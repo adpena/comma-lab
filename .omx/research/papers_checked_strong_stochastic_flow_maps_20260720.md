@@ -1,9 +1,9 @@
 # Paper disposition: Strong Stochastic Flow Maps
 
-UTC: 2026-07-20  
-lane: `lane_einstein_kolmogorov_crux_20260719`  
-research_only: `true`  
-pointer: `0.1910828242 [contest-CPU Linux x86_64]`, UNMOVED  
+UTC: 2026-07-20
+lane: `lane_einstein_kolmogorov_crux_20260719`
+research_only: `true`
+pointer: `0.1910828242 [contest-CPU Linux x86_64]`, UNMOVED
 review_status: recovery-written-UNREVIEWED-BY-MAIN
 
 ## Citation and intake custody
