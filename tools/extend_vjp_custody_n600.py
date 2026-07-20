@@ -49,7 +49,8 @@ DEFAULT_SOURCES = (
     DEFAULT_OUTPUT / "replacement_pair_0025/manifest.json",
     DEFAULT_OUTPUT / "extension_20260720_timing_026_028/manifest.json",
 )
-KNOWN_ISOLATED_PAIRS = (11,)
+KNOWN_ISOLATED_PAIRS = (11, 245, 277, 482, 514, 532, 574)
+KNOWN_NATIVE_REFRESH_PAIRS = KNOWN_ISOLATED_PAIRS
 RunCommand = Callable[[Sequence[str]], subprocess.CompletedProcess[str]]
 
 
@@ -80,6 +81,20 @@ def _chunks(missing: Sequence[int], isolated: Sequence[int]) -> list[list[int]]:
     result = [[value] for value in sorted(isolated_set)]
     result.extend(ordinary[index : index + MAX_PAIRS] for index in range(0, len(ordinary), MAX_PAIRS))
     return result
+
+
+def _recovery_work(
+    pair_ids: Sequence[int], completed: set[int], refused: set[int]
+) -> list[tuple[list[int], str]]:
+    """Split one refused cached chunk into native retries plus untouched tails."""
+
+    declared = set(pair_ids)
+    if not refused or not refused <= declared or not completed <= declared:
+        raise ExtensionError("refused-chunk recovery sets are inconsistent")
+    untouched = sorted(declared - completed - refused)
+    work = [([pair_id], "fresh-native") for pair_id in sorted(refused)]
+    work.extend((chunk, "cached-verified") for chunk in _chunks(untouched, []))
+    return work
 
 
 def _manifest_rows(path: Path) -> tuple[dict[str, Any], set[int], set[int]]:
@@ -114,9 +129,38 @@ def _source_coverage(paths: Sequence[Path]) -> tuple[set[int], list[dict[str, An
     return coverage, records
 
 
-def _chunk_dir(root: Path, pair_ids: Sequence[int]) -> Path:
-    digest = hashlib.sha256(",".join(str(value) for value in pair_ids).encode()).hexdigest()[:8]
-    return root / f"chunk_{pair_ids[0]:04d}_{pair_ids[-1]:04d}_{digest}"
+def _prior_manifest_paths(state_path: Path) -> list[Path]:
+    if not state_path.is_file():
+        return []
+    try:
+        campaign = json.loads(state_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ExtensionError(f"cannot resume prior campaign receipt: {state_path}") from exc
+    if campaign.get("schema") != SCHEMA:
+        raise ExtensionError(f"prior campaign schema mismatch: {state_path}")
+    allowed = DEFAULT_OUTPUT.resolve()
+    paths: list[Path] = []
+    for row in campaign.get("source_manifests", []):
+        if isinstance(row, dict):
+            paths.append(Path(str(row.get("path", ""))))
+    for row in campaign.get("chunks", []):
+        if isinstance(row, dict):
+            paths.append(Path(str(row.get("path", ""))) / "manifest.json")
+    resolved: list[Path] = []
+    for path in paths:
+        candidate = path.expanduser().resolve(strict=True)
+        if not (candidate.parent == allowed or candidate.parent.is_relative_to(allowed)):
+            raise ExtensionError(f"prior campaign manifest escaped output root: {candidate}")
+        if candidate not in resolved:
+            resolved.append(candidate)
+    return resolved
+
+
+def _chunk_dir(root: Path, pair_ids: Sequence[int], *, winner_policy: str = "cached-verified") -> Path:
+    identity = f"{winner_policy}:" + ",".join(str(value) for value in pair_ids)
+    digest = hashlib.sha256(identity.encode()).hexdigest()[:8]
+    suffix = "_fresh_native" if winner_policy == "fresh-native" else ""
+    return root / f"chunk_{pair_ids[0]:04d}_{pair_ids[-1]:04d}_{digest}{suffix}"
 
 
 def _classify_chunk(path: Path, expected_ids: Sequence[int]) -> tuple[str, set[int], set[int]]:
@@ -152,12 +196,16 @@ def _default_runner(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
 
 def execute(args: argparse.Namespace, *, runner: RunCommand = _default_runner) -> int:
     root = args.output_root.expanduser().resolve(strict=False)
+    state_path = root / "campaign_receipt.json"
     source_paths = [Path(value) for value in args.source_manifest]
+    if args.resume_campaign:
+        source_paths.extend(_prior_manifest_paths(state_path))
+    source_paths = list(dict.fromkeys(path.expanduser().resolve(strict=True) for path in source_paths))
     source_coverage, source_records = _source_coverage(source_paths)
     missing = sorted(set(range(N_PAIRS)) - source_coverage)
-    schedule = _chunks(missing, args.isolate_pair)
+    native_refresh = {int(value) for value in args.refresh_native_pair} & set(missing)
+    schedule = _chunks(missing, [*args.isolate_pair, *native_refresh])
     storage = _preflight(root, len(missing))
-    state_path = root / "campaign_receipt.json"
     campaign: dict[str, Any] = {
         "schema": SCHEMA,
         "updated_at_utc": _utc_now(),
@@ -176,6 +224,7 @@ def execute(args: argparse.Namespace, *, runner: RunCommand = _default_runner) -
         "source_manifests": source_records,
         "source_completed_pair_ids": sorted(source_coverage),
         "initial_missing_pair_ids": missing,
+        "native_refresh_pair_ids": sorted(native_refresh),
         "schedule": schedule,
         "storage_preflight": storage,
         "chunks": [],
@@ -187,8 +236,21 @@ def execute(args: argparse.Namespace, *, runner: RunCommand = _default_runner) -
         return 0
 
     executed = 0
-    for pair_ids in schedule:
-        chunk_dir = _chunk_dir(root, pair_ids)
+    work_queue = [
+        (
+            pair_ids,
+            "fresh-native"
+            if len(pair_ids) == 1 and pair_ids[0] in native_refresh
+            else "cached-verified",
+        )
+        for pair_ids in schedule
+    ]
+    queued = {(tuple(pair_ids), winner_policy) for pair_ids, winner_policy in work_queue}
+    cursor = 0
+    while cursor < len(work_queue):
+        pair_ids, winner_policy = work_queue[cursor]
+        cursor += 1
+        chunk_dir = _chunk_dir(root, pair_ids, winner_policy=winner_policy)
         before, completed, refused = _classify_chunk(chunk_dir, pair_ids)
         argv = [
             str(args.python),
@@ -199,6 +261,8 @@ def execute(args: argparse.Namespace, *, runner: RunCommand = _default_runner) -
             str(chunk_dir),
             "--cpu-threads",
             str(args.cpu_threads),
+            "--winner-policy",
+            winner_policy,
         ]
         invoked = False
         returncode: int | None = None
@@ -219,6 +283,7 @@ def execute(args: argparse.Namespace, *, runner: RunCommand = _default_runner) -
                 "status_after": after,
                 "invoked": invoked,
                 "returncode": returncode,
+                "winner_policy": winner_policy,
                 "completed_pair_ids": sorted(completed),
                 "refused_pair_ids": sorted(refused),
                 "verdict_scope": REFUSAL_VERDICT_SCOPE if refused else None,
@@ -227,26 +292,53 @@ def execute(args: argparse.Namespace, *, runner: RunCommand = _default_runner) -
                 else None,
             }
         )
+        if refused and winner_policy == "cached-verified":
+            recovery = _recovery_work(pair_ids, completed, refused)
+            native_refresh.update(refused)
+            campaign["native_refresh_pair_ids"] = sorted(native_refresh)
+            for item in recovery:
+                identity = (tuple(item[0]), item[1])
+                if identity not in queued:
+                    work_queue.append(item)
+                    queued.add(identity)
+            campaign["dynamic_recovery_work"] = [
+                {"pair_ids": ids, "winner_policy": policy}
+                for ids, policy in work_queue[len(schedule) :]
+            ]
         campaign["updated_at_utc"] = _utc_now()
         atomic_json(state_path, campaign)
 
-    extension_completed: set[int] = set()
-    extension_refused: set[int] = set()
-    for pair_ids in schedule:
-        _, completed, refused = _classify_chunk(_chunk_dir(root, pair_ids), pair_ids)
-        extension_completed.update(completed)
-        extension_refused.update(refused)
+    extension_completed = {
+        int(pair_id)
+        for row in campaign["chunks"]
+        for pair_id in row["completed_pair_ids"]
+    }
+    extension_refused = {
+        int(pair_id)
+        for row in campaign["chunks"]
+        for pair_id in row["refused_pair_ids"]
+    }
     final_coverage = source_coverage | extension_completed
     still_missing = sorted(set(range(N_PAIRS)) - final_coverage)
+    source_refused = {
+        int(pair_id)
+        for record in source_records
+        for pair_id in record["refused_pair_ids"]
+    }
+    effective_refused = sorted((source_refused | extension_refused) - final_coverage)
     campaign.update(
         {
             "updated_at_utc": _utc_now(),
             "extension_completed_pair_ids": sorted(extension_completed),
-            "refused_pair_ids": sorted(extension_refused),
+            "refused_pair_ids": effective_refused,
             "final_completed_pair_ids": sorted(final_coverage),
             "final_completed_count": len(final_coverage),
             "still_missing_pair_ids": still_missing,
-            "status": "COMPLETE_N600" if not still_missing else "IN_PROGRESS_OR_SCOPED_BLOCKED",
+            "status": (
+                "COMPLETE_N600"
+                if not still_missing and not effective_refused
+                else "IN_PROGRESS_OR_SCOPED_BLOCKED"
+            ),
         }
     )
     atomic_json(state_path, campaign)
@@ -257,7 +349,7 @@ def execute(args: argparse.Namespace, *, runner: RunCommand = _default_runner) -
                 "status": campaign["status"],
                 "completed": len(final_coverage),
                 "missing": len(still_missing),
-                "refused": sorted(extension_refused),
+                "refused": effective_refused,
             },
             sort_keys=True,
         )
@@ -275,6 +367,19 @@ def _parser() -> argparse.ArgumentParser:
         help="Validated existing manifest; repeat to add sources.",
     )
     parser.add_argument("--isolate-pair", action="append", type=int, default=list(KNOWN_ISOLATED_PAIRS))
+    parser.add_argument(
+        "--refresh-native-pair",
+        action="append",
+        type=int,
+        default=list(KNOWN_NATIVE_REFRESH_PAIRS),
+    )
+    parser.add_argument(
+        "--no-resume-campaign",
+        dest="resume_campaign",
+        action="store_false",
+        help="Ignore prior campaign manifests and rebuild the schedule from explicit sources only.",
+    )
+    parser.set_defaults(resume_campaign=True)
     parser.add_argument("--cpu-threads", type=int, default=4)
     parser.add_argument("--python", type=Path, default=REPO / ".venv/bin/python")
     parser.add_argument("--stop-after-chunks", type=int)

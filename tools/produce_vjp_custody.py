@@ -25,9 +25,11 @@ for import_path in (REPO, SRC):
 
 from tac.optimization.vjp_custody import (  # noqa: E402
     ACTIVE_ARRANGEMENT,
+    ACTIVE_ARRANGEMENTS,
     CAMERA_HW,
     EXPECTED_HASHES,
     MANIFEST_SCHEMA,
+    NATIVE_REFRESH_ARRANGEMENT,
     RECEIVER_ARITHMETIC,
     REPRESENTATION,
     SCORER_HW,
@@ -163,6 +165,7 @@ def _manifest_base(
     upstream: Path,
     hashes: dict[str, str],
     output_dir: Path,
+    winner_policy: str,
 ) -> dict[str, Any]:
     config = {
         "pair_ids": pair_ids,
@@ -174,6 +177,7 @@ def _manifest_base(
         "scorer_hw": list(SCORER_HW),
         "producer_sha256": sha256_file(Path(__file__).resolve()),
         "library_sha256": sha256_file(SRC / "tac/optimization/vjp_custody.py"),
+        "winner_policy": winner_policy,
     }
     return {
         "schema": MANIFEST_SCHEMA,
@@ -181,7 +185,9 @@ def _manifest_base(
         "completed_at_utc": None,
         "pair_ids": pair_ids,
         "receiver_arithmetic": RECEIVER_ARITHMETIC,
-        "active_arrangement": ACTIVE_ARRANGEMENT,
+        "active_arrangement": (
+            NATIVE_REFRESH_ARRANGEMENT if winner_policy == "fresh-native" else ACTIVE_ARRANGEMENT
+        ),
         "representation": REPRESENTATION,
         "source_hashes": hashes,
         "config": config,
@@ -356,12 +362,13 @@ def _load_composition_source(path: Path) -> tuple[Path, dict[str, Any], str]:
     expected_common = {
         "schema": MANIFEST_SCHEMA,
         "receiver_arithmetic": RECEIVER_ARITHMETIC,
-        "active_arrangement": ACTIVE_ARRANGEMENT,
         "representation": REPRESENTATION,
     }
     for key, expected in expected_common.items():
         if manifest.get(key) != expected:
             raise VJPCustodyError(f"composition source manifest {key} mismatch: {manifest_path}")
+    if manifest.get("active_arrangement") not in ACTIVE_ARRANGEMENTS:
+        raise VJPCustodyError(f"composition source active arrangement mismatch: {manifest_path}")
     if manifest.get("source_hashes") != EXPECTED_HASHES:
         raise VJPCustodyError(f"composition source frozen hashes mismatch: {manifest_path}")
     config = manifest.get("config")
@@ -532,7 +539,7 @@ def compose_manifests(args: argparse.Namespace) -> dict[str, Any]:
         "completed_at_utc": datetime.now(UTC).isoformat(),
         "pair_ids": pair_ids,
         "receiver_arithmetic": RECEIVER_ARITHMETIC,
-        "active_arrangement": ACTIVE_ARRANGEMENT,
+        "active_arrangement": sources[0][1]["active_arrangement"],
         "representation": REPRESENTATION,
         "source_hashes": EXPECTED_HASHES,
         "config": config,
@@ -592,7 +599,12 @@ def produce(args: argparse.Namespace) -> dict[str, Any]:
     sacred_before = _stat_tree_snapshot(SACRED)
     hashes = source_hashes(cache, upstream)
     expected = _manifest_base(
-        pair_ids=pair_ids, cache=cache, upstream=upstream, hashes=hashes, output_dir=output_dir
+        pair_ids=pair_ids,
+        cache=cache,
+        upstream=upstream,
+        hashes=hashes,
+        output_dir=output_dir,
+        winner_policy=args.winner_policy,
     )
     if manifest_path.exists():
         if not args.resume:
@@ -625,6 +637,7 @@ def produce(args: argparse.Namespace) -> dict[str, Any]:
                 segnet=segnet,
                 posenet=posenet,
                 torch=torch,
+                refresh_native_winner=args.winner_policy == "fresh-native",
             )
         except VJPCustodyError as error:
             _record_pair_refusal(
@@ -671,6 +684,12 @@ def _parser() -> argparse.ArgumentParser:
         help="Finalize a zero-copy manifest from existing complete or partial producer manifests.",
     )
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--winner-policy",
+        choices=("cached-verified", "fresh-native"),
+        default="cached-verified",
+        help="Use the cache-verified arrangement or explicitly refresh the native winner/rival chart.",
+    )
     parser.add_argument("--cpu-threads", type=int, default=4)
     return parser
 

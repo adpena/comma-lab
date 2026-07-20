@@ -323,6 +323,7 @@ def audit_vjp_campaign(path: Path) -> dict[str, Any]:
 
     completed_ids = sorted(declared_rows)
     missing_ids = sorted(set(range(PAIR_COUNT)) - set(completed_ids))
+    refused.difference_update(completed_ids)
     blockers: list[str] = []
     if campaign.get("status") != "COMPLETE_N600":
         blockers.append("VJP_CAMPAIGN_NOT_TERMINAL_COMPLETE_N600")

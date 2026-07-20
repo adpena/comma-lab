@@ -96,6 +96,24 @@ def test_campaign_audit_refuses_manifest_hash_drift(tmp_path: Path) -> None:
         audit_vjp_campaign(campaign)
 
 
+def test_campaign_audit_treats_later_completion_as_superseding_scoped_refusal(
+    tmp_path: Path,
+) -> None:
+    campaign = _incomplete_campaign(tmp_path)
+    campaign_value = json.loads(campaign.read_text())
+    manifest = Path(campaign_value["source_manifests"][0]["path"])
+    manifest_value = json.loads(manifest.read_text())
+    manifest_value["refusals"] = [{"pair_id": 0}]
+    _write_json(manifest, manifest_value)
+    campaign_value["source_manifests"][0]["sha256"] = sha256_file(manifest)
+    campaign_value["source_manifests"][0]["refused_pair_ids"] = [0]
+    _write_json(campaign, campaign_value)
+
+    result = audit_vjp_campaign(campaign)
+    assert result["refused_pair_ids"] == []
+    assert "VJP_REFUSED_PAIR_IDS_PRESENT" not in result["blockers"]
+
+
 def _packet(path: Path) -> None:
     packet = BoundaryCoordinatePacket(
         family=FrameFamily.WINDOWED_CURVELET,

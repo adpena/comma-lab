@@ -12,6 +12,9 @@ from tac.optimization.vjp_custody import (
     ACTIVE_ARRANGEMENT,
     EXPECTED_HASHES,
     MANIFEST_SCHEMA,
+    NATIVE_REFRESH_ARRANGEMENT,
+    NATIVE_REFRESH_PAIR_SCHEMA,
+    NATIVE_REFRESH_WINNER_SOURCE,
     RECEIVER_ARITHMETIC,
     REPRESENTATION,
     VJPCustodyError,
@@ -138,6 +141,40 @@ def test_manifest_loads_per_pair_hashes_shapes_and_representation(tmp_path: Path
     assert rows[7].metadata["representation"] == REPRESENTATION
 
 
+def test_manifest_loads_explicit_fresh_native_winner_refresh(tmp_path: Path) -> None:
+    arrays = _tiny_arrays()
+    arrays.update(
+        {
+            "cached_winner": np.ones((2, 3), dtype=np.int8),
+            "pair_schema": NATIVE_REFRESH_PAIR_SCHEMA,
+            "active_arrangement": NATIVE_REFRESH_ARRANGEMENT,
+            "winner_source": NATIVE_REFRESH_WINNER_SOURCE,
+            "checks": {
+                "native_refresh_authorized": True,
+                "cached_native_winner_agreement": False,
+                "cached_native_winner_mismatch_pixels": 6,
+            },
+        }
+    )
+    row = write_pair_sidecar(tmp_path / "pair_0007.vjp.npz", arrays, EXPECTED_HASHES)
+    manifest = {
+        "schema": MANIFEST_SCHEMA,
+        "pair_ids": [7],
+        "receiver_arithmetic": RECEIVER_ARITHMETIC,
+        "active_arrangement": NATIVE_REFRESH_ARRANGEMENT,
+        "representation": REPRESENTATION,
+        "source_hashes": EXPECTED_HASHES,
+        "sidecars": [row],
+    }
+    manifest["manifest_content_sha256"] = hashlib.sha256(canonical_json(manifest)).hexdigest()
+    path = tmp_path / "manifest.json"
+    atomic_json(path, manifest)
+
+    rows = load_vjp_manifest(path, [7], scorer_hw=(2, 3), camera_hw=(4, 5))
+    assert rows[7].metadata["winner_source"] == NATIVE_REFRESH_WINNER_SOURCE
+    assert rows[7].metadata["checks"]["cached_native_winner_mismatch_pixels"] == 6
+
+
 def test_positive_band_telemetry_summarizes_oracle_attempts_and_vjp_fields(
     tmp_path: Path,
 ) -> None:
@@ -227,6 +264,7 @@ def test_producer_resume_appends_valid_orphan_after_atomic_rename(
         upstream=upstream,
         hashes=EXPECTED_HASHES,
         output_dir=tmp_path,
+        winner_policy="cached-verified",
     )
     producer.atomic_json(tmp_path / "manifest.json", manifest)
     sidecar = tmp_path / "pair_0007.vjp.npz"
@@ -266,6 +304,7 @@ def test_producer_resume_appends_valid_orphan_after_atomic_rename(
             output_dir=tmp_path,
             resume=True,
             cpu_threads=1,
+            winner_policy="cached-verified",
         )
     )
     after = (sidecar.stat().st_mtime_ns, hashlib.sha256(sidecar.read_bytes()).hexdigest())
@@ -306,6 +345,7 @@ def test_producer_persists_scoped_immutable_refusal_and_keeps_manifest_partial(
         output_dir=tmp_path,
         resume=False,
         cpu_threads=1,
+        winner_policy="cached-verified",
     )
     with pytest.raises(VJPCustodyError, match="winner mismatch pixels=1"):
         producer.produce(args)
@@ -369,6 +409,7 @@ def _producer_manifest(
         upstream=Path("/synthetic/upstream"),
         hashes=EXPECTED_HASHES,
         output_dir=root,
+        winner_policy="cached-verified",
     )
     if config_overrides:
         manifest["config"].update(config_overrides)
