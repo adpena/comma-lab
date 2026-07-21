@@ -164,6 +164,8 @@ def build_receipt(
     r1b7_receipt_path: Path,
     rust_parity: dict[str, Any],
     lane_id: str,
+    s2_partition_seed_receipt_path: Path | None = None,
+    s2_lane_curve_receipt_path: Path | None = None,
 ) -> dict[str, Any]:
     required_files = [
         source_video,
@@ -175,6 +177,10 @@ def build_receipt(
         aa_receipt_path,
         r1b7_receipt_path,
     ]
+    if s2_partition_seed_receipt_path is not None:
+        required_files.append(s2_partition_seed_receipt_path)
+    if s2_lane_curve_receipt_path is not None:
+        required_files.append(s2_lane_curve_receipt_path)
     modules = upstream_root / "modules.py"
     segnet = upstream_root / "models" / "segnet.safetensors"
     posenet = upstream_root / "models" / "posenet.safetensors"
@@ -189,6 +195,16 @@ def build_receipt(
     g1g3 = load_json(g1g3_receipt_path)
     aa = load_json(aa_receipt_path)
     r1b7 = load_json(r1b7_receipt_path)
+    finite_seed = (
+        None
+        if s2_partition_seed_receipt_path is None
+        else load_json(s2_partition_seed_receipt_path)
+    )
+    lane_curve = (
+        None
+        if s2_lane_curve_receipt_path is None
+        else load_json(s2_lane_curve_receipt_path)
+    )
 
     require(tie.get("score_claim") is False, "tie-aware receipt crossed score firewall")
     fidelity = tie.get("input_fidelity", {})
@@ -244,6 +260,89 @@ def build_receipt(
         r1b7["integer_aware"]["search"]["new_hard_crossing_site_count"] == 0,
         "r1b7 adjudicated crossing count drift",
     )
+    if finite_seed is not None:
+        require(
+            finite_seed.get("schema") == "s2_partition_seed_measurement.v1",
+            "S2 finite partition seed schema drift",
+        )
+        require(finite_seed.get("score_claim") is False, "S2 finite seed crossed score firewall")
+        require(finite_seed.get("n_pairs") == 600, "S2 finite seed is not n600")
+        require(
+            finite_seed["gt_cache"]["sha256"] == cache_sha,
+            "S2 finite seed cache hash mismatch",
+        )
+        require(
+            finite_seed["finite_packet"]["event_count"] == g3["all_flips"]["flip_count"],
+            "S2 finite seed event count does not close the G3 inventory",
+        )
+        require(
+            finite_seed["finite_packet"]["double_encode_byte_identical"] is True
+            and finite_seed["finite_packet"]["parse_back_event_identity"] is True,
+            "S2 finite seed lacks deterministic exact parse-back",
+        )
+        require(
+            finite_seed["finite_packet"]["stored_plane_value_bytes"] == 0,
+            "S2 finite seed improperly stores plane values",
+        )
+        require(
+            finite_seed["semantic_detection"]["luma_consulted"] is False,
+            "S2 finite seed used forbidden luma class sorting",
+        )
+        require(
+            finite_seed["content_lineage"]["inherited_bytes_in_candidate"] == 0,
+            "S2 finite seed imported inherited candidate bytes",
+        )
+        finite_packet_path = Path(finite_seed["finite_packet"]["path"])
+        require(finite_packet_path.is_file(), "S2 finite packet bytes are not in custody")
+        require(
+            finite_packet_path.stat().st_size == finite_seed["finite_packet"]["packet_bytes"],
+            "S2 finite packet byte count mismatch",
+        )
+        require(
+            sha256_file(finite_packet_path)
+            == finite_seed["finite_packet"]["packet_sha256"],
+            "S2 finite packet SHA mismatch",
+        )
+    else:
+        finite_packet_path = None
+    if lane_curve is not None:
+        require(lane_curve.get("schema") == "s2_lane_true_mask_curve.v1", "S2 Lane curve schema drift")
+        require(lane_curve.get("score_claim") is False, "S2 Lane curve crossed score firewall")
+        require(lane_curve["gt_cache"]["sha256"] == cache_sha, "S2 Lane curve cache hash mismatch")
+        require(lane_curve["fit"]["n_pairs"] == 600, "S2 Lane curve is not n600")
+        require(
+            lane_curve["semantic_detection"]["luma_consulted"] is False,
+            "S2 Lane curve used forbidden luma class sorting",
+        )
+        if finite_seed is not None:
+            require(
+                lane_curve["semantic_detection"]["semantic_class_ids"]
+                == finite_seed["semantic_detection"]["semantic_class_ids"],
+                "S2 Lane and finite-seed semantic detection disagree",
+            )
+        require(len(lane_curve["curve"]) >= 2, "S2 Lane curve lacks a finite comparison")
+        require(
+            lane_curve["curvelet_shearlet_residual"]["status"]
+            == "BLOCKED_TARGET_BOUNDARY_INVERSE_CUSTODY",
+            "S2 Lane curve improperly claims genuine residual closure",
+        )
+        require(
+            lane_curve["content_lineage"]["inherited_bytes_in_candidate"] == 0,
+            "S2 Lane curve imported inherited candidate bytes",
+        )
+        genuine_proof_path = Path(
+            lane_curve["curvelet_shearlet_residual"]["genuine_structural_proof_path"]
+        )
+        if not genuine_proof_path.is_absolute():
+            genuine_proof_path = REPO / genuine_proof_path
+        require(genuine_proof_path.is_file(), "genuine frame structural proof is absent")
+        require(
+            sha256_file(genuine_proof_path)
+            == lane_curve["curvelet_shearlet_residual"][
+                "genuine_structural_proof_sha256"
+            ],
+            "genuine frame structural proof SHA mismatch",
+        )
     require(rust_parity.get("status") == "PASS", "Rust parity attestation is not PASS")
 
     source_custody = {
@@ -279,6 +378,31 @@ def build_receipt(
             "S3 fixed-magnitude/no-sub-step lesson only; all archive/payload bytes excluded",
         ),
     ]
+    if finite_seed is not None and s2_partition_seed_receipt_path is not None:
+        consumed.append(
+            _artifact(
+                s2_partition_seed_receipt_path,
+                "source-video-derived our finite coder",
+                "S2 counted G3 site and cell-identity seed with exact parse-back",
+            )
+        )
+        if finite_packet_path is None:  # pragma: no cover - guarded above
+            raise SpineAuditError("S2 finite packet custody was not resolved")
+        consumed.append(
+            _artifact(
+                finite_packet_path,
+                "source-video-derived our finite coder",
+                "S2 exact counted packet bytes",
+            )
+        )
+    if lane_curve is not None and s2_lane_curve_receipt_path is not None:
+        consumed.append(
+            _artifact(
+                s2_lane_curve_receipt_path,
+                "source-video-derived our Lane-chart measurement",
+                "S2 finite Lane chart bytes versus true-mask fidelity curve",
+            )
+        )
 
     g1_transition = g1["aggregate"]["by_transition"]
     g3_best = g3["best_measured_prior"]
@@ -320,6 +444,18 @@ def build_receipt(
                 "fitted_lines": int(lane["fit_stats"]["total_lines"]),
                 "band_recall_mean": float(lane["fit_stats"]["band_recall_mean"]),
                 "fidelity_scope": "lossless to fitted lane parameters, not lossless to the Lane argmax mask",
+                "true_mask_curve": (
+                    {
+                        "status": "MEASURED_POLYNOMIAL_CONTROL_GENUINE_RESIDUAL_OPEN",
+                        "rows": lane_curve["curve"],
+                        "residual_status": lane_curve["curvelet_shearlet_residual"][
+                            "status"
+                        ],
+                        "scope": lane_curve["verdict_scope"],
+                    }
+                    if lane_curve is not None
+                    else {"status": "NOT_PROVIDED"}
+                ),
             },
             "worldsheet_transport": {
                 "equation_id": "worldsheet_transport_residual_event_rate_v1",
@@ -345,6 +481,23 @@ def build_receipt(
                 "ideal_bytes": g3_bytes,
                 "not_counted": ["site locations", "headers", "finite coder overhead"],
                 "fidelity_scope": "ideal conditional cell-identity floor, not a receiver-closed stream",
+                "finite_seed": (
+                    {
+                        "status": "MEASURED_FINITE_PARSEBACK_COMPLETE",
+                        "packet_bytes": int(finite_seed["finite_packet"]["packet_bytes"]),
+                        "packet_sha256": finite_seed["finite_packet"]["packet_sha256"],
+                        "event_count": int(finite_seed["finite_packet"]["event_count"]),
+                        "sites_headers_coder_crc_counted": True,
+                        "stored_plane_value_bytes": 0,
+                        "semantic_class_ids": finite_seed["semantic_detection"][
+                            "semantic_class_ids"
+                        ],
+                        "self_detection_method": finite_seed["semantic_detection"]["method"],
+                        "scope": finite_seed["verdict_scope"],
+                    }
+                    if finite_seed is not None
+                    else {"status": "NOT_PROVIDED"}
+                ),
             },
             "aa_sdf_renderer": {
                 "equation_id": "aa_sdf_observation_footprint_render_dseg_v1",
@@ -366,7 +519,7 @@ def build_receipt(
                 "scope": "generic fill is free only for a camera-resolution payload; direct saving is zero for a pure generator",
             },
             "missing_closure": [
-                "receiver-closed five-class partition descriptor with measured finite bytes",
+                "baseline five-class chart/predictor composed with the measured finite cell-event seed",
                 "counted pose/xi stream bound to the same n600 partition row",
                 "curvelet residual chart composed where polynomial/ground charts fail",
                 "one parse-back that combines charts, cell events, values, range(A), and generic blind fill",
@@ -420,6 +573,8 @@ def build_receipt(
         "stages": stages,
         "admission": {
             "s0_s1_ground_truth_spine": True,
+            "s2_lane_true_mask_curve_measured": lane_curve is not None,
+            "s2_finite_cell_event_seed": finite_seed is not None,
             "s2_complete_partition_pose_description": False,
             "s3_integer_realization_composed": False,
             "s4_receiver_closed_archive": False,
@@ -446,6 +601,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--g1g3-receipt", type=Path, required=True)
     parser.add_argument("--aa-receipt", type=Path, required=True)
     parser.add_argument("--r1b7-receipt", type=Path, required=True)
+    parser.add_argument("--s2-partition-seed-receipt", type=Path)
+    parser.add_argument("--s2-lane-curve-receipt", type=Path)
     parser.add_argument("--runtime-rs", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--lane-id", default="joint_planes_direct_strike")
@@ -465,6 +622,16 @@ def main() -> int:
         g1g3_receipt_path=args.g1g3_receipt.resolve(),
         aa_receipt_path=args.aa_receipt.resolve(),
         r1b7_receipt_path=args.r1b7_receipt.resolve(),
+        s2_partition_seed_receipt_path=(
+            None
+            if args.s2_partition_seed_receipt is None
+            else args.s2_partition_seed_receipt.resolve()
+        ),
+        s2_lane_curve_receipt_path=(
+            None
+            if args.s2_lane_curve_receipt is None
+            else args.s2_lane_curve_receipt.resolve()
+        ),
         rust_parity=rust,
         lane_id=args.lane_id,
     )
