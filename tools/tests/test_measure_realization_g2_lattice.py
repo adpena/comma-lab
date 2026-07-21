@@ -13,6 +13,10 @@ from tools.measure_realization_g2_lattice import (
     INTERIOR_STAGE_SCHEMA,
     SOURCE_CONTROL_STAGE_SCHEMA,
     RealizationAuditError,
+    _apply_local_chart_delta,
+    _exception_parseback,
+    _head_patch_144,
+    _rank4_chart_directions,
     apply_contextual_rgb_exceptions,
     apply_dying_write_exceptions,
     audit_prefix,
@@ -27,6 +31,7 @@ from tools.measure_realization_g2_lattice import (
     serialize_frozen_scorer_palette,
     summarize_contextual_prefix,
     summarize_interior_prefix,
+    summarize_secant_prefix,
     summarize_source_control_prefix,
 )
 
@@ -303,6 +308,110 @@ def test_contextual_prefix_keeps_whole_description_write_pose_and_bytes_separate
     }
     assert summary["byte_accounting"]["contextual_total_bytes"] == 78_969 + 100_000 + 16 * 19
     assert summary["byte_accounting"]["fits_target_box"] is True
+
+
+def test_g2e_rank4_chart_local_rounding_and_557_double_decode_are_deterministic():
+    jacobian = np.asarray(
+        [
+            [1.0, 0.0, 0.0, 0.5, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.5, 0.0],
+        ],
+        dtype=np.float64,
+    )
+    first = _rank4_chart_directions(jacobian)
+    second = _rank4_chart_directions(jacobian)
+    assert first.shape == (6, 4)
+    assert np.array_equal(first, second)
+    constraints = [
+        {"y": 3, "x": 4, "cell_id": 1, "stratum": "boundary_codim1"},
+        {"y": 7, "x": 8, "cell_id": 0, "stratum": "critical_event"},
+    ]
+    baseline = np.full((384, 512, 3), 127, dtype=np.uint8)
+    candidate, actual, saturation = _apply_local_chart_delta(baseline, constraints, 8.0 * first[:, 0])
+    assert saturation == 0
+    assert np.max(np.abs(actual)) <= 8.0
+    payload, parsed_once, ordinals = _exception_parseback(baseline, constraints, candidate)
+    _, parsed_twice, ordinals_twice = _exception_parseback(baseline, constraints, candidate)
+    assert payload
+    assert ordinals == ordinals_twice
+    assert np.array_equal(parsed_once, parsed_twice)
+
+
+def test_g2e_rank4_chart_zero_pads_single_write_three_rgb_chart() -> None:
+    jacobian = np.asarray([[1.0, -2.0, 3.0]], dtype=np.float64)
+    first = _rank4_chart_directions(jacobian)
+    second = _rank4_chart_directions(jacobian)
+    assert first.shape == (3, 4)
+    assert np.array_equal(first, second)
+    assert np.max(np.abs(first[:, :3]), axis=0) == pytest.approx(np.ones(3))
+    assert np.array_equal(first[:, 3], np.zeros(3))
+    for vector in first[:, :3].T:
+        response_sum = float(np.sum(jacobian @ vector))
+        pivot = int(np.argmax(np.abs(vector)))
+        assert response_sum >= 0.0
+        if response_sum == 0.0:
+            assert vector[pivot] > 0.0
+
+
+def test_g2e_head_patch_is_exact_144d_zero_padded_input() -> None:
+    feature = np.arange(16 * 4 * 5, dtype=np.float64).reshape(16, 4, 5)
+    interior = _head_patch_144(feature, 2, 3)
+    corner = np.asarray(_head_patch_144(feature, 0, 0)).reshape(16, 3, 3)
+    assert len(interior) == 144
+    assert np.all(corner[:, 0, :] == 0.0)
+    assert np.all(corner[:, :, 0] == 0.0)
+
+
+def _secant_stage(pair: int, *, admitted: bool) -> dict:
+    return {
+        "schema": "realization_g2e_secant_pair.v1",
+        "pair_index": pair,
+        "uint8_factor2_exact": True,
+        "double_decode_identical": True,
+        "pair_solve": {
+            "status": "ADMITTED_RECEIVER_CLOSED" if admitted else "TRUST_REGION_REFUSED",
+            "admitted": admitted,
+        },
+        "correction_packet": {"bytes": 5 if admitted else 0},
+        "hard_oracle": {
+            "realized_argmax_equals_description": admitted,
+            "all_declared_writes_survive": admitted,
+            "d_seg_realized_vs_frozen_target": 0.2,
+            "d_pose_realized_vs_frozen_target": 0.01,
+            "d_pose_realized_outside_declared_tube": 0.02,
+            "pose_within_declared_tube": admitted,
+        },
+        "declared_write_survival": [
+            {
+                "class_id": 1,
+                "stratum": "boundary_codim1",
+                "margin_bucket": "positive_le_1" if admitted else "nonpositive",
+                "survives": admitted,
+            }
+        ],
+    }
+
+
+def test_g2e_prefix_preserves_refusals_and_rate_pose_decomposition() -> None:
+    rows = [_secant_stage(pair, admitted=pair % 2 == 0) for pair in range(16)]
+    summary = summarize_secant_prefix(16, rows, base_bytes=200_000)
+    assert summary["whole_description_exact_pair_count"] == 8
+    assert summary["uint8_factor2_exact_pair_count"] == 16
+    assert summary["double_decode_identical_pair_count"] == 16
+    assert summary["admitted_pair_count"] == 8
+    assert summary["solve_status_histogram"] == {
+        "ADMITTED_RECEIVER_CLOSED": 8,
+        "TRUST_REGION_REFUSED": 8,
+    }
+    assert summary["byte_accounting"]["correction_bytes"] == 40
+    assert summary["mean_d_pose_declared_tube_debt"] == pytest.approx(0.02)
+    admissibility = summary["predict_project_realization_admissibility_v1"]
+    assert admissibility["accepted"] is False
+    assert admissibility["predicates"]["factor2_uint8_exact"] is True
+    assert admissibility["predicates"]["double_decode_identical"] is True
+    assert admissibility["predicates"]["semantic_cells_to_rgb_exact"] is False
+    assert admissibility["predicates"]["zero_added_seed_bytes"] is False
+    assert admissibility["predicates"]["receiver_derived_rgb"] is False
 
 
 def _interior_stage(pair: int, *, survives: bool, rung: str = "R2_MAX_MARGIN") -> dict:

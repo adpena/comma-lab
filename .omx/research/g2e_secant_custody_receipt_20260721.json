@@ -1,0 +1,119 @@
+{
+  "schema": "g2e_secant_custody_compact_receipt.v1",
+  "task_id": "578",
+  "lane_id": "lane_g2e_secant_custody_578_20260721",
+  "research_only": true,
+  "verdict": "MEASURED_G2E_SECANT_PREFIX_N16_FAMILY_OPEN",
+  "verdict_scope": "Exact contiguous n16 openpilot-base prefix on macOS CPU advisory only; no n64, n600, contest-score, promotion, QP-success, or rank-4-family claim.",
+  "blocker_transition": {
+    "closed_at_n16": "R1B2_RANK4_FIRST_ORDER_REALIZED_SECANT_CUSTODY_ABSENT",
+    "active": "R1B2_RANK4_REALIZED_SECANT_TRUST_REGION_EMPTY_N16_OPENPILOT",
+    "family_open": true
+  },
+  "D1_realized_secant_custody": {
+    "pair_count": 16,
+    "column_indices": [0, 1, 2, 3],
+    "independent_pair_column_rows": 64,
+    "rows_per_column": 16,
+    "per_write_responses": 388,
+    "declared_relative_residual_tolerance": 0.35,
+    "trust_region_count": 31,
+    "usable_trust_region_count": 0,
+    "refusal_reason_counts": {
+      "REALIZED_SIGN_OR_ZERO": 26,
+      "RELATIVE_SECANT_RESIDUAL": 31
+    },
+    "class_bucket_region_counts": {
+      "class_0_nonpositive": 16,
+      "class_1_nonpositive": 15
+    },
+    "measurement_label": "MEASURED [macOS-CPU advisory]"
+  },
+  "D2_receiver_closed_qp": {
+    "pair_status_histogram": {
+      "TRUST_REGION_REFUSED": 16
+    },
+    "qp_invoked_pair_count": 0,
+    "admitted_pair_count": 0,
+    "correction_bytes": 0,
+    "uint8_factor2_exact_pair_count": 16,
+    "double_decode_identical_pair_count": 16,
+    "all_declared_writes_survive_pair_count": 0,
+    "declared_write_count": 97,
+    "surviving_declared_write_count": 0
+  },
+  "D3_semantic_rate_prefix": {
+    "n": 16,
+    "whole_description_exact_pair_count": 0,
+    "mean_d_seg_realized_vs_frozen_target": 0.3777516682942708,
+    "base_bytes": 121128,
+    "counted_openpilot_base_bytes": 42159,
+    "total_bytes": 121128,
+    "target_box_bytes": 216222,
+    "headroom_vs_target_box_bytes": 95094,
+    "rate_break_even": "25/37,545,489 score units per correction byte",
+    "admissibility": {
+      "accepted": false,
+      "passed_predicates": [
+        "factor2_uint8_exact",
+        "double_decode_identical"
+      ],
+      "failed_predicates": [
+        "n600",
+        "semantic_cells_to_rgb_exact",
+        "pose_within_declared_tube",
+        "zero_added_seed_bytes",
+        "receiver_derived_rgb"
+      ],
+      "additional_seed_bytes": 42159,
+      "status": "D2_ZERO_BYTE_SEMANTIC_CELLS_TO_RGB_ADMISSION_FALSE"
+    }
+  },
+  "D4_pose": {
+    "mean_d_pose_realized_vs_frozen_target": 172.29492246623715,
+    "mean_d_pose_declared_tube_debt": 166.80570309370756,
+    "tube_contained_pair_count": 0,
+    "semantic_correction_pose_delta": 0.0,
+    "cross_pair_proxy_exact": false,
+    "pose_factorized_child_open": true
+  },
+  "external_custody": {
+    "root": "/Volumes/VertigoDataTier/pact/evidence/g2e_secant_20260721/final_hardened",
+    "receipt_path": "/Volumes/VertigoDataTier/pact/evidence/g2e_secant_20260721/final_hardened/receipt.json",
+    "receipt_file_bytes": 1706489,
+    "receipt_file_sha256": "e89157bb8dfc6b11b20aecccd4dbe82113ea706c9a1eb054de989c26a740dbc4",
+    "canonical_receipt_sha256": "cafd3d4d3b1024c47e6cbdfcc74322cfa2a24f2ffc3a7bd02c41727416f542c4",
+    "config_sha256": "06887691f57e94ef461b2014ef182f4ab90c9a191d247ba47441c6419c70d20f",
+    "tree_file_count": 58,
+    "tree_bytes": 5200129,
+    "tree_manifest_sha256": "e6ee0aa4357c634145c0647a6715db053f507202e6dd2d99e9a06566aaddb733",
+    "all_pair_stages_preserved": true,
+    "automatic_disk_hygiene": "SSD-only stages and sidecars; atomic same-directory replaces; no persisted camera, logits, or feature tensors; certify-or-block before deletion."
+  },
+  "execution": {
+    "command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python tools/measure_realization_g2_lattice.py --realized-secant-custody --secant-output-root /Volumes/VertigoDataTier/pact/evidence/g2e_secant_20260721/final_hardened --stop-after-prefix 16 --chunk-size 4 --threads 1",
+    "seed": 1234,
+    "axis": "[macOS-CPU advisory]",
+    "focused_tests_passed": 29,
+    "verification": [
+      "py_compile",
+      "pytest focused",
+      "ruff check",
+      "ruff format --check",
+      "strict receipt validation",
+      "200-case random QP cross-check against SciPy SLSQP",
+      "real receipt corruption refusal cross-check",
+      "review_tracker g2e_secant_clean_1",
+      "review_tracker g2e_secant_clean_2",
+      "git diff --check"
+    ],
+    "review_policy_status": "No .omx/state/review_policy.json in this worktree; no policy verdict claimed."
+  },
+  "authority": {
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "pointer_moved": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "main_landing_review_required": true
+  }
+}

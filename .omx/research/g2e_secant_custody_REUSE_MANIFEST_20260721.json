@@ -1,0 +1,107 @@
+{
+  "schema": "g2e_secant_custody_reuse_manifest.v1",
+  "task_id": "578",
+  "lane_id": "lane_g2e_secant_custody_578_20260721",
+  "entries": [
+    {
+      "surface": "factor2_receiver_and_lattice_391_580",
+      "path": "src/tac/optimization/predict_project_receiver.py",
+      "status": "reused_as_is"
+    },
+    {
+      "surface": "bounded_uint8_lattice",
+      "path": "src/tac/optimization/uint8_lattice_feasibility.py",
+      "status": "reused_as_is"
+    },
+    {
+      "surface": "G1_xi_worldsheet_warp",
+      "path": "src/tac/boundary_math/warp_real_luma_frame0.py",
+      "status": "reused_as_is"
+    },
+    {
+      "surface": "G1_LawRef_and_openpilot_base",
+      "path": "src/tac/optimization/predictor_upgrade_xi_chart.py",
+      "status": "reused_as_is"
+    },
+    {
+      "surface": "adaptive_context_range_coder_557",
+      "path": "src/tac/optimization/predictor_r2_missdelta.py",
+      "status": "reused_as_is"
+    },
+    {
+      "surface": "realization_measurement_harness_350",
+      "path": "tools/measure_realization_g2_lattice.py",
+      "status": "extended_in_place"
+    },
+    {
+      "surface": "realization_admission_law",
+      "path": "src/tac/canonical_equations/predict_project_realization_admissibility_20260721.py",
+      "status": "reused_unmodified"
+    },
+    {
+      "surface": "frozen_rank4_prototype_bank_583",
+      "path": ".omx/research/prereq_surfaces_flush_20260720/surface_2_rank4_prototype_bank.json",
+      "status": "reused_as_exact_head_quotient_custody"
+    },
+    {
+      "surface": "terminal_n600_native_vjp_campaign",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_n600_20260720/campaign_receipt.json",
+      "status": "provenance_cross_check_only_not_used_for_candidate_solve"
+    },
+    {
+      "surface": "M1_rank4_first_order_band",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/receipt.json",
+      "status": "inspected_not_substituted_for_fresh_candidate_response"
+    },
+    {
+      "surface": "G2d_predecessor_findings",
+      "path": ".omx/research/codex_findings_realization_g2d_predict_base_20260721_codex.md",
+      "status": "reused_blocker_and_base_custody"
+    },
+    {
+      "surface": "G2d_predecessor_reuse_manifest",
+      "path": ".omx/research/realization_g2d_predict_base_REUSE_MANIFEST_20260721.json",
+      "status": "extended_without_forking_source_of_truth"
+    }
+  ],
+  "new_with_justification": [
+    {
+      "path": "src/tac/optimization/realized_secant_custody.py",
+      "reason": "No reusable surface typed independent pair/column secants, isolated class/bucket trust, deterministic rank-at-most-four inequality solve, coefficient packets, and strict receipt validation."
+    },
+    {
+      "path": "tools/measure_realization_g2_lattice.py",
+      "reason": "The settled harness lacked fresh candidate-state head-input capture, realized finite secants, trust-gated QP application, and n16/n64/n600 prefix receipts."
+    }
+  ],
+  "sibling_boundaries": [
+    {
+      "lane": "predictor_r4_tailrace",
+      "ownership": "generator and prior race",
+      "overlap": false
+    },
+    {
+      "lane": "s4_archive_composer",
+      "ownership": "archive packaging and composition",
+      "overlap": false
+    }
+  ],
+  "measurement_disposition": {
+    "status": "MEASURED_G2E_SECANT_PREFIX_N16_FAMILY_OPEN",
+    "axis": "[macOS-CPU advisory]",
+    "full_receipt_path": "/Volumes/VertigoDataTier/pact/evidence/g2e_secant_20260721/final_hardened/receipt.json",
+    "full_receipt_file_sha256": "e89157bb8dfc6b11b20aecccd4dbe82113ea706c9a1eb054de989c26a740dbc4",
+    "canonical_receipt_sha256": "cafd3d4d3b1024c47e6cbdfcc74322cfa2a24f2ffc3a7bd02c41727416f542c4",
+    "reuse_next": [
+      "Keep independent per-pair/per-column candidate-state rows and class/bucket trust isolation.",
+      "Keep rank-at-most-four zero padding for one-write pairs and refuse null directions explicitly.",
+      "Keep QP, #557 packet, receiver double-decode, and hard-oracle admission separate.",
+      "Do not reuse the empty n16 trust region as a rank-4 family verdict or as authority to spend the 95094-byte headroom."
+    ]
+  },
+  "forked_source_of_truth": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "main_review_required": true
+}
