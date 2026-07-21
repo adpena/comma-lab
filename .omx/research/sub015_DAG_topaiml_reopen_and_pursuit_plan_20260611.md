@@ -20498,3 +20498,17 @@ with EAT-THE-FLIP first-class · decoder gaps G1–G5 (pose-blind tightening is 
 one). Owners live: #595 description · #596 pricing · #597 receiver; all steers in arm inboxes
 verbatim. Decode-time = engineering ledger NEVER admission gate (operator binding; #214
 precedent). Pointer 0.1910828242 [contest-CPU] UNMOVED — doctrine is means.
+
+## FEED-QUADRALITY-SYNC-20260721 (roadmap→ledger sync + doctrine Addendum 3)
+Operator 07-21: reuse-not-rebuild FULL SCOPE ("both halves, the system of equations and the task
+space level set, and all the inverse solving and training tools") → doctrine Addendum 3
+(4 inventories: equations/witness/inverse-solve/training + REUSE MANIFEST landing requirement on
+#597; commit d6da491822). TASKS leg re-synced to the as-built chain: #578 rewritten to seed-
+doctrine form (R1✓ R2✓ R3-SUPERSEDED R4-folded-into-#597-B5 → #597 → R5 composed archive → R6
+exact eval); #595 CLOSED (landed 516129a073: gap-2 packet 17,926 events @39,836B = R0 baseline;
+gap-1 boundary-inverse NOT atom-sparse, verdict_scope: formulation — closure re-routed through
+predictor-satisfied-free cells + events + sell-back); #582 queue pruned ((b) reconcile DONE
+701d5f3d63, (c) R3 SUPERSEDED); #574 ξ-temporal ROUTED into #597 B5 single-object seed (fallback
+only if the factorization row underdelivers). No new equation this wave (process directive, not
+measured law); no new DSL lever (receiver ≠ trainer lever; tail-gen config will compile through
+witness_dsl per Addendum 3). Pointer 0.1910828242 [contest-CPU] UNMOVED — sync is means.

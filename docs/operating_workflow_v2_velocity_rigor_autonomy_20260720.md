@@ -44,6 +44,13 @@ craft layer; this doc is the LOOP layer). Sisters: CLAUDE.md §OPERATOR PRIORITY
   compression and encoding"): only decode carries the 30-min budget. Never scope an encode-side
   solve down for cost; days of solver time for archive bytes is the correct trade. A wall met
   mid-solve = a missing equation to register, not a stop (Kolmogorov × Einsteinian).
+- **REUSE-NOT-REBUILD in every build dispatch** (operator 2026-07-21, doctrine Addendum 3):
+  the build is a COMPOSITION of the existing inventory across all four surfaces — equations
+  (canonical_equations via LawRef, constants by ID), witness stack (witness_dsl + trainer +
+  boundary_math + Metal kernels), inverse-solve tools (#547/#549/#580/preimage/adjoint), and
+  training tools (governed launcher + preflight + resume registry). New code only where a named
+  search failed; landing owes a REUSE MANIFEST classifying every component
+  {reused|extended|enhanced|vendored|refactored|NEW-with-justification} (anti-duplicate-SoT #533).
 - **Contract blocks** from `tac.subagent_contract.standard_contract()` — never re-typed by hand.
 
 ## 3. SPAWN PREFLIGHT (three checks, ~seconds each, before ANY launch/relaunch)
