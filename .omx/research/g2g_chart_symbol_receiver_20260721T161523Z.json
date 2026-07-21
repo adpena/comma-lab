@@ -1,0 +1,75 @@
+{
+  "schema": "g2g_chart_symbol_receiver_durable_receipt.v1",
+  "created_at_utc": "2026-07-21T16:15:23Z",
+  "lane_id": "lane_g2g_chart_symbol_receiver_578_20260721",
+  "task_id": "578",
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "pointer": 0.19108,
+    "pointer_axis": "[contest-CPU]",
+    "pointer_moved": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "main_landing_review_required": true
+  },
+  "ssd_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/g2g_chart_receiver_20260721/run_20260721T1622Z/receipt.json",
+    "bytes": 105193,
+    "file_sha256": "fa49a2ca71cb2960b1e497d425f05c4a496cc7634c45b2e193e3977dfa0667da",
+    "canonical_receipt_sha256": "8b2e86edf53699f5cd819b0f3743bad1978edadfbf3736399580b1f1d0790e6d"
+  },
+  "input_custody": {
+    "g2f_chart_receipt_path": "/Volumes/VertigoDataTier/pact/evidence/g2f_chart_amplitude_20260721/receipt.json",
+    "g2f_chart_receipt_file_sha256": "47d3ca538f1b876f7639223a1a9a7714b7db2083eaa0971936b9a43a1e6d0d04",
+    "lane_chart_sha256": "d2b2a62eeb6ebe45cbf908dafa7e081eabddaca0f424faac970b41eea650d810",
+    "seed": 1234,
+    "base_counted_bytes": 121128
+  },
+  "D1": {
+    "packet_schema": "G2CS1",
+    "single_symbol_packet_bytes": 20,
+    "candidate_packet_count": 12,
+    "candidate_packet_bytes_total": 240,
+    "double_decode_byte_identical_pairs": 6,
+    "rule_118_clean": true,
+    "target_cells_or_scorer_state_carried": false
+  },
+  "D2": {
+    "candidate_pair_indices": [0, 34, 37, 46, 22, 30],
+    "chart_only_pair_indices": [0, 34, 37, 46],
+    "overlap_pair_indices": [22, 30],
+    "admitted_pair_count": 0,
+    "first_admitted_realization_correction": false,
+    "selected_predicate_true_counts": {
+      "semantic_cells_to_rgb_exact": 0,
+      "pose_within_tube": 0,
+      "zero_or_counted_bytes": 6,
+      "receiver_derived_rgb": 6,
+      "factor2_uint8_exact": 6,
+      "double_decode_identical": 6,
+      "rate_above_lambda": 5
+    },
+    "per_pair": [
+      {"pair_index": 0, "selected_sign": "positive", "delta_d_seg": -0.00023905436197918517, "delta_d_pose": -0.3103097701926174, "delta_bytes": 20, "score_units_recovered": 0.060568154948711594, "score_units_per_byte": 0.00302840774743558, "changed_pixels": 102, "uint8_saturation_count": 0, "semantic_cells_to_rgb_exact": false, "pose_within_tube": false},
+      {"pair_index": 34, "selected_sign": "positive", "delta_d_seg": 0.0, "delta_d_pose": -0.2310225249727864, "delta_bytes": 20, "score_units_recovered": 0.027308998444524946, "score_units_per_byte": 0.0013654499222262473, "changed_pixels": 98, "uint8_saturation_count": 0, "semantic_cells_to_rgb_exact": false, "pose_within_tube": false},
+      {"pair_index": 37, "selected_sign": "positive", "delta_d_seg": -0.0011850992838541297, "delta_d_pose": -0.1350718923217471, "delta_bytes": 20, "score_units_recovered": 0.13423928099700788, "score_units_per_byte": 0.006711964049850394, "changed_pixels": 114, "uint8_saturation_count": 8, "semantic_cells_to_rgb_exact": false, "pose_within_tube": false},
+      {"pair_index": 46, "selected_sign": "negative", "delta_d_seg": -0.0002492268880207593, "delta_d_pose": 0.47575588232248833, "delta_bytes": 20, "score_units_recovered": -0.030278298456735797, "score_units_per_byte": -0.00151391492283679, "changed_pixels": 301, "uint8_saturation_count": 47, "semantic_cells_to_rgb_exact": false, "pose_within_tube": false},
+      {"pair_index": 22, "selected_sign": "positive", "delta_d_seg": -0.00047810872395831483, "delta_d_pose": -0.2611290687872838, "delta_bytes": 20, "score_units_recovered": 0.07921301696637784, "score_units_per_byte": 0.003960650848318892, "changed_pixels": 104, "uint8_saturation_count": 0, "semantic_cells_to_rgb_exact": false, "pose_within_tube": false},
+      {"pair_index": 30, "selected_sign": "positive", "delta_d_seg": 0.0, "delta_d_pose": -0.9574408749713257, "delta_bytes": 20, "score_units_recovered": 0.11369192069284395, "score_units_per_byte": 0.005684596034642197, "changed_pixels": 204, "uint8_saturation_count": 55, "semantic_cells_to_rgb_exact": false, "pose_within_tube": false}
+    ]
+  },
+  "D3": {
+    "status": "NOT_RUN_NO_ADMISSION",
+    "rate_lambda_score_units_per_byte": 6.658589531221714e-7,
+    "correction_price_coefficient_authorized": false,
+    "route_einstein_kolmogorov_ultra_U1": false,
+    "route_P0_register_G6_task603": false,
+    "next_crux": "joint multi-coefficient chart-symbol solve against the hard semantic-cell and pose-tube constraints"
+  },
+  "n600": {
+    "status": "REFUSED_ABSENT_N64_TARGETED_ADMISSION",
+    "claim": false
+  },
+  "verdict": "MEASURED_G2G_CHART_SYMBOL_HARD_ORACLE_NO_ADMISSION_N64_TARGETED_FAMILY_OPEN",
+  "verdict_scope": "Six g2f-selected n64 pairs only; one support-maximizing LaneLine centerline-intercept symbol at the g2f-selected rung. This is not a negative on joint coefficients, other lane lines, nonlinear chart QPs, xi-factorized pose, or the chart-level family."
+}

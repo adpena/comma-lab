@@ -8,6 +8,8 @@ import numpy as np
 import pytest
 
 from tac.boundary_math import warp_real_luma_frame0 as g1_warp
+from tac.boundary_math.analytic_lane_render_band import LaneBandRenderConfig, serialize_lane_band_rd
+from tac.boundary_math.lane_sdf_component import LaneLine
 from tac.optimization import predictor_upgrade_xi_chart as predictor_module
 from tac.optimization.predict_project_schema import (
     PredictProjectSchemaError,
@@ -17,10 +19,15 @@ from tac.optimization.predict_project_schema import (
     serialize_constraint_seed,
 )
 from tac.optimization.predictor_upgrade_xi_chart import (
+    LaneCoefficientDelta,
     PredictorUpgradeError,
     StaticCharts,
     advect_categorical_field,
+    apply_lane_coefficient_deltas,
     chart_section_receipt,
+    decode_lane_chart_with_symbols,
+    decode_lane_coefficient_deltas,
+    encode_lane_coefficient_deltas,
     load_lane_chart,
     miss_cause,
     parse_static_charts,
@@ -43,23 +50,27 @@ def labels() -> np.ndarray:
 
 
 def seed() -> dict:
-    return build_minimal_constraint_seed(bytes([0, 1, 2, 3, 4, 0]), scorer_height=2, scorer_width=3,
-                                         camera_height=4, camera_width=6)
+    return build_minimal_constraint_seed(
+        bytes([0, 1, 2, 3, 4, 0]), scorer_height=2, scorer_width=3, camera_height=4, camera_width=6
+    )
 
 
 def policy() -> dict:
     payload = serialize_static_charts(train_static_charts(labels()))
-    return predictor_policy(chart_section_receipt(payload), {
-        "lane_chart_raw_bytes": 159386,
-        "lane_chart_brotli_bytes": 41303,
-        "lane_chart_sha256": "d2b2a62eeb6ebe45cbf908dafa7e081eabddaca0f424faac970b41eea650d810",
-        "lane_chart_zlib9_bytes_diagnostic_only": 47546,
-        "lane_chart_zlib9_sha256_diagnostic_only": "ef16824eea59415e71435b94c450c2d554e0db08c0981fae6b392ab08170d287",
-        "lane_chart_status": "executed_in_task578_measurement_external_counted_custody",
-        "executed": True,
-        "execution_scope": "task578_measurement_only",
-        "receiver_closed": False,
-    })
+    return predictor_policy(
+        chart_section_receipt(payload),
+        {
+            "lane_chart_raw_bytes": 159386,
+            "lane_chart_brotli_bytes": 41303,
+            "lane_chart_sha256": "d2b2a62eeb6ebe45cbf908dafa7e081eabddaca0f424faac970b41eea650d810",
+            "lane_chart_zlib9_bytes_diagnostic_only": 47546,
+            "lane_chart_zlib9_sha256_diagnostic_only": "ef16824eea59415e71435b94c450c2d554e0db08c0981fae6b392ab08170d287",
+            "lane_chart_status": "executed_in_task578_measurement_external_counted_custody",
+            "executed": True,
+            "execution_scope": "task578_measurement_only",
+            "receiver_closed": False,
+        },
+    )
 
 
 def test_legacy_schema_roundtrip_remains_byte_identical() -> None:
@@ -95,6 +106,58 @@ def test_static_chart_payload_is_canonical_and_contains_no_full_target_sequence(
     assert source.tobytes() not in payload
 
 
+def test_chart_symbol_packet_is_counted_canonical_and_receiver_applied() -> None:
+    pairs = [
+        [
+            LaneLine(
+                centerline_coeffs=np.asarray([0.0, 0.25 + pair], dtype=np.float64),
+                halfwidth_coeffs=np.asarray([0.0, 2.0], dtype=np.float64),
+                forward_range=(0.0, 50.0),
+            )
+        ]
+        for pair in range(2)
+    ]
+    config = LaneBandRenderConfig(dash_gate=False)
+    lane_payload = serialize_lane_band_rd(pairs, config)
+    symbol = LaneCoefficientDelta(
+        pair_index=1,
+        line_index=0,
+        coefficient_index=1,
+        coefficient_delta=0.03123456789,
+    )
+    payload = encode_lane_coefficient_deltas((symbol,))
+    assert len(payload) == 20
+    assert decode_lane_coefficient_deltas(payload) == (symbol,)
+    corrected, decoded_config, receipt = decode_lane_chart_with_symbols(lane_payload, payload)
+    baseline, _ = predictor_module.deserialize_lane_band_any(lane_payload)
+    assert decoded_config.dash_gate is False
+    assert corrected[1][0].centerline_coeffs[1] == pytest.approx(
+        baseline[1][0].centerline_coeffs[1] + float(np.float32(0.03123456789)), rel=0.0, abs=1e-12
+    )
+    assert corrected[0][0].centerline_coeffs.tolist() == baseline[0][0].centerline_coeffs.tolist()
+    assert receipt["chart_symbol_bytes"] == len(payload)
+    assert receipt["double_decode_byte_identical"] is True
+    assert receipt["rule_118"]["target_cells_or_scorer_state_in_packet"] is False
+    assert encode_lane_coefficient_deltas(()) == b""
+    assert decode_lane_coefficient_deltas(b"") == ()
+
+
+def test_chart_symbol_packet_and_addresses_fail_closed() -> None:
+    first = LaneCoefficientDelta(0, 0, 0, 0.25)
+    second = LaneCoefficientDelta(1, 0, 0, -0.25)
+    payload = encode_lane_coefficient_deltas((first, second))
+    for malformed in (payload[:-1], payload + b"x", payload[:12] + bytes([payload[12] ^ 1]) + payload[13:]):
+        with pytest.raises(PredictorUpgradeError):
+            decode_lane_coefficient_deltas(malformed)
+    with pytest.raises(PredictorUpgradeError, match="sorted"):
+        encode_lane_coefficient_deltas((second, first))
+    with pytest.raises(PredictorUpgradeError, match="address"):
+        apply_lane_coefficient_deltas(
+            [[LaneLine(np.asarray([0.0]), np.asarray([1.0]))]],
+            (LaneCoefficientDelta(0, 0, 1, 0.25),),
+        )
+
+
 def test_predictor_is_deterministic_causal_and_does_not_mutate_prior() -> None:
     charts = train_static_charts(labels())
     prior = labels()[0].copy()
@@ -103,20 +166,32 @@ def test_predictor_is_deterministic_causal_and_does_not_mutate_prior() -> None:
     lane = np.zeros(prior.shape, dtype=np.bool_)
     geom = g1_warp.GroundHomographyGeom.eon(native_hw=prior.shape, pitch=0.0)
     one = predict_cell_field(
-        pair_index=1, prior_decoded_field=prior, charts=charts, relative_xi=xi,
-        worldsheet_geom=geom, lane_mask=lane,
+        pair_index=1,
+        prior_decoded_field=prior,
+        charts=charts,
+        relative_xi=xi,
+        worldsheet_geom=geom,
+        lane_mask=lane,
     )
     two = predict_cell_field(
-        pair_index=1, prior_decoded_field=prior, charts=charts, relative_xi=xi,
-        worldsheet_geom=geom, lane_mask=lane,
+        pair_index=1,
+        prior_decoded_field=prior,
+        charts=charts,
+        relative_xi=xi,
+        worldsheet_geom=geom,
+        lane_mask=lane,
     )
     assert one.dtype == np.uint8
     assert one.tobytes() == two.tobytes()
     assert np.array_equal(prior, original)
     with pytest.raises(PredictorUpgradeError, match="prior decoded"):
         predict_cell_field(
-            pair_index=1, prior_decoded_field=None, charts=charts, relative_xi=xi,
-            worldsheet_geom=geom, lane_mask=lane,
+            pair_index=1,
+            prior_decoded_field=None,
+            charts=charts,
+            relative_xi=xi,
+            worldsheet_geom=geom,
+            lane_mask=lane,
         )
 
 
@@ -147,14 +222,14 @@ def test_nontrivial_advection_calls_canonical_worldsheet_and_is_not_flat_shift(m
 
 
 def test_g1_proxy_twist_uses_pose_t_directly_without_redifferencing() -> None:
-    poses = np.asarray([
-        [200.0, 30.0, -40.0, 0.2, -0.1, 0.3],
-        [20.0, 2.0, 5.0, 0.01, 0.02, 0.03],
-    ])
-    twists, custody = relative_adjacent_xi(poses, s_t=-0.00143, s_r=0.0, pitch_rad=-0.05)
-    expected = g1_warp.xi_from_pose_calibration(
-        poses[1], s_t=-0.00143, s_r=0.0, pitch=-0.05
+    poses = np.asarray(
+        [
+            [200.0, 30.0, -40.0, 0.2, -0.1, 0.3],
+            [20.0, 2.0, 5.0, 0.01, 0.02, 0.03],
+        ]
     )
+    twists, custody = relative_adjacent_xi(poses, s_t=-0.00143, s_r=0.0, pitch_rad=-0.05)
+    expected = g1_warp.xi_from_pose_calibration(poses[1], s_t=-0.00143, s_r=0.0, pitch=-0.05)
     assert np.array_equal(twists[0], np.zeros(6))
     assert np.allclose(twists[1], expected)
     assert custody["absolute_trajectory_fabricated"] is False
@@ -228,9 +303,14 @@ def test_miss_causes_follow_executed_sequential_policy() -> None:
 
 def test_pair0_is_chart_only_and_unknown_class_ids_are_rejected() -> None:
     charts = train_static_charts(labels())
-    out = predict_cell_field(pair_index=0, prior_decoded_field=None, charts=charts, relative_xi=np.zeros(6),
-                             worldsheet_geom=g1_warp.GroundHomographyGeom.eon(native_hw=charts.hood.shape),
-                             lane_mask=np.zeros(charts.hood.shape, dtype=np.bool_))
+    out = predict_cell_field(
+        pair_index=0,
+        prior_decoded_field=None,
+        charts=charts,
+        relative_xi=np.zeros(6),
+        worldsheet_geom=g1_warp.GroundHomographyGeom.eon(native_hw=charts.hood.shape),
+        lane_mask=np.zeros(charts.hood.shape, dtype=np.bool_),
+    )
     assert set(np.unique(out)).issubset({0, 2, 4})
     bad = labels()
     bad[0, 0, 0] = 7
@@ -255,7 +335,9 @@ def test_policy_counts_actual_payload_and_external_lane_once() -> None:
 
 
 def test_exact_lane_packet_decodes_and_validates_custody() -> None:
-    path = Path("/Volumes/VertigoDataTier/pact/evidence/boundary_inverse_20260721/run_20260721T052100Z_threshold0p5/coherent_slot_none_dash.lbnd2")
+    path = Path(
+        "/Volumes/VertigoDataTier/pact/evidence/boundary_inverse_20260721/run_20260721T052100Z_threshold0p5/coherent_slot_none_dash.lbnd2"
+    )
     if not path.is_file():
         pytest.skip("Task #595 SSD packet is not mounted; measurement CLI still fails closed")
     pairs, config, custody = load_lane_chart(path)
@@ -284,12 +366,21 @@ def test_source_and_motion_custody_change_run_config_hash(monkeypatch: pytest.Mo
     motion = {"pitch_custody": {"resolved_value": -0.05}}
     monkeypatch.setattr(predictor_module, "sha256_file", lambda _path: "a" * 64)
     baseline = predictor_module._source_config_hash(
-        cache=cache, n_pairs=64, chunk_size=16, predecessor_seeds=seeds,
-        lane_chart=lane, lane_custody=lane_custody, motion_custody=motion,
+        cache=cache,
+        n_pairs=64,
+        chunk_size=16,
+        predecessor_seeds=seeds,
+        lane_chart=lane,
+        lane_custody=lane_custody,
+        motion_custody=motion,
     )
     changed_motion = predictor_module._source_config_hash(
-        cache=cache, n_pairs=64, chunk_size=16, predecessor_seeds=seeds,
-        lane_chart=lane, lane_custody=lane_custody,
+        cache=cache,
+        n_pairs=64,
+        chunk_size=16,
+        predecessor_seeds=seeds,
+        lane_chart=lane,
+        lane_custody=lane_custody,
         motion_custody={"pitch_custody": {"resolved_value": -0.04}},
     )
     module_path = Path(predictor_module.__file__)
@@ -299,8 +390,13 @@ def test_source_and_motion_custody_change_run_config_hash(monkeypatch: pytest.Mo
         lambda path: "b" * 64 if Path(path) == module_path else "a" * 64,
     )
     changed_source = predictor_module._source_config_hash(
-        cache=cache, n_pairs=64, chunk_size=16, predecessor_seeds=seeds,
-        lane_chart=lane, lane_custody=lane_custody, motion_custody=motion,
+        cache=cache,
+        n_pairs=64,
+        chunk_size=16,
+        predecessor_seeds=seeds,
+        lane_chart=lane,
+        lane_custody=lane_custody,
+        motion_custody=motion,
     )
     assert baseline != changed_motion
     assert baseline != changed_source

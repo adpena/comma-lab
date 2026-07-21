@@ -50,6 +50,9 @@ from tac.boundary_math.analytic_lane_render_band import (  # noqa: E402
     rasterize_lane_coverage_range_dependent,
 )
 from tac.boundary_math.lane_sdf_component import LaneLine  # noqa: E402
+from tac.canonical_equations.day_consolidation_laws_20260720 import (  # noqa: E402
+    RATE_PRICE_S_PER_BYTE,
+)
 from tac.optimization.predict_project_receiver import (  # noqa: E402
     PROJECTED_RGB_PLANE_CUSTODY_SCHEMA,
     predict_cell_field,
@@ -65,6 +68,9 @@ from tac.optimization.predictor_r2_missdelta import (  # noqa: E402
     AdaptiveStreamDecoder,
 )
 from tac.optimization.predictor_upgrade_xi_chart import (  # noqa: E402
+    LaneCoefficientDelta,
+    decode_lane_chart_with_symbols,
+    encode_lane_coefficient_deltas,
     load_g1_worldsheet_motion,
     load_lane_chart,
     parse_static_charts,
@@ -130,6 +136,8 @@ AMPLITUDE_STAGE_SCHEMA: Final = "realization_g2f_bidirectional_amplitude_pair.v1
 AMPLITUDE_CONFIG_SCHEMA: Final = "realization_g2f_bidirectional_amplitude_config.v1"
 CHART_AMPLITUDE_STAGE_SCHEMA: Final = "realization_g2f_chart_bidirectional_amplitude_pair.v1"
 CHART_AMPLITUDE_CONFIG_SCHEMA: Final = "realization_g2f_chart_bidirectional_amplitude_config.v1"
+CHART_SYMBOL_STAGE_SCHEMA: Final = "realization_g2g_chart_symbol_receiver_pair.v1"
+CHART_SYMBOL_CONFIG_SCHEMA: Final = "realization_g2g_chart_symbol_receiver_config.v1"
 PREFIXES: Final = (16, 64, 600)
 RGB_REALIZATION_FIELDS: Final = frozenset(
     {
@@ -202,6 +210,8 @@ SECANT_REQUIRED_MARGIN: Final = 1e-4
 SECANT_CHART_RANK: Final = 4
 AMPLITUDE_LANE_ID: Final = "lane_g2f_bidirectional_amplitude_ladder_578_20260721"
 CHART_AMPLITUDE_LANE_ID: Final = "lane_g2f_chart_bidirectional_amplitude_ladder_578_20260721"
+CHART_SYMBOL_LANE_ID: Final = "lane_g2g_chart_symbol_receiver_578_20260721"
+G2F_CHART_RECEIPT_SHA256: Final = "47d3ca538f1b876f7639223a1a9a7714b7db2083eaa0971936b9a43a1e6d0d04"
 G2E_PRIOR_RECEIPT_SHA256: Final = "e89157bb8dfc6b11b20aecccd4dbe82113ea706c9a1eb054de989c26a740dbc4"
 AMPLITUDE_LSB_LAWREF_ID: Final = "witness_realization_lsb_regime_v1"
 AMPLITUDE_R_OPERATOR_LAWREF_ID: Final = "separable_resize_full_kernel_direct_sum_v1"
@@ -214,6 +224,9 @@ DEFAULT_FRAME0_STATIC_CHART: Final = Path(
 DEFAULT_FRAME0_LANE_CHART: Final = Path(
     "/Volumes/VertigoDataTier/pact/evidence/boundary_inverse_20260721/"
     "run_20260721T052100Z_threshold0p5/coherent_slot_none_dash.lbnd2"
+)
+DEFAULT_G2F_CHART_RECEIPT: Final = Path(
+    "/Volumes/VertigoDataTier/pact/evidence/g2f_chart_amplitude_20260721/receipt.json"
 )
 DEFAULT_VJP_CAMPAIGN: Final = Path(
     "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_n600_20260720/campaign_receipt.json"
@@ -5561,6 +5574,612 @@ def run_chart_bidirectional_amplitude_ladder(
     return receipt
 
 
+def _chart_symbol_distortion_score(hard: Mapping[str, Any]) -> float:
+    d_seg = float(hard["d_seg_realized_vs_frozen_target"])
+    d_pose = float(hard["d_pose_realized_vs_frozen_target"])
+    if d_seg < 0.0 or d_pose < 0.0 or not math.isfinite(d_seg + d_pose):
+        raise RealizationAuditError("chart-symbol hard-oracle distortion is invalid")
+    return 100.0 * d_seg + math.sqrt(10.0 * d_pose)
+
+
+def _chart_symbol_rgb_plane(
+    *,
+    base1: np.ndarray,
+    baseline_lines: Sequence[LaneLine],
+    corrected_lines: Sequence[LaneLine],
+    config: Any,
+    palette: np.ndarray,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    baseline_coverage = rasterize_lane_coverage_range_dependent(
+        list(baseline_lines),
+        h=SCORER_HW[0],
+        w=SCORER_HW[1],
+        softness=config.softness,
+        dash_gate=config.dash_gate,
+        dash_forward_max_m=config.dash_forward_max_m,
+        v_h=config.v_h,
+        cx=config.cx,
+    )
+    corrected_coverage = rasterize_lane_coverage_range_dependent(
+        list(corrected_lines),
+        h=SCORER_HW[0],
+        w=SCORER_HW[1],
+        softness=config.softness,
+        dash_gate=config.dash_gate,
+        dash_forward_max_m=config.dash_forward_max_m,
+        v_h=config.v_h,
+        cx=config.cx,
+    )
+    palette_delta = np.asarray(palette[1], dtype=np.float64) - np.asarray(palette[0], dtype=np.float64)
+    intended = (np.asarray(corrected_coverage, dtype=np.float64) - np.asarray(baseline_coverage, dtype=np.float64))[
+        ..., None
+    ] * palette_delta
+    rounded = np.rint(np.asarray(base1, dtype=np.float64) + intended)
+    saturation = int(np.count_nonzero((rounded < 0.0) | (rounded > 255.0)))
+    plane = np.clip(rounded, 0.0, 255.0).astype(np.uint8)
+    changed = np.any(plane != np.asarray(base1, dtype=np.uint8), axis=2)
+    return plane, {
+        "baseline_coverage_sha256": _chart_coverage_sha256(baseline_coverage),
+        "corrected_coverage_sha256": _chart_coverage_sha256(corrected_coverage),
+        "changed_pixel_count": int(np.count_nonzero(changed)),
+        "changed_rgb_value_count": int(np.count_nonzero(plane != np.asarray(base1, dtype=np.uint8))),
+        "uint8_saturation_count": saturation,
+    }
+
+
+def summarize_chart_symbol_receiver_rows(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    candidate_scope: str,
+) -> dict[str, Any]:
+    """Aggregate receiver-closed candidate rows without widening their scope."""
+
+    pair_indices = [int(row["pair_index"]) for row in rows]
+    if pair_indices != sorted(set(pair_indices)):
+        raise RealizationAuditError("chart-symbol summary pairs must be sorted and unique")
+    selected = [row["selected_candidate"] for row in rows]
+    predicates = (
+        "semantic_cells_to_rgb_exact",
+        "pose_within_tube",
+        "zero_or_counted_bytes",
+        "receiver_derived_rgb",
+        "factor2_uint8_exact",
+        "double_decode_identical",
+        "rate_above_lambda",
+    )
+    admitted = [row for row in rows if row["selected_candidate"]["admitted"] is True]
+    failure_histogram: Counter[str] = Counter()
+    for candidate in selected:
+        for name in predicates:
+            if candidate["admission_predicates"][name] is False:
+                failure_histogram[name] += 1
+    return {
+        "candidate_scope": candidate_scope,
+        "pair_count": len(rows),
+        "pair_indices": pair_indices,
+        "admitted_pair_count": len(admitted),
+        "admitted_pair_indices": [int(row["pair_index"]) for row in admitted],
+        "first_admitted_realization_correction": bool(admitted),
+        "selected_candidate_packet_bytes": int(sum(int(row["packet"]["bytes"]) for row in selected)),
+        "admission_predicate_true_counts": {
+            name: sum(candidate["admission_predicates"][name] is True for candidate in selected) for name in predicates
+        },
+        "admission_predicate_failure_histogram": dict(sorted(failure_histogram.items())),
+        "mean_selected_delta_d_seg": (
+            float(np.mean([float(row["deltas"]["delta_d_seg"]) for row in selected])) if selected else None
+        ),
+        "mean_selected_delta_d_pose": (
+            float(np.mean([float(row["deltas"]["delta_d_pose"]) for row in selected])) if selected else None
+        ),
+        "rate_lambda_score_units_per_byte": RATE_PRICE_S_PER_BYTE,
+        "axis": AXIS,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+
+def run_chart_symbol_receiver(
+    *,
+    seed_path: Path,
+    gt_cache_path: Path,
+    upstream: Path,
+    output_root: Path,
+    chart_amplitude_receipt_path: Path,
+    static_chart_path: Path,
+    lane_chart_path: Path,
+    chunk_size: int,
+    threads: int,
+) -> dict[str, Any]:
+    """Measure the six g2f-selected chart symbols through the real receiver/oracle."""
+
+    if chunk_size < 1 or threads < 1:
+        raise RealizationAuditError("invalid G2g chunk/thread setting")
+    output_root.mkdir(parents=True, exist_ok=True)
+    usage = shutil.disk_usage(output_root)
+    if usage.free < 1 << 30:
+        raise RealizationAuditError("G2g storage preflight requires at least 1 GiB free")
+    if _sha256(chart_amplitude_receipt_path) != G2F_CHART_RECEIPT_SHA256:
+        raise RealizationAuditError("G2g g2f chart receipt SHA-256 custody mismatch")
+    chart_receipt = _load_json(chart_amplitude_receipt_path)
+    if validate_chart_bidirectional_receipt(
+        chart_receipt,
+        expected_pair_count=int(chart_receipt.get("completed_prefix", 0)),
+    ) != chart_receipt.get("receipt_sha256"):
+        raise RealizationAuditError("G2g g2f chart receipt strict validation failed")
+    comparison = chart_receipt["level_comparison"]
+    chart_only = [int(value) for value in comparison["chart_only_rescued_pair_indices"]]
+    overlap = [int(value) for value in comparison["both_selected_pair_indices"]]
+    candidate_order = chart_only + overlap
+    if not chart_only or set(chart_only) & set(overlap) or len(candidate_order) != len(set(candidate_order)):
+        raise RealizationAuditError("G2g chart-only/overlap candidate custody is malformed")
+    selected_by_pair = {
+        int(row["pair_index"]): row for row in chart_receipt["selected_rungs"] if row["selected"] is True
+    }
+    if set(candidate_order) != set(selected_by_pair):
+        raise RealizationAuditError("G2g selected chart-symbol candidates drifted from g2f attribution")
+    observation_by_pair_rung = {
+        (int(row["pair_index"]), int(row["rung_index"])): row
+        for row in chart_receipt["chart_bidirectional_observations"]
+    }
+
+    seed_bytes = seed_path.read_bytes()
+    seed = parse_constraint_seed(seed_bytes)
+    if serialize_constraint_seed(seed) != seed_bytes:
+        raise RealizationAuditError("G2g seed is not canonical on parse-back")
+    seed_sha256 = hashlib.sha256(seed_bytes).hexdigest()
+    cache = _load_real_cache(gt_cache_path)
+    net, torch, scorer_custody = _load_distortion_net(upstream, threads)
+    kernel = FullResizeKernel.build()
+    s_t, s_r, pitch_rad, motion_custody = load_g1_worldsheet_motion(REPO)
+    poses = np.asarray(cache["gt_poses"], dtype=np.float64)
+    cross_xi, cross_custody = relative_adjacent_xi(poses, s_t=s_t, s_r=s_r, pitch_rad=pitch_rad)
+    within_xi = np.stack(
+        [g1_warp.xi_from_pose_calibration(pose, s_t=s_t, s_r=s_r, pitch=pitch_rad) for pose in poses],
+        axis=0,
+    )
+    geom = g1_warp.GroundHomographyGeom.eon(native_hw=SCORER_HW, pitch=pitch_rad)
+    static_raw = static_chart_path.read_bytes()
+    if hashlib.sha256(static_raw).hexdigest() != FRAME0_STATIC_CHART_SHA256:
+        raise RealizationAuditError("G2g frame0 static-chart SHA-256 custody mismatch")
+    static_charts = parse_static_charts(static_raw)
+    static_zlib = zlib.compress(static_raw, 9)
+    lane_pairs, lane_config, lane_custody = load_lane_chart(lane_chart_path)
+    lane_raw = lane_chart_path.read_bytes()
+    lane_brotli = brotli.compress(lane_raw, quality=11)
+    if brotli.decompress(lane_brotli) != lane_raw:
+        raise RealizationAuditError("G2g lane-chart Brotli parse-back mismatch")
+    lane_mask = render_lane_mask(lane_pairs[0], lane_config, h=SCORER_HW[0], w=SCORER_HW[1])
+    openpilot_cells, protected_sites = openpilot_frame0_class_prior(
+        seed=seed,
+        static_charts=static_charts,
+        lane_mask=lane_mask,
+        geom=geom,
+    )
+    palette_payload = serialize_frozen_scorer_palette()
+    palette = parse_frozen_scorer_palette(palette_payload)
+    bootstrap = palette[openpilot_cells]
+    bootstrap_counted_bytes = len(palette_payload) + len(static_zlib) + len(lane_brotli)
+    base_counted_bytes = CONTEXTUAL_SEED_BASELINE_BYTES + bootstrap_counted_bytes
+    if base_counted_bytes != 121_128:
+        raise RealizationAuditError("G2g openpilot base byte custody drifted from 121,128")
+
+    root = output_root / "chart_symbol_receiver_openpilot"
+    _atomic_bytes(root / "base_packets" / "frozen_scorer_palette.g2pal", palette_payload)
+    _atomic_bytes(root / "base_packets" / "static_charts_n64.zlib9", static_zlib)
+    _atomic_bytes(root / "base_packets" / "lane_chart.brotli11", lane_brotli)
+    implementation_paths = (
+        REPO / "tools/measure_realization_g2_lattice.py",
+        REPO / "src/tac/optimization/predictor_upgrade_xi_chart.py",
+        REPO / "src/tac/optimization/predict_project_receiver.py",
+        REPO / "src/tac/optimization/resize_full_kernel.py",
+        REPO / "src/tac/boundary_math/analytic_lane_render_band.py",
+        REPO / "src/tac/boundary_math/warp_real_luma_frame0.py",
+    )
+    config = {
+        "schema": CHART_SYMBOL_CONFIG_SCHEMA,
+        "seed": 1234,
+        "seed_sha256": seed_sha256,
+        "gt_cache_sha256": GT_CACHE_SHA256,
+        "scorer_custody": scorer_custody,
+        "motion_custody": {**motion_custody, **cross_custody},
+        "lawref_equation_ids": [
+            "dsl_custodied_scalar_identity_v1",
+            "lane_band_ego_factorization_source_reparam_v1",
+            "realization_breakeven_bytes_v1",
+        ],
+        "implementation_sources": {str(path.relative_to(REPO)): _sha256(path) for path in implementation_paths},
+        "g2f_chart_receipt": {
+            "path": str(chart_amplitude_receipt_path),
+            "file_sha256": G2F_CHART_RECEIPT_SHA256,
+            "canonical_receipt_sha256": chart_receipt["receipt_sha256"],
+        },
+        "candidate_order": candidate_order,
+        "chart_only_pairs_first": chart_only,
+        "overlap_pairs_second_for_pixel_vs_chart_byte_race": overlap,
+        "base_counted_bytes": base_counted_bytes,
+        "chart_symbol_wire": "G2CS1 sorted (pair u16,line u8,coefficient u8,delta fp32) rows with CRC",
+        "rate_lambda_score_units_per_byte": RATE_PRICE_S_PER_BYTE,
+        "axis": AXIS,
+    }
+    config_sha256 = secant_canonical_sha256(config)
+    stage_dir = root / "stages"
+    packet_dir = root / "candidate_packets"
+    rows: dict[int, dict[str, Any]] = {}
+    if stage_dir.exists():
+        for path in sorted(stage_dir.glob("pair_*.json")):
+            row = _load_json(path)
+            pair_index = int(row.get("pair_index", -1))
+            if (
+                row.get("schema") != CHART_SYMBOL_STAGE_SCHEMA
+                or row.get("config_sha256") != config_sha256
+                or pair_index not in candidate_order
+                or pair_index in rows
+            ):
+                raise RealizationAuditError("G2g resume stage schema/config/pair drift")
+            rows[pair_index] = row
+    constraints_by_pair: dict[int, list[Mapping[str, Any]]] = {pair: [] for pair in candidate_order}
+    for constraint in seed["constraint_seeds"]:
+        pair = int(constraint["time"])
+        if pair in constraints_by_pair and constraint["frame_index"] == 1:
+            constraints_by_pair[pair].append(constraint)
+
+    def baseline_pair(pair_index: int) -> tuple[np.ndarray, np.ndarray]:
+        previous: np.ndarray | None = None
+        for current in range(pair_index + 1):
+            plane0 = (
+                bootstrap.copy() if current == 0 else contextual_advected_rgb_plane(previous, cross_xi[current], geom)
+            )
+            base1 = contextual_advected_rgb_plane(plane0, within_xi[current], geom)
+            if current == pair_index:
+                return plane0, base1
+            previous = base1
+        raise AssertionError("unreachable G2g baseline replay")
+
+    resumed_pairs = len(rows)
+    for ordinal, pair_index in enumerate(candidate_order):
+        if pair_index in rows:
+            continue
+        constraints = constraints_by_pair[pair_index]
+        if not constraints:
+            raise RealizationAuditError(f"G2g pair {pair_index} has no declared writes")
+        started = time.perf_counter()
+        represented = _represented_cells(seed, pair_index)
+        target_cells = np.asarray(cache["lstars"][pair_index], dtype=np.uint8).copy()
+        target_pose = poses[pair_index].copy()
+        plane0, base1 = baseline_pair(pair_index)
+        realized0 = _contextual_realize(
+            plane0,
+            represented,
+            seed_sha256=seed_sha256,
+            additional_seed_bytes=bootstrap_counted_bytes if pair_index == 0 else 0,
+            generator_id="g2g_openpilot_pair_local_baseline_frame0",
+            kernel=kernel,
+        )
+        realized_base1 = _contextual_realize(
+            base1,
+            represented,
+            seed_sha256=seed_sha256,
+            additional_seed_bytes=0,
+            generator_id="g2g_openpilot_pair_local_baseline_frame1",
+            kernel=kernel,
+        )
+        baseline_hard, _, baseline_writes = _hard_oracle_interior(
+            net,
+            torch,
+            realized0["frame"],
+            realized_base1["frame"],
+            target_cells,
+            represented,
+            target_pose,
+            constraints,
+        )
+        selected = selected_by_pair[pair_index]
+        observation = observation_by_pair_rung.get((pair_index, int(selected["selected_rung_index"])))
+        if observation is None:
+            raise RealizationAuditError("G2g selected g2f rung observation is absent")
+        candidate_rows = []
+        for sign_name, branch_key in (("positive", "positive_chart"), ("negative", "negative_chart")):
+            branch = observation[branch_key]
+            symbol = LaneCoefficientDelta(
+                pair_index=pair_index,
+                line_index=int(observation["line_index"]),
+                coefficient_index=int(observation["coefficient_index"]),
+                coefficient_delta=float(branch["coefficient_delta"]),
+            )
+            packet = encode_lane_coefficient_deltas((symbol,))
+            packet_path = packet_dir / f"pair_{pair_index:04d}_{sign_name}.g2cs"
+            _atomic_bytes(packet_path, packet)
+            corrected_pairs, corrected_config, parseback = decode_lane_chart_with_symbols(lane_raw, packet)
+            candidate_plane, raster = _chart_symbol_rgb_plane(
+                base1=base1,
+                baseline_lines=lane_pairs[pair_index],
+                corrected_lines=corrected_pairs[pair_index],
+                config=corrected_config,
+                palette=palette,
+            )
+            if raster["baseline_coverage_sha256"] != observation["baseline_coverage_sha256"]:
+                raise RealizationAuditError("G2g baseline chart coverage drifted from g2f")
+            repeated_pairs, repeated_config, repeated_parseback = decode_lane_chart_with_symbols(lane_raw, packet)
+            repeated_plane, repeated_raster = _chart_symbol_rgb_plane(
+                base1=base1,
+                baseline_lines=lane_pairs[pair_index],
+                corrected_lines=repeated_pairs[pair_index],
+                config=repeated_config,
+                palette=palette,
+            )
+            if (
+                not np.array_equal(candidate_plane, repeated_plane)
+                or raster != repeated_raster
+                or parseback != repeated_parseback
+            ):
+                raise RealizationAuditError("G2g receiver double decode changed raster/RGB bytes")
+            realized = _contextual_realize(
+                candidate_plane,
+                represented,
+                seed_sha256=seed_sha256,
+                additional_seed_bytes=len(packet),
+                generator_id=f"g2g_chart_symbol_{sign_name}",
+                kernel=kernel,
+            )
+            repeated_realized = _contextual_realize(
+                repeated_plane,
+                represented,
+                seed_sha256=seed_sha256,
+                additional_seed_bytes=len(packet),
+                generator_id=f"g2g_chart_symbol_{sign_name}_repeat",
+                kernel=kernel,
+            )
+            hard, _, writes = _hard_oracle_interior(
+                net,
+                torch,
+                realized0["frame"],
+                realized["frame"],
+                target_cells,
+                represented,
+                target_pose,
+                constraints,
+            )
+            double_decode = bool(
+                np.array_equal(realized["frame"], repeated_realized["frame"])
+                and realized["camera_uint8_sha256"] == repeated_realized["camera_uint8_sha256"]
+            )
+            factor2_exact = bool(
+                realized0["factor2_verification"]["certified_exact"]
+                and realized["factor2_verification"]["certified_exact"]
+            )
+            score_recovered = _chart_symbol_distortion_score(baseline_hard) - _chart_symbol_distortion_score(hard)
+            marginal = score_recovered / len(packet)
+            predicates = {
+                "semantic_cells_to_rgb_exact": hard["realized_argmax_equals_description"] is True,
+                "pose_within_tube": hard["pose_within_declared_tube"] is True,
+                "zero_or_counted_bytes": len(packet) > 0 and parseback["chart_symbol_bytes"] == len(packet),
+                "receiver_derived_rgb": parseback["receiver_derived_rgb"] is True,
+                "factor2_uint8_exact": factor2_exact,
+                "double_decode_identical": double_decode,
+                "rate_above_lambda": marginal > RATE_PRICE_S_PER_BYTE,
+            }
+            admitted = all(predicates.values())
+            candidate_rows.append(
+                {
+                    "sign": sign_name,
+                    "symbol": {
+                        "pair_index": symbol.pair_index,
+                        "line_index": symbol.line_index,
+                        "coefficient_index": symbol.coefficient_index,
+                        "coefficient_delta_fp32": symbol.coefficient_delta,
+                    },
+                    "packet": {
+                        "path": str(packet_path),
+                        "bytes": len(packet),
+                        "sha256": _sha256(packet_path),
+                        "parseback": parseback,
+                    },
+                    "raster": raster,
+                    "hard_oracle": hard,
+                    "declared_write_survival": writes,
+                    "deltas": {
+                        "delta_d_seg": float(hard["d_seg_realized_vs_frozen_target"])
+                        - float(baseline_hard["d_seg_realized_vs_frozen_target"]),
+                        "delta_d_pose": float(hard["d_pose_realized_vs_frozen_target"])
+                        - float(baseline_hard["d_pose_realized_vs_frozen_target"]),
+                        "delta_bytes": len(packet),
+                        "score_units_recovered_before_rate": score_recovered,
+                        "marginal_score_units_per_chart_symbol_byte": marginal,
+                    },
+                    "admission_predicates": predicates,
+                    "admitted": admitted,
+                    "axis": AXIS,
+                    "score_claim": False,
+                }
+            )
+        candidate_rows.sort(key=lambda row: row["sign"])
+        selected_candidate = max(
+            candidate_rows,
+            key=lambda row: (
+                int(row["admitted"]),
+                sum(row["admission_predicates"].values()),
+                float(row["deltas"]["score_units_recovered_before_rate"]),
+                -float(row["hard_oracle"]["d_pose_realized_outside_declared_tube"]),
+                row["sign"] == "positive",
+            ),
+        )
+        stage = {
+            "schema": CHART_SYMBOL_STAGE_SCHEMA,
+            "config_sha256": config_sha256,
+            "pair_index": pair_index,
+            "candidate_class": "chart_only_rescue" if pair_index in chart_only else "pixel_chart_overlap",
+            "g2f_selection": selected,
+            "baseline_hard_oracle": baseline_hard,
+            "baseline_declared_write_survival": baseline_writes,
+            "candidate_rows": candidate_rows,
+            "selected_candidate": selected_candidate,
+            "wall_seconds": time.perf_counter() - started,
+            "authority": f"MEASURED {AXIS}",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+        _atomic_json(stage_dir / f"pair_{pair_index:04d}.json", stage)
+        rows[pair_index] = stage
+        if (ordinal + 1) % chunk_size == 0 or ordinal + 1 == len(candidate_order):
+            _atomic_json(
+                root / "checkpoints" / f"candidate_chunk_{ordinal + 1:04d}.json",
+                {
+                    "schema": "realization_g2g_chart_symbol_receiver_chunk_checkpoint.v1",
+                    "config_sha256": config_sha256,
+                    "completed_candidate_count": len(rows),
+                    "completed_candidate_pairs": [pair for pair in candidate_order if pair in rows],
+                    "all_pair_stages_preserved": True,
+                    "resumed_pairs_at_invocation_start": resumed_pairs,
+                },
+            )
+
+    ordered = [rows[pair] for pair in candidate_order]
+    ordered_by_pair = sorted(ordered, key=lambda row: int(row["pair_index"]))
+    n16_rows = [row for row in ordered_by_pair if int(row["pair_index"]) < 16]
+    n64_rows = [row for row in ordered_by_pair if int(row["pair_index"]) < 64]
+    chart_only_rows = [row for row in ordered if row["candidate_class"] == "chart_only_rescue"]
+    overlap_rows = [row for row in ordered if row["candidate_class"] == "pixel_chart_overlap"]
+    summaries = {
+        "chart_only_first_gate": summarize_chart_symbol_receiver_rows(
+            sorted(chart_only_rows, key=lambda row: int(row["pair_index"])),
+            candidate_scope="g2f chart-only rescues",
+        ),
+        "overlap_byte_race": summarize_chart_symbol_receiver_rows(
+            sorted(overlap_rows, key=lambda row: int(row["pair_index"])),
+            candidate_scope="g2f pixel-and-chart trust overlap",
+        ),
+        "n16_targeted_subset": summarize_chart_symbol_receiver_rows(
+            n16_rows,
+            candidate_scope="g2f-selected chart-symbol candidates with pair_index<16; not all n16 pairs",
+        ),
+        "n64_targeted_subset": summarize_chart_symbol_receiver_rows(
+            n64_rows,
+            candidate_scope="all six g2f-selected chart-symbol candidates inside n64; not all n64 pairs",
+        ),
+    }
+    admitted = [row for row in ordered_by_pair if row["selected_candidate"]["admitted"] is True]
+    admitted_symbols = tuple(
+        LaneCoefficientDelta(
+            pair_index=int(row["selected_candidate"]["symbol"]["pair_index"]),
+            line_index=int(row["selected_candidate"]["symbol"]["line_index"]),
+            coefficient_index=int(row["selected_candidate"]["symbol"]["coefficient_index"]),
+            coefficient_delta=float(row["selected_candidate"]["symbol"]["coefficient_delta_fp32"]),
+        )
+        for row in admitted
+    )
+    admitted_packet = encode_lane_coefficient_deltas(admitted_symbols)
+    _atomic_bytes(root / "admitted_chart_symbols.g2cs", admitted_packet)
+    if admitted_packet:
+        decode_lane_chart_with_symbols(lane_raw, admitted_packet)
+    verdict = (
+        "MEASURED_G2G_FIRST_CHART_SYMBOL_CORRECTION_ADMITTED_N64_TARGETED"
+        if admitted
+        else "MEASURED_G2G_CHART_SYMBOL_HARD_ORACLE_NO_ADMISSION_N64_TARGETED_FAMILY_OPEN"
+    )
+    receipt: dict[str, Any] = {
+        "schema": "realization_g2g_chart_symbol_receiver_receipt.v1",
+        "lane_id": CHART_SYMBOL_LANE_ID,
+        "task_id": "578",
+        "config": config,
+        "config_sha256": config_sha256,
+        "candidate_rows": ordered,
+        "D1_chart_symbol_receiver_packet": {
+            "schema": "G2CS1",
+            "header_bytes_nonempty": 12,
+            "row_bytes": 8,
+            "single_symbol_packet_bytes": sorted(
+                {int(candidate["packet"]["bytes"]) for row in ordered for candidate in row["candidate_rows"]}
+            ),
+            "candidate_packet_count": sum(len(row["candidate_rows"]) for row in ordered),
+            "candidate_packet_bytes_total": sum(
+                int(candidate["packet"]["bytes"]) for row in ordered for candidate in row["candidate_rows"]
+            ),
+            "admitted_combined_packet": {
+                "path": str(root / "admitted_chart_symbols.g2cs"),
+                "bytes": len(admitted_packet),
+                "sha256": _sha256(root / "admitted_chart_symbols.g2cs"),
+                "symbol_count": len(admitted_symbols),
+                "double_decode_byte_identical": True,
+            },
+            "base_counted_bytes": base_counted_bytes,
+            "rule_118_clean": True,
+            "target_cells_or_scorer_state_carried": False,
+        },
+        "D2_hard_oracle_admission": {
+            "headline_first_admitted_realization_correction": bool(admitted),
+            "summaries": summaries,
+            "hard_oracle": "native frozen CPU-Torch SegNet and PoseNet, seed 1234",
+            "receiver_path": "G2CS1 parse -> LBND2 parse -> coefficient apply -> AA-SDF raster -> exact R",
+        },
+        "D3_correction_price": {
+            "status": "MEASURED_ADMITTED_ROWS" if admitted else "NOT_RUN_NO_ADMISSION",
+            "admitted_pair_rows": [
+                {
+                    "pair_index": int(row["pair_index"]),
+                    **row["selected_candidate"]["deltas"],
+                }
+                for row in admitted
+            ],
+            "rate_lambda_score_units_per_byte": RATE_PRICE_S_PER_BYTE,
+            "route_einstein_kolmogorov_ultra_U1": bool(admitted),
+            "route_P0_register_G6_task603": bool(admitted),
+            "next_crux_if_empty": (
+                None
+                if admitted
+                else "joint multi-coefficient chart-symbol solve against hard cell/tube constraints; this single-intercept signed rung remains formulation-scoped"
+            ),
+        },
+        "verdict": verdict,
+        "verdict_scope": (
+            "six g2f-selected n64 pairs only (four chart-only rescues plus two pixel/chart overlaps), "
+            "one support-maximizing LaneLine centerline-intercept symbol and the g2f-selected rung; "
+            "not a negative on joint coefficients, other lane lines, nonlinear chart QPs, xi-factorized pose, "
+            "or the broader chart-level family"
+        ),
+        "n600": {
+            "status": "REFUSED_ABSENT_N64_TARGETED_ADMISSION" if not admitted else "NOT_RUN_OUTSIDE_TARGETED_BUILD",
+            "claim": False,
+        },
+        "reuse_manifest": {
+            "predictor_upgrade_xi_chart": "EXTENDED_IN_PLACE with G2CS1 packet and decoder application",
+            "openpilot_lane_chart": "REUSED hash-pinned LBND2 base at 121128 total base bytes",
+            "fail_closed_receiver_402": "REUSED exact-consumption parse and extended with strict G2CS1 CRC/canonical replay",
+            "predict_project_receiver": "REUSED exact R and receiver/scorer input custody",
+            "seed_coder_pricing": "REUSED counted-payload discipline; actual G2CS1 bytes, no pixel proxy",
+            "solved_target_cells_tube_549": "REUSED frozen target cells and declared pose tubes in hard oracle",
+            "g2f_candidate_set": "REUSED four chart-only rescues plus two overlap controls without remeasuring trust",
+            "new_code_failed_search_justification": (
+                "no existing packet addresses decoded LaneLine coefficients by pair/line/coeff; the minimal G2CS1 "
+                "extension is required and the existing measurement CLI is extended rather than forked"
+            ),
+        },
+        "storage": {
+            "root": str(root),
+            "storage_preflight_minimum_free_bytes": 1 << 30,
+            "storage_preflight_passed": True,
+            "automatic_disk_hygiene": (
+                "one pair/sign scorer tensor at a time; only small packets, JSON stages, and checkpoints persist; "
+                "atomic writes; no camera/logit/coverage tensors retained"
+            ),
+        },
+        "authority": {
+            "axis": AXIS,
+            "pointer": POINTER,
+            "pointer_moved": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "main_landing_review_required": True,
+        },
+    }
+    receipt["receipt_sha256"] = secant_canonical_sha256(receipt)
+    _atomic_json(root / "receipt.json", receipt)
+    _atomic_json(output_root / "receipt.json", receipt)
+    parsed = _load_json(root / "receipt.json")
+    if parsed["receipt_sha256"] != receipt["receipt_sha256"]:
+        raise RealizationAuditError("G2g receipt JSON/canonical hash parse-back drift")
+    return receipt
+
+
 def audit_prefix(
     *,
     prefix: int,
@@ -5909,6 +6528,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="measure paired +/- coherent openpilot coefficient moves across the same numeric ladder",
     )
     parser.add_argument(
+        "--chart-symbol-receiver",
+        action="store_true",
+        help="decode and hard-score the g2f-selected counted chart-symbol corrections",
+    )
+    parser.add_argument(
         "--secant-output-root",
         type=Path,
         default=Path("/Volumes/VertigoDataTier/pact/evidence/g2e_secant_20260721"),
@@ -5926,7 +6550,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("/Volumes/VertigoDataTier/pact/evidence/g2f_chart_amplitude_20260721"),
         help="durable SSD root for --chart-amplitude-ladder stages and receipts",
     )
+    parser.add_argument(
+        "--chart-symbol-output-root",
+        type=Path,
+        default=Path("/Volumes/VertigoDataTier/pact/evidence/g2g_chart_receiver_20260721"),
+        help="durable SSD root for --chart-symbol-receiver stages and receipts",
+    )
     parser.add_argument("--pixel-amplitude-receipt", type=Path, default=DEFAULT_PIXEL_AMPLITUDE_RECEIPT)
+    parser.add_argument("--chart-amplitude-receipt", type=Path, default=DEFAULT_G2F_CHART_RECEIPT)
     parser.add_argument("--g2e-prior-receipt", type=Path, default=DEFAULT_G2E_PRIOR_RECEIPT)
     parser.add_argument("--static-chart", type=Path, default=DEFAULT_FRAME0_STATIC_CHART)
     parser.add_argument("--lane-chart", type=Path, default=DEFAULT_FRAME0_LANE_CHART)
@@ -5961,15 +6592,39 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.realized_secant_custody,
                 args.bidirectional_amplitude_ladder,
                 args.chart_amplitude_ladder,
+                args.chart_symbol_receiver,
             )
         )
         > 1
     ):
         raise RealizationAuditError(
             "--audit-only, --interior-rungs, --contextual-predict-base, --frame0-prior-race, "
-            "--realized-secant-custody, --bidirectional-amplitude-ladder, and --chart-amplitude-ladder are "
-            "mutually exclusive"
+            "--realized-secant-custody, --bidirectional-amplitude-ladder, --chart-amplitude-ladder, and "
+            "--chart-symbol-receiver are mutually exclusive"
         )
+    if args.chart_symbol_receiver:
+        receipt = run_chart_symbol_receiver(
+            seed_path=args.seed.resolve(),
+            gt_cache_path=args.gt_cache.resolve(),
+            upstream=args.upstream.resolve(),
+            output_root=args.chart_symbol_output_root.resolve(),
+            chart_amplitude_receipt_path=args.chart_amplitude_receipt.resolve(),
+            static_chart_path=args.static_chart.resolve(),
+            lane_chart_path=args.lane_chart.resolve(),
+            chunk_size=args.chunk_size,
+            threads=args.threads,
+        )
+        print(
+            json.dumps(
+                {
+                    "receipt": str(args.chart_symbol_output_root.resolve() / "receipt.json"),
+                    "verdict": receipt["verdict"],
+                    "admitted_pair_count": len(receipt["D3_correction_price"]["admitted_pair_rows"]),
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
     if args.chart_amplitude_ladder:
         receipt = run_chart_bidirectional_amplitude_ladder(
             seed_path=args.seed.resolve(),
