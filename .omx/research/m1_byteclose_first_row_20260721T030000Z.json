@@ -1,0 +1,326 @@
+{
+  "schema": "m1_byteclose_first_row.v1",
+  "written_at_utc": "2026-07-21T03:00:00Z",
+  "lane_id": "m1_byteclose_closer",
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "hard_cpu_torch": true,
+    "through_r": true,
+    "contest_score_claim": false,
+    "promotion_authority": false,
+    "pointer_mutation": false
+  },
+  "verdict": "MEASURED_FORMULATION_NEGATIVE_EFFICACY_RATE_ONLY_IMPROVEMENT_VS_SCORED_CONTROL",
+  "verdict_scope": "FORMULATION: first positive-anisotropic M1 firing after three one-epoch stages is receiver-identical to the scored 94,344-byte control and does not improve d_seg or d_pose; no banded-generator, windowed-curvelet, or shared-receiver family negative",
+  "control": {
+    "archive_bytes": 94344,
+    "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+    "bytes_per_pair": 157.24,
+    "d_seg": 0.003515794640406966,
+    "d_pose": 127.36588287353516,
+    "seg_component": 0.3515794640406966,
+    "pose_component": 35.688357047296975,
+    "rate_component": 0.06281979707335814,
+    "advisory_composite_S": 36.10275630841103,
+    "raw_sha256": "dbfcdcfa9c2ea361cfa51eb6b6e26379b20ad5591fb0fe399ace496315628a97",
+    "measurement_receipt": ".omx/research/r1b_boundary_generator_solve_20260720.json",
+    "measurement_receipt_sha256": "d3c2cc69d3e1cac4d4c3cbc580ad0bbe4e738ae05771725b865c7c7c4454729b"
+  },
+  "candidate": {
+    "archive": "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/m1_candidate_archive.zip",
+    "archive_bytes": 90566,
+    "archive_sha256": "a386a854e2483f839191f6c9da781f60b49774b71830b9baccee259be85edf8c",
+    "bytes_per_pair": 150.94333333333333,
+    "d_seg": 0.003515794640406966,
+    "d_pose": 127.36588287353516,
+    "seg_component": 0.3515794640406966,
+    "pose_component": 35.688357047296975,
+    "rate_component": 0.06030418194846257,
+    "advisory_composite_S": 36.10024069328613,
+    "raw_sha256": "dbfcdcfa9c2ea361cfa51eb6b6e26379b20ad5591fb0fe399ace496315628a97"
+  },
+  "base_archive_comparison": {
+    "archive_bytes": 83838,
+    "archive_sha256": "149fefd097c1fa85c4afb6cb2d8ab20311035d7ba8063f1e72137b843a9b89f3",
+    "candidate_archive_byte_delta": 6728,
+    "base_materialization_raw_sha256": "8565df10cbff8f86f02233fd20ececd74857a0d3806caf278a385a4d5421dcae",
+    "candidate_raw_sha256": "dbfcdcfa9c2ea361cfa51eb6b6e26379b20ad5591fb0fe399ace496315628a97",
+    "raw_byte_identical": false,
+    "main_conditional_base_identity_prediction": "FALSIFIED_BY_EXISTING_SHA_BOUND_BASE_MATERIALIZATION_RECEIPT",
+    "base_hard_oracle_row_available": false,
+    "score_delta_vs_base": null,
+    "no_fake_note": "the candidate is +6,728 B versus the 83,838-byte base, but the raw outputs differ; no d_seg, d_pose, or S equality is inferred against that base"
+  },
+  "delta_candidate_minus_control": {
+    "archive_bytes": -3778,
+    "bytes_per_pair": -6.296666666666667,
+    "d_seg": 0.0,
+    "d_pose": 0.0,
+    "seg_component": 0.0,
+    "pose_component": 0.0,
+    "rate_component_formula_exact_to_float": -0.002515615124895563,
+    "advisory_composite_S_from_reported_rows": -0.002515615124899284,
+    "improvement_source": "rate_only"
+  },
+  "receiver_identity": {
+    "pass": true,
+    "decoded_raw_bytes": 3662409600,
+    "control_raw_sha256": "dbfcdcfa9c2ea361cfa51eb6b6e26379b20ad5591fb0fe399ace496315628a97",
+    "candidate_decode_1_raw_sha256": "dbfcdcfa9c2ea361cfa51eb6b6e26379b20ad5591fb0fe399ace496315628a97",
+    "candidate_decode_2_raw_sha256": "dbfcdcfa9c2ea361cfa51eb6b6e26379b20ad5591fb0fe399ace496315628a97",
+    "exact_harness_raw_sha256": "dbfcdcfa9c2ea361cfa51eb6b6e26379b20ad5591fb0fe399ace496315628a97",
+    "factor2_exact": true,
+    "canonical_numpy_scorer_sha256": "f09527720969b6552a29db13ff68efe3fd55c908ebac44dd829cfa6b3ec3f6f8",
+    "parse_back_scorer_sha256": "f09527720969b6552a29db13ff68efe3fd55c908ebac44dd829cfa6b3ec3f6f8"
+  },
+  "decode_measurements": {
+    "decode_1_launch_to_receipt_seconds": 753.163059,
+    "decode_2_time_real_seconds": 738.52,
+    "decode_2_launch_to_receipt_seconds": 739.140885,
+    "exact_harness_decode_seconds": 742.0773589611053,
+    "worst_independent_decode_seconds": 753.163059,
+    "budget_seconds": 1800.0,
+    "worst_margin_seconds": 1046.836941,
+    "double_decode_byte_identical": true
+  },
+  "hard_oracle": {
+    "pair_count": 600,
+    "batch_count": 38,
+    "batch_size": 16,
+    "cpu_threads": 8,
+    "seed": 1234,
+    "torch_version": "2.12.1",
+    "exact_harness_decode_seconds": 742.0773589611053,
+    "exact_harness_score_seconds": 503.4817280769348,
+    "exact_harness_total_seconds": 1248.1239140033722,
+    "decomposition_seconds": 623.9418950080872,
+    "d_seg_exact_argmax_rational": 0.0035157945421006942,
+    "d_seg_official_minus_rational_abs": 9.830627197698893e-11,
+    "mismatch_pixels": 414740,
+    "total_segnet_pixels": 117964800,
+    "per_pair_mismatch_sum": 414740
+  },
+  "per_class_canonical_order": [
+    {
+      "class": "Road",
+      "candidate_d_seg_contribution": 0.001174714830186632,
+      "control_d_seg_contribution": 0.001174714830186632,
+      "conditional_error_rate": 0.0050561820915886475,
+      "area_fraction": 0.23233238220214844,
+      "gt_pixels": 27407043,
+      "mismatch_pixels": 138575
+    },
+    {
+      "class": "Lane",
+      "candidate_d_seg_contribution": 0.0012633260091145834,
+      "control_d_seg_contribution": 0.0012633260091145834,
+      "conditional_error_rate": 0.21578277508220647,
+      "area_fraction": 0.005854619344075521,
+      "gt_pixels": 690639,
+      "mismatch_pixels": 149028
+    },
+    {
+      "class": "Undriv",
+      "candidate_d_seg_contribution": 0.00044615003797743053,
+      "control_d_seg_contribution": 0.00044615003797743053,
+      "conditional_error_rate": 0.000900993715778545,
+      "area_fraction": 0.49517552693684896,
+      "gt_pixels": 58413282,
+      "mismatch_pixels": 52630
+    },
+    {
+      "class": "Movable",
+      "candidate_d_seg_contribution": 0.00044422573513454864,
+      "control_d_seg_contribution": 0.00044422573513454864,
+      "conditional_error_rate": 0.03588447777035934,
+      "area_fraction": 0.012379328409830729,
+      "gt_pixels": 1460325,
+      "mismatch_pixels": 52403
+    },
+    {
+      "class": "MyCar",
+      "candidate_d_seg_contribution": 0.0001873779296875,
+      "control_d_seg_contribution": 0.0001873779296875,
+      "conditional_error_rate": 0.0007369594043191543,
+      "area_fraction": 0.2542581431070964,
+      "gt_pixels": 29993511,
+      "mismatch_pixels": 22104
+    }
+  ],
+  "top_8_pairs_by_d_seg": [
+    {"pair_index": 522, "d_seg": 0.0057525634765625, "mismatch_pixels": 1131},
+    {"pair_index": 515, "d_seg": 0.00531005859375, "mismatch_pixels": 1044},
+    {"pair_index": 572, "d_seg": 0.0052947998046875, "mismatch_pixels": 1041},
+    {"pair_index": 517, "d_seg": 0.0052897133864462376, "mismatch_pixels": 1040},
+    {"pair_index": 518, "d_seg": 0.0052591958083212376, "mismatch_pixels": 1034},
+    {"pair_index": 510, "d_seg": 0.0050608315505087376, "mismatch_pixels": 995},
+    {"pair_index": 74, "d_seg": 0.0049997963942587376, "mismatch_pixels": 983},
+    {"pair_index": 566, "d_seg": 0.0049947104416787624, "mismatch_pixels": 982}
+  ],
+  "top_8_pairs_by_d_pose": [
+    {"pair_index": 523, "d_pose": 170.88963317871094},
+    {"pair_index": 21, "d_pose": 163.10006713867188},
+    {"pair_index": 90, "d_pose": 162.15255737304688},
+    {"pair_index": 1, "d_pose": 161.16334533691406},
+    {"pair_index": 7, "d_pose": 159.992919921875},
+    {"pair_index": 24, "d_pose": 158.2308349609375},
+    {"pair_index": 49, "d_pose": 156.4541473388672},
+    {"pair_index": 41, "d_pose": 155.85140991210938}
+  ],
+  "tail_equivalence": {
+    "candidate_status": "MEASURED",
+    "control_status": "DERIVED_EXACT_FROM_IDENTICAL_RAW_BYTES_AND_DETERMINISTIC_SCORER",
+    "all_per_class_and_top_8_values_equal": true
+  },
+  "gates": {
+    "d_seg": {
+      "limit": 0.000339,
+      "value": 0.003515794640406966,
+      "margin": -0.0031767946404069663,
+      "value_over_limit": 10.37107563541878,
+      "pass": false
+    },
+    "bytes_per_pair": {
+      "limit": 477.8,
+      "value": 150.94333333333333,
+      "margin": 326.8566666666667,
+      "pass": true
+    },
+    "fixed_cap": {
+      "mission_limit_bytes": 216222,
+      "value_bytes": 90566,
+      "margin_bytes": 125656,
+      "pass": true,
+      "inherited_harness_legacy_limit_bytes": 216223,
+      "legacy_one_byte_drift_affects_verdict": false
+    },
+    "decode": {
+      "limit_seconds": 1800.0,
+      "worst_value_seconds": 753.163059,
+      "margin_seconds": 1046.836941,
+      "pass": true
+    },
+    "advisory_composite_vs_control": {
+      "candidate": 36.10024069328613,
+      "control": 36.10275630841103,
+      "delta": -0.002515615124899284,
+      "pass": true,
+      "reason": "rate_only"
+    },
+    "joint_mission_gate_pass": false
+  },
+  "mechanism": {
+    "ipe_codes_elements": 4800,
+    "ipe_codes_changed_elements": 4800,
+    "control_nonzero_codes": 4800,
+    "candidate_nonzero_codes": 2400,
+    "control_unique_codes": 3755,
+    "candidate_unique_codes": 1995,
+    "max_abs_code_delta": 0.0406646728515625,
+    "mean_abs_code_delta": 0.008500169031322002,
+    "quotient_head_elements": 12,
+    "quotient_head_changed_elements": 12,
+    "ipe_codes_compressed_byte_delta": -3781,
+    "manifest_compressed_byte_delta": 3,
+    "archive_byte_delta": -3778,
+    "receiver_effect": "zero_bytes_changed",
+    "interpretation": "relative to the scored control, this trained firing is formulation-negative on efficacy: it remained inside the realized receiver/decode uint8 dead zone while improving payload compressibility"
+  },
+  "training_custody": {
+    "receipt": "/Volumes/VertigoDataTier/pact/evidence/m1_curvelet_binding_closer_20260721/materializer_output/m1_c2_curvelet_full_n600_ready_20260721.training_receipt.json",
+    "receipt_sha256": "9606d01fea0a8153708937031f78973de2b36a6841a75c54b7f4fda01f09cfd8",
+    "global_step": 900,
+    "stages": ["warmup:1_epoch", "band_fit:1_epoch", "rate_polish:1_epoch"],
+    "basis_id": "r1b4_windowed_curvelet",
+    "carrier_packet_bytes": 8998,
+    "carrier_packet_sha256": "9b1f662a2bd0d48aa07b23df516559608f475371c1ea2064064b81a556ecfdd1",
+    "frame0_codes_nonzero": 0,
+    "ema_authority": true
+  },
+  "receipt_custody": {
+    "candidate_build_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/build_receipt.json",
+      "sha256": "0ef9bd6061ef6cd288b5ab8c140b04b57268d8ee01ae0d61a4250168045b75e2"
+    },
+    "decode_1_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/decode_1/receipt.json",
+      "sha256": "53781b33fe99051babfebf3afc62801d28059a58a501f35e5ec93f20c60f97ba"
+    },
+    "decode_2_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/decode_2/receipt.json",
+      "sha256": "e0179759e55c22cddfdc7da85f6ff8b5f9584f49d2c3caef469a26d905fc8fff"
+    },
+    "exact_harness_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/exact_candidate_harness_20260721.json",
+      "sha256": "20d01dac12d8d96c7e20dca44aad1079c9c43e4a5ff92789214a3510faa0ba17"
+    },
+    "decomposition_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/hard_oracle_decomposition_20260721.json",
+      "sha256": "c15423c5316c61297cc7dd1f15df7168d83e46724f8326d2fbfbfac9b214cca5"
+    },
+    "decomposition_checkpoint": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/hard_oracle_decomposition_progress.jsonl",
+      "bytes": 574282,
+      "sha256": "6202f02f388522d087d6981428ba9f680d8add30ed4c6a182399b3e58777f653",
+      "preserved_batch_rows": 38,
+      "contract_sha256": "beb54f656f2c85be43e1916864b40a85855ae4090b7b99b8321b71f19d5f8fa6"
+    }
+  },
+  "harness_reuse": {
+    "path": "tools/measure_r1b_boundary_generator_n600.py",
+    "sha256": "400d914eae031e748b0ee70ca9130ac07bf0062365c517fd974602db948428fb",
+    "control_producing_commit": "aa2cb910c9128e79e392a19e49b61f31484bf499",
+    "current_file_equal_to_control_commit": true,
+    "seed": 1234,
+    "batch_size": 16,
+    "cpu_threads": 8,
+    "decode_workers": 8
+  },
+  "status_578c": {
+    "advisory_composite_beats_control": true,
+    "eligible_for_main_modal_exact_eval_review": true,
+    "dispatch_authority": "MAIN_ONLY",
+    "dispatch_performed": false,
+    "promotion_eligible": false,
+    "reason": "local advisory composite is lower only through exact counted bytes; contest CPU/CUDA custody remains owed"
+  },
+  "next_reformulations": [
+    "longer band_fit",
+    "band-width tuning until receiver-output actuation is measured",
+    "Fisher-margin reverse-waterfill with the corrected realized inner-Jacobian and rate break-even stop",
+    "receiver-closed eval_roundtrip STE beyond the existing scorer-plane saturation-aware Uint8STE",
+    "r1b7 measured-positive fixed-magnitude parametrization",
+    "hotter schedule with receiver-output actuation preregistered"
+  ],
+  "inbox": {
+    "per_arm_new_directives": 1,
+    "per_arm_cursor_utc": "2026-07-21T02:53:55Z",
+    "broadcast_cursor_utc": "2026-07-19T19:48:01Z",
+    "applied": [
+      "target highest-EV cells first and stop at measured rate break-even",
+      "use Fisher/margin metric, corrected inner Jacobian, curvelet/shearlet basis, and xi factorization",
+      "check candidate raw against the 83,838-byte base materialization and keep a firm formulation-negative efficacy verdict"
+    ],
+    "main_prediction_resolution": {
+      "candidate_equals_or_nears_base": "exact identity false: candidate dbfcdcfa... != base 8565df10...; near-identity not inferred from hashes",
+      "candidate_equals_scored_control": true,
+      "no_uint8_ste_in_loss": "literal premise false at this commit: integer_plane_banded_trainer calls torch_uint8 and computes band_loss from its Uint8STE output; a full receiver-closed eval_roundtrip STE is still absent",
+      "formulation_negative_retained": true
+    }
+  },
+  "validation": {
+    "focused_pytest": "5 passed",
+    "ruff": "pass",
+    "py_compile": "pass",
+    "git_diff_check": "pass",
+    "review_tracker": {
+      "reviewer": "codex_m1_self",
+      "clean_passes_per_entity": 3,
+      "tool_entities": 10,
+      "test_entities": 5,
+      "main_review_still_required": true
+    }
+  },
+  "pointer": "0.19108 [contest-CPU] UNMOVED",
+  "main_landing_review_required": true
+}

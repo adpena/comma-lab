@@ -80495,6 +80495,48 @@
       },
       "notes": "Real n600 BandArtifact parses; 11453 quantization-realizable cells, 26624 substep-dead; receiver fire remains blocked; pointer unchanged; MAIN review required.",
       "research_only": true
+    },
+    {
+      "id": "m1_byteclose_closer",
+      "name": "M1 byte-close first n600 row closer",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/decompose_r1b_n600_hard_oracle.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/m1_byteclose_first_row_20260721T030000Z.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/m1_byteclose_first_row_20260721T030000Z.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "FORMULATION-NEGATIVE efficacy for first three-epoch firing vs scored 94,344-byte control; receiver-identical, rate-only -3,778B. Candidate is +6,728B and raw-distinct vs 83,838-byte base. [macOS-CPU advisory], pointer unchanged, MAIN review required.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -80504,5 +80546,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-20T22:00:30Z"
+  "updated_at": "2026-07-21T03:07:17Z"
 }
