@@ -1,8 +1,8 @@
 # Per-stratum recursive-fractal optimal treatment — measured custody verdict
 
-UTC: 2026-07-21T19:12:17Z  
-Lane: `lane_per_stratum_recursive_fractal_optimal_20260721`  
-Authority: research-only, local `$0`, `[macOS-CPU advisory]`; MAIN landing review required  
+UTC: 2026-07-21T19:12:17Z
+Lane: `lane_per_stratum_recursive_fractal_optimal_20260721`
+Authority: research-only, local `$0`, `[macOS-CPU advisory]`; MAIN landing review required
 Pointer: `0.1910828242 [contest-CPU]` **UNMOVED**
 
 ## Outcome first

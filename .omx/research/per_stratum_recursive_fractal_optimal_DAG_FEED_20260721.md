@@ -1,7 +1,7 @@
 # DAG FEED — per-stratum recursive-fractal optimal treatment
 
-UTC: 2026-07-21T19:12:17Z  
-Lane: `lane_per_stratum_recursive_fractal_optimal_20260721`  
+UTC: 2026-07-21T19:12:17Z
+Lane: `lane_per_stratum_recursive_fractal_optimal_20260721`
 Pointer: `0.1910828242 [contest-CPU]` UNMOVED
 
 ```text
