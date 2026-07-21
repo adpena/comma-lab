@@ -20540,7 +20540,7 @@ arc-length Lane dash chart + hood clamp + adjacency) lifts n600 satisfaction 65.
 Lane 8.3->70.8 (8.5x, the arc-length chart beats the temporal mode exactly as the lane-erasure
 physics predicted) · Road 50.9->92.4 · Undriv 61.7->98.6 · Movable 99.7 · MyCar 99.9. HONEST MISS:
 3.12M residual px (Road 2.07M / Undriv 0.81M / Lane 0.20M) = unfixed description d_seg 0.0265;
-naive per-event exception coding measured DEAD (807KB-1.8MB >> 216KB box). DERIVED CRUX NUMBER:
+naive per-event exception coding measured DEAD (807KB-1.8MB >> 216KB box; verdict_scope: formulation — per-event absolute coding at the measured 2.2-4.4 B/event rates only; exception coding as a FAMILY remains open, the boundary-DELTA reformulation is round-2's D2). DERIVED CRUX NUMBER:
 0.365 bits/px required on the residual (fix ~3.0M px in ~137KB) — boundary-DELTA territory vs
 published 1-1.5 bits/contour-px generic floors; affordable IFF the misses are 1-2px jitter on
 predictor-KNOWN contours (delta coding vs absolute) — the D1 miss-structure decomposition decides.
