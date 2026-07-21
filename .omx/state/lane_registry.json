@@ -81425,6 +81425,48 @@
         }
       },
       "notes": "Zero-cost-local end-to-end build and measured candidate tournament; no paid dispatch; pointer mutation forbidden without exact authority."
+    },
+    {
+      "id": "lane_ultimate_form_predict_project_597_20260721",
+      "name": "Ultimate-form predict-project receiver and spacetime seed schema",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Delegated isolated-worktree BUILD plus macOS-CPU advisory measurement; Task #597; pointer 0.1910828242 contest-CPU unmoved; research_only; MAIN landing review required",
+      "research_only": true
     }
   ],
   "level_rules": {
