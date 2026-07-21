@@ -81679,6 +81679,53 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_realization_g2c_interior_578_20260721",
+      "name": "Realization G2c quantization-robust cell-interior fills",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/measure_realization_g2_lattice.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/evidence/realization_g2c_20260721/r2_residual_v2/receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/canonical_equations/tests/test_predict_project_realization_admissibility_20260721.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Build a spatial contextual exact SegNet-cell optimizer or texture decoder",
+        "Add an explicit intra-pair frame0 pose carrier",
+        "Rerun n16 n64 n600 hard-oracle admission"
+      ]
     }
   ],
   "level_rules": {

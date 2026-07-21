@@ -81,6 +81,21 @@ def test_lawref_evaluator_and_empirical_anchor_are_registered_in_code() -> None:
     assert anchor.empirical_output["d_seg_description_vs_frozen_target"] > 0.34
     assert anchor.empirical_output["d_seg_realized_vs_frozen_target"] < 0.001
 
+    assert len(equation.empirical_anchors) == 2
+    interior = equation.empirical_anchors[1]
+    assert interior.inputs["rung_id"] == "R2_MAX_MARGIN"
+    assert interior.inputs["receiver_derived_rgb"] is True
+    assert interior.inputs["additional_seed_bytes"] == 0
+    assert interior.empirical_output["accepted"] is False
+    assert interior.empirical_output["surviving_declared_writes"] == 114
+    assert interior.empirical_output["pose_within_declared_tube_pair_count"] == 0
+    assert set(interior.empirical_output["failed_predicates"]) == {
+        "semantic_cells_to_rgb_exact",
+        "pose_within_declared_tube",
+    }
+    assert "constant-tile interior formulations" in equation.domain_of_validity["verdict_scope"]
+    assert "G2b/G2c successor admission" in equation.canonical_consumers
+
 
 def test_admission_refuses_type_and_range_laundering() -> None:
     with pytest.raises(ValueError, match="must be boolean"):

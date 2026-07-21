@@ -1,0 +1,41 @@
+{
+  "schema": "realization_g2c_reuse_manifest.v1",
+  "task_id": "578",
+  "lane_id": "lane_realization_g2c_interior_578_20260721",
+  "research_only": true,
+  "reused": {
+    "seed_parser_and_canonical_serializer": "tac.optimization.predict_project_schema",
+    "cell_field_decoder": "tac.optimization.predict_project_receiver.predict_cell_field",
+    "rgb_custody_and_receiver": "tac.optimization.predict_project_receiver.realize_projected_rgb_plane_camera_uint8",
+    "full_kernel_projector_580": "tac.optimization.resize_full_kernel.FullResizeKernel",
+    "bounded_uint8_feasibility_583": "tac.canonical_equations.bounded_uint8_resize_preimage_cell_feasibility_20260718",
+    "native_hard_oracle": "upstream.modules.DistortionNet",
+    "source_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "admission_gate": "tac.canonical_equations.predict_project_realization_admissibility_20260721",
+    "measurement_cli_extended_in_place": "tools/measure_realization_g2_lattice.py"
+  },
+  "new_with_justification": {
+    "R1_fixed_magnitude_decoder": "required assigned zero-byte formulation; generic constants only",
+    "R2_max_margin_decoder": "required assigned zero-byte formulation; frozen-scorer constant-tile geometry only",
+    "R3_hopfield_memory_prox_decoder": "required behaviorally distinct assigned formulation; scorer-free at decode",
+    "R4_dying_write_stream": "required exact residual pricing; strict ordinal/RGB parse-back avoids blanket payload",
+    "interior_stage_and_prefix_schemas": "needed to preserve independent resumable pair/rung custody and D1 decomposition"
+  },
+  "not_rederived": [
+    "factor-2 resize coefficients",
+    "bounded Diophantine solver",
+    "seed grammar or predictor policy",
+    "source target cache",
+    "SegNet or PoseNet implementation",
+    "frontier pointer"
+  ],
+  "source_of_truth": {
+    "compact_receipt": ".omx/research/realization_g2c_interior_receipt_20260721.json",
+    "compact_receipt_sha256": "3e5307c471d9e7feaa28a608496b972431f73f6b060a94b979ca32c86d3bfe64",
+    "ssd_receipt": "/Volumes/VertigoDataTier/pact/evidence/realization_g2c_20260721/r2_residual_v2/receipt.json",
+    "ssd_receipt_sha256": "cef451a404c77fe08ab2d041b0f59972ff73c0a84ba3ff20281b8651835323b8"
+  },
+  "main_landing_review_required": true,
+  "score_claim": false,
+  "promotion_eligible": false
+}
