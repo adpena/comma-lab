@@ -82266,11 +82266,11 @@
       "id": "lane_bev_staticity_v2_absolute_trajectory_20260721",
       "name": "BEV staticity v2 absolute trajectory",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/measure_bev_staticity_developability.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -82301,7 +82301,11 @@
           "evidence": ""
         }
       },
-      "notes": "research_only=true; macOS-CPU advisory D0 hood gate; D1-D3 gated; MAIN landing review required"
+      "notes": "D0 PASS at n64 and n600; exact G1-calibrated chart Road/Lane D1-D2 negative; D3 blocked; macOS-CPU advisory; no score; MAIN landing review required",
+      "research_only": true,
+      "reactivation_criteria": [
+        "New hash-custodied absolute-motion source or independently admitted calibration preserves D0 and passes both Road and Lane n600 staticity before D3"
+      ]
     }
   ],
   "level_rules": {
@@ -82311,5 +82315,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-21T17:46:43Z"
+  "updated_at": "2026-07-21T18:37:27Z"
 }

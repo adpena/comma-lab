@@ -1,0 +1,89 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "main_landing_review_required": true,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "seed": 1234
+  },
+  "custody": {
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "implementation_commit": "ba1c4500a72d79ee353b0c7654886caa62437f40",
+    "n600_receipt_file_sha256": "c3ec847ba5ca43246f01af12f7bd650b14aba2784eb1878c29c16f8a4469ab96",
+    "n600_receipt_internal_sha256": "567f0afb9c8982fe78ab6897dc486f93d71fb9503468ce0e5f9d1a204b747d1d",
+    "n64_receipt_file_sha256": "94a7d7b5635e04d5da6f22e1d4f2e5b8d170a9dc95923e3835b9421aedb8bbba",
+    "n64_receipt_internal_sha256": "4312762657767f230b9de2989f6836dd7a7002e8312227805cdd00b7ef2c634f",
+    "singleton_manifest_n600_sha256": "7614b540d9bd926d258ade9d8dc53598f24ed7a7bc2c41477b70af22b1b27c75",
+    "source_config_sha256": "99f23df35d720b5f006842a882c15f69439e11ca876b3f527e62118cd5703120",
+    "ssd_root": "/Volumes/VertigoDataTier/pact/evidence/bev_staticity_v2_20260721/canonical_v1"
+  },
+  "d0": {
+    "n600": {
+      "f1_cache_label_mismatches": 0,
+      "hood_p50_px": 0.0,
+      "hood_p95_px": 11.0,
+      "hood_static_fraction_at_1px": 0.9130565288101553,
+      "max_world_to_ego_closure_m": 3.580361673049448e-15,
+      "verdict": "PASS"
+    },
+    "n64": {
+      "f1_cache_label_mismatches": 0,
+      "hood_p50_px": 0.0,
+      "hood_p95_px": 6.0,
+      "hood_static_fraction_at_1px": 0.9229909580412475,
+      "max_world_to_ego_closure_m": 4.440892098500626e-16,
+      "verdict": "PASS"
+    },
+    "thresholds": {
+      "hood_p50_px_max": 1.0,
+      "hood_static_fraction_at_1px_min": 0.5
+    }
+  },
+  "d1_d2_n600": {
+    "Lane": {
+      "developable_fraction_at_1px": 0.043712852318193565,
+      "event_count": 2,
+      "near_static": false,
+      "p50_ruling_residual_px": 47.119248012565066,
+      "p90_ruling_residual_px": 186.70251336188286,
+      "static_fraction_at_1px": 0.043712852318193565,
+      "static_segment_count": 3
+    },
+    "Movable": {
+      "event_count": 32,
+      "expected_nonstatic_observed": true,
+      "near_static": false,
+      "p50_ruling_residual_px": 10.762792808809795,
+      "p90_ruling_residual_px": 57.555185420436416,
+      "static_fraction_at_1px": 0.17813773431132846,
+      "static_segment_count": 25
+    },
+    "Road": {
+      "developable_fraction_at_1px": 0.04309343986018351,
+      "event_count": 13,
+      "near_static": false,
+      "p50_ruling_residual_px": 39.02261829831544,
+      "p90_ruling_residual_px": 180.50954103071842,
+      "static_fraction_at_1px": 0.04309343986018351,
+      "static_segment_count": 7
+    }
+  },
+  "d3": {
+    "blocker": "NO_ROAD_OR_LANE_STRATUM_PASSED_HOOD_GATED_D1_D2",
+    "byte_estimate_emitted": false,
+    "static_ground_coefficients_emitted": false,
+    "status": "BLOCKED"
+  },
+  "determinism": {
+    "n600_receipt_byte_identical_on_resume": true,
+    "n64_receipt_byte_identical_on_resume": true,
+    "resumable_pose_stages": 600,
+    "resumable_singleton_label_stages": 600
+  },
+  "schema": "bev_staticity_v2_absolute_trajectory_summary.v1",
+  "verdict": "MEASURED_D0_PASS_D1_D2_NEGATIVE_D3_BLOCKED",
+  "verdict_scope": "exact G1-calibrated PoseNet absolute chart only; not a negative on true absolute ego GT, a different admitted calibration, or other BEV/worldsheet families"
+}
+
