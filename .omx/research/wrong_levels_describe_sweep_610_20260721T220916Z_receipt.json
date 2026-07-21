@@ -1,0 +1,265 @@
+{
+  "schema": "wrong_levels_describe_sweep_610_receipt.v1",
+  "written_at_utc": "2026-07-21T22:09:16Z",
+  "task_id": 610,
+  "lane_id": "lane_wrong_levels_describe_sweep_610_20260721",
+  "git_base_sha": "74324e81faf2ed11cb7512112526d3fd9a1f0e78",
+  "authority": {
+    "axis": "[macOS-CPU advisory] plus exact description-byte custody",
+    "research_only": true,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "main_landing_review_required": true,
+    "paid_spend_usd": 0.0,
+    "seed": 1234
+  },
+  "delegation": {
+    "checkpoint_key": "codex_delegate:wrong_levels_describe_sweep_610:20260721T214605Z",
+    "authority_file": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/wrong_levels_describe_sweep_610_20260721T214605Z.wrapped.prompt.txt",
+    "authority_file_bytes": 6590,
+    "authority_file_sha256": "0f917e6f37e926a41829ab9da304c0c95013f9b51254b7e1059a6c210305c2f4",
+    "main_directives_consumed": [
+      "2026-07-21T21:54:13Z V9 per-stratum and homography recall supplement",
+      "2026-07-21T21:59:22Z off-the-shelf reuse supplement"
+    ]
+  },
+  "settled_ledgers": {
+    "description_control": {
+      "base_entropy_bytes": 36011,
+      "component_shape_bytes": 180196,
+      "total_bytes": 216207,
+      "claim_kind": "MEASURED R3 description object; not an archive",
+      "r3_measurement_target_box_bytes": 216222,
+      "task_preregistered_pointer_box_bytes": 216300
+    },
+    "archive_control": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/canonical_s4_20260721/archive.zip",
+      "bytes": 451191,
+      "sha256": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed",
+      "monolithic_member_bytes": 1285943,
+      "claim_kind": "MEASURED deterministic S4 archive control",
+      "sub_0_15_target_bytes": 154600,
+      "d_seg": 0.60198647,
+      "d_pose": 163.11865234,
+      "verdict": "MEASURED_CONTROL_FAILS_RATE_AND_SCORER_CELLS"
+    },
+    "projection_policy": {
+      "candidate_projected_archive_bytes": null,
+      "reason": "No candidate has a parser-consumed replacement section or a fresh deterministic archive build. A ZIP compression ratio is not marginal-byte custody."
+    }
+  },
+  "fresh_execution": {
+    "name": "mandatory_per_stratum_fail_closed_audit",
+    "source_commit": "8fa6581f74999aa5f112936005975c3ab5e79193",
+    "source_path": "tools/measure_per_stratum_recursive_fractal_optimal.py",
+    "source_sha256": "0bdde9978a5de7e9e7d9f5b1ec13a83413befaae0d034cc54b0839d94138867b",
+    "command": "PYTHONPATH=<worktree>/src python3 /Users/adpena/Projects/pact/tools/measure_per_stratum_recursive_fractal_optimal.py --repo-root <worktree> --output /Volumes/VertigoDataTier/pact/evidence/wrong_levels_610_20260721/per_stratum_recall_full.json --compact-output /Volumes/VertigoDataTier/pact/evidence/wrong_levels_610_20260721/per_stratum_recall_compact.json",
+    "runs": 2,
+    "byte_identical_double_run": true,
+    "full_output": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/wrong_levels_610_20260721/per_stratum_recall_full.json",
+      "bytes": 124731,
+      "sha256": "1d4b4f6fcc4444d84321d52bc8889c2648e66bcaa864c0e0fea788294f4d4b5c"
+    },
+    "compact_output": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/wrong_levels_610_20260721/per_stratum_recall_compact.json",
+      "bytes": 23414,
+      "sha256": "68b20a2a64021f6820d2839e4b35d41042f8849eb8ab04b1406ab3d13231b46c"
+    },
+    "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY"
+  },
+  "surface_rows": [
+    {
+      "surface_id": "S1",
+      "name": "xi_curve_knot_pose_storage",
+      "baseline": {
+        "object": "canonical PNTG frozen-PoseNet target description",
+        "source_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+        "n64_stream_bytes": 797,
+        "n64_stream_sha256": "807ba877c9e2e0402b5c145031aafd43223925e7169d7c365bb5756570d60742",
+        "n600_stream_bytes": 6791,
+        "n600_stream_sha256": "ccea4eb96d177a10e46ee56773290d6b158dd8fdec0e298560ca2f4454020014",
+        "n600_raw_fp16_bytes": 7200,
+        "n600_raw_fp16_sha256": "583d74cb8121c4f4836809d6e08c0ad06c2abe83e5a2860fda80f204f5a429d0",
+        "present_in_s4_archive": false,
+        "claim_kind": "MEASURED exact description bytes; not archive membership",
+        "object_type_guard": "PNTG rows are frozen PoseNet 6-vector targets, not translation-first Lie-algebra xi and not directly interchangeable with a knot packet"
+      },
+      "current_s4_planar_proxy": {
+        "representation": "cubic_catmull_rom_plus_ar_residual.v1",
+        "controls": 10,
+        "ar_residual_rows": 254,
+        "raw_bytes": 11768,
+        "standalone_zlib9_bytes_diagnostic_only": 902,
+        "canonical_json_sha256": "591baea6e83f13a2b99a157318f47cb58a0bdee5f6f310dda868c600d9c22add",
+        "is_full_posenet_pose_target": false
+      },
+      "candidate": {
+        "knots_needed_for_real_d_pose_at_most_1_02e_4": null,
+        "stream_bytes": null,
+        "d_pose_through_real_receiver": null,
+        "projected_archive_bytes": null,
+        "bit_exact_receiver_roundtrip": null,
+        "required_target_to_xi_custody": "name PoseTargetEgoEstimator or xi_from_pose_calibration channels, calibration constants/mode, and fixed-root lift from 600 pair twists to 601 absolute poses"
+      },
+      "blockers": [
+        "CURRENT_451KB_ARCHIVE_HAS_NO_RECEIVER_CLOSED_POSE_STREAM",
+        "PPCS_XI_IS_PLANAR_G1_PROXY_NOT_FULL_POSE_TARGET",
+        "NO_PURE_KNOT_ONLY_XIP2_FORMAT_OR_SHIPPED_RUNTIME_PARSEBACK",
+        "PNTG_TARGETS_REQUIRE_CALIBRATED_XI_MAPPING_AND_FIXED_ROOT_601_POSE_LIFT",
+        "S4_FRAME0_CARRIER_ABSENT_SAME_AS_FRAME1",
+        "DESCRIPTION_STREAM_BYTES_NOT_MARGINAL_ARCHIVE_BYTES"
+      ],
+      "n64_executed": false,
+      "n600_executed": false,
+      "verdict": "BLOCKED_NO_PURE_KNOT_XIP2_RUNTIME_PARSEBACK",
+      "verdict_scope": "current pure-knot XIP2 format/runtime binding and S4 archive instance; downstream xi-to-H/RGB realizer exists and SE(3) B-spline family remains open"
+    },
+    {
+      "surface_id": "S2",
+      "name": "per_stratum_ops_grammar",
+      "baseline": {
+        "object": "R3 admitted literal component packet control",
+        "path": "/Volumes/VertigoDataTier/pact/evidence/predictor_r3_20260721/canonical_r3_20260721/components/admitted_knee_components.pcomp3",
+        "bytes": 180196,
+        "sha256": "32b41a7db1c6927e6812a49bdea568cd00fd2c19ca9798e38666385e8ed2e68d",
+        "per_class_bytes": {
+          "Road": 131565,
+          "Lane": 8162,
+          "Undrivable": 39679,
+          "Movable": 0,
+          "MyCar": 790
+        },
+        "claim_kind": "MEASURED literal-component description control; not v9 unique-home attribution"
+      },
+      "settled_event_controls": {
+        "s4_event_alphabet_bytes": 181904,
+        "s2_literal_event_count": 17926,
+        "s2_literal_event_packet_bytes": 39836,
+        "lane_coherent_lbnd2_bytes": 41303,
+        "cpc1_exact_partition_bytes": 255288,
+        "claim_kind": "MEASURED independent controls; not additive composed sections"
+      },
+      "candidate": {
+        "description_stream_bytes": null,
+        "unique_home_bytes": {
+          "Road": null,
+          "Lane": null,
+          "Undrivable": null,
+          "Movable": null,
+          "MyCar": null
+        },
+        "projected_archive_bytes": null,
+        "receiver_parseback": null
+      },
+      "c2_priority_signal": {
+        "trained_witness_residual_edge_fraction": 0.906,
+        "class_edge_fractions": {
+          "Lane": 0.38,
+          "Road": 0.292,
+          "Undrivable": 0.098,
+          "Movable": 0.096,
+          "MyCar": 0.04
+        },
+        "claim_kind": "MEASURED residual allocation signal; no byte attribution"
+      },
+      "blockers": [
+        "candidate_archive",
+        "encoder_parser_receiver_modules",
+        "n600_decode_and_full_scorer_receipt",
+        "exact_evaluator_receipt",
+        "parser_consumed_section_registry",
+        "unique_home_byte_attribution"
+      ],
+      "n64_executed": false,
+      "n600_executed": false,
+      "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY",
+      "verdict_scope": "current v8/v9 composition custody; per-stratum carrier and ops-grammar families open"
+    },
+    {
+      "surface_id": "S3",
+      "name": "chart_space_seed_quantization",
+      "baseline": {
+        "object": "PPCS B2 loose seed",
+        "path": "/Volumes/VertigoDataTier/pact/evidence/seed_compose_20260721/seeds/seed_compose_b2_loose.ppcs",
+        "raw_bytes": 884872,
+        "standalone_zlib9_bytes_diagnostic_only": 78969,
+        "sha256": "a21dde38128bed7ff62860ef005b994b74202e0bd00a37d1df8824ee325e856b",
+        "factor2_exact_pairs": 0,
+        "factor2_checked_pairs": 600,
+        "receiver_closed": false,
+        "claim_kind": "MEASURED description seed; not an archive"
+      },
+      "corrected_ground_custody": {
+        "road_n600_p50_residual_pixels": 39.022618,
+        "lane_n600_p50_residual_pixels": 47.119248,
+        "stored_rotation": "identity_only",
+        "calibration_vs_geometry": "UNIDENTIFIABLE_FROM_CURRENT_CUSTODY",
+        "pure_static_ground_frame_allowed": false
+      },
+      "closest_receiver_controls": {
+        "full_screw_chart_n16": {
+          "receipt_path": ".omx/research/advected_screw6_chartlevel_20260721.json",
+          "receipt_sha256": "98ccf6af4a3b482c71e2654353180aac32b99ad85be8647c36046f4591cd4f2a",
+          "brotli_terminal_chart_coefficient_packet_bytes": 348,
+          "is_complete_seed_receiver_payload_or_archive": false,
+          "d_seg": 0.01676400494761765,
+          "d_pose": 181.9871473312378,
+          "verdict": "N16_TWO_AXIS_GATE_FAIL_STOP_BEFORE_N64",
+          "is_requested_corrected_joint_road_lane_seed": false
+        },
+        "g2cs1_targeted_n64_subset": {
+          "receipt_path": "/Volumes/VertigoDataTier/pact/evidence/g2g_chart_receiver_20260721/run_20260721T1622Z/receipt.json",
+          "receipt_file_sha256": "fa49a2ca71cb2960b1e497d425f05c4a496cc7634c45b2e193e3977dfa0667da",
+          "selected_pair_count": 6,
+          "selected_packet_bytes": 120,
+          "single_symbol_packet_bytes": 20,
+          "admitted_pair_count": 0,
+          "n600_status": "REFUSED_ABSENT_N64_TARGETED_ADMISSION",
+          "is_full_n64": false,
+          "is_requested_corrected_joint_road_lane_seed": false
+        }
+      },
+      "candidate": {
+        "chart_quantized_seed_bytes": null,
+        "d_seg_through_real_receiver": null,
+        "d_pose_through_real_receiver": null,
+        "projected_archive_bytes": null,
+        "bit_exact_receiver_roundtrip": null
+      },
+      "blockers": [
+        "CORRECTED_XI_JOINT_ROAD_LANE_CHART_PACKET_ABSENT",
+        "S4_HAS_NO_ARBITRARY_CHART_SECTION",
+        "S4_FRAME0_CARRIER_ABSENT",
+        "CURRENT_CHART_RECEIVER_ROWS_DO_NOT_MATCH_REQUESTED_CORRECTED_TRAJECTORY_FORMULATION",
+        "NO_N16_CORRECTED_XI_JOINT_ROAD_LANE_ADMISSION"
+      ],
+      "n64_executed": false,
+      "n600_executed": false,
+      "verdict": "BLOCKED_BEFORE_N64_CORRECTED_CHART_RECEIVER_ABSENT",
+      "verdict_scope": "current corrected-xi joint Road/Lane seed formulation; chart-coordinate quantization family open"
+    }
+  ],
+  "composition": {
+    "law": "store each generator once at its unique lowest sufficient home; derive boundaries/pixels/warps; charge only parser-consumed video-derived sections",
+    "candidate_stream_bytes": null,
+    "candidate_projected_archive_bytes": null,
+    "candidate_d_seg": null,
+    "candidate_d_pose": null,
+    "admission": false,
+    "reason": "No surface produced a parser-consumed, receiver-closed candidate section. Adding independent diagnostic byte counts would double-count or compare unequal objects.",
+    "xi_temporal_delta_coder_574_composability": "No representation win admitted. Future S1/S2 packets may consume the sibling predictor as external custody, but this lane did not duplicate or claim its temporal savings."
+  },
+  "storage": {
+    "ssd_root": "/Volumes/VertigoDataTier/pact/evidence/wrong_levels_610_20260721",
+    "bulk_bytes_created": 0,
+    "raw_decode_or_scorer_scratch_created": false,
+    "retired_archives": "harvest-signal-only controls; no mutation, launch, or promotion",
+    "cleanup_required": false
+  },
+  "verdict": "THREE_SURFACES_BLOCKED_RECEIVER_RATE_CUSTODY_FAMILIES_OPEN",
+  "verdict_scope": "current description objects and receiver seams only; no family kill and no pointer movement"
+}
