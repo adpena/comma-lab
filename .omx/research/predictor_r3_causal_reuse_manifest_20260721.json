@@ -1,0 +1,47 @@
+{
+  "schema": "predictor_r3_causal_reuse_manifest.v1",
+  "task": 578,
+  "round": 3,
+  "lane_id": "predictor_r3_causal",
+  "research_only": true,
+  "main_review_required": true,
+  "authority": {
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "axis": "[macOS-CPU advisory]"
+  },
+  "source_files": {
+    "src/tac/optimization/predictor_r3_causal.py": "1beb7eb9dab6a5651dd9ff448239c74376cbacb56093b713705db732ad4c1df3",
+    "src/tac/tests/test_predictor_r3_causal.py": "f0c8dfdf812a3122970721ad4f3f19ef2a051df5d9f615c6bf951fa3bc915bbf",
+    "tools/measure_predictor_upgrade_xi_chart.py": "1183048860330430c115f2dace7526e5a0c7365584d1674083f588989f9fdb3c"
+  },
+  "reuse": {
+    "round2_module_and_chunks": "tac.optimization.predictor_r2_missdelta plus /Volumes/VertigoDataTier/pact/evidence/predictor_r2_20260721/canonical_r2_20260721",
+    "phase_advection_424": "tac.boundary_math.phase_primitives.cross_scored_frame_xi_interp",
+    "phase_carrier_dash_codec_425": "tac.boundary_math.dash_phase_carrier measured jitter prior and canonical Huffman lengths",
+    "correspondence_234": "Hungarian/LAP mechanism with the public 48px gate from tac.boundary_math.movable_site_coder.track_sites",
+    "shape_307_557": "predictor_r2_missdelta PBS1 straightness-first chain grammar over the in-tree range coder",
+    "jitter_lawref": "partition_temporal_transport_amortization_jitter_bound_v1",
+    "breakeven_lawref": "realization_breakeven_bytes_v1",
+    "gauge_quotient_553": "executed as exact ternary-chart two-bitplane quotient with symbol 0 derived",
+    "JRD_453": "NULL_SAFE_NOT_APPLICABLE: no ordered lossy coefficient prefix in BASE sections",
+    "container_entropy_557": "Brotli q11, zlib9, raw LZMA1 and per-section/grouped exact replay race",
+    "L20_L32_signed_byte_maps": "NULL_SAFE_NOT_APPLICABLE: semantic label/container bytes are not signed-int8 coefficient tensors"
+  },
+  "artifacts": {
+    ".omx/research/predictor_r3_causal_measurements_20260721.json": "8dd7fec159ca5e5013b5d3b78eac859c972c4facf7e261d6ded3b2f3c217dc2b",
+    "/Volumes/VertigoDataTier/pact/evidence/predictor_r3_20260721/canonical_r3_20260721/receipt.json": "8dd7fec159ca5e5013b5d3b78eac859c972c4facf7e261d6ded3b2f3c217dc2b",
+    "/Volumes/VertigoDataTier/pact/evidence/predictor_r3_20260721/canonical_r3_20260721/components/all_coherent_event_alphabet.pce3": "47c94bb47c450ef6bf5793e9583dcb06d40bfb8f33baa64becdde9fc1796e8c6",
+    "/Volumes/VertigoDataTier/pact/evidence/predictor_r3_20260721/canonical_r3_20260721/components/all_coherent_raster.pbs1": "70a1da52f0c240985eb6ea7a43d658e6720df10612860f68db7adaf1cc0b7696",
+    "/Volumes/VertigoDataTier/pact/evidence/predictor_r3_20260721/canonical_r3_20260721/components/admitted_knee_components.pcomp3": "32b41a7db1c6927e6812a49bdea568cd00fd2c19ca9798e38666385e8ed2e68d",
+    "/Volumes/VertigoDataTier/pact/evidence/predictor_r3_20260721/canonical_r3_20260721/base/base_terminal.pbase3": "7f2c95f8993136ac99b6ab179cc793cd4bccdf08407b7e31593503b750a81d5b"
+  },
+  "automatic_disk_hygiene": {
+    "durable_root": "/Volumes/VertigoDataTier/pact/evidence/predictor_r3_20260721/canonical_r3_20260721",
+    "stage_checkpoints": ["base.json", "causal.json", "components.json", "receipt.json"],
+    "scratch": "atomic same-directory temporaries removed after replace",
+    "deletion": "none"
+  }
+}
+

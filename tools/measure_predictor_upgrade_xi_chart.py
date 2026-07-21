@@ -14,6 +14,9 @@ from tac.optimization.predictor_r2_missdelta import (
 from tac.optimization.predictor_r2_missdelta import (
     run_measurement_stage as run_r2_measurement_stage,
 )
+from tac.optimization.predictor_r3_causal import (
+    build_final_receipt as build_r3_final_receipt,
+)
 from tac.optimization.predictor_upgrade_xi_chart import build_final_receipt, run_measurement_stage
 
 
@@ -21,7 +24,7 @@ def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser()
     value.add_argument(
         "--stage",
-        choices=("n64", "n600", "final", "r2-n64", "r2-n600", "r2-final"),
+        choices=("n64", "n600", "final", "r2-n64", "r2-n600", "r2-final", "r3-final"),
         required=True,
     )
     value.add_argument("--cache", type=Path, required=True)
@@ -33,6 +36,7 @@ def parser() -> argparse.ArgumentParser:
         type=Path,
         help="Required for r2-n64/r2-n600; custody root containing round-1 charts.",
     )
+    value.add_argument("--r2-work-dir", type=Path, help="Required for r3-final; completed R2 custody root.")
     value.add_argument("--lane-chart", type=Path, required=True)
     value.add_argument("--output", type=Path)
     value.add_argument("--chunk-size", type=int, default=16)
@@ -42,6 +46,25 @@ def parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = parser().parse_args()
+    if args.stage == "r3-final":
+        if args.output is None or args.round1_work_dir is None or args.r2_work_dir is None:
+            raise SystemExit("--output, --round1-work-dir and --r2-work-dir are required for --stage r3-final")
+        result = build_r3_final_receipt(
+            repository_root=args.repository_root,
+            cache=args.cache,
+            r2_work_dir=args.r2_work_dir,
+            round1_work_dir=args.round1_work_dir,
+            lane_chart=args.lane_chart,
+            work_dir=args.work_dir,
+            output_path=args.output,
+        )
+        print(
+            json.dumps(
+                {"schema": result["schema"], "verdict": result["verdict"], "pointer": "0.1910828242 UNMOVED"},
+                sort_keys=True,
+            )
+        )
+        return 0
     if args.stage == "r2-final":
         if args.output is None:
             raise SystemExit("--output is required for --stage r2-final")
@@ -83,11 +106,21 @@ def main() -> int:
     else:
         n_pairs = 64 if args.stage == "n64" else 600
         result = run_measurement_stage(
-            repository_root=args.repository_root, cache=args.cache, work_dir=args.work_dir, n_pairs=n_pairs,
-            chunk_size=args.chunk_size, predecessor_seeds=seeds, lane_chart=args.lane_chart,
+            repository_root=args.repository_root,
+            cache=args.cache,
+            work_dir=args.work_dir,
+            n_pairs=n_pairs,
+            chunk_size=args.chunk_size,
+            predecessor_seeds=seeds,
+            lane_chart=args.lane_chart,
             resume=not args.no_resume,
         )
-    print(json.dumps({"schema": result["schema"], "verdict": result.get("verdict"), "pointer": "0.1910828242 UNMOVED"}, sort_keys=True))
+    print(
+        json.dumps(
+            {"schema": result["schema"], "verdict": result.get("verdict"), "pointer": "0.1910828242 UNMOVED"},
+            sort_keys=True,
+        )
+    )
     return 0
 
 

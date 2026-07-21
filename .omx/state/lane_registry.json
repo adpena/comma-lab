@@ -81726,6 +81726,48 @@
         "Add an explicit intra-pair frame0 pose carrier",
         "Rerun n16 n64 n600 hard-oracle admission"
       ]
+    },
+    {
+      "id": "predictor_r3_causal",
+      "name": "Predictor R3 causal jitter shapes and base coding audit",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/predictor_r3_causal.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/predictor_r3_causal_measurements_20260721.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #578 round 3; real n600 description-space causal jitter, surgical shape waterfill, and base terminal-coding audit; pointer unmoved; MAIN landing review required",
+      "research_only": true
     }
   ],
   "level_rules": {
