@@ -20466,3 +20466,22 @@ consumer named: integer_plane_banded_trainer). DSL = N/A-with-rationale (produce
 artifact; the launch/lever change arrives with the curvelet binding, which WILL carry a DSL leg).
 DAG = this FEED + arm FEED in-branch. MEMORY = quantization-gate law body amendment same turn
 (design-time application). Pointer 0.19108 [contest-CPU] UNMOVED (means).
+
+## FEED-TWO-HALVES-SYNTHESIS-20260720 (operator doctrine, binding)
+**Operator 2026-07-20 verbatim:** "This is the true heart and true path to true inverse solving,
+which is the other half with our deep math and geometry and system of equations that we work so
+hard to discover — The task space level set witness." Plus, same session: "never go for easy —
+correct and true and understanding" · "infinite compute and time for compression and encoding" ·
+"frozen contest information space... smallest description possible. Kolmogorov and Einsteinian."
+**THE SYNTHESIS (campaign spine):** the TASK-SPACE LEVEL-SET WITNESS = the DESCRIPTION LANGUAGE
+(phi_c level-sets; openpilot lane polynomial = zero level-set rendered by the bit-exact AA-SDF
+kernel #283; Morse-Smale strata; Fisher==margin (0.978) as the description-precision waterfill;
+screw-xi temporal advection with explicit topology events per G1 0.279px transport). The
+CONSTRUCTIVE INVERSE SOLVE (#541) = the EXACT INSTANTIATION (canonical support-fill preimage,
+fp32-exact 0/117.96M all 600 pairs). INTEGER-AWARE REALIZATION (#532/#586, r1b7 machinery) = the
+bridge through uint8. Witness=shape · solve=values · realization=bridge. Training sought shape and
+values at once; the split gives each its right tool. **Enforcement landed same-turn:** contract
+blocks CONTENT_LINEAGE_CRUX + CORRECT_OVER_EASY composed into standard_contract() (833cfcde44,
+integrity-gate STRICT pass); workflow v2 §2 amended (1322dbd27f); master-thesis memory items
+(4)-(6). Strike arm (joint_planes_direct_strike) steered to speak this formalism in S2 and consume
+the registered equations BY ID. Pointer 0.19108 [contest-CPU] UNMOVED — this FEED is means.
