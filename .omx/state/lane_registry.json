@@ -81129,6 +81129,49 @@
       "notes": "research_only=true; bounded read/analyze/write audit; no code, training, launch, score, or pointer authority; isolated branch requires MAIN landing review",
       "research_only": true,
       "lane_class": "research"
+    },
+    {
+      "id": "pdw1_dB_attack_step2_20260719T192712Z",
+      "name": "PDW1 STEP-2 uint8 hard-accept d_B attack",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "lane_class": "experimental"
     }
   ],
   "level_rules": {
