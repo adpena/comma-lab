@@ -81301,6 +81301,48 @@
         }
       },
       "notes": "Delegated isolated-worktree build; research_only; MAIN landing review required."
+    },
+    {
+      "id": "lane_r2b_sparse_target_selection_20260720",
+      "name": "R2b sparse target selection",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/measure_r2b_sparse_target_selection.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/r2b_sparse_target_selection_20260720.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local-only n600 sparse fractional target-decision measurement; no paid or heavy launch.",
+      "research_only": true
     }
   ],
   "level_rules": {
