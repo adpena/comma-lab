@@ -20825,3 +20825,20 @@ No dispatch. Pointer 0.1910828242 `[contest-CPU]` UNMOVED. MAIN merge-boundary r
 ## FEED-past-solves-rate-naive-regrade (2026-07-21T23:58Z, operator diagnosis)
 - **Operator (confirmed by record): the solved-distortion/super-high-rate solves were NAIVE-TOY on the rate axis** — verdict_scope: FORMULATION — because they never discriminated archive-COUNTED vs inflate.py-FREE (rule 118) in the task-space level-set witness framing: they solved for VALUES and put 100% in COUNTED (409,526,925 B). DISTORTION AUTHORITY PRESERVED: the solved tuple (1.5196e-4 / 1.02e-4) remains the target receipt; only its byte figure is void as a rate datum. Evidence the discrimination was skipped: 80.67% resize nullity + 52% gauge orbit + 230,904 blind px/frame were all STORED; the generic generator (homography/ξ-warp/tropical-argmax) was never moved to the free side.
 - **Law to builder (delivered):** FREE ∪ NULL ∪ COUNTED is the decision-variable STRUCTURE, not an end-stage compliance check — STEP-0 partition ledger of the solved object before any coding; knee rungs optimize only the COUNTED residue; #597 predict→project receiver = consumed prior art. This is the operator's solve-most/store-most/carry-least/train-least doctrine expressed as the solver's variable structure.
+
+## FEED-610-custody-and-cap-reconcile (2026-07-21T23:xxZ, main)
+wrong_levels_610 MERGED (3882a02, worktree 992fe889be..20f0bbd25c; registry union-merged, no
+stale-base clobber — all 3 recent lanes verified). Verdict THREE_SURFACES_BLOCKED_RECEIVER_RATE_
+CUSTODY_FAMILIES_OPEN (verdict_scope: custody, families OPEN). Measured controls banked: S1 PNTG
+pose-target description n600=6,791B / n64=797B (hash-pinned; routed to ddm builder xi_curve_knots);
+S2 R3 component control 180,196B w/ per-class split (Road 131,565 / Lane 8,162 / Undriv 39,679 /
+MyCar 790 / Movable 0); S3 PPCS seed 884,872B raw / 78,969B zlib diagnostic. Named S1 seam:
+PoseNet-targets -> calibration -> translation-first xi -> 601-pose lift -> pure-knot XIP2 coder ID
+-> shipped parseback (blocker: _xip_parse accepts delta_ar|none only).
+CAP RECONCILIATION (exact, D=0.04710838004286111 solved-pair distortion, lam_B=25/37,545,489):
+pointer box = **216,223 B** (216,223 -> S=0.1910824005 < pointer 0.1910828242; 216,224 crosses) —
+the R3 receipt's 216,222 box was 1 B conservative, NOT wrong; strict sub-0.15 box = **154,524 B**
+(154,525 -> 0.1500002348). Pre-registered 216,300/154,600 are APPROXIMATIONS, superseded. LAW:
+byte caps are D-conditional advisory pre-registrations; the binding cap is recomputed at compose
+time from the candidate's FULL-precision D. Convergence: S1/S2/S3 + per_stratum NO_VERDICT all
+block on the SAME receiver-rate custody the ddm builder's STEP-0 partition ledger produces.
