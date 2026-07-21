@@ -1,0 +1,385 @@
+{
+  "schema": "pact.autoencoder_describe_crosswalk_receipt.v1",
+  "written_at_utc": "2026-07-21T23:23:51Z",
+  "lane_id": "lane_autoencoder_describe_crosswalk_20260721T231126Z",
+  "git_base_sha": "5f2541a9ecba31af7c60f1ee464e7a4f676c01c3",
+  "delegation": {
+    "checkpoint_key": "codex_delegate:autoencoder_describe_crosswalk:20260721T231126Z",
+    "authority_file": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/autoencoder_describe_crosswalk_20260721T231126Z.wrapped.prompt.txt",
+    "authority_file_bytes": 8860,
+    "authority_file_sha256": "a26b164b0b4bbce0095e24c946b680a27ab733c7acec0109843df03f692674f2",
+    "inbox_cursor_utc": "2026-07-21T23:11:26Z",
+    "newer_directives_consumed": []
+  },
+  "authority": {
+    "axis": "[research-only; exact description-stream byte custody plus source/repository audit]",
+    "research_only": true,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "execution_authority": false,
+    "paid_spend_usd": 0.0,
+    "seed": 1234,
+    "n_pairs_required_for_decision": 600,
+    "pointer_before": "0.1910828242 [contest-CPU]",
+    "pointer_after": "0.1910828242 [contest-CPU]",
+    "pointer_delta": 0.0,
+    "main_landing_review_required": true
+  },
+  "byte_law": {
+    "lambda_B_score_per_byte": 6.658589531221714e-7,
+    "equation": "net_delta_bytes = decoder_counted_bytes + stream_bytes_after - best_exact_control_bytes",
+    "admission_evaluator": "net_delta_bytes < 0",
+    "registered": false,
+    "reason_unregistered": "No measured autoencoder candidate and no parser-consumed receiver-closed candidate archive."
+  },
+  "source_streams": [
+    {
+      "stream_id": "S1_PNTG",
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "exact_stream_bytes": 6791,
+      "exact_stream_sha256": "ccea4eb96d177a10e46ee56773290d6b158dd8fdec0e298560ca2f4454020014",
+      "raw_fp16_bytes": 7200,
+      "raw_fp16_sha256": "583d74cb8121c4f4836809d6e08c0ad06c2abe83e5a2860fda80f204f5a429d0",
+      "best_exact_control_bytes": 6791,
+      "best_exact_control": "PNTG fp16 plus zlib9",
+      "maximum_raw_fp16_decoder_parameters_if_zero_payload": 3395,
+      "claim_kind": "MEASURED inherited exact description bytes; not archive membership"
+    },
+    {
+      "stream_id": "S2_R3_LITERAL_COMPONENTS",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/predictor_r3_20260721/canonical_r3_20260721/components/admitted_knee_components.pcomp3",
+      "raw_bytes": 180196,
+      "raw_sha256": "32b41a7db1c6927e6812a49bdea568cd00fd2c19ca9798e38666385e8ed2e68d",
+      "per_class_raw_bytes": {
+        "Road": 131565,
+        "Lane": 8162,
+        "Undrivable": 39679,
+        "Movable": 0,
+        "MyCar": 790
+      },
+      "best_exact_control_bytes": 152160,
+      "best_exact_control": "fresh zlib9",
+      "maximum_raw_fp16_decoder_parameters_if_zero_payload": 76079,
+      "claim_kind": "MEASURED exact description object; not an archive section"
+    },
+    {
+      "stream_id": "PPCS_B2_LOOSE",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/seed_compose_20260721/seeds/seed_compose_b2_loose.ppcs",
+      "raw_bytes": 884872,
+      "raw_sha256": "a21dde38128bed7ff62860ef005b994b74202e0bd00a37d1df8824ee325e856b",
+      "best_exact_control_bytes": 78969,
+      "best_exact_control": "zlib9",
+      "maximum_raw_fp16_decoder_parameters_if_zero_payload": 39484,
+      "factor2_exact_pairs": 0,
+      "factor2_checked_pairs": 600,
+      "claim_kind": "MEASURED description seed; not receiver closed and not an archive"
+    },
+    {
+      "stream_id": "PDW2",
+      "path": ".omx/research/pdw2_spatial_receiver_576_measurement/pdw2_margin_packet_138b.pdw2",
+      "raw_bytes": 138,
+      "raw_sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+      "inherited_brotli_q11_bytes": 133,
+      "inherited_brotli_q11_sha256": "e5b14699d682c8d6fd0291bb7f2874eede1c4e5788e09c612604d00f9a134704",
+      "best_exact_control_bytes": 111,
+      "best_exact_control": "fresh zlib9",
+      "maximum_raw_fp16_decoder_parameters_if_zero_payload": 55,
+      "claim_kind": "MEASURED exact packet; no counted spatial generator or RGB through-R receiver"
+    }
+  ],
+  "fresh_lossless_control_rows": [
+    {
+      "row_id": "S2_ZLIB9_CONTROL",
+      "stream_bytes_before": 180196,
+      "decoder_counted_bytes": 0,
+      "stream_bytes_after": 152160,
+      "net_delta_bytes": -28036,
+      "reconstruction_error_vs_exact_stream": 0,
+      "round_trip_bit_exact": true,
+      "quantization_loss": 0,
+      "compressed_sha256": "37d5e0dec858825adeecd60d3ed0811514963857aa738882a3748f157de9d3f8",
+      "score_rate_delta": -0.0186680216097332,
+      "verdict": "ADOPT_CONTROL_ONLY",
+      "consumer": "#557 coder rung",
+      "verdict_scope": "exact S2 literal-component stream; not marginal archive bytes"
+    },
+    {
+      "row_id": "PPCS_ZLIB9_CONTROL_REPRODUCTION",
+      "stream_bytes_before": 884872,
+      "decoder_counted_bytes": 0,
+      "stream_bytes_after": 78969,
+      "net_delta_bytes": -805903,
+      "reconstruction_error_vs_exact_stream": 0,
+      "round_trip_bit_exact": true,
+      "quantization_loss": 0,
+      "compressed_sha256": "c50925aafe297a97a8a6e8147b60c39e128f24c0058938d0c540ea40516bcc16",
+      "verdict": "ALREADY_HAVE_CONTROL_REPRODUCED",
+      "consumer": "#557 coder rung",
+      "verdict_scope": "exact PPCS description seed; not marginal archive bytes"
+    },
+    {
+      "row_id": "PDW2_ZLIB9_CONTROL",
+      "stream_bytes_before": 138,
+      "decoder_counted_bytes": 0,
+      "stream_bytes_after": 111,
+      "net_delta_bytes": -27,
+      "reconstruction_error_vs_exact_stream": 0,
+      "round_trip_bit_exact": true,
+      "quantization_loss": 0,
+      "compressed_sha256": "6d4a95ac3acc2db200377994e40786a9694c838f8715430232232bea34babab2",
+      "delta_vs_inherited_brotli_q11_bytes": -22,
+      "score_rate_delta_vs_inherited_brotli_q11": -0.00001464889696868777,
+      "verdict": "ADOPT_CONTROL_ONLY",
+      "consumer": "#557 coder rung",
+      "verdict_scope": "exact PDW2 packet; not marginal archive bytes and not RGB through-R"
+    }
+  ],
+  "fresh_measurement_environment": {
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python_version": "3.14.6",
+    "zlib_compile_version": "1.2.12",
+    "zlib_runtime_version": "1.2.12",
+    "operation": "zlib.compress(data, level=9); assert zlib.decompress(compressed) == data; sha256 both sides",
+    "command_argv": [
+      "python3",
+      "-"
+    ],
+    "rng_used": false,
+    "reproduction_code": "data=Path(path).read_bytes(); compressed=zlib.compress(data,level=9); assert zlib.decompress(compressed)==data; print(len(data),hashlib.sha256(data).hexdigest(),len(compressed),hashlib.sha256(compressed).hexdigest())",
+    "brotli_q11_attempt_status": "UNAVAILABLE",
+    "brotli_q11_error": "ModuleNotFoundError: No module named 'brotli'",
+    "files_written": 0,
+    "bulk_bytes_created": 0
+  },
+  "autoencoder_candidate_rows": [
+    {
+      "row_id": "S1_CURRENT_POSE_FROM_EMBEDDING",
+      "stream_bytes_before": 6791,
+      "decoder_counted_bytes": null,
+      "stream_bytes_after": null,
+      "net_delta_bytes": null,
+      "reconstruction_error_vs_exact_stream": null,
+      "round_trip_bit_exact": null,
+      "quantization_loss_decomposition": null,
+      "source_derived_parameter_count": 4782,
+      "source_derived_raw_fp16_weight_bytes": 9564,
+      "source_derived_raw_fp16_minus_control_bytes": 2773,
+      "same_object_baselines": {
+        "zlib9_bytes": 6791,
+        "brotli_q11_bytes": null,
+        "context_arithmetic_bytes": null,
+        "block_fp_bytes": null,
+        "missing_reason": "No same-object #557 context-arithmetic or block-FP receipt; Brotli unavailable in this execution environment."
+      },
+      "measurement_status": "NO_SERIALIZED_CANDIDATE_OR_N600_RECEIVER_RECEIPT",
+      "verdict": "N-A-WHY",
+      "verdict_scope": "INSTANCE x CURRENT-POSE-MLP",
+      "exit_measurement": "total counted decoder plus latent/residual below 6791 bytes and real n600 frame-receiver scorer receipt"
+    },
+    {
+      "row_id": "S2_SHARED_TINY_STREAM_AUTOENCODER",
+      "stream_bytes_before": 152160,
+      "decoder_counted_bytes": null,
+      "stream_bytes_after": null,
+      "net_delta_bytes": null,
+      "reconstruction_error_vs_exact_stream": null,
+      "round_trip_bit_exact": null,
+      "quantization_loss_decomposition": null,
+      "same_object_baselines": {
+        "zlib9_bytes": 152160,
+        "brotli_q11_bytes": null,
+        "context_arithmetic_bytes": null,
+        "block_fp_bytes": null,
+        "missing_reason": "Brotli unavailable in this execution environment; #557 context-arithmetic and block-FP have not been run on this typed object."
+      },
+      "measurement_status": "UNMEASURED",
+      "verdict": "N-A-WHY",
+      "verdict_scope": "FORMULATION x CURRENT-S2-LITERAL-PACKET",
+      "exit_measurement": "seed1234 n600 parser-consumed candidate beating zlib9 and #557 same-object controls; through-scorer decomposition if lossy"
+    },
+    {
+      "row_id": "PPCS_SECTIONED_STREAM_AUTOENCODER",
+      "stream_bytes_before": 78969,
+      "decoder_counted_bytes": null,
+      "stream_bytes_after": null,
+      "net_delta_bytes": null,
+      "reconstruction_error_vs_exact_stream": null,
+      "round_trip_bit_exact": null,
+      "quantization_loss_decomposition": null,
+      "same_object_baselines": {
+        "zlib9_bytes": 78969,
+        "brotli_q11_bytes": null,
+        "context_arithmetic_bytes": null,
+        "block_fp_bytes": null,
+        "missing_reason": "Brotli unavailable in this execution environment; #557 context-arithmetic and block-FP have not been run on this typed object."
+      },
+      "measurement_status": "UNMEASURED",
+      "verdict": "N-A-WHY",
+      "verdict_scope": "FORMULATION x CURRENT-PPCS-B2-LOOSE",
+      "exit_measurement": "section-aware candidate beating 78969 bytes with exact parser and through-scorer receipt for any quantization"
+    },
+    {
+      "row_id": "PDW2_STANDALONE_STREAM_AUTOENCODER",
+      "stream_bytes_before": 111,
+      "decoder_counted_bytes": null,
+      "stream_bytes_after": null,
+      "net_delta_bytes": null,
+      "reconstruction_error_vs_exact_stream": null,
+      "round_trip_bit_exact": null,
+      "quantization_loss_decomposition": null,
+      "same_object_baselines": {
+        "zlib9_bytes": 111,
+        "brotli_q11_bytes": 133,
+        "context_arithmetic_bytes": null,
+        "block_fp_bytes": null,
+        "missing_reason": "#557 context-arithmetic and block-FP have not been run on this typed object."
+      },
+      "measurement_status": "UNMEASURED",
+      "verdict": "ALREADY-HAVE-BETTER",
+      "verdict_scope": "FORMULATION x STANDALONE-PDW2",
+      "exit_measurement": "already-counted shared decoder with incremental PDW2 stream below 111 bytes and RGB through-R custody"
+    },
+    {
+      "row_id": "XI_TEMPORAL_RESIDUAL_AUTOENCODER",
+      "stream_bytes_before": null,
+      "decoder_counted_bytes": null,
+      "stream_bytes_after": null,
+      "net_delta_bytes": null,
+      "reconstruction_error_vs_exact_stream": null,
+      "round_trip_bit_exact": null,
+      "quantization_loss_decomposition": null,
+      "input_receipt": null,
+      "same_object_baselines": {
+        "zlib9_bytes": null,
+        "brotli_q11_bytes": null,
+        "context_arithmetic_bytes": null,
+        "block_fp_bytes": null,
+        "missing_reason": "The #574 residual object and receipt are absent."
+      },
+      "measurement_status": "BLOCKED_ON_574_RESIDUAL_RECEIPT",
+      "verdict": "N-A-WHY",
+      "verdict_scope": "INSTANCE x INPUT-CUSTODY-ABSENT",
+      "exit_measurement": "consume, do not duplicate, the #574 custodied residual stream and run the same-object six-field gate"
+    }
+  ],
+  "generic_pretrained_decoder_boundary": {
+    "adjudicated_here": false,
+    "owner": "#604 U4 einstein_kolmogorov",
+    "strict_reading": {
+      "counted": [
+        "shared pretrained decoder weights",
+        "video-derived latent/modulations",
+        "codebook and entropy state",
+        "normalization and syntax"
+      ]
+    },
+    "alternative_reading": {
+      "possibly_free_only_after_U4_ruling": [
+        "fixed decoder trained solely on external non-contest corpus"
+      ],
+      "always_counted": [
+        "contest-derived latent/modulations",
+        "adaptation or fine-tuning",
+        "video-derived codebook/probability state",
+        "stream syntax and side information"
+      ],
+      "candidate_status_before_ruling": "research_only"
+    },
+    "routed_shapes": [
+      "COIN++ shared base INR plus quantized modulations",
+      "VC-INR shared gated INR plus modulation vectors",
+      "external-corpus VAE/foundation codec decoder plus contest latent",
+      "pre-fitted entropy prior plus fitted contest state"
+    ],
+    "verdict": "ROUTE-TO-U4"
+  },
+  "literature_delta": [
+    {
+      "name": "COIN++",
+      "url": "https://openreview.net/forum?id=NXB0rEM2Tq",
+      "mechanism": "shared meta-learned coordinate network plus quantized entropy-coded per-object modulations",
+      "disposition": "ROUTE-TO-U4"
+    },
+    {
+      "name": "VC-INR",
+      "url": "https://proceedings.mlr.press/v202/schwarz23a.html",
+      "mechanism": "shared INR with latent soft gating and rate-distortion-coded modulation vectors",
+      "disposition": "ROUTE-TO-U4"
+    },
+    {
+      "name": "Deep Dict",
+      "url": "https://arxiv.org/abs/2401.10396",
+      "mechanism": "Bernoulli-Transformer autoencoder latent plus quantized residual and quantization-entropy loss",
+      "disposition": "N-A-WHY_NO_SAME_OBJECT_RECEIPT"
+    },
+    {
+      "name": "Accelerating Relative Entropy Coding with Space Partitioning",
+      "url": "https://openreview.net/forum?id=OuQYWNuNxm",
+      "mechanism": "space-partitioned REC relative to a shared proposal",
+      "disposition": "N-A-WHY_AND_ROUTE-TO-U4"
+    },
+    {
+      "name": "Universal Sample Coding",
+      "url": "https://openreview.net/forum?id=qdV1vp1AtL",
+      "mechanism": "channel simulation relative to shared source-model access",
+      "disposition": "N-A-WHY_AND_ROUTE-TO-U4"
+    },
+    {
+      "name": "Some Notes on the Sample Complexity of Approximate Channel Simulation",
+      "url": "https://openreview.net/forum?id=Hq07uannyG",
+      "mechanism": "depth-limited approximate A-star coding with fixed-runtime and total-variation tradeoff",
+      "disposition": "N-A-WHY_THROUGH_SCORER_REQUIRED"
+    },
+    {
+      "name": "DZip",
+      "url": "https://arxiv.org/abs/1911.03572",
+      "mechanism": "adaptive or semi-adaptive neural prediction plus arithmetic coding",
+      "disposition": "ALREADY-HAVE-BETTER_UNTIL_SAME_OBJECT_WIN"
+    }
+  ],
+  "settled_non_duplication": {
+    "C6_IBPS": "24-dimensional bottleneck instance destroyed segmentation; implementation/formulation negative only",
+    "CoolChic_C3": "n48 byte-closed and still descending, not a basis limit; deprioritized #97/#115",
+    "HNeRV_PR95": "embedding-to-decoder 0.19 plateau and bc20/bc36 trilemma settled",
+    "VQ_VAE": "built and cross-tensor VQ measured #461; procedural indices known",
+    "classical_learned_image_compression": "Balle/Minnen/ELIC/CompressAI harvested #152",
+    "neural_self_compression": "2025-26 size-in-loss, learned weight entropy, REC and related families measured/classified #558",
+    "DeepCABAC_instance": {
+      "canonical_archive_bytes": 83838,
+      "candidate_archive_bytes": 85274,
+      "net_delta_bytes": 1436,
+      "verdict_scope": "measured macOS DeepCABAC configuration; other transforms/priors open"
+    }
+  },
+  "xi_temporal_delta_coder_574_poll": {
+    "branch": "codexwt/xi_temporal_delta_coder_574_20260721T214553Z",
+    "observed_commit": "74324e81faf2ed11cb7512112526d3fd9a1f0e78",
+    "measurement_receipt_found": false,
+    "predictor_duplicated": false
+  },
+  "consumer_routes": [
+    {
+      "consumer": "direct_description_minimizer_builder",
+      "route": "Own bounded S2 shared-decoder measurement; total counted bytes must beat 152160 and lossy fields require through-scorer decomposition."
+    },
+    {
+      "consumer": "#557 coder rung",
+      "route": "Ingest exact S2 zlib9 152160-byte and PDW2 zlib9 111-byte controls; run context arithmetic/block-FP on identical typed objects."
+    },
+    {
+      "consumer": "#604 U4 einstein_kolmogorov",
+      "route": "Adjudicate external-corpus generic decoder boundary; both byte readings supplied without a ruling."
+    },
+    {
+      "consumer": "xi_temporal_delta_coder_574",
+      "route": "Publish custodied residual stream; later AE rows consume it and do not duplicate the predictor."
+    },
+    {
+      "consumer": "canonical_equations",
+      "route": "Consider the counted-decoder break-even law only after a real evaluator-bound candidate exists; no registration in this pass."
+    }
+  ],
+  "terminal_verdict": "CONTROL_ROWS_ADOPTED_NO_AUTOENCODER_PROMOTED_FAMILIES_OPEN_U4_ROUTED",
+  "terminal_verdict_scope": "exact listed description streams and current counted-decoder formulations; no autoencoder family or paradigm kill"
+}

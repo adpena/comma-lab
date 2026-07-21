@@ -82473,6 +82473,48 @@
       },
       "notes": "HSG delta-only crosswalk; real n64 advisory probe; no score, launch, archive, or production authority; MAIN review required.",
       "research_only": true
+    },
+    {
+      "id": "lane_autoencoder_describe_crosswalk_20260721T231126Z",
+      "name": "Autoencoder direct-description stream crosswalk",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only bounded crosswalk; no score authority; pointer immutable; MAIN review required.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -82482,5 +82524,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-21T20:59:01Z"
+  "updated_at": "2026-07-21T23:33:33Z"
 }

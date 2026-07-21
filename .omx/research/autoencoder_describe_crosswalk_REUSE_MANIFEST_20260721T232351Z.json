@@ -1,0 +1,176 @@
+{
+  "schema": "pact.autoencoder_describe_crosswalk_reuse_manifest.v1",
+  "utc": "2026-07-21T23:23:51Z",
+  "lane_id": "lane_autoencoder_describe_crosswalk_20260721T231126Z",
+  "research_only": true,
+  "reuse_policy": "Reuse exact live description streams, canonical parser/receiver surfaces, and settled coder receipts. Do not fork a temporal predictor, frame autoencoder vehicle, archive grammar, equation registry, or generic-decoder rule interpretation.",
+  "reused": [
+    {
+      "path": ".omx/research/wrong_levels_describe_sweep_610_20260721T220916Z_receipt.json",
+      "objects": [
+        "S1 PNTG 6791-byte exact stream",
+        "S2 180196-byte literal-component stream and per-class raw split"
+      ],
+      "disposition": "reused-read-only",
+      "reason": "Current exact description custody with structured-null receiver debts."
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/predictor_r3_20260721/canonical_r3_20260721/components/admitted_knee_components.pcomp3",
+      "sha256": "32b41a7db1c6927e6812a49bdea568cd00fd2c19ca9798e38666385e8ed2e68d",
+      "disposition": "reused-read-only real payload",
+      "reason": "Fresh exact zlib-9 control; no payload mutation."
+    },
+    {
+      "path": ".omx/research/seed_compose_b2_measurements_20260721.json",
+      "objects": [
+        "PPCS B2 loose raw and zlib9 controls",
+        "seed1234 n600 custody"
+      ],
+      "disposition": "reused-read-only",
+      "reason": "Current real seed object and receiver blockers."
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/seed_compose_20260721/seeds/seed_compose_b2_loose.ppcs",
+      "sha256": "a21dde38128bed7ff62860ef005b994b74202e0bd00a37d1df8824ee325e856b",
+      "disposition": "reused-read-only real payload",
+      "reason": "Reproduced inherited zlib-9 byte/hash control."
+    },
+    {
+      "path": ".omx/research/pdw2_spatial_receiver_576_blocker_receipt_20260719.json",
+      "objects": [
+        "PDW2 138-byte raw packet",
+        "133-byte Brotli-q11 control",
+        "packet-only spatial nonidentifiability and through-R debt"
+      ],
+      "disposition": "reused-read-only",
+      "reason": "Exact packet and authority boundary."
+    },
+    {
+      "path": ".omx/research/pdw2_spatial_receiver_576_measurement/pdw2_margin_packet_138b.pdw2",
+      "sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+      "disposition": "reused-read-only real payload",
+      "reason": "Fresh 111-byte exact zlib-9 control."
+    },
+    {
+      "path": ".omx/research/arith_selfcomp_rate_coders_20260719_codex.md",
+      "disposition": "reused-as-baseline",
+      "reason": "Canonical #557 direct-coder race and same-object measurement contract."
+    },
+    {
+      "path": ".omx/research/neural_selfcomp_sota_20260719_codex.md",
+      "objects": [
+        "NVRC and NVRC++",
+        "NeuroQuant",
+        "NNCodec and DeepCABAC",
+        "COMBINER and RECOMBINER",
+        "LotteryCodec",
+        "C3 and Cool-Chic",
+        "WaLLoC",
+        "FNLIC",
+        "REC-style sample communication"
+      ],
+      "disposition": "reused-as-settled-harvest",
+      "reason": "Avoid duplicate 2025-26 survey/build work; retain exact DeepCABAC loss row."
+    },
+    {
+      "path": "src/tac/pose_from_embedding.py",
+      "objects": [
+        "MaskFeatureExtractor",
+        "PoseFromEmbeddingMLP"
+      ],
+      "disposition": "recalled-not-mutated",
+      "reason": "In-tree stream-autoencoder existence proof and source-derived parameter lower bound."
+    },
+    {
+      "path": ".omx/research/levelset_pose_supervised_path_20260627T072947Z.md",
+      "disposition": "reused-as-settled-measurement",
+      "reason": "Existing weak pose holdout and missing realized-frame path; no duplicate training."
+    },
+    {
+      "path": "src/tac/scorer_targets.py",
+      "disposition": "recalled-not-mutated",
+      "reason": "Canonical PNTG object semantics."
+    },
+    {
+      "path": "src/tac/canonical_equations/",
+      "disposition": "recalled-not-mutated",
+      "reason": "No equation registration without a real evaluator-bound AE candidate."
+    }
+  ],
+  "new_with_justification": [
+    {
+      "path": ".omx/research/autoencoder_describe_crosswalk_20260721T232351Z.md",
+      "kind": "research memo",
+      "justification": "Ranked A1/A2/A3 crosswalk, strict byte ceilings, U4 routing, and same-turn consumer notes."
+    },
+    {
+      "path": ".omx/research/autoencoder_describe_crosswalk_receipt_20260721T232351Z.json",
+      "kind": "machine-readable receipt",
+      "justification": "Exact control measurements, structured candidate nulls, byte law, custody, and routes."
+    },
+    {
+      "path": ".omx/research/autoencoder_describe_crosswalk_DAG_FEED_20260721T232351Z.md",
+      "kind": "DAG FEED",
+      "justification": "Fail-closed decision graph, triality, six hooks, and consumer/falsifier edges."
+    },
+    {
+      "path": ".omx/research/autoencoder_describe_crosswalk_REUSE_MANIFEST_20260721T232351Z.json",
+      "kind": "REUSE MANIFEST",
+      "justification": "Explicit reuse, non-reuse, and no-duplicate ownership."
+    },
+    {
+      "path": ".omx/state/lane_registry.json",
+      "kind": "canonical lane registration",
+      "justification": "Research-only L0 ownership and authority boundary."
+    },
+    {
+      "path": ".omx/state/lane_maturity_audit.log",
+      "kind": "append-only lane mutation receipt",
+      "justification": "Auditable lane registration."
+    }
+  ],
+  "explicit_non_reuse": [
+    {
+      "object": "frame-level autoencoder substrate",
+      "reason": "HNeRV/PR95 and Cool-Chic/C3 trilemma/plateau evidence is settled; task scope is description streams."
+    },
+    {
+      "object": "new temporal xi predictor",
+      "reason": "#574 owns prediction; this lane waits for and consumes its residual receipt."
+    },
+    {
+      "object": "free pretrained decoder assumption",
+      "reason": "#604 U4 owns rule-118 adjudication; all free-reading candidates remain research only."
+    },
+    {
+      "object": "synthetic stream fixture",
+      "reason": "NO-FAKE real-payload requirement; only named live S1/S2/PPCS/PDW2 objects were measured."
+    },
+    {
+      "object": "new archive grammar or parser",
+      "reason": "No candidate earned a build; future owner must extend canonical typed parser surfaces."
+    },
+    {
+      "object": "new canonical equation",
+      "reason": "Break-even inequality is derived but unregistered until a real candidate supplies an evaluator receipt."
+    },
+    {
+      "object": "provider, GPU, scorer, archive, or live-run actuation",
+      "reason": "Research-only $0 authority."
+    }
+  ],
+  "consumer_routes": {
+    "direct_description_minimizer_builder": "bounded S2 shared-decoder probe after MAIN review",
+    "#557 coder rung": "ingest exact S2 152160-byte and PDW2 111-byte zlib9 controls",
+    "#604 U4 einstein_kolmogorov": "adjudicate external-corpus generic decoder boundary",
+    "xi_temporal_delta_coder_574": "publish residual receipt; no predictor duplication",
+    "canonical_equations": "defer break-even-law registration until evaluator-bound candidate"
+  },
+  "authority": {
+    "axis": "[research-only; exact description-stream byte custody plus source/repository audit]",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "main_landing_review_required": true
+  }
+}
