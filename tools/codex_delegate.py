@@ -546,6 +546,21 @@ def main(argv: list[str] | None = None) -> int:
         prompt_file = RUNS / f"{args.label}_{stamp}.prompt.txt"
         prompt_file.write_text(args.prompt, encoding="utf-8")
 
+    # ARTIFACT QUARANTINE (operator 2026-07-21): retired-vehicle artifacts are
+    # HARVEST-SIGNAL-ONLY — a dispatch prompt anchoring on a quarantined identifier is
+    # refused unless it carries the explicit signal-only waiver line. Fail-open only when
+    # the manifest is absent; a corrupt manifest refuses (rc=12 either way on violation).
+    try:
+        from tac.artifact_quarantine import refuse_message, scan_text
+        _q_hits = scan_text(prompt_file.read_text(encoding="utf-8"))
+    except ImportError:
+        print("[codex_delegate] WARNING: tac.artifact_quarantine unavailable — "
+              "quarantine scan skipped", file=sys.stderr)
+        _q_hits = []
+    if _q_hits:
+        print(refuse_message(_q_hits), file=sys.stderr)
+        return 12
+
     # Give the arm a watched inbox + prepend the poll-and-consume contract so it stays
     # amendable mid-run. The wrapped prompt is what the launcher feeds codex; the original
     # prompt_file is preserved untouched (and recorded in the ledger for provenance).
