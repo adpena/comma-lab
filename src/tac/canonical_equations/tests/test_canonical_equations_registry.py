@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Tests for tac.canonical_equations registry (Catalog #344 anchor)."""
+
 from __future__ import annotations
 
 import json
@@ -9,10 +10,10 @@ import pytest
 
 from tac.canonical_equations import (
     CANONICAL_EQUATION_SCHEMA_VERSION,
+    RECALIBRATE_ON_NEW_ANCHORS,
     CanonicalEquation,
     EmpiricalAnchor,
     InvalidEquationError,
-    RECALIBRATE_ON_NEW_ANCHORS,
     get_equation_by_id,
     load_equation_registry_strict,
     load_registry_events_lenient,
@@ -23,6 +24,7 @@ from tac.canonical_equations import (
     register_canonical_equation,
     update_equation_with_empirical_anchor,
 )
+from tac.canonical_equations.equation import VALID_EMPIRICAL_VERIFICATION_STATUSES
 from tac.canonical_equations.registry import (
     CanonicalEquationsRegistryCorruptError,
     _equation_from_dict,
@@ -58,7 +60,11 @@ def _make_eq(eq_id: str = "test_equation_v1", consumers=("tac.foo",)) -> Canonic
     )
 
 
-def _make_anchor(anchor_id: str = "test_anchor_v1") -> EmpiricalAnchor:
+def _make_anchor(
+    anchor_id: str = "test_anchor_v1",
+    *,
+    empirical_verification_status: str | None = None,
+) -> EmpiricalAnchor:
     return EmpiricalAnchor(
         anchor_id=anchor_id,
         measurement_utc="2026-05-19T01:00:00Z",
@@ -69,6 +75,7 @@ def _make_anchor(anchor_id: str = "test_anchor_v1") -> EmpiricalAnchor:
         source_artifact="experiments/results/test_anchor",
         measurement_method="test_method",
         provenance=_design_prov(),
+        empirical_verification_status=empirical_verification_status,
     )
 
 
@@ -86,7 +93,6 @@ def test_equation_id_must_match_canonical_pattern():
 
 
 def test_equation_summary_length_capped():
-    eq = _make_eq()
     with pytest.raises(InvalidEquationError, match="exceeds 200-char limit"):
         CanonicalEquation(
             equation_id="long_summary_v1",
@@ -232,7 +238,6 @@ def test_to_dict_round_trip():
 
 
 def test_anchor_residual_nan_rejected():
-    import math
 
     with pytest.raises(InvalidEquationError, match="must not be NaN"):
         EmpiricalAnchor(
@@ -276,15 +281,31 @@ def test_register_and_query_roundtrip(tmp_path: Path):
     assert loaded[0].equation_id == "round_trip_v1"
 
 
+@pytest.mark.parametrize("status", sorted(VALID_EMPIRICAL_VERIFICATION_STATUSES))
+def test_registry_roundtrip_preserves_each_empirical_verification_status(
+    tmp_path: Path,
+    status: str,
+) -> None:
+    path = tmp_path / f"status-{status}.jsonl"
+    lock = path.with_suffix(path.suffix + ".lock")
+    equation = _make_eq(eq_id="status_round_trip_v1").with_new_anchor(
+        _make_anchor(empirical_verification_status=status)
+    )
+    register_canonical_equation(equation, path=path, lock_path=lock)
+
+    loaded = query_equations(path=path)
+
+    assert len(loaded) == 1
+    assert loaded[0].empirical_anchors[0].empirical_verification_status == status
+
+
 def test_register_then_update_with_anchor(tmp_path: Path):
     path = tmp_path / "test_registry.jsonl"
     lock = path.with_suffix(path.suffix + ".lock")
     eq = _make_eq(eq_id="anchor_update_v1")
     register_canonical_equation(eq, path=path, lock_path=lock)
     anchor = _make_anchor("anchor_a")
-    updated = update_equation_with_empirical_anchor(
-        "anchor_update_v1", anchor, path=path, lock_path=lock
-    )
+    updated = update_equation_with_empirical_anchor("anchor_update_v1", anchor, path=path, lock_path=lock)
     assert len(updated.empirical_anchors) == 1
     # Re-query; latest payload wins.
     re_loaded = get_equation_by_id("anchor_update_v1", path=path)
@@ -297,9 +318,7 @@ def test_update_unknown_equation_raises(tmp_path: Path):
     lock = path.with_suffix(path.suffix + ".lock")
     anchor = _make_anchor("unknown_anchor")
     with pytest.raises(InvalidEquationError, match="not found in registry"):
-        update_equation_with_empirical_anchor(
-            "nonexistent_v1", anchor, path=path, lock_path=lock
-        )
+        update_equation_with_empirical_anchor("nonexistent_v1", anchor, path=path, lock_path=lock)
 
 
 def test_load_strict_raises_on_corrupt_json(tmp_path: Path):

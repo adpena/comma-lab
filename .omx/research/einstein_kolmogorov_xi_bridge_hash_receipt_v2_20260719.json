@@ -1,0 +1,84 @@
+{
+  "authority": "read-only input custody; no score authority",
+  "backend_started": false,
+  "command": {
+    "argv": [
+      "--config",
+      "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_xi_bridge_hash_config_20260719.json",
+      "--verify-input-hashes"
+    ],
+    "config_fingerprint_sha256": "736211491467c36015b8a4aeae76dcbc36b0ad54eea47df6b9b0d11a2e273700",
+    "cwd": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z"
+  },
+  "command_sha256": "765710bc2363155b7b40fdfc1c4d9e59430c2b01ffd15b919307547f2486916e",
+  "config": {
+    "backend_resume_receipt_path": null,
+    "backend_resume_receipt_sha256": null,
+    "bit_exact_pairs": 2,
+    "declared_minimum_free_bytes": null,
+    "donor_r1_npz_path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_R1_storenothing_descent_ev1_20260703T004906Z/levelset_witness_ema_mlx.npz",
+    "donor_r1_npz_sha256": "5d18042eba3ac262200a7bb3fb905846cd9e1d4ea956dee6f65da8984ddd6e95",
+    "dxi_scale": 1.0,
+    "execution_mode": "governed_full",
+    "expected_n_pairs": 600,
+    "failure_manifest_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_xi_bridge_hash_failure_v2_20260719.json",
+    "generator_checkpoint_dir": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z",
+    "generator_npz_path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z/levelset_witness_ema_BEST.npz",
+    "generator_npz_sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+    "gt_cache_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "max_pairs": 600,
+    "operator_authorization_token": "OPERATOR-GO:/Users/adpena/Projects/pact/.omx/tmp/codex_inbox/einstein_kolmogorov_crux.jsonl#2026-07-19T21:26:22Z-zero-cost-local-full",
+    "packet_output_dir": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_20260719_xi_bridge_packet",
+    "pose_carrier_pitch": 0.0,
+    "pose_carrier_s_r": 0.0,
+    "pose_carrier_s_t": 0.16,
+    "result_json_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_xi_bridge_hash_receipt_v2_20260719.json",
+    "schema": "einstein_kolmogorov_xi_bridge_config.v2",
+    "xi_coder": "delta_ar",
+    "xi_q_levels": 4096
+  },
+  "custody": {
+    "donor_r1": {
+      "bytes": 438018,
+      "path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_R1_storenothing_descent_ev1_20260703T004906Z/levelset_witness_ema_mlx.npz",
+      "sha256": "5d18042eba3ac262200a7bb3fb905846cd9e1d4ea956dee6f65da8984ddd6e95"
+    },
+    "generator": {
+      "bytes": 460448,
+      "path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z/levelset_witness_ema_BEST.npz",
+      "sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef"
+    },
+    "gt_cache": {
+      "bytes": 5078017610,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "r1_calibration_receipt": {
+      "bytes": 11547,
+      "calibration": {
+        "pitch": 0.0,
+        "s_r": 0.0,
+        "s_t": 0.16
+      },
+      "field_semantics_with_xi_override": {
+        "pitch": "computational; ground-plane homography derives H from supplied xi",
+        "s_r": "provenance_only; xi is supplied directly",
+        "s_t": "provenance_only; xi is supplied directly"
+      },
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/reports/r1_dxi_238/n600_shipdxi.json",
+      "sha256": "45fb86119d8ba0f8ce3415b17f2bcae3cc50ad497c654479ceac0ac88196b0da"
+    }
+  },
+  "mode": "verify_input_hashes",
+  "output_storage_probed": false,
+  "runtime": {
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python_executable": "/Users/adpena/Projects/pact/.venv/bin/python",
+    "python_version": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+    "tool_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/tools/probe_einstein_kolmogorov_xi_bridge.py",
+    "tool_sha256": "1facbe7b63dcfc2ca9c5961aee858145e28d7c0acb16b2336fceaa81f6dc4d88"
+  },
+  "schema": "einstein_kolmogorov_xi_bridge_hash_receipt.v1",
+  "utc": "2026-07-19T23:28:48Z"
+}

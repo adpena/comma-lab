@@ -1,0 +1,1329 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "base_git_head": "889d32db399709aca475c3c6120c81f189dd4b81",
+  "checkpoint_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoint.json",
+  "config": {
+    "camera_height": 874,
+    "camera_width": 1164,
+    "checkpoint_every_pairs": 1,
+    "family": "dspsa",
+    "gain_alpha": 0.602,
+    "gt_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n24.npz",
+    "gt_sha256": "684a2e043f5637eec6f2bc837b845588a7ec759c2a5c4b3b75dcb9f872541ede",
+    "iterations": 8,
+    "label_min_run": 0,
+    "lower_bound": 0,
+    "output_dir": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa",
+    "packet_path": "/Volumes/VertigoDataTier/pact/evidence/pdw1_realization_20260719/pdw1p_n24_payload.bin",
+    "packet_sha256": "8d66286c722e9202d77b54bcdf06942496641bad20ff9632c785800b53a0a02d",
+    "pair_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "schema": "einstein_kolmogorov_crux_config.v1",
+    "scorer_authority": "singleton_cpu_torch_segnet",
+    "scorer_height": 384,
+    "scorer_width": 512,
+    "seed": 20260719,
+    "segnet_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "target_first_displacement": 1.0,
+    "upper_bound": 255,
+    "upstream_path": "/Users/adpena/Projects/pact/upstream"
+  },
+  "config_fingerprint": "069f56519f4f27366c8907bb1932d243129f5bf06865eb7b07f920a0d8b40fa7",
+  "d_seg": 0.0064991845024956595,
+  "dspsa_iteration_checkpoints": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0000_iter_0001.json",
+      "sha256": "2d56ce65dcb6f3225c9c78234c39f2ced591b0b3401c9f7a3bfbabc839dd4582"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0000_iter_0002.json",
+      "sha256": "91a028d299cd326f997e6a0373f161a4bffaa63b75a31235905d51d741c364cd"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0000_iter_0003.json",
+      "sha256": "4a163605f1ffb34ac387cd2a221824f53f50288e1640f6b5a12fdf63b0fbe7c1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0000_iter_0004.json",
+      "sha256": "ef76a9a56aeb89d2f3732e5b441a971ee3c4997c1291f7d3ba2d73f60672e32d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0000_iter_0005.json",
+      "sha256": "c132c31941534f92974f75f6a2a4c9bff955da4d9d8f9ccdc7edb5e02fd45eaa"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0000_iter_0006.json",
+      "sha256": "3043de3bc4bddee1ccfc60590cdddfb8477d40088a9658ca89a7fd6655e9e5bd"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0000_iter_0007.json",
+      "sha256": "34ef7e16343edcfec250f2eef713ad264a1af32c801b1b00dc890fc13bcd80ac"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0000_iter_0008.json",
+      "sha256": "cd621c34edf23c69e83daec1ec178671000826cbef5feed78b34e7796288c506"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0001_iter_0001.json",
+      "sha256": "0719a5d5b64277be52f38aec6f4bad3adf060fe91db233edb72d8baa1432316c"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0001_iter_0002.json",
+      "sha256": "c136f4aa03e2f33505d65efec6d5392bc0a46985e3d3b44d16ed6dbcc935a1ca"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0001_iter_0003.json",
+      "sha256": "df63e790145f3b0b3456fa1c45f21aa828f29053cdafdced36f939cf4dd86979"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0001_iter_0004.json",
+      "sha256": "c9c28c5e684485cee1b97875d69f97555c88ac677bd2abd0b9349e30eb7082f4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0001_iter_0005.json",
+      "sha256": "92fc6e1ac1978c2675ee90fbe76b47874b9fb6c3410eb3848c3beb5c6c9e0ffc"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0001_iter_0006.json",
+      "sha256": "b11aaa1f7be3526eb7f579b75eec7176ed0868d0552e84ffd4119b68cd219aae"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0001_iter_0007.json",
+      "sha256": "9b75f887d36c58d2d11aef3289751b6c4c90df438f4129812f1105d9e1bfce64"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0001_iter_0008.json",
+      "sha256": "577bc87dbcd49b5ad0b1c9fd20eb73ea84b232242743ed604fa0875bc5f41140"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0002_iter_0001.json",
+      "sha256": "de9fa946b8b8dc8f85fbabe22ed8f59d46929f5dfa3799f9653487ba99bed642"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0002_iter_0002.json",
+      "sha256": "572b0fec6af98622be8c07c7a08dedd77e1f13a00a0f7e130eb979bfa5b84af2"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0002_iter_0003.json",
+      "sha256": "fa6d4ececb62ebadea4bb6c4c758f31853490e2e9c4e4e50183f19fd7da149b1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0002_iter_0004.json",
+      "sha256": "99dfaf0e293af6c546975976ce70fe3ecec9474a296fd5eea917f08f6e11580c"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0002_iter_0005.json",
+      "sha256": "09d6b0f680a088dc599ec9ae2f4941f837732f3cf92b967118d95611fea8e094"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0002_iter_0006.json",
+      "sha256": "b8b3d3e38a6ebd48505b36518273e45ed23b7aaaa7221cb830062658cee69b87"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0002_iter_0007.json",
+      "sha256": "5df45a0b356a0918a5f730f2ff3113d8f3cf55e64f30524ff45e72c5a327e33a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0002_iter_0008.json",
+      "sha256": "584319ccf5ce44c21d11d1f0d4af174605e87823cfed7300150541724f901bc2"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0003_iter_0001.json",
+      "sha256": "c3ca4a8bc3168dfe0276e4ab93f1db6ec1073c14b1aadbd3ae52d943de6a6679"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0003_iter_0002.json",
+      "sha256": "e0be9d29b5f2462db4827b93aa54665103a6040248b2bc76ab3c334562244474"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0003_iter_0003.json",
+      "sha256": "c738234f4ec2ce3a984dd3feb85c66c7b48b7d7a1b1df207359902b0934d0eb7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0003_iter_0004.json",
+      "sha256": "5d3b8c36bc78a0b21167c06afe3ab7bdf80b427f1700554de74e580e25d15aa1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0003_iter_0005.json",
+      "sha256": "4b028469b86c413547005e65f939f48f928fb85a1abe92e58908349b4ceff6c7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0003_iter_0006.json",
+      "sha256": "0c1fd43b2a4125dc55bd40e572a3ba59817d925c47ab7f395f20498f07b00094"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0003_iter_0007.json",
+      "sha256": "f84b8f6174e3cc1fe45056effa9937daa9e0d8d4cfe172ac93b2d098b69c99fe"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0003_iter_0008.json",
+      "sha256": "0080779e9f13438113120828fafc789964c4f4e5c2fa0c118c0195fcbafb9aef"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0004_iter_0001.json",
+      "sha256": "bda6b1960da6ce8741e6a7c9159ff18222e19673a9c52a96ac6993d5b437a683"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0004_iter_0002.json",
+      "sha256": "b2986fde80bf53d0b25cd18f4da2d1914ebb42bffed50c7164ed02b48b2196c5"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0004_iter_0003.json",
+      "sha256": "151a6571b0d8b9c072660c7bd47218250decc4d49baa4d85acfe4f556bbf1529"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0004_iter_0004.json",
+      "sha256": "9da12a42832abc6dbb7d928f10ead60ff2227cfffab8b3d21d9732e673bd60eb"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0004_iter_0005.json",
+      "sha256": "4b2eb0004f14081968b87d7cc6e9f906d9948bbc45c4068bda4e82ac614d8696"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0004_iter_0006.json",
+      "sha256": "5dec9a9733c41d00e521edf1def2d9877f7c4cee68cde85680de642561bbff5e"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0004_iter_0007.json",
+      "sha256": "c6bf9d4825be48327e5bd0971178991388dbee749373f22cfbf1526a5a87a1ee"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0004_iter_0008.json",
+      "sha256": "fa67eefa8502465cfff22f339498bbc8347d22325a4efe41454f19beb89c26e3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0005_iter_0001.json",
+      "sha256": "566bef7c5f6ec3b67d2a0b844c8f2bbb96bfc7fe0a06088f05dcd7b58731624c"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0005_iter_0002.json",
+      "sha256": "6d739fb7792b737f9aac3a377326cb2eec97ccd90826218a718a853ba3a2f7a4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0005_iter_0003.json",
+      "sha256": "28b16c086a3435d97863045cddca1e67a855150e513874bc64eae2cdbf057448"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0005_iter_0004.json",
+      "sha256": "9a313682b970a79bfa66e5e8dcfa6ed50026132ca36659116137179d1a1af30e"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0005_iter_0005.json",
+      "sha256": "8ba0b758a6481c5a013ac919b2f846fa64f85aaf5ca73666bc13cf4595dc9cba"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0005_iter_0006.json",
+      "sha256": "b9b05b33c3dc0165ac852ccaa5975c9c18ceb1c01f76adaee963e01d653cbcc1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0005_iter_0007.json",
+      "sha256": "9f6aa460536070dd03a89cd50a77ad2ad8ad498d4708c6347d2758eddc12da64"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0005_iter_0008.json",
+      "sha256": "15c5f3769809642d6c3e09ee2c4dae1010352b4d46ee1feaa0f9f6a80e78e7d7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0006_iter_0001.json",
+      "sha256": "1793f88b30261d09614a9f49f3512753c284f3c6c8fe01e2aa5260b06ee820b2"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0006_iter_0002.json",
+      "sha256": "427814c6b4f662583166a8994940785e7c3909c8a3702d5067ec8b8a9ddada9f"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0006_iter_0003.json",
+      "sha256": "c2e3bd55298b693816042a321e199abfb41c5fefd0548f3a331656f09a6087e4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0006_iter_0004.json",
+      "sha256": "f31f497f6ed342c27b4c07b49736654e3bdb97bb189e3fc2afbbd0c14cc318ac"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0006_iter_0005.json",
+      "sha256": "76111d7c8531577b8feff9b14e6657d623356eee9ad64395de4713e1c8e64645"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0006_iter_0006.json",
+      "sha256": "038d8e055363cc6f32d5068096518757246f86f4515d57e50ee36aacd840d070"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0006_iter_0007.json",
+      "sha256": "f7bb9d5bd712af9a1f7d4b0fa9eb87a6cc12b543cb4968d9ddc50e10c5119522"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0006_iter_0008.json",
+      "sha256": "e722f3edf20e32b75ac15f53e3a21441feb130c7ad7e845bd8282d14b6947ead"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0007_iter_0001.json",
+      "sha256": "a3bbe1216564bf17f7c3f405abaaac0130f3dd44b84bf259506935e6ebf83bf4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0007_iter_0002.json",
+      "sha256": "748c8b9219c4bfaa6ea2b73b8fee8a8329633812fa5f0d06999f3c78ff2dd57b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0007_iter_0003.json",
+      "sha256": "63d5b39c2023ce6f0d8daf646ac1f8c62750e737748fc043937001129b85ac95"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0007_iter_0004.json",
+      "sha256": "61a1a6072af0704fd0c4fcd497ade68e1d81a67b82bd07666261847e00b9643e"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0007_iter_0005.json",
+      "sha256": "4b18b2eca4fa2885d8092af58b4bce9e8646be422fe8ead8d56d317b3bc71443"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0007_iter_0006.json",
+      "sha256": "16838eb33837aa88d1a7e62742e8ee7cf9839dd2f5dc378433d9e33b8d840492"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0007_iter_0007.json",
+      "sha256": "c7de50f22b5cde1178a58318dbd10de34cbd30c504c18ec4765db735cab3f4d7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0007_iter_0008.json",
+      "sha256": "8e9e07a5258e22f0836434530c1d2b63fae45a6d387abed50b123274b0dc93cb"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0008_iter_0001.json",
+      "sha256": "0abcd5bc79d12ef5bf365ac2797078d0828514ccfee6440e716352b3bf7fedc4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0008_iter_0002.json",
+      "sha256": "3229ffe700682db00f66084ebcd0d409f0d8d1bd65babd73f08489a91f6028e1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0008_iter_0003.json",
+      "sha256": "e442426d5af52f252aa4789e2d6a03383b187ed7ac5e697aba64f1f491c29e79"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0008_iter_0004.json",
+      "sha256": "9b36c51164fc2eb6ba83c2792651649ceb230a29d96ebcbe4c284d0dbac7d40b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0008_iter_0005.json",
+      "sha256": "75457a2673b4b1c019ef2cf85ed9e2cc49160cb59f8026341e5012582a29a510"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0008_iter_0006.json",
+      "sha256": "9b1903cdaee6bd1d2af8fcf5bd4f9ff65dc3d143a05beb6d9762bb4fcf3f8008"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0008_iter_0007.json",
+      "sha256": "d15e8608908ae5d53212ae3140e0bac1ceadd3a11fb223c87b57fa3b9af6f6ab"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0008_iter_0008.json",
+      "sha256": "0a8d787a41aa6c302d9fbae7bf00dc2e2f158a32979a8f82299baddfa54b4cb1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0009_iter_0001.json",
+      "sha256": "55c46924b61365cbf39246e863458ad5976e42794c3571ea15e1ec7c81a53078"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0009_iter_0002.json",
+      "sha256": "25cae88d174fb51acbc652ce7910c18348860f3cf4c6d79d247964385279573e"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0009_iter_0003.json",
+      "sha256": "ac2b66e1bc147ab50fd176dca5bc52463eb77a383da9be1c5baa8475e515e7ef"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0009_iter_0004.json",
+      "sha256": "6144109df2063642ef396c2a6a4aa6604318bf8e21ee5a9afcfa7a063887dd8c"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0009_iter_0005.json",
+      "sha256": "ae1ab9695208f9744bc0479e3a0cba09b2eaa4456f91c32cec44d8cd7f4c984f"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0009_iter_0006.json",
+      "sha256": "12fa1438656150f38405b5cdebe7d84e2800d240c28c8169d15ebc305ab6256b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0009_iter_0007.json",
+      "sha256": "aab4b1ad0b1cd8fdd1d9102750e04c7ac74beb7f4e6d93424b2d2ecfd254395a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0009_iter_0008.json",
+      "sha256": "8fa2f76567ab3db10fc066e4339db7b1ebf2f22699e6d25dfeb244501c409035"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0010_iter_0001.json",
+      "sha256": "0bec36d88c93f68b7b697177ec003d7d3ab5a6d8b93159cd3d5ec76680d2241b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0010_iter_0002.json",
+      "sha256": "81a038c333e293b36e9ff4948d45b7eade00dda86542a982de01596811c33341"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0010_iter_0003.json",
+      "sha256": "ec27deec17a2d744687435492de7317a2cde3bcc831b95443d45983abf32f07a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0010_iter_0004.json",
+      "sha256": "5764ed00a32de265fb291827dc8a945a1d15f200edcef26c81781f68f602f04f"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0010_iter_0005.json",
+      "sha256": "24d6d0843deda08a6a492c957114a792dceda71279d0f59bb349629be16cbf2c"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0010_iter_0006.json",
+      "sha256": "ea0abc508e5a01ca8c06550647c29534a69662c1bdb837f4704fbaa4f09789a4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0010_iter_0007.json",
+      "sha256": "f77951ad64878dcfe9706780832b040904f667af76f0267c7565f9b70d1e55fe"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0010_iter_0008.json",
+      "sha256": "d5caef53f681f32a0d8ad5c15917f5f1d2bbb9ceffdf0be3ffd0f74ad9059bf8"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0011_iter_0001.json",
+      "sha256": "6886c69b97bfa554530a3cddcb293ce123f56b53d7047fd8d5383ad10930b31e"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0011_iter_0002.json",
+      "sha256": "4de6a6b7003e953cbc2c331afa301cdb3ce8db36eb3ace5a077abac765348107"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0011_iter_0003.json",
+      "sha256": "7b0d47597e529059941a1dc80695b265eedf0065c2e3cd278ea4870392cc7214"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0011_iter_0004.json",
+      "sha256": "c0ec7442d48b61e5d6e05a41f6181c2e4f25ea2d7a9fdac412d2a8ad5d2b22ac"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0011_iter_0005.json",
+      "sha256": "811ffb0da6e6edd57e8500786f465e1c420be30b55fd1cfa197a0635b294f70b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0011_iter_0006.json",
+      "sha256": "15e2ddd71b1397a5d0ced1e0e9f07617602739991c4011826554f8be4ff60413"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0011_iter_0007.json",
+      "sha256": "dfcb10a8c7c256acba36efc892a89b0844addd129a7d20329de70d6eb23d39a0"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0011_iter_0008.json",
+      "sha256": "717870a82bc5677e35931548ddcd0652c72e31275c5e0ed78eb66e05d1003f5e"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0012_iter_0001.json",
+      "sha256": "ca2cd08e0d87003602d178622a0c55abbdccce8e8d6e2138c0bf217340ddaa22"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0012_iter_0002.json",
+      "sha256": "79cb0e90dbf1fdff6a0472a2b78ac3a462b9a5886f2c7ca81ea45bc70749269e"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0012_iter_0003.json",
+      "sha256": "1065048a280640ecbfb1117292abad32b8c7b6aa1bb9092d5d4d2ddbeea2c820"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0012_iter_0004.json",
+      "sha256": "88b4f9c27c863c17f0213ae6f1afb27f130e523d1f472d91485d5b99a74b25c3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0012_iter_0005.json",
+      "sha256": "2dd6de12c8d402dcf053fdf6704759d4793a26ed00f52421d43c1bc234d4fe34"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0012_iter_0006.json",
+      "sha256": "62e1ef8688ab65c9e97b9a2ced44e33fbec74c99d87f8f1d0f5759e6adf0ef24"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0012_iter_0007.json",
+      "sha256": "b245a602e768448b8edbe314ea93969a5722f54af7595ffae1af7a9b129b88b6"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0012_iter_0008.json",
+      "sha256": "9bc5ea681fefc5d82f0dfe1de0c58f9e25b0b8bdf16945a35f971a71c14c3d2e"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0013_iter_0001.json",
+      "sha256": "cc89614efdecf85001fd904f4596ee9fe4083d7b33c400509a49abc9b19cba09"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0013_iter_0002.json",
+      "sha256": "afc6be1cacacf813d668ff542ad76b225d3f3be3bf7810316a62ba0dac289b08"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0013_iter_0003.json",
+      "sha256": "de5272ab84be591c7d71ec447c6ebaae782bfc1ceb8107abba43cd7877bea104"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0013_iter_0004.json",
+      "sha256": "70e20bde34500f3f67f2feaf57d4e04cb2d98de046259b47994a8721fb37d8bf"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0013_iter_0005.json",
+      "sha256": "8cc1657309427b719e5d3bfc5c6cd9d09d396ebfbdfc56a45613e7213b380d3f"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0013_iter_0006.json",
+      "sha256": "6dda865395157b45f55a83e6f397e9e7bb8ab1a2818dc66e0eea34c208023683"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0013_iter_0007.json",
+      "sha256": "1e185989cff0ed09575e2b44480912e694dc27fb298370595e13b339429bfb85"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0013_iter_0008.json",
+      "sha256": "4d3dbf410bdae4662b911077e89702d579d8b075954d106667fbec52cf4362fd"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0014_iter_0001.json",
+      "sha256": "3fa85d5037f76953017ccde912744a5ebd2c76bf18d426b3c7c474357feecb79"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0014_iter_0002.json",
+      "sha256": "216cd968e07af9b8ae15affb42e0411e475ea22b2ad9bf85a4246d7b968683ee"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0014_iter_0003.json",
+      "sha256": "1cfe34f7060feae7f9e943a9b0c240d5322ac2b46a48b26a77d2e6dcbb9e12a6"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0014_iter_0004.json",
+      "sha256": "0d5be7c890a0ade61618db6c2ac3f637f025e6ed9d965a16fd89918187c0205a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0014_iter_0005.json",
+      "sha256": "a01dfb4df5dd96b711be21ca9739b212a82fa813200ddc40ca349d3d25862206"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0014_iter_0006.json",
+      "sha256": "9a9678963d644fddc613801aabae46a6daab2e9008931c337673f84f663ac6bb"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0014_iter_0007.json",
+      "sha256": "3643211047f5aedf9b5e83596fa486c2a460f46238410a7e35aae30801f395f4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0014_iter_0008.json",
+      "sha256": "5f487c78bb6916b75b569a8454ab95c7e7dcb273b582d7069e40c3a1c52701d5"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0015_iter_0001.json",
+      "sha256": "4185fa73bd36b43855d191e9888ccfb15b5374f71dcb7ae65670b6d462f77894"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0015_iter_0002.json",
+      "sha256": "f89cc632342fbdd4cfdb9cc17986a887e140548cec20d6777bf7377e7706baa3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0015_iter_0003.json",
+      "sha256": "1f938225653f5edb7093e227fd611dbc44097a4af899626cb94491d7001bbc7d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0015_iter_0004.json",
+      "sha256": "ac1a8219dedfb1e3d1022e4b100173bd9ea853c773beb4278e7761bc846755d5"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0015_iter_0005.json",
+      "sha256": "e06f742ae1906653cdc3589ffdc5364dd20b19561503afedcf412536a890c6d3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0015_iter_0006.json",
+      "sha256": "f144dd6a42124e48cf377ebd50739630446f230f25e99db3f39617ed659361a2"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0015_iter_0007.json",
+      "sha256": "df7178c2f130fc852ba11ec7a886d1935a2fb39c078e5bb656c64bc31717c7aa"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0015_iter_0008.json",
+      "sha256": "e4b4fefec903688232f2e078b4d2ad8fc130980b4d15d85a8b4b82d0471bbba8"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0016_iter_0001.json",
+      "sha256": "1b0bf9be9ad86f10e1e0b30ba1cd9cffee3d644e36abe49877a339af47c47509"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0016_iter_0002.json",
+      "sha256": "1830f1c294e0dd068d922f9992dfc4e79d15f1b1dc2a526f9328e28eae7d6108"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0016_iter_0003.json",
+      "sha256": "d09df329fc4a9621fb65c42789b5688f31462785f482201eb49a9a08649ecea1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0016_iter_0004.json",
+      "sha256": "95601d4b48b0021c9f13afec78ce66506d835919a554f34ecdd828b50d831ea3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0016_iter_0005.json",
+      "sha256": "9aef5c29d0f32495e86666fbe296ffb23e530790acd0a5fef36f51f2be7b6a90"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0016_iter_0006.json",
+      "sha256": "e5e485f4a3ca3e88c1dff9b584b2639925ab8afbdf2efab179a10e30e1d8c642"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0016_iter_0007.json",
+      "sha256": "6551f7491376305ed5422442f8c2ce17e864812a7718b24cdc95c506152f5c56"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0016_iter_0008.json",
+      "sha256": "929e02586778f5f32c9bf8d8dbc128c308e1917916c9846eb684e390d7d7cee2"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0017_iter_0001.json",
+      "sha256": "4eded06f0dd542ac079b4f1f55377e56e3d9d4806c1e0ebe8141993b9e107510"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0017_iter_0002.json",
+      "sha256": "974787ae92b77ce5920fc418255c8cc73f95a5e2f59d621b32492d6fe7fe81df"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0017_iter_0003.json",
+      "sha256": "2a1f68c0d0af356fdc857b924d85dbdcfa560a26021dded566118c1579203113"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0017_iter_0004.json",
+      "sha256": "3a64c4f74198e5a6cee3ea33e8a33317752d3b717e2b9d5585c2db0af4167105"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0017_iter_0005.json",
+      "sha256": "bc55e2972b792c1fab6e26f79a7bcfbe630d9ed2a61f7ff253711e84b2233ccb"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0017_iter_0006.json",
+      "sha256": "2dbcca93acaa81bec953276873655eec8b1953e5ab607fefdd578a1093b5f48d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0017_iter_0007.json",
+      "sha256": "ac73b0ba03e0204e3190e42cc3347a480b050f3e8e07b8c42c29fda42f2c41fc"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0017_iter_0008.json",
+      "sha256": "bba78fd10e9dc6213917d021194447e5182a556c7235b3ac6d49bbeccf3ef4d7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0018_iter_0001.json",
+      "sha256": "ed9f99ab08fc98ebea3aab24a364bfd3332009bbd3a2dd0bee922070db035d0c"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0018_iter_0002.json",
+      "sha256": "970b64c4d061330f27d07d5495cbfbb4797ab9c1a112a56e3ca7ac17c7ca6d02"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0018_iter_0003.json",
+      "sha256": "48893c1b9926691d1408b17e14f0ecc68114ee9f8c13b7817c65b5895230b8a3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0018_iter_0004.json",
+      "sha256": "c2c0c6fd23b678b323f554dae3d37fd2b366909dea800446c39dd556f59f83e7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0018_iter_0005.json",
+      "sha256": "01b63a1ae63611fec097ecfcad07375dfcce3229dbc5aa699aab056bc691a3c5"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0018_iter_0006.json",
+      "sha256": "d496f247c5f536a5cdbd0b6a27577bb513f18b7082770b7e7e5d05594978d4ce"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0018_iter_0007.json",
+      "sha256": "1186ed7a1920d8b6667d3a6217e7e4957335c1286ec93d233b6dbd1d99fd8d8b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0018_iter_0008.json",
+      "sha256": "3bd9b4e57a14a7ac49343aa7d10379e46d9c88ef53f9d13bd2b256dfd2aff2f0"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0019_iter_0001.json",
+      "sha256": "fe7d633f3f4e28302a41495359740ba74947ee8272bcba28d5a4bffd7a73e233"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0019_iter_0002.json",
+      "sha256": "24913c9fba16e83a095a2c11ee48f402ad47bfb05de537b05e62d0f39c122763"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0019_iter_0003.json",
+      "sha256": "9a594588519384eeab4999e516159fd335f2d688de20759975e6107051c93dbf"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0019_iter_0004.json",
+      "sha256": "194ab802bef729470acea478bbde9cf39e777730bf39c6e65ccd1aa9507e08c3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0019_iter_0005.json",
+      "sha256": "8bb4f894dcaa8b92542d050049a10e79b84388168d908991489bb557113337c9"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0019_iter_0006.json",
+      "sha256": "527f5d8bcce262712976a3b9f4848a7aaa524a332e20706e9c8aa5841bf54dd2"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0019_iter_0007.json",
+      "sha256": "a0d1979bea7150d01a8408b8c8f0f42acfa324edb240630c1329a7e1cfd38bc3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0019_iter_0008.json",
+      "sha256": "06254d084d195c8b94cdf445b45682b1e7d6bce6e069f791cef25eec52b855fa"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0020_iter_0001.json",
+      "sha256": "685d336c6349e5b654b1e38b19cae36d31214cc90fa84d8ac04a176016c65b66"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0020_iter_0002.json",
+      "sha256": "70f69807d3765341db13b4ee71d7947f7d81868c95fc0c79f471001cc5d4e7bb"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0020_iter_0003.json",
+      "sha256": "4796996cb54b4c90c3f21127f7d1fdddaa7bd9d0c8af81460916620f63c72fa7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0020_iter_0004.json",
+      "sha256": "be1249136297831735a2de42184baf7c294ef9b94beefec789ccc257029b30b3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0020_iter_0005.json",
+      "sha256": "8f91b8f78999d0d4be7933d51297b00f1a4e2d0d02c34bda902ce03b0d649d75"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0020_iter_0006.json",
+      "sha256": "b3a920323a910432a485805db130969332fc237b3a5f52526b59ca09e0204f63"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0020_iter_0007.json",
+      "sha256": "c29284ac5d4e580b76ed274666aebd807c752c1931a0326721e824b13826fd70"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0020_iter_0008.json",
+      "sha256": "594b75b1f6832e4094769a18b2d4869f8c7f40bc1d1a29ab85fccf5dbf36d1d1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0021_iter_0001.json",
+      "sha256": "47d71147a1d733e6c71c954160016e76ea153b48c815d715a1d5714ffd36ac1b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0021_iter_0002.json",
+      "sha256": "b57a78eec58ef27a227f8130cfe655c773a7f99fef657e55a1010952277264d6"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0021_iter_0003.json",
+      "sha256": "9db2e410a33f49ee77d36ee0f1ba552e7a6fd382de02b96a3482bc3240d7ce99"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0021_iter_0004.json",
+      "sha256": "11ea7a2585ab99d47dbbcc5dfa7c805ecafb8e362e47cf9df5795f01695ad7ae"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0021_iter_0005.json",
+      "sha256": "9458747c6f2549bdf0a90652096e3824defbf700ffa72fcc7ea28d5dde59c66e"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0021_iter_0006.json",
+      "sha256": "7deb1ae6296319a17f98f3671e5414f6928b051d77cfe81a63495b2132c508a4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0021_iter_0007.json",
+      "sha256": "4550243215d5e388e4ed4f0de57c81059b4f4fcb464bbb059a9ed04514ed95e4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0021_iter_0008.json",
+      "sha256": "d72d5197cc823133deaf56a8aea9aa26ef1a7a4e2e3dcb16a72a81b894f49356"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0022_iter_0001.json",
+      "sha256": "d621941f8db1c46e9b976fe4b3bd783442a6f3d6d451848360c4afabda094e0a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0022_iter_0002.json",
+      "sha256": "63423d704f0539c87fe0175261c674638e65e844f508a1efba057adc97e570d3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0022_iter_0003.json",
+      "sha256": "72e56872f66604d3a9de3d204d8799d0b5145697b90ef87bdfb187b8a17d8f41"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0022_iter_0004.json",
+      "sha256": "6e33df6635413c837cf375c81feb037f24a64a64394ef6ef3cd8e6a10760cc7d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0022_iter_0005.json",
+      "sha256": "fae1ccbad6af01a14acd91528395c5831d69ab1636717d454d5cb7e718dc6515"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0022_iter_0006.json",
+      "sha256": "c9fbed5aeb9bc90d4e51dafe8c54db1fc464e5127c73b78fc6449e041986735d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0022_iter_0007.json",
+      "sha256": "0dc7775bd23db8a78fe048d8e3c21e83aafa3c8ccb6a7288cc60581f761f3573"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0022_iter_0008.json",
+      "sha256": "86b325ec96b32bf68575db9bc8f49acc85d594047910109ab91f2b818711048b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0023_iter_0001.json",
+      "sha256": "2250614539fe5375816027af1b2719e8984506ae113933b19ba610881d962477"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0023_iter_0002.json",
+      "sha256": "4a4c073385b9f6b44d98efd67a1e2d33a010548862aa27e3c14e8e3641623cf1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0023_iter_0003.json",
+      "sha256": "e0271838b87b066b3b2bac093271ac4647a4cc6674eb79763bfbf456083d4414"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0023_iter_0004.json",
+      "sha256": "436aa8b398fb114bbd57530eb99ee56a993378d1ecdd5bb824ff4484bbf6e253"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0023_iter_0005.json",
+      "sha256": "f794b813c094865980d945408894128bf97013cbbf5131a0d72b7cfebd54af61"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0023_iter_0006.json",
+      "sha256": "ffcd7c51033295e8b8cee8ed1b29abfcd2c272d2ae6653784035c3e52195efef"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0023_iter_0007.json",
+      "sha256": "0245053adf7fdab782834cdcbf9743a7b53c664e6dccb595d69ab82e64fc1721"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0023_iter_0008.json",
+      "sha256": "d6cafd51c05b2f6254bf85f380bc066619fbd01795e99eda38af8a7dcac4862b"
+    }
+  ],
+  "family": "dspsa",
+  "hard_mismatch_px": 30667,
+  "implementation_fingerprints": {
+    "frozen_segnet_loader": "3c720fc6d81ebbf1779b8370fb5c17b545b609fc39fdf62176b2d17e35edefaf",
+    "optimization": "3cb5207ae711ce0a2288f528637bf117001c349e12429cfc48b78ee6581ecdad",
+    "pdw1_codec": "ea3456a36f300bde3a6924d7c8d0fcacb92675904e7f68ba56bc3862e7c4b4d9",
+    "probe": "644ba9885422262f2907f6b70fcd5a9595a0902121a3b2577b75f0ec67b7f50f",
+    "typed_dsl": "b83616bf48c8a3ce530ac6a121923c8d0283e03ccb1a6c5ffa68adec77849721",
+    "uint8_lattice_realization": "8f694f06bfd643a598e3f5f9ce768dd73b546f7c5133f34d436b84adea635b17",
+    "upstream_modules": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+  },
+  "input_fingerprints": {
+    "gt": "684a2e043f5637eec6f2bc837b845588a7ec759c2a5c4b3b75dcb9f872541ede",
+    "packet": "8d66286c722e9202d77b54bcdf06942496641bad20ff9632c785800b53a0a02d",
+    "segnet": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+  },
+  "label_mutations": 0,
+  "packet": {
+    "candidate_bytes": 19859,
+    "candidate_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/candidate.pdw1p.bin",
+    "candidate_sha256": "e6bdf1b2e11abf6740a2441774f602f643ece3f8142358f4e5dc41b5a85a9257",
+    "length_identity": true,
+    "source_bytes": 19859,
+    "strict_encode_decode_reencode_identity": true,
+    "strict_parseback": true
+  },
+  "pairs": [
+    {
+      "d_seg": 0.008504231770833334,
+      "dspsa_best_objective": 1672.0,
+      "dspsa_calibrated_a": 0.009254995444963743,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1672,
+      "pair": 0
+    },
+    {
+      "d_seg": 0.005925496419270833,
+      "dspsa_best_objective": 1165.0,
+      "dspsa_calibrated_a": 0.06899178422609337,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1165,
+      "pair": 1
+    },
+    {
+      "d_seg": 0.005950927734375,
+      "dspsa_best_objective": 1170.0,
+      "dspsa_calibrated_a": 0.041022141972271726,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1170,
+      "pair": 2
+    },
+    {
+      "d_seg": 0.005854288736979167,
+      "dspsa_best_objective": 1151.0,
+      "dspsa_calibrated_a": 0.01018670639579902,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1151,
+      "pair": 3
+    },
+    {
+      "d_seg": 0.006429036458333333,
+      "dspsa_best_objective": 1264.0,
+      "dspsa_calibrated_a": 0.2168313218534363,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1264,
+      "pair": 4
+    },
+    {
+      "d_seg": 0.005671183268229167,
+      "dspsa_best_objective": 1115.0,
+      "dspsa_calibrated_a": 0.5059397509913514,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1115,
+      "pair": 5
+    },
+    {
+      "d_seg": 0.006006876627604167,
+      "dspsa_best_objective": 1181.0,
+      "dspsa_calibrated_a": 0.13798356845218673,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1181,
+      "pair": 6
+    },
+    {
+      "d_seg": 0.0078887939453125,
+      "dspsa_best_objective": 1551.0,
+      "dspsa_calibrated_a": 0.013432028787381008,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1551,
+      "pair": 7
+    },
+    {
+      "d_seg": 0.007731119791666667,
+      "dspsa_best_objective": 1520.0,
+      "dspsa_calibrated_a": 0.0178566970938124,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1520,
+      "pair": 8
+    },
+    {
+      "d_seg": 0.005961100260416667,
+      "dspsa_best_objective": 1172.0,
+      "dspsa_calibrated_a": 0.01667933245026433,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1172,
+      "pair": 9
+    },
+    {
+      "d_seg": 0.005396525065104167,
+      "dspsa_best_objective": 1061.0,
+      "dspsa_calibrated_a": 0.03162123443695946,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1061,
+      "pair": 10
+    },
+    {
+      "d_seg": 0.005559285481770833,
+      "dspsa_best_objective": 1093.0,
+      "dspsa_calibrated_a": 0.021683132185343627,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1093,
+      "pair": 11
+    },
+    {
+      "d_seg": 0.005615234375,
+      "dspsa_best_objective": 1104.0,
+      "dspsa_calibrated_a": 0.012339993926618324,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1104,
+      "pair": 12
+    },
+    {
+      "d_seg": 0.007074991861979167,
+      "dspsa_best_objective": 1391.0,
+      "dspsa_calibrated_a": 0.007905308609239865,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1391,
+      "pair": 13
+    },
+    {
+      "d_seg": 0.005940755208333333,
+      "dspsa_best_objective": 1168.0,
+      "dspsa_calibrated_a": 0.021683132185343627,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1168,
+      "pair": 14
+    },
+    {
+      "d_seg": 0.005645751953125,
+      "dspsa_best_objective": 1110.0,
+      "dspsa_calibrated_a": 0.758909626487027,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1110,
+      "pair": 15
+    },
+    {
+      "d_seg": 0.011301676432291666,
+      "dspsa_best_objective": 2222.0,
+      "dspsa_calibrated_a": 0.008294094278546743,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 2222,
+      "pair": 16
+    },
+    {
+      "d_seg": 0.007120768229166667,
+      "dspsa_best_objective": 1400.0,
+      "dspsa_calibrated_a": 0.011327009350552641,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1400,
+      "pair": 17
+    },
+    {
+      "d_seg": 0.006235758463541667,
+      "dspsa_best_objective": 1226.0,
+      "dspsa_calibrated_a": 0.022654018701105283,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1226,
+      "pair": 18
+    },
+    {
+      "d_seg": 0.005401611328125,
+      "dspsa_best_objective": 1062.0,
+      "dspsa_calibrated_a": 0.029761161823020667,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1062,
+      "pair": 19
+    },
+    {
+      "d_seg": 0.0063629150390625,
+      "dspsa_best_objective": 1251.0,
+      "dspsa_calibrated_a": 0.020237590039654054,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1251,
+      "pair": 20
+    },
+    {
+      "d_seg": 0.007207234700520833,
+      "dspsa_best_objective": 1417.0,
+      "dspsa_calibrated_a": 0.005325681589382646,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1417,
+      "pair": 21
+    },
+    {
+      "d_seg": 0.005666097005208333,
+      "dspsa_best_objective": 1114.0,
+      "dspsa_calibrated_a": 0.3035638505948108,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1114,
+      "pair": 22
+    },
+    {
+      "d_seg": 0.005528767903645833,
+      "dspsa_best_objective": 1087.0,
+      "dspsa_calibrated_a": 0.004386760846745821,
+      "dspsa_iterations": 8,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1087,
+      "pair": 23
+    }
+  ],
+  "pointer_delta": "UNMOVED",
+  "promotion_eligible": false,
+  "reproducibility_closure": {
+    "base_git_head": "889d32db399709aca475c3c6120c81f189dd4b81",
+    "runtime": {
+      "numpy": {
+        "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/numpy/__init__.py",
+        "version": "1.26.4"
+      },
+      "platform": {
+        "machine": "arm64",
+        "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+        "processor": "arm",
+        "release": "25.4.0",
+        "system": "Darwin",
+        "version": "Darwin Kernel Version 25.4.0: Thu Mar 19 19:33:50 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6050"
+      },
+      "python": {
+        "cache_tag": "cpython-313",
+        "executable": "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/bin/python3.13",
+        "implementation": "CPython",
+        "version": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+      },
+      "threads": {
+        "environment": {
+          "MKL_NUM_THREADS": null,
+          "NUMEXPR_NUM_THREADS": null,
+          "OMP_NUM_THREADS": null,
+          "OPENBLAS_NUM_THREADS": null,
+          "VECLIB_MAXIMUM_THREADS": null
+        },
+        "torch_num_interop_threads": 18,
+        "torch_num_threads": 1
+      },
+      "torch": {
+        "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/torch/__init__.py",
+        "version": "2.12.1"
+      }
+    },
+    "schema": "einstein_kolmogorov_reproducibility_closure.v1",
+    "sources": {
+      "frozen_segnet_loader": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/witness_control/factorized_features.py",
+        "sha256": "3c720fc6d81ebbf1779b8370fb5c17b545b609fc39fdf62176b2d17e35edefaf"
+      },
+      "optimization": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/optimization/einstein_kolmogorov_crux.py",
+        "sha256": "3cb5207ae711ce0a2288f528637bf117001c349e12429cfc48b78ee6581ecdad"
+      },
+      "pdw1_codec": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/codec/pdw1_plane_codec.py",
+        "sha256": "ea3456a36f300bde3a6924d7c8d0fcacb92675904e7f68ba56bc3862e7c4b4d9"
+      },
+      "probe": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/tools/probe_einstein_kolmogorov_crux.py",
+        "sha256": "644ba9885422262f2907f6b70fcd5a9595a0902121a3b2577b75f0ec67b7f50f"
+      },
+      "typed_dsl": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/witness_dsl/einstein_kolmogorov_crux_20260719.py",
+        "sha256": "b83616bf48c8a3ce530ac6a121923c8d0283e03ccb1a6c5ffa68adec77849721"
+      },
+      "uint8_lattice_realization": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/optimization/uint8_lattice_feasibility.py",
+        "sha256": "8f694f06bfd643a598e3f5f9ce768dd73b546f7c5133f34d436b84adea635b17"
+      },
+      "upstream_modules": {
+        "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+        "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+      }
+    }
+  },
+  "research_only": true,
+  "runtime": {
+    "numpy": {
+      "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/numpy/__init__.py",
+      "version": "1.26.4"
+    },
+    "platform": {
+      "machine": "arm64",
+      "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+      "processor": "arm",
+      "release": "25.4.0",
+      "system": "Darwin",
+      "version": "Darwin Kernel Version 25.4.0: Thu Mar 19 19:33:50 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6050"
+    },
+    "python": {
+      "cache_tag": "cpython-313",
+      "executable": "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/bin/python3.13",
+      "implementation": "CPython",
+      "version": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+    },
+    "threads": {
+      "environment": {
+        "MKL_NUM_THREADS": null,
+        "NUMEXPR_NUM_THREADS": null,
+        "OMP_NUM_THREADS": null,
+        "OPENBLAS_NUM_THREADS": null,
+        "VECLIB_MAXIMUM_THREADS": null
+      },
+      "torch_num_interop_threads": 18,
+      "torch_num_threads": 1
+    },
+    "torch": {
+      "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/torch/__init__.py",
+      "version": "2.12.1"
+    }
+  },
+  "schema": "einstein_kolmogorov_crux_receipt.v2",
+  "score_claim": false,
+  "score_with_pose_zero_for_local_ordering_only": 0.6631417431996192,
+  "stage_checkpoints": [
+    {
+      "pair": 0,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0000.json",
+      "sha256": "3466b9cc99c0ce2add7304ffe3025add5a8f46911b4784ff10e4536a16eccdf5"
+    },
+    {
+      "pair": 1,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0001.json",
+      "sha256": "bffc878e4864a749c0e5389be284917dbcfe25d53787007aee66cc88a90d63db"
+    },
+    {
+      "pair": 2,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0002.json",
+      "sha256": "701a4c4fa04b62f3a1c6ba0982df24b9cd17708469fff0b0e99494517fc24fe0"
+    },
+    {
+      "pair": 3,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0003.json",
+      "sha256": "c2b6abb5b18bf19f8601264456974372cfccf4ddb547f3f44080579a5efa1f91"
+    },
+    {
+      "pair": 4,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0004.json",
+      "sha256": "300c949881c2f9be87f6474460011b137ec888eeb11fa5f4011a59368bd300db"
+    },
+    {
+      "pair": 5,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0005.json",
+      "sha256": "6d01d59ea5ded14dcfaf6dbb50f72251df1b38e67d013247d61ec9293160f0be"
+    },
+    {
+      "pair": 6,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0006.json",
+      "sha256": "2ae88211a5510e3a781a48154cc925e07c0ad8dfd34923cab1778c808aa1e9fc"
+    },
+    {
+      "pair": 7,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0007.json",
+      "sha256": "ce7b7e7b6c76d8489b75293fdd73e4cb4278cf5cba54f3650e9cad21c1e2e792"
+    },
+    {
+      "pair": 8,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0008.json",
+      "sha256": "42d485937ac2a16ac6c7db40c8f23bd7bf44a61a9df4224923d12de1fdb65a8f"
+    },
+    {
+      "pair": 9,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0009.json",
+      "sha256": "a2b2521af7ece2ce2e5db75ef2aa803813056d3c731eeaa7b2dfb0fa07416335"
+    },
+    {
+      "pair": 10,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0010.json",
+      "sha256": "e31b6eae54585518ff3f00c3348d8b00fe6bbe7f5aa09805b7d30db45a76bc87"
+    },
+    {
+      "pair": 11,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0011.json",
+      "sha256": "86081e1a32c12ec182ffdc1c59bb5d0b28f872432c97b95d082fac97e0ea280f"
+    },
+    {
+      "pair": 12,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0012.json",
+      "sha256": "0b4c8c67681cb9021fea0a1570afae3a03ac96655e5924fc2e36ee0ab0842f3b"
+    },
+    {
+      "pair": 13,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0013.json",
+      "sha256": "86297e0bdd1fedd6935d4fc74e617c3a5eeb1cca965c5d2d9ca2088f7be5f79e"
+    },
+    {
+      "pair": 14,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0014.json",
+      "sha256": "07e84caded0f82d6321d1d02bec02f096f8ea0e4d1e47bd619285d3cf76f3df0"
+    },
+    {
+      "pair": 15,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0015.json",
+      "sha256": "1b8e9b4a7aec1b66ee9be74f9a93d58eff51544fe903dd0ea292f7885e2a20f2"
+    },
+    {
+      "pair": 16,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0016.json",
+      "sha256": "17e435084aabd8fa6bfd0305c57cbaa93955031e8742bf5e562896755ffa5e62"
+    },
+    {
+      "pair": 17,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0017.json",
+      "sha256": "94c15e2854cd9472c4bec1cb98a440d390f6ef39edd9315236676e0c7246b14f"
+    },
+    {
+      "pair": 18,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0018.json",
+      "sha256": "5c8220772cb3c9e69c326455d925eb1b8e90449bae39c2958aef6abfd595aa4c"
+    },
+    {
+      "pair": 19,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0019.json",
+      "sha256": "49648266c1c44fa0097e4329b426cd7b50ed8bf90d25b88b6958dd2342ee610d"
+    },
+    {
+      "pair": 20,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0020.json",
+      "sha256": "d326d6c65d70e59bb7048883364f2e31f3d68eb7b13973fcc7f70b570c3f3a45"
+    },
+    {
+      "pair": 21,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0021.json",
+      "sha256": "7287f53dbb9eb1a8bc8d49cbbae6e2fd0dda9ea1d8a3a77a911f15729163a359"
+    },
+    {
+      "pair": 22,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0022.json",
+      "sha256": "f6abe96a7c0537e6ab967fb7ceeba7ca5b3b2bfc08146872fa122f7cc8a37170"
+    },
+    {
+      "pair": 23,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/checkpoints/pair_0023.json",
+      "sha256": "a0df4414650e12a370e504056a03108892d830d9942eac352fc2fcf3f3732ab1"
+    }
+  ],
+  "verdict_scope": "n24 SegNet-only PDW1 component arm; no compact pose stream or archive"
+}

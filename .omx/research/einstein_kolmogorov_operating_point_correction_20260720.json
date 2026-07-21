@@ -1,0 +1,60 @@
+{
+  "schema": "einstein_kolmogorov_operating_point_correction.v1",
+  "utc": "2026-07-20T01:03:29Z",
+  "lane_id": "lane_einstein_kolmogorov_crux_20260719",
+  "axis": "cross-axis comparison with explicitly separate custody",
+  "operator_directive_source": "/Users/adpena/Projects/pact/.omx/tmp/codex_inbox/einstein_kolmogorov_crux.jsonl#2026-07-20T01:03:29Z",
+  "pointer": {
+    "score": 0.1910828242,
+    "axis": "contest-CPU Linux x86_64",
+    "moved": false
+  },
+  "solved_distortion_bank": {
+    "archive_path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/archive.zip",
+    "archive_sha256_reverified_this_session": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42",
+    "archive_bytes_reverified_this_session": 409526925,
+    "d_seg": 0.00015196,
+    "d_pose": 0.00010184,
+    "seg_term": 0.015196,
+    "pose_term": 0.03191238004286111,
+    "distortion_terms_total": 0.04710838004286111,
+    "measurement_axis": "contest-CPU Linux x86_64",
+    "role": "rate-dead solved-distortion mechanism and composition source, not a frontier candidate"
+  },
+  "pdw1_wall_characterization": {
+    "receipt_path": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/hybrid/receipt.json",
+    "receipt_sha256_reverified_this_session": "258200c1ecfb08748645f7e69e62a3197cab848b57ff4b50dcc456ed7595b638",
+    "pair_count": 24,
+    "component_bytes": 19859,
+    "hard_mismatches": 26795,
+    "hard_pixels": 4718592,
+    "d_seg": 0.0056786007351345485,
+    "seg_term": 0.5678600735134548,
+    "measurement_axis": "macOS-CPU advisory",
+    "pose_measured": false,
+    "total_archive_bytes_measured": false,
+    "scope": "explicit-target realization-wall characterization only"
+  },
+  "derived_comparison": {
+    "d_seg_ratio_vs_solved_bank": 37.36904932307547,
+    "seg_term_exceeds_pointer_by": 0.37677724931345485,
+    "absolute_zero_pose_zero_byte_d_seg_ceiling_for_pointer": 0.001910828242,
+    "candidate_ratio_vs_absolute_zero_pose_zero_byte_ceiling": 2.9718007146424354,
+    "zero_pose_component_byte_arithmetic_only": 0.581083366463508,
+    "frontier_feasible_even_at_zero_pose_zero_bytes": false
+  },
+  "verdict": "WRONG_OPERATING_POINT_WALL_CHARACTERIZATION",
+  "n600_explicit_target_launch_eligible": false,
+  "hard_next_gate": {
+    "composition_source": "solved-distortion v10 capstone receiver mechanism",
+    "required_candidate_family": "decode-to-RGB or trade-cells chart derived from the solved witness, not PDW1 explicit-target reconstruction",
+    "required_measurement": [
+      "exact counted bytes with declared scope",
+      "hard CPU-Torch d_seg through the real byte-closed decode",
+      "projected or exact total S with Pose assumption declared"
+    ],
+    "scale_condition": "No n600 request until d_seg is at frontier-relevant magnitude near the solved bank or a byte-closed exact-action trajectory is below 0.1910828242."
+  },
+  "score_claim": false,
+  "promotion_eligible": false
+}

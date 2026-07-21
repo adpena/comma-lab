@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import platform
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -30,6 +33,58 @@ def _synthetic_planes() -> tuple[np.ndarray, np.ndarray, list[np.ndarray], list[
         for _ in range(2)
     ]
     return y0, y1, labels, margins
+
+
+def _fake_scorer_custody(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    prefix: str,
+) -> dict[str, Any]:
+    files: dict[str, Any] = {}
+    for key in ("modules_py", "frame_utils_py", "segnet_weights", "posenet_weights"):
+        path = tmp_path / f"{prefix}-{key}"
+        path.write_bytes(key.encode())
+        files[key] = {
+            "path": str(path),
+            "bytes": path.stat().st_size,
+            "sha256": measure._sha256_file(path),
+        }
+    executable = tmp_path / f"{prefix}-python"
+    executable.write_bytes(b"python-runtime")
+    distribution_trees = {
+        name: {
+            "distribution": name,
+            "version": "test" if name == "torch" else "test-1",
+            "root": str(tmp_path / f"{prefix}-{name}"),
+            "file_count": 1,
+            "bytes": len(name),
+            "tree_sha256": hashlib.sha256(name.encode()).hexdigest(),
+            "tree_algorithm": "test-tree",
+        }
+        for name in measure.SCORER_RUNTIME_DISTRIBUTIONS
+    }
+    monkeypatch.setattr(
+        measure,
+        "_distribution_tree_custody",
+        lambda name: json.loads(json.dumps(distribution_trees[name])),
+    )
+    return files | {
+        "torch_version": "test",
+        "device": "cpu",
+        "deterministic_algorithms": True,
+        "python_runtime": {
+            "version": sys.version,
+            "implementation": platform.python_implementation(),
+            "platform": platform.platform(),
+            "executable": {
+                "path": str(executable),
+                "bytes": executable.stat().st_size,
+                "sha256": measure._sha256_file(executable),
+            },
+        },
+        "distribution_trees": distribution_trees,
+    }
 
 
 def test_exact_operator_round_u8_uses_integer_half_up() -> None:
@@ -262,6 +317,468 @@ def test_build_rung_e_inputs_uses_production_codec_parseback(monkeypatch: pytest
     assert len(result.predictor_payload_sha256) == 64
 
 
+def _write_prepared_chunk(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    from tac.codec.v10_predictor_residual import encode_predictor_residual
+
+    monkeypatch.setattr(measure, "CAMERA_HW", (4, 4))
+    monkeypatch.setattr(measure, "SCORER_HW", (2, 2))
+    y0 = np.arange(2 * 2 * 2 * 3, dtype=np.uint8).reshape(2, 2, 2, 3)
+    y1 = np.flip(y0, axis=2).copy()
+    payload = encode_predictor_residual(
+        y0,
+        y1,
+        modes=measure.SPATIAL_SMOOTH_121_ID,
+        pair_ids=(0, 1),
+    )
+    base = tmp_path / "chunk-0000"
+    y0_path = base.with_suffix(".y0.bin")
+    y1_path = base.with_suffix(".y1.bin")
+    predictor_path = base.with_suffix(".predictor.bin")
+    manifest_path = base.with_suffix(".manifest.json")
+    y0_path.write_bytes(y0.tobytes())
+    y1_path.write_bytes(y1.tobytes())
+    predictor_path.write_bytes(payload)
+
+    def sha(value: bytes) -> str:
+        return hashlib.sha256(value).hexdigest()
+
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": measure.PREPARED_CHUNK_SCHEMA,
+                "complete": True,
+                "pair_ids": [0, 1],
+                "pair_count": 2,
+                "camera_hw": [4, 4],
+                "scorer_hw": [2, 2],
+                "source_cache_sha256": measure.EXPECTED_CACHE_SHA256,
+                "y_codec_id": "predictor-residual-u8.v1",
+                "predictor_mode_id": measure.SPATIAL_SMOOTH_121_ID,
+                "y0_bytes": y0.nbytes,
+                "y0_sha256": sha(y0.tobytes()),
+                "y1_bytes": y1.nbytes,
+                "y1_sha256": sha(y1.tobytes()),
+                "predictor_bytes": len(payload),
+                "predictor_sha256": sha(payload),
+            }
+        )
+    )
+    return manifest_path
+
+
+def test_load_prepared_chunk_closes_manifest_and_predictor_custody(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path = _write_prepared_chunk(tmp_path, monkeypatch)
+    manifest_sha = measure._sha256_file(manifest_path)
+    with pytest.raises(measure.PredictorFloorError, match="exact settled manifest"):
+        measure.load_prepared_chunk(manifest_path)
+    custody = measure.load_prepared_chunk(manifest_path, expected_manifest_sha256=manifest_sha)
+    assert custody.inputs.pair_ids == (0, 1)
+    assert custody.inputs.mode == measure.SPATIAL_SMOOTH_121_ID
+    assert custody.inputs.frame0_y_planes.shape == (2, 2, 2, 3)
+    assert custody.inputs.frame1_y_planes.shape == (2, 2, 2, 3)
+    predictor_path = manifest_path.with_name("chunk-0000.predictor.bin")
+    predictor_path.write_bytes(predictor_path.read_bytes() + b"drift")
+    with pytest.raises(measure.PredictorFloorError, match="custody drifted"):
+        measure.load_prepared_chunk(manifest_path, expected_manifest_sha256=manifest_sha)
+
+
+def test_banked_precision_drop_is_exact_uint8_predictor_toward_zero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path = _write_prepared_chunk(tmp_path, monkeypatch)
+    custody = measure.load_prepared_chunk(
+        manifest_path,
+        expected_manifest_sha256=measure._sha256_file(manifest_path),
+    )
+    treated, operation = measure.truncate_scorer_plane_predictor_residual(
+        custody.inputs,
+        drop_low_bits=1,
+    )
+    assert treated.frame0_y_planes is custody.inputs.frame0_y_planes
+    assert treated.frame1_y_planes.dtype == np.uint8
+    assert operation["exact_uint8_reachable_plane"] is True
+    assert operation["camera_preimage_secant_equivalence_claim"] is False
+    assert operation["residual_abs_sum_after"] <= operation["residual_abs_sum_before"]
+
+
+def test_projected_action_uses_ceil_population_and_exact_contest_formula() -> None:
+    result = measure.projected_action(archive_bytes=101, pair_count=12, d_seg=0.001, d_pose=0.0001)
+    assert result["projected_n600_archive_bytes"] == 5050
+    assert result["distortion_term"] == pytest.approx(0.1 + np.sqrt(0.001))
+    assert result["projected_exact_objective"] == pytest.approx(
+        0.1 + np.sqrt(0.001) + 25 * 5050 / measure.CONTEST_ARCHIVE_DENOMINATOR
+    )
+    cap = result["strict_pointer_byte_cap_at_measured_distortion"]
+    distortion = result["distortion_term"]
+    assert distortion + 25 * cap / measure.CONTEST_ARCHIVE_DENOMINATOR < measure.POINTER_VALUE
+    assert distortion + 25 * (cap + 1) / measure.CONTEST_ARCHIVE_DENOMINATOR >= measure.POINTER_VALUE
+
+
+def test_strict_pointer_byte_cap_refuses_integral_equality_boundary() -> None:
+    desired_equality_bytes = 1_000
+    d_seg = (measure.POINTER_VALUE - 25.0 * desired_equality_bytes / measure.CONTEST_ARCHIVE_DENOMINATOR) / 100.0
+    cap = measure._strict_pointer_byte_cap(d_seg=d_seg, d_pose=0.0)
+    assert cap == desired_equality_bytes - 1
+    assert 100 * d_seg + 25 * cap / measure.CONTEST_ARCHIVE_DENOMINATOR < measure.POINTER_VALUE
+    assert 100 * d_seg + 25 * (cap + 1) / measure.CONTEST_ARCHIVE_DENOMINATOR >= measure.POINTER_VALUE
+
+
+def test_banked_ab_resume_closes_postreceipt_cleanup_window(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    output_root = tmp_path / "pact-rung-e-postreceipt"
+    output_root.mkdir()
+    (output_root / measure._EPHEMERAL_MARKER_NAME).write_bytes(measure._EPHEMERAL_MARKER_BYTES)
+    arms: dict[str, Any] = {}
+    for arm_id in ("control", "precision_drop"):
+        arm_root = output_root / arm_id
+        raw_path = arm_root / "inflated" / f"v10-banked-ab-{arm_id}.raw"
+        raw_path.parent.mkdir(parents=True)
+        archive_path = arm_root / "archive.zip"
+        archive_path.write_bytes(f"archive-{arm_id}".encode())
+        raw_path.write_bytes(f"raw-{arm_id}".encode())
+        arms[arm_id] = {
+            "stage_complete": True,
+            "archive": {"bytes": archive_path.stat().st_size, "sha256": measure._sha256_file(archive_path)},
+            "inflated": {"bytes": raw_path.stat().st_size, "sha256": measure._sha256_file(raw_path)},
+        }
+    monkeypatch.setattr(
+        measure,
+        "load_prepared_chunk",
+        lambda _path: SimpleNamespace(manifest_sha256="prepared-manifest-sha"),
+    )
+    receipt_path = tmp_path / "receipt.json"
+    precleanup_path = measure._precleanup_receipt_path(receipt_path)
+    scorer_custody = _fake_scorer_custody(tmp_path, monkeypatch, prefix="banked")
+    stage_rows = {}
+    for stage_id in ("control", "precision-drop"):
+        stage_path = tmp_path / f"{stage_id}.json"
+        stage_path.write_text(json.dumps({"stage_id": stage_id}))
+        stage_rows[stage_id] = {
+            "path": str(stage_path),
+            "bytes": stage_path.stat().st_size,
+            "sha256": measure._sha256_file(stage_path),
+        }
+    receipt = {
+        "schema": measure.SCHEMA_BANKED_AB,
+        "supersedes": list(measure.SUPERSEDED_BANKED_AB_RECEIPTS),
+        "authority": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "pointer_moved": False,
+        },
+        "research_only": True,
+        "arms": arms,
+        "hard_oracle_custody": scorer_custody,
+        "artifact_lifecycle": {
+            "ephemeral_output": True,
+            "retained": False,
+            "cleanup_completed": False,
+            "cleanup_status": "pending",
+            "output_root_identity_sha256": measure._ephemeral_output_identity(output_root),
+            "durable_stage_receipts": stage_rows,
+            "rebuildable_from": {
+                "prepared_manifest_sha256": "prepared-manifest-sha",
+                "tool_sha256": next(iter(measure.CLEANUP_COMPATIBLE_PREDECESSOR_TOOL_SHA256S)),
+                "codec_sha256": measure._sha256_file(measure.SRC / "tac/codec/v10_predictor_residual.py"),
+                "receiver_sha256": measure._sha256_file(measure.SRC / "tac/witness_dsl/v10_production_receiver.py"),
+                "lattice_sha256": measure._sha256_file(measure.SRC / "tac/optimization/uint8_lattice_feasibility.py"),
+                "hard_oracle_custody": scorer_custody,
+            },
+        },
+    }
+    receipt["artifact_lifecycle"]["cleanup_manifest"] = measure._build_ephemeral_cleanup_manifest(output_root)
+    measure._write_json_once(precleanup_path, receipt)
+    precleanup_bytes = precleanup_path.read_bytes()
+    args = argparse.Namespace(
+        resume=True,
+        ephemeral_output=True,
+        output_root=output_root,
+        prepared_manifest=tmp_path / "unused.json",
+    )
+    wrong_args = argparse.Namespace(**vars(args))
+    wrong_args.output_root = tmp_path / "pact-rung-e-wrong-root"
+    with pytest.raises(measure.PredictorFloorError, match="lifecycle custody"):
+        measure._resume_banked_ab_postreceipt_cleanup(wrong_args, receipt_path)
+    assert output_root.is_dir()
+    assert not receipt_path.exists()
+
+    resumed = measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path)
+    assert resumed["artifact_lifecycle"]["cleanup_completed"] is True
+    assert resumed["artifact_lifecycle"]["precleanup_receipt"]["sha256"] == hashlib.sha256(precleanup_bytes).hexdigest()
+    assert resumed["artifact_lifecycle"]["cleanup_execution_custody"]["cross_version_cleanup_only"] is True
+    assert resumed["artifact_lifecycle"]["cleanup_manifest"] == receipt["artifact_lifecycle"]["cleanup_manifest"]
+    assert resumed["arms"] == receipt["arms"]
+    assert precleanup_path.read_bytes() == precleanup_bytes
+    assert not output_root.exists()
+    assert measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path) == resumed
+
+
+def _legacy_banked_cleanup_case(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    name: str,
+    complete: bool,
+    cleanup_overrides: dict[str, Any] | None = None,
+) -> tuple[argparse.Namespace, Path, dict[str, Any]]:
+    output_root = tmp_path / f"pact-rung-e-{name}"
+    monkeypatch.setattr(
+        measure,
+        "load_prepared_chunk",
+        lambda _path: SimpleNamespace(manifest_sha256="prepared-manifest-sha"),
+    )
+    scorer_custody = _fake_scorer_custody(tmp_path, monkeypatch, prefix=name)
+    stage_rows: dict[str, Any] = {}
+    for stage_id in ("control", "precision-drop"):
+        stage_path = tmp_path / f"{name}-{stage_id}.json"
+        stage_path.write_text(json.dumps({"stage_id": stage_id}))
+        stage_rows[stage_id] = {
+            "path": str(stage_path),
+            "bytes": stage_path.stat().st_size,
+            "sha256": measure._sha256_file(stage_path),
+        }
+    receipt_path = tmp_path / f"{name}.json"
+    precleanup_path = measure._precleanup_receipt_path(receipt_path)
+    precleanup_path.write_text(json.dumps({"legacy": name}, sort_keys=True) + "\n")
+    cleanup = dict(measure.FROZEN_HISTORICAL_BANKED_CLEANUP)
+    cleanup.update(cleanup_overrides or {})
+    lifecycle: dict[str, Any] = {
+        "ephemeral_output": True,
+        "retained": False,
+        "cleanup_completed": complete,
+        "cleanup_status": "complete" if complete else "pending",
+        "output_root_identity_sha256": measure._ephemeral_output_identity(output_root),
+        "durable_stage_receipts": stage_rows,
+        "rebuildable_from": {
+            "prepared_manifest_sha256": "prepared-manifest-sha",
+            "tool_sha256": measure.FROZEN_HISTORICAL_BANKED_CLEANUP["precleanup_tool_sha256"],
+            "codec_sha256": measure._sha256_file(measure.SRC / "tac/codec/v10_predictor_residual.py"),
+            "receiver_sha256": measure._sha256_file(measure.SRC / "tac/witness_dsl/v10_production_receiver.py"),
+            "lattice_sha256": measure._sha256_file(measure.SRC / "tac/optimization/uint8_lattice_feasibility.py"),
+            "hard_oracle_custody": scorer_custody,
+        },
+    }
+    if complete:
+        lifecycle["cleanup_execution_custody"] = cleanup
+        lifecycle["precleanup_receipt"] = {
+            "path": str(precleanup_path),
+            "bytes": precleanup_path.stat().st_size,
+            "sha256": measure._sha256_file(precleanup_path),
+        }
+    receipt = {
+        "schema": measure.SCHEMA_BANKED_AB,
+        "supersedes": list(measure.SUPERSEDED_BANKED_AB_RECEIPTS),
+        "authority": {"score_claim": False, "promotion_eligible": False, "pointer_moved": False},
+        "research_only": True,
+        "hard_oracle_custody": scorer_custody,
+        "artifact_lifecycle": lifecycle,
+    }
+    args = argparse.Namespace(
+        resume=True,
+        ephemeral_output=True,
+        output_root=output_root,
+        prepared_manifest=tmp_path / "unused.json",
+    )
+    return args, receipt_path, receipt
+
+
+def test_frozen_historical_v3_receipt_is_exactly_content_bound(
+    tmp_path: Path,
+) -> None:
+    frozen_path = measure.REPO / measure.FROZEN_HISTORICAL_BANKED_RECEIPT["path"]
+    frozen_precleanup_path = measure.REPO / measure.FROZEN_HISTORICAL_BANKED_PRECLEANUP["path"]
+    assert frozen_path.stat().st_size == measure.FROZEN_HISTORICAL_BANKED_RECEIPT["bytes"]
+    assert measure._sha256_file(frozen_path) == measure.FROZEN_HISTORICAL_BANKED_RECEIPT["sha256"]
+    assert frozen_precleanup_path.stat().st_size == measure.FROZEN_HISTORICAL_BANKED_PRECLEANUP["bytes"]
+    assert measure._sha256_file(frozen_precleanup_path) == measure.FROZEN_HISTORICAL_BANKED_PRECLEANUP["sha256"]
+    receipt = json.loads(frozen_path.read_text())
+    output_root = tmp_path / "pact-rung-e-frozen-v3-already-absent"
+
+    measure._validate_frozen_historical_banked_cleanup(receipt, output_root)
+
+    assert not output_root.exists()
+
+
+def test_tuple_shaped_historical_v3_lookalike_is_rejected(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    args, receipt_path, receipt = _legacy_banked_cleanup_case(
+        tmp_path,
+        monkeypatch,
+        name="tuple-shaped-v3-lookalike",
+        complete=True,
+    )
+    measure._write_json_once(receipt_path, receipt)
+    with pytest.raises(measure.PredictorFloorError, match="exact committed v3 receipt"):
+        measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path)
+    assert not args.output_root.exists()
+
+
+def test_frozen_historical_v3_mutated_scientific_arm_is_rejected(tmp_path: Path) -> None:
+    frozen_path = measure.REPO / measure.FROZEN_HISTORICAL_BANKED_RECEIPT["path"]
+    receipt = json.loads(frozen_path.read_text())
+    receipt["arms"]["control"]["archive"]["sha256"] = "0" * 64
+
+    with pytest.raises(measure.PredictorFloorError, match="exact committed v3 receipt"):
+        measure._validate_frozen_historical_banked_cleanup(
+            receipt,
+            tmp_path / "pact-rung-e-mutated-v3",
+        )
+
+
+def test_unknown_legacy_final_cleanup_tuple_is_rejected(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    args, receipt_path, receipt = _legacy_banked_cleanup_case(
+        tmp_path,
+        monkeypatch,
+        name="unknown-v3-final",
+        complete=True,
+        cleanup_overrides={"tool_sha256": "0" * 64},
+    )
+    measure._write_json_once(receipt_path, receipt)
+    with pytest.raises(measure.PredictorFloorError, match="exact committed v3 receipt"):
+        measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path)
+    assert not args.output_root.exists()
+
+
+def test_pending_legacy_precleanup_without_manifest_cannot_delete(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    args, receipt_path, receipt = _legacy_banked_cleanup_case(
+        tmp_path,
+        monkeypatch,
+        name="pending-legacy-no-manifest",
+        complete=False,
+    )
+    precleanup_path = measure._precleanup_receipt_path(receipt_path)
+    precleanup_path.unlink()
+    measure._write_json_once(precleanup_path, receipt)
+    with pytest.raises(measure.PredictorFloorError, match="exact committed v3 receipt"):
+        measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path)
+    assert not receipt_path.exists()
+    assert not args.output_root.exists()
+
+
+def test_banked_arm_resume_recovers_archive_before_manifest_crash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    prepared_root = tmp_path / "prepared"
+    prepared_root.mkdir()
+    manifest_path = _write_prepared_chunk(prepared_root, monkeypatch)
+    custody = measure.load_prepared_chunk(
+        manifest_path,
+        expected_manifest_sha256=measure._sha256_file(manifest_path),
+    )
+    monkeypatch.setattr(
+        measure,
+        "score_inflated_raw",
+        lambda raw_path, **_kwargs: {
+            "receiver_arithmetic": "test",
+            "tie_policy": "test",
+            "cache_sha256": "c" * 64,
+            "raw_sha256": measure._sha256_file(raw_path),
+            "pairs": [],
+            "mean_d_seg": 0.0,
+            "mean_d_pose": 0.0,
+        },
+    )
+    output_root = tmp_path / "output"
+    kwargs = {
+        "arm_id": "control",
+        "inputs": custody.inputs,
+        "output_root": output_root,
+        "cache_path": tmp_path / "cache.npz",
+        "upstream": tmp_path / "upstream",
+        "cpu_threads": 1,
+        "require_canonical_hash": False,
+        "scorer_bundle": (object(), object(), object()),
+    }
+    first = measure._run_banked_ab_arm(**kwargs, resume=False)
+    manifest = output_root / "control" / "archive.zip.manifest.json"
+    manifest.unlink()
+    resumed = measure._run_banked_ab_arm(**kwargs, resume=True)
+    assert manifest.is_file()
+    assert resumed == first
+
+
+def test_rung_e_resume_closes_cleanup_with_immutable_successor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    output_root = tmp_path / "pact-rung-e-rung-postreceipt"
+    raw_path = output_root / "inflated" / "v10-rung-e.raw"
+    raw_path.parent.mkdir(parents=True)
+    archive_path = output_root / "archive.zip"
+    archive_path.write_bytes(b"archive")
+    raw_path.write_bytes(b"raw")
+    (output_root / measure._EPHEMERAL_MARKER_NAME).write_bytes(measure._EPHEMERAL_MARKER_BYTES)
+    composed_path = tmp_path / "composed.json"
+    composed_path.write_text("{}")
+    scorer_custody = _fake_scorer_custody(tmp_path, monkeypatch, prefix="rung")
+    receipt_path = tmp_path / "rung-receipt.json"
+    stage_path = measure._stage_receipt_path(receipt_path, "rung-e")
+    stage_path.write_text("{}")
+    receipt = {
+        "schema": measure.SCHEMA_RUNG_E,
+        "authority": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "pointer_moved": False,
+        },
+        "research_only": True,
+        "archive": {
+            "bytes": archive_path.stat().st_size,
+            "sha256": measure._sha256_file(archive_path),
+        },
+        "inflated": {
+            "raw_bytes": raw_path.stat().st_size,
+            "raw_sha256": measure._sha256_file(raw_path),
+        },
+        "hard_oracle_custody": scorer_custody,
+        "artifact_lifecycle": {
+            "ephemeral_output": True,
+            "retained": False,
+            "cleanup_completed": False,
+            "cleanup_status": "pending",
+            "output_root_identity_sha256": measure._ephemeral_output_identity(output_root),
+            "durable_stage_receipts": {
+                "rung-e": {
+                    "path": str(stage_path),
+                    "bytes": stage_path.stat().st_size,
+                    "sha256": measure._sha256_file(stage_path),
+                }
+            },
+            "rebuildable_from": {
+                "composed_receipt_sha256": measure._sha256_file(composed_path),
+                "tool_sha256": measure._sha256_file(Path(measure.__file__).resolve()),
+                "codec_sha256": measure._sha256_file(measure.SRC / "tac/codec/v10_predictor_residual.py"),
+                "receiver_sha256": measure._sha256_file(measure.SRC / "tac/witness_dsl/v10_production_receiver.py"),
+                "lattice_sha256": measure._sha256_file(measure.SRC / "tac/optimization/uint8_lattice_feasibility.py"),
+                "hard_oracle_custody": scorer_custody,
+            },
+        },
+    }
+    receipt["artifact_lifecycle"]["cleanup_manifest"] = measure._build_ephemeral_cleanup_manifest(output_root)
+    precleanup_path = measure._precleanup_receipt_path(receipt_path)
+    measure._write_json_once(precleanup_path, receipt)
+    precleanup_bytes = precleanup_path.read_bytes()
+    args = argparse.Namespace(
+        resume=True,
+        ephemeral_output=True,
+        output_root=output_root,
+        receipt=receipt_path,
+        composed_receipt=composed_path,
+    )
+    final = measure._resume_rung_e_postreceipt_cleanup(args, receipt_path)
+    assert final["artifact_lifecycle"]["cleanup_completed"] is True
+    assert precleanup_path.read_bytes() == precleanup_bytes
+    assert not output_root.exists()
+    assert measure._resume_rung_e_postreceipt_cleanup(args, receipt_path) == final
+
+
 def test_score_inflated_raw_preserves_pair_order_and_aggregates(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -307,7 +824,10 @@ def test_ephemeral_policy_only_cleans_narrow_temp_tree(tmp_path: Path) -> None:
     target.mkdir()
     (target / measure._EPHEMERAL_MARKER_NAME).write_bytes(measure._EPHEMERAL_MARKER_BYTES)
     (target / "archive.zip").write_bytes(b"ephemeral")
-    measure._cleanup_ephemeral_output(target)
+    manifest = measure._build_ephemeral_cleanup_manifest(target)
+    measure._cleanup_ephemeral_output(target, manifest)
+    assert not target.exists()
+    measure._cleanup_ephemeral_output(target, manifest)
     assert not target.exists()
 
     unsafe = tmp_path / "unrelated-name"
@@ -315,7 +835,7 @@ def test_ephemeral_policy_only_cleans_narrow_temp_tree(tmp_path: Path) -> None:
     sentinel = unsafe / "preserve.bin"
     sentinel.write_bytes(b"keep")
     with pytest.raises(measure.PredictorFloorError, match="basename"):
-        measure._cleanup_ephemeral_output(unsafe)
+        measure._build_ephemeral_cleanup_manifest(unsafe)
     assert sentinel.read_bytes() == b"keep"
 
     unowned = tmp_path / "pact-rung-e-unowned"
@@ -323,11 +843,179 @@ def test_ephemeral_policy_only_cleans_narrow_temp_tree(tmp_path: Path) -> None:
     unowned_sentinel = unowned / "preserve.bin"
     unowned_sentinel.write_bytes(b"keep")
     with pytest.raises(measure.PredictorFloorError, match="ownership marker"):
-        measure._cleanup_ephemeral_output(unowned)
+        measure._build_ephemeral_cleanup_manifest(unowned)
     assert unowned_sentinel.read_bytes() == b"keep"
 
     with pytest.raises(measure.PredictorFloorError, match="system temporary root"):
         measure._ephemeral_output_root(Path("/Users/adpena/Projects/pact/pact-rung-e-unsafe"))
+
+    symlink_target = tmp_path / "pact-rung-e-symlink-target"
+    symlink_target.mkdir()
+    (symlink_target / measure._EPHEMERAL_MARKER_NAME).write_bytes(measure._EPHEMERAL_MARKER_BYTES)
+    symlink_path = tmp_path / "pact-rung-e-symlink"
+    symlink_path.symlink_to(symlink_target, target_is_directory=True)
+    with pytest.raises(measure.PredictorFloorError, match="may not be a symlink"):
+        measure._build_ephemeral_cleanup_manifest(symlink_path)
+    assert symlink_target.is_dir()
+
+
+def _certified_cleanup_tree(
+    tmp_path: Path,
+    name: str,
+) -> tuple[Path, dict[str, Any], dict[str, Any]]:
+    output_root = tmp_path / name
+    output_root.mkdir()
+    (output_root / measure._EPHEMERAL_MARKER_NAME).write_bytes(measure._EPHEMERAL_MARKER_BYTES)
+    arms: dict[str, Any] = {}
+    for arm_id in ("control", "precision_drop"):
+        arm_root = output_root / arm_id
+        nested = arm_root / "inflated"
+        nested.mkdir(parents=True)
+        archive_path = arm_root / "archive.zip"
+        raw_path = nested / f"v10-banked-ab-{arm_id}.raw"
+        archive_path.write_bytes(f"archive-{arm_id}".encode())
+        (arm_root / "stage.json").write_bytes(f"stage-{arm_id}".encode())
+        raw_path.write_bytes(f"raw-{arm_id}".encode())
+        arms[arm_id] = {
+            "archive": {"bytes": archive_path.stat().st_size, "sha256": measure._sha256_file(archive_path)},
+            "inflated": {"bytes": raw_path.stat().st_size, "sha256": measure._sha256_file(raw_path)},
+        }
+    return output_root, measure._build_ephemeral_cleanup_manifest(output_root), arms
+
+
+@pytest.mark.parametrize("deleted_before_interrupt", [1, 3])
+def test_manifest_cleanup_resumes_after_per_artifact_interruption(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    deleted_before_interrupt: int,
+) -> None:
+    output_root, manifest, arms = _certified_cleanup_tree(
+        tmp_path,
+        f"pact-rung-e-partial-{deleted_before_interrupt}",
+    )
+    precleanup_path = tmp_path / f"partial-{deleted_before_interrupt}.precleanup.json"
+    receipt_path = tmp_path / f"partial-{deleted_before_interrupt}.json"
+    receipt = {
+        "arms": arms,
+        "artifact_lifecycle": {
+            "cleanup_completed": False,
+            "cleanup_status": "pending",
+            "cleanup_manifest": manifest,
+            "rebuildable_from": {"tool_sha256": measure._sha256_file(Path(measure.__file__).resolve())},
+        },
+    }
+    measure._write_json_once(precleanup_path, receipt)
+    precleanup_bytes = precleanup_path.read_bytes()
+    original_unlink = measure._unlink_certified_cleanup_artifact
+    deleted: list[Path] = []
+
+    def interrupt_after_boundary(path: Path, row: dict[str, Any]) -> None:
+        if len(deleted) == deleted_before_interrupt:
+            raise RuntimeError("simulated cleanup interruption")
+        original_unlink(path, row)
+        deleted.append(path)
+
+    monkeypatch.setattr(measure, "_unlink_certified_cleanup_artifact", interrupt_after_boundary)
+    with pytest.raises(RuntimeError, match="simulated cleanup interruption"):
+        measure._finalize_banked_cleanup(
+            receipt,
+            precleanup_path=precleanup_path,
+            receipt_path=receipt_path,
+            output_root=output_root,
+        )
+    assert len(deleted) == deleted_before_interrupt
+    assert all(not path.exists() for path in deleted)
+    assert precleanup_path.read_bytes() == precleanup_bytes
+    assert not receipt_path.exists()
+
+    monkeypatch.setattr(measure, "_unlink_certified_cleanup_artifact", original_unlink)
+    final = measure._finalize_banked_cleanup(
+        receipt,
+        precleanup_path=precleanup_path,
+        receipt_path=receipt_path,
+        output_root=output_root,
+    )
+    assert final["artifact_lifecycle"]["cleanup_completed"] is True
+    assert final["artifact_lifecycle"]["cleanup_status"] == "complete"
+    assert final["artifact_lifecycle"]["cleanup_manifest"] == manifest
+    assert final["arms"] == arms
+    assert precleanup_path.read_bytes() == precleanup_bytes
+    assert not output_root.exists()
+
+
+def test_manifest_cleanup_blocks_mutated_survivor_after_interruption(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output_root, manifest, _arms = _certified_cleanup_tree(tmp_path, "pact-rung-e-mutated-survivor")
+    original_unlink = measure._unlink_certified_cleanup_artifact
+    deleted: list[Path] = []
+
+    def interrupt_after_one(path: Path, row: dict[str, Any]) -> None:
+        if deleted:
+            raise RuntimeError("simulated cleanup interruption")
+        original_unlink(path, row)
+        deleted.append(path)
+
+    monkeypatch.setattr(measure, "_unlink_certified_cleanup_artifact", interrupt_after_one)
+    with pytest.raises(RuntimeError, match="simulated cleanup interruption"):
+        measure._cleanup_ephemeral_output(output_root, manifest)
+    monkeypatch.setattr(measure, "_unlink_certified_cleanup_artifact", original_unlink)
+    survivor = output_root / "control" / "stage.json"
+    assert survivor.is_file()
+    survivor.write_bytes(b"mutated")
+    with pytest.raises(measure.PredictorFloorError, match="surviving ephemeral cleanup artifact drifted"):
+        measure._cleanup_ephemeral_output(output_root, manifest)
+    assert survivor.read_bytes() == b"mutated"
+
+
+def test_manifest_cleanup_blocks_unexpected_uncustodied_survivor(tmp_path: Path) -> None:
+    output_root, manifest, _arms = _certified_cleanup_tree(tmp_path, "pact-rung-e-unexpected-survivor")
+    unexpected = output_root / "control" / "uncustodied.bin"
+    unexpected.write_bytes(b"preserve")
+    with pytest.raises(measure.PredictorFloorError, match="unexpected uncustodied entries"):
+        measure._cleanup_ephemeral_output(output_root, manifest)
+    assert unexpected.read_bytes() == b"preserve"
+    assert (output_root / "control" / "archive.zip").read_bytes() == b"archive-control"
+
+
+def test_banked_cleanup_manifest_is_bound_to_scientific_receipt(tmp_path: Path) -> None:
+    output_root, manifest, arms = _certified_cleanup_tree(tmp_path, "pact-rung-e-receipt-binding")
+    receipt = {"arms": arms, "artifact_lifecycle": {"cleanup_manifest": manifest}}
+    receipt["arms"]["control"]["archive"]["sha256"] = "0" * 64
+    with pytest.raises(measure.PredictorFloorError, match="cleanup manifest differs from receipt custody"):
+        measure._validate_banked_cleanup_manifest(receipt, output_root)
+    assert (output_root / "control" / "archive.zip").read_bytes() == b"archive-control"
+
+
+def test_banked_finalize_accepts_fully_absent_certified_root_after_crash(tmp_path: Path) -> None:
+    output_root, manifest, arms = _certified_cleanup_tree(tmp_path, "pact-rung-e-absent-after-cleanup")
+    precleanup_path = tmp_path / "absent.precleanup.json"
+    receipt_path = tmp_path / "absent.json"
+    receipt = {
+        "arms": arms,
+        "artifact_lifecycle": {
+            "cleanup_completed": False,
+            "cleanup_status": "pending",
+            "cleanup_manifest": manifest,
+            "rebuildable_from": {"tool_sha256": measure._sha256_file(Path(measure.__file__).resolve())},
+        },
+    }
+    measure._write_json_once(precleanup_path, receipt)
+    precleanup_bytes = precleanup_path.read_bytes()
+    measure._cleanup_ephemeral_output(output_root, manifest)
+    assert not output_root.exists()
+    assert not receipt_path.exists()
+
+    final = measure._finalize_banked_cleanup(
+        receipt,
+        precleanup_path=precleanup_path,
+        receipt_path=receipt_path,
+        output_root=output_root,
+    )
+    assert final["artifact_lifecycle"]["cleanup_completed"] is True
+    assert receipt_path.is_file()
+    assert precleanup_path.read_bytes() == precleanup_bytes
 
 
 def test_rung_e_completion_seam_uses_production_completed_field(tmp_path: Path) -> None:
@@ -341,7 +1029,7 @@ def test_rung_e_completion_seam_uses_production_completed_field(tmp_path: Path) 
         measure._completed_inflate_raw_path(SimpleNamespace(completed=False, raw_path=raw_path))
 
 
-def test_cli_has_measure_compose_and_rung_e_subcommands() -> None:
+def test_cli_has_all_measurement_subcommands() -> None:
     parser = measure._parser()
     subcommands = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
-    assert set(subcommands.choices) == {"measure", "compose", "rung-e"}
+    assert set(subcommands.choices) == {"measure", "compose", "rung-e", "banked-ab"}

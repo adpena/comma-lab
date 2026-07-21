@@ -1,0 +1,796 @@
+{
+  "arms": {
+    "control": {
+      "archive": {
+        "bytes": 7898534,
+        "sha256": "3ed7edcbd6bbe696af476d2bdbf49f7a0ef0d568137a2622fa0aa060a4ec7834"
+      },
+      "arm_id": "control",
+      "frame0_y_sha256": "655ba4736dcbecd14f51ebb7b5d19c860c234bf351ecf3b4fef447359383ae93",
+      "frame1_y_sha256": "595312096621fa72d685d03345647796cec32936896e753eaaed8f8c00d60b5a",
+      "hard_oracle": {
+        "cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+        "mean_d_pose": 2.539280505051993e-05,
+        "mean_d_seg": 0.00012715657552083332,
+        "pairs": [
+          {
+            "d_pose": 1.3020403199106209e-05,
+            "d_seg": 0.00014750162760416666,
+            "pair_id": 0,
+            "pose6": [
+              34.2353401184082,
+              -0.00018767639994621277,
+              0.0015607699751853943,
+              -0.0007851645350456238,
+              -0.012636981904506683,
+              -8.419901132583618e-05
+            ],
+            "seg_mismatched_pixels": 29
+          },
+          {
+            "d_pose": 8.199706498003094e-05,
+            "d_seg": 0.00010172526041666667,
+            "pair_id": 1,
+            "pose6": [
+              34.70551300048828,
+              0.02028559520840645,
+              -0.020601652562618256,
+              0.007678069174289703,
+              -0.008572399616241455,
+              -0.0007225871086120605
+            ],
+            "seg_mismatched_pixels": 20
+          },
+          {
+            "d_pose": 5.297586022319963e-05,
+            "d_seg": 9.1552734375e-05,
+            "pair_id": 2,
+            "pose6": [
+              32.09267044067383,
+              0.00859333947300911,
+              -0.016458556056022644,
+              0.003969766199588776,
+              -0.00020140409469604492,
+              -0.0005257204174995422
+            ],
+            "seg_mismatched_pixels": 18
+          },
+          {
+            "d_pose": 1.788849136501643e-05,
+            "d_seg": 0.00012715657552083334,
+            "pair_id": 3,
+            "pose6": [
+              33.493446350097656,
+              -0.0030810944736003876,
+              -0.02093612402677536,
+              0.001141957938671112,
+              0.00630594789981842,
+              0.00027298927307128906
+            ],
+            "seg_mismatched_pixels": 25
+          },
+          {
+            "d_pose": 2.2625978771136552e-05,
+            "d_seg": 0.00014750162760416666,
+            "pair_id": 4,
+            "pose6": [
+              33.98314666748047,
+              0.022913772612810135,
+              -0.010650910437107086,
+              0.009970583021640778,
+              -0.0001452714204788208,
+              -0.0002986490726470947
+            ],
+            "seg_mismatched_pixels": 29
+          },
+          {
+            "d_pose": 2.0741750102008332e-05,
+            "d_seg": 8.138020833333333e-05,
+            "pair_id": 5,
+            "pose6": [
+              33.88034439086914,
+              -0.011921089142560959,
+              -0.015139579772949219,
+              -0.007598347961902618,
+              0.0015130043029785156,
+              0.0011225491762161255
+            ],
+            "seg_mismatched_pixels": 16
+          },
+          {
+            "d_pose": 2.2007359071402055e-05,
+            "d_seg": 0.0001068115234375,
+            "pair_id": 6,
+            "pose6": [
+              32.737300872802734,
+              -0.02597455307841301,
+              -0.008600607514381409,
+              -0.01377025991678238,
+              0.0016548782587051392,
+              -5.5886805057525635e-05
+            ],
+            "seg_mismatched_pixels": 21
+          },
+          {
+            "d_pose": 5.8153789056954635e-06,
+            "d_seg": 0.00016276041666666666,
+            "pair_id": 7,
+            "pose6": [
+              34.262176513671875,
+              -0.007057588547468185,
+              -0.0019803419709205627,
+              -0.0009603574872016907,
+              0.004642985761165619,
+              -0.0016158297657966614
+            ],
+            "seg_mismatched_pixels": 32
+          },
+          {
+            "d_pose": 1.3910744447352222e-05,
+            "d_seg": 0.00016276041666666666,
+            "pair_id": 8,
+            "pose6": [
+              33.48845672607422,
+              0.021876920014619827,
+              -0.009305648505687714,
+              0.00690094381570816,
+              -0.0011204332113265991,
+              -0.00028108060359954834
+            ],
+            "seg_mismatched_pixels": 32
+          },
+          {
+            "d_pose": 3.482916782415746e-05,
+            "d_seg": 0.00014241536458333334,
+            "pair_id": 9,
+            "pose6": [
+              33.20396041870117,
+              0.024482686072587967,
+              -0.00669977068901062,
+              0.00940810889005661,
+              -0.00892050564289093,
+              -0.0009708181023597717
+            ],
+            "seg_mismatched_pixels": 28
+          },
+          {
+            "d_pose": 1.3868277058996329e-05,
+            "d_seg": 8.138020833333333e-05,
+            "pair_id": 10,
+            "pose6": [
+              33.65117645263672,
+              0.025042284280061722,
+              -0.014194004237651825,
+              0.01015230268239975,
+              -0.004466623067855835,
+              -0.003651447594165802
+            ],
+            "seg_mismatched_pixels": 16
+          },
+          {
+            "d_pose": 5.033184658137513e-06,
+            "d_seg": 0.00017293294270833334,
+            "pair_id": 11,
+            "pose6": [
+              33.27347946166992,
+              0.008460361510515213,
+              -0.00398668646812439,
+              -0.0005218461155891418,
+              0.0016606152057647705,
+              -0.001250527799129486
+            ],
+            "seg_mismatched_pixels": 34
+          }
+        ],
+        "raw_sha256": "eefe96de9c722b1141faa113911bf518954a37adba5e06c4bc57ac686369dcf3",
+        "receiver_arithmetic": "native_float32_cpu_torch",
+        "tie_policy": "first maximum in frozen SegNet class index order"
+      },
+      "inflated": {
+        "bytes": 73248192,
+        "sha256": "eefe96de9c722b1141faa113911bf518954a37adba5e06c4bc57ac686369dcf3"
+      },
+      "integer_numerator_proof": {
+        "both_planes_exact": true,
+        "numerator_equal_values": 14155776
+      },
+      "packet": {
+        "bytes": 7898426,
+        "sha256": "661d511a885de4c089b5167f0a279f7c6fa291e2231dfcabe4d29d13bcbf471a"
+      },
+      "pair_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "predictor_payload_sha256": "812b8216f81260c6309865e17a7b03c482c1dca45ce5ee2a76444ef7808f0d78",
+      "projection": {
+        "distortion_term": 0.028650777586309597,
+        "measured_subset_d_pose": 2.539280505051993e-05,
+        "measured_subset_d_seg": 0.00012715657552083332,
+        "projected_beats_pointer": false,
+        "projected_exact_objective": 262.99412979958015,
+        "projected_n600_archive_bytes": 394926700,
+        "projection": "ceil(measured subset archive bytes * 600 / measured pair count)",
+        "strict_pointer_byte_cap_at_measured_distortion": 243943
+      },
+      "schema": "v10_free_predictor_floor_banked_ab_stage.v1",
+      "stage_complete": true
+    },
+    "precision_drop": {
+      "archive": {
+        "bytes": 6728570,
+        "sha256": "5a4da0a200d69822a0e5c832b976ee349401329f39a6886ca84eb24bb36d4ea9"
+      },
+      "arm_id": "precision_drop",
+      "frame0_y_sha256": "655ba4736dcbecd14f51ebb7b5d19c860c234bf351ecf3b4fef447359383ae93",
+      "frame1_y_sha256": "9c65ed56e55bd5ce7f9521a7ea2bba4da1b353f57121dfaa9d4e17c6e719d32b",
+      "hard_oracle": {
+        "cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+        "mean_d_pose": 0.0054544011035597036,
+        "mean_d_seg": 0.0004971822102864584,
+        "pairs": [
+          {
+            "d_pose": 0.007116567889875543,
+            "d_seg": 0.0005340576171875,
+            "pair_id": 0,
+            "pose6": [
+              34.03754806518555,
+              0.0016632862389087677,
+              0.0026966705918312073,
+              -0.00012428313493728638,
+              -0.012162283062934875,
+              -0.00013109296560287476
+            ],
+            "seg_mismatched_pixels": 105
+          },
+          {
+            "d_pose": 2.165491085712179e-05,
+            "d_seg": 0.00030517578125,
+            "pair_id": 1,
+            "pose6": [
+              34.694725036621094,
+              0.020575005561113358,
+              -0.020374976098537445,
+              0.008102230727672577,
+              -0.008508995175361633,
+              -0.0006330609321594238
+            ],
+            "seg_mismatched_pixels": 60
+          },
+          {
+            "d_pose": 0.01743869019732296,
+            "d_seg": 0.00042724609375,
+            "pair_id": 2,
+            "pose6": [
+              31.751392364501953,
+              0.007209081202745438,
+              -0.014025188982486725,
+              0.003847844898700714,
+              -0.0003985166549682617,
+              -0.00031559914350509644
+            ],
+            "seg_mismatched_pixels": 84
+          },
+          {
+            "d_pose": 0.00576672019188626,
+            "d_seg": 0.0003814697265625,
+            "pair_id": 3,
+            "pose6": [
+              33.297119140625,
+              -0.003957133740186691,
+              -0.018173202872276306,
+              0.0007941797375679016,
+              0.005466386675834656,
+              0.0007513538002967834
+            ],
+            "seg_mismatched_pixels": 75
+          },
+          {
+            "d_pose": 0.0026598763378233303,
+            "d_seg": 0.000701904296875,
+            "pair_id": 4,
+            "pose6": [
+              33.84518814086914,
+              0.02402942255139351,
+              -0.009363658726215363,
+              0.009478248655796051,
+              -0.0005481839179992676,
+              -0.00022254884243011475
+            ],
+            "seg_mismatched_pixels": 138
+          },
+          {
+            "d_pose": 0.0014760739602648436,
+            "d_seg": 0.0002695719401041667,
+            "pair_id": 5,
+            "pose6": [
+              33.77509307861328,
+              -0.011282097548246384,
+              -0.013810858130455017,
+              -0.007271520793437958,
+              0.0011036321520805359,
+              0.0012472718954086304
+            ],
+            "seg_mismatched_pixels": 53
+          },
+          {
+            "d_pose": 2.4360528956731318e-06,
+            "d_seg": 0.0004679361979166667,
+            "pair_id": 6,
+            "pose6": [
+              32.74580764770508,
+              -0.023833345621824265,
+              -0.008036941289901733,
+              -0.012973926961421967,
+              0.0012384653091430664,
+              2.578645944595337e-05
+            ],
+            "seg_mismatched_pixels": 92
+          },
+          {
+            "d_pose": 0.004020919782261156,
+            "d_seg": 0.0006052652994791666,
+            "pair_id": 7,
+            "pose6": [
+              34.10096740722656,
+              -0.007725667208433151,
+              -0.001586027443408966,
+              -0.0009707733988761902,
+              0.0044034868478775024,
+              -0.0015181973576545715
+            ],
+            "seg_mismatched_pixels": 119
+          },
+          {
+            "d_pose": 0.00020792552903715436,
+            "d_seg": 0.0005747477213541666,
+            "pair_id": 8,
+            "pose6": [
+              33.44401168823242,
+              0.021908361464738846,
+              -0.009112916886806488,
+              0.007062830030918121,
+              -0.0009866952896118164,
+              -2.1472573280334473e-05
+            ],
+            "seg_mismatched_pixels": 113
+          },
+          {
+            "d_pose": 0.026265848510206347,
+            "d_seg": 0.0004628499348958333,
+            "pair_id": 9,
+            "pose6": [
+              32.79252624511719,
+              0.02510489895939827,
+              -0.005523420870304108,
+              0.009798146784305573,
+              -0.008399993181228638,
+              -0.0011581405997276306
+            ],
+            "seg_mismatched_pixels": 91
+          },
+          {
+            "d_pose": 3.69321517590393e-07,
+            "d_seg": 0.00054931640625,
+            "pair_id": 10,
+            "pose6": [
+              33.640899658203125,
+              0.02506481483578682,
+              -0.013474680483341217,
+              0.00991842895746231,
+              -0.004568636417388916,
+              -0.003244630992412567
+            ],
+            "seg_mismatched_pixels": 108
+          },
+          {
+            "d_pose": 0.000475730558768465,
+            "d_seg": 0.0006866455078125,
+            "pair_id": 11,
+            "pose6": [
+              33.21456527709961,
+              0.008815009146928787,
+              -0.004375062882900238,
+              -0.0005209669470787048,
+              0.0014529526233673096,
+              -0.0009165331721305847
+            ],
+            "seg_mismatched_pixels": 135
+          }
+        ],
+        "raw_sha256": "0e01ac283f17d343136d4202dd4170ad4ea57c7a5143fa1f6c1e31d95280007a",
+        "receiver_arithmetic": "native_float32_cpu_torch",
+        "tie_policy": "first maximum in frozen SegNet class index order"
+      },
+      "inflated": {
+        "bytes": 73248192,
+        "sha256": "0e01ac283f17d343136d4202dd4170ad4ea57c7a5143fa1f6c1e31d95280007a"
+      },
+      "integer_numerator_proof": {
+        "both_planes_exact": true,
+        "numerator_equal_values": 14155776
+      },
+      "packet": {
+        "bytes": 6728462,
+        "sha256": "e4418d8f1eb5e9941ed90109dc6fac1e4e5becf4176b3e6c0474eec1e9604440"
+      },
+      "pair_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "predictor_payload_sha256": "262b9b92bf2b2755c3854475918f361e765852e286356b8fc19a209b80823024",
+      "projection": {
+        "distortion_term": 0.2832648138866814,
+        "measured_subset_d_pose": 0.0054544011035597036,
+        "measured_subset_d_seg": 0.0004971822102864584,
+        "projected_beats_pointer": false,
+        "projected_exact_objective": 224.29719362434912,
+        "projected_n600_archive_bytes": 336428500,
+        "projection": "ceil(measured subset archive bytes * 600 / measured pair count)",
+        "strict_pointer_byte_cap_at_measured_distortion": -1
+      },
+      "schema": "v10_free_predictor_floor_banked_ab_stage.v1",
+      "stage_complete": true
+    }
+  },
+  "artifact_lifecycle": {
+    "cleanup_completed": false,
+    "cleanup_rule": "immutable redacted precleanup receipt and durable stage receipts precede deletion of only the identity-bound marker-owned pact-rung-e-* temp tree; a write-once final successor binds the predecessor",
+    "cleanup_status": "pending",
+    "durable_stage_receipts": {
+      "control": {
+        "bytes": 5949,
+        "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json.control.stage.json",
+        "sha256": "247e572cfad5755be695f7513391e40fcb37698f5c29d74ba84e67828a524474"
+      },
+      "precision-drop": {
+        "bytes": 5925,
+        "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json.precision-drop.stage.json",
+        "sha256": "0cd746ecb17899543b6d16614187d2a25fd3651b7980b04e5f1b33893ec98c0c"
+      }
+    },
+    "ephemeral_output": true,
+    "output_root_identity_sha256": "06639bc1afb98d84659bdd29350bc70d026c63c60127560bc201b1611771ca8d",
+    "per_arm_stage_receipts_preserved_after_success": true,
+    "rebuildable_from": {
+      "codec_sha256": "fec4d269efbd3efc334af7623b8b6d95778d91706b5550362b8cacae60014ec0",
+      "hard_oracle_custody": {
+        "deterministic_algorithms": true,
+        "device": "cpu",
+        "distribution_trees": {
+          "einops": {
+            "bytes": 232744,
+            "distribution": "einops",
+            "file_count": 33,
+            "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+            "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+            "tree_sha256": "4265a0fe66a55bf699ec4a9b2a71eb0221644e229d2b50a57fb14057819c41b9",
+            "version": "0.8.2"
+          },
+          "numpy": {
+            "bytes": 17827083,
+            "distribution": "numpy",
+            "file_count": 790,
+            "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+            "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+            "tree_sha256": "124571175e68361b03f4f7065fcae1d0da6aebaadc6afe2179d57e7963a26bf6",
+            "version": "1.26.4"
+          },
+          "safetensors": {
+            "bytes": 1213241,
+            "distribution": "safetensors",
+            "file_count": 17,
+            "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+            "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+            "tree_sha256": "ebf3946e567c83c366bcadf81aaec11f1bd0a5eec27eed8ff27060b236059431",
+            "version": "0.8.0"
+          },
+          "segmentation-models-pytorch": {
+            "bytes": 547098,
+            "distribution": "segmentation-models-pytorch",
+            "file_count": 99,
+            "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+            "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+            "tree_sha256": "816b7c83f13ab516bd14d1a12d84ff11f27e4fe13f816919fa83b35bfc00bbb5",
+            "version": "0.5.0"
+          },
+          "timm": {
+            "bytes": 9122283,
+            "distribution": "timm",
+            "file_count": 315,
+            "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+            "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+            "tree_sha256": "e2218f231793cd119836702a328ffa9661ab8ae6ac371fa63f27a38a68975db5",
+            "version": "1.0.27"
+          },
+          "torch": {
+            "bytes": 378575216,
+            "distribution": "torch",
+            "file_count": 12536,
+            "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+            "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+            "tree_sha256": "588d6027e60aeb5c803b87f3cdfbc7d16568819450f37c0a80cecffe01dce5f5",
+            "version": "2.12.1"
+          },
+          "torchvision": {
+            "bytes": 6166800,
+            "distribution": "torchvision",
+            "file_count": 198,
+            "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+            "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+            "tree_sha256": "65e2c41f8135f30a02b3386213a0ba27e7f86539f196f5c952e3321dca59a937",
+            "version": "0.27.1"
+          }
+        },
+        "frame_utils_py": {
+          "bytes": 9345,
+          "path": "/Users/adpena/Projects/pact/upstream/frame_utils.py",
+          "sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90"
+        },
+        "modules_py": {
+          "bytes": 8322,
+          "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+          "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+        },
+        "posenet_weights": {
+          "bytes": 55835560,
+          "path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+          "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+        },
+        "python_runtime": {
+          "executable": {
+            "bytes": 49968,
+            "path": "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/bin/python3.13",
+            "sha256": "70db9c86354ca8b7c6e3a2c73cb623e05dc03d87452727af36675bfe04ba6c41"
+          },
+          "implementation": "CPython",
+          "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+          "version": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+        },
+        "segnet_weights": {
+          "bytes": 38502892,
+          "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+          "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+        },
+        "torch_version": "2.12.1"
+      },
+      "lattice_sha256": "8f694f06bfd643a598e3f5f9ce768dd73b546f7c5133f34d436b84adea635b17",
+      "prepared_manifest_sha256": "17f10449fe8a4420767b7977722154d4661d1ed6972266eb19b50cfe5b1b3fb7",
+      "receiver_sha256": "464173914cc0d0dc67801d80ede0447837725466785f28e64122bcaec46672f4",
+      "tool_sha256": "45e6539f0f9906a547cecf068949d73e439a03000ff4616aa07cdcb0a36e2cbc"
+    },
+    "resume_reopens_exact_archive_and_receiver_pair_stages": true,
+    "retained": false,
+    "storage_preflight": {
+      "free_bytes": 594275131392,
+      "passed": true,
+      "required_bytes": 561428224
+    },
+    "temporary_paths_redacted": true
+  },
+  "authority": {
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "verdict_scope": "one settled banked chunk; local native-f32 CPU hard oracle; linear n600 byte projection"
+  },
+  "axis": "[Darwin-arm64 CPU advisory real-cache banked n12 hard-oracle A/B] NON-PROMOTABLE",
+  "decode_import_boundary": "production inflate imports no scorer/Torch/source bank; hard oracle ran afterward encode-side",
+  "execution_custody": {
+    "cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "command": "banked-ab",
+    "cpu_threads": 4,
+    "drop_low_bits": 1,
+    "ephemeral_output": true,
+    "git_head_before_measurement": "ff88d42ab53b8a4fc0b067132d48992fcb9a967d",
+    "output_root": "<REDACTED_IDENTITY_BOUND_EPHEMERAL_ROOT>",
+    "prepared_manifest": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0000.manifest.json",
+    "resume": false,
+    "seed": 20260719,
+    "tool_sha256": "45e6539f0f9906a547cecf068949d73e439a03000ff4616aa07cdcb0a36e2cbc",
+    "upstream": "/Users/adpena/Projects/pact/upstream"
+  },
+  "frontier_verdict": {
+    "control_projected_beats_pointer": false,
+    "missing_complete_n600_archive_within_total_score_byte_cap": true,
+    "no_n600_launch_authorized": true,
+    "rate_subproblem": "compact predictor after all fixed archive/runtime/pose overhead is debited",
+    "treatment_projected_beats_pointer": false
+  },
+  "hard_oracle_custody": {
+    "deterministic_algorithms": true,
+    "device": "cpu",
+    "distribution_trees": {
+      "einops": {
+        "bytes": 232744,
+        "distribution": "einops",
+        "file_count": 33,
+        "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+        "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+        "tree_sha256": "4265a0fe66a55bf699ec4a9b2a71eb0221644e229d2b50a57fb14057819c41b9",
+        "version": "0.8.2"
+      },
+      "numpy": {
+        "bytes": 17827083,
+        "distribution": "numpy",
+        "file_count": 790,
+        "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+        "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+        "tree_sha256": "124571175e68361b03f4f7065fcae1d0da6aebaadc6afe2179d57e7963a26bf6",
+        "version": "1.26.4"
+      },
+      "safetensors": {
+        "bytes": 1213241,
+        "distribution": "safetensors",
+        "file_count": 17,
+        "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+        "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+        "tree_sha256": "ebf3946e567c83c366bcadf81aaec11f1bd0a5eec27eed8ff27060b236059431",
+        "version": "0.8.0"
+      },
+      "segmentation-models-pytorch": {
+        "bytes": 547098,
+        "distribution": "segmentation-models-pytorch",
+        "file_count": 99,
+        "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+        "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+        "tree_sha256": "816b7c83f13ab516bd14d1a12d84ff11f27e4fe13f816919fa83b35bfc00bbb5",
+        "version": "0.5.0"
+      },
+      "timm": {
+        "bytes": 9122283,
+        "distribution": "timm",
+        "file_count": 315,
+        "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+        "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+        "tree_sha256": "e2218f231793cd119836702a328ffa9661ab8ae6ac371fa63f27a38a68975db5",
+        "version": "1.0.27"
+      },
+      "torch": {
+        "bytes": 378575216,
+        "distribution": "torch",
+        "file_count": 12536,
+        "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+        "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+        "tree_sha256": "588d6027e60aeb5c803b87f3cdfbc7d16568819450f37c0a80cecffe01dce5f5",
+        "version": "2.12.1"
+      },
+      "torchvision": {
+        "bytes": 6166800,
+        "distribution": "torchvision",
+        "file_count": 198,
+        "root": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages",
+        "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+        "tree_sha256": "65e2c41f8135f30a02b3386213a0ba27e7f86539f196f5c952e3321dca59a937",
+        "version": "0.27.1"
+      }
+    },
+    "frame_utils_py": {
+      "bytes": 9345,
+      "path": "/Users/adpena/Projects/pact/upstream/frame_utils.py",
+      "sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90"
+    },
+    "modules_py": {
+      "bytes": 8322,
+      "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    },
+    "posenet_weights": {
+      "bytes": 55835560,
+      "path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+      "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+    },
+    "python_runtime": {
+      "executable": {
+        "bytes": 49968,
+        "path": "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/bin/python3.13",
+        "sha256": "70db9c86354ca8b7c6e3a2c73cb623e05dc03d87452727af36675bfe04ba6c41"
+      },
+      "implementation": "CPython",
+      "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+      "version": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+    },
+    "segnet_weights": {
+      "bytes": 38502892,
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "torch_version": "2.12.1"
+  },
+  "labels": {
+    "DERIVED": [
+      "ceil-linear n600 archive-byte projection",
+      "exact contest objective formula evaluated on projected bytes and measured subset distortion"
+    ],
+    "INFERRED": [],
+    "MEASURED": [
+      "actual production archive bytes",
+      "production packet parse-back and receiver inflation",
+      "factor-2 exact integer numerator equality",
+      "native-f32 frozen CPU-Torch d_seg/d_pose"
+    ]
+  },
+  "research_only": true,
+  "schema": "v10_free_predictor_floor_banked_ab.v2",
+  "source_prepared_chunk": {
+    "manifest": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0000.manifest.json",
+    "manifest_sha256": "17f10449fe8a4420767b7977722154d4661d1ed6972266eb19b50cfe5b1b3fb7",
+    "pair_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "predictor": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0000.predictor.bin",
+      "sha256": "812b8216f81260c6309865e17a7b03c482c1dca45ce5ee2a76444ef7808f0d78"
+    },
+    "source_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "y0": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0000.y0.bin",
+      "sha256": "655ba4736dcbecd14f51ebb7b5d19c860c234bf351ecf3b4fef447359383ae93"
+    },
+    "y1": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0000.y1.bin",
+      "sha256": "595312096621fa72d685d03345647796cec32936896e753eaaed8f8c00d60b5a"
+    }
+  },
+  "supersedes": [
+    {
+      "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720.json",
+      "reason": "strict total-byte equality boundary and immutable cleanup-successor custody were not closed",
+      "sha256": "9c031e016300768593d8848d265ed5d5c9fb915f335dd9024b3ba0b8ecfb904a"
+    },
+    {
+      "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v2.json",
+      "reason": "ephemeral output-root identity and receipt-to-chart provenance were not bound",
+      "sha256": "9de355d7208f0256d9e137ace54c24cf0f9b3f6907dbb3753227f9c26807c7c7"
+    }
+  ],
+  "treatment_minus_control": {
+    "archive_bytes": -1169964,
+    "mean_d_pose": 0.0054290082985091834,
+    "mean_d_seg": 0.00037002563476562505,
+    "projected_exact_objective": -38.69693617523103
+  },
+  "treatment_operation": {
+    "camera_preimage_secant_equivalence_claim": false,
+    "changed_fraction": 0.4906826725712529,
+    "changed_values": 3472997,
+    "drop_low_bits": 1,
+    "exact_uint8_reachable_plane": true,
+    "operation": "truncate scorer-plane signed predictor residual magnitudes toward zero",
+    "residual_abs_sum_after": 21892520,
+    "residual_abs_sum_before": 25365517
+  },
+  "written_at_utc": "2026-07-20T03:29:41.890586+00:00"
+}

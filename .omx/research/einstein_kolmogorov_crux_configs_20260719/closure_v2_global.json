@@ -1,0 +1,14 @@
+{
+  "packet_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/global/candidate.pdw1p.bin",
+  "packet_sha256": "3a9c95f6005c51c2b27bf36b627d99673ca4c9cdfea24e18e9b15590bcb16f60",
+  "gt_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n24.npz",
+  "gt_sha256": "684a2e043f5637eec6f2bc837b845588a7ec759c2a5c4b3b75dcb9f872541ede",
+  "segnet_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+  "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+  "upstream_path": "/Users/adpena/Projects/pact/upstream",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global",
+  "pair_indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+  "family": "baseline",
+  "seed": 20260719,
+  "iterations": 0
+}

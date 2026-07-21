@@ -1,0 +1,63 @@
+{
+  "schema": "einstein_kolmogorov_crux_cleanup.v3",
+  "utc": "2026-07-20T00:31:44Z",
+  "policy": "certify_or_block",
+  "deleted_bytes": 0,
+  "moved_bytes": 0,
+  "fresh_evidence": {
+    "path": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719",
+    "bytes": 26210105,
+    "file_count": 1638,
+    "sorted_file_hash_manifest_sha256": "03bd658dcc49111758f3fcb67488a5bee1d7b456c9671bb3363288dedfdc0130",
+    "status": "SEALED_CONTENT_ADDRESSED_BUNDLE_FOR_MAIN_LANDING",
+    "reason": "fresh post-hardening candidate bytes and immutable per-pair/per-iteration checkpoints are retained locally and duplicated byte-for-byte in the content-addressed bundle below; the bundle and manifest are staged for serializer commit",
+    "ssd_move_status": "BLOCKED_LOCAL_FILESYSTEM_POLICY",
+    "ssd_parent": "/Volumes/VertigoDataTier/pact/evidence",
+    "ssd_errno": 1,
+    "evidence_bundle": {
+      "manifest_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_runs_final_20260719.evidence.7b408d1cd9dd4f2bf4952fe1ed5370a81f820920b77529942095ee906b03bde6/manifest.json",
+      "bundle_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_runs_final_20260719.evidence.7b408d1cd9dd4f2bf4952fe1ed5370a81f820920b77529942095ee906b03bde6/bundle.evidence.bundle",
+      "tree_sha256": "7b408d1cd9dd4f2bf4952fe1ed5370a81f820920b77529942095ee906b03bde6",
+      "file_manifest_sha256": "f99e2e15c155f3c35e1b775cb7b7060d1b15299359b51c3e7d45129924d3e560",
+      "bundle_sha256": "e488da3083645f10e26e58b8e8703239fe2fe3e4706070963ef46ae10e54517a",
+      "bundle_bytes": 1048888,
+      "verified_file_count": 1638,
+      "verified_payload_bytes": 26210105,
+      "restore_check": "PASS_BYTE_IDENTICAL_DIFF_RQ",
+      "restore_scratch_status": "CERTIFIED_REBUILDABLE_AND_REMOVED_AFTER_PASS"
+    }
+  },
+  "closure_v2_terminal_replay": {
+    "path": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720",
+    "bytes": 1373763,
+    "file_count": 81,
+    "status": "SEALED_CONTENT_ADDRESSED_BUNDLE_FOR_MAIN_LANDING",
+    "manifest_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_closure_v2_20260720.evidence.6edb77687219aedbdcdc4e67b425e2ad81fef8d40a9d1e48d89440aa2c7bddb3/manifest.json",
+    "bundle_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_closure_v2_20260720.evidence.6edb77687219aedbdcdc4e67b425e2ad81fef8d40a9d1e48d89440aa2c7bddb3/bundle.evidence.bundle",
+    "tree_sha256": "6edb77687219aedbdcdc4e67b425e2ad81fef8d40a9d1e48d89440aa2c7bddb3",
+    "file_manifest_sha256": "ca25e8a52b638beaaf2ff9e48c2ccf26968c789d0f42bf3d16b83920197a68e2",
+    "bundle_sha256": "d40686bac2a511f1f3903e96198798ec49e27fbf425b1fdf2654416f651663f9",
+    "bundle_bytes": 99573,
+    "reason": "terminal source/global/scoped-Seg-winner replays reproduce the historical bytes and metrics under the complete v2 source/runtime closure"
+  },
+  "superseded_pre_closure_runs": {
+    "path": ".omx/research/einstein_kolmogorov_crux_runs_20260719",
+    "bytes": 18763542,
+    "file_count": 1476,
+    "sorted_file_hash_manifest_sha256": "9003e2f2e91fd84443a50e89b9074cdbbbf23ea2b454a887eb999c89ddfaf706",
+    "status": "RETAINED_UNCOMMITTED_SUPERSEDED",
+    "authority": false,
+    "reason": "precedes final source/runtime-closure and is superseded by fresh runs; deletion remains forbidden because no cold-store copy exists"
+  },
+  "pre_review_invalid_scratch": {
+    "path": ".omx/research/einstein_kolmogorov_crux_runs_20260719_pre_review_invalid",
+    "bytes": 768853,
+    "file_count": 81,
+    "sorted_file_hash_manifest_sha256": "984530e09fcc8b871b2a83fb3a50e7da4f9186b8242eeb60ada9217f3dc938f6",
+    "status": "RETAINED_UNCOMMITTED_QUARANTINE",
+    "authority": false,
+    "reason": "runs predate the DSPSA/resume/custody class fixes; exact uncommitted source bytes were not preserved, so deterministic rebuild certification is incomplete and deletion is forbidden"
+  },
+  "operator_evidence_uses_tmp": false,
+  "pointer_mutated": false
+}

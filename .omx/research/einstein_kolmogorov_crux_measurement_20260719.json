@@ -1,0 +1,383 @@
+{
+  "schema": "einstein_kolmogorov_crux_measurement.v2",
+  "utc": "2026-07-20T00:34:00Z",
+  "lane_id": "lane_einstein_kolmogorov_crux_20260719",
+  "authority": "[macOS-CPU advisory] n24 singleton CPU-Torch SegNet hard-R",
+  "research_only": true,
+  "promotion_eligible": false,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "scoped_completion": "n24_fixed_label_palette_and_lossy_label_realization_wall_characterization_complete",
+  "overall_lane_status": "IMPLEMENTATION_INCOMPLETE",
+  "verdict_scope": "complete n24 PDW1 component tournament only; no compact pose stream, no full n600 archive, and no contest-axis score",
+  "operating_point_correction": {
+    "receipt": ".omx/research/einstein_kolmogorov_operating_point_correction_20260720.json",
+    "verdict": "WRONG_OPERATING_POINT_WALL_CHARACTERIZATION",
+    "target_action": 0.1910828242,
+    "d_seg_ratio_vs_solved_bank": 37.36904932307547,
+    "seg_term": 0.5678600735134548,
+    "seg_term_exceeds_pointer_by": 0.37677724931345485,
+    "frontier_feasible_even_at_zero_pose_zero_bytes": false,
+    "n600_explicit_target_launch_eligible": false
+  },
+  "labels": {
+    "MEASURED": "hard mismatch count, d_seg, candidate component bytes and hashes, parse-back, factor-2 certificate, label mutations, and the named receipt closure; source/global/scoped-Seg-winner terminal replays have v2 source/runtime closure, while nonterminal historical tournament receipts retain the disclosed v1 limitation",
+    "DERIVED": "relative Seg reductions, pose-zero partial-action arithmetic, component-byte tradeoffs, score-law byte caps, and the proof that this operating point cannot beat the pointer even at zero Pose and zero bytes",
+    "SPECULATIVE": "generalization from this n24 component to a full generator quotient, a full archive, or sub-0.15"
+  },
+  "inputs": {
+    "pdw1_packet": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/pdw1_realization_20260719/pdw1p_n24_payload.bin",
+      "bytes": 19859,
+      "sha256": "8d66286c722e9202d77b54bcdf06942496641bad20ff9632c785800b53a0a02d"
+    },
+    "gt_n24": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n24.npz",
+      "sha256": "684a2e043f5637eec6f2bc837b845588a7ec759c2a5c4b3b75dcb9f872541ede"
+    },
+    "segnet": {
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "pair_count": 24,
+    "scorer_pixels": 4718592,
+    "camera_geometry": [874, 1164],
+    "scorer_geometry": [384, 512],
+    "scorer_batch_geometry": "singleton"
+  },
+  "reproducibility_closure": {
+    "schema": "einstein_kolmogorov_reproducibility_closure.v2",
+    "base_git_head": "8eee0e3becdabbfe2f38246ad014678bb11f1e8e",
+    "scope": "terminal source/global/scoped-Seg-winner triplet; same candidate bytes and metrics as the historical tournament",
+    "source_receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/source/receipt.json",
+    "source_receipt_sha256": "60f4d8941931c58c256f859984de19fbc1521242e96c2b5718ff1eda27989043",
+    "global_receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/receipt.json",
+    "global_receipt_sha256": "2d9b767fce296b5449b02e856d12dd549a626e606557231fb7159a6c053039a0",
+    "validation_receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/hybrid/receipt.json",
+    "validation_receipt_sha256": "258200c1ecfb08748645f7e69e62a3197cab848b57ff4b50dcc456ed7595b638",
+    "python": "3.13.12",
+    "python_executable_sha256": "70db9c86354ca8b7c6e3a2c73cb623e05dc03d87452727af36675bfe04ba6c41",
+    "numpy": "1.26.4",
+    "torch": "2.12.1",
+    "brotli": "1.2.0",
+    "safetensors": "0.8.0",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "torch_num_threads": 1,
+    "source_fingerprint_count": 12,
+    "historical_nonterminal_receipts": "BASE_COMMIT_PARTIAL_CLOSURE_DISCLOSED: v1 omitted the canonical action/equation/provenance/law sources and Brotli/safetensors module custody; they remain evidence for candidate construction, not terminal closure authority",
+    "evidence_bundle": {
+      "manifest_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_closure_v2_20260720.evidence.6edb77687219aedbdcdc4e67b425e2ad81fef8d40a9d1e48d89440aa2c7bddb3/manifest.json",
+      "bundle_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_closure_v2_20260720.evidence.6edb77687219aedbdcdc4e67b425e2ad81fef8d40a9d1e48d89440aa2c7bddb3/bundle.evidence.bundle",
+      "tree_sha256": "6edb77687219aedbdcdc4e67b425e2ad81fef8d40a9d1e48d89440aa2c7bddb3",
+      "bundle_sha256": "d40686bac2a511f1f3903e96198798ec49e27fbf425b1fdf2654416f651663f9",
+      "file_count": 81,
+      "payload_bytes": 1373763
+    }
+  },
+  "evidence_custody": {
+    "status": "CONTENT_ADDRESSED_BUNDLES_STAGED_FOR_MAIN_LANDING",
+    "full_tournament_bundle": {
+      "manifest_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_runs_final_20260719.evidence.7b408d1cd9dd4f2bf4952fe1ed5370a81f820920b77529942095ee906b03bde6/manifest.json",
+      "bundle_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_runs_final_20260719.evidence.7b408d1cd9dd4f2bf4952fe1ed5370a81f820920b77529942095ee906b03bde6/bundle.evidence.bundle",
+      "tree_sha256": "7b408d1cd9dd4f2bf4952fe1ed5370a81f820920b77529942095ee906b03bde6",
+      "file_manifest_sha256": "f99e2e15c155f3c35e1b775cb7b7060d1b15299359b51c3e7d45129924d3e560",
+      "bundle_sha256": "e488da3083645f10e26e58b8e8703239fe2fe3e4706070963ef46ae10e54517a",
+      "file_count": 1638,
+      "payload_bytes": 26210105,
+      "restore_check": "PASS_BYTE_IDENTICAL_DIFF_RQ"
+    },
+    "closure_v2_bundle_tree_sha256": "6edb77687219aedbdcdc4e67b425e2ad81fef8d40a9d1e48d89440aa2c7bddb3",
+    "source_trees_retained": true,
+    "source_deleted": false
+  },
+  "tournament": [
+    {
+      "arm": "source_per_pair_means",
+      "family": "fixed_label_palette",
+      "status": "MEASURED_CONTROL_FINAL_VALIDATED",
+      "d_seg": 0.00806956821017795,
+      "hard_mismatch_px": 38077,
+      "candidate_bytes": 19859,
+      "candidate_sha256": "8d66286c722e9202d77b54bcdf06942496641bad20ff9632c785800b53a0a02d",
+      "receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/source/receipt.json",
+      "receipt_sha256": "60f4d8941931c58c256f859984de19fbc1521242e96c2b5718ff1eda27989043"
+    },
+    {
+      "arm": "zero_palette",
+      "family": "fixed_label_palette",
+      "status": "MEASURED_NEGATIVE_CANARY",
+      "d_seg": 0.5061554378933377,
+      "hard_mismatch_px": 2388341,
+      "candidate_bytes": 19859,
+      "candidate_sha256": "9f2437ab7caf6f3a4fa06afea995b02726fda6c08f71979497264a90e682e2d8",
+      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/zero/receipt.json",
+      "receipt_sha256": "5c8329dac9b0cc52025b2cdb99f189d6dff70e4e682bc240eedf4bd1532eb20f"
+    },
+    {
+      "arm": "global_5xRGB_palette",
+      "family": "fixed_label_palette_quadratic_bregman_centroid",
+      "status": "MEASURED_POSITIVE_CONTROL_FINAL_VALIDATED",
+      "d_seg": 0.007899814181857638,
+      "hard_mismatch_px": 37276,
+      "candidate_bytes": 19859,
+      "candidate_sha256": "3a9c95f6005c51c2b27bf36b627d99673ca4c9cdfea24e18e9b15590bcb16f60",
+      "construction_receipt_sha256": "827eb1f07e3f5cdbcbc393b9937134673a1da749066299b6d97bc13f3a90d32a",
+      "receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/receipt.json",
+      "receipt_sha256": "2d9b767fce296b5449b02e856d12dd549a626e606557231fb7159a6c053039a0"
+    },
+    {
+      "arm": "coordinate_3",
+      "family": "fixed_label_palette",
+      "status": "MEASURED_DOMINATED_CAP_LIMITED",
+      "d_seg": 0.0075884924994574655,
+      "hard_mismatch_px": 35807,
+      "accepted_moves": 72,
+      "candidate_bytes": 19859,
+      "candidate_sha256": "446d0fe325f0d5d1f6ec85efbc793ba4c0ca3d1ea828ee85e2e68e67385db99b",
+      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/coordinate/receipt.json",
+      "receipt_sha256": "10dbd88a5a2c1f7360c2c15a990839eddcbffd15d61dd32bdd36bdddd7277ea4"
+    },
+    {
+      "arm": "coordinate_12",
+      "family": "fixed_label_palette",
+      "status": "MEASURED_DOMINATED",
+      "d_seg": 0.0068895551893446184,
+      "hard_mismatch_px": 32509,
+      "accepted_moves": 281,
+      "candidate_bytes": 19859,
+      "candidate_sha256": "213fc158bd30a976eed20e15c2cf0bb4af17b68e1be7cbf824f682667bfb33ee",
+      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/coordinate_deep/receipt.json",
+      "receipt_sha256": "d530f9e92fd7a6e7b1d71425e893d200ab8c57faae79c481fc9957a1ab3bb737"
+    },
+    {
+      "arm": "projected_middle_point_dspsa_8",
+      "family": "fixed_label_palette",
+      "status": "MEASURED_REPRODUCED_BYTE_IDENTICALLY",
+      "d_seg": 0.0064991845024956595,
+      "hard_mismatch_px": 30667,
+      "candidate_bytes": 19859,
+      "candidate_sha256": "e6bdf1b2e11abf6740a2441774f602f643ece3f8142358f4e5dc41b5a85a9257",
+      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa/receipt.json",
+      "receipt_sha256": "7b7ec47e0021074c901a55f261313ba4e86327ff17c934a6dbd378ad098dbf88",
+      "repeat_receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa_repeat/receipt.json",
+      "repeat_receipt_sha256": "fb56d9097dbc2cb3ea08abfe01d48c46963d8933f1060b0cc99532dccf0803a3",
+      "same_seed_same_candidate": true,
+      "same_seed_same_pair_rows": true,
+      "immutable_iteration_checkpoints_per_run": 192
+    },
+    {
+      "arm": "projected_middle_point_dspsa_32",
+      "family": "fixed_label_palette",
+      "status": "MEASURED_PARENT_OF_WINNER",
+      "d_seg": 0.0059422387017144095,
+      "hard_mismatch_px": 28039,
+      "candidate_bytes": 19859,
+      "candidate_sha256": "9fd596a22467a420ac2ba5aa85aec1ccded176eda6abffe301dd62979dee6982",
+      "immutable_iteration_checkpoints": 768,
+      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/dspsa_deep/receipt.json",
+      "receipt_sha256": "f0ac07e7e00d252746f67c9258613661cfa35e55bb725e7f7342bc496cf7a5bc"
+    },
+    {
+      "arm": "dspsa32_then_coordinate12",
+      "family": "fixed_label_palette",
+      "status": "MEASURED_SCOPED_SEG_ONLY_WINNER_FINAL_VALIDATED",
+      "d_seg": 0.0056786007351345485,
+      "hard_mismatch_px": 26795,
+      "accepted_coordinate_moves": 245,
+      "candidate_bytes": 19859,
+      "candidate_sha256": "ead37f3e3d730347a5d7a8b837cf9f14c97cb4b5c45fb2641c020bf43f567e98",
+      "strict_parseback": true,
+      "strict_encode_decode_reencode_identity": true,
+      "factor2_certified_exact_all_pairs": true,
+      "construction_receipt_sha256": "0ea5fb0b61007f86b4d54f23f4e8c2d8734d10c73d65a02813d4aa8ec326323c",
+      "receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/hybrid/receipt.json",
+      "receipt_sha256": "258200c1ecfb08748645f7e69e62a3197cab848b57ff4b50dcc456ed7595b638"
+    },
+    {
+      "arm": "label_run_2_source_fills",
+      "family": "lossy_label_topology",
+      "status": "MEASURED_SEG_RATE_PARTIAL_IMPROVEMENT_VS_SOURCE_JOINT_POSE_UNRESOLVED",
+      "d_seg": 0.007815043131510416,
+      "hard_mismatch_px": 36876,
+      "label_mutations": 323,
+      "candidate_bytes": 19371,
+      "candidate_sha256": "994ff738afc01e74f51d8e99d57379b373e1b6f309b2b6f7e5342181dcf59e02",
+      "pose_zero_ordering_action": 0.7944026669319713,
+      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/label_run_2/receipt.json",
+      "receipt_sha256": "c9e316a2f55e5773acf2213e51b2959f917911be232bb24b4f44b9c23d88d57d"
+    },
+    {
+      "arm": "label_run_3_source_fills",
+      "family": "lossy_label_topology",
+      "status": "MEASURED_SEG_RATE_PARTIAL_ROW_JOINT_POSE_UNRESOLVED",
+      "d_seg": 0.00799560546875,
+      "hard_mismatch_px": 37728,
+      "label_mutations": 1355,
+      "candidate_bytes": 18419,
+      "candidate_sha256": "cc27ed80cb197d127c26f968b14c80b562d527282e06ff63320362804c2a1dc6",
+      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/label_run_3/receipt.json",
+      "receipt_sha256": "7e3ff4a2a1fbbe029874130aedb3b93ca36cd7dda93fd9c96e8252ea064a4746"
+    },
+    {
+      "arm": "label_run_4_source_fills",
+      "family": "lossy_label_topology",
+      "status": "MEASURED_SEG_RATE_PARTIAL_NEGATIVE_RUNG_JOINT_POSE_UNRESOLVED",
+      "d_seg": 0.010709762573242188,
+      "hard_mismatch_px": 50535,
+      "label_mutations": 2996,
+      "candidate_bytes": 17207,
+      "candidate_sha256": "189a20a425893f4268cb1edbdb21057d1c7e531aa8301bd29ccec9738506014f",
+      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/label_run_4/receipt.json",
+      "receipt_sha256": "f9c4c1c03bfe6bb67e084ddd45ff3d57f11d566cf184aedb2b4b74b01a2eebde"
+    },
+    {
+      "arm": "hybrid_winner_then_label_run_2",
+      "family": "lossy_label_topology_plus_optimized_palette",
+      "status": "MEASURED_SEG_RATE_PARTIAL_GRAFT_WORSE_JOINT_POSE_UNRESOLVED",
+      "d_seg": 0.0058324601915147566,
+      "hard_mismatch_px": 27521,
+      "label_mutations": 323,
+      "candidate_bytes": 19371,
+      "candidate_sha256": "504692a6ba2b00da3840ff2d342fda84d3492d453b2bb1faf637502c77898fbf",
+      "pose_zero_ordering_action": 0.5961443729324053,
+      "seg_rate_partial_action_delta_vs_fixed_label_winner": 0.015061006468897298,
+      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/hybrid_label_run_2/receipt.json",
+      "receipt_sha256": "4b5381074ff1c4cca6a47e059d9f118afee15be0ae7ae7c741cb957c56a54cac"
+    },
+    {
+      "arm": "hybrid_winner_then_label_run_3",
+      "family": "lossy_label_topology_plus_optimized_palette",
+      "status": "MEASURED_SEG_RATE_PARTIAL_GRAFT_WORSE_JOINT_POSE_UNRESOLVED",
+      "d_seg": 0.0078377193874783,
+      "hard_mismatch_px": 36983,
+      "label_mutations": 1355,
+      "candidate_bytes": 18419,
+      "candidate_sha256": "29981a42a068ee1ca34e8ce37c6af43d5c20e1ceb7017380f791f2e88c1a8478",
+      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/hybrid_label_run_3/receipt.json",
+      "receipt_sha256": "3fb2cc1c19fe679ec1a035bc80ba2926a23b1ad252af2f61c890ae7409d60756"
+    },
+    {
+      "arm": "hybrid_winner_then_label_run_4",
+      "family": "lossy_label_topology_plus_optimized_palette",
+      "status": "MEASURED_SEG_RATE_PARTIAL_GRAFT_WORSE_JOINT_POSE_UNRESOLVED",
+      "d_seg": 0.06743261549207899,
+      "hard_mismatch_px": 318187,
+      "label_mutations": 2996,
+      "candidate_bytes": 17207,
+      "candidate_sha256": "c9c85b640df396ca582b4b5715b1e7b1c10d9072cf802e7a7fe8991f6e7d1658",
+      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/hybrid_label_run_4/receipt.json",
+      "receipt_sha256": "b2ec76fe2370558640e7fb828c50f28077f726396be669aef30452b9c6d0c911"
+    }
+  ],
+  "winner_derived_deltas": {
+    "mismatch_reduction_vs_source": 11282,
+    "relative_reduction_vs_source": 0.2962943509205032,
+    "mismatch_reduction_vs_global": 10481,
+    "relative_reduction_vs_global": 0.2811728726258182,
+    "added_packet_bytes": 0,
+    "seg_only_partial_action_delta_vs_source": -0.2390967475043403,
+    "seg_only_partial_action_delta_vs_global": -0.22212134467230896,
+    "pose_status_for_delta": "unmeasured; it does not cancel because palette changes affect PoseNet frame1",
+    "pose_zero_action_for_local_ordering_only": 0.581083366463508,
+    "pose_zero_value_is_not_a_contest_score": true
+  },
+  "cross_family_evidence_inventory": [
+    {
+      "chart": "direct_counted_payload_to_RGB_yhat",
+      "scope": "existing 83838-byte full archive plus fresh n24 diagnostic",
+      "disposition": "rate in-box, but d_pose approximately 63 makes this diagnostic noncompetitive; no new full replay"
+    },
+    {
+      "chart": "PDW1_fixed_label_palette",
+      "scope": "fresh n24 component hard-R tournament",
+      "disposition": "scoped Seg-only winner measured; joint Pose/total-archive admission unresolved"
+    },
+    {
+      "chart": "PDW1_lossy_label_topology",
+      "scope": "fresh n24 component hard-R rungs and graft",
+      "disposition": "minimum-run 2 improves the Seg-plus-component-rate partial objective; no joint family selection without Pose and total archive bytes"
+    },
+    {
+      "chart": "PDW2_quotient_power_packet",
+      "scope": "prior 138-byte raw / 133-byte Brotli coefficient head",
+      "disposition": "consumed but spatially non-identifying; missing decoder-computable field/pullback"
+    },
+    {
+      "chart": "xi_temporal_pose_R1",
+      "scope": "settled full-n600 macOS advisory control",
+      "disposition": "89,772 B, d_seg 0.004549119737413194, d_pose 0.0016095471538913576; not a new result"
+    },
+    {
+      "chart": "curvelet_shearlet_residual",
+      "scope": "prior saved-OFF n600 through-R basis rows",
+      "disposition": "equal scalar support rather than equal bytes; target-boundary inverse remains absent"
+    },
+    {
+      "chart": "MPEG4_INTER_CAE_arithmetic_self_compression",
+      "scope": "prior literature and local rate evidence",
+      "disposition": "open design family; no new receiver-closed row"
+    },
+    {
+      "chart": "Bregman_Fisher_dual",
+      "scope": "full 41-page Nielsen deck plus prior #504/#550/#552 and exact code derivation",
+      "disposition": "exact R-fiber projection and already-measured quadratic centroid; no new categorical pullback or byte theorem"
+    }
+  ],
+  "bregman_verdict": {
+    "paper_receipt": ".omx/research/papers_checked_nielsen_short_stories_bregman_20260719.md",
+    "support_fill": "DERIVED_EXACT: quadratic Bregman projection onto the fixed linear R-fiber",
+    "segnet_cell": "NOT_PROVED: discrete nonlinear scorer cell is generally nonconvex and the realizer never calls the scorer",
+    "global_palette": "MEASURED_ALREADY_APPLIED: rounded lattice quadratic-Bregman centroid, 38077 to 37276 mismatches at 19859 bytes",
+    "dual_coordinate_K_floor": "DERIVED_GUARD: computable Legendre bijection preserves K up to O(1); byte gain requires a real quotient or measured entropy reduction",
+    "new_score_row": false
+  },
+  "full_archive_controls_not_rerun": {
+    "yhat_archive": {
+      "archive_bytes": 83838,
+      "archive_sha256": "149fefd097c1fa85c4afb6cb2d8ab20311035d7ba8063f1e72137b843a9b89f3",
+      "measurement_scope": "n24 diagnostic with source-frame0 policy",
+      "d_seg": 0.003455691873872032,
+      "d_pose": 63.0309157371521,
+      "receipt": ".omx/research/yhat_rd_ladder_20260719_codex.json",
+      "receipt_sha256": "74e04312e90330d1a4c03e49db5090b134c4cf5894ffd78165dd576ab5c796e3"
+    },
+    "r1_xi_joint_archive": {
+      "archive_bytes": 89772,
+      "archive_sha256": "17f8da14b8ea5408fab442a3a1e3c63f7df9706e6bd192cfe2651b27a73f2902",
+      "measurement_scope": "full n600 macOS-CPU advisory, already settled",
+      "d_seg": 0.004549119737413194,
+      "d_pose": 0.0016095471538913576,
+      "implied_action": 0.6415553931939952,
+      "receipt": "reports/r1_dxi_238/n600_shipdxi.json",
+      "receipt_sha256": "45fb86119d8ba0f8ce3415b17f2bcae3cc50ad497c654479ceac0ac88196b0da",
+      "packet_status": "deleted by the settled run; not rerun or represented as a new result"
+    }
+  },
+  "xi_bridge": {
+    "status": "BLOCKED_LOCAL_FILESYSTEM_POLICY_BEFORE_INPUT_LOAD_OR_BACKEND",
+    "hash_receipt": ".omx/research/einstein_kolmogorov_xi_bridge_hash_receipt_v2_20260719.json",
+    "hash_receipt_sha256": "a77559f01fb4386d3c53ed1d62e6f56673e4382016f0a59a029c41addd2eae1f",
+    "preflight_blocker": ".omx/research/einstein_kolmogorov_xi_bridge_full_preflight_blocker_v3_20260719.json",
+    "exception": "PacketOutputFilesystemCustodyError",
+    "classification": "permission_denied",
+    "packet_created": false,
+    "result_receipt_created": false,
+    "bulky_local_or_tmp_fallback_used": false,
+    "input_hashes_reverified_read_only": true,
+    "downstream_resume_contract_present": false,
+    "future_backend_launch_fail_closed_on_missing_resume_contract": true,
+    "authorization_schema": "einstein_kolmogorov_xi_bridge_operator_authorization.v2",
+    "authorization_requires_allowlisted_ed25519_signature": true,
+    "authorization_trust_root_present": false,
+    "committed_json_alone_is_authority": false
+  },
+  "in_box_verdict": {
+    "new_full_n600_archive_produced": false,
+    "new_measured_in_box_point": false,
+    "existing_settled_in_box_control_preserved": true,
+    "reason": "the 19859-byte n24 component is an explicit-target realization-wall characterization whose Seg term alone exceeds the pointer; it is not a launch predecessor or full n600 two-frame archive. Any next chart must compose from the solved-distortion bank. The governed xi bridge also refuses without SSD custody, executable resume ABI, and signed operator authorization.",
+    "sub_0_15_reached": false,
+    "pointer_moved": false
+  }
+}

@@ -11,16 +11,24 @@ zstd-19 bytes.  Four canonical chunks compose to the n48 advisory surface.
 additive production archive, verifies both factor-2 planes, and only then loads
 the frozen CPU scorers.  Neither the predictor codec nor archive decoder loads
 SegNet, PoseNet, Torch, source frames, labels, or margins.
+
+``banked-ab`` consumes one immutable prepared V10 chunk and runs a matched
+receiver-closed control versus scorer-plane predictor-residual precision drop.
+It reports actual archive bytes and local hard-oracle distortion before any
+explicitly labeled n600 projection.
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.metadata
 import json
+import math
 import os
 import platform
 import shutil
+import stat
 import struct
 import subprocess
 import sys
@@ -31,7 +39,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from itertools import pairwise
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import brotli
@@ -53,6 +61,9 @@ from tac.codec.v10_predictor_residual import (  # noqa: E402
     fit_affine6_q12_descriptor,
     predict_plane,
 )
+from tac.codec.v10_predictor_residual import (  # noqa: E402
+    CODEC_ID as PREDICTOR_RESIDUAL_CODEC_ID,
+)
 from tac.optimization.uint8_lattice_feasibility import DisjointResizeOperator  # noqa: E402
 from tools.measure_uint8_lattice_feasibility import stored_npy_memmap  # noqa: E402
 
@@ -60,9 +71,17 @@ SCHEMA_CHUNK = "v10_free_predictor_floor_chunk.v1"
 SCHEMA_STATE = "v10_free_predictor_floor_state.v1"
 SCHEMA_STAGE = "v10_free_predictor_floor_pair_stage.v1"
 SCHEMA_COMPOSED = "v10_free_predictor_floor_n48.v1"
-SCHEMA_RUNG_E = "v10_free_predictor_floor_rung_e.v1"
+SCHEMA_RUNG_E = "v10_free_predictor_floor_rung_e.v2"
+SCHEMA_RUNG_E_STAGE = "v10_free_predictor_floor_rung_e_stage.v1"
+SCHEMA_BANKED_AB = "v10_free_predictor_floor_banked_ab.v2"
+SCHEMA_BANKED_AB_STAGE = "v10_free_predictor_floor_banked_ab_stage.v1"
+SCHEMA_EPHEMERAL_CLEANUP = "v10_ephemeral_cleanup_manifest.v1"
+PREPARED_CHUNK_SCHEMA = "v10_two_plane_receiver_prepare_chunk.v1"
 SCHEMA_ATTRIBUTION = "v10_predictor_attribution_stream.v1"
 POINTER = "0.1910828242 [contest-CPU Linux x86_64] UNMOVED"
+POINTER_VALUE = 0.1910828242
+CONTEST_ARCHIVE_DENOMINATOR = 37_545_489
+CONTEST_PAIR_COUNT = 600
 AXIS = f"[{platform.system()}-{platform.machine()} CPU advisory real-cache subset] NON-PROMOTABLE"
 CAMERA_HW = (874, 1164)
 SCORER_HW = (384, 512)
@@ -77,7 +96,55 @@ DEFAULT_CACHE = Path("/Users/adpena/Projects/pact/experiments/results/mlx_fleet_
 DEFAULT_UPSTREAM = Path("/Users/adpena/Projects/pact/upstream")
 DEFAULT_SACRED = Path("/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z")
 EXPECTED_CACHE_SHA256 = "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+EXPECTED_PREPARED_N12_MANIFEST_SHA256 = "17f10449fe8a4420767b7977722154d4661d1ed6972266eb19b50cfe5b1b3fb7"
 SSD_ROOTS = (Path("/Volumes/VertigoDataTier/pact"), Path("/Volumes/APDataStore/pact"))
+
+SUPERSEDED_BANKED_AB_RECEIPTS = (
+    {
+        "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720.json",
+        "sha256": "9c031e016300768593d8848d265ed5d5c9fb915f335dd9024b3ba0b8ecfb904a",
+        "reason": "strict total-byte equality boundary and immutable cleanup-successor custody were not closed",
+    },
+    {
+        "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v2.json",
+        "sha256": "9de355d7208f0256d9e137ace54c24cf0f9b3f6907dbb3753227f9c26807c7c7",
+        "reason": "ephemeral output-root identity and receipt-to-chart provenance were not bound",
+    },
+)
+
+SCORER_RUNTIME_DISTRIBUTIONS = (
+    "numpy",
+    "torch",
+    "torchvision",
+    "timm",
+    "einops",
+    "segmentation-models-pytorch",
+    "safetensors",
+)
+
+# ff88d42ab5 produced a complete immutable precleanup receipt before its
+# cleanup validator discovered that the production receiver writes ``.raw``.
+# Only this exact scientific-tool image may cross that already-certified
+# cleanup window; the final successor records the distinct cleanup tool.
+CLEANUP_COMPATIBLE_PREDECESSOR_TOOL_SHA256S = frozenset(
+    {"45e6539f0f9906a547cecf068949d73e439a03000ff4616aa07cdcb0a36e2cbc"}
+)
+FROZEN_HISTORICAL_BANKED_CLEANUP = {
+    "git_head": "5758418c0e56d2bffbc1e313aa0f0ef71d215439",
+    "tool_sha256": "00470f4a2cc21829c3c91d929824b18b53c20e055fd8372d1b43f370ff7253ca",
+    "precleanup_tool_sha256": "45e6539f0f9906a547cecf068949d73e439a03000ff4616aa07cdcb0a36e2cbc",
+    "cross_version_cleanup_only": True,
+}
+FROZEN_HISTORICAL_BANKED_RECEIPT = {
+    "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json",
+    "bytes": 30_899,
+    "sha256": "9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a",
+}
+FROZEN_HISTORICAL_BANKED_PRECLEANUP = {
+    "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json.precleanup.json",
+    "bytes": 30_259,
+    "sha256": "184cf2405131242be6c821e6a07da574ed83178d778706e1b60ce65bea455908",
+}
 
 _ATTR_MAGIC = b"V10ATTR1"
 _ATTR_PREFIX = struct.Struct("<8sHBBIHHH")
@@ -101,6 +168,19 @@ class RungEInputs:
     descriptors: tuple[bytes, ...]
     cache_sha256: str
     predictor_payload_sha256: str
+
+
+@dataclass(frozen=True)
+class PreparedChunkCustody:
+    """One immutable prepared V10 chunk plus its bound source artifacts."""
+
+    inputs: RungEInputs
+    manifest_path: Path
+    manifest_sha256: str
+    manifest: Mapping[str, Any]
+    y0_path: Path
+    y1_path: Path
+    predictor_path: Path
 
 
 def _canonical(value: Any) -> bytes:
@@ -140,6 +220,10 @@ def _atomic_json(path: Path, value: Any) -> None:
     _atomic_bytes(path, json.dumps(value, indent=2, sort_keys=True, allow_nan=False).encode() + b"\n")
 
 
+def _json_bytes(value: Any) -> bytes:
+    return json.dumps(value, indent=2, sort_keys=True, allow_nan=False).encode() + b"\n"
+
+
 def _write_once_or_equal(path: Path, value: bytes) -> None:
     if path.exists():
         if not path.is_file() or path.read_bytes() != value:
@@ -160,6 +244,54 @@ def _write_once_or_equal(path: Path, value: bytes) -> None:
                 raise PredictorFloorError(f"preserved write-once artifact drifted: {path}") from exc
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _write_json_once(path: Path, value: Any) -> None:
+    _write_once_or_equal(path, _json_bytes(value))
+
+
+def _precleanup_receipt_path(receipt_path: Path) -> Path:
+    return receipt_path.with_name(f"{receipt_path.name}.precleanup.json")
+
+
+def _stage_receipt_path(receipt_path: Path, stage_id: str) -> Path:
+    if not stage_id or any(character not in "abcdefghijklmnopqrstuvwxyz0123456789-_" for character in stage_id):
+        raise PredictorFloorError("durable stage receipt id is outside the closed filename alphabet")
+    return receipt_path.with_name(f"{receipt_path.name}.{stage_id}.stage.json")
+
+
+def _receipt_path_string(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(REPO))
+    except ValueError:
+        return str(resolved)
+
+
+def _git_head() -> str:
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPO,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    value = completed.stdout.strip()
+    if len(value) != 40:
+        raise PredictorFloorError("git HEAD custody is malformed")
+    return value
+
+
+def _git_file_sha256(revision: str, relative_path: str) -> str:
+    completed = subprocess.run(
+        ["git", "show", f"{revision}:{relative_path}"],
+        cwd=REPO,
+        check=False,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        raise PredictorFloorError("historical cleanup source commit is unavailable")
+    return _sha256_bytes(completed.stdout)
 
 
 def _is_relative_to(path: Path, root: Path) -> bool:
@@ -189,7 +321,10 @@ def _durable_path(path: Path, field: str, *, require_ssd: bool = False, allow_lo
 def _ephemeral_output_root(path: Path) -> Path:
     """Admit only one narrowly named temporary rung-E tree for certified cleanup."""
 
-    resolved = path.expanduser().resolve()
+    expanded = path.expanduser()
+    if expanded.is_symlink():
+        raise PredictorFloorError("ephemeral rung-E output may not be a symlink")
+    resolved = expanded.resolve()
     temp_roots = {
         Path(tempfile.gettempdir()).resolve(),
         Path("/tmp").resolve(),
@@ -200,9 +335,14 @@ def _ephemeral_output_root(path: Path) -> Path:
         raise PredictorFloorError("ephemeral rung-E output must be a child of the system temporary root")
     if not resolved.name.startswith("pact-rung-e-"):
         raise PredictorFloorError("ephemeral rung-E output basename must start with 'pact-rung-e-'")
-    if resolved.is_symlink():
-        raise PredictorFloorError("ephemeral rung-E output may not be a symlink")
     return resolved
+
+
+def _ephemeral_output_identity(path: Path) -> str:
+    """Bind a redacted receipt to one resolved temporary output root."""
+
+    resolved = _ephemeral_output_root(path)
+    return _sha256_bytes(str(resolved).encode("utf-8"))
 
 
 def _ephemeral_storage_preflight(path: Path, pair_count: int) -> dict[str, Any]:
@@ -219,17 +359,200 @@ def _ephemeral_storage_preflight(path: Path, pair_count: int) -> dict[str, Any]:
     return {"required_bytes": required, "free_bytes": free, "passed": True}
 
 
-def _cleanup_ephemeral_output(path: Path) -> None:
+def _cleanup_relative_path(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise PredictorFloorError(f"{label} path is malformed")
+    pure = PurePosixPath(value)
+    if pure.is_absolute() or pure.as_posix() != value or any(part in {"", ".", ".."} for part in pure.parts):
+        raise PredictorFloorError(f"{label} path is not one canonical relative path")
+    return value
+
+
+def _scan_ephemeral_tree(path: Path, *, require_marker: bool) -> tuple[list[str], list[dict[str, Any]]]:
+    """Snapshot only regular files and real directories without following links."""
+
     validated = _ephemeral_output_root(path)
-    if validated.exists():
-        if not validated.is_dir() or validated.is_symlink():
-            raise PredictorFloorError("ephemeral cleanup target is not one exact real directory")
-        marker = validated / _EPHEMERAL_MARKER_NAME
-        if not marker.is_file() or marker.read_bytes() != _EPHEMERAL_MARKER_BYTES:
-            raise PredictorFloorError("ephemeral cleanup target lacks the exact ownership marker")
-        shutil.rmtree(validated)
-    if validated.exists():
-        raise PredictorFloorError("ephemeral rung-E cleanup did not remove its exact output tree")
+    if not validated.exists() or not validated.is_dir() or validated.is_symlink():
+        raise PredictorFloorError("ephemeral cleanup target is not one exact real directory")
+    directories: list[str] = []
+    artifacts: list[dict[str, Any]] = []
+    for current, directory_names, file_names in os.walk(validated, topdown=True, followlinks=False):
+        directory_names.sort()
+        file_names.sort()
+        current_path = Path(current)
+        for name in directory_names:
+            directory = current_path / name
+            mode = directory.lstat().st_mode
+            if not stat.S_ISDIR(mode) or directory.is_symlink():
+                raise PredictorFloorError(f"ephemeral cleanup tree contains a non-directory link: {directory}")
+            directories.append(directory.relative_to(validated).as_posix())
+        for name in file_names:
+            artifact = current_path / name
+            metadata = artifact.lstat()
+            if not stat.S_ISREG(metadata.st_mode) or artifact.is_symlink():
+                raise PredictorFloorError(f"ephemeral cleanup tree contains a non-regular artifact: {artifact}")
+            artifacts.append(
+                {
+                    "path": artifact.relative_to(validated).as_posix(),
+                    "bytes": metadata.st_size,
+                    "sha256": _sha256_file(artifact),
+                }
+            )
+    directories.sort()
+    artifacts.sort(key=lambda row: row["path"])
+    marker_rows = [row for row in artifacts if row["path"] == _EPHEMERAL_MARKER_NAME]
+    if require_marker and (
+        len(marker_rows) != 1
+        or marker_rows[0]["bytes"] != len(_EPHEMERAL_MARKER_BYTES)
+        or marker_rows[0]["sha256"] != _sha256_bytes(_EPHEMERAL_MARKER_BYTES)
+    ):
+        raise PredictorFloorError("ephemeral cleanup target lacks the exact ownership marker")
+    return directories, artifacts
+
+
+def _build_ephemeral_cleanup_manifest(path: Path) -> dict[str, Any]:
+    """Certify every scratch entry before the immutable precleanup receipt lands."""
+
+    validated = _ephemeral_output_root(path)
+    directories, artifacts = _scan_ephemeral_tree(validated, require_marker=True)
+    manifest: dict[str, Any] = {
+        "schema": SCHEMA_EPHEMERAL_CLEANUP,
+        "output_root_identity_sha256": _ephemeral_output_identity(validated),
+        "directories": directories,
+        "artifacts": artifacts,
+    }
+    manifest["manifest_sha256"] = _sha256_bytes(_canonical(manifest))
+    return manifest
+
+
+def _validate_ephemeral_cleanup_manifest(
+    value: Any,
+    path: Path,
+) -> tuple[set[str], dict[str, Mapping[str, Any]]]:
+    """Validate the immutable allowlist independently of current scratch state."""
+
+    if not isinstance(value, Mapping) or set(value) != {
+        "schema",
+        "output_root_identity_sha256",
+        "directories",
+        "artifacts",
+        "manifest_sha256",
+    }:
+        raise PredictorFloorError("ephemeral cleanup manifest is absent or malformed")
+    validated = _ephemeral_output_root(path)
+    unsigned = {key: value[key] for key in value if key != "manifest_sha256"}
+    if (
+        value.get("schema") != SCHEMA_EPHEMERAL_CLEANUP
+        or value.get("output_root_identity_sha256") != _ephemeral_output_identity(validated)
+        or value.get("manifest_sha256") != _sha256_bytes(_canonical(unsigned))
+    ):
+        raise PredictorFloorError("ephemeral cleanup manifest identity or digest drifted")
+    raw_directories = value.get("directories")
+    raw_artifacts = value.get("artifacts")
+    if not isinstance(raw_directories, list) or not isinstance(raw_artifacts, list):
+        raise PredictorFloorError("ephemeral cleanup manifest entries are malformed")
+    directories = {_cleanup_relative_path(directory, "ephemeral cleanup directory") for directory in raw_directories}
+    if len(directories) != len(raw_directories):
+        raise PredictorFloorError("ephemeral cleanup manifest repeats a directory")
+    artifacts: dict[str, Mapping[str, Any]] = {}
+    for raw_row in raw_artifacts:
+        if not isinstance(raw_row, Mapping) or set(raw_row) != {"path", "bytes", "sha256"}:
+            raise PredictorFloorError("ephemeral cleanup artifact row is malformed")
+        relative = _cleanup_relative_path(raw_row.get("path"), "ephemeral cleanup artifact")
+        size = raw_row.get("bytes")
+        digest = raw_row.get("sha256")
+        if (
+            relative in artifacts
+            or relative in directories
+            or isinstance(size, bool)
+            or not isinstance(size, int)
+            or size < 0
+            or not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+        ):
+            raise PredictorFloorError("ephemeral cleanup artifact custody is malformed")
+        artifacts[relative] = raw_row
+    marker = artifacts.get(_EPHEMERAL_MARKER_NAME)
+    if (
+        marker is None
+        or marker.get("bytes") != len(_EPHEMERAL_MARKER_BYTES)
+        or marker.get("sha256") != _sha256_bytes(_EPHEMERAL_MARKER_BYTES)
+    ):
+        raise PredictorFloorError("ephemeral cleanup manifest lacks the exact ownership marker")
+    return directories, artifacts
+
+
+def _validate_cleanup_artifact(path: Path, row: Mapping[str, Any]) -> None:
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or path.is_symlink()
+        or metadata.st_size != row.get("bytes")
+        or _sha256_file(path) != row.get("sha256")
+    ):
+        raise PredictorFloorError(f"surviving ephemeral cleanup artifact drifted: {path}")
+
+
+def _unlink_certified_cleanup_artifact(path: Path, row: Mapping[str, Any]) -> None:
+    """Revalidate one manifest-bound file immediately before deterministic deletion."""
+
+    _validate_cleanup_artifact(path, row)
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        # A previous cleanup invocation may already have removed this exact row.
+        return
+
+
+def _cleanup_ephemeral_output(path: Path, manifest: Mapping[str, Any]) -> None:
+    """Resume a certified cleanup from any per-file deletion boundary."""
+
+    validated = _ephemeral_output_root(path)
+    expected_directories, expected_artifacts = _validate_ephemeral_cleanup_manifest(manifest, validated)
+    if validated.is_symlink():
+        raise PredictorFloorError("ephemeral cleanup target may not become a symlink")
+    if not validated.exists():
+        return
+    actual_directories, actual_rows = _scan_ephemeral_tree(validated, require_marker=False)
+    actual_artifacts = {row["path"]: row for row in actual_rows}
+    unexpected_directories = set(actual_directories) - expected_directories
+    unexpected_artifacts = set(actual_artifacts) - set(expected_artifacts)
+    if unexpected_directories or unexpected_artifacts:
+        raise PredictorFloorError("ephemeral cleanup tree contains unexpected uncustodied entries")
+    # Validate every survivor before deleting any more. A mutated survivor must
+    # fail closed even when earlier certified artifacts are already absent.
+    for relative, actual in actual_artifacts.items():
+        expected = expected_artifacts[relative]
+        if actual.get("bytes") != expected.get("bytes") or actual.get("sha256") != expected.get("sha256"):
+            raise PredictorFloorError(f"surviving ephemeral cleanup artifact drifted: {validated / relative}")
+    deletion_order = sorted(
+        expected_artifacts,
+        key=lambda relative: (relative == _EPHEMERAL_MARKER_NAME, relative),
+    )
+    for relative in deletion_order:
+        artifact = validated.joinpath(*PurePosixPath(relative).parts)
+        if artifact.exists() or artifact.is_symlink():
+            _unlink_certified_cleanup_artifact(artifact, expected_artifacts[relative])
+    for relative in sorted(expected_directories, key=lambda value: (-len(PurePosixPath(value).parts), value)):
+        directory = validated.joinpath(*PurePosixPath(relative).parts)
+        if directory.is_symlink():
+            raise PredictorFloorError(f"ephemeral cleanup directory became a symlink: {directory}")
+        try:
+            directory.rmdir()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise PredictorFloorError(f"ephemeral cleanup directory is not safely empty: {directory}") from exc
+    try:
+        validated.rmdir()
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise PredictorFloorError("ephemeral cleanup root is not safely empty") from exc
 
 
 def _tree_snapshot(root: Path) -> dict[str, Any]:
@@ -1013,6 +1336,208 @@ def build_rung_e_inputs(
     )
 
 
+def load_prepared_chunk(
+    manifest_path: Path,
+    *,
+    expected_manifest_sha256: str = EXPECTED_PREPARED_N12_MANIFEST_SHA256,
+) -> PreparedChunkCustody:
+    """Load one settled n<=12 V10 prepare chunk without re-deriving it."""
+
+    target = manifest_path.expanduser().resolve()
+    if not target.is_file() or not target.name.endswith(".manifest.json"):
+        raise PredictorFloorError("prepared chunk manifest is absent or misnamed")
+    if (
+        not isinstance(expected_manifest_sha256, str)
+        or len(expected_manifest_sha256) != 64
+        or _sha256_file(target) != expected_manifest_sha256
+    ):
+        raise PredictorFloorError("prepared chunk is not the exact settled manifest authority")
+    try:
+        manifest = json.loads(target.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PredictorFloorError("prepared chunk manifest is unreadable") from exc
+    pair_ids = manifest.get("pair_ids")
+    pair_count = manifest.get("pair_count")
+    if (
+        manifest.get("schema") != PREPARED_CHUNK_SCHEMA
+        or manifest.get("complete") is not True
+        or type(pair_count) is not int
+        or not isinstance(pair_ids, list)
+        or pair_count != len(pair_ids)
+        or not 1 <= pair_count <= MAX_CHUNK
+        or any(type(value) is not int or value < 0 or value >= 600 for value in pair_ids)
+        or any(right <= left for left, right in pairwise(pair_ids))
+        or manifest.get("camera_hw") != list(CAMERA_HW)
+        or manifest.get("scorer_hw") != list(SCORER_HW)
+        or manifest.get("source_cache_sha256") != EXPECTED_CACHE_SHA256
+        or manifest.get("y_codec_id") != PREDICTOR_RESIDUAL_CODEC_ID
+        or manifest.get("predictor_mode_id") not in MODE_BY_ID
+    ):
+        raise PredictorFloorError("prepared chunk manifest violates the settled V10 contract")
+    prefix = target.name[: -len(".manifest.json")]
+    y0_path = target.with_name(f"{prefix}.y0.bin")
+    y1_path = target.with_name(f"{prefix}.y1.bin")
+    predictor_path = target.with_name(f"{prefix}.predictor.bin")
+    for path, byte_field, sha_field in (
+        (y0_path, "y0_bytes", "y0_sha256"),
+        (y1_path, "y1_bytes", "y1_sha256"),
+        (predictor_path, "predictor_bytes", "predictor_sha256"),
+    ):
+        if (
+            not path.is_file()
+            or type(manifest.get(byte_field)) is not int
+            or path.stat().st_size != manifest[byte_field]
+            or _sha256_file(path) != manifest.get(sha_field)
+        ):
+            raise PredictorFloorError(f"prepared chunk {path.name} custody drifted")
+    shape = (pair_count, *SCORER_HW, 3)
+    expected_plane_bytes = int(np.prod(shape, dtype=np.int64))
+    if manifest["y0_bytes"] != expected_plane_bytes or manifest["y1_bytes"] != expected_plane_bytes:
+        raise PredictorFloorError("prepared chunk plane byte geometry drifted")
+    y0 = np.frombuffer(y0_path.read_bytes(), dtype=np.uint8).reshape(shape).copy()
+    y1 = np.frombuffer(y1_path.read_bytes(), dtype=np.uint8).reshape(shape).copy()
+    predictor_payload = predictor_path.read_bytes()
+    try:
+        decoded = decode_predictor_residual(predictor_payload)
+    except Exception as exc:
+        raise PredictorFloorError("prepared predictor payload parse-back refused") from exc
+    mode = str(manifest["predictor_mode_id"])
+    if (
+        decoded.pair_ids != tuple(pair_ids)
+        or decoded.modes != (mode,) * pair_count
+        or not np.array_equal(decoded.frame0, y0)
+        or not np.array_equal(decoded.frame1, y1)
+    ):
+        raise PredictorFloorError("prepared predictor payload differs from its bound planes")
+    inputs = RungEInputs(
+        pair_ids=tuple(pair_ids),
+        mode=mode,
+        frame0_y_planes=y0,
+        frame1_y_planes=y1,
+        descriptors=decoded.descriptors,
+        cache_sha256=str(manifest["source_cache_sha256"]),
+        predictor_payload_sha256=str(manifest["predictor_sha256"]),
+    )
+    return PreparedChunkCustody(
+        inputs=inputs,
+        manifest_path=target,
+        manifest_sha256=expected_manifest_sha256,
+        manifest=manifest,
+        y0_path=y0_path,
+        y1_path=y1_path,
+        predictor_path=predictor_path,
+    )
+
+
+def truncate_scorer_plane_predictor_residual(
+    inputs: RungEInputs,
+    *,
+    drop_low_bits: int,
+) -> tuple[RungEInputs, dict[str, Any]]:
+    """Coarsen exact uint8 scorer-plane residuals toward their V10 predictor."""
+
+    if isinstance(drop_low_bits, bool) or int(drop_low_bits) != drop_low_bits:
+        raise PredictorFloorError("banked A/B drop-low-bits must be an exact integer")
+    bits = int(drop_low_bits)
+    if not 1 <= bits <= 7:
+        raise PredictorFloorError("banked A/B drop-low-bits must be in [1,7]")
+    rows: list[np.ndarray] = []
+    changed_values = 0
+    residual_abs_before = 0
+    residual_abs_after = 0
+    for y0, y1, descriptor in zip(
+        inputs.frame0_y_planes,
+        inputs.frame1_y_planes,
+        inputs.descriptors,
+        strict=True,
+    ):
+        predictor = predict_plane(y0, inputs.mode, descriptor)
+        residual = y1.astype(np.int16) - predictor.astype(np.int16)
+        magnitude = np.abs(residual).astype(np.int16)
+        truncated_magnitude = (magnitude >> bits) << bits
+        truncated = np.where(residual < 0, -truncated_magnitude, truncated_magnitude)
+        reconstructed = predictor.astype(np.int16) + truncated
+        if np.any(reconstructed < 0) or np.any(reconstructed > 255):
+            raise PredictorFloorError("banked A/B precision treatment left the uint8 lattice")
+        treated = reconstructed.astype(np.uint8)
+        changed_values += int(np.count_nonzero(treated != y1))
+        residual_abs_before += int(np.abs(residual.astype(np.int32)).sum(dtype=np.int64))
+        residual_abs_after += int(np.abs(truncated.astype(np.int32)).sum(dtype=np.int64))
+        rows.append(treated)
+    frame1 = np.stack(rows)
+    payload = encode_predictor_residual(
+        inputs.frame0_y_planes,
+        frame1,
+        modes=inputs.mode,
+        descriptors=inputs.descriptors,
+        pair_ids=inputs.pair_ids,
+    )
+    decoded = decode_predictor_residual(payload)
+    if not np.array_equal(decoded.frame0, inputs.frame0_y_planes) or not np.array_equal(decoded.frame1, frame1):
+        raise PredictorFloorError("banked A/B treatment predictor parse-back differs")
+    result = RungEInputs(
+        pair_ids=inputs.pair_ids,
+        mode=inputs.mode,
+        frame0_y_planes=inputs.frame0_y_planes,
+        frame1_y_planes=frame1,
+        descriptors=inputs.descriptors,
+        cache_sha256=inputs.cache_sha256,
+        predictor_payload_sha256=_sha256_bytes(payload),
+    )
+    return result, {
+        "operation": "truncate scorer-plane signed predictor residual magnitudes toward zero",
+        "drop_low_bits": bits,
+        "changed_values": changed_values,
+        "changed_fraction": changed_values / int(frame1.size),
+        "residual_abs_sum_before": residual_abs_before,
+        "residual_abs_sum_after": residual_abs_after,
+        "exact_uint8_reachable_plane": True,
+        "camera_preimage_secant_equivalence_claim": False,
+    }
+
+
+def _strict_pointer_byte_cap(*, d_seg: float, d_pose: float) -> int:
+    """Return the greatest integer byte count whose exact action beats the pointer."""
+
+    distortion_term = 100.0 * d_seg + math.sqrt(10.0 * d_pose)
+    slack = POINTER_VALUE - distortion_term
+    if slack <= 0.0:
+        return -1
+    candidate = math.ceil(slack * CONTEST_ARCHIVE_DENOMINATOR / 25.0) - 1
+
+    def action(byte_count: int) -> float:
+        return distortion_term + 25.0 * byte_count / CONTEST_ARCHIVE_DENOMINATOR
+
+    while candidate >= 0 and action(candidate) >= POINTER_VALUE:
+        candidate -= 1
+    while action(candidate + 1) < POINTER_VALUE:
+        candidate += 1
+    return candidate
+
+
+def projected_action(*, archive_bytes: int, pair_count: int, d_seg: float, d_pose: float) -> dict[str, Any]:
+    """Project a subset archive linearly to n600 and apply the exact objective."""
+
+    if type(archive_bytes) is not int or archive_bytes <= 0 or type(pair_count) is not int or pair_count <= 0:
+        raise PredictorFloorError("projected action requires positive exact byte/pair counts")
+    if not all(math.isfinite(value) and value >= 0.0 for value in (float(d_seg), float(d_pose))):
+        raise PredictorFloorError("projected action requires finite nonnegative distortion")
+    projected_bytes = (archive_bytes * CONTEST_PAIR_COUNT + pair_count - 1) // pair_count
+    distortion_term = 100.0 * float(d_seg) + math.sqrt(10.0 * float(d_pose))
+    action = distortion_term + 25.0 * projected_bytes / CONTEST_ARCHIVE_DENOMINATOR
+    byte_cap = _strict_pointer_byte_cap(d_seg=float(d_seg), d_pose=float(d_pose))
+    return {
+        "projection": "ceil(measured subset archive bytes * 600 / measured pair count)",
+        "projected_n600_archive_bytes": projected_bytes,
+        "measured_subset_d_seg": float(d_seg),
+        "measured_subset_d_pose": float(d_pose),
+        "distortion_term": distortion_term,
+        "projected_exact_objective": action,
+        "strict_pointer_byte_cap_at_measured_distortion": byte_cap,
+        "projected_beats_pointer": action < POINTER_VALUE,
+    }
+
+
 def _load_scorers(upstream: Path, cpu_threads: int) -> tuple[Any, Any, Any]:
     if not (upstream / "modules.py").is_file():
         raise PredictorFloorError(f"frozen upstream scorer source is absent: {upstream}")
@@ -1049,6 +1574,83 @@ def _load_scorers(upstream: Path, cpu_threads: int) -> tuple[Any, Any, Any]:
     for parameter in distortion.parameters():
         parameter.requires_grad_(False)
     return distortion.segnet, distortion.posenet, torch
+
+
+def _distribution_tree_custody(distribution_name: str) -> dict[str, Any]:
+    """Hash every installed file named by one scorer-runtime distribution."""
+
+    try:
+        distribution = importlib.metadata.distribution(distribution_name)
+    except importlib.metadata.PackageNotFoundError as exc:
+        raise PredictorFloorError(f"scorer runtime distribution is absent: {distribution_name}") from exc
+    files = distribution.files
+    if not files:
+        raise PredictorFloorError(f"scorer runtime distribution has no file manifest: {distribution_name}")
+    tree = hashlib.sha256()
+    total_bytes = 0
+    file_count = 0
+    root = Path(distribution.locate_file("")).resolve()
+    for relative in sorted(files, key=str):
+        path = Path(distribution.locate_file(relative)).resolve()
+        if not path.is_file():
+            raise PredictorFloorError(f"scorer runtime distribution file is absent: {distribution_name}:{relative}")
+        size = path.stat().st_size
+        digest = _sha256_file(path)
+        tree.update(
+            json.dumps([str(relative), size, digest], separators=(",", ":"), ensure_ascii=True).encode("utf-8") + b"\n"
+        )
+        total_bytes += size
+        file_count += 1
+    return {
+        "distribution": distribution_name,
+        "version": distribution.version,
+        "root": str(root),
+        "file_count": file_count,
+        "bytes": total_bytes,
+        "tree_sha256": tree.hexdigest(),
+        "tree_algorithm": "sha256(json([distribution-relative-path,bytes,file-sha256]) + newline)",
+    }
+
+
+def _scorer_runtime_custody(upstream: Path, torch: Any) -> dict[str, Any]:
+    """Hash the complete local and installed runtime used by the hard oracle."""
+
+    modules = sys.modules.get("modules")
+    expected_modules = (upstream / "modules.py").resolve()
+    if modules is None or Path(getattr(modules, "__file__", "")).resolve() != expected_modules:
+        raise PredictorFloorError("frozen scorer custody requested before the exact module was loaded")
+    paths = {
+        "modules_py": expected_modules,
+        "frame_utils_py": (upstream / "frame_utils.py").resolve(),
+        "segnet_weights": Path(modules.segnet_sd_path).resolve(),
+        "posenet_weights": Path(modules.posenet_sd_path).resolve(),
+    }
+    if any(not path.is_file() for path in paths.values()):
+        raise PredictorFloorError("frozen scorer source/weight custody is incomplete")
+    files = {
+        key: {"path": str(path), "bytes": path.stat().st_size, "sha256": _sha256_file(path)}
+        for key, path in paths.items()
+    }
+    python_executable = Path(sys.executable).resolve()
+    if not python_executable.is_file():
+        raise PredictorFloorError("hard-oracle Python executable is absent")
+    distributions = {name: _distribution_tree_custody(name) for name in SCORER_RUNTIME_DISTRIBUTIONS}
+    return files | {
+        "torch_version": str(torch.__version__),
+        "device": "cpu",
+        "deterministic_algorithms": True,
+        "python_runtime": {
+            "version": sys.version,
+            "implementation": platform.python_implementation(),
+            "platform": platform.platform(),
+            "executable": {
+                "path": str(python_executable),
+                "bytes": python_executable.stat().st_size,
+                "sha256": _sha256_file(python_executable),
+            },
+        },
+        "distribution_trees": distributions,
+    }
 
 
 def _score_one_pair(
@@ -1181,6 +1783,785 @@ def _completed_inflate_raw_path(inflate_result: Any) -> Path:
     return raw_path
 
 
+def _run_banked_ab_arm(
+    *,
+    arm_id: str,
+    inputs: RungEInputs,
+    output_root: Path,
+    cache_path: Path,
+    upstream: Path,
+    cpu_threads: int,
+    resume: bool,
+    require_canonical_hash: bool,
+    scorer_bundle: tuple[Any, Any, Any],
+) -> dict[str, Any]:
+    """Build, inflate, verify, and hard-score one matched banked A/B arm."""
+
+    from tac.witness_dsl.v10_production_receiver import (
+        PREDICTOR_RESIDUAL_Y_CODEC_ID,
+        build_packet,
+        build_production_archive,
+        decode_y_plane_pair,
+        inflate_archive,
+        parse_packet,
+    )
+
+    if arm_id not in {"control", "precision_drop"}:
+        raise PredictorFloorError("banked A/B arm id is outside the closed registry")
+    arm_root = output_root / arm_id
+    arm_root.mkdir(parents=True, exist_ok=True)
+    packet = build_packet(
+        inputs.frame1_y_planes,
+        camera_height=CAMERA_HW[0],
+        camera_width=CAMERA_HW[1],
+        y_codec_id=PREDICTOR_RESIDUAL_Y_CODEC_ID,
+        frame0_y_planes=inputs.frame0_y_planes,
+        predictor_modes=inputs.mode,
+        predictor_descriptors=inputs.descriptors,
+        predictor_pair_ids=inputs.pair_ids,
+    )
+    parsed = parse_packet(packet)
+    decoded = decode_y_plane_pair(parsed)
+    if not np.array_equal(decoded.frame0, inputs.frame0_y_planes) or not np.array_equal(
+        decoded.frame1, inputs.frame1_y_planes
+    ):
+        raise PredictorFloorError(f"banked A/B {arm_id} packet parse-back differs")
+    archive_path = arm_root / "archive.zip"
+    manifest_path = arm_root / "archive.zip.manifest.json"
+    build_arguments = {
+        "archive_path": archive_path,
+        "camera_height": CAMERA_HW[0],
+        "camera_width": CAMERA_HW[1],
+        "y_codec_id": PREDICTOR_RESIDUAL_Y_CODEC_ID,
+        "frame0_y_planes": inputs.frame0_y_planes,
+        "predictor_modes": inputs.mode,
+        "predictor_descriptors": inputs.descriptors,
+        "predictor_pair_ids": inputs.pair_ids,
+        "manifest_path": manifest_path,
+    }
+    if archive_path.exists() or manifest_path.exists():
+        if not resume or not archive_path.is_file() or (manifest_path.exists() and not manifest_path.is_file()):
+            raise PredictorFloorError(f"banked A/B {arm_id} archive state requires --resume")
+        if not manifest_path.exists():
+            # build_production_archive is write-once-or-equal for archive.zip and
+            # writes the manifest last, so this is the exact recoverable crash window.
+            built = build_production_archive(inputs.frame1_y_planes, **build_arguments)
+            archive_bytes, archive_sha = built.archive_bytes, built.archive_sha256
+        else:
+            if _open_existing_archive(archive_path) != packet:
+                raise PredictorFloorError(f"banked A/B {arm_id} preserved packet differs")
+            try:
+                archive_manifest = json.loads(manifest_path.read_text())
+            except (OSError, json.JSONDecodeError) as exc:
+                raise PredictorFloorError(f"banked A/B {arm_id} archive manifest is unreadable") from exc
+            archive_bytes = archive_path.stat().st_size
+            archive_sha = _sha256_file(archive_path)
+            if (
+                archive_manifest.get("archive_bytes") != archive_bytes
+                or archive_manifest.get("archive_sha256") != archive_sha
+                or archive_manifest.get("packet_bytes") != len(packet)
+                or archive_manifest.get("packet_sha256") != parsed.packet_sha256
+            ):
+                raise PredictorFloorError(f"banked A/B {arm_id} archive custody drifted")
+    else:
+        built = build_production_archive(inputs.frame1_y_planes, **build_arguments)
+        archive_bytes, archive_sha = built.archive_bytes, built.archive_sha256
+    names_path = arm_root / "video_names.txt"
+    _write_once_or_equal(names_path, f"v10-banked-ab-{arm_id}.mp4\n".encode())
+    inflate_result = inflate_archive(arm_root, arm_root / "inflated", names_path)
+    raw_path = _completed_inflate_raw_path(inflate_result)
+    numerator_proof = _verify_inflated_planes(raw_path, inputs)
+    hard_oracle = score_inflated_raw(
+        raw_path,
+        pair_ids=inputs.pair_ids,
+        cache_path=cache_path,
+        upstream=upstream,
+        cpu_threads=cpu_threads,
+        require_canonical_hash=require_canonical_hash,
+        scorer_bundle=scorer_bundle,
+    )
+    stage = {
+        "schema": SCHEMA_BANKED_AB_STAGE,
+        "arm_id": arm_id,
+        "pair_ids": list(inputs.pair_ids),
+        "archive": {"bytes": archive_bytes, "sha256": archive_sha},
+        "packet": {"bytes": len(packet), "sha256": parsed.packet_sha256},
+        "predictor_payload_sha256": inputs.predictor_payload_sha256,
+        "frame0_y_sha256": _sha256_array(inputs.frame0_y_planes),
+        "frame1_y_sha256": _sha256_array(inputs.frame1_y_planes),
+        "inflated": {
+            "bytes": inflate_result.raw_bytes,
+            "sha256": inflate_result.raw_sha256,
+        },
+        "integer_numerator_proof": numerator_proof,
+        "hard_oracle": hard_oracle,
+        "stage_complete": True,
+    }
+    _write_once_or_equal(
+        arm_root / "stage-receipt.json",
+        json.dumps(stage, indent=2, sort_keys=True, allow_nan=False).encode() + b"\n",
+    )
+    return stage
+
+
+def _preserve_stage_receipts(receipt_path: Path, stages: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Copy small stage receipts out of rebuildable scratch before cleanup."""
+
+    preserved: dict[str, Any] = {}
+    for stage_id, stage in stages.items():
+        stage_path = _stage_receipt_path(receipt_path, stage_id)
+        _write_json_once(stage_path, stage)
+        preserved[stage_id] = {
+            "path": _receipt_path_string(stage_path),
+            "bytes": stage_path.stat().st_size,
+            "sha256": _sha256_file(stage_path),
+        }
+    return preserved
+
+
+def _resolve_recorded_path(value: str) -> Path:
+    path = Path(value)
+    return path.resolve() if path.is_absolute() else (REPO / path).resolve()
+
+
+def _validate_preserved_file(row: Mapping[str, Any], label: str) -> Path:
+    path_value = row.get("path")
+    if not isinstance(path_value, str):
+        raise PredictorFloorError(f"{label} lacks its durable path")
+    path = _resolve_recorded_path(path_value)
+    if not path.is_file() or path.stat().st_size != row.get("bytes") or _sha256_file(path) != row.get("sha256"):
+        raise PredictorFloorError(f"{label} durable custody drifted")
+    return path
+
+
+def _validate_scorer_custody(custody: Mapping[str, Any]) -> None:
+    for key in ("modules_py", "frame_utils_py", "segnet_weights", "posenet_weights"):
+        row = custody.get(key)
+        if not isinstance(row, Mapping):
+            raise PredictorFloorError("hard-oracle scorer custody is incomplete")
+        _validate_preserved_file(row, f"hard-oracle {key}")
+    if custody.get("device") != "cpu" or custody.get("deterministic_algorithms") is not True:
+        raise PredictorFloorError("hard-oracle runtime custody is not deterministic CPU")
+    python_runtime = custody.get("python_runtime")
+    if not isinstance(python_runtime, Mapping):
+        raise PredictorFloorError("hard-oracle Python runtime custody is incomplete")
+    executable = python_runtime.get("executable")
+    if not isinstance(executable, Mapping):
+        raise PredictorFloorError("hard-oracle Python executable custody is incomplete")
+    _validate_preserved_file(executable, "hard-oracle Python executable")
+    if (
+        python_runtime.get("version") != sys.version
+        or python_runtime.get("implementation") != platform.python_implementation()
+        or python_runtime.get("platform") != platform.platform()
+    ):
+        raise PredictorFloorError("hard-oracle Python runtime custody drifted")
+    trees = custody.get("distribution_trees")
+    if not isinstance(trees, Mapping) or set(trees) != set(SCORER_RUNTIME_DISTRIBUTIONS):
+        raise PredictorFloorError("hard-oracle distribution-tree custody is incomplete")
+    for distribution_name in SCORER_RUNTIME_DISTRIBUTIONS:
+        recorded = trees.get(distribution_name)
+        if not isinstance(recorded, Mapping) or dict(recorded) != _distribution_tree_custody(distribution_name):
+            raise PredictorFloorError(f"hard-oracle distribution tree drifted: {distribution_name}")
+    torch_row = trees.get("torch")
+    if not isinstance(torch_row, Mapping) or custody.get("torch_version") != torch_row.get("version"):
+        raise PredictorFloorError("hard-oracle Torch version custody is inconsistent")
+
+
+def _validate_frozen_historical_banked_cleanup(
+    receipt: Mapping[str, Any],
+    output_root: Path,
+) -> None:
+    """Admit the byte-exact committed v3 final, never a tuple-shaped lookalike."""
+
+    lifecycle = receipt.get("artifact_lifecycle")
+    if not isinstance(lifecycle, Mapping):
+        raise PredictorFloorError("legacy banked A/B cleanup lacks its lifecycle")
+    receipt_sha256 = hashlib.sha256(_json_bytes(receipt)).hexdigest()
+    frozen_receipt_path = _validate_preserved_file(
+        FROZEN_HISTORICAL_BANKED_RECEIPT,
+        "frozen historical banked A/B receipt",
+    )
+    frozen_precleanup_path = _validate_preserved_file(
+        FROZEN_HISTORICAL_BANKED_PRECLEANUP,
+        "frozen historical banked A/B precleanup receipt",
+    )
+    predecessor = lifecycle.get("precleanup_receipt")
+    cleanup = lifecycle.get("cleanup_execution_custody")
+    rebuildable = lifecycle.get("rebuildable_from")
+    if (
+        frozen_receipt_path != (REPO / FROZEN_HISTORICAL_BANKED_RECEIPT["path"]).resolve()
+        or frozen_precleanup_path != (REPO / FROZEN_HISTORICAL_BANKED_PRECLEANUP["path"]).resolve()
+        or receipt_sha256 != FROZEN_HISTORICAL_BANKED_RECEIPT["sha256"]
+        or not isinstance(predecessor, Mapping)
+        or dict(predecessor) != FROZEN_HISTORICAL_BANKED_PRECLEANUP
+        or lifecycle.get("cleanup_completed") is not True
+        or lifecycle.get("cleanup_status") != "complete"
+        or "cleanup_manifest" in lifecycle
+        or output_root.exists()
+        or not isinstance(cleanup, Mapping)
+        or dict(cleanup) != FROZEN_HISTORICAL_BANKED_CLEANUP
+        or not isinstance(rebuildable, Mapping)
+        or rebuildable.get("tool_sha256") != FROZEN_HISTORICAL_BANKED_CLEANUP["precleanup_tool_sha256"]
+        or _git_file_sha256(
+            FROZEN_HISTORICAL_BANKED_CLEANUP["git_head"],
+            "tools/measure_v10_free_predictor_floor.py",
+        )
+        != FROZEN_HISTORICAL_BANKED_CLEANUP["tool_sha256"]
+    ):
+        raise PredictorFloorError("legacy banked A/B cleanup is not the exact committed v3 receipt")
+
+
+def _validate_banked_receipt_common(
+    receipt: Mapping[str, Any],
+    *,
+    args: argparse.Namespace,
+    output_root: Path,
+) -> PreparedChunkCustody:
+    lifecycle = receipt.get("artifact_lifecycle")
+    authority = receipt.get("authority")
+    if (
+        receipt.get("schema") != SCHEMA_BANKED_AB
+        or receipt.get("supersedes") != list(SUPERSEDED_BANKED_AB_RECEIPTS)
+        or receipt.get("research_only") is not True
+        or not isinstance(authority, Mapping)
+        or authority.get("score_claim") is not False
+        or authority.get("promotion_eligible") is not False
+        or authority.get("pointer_moved") is not False
+        or not isinstance(lifecycle, Mapping)
+        or lifecycle.get("ephemeral_output") is not True
+        or lifecycle.get("retained") is not False
+        or lifecycle.get("output_root_identity_sha256") != _ephemeral_output_identity(output_root)
+    ):
+        raise PredictorFloorError("existing banked A/B receipt violates immutable lifecycle custody")
+    if "cleanup_manifest" in lifecycle:
+        _validate_banked_cleanup_manifest(receipt, output_root)
+    else:
+        _validate_frozen_historical_banked_cleanup(receipt, output_root)
+    custody = load_prepared_chunk(args.prepared_manifest)
+    rebuildable = lifecycle.get("rebuildable_from")
+    live_tool_sha256 = _sha256_file(Path(__file__).resolve())
+    recorded_tool_sha256 = rebuildable.get("tool_sha256") if isinstance(rebuildable, Mapping) else None
+    if not isinstance(rebuildable, Mapping) or (
+        rebuildable.get("prepared_manifest_sha256") != custody.manifest_sha256
+        or (
+            recorded_tool_sha256 != live_tool_sha256
+            and recorded_tool_sha256 not in CLEANUP_COMPATIBLE_PREDECESSOR_TOOL_SHA256S
+        )
+        or rebuildable.get("codec_sha256") != _sha256_file(SRC / "tac/codec/v10_predictor_residual.py")
+        or rebuildable.get("receiver_sha256") != _sha256_file(SRC / "tac/witness_dsl/v10_production_receiver.py")
+        or rebuildable.get("lattice_sha256") != _sha256_file(SRC / "tac/optimization/uint8_lattice_feasibility.py")
+    ):
+        raise PredictorFloorError("existing banked A/B cleanup custody differs from live immutable sources")
+    scorer_custody = receipt.get("hard_oracle_custody")
+    if not isinstance(scorer_custody, Mapping):
+        raise PredictorFloorError("existing banked A/B receipt lacks hard-oracle custody")
+    _validate_scorer_custody(scorer_custody)
+    durable_stages = lifecycle.get("durable_stage_receipts")
+    if not isinstance(durable_stages, Mapping) or set(durable_stages) != {"control", "precision-drop"}:
+        raise PredictorFloorError("existing banked A/B receipt lacks both durable stage receipts")
+    for stage_id, stage_row in durable_stages.items():
+        if not isinstance(stage_row, Mapping):
+            raise PredictorFloorError("existing banked A/B durable stage receipt is malformed")
+        _validate_preserved_file(stage_row, f"banked A/B {stage_id} stage")
+    return custody
+
+
+def _validate_banked_scratch(receipt: Mapping[str, Any], output_root: Path) -> None:
+    arms = receipt.get("arms")
+    if not isinstance(arms, Mapping):
+        raise PredictorFloorError("existing banked A/B receipt lacks its arm map")
+    for arm_id in ("control", "precision_drop"):
+        arm = arms.get(arm_id)
+        if not isinstance(arm, Mapping) or arm.get("stage_complete") is not True:
+            raise PredictorFloorError("existing banked A/B receipt lacks a complete arm")
+        archive = arm.get("archive")
+        inflated = arm.get("inflated")
+        if not isinstance(archive, Mapping) or not isinstance(inflated, Mapping):
+            raise PredictorFloorError("existing banked A/B receipt arm custody is malformed")
+        archive_path = output_root / arm_id / "archive.zip"
+        raw_path = output_root / arm_id / "inflated" / f"v10-banked-ab-{arm_id}.raw"
+        if (
+            not archive_path.is_file()
+            or archive_path.stat().st_size != archive.get("bytes")
+            or _sha256_file(archive_path) != archive.get("sha256")
+            or not raw_path.is_file()
+            or raw_path.stat().st_size != inflated.get("bytes")
+            or _sha256_file(raw_path) != inflated.get("sha256")
+        ):
+            raise PredictorFloorError(f"banked A/B {arm_id} scratch differs from its durable receipt")
+
+
+def _validate_banked_cleanup_manifest(receipt: Mapping[str, Any], output_root: Path) -> Mapping[str, Any]:
+    lifecycle = receipt.get("artifact_lifecycle")
+    arms = receipt.get("arms")
+    if not isinstance(lifecycle, Mapping) or not isinstance(arms, Mapping):
+        raise PredictorFloorError("banked A/B cleanup manifest lacks receipt custody")
+    manifest = lifecycle.get("cleanup_manifest")
+    _, artifacts = _validate_ephemeral_cleanup_manifest(manifest, output_root)
+    for arm_id in ("control", "precision_drop"):
+        arm = arms.get(arm_id)
+        if not isinstance(arm, Mapping):
+            raise PredictorFloorError("banked A/B cleanup manifest lacks an arm")
+        archive = arm.get("archive")
+        inflated = arm.get("inflated")
+        archive_row = artifacts.get(f"{arm_id}/archive.zip")
+        raw_row = artifacts.get(f"{arm_id}/inflated/v10-banked-ab-{arm_id}.raw")
+        if (
+            not isinstance(archive, Mapping)
+            or not isinstance(inflated, Mapping)
+            or not isinstance(archive_row, Mapping)
+            or archive_row.get("bytes") != archive.get("bytes")
+            or archive_row.get("sha256") != archive.get("sha256")
+            or not isinstance(raw_row, Mapping)
+            or raw_row.get("bytes") != inflated.get("bytes")
+            or raw_row.get("sha256") != inflated.get("sha256")
+        ):
+            raise PredictorFloorError(f"banked A/B {arm_id} cleanup manifest differs from receipt custody")
+    return manifest
+
+
+def _finalize_banked_cleanup(
+    receipt: Mapping[str, Any],
+    *,
+    precleanup_path: Path,
+    receipt_path: Path,
+    output_root: Path,
+) -> dict[str, Any]:
+    cleanup_manifest = _validate_banked_cleanup_manifest(receipt, output_root)
+    _cleanup_ephemeral_output(output_root, cleanup_manifest)
+    final = json.loads(json.dumps(receipt, allow_nan=False))
+    lifecycle = final["artifact_lifecycle"]
+    lifecycle["cleanup_completed"] = True
+    lifecycle["cleanup_status"] = "complete"
+    lifecycle["precleanup_receipt"] = {
+        "path": _receipt_path_string(precleanup_path),
+        "bytes": precleanup_path.stat().st_size,
+        "sha256": _sha256_file(precleanup_path),
+    }
+    predecessor_tool_sha256 = lifecycle["rebuildable_from"]["tool_sha256"]
+    lifecycle["cleanup_execution_custody"] = {
+        "git_head": _git_head(),
+        "tool_sha256": _sha256_file(Path(__file__).resolve()),
+        "precleanup_tool_sha256": predecessor_tool_sha256,
+        "cross_version_cleanup_only": predecessor_tool_sha256 != _sha256_file(Path(__file__).resolve()),
+    }
+    lifecycle["cleanup_completed_at_utc"] = datetime.now(UTC).isoformat()
+    _write_json_once(receipt_path, final)
+    return final
+
+
+def _validate_cleanup_execution_custody(
+    lifecycle: Mapping[str, Any],
+    *,
+    historical_banked_output_root: Path | None = None,
+    historical_banked_receipt: Mapping[str, Any] | None = None,
+) -> None:
+    if historical_banked_output_root is not None and "cleanup_manifest" not in lifecycle:
+        if historical_banked_receipt is None:
+            raise PredictorFloorError("historical cleanup validation lacks its exact final receipt")
+        _validate_frozen_historical_banked_cleanup(
+            historical_banked_receipt,
+            historical_banked_output_root,
+        )
+        return
+    cleanup = lifecycle.get("cleanup_execution_custody")
+    rebuildable = lifecycle.get("rebuildable_from")
+    if not isinstance(cleanup, Mapping) or not isinstance(rebuildable, Mapping):
+        raise PredictorFloorError("final cleanup successor lacks execution custody")
+    live_tool_sha256 = _sha256_file(Path(__file__).resolve())
+    predecessor_tool_sha256 = rebuildable.get("tool_sha256")
+    if (
+        cleanup.get("git_head") != _git_head()
+        or cleanup.get("tool_sha256") != live_tool_sha256
+        or cleanup.get("precleanup_tool_sha256") != predecessor_tool_sha256
+        or cleanup.get("cross_version_cleanup_only") is not (predecessor_tool_sha256 != live_tool_sha256)
+    ):
+        raise PredictorFloorError("final cleanup execution custody drifted")
+
+
+def _resume_banked_ab_postreceipt_cleanup(args: argparse.Namespace, receipt_path: Path) -> dict[str, Any]:
+    """Finish only the certified cleanup window through an immutable successor."""
+
+    if not args.resume or not args.ephemeral_output:
+        raise PredictorFloorError(f"write-once banked A/B receipt already exists: {receipt_path}")
+    output_root = _ephemeral_output_root(args.output_root)
+    precleanup_path = _precleanup_receipt_path(receipt_path)
+    if receipt_path.exists():
+        try:
+            final = json.loads(receipt_path.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            raise PredictorFloorError("existing banked A/B final receipt is unreadable") from exc
+        _validate_banked_receipt_common(final, args=args, output_root=output_root)
+        lifecycle = final["artifact_lifecycle"]
+        predecessor = lifecycle.get("precleanup_receipt")
+        if lifecycle.get("cleanup_completed") is not True or not isinstance(predecessor, Mapping):
+            raise PredictorFloorError("existing banked A/B final receipt lacks immutable cleanup closure")
+        _validate_cleanup_execution_custody(
+            lifecycle,
+            historical_banked_output_root=output_root,
+            historical_banked_receipt=final,
+        )
+        if _validate_preserved_file(predecessor, "banked A/B precleanup receipt") != precleanup_path.resolve():
+            raise PredictorFloorError("banked A/B final receipt points at the wrong predecessor")
+        if output_root.exists():
+            raise PredictorFloorError("completed banked A/B receipt conflicts with its bound output tree")
+        return final
+    if not precleanup_path.is_file():
+        raise PredictorFloorError("banked A/B resume lacks both final and precleanup receipts")
+    try:
+        receipt = json.loads(precleanup_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PredictorFloorError("existing banked A/B precleanup receipt is unreadable") from exc
+    _validate_banked_receipt_common(receipt, args=args, output_root=output_root)
+    lifecycle = receipt["artifact_lifecycle"]
+    if lifecycle.get("cleanup_completed") is not False or lifecycle.get("cleanup_status") != "pending":
+        raise PredictorFloorError("existing banked A/B precleanup receipt has an invalid state")
+    return _finalize_banked_cleanup(
+        receipt,
+        precleanup_path=precleanup_path,
+        receipt_path=receipt_path,
+        output_root=output_root,
+    )
+
+
+def run_banked_ab(args: argparse.Namespace) -> dict[str, Any]:
+    """Run a same-harness receiver-closed control/precision A/B on one banked chunk."""
+
+    receipt_path = _durable_path(args.receipt, "banked A/B receipt")
+    precleanup_path = _precleanup_receipt_path(receipt_path)
+    if receipt_path.exists() or precleanup_path.exists():
+        return _resume_banked_ab_postreceipt_cleanup(args, receipt_path)
+    custody = load_prepared_chunk(args.prepared_manifest)
+    if args.cache.expanduser().resolve() != DEFAULT_CACHE.resolve() and not args.allow_noncanonical_cache:
+        raise PredictorFloorError("banked A/B cache path differs from canonical custody")
+    output_root = (
+        _ephemeral_output_root(args.output_root)
+        if args.ephemeral_output
+        else _durable_path(
+            args.output_root,
+            "banked A/B output-root",
+            require_ssd=True,
+            allow_local=args.allow_local_output,
+        )
+    )
+    preflight = (
+        _ephemeral_storage_preflight(output_root, 2 * len(custody.inputs.pair_ids)) if args.ephemeral_output else None
+    )
+    marker_path = output_root / _EPHEMERAL_MARKER_NAME
+    if args.ephemeral_output:
+        if args.resume:
+            if not marker_path.is_file() or marker_path.read_bytes() != _EPHEMERAL_MARKER_BYTES:
+                raise PredictorFloorError("ephemeral banked A/B resume lacks its ownership marker")
+        elif output_root.exists():
+            raise PredictorFloorError("new ephemeral banked A/B output root must not already exist")
+    elif output_root.exists() and not args.resume:
+        raise PredictorFloorError("banked A/B output exists; use --resume or a new output root")
+    output_root.mkdir(parents=True, exist_ok=True)
+    if args.ephemeral_output:
+        _write_once_or_equal(marker_path, _EPHEMERAL_MARKER_BYTES)
+
+    treatment, treatment_operation = truncate_scorer_plane_predictor_residual(
+        custody.inputs,
+        drop_low_bits=args.drop_low_bits,
+    )
+    scorer_bundle = _load_scorers(args.upstream.expanduser().resolve(), args.cpu_threads)
+    scorer_custody = _scorer_runtime_custody(args.upstream.expanduser().resolve(), scorer_bundle[2])
+    arm_arguments = {
+        "output_root": output_root,
+        "cache_path": args.cache.expanduser().resolve(),
+        "upstream": args.upstream.expanduser().resolve(),
+        "cpu_threads": args.cpu_threads,
+        "resume": args.resume,
+        "require_canonical_hash": not args.allow_noncanonical_cache,
+        "scorer_bundle": scorer_bundle,
+    }
+    control = _run_banked_ab_arm(arm_id="control", inputs=custody.inputs, **arm_arguments)
+    treated = _run_banked_ab_arm(arm_id="precision_drop", inputs=treatment, **arm_arguments)
+    durable_stages = _preserve_stage_receipts(
+        receipt_path,
+        {"control": control, "precision-drop": treated},
+    )
+    control_projection = projected_action(
+        archive_bytes=control["archive"]["bytes"],
+        pair_count=len(custody.inputs.pair_ids),
+        d_seg=control["hard_oracle"]["mean_d_seg"],
+        d_pose=control["hard_oracle"]["mean_d_pose"],
+    )
+    treatment_projection = projected_action(
+        archive_bytes=treated["archive"]["bytes"],
+        pair_count=len(custody.inputs.pair_ids),
+        d_seg=treated["hard_oracle"]["mean_d_seg"],
+        d_pose=treated["hard_oracle"]["mean_d_pose"],
+    )
+    receipt = {
+        "schema": SCHEMA_BANKED_AB,
+        "written_at_utc": datetime.now(UTC).isoformat(),
+        "supersedes": list(SUPERSEDED_BANKED_AB_RECEIPTS),
+        "axis": AXIS.replace("subset", f"banked n{len(custody.inputs.pair_ids)} hard-oracle A/B"),
+        "execution_custody": {
+            "git_head_before_measurement": _git_head(),
+            "tool_sha256": _sha256_file(Path(__file__).resolve()),
+            "command": "banked-ab",
+            "prepared_manifest": str(custody.manifest_path),
+            "cache": str(args.cache.expanduser().resolve()),
+            "upstream": str(args.upstream.expanduser().resolve()),
+            "drop_low_bits": args.drop_low_bits,
+            "cpu_threads": args.cpu_threads,
+            "seed": 20260719,
+            "ephemeral_output": bool(args.ephemeral_output),
+            "resume": bool(args.resume),
+            "output_root": "<REDACTED_IDENTITY_BOUND_EPHEMERAL_ROOT>" if args.ephemeral_output else str(output_root),
+        },
+        "authority": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "pointer": POINTER,
+            "pointer_moved": False,
+            "verdict_scope": "one settled banked chunk; local native-f32 CPU hard oracle; linear n600 byte projection",
+        },
+        "labels": {
+            "MEASURED": [
+                "actual production archive bytes",
+                "production packet parse-back and receiver inflation",
+                "factor-2 exact integer numerator equality",
+                "native-f32 frozen CPU-Torch d_seg/d_pose",
+            ],
+            "DERIVED": [
+                "ceil-linear n600 archive-byte projection",
+                "exact contest objective formula evaluated on projected bytes and measured subset distortion",
+            ],
+            "INFERRED": [],
+        },
+        "source_prepared_chunk": {
+            "manifest": str(custody.manifest_path),
+            "manifest_sha256": custody.manifest_sha256,
+            "y0": {"path": str(custody.y0_path), "sha256": custody.manifest["y0_sha256"]},
+            "y1": {"path": str(custody.y1_path), "sha256": custody.manifest["y1_sha256"]},
+            "predictor": {
+                "path": str(custody.predictor_path),
+                "sha256": custody.manifest["predictor_sha256"],
+            },
+            "source_cache_sha256": custody.inputs.cache_sha256,
+            "pair_ids": list(custody.inputs.pair_ids),
+        },
+        "hard_oracle_custody": scorer_custody,
+        "treatment_operation": treatment_operation,
+        "arms": {
+            "control": {**control, "projection": control_projection},
+            "precision_drop": {**treated, "projection": treatment_projection},
+        },
+        "treatment_minus_control": {
+            "archive_bytes": treated["archive"]["bytes"] - control["archive"]["bytes"],
+            "mean_d_seg": treated["hard_oracle"]["mean_d_seg"] - control["hard_oracle"]["mean_d_seg"],
+            "mean_d_pose": treated["hard_oracle"]["mean_d_pose"] - control["hard_oracle"]["mean_d_pose"],
+            "projected_exact_objective": (
+                treatment_projection["projected_exact_objective"] - control_projection["projected_exact_objective"]
+            ),
+        },
+        "frontier_verdict": {
+            "control_projected_beats_pointer": control_projection["projected_beats_pointer"],
+            "treatment_projected_beats_pointer": treatment_projection["projected_beats_pointer"],
+            "missing_complete_n600_archive_within_total_score_byte_cap": True,
+            "rate_subproblem": "compact predictor after all fixed archive/runtime/pose overhead is debited",
+            "no_n600_launch_authorized": True,
+        },
+        "decode_import_boundary": "production inflate imports no scorer/Torch/source bank; hard oracle ran afterward encode-side",
+        "artifact_lifecycle": {
+            "ephemeral_output": bool(args.ephemeral_output),
+            "temporary_paths_redacted": bool(args.ephemeral_output),
+            "retained": not args.ephemeral_output,
+            "cleanup_completed": False if args.ephemeral_output else None,
+            "cleanup_status": "pending" if args.ephemeral_output else "not-applicable",
+            "output_root_identity_sha256": (_ephemeral_output_identity(output_root) if args.ephemeral_output else None),
+            "storage_preflight": preflight,
+            "durable_stage_receipts": durable_stages,
+            "per_arm_stage_receipts_preserved_after_success": True,
+            "resume_reopens_exact_archive_and_receiver_pair_stages": True,
+            "rebuildable_from": {
+                "prepared_manifest_sha256": custody.manifest_sha256,
+                "tool_sha256": _sha256_file(Path(__file__).resolve()),
+                "codec_sha256": _sha256_file(SRC / "tac/codec/v10_predictor_residual.py"),
+                "receiver_sha256": _sha256_file(SRC / "tac/witness_dsl/v10_production_receiver.py"),
+                "lattice_sha256": _sha256_file(SRC / "tac/optimization/uint8_lattice_feasibility.py"),
+                "hard_oracle_custody": scorer_custody,
+            },
+            "cleanup_rule": (
+                "immutable redacted precleanup receipt binds every scratch file by relative path, bytes, and SHA-256; "
+                "cleanup validates all survivors, deletes one certified artifact at a time, safely prunes only manifest "
+                "directories, and a write-once final successor binds the predecessor"
+            ),
+        },
+        "research_only": True,
+    }
+    if args.ephemeral_output:
+        receipt["artifact_lifecycle"]["cleanup_manifest"] = _build_ephemeral_cleanup_manifest(output_root)
+        _validate_banked_cleanup_manifest(receipt, output_root)
+        _write_json_once(precleanup_path, receipt)
+        return _finalize_banked_cleanup(
+            receipt,
+            precleanup_path=precleanup_path,
+            receipt_path=receipt_path,
+            output_root=output_root,
+        )
+    _write_json_once(receipt_path, receipt)
+    return receipt
+
+
+def _validate_rung_e_receipt_common(
+    receipt: Mapping[str, Any],
+    *,
+    args: argparse.Namespace,
+    output_root: Path,
+) -> None:
+    lifecycle = receipt.get("artifact_lifecycle")
+    authority = receipt.get("authority")
+    if (
+        receipt.get("schema") != SCHEMA_RUNG_E
+        or receipt.get("research_only") is not True
+        or not isinstance(authority, Mapping)
+        or authority.get("score_claim") is not False
+        or authority.get("promotion_eligible") is not False
+        or authority.get("pointer_moved") is not False
+        or not isinstance(lifecycle, Mapping)
+        or lifecycle.get("ephemeral_output") is not True
+        or lifecycle.get("retained") is not False
+        or lifecycle.get("output_root_identity_sha256") != _ephemeral_output_identity(output_root)
+    ):
+        raise PredictorFloorError("existing rung-E receipt violates immutable lifecycle custody")
+    _validate_rung_e_cleanup_manifest(receipt, output_root)
+    rebuildable = lifecycle.get("rebuildable_from")
+    composed_path = _durable_path(args.composed_receipt, "rung-E composed receipt")
+    if not isinstance(rebuildable, Mapping) or (
+        rebuildable.get("composed_receipt_sha256") != _sha256_file(composed_path)
+        or rebuildable.get("tool_sha256") != _sha256_file(Path(__file__).resolve())
+        or rebuildable.get("codec_sha256") != _sha256_file(SRC / "tac/codec/v10_predictor_residual.py")
+        or rebuildable.get("receiver_sha256") != _sha256_file(SRC / "tac/witness_dsl/v10_production_receiver.py")
+        or rebuildable.get("lattice_sha256") != _sha256_file(SRC / "tac/optimization/uint8_lattice_feasibility.py")
+    ):
+        raise PredictorFloorError("existing rung-E cleanup custody differs from live immutable sources")
+    scorer_custody = receipt.get("hard_oracle_custody")
+    if not isinstance(scorer_custody, Mapping):
+        raise PredictorFloorError("existing rung-E receipt lacks hard-oracle custody")
+    _validate_scorer_custody(scorer_custody)
+    stages = lifecycle.get("durable_stage_receipts")
+    if not isinstance(stages, Mapping) or set(stages) != {"rung-e"}:
+        raise PredictorFloorError("existing rung-E receipt lacks its durable stage receipt")
+    stage_row = stages["rung-e"]
+    if not isinstance(stage_row, Mapping):
+        raise PredictorFloorError("existing rung-E durable stage receipt is malformed")
+    _validate_preserved_file(stage_row, "rung-E stage")
+
+
+def _validate_rung_e_scratch(receipt: Mapping[str, Any], output_root: Path) -> None:
+    archive = receipt.get("archive")
+    inflated = receipt.get("inflated")
+    if not isinstance(archive, Mapping) or not isinstance(inflated, Mapping):
+        raise PredictorFloorError("existing rung-E receipt lacks archive/raw custody")
+    archive_path = output_root / "archive.zip"
+    raw_path = output_root / "inflated" / "v10-rung-e.raw"
+    if (
+        not archive_path.is_file()
+        or archive_path.stat().st_size != archive.get("bytes")
+        or _sha256_file(archive_path) != archive.get("sha256")
+        or not raw_path.is_file()
+        or raw_path.stat().st_size != inflated.get("raw_bytes")
+        or _sha256_file(raw_path) != inflated.get("raw_sha256")
+    ):
+        raise PredictorFloorError("rung-E scratch differs from its durable receipt")
+
+
+def _validate_rung_e_cleanup_manifest(receipt: Mapping[str, Any], output_root: Path) -> Mapping[str, Any]:
+    lifecycle = receipt.get("artifact_lifecycle")
+    archive = receipt.get("archive")
+    inflated = receipt.get("inflated")
+    if not isinstance(lifecycle, Mapping):
+        raise PredictorFloorError("rung-E cleanup manifest lacks receipt custody")
+    manifest = lifecycle.get("cleanup_manifest")
+    _, artifacts = _validate_ephemeral_cleanup_manifest(manifest, output_root)
+    archive_row = artifacts.get("archive.zip")
+    raw_row = artifacts.get("inflated/v10-rung-e.raw")
+    if (
+        not isinstance(archive, Mapping)
+        or not isinstance(inflated, Mapping)
+        or not isinstance(archive_row, Mapping)
+        or archive_row.get("bytes") != archive.get("bytes")
+        or archive_row.get("sha256") != archive.get("sha256")
+        or not isinstance(raw_row, Mapping)
+        or raw_row.get("bytes") != inflated.get("raw_bytes")
+        or raw_row.get("sha256") != inflated.get("raw_sha256")
+    ):
+        raise PredictorFloorError("rung-E cleanup manifest differs from receipt custody")
+    return manifest
+
+
+def _finalize_rung_e_cleanup(
+    receipt: Mapping[str, Any],
+    *,
+    precleanup_path: Path,
+    receipt_path: Path,
+    output_root: Path,
+) -> dict[str, Any]:
+    cleanup_manifest = _validate_rung_e_cleanup_manifest(receipt, output_root)
+    _cleanup_ephemeral_output(output_root, cleanup_manifest)
+    final = json.loads(json.dumps(receipt, allow_nan=False))
+    lifecycle = final["artifact_lifecycle"]
+    lifecycle["cleanup_completed"] = True
+    lifecycle["cleanup_status"] = "complete"
+    lifecycle["precleanup_receipt"] = {
+        "path": _receipt_path_string(precleanup_path),
+        "bytes": precleanup_path.stat().st_size,
+        "sha256": _sha256_file(precleanup_path),
+    }
+    lifecycle["cleanup_execution_custody"] = {
+        "git_head": _git_head(),
+        "tool_sha256": _sha256_file(Path(__file__).resolve()),
+        "precleanup_tool_sha256": lifecycle["rebuildable_from"]["tool_sha256"],
+        "cross_version_cleanup_only": False,
+    }
+    lifecycle["cleanup_completed_at_utc"] = datetime.now(UTC).isoformat()
+    _write_json_once(receipt_path, final)
+    return final
+
+
+def _resume_rung_e_postreceipt_cleanup(args: argparse.Namespace, receipt_path: Path) -> dict[str, Any]:
+    if not args.resume or not args.ephemeral_output:
+        raise PredictorFloorError(f"write-once rung-E receipt already exists: {receipt_path}")
+    output_root = _ephemeral_output_root(args.output_root)
+    precleanup_path = _precleanup_receipt_path(receipt_path)
+    if receipt_path.exists():
+        try:
+            final = json.loads(receipt_path.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            raise PredictorFloorError("existing rung-E final receipt is unreadable") from exc
+        _validate_rung_e_receipt_common(final, args=args, output_root=output_root)
+        lifecycle = final["artifact_lifecycle"]
+        predecessor = lifecycle.get("precleanup_receipt")
+        if lifecycle.get("cleanup_completed") is not True or not isinstance(predecessor, Mapping):
+            raise PredictorFloorError("existing rung-E final receipt lacks immutable cleanup closure")
+        _validate_cleanup_execution_custody(lifecycle)
+        if _validate_preserved_file(predecessor, "rung-E precleanup receipt") != precleanup_path.resolve():
+            raise PredictorFloorError("rung-E final receipt points at the wrong predecessor")
+        if output_root.exists():
+            raise PredictorFloorError("completed rung-E receipt conflicts with its bound output tree")
+        return final
+    if not precleanup_path.is_file():
+        raise PredictorFloorError("rung-E resume lacks both final and precleanup receipts")
+    try:
+        receipt = json.loads(precleanup_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PredictorFloorError("existing rung-E precleanup receipt is unreadable") from exc
+    _validate_rung_e_receipt_common(receipt, args=args, output_root=output_root)
+    lifecycle = receipt["artifact_lifecycle"]
+    if lifecycle.get("cleanup_completed") is not False or lifecycle.get("cleanup_status") != "pending":
+        raise PredictorFloorError("existing rung-E precleanup receipt has an invalid state")
+    return _finalize_rung_e_cleanup(
+        receipt,
+        precleanup_path=precleanup_path,
+        receipt_path=receipt_path,
+        output_root=output_root,
+    )
+
+
 def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
     """Build, inflate, exact-verify, and hard-score one n48 production archive."""
 
@@ -1202,9 +2583,10 @@ def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
         )
     )
     receipt_path = _durable_path(args.receipt, "rung-E receipt")
+    precleanup_path = _precleanup_receipt_path(receipt_path)
     composed_path = _durable_path(args.composed_receipt, "rung-E composed receipt")
-    if receipt_path.exists():
-        raise PredictorFloorError(f"write-once rung-E receipt already exists: {receipt_path}")
+    if receipt_path.exists() or precleanup_path.exists():
+        return _resume_rung_e_postreceipt_cleanup(args, receipt_path)
     try:
         composed = json.loads(composed_path.read_text())
     except (OSError, json.JSONDecodeError) as exc:
@@ -1264,34 +2646,43 @@ def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
         raise PredictorFloorError("production archive packet parse-back differs before write")
     archive_path = output_root / "archive.zip"
     manifest_path = output_root / "archive.zip.manifest.json"
+    build_arguments = {
+        "archive_path": archive_path,
+        "camera_height": CAMERA_HW[0],
+        "camera_width": CAMERA_HW[1],
+        "y_codec_id": PREDICTOR_RESIDUAL_Y_CODEC_ID,
+        "frame0_y_planes": inputs.frame0_y_planes,
+        "predictor_modes": mode,
+        "predictor_descriptors": inputs.descriptors,
+        "predictor_pair_ids": inputs.pair_ids,
+        "manifest_path": manifest_path,
+    }
     if args.resume:
-        if not archive_path.is_file() or not manifest_path.is_file():
-            raise PredictorFloorError("rung-E --resume requires preserved archive and manifest")
-        if _open_existing_archive(archive_path) != packet:
-            raise PredictorFloorError("rung-E preserved archive differs from deterministic rebuild")
-        archive_bytes = archive_path.stat().st_size
-        archive_sha = _sha256_file(archive_path)
-        try:
-            manifest = json.loads(manifest_path.read_text())
-        except (OSError, json.JSONDecodeError) as exc:
-            raise PredictorFloorError("rung-E preserved archive manifest is unreadable") from exc
-        if manifest.get("archive_bytes") != archive_bytes or manifest.get("archive_sha256") != archive_sha:
-            raise PredictorFloorError("rung-E preserved archive manifest custody drift")
+        if not archive_path.is_file() or (manifest_path.exists() and not manifest_path.is_file()):
+            raise PredictorFloorError("rung-E --resume requires a preserved archive")
+        if not manifest_path.exists():
+            built = build_production_archive(inputs.frame1_y_planes, **build_arguments)
+            archive_bytes, archive_sha = built.archive_bytes, built.archive_sha256
+        else:
+            if _open_existing_archive(archive_path) != packet:
+                raise PredictorFloorError("rung-E preserved archive differs from deterministic rebuild")
+            archive_bytes = archive_path.stat().st_size
+            archive_sha = _sha256_file(archive_path)
+            try:
+                manifest = json.loads(manifest_path.read_text())
+            except (OSError, json.JSONDecodeError) as exc:
+                raise PredictorFloorError("rung-E preserved archive manifest is unreadable") from exc
+            if (
+                manifest.get("archive_bytes") != archive_bytes
+                or manifest.get("archive_sha256") != archive_sha
+                or manifest.get("packet_bytes") != len(packet)
+                or manifest.get("packet_sha256") != parsed.packet_sha256
+            ):
+                raise PredictorFloorError("rung-E preserved archive manifest custody drift")
     else:
         if archive_path.exists() or manifest_path.exists():
             raise PredictorFloorError("rung-E output exists; use --resume or a new output root")
-        built = build_production_archive(
-            inputs.frame1_y_planes,
-            archive_path=archive_path,
-            camera_height=CAMERA_HW[0],
-            camera_width=CAMERA_HW[1],
-            y_codec_id=PREDICTOR_RESIDUAL_Y_CODEC_ID,
-            frame0_y_planes=inputs.frame0_y_planes,
-            predictor_modes=mode,
-            predictor_descriptors=inputs.descriptors,
-            predictor_pair_ids=inputs.pair_ids,
-            manifest_path=manifest_path,
-        )
+        built = build_production_archive(inputs.frame1_y_planes, **build_arguments)
         archive_bytes, archive_sha = built.archive_bytes, built.archive_sha256
     names_path = output_root / "video_names.txt"
     _write_once_or_equal(names_path, b"v10-rung-e.mp4\n")
@@ -1299,6 +2690,8 @@ def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
     inflate_result = inflate_archive(output_root, inflated_root, names_path)
     inflated_raw_path = _completed_inflate_raw_path(inflate_result)
     numerator_proof = _verify_inflated_planes(inflated_raw_path, inputs)
+    scorer_bundle = _load_scorers(args.upstream.expanduser().resolve(), args.cpu_threads)
+    scorer_custody = _scorer_runtime_custody(args.upstream.expanduser().resolve(), scorer_bundle[2])
     hard_oracle = score_inflated_raw(
         inflated_raw_path,
         pair_ids=N48_PAIRS,
@@ -1306,11 +2699,37 @@ def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
         upstream=args.upstream,
         cpu_threads=args.cpu_threads,
         require_canonical_hash=not args.allow_noncanonical_cache,
+        scorer_bundle=scorer_bundle,
     )
+    stage = {
+        "schema": SCHEMA_RUNG_E_STAGE,
+        "pair_ids": list(N48_PAIRS),
+        "mode": mode,
+        "archive": {"bytes": archive_bytes, "sha256": archive_sha},
+        "predictor_payload_sha256": inputs.predictor_payload_sha256,
+        "inflated": {"raw_bytes": inflate_result.raw_bytes, "raw_sha256": inflate_result.raw_sha256},
+        "integer_numerator_proof": numerator_proof,
+        "hard_oracle": hard_oracle,
+        "stage_complete": True,
+    }
+    durable_stages = _preserve_stage_receipts(receipt_path, {"rung-e": stage})
     receipt = {
         "schema": SCHEMA_RUNG_E,
         "written_at_utc": datetime.now(UTC).isoformat(),
         "axis": AXIS.replace("subset", "n48 hard-oracle"),
+        "execution_custody": {
+            "git_head_before_measurement": _git_head(),
+            "tool_sha256": _sha256_file(Path(__file__).resolve()),
+            "command": "rung-e",
+            "composed_receipt": str(composed_path),
+            "cache": str(args.cache.expanduser().resolve()),
+            "upstream": str(args.upstream.expanduser().resolve()),
+            "cpu_threads": args.cpu_threads,
+            "seed": 20260719,
+            "ephemeral_output": ephemeral,
+            "resume": bool(args.resume),
+            "output_root": "<REDACTED_IDENTITY_BOUND_EPHEMERAL_ROOT>" if ephemeral else str(output_root),
+        },
         "authority": {
             "score_claim": False,
             "promotion_eligible": False,
@@ -1340,6 +2759,7 @@ def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
         },
         "integer_numerator_proof": numerator_proof,
         "hard_oracle": hard_oracle,
+        "hard_oracle_custody": scorer_custody,
         "source_composed_receipt": {
             "path": str(composed_path),
             "sha256": _sha256_file(composed_path),
@@ -1351,22 +2771,39 @@ def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
             "temporary_paths_redacted": ephemeral,
             "retained": not ephemeral,
             "cleanup_completed": False if ephemeral else None,
+            "cleanup_status": "pending" if ephemeral else "not-applicable",
+            "output_root_identity_sha256": _ephemeral_output_identity(output_root) if ephemeral else None,
             "storage_preflight": ephemeral_preflight,
+            "durable_stage_receipts": durable_stages,
+            "stage_receipts_preserved_after_success": True,
             "rebuildable_from": {
                 "cache_sha256": inputs.cache_sha256,
                 "composed_receipt_sha256": _sha256_file(composed_path),
                 "tool_sha256": _sha256_file(Path(__file__).resolve()),
                 "codec_sha256": _sha256_file(SRC / "tac/codec/v10_predictor_residual.py"),
+                "receiver_sha256": _sha256_file(SRC / "tac/witness_dsl/v10_production_receiver.py"),
+                "lattice_sha256": _sha256_file(SRC / "tac/optimization/uint8_lattice_feasibility.py"),
+                "hard_oracle_custody": scorer_custody,
             },
-            "cleanup_rule": "durable redacted receipt is written before deleting only the validated pact-rung-e-* temp tree",
+            "cleanup_rule": (
+                "immutable redacted precleanup receipt binds every scratch file by relative path, bytes, and SHA-256; "
+                "cleanup validates all survivors, deletes one certified artifact at a time, safely prunes only manifest "
+                "directories, and a write-once final successor binds the predecessor"
+            ),
         },
         "research_only": True,
     }
-    _atomic_json(receipt_path, receipt)
     if ephemeral:
-        _cleanup_ephemeral_output(output_root)
-        receipt["artifact_lifecycle"]["cleanup_completed"] = True
-        _atomic_json(receipt_path, receipt)
+        receipt["artifact_lifecycle"]["cleanup_manifest"] = _build_ephemeral_cleanup_manifest(output_root)
+        _validate_rung_e_cleanup_manifest(receipt, output_root)
+        _write_json_once(precleanup_path, receipt)
+        return _finalize_rung_e_cleanup(
+            receipt,
+            precleanup_path=precleanup_path,
+            receipt_path=receipt_path,
+            output_root=output_root,
+        )
+    _write_json_once(receipt_path, receipt)
     return receipt
 
 
@@ -1403,6 +2840,20 @@ def _parser() -> argparse.ArgumentParser:
     output_policy.add_argument("--allow-local-output", action="store_true")
     output_policy.add_argument("--ephemeral-output", action="store_true")
     rung.add_argument("--allow-noncanonical-cache", action="store_true", help=argparse.SUPPRESS)
+
+    banked = sub.add_parser("banked-ab", help="run one matched banked n<=12 production-receiver A/B")
+    banked.add_argument("--prepared-manifest", type=Path, required=True)
+    banked.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
+    banked.add_argument("--upstream", type=Path, default=DEFAULT_UPSTREAM)
+    banked.add_argument("--output-root", type=Path, required=True)
+    banked.add_argument("--receipt", type=Path, required=True)
+    banked.add_argument("--drop-low-bits", type=int, default=1, choices=range(1, 8))
+    banked.add_argument("--cpu-threads", type=int, default=4)
+    banked.add_argument("--resume", action="store_true")
+    banked_output = banked.add_mutually_exclusive_group()
+    banked_output.add_argument("--allow-local-output", action="store_true")
+    banked_output.add_argument("--ephemeral-output", action="store_true")
+    banked.add_argument("--allow-noncanonical-cache", action="store_true", help=argparse.SUPPRESS)
     return parser
 
 
@@ -1415,8 +2866,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.command == "compose":
         result = compose_chunks(args.receipts, args.output)
         target = args.output
-    else:
+    elif args.command == "rung-e":
         result = run_rung_e(args)
+        target = args.receipt
+    else:
+        result = run_banked_ab(args)
         target = args.receipt
     print(
         json.dumps(
