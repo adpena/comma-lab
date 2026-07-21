@@ -1,0 +1,31 @@
+{
+  "archive_sha256": "3555bafcccac0827225a87f07dc5b093381de3188560cb7002f2bf9ac2b37c6a",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "canonical_terms": {
+    "formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "pose_term": 35.53921799728771,
+    "projected_total_S": 35.955425463668846,
+    "rate_term": 0.060634447989211165,
+    "seg_term": 0.35557301839192706,
+    "source": "tac.contest_score"
+  },
+  "parity": {
+    "d_pose_realized_on_inflated": 126.30360158587386,
+    "d_seg_realized_on_inflated": 0.003555730183919271,
+    "pairs_scored": 600
+  },
+  "raw_sha256": "e161990ed1c0071a156b3a071758f25b5a7f56bfd1f6c9da69ff1fc47b09e8e6",
+  "schema": "einstein_kolmogorov_crux_v3_score_stage.v1",
+  "scorer": {
+    "device": "cpu",
+    "gt_cache": {
+      "bytes": 5078017610,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "surface": "tools.levelset_byte_close_and_eval.parity_on_inflated",
+    "torch_num_threads": 6,
+    "torch_version": "2.12.1"
+  },
+  "utc": "2026-07-20T08:39:34Z"
+}

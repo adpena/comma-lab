@@ -247,8 +247,34 @@ def test_assemble_packet_contents(tmp_path):
         assert zf.namelist() == ["0.bin"]
         assert zf.read("0.bin") == blob
     assert (pkt / "inflate.py").exists()
+    inflate_source = (pkt / "inflate.py").read_text()
+    xi_contract = lbce.xi_receiver_camera_contract()
+    assert lbce._XI_CAMERA_CONTRACT_MARKER not in inflate_source
+    assert f"_XI_CAMERA_CONTRACT_JSON = {xi_contract['canonical_json']!r}" in inflate_source
+    assert f"_XI_CAMERA_CONTRACT_SHA256 = {xi_contract['canonical_json_sha256']!r}" in inflate_source
+    assert "_CP_XI_FX = float(_xi_camera_contract['fx_native'])" in inflate_source
     sh = pkt / "inflate.sh"
     assert sh.exists() and (sh.stat().st_mode & 0o111)  # executable
+
+
+def test_emitted_xi_camera_contract_rejects_unhashed_mutation(tmp_path):
+    cfg = _tiny_cfg(False)
+    params = _tiny_params(cfg, seed=41)
+    pkt, blob = _build_packet(tmp_path, cfg, params)
+    contract = lbce.xi_receiver_camera_contract()
+    canonical_json = contract["canonical_json"]
+    tampered_json = canonical_json.replace("910.0", "911.0")
+    assert tampered_json != canonical_json
+    inflate_path = pkt / "inflate.py"
+    source = inflate_path.read_text()
+    source = source.replace(
+        f"_XI_CAMERA_CONTRACT_JSON = {canonical_json!r}",
+        f"_XI_CAMERA_CONTRACT_JSON = {tampered_json!r}",
+        1,
+    )
+    inflate_path.write_text(source)
+    with pytest.raises(RuntimeError, match="xi camera contract hash mismatch"):
+        lbce.bit_exact_roundtrip_gate(pkt, blob, gate_pairs=1, strict=True)
 
 
 # ---------------------------------------------------------------------------
@@ -344,6 +370,29 @@ def test_bit_exact_gate_store_nothing_v2_derive_H(tmp_path, coder):
     res = lbce.bit_exact_roundtrip_gate(pkt, blob, gate_pairs=2, strict=True)
     assert res["bit_exact"] is True, f"{coder}: shipped inflate derive-H != numpy oracle"
     assert res["max_abs_uint8_diff"] == 0 and res["n_frames_differing"] == 0
+
+    # Review FIX_ONCE: a capped run re-quantizes code and rewrites the extracted blob.
+    # The post-hoc pose confirmation must use those exact scored bytes, not ``blob`` above.
+    inflate = lbce.run_inflate(pkt, n_pairs_total=2, max_pairs=1)
+    scored_blob, scored_pcar = lbce._pose_carrier_confirmation_payload(pkt)
+    scored_manifest, scored_params, scored_code, lanes, scored_pc, chart = lbce._dequant_blob(
+        scored_blob
+    )
+    assert scored_manifest["n_pairs"] == 1
+    assert lbce.parse_pose_carrier(scored_pcar)["hdr"]["n_pairs"] == 1
+    reference, _ = lbce.numpy_oracle_reference_frames(
+        scored_params,
+        scored_code,
+        scored_manifest,
+        1,
+        lanes,
+        pose_carrier=scored_pc,
+        chart_payload=chart,
+    )
+    raw = np.fromfile(inflate["raw_path"], dtype=np.uint8).reshape(
+        2, lbce.CAMERA_H, lbce.CAMERA_W, 3
+    )
+    assert np.array_equal(raw[0], reference[0]), f"{coder}: capped confirmation blob mismatch"
 
 
 def test_bit_exact_gate_detects_corruption(tmp_path):

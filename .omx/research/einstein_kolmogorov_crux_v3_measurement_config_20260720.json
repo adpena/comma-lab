@@ -1,0 +1,17 @@
+{
+  "schema": "einstein_kolmogorov_crux_v3_measurement_config.v1",
+  "packet_dir": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_v3_20260720_xi_diag_n24",
+  "expected_archive_bytes": 91062,
+  "expected_archive_sha256": "3555bafcccac0827225a87f07dc5b093381de3188560cb7002f2bf9ac2b37c6a",
+  "expected_inflate_py_sha256": "039f474795485ea2aaf6cf8e2a52eb4389acfb7697f1ebb76ffbba6884466811",
+  "strict_n24_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_v2_20260720T071044Z/.omx/tmp/einstein_kolmogorov_diag_runtime_20260720/diagnostic_receipt_v3_repair.json",
+  "strict_n24_receipt_sha256": "09fb6975f3244ab4d12612c995a99e2e875e30a52641eb9a344c2d7aceebe450",
+  "gt_cache_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+  "inflate_stage_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_v3_20260720T075336Z/.omx/research/einstein_kolmogorov_crux_v3_n600_inflate_stage_20260720.json",
+  "score_stage_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_v3_20260720T075336Z/.omx/research/einstein_kolmogorov_crux_v3_n600_score_stage_20260720.json",
+  "result_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_v3_20260720T075336Z/.omx/research/einstein_kolmogorov_crux_v3_20260720.json",
+  "comparison_bank_score": 0.1910828242,
+  "comparison_byte_box": 264320,
+  "cleanup_raw_after_success": true
+}

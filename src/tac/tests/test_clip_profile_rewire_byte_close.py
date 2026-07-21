@@ -11,6 +11,7 @@ byte-close output + trainer byte path are unchanged. The two DISAGREEING constan
 profile 1.22) are DELIBERATELY left hardcoded per the FEED-clipprofile2 discrepancy findings —
 this test asserts they were NOT silently switched.
 """
+import hashlib
 import importlib
 from pathlib import Path
 
@@ -44,6 +45,16 @@ def test_byte_close_camera_rate_constants_bit_identical():
     assert bc.RATE_DENOM == 37_545_489.0
     # the xi-homography intrinsics the _XI_* line consumes (fx==fy==910 native, cx/cy, height).
     assert (bc._CP_XI_FX, bc._CP_XI_CX, bc._CP_XI_CY, bc._CP_XI_D) == (910.0, 582.0, 437.0, 1.22)
+    contract = bc.xi_receiver_camera_contract()
+    assert contract["values"] == {
+        "cx": 582.0,
+        "cy": 437.0,
+        "device_height_m": 1.22,
+        "fx_native": 910.0,
+    }
+    assert hashlib.sha256(contract["canonical_json"].encode("ascii")).hexdigest() == contract[
+        "canonical_json_sha256"
+    ]
 
 
 def test_byte_close_constants_track_clip_profile_when_cache_present():

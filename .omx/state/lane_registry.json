@@ -80960,6 +80960,48 @@
         "#597 exact receiver parse-back d_seg d_pose and wall-clock",
         "#596 and #597 joint marginal at or above lambda star"
       ]
+    },
+    {
+      "id": "lane_einstein_kolmogorov_crux_v3_20260720",
+      "name": "Einstein Kolmogorov crux v3 same-packet xi closure",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/einstein_kolmogorov_crux_v3_fix_once_20260720.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/einstein_kolmogorov_crux_v3_20260720.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L2 local advisory terminal negative: exact 91062-byte packet scored S=35.955425463668846 over n600. Post-review 24-pair gate and capped confirmation are bit-exact. Operator redirect ends iteration; existing distortion/rate inverse-solve artifacts guide but do not prescribe the next optimal inverse solve. Pointer unmoved; MAIN review required.",
+      "research_only": true
     }
   ],
   "level_rules": {
