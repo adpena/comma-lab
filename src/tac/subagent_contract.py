@@ -47,6 +47,8 @@ __all__ = [
     "OWN_ROUND1_REVIEW",
     "PAPER_WARM_START_FROM_DIVERGENCE",
     "RECURSION_CLAUSE",
+    "CONTENT_LINEAGE_CRUX",
+    "CORRECT_OVER_EASY",
     "RESEARCH_AUTHORITY",
     "RETRIEVAL_FIRST_CLAUSE",
     "REVIEW_ONLY_CONSTANT_NAMES",
@@ -370,6 +372,24 @@ VERDICT_SCOPE_LADDER = (
     "operator/council authority. Record the still-open reformulations with every narrower negative."
 )
 
+#: The archive-gravity guard: content lineage + crux alignment declared up front (operator 2026-07-20).
+CONTENT_LINEAGE_CRUX = (
+    "CONTENT LINEAGE + CRUX ALIGNMENT: state, up front and in the memo, the lineage of every "
+    "consumed content artifact (from-scratch / our-solve / inherited-JUSTIFIED) and which stage "
+    "of describe->realize your work attacks. Inherited content is harvest-only signal, never a "
+    "starting point or a candidate component; the submittable line is 100% ours. The crux is "
+    "REALIZATION - if your work does not touch it, say which solved end it serves instead."
+)
+
+#: The root selection rule (operator 2026-07-20): never easy; correct, true, understanding.
+CORRECT_OVER_EASY = (
+    "CORRECT OVER EASY: never go for easy - go for correct and true and understanding. Easy is "
+    "the generator of every drift class: archives over from-scratch, proxies over exact, "
+    "constants over derivations, composites over decompositions. Encode-side compute is "
+    "UNBOUNDED (only decode carries the 30-min budget): never scope a solve down for cost; a "
+    "wall met mid-solve is a missing equation to register, not a stop."
+)
+
 # --- Registry (consumed by tests + the preflight integrity gate) -----------------------------
 
 #: Every named contract constant this module guarantees. The preflight integrity gate
@@ -405,6 +425,8 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "TIEBREAK_LEAST_COMPLEXITY",
     "MASTER_THESIS_FRAMING",
     "VERDICT_SCOPE_LADDER",
+    "CONTENT_LINEAGE_CRUX",
+    "CORRECT_OVER_EASY",
 )
 
 #: Review-dispatch-only constants: composed by ``review_contract()``, deliberately NOT
@@ -450,6 +472,8 @@ KEY_PHRASES: dict[str, str] = {
     "TIEBREAK_LEAST_COMPLEXITY": "without touching score, ALWAYS choose the least complex",
     "MASTER_THESIS_FRAMING": "formulation × realization × completeness",
     "VERDICT_SCOPE_LADDER": "INSTANCE < FORMULATION < FAMILY < PARADIGM",
+    "CONTENT_LINEAGE_CRUX": "harvest-only signal, never a starting point",
+    "CORRECT_OVER_EASY": "never go for easy - go for correct and true and understanding",
 }
 
 
@@ -486,6 +510,8 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         TIEBREAK_LEAST_COMPLEXITY,
         MASTER_THESIS_FRAMING,
         VERDICT_SCOPE_LADDER,
+        CONTENT_LINEAGE_CRUX,
+        CORRECT_OVER_EASY,
         FRESH_CONTEXT_VERIFIER,
         RECURSION_CLAUSE,
         CONTROL_LAW_CLAUSE,
