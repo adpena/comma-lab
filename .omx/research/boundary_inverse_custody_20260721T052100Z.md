@@ -130,6 +130,15 @@ exact G3 identity set plus per-coefficient removal/quantization influence, re-co
 tranche, and apply the individual-flip fixed-point rule before #596 can keep any part of this
 sidecar. No mask pixel is assigned the `8.48e-7 S` value in this receipt.
 
+The 05:47 UTC operator correction further classifies this mechanism as an **L1
+GEOMETRY/CHART action**, not a pixel action: four counted coefficients move overlapping coherent
+boundary/dash families. That is precisely the amortization this lane was built to expose, but the
+mask-only receipt cannot yet say L1 is cheapest. #597 must measure exact G3 flips and ERF
+collateral for this fixed L1 sidecar, then price the same flip-families at L2 channel, L3
+hyperplane/feature, L4 regional-plane, and L5 isolated-pixel rungs. #596 may choose L1 per stratum
+only if its joint decoded bytes per surviving scorer flip beat every other measured rung; the
+chosen-rung distribution remains **FORMALIZATION_PENDING**.
+
 ## D4 — rule-118 split
 
 COUNTED state is exactly the coordinate-mode/phase-row header, qstep, correction threshold, and
@@ -206,3 +215,4 @@ receiver handoff before merge or any promotion claim.
 - `/Users/adpena/Projects/pact/.omx/research/rep_mine_solved_binary_20260721T045500Z.json`
 - delegated per-arm and broadcast inboxes through 2026-07-21T05:17:23Z
 - operator per-flip sell-back directives at 2026-07-21T05:34:22Z and 05:37:49Z
+- operator action-level ladder correction at 2026-07-21T05:47:06Z

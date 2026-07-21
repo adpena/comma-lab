@@ -99,6 +99,11 @@ the through-R recovery needed to calibrate a new measured law is absent.
    coefficient removals/quantization changes to those identities, re-code the full #557 context
    after each cut tranche, and iterate to a stable kept/eaten fixed point. Do not attach the
    `8.48e-7 S` value or `1.27 B/flip-pixel` threshold to raw Lane-mask pixels.
+9. Treat this four-coefficient sidecar as the L1 GEOMETRY/CHART rung from the 05:47 UTC operator
+   ladder. Measure its amortized bytes per surviving G3 flip including ERF collateral, and compare
+   the same flip-family against L2 channel, L3 hyperplane/feature, L4 regional-plane, and L5
+   isolated-pixel actions. Emit a chosen-rung distribution per stratum only after joint decode;
+   current mask-only evidence does not choose a rung.
 
 MAIN landing review is required before this feed is merged, wired into the emitted seed, or used
 as score/promotion evidence.
