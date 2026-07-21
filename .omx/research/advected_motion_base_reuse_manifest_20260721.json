@@ -1,0 +1,86 @@
+{
+  "schema": "advected_motion_base_reuse_manifest.v1",
+  "lane_id": "lane_advected_motion_base_20260721",
+  "research_only": true,
+  "main_review_required": true,
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED"
+  },
+  "new_components": [
+    {
+      "path": "src/tac/optimization/predict_project_receiver.py",
+      "component": "counted planar-xi decoder and advected RGB/chart base",
+      "disposition": "additive receiver extension",
+      "sha256": "26559925a09df69c17f02dffca053788800cf6b34f54501b11d8c2be3c0cda00"
+    },
+    {
+      "path": "tools/measure_predict_project_receiver.py",
+      "component": "resumable n64/n600 strict rate-gate measurement",
+      "disposition": "additive CLI mode",
+      "sha256": "a38999acf8edc02165f196e67f90b12c5be075361414c6bd1f8b6f74807cb264"
+    },
+    {
+      "path": "src/tac/tests/test_advected_motion_base.py",
+      "component": "counted-xi, zero-motion, determinism, and exact-codec guards",
+      "disposition": "new focused regression suite",
+      "sha256": "101f08e19a9a881c21b7ae6573f1ea913c380cb66555afacae877fe96a7eef00"
+    }
+  ],
+  "reused_components": [
+    {
+      "path": "src/tac/boundary_math/warp_real_luma_frame0.py",
+      "component": "canonical G1 plane-induced homography and persistent inverse warp",
+      "disposition": "reused as-is"
+    },
+    {
+      "path": "src/tac/lie.py",
+      "component": "SE(3) exponential-map machinery",
+      "disposition": "reused as-is"
+    },
+    {
+      "path": "src/tac/optimization/predict_project_schema.py",
+      "component": "PPCS parser and trajectory decoder",
+      "disposition": "reused as-is"
+    },
+    {
+      "path": ".omx/research/g1_worldsheet_g3_cellcode_measurements_20260720T210000Z.json",
+      "component": "hash-pinned pitch/projection geometry receipt",
+      "disposition": "geometry only; external proxy motion not consumed",
+      "sha256": "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089"
+    },
+    {
+      "path": ".omx/research/joint_seg_pose_inverse_solve_20260719_codex.md",
+      "component": "#549/C1 solved-target definition",
+      "disposition": "reconstructed from frozen source planes; old archive bytes not consumed",
+      "sha256": "a7c23e6ce0879b6951ecc0d6434bb892c4836d398efff377a5dcba3b50791a03"
+    }
+  ],
+  "lawrefs": [
+    "ego_motion_cumulative_se3_bspline_v1",
+    "lane_band_ego_factorization_source_reparam_v1",
+    "lane_band_source_reparam_measured_resolution_v1",
+    "dsl_custodied_scalar_identity_v1:s_t",
+    "dsl_custodied_scalar_identity_v1:s_r"
+  ],
+  "evidence": {
+    "receipt": "/Volumes/VertigoDataTier/pact/evidence/advected_base_20260721/advected_base/receipt.json",
+    "receipt_sha256": "4a6650f2b1c8f8290a0a099fecf8fa7dd7a1d8826b5bfa72441cf553f1e676d0",
+    "pair_stage_count": 64,
+    "checkpoint_count": 8,
+    "n600_executed": false,
+    "stop_verdict": "N64_RATE_GATE_FAIL_STOP_BEFORE_N600",
+    "superseded_whole_plane_root": "/Volumes/VertigoDataTier/pact/evidence/advected_base_20260721/superseded_whole_plane_20260721T151700Z",
+    "superseded_whole_plane_receipt_sha256": "199eee1c419db5cca3e27d24729f025881ae4166a180202802b0030a941be36f"
+  },
+  "automatic_disk_hygiene": {
+    "durable_root": "/Volumes/VertigoDataTier/pact/evidence/advected_base_20260721",
+    "gt_cache": "ZIP_STORED mmap; no inflated frame tree",
+    "working_set": "one pair of tensors",
+    "stages": "atomic JSON, immutable after successful parseback",
+    "scratch": "same-directory atomic temporaries removed by os.replace",
+    "failed_attempt": "preserved under failed_runs with exact reason; no deletion"
+  }
+}

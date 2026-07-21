@@ -82,6 +82,13 @@ REALIZATION_BREAKEVEN_EQUATION_ID: Final = "realization_breakeven_bytes_v1"
 RATE_LAW_LADDER_EQUATION_ID: Final = "rate_law_ladder_v1"
 RATE_LAW_LADDER_REUSE_SOURCE: Final = "src/tac/canonical_equations/rate_law_ladder_20260713.py"
 PDE_318_REUSE_ID: Final = "#318"
+ADVECTED_MOTION_BASE_SCHEMA: Final = "predict_project_advected_motion_base.v1"
+COUNTED_PLANAR_XI_SCHEMA: Final = "predict_project_counted_planar_xi.v1"
+ADVECTED_MOTION_LAWREFS: Final = (
+    "ego_motion_cumulative_se3_bspline_v1",
+    "lane_band_ego_factorization_source_reparam_v1",
+    "lane_band_source_reparam_measured_resolution_v1",
+)
 
 
 def _evaluate_realization_breakeven(inputs: Mapping[str, Any]) -> float:
@@ -724,6 +731,134 @@ def trajectory_at(seed: Mapping[str, Any], time: int) -> tuple[float, float, flo
     ty = (_catmull_rom(values[1], times, time) + deltas[1]) * translation
     yaw = (_catmull_rom(values[2], times, time) + deltas[2]) * rotation
     return tx, ty, yaw
+
+
+def _trajectory_at_validated(seed: Mapping[str, Any], time: int) -> tuple[float, float, float]:
+    """Evaluate the canonical PPCS planar trajectory after one outer validation."""
+
+    if isinstance(time, bool) or not isinstance(time, int) or not 0 <= time < 600:
+        raise PredictProjectReceiverError("trajectory time is outside [0,600)")
+    controls = seed["trajectory"]["controls"]
+    times = [row["time"] for row in controls]
+    values = [[row[key] for row in controls] for key in ("tx_q", "ty_q", "yaw_q")]
+    residual = next((row for row in seed["trajectory"]["ar_residuals"] if row["time"] == time), None)
+    deltas = (0, 0, 0) if residual is None else (residual["dtx_q"], residual["dty_q"], residual["dyaw_q"])
+    quanta = seed["units"]
+    translation = quanta["trajectory_translation"]["numerator"] / quanta["trajectory_translation"]["denominator"]
+    rotation = quanta["trajectory_rotation"]["numerator"] / quanta["trajectory_rotation"]["denominator"]
+    return (
+        (_catmull_rom(values[0], times, time) + deltas[0]) * translation,
+        (_catmull_rom(values[1], times, time) + deltas[1]) * translation,
+        (_catmull_rom(values[2], times, time) + deltas[2]) * rotation,
+    )
+
+
+def counted_planar_xi_series(
+    seed: Mapping[str, Any], *, pair_start: int = 0, pair_end: int = 600
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Decode the already-counted planar trajectory as translation-first twists.
+
+    PPCS names the three stored values ``(tx, ty, yaw)`` because its chart
+    interpreter works in image coordinates.  The producer is the canonical
+    :class:`XiEgoTrajectory` planar seam, where those values are ``(dy, ds,
+    dpsi)``.  Its fixed SE(3) embedding is therefore
+    ``xi=(dy,0,ds,0,dpsi,0)``.  No target pose, scorer, or additional payload is
+    consulted here.
+    """
+
+    validated = validate_constraint_seed(seed)
+    if any(isinstance(value, bool) or not isinstance(value, int) for value in (pair_start, pair_end)):
+        raise PredictProjectReceiverError("xi pair range must use exact integers")
+    if not 0 <= pair_start < pair_end <= 600:
+        raise PredictProjectReceiverError("xi pair range is outside [0,600]")
+    planar = np.asarray(
+        [_trajectory_at_validated(validated, pair) for pair in range(pair_start, pair_end)],
+        dtype=np.float64,
+    )
+    xi = np.zeros((pair_end - pair_start, 6), dtype=np.float64)
+    xi[:, 0] = planar[:, 0]
+    xi[:, 2] = planar[:, 1]
+    xi[:, 4] = planar[:, 2]
+    trajectory_bytes = len(canonical_json_bytes(validated["trajectory"]))
+    custody = {
+        "schema": COUNTED_PLANAR_XI_SCHEMA,
+        "source_section": "PPCS.trajectory",
+        "source_representation": validated["trajectory"]["representation"],
+        "source_section_sha256": hashlib.sha256(canonical_json_bytes(validated["trajectory"])).hexdigest(),
+        "source_section_raw_bytes": trajectory_bytes,
+        "pair_range": [pair_start, pair_end],
+        "embedding": "(tx=dy,ty=ds,yaw=dpsi)->xi=(dy,0,ds,0,dpsi,0)",
+        "translation_first": True,
+        "additional_video_derived_bytes": 0,
+        "decoder_scorer_invocations": 0,
+        "lawref_equation_ids": list(ADVECTED_MOTION_LAWREFS),
+    }
+    return xi, custody
+
+
+def advect_motion_base(
+    frame0_base: np.ndarray,
+    frame0_cells: np.ndarray,
+    xi: np.ndarray,
+    geom: Any,
+    *,
+    ground_class_ids: Sequence[int] = (0, 1, 2),
+) -> dict[str, Any]:
+    """Build ``frame1_base = W_xi(frame0_base)`` and transport its scene chart.
+
+    RGB ground texture and the one-hot categorical chart share the same
+    plane-induced homography.  The transported chart supplies the explicit
+    ground/off-ground stratification for later PROJECT/exception accounting;
+    it is not converted into RGB by an invented palette.  The generic warp is
+    scorer-free and executes through the NumPy ``tac.lie`` authority.
+    """
+
+    from tac.boundary_math import warp_real_luma_frame0 as g1_warp
+
+    rgb = np.asarray(frame0_base)
+    cells = np.asarray(frame0_cells)
+    twist = np.asarray(xi, dtype=np.float64)
+    expected_hw = tuple(int(value) for value in geom.native_hw)
+    if rgb.dtype != np.uint8 or rgb.shape != (*expected_hw, 3):
+        raise PredictProjectReceiverError("advected frame0 base must be uint8 HWC at worldsheet geometry")
+    if cells.dtype != np.uint8 or cells.shape != expected_hw or np.any(cells >= CLASS_COUNT):
+        raise PredictProjectReceiverError("advected frame0 cells must be canonical uint8 class IDs")
+    if twist.shape != (6,) or not np.all(np.isfinite(twist)):
+        raise PredictProjectReceiverError("advected motion requires one finite translation-first xi")
+    classes = tuple(int(value) for value in ground_class_ids)
+    if not classes or len(set(classes)) != len(classes) or any(not 0 <= value < CLASS_COUNT for value in classes):
+        raise PredictProjectReceiverError("ground class IDs must be unique canonical classes")
+
+    warped_rgb_fp = g1_warp.warp_frame0_native_numpy(rgb, twist, geom)
+    warped_rgb = np.clip(np.rint(warped_rgb_fp), 0, 255).astype(np.uint8)
+    one_hot = (cells[..., None] == np.arange(CLASS_COUNT, dtype=np.uint8)).astype(np.float64)
+    warped_one_hot = g1_warp.warp_frame0_native_numpy(one_hot, twist, geom)
+    frame1_cells = np.argmax(warped_one_hot, axis=-1).astype(np.uint8)
+    ground = np.isin(frame1_cells, classes)
+    # The plane-induced homography is geometrically valid only on ground
+    # strata.  Keep the source-base value elsewhere so foreground/sky pixels
+    # are not falsely assigned ground depth.  The transported scene chart,
+    # rather than an encoder-side target mask, selects the receiver branch.
+    frame1_base = np.where(ground[..., None], warped_rgb, rgb).astype(np.uint8)
+    return {
+        "schema": ADVECTED_MOTION_BASE_SCHEMA,
+        "frame1_base": frame1_base,
+        "frame1_cells": frame1_cells,
+        "ground_mask": ground,
+        "offground_mask": ~ground,
+        "xi_l2": float(np.linalg.norm(twist)),
+        "ground_pixels": int(np.count_nonzero(ground)),
+        "offground_pixels": int(np.count_nonzero(~ground)),
+        "rgb_transport": "transported_ground_chart ? H-warped-RGB : persisted-source-RGB",
+        "ground_rgb_transport": "H=K(R(xi)-t(xi)nT/d)K^-1; inverse_bilinear_persist; uint8_round",
+        "offground_rgb_transport": "persist_source_base_same_pixel",
+        "scene_chart_transport": "one_hot_same_H_then_first_argmax",
+        "additional_video_derived_bytes": 0,
+        "decoder_scorer_invocations": 0,
+        "lawref_equation_ids": list(ADVECTED_MOTION_LAWREFS),
+        "frame1_base_sha256": projected_plane_array_sha256(frame1_base),
+        "frame1_cells_sha256": projected_plane_array_sha256(frame1_cells),
+    }
 
 
 def _nearest_shift(grid: np.ndarray, tx: float, ty: float, yaw: float) -> np.ndarray:
@@ -3076,6 +3211,8 @@ def component_byte_accounting(seed: Mapping[str, Any]) -> dict[str, int]:
 __all__ = [
     "ACTION_LEVEL_LADDER_SCHEMA",
     "ACTION_LEVEL_RUNGS",
+    "ADVECTED_MOTION_BASE_SCHEMA",
+    "ADVECTED_MOTION_LAWREFS",
     "ATTRIBUTION_EDIT_TELEMETRY_SCHEMA",
     "ATTRIBUTION_REUSE_BINDINGS",
     "BOUNDARY_INVERSE_ACTION_POLICY",
@@ -3084,6 +3221,7 @@ __all__ = [
     "BOUNDARY_INVERSE_RECEIPT_SHA256",
     "CANONICAL_LAW_RESOLUTION_CUSTODY",
     "CANONICAL_LAW_RESOLUTION_SHA256",
+    "COUNTED_PLANAR_XI_SCHEMA",
     "GLOBAL_WATERFILL_LAMBDA_STAR",
     "GLOBAL_WATERFILL_STREAMS",
     "M1_ANCHORS",
@@ -3104,8 +3242,10 @@ __all__ = [
     "LinearConstraint",
     "PredictProjectReceiverError",
     "ProjectionResult",
+    "advect_motion_base",
     "camera_uint8_identity_sha256",
     "component_byte_accounting",
+    "counted_planar_xi_series",
     "derive_ground_chart_raster",
     "double_decode_hash",
     "extract_constraint_violations",

@@ -15,33 +15,43 @@ import hashlib
 import importlib
 import inspect
 import json
+import math
 import os
 import platform
 import resource
+import shutil
+import struct
 import sys
 import tempfile
 import time
+import zipfile
 import zlib
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, Final
 
+import brotli
 import numpy as np
 
 from tac.optimization.predict_project_receiver import (
     CANONICAL_LAW_RESOLUTION_CUSTODY,
     CANONICAL_LAW_RESOLUTION_SHA256,
+    GLOBAL_WATERFILL_LAMBDA_STAR,
     M1_ANCHORS,
     TEMPORAL_JITTER_AMORTIZATION_RATIO,
     TEMPORAL_JITTER_EQUATION_ID,
     PredictProjectReceiverError,
+    advect_motion_base,
     component_byte_accounting,
+    counted_planar_xi_series,
     double_decode_hash,
     extract_constraint_violations,
     global_joint_waterfill,
     hard_oracle_custody_sha256,
     plane_cache_key,
     predict_cell_field,
+    projected_plane_array_sha256,
+    realize_projected_rgb_plane_camera_uint8,
     receiver_composition_metadata,
     stratify_predictor_quality,
     validate_global_joint_waterfill_evidence,
@@ -52,9 +62,20 @@ from tac.optimization.predict_project_schema import (
     parse_constraint_seed,
     serialize_constraint_seed,
 )
+from tac.optimization.resize_full_kernel import FullResizeKernel
+from tac.optimization.seed_compose_b2 import GT_CACHE_SHA256
 
 RECEIPT_SCHEMA: Final = "predict_project_b1_b5_measurement.v0"
 HARD_ORACLE_SCHEMA: Final = "predict_project_hard_oracle_pair.v0"
+ADVECTED_RECEIPT_SCHEMA: Final = "predict_project_advected_base_measurement.v1"
+ADVECTED_STAGE_SCHEMA: Final = "predict_project_advected_base_pair.v1"
+ADVECTED_TARGET_MEMO: Final = ".omx/research/joint_seg_pose_inverse_solve_20260719_codex.md"
+ADVECTED_TARGET_REFERENCE: Final = {"d_seg": 0.00015196, "d_pose": 0.00010184}
+ADVECTED_PREFIXES: Final = (64, 600)
+SCORER_HW: Final = (384, 512)
+CAMERA_HW: Final = (874, 1164)
+PAIR_COUNT: Final = 600
+POINTER: Final = "0.1910828242 [contest-CPU] UNMOVED"
 SSD_ROOTS: Final = (Path("/Volumes/VertigoDataTier/pact"), Path("/Volumes/APDataStore/pact"))
 IMPLEMENTATION_SOURCE_PATHS: Final = (
     "src/tac/optimization/predict_project_receiver.py",
@@ -703,11 +724,521 @@ def run_measurement(
     return receipt
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(8 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _stored_npy_memmap(npz_path: Path, key: str) -> np.memmap:
+    """Map one unencrypted ZIP_STORED NPY member without local inflation."""
+
+    member = key if key.endswith(".npy") else f"{key}.npy"
+    with zipfile.ZipFile(npz_path) as archive:
+        try:
+            info = archive.getinfo(member)
+        except KeyError as exc:
+            raise MeasurementError(f"GT cache lacks {member}") from exc
+        if info.compress_type != zipfile.ZIP_STORED or info.flag_bits & 1:
+            raise MeasurementError(f"GT cache member must be unencrypted ZIP_STORED: {member}")
+        offset = int(info.header_offset)
+    with npz_path.open("rb") as handle:
+        handle.seek(offset)
+        header = handle.read(30)
+        if len(header) != 30:
+            raise MeasurementError(f"truncated ZIP header: {member}")
+        fields = struct.unpack("<IHHHHHIIIHH", header)
+        if fields[0] != 0x04034B50:
+            raise MeasurementError(f"invalid ZIP local header: {member}")
+        handle.seek(offset + 30 + int(fields[-2]) + int(fields[-1]))
+        version = np.lib.format.read_magic(handle)
+        if version == (1, 0):
+            shape, fortran, dtype = np.lib.format.read_array_header_1_0(handle)
+        elif version in {(2, 0), (3, 0)}:
+            shape, fortran, dtype = np.lib.format.read_array_header_2_0(handle)
+        else:
+            raise MeasurementError(f"unsupported NPY version for {member}: {version}")
+        data_offset = handle.tell()
+    return np.memmap(
+        npz_path,
+        mode="r",
+        dtype=dtype,
+        shape=shape,
+        offset=data_offset,
+        order="F" if fortran else "C",
+    )
+
+
+def _load_advected_cache(path: Path) -> dict[str, np.memmap]:
+    if _sha256_file(path) != GT_CACHE_SHA256:
+        raise MeasurementError("advected-base GT-cache SHA-256 mismatch")
+    fields = {
+        key: _stored_npy_memmap(path, key)
+        for key in ("n_pairs", "gt_f0", "gt_f1")
+    }
+    if int(np.asarray(fields["n_pairs"]).reshape(())) != PAIR_COUNT:
+        raise MeasurementError("advected-base measurement requires exact n600 cache")
+    expected = (PAIR_COUNT, *CAMERA_HW, 3)
+    if fields["gt_f0"].shape != expected or fields["gt_f1"].shape != expected:
+        raise MeasurementError("advected-base GT-cache camera geometry mismatch")
+    return fields
+
+
+def _load_native_distortion_net(upstream: Path, threads: int) -> tuple[Any, Any, dict[str, Any]]:
+    if threads < 1 or not (upstream / "modules.py").is_file():
+        raise MeasurementError("native CPU-Torch scorer custody is unavailable")
+    sys.path.insert(0, str(upstream))
+    import torch
+    from modules import DistortionNet, posenet_sd_path, segnet_sd_path
+
+    torch.set_num_threads(threads)
+    torch.manual_seed(1234)
+    torch.use_deterministic_algorithms(True)
+    net = DistortionNet().eval().to("cpu")
+    net.load_state_dicts(posenet_sd_path, segnet_sd_path, torch.device("cpu"))
+    for parameter in net.parameters():
+        parameter.requires_grad_(False)
+    return net, torch, {
+        "implementation": "upstream.modules.DistortionNet.native_cpu_torch",
+        "modules_path": str(upstream / "modules.py"),
+        "modules_sha256": _sha256_file(upstream / "modules.py"),
+        "segnet_weights_path": str(Path(segnet_sd_path)),
+        "segnet_weights_sha256": _sha256_file(Path(segnet_sd_path)),
+        "posenet_weights_path": str(Path(posenet_sd_path)),
+        "posenet_weights_sha256": _sha256_file(Path(posenet_sd_path)),
+        "threads": threads,
+        "seed": 1234,
+        "deterministic_algorithms": True,
+        "axis": "[macOS-CPU advisory]",
+    }
+
+
+def _exact_solved_target_plane(operator: Any, camera: np.ndarray) -> np.ndarray:
+    """Reconstruct the #549/C1 fixed target without consuming archived bytes."""
+
+    numerators, denominator = operator.apply_numerators(camera.astype(np.int64, copy=False))
+    return np.clip(np.rint(numerators.astype(np.float64) / denominator), 0, 255).astype(np.uint8)
+
+
+def _realize_advected_plane(
+    plane: np.ndarray,
+    cells: np.ndarray,
+    *,
+    seed_sha256: str,
+    generator_id: str,
+    additional_seed_bytes: int,
+    kernel: FullResizeKernel,
+) -> np.ndarray:
+    source_kind = "decoder_derived_from_seed" if additional_seed_bytes == 0 else "encoder_supplied_counted"
+    custody = {
+        "schema": "predict_project_rgb_plane_custody.v0",
+        "source_kind": source_kind,
+        "generator_id": generator_id,
+        "seed_sha256": seed_sha256,
+        "projected_rgb_sha256": projected_plane_array_sha256(plane),
+        "projected_cells_sha256": projected_plane_array_sha256(cells),
+        "additional_seed_bytes": additional_seed_bytes,
+        "decoder_scorer_invocations": 0,
+    }
+    realized = realize_projected_rgb_plane_camera_uint8(plane, cells, custody, kernel=kernel)
+    if not realized["factor2_verification"]["certified_exact"]:
+        raise MeasurementError("advected-base factor-2 realization lost exactness")
+    return np.asarray(realized["frame"], dtype=np.uint8)
+
+
+def _encode_exact_plane_exception(base: np.ndarray, target: np.ndarray) -> tuple[bytes, dict[str, Any]]:
+    """Select the smallest exact payload from a fixed lossless Brotli-11 family."""
+
+    lhs = np.asarray(base)
+    rhs = np.asarray(target)
+    if lhs.dtype != np.uint8 or rhs.dtype != np.uint8 or lhs.shape != (*SCORER_HW, 3) or rhs.shape != lhs.shape:
+        raise MeasurementError("plane-exception operands must be canonical scorer RGB")
+    delta = ((rhs.astype(np.int16) - lhs.astype(np.int16)) & 0xFF).astype(np.uint8)
+    xor = np.bitwise_xor(lhs, rhs)
+    candidates = {
+        "modular_u8_delta": brotli.compress(delta.tobytes(order="C"), quality=11),
+        "xor_u8_delta": brotli.compress(xor.tobytes(order="C"), quality=11),
+        "target_replacement": brotli.compress(rhs.tobytes(order="C"), quality=11),
+    }
+    selected = min(candidates, key=lambda name: (len(candidates[name]), name))
+    payload = candidates[selected]
+    decoded = np.frombuffer(brotli.decompress(payload), dtype=np.uint8).reshape(lhs.shape)
+    if selected == "modular_u8_delta":
+        reconstructed = ((lhs.astype(np.uint16) + decoded.astype(np.uint16)) & 0xFF).astype(np.uint8)
+    elif selected == "xor_u8_delta":
+        reconstructed = np.bitwise_xor(lhs, decoded)
+    else:
+        reconstructed = decoded.copy()
+    if not np.array_equal(reconstructed, rhs):
+        raise MeasurementError("plane-exception parse-back is not exact")
+    return payload, {
+        "coder": f"brotli-11({selected}_C_order_fixed_geometry)",
+        "selected_family_member": selected,
+        "candidate_payload_bytes": {name: len(value) for name, value in sorted(candidates.items())},
+        "payload_bytes": len(payload),
+        "payload_sha256": _sha256(payload),
+        "raw_delta_bytes": int(delta.nbytes),
+        "changed_values": int(np.count_nonzero(lhs != rhs)),
+        "target_exact": True,
+    }
+
+
+def _score_variants(
+    net: Any,
+    torch: Any,
+    source0: np.ndarray,
+    source1: np.ndarray,
+    frame0: np.ndarray,
+    variants: Mapping[str, np.ndarray],
+) -> dict[str, dict[str, float]]:
+    names = list(variants)
+    gt_pair = np.stack((source0, source1), axis=0)
+    gt = np.stack([gt_pair for _ in names], axis=0)
+    comp = np.stack([np.stack((frame0, variants[name]), axis=0) for name in names], axis=0)
+    gt_tensor = torch.from_numpy(np.ascontiguousarray(gt)).float()
+    comp_tensor = torch.from_numpy(np.ascontiguousarray(comp)).float()
+    with torch.inference_mode():
+        pose, seg = net.compute_distortion(gt_tensor, comp_tensor)
+    return {
+        name: {"d_seg": float(seg[index]), "d_pose": float(pose[index])}
+        for index, name in enumerate(names)
+    }
+
+
+def _metric_without_rate(row: Mapping[str, float]) -> float:
+    return 100.0 * float(row["d_seg"]) + math.sqrt(10.0 * float(row["d_pose"]))
+
+
+def _xi_bucket_edges(xi: np.ndarray) -> list[float]:
+    magnitudes = np.linalg.norm(np.asarray(xi, dtype=np.float64), axis=1)
+    return [float(value) for value in np.quantile(magnitudes, (0.0, 0.25, 0.5, 0.75, 1.0))]
+
+
+def _xi_bucket(value: float, edges: Sequence[float]) -> str:
+    for index in range(4):
+        if value <= edges[index + 1] or index == 3:
+            return f"q{index + 1}"
+    raise AssertionError("unreachable xi bucket")
+
+
+def _aggregate_advected_rows(rows: Sequence[Mapping[str, Any]], edges: Sequence[float]) -> dict[str, Any]:
+    def aggregate(selected: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+        count = len(selected)
+        if not count:
+            return {"pair_count": 0}
+        result: dict[str, Any] = {
+            "pair_count": count,
+            "xi_l2_min": min(float(row["xi_l2"]) for row in selected),
+            "xi_l2_max": max(float(row["xi_l2"]) for row in selected),
+        }
+        for arm in ("static", "advected"):
+            result[arm] = {
+                "exception_bytes_total": sum(int(row[arm]["exception"]["payload_bytes"]) for row in selected),
+                "exception_bytes_mean": sum(int(row[arm]["exception"]["payload_bytes"]) for row in selected) / count,
+                "d_seg_mean": sum(float(row[arm]["hard_oracle"]["d_seg"]) for row in selected) / count,
+                "d_pose_mean": sum(float(row[arm]["hard_oracle"]["d_pose"]) for row in selected) / count,
+                "lagrangian_delta_mean": sum(float(row[arm]["lagrangian_delta_to_solved"]) for row in selected)
+                / count,
+                "admitted_at_lambda_count": sum(bool(row[arm]["admitted_at_lambda"]) for row in selected),
+            }
+        result["solved_target"] = {
+            "d_seg_mean": sum(float(row["solved_target"]["hard_oracle"]["d_seg"]) for row in selected) / count,
+            "d_pose_mean": sum(float(row["solved_target"]["hard_oracle"]["d_pose"]) for row in selected) / count,
+        }
+        result["advected_exception_byte_delta_vs_static"] = (
+            result["advected"]["exception_bytes_total"] - result["static"]["exception_bytes_total"]
+        )
+        return result
+
+    aggregate_all = aggregate(rows)
+    by_bucket = []
+    for index in range(4):
+        bucket_id = f"q{index + 1}"
+        selected = [row for row in rows if row["xi_bucket"] == bucket_id]
+        by_bucket.append(
+            {
+                "bucket": bucket_id,
+                "interval": [float(edges[index]), float(edges[index + 1])],
+                **aggregate(selected),
+            }
+        )
+    return {"aggregate": aggregate_all, "by_xi_magnitude_bucket": by_bucket}
+
+
+def _load_advected_stages(stage_dir: Path, config_sha256: str) -> dict[int, dict[str, Any]]:
+    rows: dict[int, dict[str, Any]] = {}
+    if not stage_dir.exists():
+        return rows
+    for path in sorted(stage_dir.glob("pair_*.json")):
+        try:
+            row = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            raise MeasurementError(f"corrupt advected stage: {path}") from exc
+        pair = row.get("pair_index")
+        if (
+            row.get("schema") != ADVECTED_STAGE_SCHEMA
+            or row.get("config_sha256") != config_sha256
+            or isinstance(pair, bool)
+            or not isinstance(pair, int)
+            or pair in rows
+        ):
+            raise MeasurementError(f"advected stage custody mismatch: {path}")
+        rows[pair] = row
+    return rows
+
+
+def run_advected_base_measurement(
+    seed_path: Path,
+    gt_cache_path: Path,
+    upstream: Path,
+    output_root: Path,
+    *,
+    pair_end: int,
+    chunk_size: int,
+    threads: int,
+) -> dict[str, Any]:
+    """Measure static-vs-advected exception rate to the fixed solved target."""
+
+    if pair_end not in ADVECTED_PREFIXES or chunk_size < 1 or threads < 1:
+        raise MeasurementError("advected base requires prefix n64 or n600 and positive chunk/threads")
+    seed_bytes = seed_path.read_bytes()
+    seed = parse_constraint_seed(seed_bytes)
+    if serialize_constraint_seed(seed) != seed_bytes or seed["receiver"]["seed"] != 1234:
+        raise MeasurementError("advected base requires canonical seed with seed=1234")
+    output_root.mkdir(parents=True, exist_ok=True)
+    if shutil.disk_usage(output_root).free < 1 << 30:
+        raise MeasurementError("advected-base storage preflight requires at least 1 GiB free")
+    target_memo = Path(__file__).resolve().parents[1] / ADVECTED_TARGET_MEMO
+    if not target_memo.is_file():
+        raise MeasurementError("#549 solved-target memo is missing")
+    receiver_path = Path(__file__).resolve().parents[1] / "src/tac/optimization/predict_project_receiver.py"
+    full_xi, xi_custody = counted_planar_xi_series(seed)
+    edges = _xi_bucket_edges(full_xi)
+    from tac.optimization.predictor_upgrade_xi_chart import load_g1_worldsheet_motion
+
+    _, _, pitch_rad, geometry_custody = load_g1_worldsheet_motion(Path(__file__).resolve().parents[1])
+    config = {
+        "schema": ADVECTED_RECEIPT_SCHEMA,
+        "seed": {"path": str(seed_path), "sha256": _sha256(seed_bytes), "bytes": len(seed_bytes)},
+        "gt_cache": {"path": str(gt_cache_path), "sha256": GT_CACHE_SHA256},
+        "target": {
+            "definition": "#549/C1 exact rational source scorer planes plus canonical factor2 realization",
+            "memo_path": ADVECTED_TARGET_MEMO,
+            "memo_sha256": _sha256_file(target_memo),
+            "n600_reference": dict(ADVECTED_TARGET_REFERENCE),
+            "target_pose_rederived": False,
+            "old_archive_bytes_consumed": False,
+        },
+        "xi_custody": xi_custody,
+        "ground_geometry_custody": geometry_custody,
+        "xi_bucket_edges_full_n600": edges,
+        "campaign_pair_count": PAIR_COUNT,
+        "chunk_size": chunk_size,
+        "threads": threads,
+        "seed_value": 1234,
+        "lambda_star_s_per_byte": GLOBAL_WATERFILL_LAMBDA_STAR,
+        "implementation_sources": {
+            "tools/measure_predict_project_receiver.py": _sha256_file(Path(__file__).resolve()),
+            "src/tac/optimization/predict_project_receiver.py": _sha256_file(receiver_path),
+        },
+        "artifact_quarantine": {
+            "policy": "ep725/witness-checkpoints/R1-dxi/old-archives are harvest-signal-only",
+            "bytes_consumed": False,
+        },
+    }
+    config_sha256 = _sha256(canonical_json_bytes(config))
+    existing_receipt_path = output_root / "advected_base" / "receipt.json"
+    if pair_end == 600:
+        if not existing_receipt_path.is_file():
+            raise MeasurementError("n600 is blocked until the resumable n64 receipt passes")
+        existing = json.loads(existing_receipt_path.read_text())
+        if (
+            existing.get("config_sha256") != config_sha256
+            or existing.get("D2_D3", {}).get("prefix") != 64
+            or existing.get("D2_D3", {}).get("n64_gate") != "PASS_ADVECTED_EXCEPTION_BYTES_LT_STATIC"
+        ):
+            raise MeasurementError("n600 is blocked because the exact-source n64 rate gate did not pass")
+    cache = _load_advected_cache(gt_cache_path)
+    net, torch, scorer_custody = _load_native_distortion_net(upstream, threads)
+    kernel = FullResizeKernel.build()
+    from tac.boundary_math import warp_real_luma_frame0 as g1_warp
+
+    geom = g1_warp.GroundHomographyGeom.eon(native_hw=SCORER_HW, pitch=pitch_rad)
+    seed_sha256 = config["seed"]["sha256"]
+    stage_dir = output_root / "advected_base" / "stages"
+    rows = _load_advected_stages(stage_dir, config_sha256)
+    resumed_rows = len([pair for pair in rows if pair < pair_end])
+    for chunk_begin in range(0, pair_end, chunk_size):
+        chunk_end = min(pair_end, chunk_begin + chunk_size)
+        for pair in range(chunk_begin, chunk_end):
+            if pair in rows:
+                continue
+            started = time.perf_counter()
+            source0 = np.asarray(cache["gt_f0"][pair], dtype=np.uint8).copy()
+            source1 = np.asarray(cache["gt_f1"][pair], dtype=np.uint8).copy()
+            target0 = _exact_solved_target_plane(kernel.operator, source0)
+            target1 = _exact_solved_target_plane(kernel.operator, source1)
+            chart0 = predict_cell_field(seed, pair)
+            advected = advect_motion_base(target0, chart0, full_xi[pair], geom)
+            _, static_exception = _encode_exact_plane_exception(target0, target1)
+            _, advected_exception = _encode_exact_plane_exception(advected["frame1_base"], target1)
+            frame0 = _realize_advected_plane(
+                target0,
+                chart0,
+                seed_sha256=seed_sha256,
+                generator_id="task549_solved_target_frame0_reconstruction",
+                additional_seed_bytes=int(target0.nbytes),
+                kernel=kernel,
+            )
+            solved_frame1 = _realize_advected_plane(
+                target1,
+                np.asarray(advected["frame1_cells"], dtype=np.uint8),
+                seed_sha256=seed_sha256,
+                generator_id="task549_solved_target_frame1_reconstruction",
+                additional_seed_bytes=int(target1.nbytes),
+                kernel=kernel,
+            )
+            advected_frame1 = _realize_advected_plane(
+                np.asarray(advected["frame1_base"], dtype=np.uint8),
+                np.asarray(advected["frame1_cells"], dtype=np.uint8),
+                seed_sha256=seed_sha256,
+                generator_id="counted_ppcs_xi_advected_motion_base",
+                additional_seed_bytes=0,
+                kernel=kernel,
+            )
+            hard = _score_variants(
+                net,
+                torch,
+                source0,
+                source1,
+                frame0,
+                {"static": frame0, "advected": advected_frame1, "solved_target": solved_frame1},
+            )
+            solved_metric = _metric_without_rate(hard["solved_target"])
+            arms: dict[str, Any] = {}
+            for name, exception in (("static", static_exception), ("advected", advected_exception)):
+                lagrangian_delta = solved_metric - _metric_without_rate(hard[name]) + (
+                    GLOBAL_WATERFILL_LAMBDA_STAR * int(exception["payload_bytes"])
+                )
+                arms[name] = {
+                    "exception": exception,
+                    "hard_oracle": hard[name],
+                    "lagrangian_delta_to_solved": lagrangian_delta,
+                    "admitted_at_lambda": lagrangian_delta < 0.0,
+                }
+            xi_l2 = float(advected["xi_l2"])
+            row = {
+                "schema": ADVECTED_STAGE_SCHEMA,
+                "config_sha256": config_sha256,
+                "pair_index": pair,
+                "xi": full_xi[pair].tolist(),
+                "xi_l2": xi_l2,
+                "xi_bucket": _xi_bucket(xi_l2, edges),
+                "xi_additional_video_derived_bytes": 0,
+                "ground_pixels": advected["ground_pixels"],
+                "offground_pixels": advected["offground_pixels"],
+                "advected_base_sha256": advected["frame1_base_sha256"],
+                "advected_cells_sha256": advected["frame1_cells_sha256"],
+                "static": arms["static"],
+                "advected": arms["advected"],
+                "solved_target": {
+                    "hard_oracle": hard["solved_target"],
+                    "plane0_sha256": projected_plane_array_sha256(target0),
+                    "plane1_sha256": projected_plane_array_sha256(target1),
+                    "source": "deterministic #549 target reconstruction; no old archive bytes",
+                },
+                "timing_seconds": time.perf_counter() - started,
+                "authority": "MEASURED [macOS-CPU advisory] RATE-axis",
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+            _atomic_json(stage_dir / f"pair_{pair:04d}.json", row)
+            rows[pair] = row
+            del source0, source1, target0, target1, frame0, solved_frame1, advected_frame1
+        _atomic_json(
+            output_root / "advected_base" / "checkpoints" / f"chunk_{chunk_begin:04d}_{chunk_end:04d}.json",
+            {
+                "schema": "predict_project_advected_base_checkpoint.v1",
+                "config_sha256": config_sha256,
+                "completed_through_exclusive": chunk_end,
+                "completed_pairs": len([pair for pair in rows if pair < pair_end]),
+                "all_pair_stages_preserved": True,
+            },
+        )
+    ordered = [rows[pair] for pair in range(pair_end)]
+    summary = _aggregate_advected_rows(ordered, edges)
+    gate_pass = summary["aggregate"]["advected"]["exception_bytes_total"] < summary["aggregate"]["static"][
+        "exception_bytes_total"
+    ]
+    receipt = {
+        "schema": ADVECTED_RECEIPT_SCHEMA,
+        "config": config,
+        "config_sha256": config_sha256,
+        "scorer_custody": scorer_custody,
+        "resumed_pair_stages": resumed_rows,
+        "D1": {
+            "status": "BUILT_AND_EXECUTED",
+            "equation": "frame1_base=W_xi(frame0_base); chart1=argmax(W_xi(onehot(chart0)))",
+            "ground_stratified": True,
+            "scene_chart_transport": True,
+            "additional_video_derived_bytes": 0,
+            "xi_custody": xi_custody,
+            "ground_geometry_custody": geometry_custody,
+        },
+        "D2_D3": {
+            "prefix": pair_end,
+            **summary,
+            "n64_gate": "PASS_ADVECTED_EXCEPTION_BYTES_LT_STATIC" if gate_pass else "FAIL_ADVECTED_NOT_RATE_BETTER",
+            "n600_authorized_by_gate": pair_end == 64 and gate_pass,
+            "lambda_star_s_per_byte": GLOBAL_WATERFILL_LAMBDA_STAR,
+            "target_framing": "#549 solved joint target; pose is not an open axis",
+        },
+        "D4": {
+            "comparison": "same solved frame0 and solved frame1 target; static frame1 base=frame0 base",
+            "pointer": POINTER,
+            "pointer_moved": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "main_landing_review_required": True,
+        },
+        "storage": {
+            "root": str(output_root),
+            "automatic_disk_hygiene": "GT cache is ZIP_STORED mmap; one-pair tensors only; only immutable JSON stages persist",
+            "old_archive_bytes_consumed": False,
+        },
+        "verdict": (
+            "N600_RATE_MEASUREMENT_COMPLETE"
+            if pair_end == 600
+            else ("N64_RATE_GATE_PASS" if gate_pass else "N64_RATE_GATE_FAIL_STOP_BEFORE_N600")
+        ),
+        "verdict_scope": "counted PPCS planar-xi formulation against deterministic #549 target reconstruction",
+        "authority": {
+            "axis": "[macOS-CPU advisory]",
+            "rate_axis_only": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "pointer": POINTER,
+        },
+    }
+    _atomic_json(output_root / "advected_base" / "receipt.json", receipt)
+    return receipt
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=Path, required=True, help="canonical predict-project seed bytes")
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--allow-local-output", action="store_true")
+    parser.add_argument(
+        "--advected-base",
+        action="store_true",
+        help="measure counted-xi static-vs-advected exact-target exception rate",
+    )
+    parser.add_argument("--gt-cache", type=Path, help="exact frozen n600 GT cache for --advected-base")
+    parser.add_argument("--upstream", type=Path, help="frozen upstream scorer checkout for --advected-base")
+    parser.add_argument("--threads", type=int, default=4, help="CPU-Torch threads for --advected-base")
     parser.add_argument("--pair-start", type=int, default=0)
     parser.add_argument("--pair-end", type=int, default=600)
     parser.add_argument("--chunk-size", type=int, default=16)
@@ -720,6 +1251,28 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     output_root = _choose_output_root(args.output_dir, allow_local=args.allow_local_output)
+    if args.advected_base:
+        if args.gt_cache is None or args.upstream is None or args.pair_start != 0:
+            raise MeasurementError("--advected-base requires --gt-cache, --upstream, and --pair-start 0")
+        receipt = run_advected_base_measurement(
+            args.seed,
+            args.gt_cache,
+            args.upstream,
+            output_root,
+            pair_end=args.pair_end,
+            chunk_size=args.chunk_size,
+            threads=args.threads,
+        )
+        print(
+            json.dumps(
+                {
+                    "receipt": str(output_root / "advected_base" / "receipt.json"),
+                    "verdict": receipt["verdict"],
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
     receipt = run_measurement(
         args.seed,
         output_root,
