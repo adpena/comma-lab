@@ -1,20 +1,23 @@
 # DAG FEED — G2g2 joint multi-chart solve
 
-**FEED:** `FEED-578-g2g2-joint-multichart`  
+**FEED:** `FEED-578-g2g2-joint-multichart`
+
 **Authority:** MEASURED `[macOS-CPU advisory]`; pointer `0.1910828242 [contest-CPU]` unmoved; no score or promotion authority; MAIN review required.
 
 ## Executed graph
 
-`hash-pinned G2f six-pair order + counted LBND2/openpilot base + #549 target cells/tubes`  
-`-> dynamically derive 5 LaneLines x 4 centerline coefficients = 20 addresses/pair`  
-`-> actual +/-0.5-native-pixel one-row G2CS1 response packets`  
-`-> receiver RGB + exact factor-2 R + frozen batch-1 CPU-Torch Seg5/Pose6`  
-`-> full-logit/Pose6 central secants (memory only)`  
-`-> Fisher/margin lexicographic projected greedy + coordinate polish + one swap`  
-`-> actual multi-row G2CS1 prefix, 20 bytes then +8 bytes/row`  
-`-> independent double decode + nonlinear receiver + seven hard predicates`  
-`-> first-admission stop OR marginal reverse-waterfill stop`  
-`-> 0/6 admitted; U1/P0/n64/n600 routes false; formulation-scoped family-open verdict`
+```text
+hash-pinned G2f six-pair order + counted LBND2/openpilot base + #549 target cells/tubes
+-> dynamically derive 5 LaneLines x 4 centerline coefficients = 20 addresses/pair
+-> actual +/-0.5-native-pixel one-row G2CS1 response packets
+-> receiver RGB + exact factor-2 R + frozen batch-1 CPU-Torch Seg5/Pose6
+-> full-logit/Pose6 central secants (memory only)
+-> Fisher/margin lexicographic projected greedy + coordinate polish + one swap
+-> actual multi-row G2CS1 prefix, 20 bytes then +8 bytes/row
+-> independent double decode + nonlinear receiver + seven hard predicates
+-> first-admission stop OR marginal reverse-waterfill stop
+-> 0/6 admitted; U1/P0/n64/n600 routes false; formulation-scoped family-open verdict
+```
 
 ## Six-hook wire-in
 

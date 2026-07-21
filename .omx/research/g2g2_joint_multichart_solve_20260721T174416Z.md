@@ -1,7 +1,9 @@
 # G2g2 joint multi-chart solve — measured hard-oracle result
 
-**UTC:** 2026-07-21T17:44:16Z  
-**Lane:** `lane_g2g2_joint_multichart_solve_20260721`  
+**UTC:** 2026-07-21T17:44:16Z
+
+**Lane:** `lane_g2g2_joint_multichart_solve_20260721`
+
 **Authority:** MEASURED `[macOS-CPU advisory]`; frozen CPU Torch; seed 1234; no score claim; pointer `0.1910828242 [contest-CPU]` unmoved; `MAIN_REVIEW_REQUIRED=true`.
 
 ## Verdict
