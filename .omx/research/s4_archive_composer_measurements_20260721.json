@@ -1,0 +1,73 @@
+{
+  "A1_archive_builder": {
+    "archive_bytes": 451191,
+    "archive_sha256": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed",
+    "member_bytes": 1285943,
+    "member_count": 1,
+    "member_name": "0.bin",
+    "member_sha256": "595e69d41f96cc1a33ca7b58c0ed386549bfda6389a8176b24d7044d1f55955b",
+    "status": "PASS"
+  },
+  "A2_standalone_receiver": {
+    "declared_dependencies": [
+      "numpy==2.4.4",
+      "brotli==1.2.0"
+    ],
+    "forbidden_imports": [],
+    "ground_truth_argmax_files": [],
+    "runtime_sha256": "eef055896474b8327baf57ace016c37fe651f4c22534e2442ebc44da8c3f40b0",
+    "scorer_weight_files": [],
+    "source_video_files": [],
+    "status": "PASS",
+    "tac_imports": []
+  },
+  "A3_byte_identity": {
+    "n16": {
+      "byte_exact_repo_vs_standalone": true,
+      "double_decode_deterministic": true,
+      "stream_sha256": "9ae82020c978b9779023b9f903e1e3597590ec07d9808389d14f16e575bed987"
+    },
+    "n600": {
+      "byte_exact_repo_vs_standalone": true,
+      "double_decode_deterministic": true,
+      "output_bytes": 3662409600,
+      "repo_native_seconds": 8.95500020799227,
+      "standalone_first_seconds": 7.898707958869636,
+      "standalone_second_seconds": 7.908579082926735,
+      "stream_sha256": "01f4581354e108092010399c00dd6889286b87ad0525ea111d6f27f669d683f8"
+    },
+    "n64": {
+      "byte_exact_repo_vs_standalone": true,
+      "double_decode_deterministic": true,
+      "stream_sha256": "55d525f09a1dc86c474ea90543b92fbcd8096292fadda2b97f12764952ff13e9"
+    },
+    "status": "PASS"
+  },
+  "A4_local_advisory_eval": {
+    "archive_bytes": 451191,
+    "axis": "[macOS-CPU advisory]",
+    "d_pose": 163.11865234,
+    "d_seg": 0.60198647,
+    "evaluate_wall_seconds": 351.00913258315995,
+    "inflate_wall_seconds": 94.15378933306783,
+    "rate": 0.01201718,
+    "score": 100.89,
+    "score_claim": false,
+    "status": "MEASURED_NON_PROMOTABLE"
+  },
+  "artifact_root": "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/canonical_s4_20260721",
+  "authority": {
+    "main_review_required": true,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "promotion_eligible": false,
+    "research_only": true
+  },
+  "cleanup": {
+    "certified_rebuildable_raw_bytes_deleted": 3662409600,
+    "raw_sha256": "01f4581354e108092010399c00dd6889286b87ad0525ea111d6f27f669d683f8",
+    "receipt_preserved": true
+  },
+  "lane_id": "lane_s4_archive_composer_578_20260721",
+  "schema": "s4_archive_composer_measurements.v1",
+  "source_commit": "56657efc187951ece601a66c756ad957e9975e88"
+}
