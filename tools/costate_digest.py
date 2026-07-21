@@ -1445,6 +1445,28 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
     return lines, data
 
 
+def _model_identity_stamp() -> str:
+    """MODEL-IDENTITY stamp (operator 2026-07-21): Fable is the REQUIRED main-thread
+    orchestrator. A silent harness fallback to another model (e.g. a security-flag
+    reroute to Opus) must be LOUD at session start, never discovered mid-conversation.
+    The hook cannot observe the live model directly, so it (a) reads the saved client
+    default, and (b) instructs the agent to SELF-DECLARE — a swapped model declaring
+    itself is the detection. Fail-open: never blocks a session."""
+    default = "unknown"
+    try:
+        cfg = json.loads((Path.home() / ".claude" / "settings.json").read_text())
+        default = str(cfg.get("model", "unknown"))
+    except Exception:
+        pass
+    return (
+        f"MODEL-IDENTITY CHECK (operator directive 2026-07-21): main-thread orchestrator MUST be "
+        f"FABLE 5 (client default: {default!r}). Agent: STATE your exact model ID in your FIRST "
+        f"reply. If you are NOT a Fable-class model, say so LOUDLY, do minimal safe work only "
+        f"(custody/handoff), and surface the mismatch — the operator was silently rerouted off "
+        f"Fable once (2026-07-21) and must never discover it mid-conversation again."
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--json", action="store_true", help="machine-readable output")
@@ -1459,6 +1481,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             if args.session_start:
                 print("[costate-digest] controller SENSE+DECIDE state (auto-surfaced; tools/costate_digest.py):")
+                print(_model_identity_stamp())
             print("\n".join(lines))
         return 0
     except Exception as exc:  # fail-open: a broken digest must never crash a session
