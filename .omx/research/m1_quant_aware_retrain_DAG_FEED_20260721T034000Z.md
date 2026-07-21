@@ -81,8 +81,10 @@ M1_N2_FIXTURE_RECEIPT
 **Extended anchor ID:**
 `realization_is_quantization_gated_minimal_writes_die_at_uint8_20260720`
 
-**Refinement ID:** `M1-QA-S3-20260721`  
-**Operation:** `domain_refinement` / `generation_side_anchor_refinement`  
+**Refinement ID:** `M1-QA-S3-20260721`
+
+**Operation:** `domain_refinement` / `generation_side_anchor_refinement`
+
 **Registry action:** none; this FEED does not invent a canonical-registry row.
 
 The old M1-specific clause “the training loss never simulated uint8 in-loop” is falsified by

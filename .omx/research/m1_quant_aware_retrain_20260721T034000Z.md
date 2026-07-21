@@ -1,9 +1,13 @@
 # M1 quantization-aware realization machinery — TIER-0 handoff
 
-**Written:** 2026-07-21T03:40:00Z  
-**Lane:** `m1_quant_aware_retrain_20260721T025441Z`  
-**Code commit:** `c89b1e020aa5e6ce143f2d32a8167593f5dc1c6a`  
-**Verdict:** `BUILT_TESTED_PORTABLE`  
+**Written:** 2026-07-21T03:40:00Z
+
+**Lane:** `m1_quant_aware_retrain_20260721T025441Z`
+
+**Code commit:** `c89b1e020aa5e6ce143f2d32a8167593f5dc1c6a`
+
+**Verdict:** `BUILT_TESTED_PORTABLE`
+
 **verdict_scope:** realization machinery and bounded fixture behavior only; not a full-n600,
 SegNet, PoseNet, archive-byte, contest-score, launch, promotion, family, or frontier verdict.
 
