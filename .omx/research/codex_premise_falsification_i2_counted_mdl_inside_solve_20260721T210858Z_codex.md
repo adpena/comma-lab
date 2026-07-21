@@ -1,8 +1,8 @@
 # Codex premise falsification — I2 counted MDL is not inside the solve
 
-**UTC:** 2026-07-21T21:08:58Z  
-**Scope:** FORMULATION  
-**Pointer:** 0.1910828242 `[contest-CPU]` UNMOVED  
+**UTC:** 2026-07-21T21:08:58Z
+**Scope:** FORMULATION
+**Pointer:** 0.1910828242 `[contest-CPU]` UNMOVED
 **Result:** `FALSIFIED`
 
 The delegated premise said the I2 polytope-member arm optimized “code length INSIDE the solve.”

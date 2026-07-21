@@ -1,7 +1,7 @@
 # Canonical-equations disposition — realization verdict
 
-**UTC:** 2026-07-21T21:08:58Z  
-**Disposition:** `NO_NEW_LAW_MEASURED`; no registry append owed.  
+**UTC:** 2026-07-21T21:08:58Z
+**Disposition:** `NO_NEW_LAW_MEASURED`; no registry append owed.
 **Pointer:** 0.1910828242 `[contest-CPU]` UNMOVED.
 
 This verdict measures no new invariant or controller law. It applies existing canonical laws:
