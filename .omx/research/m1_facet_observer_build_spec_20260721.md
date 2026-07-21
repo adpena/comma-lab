@@ -127,38 +127,34 @@ section of this spec.
 
 ### Stage panels
 
-- `SCOPE_AMENDMENT_ACK` also covers operator amendments received at
-  `2026-07-21T01:24:41Z`, `2026-07-21T01:25:35Z`, and
-  `2026-07-21T01:26:01Z`. They supersede the underived hardest-six and
-  fixed-mass-cut panel rules below while preserving the read-only/advisory
-  boundary.
-- Derive the visual cohort from the complete bootstrap population. Build a
-  mechanism signature per pair from class-flip composition,
-  boundary-versus-bulk flip fraction, and an explicitly defined temporal
-  flicker flag. Fit deterministic clusters for every k in `[2,20]` that the
-  population supports and choose k by the reported BIC curve; no hand-picked
-  cluster count is admitted.
-- Allocate depth by Neyman allocation, proportional to cluster d_seg mass times
-  within-cluster d_seg standard deviation, with at least one exemplar from
-  every selected cluster. Rank exemplars deterministically inside each cluster.
-  Stop through a Good-Turing unseen-mechanism-mass rule. Consume
-  `realization_breakeven_bytes_v1` by ID, invoking its registered callable to
-  derive (not retype) the exact non-rate score floor corresponding to the panel
-  fix-payload comparator. Persist equation/callable/anchor custody in the
-  derivation row.
-- Emit the complete panel-budget derivation in every required boundary/final
-  facet row: k and BIC curve, per-cluster mass/std/Neyman depth, Good-Turing
-  unseen-mass estimate, derived total, envelope cap, and emitted total. Freeze
-  an observer-owned base snapshot for the derived panel IDs before deleting the
-  full bootstrap scratch so later stage boundaries remain reproducible. If the
-  derived total exceeds the byte envelope, cap deterministically and report
-  both totals; never silently drop pairs.
+- `SCOPE_AMENDMENT_ACK` covers all five operator amendments received through
+  `2026-07-21T01:54:58Z`. Amendment 5 retracts the earlier BIC, Neyman, and
+  Good-Turing estimator machinery: the first n600 pass is a finite exhaustive
+  census, not a sample from an exchangeable population.
+- Rank the complete census by measured per-pair d_seg. The minimal measured
+  prefix covering 50% of total census d_seg mass receives full panels; the
+  minimal prefix covering 90% receives compact contact-sheet coverage. Persist
+  both counts, both ordered ID sets, the complete cumulative concentration
+  curve, and the Gini concentration index.
+- Build direct class-flip-composition strata from the 25 canonical
+  GT-class-to-emitted-class axes. Every nonempty stratum receives one exemplar,
+  selected by greatest partitioned d_seg contribution then flip count then pair
+  ID. Add missed exemplars to the full-panel cohort. This is direct measured
+  stratification, not objective-free clustering.
+- Consume `realization_breakeven_bytes_v1` by ID and invoke its registered
+  callable for the 150-byte comparator. Report each stratum's partitioned score
+  contribution and whether it clears that fix-EV floor; the law diagnoses fix
+  value and does not act as a census stopping rule.
+- Freeze an observer-owned base snapshot for the union of full-panel and
+  contact-sheet IDs before deleting the full bootstrap scratch. If that union
+  exceeds the byte envelope, cap deterministically in derived priority order
+  and report derived/admitted sets explicitly; never silently drop pairs.
 - On each distinct stage-boundary checkpoint (`stage_complete=true`) and the
   terminal/final checkpoint, render a full multipane panel for every admitted
-  derived exemplar. Also render a cluster-overview contact sheet with one row
-  per cluster and exemplars in rank order.
+  admitted full-panel exemplar. Also render the measured 90%-mass contact-sheet
+  cohort in d_seg rank order, eight exact-/2 thumbnails per row.
 - Store panels only under the observer evidence directory's `panels/` subtree.
-  Bind each panel and contact sheet to checkpoint SHA and pair ID/cluster in row
+  Bind each panel and contact sheet to checkpoint SHA and pair ID/stratum in row
   provenance. Use only lossless PNG. Scorer-plane maps are direct native
   `512x384` arrays at one array pixel per image pixel; indexed class maps use
   nearest-neighbor only. No lossy codec, fractional resampling, antialiasing,

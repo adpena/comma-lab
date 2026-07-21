@@ -84,7 +84,7 @@ BASE_SNAPSHOT_SCHEMA: Final = "m1_banded_checkpoint_base_snapshot.v2"
 COHORT_SCHEMA: Final = "m1_banded_checkpoint_recurring_cohort.v1"
 PREFLIGHT_SCHEMA: Final = "m1_banded_checkpoint_bootstrap_preflight.v1"
 CLEANUP_SCHEMA: Final = "m1_banded_checkpoint_scratch_cleanup.v1"
-PANEL_PLAN_SCHEMA: Final = "m1_banded_checkpoint_panel_plan.v1"
+PANEL_PLAN_SCHEMA: Final = "m1_banded_checkpoint_panel_plan.v2"
 BREAK_EVEN_EQUATION_ID: Final = "realization_breakeven_bytes_v1"
 PANEL_FIX_PAYLOAD_BYTES: Final = 150.0  # operator-specified comparator
 EXPECTED_BAND_MANIFEST_SHA256: Final = "2fd10841dc0cb344454e4af55bd8d27e5e1d819a97df3fc03307604dfffcc367"
@@ -902,39 +902,6 @@ def mechanism_signature(
     }
 
 
-def _deterministic_kmeans(features: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray, float]:
-    """Deterministic farthest-first k-means used only for advisory clustering."""
-
-    value = np.asarray(features, dtype=np.float64)
-    if value.ndim != 2 or not 2 <= k <= value.shape[0] or not np.isfinite(value).all():
-        raise ObserverError("mechanism clustering input mismatch")
-    centers = [value[0].copy()]
-    for _ in range(1, k):
-        distance = np.min(
-            np.stack([np.sum((value - center) ** 2, axis=1) for center in centers], axis=1),
-            axis=1,
-        )
-        centers.append(value[int(np.argmax(distance))].copy())
-    center_array = np.stack(centers)
-    labels = np.zeros(value.shape[0], dtype=np.int64)
-    for _ in range(100):
-        distance = np.sum((value[:, None, :] - center_array[None, :, :]) ** 2, axis=2)
-        updated = np.argmin(distance, axis=1)
-        new_centers = center_array.copy()
-        for cluster in range(k):
-            members = value[updated == cluster]
-            if members.size:
-                new_centers[cluster] = np.mean(members, axis=0, dtype=np.float64)
-        if np.array_equal(updated, labels) and np.array_equal(new_centers, center_array):
-            labels = updated
-            center_array = new_centers
-            break
-        labels = updated
-        center_array = new_centers
-    residual = float(np.sum((value - center_array[labels]) ** 2, dtype=np.float64))
-    return labels, center_array, residual
-
-
 def consume_panel_break_even_equation() -> dict[str, Any]:
     """Consume the registered rate law by ID and invert it for 150 bytes."""
 
@@ -968,114 +935,130 @@ def consume_panel_break_even_equation() -> dict[str, Any]:
 
 
 def derive_panel_plan(rank_rows: Mapping[int, Mapping[str, Any]]) -> dict[str, Any]:
-    """Derive k, depth, and stopping without a fixed hardest-K panel count."""
+    """Derive visual tiers from the exhaustive census without sample estimators."""
 
     ordered_ids = tuple(sorted(int(pair_id) for pair_id in rank_rows))
-    features = np.asarray([rank_rows[pair_id]["mechanism_signature"]["vector"] for pair_id in ordered_ids])
-    dseg = np.asarray([float(rank_rows[pair_id]["d_seg"]) for pair_id in ordered_ids])
-    curves = []
-    fits: dict[int, np.ndarray] = {}
-    dimensions = features.shape[1]
-    for k in range(2, min(20, len(ordered_ids)) + 1):
-        assignments, _centers, residual = _deterministic_kmeans(features, k)
-        variance = max(residual / max(1, len(ordered_ids) * dimensions), np.finfo(np.float64).tiny)
-        parameters = k * dimensions + k - 1
-        bic = len(ordered_ids) * dimensions * float(np.log(variance)) + parameters * float(np.log(len(ordered_ids)))
-        curves.append({"k": k, "bic": bic, "residual_sum_squares": residual})
-        fits[k] = assignments
-    chosen = min(curves, key=lambda row: (row["bic"], row["k"]))
-    k_selected = int(chosen["k"])
-    assignments = fits[k_selected]
+    if not ordered_ids or len(ordered_ids) != len(rank_rows):
+        raise ObserverError("panel census must contain unique integer pair IDs")
+    dseg_by_id = {pair_id: float(rank_rows[pair_id]["d_seg"]) for pair_id in ordered_ids}
+    if any(not np.isfinite(value) or value < 0.0 for value in dseg_by_id.values()):
+        raise ObserverError("panel census d_seg must be finite and nonnegative")
+    ranked_ids = tuple(sorted(ordered_ids, key=lambda pair_id: (-dseg_by_id[pair_id], pair_id)))
+    dseg = np.asarray([dseg_by_id[pair_id] for pair_id in ranked_ids], dtype=np.float64)
+    total_mass = float(np.sum(dseg, dtype=np.float64))
+    cumulative = np.cumsum(dseg, dtype=np.float64)
+
+    def coverage_prefix(fraction: float) -> list[int]:
+        if total_mass == 0.0:
+            return []
+        count = int(np.searchsorted(cumulative, fraction * total_mass, side="left")) + 1
+        return list(ranked_ids[:count])
+
+    full_mass_ids = coverage_prefix(0.5)
+    contact_mass_ids = coverage_prefix(0.9)
+    concentration_curve = [
+        {
+            "rank": rank,
+            "pair_id": pair_id,
+            "d_seg": dseg_by_id[pair_id],
+            "cumulative_dseg_mass_fraction": (float(cumulative[rank - 1] / total_mass) if total_mass else 0.0),
+        }
+        for rank, pair_id in enumerate(ranked_ids, start=1)
+    ]
+    ascending = np.sort(dseg)
+    if total_mass:
+        n = len(ascending)
+        gini = float(np.sum((2.0 * np.arange(1, n + 1, dtype=np.float64) - n - 1.0) * ascending) / (n * total_mass))
+    else:
+        gini = 0.0
+
     equation = consume_panel_break_even_equation()
     score_floor = float(equation["derived_nonrate_score_floor"])
-    singleton_vectors = {}
-    for row in rank_rows.values():
-        token = canonical_json(row["mechanism_signature"]["vector"])
-        singleton_vectors[token] = singleton_vectors.get(token, 0) + 1
-    singleton_fraction = sum(value == 1 for value in singleton_vectors.values()) / len(ordered_ids)
-    clusters = []
-    weights = []
-    for cluster in range(k_selected):
-        positions = np.flatnonzero(assignments == cluster)
-        member_ids = [ordered_ids[int(position)] for position in positions]
-        member_ids.sort(key=lambda pair_id: (-float(rank_rows[pair_id]["d_seg"]), pair_id))
-        values = np.asarray([float(rank_rows[pair_id]["d_seg"]) for pair_id in member_ids])
-        mass = float(np.sum(values, dtype=np.float64))
-        std = float(np.std(values, dtype=np.float64))
-        weight = mass * std
-        weights.append(weight)
-        clusters.append(
+
+    mechanism_strata = []
+    mechanism_exemplars = []
+    class_pair_count = len(CLASS_NAMES) ** 2
+    for stratum_index in range(class_pair_count):
+        contributors = []
+        aggregate_flip_count = 0
+        stratum_dseg_mass = 0.0
+        for pair_id in ranked_ids:
+            signature = rank_rows[pair_id]["mechanism_signature"]
+            counts = signature["class_flip_counts"]
+            composition = signature["class_flip_composition"]
+            if len(counts) != class_pair_count or len(composition) != class_pair_count:
+                raise ObserverError("mechanism signature class-pair geometry drift")
+            count = int(counts[stratum_index])
+            share = float(composition[stratum_index])
+            if count > 0:
+                contribution = dseg_by_id[pair_id] * share
+                contributors.append((pair_id, contribution, count))
+                aggregate_flip_count += count
+                stratum_dseg_mass += contribution
+        if not contributors:
+            continue
+        exemplar = min(contributors, key=lambda row: (-row[1], -row[2], row[0]))[0]
+        mechanism_exemplars.append(exemplar)
+        gt_class, emitted_class = divmod(stratum_index, len(CLASS_NAMES))
+        score_contribution = 100.0 * stratum_dseg_mass / len(ordered_ids)
+        mechanism_strata.append(
             {
-                "cluster_id": cluster,
-                "pair_count": len(member_ids),
-                "d_seg_mass": mass,
-                "within_cluster_d_seg_std": std,
-                "neyman_weight": weight,
-                "ranked_pair_ids": member_ids,
+                "stratum_id": f"{gt_class}_to_{emitted_class}",
+                "gt_class_id": gt_class,
+                "gt_class_name": CLASS_NAMES[gt_class],
+                "emitted_class_id": emitted_class,
+                "emitted_class_name": CLASS_NAMES[emitted_class],
+                "participating_pair_count": len(contributors),
+                "aggregate_flip_count": aggregate_flip_count,
+                "partitioned_d_seg_mass": stratum_dseg_mass,
+                "partitioned_score_contribution": score_contribution,
+                "fix_ev_above_150_byte_floor": score_contribution >= score_floor,
+                "exemplar_pair_id": exemplar,
             }
         )
-    selected_total = k_selected
-    total_mass = float(np.sum(dseg, dtype=np.float64))
-    unseen_mass = total_mass * singleton_fraction
-    while selected_total < len(ordered_ids) and unseen_mass * 100.0 >= score_floor:
-        selected_total += 1
-        unseen_mass = total_mass * singleton_fraction * (1.0 - selected_total / len(ordered_ids))
-    weight_sum = float(sum(weights))
-    extra = selected_total - k_selected
-    allocations = [1] * k_selected
-    if extra:
-        shares = (
-            np.asarray(weights, dtype=np.float64) / weight_sum
-            if weight_sum > 0.0
-            else np.full(k_selected, 1.0 / k_selected)
-        )
-        raw = shares * extra
-        floors = np.floor(raw).astype(np.int64)
-        allocations = [1 + int(value) for value in floors]
-        remainder = extra - int(np.sum(floors))
-        order = sorted(range(k_selected), key=lambda index: (-(raw[index] - floors[index]), index))
-        for index in order[:remainder]:
-            allocations[index] += 1
+
+    full_derived = list(dict.fromkeys([*full_mass_ids, *mechanism_exemplars]))
+    contact_derived = list(contact_mass_ids)
+    snapshot_derived = list(dict.fromkeys([*full_derived, *contact_derived]))
     bytes_per_pair = FULL_RAW_BYTES // LOGICAL_PAIR_COUNT
     recurring_bytes = PAIR_SAMPLE_SIZE * bytes_per_pair
     envelope_cap = max(
-        k_selected,
+        1,
         int(
             (MAX_OBSERVER_FOOTPRINT_BYTES - FULL_RAW_BYTES - recurring_bytes - SNAPSHOT_HEADROOM_BYTES)
             // bytes_per_pair
         ),
     )
-    admitted_total = min(selected_total, envelope_cap)
-    while sum(allocations) > admitted_total:
-        candidates = [index for index, value in enumerate(allocations) if value > 1]
-        if not candidates:
-            break
-        index = min(candidates, key=lambda item: (weights[item], item))
-        allocations[index] -= 1
-    panel_ids = []
-    for cluster, allocation in zip(clusters, allocations, strict=True):
-        admitted = min(allocation, cluster["pair_count"])
-        cluster["panels_allocated"] = admitted
-        cluster["panel_pair_ids"] = cluster["ranked_pair_ids"][:admitted]
-        panel_ids.extend(cluster["panel_pair_ids"])
+    snapshot_ids = snapshot_derived[:envelope_cap]
+    snapshot_set = set(snapshot_ids)
+    full_ids = [pair_id for pair_id in full_derived if pair_id in snapshot_set]
+    contact_ids = [pair_id for pair_id in contact_derived if pair_id in snapshot_set]
     return {
         "schema": PANEL_PLAN_SCHEMA,
-        "selection_method": "deterministic_farthest_first_kmeans_bic_k2_to_k20",
-        "k_selected": k_selected,
-        "selection_score_curve": curves,
-        "clusters": clusters,
-        "good_turing": {
-            "signature_singleton_fraction": singleton_fraction,
-            "unseen_mechanism_dseg_mass_at_stop": unseen_mass,
-            "unseen_score_mass_at_stop": unseen_mass * 100.0,
-            "break_even": equation,
+        "selection_method": "exhaustive_census_mass_concentration_plus_direct_class_flip_strata",
+        "population_size": len(ordered_ids),
+        "total_d_seg_mass": total_mass,
+        "concentration": {
+            "pairs_for_50pct_mass": len(full_mass_ids),
+            "pair_ids_for_50pct_mass": full_mass_ids,
+            "pairs_for_90pct_mass": len(contact_mass_ids),
+            "pair_ids_for_90pct_mass": contact_mass_ids,
+            "gini_concentration_index": gini,
+            "curve": concentration_curve,
         },
-        "total_panels_derived": selected_total,
-        "envelope_cap_panels": envelope_cap,
-        "total_panels_admitted": len(panel_ids),
-        "envelope_capped": selected_total > envelope_cap,
-        "pair_ids": panel_ids,
-        "pair_ids_sha256": pair_sample_sha256(panel_ids),
+        "mechanism_strata": mechanism_strata,
+        "mechanism_exemplar_pair_ids": list(dict.fromkeys(mechanism_exemplars)),
+        "break_even": equation,
+        "full_panel_pair_ids_derived": full_derived,
+        "contact_sheet_pair_ids_derived": contact_derived,
+        "snapshot_pair_ids_derived": snapshot_derived,
+        "envelope_cap_pairs": envelope_cap,
+        "envelope_capped": len(snapshot_derived) > envelope_cap,
+        "full_panel_pair_ids": full_ids,
+        "contact_sheet_pair_ids": contact_ids,
+        "snapshot_pair_ids": snapshot_ids,
+        "pair_ids": snapshot_ids,
+        "pair_ids_sha256": pair_sample_sha256(snapshot_ids),
     }
 
 
@@ -1888,6 +1871,20 @@ def _render_panel_bytes(
     return buffer.getvalue()
 
 
+def _contact_thumbnail(source_plane: np.ndarray, source_labels: np.ndarray, receiver_labels: np.ndarray) -> Any:
+    """Return an exact /2 nearest-neighbor disagreement thumbnail."""
+
+    from PIL import Image
+
+    disagreement = source_labels != receiver_labels
+    overlay = (source_plane.astype(np.uint16) // 2).astype(np.uint8)
+    overlay[disagreement] = np.asarray([255, 32, 32], dtype=np.uint8)
+    return Image.fromarray(overlay, mode="RGB").resize(
+        (SCORER_WIDTH // 2, SCORER_HEIGHT // 2),
+        resample=Image.Resampling.NEAREST,
+    )
+
+
 def _write_panel(
     output_dir: Path,
     *,
@@ -2106,13 +2103,17 @@ def observe_checkpoint(
     panel_records: list[dict[str, Any]] = []
     contact_sheet_record: dict[str, Any] | None = None
     if bool(parsed.checkpoint.rng_state["stage_complete"]):
-        panel_ids = tuple(int(value) for value in cohort_receipt["panel_plan"]["pair_ids"])
-        if tuple(panel_manifest.get("pair_ids", ())) != panel_ids:
+        panel_plan = cohort_receipt["panel_plan"]
+        snapshot_ids = tuple(int(value) for value in panel_plan["snapshot_pair_ids"])
+        full_panel_ids = {int(value) for value in panel_plan["full_panel_pair_ids"]}
+        contact_ids = tuple(int(value) for value in panel_plan["contact_sheet_pair_ids"])
+        if tuple(panel_manifest.get("pair_ids", ())) != snapshot_ids:
             raise ObserverError("derived panel base snapshot custody drift")
-        panel_masks, _panel_stratum_custody = load_stratum_masks(band, panel_ids)
-        for start in range(0, len(panel_ids), SCORER_BATCH_SIZE):
-            stop = min(start + SCORER_BATCH_SIZE, len(panel_ids))
-            batch_ids = panel_ids[start:stop]
+        panel_masks, _panel_stratum_custody = load_stratum_masks(band, snapshot_ids)
+        contact_thumbnails: dict[int, Any] = {}
+        for start in range(0, len(snapshot_ids), SCORER_BATCH_SIZE):
+            stop = min(start + SCORER_BATCH_SIZE, len(snapshot_ids))
+            batch_ids = snapshot_ids[start:stop]
             batch = _evaluate_batch(
                 parsed=parsed,
                 binding=binding,
@@ -2142,6 +2143,14 @@ def observe_checkpoint(
             batch_source_argmax = _segnet_argmax_scorer_planes(distortion_net, batch_source)
             batch_receiver_argmax = _segnet_argmax_scorer_planes(distortion_net, batch.receiver_planes)
             for local, pair_id in enumerate(batch_ids):
+                if pair_id in contact_ids:
+                    contact_thumbnails[pair_id] = _contact_thumbnail(
+                        batch_source[local],
+                        batch_source_argmax[local],
+                        batch_receiver_argmax[local],
+                    )
+                if pair_id not in full_panel_ids:
+                    continue
                 payload = _render_panel_bytes(
                     pair_id=pair_id,
                     checkpoint_sha256=parsed.sha256,
@@ -2169,31 +2178,20 @@ def observe_checkpoint(
             gc.collect()
         from PIL import Image
 
-        plan_clusters = cohort_receipt["panel_plan"]["clusters"]
-        record_by_pair = {record["pair_id"]: record for record in panel_records}
-        rows = []
-        for cluster in plan_clusters:
-            thumbnails = []
-            for pair_id in cluster["panel_pair_ids"]:
-                with Image.open(record_by_pair[pair_id]["path"]) as panel_image:
-                    overlay = panel_image.crop((0, 22, SCORER_WIDTH, SCORER_HEIGHT + 22))
-                    thumbnails.append(
-                        overlay.resize(
-                            (SCORER_WIDTH // 2, SCORER_HEIGHT // 2),
-                            resample=Image.Resampling.NEAREST,
-                        )
-                    )
-            rows.append(thumbnails)
-        width = max(len(row) for row in rows) * (SCORER_WIDTH // 2)
-        height = len(rows) * (SCORER_HEIGHT // 2)
+        if set(contact_thumbnails) != set(contact_ids):
+            raise ObserverError("contact-sheet cohort was not evaluated exhaustively")
+        columns = 8
+        rows = (len(contact_ids) + columns - 1) // columns
+        width = min(columns, len(contact_ids)) * (SCORER_WIDTH // 2)
+        height = rows * (SCORER_HEIGHT // 2)
         sheet = Image.new("RGB", (width, height), "black")
-        for row_index, thumbnails in enumerate(rows):
-            for column, thumbnail in enumerate(thumbnails):
-                sheet.paste(
-                    thumbnail,
-                    (column * (SCORER_WIDTH // 2), row_index * (SCORER_HEIGHT // 2)),
-                )
-        sheet_path = output_dir / PANELS_DIR_NAME / f"m1_{parsed.sha256}_cluster_contact_sheet.png"
+        for position, pair_id in enumerate(contact_ids):
+            row_index, column = divmod(position, columns)
+            sheet.paste(
+                contact_thumbnails[pair_id],
+                (column * (SCORER_WIDTH // 2), row_index * (SCORER_HEIGHT // 2)),
+            )
+        sheet_path = output_dir / PANELS_DIR_NAME / f"m1_{parsed.sha256}_concentration_contact_sheet.png"
         if not sheet_path.exists():
             sheet.save(sheet_path, format="PNG", optimize=False, compress_level=9)
         contact_sheet_record = {
@@ -2202,8 +2200,10 @@ def observe_checkpoint(
             "sha256": sha256_file(sheet_path),
             "lossless": True,
             "thumbnail_transform": "exact_integer_divide_by_2_nearest_neighbor",
-            "one_row_per_cluster": True,
-            "cluster_count": len(rows),
+            "columns": columns,
+            "rows": rows,
+            "pair_ids": list(contact_ids),
+            "selection": "minimal_exhaustive_census_prefix_covering_90pct_d_seg_mass",
         }
     checkpoint = parsed.checkpoint
     custody = checkpoint.rng_state["run_custody"]
@@ -2286,7 +2286,7 @@ def observe_checkpoint(
         },
         "stage_panels": {
             "required": bool(checkpoint.rng_state["stage_complete"]),
-            "definition": "BIC_clusters_plus_Neyman_allocation_plus_Good_Turing_break_even_stop",
+            "definition": "census_concentration_50pct_full_90pct_contact_plus_direct_flip_strata_exemplars",
             "panel_plan": cohort_receipt["panel_plan"],
             "records": panel_records,
             "contact_sheet": contact_sheet_record,
@@ -2767,7 +2767,7 @@ def run(config: ObserverConfig) -> int:
                                 bootstrap_manifest,
                                 cohort_ids,
                             )
-                            panel_ids = tuple(cohort_receipt["panel_plan"]["pair_ids"])
+                            panel_ids = tuple(cohort_receipt["panel_plan"]["snapshot_pair_ids"])
                             _panel_camera, panel_manifest = snapshot_panel_from_bootstrap(
                                 output_dir,
                                 bootstrap_camera,
@@ -2797,7 +2797,7 @@ def run(config: ObserverConfig) -> int:
                 if base is None:
                     raise ObserverError("cohort receipt exists without recurring base snapshot")
                 base_camera, base_manifest = base
-                panel_ids = tuple(cohort_receipt["panel_plan"]["pair_ids"])
+                panel_ids = tuple(cohort_receipt["panel_plan"]["snapshot_pair_ids"])
                 panel_base = load_base_snapshot(output_dir, panel_ids, kind="panel_derived")
                 if panel_base is None:
                     raise ObserverError("cohort receipt exists without derived panel base snapshot")

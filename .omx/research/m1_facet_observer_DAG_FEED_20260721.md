@@ -17,9 +17,9 @@ R1b4 packet parse/apply -> exact factor-2 realization -> frozen SegNet/PoseNet
 - DAG: append-only rank rows freeze the recurring and visual cohorts; each
   subsequent checkpoint is processed receiver-first in batches no larger than
   16 and deduplicated by checkpoint SHA-256.
-- Equations: the visual stopping rule consumes
+- Equations: the visual fix-EV diagnostic consumes
   `realization_breakeven_bytes_v1` by registry ID and invokes its registered
-  callable. No rate constant is copied into observer code.
+  callable. It is not used as a stopping estimator for the exhaustive census.
 
 ## Six-hook disposition
 
@@ -31,11 +31,12 @@ R1b4 packet parse/apply -> exact factor-2 realization -> frozen SegNet/PoseNet
 3. Bit allocator: tails and the registered break-even law provide read-only
    diagnostics only; no allocation mutation.
 4. Cathedral/autopilot: no dispatch hook; observer attachment only.
-5. Continual learning: the complete per-pair rank and mechanism-cluster curve
+5. Continual learning: the complete per-pair rank, concentration curve, and
+   direct class-flip strata
    are durable evidence for a later canonical ingest after MAIN review.
-6. Probe disambiguator: BIC curve, Neyman rows, Good-Turing stop, and explicit
-   envelope cap preserve competing mechanism interpretations instead of hiding
-   them behind a fixed K.
+6. Probe disambiguator: complete measured 50%/90% mass prefixes, direct
+   class-flip exemplars, registered fix-EV rows, and the explicit envelope cap
+   preserve the census evidence without an unjustified sampling objective.
 
 ## Pointer delta
 

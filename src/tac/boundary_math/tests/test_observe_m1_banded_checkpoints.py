@@ -409,18 +409,33 @@ def test_panel_plan_is_data_derived_and_consumes_registered_break_even() -> None
     rows = {}
     for pair_id in range(24):
         vector = [0.0] * 27
-        vector[pair_id % 5] = 1.0
+        stratum = pair_id % 2
+        vector[stratum] = 1.0
         vector[-2] = (pair_id % 3) / 2.0
         vector[-1] = float(pair_id % 2)
+        counts = [0] * 25
+        counts[stratum] = 24 - pair_id
+        composition = [0.0] * 25
+        composition[stratum] = 1.0
         rows[pair_id] = {
             "d_seg": (24 - pair_id) / 1000.0,
-            "mechanism_signature": {"vector": vector},
+            "mechanism_signature": {
+                "vector": vector,
+                "class_flip_counts": counts,
+                "class_flip_composition": composition,
+            },
         }
     first = observer.derive_panel_plan(rows)
     second = observer.derive_panel_plan(rows)
     assert first == second
-    assert 2 <= first["k_selected"] <= 20
-    assert len(first["selection_score_curve"]) == 19
-    assert first["good_turing"]["break_even"]["equation_id"] == ("realization_breakeven_bytes_v1")
-    assert first["good_turing"]["break_even"]["callable_roundtrip_bytes"] == 150.0
-    assert first["total_panels_admitted"] == len(first["pair_ids"])
+    assert first["selection_method"] == ("exhaustive_census_mass_concentration_plus_direct_class_flip_strata")
+    assert first["concentration"]["pairs_for_50pct_mass"] == 8
+    assert first["concentration"]["pairs_for_90pct_mass"] == 17
+    assert len(first["concentration"]["curve"]) == 24
+    assert len(first["mechanism_strata"]) == 2
+    assert first["mechanism_exemplar_pair_ids"] == [0, 1]
+    assert first["break_even"]["equation_id"] == "realization_breakeven_bytes_v1"
+    assert first["break_even"]["callable_roundtrip_bytes"] == 150.0
+    assert first["full_panel_pair_ids"] == list(range(8))
+    assert first["contact_sheet_pair_ids"] == list(range(17))
+    assert first["snapshot_pair_ids"] == list(range(17))

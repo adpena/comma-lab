@@ -8,19 +8,21 @@ Promotion authority: **none**; score claim: **false**; pointer: **unchanged**
 
 ## SCOPE_AMENDMENT_ACK
 
-The observer consumes all four binding operator amendments received through
+The observer consumes all five binding operator amendments received through
 the per-arm inbox at `2026-07-21T01:20:52Z`, `01:24:41Z`, `01:25:35Z`, and
-`01:26:01Z`. The fixed random-n24 and hardest-six panel designs are superseded.
+`01:26:01Z`, plus the estimator retraction at `01:54:58Z`. The fixed random-n24,
+hardest-six, BIC, Neyman, and Good-Turing panel designs are superseded.
 The binding design is now:
 
 - first-checkpoint n600 per-pair receiver/scorer sweep when the explicit
   footprint preflight accepts it, else a labelled PCG64 n128 fallback;
 - recurring top-32 d_seg plus 16 seeded-background cohort;
-- BIC-selected mechanism clusters over the bootstrap population, Neyman panel
-  allocation, and Good-Turing stopping against
-  `realization_breakeven_bytes_v1` consumed by ID;
+- measured 50%/90% d_seg-mass prefixes from the exhaustive census, direct
+  class-flip-composition strata with one exemplar per nonempty stratum, and
+  `realization_breakeven_bytes_v1` consumed by ID as fix-EV telemetry only;
 - lossless native-resolution PNG diagnostics, exact signed-delta `.npy`
-  sidecars, bit-exact persisted-map verification, and cluster contact sheet;
+  sidecars, bit-exact persisted-map verification, and eight-per-row
+  concentration contact sheet;
 - out-of-band class-pair excursion, per-pair d_seg/d_pose tails, and explicitly
   pair-internal temporal argmax instability.
 
@@ -48,7 +50,7 @@ Other sealed custody:
 ## Build verification
 
 Status at this checkpoint: implementation review and final amended tests are in
-progress. Runtime PID, launch receipt, first rank/facet rows, measured cluster
+progress. Runtime PID, launch receipt, first rank/facet rows, measured census
 derivation, and panel receipts will be appended before the delegated arm is
 closed.
 
