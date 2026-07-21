@@ -20842,3 +20842,20 @@ the R3 receipt's 216,222 box was 1 B conservative, NOT wrong; strict sub-0.15 bo
 byte caps are D-conditional advisory pre-registrations; the binding cap is recomputed at compose
 time from the candidate's FULL-precision D. Convergence: S1/S2/S3 + per_stratum NO_VERDICT all
 block on the SAME receiver-rate custody the ddm builder's STEP-0 partition ledger produces.
+
+## FEED-hsg-crosswalk-custody (2026-07-21, main)
+nielsen_hsg_crosswalk MERGED (7f6dcef). ZERO adopts — H1/H2/H3 ALREADY-HAVE-BETTER (HSG
+d_H(p,q)=||log p - log q||_var; boundary distance == top-1/top-2 margin EXACTLY, n64 err 0;
+Spearman 0.9569 vs the STRONGER realization-aware rank-4 flip distance d=|m|/||dw||, normal
+norms 2.60-4.01; tropical representative already LOSES the same-coder race 137B vs Aurenhammer
+134B / zero-sum 131B); H4/H5 N-A-WHY at named $0 exits (verdict_scope: current-branch readiness
+/ k=4 proxy only, families open). LOAD-BEARING CORRECTION (H1 axis-labeling LAW): the circulating
+"52% gauge" figure conflates FOUR distinct measured quantities — 52.36% WEIGHT-norm gauge (#519
+param audit) / 69.34% BIAS-norm gauge / ~52.4-52.9% RENDER-ENERGY ker(A) / M1 solved-object
+31.11% gauge + 45.17% ker(A). Every future citation MUST name the axis (param-norm vs
+render-energy) and the object (donor ckpt vs solved M1). H4 routing: fisher_rao stays the ddm
+builder DEFAULT; hilbert_variation_exact + hilbert_lset_t5 are OPTIONAL treatment-only arms,
+admissible only via same-initial-state exact integer/uint8 receiver secants beating the Fisher
+control AND clearing lam_B=6.6586e-7 S/B — never a per-step loss schedule. No new canonical
+equation (H1/H3 governed by segnet_head_affine_gauge_quotient_v1 +
+frozen_scorer_fisher_curvature_margin_colocation_v1 + segnet_head_rank4_linear_flipdist_v1).
