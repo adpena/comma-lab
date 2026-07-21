@@ -1,9 +1,13 @@
 # Task #578-R5 — exact ep725 witness reverse-waterfill
 
-**Date:** 2026-07-21  
-**Lane:** `r5_witness_anchor_waterfill` · `research_only=true`  
-**Authority:** `[macOS-CPU advisory]`, full n600, CPU Torch hard oracle, batch 32, seed 1234  
-**Pointer:** `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**  
+**Date:** 2026-07-21
+
+**Lane:** `r5_witness_anchor_waterfill` · `research_only=true`
+
+**Authority:** `[macOS-CPU advisory]`, full n600, CPU Torch hard oracle, batch 32, seed 1234
+
+**Pointer:** `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**
+
 **MAIN landing review:** **REQUIRED** before any merge, adoption, dispatch, or pointer action.
 
 ## Verdict
