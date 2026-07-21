@@ -484,8 +484,8 @@ class AlongTangentFrequencyGauge(Enum):
     [[lane-dash-residual-root-is-along-tangent-freq-deficit-R-allpass]]).
 
     The live implementation is global Fourier, not a discrete shearlet frame.  Cartoon-optimal
-    shearlet N-term theory motivates the separate localized-family candidate only; it proves no
-    property of this augmentation.  The historical -48% n96 circular direct-partition result is
+    shearlet N-term theory (equation ``shearlet_nterm_upper_bounds_task_rate_v1``) motivates the
+    separate localized-family candidate only; it proves no property of this augmentation.  The historical -48% n96 circular direct-partition result is
     UN-REPRODUCED in V9, while owed16 n600 warm-start measured OFF 0.004244 versus ON 0.004259.
     Fresh-start and genuine localized-family effects remain open.
 
