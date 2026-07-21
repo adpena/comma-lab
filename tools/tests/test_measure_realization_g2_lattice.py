@@ -6,14 +6,21 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from tac.boundary_math import warp_real_luma_frame0 as g1_warp
 from tools.measure_realization_g2_lattice import (
+    CONTEXTUAL_STAGE_SCHEMA,
     INTERIOR_STAGE_SCHEMA,
     SOURCE_CONTROL_STAGE_SCHEMA,
     RealizationAuditError,
+    apply_contextual_rgb_exceptions,
     apply_dying_write_exceptions,
     audit_prefix,
+    contextual_advected_rgb_plane,
+    contextual_banded_projection,
+    encode_contextual_rgb_exceptions,
     encode_dying_write_exceptions,
     interior_rgb_plane,
+    summarize_contextual_prefix,
     summarize_interior_prefix,
     summarize_source_control_prefix,
 )
@@ -77,9 +84,7 @@ def _source_control_stage(pair: int, *, survives: bool) -> dict:
             "d_pose_realized_outside_declared_tube": 0.0,
             "pose_within_declared_tube": True,
         },
-        "declared_write_survival": [
-            {"class_id": 1, "stratum": "boundary_codim1", "survives": survives}
-        ],
+        "declared_write_survival": [{"class_id": 1, "stratum": "boundary_codim1", "survives": survives}],
         "timings_seconds": {
             "source_cache_load": 0.1,
             "seed_cell_decode": 0.2,
@@ -150,6 +155,97 @@ def test_r4_exception_stream_contains_only_dying_ordinals_and_roundtrips():
     assert decoded[3, 4].tolist() == [11, 12, 13]
     assert decoded[9, 10].tolist() == [21, 22, 23]
     assert decoded[7, 8].tolist() == [127, 127, 127]
+
+
+def test_contextual_exception_stream_uses_seed_ordinals_and_roundtrips_exactly():
+    constraints = [
+        {"y": 3, "x": 4, "cell_id": 1, "stratum": "boundary_codim1"},
+        {"y": 7, "x": 8, "cell_id": 0, "stratum": "critical_event"},
+        {"y": 9, "x": 10, "cell_id": 4, "stratum": "cell_interior"},
+    ]
+    base = np.full((384, 512, 3), 127, dtype=np.uint8)
+    projected = base.copy()
+    projected[3, 4] = (51, 255, 204)
+    projected[9, 10] = (0, 255, 153)
+    payload, ordinals = encode_contextual_rgb_exceptions(base, projected, constraints)
+    decoded, decoded_ordinals = apply_contextual_rgb_exceptions(base, constraints, payload)
+    assert ordinals == decoded_ordinals == [0, 2]
+    assert np.array_equal(decoded, projected)
+    assert encode_contextual_rgb_exceptions(base, decoded, constraints)[0] == payload
+
+    corrupted = bytearray(payload)
+    corrupted[-1] ^= 1
+    with pytest.raises(RealizationAuditError, match="checksum"):
+        apply_contextual_rgb_exceptions(base, constraints, bytes(corrupted))
+
+
+def test_contextual_banded_projection_changes_only_violated_sites_toward_prototype():
+    constraints = [
+        {"y": 3, "x": 4, "cell_id": 1, "stratum": "boundary_codim1"},
+        {"y": 7, "x": 8, "cell_id": 0, "stratum": "critical_event"},
+    ]
+    base = np.full((384, 512, 3), 127, dtype=np.uint8)
+    projected = contextual_banded_projection(base, constraints, [0], 32)
+    assert projected[3, 4].tolist() == [95, 159, 159]
+    assert projected[7, 8].tolist() == [127, 127, 127]
+    changed = np.any(projected != base, axis=2)
+    assert int(np.count_nonzero(changed)) == 1
+
+
+def test_contextual_advected_rgb_identity_is_byte_exact_for_zero_xi():
+    yy, xx = np.indices((384, 512))
+    plane = np.stack((yy % 256, xx % 256, (yy + xx) % 256), axis=-1).astype(np.uint8)
+    geom = g1_warp.GroundHomographyGeom.eon(native_hw=(384, 512), pitch=-0.05)
+    warped = contextual_advected_rgb_plane(plane, np.zeros(6), geom)
+    assert np.array_equal(warped, plane)
+
+
+def _contextual_stage(pair: int, *, survives: bool) -> dict:
+    return {
+        "schema": CONTEXTUAL_STAGE_SCHEMA,
+        "pair_index": pair,
+        "uint8_factor2_exact": True,
+        "double_decode_identical": True,
+        "hard_oracle": {
+            "d_seg_realized_vs_frozen_target": 0.2,
+            "d_seg_description_vs_frozen_target": 0.3,
+            "d_seg_realized_argmax_vs_description": 0.4,
+            "realized_argmax_equals_description": survives,
+            "all_declared_writes_survive": survives,
+            "d_pose_realized_vs_frozen_target": 0.01,
+            "d_pose_realized_outside_declared_tube": 0.02,
+            "pose_within_declared_tube": survives,
+        },
+        "declared_write_survival": [
+            {
+                "ordinal": 0,
+                "class_id": 1,
+                "stratum": "boundary_codim1",
+                "survives": survives,
+                "target_logit_margin": 0.5 if survives else -0.5,
+                "margin_bucket": "positive_le_1" if survives else "nonpositive",
+            }
+        ],
+        "exception_stream": {"bytes": 19, "record_count": 1},
+        "projection": {"selected_band": 32},
+    }
+
+
+def test_contextual_prefix_keeps_whole_description_write_pose_and_bytes_separate():
+    rows = [_contextual_stage(pair, survives=pair % 2 == 0) for pair in range(16)]
+    summary = summarize_contextual_prefix(16, rows, bootstrap_bytes=100_000)
+    assert summary["semantic_cells_to_rgb_exact_pair_count"] == 8
+    assert summary["all_declared_writes_survive_pair_count"] == 8
+    assert summary["declared_write_survival_fraction"] == 0.5
+    assert summary["pose_within_declared_tube_pair_count"] == 8
+    assert summary["margin_survival_contingency"] == {
+        "positive_survives": 8,
+        "positive_total": 8,
+        "nonpositive_survives": 0,
+        "nonpositive_total": 8,
+    }
+    assert summary["byte_accounting"]["contextual_total_bytes"] == 78_969 + 100_000 + 16 * 19
+    assert summary["byte_accounting"]["fits_target_box"] is True
 
 
 def _interior_stage(pair: int, *, survives: bool, rung: str = "R2_MAX_MARGIN") -> dict:
