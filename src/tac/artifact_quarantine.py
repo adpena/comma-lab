@@ -18,7 +18,9 @@ present-but-unparseable manifest (corruption is not a license).
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -53,6 +55,28 @@ DEFAULT_QUARANTINED: tuple[dict, ...] = (
     {"id": "r1 dxi", "kind": "token_ci",
      "what": "the banked R1 store-nothing pose dxi artifact",
      "reason": "trained pose artifact; its NUMBERS remain citable signal"},
+    # --- 2026-07-21 RECURRENCE #2: the M1/C2 byte-close family. The first manifest
+    # registered the ep725/r5 witness family but MISSED these; per_stratum decoded
+    # a386a854 as a "control" and a receiver prompt cited it as a scaffold. These are
+    # TRACKED defaults (not the gitignored manifest) so they reach EVERY worktree and
+    # EVERY Claude/Codex subagent via `import tac`, not just this checkout. ---
+    {"id": "a386a854", "kind": "archive_sha_prefix",
+     "what": "M1/C2 banded-generator byte-close (90,566 B) — STOPPED MID-RUN, pose OFF "
+             "(d_pose 127.4), segnet not conditioned for joint descent",
+     "reason": "07-21 archive-gravity RECURRENCE #2 — un-converged; harvest-signal-only"},
+    {"id": "3748485f", "kind": "archive_sha_prefix",
+     "what": "r5 waterfill d2_jrd_fixture_transfer byte-close (79,008 B)",
+     "reason": "witness/r5-derived, pre-realization-crux"},
+    {"id": "d633e6bf", "kind": "archive_sha_prefix",
+     "what": "m1_c2_glue_rebuild pre_archive (94,344 B)",
+     "reason": "old-vehicle byte-close, pre-realization-crux"},
+    {"id": "e9e42971", "kind": "archive_sha_prefix",
+     "what": "m1_c2_glue_rebuild post_archive (94,352 B)",
+     "reason": "old-vehicle byte-close, pre-realization-crux"},
+    {"id": "m1_byteclose_20260721", "kind": "path_token",
+     "what": "M1/C2 byte-close evidence dir", "reason": "old M1/C2 bytes — harvest-signal-only"},
+    {"id": "m1_c2_glue_rebuild_20260719", "kind": "path_token",
+     "what": "M1/C2 glue-rebuild evidence dir", "reason": "old M1/C2 bytes — harvest-signal-only"},
 )
 _WAIVER_RE = re.compile(
     r"QUARANTINE-WAIVER:\s*HARVEST-SIGNAL-ONLY\s*[—-]\s*(\S.{9,})", re.IGNORECASE
@@ -139,3 +163,82 @@ def refuse_message(hits: list[QuarantineHit]) -> str:
         "'QUARANTINE-WAIVER: HARVEST-SIGNAL-ONLY — <real rationale>' to the prompt."
     )
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# RUNTIME DECODE GATE (operator 2026-07-21: "apply to main and all worktrees and
+# all Claude and Codex subagents"). The prompt-scan above guards only the SPAWN
+# text; this guards the BYTES at the moment of decode. Because every decode path
+# imports `tac` and passes an archive through here, this fires in main, in every
+# worktree, and in every Claude/Codex subagent — regardless of which spawn path
+# (or none) created the work, and regardless of whether the prompt named the SHA.
+# ---------------------------------------------------------------------------
+
+_SIGNAL_ONLY_ENV = "TAC_ARTIFACT_QUARANTINE_SIGNAL_ONLY"
+
+
+class QuarantineViolation(RuntimeError):
+    """A quarantined artifact's BYTES were opened for consumption. Fail closed."""
+
+
+def sha256_of_file(path: Path | str) -> str:
+    """Streaming sha256 of a file's bytes (empty string if unreadable)."""
+    h = hashlib.sha256()
+    try:
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(chunk)
+    except OSError:
+        return ""
+    return h.hexdigest()
+
+
+def is_quarantined_archive(
+    path: Path | str, repo_root: Path | None = None
+) -> list[QuarantineHit]:
+    """QuarantineHits for an archive FILE — matched by content sha256 AND by path.
+
+    sha256 catches a rename/copy of the exact bytes (the a386a854 recurrence class);
+    the path string catches evidence-dir path tokens. Waiver applies as in scan_text.
+    """
+    p = Path(path)
+    hits: list[QuarantineHit] = []
+    sha = sha256_of_file(p)
+    if sha:
+        hits += scan_text(sha, repo_root)
+    hits += scan_text(str(p), repo_root)
+    seen: set[str] = set()
+    uniq: list[QuarantineHit] = []
+    for h in hits:
+        if h.identifier not in seen:
+            seen.add(h.identifier)
+            uniq.append(h)
+    return uniq
+
+
+def assert_not_quarantined_archive(
+    path: Path | str, *, context: str = "", repo_root: Path | None = None
+) -> None:
+    """Refuse to OPEN a quarantined archive's bytes for consumption.
+
+    Call this at every decode/byte-close/measurement archive-open site. A quarantined
+    archive may be opened SIGNAL-ONLY (metrics/receipts, never bytes-as-carrier) by
+    setting ``TAC_ARTIFACT_QUARANTINE_SIGNAL_ONLY=<>=10-char rationale>``; that logs
+    loudly and returns. Otherwise raises :class:`QuarantineViolation`.
+    """
+    hits = is_quarantined_archive(path, repo_root)
+    if not hits:
+        return
+    waiver = os.environ.get(_SIGNAL_ONLY_ENV, "").strip()
+    if len(waiver) >= 10:
+        print(
+            f"[artifact_quarantine] SIGNAL-ONLY open of quarantined archive {path} "
+            f"(context={context!r}; rationale={waiver!r})",
+            file=sys.stderr,
+        )
+        return
+    raise QuarantineViolation(
+        f"REFUSED to decode quarantined archive {path} (context={context!r}).\n"
+        f"{refuse_message(hits)}\n"
+        f"If ONLY signal (metrics/receipts) is consumed, set {_SIGNAL_ONLY_ENV}=<rationale>."
+    )

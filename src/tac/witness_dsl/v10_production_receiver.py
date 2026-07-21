@@ -888,6 +888,10 @@ def _zip_bytes(packet_bytes: bytes) -> bytes:
 
 
 def _read_archive_packet(archive_path: Path) -> tuple[bytes, str, int]:
+    # RUNTIME QUARANTINE GATE (operator 2026-07-21): a retired-vehicle archive's BYTES
+    # are never decoded here — universal across main/worktrees/subagents via `import tac`.
+    from tac.artifact_quarantine import assert_not_quarantined_archive
+    assert_not_quarantined_archive(archive_path, context="v10_production_receiver decode")
     try:
         archive_bytes = archive_path.read_bytes()
     except OSError as exc:

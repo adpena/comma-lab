@@ -2822,6 +2822,10 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
     inflated_dir = packet_dir / "inflated"
     archive_dir.mkdir(exist_ok=True)
     inflated_dir.mkdir(exist_ok=True)
+    # RUNTIME QUARANTINE GATE (operator 2026-07-21): refuse to decode a retired-vehicle
+    # archive's BYTES here — this fires in main, every worktree, and every subagent.
+    from tac.artifact_quarantine import assert_not_quarantined_archive
+    assert_not_quarantined_archive(packet_dir / "archive.zip", context="levelset_byte_close decode")
     with zipfile.ZipFile(packet_dir / "archive.zip") as zf:
         zf.extractall(archive_dir)
     src_bin = archive_dir / "0.bin"
