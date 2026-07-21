@@ -15,6 +15,7 @@ mutate a pointer.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import math
@@ -63,6 +64,8 @@ BAND_SCHEMA: Final = "c2_anisotropic_band_artifact.v1"
 TRAINER_CONFIG_SCHEMA: Final = "c2_integer_plane_banded_trainer_config.v1"
 TRAINING_RECEIPT_SCHEMA: Final = "c2_integer_plane_banded_training_receipt.v1"
 BASE_MATERIALIZATION_SCHEMA: Final = "c2_base_plane_materialization.v1"
+BASE_SCORER_CACHE_ROOT: Final = Path("/Volumes/VertigoDataTier/pact/cache/base_scorer_planes")
+SCORER_PROJECTION_BATCH_PLANES: Final = 4
 ALLOWED_STAGES: Final = ("warmup", "band_fit", "rate_polish")
 RATE_SCORE_PER_BYTE: Final = 25.0 / 37_545_489.0
 C2_MEASURED_FLIP_CANDIDATES: Final = 38_077
@@ -1025,6 +1028,109 @@ def _zip_eof_offset(path: Path) -> int:
     return raw_size - tail_size + marker + 22 + comment_len
 
 
+def inflate_worker_count() -> int:
+    """Resolve the decoder worker request, preserving an explicit env override."""
+
+    configured = os.environ.get("INFLATE_WORKERS")
+    if configured is None:
+        return max(1, (os.cpu_count() or 1) - 2)
+    try:
+        workers = int(configured)
+    except ValueError as exc:
+        raise C2BandedTrainerError("INFLATE_WORKERS must be a positive integer") from exc
+    if workers < 1:
+        raise C2BandedTrainerError("INFLATE_WORKERS must be a positive integer")
+    return workers
+
+
+def _project_camera_planes_batched(camera: np.ndarray, out: np.ndarray) -> None:
+    """Apply the exact factor-2 scorer projection in bounded NumPy batches."""
+
+    if camera.ndim != 5 or camera.shape[1:] != (
+        PLANE_COUNT,
+        CAMERA_HEIGHT,
+        CAMERA_WIDTH,
+        RGB_CHANNELS,
+    ):
+        raise C2BandedTrainerError("camera projection input geometry mismatch")
+    if out.shape != (camera.shape[0], *PLANE_SHAPE) or out.dtype != np.uint8:
+        raise C2BandedTrainerError("scorer projection output geometry mismatch")
+    operator = factor2_operator()
+    row_indices = np.asarray([support.indices for support in operator.row_supports], dtype=np.intp)
+    col_indices = np.asarray([support.indices for support in operator.col_supports], dtype=np.intp)
+    row_numerators = np.asarray([support.numerators for support in operator.row_supports], dtype=np.int64)
+    col_numerators = np.asarray([support.numerators for support in operator.col_supports], dtype=np.int64)
+    denominators = {
+        int(row.denominator) * int(col.denominator) for row in operator.row_supports for col in operator.col_supports
+    }
+    if len(denominators) != 1:
+        raise C2BandedTrainerError("factor-2 projection lacks one exact denominator")
+    denominator = denominators.pop()
+    coefficients = (row_numerators[:, None, :, None] * col_numerators[None, :, None, :])[None, ..., None]
+    camera_planes = camera.reshape((-1, CAMERA_HEIGHT, CAMERA_WIDTH, RGB_CHANNELS))
+    scorer_planes = out.reshape((-1, SCORER_HEIGHT, SCORER_WIDTH, RGB_CHANNELS))
+    for start in range(0, len(camera_planes), SCORER_PROJECTION_BATCH_PLANES):
+        stop = min(start + SCORER_PROJECTION_BATCH_PLANES, len(camera_planes))
+        source = camera_planes[start:stop].astype(np.int64, copy=False)
+        blocks = source[:, row_indices[:, None, :, None], col_indices[None, :, None, :], :]
+        numerators = np.sum(blocks * coefficients, axis=(3, 4), dtype=np.int64)
+        scorer_planes[start:stop] = np.clip(np.rint(numerators.astype(np.float64) / denominator), 0.0, 255.0).astype(
+            np.uint8
+        )
+
+
+def _load_shared_base_cache(
+    *,
+    scorer: Path,
+    receipt_path: Path,
+    archive_hash: str,
+    decoder_hash: str,
+    cache_key: str,
+) -> tuple[np.memmap, str, dict[str, Any]] | None:
+    """Validate every byte of a shared cache hit, or fail closed on debris."""
+
+    if not scorer.exists() and not receipt_path.exists():
+        return None
+    if not scorer.is_file() or not receipt_path.is_file():
+        raise C2BandedTrainerError("shared base materialization cache is incomplete")
+    receipt_raw = receipt_path.read_bytes()
+    try:
+        receipt = json.loads(receipt_raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise C2BandedTrainerError("shared base materialization receipt is invalid JSON") from exc
+    if canonical_json(receipt) != receipt_raw:
+        raise C2BandedTrainerError("shared base materialization receipt is noncanonical")
+    expected = {
+        "schema": BASE_MATERIALIZATION_SCHEMA,
+        "base_archive_sha256": archive_hash,
+        "base_decoder_sha256": decoder_hash,
+        "scorer_planes": str(scorer),
+        "logical_geometry": [LOGICAL_PAIR_COUNT, *PLANE_SHAPE],
+    }
+    if any(receipt.get(key) != value for key, value in expected.items()):
+        raise C2BandedTrainerError("shared base materialization custody is stale")
+    cache = receipt.get("shared_cache")
+    if not isinstance(cache, dict) or cache.get("key") != cache_key or cache.get("certified_rebuildable") is not True:
+        raise C2BandedTrainerError("shared base materialization cache custody is stale")
+    if receipt.get("scorer_planes_bytes") != scorer.stat().st_size:
+        raise C2BandedTrainerError("shared base scorer planes byte count mismatch")
+    scorer_hash = sha256_file(scorer)
+    if receipt.get("scorer_planes_sha256") != scorer_hash:
+        raise C2BandedTrainerError("shared base scorer planes SHA mismatch")
+    array = np.load(scorer, mmap_mode="r", allow_pickle=False)
+    if (
+        not isinstance(array, np.memmap)
+        or array.dtype != np.uint8
+        or array.shape
+        != (
+            LOGICAL_PAIR_COUNT,
+            *PLANE_SHAPE,
+        )
+    ):
+        raise C2BandedTrainerError("shared base scorer planes array geometry mismatch")
+    return array, scorer_hash, receipt
+
+
 def materialize_base_scorer_planes(
     *,
     base_archive: str | Path,
@@ -1033,6 +1139,7 @@ def materialize_base_scorer_planes(
     base_decoder_sha256: str,
     scratch_root: str | Path,
     python: str = sys.executable,
+    shared_cache_root: str | Path = BASE_SCORER_CACHE_ROOT,
 ) -> tuple[np.memmap, str, dict[str, Any]]:
     """Decode a counted base packet once, then stream-project it to scorer planes.
 
@@ -1056,103 +1163,134 @@ def materialize_base_scorer_planes(
     root.mkdir(parents=True, exist_ok=True)
     packet = root / "base_packet_0.bin"
     raw = root / "base_camera_frames.raw"
-    scorer_partial = root / "base_scorer_planes.npy.partial"
-    scorer = root / "base_scorer_planes.npy"
-    receipt_path = root / "base_scorer_planes.materialization.json"
+    local_scorer_partial = root / "base_scorer_planes.npy.partial"
+    cache_root = Path(shared_cache_root).expanduser().resolve()
+    cache_root.mkdir(parents=True, exist_ok=True)
+    cache_key = f"{archive_hash[:16]}_{decoder_hash[:16]}"
+    cache_dir = cache_root / cache_key
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    scorer = cache_dir / "base_scorer_planes.npy"
+    scorer_partial = cache_dir / "base_scorer_planes.npy.partial"
+    receipt_path = cache_dir / "base_scorer_planes.materialization.json"
+    receipt_partial = cache_dir / "base_scorer_planes.materialization.json.partial"
+    lock_path = cache_dir / "materialization.lock"
 
-    if scorer.exists() and receipt_path.exists():
-        receipt_raw = receipt_path.read_bytes()
-        receipt = json.loads(receipt_raw)
-        if canonical_json(receipt) != receipt_raw:
-            raise C2BandedTrainerError("existing base materialization receipt is noncanonical")
-        expected = {
-            "schema": BASE_MATERIALIZATION_SCHEMA,
-            "base_archive_sha256": archive_hash,
-            "base_decoder_sha256": decoder_hash,
-        }
-        if any(receipt.get(key) != value for key, value in expected.items()):
-            raise C2BandedTrainerError("existing base materialization custody is stale")
+    with lock_path.open("a+b") as lock_handle:
+        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+        cached = _load_shared_base_cache(
+            scorer=scorer,
+            receipt_path=receipt_path,
+            archive_hash=archive_hash,
+            decoder_hash=decoder_hash,
+            cache_key=cache_key,
+        )
+        if cached is not None:
+            return cached
+
+        for target in (packet, raw, local_scorer_partial):
+            if target.exists():
+                raise C2BandedTrainerError(f"uncertified stale base scratch requires review: {target}")
+        for target in (scorer_partial, receipt_partial):
+            if target.exists():
+                raise C2BandedTrainerError(f"uncertified stale shared cache requires review: {target}")
+        with zipfile.ZipFile(archive, "r") as zf:
+            infos = zf.infolist()
+            if len(infos) != 1 or infos[0].filename != "0.bin" or infos[0].is_dir():
+                raise C2BandedTrainerError("base archive must contain exactly the counted 0.bin section")
+            if infos[0].flag_bits & 0x1:
+                raise C2BandedTrainerError("encrypted base packets are forbidden")
+            with zf.open(infos[0], "r") as source_handle, packet.open("xb") as target_handle:
+                shutil.copyfileobj(source_handle, target_handle, length=8 << 20)
+                target_handle.flush()
+                os.fsync(target_handle.fileno())
+        workers = inflate_worker_count()
+        command = [str(python), str(decoder), str(packet), str(raw)]
+        env = os.environ.copy()
+        env.update(
+            {
+                "INFLATE_MAX_PAIRS": str(LOGICAL_PAIR_COUNT),
+                "INFLATE_WORKERS": str(workers),
+            }
+        )
+        proc = subprocess.run(command, env=env, capture_output=True, text=True, check=False)
+        if proc.returncode != 0:
+            raise C2BandedTrainerError(f"base decoder failed rc={proc.returncode}: {proc.stderr[-1000:]}")
+        expected_raw_bytes = LOGICAL_PAIR_COUNT * PLANE_COUNT * CAMERA_HEIGHT * CAMERA_WIDTH * RGB_CHANNELS
+        if not raw.exists() or raw.stat().st_size != expected_raw_bytes:
+            raise C2BandedTrainerError("base decoder raw output size mismatch")
+        camera = np.memmap(
+            raw,
+            dtype=np.uint8,
+            mode="r",
+            shape=(LOGICAL_PAIR_COUNT, PLANE_COUNT, CAMERA_HEIGHT, CAMERA_WIDTH, RGB_CHANNELS),
+        )
+        out = np.lib.format.open_memmap(
+            scorer_partial,
+            mode="w+",
+            dtype=np.uint8,
+            shape=(LOGICAL_PAIR_COUNT, *PLANE_SHAPE),
+        )
+        _project_camera_planes_batched(camera, out)
+        out.flush()
+        del out, camera
+        with scorer_partial.open("rb") as handle:
+            os.fsync(handle.fileno())
+        os.replace(scorer_partial, scorer)
         scorer_hash = sha256_file(scorer)
-        if receipt.get("scorer_planes_sha256") != scorer_hash:
-            raise C2BandedTrainerError("existing base scorer planes SHA mismatch")
-        array = np.load(scorer, mmap_mode="r", allow_pickle=False)
-        return array, scorer_hash, receipt
-
-    for target in (packet, raw, scorer_partial):
-        if target.exists():
-            raise C2BandedTrainerError(f"uncertified stale base scratch requires review: {target}")
-    with zipfile.ZipFile(archive, "r") as zf:
-        infos = zf.infolist()
-        if len(infos) != 1 or infos[0].filename != "0.bin" or infos[0].is_dir():
-            raise C2BandedTrainerError("base archive must contain exactly the counted 0.bin section")
-        if infos[0].flag_bits & 0x1:
-            raise C2BandedTrainerError("encrypted base packets are forbidden")
-        with zf.open(infos[0], "r") as source_handle, packet.open("xb") as target_handle:
-            shutil.copyfileobj(source_handle, target_handle, length=8 << 20)
-            target_handle.flush()
-            os.fsync(target_handle.fileno())
-    command = [str(python), str(decoder), str(packet), str(raw)]
-    env = os.environ.copy()
-    env.update({"INFLATE_MAX_PAIRS": str(LOGICAL_PAIR_COUNT), "INFLATE_WORKERS": "1"})
-    proc = subprocess.run(command, env=env, capture_output=True, text=True, check=False)
-    if proc.returncode != 0:
-        raise C2BandedTrainerError(f"base decoder failed rc={proc.returncode}: {proc.stderr[-1000:]}")
-    expected_raw_bytes = LOGICAL_PAIR_COUNT * PLANE_COUNT * CAMERA_HEIGHT * CAMERA_WIDTH * RGB_CHANNELS
-    if not raw.exists() or raw.stat().st_size != expected_raw_bytes:
-        raise C2BandedTrainerError("base decoder raw output size mismatch")
-    camera = np.memmap(
-        raw,
-        dtype=np.uint8,
-        mode="r",
-        shape=(LOGICAL_PAIR_COUNT, PLANE_COUNT, CAMERA_HEIGHT, CAMERA_WIDTH, RGB_CHANNELS),
-    )
-    out = np.lib.format.open_memmap(
-        scorer_partial,
-        mode="w+",
-        dtype=np.uint8,
-        shape=(LOGICAL_PAIR_COUNT, *PLANE_SHAPE),
-    )
-    operator = factor2_operator()
-    for pair_index in range(LOGICAL_PAIR_COUNT):
-        for plane_index in range(PLANE_COUNT):
-            numerator, denominator = operator.apply_numerators(camera[pair_index, plane_index])
-            out[pair_index, plane_index] = np.clip(
-                np.rint(numerator.astype(np.float64) / denominator), 0.0, 255.0
-            ).astype(np.uint8)
-    out.flush()
-    del out, camera
-    os.replace(scorer_partial, scorer)
-    scorer_hash = sha256_file(scorer)
-    packet_hash = sha256_file(packet)
-    raw_hash = sha256_file(raw)
-    receipt = {
-        "schema": BASE_MATERIALIZATION_SCHEMA,
-        "base_archive": str(archive),
-        "base_archive_bytes": archive.stat().st_size,
-        "base_archive_sha256": archive_hash,
-        "base_decoder": str(decoder),
-        "base_decoder_sha256": decoder_hash,
-        "command": command,
-        "environment": {"INFLATE_MAX_PAIRS": str(LOGICAL_PAIR_COUNT), "INFLATE_WORKERS": "1"},
-        "packet_scratch": {"path": str(packet), "bytes": packet.stat().st_size, "sha256": packet_hash},
-        "camera_raw_scratch": {"path": str(raw), "bytes": raw.stat().st_size, "sha256": raw_hash},
-        "scorer_planes": str(scorer),
-        "scorer_planes_bytes": scorer.stat().st_size,
-        "scorer_planes_sha256": scorer_hash,
-        "logical_geometry": [LOGICAL_PAIR_COUNT, *PLANE_SHAPE],
-        "cleanup": {
-            "success_only": True,
-            "certified_rebuildable": [str(packet), str(raw)],
-            "reason": "deterministically regenerated from hash-bound counted base archive and decoder",
-        },
-    }
-    receipt_path.write_bytes(canonical_json(receipt))
-    with receipt_path.open("rb") as handle:
-        os.fsync(handle.fileno())
-    packet.unlink()
-    raw.unlink()
-    array = np.load(scorer, mmap_mode="r", allow_pickle=False)
-    return array, scorer_hash, receipt
+        packet_hash = sha256_file(packet)
+        raw_hash = sha256_file(raw)
+        receipt = {
+            "schema": BASE_MATERIALIZATION_SCHEMA,
+            "base_archive": str(archive),
+            "base_archive_bytes": archive.stat().st_size,
+            "base_archive_sha256": archive_hash,
+            "base_decoder": str(decoder),
+            "base_decoder_sha256": decoder_hash,
+            "command": command,
+            "environment": {
+                "INFLATE_MAX_PAIRS": str(LOGICAL_PAIR_COUNT),
+                "INFLATE_WORKERS": str(workers),
+            },
+            "packet_scratch": {"path": str(packet), "bytes": packet.stat().st_size, "sha256": packet_hash},
+            "camera_raw_scratch": {"path": str(raw), "bytes": raw.stat().st_size, "sha256": raw_hash},
+            "scorer_planes": str(scorer),
+            "scorer_planes_bytes": scorer.stat().st_size,
+            "scorer_planes_sha256": scorer_hash,
+            "logical_geometry": [LOGICAL_PAIR_COUNT, *PLANE_SHAPE],
+            "projection": {
+                "method": "exact_numpy_batched_factor2_numerators",
+                "batch_planes": SCORER_PROJECTION_BATCH_PLANES,
+            },
+            "shared_cache": {
+                "root": str(cache_root),
+                "key": cache_key,
+                "certified_rebuildable": True,
+                "atomic_population": True,
+                "source_identity": "archive_sha256_plus_decoder_sha256",
+            },
+            "cleanup": {
+                "success_only": True,
+                "certified_rebuildable": [str(packet), str(raw)],
+                "reason": "deterministically regenerated from hash-bound counted base archive and decoder",
+            },
+        }
+        with receipt_partial.open("xb") as handle:
+            handle.write(canonical_json(receipt))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(receipt_partial, receipt_path)
+        packet.unlink()
+        raw.unlink()
+        cached = _load_shared_base_cache(
+            scorer=scorer,
+            receipt_path=receipt_path,
+            archive_hash=archive_hash,
+            decoder_hash=decoder_hash,
+            cache_key=cache_key,
+        )
+        if cached is None:  # pragma: no cover - guarded by the atomic population above
+            raise C2BandedTrainerError("shared base materialization vanished after population")
+        return cached
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1279,6 +1417,7 @@ __all__ = [
     "TrainerConfig",
     "build_parser",
     "canonical_json",
+    "inflate_worker_count",
     "load_training_state",
     "main",
     "materialize_base_scorer_planes",

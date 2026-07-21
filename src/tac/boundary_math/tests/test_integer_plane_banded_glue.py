@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import zipfile
 from dataclasses import replace
@@ -307,12 +308,122 @@ def _write_base_archive(path: Path) -> None:
 def _write_decoder(path: Path) -> None:
     path.write_text(
         "import os,sys\n"
+        "expected=os.environ.get('EXPECT_INFLATE_WORKERS')\n"
+        "assert expected is None or os.environ['INFLATE_WORKERS']==expected\n"
         "n=int(os.environ['INFLATE_MAX_PAIRS'])\n"
         "fb=874*1164*3\n"
         "with open(sys.argv[2], 'wb') as f:\n"
         "  [f.write(bytes([96])*fb + bytes([160])*fb) for _ in range(n)]\n",
         encoding="ascii",
     )
+
+
+def test_inflate_worker_resolution_honors_env_and_defaults_below_cpu_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("INFLATE_WORKERS", raising=False)
+    monkeypatch.setattr(trainer.os, "cpu_count", lambda: 12)
+    assert trainer.inflate_worker_count() == 10
+    monkeypatch.setenv("INFLATE_WORKERS", "3")
+    assert trainer.inflate_worker_count() == 3
+    monkeypatch.setenv("INFLATE_WORKERS", "0")
+    with pytest.raises(C2BandedTrainerError, match="positive integer"):
+        trainer.inflate_worker_count()
+
+
+def test_batched_projection_is_byte_identical_to_serial_factor2() -> None:
+    rng = np.random.default_rng(20260721)
+    camera = rng.integers(
+        0,
+        256,
+        size=(2, 2, trainer.CAMERA_HEIGHT, trainer.CAMERA_WIDTH, trainer.RGB_CHANNELS),
+        dtype=np.uint8,
+    )
+    batched = np.empty((2, *PLANE_SHAPE), dtype=np.uint8)
+    trainer._project_camera_planes_batched(camera, batched)
+    serial = np.empty_like(batched)
+    operator = trainer.factor2_operator()
+    for pair_index in range(2):
+        for plane_index in range(2):
+            numerator, denominator = operator.apply_numerators(camera[pair_index, plane_index])
+            serial[pair_index, plane_index] = np.clip(
+                np.rint(numerator.astype(np.float64) / denominator), 0.0, 255.0
+            ).astype(np.uint8)
+    np.testing.assert_array_equal(batched, serial)
+
+
+def test_materialization_shared_cache_hit_miss_env_and_stale_receipt_refuse(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(trainer, "LOGICAL_PAIR_COUNT", 2)
+    monkeypatch.setenv("INFLATE_WORKERS", "3")
+    monkeypatch.setenv("EXPECT_INFLATE_WORKERS", "3")
+    base = tmp_path / "base.zip"
+    decoder = tmp_path / "inflate.py"
+    _write_base_archive(base)
+    _write_decoder(decoder)
+    calls: list[dict[str, str]] = []
+    real_run = trainer.subprocess.run
+
+    def counted_run(*args: object, **kwargs: object) -> object:
+        calls.append(dict(kwargs["env"]))
+        return real_run(*args, **kwargs)
+
+    monkeypatch.setattr(trainer.subprocess, "run", counted_run)
+    common = {
+        "base_archive": base,
+        "base_archive_sha256": sha256_file(base),
+        "base_decoder": decoder,
+        "base_decoder_sha256": sha256_file(decoder),
+        "python": os.sys.executable,
+        "shared_cache_root": tmp_path / "shared",
+    }
+    first, first_hash, first_receipt = trainer.materialize_base_scorer_planes(scratch_root=tmp_path / "run_a", **common)
+    assert isinstance(first, np.memmap)
+    assert Path(first.filename).is_relative_to(tmp_path / "shared")
+    assert first_receipt["environment"]["INFLATE_WORKERS"] == "3"
+    assert first_receipt["shared_cache"]["certified_rebuildable"] is True
+    assert calls[0]["INFLATE_WORKERS"] == "3"
+    assert not (tmp_path / "run_a" / "base_packet_0.bin").exists()
+    assert not (tmp_path / "run_a" / "base_camera_frames.raw").exists()
+
+    second, second_hash, second_receipt = trainer.materialize_base_scorer_planes(
+        scratch_root=tmp_path / "run_b", **common
+    )
+    assert isinstance(second, np.memmap)
+    assert Path(second.filename) == Path(first.filename)
+    assert second_hash == first_hash
+    assert second_receipt == first_receipt
+    assert len(calls) == 1
+
+    monkeypatch.setenv("INFLATE_WORKERS", "1")
+    monkeypatch.setenv("EXPECT_INFLATE_WORKERS", "1")
+    serial, serial_hash, serial_receipt = trainer.materialize_base_scorer_planes(
+        scratch_root=tmp_path / "run_serial",
+        shared_cache_root=tmp_path / "serial_shared",
+        **{key: value for key, value in common.items() if key != "shared_cache_root"},
+    )
+    np.testing.assert_array_equal(serial, first)
+    assert serial_hash == first_hash
+    assert serial_receipt["environment"]["INFLATE_WORKERS"] == "1"
+    assert len(calls) == 2
+
+    scorer_path = Path(first.filename)
+    receipt_path = scorer_path.with_name("base_scorer_planes.materialization.json")
+    original_receipt = receipt_path.read_bytes()
+    stale = json.loads(receipt_path.read_bytes())
+    stale["base_decoder_sha256"] = SHA_A
+    receipt_path.write_bytes(canonical_json(stale))
+    with pytest.raises(C2BandedTrainerError, match="custody is stale"):
+        trainer.materialize_base_scorer_planes(scratch_root=tmp_path / "run_c", **common)
+    receipt_path.write_bytes(original_receipt)
+    with scorer_path.open("r+b") as handle:
+        handle.seek(-1, os.SEEK_END)
+        final_byte = handle.read(1)
+        handle.seek(-1, os.SEEK_END)
+        handle.write(bytes([final_byte[0] ^ 0xFF]))
+    with pytest.raises(C2BandedTrainerError, match="SHA mismatch"):
+        trainer.materialize_base_scorer_planes(scratch_root=tmp_path / "run_d", **common)
 
 
 def _write_checkpoint(tmp_path: Path, base_archive: Path, decoder: Path, *, changed: bool) -> Path:

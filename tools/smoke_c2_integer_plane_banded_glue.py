@@ -23,6 +23,7 @@ from tac.boundary_math.integer_plane_banded_trainer import (
     StagePlan,
     TrainerConfig,
     canonical_json,
+    inflate_worker_count,
     sha256_file,
     storage_preflight,
     train_streamed,
@@ -105,7 +106,8 @@ def _decode_base_prefix(
         packet.write_bytes(handle.read(infos[0]))
     raw = root / "base.raw"
     env = os.environ.copy()
-    env.update({"INFLATE_MAX_PAIRS": str(pair_cap), "INFLATE_WORKERS": "1"})
+    workers = inflate_worker_count()
+    env.update({"INFLATE_MAX_PAIRS": str(pair_cap), "INFLATE_WORKERS": str(workers)})
     command = [sys.executable, str(decoder), str(packet), str(raw)]
     proc = subprocess.run(command, env=env, capture_output=True, text=True, check=False)
     if proc.returncode:
@@ -117,7 +119,7 @@ def _decode_base_prefix(
     camera = np.memmap(raw, mode="r", dtype=np.uint8, shape=shape)
     return _project(camera), {
         "command": command,
-        "environment": {"INFLATE_MAX_PAIRS": str(pair_cap), "INFLATE_WORKERS": "1"},
+        "environment": {"INFLATE_MAX_PAIRS": str(pair_cap), "INFLATE_WORKERS": str(workers)},
         "stdout_tail": proc.stdout[-500:],
         "scratch_raw_bytes": raw.stat().st_size,
         "scratch_rebuildable": True,
