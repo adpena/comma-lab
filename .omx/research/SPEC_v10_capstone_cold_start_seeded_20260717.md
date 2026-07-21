@@ -1003,3 +1003,33 @@ Binding consequences on §14:
    waterfill runs on bytes(band-scale) with τ_pose swept wide (up to ~2.5e-4), not tiny.
 4. **Receiver (§#543, landed):** factor-2 production receiver consumes this unchanged — the archive
    carries the compact ŷ-description (residual-vs-predictor); realization + pose both free at decode.
+
+---
+## §15 ADDENDUM (2026-07-21, MAIN — operator P0 "pursue the crux... update the v10 capstone spec doc"): THE KNEE DOCTRINE + RECURSIVE-FRACTAL TOLERANCE ALLOCATION
+
+**Supersedes any reading of this spec that targets the exact-solve endpoint by default.** The fork
+closed 2026-07-21 (realization_verdict, merged 0ab20e38ec): DOMINATED at supplied-formulations scope,
+FAMILY refused; PRIMARY successor = the direct-description minimizer
+(`direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md` — the live routing authority).
+
+1. **Three counted objects, never conflated:** 216,207 B = R3 *description row* (not receiver-closed) ·
+   451,191 B = S4 *real archive* (not solved) · caps are *derived arithmetic*: pointer-tie 216,223 B,
+   strict sub-0.15 **154,524 B** (154,525 → S=0.1500002; the earlier "154,600" was an approximation).
+   Caps enter configs only via the full-precision solved-target receipt (ceil−1), never displayed values.
+2. **THE CRUX (quantified):** one receiver-closed archive ≤~200 KB with d_seg ≤ ~0.00116 and the counted
+   pose stream present. Anchor: the 91,062 B v3 packet is receiver-closed at d_seg 0.003556 with its S
+   loss 99% pose — the distance is a measured ~3× seg improvement + a pose stream inside ~100 KB headroom.
+3. **KNEE, NOT ENDPOINT:** the joint R-D optimum is searched on the tolerance ladder
+   (0.000152/0.000300/0.000500/0.000800); min-S rung wins. The exact solve is the ladder's top rung,
+   not the target.
+4. **RECURSIVE-FRACTAL TOLERANCE ALLOCATION (operator-binding, 2026-07-21):** the d_seg tolerance is a
+   budget priced at λ_B = 25/37,545,489 S/B and waterfilled at EVERY level of the decomposition —
+   L1 class strata × L2 sub-strata (cell_interior/boundary_codim1/movable_track/critical_event) ×
+   L3 temporal segments (per ξ-curve window) × L4 class-pair boundaries (Road–Lane ≠ Road–Undrivable) ×
+   L5 frequency/scale. **Einsteinian lens:** each node's tolerance is allocated in its covariant chart
+   (ground-frame Road/Lane via corrected-ξ; image-frame MyCar/Undrivable; object-frame Movable).
+   **Kolmogorov lens:** each node's deliverable is min-description-length AT its allocated tolerance;
+   one λ across all scales; KKT check = no node's marginal bytes-per-tolerance deviates from λ_B beyond
+   the quantization floor. Deliverable = the allocation TREE, not a flat table.
+5. **Bottom-up rung zero:** compose the counted Pose6/dξ stream into a fresh v3-family packet through
+   A(z) before heavy optimization — first mid-hole point + live-receiver seg-repair calibration + warm z seed.
