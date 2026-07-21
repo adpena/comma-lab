@@ -359,6 +359,14 @@ def valid_hard_oracle_without_sweep(**kwargs):
     }
 
 
+def represented_surface_hard_oracle(**kwargs):
+    assert not np.array_equal(kwargs["predicted"], kwargs["represented"])
+    row = valid_hard_oracle_without_sweep(**kwargs)
+    row["custody"] = _adapter_custody(represented_surface_hard_oracle, kwargs["seed"])
+    row["cell_exact"] = bool(kwargs["represented"][0, 0] == 4)
+    return row
+
+
 def fake_legacy_hard_oracle(**kwargs):
     return {
         "schema": "predict_project_hard_oracle_pair.v0",
@@ -419,6 +427,37 @@ def test_hard_oracle_prefix_has_structured_custody_and_never_builds_cross_pair_b
     assert receipt["b4"]["independent_curve_authority"] is False
     assert receipt["b3"]["authority"] == "MEASURED_REAL_DESIRED_CELLS_NON_SOURCE_GROUND_TRUTH"
     assert receipt["b3"]["source_ground_truth_quality_claim"] is False
+
+
+def test_hard_oracle_receives_projected_represented_field_and_hashes_both_surfaces(tmp_path):
+    constrained = seed()
+    constrained["constraint_seeds"] = [
+        {
+            "time": 0,
+            "frame_index": 1,
+            "obligation": "seg_and_pose",
+            "y": 0,
+            "x": 0,
+            "cell_id": 4,
+            "predictor_status": "violated",
+            "stratum": "cell_interior",
+            "pose_tube": None,
+            "pose_tightening_id": None,
+            "projector": None,
+        }
+    ]
+    seed_path = tmp_path / "seed.ppcs"
+    seed_path.write_bytes(serialize_constraint_seed(constrained))
+    receipt = run_measurement(
+        seed_path,
+        tmp_path / "represented",
+        pair_end=1,
+        hard_oracle=represented_surface_hard_oracle,
+    )
+    row = receipt["b2"]
+    stage = json.loads((tmp_path / "represented/stages/pair_0000.json").read_text())
+    assert row["cell_exact"] is True
+    assert stage["hard_oracle"]["pair_input_sha256"] != stage["hard_oracle"]["represented_input_sha256"]
 
 
 def _m1_receipt_binding() -> dict:
