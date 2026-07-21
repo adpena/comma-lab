@@ -1,0 +1,448 @@
+{
+  "schema": "rep_mine_solved_binary.v1",
+  "utc": "2026-07-21T04:55:00Z",
+  "lane_id": "lane_rep_mine_solved_binary_20260721",
+  "task": 596,
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "verdict_scope": "forensic representation measurements on our solved/source-derived artifacts; no receiver-closed archive, CPU/CUDA score, candidate, or promotion claim",
+  "authority": {
+    "prompt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/rep_mine_solved_binary_20260721T040507Z.wrapped.prompt.txt",
+    "prompt_sha256": "061e6b8be93c184fcad844dccb54c1abe754f16538214cc50801400f62f59466",
+    "delegation_checkpoint_key": "codex_delegate:rep_mine_solved_binary:20260721T040507Z"
+  },
+  "custody": {
+    "m2_archive": {
+      "bytes": 1717172741,
+      "sha256": "0fee1b74b315f368cec8f009b8d1aec91b03972e70aa299b60d25338f25cfb6b",
+      "d_seg": 0.0,
+      "d_pose": 0.0,
+      "authority_axis": "[contest-CPU] existing M2 receipt only"
+    },
+    "inflated_raw": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m2_live_target_selection_20260720T1528Z/inflated/0.raw",
+      "bytes": 3662409600,
+      "sha256": "a7192f9387856c849d406a322a08ff77080502751ac200cc63fe80a704989dd5",
+      "shape": [1200, 874, 1164, 3],
+      "dtype": "uint8"
+    },
+    "gt_cache": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "bytes": 5078017610,
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "teacher_logits": {
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/gt_segnet_logits.f16",
+      "bytes": 1179648000,
+      "sha256": "41d3ef535f5b5855fe17aab678580114a50309dc48d04948af62c2f563ed3b52",
+      "caveat": "source manifest records a 24 ppm fp16 tie-argmax caveat"
+    },
+    "ssd_measurement_receipt": "/Volumes/VertigoDataTier/pact/evidence/rep_mine_20260721/full_n600/receipt.json",
+    "initial_full_measurement_elapsed_seconds": 1482.817654132843,
+    "final_label_schema_and_custody_rerun_elapsed_seconds": 36.98133206367493,
+    "checkpointing": "atomic 12-pair camera/logit chunks and atomic stage summaries; --resume is input-hash-bound"
+  },
+  "m1_byte_mass_algebra": {
+    "headline_answer": {
+      "exact_reconstructive_payload_estimate_bytes": 1571792105,
+      "payload_components": {
+        "owned_camera_seed_brotli5_bytes": 1571792092,
+        "fill_selectors_2_bits_times_50_chunks_ceiling_bytes": 13
+      },
+      "payload_estimate_delta_vs_m2_archive_bytes_before_new_framing": -145380636,
+      "payload_estimate_fraction_below_m2_archive_before_new_framing": 0.08466279048626012,
+      "exact_reconstructive_payload_estimate_bytes_per_pair": 2619653.5083333333,
+      "new_archive_manifest_container_framing_bytes": null,
+      "valid_full_archive_upper_bound_bytes": 1717172741,
+      "full_witness_native_information_bytes": null,
+      "why_not_single_number": "nullspace, gauge, label constraints, RGB/Pose values, and compressor correlations overlap; their separately coded lengths are not additive. The 1.571792105 GB payload reconstructs this M2 raw but has not been packaged, so its new manifest/container framing is owed; the existing 1.717172741 GB M2 archive remains the valid full-archive upper bound. The 222447 B context entropy is an oracle-side-information estimate for one label model, not an information-theoretic lower bound and not an RGB/Pose reconstruction. The exact full-witness irreducible remainder is not identified."
+    },
+    "camera_geometry": {
+      "full_resize_kernel_dimension_fraction_derived": 0.8067423152232891,
+      "implemented_blind_coordinate_fraction_measured": 0.22696926089315625,
+      "actual_m2_energy_in_kernel_fraction_measured": 0.45166783517474646,
+      "actual_m2_energy_in_range_fraction_measured": 0.5483321648252535,
+      "orthogonal_energy_relative_error": 5.679206446043377e-9,
+      "warning": "dimension and energy fractions are not byte savings"
+    },
+    "logit_gauge": {
+      "gauge_energy_fraction_measured": 0.3110711377326169,
+      "quotient_energy_fraction_measured": 0.688928862267383,
+      "empirical_centered_rank_relative_1e_10": 4,
+      "fifth_direction_energy_fraction": 0.0,
+      "warning": "teacher-logit gauge is a different representation surface from camera-array bytes and cannot be subtracted from the M2 archive"
+    },
+    "direct_code_lengths_bytes": {
+      "raw_camera_zlib6": 1801803583,
+      "owned_camera_seed_zlib6": 1667314419,
+      "owned_camera_seed_brotli5": 1571792092,
+      "exact_resize_numerators_u32_zlib6": 2161746454,
+      "rounded_rgb_scorer_plane_u8_zlib6": 455421684,
+      "fractional_numerator_residual_i32_zlib6": 1722576181,
+      "rounded_plus_fractional_sum_zlib6": 2177997865,
+      "camera_delta_from_rounded_canonical_fill_i16_zlib6": 1747002483,
+      "scope": "sum of independently compressed 12-pair chunks; framing/header excluded"
+    },
+    "fractional_residual_f1_by_class": {
+      "scope": "600 f1 scorer planes only; each class stream compressed independently, so totals include independent-stream overhead",
+      "0_Road": {"cells": 27407046, "values": 82221138, "zlib6_bytes": 178307718},
+      "1_Lane": {"cells": 690639, "values": 2071917, "zlib6_bytes": 5617887},
+      "2_Undrivable": {"cells": 58413281, "values": 175239843, "zlib6_bytes": 441268981},
+      "3_Movable": {"cells": 1460325, "values": 4380975, "zlib6_bytes": 11644451},
+      "4_MyCar": {"cells": 29993509, "values": 89980527, "zlib6_bytes": 224671774}
+    },
+    "fractional_residual_f1_by_facet": {
+      "boundary": {"cells": 3538118, "values": 10614354, "zlib6_bytes": 27567290},
+      "interior": {"cells": 114426682, "values": 343280046, "zlib6_bytes": 833879076},
+      "margin_ge_1e_2": {"cells": 117931588, "values": 353794764, "zlib6_bytes": 860944504},
+      "interpretation": "the value payload is concentrated in stable interior mass because that is where almost all cells live; a boundary-only residual is not an exact-value replacement"
+    }
+  },
+  "m2_value_spatial_structure": {
+    "teacher_logit_code_lengths_bytes": {
+      "raw_f16_zlib6": 841764897,
+      "four_difference_coordinates_f16_zlib6": 693329263,
+      "gauge_mean_f32_zlib6": 260364455,
+      "four_difference_argmax_mismatches": 4367,
+      "argmax_values": 117964800,
+      "verdict": "the 4-coordinate code is smaller but not partition-exact; separately coding gauge plus quotient is larger than the raw stream and loses cross-stream correlation"
+    },
+    "distinct_f16_values_per_plane": [31505, 31795, 28933, 27203, 31333],
+    "digital_ms_cells": {
+      "definition": "4-neighbor connected components of a digital argmax raster; operator interpretation is the discrete Morse-Smale cell identity surface, but no classical critical-point/separatrix certificate was emitted",
+      "cells": 21304,
+      "singleton_cells": 1762,
+      "singleton_fraction": 0.08270747277506571,
+      "within_cell_quotient_sse_fraction": 0.16843598373422977,
+      "cell_constant_explained_quotient_energy_fraction": 0.8315640162657702,
+      "verdict": "per-cell constants are a strong quotient model but not exact; the nonzero 16.84% within-cell remainder must be coded"
+    },
+    "constant_argmax_runs": {
+      "horizontal_equal_adjacency_fraction": 0.9971151252310285,
+      "vertical_equal_adjacency_fraction": 0.989118696964752,
+      "horizontal_runs_by_class": [196962, 111684, 158191, 39180, 64032],
+      "vertical_runs_by_class": [604217, 300187, 314642, 60898, 307524],
+      "horizontal_mean_run_length_by_class": [139.14890181862492, 6.183866981841625, 369.25792870643716, 37.27220520673813, 468.4143709395302],
+      "vertical_mean_run_length_by_class": [45.3596075582117, 2.3006958995559437, 185.649979977244, 23.97985155505928, 97.53225439315305]
+    }
+  },
+  "m3_temporal_dynamics": {
+    "label_entropy": {
+      "unconditional_bits_per_cell": 1.6155077987305089,
+      "unconditional_ideal_bytes": 23821631.796960592,
+      "previous_pair_f1_conditional_bits_per_cell": 0.08346544422916649,
+      "previous_pair_f1_conditional_ideal_bytes": 1228696.807668221,
+      "pose_proxy_advected_conditional_bits_per_cell": 0.09617400036223309,
+      "pose_proxy_advected_conditional_ideal_bytes": 1418143.339741344,
+      "position_adjacency_pose_proxy_conditional_bits_per_cell": 0.015085654507210264,
+      "position_adjacency_pose_proxy_conditional_ideal_bytes": 222447.02710151966,
+      "model_header_and_pose_side_information_included": false,
+      "temporal_scope": "600 cached f1 planes: previous is f1[p-1], two video frames earlier; gt_poses[p] is exact for f0[p]->f1[p] and only a nearest-target proxy for f1[p-1]->f1[p]",
+      "interpretation": "the pose-proxy warp alone is 15.23% worse than direct previous-pair-f1 prediction; the 222447 B row is an optimistic empirical context-model estimate, not authoritative sequential transport or an information lower bound"
+    },
+    "innovation_masks": {
+      "previous_pair_f1_changed_fraction": 0.012456377015620652,
+      "previous_pair_f1_mask_zlib6_bytes": 884460,
+      "pose_proxy_advected_changed_fraction": 0.028954702811434856,
+      "pose_proxy_advected_mask_zlib6_bytes": 1128863
+    },
+    "exact_fractional_residual_temporal": {
+      "previous_pair_f1_delta_i32_zlib6_bytes": 964201392,
+      "xi_advected_exact_residual_bytes": null,
+      "verdict": "the requested exact irreducible-remainder xi residual remains unmeasured; label entropy is not a substitute"
+    },
+    "g1_boundary_transport": {
+      "within_pair_median_of_transition_medians_px": 0.27921226653790376,
+      "cross_pair_median_of_transition_medians_px": 0.2798490886048264,
+      "within_pair_fraction_gt_4px": 0.08397657410483839,
+      "cross_pair_fraction_gt_4px": 0.08249694465142526,
+      "verdict": "no within/cross reset discontinuity; large tails are stratum-dependent events, not iid noise"
+    },
+    "jitter_representation_ladder": [
+      {
+        "rung": "R0_raw_normal_offset_events",
+        "measurement": "G1 exact boundary census",
+        "measured": true,
+        "bytes": null,
+        "reason": "the durable G1 histogram is magnitude-binned and does not preserve signed exact offsets; an equal-fidelity code length cannot be inferred"
+      },
+      {
+        "rung": "R1_phase_conditioned_offsets",
+        "measurement": "#425 phase-carrier",
+        "measured": true,
+        "bytes": 10682,
+        "symbols": 13222,
+        "rmse_px": 0.06568,
+        "through_R_recovered_d_seg": null,
+        "scope": "ground classes only; byte-closed carrier on a cached different vehicle, not composable into M2 without receiver A/B"
+      },
+      {
+        "rung": "R2_causal_ground_appearance_chart_plus_xi_response_plus_exceptions",
+        "measured": false,
+        "bytes": null,
+        "status": "FORMALIZATION_PENDING",
+        "settling_measurement": "fit causal chart on decoded seed only, ship chart parameters plus signed exact exceptions, parse back, and measure identical event fidelity and through-R Seg/Pose"
+      }
+    ],
+    "morse_smale_vineyard": {
+      "flip_site_count": 17926,
+      "flip_identity_symbol_ideal_bytes_spatial_temporal": 2724.873306413088,
+      "colex_site_set_ideal_bytes": 31653.131543077303,
+      "composed_identity_plus_sites_ideal_bytes": 34378.00484949039,
+      "headers_model_and_receiver_included": false,
+      "critical_points_separatrix_arcs_adjacency_measured": false,
+      "persistence_order_measured": false,
+      "vineyard_lifecycle_events_measured": false,
+      "verdict": "G3 gives event identities, not a complete classical Morse-Smale/vineyard stream; DMTz-style posthoc correction is not an authority for this source-native formulation"
+    }
+  },
+  "m4_ranked_reformulations": [
+    {
+      "rank": 1,
+      "name": "predict-project constraint seed",
+      "data_structure": "causal context table plus exact argmax inequalities and Pose constraints",
+      "operations": "decode labels, solve MDL-regularized constrained inverse, project to resize/argmax/Pose feasible set",
+      "transform": "camera values to evaluator constraints",
+      "primitive": "integer numerator and inequality residual",
+      "abstraction": "ship constraints rather than values",
+      "measured_bits_estimate": 1779576.2168121573,
+      "measured_bytes_estimate": 222447.02710151966,
+      "counted_seed": "label arithmetic stream plus model/header, Pose constraints, and true exception residuals",
+      "free_interpreter": "generic causal model, convex/integer projection, deterministic tie break",
+      "decoder_wall_clock": "UNMEASURED",
+      "rule118": "legal only when all video-specific tables/parameters are counted",
+      "status": "BEST_CONTEXT_IDEAL_NOT_FULL_RECEIVER",
+      "consumer": "S2-compose #595 and v10 constraint receiver"
+    },
+    {
+      "rank": 2,
+      "name": "Morse-Smale 1-skeleton plus persistence vineyard",
+      "data_structure": "critical points, separatrix arcs, winged-edge adjacency, persistence order, lifecycle events",
+      "operations": "cancel low-persistence pairs, advect cells, emit birth/death/split/merge",
+      "transform": "raster partition to spacetime cell complex",
+      "primitive": "cell, arc, junction, event",
+      "abstraction": "partition topology plus temporal vineyard",
+      "measured_bytes_estimate": 34378.00484949039,
+      "estimate_scope": "only G3 target symbols plus colex sites; cell skeleton, values, Pose, and receiver absent",
+      "counted_seed": "initial skeleton, persistence values/order if video-derived, lifecycle exceptions, cell charts",
+      "free_interpreter": "generic discrete Morse construction/cancellation and vineyard updater",
+      "decoder_wall_clock": "UNMEASURED",
+      "rule118": "DMTz/posthoc edit lists are counted; topology algorithms are free",
+      "status": "PROMISING_EVENT_SIDECAR_NOT_FULL_DESCRIPTION",
+      "consumer": "G3/r1b5 and S2-compose #595"
+    },
+    {
+      "rank": 3,
+      "name": "context arithmetic over exact label CPC",
+      "data_structure": "finite-state raster/temporal context model",
+      "operations": "adaptive arithmetic encode/decode",
+      "transform": "labels to conditional symbols",
+      "primitive": "class symbol",
+      "abstraction": "probability model separated from channel coder",
+      "measured_bytes_estimate": 255288,
+      "estimate_scope": "existing exact CPC1 partition bytes; RGB/Pose realization absent",
+      "counted_seed": "partition stream and any video-trained fixed tables",
+      "free_interpreter": "generic arithmetic coder and causal adaptive updates",
+      "decoder_wall_clock": "UNMEASURED",
+      "rule118": "adaptive parameters derived from already-decoded history are free",
+      "status": "EXACT_PARTITION_ONLY",
+      "consumer": "#557 coder stack"
+    },
+    {
+      "rank": 4,
+      "name": "colex combinatorial event-set ranks",
+      "data_structure": "enumerative rank of a k-subset plus local target alphabet",
+      "operations": "rank/unrank",
+      "transform": "sparse coordinates to combinatorial integer",
+      "primitive": "subset rank",
+      "abstraction": "locations as one combinatorial object",
+      "measured_bytes_estimate": 31653.131543077303,
+      "counted_seed": "rank integer, k, universe binding, target symbols",
+      "free_interpreter": "generic colex rank/unrank",
+      "decoder_wall_clock": "UNMEASURED",
+      "rule118": "legal",
+      "status": "IDEAL_BITS_HEADERS_EXCLUDED",
+      "consumer": "G3/r1b5"
+    },
+    {
+      "rank": 5,
+      "name": "Fisher-prefix plus exceptions",
+      "data_structure": "prefix of generic ranking plus add/delete sets",
+      "operations": "regenerate ranking, patch prefix",
+      "transform": "sites to ranked decisions",
+      "primitive": "prefix and exception rank",
+      "abstraction": "sensitivity-ordered sparse set",
+      "measured_bytes_estimate": 31484.713984110094,
+      "agreement_at_k": 0.014113578043065938,
+      "fisher_payload_if_shipped_bytes": 2225887,
+      "counted_seed": "exceptions and any video-derived ranking payload",
+      "free_interpreter": "ranking algorithm only if recomputed from already-decoded seed",
+      "decoder_wall_clock": "UNMEASURED",
+      "rule118": "current 0.mkv-derived 2.225887 MB ranking cannot be hidden in code",
+      "status": "168_BYTE_IDEAL_GAIN_VS_COLEX_ERASED_BY_CURRENT_RANKING_CUSTODY",
+      "consumer": "r1b5 row closer"
+    },
+    {
+      "rank": 6,
+      "name": "phase-conditioned causal appearance chart",
+      "data_structure": "ground chart, xi response coefficients, signed exceptions",
+      "operations": "predict phase, render boundary, patch true residual",
+      "transform": "normal jitter to causal appearance phase",
+      "primitive": "phase coefficient and exception",
+      "abstraction": "jitter is solvable response, not noise",
+      "measured_bytes_estimate": null,
+      "counted_seed": "chart parameters if video-derived and exact exceptions",
+      "free_interpreter": "generic chart evaluation and adaptive parameters learned solely from decoded seed",
+      "decoder_wall_clock": "UNMEASURED",
+      "rule118": "legal split required",
+      "status": "FORMALIZATION_PENDING",
+      "consumer": "#425 plus flicker/phase receiver"
+    },
+    {
+      "rank": 7,
+      "name": "gauge quotient plus resize-range format",
+      "data_structure": "four logit differences or range coordinates plus integer kernel coordinates",
+      "operations": "quotient, project, canonical fill",
+      "transform": "remove gauge and resize-null coordinates",
+      "primitive": "basis coefficient",
+      "abstraction": "equivalence-class coordinate format",
+      "measured_bytes_estimate": 1571792105,
+      "alternative_exact_numerator_bytes": 2161746454,
+      "counted_seed": "owned camera coordinates or exact constraint numerators",
+      "free_interpreter": "#580 projector, canonical fill, gauge normalization",
+      "decoder_wall_clock": "UNMEASURED",
+      "rule118": "legal",
+      "status": "EXACT_RECONSTRUCTIVE_PAYLOAD_ESTIMATE_FRAMING_OWED",
+      "consumer": "M2 successor format"
+    },
+    {
+      "rank": 8,
+      "name": "tropical max-plus indicator algebra",
+      "data_structure": "rank-4 quotient charts and pairwise argmax inequalities",
+      "operations": "max-plus evaluation, chart transition, tie handling",
+      "transform": "five logits to tropical decision complex",
+      "primitive": "affine form and inequality",
+      "abstraction": "store the decision complex, not dense logits",
+      "measured_bytes_estimate": null,
+      "measured_anchor": "rank 4 exactly; fifth centered direction energy 0; 21304 digital cells",
+      "counted_seed": "video-specific chart coefficients, offsets, cell incidence, exceptions",
+      "free_interpreter": "generic max-plus evaluator",
+      "decoder_wall_clock": "UNMEASURED",
+      "rule118": "legal only with coefficients counted",
+      "status": "FORMALIZATION_PENDING",
+      "consumer": "v10 tropical receiver"
+    },
+    {
+      "rank": 9,
+      "name": "integer-lattice reduced-basis coordinates",
+      "data_structure": "unimodular reduced basis and integer coefficient stream",
+      "operations": "LLL/reduced-basis solve, integer reconstruction",
+      "transform": "uint8 feasible affine lattice to short coordinates",
+      "primitive": "integer coefficient",
+      "abstraction": "exact realization as lattice point",
+      "measured_bytes_estimate": null,
+      "counted_seed": "video-specific basis or generator seed plus coefficients",
+      "free_interpreter": "generic LLL and deterministic basis convention",
+      "decoder_wall_clock": "UNMEASURED",
+      "rule118": "basis cannot be hidden in code",
+      "status": "#586_STRUCTURAL_ANCHOR_NO_N600_CODE_LENGTH",
+      "consumer": "integer-fiber exact-D successor"
+    },
+    {
+      "rank": 10,
+      "name": "Freeman chain code plus winged-edge cell graph",
+      "data_structure": "boundary direction strings with junction/cell adjacency",
+      "operations": "trace, turn-code, rasterize",
+      "transform": "partition raster to contour graph",
+      "primitive": "direction, vertex, edge, face",
+      "abstraction": "topology and contour geometry",
+      "measured_bytes_estimate": 228764,
+      "estimate_scope": "existing optimistic shared-edge MDL contour estimate, not emitted and not receiver-closed",
+      "counted_seed": "contour turns, starts, junctions, cell values, residuals",
+      "free_interpreter": "generic tracer/rasterizer",
+      "decoder_wall_clock": "UNMEASURED",
+      "rule118": "legal",
+      "status": "OPTIMISTIC_ESTIMATE",
+      "consumer": "MS cell codec"
+    }
+  ],
+  "global_waterfill": {
+    "lambda_star_score_per_byte": 6.658589531221714e-7,
+    "streams": [
+      {"stream": "partition", "curve": "one exact 255288 B point plus one 222447.03 B optimistic context ideal; no equal-fidelity receiver curve", "admission": "BLOCKED"},
+      {"stream": "morse_smale_events", "curve": "34378.00 B ideal event identity+site point; not standalone fidelity", "admission": "BLOCKED"},
+      {"stream": "xi", "curve": "7195 B existing side section with nonzero Pose; not a joint curve", "admission": "BLOCKED"},
+      {"stream": "jitter", "curve": "10682 B #425 byte point, recovered score owed", "admission": "BLOCKED"},
+      {"stream": "exact_values", "curve": "1571792105 B reconstructive point and 2161746454 B exact-numerator point", "admission": "REJECT_OVER_BOX"},
+      {"stream": "r2b_sparse_flips", "bytes": 27213, "recovered_score": 0.0012332316583976016, "score_value_per_byte": 4.5317739991827494e-8, "fraction_of_lambda_star": 0.06805906833472077, "admission": "EAT_UNDER_CURRENT_ISOLATED_MEASUREMENT"}
+    ],
+    "eaten_flips": {
+      "measured_fixed_flips": 1585,
+      "evaluated_decisions": 16751,
+      "interpretation": "the measured isolated r2b sparse stream recovers only 6.81% of lambda-star value per byte and is eaten unless a joint interaction changes its marginal"
+    },
+    "verdict": "no global allocation is claimed because equal-fidelity per-stream curves and joint receiver composition do not exist"
+  },
+  "interaction_matrix": {
+    "streams": ["partition", "morse_smale_events", "xi", "jitter", "exact_values", "r2b_sparse_flips"],
+    "diagonal": ["PARTIAL_POINTS", "IDEAL_POINT", "PARTIAL_POINT", "BYTE_POINT_SCORE_OWED", "EXACT_RECONSTRUCTIVE_POINTS", "MEASURED_ISOLATED_POINT"],
+    "off_diagonal": "NOT_MEASURED_RECEIVER_COMPOSITION_ABSENT",
+    "required_protocol": "joint receiver-closed rollouts, both orderings for each pair, commutator term, exact bytes, d_seg, d_pose, and interaction residual; coordinate with #535 rather than fork it"
+  },
+  "m5_verdict": {
+    "box_bytes": 216222,
+    "best_measured_context_entropy_ideal_bytes": 222447.02710151966,
+    "gap_above_box_bytes": 6225.027101519663,
+    "existing_exact_partition_cpc1_bytes": 255288,
+    "existing_optimistic_contour_plus_xi_bytes": 235974,
+    "g3_flip_symbol_ideal_floor_bytes": 2724.873306413088,
+    "g3_flip_sites_plus_symbols_ideal_bytes": 34378.00484949039,
+    "full_n600_best_case_bytes": null,
+    "evaluated_formulation_envelope": "222447 B optimistic context ideal plus Pose/value/model/header/receiver through 1571792105 B exact reconstructive payload estimate with new archive framing owed; this is not an information-theoretic interval. The existing 1717172741 B M2 archive is the valid full-archive upper bound.",
+    "verdict": "The solved object natively wants a constraint/topology/causal-context description, not dense camera values. This measured context model is 6225 B over the box before Pose and realization, but a better model may be smaller, so no impossibility or sub-box full-description claim is admissible. The gap to close is a better joint model or a representation that makes constraints and dynamics free while emitting RGB/Pose exactly."
+  },
+  "canonical_equations": [
+    {"law": "m2_actual_resize_kernel_energy_fraction", "value": 0.45166783517474646, "status": "FORMALIZATION_PENDING", "reason": "single-object empirical anchor, not a general evaluator"},
+    {"law": "m2_teacher_logit_gauge_energy_fraction", "value": 0.3110711377326169, "status": "FORMALIZATION_PENDING", "reason": "single cached teacher-logit tensor with fp16 caveat"},
+    {"law": "m2_label_position_adjacency_pose_proxy_entropy_bits", "value": 1779576.2168121573, "status": "FORMALIZATION_PENDING", "reason": "static 600-f1 empirical table excludes model/header/Pose side information, uses a nearest-target motion proxy, and lacks receiver bytes"},
+    {"law": "m2_colex_flip_site_ideal_bits", "value": 253225.05234461842, "status": "FORMALIZATION_PENDING", "reason": "ideal enumerative length excludes finite coder and headers"}
+  ],
+  "online_primary_sources": [
+    {"topic": "tropical ReLU maps", "url": "https://arxiv.org/abs/1805.07091"},
+    {"topic": "persistence vineyards", "url": "https://doi.org/10.1145/1137856.1137877"},
+    {"topic": "Morse-Smale complexes", "url": "https://doi.org/10.1145/777792.777846"},
+    {"topic": "enumerative source coding", "url": "https://doi.org/10.1109/TIT.1973.1054929"},
+    {"topic": "arithmetic coding", "url": "https://doi.org/10.1145/214762.214771"},
+    {"topic": "Freeman chain codes", "url": "https://doi.org/10.1109/TEC.1961.5219197"},
+    {"topic": "winged-edge representation", "url": "https://www.cs.jhu.edu/~misha/Spring25/Readings/Baumgart75.pdf"},
+    {"topic": "minimum description length", "url": "https://doi.org/10.1016/0005-1098(78)90005-5"},
+    {"topic": "convex projection", "url": "https://doi.org/10.1109/TMI.1982.4307555"},
+    {"topic": "LLL", "url": "https://doi.org/10.1007/BF01457454"},
+    {"topic": "DMSC preservation", "url": "https://arxiv.org/abs/2409.17346"}
+  ],
+  "directives_consumed_through_utc": "2026-07-21T04:31:32Z",
+  "tests": {
+    "pytest": "5 passed",
+    "ruff": "passed",
+    "py_compile": "passed"
+  },
+  "stores_consulted": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "PROGRAM.md",
+    "docs/operating_manual_craft_handoff.md",
+    ".omx/research/t5_crucible/SPEC_v75_optimal_single_trunk_20260708.md",
+    ".omx/research/SPEC_v8_perclass_decomposition_20260708.md",
+    ".omx/research/m2_live_target_selection_20260720T1548Z.json",
+    ".omx/research/g1_worldsheet_g3_cellcode_measurements_20260720T210000Z.json",
+    ".omx/research/r1b3_producers_20260720T185300Z.json",
+    ".omx/research/collateral_coupling_geometry_and_film_flicker_sidecar_20260718.md",
+    ".omx/research/p0_425_phase_carrier_byte_close_row_20260716.md",
+    ".omx/research/v10_power_diagram_byteclose_blocker_receipt_20260718.json",
+    ".omx/state/lane_registry.json",
+    ".omx/state/subagent_progress.jsonl",
+    "live delegation inbox through 2026-07-21T04:31:32Z"
+  ]
+}
