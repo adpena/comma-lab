@@ -1,9 +1,9 @@
 # Joint planes direct strike — from-scratch task-space level-set spine audit
 
-**UTC:** 2026-07-21T03:42:48Z  
-**Lane:** `joint_planes_direct_strike`  
-**Authority:** `[macOS-CPU advisory]`, `score_claim=false`, `promotion_eligible=false`  
-**Pointer:** `0.1910828242 [contest-CPU] UNMOVED`  
+**UTC:** 2026-07-21T03:42:48Z
+**Lane:** `joint_planes_direct_strike`
+**Authority:** `[macOS-CPU advisory]`, `score_claim=false`, `promotion_eligible=false`
+**Pointer:** `0.1910828242 [contest-CPU] UNMOVED`
 **Receipt:** `.omx/research/joint_planes_direct_strike_20260721T034248Z.json`
 
 ## Outcome first

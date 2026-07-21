@@ -1,6 +1,6 @@
 # Equations — task-space level-set constructive inverse spine
 
-**Authority:** `[macOS-CPU advisory]`; no score or global-optimality claim.  
+**Authority:** `[macOS-CPU advisory]`; no score or global-optimality claim.
 **Receipt:** `.omx/research/joint_planes_direct_strike_20260721T034248Z.json`
 
 ## S0: true frozen-scorer targets
