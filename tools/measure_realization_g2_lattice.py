@@ -35,6 +35,7 @@ import zipfile
 import zlib
 from collections import Counter
 from collections.abc import Mapping, Sequence
+from functools import partial
 from pathlib import Path
 from typing import Any, Final
 
@@ -68,14 +69,19 @@ from tac.optimization.predictor_r2_missdelta import (  # noqa: E402
     AdaptiveStreamDecoder,
 )
 from tac.optimization.predictor_upgrade_xi_chart import (  # noqa: E402
+    LaneCoefficientAddress,
     LaneCoefficientDelta,
+    ProjectedChartChoice,
     decode_lane_chart_with_symbols,
     encode_lane_coefficient_deltas,
+    lane_coefficient_packet_size,
     load_g1_worldsheet_motion,
     load_lane_chart,
     parse_static_charts,
+    projected_greedy_with_swap_search,
     relative_adjacent_xi,
     render_lane_mask,
+    summarize_joint_chart_prefix_rows,
 )
 from tac.optimization.predictor_upgrade_xi_chart import (  # noqa: E402
     predict_cell_field as predict_chart_cell_field,
@@ -138,6 +144,8 @@ CHART_AMPLITUDE_STAGE_SCHEMA: Final = "realization_g2f_chart_bidirectional_ampli
 CHART_AMPLITUDE_CONFIG_SCHEMA: Final = "realization_g2f_chart_bidirectional_amplitude_config.v1"
 CHART_SYMBOL_STAGE_SCHEMA: Final = "realization_g2g_chart_symbol_receiver_pair.v1"
 CHART_SYMBOL_CONFIG_SCHEMA: Final = "realization_g2g_chart_symbol_receiver_config.v1"
+JOINT_CHART_STAGE_SCHEMA: Final = "realization_g2g2_joint_multichart_pair.v1"
+JOINT_CHART_CONFIG_SCHEMA: Final = "realization_g2g2_joint_multichart_config.v1"
 PREFIXES: Final = (16, 64, 600)
 RGB_REALIZATION_FIELDS: Final = frozenset(
     {
@@ -211,6 +219,7 @@ SECANT_CHART_RANK: Final = 4
 AMPLITUDE_LANE_ID: Final = "lane_g2f_bidirectional_amplitude_ladder_578_20260721"
 CHART_AMPLITUDE_LANE_ID: Final = "lane_g2f_chart_bidirectional_amplitude_ladder_578_20260721"
 CHART_SYMBOL_LANE_ID: Final = "lane_g2g_chart_symbol_receiver_578_20260721"
+JOINT_CHART_LANE_ID: Final = "lane_g2g2_joint_multichart_solve_20260721"
 G2F_CHART_RECEIPT_SHA256: Final = "47d3ca538f1b876f7639223a1a9a7714b7db2083eaa0971936b9a43a1e6d0d04"
 G2E_PRIOR_RECEIPT_SHA256: Final = "e89157bb8dfc6b11b20aecccd4dbe82113ea706c9a1eb054de989c26a740dbc4"
 AMPLITUDE_LSB_LAWREF_ID: Final = "witness_realization_lsb_regime_v1"
@@ -244,6 +253,8 @@ DEFAULT_G2E_PRIOR_RECEIPT: Final = Path(
 DEFAULT_PIXEL_AMPLITUDE_RECEIPT: Final = Path(
     "/Volumes/VertigoDataTier/pact/evidence/g2f_amplitude_20260721/receipt.json"
 )
+JOINT_CHART_NATIVE_AMPLITUDES: Final = (-16.0, -8.0, -4.0, -2.0, -1.0, -0.5, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0)
+JOINT_CHART_SECANT_RUNG_NATIVE_PIXELS: Final = 0.5
 
 
 class RealizationAuditError(ValueError):
@@ -283,6 +294,17 @@ def _atomic_json(path: Path, value: Mapping[str, Any]) -> None:
             os.unlink(temporary)
         except FileNotFoundError:
             pass
+
+
+def _atomic_immutable_json(path: Path, value: Mapping[str, Any]) -> None:
+    """Create one canonical JSON artifact or verify its existing bytes."""
+
+    payload = json.dumps(value, sort_keys=True, indent=2, allow_nan=False).encode() + b"\n"
+    if path.exists():
+        if path.read_bytes() != payload:
+            raise RealizationAuditError(f"immutable JSON artifact drift: {path}")
+        return
+    _atomic_json(path, value)
 
 
 def _atomic_bytes(path: Path, payload: bytes) -> None:
@@ -5627,6 +5649,236 @@ def _chart_symbol_rgb_plane(
     }
 
 
+def derive_lane_coefficient_addresses(lines: Sequence[LaneLine]) -> tuple[LaneCoefficientAddress, ...]:
+    """Derive every decoded centerline coordinate; no 20-address constant is trusted."""
+
+    if not lines or len(lines) > 256:
+        raise RealizationAuditError("joint-chart decoded LaneLine cardinality is invalid")
+    addresses: list[LaneCoefficientAddress] = []
+    for line_index, line in enumerate(lines):
+        coefficients = np.asarray(line.centerline_coeffs, dtype=np.float64)
+        if (
+            coefficients.ndim != 1
+            or coefficients.size == 0
+            or coefficients.size > 256
+            or not np.isfinite(coefficients).all()
+        ):
+            raise RealizationAuditError("joint-chart decoded centerline coefficients are malformed")
+        addresses.extend(
+            LaneCoefficientAddress(line_index, coefficient_index) for coefficient_index in range(coefficients.size)
+        )
+    result = tuple(addresses)
+    if result != tuple(sorted(set(result))):
+        raise RealizationAuditError("joint-chart decoded addresses are not canonical")
+    return result
+
+
+def _clone_lane_line_with_coefficient(
+    line: LaneLine,
+    coefficient_index: int,
+    coefficient_delta: float,
+) -> LaneLine:
+    coefficients = np.asarray(line.centerline_coeffs, dtype=np.float64).copy()
+    if not 0 <= coefficient_index < coefficients.size:
+        raise RealizationAuditError("joint-chart coefficient address is absent")
+    coefficients[coefficient_index] += float(coefficient_delta)
+    if not np.isfinite(coefficients).all():
+        raise RealizationAuditError("joint-chart coefficient perturbation is nonfinite")
+    return LaneLine(
+        centerline_coeffs=coefficients,
+        halfwidth_coeffs=np.asarray(line.halfwidth_coeffs, dtype=np.float64).copy(),
+        dash_period_m=float(line.dash_period_m),
+        dash_phase_m=float(line.dash_phase_m),
+        dash_duty=float(line.dash_duty),
+        forward_range=(float(line.forward_range[0]), float(line.forward_range[1])),
+        n_pixels=int(line.n_pixels),
+    )
+
+
+def lane_coefficient_native_gain(
+    line: LaneLine,
+    coefficient_index: int,
+    config: Any,
+) -> tuple[float, dict[str, Any]]:
+    """Derive coefficient-to-native-centerline-pixel gain on active raster rows."""
+
+    rows = np.arange(SCORER_HW[0], dtype=np.float64)
+    active_rows = rows > (float(config.v_h) + 1.0)
+    cxx = SCORER_HW[1] / 2.0 if config.cx is None else float(config.cx)
+    center, _, gate = _line_row_params(
+        line,
+        rows[active_rows],
+        dash_gate=config.dash_gate,
+        dash_forward_max_m=config.dash_forward_max_m,
+        cx=cxx,
+        v_h=config.v_h,
+    )
+    unit_center, _, unit_gate = _line_row_params(
+        _clone_lane_line_with_coefficient(line, coefficient_index, 1.0),
+        rows[active_rows],
+        dash_gate=config.dash_gate,
+        dash_forward_max_m=config.dash_forward_max_m,
+        cx=cxx,
+        v_h=config.v_h,
+    )
+    active = (gate > 0.0) & (unit_gate > 0.0)
+    delta = np.abs(unit_center[active] - center[active])
+    if delta.size == 0 or not np.isfinite(delta).all():
+        raise RealizationAuditError("joint-chart coefficient has no finite active-row gain")
+    gain = float(np.max(delta))
+    if gain <= 0.0:
+        raise RealizationAuditError("joint-chart coefficient native-pixel gain is nonpositive")
+    return gain, {
+        "active_row_count": int(delta.size),
+        "max_abs_native_pixels_per_coefficient_unit": gain,
+        "mean_abs_native_pixels_per_coefficient_unit": float(np.mean(delta)),
+        "rms_native_pixels_per_coefficient_unit": float(np.sqrt(np.mean(delta * delta))),
+    }
+
+
+def _scorer_logits_pose6(
+    net: Any,
+    torch: Any,
+    frame0: np.ndarray,
+    frame1: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return the complete frozen batch-one Seg5/Pose6 response in memory only."""
+
+    pair = np.stack((frame0, frame1), axis=0)[None]
+    tensor = torch.from_numpy(np.ascontiguousarray(pair)).permute(0, 1, 4, 2, 3).contiguous().float()
+    with torch.inference_mode():
+        logits_tensor = net.segnet(net.segnet.preprocess_input(tensor))[0]
+        pose_output = net.posenet(net.posenet.preprocess_input(tensor))
+        pose_tensor = pose_output["pose"] if isinstance(pose_output, dict) else pose_output
+    logits = logits_tensor.cpu().numpy().astype(np.float64)
+    pose6 = pose_tensor[0, :6].cpu().numpy().astype(np.float64)
+    if logits.shape != (5, *SCORER_HW) or pose6.shape != (6,) or not np.isfinite(logits).all():
+        raise RealizationAuditError("joint-chart frozen scorer response geometry/value mismatch")
+    if not np.isfinite(pose6).all():
+        raise RealizationAuditError("joint-chart frozen Pose6 response is nonfinite")
+    return logits, pose6
+
+
+def target_rival_fisher_weights(logits: np.ndarray, represented: np.ndarray) -> np.ndarray:
+    """Freeze categorical-Fisher weights for every target-vs-rival margin."""
+
+    values = np.asarray(logits, dtype=np.float64)
+    targets = np.asarray(represented, dtype=np.int64)
+    if values.shape != (5, *SCORER_HW) or targets.shape != SCORER_HW or not np.isfinite(values).all():
+        raise RealizationAuditError("joint-chart Fisher/margin geometry is invalid")
+    if np.any((targets < 0) | (targets >= 5)):
+        raise RealizationAuditError("joint-chart represented class IDs are invalid")
+    shifted = values - np.max(values, axis=0, keepdims=True)
+    probabilities = np.exp(shifted)
+    probabilities /= np.sum(probabilities, axis=0, keepdims=True)
+    target_probability = np.take_along_axis(probabilities, targets[None], axis=0)[0]
+    fisher_variance = target_probability[None] + probabilities - (target_probability[None] - probabilities) ** 2
+    weights = np.sqrt(np.maximum(fisher_variance, np.finfo(np.float64).eps))
+    np.put_along_axis(weights, targets[None], 0.0, axis=0)
+    return weights
+
+
+def quantized_pose_tube_debt(
+    pose6: np.ndarray,
+    constraints: Sequence[Mapping[str, Any]],
+) -> tuple[int, np.ndarray]:
+    """Return exact integer outside debt for the closest declared pose tube."""
+
+    pose = np.asarray(pose6, dtype=np.float64)
+    if pose.shape != (6,) or not np.isfinite(pose).all():
+        raise RealizationAuditError("joint-chart Pose6 model value is invalid")
+    pose_q = np.rint(pose * POSE_Q_SCALE).astype(np.int64)
+    debts: list[np.ndarray] = []
+    for row in constraints:
+        tube = row.get("pose_tube")
+        if tube is None:
+            continue
+        lower = np.asarray(tube["lower_q"], dtype=np.int64)
+        upper = np.asarray(tube["upper_q"], dtype=np.int64)
+        if lower.shape != (6,) or upper.shape != (6,) or np.any(lower > upper):
+            raise RealizationAuditError("joint-chart declared pose tube is malformed")
+        debts.append(np.maximum(lower - pose_q, 0) + np.maximum(pose_q - upper, 0))
+    if not debts:
+        raise RealizationAuditError("joint-chart pair has no declared pose tube")
+    best = min(debts, key=lambda value: (int(np.sum(value)), tuple(int(item) for item in value)))
+    return int(np.sum(best)), best
+
+
+def joint_chart_model_constraint_key(
+    logits: np.ndarray,
+    pose6: np.ndarray,
+    represented: np.ndarray,
+    constraints: Sequence[Mapping[str, Any]],
+    fisher_weights: np.ndarray,
+) -> tuple[int, int, float]:
+    """Compute the strict full-field semantic/tube/Fisher-margin model key."""
+
+    values = np.asarray(logits, dtype=np.float64)
+    targets = np.asarray(represented, dtype=np.int64)
+    weights = np.asarray(fisher_weights, dtype=np.float64)
+    if values.shape != (5, *SCORER_HW) or weights.shape != values.shape or targets.shape != SCORER_HW:
+        raise RealizationAuditError("joint-chart response-model constraint geometry mismatch")
+    target_logits = np.take_along_axis(values, targets[None], axis=0)[0]
+    negative_margins = np.maximum(values - target_logits[None], 0.0)
+    np.put_along_axis(negative_margins, targets[None], 0.0, axis=0)
+    mismatch = int(np.count_nonzero(np.argmax(values, axis=0) != targets))
+    pose_debt, _ = quantized_pose_tube_debt(pose6, constraints)
+    fisher_margin_debt = float(np.sum(negative_margins * weights, dtype=np.float64))
+    if not math.isfinite(fisher_margin_debt):
+        raise RealizationAuditError("joint-chart Fisher/margin debt is nonfinite")
+    return mismatch, pose_debt, fisher_margin_debt
+
+
+def joint_chart_response_constraint_key(
+    choices: tuple[ProjectedChartChoice, ...],
+    *,
+    baseline_logits: np.ndarray,
+    baseline_pose6: np.ndarray,
+    response: Mapping[LaneCoefficientAddress, tuple[np.ndarray, np.ndarray]],
+    represented: np.ndarray,
+    constraints: Sequence[Mapping[str, Any]],
+    fisher_weights: np.ndarray,
+) -> tuple[int, int, float]:
+    """Evaluate one deterministic lattice selection against the linear response."""
+
+    predicted_logits = np.asarray(baseline_logits, dtype=np.float64).copy()
+    predicted_pose6 = np.asarray(baseline_pose6, dtype=np.float64).copy()
+    for choice in choices:
+        try:
+            logits_secant, pose_secant = response[choice.address]
+        except KeyError as error:
+            raise RealizationAuditError("joint-chart choice lacks a measured response") from error
+        predicted_logits += float(choice.amplitude) * np.asarray(logits_secant, dtype=np.float64)
+        predicted_pose6 += float(choice.amplitude) * np.asarray(pose_secant, dtype=np.float64)
+    return joint_chart_model_constraint_key(
+        predicted_logits,
+        predicted_pose6,
+        represented,
+        constraints,
+        fisher_weights,
+    )
+
+
+def joint_chart_multirow_parseback(prefixes: Sequence[Mapping[str, Any]]) -> bool:
+    """Require at least one real multi-row packet and full counted double replay."""
+
+    if not prefixes or not any(int(row.get("k", 0)) > 1 for row in prefixes):
+        return False
+    for row in prefixes:
+        predicates = row.get("admission_predicates")
+        parseback = row.get("packet_parseback")
+        if (
+            not isinstance(predicates, Mapping)
+            or predicates.get("counted_bytes") is not True
+            or predicates.get("double_decode") is not True
+            or not isinstance(parseback, Mapping)
+            or int(parseback.get("symbol_count", -1)) != int(row.get("k", -2))
+            or int(parseback.get("chart_symbol_bytes", -1)) != int(row.get("packet_bytes", -2))
+        ):
+            return False
+    return True
+
+
 def summarize_chart_symbol_receiver_rows(
     rows: Sequence[Mapping[str, Any]],
     *,
@@ -6180,6 +6432,755 @@ def run_chart_symbol_receiver(
     return receipt
 
 
+def run_joint_chart_symbol_solve(
+    *,
+    seed_path: Path,
+    gt_cache_path: Path,
+    upstream: Path,
+    output_root: Path,
+    chart_amplitude_receipt_path: Path,
+    static_chart_path: Path,
+    lane_chart_path: Path,
+    threads: int,
+    polish_pass_limit: int = 4,
+    swap_pass_limit: int = 1,
+) -> dict[str, Any]:
+    """Measure and hard-replay the bounded G2g2 joint multi-chart search.
+
+    This is deliberately a bounded projected greedy/polish/swap search, not a
+    MIQP or global solver.  Model keys select actual G2CS1 prefixes, while only
+    independent receiver/oracle replay can admit one.
+    """
+
+    if threads < 1 or polish_pass_limit < 0 or swap_pass_limit < 0:
+        raise RealizationAuditError("invalid G2g2 thread/search pass setting")
+    output_root.mkdir(parents=True, exist_ok=True)
+    if shutil.disk_usage(output_root).free < 1 << 30:
+        raise RealizationAuditError("G2g2 storage preflight requires at least 1 GiB free")
+    if _sha256(chart_amplitude_receipt_path) != G2F_CHART_RECEIPT_SHA256:
+        raise RealizationAuditError("G2g2 g2f chart receipt SHA-256 custody mismatch")
+    chart_receipt = _load_json(chart_amplitude_receipt_path)
+    if validate_chart_bidirectional_receipt(
+        chart_receipt,
+        expected_pair_count=int(chart_receipt.get("completed_prefix", 0)),
+    ) != chart_receipt.get("receipt_sha256"):
+        raise RealizationAuditError("G2g2 g2f chart receipt strict validation failed")
+    comparison = chart_receipt["level_comparison"]
+    chart_only = [int(value) for value in comparison["chart_only_rescued_pair_indices"]]
+    overlap = [int(value) for value in comparison["both_selected_pair_indices"]]
+    candidate_order = chart_only + overlap
+    if candidate_order != [0, 34, 37, 46, 22, 30]:
+        raise RealizationAuditError("G2g2 settled six-pair order drifted from hash-pinned G2f custody")
+
+    seed_bytes = seed_path.read_bytes()
+    seed = parse_constraint_seed(seed_bytes)
+    if serialize_constraint_seed(seed) != seed_bytes:
+        raise RealizationAuditError("G2g2 seed is not canonical on parse-back")
+    seed_sha256 = hashlib.sha256(seed_bytes).hexdigest()
+    cache = _load_real_cache(gt_cache_path)
+    net, torch, scorer_custody = _load_distortion_net(upstream, threads)
+    kernel = FullResizeKernel.build()
+    s_t, s_r, pitch_rad, motion_custody = load_g1_worldsheet_motion(REPO)
+    poses = np.asarray(cache["gt_poses"], dtype=np.float64)
+    cross_xi, cross_custody = relative_adjacent_xi(poses, s_t=s_t, s_r=s_r, pitch_rad=pitch_rad)
+    within_xi = np.stack(
+        [g1_warp.xi_from_pose_calibration(pose, s_t=s_t, s_r=s_r, pitch=pitch_rad) for pose in poses],
+        axis=0,
+    )
+    geom = g1_warp.GroundHomographyGeom.eon(native_hw=SCORER_HW, pitch=pitch_rad)
+    static_raw = static_chart_path.read_bytes()
+    if hashlib.sha256(static_raw).hexdigest() != FRAME0_STATIC_CHART_SHA256:
+        raise RealizationAuditError("G2g2 frame0 static-chart SHA-256 custody mismatch")
+    static_charts = parse_static_charts(static_raw)
+    static_zlib = zlib.compress(static_raw, 9)
+    lane_pairs, lane_config, lane_custody = load_lane_chart(lane_chart_path)
+    lane_raw = lane_chart_path.read_bytes()
+    lane_brotli = brotli.compress(lane_raw, quality=11)
+    if brotli.decompress(lane_brotli) != lane_raw:
+        raise RealizationAuditError("G2g2 lane-chart Brotli parse-back mismatch")
+    lane_mask = render_lane_mask(lane_pairs[0], lane_config, h=SCORER_HW[0], w=SCORER_HW[1])
+    openpilot_cells, protected_sites = openpilot_frame0_class_prior(
+        seed=seed,
+        static_charts=static_charts,
+        lane_mask=lane_mask,
+        geom=geom,
+    )
+    palette_payload = serialize_frozen_scorer_palette()
+    palette = parse_frozen_scorer_palette(palette_payload)
+    bootstrap = palette[openpilot_cells]
+    bootstrap_counted_bytes = len(palette_payload) + len(static_zlib) + len(lane_brotli)
+    base_counted_bytes = CONTEXTUAL_SEED_BASELINE_BYTES + bootstrap_counted_bytes
+    if base_counted_bytes != 121_128:
+        raise RealizationAuditError("G2g2 openpilot base byte custody drifted from 121,128")
+
+    implementation_paths = (
+        REPO / "tools/measure_realization_g2_lattice.py",
+        REPO / "src/tac/optimization/predictor_upgrade_xi_chart.py",
+        REPO / "src/tac/optimization/predict_project_receiver.py",
+        REPO / "src/tac/optimization/resize_full_kernel.py",
+        REPO / "src/tac/boundary_math/analytic_lane_render_band.py",
+        REPO / "src/tac/boundary_math/warp_real_luma_frame0.py",
+    )
+    try:
+        git_head = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=REPO,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise RealizationAuditError("G2g2 git custody is unavailable") from error
+    protected_site_payload = json.dumps(
+        protected_sites,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode()
+    python_executable = Path(sys.executable).resolve()
+    config = {
+        "schema": JOINT_CHART_CONFIG_SCHEMA,
+        "seed": 1234,
+        "seed_sha256": seed_sha256,
+        "gt_cache_sha256": GT_CACHE_SHA256,
+        "scorer_custody": scorer_custody,
+        "motion_custody": {**motion_custody, **cross_custody},
+        "lane_chart_custody": lane_custody,
+        "invocation_argv": [sys.executable, *sys.argv],
+        "runtime_custody": {
+            "python_executable": str(python_executable),
+            "python_executable_sha256": _sha256(python_executable),
+            "python_version": sys.version,
+            "python_implementation": platform.python_implementation(),
+            "platform": platform.platform(),
+            "machine": platform.machine(),
+            "numpy_version": np.__version__,
+            "torch_version": str(torch.__version__),
+        },
+        "git_custody": {"head": git_head, "repo": str(REPO)},
+        "input_source_custody": {
+            "seed": {"path": str(seed_path), "sha256": seed_sha256},
+            "gt_cache": {"path": str(gt_cache_path), "sha256": GT_CACHE_SHA256},
+            "static_chart": {"path": str(static_chart_path), "sha256": FRAME0_STATIC_CHART_SHA256},
+            "lane_chart": {"path": str(lane_chart_path), "sha256": hashlib.sha256(lane_raw).hexdigest()},
+            "g2f_chart_receipt": {
+                "path": str(chart_amplitude_receipt_path),
+                "sha256": G2F_CHART_RECEIPT_SHA256,
+            },
+        },
+        "protected_site_custody": {
+            "sites": protected_sites,
+            "site_count": len(protected_sites),
+            "canonical_sha256": hashlib.sha256(protected_site_payload).hexdigest(),
+        },
+        "implementation_sources": {str(path.relative_to(REPO)): _sha256(path) for path in implementation_paths},
+        "g2f_chart_receipt": {
+            "path": str(chart_amplitude_receipt_path),
+            "file_sha256": G2F_CHART_RECEIPT_SHA256,
+            "canonical_receipt_sha256": chart_receipt["receipt_sha256"],
+        },
+        "candidate_order": candidate_order,
+        "chart_only_pairs_first": chart_only,
+        "overlap_pairs_second": overlap,
+        "native_amplitude_ladder": list(JOINT_CHART_NATIVE_AMPLITUDES),
+        "central_secant_rung_native_pixels": JOINT_CHART_SECANT_RUNG_NATIVE_PIXELS,
+        "search": {
+            "method": "bounded_projected_greedy_coordinate_search_with_polish_and_swap",
+            "polish_pass_limit": polish_pass_limit,
+            "swap_pass_limit": swap_pass_limit,
+            "global_optimum_claim": False,
+        },
+        "objective": (
+            "lexicographic full represented-field argmax mismatch, exact quantized pose-tube outside debt, "
+            "then summed negative target-vs-each-rival margin weighted by frozen categorical Fisher geometry"
+        ),
+        "lawref_equation_ids": [
+            "witness_realization_lsb_regime_v1",
+            "separable_resize_full_kernel_direct_sum_v1",
+            "realization_breakeven_bytes_v1",
+        ],
+        "base_counted_bytes": base_counted_bytes,
+        "rate_lambda_score_units_per_byte": RATE_PRICE_S_PER_BYTE,
+        "axis": AXIS,
+        "pointer": POINTER,
+    }
+    config_sha256 = secant_canonical_sha256(config)
+    root = output_root / f"run_{config_sha256[:16]}"
+    _atomic_bytes(root / "base_packets" / "frozen_scorer_palette.g2pal", palette_payload)
+    _atomic_bytes(root / "base_packets" / "static_charts_n64.zlib9", static_zlib)
+    _atomic_bytes(root / "base_packets" / "lane_chart.brotli11", lane_brotli)
+    _atomic_immutable_json(root / "config.json", {**config, "config_sha256": config_sha256})
+
+    constraints_by_pair: dict[int, list[Mapping[str, Any]]] = {pair: [] for pair in candidate_order}
+    for constraint in seed["constraint_seeds"]:
+        pair = int(constraint["time"])
+        if pair in constraints_by_pair and constraint["frame_index"] == 1:
+            constraints_by_pair[pair].append(constraint)
+
+    def baseline_pair(pair_index: int) -> tuple[np.ndarray, np.ndarray]:
+        previous: np.ndarray | None = None
+        for current in range(pair_index + 1):
+            plane0 = (
+                bootstrap.copy() if current == 0 else contextual_advected_rgb_plane(previous, cross_xi[current], geom)
+            )
+            base1 = contextual_advected_rgb_plane(plane0, within_xi[current], geom)
+            if current == pair_index:
+                return plane0, base1
+            previous = base1
+        raise AssertionError("unreachable G2g2 baseline replay")
+
+    stage_dir = root / "stages"
+    rows: dict[int, dict[str, Any]] = {}
+    if stage_dir.exists():
+        for path in sorted(stage_dir.glob("pair_*.json")):
+            row = _load_json(path)
+            pair_index = int(row.get("pair_index", -1))
+            if (
+                row.get("schema") != JOINT_CHART_STAGE_SCHEMA
+                or row.get("config_sha256") != config_sha256
+                or pair_index not in candidate_order
+                or pair_index in rows
+            ):
+                raise RealizationAuditError("G2g2 resume stage schema/config/pair drift")
+            rows[pair_index] = row
+    completed = [pair for pair in candidate_order if pair in rows]
+    if completed != candidate_order[: len(completed)]:
+        raise RealizationAuditError("G2g2 resume stages are not a contiguous settled-order prefix")
+    resumed_pairs = len(rows)
+
+    for ordinal, pair_index in enumerate(candidate_order):
+        if pair_index in rows:
+            continue
+        started = time.perf_counter()
+        constraints = constraints_by_pair[pair_index]
+        if not constraints:
+            raise RealizationAuditError(f"G2g2 pair {pair_index} has no declared writes")
+        represented = _represented_cells(seed, pair_index)
+        target_cells = np.asarray(cache["lstars"][pair_index], dtype=np.uint8).copy()
+        target_pose = poses[pair_index].copy()
+        plane0, base1 = baseline_pair(pair_index)
+        realized0 = _contextual_realize(
+            plane0,
+            represented,
+            seed_sha256=seed_sha256,
+            additional_seed_bytes=bootstrap_counted_bytes if pair_index == 0 else 0,
+            generator_id="g2g2_openpilot_pair_local_baseline_frame0",
+            kernel=kernel,
+        )
+        realized_base1 = _contextual_realize(
+            base1,
+            represented,
+            seed_sha256=seed_sha256,
+            additional_seed_bytes=0,
+            generator_id="g2g2_openpilot_pair_local_baseline_frame1",
+            kernel=kernel,
+        )
+        baseline_hard, _, baseline_writes = _hard_oracle_interior(
+            net,
+            torch,
+            realized0["frame"],
+            realized_base1["frame"],
+            target_cells,
+            represented,
+            target_pose,
+            constraints,
+        )
+        baseline_logits, baseline_pose6 = _scorer_logits_pose6(
+            net,
+            torch,
+            realized0["frame"],
+            realized_base1["frame"],
+        )
+        fisher_weights = target_rival_fisher_weights(baseline_logits, represented)
+        addresses = derive_lane_coefficient_addresses(lane_pairs[pair_index])
+        gains: dict[LaneCoefficientAddress, float] = {}
+        response: dict[LaneCoefficientAddress, tuple[np.ndarray, np.ndarray]] = {}
+        secant_rows: list[dict[str, Any]] = []
+        for address in addresses:
+            gain, gain_custody = lane_coefficient_native_gain(
+                lane_pairs[pair_index][address.line_index],
+                address.coefficient_index,
+                lane_config,
+            )
+            gains[address] = gain
+            branches: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+            branch_custody: dict[str, Any] = {}
+            for sign_name, sign in (("positive", 1.0), ("negative", -1.0)):
+                coefficient_delta = sign * JOINT_CHART_SECANT_RUNG_NATIVE_PIXELS / gain
+                symbol = LaneCoefficientDelta(
+                    pair_index,
+                    address.line_index,
+                    address.coefficient_index,
+                    coefficient_delta,
+                )
+                packet = encode_lane_coefficient_deltas((symbol,))
+                packet_path = (
+                    root
+                    / "response_packets"
+                    / f"pair_{pair_index:04d}_line_{address.line_index:03d}_coeff_{address.coefficient_index:03d}_{sign_name}.g2cs"
+                )
+                _atomic_bytes(packet_path, packet)
+                corrected_pairs, corrected_config, parseback = decode_lane_chart_with_symbols(lane_raw, packet)
+                plane, raster = _chart_symbol_rgb_plane(
+                    base1=base1,
+                    baseline_lines=lane_pairs[pair_index],
+                    corrected_lines=corrected_pairs[pair_index],
+                    config=corrected_config,
+                    palette=palette,
+                )
+                realized = _contextual_realize(
+                    plane,
+                    represented,
+                    seed_sha256=seed_sha256,
+                    additional_seed_bytes=len(packet),
+                    generator_id=f"g2g2_secant_{sign_name}",
+                    kernel=kernel,
+                )
+                logits, pose6 = _scorer_logits_pose6(net, torch, realized0["frame"], realized["frame"])
+                branches[sign_name] = (logits, pose6)
+                branch_custody[sign_name] = {
+                    "coefficient_delta_fp32": symbol.coefficient_delta,
+                    "packet_bytes": len(packet),
+                    "packet_sha256": _sha256(packet_path),
+                    "packet_parseback": parseback,
+                    "camera_uint8_sha256": realized["camera_uint8_sha256"],
+                    "factor2_uint8_exact": bool(realized["factor2_verification"]["certified_exact"]),
+                    "changed_pixel_count": raster["changed_pixel_count"],
+                    "uint8_saturation_count": raster["uint8_saturation_count"],
+                }
+            denominator = 2.0 * JOINT_CHART_SECANT_RUNG_NATIVE_PIXELS
+            logits_secant = ((branches["positive"][0] - branches["negative"][0]) / denominator).astype(np.float32)
+            pose_secant = ((branches["positive"][1] - branches["negative"][1]) / denominator).astype(np.float32)
+            response[address] = (logits_secant, pose_secant)
+            response_bytes = (
+                np.ascontiguousarray(logits_secant, dtype="<f4").tobytes()
+                + np.ascontiguousarray(
+                    pose_secant,
+                    dtype="<f4",
+                ).tobytes()
+            )
+            secant_rows.append(
+                {
+                    "line_index": address.line_index,
+                    "coefficient_index": address.coefficient_index,
+                    "native_gain": gain_custody,
+                    "branches": branch_custody,
+                    "central_secant_sha256": hashlib.sha256(response_bytes).hexdigest(),
+                    "logit_shape": list(logits_secant.shape),
+                    "pose_shape": list(pose_secant.shape),
+                    "logit_secant_l1": float(np.sum(np.abs(logits_secant), dtype=np.float64)),
+                    "logit_secant_max_abs": float(np.max(np.abs(logits_secant), initial=0.0)),
+                    "pose_secant_l1": float(np.sum(np.abs(pose_secant), dtype=np.float64)),
+                    "persisted_tensor": False,
+                }
+            )
+
+        search = projected_greedy_with_swap_search(
+            addresses=addresses,
+            amplitudes=JOINT_CHART_NATIVE_AMPLITUDES,
+            objective=partial(
+                joint_chart_response_constraint_key,
+                baseline_logits=baseline_logits,
+                baseline_pose6=baseline_pose6,
+                response=response,
+                represented=represented,
+                constraints=constraints,
+                fisher_weights=fisher_weights,
+            ),
+            polish_pass_limit=polish_pass_limit,
+            swap_pass_limit=swap_pass_limit,
+        )
+        model_prefixes = [
+            {
+                "k": prefix.cardinality,
+                "constraint_key": list(prefix.constraint_key),
+                "choices": [
+                    {
+                        "line_index": choice.address.line_index,
+                        "coefficient_index": choice.address.coefficient_index,
+                        "native_pixel_amplitude": choice.amplitude,
+                        "coefficient_delta_fp32": float(np.float32(choice.amplitude / gains[choice.address])),
+                    }
+                    for choice in prefix.choices
+                ],
+            }
+            for prefix in search.prefixes
+        ]
+        measured_prefixes: list[dict[str, Any]] = []
+        prior_hard = baseline_hard
+        prior_packet_bytes = 0
+        for prefix, model_row in zip(search.prefixes, model_prefixes, strict=True):
+            symbols = tuple(
+                LaneCoefficientDelta(
+                    pair_index,
+                    choice.address.line_index,
+                    choice.address.coefficient_index,
+                    choice.amplitude / gains[choice.address],
+                )
+                for choice in prefix.choices
+            )
+            packet = encode_lane_coefficient_deltas(symbols)
+            if len(packet) != lane_coefficient_packet_size(prefix.cardinality):
+                raise RealizationAuditError("G2g2 multi-row packet size drifted from 12+8k")
+            packet_path = root / "prefix_packets" / f"pair_{pair_index:04d}_k_{prefix.cardinality:02d}.g2cs"
+            _atomic_bytes(packet_path, packet)
+            corrected_pairs, corrected_config, parseback = decode_lane_chart_with_symbols(lane_raw, packet)
+            repeated_pairs, repeated_config, repeated_parseback = decode_lane_chart_with_symbols(lane_raw, packet)
+            plane, raster = _chart_symbol_rgb_plane(
+                base1=base1,
+                baseline_lines=lane_pairs[pair_index],
+                corrected_lines=corrected_pairs[pair_index],
+                config=corrected_config,
+                palette=palette,
+            )
+            repeated_plane, repeated_raster = _chart_symbol_rgb_plane(
+                base1=base1,
+                baseline_lines=lane_pairs[pair_index],
+                corrected_lines=repeated_pairs[pair_index],
+                config=repeated_config,
+                palette=palette,
+            )
+            realized = _contextual_realize(
+                plane,
+                represented,
+                seed_sha256=seed_sha256,
+                additional_seed_bytes=len(packet),
+                generator_id=f"g2g2_hard_prefix_k{prefix.cardinality}",
+                kernel=kernel,
+            )
+            repeated_realized = _contextual_realize(
+                repeated_plane,
+                represented,
+                seed_sha256=seed_sha256,
+                additional_seed_bytes=len(packet),
+                generator_id=f"g2g2_hard_prefix_k{prefix.cardinality}_repeat",
+                kernel=kernel,
+            )
+            hard, actual_argmax, writes = _hard_oracle_interior(
+                net,
+                torch,
+                realized0["frame"],
+                realized["frame"],
+                target_cells,
+                represented,
+                target_pose,
+                constraints,
+            )
+            exact_pose_debt, exact_pose_vector = quantized_pose_tube_debt(
+                np.asarray(hard["pose6"], dtype=np.float64),
+                constraints,
+            )
+            double_decode = bool(
+                parseback == repeated_parseback
+                and raster == repeated_raster
+                and np.array_equal(plane, repeated_plane)
+                and np.array_equal(realized["frame"], repeated_realized["frame"])
+                and realized["camera_uint8_sha256"] == repeated_realized["camera_uint8_sha256"]
+            )
+            factor2_exact = bool(
+                realized0["factor2_verification"]["certified_exact"]
+                and realized["factor2_verification"]["certified_exact"]
+                and repeated_realized["factor2_verification"]["certified_exact"]
+            )
+            delta_bytes = len(packet) - prior_packet_bytes
+            expected_delta_bytes = 20 if prefix.cardinality == 1 else 8
+            if delta_bytes != expected_delta_bytes:
+                raise RealizationAuditError("G2g2 incremental packet price must be 20 bytes then 8 bytes")
+            incremental_score_recovered = _chart_symbol_distortion_score(prior_hard) - _chart_symbol_distortion_score(
+                hard
+            )
+            cumulative_score_recovered = _chart_symbol_distortion_score(baseline_hard) - _chart_symbol_distortion_score(
+                hard
+            )
+            incremental_marginal = incremental_score_recovered / delta_bytes
+            cumulative_average_marginal = cumulative_score_recovered / len(packet)
+            predicates = {
+                "semantic_exact": hard["realized_argmax_equals_description"] is True,
+                "pose_tube": hard["pose_within_declared_tube"] is True,
+                "factor2_uint8_exact": factor2_exact,
+                "double_decode": double_decode,
+                "receiver_RGB": parseback["receiver_derived_rgb"] is True,
+                "counted_bytes": bool(
+                    parseback["chart_symbol_bytes"] == len(packet) and len(packet) == 12 + 8 * prefix.cardinality
+                ),
+                "rate_above_lambda": incremental_marginal > RATE_PRICE_S_PER_BYTE,
+            }
+            admitted = all(predicates.values())
+            rate_stop = bool(not admitted and incremental_marginal <= RATE_PRICE_S_PER_BYTE)
+            terminal_stop_reason = (
+                "FIRST_ADMITTED_MIN_K_STOP" if admitted else "RATE_BREAK_EVEN_STOP" if rate_stop else None
+            )
+            measured_prefixes.append(
+                {
+                    "k": prefix.cardinality,
+                    "model_constraint_key": model_row["constraint_key"],
+                    "symbols": model_row["choices"],
+                    "packet_path": str(packet_path),
+                    "packet_bytes": len(packet),
+                    "delta_bytes": delta_bytes,
+                    "packet_sha256": _sha256(packet_path),
+                    "packet_parseback": parseback,
+                    "semantic_mismatch_count": int(np.count_nonzero(actual_argmax != represented)),
+                    "d_seg": float(hard["d_seg_realized_vs_frozen_target"]),
+                    "d_pose": float(hard["d_pose_realized_vs_frozen_target"]),
+                    "incremental_delta_d_seg": float(hard["d_seg_realized_vs_frozen_target"])
+                    - float(prior_hard["d_seg_realized_vs_frozen_target"]),
+                    "incremental_delta_d_pose": float(hard["d_pose_realized_vs_frozen_target"])
+                    - float(prior_hard["d_pose_realized_vs_frozen_target"]),
+                    "cumulative_delta_d_seg": float(hard["d_seg_realized_vs_frozen_target"])
+                    - float(baseline_hard["d_seg_realized_vs_frozen_target"]),
+                    "cumulative_delta_d_pose": float(hard["d_pose_realized_vs_frozen_target"])
+                    - float(baseline_hard["d_pose_realized_vs_frozen_target"]),
+                    "pose_tube_debt": float(hard["d_pose_realized_outside_declared_tube"]),
+                    "exact_quantized_pose_tube_outside_debt": exact_pose_debt,
+                    "exact_quantized_pose_tube_outside_vector": exact_pose_vector.tolist(),
+                    "declared_write_survival": writes,
+                    "changed_pixel_count": raster["changed_pixel_count"],
+                    "changed_rgb_value_count": raster["changed_rgb_value_count"],
+                    "uint8_saturation_count": raster["uint8_saturation_count"],
+                    "incremental_score_units_recovered": incremental_score_recovered,
+                    "cumulative_score_units_recovered": cumulative_score_recovered,
+                    "incremental_marginal_score_units_per_byte": incremental_marginal,
+                    "cumulative_average_score_units_per_byte": cumulative_average_marginal,
+                    "rate_lambda_score_units_per_byte": RATE_PRICE_S_PER_BYTE,
+                    "admission_predicates": predicates,
+                    "admitted": admitted,
+                    "rate_stop": rate_stop,
+                    "rate_stop_status": "RATE_BREAK_EVEN_STOP" if rate_stop else None,
+                    "terminal_stop_reason": terminal_stop_reason,
+                    "hard_oracle": hard,
+                    "axis": AXIS,
+                    "score_claim": False,
+                }
+            )
+            if admitted or rate_stop:
+                break
+            prior_hard = hard
+            prior_packet_bytes = len(packet)
+        measured_summary = summarize_joint_chart_prefix_rows(measured_prefixes)
+        underreach = bool(
+            search.status == "EXHAUSTED_ALL_ADDRESSES"
+            and measured_prefixes
+            and measured_prefixes[-1]["k"] == search.address_count
+            and (
+                measured_prefixes[-1]["admission_predicates"]["semantic_exact"] is False
+                or measured_prefixes[-1]["admission_predicates"]["pose_tube"] is False
+            )
+        )
+        stage = {
+            "schema": JOINT_CHART_STAGE_SCHEMA,
+            "config_sha256": config_sha256,
+            "pair_index": pair_index,
+            "candidate_class": "chart_only_rescue" if pair_index in chart_only else "pixel_chart_overlap",
+            "address_count": len(addresses),
+            "addresses": [
+                {"line_index": address.line_index, "coefficient_index": address.coefficient_index}
+                for address in addresses
+            ],
+            "response_custody": {
+                "schema": "g2g2_realized_full_logit_pose_central_secant.v1",
+                "smallest_signed_rung_native_pixels": JOINT_CHART_SECANT_RUNG_NATIVE_PIXELS,
+                "scorer_batch_geometry": 1,
+                "seg_logit_shape": [5, *SCORER_HW],
+                "pose_shape": [6],
+                "address_rows": secant_rows,
+                "fisher_weights_sha256": hashlib.sha256(
+                    np.ascontiguousarray(fisher_weights, dtype="<f4").tobytes()
+                ).hexdigest(),
+                "full_logits_or_tensors_persisted": False,
+                "camera_frames_or_coverage_persisted": False,
+            },
+            "model_search": {
+                "status": search.status,
+                "initial_constraint_key": list(search.initial_constraint_key),
+                "final_constraint_key": list(search.final_constraint_key),
+                "objective_evaluation_count": search.objective_evaluation_count,
+                "polish_pass_limit": search.polish_pass_limit,
+                "swap_pass_limit": search.swap_pass_limit,
+                "search_completeness": search.search_completeness,
+                "model_prediction_is_hard_predicate": False,
+                "prefixes": model_prefixes,
+            },
+            "hard_replay_prefixes": measured_prefixes,
+            "hard_replay_summary": measured_summary,
+            "baseline_hard_oracle": baseline_hard,
+            "baseline_declared_write_survival": baseline_writes,
+            "chart_manifold_underreach": underreach,
+            "wall_seconds": time.perf_counter() - started,
+            "authority": f"MEASURED {AXIS}",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+        _atomic_immutable_json(stage_dir / f"pair_{pair_index:04d}.json", stage)
+        rows[pair_index] = stage
+        if (ordinal + 1) % 2 == 0 or ordinal + 1 == len(candidate_order):
+            checkpoint = {
+                "schema": "realization_g2g2_joint_multichart_checkpoint.v1",
+                "config_sha256": config_sha256,
+                "completed_pair_count": len(rows),
+                "completed_pairs_in_settled_order": [pair for pair in candidate_order if pair in rows],
+                "checkpoint_every_pairs": 2,
+                "all_pair_stages_preserved": True,
+                "resumed_pairs_at_invocation_start": resumed_pairs,
+            }
+            _atomic_immutable_json(root / "checkpoints" / f"pairs_{ordinal + 1:02d}.json", checkpoint)
+
+    ordered = [rows[pair] for pair in candidate_order]
+    admitted_stages = [row for row in ordered if row["hard_replay_summary"]["admitted_prefix_count"] > 0]
+    all_six_admitted = len(admitted_stages) == len(candidate_order)
+    any_admitted = bool(admitted_stages)
+    any_underreach = any(row["chart_manifold_underreach"] is True for row in ordered)
+    rate_stopped_stages = [row for row in ordered if row["hard_replay_summary"]["rate_break_even_stop"] is not None]
+    if all_six_admitted:
+        verdict = "MEASURED_G2G2_ALL_SIX_PAIRS_ADMITTED_N64_GATE_OPEN"
+    elif any_underreach:
+        verdict = "MEASURED_G2G2_LANELINE_FORMULATION_CHART_MANIFOLD_UNDERREACH_FAMILY_OPEN"
+    elif any_admitted:
+        verdict = "MEASURED_G2G2_PARTIAL_SIX_PAIR_ADMISSION_N64_GATE_CLOSED"
+    elif rate_stopped_stages:
+        verdict = "MEASURED_G2G2_RATE_BREAK_EVEN_STOP_FAMILY_OPEN"
+    else:
+        verdict = "MEASURED_G2G2_BOUNDED_SEARCH_NO_ADMISSION_FAMILY_OPEN"
+    minimum_admitted_prefixes: list[dict[str, Any]] = []
+    for row in admitted_stages:
+        minimum_k = int(row["hard_replay_summary"]["minimum_admitted_k"])
+        prefix = next(
+            candidate
+            for candidate in row["hard_replay_prefixes"]
+            if int(candidate["k"]) == minimum_k and candidate["admitted"] is True
+        )
+        minimum_admitted_prefixes.append(
+            {
+                "pair_index": int(row["pair_index"]),
+                "k": minimum_k,
+                "packet_bytes": int(prefix["packet_bytes"]),
+                "delta_d_seg": float(prefix["cumulative_delta_d_seg"]),
+                "delta_d_pose": float(prefix["cumulative_delta_d_pose"]),
+                "delta_bytes": int(prefix["packet_bytes"]),
+                "incremental_delta_bytes": int(prefix["delta_bytes"]),
+                "incremental_score_units_recovered": float(prefix["incremental_score_units_recovered"]),
+                "cumulative_score_units_recovered": float(prefix["cumulative_score_units_recovered"]),
+                "incremental_marginal_score_units_per_byte": float(prefix["incremental_marginal_score_units_per_byte"]),
+                "cumulative_average_score_units_per_byte": float(prefix["cumulative_average_score_units_per_byte"]),
+            }
+        )
+    aggregate_wall_seconds = float(sum(float(row["wall_seconds"]) for row in ordered))
+    receipt: dict[str, Any] = {
+        "schema": "realization_g2g2_joint_multichart_receipt.v1",
+        "lane_id": JOINT_CHART_LANE_ID,
+        "task_id": "578",
+        "config": config,
+        "config_sha256": config_sha256,
+        "run_root": str(root),
+        "pair_stages": ordered,
+        "D1_solver_and_response": {
+            "method": config["search"]["method"],
+            "global_optimum_claim": False,
+            "pair_rows": [
+                {
+                    "pair_index": row["pair_index"],
+                    "address_count": row["address_count"],
+                    "model_status": row["model_search"]["status"],
+                    "measured_prefix_count": row["hard_replay_summary"]["measured_prefix_count"],
+                    "actual_g2cs1_bytes_by_k": [
+                        [prefix["k"], prefix["packet_bytes"]] for prefix in row["hard_replay_prefixes"]
+                    ],
+                    "multirow_parseback": joint_chart_multirow_parseback(row["hard_replay_prefixes"]),
+                    "counted_parseback_and_double_decode": bool(row["hard_replay_prefixes"])
+                    and all(
+                        prefix["admission_predicates"]["counted_bytes"] is True
+                        and prefix["admission_predicates"]["double_decode"] is True
+                        for prefix in row["hard_replay_prefixes"]
+                    ),
+                    "rule_118_clean": True,
+                }
+                for row in ordered
+            ],
+            "response_tensors_persisted": False,
+        },
+        "D2_hard_receiver_oracle": {
+            "all_seven_predicates_required": True,
+            "pair_summaries": [{"pair_index": row["pair_index"], **row["hard_replay_summary"]} for row in ordered],
+            "admitted_pair_count": len(admitted_stages),
+            "minimum_admitted_by_pair": minimum_admitted_prefixes,
+            "all_six_admitted": all_six_admitted,
+            "model_prediction_is_hard_predicate": False,
+        },
+        "D3_routes_or_scoped_stall": {
+            "status": (
+                "ADMITTED_ROUTES_AVAILABLE"
+                if any_admitted
+                else "RATE_BREAK_EVEN_STOP"
+                if rate_stopped_stages
+                else "NO_ROUTE_BOUNDED_SEARCH_STALL"
+            ),
+            "route_n64": all_six_admitted,
+            "route_n600": False,
+            "minimum_admitted_prefixes": minimum_admitted_prefixes,
+            "route_einstein_kolmogorov_ultra_U1": any_admitted,
+            "route_P0_register_G6_task603": any_admitted,
+            "rate_break_even_stop_pairs": [
+                {
+                    "pair_index": int(row["pair_index"]),
+                    **row["hard_replay_summary"]["rate_break_even_stop"],
+                }
+                for row in rate_stopped_stages
+            ],
+            "n600_refusal": "REFUSED_UNLESS_PARENT_FIRST_MEASURES_SIX_PAIR_AND_THEN_N64_ADMISSION",
+            "chart_manifold_underreach_pair_indices": [
+                row["pair_index"] for row in ordered if row["chart_manifold_underreach"] is True
+            ],
+            "describe_line_rate_domination_claim": False,
+            "describe_line_comparator_status": "ABSENT_NOT_AUTHORIZED_TO_INFER_DOMINATION",
+            "measured_k_curves": [
+                {
+                    "pair_index": row["pair_index"],
+                    "curve": row["hard_replay_summary"]["measured_k_curve"],
+                }
+                for row in ordered
+            ],
+        },
+        "timings": {
+            "pair_wall_seconds": [
+                {"pair_index": int(row["pair_index"]), "wall_seconds": float(row["wall_seconds"])} for row in ordered
+            ],
+            "aggregate_measured_wall_seconds": aggregate_wall_seconds,
+            "timing_scope": "baseline plus response secants, model search, and measured hard prefixes",
+        },
+        "verdict": verdict,
+        "verdict_scope": (
+            "bounded projected greedy/polish/swap over every decoded LaneLine centerline coordinate for the "
+            "six hash-pinned G2f-selected pairs; a stall or all-address underreach applies only to this "
+            "linearized LaneLine realization formulation and is not a chart-family infeasibility or "
+            "rate-domination proof"
+        ),
+        "storage": {
+            "root": str(root),
+            "storage_preflight_minimum_free_bytes": 1 << 30,
+            "storage_preflight_passed": True,
+            "checkpoint_every_pairs": 2,
+            "resume_config_and_source_hash_refusal": True,
+            "automatic_disk_hygiene": (
+                "one pair in memory; only G2CS1 packets, compact JSON stages, config, checkpoints, and receipt "
+                "persist; no logits, response tensors, frames, or coverage planes are written"
+            ),
+        },
+        "authority": {
+            "axis": AXIS,
+            "pointer": POINTER,
+            "pointer_moved": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "main_landing_review_required": True,
+        },
+    }
+    receipt["receipt_sha256"] = secant_canonical_sha256(receipt)
+    _atomic_immutable_json(root / "receipt.json", receipt)
+    _atomic_immutable_json(output_root / "receipt.json", receipt)
+    if _load_json(root / "receipt.json")["receipt_sha256"] != receipt["receipt_sha256"]:
+        raise RealizationAuditError("G2g2 receipt JSON/canonical hash parse-back drift")
+    return receipt
+
+
 def audit_prefix(
     *,
     prefix: int,
@@ -6533,6 +7534,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="decode and hard-score the g2f-selected counted chart-symbol corrections",
     )
     parser.add_argument(
+        "--joint-chart-symbol-solve",
+        action="store_true",
+        help="run the bounded G2g2 multi-coordinate response search and hard-replay every selected k prefix",
+    )
+    parser.add_argument(
         "--secant-output-root",
         type=Path,
         default=Path("/Volumes/VertigoDataTier/pact/evidence/g2e_secant_20260721"),
@@ -6556,6 +7562,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("/Volumes/VertigoDataTier/pact/evidence/g2g_chart_receiver_20260721"),
         help="durable SSD root for --chart-symbol-receiver stages and receipts",
     )
+    parser.add_argument(
+        "--joint-chart-output-root",
+        type=Path,
+        default=Path("/Volumes/VertigoDataTier/pact/evidence/g2g2_joint_multichart_20260721"),
+        help="durable SSD parent root for invocation/config-specific --joint-chart-symbol-solve evidence",
+    )
+    parser.add_argument("--joint-chart-polish-passes", type=int, default=4)
+    parser.add_argument("--joint-chart-swap-passes", type=int, default=1)
     parser.add_argument("--pixel-amplitude-receipt", type=Path, default=DEFAULT_PIXEL_AMPLITUDE_RECEIPT)
     parser.add_argument("--chart-amplitude-receipt", type=Path, default=DEFAULT_G2F_CHART_RECEIPT)
     parser.add_argument("--g2e-prior-receipt", type=Path, default=DEFAULT_G2E_PRIOR_RECEIPT)
@@ -6593,6 +7607,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.bidirectional_amplitude_ladder,
                 args.chart_amplitude_ladder,
                 args.chart_symbol_receiver,
+                args.joint_chart_symbol_solve,
             )
         )
         > 1
@@ -6600,8 +7615,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise RealizationAuditError(
             "--audit-only, --interior-rungs, --contextual-predict-base, --frame0-prior-race, "
             "--realized-secant-custody, --bidirectional-amplitude-ladder, --chart-amplitude-ladder, and "
-            "--chart-symbol-receiver are mutually exclusive"
+            "--chart-symbol-receiver, and --joint-chart-symbol-solve are mutually exclusive"
         )
+    if args.joint_chart_symbol_solve:
+        receipt = run_joint_chart_symbol_solve(
+            seed_path=args.seed.resolve(),
+            gt_cache_path=args.gt_cache.resolve(),
+            upstream=args.upstream.resolve(),
+            output_root=args.joint_chart_output_root.resolve(),
+            chart_amplitude_receipt_path=args.chart_amplitude_receipt.resolve(),
+            static_chart_path=args.static_chart.resolve(),
+            lane_chart_path=args.lane_chart.resolve(),
+            threads=args.threads,
+            polish_pass_limit=args.joint_chart_polish_passes,
+            swap_pass_limit=args.joint_chart_swap_passes,
+        )
+        print(
+            json.dumps(
+                {
+                    "receipt": str(args.joint_chart_output_root.resolve() / "receipt.json"),
+                    "verdict": receipt["verdict"],
+                    "admitted_pair_count": receipt["D2_hard_receiver_oracle"]["admitted_pair_count"],
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
     if args.chart_symbol_receiver:
         receipt = run_chart_symbol_receiver(
             seed_path=args.seed.resolve(),

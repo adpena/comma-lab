@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import copy
+import struct
+import zlib
 from pathlib import Path
 
 import numpy as np
@@ -19,8 +21,10 @@ from tac.optimization.predict_project_schema import (
     serialize_constraint_seed,
 )
 from tac.optimization.predictor_upgrade_xi_chart import (
+    LaneCoefficientAddress,
     LaneCoefficientDelta,
     PredictorUpgradeError,
+    ProjectedChartChoice,
     StaticCharts,
     advect_categorical_field,
     apply_lane_coefficient_deltas,
@@ -28,13 +32,16 @@ from tac.optimization.predictor_upgrade_xi_chart import (
     decode_lane_chart_with_symbols,
     decode_lane_coefficient_deltas,
     encode_lane_coefficient_deltas,
+    lane_coefficient_packet_size,
     load_lane_chart,
     miss_cause,
     parse_static_charts,
     predict_cell_field,
     predictor_policy,
+    projected_greedy_with_swap_search,
     relative_adjacent_xi,
     serialize_static_charts,
+    summarize_joint_chart_prefix_rows,
     train_static_charts,
     validate_resume_config,
 )
@@ -156,6 +163,191 @@ def test_chart_symbol_packet_and_addresses_fail_closed() -> None:
             [[LaneLine(np.asarray([0.0]), np.asarray([1.0]))]],
             (LaneCoefficientDelta(0, 0, 1, 0.25),),
         )
+
+
+def test_chart_symbol_multirow_packet_size_parseback_and_application() -> None:
+    pairs = [
+        [
+            LaneLine(
+                centerline_coeffs=np.asarray([pair, line, 0.5, -0.25], dtype=np.float64),
+                halfwidth_coeffs=np.asarray([0.0, 2.0], dtype=np.float64),
+            )
+            for line in range(2)
+        ]
+        for pair in range(2)
+    ]
+    symbols = (
+        LaneCoefficientDelta(0, 0, 0, 0.125),
+        LaneCoefficientDelta(0, 1, 2, -0.5),
+        LaneCoefficientDelta(1, 0, 3, 1.25),
+    )
+    payload = encode_lane_coefficient_deltas(symbols)
+    assert len(payload) == lane_coefficient_packet_size(3) == 12 + 8 * 3
+    assert encode_lane_coefficient_deltas(decode_lane_coefficient_deltas(payload)) == payload
+    corrected = apply_lane_coefficient_deltas(pairs, decode_lane_coefficient_deltas(payload))
+    assert corrected[0][0].centerline_coeffs[0] == pytest.approx(0.125)
+    assert corrected[0][1].centerline_coeffs[2] == pytest.approx(0.0)
+    assert corrected[1][0].centerline_coeffs[3] == pytest.approx(1.0)
+    assert corrected[1][1].centerline_coeffs.tolist() == pairs[1][1].centerline_coeffs.tolist()
+
+    header = struct.Struct(">5sBHI")
+    body = payload[header.size :]
+    row_size = 8
+    reordered = body[row_size : 2 * row_size] + body[:row_size] + body[2 * row_size :]
+    magic, version, count, _ = header.unpack_from(payload)
+    noncanonical = header.pack(magic, version, count, zlib.crc32(reordered) & 0xFFFFFFFF) + reordered
+    with pytest.raises(PredictorUpgradeError, match="sorted and address-unique"):
+        decode_lane_coefficient_deltas(noncanonical)
+
+    duplicate = body[:row_size] + body[:row_size] + body[2 * row_size :]
+    nonunique = header.pack(magic, version, count, zlib.crc32(duplicate) & 0xFFFFFFFF) + duplicate
+    with pytest.raises(PredictorUpgradeError, match="sorted and address-unique"):
+        decode_lane_coefficient_deltas(nonunique)
+
+
+def test_projected_greedy_search_deterministically_adds_polishes_and_swaps() -> None:
+    a = LaneCoefficientAddress(0, 0)
+    b = LaneCoefficientAddress(0, 1)
+    c = LaneCoefficientAddress(1, 0)
+
+    def objective(choices: tuple[ProjectedChartChoice, ...]) -> tuple[int, int, float]:
+        state = {(choice.address, choice.amplitude) for choice in choices}
+        lookup = {
+            frozenset(): (4, 4, 4.0),
+            frozenset({(a, 1.0)}): (3, 4, 4.0),
+            frozenset({(a, 1.0), (b, 1.0)}): (2, 3, 3.0),
+            frozenset({(a, 2.0), (b, 1.0)}): (2, 2, 2.0),
+            frozenset({(a, 2.0), (c, 1.0)}): (1, 1, 1.0),
+            frozenset({(a, 2.0), (b, 1.0), (c, 1.0)}): (0, 0, 0.0),
+        }
+        return lookup.get(frozenset(state), (4, 4, 9.0))
+
+    one = projected_greedy_with_swap_search(
+        addresses=(a, b, c),
+        amplitudes=(1.0, 2.0),
+        objective=objective,
+        polish_pass_limit=3,
+        swap_pass_limit=1,
+    )
+    two = projected_greedy_with_swap_search(
+        addresses=(a, b, c),
+        amplitudes=(2.0, 1.0),
+        objective=objective,
+        polish_pass_limit=3,
+        swap_pass_limit=1,
+    )
+    assert one == two
+    assert one.status == "MODEL_ADMITTED_CANDIDATE"
+    assert [prefix.cardinality for prefix in one.prefixes] == [1, 2, 3]
+    assert one.prefixes[0].choices == (ProjectedChartChoice(a, 1.0),)
+    assert one.prefixes[1].choices == (ProjectedChartChoice(a, 2.0), ProjectedChartChoice(c, 1.0))
+    assert one.final_constraint_key == (0, 0, 0.0)
+    assert "not a global-optimum proof" in one.search_completeness
+
+
+def test_projected_greedy_search_refuses_duplicates_and_reports_exhaustion() -> None:
+    address = LaneCoefficientAddress(0, 0)
+    with pytest.raises(PredictorUpgradeError, match="sorted, and unique"):
+        projected_greedy_with_swap_search(
+            addresses=(address, address),
+            amplitudes=(1.0,),
+            objective=lambda choices: (1, 1, float(len(choices))),
+        )
+    result = projected_greedy_with_swap_search(
+        addresses=(address,),
+        amplitudes=(1.0,),
+        objective=lambda choices: (1, 1, 1.0 if not choices else 0.5),
+    )
+    assert result.status == "EXHAUSTED_ALL_ADDRESSES"
+    assert result.prefixes[0].constraint_key == (1, 1, 0.5)
+
+
+def test_joint_chart_prefix_summary_uses_only_complete_hard_predicates() -> None:
+    names = (
+        "semantic_exact",
+        "pose_tube",
+        "factor2_uint8_exact",
+        "double_decode",
+        "receiver_RGB",
+        "counted_bytes",
+        "rate_above_lambda",
+    )
+    rows = []
+    for k in range(1, 3):
+        predicates = dict.fromkeys(names, True)
+        if k != 2:
+            predicates["semantic_exact"] = False
+        rows.append(
+            {
+                "k": k,
+                "packet_bytes": lane_coefficient_packet_size(k),
+                "semantic_mismatch_count": 0 if k == 2 else 1,
+                "pose_tube_debt": 0.0,
+                "d_seg": 0.1 / k,
+                "d_pose": 0.01 / k,
+                "incremental_delta_d_seg": -0.01,
+                "incremental_delta_d_pose": -0.001,
+                "cumulative_delta_d_seg": -0.01 * k,
+                "cumulative_delta_d_pose": -0.001 * k,
+                "delta_bytes": 20 if k == 1 else 8,
+                "incremental_score_units_recovered": 0.02,
+                "cumulative_score_units_recovered": 0.02 * k,
+                "incremental_marginal_score_units_per_byte": 0.001,
+                "cumulative_average_score_units_per_byte": 0.001,
+                "admission_predicates": predicates,
+                "admitted": k == 2,
+                "rate_stop": False,
+                "terminal_stop_reason": "FIRST_ADMITTED_MIN_K_STOP" if k == 2 else None,
+            }
+        )
+    summary = summarize_joint_chart_prefix_rows(rows)
+    assert summary["measured_prefix_count"] == 2
+    assert summary["admitted_prefix_count"] == 1
+    assert summary["minimum_admitted_k"] == 2
+    assert summary["minimum_admitted_packet_bytes"] == 28
+    assert summary["measured_k_curve"][-1]["terminal_stop_reason"] == "FIRST_ADMITTED_MIN_K_STOP"
+    assert summary["rate_break_even_stop"] is None
+    assert summary["model_prediction_is_hard_predicate"] is False
+
+
+def test_joint_chart_prefix_summary_preserves_terminal_rate_stop() -> None:
+    predicates = {
+        "semantic_exact": False,
+        "pose_tube": True,
+        "factor2_uint8_exact": True,
+        "double_decode": True,
+        "receiver_RGB": True,
+        "counted_bytes": True,
+        "rate_above_lambda": False,
+    }
+    summary = summarize_joint_chart_prefix_rows(
+        [
+            {
+                "k": 1,
+                "packet_bytes": 20,
+                "delta_bytes": 20,
+                "semantic_mismatch_count": 1,
+                "pose_tube_debt": 0.0,
+                "d_seg": 0.1,
+                "d_pose": 0.01,
+                "incremental_delta_d_seg": 0.0,
+                "incremental_delta_d_pose": 0.0,
+                "cumulative_delta_d_seg": 0.0,
+                "cumulative_delta_d_pose": 0.0,
+                "incremental_score_units_recovered": 0.0,
+                "cumulative_score_units_recovered": 0.0,
+                "incremental_marginal_score_units_per_byte": 0.0,
+                "cumulative_average_score_units_per_byte": 0.0,
+                "admission_predicates": predicates,
+                "admitted": False,
+                "rate_stop": True,
+                "terminal_stop_reason": "RATE_BREAK_EVEN_STOP",
+            }
+        ]
+    )
+    assert summary["status"] == "RATE_BREAK_EVEN_STOP"
+    assert summary["rate_break_even_stop"]["k"] == 1
+    assert summary["rate_break_even_stop"]["delta_bytes"] == 20
 
 
 def test_predictor_is_deterministic_causal_and_does_not_mutate_prior() -> None:

@@ -82220,6 +82220,48 @@
       "reactivation_criteria": [
         "Reactivate only with depth-stratified screw scene framing plus Fisher-margin curvelet/shearlet chart coefficients under a new governed n16 gate."
       ]
+    },
+    {
+      "id": "lane_g2g2_joint_multichart_solve_20260721",
+      "name": "G2g2 joint multi-chart coefficient solve",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Delegated isolated-worktree BUILD plus first-six hard-oracle advisory measurement; n64 only on admission; pointer 0.19108 unmoved; MAIN landing review required.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -82229,5 +82271,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-21T15:33:40Z"
+  "updated_at": "2026-07-21T16:37:20Z"
 }
