@@ -104,7 +104,7 @@ rows grant no spend authority.
 | openpilot static/lane charts and frozen palette | REUSED | counted base packets are copied and parse-back checked under existing custody |
 | receiver packet / admission helper | NOT CLAIMED | measurement intentionally stops before a counted chart-symbol codec exists |
 | new measurement CLI | NOT CREATED | existing G2 runner received one mutually exclusive typed mode |
-| measurement-time source bytes | PRESERVED AS PATCH | `g2f_chart_measurement_runtime_sources_20260721T153318Z.patch` applies to base `c9abc61b2e` and reproduces every as-run source hash |
+| measurement-time source bytes | PRESERVED AS BASE64 PATCH | `g2f_chart_measurement_runtime_sources_20260721T153318Z.patch.b64` decodes to a patch against base `c9abc61b2e` and reproduces every as-run source hash |
 
 ## Custody and verification
 
@@ -124,7 +124,9 @@ Full external receipt:
 - immutable stages: `64`; prefix checkpoint: `prefix_n64.json`;
 - top-level and nested receipts are byte-identical;
 - strict receipt rederivation returned the embedded canonical SHA;
-- measurement-time source patch SHA-256:
+- encoded measurement-time source artifact SHA-256:
+  `6d7ac55963ebcc128fe4800aea0e51776924821615a68e4283d256c1cb02227d`
+  (`107,529` bytes); its decoded patch SHA-256 is
   `e2dca7957ee3d96b9d5a116077ee3c2fcf7ede52e28c5c640b62cfaf35a16d5d`
   (`80,646` bytes), applied and hash-checked against base `c9abc61b2e`;
 - reconstructed as-run implementation SHA-256 values match the receipt:

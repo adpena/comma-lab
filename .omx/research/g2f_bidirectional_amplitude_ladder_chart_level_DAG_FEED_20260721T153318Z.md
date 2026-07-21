@@ -92,10 +92,12 @@ nonempty chart trust without receiver packet
 - config SHA-256:
   `8b357c1d9c7c7ac5257cc67e996851597d3989f3c2921e9c60e28b319550e055`
 - as-run source patch:
-  `.omx/research/g2f_chart_measurement_runtime_sources_20260721T153318Z.patch`
-  at SHA-256
-  `e2dca7957ee3d96b9d5a116077ee3c2fcf7ede52e28c5c640b62cfaf35a16d5d`,
-  verified against base `c9abc61b2e` and both receipt implementation hashes
+  `.omx/research/g2f_chart_measurement_runtime_sources_20260721T153318Z.patch.b64`
+  at encoded SHA-256
+  `6d7ac55963ebcc128fe4800aea0e51776924821615a68e4283d256c1cb02227d`;
+  decoded patch SHA-256
+  `e2dca7957ee3d96b9d5a116077ee3c2fcf7ede52e28c5c640b62cfaf35a16d5d`
+  was verified against base `c9abc61b2e` and both receipt implementation hashes
 - verdict scope: exact contiguous n64, one support-maximizing lane line and
   centerline intercept per pair, coherent chart raster through exact R and
   native CPU SegNet; no packet, admission, n600, score, promotion, other-chart,
