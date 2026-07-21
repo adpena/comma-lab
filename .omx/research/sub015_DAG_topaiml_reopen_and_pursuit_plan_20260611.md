@@ -20873,3 +20873,15 @@ emits the projected-seed byte row alongside residual rows). S3's corrected-xi cu
 INHERITED by chart-cell rows (NO_VERDICT-pending-custody, never measured vs the stale seed).
 Cell-level waterfill at organ-v2 lambda (#516) = the unique-lowest-sufficient-home rule at cell
 granularity. Consumer: autoencoder_describe_crosswalk arm (live) -> ddm builder z-grammar.
+
+## FEED-574-custody-xi-temporal-negative (2026-07-21, MAIN full-artifact custody)
+
+**Landing:** xi_temporal_delta_coder_574 (#578 R4) — `MEASURED_FORMULATION_NEGATIVE`, merged (commit `2b1aee4185`), disposition reviewed_committed. Receipt reproduced byte-identical across 2 resumptions (receipt sha `2c704c5df7…`, projected archive sha `5eac6976aa…`).
+
+**The measured table (n600, S4 coherent-slot Lane, terminal LZMA):** LBND2 settled 35,393 B · XTDL1 identity+ξ-context control 42,413 B (+7,020) · XTDL1 planar-3 ξ predictor 43,901 B (+8,508). Description ledger 216,207→224,715 B; projected one-member ZIP 451,191→460,168 B.
+
+**MAIN naive/toy audit — PASSED (not naive):** the n600 planar-3 range payload ALONE (36,732 B) exceeds the entire LBND2 terminal (35,393 B) — the delta-innovations are more entropic than the direct coefficients, so the negative survives even a FREE predictor + free ξ payload. Identity control isolates the framing cost; ξ prediction adds only +1,488 B over identity → the predictor is not the failure, the delta REPRESENTATION is. Mechanism (law-shaped): **ground-canonicalization and temporal delta coding are the SAME redundancy lever at different stages — a chart that already absorbed ego motion leaves no cross-pair redundancy for a temporal coder; differencing an already-decorrelated stream RAISES entropy.** Sister of the non-additive-pools law (opportunity_pools_non_additive 07-18): same-pool levers compete, never sum.
+
+**verdict_scope = FORMULATION** (coherent-slot LBND chart, S4 research-only corpus). Family OPEN with NAMED exits: (a) solved-object description streams — blocker `SOURCE_S4_NOT_SOLVED_POINTER_OBJECT_DESCRIPTION_STREAM`; the ddm builder's z-streams ARE the reopen trigger (inbox directive sent same-turn); (b) non-Lane recodes (PCE3 already INTER-coded; PCOMP3 needs the persistent-ID parser surface first); (c) uncanonicalized charts. NO immediate respawn: the crux input (solved-object z-streams) does not exist yet — genuinely-deferred-with-named-blocker, not parked.
+
+**Custody boundary re-pin:** 216,207 B = base.pbase3 + components.pcomp3 ONLY (not an archive; seed/events/container live inside the 451,191 B ZIP). The shortcut `451191 − 216207 + D_new` is INVALID — outer deflate couples all section bytes; the law is `A(θ)=len(DetZip9(SerializeS4(...)))`. XTDL1 NOT promoted; no DSL lever admitted (loses + no standalone receiver custody). Pointer 0.1910828242 [contest-CPU] UNMOVED (means).
