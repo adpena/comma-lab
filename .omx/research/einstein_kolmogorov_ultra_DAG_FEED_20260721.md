@@ -1,7 +1,7 @@
 # DAG FEED — Einstein × Kolmogorov R–D custody
 
-`feed_id=FEED-EINSTEIN-KOLMOGOROV-20260721`  
-`lane_id=lane_einstein_kolmogorov_ultra_20260721`  
+`feed_id=FEED-EINSTEIN-KOLMOGOROV-20260721`
+`lane_id=lane_einstein_kolmogorov_ultra_20260721`
 `research_only=true` · `score_claim=false` · `pointer_moved=false`
 
 ```text

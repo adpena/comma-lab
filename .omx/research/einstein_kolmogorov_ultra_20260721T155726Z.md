@@ -1,8 +1,8 @@
 # Einstein × Kolmogorov ultra — custody-first R–D result
 
-UTC: 2026-07-21T17:29:15Z  
-Lane: `lane_einstein_kolmogorov_ultra_20260721`  
-Authority: research-only; `score_claim=false`; `promotion_eligible=false`; MAIN landing review required  
+UTC: 2026-07-21T17:29:15Z
+Lane: `lane_einstein_kolmogorov_ultra_20260721`
+Authority: research-only; `score_claim=false`; `promotion_eligible=false`; MAIN landing review required
 Pointer: **0.1910828242 `[contest-CPU]` UNMOVED**
 
 ## Verdict
