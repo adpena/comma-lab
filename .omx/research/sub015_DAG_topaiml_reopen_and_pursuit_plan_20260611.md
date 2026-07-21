@@ -20512,3 +20512,24 @@ predictor-satisfied-free cells + events + sell-back); #582 queue pruned ((b) rec
 only if the factorization row underdelivers). No new equation this wave (process directive, not
 measured law); no new DSL lever (receiver ≠ trainer lever; tail-gen config will compile through
 witness_dsl per Addendum 3). Pointer 0.1910828242 [contest-CPU] UNMOVED — sync is means.
+
+## FEED-SEED-B2-LANDING-20260721 (the first real n600 seed + the decisive predictor decomposition)
+seed_compose_b2 MERGED (6a90564c9f): THE REAL SEED EXISTS — single PPCS spacetime object, n600,
+3,188 loose sites cell-exact, 600 pose tubes d_pose=0 EXACTLY, double-decode byte-identical,
+zlib-9 78,969B (inside the 216,222B box). B5 DOCTRINE CONFIRMED: single-object 266x raw / 12.6x
+zlib vs 600 per-frame equivalents. THE DECISIVE DECOMPOSITION (boundary-KKT): tightening sites
+3,188->12,749 (884,872->2,809,838B) moves description d_seg only 0.34350->0.34342 — marginals
+BELOW lambda*; sites are nearly worthless at current predictor quality => THE PREDICTOR IS THE
+LEVER, constraints are for the residual tail only. D3 per-class satisfaction (five-site
+compatibility raster): Lane 8.3% (never wins temporal mode = the known lane-erasure physics) ·
+Road 50.9% · Undrivable 61.7% · Movable 99.8% (tracks work) · MyCar 86.5%. TWO FORMULATION-scoped
+blockers (verdict_scope: formulation, both with named open cures): (1) rung-1 realization —
+uint8_factor2_exact=false all 600 (the #532 quantization-gated law at the receiver; M2 PROVED
+exact realization exists => cure = compose #547/M2 lattice solve in-decoder, G2) -> arm
+realization_g2_lattice LIVE; (2) description d_seg 0.343 scoped to the compatibility-raster
+predictor; doctrine predictor (xi-advected prev + per-class charts + adjacency) UNMEASURED;
+MS-native family OPEN behind MS_ARC_TO_CELL_RASTERIZATION_SEMANTICS_UNMEASURED -> arm
+predictor_upgrade_xi_chart LIVE. R6 judgment under standing GO: NO exact-eval fired — advisory
+objective 34.94 >> pointer; the envelope buys knee candidates, not exploration (per the iteration
+authorization). Measurements sha 5108ae6ab4...; equations leg: predict-project law registration
+owed on realization close. Pointer 0.1910828242 [contest-CPU] UNMOVED — the seed is means.
