@@ -1,0 +1,66 @@
+{
+  "schema": "realization_g2b_supportfill_reuse_manifest.v1",
+  "task_id": 578,
+  "lane_id": "lane_realization_g2b_supportfill_578_20260721",
+  "reuse_policy": "extend_predecessor_measurement_and_existing_receiver_never_fork",
+  "reused": [
+    {
+      "surface": "src/tac/optimization/predict_project_receiver.py",
+      "role": "strict projected-RGB custody and exact composed realization"
+    },
+    {
+      "surface": "src/tac/optimization/uint8_lattice_feasibility.py",
+      "role": "factor-2 exact integer RGB-plane realization"
+    },
+    {
+      "surface": "src/tac/optimization/tie_aware_preimage.py",
+      "role": "canonical fp32-exact support-fill law"
+    },
+    {
+      "surface": "src/tac/optimization/resize_full_kernel.py",
+      "role": "exact full resize operator"
+    },
+    {
+      "surface": "src/tac/optimization/predict_project_schema.py",
+      "role": "canonical seed parser and constraint schema"
+    },
+    {
+      "surface": "src/tac/optimization/seed_compose_b2.py",
+      "role": "real seed/cache custody and source-cache hash"
+    },
+    {
+      "surface": "tools/measure_realization_g2_lattice.py",
+      "role": "predecessor resumable n16/n64/n600 audit extended in place"
+    }
+  ],
+  "extended": [
+    {
+      "surface": "tools/measure_realization_g2_lattice.py",
+      "justification": "add the missing real source-RGB control, deterministic hard scorers, per-pair checkpoints, and exact cost accounting without a second CLI"
+    },
+    {
+      "surface": "predict_project_realization_admissibility_v1",
+      "justification": "preserve the measured false conjunction so downstream planners cannot promote factor-2 exactness as cells-to-RGB success"
+    }
+  ],
+  "explicit_non_reuse": [
+    {
+      "surface": "#547/#549 joint_solved_planes as cells-to-RGB decoder",
+      "reason": "those planes are dense source/target RGB custody, not a decoder from semantic seed cells"
+    },
+    {
+      "surface": "source-derived palette or RGB table inside decoder code",
+      "reason": "would hide counted video-derived data in code and counterfeit the zero-byte target"
+    },
+    {
+      "surface": "new receiver or measurement fork",
+      "reason": "unnecessary; existing strict receiver and predecessor CLI were sufficient"
+    }
+  ],
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "pointer_moved": false,
+    "main_landing_review_required": true
+  }
+}

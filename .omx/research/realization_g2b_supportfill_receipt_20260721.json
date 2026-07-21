@@ -1,0 +1,90 @@
+{
+  "schema": "realization_g2b_supportfill_repo_receipt.v1",
+  "task_id": 578,
+  "lane_id": "lane_realization_g2b_supportfill_578_20260721",
+  "measurement_utc": "2026-07-21T09:37:19Z",
+  "verdict": "SOURCE_RGB_CONTROL_EXACT_ZERO_BYTE_CELLS_TO_RGB_PREMISE_FALSIFIED",
+  "verdict_scope": "The real seed's class-ID cells do not have a decoder-derived HxWx3 RGB plane. The measured source-RGB control validates the existing projection/lattice/scorer chain only; it does not validate a seed receiver.",
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "main_landing_review_required": true
+  },
+  "input_custody": {
+    "seed_path": "/Volumes/VertigoDataTier/pact/evidence/seed_compose_20260721/seeds/seed_compose_b2_loose.ppcs",
+    "seed_bytes": 884872,
+    "seed_sha256": "a21dde38128bed7ff62860ef005b994b74202e0bd00a37d1df8824ee325e856b",
+    "stage_count": 600,
+    "stage_first_sha256": "d771a821df33c193df0cfc0dcdce12b249cc6ce14e40c5f2336d2ee9bb0e1c05",
+    "stage_last_sha256": "facb1a9279b19f1eddc1a5a00a58fa639865fbcf2700e9f4ce6e278b1bcd440c",
+    "gt_cache_sha256": "cf8d8302964a3306f5099f47e4cf31b242980820c609548161f8519647b8cd6"
+  },
+  "measurement_ladder": [
+    {
+      "n": 16,
+      "uint8_factor2_exact_fraction": 1.0,
+      "double_decode_identical_pairs": 16,
+      "semantic_cells_to_rgb_exact_pairs": 0,
+      "d_seg_realized_vs_frozen_target": 0.00013256072998046875,
+      "d_seg_description_vs_frozen_target": 0.34781742095947266,
+      "d_seg_realized_argmax_vs_description": 0.3478581110636393,
+      "d_pose_realized_vs_frozen_target": 0.00004087406620429414,
+      "pose_within_declared_tube_pairs": 16,
+      "additional_seed_bytes": 18874368
+    },
+    {
+      "n": 64,
+      "uint8_factor2_exact_fraction": 1.0,
+      "double_decode_identical_pairs": 64,
+      "semantic_cells_to_rgb_exact_pairs": 0,
+      "d_seg_realized_vs_frozen_target": 0.00012628237406412762,
+      "d_seg_description_vs_frozen_target": 0.3477973143259684,
+      "d_seg_realized_argmax_vs_description": 0.34783728917439777,
+      "d_pose_realized_vs_frozen_target": 0.00006004385436454707,
+      "pose_within_declared_tube_pairs": 64,
+      "additional_seed_bytes": 75497472
+    },
+    {
+      "n": 600,
+      "uint8_factor2_exact_fraction": 1.0,
+      "double_decode_identical_pairs": 600,
+      "semantic_cells_to_rgb_exact_pairs": 0,
+      "d_seg_realized_vs_frozen_target": 0.0001518673366970486,
+      "d_seg_description_vs_frozen_target": 0.3434977213541667,
+      "d_seg_realized_argmax_vs_description": 0.3435325537787543,
+      "d_pose_realized_vs_frozen_target": 0.0001016086067031589,
+      "pose_within_declared_tube_pairs": 600,
+      "additional_seed_bytes": 707788800,
+      "declared_writes": 3188,
+      "surviving_writes": 28,
+      "mean_seconds_per_pair": 1.1320692461092645
+    }
+  ],
+  "deliverables": {
+    "D1": "MEASURED_SOURCE_RGB_CONTROL_EXACT_SEED_PATH_BLOCKED",
+    "D2": "FAIL_ZERO_BYTE_SEMANTIC_CELLS_TO_RGB_ADMISSION",
+    "D3": "MEASURED_707788800_RAW_RGB_BYTES_AND_1.1320692461_SECONDS_PER_PAIR",
+    "D4": "REGISTERED_FALSE_EMPIRICAL_ANCHOR_PREDICT_PROJECT_REALIZATION_ADMISSIBILITY_V1"
+  },
+  "external_evidence": {
+    "root": "/Volumes/VertigoDataTier/pact/evidence/realization_g2b_20260721",
+    "receipt_path": "/Volumes/VertigoDataTier/pact/evidence/realization_g2b_20260721/receipt.json",
+    "receipt_bytes": 21544,
+    "receipt_sha256": "ecea57bff31f468c7e3086b0391da5478e2c2379d0c4830af44d9eb638558363",
+    "source_control_receipt_path": "/Volumes/VertigoDataTier/pact/evidence/realization_g2b_20260721/source_plane_control/receipt.json",
+    "source_control_receipt_bytes": 11192,
+    "source_control_receipt_sha256": "967f6c23b49fa8ddf1347cc1ae3c4751e8bb20078b2b03f10da9c6f1fec54b77",
+    "pair_stage_count": 600,
+    "chunk_checkpoint_count": 38
+  },
+  "implementation": {
+    "tool": "tools/measure_realization_g2_lattice.py",
+    "tool_sha256": "814851951c7eaf9bada78c5a2fed5f721514d1108bde4cb12936427f4dcdc474",
+    "test": "tools/tests/test_measure_realization_g2_lattice.py",
+    "test_sha256": "f96915fbee6f31c363a2d9f51c68788f0b27c8ef452d3cc7548ffba039c4ffcf",
+    "measured_git_base": "855d3b089827dbe32d1a687830581b4194d0771c"
+  },
+  "cleanup": "No camera tensor or RGB plane was persisted. Pair stages and checkpoints are small JSON; atomic temporary files are removed after replace."
+}
