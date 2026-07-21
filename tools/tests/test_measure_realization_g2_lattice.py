@@ -7,21 +7,29 @@ import numpy as np
 import pytest
 
 from tac.boundary_math import warp_real_luma_frame0 as g1_warp
+from tac.boundary_math.analytic_lane_render_band import LaneBandRenderConfig
+from tac.boundary_math.lane_sdf_component import LaneLine
 from tac.optimization.predictor_upgrade_xi_chart import StaticCharts
+from tac.optimization.resize_full_kernel import FullResizeKernel
 from tools.measure_realization_g2_lattice import (
     CONTEXTUAL_STAGE_SCHEMA,
     INTERIOR_STAGE_SCHEMA,
     SOURCE_CONTROL_STAGE_SCHEMA,
     RealizationAuditError,
     _apply_local_chart_delta,
+    _effective_chart_direction_count,
     _exception_parseback,
     _head_patch_144,
+    _level_comparison,
+    _prepare_chart_branch,
     _rank4_chart_directions,
+    _select_chart_centerline_intercept,
     apply_contextual_rgb_exceptions,
     apply_dying_write_exceptions,
     audit_prefix,
     contextual_advected_rgb_plane,
     contextual_banded_projection,
+    derive_bidirectional_amplitude_ladder,
     encode_contextual_rgb_exceptions,
     encode_dying_write_exceptions,
     interior_rgb_plane,
@@ -351,6 +359,86 @@ def test_g2e_rank4_chart_zero_pads_single_write_three_rgb_chart() -> None:
         assert response_sum >= 0.0
         if response_sum == 0.0:
             assert vector[pivot] > 0.0
+
+
+def test_g2f_amplitude_ladder_is_derived_from_exact_r_gain_and_g2e_extent() -> None:
+    prior = {"secant_observations": [{"signed_amplitude": (4.0, -4.0, 8.0, -8.0)[index % 4]} for index in range(64)]}
+    amplitudes, custody = derive_bidirectional_amplitude_ladder(
+        FullResizeKernel.build(),
+        prior,
+    )
+    assert amplitudes == (0.5, 1.0, 2.0, 4.0, 8.0, 16.0)
+    assert custody["lsb_lawref_id"] == "witness_realization_lsb_regime_v1"
+    assert custody["r_operator_lawref_id"] == "separable_resize_full_kernel_direct_sum_v1"
+    assert custody["exact_r_induced_linf_gain"] == pytest.approx(1.0)
+    assert custody["constant_guessed"] is False
+
+
+def test_g2f_effective_direction_count_refuses_interior_zero_holes() -> None:
+    assert _effective_chart_direction_count(np.eye(4)) == 4
+    zero_padded = np.concatenate((np.eye(3), np.zeros((3, 1))), axis=1)
+    assert _effective_chart_direction_count(zero_padded) == 3
+    with pytest.raises(RealizationAuditError, match="contiguous rank prefix"):
+        _effective_chart_direction_count(np.asarray([[1.0, 0.0, 1.0, 0.0]]))
+
+
+def test_g2f_chart_intercept_move_is_coherent_normalized_and_deterministic() -> None:
+    lines = [
+        LaneLine(
+            centerline_coeffs=np.asarray([0.0]),
+            halfwidth_coeffs=np.asarray([0.0, halfwidth]),
+            forward_range=(0.0, 10_000.0),
+        )
+        for halfwidth in (1.0, 3.0)
+    ]
+    config = LaneBandRenderConfig(dash_gate=False)
+    line_index, coefficient_index, gain, baseline_coverage = _select_chart_centerline_intercept(lines, config)
+    assert line_index == 1
+    assert coefficient_index == 0
+    assert gain > 0.0
+    base = np.full((384, 512, 3), 127, dtype=np.uint8)
+    palette = np.asarray(((100, 100, 100), (200, 180, 160)), dtype=np.uint8)
+    first = _prepare_chart_branch(
+        base1=base,
+        lines=lines,
+        config=config,
+        palette=palette,
+        line_index=line_index,
+        coefficient_gain_pixels_per_unit=gain,
+        signed_amplitude=2.0,
+        baseline_coverage=baseline_coverage,
+    )
+    second = _prepare_chart_branch(
+        base1=base,
+        lines=lines,
+        config=config,
+        palette=palette,
+        line_index=line_index,
+        coefficient_gain_pixels_per_unit=gain,
+        signed_amplitude=2.0,
+        baseline_coverage=baseline_coverage,
+    )
+    probe, delta, saturation, custody = first
+    assert np.array_equal(probe, second[0])
+    assert np.array_equal(delta, second[1])
+    assert custody == second[3]
+    assert saturation == 0
+    assert custody.coefficient_delta == pytest.approx(2.0 / gain)
+    assert custody.max_centerline_displacement_pixels == pytest.approx(2.0)
+    assert custody.changed_pixel_count > 1
+    assert custody.changed_rgb_value_count >= custody.changed_pixel_count
+    assert np.max(np.abs(delta)) > 0
+
+
+def test_g2f_level_comparison_preserves_both_levels_and_rescues() -> None:
+    comparison = _level_comparison(
+        [False, True, False, True],
+        [True, True, False, False],
+    )
+    assert comparison["chart_only_rescued_pair_indices"] == [0]
+    assert comparison["pixel_only_pair_indices"] == [3]
+    assert comparison["both_selected_pair_indices"] == [1]
+    assert comparison["neither_selected_pair_indices"] == [2]
 
 
 def test_g2e_head_patch_is_exact_144d_zero_padded_input() -> None:
