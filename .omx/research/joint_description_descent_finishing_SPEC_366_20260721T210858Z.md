@@ -1,27 +1,42 @@
 ---
-title: "#366 direct joint-description descent finishing specification"
+title: "#366 learned joint-description descent FALLBACK specification"
 utc: 2026-07-21T21:08:58Z
 task_id: 366
 lane_id: realization_verdict_admits_or_dominated
-status: QUEUED_OPERATOR_GO_REQUIRED
+status: FALLBACK_ONLY_TRIGGER_NOT_MET
 execution_allowed: false
 research_only: true
 ---
 
-# #366 direct joint-description descent finishing SPEC
+# #366 learned joint-description descent — FALLBACK ONLY
 
 ## Ticket state
 
-**QUEUED — operator GO required. No launch or paid dispatch occurred.** This is an exact build and
-launch contract, not a runnable argv. A new typed direct-description consumer must land, pass its
-tests, storage preflight, resume audit, and governed-launch refusal checks before any GO can become
-executable. Raw flags may not be hand-appended.
+**FALLBACK ONLY — trigger not met; operator GO still required. No launch or paid dispatch
+occurred.** The PRIMARY successor is
+`direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md`, which minimizes the complete
+counted analytic ops-grammar over static-ground coefficients, the `xi` curve, and sparse events.
+This #366 contract is retained for a learned generator only if that primary produces a valid,
+SHA-bound `DirectGrammarReceiverReachabilityFailureReceiptV1` carrying the exact token
+`DIRECT_GRAMMAR_RECEIVER_REACHABILITY_FAILURE`. Raw flags may not be hand-appended.
 
-Success means one **same-artifact** tuple at n600. The build must ingest a full-precision,
+The fallback trigger requires one healthy, completion-certified primary n600 run in which exact
+final-ZIP/archive, charged/free, quarantine, determinism, resume, evaluator, and attestation gates
+are green; every v8/v9 owner has a live consumption/output-mutation/archive-byte receipt; the
+counted Pose6/`dxi` payload is present; `archive_bytes <= pointer_cap_bytes` from the same
+full-precision target receipt; and the decoded tuple misses solved Seg/Pose specifically at the
+declared analytic grammar's integer/uint8 reachability boundary. Empty manifests, default-OFF
+owners, unsearched pools/interpretations, unhealthy or incomplete optimization, byte excess,
+wrong coordinate custody, timeouts, or attestation failures do **not** activate #366. They emit
+or preserve `OPTIMIZER_NO_ADMISSION` on the PRIMARY route. Even after the typed trigger verifies,
+a separately SHA-bound operator GO is required.
+
+Fallback success means one **same-artifact** tuple at n600. The build must ingest a full-precision,
 SHA-bound official C1 solved-target receipt and derive its thresholds and byte caps at compile
 time; rounded values may not enter the launch config. Planning values from the displayed tuple
 are `d_seg≈0.00015196`, `d_pose≈0.00010184`, pointer cap 216,223 B, and strict-sub-0.15 cap
 154,524 B. These are planning ceilings until the full-precision receipt is bound.
+`pointer_cap_bytes` is the binding fallback ceiling; `strict_0_15_cap_bytes` is stretch-only.
 
 The actual admission contract is:
 
@@ -29,8 +44,32 @@ The actual admission contract is:
   measured through the integer/uint8 receiver and frozen scorers;
 - `pointer_cap_bytes = ceil((pointer_S - nonrate_S_full_precision) / rate_price) - 1` and
   `strict_0_15_cap_bytes = ceil((0.15 - nonrate_S_full_precision) / rate_price) - 1`;
-- deterministic parse-back and two independent inflates with identical raw SHA-256;
+- rate is `len(final_archive_zip_bytes)` on the exact final byte string;
+- deterministic parse-back, canonical re-encode to identical final ZIP bytes, and two independent
+  inflates with identical raw SHA-256;
 - exact archive SHA/bytes, runtime, source, config, seed, hardware axis, and scorer custody.
+
+### Non-bypass trigger verifier — TO BUILD
+
+Both the #366 typed compiler and governed launcher must call one shared verifier for:
+
+- `DirectGrammarReceiverReachabilityFailureReceiptV1` schema, exact verdict token, RFC 8785
+  payload hash (recomputed with `receipt_payload_sha256` omitted), exact on-disk receipt file hash
+  from the immutable sidecar/GO, primary-spec hash, run/artifact/evaluator/scorer hashes, seed,
+  n600, and hardware axis;
+- full-precision target-receipt SHA, solved distortions, derived `pointer_cap_bytes`, and proof the
+  exact final archive ZIP satisfies that binding cap;
+- primary optimizer health plus its preregistered completion/exhaustion/stationarity certificate
+  over every declared grammar pool and coordinate interpretation;
+- live v8/v9 owner consumption/output-mutation/archive-byte receipts, explicit counted
+  Pose6/`dxi` ownership, exact archive compile/parse/re-encode identity, double-decode identity,
+  readiness predicates, and external execution attestation; and
+- a separate content-addressed operator-GO authorization naming receipt path, exact on-disk
+  `receipt_file_sha256`, canonical `receipt_payload_sha256`, and #366.
+
+The compiler and launcher both REFUSE if any field is absent, false, stale, hash-mismatched, or
+if the status is `OPTIMIZER_NO_ADMISSION`. Neither prose metadata nor a manually supplied raw flag
+can satisfy the trigger.
 
 The final authority remains separate exact canonical-evaluator runs on contest-CPU Linux x86_64
 and contest-CUDA. This worktree has not established the evaluator path/hash; resolving and binding
@@ -45,7 +84,7 @@ The builder must extend, not bypass, the existing compiler:
 | parent compiler | `tac.witness_dsl.spec_v9_cgauge.compile_v9_cgauge_ideal_mod19_launch_config` |
 | pairs | `600` |
 | seed | `1234` for every Python/NumPy/MLX/Torch RNG derived from one recorded seed |
-| objective | exactly `100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489` |
+| objective | exactly `100*d_seg + sqrt(10*d_pose) + 25*len(final_archive_zip_bytes)/37545489` |
 | receiver | C1 deterministic generator -> RGB uint8 -> exact integer factor-2 `R` -> frozen SegNet/PoseNet |
 | solved target | required full-precision official C1 receipt plus SHA-256; no rounded fallback |
 | description variables | one counted archive description; no post-hoc correction composition by #366 program policy |
@@ -119,7 +158,7 @@ Its schema must contain, and its consumer must enforce:
 
 ```text
 objective_domain = exact_contest_score
-rate_source = canonical_archive_parseback_bytes
+rate_source = exact_len_of_final_archive_zip_bytes
 receiver_domain = integer_uint8_R
 candidate_sources = seed_or_conditioning_only
 hard_oracle_cadence = every_admission_event_and_checkpoint
@@ -128,6 +167,8 @@ post_hoc_composition = forbidden
 n64_gate_before_n600 = required
 pose_finish_eligibility = persisted_tau_final_rung_event
 pose_finish_backstop_cannot_bypass_eligibility = true
+fallback_trigger_receipt = DirectGrammarReceiverReachabilityFailureReceiptV1
+fallback_trigger_verifier = required_in_compiler_and_governed_launcher
 ```
 
 The DSL addition must resolve to a real consumer and a provenance-complete config manifest;
@@ -135,7 +176,8 @@ a lever with no consumer or a hand-invented raw flag is a launch blocker.
 
 ## What the generator must learn through uint8
 
-Reuse the already-settled v8/v9 per-class carriers; do not rediscover them:
+Reuse the governed v8/v9 per-class designs; do not rediscover them, and do not call their
+default-OFF owners present without live consumption/output-mutation/archive-byte receipts:
 
 | Semantic class / score axis | Counted object learned inside the generator | Exact receiver debt |
 |---|---|---|
@@ -145,7 +187,7 @@ Reuse the already-settled v8/v9 per-class carriers; do not rediscover them:
 | Lane | analytic ground-frame thin bands, curve rhythm, and shallow-side precision | birth and retain Lane cells without Road spill |
 | Movable | sparse object islands, births/deaths, and per-object motion parameters | preserve topology events and object cells |
 | Pose | jointly trained `xi/dxi` and generator-conditioned frame pair | enter the six-value Pose tube without sacrificing semantic cells |
-| Rate | entropy model, symbol order, quantizers, and grammar choices | minimize actual parse-back archive bytes, not a proxy tensor size |
+| Rate | entropy model, symbol order, quantizers, and grammar choices | minimize the exact final archive ZIP byte string; parse/re-encode must reproduce those bytes |
 
 The five semantic-class carriers must cover the four canonical strata
 `cell_interior`, `boundary_codim1`, `movable_track`, and `critical_event` wherever applicable.
@@ -189,8 +231,10 @@ launcher after timing smoke. They do not choose curriculum transitions.
 ## Resumability, storage, and cleanup
 
 - Complete state lives on the SSD root: generator/decoder, description variables, entropy model,
-  optimizer, EMA shadow, event index, tau rung, Pose-gate state, RNG state, config, source hashes,
-  and archive compiler state.
+  optimizer, EMA shadow, event index, tau rung, active tolerance/rate rung, every per-pool
+  marginal/KKT stop state, Pose-gate state, hard-oracle accepted/rejected receipt chain, best
+  canonical archive bytes/hash, primary-trigger receipt/verifier state, RNG state, config, source
+  hashes, and archive compiler state.
 - Save atomically (`tmp` + `os.replace`) at every event boundary and periodically within any long
   event. Preserve every stage/event checkpoint with a distinct encoded filename.
 - A resume must reload byte-close and continue from the recorded event; it may lose at most one
@@ -205,18 +249,26 @@ launcher after timing smoke. They do not choose curriculum transitions.
 
 The operator GO remains non-executable until all are green:
 
-1. typed `DirectCountedDescriptionJointSolveV1` and `PoseEligibilityOnTauFinalRungV1`, each with
+1. shared compiler/launcher verifier accepts a canonical-payload-hashed, exact-file-hashed
+   `DirectGrammarReceiverReachabilityFailureReceiptV1` plus a separate SHA-bound operator GO;
+   malformed, stale, `OPTIMIZER_NO_ADMISSION`, or hash-mismatched inputs REFUSE;
+2. typed `DirectCountedDescriptionJointSolveV1` and `PoseEligibilityOnTauFinalRungV1`, each with
    a real consumer and pure compile tests, including proof no backstop bypasses final-rung
    eligibility;
-2. deterministic NumPy reference plus MLX/Torch portability surfaces: floating intermediates
+3. deterministic NumPy reference plus MLX/Torch portability surfaces: floating intermediates
    must meet measured parity `>=0.9997`, while final receiver RGB/raw output must be byte-identical;
-3. archive grammar, parser section manifest, charged/free bijection, and quarantine gate;
-4. the deterministic stratified n64 receiver/custody smoke defined above;
-5. resume-from-every-event-boundary and EMA-shadow byte-close tests;
-6. memory/storage/timing smoke with a prelaunch n600 decode estimate below 1,800 seconds, followed
+4. archive grammar, exact final-ZIP byte source, parser/re-encode identity, charged/free bijection,
+   quarantine gate, and live owner consumption/output-mutation/archive-byte receipts;
+5. explicit counted Pose6/`dxi` ownership and a coordinate receipt for any pairwise-to-absolute
+   trajectory use;
+6. the deterministic stratified n64 receiver/custody smoke defined above;
+7. resume-from-every-event-boundary and EMA-shadow byte-close tests, including fallback-critical
+   rung/KKT/oracle/best-archive/trigger state;
+8. memory/storage/timing smoke with a prelaunch n600 decode estimate below 1,800 seconds, followed
    by a measured final n600 decode below 1,800 seconds for admission;
-7. canonical evaluator availability, bytes/hash, dependency, and scorer-custody gate;
-8. lane dispatch claim and governed launcher approval;
-9. explicit operator GO.
+9. canonical evaluator availability, bytes/hash, dependency, scorer custody, and external
+   execution attestation gate;
+10. lane dispatch claim and governed launcher approval.
 
-Until then: `QUEUED_OPERATOR_GO_REQUIRED`, pointer unchanged.
+Until the named primary trigger and operator GO both exist:
+`FALLBACK_ONLY_TRIGGER_NOT_MET`, pointer unchanged.

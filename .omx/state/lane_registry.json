@@ -82301,7 +82301,7 @@
           "evidence": ""
         }
       },
-      "notes": "FORMULATION-scoped same-artifact realization verdict; no dispatch; broader direct-description family open; MAIN review required.",
+      "notes": "FORMULATION-scoped same-artifact verdict; FAMILY strengthening refused because direct-description grammar remains open; direct-description minimizer PRIMARY, #366 FALLBACK-only; no dispatch; MAIN review required.",
       "research_only": true
     }
   ],
@@ -82312,5 +82312,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-21T21:19:21Z"
+  "updated_at": "2026-07-21T21:48:00Z"
 }

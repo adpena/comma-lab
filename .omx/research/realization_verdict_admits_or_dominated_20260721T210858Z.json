@@ -1,9 +1,14 @@
 {
-  "schema": "realization_verdict_admits_or_dominated.v1",
+  "schema": "realization_verdict_admits_or_dominated.v2",
   "utc": "2026-07-21T21:08:58Z",
   "lane_id": "realization_verdict_admits_or_dominated",
   "research_only": true,
   "dispatch": "NONE",
+  "late_main_directive": {
+    "utc": "2026-07-21T21:39:34Z",
+    "status": "CONSUMED",
+    "settled_commits": ["99cd0bd9fc", "87c470d645", "59344f22ef"]
+  },
   "pointer": {
     "score": 0.1910828242,
     "axis": "contest-CPU",
@@ -14,7 +19,7 @@
     "line": "DOMINATED(NO_SAME_ARTIFACT_RECEIVER_CLOSED_SOLVED_DISTORTION_TUPLE_IN_SUPPLIED_FORMULATIONS)",
     "named_wall": "NO_SAME_ARTIFACT_RECEIVER_CLOSED_SOLVED_DISTORTION_TUPLE_IN_SUPPLIED_FORMULATIONS",
     "verdict_scope": "FORMULATION",
-    "scope_detail": "Current supplied I1 bounded G2CS1 LaneLine search, I2 bounded fixed-kernel member selection, and I3 v3/U1 supplied-receipt formulations only.",
+    "scope_detail": "Current supplied I1 bounded G2CS1 LaneLine search, I2 bounded fixed-kernel member selection, and I3 v3/U1 supplied-receipt formulations only; FAMILY strengthening refused.",
     "scope_components": {
       "I1": "FORMULATION_bounded_linearized_LaneLine",
       "I2": "FORMULATION_bounded_fixed_kernel_member_selector",
@@ -26,6 +31,13 @@
     "minimum_admitted_k_bytes": null,
     "admitted_configuration_count": 0,
     "broader_family_status": "OPEN_NOT_RULED_OUT",
+    "family_scope_test": {
+      "requested": true,
+      "result": "REFUSED_INSUFFICIENT_EVIDENCE",
+      "reason": "I1 and I2 are bounded formulation negatives, U1 did not run an optimizer, and U2 lower bound is 0 bits.",
+      "named_escape_candidate": "complete_counted_ops_grammar_over_static_ground_coefficients_xi_curve_with_counted_pose6_dxi_residuals_and_sparse_events",
+      "escape_candidate_admitted": false
+    },
     "paradigm_status": "OPEN_NOT_RULED_OUT"
   },
   "admission_contract": {
@@ -132,6 +144,36 @@
       "verdict": "NO_FAMILY_IMPOSSIBILITY_PROOF"
     }
   ],
+  "object_role_custody": {
+    "seed": {
+      "bytes": 884872,
+      "role": "raw_PPCS_seed",
+      "is_complete_archive": false
+    },
+    "description_row": {
+      "bytes": 216207,
+      "base_bytes": 36011,
+      "component_bytes": 180196,
+      "d_seg": 0.016095318264431422,
+      "d_pose": null,
+      "receiver_closed": false,
+      "is_complete_archive": false
+    },
+    "settled_S4_archive": {
+      "bytes": 451191,
+      "inflate_seconds": 94.2,
+      "d_seg_approx": 0.602,
+      "d_pose_approx": 163.1,
+      "authority": "macOS_CPU_advisory_placeholder",
+      "is_complete_archive": true,
+      "same_object_as_description_row": false
+    },
+    "displayed_value_pointer_cap": {
+      "bytes": 216223,
+      "role": "derived_integer_archive_cap_not_observed_artifact"
+    },
+    "non_transfer_rule": "bytes_distortion_and_receiver_status_must_not_transfer_between_seed_description_archive_or_cap"
+  },
   "mechanism": {
     "aggregate": "no supplied description closes counted archive plus solved receiver distortion on the same bytes",
     "I1": {
@@ -183,6 +225,14 @@
       "ssd_receipt": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_20260721/frontier_receipt_20260721T170000Z.json",
       "ssd_file_sha256": "956094a5bcf1ee11e7dbfe7feb389bbf3f620ed2e75c00318b24d14d3fd56216",
       "canonical_receipt_sha256": "b8165f49ea4b82b995c17462f9dac8be4d6c4282ccb0b5dfbd36cfce82c9f18f"
+    },
+    {
+      "input": "MAIN_settled_custody",
+      "commits": {
+        "g2g2_resolution": "99cd0bd9fc",
+        "closed_scorer": "87c470d645",
+        "object_role_distinction": "59344f22ef"
+      }
     }
   ],
   "premise_falsification": {
@@ -191,9 +241,29 @@
     "impact": "79385 bytes cannot be paired with I2 solved distortion or used as an admission"
   },
   "next": {
-    "task": 366,
-    "ticket": ".omx/research/joint_description_descent_finishing_SPEC_366_20260721T210858Z.md",
-    "status": "QUEUED_OPERATOR_GO_REQUIRED",
+    "primary": {
+      "master_task": 578,
+      "route": "R3_DIRECT_DESCRIPTION_REDIRECT",
+      "ticket": ".omx/research/direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md",
+      "typed_owner": "DirectDescriptionOpsGrammarMinimizerV1",
+      "rate_source": "exact_len_of_final_archive_zip_A_of_z",
+      "status": "PRIMARY_BUILD_SPEC_NOT_EXECUTABLE"
+    },
+    "fallback": {
+      "task": 366,
+      "ticket": ".omx/research/joint_description_descent_finishing_SPEC_366_20260721T210858Z.md",
+      "status": "FALLBACK_ONLY_TRIGGER_NOT_MET",
+      "trigger": "DIRECT_GRAMMAR_RECEIVER_REACHABILITY_FAILURE",
+      "trigger_receipt_schema": "DirectGrammarReceiverReachabilityFailureReceiptV1",
+      "trigger_payload_hash": "sha256_RFC8785_receipt_with_receipt_payload_sha256_omitted",
+      "trigger_file_hash": "sha256_exact_on_disk_receipt_bytes_in_sidecar_and_operator_GO",
+      "trigger_scope": "FORMULATION_DECLARED_ANALYTIC_OPS_GRAMMAR",
+      "binding_cap": "pointer_cap_bytes_from_full_precision_target_receipt",
+      "strict_0_15_cap_role": "stretch_only",
+      "optimizer_incomplete_status": "OPTIMIZER_NO_ADMISSION_STAYS_PRIMARY",
+      "compiler_and_launcher_refusal_required": true,
+      "separate_sha_bound_operator_go_required": true
+    },
     "dispatch_performed": false
   },
   "main_landing_review_required": true

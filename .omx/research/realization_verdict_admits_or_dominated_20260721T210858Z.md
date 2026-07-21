@@ -19,8 +19,17 @@ formulations. `DOMINATED` here is the authority-required next-action disposition
 these supplied configurations, but it is not a measured Pareto/rate-domination claim, a family
 lower bound, or a paradigm lower bound. No supplied candidate joins, on the same bytes, all of:
 a counted archive; deterministic parse-back and double decode; the integer/
-uint8 receiver; solved `d_seg`; and the solved Pose tube. The direct, counted-description joint
-generator family remains OPEN and is the queued successor in the #366 finishing spec.
+uint8 receiver; solved `d_seg`; and the solved Pose tube. The direct-description family remains
+OPEN. Its primary successor is the direct minimizer over static-ground coefficients, the counted
+`xi` curve with explicit Pose6/`dxi` residual ownership, and sparse events; #366 joint generator
+descent is fallback-only.
+
+The requested FAMILY-scope strengthening is **REFUSED** by the evidence. I1 and I2 close bounded
+formulations, U1 never ran an optimizer, and U2 proves only the universal lower bound of 0 bits:
+`154600_BYTES_NOT_RULED_OUT`. The named family member escaping the domination proof is the
+complete counted ops-grammar/archive description optimized directly through the free decoder and
+frozen scorer, with the final ZIP bytes—not the parsed description—priced. It has not admitted
+and therefore cannot move the pointer, but it prevents an honest FAMILY-scope impossibility claim.
 
 The frontier pointer remains **0.1910828242 [contest-CPU]**. Nothing in this arm is a new
 contest-CPU/CUDA score.
@@ -36,15 +45,18 @@ contest-CPU/CUDA score.
 | I1, pairs 22 / 30 stop | 121,148 each | `0.5202585856119791, 163.40890639366341`; `0.5048929850260416, 178.69692494633534` | same packet-level scope | no |
 | I2 n64 selected member | 77,651,017 diagnostic zlib bytes | `d_seg=0.00012636184692382812`, `d_pose=0.000060022091887905524` | selected arrays are 64/64 byte-identical to canonical; **no counted replacement packet/archive** | no |
 | I2 raw seed / zlib seed / seed+calibration | 884,872 raw / 78,969 / 79,385 zlib bytes | not coupled to I2 solved distortion | raw PPCS seed parse/serialize exact; neither compressed form is an archive, and the concatenated form is not parser-valid PPCS | no |
+| I3 R3 description row | **216,207 description bytes** (`36,011` base + `180,196` components) | `d_seg≈0.0161`; `d_pose` absent | `receiver_closed=false`; **not archive.zip** | no |
+| Separate S4 settled archive | **451,191 archive bytes** | placeholder candidate `d_seg≈0.602`, `d_pose≈163.1` `[macOS-CPU advisory]` | real ZIP; inflate `94.2 s`; not the 216,207-byte description object and not solved | no |
 | I3 v3 same packet | **91,062 archive bytes** | `d_seg=0.003555730183919271`, `d_pose=126.30360158587386`; `S=35.955425463668846` | real n600 inflate, 1,200 frames, hard local CPU scorer; `[macOS-CPU advisory] NON-PROMOTABLE` | no |
 | I3 U1 tolerance ladder | none | tolerances `0.000152/0.000300/0.000500/0.000800`; zero supplied candidates | strict compiler ran over an empty candidate manifest; it did not run an optimizer | no |
 
 There is therefore no minimum admitted `k`; `k = undefined` for this formulation set.
 
 The high-rate solved context remains the settled C1 tuple: 409,526,925 archive bytes,
-`d_seg=0.00015196`, `d_pose=0.00010184`. The description-only R3 row at 216,207 bytes has
-`d_seg=0.016095318264431422`, no `d_pose`, and `receiver_closed=false`; it is not an archive
-or an admission point.
+`d_seg=0.00015196`, `d_pose=0.00010184`. Three objects must remain distinct: the R3
+**description row** is 216,207 bytes with `d_seg=0.016095318264431422`, no `d_pose`, and
+`receiver_closed=false`; the S4 **real archive** is 451,191 bytes and does not carry the R3 row's
+distortion; and 216,223 bytes is a **derived pointer-tie archive cap**, not an observed artifact.
 
 ## Independent re-derivation
 
@@ -58,12 +70,14 @@ All 13 replayed prefixes passed the packet/helper custody checks, but all 13 had
 `0/34/37/46/22/30`.
 
 The wall is visible where evidence is explicit: the six selected pairs contain 18 explicit
-declared-write rows, all `boundary_codim1` (9 Road, 9 Lane); none survives the integer/uint8
-realization check. Separately, `protected_site_custody` contains five sites, one per semantic
-class, with nine protected pixels each. The whole-field `semantic_exact` predicate covers all
-five classes, but the receipt persists no per-class/per-stratum mismatch attribution. Every
-replayed prefix also missed its declared Pose tube. I1 is ineligible for the aggregate admission
-contract because no archive/inflate exists.
+declared-write rows, all `boundary_codim1` (9 Road, 9 Lane). Receiver integrity itself works:
+parse-back, receiver RGB, factor-2 uint8 exactness, canonical re-encode, and double decode pass.
+The bounded 20-coordinate LaneLine alphabet is instead under-dimensioned for the whole-field
+partition, leaving 99,681--139,821 semantic mismatches, and it also misses the Pose tube.
+Separately, `protected_site_custody` contains five sites, one per semantic class, with nine
+protected pixels each. The whole-field `semantic_exact` predicate covers all five classes, but
+the receipt persists no per-class/per-stratum mismatch attribution. I1 is ineligible for the
+aggregate admission contract because no archive/inflate exists.
 
 This closes only the executed bounded linearized LaneLine path. It does not prove that later
 unreplayed prefixes, another chart alphabet, or the chart family are dominated; no monotonicity
@@ -108,7 +122,8 @@ equivalently `150.181956 bytes` per `1e-6` of `d_seg`. Reducing the v3 row from
 an exchange-rate calculation, **not** a lower bound on the bytes required to realize the repair.
 The v3 archive has 125,161 bytes of headroom to the displayed-value pointer cap of 216,223 and
 63,462 bytes to the displayed-value strict cap of 154,524. Its Pose debt is independently
-catastrophic.
+catastrophic. The 216,223-byte cap is arithmetic; it must never be cited as the 216,207-byte R3
+description or the 451,191-byte S4 archive.
 
 Using only the displayed rounded solved values, the non-rate score is
 `0.04710838004286111`. The strict integer cap for `S < 0.15` is 154,524 bytes:
@@ -129,12 +144,18 @@ realization constraint:
 3. I3 closes a real 91,062-byte archive, but the decoded generator misses both solved scorer
    cells and Pose by a large margin; U1/U2 provide no positive feasibility or lower-bound closure.
 
-Thus continuing the **supplied** configurations has no admitted current row. Choosing one
-generator/description solve, with all candidate pools used only as initialization or
-conditioning, is the binding #366 routing/design decision; I1 does not prove every possible
-receiver-closed post-hoc design impossible. That successor is specified in
-`joint_description_descent_finishing_SPEC_366_20260721T210858Z.md` and remains QUEUED pending
-operator GO and the fail-closed readiness DAG.
+Thus continuing the **supplied** configurations has no admitted current row. The family-scope
+test does not close: the 0-bit U2 bound cannot exclude a <=154,600-byte member, and none of I1,
+I2, or U1 searched the direct full-partition grammar. The escaping candidate is the PRIMARY
+direct-description minimizer specified in
+`direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md`: compose the reusable-but-
+default-OFF v8/v9 carrier designs into one counted grammar over static-ground coefficients,
+`xi`-curve knots, explicit Pose6/`dxi` residuals, and sparse events, then minimize exact score
+through free decode while pricing the exact final ZIP. #366 is demoted to a fallback-only learned
+generator solve. Its compiler and launcher must verify a SHA-bound
+`DirectGrammarReceiverReachabilityFailureReceiptV1`, a healthy preregistered completion
+certificate, `archive_bytes <= pointer_cap_bytes`, and separate operator GO; optimizer
+noncompletion remains PRIMARY as `OPTIMIZER_NO_ADMISSION`.
 
 ## STORES CONSULTED
 
@@ -149,13 +170,16 @@ operator GO and the fail-closed readiness DAG.
 - I3 tracked v3 receipts and branch `codexwt/einstein_kolmogorov_ultra_20260721T150001Z`,
   commits `5cc81f1172..ab9a14a6f2`; compiled SSD receipt SHA-256
   `956094a5bcf1ee11e7dbfe7feb389bbf3f620ed2e75c00318b24d14d3fd56216`.
+- MAIN custody commits `99cd0bd9fc` (g2g2 resolution and direct-description redirect),
+  `87c470d645` (closed-scorer D1 exact closure and unresolved 154,600-byte minimum), and
+  `59344f22ef` (seed/archive/description distinction).
 - v7.5/v8/v9 specs, existing typed curriculum DSL, #366 prior prep, canonical equation modules,
   and the append-only #603 G-register.
 
 ## Review and authority
 
-No paid dispatch, training, archive mutation, or pointer movement occurred. MAIN must review
-this branch plus the cited I1 and I3 branch ranges before merging or treating their code as
-canonical.
+No paid dispatch, training, archive mutation, or pointer movement occurred. The late MAIN
+directive at `2026-07-21T21:39:34Z` was consumed. MAIN must review this branch plus the cited I1
+and I3 branch ranges before merging or treating their code as canonical.
 
 `DOMINATED(NO_SAME_ARTIFACT_RECEIVER_CLOSED_SOLVED_DISTORTION_TUPLE_IN_SUPPLIED_FORMULATIONS)`

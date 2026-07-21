@@ -14,13 +14,19 @@ This verdict measures no new invariant or controller law. It applies existing ca
 | `realization_necessity_preimage_per_stratum_v1` | requires integer/uint8 preimage survival per explicitly actuated stratum |
 | `frozen_scorer_fisher_curvature_margin_colocation_v1` | binds the inner correction direction to the frozen scorer/margin geometry |
 | `flip_margin_step_law_v1` | supplies the discrete argmax-crossing condition; proxy movement is not an admitted cell flip |
-| `cgauge_master_action_v1` | supplies the single joint Seg/Pose/rate action for the #366 successor |
+| `cgauge_master_action_v1` | supplies the single joint Seg/Pose/rate action for the PRIMARY direct-description minimizer and fallback #366 |
 
 The derived strict sub-0.15 integer cap of 154,524 bytes uses the displayed rounded solved
 distortion and the existing contest score equation. It is an input-specific evaluation, not a
 new law. U2's 0-bit universal lower bound likewise remains an input result, not a positive
 Kolmogorov law.
 
-Triality disposition: equations reused; DAG updated; the successor direct-description and
-tau-final-rung Pose-eligibility DSL components are specified as TO BUILD and are not represented
-as executable today.
+The evidence cannot promote the verdict to FAMILY scope: U2's 0-bit bound leaves the
+static-ground-coefficients + `xi`-curve + sparse-events direct grammar open. This is an
+evidence-scope disposition, not a new equation.
+
+Triality disposition: equations reused; DAG updated; PRIMARY
+`DirectDescriptionOpsGrammarMinimizerV1`, typed
+`DirectGrammarReceiverReachabilityFailureReceiptV1` plus its compiler/launcher verifier, and
+fallback direct-description/tau-final-rung DSL components are specified as TO BUILD and are not
+represented as executable today.

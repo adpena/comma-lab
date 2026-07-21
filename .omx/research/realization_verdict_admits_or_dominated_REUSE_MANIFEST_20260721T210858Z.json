@@ -1,5 +1,5 @@
 {
-  "schema": "realization_verdict_reuse_manifest.v1",
+  "schema": "realization_verdict_reuse_manifest.v2",
   "utc": "2026-07-21T21:08:58Z",
   "artifact": ".omx/research/realization_verdict_admits_or_dominated_20260721T210858Z.md",
   "research_only": true,
@@ -31,6 +31,24 @@
       "limits": "not on current HEAD; empty candidate manifest; MAIN review required"
     },
     {
+      "surface": "MAIN_g2g2_custody_and_redirect",
+      "location": "git:99cd0bd9fc",
+      "use": "receiver works; LaneLine realization under-dimensioned; direct-description minimizer redirect",
+      "limits": "0/6 bounded formulation; family remains open"
+    },
+    {
+      "surface": "MAIN_closed_scorer_custody",
+      "location": "git:87c470d645",
+      "use": "Bregman-Voronoi equals Laguerre power diagram at 0/20480 residual",
+      "limits": "154600-byte minimum remains unresolved"
+    },
+    {
+      "surface": "MAIN_object_role_custody",
+      "location": "git:59344f22ef",
+      "use": "separate seed, description, archive, and derived-cap authority",
+      "limits": "216207-byte description is not the 451191-byte archive"
+    },
+    {
       "surface": "v9_typed_curriculum_DSL",
       "location": "src/tac/witness_dsl/curriculum_dsl.py",
       "use": "inherited event-driven tau, unified semantic form, pose conditioning, pose carrier, and governed basis control",
@@ -45,8 +63,8 @@
     {
       "surface": "v8_v9_per_class_carriers",
       "location": ".omx/research/SPEC_v8_perclass_decomposition_20260708.md",
-      "use": "reuse settled per-stratum carrier assignments inside #366",
-      "limits": "byte-closed composed verdict remains owed"
+      "use": "compose reusable per-stratum designs inside the PRIMARY direct-description grammar",
+      "limits": "v9 #503 is built default-OFF with NO_VERDICT_RECEIVER_RATE_CUSTODY and V9_INTEGRATION_BLOCKED_OWNER; live consumer/output-mutation/archive-byte receipts remain owed"
     }
   ],
   "do_not_reuse_as_authority": [
@@ -60,7 +78,11 @@
     },
     {
       "surface": "I3_R3_216207_description",
-      "reason": "description-only, d_pose absent, receiver_closed false"
+      "reason": "description-only, d_pose absent, receiver_closed false; not the 451191-byte ZIP or 216223-byte derived cap"
+    },
+    {
+      "surface": "I3_S4_451191_archive_as_R3_row",
+      "reason": "real archive is a distinct object and cannot inherit the 216207-byte description row's size or distortion"
     },
     {
       "surface": "I3_U1_NO_FEASIBLE_CANDIDATE_rows",
@@ -78,7 +100,15 @@
     },
     {
       "surface": "task_366_finishing_spec",
-      "kind": "QUEUED_operator_GO_ticket"
+      "kind": "FALLBACK_ONLY_DIRECT_GRAMMAR_RECEIVER_REACHABILITY_FAILURE"
+    },
+    {
+      "surface": "direct_description_minimizer_PRIMARY_spec",
+      "kind": "PRIMARY_BUILD_SPEC_NOT_EXECUTABLE"
+    },
+    {
+      "surface": "DirectDescriptionOpsGrammarMinimizerV1",
+      "kind": "TO_BUILD_primary_typed_DSL_and_consumer"
     },
     {
       "surface": "DirectCountedDescriptionJointSolveV1",
@@ -87,6 +117,14 @@
     {
       "surface": "PoseEligibilityOnTauFinalRungV1",
       "kind": "TO_BUILD_event_consumer_replacing_epoch_based_beta_eligibility"
+    },
+    {
+      "surface": "DirectGrammarReceiverReachabilityFailureReceiptV1",
+      "kind": "TO_BUILD_RFC8785_payload_hash_plus_exact_file_hash_primary_completion_receipt"
+    },
+    {
+      "surface": "fallback_trigger_verifier",
+      "kind": "TO_BUILD_shared_compiler_and_governed_launcher_REFUSE_gate"
     }
   ],
   "dispatch_performed": false,

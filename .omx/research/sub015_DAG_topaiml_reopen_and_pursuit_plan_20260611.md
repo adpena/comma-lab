@@ -20753,3 +20753,38 @@ STANDING DIRECTIVE (binds every session): "If you run into any similar questions
 | G8 Pose refinement | `OPEN_COUPLED_TO_G7` | Sigma-min event-gated Pose finish inside the generator; no separate composition. |
 
 Durable set: `.omx/research/realization_verdict_admits_or_dominated_20260721T210858Z.md` + JSON receipt + DAG FEED + canonical-equations disposition + REUSE MANIFEST + `.omx/research/joint_description_descent_finishing_SPEC_366_20260721T210858Z.md` + I2 premise-falsification memo. Triality: DAG updated; existing v9 single-owner event actuators and descendant custody order specified with `DirectCountedDescriptionJointSolveV1` + `PoseEligibilityOnTauFinalRungV1` explicitly TO BUILD; existing equations reused, no new law measured. No dispatch. MAIN landing review required.
+
+## FEED-REALIZATION-VERDICT-MAIN-DIRECTIVE-CORRECTION-20260721T214800Z
+
+Supersedes only the routing/scope implications in the immediately preceding
+`FEED-REALIZATION-VERDICT` block; its measured rows remain historical evidence.
+
+- **FAMILY-SCOPE TEST REFUSED:** I1 G2G2 and I2 member selection close bounded formulations,
+  U1 has an empty candidate manifest, and U2's sound lower bound is 0 bits. Therefore no evidence
+  proves the entire chart/direct-description family dominated. The named member escaping that
+  proof is the complete counted ops-grammar/archive description over static-ground coefficients,
+  the `xi` curve with counted Pose6/`dxi` residuals, and sparse events, optimized directly through
+  free decode + frozen scorer while pricing the exact final ZIP.
+  Exact verdict remains
+  `DOMINATED(NO_SAME_ARTIFACT_RECEIVER_CLOSED_SOLVED_DISTORTION_TUPLE_IN_SUPPLIED_FORMULATIONS)`
+  at FORMULATION scope with `pareto_or_rate_domination_claim=false`.
+- **PRIMARY ROUTE:**
+  `.omx/research/direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md`. Compose the
+  v8/v9 #503 per-class/recursive-fractal designs; do not rediscover them, but preserve their
+  default-OFF `NO_VERDICT_RECEIVER_RATE_CUSTODY` status until live owner consumption/output-
+  mutation/archive-byte receipts exist. Put exact final ZIP bytes inside the objective. G2 becomes
+  `P0_PRIMARY_DIRECT_DESCRIPTION_MINIMIZER`; G7 becomes `P0_PRIMARY_DIRECT_DESCRIPTION`.
+- **#366 DEMOTED:**
+  `.omx/research/joint_description_descent_finishing_SPEC_366_20260721T210858Z.md` is
+  `FALLBACK_ONLY_TRIGGER_NOT_MET`. Its compiler and launcher must verify an RFC-8785-payload-
+  hashed `DirectGrammarReceiverReachabilityFailureReceiptV1` plus the exact receipt-file SHA named
+  by operator GO, full-precision target/cap custody, a
+  healthy preregistered completion certificate over every grammar pool/interpretation, exact
+  archive/receiver/evaluator gates, and separate SHA-bound operator GO. `OPTIMIZER_NO_ADMISSION`,
+  empty search, byte excess, custody/attestation failure, or timeout remains PRIMARY.
+- **OBJECT ROLES LOCKED:** 216,207 B is an R3 DESCRIPTION row (36,011 base + 180,196
+  components, `d_seg≈0.0161`, Pose absent, `receiver_closed=false`); 451,191 B is a DISTINCT real
+  S4 archive (inflate 94.2 s); 216,223 B is a DERIVED pointer-tie archive cap. Bytes, distortion,
+  and receiver status never transfer across those objects.
+
+No dispatch. Pointer 0.1910828242 `[contest-CPU]` UNMOVED. MAIN merge-boundary review required.
