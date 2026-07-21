@@ -2703,3 +2703,8 @@
 | 2026-07-20T15:59:23Z | codex:gpt-5.6-sol | lane_v10_m2_live_target_selection_20260720 | macos_cpu_local | r2_m2_target_selection_20260720T151641Z |  | completed_local_measurement | n600 byte-closed receipt committed 78636bb610: d_seg=0 d_pose=0 archive=1,717,172,741 B; direct target custody rate-dead; pointer unmoved. |
 | 2026-07-20T17:12:37Z | codex:r2b_sparse_target_selection | lane_r2b_sparse_target_selection_20260720 | local | r2b_sparse_target_selection_20260720T160249Z |  | completed_local_measurement_scoped_negative | n600 macOS-CPU advisory measured; KKT stop zero; pointer unmoved; MAIN review required. |
 | 2026-07-20T16:10:18Z | codex:r2b_sparse_target_selection | lane_r2b_sparse_target_selection_20260720 | local | r2b_sparse_target_selection_20260720T160249Z |  | active_local_measurement | Local-only sparse target-decision arm; no paid dispatch. |
+
+
+
+| 2026-07-20T16:30:10Z | codex:gpt-5.6-sol | regmax_family_probes | macos_cpu_local | regmax_family_probes_20260720T160907Z |  | completed_local_probe_n_a | Completed three preregistered bounded probes: full n600 target characterization measured; all terminal matched receiver verdicts N-A; no score or pointer change |
+| 2026-07-20T16:16:48Z | codex:gpt-5.6-sol | regmax_family_probes | macos_cpu_local | regmax_family_probes_20260720T160907Z |  | active_local_cpu_probe | Local zero-dollar bounded probe arm; no paid dispatch, no evaluator score, pointer unchanged |

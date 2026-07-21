@@ -1,0 +1,66 @@
+{
+  "axis": "[macOS-CPU advisory] target-cache analysis; no score authority",
+  "created_at_utc": "2026-07-20T16:27:19Z",
+  "elapsed_seconds": 13.079850249923766,
+  "git_head": "35ef3613caf2c1bfa765c1529fc3d648396e6e2e",
+  "inputs": {
+    "hard_labels": {
+      "bytes": 117964800,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_segnet_argmax.u8",
+      "sha256": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68"
+    },
+    "logits": {
+      "bytes": 1179648000,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/gt_segnet_logits.f16",
+      "sha256": "41d3ef535f5b5855fe17aab678580114a50309dc48d04948af62c2f563ed3b52"
+    },
+    "registry": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/regmax_family_probes_20260720T160907Z/.omx/state/canonical_equations_registry.jsonl",
+      "sha256": "32156d4105fee668c047176a618d6c1b3ba6a4af3e6ced8273fd93bb9889d6d1"
+    },
+    "scale": 1.0,
+    "shape": [
+      600,
+      5,
+      384,
+      512
+    ]
+  },
+  "overall_verdict": "N-A_MATCHED_RECEIVER_SURFACES_ABSENT",
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "receipts": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/regmax_family_probes_20260720T160907Z/.omx/research/regmax_family_probes_20260720T162719Z/probe_sparsemax_margin_band_preimage_ab_v1.json",
+      "probe_id": "probe_sparsemax_margin_band_preimage_ab_v1",
+      "sha256": "fbe2210af7086a2b52413255d65159600c8eb75b2fb898604a175166c6ad92ae"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/regmax_family_probes_20260720T160907Z/.omx/research/regmax_family_probes_20260720T162719Z/probe_tropical_residuation_principal_cell_representative_v1.json",
+      "probe_id": "probe_tropical_residuation_principal_cell_representative_v1",
+      "sha256": "4f9c6cef578c9cb589879ad2b3aa4974537f1d1468fb7dffafd72401edd91ab2"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/regmax_family_probes_20260720T160907Z/.omx/research/regmax_family_probes_20260720T162719Z/probe_entropy_hopfield_preprox_uint8_v1.json",
+      "probe_id": "probe_entropy_hopfield_preprox_uint8_v1",
+      "sha256": "c0bf63effc60dd2094208760707abc7c42526d6a6c04359e8ad04c4f95a65330"
+    }
+  ],
+  "registered_surface_presence": {
+    "aurenhammer_comparator": false,
+    "preimage_adapter": false,
+    "principal_cell_fixture": false,
+    "valid_cell_prototypes": false
+  },
+  "runtime": {
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "schema": "regmax_family_probe_manifest.v1",
+  "score_claim": false,
+  "verdicts": {
+    "probe_entropy_hopfield_preprox_uint8_v1": "N-A",
+    "probe_sparsemax_margin_band_preimage_ab_v1": "N-A",
+    "probe_tropical_residuation_principal_cell_representative_v1": "N-A"
+  }
+}
