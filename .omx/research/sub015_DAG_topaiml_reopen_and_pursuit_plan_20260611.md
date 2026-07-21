@@ -20746,3 +20746,54 @@ STANDING DIRECTIVE (binds every session): "If you run into any similar questions
 - **per_stratum_recursive_fractal_optimal MERGED** (8fa6581f74; arm rc=0, 10 tests, byte-identical double-run): verdict `NO_VERDICT_RECEIVER_RATE_CUSTODY`; Road/Lane calibration-vs-geometry split `UNIDENTIFIABLE_FROM_CURRENT_CUSTODY` (BEV non-staticity 39–47px; refusal-to-infer verified at review). Tool `tools/measure_per_stratum_recursive_fractal_optimal.py` = the canonical fail-closed per-stratum measurement surface (JSON-null semantics for absent V9 sections — no fabricated zero-byte rate claims).
 - **Equations-leg decision (per triality per-leg gate):** NO equation registered — # FORMALIZATION_PENDING:null-verdict-no-anchor-per-NO-FAKE — the arm's verdict is a custody BLOCKER, not a measured law; registering an EmpiricalAnchor from a null byte-verdict would fabricate authority. Named registration trigger: when receiver-rate custody lands (producers: xi_temporal_delta_coder_574 + wrong_levels_describe_sweep_610, both live and carrying the full v9-recall supplement), re-run the per-stratum tool → the FIRST non-null per-stratum byte-verdict registers/refines `perclass_stratum_residual_carrier_taxonomy_v1`'s anchor set, and the calib-vs-geometry split becomes identifiable-or-scoped.
 - v9-recall closure: both live describe-line arms supplemented (inbox, high) with the built carrier modules (analytic_lane_render_band · hood_static_component · island_protection · lane_ground_factorization · lane_headstart), the #503 9-dim composition law, chroma-first/luma-reserved reconciliation, and the openpilot/BEV homography corpus — the operator's "all v9 per-stratum + homography" incorporation is now structural, not prompt-partial.
+## FEED-REALIZATION-VERDICT-20260721T210858Z (#603 G-register append-only delta)
+
+**VERDICT:** `DOMINATED(NO_SAME_ARTIFACT_RECEIVER_CLOSED_SOLVED_DISTORTION_TUPLE_IN_SUPPLIED_FORMULATIONS)` at **FORMULATION** scope only and as the authority-required next-action disposition (`pareto_or_rate_domination_claim=false`). The current supplied I1/I2/I3 formulations have zero admitted same-artifact tuples. I1 G2CS1 is `0/6` after its preregistered path-local hard-replay rate stop (packet/helper checks pass; semantic exactness + Pose tube fail; no archive closure). I2 is identity `64/64`, 0% cut, and its counted-code-inside-solve premise is FALSIFIED: 79,385 B is neither parser-valid PPCS nor an archive. I3's real 91,062 B n600 archive measures `d_seg=0.003555730183919271`, `d_pose=126.30360158587386`; U1 has zero supplied candidates and U2's universal lower bound is 0 bits. Broader chart/direct-description families remain OPEN/NOT-RULED-OUT; U2's exact conclusion is `154600_BYTES_NOT_RULED_OUT`. Pointer 0.1910828242 `[contest-CPU]` UNMOVED.
+
+| #603 row | Append-only status update | Next routing |
+|---|---|---|
+| G1 MDL-in-loop | `OPEN_COUNTED_MDL_UNTESTED_I2_BOUNDED_MEMBER_STOPPED` | Stop bounded fixed-kernel member reselection; counted-packet MDL remains open and must enter #366's joint generator solve. |
+| G2 scorer-coordinate description | `OPEN_NO_ADMITTED_ROW` | U1 empty, U2 0-bit lower bound; retain as direct-description work, not an admission claim. |
+| G6 constructed correction alphabet | `MEASURED_PATH_LOCAL_RATE_STOP_NO_ADMISSION` | Retire only the exact stopped G2CS1 sequences absent a materially changed formulation; reuse symbols as seeds/conditioning inside the joint solve. |
+| G3 xi temporal | `OPEN_UNCHANGED` | Optimize and serialize `xi/dxi` inside the same counted description. |
+| G4 grammar arithmetic | `OPEN_UNCHANGED` | Price canonical archive parse-back bytes in the objective. |
+| G5 adaptive statistics | `OPEN_UNCHANGED` | Learn inside the same solve; no post-hoc component. |
+| G7 generator description | `P0_SUCCESSOR` | #366 direct joint-description finishing spec QUEUED; operator GO required after readiness DAG. |
+| G8 Pose refinement | `OPEN_COUPLED_TO_G7` | Sigma-min event-gated Pose finish inside the generator; no separate composition. |
+
+Durable set: `.omx/research/realization_verdict_admits_or_dominated_20260721T210858Z.md` + JSON receipt + DAG FEED + canonical-equations disposition + REUSE MANIFEST + `.omx/research/joint_description_descent_finishing_SPEC_366_20260721T210858Z.md` + I2 premise-falsification memo. Triality: DAG updated; existing v9 single-owner event actuators and descendant custody order specified with `DirectCountedDescriptionJointSolveV1` + `PoseEligibilityOnTauFinalRungV1` explicitly TO BUILD; existing equations reused, no new law measured. No dispatch. MAIN landing review required.
+
+## FEED-REALIZATION-VERDICT-MAIN-DIRECTIVE-CORRECTION-20260721T214800Z
+
+Supersedes only the routing/scope implications in the immediately preceding
+`FEED-REALIZATION-VERDICT` block; its measured rows remain historical evidence.
+
+- **FAMILY-SCOPE TEST REFUSED:** I1 G2G2 and I2 member selection close bounded formulations,
+  U1 has an empty candidate manifest, and U2's sound lower bound is 0 bits. Therefore no evidence
+  proves the entire chart/direct-description family dominated. The named member escaping that
+  proof is the complete counted ops-grammar/archive description over static-ground coefficients,
+  the `xi` curve with counted Pose6/`dxi` residuals, and sparse events, optimized directly through
+  free decode + frozen scorer while pricing the exact final ZIP.
+  Exact verdict remains
+  `DOMINATED(NO_SAME_ARTIFACT_RECEIVER_CLOSED_SOLVED_DISTORTION_TUPLE_IN_SUPPLIED_FORMULATIONS)`
+  at FORMULATION scope with `pareto_or_rate_domination_claim=false`.
+- **PRIMARY ROUTE:**
+  `.omx/research/direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md`. Compose the
+  v8/v9 #503 per-class/recursive-fractal designs; do not rediscover them, but preserve their
+  default-OFF `NO_VERDICT_RECEIVER_RATE_CUSTODY` status until live owner consumption/output-
+  mutation/archive-byte receipts exist. Put exact final ZIP bytes inside the objective. G2 becomes
+  `P0_PRIMARY_DIRECT_DESCRIPTION_MINIMIZER`; G7 becomes `P0_PRIMARY_DIRECT_DESCRIPTION`.
+- **#366 DEMOTED:**
+  `.omx/research/joint_description_descent_finishing_SPEC_366_20260721T210858Z.md` is
+  `FALLBACK_ONLY_TRIGGER_NOT_MET`. Its compiler and launcher must verify an RFC-8785-payload-
+  hashed `DirectGrammarReceiverReachabilityFailureReceiptV1` plus the exact receipt-file SHA named
+  by operator GO, full-precision target/cap custody, a
+  healthy preregistered completion certificate over every grammar pool/interpretation, exact
+  archive/receiver/evaluator gates, and separate SHA-bound operator GO. `OPTIMIZER_NO_ADMISSION`,
+  empty search, byte excess, custody/attestation failure, or timeout remains PRIMARY.
+- **OBJECT ROLES LOCKED:** 216,207 B is an R3 DESCRIPTION row (36,011 base + 180,196
+  components, `d_seg≈0.0161`, Pose absent, `receiver_closed=false`); 451,191 B is a DISTINCT real
+  S4 archive (inflate 94.2 s); 216,223 B is a DERIVED pointer-tie archive cap. Bytes, distortion,
+  and receiver status never transfer across those objects.
+
+No dispatch. Pointer 0.1910828242 `[contest-CPU]` UNMOVED. MAIN merge-boundary review required.
