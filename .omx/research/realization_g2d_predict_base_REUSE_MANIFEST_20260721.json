@@ -1,0 +1,62 @@
+{
+  "schema": "realization_g2d_predict_base_reuse_manifest.v1",
+  "lane_id": "lane_realization_g2d_predict_base_578_20260721",
+  "task_id": "578",
+  "entries": [
+    {"surface": "factor2_receiver_and_lattice", "path": "src/tac/optimization/predict_project_receiver.py", "status": "reused_as_is"},
+    {"surface": "bounded_integer_lattice", "path": "src/tac/optimization/uint8_lattice_feasibility.py", "status": "reused_as_is"},
+    {"surface": "G1_xi_worldsheet_warp", "path": "src/tac/boundary_math/warp_real_luma_frame0.py", "status": "reused_as_is"},
+    {"surface": "G1_LawRef_and_receipt_loader", "path": "src/tac/optimization/predictor_upgrade_xi_chart.py", "status": "reused_as_is"},
+    {"surface": "tac_lie_SE3", "path": "src/tac/lie/_se3_numpy.py", "status": "reused_as_is"},
+    {"surface": "adaptive_context_range_coder_557", "path": "src/tac/optimization/predictor_r2_missdelta.py", "status": "reused_as_is"},
+    {"surface": "realization_measurement_and_2400_stage_harness", "path": "tools/measure_realization_g2_lattice.py", "status": "extended_in_place"},
+    {"surface": "realization_admission_law", "path": "src/tac/canonical_equations/predict_project_realization_admissibility_20260721.py", "status": "reused_as_is"},
+    {"surface": "seed_schema_and_parser", "path": "src/tac/optimization/predict_project_schema.py", "status": "reused_as_is_sibling_owned"},
+    {"surface": "predictor_round2_coder_schema", "path": "src/tac/optimization/predictor_r2_missdelta.py", "status": "read_only_sibling_owned"},
+    {"surface": "openpilot_per_class_chart_predictor", "path": "src/tac/optimization/predictor_upgrade_xi_chart.py", "status": "reused_pair0_path_as_is"},
+    {"surface": "lane_polynomial_chart_and_renderer", "path": "src/tac/boundary_math/analytic_lane_render_band.py", "status": "reused_counted_brotli41303"},
+    {"surface": "static_road_undrivable_hood_chart", "path": "/Volumes/VertigoDataTier/pact/evidence/predictor_upgrade_20260721/canonical_g1_d4_fixed_20260721/charts/static_charts_n64.pxch", "status": "reused_counted_zlib835_parseback_exact"},
+    {"surface": "frozen_rank4_prototype_bank_583", "path": ".omx/research/prereq_surfaces_flush_20260720/surface_2_rank4_prototype_bank.json", "status": "reused_as_exact_feature_space_custody"},
+    {"surface": "terminal_n600_native_vjp_campaign", "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_n600_20260720/campaign_receipt.json", "status": "reused_complete600_source_arrangement_only"},
+    {"surface": "M1_rank4_first_order_band", "path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/receipt.json", "status": "inspected_not_reused_for_generated_arrangement"},
+    {"surface": "r1b6_receiver", "path": "tools/measure_r1b6_admissible_carrier.py", "status": "inspected_not_compatible_no_reuse"}
+  ],
+  "new_with_justification": [
+    "A contextual sequential measurement runner and sparse RGB-delta container are new because no existing receiver harness composes previous-decoded RGB, G1 warp, margin-directed projection, and 1200-frame replay."
+  ],
+  "measurement_disposition": {
+    "status": "MEASURED_CONTEXTUAL_PREDICT_BASE_NOT_ADMISSIBLE",
+    "axis": "[macOS-CPU advisory]",
+    "full_receipt_path": "/Volumes/VertigoDataTier/pact/evidence/realization_g2d_20260721/canonical_v1/receipt.json",
+    "full_receipt_sha256": "f7452ae660d6529f49c1de1e44826860b52a840c9459eea4af40d6737bcf6394",
+    "reuse_next": [
+      "Keep the scorer-free sequential decoder, source-closed resume format, strict exception parse-back, and exact D5 invocation.",
+      "Keep the measured margin-survival contingency as a regression oracle: positive 1580/1580, nonpositive 0/1608.",
+      "Do not reuse the 368201-byte exact bootstrap as an admissible payload, the nearest-target-pair cross-motion proxy as exact motion, or the one-round prototype projection as a family verdict."
+    ]
+  },
+  "late_directive_addendum": {
+    "status": "MEASURED_FRAME0_PRIOR_RACE_PROJECTION_BLOCKED",
+    "axis": "[macOS-CPU advisory]",
+    "full_receipt_path": "/Volumes/VertigoDataTier/pact/evidence/realization_g2d_20260721/prior_race_v2/receipt.json",
+    "full_receipt_sha256": "0aa7e9cc86b1eb11ef3816b2bcf95182ca504d7e514107112f22a52bfee7412e",
+    "openpilot_base_counted_bytes": 121128,
+    "openpilot_base_headroom_bytes": 95094,
+    "openpilot_base_d_seg": 0.2808990478515625,
+    "keyframe_base_counted_bytes": 78990,
+    "keyframe_base_d_seg": 0.4743448893229167,
+    "rank4_projection_disposition": "BLOCKED_FAIL_CLOSED_NO_RANK4_RGB_EXCEPTION_STREAM_EMITTED",
+    "exact_blocker": "R1B2_RANK4_FIRST_ORDER_REALIZED_SECANT_CUSTODY_ABSENT",
+    "reuse_next": [
+      "Keep the openpilot per-class prior as the measured compact fidelity leader at pair0.",
+      "Keep terminal n600 VJP custody, but never apply source-arrangement normals to generated candidates without arrangement validation.",
+      "Build candidate-arrangement realized-backbone secants and a receiver-closed rank4 QP before emitting correction bytes.",
+      "Use frozen deeper-layer or PoseNet bases only at encode time; ship and count any decoder constants and never load scorer weights at inflate time."
+    ]
+  },
+  "forked_source_of_truth": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "main_review_required": true
+}

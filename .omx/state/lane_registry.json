@@ -81768,6 +81768,54 @@
       },
       "notes": "Task #578 round 3; real n600 description-space causal jitter, surgical shape waterfill, and base terminal-coding audit; pointer unmoved; MAIN landing review required",
       "research_only": true
+    },
+    {
+      "id": "lane_realization_g2d_predict_base_578_20260721",
+      "name": "Task 578 contextual predict-project realization with advected RGB base",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "MEASURED_CONTEXTUAL_PREDICT_BASE_NOT_ADMISSIBLE plus late MEASURED_FRAME0_PRIOR_RACE_PROJECTION_BLOCKED [macOS-CPU advisory]; n600 whole exact 0/600 and Pose tube 0/600. Pair0 openpilot base now fits at 121128 B with d_seg 0.280899, but candidate-arrangement realized secants and receiver QP are absent; source VJP is terminal 600/600. MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "candidate-arrangement rank4 first-order plus realized-backbone secants and receiver-closed QP",
+        "exact or learned cross-pair xi custody",
+        "corrected secant-QP whole-field projection",
+        "rate-accounted curvelet-shearlet residual"
+      ]
     }
   ],
   "level_rules": {

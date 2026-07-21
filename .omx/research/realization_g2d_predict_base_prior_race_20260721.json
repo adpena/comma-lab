@@ -1,0 +1,93 @@
+{
+  "schema": "realization_g2d_frame0_prior_race_compact.v1",
+  "task_id": "578",
+  "lane_id": "lane_realization_g2d_predict_base_578_20260721",
+  "verdict": "MEASURED_FRAME0_PRIOR_RACE_PROJECTION_BLOCKED",
+  "verdict_scope": "pair0 frame0 prior followed by one G1 within-pair refinement only; base-prior comparison is measured, while no exception stream is admitted until candidate-arrangement rank4 first-order plus realized-secant QP closes",
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "pointer_moved": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "main_landing_review_required": true
+  },
+  "custody": {
+    "ssd_root": "/Volumes/VertigoDataTier/pact/evidence/realization_g2d_20260721/prior_race_v2",
+    "full_receipt_path": "/Volumes/VertigoDataTier/pact/evidence/realization_g2d_20260721/prior_race_v2/receipt.json",
+    "full_receipt_sha256": "0aa7e9cc86b1eb11ef3816b2bcf95182ca504d7e514107112f22a52bfee7412e",
+    "projection_blocker_path": "/Volumes/VertigoDataTier/pact/evidence/realization_g2d_20260721/prior_race_v2/projection_blocker.json",
+    "projection_blocker_sha256": "f4a7e36872d14174e082610d8317372ba5782a9de25b8de3130200b3c7d1bf0b",
+    "tool_sha256": "07deda8cf5630b884df886c0c0279611d3ed29f6da07aa5680a17c724c1551e6",
+    "seed_sha256": "a21dde38128bed7ff62860ef005b994b74202e0bd00a37d1df8824ee325e856b",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "native_cpu_torch_threads": 4,
+    "deterministic_algorithms": true
+  },
+  "base_only_rank": [
+    "exact_source_iframe_control",
+    "openpilot_per_class_geometric_solve",
+    "keyframe_class_description"
+  ],
+  "candidates": {
+    "exact_source_iframe_control": {
+      "base_counted_bytes": 447170,
+      "headroom_vs_216222": -230948,
+      "fits_box": false,
+      "d_seg_realized_vs_target": 0.007476806640625,
+      "d_seg_description_vs_target": 0.0,
+      "d_seg_realized_vs_description": 0.007476806640625,
+      "d_pose_realized_vs_target": 185.1727968328056,
+      "pose_within_tube": false,
+      "declared_writes": "5/8",
+      "source_arrangement_disagreement_pixels": 1470,
+      "syntactic_full_prototype_exception_upper_bound_bytes": 32,
+      "syntactic_full_prototype_exception_records": 3
+    },
+    "keyframe_class_description": {
+      "base_counted_bytes": 78990,
+      "headroom_vs_216222": 137232,
+      "fits_box": true,
+      "d_seg_realized_vs_target": 0.4743448893229167,
+      "d_seg_description_vs_target": 0.3475087483723958,
+      "d_seg_realized_vs_description": 0.6392364501953125,
+      "d_pose_realized_vs_target": 183.09879439761926,
+      "pose_within_tube": false,
+      "declared_writes": "1/8",
+      "source_arrangement_disagreement_pixels": 93260,
+      "syntactic_full_prototype_exception_upper_bound_bytes": 44,
+      "syntactic_full_prototype_exception_records": 7
+    },
+    "openpilot_per_class_geometric_solve": {
+      "base_counted_bytes": 121128,
+      "headroom_vs_216222": 95094,
+      "fits_box": true,
+      "payload_sections": {
+        "frozen_scorer_palette": 21,
+        "n64_static_chart_zlib9": 835,
+        "lane_polynomial_chart_brotli11": 41303
+      },
+      "d_seg_realized_vs_target": 0.2808990478515625,
+      "d_seg_description_vs_target": 0.011210123697916666,
+      "d_seg_realized_vs_description": 0.284088134765625,
+      "d_pose_realized_vs_target": 179.24941000940717,
+      "pose_within_tube": false,
+      "declared_writes": "0/8",
+      "source_arrangement_disagreement_pixels": 55227,
+      "syntactic_full_prototype_exception_upper_bound_bytes": 44,
+      "syntactic_full_prototype_exception_records": 7,
+      "protected_class_sites": 5,
+      "protected_pixels_per_site": 9
+    }
+  },
+  "receiver": {
+    "factor2_exact_candidates": 3,
+    "double_decode_identical_candidates": 3,
+    "decoder_scorer_invocations": 0,
+    "compressed_payload_parseback_exact": true
+  },
+  "exception_upper_bound_warning": "The #557 rows price non-minimal full-prototype writes only. They are syntax/byte upper bounds, not measured semantic admissions and not substitutes for the required rank4/secant/QP solve.",
+  "late_inbox_cursor": "2026-07-21T12:27:12Z"
+}
