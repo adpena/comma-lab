@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from tac.boundary_math import warp_real_luma_frame0 as g1_warp
+from tac.optimization.predictor_upgrade_xi_chart import StaticCharts
 from tools.measure_realization_g2_lattice import (
     CONTEXTUAL_STAGE_SCHEMA,
     INTERIOR_STAGE_SCHEMA,
@@ -20,6 +21,10 @@ from tools.measure_realization_g2_lattice import (
     encode_contextual_rgb_exceptions,
     encode_dying_write_exceptions,
     interior_rgb_plane,
+    openpilot_frame0_class_prior,
+    parse_frozen_scorer_palette,
+    protect_seed_class_sites,
+    serialize_frozen_scorer_palette,
     summarize_contextual_prefix,
     summarize_interior_prefix,
     summarize_source_control_prefix,
@@ -135,6 +140,58 @@ def test_zero_byte_interior_rungs_are_deterministic_and_behaviorally_distinct():
     assert not np.array_equal(r2, r3a)
     assert not np.array_equal(r1, r3a)
     assert np.array_equal(r3a, r3b)
+
+
+def _site_seed() -> dict:
+    return {
+        "ground_chart": {
+            "coordinate_quantum": {"numerator": 1, "denominator": 256},
+            "cells": [
+                {
+                    "class_id": class_id,
+                    "site_y_q": (20 + class_id * 30) * 256,
+                    "site_x_q": (40 + class_id * 50) * 256,
+                }
+                for class_id in range(5)
+            ],
+        },
+        "movable_tracks": [],
+    }
+
+
+def test_frozen_scorer_palette_is_counted_canonical_packet():
+    payload = serialize_frozen_scorer_palette()
+    palette = parse_frozen_scorer_palette(payload)
+    assert len(payload) == 21
+    assert palette.shape == (5, 3)
+    assert serialize_frozen_scorer_palette() == payload
+    with pytest.raises(RealizationAuditError, match="packet mismatch"):
+        parse_frozen_scorer_palette(payload[:-1])
+
+
+def test_openpilot_frame0_prior_reuses_charts_and_protects_every_class_site():
+    seed = _site_seed()
+    ru = np.ones((384, 512), dtype=np.uint8)
+    ru[:120] = 2
+    hood = np.zeros((384, 512), dtype=np.bool_)
+    hood[300:] = True
+    charts = StaticCharts(ru, hood, ((0, 1), (0, 2), (0, 3), (0, 4), (1, 2), (3, 4)))
+    lane = np.zeros((384, 512), dtype=np.bool_)
+    lane[180:280, 250:256] = True
+    geom = g1_warp.GroundHomographyGeom.eon(native_hw=(384, 512), pitch=-0.05)
+    prior, sites = openpilot_frame0_class_prior(
+        seed=seed,
+        static_charts=charts,
+        lane_mask=lane,
+        geom=geom,
+    )
+    assert prior.dtype == np.uint8 and prior.shape == (384, 512)
+    assert len(sites) == 5
+    for site in sites:
+        assert prior[site["y"], site["x"]] == site["class_id"]
+    protected_again, sites_again = protect_seed_class_sites(prior, seed)
+    assert np.array_equal(protected_again, prior)
+    assert sites_again == sites
 
 
 def test_r4_exception_stream_contains_only_dying_ordinals_and_roundtrips():

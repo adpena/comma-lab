@@ -19,6 +19,41 @@ nonpositive-margin writes survived.  That sharp separator held at n16, n64, and
 n600.  Declared-write survival therefore must not be conflated with the much
 stronger whole-description condition, which remained 0/600.
 
+## Late operator addendum — prediction prior is reuse
+
+The exact-I-frame rate blocker is not a contextual-family blocker.  After the
+operator routed the already-built openpilot per-class charts, frozen-scorer
+constants, and rank-4 head/VJP surfaces, a separate pair-0 race measured three
+base priors through the same exact factor-2 receiver and native scorer:
+
+| frame-0 prior + one G1 refinement | counted base bytes | headroom vs 216,222 | d_seg vs target | description d_seg | realized-vs-description d_seg | Pose d_pose | declared writes |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| exact source I-frame control | 447,170 | -230,948 | 0.00747681 | 0 | 0.00747681 | 185.1728 | 5/8 |
+| keyframe-class description | 78,990 | +137,232 | 0.47434489 | 0.34750875 | 0.63923645 | 183.0988 | 1/8 |
+| openpilot per-class geometric solve | 121,128 | +95,094 | 0.28089905 | 0.01121012 | 0.28408813 | 179.2494 | 0/8 |
+
+The openpilot base is a real improvement over the keyframe-class RGB mapping:
+it reuses the counted 835-byte zlib static chart, 41,303-byte Brotli lane
+polynomial chart, 21-byte frozen-scorer palette, G1 geometry, static hood,
+movable tracks, and five protected class sites.  All compressed packets parsed
+back exactly; all three candidates were factor-2 exact and double-decode
+identical with zero decoder scorer calls.  The openpilot and keyframe bases fit
+the box before correction, so “eliminate the bootstrap” is now closed at the
+base-prior level.  Neither is semantically or Pose admissible.
+
+The required rank-4 correction was deliberately not faked.  Current VJP
+custody is `COMPLETE_N600` (`600/600`, no refusal), superseding the earlier
+24-pair snapshot.  But those pullbacks bind source/native winner-rival
+arrangements; the three generated candidates disagreed with the source winner
+chart at 1,470, 93,260, and 55,227 pixels respectively.  The rank-4 closed form
+is exact in the 144-dimensional penultimate feature quotient, while the
+candidate-arrangement realized-backbone secants and receiver-closed QP remain
+absent under blocker
+`R1B2_RANK4_FIRST_ORDER_REALIZED_SECANT_CUSTODY_ABSENT`.  Therefore no
+rank-4 RGB exception stream, rounding-ball magnitude, or admission claim was
+emitted.  The 32/44/44-byte #557 rows in the race receipt are only syntactic
+full-prototype upper bounds, not semantic corrections.
+
 ## D1 — semantic realization
 
 - Whole represented-cell-field equality after frozen SegNet: `0/600` pairs.
@@ -54,7 +89,7 @@ cross-pair motion, learned residual motion, or a pose-factorized xi child.
 
 ## D3 — counted bytes
 
-The exact scorer-plane frame-zero bootstrap compressed to `368,201` Brotli-11
+In the original n600 formulation, the exact scorer-plane frame-zero bootstrap compressed to `368,201` Brotli-11
 bytes, already `151,979` bytes above the entire `216,222`-byte target box.
 Adding the settled seed baseline (`78,969` bytes) and 1,967 sparse exception
 records (`19,151` bytes) produced `466,321` bytes total, or `250,099` bytes over
@@ -93,12 +128,13 @@ one-round prototype projection as a family verdict.
 
 The measured blocker ordering is concrete:
 
-1. eliminate or generatively derive the frame-zero bootstrap before any
-   micro-optimization—the bootstrap alone cannot fit the box;
-2. require an exact or explicitly learned cross-pair xi surface before treating
+1. preserve the measured openpilot base prior (`121,128` bytes total before
+   correction) rather than returning to the exact I-frame;
+2. compute candidate-arrangement rank-4 first-order plus realized-backbone
+   secants and close the receiver QP; do not reuse source-arrangement normals
+   across the measured 55,227-pixel winner mismatch;
+3. require an exact or explicitly learned cross-pair xi surface before treating
    the Pose negative as formulation-complete;
-3. replace naive one-round prototype movement with the registered corrected
-   inner-Jacobian/secant/QP projection and retain only positive-margin writes;
 4. if residuals remain, rank only necessary edge/saddle obligations by the
    registered Fisher/margin EV field and rate break-even, using a genuine
    curvelet/shearlet carrier rather than a blanket RGB exception stream.
@@ -113,6 +149,12 @@ SHA-256 `f7452ae660d6529f49c1de1e44826860b52a840c9459eea4af40d6737bcf6394`.
 The compact repository receipt records dependency, scorer, seed, cache,
 bootstrap, stage-tree, exception-tree, and prefix-checkpoint hashes.
 
+Late frame-0 race receipt:
+`/Volumes/VertigoDataTier/pact/evidence/realization_g2d_20260721/prior_race_v2/receipt.json`
+SHA-256 `0aa7e9cc86b1eb11ef3816b2bcf95182ca504d7e514107112f22a52bfee7412e`;
+projection blocker SHA-256
+`f4a7e36872d14174e082610d8317372ba5782a9de25b8de3130200b3c7d1bf0b`.
+
 ## STORES CONSULTED
 
 Delegated authority SHA `8bcc0bbc9534197d14b6b514fc447d3b334ce4f8a2a1eef6bb100eb9c4d8c1fc`;
@@ -121,12 +163,15 @@ PREDICT-to-PROJECT interfaces; G1/G3 custody receipt; G2/G2b/G2c code,
 receipts, equations, tests, DAGs, and reuse manifests; predictor round-1 and
 round-2 code/findings; r1b6 negative; frozen seed/cache/scorer; lane/progress
 state; n16/n64/n600 SSD artifacts; both inboxes through
-`2026-07-19T19:48:01Z`.
+`2026-07-21T12:27:12Z`; frozen rank-4 prototype receipt; terminal n600 VJP
+campaign; M1 band/inner-Jacobian blocker; Task 595 lane chart and Task 578
+static-chart artifacts; pair-0 prior-race packets and receipts.
 
 ## Triality and landing boundary
 
 - DSL/code: `tools/measure_realization_g2_lattice.py` composes the settled
-  receiver, G1 xi transport, lattice, #557 coder, and unchanged admission law.
+  receiver, G1 xi transport, lattice, #557 coder, openpilot chart predictor,
+  counted frozen-scorer constants, and unchanged admission law.
 - DAG: `realization_g2d_predict_base_DAG_FEED_20260721.md` routes the measured
   blockers and regression surfaces.
 - Equations: `predict_project_realization_admissibility_v1` was invoked

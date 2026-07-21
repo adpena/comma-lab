@@ -88,3 +88,22 @@ survival separated perfectly (`1,580/1,580` versus `0/1,608`), factor-2 and
 double-decode exactness were `600/600`, and the 1,200-frame scorer-free replay
 took `66.62605445901863` seconds.  See the compact receipt and dated findings;
 the contest pointer remains unchanged and MAIN review is required.
+
+## Late-directive measured addendum
+
+Operator inbox directives at `2026-07-21T12:23:06Z` and
+`2026-07-21T12:27:12Z` superseded the exact-I-frame-only bootstrap premise.
+The CLI now also runs a source-closed pair-0 race between the exact source
+I-frame, the counted keyframe-class description, and the existing openpilot
+per-class geometric predictor.  Weight-derived constants are shipped and
+counted; scorer weights remain encode-only and are never loaded by the decoder.
+
+The openpilot base measured `121,128` counted bytes and
+`d_seg=0.2808990478515625`, compared with the keyframe base at `78,990` bytes
+and `d_seg=0.4743448893229167`.  Both fit the `216,222`-byte box before
+correction.  Exact rank-4 feature-space prototypes and terminal n600 source VJP
+custody were consumed, but candidate-arrangement realized-backbone secants and
+receiver-closed QP remain absent.  The implementation therefore emits an exact
+blocker instead of a fake RGB correction:
+`R1B2_RANK4_FIRST_ORDER_REALIZED_SECANT_CUSTODY_ABSENT`.  See the compact
+prior-race and projection-blocker JSON artifacts; MAIN review remains required.

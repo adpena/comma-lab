@@ -142,5 +142,21 @@
       "receiver_derived_rgb"
     ]
   },
-  "inbox_cursor": "2026-07-19T19:48:01Z"
+  "late_directive_addendum": {
+    "verdict": "MEASURED_FRAME0_PRIOR_RACE_PROJECTION_BLOCKED",
+    "compact_receipt": ".omx/research/realization_g2d_predict_base_prior_race_20260721.json",
+    "full_receipt_path": "/Volumes/VertigoDataTier/pact/evidence/realization_g2d_20260721/prior_race_v2/receipt.json",
+    "full_receipt_sha256": "0aa7e9cc86b1eb11ef3816b2bcf95182ca504d7e514107112f22a52bfee7412e",
+    "projection_blocker_sha256": "f4a7e36872d14174e082610d8317372ba5782a9de25b8de3130200b3c7d1bf0b",
+    "base_race": {
+      "exact_source_iframe": {"bytes": 447170, "d_seg": 0.007476806640625},
+      "keyframe_class_description": {"bytes": 78990, "d_seg": 0.4743448893229167},
+      "openpilot_per_class_geometric_solve": {"bytes": 121128, "d_seg": 0.2808990478515625}
+    },
+    "projection_disposition": "BLOCKED_FAIL_CLOSED_NO_RANK4_RGB_EXCEPTION_STREAM_EMITTED",
+    "exact_blocker": "R1B2_RANK4_FIRST_ORDER_REALIZED_SECANT_CUSTODY_ABSENT",
+    "source_vjp_status": "COMPLETE_N600",
+    "source_vjp_pair_count": 600
+  },
+  "inbox_cursor": "2026-07-21T12:27:12Z"
 }

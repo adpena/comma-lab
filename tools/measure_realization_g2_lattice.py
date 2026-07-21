@@ -60,7 +60,13 @@ from tac.optimization.predictor_r2_missdelta import (  # noqa: E402
 )
 from tac.optimization.predictor_upgrade_xi_chart import (  # noqa: E402
     load_g1_worldsheet_motion,
+    load_lane_chart,
+    parse_static_charts,
     relative_adjacent_xi,
+    render_lane_mask,
+)
+from tac.optimization.predictor_upgrade_xi_chart import (  # noqa: E402
+    predict_cell_field as predict_chart_cell_field,
 )
 from tac.optimization.resize_full_kernel import FullResizeKernel  # noqa: E402
 from tac.optimization.seed_compose_b2 import GT_CACHE_SHA256  # noqa: E402
@@ -76,6 +82,7 @@ INTERIOR_RECEIPT_SCHEMA: Final = "realization_g2c_interior_receipt.v1"
 CONTEXTUAL_STAGE_SCHEMA: Final = "realization_g2d_predict_base_pair.v1"
 CONTEXTUAL_CONFIG_SCHEMA: Final = "realization_g2d_predict_base_config.v1"
 CONTEXTUAL_RECEIPT_SCHEMA: Final = "realization_g2d_predict_base_receipt.v1"
+FRAME0_PRIOR_RACE_SCHEMA: Final = "realization_g2d_frame0_prior_race_receipt.v1"
 PREFIXES: Final = (16, 64, 600)
 RGB_REALIZATION_FIELDS: Final = frozenset(
     {
@@ -141,6 +148,26 @@ CONTEXTUAL_EXCEPTION_MAGIC: Final = b"G2DX1"
 CONTEXTUAL_EXCEPTION_HEADER: Final = struct.Struct(">5sHIII")
 CONTEXTUAL_SEED_BASELINE_BYTES: Final = 78_969
 CONTEXTUAL_TARGET_BOX_BYTES: Final = 216_222
+FRAME0_PALETTE_MAGIC: Final = b"G2PAL1"
+FRAME0_STATIC_CHART_SHA256: Final = "2b3665c47f7a404e7ac8ea1b30cad768d4ce2a84fd998e167d230b522e18ba43"
+DEFAULT_FRAME0_STATIC_CHART: Final = Path(
+    "/Volumes/VertigoDataTier/pact/evidence/predictor_upgrade_20260721/"
+    "canonical_g1_d4_fixed_20260721/charts/static_charts_n64.pxch"
+)
+DEFAULT_FRAME0_LANE_CHART: Final = Path(
+    "/Volumes/VertigoDataTier/pact/evidence/boundary_inverse_20260721/"
+    "run_20260721T052100Z_threshold0p5/coherent_slot_none_dash.lbnd2"
+)
+DEFAULT_VJP_CAMPAIGN: Final = Path(
+    "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_n600_20260720/campaign_receipt.json"
+)
+DEFAULT_M1_BAND_RECEIPT: Final = Path("/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/receipt.json")
+DEFAULT_M1_INNER_JACOBIAN: Final = Path(
+    "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/records/inner_jacobian_secant_qp.json"
+)
+DEFAULT_RANK4_PROTOTYPE_RECEIPT: Final = (
+    REPO / ".omx/research/prereq_surfaces_flush_20260720/surface_2_rank4_prototype_bank.json"
+)
 
 
 class RealizationAuditError(ValueError):
@@ -168,6 +195,28 @@ def _load_json(path: Path) -> dict[str, Any]:
 def _atomic_json(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(value, sort_keys=True, indent=2, allow_nan=False).encode() + b"\n"
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+
+
+def _atomic_bytes(path: Path, payload: bytes) -> None:
+    """Create or verify one immutable byte artifact."""
+
+    if path.exists():
+        if path.read_bytes() != payload:
+            raise RealizationAuditError(f"immutable byte artifact drift: {path}")
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
     try:
         with os.fdopen(descriptor, "wb") as handle:
@@ -375,6 +424,92 @@ def interior_rgb_plane(cells: np.ndarray, rung_id: str) -> np.ndarray:
         weights /= weights.sum(axis=1, keepdims=True)
         out[mask] = np.einsum("nk,kc->nc", weights, memories)
     return np.rint(np.clip(out, 0.0, 255.0)).astype(np.uint8)
+
+
+def serialize_frozen_scorer_palette() -> bytes:
+    """Serialize the counted frozen-scorer class-to-RGB constants."""
+
+    return FRAME0_PALETTE_MAGIC + R2_MAX_MARGIN_PALETTE.tobytes(order="C")
+
+
+def parse_frozen_scorer_palette(payload: bytes) -> np.ndarray:
+    """Parse the tiny counted class-to-RGB packet with canonical round-trip."""
+
+    expected = len(FRAME0_PALETTE_MAGIC) + R2_MAX_MARGIN_PALETTE.nbytes
+    if len(payload) != expected or payload[: len(FRAME0_PALETTE_MAGIC)] != FRAME0_PALETTE_MAGIC:
+        raise RealizationAuditError("frozen-scorer palette packet mismatch")
+    palette = (
+        np.frombuffer(
+            payload,
+            dtype=np.uint8,
+            count=R2_MAX_MARGIN_PALETTE.size,
+            offset=len(FRAME0_PALETTE_MAGIC),
+        )
+        .reshape(R2_MAX_MARGIN_PALETTE.shape)
+        .copy()
+    )
+    if not np.array_equal(palette, R2_MAX_MARGIN_PALETTE):
+        raise RealizationAuditError("frozen-scorer palette constants drifted")
+    if serialize_frozen_scorer_palette() != payload:
+        raise RealizationAuditError("frozen-scorer palette parse-back is noncanonical")
+    return palette
+
+
+def protect_seed_class_sites(
+    cells: np.ndarray,
+    seed: Mapping[str, Any],
+    *,
+    radius: int = 1,
+) -> tuple[np.ndarray, list[dict[str, int]]]:
+    """Apply the counted #208 per-class site protection to a class prior."""
+
+    if radius < 0:
+        raise RealizationAuditError("site-protection radius must be nonnegative")
+    out = np.asarray(cells, dtype=np.uint8).copy()
+    if out.shape != SCORER_HW or np.any(out >= len(R2_MAX_MARGIN_PALETTE)):
+        raise RealizationAuditError("site-protection class field mismatch")
+    quantum = seed["ground_chart"]["coordinate_quantum"]
+    scale = float(quantum["numerator"]) / float(quantum["denominator"])
+    protected: list[dict[str, int]] = []
+    for site in seed["ground_chart"]["cells"]:
+        class_id = int(site["class_id"])
+        y = round(int(site["site_y_q"]) * scale)
+        x = round(int(site["site_x_q"]) * scale)
+        y0, y1 = max(0, y - radius), min(out.shape[0], y + radius + 1)
+        x0, x1 = max(0, x - radius), min(out.shape[1], x + radius + 1)
+        if y0 >= y1 or x0 >= x1 or not 0 <= class_id < len(R2_MAX_MARGIN_PALETTE):
+            raise RealizationAuditError("ground-chart protected site is outside canonical geometry")
+        out[y0:y1, x0:x1] = class_id
+        protected.append(
+            {
+                "class_id": class_id,
+                "y": y,
+                "x": x,
+                "protected_pixels": (y1 - y0) * (x1 - x0),
+            }
+        )
+    return out, protected
+
+
+def openpilot_frame0_class_prior(
+    *,
+    seed: Mapping[str, Any],
+    static_charts: Any,
+    lane_mask: np.ndarray,
+    geom: g1_warp.GroundHomographyGeom,
+) -> tuple[np.ndarray, list[dict[str, int]]]:
+    """Compose the existing per-class geometric solve for pair-0 initialization."""
+
+    cells = predict_chart_cell_field(
+        pair_index=0,
+        prior_decoded_field=None,
+        charts=static_charts,
+        relative_xi=np.zeros(6, dtype=np.float64),
+        worldsheet_geom=geom,
+        lane_mask=np.asarray(lane_mask, dtype=np.bool_),
+        movable_tracks=seed["movable_tracks"],
+    )
+    return protect_seed_class_sites(np.asarray(cells, dtype=np.uint8), seed)
 
 
 def encode_dying_write_exceptions(
@@ -1788,6 +1923,351 @@ def _replay_contextual_sequence(
     }
 
 
+def run_frame0_prior_race(
+    *,
+    seed_path: Path,
+    gt_cache_path: Path,
+    upstream: Path,
+    output_root: Path,
+    static_chart_path: Path,
+    lane_chart_path: Path,
+    vjp_campaign_path: Path,
+    m1_band_receipt_path: Path,
+    m1_inner_jacobian_path: Path,
+    rank4_prototype_receipt_path: Path,
+    threads: int,
+) -> dict[str, Any]:
+    """Measure three frame-0 priors and refuse an unclosed RGB projection."""
+
+    if threads < 1:
+        raise RealizationAuditError("frame0-prior race requires positive CPU threads")
+    if output_root.exists() and any(output_root.iterdir()):
+        raise RealizationAuditError("frame0-prior race output root is preserved and nonempty; choose a new root")
+    output_root.mkdir(parents=True, exist_ok=True)
+    usage = shutil.disk_usage(output_root)
+    if usage.free < 1 << 30:
+        raise RealizationAuditError("frame0-prior race storage preflight requires 1 GiB free")
+
+    seed_bytes = seed_path.read_bytes()
+    seed = parse_constraint_seed(seed_bytes)
+    if serialize_constraint_seed(seed) != seed_bytes:
+        raise RealizationAuditError("frame0-prior seed is not canonical on parse-back")
+    seed_sha256 = hashlib.sha256(seed_bytes).hexdigest()
+    cache = _load_real_cache(gt_cache_path)
+    net, torch, scorer_custody = _load_distortion_net(upstream, threads)
+    kernel = FullResizeKernel.build()
+    s_t, s_r, pitch_rad, motion_custody = load_g1_worldsheet_motion(REPO)
+    geom = g1_warp.GroundHomographyGeom.eon(native_hw=SCORER_HW, pitch=pitch_rad)
+    pose0 = np.asarray(cache["gt_poses"][0], dtype=np.float64).copy()
+    within_xi = g1_warp.xi_from_pose_calibration(pose0, s_t=s_t, s_r=s_r, pitch=pitch_rad)
+    target_cells = np.asarray(cache["lstars"][0], dtype=np.uint8).copy()
+    source0 = np.asarray(cache["gt_f0"][0], dtype=np.uint8).copy()
+    represented = _represented_cells(seed, 0)
+    constraints = [row for row in seed["constraint_seeds"] if row["time"] == 0 and row["frame_index"] == 1]
+
+    static_raw = static_chart_path.read_bytes()
+    if hashlib.sha256(static_raw).hexdigest() != FRAME0_STATIC_CHART_SHA256:
+        raise RealizationAuditError("frame0 static-chart SHA-256 custody mismatch")
+    static_charts = parse_static_charts(static_raw)
+    static_zlib = zlib.compress(static_raw, 9)
+    parsed_static = parse_static_charts(zlib.decompress(static_zlib))
+    if (
+        not np.array_equal(parsed_static.road_undrivable, static_charts.road_undrivable)
+        or not np.array_equal(parsed_static.hood, static_charts.hood)
+        or parsed_static.adjacency != static_charts.adjacency
+    ):
+        raise RealizationAuditError("frame0 static-chart compressed parse-back mismatch")
+    lane_pairs, lane_config, lane_custody = load_lane_chart(lane_chart_path)
+    lane_raw = lane_chart_path.read_bytes()
+    lane_brotli = brotli.compress(lane_raw, quality=11)
+    if brotli.decompress(lane_brotli) != lane_raw:
+        raise RealizationAuditError("frame0 lane-chart compressed parse-back mismatch")
+    lane_mask = render_lane_mask(lane_pairs[0], lane_config, h=SCORER_HW[0], w=SCORER_HW[1])
+    openpilot_cells, protected_sites = openpilot_frame0_class_prior(
+        seed=seed,
+        static_charts=static_charts,
+        lane_mask=lane_mask,
+        geom=geom,
+    )
+
+    palette_payload = serialize_frozen_scorer_palette()
+    palette = parse_frozen_scorer_palette(palette_payload)
+    exact_plane = _exact_source_target_plane(kernel.operator, source0)
+    exact_iframe = brotli.compress(exact_plane.tobytes(order="C"), quality=11)
+    if brotli.decompress(exact_iframe) != exact_plane.tobytes(order="C"):
+        raise RealizationAuditError("exact frame0 I-frame Brotli parse-back mismatch")
+    _atomic_bytes(output_root / "payloads" / "frozen_scorer_palette.g2pal", palette_payload)
+    _atomic_bytes(output_root / "payloads" / "static_charts_n64.zlib9", static_zlib)
+    _atomic_bytes(output_root / "payloads" / "lane_chart.brotli11", lane_brotli)
+    _atomic_bytes(output_root / "payloads" / "exact_iframe.brotli11", exact_iframe)
+
+    candidates = (
+        {
+            "candidate_id": "exact_source_iframe_control",
+            "plane0": exact_plane,
+            "description": target_cells,
+            "payload_bytes": len(exact_iframe),
+            "payload_sections": {"exact_iframe_brotli11": len(exact_iframe)},
+            "source_scope": "counted source-derived exact scorer-RGB control",
+        },
+        {
+            "candidate_id": "keyframe_class_description",
+            "plane0": palette[represented],
+            "description": represented,
+            "payload_bytes": len(palette_payload),
+            "payload_sections": {"frozen_scorer_palette": len(palette_payload)},
+            "source_scope": "counted seed chart plus counted frozen-scorer palette",
+        },
+        {
+            "candidate_id": "openpilot_per_class_geometric_solve",
+            "plane0": palette[openpilot_cells],
+            "description": openpilot_cells,
+            "payload_bytes": len(palette_payload) + len(static_zlib) + len(lane_brotli),
+            "payload_sections": {
+                "frozen_scorer_palette": len(palette_payload),
+                "n64_static_chart_zlib9": len(static_zlib),
+                "lane_polynomial_chart_brotli11": len(lane_brotli),
+            },
+            "source_scope": (
+                "#138/#145 G1 and lane geometry plus #139 static hood, #208 protected "
+                "class sites, #234 movable tracks, and counted frozen-scorer palette"
+            ),
+        },
+    )
+
+    rows: list[dict[str, Any]] = []
+    for candidate in candidates:
+        started = time.perf_counter()
+        plane0 = np.asarray(candidate["plane0"], dtype=np.uint8)
+        description = np.asarray(candidate["description"], dtype=np.uint8)
+        plane1 = contextual_advected_rgb_plane(plane0, within_xi, geom)
+        realized0 = _contextual_realize(
+            plane0,
+            description,
+            seed_sha256=seed_sha256,
+            additional_seed_bytes=int(candidate["payload_bytes"]),
+            generator_id=f"frame0_prior_race_{candidate['candidate_id']}",
+            kernel=kernel,
+        )
+        realized1 = _contextual_realize(
+            plane1,
+            description,
+            seed_sha256=seed_sha256,
+            additional_seed_bytes=0,
+            generator_id=f"frame0_prior_race_{candidate['candidate_id']}_g1_refine",
+            kernel=kernel,
+        )
+        repeated0 = _contextual_realize(
+            plane0,
+            description,
+            seed_sha256=seed_sha256,
+            additional_seed_bytes=int(candidate["payload_bytes"]),
+            generator_id=f"frame0_prior_race_{candidate['candidate_id']}_repeat",
+            kernel=kernel,
+        )
+        repeated1 = _contextual_realize(
+            plane1,
+            description,
+            seed_sha256=seed_sha256,
+            additional_seed_bytes=0,
+            generator_id=f"frame0_prior_race_{candidate['candidate_id']}_g1_refine_repeat",
+            kernel=kernel,
+        )
+        hard, actual_argmax, writes = _hard_oracle_interior(
+            net,
+            torch,
+            realized0["frame"],
+            realized1["frame"],
+            target_cells,
+            description,
+            pose0,
+            constraints,
+        )
+        violated = [int(row["ordinal"]) for row in writes if row["survives"] is False]
+        full_prototype = contextual_banded_projection(plane1, constraints, violated, 255)
+        upper_payload, upper_ordinals = encode_contextual_rgb_exceptions(
+            plane1,
+            full_prototype,
+            constraints,
+        )
+        parsed_upper, parsed_ordinals = apply_contextual_rgb_exceptions(
+            plane1,
+            constraints,
+            upper_payload,
+        )
+        if parsed_ordinals != upper_ordinals or not np.array_equal(parsed_upper, full_prototype):
+            raise RealizationAuditError("frame0-prior syntactic exception upper bound lost parse-back")
+        upper_path = output_root / "payloads" / f"{candidate['candidate_id']}.prototype_upper.g2dx"
+        _atomic_bytes(upper_path, upper_payload)
+        double_decode = bool(
+            np.array_equal(realized0["frame"], repeated0["frame"])
+            and np.array_equal(realized1["frame"], repeated1["frame"])
+        )
+        factor2_exact = bool(
+            realized0["factor2_verification"]["certified_exact"]
+            and realized1["factor2_verification"]["certified_exact"]
+        )
+        if not factor2_exact or not double_decode:
+            raise RealizationAuditError("frame0-prior receiver lost exact deterministic custody")
+        base_total = CONTEXTUAL_SEED_BASELINE_BYTES + int(candidate["payload_bytes"])
+        rows.append(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "source_scope": candidate["source_scope"],
+                "payload_sections": candidate["payload_sections"],
+                "base_counted_bytes": base_total,
+                "base_headroom_vs_target_box_bytes": CONTEXTUAL_TARGET_BOX_BYTES - base_total,
+                "base_fits_target_box": base_total <= CONTEXTUAL_TARGET_BOX_BYTES,
+                "syntactic_full_prototype_exception_upper_bound": {
+                    "bytes": len(upper_payload),
+                    "record_count": len(upper_ordinals),
+                    "path": str(upper_path),
+                    "sha256": hashlib.sha256(upper_payload).hexdigest(),
+                    "parseback_exact": True,
+                    "semantic_admission": False,
+                    "scope": (
+                        "#557 byte upper bound for non-minimal full-prototype writes at currently "
+                        "violated declared sites; not the required rank4/secant/QP projection"
+                    ),
+                    "total_counted_bytes_if_carried": base_total + len(upper_payload),
+                },
+                "hard_oracle": hard,
+                "declared_write_count": len(writes),
+                "declared_write_surviving_count": sum(row["survives"] is True for row in writes),
+                "declared_write_positive_margin_count": sum(float(row["target_logit_margin"]) > 0.0 for row in writes),
+                "candidate_winner_vs_source_arrangement_disagreement_pixels": int(
+                    np.count_nonzero(actual_argmax != target_cells)
+                ),
+                "uint8_factor2_exact": factor2_exact,
+                "double_decode_identical": double_decode,
+                "decoder_scorer_invocations": 0,
+                "wall_seconds": time.perf_counter() - started,
+            }
+        )
+
+    vjp_campaign = _load_json(vjp_campaign_path)
+    if (
+        vjp_campaign.get("status") != "COMPLETE_N600"
+        or vjp_campaign.get("final_completed_count") != PAIR_COUNT
+        or vjp_campaign.get("still_missing_pair_ids") != []
+        or vjp_campaign.get("refused_pair_ids") != []
+    ):
+        raise RealizationAuditError("active VJP campaign is not terminal n600")
+    inner = _load_json(m1_inner_jacobian_path)
+    m1 = _load_json(m1_band_receipt_path)
+    rank4 = _load_json(rank4_prototype_receipt_path)
+    if inner.get("blocker") != "R1B2_RANK4_FIRST_ORDER_REALIZED_SECANT_CUSTODY_ABSENT":
+        raise RealizationAuditError("inner-Jacobian/secant blocker drifted")
+    if rank4.get("rank") != 4 or rank4.get("canonical_equation") != "segnet_head_rank4_linear_flipdist_v1":
+        raise RealizationAuditError("rank4 prototype receipt custody mismatch")
+    projection_blocker = {
+        "schema": "realization_g2d_rank4_projection_compatibility.v1",
+        "rank4_head": {
+            "status": "BUILT_EXACT_IN_144D_PENULTIMATE_FEATURE_QUOTIENT",
+            "receipt_path": str(rank4_prototype_receipt_path),
+            "receipt_sha256": _sha256(rank4_prototype_receipt_path),
+            "rank": rank4["rank"],
+            "prototype_labels": rank4["prototype_labels"],
+            "closed_form_feature_flip_distance": "abs(margin)/norm(delta_w)",
+        },
+        "source_vjp": {
+            "status": vjp_campaign["status"],
+            "completed_pair_count": vjp_campaign["final_completed_count"],
+            "campaign_path": str(vjp_campaign_path),
+            "campaign_sha256": _sha256(vjp_campaign_path),
+            "scope": "source/native winner-rival arrangements, not these generated candidate arrangements",
+        },
+        "candidate_arrangement_disagreement_pixels": {
+            row["candidate_id"]: row["candidate_winner_vs_source_arrangement_disagreement_pixels"] for row in rows
+        },
+        "m1_first_order_band": {
+            "receipt_path": str(m1_band_receipt_path),
+            "receipt_sha256": _sha256(m1_band_receipt_path),
+            "vjp_sidecars_rehashed": m1["vjp_sidecars_rehashed"],
+            "selected_pixel_count": m1["selected_pixel_count"],
+            "readiness": m1["readiness"],
+        },
+        "missing_closure": {
+            "blocker": inner["blocker"],
+            "record_path": str(m1_inner_jacobian_path),
+            "record_sha256": _sha256(m1_inner_jacobian_path),
+            "realized_backbone_secants": inner["realized_backbone_secants"],
+            "qp_receiver_closure": inner["qp_receiver_closure"],
+            "rounding_ball_radius_application": "BLOCKED_WITHOUT_CANDIDATE_ARRANGEMENT_SECANT_QP",
+        },
+        "disposition": "BLOCKED_FAIL_CLOSED_NO_RANK4_RGB_EXCEPTION_STREAM_EMITTED",
+        "verdict_scope": (
+            "the exact head-space hyperplane solve is built and the source-arrangement first-order "
+            "RGB pullback is complete n600; the candidate-arrangement nonlinear trunk secants and "
+            "receiver-closed QP are absent. This is not a negative on computed rank4 projection."
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    _atomic_json(output_root / "projection_blocker.json", projection_blocker)
+
+    ranked = sorted(
+        rows,
+        key=lambda row: (
+            row["hard_oracle"]["d_seg_realized_vs_frozen_target"],
+            -row["declared_write_surviving_count"],
+            row["base_counted_bytes"],
+        ),
+    )
+    receipt = {
+        "schema": FRAME0_PRIOR_RACE_SCHEMA,
+        "lane_id": CONTEXTUAL_LANE_ID,
+        "task_id": "578",
+        "measurement": f"MEASURED {AXIS}",
+        "candidate_rows": rows,
+        "base_only_rank": [row["candidate_id"] for row in ranked],
+        "base_only_winner": ranked[0]["candidate_id"],
+        "openpilot_composition": {
+            "policy": "xi_advected_prior_per_class_charts.v2 pair0",
+            "lane_custody": lane_custody,
+            "protected_class_sites": protected_sites,
+            "static_chart_raw_sha256": FRAME0_STATIC_CHART_SHA256,
+            "static_chart_raw_bytes": len(static_raw),
+            "static_chart_zlib9_bytes_counted_here": len(static_zlib),
+            "static_chart_zlib_parseback_exact": True,
+            "lane_chart_brotli11_bytes_counted_here": len(lane_brotli),
+            "lane_chart_brotli_parseback_exact": True,
+        },
+        "projection_blocker": {
+            "path": str(output_root / "projection_blocker.json"),
+            "sha256": _sha256(output_root / "projection_blocker.json"),
+            "disposition": projection_blocker["disposition"],
+        },
+        "scorer_custody": scorer_custody,
+        "motion_custody": motion_custody,
+        "source_custody": {
+            "seed": {"path": str(seed_path), "bytes": len(seed_bytes), "sha256": seed_sha256},
+            "gt_cache": {"path": str(gt_cache_path), "sha256": GT_CACHE_SHA256},
+            "tool": {"path": str(Path(__file__).resolve()), "sha256": _sha256(Path(__file__).resolve())},
+        },
+        "storage": {
+            "root": str(output_root),
+            "free_bytes_at_preflight": usage.free,
+            "automatic_disk_hygiene": "small immutable compressed packets and JSON only; no camera/logit tensor persistence",
+        },
+        "verdict": "MEASURED_FRAME0_PRIOR_RACE_PROJECTION_BLOCKED",
+        "verdict_scope": (
+            "pair0 frame0 prior followed by one G1 within-pair refinement only; no exception stream "
+            "is admitted until candidate-arrangement rank4 first-order plus realized secant QP closes"
+        ),
+        "authority": {
+            "axis": AXIS,
+            "pointer": POINTER,
+            "pointer_moved": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "main_landing_review_required": True,
+        },
+    }
+    _atomic_json(output_root / "receipt.json", receipt)
+    return receipt
+
+
 def run_contextual_predict_base(
     *,
     seed_path: Path,
@@ -2541,6 +3021,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="measure sequential G1-advected RGB prediction plus margin-banded projection",
     )
     parser.add_argument(
+        "--frame0-prior-race",
+        action="store_true",
+        help="race exact I-frame, seed keyframe classes, and the openpilot per-class geometric prior",
+    )
+    parser.add_argument("--static-chart", type=Path, default=DEFAULT_FRAME0_STATIC_CHART)
+    parser.add_argument("--lane-chart", type=Path, default=DEFAULT_FRAME0_LANE_CHART)
+    parser.add_argument("--vjp-campaign", type=Path, default=DEFAULT_VJP_CAMPAIGN)
+    parser.add_argument("--m1-band-receipt", type=Path, default=DEFAULT_M1_BAND_RECEIPT)
+    parser.add_argument("--m1-inner-jacobian", type=Path, default=DEFAULT_M1_INNER_JACOBIAN)
+    parser.add_argument("--rank4-prototype-receipt", type=Path, default=DEFAULT_RANK4_PROTOTYPE_RECEIPT)
+    parser.add_argument(
         "--stop-after-prefix",
         type=int,
         choices=PREFIXES,
@@ -2557,10 +3048,35 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if sum((args.audit_only, args.interior_rungs, args.contextual_predict_base)) > 1:
+    if sum((args.audit_only, args.interior_rungs, args.contextual_predict_base, args.frame0_prior_race)) > 1:
         raise RealizationAuditError(
-            "--audit-only, --interior-rungs, and --contextual-predict-base are mutually exclusive"
+            "--audit-only, --interior-rungs, --contextual-predict-base, and --frame0-prior-race are mutually exclusive"
         )
+    if args.frame0_prior_race:
+        receipt = run_frame0_prior_race(
+            seed_path=args.seed.resolve(),
+            gt_cache_path=args.gt_cache.resolve(),
+            upstream=args.upstream.resolve(),
+            output_root=args.output_root.resolve(),
+            static_chart_path=args.static_chart.resolve(),
+            lane_chart_path=args.lane_chart.resolve(),
+            vjp_campaign_path=args.vjp_campaign.resolve(),
+            m1_band_receipt_path=args.m1_band_receipt.resolve(),
+            m1_inner_jacobian_path=args.m1_inner_jacobian.resolve(),
+            rank4_prototype_receipt_path=args.rank4_prototype_receipt.resolve(),
+            threads=args.threads,
+        )
+        print(
+            json.dumps(
+                {
+                    "receipt": str(args.output_root.resolve() / "receipt.json"),
+                    "verdict": receipt["verdict"],
+                    "base_only_winner": receipt["base_only_winner"],
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
     if args.contextual_predict_base:
         receipt = run_contextual_predict_base(
             seed_path=args.seed.resolve(),

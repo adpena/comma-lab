@@ -1,0 +1,55 @@
+{
+  "schema": "realization_g2d_rank4_projection_compatibility_compact.v1",
+  "task_id": "578",
+  "lane_id": "lane_realization_g2d_predict_base_578_20260721",
+  "disposition": "BLOCKED_FAIL_CLOSED_NO_RANK4_RGB_EXCEPTION_STREAM_EMITTED",
+  "verdict_scope": "the exact head-space hyperplane solve is built and source-arrangement first-order RGB pullbacks are complete n600; generated-candidate arrangement realized-backbone secants and receiver-closed QP are absent. This is not a negative on computed rank4 projection.",
+  "rank4_head": {
+    "status": "BUILT_EXACT_IN_144D_PENULTIMATE_FEATURE_QUOTIENT",
+    "canonical_equation": "segnet_head_rank4_linear_flipdist_v1",
+    "rank": 4,
+    "closed_form_feature_flip_distance": "abs(margin)/norm(delta_w)",
+    "prototype_receipt_path": ".omx/research/prereq_surfaces_flush_20260720/surface_2_rank4_prototype_bank.json",
+    "prototype_receipt_sha256": "bb1f79839c2e2ab8c41856ca0545bd4147d63deccbe0b1200e2ba65e5fa3501f"
+  },
+  "source_vjp": {
+    "status": "COMPLETE_N600",
+    "completed_pair_count": 600,
+    "refused_pair_count": 0,
+    "campaign_path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_n600_20260720/campaign_receipt.json",
+    "campaign_sha256": "11d441acec2640f607e87514e35c9244c9d8dfec617a810b2c9763b2e116d284",
+    "scope": "source/native winner-rival arrangements only"
+  },
+  "candidate_arrangement_disagreement_pixels": {
+    "exact_source_iframe_control": 1470,
+    "keyframe_class_description": 93260,
+    "openpilot_per_class_geometric_solve": 55227
+  },
+  "first_order_band": {
+    "m1_receipt_path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/receipt.json",
+    "m1_receipt_sha256": "5319c4801dd844cdb5609e657843d66d8818e127f72748c7a7bfc982710ea8e3",
+    "vjp_sidecars_rehashed": 600,
+    "selected_pixel_count": 11453,
+    "readiness": "BLOCKED_DRY_CONFIG_ONLY"
+  },
+  "missing_closure": {
+    "blocker": "R1B2_RANK4_FIRST_ORDER_REALIZED_SECANT_CUSTODY_ABSENT",
+    "realized_backbone_secants": "ABSENT",
+    "qp_receiver_closure": "ABSENT",
+    "rounding_ball_radius_application": "BLOCKED_WITHOUT_CANDIDATE_ARRANGEMENT_SECANT_QP",
+    "record_path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/records/inner_jacobian_secant_qp.json",
+    "record_sha256": "53cca3a5e06fc98b3f6170aa340b2fab740d281e7f8bc602b4330b9fb345fd46"
+  },
+  "decoder_boundary": {
+    "scorer_weights_loaded_at_inflate": false,
+    "decoder_scorer_invocations": 0,
+    "weight_derived_constants_must_be_shipped_and_counted": true
+  },
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "main_landing_review_required": true
+  }
+}
