@@ -144,6 +144,18 @@ def load_or_build(*, rebuild: bool = False) -> Graph:
         publish_and_check(graph)
     except Exception:
         pass
+    # Obsidian auto-round-trip (operator 2026-07-20 "automatically keeping our
+    # obsidian updated"): vault content is the corpus itself and the cache
+    # auto-invalidates above, but the synthesized-edge index note previously
+    # refreshed only on manual --export-obsidian. Refresh it on every rebuild
+    # so graph-view wikilinks never drift behind the graph. Best-effort:
+    # recall must never fail on export bookkeeping.
+    try:
+        from tac.graph_memory.obsidian_export import export_obsidian
+
+        export_obsidian(graph)
+    except Exception:
+        pass
     return graph
 
 
