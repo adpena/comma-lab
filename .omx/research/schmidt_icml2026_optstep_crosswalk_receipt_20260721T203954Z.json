@@ -1,0 +1,293 @@
+{
+  "schema": "pact.schmidt_icml2026_optstep_crosswalk_receipt.v1",
+  "utc": "2026-07-21T20:39:54Z",
+  "lane_id": "lane_schmidt_icml2026_optstep_crosswalk_20260721",
+  "task_name": "schmidt_icml2026_optstep_crosswalk",
+  "task_id": "schmidt_icml2026_optstep_crosswalk_20260721T203954Z::ADOPT_WITHIN_SEGMENT_SHADOW_CANDIDATE_STEP_PROBE",
+  "research_only": true,
+  "execution_authority": false,
+  "axis": "[research-only; source/repository/custody audit]",
+  "verdict": "NO-VERDICT_DATA_CUSTODY; ADOPT-INSTRUMENTATION-ONLY",
+  "verdict_scope": "INSTANCE x CURRENT-TELEMETRY-CUSTODY; adaptive-step family open",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "paid_dispatch": false,
+  "heavy_launch": false,
+  "training_performed": false,
+  "pointer": {
+    "value": 0.1910828242,
+    "axis": "[contest-CPU]",
+    "status": "UNMOVED",
+    "delta": 0.0
+  },
+  "delegation": {
+    "authority_file": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/schmidt_icml2026_optstep_crosswalk_20260721T202207Z.wrapped.prompt.txt",
+    "authority_sha256": "de9875dd10c137b0b879e2b70137046a1ae3fe25a451275bff372bdcb497ec53",
+    "authority_bytes": 9432,
+    "delegation_checkpoint_key": "codex_delegate:schmidt_icml2026_optstep_crosswalk:20260721T202207Z",
+    "authority_verified": true
+  },
+  "repo": {
+    "head_before_landing": "b77a97d4cb51a4acb7bf21bd34e4adee4569e566",
+    "branch": "codexwt/schmidt_icml2026_optstep_crosswalk_20260721T202207Z",
+    "isolated_worktree": true,
+    "main_touched": false,
+    "main_landing_review_required": true
+  },
+  "source_custody": {
+    "tutorial": {
+      "title": "Is numerical optimization theory irrelevant to machine learning practice in 2026?",
+      "author": "Mark Schmidt",
+      "url": "https://www.cs.ubc.ca/~schmidtm/Documents/2026_ICML_Tutorial.pdf",
+      "pages_measured": 209,
+      "bytes_measured": 14225714,
+      "sha256": "567617699196c7a5f6346374a89cd901421e33609390b62d12cca158e406d963"
+    },
+    "ephemeral_pdftotext": {
+      "bytes_measured": 97247,
+      "lines_measured": 3038,
+      "sha256": "7ac5f975af582f2f278d62663afc52bc62632356fc8a707eeb61fe20858bc2dd",
+      "full_read": true,
+      "fresh_official_pdf_pdftotext_sha_match": true,
+      "durable_path_cited": false
+    },
+    "accessed_utc": "2026-07-21",
+    "primary_sources_checked": [
+      {"id": "openreview:be9PdukwEL", "url": "https://openreview.net/forum?id=be9PdukwEL"},
+      {"id": "arXiv:1910.09529v2", "updated_utc": "2020-08-15T20:00:34Z", "url": "https://arxiv.org/abs/1910.09529v2"},
+      {"id": "Polyak-1963", "doi": "10.1016/0041-5553(63)90382-3", "url": "https://www.mathnet.ru/eng/zvmmf7813"},
+      {"id": "Polyak-1969-nonsmooth", "doi": "10.1016/0041-5553(69)90061-5", "url": "https://doi.org/10.1016/0041-5553(69)90061-5"},
+      {"id": "PMLR:v202:defazio23a", "url": "https://proceedings.mlr.press/v202/defazio23a.html"},
+      {"id": "PMLR:v235:mishchenko24a", "url": "https://proceedings.mlr.press/v235/mishchenko24a.html"},
+      {"id": "arXiv:2405.15682v4", "updated_utc": "2024-10-29T22:40:23Z", "url": "https://arxiv.org/abs/2405.15682v4"},
+      {"id": "arXiv:2404.06395v3", "updated_utc": "2024-06-03T08:54:38Z", "pdf_sha256": "4f3b8f22cb0a19a41d267d45beaa882306c5342ed5a09cedb405ea86d159e322", "url": "https://arxiv.org/abs/2404.06395v3"},
+      {"id": "arXiv:2410.05192v3", "updated_utc": "2024-12-02T21:54:54Z", "url": "https://arxiv.org/abs/2410.05192v3"},
+      {"id": "arXiv:2304.13960v1", "pdf_sha256": "9859475ab76b2d5fd950e0c86affd3e04ae0523e8b699be1c793ddbd26983dd2", "url": "https://arxiv.org/abs/2304.13960v1"},
+      {"id": "arXiv:1802.04434v3", "updated_utc": "2018-08-07T18:55:19Z", "url": "https://arxiv.org/abs/1802.04434v3"},
+      {"id": "arXiv:2302.06675v4", "updated_utc": "2023-05-08T21:49:57Z", "url": "https://arxiv.org/abs/2302.06675v4"},
+      {"id": "arXiv:1602.04128v4", "updated_utc": "2016-11-04T01:30:29Z", "url": "https://arxiv.org/abs/1602.04128v4"},
+      {"id": "arXiv:1705.07795v3", "updated_utc": "2017-11-04T21:19:04Z", "url": "https://arxiv.org/abs/1705.07795v3"},
+      {"id": "arXiv:1206.3209v1", "updated_utc": "2012-06-14T18:46:52Z", "url": "https://arxiv.org/abs/1206.3209v1"},
+      {"id": "arXiv:2003.13607v4", "updated_utc": "2021-11-30T22:41:19Z", "url": "https://arxiv.org/abs/2003.13607v4"},
+      {"id": "github:KellerJordan/Muon", "commit": "f98f1cacc0263b04290753e32be8d498c1efc806", "blob": "muon.py", "blob_sha256": "2479665a90124f62e4df557816665851ca317e42fcfda2af1da02c1f44ab5f3d", "url": "https://github.com/KellerJordan/Muon/blob/f98f1cacc0263b04290753e32be8d498c1efc806/muon.py"}
+    ]
+  },
+  "ranked_crosswalk": {
+    "rows_derived": 24,
+    "adopt_rows_derived": 1,
+    "already_have_better_rows_derived": 8,
+    "n_a_why_rows_derived": 15,
+    "counts_are_row_primary_labels": true,
+    "sole_adopt": "fail-closed within-event-segment shadow candidate-step recorder/probe build decision",
+    "adaptive_law_adopted": false,
+    "schedule_replacement": false
+  },
+  "negative_scopes": [
+    "FORMULATION x UNCALIBRATED_CURVATURE_LOCUS",
+    "INSTANCE x UNKNOWN_VALID_FSTAR",
+    "INSTANCE x NO_CANDIDATE_EVALUATIONS",
+    "FORMULATION x WITHIN_SEGMENT_UNMEASURED",
+    "FORMULATION x FIXED_SEGMENT_WSD_UNMEASURED",
+    "FORMULATION x CONVEX_DISTANCE_ESTIMATOR_NOT_LOCAL_SHARPNESS",
+    "FORMULATION x PRACTICAL_ADAM_HEURISTIC_UNMEASURED",
+    "FORMULATION x NUMERATOR_STILL_TUNED",
+    "FORMULATION x ONLINE_CONVEX_ASSUMPTIONS",
+    "FORMULATION x FIXED_L_FIXED_HORIZON",
+    "FORMULATION x FULL_TRUNK_SECANT_CUSTODY_ABSENT",
+    "FORMULATION x PR_AVERAGING_UNMEASURED",
+    "FORMULATION x FULL_TRUNK_BFGS_ASSUMPTIONS_UNMET",
+    "INSTANCE x DISENGAGED_OR_INTERPOLATION_UNPROVEN",
+    "FORMULATION x DEEP_LARGE_BATCH_TRANSFER_UNGROUNDED"
+  ],
+  "d3": {
+    "core_question": "Does a common scalar rescaling of the fully realized incumbent update improve objective decrease per wall-second inside a fixed live event segment while optimizer formulation/state and per-group LR ratios remain fixed?",
+    "adjacent_fork_question": "Do separately specified raw-GD AdGD/Polyak or Schedule-Free optimizer formulations win a matched deterministic fork?",
+    "scope": "core held-incumbent update-rescaling probe plus separately labeled optimizer-formulation forks; event-first-hybrid stage/loss controller remains authoritative",
+    "backtest_executed": false,
+    "launch_executed": false,
+    "score_eval_executed": false,
+    "archive_mutated": false,
+    "result": "NO-VERDICT_DATA_CUSTODY",
+    "instrumentation_build_decision": "ADOPT",
+    "instrumentation_implemented": false,
+    "implementation_status": "PENDING",
+    "adaptive_law_adopted": false,
+    "candidate_families_unadopted": [
+      "directional-local-quadratic",
+      "AdGD",
+      "Polyak",
+      "nonmonotone-Armijo",
+      "ScheduleFree"
+    ],
+    "schedule_free_stateless_one_step_from_incumbent_sidecar_valid": false,
+    "schedule_free_formulation_selected": false,
+    "schedule_free_required_gate": "select one source-faithful variant, enumerate its complete state/init/resume semantics, then run a separately preregistered deterministic fork",
+    "schedule_free_basic_sgd_state": ["x_t", "z_t", "z_1=x_1", "gradient at y_t"],
+    "schedule_free_adamw_v4_additional_state_or_semantics": ["v_t", "beta1", "beta2", "warmup and bias-corrected gamma_t", "cumulative gamma_i^2 weighting for c_t", "epsilon", "decay-at-y semantics"],
+    "causal_limit": "Teacher-forced one-step calculations cannot identify the counterfactual path after the first changed update because subsequent gradients, moments, curvature, and event time change.",
+    "future_heavy_execution_requires_operator_go": true
+  },
+  "trajectory_custody": {
+    "n205_full_run_trajectory": {
+      "path": ".omx/research/n205_full_run_trajectory_20260711.jsonl",
+      "sha256": "7ee89fcc3effbd0836e8745f7a13642ee29fda41d8631e2a54c7868c7f8d4660",
+      "bytes_measured": 381403,
+      "total_lines_measured": 580,
+      "telemetry_rows_measured": 579,
+      "present": [
+        "scalar loss terms",
+        "scalar gnorm",
+        "verdict rows",
+        "event rows",
+        "checkpoint names"
+      ],
+      "absent": [
+        "parameter vectors",
+        "gradient vectors",
+        "delta_w",
+        "delta_g",
+        "optimizer directions",
+        "directional HVP",
+        "candidate-step loss evaluations"
+      ]
+    },
+    "n205_diagnostic_snapshot": {
+      "path": ".omx/research/n205_full_run_diagnostic_snapshot_20260711.json",
+      "sha256": "2e00b08e6f89eabc135b6a5e47e627dd2ea0d2e48317afc243e80aea22336b18",
+      "bytes_measured": 8713,
+      "counterfactual_optimizer_authority": false
+    },
+    "mod32cap": {
+      "run_dir": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z",
+      "levelset_train_result": {
+        "sha256": "39e0324a115829bb16924d039d211303a0c9bf24f0562b48d7c221feaa9e0d12",
+        "bytes_measured": 8539,
+        "history_rows_measured": 41,
+        "epoch_span_measured": [
+          0,
+          1000
+        ]
+      },
+      "preserved_resume_checkpoints": [
+        {
+          "name": "levelset_resume_stageCE_ep299.npz",
+          "bytes_measured": 1811032,
+          "sha256": "6782f64c3e0c6850597aa712187d93eaab2bd2374108fea793d3eddd6ab181bd"
+        },
+        {
+          "name": "levelset_resume_stageMuonStart_ep726.npz",
+          "bytes_measured": 1527496,
+          "sha256": "3add1de456f9e5d4cbb60f867e8c081b6c6181d4207189e7e581030c056b943b"
+        },
+        {
+          "name": "levelset_resume_stageTau_muon_ep1000.npz",
+          "bytes_measured": 1527896,
+          "sha256": "e02eec88fbfd25884147ad3c591c4767eb4b790bb874833e8c83ac118eb34778"
+        }
+      ],
+      "resume_fields_present": [
+        "live model",
+        "EMA model",
+        "optimizer moments",
+        "optimizer learning rate and step",
+        "resume epoch",
+        "recent losses",
+        "NumPy RNG",
+        "hardness RNG"
+      ],
+      "gradient_or_hvp_series_present": false,
+      "exact_boundary_fork_support": "UNVERIFIED",
+      "supports_exact_boundary_fork": false,
+      "exact_fork_blockers": [
+        "dirty git state stamped without dirty patch/source hash",
+        "resume semantic schema/stage absent",
+        "event ledger absent",
+        "resume-vs-continuous incumbent next-state digest receipt absent"
+      ],
+      "scope": "legacy-mod32cap boundary-fork candidate; current v9 support not inferred",
+      "supports_retrospective_counterfactual_path": false
+    },
+    "c2_perclass_stratum": {
+      "run_dir": "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716",
+      "decomp_rows_sha256": "423c52e40e7b91905ed9a3ca5f8e50e01f56790a30f277f5436ca19ba3629934",
+      "sens_sha256": "ded60916624f8a250780e9700550529fa59ef9d9df0e73f791a3fa5d24bb0b36",
+      "slope_sha256": "b88ab29b4123842dd81043aaee2caa09104a0639d019e386a64622d2a41e470a",
+      "type": "receiver-space per-frame/per-pair-side dseg/confidence/stratum response",
+      "optimizer_trajectory": false
+    },
+    "c2_witness_own_decomp": {
+      "run_dir": "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716",
+      "decomp_rows_sha256": "8adc8ec41082798c3660efd26c3f320d22701333a0eeefa9935bd74315bd0ab6",
+      "sens_sha256": "137557d7cae0aaf53cc0b1d5544c10f17d190518d724e9008282916e967fe415",
+      "type": "receiver-space witness decomposition",
+      "optimizer_trajectory": false
+    }
+  },
+  "equation_disposition": {
+    "law_selection": "NO_LAW_SELECTED",
+    "registered": false,
+    "conditional_candidate": {
+      "equation_id": "within_event_segment_directional_quadratic_step_model_v1",
+      "delta_f_hat": "r * (g^T delta_w_inc) + 0.5 * r^2 * (delta_w_inc^T H_loss delta_w_inc)",
+      "r_q": "-(g^T delta_w_inc) / (delta_w_inc^T H_loss delta_w_inc)",
+      "inputs_and_units": {
+        "r": "dimensionless common multiplier; incumbent update is r=1",
+        "g": "training-objective gradient; loss per parameter-unit",
+        "delta_w_inc": "fully realized incumbent update at r=1; parameter-unit; includes decoupled weight decay and preserves per-group LR ratios",
+        "delta_w_inc_t_h_loss_delta_w_inc": "directional training-loss curvature; loss"
+      },
+      "measured_payoff_not_equation_input": {
+        "value": "-delta_f_actual / candidate_wall_seconds",
+        "units": "loss per second"
+      },
+      "h_loss_definition": "H_loss = nabla^2 f_batch(w_k) at the same pre-update state, batch, and differentiated objective as g",
+      "domain": "fixed v9 event segment/loss weights and optimizer state; matched batch/seed/checkpoint custody; directionally twice differentiable and local-model-valid candidate segment; g^T delta_w_inc < 0; delta_w_inc^T H_loss delta_w_inc > 0; per-group LR ratios fixed; decoupled weight decay is inside delta_w_inc but outside H_loss unless explicitly part of f_batch",
+      "producer_if_built": "pact.within_segment_candidate_step_probe.v1",
+      "immediate_consumer_if_measured": "tac.probe_outcomes_ledger.register_probe_outcome",
+      "conditional_downstream_consumer": "tac.witness_dsl.curriculum_dsl.WithinSegmentAdaptiveStep",
+      "registration_gate": "held-out one-step calibration plus deterministic path-level fork benefit with resume and protected-facet custody"
+    },
+    "formalization_pending_reason": "Current trajectory cannot identify alternate-step outcomes and no adaptive-law efficacy anchor exists.",
+    "other_candidate_families_are_distinct": [
+      "raw-gradient AdGD",
+      "raw-gradient Polyak",
+      "nonmonotone Armijo on actual direction",
+      "ScheduleFree deterministic fork after variant and complete state-schema selection"
+    ]
+  },
+  "canonical_task": {
+    "task_id": "schmidt_icml2026_optstep_crosswalk_20260721T203954Z::ADOPT_WITHIN_SEGMENT_SHADOW_CANDIDATE_STEP_PROBE",
+    "title": "Build a $0 fail-closed within-event-segment shadow candidate-step recorder/probe",
+    "status": "pending",
+    "predicted_cost_usd": 0.0,
+    "adaptive_law_scope": false
+  },
+  "six_hooks": {
+    "sensitivity_map": "Reuse Fisher/margin/nTHn as covariates only; no Hessian identity inferred.",
+    "pareto": "Wall-clock advisory debt only; no score constraint mutation.",
+    "bit_allocator": "N-A-WHY — CURRENT-INSTRUMENT-DESIGN x NO-BYTE_MARGINAL until trained-model byte/score effect is measured.",
+    "cathedral_autopilot": "Pending task visibility only; no dispatch or actuation.",
+    "continual_learning": "No posterior update before an empirical receipt.",
+    "probe_disambiguator": "Candidate-formulation matrix with explicit insufficient-custody refusal; implementation pending."
+  },
+  "inbox_directives_consumed": [
+    "2026-07-21T20:26:05Z event-driven schedule correction",
+    "2026-07-21T20:29:23Z non-PR95 optimizer/schedule set supplement",
+    "2026-07-21T20:31:53Z initialization-axis supplement",
+    "2026-07-19T19:42:07Z reverse-waterfill/marginal-value directive",
+    "2026-07-19T19:48:01Z Fisher-margin/inner-Jacobian/basis directive"
+  ],
+  "artifacts": {
+    "memo": ".omx/research/schmidt_icml2026_optstep_crosswalk_20260721T203954Z.md",
+    "dag_feed": ".omx/research/schmidt_icml2026_optstep_crosswalk_DAG_FEED_20260721T203954Z.md",
+    "receipt": ".omx/research/schmidt_icml2026_optstep_crosswalk_receipt_20260721T203954Z.json",
+    "reuse_manifest": ".omx/research/schmidt_icml2026_optstep_crosswalk_REUSE_MANIFEST_20260721T203954Z.json"
+  },
+  "state_mutations": [
+    ".omx/state/canonical_task_status.jsonl: one pending task registration",
+    ".omx/state/lane_registry.json: one research-only L0 lane plus notes correction",
+    ".omx/state/lane_maturity_audit.log: CLI mutation receipts for that lane"
+  ],
+  "main_landing_review_required": true
+}

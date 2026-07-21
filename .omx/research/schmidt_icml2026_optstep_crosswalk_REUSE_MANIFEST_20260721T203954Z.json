@@ -1,0 +1,154 @@
+{
+  "schema": "pact.schmidt_icml2026_optstep_crosswalk_reuse_manifest.v1",
+  "utc": "2026-07-21T20:39:54Z",
+  "lane_id": "lane_schmidt_icml2026_optstep_crosswalk_20260721",
+  "task_id": "schmidt_icml2026_optstep_crosswalk_20260721T203954Z::ADOPT_WITHIN_SEGMENT_SHADOW_CANDIDATE_STEP_PROBE",
+  "research_only": true,
+  "reuse_policy": "Extend canonical event, costate, trajectory, and task surfaces; do not fork a scheduler, optimizer registry, equation registry, or backtest stack.",
+  "reused": [
+    {
+      "path": "src/tac/witness_dsl/curriculum_dsl.py",
+      "objects": [
+        "WitnessNativeMorseContinuationSchedule",
+        "EventTriggeredCurriculum",
+        "ExitEvent",
+        "TauAdvanceEvent",
+        "BirthCompletionEvent",
+        "CurriculumReanchorLevers"
+      ],
+      "disposition": "reused-as-is",
+      "reason": "Canonical event-first-hybrid stage/loss machinery remains authoritative; fixed caps/static approximations/build-owed branches stay explicit."
+    },
+    {
+      "path": "src/tac/witness_dsl/spec_v9_cgauge.py",
+      "disposition": "reused-as-is",
+      "reason": "Current v9-CGauge typed event/optimizer composition; no parallel config."
+    },
+    {
+      "path": "src/tac/witness_control/lambda_net.py",
+      "disposition": "reused-or-extended-by-future-owner",
+      "reason": "Canonical trajectory/costate reading surface; no duplicate parser."
+    },
+    {
+      "path": "tools/lambda_net_backtest.py",
+      "disposition": "reused-or-extended-by-future-owner",
+      "reason": "Canonical real-only walk-forward/backtest discipline."
+    },
+    {
+      "path": "tools/costate_organ_elevation_backtest.py",
+      "disposition": "reused-as-custody-reference",
+      "reason": "Already fails closed on trajectory-equivalence gaps."
+    },
+    {
+      "path": "tools/n205_full_run_diagnostics.py",
+      "disposition": "reused-as-custody-reference",
+      "reason": "Canonical read-only #205 trajectory/snapshot producer."
+    },
+    {
+      "path": ".omx/research/n205_full_run_trajectory_20260711.jsonl",
+      "sha256": "7ee89fcc3effbd0836e8745f7a13642ee29fda41d8631e2a54c7868c7f8d4660",
+      "disposition": "reused-read-only",
+      "reason": "Content-hashed scalar/event/checkpoint-name trajectory evidence."
+    },
+    {
+      "path": ".omx/research/n205_full_run_diagnostic_snapshot_20260711.json",
+      "sha256": "2e00b08e6f89eabc135b6a5e47e627dd2ea0d2e48317afc243e80aea22336b18",
+      "disposition": "reused-read-only",
+      "reason": "Content-hashed milestone/checkpoint custody."
+    },
+    {
+      "path": "src/tac/optimization/muon_finisher_mlx.py",
+      "disposition": "reused-as-is",
+      "reason": "Existing Muon implementation; no generic SignGD duplicate."
+    },
+    {
+      "path": "src/tac/witness_control/grad_interaction.py",
+      "disposition": "reused-as-observability-pattern",
+      "reason": "Existing score-neutral gradient telemetry and RNG guard pattern."
+    },
+    {
+      "path": "src/tac/canonical_task_status/",
+      "disposition": "reused-as-is",
+      "reason": "Exactly one canonical pending task registration."
+    },
+    {
+      "path": "src/tac/canonical_equations/",
+      "disposition": "recalled-but-not-mutated",
+      "reason": "Existing Morse/Fisher/CFL/optimizer laws remain authoritative; proposed law is not registered."
+    }
+  ],
+  "new_with_justification": [
+    {
+      "path": ".omx/research/schmidt_icml2026_optstep_crosswalk_20260721T203954Z.md",
+      "kind": "research memo",
+      "justification": "Durable exhaustive formula digest, ranked crosswalk, custody audit, and D3 verdict."
+    },
+    {
+      "path": ".omx/research/schmidt_icml2026_optstep_crosswalk_DAG_FEED_20260721T203954Z.md",
+      "kind": "DAG FEED",
+      "justification": "Fail-closed routing, verdict scopes, six hooks, and triality boundary."
+    },
+    {
+      "path": ".omx/research/schmidt_icml2026_optstep_crosswalk_receipt_20260721T203954Z.json",
+      "kind": "machine-readable receipt",
+      "justification": "Source, repository, trajectory, task, and authority custody."
+    },
+    {
+      "path": ".omx/research/schmidt_icml2026_optstep_crosswalk_REUSE_MANIFEST_20260721T203954Z.json",
+      "kind": "reuse manifest",
+      "justification": "Explicit no-duplicate inventory."
+    },
+    {
+      "path": ".omx/state/canonical_task_status.jsonl",
+      "kind": "one append-only registration",
+      "justification": "One real ADOPT: pending shadow candidate-step recorder/probe build only."
+    },
+    {
+      "path": ".omx/state/lane_registry.json",
+      "kind": "canonical lane registration",
+      "justification": "Research-only L0 ownership and authority boundary."
+    },
+    {
+      "path": ".omx/state/lane_maturity_audit.log",
+      "kind": "append-only CLI mutation receipts",
+      "justification": "Auditable add-lane, research-only, and notes mutations."
+    }
+  ],
+  "explicit_non_reuse": [
+    {
+      "object": "sealed #205 hardcoded PR95 curriculum as live schedule",
+      "reason": "It remains a governed fixed legacy control; v9/v9-CGauge is an event-first hybrid with explicit fixed residues."
+    },
+    {
+      "object": "new scheduler or curriculum fork",
+      "reason": "Would duplicate canonical event machinery and answer the stale premise."
+    },
+    {
+      "object": "adaptive viscosity epsilon as training-loss LR",
+      "reason": "PDE CFL curvature and objective directional Hessian are distinct loci until calibrated."
+    },
+    {
+      "object": "C2 receiver strata as optimizer trajectory",
+      "reason": "Schema/type mismatch; no optimizer state or loss-curvature series."
+    },
+    {
+      "object": "equation registry append",
+      "reason": "law_selection=NO_LAW_SELECTED; the conditional directional-quadratic candidate is unmeasured and unregistered."
+    },
+    {
+      "object": "DSL Lever",
+      "reason": "Conditional on a green measurement receipt; none exists."
+    },
+    {
+      "object": "archive, scorer, provider, or live-run actuation",
+      "reason": "Research-only $0 authority; no launch/eval/archive mutation."
+    }
+  ],
+  "authority": {
+    "axis": "[research-only; source/repository/custody audit]",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "main_landing_review_required": true
+  }
+}
