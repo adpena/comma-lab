@@ -27,6 +27,7 @@ rerun both gates under #578(a) and may fire only if they admit.
 
 Canonical receipt:
 `.omx/research/m1_c2_r1b4_curvelet_binding_closer_receipt_20260721.json`.
+Implementation commit: `54f6494867` from base `f6d4817352`.
 Dry config:
 `.omx/research/m1_c2_curvelet_generator_governed_ready_config_20260721T002000Z.json`,
 SHA-256 `f8e828ad1551c65e7e29b1c04b0f9d3fb34e1cf4d45afc14546012a25732aa6a`.
