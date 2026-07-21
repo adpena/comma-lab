@@ -80663,6 +80663,48 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_costate_v3_rank_sharpen_20260721",
+      "name": "Costate organ v3 rank sharpening",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/costate_organ_v3_rank_sharpen_20260721.json"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Advisory fixed-n24 retrospective organ; zero learned parameters; no score, actuation, or promotion authority; MAIN landing review required.",
+      "research_only": true
     }
   ],
   "level_rules": {

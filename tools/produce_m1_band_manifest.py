@@ -48,6 +48,12 @@ from tac.boundary_math.integer_plane_banded_trainer import (  # noqa: E402
 )
 from tac.boundary_math.integer_plane_emitter import factor2_operator  # noqa: E402
 from tac.optimization.vjp_custody import sha256_array  # noqa: E402
+from tac.witness_control.costate_organ_v3 import (  # noqa: E402
+    DEFAULT_CORPUS_PATH as COSTATE_CORPUS_PATH,
+)
+from tac.witness_control.costate_organ_v3 import (  # noqa: E402
+    emit_m1_byte_close_row,
+)
 
 SCHEMA = "m1_band_manifest_producer_receipt.v1"
 PAIR_SCHEMA = "m1_band_manifest_pair_checkpoint.v1"
@@ -970,6 +976,20 @@ def check(path: Path) -> dict[str, Any]:
     loaded = BandArtifact.load(manifest)
     if loaded.manifest_sha256 != manifest_record.get("sha256"):
         raise ProducerError("producer receipt band manifest custody mismatch")
+    try:
+        receipt_ref = str(receipt_path.relative_to(REPO))
+    except ValueError:
+        costate_emission = {
+            "status": "NOT_EMITTED_RECEIPT_NOT_REPO_MIRRORED",
+            "blocker": "costate corpus requires a durable repo-relative receipt reference",
+        }
+    else:
+        costate_emission = emit_m1_byte_close_row(
+            receipt,
+            source_receipt=receipt_ref,
+            source_receipt_sha256=sha256_file(receipt_path),
+            corpus_path=REPO / COSTATE_CORPUS_PATH,
+        )
     return {
         "schema": SCHEMA,
         "valid": True,
@@ -977,6 +997,7 @@ def check(path: Path) -> dict[str, Any]:
         "manifest_sha256": loaded.manifest_sha256,
         "launch": False,
         "score_claim": False,
+        "costate_receipt_emission": costate_emission,
     }
 
 
