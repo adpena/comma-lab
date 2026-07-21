@@ -103,9 +103,12 @@ def test_policy_contract_is_json_safe_default_off_and_pair_parallel() -> None:
 def test_basis_arms_share_exact_capacity_but_have_distinct_policy_identity() -> None:
     raw = IntegerPlaneEmitterPolicy(basis=BasisMode.RAW_CENTERED)
     u4 = IntegerPlaneEmitterPolicy(basis=BasisMode.SIGN_FIXED_U4_PAIR_MARGIN)
-    assert raw.capacity_signature() == u4.capacity_signature()
+    curvelet = IntegerPlaneEmitterPolicy(basis=BasisMode.R1B4_WINDOWED_CURVELET)
+    assert raw.capacity_signature() == u4.capacity_signature() == curvelet.capacity_signature()
     assert raw.compile()["policy_sha256"] != u4.compile()["policy_sha256"]
+    assert raw.compile()["policy_sha256"] != curvelet.compile()["policy_sha256"]
     assert u4.compile()["basis"] == "sign_fixed_u4_pair_margin"
+    assert curvelet.compile()["basis"] == "r1b4_windowed_curvelet"
 
 
 @pytest.mark.parametrize(

@@ -295,6 +295,7 @@ class BasisMode(StrEnum):
 
     RAW_CENTERED = "raw_centered"
     SIGN_FIXED_U4_PAIR_MARGIN = "sign_fixed_u4_pair_margin"
+    R1B4_WINDOWED_CURVELET = "r1b4_windowed_curvelet"
 
 
 class STEMode(StrEnum):

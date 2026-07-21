@@ -31,6 +31,11 @@ from typing import Any, Final, Protocol
 
 import numpy as np
 
+from tac.boundary_math.c2_r1b4_curvelet_binding import (
+    BINDING_BASIS_ID,
+    C2R1B4CurveletBinding,
+    C2R1B4CurveletBindingError,
+)
 from tac.boundary_math.integer_plane_emitter import (
     CAMERA_HEIGHT,
     CAMERA_WIDTH,
@@ -464,6 +469,7 @@ class TrainerConfig:
     band_mode: str
     output_dir: Path
     run_id: str
+    carrier_binding: C2R1B4CurveletBinding | None = None
     seed: int = 20260719
     pair_batch_size: int = 2
     smoke_pair_cap: int = 0
@@ -484,6 +490,13 @@ class TrainerConfig:
             _require_sha256(getattr(self, field), field)
         if self.band_mode not in {"positive_anisotropic", "zero_radius_control"}:
             raise C2BandedTrainerError("trainer band_mode is unknown")
+        curvelet_active = self.policy.basis is BasisMode.R1B4_WINDOWED_CURVELET
+        if curvelet_active != (self.carrier_binding is not None):
+            raise C2BandedTrainerError(
+                "r1b4_windowed_curvelet policy and carrier binding must be present together"
+            )
+        if self.carrier_binding is not None and self.carrier_binding.band_manifest_sha256 != self.band_sha256:
+            raise C2BandedTrainerError("carrier binding and trainer band manifest differ")
         if self.pair_count != LOGICAL_PAIR_COUNT:
             raise C2BandedTrainerError("trainer logical state is sealed to 600 pairs")
         if not isinstance(self.seed, int) or isinstance(self.seed, bool) or not 0 <= self.seed < 2**64:
@@ -518,6 +531,18 @@ class TrainerConfig:
             "source_sha256": self.source_sha256,
             "band_sha256": self.band_sha256,
             "band_mode": self.band_mode,
+            "carrier_binding": (
+                {
+                    "schema": "c2_r1b4_curvelet_carrier_binding.v1",
+                    "path": str(self.carrier_binding.manifest_path),
+                    "sha256": self.carrier_binding.manifest_sha256,
+                    "topology_sha256": self.carrier_binding.topology_sha256,
+                    "receiver_schema": "r1b4_section_receiver.v1",
+                    "archive_section": "boundary_coordinate.bgj",
+                }
+                if self.carrier_binding is not None
+                else None
+            ),
             "seed": self.seed,
             "pair_count": self.pair_count,
             "pair_batch_size": self.pair_batch_size,
@@ -650,8 +675,20 @@ def _config_pair_order(config: TrainerConfig, stage_index: int, stage_epoch: int
     return _pair_order(config.seed, stage_index, stage_epoch, count)
 
 
-def _capacity_sha(codes: np.ndarray, head: np.ndarray) -> str:
-    basis = deterministic_coordinate_basis(codes.shape[-1])
+def _coordinate_basis(config: TrainerConfig) -> np.ndarray:
+    if config.carrier_binding is not None:
+        return config.carrier_binding.coordinate_basis()
+    return deterministic_coordinate_basis(config.policy.residual_width)
+
+
+def _structured_state(config: TrainerConfig, base: np.ndarray) -> StructuredEmitterState:
+    if config.carrier_binding is not None:
+        return config.carrier_binding.structured_state(base)
+    return StructuredEmitterState.from_base(base, residual_width=config.policy.residual_width)
+
+
+def _capacity_sha(config: TrainerConfig, codes: np.ndarray, head: np.ndarray) -> str:
+    basis = _coordinate_basis(config)
     code_parameters = int(codes.size)
     head_parameters = int(head.size)
     return CapacitySignature(
@@ -676,6 +713,8 @@ def _state_from_fresh(config: TrainerConfig) -> TrainingState:
     head = (
         rng.standard_normal((config.policy.residual_width, RGB_CHANNELS), dtype=np.float32) * np.float32(0.01)
     ).astype(np.float32)
+    if config.carrier_binding is not None:
+        codes[:, 0, :] = np.float32(0.0)
     return TrainingState(codes, head, codes.copy(), head.copy(), _AdamState.fresh(codes, head))
 
 
@@ -689,7 +728,7 @@ def _run_custody(config: TrainerConfig, state: TrainingState) -> dict[str, Any]:
         "source_sha256": config.source_sha256,
         "band_sha256": config.band_sha256,
         "band_mode": config.band_mode,
-        "emitter_capacity_sha256": _capacity_sha(state.codes, state.head),
+        "emitter_capacity_sha256": _capacity_sha(config, state.codes, state.head),
     }
 
 
@@ -724,7 +763,7 @@ def _checkpoint(
             "stage_complete": stage_complete,
             "run_custody": _run_custody(config, state),
         },
-        topology_state_sha256=sha256_bytes(deterministic_coordinate_basis(config.policy.residual_width).tobytes()),
+        topology_state_sha256=sha256_bytes(_coordinate_basis(config).tobytes()),
         discrete_state_sha256=sha256_bytes(
             canonical_json(
                 {
@@ -773,8 +812,10 @@ def load_training_state(path: str | Path, config: TrainerConfig) -> TrainingStat
         global_step=checkpoint.global_step,
     )
     custody = checkpoint.rng_state["run_custody"]
-    if custody["emitter_capacity_sha256"] != _capacity_sha(state.codes, state.head):
+    if custody["emitter_capacity_sha256"] != _capacity_sha(config, state.codes, state.head):
         raise C2BandedTrainerError("resume emitter capacity drift")
+    if config.carrier_binding is not None and np.count_nonzero(state.codes[:, 0]) != 0:
+        raise C2BandedTrainerError("resume contains unconsumed frame-0 curvelet codes")
     if bool(checkpoint.rng_state["stage_complete"]):
         state.stage_index += 1
         state.stage_epoch = 0
@@ -840,7 +881,7 @@ def train_streamed(
                     raise C2BandedTrainerError("stream source returned wrong real-geometry batch")
                 if any(array.dtype != np.float32 for array in (base, source_planes, radii)):
                     raise C2BandedTrainerError("stream source batches must be float32")
-                structured = StructuredEmitterState.from_base(base, residual_width=config.policy.residual_width)
+                structured = _structured_state(config, base)
                 codes_t = torch.tensor(state.codes, dtype=torch.float32, requires_grad=True)
                 head_t = torch.tensor(state.head, dtype=torch.float32, requires_grad=True)
                 index_t = torch.as_tensor(indices, dtype=torch.long)
@@ -856,6 +897,8 @@ def train_streamed(
                     raise C2BandedTrainerError("trainable residual arrays did not receive gradients")
                 code_grad = codes_t.grad.detach().cpu().numpy().astype(np.float32, copy=False)
                 head_grad = head_t.grad.detach().cpu().numpy().astype(np.float32, copy=False)
+                if config.carrier_binding is not None:
+                    code_grad[:, 0, :] = np.float32(0.0)
                 state.optimizer.update(
                     state.codes,
                     state.head,
@@ -863,6 +906,10 @@ def train_streamed(
                     head_grad,
                     learning_rate=stage.learning_rate,
                 )
+                if config.carrier_binding is not None:
+                    state.codes[:, 0, :] = np.float32(0.0)
+                    state.optimizer.code_m[:, 0, :] = np.float32(0.0)
+                    state.optimizer.code_v[:, 0, :] = np.float32(0.0)
                 decay = np.float32(config.ema_decay)
                 state.ema_codes[:] = decay * state.ema_codes + (np.float32(1.0) - decay) * state.codes
                 state.ema_head[:] = decay * state.ema_head + (np.float32(1.0) - decay) * state.head
@@ -910,6 +957,17 @@ def _training_receipt(
     *,
     stopped_early: bool,
 ) -> dict[str, Any]:
+    carrier_packet: dict[str, Any] | None = None
+    if config.carrier_binding is not None and not stopped_early:
+        packet_path = config.output_dir / f"{config.run_id}.ema.{BINDING_BASIS_ID}.bgj"
+        try:
+            carrier_packet = config.carrier_binding.write_packet_new(
+                packet_path,
+                state.ema_codes,
+                state.ema_head,
+            )
+        except C2R1B4CurveletBindingError as exc:
+            raise C2BandedTrainerError("final EMA carrier packet export failed") from exc
     return {
         "schema": TRAINING_RECEIPT_SCHEMA,
         "authority": "bounded local training evidence; non-score; non-promotion",
@@ -930,6 +988,7 @@ def _training_receipt(
         "peak_rss_bytes": _peak_rss_bytes(),
         "peak_rss_delta_bytes": max(0, _peak_rss_bytes() - initial_rss),
         "ema_authority_default": True,
+        "carrier_packet": carrier_packet,
         "launch": False,
         "score_claim": False,
         "pointer_mutation": False,
@@ -1106,6 +1165,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base-archive-sha256", required=True)
     parser.add_argument("--base-decoder-sha256", required=True)
     parser.add_argument("--band-manifest", type=Path, required=True)
+    parser.add_argument("--r1b4-carrier-binding", type=Path)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--scratch-root", type=Path, required=True)
     parser.add_argument("--required-free-bytes", type=int, default=4_000_000_000)
@@ -1154,6 +1214,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         policy = policy_from_args(args)
         band = BandArtifact.load(args.band_manifest)
+        carrier_binding = (
+            C2R1B4CurveletBinding.load(args.r1b4_carrier_binding)
+            if args.r1b4_carrier_binding is not None
+            else None
+        )
         base, base_planes_sha, materialization = materialize_base_scorer_planes(
             base_archive=args.base_archive,
             base_archive_sha256=args.base_archive_sha256,
@@ -1176,6 +1241,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             band_mode=band.mode,
             output_dir=args.output_dir,
             run_id=args.run_id,
+            carrier_binding=carrier_binding,
             seed=args.seed,
             pair_batch_size=args.pair_batch_size,
             smoke_pair_cap=args.smoke_pair_cap,

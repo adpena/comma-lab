@@ -77,7 +77,7 @@ def _pdw2_packet() -> bytes:
     return encode_pdw2(target)
 
 
-def test_materializer_emits_valid_blocked_config_without_trainer_argv(
+def test_materializer_emits_valid_ready_config_with_bound_curvelet_trainer_argv(
     monkeypatch, tmp_path: Path
 ) -> None:
     base = tmp_path / "archive.zip"
@@ -89,14 +89,26 @@ def test_materializer_emits_valid_blocked_config_without_trainer_argv(
     cache.write_bytes(b"cache")
     manifest = tmp_path / "band_manifest.json"
     manifest.write_bytes(b"{}")
+    carrier_binding = tmp_path / "carrier_binding.json"
+    carrier_binding.write_bytes(b"{}")
     pdw2 = tmp_path / "seg_head_target.pdw2"
     pdw2.write_bytes(_pdw2_packet())
     fake_band = SimpleNamespace(
         mode="positive_anisotropic",
         manifest_path=manifest.resolve(),
+        manifest_sha256=hashlib.sha256(manifest.read_bytes()).hexdigest(),
         source_sha256="f" * 64,
     )
+    fake_binding = SimpleNamespace(
+        manifest_path=carrier_binding.resolve(),
+        manifest_sha256=hashlib.sha256(carrier_binding.read_bytes()).hexdigest(),
+        band_manifest_sha256=fake_band.manifest_sha256,
+        topology_sha256="e" * 64,
+        selected_pixel_count=11_453,
+        dead_pixel_count=26_624,
+    )
     monkeypatch.setattr(fire.BandArtifact, "load", lambda _path: fake_band)
+    monkeypatch.setattr(fire.C2R1B4CurveletBinding, "load", lambda _path: fake_binding)
     monkeypatch.setattr(fire, "_beneath_ssd", lambda path: Path(path).resolve())
     monkeypatch.setattr(
         fire,
@@ -116,9 +128,10 @@ def test_materializer_emits_valid_blocked_config_without_trainer_argv(
         base_decoder=decoder,
         cache=cache,
         band_manifest=manifest,
+        carrier_binding=carrier_binding,
         pdw2_packet=pdw2,
         required_free_bytes=1,
-        basis=BasisMode.RAW_CENTERED.value,
+        basis=BasisMode.R1B4_WINDOWED_CURVELET.value,
         resume_from=None,
         seed=producer.SEED,
         run_id="dry",
@@ -127,13 +140,29 @@ def test_materializer_emits_valid_blocked_config_without_trainer_argv(
         ema_decay=0.997,
     )
     config = fire.materialize(args)
-    assert config["readiness"] == "BLOCKED"
-    assert config["trainer_argv"] is None
+    assert config["readiness"] == "READY"
+    assert config["trainer_argv"][:2] == [
+        "python3",
+        "experiments/train_c2_integer_plane_emitter_banded.py",
+    ]
     assert config["launch"] is False
-    assert len(config["blocking_gates"]) == 3
+    assert config["blocking_gates"] == []
+    assert config["remaining_preflights"] == [
+        "governed_launcher_governor",
+        "witness_memory_preflight",
+    ]
+    assert config["receiver_binding"]["quantization_strata"] == {
+        "realizable_pixels": 11_453,
+        "substep_dead_pixels": 26_624,
+        "dead_stratum_optimization_weight": 0,
+        "shared_packet_bytes_pixel_attribution": (
+            "not_decomposable_before_receiver_effect_measurement"
+        ),
+        "dead_stratum_spatial_effect": "not_measured_no_launch",
+    }
     path = tmp_path / "fire.json"
     path.write_bytes(canonical_json(config))
     receipt = fire.validate_materialized(path)
     assert receipt["valid"] is True
-    assert receipt["readiness"] == "BLOCKED"
+    assert receipt["readiness"] == "READY"
     assert receipt["fire_executed"] is False
