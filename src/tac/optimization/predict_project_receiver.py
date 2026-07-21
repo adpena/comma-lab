@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import hashlib
 import heapq
+import json
 import math
 import struct
+import zlib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Final, Literal
@@ -84,6 +86,12 @@ RATE_LAW_LADDER_REUSE_SOURCE: Final = "src/tac/canonical_equations/rate_law_ladd
 PDE_318_REUSE_ID: Final = "#318"
 ADVECTED_MOTION_BASE_SCHEMA: Final = "predict_project_advected_motion_base.v1"
 COUNTED_PLANAR_XI_SCHEMA: Final = "predict_project_counted_planar_xi.v1"
+COUNTED_FULL_SCREW_XI_SCHEMA: Final = "predict_project_counted_full_screw_xi.v1"
+CHART_RGB_COEFFICIENT_SCHEMA: Final = "predict_project_chart_rgb_coefficients.v1"
+CHART_RGB_COEFFICIENT_MAGIC: Final = b"PCR1"
+CHART_RGB_COEFFICIENT_VERSION: Final = 1
+_CHART_RGB_PREFIX: Final = struct.Struct("<4sHII")
+_CHART_RGB_CRC: Final = struct.Struct("<I")
 ADVECTED_MOTION_LAWREFS: Final = (
     "ego_motion_cumulative_se3_bspline_v1",
     "lane_band_ego_factorization_source_reparam_v1",
@@ -794,6 +802,289 @@ def counted_planar_xi_series(
         "lawref_equation_ids": list(ADVECTED_MOTION_LAWREFS),
     }
     return xi, custody
+
+
+def counted_full_screw_xi_series(
+    stored_pose6: np.ndarray,
+    *,
+    translation_scale: float,
+    rotation_scale: float,
+    pitch_rad: float,
+    pair_start: int = 0,
+    pair_end: int | None = None,
+    source_sha256: str,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Map an already-counted six-coordinate pose stream to complete SE(3) twists.
+
+    Unlike :func:`counted_planar_xi_series`, this path does not zero any source
+    coordinate.  ``xi_from_pose_calibration`` maps all three translation and all
+    three rotation coordinates through the NumPy ``tac.lie`` exp/log authority.
+    The scorer and target are deliberately absent from this decoder primitive.
+    """
+
+    from tac.boundary_math import warp_real_luma_frame0 as g1_warp
+
+    poses = np.asarray(stored_pose6, dtype=np.float64)
+    if poses.ndim != 2 or poses.shape[1] != 6 or poses.shape[0] <= 0:
+        raise PredictProjectReceiverError("stored full-screw pose must have shape (pairs,6)")
+    if not np.all(np.isfinite(poses)):
+        raise PredictProjectReceiverError("stored full-screw pose must be finite")
+    stop = poses.shape[0] if pair_end is None else pair_end
+    if any(isinstance(value, bool) or not isinstance(value, int) for value in (pair_start, stop)):
+        raise PredictProjectReceiverError("full-screw pair range must use exact integers")
+    if not 0 <= pair_start < stop <= poses.shape[0]:
+        raise PredictProjectReceiverError("full-screw pair range is outside stored pose coverage")
+    for name, value in (
+        ("translation_scale", translation_scale),
+        ("rotation_scale", rotation_scale),
+        ("pitch_rad", pitch_rad),
+    ):
+        if not math.isfinite(float(value)):
+            raise PredictProjectReceiverError(f"{name} must be finite")
+    if translation_scale == 0.0 or rotation_scale == 0.0:
+        raise PredictProjectReceiverError("full-screw scales must keep translation and rotation active")
+    if (
+        not isinstance(source_sha256, str)
+        or len(source_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in source_sha256)
+        or source_sha256 == "0" * 64
+    ):
+        raise PredictProjectReceiverError("full-screw source SHA-256 is malformed")
+
+    selected = poses[pair_start:stop]
+    xi = np.stack(
+        [
+            g1_warp.xi_from_pose_calibration(
+                pose,
+                float(translation_scale),
+                float(rotation_scale),
+                float(pitch_rad),
+                whole_ground=True,
+            )
+            for pose in selected
+        ],
+        axis=0,
+    )
+    if xi.shape != selected.shape or not np.all(np.isfinite(xi)):
+        raise PredictProjectReceiverError("full-screw tac.lie conversion produced invalid twists")
+    source_nonzero = np.count_nonzero(selected, axis=0)
+    xi_nonzero = np.count_nonzero(xi, axis=0)
+    if np.any(source_nonzero == 0) or np.any(xi_nonzero == 0):
+        raise PredictProjectReceiverError("full-screw coverage requires every stored/xi coordinate to be active")
+    custody = {
+        "schema": COUNTED_FULL_SCREW_XI_SCHEMA,
+        "source_section": "gt_n600.gt_poses already-counted six-coordinate pose sidecar",
+        "source_sha256": source_sha256,
+        "pair_range": [pair_start, stop],
+        "source_coordinate_order": ["forward", "lateral", "vertical", "rot0", "rot1", "rot2"],
+        "xi_coordinate_order": ["rho_x", "rho_y", "rho_z", "omega_x", "omega_y", "omega_z"],
+        "mapping": "xi=log_se3(make_T(exp_so3(s_r*[pose3,pose4,pose5]),s_t*[pose2,pose1,pose0]))",
+        "translation_scale": float(translation_scale),
+        "rotation_scale": float(rotation_scale),
+        "pitch_rad_ground_geometry": float(pitch_rad),
+        "source_nonzero_count_by_coordinate": source_nonzero.astype(int).tolist(),
+        "xi_nonzero_count_by_coordinate": xi_nonzero.astype(int).tolist(),
+        "all_six_source_coordinates_consumed": True,
+        "translation_first": True,
+        "additional_video_derived_bytes": 0,
+        "decoder_scorer_invocations": 0,
+        "lawref_equation_ids": [
+            "ego_motion_cumulative_se3_bspline_v1",
+            "xi_advected_prior_per_class_chart_reconciliation_v1",
+            *ADVECTED_MOTION_LAWREFS[1:],
+        ],
+    }
+    return xi, custody
+
+
+@dataclass(frozen=True)
+class ChartRGBCoefficientPacket:
+    """Counted per-pair RGB offsets interpreted in the decoded scene chart."""
+
+    coefficients: np.ndarray
+    scales: np.ndarray
+
+    def __post_init__(self) -> None:
+        coefficients = np.asarray(self.coefficients)
+        scales = np.asarray(self.scales)
+        if coefficients.dtype != np.int8 or coefficients.ndim != 3:
+            raise PredictProjectReceiverError("chart coefficients must be pair x class x RGB int8")
+        if coefficients.shape[0] <= 0 or coefficients.shape[1:] != (CLASS_COUNT, 3):
+            raise PredictProjectReceiverError("chart coefficients must cover positive pairs and five RGB classes")
+        if scales.ndim != 1 or scales.shape[0] != coefficients.shape[0]:
+            raise PredictProjectReceiverError("chart coefficient scales must contain one value per pair")
+        canonical_scales = scales.astype("<f2", copy=True)
+        if not np.all(np.isfinite(canonical_scales)) or np.any(canonical_scales <= 0):
+            raise PredictProjectReceiverError("chart coefficient scales must be positive finite float16")
+        canonical_coefficients = coefficients.astype(np.int8, copy=True)
+        canonical_coefficients.setflags(write=False)
+        canonical_scales.setflags(write=False)
+        object.__setattr__(self, "coefficients", canonical_coefficients)
+        object.__setattr__(self, "scales", canonical_scales)
+
+    @property
+    def pair_count(self) -> int:
+        return int(self.coefficients.shape[0])
+
+
+def encode_chart_rgb_coefficients(packet: ChartRGBCoefficientPacket) -> bytes:
+    """Serialize a strict receiver-open chart-coefficient payload."""
+
+    coefficient_bytes = packet.coefficients.tobytes(order="C")
+    scale_bytes = packet.scales.astype("<f2", copy=False).tobytes(order="C")
+    body = coefficient_bytes + scale_bytes
+    header = {
+        "schema": CHART_RGB_COEFFICIENT_SCHEMA,
+        "version": CHART_RGB_COEFFICIENT_VERSION,
+        "pair_count": packet.pair_count,
+        "class_count": CLASS_COUNT,
+        "channels": 3,
+        "coefficient_dtype": "int8",
+        "scale_dtype": "float16_le",
+        "coefficient_bytes": len(coefficient_bytes),
+        "scale_bytes": len(scale_bytes),
+        "body_sha256": hashlib.sha256(body).hexdigest(),
+        "receiver_basis": "decoded_scene_chart_class_indicator",
+    }
+    header_bytes = canonical_json_bytes(header)
+    prefix = _CHART_RGB_PREFIX.pack(
+        CHART_RGB_COEFFICIENT_MAGIC,
+        CHART_RGB_COEFFICIENT_VERSION,
+        len(header_bytes),
+        len(body),
+    )
+    checksum = _CHART_RGB_CRC.pack(zlib.crc32(header_bytes + body) & 0xFFFFFFFF)
+    return prefix + header_bytes + body + checksum
+
+
+def decode_chart_rgb_coefficients(payload: bytes) -> ChartRGBCoefficientPacket:
+    """Parse a chart-coefficient payload, refusing drift and trailing bytes."""
+
+    if not isinstance(payload, bytes) or len(payload) < _CHART_RGB_PREFIX.size + _CHART_RGB_CRC.size:
+        raise PredictProjectReceiverError("chart coefficient payload is truncated or not bytes")
+    magic, version, header_size, body_size = _CHART_RGB_PREFIX.unpack_from(payload)
+    expected_size = _CHART_RGB_PREFIX.size + header_size + body_size + _CHART_RGB_CRC.size
+    if (
+        magic != CHART_RGB_COEFFICIENT_MAGIC
+        or version != CHART_RGB_COEFFICIENT_VERSION
+        or len(payload) != expected_size
+    ):
+        raise PredictProjectReceiverError("chart coefficient magic/version/length mismatch")
+    header_start = _CHART_RGB_PREFIX.size
+    body_start = header_start + header_size
+    body_end = body_start + body_size
+    header_bytes = payload[header_start:body_start]
+    body = payload[body_start:body_end]
+    (stored_crc,) = _CHART_RGB_CRC.unpack(payload[body_end:])
+    if stored_crc != (zlib.crc32(header_bytes + body) & 0xFFFFFFFF):
+        raise PredictProjectReceiverError("chart coefficient CRC mismatch")
+    try:
+        header = json.loads(header_bytes.decode("ascii"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PredictProjectReceiverError("chart coefficient header is malformed") from exc
+    required = {
+        "schema",
+        "version",
+        "pair_count",
+        "class_count",
+        "channels",
+        "coefficient_dtype",
+        "scale_dtype",
+        "coefficient_bytes",
+        "scale_bytes",
+        "body_sha256",
+        "receiver_basis",
+    }
+    if not isinstance(header, dict) or set(header) != required or canonical_json_bytes(header) != header_bytes:
+        raise PredictProjectReceiverError("chart coefficient header is not canonical")
+    pair_count = header["pair_count"]
+    if isinstance(pair_count, bool) or not isinstance(pair_count, int) or pair_count <= 0:
+        raise PredictProjectReceiverError("chart coefficient pair_count is invalid")
+    coefficient_size = pair_count * CLASS_COUNT * 3
+    scale_size = pair_count * 2
+    if (
+        header
+        != {
+            **header,
+            "schema": CHART_RGB_COEFFICIENT_SCHEMA,
+            "version": CHART_RGB_COEFFICIENT_VERSION,
+            "class_count": CLASS_COUNT,
+            "channels": 3,
+            "coefficient_dtype": "int8",
+            "scale_dtype": "float16_le",
+            "coefficient_bytes": coefficient_size,
+            "scale_bytes": scale_size,
+            "body_sha256": hashlib.sha256(body).hexdigest(),
+            "receiver_basis": "decoded_scene_chart_class_indicator",
+        }
+        or len(body) != coefficient_size + scale_size
+    ):
+        raise PredictProjectReceiverError("chart coefficient header/body custody mismatch")
+    coefficients = np.frombuffer(body[:coefficient_size], dtype=np.int8).reshape(pair_count, CLASS_COUNT, 3).copy()
+    scales = np.frombuffer(body[coefficient_size:], dtype="<f2").copy()
+    return ChartRGBCoefficientPacket(coefficients=coefficients, scales=scales)
+
+
+def fit_chart_rgb_coefficients(
+    baseline_scorer_plane: np.ndarray,
+    target_scorer_plane: np.ndarray,
+    scene_chart: np.ndarray,
+) -> tuple[np.ndarray, float]:
+    """Fit one robust RGB-offset coefficient per decoded chart class."""
+
+    baseline = np.asarray(baseline_scorer_plane)
+    target = np.asarray(target_scorer_plane)
+    chart = np.asarray(scene_chart)
+    if (
+        baseline.dtype != np.uint8
+        or target.dtype != np.uint8
+        or baseline.shape != target.shape
+        or baseline.ndim != 3
+        or baseline.shape[2] != 3
+        or chart.dtype != np.uint8
+        or chart.shape != baseline.shape[:2]
+        or np.any(chart >= CLASS_COUNT)
+    ):
+        raise PredictProjectReceiverError("chart coefficient fit inputs have invalid geometry/dtype")
+    residual = target.astype(np.int16) - baseline.astype(np.int16)
+    values = np.zeros((CLASS_COUNT, 3), dtype=np.float64)
+    for class_id in range(CLASS_COUNT):
+        selected = residual[chart == class_id]
+        if selected.size:
+            values[class_id] = np.median(selected, axis=0)
+    max_abs = float(np.max(np.abs(values)))
+    scale = max_abs / 127.0 if max_abs > 0.0 else 1.0
+    scale16 = float(np.float16(scale))
+    if not math.isfinite(scale16) or scale16 <= 0.0:
+        raise PredictProjectReceiverError("chart coefficient quantization scale is invalid")
+    coefficients = np.clip(np.rint(values / scale16), -127.0, 127.0).astype(np.int8)
+    return coefficients, scale16
+
+
+def apply_chart_rgb_coefficients(
+    baseline_scorer_plane: np.ndarray,
+    scene_chart: np.ndarray,
+    packet: ChartRGBCoefficientPacket,
+    pair_index: int,
+) -> np.ndarray:
+    """Apply one counted coefficient row through its decoded scene-chart basis."""
+
+    baseline = np.asarray(baseline_scorer_plane)
+    chart = np.asarray(scene_chart)
+    if (
+        baseline.dtype != np.uint8
+        or baseline.ndim != 3
+        or baseline.shape[2] != 3
+        or chart.dtype != np.uint8
+        or chart.shape != baseline.shape[:2]
+        or np.any(chart >= CLASS_COUNT)
+    ):
+        raise PredictProjectReceiverError("chart coefficient receiver inputs have invalid geometry/dtype")
+    if isinstance(pair_index, bool) or not isinstance(pair_index, int) or not 0 <= pair_index < packet.pair_count:
+        raise PredictProjectReceiverError("chart coefficient pair_index is out of range")
+    offsets = packet.coefficients[pair_index].astype(np.float64) * float(packet.scales[pair_index])
+    corrected = baseline.astype(np.float64) + offsets[chart]
+    return np.clip(np.rint(corrected), 0.0, 255.0).astype(np.uint8)
 
 
 def advect_motion_base(
@@ -3221,6 +3512,8 @@ __all__ = [
     "BOUNDARY_INVERSE_RECEIPT_SHA256",
     "CANONICAL_LAW_RESOLUTION_CUSTODY",
     "CANONICAL_LAW_RESOLUTION_SHA256",
+    "CHART_RGB_COEFFICIENT_SCHEMA",
+    "COUNTED_FULL_SCREW_XI_SCHEMA",
     "COUNTED_PLANAR_XI_SCHEMA",
     "GLOBAL_WATERFILL_LAMBDA_STAR",
     "GLOBAL_WATERFILL_STREAMS",
@@ -3238,18 +3531,24 @@ __all__ = [
     "SEGNET_HEAD_RANK_EQUATION_ID",
     "TEMPORAL_JITTER_AMORTIZATION_RATIO",
     "TEMPORAL_JITTER_EQUATION_ID",
+    "ChartRGBCoefficientPacket",
     "DoubleDecodeResult",
     "LinearConstraint",
     "PredictProjectReceiverError",
     "ProjectionResult",
     "advect_motion_base",
+    "apply_chart_rgb_coefficients",
     "camera_uint8_identity_sha256",
     "component_byte_accounting",
+    "counted_full_screw_xi_series",
     "counted_planar_xi_series",
+    "decode_chart_rgb_coefficients",
     "derive_ground_chart_raster",
     "double_decode_hash",
+    "encode_chart_rgb_coefficients",
     "extract_constraint_violations",
     "factor2_project_with_existing_solver",
+    "fit_chart_rgb_coefficients",
     "global_joint_waterfill",
     "hard_oracle_custody_sha256",
     "max_linear_violation",

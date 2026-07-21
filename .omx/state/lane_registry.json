@@ -82032,6 +82032,52 @@
       },
       "notes": "Delegated isolated-worktree BUILD plus macOS-CPU advisory n64 gate then n600 if admitted; no trained weights; no extra video-derived bytes beyond stored xi; pointer unchanged; MAIN landing review required.",
       "research_only": true
+    },
+    {
+      "id": "lane_advected_screw6_chartlevel_20260721",
+      "name": "Advected full-screw chart-level exception measurement",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/predict_project_receiver.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/advected_screw6_chartlevel_20260721.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "N16_TWO_AXIS_GATE_FAIL_STOP_BEFORE_N64; formulation rejected, advection family open; MAIN review required.",
+      "research_only": true,
+      "lane_class": "substrate_engineering",
+      "reactivation_criteria": [
+        "Reactivate only with depth-stratified screw scene framing plus Fisher-margin curvelet/shearlet chart coefficients under a new governed n16 gate."
+      ]
     }
   ],
   "level_rules": {
@@ -82041,5 +82087,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-21T15:33:40Z"
+  "updated_at": "2026-07-21T16:21:24Z"
 }
