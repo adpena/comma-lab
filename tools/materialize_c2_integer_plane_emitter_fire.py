@@ -82,12 +82,6 @@ def materialize(args: argparse.Namespace) -> dict[str, Any]:
         raise FireConfigError("full fire requires strict canonical #553 PDW2 bytes") from exc
     if encode_pdw2(pdw2) != pdw2_bytes:
         raise FireConfigError("full fire PDW2 bytes fail parse/re-encode")
-    raise FireConfigError(
-        "full fire blocked: #553 PDW2 remains target-only with no scorer-free spatial/RGB "
-        "pullback in #543; the current C2 coordinate topology is a polynomial control, not a "
-        "receiver-bound curvelet/shearlet carrier; executable Fisher/secant/QP EV field custody "
-        "is required by the positive-band manifest"
-    )
     _base_packet_compatible(base_archive)
     preflights = {
         "output": storage_preflight(output_dir, required_free_bytes=args.required_free_bytes),
@@ -98,60 +92,25 @@ def materialize(args: argparse.Namespace) -> dict[str, Any]:
     policy = IntegerPlaneEmitterPolicy(basis=BasisMode(args.basis), mode=PolicyMode.BANDED_TRAINING)
     lever = IntegerPlaneEmitter(policy=policy)
     contract = policy.compile_contract()
-    stage_json = json.dumps(
-        [stage.to_dict() for stage in DEFAULT_STAGE_PLAN],
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-    trainer = (Path(__file__).resolve().parents[1] / "experiments/train_c2_integer_plane_emitter_banded.py").resolve(
-        strict=True
-    )
-    argv = [sys.executable, str(trainer)]
-    for flag, value in lever.overrides.items():
-        argv.extend((flag, str(value).lower() if isinstance(value, bool) else str(value)))
-    argv.extend(
-        (
-            "--base-archive",
-            str(base_archive),
-            "--base-decoder",
-            str(base_decoder),
-            "--base-archive-sha256",
-            sha256_file(base_archive),
-            "--base-decoder-sha256",
-            sha256_file(base_decoder),
-            "--band-manifest",
-            str(band.manifest_path),
-            "--output-dir",
-            str(output_dir),
-            "--scratch-root",
-            str(cold_store / "scratch"),
-            "--required-free-bytes",
-            str(args.required_free_bytes),
-            "--run-id",
-            args.run_id,
-            "--seed",
-            str(args.seed),
-            "--pair-batch-size",
-            str(args.pair_batch_size),
-            "--checkpoint-every-steps",
-            str(args.checkpoint_every_steps),
-            "--ema-decay",
-            str(args.ema_decay),
-            "--stage-plan-json",
-            stage_json,
-            "--receipt",
-            str(output_dir / "training_receipt.json"),
-        )
-    )
     if args.resume_from is not None:
         resume = args.resume_from.expanduser().resolve(strict=True)
-        argv.extend(("--resume-from", str(resume)))
         resume_record: dict[str, Any] | None = _hash_record(resume)
     else:
         resume_record = None
+    blocking_gates = [
+        "RECEIVER_BYTE_KKT_ADMISSION_PENDING_REALIZED_BACKBONE_SECANTS_AND_EXACT_PREFIX_BYTE_MARGINALS",
+        "#502_R1B4_RECEIVER_BOUND_C2_BANDED_TRAINER_BINDING_ABSENT",
+        "PDW2_SPATIAL_RECEIVER_MODULE_MERGED_C2_FACTOR2_COMPOSITION_ABSENT",
+    ]
     config = {
         "schema": SCHEMA,
-        "authority": "materialized_only_not_fired",
+        "authority": "materialized_blocked_not_fired",
+        "readiness": "BLOCKED",
+        "verdict_scope": (
+            "inputs parse and bind for config-only review; this is not trainer, receiver-byte, "
+            "score, dispatch, or promotion authority"
+        ),
+        "blocking_gates": blocking_gates,
         "logical_pair_count": 600,
         "policy_contract": contract,
         "dsl_overrides": lever.overrides,
@@ -161,13 +120,14 @@ def materialize(args: argparse.Namespace) -> dict[str, Any]:
         "cache": _hash_record(cache),
         "band_manifest": _hash_record(band.manifest_path),
         "band_source_sha256": band.source_sha256,
+        "pdw2_packet": _hash_record(pdw2_path),
         "resume_checkpoint": resume_record,
         "seed": args.seed,
         "stage_plan": [stage.to_dict() for stage in DEFAULT_STAGE_PLAN],
         "output_dir": str(output_dir),
         "cold_store": str(cold_store),
         "storage_preflight": preflights,
-        "trainer_argv": argv,
+        "trainer_argv": None,
         "launch": False,
         "paid_dispatch": False,
         "score_claim": False,
@@ -188,6 +148,16 @@ def validate_materialized(path: Path) -> dict[str, Any]:
         record = config.get(name)
         if not isinstance(record, dict) or sha256_file(record["path"]) != record["sha256"]:
             raise FireConfigError(f"stale {name} custody")
+    pdw2_record = config.get("pdw2_packet")
+    if not isinstance(pdw2_record, dict) or sha256_file(pdw2_record["path"]) != pdw2_record["sha256"]:
+        raise FireConfigError("stale pdw2_packet custody")
+    pdw2_bytes = Path(pdw2_record["path"]).read_bytes()
+    try:
+        pdw2 = decode_pdw2(pdw2_bytes)
+    except ValueError as exc:
+        raise FireConfigError("stale PDW2 parse custody") from exc
+    if encode_pdw2(pdw2) != pdw2_bytes:
+        raise FireConfigError("stale PDW2 canonical custody")
     resume = config.get("resume_checkpoint")
     if resume is not None and sha256_file(resume["path"]) != resume["sha256"]:
         raise FireConfigError("stale resume checkpoint custody")
@@ -200,7 +170,21 @@ def validate_materialized(path: Path) -> dict[str, Any]:
     band = BandArtifact.load(config["band_manifest"]["path"])
     if band.mode != "positive_anisotropic" or band.source_sha256 != config["band_source_sha256"]:
         raise FireConfigError("stale or nonpositive band custody")
-    return {"schema": SCHEMA, "valid": True, "fire_executed": False}
+    if (
+        config.get("readiness") != "BLOCKED"
+        or not isinstance(config.get("blocking_gates"), list)
+        or not config["blocking_gates"]
+        or config.get("trainer_argv") is not None
+        or config.get("launch") is not False
+    ):
+        raise FireConfigError("blocked config fail-closed fields mismatch")
+    return {
+        "schema": SCHEMA,
+        "valid": True,
+        "readiness": "BLOCKED",
+        "blocking_gates": config["blocking_gates"],
+        "fire_executed": False,
+    }
 
 
 def build_parser() -> argparse.ArgumentParser:
