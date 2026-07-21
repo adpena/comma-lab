@@ -14,9 +14,12 @@ from tac.boundary_math.integer_plane_banded_trainer import (
     BAND_SCHEMA,
     PLANE_SHAPE,
     BandArtifact,
+    BandTarget,
     C2BandedTrainerError,
+    QuantizationMode,
     StagePlan,
     TrainerConfig,
+    bind_band_target,
     build_parser,
     canonical_json,
     load_training_state,
@@ -37,6 +40,7 @@ from tac.boundary_math.power_diagram_witness import (
 from tac.witness_dsl.curriculum_dsl import IntegerPlaneEmitter
 from tac.witness_dsl.integer_plane_emitter_policy import (
     IntegerPlaneEmitterPolicy,
+    IntegerPlaneEmitterStageCheckpoint,
     PolicyMode,
 )
 
@@ -69,7 +73,13 @@ class StreamingFixture:
         return base, source, radii
 
 
-def _config(tmp_path: Path, *, pair_count: int = 600, batch: int = 2) -> TrainerConfig:
+def _config(
+    tmp_path: Path,
+    *,
+    pair_count: int = 600,
+    batch: int = 2,
+    quantization_mode: QuantizationMode = QuantizationMode.PLAIN_STE,
+) -> TrainerConfig:
     return TrainerConfig(
         policy=IntegerPlaneEmitterPolicy(mode=PolicyMode.BANDED_TRAINING),
         base_archive_sha256=SHA_A,
@@ -82,6 +92,7 @@ def _config(tmp_path: Path, *, pair_count: int = 600, batch: int = 2) -> Trainer
         seed=20260719,
         pair_batch_size=batch,
         checkpoint_every_steps=100,
+        quantization_mode=quantization_mode,
         stages=(
             StagePlan("warmup", 1, 2e-3, 1e-6),
             StagePlan("band_fit", 1, 1e-3, 1e-5),
@@ -122,6 +133,8 @@ def test_active_dsl_argv_is_consumed_by_exact_trainer_parser(tmp_path: Path) -> 
         )
     )
     parsed = build_parser().parse_args(argv)
+    assert parsed.quantization_mode == QuantizationMode.PLAIN_STE.value
+    assert parsed.band_target == BandTarget.SOURCE_PLANES.value
     assert policy_from_args(parsed).compile_contract() == policy.compile_contract()
     hash_index = argv.index("--integer-plane-emitter-policy-sha256") + 1
     bad = list(argv)
@@ -244,14 +257,60 @@ def test_positive_band_refuses_blanket_or_wrong_metric_ev_policy(
         BandArtifact.load(path)
 
 
-def test_positive_band_refuses_ev_artifact_hash_drift(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_positive_band_refuses_ev_artifact_hash_drift(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(trainer, "LOGICAL_PAIR_COUNT", 2)
     path = _write_band(tmp_path)
     (tmp_path / "ranked_ev_field.json").write_bytes(b"tampered")
     with pytest.raises(C2BandedTrainerError, match="artifact custody mismatch"):
         BandArtifact.load(path)
+
+
+def test_joint_target_binding_requires_exact_band_source_custody(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(trainer, "LOGICAL_PAIR_COUNT", 2)
+    manifest = _write_band(tmp_path)
+    band = BandArtifact.load(manifest)
+    joint_path = tmp_path / "source.npy"
+    assert (
+        bind_band_target(
+            band=band,
+            target=BandTarget.JOINT_SOLVED_PLANES,
+            joint_solved_planes=joint_path,
+            joint_solved_planes_sha256=band.source_sha256,
+        )
+        == band.source_sha256
+    )
+    with pytest.raises(C2BandedTrainerError, match="file SHA drift"):
+        bind_band_target(
+            band=band,
+            target=BandTarget.JOINT_SOLVED_PLANES,
+            joint_solved_planes=joint_path,
+            joint_solved_planes_sha256="f" * 64,
+        )
+    with pytest.raises(C2BandedTrainerError, match="refuses joint-solved"):
+        bind_band_target(
+            band=band,
+            target=BandTarget.SOURCE_PLANES,
+            joint_solved_planes=joint_path,
+            joint_solved_planes_sha256=band.source_sha256,
+        )
+
+
+def test_trainer_config_refuses_joint_target_without_matching_source_sha(tmp_path: Path) -> None:
+    config = _config(tmp_path)
+    with pytest.raises(C2BandedTrainerError, match="must equal"):
+        replace(
+            config,
+            band_target=BandTarget.JOINT_SOLVED_PLANES,
+            joint_solved_planes_sha256="f" * 64,
+        )
+    joint = replace(
+        config,
+        band_target=BandTarget.JOINT_SOLVED_PLANES,
+        joint_solved_planes_sha256=config.source_sha256,
+    )
+    assert joint.identity()["band_target"] == BandTarget.JOINT_SOLVED_PLANES.value
 
 
 def test_n600_logical_state_streams_real_geometry_and_records_peak_rss(tmp_path: Path) -> None:
@@ -261,8 +320,118 @@ def test_n600_logical_state_streams_real_geometry_and_records_peak_rss(tmp_path:
     assert receipt["logical_geometry"] == [600, *PLANE_SHAPE]
     assert receipt["trainable_arrays"] == ["pair_plane_codes", "shared_rgb_head"]
     assert receipt["peak_rss_bytes"] > 0
-    assert source.fetch_shapes == [(2, *PLANE_SHAPE)]
+    assert (2, *PLANE_SHAPE) in source.fetch_shapes
+    assert all(shape[0] <= 32 for shape in source.fetch_shapes)
     assert len(receipt["checkpoint_paths"]) == 2  # initial + resumable step
+
+
+def _fixed_magnitude_config(tmp_path: Path) -> TrainerConfig:
+    return replace(
+        _config(tmp_path, pair_count=2, batch=2),
+        ema_decay=0.0,
+        quantization_mode=QuantizationMode.FIXED_MAGNITUDE_DEADZONE,
+        stages=(
+            StagePlan("warmup", 1, 2e-3, 1e-6),
+            StagePlan("band_fit", 8, 1e-3, 1e-5),
+            StagePlan("rate_polish", 1, 2e-4, 1e-3),
+        ),
+    )
+
+
+def test_fixed_magnitude_mode_projects_to_exact_receiver_steps(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(trainer, "LOGICAL_PAIR_COUNT", 2)
+    config = _fixed_magnitude_config(tmp_path)
+    receipt = train_streamed(config, StreamingFixture(2, config), stop_after_steps=1)
+    assert receipt["quantization_mode"] == QuantizationMode.FIXED_MAGNITUDE_DEADZONE.value
+    assert receipt["receiver_telemetry"]["realized_changed_pixel_count"] > 0
+    assert receipt["receiver_telemetry"]["realized_changed_channel_count"] > 0
+    assert receipt["stopped_early"] is True
+    final = IntegerPlaneEmitterStageCheckpoint.from_bytes(Path(receipt["checkpoint_paths"][-1]).read_bytes())
+    assert final.rng_state["receiver_telemetry"]["realized_changed_pixel_count"] > 0
+    assert final.rng_state["run_custody"]["magnitude_floor_sha256"] == receipt["magnitude_floor_sha256"]
+
+
+def test_fixed_magnitude_band_fit_stops_on_derived_nonzero_flip_plateau(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(trainer, "LOGICAL_PAIR_COUNT", 2)
+    monkeypatch.setattr(
+        trainer,
+        "_measure_receiver_telemetry",
+        lambda *_args, **_kwargs: {
+            "schema": trainer.RECEIVER_TELEMETRY_SCHEMA,
+            "forward": "numpy_uint8 clip-rint-clip",
+            "authority": "receiver-realization telemetry; not SegNet argmax authority",
+            "pair_count": 2,
+            "realized_changed_pixel_count": 7,
+            "realized_flip_count": 7,
+        },
+    )
+    config = _fixed_magnitude_config(tmp_path)
+    receipt = train_streamed(config, StreamingFixture(2, config))
+    assert receipt["band_fit_flip_plateau_patience"] == 2
+    assert receipt["band_fit_flip_history"] == [7, 7, 7]
+    assert receipt["halted"] is False
+    assert any("rate_polish" in Path(path).name for path in receipt["checkpoint_paths"])
+
+
+def test_fixed_magnitude_resume_preserves_event_and_tensor_state(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(trainer, "LOGICAL_PAIR_COUNT", 2)
+    monkeypatch.setattr(
+        trainer,
+        "_measure_receiver_telemetry",
+        lambda *_args, **_kwargs: {
+            "schema": trainer.RECEIVER_TELEMETRY_SCHEMA,
+            "forward": "numpy_uint8 clip-rint-clip",
+            "authority": "receiver-realization telemetry; not SegNet argmax authority",
+            "pair_count": 2,
+            "realized_changed_pixel_count": 7,
+            "realized_flip_count": 7,
+        },
+    )
+    full = _fixed_magnitude_config(tmp_path / "full")
+    full_receipt = train_streamed(full, StreamingFixture(2, full))
+    split_a = replace(full, output_dir=tmp_path / "split_a")
+    partial = train_streamed(split_a, StreamingFixture(2, split_a), stop_after_steps=2)
+    split_b = replace(full, output_dir=tmp_path / "split_b")
+    resumed_receipt = train_streamed(
+        split_b,
+        StreamingFixture(2, split_b),
+        resume_from=partial["checkpoint_paths"][-1],
+    )
+    full_state = load_training_state(full_receipt["checkpoint_paths"][-1], full)
+    resumed_state = load_training_state(resumed_receipt["checkpoint_paths"][-1], split_b)
+    assert np.array_equal(full_state.codes, resumed_state.codes)
+    assert np.array_equal(full_state.head, resumed_state.head)
+    assert np.array_equal(full_state.ema_codes, resumed_state.ema_codes)
+    assert np.array_equal(full_state.ema_head, resumed_state.ema_head)
+    assert full_receipt["band_fit_flip_history"] == resumed_receipt["band_fit_flip_history"] == [7, 7, 7]
+    assert full_receipt["magnitude_floor_sha256"] == resumed_receipt["magnitude_floor_sha256"]
+
+
+def test_fixed_magnitude_mode_halts_before_rate_polish_on_zero_realized_flips(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(trainer, "LOGICAL_PAIR_COUNT", 2)
+    monkeypatch.setattr(
+        trainer,
+        "_measure_receiver_telemetry",
+        lambda *_args, **_kwargs: {
+            "schema": trainer.RECEIVER_TELEMETRY_SCHEMA,
+            "forward": "numpy_uint8 clip-rint-clip",
+            "authority": "receiver-realization telemetry; not SegNet argmax authority",
+            "pair_count": 2,
+            "realized_changed_pixel_count": 0,
+            "realized_flip_count": 0,
+        },
+    )
+    config = _fixed_magnitude_config(tmp_path)
+    receipt = train_streamed(config, StreamingFixture(2, config))
+    assert receipt["halted"] is True
+    assert receipt["halt_reason"] == "band_fit_zero_realized_flip_count_at_plateau"
+    assert all("rate_polish" not in Path(path).name for path in receipt["checkpoint_paths"])
 
 
 def test_deterministic_resume_matches_fresh_and_preserves_stage_checkpoints(

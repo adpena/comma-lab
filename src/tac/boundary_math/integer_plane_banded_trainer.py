@@ -26,6 +26,7 @@ import sys
 import zipfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Final, Protocol
 
@@ -44,9 +45,11 @@ from tac.boundary_math.integer_plane_emitter import (
     SCORER_HEIGHT,
     SCORER_WIDTH,
     CapacitySignature,
+    QuotientResidualState,
     StructuredEmitterState,
     deterministic_coordinate_basis,
     factor2_operator,
+    numpy_uint8,
     torch_uint8,
 )
 from tac.witness_dsl.integer_plane_emitter_policy import (
@@ -67,6 +70,21 @@ ALLOWED_STAGES: Final = ("warmup", "band_fit", "rate_polish")
 RATE_SCORE_PER_BYTE: Final = 25.0 / 37_545_489.0
 C2_MEASURED_FLIP_CANDIDATES: Final = 38_077
 INACTIVE_BAND_RADIUS: Final = 255.0
+RECEIVER_TELEMETRY_SCHEMA: Final = "c2_integer_plane_receiver_telemetry.v1"
+
+
+class QuantizationMode(StrEnum):
+    """Typed A/B for the receiver-quantization formulation."""
+
+    PLAIN_STE = "plain_ste"
+    FIXED_MAGNITUDE_DEADZONE = "fixed_magnitude_deadzone"
+
+
+class BandTarget(StrEnum):
+    """Typed content lineage for the target planes bound by the band manifest."""
+
+    SOURCE_PLANES = "source_planes"
+    JOINT_SOLVED_PLANES = "joint_solved_planes"
 
 
 class C2BandedTrainerError(ValueError):
@@ -459,6 +477,14 @@ DEFAULT_STAGE_PLAN: Final = (
 )
 
 
+def _realized_flip_plateau_patience(residual_width: int) -> int:
+    """Derive event patience from capacity rather than another tuned epoch constant."""
+
+    if residual_width < 1:
+        raise C2BandedTrainerError("residual_width must be positive")
+    return max(1, math.ceil(math.log2(residual_width)))
+
+
 @dataclass(frozen=True, slots=True)
 class TrainerConfig:
     policy: IntegerPlaneEmitterPolicy
@@ -475,6 +501,9 @@ class TrainerConfig:
     smoke_pair_cap: int = 0
     checkpoint_every_steps: int = 50
     ema_decay: float = 0.997
+    quantization_mode: QuantizationMode = QuantizationMode.PLAIN_STE
+    band_target: BandTarget = BandTarget.SOURCE_PLANES
+    joint_solved_planes_sha256: str | None = None
     stages: tuple[StagePlan, ...] = DEFAULT_STAGE_PLAN
     pair_count: int = LOGICAL_PAIR_COUNT
 
@@ -492,9 +521,7 @@ class TrainerConfig:
             raise C2BandedTrainerError("trainer band_mode is unknown")
         curvelet_active = self.policy.basis is BasisMode.R1B4_WINDOWED_CURVELET
         if curvelet_active != (self.carrier_binding is not None):
-            raise C2BandedTrainerError(
-                "r1b4_windowed_curvelet policy and carrier binding must be present together"
-            )
+            raise C2BandedTrainerError("r1b4_windowed_curvelet policy and carrier binding must be present together")
         if self.carrier_binding is not None and self.carrier_binding.band_manifest_sha256 != self.band_sha256:
             raise C2BandedTrainerError("carrier binding and trainer band manifest differ")
         if self.pair_count != LOGICAL_PAIR_COUNT:
@@ -511,8 +538,22 @@ class TrainerConfig:
             raise C2BandedTrainerError("checkpoint_every_steps must be positive")
         if not 0.0 <= self.ema_decay < 1.0 or not math.isfinite(self.ema_decay):
             raise C2BandedTrainerError("ema_decay must be finite in [0,1)")
+        if not isinstance(self.quantization_mode, QuantizationMode):
+            raise C2BandedTrainerError("quantization_mode must be a QuantizationMode")
+        if not isinstance(self.band_target, BandTarget):
+            raise C2BandedTrainerError("band_target must be a BandTarget")
+        if self.band_target is BandTarget.JOINT_SOLVED_PLANES:
+            _require_sha256(self.joint_solved_planes_sha256, "joint_solved_planes_sha256")
+            if self.joint_solved_planes_sha256 != self.source_sha256:
+                raise C2BandedTrainerError("joint-solved target SHA must equal the band manifest source SHA")
+        elif self.joint_solved_planes_sha256 is not None:
+            raise C2BandedTrainerError("source-plane target must not carry joint-solved SHA custody")
         if tuple(stage.name for stage in self.stages) != ALLOWED_STAGES:
             raise C2BandedTrainerError("stage plan must be warmup, band_fit, rate_polish in order")
+        if self.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE and self.stages[
+            1
+        ].epochs <= _realized_flip_plateau_patience(self.policy.residual_width):
+            raise C2BandedTrainerError("fixed-magnitude band_fit safety cap must exceed the derived plateau patience")
         if not self.run_id or any(
             ch not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-" for ch in self.run_id
         ):
@@ -549,6 +590,43 @@ class TrainerConfig:
             "smoke_pair_cap": self.smoke_pair_cap,
             "checkpoint_every_steps": self.checkpoint_every_steps,
             "ema_decay": self.ema_decay,
+            "quantization_mode": self.quantization_mode.value,
+            "band_target": self.band_target.value,
+            "joint_solved_planes_sha256": self.joint_solved_planes_sha256,
+            "quantization_contract": {
+                "forward": "exact_clip_rint_uint8_with_saturation_aware_ste",
+                "fixed_magnitude_floor": (
+                    "target_band_entry_deficit_over_active_curvelet_basis_gain"
+                    if self.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE
+                    else None
+                ),
+                "activation_rule": (
+                    "exact_zero_is_off; nonzero_descent_choice_projects_to_sign_times_floor"
+                    if self.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE
+                    else None
+                ),
+                "receiver_quantum_uint8_steps": 1,
+                "head_row_norm_floor": (
+                    1.0 if self.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE else None
+                ),
+            },
+            "band_fit_continuation": {
+                "event": (
+                    "realized_flip_count_plateau"
+                    if self.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE
+                    else "fixed_epoch_legacy_control"
+                ),
+                "plateau_patience_epochs": (
+                    _realized_flip_plateau_patience(self.policy.residual_width)
+                    if self.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE
+                    else None
+                ),
+                "band_fit_epochs_semantics": (
+                    "safety_cap_not_schedule"
+                    if self.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE
+                    else "fixed_schedule"
+                ),
+            },
             "stages": [stage.to_dict() for stage in self.stages],
             "trainable_arrays": ["pair_plane_codes", "shared_rgb_head"],
         }
@@ -658,6 +736,10 @@ class TrainingState:
     stage_epoch: int = 0
     next_pair: int = 0
     global_step: int = 0
+    receiver_telemetry: dict[str, Any] | None = None
+    band_fit_flip_history: list[int] | None = None
+    magnitude_floor_sha256: str | None = None
+    halt_reason: str | None = None
 
 
 def _peak_rss_bytes() -> int:
@@ -685,6 +767,152 @@ def _structured_state(config: TrainerConfig, base: np.ndarray) -> StructuredEmit
     if config.carrier_binding is not None:
         return config.carrier_binding.structured_state(base)
     return StructuredEmitterState.from_base(base, residual_width=config.policy.residual_width)
+
+
+def _project_head_to_receiver_quantum(head: np.ndarray) -> None:
+    """Project every RGB-head row to at least one uint8 receiver quantum."""
+
+    for feature_index, row in enumerate(head):
+        norm = float(np.linalg.norm(row.astype(np.float64)))
+        if not math.isfinite(norm):
+            raise C2BandedTrainerError("shared RGB head norm became nonfinite")
+        if norm == 0.0:
+            row[:] = np.float32(0.0)
+            row[feature_index % RGB_CHANNELS] = np.float32(1.0)
+        elif norm < 1.0:
+            row[:] = row * np.float32(1.0 / norm)
+
+
+def _batch_code_magnitude_floors(
+    config: TrainerConfig,
+    base: np.ndarray,
+    source_planes: np.ndarray,
+    radii: np.ndarray,
+) -> np.ndarray:
+    """Derive code floors from exact target-band entry debt and basis gain.
+
+    A head row with Euclidean norm at least one has a channel of magnitude at
+    least ``1/sqrt(3)``.  Dividing the integer target-band entry step by that
+    bound and the largest active basis response makes each nonzero code a
+    receiver-realizable sign/magnitude choice.  The subsequent exact uint8
+    telemetry remains the authority because multiple features can cancel.
+    """
+
+    if base.shape != source_planes.shape or base.shape != radii.shape:
+        raise C2BandedTrainerError("fixed-magnitude floor inputs differ in shape")
+    basis = np.abs(_coordinate_basis(config).astype(np.float32, copy=False))
+    floors = np.zeros((base.shape[0], PLANE_COUNT, config.policy.residual_width), dtype=np.float32)
+    entry_debt = np.maximum(np.abs(base - source_planes) - radii, np.float32(0.0))
+    pixel_steps = np.ceil(np.max(entry_debt, axis=-1)).astype(np.float32)
+    active_band = np.any(radii < np.float32(INACTIVE_BAND_RADIUS), axis=-1)
+    channel_bound = np.float32(math.sqrt(RGB_CHANNELS))
+    for batch_index in range(base.shape[0]):
+        for plane_index in range(PLANE_COUNT):
+            active = active_band[batch_index, plane_index] & (pixel_steps[batch_index, plane_index] > 0)
+            if not bool(np.any(active)):
+                continue
+            receiver_step = max(1.0, float(np.min(pixel_steps[batch_index, plane_index][active])))
+            for feature_index in range(config.policy.residual_width):
+                basis_gain = float(np.max(basis[..., feature_index][active]))
+                if not math.isfinite(basis_gain) or basis_gain <= 0.0:
+                    raise C2BandedTrainerError("active curvelet feature has no finite receiver gain")
+                floors[batch_index, plane_index, feature_index] = np.float32(
+                    receiver_step * float(channel_bound) / basis_gain
+                )
+    if config.carrier_binding is not None:
+        floors[:, 0, :] = np.float32(0.0)
+    return floors
+
+
+def _derive_code_magnitude_floors(
+    config: TrainerConfig,
+    source: PlaneBatchSource,
+) -> np.ndarray:
+    count = config.smoke_pair_cap or config.pair_count
+    floors = np.zeros((config.pair_count, PLANE_COUNT, config.policy.residual_width), dtype=np.float32)
+    for start in range(0, count, config.pair_batch_size):
+        indices = np.arange(start, min(count, start + config.pair_batch_size), dtype=np.int64)
+        base, source_planes, radii = source.fetch(indices)
+        floors[indices] = _batch_code_magnitude_floors(config, base, source_planes, radii)
+    return floors
+
+
+def _project_sign_magnitude(values: np.ndarray, floors: np.ndarray) -> None:
+    if values.shape != floors.shape:
+        raise C2BandedTrainerError("sign-magnitude projection shape mismatch")
+    active = (floors > 0) & (values != 0)
+    signs = np.where(values < 0, np.float32(-1.0), np.float32(1.0))
+    values[:] = np.where(active, signs * np.maximum(np.abs(values), floors), np.float32(0.0))
+
+
+def _project_fixed_magnitude_state(state: TrainingState, floors: np.ndarray) -> None:
+    _project_head_to_receiver_quantum(state.head)
+    _project_head_to_receiver_quantum(state.ema_head)
+    _project_sign_magnitude(state.codes, floors)
+    _project_sign_magnitude(state.ema_codes, floors)
+    inactive = floors == 0
+    state.optimizer.code_m[inactive] = np.float32(0.0)
+    state.optimizer.code_v[inactive] = np.float32(0.0)
+
+
+def _measure_receiver_telemetry(
+    config: TrainerConfig,
+    source: PlaneBatchSource,
+    state: TrainingState,
+) -> dict[str, Any]:
+    """Measure exact EMA uint8 cell crossings and target-band entries, streamed."""
+
+    count = config.smoke_pair_cap or config.pair_count
+    changed_pixels = 0
+    changed_channels = 0
+    changed_inside_selected = 0
+    changed_outside_selected = 0
+    target_band_entries = 0
+    selected_pixels = 0
+    telemetry_batch_size = min(32, count)
+    for start in range(0, count, telemetry_batch_size):
+        indices = np.arange(start, min(count, start + telemetry_batch_size), dtype=np.int64)
+        base, source_planes, radii = source.fetch(indices)
+        structured = _structured_state(config, base)
+        residual = QuotientResidualState(
+            state.ema_codes[indices],
+            state.ema_head,
+            config.seed,
+        )
+        emitted = numpy_uint8(structured, residual, require_distinct_planes=False)
+        base_uint8 = np.rint(np.clip(base, np.float32(0.0), np.float32(255.0))).astype(np.uint8)
+        changed_channel_mask = emitted != base_uint8
+        changed_pixel_mask = np.any(changed_channel_mask, axis=-1)
+        selected = np.any(radii < np.float32(INACTIVE_BAND_RADIUS), axis=-1)
+        changed_pixels += int(np.count_nonzero(changed_pixel_mask))
+        changed_channels += int(np.count_nonzero(changed_channel_mask))
+        changed_inside_selected += int(np.count_nonzero(changed_pixel_mask & selected))
+        changed_outside_selected += int(np.count_nonzero(changed_pixel_mask & ~selected))
+        selected_pixels += int(np.count_nonzero(selected))
+        base_inside = np.all(np.abs(base - source_planes) <= radii, axis=-1)
+        emitted_inside = np.all(
+            np.abs(emitted.astype(np.float32) - source_planes) <= radii,
+            axis=-1,
+        )
+        target_band_entries += int(np.count_nonzero(selected & ~base_inside & emitted_inside))
+    return {
+        "schema": RECEIVER_TELEMETRY_SCHEMA,
+        "authority": "exact_numpy_uint8_receiver_path_non_score",
+        "state": "ema",
+        "pair_count": count,
+        "realized_changed_pixel_count": changed_pixels,
+        "realized_changed_channel_count": changed_channels,
+        "realized_changed_inside_selected_band": changed_inside_selected,
+        "realized_changed_outside_selected_band": changed_outside_selected,
+        "realized_flip_count": target_band_entries,
+        "realized_flip_definition": (
+            "selected target-band pixels outside at base and inside after exact clip-rint uint8; "
+            "not SegNet argmax authority"
+        ),
+        "realized_target_band_entry_count": target_band_entries,
+        "selected_band_pixel_count": selected_pixels,
+        "score_claim": False,
+    }
 
 
 def _capacity_sha(config: TrainerConfig, codes: np.ndarray, head: np.ndarray) -> str:
@@ -729,6 +957,10 @@ def _run_custody(config: TrainerConfig, state: TrainingState) -> dict[str, Any]:
         "band_sha256": config.band_sha256,
         "band_mode": config.band_mode,
         "emitter_capacity_sha256": _capacity_sha(config, state.codes, state.head),
+        "quantization_mode": config.quantization_mode.value,
+        "band_target": config.band_target.value,
+        "joint_solved_planes_sha256": config.joint_solved_planes_sha256,
+        "magnitude_floor_sha256": state.magnitude_floor_sha256,
     }
 
 
@@ -762,6 +994,9 @@ def _checkpoint(
             "stage_epoch": state.stage_epoch,
             "stage_complete": stage_complete,
             "run_custody": _run_custody(config, state),
+            "receiver_telemetry": state.receiver_telemetry,
+            "band_fit_flip_history": list(state.band_fit_flip_history or []),
+            "halt_reason": state.halt_reason,
         },
         topology_state_sha256=sha256_bytes(_coordinate_basis(config).tobytes()),
         discrete_state_sha256=sha256_bytes(
@@ -793,6 +1028,9 @@ def load_training_state(path: str | Path, config: TrainerConfig) -> TrainingStat
         "source_sha256": config.source_sha256,
         "band_sha256": config.band_sha256,
         "band_mode": config.band_mode,
+        "quantization_mode": config.quantization_mode.value,
+        "band_target": config.band_target.value,
+        "joint_solved_planes_sha256": config.joint_solved_planes_sha256,
     }
     for field, value in expected_custody.items():
         custody = checkpoint.rng_state.get("run_custody")
@@ -810,6 +1048,14 @@ def load_training_state(path: str | Path, config: TrainerConfig) -> TrainingStat
         stage_epoch=int(checkpoint.rng_state["stage_epoch"]),
         next_pair=checkpoint.next_pair,
         global_step=checkpoint.global_step,
+        receiver_telemetry=(
+            dict(checkpoint.rng_state["receiver_telemetry"])
+            if isinstance(checkpoint.rng_state.get("receiver_telemetry"), Mapping)
+            else None
+        ),
+        band_fit_flip_history=[int(value) for value in checkpoint.rng_state.get("band_fit_flip_history", [])],
+        magnitude_floor_sha256=checkpoint.rng_state["run_custody"].get("magnitude_floor_sha256"),
+        halt_reason=checkpoint.rng_state.get("halt_reason"),
     )
     custody = checkpoint.rng_state["run_custody"]
     if custody["emitter_capacity_sha256"] != _capacity_sha(config, state.codes, state.head):
@@ -849,19 +1095,39 @@ def train_streamed(
     torch.use_deterministic_algorithms(True)
     torch.set_num_threads(1)
     state = load_training_state(resume_from, config) if resume_from else _state_from_fresh(config)
+    if state.band_fit_flip_history is None:
+        state.band_fit_flip_history = []
+    magnitude_floors: np.ndarray | None = None
+    if config.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE:
+        magnitude_floors = _derive_code_magnitude_floors(config, source)
+        floor_sha = _array_sha256(magnitude_floors)
+        if state.magnitude_floor_sha256 not in (None, floor_sha):
+            raise C2BandedTrainerError("resume fixed-magnitude floor derivation drift")
+        state.magnitude_floor_sha256 = floor_sha
+        if resume_from is None:
+            # The discrete OFF state is exact.  The first optimizer step selects
+            # which sign/magnitude sites become active; projection never turns a
+            # zero site on merely because a realizable floor exists there.
+            state.codes[:] = np.float32(0.0)
+            state.ema_codes[:] = np.float32(0.0)
+            state.optimizer.code_m[:] = np.float32(0.0)
+            state.optimizer.code_v[:] = np.float32(0.0)
+        _project_fixed_magnitude_state(state, magnitude_floors)
     config.output_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_paths: list[str] = []
     telemetry: list[dict[str, Any]] = []
     initial_rss = _peak_rss_bytes()
     starting_step = state.global_step
+
+    def save_checkpoint(*, stage: StagePlan, stage_complete: bool) -> Path:
+        state.receiver_telemetry = _measure_receiver_telemetry(config, source, state)
+        checkpoint = _checkpoint(config, state, stage=stage, stage_complete=stage_complete)
+        path = checkpoint.write_new(config.output_dir, config.run_id)
+        checkpoint_paths.append(str(path))
+        return path
+
     if resume_from is None:
-        initial = _checkpoint(
-            config,
-            state,
-            stage=config.stages[0],
-            stage_complete=False,
-        )
-        checkpoint_paths.append(str(initial.write_new(config.output_dir, config.run_id)))
+        save_checkpoint(stage=config.stages[0], stage_complete=False)
 
     while state.stage_index < len(config.stages):
         stage = config.stages[state.stage_index]
@@ -910,9 +1176,18 @@ def train_streamed(
                     state.codes[:, 0, :] = np.float32(0.0)
                     state.optimizer.code_m[:, 0, :] = np.float32(0.0)
                     state.optimizer.code_v[:, 0, :] = np.float32(0.0)
+                if magnitude_floors is not None:
+                    _project_head_to_receiver_quantum(state.head)
+                    _project_sign_magnitude(state.codes, magnitude_floors)
+                    inactive = magnitude_floors <= np.float32(0.0)
+                    state.optimizer.code_m[inactive] = np.float32(0.0)
+                    state.optimizer.code_v[inactive] = np.float32(0.0)
                 decay = np.float32(config.ema_decay)
                 state.ema_codes[:] = decay * state.ema_codes + (np.float32(1.0) - decay) * state.codes
                 state.ema_head[:] = decay * state.ema_head + (np.float32(1.0) - decay) * state.head
+                if magnitude_floors is not None:
+                    _project_head_to_receiver_quantum(state.ema_head)
+                    _project_sign_magnitude(state.ema_codes, magnitude_floors)
                 state.global_step += 1
                 state.next_pair = end
                 telemetry.append(
@@ -927,21 +1202,43 @@ def train_streamed(
                     }
                 )
                 if state.global_step % config.checkpoint_every_steps == 0:
-                    ckpt = _checkpoint(config, state, stage=stage, stage_complete=False)
-                    checkpoint_paths.append(str(ckpt.write_new(config.output_dir, config.run_id)))
+                    save_checkpoint(stage=stage, stage_complete=False)
                 if stop_after_steps is not None and state.global_step - starting_step >= stop_after_steps:
-                    if not checkpoint_paths or not checkpoint_paths[-1].endswith(
-                        _checkpoint(config, state, stage=stage, stage_complete=False).filename(config.run_id)
-                    ):
-                        ckpt = _checkpoint(config, state, stage=stage, stage_complete=False)
-                        checkpoint_paths.append(str(ckpt.write_new(config.output_dir, config.run_id)))
+                    expected_name = _checkpoint(config, state, stage=stage, stage_complete=False).filename(
+                        config.run_id
+                    )
+                    if not checkpoint_paths or Path(checkpoint_paths[-1]).name != expected_name:
+                        save_checkpoint(stage=stage, stage_complete=False)
                     return _training_receipt(
                         config, state, telemetry, checkpoint_paths, initial_rss, stopped_early=True
                     )
             state.stage_epoch += 1
             state.next_pair = 0
-        ckpt = _checkpoint(config, state, stage=stage, stage_complete=True)
-        checkpoint_paths.append(str(ckpt.write_new(config.output_dir, config.run_id)))
+            if config.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE and stage.name == "band_fit":
+                state.receiver_telemetry = _measure_receiver_telemetry(config, source, state)
+                state.band_fit_flip_history.append(int(state.receiver_telemetry["realized_flip_count"]))
+                patience = _realized_flip_plateau_patience(config.policy.residual_width)
+                history = state.band_fit_flip_history
+                if len(history) >= patience + 1 and max(history[-patience:]) <= history[-patience - 1]:
+                    break
+        if config.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE and stage.name == "band_fit":
+            patience = _realized_flip_plateau_patience(config.policy.residual_width)
+            history = state.band_fit_flip_history
+            plateau_reached = len(history) >= patience + 1 and max(history[-patience:]) <= history[-patience - 1]
+            if not plateau_reached:
+                state.halt_reason = "band_fit_realized_flip_plateau_not_reached_before_safety_cap"
+            elif int(history[-1]) == 0:
+                state.halt_reason = "band_fit_zero_realized_flip_count_at_plateau"
+        save_checkpoint(stage=stage, stage_complete=state.halt_reason is None)
+        if state.halt_reason is not None:
+            return _training_receipt(
+                config,
+                state,
+                telemetry,
+                checkpoint_paths,
+                initial_rss,
+                stopped_early=False,
+            )
         state.stage_index += 1
         state.stage_epoch = 0
         state.next_pair = 0
@@ -958,7 +1255,7 @@ def _training_receipt(
     stopped_early: bool,
 ) -> dict[str, Any]:
     carrier_packet: dict[str, Any] | None = None
-    if config.carrier_binding is not None and not stopped_early:
+    if config.carrier_binding is not None and not stopped_early and state.halt_reason is None:
         packet_path = config.output_dir / f"{config.run_id}.ema.{BINDING_BASIS_ID}.bgj"
         try:
             carrier_packet = config.carrier_binding.write_packet_new(
@@ -979,12 +1276,36 @@ def _training_receipt(
         ),
         "pair_batch_size": config.pair_batch_size,
         "trainable_arrays": ["pair_plane_codes", "shared_rgb_head"],
+        "quantization_mode": config.quantization_mode.value,
+        "magnitude_floor_sha256": state.magnitude_floor_sha256,
         "config": config.identity(),
         "config_sha256": config.sha256,
         "global_step": state.global_step,
         "stopped_early": stopped_early,
         "checkpoint_paths": list(checkpoint_paths),
         "last_telemetry": list(telemetry[-12:]),
+        "receiver_telemetry": state.receiver_telemetry,
+        "band_fit_event": {
+            "event": (
+                "realized_flip_count_plateau"
+                if config.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE
+                else "fixed_epoch_legacy_control"
+            ),
+            "history": list(state.band_fit_flip_history or []),
+            "patience_epochs": (
+                _realized_flip_plateau_patience(config.policy.residual_width)
+                if config.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE
+                else None
+            ),
+        },
+        "band_fit_flip_history": list(state.band_fit_flip_history or []),
+        "band_fit_flip_plateau_patience": (
+            _realized_flip_plateau_patience(config.policy.residual_width)
+            if config.quantization_mode is QuantizationMode.FIXED_MAGNITUDE_DEADZONE
+            else None
+        ),
+        "halted": state.halt_reason is not None,
+        "halt_reason": state.halt_reason,
         "peak_rss_bytes": _peak_rss_bytes(),
         "peak_rss_delta_bytes": max(0, _peak_rss_bytes() - initial_rss),
         "ema_authority_default": True,
@@ -1175,6 +1496,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--smoke-pair-cap", type=int, default=0)
     parser.add_argument("--checkpoint-every-steps", type=int, default=50)
     parser.add_argument("--ema-decay", type=float, default=0.997)
+    parser.add_argument(
+        "--quantization-mode",
+        choices=[mode.value for mode in QuantizationMode],
+        default=QuantizationMode.PLAIN_STE.value,
+    )
+    parser.add_argument(
+        "--band-target",
+        choices=[target.value for target in BandTarget],
+        default=BandTarget.SOURCE_PLANES.value,
+    )
+    parser.add_argument("--joint-solved-planes", type=Path)
+    parser.add_argument("--joint-solved-planes-sha256")
     parser.add_argument("--stage-plan-json", required=True)
     parser.add_argument("--resume-from", type=Path)
     parser.add_argument("--stop-after-steps", type=int)
@@ -1205,6 +1538,30 @@ def parse_stage_plan(raw: str) -> tuple[StagePlan, ...]:
         raise C2BandedTrainerError("stage plan row fields mismatch") from exc
 
 
+def bind_band_target(
+    *,
+    band: BandArtifact,
+    target: BandTarget,
+    joint_solved_planes: Path | None,
+    joint_solved_planes_sha256: str | None,
+) -> str | None:
+    """Fail closed unless a joint target is the exact source bound by the band."""
+
+    if target is BandTarget.SOURCE_PLANES:
+        if joint_solved_planes is not None or joint_solved_planes_sha256 is not None:
+            raise C2BandedTrainerError("source-plane target refuses joint-solved target arguments")
+        return None
+    if joint_solved_planes is None:
+        raise C2BandedTrainerError("joint-solved target requires --joint-solved-planes")
+    expected_sha = _require_sha256(joint_solved_planes_sha256, "joint_solved_planes_sha256")
+    path = joint_solved_planes.expanduser().resolve(strict=True)
+    if sha256_file(path) != expected_sha:
+        raise C2BandedTrainerError("joint-solved target file SHA drift")
+    if expected_sha != band.source_sha256:
+        raise C2BandedTrainerError("joint-solved target is not the source bound by this band manifest")
+    return expected_sha
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     preflight = storage_preflight(args.scratch_root, required_free_bytes=args.required_free_bytes)
@@ -1214,10 +1571,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         policy = policy_from_args(args)
         band = BandArtifact.load(args.band_manifest)
+        band_target = BandTarget(args.band_target)
+        joint_solved_sha = bind_band_target(
+            band=band,
+            target=band_target,
+            joint_solved_planes=args.joint_solved_planes,
+            joint_solved_planes_sha256=args.joint_solved_planes_sha256,
+        )
         carrier_binding = (
-            C2R1B4CurveletBinding.load(args.r1b4_carrier_binding)
-            if args.r1b4_carrier_binding is not None
-            else None
+            C2R1B4CurveletBinding.load(args.r1b4_carrier_binding) if args.r1b4_carrier_binding is not None else None
         )
         base, base_planes_sha, materialization = materialize_base_scorer_planes(
             base_archive=args.base_archive,
@@ -1247,6 +1609,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             smoke_pair_cap=args.smoke_pair_cap,
             checkpoint_every_steps=args.checkpoint_every_steps,
             ema_decay=args.ema_decay,
+            quantization_mode=QuantizationMode(args.quantization_mode),
+            band_target=band_target,
+            joint_solved_planes_sha256=joint_solved_sha,
             stages=parse_stage_plan(args.stage_plan_json),
         )
         receipt = train_streamed(
@@ -1259,6 +1624,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         receipt["base_materialization"] = materialization
         args.receipt.parent.mkdir(parents=True, exist_ok=True)
         args.receipt.write_bytes(canonical_json(receipt))
+        if receipt["halted"]:
+            print(canonical_json({"training_halt": receipt["halt_reason"]}).decode("ascii"), file=sys.stderr)
+            return 7
     except (C2BandedTrainerError, OSError, ValueError) as exc:
         print(f"C2 trainer custody/config refusal: {exc}", file=sys.stderr)
         return 6
@@ -1271,12 +1639,16 @@ __all__ = [
     "DEFAULT_STAGE_PLAN",
     "LOGICAL_PAIR_COUNT",
     "PLANE_SHAPE",
+    "RECEIVER_TELEMETRY_SCHEMA",
     "BandArtifact",
+    "BandTarget",
     "C2BandedTrainerError",
     "MemmapPlaneBatchSource",
     "PlaneBatchSource",
+    "QuantizationMode",
     "StagePlan",
     "TrainerConfig",
+    "bind_band_target",
     "build_parser",
     "canonical_json",
     "load_training_state",

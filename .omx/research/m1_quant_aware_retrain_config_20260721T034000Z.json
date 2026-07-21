@@ -1,0 +1,145 @@
+{
+  "schema": "m1_quant_aware_realization_machinery.v1",
+  "written_at_utc": "2026-07-21T03:40:00Z",
+  "lane_id": "m1_quant_aware_retrain_20260721T025441Z",
+  "delegation_checkpoint_key": "codex_delegate:m1_quant_aware_retrain:20260721T025441Z",
+  "authority": "MACHINERY_COMPLETE_FIXTURE_ONLY_NO_ARCHIVE_CANDIDATE",
+  "verdict": "BUILT_TESTED_PORTABLE",
+  "verdict_scope": "realization machinery and bounded fixture behavior only; not a full-n600, SegNet, PoseNet, archive-byte, contest-score, launch, promotion, family, or frontier verdict",
+  "consumer": {
+    "pipeline": "joint_planes_direct_strike",
+    "stage": "S3_realization",
+    "state": "PORTABLE_BINDING_BUILT_AWAITING_REBUILT_JOINT_BAND_MANIFEST"
+  },
+  "content_lineage": {
+    "fixture": "inherited",
+    "fixture_inputs": [
+      "base archive and decoder",
+      "source-plane band manifest",
+      "r1b4 windowed-curvelet carrier binding"
+    ],
+    "machinery": "ours",
+    "machinery_commit": "c89b1e020aa5e6ce143f2d32a8167593f5dc1c6a",
+    "machinery_surfaces": [
+      "exact uint8 forward with saturation-aware STE",
+      "typed fixed-magnitude/dead-zone projection",
+      "derived realizable magnitude floor",
+      "exact receiver changed-pixel and target-band-entry telemetry",
+      "event-driven band-fit continuation",
+      "halt-if-inert gate",
+      "resume-complete quantization and telemetry state",
+      "typed source_planes or joint_solved_planes target custody"
+    ]
+  },
+  "source_custody": {
+    "trainer": {
+      "path": "src/tac/boundary_math/integer_plane_banded_trainer.py",
+      "sha256": "f8b78eb4284d228f2ecdf206cabecc315ee3be0ac6a80b0cc49f6dee5b154304"
+    },
+    "tests": {
+      "path": "src/tac/boundary_math/tests/test_integer_plane_banded_glue.py",
+      "sha256": "c6c76c8773a5d1624d5b673a1a208eae34ea32e197ba8be4e8b3b6b1f84f7f25"
+    }
+  },
+  "typed_controls": {
+    "quantization_mode": [
+      "plain_ste",
+      "fixed_magnitude_deadzone"
+    ],
+    "band_target": [
+      "source_planes",
+      "joint_solved_planes"
+    ],
+    "joint_target_binding": "--joint-solved-planes plus --joint-solved-planes-sha256 must equal the rebuilt band manifest source_sha256; mismatch refuses before training",
+    "fixed_mode_activation": "exact zero is OFF; optimizer-selected nonzero codes project to sign times a target-band-entry floor derived from band debt, active basis gain, and shared-head norm floor",
+    "band_fit_schedule": "realized_flip_count plateau event; configured epochs are a safety cap",
+    "band_fit_plateau_patience_epochs": 2,
+    "plateau_patience_derivation": "ceil(log2(residual_width)) with residual_width=4",
+    "zero_flip_action": "halt with refusal code 7 before rate_polish and emit no carrier"
+  },
+  "inherited_fixture": {
+    "governed_config": {
+      "path": ".omx/research/m1_c2_curvelet_generator_governed_ready_config_20260721T002000Z.json",
+      "sha256": "f8e828ad1551c65e7e29b1c04b0f9d3fb34e1cf4d45afc14546012a25732aa6a"
+    },
+    "base_archive": {
+      "path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet/archive.zip",
+      "bytes": 83838,
+      "sha256": "149fefd097c1fa85c4afb6cb2d8ab20311035d7ba8063f1e72137b843a9b89f3"
+    },
+    "base_decoder": {
+      "path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet/inflate.py",
+      "sha256": "4b54d512565f7275c53f697a931dd087222a36a69495b6e536a6b65dede36224"
+    },
+    "band_manifest": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/band_manifest.json",
+      "sha256": "2fd10841dc0cb344454e4af55bd8d27e5e1d819a97df3fc03307604dfffcc367",
+      "source_sha256": "e6dcef17278441631b58aec1ac038fdc5934e21c53baeb6ab6cf59bf19f54161"
+    },
+    "carrier_binding": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_curvelet_binding_closer_20260721/carrier_binding.json",
+      "sha256": "251b392a66af745b57627fdf77db3792eb133d652f7ca606dbc32f140989bff3"
+    }
+  },
+  "joint_target_custody": {
+    "existence_receipt": {
+      "path": ".omx/research/joint_seg_pose_inverse_solve_receipt_n24_20260719.json",
+      "sha256": "7a6fdbdfb8f6084a6fd79bb0a63490335b22ae308774032fff7471bb4281e3e9"
+    },
+    "consumed_as_current_fixture_target": false,
+    "reason": "the inherited source-plane band manifest cannot be rebound to different joint planes; the trainer now requires a rebuilt manifest whose source SHA exactly matches the supplied joint planes"
+  },
+  "fixture_smoke": {
+    "axis": "macOS-CPU advisory",
+    "execution_scope": "capped_prefix_n2_non_n600_non_score",
+    "path": "/Volumes/VertigoDataTier/pact/evidence/m1_quant_aware_smoke_full_n2_v2_20260721/training_receipt.json",
+    "sha256": "76a6bad74ada559a59f8e757898a6260729c9a52413214838514b29a2f4aebe5",
+    "config_sha256": "e4ea519ab0fb6f8ad9d3f95843717d1411088e66b97162507d9df2c5fbb63252",
+    "quantization_mode": "fixed_magnitude_deadzone",
+    "band_target": "source_planes",
+    "global_step": 4,
+    "peak_rss_bytes": 3356688384,
+    "realized_flip_history": [
+      0,
+      0,
+      0
+    ],
+    "realized_changed_pixel_count": 256450,
+    "realized_changed_channel_count": 503198,
+    "realized_changed_inside_selected_band": 1218,
+    "realized_changed_outside_selected_band": 255232,
+    "selected_band_pixel_count": 2605,
+    "realized_target_band_entry_count": 0,
+    "realized_flip_count": 0,
+    "halted": true,
+    "halt_reason": "band_fit_zero_realized_flip_count_at_plateau",
+    "return_code": 7,
+    "carrier_packet": null,
+    "rate_polish_entered": false,
+    "telemetry_authority": "exact NumPy clip-rint uint8 receiver path; realized_flip_count is target-band residency telemetry, not SegNet argmax authority"
+  },
+  "verification": {
+    "tests": "97 passed, 5 skipped",
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "git_diff_check": "PASS",
+    "clean_review_passes_per_python_file": 2,
+    "worktree_bound_import_required": "set PYTHONPATH to this worktree's src during isolated-branch validation so the base-repository editable install is not imported"
+  },
+  "execution_decision": {
+    "full_n600_fixture_launch": false,
+    "governor_admit": null,
+    "pid": null,
+    "archive_candidate": null,
+    "reason": "operator re-scoped the deliverable to portable S3 realization machinery, and the bounded inherited fixture correctly halted with zero target-band entries plus large outside-band spill"
+  },
+  "claims": {
+    "launch": false,
+    "paid_dispatch": false,
+    "score_claim": false,
+    "promotion": false,
+    "pointer_mutation": false,
+    "contest_cpu_pointer_observed": "0.1910828242 [contest-CPU Linux x86_64]"
+  },
+  "main_landing_review_required": true
+}
