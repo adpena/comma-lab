@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import platform
 import shutil
@@ -68,6 +69,30 @@ from tac.optimization.predictor_upgrade_xi_chart import (  # noqa: E402
 from tac.optimization.predictor_upgrade_xi_chart import (  # noqa: E402
     predict_cell_field as predict_chart_cell_field,
 )
+from tac.optimization.realized_secant_custody import (  # noqa: E402
+    RECEIPT_SCHEMA as SECANT_RECEIPT_SCHEMA,
+)
+from tac.optimization.realized_secant_custody import (  # noqa: E402
+    PairSolveStatus as SecantPairSolveStatus,
+)
+from tac.optimization.realized_secant_custody import (  # noqa: E402
+    QPStatus as SecantQPStatus,
+)
+from tac.optimization.realized_secant_custody import (  # noqa: E402
+    SecantObservation,
+    WriteSecantObservation,
+    build_pair_trust_region_custody,
+    build_trust_regions,
+    decode_coefficient_packet,
+    encode_coefficient_packet,
+    solve_minimal_norm_inequalities,
+)
+from tac.optimization.realized_secant_custody import (  # noqa: E402
+    canonical_sha256 as secant_canonical_sha256,
+)
+from tac.optimization.realized_secant_custody import (  # noqa: E402
+    validate_receipt as validate_secant_receipt,
+)
 from tac.optimization.resize_full_kernel import FullResizeKernel  # noqa: E402
 from tac.optimization.seed_compose_b2 import GT_CACHE_SHA256  # noqa: E402
 
@@ -83,6 +108,8 @@ CONTEXTUAL_STAGE_SCHEMA: Final = "realization_g2d_predict_base_pair.v1"
 CONTEXTUAL_CONFIG_SCHEMA: Final = "realization_g2d_predict_base_config.v1"
 CONTEXTUAL_RECEIPT_SCHEMA: Final = "realization_g2d_predict_base_receipt.v1"
 FRAME0_PRIOR_RACE_SCHEMA: Final = "realization_g2d_frame0_prior_race_receipt.v1"
+SECANT_STAGE_SCHEMA: Final = "realization_g2e_secant_pair.v1"
+SECANT_CONFIG_SCHEMA: Final = "realization_g2e_secant_config.v1"
 PREFIXES: Final = (16, 64, 600)
 RGB_REALIZATION_FIELDS: Final = frozenset(
     {
@@ -148,6 +175,11 @@ CONTEXTUAL_EXCEPTION_MAGIC: Final = b"G2DX1"
 CONTEXTUAL_EXCEPTION_HEADER: Final = struct.Struct(">5sHIII")
 CONTEXTUAL_SEED_BASELINE_BYTES: Final = 78_969
 CONTEXTUAL_TARGET_BOX_BYTES: Final = 216_222
+SECANT_LANE_ID: Final = "lane_g2e_secant_custody_578_20260721"
+SECANT_SIGNED_AMPLITUDES: Final = (4.0, -4.0, 8.0, -8.0)
+SECANT_RELATIVE_RESIDUAL_TOLERANCE: Final = 0.35
+SECANT_REQUIRED_MARGIN: Final = 1e-4
+SECANT_CHART_RANK: Final = 4
 FRAME0_PALETTE_MAGIC: Final = b"G2PAL1"
 FRAME0_STATIC_CHART_SHA256: Final = "2b3665c47f7a404e7ac8ea1b30cad768d4ce2a84fd998e167d230b522e18ba43"
 DEFAULT_FRAME0_STATIC_CHART: Final = Path(
@@ -1923,6 +1955,290 @@ def _replay_contextual_sequence(
     }
 
 
+def _head_patch_144(feature: np.ndarray, row: int, col: int) -> tuple[float, ...]:
+    """Gather the zero-padded 16x3x3 input patch to segmentation_head[0]."""
+
+    if feature.ndim != 3 or feature.shape[0] != 16:
+        raise RealizationAuditError("candidate-state head input must have shape 16xHxW")
+    padded = np.pad(feature, ((0, 0), (1, 1), (1, 1)), mode="constant")
+    patch = padded[:, row : row + 3, col : col + 3]
+    if patch.shape != (16, 3, 3) or not np.isfinite(patch).all():
+        raise RealizationAuditError("candidate-state 144D head patch is malformed")
+    return tuple(float(value) for value in patch.reshape(-1))
+
+
+def _candidate_seg_state(
+    net: Any,
+    torch: Any,
+    frame0: np.ndarray,
+    frame1: np.ndarray,
+    scorer_plane: np.ndarray,
+    constraints: Sequence[Mapping[str, Any]],
+    *,
+    fixed_rivals: Sequence[int] | None = None,
+    with_jacobian: bool,
+) -> dict[str, Any]:
+    """Capture fresh candidate logits/head input and optional local RGB pullback."""
+
+    if not constraints:
+        raise RealizationAuditError("realized-secant custody requires declared writes")
+    pair = np.stack((frame0, frame1), axis=0)[None]
+    camera_tensor = torch.from_numpy(np.ascontiguousarray(pair)).permute(0, 1, 4, 2, 3).contiguous().float()
+    scorer_input = net.segnet.preprocess_input(camera_tensor).detach()
+    expected = torch.from_numpy(np.ascontiguousarray(scorer_plane)).permute(2, 0, 1).unsqueeze(0).float()
+    receiver_input_maxabs = float(torch.max(torch.abs(scorer_input - expected)).item())
+    if receiver_input_maxabs > 1e-4:
+        raise RealizationAuditError(f"real receiver/scorer input drift {receiver_input_maxabs} exceeds 1e-4")
+    scorer_input.requires_grad_(with_jacobian)
+    captured: dict[str, Any] = {}
+
+    def head_pre_hook(_module: Any, inputs: Any) -> None:
+        captured["head_input"] = inputs[0]
+
+    head = net.segnet.segmentation_head[0]
+    handle = head.register_forward_pre_hook(head_pre_hook)
+    try:
+        logits_tensor = net.segnet(scorer_input)[0]
+    finally:
+        handle.remove()
+    if "head_input" not in captured or tuple(logits_tensor.shape) != (5, *SCORER_HW):
+        raise RealizationAuditError("candidate-state SegNet capture geometry mismatch")
+    logits = logits_tensor.detach().cpu().numpy().astype(np.float64)
+    head_input = captured["head_input"][0].detach().cpu().numpy().astype(np.float64)
+    argmax = logits.argmax(axis=0).astype(np.uint8)
+    margins: list[float] = []
+    rivals: list[int] = []
+    current_classes: list[int] = []
+    patches: list[tuple[float, ...]] = []
+    margin_tensors: list[Any] = []
+    for ordinal, constraint in enumerate(constraints):
+        target = int(constraint["cell_id"])
+        row, col = int(constraint["y"]), int(constraint["x"])
+        current = int(argmax[row, col])
+        if fixed_rivals is None:
+            if current != target:
+                rival = current
+            else:
+                rival_values = logits[:, row, col].copy()
+                rival_values[target] = -np.inf
+                rival = int(np.argmax(rival_values))
+        else:
+            rival = int(fixed_rivals[ordinal])
+            if not 0 <= rival < 5 or rival == target:
+                raise RealizationAuditError("fixed candidate-state rival is invalid")
+        margins.append(float(logits[target, row, col] - logits[rival, row, col]))
+        rivals.append(rival)
+        current_classes.append(current)
+        patches.append(_head_patch_144(head_input, row, col))
+        margin_tensors.append(logits_tensor[target, row, col] - logits_tensor[rival, row, col])
+
+    jacobian: np.ndarray | None = None
+    if with_jacobian:
+        site_count = len(constraints)
+        jacobian = np.empty((site_count, 3 * site_count), dtype=np.float64)
+        for row_index, margin_tensor in enumerate(margin_tensors):
+            gradient = torch.autograd.grad(
+                margin_tensor,
+                scorer_input,
+                retain_graph=row_index + 1 < site_count,
+                create_graph=False,
+            )[0][0]
+            local = []
+            for constraint in constraints:
+                local.extend(
+                    float(value)
+                    for value in gradient[:, int(constraint["y"]), int(constraint["x"])].detach().cpu().tolist()
+                )
+            jacobian[row_index] = local
+        if not np.isfinite(jacobian).all():
+            raise RealizationAuditError("candidate-state local margin Jacobian is nonfinite")
+    scorer_array = scorer_input.detach().cpu().numpy().astype(np.float32, copy=False)
+    return {
+        "logits": logits,
+        "argmax": argmax,
+        "margins": np.asarray(margins, dtype=np.float64),
+        "rivals": tuple(rivals),
+        "current_classes": tuple(current_classes),
+        "feature_patches": tuple(patches),
+        "local_jacobian": jacobian,
+        "receiver_input_maxabs": receiver_input_maxabs,
+        "segnet_input_sha256": hashlib.sha256(np.ascontiguousarray(scorer_array).tobytes()).hexdigest(),
+        "logits_sha256": hashlib.sha256(np.ascontiguousarray(logits.astype("<f4")).tobytes()).hexdigest(),
+    }
+
+
+def _rank4_chart_directions(local_jacobian: np.ndarray) -> np.ndarray:
+    """Build four deterministic response columns, zero-padding unavailable directions."""
+
+    jacobian = np.asarray(local_jacobian, dtype=np.float64)
+    if jacobian.ndim != 2 or jacobian.shape[0] == 0 or jacobian.shape[1] == 0:
+        raise RealizationAuditError("candidate-state chart Jacobian geometry is too small")
+    if not np.isfinite(jacobian).all():
+        raise RealizationAuditError("candidate-state chart Jacobian is nonfinite")
+    _, _, vh = np.linalg.svd(jacobian, full_matrices=True)
+    available_directions = min(SECANT_CHART_RANK, vh.shape[0])
+    directions = np.zeros((jacobian.shape[1], SECANT_CHART_RANK), dtype=np.float64)
+    directions[:, :available_directions] = vh[:available_directions].T
+    for column in range(available_directions):
+        vector = directions[:, column]
+        scale = float(np.max(np.abs(vector), initial=0.0))
+        if scale == 0.0 or not math.isfinite(scale):
+            raise RealizationAuditError("candidate-state chart produced a zero/nonfinite column")
+        vector /= scale
+        response_sum = float(np.sum(jacobian @ vector))
+        pivot = int(np.argmax(np.abs(vector)))
+        if response_sum < 0.0 or (response_sum == 0.0 and vector[pivot] < 0.0):
+            vector *= -1.0
+    return directions
+
+
+def _local_rgb_values(
+    plane: np.ndarray,
+    constraints: Sequence[Mapping[str, Any]],
+) -> np.ndarray:
+    sites = [(int(row["y"]), int(row["x"])) for row in constraints]
+    if len(sites) != len(set(sites)):
+        raise RealizationAuditError("declared writes contain duplicate RGB sites")
+    return np.asarray([plane[row, col] for row, col in sites], dtype=np.float64).reshape(-1)
+
+
+def _apply_local_chart_delta(
+    baseline: np.ndarray,
+    constraints: Sequence[Mapping[str, Any]],
+    delta: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, int]:
+    """Round one local chart move once and apply uint8 bounds explicitly."""
+
+    base_values = _local_rgb_values(baseline, constraints)
+    raw_delta = np.asarray(delta, dtype=np.float64)
+    if raw_delta.shape != base_values.shape or not np.isfinite(raw_delta).all():
+        raise RealizationAuditError("local chart delta geometry/value mismatch")
+    rounded = np.rint(raw_delta)
+    unbounded = base_values + rounded
+    saturation = int(np.count_nonzero((unbounded < 0.0) | (unbounded > 255.0)))
+    bounded = np.clip(unbounded, 0.0, 255.0).astype(np.uint8)
+    candidate = np.asarray(baseline, dtype=np.uint8).copy()
+    for ordinal, constraint in enumerate(constraints):
+        candidate[int(constraint["y"]), int(constraint["x"])] = bounded[3 * ordinal : 3 * ordinal + 3]
+    return candidate, bounded.astype(np.float64) - base_values, saturation
+
+
+def _exception_parseback(
+    baseline: np.ndarray,
+    constraints: Sequence[Mapping[str, Any]],
+    candidate: np.ndarray,
+) -> tuple[bytes, np.ndarray, list[int]]:
+    """Use #557 for nonempty residuals and represent no payload as zero bytes."""
+
+    if np.array_equal(baseline, candidate):
+        return b"", np.asarray(baseline, dtype=np.uint8).copy(), []
+    payload, ordinals = encode_contextual_rgb_exceptions(baseline, candidate, constraints)
+    parsed, parsed_ordinals = apply_contextual_rgb_exceptions(baseline, constraints, payload)
+    if (
+        parsed_ordinals != ordinals
+        or not np.array_equal(parsed, candidate)
+        or encode_contextual_rgb_exceptions(baseline, parsed, constraints)[0] != payload
+    ):
+        raise RealizationAuditError("G2e #557 parse-back/re-encode custody failed")
+    return payload, parsed, ordinals
+
+
+def _load_secant_stages(stage_dir: Path, sidecar_dir: Path, config_sha256: str) -> dict[int, dict[str, Any]]:
+    rows: dict[int, dict[str, Any]] = {}
+    if not stage_dir.exists():
+        return rows
+    for path in sorted(stage_dir.glob("pair_*.json")):
+        row = _load_json(path)
+        pair_index = row.get("pair_index")
+        if (
+            row.get("schema") != SECANT_STAGE_SCHEMA
+            or row.get("config_sha256") != config_sha256
+            or isinstance(pair_index, bool)
+            or not isinstance(pair_index, int)
+            or pair_index in rows
+        ):
+            raise RealizationAuditError(f"G2e resume custody mismatch: {path}")
+        sidecar = sidecar_dir / f"pair_{pair_index:04d}.g2dx"
+        if not sidecar.is_file() or _sha256(sidecar) != row["correction_packet"]["sha256"]:
+            raise RealizationAuditError(f"G2e correction sidecar custody mismatch: {sidecar}")
+        if sidecar.stat().st_size != row["correction_packet"]["bytes"]:
+            raise RealizationAuditError(f"G2e correction sidecar size mismatch: {sidecar}")
+        rows[pair_index] = row
+    return rows
+
+
+def summarize_secant_prefix(prefix: int, stage_rows: Sequence[Mapping[str, Any]], *, base_bytes: int) -> dict[str, Any]:
+    """Aggregate G2e whole-description, write, trust, pose, and rate custody."""
+
+    if prefix not in PREFIXES or len(stage_rows) != prefix:
+        raise RealizationAuditError("G2e prefix must be exactly n16/n64/n600")
+    if [row.get("pair_index") for row in stage_rows] != list(range(prefix)):
+        raise RealizationAuditError("G2e prefix is not contiguous from zero")
+    if any(row.get("schema") != SECANT_STAGE_SCHEMA for row in stage_rows):
+        raise RealizationAuditError("G2e prefix stage schema mismatch")
+    writes = [write for row in stage_rows for write in row["declared_write_survival"]]
+    hard = [row["hard_oracle"] for row in stage_rows]
+    correction_bytes = int(sum(row["correction_packet"]["bytes"] for row in stage_rows))
+    total_bytes = base_bytes + correction_bytes
+    factor2_exact_count = sum(row["uint8_factor2_exact"] is True for row in stage_rows)
+    double_decode_count = sum(row["double_decode_identical"] is True for row in stage_rows)
+    whole_exact_count = sum(row["realized_argmax_equals_description"] is True for row in hard)
+    tube_count = sum(row["pose_within_declared_tube"] is True for row in hard)
+    from tac.canonical_equations.predict_project_realization_admissibility_20260721 import (
+        predict_project_realization_certificate,
+    )
+
+    admissibility = predict_project_realization_certificate(
+        pair_count=prefix,
+        uint8_factor2_exact_fraction=factor2_exact_count / prefix,
+        double_decode_identical_pair_count=double_decode_count,
+        semantic_cells_to_rgb_exact_pair_count=whole_exact_count,
+        pose_within_declared_tube_pair_count=tube_count,
+        additional_seed_bytes=(base_bytes - CONTEXTUAL_SEED_BASELINE_BYTES + correction_bytes),
+        receiver_derived_rgb=False,
+    )
+    return {
+        "schema": "realization_g2e_secant_prefix.v1",
+        "n": prefix,
+        "pair_count": prefix,
+        "uint8_factor2_exact_pair_count": factor2_exact_count,
+        "double_decode_identical_pair_count": double_decode_count,
+        "whole_description_exact_pair_count": whole_exact_count,
+        "all_declared_writes_survive_pair_count": sum(row["all_declared_writes_survive"] is True for row in hard),
+        "declared_write_count": len(writes),
+        "surviving_write_count": sum(row["survives"] is True for row in writes),
+        "declared_write_survival_fraction": (float(np.mean([row["survives"] for row in writes])) if writes else 1.0),
+        "by_class": _aggregate_survival(writes, "class_id"),
+        "by_stratum": _aggregate_survival(writes, "stratum"),
+        "by_margin_bucket": _aggregate_survival(writes, "margin_bucket"),
+        "admitted_pair_count": sum(row["pair_solve"]["admitted"] is True for row in stage_rows),
+        "solve_status_histogram": dict(sorted(Counter(row["pair_solve"]["status"] for row in stage_rows).items())),
+        "mean_d_seg_realized_vs_frozen_target": float(
+            np.mean([row["d_seg_realized_vs_frozen_target"] for row in hard])
+        ),
+        "mean_d_pose_realized_vs_frozen_target": float(
+            np.mean([row["d_pose_realized_vs_frozen_target"] for row in hard])
+        ),
+        "mean_d_pose_declared_tube_debt": float(
+            np.mean([row["d_pose_realized_outside_declared_tube"] for row in hard])
+        ),
+        "tube_contained_pair_count": tube_count,
+        "predict_project_realization_admissibility_v1": admissibility,
+        "byte_accounting": {
+            "base_bytes": base_bytes,
+            "correction_bytes": correction_bytes,
+            "total_bytes": total_bytes,
+            "target_box_bytes": CONTEXTUAL_TARGET_BOX_BYTES,
+            "headroom_vs_target_box_bytes": CONTEXTUAL_TARGET_BOX_BYTES - total_bytes,
+            "fits_target_box": total_bytes <= CONTEXTUAL_TARGET_BOX_BYTES,
+            "rate_break_even": "25/37,545,489 score units per correction byte",
+        },
+        "axis": AXIS,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+
 def run_frame0_prior_race(
     *,
     seed_path: Path,
@@ -2693,6 +3009,581 @@ def run_contextual_predict_base(
     return receipt
 
 
+def run_realized_secant_custody(
+    *,
+    seed_path: Path,
+    gt_cache_path: Path,
+    upstream: Path,
+    output_root: Path,
+    rank4_prototype_receipt_path: Path,
+    static_chart_path: Path,
+    lane_chart_path: Path,
+    chunk_size: int,
+    threads: int,
+    stop_after_prefix: int,
+) -> dict[str, Any]:
+    """Run/resume receiver-closed candidate-state secants and per-pair QPs."""
+
+    if chunk_size < 1 or threads < 1 or stop_after_prefix not in PREFIXES:
+        raise RealizationAuditError("invalid G2e chunk/thread/prefix setting")
+    output_root.mkdir(parents=True, exist_ok=True)
+    usage = shutil.disk_usage(output_root)
+    if usage.free < 1 << 30:
+        raise RealizationAuditError("G2e storage preflight requires at least 1 GiB free")
+    seed_bytes = seed_path.read_bytes()
+    seed = parse_constraint_seed(seed_bytes)
+    if serialize_constraint_seed(seed) != seed_bytes:
+        raise RealizationAuditError("G2e seed is not canonical on parse-back")
+    seed_sha256 = hashlib.sha256(seed_bytes).hexdigest()
+    rank4 = _load_json(rank4_prototype_receipt_path)
+    if (
+        rank4.get("schema") != "rank4_valid_cell_prototypes_v1"
+        or rank4.get("rank") != SECANT_CHART_RANK
+        or rank4.get("canonical_equation") != "segnet_head_rank4_linear_flipdist_v1"
+    ):
+        raise RealizationAuditError("G2e rank-4 prototype receipt custody mismatch")
+    cache = _load_real_cache(gt_cache_path)
+    net, torch, scorer_custody = _load_distortion_net(upstream, threads)
+    kernel = FullResizeKernel.build()
+    s_t, s_r, pitch_rad, motion_custody = load_g1_worldsheet_motion(REPO)
+    poses = np.asarray(cache["gt_poses"], dtype=np.float64)
+    cross_xi, cross_custody = relative_adjacent_xi(poses, s_t=s_t, s_r=s_r, pitch_rad=pitch_rad)
+    within_xi = np.stack(
+        [g1_warp.xi_from_pose_calibration(pose, s_t=s_t, s_r=s_r, pitch=pitch_rad) for pose in poses],
+        axis=0,
+    )
+    geom = g1_warp.GroundHomographyGeom.eon(native_hw=SCORER_HW, pitch=pitch_rad)
+    static_raw = static_chart_path.read_bytes()
+    if hashlib.sha256(static_raw).hexdigest() != FRAME0_STATIC_CHART_SHA256:
+        raise RealizationAuditError("G2e frame0 static-chart SHA-256 custody mismatch")
+    static_charts = parse_static_charts(static_raw)
+    static_zlib = zlib.compress(static_raw, 9)
+    parsed_static = parse_static_charts(zlib.decompress(static_zlib))
+    if (
+        not np.array_equal(parsed_static.road_undrivable, static_charts.road_undrivable)
+        or not np.array_equal(parsed_static.hood, static_charts.hood)
+        or parsed_static.adjacency != static_charts.adjacency
+    ):
+        raise RealizationAuditError("G2e static-chart compressed parse-back mismatch")
+    lane_pairs, lane_config, lane_custody = load_lane_chart(lane_chart_path)
+    lane_raw = lane_chart_path.read_bytes()
+    lane_brotli = brotli.compress(lane_raw, quality=11)
+    if brotli.decompress(lane_brotli) != lane_raw:
+        raise RealizationAuditError("G2e lane-chart compressed parse-back mismatch")
+    lane_mask = render_lane_mask(lane_pairs[0], lane_config, h=SCORER_HW[0], w=SCORER_HW[1])
+    openpilot_cells, protected_sites = openpilot_frame0_class_prior(
+        seed=seed,
+        static_charts=static_charts,
+        lane_mask=lane_mask,
+        geom=geom,
+    )
+    palette_payload = serialize_frozen_scorer_palette()
+    palette = parse_frozen_scorer_palette(palette_payload)
+    bootstrap = palette[openpilot_cells]
+    bootstrap_counted_bytes = len(palette_payload) + len(static_zlib) + len(lane_brotli)
+    root = output_root / "realized_secant_custody_openpilot"
+    _atomic_bytes(root / "base_packets" / "frozen_scorer_palette.g2pal", palette_payload)
+    _atomic_bytes(root / "base_packets" / "static_charts_n64.zlib9", static_zlib)
+    _atomic_bytes(root / "base_packets" / "lane_chart.brotli11", lane_brotli)
+
+    implementation_paths = (
+        REPO / "tools/measure_realization_g2_lattice.py",
+        REPO / "src/tac/optimization/realized_secant_custody.py",
+        REPO / "src/tac/optimization/predict_project_receiver.py",
+        REPO / "src/tac/optimization/uint8_lattice_feasibility.py",
+        REPO / "src/tac/boundary_math/warp_real_luma_frame0.py",
+        REPO / "src/tac/optimization/predictor_upgrade_xi_chart.py",
+        REPO / "src/tac/optimization/predictor_r2_missdelta.py",
+        REPO / "src/tac/canonical_equations/predict_project_realization_admissibility_20260721.py",
+    )
+    config = {
+        "schema": SECANT_CONFIG_SCHEMA,
+        "seed": 1234,
+        "seed_sha256": seed_sha256,
+        "gt_cache_sha256": GT_CACHE_SHA256,
+        "scorer_custody": scorer_custody,
+        "motion_custody": {**motion_custody, **cross_custody},
+        "rank4_prototype_receipt": {
+            "path": str(rank4_prototype_receipt_path),
+            "sha256": _sha256(rank4_prototype_receipt_path),
+            "rank": rank4["rank"],
+            "prototype_sha256": rank4["prototype_sha256"],
+            "quotient_basis_sha256": rank4["quotient_basis_sha256"],
+        },
+        "implementation_sources": {str(path.relative_to(REPO)): _sha256(path) for path in implementation_paths},
+        "base": ("G2d openpilot per-class geometric frame0 prior plus canonical within/cross G1 advected RGB"),
+        "openpilot_base_custody": {
+            "palette_bytes": len(palette_payload),
+            "palette_sha256": hashlib.sha256(palette_payload).hexdigest(),
+            "static_chart_raw_sha256": FRAME0_STATIC_CHART_SHA256,
+            "static_chart_zlib9_bytes": len(static_zlib),
+            "static_chart_zlib9_sha256": hashlib.sha256(static_zlib).hexdigest(),
+            "lane_chart_raw_sha256": hashlib.sha256(lane_raw).hexdigest(),
+            "lane_chart_brotli11_bytes": len(lane_brotli),
+            "lane_chart_brotli11_sha256": hashlib.sha256(lane_brotli).hexdigest(),
+            "lane_custody": lane_custody,
+            "protected_class_sites": protected_sites,
+            "total_counted_bytes": bootstrap_counted_bytes,
+        },
+        "candidate_response": (
+            "fresh candidate-state native CPU-Torch SegNet, exact input to segmentation_head[0], "
+            "local declared-write RGB pullback"
+        ),
+        "chart_rank": SECANT_CHART_RANK,
+        "signed_amplitudes": list(SECANT_SIGNED_AMPLITUDES),
+        "relative_secant_residual_tolerance": SECANT_RELATIVE_RESIDUAL_TOLERANCE,
+        "required_positive_margin": SECANT_REQUIRED_MARGIN,
+        "qp": "deterministic complete active-set enumeration in rank<=4 with uint8 box inequalities",
+        "correction_codec": "#557 adaptive range coder; zero changed records carry zero bytes",
+        "pair_count": PAIR_COUNT,
+        "axis": AXIS,
+    }
+    config_sha256 = secant_canonical_sha256(config)
+    stage_dir = root / "stages"
+    sidecar_dir = root / "corrections"
+    tested_dir = root / "tested_corrections"
+    rows = _load_secant_stages(stage_dir, sidecar_dir, config_sha256)
+    resumed_pairs = len(rows)
+    if rows and sorted(rows) != list(range(max(rows) + 1)):
+        raise RealizationAuditError("G2e resume stages are not a contiguous prefix")
+    constraints_by_pair: dict[int, list[Mapping[str, Any]]] = {pair: [] for pair in range(PAIR_COUNT)}
+    for constraint in seed["constraint_seeds"]:
+        if constraint["frame_index"] == 1:
+            constraints_by_pair[int(constraint["time"])].append(constraint)
+    represented_by_pair = {pair: _represented_cells(seed, pair) for pair in range(stop_after_prefix)}
+    previous_plane: np.ndarray | None = None
+    rate_lambda = 25.0 / 37_545_489.0
+
+    for chunk_begin in range(0, stop_after_prefix, chunk_size):
+        chunk_end = min(stop_after_prefix, chunk_begin + chunk_size)
+        for pair_index in range(chunk_begin, chunk_end):
+            represented = represented_by_pair[pair_index]
+            constraints = constraints_by_pair[pair_index]
+            if not constraints:
+                raise RealizationAuditError(f"G2e pair {pair_index} has no declared writes")
+            plane0 = (
+                bootstrap.copy()
+                if pair_index == 0
+                else contextual_advected_rgb_plane(previous_plane, cross_xi[pair_index], geom)
+            )
+            base1 = contextual_advected_rgb_plane(plane0, within_xi[pair_index], geom)
+            sidecar_path = sidecar_dir / f"pair_{pair_index:04d}.g2dx"
+            if pair_index in rows:
+                payload = sidecar_path.read_bytes()
+                if payload:
+                    previous_plane, _ = apply_contextual_rgb_exceptions(base1, constraints, payload)
+                else:
+                    previous_plane = base1
+                continue
+
+            started = time.perf_counter()
+            target_cells = np.asarray(cache["lstars"][pair_index], dtype=np.uint8).copy()
+            target_pose = np.asarray(cache["gt_poses"][pair_index], dtype=np.float64).copy()
+            realized0 = _contextual_realize(
+                plane0,
+                represented,
+                seed_sha256=seed_sha256,
+                additional_seed_bytes=bootstrap_counted_bytes if pair_index == 0 else 0,
+                generator_id=(
+                    "g2e_openpilot_per_class_geometric_frame0_prior"
+                    if pair_index == 0
+                    else "g2e_cross_pair_g1_advected_rgb"
+                ),
+                kernel=kernel,
+            )
+            realized_base1 = _contextual_realize(
+                base1,
+                represented,
+                seed_sha256=seed_sha256,
+                additional_seed_bytes=0,
+                generator_id="g2e_within_pair_g1_advected_rgb_base",
+                kernel=kernel,
+            )
+            baseline_state = _candidate_seg_state(
+                net,
+                torch,
+                realized0["frame"],
+                realized_base1["frame"],
+                base1,
+                constraints,
+                with_jacobian=True,
+            )
+            baseline_hard, _, baseline_writes = _hard_oracle_interior(
+                net,
+                torch,
+                realized0["frame"],
+                realized_base1["frame"],
+                target_cells,
+                represented,
+                target_pose,
+                constraints,
+            )
+            local_jacobian = np.asarray(baseline_state["local_jacobian"], dtype=np.float64)
+            chart_directions = _rank4_chart_directions(local_jacobian)
+            secant_rows: list[SecantObservation] = []
+            applied_columns: list[np.ndarray] = []
+            realized_columns: list[np.ndarray] = []
+            for column, amplitude in enumerate(SECANT_SIGNED_AMPLITUDES):
+                probe_plane, actual_delta, saturation = _apply_local_chart_delta(
+                    base1, constraints, amplitude * chart_directions[:, column]
+                )
+                probe_realized = _contextual_realize(
+                    probe_plane,
+                    represented,
+                    seed_sha256=seed_sha256,
+                    additional_seed_bytes=0,
+                    generator_id=f"g2e_signed_secant_column_{column}",
+                    kernel=kernel,
+                )
+                probe_state = _candidate_seg_state(
+                    net,
+                    torch,
+                    realized0["frame"],
+                    probe_realized["frame"],
+                    probe_plane,
+                    constraints,
+                    fixed_rivals=baseline_state["rivals"],
+                    with_jacobian=False,
+                )
+                predicted = local_jacobian @ actual_delta
+                realized_delta = probe_state["margins"] - baseline_state["margins"]
+                write_rows = []
+                for ordinal, constraint in enumerate(constraints):
+                    predicted_value = float(predicted[ordinal])
+                    realized_value = float(realized_delta[ordinal])
+                    write_rows.append(
+                        WriteSecantObservation(
+                            ordinal=ordinal,
+                            target_class=int(constraint["cell_id"]),
+                            current_class=int(baseline_state["current_classes"][ordinal]),
+                            pre_margin=float(baseline_state["margins"][ordinal]),
+                            margin_bucket=_margin_bucket(float(baseline_state["margins"][ordinal])),
+                            expected_sign=1 if predicted_value >= 0.0 else -1,
+                            feature_displacement=tuple(
+                                float(after - before)
+                                for after, before in zip(
+                                    probe_state["feature_patches"][ordinal],
+                                    baseline_state["feature_patches"][ordinal],
+                                    strict=True,
+                                )
+                            ),
+                            predicted_margin_delta=predicted_value,
+                            realized_margin_delta=realized_value,
+                            secant_ratio=realized_value / amplitude,
+                        )
+                    )
+                secant_rows.append(
+                    SecantObservation(
+                        pair_index=pair_index,
+                        column_index=column,
+                        signed_amplitude=amplitude,
+                        applied_rgb_l2=float(np.linalg.norm(actual_delta)),
+                        applied_rgb_linf=float(np.max(np.abs(actual_delta), initial=0.0)),
+                        uint8_saturation_count=saturation,
+                        writes=tuple(write_rows),
+                    )
+                )
+                applied_columns.append(actual_delta / amplitude)
+                realized_columns.append(realized_delta / amplitude)
+
+            trust_regions = build_trust_regions(
+                secant_rows,
+                relative_residual_tolerance=SECANT_RELATIVE_RESIDUAL_TOLERANCE,
+            )
+            direction_model = np.column_stack(applied_columns)
+            secant_model = np.column_stack(realized_columns)
+            solve = None
+            tested_plane = base1
+            tested_payload = b""
+            tested_ordinals: list[int] = []
+            coefficient_packet = b""
+            status = SecantPairSolveStatus.TRUST_REGION_REFUSED
+            if all(region.usable for region in trust_regions):
+                solve = solve_minimal_norm_inequalities(
+                    secant_model,
+                    SECANT_REQUIRED_MARGIN - baseline_state["margins"],
+                    direction_model,
+                    _local_rgb_values(base1, constraints),
+                )
+                if solve.status is SecantQPStatus.SOLVED:
+                    coefficient_packet = encode_coefficient_packet(solve.coefficients)
+                    decoded_once = decode_coefficient_packet(coefficient_packet)
+                    decoded_twice = decode_coefficient_packet(coefficient_packet)
+                    if decoded_once != decoded_twice or encode_coefficient_packet(decoded_once) != coefficient_packet:
+                        raise RealizationAuditError("G2e coefficient packet double-decode drift")
+                    tested_plane, _, _ = _apply_local_chart_delta(
+                        base1,
+                        constraints,
+                        direction_model @ np.asarray(decoded_once, dtype=np.float64),
+                    )
+                    tested_payload, tested_plane, tested_ordinals = _exception_parseback(
+                        base1, constraints, tested_plane
+                    )
+                else:
+                    status = SecantPairSolveStatus.QP_INFEASIBLE
+
+            tested_path = tested_dir / f"pair_{pair_index:04d}.g2dx"
+            _atomic_bytes(tested_path, tested_payload)
+            tested_realized = _contextual_realize(
+                tested_plane,
+                represented,
+                seed_sha256=seed_sha256,
+                additional_seed_bytes=len(tested_payload),
+                generator_id="g2e_tested_rank4_secant_qp_correction",
+                kernel=kernel,
+            )
+            tested_second = _contextual_realize(
+                tested_plane,
+                represented,
+                seed_sha256=seed_sha256,
+                additional_seed_bytes=len(tested_payload),
+                generator_id="g2e_tested_rank4_secant_qp_correction_repeat",
+                kernel=kernel,
+            )
+            tested_hard, _, tested_writes = _hard_oracle_interior(
+                net,
+                torch,
+                realized0["frame"],
+                tested_realized["frame"],
+                target_cells,
+                represented,
+                target_pose,
+                constraints,
+            )
+            tested_state = _candidate_seg_state(
+                net,
+                torch,
+                realized0["frame"],
+                tested_realized["frame"],
+                tested_plane,
+                constraints,
+                fixed_rivals=baseline_state["rivals"],
+                with_jacobian=False,
+            )
+            double_decode = bool(
+                np.array_equal(tested_realized["frame"], tested_second["frame"])
+                and tested_realized["camera_uint8_sha256"] == tested_second["camera_uint8_sha256"]
+            )
+            positive_fixed_margins = bool(np.all(tested_state["margins"] > SECANT_REQUIRED_MARGIN))
+            hard_positive = bool(
+                tested_hard["all_declared_writes_survive"]
+                and all(float(row["target_logit_margin"]) > 0.0 for row in tested_writes)
+            )
+            semantic_score_delta = 100.0 * (
+                float(baseline_hard["d_seg_realized_vs_frozen_target"])
+                - float(tested_hard["d_seg_realized_vs_frozen_target"])
+            )
+            marginal_score_units_per_byte = (
+                semantic_score_delta / len(tested_payload)
+                if tested_payload
+                else (math.inf if semantic_score_delta > 0.0 else 0.0)
+            )
+            rate_admissible = bool(not tested_payload or marginal_score_units_per_byte > rate_lambda)
+            kkt_clean = bool(
+                solve is not None
+                and solve.status is SecantQPStatus.SOLVED
+                and solve.max_primal_violation <= 1e-8
+                and solve.stationarity_residual <= 1e-8
+                and solve.min_active_multiplier is not None
+                and solve.min_active_multiplier >= -1e-9
+            )
+            admitted = bool(
+                kkt_clean and positive_fixed_margins and hard_positive and double_decode and rate_admissible
+            )
+            if solve is not None and solve.status is SecantQPStatus.SOLVED:
+                if not positive_fixed_margins or not hard_positive:
+                    status = SecantPairSolveStatus.NEGATIVE_REALIZED_HARD_ORACLE_REFUSED
+                elif not rate_admissible:
+                    status = SecantPairSolveStatus.RATE_BREAK_EVEN_REFUSED
+                elif not kkt_clean:
+                    status = SecantPairSolveStatus.KKT_RESIDUAL_REFUSED
+                elif not double_decode:
+                    status = SecantPairSolveStatus.DOUBLE_DECODE_REFUSED
+                else:
+                    status = SecantPairSolveStatus.ADMITTED_RECEIVER_CLOSED
+            admitted_payload = tested_payload if admitted else b""
+            admitted_plane = tested_plane if admitted else base1
+            _atomic_bytes(sidecar_path, admitted_payload)
+            if admitted:
+                final_realized = tested_realized
+                hard, writes = tested_hard, tested_writes
+            else:
+                final_realized = realized_base1
+                hard, writes = baseline_hard, baseline_writes
+            previous_plane = admitted_plane
+            stage = {
+                "schema": SECANT_STAGE_SCHEMA,
+                "config_sha256": config_sha256,
+                "pair_index": pair_index,
+                "candidate_state": {
+                    "segnet_input_sha256": baseline_state["segnet_input_sha256"],
+                    "logits_sha256": baseline_state["logits_sha256"],
+                    "receiver_input_maxabs": baseline_state["receiver_input_maxabs"],
+                    "head_input": "exact 16-channel input to segmentation_head[0]",
+                    "head_patch_dimension": 144,
+                    "rivals": list(baseline_state["rivals"]),
+                    "fresh_candidate_response": True,
+                    "source_arrangement_vjp_used_for_solve": False,
+                },
+                "secant_observations": [row.as_dict() for row in secant_rows],
+                "trust_regions": [row.as_dict() for row in trust_regions],
+                "pair_solve": {
+                    "pair_index": pair_index,
+                    "status": status.value,
+                    "admitted": admitted,
+                    "qp": solve.as_dict() if solve is not None else None,
+                    "coefficient_packet": {
+                        "bytes": len(coefficient_packet),
+                        "sha256": hashlib.sha256(coefficient_packet).hexdigest(),
+                        "double_decode_identical": bool(coefficient_packet),
+                    },
+                    "tested_fixed_rival_margins": tested_state["margins"].tolist(),
+                    "tested_positive_fixed_rival_margins": positive_fixed_margins,
+                    "tested_hard_positive_declared_writes": hard_positive,
+                    "tested_uint8_saturation_count": int(sum(row.uint8_saturation_count for row in secant_rows)),
+                    "tested_exception_ordinals": tested_ordinals,
+                    "tested_packet_bytes": len(tested_payload),
+                    "tested_packet_sha256": hashlib.sha256(tested_payload).hexdigest(),
+                    "tested_packet_path": str(tested_path),
+                    "double_decode_identical": double_decode,
+                    "semantic_score_units_delta": semantic_score_delta,
+                    "marginal_score_units_per_correction_byte": marginal_score_units_per_byte,
+                    "rate_break_even": rate_lambda,
+                    "rate_admissible": rate_admissible,
+                    "baseline_hard_oracle": baseline_hard,
+                    "tested_hard_oracle": tested_hard,
+                    "pose_delta_from_semantic_correction": float(
+                        tested_hard["d_pose_realized_vs_frozen_target"]
+                        - baseline_hard["d_pose_realized_vs_frozen_target"]
+                    ),
+                },
+                "correction_packet": {
+                    "codec": "#557 adaptive range coder" if admitted_payload else "none",
+                    "path": str(sidecar_path),
+                    "bytes": len(admitted_payload),
+                    "sha256": hashlib.sha256(admitted_payload).hexdigest(),
+                    "video_derived_payload_carried": bool(admitted_payload),
+                    "parseback_exact": True,
+                    "reencode_byte_identical": True,
+                },
+                "hard_oracle": hard,
+                "declared_write_survival": writes,
+                "camera_frame0_sha256": realized0["camera_uint8_sha256"],
+                "camera_frame1_sha256": final_realized["camera_uint8_sha256"],
+                "uint8_factor2_exact": bool(
+                    realized0["factor2_verification"]["certified_exact"]
+                    and final_realized["factor2_verification"]["certified_exact"]
+                ),
+                "double_decode_identical": double_decode,
+                "wall_seconds": time.perf_counter() - started,
+                "authority": f"MEASURED {AXIS}",
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+            _atomic_json(stage_dir / f"pair_{pair_index:04d}.json", stage)
+            rows[pair_index] = stage
+            del target_cells, target_pose
+        _atomic_json(
+            root / "checkpoints" / f"chunk_{chunk_begin:04d}_{chunk_end:04d}.json",
+            {
+                "schema": "realization_g2e_secant_chunk_checkpoint.v1",
+                "config_sha256": config_sha256,
+                "completed_through_exclusive": chunk_end,
+                "completed_pairs": len(rows),
+                "all_pair_stages_preserved": True,
+                "resumed_pairs_at_invocation_start": resumed_pairs,
+            },
+        )
+
+    ordered = [rows[index] for index in range(stop_after_prefix)]
+    base_bytes = CONTEXTUAL_SEED_BASELINE_BYTES + bootstrap_counted_bytes
+    prefixes = []
+    for prefix in PREFIXES:
+        if prefix > stop_after_prefix:
+            continue
+        summary = summarize_secant_prefix(prefix, ordered[:prefix], base_bytes=base_bytes)
+        checkpoint = root / "checkpoints" / f"prefix_n{prefix}.json"
+        _atomic_json(checkpoint, summary)
+        summary["checkpoint_path"] = str(checkpoint)
+        summary["checkpoint_sha256"] = _sha256(checkpoint)
+        prefixes.append(summary)
+    final = prefixes[-1]
+    admission = final["predict_project_realization_admissibility_v1"]
+    secant_observations = [observation for row in ordered for observation in row["secant_observations"]]
+    pair_trust_regions = list(
+        build_pair_trust_region_custody(
+            [SecantObservation.from_dict(row) for row in secant_observations],
+            pair_count=stop_after_prefix,
+            relative_residual_tolerance=config["relative_secant_residual_tolerance"],
+        )
+    )
+    receipt: dict[str, Any] = {
+        "schema": SECANT_RECEIPT_SCHEMA,
+        "lane_id": SECANT_LANE_ID,
+        "task_id": "578",
+        "config": config,
+        "config_sha256": config_sha256,
+        "completed_prefix": stop_after_prefix,
+        "column_indices": list(range(SECANT_CHART_RANK)),
+        "secant_observations": secant_observations,
+        "pair_trust_regions": pair_trust_regions,
+        "pair_solves": [row["pair_solve"] for row in ordered],
+        "D1_realized_secant_ladder": prefixes,
+        "D2_receiver_closed_solve": {
+            "admitted_pair_count": final["admitted_pair_count"],
+            "solve_status_histogram": final["solve_status_histogram"],
+            "hard_oracle_is_admission_authority": True,
+        },
+        "D3_semantic_rate_ladder": final,
+        "D4_pose_scope": {
+            "mean_realized_d_pose": final["mean_d_pose_realized_vs_frozen_target"],
+            "mean_declared_tube_debt": final["mean_d_pose_declared_tube_debt"],
+            "tube_contained_pair_count": final["tube_contained_pair_count"],
+            "status": f"MEASURED_CORRECTED_FRAME_PAIRS {AXIS}",
+            "nearest_target_cross_pair_proxy_exact": False,
+            "blocker": (
+                "the contextual cross-pair base uses the declared nearest-target G1 proxy; "
+                "no exact pose-factorized conclusion transfers from this semantic arm"
+            ),
+            "pose_factorized_child_open": True,
+        },
+        "admissibility": admission,
+        "verdict": (
+            "MEASURED_G2E_SECANT_PREFIX_N600"
+            if stop_after_prefix == PAIR_COUNT
+            else f"MEASURED_G2E_SECANT_PREFIX_N{stop_after_prefix}_FAMILY_OPEN"
+        ),
+        "verdict_scope": (
+            f"exact contiguous n{stop_after_prefix} prefix only; candidate-state local declared-write "
+            "rank-4 chart with signed finite secants and receiver-closed per-pair correction; "
+            "no n600 claim unless completed_prefix is 600"
+        ),
+        "storage": {
+            "root": str(root),
+            "free_bytes_at_preflight": usage.free,
+            "automatic_disk_hygiene": (
+                "ZIP_STORED cache memmaps, current pair/column scorer tensors only, atomic immutable "
+                "JSON and #557 sidecars, no persisted camera/logit/feature tensors"
+            ),
+        },
+        "authority": {
+            "axis": AXIS,
+            "pointer": POINTER,
+            "pointer_moved": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "main_landing_review_required": True,
+        },
+    }
+    receipt["receipt_sha256"] = secant_canonical_sha256(receipt)
+    validate_secant_receipt(receipt, expected_pair_count=stop_after_prefix)
+    _atomic_json(root / "receipt.json", receipt)
+    _atomic_json(output_root / "receipt.json", receipt)
+    if _load_json(root / "receipt.json")["receipt_sha256"] != receipt["receipt_sha256"]:
+        raise RealizationAuditError("G2e receipt JSON parse-back drift")
+    return receipt
+
+
 def audit_prefix(
     *,
     prefix: int,
@@ -3025,6 +3916,17 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="race exact I-frame, seed keyframe classes, and the openpilot per-class geometric prior",
     )
+    parser.add_argument(
+        "--realized-secant-custody",
+        action="store_true",
+        help="measure candidate-state rank-4 secants and receiver-closed per-pair QP corrections",
+    )
+    parser.add_argument(
+        "--secant-output-root",
+        type=Path,
+        default=Path("/Volumes/VertigoDataTier/pact/evidence/g2e_secant_20260721"),
+        help="durable SSD root for --realized-secant-custody stages and receipts",
+    )
     parser.add_argument("--static-chart", type=Path, default=DEFAULT_FRAME0_STATIC_CHART)
     parser.add_argument("--lane-chart", type=Path, default=DEFAULT_FRAME0_LANE_CHART)
     parser.add_argument("--vjp-campaign", type=Path, default=DEFAULT_VJP_CAMPAIGN)
@@ -3048,10 +3950,46 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if sum((args.audit_only, args.interior_rungs, args.contextual_predict_base, args.frame0_prior_race)) > 1:
-        raise RealizationAuditError(
-            "--audit-only, --interior-rungs, --contextual-predict-base, and --frame0-prior-race are mutually exclusive"
+    if (
+        sum(
+            (
+                args.audit_only,
+                args.interior_rungs,
+                args.contextual_predict_base,
+                args.frame0_prior_race,
+                args.realized_secant_custody,
+            )
         )
+        > 1
+    ):
+        raise RealizationAuditError(
+            "--audit-only, --interior-rungs, --contextual-predict-base, --frame0-prior-race, "
+            "and --realized-secant-custody are mutually exclusive"
+        )
+    if args.realized_secant_custody:
+        receipt = run_realized_secant_custody(
+            seed_path=args.seed.resolve(),
+            gt_cache_path=args.gt_cache.resolve(),
+            upstream=args.upstream.resolve(),
+            output_root=args.secant_output_root.resolve(),
+            rank4_prototype_receipt_path=args.rank4_prototype_receipt.resolve(),
+            static_chart_path=args.static_chart.resolve(),
+            lane_chart_path=args.lane_chart.resolve(),
+            chunk_size=args.chunk_size,
+            threads=args.threads,
+            stop_after_prefix=args.stop_after_prefix,
+        )
+        print(
+            json.dumps(
+                {
+                    "receipt": str(args.secant_output_root.resolve() / "receipt.json"),
+                    "verdict": receipt["verdict"],
+                    "completed_prefix": receipt["completed_prefix"],
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
     if args.frame0_prior_race:
         receipt = run_frame0_prior_race(
             seed_path=args.seed.resolve(),

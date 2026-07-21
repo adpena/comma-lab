@@ -81816,6 +81816,54 @@
         "corrected secant-QP whole-field projection",
         "rate-accounted curvelet-shearlet residual"
       ]
+    },
+    {
+      "id": "lane_g2e_secant_custody_578_20260721",
+      "name": "G2e realized secant custody and receiver QP",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/realized_secant_custody.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/g2e_secant_custody_receipt_20260721.json"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #578 n16 macOS-CPU advisory realized-secants measured; 0/31 trust regions usable; no QP/correction/score; family open; pointer unchanged; MAIN review required",
+      "research_only": true,
+      "reactivation_criteria": [
+        "nonempty measured class/bucket trust region on fresh n16",
+        "positive realized margins after rounded receiver correction",
+        "#557 byte-identical parse/re-encode for nonempty correction",
+        "hard Seg/Pose oracle and rate value above registered break-even"
+      ]
     }
   ],
   "level_rules": {
@@ -81825,5 +81873,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-21T10:45:47Z"
+  "updated_at": "2026-07-21T13:43:23Z"
 }
