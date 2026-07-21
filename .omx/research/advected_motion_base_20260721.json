@@ -1,0 +1,130 @@
+{
+  "schema": "advected_motion_base_measurement.v1",
+  "written_at_utc": "2026-07-21T15:31:33Z",
+  "lane_id": "lane_advected_motion_base_20260721",
+  "research_only": true,
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "main_landing_review_required": true
+  },
+  "verdict": "N64_RATE_GATE_FAIL_STOP_BEFORE_N600",
+  "verdict_scope": "counted PPCS planar-xi ground-stratified homography with offground persistence plus exact full-plane solved-target correction",
+  "family_status": "FORMULATION_REJECTED_FAMILY_OPEN",
+  "measured_failure_mode": "ground-plane warp fidelity: modest pose improvement is outweighed by more RGB disagreement and worse Seg distortion against the solved target",
+  "pair_range": [0, 64],
+  "n600_executed": false,
+  "n600_stop_reason": "preregistered n64 condition advected_exception_bytes_total < static_exception_bytes_total was false",
+  "equation": "frame_1_base = W_xi(frame_0_base); chart_1 = first_argmax(W_xi(onehot(chart_0)))",
+  "xi": {
+    "source": "PPCS.trajectory",
+    "source_sha256": "591baea6e83f13a2b99a157318f47cb58a0bdee5f6f310dda868c600d9c22add",
+    "source_raw_bytes": 11768,
+    "embedding": "(tx=dy,ty=ds,yaw=dpsi)->xi=(dy,0,ds,0,dpsi,0)",
+    "additional_video_derived_bytes": 0,
+    "decoder_scorer_invocations": 0
+  },
+  "lambda_star_s_per_byte": 6.658589531221714e-7,
+  "aggregate": {
+    "pair_count": 64,
+    "solved_target": {
+      "d_seg_mean": 0.00012628237419676225,
+      "d_pose_mean": 0.000060044317466950714
+    },
+    "static": {
+      "d_seg_mean": 0.007238626480102539,
+      "d_pose_mean": 187.59481859207153,
+      "exception_bytes_total": 19559060,
+      "exception_bytes_mean": 305610.3125,
+      "admitted_at_lambda_count": 64,
+      "lagrangian_delta_mean": -43.794756348815646
+    },
+    "advected": {
+      "d_seg_mean": 0.007649103790754452,
+      "d_pose_mean": 182.60628509521484,
+      "exception_bytes_total": 19739340,
+      "exception_bytes_mean": 308427.1875,
+      "admitted_at_lambda_count": 64,
+      "lagrangian_delta_mean": -43.25387332727818
+    },
+    "advected_exception_byte_delta_vs_static": 180280,
+    "advected_exception_byte_delta_pct_vs_static": 0.9217211870100162,
+    "static_changed_rgb_values_mean": 509768.96875,
+    "advected_changed_rgb_values_mean": 514020.578125,
+    "advected_changed_rgb_values_delta_mean": 4251.609375,
+    "advected_pair_rate_comparison_counts": {
+      "better": 11,
+      "equal": 3,
+      "worse": 50
+    },
+    "static_exception_coder_counts": {
+      "modular_u8_delta": 62,
+      "target_replacement": 2
+    },
+    "advected_exception_coder_counts": {
+      "modular_u8_delta": 62,
+      "target_replacement": 2
+    },
+    "xi_l2_min": 0.0,
+    "xi_l2_max": 0.052260092976030965
+  },
+  "xi_magnitude_buckets": [
+    {
+      "bucket": "q1",
+      "interval": [0.0, 0.0428688380936568],
+      "pair_count": 1,
+      "static_exception_bytes_total": 358533,
+      "advected_exception_bytes_total": 358533,
+      "advected_byte_delta_vs_static": 0
+    },
+    {
+      "bucket": "q2",
+      "interval": [0.0428688380936568, 0.043319563325800454],
+      "pair_count": 0,
+      "note": "full-n600 quartile is empty in the n64 prefix"
+    },
+    {
+      "bucket": "q3",
+      "interval": [0.043319563325800454, 0.04657008948406344],
+      "pair_count": 21,
+      "static_exception_bytes_total": 6398594,
+      "advected_exception_bytes_total": 6462640,
+      "advected_byte_delta_vs_static": 64046
+    },
+    {
+      "bucket": "q4",
+      "interval": [0.04657008948406344, 0.052260092976030965],
+      "pair_count": 42,
+      "static_exception_bytes_total": 12801933,
+      "advected_exception_bytes_total": 12918167,
+      "advected_byte_delta_vs_static": 116234
+    }
+  ],
+  "custody": {
+    "seed_path": "/Volumes/VertigoDataTier/pact/evidence/seed_compose_20260721/seeds/seed_compose_b2_loose.ppcs",
+    "seed_sha256": "a21dde38128bed7ff62860ef005b994b74202e0bd00a37d1df8824ee325e856b",
+    "gt_cache_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "target": "#549/C1 exact rational source scorer planes plus canonical factor2 realization",
+    "target_memo_sha256": "a7c23e6ce0879b6951ecc0d6434bb892c4836d398efff377a5dcba3b50791a03",
+    "old_archive_bytes_consumed": false,
+    "g1_geometry_receipt_sha256": "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089",
+    "g1_use_scope": "pitch/projection geometry only; external proxy motion was not consumed",
+    "scorer": "upstream.modules.DistortionNet.native_cpu_torch",
+    "seed_value": 1234,
+    "threads": 4,
+    "deterministic_algorithms": true,
+    "config_sha256": "8371f2329d71de06092eec5899f0e8d483eb61f63544ce2dd8650636f0df8fad"
+  },
+  "artifacts": {
+    "ssd_receipt": "/Volumes/VertigoDataTier/pact/evidence/advected_base_20260721/advected_base/receipt.json",
+    "ssd_receipt_sha256": "4a6650f2b1c8f8290a0a099fecf8fa7dd7a1d8826b5bfa72441cf553f1e676d0",
+    "stage_json_count": 64,
+    "checkpoint_count": 8,
+    "failed_attempt_preserved": "/Volumes/VertigoDataTier/pact/evidence/advected_base_20260721/failed_runs/invalid_target_replacement_assertion_f893065b3554c16edad4c013884fb85ebf05279b13122e80b87848428c558c5a",
+    "superseded_whole_plane_preserved": "/Volumes/VertigoDataTier/pact/evidence/advected_base_20260721/superseded_whole_plane_20260721T151700Z",
+    "superseded_whole_plane_receipt_sha256": "199eee1c419db5cca3e27d24729f025881ae4166a180202802b0030a941be36f"
+  }
+}
