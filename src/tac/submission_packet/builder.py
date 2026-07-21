@@ -7,8 +7,8 @@ per Phase 1 audit specification memo at
 Layer 2 (largest single layer per the spec; ~600-900 LOC).
 
 The bug class this layer extincts: ad-hoc per-substrate ``submission_dir/``
-builders that drift on (i) HNeRV parity L4 ``inflate.py`` ≤200 LOC + ≤2
-external deps + numpy-portable + CUDA-or-CPU agnostic + reviewable in 30s,
+builders that drift on (i) HNeRV parity L4 ``inflate.py`` dependency closure,
+numpy portability, CUDA-or-CPU agnosticism, and decode-time compliance,
 (ii) Catalog #205 canonical ``select_inflate_device`` routing (no inline
 device-fork without explicit waiver), (iii) Catalog #295 PYTHONPATH
 self-containment (no bare ``from tac.*`` without a vendored sister package),
@@ -96,8 +96,8 @@ _PLACEHOLDER_RATIONALES: frozenset[str] = frozenset(
     {"<rationale>", "<reason>", "<rationale_here>", "<reason_here>", ""}
 )
 
-# Per HNeRV parity L4 — inflate.py LOC + dep budgets (NON-NEGOTIABLE
-# default; explicit waiver required to exceed).
+# Historical Catalog #328 value retained for serialized-schema and caller
+# compatibility. It has no admission authority after operator 2026-07-21.
 DEFAULT_INFLATE_PY_LOC_BUDGET = 200
 DEFAULT_INFLATE_DEPS_BUDGET = 2
 
@@ -302,12 +302,10 @@ class SubmissionBundleResult:
     + :class:`tac.submission_packet.archive_grammar.ArchiveGrammarManifest`
     at the submission-packet bundling sub-surface.
 
-    Per HNeRV parity L4: the bundled inflate.py MUST be ≤200 LOC AND carry
-    ≤2 external deps AND be numpy-portable (CUDA-or-CPU agnostic, no MPS)
-    AND be reviewable in 30 seconds. Default-mode build refuses to emit a
-    bundle that violates these invariants; an explicit
-    ``inflate_loc_budget_waiver`` rationale (≥4 chars, non-placeholder per
-    Catalog #287) is required to exceed the LOC budget.
+    The bundled ``inflate.py`` is a free, unsized interpreter. Dependency
+    closure, numpy portability, device routing, and decode-time requirements
+    remain enforced. The historical LOC fields are telemetry-only schema
+    compatibility fields and never affect construction or validation.
     """
 
     schema_version: str
@@ -336,15 +334,13 @@ class SubmissionBundleResult:
     """Path to the bundled ``inflate.py`` per HNeRV parity L4."""
 
     inflate_py_loc: int
-    """Physical LOC of bundled ``inflate.py`` (must be ≤
-    :data:`DEFAULT_INFLATE_PY_LOC_BUDGET` OR carry a substantive waiver)."""
+    """Informational physical LOC of bundled ``inflate.py``."""
 
     inflate_py_loc_budget: int
-    """Operator-set LOC budget (canonical default
-    :data:`DEFAULT_INFLATE_PY_LOC_BUDGET`)."""
+    """Historical no-op value retained for schema compatibility."""
 
     inflate_py_loc_waiver_rationale: str | None
-    """Substantive rationale when ``inflate_py_loc > inflate_py_loc_budget``."""
+    """Historical no-op field retained for schema compatibility."""
 
     readme_md_path: str
     """Path to the bundled ``README.md`` with attribution chain placeholder."""
@@ -442,20 +438,6 @@ class SubmissionBundleResult:
             raise ValueError("inflate_py_loc must be non-negative")
         if self.inflate_py_loc_budget < 0:
             raise ValueError("inflate_py_loc_budget must be non-negative")
-        # HNeRV parity L4: refuse over-budget without substantive waiver.
-        if self.inflate_py_loc > self.inflate_py_loc_budget:
-            if self.inflate_py_loc_waiver_rationale is None:
-                raise ValueError(
-                    f"inflate_py_loc={self.inflate_py_loc} exceeds budget "
-                    f"{self.inflate_py_loc_budget} per HNeRV parity L4; "
-                    "non-None inflate_py_loc_waiver_rationale required"
-                )
-            stripped = self.inflate_py_loc_waiver_rationale.strip()
-            if stripped in _PLACEHOLDER_RATIONALES or len(stripped) < 4:
-                raise ValueError(
-                    f"inflate_py_loc_waiver_rationale {self.inflate_py_loc_waiver_rationale!r} "
-                    "must be substantive (>=4 chars, non-placeholder) per Catalog #287"
-                )
         if not isinstance(self.dependency_closure_manifest, DependencyClosureManifest):
             raise ValueError(
                 "dependency_closure_manifest must be a DependencyClosureManifest instance"
@@ -646,14 +628,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _count_physical_loc(source: str) -> int:
-    """Count physical lines (canonical HNeRV parity L4 metric).
-
-    Per HNeRV parity L4 the budget is "≤200 LOC". This is physical lines
-    (including blanks + comments) because the contest scorer charges
-    rate-term bytes on the bundled archive ONLY; the inflate.py LOC budget
-    is a REVIEWABILITY metric (30-second-reviewable per the canonical
-    discipline), so physical lines is the operator-facing metric.
-    """
+    """Count physical lines for informational bundle telemetry only."""
     if not source:
         return 0
     # Trailing newline is canonical per PEP 8; do not double-count.
@@ -816,7 +791,7 @@ def _emit_inflate_py(
     inflate_body: str | None = None,
     select_inflate_device_routing: str = SelectInflateDeviceRouting.INLINE_WITH_WAIVER.value,
 ) -> Path:
-    """Emit canonical inflate.py per HNeRV parity L4.
+    """Emit the canonical free, unsized ``inflate.py`` interpreter.
 
     When ``inflate_body`` is provided, the substrate's bespoke decode logic
     is interpolated into the template (canonical for per-substrate
@@ -824,8 +799,8 @@ def _emit_inflate_py(
     canonical minimal scaffold for a NEW substrate scaffold per
     UNIQUE-AND-COMPLETE-PER-METHOD operating mode.
 
-    Per HNeRV parity L4: the emitted body MUST be ≤200 LOC + ≤2 deps +
-    numpy-portable + CUDA-or-CPU-agnostic + reviewable in 30s.
+    Dependency closure, portability, device routing, and decode time remain
+    authoritative; physical source length does not.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     target = output_dir / "inflate.py"
@@ -833,7 +808,7 @@ def _emit_inflate_py(
     select_block = _emit_canonical_select_inflate_device_block()
     inflate_default = (
         f'''    # Canonical scaffold inflate.py for substrate {substrate_id}.
-    # Per HNeRV parity L4: this scaffold is ≤200 LOC + numpy-portable; the
+    # This scaffold is numpy-portable; the
     # substrate-specific decode logic is operator-routable via Phase 4
     # inflate_body= kwarg or via direct edit of this generated file.
     with open(src_bin, "rb") as f:
@@ -858,8 +833,8 @@ def _emit_inflate_py(
 
 Phase 4 Layer 2 canonical scaffold for substrate {substrate_id!r}.
 
-Per HNeRV parity L4: ≤200 LOC + ≤2 ext deps + numpy-portable + CUDA-or-CPU
-agnostic + reviewable in 30s. Per Catalog #205: canonical select_inflate_device
+Per HNeRV parity L4: ≤2 ext deps + numpy-portable + CUDA-or-CPU agnostic.
+Source length is unrestricted. Per Catalog #205: canonical select_inflate_device
 routing (inline mirror with INLINE_DEVICE_FORK_OK waiver per the canonical
 self-contained inflate-runtime contract).
 
@@ -938,7 +913,7 @@ Substrate: `{substrate_id}`
 | File | Purpose |
 |---|---|
 | `inflate.sh` | Catalog #146 3-arg signature (archive_dir / output_dir / file_list) |
-| `inflate.py` | Canonical numpy-portable decoder (≤200 LOC; CUDA-or-CPU agnostic) |
+| `inflate.py` | Canonical free, unsized numpy-portable decoder (CUDA-or-CPU agnostic) |
 | `archive.zip` | Contest-compliant archive bytes |
 | `archive_manifest.json` | Per-member identity manifest |
 | `report.txt` | Placeholder; filled by Phase 6 paired-auth-eval |
@@ -1233,12 +1208,11 @@ def build_submission_bundle(
         declared_dependencies: canonical sorted tuple of external deps the
             bundled inflate.py requires at runtime. Canonical numpy-portable
             default is ``("numpy",)``; HNeRV-class default is ``("numpy", "torch")``.
-        inflate_py_loc_budget: HNeRV parity L4 LOC budget (canonical
-            default :data:`DEFAULT_INFLATE_PY_LOC_BUDGET`).
+        inflate_py_loc_budget: historical no-op value retained for caller and
+            serialized-schema compatibility.
         inflate_deps_budget: HNeRV parity L4 deps budget (canonical
             default :data:`DEFAULT_INFLATE_DEPS_BUDGET`).
-        inflate_py_loc_waiver_rationale: substantive rationale when LOC
-            exceeds budget (≥4 chars per Catalog #287).
+        inflate_py_loc_waiver_rationale: historical no-op compatibility field.
         inflate_deps_waiver_rationale: substantive rationale when deps
             exceed budget (≥4 chars per Catalog #287).
         vendor_pythonpath_self_containment: when True (canonical default
@@ -1328,11 +1302,6 @@ def build_submission_bundle(
     )
     inflate_source = inflate_py_path.read_text(encoding="utf-8")
     inflate_py_loc = _count_physical_loc(inflate_source)
-    if inflate_py_loc > inflate_py_loc_budget and inflate_py_loc_waiver_rationale is None:
-        raise SubmissionBundleError(
-            f"HNeRV parity L4: inflate.py LOC={inflate_py_loc} exceeds budget "
-            f"{inflate_py_loc_budget}; non-None inflate_py_loc_waiver_rationale required"
-        )
 
     # Step 4: verify Catalog #295 PYTHONPATH self-containment.
     pythonpath_status = _verify_pythonpath_self_containment(

@@ -92,10 +92,9 @@ sister strict gate Catalog #320 refuses any
 HNeRV parity discipline
 =======================
 
-Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L4:
-``WynerZivLayerResult.inflate_py_loc_added`` MUST stay ≤ 100 by default (≤
-200 with explicit operator waiver). The result records the per-config LOC
-overhead so downstream consumers + Catalog #320 can audit.
+``WynerZivLayerResult.inflate_py_loc_added`` records informational source-size
+telemetry. Per operator 2026-07-21, ``inflate.py`` is free and unsized; this
+value cannot gate or rank a candidate.
 
 ## Observability surface
 
@@ -191,8 +190,8 @@ from the sister prober anchor (pr101_state_dict + pr106_state_dict at
 | **Stacked both** | — | **−0.0940** | **−0.0470** |
 
 Shannon citation: Wyner-Ziv 1976 R(D|Y) lower bound. Dykstra-feasibility
-check: side-info derivation MUST satisfy convex constraint (Comma2k19 chunk
-size ≤ disk budget AND inflate.py LOC ≤ 100). When alpha is unknown,
+check: side-info derivation MUST satisfy the disk budget plus receiver and
+payload-cleanliness constraints. When alpha is unknown,
 :func:`estimate_composition_alpha` returns 1.0 (additive prior) and the
 sister probe-disambiguator
 ``tools/probe_wyner_ziv_composition_alpha_disambiguator.py`` is the canonical
@@ -265,10 +264,10 @@ WYNER_ZIV_LAYER_RESULT_SCHEMA_VERSION = "wyner_ziv_layer_result_v1"
 #: Per CLAUDE.md "Contest scoring": canonical rate-term denominator.
 CONTEST_RATE_DENOM_BYTES: int = 37_545_489
 
-#: Per CLAUDE.md HNeRV parity L4: inflate.py ≤ 100 LOC default budget.
+#: Historical value retained for caller compatibility; never enforced.
 DEFAULT_INFLATE_PY_LOC_BUDGET: int = 100
 
-#: Per CLAUDE.md HNeRV parity L4: ≤ 200 LOC with explicit operator waiver.
+#: Historical value retained for caller compatibility; never enforced.
 DEFAULT_INFLATE_PY_LOC_WAIVER_LIMIT: int = 200
 
 
@@ -928,7 +927,7 @@ def reconstruct_from_wyner_ziv_layer(
 
 
 # ---------------------------------------------------------------------------
-# Inflate.py LOC overhead estimator
+# Informational inflate.py LOC estimator
 # ---------------------------------------------------------------------------
 
 
@@ -937,10 +936,10 @@ def estimate_inflate_py_loc_overhead(
     side_bytes_compressed_baked: int,
     compression_codec_for_side: str = "lzma",
 ) -> int:
-    """Estimate inflate.py LOC added by baking ``side_bytes_compressed_baked``.
+    """Estimate informational LOC added by ``side_bytes_compressed_baked``.
 
-    Per CLAUDE.md HNeRV parity discipline L4 (≤ 100 LOC default, ≤ 200 LOC
-    with operator waiver), this is the structural budget audit surface.
+    Source length is unrestricted. The estimate is observability only and must
+    not gate, price, or rank a candidate.
 
     Args:
         side_bytes_compressed_baked: byte count of the compressed side stream

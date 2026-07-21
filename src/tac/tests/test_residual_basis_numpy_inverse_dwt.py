@@ -40,39 +40,13 @@ def test_module_does_not_import_pywavelets() -> None:
             raise AssertionError(f"numpy_inverse_dwt imports pywt: {stripped!r}")
 
 
-def test_module_loc_within_budget() -> None:
-    """Functional LOC <= 80 per HNeRV parity discipline lesson 3."""
-    import ast
-
+def test_module_source_is_present() -> None:
+    """The inverse-DWT module remains present without a bolt-on LOC gate."""
     src_path = (
         __import__("tac.residual_basis.numpy_inverse_dwt", fromlist=["__file__"]).__file__
     )
-    src = open(src_path, encoding="utf-8").read()
-    tree = ast.parse(src)
-    lines = src.splitlines()
-    docstring_lines: set[int] = set()
-    for node in ast.walk(tree):
-        if isinstance(
-            node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
-        ):
-            body = getattr(node, "body", [])
-            if (
-                body
-                and isinstance(body[0], ast.Expr)
-                and isinstance(body[0].value, ast.Constant)
-                and isinstance(body[0].value.value, str)
-            ):
-                for ln in range(body[0].lineno, body[0].end_lineno + 1):
-                    docstring_lines.add(ln)
-    functional = 0
-    for idx, line in enumerate(lines, start=1):
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        if idx in docstring_lines:
-            continue
-        functional += 1
-    assert functional <= 80, f"functional LOC {functional} exceeds budget 80"
+    with open(src_path, encoding="utf-8") as handle:
+        assert handle.read().strip()
 
 
 # ---------------------------------------------------------------------------

@@ -12,9 +12,9 @@ Wraps :func:`tac.submission_packet.build_submission_bundle` with operator-
 friendly flags + canonical exit codes per Phase 1 audit specification memo §7.
 
 Exit codes:
-  0 CLEAN — submission bundle emitted, all HNeRV parity L4 invariants satisfied
+  0 CLEAN — submission bundle emitted, all active invariants satisfied
   1 ARCHIVE-GRAMMAR-INVALID — archive grammar manifest cannot be loaded / parsed
-  2 INFLATE-PY-OVER-LOC-BUDGET — inflate.py LOC > budget AND no waiver
+  2 RETIRED — historical inflate.py LOC exit code, never emitted
   3 DEPS-OVER-BUDGET — declared dependencies > deps budget AND no waiver
   4 PYTHONPATH-SELF-CONTAINMENT-FAILED — Catalog #295 violation
   5 CLI error (missing required arg, invalid path, etc.)
@@ -65,7 +65,7 @@ from tac.submission_packet.compression_pipeline import (  # noqa: E402
 
 EXIT_OK = 0
 EXIT_ARCHIVE_GRAMMAR_INVALID = 1
-EXIT_INFLATE_PY_OVER_LOC_BUDGET = 2
+EXIT_INFLATE_PY_OVER_LOC_BUDGET = 2  # historical compatibility; never emitted
 EXIT_DEPS_OVER_BUDGET = 3
 EXIT_PYTHONPATH_SELF_CONTAINMENT_FAILED = 4
 EXIT_CLI_ERROR = 5
@@ -77,8 +77,8 @@ def _build_parser() -> argparse.ArgumentParser:
         description=(
             "Canonical submission bundle builder (Phase 4, Layer 2). "
             "Wraps tac.submission_packet.build_submission_bundle with operator-"
-            "friendly flags. Per HNeRV parity L4: <=200 LOC inflate.py + <=2 ext "
-            "deps + numpy-portable + CUDA-or-CPU agnostic + reviewable in 30s."
+            "friendly flags. inflate.py is a free, unsized interpreter; dependency "
+            "closure, portability, device routing, and decode time remain binding."
         ),
     )
     parser.add_argument(
@@ -140,7 +140,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--inflate-py-loc-budget",
         type=int,
         default=DEFAULT_INFLATE_PY_LOC_BUDGET,
-        help="HNeRV parity L4 LOC budget for inflate.py (default 200).",
+        help="Historical no-op compatibility value; source length is unrestricted.",
     )
     parser.add_argument(
         "--inflate-deps-budget",
@@ -159,7 +159,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--inflate-py-loc-waiver-rationale",
         type=str,
         default=None,
-        help="Substantive rationale (>=4 chars, non-placeholder) when LOC > budget.",
+        help="Historical no-op compatibility field; no LOC waiver is required.",
     )
     parser.add_argument(
         "--inflate-deps-waiver-rationale",
@@ -240,14 +240,9 @@ def _render_human(bundle_dict: dict) -> str:
     lines.append(f"  inflate.sh:       {bundle_dict['inflate_sh_path']}")
     lines.append(f"  inflate.py:       {bundle_dict['inflate_py_path']}")
     lines.append(
-        f"  inflate.py LOC:   {bundle_dict['inflate_py_loc']} / "
-        f"{bundle_dict['inflate_py_loc_budget']}"
-        f" ({'WITHIN' if bundle_dict['inflate_py_loc'] <= bundle_dict['inflate_py_loc_budget'] else 'OVER'} budget)"
+        f"  inflate.py LOC:   {bundle_dict['inflate_py_loc']} "
+        "(informational; unrestricted)"
     )
-    if bundle_dict.get("inflate_py_loc_waiver_rationale"):
-        lines.append(
-            f"  inflate.py waiver:  {bundle_dict['inflate_py_loc_waiver_rationale']}"
-        )
     lines.append(f"  README.md:        {bundle_dict['readme_md_path']}")
     lines.append(f"  report.txt:       {bundle_dict['report_txt_path']}")
     lines.append(f"  archive_manifest: {bundle_dict['archive_manifest_path']}")
@@ -395,11 +390,6 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return EXIT_PYTHONPATH_SELF_CONTAINMENT_FAILED
-        if "HNeRV parity L4" in msg and "LOC" in msg:
-            print(
-                f"ERROR (HNeRV parity L4 LOC budget): {exc}", file=sys.stderr
-            )
-            return EXIT_INFLATE_PY_OVER_LOC_BUDGET
         print(f"ERROR (submission bundle invalid): {exc}", file=sys.stderr)
         return EXIT_CLI_ERROR
     except ValueError as exc:

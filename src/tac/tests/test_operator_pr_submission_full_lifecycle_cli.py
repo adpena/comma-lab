@@ -61,7 +61,13 @@ def _make_bundle(tmp_path: Path, lane_id: str = "lane_p9_test") -> SubmissionBun
     submission_dir.mkdir(parents=True, exist_ok=True)
     for name, body in (
         ("inflate.sh", "#!/bin/bash\nset -euo pipefail\necho ok\n"),
-        ("inflate.py", "# minimal inflate stub\n"),
+        (
+            "inflate.py",
+            "\n".join(
+                f"# unrestricted interpreter line {index}" for index in range(500)
+            )
+            + "\n",
+        ),
         ("README.md", "# PR submission\n\n## Submission\n\n@SajayR (PR #56)\n"),
         ("report.txt", "placeholder\n"),
         ("PR_BODY.md", "# PR\n\n@SajayR (PR #56): HNeRV substrate [contest-CUDA]\n"),
@@ -82,7 +88,7 @@ def _make_bundle(tmp_path: Path, lane_id: str = "lane_p9_test") -> SubmissionBun
         submission_dir=str(submission_dir),
         inflate_sh_path=str(submission_dir / "inflate.sh"),
         inflate_py_path=str(submission_dir / "inflate.py"),
-        inflate_py_loc=1,
+        inflate_py_loc=500,
         inflate_py_loc_budget=DEFAULT_INFLATE_PY_LOC_BUDGET,
         inflate_py_loc_waiver_rationale=None,
         readme_md_path=str(submission_dir / "README.md"),

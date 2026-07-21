@@ -4,7 +4,7 @@
 Covers:
 - ``DependencyClosureManifest`` + ``SubmissionBundleResult`` dataclass invariants.
 - End-to-end ``build_submission_bundle`` synthesizes a clean submission_dir.
-- HNeRV parity L4 inflate.py <=200 LOC + <=2 ext deps verification.
+- Free, unsized inflate.py telemetry + dependency-closure verification.
 - Catalog #205 canonical select_inflate_device routing (mirror present in
   generated inflate.py).
 - Catalog #295 PYTHONPATH self-containment (no bare ``from tac.*`` imports
@@ -309,7 +309,9 @@ class TestBuildSubmissionBundleSynthesis:
         assert Path(result.archive_manifest_path).is_file()
         assert (Path(result.submission_dir) / "archive.zip").is_file()
 
-    def test_inflate_py_within_loc_budget(self, tmp_path: Path) -> None:
+    def test_inflate_py_loc_is_informational_and_unrestricted(
+        self, tmp_path: Path
+    ) -> None:
         archive = _make_test_archive(tmp_path / "src")
         pipeline = _make_pipeline_result()
         grammar = _make_archive_grammar(archive_path=archive)
@@ -318,11 +320,12 @@ class TestBuildSubmissionBundleSynthesis:
             compression_pipeline_result=pipeline,
             archive_grammar_manifest=grammar,
             output_dir=output_dir,
+            inflate_body="\n".join(
+                f"    unrestricted_value_{index} = {index}" for index in range(500)
+            ),
         )
-        assert result.inflate_py_loc <= DEFAULT_INFLATE_PY_LOC_BUDGET, (
-            f"HNeRV parity L4: inflate.py LOC={result.inflate_py_loc} "
-            f"exceeds budget {DEFAULT_INFLATE_PY_LOC_BUDGET}"
-        )
+        assert result.inflate_py_loc > DEFAULT_INFLATE_PY_LOC_BUDGET
+        assert result.inflate_py_loc_waiver_rationale is None
 
     def test_inflate_py_numpy_portable_default(self, tmp_path: Path) -> None:
         archive = _make_test_archive(tmp_path / "src")
@@ -631,12 +634,12 @@ class TestCathedralConsumerContract:
         assert result["promotable"] is False
         assert result["axis_tag"] == "[predicted]"
 
-    def test_consumer_blocked_verdict_when_over_loc_budget(self) -> None:
+    def test_consumer_does_not_block_on_informational_loc(self) -> None:
         import tac.cathedral_consumers.submission_bundle_builder_consumer as m
 
         candidate = {
             "submission_bundle_result": {
-                "inflate_py_loc": 300,  # over budget
+                "inflate_py_loc": 500,
                 "inflate_py_loc_budget": 200,
                 "dependency_closure_manifest": {
                     "within_budget": True,
@@ -648,8 +651,8 @@ class TestCathedralConsumerContract:
             },
         }
         result = m.consume_candidate(candidate)
-        assert result["readiness_verdict"] == "BLOCKED"
-        assert "HNeRV parity L4" in result["rationale"]
+        assert result["readiness_verdict"] == "READY"
+        assert "informational" in result["rationale"]
 
     def test_consumer_unknown_verdict_when_no_metadata(self) -> None:
         import tac.cathedral_consumers.submission_bundle_builder_consumer as m

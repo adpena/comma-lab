@@ -30,7 +30,7 @@ Contest contract (Catalog #146):
 CLAUDE.md compliance:
 * No scorer load. No /tmp paths. No score claim. No KILL verdict.
 * score_claim / promotion_eligible / ready_for_exact_eval_dispatch = False.
-* HNeRV parity discipline lesson 4: ≤200 LOC budget.
+* Source length is unrestricted; receiver and payload-cleanliness gates bind.
 """
 from __future__ import annotations
 

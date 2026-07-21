@@ -8,19 +8,18 @@
 
 The check refuses Level 1+ promotion of representation/codec lanes
 (NeRV / HNeRV / Cool-Chic / C3 / wavelet / VQ-VAE / grayscale-LUT / SIREN /
-hyperprior / etc.) without 8 design-time evidence fields:
+hyperprior / etc.) without 6 design-time evidence fields:
 
-  archive_grammar, parser_section_manifest, inflate_runtime_loc_budget,
-  runtime_dep_closure, export_format, score_aware_loss, bolt_on_loc_budget,
-  no_op_detector_planned
+  archive_grammar, parser_section_manifest, runtime_dep_closure, export_format,
+  score_aware_loss, no_op_detector_planned
 
 Two opt-outs (per HNeRV parity discipline lessons 2 + 7):
   - lane_class=substrate_engineering
   - research_only=true
 
 This test set verifies:
-  1. Each of the 8 fields missing → WARN (not RAISE) in non-strict
-  2. All 8 fields present → no warning
+  1. Each of the 6 fields missing → WARN (not RAISE) in non-strict
+  2. All 6 fields present → no warning
   3. Opt-outs (lane_class=substrate_engineering, research_only=true) → no warning
   4. Non-representation lanes → no warning regardless
   5. STRICT mode → RAISE PreflightError with formatted message
@@ -122,21 +121,19 @@ def _representation_lane(
     return lane
 
 
-def _all_8_fields() -> dict:
-    """Return a dict with all 8 required fields populated."""
+def _all_required_fields() -> dict:
+    """Return a dict with all six active required fields populated."""
     return {
         "archive_grammar": "monolithic_single_file_0_bin",
         "parser_section_manifest": "experiments/results/foo/parser.json",
-        "inflate_runtime_loc_budget": 80,
         "runtime_dep_closure": ["brotli"],
         "export_format": "brotli_quantized_with_lzma_latents",
         "score_aware_loss": "score-domain (gradient-through-FastViT-T12 PoseNet)",
-        "bolt_on_loc_budget": 350,
         "no_op_detector_planned": True,
     }
 
 
-# ── Test 1-8: each field missing → WARN ──────────────────────────────────
+# ── Each active field missing → WARN ─────────────────────────────────────
 
 
 @pytest.mark.parametrize("missing_field", list(_REPRESENTATION_LANE_REQUIRED_FIELDS))
@@ -144,7 +141,7 @@ def test_each_field_missing_individually_warns(
     tmp_path: Path, missing_field: str,
 ) -> None:
     """Drop one field at a time; check warns for each."""
-    fields = _all_8_fields()
+    fields = _all_required_fields()
     del fields[missing_field]
     lane = _representation_lane(extra=fields)
     repo = _make_repo(tmp_path, [lane])
@@ -159,11 +156,11 @@ def test_each_field_missing_individually_warns(
     assert "lane_test_nerv" in violations[0]
 
 
-# ── Test 9: all 8 fields present → no warning ────────────────────────────
+# ── All active fields present → no warning ───────────────────────────────
 
 
-def test_all_8_fields_present_no_warning(tmp_path: Path) -> None:
-    lane = _representation_lane(extra=_all_8_fields())
+def test_all_required_fields_present_no_warning(tmp_path: Path) -> None:
+    lane = _representation_lane(extra=_all_required_fields())
     repo = _make_repo(tmp_path, [lane])
     violations = check_representation_lane_has_archive_grammar_at_design_time(
         repo_root=repo, strict=False, verbose=False,
@@ -271,7 +268,7 @@ def test_strict_mode_raises_with_formatted_message(tmp_path: Path) -> None:
 
 
 def test_strict_mode_no_violations_does_not_raise(tmp_path: Path) -> None:
-    lane = _representation_lane(extra=_all_8_fields())
+    lane = _representation_lane(extra=_all_required_fields())
     repo = _make_repo(tmp_path, [lane])
     # Should not raise
     violations = check_representation_lane_has_archive_grammar_at_design_time(
@@ -297,14 +294,14 @@ def test_level_0_lane_no_warning(tmp_path: Path) -> None:
 
 
 def test_lane_with_no_evidence_dict_warns(tmp_path: Path) -> None:
-    """Lane with no top-level fields and no evidence dict warns on all 8."""
+    """Lane with no evidence warns on every active required field."""
     lane = _representation_lane(extra={})  # no fields at all
     repo = _make_repo(tmp_path, [lane])
     violations = check_representation_lane_has_archive_grammar_at_design_time(
         repo_root=repo, strict=False, verbose=False,
     )
     assert len(violations) == 1
-    # All 8 fields should be in the violation message
+    # Every active field should be in the violation message.
     for f in _REPRESENTATION_LANE_REQUIRED_FIELDS:
         assert f in violations[0]
 
@@ -313,7 +310,7 @@ def test_lane_with_no_evidence_dict_warns(tmp_path: Path) -> None:
 
 
 def test_field_discovery_via_top_level(tmp_path: Path) -> None:
-    fields = _all_8_fields()
+    fields = _all_required_fields()
     lane = _representation_lane(extra=fields)
     repo = _make_repo(tmp_path, [lane])
     violations = check_representation_lane_has_archive_grammar_at_design_time(
@@ -323,7 +320,7 @@ def test_field_discovery_via_top_level(tmp_path: Path) -> None:
 
 
 def test_field_discovery_via_evidence_dict(tmp_path: Path) -> None:
-    fields = _all_8_fields()
+    fields = _all_required_fields()
     lane = _representation_lane(extra={"evidence": fields})
     repo = _make_repo(tmp_path, [lane])
     violations = check_representation_lane_has_archive_grammar_at_design_time(
@@ -333,7 +330,7 @@ def test_field_discovery_via_evidence_dict(tmp_path: Path) -> None:
 
 
 def test_field_discovery_via_design_evidence_dict(tmp_path: Path) -> None:
-    fields = _all_8_fields()
+    fields = _all_required_fields()
     lane = _representation_lane(extra={"design_evidence": fields})
     repo = _make_repo(tmp_path, [lane])
     violations = check_representation_lane_has_archive_grammar_at_design_time(
@@ -349,11 +346,9 @@ def test_field_discovery_via_gate_evidence_string(tmp_path: Path) -> None:
         "src/tac/fake.py — design notes: "
         "archive_grammar=monolithic_0_bin; "
         "parser_section_manifest=parsers/foo.json; "
-        "inflate_runtime_loc_budget=80; "
         "runtime_dep_closure=[brotli]; "
         "export_format=fp4a_brotli; "
         "score_aware_loss=score-domain (gradient-through-PoseNet); "
-        "bolt_on_loc_budget=350; "
         "no_op_detector_planned=true"
     )
     gates["impl_complete"]["evidence"] = inline_evidence
@@ -545,18 +540,16 @@ def test_lane_has_field_returns_false_when_absent() -> None:
 
 
 def test_lane_has_field_inline_in_notes_string() -> None:
-    """Subagent C (Lane 12-v2) declares the 8 fields inline in notes."""
+    """A lane can declare the six active fields inline in notes."""
     lane = {
         "id": "x",
         "notes": (
             "Re-scoped per HNeRV retrospective. "
             "archive_grammar=monolithic_0_bin "
             "parser_section_manifest=ARCHIVE_GRAMMAR_constant_in_module "
-            "inflate_runtime_loc_budget=100 "
             "runtime_dep_closure=torch+brotli "
             "export_format=monolithic_single_file_0_bin "
             "score_aware_loss=gradient_through_PoseNet+SegNet "
-            "bolt_on_loc_budget=350 "
             "no_op_detector_planned=true_via_inflate_roundtrip"
         ),
     }
@@ -569,11 +562,9 @@ def test_field_discovery_via_notes_string_lane_passes(tmp_path: Path) -> None:
         "notes": (
             "archive_grammar=monolithic_0_bin "
             "parser_section_manifest=parser.json "
-            "inflate_runtime_loc_budget=100 "
             "runtime_dep_closure=brotli "
             "export_format=fp4a "
             "score_aware_loss=score-domain "
-            "bolt_on_loc_budget=350 "
             "no_op_detector_planned=true"
         ),
     })
@@ -614,7 +605,7 @@ def test_verbose_mode_does_not_crash(tmp_path: Path, capsys) -> None:
 
 
 def test_verbose_mode_clean_lane_prints_ok(tmp_path: Path, capsys) -> None:
-    lane = _representation_lane(extra=_all_8_fields())
+    lane = _representation_lane(extra=_all_required_fields())
     repo = _make_repo(tmp_path, [lane])
     check_representation_lane_has_archive_grammar_at_design_time(
         repo_root=repo, strict=False, verbose=True,
@@ -623,23 +614,16 @@ def test_verbose_mode_clean_lane_prints_ok(tmp_path: Path, capsys) -> None:
     assert "OK" in captured.out
 
 
-# ── FIX-A 2026-05-12: ZZZZZ Medium fix — `<=`/`>=` operator acceptance ────
-#
-# The original `_lane_has_field` matcher only accepted `<field>=` /
-# `<field>:` separators. Two in-flight substrates (`cool_chic`, `wavelet`)
-# declare `inflate_runtime_loc_budget<=100 LOC` and would false-positive
-# bomb the gate on L1 promotion. The hardened matcher now accepts
-# `<=` / `>=` / `=` / `:`.
+# ── Generic inline-field separator acceptance ────────────────────────────
 
 
 def test_le_operator_in_notes_counts_as_declared() -> None:
-    """`<field><=value>` form (e.g. `inflate_runtime_loc_budget<=100`) is
-    accepted as a declaration. Regression for the ZZZZZ Medium gap."""
+    """`<field><=value>` remains accepted for active evidence fields."""
     lane = {
         "id": "lane_test_nerv",
-        "notes": "inflate_runtime_loc_budget<=100 LOC",
+        "notes": "archive_grammar<=monolithic",
     }
-    assert _lane_has_field(lane, "inflate_runtime_loc_budget"), (
+    assert _lane_has_field(lane, "archive_grammar"), (
         "`<=` operator in notes must count as a declaration"
     )
 
@@ -648,9 +632,9 @@ def test_ge_operator_in_notes_counts_as_declared() -> None:
     """`<field>>=<value>` form is also accepted."""
     lane = {
         "id": "lane_test_nerv",
-        "notes": "bolt_on_loc_budget>=350 LOC",
+        "notes": "score_aware_loss>=score-domain",
     }
-    assert _lane_has_field(lane, "bolt_on_loc_budget"), (
+    assert _lane_has_field(lane, "score_aware_loss"), (
         "`>=` operator in notes must count as a declaration"
     )
 
@@ -662,27 +646,25 @@ def test_le_operator_in_gate_evidence_counts_as_declared() -> None:
         "gates": {
             "impl_complete": {
                 "status": True,
-                "evidence": "inflate_runtime_loc_budget<=100 LOC",
+                "evidence": "parser_section_manifest<=parser.json",
             },
         },
     }
-    assert _lane_has_field(lane, "inflate_runtime_loc_budget"), (
+    assert _lane_has_field(lane, "parser_section_manifest"), (
         "`<=` operator in gate evidence must count as a declaration"
     )
 
 
 def test_le_operator_full_lane_passes_check(tmp_path: Path) -> None:
-    """End-to-end: representation lane declaring all 8 fields using
+    """End-to-end: representation lane declaring all active fields using
     `<=` operators throughout passes the gate (no violation)."""
     lane = _representation_lane(extra={
         "notes": (
             "archive_grammar=monolithic_0_bin "
             "parser_section_manifest=parser.json "
-            "inflate_runtime_loc_budget<=100 "
             "runtime_dep_closure=brotli "
             "export_format=fp4a "
             "score_aware_loss=score-domain "
-            "bolt_on_loc_budget<=350 "
             "no_op_detector_planned=true"
         ),
     })
@@ -691,24 +673,20 @@ def test_le_operator_full_lane_passes_check(tmp_path: Path) -> None:
         repo_root=repo, strict=False, verbose=False,
     )
     assert violations == [], (
-        "Lane declaring all 8 fields with mix of `=` and `<=` separators "
+        "Lane declaring all active fields with mixed separators "
         "must not violate Catalog #124."
     )
 
 
-def test_cool_chic_wavelet_style_notes_no_false_positive(tmp_path: Path) -> None:
-    """Cool-Chic / wavelet substrate-style notes (with `<=`) must pass
-    when all 8 fields are declared. This is the exact ZZZZZ scenario:
-    `inflate_runtime_loc_budget<=100 LOC` was previously rejected."""
+def test_retired_loc_fields_are_not_required(tmp_path: Path) -> None:
+    """Catalog #124 must admit a lane that omits both retired LOC fields."""
     cool_chic_notes = (
         "research_only=true; substrate_engineering exception per HNeRV L7; "
         "archive_grammar=CCV1 monolithic single-file 0.bin fixed offsets; "
         "parser_section_manifest=parse_archive() returns 5 tuple; "
-        "inflate_runtime_loc_budget<=100 LOC; "
         "runtime_dep_closure=torch+brotli; "
         "export_format=brotli(state_dicts)+int16(latents); "
         "score_aware_loss=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose); "
-        "bolt_on_loc_budget=~530 LOC (substrate_engineering tag); "
         "no_op_detector_planned=Catalog #139 byte-mutation smoke"
     )
     lane = _representation_lane(
@@ -716,17 +694,11 @@ def test_cool_chic_wavelet_style_notes_no_false_positive(tmp_path: Path) -> None
         name="Cool-Chic substrate scaffold",
         extra={"notes": cool_chic_notes},
     )
-    # Note: lane is research_only=true in the live registry which exempts
-    # it via _NON_REPRESENTATION_LANE_CLASSES or research_only check. Here
-    # we simulate the post-promotion case (research_only stripped) to
-    # confirm the matcher accepts the `<=` declaration.
     repo = _make_repo(tmp_path, [lane])
     violations = check_representation_lane_has_archive_grammar_at_design_time(
         repo_root=repo, strict=False, verbose=False,
     )
     assert violations == [], (
-        "Cool-Chic style notes with `inflate_runtime_loc_budget<=100 LOC` "
-        "must pass; the original matcher would have flagged this lane "
-        "as missing `inflate_runtime_loc_budget` because it only matched "
-        "`=` / `:` separators."
+        "A representation lane with all six active fields must pass without "
+        "declaring inflate_runtime_loc_budget or bolt_on_loc_budget."
     )

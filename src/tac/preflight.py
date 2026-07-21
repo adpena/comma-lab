@@ -2873,19 +2873,6 @@ def preflight_all(
         check_submission_inflate_works_with_empty_pythonpath(
             strict=True, verbose=verbose,
         )
-        # 2026-05-18 Catalog #328 - SUBMISSION INFLATE.PY LOC BUDGET AUDIT.
-        # The T3 inflate.py extreme-compression symposium correctly found
-        # that the contest rate term charges archive.zip bytes, not inflate.py
-        # source bytes. Keep the source-size discipline as a review/runtime-
-        # closure guard instead of a score claim: direct submissions whose
-        # inflate.py exceeds 200 physical lines should extract reusable helpers
-        # or carry an explicit source-faithful/runtime-closure waiver.
-        # Initial wire-in is WARN-ONLY because live submissions still include
-        # known >200 LOC runtimes; strict-flip after OP-2/OP-5 cleanup drives
-        # the count to 0.
-        check_submission_inflate_py_under_loc_budget(
-            strict=False, verbose=verbose,
-        )
         # 2026-05-16 Catalog #296 - SUBSTRATE PREDICTED-BAND HAS DYKSTRA-
         # FEASIBILITY CHECK. Empirical anchor: NSCS06 v6 dispatch landed
         # 105.15 vs predicted [0.10, 0.20] (553x OUTSIDE band) because
@@ -3746,17 +3733,17 @@ def preflight_all(
         )
         # 2026-05-09 HNeRV parity discipline (#124): representation/codec
         # lanes (NeRV / HNeRV / Cool-Chic / C3 / wavelet / VQ-VAE / etc.)
-        # at Lane Maturity Level 1+ MUST declare the 8 design-time evidence
-        # fields (archive_grammar, parser_section_manifest,
-        # inflate_runtime_loc_budget, runtime_dep_closure, export_format,
-        # score_aware_loss, bolt_on_loc_budget, no_op_detector_planned)
+        # at Lane Maturity Level 1+ MUST declare the 6 active design-time
+        # evidence fields (archive_grammar, parser_section_manifest,
+        # runtime_dep_closure, export_format, score_aware_loss,
+        # no_op_detector_planned)
         # OR opt out via lane_class='substrate_engineering' / research_only.
         # 2026-05-09 STRICT-FLIP: adc4c39c backfill landed all 7 flagged
         # lanes (live count 7->0); operator-approved per "fix all yourself"
         # directive. Phase 2 lanes (T1/T6/T10/T15/T17/T18) pre-registered
         # at L0 SKETCH with research_only=true UNTIL Phase 1 lands sub-0.155.
         # Ratchet protects against future representation lanes promoting to
-        # L1+ without the 8 archive-grammar fields. Memory:
+        # L1+ without the active archive-grammar fields. Memory:
         # feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md
         # + feedback_representation_lane_8_field_backfill_landed_20260509.md.
         check_representation_lane_has_archive_grammar_at_design_time(
@@ -39666,15 +39653,14 @@ _NON_REPRESENTATION_LANE_CLASSES = frozenset({
     "autopilot_plumbing",
 })
 
-# Required 8 design-time evidence fields per the HNeRV retrospective §10.
+# Active design-time evidence fields per the HNeRV retrospective §10. Operator
+# 2026-07-21 retired both LOC-budget declarations; the remaining six bind.
 _REPRESENTATION_LANE_REQUIRED_FIELDS = (
     "archive_grammar",
     "parser_section_manifest",
-    "inflate_runtime_loc_budget",
     "runtime_dep_closure",
     "export_format",
     "score_aware_loss",
-    "bolt_on_loc_budget",
     "no_op_detector_planned",
 )
 
@@ -39728,27 +39714,16 @@ def _lane_is_representation_lane(lane: dict) -> bool:
 
 
 # FIX-A 2026-05-12 (ZZZZZ Medium fix): Catalog #124 _lane_has_field
-# inline-string matcher must accept `<=` / `>=` operators in addition to
-# `=` / `:`. Two in-flight substrates (`lane_substrate_cool_chic_20260512`,
-# `lane_substrate_wavelet_20260512`) declare
-# `inflate_runtime_loc_budget<=100 LOC` - with `<=` - and a 3rd
-# (`lane_packet_compiler_5_pr63_64_65_105_primitives`) uses
-# `bolt_on_loc_budget<=300`. Both are currently `research_only=true` so
-# the gate exempts them, but if either promotes to L1 the original
-# matcher would false-positive bomb. Accept all 4 separators here so
-# `inflate_runtime_loc_budget<=100`, `bolt_on_loc_budget<=300`,
-# `inflate_runtime_loc_budget>=200`, etc. all count as declared.
+# inline-string matcher accepts `<=` / `>=` operators in addition to `=` / `:`.
+# This remains generic parser behavior for non-LOC evidence fields.
 _LANE_FIELD_SEPARATORS: tuple[str, ...] = ("<=", ">=", "=", ":")
 
 
 def _field_declared_in_text(field: str, text: str) -> bool:
     """Return True iff `text` contains `<field><sep>` where sep is in
     `_LANE_FIELD_SEPARATORS`. Order matters: check 2-char operators
-    (`<=` / `>=`) BEFORE 1-char (`=` / `:`) so `inflate_runtime_loc_budget<=100`
-    matches `<=` first instead of letting the bare `=` (which is also
-    present in `<=`) succeed via the suffix path. Both behaviors yield
-    True in the current call sites, so the ordering is documentation
-    rather than correctness - but it keeps the intent explicit.
+    (`<=` / `>=`) BEFORE 1-char (`=` / `:`). Both orders yield True in the
+    current call sites, but the ordering keeps the parser intent explicit.
     """
     if not isinstance(text, str) or not text:
         return False
@@ -39774,8 +39749,7 @@ def _lane_has_field(lane: dict, field: str) -> bool:
     existing gate's evidence string OR inside the lane's notes blob. Per
     CLAUDE.md "Beauty, simplicity, and developer experience": accept either
     ergonomic. `<=` / `>=` are accepted in addition to `=` / `:` per
-    FIX-A 2026-05-12 (ZZZZZ audit Medium) so budget declarations like
-    `inflate_runtime_loc_budget<=100 LOC` count as declared.
+    FIX-A 2026-05-12 (ZZZZZ audit Medium).
     """
     # Top-level
     if field in lane and lane[field] not in (None, ""):
@@ -39815,23 +39789,21 @@ def check_representation_lane_has_archive_grammar_at_design_time(
 
     Refuses Level 1+ promotion of representation/codec lanes (NeRV / HNeRV /
     Cool-Chic / C3 / wavelet / VQ-VAE / grayscale-LUT / SIREN / hyperprior /
-    etc.) without 8 declared evidence fields per HNeRV parity discipline
+    etc.) without 6 declared evidence fields per HNeRV parity discipline
     forbidden pattern #4:
 
         archive_grammar
         parser_section_manifest
-        inflate_runtime_loc_budget
         runtime_dep_closure
         export_format
         score_aware_loss
-        bolt_on_loc_budget
         no_op_detector_planned
 
     Opt-outs (per HNeRV parity discipline lessons 2 + 7):
       - ``lane_class=substrate_engineering`` (top-level on lane dict)
       - ``research_only=true`` (top-level on lane dict)
 
-    Acceptance locations for the 8 fields (any one suffices per field):
+    Acceptance locations for the 6 fields (any one suffices per field):
       - top-level on the lane dict
       - under ``lane["evidence"][field]``
       - under ``lane["design_evidence"][field]``
@@ -71098,12 +71070,8 @@ def check_submission_inflate_works_with_empty_pythonpath(
 # ============================================================================
 # Catalog #328 - check_submission_inflate_py_under_loc_budget
 # ============================================================================
-# The 2026-05-18 inflate.py extreme-compression symposium resolved a subtle
-# authority problem: compressing Python source does NOT improve contest score
-# because the scorer charges `archive.zip` bytes, not runtime source bytes.
-# Source size still matters as a review/runtime-closure constraint. This gate
-# keeps direct `submissions/*/inflate.py` files small enough to audit and nudges
-# large runtimes toward reusable helpers or explicit waivers.
+# Historical symbol retained for import compatibility. The operator permanently
+# removed the line-count restriction on 2026-07-21.
 # ============================================================================
 
 
@@ -71114,57 +71082,18 @@ def check_submission_inflate_py_under_loc_budget(
     strict: bool = False,
     verbose: bool = False,
 ) -> list[str]:
-    """Catalog #328 - flag direct submission ``inflate.py`` files over budget.
+    """Permanent no-op for the retired Catalog #328 line-count restriction.
 
-    This is deliberately not score evidence. The contest rate term charges
-    archive bytes. The budget exists to prevent source-review opacity, hidden
-    dependency creep, and cargo-culted "compress inflate.py" score claims.
+    Operator decision 2026-07-21: ``inflate.py`` is a free, unsized
+    interpreter. Rule-118 anti-fake enforcement remains with Catalog #417
+    receiver-consumption bijection plus ``embedded_constants_audit``,
+    ``archive_payload_manifest``, and ``python_reference_equivalence_test``;
+    source LOC has no admission authority. The arguments and symbol remain for
+    compatibility and this function always returns ``[]``.
     """
 
-    from tac.submission_inflate_loc_budget import (
-        scan_submission_inflate_py_loc_budget,
-    )
-
-    root = repo_root or REPO_ROOT
-    if isinstance(root, str):
-        root = Path(root)
-    findings = scan_submission_inflate_py_loc_budget(
-        root,
-        max_lines=max_lines,
-    )
-    violations = [finding.format() for finding in findings]
-    hard_count = sum(1 for finding in findings if finding.budget_tier == "hard_budget")
-    default_count = sum(1 for finding in findings if finding.budget_tier == "default_budget")
-
-    if verbose:
-        if violations:
-            print(
-                f"  [check_submission_inflate_py_under_loc_budget] "
-                f"{len(violations)} finding(s): {hard_count} over hard "
-                f"{max_lines}-line budget, {default_count} over default "
-                "100-line review target (warn-only until cleanup):"
-            )
-            for violation in violations[:10]:
-                print(f"    - {violation[:280]}")
-        else:
-            print(
-                f"  [check_submission_inflate_py_under_loc_budget] OK "
-                f"(all direct submissions/inflate.py files <= {max_lines} lines)"
-            )
-
-    if violations and strict:
-        raise PreflightError(
-            "check_submission_inflate_py_under_loc_budget found "
-            f"{len(violations)} direct submission inflate.py file(s) over "
-            f"{max_lines} physical lines per Catalog #328. This is a "
-            "review/runtime-closure guard, not a score claim: the contest "
-            "charges archive.zip bytes. Extract reusable runtime helpers, "
-            "remove dead source, or add an explicit "
-            "`# INFLATE_PY_LOC_BUDGET_OK:<rationale>` waiver in the first "
-            "40 lines for a source-faithful exception:\n  "
-            + "\n  ".join(v[:400] for v in violations[:5])
-        )
-    return violations
+    _ = (repo_root, max_lines, strict, verbose)
+    return []
 
 
 # ============================================================================

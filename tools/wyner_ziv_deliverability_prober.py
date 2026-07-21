@@ -12,9 +12,8 @@
                    autopilot consumer whose positive PAIR_INVARIANT reward is
                    now DeliverabilityProof-gated; this prober audits the
                    legacy blanket 1.15 reward assumption]
-[verified-against: CLAUDE.md "HNeRV / leaderboard-implementation parity
-                   discipline" L4 (inflate.py ≤ 100 LOC default budget) +
-                   L9 (runtime closure)]
+[verified-against: operator directive 2026-07-21 (inflate.py source length
+                   unrestricted) + HNeRV L9 (runtime closure)]
 [verified-against: empirical anchor — fec6 archive sha
                    f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd]
 
@@ -29,15 +28,15 @@ substrates per `adjust_predicted_delta_for_venn_classification`. Catalog #319
 now gates positive reward through DeliverabilityProof. **Any positive reward
 still assumes the hoist is DELIVERABLE.**
 
-The 100-LOC inflate.py budget (HNeRV parity L4) is INTERNAL discipline,
-NOT a contest rule — the contest charges only `archive.zip` bytes (rate
+Inflate.py source length is unrestricted. The contest charges only
+`archive.zip` bytes (rate
 term = ``25 * archive_bytes / 37_545_489`` per CLAUDE.md). Bytes hoisted
 to a side-info channel that the inflate runtime can reconstruct
 deterministically are STILL CHARGEABLE if they end up in `archive.zip` and
 RECOVERABLE if they don't. The deliverability question is: given
 178,417 archive bytes whose CSP subset is 162,123 bytes, can we move
-those 162,123 bytes into a smaller inflate.py constant blob without
-exceeding T4 timeout and without scorer-load?
+those 162,123 bytes into a receiver-clean representation without code-smuggling,
+exceeding T4 timeout, or scorer-load?
 
 This prober empirically measures the 4 deliverability axes:
 
@@ -155,9 +154,8 @@ CONTEST_T4_TIMEOUT_SECONDS = 30 * 60  # contest T4 hard cap
 WYNER_ZIV_CORRELATION_THRESHOLD_HIGH = 0.8
 WYNER_ZIV_CORRELATION_THRESHOLD_LOW = 0.2
 
-# Tier budgets (operator-tunable; defaults from CLAUDE.md "HNeRV parity
-# discipline" L4 — ≤ 100 LOC default inflate budget; ≤ 200 LOC with
-# explicit waiver).
+# Counted-payload tier budgets. These bound video-derived bytes and are
+# independent of the retired ``inflate.py`` source-length restriction.
 DEFAULT_TIER2_BUDGET_BYTES = 5 * 1024  # ≤ 5 KB constants in canonical inflate
 DEFAULT_TIER3_BUDGET_BYTES = 200 * 1024  # ≤ 200 KB with waiver
 
@@ -424,7 +422,7 @@ def classify_csp_bytes_into_tiers(
         bytes first; the budget is a hard cap).
     Tier 3 (waiver-required): bytes whose cumulative lzma-compressed size
         exceeds tier_2_budget but is ≤ tier_3_budget. Requires explicit
-        inflate.py LOC waiver per HNeRV parity L4 (≤ 200 LOC).
+        payload review because these bytes may be video-derived.
     Tier 4 (forbidden / scorer-bound): bytes whose per-pair gradient on
         seg-OR-pose axes is dominant by `tier_4_scorer_axis_dominance_ratio`
         AND the aggregate magnitude is high. These bytes encode

@@ -26,7 +26,7 @@ Exit codes:
   1 FORBIDDEN-TOKEN (Claude / Anthropic / Co-Authored / claude.com / anthropic.com)
   2 FIRST-PERSON-PLURAL (we / our / us)
   3 EMDASH (U+2014 forbidden)
-  4 INFLATE-PY-OVER-BUDGET (HNeRV parity L4 violation)
+  4 RETIRED (historical inflate.py LOC exit code, never emitted)
   5 TONE-VIOLATION (marketing flourish / emoji / sign-off bromide / AI-tell)
   6 CLI ERROR (malformed args / missing files / parse failure)
 
@@ -67,7 +67,7 @@ EXIT_LINT_CLEAN = 0
 EXIT_FORBIDDEN_TOKEN = 1
 EXIT_FIRST_PERSON_PLURAL = 2
 EXIT_EMDASH = 3
-EXIT_INFLATE_PY_OVER_BUDGET = 4
+EXIT_INFLATE_PY_OVER_BUDGET = 4  # historical compatibility; never emitted
 EXIT_TONE_VIOLATION = 5
 EXIT_CLI_ERROR = 6
 
@@ -79,8 +79,7 @@ def _exit_code_from_verdict(verdict: LintVerdict) -> int:
       1. forbidden_token_* → 1
       2. first_person_plural_* → 2
       3. emdash_u2014 → 3
-      4. inflate_py_loc_over_budget → 4
-      5. tone_* / emoji_* → 5
+      4. tone_* / emoji_* → 5
       6. any other ERROR finding → 1 (default forbidden-token bucket)
       0. clean → 0
     """
@@ -101,11 +100,6 @@ def _exit_code_from_verdict(verdict: LintVerdict) -> int:
             continue
         if finding.rule == "emdash_u2014":
             return EXIT_EMDASH
-    for finding in verdict.findings:
-        if finding.severity != LintSeverity.ERROR.value:
-            continue
-        if finding.rule == "inflate_py_loc_over_budget":
-            return EXIT_INFLATE_PY_OVER_BUDGET
     for finding in verdict.findings:
         if finding.severity != LintSeverity.ERROR.value:
             continue
@@ -133,9 +127,6 @@ def _exit_code_from_findings_only(findings) -> int:
     for f in errors:
         if f.rule == "emdash_u2014":
             return EXIT_EMDASH
-    for f in errors:
-        if f.rule == "inflate_py_loc_over_budget":
-            return EXIT_INFLATE_PY_OVER_BUDGET
     for f in errors:
         if f.rule.startswith("tone_") or f.rule.startswith("emoji_"):
             return EXIT_TONE_VIOLATION
@@ -243,10 +234,7 @@ def main(argv: list[str] | None = None) -> int:
         "--inflate-py-loc-waiver-rationale",
         type=str,
         default=None,
-        help=(
-            "Substantive waiver rationale (>=4 chars, non-placeholder per "
-            "Catalog #287) when inflate.py exceeds the HNeRV parity L4 LOC budget."
-        ),
+        help="Historical no-op compatibility field; source length is unrestricted.",
     )
     parser.add_argument(
         "--json",

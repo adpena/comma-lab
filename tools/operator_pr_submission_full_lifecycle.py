@@ -1050,12 +1050,6 @@ def run_composite_lifecycle(args: argparse.Namespace) -> tuple[int, dict[str, An
     inflate_py_loc = _count_loc(inflate_py)
     inflate_py_loc_budget = DEFAULT_INFLATE_PY_LOC_BUDGET
     inflate_py_loc_waiver = None
-    if inflate_py_loc > inflate_py_loc_budget:
-        inflate_py_loc_waiver = (
-            f"composite inflate.py uses {len(sections)} substrate decoders + "
-            "canonical contest-output upsample per Catalog #367; "
-            "substrate-engineering exception per HNeRV parity L7"
-        )
     provenance = _build_composite_provenance(recipe_path, archive_sha)
     report["layers"]["composite_archive_resolution"] = {
         "ok": True,
@@ -1064,7 +1058,7 @@ def run_composite_lifecycle(args: argparse.Namespace) -> tuple[int, dict[str, An
         "section_count": len(sections),
         "section_names": [s["section_name"] for s in sections],
         "inflate_py_loc": inflate_py_loc,
-        "inflate_py_loc_budget": inflate_py_loc_budget,
+        "inflate_py_loc_status": "informational_unrestricted",
     }
 
     # ---- Layer 0+1 STRUCTURAL_EXEMPTION (composite has no single trainer) ----
@@ -1666,7 +1660,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--inflate-py-loc-waiver-rationale", default=None,
-        help="Substantive rationale (>=4 chars) when inflate.py LOC > budget.",
+        help="Historical no-op compatibility field; inflate.py LOC is unrestricted.",
     )
     parser.add_argument(
         "--competitive-or-innovative-statement", default=None,

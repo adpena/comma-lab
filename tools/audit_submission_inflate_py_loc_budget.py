@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Audit direct submission ``inflate.py`` files against a source LOC budget.
+"""Compatibility CLI for the retired submission ``inflate.py`` LOC audit.
 
-This is a review-surface guard. The contest score charges ``archive.zip`` bytes;
-large ``inflate.py`` files are flagged because they are hard to review and tend
-to hide runtime-closure bugs, not because trimming Python source lowers score.
+The operator permanently removed the line-count restriction on 2026-07-21.
+This command remains callable for old automation, always reports the retired
+status, and always exits zero. Anti-fake enforcement remains in #417 and the
+payload-cleanliness audit bundle.
 """
 
 from __future__ import annotations
@@ -12,7 +13,6 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -69,8 +69,6 @@ def main(argv: list[str] | None = None) -> int:
         max_lines=args.max_lines,
         review_target_lines=args.review_target_lines,
     )
-    hard_count = sum(1 for finding in findings if finding.budget_tier == "hard_budget")
-    default_count = sum(1 for finding in findings if finding.budget_tier == "default_budget")
     if args.json:
         print(
             json.dumps(
@@ -79,11 +77,13 @@ def main(argv: list[str] | None = None) -> int:
                     "generated_at_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "git_head": _git_head(root),
                     "repo_root": str(root),
+                    "restriction_status": "permanently_removed_2026-07-21",
+                    "informational_only": True,
                     "max_lines": args.max_lines,
                     "review_target_lines": args.review_target_lines,
                     "finding_count": len(findings),
-                    "hard_budget_violation_count": hard_count,
-                    "default_budget_warning_count": default_count,
+                    "hard_budget_violation_count": 0,
+                    "default_budget_warning_count": 0,
                     "findings": [
                         {
                             "budget_tier": f.budget_tier,
@@ -103,25 +103,13 @@ def main(argv: list[str] | None = None) -> int:
                 sort_keys=True,
             )
         )
-    elif findings:
-        print(
-            f"[inflate-py-loc-budget] {len(findings)} file(s) exceed "
-            f"review target {args.review_target_lines} physical lines "
-            f"({hard_count} exceed hard max {args.max_lines}):",
-            file=sys.stderr,
-        )
-        for finding in findings[:40]:
-            print(f"  - {finding.format()}", file=sys.stderr)
-        if len(findings) > 40:
-            print(f"  ... (+{len(findings) - 40} more)", file=sys.stderr)
     else:
         print(
-            f"[inflate-py-loc-budget] OK: all direct submissions/inflate.py "
-            f"files are <= {args.max_lines} physical lines"
+            "[inflate-py-loc-budget] RETIRED: source length is informational "
+            "and unrestricted (operator 2026-07-21)"
         )
 
-    if findings and args.strict:
-        return 1
+    _ = args.strict
     return 0
 
 
