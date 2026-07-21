@@ -20485,3 +20485,16 @@ blocks CONTENT_LINEAGE_CRUX + CORRECT_OVER_EASY composed into standard_contract(
 integrity-gate STRICT pass); workflow v2 §2 amended (1322dbd27f); master-thesis memory items
 (4)-(6). Strike arm (joint_planes_direct_strike) steered to speak this formalism in S2 and consume
 the registered equations BY ID. Pointer 0.19108 [contest-CPU] UNMOVED — this FEED is means.
+
+## FEED-SEED-DOCTRINE-20260720 (operator closed-form cascade, consolidated)
+Ten operator directives (2026-07-20 evening) consolidated into the BINDING v10 seed doctrine —
+canonical memo `.omx/research/v10_seed_doctrine_closed_form_20260720.md` (the SoT; this FEED is
+the pointer). Spine: "All is reducible to a closed form — omniscience and complete control."
+Interpreter/seed split (rule-118 litmus + seed-search) · predict→project ultimate form (values
+0 B, store the problem) · labels/sites as exceptions/counts · ONE spacetime object (chart + ξ +
+tracks + vineyard events) · MS-complex persistence-ordered encoding · jitter SOLVABLE via the
+causal ladder R0→R2 (consumes jitter_bound law honestly) · global cross-stream waterfill at λ*
+with EAT-THE-FLIP first-class · decoder gaps G1–G5 (pose-blind tightening is the substantive
+one). Owners live: #595 description · #596 pricing · #597 receiver; all steers in arm inboxes
+verbatim. Decode-time = engineering ledger NEVER admission gate (operator binding; #214
+precedent). Pointer 0.1910828242 [contest-CPU] UNMOVED — doctrine is means.
