@@ -1,0 +1,69 @@
+{
+  "schema": "xi_temporal_delta_coder_574_reuse_manifest.v1",
+  "task": 574,
+  "implementation": {
+    "module": "src/tac/optimization/xi_temporal_delta_coder.py",
+    "apis": [
+      "quantized_lane_grid_from_lbnd2",
+      "encode_quantized_lane_xi_temporal",
+      "decode_lane_xi_temporal_grid",
+      "semantic_quantized_lane_sha256",
+      "encode_lane_xi_temporal",
+      "decode_lane_xi_temporal",
+      "inspect_lane_xi_temporal",
+      "semantic_lane_sha256"
+    ],
+    "tool": "tools/measure_xi_temporal_delta_coder.py",
+    "test": "src/tac/tests/test_xi_temporal_delta_coder.py"
+  },
+  "reused_without_rebuild": [
+    "S4 named-section composer and deterministic ZIP",
+    "settled LBND2 coherent-slot Lane statistic",
+    "lane_track_and_smooth front-end already present in S4",
+    "BEV-v2 exact cross/within pose stages",
+    "full-screw scale and pitch LawRefs",
+    "xi_pose_coder delta_res payload",
+    "shared_pmf_model and tac.lossless.range_coder"
+  ],
+  "wire_contract": {
+    "magic": "XTDL1\\u0000",
+    "version": 1,
+    "strict_checks": [
+      "canonical JSON",
+      "exact segment sizes",
+      "segment SHA-256",
+      "outer SHA-256",
+      "xi decode-reencode identity",
+      "shared-PMF decode-reencode identity",
+      "re-derived shared-PMF payload estimate",
+      "signed-int64 predictor arithmetic",
+      "no trailing varints or wire bytes",
+      "exact semantic Lane-grid hash"
+    ]
+  },
+  "durable_evidence": {
+    "repo_receipt": ".omx/research/xi_temporal_delta_coder_574_20260721T222234Z.json",
+    "ssd_root": "/Volumes/VertigoDataTier/pact/evidence/xi_temporal_574_20260721",
+    "ssd_receipt_sha256": "2c704c5df77e20bf0b7dbd83c9a492f05cfc8323a6e65bc880480d3524a33fd4",
+    "projected_archive_sha256": "5eac6976aaa8f56f807c9a4fa60e9b10015db381d06c7c5dace03fd86cd6c388",
+    "repeatability": "two unchanged-source resumptions reproduced both hashes byte-for-byte; volatile free_bytes is isolated in checkpoints/storage_preflight.json"
+  },
+  "reuse_decision": {
+    "current_chart": "DO_NOT_PROMOTE_OR_WIRE; measured dominated",
+    "safe_reuse": "strict lossless research codec and measurement harness",
+    "reopen_on": [
+      "uncanonicalized image/tie/dash description chart",
+      "solved pointer-object description stream",
+      "full-6D or non-Lane temporal formulation",
+      "public semantic PCE3 or PCOMP3 persistent-ID encoder",
+      "standalone receiver integration plus exact full archive recomposition"
+    ]
+  },
+  "blockers": [
+    "STANDALONE_S4_XTDL1_CODEC_INTEGRATION_OWED_MAIN",
+    "SOURCE_S4_NOT_SOLVED_POINTER_OBJECT_DESCRIPTION_STREAM",
+    "CANONICAL_PER_STRATUM_TOOL_ABSENT_AT_DELEGATION_BASE",
+    "NO_VERDICT_RECEIVER_RATE_CUSTODY"
+  ],
+  "main_landing_review_required": true
+}

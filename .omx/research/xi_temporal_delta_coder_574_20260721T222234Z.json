@@ -1,0 +1,140 @@
+{
+  "schema": "xi_temporal_delta_coder_574_durable_receipt.v1",
+  "task": 574,
+  "utc": "2026-07-21T22:22:34Z",
+  "seed": 1234,
+  "axis": "[macOS-CPU advisory] rate and description only; not contest score authority",
+  "input_fingerprint": "0bf1e0ed42fca062b0707502fb440b3157999aba9d20618a4f21550911d50219",
+  "source": {
+    "archive_bytes": 451191,
+    "archive_sha256": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed",
+    "member_bytes": 1285943,
+    "member_sha256": "595e69d41f96cc1a33ca7b58c0ed386549bfda6389a8176b24d7044d1f55955b",
+    "quarantine_gate": "PASS",
+    "description_base_plus_components_bytes": 216207,
+    "research_only": true,
+    "advisory_score_axis": "macOS-CPU advisory",
+    "advisory_d_seg": 0.60198647,
+    "advisory_d_pose": 163.11865234,
+    "source_object_scope": "S4 research-only receiver description corpus; not the solved pointer object",
+    "source_object_blocker": "SOURCE_S4_NOT_SOLVED_POINTER_OBJECT_DESCRIPTION_STREAM"
+  },
+  "xi_custody": {
+    "source": "BEV-v2 raw exact cross-pair and within-pair target stages",
+    "composition": "log_se3(exp_se3(xi_cross[t]) @ exp_se3(xi_within[t]))",
+    "translation_scale": 0.16,
+    "rotation_scale": 1.0,
+    "pitch_rad": -0.05,
+    "stage_count": 600,
+    "stage_config_sha256": "99f23df35d720b5f006842a882c15f69439e11ca876b3f527e62118cd5703120",
+    "stage_tree_sha256": "ac7ec2703c5fac51542dcb86a5d381912ae6374a5adc560ded6e82bedca79e9c",
+    "scale_receipt_sha256": "e257bc6b9fe3a899e6b1d9b6a4d5b0496129dc4831a3aa25b40d7cf27346b450",
+    "xi_fp64_sha256": "5269b47a0fb5d8cb10dabc860da8be05511cebf396861e9a0aac35267a23462d",
+    "nonzero_count_by_coordinate": [599, 599, 599, 599, 599, 599],
+    "frame0": "zero temporal keyframe",
+    "all_six_coordinates_counted": true,
+    "predictor_coordinates": ["rho_z", "rho_x", "omega_y"]
+  },
+  "measurements": {
+    "n64": {
+      "semantic_lane_sha256": "92e02a72aaedf157e00088b4dd713060a561cb2c2637b4e455e98442e907a483",
+      "repository_codec_semantic_grid_exact": true,
+      "standalone_s4_receiver_closed": false,
+      "rows": [
+        {"arm": "LBND2_identity_settled", "terminal_bytes": 3617, "delta_bytes": 0},
+        {"arm": "XTDL1_identity_xi_context_control", "terminal_bytes": 5194, "delta_bytes": 1577},
+        {"arm": "XTDL1_planar3_from_composed_screw_predictor", "terminal_bytes": 5331, "delta_bytes": 1714}
+      ]
+    },
+    "n600": {
+      "semantic_lane_sha256": "a2bcac5c3ba9231634cbd09d40aac013c8eab0f7ad31a5b031ccfde214e1924a",
+      "repository_codec_semantic_grid_exact": true,
+      "standalone_s4_receiver_closed": false,
+      "rows": [
+        {"arm": "LBND2_identity_settled", "terminal_bytes": 35393, "delta_bytes": 0},
+        {"arm": "XTDL1_identity_xi_context_control", "terminal_bytes": 42413, "delta_bytes": 7020},
+        {
+          "arm": "XTDL1_planar3_from_composed_screw_predictor",
+          "terminal_bytes": 43901,
+          "delta_bytes": 8508,
+          "bundle_bytes": 44399,
+          "xi_payload_bytes": 4994,
+          "shared_pmf_model_bytes": 318,
+          "shared_pmf_range_payload_bytes": 36732,
+          "presence_bytes": 450,
+          "strict_header_framing_and_digests_bytes": 1905,
+          "estimated_range_payload_bytes": 36708,
+          "selected_context_bins": 1
+        }
+      ]
+    }
+  },
+  "projected_archive": {
+    "bytes": 460168,
+    "sha256": "5eac6976aaa8f56f807c9a4fa60e9b10015db381d06c7c5dace03fd86cd6c388",
+    "member_bytes": 1295039,
+    "member_sha256": "44f141974bc79087a5515f654e309775df1909b1ea814c2c9ae5a0babc5f77ee",
+    "delta_vs_real_s4_bytes": 8977,
+    "description_base_plus_components_after_bytes": 224715,
+    "description_delta_bytes": 8508,
+    "description_phase_box_216300_delta": 8415,
+    "description_phase_box_154600_delta": 70115,
+    "projected_archive_phase_box_216300_delta": 243868,
+    "projected_archive_phase_box_154600_delta": 305568,
+    "s4_container_parse_back": true,
+    "xtdl1_repository_decode": true,
+    "standalone_s4_receiver_closed": false,
+    "standalone_probe_status": "NOT_RUN_UNSUPPORTED_CODEC_DERIVED_FROM_PINNED_RUNTIME_SOURCE",
+    "standalone_runtime_sha256": "eef055896474b8327baf57ace016c37fe651f4c22534e2442ebc44da8c3f40b0",
+    "blocker": "STANDALONE_S4_XTDL1_CODEC_INTEGRATION_OWED_MAIN"
+  },
+  "per_stratum": {
+    "pcomp3_exact_unique_home_bytes_unchanged": {
+      "Road:cell": 130736,
+      "Road:boundary": 829,
+      "Lane:cell": 7803,
+      "Lane:boundary": 359,
+      "Undrivable:cell": 39406,
+      "Undrivable:boundary": 273,
+      "MyCar:cell": 790
+    },
+    "lane_shared_generator": "no custodied cell/boundary/critical unique-home split",
+    "canonical_tool_blocker": "CANONICAL_PER_STRATUM_TOOL_ABSENT_AT_DELEGATION_BASE",
+    "canonical_v9_status": "NO_VERDICT_RECEIVER_RATE_CUSTODY"
+  },
+  "implementation": {
+    "module_sha256": "ea77d0135b23c3db520d4aa0769349ce3baa14ee6206e6630dab3a47c8337eda",
+    "tool_sha256": "2fb504649fc05d3e343396013b561fcf072a5f76cf2143b04989a2529f7e662b",
+    "test_sha256": "4ccbe1392d69fe34b34d09ad05decd8b4512cf2c6e83531da1b81d788f3c9693"
+  },
+  "runtime_custody": {
+    "python": "CPython 3.13.12",
+    "numpy": "1.26.4",
+    "zlib_compile_runtime": "1.2.12/1.2.12",
+    "brotli": "1.2.0",
+    "full_detail": "SSD receipt runtime_custody"
+  },
+  "ssd_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/xi_temporal_574_20260721/receipt.json",
+    "bytes": 21888,
+    "sha256": "2c704c5df77e20bf0b7dbd83c9a492f05cfc8323a6e65bc880480d3524a33fd4",
+    "repeatability": "two unchanged-source resumptions reproduced this receipt and the projected archive byte-for-byte"
+  },
+  "verdict": {
+    "label": "MEASURED_FORMULATION_NEGATIVE",
+    "scope": "3-DOF planar rho_z/rho_x/omega_y projection of the corrected composed full screw on the settled coherent-slot Lane lattice from the research-only S4 corpus, with shared-PMF residual coding",
+    "xi_family_status": "OPEN_FULL_6D_NON_LANE_UNCANONICALIZED_AND_SOLVED_OBJECT_UNMEASURED",
+    "unimplemented_stream_families": [
+      "PPCS_seed_temporal_recode",
+      "PCE3_event_temporal_recode",
+      "PCOMP3_persistent_object_temporal_recode",
+      "Movable_site_temporal_recode"
+    ],
+    "solved_object_status": "NOT_MEASURED_SOURCE_S4_IS_NOT_SOLVED_POINTER_OBJECT",
+    "promotion_eligible": false,
+    "score_claim": false,
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false
+  },
+  "main_landing_review_required": true
+}

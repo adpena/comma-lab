@@ -82473,6 +82473,49 @@
       },
       "notes": "HSG delta-only crosswalk; real n64 advisory probe; no score, launch, archive, or production authority; MAIN review required.",
       "research_only": true
+    },
+    {
+      "id": "xi_temporal_delta_coder_574",
+      "name": "Xi-keyed temporal description delta coder",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #574 MEASURED_FORMULATION_NEGATIVE on research-only S4 coherent-slot Lane lattice: planar-3 predictor from counted composed full screw is +8,508 n600 terminal description bytes and deterministic ZIP +8,977 B (460,168 vs 451,191); repository semantic-grid exact; receipt/archive hashes repeat byte-for-byte across unchanged-source resumptions; standalone XTDL1 receiver probe NOT RUN and unsupported codec derived from pinned runtime; solved-pointer/full-6D/non-Lane temporal coding unmeasured; no score authority; MAIN review required.",
+      "lane_class": "substrate_engineering",
+      "research_only": true
     }
   ],
   "level_rules": {
