@@ -1,0 +1,533 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory] controls plus DERIVED sensitivity",
+    "main_landing_review_required": true,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "research_only": true,
+    "score_claim": false
+  },
+  "c2_taxonomy": {
+    "class_bucket_sum": 0.01303,
+    "everything_else_d_seg": 0.00015,
+    "residual_d_seg": 0.01328,
+    "saddle_d_seg": 0.0001,
+    "scope": "MEASURED_N600_PALETTE_VEHICLE; treatment forms SETTLED_RECALL",
+    "total_crosscheck": 0.01328
+  },
+  "cap_accounting": {
+    "archive_to_source_ratio": 0.004117671766107508,
+    "cap_bytes": 154600,
+    "rate_component": 0.10294179415268769,
+    "rate_component_exact": "3865000/37545489",
+    "remaining_sub_0_15_distortion_budget": 0.04705820584731231,
+    "remaining_sub_0_15_distortion_budget_exact": "35336467/750909780",
+    "source_bytes": 37545489
+  },
+  "controls": {
+    "M1": {
+      "archive_bytes": 90566,
+      "archive_sha256": "a386a854e2483f839191f6c9da781f60b49774b71830b9baccee259be85edf8c",
+      "axis": "[macOS-CPU advisory]",
+      "batch_count": 38,
+      "cap_ratio": 0.5858085381630013,
+      "cap_ratio_exact": "45283/77300",
+      "d_pose_official_float32": 127.36588287353516,
+      "d_seg_exact_argmax_rational": 0.0035157945421006942,
+      "d_seg_exact_fraction": "20737/5898240",
+      "d_seg_official_float32": 0.003515794640406966,
+      "decoded_raw_sha256": "dbfcdcfa9c2ea361cfa51eb6b6e26379b20ad5591fb0fe399ace496315628a97",
+      "double_decode_byte_identical": true,
+      "full_richness_exact": false,
+      "hard_cpu_torch": true,
+      "mismatch_pixels": 414740,
+      "pair_count": 600,
+      "preserved_checkpoint_count": 38,
+      "rate_component": 0.06030418194846257,
+      "rate_component_exact": "2264150/37545489",
+      "receiver_closed": true,
+      "seed": 1234,
+      "through_r": true,
+      "total_segnet_pixels": 117964800,
+      "verdict": "MEASURED_CONTROL_FAILS_FULL_SCORER_CELL_CLOSURE",
+      "verdict_scope": "one exact M1 receiver output; no family negative or contest score"
+    },
+    "S4": {
+      "archive_bytes": 451191,
+      "archive_sha256": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed",
+      "axis": "macOS-CPU advisory",
+      "cap_ratio": 2.9184411384217337,
+      "cap_ratio_exact": "451191/154600",
+      "d_pose": 163.11865234,
+      "d_seg": 0.60198647,
+      "deterministic_n600_decode_sha256": "01f4581354e108092010399c00dd6889286b87ad0525ea111d6f27f669d683f8",
+      "full_richness_exact": false,
+      "rate_component": 0.3004295669181456,
+      "rate_component_exact": "3759925/12515163",
+      "receiver_closed": true,
+      "repo_standalone_n600_byte_identical": true,
+      "verdict": "MEASURED_CONTROL_FAILS_RATE_AND_SCORER_CELLS",
+      "verdict_scope": "one exact S4 receiver output; no family negative or contest score"
+    }
+  },
+  "disk_hygiene": {
+    "bulk_bytes_created": 0,
+    "cleanup_required": false,
+    "inputs_read_only": true,
+    "raw_decode_or_scorer_scratch_created": false
+  },
+  "input_sha256": {
+    ".omx/research/SPEC_v8_perclass_decomposition_20260708.md": "74417253b351f25185106d150fa67dae2b3357aeb33faed982e9b4756e2c4e72",
+    ".omx/research/c2_perclass_stratum_carrier_taxonomy_20260716.md": "8ae65930b160bb0d68b10f6f078c5a78c6319ecbec2c8ae55641470ac305dc97",
+    ".omx/research/g1_worldsheet_g3_cellcode_measurements_20260720T210000Z.json": "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089",
+    ".omx/research/recursive_fractal_optimal_representation_v9_build_spec_20260714.md": "e4e3435e2b87ce93e56df18d499475af8a80f5ca842c1d257bfadadf0bb96283",
+    ".omx/research/recursive_fractal_optimal_representation_v9_measurement_receipt_20260714.json": "225f8db81b5a0607f227fa34a97d13e51c5c0e664375eb5e8bf5248b1d0ea60b",
+    "/Volumes/VertigoDataTier/pact/evidence/bev_staticity_v2_20260721/canonical_v1/receipt_n600.json": "c3ec847ba5ca43246f01af12f7bd650b14aba2784eb1878c29c16f8a4469ab96",
+    "/Volumes/VertigoDataTier/pact/evidence/bev_staticity_v2_20260721/canonical_v1/receipt_n64.json": "94a7d7b5635e04d5da6f22e1d4f2e5b8d170a9dc95923e3835b9421aedb8bbba",
+    "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/build_receipt.json": "0ef9bd6061ef6cd288b5ab8c140b04b57268d8ee01ae0d61a4250168045b75e2",
+    "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/decode_1/receipt.json": "53781b33fe99051babfebf3afc62801d28059a58a501f35e5ec93f20c60f97ba",
+    "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/decode_2/receipt.json": "e0179759e55c22cddfdc7da85f6ff8b5f9584f49d2c3caef469a26d905fc8fff",
+    "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/exact_candidate_harness_20260721.json": "20d01dac12d8d96c7e20dca44aad1079c9c43e4a5ff92789214a3510faa0ba17",
+    "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/hard_oracle_decomposition_20260721.json": "c15423c5316c61297cc7dd1f15df7168d83e46724f8326d2fbfbfac9b214cca5",
+    "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/hard_oracle_decomposition_progress.jsonl": "6202f02f388522d087d6981428ba9f680d8add30ed4c6a182399b3e58777f653",
+    "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/m1_candidate_archive.zip": "a386a854e2483f839191f6c9da781f60b49774b71830b9baccee259be85edf8c",
+    "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/canonical_s4_20260721/archive.zip": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed",
+    "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/canonical_s4_20260721/build_receipt.json": "f9f2f9b63ea5c1b1dd3972752012e0a9279aca705064f1a8fa89c231bd51f590",
+    "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/measurement_s4_20260721/advisory_eval_checkpoint.json": "164d057ff5aca89664f10bc12f3e3585c654db659b34147407ea31d5b6b2a086",
+    "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/measurement_s4_20260721/measurement_receipt.json": "244d7b8fa695068755cd64a47572d58f2212f215e287e5d1ee6e6182384ea428",
+    "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/measurement_s4_20260721/parity_checkpoint.json": "7e97c60a3676fc25634cda19186b3a197dabb077e9bc60124c90e9831ac8c2f6",
+    "src/tac/boundary_math/warp_real_luma_frame0.py": "e291a7355eecb542c9146b8a75fc1c3e0e44e003e15fc23d54c5a0b91864a03f",
+    "src/tac/calibrated_geometry.py": "884efda60849b932f1500463c7a0bfb1dcab6f3e5428207fccf718389bd74e78",
+    "src/tac/canonical_equations/perclass_stratum_carrier_taxonomy_20260716.py": "33b465c185e0b69cc8499b506d4711c5de44c743efa89db83fcdb02bf3b96ca3"
+  },
+  "openpilot_representation_correction": "v0.9.7/current lane outputs are four sampled 33-point (x,y,z) curves with probability/std metadata and two sampled road edges; the repo LaneLine polynomial is a compression abstraction, not an OpenPilot-native carrier",
+  "per_stratum_treatment_table": [
+    {
+      "c2_residual_buckets": [
+        {
+          "d_seg_contribution": 0.004684,
+          "residual_weight": 0.35271084337349395,
+          "scope": "MEASURED_N600_PALETTE_VEHICLE",
+          "stratum": "edge"
+        },
+        {
+          "d_seg_contribution": 0.001586,
+          "residual_weight": 0.11942771084337349,
+          "scope": "MEASURED_N600_PALETTE_VEHICLE",
+          "stratum": "near"
+        }
+      ],
+      "c2_residual_d_seg_sum": 0.0062699999999999995,
+      "claim_kind": "SETTLED_RECALL_TREATMENT_PLUS_MEASURED_M1_CONTROL",
+      "class_name": "Road",
+      "m1_hard_oracle": {
+        "conditional_error": 0.0050561820915886475,
+        "d_seg_contribution": 0.001174714830186632,
+        "d_seg_contribution_exact": "5543/4718592",
+        "gt_pixels": 27407043,
+        "mismatch_pixels": 138575
+      },
+      "measured_unique_home_bytes": null,
+      "unique_home_byte_blocker": "NO_PARSER_CONSUMED_SECTION_WITH_UNIQUE_HOME_ATTRIBUTION",
+      "v8_carrier": "shared Road+Undrivable bulk-boundary field; spend on separatrices",
+      "v9_dimensional_treatment": {
+        "basis": "bulk field plus localized tangent atoms on incident separatrices",
+        "boundary": "shared Road-Lane, Road-Undrivable, Road-MyCar, Road-Movable annuli",
+        "composition": "edge-centric generator; no duplicated sampled boundary",
+        "coordinate_frame": "ground/BEV conditional on independent calibration rotation custody",
+        "quantization": "Fisher-margin reverse-waterfill; shallow side chosen per class pair",
+        "temporal": "one translation-first se(3) xi plus receiver-proven sparse correction"
+      },
+      "verdict_scope": "CURRENT_COMPOSITION_CUSTODY_ONLY_FAMILY_OPEN"
+    },
+    {
+      "c2_residual_buckets": [
+        {
+          "d_seg_contribution": 0.001098,
+          "residual_weight": 0.08268072289156626,
+          "scope": "MEASURED_N600_PALETTE_VEHICLE",
+          "stratum": "edge"
+        }
+      ],
+      "c2_residual_d_seg_sum": 0.001098,
+      "claim_kind": "SETTLED_RECALL_TREATMENT_PLUS_MEASURED_M1_CONTROL",
+      "class_name": "Lane",
+      "m1_hard_oracle": {
+        "conditional_error": 0.21578277508220647,
+        "d_seg_contribution": 0.0012633260091145834,
+        "d_seg_contribution_exact": "12419/9830400",
+        "gt_pixels": 690639,
+        "mismatch_pixels": 149028
+      },
+      "measured_unique_home_bytes": null,
+      "unique_home_byte_blocker": "NO_PARSER_CONSUMED_SECTION_WITH_UNIQUE_HOME_ATTRIBUTION",
+      "v8_carrier": "analytic ground-frame band prior (1-2 KB; not a composed byte row)",
+      "v9_dimensional_treatment": {
+        "basis": "analytic curve/band plus dash grammar; repo compression abstraction",
+        "boundary": "localized along-tangent 4-8 render-pixel atoms",
+        "composition": "sampled-curve correction; not an OpenPilot-native polynomial claim",
+        "coordinate_frame": "ground curve chart with independent calibration owed",
+        "quantization": "thin-class high precision with uint8/resize survival",
+        "temporal": "xi transport plus dash phase and sparse curvature/fork correction"
+      },
+      "verdict_scope": "CURRENT_COMPOSITION_CUSTODY_ONLY_FAMILY_OPEN"
+    },
+    {
+      "c2_residual_buckets": [
+        {
+          "d_seg_contribution": 0.000585,
+          "residual_weight": 0.04405120481927711,
+          "scope": "MEASURED_N600_PALETTE_VEHICLE",
+          "stratum": "edge+near"
+        }
+      ],
+      "c2_residual_d_seg_sum": 0.000585,
+      "claim_kind": "SETTLED_RECALL_TREATMENT_PLUS_MEASURED_M1_CONTROL",
+      "class_name": "Undrivable",
+      "m1_hard_oracle": {
+        "conditional_error": 0.000900993715778545,
+        "d_seg_contribution": 0.00044615003797743053,
+        "d_seg_contribution_exact": "5263/11796480",
+        "gt_pixels": 58413282,
+        "mismatch_pixels": 52630
+      },
+      "measured_unique_home_bytes": null,
+      "unique_home_byte_blocker": "NO_PARSER_CONSUMED_SECTION_WITH_UNIQUE_HOME_ATTRIBUTION",
+      "v8_carrier": "shared Road+Undrivable bulk-boundary field",
+      "v9_dimensional_treatment": {
+        "basis": "low-frequency region and one shared Road boundary generator",
+        "boundary": "horizon annulus has one unique home shared with Road",
+        "composition": "no double charge for the shared separatrix",
+        "coordinate_frame": "image/horizon chart plus shared ground edge",
+        "quantization": "low interior precision; precision on the Road-side shallow edge",
+        "temporal": "slow horizon knots carried by shared xi"
+      },
+      "verdict_scope": "CURRENT_COMPOSITION_CUSTODY_ONLY_FAMILY_OPEN"
+    },
+    {
+      "c2_residual_buckets": [
+        {
+          "d_seg_contribution": 0.003222,
+          "residual_weight": 0.24262048192771085,
+          "scope": "MEASURED_N600_PALETTE_VEHICLE",
+          "stratum": "far"
+        },
+        {
+          "d_seg_contribution": 0.001101,
+          "residual_weight": 0.0829066265060241,
+          "scope": "MEASURED_N600_PALETTE_VEHICLE",
+          "stratum": "near"
+        },
+        {
+          "d_seg_contribution": 0.000614,
+          "residual_weight": 0.04623493975903614,
+          "scope": "MEASURED_N600_PALETTE_VEHICLE",
+          "stratum": "edge"
+        }
+      ],
+      "c2_residual_d_seg_sum": 0.004937,
+      "claim_kind": "SETTLED_RECALL_TREATMENT_PLUS_MEASURED_M1_CONTROL",
+      "class_name": "Movable",
+      "m1_hard_oracle": {
+        "conditional_error": 0.03588447777035934,
+        "d_seg_contribution": 0.00044422573513454864,
+        "d_seg_contribution_exact": "52403/117964800",
+        "gt_pixels": 1460325,
+        "mismatch_pixels": 52403
+      },
+      "measured_unique_home_bytes": null,
+      "unique_home_byte_blocker": "NO_PARSER_CONSUMED_SECTION_WITH_UNIQUE_HOME_ATTRIBUTION",
+      "v8_carrier": "sparse islands plus the measured two-regime boundary law",
+      "v9_dimensional_treatment": {
+        "basis": "object-cell generators plus localized object-border atoms",
+        "boundary": "one-sided border contrast plus sparse birth/death correction",
+        "composition": "store object generators, not sampled object boundaries",
+        "coordinate_frame": "per-object frame",
+        "quantization": "both sides fragile; per-object Fisher-margin waterfill",
+        "temporal": "per-object track plus xi; far-bucket persistence 0.865"
+      },
+      "verdict_scope": "CURRENT_COMPOSITION_CUSTODY_ONLY_FAMILY_OPEN"
+    },
+    {
+      "c2_residual_buckets": [
+        {
+          "d_seg_contribution": 0.00014,
+          "residual_weight": 0.010542168674698794,
+          "scope": "MEASURED_N600_PALETTE_VEHICLE",
+          "stratum": "edge"
+        }
+      ],
+      "c2_residual_d_seg_sum": 0.00014,
+      "claim_kind": "SETTLED_RECALL_TREATMENT_PLUS_MEASURED_M1_CONTROL",
+      "class_name": "MyCar",
+      "m1_hard_oracle": {
+        "conditional_error": 0.0007369594043191543,
+        "d_seg_contribution": 0.0001873779296875,
+        "d_seg_contribution_exact": "307/1638400",
+        "gt_pixels": 29993511,
+        "mismatch_pixels": 22104
+      },
+      "measured_unique_home_bytes": null,
+      "unique_home_byte_blocker": "NO_PARSER_CONSUMED_SECTION_WITH_UNIQUE_HOME_ATTRIBUTION",
+      "v8_carrier": "static bottom-connected hood mask prior (0.1-0.5 KB)",
+      "v9_dimensional_treatment": {
+        "basis": "static mask plus localized rim correction",
+        "boundary": "single static rim with one unique home",
+        "composition": "bottom-connected component; no per-frame duplicate",
+        "coordinate_frame": "ego-image frame",
+        "quantization": "lowest post-seed debt; image-coordinate quantization",
+        "temporal": "store once; sparse rim correction only"
+      },
+      "verdict_scope": "CURRENT_COMPOSITION_CUSTODY_ONLY_FAMILY_OPEN"
+    }
+  ],
+  "pointer": {
+    "axis": "[contest-CPU Linux x86_64]",
+    "delta": null,
+    "mutated": false,
+    "score": "0.1910828242",
+    "source": "reports/latest.md canonical frontier table",
+    "source_sha256": "2c8e987723e68c7b7efcf058776c4052fc4b8990cab733194a7f9923350c291d"
+  },
+  "requested_v9": {
+    "diagnostic_is_archive": false,
+    "dimension_bytes": {
+      "boundary": null,
+      "chroma": null,
+      "class": null,
+      "epoch": null,
+      "frame": null,
+      "frequency": null,
+      "pair": null,
+      "pixel": null,
+      "scale": null
+    },
+    "dimensions": {
+      "boundary": {
+        "claim_kind": "SETTLED_RECALL_FORM_NO_VERDICT_BYTES",
+        "exact_composed_bytes": null,
+        "settled_optimal_form": "smooth interior plus localized curvelet/shearlet annulus partition"
+      },
+      "chroma": {
+        "claim_kind": "SETTLED_RECALL_FORM_NO_VERDICT_BYTES",
+        "exact_composed_bytes": null,
+        "settled_optimal_form": "decision palette plus luma-null sparse chroma correction"
+      },
+      "class": {
+        "claim_kind": "SETTLED_RECALL_FORM_NO_VERDICT_BYTES",
+        "exact_composed_bytes": null,
+        "settled_optimal_form": "five edge-centric carriers with merge-diff-correct reconciliation"
+      },
+      "epoch": {
+        "claim_kind": "SETTLED_RECALL_FORM_NO_VERDICT_BYTES",
+        "exact_composed_bytes": null,
+        "settled_optimal_form": "metric annealing at stage boundaries only"
+      },
+      "frame": {
+        "claim_kind": "SETTLED_RECALL_FORM_NO_VERDICT_BYTES",
+        "exact_composed_bytes": null,
+        "settled_optimal_form": "decision keyframe plus deterministic warp plus sparse correction"
+      },
+      "frequency": {
+        "claim_kind": "SETTLED_RECALL_FORM_NO_VERDICT_BYTES",
+        "exact_composed_bytes": null,
+        "settled_optimal_form": "smooth interior plus localized 4-8 render-pixel tangent atoms"
+      },
+      "pair": {
+        "claim_kind": "SETTLED_RECALL_FORM_NO_VERDICT_BYTES",
+        "exact_composed_bytes": null,
+        "settled_optimal_form": "one xi screw; Pose6 tangent only when xi is insufficient"
+      },
+      "pixel": {
+        "claim_kind": "SETTLED_RECALL_FORM_NO_VERDICT_BYTES",
+        "exact_composed_bytes": null,
+        "settled_optimal_form": "generator/tie/xi/Pose6/chroma DecisionCarrierBundle; RGB only at scorer boundary"
+      },
+      "scale": {
+        "claim_kind": "SETTLED_RECALL_FORM_NO_VERDICT_BYTES",
+        "exact_composed_bytes": null,
+        "settled_optimal_form": "multiresolution partition with unique lowest-sufficient home"
+      }
+    },
+    "historical_65172_byte_diagnostic": {
+      "bytes": 65172,
+      "reconstruction_exact": true,
+      "sha256": "0196e921881eac0670bda29e7d910b0ce95c232106ae710e320cbf5fb07917f5"
+    },
+    "missing_required_custody": [
+      "candidate_archive",
+      "encoder_parser_receiver_modules",
+      "n600_decode_and_full_scorer_receipt",
+      "exact_evaluator_receipt",
+      "parser_consumed_section_registry",
+      "unique_home_byte_attribution"
+    ],
+    "module_presence": {
+      "src/tac/boundary_math/decision_carrier_bundle.py": false,
+      "src/tac/boundary_math/decision_palette_chroma.py": false,
+      "src/tac/witness_dsl/decision_carrier_policy.py": false,
+      "tools/probe_appearance_task_rank_n600.py": false
+    },
+    "name": "requested_v9_composition",
+    "per_stratum_bytes": {
+      "Lane": null,
+      "Movable": null,
+      "MyCar": null,
+      "Road": null,
+      "Undrivable": null
+    },
+    "total_archive_bytes": null,
+    "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY",
+    "verdict_scope": "current checkout and #503 custody; representation family open"
+  },
+  "road_lane_ground_frame": {
+    "calibrated_geometry_identity_canary": {
+      "K": {
+        "fx": 400.3,
+        "fy": 399.5,
+        "pp": [
+          256.0,
+          192.0
+        ]
+      },
+      "api": "CalibratedGeometry.homography_to_pose(return_decomposition=True)",
+      "defaults_used": false,
+      "identity_homography": true,
+      "max_pose_error": 0.0,
+      "max_rotation_error": 0.0,
+      "max_translation_error": 0.0,
+      "verdict": "PASS_IDENTITY_CANARY_ONLY",
+      "working_shape": {
+        "height": 384,
+        "width": 512
+      }
+    },
+    "calibration": {
+      "pitch_rad": -0.05,
+      "s_r": 0.0,
+      "s_t": -0.00143
+    },
+    "claim_kind": "MEASURED_RECEIPT_REAUDIT",
+    "geometry": {
+      "camera_height_m": 1.22,
+      "intrinsics": {
+        "cx": 256.0,
+        "cy": 192.0,
+        "fx": 400.3,
+        "fy": 399.5
+      },
+      "v_horizon": 174.0
+    },
+    "n600_hood_positive_control": {
+      "fraction_at_or_below_1px": 0.9130565288101553,
+      "p50_pixels": 0.0,
+      "p90_pixels": 0.0
+    },
+    "n600_lane": {
+      "fraction_at_or_below_1px": 0.043712852318193565,
+      "p50_pixels": 47.119248012565066,
+      "p90_pixels": 186.70251336188286
+    },
+    "n600_road": {
+      "fraction_at_or_below_1px": 0.04309343986018351,
+      "p50_pixels": 39.02261829831544,
+      "p90_pixels": 180.50954103071842
+    },
+    "n64_hood_positive_control": {
+      "fraction_at_or_below_1px": 0.9229909580412475,
+      "p50_pixels": 0.0,
+      "p90_pixels": 0.0
+    },
+    "openpilot_vanishing_point_sensitivity": {
+      "calibration_explained_fraction": null,
+      "claim_kind": "DERIVED_SENSITIVITY_NOT_CAUSAL_ATTRIBUTION",
+      "formula": "u=cx+fx*tan(yaw); v=cy-fy*tan(pitch)/cos(yaw)",
+      "genuine_geometry_fraction": null,
+      "intrinsics": {
+        "cx": 256.0,
+        "cy": 192.0,
+        "fx": 400.3,
+        "fy": 399.5
+      },
+      "minimum_one_axis_angular_equivalents": {
+        "Lane": {
+          "measured_p50_pixels": 47.119248012565066,
+          "pitch_delta_deg": 6.678107181057244,
+          "pitch_delta_rad": 0.11655495811052599,
+          "yaw_delta_deg": 6.713384638605065,
+          "yaw_delta_rad": 0.117170665896468
+        },
+        "Road": {
+          "measured_p50_pixels": 39.02261829831544,
+          "pitch_delta_deg": 5.543449713922642,
+          "pitch_delta_rad": 0.09675144942668784,
+          "yaw_delta_deg": 5.567796805536073,
+          "yaw_delta_rad": 0.09717638633862691
+        }
+      },
+      "nominal_pitch_deg": 2.57979222205941,
+      "nominal_pitch_rad": 0.045025868292277386,
+      "nominal_vanishing_point": {
+        "u": 256.0,
+        "v": 174.0
+      },
+      "reconciled_horizon_pixels": 174.0,
+      "spread_thresholds": {
+        "pitch_deg": 4.0,
+        "yaw_deg": 2.0
+      },
+      "threshold_corner_displacement_pixels": {
+        "euclidean": 31.393060065735824,
+        "horizontal": 13.978784027546624,
+        "vertical": 28.10903444450031
+      },
+      "validity_windows_rad": {
+        "pitch": [
+          -0.09074,
+          0.17
+        ],
+        "yaw": [
+          -0.06912,
+          0.06912
+        ]
+      },
+      "verdict": "UNIDENTIFIABLE_FROM_CURRENT_CUSTODY"
+    },
+    "rotation_custody": {
+      "absolute_pose_schema": "4x4 homogeneous transform",
+      "calibration_explained_fraction": null,
+      "causal_R_t_verdict": "UNIDENTIFIABLE_FROM_CURRENT_CUSTODY",
+      "genuine_geometry_fraction": null,
+      "max_absolute_translation_magnitude": 53.58445949341355,
+      "max_rotation_matrix_deviation_from_identity": 0.0,
+      "max_twist_rotation_vector_magnitude": 0.0,
+      "nonidentity_absolute_rotation_frames": 0,
+      "nonzero_cross_rotation_transitions": 0,
+      "nonzero_rotation_transition_vectors": 0,
+      "nonzero_within_rotation_transitions": 0,
+      "observed_pixel_homography_count": 0,
+      "rotation_observation_verdict": "IDENTITY_ONLY_STORED_ROTATION",
+      "stage_count": 600,
+      "twist_convention": "translation-first [rho,omega]"
+    },
+    "stage_manifest": {
+      "entries_omitted_from_compact_receipt": 600,
+      "entry_count": 600,
+      "full_receipt_required_for_per_file_bindings": true,
+      "sha256": "21ce217b74293663293e754e89f7579a61f467ad0f9342c3f88402eb654ed9b9"
+    },
+    "verdict": "UNIDENTIFIABLE_FROM_CURRENT_CUSTODY",
+    "verdict_scope": "exact translation-only BEV-v2 custody; independently calibrated ground charts open"
+  },
+  "schema": "per_stratum_recursive_fractal_optimal_receipt.v2",
+  "storage_preflight": {
+    "checked_existing_ancestor": "/Volumes/VertigoDataTier/pact/evidence/per_stratum_recursive_fractal_20260721",
+    "observed_free_bytes_at_least_required": true,
+    "observed_free_bytes_redacted_for_determinism": true,
+    "passed": true,
+    "required_free_bytes": 1048576,
+    "tier": "/Volumes/VertigoDataTier/pact"
+  },
+  "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY",
+  "verdict_scope": "current V9 composition custody only; v8/v9 carrier families and independently calibrated ground-frame treatments remain open"
+}

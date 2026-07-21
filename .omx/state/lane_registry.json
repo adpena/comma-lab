@@ -82261,6 +82261,49 @@
         }
       },
       "notes": "Delegated apparatus-only removal of obsolete inflate.py line-count enforcement; pointer unmoved; MAIN review required"
+    },
+    {
+      "id": "lane_per_stratum_recursive_fractal_optimal_20260721",
+      "name": "Per-stratum recursive-fractal byte-closed treatment table",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task-specific $0 local n600 measurement; recall settled SPEC_v8 carriers; only new Road/Lane calibration decomposition; research_only=true; no score or promotion authority; MAIN review required.",
+      "research_only": true,
+      "lane_class": "research_substrate"
     }
   ],
   "level_rules": {
@@ -82270,5 +82313,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-21T15:33:40Z"
+  "updated_at": "2026-07-21T18:58:01Z"
 }
