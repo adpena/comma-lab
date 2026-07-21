@@ -1,0 +1,90 @@
+{
+  "schema": "g2g2_joint_multichart_durable_receipt.v1",
+  "created_at_utc": "2026-07-21T17:44:16Z",
+  "lane_id": "lane_g2g2_joint_multichart_solve_20260721",
+  "task_id": "578",
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "pointer": 0.1910828242,
+    "pointer_axis": "[contest-CPU]",
+    "pointer_moved": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "main_landing_review_required": true
+  },
+  "implementation": {
+    "commit": "23183462e6d3d3d22d5382b157f05200c5edcaa7",
+    "search_method": "bounded_projected_greedy_coordinate_search_with_polish_and_swap",
+    "global_optimum_claim": false,
+    "polish_pass_limit": 4,
+    "swap_pass_limit": 1,
+    "address_count_per_pair": 20,
+    "native_amplitude_alphabet": [-16.0, -8.0, -4.0, -2.0, -1.0, -0.5, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0],
+    "central_secant_rung_native_pixels": 0.5,
+    "tests_passed": 49,
+    "clean_review_tracker_passes_per_python_file": 2
+  },
+  "ssd_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/g2g2_joint_multichart_20260721/measurement_20260721T172244Z/receipt.json",
+    "run_root": "/Volumes/VertigoDataTier/pact/evidence/g2g2_joint_multichart_20260721/measurement_20260721T172244Z/run_778ea2311fbabf89",
+    "bytes": 860288,
+    "file_sha256": "928d3cd74cc92ef52aa9f821229ada12fbf4c3e9dad772e8a76adffcfcfcb078",
+    "canonical_receipt_sha256": "b54e9816c3ef6ec7a93303fce62127c0b2fa0c59f094a3182e266af5cf8157f4",
+    "config_sha256": "778ea2311fbabf89f29836cbee364035fc47926a1b5581cd6cde037c69b11f7a",
+    "aggregate_measured_wall_seconds": 1201.89893899858,
+    "disk_footprint_mib": 3.4,
+    "immediate_resume_seconds": 5,
+    "immediate_resume_byte_identical": true
+  },
+  "input_custody": {
+    "seed": 1234,
+    "candidate_pair_indices": [0, 34, 37, 46, 22, 30],
+    "chart_only_pair_indices": [0, 34, 37, 46],
+    "overlap_pair_indices": [22, 30],
+    "base_counted_bytes": 121128,
+    "g2f_chart_receipt_file_sha256": "47d3ca538f1b876f7639223a1a9a7714b7db2083eaa0971936b9a43a1e6d0d04",
+    "lane_chart_sha256": "d2b2a62eeb6ebe45cbf908dafa7e081eabddaca0f424faac970b41eea650d810",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "D1": {
+    "packet_schema": "G2CS1",
+    "first_packet_bytes": 20,
+    "incremental_packet_bytes_after_first": 8,
+    "response_packet_count": 240,
+    "response_tensors_persisted": false,
+    "model_objective_evaluation_count": 126234,
+    "rule_118_clean": true
+  },
+  "D2": {
+    "all_seven_predicates_required": true,
+    "admitted_pair_count": 0,
+    "all_six_admitted": false,
+    "selected_predicate_true_counts": {
+      "counted_bytes": 6,
+      "receiver_RGB": 6,
+      "factor2_uint8_exact": 6,
+      "double_decode": 6,
+      "semantic_exact": 0,
+      "pose_tube": 0
+    },
+    "per_pair": [
+      {"pair_index": 0, "candidate_class": "chart_only_rescue", "measured_k": [1], "best_k": 1, "best_packet_bytes": 20, "best_cumulative_score_units_recovered": -1.6695415273368326, "best_semantic_mismatch_count": 99681, "best_pose_tube_debt": 171.8283148080277, "rate_stop_k": 1, "rate_stop_packet_bytes": 20, "rate_stop_incremental_score_units_per_byte": -0.08347707636684162, "admitted": false},
+      {"pair_index": 34, "candidate_class": "chart_only_rescue", "measured_k": [1, 2, 3, 4], "best_k": 3, "best_packet_bytes": 36, "best_cumulative_score_units_recovered": 24.245069243766608, "best_semantic_mismatch_count": 116714, "best_pose_tube_debt": 84.06413630742524, "rate_stop_k": 4, "rate_stop_packet_bytes": 44, "rate_stop_incremental_score_units_per_byte": -0.4490530752216486, "admitted": false},
+      {"pair_index": 37, "candidate_class": "chart_only_rescue", "measured_k": [1, 2, 3], "best_k": 2, "best_packet_bytes": 28, "best_cumulative_score_units_recovered": 37.46550005104715, "best_semantic_mismatch_count": 127556, "best_pose_tube_debt": 9.135072773646394, "rate_stop_k": 3, "rate_stop_packet_bytes": 36, "rate_stop_incremental_score_units_per_byte": -0.48279591264071975, "admitted": false},
+      {"pair_index": 46, "candidate_class": "chart_only_rescue", "measured_k": [1, 2, 3], "best_k": 2, "best_packet_bytes": 28, "best_cumulative_score_units_recovered": 1.32752116961818, "best_semantic_mismatch_count": 136542, "best_pose_tube_debt": 168.6846921054786, "rate_stop_k": 3, "rate_stop_packet_bytes": 36, "rate_stop_incremental_score_units_per_byte": -0.02517943322805216, "admitted": false},
+      {"pair_index": 22, "candidate_class": "pixel_chart_overlap", "measured_k": [1], "best_k": 1, "best_packet_bytes": 20, "best_cumulative_score_units_recovered": -0.9041223093726103, "best_semantic_mismatch_count": 139821, "best_pose_tube_debt": 158.06330700963736, "rate_stop_k": 1, "rate_stop_packet_bytes": 20, "rate_stop_incremental_score_units_per_byte": -0.045206115468630514, "admitted": false},
+      {"pair_index": 30, "candidate_class": "pixel_chart_overlap", "measured_k": [1], "best_k": 1, "best_packet_bytes": 20, "best_cumulative_score_units_recovered": -0.10890070958083697, "best_semantic_mismatch_count": 136542, "best_pose_tube_debt": 173.10484802392617, "rate_stop_k": 1, "rate_stop_packet_bytes": 20, "rate_stop_incremental_score_units_per_byte": -0.005445035479041849, "admitted": false}
+    ]
+  },
+  "D3": {
+    "status": "RATE_BREAK_EVEN_STOP",
+    "rate_lambda_score_units_per_byte": 6.658589531221714e-7,
+    "correction_price_coefficient_authorized": false,
+    "route_einstein_kolmogorov_ultra_U1": false,
+    "route_P0_register_G6_task603": false,
+    "route_n64": false,
+    "route_n600": false
+  },
+  "verdict": "MEASURED_G2G2_RATE_BREAK_EVEN_STOP_FAMILY_OPEN",
+  "verdict_scope": "Bounded projected greedy, coordinate polish, and one-swap search over every decoded LaneLine centerline coordinate for six hash-pinned G2f-selected pairs. This is not a chart-family infeasibility, global-optimum, or rate-domination proof."
+}

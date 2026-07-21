@@ -82225,15 +82225,15 @@
       "id": "lane_g2g2_joint_multichart_solve_20260721",
       "name": "G2g2 joint multi-chart coefficient solve",
       "phase": 1.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/measure_realization_g2_lattice.py"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/g2g2_joint_multichart_solve_20260721T174416Z.json"
         },
         "contest_cuda": {
           "status": false,
@@ -82244,8 +82244,8 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/tests/test_measure_realization_g2_lattice.py"
         },
         "three_clean_review": {
           "status": false,
@@ -82260,8 +82260,12 @@
           "evidence": ""
         }
       },
-      "notes": "Delegated isolated-worktree BUILD plus first-six hard-oracle advisory measurement; n64 only on admission; pointer 0.19108 unmoved; MAIN landing review required.",
-      "research_only": true
+      "notes": "MEASURED_G2G2_RATE_BREAK_EVEN_STOP_FAMILY_OPEN; 0/6 admitted on macOS-CPU advisory; U1/P0/n64/n600 routes false; pointer unmoved; MAIN review required.",
+      "research_only": true,
+      "lane_class": "substrate_engineering",
+      "reactivation_criteria": [
+        "Reactivate only with a materially different nonlinear or xi-coupled chart formulation behind the same exact receiver and marginal-price gates."
+      ]
     }
   ],
   "level_rules": {
@@ -82271,5 +82275,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-21T16:37:20Z"
+  "updated_at": "2026-07-21T17:47:27Z"
 }
