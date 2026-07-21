@@ -1,0 +1,39 @@
+{
+  "evidence": {
+    "adapter_source_sha256": "db259daafaa7acba68060c7de8352611634a9de185d0e44c8f7f0fce408518f7",
+    "compose_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/seed_compose_20260721/receipt.json",
+      "sha256": "6a2e6eb323ffc2dffe7dc698efa29d3073273b85e6b107ef1303352e7ec5f967"
+    },
+    "measurement_source_sha256": "8768d180eac95b29fc170ff1566a2a494e7b02e167c5c2b89125d23507e1d8d7",
+    "pair_stage_count": 600
+  },
+  "research_only": true,
+  "reused_surfaces": {
+    "lawrefs": "tac.witness_dsl.lawref",
+    "movable_correspondence": "tac.boundary_math.movable_site_coder.extract_movable_sites+track_sites",
+    "pose_to_xi": "tac.boundary_math.ego_xi_trajectory.PoseTargetEgoEstimator",
+    "receiver_chart_pose_component_plane_contract": "tac.optimization.predict_project_receiver",
+    "s2_finite_event_packet": "tac.optimization.s2_partition_seed",
+    "schema_builder_validator_serializer_parser": "tac.optimization.predict_project_schema",
+    "tracks": {
+      "canonical_helper": "tac.boundary_math.movable_site_coder.extract_movable_sites+track_sites",
+      "matched_assignments": 2097,
+      "max_concurrent_sites": 9,
+      "provenance": {
+        "gate_dist_px": 48.0,
+        "max_gap": 8,
+        "tier": "bounded_K_site_track"
+      },
+      "track_count": 9
+    }
+  },
+  "schema": "seed_compose_b2_reuse_manifest.v1",
+  "source_files": {
+    "src/tac/optimization/predict_project_receiver.py": "6f3704726c57f9e02e628a792127d0ce16f1979e27097bbede003542942dbd1f",
+    "src/tac/optimization/predict_project_schema.py": "acb2783e73b7a3e941dd58aba4ad744d0c2529872ca363b770ee70846d320992",
+    "src/tac/optimization/s2_partition_seed.py": "ed8ff4be2f578ea27513cfe20475511e63cdf4cfe43e2fbfa939bed5087af713",
+    "src/tac/optimization/seed_compose_b2.py": "db259daafaa7acba68060c7de8352611634a9de185d0e44c8f7f0fce408518f7",
+    "tools/measure_predict_project_receiver.py": "8768d180eac95b29fc170ff1566a2a494e7b02e167c5c2b89125d23507e1d8d7"
+  }
+}

@@ -167,6 +167,7 @@ def _validate_hard_oracle_row(
     *,
     seed_sha256: str,
     predicted: np.ndarray,
+    represented: np.ndarray,
     expected_adapter: Mapping[str, str],
 ) -> dict[str, Any]:
     required = {
@@ -234,6 +235,7 @@ def _validate_hard_oracle_row(
     result["custody"] = custody
     result["custody_sha256"] = hard_oracle_custody_sha256(custody)
     result["pair_input_sha256"] = _array_sha256(predicted)
+    result["represented_input_sha256"] = _array_sha256(represented)
     result["desired_cells_sha256"] = desired_cells_sha256
     result["desired_quality"] = desired_quality
     return result
@@ -396,6 +398,7 @@ def run_measurement(
                         seed=seed,
                         pair_index=pair_index,
                         predicted=predicted.copy(),
+                        represented=desired.copy(),
                         workers=workers,
                         measurement_seed=1234,
                         batch_size=16,
@@ -403,6 +406,7 @@ def run_measurement(
                     pair_index,
                     seed_sha256=config["seed_sha256"],
                     predicted=predicted,
+                    represented=desired,
                     expected_adapter=adapter_identity,
                 )
                 timings.update({key: float(value) for key, value in hard_row["stage_seconds"].items()})
