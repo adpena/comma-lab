@@ -20885,3 +20885,18 @@ granularity. Consumer: autoencoder_describe_crosswalk arm (live) -> ddm builder 
 **verdict_scope = FORMULATION** (coherent-slot LBND chart, S4 research-only corpus). Family OPEN with NAMED exits: (a) solved-object description streams — blocker `SOURCE_S4_NOT_SOLVED_POINTER_OBJECT_DESCRIPTION_STREAM`; the ddm builder's z-streams ARE the reopen trigger (inbox directive sent same-turn); (b) non-Lane recodes (PCE3 already INTER-coded; PCOMP3 needs the persistent-ID parser surface first); (c) uncanonicalized charts. NO immediate respawn: the crux input (solved-object z-streams) does not exist yet — genuinely-deferred-with-named-blocker, not parked.
 
 **Custody boundary re-pin:** 216,207 B = base.pbase3 + components.pcomp3 ONLY (not an archive; seed/events/container live inside the 451,191 B ZIP). The shortcut `451191 − 216207 + D_new` is INVALID — outer deflate couples all section bytes; the law is `A(θ)=len(DetZip9(SerializeS4(...)))`. XTDL1 NOT promoted; no DSL lever admitted (loses + no standalone receiver custody). Pointer 0.1910828242 [contest-CPU] UNMOVED (means).
+
+## FEED-614-custody-ae-crosswalk (2026-07-21, MAIN full-artifact custody)
+
+**Landing:** autoencoder_describe_crosswalk (#614, operator drop "What about autoencoders and related research and OSS") — merged, disposition reviewed_committed. Research-only; pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+**Headline verdict: ZERO autoencoder adoptions on the describe line.** Under rule 118 every learned decoder is counted archive bytes, so the admission law is `net_delta_bytes = decoder_counted_bytes + stream_bytes_after − best_exact_control_bytes < 0` (λ_B = 6.6586e-7 S/B). No candidate clears it; the C6-IBPS/Cool-Chic/HNeRV/VQ-VAE/NVRC/REC families all remain covered by settled receipts (#97/#115/#152/#461/#557/#558) — no frame-AE vehicle reopened.
+
+**The two REAL rows (lossless control-rung, MAIN re-derived byte- and sha-exact from live payloads):**
+- S2 pcomp3 literal components: 180,196 → **152,160 B** fresh zlib-9 (per-class raw split Road 131,565 / Lane 8,162 / Undriv 39,679 / MyCar 790 / Movable 0 sums exactly; zero-latent fp16 decoder ceiling = 76,079 params — a preflight refusal bar, not a budget).
+- PDW2: 138 → **111 B** fresh zlib-9, beating the 133 B brotli-q11 inherited control (brotli header overhead dominates at 138 B scale).
+These are STREAM controls, not archive deltas — the outer-deflate coupling law (FEED-574-custody) still binds any archive claim.
+
+**Scoped negatives (all with named exits, none family-kills):** pose_from_embedding MLP as S1 replacement is INSTANCE-dead (4,782 params → 9,564 B raw fp16 > the whole 6,791 B PNTG stream, +0.00185 S even free elsewhere; weight-compression could change the instance). S2 tiny shared AE is UNMEASURED-N-A pending a real six-field byte/error row — measurement ownership routed to the ddm builder. A2 pretrained-decoder shapes (COIN++/VC-INR/foundation-codec/pre-fitted-prior) ROUTED to #604 U4 with both rule-118 readings characterized — properly NOT self-adjudicated; free-reading builds are research_only until U4 rules.
+
+**Cross-arm hygiene verified:** the arm polled the #574 worktree at base `74324e81fa` (pre-receipt), found no measurement, and did NOT duplicate the temporal predictor — clean sister-coherence. Consumers relayed same-turn: ddm inbox (probe ownership + admission law + fresh controls + dominated-if-loses-to-zlib9 bar), #604 metadata (U4 A2 queue), #614 completed. The candidate admissibility law stays UNREGISTERED as an equation until a real candidate + parser/receiver receipt exists (its own correct rule).
