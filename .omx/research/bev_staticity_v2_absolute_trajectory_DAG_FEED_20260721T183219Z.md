@@ -47,4 +47,3 @@ cached PoseNet f0[t] -> f1[t] ─────────┘                 │
 
 The exact G1-calibrated PoseNet chart is closed for static-ground D3. This feed does not close true
 absolute ego GT, other admitted calibrations, or the broader BEV/worldsheet representation family.
-

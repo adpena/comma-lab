@@ -36,4 +36,3 @@ The SSD evidence tree is rebuildable from the recorded cache/scorer/implementati
 argv. Per-frame atomic stages are the resume surface. No transient virtualenv, decoded PNG tree,
 profiler trace, copied archive, or local bulk scratch was created; therefore no destructive cleanup
 or cold-store move is authorized or needed.
-

@@ -86,4 +86,3 @@
   "verdict": "MEASURED_D0_PASS_D1_D2_NEGATIVE_D3_BLOCKED",
   "verdict_scope": "exact G1-calibrated PoseNet absolute chart only; not a negative on true absolute ego GT, a different admitted calibration, or other BEV/worldsheet families"
 }
-
