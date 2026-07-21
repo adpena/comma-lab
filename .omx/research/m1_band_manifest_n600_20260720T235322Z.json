@@ -1,0 +1,79 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "launch": false,
+    "paid_dispatch": false,
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "pointer_mutation": false,
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "band_manifest": {
+    "bytes": 3352,
+    "parse_back": "PASS_BandArtifact.load",
+    "path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/band_manifest.json",
+    "sha256": "2fd10841dc0cb344454e4af55bd8d27e5e1d819a97df3fc03307604dfffcc367"
+  },
+  "blocking_gates": [
+    "RECEIVER_BYTE_KKT_ADMISSION_PENDING_REALIZED_BACKBONE_SECANTS_AND_EXACT_PREFIX_BYTE_MARGINALS",
+    "#502_R1B4_RECEIVER_BOUND_C2_BANDED_TRAINER_BINDING_ABSENT",
+    "PDW2_SPATIAL_RECEIVER_MODULE_MERGED_C2_FACTOR2_COMPOSITION_ABSENT"
+  ],
+  "candidate_population": {
+    "candidate_count": 38077,
+    "dead_substep_pixel_count": 26624,
+    "selected_pixel_count": 11453,
+    "selected_fraction": 0.30078525093888697,
+    "scope": "sealed_PDW1_n24_realization_mismatches; not relabeled as n600 candidates",
+    "stratum_candidate_count": {
+      "bulk_nonedge": 11896,
+      "other_edge": 11643,
+      "road_lane_edge": 14538
+    },
+    "stratum_selected_count": {
+      "bulk_nonedge": 7858,
+      "other_edge": 1691,
+      "road_lane_edge": 1904
+    }
+  },
+  "created_at_utc": "2026-07-20T23:53:22Z",
+  "dry_materializer": {
+    "config_path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/c2_blocked_config.json",
+    "config_sha256": "fcc0305a7871df08481492b791c6d4aea02211dba5acf3930f23e6b7079c5139",
+    "fire_executed": false,
+    "readiness": "BLOCKED",
+    "trainer_argv": null,
+    "validation": "PASS"
+  },
+  "external_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/receipt.json",
+    "sha256": "5319c4801dd844cdb5609e657843d66d8818e127f72748c7a7bfc982710ea8e3"
+  },
+  "frame_summary": {
+    "frame_count": 1200,
+    "path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/frame_summary.json",
+    "sha256": "d81e3a6acf7fde50854729aaded55e97818a67b8cdc53e6d973de1324dfda0e9"
+  },
+  "geometry": {
+    "pair_count": 600,
+    "radii": {
+      "bytes": 2831155328,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/radii_uint8_steps.npy",
+      "sha256": "192fa0cf99724ada821fa605b10631fe65a25f7c4e0eb3aca7a7b668ccdd3bad"
+    },
+    "shape": [600, 2, 384, 512, 3],
+    "source_planes": {
+      "bytes": 707788928,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/source_planes.npy",
+      "sha256": "e6dcef17278441631b58aec1ac038fdc5934e21c53baeb6ab6cf59bf19f54161"
+    }
+  },
+  "resumability": {
+    "all_vjp_sidecar_bytes_rehashed": true,
+    "per_pair_checkpoint_count": 600,
+    "seed": 20260720
+  },
+  "schema": "m1_band_manifest_n600_repo_receipt.v1",
+  "verdict": "BANDARTIFACT_LOAD_PASS_RECEIVER_FIRE_BLOCKED",
+  "verdict_scope": "real n600 source/VJP custody plus an n24 sealed candidate support; no receiver-byte, score, launch, or promotion verdict"
+}
