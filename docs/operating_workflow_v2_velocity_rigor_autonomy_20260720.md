@@ -112,3 +112,26 @@ forgetting. Memory files for corrections/doctrine land in the SAME turn as the c
 - §1/§4/§5/§6 are audited at custody time; the tick protocol (ROADMAP TICK v2 cron) executes §1.
 - This doc is pointer-referenced from memory
   (`workflow_v2_velocity_rigor_autonomy_20260720.md`) so it loads via MEMORY.md at session start.
+
+## 8. REPRESENTATION DESIGN LENS (binding — operator 2026-07-21)
+
+**"Meet everything precisely where it is; carry the THING ITSELF in the smallest representation and
+basis; across n600 temporal."** Apply this lens to EVERY representation/description/training/coding
+decision (it is the RATE axis — seg+pose are solved):
+1. **Meet it where it is** — each object/stratum in its OWN natural coordinates (ground-frame lanes as
+   static polynomials; ego-motion as the SE(3) ξ curve; topology as sparse Morse events; argmax as its
+   rank-4 subspace), never the ambient/pixel/weight embedding.
+2. **Carry the thing itself, smallest basis** — the intrinsic object (not a proxy, not an ambient
+   embedding, not an arbitrary gauge member) as the Kolmogorov-minimal program in an ops-grammar whose
+   primitives ARE the object's operations.
+3. **Temporally unified across n600** — one worldsheet object across all 600 pairs (static geometry +
+   ξ-curve + events), not 600 slices; the temporal axis is SPANNED by the basis, not paid per-frame.
+
+Design-review checklist at every stage — loss (chart-gradient not pixel→weight) · optimizer (manifold
+not Euclidean) · quantization (chart coefficients not pixels) · coding (per-stratum ops-grammar not
+aggregate stream) · storage (ξ-knots not per-pair) · coordinate frame (BEV/ground not image) ·
+representation (generator not state; surface not slices; rank-4 subspace not full plane; gauge-fixed
+representative not member). Ask: *am I meeting this where it lives, in its own smallest basis, unified
+across n600?* Catalog of current violations + decisive $0 probe:
+`.omx/research/wrong_levels_systematic_sweep_20260721.md`. Memory:
+`meet_it_where_it_is_carry_thing_itself_smallest_basis_n600_20260721.md`.
