@@ -1,0 +1,141 @@
+{
+  "schema": "advected_screw6_chartlevel_durable_receipt.v1",
+  "written_at_utc": "2026-07-21T16:20:15Z",
+  "lane_id": "lane_advected_screw6_chartlevel_20260721",
+  "research_only": true,
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer": "0.19108 [contest-CPU] UNMOVED",
+    "main_landing_review_required": true
+  },
+  "verdict": "N16_TWO_AXIS_GATE_FAIL_STOP_BEFORE_N64",
+  "verdict_scope": "stored-PoseNet full-screw calibration with one ground homography plus five-class RGB-offset chart coefficients, n16 prefix, this clip, hard CPU-Torch on macOS only",
+  "family_status": "FORMULATION_REJECTED_ADVECTION_FAMILY_OPEN",
+  "gate": {
+    "d_pose_full_screw_lt_static": true,
+    "chart_bytes_full_screw_le_static": false,
+    "n64_executed": false,
+    "n600_executed": false,
+    "stop_reason": "preregistered n16 two-axis gate requires both pose carry and non-worse chart bytes"
+  },
+  "D1_full_screw": {
+    "source": "hash-bound gt_n600.gt_poses already-counted six-coordinate pose sidecar",
+    "mapping": "xi=log_se3(make_T(exp_so3(1.0*[pose3,pose4,pose5]),0.16*[pose2,pose1,pose0]))",
+    "all_six_source_coordinates_consumed": true,
+    "source_nonzero_count_by_coordinate_n600": [600, 600, 600, 600, 600, 600],
+    "xi_nonzero_count_by_coordinate_n600": [600, 600, 600, 600, 600, 600],
+    "xi_l2_full_n600_quantiles": {
+      "min": 3.72201122808122,
+      "q25": 4.87004450255474,
+      "median": 4.9830066459108515,
+      "q75": 5.106533392097673,
+      "max": 5.608759743242474
+    },
+    "planar_predecessor_xi_l2_max": 0.05226009,
+    "additional_video_derived_motion_bytes": 0,
+    "decoder_pose_blind": true,
+    "lawref_equation_ids": [
+      "ego_motion_cumulative_se3_bspline_v1",
+      "xi_advected_prior_per_class_chart_reconciliation_v1",
+      "lane_band_ego_factorization_source_reparam_v1",
+      "lane_band_source_reparam_measured_resolution_v1"
+    ]
+  },
+  "D2_n16_hard_oracle": {
+    "pair_count": 16,
+    "xi_bucket": "q4 only; the n16 prefix has no rows in full-n600 q1-q3",
+    "xi_l2_min": 5.13198133224798,
+    "xi_l2_max": 5.549378535688974,
+    "static": {
+      "d_seg_mean": 0.007289568515261635,
+      "d_pose_mean": 187.78951930999756
+    },
+    "full_screw": {
+      "d_seg_mean": 0.01685619360068813,
+      "d_pose_mean": 181.83216428756714,
+      "d_pose_delta_vs_static": -5.95735502243042,
+      "d_pose_delta_percent_vs_static": -3.1723575651717795,
+      "d_seg_delta_vs_static": 0.009566625085426494,
+      "d_seg_ratio_vs_static": 2.312371927830509
+    },
+    "static_chart": {
+      "d_seg_mean": 0.007288296998012811,
+      "d_pose_mean": 187.78976154327393
+    },
+    "full_screw_chart": {
+      "d_seg_mean": 0.01676400494761765,
+      "d_pose_mean": 181.9871473312378,
+      "d_pose_delta_vs_static_chart": -5.802614212036133,
+      "d_seg_delta_vs_static_chart": 0.009475707949604839
+    },
+    "solved_target": {
+      "d_seg_mean": 0.00013287862248034799,
+      "d_pose_mean": 0.00004087142212938488
+    }
+  },
+  "D3_chart_coefficient_rate": {
+    "lambda_star_s_per_byte": 6.658589531221714e-7,
+    "packet": "strict five-class x RGB int8 coefficients plus one float16 scale per pair; Brotli-11; byte-identical parseback",
+    "target_exact": false,
+    "receiver_closed": true,
+    "static_chart": {
+      "raw_packet_bytes": 632,
+      "terminal_bytes": 269,
+      "terminal_sha256": "4d6c4c4b5599b73a78c1f54ff2c2bb4c041ffc5c2d27dc7649a431975767b3fc"
+    },
+    "full_screw_chart": {
+      "raw_packet_bytes": 632,
+      "terminal_bytes": 348,
+      "terminal_sha256": "bc72844ac0fef719bbf5c55d53c5d8fa97a327c0028f0ee2b22892577de98f37"
+    },
+    "full_screw_byte_delta_vs_static": 79,
+    "full_screw_byte_delta_percent_vs_static": 29.368029739776947,
+    "rate_action_delta_at_lambda": 0.00005260285729665154,
+    "advisory_composed_action": {
+      "static_chart": 44.063724869305084,
+      "full_screw_chart": 44.33658384647209,
+      "full_screw_delta_vs_static": 0.27285897716700447
+    },
+    "superseded_planar_pixel_baseline_n64_bytes": 19739340,
+    "static_chart_byte_reduction_vs_planar_pixel_percent": 99.99863723913768,
+    "full_screw_chart_byte_reduction_vs_planar_pixel_percent": 99.99823702312234,
+    "comparison_warning": "the chart packet is lossy n16 while the planar pixel packet was target-exact n64; byte reduction alone is neither equal-fidelity nor equal-prefix authority"
+  },
+  "D4_route": {
+    "einstein_kolmogorov_ultra": {
+      "surface": "U1_R_D_frontier",
+      "point": {
+        "bytes": 348,
+        "d_pose": 181.9871473312378,
+        "d_seg": 0.01676400494761765
+      },
+      "status": "REJECTED_POINT_NOT_A_WATERFILL_COEFFICIENT"
+    },
+    "p0_register": {
+      "surface": "G-pose #603",
+      "status": "FORMULATION_NEGATIVE",
+      "reason": "pose carry is only 3.17 percent while Seg distortion rises 2.31x and chart bytes rise 29.37 percent"
+    },
+    "next_crux": "replace the one-ground-depth scene-chart framing with depth-stratified screw action (ground homography, sky rotation-only, hood identity, movable/object motion) and Fisher-margin boundary coefficients; this result does not show pose is intrinsically expensive"
+  },
+  "custody": {
+    "command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python tools/measure_advected_screw6_chartlevel.py --seed /Volumes/VertigoDataTier/pact/evidence/seed_compose_20260721/seeds/seed_compose_b2_loose.ppcs --gt-cache /Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz --upstream /Users/adpena/Projects/pact/upstream --output-dir /Volumes/VertigoDataTier/pact/evidence/advected_screw6_20260721 --pair-end 16 --chunk-size 8 --threads 4",
+    "seed": 1234,
+    "deterministic_algorithms": true,
+    "full_receipt_path": "/Volumes/VertigoDataTier/pact/evidence/advected_screw6_20260721/advected_screw6_chartlevel/receipt.json",
+    "full_receipt_bytes": 19873,
+    "full_receipt_sha256": "e257bc6b9fe3a899e6b1d9b6a4d5b0496129dc4831a3aa25b40d7cf27346b450",
+    "stage_count": 16,
+    "stage_tree_sha256": "1672e072fd29d5b889a07fc3be6a34b3c2f09bd5cbc9ed2804f93069e060302e",
+    "checkpoint_count": 2,
+    "checkpoint_tree_sha256": "181346f75406efe3ceb699e7c15fb85d469b0a8bc38181631484621e70404dc6",
+    "failed_attempts_preserved_losslessly": [
+      "/Volumes/VertigoDataTier/pact/evidence/advected_screw6_20260721/attempt_pre_empty_bucket_fix_20260721T160054Z",
+      "/Volumes/VertigoDataTier/pact/evidence/advected_screw6_20260721/attempt_pre_point_key_fix_20260721T160300Z",
+      "/Volumes/VertigoDataTier/pact/evidence/advected_screw6_20260721/attempt_pre_full_source_custody_fix_20260721T161713Z"
+    ],
+    "old_archive_bytes_consumed": false
+  }
+}

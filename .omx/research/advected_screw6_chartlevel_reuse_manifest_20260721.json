@@ -1,0 +1,51 @@
+{
+  "schema": "advected_screw6_chartlevel_reuse_manifest.v1",
+  "lane_id": "lane_advected_screw6_chartlevel_20260721",
+  "research_only": true,
+  "rows": [
+    {
+      "surface": "tac.lie SE(3) exp/log",
+      "disposition": "REUSED",
+      "consumer": "counted_full_screw_xi_series and ground homography",
+      "new_implementation": false
+    },
+    {
+      "surface": "advected_motion_base",
+      "disposition": "EXTENDED",
+      "consumer": "advect_motion_base unchanged plus additive full-screw custody",
+      "new_implementation": false
+    },
+    {
+      "surface": "#549 joint-solve target reconstruction",
+      "disposition": "REUSED",
+      "consumer": "_exact_solved_target_plane and factor-2 realization",
+      "new_implementation": false
+    },
+    {
+      "surface": "PPCS seed coder and five-class scene chart",
+      "disposition": "REUSED",
+      "consumer": "predict_cell_field and decoded chart indicator basis",
+      "new_implementation": false
+    },
+    {
+      "surface": "openpilot G1 ground homography/IPM",
+      "disposition": "REUSED",
+      "consumer": "hash-pinned pitch plus GroundHomographyGeom.eon",
+      "new_implementation": false
+    },
+    {
+      "surface": "strict chart-conditioned RGB coefficient packet",
+      "disposition": "NEW_NARROW_SURFACE",
+      "consumer": "chart-level residual pricing and receiver parseback",
+      "new_implementation": true,
+      "failed_search": "existing boundary-coordinate packets do not bind coefficients directly to PPCS decoded class charts; PPCS had no callable per-pair chart-RGB coefficient packet"
+    }
+  ],
+  "not_reused": [
+    "quarantined archives",
+    "predecessor pixel exception bytes as payload",
+    "scorer state in the decoder",
+    "Fourier residual basis"
+  ],
+  "main_landing_review_required": true
+}
