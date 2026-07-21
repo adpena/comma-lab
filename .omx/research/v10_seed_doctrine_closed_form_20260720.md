@@ -80,3 +80,18 @@ rolled out EXACTLY at encode (decode+count the joint effect); composition is com
 (Δ-of-joint vs sum-of-singles). Dynamics corpus consumable by ID: level-set flow + bifurcations,
 screw ODE, #318 coupled-DE derivations, NCDE trajectory model, costate λ field, collateral
 coupling (#535). Statics closed-form + dynamics closed-form = nothing in the pipeline is estimated.
+
+## Addendum 2 (operator, 2026-07-21): training's final role — the tail-sweeper
+"The only thing we should consider training a generator for, maybe seed-based also, is that
+expensive long residual tail." Learning is admitted for EXACTLY ONE band: streams the waterfill
+catches between literal-too-expensive and eating-too-lossy. Admission = three-way race at λ* per
+stream through the hard oracle: bytes(literal) vs bytes(weights+seeds+generator-exceptions) vs
+cost(eaten). Form: small seed-conditioned shared-rule generator (dash-codec/#146 shape); weights
+counted (rule 118). Trainer: the merged S3 machinery (uint8-STE, fixed-magnitude floors,
+realized-flip telemetry, rc7 halt). Grammar: LearnedTailGenerator nonterminal, absent by default,
+admitted per-stream by race receipt. THE COMPLETE ASSIGNMENT: solve everything solvable · derive
+everything causal · store cheap surprises · eat expensive ones · LEARN only the band between.
+Plus (same session): custom NATIVE GRAMMAR (nonterminals = doctrine objects, productions = free
+decoder procedures, coder contexts grammar-keyed, derived from the algebra not induced) +
+SURGICAL TELEMETRY (per-rung attribution that doubles as the edit surface: see the flip, trace
+the cause, cut at the cheapest ladder level, measure exact consequence).
