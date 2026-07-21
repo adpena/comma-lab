@@ -53,6 +53,16 @@ open axis (seg+pose solved: d_seg 1.52e-4 / d_pose 1.02e-4). Every byte we pay f
    states. Describe (IC + field + time), integrate at decode.
 5. **Events are SPARSE (Morse).** Between births/deaths the worldsheet is smooth rigid transport (free
    from ξ). Code smooth-transport-segments + a sparse event list, never per-frame. #597 is the live home.
+6. **The separatrix is ORIENTED and ASYMMETRIC — meet it one-sided, not as a symmetric curve (MEASURED).**
+   The two sides of each class boundary have DIFFERENT margin slopes: one shallow (flip-prone) side, one
+   deep (stable, over-determined) side. Canonical eq `separatrix_asymmetry_t_subpixel_boundary_localizer_v1`
+   (n600). The asymmetry is PER-PAIR, not a global fine-class rule (Lane is often the shallow side). Flip
+   mass is asymmetric across classes (Road ~50% / Lane ~19% / Undrivable ~13%); the margin field IS the
+   Fisher surrogate (Pearson 0.978) so this is a Fisher-metric asymmetry. Consequence for the describe line:
+   precision/bytes belong ONLY on the shallow flip-prone side (the deep side is free); store a per-boundary
+   orientation symbol (which side is shallow); the measured one-sided asym-β=2 carrier already gave −29.5% @
+   0 B (cure = non-local luma; `c2_perclass_stratum_carrier_taxonomy_20260716`). A symmetric boundary basis
+   pays for the deep side it doesn't need.
 
 ## PART B — where else the WRONG-LEVEL principle applies (NOT yet applied)
 - **B1 · TRAINING GRADIENT level.** We backprop PIXEL losses into WEIGHT space. Higher level: flow the
