@@ -37,6 +37,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -560,6 +561,25 @@ def main(argv: list[str] | None = None) -> int:
     if _q_hits:
         print(refuse_message(_q_hits), file=sys.stderr)
         return 12
+
+    # RECENCY-FLOOR ADVISORY (operator 2026-07-21 ×2, recurrence of the 07-19 law
+    # "no recency floor — oldest math wins"): a research/survey prompt that scopes a
+    # FAMILY to a recent year range (e.g. "2024-2026 SOTA") silently excludes the
+    # classical corpus (Prony 1795 / Fourier 1807 / Chasles 1830 / KL 1940s — all
+    # load-bearing in this campaign). Warn-only: year mentions are fine for "know the
+    # latest"; the warning fires so the dispatcher re-checks the scope is not a floor.
+    _recency_hits = re.findall(
+        r"\b20[12]\d\s*[-–—]\s*(?:20)?[12]\d\b|\b(?:since|post|after)[- ]20[12]\d\b",
+        prompt_file.read_text(encoding="utf-8"),
+    )
+    if _recency_hits:
+        print(
+            f"[codex_delegate] RECENCY-FLOOR ADVISORY: prompt contains year-range "
+            f"scope(s) {_recency_hits[:4]} — verify this means 'include the latest', "
+            f"NOT 'exclude the classical corpus' (memory: "
+            f"feedback_no_recency_floor_oldest_math_keeps_winning_20260719).",
+            file=sys.stderr,
+        )
 
     # Give the arm a watched inbox + prepend the poll-and-consume contract so it stays
     # amendable mid-run. The wrapped prompt is what the launcher feeds codex; the original
