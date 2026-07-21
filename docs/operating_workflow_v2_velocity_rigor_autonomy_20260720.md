@@ -36,6 +36,14 @@ craft layer; this doc is the LOOP layer). Sisters: CLAUDE.md §OPERATOR PRIORITY
 - **Master-thesis framing + tiebreak law** in every solve arm: invert the frozen contest
   information space over (formulation × realization × completeness), jointly optimal
   (score, wall-clock); score-neutral choices ALWAYS resolve to least complexity.
+- **CONTENT-LINEAGE + CRUX-ALIGNMENT lines in every dispatch** (operator 2026-07-20, the
+  archive-gravity guard): state whether consumed content is from-scratch / our-solve /
+  inherited-JUSTIFIED, and which stage of describe→realize the arm attacks. Inherited content is
+  harvest-only; the submittable line is 100% ours.
+- **Encode-side compute is UNBOUNDED** (operator 2026-07-20: "infinite compute and time for
+  compression and encoding"): only decode carries the 30-min budget. Never scope an encode-side
+  solve down for cost; days of solver time for archive bytes is the correct trade. A wall met
+  mid-solve = a missing equation to register, not a stop (Kolmogorov × Einsteinian).
 - **Contract blocks** from `tac.subagent_contract.standard_contract()` — never re-typed by hand.
 
 ## 3. SPAWN PREFLIGHT (three checks, ~seconds each, before ANY launch/relaunch)
