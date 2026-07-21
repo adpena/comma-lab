@@ -25,7 +25,8 @@ R1b4 packet parse/apply -> exact factor-2 realization -> frozen SegNet/PoseNet
 
 1. Sensitivity-map contribution: per-pair d_seg/d_pose, class flips,
    boundary/bulk signature, out-of-band excursion, and flicker rows are durable
-   inputs; no promotion consumer is enabled in this advisory lane.
+   inputs; every row also exposes sealed-GT/candidate scorer batch nonparity,
+   and no promotion consumer is enabled in this advisory lane.
 2. Pareto constraint: rate is a labelled live-code compression estimate, not
    archive bytes; it cannot authorize a Pareto move.
 3. Bit allocator: tails and the registered break-even law provide read-only

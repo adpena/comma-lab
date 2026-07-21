@@ -217,6 +217,15 @@ def test_binding_output_and_panel_names_are_exact() -> None:
         observer.panel_name("A" * 64, 7)
 
 
+def test_scoring_geometry_is_explicitly_advisory_and_nonparity() -> None:
+    receipt = observer.scoring_geometry_receipt()
+    assert receipt["candidate_segnet_batch_size"] == 16
+    assert receipt["candidate_posenet_batch_size"] == 16
+    assert receipt["sealed_gt_segnet_batch_size"] == 32
+    assert receipt["segnet_batch_geometry_parity"] is False
+    assert "no_contest_or_promotion_authority" in receipt["disposition"]
+
+
 def test_per_class_and_candidate_stratum_accounting_is_exhaustive() -> None:
     shape = (
         observer.PAIR_SAMPLE_SIZE,

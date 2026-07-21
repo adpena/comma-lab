@@ -124,6 +124,12 @@ section of this spec.
 - Compute temporal argmax instability between the two consecutive frames inside
   every sampled pair, plus aggregate and worst-pair tails; name that definition
   in the row so it cannot be confused with non-adjacent pair-index comparisons.
+- Preserve the binding batch-16 scorer envelope. The sealed `lstars` and
+  `gt_poses` cache members are the frozen-GT authority; candidate SegNet and
+  PoseNet forwards run at batch 16. Record the known sealed-GT/candidate SegNet
+  batch-geometry nonparity in every rank/facet row and keep the result strictly
+  `[macOS-CPU advisory]`; do not replay a batch-32 SegNet forward that breaches
+  the observer memory envelope or disguise the mismatch as parity.
 
 ### Stage panels
 

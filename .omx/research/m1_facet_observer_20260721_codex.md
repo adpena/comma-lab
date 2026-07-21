@@ -47,6 +47,15 @@ Other sealed custody:
 - every output remains `[macOS-CPU advisory]`, `score_claim=false`,
   `subsample_advisory=true`, and `promotion_eligible=false`.
 
+The first live scoring attempt failed closed because replaying sealed GT labels
+through candidate batch-16 SegNet did not reproduce the batch-32 cache exactly.
+An exact self-replay smoke over pairs 0..15 measured maximum per-pair d_seg
+offset `5.086263020833333e-06`; batch-16 Pose candidate versus sealed cached
+poses measured maximum d_pose `2.1832103254867025e-11`. The corrected observer
+therefore uses the sealed cache as GT authority, runs both candidate scorers at
+the binding batch 16, and emits `segnet_batch_geometry_parity=false` on every
+row. This is trajectory telemetry only, never contest or promotion evidence.
+
 ## Build verification
 
 Status at this checkpoint: implementation review and final amended tests are in

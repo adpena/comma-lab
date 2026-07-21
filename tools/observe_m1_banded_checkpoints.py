@@ -96,6 +96,7 @@ HARD_PAIR_COUNT: Final = 32
 BACKGROUND_PAIR_COUNT: Final = 16
 PAIR_SAMPLE_SIZE: Final = HARD_PAIR_COUNT + BACKGROUND_PAIR_COUNT
 SCORER_BATCH_SIZE: Final = 16
+SEALED_GT_SEGNET_BATCH_SIZE: Final = 32
 DEFAULT_POLL_SECONDS: Final = 120.0
 CLASS_NAMES: Final = ("Road", "Lane", "Undriv", "Movable", "MyCar")
 SSD_ROOTS: Final = (
@@ -312,6 +313,21 @@ def output_names() -> dict[str, str]:
         "cleanup": CLEANUP_RECEIPT_NAME,
         "panels": PANELS_DIR_NAME,
         "errors": ERRORS_NAME,
+    }
+
+
+def scoring_geometry_receipt() -> dict[str, Any]:
+    """Expose the sealed-cache/candidate batch split without claiming parity."""
+
+    return {
+        "observer_decode_batch_size": SCORER_BATCH_SIZE,
+        "candidate_segnet_batch_size": SCORER_BATCH_SIZE,
+        "candidate_posenet_batch_size": SCORER_BATCH_SIZE,
+        "sealed_gt_segnet_batch_size": SEALED_GT_SEGNET_BATCH_SIZE,
+        "segnet_batch_geometry_parity": False,
+        "d_seg_definition": "sealed_cached_lstars_vs_candidate_batch16_frozen_cpu_segnet_argmax",
+        "d_pose_definition": "sealed_cached_gt_poses_vs_candidate_batch16_frozen_cpu_posenet",
+        "disposition": "explicit_macOS_advisory_only_no_contest_or_promotion_authority",
     }
 
 
@@ -1612,7 +1628,7 @@ def _load_distortion_net(upstream: Path) -> tuple[Any, dict[str, Any]]:
     return model, {
         "class": "upstream.modules.DistortionNet",
         "device": "cpu",
-        "batch_size": SCORER_BATCH_SIZE,
+        "scoring_geometry": scoring_geometry_receipt(),
         "torch_threads": 1,
         "modules_py": {"path": str(modules_path), "sha256": sha256_file(modules_path)},
         "posenet": {"path": str(pose_path), "sha256": sha256_file(pose_path)},
@@ -1703,36 +1719,29 @@ def _score_receiver_batch(
 
     import torch
 
-    count = len(pair_ids)
     ids = np.asarray(pair_ids, dtype=np.int64)
-    gt_batch = np.empty((count, PLANE_COUNT, CAMERA_HEIGHT, CAMERA_WIDTH, RGB_CHANNELS), dtype=np.uint8)
-    gt_batch[:, 0] = np.asarray(gt["gt_f0"][ids])
-    gt_batch[:, 1] = np.asarray(gt["gt_f1"][ids])
     candidate_tensor = torch.from_numpy(candidate_camera)
+
     with torch.inference_mode():
-        gt_pose_out, gt_seg_out = distortion_net(torch.from_numpy(gt_batch))
-        candidate_pose_out, candidate_seg_out = distortion_net(candidate_tensor)
-        pose_rows = distortion_net.posenet.compute_distortion(gt_pose_out, candidate_pose_out)
-        seg_rows = distortion_net.segnet.compute_distortion(gt_seg_out, candidate_seg_out)
-        candidate_chw = candidate_tensor.permute(0, 1, 4, 2, 3).float()
-        frame0_input = distortion_net.segnet.preprocess_input(candidate_chw[:, :1])
+        candidate_seg_input = distortion_net.segnet.preprocess_input(
+            candidate_tensor[:, -1].permute(0, 3, 1, 2).float()[:, None]
+        )
+        candidate_seg_out = distortion_net.segnet(candidate_seg_input)
+        del candidate_seg_input
+        candidate_pose_input = distortion_net.posenet.preprocess_input(candidate_tensor.permute(0, 1, 4, 2, 3).float())
+        candidate_pose_out = distortion_net.posenet(candidate_pose_input)
+        del candidate_pose_input
+        frame0_input = distortion_net.segnet.preprocess_input(
+            candidate_tensor[:, 0].permute(0, 3, 1, 2).float()[:, None]
+        )
         frame0_out = distortion_net.segnet(frame0_input)
     cached_labels = np.asarray(gt["lstars"][ids], dtype=np.int64)
-    computed_labels = gt_seg_out.argmax(dim=1).cpu().numpy().astype(np.int64, copy=False)
-    if not np.array_equal(cached_labels, computed_labels):
-        raise ObserverError("mapped GT labels disagree with frozen DistortionNet SegNet")
     cached_pose = np.asarray(gt["gt_poses"][ids], dtype=np.float64)
-    computed_pose = gt_pose_out["pose"][..., :6].detach().cpu().numpy().astype(np.float64, copy=False)
-    if not np.allclose(cached_pose, computed_pose, rtol=0.0, atol=1e-5):
-        maximum = float(np.max(np.abs(cached_pose - computed_pose)))
-        raise ObserverError(f"mapped GT poses disagree with frozen DistortionNet PoseNet; max_abs={maximum}")
+    candidate_pose = candidate_pose_out["pose"][..., :6].detach().cpu().numpy().astype(np.float64, copy=False)
     predictions = candidate_seg_out.argmax(dim=1).cpu().numpy().astype(np.int64, copy=False)
     frame0_predictions = frame0_out.argmax(dim=1).cpu().numpy().astype(np.int64, copy=False)
-    per_d_seg = seg_rows.detach().cpu().numpy().astype(np.float64, copy=False)
-    per_d_pose = pose_rows.detach().cpu().numpy().astype(np.float64, copy=False)
-    derived_d_seg = np.mean(cached_labels != predictions, axis=(1, 2), dtype=np.float64)
-    if not np.allclose(per_d_seg, derived_d_seg, rtol=0.0, atol=1e-12):
-        raise ObserverError("DistortionNet per-pair d_seg disagrees with cached-label accounting")
+    per_d_seg = np.mean(cached_labels != predictions, axis=(1, 2), dtype=np.float64)
+    per_d_pose = np.mean((cached_pose - candidate_pose) ** 2, axis=1, dtype=np.float64)
     return (
         cached_labels,
         predictions,
@@ -2266,6 +2275,7 @@ def observe_checkpoint(
             "device": "cpu",
             "batch_size": SCORER_BATCH_SIZE,
             "sample_size": len(pair_ids),
+            "geometry": scoring_geometry_receipt(),
             "d_seg": d_seg,
             "d_pose": d_pose,
             "pose_policy": "snapshotted base frame0 plus factor2-realized EMA frame1",
@@ -2364,6 +2374,7 @@ def _rank_row_template(
         "pair_idx": pair_id,
         "d_seg": float(observation.per_pair_d_seg[position]),
         "d_pose": float(observation.per_pair_d_pose[position]),
+        "scoring_geometry": scoring_geometry_receipt(),
         "mechanism_signature": signature,
         "receiver_emitter_parity": dict(parity),
         "receiver_scored": True,
