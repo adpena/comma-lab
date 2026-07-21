@@ -1,0 +1,88 @@
+{
+  "schema": "r5_witness_anchor_waterfill.reuse_manifest.v1",
+  "task": "578-R5",
+  "lane_id": "r5_witness_anchor_waterfill",
+  "anchor_archive_sha256": "149fefd097c1fa85c4afb6cb2d8ab20311035d7ba8063f1e72137b843a9b89f3",
+  "authority": "Reuse and disposition inventory only. Score and candidate authority remains the SSD composed receipt and its hashed inputs.",
+  "rows": [
+    {
+      "surface": "tools/levelset_byte_close_and_eval.py",
+      "catalog": "anchor decode and verdict authority",
+      "disposition": "REUSED",
+      "application": "Exact archive decode and the canonical n600 batch-32 hard scorer geometry were reused; the decomposition adapter adds per-class and receiver-miss custody without changing the oracle.",
+      "verdict_scope": "macOS-CPU advisory; seed 1234; hard CPU Torch; full n600"
+    },
+    {
+      "surface": "src/tac/through_r/mc_finisher.py:PairLocalDiagonalFinisher",
+      "catalog": "#400",
+      "disposition": "INSPECTED_ACTUATION_REFUSED",
+      "application": "The anchor has self_orient=true, so a pair-code click can change shared h0 and both frames. The existing Seg-only diagonal acceptance surface cannot establish joint Seg/Pose descent.",
+      "settling_measurement": "A receiver-bound joint Seg/Pose proposal/accept adapter followed by full n600 hard scoring."
+    },
+    {
+      "surface": "src/tac/packet_compiler/jrd_coefficient_prefix.py",
+      "catalog": "#453",
+      "disposition": "REUSED_AND_FULLY_MEASURED",
+      "application": "Transferred the previously identified last-safe-prefix fixture to the exact ep725 LVLS1 payload, rebuilt a parse-back-exact archive, fully decoded it, and hard-scored all 600 pairs."
+    },
+    {
+      "surface": "src/tac/through_r/blind_coordinate.py",
+      "catalog": "#401",
+      "disposition": "NOT_APPLICABLE_TO_CURRENT_PAYLOAD",
+      "application": "The LVLS1 archive stores renderer weights and pair codes, not camera pixels, so certified scorer-blind camera coordinates expose zero directly removable payload bytes.",
+      "verdict_scope": "current anchor grammar only; blind-coordinate family remains valid for pixel-carrying payloads"
+    },
+    {
+      "surface": "tools/levelset_byte_close_and_eval.py",
+      "catalog": "#402",
+      "disposition": "REUSED_FAIL_CLOSED_RECEIVER",
+      "application": "Every mutated LVLS1 candidate passed parser replay and the unchanged receiver before hard scoring."
+    },
+    {
+      "surface": "src/tac/v2_compose/pose_sidecar.py",
+      "catalog": "#140",
+      "disposition": "NOT_APPLICABLE_ABSENT_DXI",
+      "application": "The exact LVLS1 manifest has no pose sidecar or dxi stream; therefore low-rank pose coding has zero addressable bytes and no distortion row on this anchor.",
+      "verdict_scope": "manifest structural negative, not a low-rank pose family negative"
+    },
+    {
+      "surface": "tools/apply_sensitivity_bitalloc_witness.py",
+      "catalog": "#336",
+      "disposition": "REUSED_CHEAPEST_BOUNDED_POINT",
+      "application": "Used the per-tensor quantization family and evaluated the smallest current-payload mutation, out_tex.weight with one uniform prefix bit removed, through full decode and n600 hard scoring.",
+      "verdict_scope": "one cheapest bounded point, not an exhaustive tensor-by-bit response surface"
+    },
+    {
+      "surface": "src/tac/boundary_math/tropnnc_witness_reduction.py",
+      "catalog": "#311",
+      "disposition": "NOT_REOPENED_ALREADY_SETTLED",
+      "application": "The existing exact zero-distortion structured-reduction control is already settled; rerunning it was not cheap relative to the two required full n600 rows and would violate recall-before-decide.",
+      "authority": ".omx/research/alternative_forms_conv_wall_20260718.md"
+    },
+    {
+      "surface": "src/tac/optimization/arith_selfcomp_rate_coders.py",
+      "catalog": "#557",
+      "disposition": "REUSED_BYTE_MEASUREMENT_RECEIVER_BLOCKED",
+      "application": "Measured fully framed IID arithmetic, spatial-context arithmetic, and block-FP alternatives on every exact witness coefficient section. Current LVLS1 inflate.py consumes only Brotli signed-int8 streams, so no unbound coder result is called an archive or distortion row.",
+      "settling_measurement": "Add a strict content-bound LVLS1 parser/consumer for the winning coder, parse back exact logical arrays, then full-decode and hard-score n600."
+    },
+    {
+      "surface": "src/tac/boundary_math/pdw2_spatial_receiver.py",
+      "catalog": "#553",
+      "disposition": "NOT_ADMITTED_NO_RGB_PULLBACK",
+      "application": "PDW2 remains a compact target/coefficient packet without a counted scorer-free spatial/RGB inverse-R consumer for this LVLS1 witness.",
+      "verdict_scope": "receiver-custody gap only; not a PDW2 formulation negative"
+    },
+    {
+      "surface": "/Volumes/VertigoDataTier/pact/evidence/predictor_r3_20260721/canonical_r3_20260721/components/admitted_knee_components.pcomp3",
+      "catalog": "R3 donor",
+      "disposition": "REUSED_SET_INTERSECTION_ONLY",
+      "application": "Parsed 1,802 self-delimited packets and intersected their 1,094,309 unique description-repairable frame/site/class keys with 414,377 receiver-measured anchor misses. The greater-than-five-percent screen passed, but no splice was built because the donor has no LVLS1 RGB inverse-R binding and even an impossible all-overlap repair is rate-dominated.",
+      "donor_sha256": "32b41a7db1c6927e6812a49bdea568cd00fd2c19ca9798e38666385e8ed2e68d"
+    }
+  ],
+  "new_code_justification": {
+    "search_result": "No existing tool combined LVLS1 section mutation, exact #557 framed-coder measurement, pcomp3-to-receiver-miss intersection, and singleton-safe waterfill composition.",
+    "landing": "tools/r5_witness_anchor_waterfill.py is a narrow adapter over existing parser, coder, score, and coefficient-prefix primitives."
+  }
+}

@@ -80,6 +80,11 @@ def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
             os.fsync(directory_fd)
         finally:
             os.close(directory_fd)
+        directory_fd = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
     finally:
         if partial.exists():
             partial.unlink()
@@ -92,6 +97,84 @@ def _append_checkpoint(path: Path, payload: dict[str, Any]) -> None:
         handle.write(encoded)
         handle.flush()
         os.fsync(handle.fileno())
+
+
+def _write_label_chunk(
+    path: Path,
+    *,
+    pair_index: np.ndarray,
+    site_index: np.ndarray,
+    gt_class: np.ndarray,
+    candidate_class: np.ndarray,
+) -> dict[str, Any]:
+    """Persist one write-once, receiver-closed mismatch chunk atomically.
+
+    A cut may occur after the atomic chunk rename but before the JSONL checkpoint
+    append.  In that narrow window the next run re-derives the same arrays and
+    accepts the orphan only when every member is byte-value identical.
+    """
+    arrays = {
+        "pair_index": np.asarray(pair_index, dtype=np.uint16),
+        "site_index": np.asarray(site_index, dtype=np.uint32),
+        "gt_class": np.asarray(gt_class, dtype=np.uint8),
+        "candidate_class": np.asarray(candidate_class, dtype=np.uint8),
+    }
+    if path.exists():
+        try:
+            with np.load(path, allow_pickle=False) as saved:
+                if set(saved.files) != set(arrays) or any(
+                    not np.array_equal(saved[name], value) for name, value in arrays.items()
+                ):
+                    raise DecompositionError(f"label-cache orphan conflicts with replay: {path}")
+        except (OSError, ValueError) as exc:
+            raise DecompositionError(f"label-cache orphan is unreadable: {path}") from exc
+        return {
+            "path": str(path),
+            "bytes": path.stat().st_size,
+            "sha256": sha256_file(path),
+            "mismatch_sites": len(arrays["site_index"]),
+        }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    try:
+        with partial.open("xb") as handle:
+            np.savez_compressed(
+                handle,
+                **arrays,
+            )
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(partial, path)
+    finally:
+        if partial.exists():
+            partial.unlink()
+    return {
+        "path": str(path),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+        "mismatch_sites": len(site_index),
+    }
+
+
+def _validate_label_chunks(
+    rows: list[dict[str, Any]], *, expected_count: int, expected_mismatch_sites: int
+) -> None:
+    if len(rows) != expected_count:
+        raise DecompositionError(
+            f"label-cache checkpoint has {len(rows)} chunks for {expected_count} completed batches"
+        )
+    for row in rows:
+        path = Path(str(row["path"]))
+        if not path.is_file():
+            raise DecompositionError(f"label-cache chunk missing on resume: {path}")
+        if path.stat().st_size != int(row["bytes"]) or sha256_file(path) != row["sha256"]:
+            raise DecompositionError(f"label-cache chunk custody drift on resume: {path}")
+    observed_sites = sum(int(row["mismatch_sites"]) for row in rows)
+    if observed_sites != expected_mismatch_sites:
+        raise DecompositionError(
+            "label-cache mismatch count drift on resume: "
+            f"chunks={observed_sites}, checkpoint={expected_mismatch_sites}"
+        )
 
 
 def _load_checkpoint(path: Path, *, contract_sha256: str) -> dict[str, Any] | None:
@@ -180,6 +263,7 @@ def _measure(
     top_k: int,
     checkpoint_path: Path,
     contract_sha256: str,
+    label_cache_dir: Path | None,
 ) -> dict[str, Any]:
     if raw_path.name != "0.raw":
         raise DecompositionError("TensorVideoDataset custody requires a path named 0.raw")
@@ -187,8 +271,8 @@ def _measure(
         raise DecompositionError(
             f"raw size {raw_path.stat().st_size} != expected n600 size {EXPECTED_RAW_BYTES}"
         )
-    if batch_size != 16:
-        raise DecompositionError("hard CPU decomposition requires evaluator batch_size=16")
+    if batch_size not in (16, 32):
+        raise DecompositionError("hard CPU decomposition supports evaluator batch_size in {16,32}")
     if cpu_threads <= 0:
         raise DecompositionError("cpu_threads must be positive")
 
@@ -253,6 +337,7 @@ def _measure(
     mismatch_pixels = 0
     sample_count = 0
     batch_count = 0
+    label_chunks: list[dict[str, Any]] = []
     if state:
         pair_pose = [float(value) for value in state["pair_pose"]]
         pair_seg = [float(value) for value in state["pair_seg"]]
@@ -268,6 +353,13 @@ def _measure(
         mismatch_pixels = int(state["mismatch_pixels"])
         sample_count = int(state["sample_count"])
         batch_count = int(state["batch_count"])
+        label_chunks = [dict(row) for row in state.get("label_chunks", [])]
+        if label_cache_dir is not None:
+            _validate_label_chunks(
+                label_chunks,
+                expected_count=batch_count,
+                expected_mismatch_sites=mismatch_pixels,
+            )
     resume_batch_count = batch_count
     captured_segnet: list[Any] = []
 
@@ -307,6 +399,28 @@ def _measure(
                 if not np.allclose(official_pair_seg, exact_pair_seg, rtol=0.0, atol=2e-8):
                     raise DecompositionError("observed argmax decomposition drifted from official SegNet distortion")
 
+                if label_cache_dir is not None:
+                    mismatch_batch, mismatch_y, mismatch_x = np.nonzero(
+                        candidate_labels != gt_labels
+                    )
+                    pair_indices = mismatch_batch.astype(np.int64) + sample_count
+                    site_indices = (
+                        mismatch_y.astype(np.int64) * gt_labels.shape[2]
+                        + mismatch_x.astype(np.int64)
+                    )
+                    chunk_path = label_cache_dir / (
+                        f"mismatch_{sample_count:04d}_{sample_count + batch_gt.shape[0]:04d}.npz"
+                    )
+                    label_chunks.append(
+                        _write_label_chunk(
+                            chunk_path,
+                            pair_index=pair_indices,
+                            site_index=site_indices,
+                            gt_class=gt_labels[mismatch_batch, mismatch_y, mismatch_x],
+                            candidate_class=candidate_labels[mismatch_batch, mismatch_y, mismatch_x],
+                        )
+                    )
+
                 pose_sum += pose_dist.sum()
                 seg_sum += seg_dist.sum()
                 pair_pose.extend(float(value) for value in pose_dist.cpu().tolist())
@@ -336,6 +450,7 @@ def _measure(
                         "per_class_counts": per_class_counts,
                         "total_pixels": total_pixels,
                         "mismatch_pixels": mismatch_pixels,
+                        "label_chunks": label_chunks,
                     },
                 )
                 print(
@@ -411,6 +526,13 @@ def _measure(
             "resumed_from_batch_count": resume_batch_count,
             "checkpoint_jsonl": str(checkpoint_path),
         },
+        "label_cache": {
+            "status": "WRITE_ONCE_MISMATCH_SITES" if label_cache_dir is not None else "NOT_REQUESTED",
+            "directory": None if label_cache_dir is None else str(label_cache_dir),
+            "chunks": label_chunks,
+            "mismatch_sites": sum(int(row["mismatch_sites"]) for row in label_chunks),
+            "coordinate_contract": "pair_index plus row-major site_index on SegNet 384x512 output",
+        },
     }
 
 
@@ -421,8 +543,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--checkpoint-jsonl", type=Path, required=True)
     parser.add_argument("--expected-raw-sha256", required=True)
-    parser.add_argument("--expected-d-seg", type=float, required=True)
-    parser.add_argument("--expected-d-pose", type=float, required=True)
+    parser.add_argument("--expected-d-seg", type=float)
+    parser.add_argument("--expected-d-pose", type=float)
+    parser.add_argument("--label-cache-dir", type=Path)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--cpu-threads", type=int, default=8)
     parser.add_argument("--seed", type=int, default=1234)
@@ -432,11 +555,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if (args.expected_d_seg is None) != (args.expected_d_pose is None):
+        raise DecompositionError("--expected-d-seg and --expected-d-pose must be provided together")
     started = time.time()
     raw_path = args.raw.expanduser().resolve(strict=True)
     upstream = args.upstream.expanduser().resolve(strict=True)
     output = args.output.expanduser().resolve()
     checkpoint_path = args.checkpoint_jsonl.expanduser().resolve()
+    label_cache_dir = (
+        None if args.label_cache_dir is None else args.label_cache_dir.expanduser().resolve()
+    )
     tool_path = Path(__file__).resolve(strict=True)
     source_video = (upstream / "videos" / "0.mkv").resolve(strict=True)
     raw_sha256 = sha256_file(raw_path)
@@ -455,6 +583,7 @@ def main() -> int:
         "top_k": args.top_k,
         "expected_d_seg": args.expected_d_seg,
         "expected_d_pose": args.expected_d_pose,
+        "label_cache_dir": None if label_cache_dir is None else str(label_cache_dir),
     }
     contract_sha256 = sha256(
         json.dumps(contract_payload, sort_keys=True, separators=(",", ":")).encode()
@@ -468,18 +597,31 @@ def main() -> int:
         top_k=args.top_k,
         checkpoint_path=checkpoint_path,
         contract_sha256=contract_sha256,
+        label_cache_dir=label_cache_dir,
     )
     aggregate = measurement["aggregate"]
-    d_seg_delta = aggregate["d_seg_official_float32"] - args.expected_d_seg
-    d_pose_delta = aggregate["d_pose_official_float32"] - args.expected_d_pose
-    if d_seg_delta != 0.0:
+    d_seg_delta = (
+        None
+        if args.expected_d_seg is None
+        else aggregate["d_seg_official_float32"] - args.expected_d_seg
+    )
+    d_pose_delta = (
+        None
+        if args.expected_d_pose is None
+        else aggregate["d_pose_official_float32"] - args.expected_d_pose
+    )
+    if args.expected_d_seg is not None and d_seg_delta != 0.0:
         raise DecompositionError(f"official d_seg anchor drift: delta={d_seg_delta}")
-    if d_pose_delta != 0.0:
+    if args.expected_d_pose is not None and d_pose_delta != 0.0:
         raise DecompositionError(f"official d_pose anchor drift: delta={d_pose_delta}")
 
     payload = {
         "schema": SCHEMA,
-        "verdict": "MEASURED_N600_HARD_ORACLE_DECOMPOSITION_MATCHES_SETTLED_CONTROL",
+        "verdict": (
+            "MEASURED_N600_HARD_ORACLE_DECOMPOSITION_MATCHES_SETTLED_CONTROL"
+            if args.expected_d_seg is not None and args.expected_d_pose is not None
+            else "MEASURED_N600_HARD_ORACLE_DECOMPOSITION"
+        ),
         "verdict_scope": (
             "one exact receiver-output instance; diagnostic decomposition only; "
             "no contest score claim, no family negative"
