@@ -1,0 +1,94 @@
+{
+  "schema": "realization_verdict_reuse_manifest.v1",
+  "utc": "2026-07-21T21:08:58Z",
+  "artifact": ".omx/research/realization_verdict_admits_or_dominated_20260721T210858Z.md",
+  "research_only": true,
+  "reuse": [
+    {
+      "surface": "I1_g2g2_measured_receipt",
+      "location": "/Volumes/VertigoDataTier/pact/evidence/g2g2_joint_multichart_20260721/measurement_20260721T172244Z/receipt.json",
+      "sha256": "928d3cd74cc92ef52aa9f821229ada12fbf4c3e9dad772e8a76adffcfcfcb078",
+      "use": "path-local packet price, hard replay, semantic and Pose failures",
+      "limits": "not archive/inflate closed; six-pair bounded LaneLine path only"
+    },
+    {
+      "surface": "I2_MDL_receipts",
+      "location": ".omx/research/mdl_polytope_member_solve_receipt_20260721.json",
+      "ssd_receipt_sha256": "b71ad6ab036b62fca640c4dc1a76fa37eec404901f6854239d35eb5c90d803a3",
+      "use": "identity selection, zero-cut result, solved-array diagnostics",
+      "limits": "diagnostic zlib and seed concatenation are not counted archive tuples"
+    },
+    {
+      "surface": "I3_v3_same_packet",
+      "location": ".omx/research/einstein_kolmogorov_crux_v3_20260720.json",
+      "use": "real 91062-byte n600 receiver point",
+      "limits": "macOS-CPU advisory and large semantic/Pose failure"
+    },
+    {
+      "surface": "I3_U1_U2_frontier_compiler",
+      "location": "codexwt/einstein_kolmogorov_ultra_20260721T150001Z@5cc81f1172..ab9a14a6f2",
+      "use": "strict custody adjudication and zero-bit universal lower bound",
+      "limits": "not on current HEAD; empty candidate manifest; MAIN review required"
+    },
+    {
+      "surface": "v9_typed_curriculum_DSL",
+      "location": "src/tac/witness_dsl/curriculum_dsl.py",
+      "use": "inherited event-driven tau, unified semantic form, pose conditioning, pose carrier, and governed basis control",
+      "limits": "direct counted-description joint solver does not yet exist; shearlet/curvelet need a separate matched A/B"
+    },
+    {
+      "surface": "canonical_equations",
+      "location": "src/tac/canonical_equations/",
+      "use": "score, rate break-even, reverse waterfill, realization preimage, Fisher/margin, CGauge action",
+      "limits": "no new law inferred"
+    },
+    {
+      "surface": "v8_v9_per_class_carriers",
+      "location": ".omx/research/SPEC_v8_perclass_decomposition_20260708.md",
+      "use": "reuse settled per-stratum carrier assignments inside #366",
+      "limits": "byte-closed composed verdict remains owed"
+    }
+  ],
+  "do_not_reuse_as_authority": [
+    {
+      "surface": "retired_vehicle_archives",
+      "reason": "DEFAULT_QUARANTINED; harvest signal only"
+    },
+    {
+      "surface": "I2_79385_byte_concatenation",
+      "reason": "not parser-valid PPCS/archive and not coupled to solved distortion"
+    },
+    {
+      "surface": "I3_R3_216207_description",
+      "reason": "description-only, d_pose absent, receiver_closed false"
+    },
+    {
+      "surface": "I3_U1_NO_FEASIBLE_CANDIDATE_rows",
+      "reason": "empty input manifest; not an optimizer or family lower bound"
+    },
+    {
+      "surface": "cross_axis_inference",
+      "reason": "macOS CPU, contest-CPU, and contest-CUDA are separate evidence axes"
+    }
+  ],
+  "new_work": [
+    {
+      "surface": "aggregate_verdict",
+      "kind": "FORMULATION_scoped_adjudication"
+    },
+    {
+      "surface": "task_366_finishing_spec",
+      "kind": "QUEUED_operator_GO_ticket"
+    },
+    {
+      "surface": "DirectCountedDescriptionJointSolveV1",
+      "kind": "TO_BUILD_typed_DSL_and_consumer"
+    },
+    {
+      "surface": "PoseEligibilityOnTauFinalRungV1",
+      "kind": "TO_BUILD_event_consumer_replacing_epoch_based_beta_eligibility"
+    }
+  ],
+  "dispatch_performed": false,
+  "main_landing_review_required": true
+}

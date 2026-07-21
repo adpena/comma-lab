@@ -20736,3 +20736,20 @@ DEFINITIVE RECALL — the per-class × per-dimension recursive-fractal-optimal c
 
 ## FEED-STANDING-RECALL-V7-V8-V9-FIRST-20260721 (operator standing directive)
 STANDING DIRECTIVE (binds every session): "If you run into any similar questions or issues you should look at all of the various v7, v8, and v9 work and research and code FIRST before making assumptions." Before designing/assuming on ANY carrier/per-class/representation/basis/curriculum/schedule/metric/geometry/describe-line/pose/boundary question, RECALL the v-line corpus first (v7/v7.5 single-trunk+curriculum-DE · v8 SPEC_v8 per-class decomposition+carriers · v9/v9·CGauge polished carriers+#503 recursive-fractal+#504 Bregman+#500 metric+costate organ+c2 taxonomy) via graph_memory_recall + grep .omx/research/*v7*/*v8*/*v9*/*cgauge* + SPEC docs + src/tac/**. The cardinal sin is re-deriving what the v-line already settled. Anchor: [[per-class-carriers-culminated-in-v8-v9-witness-recall-dont-rederive]] (now generalized). Empirical trigger: nearly re-ran #503 twice this session; operator caught it 3×. Pointer 0.19108 UNMOVED.
+
+## FEED-REALIZATION-VERDICT-20260721T210858Z (#603 G-register append-only delta)
+
+**VERDICT:** `DOMINATED(NO_SAME_ARTIFACT_RECEIVER_CLOSED_SOLVED_DISTORTION_TUPLE_IN_SUPPLIED_FORMULATIONS)` at **FORMULATION** scope only and as the authority-required next-action disposition (`pareto_or_rate_domination_claim=false`). The current supplied I1/I2/I3 formulations have zero admitted same-artifact tuples. I1 G2CS1 is `0/6` after its preregistered path-local hard-replay rate stop (packet/helper checks pass; semantic exactness + Pose tube fail; no archive closure). I2 is identity `64/64`, 0% cut, and its counted-code-inside-solve premise is FALSIFIED: 79,385 B is neither parser-valid PPCS nor an archive. I3's real 91,062 B n600 archive measures `d_seg=0.003555730183919271`, `d_pose=126.30360158587386`; U1 has zero supplied candidates and U2's universal lower bound is 0 bits. Broader chart/direct-description families remain OPEN/NOT-RULED-OUT; U2's exact conclusion is `154600_BYTES_NOT_RULED_OUT`. Pointer 0.1910828242 `[contest-CPU]` UNMOVED.
+
+| #603 row | Append-only status update | Next routing |
+|---|---|---|
+| G1 MDL-in-loop | `OPEN_COUNTED_MDL_UNTESTED_I2_BOUNDED_MEMBER_STOPPED` | Stop bounded fixed-kernel member reselection; counted-packet MDL remains open and must enter #366's joint generator solve. |
+| G2 scorer-coordinate description | `OPEN_NO_ADMITTED_ROW` | U1 empty, U2 0-bit lower bound; retain as direct-description work, not an admission claim. |
+| G6 constructed correction alphabet | `MEASURED_PATH_LOCAL_RATE_STOP_NO_ADMISSION` | Retire only the exact stopped G2CS1 sequences absent a materially changed formulation; reuse symbols as seeds/conditioning inside the joint solve. |
+| G3 xi temporal | `OPEN_UNCHANGED` | Optimize and serialize `xi/dxi` inside the same counted description. |
+| G4 grammar arithmetic | `OPEN_UNCHANGED` | Price canonical archive parse-back bytes in the objective. |
+| G5 adaptive statistics | `OPEN_UNCHANGED` | Learn inside the same solve; no post-hoc component. |
+| G7 generator description | `P0_SUCCESSOR` | #366 direct joint-description finishing spec QUEUED; operator GO required after readiness DAG. |
+| G8 Pose refinement | `OPEN_COUPLED_TO_G7` | Sigma-min event-gated Pose finish inside the generator; no separate composition. |
+
+Durable set: `.omx/research/realization_verdict_admits_or_dominated_20260721T210858Z.md` + JSON receipt + DAG FEED + canonical-equations disposition + REUSE MANIFEST + `.omx/research/joint_description_descent_finishing_SPEC_366_20260721T210858Z.md` + I2 premise-falsification memo. Triality: DAG updated; existing v9 single-owner event actuators and descendant custody order specified with `DirectCountedDescriptionJointSolveV1` + `PoseEligibilityOnTauFinalRungV1` explicitly TO BUILD; existing equations reused, no new law measured. No dispatch. MAIN landing review required.

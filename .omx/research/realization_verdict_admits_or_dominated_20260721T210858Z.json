@@ -1,0 +1,200 @@
+{
+  "schema": "realization_verdict_admits_or_dominated.v1",
+  "utc": "2026-07-21T21:08:58Z",
+  "lane_id": "realization_verdict_admits_or_dominated",
+  "research_only": true,
+  "dispatch": "NONE",
+  "pointer": {
+    "score": 0.1910828242,
+    "axis": "contest-CPU",
+    "status": "UNMOVED"
+  },
+  "verdict": {
+    "decision": "DOMINATED",
+    "line": "DOMINATED(NO_SAME_ARTIFACT_RECEIVER_CLOSED_SOLVED_DISTORTION_TUPLE_IN_SUPPLIED_FORMULATIONS)",
+    "named_wall": "NO_SAME_ARTIFACT_RECEIVER_CLOSED_SOLVED_DISTORTION_TUPLE_IN_SUPPLIED_FORMULATIONS",
+    "verdict_scope": "FORMULATION",
+    "scope_detail": "Current supplied I1 bounded G2CS1 LaneLine search, I2 bounded fixed-kernel member selection, and I3 v3/U1 supplied-receipt formulations only.",
+    "scope_components": {
+      "I1": "FORMULATION_bounded_linearized_LaneLine",
+      "I2": "FORMULATION_bounded_fixed_kernel_member_selector",
+      "I3_v3": "INSTANCE_same_packet",
+      "I3_U1": "EVIDENCE_ABSENCE_empty_candidate_manifest"
+    },
+    "dominated_semantics": "AUTHORITY_REQUIRED_ROUTING_DISPOSITION",
+    "pareto_or_rate_domination_claim": false,
+    "minimum_admitted_k_bytes": null,
+    "admitted_configuration_count": 0,
+    "broader_family_status": "OPEN_NOT_RULED_OUT",
+    "paradigm_status": "OPEN_NOT_RULED_OUT"
+  },
+  "admission_contract": {
+    "same_bytes_required": true,
+    "counted_archive_required": true,
+    "parser_and_double_decode_required": true,
+    "integer_uint8_receiver_required": true,
+    "solved_d_seg_required": true,
+    "solved_pose_tube_required": true,
+    "post_hoc_composition_allowed": false
+  },
+  "admission_ladder": [
+    {
+      "input": "I1_g2g2_G2CS1",
+      "scope": "six_pair_bounded_linearized_LaneLine_search",
+      "counted_basis_bytes": 121128,
+      "counting_caveat": "counted representation custody, not archive.zip size",
+      "first_symbol_bytes": 20,
+      "additional_symbol_bytes": 8,
+      "replayed_prefix_count": 13,
+      "admitted_pairs": 0,
+      "pairs_tested": 6,
+      "local_pair_admission": "0/6",
+      "aggregate_same_artifact_archive_eligibility": "INELIGIBLE_NO_ARCHIVE",
+      "receiver_checks": {
+        "packet_parseback": true,
+        "receiver_RGB": true,
+        "factor2_uint8_exact": true,
+        "double_decode": true,
+        "canonical_reencode_identical": true,
+        "archive_inflate_closed": false
+      },
+      "selected_best_and_stop_points": [
+        {"pair": 0, "k": 1, "counted_bytes": 121148, "d_seg": 0.2997843424479167, "d_pose": 177.3999096466168, "role": "stop"},
+        {"pair": 34, "k": 3, "counted_bytes": 121164, "d_seg": 0.3899943033854167, "d_pose": 87.97510516137653, "role": "best_recovered_score"},
+        {"pair": 34, "k": 4, "counted_bytes": 121172, "d_seg": 0.4098612467447917, "d_pose": 97.75832599265247, "role": "stop"},
+        {"pair": 37, "k": 2, "counted_bytes": 121156, "d_seg": 0.4529469807942708, "d_pose": 10.454264035156838, "role": "best_recovered_score"},
+        {"pair": 37, "k": 3, "counted_bytes": 121164, "d_seg": 0.4633890787760417, "d_pose": 17.011377227198363, "role": "stop"},
+        {"pair": 46, "k": 2, "counted_bytes": 121156, "d_seg": 0.5038706461588541, "d_pose": 174.20554294744423, "role": "best_recovered_score"},
+        {"pair": 46, "k": 3, "counted_bytes": 121164, "d_seg": 0.5038706461588541, "d_pose": 175.89110075001898, "role": "stop"},
+        {"pair": 22, "k": 1, "counted_bytes": 121148, "d_seg": 0.5202585856119791, "d_pose": 163.40890639366341, "role": "stop"},
+        {"pair": 30, "k": 1, "counted_bytes": 121148, "d_seg": 0.5048929850260416, "d_pose": 178.69692494633534, "role": "stop"}
+      ],
+      "semantic_exact_prefixes": 0,
+      "pose_tube_prefixes": 0,
+      "verdict": "NO_ADMISSION_PATH_LOCAL_RATE_STOP"
+    },
+    {
+      "input": "I2_mdl_polytope_member",
+      "scope": "bounded_fixed_kernel_member_selection",
+      "n16": {
+        "diagnostic_zlib_bytes": 19093143,
+        "d_seg": 0.0001312891642252604,
+        "d_pose": 0.00004116360380325019,
+        "identity_pairs": 16,
+        "pairs": 16
+      },
+      "n64": {
+        "diagnostic_zlib_bytes": 77651017,
+        "d_seg": 0.00012636184692382812,
+        "d_pose": 0.000060022091887905524,
+        "identity_pairs": 64,
+        "pairs": 64
+      },
+      "seed_zlib_bytes": 78969,
+      "seed_plus_calibration_zlib_bytes": 79385,
+      "seed_raw_bytes": 884872,
+      "seed_raw_ppcs_parse_serialize_identical": true,
+      "seed_zlib_decodes_to_raw_ppcs": true,
+      "seed_zlib_is_complete_archive": false,
+      "seed_plus_calibration_is_parser_valid_ppcs": false,
+      "seed_plus_calibration_is_complete_archive": false,
+      "counted_length_inside_solve": false,
+      "replacement_receiver_packet_emitted": false,
+      "byte_cut_fraction": 0.0,
+      "verdict": "NO_ADMISSION_IDENTITY_ZERO_CUT"
+    },
+    {
+      "input": "I3_v3_same_packet",
+      "scope": "n600_macOS_CPU_advisory_same_packet",
+      "archive_bytes": 91062,
+      "archive_sha256": "3555bafcccac0827225a87f07dc5b093381de3188560cb7002f2bf9ac2b37c6a",
+      "raw_bytes": 3662409600,
+      "raw_sha256": "e161990ed1c0071a156b3a071758f25b5a7f56bfd1f6c9da69ff1fc47b09e8e6",
+      "pairs": 600,
+      "d_seg": 0.003555730183919271,
+      "d_pose": 126.30360158587386,
+      "score": 35.955425463668846,
+      "authority": "macOS-CPU_advisory_NON-PROMOTABLE",
+      "verdict": "NO_ADMISSION_REAL_RECEIVER_DISTORTION_FAILURE"
+    },
+    {
+      "input": "I3_U1_frontier_compiler",
+      "candidate_manifest_rows": 0,
+      "tolerances_d_seg": [0.000152, 0.0003, 0.0005, 0.0008],
+      "measured_frontier": [],
+      "verdict": "NO_SUPPLIED_FEASIBLE_CANDIDATE_NOT_AN_OPTIMIZER_RESULT"
+    },
+    {
+      "input": "I3_U2_Kolmogorov_bound",
+      "universal_lower_bound_bits": 0,
+      "target_bytes": 154600,
+      "conclusion": "154600_BYTES_NOT_RULED_OUT",
+      "verdict": "NO_FAMILY_IMPOSSIBILITY_PROOF"
+    }
+  ],
+  "mechanism": {
+    "aggregate": "no supplied description closes counted archive plus solved receiver distortion on the same bytes",
+    "I1": {
+      "explicit_write_stratum": "boundary_codim1",
+      "selected_pair_declared_writes": {"Road": 9, "Lane": 9, "survived": 0},
+      "protected_site_custody": "five semantic-class sites with nine protected pixels each",
+      "whole_field_semantic_exact_covers_all_five_classes": true,
+      "not_explicitly_stratified_in_selected_rows": ["Undrivable", "Movable", "MyCar", "cell_interior", "critical_event", "movable_track"],
+      "pose_tube": "all_replayed_prefixes_failed"
+    },
+    "I2": "majority-tile byte diagnostics omit Lane/class 1 and do not report per-class distortion",
+    "I3_per_stratum_attribution": "UNAVAILABLE_DO_NOT_INFER"
+  },
+  "rate_arithmetic": {
+    "score_per_byte": 6.658589531221714e-7,
+    "bytes_per_1e_minus_6_d_seg": 150.181956,
+    "v3_to_0_000152_rate_indifference_bytes": 511178.8567172359,
+    "interpretation": "exchange_rate_only_not_a_required_byte_lower_bound"
+  },
+  "strict_sub_0_15_cap_from_displayed_rounded_solved_values": {
+    "d_seg": 0.00015196,
+    "d_pose": 0.00010184,
+    "nonrate_score": 0.04710838004286111,
+    "max_integer_bytes": 154524,
+    "score_at_154524": 0.14999956891511151,
+    "score_at_154525": 0.15000023477406466,
+    "settled_154600_label": "approximate_unless_more_precise_hidden_distortion_is_supplied"
+  },
+  "primary_evidence": [
+    {
+      "input": "I1",
+      "branch": "codexwt/g2g2_joint_multichart_solve_20260721T163037Z",
+      "commit_range": "1c6cdd480f392891de7abad4a78fbabf4091ba36..eb57e1dae48d4055c258aed2209dd36c53cedcbd",
+      "executed_measurement_commit": "23183462e6d3d3d22d5382b157f05200c5edcaa7",
+      "ssd_receipt": "/Volumes/VertigoDataTier/pact/evidence/g2g2_joint_multichart_20260721/measurement_20260721T172244Z/receipt.json",
+      "ssd_file_sha256": "928d3cd74cc92ef52aa9f821229ada12fbf4c3e9dad772e8a76adffcfcfcb078",
+      "canonical_receipt_sha256": "b54e9816c3ef6ec7a93303fce62127c0b2fa0c59f094a3182e266af5cf8157f4"
+    },
+    {
+      "input": "I2",
+      "compact_receipt": ".omx/research/mdl_polytope_member_solve_receipt_20260721.json",
+      "ssd_receipt": "/Volumes/VertigoDataTier/pact/evidence/mdl_member_20260721/receipt_n64.json",
+      "ssd_file_sha256": "b71ad6ab036b62fca640c4dc1a76fa37eec404901f6854239d35eb5c90d803a3"
+    },
+    {
+      "input": "I3",
+      "branch": "codexwt/einstein_kolmogorov_ultra_20260721T150001Z",
+      "commit_range": "5cc81f1172..ab9a14a6f2",
+      "ssd_receipt": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_20260721/frontier_receipt_20260721T170000Z.json",
+      "ssd_file_sha256": "956094a5bcf1ee11e7dbfe7feb389bbf3f620ed2e75c00318b24d14d3fd56216",
+      "canonical_receipt_sha256": "b8165f49ea4b82b995c17462f9dac8be4d6c4282ccb0b5dfbd36cfce82c9f18f"
+    }
+  ],
+  "premise_falsification": {
+    "premise": "I2 puts counted code length inside the solve",
+    "result": "FALSIFIED",
+    "impact": "79385 bytes cannot be paired with I2 solved distortion or used as an admission"
+  },
+  "next": {
+    "task": 366,
+    "ticket": ".omx/research/joint_description_descent_finishing_SPEC_366_20260721T210858Z.md",
+    "status": "QUEUED_OPERATOR_GO_REQUIRED",
+    "dispatch_performed": false
+  },
+  "main_landing_review_required": true
+}
