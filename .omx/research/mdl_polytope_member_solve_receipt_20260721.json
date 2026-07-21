@@ -1,0 +1,159 @@
+{
+  "schema": "mdl_polytope_member_solve_compact_receipt.v1",
+  "task_id": "mdl_polytope_member_solve",
+  "lane_id": "mdl_polytope_member_solve_20260721",
+  "research_only": true,
+  "measurement_utc": "2026-07-21T15:28:50Z",
+  "verdict": "MEASURED_NO_MEMBER_RATE_CUT_RETAIN_CANONICAL",
+  "verdict_scope": "Real n64 prefix of the exact current v10 two-plane canonical support fill; bounded chart/object-first full-kernel candidate family; zlib-9 diagnostic member coder plus the #557 seed coder. This is not a global MDL optimum or family-dead verdict.",
+  "D1": {
+    "calibration_rows": 192,
+    "actual_coder": "zlib-9 over uint8 camera tile bytes",
+    "pearson_r": 0.9451942809746968,
+    "spearman_r": 0.8798668622032858,
+    "mean_absolute_error_bytes": 10.32127029680138,
+    "features": [
+      "piecewise_breaks",
+      "gradient_l1",
+      "kernel_move_l1",
+      "temporal_xi_l1",
+      "nonzero_values",
+      "unique_values"
+    ],
+    "proxy_limitation": "temporal_xi_l1 is an unwarped paired-frame L1 feature; it does not instantiate or measure an explicit SE(3) xi warp."
+  },
+  "D2": {
+    "prefix_pairs": 64,
+    "search_order": [
+      "chart",
+      "object_class_stratum",
+      "pixel_tile_residual"
+    ],
+    "integer_resize_exact_pairs": 64,
+    "hard_oracle": "native CPU Torch, deterministic seed 1234, batch geometry 32",
+    "zero_radius_pose_output_tube_equal_pairs": 64,
+    "selected_equals_canonical_pairs": 64,
+    "canonical_mean_d_seg": 0.00012636184692382812,
+    "selected_mean_d_seg": 0.00012636184692382812,
+    "canonical_mean_d_pose": 0.000060022091887905524,
+    "selected_mean_d_pose": 0.000060022091887905524,
+    "identical_distortion": true
+  },
+  "D3": {
+    "same_coder": "zlib-9",
+    "canonical_member_bytes": 77651017,
+    "selected_member_bytes": 77651017,
+    "member_byte_cut_fraction": 0.0,
+    "level_attribution_delta_bytes": {
+      "chart": 0,
+      "object_class_stratum": 0,
+      "pixel_tile_residual": 0
+    },
+    "per_class_delta_bytes": {
+      "0": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0
+    },
+    "per_stratum_delta_bytes": {
+      "cell": 0,
+      "edge": 0,
+      "saddle": 0
+    },
+    "decomposition_scope": "Frame1 SegNet-authority tiles only; independent tile zlib-9 totals are diagnostic and are not additive to the whole-frame coder.",
+    "seed_coder": {
+      "serializer": "serialize_constraint_seed exact roundtrip",
+      "seed_raw_bytes": 884872,
+      "seed_zlib9_bytes": 78969,
+      "seed_plus_video_derived_calibration_zlib9_bytes": 79385,
+      "member_policy_overhead_bytes": 416,
+      "target_box_interpretation": "The seed alone is below both requested boxes, but it is not a complete solved-pair archive; no target-score or archive-size claim follows."
+    }
+  },
+  "D4": {
+    "activation_threshold_cut_fraction": 0.15,
+    "activated": false,
+    "n600_estimate": null,
+    "feed_541": "NOT_ROUTED_THRESHOLD_NOT_MET"
+  },
+  "labels": {
+    "MEASURED": [
+      "D1 calibration correlations and MAE",
+      "n16 and n64 exact numerator equality",
+      "batch32 native CPU Torch hard-oracle distortions",
+      "same-coder bytes and level/class/stratum deltas",
+      "#557 seed parse-serialize and zlib-9 bytes"
+    ],
+    "DERIVED": [
+      "0 percent cut does not activate the delegated greater-than-15-percent n600 gate"
+    ],
+    "SPECULATIVE": []
+  },
+  "reuse_manifest": [
+    {
+      "catalog": "#49/S12",
+      "component": "resize_null_preimage compiler",
+      "disposition": "COMPOSED as the coder-admission lineage; no forked resize law"
+    },
+    {
+      "catalog": "#580",
+      "component": "FullResizeKernel and exact integer numerator authority",
+      "disposition": "REUSED directly; measured coverage 80.67423152232891 percent"
+    },
+    {
+      "catalog": "#547/#549",
+      "component": "current exact two-plane lattice output and DisjointResizeOperator",
+      "disposition": "REUSED read-only as cells-and-pose solved constraint surface"
+    },
+    {
+      "catalog": "#557",
+      "component": "serialize_constraint_seed plus zlib baseline",
+      "disposition": "REUSED with exact parse-serialize roundtrip"
+    },
+    {
+      "catalog": "margin survival",
+      "component": "fixed positive-margin alphabet 114/114",
+      "disposition": "SETTLED; not remeasured or replaced"
+    },
+    {
+      "catalog": "#586",
+      "component": "lattice-enumeration crosswalk",
+      "disposition": "REUSED only for deterministic proposal ordering; no optimum claim"
+    }
+  ],
+  "failed_search_justification": "The existing #580 compiler races whole-frame preferences but has no measured per-tile proxy, chart/object-first hierarchy, class/stratum decomposition, or resumable n16/n64 hard-oracle receipt.",
+  "untested_optimal_form_queue": [
+    "Direct polynomial chart-coefficient and event-symbol optimization in the counted seed.",
+    "Explicit SE(3) xi-warped temporal chart with measured pose-tube admission.",
+    "Joint scorer-plane packet and member entropy optimization under the real archive coder.",
+    "Curvelet/shearlet residual symbols only after charged chart/object terms are exhausted."
+  ],
+  "custody": {
+    "ssd_root": "/Volumes/VertigoDataTier/pact/evidence/mdl_member_20260721",
+    "n16_receipt_sha256": "6aff269708303545d66970b898e1667d678b2f139ca486acf0de433be2ef1b92",
+    "n64_receipt_sha256": "b71ad6ab036b62fca640c4dc1a76fa37eec404901f6854239d35eb5c90d803a3",
+    "proxy_calibration_sha256": "81e7fa67a86c6b129d0f23fbc4fcd3abb023cd0b24bc55cb9299b1d11a98d015",
+    "source_raw_sha256": "31d77be9ab9f00e9f814542368396a35ffa119a32571e701636d4747540e255b",
+    "target_cache_sha256": "e41718a047b77b9072828e72f8cbffa0f5ef7ddf462c7ef4329d997ace89de50",
+    "seed_sha256": "a21dde38128bed7ff62860ef005b994b74202e0bd00a37d1df8824ee325e856b",
+    "stages_preserved": 64
+  },
+  "verification": {
+    "pytest": "52 passed, 1 skipped across MDL member, full-kernel, null-preimage, and structural-law tests",
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "property_seeds": "20/20 exact numerator preservation and coder monotonicity",
+    "review_tracker_passes": {
+      "mdl_polytope_member_structural_pass": 58,
+      "mdl_polytope_member_evidence_pass": 58
+    }
+  },
+  "authority": {
+    "axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "pointer_moved": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "main_landing_review_required": true
+  }
+}
