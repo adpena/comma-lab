@@ -1,5 +1,7 @@
 # v10 A2 profiler review fix 5 — independent semantic replay
 
+verdict_scope: formulation — the NO-GO tokens herein grade the SPECIFIC profiler review-fix formulation this spec addresses (v10_A2 profiler fix round), not the profiler family or any measurement family.
+
 Date: 2026-07-18  
 Lane: `v10_A2_profiler_20260718`  
 Authority: `codex_delegate:v10_A2_profiler_20260718:20260718T160947Z`  
