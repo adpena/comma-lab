@@ -72,3 +72,11 @@ geometry→one chart + ξ spline + vineyard symbols · jitter→causal chart+par
 statistics→0 B (decoder-adaptive) · allocation→global λ* with eaten-flip set.
 What is counted = the exception streams + the event alphabet + tightened-constraint deltas: the
 drive's irreducible narrative. Every row has a live measurement owner (#595/#596/#597).
+
+## Addendum (operator, same session): dynamics + interactions omniscience
+"We also have full insight into all dynamics and interactions." Interactions are never assumed —
+rolled out EXACTLY at encode (decode+count the joint effect); composition is commutator-aware
+(#30 precedent); every composed allocation ships its measured pairwise interaction matrix
+(Δ-of-joint vs sum-of-singles). Dynamics corpus consumable by ID: level-set flow + bifurcations,
+screw ODE, #318 coupled-DE derivations, NCDE trajectory model, costate λ field, collateral
+coupling (#535). Statics closed-form + dynamics closed-form = nothing in the pipeline is estimated.
