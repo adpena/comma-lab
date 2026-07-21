@@ -10,18 +10,23 @@ import numpy as np
 import pytest
 
 from tac.optimization.realized_secant_custody import (
+    BIDIRECTIONAL_RECEIPT_SCHEMA,
     RECEIPT_SCHEMA,
     PairSolveStatus,
     QPStatus,
     RealizedSecantCustodyError,
     SecantObservation,
     WriteSecantObservation,
+    build_bidirectional_rung_observation,
+    build_bidirectional_trust_region_custody,
     build_pair_trust_region_custody,
     build_trust_regions,
     canonical_sha256,
     decode_coefficient_packet,
     encode_coefficient_packet,
+    select_best_bidirectional_rungs,
     solve_minimal_norm_inequalities,
+    validate_bidirectional_receipt,
     validate_receipt,
 )
 
@@ -62,8 +67,8 @@ def _observation(
         pair_index=pair,
         column_index=column,
         signed_amplitude=amplitude,
-        applied_rgb_l2=2.0,
-        applied_rgb_linf=2.0,
+        applied_rgb_l2=abs(amplitude),
+        applied_rgb_linf=abs(amplitude),
         uint8_saturation_count=0,
         writes=(
             _write(
@@ -303,3 +308,142 @@ def test_receipt_unusable_rederived_trust_region_requires_refusal() -> None:
     _rehash_receipt(corrupted)
     with pytest.raises(RealizedSecantCustodyError, match="unusable trust region"):
         validate_receipt(corrupted, expected_pair_count=2)
+
+
+def _paired_rung(
+    *,
+    rung: int,
+    amplitude: float,
+    positive_realized: float,
+    negative_realized: float,
+):
+    positive = _observation(
+        amplitude=amplitude,
+        predicted=amplitude / 2.0,
+        realized=positive_realized,
+    )
+    negative = _observation(
+        amplitude=-amplitude,
+        predicted=-amplitude / 2.0,
+        realized=negative_realized,
+    )
+    return build_bidirectional_rung_observation(
+        positive=positive,
+        negative=negative,
+        rung_index=rung,
+        strata=("boundary_codim1",),
+        positive_source="REUSED_G2E_RUNG0_PRIOR" if rung == 0 else "MEASURED_G2F",
+        negative_source="MEASURED_G2F",
+        positive_applied_rgb_delta=(amplitude, 0.0, 0.0),
+        negative_applied_rgb_delta=(-amplitude, 0.0, 0.0),
+    )
+
+
+def test_bidirectional_rung_rederives_odd_even_response_and_branch_custody() -> None:
+    rung = _paired_rung(
+        rung=0,
+        amplitude=2.0,
+        positive_realized=0.9,
+        negative_realized=-0.7,
+    )
+    write = rung.writes[0]
+    assert write.odd_predicted_margin_delta == pytest.approx(1.0)
+    assert write.odd_realized_margin_delta == pytest.approx(0.8)
+    assert write.even_predicted_margin_delta == pytest.approx(0.0)
+    assert write.even_realized_margin_delta == pytest.approx(0.1)
+    assert write.odd_realized_secant == pytest.approx(0.4)
+    assert rung.positive_source == "REUSED_G2E_RUNG0_PRIOR"
+    assert len(rung.as_dict()["row_sha256"]) == 64
+
+
+def test_bidirectional_trust_and_best_rung_selection_are_isolated_and_fail_closed() -> None:
+    noisy = _paired_rung(
+        rung=0,
+        amplitude=2.0,
+        positive_realized=0.2,
+        negative_realized=0.1,
+    )
+    usable = _paired_rung(
+        rung=1,
+        amplitude=4.0,
+        positive_realized=1.9,
+        negative_realized=-1.8,
+    )
+    trust = build_bidirectional_trust_region_custody(
+        (noisy, usable),
+        relative_residual_tolerance=0.35,
+    )
+    assert trust[0]["usable"] is False
+    assert set(trust[0]["refusal_reasons"]) == {
+        "BIDIRECTIONAL_SIGN_OR_ZERO",
+        "RELATIVE_SECANT_RESIDUAL",
+    }
+    assert trust[1]["usable"] is True
+    selections = select_best_bidirectional_rungs(
+        trust,
+        effective_direction_count_by_pair=(1,),
+    )
+    assert selections[0]["selected"] is True
+    assert selections[0]["selected_rung_index"] == 1
+    assert selections[0]["selected_amplitude"] == pytest.approx(4.0)
+
+
+def test_bidirectional_receipt_strictly_rederives_rungs_trust_and_selection() -> None:
+    observations = [
+        _paired_rung(
+            rung=0,
+            amplitude=2.0,
+            positive_realized=0.9,
+            negative_realized=-0.8,
+        ),
+        _paired_rung(
+            rung=1,
+            amplitude=4.0,
+            positive_realized=1.9,
+            negative_realized=-1.8,
+        ),
+    ]
+    trust = list(
+        build_bidirectional_trust_region_custody(
+            observations,
+            relative_residual_tolerance=0.35,
+        )
+    )
+    selections = list(
+        select_best_bidirectional_rungs(
+            trust,
+            effective_direction_count_by_pair=(1,),
+        )
+    )
+    receipt = {
+        "schema": BIDIRECTIONAL_RECEIPT_SCHEMA,
+        "completed_prefix": 1,
+        "config": {
+            "amplitude_ladder": [2.0, 4.0],
+            "relative_secant_residual_tolerance": 0.35,
+            "g2e_rung0_prior": {
+                "secant_observation_count": 64,
+                "remeasured": False,
+            },
+        },
+        "g2e_rung0_prior_observation_hashes": [f"{index:064x}" for index in range(64)],
+        "effective_direction_count_by_pair": [1],
+        "bidirectional_observations": [row.as_dict() for row in observations],
+        "pair_direction_rung_trust_regions": trust,
+        "selected_rungs": selections,
+        "pair_solves": [
+            {
+                "pair_index": 0,
+                "status": PairSolveStatus.QP_INFEASIBLE.value,
+                "admitted": False,
+            }
+        ],
+    }
+    _rehash_receipt(receipt)
+    assert validate_bidirectional_receipt(receipt, expected_pair_count=1) == receipt["receipt_sha256"]
+
+    corrupted = copy.deepcopy(receipt)
+    corrupted["bidirectional_observations"][0]["writes"][0]["odd_realized_secant"] += 1.0
+    _rehash_receipt(corrupted)
+    with pytest.raises(RealizedSecantCustodyError, match="row hash"):
+        validate_bidirectional_receipt(corrupted, expected_pair_count=1)

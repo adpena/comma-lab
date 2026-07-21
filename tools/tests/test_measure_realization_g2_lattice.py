@@ -8,12 +8,14 @@ import pytest
 
 from tac.boundary_math import warp_real_luma_frame0 as g1_warp
 from tac.optimization.predictor_upgrade_xi_chart import StaticCharts
+from tac.optimization.resize_full_kernel import FullResizeKernel
 from tools.measure_realization_g2_lattice import (
     CONTEXTUAL_STAGE_SCHEMA,
     INTERIOR_STAGE_SCHEMA,
     SOURCE_CONTROL_STAGE_SCHEMA,
     RealizationAuditError,
     _apply_local_chart_delta,
+    _effective_chart_direction_count,
     _exception_parseback,
     _head_patch_144,
     _rank4_chart_directions,
@@ -22,6 +24,7 @@ from tools.measure_realization_g2_lattice import (
     audit_prefix,
     contextual_advected_rgb_plane,
     contextual_banded_projection,
+    derive_bidirectional_amplitude_ladder,
     encode_contextual_rgb_exceptions,
     encode_dying_write_exceptions,
     interior_rgb_plane,
@@ -351,6 +354,27 @@ def test_g2e_rank4_chart_zero_pads_single_write_three_rgb_chart() -> None:
         assert response_sum >= 0.0
         if response_sum == 0.0:
             assert vector[pivot] > 0.0
+
+
+def test_g2f_amplitude_ladder_is_derived_from_exact_r_gain_and_g2e_extent() -> None:
+    prior = {"secant_observations": [{"signed_amplitude": (4.0, -4.0, 8.0, -8.0)[index % 4]} for index in range(64)]}
+    amplitudes, custody = derive_bidirectional_amplitude_ladder(
+        FullResizeKernel.build(),
+        prior,
+    )
+    assert amplitudes == (0.5, 1.0, 2.0, 4.0, 8.0, 16.0)
+    assert custody["lsb_lawref_id"] == "witness_realization_lsb_regime_v1"
+    assert custody["r_operator_lawref_id"] == "separable_resize_full_kernel_direct_sum_v1"
+    assert custody["exact_r_induced_linf_gain"] == pytest.approx(1.0)
+    assert custody["constant_guessed"] is False
+
+
+def test_g2f_effective_direction_count_refuses_interior_zero_holes() -> None:
+    assert _effective_chart_direction_count(np.eye(4)) == 4
+    zero_padded = np.concatenate((np.eye(3), np.zeros((3, 1))), axis=1)
+    assert _effective_chart_direction_count(zero_padded) == 3
+    with pytest.raises(RealizationAuditError, match="contiguous rank prefix"):
+        _effective_chart_direction_count(np.asarray([[1.0, 0.0, 1.0, 0.0]]))
 
 
 def test_g2e_head_patch_is_exact_144d_zero_padded_input() -> None:
