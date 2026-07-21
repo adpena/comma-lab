@@ -58,10 +58,36 @@ row. This is trajectory telemetry only, never contest or promotion evidence.
 
 ## Build verification
 
-Status at this checkpoint: implementation review and final amended tests are in
-progress. Runtime PID, launch receipt, first rank/facet rows, measured census
-derivation, and panel receipts will be appended before the delegated arm is
-closed.
+Implementation and live attachment are complete:
+
+- focused verification: Ruff, py_compile, and `17 passed`; both changed Python
+  files received two review-tracker passes with 100% entity coverage;
+- commits: `014b87715a`, `2e21f249e4`, and `14ec523233`, all without co-author
+  trailers;
+- detached observer PID `77097`, CWD verified as this isolated worktree,
+  launch receipt
+  `/Volumes/VertigoDataTier/pact/evidence/m1_facet_observer_20260721/launch_batch_geometry_fix/launch_manifest.json`,
+  SHA-256 `bd963f9260f16483a04d5e286541e5aa25743b3f0fb332c3f69fc42b6e0b2c08`;
+- exhaustive rank: exactly 600 unique pair rows from one checkpoint, SHA-256
+  `355c09b59c455a9edb16046f29314ab771c6ce6e71c1a3e25ed63f15f8f00243`;
+- measured concentration: 259 pairs for 50% mass, 522 for 90%, Gini
+  `0.09654806223979684`, and 19 nonempty direct class-flip strata;
+- visual plan: all 262 full panels admitted; 90%-mass contact cohort explicitly
+  capped from 522 to 396 pairs. The preserved 396-pair snapshot is
+  `2,417,190,464` bytes, SHA-256
+  `49028ff18dc33fd42abdd83919da318c012317ef2e2b619a12d159913121d199`;
+- certified cleanup removed the observer-owned full-n600 scratch after rank,
+  recurring, and visual snapshots became durable. Cleanup receipt SHA-256:
+  `6f02f475409b4f2732a66d4a1a262572719be74fb3eb7c2a63b1e32955061a80`;
+- first facet line SHA-256
+  `cf4e2c6dcb27fbff2ec2fba1baead79c23dfffa9882100ca44309fb35346ccdb`:
+  n48 d_seg `0.004533873664008247`, d_pose `124.3037419718479`,
+  pair-internal flicker `0.5098681979709202`, excursion `0.0`, exact parsed
+  receiver/emitter equality, and exact factor-2 proof. It is not a score.
+
+The observer remains live and is processing the retained checkpoints in order.
+Stage-complete rows will add the lossless native-resolution panels and exact
+sidecars. MAIN must review the full `base..branch` diff before landing.
 
 ## Operator tail commands
 
