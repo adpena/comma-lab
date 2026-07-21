@@ -1,0 +1,477 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Audit the from-scratch task-space level-set constructive-inverse spine.
+
+This tool composes already-landed measurement receipts.  It does not synthesize
+an archive and it deliberately refuses to turn component measurements into a
+full-partition or score claim.  Its job is to bind the source-only pedigree,
+replay the Rust receiver parity gate, and state exactly which S0--S4 gates are
+closed.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import platform
+import subprocess
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+SCHEMA = "task_space_levelset_constructive_spine_receipt.v1"
+AXIS = "[macOS-CPU advisory]"
+RATE_DENOMINATOR = 37_545_489
+REPO = Path(__file__).resolve().parents[1]
+
+
+class SpineAuditError(RuntimeError):
+    """A required custody or scientific contract is absent or inconsistent."""
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(8 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SpineAuditError(f"cannot load JSON receipt {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise SpineAuditError(f"receipt root must be an object: {path}")
+    return payload
+
+
+def require(condition: bool, message: str) -> None:
+    if not condition:
+        raise SpineAuditError(message)
+
+
+def atomic_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    try:
+        with tmp.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
+def run_rust_parity(runtime_rs: Path) -> dict[str, Any]:
+    command = ["cargo", "test", "-p", "tac-levelset-inflate", "--", "--nocapture"]
+    completed = subprocess.run(
+        command,
+        cwd=runtime_rs,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+    output = completed.stdout + completed.stderr
+    require(completed.returncode == 0, "Rust level-set receiver parity suite failed")
+    require(
+        "lane_coverage_parity ... ok" in output
+        and "lane_coverage_negative_control_bit_flip_breaks_parity ... ok" in output,
+        "Rust AA-SDF parity or its negative control did not execute",
+    )
+    require(
+        "range_decode_parity ... ok" in output and "xi_column_delta_parity ... ok" in output,
+        "Rust arithmetic/xi decoder parity did not execute",
+    )
+    crate = runtime_rs / "crates" / "tac-levelset-inflate"
+    manifest = crate / "golden_vectors" / "levelset_lane_coverage_v1.json"
+    fixture = crate / "golden_vectors" / "levelset_lane_coverage_v1_band.bin"
+    rust_source = crate / "src" / "lane_coverage.rs"
+    parity_test = crate / "tests" / "golden_vector_parity.rs"
+    for path in (manifest, fixture, rust_source, parity_test):
+        require(path.is_file(), f"Rust parity input missing: {path}")
+    return {
+        "status": "PASS",
+        "command": command,
+        "returncode": completed.returncode,
+        "required_tests": [
+            "lane_coverage_parity",
+            "lane_coverage_negative_control_bit_flip_breaks_parity",
+            "range_decode_parity",
+            "xi_column_delta_parity",
+        ],
+        "sha256": {
+            "golden_manifest": sha256_file(manifest),
+            "golden_band_fixture": sha256_file(fixture),
+            "rust_lane_coverage": sha256_file(rust_source),
+            "golden_parity_test": sha256_file(parity_test),
+        },
+        "scope": "real n96 lane coefficients for AA-SDF golden parity; decoder primitive proof, not an n600 full-partition receiver proof",
+    }
+
+
+def _artifact(path: Path, lineage: str, use: str) -> dict[str, Any]:
+    resolved = path.resolve()
+    try:
+        durable_path = str(resolved.relative_to(REPO))
+    except ValueError:
+        durable_path = str(resolved)
+    return {
+        "path": durable_path,
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+        "content_lineage": lineage,
+        "consumed_as": use,
+    }
+
+
+def _resolved_same(left: str, right: Path) -> bool:
+    return Path(left).expanduser().resolve() == right.expanduser().resolve()
+
+
+def git_head() -> str:
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPO,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    require(completed.returncode == 0, "cannot resolve git HEAD for receipt custody")
+    value = completed.stdout.strip()
+    require(len(value) == 40, "git HEAD is not a full SHA-1")
+    return value
+
+
+def build_receipt(
+    *,
+    source_video: Path,
+    upstream_root: Path,
+    gt_cache: Path,
+    tie_receipt_path: Path,
+    m2_receipt_path: Path,
+    lane_receipt_path: Path,
+    g1g3_receipt_path: Path,
+    aa_receipt_path: Path,
+    r1b7_receipt_path: Path,
+    rust_parity: dict[str, Any],
+    lane_id: str,
+) -> dict[str, Any]:
+    required_files = [
+        source_video,
+        gt_cache,
+        tie_receipt_path,
+        m2_receipt_path,
+        lane_receipt_path,
+        g1g3_receipt_path,
+        aa_receipt_path,
+        r1b7_receipt_path,
+    ]
+    modules = upstream_root / "modules.py"
+    segnet = upstream_root / "models" / "segnet.safetensors"
+    posenet = upstream_root / "models" / "posenet.safetensors"
+    required_files.extend((modules, segnet, posenet))
+    for path in required_files:
+        require(path.is_file(), f"required input missing: {path}")
+
+    cache_sha = sha256_file(gt_cache)
+    tie = load_json(tie_receipt_path)
+    m2 = load_json(m2_receipt_path)
+    lane = load_json(lane_receipt_path)
+    g1g3 = load_json(g1g3_receipt_path)
+    aa = load_json(aa_receipt_path)
+    r1b7 = load_json(r1b7_receipt_path)
+
+    require(tie.get("score_claim") is False, "tie-aware receipt crossed score firewall")
+    fidelity = tie.get("input_fidelity", {})
+    require(fidelity.get("n_pairs") == 600, "tie-aware receipt is not n600")
+    require(fidelity.get("all_fp32_exact") is True, "canonical support-fill is not fp32 exact")
+    require(fidelity.get("total_nonzero_values") == 0, "canonical support-fill has nonzero errors")
+    require(float(fidelity.get("max_abs_over_pairs", -1.0)) == 0.0, "support-fill max error is nonzero")
+
+    require(m2.get("schema") == "m2_live_target_selection_receipt.v1", "M2 schema drift")
+    require(m2.get("score_claim") is False, "M2 receipt crossed score firewall")
+    require(m2["source_custody"]["gt_cache_sha256"] == cache_sha, "M2 cache hash mismatch")
+    require(m2["source_custody"]["pair_count"] == 600, "M2 receipt is not n600")
+    require(float(m2["candidate"]["d_seg"]) == 0.0, "M2 direct row d_seg is not exact")
+    require(float(m2["candidate"]["d_pose"]) == 0.0, "M2 direct row d_pose is not exact")
+    require(
+        m2["geometry_decomposition"]["resize_numerator_mismatches"] == 0,
+        "M2 exact resize numerator gate failed",
+    )
+
+    require(lane.get("n_pairs") == 600, "lane descriptor receipt is not n600")
+    require(_resolved_same(lane["gt_cache"], gt_cache), "lane receipt names a different GT cache")
+    require(lane.get("correspondence_lossless_vs_sort") is True, "coherent slot codec is not lossless to fitted lanes")
+    coherent = next(
+        (row for row in lane.get("rows", []) if row.get("variant") == "coherent_slot_none"),
+        None,
+    )
+    require(coherent is not None, "coherent_slot_none row missing")
+    lane_bytes = int(coherent["brotli_bytes"])
+    expected_rate = 25.0 * lane_bytes / RATE_DENOMINATOR
+    require(abs(float(coherent["rate_term"]) - expected_rate) < 1e-15, "lane rate arithmetic drift")
+
+    require(
+        g1g3.get("schema") == "g1_worldsheet_g3_cellcode_measurements.v1",
+        "G1/G3 schema drift",
+    )
+    require(g1g3.get("score_claim") is False, "G1/G3 receipt crossed score firewall")
+    require(g1g3["cache"]["sha256"] == cache_sha, "G1/G3 cache hash mismatch")
+    g1 = g1g3["g1"]
+    g3 = g1g3["g3"]
+    require(
+        g1["verdict_scope"].startswith("single global ground-plane-homography"),
+        "G1 formulation scope drift",
+    )
+    require(
+        g3["alphabet"]["headers_and_finite_coder_overhead_included"] is False, "G3 unexpectedly claims finite coding"
+    )
+    require(g3["alphabet"]["site_location_cost_included"] is False, "G3 unexpectedly includes site locations")
+
+    require(aa.get("n_pairs") == 600, "AA-SDF observation receipt is not n600")
+    require("NON-PROMOTABLE" in aa.get("axis_tag", ""), "AA-SDF authority firewall drift")
+    require(r1b7.get("schema") == "r1b7_uint8_survival_carrier_measurement.v1", "r1b7 schema drift")
+    require(
+        r1b7["integer_aware"]["search"]["new_hard_crossing_site_count"] == 0,
+        "r1b7 adjudicated crossing count drift",
+    )
+    require(rust_parity.get("status") == "PASS", "Rust parity attestation is not PASS")
+
+    source_custody = {
+        "video": _artifact(source_video, "source-video-derived", "S0 sole video input"),
+        "frozen_upstream": [
+            _artifact(modules, "upstream-frozen-scorer-code", "S0 frozen preprocessing/model definitions"),
+            _artifact(segnet, "upstream-frozen-scorer-weights", "S0 SegNet authority"),
+            _artifact(posenet, "upstream-frozen-scorer-weights", "S0 PoseNet authority"),
+        ],
+        "target_cache": _artifact(gt_cache, "source-video-derived our-build", "S0 n600 target custody"),
+        "cache_binding": {
+            "m2_sha_match": True,
+            "g1g3_sha_match": True,
+            "lane_path_match": True,
+            "fresh_full_cache_rebuild_this_pass": False,
+            "scope": "existing canonical cache re-hashed and cross-bound; build log does not itself pin source/module hashes",
+        },
+    }
+
+    consumed = [
+        _artifact(
+            tie_receipt_path,
+            "our support-fill solve on the exact-plane receiver; law-only consumption",
+            "S1 canonical support-fill exactness; no receiver/archive bytes consumed",
+        ),
+        _artifact(m2_receipt_path, "source-video-derived our-solve", "S1 source-target exact direct row"),
+        _artifact(lane_receipt_path, "source-video-derived our-solve", "S2 coherent lane-chart rate"),
+        _artifact(g1g3_receipt_path, "source-video-derived our-measurement", "S2 transport and cell-code priors"),
+        _artifact(aa_receipt_path, "source-video-derived our-measurement", "S2 n600 AA-SDF fidelity curve"),
+        _artifact(
+            r1b7_receipt_path,
+            "mixed inherited-base experiment; law-only consumption",
+            "S3 fixed-magnitude/no-sub-step lesson only; all archive/payload bytes excluded",
+        ),
+    ]
+
+    g1_transition = g1["aggregate"]["by_transition"]
+    g3_best = g3["best_measured_prior"]
+    g3_bytes = float(g3["all_flips"]["ideal_bytes"][g3_best])
+    stages = {
+        "S0_true_targets": {
+            "status": "VERIFIED_EXISTING_N600_SOURCE_DERIVATION",
+            "pair_count": 600,
+            "only_semantic_inputs": ["upstream/videos/0.mkv", "upstream/modules.py", "frozen scorer weights"],
+            "note": source_custody["cache_binding"]["scope"],
+        },
+        "S1_canonical_support_fill_and_exact_direct_row": {
+            "status": "MEASURED_TWO_DISTINCT_EXACTNESS_ROWS",
+            "canonical_support_fill": {
+                "target": "rounded uint8 scorer plane Y",
+                "fp32_nonzero_values": 0,
+                "fp32_total_values": 600 * 384 * 512,
+                "max_abs": 0.0,
+                "warning": "the receipt verdict prose contradicts its exact numeric fields; numeric fields were re-derived and used",
+            },
+            "source_target_direct_realization": {
+                "archive_bytes": int(m2["candidate"]["archive_bytes"]),
+                "d_seg": 0.0,
+                "d_pose": 0.0,
+                "score_claim": False,
+                "scope": "official macOS-CPU advisory row; direct per-camera realization, not a compact descriptor",
+            },
+        },
+        "S2_task_space_level_set_witness": {
+            "status": "PARTIAL_MEASURED_NOT_PARTITION_POSE_COMPLETE",
+            "division_of_labor": {
+                "shape": "level-set charts describe the five-class partition; lane polynomial is the lane SDF zero-set",
+                "values": "inverse preimage pins scorer-bearing values inside the selected cells",
+                "realization": "S3 must jointly preserve chart and values on the uint8 lattice",
+            },
+            "lane_chart": {
+                "coherent_slot_brotli_bytes": lane_bytes,
+                "rate_term": expected_rate,
+                "fitted_lines": int(lane["fit_stats"]["total_lines"]),
+                "band_recall_mean": float(lane["fit_stats"]["band_recall_mean"]),
+                "fidelity_scope": "lossless to fitted lane parameters, not lossless to the Lane argmax mask",
+            },
+            "worldsheet_transport": {
+                "equation_id": "worldsheet_transport_residual_event_rate_v1",
+                "within_pair_median_px": float(g1_transition["within_pair"]["median_of_transition_medians_px"]),
+                "cross_pair_median_px": float(g1_transition["cross_pair"]["median_of_transition_medians_px"]),
+                "within_pair_event_gt4_fraction": float(g1_transition["within_pair"]["event_fraction_gt_px"]["4"]),
+                "cross_pair_event_gt4_fraction": float(g1_transition["cross_pair"]["event_fraction_gt_px"]["4"]),
+                "formulation_caveat": g1["verdict_scope"],
+            },
+            "precision_waterfill": {
+                "equation_ids": [
+                    "frozen_scorer_fisher_curvature_margin_colocation_v1",
+                    "fisher_curvature_equals_categorical_fisher_trace_caustic_v1",
+                    "segnet_head_rank4_linear_flipdist_v1",
+                    "witness_measured_reverse_waterfill_v1",
+                ],
+                "status": "REGISTERED_LAWS_NOT_EXECUTED_AS_A_COMPLETE_S2_BIT_ALLOCATOR_IN_THIS_ROW",
+            },
+            "morse_smale_cell_prior": {
+                "equation_id": "argmax_cell_identity_ideal_bytes_v1",
+                "flip_count": int(g3["all_flips"]["flip_count"]),
+                "best_prior": g3_best,
+                "ideal_bytes": g3_bytes,
+                "not_counted": ["site locations", "headers", "finite coder overhead"],
+                "fidelity_scope": "ideal conditional cell-identity floor, not a receiver-closed stream",
+            },
+            "aa_sdf_renderer": {
+                "equation_id": "aa_sdf_observation_footprint_render_dseg_v1",
+                "n600_grid384_d_seg": float(aa["render_grid_curve"]["384"]["real"]["aa"]["d_seg"]["mean"]),
+                "rust_oracle_parity": rust_parity,
+            },
+            "curvelet_residual_chart": {
+                "status": "REQUIRED_NOT_COMPOSED",
+                "equation_id": "shearlet_nterm_upper_bounds_task_rate_v1",
+                "scope": "use only where polynomial/ground charts leave measured residual; no Fourier candidate basis",
+            },
+            "range_and_blind_geometry": {
+                "full_linear_nullity_fraction": float(m2["geometry_decomposition"]["full_linear_nullity_fraction"]),
+                "implemented_integer_exact_null_mask_fraction": float(
+                    m2["geometry_decomposition"]["implemented_integer_exact_null_mask_fraction"]
+                ),
+                "blind_coordinates_per_frame": 230_904,
+                "blind_fraction": 0.22696926089315625,
+                "scope": "generic fill is free only for a camera-resolution payload; direct saving is zero for a pure generator",
+            },
+            "missing_closure": [
+                "receiver-closed five-class partition descriptor with measured finite bytes",
+                "counted pose/xi stream bound to the same n600 partition row",
+                "curvelet residual chart composed where polynomial/ground charts fail",
+                "one parse-back that combines charts, cell events, values, range(A), and generic blind fill",
+                "n600 through-R hard-oracle fidelity for that combined descriptor",
+            ],
+        },
+        "S3_integer_aware_realization": {
+            "status": "COMPONENTS_PRESENT_NOT_COMPOSED_WITH_S2",
+            "lattice_components": [
+                "tac.optimization.uint8_lattice_feasibility",
+                "tac.optimization.tie_aware_preimage",
+            ],
+            "fixed_magnitude_lesson": {
+                "receipt_verdict": r1b7["verdict"],
+                "new_hard_crossings": 0,
+                "scope": r1b7["verdict_scope"],
+                "candidate_bytes_consumed": False,
+            },
+            "gate": "no sub-step writes; admit only fixed-magnitude integer writes through a fresh hard oracle",
+        },
+        "S4_strict_archive_n600_receiver": {
+            "status": "NOT_BUILT_FOR_THIS_FROM_SCRATCH_COMPOSITION",
+            "archive_bytes": None,
+            "per_class_d_seg": None,
+            "d_pose": None,
+            "score": None,
+            "pointer_moved": False,
+        },
+    }
+
+    return {
+        "schema": SCHEMA,
+        "captured_at_utc": datetime.now(UTC).isoformat(),
+        "lane_id": lane_id,
+        "authority_axis": AXIS,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+        "verdict": "PARTIAL_CONSTRUCTIVE_SPINE_MEASURED_S2_AND_S3_NOT_COMPOSED_S4_ABSENT",
+        "verdict_scope": "current from-scratch source-only composition; component gaps do not close the task-space level-set witness family",
+        "source_custody": source_custody,
+        "consumed_artifacts": consumed,
+        "borrowed_substrate_accounting": {
+            "borrowed_candidate_archives": [],
+            "borrowed_candidate_payloads": [],
+            "inherited_bytes_in_candidate": 0,
+            "lineage_submission_eligible": True,
+            "candidate_submission_eligible": False,
+            "note": "all candidate-bearing rows are source-derived/our-solve; r1b7 is law-only and every inherited archive/payload byte is excluded",
+        },
+        "stages": stages,
+        "admission": {
+            "s0_s1_ground_truth_spine": True,
+            "s2_complete_partition_pose_description": False,
+            "s3_integer_realization_composed": False,
+            "s4_receiver_closed_archive": False,
+            "score_or_pointer_authority": False,
+        },
+        "runtime": {
+            "git_head": git_head(),
+            "auditor_sha256": sha256_file(Path(__file__)),
+            "host": platform.node(),
+            "platform": platform.platform(),
+            "python": platform.python_version(),
+        },
+    }
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source-video", type=Path, required=True)
+    parser.add_argument("--upstream-root", type=Path, required=True)
+    parser.add_argument("--gt-cache", type=Path, required=True)
+    parser.add_argument("--tie-receipt", type=Path, required=True)
+    parser.add_argument("--m2-receipt", type=Path, required=True)
+    parser.add_argument("--lane-receipt", type=Path, required=True)
+    parser.add_argument("--g1g3-receipt", type=Path, required=True)
+    parser.add_argument("--aa-receipt", type=Path, required=True)
+    parser.add_argument("--r1b7-receipt", type=Path, required=True)
+    parser.add_argument("--runtime-rs", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--lane-id", default="joint_planes_direct_strike")
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    rust = run_rust_parity(args.runtime_rs.resolve())
+    receipt = build_receipt(
+        source_video=args.source_video.resolve(),
+        upstream_root=args.upstream_root.resolve(),
+        gt_cache=args.gt_cache.resolve(),
+        tie_receipt_path=args.tie_receipt.resolve(),
+        m2_receipt_path=args.m2_receipt.resolve(),
+        lane_receipt_path=args.lane_receipt.resolve(),
+        g1g3_receipt_path=args.g1g3_receipt.resolve(),
+        aa_receipt_path=args.aa_receipt.resolve(),
+        r1b7_receipt_path=args.r1b7_receipt.resolve(),
+        rust_parity=rust,
+        lane_id=args.lane_id,
+    )
+    atomic_json(args.output.resolve(), receipt)
+    print(json.dumps(receipt, indent=2, sort_keys=True, allow_nan=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
