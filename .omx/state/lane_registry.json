@@ -82303,6 +82303,49 @@
       },
       "notes": "research_only=true; $0 literature crosswalk and fail-closed shadow one-step candidate probe design; no launch or pointer authority",
       "research_only": true
+    },
+    {
+      "id": "lane_per_stratum_recursive_fractal_optimal_20260721",
+      "name": "Per-stratum recursive-fractal byte-closed treatment table",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task-specific $0 local n600 measurement; recall settled SPEC_v8 carriers; only new Road/Lane calibration decomposition; research_only=true; no score or promotion authority; MAIN review required.",
+      "research_only": true,
+      "lane_class": "research_substrate"
     }
   ],
   "level_rules": {
