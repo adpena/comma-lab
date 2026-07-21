@@ -80538,6 +80538,49 @@
       "notes": "research_only=true; task #593; memo plus DAG feed only; no launch/no score/no pointer mutation; MAIN landing review required",
       "research_only": true,
       "lane_class": "research"
+    },
+    {
+      "id": "p0_costate_organ_factorization_grounded_ABC",
+      "name": "P0 costate ORGAN v2 exact anchored factorization",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/costate_organ_v2_exact_anchor_20260721T015900Z.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/costate_organ_v2_exact_anchor_backtest_20260721.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Advisory-only ORGAN v2 exact-anchored costate. No paid/heavy/live-run actuation. MAIN landing review required.",
+      "research_only": true,
+      "lane_class": "decision_apparatus"
     }
   ],
   "level_rules": {
