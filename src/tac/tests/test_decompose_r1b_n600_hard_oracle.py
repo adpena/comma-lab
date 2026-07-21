@@ -80,3 +80,25 @@ def test_checkpoint_roundtrip_and_contract_refusal(tmp_path: Path) -> None:
     assert tool._load_checkpoint(path, contract_sha256="a" * 64) == second
     with pytest.raises(tool.DecompositionError, match="contract mismatch"):
         tool._load_checkpoint(path, contract_sha256="b" * 64)
+
+
+def test_label_chunk_reuses_exact_post_rename_orphan_and_rejects_drift(tmp_path: Path) -> None:
+    path = tmp_path / "mismatch_0000_0001.npz"
+    arrays = {
+        "pair_index": np.array([0, 0], dtype=np.uint16),
+        "site_index": np.array([4, 9], dtype=np.uint32),
+        "gt_class": np.array([1, 2], dtype=np.uint8),
+        "candidate_class": np.array([0, 0], dtype=np.uint8),
+    }
+
+    first = tool._write_label_chunk(path, **arrays)
+    replay = tool._write_label_chunk(path, **arrays)
+
+    assert first == replay
+    with pytest.raises(tool.DecompositionError, match="conflicts with replay"):
+        tool._write_label_chunk(path, **{**arrays, "site_index": np.array([4, 10])})
+
+    with pytest.raises(tool.DecompositionError, match="mismatch count drift"):
+        tool._validate_label_chunks(
+            [first], expected_count=1, expected_mismatch_sites=3
+        )
