@@ -82127,6 +82127,53 @@
         "Explicit xi warp survives hard oracle",
         "Real archive coder demonstrates positive rate cut"
       ]
+    },
+    {
+      "id": "lane_g2g_chart_symbol_receiver_578_20260721",
+      "name": "G2g chart-symbol receiver",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/predictor_upgrade_xi_chart.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_predictor_upgrade_xi_chart.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "MEASURED macOS-CPU advisory: 0/6 admitted on g2f-selected n64 candidates; receiver/bytes exact, semantic exactness and pose tube failed; family open; n600 refused; MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "joint multi-coefficient chart-symbol solve reaches semantic cells and pose tube at n64",
+        "nonempty receiver-closed G2CS1 row remains above 25/37545489 score units per byte",
+        "MAIN approves any U1 or P0 G6 routing"
+      ]
     }
   ],
   "level_rules": {

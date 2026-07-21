@@ -37,11 +37,58 @@ from tools.measure_realization_g2_lattice import (
     parse_frozen_scorer_palette,
     protect_seed_class_sites,
     serialize_frozen_scorer_palette,
+    summarize_chart_symbol_receiver_rows,
     summarize_contextual_prefix,
     summarize_interior_prefix,
     summarize_secant_prefix,
     summarize_source_control_prefix,
 )
+
+
+def _chart_symbol_stage(pair: int, *, admitted: bool) -> dict:
+    predicates = {
+        "semantic_cells_to_rgb_exact": admitted,
+        "pose_within_tube": True,
+        "zero_or_counted_bytes": True,
+        "receiver_derived_rgb": True,
+        "factor2_uint8_exact": True,
+        "double_decode_identical": True,
+        "rate_above_lambda": admitted,
+    }
+    return {
+        "pair_index": pair,
+        "selected_candidate": {
+            "admitted": admitted,
+            "admission_predicates": predicates,
+            "packet": {"bytes": 20},
+            "deltas": {"delta_d_seg": -0.01 if admitted else 0.0, "delta_d_pose": 0.0},
+        },
+    }
+
+
+def test_g2g_chart_symbol_summary_preserves_hard_predicates_and_scope() -> None:
+    summary = summarize_chart_symbol_receiver_rows(
+        [_chart_symbol_stage(0, admitted=True), _chart_symbol_stage(34, admitted=False)],
+        candidate_scope="four chart-only rescues",
+    )
+    assert summary["pair_indices"] == [0, 34]
+    assert summary["admitted_pair_indices"] == [0]
+    assert summary["first_admitted_realization_correction"] is True
+    assert summary["selected_candidate_packet_bytes"] == 40
+    assert summary["admission_predicate_failure_histogram"] == {
+        "rate_above_lambda": 1,
+        "semantic_cells_to_rgb_exact": 1,
+    }
+    assert summary["candidate_scope"] == "four chart-only rescues"
+    assert summary["score_claim"] is False
+
+
+def test_g2g_chart_symbol_summary_refuses_duplicate_or_unsorted_pairs() -> None:
+    with pytest.raises(RealizationAuditError, match="sorted and unique"):
+        summarize_chart_symbol_receiver_rows(
+            [_chart_symbol_stage(34, admitted=False), _chart_symbol_stage(0, admitted=False)],
+            candidate_scope="malformed",
+        )
 
 
 def _stage(pair: int) -> dict:

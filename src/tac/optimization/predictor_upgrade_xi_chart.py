@@ -28,6 +28,7 @@ from tac.boundary_math.analytic_lane_render_band import (
     rasterize_lane_coverage_range_dependent,
     render_config_from_header,
 )
+from tac.boundary_math.lane_sdf_component import LaneLine
 from tac.optimization.predict_project_receiver import _interpolate_track_knot, component_byte_accounting
 from tac.optimization.predict_project_schema import (
     attach_generic_predictor_policy,
@@ -61,6 +62,10 @@ LANE_CHART_ZLIB9_SHA256: Final = "ef16824eea59415e71435b94c450c2d554e0db08c0981f
 LANE_CHART_STATUS: Final = "executed_in_task578_measurement_external_counted_custody"
 _MAGIC: Final = b"PXCH1"
 _HEADER: Final = struct.Struct(">5sHHH")
+CHART_SYMBOL_PACKET_MAGIC: Final = b"G2CS1"
+CHART_SYMBOL_PACKET_VERSION: Final = 1
+_CHART_SYMBOL_HEADER: Final = struct.Struct(">5sBHI")
+_CHART_SYMBOL_ROW: Final = struct.Struct(">HBBf")
 
 
 class PredictorUpgradeError(ValueError):
@@ -82,6 +87,193 @@ class StaticCharts:
             raise PredictorUpgradeError("road/undrivable chart has unknown symbols")
         if tuple(sorted(set(self.adjacency))) != self.adjacency:
             raise PredictorUpgradeError("adjacency edges must be sorted and unique")
+
+
+@dataclass(frozen=True, order=True)
+class LaneCoefficientDelta:
+    """One counted, decoder-applied openpilot lane-chart symbol.
+
+    ``coefficient_delta`` is canonically quantized to IEEE-754 binary32 on the
+    wire.  Pair, line, and coefficient indices address the already-counted
+    decoded LBND chart; no raster, target cell, scorer state, or RGB value is
+    carried by this packet.
+    """
+
+    pair_index: int
+    line_index: int
+    coefficient_index: int
+    coefficient_delta: float
+
+    def __post_init__(self) -> None:
+        for name, value, limit in (
+            ("pair_index", self.pair_index, 600),
+            ("line_index", self.line_index, 256),
+            ("coefficient_index", self.coefficient_index, 256),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value < limit:
+                raise PredictorUpgradeError(f"chart-symbol {name} is outside its wire range")
+        quantized = float(np.float32(self.coefficient_delta))
+        if not np.isfinite(quantized) or quantized == 0.0:
+            raise PredictorUpgradeError(
+                "chart-symbol coefficient delta must be finite and nonzero after fp32 quantization"
+            )
+        object.__setattr__(self, "coefficient_delta", quantized)
+
+
+def encode_lane_coefficient_deltas(symbols: Sequence[LaneCoefficientDelta]) -> bytes:
+    """Emit the actual counted G2CS1 chart-symbol packet.
+
+    Empty correction sets cost zero bytes.  Nonempty rows are sorted by their
+    receiver address, carry the fp32-quantized delta, and are protected by a
+    body CRC.  The fixed binary packet is the byte-price authority; no pixel
+    proxy or entropy estimate substitutes for ``len(payload)``.
+    """
+
+    rows = tuple(symbols)
+    if not rows:
+        return b""
+    if len(rows) > 0xFFFF or any(not isinstance(row, LaneCoefficientDelta) for row in rows):
+        raise PredictorUpgradeError("chart-symbol packet rows are malformed or exceed uint16 count")
+    keys = [(row.pair_index, row.line_index, row.coefficient_index) for row in rows]
+    if keys != sorted(set(keys)):
+        raise PredictorUpgradeError("chart-symbol rows must be sorted and address-unique")
+    body = b"".join(
+        _CHART_SYMBOL_ROW.pack(
+            row.pair_index,
+            row.line_index,
+            row.coefficient_index,
+            row.coefficient_delta,
+        )
+        for row in rows
+    )
+    return (
+        _CHART_SYMBOL_HEADER.pack(
+            CHART_SYMBOL_PACKET_MAGIC,
+            CHART_SYMBOL_PACKET_VERSION,
+            len(rows),
+            zlib.crc32(body) & 0xFFFFFFFF,
+        )
+        + body
+    )
+
+
+def decode_lane_coefficient_deltas(payload: bytes) -> tuple[LaneCoefficientDelta, ...]:
+    """Strict inverse of :func:`encode_lane_coefficient_deltas`.
+
+    Exact length, version, CRC, ordering, uniqueness, finite fp32 values, and
+    canonical re-encoding all fail closed.  This is the chart-symbol extension
+    of the existing exact-consumption receiver discipline (#402).
+    """
+
+    if not isinstance(payload, bytes):
+        raise PredictorUpgradeError("chart-symbol payload must be bytes")
+    if not payload:
+        return ()
+    if len(payload) < _CHART_SYMBOL_HEADER.size:
+        raise PredictorUpgradeError("chart-symbol packet is truncated")
+    magic, version, count, checksum = _CHART_SYMBOL_HEADER.unpack_from(payload)
+    if magic != CHART_SYMBOL_PACKET_MAGIC or version != CHART_SYMBOL_PACKET_VERSION or count == 0:
+        raise PredictorUpgradeError("chart-symbol packet magic/version/count mismatch")
+    expected = _CHART_SYMBOL_HEADER.size + count * _CHART_SYMBOL_ROW.size
+    if len(payload) != expected:
+        raise PredictorUpgradeError("chart-symbol packet length mismatch or trailing bytes")
+    body = payload[_CHART_SYMBOL_HEADER.size :]
+    if (zlib.crc32(body) & 0xFFFFFFFF) != checksum:
+        raise PredictorUpgradeError("chart-symbol packet CRC mismatch")
+    rows = tuple(
+        LaneCoefficientDelta(*_CHART_SYMBOL_ROW.unpack_from(body, offset * _CHART_SYMBOL_ROW.size))
+        for offset in range(count)
+    )
+    if encode_lane_coefficient_deltas(rows) != payload:
+        raise PredictorUpgradeError("chart-symbol packet is not canonical on parse-back")
+    return rows
+
+
+def _clone_lane_line(line: LaneLine, centerline_coeffs: np.ndarray) -> LaneLine:
+    return LaneLine(
+        centerline_coeffs=np.asarray(centerline_coeffs, dtype=np.float64).copy(),
+        halfwidth_coeffs=np.asarray(line.halfwidth_coeffs, dtype=np.float64).copy(),
+        dash_period_m=float(line.dash_period_m),
+        dash_phase_m=float(line.dash_phase_m),
+        dash_duty=float(line.dash_duty),
+        forward_range=(float(line.forward_range[0]), float(line.forward_range[1])),
+        n_pixels=int(line.n_pixels),
+    )
+
+
+def apply_lane_coefficient_deltas(
+    lane_pairs: Sequence[Sequence[LaneLine]],
+    symbols: Sequence[LaneCoefficientDelta],
+) -> list[list[LaneLine]]:
+    """Apply decoded symbols to a deep copy of the parsed lane chart."""
+
+    pairs = [
+        [_clone_lane_line(line, np.asarray(line.centerline_coeffs, dtype=np.float64)) for line in lines]
+        for lines in lane_pairs
+    ]
+    for symbol in symbols:
+        if symbol.pair_index >= len(pairs) or symbol.line_index >= len(pairs[symbol.pair_index]):
+            raise PredictorUpgradeError("chart-symbol pair/line address is absent from the decoded Lane chart")
+        line = pairs[symbol.pair_index][symbol.line_index]
+        coefficients = np.asarray(line.centerline_coeffs, dtype=np.float64).copy()
+        if symbol.coefficient_index >= coefficients.size:
+            raise PredictorUpgradeError("chart-symbol coefficient address is absent from the decoded LaneLine")
+        coefficients[symbol.coefficient_index] += symbol.coefficient_delta
+        if not np.isfinite(coefficients).all():
+            raise PredictorUpgradeError("chart-symbol application produced a nonfinite LaneLine")
+        pairs[symbol.pair_index][symbol.line_index] = _clone_lane_line(line, coefficients)
+    return pairs
+
+
+def decode_lane_chart_with_symbols(
+    lane_chart_payload: bytes,
+    chart_symbol_payload: bytes,
+) -> tuple[list[list[LaneLine]], Any, dict[str, Any]]:
+    """Parse the counted base chart, apply counted symbols, and prove replay.
+
+    The rasterizer remains generic/free under rule 118.  Only the already
+    counted base chart and ``chart_symbol_payload`` carry instance data.
+    """
+
+    if not isinstance(lane_chart_payload, bytes) or not lane_chart_payload:
+        raise PredictorUpgradeError("receiver requires nonempty counted Lane-chart bytes")
+    try:
+        lane_pairs, header = deserialize_lane_band_any(lane_chart_payload)
+        config = render_config_from_header(header)
+    except (AssertionError, KeyError, TypeError, ValueError) as error:
+        raise PredictorUpgradeError("receiver refused malformed counted Lane-chart bytes") from error
+    first = decode_lane_coefficient_deltas(chart_symbol_payload)
+    second = decode_lane_coefficient_deltas(chart_symbol_payload)
+    if first != second or encode_lane_coefficient_deltas(first) != chart_symbol_payload:
+        raise PredictorUpgradeError("chart-symbol receiver double decode changed bytes or values")
+    corrected = apply_lane_coefficient_deltas(lane_pairs, first)
+    replayed = apply_lane_coefficient_deltas(lane_pairs, second)
+    for pair_a, pair_b in zip(corrected, replayed, strict=True):
+        if len(pair_a) != len(pair_b):
+            raise PredictorUpgradeError("chart-symbol receiver replay changed line cardinality")
+        for line_a, line_b in zip(pair_a, pair_b, strict=True):
+            if not np.array_equal(line_a.centerline_coeffs, line_b.centerline_coeffs):
+                raise PredictorUpgradeError("chart-symbol receiver replay changed coefficients")
+    return (
+        corrected,
+        config,
+        {
+            "schema": "g2g_chart_symbol_receiver_parseback.v1",
+            "base_lane_chart_bytes": len(lane_chart_payload),
+            "base_lane_chart_sha256": hashlib.sha256(lane_chart_payload).hexdigest(),
+            "chart_symbol_bytes": len(chart_symbol_payload),
+            "chart_symbol_sha256": hashlib.sha256(chart_symbol_payload).hexdigest(),
+            "symbol_count": len(first),
+            "double_decode_byte_identical": True,
+            "canonical_reencode_identical": True,
+            "receiver_derived_rgb": True,
+            "rule_118": {
+                "counted": "base Lane chart plus G2CS1 coefficient deltas",
+                "free_generic": "LBND parse, coefficient application, AA-SDF rasterization",
+                "target_cells_or_scorer_state_in_packet": False,
+            },
+        },
+    )
 
 
 def _detected_class_order(labels: np.ndarray) -> tuple[int, ...]:
@@ -142,9 +334,13 @@ def parse_static_charts(payload: bytes) -> StaticCharts:
     if len(payload) != _HEADER.size + count + packed:
         raise PredictorUpgradeError("static chart payload length mismatch")
     ru = np.frombuffer(payload, dtype=np.uint8, count=count, offset=_HEADER.size).reshape(h, w).copy()
-    hood = np.unpackbits(
-        np.frombuffer(payload, dtype=np.uint8, count=packed, offset=_HEADER.size + count), bitorder="little"
-    )[:count].reshape(h, w).astype(np.bool_)
+    hood = (
+        np.unpackbits(
+            np.frombuffer(payload, dtype=np.uint8, count=packed, offset=_HEADER.size + count), bitorder="little"
+        )[:count]
+        .reshape(h, w)
+        .astype(np.bool_)
+    )
     edges = []
     bit = 0
     for left in range(5):
@@ -168,9 +364,7 @@ def relative_adjacent_xi(
         raise PredictorUpgradeError("G1 PoseNet targets must have shape (pairs,6)")
     relative = np.zeros_like(poses)
     for pair in range(1, len(relative)):
-        relative[pair] = g1_warp.xi_from_pose_calibration(
-            poses[pair], s_t=s_t, s_r=s_r, pitch=pitch_rad
-        )
+        relative[pair] = g1_warp.xi_from_pose_calibration(poses[pair], s_t=s_t, s_r=s_r, pitch=pitch_rad)
     return relative, {
         **_policy_motion_custody(),
         "pair0": "chart_only_no_predecessor_no_warp",
@@ -269,9 +463,15 @@ def _admitted_chart_mask(
 
 
 def predict_cell_field(
-    *, pair_index: int, prior_decoded_field: np.ndarray | None, charts: StaticCharts, relative_xi: np.ndarray,
-    worldsheet_geom: g1_warp.GroundHomographyGeom, lane_mask: np.ndarray,
-    movable_tracks: Sequence[Mapping[str, Any]] = (), return_trace: bool = False,
+    *,
+    pair_index: int,
+    prior_decoded_field: np.ndarray | None,
+    charts: StaticCharts,
+    relative_xi: np.ndarray,
+    worldsheet_geom: g1_warp.GroundHomographyGeom,
+    lane_mask: np.ndarray,
+    movable_tracks: Sequence[Mapping[str, Any]] = (),
+    return_trace: bool = False,
 ) -> np.ndarray | tuple[np.ndarray, dict[str, np.ndarray]]:
     """Deterministic doctrine predictor.  The caller owns prior-field custody."""
 
@@ -356,32 +556,43 @@ def load_lane_chart(path: Path) -> tuple[list[list[Any]], Any, dict[str, Any]]:
     compressed = brotli.compress(payload, quality=11)
     zlib9 = zlib.compress(payload, 9)
     if (len(payload), len(compressed), observed_sha) != (
-        LANE_CHART_RAW_BYTES, LANE_CHART_BROTLI_BYTES, LANE_CHART_SHA256
+        LANE_CHART_RAW_BYTES,
+        LANE_CHART_BROTLI_BYTES,
+        LANE_CHART_SHA256,
     ):
         raise PredictorUpgradeError("Lane chart raw/brotli/SHA custody mismatch")
-    if (len(zlib9), hashlib.sha256(zlib9).hexdigest()) != (
-        LANE_CHART_ZLIB9_BYTES, LANE_CHART_ZLIB9_SHA256
-    ):
+    if (len(zlib9), hashlib.sha256(zlib9).hexdigest()) != (LANE_CHART_ZLIB9_BYTES, LANE_CHART_ZLIB9_SHA256):
         raise PredictorUpgradeError("Lane chart zlib-9 diagnostic custody mismatch")
     pairs, header = deserialize_lane_band_any(payload)
     if len(pairs) != 600 or int(header.get("lane_cls", -1)) != 1:
         raise PredictorUpgradeError("Lane chart decoded geometry/class mismatch")
-    return pairs, render_config_from_header(header), {
-        "lane_chart_raw_bytes": len(payload), "lane_chart_brotli_bytes": len(compressed),
-        "lane_chart_sha256": observed_sha,
-        "lane_chart_zlib9_bytes_diagnostic_only": len(zlib9),
-        "lane_chart_zlib9_sha256_diagnostic_only": hashlib.sha256(zlib9).hexdigest(),
-        "lane_chart_status": LANE_CHART_STATUS,
-        "executed": True,
-        "execution_scope": "task578_measurement_only",
-        "receiver_closed": False,
-    }
+    return (
+        pairs,
+        render_config_from_header(header),
+        {
+            "lane_chart_raw_bytes": len(payload),
+            "lane_chart_brotli_bytes": len(compressed),
+            "lane_chart_sha256": observed_sha,
+            "lane_chart_zlib9_bytes_diagnostic_only": len(zlib9),
+            "lane_chart_zlib9_sha256_diagnostic_only": hashlib.sha256(zlib9).hexdigest(),
+            "lane_chart_status": LANE_CHART_STATUS,
+            "executed": True,
+            "execution_scope": "task578_measurement_only",
+            "receiver_closed": False,
+        },
+    )
 
 
 def render_lane_mask(lines: Sequence[Any], config: Any, *, h: int, w: int) -> np.ndarray:
     coverage = rasterize_lane_coverage_range_dependent(
-        list(lines), h=h, w=w, softness=config.softness, dash_gate=config.dash_gate,
-        dash_forward_max_m=config.dash_forward_max_m, v_h=config.v_h, cx=config.cx,
+        list(lines),
+        h=h,
+        w=w,
+        softness=config.softness,
+        dash_gate=config.dash_gate,
+        dash_forward_max_m=config.dash_forward_max_m,
+        v_h=config.v_h,
+        cx=config.cx,
     )
     return np.asarray(coverage >= 0.5, dtype=np.bool_)
 
@@ -416,8 +627,14 @@ def classify_strata(target: np.ndarray, critical_sites: Sequence[tuple[int, int]
     return strata
 
 
-def miss_cause(target: np.ndarray, predicted: np.ndarray, strata: np.ndarray, charts: StaticCharts,
-               lane_mask: np.ndarray, trace: Mapping[str, np.ndarray]) -> np.ndarray:
+def miss_cause(
+    target: np.ndarray,
+    predicted: np.ndarray,
+    strata: np.ndarray,
+    charts: StaticCharts,
+    lane_mask: np.ndarray,
+    trace: Mapping[str, np.ndarray],
+) -> np.ndarray:
     causes = np.zeros(target.shape, dtype=np.uint8)
     causes[strata == 3] = 4
     causes[(strata == 2) & (strata != 3)] = 3
@@ -469,16 +686,26 @@ def counts_receipt(counts: Mapping[str, np.ndarray]) -> dict[str, Any]:
         strata = []
         for stratum_id, stratum in enumerate(STRATA):
             c, t = int(correct[class_id, stratum_id]), int(total[class_id, stratum_id])
-            strata.append({
-                "stratum": stratum,
+            strata.append(
+                {
+                    "stratum": stratum,
+                    "correct": c,
+                    "total": t,
+                    "satisfaction_fraction": c / t if t else None,
+                    "miss_causes": {MISS_CAUSES[i]: int(causes[class_id, stratum_id, i]) for i in range(5)},
+                }
+            )
+        c, t = int(correct[class_id].sum()), int(total[class_id].sum())
+        rows.append(
+            {
+                "class_id": class_id,
+                "class_name": class_name,
                 "correct": c,
                 "total": t,
                 "satisfaction_fraction": c / t if t else None,
-                "miss_causes": {MISS_CAUSES[i]: int(causes[class_id, stratum_id, i]) for i in range(5)},
-            })
-        c, t = int(correct[class_id].sum()), int(total[class_id].sum())
-        rows.append({"class_id": class_id, "class_name": class_name, "correct": c, "total": t,
-                     "satisfaction_fraction": c / t if t else None, "strata": strata})
+                "strata": strata,
+            }
+        )
     c, t = int(correct.sum()), int(total.sum())
     return {"per_class": rows, "overall": {"correct": c, "total": t, "satisfaction_fraction": c / t}}
 
@@ -504,8 +731,16 @@ def _atomic_json(path: Path, value: Any) -> None:
     _atomic_write(path, json.dumps(value, sort_keys=True, indent=2, allow_nan=False).encode() + b"\n")
 
 
-def _source_config_hash(*, cache: Path, n_pairs: int, chunk_size: int, predecessor_seeds: Mapping[str, Path],
-                        lane_chart: Path, lane_custody: Mapping[str, Any], motion_custody: Mapping[str, Any]) -> str:
+def _source_config_hash(
+    *,
+    cache: Path,
+    n_pairs: int,
+    chunk_size: int,
+    predecessor_seeds: Mapping[str, Path],
+    lane_chart: Path,
+    lane_custody: Mapping[str, Any],
+    motion_custody: Mapping[str, Any],
+) -> str:
     source = Path(__file__)
     value = {
         "schema": "predictor_upgrade_xi_chart_run_config.v1",
@@ -518,7 +753,9 @@ def _source_config_hash(*, cache: Path, n_pairs: int, chunk_size: int, predecess
         "canonical_g1_worldsheet_warp_sha256": sha256_file(Path(g1_warp.__file__)),
         "n_pairs": n_pairs,
         "chunk_size": chunk_size,
-        "predecessor_seeds": {name: {"path": str(path), "sha256": sha256_file(path)} for name, path in predecessor_seeds.items()},
+        "predecessor_seeds": {
+            name: {"path": str(path), "sha256": sha256_file(path)} for name, path in predecessor_seeds.items()
+        },
         "lane_chart": {"path": str(lane_chart), **dict(lane_custody)},
         "motion_custody": dict(motion_custody),
         "policy_id": POLICY_ID,
@@ -548,9 +785,17 @@ def _normal_at(target: np.ndarray, y: int, x: int) -> tuple[int, int]:
 
 
 def _measure_chunk(
-    *, labels: np.ndarray, relative: np.ndarray, charts: StaticCharts, start: int, stop: int,
-    critical_by_pair: Mapping[int, Sequence[tuple[int, int]]], predecessor_rows: Mapping[str, Mapping[int, list[dict[str, Any]]]],
-    movable_tracks: Sequence[Mapping[str, Any]], lane_pairs: Sequence[Sequence[Any]], lane_config: Any,
+    *,
+    labels: np.ndarray,
+    relative: np.ndarray,
+    charts: StaticCharts,
+    start: int,
+    stop: int,
+    critical_by_pair: Mapping[int, Sequence[tuple[int, int]]],
+    predecessor_rows: Mapping[str, Mapping[int, list[dict[str, Any]]]],
+    movable_tracks: Sequence[Mapping[str, Any]],
+    lane_pairs: Sequence[Sequence[Any]],
+    lane_config: Any,
     worldsheet_geom: g1_warp.GroundHomographyGeom,
 ) -> tuple[dict[str, Any], bytes]:
     counts = empty_counts()
@@ -561,13 +806,23 @@ def _measure_chunk(
         prior = None if pair == 0 else np.asarray(labels[pair - 1], dtype=np.uint8)
         lane_mask = render_lane_mask(lane_pairs[pair], lane_config, h=charts.hood.shape[0], w=charts.hood.shape[1])
         predicted, trace = predict_cell_field(
-            pair_index=pair, prior_decoded_field=prior, charts=charts, relative_xi=relative[pair],
-            worldsheet_geom=worldsheet_geom, lane_mask=lane_mask,
-            movable_tracks=movable_tracks, return_trace=True,
+            pair_index=pair,
+            prior_decoded_field=prior,
+            charts=charts,
+            relative_xi=relative[pair],
+            worldsheet_geom=worldsheet_geom,
+            lane_mask=lane_mask,
+            movable_tracks=movable_tracks,
+            return_trace=True,
         )
         repeated = predict_cell_field(
-            pair_index=pair, prior_decoded_field=prior, charts=charts, relative_xi=relative[pair],
-            worldsheet_geom=worldsheet_geom, lane_mask=lane_mask, movable_tracks=movable_tracks,
+            pair_index=pair,
+            prior_decoded_field=prior,
+            charts=charts,
+            relative_xi=relative[pair],
+            worldsheet_geom=worldsheet_geom,
+            lane_mask=lane_mask,
+            movable_tracks=movable_tracks,
         )
         if predicted.tobytes() != repeated.tobytes():
             raise PredictorUpgradeError("double execution was not byte-identical")
@@ -579,7 +834,9 @@ def _measure_chunk(
         boundary_miss = (strata == 1) & (predicted != target)
         for y, x in np.argwhere(boundary_miss):
             ny, nx = _normal_at(target, int(y), int(x))
-            boundary_stream.extend(struct.pack(">HHHBBBB", pair, int(y), int(x), int(target[y, x]), int(predicted[y, x]), ny, nx))
+            boundary_stream.extend(
+                struct.pack(">HHHBBBB", pair, int(y), int(x), int(target[y, x]), int(predicted[y, x]), ny, nx)
+            )
         for name, rows_by_pair in predecessor_rows.items():
             for row in rows_by_pair.get(pair, []):
                 if int(predicted[row["y"], row["x"]]) != int(row["cell_id"]):
@@ -596,8 +853,15 @@ def _measure_chunk(
 
 
 def run_measurement_stage(
-    *, repository_root: Path, cache: Path, work_dir: Path, n_pairs: int, chunk_size: int,
-    predecessor_seeds: Mapping[str, Path], lane_chart: Path, resume: bool = True,
+    *,
+    repository_root: Path,
+    cache: Path,
+    work_dir: Path,
+    n_pairs: int,
+    chunk_size: int,
+    predecessor_seeds: Mapping[str, Path],
+    lane_chart: Path,
+    resume: bool = True,
 ) -> dict[str, Any]:
     """Run one atomic resumable n64 or n600 stage and preserve every chunk."""
 
@@ -612,9 +876,15 @@ def run_measurement_stage(
     s_t, s_r, pitch_rad, resolved_motion_custody = load_g1_worldsheet_motion(repository_root)
     stage_dir = work_dir / f"n{n_pairs}"
     manifest_path = stage_dir / "manifest.json"
-    config_hash = _source_config_hash(cache=cache, n_pairs=n_pairs, chunk_size=chunk_size,
-                                      predecessor_seeds=predecessor_seeds, lane_chart=lane_chart,
-                                      lane_custody=lane_custody, motion_custody=resolved_motion_custody)
+    config_hash = _source_config_hash(
+        cache=cache,
+        n_pairs=n_pairs,
+        chunk_size=chunk_size,
+        predecessor_seeds=predecessor_seeds,
+        lane_chart=lane_chart,
+        lane_custody=lane_custody,
+        motion_custody=resolved_motion_custody,
+    )
     if manifest_path.exists():
         manifest = json.loads(manifest_path.read_text())
         validate_resume_config(manifest, config_hash)
@@ -622,12 +892,17 @@ def run_measurement_stage(
             raise PredictorUpgradeError("stage already exists and resume was not enabled")
     else:
         manifest = {
-            "schema": "predictor_upgrade_xi_chart_stage_manifest.v1", "config_sha256": config_hash,
+            "schema": "predictor_upgrade_xi_chart_stage_manifest.v1",
+            "config_sha256": config_hash,
             "cache": {"path": str(cache), "sha256": GT_CACHE_SHA256, "bytes": cache.stat().st_size},
-            "n_pairs": n_pairs, "chunk_size": chunk_size, "score_claim": False, "promotion_eligible": False,
+            "n_pairs": n_pairs,
+            "chunk_size": chunk_size,
+            "score_claim": False,
+            "promotion_eligible": False,
             "lane_chart": {"path": str(lane_chart), **lane_custody},
             "motion_custody": resolved_motion_custody,
-            "pointer": "0.1910828242 [contest-CPU] UNMOVED", "main_review_required": True,
+            "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+            "main_review_required": True,
         }
         _atomic_json(manifest_path, manifest)
     with np.load(cache, allow_pickle=False) as archive:
@@ -641,10 +916,10 @@ def run_measurement_stage(
             np.asarray(archive["gt_poses"]), s_t=s_t, s_r=s_r, pitch_rad=pitch_rad
         )
         motion_custody = {**resolved_motion_custody, **direct_motion_custody}
-        worldsheet_geom = g1_warp.GroundHomographyGeom.eon(
-            native_hw=parsed_charts.hood.shape, pitch=pitch_rad
-        )
-        predecessor_objects = {name: parse_constraint_seed(path.read_bytes()) for name, path in predecessor_seeds.items()}
+        worldsheet_geom = g1_warp.GroundHomographyGeom.eon(native_hw=parsed_charts.hood.shape, pitch=pitch_rad)
+        predecessor_objects = {
+            name: parse_constraint_seed(path.read_bytes()) for name, path in predecessor_seeds.items()
+        }
         predecessor_rows: dict[str, dict[int, list[dict[str, Any]]]] = {}
         critical_by_pair: dict[int, list[tuple[int, int]]] = {}
         for name, seed in predecessor_objects.items():
@@ -666,15 +941,25 @@ def run_measurement_stage(
             if path.exists() and stream_path.exists():
                 continue
             chunk, boundary = _measure_chunk(
-                labels=labels, relative=relative, charts=parsed_charts, start=start, stop=stop,
-                critical_by_pair=critical_by_pair, predecessor_rows=predecessor_rows,
-                movable_tracks=movable_tracks, lane_pairs=lane_pairs, lane_config=lane_config,
+                labels=labels,
+                relative=relative,
+                charts=parsed_charts,
+                start=start,
+                stop=stop,
+                critical_by_pair=critical_by_pair,
+                predecessor_rows=predecessor_rows,
+                movable_tracks=movable_tracks,
+                lane_pairs=lane_pairs,
+                lane_config=lane_config,
                 worldsheet_geom=worldsheet_geom,
             )
             chunk["config_sha256"] = config_hash
             chunk["boundary_stream"] = {
-                "path": str(stream_path), "raw_bytes": len(boundary), "zlib9_bytes": len(zlib.compress(boundary, 9)),
-                "sha256": hashlib.sha256(boundary).hexdigest(), "record_bytes": 10,
+                "path": str(stream_path),
+                "raw_bytes": len(boundary),
+                "zlib9_bytes": len(zlib.compress(boundary, 9)),
+                "sha256": hashlib.sha256(boundary).hexdigest(),
+                "record_bytes": 10,
             }
             _atomic_write(stream_path, boundary)
             _atomic_json(path, chunk)
@@ -695,40 +980,72 @@ def run_measurement_stage(
     if not chunk_rows or chunk_rows[-1]["pair_range"][1] != n_pairs:
         raise PredictorUpgradeError("stage is incomplete")
     receipt = {
-        "schema": "predictor_upgrade_xi_chart_stage.v1", "n_pairs": n_pairs,
+        "schema": "predictor_upgrade_xi_chart_stage.v1",
+        "n_pairs": n_pairs,
         "measurement_label": "MEASURED_DEVELOPMENT_PREFIX" if n_pairs == 64 else "MEASURED [macOS-CPU advisory]",
         "prior_field_custody": "lstars[t-1] oracle stand-in for future caller-supplied decoded field; not serialized; receiver closure not claimed",
-        "class_order": {"detected_ids": [0, 1, 2, 3, 4], "names": list(CLASS_NAMES), "method": "np.unique frozen scorer labels; no luminance sorting"},
-        "satisfaction": counts_receipt(counts), "violations": violations,
-        "chart_section": chart_section_receipt(chart_payload), "motion_custody": motion_custody,
+        "class_order": {
+            "detected_ids": [0, 1, 2, 3, 4],
+            "names": list(CLASS_NAMES),
+            "method": "np.unique frozen scorer labels; no luminance sorting",
+        },
+        "satisfaction": counts_receipt(counts),
+        "violations": violations,
+        "chart_section": chart_section_receipt(chart_payload),
+        "motion_custody": motion_custody,
         "external_lane_chart": {"path": str(lane_chart), **lane_custody, "counted": True, "duplicated": False},
-        "hood_custody": {"source": "#139 static hood/clamp", "external_iou": 0.994, "actual_satisfaction_in_this_stage": counts_receipt(counts)["per_class"][4]["satisfaction_fraction"]},
-        "movable_custody": {"source": "#234 Hungarian correspondence", "policy": "retain prior-advected bulk; no replacement box coder"},
-        "boundary_stream": {"raw_bytes": boundary_raw, "sum_independent_chunk_zlib9_bytes": boundary_zlib, "mask_only": True},
-        "chunks": chunk_rows, "config_sha256": config_hash,
-        "score_claim": False, "promotion_eligible": False, "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+        "hood_custody": {
+            "source": "#139 static hood/clamp",
+            "external_iou": 0.994,
+            "actual_satisfaction_in_this_stage": counts_receipt(counts)["per_class"][4]["satisfaction_fraction"],
+        },
+        "movable_custody": {
+            "source": "#234 Hungarian correspondence",
+            "policy": "retain prior-advected bulk; no replacement box coder",
+        },
+        "boundary_stream": {
+            "raw_bytes": boundary_raw,
+            "sum_independent_chunk_zlib9_bytes": boundary_zlib,
+            "mask_only": True,
+        },
+        "chunks": chunk_rows,
+        "config_sha256": config_hash,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "pointer": "0.1910828242 [contest-CPU] UNMOVED",
         "main_review_required": True,
     }
     fractions = [row["satisfaction_fraction"] for row in receipt["satisfaction"]["per_class"]]
-    receipt["verdict"] = "PREDICTOR_TARGET_MET" if all(value is not None and value >= 0.99 for value in fractions) else "PREDICTOR_TARGET_MISSED"
+    receipt["verdict"] = (
+        "PREDICTOR_TARGET_MET"
+        if all(value is not None and value >= 0.99 for value in fractions)
+        else "PREDICTOR_TARGET_MISSED"
+    )
     receipt["verdict_scope"] = "oracle-prior cell-description predictor satisfaction on this measured prefix only"
     _atomic_json(stage_dir / "receipt.json", receipt)
     return receipt
 
 
-def build_final_receipt(
-    *, work_dir: Path, output_path: Path, predecessor_seeds: Mapping[str, Path]
-) -> dict[str, Any]:
+def build_final_receipt(*, work_dir: Path, output_path: Path, predecessor_seeds: Mapping[str, Path]) -> dict[str, Any]:
     n64 = json.loads((work_dir / "n64" / "receipt.json").read_text())
     n600 = json.loads((work_dir / "n600" / "receipt.json").read_text())
     chart_payload = (work_dir / "charts" / "static_charts_n64.pxch").read_bytes()
     section = chart_section_receipt(chart_payload)
     lane_row = n600["external_lane_chart"]
-    lane_custody = {key: lane_row[key] for key in (
-        "lane_chart_raw_bytes", "lane_chart_brotli_bytes", "lane_chart_sha256",
-        "lane_chart_zlib9_bytes_diagnostic_only", "lane_chart_zlib9_sha256_diagnostic_only",
-        "lane_chart_status", "executed", "execution_scope", "receiver_closed",
-    )}
+    lane_custody = {
+        key: lane_row[key]
+        for key in (
+            "lane_chart_raw_bytes",
+            "lane_chart_brotli_bytes",
+            "lane_chart_sha256",
+            "lane_chart_zlib9_bytes_diagnostic_only",
+            "lane_chart_zlib9_sha256_diagnostic_only",
+            "lane_chart_status",
+            "executed",
+            "execution_scope",
+            "receiver_closed",
+        )
+    }
     policy = predictor_policy(section, lane_custody)
     curve = []
     total_cells = int(n600["satisfaction"]["overall"]["total"])
@@ -768,102 +1085,157 @@ def build_final_receipt(
         raw = len(encoded)
         total_counted = raw + section["raw_bytes"] + LANE_CHART_BROTLI_BYTES
         rate_term = 25.0 * total_counted / 37_545_489
-        curve.append({
-            "name": name, "measurement_label": "MEASURED [macOS-CPU advisory]", "ppcs_path": str(seed_path),
-            "ppcs_bytes": raw, "ppcs_sha256": hashlib.sha256(encoded).hexdigest(), "ppcs_zlib9_bytes": len(zlib.compress(encoded, 9)),
-            "exception_count": corrected, "exception_raw_bytes": len(exceptions_raw), "exception_zlib9_bytes": len(zlib.compress(exceptions_raw, 9)),
-            "exception_counts_by_class_and_stratum": _exception_factorization(violations),
-            "cell_description_d_seg_before": d_before, "cell_description_d_seg_after": d_after,
-            "rate_term_all_counted_sections": rate_term,
-            "advisory_non_score_objective": 100.0 * d_after + rate_term,
-            "chart_sections": [
-                {
-                    "name": section["name"],
-                    "raw_bytes": section["raw_bytes"],
-                    "sha256": section["sha256"],
-                    "counted_bytes": section["raw_bytes"],
-                    "counting_basis": "raw PXCH bytes",
+        curve.append(
+            {
+                "name": name,
+                "measurement_label": "MEASURED [macOS-CPU advisory]",
+                "ppcs_path": str(seed_path),
+                "ppcs_bytes": raw,
+                "ppcs_sha256": hashlib.sha256(encoded).hexdigest(),
+                "ppcs_zlib9_bytes": len(zlib.compress(encoded, 9)),
+                "exception_count": corrected,
+                "exception_raw_bytes": len(exceptions_raw),
+                "exception_zlib9_bytes": len(zlib.compress(exceptions_raw, 9)),
+                "exception_counts_by_class_and_stratum": _exception_factorization(violations),
+                "cell_description_d_seg_before": d_before,
+                "cell_description_d_seg_after": d_after,
+                "rate_term_all_counted_sections": rate_term,
+                "advisory_non_score_objective": 100.0 * d_after + rate_term,
+                "chart_sections": [
+                    {
+                        "name": section["name"],
+                        "raw_bytes": section["raw_bytes"],
+                        "sha256": section["sha256"],
+                        "counted_bytes": section["raw_bytes"],
+                        "counting_basis": "raw PXCH bytes",
+                    },
+                    {
+                        "name": "task595_coherent_slot_none_dash_lane_chart",
+                        "raw_bytes": LANE_CHART_RAW_BYTES,
+                        "brotli_bytes": LANE_CHART_BROTLI_BYTES,
+                        "zlib9_bytes_diagnostic_only": lane_row["lane_chart_zlib9_bytes_diagnostic_only"],
+                        "zlib9_sha256_diagnostic_only": lane_row["lane_chart_zlib9_sha256_diagnostic_only"],
+                        "sha256": LANE_CHART_SHA256,
+                        "counted_bytes": LANE_CHART_BROTLI_BYTES,
+                        "counting_basis": "binding brotli-11 Lane-chart bytes",
+                        "executed": True,
+                        "execution_scope": "task578_measurement_only",
+                        "receiver_closed": False,
+                    },
+                ],
+                "total_counted_bytes": total_counted,
+                "byte_custody": {
+                    "ppcs_raw_bytes": raw,
+                    "static_pxch_raw_bytes": section["raw_bytes"],
+                    "static_pxch_zlib9_bytes_diagnostic_only": section["zlib9_bytes"],
+                    "lane_chart_raw_bytes": LANE_CHART_RAW_BYTES,
+                    "lane_chart_brotli_counted_bytes": LANE_CHART_BROTLI_BYTES,
+                    "lane_chart_zlib9_bytes_diagnostic_only": lane_row["lane_chart_zlib9_bytes_diagnostic_only"],
+                    "lane_chart_zlib9_sha256_diagnostic_only": lane_row["lane_chart_zlib9_sha256_diagnostic_only"],
+                    "lane_chart_sha256": LANE_CHART_SHA256,
+                    "lane_chart_executed": True,
+                    "exception_raw_bytes_within_ppcs": len(exceptions_raw),
+                    "total_counted_bytes": total_counted,
                 },
-                {
-                    "name": "task595_coherent_slot_none_dash_lane_chart",
-                    "raw_bytes": LANE_CHART_RAW_BYTES,
-                    "brotli_bytes": LANE_CHART_BROTLI_BYTES,
-                    "zlib9_bytes_diagnostic_only": lane_row["lane_chart_zlib9_bytes_diagnostic_only"],
-                    "zlib9_sha256_diagnostic_only": lane_row["lane_chart_zlib9_sha256_diagnostic_only"],
-                    "sha256": LANE_CHART_SHA256,
-                    "counted_bytes": LANE_CHART_BROTLI_BYTES,
-                    "counting_basis": "binding brotli-11 Lane-chart bytes",
-                    "executed": True,
-                    "execution_scope": "task578_measurement_only",
-                    "receiver_closed": False,
+                "ppcs_component_raw_bytes": component_byte_accounting(seed),
+                "predecessor": {
+                    "ppcs_bytes": len(predecessor_bytes),
+                    "ppcs_sha256": hashlib.sha256(predecessor_bytes).hexdigest(),
+                    "advisory_non_score_objective": predecessor_objectives[name],
                 },
-            ],
-            "total_counted_bytes": total_counted,
-            "byte_custody": {"ppcs_raw_bytes": raw, "static_pxch_raw_bytes": section["raw_bytes"],
-                             "static_pxch_zlib9_bytes_diagnostic_only": section["zlib9_bytes"],
-                             "lane_chart_raw_bytes": LANE_CHART_RAW_BYTES,
-                             "lane_chart_brotli_counted_bytes": LANE_CHART_BROTLI_BYTES,
-                             "lane_chart_zlib9_bytes_diagnostic_only": lane_row["lane_chart_zlib9_bytes_diagnostic_only"],
-                             "lane_chart_zlib9_sha256_diagnostic_only": lane_row["lane_chart_zlib9_sha256_diagnostic_only"],
-                             "lane_chart_sha256": LANE_CHART_SHA256, "lane_chart_executed": True,
-                             "exception_raw_bytes_within_ppcs": len(exceptions_raw),
-                             "total_counted_bytes": total_counted},
-            "ppcs_component_raw_bytes": component_byte_accounting(seed),
-            "predecessor": {"ppcs_bytes": len(predecessor_bytes), "ppcs_sha256": hashlib.sha256(predecessor_bytes).hexdigest(),
-                            "advisory_non_score_objective": predecessor_objectives[name]},
-            "comparators": {"predecessor_loose_advisory": predecessor_objectives["loose"], "box_bytes": 216222,
-                            "total_counted_bytes_exceeds_box": total_counted > 216222},
-            "score_claim": False,
-        })
+                "comparators": {
+                    "predecessor_loose_advisory": predecessor_objectives["loose"],
+                    "box_bytes": 216222,
+                    "total_counted_bytes_exceeds_box": total_counted > 216222,
+                },
+                "score_claim": False,
+            }
+        )
     boundary_raw_bytes = int(n600["boundary_stream"]["raw_bytes"])
     boundary_record_bytes = 10
     if boundary_raw_bytes % boundary_record_bytes:
         raise PredictorUpgradeError("boundary stream is not an integral same-inventory record stream")
     boundary_record_count = boundary_raw_bytes // boundary_record_bytes
     jitter = {
-        "measurement_label": "MEASURED [macOS-CPU advisory]", "inventory": "doctrine boundary misses",
+        "measurement_label": "MEASURED [macOS-CPU advisory]",
+        "inventory": "doctrine boundary misses",
         "record_count": boundary_record_count,
         "r0_boundary_normal": {**n600["boundary_stream"], "record_count": boundary_record_count},
         "exception_coding_baseline": {
             "measurement_label": "MEASURED [macOS-CPU advisory]",
             "same_inventory": True,
             "raw_bytes": boundary_raw_bytes,
-            "sum_independent_chunk_zlib9_bytes": int(
-                n600["boundary_stream"]["sum_independent_chunk_zlib9_bytes"]
-            ),
+            "sum_independent_chunk_zlib9_bytes": int(n600["boundary_stream"]["sum_independent_chunk_zlib9_bytes"]),
             "corrected_cells": boundary_record_count,
             "remaining_errors": 0,
             "comparison_surface": "mask-only",
         },
-        "r1_phase_conditioned": {"same_inventory": True, "raw_bytes": None, "compressed_bytes": None,
-                                 "corrected_cells": None, "remaining_errors": None,
-                                 "measurement_label": "SPECULATIVE interface only",
-                                 "custody": "existing schema R1 rung; no equal-fidelity through-R execution in Task #578"},
-        "corrected_cells": 0, "remaining_errors": boundary_record_count, "comparison_surface": "mask-only",
+        "r1_phase_conditioned": {
+            "same_inventory": True,
+            "raw_bytes": None,
+            "compressed_bytes": None,
+            "corrected_cells": None,
+            "remaining_errors": None,
+            "measurement_label": "SPECULATIVE interface only",
+            "custody": "existing schema R1 rung; no equal-fidelity through-R execution in Task #578",
+        },
+        "corrected_cells": 0,
+        "remaining_errors": boundary_record_count,
+        "comparison_surface": "mask-only",
         "verdict": "FORMALIZATION_PENDING_THROUGH_R_REALIZED_SCORE_RECOVERY",
         "verdict_scope": "equal-fidelity through-R comparison only; predictor and R1 families remain open",
     }
     receipt = {
-        "schema": "predictor_upgrade_xi_chart_task578.v1", "task": 578,
-        "lane_id": "lane_predictor_upgrade_xi_chart_578_20260721", "research_only": True,
-        "D1_D2": {"n64": n64, "n600": n600}, "D3_seed_curve": curve, "D4_causal_jitter": jitter,
+        "schema": "predictor_upgrade_xi_chart_task578.v1",
+        "task": 578,
+        "lane_id": "lane_predictor_upgrade_xi_chart_578_20260721",
+        "research_only": True,
+        "D1_D2": {"n64": n64, "n600": n600},
+        "D3_seed_curve": curve,
+        "D4_causal_jitter": jitter,
         "chart_and_interpreter_custody": {
             "counted_chart": section,
-            "executed_external_lane_chart": {key: lane_row[key] for key in (
-                "path", "lane_chart_raw_bytes", "lane_chart_brotli_bytes", "lane_chart_sha256",
-                "lane_chart_zlib9_bytes_diagnostic_only", "lane_chart_zlib9_sha256_diagnostic_only",
-                "lane_chart_status", "executed", "execution_scope", "receiver_closed", "counted", "duplicated",
-            )},
+            "executed_external_lane_chart": {
+                key: lane_row[key]
+                for key in (
+                    "path",
+                    "lane_chart_raw_bytes",
+                    "lane_chart_brotli_bytes",
+                    "lane_chart_sha256",
+                    "lane_chart_zlib9_bytes_diagnostic_only",
+                    "lane_chart_zlib9_sha256_diagnostic_only",
+                    "lane_chart_status",
+                    "executed",
+                    "execution_scope",
+                    "receiver_closed",
+                    "counted",
+                    "duplicated",
+                )
+            },
             "generic_interpreter": {
-                "raw_bytes": 0, "zlib9_bytes": 0, "counted": False, "source": "this module",
-                "measurement_execution_only": True, "receiver_closed": False,
+                "raw_bytes": 0,
+                "zlib9_bytes": 0,
+                "counted": False,
+                "source": "this module",
+                "measurement_execution_only": True,
+                "receiver_closed": False,
             },
         },
-        "authority": {"axis": "[macOS-CPU advisory]", "score_claim": False, "promotion_eligible": False,
-                      "pointer": "0.1910828242 [contest-CPU] UNMOVED", "main_review_required": True},
-        "verdict": n600["verdict"], "verdict_scope": n600["verdict_scope"],
+        "authority": {
+            "axis": "[macOS-CPU advisory]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+            "main_review_required": True,
+        },
+        "verdict": n600["verdict"],
+        "verdict_scope": n600["verdict_scope"],
         "storage_preflight": {"tier": "/Volumes/VertigoDataTier", "status": "PASS_RECORDED_BEFORE_RUN"},
-        "automatic_disk_hygiene": {"durable_stage_root": str(work_dir), "scratch": "none; per-chunk streams preserved", "cleanup": "certify or block"},
+        "automatic_disk_hygiene": {
+            "durable_stage_root": str(work_dir),
+            "scratch": "none; per-chunk streams preserved",
+            "cleanup": "certify or block",
+        },
     }
     _atomic_json(output_path, receipt)
     _atomic_json(work_dir / "receipt.json", receipt)
@@ -874,12 +1246,19 @@ def _exception_factorization(rows: Sequence[Mapping[str, Any]]) -> list[dict[str
     result = []
     for class_id in range(5):
         for stratum in STRATA:
-            result.append({"class_id": class_id, "stratum": stratum,
-                           "count": sum(int(row["cell_id"]) == class_id and row["stratum"] == stratum for row in rows)})
+            result.append(
+                {
+                    "class_id": class_id,
+                    "stratum": stratum,
+                    "count": sum(int(row["cell_id"]) == class_id and row["stratum"] == stratum for row in rows),
+                }
+            )
     return result
 
 
 __all__ = [
+    "CHART_SYMBOL_PACKET_MAGIC",
+    "CHART_SYMBOL_PACKET_VERSION",
     "CLASS_NAMES",
     "LANE_CHART_BROTLI_BYTES",
     "LANE_CHART_RAW_BYTES",
@@ -890,15 +1269,20 @@ __all__ = [
     "MISS_CAUSES",
     "POLICY_ID",
     "STRATA",
+    "LaneCoefficientDelta",
     "PredictorUpgradeError",
     "StaticCharts",
     "advect_categorical_field",
+    "apply_lane_coefficient_deltas",
     "build_final_receipt",
     "canonical_json",
     "chart_section_receipt",
     "classify_strata",
     "counts_receipt",
+    "decode_lane_chart_with_symbols",
+    "decode_lane_coefficient_deltas",
     "empty_counts",
+    "encode_lane_coefficient_deltas",
     "load_g1_worldsheet_motion",
     "load_lane_chart",
     "miss_cause",
