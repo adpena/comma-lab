@@ -18,6 +18,17 @@
   "new_with_justification": [
     "A contextual sequential measurement runner and sparse RGB-delta container are new because no existing receiver harness composes previous-decoded RGB, G1 warp, margin-directed projection, and 1200-frame replay."
   ],
+  "measurement_disposition": {
+    "status": "MEASURED_CONTEXTUAL_PREDICT_BASE_NOT_ADMISSIBLE",
+    "axis": "[macOS-CPU advisory]",
+    "full_receipt_path": "/Volumes/VertigoDataTier/pact/evidence/realization_g2d_20260721/canonical_v1/receipt.json",
+    "full_receipt_sha256": "f7452ae660d6529f49c1de1e44826860b52a840c9459eea4af40d6737bcf6394",
+    "reuse_next": [
+      "Keep the scorer-free sequential decoder, source-closed resume format, strict exception parse-back, and exact D5 invocation.",
+      "Keep the measured margin-survival contingency as a regression oracle: positive 1580/1580, nonpositive 0/1608.",
+      "Do not reuse the 368201-byte exact bootstrap as an admissible payload, the nearest-target-pair cross-motion proxy as exact motion, or the one-round prototype projection as a family verdict."
+    ]
+  },
   "forked_source_of_truth": false,
   "score_claim": false,
   "promotion_eligible": false,

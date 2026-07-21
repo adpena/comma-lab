@@ -81766,7 +81766,14 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "MEASURED_CONTEXTUAL_PREDICT_BASE_NOT_ADMISSIBLE [macOS-CPU advisory]; n600 whole exact 0/600, Pose tube 0/600, bytes 466321 > 216222; positive margin 1580/1580 vs nonpositive 0/1608; MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "decoder-derived frame0 fitting 216222-byte box",
+        "exact or learned cross-pair xi custody",
+        "corrected secant-QP whole-field projection",
+        "rate-accounted curvelet-shearlet residual"
+      ]
     }
   ],
   "level_rules": {
@@ -81776,5 +81783,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-21T11:20:41Z"
+  "updated_at": "2026-07-21T12:22:15Z"
 }

@@ -76,3 +76,15 @@ PREDICT-to-PROJECT interfaces; G1/G3 receipt; predictor round-1/round-2 code and
 findings; G2/G2b/G2c receipts, code, tests, equations, DAGs and reuse manifests;
 r1b6 receiver-bound negative; frozen seed/cache/scorer custody; lane/progress
 state; and both live inboxes through `2026-07-19T19:48:01Z`.
+
+## Measured disposition
+
+The cumulative n16 -> n64 -> n600 run completed under config SHA-256
+`f01276586b10766b63f8e609d249bab4338c84c3779c8e92d237d95e8898f5f8`.
+The exact instance is `MEASURED_CONTEXTUAL_PREDICT_BASE_NOT_ADMISSIBLE`:
+whole-description exactness `0/600`, Pose tube `0/600`, and `466,321` counted
+bytes versus the `216,222`-byte box.  Positive/nonpositive declared-write
+survival separated perfectly (`1,580/1,580` versus `0/1,608`), factor-2 and
+double-decode exactness were `600/600`, and the 1,200-frame scorer-free replay
+took `66.62605445901863` seconds.  See the compact receipt and dated findings;
+the contest pointer remains unchanged and MAIN review is required.
