@@ -34,6 +34,11 @@ NODE_TYPES: tuple[str, ...] = (
     "deferral",  # a deferral-ledger row
     "decision",  # a finding/memory carrying a verdict (CONFIRMED/NO-GO/VERDICT/...)
     "regime",    # a #426 costate-organ prototype regime (costate_organ_trajectory_ledger)
+    "index",     # MEMORY.md / cluster / full-index navigation document
+    "section",   # doctrine/document section addressable by a stable anchor slug
+    "research",  # a dated .omx/research memo outside the monolithic DAG
+    "lane",      # a canonical lane_registry lane
+    "catalog",   # a Catalog #NNN doctrine row
 )
 
 # Canonical edge types (directed src -> dst).
@@ -46,6 +51,14 @@ EDGE_TYPES: tuple[str, ...] = (
     "consumes",    # module -> equation it consumes
     "sister",      # "sister of" relation (symmetric-intent, stored directed)
     "tagged",      # node -> topic
+    "indexed_by",  # memory note -> MEMORY/cluster/full-index document
+    "aliases",     # wikilink-compatible alias -> canonical section/task node
+    "memo_link",   # research memo -> local markdown-linked memo
+    "equation_ref",# memo/document -> canonical equation
+    "task_ref",    # memo/document -> #NNN entity/task alias
+    "feed_ref",    # memo/document -> DAG FEED-* node
+    "lane_ref",    # memo/document -> lane_registry lane
+    "catalog_ref", # memo/document -> Catalog #NNN row
 )
 
 
@@ -121,9 +134,10 @@ class Graph:
         # keep the more specific (non-entity) type.
         better_summary = node.summary if len(node.summary) > len(existing.summary) else existing.summary
         ntype = existing.ntype
-        if existing.ntype == "entity" and node.ntype != "entity":
+        placeholder = not existing.source and not existing.summary
+        if (existing.ntype == "entity" and node.ntype != "entity") or placeholder:
             ntype = node.ntype
-        title = existing.title or node.title
+        title = node.title if placeholder and node.title else (existing.title or node.title)
         source = existing.source or node.source
         merged_attrs = {**node.attrs, **existing.attrs}
         self.nodes[node.id] = Node(
