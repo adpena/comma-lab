@@ -80830,6 +80830,47 @@
         }
       },
       "notes": "Authority 7909d6f7; formulation cure; stripped-base control per MAIN 2026-07-21T03:13:36Z; pointer unchanged."
+    },
+    {
+      "id": "s2_compose_full_partition_20260721T035922Z",
+      "name": "S2 compose full partition",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #595 isolated-worktree build+measure; from-scratch candidate bytes only; local macOS-CPU advisory; MAIN landing review required"
     }
   ],
   "level_rules": {
@@ -80839,5 +80880,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-21T03:50:54Z"
+  "updated_at": "2026-07-21T04:05:32Z"
 }

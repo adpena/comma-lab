@@ -114,6 +114,59 @@ def _fixture(tmp_path: Path) -> dict:
             "integer_aware": {"search": {"new_hard_crossing_site_count": 0}},
         },
     )
+    finite_packet_path = tmp_path / "s2_seed.bin"
+    finite_packet_path.write_bytes(b"finite-packet")
+    finite_seed = _write_json(
+        tmp_path / "s2_seed.json",
+        {
+            "schema": "s2_partition_seed_measurement.v1",
+            "score_claim": False,
+            "n_pairs": 600,
+            "gt_cache": {"sha256": cache_sha},
+            "content_lineage": {"inherited_bytes_in_candidate": 0},
+            "finite_packet": {
+                "event_count": 17926,
+                "packet_bytes": finite_packet_path.stat().st_size,
+                "packet_sha256": audit.sha256_file(finite_packet_path),
+                "path": str(finite_packet_path),
+                "double_encode_byte_identical": True,
+                "parse_back_event_identity": True,
+                "stored_plane_value_bytes": 0,
+            },
+            "semantic_detection": {
+                "luma_consulted": False,
+                "semantic_class_ids": [0, 1, 2, 3, 4],
+                "method": "spatial_static_signature_v1",
+            },
+            "verdict_scope": "finite cell-event component only",
+        },
+    )
+    genuine_proof_path = tmp_path / "genuine_proof.json"
+    genuine_proof_path.write_text("{}", encoding="utf-8")
+    lane_curve = _write_json(
+        tmp_path / "lane_curve.json",
+        {
+            "schema": "s2_lane_true_mask_curve.v1",
+            "score_claim": False,
+            "gt_cache": {"sha256": cache_sha},
+            "fit": {"n_pairs": 600},
+            "semantic_detection": {
+                "luma_consulted": False,
+                "semantic_class_ids": [0, 1, 2, 3, 4],
+            },
+            "curve": [
+                {"variant": "dash", "finite_brotli_bytes": 41303},
+                {"variant": "continuous", "finite_brotli_bytes": 41298},
+            ],
+            "curvelet_shearlet_residual": {
+                "status": "BLOCKED_TARGET_BOUNDARY_INVERSE_CUSTODY",
+                "genuine_structural_proof_path": str(genuine_proof_path),
+                "genuine_structural_proof_sha256": audit.sha256_file(genuine_proof_path),
+            },
+            "content_lineage": {"inherited_bytes_in_candidate": 0},
+            "verdict_scope": "polynomial control only",
+        },
+    )
     return {
         "source_video": tmp_path / "0.mkv",
         "upstream_root": upstream,
@@ -124,6 +177,8 @@ def _fixture(tmp_path: Path) -> dict:
         "g1g3_receipt_path": g1g3,
         "aa_receipt_path": aa,
         "r1b7_receipt_path": r1b7,
+        "s2_partition_seed_receipt_path": finite_seed,
+        "s2_lane_curve_receipt_path": lane_curve,
         "rust_parity": {"status": "PASS", "scope": "test fixture"},
         "lane_id": "test_lane",
     }
@@ -136,6 +191,13 @@ def test_build_receipt_keeps_partial_components_out_of_s4(tmp_path: Path) -> Non
     assert receipt["stages"]["S2_task_space_level_set_witness"]["lane_chart"]["coherent_slot_brotli_bytes"] == 41303
     assert receipt["consumed_artifacts"][0]["path"].endswith("tie.json")
     assert receipt["stages"]["S4_strict_archive_n600_receiver"]["status"].startswith("NOT_BUILT")
+    finite = receipt["stages"]["S2_task_space_level_set_witness"]["morse_smale_cell_prior"]["finite_seed"]
+    assert finite["status"] == "MEASURED_FINITE_PARSEBACK_COMPLETE"
+    assert finite["packet_bytes"] == len(b"finite-packet")
+    assert receipt["admission"]["s2_finite_cell_event_seed"] is True
+    assert receipt["admission"]["s2_lane_true_mask_curve_measured"] is True
+    lane_curve = receipt["stages"]["S2_task_space_level_set_witness"]["lane_chart"]["true_mask_curve"]
+    assert lane_curve["status"] == "MEASURED_POLYNOMIAL_CONTROL_GENUINE_RESIDUAL_OPEN"
     assert receipt["admission"]["score_or_pointer_authority"] is False
 
 
@@ -154,4 +216,32 @@ def test_build_receipt_rejects_nonexact_support_fill(tmp_path: Path) -> None:
     payload["input_fidelity"]["total_nonzero_values"] = 1
     _write_json(kwargs["tie_receipt_path"], payload)
     with pytest.raises(audit.SpineAuditError, match="nonzero errors"):
+        audit.build_receipt(**kwargs)
+
+
+def test_build_receipt_rejects_finite_packet_custody_drift(tmp_path: Path) -> None:
+    kwargs = _fixture(tmp_path)
+    payload = json.loads(kwargs["s2_partition_seed_receipt_path"].read_text(encoding="utf-8"))
+    Path(payload["finite_packet"]["path"]).write_bytes(b"tampered")
+    with pytest.raises(audit.SpineAuditError, match="byte count mismatch"):
+        audit.build_receipt(**kwargs)
+
+
+def test_build_receipt_rejects_semantic_disagreement(tmp_path: Path) -> None:
+    kwargs = _fixture(tmp_path)
+    path = kwargs["s2_lane_curve_receipt_path"]
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["semantic_detection"]["semantic_class_ids"] = [1, 0, 2, 3, 4]
+    _write_json(path, payload)
+    with pytest.raises(audit.SpineAuditError, match="semantic detection disagree"):
+        audit.build_receipt(**kwargs)
+
+
+def test_build_receipt_rejects_genuine_proof_drift(tmp_path: Path) -> None:
+    kwargs = _fixture(tmp_path)
+    payload = json.loads(kwargs["s2_lane_curve_receipt_path"].read_text(encoding="utf-8"))
+    Path(payload["curvelet_shearlet_residual"]["genuine_structural_proof_path"]).write_text(
+        '{"tampered":true}', encoding="utf-8"
+    )
+    with pytest.raises(audit.SpineAuditError, match="structural proof SHA mismatch"):
         audit.build_receipt(**kwargs)
