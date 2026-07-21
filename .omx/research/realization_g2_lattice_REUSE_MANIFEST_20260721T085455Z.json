@@ -1,0 +1,79 @@
+{
+  "schema": "realization_g2_lattice_reuse_manifest.v1",
+  "task_id": "578",
+  "lane_id": "lane_realization_g2_lattice_578_20260721",
+  "reuse_policy": "extend_existing_receiver_never_fork",
+  "reused": [
+    {
+      "catalog_or_task": "547",
+      "surface": "tac.optimization.uint8_lattice_feasibility",
+      "role": "exact factor-2 uint8 camera-lattice realization and verification"
+    },
+    {
+      "catalog_or_task": "549",
+      "surface": "tac.optimization.joint_seg_pose_rate",
+      "role": "existing joint interval/pose feasibility semantics; not re-derived"
+    },
+    {
+      "catalog_or_task": "M2",
+      "surface": ".omx/research/m2_live_target_selection_20260720T1548Z.json",
+      "sha256": "513d2fe54166b8b82904e671bc8beedca11e0b98ab68f09e860507ef82b2e574",
+      "role": "counted-RGB exact-realization existence comparator"
+    },
+    {
+      "catalog_or_task": "580",
+      "surface": "tac.optimization.resize_full_kernel",
+      "role": "exact full factor-2 resize operator"
+    },
+    {
+      "catalog_or_task": "532",
+      "surface": "realization_is_quantization_gated",
+      "role": "settled quantization blocker; not re-measured"
+    },
+    {
+      "catalog_or_task": "S3",
+      "surface": "fixed_magnitude_deadzone",
+      "role": "settled deadzone control; no duplicate implementation"
+    },
+    {
+      "catalog_or_task": "merged_receiver",
+      "surface": "tac.optimization.predict_project_receiver",
+      "role": "extended in place with the projected-RGB custody and lattice stage"
+    },
+    {
+      "catalog_or_task": "seed_compose_b2",
+      "surface": "tac.optimization.predict_project_schema",
+      "role": "canonical seed parser and preserved stage schema"
+    }
+  ],
+  "new_with_justification": [
+    {
+      "surface": "tools/measure_realization_g2_lattice.py",
+      "justification": "a bounded resumable audit was required to distinguish a projected class-ID field from an RGB lattice input across the real n16/n64/n600 stages"
+    },
+    {
+      "surface": "predict_project_rgb_plane_custody.v0",
+      "justification": "the merged receiver had no typed or hash-bound label-to-RGB handoff, allowing a 2-D class field to be mistaken for a 3-channel RGB plane"
+    }
+  ],
+  "explicit_non_reuse": [
+    {
+      "surface": "new receiver fork",
+      "reason": "forbidden and unnecessary; the existing receiver project stage was extended"
+    },
+    {
+      "surface": "Fourier residual basis",
+      "reason": "operator directive requires curvelet/shearlet for any future residual carrier"
+    },
+    {
+      "surface": "canonical equation registration",
+      "reason": "D1 real n600 anchor did not land"
+    }
+  ],
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "pointer_moved": false,
+    "main_landing_review_required": true
+  }
+}
