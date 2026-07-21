@@ -1,8 +1,8 @@
 # DAG FEED — solved-binary native representation
 
-**UTC:** 2026-07-21T04:55:00Z  
-**Lane:** `lane_rep_mine_solved_binary_20260721`  
-**Axis:** `[macOS-CPU advisory]` · no score/candidate/promotion  
+**UTC:** 2026-07-21T04:55:00Z
+**Lane:** `lane_rep_mine_solved_binary_20260721`
+**Axis:** `[macOS-CPU advisory]` · no score/candidate/promotion
 **Pointer:** `0.1910828242 [contest-CPU]` UNMOVED
 
 ## Feed payload

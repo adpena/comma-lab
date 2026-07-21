@@ -1,10 +1,10 @@
 # Solved-binary representation mine: constraints, cells, and causal dynamics
 
-**UTC:** 2026-07-21T04:55:00Z  
-**Lane:** `lane_rep_mine_solved_binary_20260721` · task #596  
-**Authority:** delegated prompt SHA-256 `061e6b8be93c184fcad844dccb54c1abe754f16538214cc50801400f62f59466`  
-**Verdict axis:** **[macOS-CPU advisory]**, representation-only, non-promotable  
-**Pointer:** `0.1910828242 [contest-CPU]` **UNMOVED**  
+**UTC:** 2026-07-21T04:55:00Z
+**Lane:** `lane_rep_mine_solved_binary_20260721` · task #596
+**Authority:** delegated prompt SHA-256 `061e6b8be93c184fcad844dccb54c1abe754f16538214cc50801400f62f59466`
+**Verdict axis:** **[macOS-CPU advisory]**, representation-only, non-promotable
+**Pointer:** `0.1910828242 [contest-CPU]` **UNMOVED**
 **Score/candidate claim:** none
 
 ## Outcome
