@@ -162,4 +162,25 @@ def load_or_build(*, rebuild: bool = False) -> Graph:
 def recall(query: str, *, rebuild: bool = False, **kwargs) -> Reconstruction:
     """Reconstruct-on-demand: load/build the graph, then traverse it for `query`."""
     graph = load_or_build(rebuild=rebuild)
-    return reconstruct(graph, query, **kwargs)
+    result = reconstruct(graph, query, **kwargs)
+    # Usage ledger (operator 2026-07-20 "are we making sure to use it as much as
+    # possible?" — under-use was invisible: a 16.7h-stale cache proved a full
+    # zero-recall working day went unnoticed). Append-only JSONL; the costate
+    # digest surfaces recalls-per-24h so a quiet counter is LOUD at session
+    # start. Best-effort: recall never fails on its own bookkeeping.
+    try:
+        import datetime as _dt
+        import json as _json
+
+        log_path = _CACHE_DIR / "recall_log.jsonl"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        row = {
+            "ts": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
+            "query": query[:200],
+            "nodes_returned": len(getattr(result, "nodes", []) or []),
+        }
+        with log_path.open("a", encoding="utf-8") as fh:
+            fh.write(_json.dumps(row, sort_keys=True) + "\n")
+    except Exception:
+        pass
+    return result

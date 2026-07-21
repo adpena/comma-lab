@@ -969,11 +969,35 @@ def section_graph_memory() -> tuple[str | None, dict | None]:
             ), None
         n_nodes = sum(1 for _ in npath.open(encoding="utf-8"))
         n_edges = sum(1 for _ in epath.open(encoding="utf-8"))
-        line = (
-            f"graph-memory: {n_nodes} nodes / {n_edges} edges — RECONSTRUCT before "
-            f'grepping: `tools/graph_memory_recall.py "<query>"` (#411 DAG-as-graph)'
+        # Usage counter (operator 2026-07-20 "are we making sure to use it as
+        # much as possible?"): count recall_log rows in the last 24h so a
+        # zero-recall day is LOUD here instead of silent (the 16.7h-stale-cache
+        # incident). Fail-open.
+        recalls_24h = 0
+        try:
+            import datetime as _dt
+            import json as _json
+
+            _cutoff = _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(hours=24)
+            _log = npath.parent / "recall_log.jsonl"
+            if _log.is_file():
+                for _row in _log.open(encoding="utf-8"):
+                    try:
+                        _ts = _dt.datetime.fromisoformat(_json.loads(_row)["ts"])
+                        if _ts >= _cutoff:
+                            recalls_24h += 1
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+        usage = f"recalls 24h: {recalls_24h}" + (
+            " ⚠ UNDER-USED — recall-before-decide is the discipline" if recalls_24h == 0 else ""
         )
-        return line, {"nodes": n_nodes, "edges": n_edges}
+        line = (
+            f"graph-memory: {n_nodes} nodes / {n_edges} edges — {usage} — RECONSTRUCT "
+            f'before grepping: `tools/graph_memory_recall.py "<query>"` (#411 DAG-as-graph)'
+        )
+        return line, {"nodes": n_nodes, "edges": n_edges, "recalls_24h": recalls_24h}
     except Exception as exc:
         return f"graph-memory: unavailable ({type(exc).__name__})", None
 
