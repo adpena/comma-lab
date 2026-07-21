@@ -20533,3 +20533,19 @@ predictor_upgrade_xi_chart LIVE. R6 judgment under standing GO: NO exact-eval fi
 objective 34.94 >> pointer; the envelope buys knee candidates, not exploration (per the iteration
 authorization). Measurements sha 5108ae6ab4...; equations leg: predict-project law registration
 owed on realization close. Pointer 0.1910828242 [contest-CPU] UNMOVED — the seed is means.
+
+## FEED-PREDICTOR-R1-20260721 (doctrine predictor CONFIRMED; the 0.365 bits/px crux)
+predictor_upgrade_xi_chart MERGED (fae879c8e3): the doctrine predictor (xi-advected prev frame +
+arc-length Lane dash chart + hood clamp + adjacency) lifts n600 satisfaction 65.7%->97.4% —
+Lane 8.3->70.8 (8.5x, the arc-length chart beats the temporal mode exactly as the lane-erasure
+physics predicted) · Road 50.9->92.4 · Undriv 61.7->98.6 · Movable 99.7 · MyCar 99.9. HONEST MISS:
+3.12M residual px (Road 2.07M / Undriv 0.81M / Lane 0.20M) = unfixed description d_seg 0.0265;
+naive per-event exception coding measured DEAD (807KB-1.8MB >> 216KB box). DERIVED CRUX NUMBER:
+0.365 bits/px required on the residual (fix ~3.0M px in ~137KB) — boundary-DELTA territory vs
+published 1-1.5 bits/contour-px generic floors; affordable IFF the misses are 1-2px jitter on
+predictor-KNOWN contours (delta coding vs absolute) — the D1 miss-structure decomposition decides.
+verdict_scope FORMULATION on the target-miss (round-1 predictor + naive coder; family CONFIRMED).
+Arm predictor_r2_missdelta LIVE (miss decomposition -> boundary-delta coder on real masks -> Lane/
+Road iteration -> composed knee curve w/ eat-the-flip first-class). Sibling realization_g2c_interior
+LIVE (interior-fill ladder). Both halves converging; equations owed: D4 FORMALIZATION_PENDING
+through-R realized-score recovery. Pointer 0.1910828242 [contest-CPU] UNMOVED — means.
