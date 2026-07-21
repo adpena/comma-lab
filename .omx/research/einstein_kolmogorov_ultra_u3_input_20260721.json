@@ -1,0 +1,16 @@
+{
+  "base_description": {
+    "bytes": 36011,
+    "sha256": "7f2c95f8993136ac99b6ab179cc793cd4bccdf08407b7e31593503b750a81d5b"
+  },
+  "component_description": {
+    "bytes": 180196,
+    "sha256": "32b41a7db1c6927e6812a49bdea568cd00fd2c19ca9798e38666385e8ed2e68d"
+  },
+  "counted_bytes": 216207,
+  "d_pose": null,
+  "d_seg_description": 0.016095318264431422,
+  "description_only": true,
+  "receiver_closed": false,
+  "score_claim": false
+}
