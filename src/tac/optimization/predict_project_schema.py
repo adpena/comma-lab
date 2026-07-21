@@ -1056,9 +1056,7 @@ def _validate_seeds(value: Any, scorer_h: int, scorer_w: int, tightening_ids: se
 
 
 def _validate_receiver(value: Any) -> None:
-    row = _exact_fields(
-        value,
-        {
+    legacy_fields = {
             "abi",
             "tie_policy",
             "projection_policy",
@@ -1069,9 +1067,10 @@ def _validate_receiver(value: Any) -> None:
             "pair_count",
             "no_scorer_weights",
             "receiver_search_invocations",
-        },
-        "receiver",
-    )
+    }
+    if not isinstance(value, dict) or set(value) not in (legacy_fields, legacy_fields | {"generic_predictor_policy"}):
+        raise PredictProjectSchemaError("receiver fields mismatch")
+    row = value
     _nonempty_string(row["abi"], "receiver ABI")
     if row["tie_policy"] != "native-cpu-torch-f32-first-max-class-index.v1":
         raise PredictProjectSchemaError("receiver tie policy must be first-max class index")
@@ -1116,6 +1115,111 @@ def _validate_receiver(value: Any) -> None:
         raise PredictProjectSchemaError("receiver pair_count must be 600")
     if row["no_scorer_weights"] is not True or row["receiver_search_invocations"] != 0:
         raise PredictProjectSchemaError("receiver must assert no scorer weights and zero search")
+    if "generic_predictor_policy" in row:
+        _validate_generic_predictor_policy(row["generic_predictor_policy"])
+
+
+def _validate_generic_predictor_policy(value: Any) -> None:
+    row = _exact_fields(
+        value,
+        {
+            "policy_id",
+            "prior_decoded_field",
+            "initialization",
+            "motion_custody",
+            "class_order",
+            "reconciliation_order",
+            "adjacency_policy",
+            "tie_policy",
+            "counted_sections",
+            "external_counted_custody",
+        },
+        "generic predictor policy",
+    )
+    if row["policy_id"] != "xi_advected_prior_per_class_charts.v2":
+        raise PredictProjectSchemaError("generic predictor policy ID is not admitted")
+    if row["prior_decoded_field"] != "caller_supplied_previous_decoded_cell_field":
+        raise PredictProjectSchemaError("generic predictor prior-field custody mismatch")
+    if row["initialization"] != "pair0_counted_chart_only":
+        raise PredictProjectSchemaError("generic predictor initialization mismatch")
+    motion = _exact_fields(
+        row["motion_custody"],
+        {
+            "estimator",
+            "relative_motion",
+            "worldsheet_transport",
+            "categorical_transport",
+            "invalid_projection",
+            "lawref_equation_ids",
+            "g1_receipt_sha256",
+            "pitch_json_pointer",
+            "proxy_limitation",
+        },
+        "generic predictor motion custody",
+    )
+    if motion["estimator"] != "tac.boundary_math.warp_real_luma_frame0.xi_from_pose_calibration":
+        raise PredictProjectSchemaError("generic predictor estimator mismatch")
+    if motion["relative_motion"] != "gt_poses_t_nearest_target_pair_proxy_direct_twist.v1":
+        raise PredictProjectSchemaError("generic predictor must use direct G1 cross-pair proxy twists")
+    if motion["worldsheet_transport"] != "tac.boundary_math.warp_real_luma_frame0.warp_frame0_native_numpy":
+        raise PredictProjectSchemaError("generic predictor worldsheet transport mismatch")
+    if motion["categorical_transport"] != "one_hot_bilinear_then_first_argmax.v1":
+        raise PredictProjectSchemaError("generic predictor categorical transport mismatch")
+    if motion["invalid_projection"] != "persist_source_cell.v1":
+        raise PredictProjectSchemaError("generic predictor persist fallback mismatch")
+    equation_ids = motion["lawref_equation_ids"]
+    if equation_ids != ["dsl_custodied_scalar_identity_v1:s_r", "dsl_custodied_scalar_identity_v1:s_t"]:
+        raise PredictProjectSchemaError("generic predictor LawRef custody mismatch")
+    _sha256(motion["g1_receipt_sha256"], "generic predictor G1 receipt hash")
+    if motion["g1_receipt_sha256"] != "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089":
+        raise PredictProjectSchemaError("generic predictor G1 receipt custody mismatch")
+    if motion["pitch_json_pointer"] != "g1/transport_assumptions/calibration/pitch_rad":
+        raise PredictProjectSchemaError("generic predictor pitch custody mismatch")
+    if motion["proxy_limitation"] != (
+        "no exact banked cross-pair target; uses pose[k+1] nearest-target-pair proxy"
+    ):
+        raise PredictProjectSchemaError("generic predictor cross-pair proxy scope mismatch")
+    if row["class_order"] != [0, 1, 2, 3, 4] or row["reconciliation_order"] != [0, 2, 1, 4, 3]:
+        raise PredictProjectSchemaError("generic predictor class or priority order mismatch")
+    if row["adjacency_policy"] != "measured_edges_only.v1" or row["tie_policy"] != "priority_then_min_class_id.v1":
+        raise PredictProjectSchemaError("generic predictor adjacency/tie policy mismatch")
+    sections = row["counted_sections"]
+    if not isinstance(sections, list):
+        raise PredictProjectSchemaError("generic predictor counted sections must be a list")
+    keys: list[str] = []
+    for section in sections:
+        item = _exact_fields(section, {"name", "raw_bytes", "zlib9_bytes", "sha256"}, "predictor section")
+        keys.append(_nonempty_string(item["name"], "predictor section name"))
+        _integer(item["raw_bytes"], "predictor section raw_bytes", minimum=0)
+        _integer(item["zlib9_bytes"], "predictor section zlib9_bytes", minimum=0)
+        _sha256(item["sha256"], "predictor section SHA-256")
+    if keys != sorted(set(keys)):
+        raise PredictProjectSchemaError("generic predictor sections must be sorted and unique")
+    external = row["external_counted_custody"]
+    if external != {
+        "lane_chart_raw_bytes": 159386,
+        "lane_chart_brotli_bytes": 41303,
+        "lane_chart_sha256": "d2b2a62eeb6ebe45cbf908dafa7e081eabddaca0f424faac970b41eea650d810",
+        "lane_chart_zlib9_bytes_diagnostic_only": 47546,
+        "lane_chart_zlib9_sha256_diagnostic_only": "ef16824eea59415e71435b94c450c2d554e0db08c0981fae6b392ab08170d287",
+        "lane_chart_status": "executed_in_task578_measurement_external_counted_custody",
+        "executed": True,
+        "execution_scope": "task578_measurement_only",
+        "receiver_closed": False,
+    }:
+        raise PredictProjectSchemaError("generic predictor external Lane-chart custody mismatch")
+
+
+def attach_generic_predictor_policy(seed: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a validated copy with the optional doctrine predictor policy.
+
+    The additive field keeps legacy v0 objects byte-identical while new objects
+    make the causal prior and counted-chart custody explicit.
+    """
+
+    copied = json.loads(canonical_json_bytes(seed))
+    copied["receiver"]["generic_predictor_policy"] = json.loads(canonical_json_bytes(policy))
+    return validate_constraint_seed(copied)
 
 
 def _validate_authority(value: Any) -> None:
@@ -1504,6 +1608,7 @@ __all__ = [
     "SECTION_PREFIX",
     "STRATA",
     "PredictProjectSchemaError",
+    "attach_generic_predictor_policy",
     "build_minimal_constraint_seed",
     "build_native_grammar",
     "canonical_json_bytes",
