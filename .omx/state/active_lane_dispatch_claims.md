@@ -2687,3 +2687,7 @@
 
 
 | 2026-07-19T19:32:12Z | codex:gpt-5.6-sol-xhigh | pdw1_dB_attack_step2_20260719T192712Z | local_macos_cpu_advisory | pdw1_step2_local_20260719T192712Z |  | build_measure | Local zero-dollar n24-first realization measurement; no paid dispatch; pointer authority false |
+
+
+
+| 2026-07-20T09:29:48Z | codex:gpt-5.6-sol | inverse_solve_einstein_avenue_20260720T092250Z | local | inverse_solve_einstein_avenue_20260720T092250Z |  | local_inverse_solve | $0 local inverse solve; no provider dispatch and no heavy training; exact byte-closed advisory measurements only unless contest-compliant authority lands. |

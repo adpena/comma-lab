@@ -81172,6 +81172,53 @@
       "notes": "",
       "research_only": true,
       "lane_class": "experimental"
+    },
+    {
+      "id": "inverse_solve_einstein_avenue_20260720T092250Z",
+      "name": "Inverse-Solve Einstein Avenue",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "FORMULATION_SCOPED_EMPTY_FIXED_DISTORTION_INTERSECTION: strict fixed-C1 cap is 216223 B; no new receiver-closed row; pointer unchanged; durable receipt landed; MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "MAIN approval of PDW2-conditioned receiver-closed optimal form",
+        "n24 actual archive with native-f32 parse-back and hard through-R oracle",
+        "strict n600 fixed-C1 gate: bytes<=216223 and d_seg<=0.00015196 and d_pose<=0.00010184"
+      ]
     }
   ],
   "level_rules": {
