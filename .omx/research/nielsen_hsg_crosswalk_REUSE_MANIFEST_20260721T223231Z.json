@@ -1,0 +1,101 @@
+{
+  "schema": "pact.nielsen_hsg_crosswalk_reuse_manifest.v1",
+  "created_utc": "2026-07-21T22:32:31Z",
+  "research_only": true,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "reuse_without_fork": [
+    {
+      "surface": "Task #550 Nielsen information-geometry crosswalk",
+      "path": ".omx/research/nielsen_infogeo_crosswalk_20260719_codex.md",
+      "sha256": "e70f9163f5ec65e29d3880524645a0220ca50b5e13d8d0c00acabe718b82e940",
+      "use": "exact rank-4 power/Laguerre geometry, dual metric schema, gauge recall"
+    },
+    {
+      "surface": "Task #553 PDW2 measurement memo",
+      "path": ".omx/research/pdw2_gauge_packet_probe_20260719_codex.md",
+      "sha256": "170fc5cd3470822e291e9951bc6f7ddba4b53ca2386533c3d27d4a4612608416",
+      "use": "existing exact gauge packet and target-only/spatial-receiver limits"
+    },
+    {
+      "surface": "Task #553 PDW2 receipt",
+      "path": ".omx/research/pdw2_gauge_packet_probe_20260719_receipt.json",
+      "sha256": "eac796b86ee5081a6d5fb97441966c0d621a60b8dae193c35dfda603df12c5ad",
+      "use": "measured raw and coded packet custody"
+    },
+    {
+      "surface": "Prerequisite surface flush and #581 same-coder comparator",
+      "path": ".omx/research/prereq_surfaces_flush_20260720T171050Z.md",
+      "sha256": "8d06ccfc37d3f055de737727d4b32c59c3504675290aaba7603340c2ebb23122",
+      "use": "134 B Aurenhammer, 137 B tropical residuation, 131 B zero-sum comparison"
+    },
+    {
+      "surface": "Direct description minimizer primary spec",
+      "path": ".omx/research/direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md",
+      "sha256": "3ae7166e633d46e6341c3565e0fd2d475c501e6120fa68c419ce89e931f37aa9",
+      "use": "live-builder contract, Fisher baseline, exact integer/uint8 secant gate"
+    },
+    {
+      "surface": "Null-subspace rate measurement",
+      "path": ".omx/research/null_subspace_rate_measure_20260717.md",
+      "sha256": "10de8280ab8df3ed4a28e8a46c81bdcb3b248d9c3050c831bc3a27fef6185060",
+      "use": "#519 parameter-gauge and render-nullspace axis separation"
+    },
+    {
+      "surface": "B2 seed-composition build spec",
+      "path": ".omx/research/seed_compose_b2_build_spec_20260721.md",
+      "sha256": "5eb0a4a96ac6969b3936a5191f3b91aaa1fdf2e86058c21f64b5aa4fabb294b5",
+      "use": "current receiver/action conventions; no new training surface"
+    },
+    {
+      "surface": "Canonical equations",
+      "law_refs": [
+        "segnet_head_affine_gauge_quotient_v1",
+        "frozen_scorer_fisher_curvature_margin_colocation_v1",
+        "segnet_head_rank4_linear_flipdist_v1"
+      ],
+      "use": "avoid duplicate H1 and H3 laws"
+    },
+    {
+      "surface": "tac.lossless.range_coder (#557)",
+      "use": "bit-exact static range payload and parse-back for H5 diagnostic"
+    },
+    {
+      "surface": "movable_site_coder",
+      "use": "establish absolute-coordinate receiver semantics and refuse projective drop-in"
+    }
+  ],
+  "new_delta": [
+    {
+      "artifact": ".omx/research/nielsen_hsg_n64_probe_20260721.py",
+      "sha256": "f0c43874054d7ed175cca41362474afedb718909e2b37be52ca06c6e556b4f3e",
+      "role": "deterministic seed1234 n64 H1/H2/H3 identity checks and H5 payload-only diagnostic"
+    },
+    {
+      "artifact": ".omx/research/nielsen_hsg_crosswalk_20260721T223231Z.json",
+      "sha256": "6f489a63b7d8332d5eb890e9efa664b734b6e7fd9bd11b3e9fb94e9993ebe5de",
+      "role": "machine-readable receipt with custody, verdict_scope, and review evidence"
+    },
+    {
+      "artifact": ".omx/research/nielsen_hsg_crosswalk_20260721T223231Z.md",
+      "role": "H1-H5 delta-only crosswalk and MAIN relay"
+    },
+    {
+      "artifact": ".omx/research/nielsen_hsg_crosswalk_DAG_FEED_20260721T223231Z.md",
+      "role": "consumer and named-exit routing graph"
+    }
+  ],
+  "deliberate_non_reuse_or_non_wiring": [
+    "No duplicate canonical equation for H1 or H3",
+    "No HSG coordinate replacement for movable_site_coder absolute geometry",
+    "No training curriculum or per-step loss-weight surface",
+    "No allocator, autopilot, launch, paid dispatch, candidate archive, or score claim",
+    "No retired archive bytes"
+  ],
+  "main_landing_review_required": true,
+  "git_proof": {
+    "base": "ba11694c347903034fd72edd040333c340a7f5e3",
+    "measurement_commit": "fcb14510afd4823a4265f0d286d77a6b1e6ef4c4",
+    "branch": "codexwt/nielsen_hsg_crosswalk_20260721T222048Z"
+  }
+}

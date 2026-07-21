@@ -1,0 +1,145 @@
+{
+  "schema": "nielsen_hsg_crosswalk_receipt.v1",
+  "measurement_utc": "2026-07-21T22:32:31.264921Z",
+  "authority": {
+    "axis": "[macOS-CPU advisory] real frozen-SegNet cache diagnostic",
+    "research_only": true,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "receiver_closed": false,
+    "paid_dispatch": false,
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED"
+  },
+  "probe": {
+    "command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python .omx/research/nielsen_hsg_n64_probe_20260721.py",
+    "source": ".omx/research/nielsen_hsg_n64_probe_20260721.py",
+    "source_sha256": "f0c43874054d7ed175cca41362474afedb718909e2b37be52ca06c6e556b4f3e",
+    "seed": 1234,
+    "n_pairs": 64,
+    "sampled_points": 5120,
+    "samples_per_pair_class": 16,
+    "sampled_gt_class_counts": [1024, 1024, 1024, 1024, 1024],
+    "pair_ids": [0, 9, 19, 28, 38, 47, 57, 66, 76, 85, 95, 104, 114, 123, 133, 142, 152, 161, 171, 180, 190, 199, 209, 218, 228, 237, 247, 256, 266, 275, 285, 294, 304, 313, 323, 332, 342, 351, 361, 370, 380, 389, 399, 408, 418, 427, 437, 446, 456, 465, 475, 484, 494, 503, 513, 522, 532, 541, 551, 560, 570, 579, 589, 599]
+  },
+  "input_custody": {
+    "logits": {
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/gt_segnet_logits.f16",
+      "bytes": 1179648000,
+      "sha256_from_existing_custody": "41d3ef535f5b5855fe17aab678580114a50309dc48d04948af62c2f563ed3b52",
+      "rehash_this_probe": false
+    },
+    "labels": {
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_segnet_argmax.u8",
+      "bytes": 117964800,
+      "sha256_from_existing_custody": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68",
+      "rehash_this_probe": false
+    },
+    "frozen_head": {
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "sha256_from_existing_custody": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    }
+  },
+  "primary_sources": [
+    {
+      "url": "https://franknielsen.github.io/HSG/",
+      "role": "primary project index"
+    },
+    {
+      "url": "https://arxiv.org/abs/1704.00454",
+      "role": "clustering, Hilbert centers, variation-norm isometry",
+      "downloaded_pdf_sha256": "a6a2bad9a5ed766655b79838ecfb1ec3f48e3392168ab987c1ad4c189f61879c"
+    },
+    {
+      "url": "https://arxiv.org/abs/2203.11434",
+      "role": "nonlinear embeddings and differentiable HSG approximation",
+      "downloaded_pdf_sha256": "4dedd9427e93598b275b5dfc66f95d36b7cb8e719342554bbf215a7b5f70586f"
+    },
+    {
+      "url": "https://franknielsen.github.io/HSG/PyHSGv3.zip",
+      "role": "clustering reference code",
+      "downloaded_zip_sha256": "3575db046a29f3b0661d62b69ae90b2051a036d430b1449a77ef6a257f89bc92"
+    },
+    {
+      "url": "https://franknielsen.github.io/HSG/PythonHSGembedding.zip",
+      "role": "embedding reference code",
+      "downloaded_zip_sha256": "140732ff7b5dc02b6eebe645659076162f447c3d10611eed0a1b75637cc85410"
+    }
+  ],
+  "measurements": {
+    "H1_projective_invariance": {
+      "independent_ray_scaling_max_abs_distance_error": 3.552713678800501e-15,
+      "shared_positive_diagonal_projectivity_max_abs_distance_error": 1.7763568394002505e-15,
+      "one_sided_positive_diagonal_fraction_distance_changed_gt_1e_9": 1.0,
+      "shared_positive_diagonal_fraction_argmax_changed": 0.080859375
+    },
+    "H2_tropical_identity": {
+      "log_probability_hilbert_vs_logit_variation_max_abs_error": 3.552713678800501e-15
+    },
+    "H3_argmax_boundary": {
+      "nielsen_distance_convention": "max_minus_min_without_one_half",
+      "boundary_distance_vs_top1_top2_margin_max_abs_error": 0.0,
+      "hilbert_margin_vs_rank4_euclidean_flip_spearman": 0.9568600456464719,
+      "pair_normal_norm_min": 2.601806228972597,
+      "pair_normal_norm_max": 4.007363904979667,
+      "margin_min": 0.0,
+      "margin_median": 5.16064453125,
+      "margin_max": 13.390625
+    },
+    "H4_descent_ab": {
+      "status": "NOT_RUN_NO_EXACT_DIRECT_MINIMIZER_N64_RECEIVER_SECANTS_ON_BRANCH",
+      "false_authority_prevented": true
+    },
+    "H5_codebook_proxy": {
+      "scope": "real n64 frozen-logit class strata; k=4; static range payload only; frequency table and codebook bytes excluded; not movable-site coordinates",
+      "hilbert_farthest_first_payload_bytes": 517,
+      "euclidean_farthest_first_payload_bytes": 535,
+      "delta_hilbert_minus_euclidean_bytes": -18,
+      "max_radius_ratio_hilbert_over_euclidean_by_class": [1.017969257415025, 1.0, 1.0, 0.9958603954036113, 1.0],
+      "all_range_streams_parseback_exact": true
+    }
+  },
+  "hypothesis_verdicts": {
+    "H1": {
+      "verdict": "ALREADY-HAVE-BETTER",
+      "ours": ["#519/#580 nullspace-gauge program", "segnet_head_affine_gauge_quotient_v1", "#553 PDW2"],
+      "verdict_scope": "HSG as an additional explanation or byte lever for the measured SegNet gauge/nullspace surfaces"
+    },
+    "H2": {
+      "verdict": "ALREADY-HAVE-BETTER",
+      "ours": ["exact Laguerre/power diagram", "#581 same-coder comparator", "#557 coder races"],
+      "measured_existing_same_coder_brotli_bytes": {"aurenhammer": 134, "tropical_residuation": 137, "zero_sum": 131},
+      "verdict_scope": "HSG/tropical representative as a smaller exact frozen-head packet under the existing comparator"
+    },
+    "H3": {
+      "verdict": "ALREADY-HAVE-BETTER",
+      "ours": ["frozen_scorer_fisher_curvature_margin_colocation_v1", "segnet_head_rank4_linear_flipdist_v1", "exact uint8 secant ladder"],
+      "verdict_scope": "HSG output-cell boundary distance as a replacement for realization-aware flip cost"
+    },
+    "H4": {
+      "verdict": "N-A-WHY",
+      "relative_significance": "zero until a same-state exact A(z), uint8/R, hard-oracle, final-ZIP secant beats the Fisher baseline",
+      "named_exit_measurement": "seed-1234 stratified n64 Fisher-Rao vs exact Hilbert-variation proximal vs HSG-LSET-T5 three-arm receiver-secants",
+      "verdict_scope": "current DirectDescriptionOpsGrammarMinimizerV1 branch readiness only; HSG descent family remains open"
+    },
+    "H5": {
+      "verdict": "N-A-WHY",
+      "relative_significance": "minus 18 payload-only bytes excludes the codebook/frequency-table costs and is not uniform in radius or attached to the movable-site grammar",
+      "named_exit_measurement": "same inputs, same complete #557 packet, codebook and tables counted, decoded integer/uint8 n64 hard-oracle secants",
+      "verdict_scope": "real n64 frozen-logit class-stratum k=4 proxy only; HSG codebooks as a family remain open"
+    }
+  },
+  "runtime": {
+    "python": "3.13.12",
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O"
+  },
+  "review": {
+    "python_passes": 2,
+    "pass_1": "CLEAN structural math, deterministic sampling, input custody, and parse-back review",
+    "pass_2": "CLEAN adversarial NO-FAKE, authority-axis, omitted-byte, and verdict-scope review",
+    "review_tracker_note": "mark-file refuses .omx/research because it is outside tracked source directories; passes are recorded in this receipt",
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "probe_repeat": "PASS identical numeric fields; measurement_utc intentionally changes"
+  }
+}
