@@ -1,0 +1,26 @@
+{
+  "schema": "realization_g2d_predict_base_reuse_manifest.v1",
+  "lane_id": "lane_realization_g2d_predict_base_578_20260721",
+  "task_id": "578",
+  "entries": [
+    {"surface": "factor2_receiver_and_lattice", "path": "src/tac/optimization/predict_project_receiver.py", "status": "reused_as_is"},
+    {"surface": "bounded_integer_lattice", "path": "src/tac/optimization/uint8_lattice_feasibility.py", "status": "reused_as_is"},
+    {"surface": "G1_xi_worldsheet_warp", "path": "src/tac/boundary_math/warp_real_luma_frame0.py", "status": "reused_as_is"},
+    {"surface": "G1_LawRef_and_receipt_loader", "path": "src/tac/optimization/predictor_upgrade_xi_chart.py", "status": "reused_as_is"},
+    {"surface": "tac_lie_SE3", "path": "src/tac/lie/_se3_numpy.py", "status": "reused_as_is"},
+    {"surface": "adaptive_context_range_coder_557", "path": "src/tac/optimization/predictor_r2_missdelta.py", "status": "reused_as_is"},
+    {"surface": "realization_measurement_and_2400_stage_harness", "path": "tools/measure_realization_g2_lattice.py", "status": "extended_in_place"},
+    {"surface": "realization_admission_law", "path": "src/tac/canonical_equations/predict_project_realization_admissibility_20260721.py", "status": "reused_as_is"},
+    {"surface": "seed_schema_and_parser", "path": "src/tac/optimization/predict_project_schema.py", "status": "reused_as_is_sibling_owned"},
+    {"surface": "predictor_round2_coder_schema", "path": "src/tac/optimization/predictor_r2_missdelta.py", "status": "read_only_sibling_owned"},
+    {"surface": "r1b6_receiver", "path": "tools/measure_r1b6_admissible_carrier.py", "status": "inspected_not_compatible_no_reuse"}
+  ],
+  "new_with_justification": [
+    "A contextual sequential measurement runner and sparse RGB-delta container are new because no existing receiver harness composes previous-decoded RGB, G1 warp, margin-directed projection, and 1200-frame replay."
+  ],
+  "forked_source_of_truth": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "main_review_required": true
+}
