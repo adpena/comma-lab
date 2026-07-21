@@ -1,0 +1,884 @@
+{
+  "acceptance": {
+    "passed": true,
+    "requires_v2_gt_old": true
+  },
+  "actuation": "NONE",
+  "axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "correlations": {
+    "ablate_byte_price_vs_realized": 0.6978255654102463,
+    "ablate_exact_gap_vs_realized": 0.6569697460914578,
+    "ablate_realizability_vs_realized": 0.5698089945389212,
+    "ablate_visibility_vs_realized": 0.6689900347043337,
+    "exact_anchor_v2_vs_realized": 0.6978255654102463,
+    "old_decide_vs_realized": 0.5697387260063718
+  },
+  "created_utc": "2026-07-21T02:08:57Z",
+  "learned_parameters": 0,
+  "n_rows": 24,
+  "old_decide_scope": "#205 uses emitted STOP projections; C2 uses an explicit projection of persisted factorized_duty_marginal_projected_v1 rows into the intervention vocabulary; unmapped variants are UNIDENTIFIABLE and score zero, never a fabricated marginal",
+  "pointer_changed": false,
+  "preflight": {
+    "break_even_domain_refined": true,
+    "break_even_equation_id": "realization_breakeven_bytes_v1",
+    "break_even_latest_event": "domain_refined",
+    "dedicated_opportunity_pool_equation": "FORMALIZATION_PENDING_NOT_REGISTERED",
+    "fisher_bank": {
+      "exists": true,
+      "header": {
+        "candidate_count": 38077,
+        "columns": [
+          "pair",
+          "row",
+          "col",
+          "linear_index",
+          "target_class",
+          "realized_class",
+          "necessity_edge_tier",
+          "resize_support_taps",
+          "top1_top2_margin",
+          "fisher_trace",
+          "target_realized_head_pair_norm",
+          "flip_distance",
+          "vjp_native_arrangement_match",
+          "vjp_local_lipschitz",
+          "vjp_unit_pullback_rgb"
+        ],
+        "schema": "r1b5_fisher_ev_ordering_jsonl.v1"
+      },
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b5_row_closer_20260720/fisher_ev/fisher_ev_ordering_38077.jsonl.br",
+      "ranking_use": "site-level optional; aggregate historical rows have no bank site key",
+      "schema": "r1b5_fisher_ev_ordering_jsonl.v1",
+      "schema_matches": true,
+      "sha256": "765457d424eaf1de7e05ed8703853175ef415bd3f19fb00137a74a29de52ae00",
+      "sha256_matches": true
+    },
+    "pool_kkt_equation_id": "witness_measured_reverse_waterfill_v1",
+    "pool_kkt_registered": true
+  },
+  "rows": [
+    {
+      "apparatus_valid": true,
+      "corpus": "#205_asof_trajectory",
+      "exact_anchor_v2": 0.0825,
+      "factor_context": {
+        "edge_flicker_temporal_duty": true,
+        "ema_lag_correction": "unknown_not_applied",
+        "receipt_fallback": "costate_controller_design_20260705.md",
+        "temporal_action": "STOP_TRAINING"
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.0825,
+        "lambda": 0.0825,
+        "realizability": 1.0,
+        "visibility": 1.0
+      },
+      "id": "n205:memo_stop_ep350",
+      "maturity": "_dev",
+      "old_decide": 0.0825,
+      "realized_benefit_s": 0.0119,
+      "source_epochs": [
+        350,
+        375
+      ]
+    },
+    {
+      "apparatus_valid": true,
+      "corpus": "#205_asof_trajectory",
+      "exact_anchor_v2": 0.006,
+      "factor_context": {
+        "edge_flicker_temporal_duty": true,
+        "ema_lag_correction": "unknown_not_applied",
+        "receipt_fallback": "costate_controller_design_20260705.md",
+        "temporal_action": "STOP_TRAINING"
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.006,
+        "lambda": 0.006,
+        "realizability": 1.0,
+        "visibility": 1.0
+      },
+      "id": "n205:memo_stop_ep450",
+      "maturity": "_dev",
+      "old_decide": 0.006,
+      "realized_benefit_s": 0.0004,
+      "source_epochs": [
+        450,
+        475
+      ]
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 0.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.01,
+        "lambda": 0.0,
+        "realizability": 0.07519631273472174,
+        "visibility": 0.0
+      },
+      "id": "c2:palette:blur2:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.0,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "UNIDENTIFIABLE_NOT_MAPPED",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": true
+      },
+      "realized_benefit_s": -0.09473347032335089,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "blur2",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 0.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.4937,
+        "lambda": 0.0,
+        "realizability": 0.07519631273472174,
+        "visibility": 0.0
+      },
+      "id": "c2:palette:movable_meancolor:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.015295,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "persistence",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": 0.07621582980685773,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "movable_meancolor",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 0.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.01,
+        "lambda": 0.0,
+        "realizability": 0.07519631273472174,
+        "visibility": 0.0
+      },
+      "id": "c2:palette:oneside_deep:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.0,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "UNIDENTIFIABLE_NOT_MAPPED",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": true
+      },
+      "realized_benefit_s": -1.2810153103298614,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "oneside_deep",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0015956427302561765,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.10980000000000001,
+        "lambda": 0.0015956427302561765,
+        "realizability": 0.07519631273472174,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:palette:oneside_lane:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.021015000000000002,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "lane_edge",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": 0.02322544623480898,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "oneside_lane",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.007174579380031643,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.4937,
+        "lambda": 0.007174579380031643,
+        "realizability": 0.07519631273472174,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:palette:oneside_movable:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.015295,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "persistence",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": 0.19058893093532991,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "oneside_movable",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 1.0,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.014349158760063286,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.4937,
+        "lambda": 0.014349158760063286,
+        "realizability": 0.15039262546944349,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:palette:oneside_movable:1.00",
+      "maturity": "_dev",
+      "old_decide": 0.03059,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "persistence",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": 0.29790060356987835,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "oneside_movable",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 1.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.021523738140094926,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.4937,
+        "lambda": 0.021523738140094926,
+        "realizability": 0.22558893820416523,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:palette:oneside_movable:1.50",
+      "maturity": "_dev",
+      "old_decide": 0.045885,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "persistence",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": 0.35256521538628466,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "oneside_movable",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 2.0,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.02869831752012657,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.4937,
+        "lambda": 0.02869831752012657,
+        "realizability": 0.30078525093888697,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:palette:oneside_movable:2.00",
+      "maturity": "_dev",
+      "old_decide": 0.06118,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "persistence",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": 0.38483755425347216,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "oneside_movable",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.008770222110287818,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.6035,
+        "lambda": 0.008770222110287818,
+        "realizability": 0.07519631273472174,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:palette:oneside_shallow:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.01649,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "horizon_margin",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": 0.20308842230902774,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "oneside_shallow",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 1.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.026310666330863455,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.6035,
+        "lambda": 0.026310666330863455,
+        "realizability": 0.22558893820416523,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:palette:oneside_shallow:1.50",
+      "maturity": "_dev",
+      "old_decide": 0.04947000000000001,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "horizon_margin",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": 0.3437108791775174,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "oneside_shallow",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 0.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.01,
+        "lambda": 0.0,
+        "realizability": 0.07519631273472174,
+        "visibility": 0.0
+      },
+      "id": "c2:palette:symmetric:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.0,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "UNIDENTIFIABLE_NOT_MAPPED",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": true
+      },
+      "realized_benefit_s": -0.9527690877278647,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "symmetric",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 0.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.01,
+        "lambda": 0.0,
+        "realizability": 0.07519631273472174,
+        "visibility": 0.0
+      },
+      "id": "c2:palette:tex_band_ds4:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.0,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "UNIDENTIFIABLE_NOT_MAPPED",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": true
+      },
+      "realized_benefit_s": -1.1410794989691841,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "tex_band_ds4",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 0.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.01,
+        "lambda": 0.0,
+        "realizability": 0.07519631273472174,
+        "visibility": 0.0
+      },
+      "id": "c2:palette:tex_global_ds16:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.0,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "UNIDENTIFIABLE_NOT_MAPPED",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": true
+      },
+      "realized_benefit_s": -1.0149783230251737,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "tex_global_ds16",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 0.0,
+        "formulation_valid": true
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.01,
+        "lambda": 0.0,
+        "realizability": 0.07519631273472174,
+        "visibility": 0.0
+      },
+      "id": "c2:palette:tex_movable_ds8:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.0,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "UNIDENTIFIABLE_NOT_MAPPED",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": true
+      },
+      "realized_benefit_s": 0.4353780544704863,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, not n600 evidence; reason: carrier-variant SMOKE ranking only; winner re-measured at n600 before any verdict; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)",
+      "variant": "tex_movable_ds8",
+      "vehicle": "palette"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 0.0,
+        "formulation_valid": false
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.01,
+        "lambda": 0.0,
+        "realizability": 0.0,
+        "visibility": 0.0
+      },
+      "id": "c2:trained_witness:blur2:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.0,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "UNIDENTIFIABLE_NOT_MAPPED",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": true
+      },
+      "realized_benefit_s": -0.06306542290581604,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, ranking only; winner owed an n600 re-measure; carriers applied to the CACHED WITNESS camera frames; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz); FROZEN mod32cap EMA-best ep650 witness rendered through exact R",
+      "variant": "blur2",
+      "vehicle": "trained_witness"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 0.0,
+        "formulation_valid": false
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.01,
+        "lambda": 0.0,
+        "realizability": 0.0,
+        "visibility": 0.0
+      },
+      "id": "c2:trained_witness:oneside_deep:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.0,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "UNIDENTIFIABLE_NOT_MAPPED",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": true
+      },
+      "realized_benefit_s": -0.43976677788628465,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, ranking only; winner owed an n600 re-measure; carriers applied to the CACHED WITNESS camera frames; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz); FROZEN mod32cap EMA-best ep650 witness rendered through exact R",
+      "variant": "oneside_deep",
+      "vehicle": "trained_witness"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.1,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": false
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.10980000000000001,
+        "lambda": 0.0,
+        "realizability": 0.0,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:trained_witness:oneside_lane:0.10",
+      "maturity": "_dev",
+      "old_decide": 0.004203,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "lane_edge",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": -0.0038019816080729716,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, ranking only; winner owed an n600 re-measure; carriers applied to the CACHED WITNESS camera frames; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz); FROZEN mod32cap EMA-best ep650 witness rendered through exact R",
+      "variant": "oneside_lane",
+      "vehicle": "trained_witness"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.25,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": false
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.10980000000000001,
+        "lambda": 0.0,
+        "realizability": 0.0,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:trained_witness:oneside_lane:0.25",
+      "maturity": "_dev",
+      "old_decide": 0.010507500000000001,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "lane_edge",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": -0.07401784261067712,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, ranking only; winner owed an n600 re-measure; carriers applied to the CACHED WITNESS camera frames; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz); FROZEN mod32cap EMA-best ep650 witness rendered through exact R",
+      "variant": "oneside_lane",
+      "vehicle": "trained_witness"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": false
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.10980000000000001,
+        "lambda": 0.0,
+        "realizability": 0.0,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:trained_witness:oneside_lane:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.021015000000000002,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "lane_edge",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": -0.19530826144748265,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, ranking only; winner owed an n600 re-measure; carriers applied to the CACHED WITNESS camera frames; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz); FROZEN mod32cap EMA-best ep650 witness rendered through exact R",
+      "variant": "oneside_lane",
+      "vehicle": "trained_witness"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": false
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.4937,
+        "lambda": 0.0,
+        "realizability": 0.0,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:trained_witness:oneside_movable:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.015295,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "persistence",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": -0.11125352647569446,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, ranking only; winner owed an n600 re-measure; carriers applied to the CACHED WITNESS camera frames; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz); FROZEN mod32cap EMA-best ep650 witness rendered through exact R",
+      "variant": "oneside_movable",
+      "vehicle": "trained_witness"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 2.0,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 1.0,
+        "formulation_valid": false
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.4937,
+        "lambda": 0.0,
+        "realizability": 0.0,
+        "visibility": 0.193257684777
+      },
+      "id": "c2:trained_witness:oneside_movable:2.00",
+      "maturity": "_dev",
+      "old_decide": 0.06118,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "persistence",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": false
+      },
+      "realized_benefit_s": -0.2488199869791667,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, ranking only; winner owed an n600 re-measure; carriers applied to the CACHED WITNESS camera frames; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz); FROZEN mod32cap EMA-best ep650 witness rendered through exact R",
+      "variant": "oneside_movable",
+      "vehicle": "trained_witness"
+    },
+    {
+      "apparatus_valid": true,
+      "beta": 0.5,
+      "corpus": "c2_carrier_smoke",
+      "exact_anchor_v2": 0.0,
+      "factor_context": {
+        "charged_bytes": 0,
+        "design_realizability": 0.30078525093888697,
+        "direction_alignment": 0.0,
+        "formulation_valid": false
+      },
+      "factors": {
+        "byte_price": 1.0,
+        "exact_gap": 0.01,
+        "lambda": 0.0,
+        "realizability": 0.0,
+        "visibility": 0.0
+      },
+      "id": "c2:trained_witness:symmetric:0.50",
+      "maturity": "_dev",
+      "old_decide": 0.0,
+      "old_decide_readback": {
+        "equation_id": "factorized_duty_marginal_projected_v1",
+        "mapped_lever": "UNIDENTIFIABLE_NOT_MAPPED",
+        "mapping_scope": "explicit C2 intervention-vocabulary projection",
+        "unmapped_is_zero_not_guessed": true
+      },
+      "realized_benefit_s": -0.3844409518771702,
+      "source_scope": "stride-5 subset (120 frames of n600) \u2014 LABELLED SUBSET, ranking only; winner owed an n600 re-measure; carriers applied to the CACHED WITNESS camera frames; [macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz); FROZEN mod32cap EMA-best ep650 witness rendered through exact R",
+      "variant": "symmetric",
+      "vehicle": "trained_witness"
+    }
+  ],
+  "schema": "costate_organ_v2_exact_anchor_backtest.v1",
+  "score_claim": false,
+  "source_custody": {
+    "bytes_unchanged": true,
+    "sha256_after": {
+      "/Users/adpena/Projects/pact/.omx/research/costate_controller_design_20260705.md": "36fbdebee1a6b134b35480d91b55be38c9b9e5e322a53f624c25590303b0de65",
+      "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/costate_exact_anchor_v2_20260721T013151Z/.omx/state/canonical_equations_registry.jsonl": "df8ebe2b9bb3520927ed29dd98e6b4b11059740666e992f0c594942784292ef1",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_blur2_b0.5.json": "c92be1ad0190d52266ff6241492e7351b9e90756dc38696ea10e5dc4ab9f761d",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_movable_meancolor_b0.5.json": "54534d605ecb307b7c14f8fe5b27a23ddbbca5aa040c977dab0d8a4bb3b80d0c",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_deep_b0.5.json": "f58e4088ab004f36e1659a4392c4059c1f57507dd4e92787ec5df33767b70f4f",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_lane_b0.5.json": "20b55c00ae2a55453de5ab22c136e3cc90129bcb8ad4422dccfc2ff92c8a0f3e",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_movable_b0.5.json": "a351a48d7dc1cd734d2b1a1aae9bc092408ec799e896d49f348d3c80c89a02be",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_movable_b1.0.json": "86c7afe855ea7111d75845f437c9e8d3e179f080496e9e1991258662ce72fac7",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_movable_b1.5.json": "c55000c1a2b77cac79f7cebdf06acb0f825af84bcd6daa6f96b6a5974999a3d2",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_movable_b2.0.json": "aa93152bb6736704ce1d70b482979bc1622cd9f5e9a14bf666d1975c1d095f08",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_shallow_b0.5.json": "81b67ec80fc3ab53bf5999249fc9377e91079d32969d42d8b9191dd277f9dd7d",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_shallow_b1.5.json": "3f9557da9d7e7433f54cf059632f76413d0b47e6cb0fc5f6b889b4ba58bb4012",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_symmetric_b0.5.json": "d64a08e978f83f5323312a4acdcff7a84bfc857880b50abea1a43c403ac914f6",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_tex_band_ds4_b0.5.json": "85b3d63ec56a55aad0ccab570f7a1d5d3a497c6bcfaea7d78cdfbdf696c5a59a",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_tex_global_ds16_b0.5.json": "4ebbda3c2fabd015ebb633db851c73d30eaba66b844ec6fc95aaabd479bb8c71",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_tex_movable_ds8_b0.5.json": "55fc9fcbabd5e660e677dfe745de5fcb45cb5ce77348a9fec3995733cfd547bc",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_baseline_b0.5.json": "bc2ae869ad99b9709dd3c1d1b71537d9941e39685f0993ae50614aa9af402465",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_blur2_b0.5.json": "7dfa431b2a5e372f3cd4a40ad25515cae1cb58e36324c5f75a6121742a1fa934",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_deep_b0.5.json": "deef4155b322fb6097c7d3c8274911fa14e318c4e7e94066ea372b4d7c1ce380",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_lane_b0.1.json": "8d2b2c4598100496e79f9bd30d4fd0dda7e707420e185f2d55b92ed9cd7151d9",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_lane_b0.25.json": "21418b7a71661fbe9da22fd9c42c2c9abf9f1ea4418dba6b8008fb2c8b7f49cd",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_lane_b0.5.json": "be958c1b70dce10628657c7b89b33e6dfdbf50b679ebef67f99cb43bc1e02c4f",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_movable_b0.5.json": "7725164b6399a3736801a84f15f9eae0e5808afde1230977f8b9257b32f195ff",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_movable_b2.0.json": "ff26a27d8adbb3d9fa3e56ee40656e048e3d79ff64c1eee0702ed22486f33222",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_symmetric_b0.5.json": "abe155c1485bf19330b8e07d4f5e1e16b429980d3f5dd890b498a0e52c11e6fe",
+      "/Users/adpena/Projects/pact/experiments/results/levelset_v752_baseline_20260710T185913Z/launch.sh": "d714ddd72ad4979f7b53a784f236b923b4fd0cf2c04a703b5f1a47ebf88b78ed",
+      "/Users/adpena/Projects/pact/experiments/results/levelset_v752_baseline_20260710T185913Z/run.log": "7fdc44d19946121fb18e35060f5146bf1f48dea81c08891f8f4477d42b0bed82",
+      "/Volumes/VertigoDataTier/pact/evidence/r1b5_row_closer_20260720/fisher_ev/fisher_ev_ordering_38077.jsonl.br": "765457d424eaf1de7e05ed8703853175ef415bd3f19fb00137a74a29de52ae00"
+    },
+    "sha256_before": {
+      "/Users/adpena/Projects/pact/.omx/research/costate_controller_design_20260705.md": "36fbdebee1a6b134b35480d91b55be38c9b9e5e322a53f624c25590303b0de65",
+      "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/costate_exact_anchor_v2_20260721T013151Z/.omx/state/canonical_equations_registry.jsonl": "df8ebe2b9bb3520927ed29dd98e6b4b11059740666e992f0c594942784292ef1",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_blur2_b0.5.json": "c92be1ad0190d52266ff6241492e7351b9e90756dc38696ea10e5dc4ab9f761d",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_movable_meancolor_b0.5.json": "54534d605ecb307b7c14f8fe5b27a23ddbbca5aa040c977dab0d8a4bb3b80d0c",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_deep_b0.5.json": "f58e4088ab004f36e1659a4392c4059c1f57507dd4e92787ec5df33767b70f4f",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_lane_b0.5.json": "20b55c00ae2a55453de5ab22c136e3cc90129bcb8ad4422dccfc2ff92c8a0f3e",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_movable_b0.5.json": "a351a48d7dc1cd734d2b1a1aae9bc092408ec799e896d49f348d3c80c89a02be",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_movable_b1.0.json": "86c7afe855ea7111d75845f437c9e8d3e179f080496e9e1991258662ce72fac7",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_movable_b1.5.json": "c55000c1a2b77cac79f7cebdf06acb0f825af84bcd6daa6f96b6a5974999a3d2",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_movable_b2.0.json": "aa93152bb6736704ce1d70b482979bc1622cd9f5e9a14bf666d1975c1d095f08",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_shallow_b0.5.json": "81b67ec80fc3ab53bf5999249fc9377e91079d32969d42d8b9191dd277f9dd7d",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_shallow_b1.5.json": "3f9557da9d7e7433f54cf059632f76413d0b47e6cb0fc5f6b889b4ba58bb4012",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_symmetric_b0.5.json": "d64a08e978f83f5323312a4acdcff7a84bfc857880b50abea1a43c403ac914f6",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_tex_band_ds4_b0.5.json": "85b3d63ec56a55aad0ccab570f7a1d5d3a497c6bcfaea7d78cdfbdf696c5a59a",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_tex_global_ds16_b0.5.json": "4ebbda3c2fabd015ebb633db851c73d30eaba66b844ec6fc95aaabd479bb8c71",
+      "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_tex_movable_ds8_b0.5.json": "55fc9fcbabd5e660e677dfe745de5fcb45cb5ce77348a9fec3995733cfd547bc",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_baseline_b0.5.json": "bc2ae869ad99b9709dd3c1d1b71537d9941e39685f0993ae50614aa9af402465",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_blur2_b0.5.json": "7dfa431b2a5e372f3cd4a40ad25515cae1cb58e36324c5f75a6121742a1fa934",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_deep_b0.5.json": "deef4155b322fb6097c7d3c8274911fa14e318c4e7e94066ea372b4d7c1ce380",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_lane_b0.1.json": "8d2b2c4598100496e79f9bd30d4fd0dda7e707420e185f2d55b92ed9cd7151d9",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_lane_b0.25.json": "21418b7a71661fbe9da22fd9c42c2c9abf9f1ea4418dba6b8008fb2c8b7f49cd",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_lane_b0.5.json": "be958c1b70dce10628657c7b89b33e6dfdbf50b679ebef67f99cb43bc1e02c4f",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_movable_b0.5.json": "7725164b6399a3736801a84f15f9eae0e5808afde1230977f8b9257b32f195ff",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_movable_b2.0.json": "ff26a27d8adbb3d9fa3e56ee40656e048e3d79ff64c1eee0702ed22486f33222",
+      "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_symmetric_b0.5.json": "abe155c1485bf19330b8e07d4f5e1e16b429980d3f5dd890b498a0e52c11e6fe",
+      "/Users/adpena/Projects/pact/experiments/results/levelset_v752_baseline_20260710T185913Z/launch.sh": "d714ddd72ad4979f7b53a784f236b923b4fd0cf2c04a703b5f1a47ebf88b78ed",
+      "/Users/adpena/Projects/pact/experiments/results/levelset_v752_baseline_20260710T185913Z/run.log": "7fdc44d19946121fb18e35060f5146bf1f48dea81c08891f8f4477d42b0bed82",
+      "/Volumes/VertigoDataTier/pact/evidence/r1b5_row_closer_20260720/fisher_ev/fisher_ev_ordering_38077.jsonl.br": "765457d424eaf1de7e05ed8703853175ef415bd3f19fb00137a74a29de52ae00"
+    }
+  },
+  "validation_scope": "RETROSPECTIVE_DEVELOPMENT; no live generalization/promotion authority",
+  "verdict_scope": "#205 supplies temporal stop rows; C2 supplies stride-5 ranking-only carrier smokes. Trained-witness flat-band negatives are formulation-scoped; no family negative inferred."
+}

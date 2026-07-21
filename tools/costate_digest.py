@@ -157,6 +157,26 @@ def section_shadow(run_dir: Path | None) -> tuple[list[str], dict | None]:
             row = None
     if not row:
         return ["costate-shadow: no rows yet (observer will populate costate_shadow.jsonl)"], None
+    if not isinstance(row.get("costate_organ_v2"), dict):
+        # Backward-compatible readback for pre-v2 persisted sidecars. This is an
+        # in-memory additive field only; the sacred run directory is not rewritten.
+        try:
+            from tac.witness_control.costate_organ_v2 import aggregate_readback
+            from tac.witness_control.shadow_controller import parse_launch_sh_flags
+
+            flags = {}
+            launch = run_dir / "launch.sh"
+            if launch.is_file():
+                flags = parse_launch_sh_flags(launch.read_text(errors="replace"))
+            row = dict(row)
+            row["costate_organ_v2"] = aggregate_readback(
+                row.get("state") or {}, flags=flags, maturity="_dev")
+        except Exception as exc:
+            row = dict(row)
+            row["costate_organ_v2"] = {
+                "status": "UNAVAILABLE", "reason": f"{type(exc).__name__}: {exc}",
+                "actuation": "NONE", "score_claim": False,
+            }
     lines: list[str] = []
     try:
         age = max(0.0, time.time() - path.stat().st_mtime) if path.exists() else None
@@ -212,6 +232,24 @@ def section_shadow(run_dir: Path | None) -> tuple[list[str], dict | None]:
                 lines.append(
                     f"  factorized-DECIDE: DeltaS {pd_s}/{decision.get('horizon_epochs')}ep; "
                     + str(decision.get("why", "reason unavailable")))
+        organ_v2 = row.get("costate_organ_v2")
+        if isinstance(organ_v2, dict):
+            debt = organ_v2.get("score_debt") or {}
+            vis = organ_v2.get("visibility") or {}
+            real = organ_v2.get("realizability") or {}
+            app = organ_v2.get("apparatus") or {}
+            debt_s = debt.get("total_s")
+            debt_text = f"{debt_s:.6g}S" if isinstance(debt_s, (int, float)) else "unavailable"
+            lines.append(
+                "  costate-organ-v2: " + str(organ_v2.get("status", "?"))
+                + f" | exact-gap={debt_text}"
+                + f" | full-kernel-visible={vis.get('full_kernel_visible', '?')}"
+                + f" | realization-design={real.get('design_anchor', '?')}"
+                + f" | maturity={app.get('maturity', '_dev')}"
+                + " | pair/site lambda=OWED")
+            if app.get("bench_contaminated"):
+                lines.append("  costate-organ-v2 apparatus REFUSED: "
+                             + str(app.get("bench_reason")))
         events = row.get("event_advisories") or []
         if events and isinstance(events[0], dict):
             e = events[0]
@@ -1266,6 +1304,19 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
 
     shadow_lines, data["shadow"] = section_shadow(run_dir)
     lines.extend(shadow_lines)
+    if isinstance(data["shadow"], dict):
+        data["costate_organ_v2"] = data["shadow"].get("costate_organ_v2")
+    else:
+        try:
+            from tac.witness_control.costate_organ_v2 import aggregate_readback
+
+            data["costate_organ_v2"] = aggregate_readback({}, maturity="_dev")
+            lines.append("costate-organ-v2: UNAVAILABLE_NO_VERDICT | pair/site lambda=OWED")
+        except Exception as exc:
+            data["costate_organ_v2"] = {
+                "status": "UNAVAILABLE", "reason": f"{type(exc).__name__}: {exc}",
+                "actuation": "NONE", "score_claim": False,
+            }
 
     ncde_line, data["ncde"] = section_ncde(run_dir)
     if ncde_line:

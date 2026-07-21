@@ -269,6 +269,10 @@ class ShadowReport:
     # not a parallel digest-only controller.  It carries the full backtest gate and
     # exact/derived/learned provenance even when admission fails.
     factorized_adjoint: dict | None = None
+    # Task p0_costate_organ_factorization_grounded_ABC: exact-anchor v2 sibling
+    # readback. It exposes the four-factor debt and refuses to manufacture a
+    # pair/site lambda when the shadow row lacks site/channel/byte custody.
+    costate_organ_v2: dict | None = None
     # Morse-Smale + #344 NCDE warnings are stage-boundary advisories only.  They never
     # mutate a schedule and never manufacture a ΔS.
     event_advisories: list[dict] = _dc_field(default_factory=list)
@@ -295,6 +299,7 @@ class ShadowReport:
             "costate_prior": self.costate_prior,
             "duty_ranked": self.duty_ranked,
             "factorized_adjoint": self.factorized_adjoint,
+            "costate_organ_v2": self.costate_organ_v2,
             "event_advisories": self.event_advisories,
             "actuation": ACTUATION,
             "axis": AXIS_TAG,
@@ -961,6 +966,13 @@ def build_shadow_report(inputs: RunInputs,
 
     classification = _classify(inputs)
     factorized = _factorized_overlay(inputs, horizon_epochs)
+    try:
+        from tac.witness_control.costate_organ_v2 import aggregate_readback
+
+        organ_v2 = aggregate_readback(state, flags=inputs.flags, maturity="_dev")
+    except Exception as exc:  # advisory sibling never breaks the v1 shadow path
+        organ_v2 = {"status": "UNAVAILABLE", "reason": f"{type(exc).__name__}: {exc}",
+                    "actuation": "NONE", "score_claim": False}
     event_advisories = _event_advisories(inputs, classification, factorized)
     if classification is None and not rows:
         # no data at all: the honest empty report
@@ -971,7 +983,8 @@ def build_shadow_report(inputs: RunInputs,
             probe_queue=[*_probe_queue(costates), {"costate": "ALL_TRAJECTORY_COSTATES", "why_unidentifiable": "no verdict rows in run.log yet", "evidence_gap": ["wait for the first n600 advisory verdict"]}],
             duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs),
             costate_prior=_costate_prior(), duty_ranked=_duty_ranked(),
-            factorized_adjoint=factorized, event_advisories=event_advisories)
+            factorized_adjoint=factorized, costate_organ_v2=organ_v2,
+            event_advisories=event_advisories)
         if with_fm_advisory:
             _attach_fm_advisory(report, inputs)
         return report
@@ -987,7 +1000,8 @@ def build_shadow_report(inputs: RunInputs,
         recommendations=recs, refused=refused, probe_queue=_probe_queue(costates),
         duty_to_measure=_duty_to_measure(phase_active), producer_signals=_producer_signals(inputs),
         costate_prior=_costate_prior(), duty_ranked=_duty_ranked(),
-        factorized_adjoint=factorized, event_advisories=event_advisories)
+        factorized_adjoint=factorized, costate_organ_v2=organ_v2,
+        event_advisories=event_advisories)
     if with_fm_advisory:
         _attach_fm_advisory(report, inputs)
     return report

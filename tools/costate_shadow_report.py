@@ -87,6 +87,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"      evidence: {ev}")
     for r in report.refused:
         print(f"    REFUSED {r['action']}: {r['refusal_reason']}")
+    organ_v2 = row.get("costate_organ_v2") or {}
+    if organ_v2:
+        debt = organ_v2.get("score_debt") or {}
+        debt_s = debt.get("total_s")
+        debt_text = f"{debt_s:.6g}" if isinstance(debt_s, (int, float)) else "unavailable"
+        print("  costate ORGAN v2 (beside v1): "
+              f"{organ_v2.get('status')} exact-gap={debt_text}S "
+              f"lambda={organ_v2.get('lambda')} "
+              f"maturity={(organ_v2.get('apparatus') or {}).get('maturity', '_dev')}")
+        print(f"    why: {organ_v2.get('why_lambda_null')}")
     if report.probe_queue:
         print("  probe queue (UNIDENTIFIABLE costates — honest gaps, not guesses):")
         for p in report.probe_queue:
