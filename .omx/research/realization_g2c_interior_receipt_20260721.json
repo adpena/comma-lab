@@ -1,0 +1,273 @@
+{
+  "schema": "realization_g2c_interior_compact_receipt.v1",
+  "lane_id": "lane_realization_g2c_interior_578_20260721",
+  "task_id": "578",
+  "measurement_axis": "[macOS-CPU advisory]",
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "winning_rung": "R2_MAX_MARGIN",
+  "verdict": "MEASURED_INTERIOR_FORMULATIONS_NOT_ADMISSIBLE",
+  "verdict_scope": "R1 fixed-magnitude, R2 constant-tile max-margin, R3 frozen-prototype Hopfield prox, and R4 R2-residual dying-write RGB exceptions on seed_compose_b2; textured, learned, and exact spatial SegNet-cell optimizers remain untested",
+  "source_seed": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/seed_compose_20260721/seeds/seed_compose_b2_loose.ppcs",
+    "bytes": 884872,
+    "sha256": "a21dde45e0678ed8f678e57ae2548f5e03b291bef19dcc29c6e1c88c675df7f3"
+  },
+  "terminal_ssd_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/realization_g2c_20260721/r2_residual_v2/receipt.json",
+    "bytes": 64721,
+    "sha256": "cef451a404c77fe08ab2d041b0f59972ff73c0a84ba3ff20281b8651835323b8",
+    "config_sha256": "67fa6eb808aa64add68ab45a209d32839f6d55a257b23015425eb517a88d3762"
+  },
+  "stage_custody": {
+    "R1_FIXED_MAGNITUDE": {
+      "stage_count": 600,
+      "ordered_name_content_sha256": "fbae3a2fa4d7be34e12f33427da352b529e7073876de2e060ead7719e474305a"
+    },
+    "R2_MAX_MARGIN": {
+      "stage_count": 600,
+      "ordered_name_content_sha256": "873183d454f8963d69969df9f8545a273c336e83ee7eb71628cdd4cc896c797a"
+    },
+    "R3_HOPFIELD_MEMORY_PROX": {
+      "stage_count": 600,
+      "ordered_name_content_sha256": "67653fac93a5f8f3f6b2a973293381e680d8b8d196c9b48760dcbe1d0e9e7503"
+    },
+    "R4_DYING_WRITE_EXCEPTIONS": {
+      "stage_count": 600,
+      "ordered_name_content_sha256": "0182b70c3bf0ba87522d2eb2c3de5f5888896dfaf57e1a764adedfdd361b8825"
+    }
+  },
+  "D1_ladder": {
+    "R1_FIXED_MAGNITUDE": [
+      {
+        "n": 16,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 0,
+        "surviving_writes": 0,
+        "declared_writes": 97,
+        "by_class_surviving_over_declared": {"0": [0, 42], "1": [0, 55]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [0, 97]},
+        "d_seg_vs_frozen_target": 0.5067234039306641,
+        "d_seg_vs_description": 0.694488525390625,
+        "d_pose_vs_frozen_target": 178.38816076700743,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 0
+      },
+      {
+        "n": 64,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 0,
+        "surviving_writes": 0,
+        "declared_writes": 337,
+        "by_class_surviving_over_declared": {"0": [0, 151], "1": [0, 186]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [0, 337]},
+        "d_seg_vs_frozen_target": 0.5064441363016764,
+        "d_seg_vs_description": 0.6945145924886068,
+        "d_pose_vs_frozen_target": 179.17865860512507,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 0
+      },
+      {
+        "n": 600,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 1,
+        "surviving_writes": 1,
+        "declared_writes": 3188,
+        "by_class_surviving_over_declared": {"0": [0, 1379], "1": [0, 1807], "2": [1, 1], "4": [0, 1]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [0, 3183], "critical_event": [0, 3], "movable_track": [1, 2]},
+        "by_margin_bucket_surviving_over_declared": {"nonpositive": [0, 3187], "positive_1_to_4": [1, 1]},
+        "d_seg_vs_frozen_target": 0.5051175859239366,
+        "d_seg_vs_description": 0.6944941965738932,
+        "d_pose_vs_frozen_target": 154.56496101197592,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 0
+      }
+    ],
+    "R2_MAX_MARGIN": [
+      {
+        "n": 16,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 0,
+        "surviving_writes": 5,
+        "declared_writes": 97,
+        "by_class_surviving_over_declared": {"0": [5, 42], "1": [0, 55]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [5, 97]},
+        "d_seg_vs_frozen_target": 0.4979887008666992,
+        "d_seg_vs_description": 0.6591987609863281,
+        "d_pose_vs_frozen_target": 181.15224058182093,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 0
+      },
+      {
+        "n": 64,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 0,
+        "surviving_writes": 13,
+        "declared_writes": 337,
+        "by_class_surviving_over_declared": {"0": [13, 151], "1": [0, 186]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [13, 337]},
+        "d_seg_vs_frozen_target": 0.5187765757242838,
+        "d_seg_vs_description": 0.6818358898162842,
+        "d_pose_vs_frozen_target": 183.03846189098738,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 0
+      },
+      {
+        "n": 600,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 1,
+        "surviving_writes": 114,
+        "declared_writes": 3188,
+        "by_class_surviving_over_declared": {"0": [113, 1379], "1": [0, 1807], "2": [1, 1], "4": [0, 1]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [113, 3183], "critical_event": [0, 3], "movable_track": [1, 2]},
+        "by_margin_bucket_surviving_over_declared": {"nonpositive": [0, 3074], "positive_le_1": [86, 86], "positive_1_to_4": [28, 28]},
+        "d_seg_vs_frozen_target": 0.5106008572048611,
+        "d_seg_vs_description": 0.6560023159450954,
+        "d_pose_vs_frozen_target": 158.98986618601776,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 0
+      }
+    ],
+    "R3_HOPFIELD_MEMORY_PROX": [
+      {
+        "n": 16,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 0,
+        "surviving_writes": 1,
+        "declared_writes": 97,
+        "by_class_surviving_over_declared": {"0": [1, 42], "1": [0, 55]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [1, 97]},
+        "d_seg_vs_frozen_target": 0.512073834737142,
+        "d_seg_vs_description": 0.6947333017985026,
+        "d_pose_vs_frozen_target": 167.755094566252,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 0
+      },
+      {
+        "n": 64,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 0,
+        "surviving_writes": 1,
+        "declared_writes": 337,
+        "by_class_surviving_over_declared": {"0": [1, 151], "1": [0, 186]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [1, 337]},
+        "d_seg_vs_frozen_target": 0.5115605195363363,
+        "d_seg_vs_description": 0.6945430437723795,
+        "d_pose_vs_frozen_target": 158.0539917558539,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 0
+      },
+      {
+        "n": 600,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 1,
+        "surviving_writes": 18,
+        "declared_writes": 3188,
+        "by_class_surviving_over_declared": {"0": [17, 1379], "1": [0, 1807], "2": [1, 1], "4": [0, 1]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [17, 3183], "critical_event": [0, 3], "movable_track": [1, 2]},
+        "by_margin_bucket_surviving_over_declared": {"nonpositive": [0, 3170], "positive_le_1": [18, 18]},
+        "d_seg_vs_frozen_target": 0.509379399617513,
+        "d_seg_vs_description": 0.6944446309407553,
+        "d_pose_vs_frozen_target": 140.32854759960193,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 0
+      }
+    ],
+    "R4_DYING_WRITE_EXCEPTIONS": [
+      {
+        "n": 16,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 0,
+        "surviving_writes": 2,
+        "declared_writes": 97,
+        "by_class_surviving_over_declared": {"0": [2, 42], "1": [0, 55]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [2, 97]},
+        "d_seg_vs_frozen_target": 0.584448496500651,
+        "d_seg_vs_description": 0.7456909815470378,
+        "d_pose_vs_frozen_target": 121.48268909723794,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 492
+      },
+      {
+        "n": 64,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 0,
+        "surviving_writes": 11,
+        "declared_writes": 337,
+        "by_class_surviving_over_declared": {"0": [11, 151], "1": [0, 186]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [11, 337]},
+        "d_seg_vs_frozen_target": 0.6191258430480957,
+        "d_seg_vs_description": 0.7707834243774414,
+        "d_pose_vs_frozen_target": 138.33421997917043,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 1748
+      },
+      {
+        "n": 600,
+        "semantic_exact_pairs": 0,
+        "all_declared_writes_survive_pairs": 1,
+        "surviving_writes": 42,
+        "declared_writes": 3188,
+        "by_class_surviving_over_declared": {"0": [41, 1379], "1": [0, 1807], "2": [1, 1], "4": [0, 1]},
+        "by_stratum_surviving_over_declared": {"boundary_codim1": [41, 3183], "critical_event": [0, 3], "movable_track": [1, 2]},
+        "by_margin_bucket_surviving_over_declared": {"nonpositive": [0, 3146], "positive_le_1": [41, 41], "positive_1_to_4": [1, 1]},
+        "d_seg_vs_frozen_target": 0.5548811933729383,
+        "d_seg_vs_description": 0.7138320668538412,
+        "d_pose_vs_frozen_target": 117.53000378195958,
+        "pose_tube_pairs": 0,
+        "added_seed_bytes": 16568
+      }
+    ]
+  },
+  "D2_added_seed_bytes": {
+    "R1_FIXED_MAGNITUDE": 0,
+    "R2_MAX_MARGIN": 0,
+    "R3_HOPFIELD_MEMORY_PROX": 0,
+    "R4_DYING_WRITE_EXCEPTIONS": 16568,
+    "R4_pricing": {
+      "records": 3074,
+      "record_bytes": 15370,
+      "nonempty_pair_header_bytes": 1198,
+      "by_stratum_record_bytes": {"boundary_codim1": 15350, "critical_event": 15, "movable_track": 5}
+    }
+  },
+  "D3_winning_hard_oracle": {
+    "rung_id": "R2_MAX_MARGIN",
+    "mean_d_seg_description_vs_frozen_target": 0.3434977213541667,
+    "mean_d_seg_realized_vs_frozen_target": 0.5106008572048611,
+    "mean_d_seg_realized_argmax_vs_description": 0.6560023159450954,
+    "mean_d_pose_realized_vs_frozen_target": 158.98986618601776,
+    "mean_d_pose_realized_outside_declared_tube": 153.7215541738262,
+    "pose_within_declared_tube_pair_count": 0,
+    "description_fidelity_preserved": false,
+    "pose_tubes_preserved": false
+  },
+  "D4_admissibility": {
+    "accepted": false,
+    "status": "D2_ZERO_BYTE_SEMANTIC_CELLS_TO_RGB_ADMISSION_FALSE",
+    "failed_predicates": ["semantic_cells_to_rgb_exact", "pose_within_declared_tube"],
+    "predicates": {
+      "n600": true,
+      "factor2_uint8_exact": true,
+      "double_decode_identical": true,
+      "semantic_cells_to_rgb_exact": false,
+      "pose_within_declared_tube": false,
+      "zero_added_seed_bytes": true,
+      "receiver_derived_rgb": true
+    }
+  },
+  "formulation_limits": {
+    "R2_class1_context_free_margin": -5.11375105381012,
+    "frame0_policy": "same decoded pair cell field; seed lacks an intra-pair appearance carrier",
+    "R4_payload": "u16be count followed by repeated u16be seed-local ordinal and RGB u8 triplet",
+    "untested_optimal_forms": [
+      "spatially contextual exact SegNet-cell interior optimizer",
+      "texture or procedural cell decoder",
+      "learned counted generator with explicit frame0 pose carrier",
+      "Fisher-secanted QP plus curvelet or shearlet EV-ranked exception realization"
+    ]
+  },
+  "automatic_disk_hygiene": "mmap source cache; one pair/rung tensors only; atomic JSON; no RGB, camera, logit, or exception-payload bulk persisted",
+  "main_landing_review_required": true
+}

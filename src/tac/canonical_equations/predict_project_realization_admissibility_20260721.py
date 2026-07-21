@@ -28,7 +28,10 @@ EQUATION_ID = "predict_project_realization_admissibility_v1"
 BLOCKER_ID = "D2_ZERO_BYTE_SEMANTIC_CELLS_TO_RGB_ADMISSION_FALSE"
 SOURCE_RECEIPT = ".omx/research/realization_g2b_supportfill_receipt_20260721.json"
 SOURCE_RECEIPT_SHA256 = "daac2782ed724c9696fc49e6b968c40f29df8b0a31d0c210deb718d130fadea6"
+INTERIOR_RECEIPT = ".omx/research/realization_g2c_interior_receipt_20260721.json"
+INTERIOR_RECEIPT_SHA256 = "3e5307c471d9e7feaa28a608496b972431f73f6b060a94b979ca32c86d3bfe64"
 UTC = "2026-07-21T09:37:19Z"
+INTERIOR_UTC = "2026-07-21T10:57:10Z"
 PAIR_COUNT = 600
 
 
@@ -181,12 +184,71 @@ def build_predict_project_realization_admissibility_v1() -> CanonicalEquation:
         provenance=provenance,
         empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
     )
+    interior_provenance = build_provenance_for_research_sidecar(
+        sidecar_path=INTERIOR_RECEIPT,
+        reactivation_criteria=(
+            "Build a spatially contextual exact SegNet-cell interior optimizer or a "
+            "texture/learned decoder with an explicit intra-pair frame0 pose carrier, then "
+            "rerun the preserved n16/n64/n600 hard-oracle ladder."
+        ),
+        measurement_axis="[macOS-CPU advisory]",
+        hardware_substrate="macos_arm64_cpu",
+        captured_at_utc=INTERIOR_UTC,
+    )
+    interior_inputs = {
+        "pair_count": PAIR_COUNT,
+        "uint8_factor2_exact_fraction": 1.0,
+        "double_decode_identical_pair_count": PAIR_COUNT,
+        "semantic_cells_to_rgb_exact_pair_count": 0,
+        "pose_within_declared_tube_pair_count": 0,
+        "additional_seed_bytes": 0,
+        "receiver_derived_rgb": True,
+    }
+    interior_measured = predict_project_realization_certificate(**interior_inputs)
+    interior_failed_fraction = len(interior_measured["failed_predicates"]) / len(
+        interior_measured["predicates"]
+    )
+    interior_anchor = EmpiricalAnchor(
+        anchor_id="realization_g2c_r2_max_margin_n600_20260721",
+        measurement_utc=INTERIOR_UTC,
+        inputs={
+            **interior_inputs,
+            "rung_id": "R2_MAX_MARGIN",
+            "source_kind": "decoder_derived_from_seed",
+            "source_receipt_sha256": INTERIOR_RECEIPT_SHA256,
+        },
+        predicted_output={
+            "accepted_iff_all_predicates_hold": True,
+            "required_additional_seed_bytes": 0,
+            "required_semantic_exact_pairs": PAIR_COUNT,
+            "required_pose_tube_pairs": PAIR_COUNT,
+        },
+        empirical_output={
+            **interior_measured,
+            "declared_write_count": 3188,
+            "surviving_declared_writes": 114,
+            "pose_within_declared_tube_pair_count": 0,
+            "d_seg_realized_vs_frozen_target": 0.5106008572048611,
+            "d_seg_description_vs_frozen_target": 0.3434977213541667,
+            "d_seg_realized_argmax_vs_description": 0.6560023159450954,
+            "d_pose_realized_vs_frozen_target": 158.98986618601776,
+            "d_pose_realized_outside_declared_tube": 153.7215541738262,
+        },
+        residual=interior_failed_fraction,
+        source_artifact=INTERIOR_RECEIPT,
+        measurement_method=(
+            "n600 receiver-derived max-margin constant-tile RGB planes; exact factor-2 "
+            "double decode; native CPU-Torch frozen SegNet/PoseNet; immutable pair stages"
+        ),
+        provenance=interior_provenance,
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name="Predict-project realization hard admission",
         one_line_summary=(
-            "Exact lattice projection is admissible only when receiver-derived RGB also preserves "
-            "all described cells at zero added seed bytes; the n600 counted source-RGB control fails."
+            "Realization is admissible only when receiver RGB preserves all cells and pose tubes "
+            "at zero added bytes; n600 source-control and max-margin anchors fail complementary predicates."
         ),
         latex_form=(
             r"A=\mathbf 1[n=600]\mathbf 1[R_{2}=1]\mathbf 1[D_{2}=n]"
@@ -198,13 +260,14 @@ def build_predict_project_realization_admissibility_v1() -> CanonicalEquation:
             "predict_project_realization_admissibility"
         ),
         domain_of_validity={
-            "vehicle": "G2b seed_compose_b2 support-fill realization",
+            "vehicle": "G2b/G2c seed_compose_b2 support-fill and interior realization",
             "pair_count": PAIR_COUNT,
             "projection": "factor-2 fp32/rational lattice to uint8 camera",
             "authority": "admission gate only; no score authority",
             "verdict_scope": (
-                "falsifies the asserted zero-byte semantic cells-to-RGB link for this seed; "
-                "does not kill predict-project or support-fill families"
+                "falsifies the asserted zero-byte semantic cells-to-RGB link for the measured "
+                "source-control and constant-tile interior formulations on this seed; does not "
+                "kill predict-project, support-fill, or other interior decoder families"
             ),
             "blocker_id": BLOCKER_ID,
             "score_claim": False,
@@ -218,18 +281,22 @@ def build_predict_project_realization_admissibility_v1() -> CanonicalEquation:
             "receiver_derived_rgb": "bool",
         },
         units_out={"accepted": "bool", "status": "categorical"},
-        empirical_anchors=(anchor,),
-        predicted_vs_empirical_residual={"failed_predicate_fraction_n600": failed_fraction},
-        last_calibration_utc=UTC,
+        empirical_anchors=(anchor, interior_anchor),
+        predicted_vs_empirical_residual={
+            "source_control_failed_predicate_fraction_n600": failed_fraction,
+            "interior_r2_failed_predicate_fraction_n600": interior_failed_fraction,
+        },
+        last_calibration_utc=INTERIOR_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "tools/measure_realization_g2_lattice.py",
-            "G2b successor admission",
+            "G2b/G2c successor admission",
             "predict-project bit allocator",
         ),
         canonical_producers=(
             "tools/measure_realization_g2_lattice.py",
             SOURCE_RECEIPT,
+            INTERIOR_RECEIPT,
         ),
         provenance=provenance,
     )
@@ -250,8 +317,8 @@ def populate_predict_project_realization_admissibility_v1(
         agent=agent,
         subagent_id=subagent_id,
         notes=(
-            "Task #578 G2b source-RGB control: exact lattice but zero-byte semantic "
-            "cells-to-RGB admission false; pointer unmoved"
+            "Task #578 G2b source-RGB control plus G2c R2 max-margin receiver: exact "
+            "lattice but zero-byte semantic cells-to-RGB admission false; pointer unmoved"
         ),
     )
     return equation
@@ -260,6 +327,8 @@ def populate_predict_project_realization_admissibility_v1(
 __all__ = [
     "BLOCKER_ID",
     "EQUATION_ID",
+    "INTERIOR_RECEIPT",
+    "INTERIOR_RECEIPT_SHA256",
     "build_predict_project_realization_admissibility_v1",
     "populate_predict_project_realization_admissibility_v1",
     "predict_project_realization_admissibility",
