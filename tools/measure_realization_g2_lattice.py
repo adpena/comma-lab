@@ -45,6 +45,11 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
 from tac.boundary_math import warp_real_luma_frame0 as g1_warp  # noqa: E402
+from tac.boundary_math.analytic_lane_render_band import (  # noqa: E402
+    _line_row_params,
+    rasterize_lane_coverage_range_dependent,
+)
+from tac.boundary_math.lane_sdf_component import LaneLine  # noqa: E402
 from tac.optimization.predict_project_receiver import (  # noqa: E402
     PROJECTED_RGB_PLANE_CUSTODY_SCHEMA,
     predict_cell_field,
@@ -71,11 +76,15 @@ from tac.optimization.predictor_upgrade_xi_chart import (  # noqa: E402
 )
 from tac.optimization.realized_secant_custody import (  # noqa: E402
     BIDIRECTIONAL_RECEIPT_SCHEMA,
+    CHART_BIDIRECTIONAL_RECEIPT_SCHEMA,
     BidirectionalRungObservation,
+    ChartBidirectionalRungObservation,
+    ChartBranchCustody,
     SecantObservation,
     WriteSecantObservation,
     build_bidirectional_rung_observation,
     build_bidirectional_trust_region_custody,
+    build_chart_bidirectional_rung_observation,
     build_pair_trust_region_custody,
     build_trust_regions,
     decode_coefficient_packet,
@@ -83,6 +92,7 @@ from tac.optimization.realized_secant_custody import (  # noqa: E402
     select_best_bidirectional_rungs,
     solve_minimal_norm_inequalities,
     validate_bidirectional_receipt,
+    validate_chart_bidirectional_receipt,
 )
 from tac.optimization.realized_secant_custody import (  # noqa: E402
     RECEIPT_SCHEMA as SECANT_RECEIPT_SCHEMA,
@@ -118,6 +128,8 @@ SECANT_STAGE_SCHEMA: Final = "realization_g2e_secant_pair.v1"
 SECANT_CONFIG_SCHEMA: Final = "realization_g2e_secant_config.v1"
 AMPLITUDE_STAGE_SCHEMA: Final = "realization_g2f_bidirectional_amplitude_pair.v1"
 AMPLITUDE_CONFIG_SCHEMA: Final = "realization_g2f_bidirectional_amplitude_config.v1"
+CHART_AMPLITUDE_STAGE_SCHEMA: Final = "realization_g2f_chart_bidirectional_amplitude_pair.v1"
+CHART_AMPLITUDE_CONFIG_SCHEMA: Final = "realization_g2f_chart_bidirectional_amplitude_config.v1"
 PREFIXES: Final = (16, 64, 600)
 RGB_REALIZATION_FIELDS: Final = frozenset(
     {
@@ -189,6 +201,7 @@ SECANT_RELATIVE_RESIDUAL_TOLERANCE: Final = 0.35
 SECANT_REQUIRED_MARGIN: Final = 1e-4
 SECANT_CHART_RANK: Final = 4
 AMPLITUDE_LANE_ID: Final = "lane_g2f_bidirectional_amplitude_ladder_578_20260721"
+CHART_AMPLITUDE_LANE_ID: Final = "lane_g2f_chart_bidirectional_amplitude_ladder_578_20260721"
 G2E_PRIOR_RECEIPT_SHA256: Final = "e89157bb8dfc6b11b20aecccd4dbe82113ea706c9a1eb054de989c26a740dbc4"
 AMPLITUDE_LSB_LAWREF_ID: Final = "witness_realization_lsb_regime_v1"
 AMPLITUDE_R_OPERATOR_LAWREF_ID: Final = "separable_resize_full_kernel_direct_sum_v1"
@@ -214,6 +227,9 @@ DEFAULT_RANK4_PROTOTYPE_RECEIPT: Final = (
 )
 DEFAULT_G2E_PRIOR_RECEIPT: Final = Path(
     "/Volumes/VertigoDataTier/pact/evidence/g2e_secant_20260721/final_hardened/receipt.json"
+)
+DEFAULT_PIXEL_AMPLITUDE_RECEIPT: Final = Path(
+    "/Volumes/VertigoDataTier/pact/evidence/g2f_amplitude_20260721/receipt.json"
 )
 
 
@@ -1992,8 +2008,9 @@ def _candidate_seg_state(
     *,
     fixed_rivals: Sequence[int] | None = None,
     with_jacobian: bool,
+    directional_rgb_deltas: Sequence[np.ndarray] | None = None,
 ) -> dict[str, Any]:
-    """Capture fresh candidate logits/head input and optional local RGB pullback."""
+    """Capture logits plus optional local or full-plane directional pullbacks."""
 
     if not constraints:
         raise RealizationAuditError("realized-secant custody requires declared writes")
@@ -2004,7 +2021,10 @@ def _candidate_seg_state(
     receiver_input_maxabs = float(torch.max(torch.abs(scorer_input - expected)).item())
     if receiver_input_maxabs > 1e-4:
         raise RealizationAuditError(f"real receiver/scorer input drift {receiver_input_maxabs} exceeds 1e-4")
-    scorer_input.requires_grad_(with_jacobian)
+    directional_deltas = tuple(np.asarray(delta, dtype=np.float64) for delta in (directional_rgb_deltas or ()))
+    if any(delta.shape != (*SCORER_HW, 3) or not np.isfinite(delta).all() for delta in directional_deltas):
+        raise RealizationAuditError("candidate-state directional RGB delta geometry/value mismatch")
+    scorer_input.requires_grad_(with_jacobian or bool(directional_deltas))
     captured: dict[str, Any] = {}
 
     def head_pre_hook(_module: Any, inputs: Any) -> None:
@@ -2048,9 +2068,13 @@ def _candidate_seg_state(
         margin_tensors.append(logits_tensor[target, row, col] - logits_tensor[rival, row, col])
 
     jacobian: np.ndarray | None = None
-    if with_jacobian:
+    directional_jacobian: np.ndarray | None = None
+    if with_jacobian or directional_deltas:
         site_count = len(constraints)
-        jacobian = np.empty((site_count, 3 * site_count), dtype=np.float64)
+        if with_jacobian:
+            jacobian = np.empty((site_count, 3 * site_count), dtype=np.float64)
+        if directional_deltas:
+            directional_jacobian = np.empty((site_count, len(directional_deltas)), dtype=np.float64)
         for row_index, margin_tensor in enumerate(margin_tensors):
             gradient = torch.autograd.grad(
                 margin_tensor,
@@ -2058,15 +2082,24 @@ def _candidate_seg_state(
                 retain_graph=row_index + 1 < site_count,
                 create_graph=False,
             )[0][0]
-            local = []
-            for constraint in constraints:
-                local.extend(
-                    float(value)
-                    for value in gradient[:, int(constraint["y"]), int(constraint["x"])].detach().cpu().tolist()
-                )
-            jacobian[row_index] = local
-        if not np.isfinite(jacobian).all():
+            if with_jacobian:
+                local = []
+                for constraint in constraints:
+                    local.extend(
+                        float(value)
+                        for value in gradient[:, int(constraint["y"]), int(constraint["x"])].detach().cpu().tolist()
+                    )
+                jacobian[row_index] = local
+            if directional_jacobian is not None:
+                gradient_array = gradient.detach().cpu().numpy().astype(np.float64, copy=False)
+                for column, delta in enumerate(directional_deltas):
+                    directional_jacobian[row_index, column] = float(
+                        np.sum(gradient_array * np.moveaxis(delta, 2, 0), dtype=np.float64)
+                    )
+        if jacobian is not None and not np.isfinite(jacobian).all():
             raise RealizationAuditError("candidate-state local margin Jacobian is nonfinite")
+        if directional_jacobian is not None and not np.isfinite(directional_jacobian).all():
+            raise RealizationAuditError("candidate-state directional margin Jacobian is nonfinite")
     scorer_array = scorer_input.detach().cpu().numpy().astype(np.float32, copy=False)
     return {
         "logits": logits,
@@ -2076,6 +2109,7 @@ def _candidate_seg_state(
         "current_classes": tuple(current_classes),
         "feature_patches": tuple(patches),
         "local_jacobian": jacobian,
+        "directional_jacobian": directional_jacobian,
         "receiver_input_maxabs": receiver_input_maxabs,
         "segnet_input_sha256": hashlib.sha256(np.ascontiguousarray(scorer_array).tobytes()).hexdigest(),
         "logits_sha256": hashlib.sha256(np.ascontiguousarray(logits.astype("<f4")).tobytes()).hexdigest(),
@@ -2336,6 +2370,220 @@ def _measure_or_reuse_secant_branch(
     )
 
 
+def _chart_coverage_sha256(coverage: np.ndarray) -> str:
+    array = np.asarray(coverage, dtype="<f4")
+    if array.shape != SCORER_HW or not np.isfinite(array).all():
+        raise RealizationAuditError("chart coverage geometry/value mismatch")
+    return hashlib.sha256(np.ascontiguousarray(array).tobytes()).hexdigest()
+
+
+def _clone_lane_line_with_intercept(line: LaneLine, coefficient_delta: float) -> LaneLine:
+    coefficients = np.asarray(line.centerline_coeffs, dtype=np.float64).copy()
+    if coefficients.ndim != 1 or coefficients.size == 0 or not np.isfinite(coefficients).all():
+        raise RealizationAuditError("chart centerline coefficients are malformed")
+    coefficients[-1] += float(coefficient_delta)
+    return LaneLine(
+        centerline_coeffs=coefficients,
+        halfwidth_coeffs=np.asarray(line.halfwidth_coeffs, dtype=np.float64).copy(),
+        dash_period_m=float(line.dash_period_m),
+        dash_phase_m=float(line.dash_phase_m),
+        dash_duty=float(line.dash_duty),
+        forward_range=(float(line.forward_range[0]), float(line.forward_range[1])),
+        n_pixels=int(line.n_pixels),
+    )
+
+
+def _select_chart_centerline_intercept(
+    lines: Sequence[LaneLine],
+    config: Any,
+) -> tuple[int, int, float, np.ndarray]:
+    """Select the largest rendered line and derive its intercept-to-screen gain."""
+
+    if not lines:
+        raise RealizationAuditError("chart pair has no lane lines")
+    coverages = [
+        rasterize_lane_coverage_range_dependent(
+            [line],
+            h=SCORER_HW[0],
+            w=SCORER_HW[1],
+            softness=config.softness,
+            dash_gate=config.dash_gate,
+            dash_forward_max_m=config.dash_forward_max_m,
+            v_h=config.v_h,
+            cx=config.cx,
+        )
+        for line in lines
+    ]
+    supports = [int(np.count_nonzero(coverage > 0.0)) for coverage in coverages]
+    line_index = max(range(len(lines)), key=lambda index: (supports[index], -index))
+    if supports[line_index] == 0:
+        raise RealizationAuditError("chart pair has no rendered lane support")
+    line = lines[line_index]
+    rows = np.arange(SCORER_HW[0], dtype=np.float64)
+    active_rows = rows > (float(config.v_h) + 1.0)
+    cxx = SCORER_HW[1] / 2.0 if config.cx is None else float(config.cx)
+    center, _, gate = _line_row_params(
+        line,
+        rows[active_rows],
+        dash_gate=config.dash_gate,
+        dash_forward_max_m=config.dash_forward_max_m,
+        cx=cxx,
+        v_h=config.v_h,
+    )
+    unit_center, _, unit_gate = _line_row_params(
+        _clone_lane_line_with_intercept(line, 1.0),
+        rows[active_rows],
+        dash_gate=config.dash_gate,
+        dash_forward_max_m=config.dash_forward_max_m,
+        cx=cxx,
+        v_h=config.v_h,
+    )
+    active = (gate > 0.0) & (unit_gate > 0.0)
+    if not np.any(active):
+        raise RealizationAuditError("selected chart line lacks active centerline rows")
+    gain = float(np.max(np.abs(unit_center[active] - center[active]), initial=0.0))
+    if gain <= 0.0 or not math.isfinite(gain):
+        raise RealizationAuditError("chart intercept-to-screen gain is nonpositive/nonfinite")
+    baseline_coverage = rasterize_lane_coverage_range_dependent(
+        list(lines),
+        h=SCORER_HW[0],
+        w=SCORER_HW[1],
+        softness=config.softness,
+        dash_gate=config.dash_gate,
+        dash_forward_max_m=config.dash_forward_max_m,
+        v_h=config.v_h,
+        cx=config.cx,
+    )
+    return line_index, len(np.asarray(line.centerline_coeffs)) - 1, gain, baseline_coverage
+
+
+def _prepare_chart_branch(
+    *,
+    base1: np.ndarray,
+    lines: Sequence[LaneLine],
+    config: Any,
+    palette: np.ndarray,
+    line_index: int,
+    coefficient_gain_pixels_per_unit: float,
+    signed_amplitude: float,
+    baseline_coverage: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, int, ChartBranchCustody]:
+    """Rasterize, round, and hash one full-plane coherent chart branch."""
+
+    coefficient_delta = float(signed_amplitude) / float(coefficient_gain_pixels_per_unit)
+    perturbed_lines = list(lines)
+    perturbed_lines[line_index] = _clone_lane_line_with_intercept(lines[line_index], coefficient_delta)
+    coverage = rasterize_lane_coverage_range_dependent(
+        perturbed_lines,
+        h=SCORER_HW[0],
+        w=SCORER_HW[1],
+        softness=config.softness,
+        dash_gate=config.dash_gate,
+        dash_forward_max_m=config.dash_forward_max_m,
+        v_h=config.v_h,
+        cx=config.cx,
+    )
+    palette_delta = np.asarray(palette[1], dtype=np.float64) - np.asarray(palette[0], dtype=np.float64)
+    intended_delta = (np.asarray(coverage, dtype=np.float64) - np.asarray(baseline_coverage, dtype=np.float64))[
+        ..., None
+    ] * palette_delta
+    unbounded = np.asarray(base1, dtype=np.float64) + intended_delta
+    rounded = np.rint(unbounded)
+    saturation = int(np.count_nonzero((rounded < 0.0) | (rounded > 255.0)))
+    probe_plane = np.clip(rounded, 0.0, 255.0).astype(np.uint8)
+    actual_delta = np.asarray(
+        probe_plane.astype(np.int16) - np.asarray(base1, dtype=np.uint8).astype(np.int16),
+        dtype="<i2",
+    )
+    changed = np.any(actual_delta != 0, axis=2)
+    custody = ChartBranchCustody(
+        coefficient_delta=coefficient_delta,
+        max_centerline_displacement_pixels=abs(float(signed_amplitude)),
+        coverage_sha256=_chart_coverage_sha256(coverage),
+        applied_rgb_delta_sha256=hashlib.sha256(np.ascontiguousarray(actual_delta).tobytes()).hexdigest(),
+        changed_pixel_count=int(np.count_nonzero(changed)),
+        changed_rgb_value_count=int(np.count_nonzero(actual_delta)),
+    )
+    return probe_plane, actual_delta, saturation, custody
+
+
+def _measure_chart_secant_branch(
+    *,
+    pair_index: int,
+    signed_amplitude: float,
+    probe_plane: np.ndarray,
+    actual_delta: np.ndarray,
+    saturation: int,
+    predicted: np.ndarray,
+    constraints: Sequence[Mapping[str, Any]],
+    baseline_state: Mapping[str, Any],
+    realized0_frame: np.ndarray,
+    represented: np.ndarray,
+    seed_sha256: str,
+    kernel: FullResizeKernel,
+    net: Any,
+    torch: Any,
+) -> SecantObservation:
+    """Measure one full-plane chart branch through R and the native scorer."""
+
+    probe_realized = _contextual_realize(
+        probe_plane,
+        represented,
+        seed_sha256=seed_sha256,
+        additional_seed_bytes=0,
+        generator_id=f"g2f_chart_centerline_intercept_amplitude_{signed_amplitude:+.12g}",
+        kernel=kernel,
+    )
+    probe_state = _candidate_seg_state(
+        net,
+        torch,
+        realized0_frame,
+        probe_realized["frame"],
+        probe_plane,
+        constraints,
+        fixed_rivals=baseline_state["rivals"],
+        with_jacobian=False,
+    )
+    realized_delta = np.asarray(probe_state["margins"], dtype=np.float64) - np.asarray(
+        baseline_state["margins"], dtype=np.float64
+    )
+    writes = []
+    for ordinal, constraint in enumerate(constraints):
+        predicted_value = float(predicted[ordinal])
+        realized_value = float(realized_delta[ordinal])
+        writes.append(
+            WriteSecantObservation(
+                ordinal=ordinal,
+                target_class=int(constraint["cell_id"]),
+                current_class=int(baseline_state["current_classes"][ordinal]),
+                pre_margin=float(baseline_state["margins"][ordinal]),
+                margin_bucket=_margin_bucket(float(baseline_state["margins"][ordinal])),
+                expected_sign=1 if predicted_value >= 0.0 else -1,
+                feature_displacement=tuple(
+                    float(after - before)
+                    for after, before in zip(
+                        probe_state["feature_patches"][ordinal],
+                        baseline_state["feature_patches"][ordinal],
+                        strict=True,
+                    )
+                ),
+                predicted_margin_delta=predicted_value,
+                realized_margin_delta=realized_value,
+                secant_ratio=realized_value / signed_amplitude,
+            )
+        )
+    delta_float = np.asarray(actual_delta, dtype=np.float64)
+    return SecantObservation(
+        pair_index=pair_index,
+        column_index=0,
+        signed_amplitude=signed_amplitude,
+        applied_rgb_l2=float(np.linalg.norm(delta_float)),
+        applied_rgb_linf=float(np.max(np.abs(delta_float), initial=0.0)),
+        uint8_saturation_count=saturation,
+        writes=tuple(writes),
+    )
+
+
 def _exception_parseback(
     baseline: np.ndarray,
     constraints: Sequence[Mapping[str, Any]],
@@ -2408,8 +2656,27 @@ def _load_amplitude_stages(
     return rows
 
 
+def _load_chart_amplitude_stages(stage_dir: Path, config_sha256: str) -> dict[int, dict[str, Any]]:
+    rows: dict[int, dict[str, Any]] = {}
+    if not stage_dir.exists():
+        return rows
+    for path in sorted(stage_dir.glob("pair_*.json")):
+        row = _load_json(path)
+        pair_index = row.get("pair_index")
+        if (
+            row.get("schema") != CHART_AMPLITUDE_STAGE_SCHEMA
+            or row.get("config_sha256") != config_sha256
+            or isinstance(pair_index, bool)
+            or not isinstance(pair_index, int)
+            or pair_index in rows
+        ):
+            raise RealizationAuditError(f"G2f chart resume custody mismatch: {path}")
+        rows[pair_index] = row
+    return rows
+
+
 def _response_summary_rows(
-    observations: Sequence[BidirectionalRungObservation],
+    observations: Sequence[BidirectionalRungObservation | ChartBidirectionalRungObservation],
     *,
     key: str,
 ) -> list[dict[str, Any]]:
@@ -2455,6 +2722,137 @@ def _response_summary_rows(
             }
         )
     return rows
+
+
+def _level_comparison(pixel_selected: Sequence[bool], chart_selected: Sequence[bool]) -> dict[str, Any]:
+    if len(pixel_selected) != len(chart_selected) or not pixel_selected:
+        raise RealizationAuditError("pixel/chart level comparison coverage mismatch")
+    if any(type(value) is not bool for value in (*pixel_selected, *chart_selected)):
+        raise RealizationAuditError("pixel/chart selected custody must be exact bools")
+    chart_only = [
+        index
+        for index, (chart, pixel) in enumerate(zip(chart_selected, pixel_selected, strict=True))
+        if chart and not pixel
+    ]
+    pixel_only = [
+        index
+        for index, (chart, pixel) in enumerate(zip(chart_selected, pixel_selected, strict=True))
+        if pixel and not chart
+    ]
+    both = [
+        index
+        for index, (chart, pixel) in enumerate(zip(chart_selected, pixel_selected, strict=True))
+        if chart and pixel
+    ]
+    neither = [
+        index
+        for index, (chart, pixel) in enumerate(zip(chart_selected, pixel_selected, strict=True))
+        if not chart and not pixel
+    ]
+    return {
+        "pixel_pair_selected": list(pixel_selected),
+        "chart_pair_selected": list(chart_selected),
+        "pixel_selected_pair_count": sum(pixel_selected),
+        "chart_selected_pair_count": sum(chart_selected),
+        "chart_only_rescued_pair_indices": chart_only,
+        "chart_only_rescued_pair_count": len(chart_only),
+        "pixel_only_pair_indices": pixel_only,
+        "pixel_only_pair_count": len(pixel_only),
+        "both_selected_pair_indices": both,
+        "both_selected_pair_count": len(both),
+        "neither_selected_pair_indices": neither,
+        "neither_selected_pair_count": len(neither),
+    }
+
+
+def summarize_chart_bidirectional_amplitude_prefix(
+    prefix: int,
+    stage_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Aggregate coherent coefficient-level response and trust without pooling levels."""
+
+    if prefix not in PREFIXES or len(stage_rows) != prefix:
+        raise RealizationAuditError("G2f chart prefix must be exactly n16/n64/n600")
+    if [row.get("pair_index") for row in stage_rows] != list(range(prefix)):
+        raise RealizationAuditError("G2f chart prefix is not contiguous from zero")
+    if any(row.get("schema") != CHART_AMPLITUDE_STAGE_SCHEMA for row in stage_rows):
+        raise RealizationAuditError("G2f chart prefix stage schema mismatch")
+    observations = [
+        ChartBidirectionalRungObservation.from_dict(raw)
+        for stage in stage_rows
+        for raw in stage["chart_bidirectional_observations"]
+    ]
+    trust_regions = [row for stage in stage_rows for row in stage["amplitude_trust_regions"]]
+    amplitudes = sorted({observation.amplitude for observation in observations})
+    by_rung = []
+    for rung_index, amplitude in enumerate(amplitudes):
+        rung_observations = [row for row in observations if row.rung_index == rung_index]
+        rung_trust = [row for row in trust_regions if int(row["rung_index"]) == rung_index]
+        trust_by_pair: dict[int, list[Mapping[str, Any]]] = {}
+        for row in rung_trust:
+            trust_by_pair.setdefault(int(row["pair_index"]), []).append(row)
+        usable_pairs = sum(all(row["usable"] is True for row in rows) for rows in trust_by_pair.values())
+        changed_pixels = [
+            branch.changed_pixel_count
+            for observation in rung_observations
+            for branch in (observation.positive_chart, observation.negative_chart)
+        ]
+        by_rung.append(
+            {
+                "rung_index": rung_index,
+                "amplitude": amplitude,
+                "amplitude_unit": "native_scorer_centerline_pixels",
+                "pair_count": len(rung_observations),
+                "usable_pair_count": usable_pairs,
+                "usable_pair_fraction": usable_pairs / len(rung_observations),
+                "trust_region_count": len(rung_trust),
+                "usable_trust_region_count": sum(row["usable"] is True for row in rung_trust),
+                "changed_pixel_count_min": min(changed_pixels),
+                "changed_pixel_count_mean": float(np.mean(changed_pixels)),
+                "changed_pixel_count_max": max(changed_pixels),
+                "zero_applied_branch_count": sum(
+                    branch.applied_rgb_linf <= 0.0
+                    for observation in rung_observations
+                    for branch in (observation.positive, observation.negative)
+                ),
+                "positive_uint8_saturation_count": sum(
+                    observation.positive.uint8_saturation_count for observation in rung_observations
+                ),
+                "negative_uint8_saturation_count": sum(
+                    observation.negative.uint8_saturation_count for observation in rung_observations
+                ),
+            }
+        )
+    max_usable_fraction = max(row["usable_pair_fraction"] for row in by_rung)
+    knee = (
+        min(
+            (row for row in by_rung if row["usable_pair_fraction"] == max_usable_fraction),
+            key=lambda row: row["amplitude"],
+        )
+        if max_usable_fraction > 0.0
+        else None
+    )
+    refusal_reasons = Counter(
+        reason for row in trust_regions if row["usable"] is False for reason in row["refusal_reasons"]
+    )
+    return {
+        "schema": "realization_g2f_chart_bidirectional_amplitude_prefix.v1",
+        "n": prefix,
+        "chart_rung_observation_count": len(observations),
+        "signed_branch_count": 2 * len(observations),
+        "usable_fraction_vs_rung": by_rung,
+        "knee_rung": knee,
+        "trust_region_count": len(trust_regions),
+        "usable_trust_region_count": sum(row["usable"] is True for row in trust_regions),
+        "selected_pair_count": sum(stage["selected_rungs"][0]["selected"] is True for stage in stage_rows),
+        "refusal_reason_counts": dict(sorted(refusal_reasons.items())),
+        "by_class": _response_summary_rows(observations, key="target_class"),
+        "by_margin_bucket": _response_summary_rows(observations, key="margin_bucket"),
+        "by_stratum": _response_summary_rows(observations, key="stratum"),
+        "axis": AXIS,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
 
 
 def summarize_bidirectional_amplitude_prefix(
@@ -4736,6 +5134,433 @@ def run_bidirectional_amplitude_ladder(
     return receipt
 
 
+def run_chart_bidirectional_amplitude_ladder(
+    *,
+    seed_path: Path,
+    gt_cache_path: Path,
+    upstream: Path,
+    output_root: Path,
+    pixel_amplitude_receipt_path: Path,
+    static_chart_path: Path,
+    lane_chart_path: Path,
+    chunk_size: int,
+    threads: int,
+    stop_after_prefix: int,
+) -> dict[str, Any]:
+    """Run/resume coherent openpilot chart rungs and compare against pixel rungs."""
+
+    if chunk_size < 1 or threads < 1 or stop_after_prefix not in PREFIXES:
+        raise RealizationAuditError("invalid G2f chart chunk/thread/prefix setting")
+    output_root.mkdir(parents=True, exist_ok=True)
+    usage = shutil.disk_usage(output_root)
+    if usage.free < 1 << 30:
+        raise RealizationAuditError("G2f chart storage preflight requires at least 1 GiB free")
+    pixel_receipt = _load_json(pixel_amplitude_receipt_path)
+    pixel_prefix = int(pixel_receipt.get("completed_prefix", 0))
+    if pixel_prefix < stop_after_prefix:
+        raise RealizationAuditError("G2f chart pixel comparator does not cover requested prefix")
+    if validate_bidirectional_receipt(pixel_receipt, expected_pair_count=pixel_prefix) != pixel_receipt.get(
+        "receipt_sha256"
+    ):
+        raise RealizationAuditError("G2f chart pixel comparator strict validation failed")
+    amplitudes = tuple(float(value) for value in pixel_receipt["config"]["amplitude_ladder"])
+
+    seed_bytes = seed_path.read_bytes()
+    seed = parse_constraint_seed(seed_bytes)
+    if serialize_constraint_seed(seed) != seed_bytes:
+        raise RealizationAuditError("G2f chart seed is not canonical on parse-back")
+    seed_sha256 = hashlib.sha256(seed_bytes).hexdigest()
+    cache = _load_real_cache(gt_cache_path)
+    net, torch, scorer_custody = _load_distortion_net(upstream, threads)
+    kernel = FullResizeKernel.build()
+    s_t, s_r, pitch_rad, motion_custody = load_g1_worldsheet_motion(REPO)
+    poses = np.asarray(cache["gt_poses"], dtype=np.float64)
+    cross_xi, cross_custody = relative_adjacent_xi(poses, s_t=s_t, s_r=s_r, pitch_rad=pitch_rad)
+    within_xi = np.stack(
+        [g1_warp.xi_from_pose_calibration(pose, s_t=s_t, s_r=s_r, pitch=pitch_rad) for pose in poses],
+        axis=0,
+    )
+    geom = g1_warp.GroundHomographyGeom.eon(native_hw=SCORER_HW, pitch=pitch_rad)
+    static_raw = static_chart_path.read_bytes()
+    if hashlib.sha256(static_raw).hexdigest() != FRAME0_STATIC_CHART_SHA256:
+        raise RealizationAuditError("G2f chart frame0 static-chart SHA-256 custody mismatch")
+    static_charts = parse_static_charts(static_raw)
+    static_zlib = zlib.compress(static_raw, 9)
+    parsed_static = parse_static_charts(zlib.decompress(static_zlib))
+    if (
+        not np.array_equal(parsed_static.road_undrivable, static_charts.road_undrivable)
+        or not np.array_equal(parsed_static.hood, static_charts.hood)
+        or parsed_static.adjacency != static_charts.adjacency
+    ):
+        raise RealizationAuditError("G2f chart static-chart compressed parse-back mismatch")
+    lane_pairs, lane_config, lane_custody = load_lane_chart(lane_chart_path)
+    lane_raw = lane_chart_path.read_bytes()
+    lane_brotli = brotli.compress(lane_raw, quality=11)
+    if brotli.decompress(lane_brotli) != lane_raw:
+        raise RealizationAuditError("G2f chart lane-chart compressed parse-back mismatch")
+    lane_mask = render_lane_mask(lane_pairs[0], lane_config, h=SCORER_HW[0], w=SCORER_HW[1])
+    openpilot_cells, protected_sites = openpilot_frame0_class_prior(
+        seed=seed,
+        static_charts=static_charts,
+        lane_mask=lane_mask,
+        geom=geom,
+    )
+    palette_payload = serialize_frozen_scorer_palette()
+    palette = parse_frozen_scorer_palette(palette_payload)
+    bootstrap = palette[openpilot_cells]
+    bootstrap_counted_bytes = len(palette_payload) + len(static_zlib) + len(lane_brotli)
+    root = output_root / "chart_bidirectional_amplitude_ladder_openpilot"
+    _atomic_bytes(root / "base_packets" / "frozen_scorer_palette.g2pal", palette_payload)
+    _atomic_bytes(root / "base_packets" / "static_charts_n64.zlib9", static_zlib)
+    _atomic_bytes(root / "base_packets" / "lane_chart.brotli11", lane_brotli)
+
+    implementation_paths = (
+        REPO / "tools/measure_realization_g2_lattice.py",
+        REPO / "src/tac/optimization/realized_secant_custody.py",
+        REPO / "src/tac/optimization/predict_project_receiver.py",
+        REPO / "src/tac/optimization/uint8_lattice_feasibility.py",
+        REPO / "src/tac/optimization/resize_full_kernel.py",
+        REPO / "src/tac/boundary_math/analytic_lane_render_band.py",
+        REPO / "src/tac/boundary_math/lane_sdf_component.py",
+        REPO / "src/tac/boundary_math/warp_real_luma_frame0.py",
+        REPO / "src/tac/optimization/predictor_upgrade_xi_chart.py",
+    )
+    config = {
+        "schema": CHART_AMPLITUDE_CONFIG_SCHEMA,
+        "seed": 1234,
+        "seed_sha256": seed_sha256,
+        "gt_cache_sha256": GT_CACHE_SHA256,
+        "scorer_custody": scorer_custody,
+        "motion_custody": {**motion_custody, **cross_custody},
+        "implementation_sources": {str(path.relative_to(REPO)): _sha256(path) for path in implementation_paths},
+        "base": "G2d openpilot per-class geometric frame0 prior plus canonical within/cross G1 advected RGB",
+        "openpilot_base_custody": {
+            "palette_bytes": len(palette_payload),
+            "palette_sha256": hashlib.sha256(palette_payload).hexdigest(),
+            "static_chart_raw_sha256": FRAME0_STATIC_CHART_SHA256,
+            "static_chart_zlib9_bytes": len(static_zlib),
+            "static_chart_zlib9_sha256": hashlib.sha256(static_zlib).hexdigest(),
+            "lane_chart_raw_sha256": hashlib.sha256(lane_raw).hexdigest(),
+            "lane_chart_brotli11_bytes": len(lane_brotli),
+            "lane_chart_brotli11_sha256": hashlib.sha256(lane_brotli).hexdigest(),
+            "lane_custody": lane_custody,
+            "protected_class_sites": protected_sites,
+            "total_counted_bytes": bootstrap_counted_bytes,
+        },
+        "pixel_level_comparator": {
+            "path": str(pixel_amplitude_receipt_path),
+            "receipt_file_sha256": _sha256(pixel_amplitude_receipt_path),
+            "canonical_receipt_sha256": pixel_receipt["receipt_sha256"],
+            "completed_prefix": pixel_prefix,
+        },
+        "amplitude_ladder": list(amplitudes),
+        "amplitude_unit": "native_scorer_centerline_pixels",
+        "numeric_rungs_shared_with_pixel_level": True,
+        "physical_unit_equivalence_to_pixel_rgb_ladder": False,
+        "chart_symbol": "one openpilot LaneLine.centerline_coeffs[-1] intercept",
+        "line_selection": "largest standalone nonzero AA-SDF rendered support; lowest index tie-break",
+        "coefficient_normalization": "max active-row native scorer centerline displacement equals amplitude",
+        "coherent_rgb_action": "AA-SDF coverage delta times counted frozen palette[Lane]-palette[Road]",
+        "relative_secant_residual_tolerance": SECANT_RELATIVE_RESIDUAL_TOLERANCE,
+        "trust_rule": "both signed branches plus central odd secant sign-consistent; odd relative residual <= tolerance",
+        "pair_count": PAIR_COUNT,
+        "axis": AXIS,
+    }
+    config_sha256 = secant_canonical_sha256(config)
+    stage_dir = root / "stages"
+    rows = _load_chart_amplitude_stages(stage_dir, config_sha256)
+    resumed_pairs = len(rows)
+    if rows and sorted(rows) != list(range(max(rows) + 1)):
+        raise RealizationAuditError("G2f chart resume stages are not a contiguous prefix")
+    constraints_by_pair: dict[int, list[Mapping[str, Any]]] = {pair: [] for pair in range(PAIR_COUNT)}
+    for constraint in seed["constraint_seeds"]:
+        if constraint["frame_index"] == 1:
+            constraints_by_pair[int(constraint["time"])].append(constraint)
+    represented_by_pair = {pair: _represented_cells(seed, pair) for pair in range(stop_after_prefix)}
+    previous_plane: np.ndarray | None = None
+
+    for chunk_begin in range(0, stop_after_prefix, chunk_size):
+        chunk_end = min(stop_after_prefix, chunk_begin + chunk_size)
+        for pair_index in range(chunk_begin, chunk_end):
+            represented = represented_by_pair[pair_index]
+            constraints = constraints_by_pair[pair_index]
+            if not constraints:
+                raise RealizationAuditError(f"G2f chart pair {pair_index} has no declared writes")
+            plane0 = (
+                bootstrap.copy()
+                if pair_index == 0
+                else contextual_advected_rgb_plane(previous_plane, cross_xi[pair_index], geom)
+            )
+            base1 = contextual_advected_rgb_plane(plane0, within_xi[pair_index], geom)
+            previous_plane = base1
+            if pair_index in rows:
+                continue
+
+            started = time.perf_counter()
+            realized0 = _contextual_realize(
+                plane0,
+                represented,
+                seed_sha256=seed_sha256,
+                additional_seed_bytes=bootstrap_counted_bytes if pair_index == 0 else 0,
+                generator_id=(
+                    "g2f_chart_openpilot_per_class_geometric_frame0_prior"
+                    if pair_index == 0
+                    else "g2f_chart_cross_pair_g1_advected_rgb"
+                ),
+                kernel=kernel,
+            )
+            realized_base1 = _contextual_realize(
+                base1,
+                represented,
+                seed_sha256=seed_sha256,
+                additional_seed_bytes=0,
+                generator_id="g2f_chart_within_pair_g1_advected_rgb",
+                kernel=kernel,
+            )
+            line_index, coefficient_index, coefficient_gain, baseline_coverage = _select_chart_centerline_intercept(
+                lane_pairs[pair_index], lane_config
+            )
+            prepared: dict[tuple[int, int], tuple[np.ndarray, np.ndarray, int, ChartBranchCustody]] = {}
+            delta_order: list[tuple[int, int]] = []
+            for rung_index, amplitude in enumerate(amplitudes):
+                for sign in (1, -1):
+                    key = (rung_index, sign)
+                    prepared[key] = _prepare_chart_branch(
+                        base1=base1,
+                        lines=lane_pairs[pair_index],
+                        config=lane_config,
+                        palette=palette,
+                        line_index=line_index,
+                        coefficient_gain_pixels_per_unit=coefficient_gain,
+                        signed_amplitude=sign * amplitude,
+                        baseline_coverage=baseline_coverage,
+                    )
+                    delta_order.append(key)
+            baseline_state = _candidate_seg_state(
+                net,
+                torch,
+                realized0["frame"],
+                realized_base1["frame"],
+                base1,
+                constraints,
+                with_jacobian=False,
+                directional_rgb_deltas=[prepared[key][1] for key in delta_order],
+            )
+            directional_jacobian = np.asarray(baseline_state["directional_jacobian"], dtype=np.float64)
+            chart_rows: list[ChartBidirectionalRungObservation] = []
+            for rung_index, amplitude in enumerate(amplitudes):
+                branches: dict[int, SecantObservation] = {}
+                for sign in (1, -1):
+                    key = (rung_index, sign)
+                    probe_plane, actual_delta, saturation, _ = prepared[key]
+                    column = delta_order.index(key)
+                    branches[sign] = _measure_chart_secant_branch(
+                        pair_index=pair_index,
+                        signed_amplitude=sign * amplitude,
+                        probe_plane=probe_plane,
+                        actual_delta=actual_delta,
+                        saturation=saturation,
+                        predicted=directional_jacobian[:, column],
+                        constraints=constraints,
+                        baseline_state=baseline_state,
+                        realized0_frame=realized0["frame"],
+                        represented=represented,
+                        seed_sha256=seed_sha256,
+                        kernel=kernel,
+                        net=net,
+                        torch=torch,
+                    )
+                chart_rows.append(
+                    build_chart_bidirectional_rung_observation(
+                        positive=branches[1],
+                        negative=branches[-1],
+                        rung_index=rung_index,
+                        strata=tuple(str(constraint["stratum"]) for constraint in constraints),
+                        line_index=line_index,
+                        coefficient_index=coefficient_index,
+                        coefficient_gain_pixels_per_unit=coefficient_gain,
+                        baseline_coverage_sha256=_chart_coverage_sha256(baseline_coverage),
+                        positive_chart=prepared[(rung_index, 1)][3],
+                        negative_chart=prepared[(rung_index, -1)][3],
+                    )
+                )
+            current_trust = list(
+                build_bidirectional_trust_region_custody(
+                    chart_rows,
+                    relative_residual_tolerance=SECANT_RELATIVE_RESIDUAL_TOLERANCE,
+                )
+            )
+            prefix_trust = [
+                trust for prior_pair in range(pair_index) for trust in rows[prior_pair]["amplitude_trust_regions"]
+            ] + current_trust
+            current_selections = [
+                selection
+                for selection in select_best_bidirectional_rungs(
+                    prefix_trust,
+                    effective_direction_count_by_pair=[1] * (pair_index + 1),
+                )
+                if selection["pair_index"] == pair_index
+            ]
+            if len(current_selections) != 1:
+                raise RealizationAuditError("G2f chart selected-rung coverage mismatch")
+            stage = {
+                "schema": CHART_AMPLITUDE_STAGE_SCHEMA,
+                "config_sha256": config_sha256,
+                "pair_index": pair_index,
+                "candidate_state": {
+                    "segnet_input_sha256": baseline_state["segnet_input_sha256"],
+                    "logits_sha256": baseline_state["logits_sha256"],
+                    "receiver_input_maxabs": baseline_state["receiver_input_maxabs"],
+                    "head_input": "exact 16-channel input to segmentation_head[0]",
+                    "head_patch_dimension": 144,
+                    "rivals": list(baseline_state["rivals"]),
+                    "full_plane_directional_pullback": True,
+                    "source_arrangement_vjp_used": False,
+                },
+                "chart_bidirectional_observations": [row.as_dict() for row in chart_rows],
+                "amplitude_trust_regions": current_trust,
+                "selected_rungs": current_selections,
+                "chart_symbol_admission": {
+                    "status": "NOT_RUN_MEASUREMENT_ONLY",
+                    "receiver_packet_built": False,
+                    "bytes": 0,
+                    "reason": "trust comparison precedes any counted chart-symbol packet or correction admission",
+                },
+                "camera_frame0_sha256": realized0["camera_uint8_sha256"],
+                "baseline_camera_frame1_sha256": realized_base1["camera_uint8_sha256"],
+                "baseline_uint8_factor2_exact": bool(
+                    realized0["factor2_verification"]["certified_exact"]
+                    and realized_base1["factor2_verification"]["certified_exact"]
+                ),
+                "wall_seconds": time.perf_counter() - started,
+                "authority": f"MEASURED {AXIS}",
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+            _atomic_json(stage_dir / f"pair_{pair_index:04d}.json", stage)
+            rows[pair_index] = stage
+        _atomic_json(
+            root / "checkpoints" / f"chunk_{chunk_begin:04d}_{chunk_end:04d}.json",
+            {
+                "schema": "realization_g2f_chart_bidirectional_amplitude_chunk_checkpoint.v1",
+                "config_sha256": config_sha256,
+                "completed_through_exclusive": chunk_end,
+                "completed_pairs": len(rows),
+                "all_pair_stages_preserved": True,
+                "resumed_pairs_at_invocation_start": resumed_pairs,
+            },
+        )
+
+    ordered = [rows[index] for index in range(stop_after_prefix)]
+    prefixes = []
+    for prefix in PREFIXES:
+        if prefix > stop_after_prefix:
+            continue
+        summary = summarize_chart_bidirectional_amplitude_prefix(prefix, ordered[:prefix])
+        checkpoint = root / "checkpoints" / f"prefix_n{prefix}.json"
+        _atomic_json(checkpoint, summary)
+        summary["checkpoint_path"] = str(checkpoint)
+        summary["checkpoint_sha256"] = _sha256(checkpoint)
+        prefixes.append(summary)
+    final = prefixes[-1]
+    all_observations = [
+        ChartBidirectionalRungObservation.from_dict(raw)
+        for row in ordered
+        for raw in row["chart_bidirectional_observations"]
+    ]
+    all_trust = list(
+        build_bidirectional_trust_region_custody(
+            all_observations,
+            relative_residual_tolerance=SECANT_RELATIVE_RESIDUAL_TOLERANCE,
+        )
+    )
+    all_selections = list(
+        select_best_bidirectional_rungs(
+            all_trust,
+            effective_direction_count_by_pair=[1] * stop_after_prefix,
+        )
+    )
+    if all_trust != [trust for row in ordered for trust in row["amplitude_trust_regions"]]:
+        raise RealizationAuditError("G2f chart final trust rederivation drift")
+    if all_selections != [selection for row in ordered for selection in row["selected_rungs"]]:
+        raise RealizationAuditError("G2f chart final selected-rung rederivation drift")
+    pixel_by_pair: dict[int, list[bool]] = {pair: [] for pair in range(stop_after_prefix)}
+    for selection in pixel_receipt["selected_rungs"]:
+        pair = int(selection["pair_index"])
+        if pair < stop_after_prefix:
+            pixel_by_pair[pair].append(selection["selected"] is True)
+    if any(not pixel_by_pair[pair] for pair in range(stop_after_prefix)):
+        raise RealizationAuditError("G2f chart pixel comparator selected-rung coverage is incomplete")
+    pixel_selected = [all(pixel_by_pair[pair]) for pair in range(stop_after_prefix)]
+    chart_selected = [selection["selected"] is True for selection in all_selections]
+    comparison = _level_comparison(pixel_selected, chart_selected)
+    if comparison["chart_only_rescued_pair_count"]:
+        verdict = f"MEASURED_G2F_CHART_TRUST_RESCUES_PIXEL_EMPTY_N{stop_after_prefix}_FAMILY_OPEN"
+        alphabet = "CHART_SYMBOLS_PREFERRED_FOR_RESCUED_PAIRS_PENDING_RECEIVER_PACKET"
+    elif comparison["chart_selected_pair_count"]:
+        verdict = f"MEASURED_G2F_CHART_TRUST_NONEMPTY_NO_UNIQUE_RESCUE_N{stop_after_prefix}_FAMILY_OPEN"
+        alphabet = "NO_UNIQUE_LEVEL_WINNER_PENDING_RECEIVER_PACKET"
+    else:
+        verdict = f"MEASURED_G2F_CHART_TRUST_EMPTY_N{stop_after_prefix}_FAMILY_OPEN"
+        alphabet = "PIXEL_AND_THIS_SINGLE_CHART_FORMULATION_BOTH_REFUSED"
+    receipt: dict[str, Any] = {
+        "schema": CHART_BIDIRECTIONAL_RECEIPT_SCHEMA,
+        "lane_id": CHART_AMPLITUDE_LANE_ID,
+        "task_id": "578",
+        "config": config,
+        "config_sha256": config_sha256,
+        "completed_prefix": stop_after_prefix,
+        "chart_bidirectional_observations": [row.as_dict() for row in all_observations],
+        "pair_direction_rung_trust_regions": all_trust,
+        "selected_rungs": all_selections,
+        "level_comparison": comparison,
+        "D1_chart_coefficient_response_ladder": final,
+        "D2_pixel_vs_chart_level_attribution": {
+            **comparison,
+            "alphabet_recommendation": alphabet,
+            "comparison_metric": "pair has at least one fully usable rung for every direction at that level",
+            "amplitude_units_are_not_physically_equal": True,
+        },
+        "D3_chart_symbol_receiver_admission": {
+            "status": "NOT_RUN_MEASUREMENT_ONLY",
+            "receiver_packet_built": False,
+            "admitted_pair_count": 0,
+            "correction_bytes": 0,
+            "next_gate": "counted chart-symbol packet parse-back plus hard-oracle and pose/rate admission",
+        },
+        "verdict": verdict,
+        "verdict_scope": (
+            f"exact contiguous n{stop_after_prefix} prefix; one support-maximizing openpilot lane line per pair, "
+            "centerline intercept only, coherent AA-SDF lane-vs-road palette action through exact R and native "
+            "CPU-Torch SegNet; no negative on other coefficients, joint chart symbols, pixel structure, or "
+            "integer-lattice families; no receiver admission or score claim"
+        ),
+        "storage": {
+            "root": str(root),
+            "free_bytes_at_preflight": usage.free,
+            "automatic_disk_hygiene": (
+                "one pair/rung scorer tensor at a time, atomic immutable JSON, no persisted camera/logit/coverage "
+                "tensors; certify-or-block before deletion"
+            ),
+        },
+        "authority": {
+            "axis": AXIS,
+            "pointer": POINTER,
+            "pointer_moved": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "main_landing_review_required": True,
+        },
+    }
+    receipt["receipt_sha256"] = secant_canonical_sha256(receipt)
+    validate_chart_bidirectional_receipt(receipt, expected_pair_count=stop_after_prefix)
+    _atomic_json(root / "receipt.json", receipt)
+    _atomic_json(output_root / "receipt.json", receipt)
+    if _load_json(root / "receipt.json")["receipt_sha256"] != receipt["receipt_sha256"]:
+        raise RealizationAuditError("G2f chart receipt JSON parse-back drift")
+    return receipt
+
+
 def audit_prefix(
     *,
     prefix: int,
@@ -5079,6 +5904,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="measure paired +/- rank-4 secants across an R-derived amplitude ladder",
     )
     parser.add_argument(
+        "--chart-amplitude-ladder",
+        action="store_true",
+        help="measure paired +/- coherent openpilot coefficient moves across the same numeric ladder",
+    )
+    parser.add_argument(
         "--secant-output-root",
         type=Path,
         default=Path("/Volumes/VertigoDataTier/pact/evidence/g2e_secant_20260721"),
@@ -5090,6 +5920,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("/Volumes/VertigoDataTier/pact/evidence/g2f_amplitude_20260721"),
         help="durable SSD root for --bidirectional-amplitude-ladder stages and receipts",
     )
+    parser.add_argument(
+        "--chart-amplitude-output-root",
+        type=Path,
+        default=Path("/Volumes/VertigoDataTier/pact/evidence/g2f_chart_amplitude_20260721"),
+        help="durable SSD root for --chart-amplitude-ladder stages and receipts",
+    )
+    parser.add_argument("--pixel-amplitude-receipt", type=Path, default=DEFAULT_PIXEL_AMPLITUDE_RECEIPT)
     parser.add_argument("--g2e-prior-receipt", type=Path, default=DEFAULT_G2E_PRIOR_RECEIPT)
     parser.add_argument("--static-chart", type=Path, default=DEFAULT_FRAME0_STATIC_CHART)
     parser.add_argument("--lane-chart", type=Path, default=DEFAULT_FRAME0_LANE_CHART)
@@ -5123,14 +5960,40 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.frame0_prior_race,
                 args.realized_secant_custody,
                 args.bidirectional_amplitude_ladder,
+                args.chart_amplitude_ladder,
             )
         )
         > 1
     ):
         raise RealizationAuditError(
             "--audit-only, --interior-rungs, --contextual-predict-base, --frame0-prior-race, "
-            "--realized-secant-custody, and --bidirectional-amplitude-ladder are mutually exclusive"
+            "--realized-secant-custody, --bidirectional-amplitude-ladder, and --chart-amplitude-ladder are "
+            "mutually exclusive"
         )
+    if args.chart_amplitude_ladder:
+        receipt = run_chart_bidirectional_amplitude_ladder(
+            seed_path=args.seed.resolve(),
+            gt_cache_path=args.gt_cache.resolve(),
+            upstream=args.upstream.resolve(),
+            output_root=args.chart_amplitude_output_root.resolve(),
+            pixel_amplitude_receipt_path=args.pixel_amplitude_receipt.resolve(),
+            static_chart_path=args.static_chart.resolve(),
+            lane_chart_path=args.lane_chart.resolve(),
+            chunk_size=args.chunk_size,
+            threads=args.threads,
+            stop_after_prefix=args.stop_after_prefix,
+        )
+        print(
+            json.dumps(
+                {
+                    "receipt": str(args.chart_amplitude_output_root.resolve() / "receipt.json"),
+                    "verdict": receipt["verdict"],
+                    "completed_prefix": receipt["completed_prefix"],
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
     if args.bidirectional_amplitude_ladder:
         receipt = run_bidirectional_amplitude_ladder(
             seed_path=args.seed.resolve(),

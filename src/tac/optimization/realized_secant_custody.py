@@ -27,6 +27,7 @@ import numpy as np
 
 RECEIPT_SCHEMA: Final = "realized_secant_custody_receipt.v1"
 BIDIRECTIONAL_RECEIPT_SCHEMA: Final = "bidirectional_amplitude_ladder_receipt.v1"
+CHART_BIDIRECTIONAL_RECEIPT_SCHEMA: Final = "chart_bidirectional_amplitude_ladder_receipt.v1"
 PACKET_MAGIC: Final = b"G2ES1"
 PACKET_HEADER: Final = struct.Struct(">5sB")
 
@@ -422,18 +423,181 @@ class BidirectionalRungObservation:
         return value
 
 
-def build_bidirectional_rung_observation(
+@dataclass(frozen=True)
+class ChartBranchCustody:
+    """Full-plane chart geometry and applied-RGB custody for one signed branch."""
+
+    coefficient_delta: float
+    max_centerline_displacement_pixels: float
+    coverage_sha256: str
+    applied_rgb_delta_sha256: str
+    changed_pixel_count: int
+    changed_rgb_value_count: int
+
+    def __post_init__(self) -> None:
+        for field in ("coefficient_delta", "max_centerline_displacement_pixels"):
+            object.__setattr__(self, field, _finite_scalar(getattr(self, field), field))
+        if self.coefficient_delta == 0.0 or self.max_centerline_displacement_pixels <= 0.0:
+            raise RealizedSecantCustodyError("chart branch displacement must be nonzero and positive")
+        for field in ("coverage_sha256", "applied_rgb_delta_sha256"):
+            value = getattr(self, field)
+            if not isinstance(value, str) or len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
+                raise RealizedSecantCustodyError(f"{field} must be a lowercase SHA-256")
+        for field in ("changed_pixel_count", "changed_rgb_value_count"):
+            object.__setattr__(self, field, _exact_int(getattr(self, field), field))
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> ChartBranchCustody:
+        try:
+            return cls(**{field: value[field] for field in cls.__dataclass_fields__})
+        except (KeyError, TypeError) as exc:
+            raise RealizedSecantCustodyError("malformed chart branch custody") from exc
+
+    def as_dict(self) -> dict[str, Any]:
+        return {field: getattr(self, field) for field in self.__dataclass_fields__}
+
+
+@dataclass(frozen=True)
+class ChartBidirectionalRungObservation:
+    """One paired receiver response to a coherent polynomial-chart move."""
+
+    pair_index: int
+    direction_index: int
+    rung_index: int
+    amplitude: float
+    amplitude_unit: str
+    line_index: int
+    coefficient_name: str
+    coefficient_index: int
+    coefficient_gain_pixels_per_unit: float
+    baseline_coverage_sha256: str
+    rgb_delta_encoding: str
+    positive_chart: ChartBranchCustody
+    negative_chart: ChartBranchCustody
+    positive: SecantObservation
+    negative: SecantObservation
+    writes: tuple[BidirectionalWriteObservation, ...]
+
+    def __post_init__(self) -> None:
+        for field in ("pair_index", "direction_index", "rung_index", "line_index", "coefficient_index"):
+            object.__setattr__(self, field, _exact_int(getattr(self, field), field))
+        amplitude = _finite_scalar(self.amplitude, "amplitude")
+        gain = _finite_scalar(self.coefficient_gain_pixels_per_unit, "coefficient_gain_pixels_per_unit")
+        if amplitude <= 0.0 or gain <= 0.0:
+            raise RealizedSecantCustodyError("chart amplitude and coefficient gain must be positive")
+        object.__setattr__(self, "amplitude", amplitude)
+        object.__setattr__(self, "coefficient_gain_pixels_per_unit", gain)
+        if self.amplitude_unit != "native_scorer_centerline_pixels":
+            raise RealizedSecantCustodyError("chart amplitude unit is not canonical")
+        if self.coefficient_name != "centerline_intercept":
+            raise RealizedSecantCustodyError("chart coefficient name is not canonical")
+        if self.rgb_delta_encoding != "int16_le_hwc_384x512x3":
+            raise RealizedSecantCustodyError("chart RGB delta encoding is not canonical")
+        if (
+            not isinstance(self.baseline_coverage_sha256, str)
+            or len(self.baseline_coverage_sha256) != 64
+            or any(char not in "0123456789abcdef" for char in self.baseline_coverage_sha256)
+        ):
+            raise RealizedSecantCustodyError("baseline coverage hash must be a lowercase SHA-256")
+        if not isinstance(self.positive_chart, ChartBranchCustody) or not isinstance(
+            self.negative_chart, ChartBranchCustody
+        ):
+            raise RealizedSecantCustodyError("chart branches must carry typed geometry custody")
+        expected_delta = amplitude / gain
+        if not math.isclose(self.positive_chart.coefficient_delta, expected_delta, rel_tol=1e-12, abs_tol=1e-15):
+            raise RealizedSecantCustodyError("positive chart coefficient normalization mismatch")
+        if not math.isclose(self.negative_chart.coefficient_delta, -expected_delta, rel_tol=1e-12, abs_tol=1e-15):
+            raise RealizedSecantCustodyError("negative chart coefficient normalization mismatch")
+        for branch in (self.positive_chart, self.negative_chart):
+            if not math.isclose(
+                branch.max_centerline_displacement_pixels,
+                amplitude,
+                rel_tol=1e-12,
+                abs_tol=1e-12,
+            ):
+                raise RealizedSecantCustodyError("chart screen displacement/amplitude mismatch")
+        if not isinstance(self.positive, SecantObservation) or not isinstance(self.negative, SecantObservation):
+            raise RealizedSecantCustodyError("chart receiver branches must be typed secant observations")
+        for branch, sign in ((self.positive, 1.0), (self.negative, -1.0)):
+            if branch.pair_index != self.pair_index or branch.column_index != self.direction_index:
+                raise RealizedSecantCustodyError("chart branch identity mismatch")
+            if not math.isclose(branch.signed_amplitude, sign * amplitude, rel_tol=0.0, abs_tol=1e-12):
+                raise RealizedSecantCustodyError("chart branch amplitude mismatch")
+        if not isinstance(self.writes, tuple) or len(self.writes) != len(self.positive.writes):
+            raise RealizedSecantCustodyError("chart derived writes are incomplete")
+        if any(not isinstance(row, BidirectionalWriteObservation) for row in self.writes):
+            raise RealizedSecantCustodyError("chart derived writes must be typed")
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> ChartBidirectionalRungObservation:
+        try:
+            positive_raw = value["positive"]
+            negative_raw = value["negative"]
+            if not isinstance(positive_raw, Mapping) or not isinstance(negative_raw, Mapping):
+                raise TypeError
+            for raw in (positive_raw, negative_raw):
+                payload = {key: item for key, item in raw.items() if key != "row_sha256"}
+                if raw.get("row_sha256") != canonical_sha256(payload):
+                    raise RealizedSecantCustodyError("nested chart secant branch hash mismatch")
+            row = cls(
+                pair_index=value["pair_index"],
+                direction_index=value["direction_index"],
+                rung_index=value["rung_index"],
+                amplitude=value["amplitude"],
+                amplitude_unit=value["amplitude_unit"],
+                line_index=value["line_index"],
+                coefficient_name=value["coefficient_name"],
+                coefficient_index=value["coefficient_index"],
+                coefficient_gain_pixels_per_unit=value["coefficient_gain_pixels_per_unit"],
+                baseline_coverage_sha256=value["baseline_coverage_sha256"],
+                rgb_delta_encoding=value["rgb_delta_encoding"],
+                positive_chart=ChartBranchCustody.from_dict(value["positive_chart"]),
+                negative_chart=ChartBranchCustody.from_dict(value["negative_chart"]),
+                positive=SecantObservation.from_dict(positive_raw),
+                negative=SecantObservation.from_dict(negative_raw),
+                writes=tuple(BidirectionalWriteObservation.from_dict(item) for item in value["writes"]),
+            )
+        except (KeyError, TypeError) as exc:
+            raise RealizedSecantCustodyError("malformed chart bidirectional rung row") from exc
+        expected_writes = _build_bidirectional_writes(
+            positive=row.positive,
+            negative=row.negative,
+            strata=tuple(write.stratum for write in row.writes),
+        )
+        if row.writes != expected_writes:
+            raise RealizedSecantCustodyError("chart bidirectional derived write custody mismatch")
+        return row
+
+    def as_dict(self) -> dict[str, Any]:
+        value = {
+            "pair_index": self.pair_index,
+            "direction_index": self.direction_index,
+            "rung_index": self.rung_index,
+            "amplitude": self.amplitude,
+            "amplitude_unit": self.amplitude_unit,
+            "line_index": self.line_index,
+            "coefficient_name": self.coefficient_name,
+            "coefficient_index": self.coefficient_index,
+            "coefficient_gain_pixels_per_unit": self.coefficient_gain_pixels_per_unit,
+            "baseline_coverage_sha256": self.baseline_coverage_sha256,
+            "rgb_delta_encoding": self.rgb_delta_encoding,
+            "positive_chart": self.positive_chart.as_dict(),
+            "negative_chart": self.negative_chart.as_dict(),
+            "positive": self.positive.as_dict(),
+            "negative": self.negative.as_dict(),
+            "writes": [row.as_dict() for row in self.writes],
+        }
+        value["row_sha256"] = canonical_sha256(value)
+        return value
+
+
+def _build_bidirectional_writes(
     *,
     positive: SecantObservation,
     negative: SecantObservation,
-    rung_index: int,
     strata: Sequence[str],
-    positive_source: str,
-    negative_source: str,
-    positive_applied_rgb_delta: Sequence[float],
-    negative_applied_rgb_delta: Sequence[float],
-) -> BidirectionalRungObservation:
-    """Construct and rederive one paired rung without trusting serialized summaries."""
+) -> tuple[BidirectionalWriteObservation, ...]:
+    """Rederive odd/even write rows shared by local-pixel and chart ladders."""
 
     if positive.signed_amplitude <= 0.0 or negative.signed_amplitude >= 0.0:
         raise RealizedSecantCustodyError("paired branches must be ordered positive then negative")
@@ -486,6 +650,24 @@ def build_bidirectional_rung_observation(
                 even_realized_secant=even_realized / amplitude,
             )
         )
+    return tuple(writes)
+
+
+def build_bidirectional_rung_observation(
+    *,
+    positive: SecantObservation,
+    negative: SecantObservation,
+    rung_index: int,
+    strata: Sequence[str],
+    positive_source: str,
+    negative_source: str,
+    positive_applied_rgb_delta: Sequence[float],
+    negative_applied_rgb_delta: Sequence[float],
+) -> BidirectionalRungObservation:
+    """Construct and rederive one paired rung without trusting serialized summaries."""
+
+    amplitude = positive.signed_amplitude
+    writes = _build_bidirectional_writes(positive=positive, negative=negative, strata=strata)
     return BidirectionalRungObservation(
         pair_index=positive.pair_index,
         direction_index=positive.column_index,
@@ -497,12 +679,48 @@ def build_bidirectional_rung_observation(
         negative=negative,
         positive_applied_rgb_delta=tuple(positive_applied_rgb_delta),
         negative_applied_rgb_delta=tuple(negative_applied_rgb_delta),
-        writes=tuple(writes),
+        writes=writes,
+    )
+
+
+def build_chart_bidirectional_rung_observation(
+    *,
+    positive: SecantObservation,
+    negative: SecantObservation,
+    rung_index: int,
+    strata: Sequence[str],
+    line_index: int,
+    coefficient_index: int,
+    coefficient_gain_pixels_per_unit: float,
+    baseline_coverage_sha256: str,
+    positive_chart: ChartBranchCustody,
+    negative_chart: ChartBranchCustody,
+) -> ChartBidirectionalRungObservation:
+    """Construct a coherent chart rung while rederiving all odd/even write rows."""
+
+    writes = _build_bidirectional_writes(positive=positive, negative=negative, strata=strata)
+    return ChartBidirectionalRungObservation(
+        pair_index=positive.pair_index,
+        direction_index=positive.column_index,
+        rung_index=rung_index,
+        amplitude=positive.signed_amplitude,
+        amplitude_unit="native_scorer_centerline_pixels",
+        line_index=line_index,
+        coefficient_name="centerline_intercept",
+        coefficient_index=coefficient_index,
+        coefficient_gain_pixels_per_unit=coefficient_gain_pixels_per_unit,
+        baseline_coverage_sha256=baseline_coverage_sha256,
+        rgb_delta_encoding="int16_le_hwc_384x512x3",
+        positive_chart=positive_chart,
+        negative_chart=negative_chart,
+        positive=positive,
+        negative=negative,
+        writes=writes,
     )
 
 
 def build_bidirectional_trust_region_custody(
-    observations: Sequence[BidirectionalRungObservation],
+    observations: Sequence[BidirectionalRungObservation | ChartBidirectionalRungObservation],
     *,
     relative_residual_tolerance: float,
     response_epsilon: float = 1e-12,
@@ -513,7 +731,9 @@ def build_bidirectional_trust_region_custody(
     epsilon = _finite_scalar(response_epsilon, "response_epsilon")
     if tolerance < 0.0 or epsilon <= 0.0:
         raise RealizedSecantCustodyError("bidirectional trust tolerances are invalid")
-    if not observations or any(not isinstance(row, BidirectionalRungObservation) for row in observations):
+    if not observations or any(
+        not isinstance(row, (BidirectionalRungObservation, ChartBidirectionalRungObservation)) for row in observations
+    ):
         raise RealizedSecantCustodyError("bidirectional trust requires typed observations")
     result: list[dict[str, Any]] = []
     for observation in sorted(
@@ -1105,11 +1325,165 @@ def validate_bidirectional_receipt(
     return receipt_hash
 
 
+def validate_chart_bidirectional_receipt(
+    receipt: Mapping[str, Any],
+    *,
+    expected_pair_count: int,
+) -> str:
+    """Rebuild coherent chart-rung trust, selections, and pixel-level comparison."""
+
+    pairs = _exact_int(expected_pair_count, "expected_pair_count", minimum=1)
+    if receipt.get("schema") != CHART_BIDIRECTIONAL_RECEIPT_SCHEMA:
+        raise RealizedSecantCustodyError("chart bidirectional receipt schema mismatch")
+    if _exact_int(receipt.get("completed_prefix"), "completed_prefix", minimum=1) != pairs:
+        raise RealizedSecantCustodyError("chart bidirectional receipt completed_prefix mismatch")
+    config = receipt.get("config")
+    if not isinstance(config, Mapping):
+        raise RealizedSecantCustodyError("chart bidirectional receipt config must be an object")
+    tolerance = _finite_scalar(
+        config.get("relative_secant_residual_tolerance"),
+        "config.relative_secant_residual_tolerance",
+    )
+    amplitude_ladder = config.get("amplitude_ladder")
+    comparator = config.get("pixel_level_comparator")
+    if tolerance < 0.0 or not isinstance(amplitude_ladder, list) or not amplitude_ladder:
+        raise RealizedSecantCustodyError("chart trust tolerance/amplitude ladder is invalid")
+    amplitudes = [_finite_scalar(value, "amplitude_ladder") for value in amplitude_ladder]
+    if any(value <= 0.0 for value in amplitudes) or amplitudes != sorted(set(amplitudes)):
+        raise RealizedSecantCustodyError("chart amplitudes must be positive sorted unique")
+    if not isinstance(comparator, Mapping):
+        raise RealizedSecantCustodyError("chart receipt lacks pixel-level comparator custody")
+    for field in ("receipt_file_sha256", "canonical_receipt_sha256"):
+        value = comparator.get(field)
+        if not isinstance(value, str) or len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
+            raise RealizedSecantCustodyError("chart pixel comparator hash custody is invalid")
+    if _exact_int(comparator.get("completed_prefix"), "pixel_level_comparator.completed_prefix", minimum=1) < pairs:
+        raise RealizedSecantCustodyError("chart pixel comparator does not cover the measured prefix")
+
+    raw_rows = receipt.get("chart_bidirectional_observations")
+    if not isinstance(raw_rows, list) or len(raw_rows) != pairs * len(amplitudes):
+        raise RealizedSecantCustodyError("chart bidirectional observation coverage count mismatch")
+    observations: list[ChartBidirectionalRungObservation] = []
+    seen: set[tuple[int, int]] = set()
+    pair_geometry: dict[int, tuple[Any, ...]] = {}
+    for raw in raw_rows:
+        if not isinstance(raw, Mapping):
+            raise RealizedSecantCustodyError("chart bidirectional observation must be an object")
+        payload = {key: value for key, value in raw.items() if key != "row_sha256"}
+        if raw.get("row_sha256") != canonical_sha256(payload):
+            raise RealizedSecantCustodyError("chart bidirectional observation row hash mismatch")
+        observation = ChartBidirectionalRungObservation.from_dict(raw)
+        key = (observation.pair_index, observation.rung_index)
+        if (
+            observation.pair_index >= pairs
+            or observation.direction_index != 0
+            or observation.rung_index >= len(amplitudes)
+            or key in seen
+        ):
+            raise RealizedSecantCustodyError("chart bidirectional observation identity is invalid")
+        if not math.isclose(
+            observation.amplitude,
+            amplitudes[observation.rung_index],
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        ):
+            raise RealizedSecantCustodyError("chart rung amplitude/config mismatch")
+        geometry = (
+            observation.line_index,
+            observation.coefficient_index,
+            observation.coefficient_gain_pixels_per_unit,
+            observation.baseline_coverage_sha256,
+        )
+        if observation.pair_index in pair_geometry and pair_geometry[observation.pair_index] != geometry:
+            raise RealizedSecantCustodyError("chart pair geometry drifted across amplitude rungs")
+        pair_geometry[observation.pair_index] = geometry
+        seen.add(key)
+        observations.append(observation)
+    if seen != {(pair, rung) for pair in range(pairs) for rung in range(len(amplitudes))}:
+        raise RealizedSecantCustodyError("chart bidirectional observation coverage is incomplete")
+
+    trust_regions = list(
+        build_bidirectional_trust_region_custody(
+            observations,
+            relative_residual_tolerance=tolerance,
+        )
+    )
+    if receipt.get("pair_direction_rung_trust_regions") != trust_regions:
+        raise RealizedSecantCustodyError("chart bidirectional trust-region custody mismatch")
+    selections = list(
+        select_best_bidirectional_rungs(
+            trust_regions,
+            effective_direction_count_by_pair=[1] * pairs,
+        )
+    )
+    if receipt.get("selected_rungs") != selections:
+        raise RealizedSecantCustodyError("chart bidirectional selected-rung custody mismatch")
+
+    comparison = receipt.get("level_comparison")
+    if not isinstance(comparison, Mapping):
+        raise RealizedSecantCustodyError("chart receipt lacks level comparison")
+    pixel_selected = comparison.get("pixel_pair_selected")
+    if (
+        not isinstance(pixel_selected, list)
+        or len(pixel_selected) != pairs
+        or any(type(value) is not bool for value in pixel_selected)
+    ):
+        raise RealizedSecantCustodyError("chart pixel selected vector is invalid")
+    chart_selected = [bool(row["selected"]) for row in selections]
+    if comparison.get("chart_pair_selected") != chart_selected:
+        raise RealizedSecantCustodyError("chart selected vector does not rederive")
+    chart_only = [
+        index
+        for index, (chart, pixel) in enumerate(zip(chart_selected, pixel_selected, strict=True))
+        if chart and not pixel
+    ]
+    pixel_only = [
+        index
+        for index, (chart, pixel) in enumerate(zip(chart_selected, pixel_selected, strict=True))
+        if pixel and not chart
+    ]
+    both = [
+        index
+        for index, (chart, pixel) in enumerate(zip(chart_selected, pixel_selected, strict=True))
+        if chart and pixel
+    ]
+    neither = [
+        index
+        for index, (chart, pixel) in enumerate(zip(chart_selected, pixel_selected, strict=True))
+        if not chart and not pixel
+    ]
+    expected_comparison = {
+        "pixel_pair_selected": pixel_selected,
+        "chart_pair_selected": chart_selected,
+        "pixel_selected_pair_count": sum(pixel_selected),
+        "chart_selected_pair_count": sum(chart_selected),
+        "chart_only_rescued_pair_indices": chart_only,
+        "chart_only_rescued_pair_count": len(chart_only),
+        "pixel_only_pair_indices": pixel_only,
+        "pixel_only_pair_count": len(pixel_only),
+        "both_selected_pair_indices": both,
+        "both_selected_pair_count": len(both),
+        "neither_selected_pair_indices": neither,
+        "neither_selected_pair_count": len(neither),
+    }
+    if comparison != expected_comparison:
+        raise RealizedSecantCustodyError("chart level comparison does not rederive")
+
+    unsigned = {key: value for key, value in receipt.items() if key != "receipt_sha256"}
+    receipt_hash = canonical_sha256(unsigned)
+    if receipt.get("receipt_sha256") != receipt_hash:
+        raise RealizedSecantCustodyError("chart bidirectional receipt hash mismatch")
+    return receipt_hash
+
+
 __all__ = [
     "BIDIRECTIONAL_RECEIPT_SCHEMA",
+    "CHART_BIDIRECTIONAL_RECEIPT_SCHEMA",
     "RECEIPT_SCHEMA",
     "BidirectionalRungObservation",
     "BidirectionalWriteObservation",
+    "ChartBidirectionalRungObservation",
+    "ChartBranchCustody",
     "MinimalNormSolve",
     "PairSolveStatus",
     "QPStatus",
@@ -1119,6 +1493,7 @@ __all__ = [
     "WriteSecantObservation",
     "build_bidirectional_rung_observation",
     "build_bidirectional_trust_region_custody",
+    "build_chart_bidirectional_rung_observation",
     "build_pair_trust_region_custody",
     "build_trust_regions",
     "canonical_sha256",
@@ -1127,5 +1502,6 @@ __all__ = [
     "select_best_bidirectional_rungs",
     "solve_minimal_norm_inequalities",
     "validate_bidirectional_receipt",
+    "validate_chart_bidirectional_receipt",
     "validate_receipt",
 ]

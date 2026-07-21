@@ -7,6 +7,8 @@ import numpy as np
 import pytest
 
 from tac.boundary_math import warp_real_luma_frame0 as g1_warp
+from tac.boundary_math.analytic_lane_render_band import LaneBandRenderConfig
+from tac.boundary_math.lane_sdf_component import LaneLine
 from tac.optimization.predictor_upgrade_xi_chart import StaticCharts
 from tac.optimization.resize_full_kernel import FullResizeKernel
 from tools.measure_realization_g2_lattice import (
@@ -18,7 +20,10 @@ from tools.measure_realization_g2_lattice import (
     _effective_chart_direction_count,
     _exception_parseback,
     _head_patch_144,
+    _level_comparison,
+    _prepare_chart_branch,
     _rank4_chart_directions,
+    _select_chart_centerline_intercept,
     apply_contextual_rgb_exceptions,
     apply_dying_write_exceptions,
     audit_prefix,
@@ -375,6 +380,65 @@ def test_g2f_effective_direction_count_refuses_interior_zero_holes() -> None:
     assert _effective_chart_direction_count(zero_padded) == 3
     with pytest.raises(RealizationAuditError, match="contiguous rank prefix"):
         _effective_chart_direction_count(np.asarray([[1.0, 0.0, 1.0, 0.0]]))
+
+
+def test_g2f_chart_intercept_move_is_coherent_normalized_and_deterministic() -> None:
+    lines = [
+        LaneLine(
+            centerline_coeffs=np.asarray([0.0]),
+            halfwidth_coeffs=np.asarray([0.0, halfwidth]),
+            forward_range=(0.0, 10_000.0),
+        )
+        for halfwidth in (1.0, 3.0)
+    ]
+    config = LaneBandRenderConfig(dash_gate=False)
+    line_index, coefficient_index, gain, baseline_coverage = _select_chart_centerline_intercept(lines, config)
+    assert line_index == 1
+    assert coefficient_index == 0
+    assert gain > 0.0
+    base = np.full((384, 512, 3), 127, dtype=np.uint8)
+    palette = np.asarray(((100, 100, 100), (200, 180, 160)), dtype=np.uint8)
+    first = _prepare_chart_branch(
+        base1=base,
+        lines=lines,
+        config=config,
+        palette=palette,
+        line_index=line_index,
+        coefficient_gain_pixels_per_unit=gain,
+        signed_amplitude=2.0,
+        baseline_coverage=baseline_coverage,
+    )
+    second = _prepare_chart_branch(
+        base1=base,
+        lines=lines,
+        config=config,
+        palette=palette,
+        line_index=line_index,
+        coefficient_gain_pixels_per_unit=gain,
+        signed_amplitude=2.0,
+        baseline_coverage=baseline_coverage,
+    )
+    probe, delta, saturation, custody = first
+    assert np.array_equal(probe, second[0])
+    assert np.array_equal(delta, second[1])
+    assert custody == second[3]
+    assert saturation == 0
+    assert custody.coefficient_delta == pytest.approx(2.0 / gain)
+    assert custody.max_centerline_displacement_pixels == pytest.approx(2.0)
+    assert custody.changed_pixel_count > 1
+    assert custody.changed_rgb_value_count >= custody.changed_pixel_count
+    assert np.max(np.abs(delta)) > 0
+
+
+def test_g2f_level_comparison_preserves_both_levels_and_rescues() -> None:
+    comparison = _level_comparison(
+        [False, True, False, True],
+        [True, True, False, False],
+    )
+    assert comparison["chart_only_rescued_pair_indices"] == [0]
+    assert comparison["pixel_only_pair_indices"] == [3]
+    assert comparison["both_selected_pair_indices"] == [1]
+    assert comparison["neither_selected_pair_indices"] == [2]
 
 
 def test_g2e_head_patch_is_exact_144d_zero_padded_input() -> None:
