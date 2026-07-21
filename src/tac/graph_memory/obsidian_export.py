@@ -30,6 +30,8 @@ if TYPE_CHECKING:
 # (`links` IS the wikilink edge — already visible in Obsidian, so it is excluded.)
 _SYNTHESIZED_ETYPES: tuple[str, ...] = (
     "references", "supersedes", "sister", "produces", "consumes", "blocks", "tagged",
+    "indexed_by", "aliases", "memo_link", "equation_ref", "task_ref", "feed_ref",
+    "lane_ref", "catalog_ref",
 )
 
 _DEFAULT_OUT = REPO_ROOT / ".omx" / "state" / "graph_memory" / "synthesized_edges.md"
