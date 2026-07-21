@@ -80500,15 +80500,15 @@
       "id": "p0_costate_organ_factorization_grounded_ABC",
       "name": "P0 costate ORGAN v2 exact anchored factorization",
       "phase": 0.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": ".omx/research/costate_organ_v2_exact_anchor_20260721T015900Z.md"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/costate_organ_v2_exact_anchor_backtest_20260721.json"
         },
         "contest_cuda": {
           "status": false,
@@ -80547,5 +80547,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-21T02:02:16Z"
+  "updated_at": "2026-07-21T02:18:32Z"
 }

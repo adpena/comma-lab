@@ -121,7 +121,10 @@ outside this lane's additive edits.
 ## Pointer and git proof
 
 Pointer delta: **NONE**. No score claim.  
-Implementation commit: `PENDING_SERIALIZER_COMMIT` (to be replaced by the post-review proof commit).  
+Implementation commit: `703a061dbe` (canonical patch-manifest serializer; 15 exact files;
+post-commit SHA verification passed).  
+Lane maturity: **L2 / INTEGRATION** (`impl_complete` plus custodied real-receipt
+retrospective empirical backtest); contest CPU/CUDA, `_prod`, and promotion remain false.  
 MAIN landing review: **REQUIRED** — inspect branch diff, rerun tests, verify registry append and source hashes, then merge intentionally.
 
 ## Stores consulted
