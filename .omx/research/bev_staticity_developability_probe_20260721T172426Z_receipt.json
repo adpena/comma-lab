@@ -1,0 +1,79 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "main_landing_review_required": true,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "seed": 1234
+  },
+  "custody": {
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "n600_receipt_file_sha256": "8177eec78152209dcf8def9cb7a6c73c79dcd82a79e7622b397084fb5d0d9ea6",
+    "n600_receipt_internal_sha256": "74e7b5d46a2763a33fde225ee3bf4388944b8aca38b0805624b572345ae2bccd",
+    "n64_receipt_file_sha256": "184707e736c019c3b19ef5ff80ff8bb9254b41130b685113eaaf68573a7dc62e",
+    "n64_receipt_internal_sha256": "e833b28c8bd4ac2f8064958b9bcd9fcd837e6888780189703c91a9b7c4025186",
+    "solved_seed_sha256": "a21dde38128bed7ff62860ef005b994b74202e0bd00a37d1df8824ee325e856b",
+    "ssd_root": "/Volumes/VertigoDataTier/pact/evidence/bev_staticity_developability_20260721/canonical_v3"
+  },
+  "d1_d2_n600": {
+    "Lane": {
+      "diagnostic_only": true,
+      "event_count": 3,
+      "p50_ruling_residual_px": 46.550093115333205,
+      "residual_dynamics_fraction": 0.9557420080286769,
+      "static_fraction_at_1px": 0.04425799197132308,
+      "static_segment_count": 4
+    },
+    "Movable": {
+      "diagnostic_only": true,
+      "event_count": 39,
+      "p50_ruling_residual_px": 8.033607287490327,
+      "residual_dynamics_fraction": 0.7962154294032023,
+      "static_fraction_at_1px": 0.20378457059679767,
+      "static_segment_count": 28
+    },
+    "Road": {
+      "diagnostic_only": true,
+      "event_count": 14,
+      "p50_ruling_residual_px": 39.6465294330233,
+      "residual_dynamics_fraction": 0.9526464443887357,
+      "static_fraction_at_1px": 0.04735355561126431,
+      "static_segment_count": 8
+    }
+  },
+  "d3": {
+    "blocker": "NO_ROAD_OR_LANE_STRATUM_PASSED_HOOD_GATED_D1_D2",
+    "byte_estimate_emitted": false,
+    "future_gate": "g2g2-style through-real-homography decode plus frozen-scorer admission",
+    "matched_distortion_claim": false,
+    "status": "ESTIMATE_ONLY_NOT_RUN_NO_HOOD_GATED_D1_D2"
+  },
+  "hood_positive_control": {
+    "n600": {
+      "event_count": 32,
+      "p50_ruling_residual_px": 7.75,
+      "p90_ruling_residual_px": 79.0,
+      "residual_dynamics_fraction": 0.8565254535403789,
+      "static_fraction_at_1px": 0.1434745464596211,
+      "static_segment_count": 19,
+      "verdict": "FAIL"
+    },
+    "n64": {
+      "authority": "DIRECTIONAL_ONLY",
+      "p50_ruling_residual_px": 6.5,
+      "static_fraction_at_1px": 0.14222222222222222,
+      "verdict": "FAIL"
+    }
+  },
+  "routing": {
+    "P0_register": false,
+    "U1_U2": false,
+    "U5": false,
+    "dispatch_authority": false
+  },
+  "schema": "bev_staticity_developability_probe_summary.v1",
+  "verdict": "NO_VERDICT_C1_HOOD_CONTROL_FAILED",
+  "verdict_scope": "positive-control failure only; Road/Lane diagnostics are non-interpretable and do not falsify the representation family"
+}
