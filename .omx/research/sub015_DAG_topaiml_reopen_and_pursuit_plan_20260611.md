@@ -20797,3 +20797,7 @@ Supersedes only the routing/scope implications in the immediately preceding
   and receiver status never transfer across those objects.
 
 No dispatch. Pointer 0.1910828242 `[contest-CPU]` UNMOVED. MAIN merge-boundary review required.
+
+## FEED-verdict-merge-scope+equations-leg (2026-07-21T22:25Z, main)
+- **Scope declaration for the merged verdict FEED above** (per verdict-scope gate; the arm's own token lacked the inline declaration): the DOMINATED verdict and any FALSIFIED token in the realization_verdict FEED carry **verdict_scope: FORMULATION — the six supplied chart-symbol/polytope-member formulations only**; FAMILY explicitly REFUSED by the arm itself (U2 zero-bit bound leaves the direct-description grammar open); PARADIGM untouched. # VERDICT_SCOPE_OK:arm-refused-family-scope-explicitly-this-line-makes-it-inline
+- **Equations-leg decision:** the arm landed its canonical-equations NOTE (realization_verdict canonical_equations_note, merged) — registration remains # FORMALIZATION_PENDING:dominated-verdict-registers-no-law-per-NO-FAKE; the durable measured TRIPLE (216,207B non-receiver-closed description · 451,191B real archive · 216,223B cap) registers as an EmpiricalAnchor WITH the same named trigger as the per-stratum row: first non-null receiver-closed byte-verdict from the ddm builder (z0 byte-exact reproduction through A(z)) anchors all three numbers in one registration.
