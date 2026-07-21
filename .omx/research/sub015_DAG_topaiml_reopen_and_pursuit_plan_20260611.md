@@ -20859,3 +20859,17 @@ admissible only via same-initial-state exact integer/uint8 receiver secants beat
 control AND clearing lam_B=6.6586e-7 S/B — never a per-step loss schedule. No new canonical
 equation (H1/H3 governed by segnet_head_affine_gauge_quotient_v1 +
 frozen_scorer_fisher_curvature_margin_colocation_v1 + segnet_head_rank4_linear_flipdist_v1).
+
+## FEED-610-surface6-residual-stream (2026-07-21, operator identification)
+Operator: the autoencoder/cell-codec directive stack (#614) "is all related to our wrong levels
+findings from report too" — REGISTERED as #610 SURFACE 6: the wrong-levels binding principle
+applied to the long-tail RESIDUAL STREAM. Term map: factorized-scorer-coordinates (rank-4 head
+margins, A_seg (512,384), #580 range(A) projector, #519 gauge quotient) = meet-it-where-it-lives;
+AE-latent-dim = measured intrinsic dim ~8 / classical-first basis (KLT-in-range(A), Prony,
+Cartan charts) = carry-thing-itself-smallest-basis; shared-decoder amortization over per-stratum
+n600 mass (S2 table: Road 131,565 / Lane 8,162 / Undriv 39,679 / MyCar 790) = across-n600-temporal;
+range(A)+gauge pre-projection = #610's unapplied surface 5 (one measurement serves both — the arm
+emits the projected-seed byte row alongside residual rows). S3's corrected-xi custody blocker is
+INHERITED by chart-cell rows (NO_VERDICT-pending-custody, never measured vs the stale seed).
+Cell-level waterfill at organ-v2 lambda (#516) = the unique-lowest-sufficient-home rule at cell
+granularity. Consumer: autoencoder_describe_crosswalk arm (live) -> ddm builder z-grammar.
