@@ -1,7 +1,9 @@
 # Task #578 S4 archive composer — Codex findings
 
-UTC: 2026-07-21T12:50:20Z  
-Lane: `lane_s4_archive_composer_578_20260721`  
+UTC: 2026-07-21T12:50:20Z
+
+Lane: `lane_s4_archive_composer_578_20260721`
+
 Authority: research-only; MAIN landing review required; pointer `0.1910828242 [contest-CPU]` unchanged.
 
 ## Outcome first
