@@ -56,6 +56,10 @@ from tac.optimization.resize_full_kernel import (
     FULL_RESIZE_KERNEL_SCHEMA,
     FullResizeKernel,
 )
+from tac.optimization.uint8_lattice_feasibility import (
+    realize_factor2_uint8_scorer_plane,
+    verify_factor2_uint8_scorer_plane,
+)
 from tac.witness_dsl.lawref import (
     LADDER_DERIVED_AT_CONFIG,
     LADDER_MEASURED_ANCHOR,
@@ -2783,6 +2787,149 @@ def camera_uint8_identity_sha256(frame: np.ndarray) -> str:
     return hashlib.sha256(header + np.ascontiguousarray(value).tobytes(order="C")).hexdigest()
 
 
+PROJECTED_RGB_PLANE_CUSTODY_SCHEMA: Final = "predict_project_rgb_plane_custody.v0"
+PROJECTED_RGB_SOURCE_KINDS: Final = frozenset({"decoder_derived_from_seed", "encoder_supplied_counted"})
+
+
+def _array_identity_sha256(value: np.ndarray) -> str:
+    array = np.ascontiguousarray(value)
+    header = f"{array.dtype.str}:{','.join(map(str, array.shape))}:".encode("ascii")
+    return hashlib.sha256(header + array.tobytes(order="C")).hexdigest()
+
+
+def validate_projected_rgb_plane_custody(
+    value: Any,
+    *,
+    projected_rgb_plane: np.ndarray,
+    projected_cells: np.ndarray,
+) -> dict[str, Any]:
+    """Validate the exact handoff from cell projection to RGB realization.
+
+    A projected class-ID field is not an RGB scorer plane.  This contract keeps
+    that distinction structural: the caller must bind both arrays by hash and
+    say whether the RGB values are decoder-derived or counted encoder input.
+    """
+
+    expected = {
+        "schema",
+        "source_kind",
+        "generator_id",
+        "seed_sha256",
+        "projected_rgb_sha256",
+        "projected_cells_sha256",
+        "additional_seed_bytes",
+        "decoder_scorer_invocations",
+    }
+    if not isinstance(value, Mapping) or set(value) != expected:
+        raise PredictProjectReceiverError("projected RGB-plane custody fields mismatch")
+    if value["schema"] != PROJECTED_RGB_PLANE_CUSTODY_SCHEMA:
+        raise PredictProjectReceiverError("projected RGB-plane custody schema mismatch")
+    if value["source_kind"] not in PROJECTED_RGB_SOURCE_KINDS:
+        raise PredictProjectReceiverError("projected RGB-plane source kind is unsupported")
+    _require_identity(value["generator_id"], "projected RGB generator_id")
+    _require_sha256(value["seed_sha256"], "projected RGB seed_sha256")
+    _require_sha256(value["projected_rgb_sha256"], "projected RGB content hash")
+    _require_sha256(value["projected_cells_sha256"], "projected cell content hash")
+    additional_seed_bytes = value["additional_seed_bytes"]
+    if (
+        isinstance(additional_seed_bytes, bool)
+        or not isinstance(additional_seed_bytes, int)
+        or additional_seed_bytes < 0
+    ):
+        raise PredictProjectReceiverError("additional projected-RGB seed bytes must be exact and nonnegative")
+    if value["source_kind"] == "encoder_supplied_counted" and additional_seed_bytes == 0:
+        raise PredictProjectReceiverError("encoder-supplied projected RGB cannot claim zero added bytes")
+    decoder_scorer_invocations = value["decoder_scorer_invocations"]
+    if (
+        isinstance(decoder_scorer_invocations, bool)
+        or not isinstance(decoder_scorer_invocations, int)
+        or decoder_scorer_invocations != 0
+    ):
+        raise PredictProjectReceiverError("decoder projected-RGB construction cannot invoke a scorer")
+    if value["projected_rgb_sha256"] != _array_identity_sha256(projected_rgb_plane):
+        raise PredictProjectReceiverError("projected RGB-plane content hash mismatch")
+    if value["projected_cells_sha256"] != _array_identity_sha256(projected_cells):
+        raise PredictProjectReceiverError("projected cell-field content hash mismatch")
+    return dict(value)
+
+
+def projected_plane_array_sha256(value: np.ndarray) -> str:
+    """Public fixed-order hash for a projected cell or RGB plane."""
+
+    array = np.asarray(value)
+    if array.dtype.kind == "O" or array.ndim not in (2, 3) or array.size == 0:
+        raise PredictProjectReceiverError("projected-plane identity requires a nonempty 2D or 3D array")
+    return _array_identity_sha256(array)
+
+
+def realize_projected_rgb_plane_camera_uint8(
+    projected_rgb_plane: np.ndarray,
+    projected_cells: np.ndarray,
+    projection_custody: Mapping[str, Any],
+    *,
+    kernel: FullResizeKernel | None = None,
+) -> dict[str, Any]:
+    """Realize an already-derived RGB scorer plane on the exact uint8 lattice.
+
+    This is the composed G2 decoder stage.  It is intentionally unable to turn
+    class IDs into RGB: that missing map is a realization input, not something
+    the factor-2 integer solver may invent.  Hard SegNet/PoseNet verification is
+    an encode-side caller responsibility and is not claimed by this function.
+    """
+
+    full_kernel = FullResizeKernel.build() if kernel is None else kernel
+    rgb = np.asarray(projected_rgb_plane)
+    cells = np.asarray(projected_cells)
+    expected_rgb_shape = (full_kernel.scorer_h, full_kernel.scorer_w, 3)
+    expected_cell_shape = (full_kernel.scorer_h, full_kernel.scorer_w)
+    if rgb.dtype != np.uint8 or rgb.shape != expected_rgb_shape:
+        raise PredictProjectReceiverError(
+            f"projected RGB plane must be uint8 with shape {expected_rgb_shape}; "
+            "a 2D class-ID field is not a realizable RGB plane"
+        )
+    if cells.dtype != np.uint8 or cells.shape != expected_cell_shape:
+        raise PredictProjectReceiverError(f"projected cells must be uint8 with shape {expected_cell_shape}")
+    if np.any(cells >= CLASS_COUNT):
+        raise PredictProjectReceiverError("projected cells contain an out-of-range class ID")
+    custody = validate_projected_rgb_plane_custody(
+        projection_custody,
+        projected_rgb_plane=rgb,
+        projected_cells=cells,
+    )
+    frame = realize_factor2_uint8_scorer_plane(full_kernel.operator, rgb)
+    verification = verify_factor2_uint8_scorer_plane(full_kernel.operator, frame, rgb)
+    if not verification.certified_exact or not verification.numerator_exact:
+        raise PredictProjectReceiverError("projected RGB-plane lattice realization failed exact verification")
+    return {
+        "schema": "predict_project_rgb_lattice_realization.v0",
+        "frame": frame,
+        "camera_shape": list(frame.shape),
+        "camera_uint8_sha256": camera_uint8_identity_sha256(frame),
+        "projected_rgb_sha256": custody["projected_rgb_sha256"],
+        "projected_cells_sha256": custody["projected_cells_sha256"],
+        "projection_custody": custody,
+        "factor2_verification": {
+            "scorer_values": verification.scorer_values,
+            "owned_camera_values": verification.owned_camera_values,
+            "unowned_camera_values": verification.unowned_camera_values,
+            "numerator_equal_values": verification.numerator_equal_values,
+            "canonical_equal_values": verification.canonical_equal_values,
+            "denominator": verification.denominator,
+            "numerator_exact": verification.numerator_exact,
+            "certified_exact": verification.certified_exact,
+        },
+        "integer_parseback_exact": True,
+        "additional_seed_bytes": custody["additional_seed_bytes"],
+        "decoder_scorer_invocations": 0,
+        "hard_argmax_status": "OWED_ENCODE_SIDE_HARD_ORACLE",
+        "pose_status": "OWED_ENCODE_SIDE_HARD_ORACLE",
+        "full_kernel_callable": True,
+        "full_kernel_serialized": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+
 def realize_inverse_r_camera_uint8(
     source_numerators: np.ndarray,
     common_denominator: int,
@@ -2945,6 +3092,8 @@ __all__ = [
     "M1_RECEIPT_PATH",
     "M1_RECEIPT_SHA256",
     "M1_SCORE_DENOMINATOR",
+    "PROJECTED_RGB_PLANE_CUSTODY_SCHEMA",
+    "PROJECTED_RGB_SOURCE_KINDS",
     "REALIZATION_BREAKEVEN_EQUATION_ID",
     "S3_TRAINER_REUSE",
     "SEGNET_CENTERED_HEAD_RANK",
@@ -2971,8 +3120,10 @@ __all__ = [
     "project_box",
     "project_halfspace",
     "project_linear_intersection",
+    "projected_plane_array_sha256",
     "quantize_uint8_feasible",
     "realize_inverse_r_camera_uint8",
+    "realize_projected_rgb_plane_camera_uint8",
     "receiver_composition_metadata",
     "stratify_predictor_quality",
     "trajectory_at",
@@ -2987,5 +3138,6 @@ __all__ = [
     "validate_m1_anchor_binding",
     "validate_per_flip_sellback_evidence",
     "validate_pose_tube_knee_evidence",
+    "validate_projected_rgb_plane_custody",
     "verify_pose_tightening_choice",
 ]

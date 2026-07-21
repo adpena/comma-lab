@@ -1,0 +1,107 @@
+{
+  "schema": "realization_g2_lattice_durable_receipt.v1",
+  "task_id": "578",
+  "lane_id": "lane_realization_g2_lattice_578_20260721",
+  "axis": "[macOS-CPU advisory]",
+  "verdict": "COMPOSED_RGB_LATTICE_BUILT_SEED_TO_RGB_PROJECTION_PREMISE_FALSIFIED",
+  "verdict_scope": "the current seed_compose_b2 class-ID projection cannot enter the RGB factor-2 lattice; this is a formulation handoff gap, not a realization-family negative",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "implementation": {
+    "callable": "tac.optimization.predict_project_receiver.realize_projected_rgb_plane_camera_uint8",
+    "status": "BUILT_STRICT_RGB_INPUT_CONTRACT",
+    "structural_fixture_factor2_exact": true,
+    "real_seed_rgb_input_status": "ABSENT",
+    "real_n600_uint8_factor2_exact": null,
+    "reason": "the seed and preserved stages contain HxW uint8 class IDs, not an HxWx3 uint8 projected RGB plane"
+  },
+  "implementation_sources": {
+    "src/tac/optimization/predict_project_receiver.py": "9d1d2fc00a7d3e96408227be16961e210e4c2bd31984a117654867136accd036",
+    "src/tac/tests/test_predict_project_receiver.py": "a70bf1b909204baf61a0c1e1e631d665872c2e8f98fc01631c1af3d07f62259e",
+    "tools/measure_realization_g2_lattice.py": "4f72ceed0a777481bea980c0a1bd30c5c5ec20c58ddfd10771f29befbdad6487"
+  },
+  "measured_prefixes": [
+    {
+      "n": 16,
+      "label_only_pairs": 16,
+      "rgb_projection_pairs": 0,
+      "lattice_attempted_pairs": 0,
+      "declared_constraints": 97,
+      "class_counts": {"0": 42, "1": 55},
+      "stratum_counts": {"boundary_codim1": 97},
+      "uint8_factor2_exact_fraction": null,
+      "status": "BLOCKED_INPUT_DOMAIN_LABEL_FIELD_IS_NOT_RGB_PLANE",
+      "checkpoint_sha256": "c81e8e9d031ac055d78ef837d28c0a965fb06ebfebd75d5ad1a68d999c440e65"
+    },
+    {
+      "n": 64,
+      "label_only_pairs": 64,
+      "rgb_projection_pairs": 0,
+      "lattice_attempted_pairs": 0,
+      "declared_constraints": 337,
+      "class_counts": {"0": 151, "1": 186},
+      "stratum_counts": {"boundary_codim1": 337},
+      "uint8_factor2_exact_fraction": null,
+      "status": "BLOCKED_INPUT_DOMAIN_LABEL_FIELD_IS_NOT_RGB_PLANE",
+      "checkpoint_sha256": "368ff2c6413d1f03a8d6b33a5c0ff9357a2e984bee6a59c9b340d2f4e2b8c048"
+    },
+    {
+      "n": 600,
+      "label_only_pairs": 600,
+      "rgb_projection_pairs": 0,
+      "lattice_attempted_pairs": 0,
+      "declared_constraints": 3188,
+      "class_counts": {"0": 1379, "1": 1807, "2": 1, "4": 1},
+      "stratum_counts": {"boundary_codim1": 3183, "critical_event": 3, "movable_track": 2},
+      "uint8_factor2_exact_fraction": null,
+      "status": "BLOCKED_INPUT_DOMAIN_LABEL_FIELD_IS_NOT_RGB_PLANE",
+      "checkpoint_sha256": "0b601d857a9c83cb34e917fd36a456fc794e51ae3c570718b8e1e999b225ab96"
+    }
+  ],
+  "plane_cache_replay_n600": {
+    "authority": "MEASURED_EXISTING_LABEL_AND_TUBE_CACHE_REPLAY_NOT_REALIZED_RGB",
+    "cell_exact_pairs": 600,
+    "pose_within_tube_pairs": 600,
+    "mean_d_seg_description": 0.3434977213541667,
+    "mean_d_pose_tube_debt": 0.0,
+    "transfer_to_realized_frames_forbidden": true
+  },
+  "cost": {
+    "added_decode_seconds_per_pair": null,
+    "additional_seed_bytes": null,
+    "zero_byte_target_met": false,
+    "status": "UNMEASURED_NO_COMPOSED_RGB_FRAMES"
+  },
+  "pose": {
+    "realized_frame_d_pose": null,
+    "status": "BLOCKED_NO_COMPOSED_REALIZED_FRAMES"
+  },
+  "equation": {
+    "registered": false,
+    "blocker": "D1_REAL_N600_COMPOSED_RGB_LATTICE_ANCHOR_ABSENT"
+  },
+  "input_custody": {
+    "seed_path": "/Volumes/VertigoDataTier/pact/evidence/seed_compose_20260721/seeds/seed_compose_b2_loose.ppcs",
+    "seed_bytes": 884872,
+    "seed_sha256": "a21dde38128bed7ff62860ef005b994b74202e0bd00a37d1df8824ee325e856b",
+    "stage_root": "/Volumes/VertigoDataTier/pact/evidence/seed_compose_20260721/hard_oracle_n600/stages",
+    "stage_count": 600,
+    "stage_first_sha256": "d771a821df33c193df0cfc0dcdce12b249cc6ce14e40c5f2336d2ee9bb0e1c05",
+    "stage_last_sha256": "facb1a9279b19f1eddc1a5a00a58fa639865fbcf2700e9f4ce6e278b1bcd440c"
+  },
+  "external_measurement_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/realization_g2_20260721/receipt.json",
+    "sha256": "7e3723280833963a7fb9a1449ecacfaaf1746bcb497320af8e4687f3118c4496"
+  },
+  "m2_existence_comparator": {
+    "receipt": ".omx/research/m2_live_target_selection_20260720T1548Z.json",
+    "receipt_sha256": "513d2fe54166b8b82904e671bc8beedca11e0b98ab68f09e860507ef82b2e574",
+    "archive_bytes": 1717172741,
+    "d_seg": 0.0,
+    "d_pose": 0.0,
+    "interpretation": "exact realization exists when source RGB targets are counted; M2 does not supply the missing zero-byte seed-to-RGB map"
+  }
+}

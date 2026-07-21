@@ -30,6 +30,7 @@ from tac.optimization.predict_project_receiver import (
     M1_RECEIPT_PATH,
     M1_RECEIPT_SHA256,
     M1_SCORE_DENOMINATOR,
+    PROJECTED_RGB_PLANE_CUSTODY_SCHEMA,
     S3_TRAINER_REUSE,
     SEGNET_CENTERED_HEAD_RANK,
     SEGNET_HEAD_RANK_EQUATION_ID,
@@ -45,8 +46,10 @@ from tac.optimization.predict_project_receiver import (
     plane_cache_key,
     predict_cell_field,
     project_linear_intersection,
+    projected_plane_array_sha256,
     quantize_uint8_feasible,
     realize_inverse_r_camera_uint8,
+    realize_projected_rgb_plane_camera_uint8,
     receiver_composition_metadata,
     stratify_predictor_quality,
     validate_action_level_ladder_evidence,
@@ -207,6 +210,71 @@ def test_inverse_r_realization_is_camera_uint8_integer_exact_and_nonserialized()
     assert result["full_kernel_callable"] is True
     assert result["full_kernel_serialized"] is False
     assert result["camera_uint8_sha256"] == camera_uint8_identity_sha256(result["frame"])
+
+
+def test_projected_rgb_lattice_stage_is_exact_zero_seed_and_scorer_free():
+    kernel = FullResizeKernel.build(camera_h=4, camera_w=6, scorer_h=2, scorer_w=3)
+    cells = np.array([[0, 1, 2], [3, 4, 0]], dtype=np.uint8)
+    rgb = np.array(
+        [
+            [[11, 12, 13], [21, 22, 23], [31, 32, 33]],
+            [[41, 42, 43], [51, 52, 53], [61, 62, 63]],
+        ],
+        dtype=np.uint8,
+    )
+    custody = {
+        "schema": PROJECTED_RGB_PLANE_CUSTODY_SCHEMA,
+        "source_kind": "decoder_derived_from_seed",
+        "generator_id": "fixture_generic_rgb_projection.v1",
+        "seed_sha256": hashlib.sha256(b"seed").hexdigest(),
+        "projected_rgb_sha256": projected_plane_array_sha256(rgb),
+        "projected_cells_sha256": projected_plane_array_sha256(cells),
+        "additional_seed_bytes": 0,
+        "decoder_scorer_invocations": 0,
+    }
+    result = realize_projected_rgb_plane_camera_uint8(rgb, cells, custody, kernel=kernel)
+    assert result["integer_parseback_exact"] is True
+    assert result["factor2_verification"]["certified_exact"] is True
+    assert result["additional_seed_bytes"] == 0
+    assert result["decoder_scorer_invocations"] == 0
+    assert np.array_equal(kernel.operator.apply(result["frame"]), rgb.astype(np.float64))
+
+
+def test_projected_rgb_lattice_stage_refuses_label_plane_and_uncounted_encoder_input():
+    kernel = FullResizeKernel.build(camera_h=4, camera_w=6, scorer_h=2, scorer_w=3)
+    cells = np.array([[0, 1, 2], [3, 4, 0]], dtype=np.uint8)
+    custody = {
+        "schema": PROJECTED_RGB_PLANE_CUSTODY_SCHEMA,
+        "source_kind": "decoder_derived_from_seed",
+        "generator_id": "fixture_generic_rgb_projection.v1",
+        "seed_sha256": hashlib.sha256(b"seed").hexdigest(),
+        "projected_rgb_sha256": projected_plane_array_sha256(cells),
+        "projected_cells_sha256": projected_plane_array_sha256(cells),
+        "additional_seed_bytes": 0,
+        "decoder_scorer_invocations": 0,
+    }
+    with pytest.raises(PredictProjectReceiverError, match="2D class-ID field"):
+        realize_projected_rgb_plane_camera_uint8(cells, cells, custody, kernel=kernel)
+
+    rgb = np.repeat(cells[:, :, None], 3, axis=2)
+    custody.update(
+        {
+            "source_kind": "encoder_supplied_counted",
+            "projected_rgb_sha256": projected_plane_array_sha256(rgb),
+        }
+    )
+    with pytest.raises(PredictProjectReceiverError, match="cannot claim zero"):
+        realize_projected_rgb_plane_camera_uint8(rgb, cells, custody, kernel=kernel)
+
+    custody.update(
+        {
+            "source_kind": "decoder_derived_from_seed",
+            "additional_seed_bytes": 0,
+            "decoder_scorer_invocations": 0.0,
+        }
+    )
+    with pytest.raises(PredictProjectReceiverError, match="cannot invoke a scorer"):
+        realize_projected_rgb_plane_camera_uint8(rgb, cells, custody, kernel=kernel)
 
 
 def test_plane_cache_key_is_deterministic_and_custody_sensitive():
