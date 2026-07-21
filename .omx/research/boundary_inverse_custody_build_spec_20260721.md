@@ -1,7 +1,7 @@
 # Boundary inverse custody: implementation specification
 
-Date: 2026-07-21  
-Lane: `boundary_inverse_custody_20260721`  
+Date: 2026-07-21
+Lane: `boundary_inverse_custody_20260721`
 Authority: delegated local build and `[macOS-CPU advisory]` mask-fidelity measure only
 
 ## Objective
