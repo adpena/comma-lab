@@ -1,0 +1,137 @@
+{
+  "edge_counts_by_family": {
+    "aliases": 9991,
+    "catalog_ref": 32812,
+    "equation_ref": 2521,
+    "feed_ref": 2199,
+    "indexed_by": 303,
+    "lane_ref": 10103,
+    "memo_link": 8,
+    "task_ref": 54010
+  },
+  "false_positive_distinct": 1,
+  "false_positive_filtered": 2,
+  "files_scanned": 8009,
+  "graph_edges": 144732,
+  "graph_nodes": 33050,
+  "memory_notes": 1976,
+  "raw_wikilinks": 2140,
+  "resolution_pct_semantic": 71.60898,
+  "resolved_by_alias": 381,
+  "resolved_direct": 1150,
+  "resolved_total": 1531,
+  "schema": "graph_memory_link_hygiene.v1",
+  "semantic_wikilinks": 2138,
+  "top_filtered_false_positives": [
+    [
+      "1.0, 0.0, -1.0, 0.5",
+      2
+    ]
+  ],
+  "top_truly_unwritten": [
+    [
+      "time-traveler-l5-staircase-steps-2-3",
+      13
+    ],
+    [
+      "z8-hierarchical-predictive-coding-binding-first-active-build-target-yousfi-grounded",
+      13
+    ],
+    [
+      "c1-world-model-foveation-campaign-l1-scaffold",
+      12
+    ],
+    [
+      "zen-floor-field-medal-grade-council",
+      12
+    ],
+    [
+      "design-tension-ship-both-interpretations",
+      10
+    ],
+    [
+      "canonical-ev-metric-trichotomy",
+      8
+    ],
+    [
+      "feedback-not-pessimistic-first-results-adversarial-deepmath-oss-against-negatives",
+      8
+    ],
+    [
+      "project-witness-dsl-and-dag-dsl-duality",
+      8
+    ],
+    [
+      "assumptions-challenge-audit-break-out-local-minima",
+      7
+    ],
+    [
+      "grand-council-c1-world-model-review-landed",
+      7
+    ],
+    [
+      "c1-real-video-probe-rerun",
+      7
+    ],
+    [
+      "L85",
+      7
+    ],
+    [
+      "L10",
+      6
+    ],
+    [
+      "L83",
+      6
+    ],
+    [
+      "cathedral-autopilot-is-nervous-system-meta-consumer",
+      6
+    ],
+    [
+      "c1-world-model-revision-SUPERSEDED-by-council-unfair-probe-finding",
+      6
+    ],
+    [
+      "c1-architecture-revision-per-real-video-probe-verdict",
+      6
+    ],
+    [
+      "feedback-assumptions-challenge-audit-break-out-local-minima",
+      6
+    ],
+    [
+      "z8-phase-2-build-tracking-in-source-not-tasklist-not-memos",
+      6
+    ],
+    [
+      "atw-v2-reactivation-symposium-2026-05-18",
+      6
+    ],
+    [
+      "L1",
+      6
+    ],
+    [
+      "projection-unification-and-eight-lenses",
+      6
+    ],
+    [
+      "velocity_driven_orphaning_the_deepest_signal_loss_meta_bug",
+      5
+    ],
+    [
+      "name",
+      5
+    ],
+    [
+      "catalog-314-absorption-pattern",
+      5
+    ]
+  ],
+  "truly_unwritten": 607,
+  "truly_unwritten_distinct": 290,
+  "unreachable_orphan_pct": 77.226721,
+  "unreachable_orphans": 1526
+}
