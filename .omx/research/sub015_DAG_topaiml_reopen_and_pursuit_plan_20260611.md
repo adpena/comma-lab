@@ -20447,3 +20447,22 @@ curriculum change). DAG = this FEED + arm FEED in-lineage. MEMORY = body amendme
 [[realization_is_quantization_gated_minimal_writes_die_at_uint8_20260720]] same turn (the
 coincide-after-quantization extension; hook line already indexed). Pointer 0.19108 [contest-CPU]
 UNMOVED (means).
+
+## FEED-M1-BAND-MANIFEST-20260720G (merge f6d4817352 legs record)
+
+**MEASURED (n600, BandArtifact.load-verified, sha 2fd10841):** quantization gate applied at band
+DESIGN time — **11,453 realizable / 26,624 sub-uint8-step DEAD pixels (30.1% realizable)**;
+Road-Lane 14,538 candidates → 1,904 selected; all 600 VJP sidecars rehashed; dry-materialized C2
+fire config VALIDATES but stays BLOCKED (arm correctly refused GO-interpretation). Remaining M1
+fire blocker (exactly one): #502 curvelet carrier receiver-bound in r1b4 but ABSENT from the C2
+banded-trainer binding → m1_curvelet_binding_closer arm LIVE. verdict_scope: formulation — band
+realizability at scorer-u8 quantization on this geometry (not a band-family or vehicle verdict).
+
+**Triality legs:** equations = FORMALIZATION_PENDING — the band-realizability law (realizable
+fraction as a function of quantization step through resize dilution) registers at the M1 launch
+boundary when the training run supplies its second anchor (single-anchor registration would be
+premature; the arm encoded the empirical result in the trainer's planning guard meanwhile —
+consumer named: integer_plane_banded_trainer). DSL = N/A-with-rationale (producer tool + manifest
+artifact; the launch/lever change arrives with the curvelet binding, which WILL carry a DSL leg).
+DAG = this FEED + arm FEED in-branch. MEMORY = quantization-gate law body amendment same turn
+(design-time application). Pointer 0.19108 [contest-CPU] UNMOVED (means).
