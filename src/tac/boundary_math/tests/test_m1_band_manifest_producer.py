@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -166,3 +167,36 @@ def test_materializer_emits_valid_ready_config_with_bound_curvelet_trainer_argv(
     assert receipt["valid"] is True
     assert receipt["readiness"] == "READY"
     assert receipt["fire_executed"] is False
+
+
+def test_check_calls_costate_emitter_but_current_dry_schema_stays_fail_closed(monkeypatch, tmp_path: Path) -> None:
+    manifest = tmp_path / "band_manifest.json"
+    manifest.write_text("{}\n")
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text(
+        json.dumps(
+            {
+                "schema": producer.SCHEMA,
+                "score_claim": False,
+                "band_manifest": {"path": str(manifest), "sha256": "a" * 64},
+            }
+        )
+        + "\n"
+    )
+    monkeypatch.setattr(producer, "REPO", tmp_path)
+    monkeypatch.setattr(
+        producer.BandArtifact,
+        "load",
+        lambda _path: SimpleNamespace(manifest_sha256="a" * 64),
+    )
+    calls = []
+
+    def fake_emit(document, **kwargs):
+        calls.append((document, kwargs))
+        return {"status": "NOT_EMITTED_REALIZED_ROW_ABSENT"}
+
+    monkeypatch.setattr(producer, "emit_m1_byte_close_row", fake_emit)
+    result = producer.check(receipt)
+    assert result["costate_receipt_emission"]["status"] == "NOT_EMITTED_REALIZED_ROW_ABSENT"
+    assert len(calls) == 1
+    assert calls[0][1]["source_receipt"] == "receipt.json"
