@@ -95,3 +95,19 @@ Plus (same session): custom NATIVE GRAMMAR (nonterminals = doctrine objects, pro
 decoder procedures, coder contexts grammar-keyed, derived from the algebra not induced) +
 SURGICAL TELEMETRY (per-rung attribution that doubles as the edit surface: see the flip, trace
 the cause, cut at the cheapest ladder level, measure exact consequence).
+
+## Addendum 3 (operator, 2026-07-21): reuse-not-rebuild, full scope
+"It should reuse or extend or enhance or vendor or refactor whatever existing code we already
+have" + "Both halves, both the system of equations and the task space level set, and also all
+the inverse solving and training tools." The composed v10 build is a COMPOSITION of the existing
+inventory; new code only where no surface exists (anti-duplicate-SoT #533). Four inventories:
+(1) EQUATIONS half — tac.canonical_equations registry+evaluators via the #351 LawRef compiler
+(every constant by ID; new laws register as evaluators, never parallel constants); (2) WITNESS
+half — the task-space level-set stack is the description-language half, not superseded:
+witness_dsl (all training config compiles through it), levelset trainer + S3 banded machinery
+as the tail-band trainer, boundary_math components, margin/Fisher tools + Metal kernels,
+tac.lie; (3) INVERSE-SOLVE tools — #547/#549/#580/support-fill/null-compiler/preimage/#391
+adjoint ARE the project stage; (4) TRAINING tools — governed launcher + autoconfig +
+memory-preflight + resume registry + costate SENSE (P0 resumability inherited for free).
+Landing requirement on #597: a REUSE MANIFEST classifying every component
+{reused|extended|enhanced|vendored|refactored|NEW-with-failed-search-justification}.
