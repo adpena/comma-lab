@@ -1,0 +1,114 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "main_review_required": true,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "promotion_eligible": false,
+    "receiver_closed": false,
+    "research_only": true,
+    "score_claim": false,
+    "verdict": "BOUNDARY_DELTA_BAR_MISSED",
+    "verdict_scope": "PBD1 predictor-known 1-2px compatible-contour events on the exact R1 mask inventory only"
+  },
+  "components": [
+    {
+      "component": "round-1 predictor, charts, and mask measurement helpers",
+      "disposition": "reused-as-is-and-recomputed-on-real-n64-n600-masks",
+      "path": "src/tac/optimization/predictor_upgrade_xi_chart.py",
+      "sha256": "a429f0ca855d1d7abb6481ba8f7298f07504987fd8d6c3a063bdc692ab34cdae"
+    },
+    {
+      "component": "Task 578 measurement CLI",
+      "disposition": "extended-additively-with-r2-n64-r2-n600-r2-final",
+      "path": "tools/measure_predictor_upgrade_xi_chart.py",
+      "sha256": "c743b577e54c7ca65c18b5038d84c2994a1e01edd538c3283a61f46c7d99a602"
+    },
+    {
+      "component": "Task 557 context arithmetic stack",
+      "disposition": "reused-as-is-for-adaptive-PBD1-and-PBS1-streams",
+      "path": "src/tac/lossless/range_coder.py",
+      "sha256": "f93270db5e2da4e478552b7701c6be53d1115e9ead3498a0f0b4fb37931f3a91"
+    },
+    {
+      "component": "Task 307 digital-straightness contour prior",
+      "disposition": "recalled-and-instantiated-as-straightest-first-digital-traversal",
+      "source": ".omx/research/digital_line_supercover_analysis_20260716.md"
+    },
+    {
+      "component": "Task 595 per-stratum prices and Lane packet",
+      "disposition": "reused-with-existing-canonical-strata-and-external-counted-LBND2-custody",
+      "packet_path": "/Volumes/VertigoDataTier/pact/evidence/boundary_inverse_20260721/run_20260721T052100Z_threshold0p5/coherent_slot_none_dash.lbnd2",
+      "packet_sha256": "d2b2a62eeb6ebe45cbf908dafa7e081eabddaca0f424faac970b41eea650d810"
+    },
+    {
+      "component": "s2 partition seed interpreter",
+      "disposition": "reused-through-canonical-round1-strata-no-duplicate-interpreter",
+      "path": "src/tac/optimization/s2_partition_seed.py",
+      "sha256": "ed8ff4be2f578ea27513cfe20475511e63cdf4cfe43e2fbfa939bed5087af713"
+    },
+    {
+      "component": "realization breakeven equation",
+      "disposition": "reused-by-equation-id-for-D4-KKT-price",
+      "equation_id": "realization_breakeven_bytes_v1",
+      "path": "src/tac/canonical_equations/day_consolidation_laws_20260720.py",
+      "sha256": "89c692a23a642146efb4e5e9809411e7197670e35967ac3fbb434a2dea2a1ee5"
+    },
+    {
+      "component": "round-2 miss decomposition, coders, refinements, and composer",
+      "disposition": "new-with-justification",
+      "justification": "No existing surface produced exclusive real-mask D1 structure, exact PBD1/PBS1 byte measurements, finite n64-fit refinements, and a composed KKT curve.",
+      "path": "src/tac/optimization/predictor_r2_missdelta.py",
+      "sha256": "f22c7911a71be152b9ee8313b3224b3f5eece567c17d96e4fa798093ad0143f1"
+    },
+    {
+      "component": "PROJECT receiver and realization sibling surface",
+      "disposition": "sibling-owned-untouched-not-receiver-closed"
+    }
+  ],
+  "measured_rows": {
+    "D1_n600": {
+      "boundary_delta_1_2px": 1772327,
+      "coherent_blob": 1339907,
+      "miss_count": 3122086,
+      "scattered_incoherent": 9852
+    },
+    "D2_PBD1_n600": {
+      "bar_bits_per_miss": 0.365,
+      "bar_met": false,
+      "container_bits_per_miss": 2.9500876531249594,
+      "container_bytes": 653565,
+      "decode_verified_exact": true,
+      "event_count": 1772327,
+      "reencode_verified_byte_identical": true,
+      "sha256": "d28d8d5cd07edc792a3a3ccfdbe9f9dc8c0e92fcf8711f7507ebf9525b007d93"
+    },
+    "D3": {
+      "lane_admitted": false,
+      "lane_n600_net_miss_reduction": 148,
+      "road_admitted_by_global_dseg_gate": true,
+      "road_lane_correct_cell_spill": -56905,
+      "road_n600_net_miss_reduction": 87134
+    },
+    "D4_knee": {
+      "description_d_seg": 0.024453667534722223,
+      "implied_base_total_bytes": 169855,
+      "remaining_misses": 2884672,
+      "round1_declared_total_bytes": 358576,
+      "variable_bytes": 96078
+    }
+  },
+  "measurement_receipt": {
+    "path": ".omx/research/predictor_r2_missdelta_measurements_20260721.json",
+    "sha256": "681c4ce7b29844553d264017152785802bf17d59cc31454954ccf9f13e051e27",
+    "work_dir": "/Volumes/VertigoDataTier/pact/evidence/predictor_r2_20260721/canonical_r2_20260721"
+  },
+  "pair_locality": {
+    "decoder_model": "600 independent miss-mask frames conditioned only on each predictor field",
+    "full_target_sequence_embedded": false
+  },
+  "schema": "predictor_r2_missdelta_reuse_manifest.v1",
+  "stage_configs": {
+    "n64": "8dc985e9fe8408d49f763837ea5a54709fe49e0039e687fb16b2f55341a5d8e0",
+    "n600": "9946ce10d0c19910c75d8b12cc74cb7643c026046d55d8b78cd28780b75f374f"
+  }
+}
