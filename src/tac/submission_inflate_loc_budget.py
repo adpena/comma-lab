@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: MIT
-"""Submission ``inflate.py`` source-size audit helpers.
+"""Historical compatibility surface for the retired ``inflate.py`` LOC audit.
 
-The contest score charges archive bytes, not ``inflate.py`` bytes. This audit is
-therefore a maintainability and review-surface guard, not score evidence. It
-flags large submission runtimes so compression work is pointed at reusable
-helpers, byte-closed archive payloads, and contest-relevant packers instead of
-minifying Python source that the scorer never charges.
+The operator permanently removed the former 100-line review target and
+200-line hard limit on 2026-07-21. ``inflate.py`` is a free, unsized interpreter;
+only the contest decode-time budget binds. The historical constants, finding
+type, and helper symbols remain importable so old callers do not break, but the
+scanner is a permanent no-op. Rule-118 anti-fake protection remains in Catalog
+#417 receiver-consumption bijection and the payload-cleanliness audit bundle.
 """
 
 from __future__ import annotations
@@ -14,8 +15,8 @@ import ast
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_REVIEW_TARGET_INFLATE_PY_LINES = 100
-DEFAULT_MAX_INFLATE_PY_LINES = 200
+DEFAULT_REVIEW_TARGET_INFLATE_PY_LINES = 100  # historical; never enforced
+DEFAULT_MAX_INFLATE_PY_LINES = 200  # historical; never enforced
 INFLATE_PY_LOC_DEFAULT_BUDGET_WAIVER = "INFLATE_LOC_DEFAULT_BUDGET_WAIVED:"
 INFLATE_PY_LOC_HARD_WAIVER = "INFLATE_LOC_WAIVER:"
 INFLATE_PY_LOC_BUDGET_WAIVER = "INFLATE_PY_LOC_BUDGET_OK:"  # legacy Catalog #328 token
@@ -24,7 +25,7 @@ _WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
 
 @dataclass(frozen=True)
 class InflatePyLocBudgetFinding:
-    """One ``inflate.py`` whose physical line count exceeds the budget."""
+    """Historical finding shape retained for import/schema compatibility."""
 
     rel_path: str
     line_count: int
@@ -37,23 +38,10 @@ class InflatePyLocBudgetFinding:
     shared_runtime_helper_adopted: bool = False
 
     def format(self) -> str:
-        if self.budget_tier == "default_budget":
-            waiver_text = f"`# {INFLATE_PY_LOC_DEFAULT_BUDGET_WAIVER}<rationale>`"
-            limit_text = f"default review target={self.review_target_lines}"
-        else:
-            waiver_text = (
-                f"`# {INFLATE_PY_LOC_HARD_WAIVER}<rationale>` or legacy "
-                f"`# {INFLATE_PY_LOC_BUDGET_WAIVER}<rationale>`"
-            )
-            limit_text = f"max_lines={self.max_lines}"
         return (
-            f"{self.rel_path}: {self.line_count} physical lines exceeds "
-            f"{limit_text}. This is not score evidence because "
-            "the contest rate term charges archive.zip bytes, not inflate.py "
-            "source bytes. Extract reusable helpers or add "
-            f"{waiver_text} in the first 40 lines for an intentional "
-            "source-faithful/runtime-closure "
-            "exception."
+            f"{self.rel_path}: historical LOC telemetry={self.line_count}; "
+            "restriction retired 2026-07-21 and this record has no admission "
+            "or waiver authority"
         )
 
 
@@ -154,12 +142,12 @@ def _uses_shared_runtime_helper_line_scan(text: str, modules: set[str]) -> bool:
 
 
 def iter_submission_inflate_py_files(repo_root: Path | str) -> list[Path]:
-    """Return tracked-submission ``inflate.py`` surfaces under ``submissions/``.
+    """Return tracked ``inflate.py`` surfaces for informational inventory.
 
     Public PR intakes and generated experiment results are intentionally outside
     this helper. They are forensics or rebuildable custody, while the direct
-    ``submissions/<lane>/inflate.py`` tree is the operator-facing runtime surface
-    that preflight should keep small enough to review.
+    ``submissions/<lane>/inflate.py`` tree remains useful for receiver and
+    payload-cleanliness audits; source length is unrestricted.
     """
 
     root = Path(repo_root)
@@ -182,58 +170,12 @@ def scan_submission_inflate_py_loc_budget(
     max_lines: int = DEFAULT_MAX_INFLATE_PY_LINES,
     review_target_lines: int = DEFAULT_REVIEW_TARGET_INFLATE_PY_LINES,
 ) -> list[InflatePyLocBudgetFinding]:
-    """Find submission ``inflate.py`` files above ``max_lines``.
+    """Return no findings for every source size.
 
-    The count is physical source lines, matching the operator-facing review
-    burden and the existing symposium audit numbers. Syntax-invalid files are
-    still countable; unreadable files are skipped so this audit does not become
-    a filesystem-permission gate.
+    Permanent operator decision, 2026-07-21: the line-count restriction is
+    void. Parameters remain accepted only for source compatibility. Anti-fake
+    enforcement lives in #417 and payload-cleanliness, not source length.
     """
 
-    root = Path(repo_root).resolve()
-    review_target = min(review_target_lines, max_lines)
-    findings: list[InflatePyLocBudgetFinding] = []
-    for path in iter_submission_inflate_py_files(root):
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            continue
-        line_count = _physical_line_count(text)
-        if line_count <= review_target:
-            continue
-        over_hard_budget = line_count > max_lines
-        if over_hard_budget:
-            if _has_valid_loc_budget_waiver(
-                text,
-                tokens=(INFLATE_PY_LOC_HARD_WAIVER, INFLATE_PY_LOC_BUDGET_WAIVER),
-            ):
-                continue
-            budget_tier = "hard_budget"
-            severity = "violation"
-        else:
-            if _has_valid_loc_budget_waiver(
-                text,
-                tokens=(
-                    INFLATE_PY_LOC_DEFAULT_BUDGET_WAIVER,
-                    INFLATE_PY_LOC_HARD_WAIVER,
-                    INFLATE_PY_LOC_BUDGET_WAIVER,
-                ),
-            ):
-                continue
-            budget_tier = "default_budget"
-            severity = "warn"
-        rel_path = str(path.relative_to(root))
-        findings.append(
-            InflatePyLocBudgetFinding(
-                rel_path=rel_path,
-                line_count=line_count,
-                max_lines=max_lines,
-                review_target_lines=review_target,
-                budget_tier=budget_tier,
-                severity=severity,
-                size_driver_categories=_classify_size_driver(text),
-                technique_applicability=_classify_technique_applicability(text),
-                shared_runtime_helper_adopted=_uses_shared_runtime_helper(text),
-            )
-        )
-    return findings
+    _ = (repo_root, max_lines, review_target_lines)
+    return []

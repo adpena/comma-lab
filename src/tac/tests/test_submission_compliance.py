@@ -75,7 +75,10 @@ def _make_minimal_bundle_result(
     inflate_sh = submission_dir / "inflate.sh"
     inflate_sh.write_text("#!/bin/bash\nset -euo pipefail\necho ok\n")
     inflate_py = submission_dir / "inflate.py"
-    inflate_py.write_text("# minimal inflate stub\n")
+    inflate_py.write_text(
+        "\n".join(f"# unrestricted interpreter line {index}" for index in range(500))
+        + "\n"
+    )
     readme = submission_dir / "README.md"
     readme.write_text("# Test submission\n")
     report = submission_dir / "report.txt"
@@ -103,7 +106,7 @@ def _make_minimal_bundle_result(
         submission_dir=str(submission_dir),
         inflate_sh_path=str(inflate_sh),
         inflate_py_path=str(inflate_py),
-        inflate_py_loc=1,
+        inflate_py_loc=500,
         inflate_py_loc_budget=DEFAULT_INFLATE_PY_LOC_BUDGET,
         inflate_py_loc_waiver_rationale=None,
         readme_md_path=str(readme),

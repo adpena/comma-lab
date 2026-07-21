@@ -706,16 +706,16 @@ class TestLintInflatePy:
         loc_findings = [f for f in findings if f.rule == "inflate_py_loc_over_budget"]
         assert loc_findings == []
 
-    def test_over_budget_without_waiver_flagged_error(
+    def test_large_inflate_has_no_loc_finding(
         self, tmp_path: Path
     ) -> None:
         path = tmp_path / "inflate.py"
         path.write_text("\n".join(f"x = {i}" for i in range(250)) + "\n", encoding="utf-8")
         findings = lint_inflate_py(path, loc_budget=200)
-        loc_findings = [f for f in findings if f.rule == "inflate_py_loc_over_budget"]
-        assert any(f.severity == "error" for f in loc_findings)
+        loc_findings = [f for f in findings if "inflate_py_loc" in f.rule]
+        assert loc_findings == []
 
-    def test_over_budget_with_waiver_demoted_to_warn(
+    def test_historical_loc_waiver_argument_is_noop(
         self, tmp_path: Path
     ) -> None:
         path = tmp_path / "inflate.py"
@@ -725,20 +725,9 @@ class TestLintInflatePy:
             loc_budget=200,
             waiver_rationale="HNeRV-class trainer requires torch + per-tensor decode; reviewable in 60s",
         )
-        loc_findings_error = [
-            f
-            for f in findings
-            if f.rule == "inflate_py_loc_over_budget" and f.severity == "error"
-        ]
-        loc_findings_warn = [
-            f
-            for f in findings
-            if f.rule == "inflate_py_loc_over_budget_with_waiver"
-        ]
-        assert loc_findings_error == []
-        assert len(loc_findings_warn) == 1
+        assert [f for f in findings if "inflate_py_loc" in f.rule] == []
 
-    def test_over_budget_with_placeholder_waiver_rejected(
+    def test_placeholder_loc_waiver_is_irrelevant(
         self, tmp_path: Path
     ) -> None:
         path = tmp_path / "inflate.py"
@@ -748,12 +737,7 @@ class TestLintInflatePy:
             loc_budget=200,
             waiver_rationale="<rationale>",  # placeholder
         )
-        loc_findings_error = [
-            f
-            for f in findings
-            if f.rule == "inflate_py_loc_over_budget" and f.severity == "error"
-        ]
-        assert len(loc_findings_error) == 1
+        assert [f for f in findings if "inflate_py_loc" in f.rule] == []
 
     def test_no_select_inflate_device_warned(self, tmp_path: Path) -> None:
         path = tmp_path / "inflate.py"

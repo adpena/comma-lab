@@ -115,7 +115,7 @@ def test_contest_rate_denom_pinned() -> None:
     assert CONTEST_RATE_DENOM_BYTES == 37_545_489
 
 
-def test_hnerv_parity_l4_budget_constants() -> None:
+def test_historical_loc_constants_remain_importable_but_non_authoritative() -> None:
     assert DEFAULT_INFLATE_PY_LOC_BUDGET == 100
     assert DEFAULT_INFLATE_PY_LOC_WAIVER_LIMIT == 200
 
@@ -454,9 +454,7 @@ def test_real_pr101_like_blob_compresses_at_inflate_time() -> None:
 
 def test_inflate_py_loc_overhead_empty_side() -> None:
     loc = estimate_inflate_py_loc_overhead(side_bytes_compressed_baked=0)
-    # Structural floor: ~10 LOC + 1 for empty literal
-    assert loc <= 15
-    assert loc >= 10
+    assert loc == 11
 
 
 def test_inflate_py_loc_overhead_linear_in_side_bytes() -> None:
@@ -472,14 +470,14 @@ def test_inflate_py_loc_overhead_linear_in_side_bytes() -> None:
     assert loc_1000 == 30
 
 
-def test_inflate_py_loc_under_default_budget_for_small_side() -> None:
-    loc = estimate_inflate_py_loc_overhead(side_bytes_compressed_baked=2000)
-    assert loc <= DEFAULT_INFLATE_PY_LOC_BUDGET
-
-
-def test_inflate_py_loc_under_waiver_limit_for_medium_side() -> None:
+def test_inflate_py_loc_estimate_can_exceed_historical_default() -> None:
     loc = estimate_inflate_py_loc_overhead(side_bytes_compressed_baked=8000)
-    assert loc <= DEFAULT_INFLATE_PY_LOC_WAIVER_LIMIT
+    assert loc > DEFAULT_INFLATE_PY_LOC_BUDGET
+
+
+def test_inflate_py_loc_estimate_can_exceed_historical_waiver_limit() -> None:
+    loc = estimate_inflate_py_loc_overhead(side_bytes_compressed_baked=20_000)
+    assert loc > DEFAULT_INFLATE_PY_LOC_WAIVER_LIMIT
 
 
 def test_inflate_py_loc_rejects_negative_input() -> None:

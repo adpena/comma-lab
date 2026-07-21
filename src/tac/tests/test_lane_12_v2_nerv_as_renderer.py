@@ -10,7 +10,7 @@ Coverage:
 - Per-frame conditioning correctness (different latents → different outputs).
 - Validation gates (config, schema, shapes).
 - Smoke training step doesn't NaN.
-- Inflate LOC budget enforced.
+- Inflate source present without a LOC restriction.
 - Inflate runtime dep closure (only torch + brotli + tac.lane_12_v2_*).
 - Real-pair batch source raises if contest video missing (fail-fast).
 - ARCHIVE_GRAMMAR machine-readable manifest is internally consistent.
@@ -613,7 +613,7 @@ def test_phase_b_preconditions_status_detects_operator_authorization_token(
     assert status["operator_phase_b_authorization"] == "MET"
 
 
-# ── Inflate LOC budget ───────────────────────────────────────────────────
+# ── Inflate source and receiver contract ─────────────────────────────────
 
 
 def _effective_loc(path: Path) -> int:
@@ -648,14 +648,10 @@ def _effective_loc(path: Path) -> int:
     return loc
 
 
-def test_lane_12_v2_inflate_loc_budget():
-    """Inflate.py MUST be ≤ 100 effective LOC per Lesson 4."""
+def test_lane_12_v2_inflate_source_is_present():
+    """Inflate.py remains present without a source-line restriction."""
     inflate_path = _REPO_ROOT / "src" / "tac" / "inflate" / "lane_12_v2_inflate.py"
-    loc = _effective_loc(inflate_path)
-    assert loc <= 100, (
-        f"inflate LOC budget exceeded: {loc} > 100. "
-        f"Per HNeRV retrospective Lesson 4, inflate.py must be ≤ 100 LOC."
-    )
+    assert inflate_path.read_text(encoding="utf-8").strip()
 
 
 def test_lane_12_v2_inflate_runtime_dep_closure():

@@ -64,11 +64,10 @@ CLAUDE.md compliance
   exact T4 land. **NO authoritative score claims** in this module.
 - ``promotion_eligible = False`` permanently.
 - ``ready_for_exact_eval_dispatch = False`` until council deliberation.
-- 8 archive-grammar fields declared in module docstring + lane registry.
+- 6 promotion-gate fields declared in module docstring + lane registry.
 - ``research_only = False`` because the inflate-time consumer is the
   ``submissions/pr106_foveation_field_sidecar/`` packet (built alongside).
-- ``lane_class = substrate_engineering`` (LOC > the bolt-on 350-LOC budget;
-  full RGB renderer composition).
+- ``lane_class = substrate_engineering`` (full RGB renderer composition).
 - NO scorer load (the warp is RGB → RGB; PoseNet/SegNet only run downstream
   in the contest evaluator).
 - NO ``/tmp`` paths; module is pure-Python with brotli + numpy + torch only.
@@ -76,15 +75,13 @@ CLAUDE.md compliance
 - eval_roundtrip gradient-reachable by construction (grid_sample is
   differentiable; the future trainer will close the loop).
 
-8 archive-grammar fields (Catalog #124)
-=======================================
+Catalog #124 promotion-gate fields
+==================================
 - ``archive_grammar``: monolithic single-file ``0.bin`` (0xFC + 0x30 wrapper)
 - ``parser_section_manifest``: see ``FOVEATION_FIELD_FORMAT`` constant below
-- ``inflate_runtime_loc_budget``: 200 LOC waiver under substrate_engineering
 - ``runtime_dep_closure``: torch + brotli + numpy (all in contest runtime)
 - ``export_format``: ``foveation_field_v1`` (this module emits the bytes)
 - ``score_aware_loss``: deferred to trainer (research_only encoder right now)
-- ``bolt_on_loc_budget``: substrate_engineering (this module is the substrate)
 - ``no_op_detector_planned``: warp must shift > 1e-3 norm vs identity; tested
 
 6-hook wire-in declarations

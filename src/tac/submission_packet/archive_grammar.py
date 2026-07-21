@@ -17,8 +17,8 @@ empirical verification.
 
 Per the 8th MLX-first numpy-portable individually-fractal standing directive:
 the archive grammar is the canonical NUMPY-PORTABLE contract surface. Encoder
-training is MLX-first on Apple Silicon; archive bytes are numpy-portable per
-HNeRV parity L4 (≤200 LOC inflate.py + ≤2 ext deps).
+training is MLX-first on Apple Silicon; archive bytes are numpy-portable and
+the inflate receiver is governed by dependency closure and #417 consumption.
 
 Per the 11th ORDER-MATTERS standing directive: Layer 1 (this module) is the
 SECOND Phase 1 spec consumer; depends on Layer 0

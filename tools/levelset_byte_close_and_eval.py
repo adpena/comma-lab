@@ -1459,8 +1459,8 @@ def _cap_pose_carrier(pcar_bytes: bytes, eval_pairs: int) -> bytes:
 # ---------------------------------------------------------------------------
 # the self-contained inflate.py (numpy fwd + torch R [+ scipy iff self-orient]).
 # ---------------------------------------------------------------------------
-# REVIEW-GATE: inflate.py exceeds the 100-LOC default budget (~320 LOC) under an explicit <=340-LOC
-# waiver: it inlines THREE rule-118 FREE levers the archive-counted statistics require -- (1) the
+# LOC-UNRESTRICTED: inflate.py inlines THREE rule-118 FREE levers whose
+# archive-counted statistics require receiver consumption -- (1) the
 # SELF-ORIENT fixed-point (curvelet bank regen + decoder-own-argmax tangent + directional feats), the
 # byte-closeable directional lever the mod-32 target uses; (2) the #224 Wave E analytic-lane
 # RENDER-BAND decode reproduction (_lane_parse + _lane_coverage AA-SDF rasterizer + _lane_composite),

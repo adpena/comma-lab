@@ -766,7 +766,7 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
             "(no synthetic frame base)",
             "produced raw bytes match contest contract 3,662,409,600 "
             "(1164*874*1200*3) per Catalog #367",
-            "inflate runtime LOC <= 200 per HNeRV parity L4",
+            "inflate receiver consumes charged archive bytes with #417 bijection proof",
             "PYTHONPATH self-contained per Catalog #295",
             "select_inflate_device canonical helper per Catalog #205",
         ),

@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MIT
 """Phase 3 inflate scaffold (DESIGN-ONLY).
 
-Per CLAUDE.md HNeRV parity discipline L4: inflate.py LOC budget ≤ 200.
-This scaffold is well under, leaving room for the future trainer to
-populate the real codec dispatcher inline.
+Source length is unrestricted under the operator directive of 2026-07-21.
+The future trainer may populate the real codec dispatcher inline, subject to
+receiver-consumption, payload-cleanliness, and runtime-custody gates.
 
 Phase 3 inflate path
 --------------------
@@ -23,7 +23,7 @@ CLAUDE.md compliance
   - NO MPS-fallback default (CUDA-required; explicit ``--device cpu`` opt-in
     only when deterministic-bytes acceptable for non-promoting CPU reproduction)
   - eval_roundtrip applied (384→874→uint8→384)
-  - Inflate LOC ≤ 200 (this file)
+  - Inflate source length is informational only
   - All bytes accounted via build_manifest.json (no hidden sidecars)
 
 DESIGN-ONLY STATUS — gates dispatch decision
@@ -78,11 +78,7 @@ def phase3_inflate_design_only(
 
 
 def phase3_inflate_loc_budget() -> int:
-    """Return the current Phase 3 inflate LOC count.
-
-    Per CLAUDE.md HNeRV parity discipline L4, this MUST stay ≤ 200. Used
-    by future preflight gate to enforce the LOC budget.
-    """
+    """Return historical Phase 3 LOC telemetry without enforcement authority."""
     here = Path(__file__)
     if not here.is_file():
         return 0

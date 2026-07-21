@@ -125,15 +125,14 @@ class DeliverabilityTier(StrEnum):
 
     * TIER_1_ZERO_COST: deterministic transforms of frame_0 / well-known
       constants (torch.zeros patterns, math constants like pi/e/sqrt(2),
-      identity tensors). No archive cost; no LOC waiver; no operator
-      review.
+      identity tensors). No archive cost; receiver derivation still applies.
     * TIER_2_CONSTANTS: ≤ 5 KB baked Python literals derived from public
       datasets (Comma2k19 UV palette, ImageNet statistics, dashcam priors).
-      No archive cost (constants baked into inflate.py); LOC waiver may
-      apply per HNeRV L4 if inflate.py + baked constants exceed 100 LOC.
+      Receiver and payload-cleanliness proof is required; source length is
+      unrestricted and cannot authorize video-derived data smuggling.
     * TIER_3_WAIVER_REQUIRED: 5 KB < cumulative compressed size ≤ 200 KB.
-      Requires operator review (HNeRV L4 inflate.py ≤ 200 LOC waiver) AND
-      explicit ``operator_approved_tier_3=True`` flag.
+      Requires operator review for payload provenance and explicit
+      ``operator_approved_tier_3=True`` flag.
     * TIER_4_FORBIDDEN: bytes that require scorer access (POSE_AXIS or
       SEG_AXIS dominant in per-pair gradient breakdown), network fetch at
       inflate time (not derivable from Comma2k19LocalCache or sister
@@ -1090,7 +1089,7 @@ def verify_deliverability_proof_contest_compliance(
       4. Catalog #213 Comma2k19 canonical helper: if the helper citation
          mentions Comma2k19, it MUST cite Comma2k19LocalCache or sister
          canonical API (no raw URLs).
-      5. inflate.py LOC budget: inflate_py_loc_estimate <= 200 per HNeRV L4
+      5. ``inflate_py_loc_estimate`` is informational only; source is unsized.
          waiver ceiling.
     """
     blockers: list[str] = []
@@ -1142,14 +1141,6 @@ def verify_deliverability_proof_contest_compliance(
             "non-canonical helper rejected; route through "
             "tac.substrates.pretrained_driving_prior.local_chunk_cache."
             "Comma2k19LocalCache."
-        )
-
-    if proof.inflate_py_loc_estimate > 200:
-        blockers.append(
-            f"HNeRV parity L4 waiver ceiling exceeded: "
-            f"inflate_py_loc_estimate is {proof.inflate_py_loc_estimate} > "
-            f"200. Reduce baked constants, choose a different tier-2 "
-            f"baker, or escalate the waiver ceiling via council review."
         )
 
     if proof.tier_2_byte_count > 0:

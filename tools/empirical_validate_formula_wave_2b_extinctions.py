@@ -175,10 +175,10 @@ def _validate_row_8_loc_budget() -> RowVerdict:
         loc=100, cyclomatic_complexity=5, external_dependencies=1,
     ))
     return _check(
-        "row8_hnerv_l4_loc_budget_small_inflate_passes",
-        True,
-        r.intermediate_values["passes_30_sec_criterion"],
-        "HNeRV parity L4 + Catalog #328 + McCabe 1976",
+        "row8_inflate_loc_restriction_permanently_removed",
+        False,
+        r.intermediate_values["restriction_active"],
+        "Operator directive 2026-07-21",
     )
 
 

@@ -86,15 +86,9 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     readiness_verdict = "UNKNOWN"
     if isinstance(bundle_meta, Mapping):
         inflate_loc = bundle_meta.get("inflate_py_loc")
-        inflate_budget = bundle_meta.get("inflate_py_loc_budget")
         dep_man = bundle_meta.get("dependency_closure_manifest")
         pythonpath_status = bundle_meta.get("pythonpath_self_containment_status")
         device_routing = bundle_meta.get("select_inflate_device_routing")
-        within_loc_budget = (
-            inflate_loc is not None
-            and inflate_budget is not None
-            and inflate_loc <= inflate_budget
-        )
         within_deps_budget = (
             isinstance(dep_man, Mapping) and bool(dep_man.get("within_budget"))
         )
@@ -102,23 +96,16 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
             isinstance(dep_man, Mapping) and bool(dep_man.get("numpy_portable"))
         )
         pythonpath_clean = pythonpath_status == "clean"
-        if within_loc_budget and within_deps_budget and pythonpath_clean:
+        if within_deps_budget and pythonpath_clean:
             readiness_verdict = "READY"
             np_marker = "numpy-portable" if numpy_portable else "canonical"
             rationale = (
                 f"Phase 4 Layer 2 submission bundle preparation CLEAN: "
-                f"inflate.py LOC={inflate_loc}/{inflate_budget} ({np_marker}); "
+                f"inflate.py LOC={inflate_loc} (informational; free unsized interpreter; "
+                f"{np_marker}); "
                 f"deps within budget; PYTHONPATH self-containment={pythonpath_status}; "
                 f"device routing={device_routing}. Per Phase 1 spec memo, "
                 f"downstream Phase 5-10 layers can compose on this bundle."
-            )
-        elif not within_loc_budget:
-            readiness_verdict = "BLOCKED"
-            rationale = (
-                f"Phase 4 Layer 2 submission bundle BLOCKED per HNeRV parity L4: "
-                f"inflate.py LOC={inflate_loc} exceeds budget {inflate_budget}. "
-                f"Operator-routable: rewrite inflate.py within budget OR add "
-                f"substantive inflate_py_loc_waiver_rationale per Catalog #287."
             )
         elif not within_deps_budget:
             readiness_verdict = "BLOCKED"

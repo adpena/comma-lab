@@ -2,7 +2,7 @@
 """Layer 3 — canonical pre-flight + lint enforcer for submission packets.
 
 Wrap forbidden-token grep + first-person-plural grep + emdash audit +
-inflate.py LOC budget + archive.zip sha/size validation + tone audit
+inflate.py runtime-closure checks + archive.zip sha/size validation + tone audit
 + Catalog #208 docs-no-local-absolute-paths into a single typed
 :class:`LintVerdict` per Phase 1 audit specification memo at
 ``.omx/research/canonical_submission_pipeline_specification_memo_20260526.md``
@@ -20,14 +20,14 @@ and Layer 2
 Per the 12th canonicalization × standardization × ease-of-contest-
 compliance trinity: ONE canonical helper, ONE return shape, ONE lint
 protocol. The bug class this layer extincts: ad-hoc per-submission
-forbidden-token grep + tone audit + inflate.py LOC checks scattered
+forbidden-token grep + tone audit + inflate.py runtime checks scattered
 across multiple sister wrappers, each drifting on (i) public-PR hygiene
 per CLAUDE.md + the standing directive at
 ``feedback_forbidden_claude_attribution_in_public_pr_surfaces.md``,
 (ii) first-person-plural enforcement per the operator first-person-only
 voice directive, (iii) emdash audit per the canonical typography
 discipline, (iv) Catalog #208 docs-no-local-absolute-paths,
-(v) HNeRV parity L4 ``inflate.py`` ≤200 LOC + ≤2 deps + numpy-portable.
+(v) HNeRV parity L4 dependency closure + numpy portability.
 
 Per Catalog #341 + CLAUDE.md "Apples-to-apples evidence discipline":
 this layer is OBSERVABILITY-ONLY by construction. Every emitted
@@ -37,10 +37,9 @@ contest score REQUIRES Phase 6 paired-CUDA + Linux x86_64 CPU empirical
 anchor per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1
 CONTEST-COMPLIANT HARDWARE" non-negotiable.
 
-Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline"
-L4: the bundled inflate.py LOC budget IS the operator-facing
-reviewability metric; this layer enforces it via the same physical-LOC
-counter used by the Phase 4 builder so the two helpers stay in lock-step.
+Per operator 2026-07-21, ``inflate.py`` is a free, unsized interpreter. This
+layer does not use source length for admission. Rule-118 anti-fake protection
+remains outside this linter in #417 and payload-cleanliness gates.
 
 Per the standing directive at ``feedback_pr_95_full_deep_research_landed_20260519T192300Z.md``
 + ``feedback_pr_95_quantizr_study_citations_landed_20260519.md``:
@@ -316,7 +315,7 @@ class LintFinding:
 
     rule: str
     """Canonical rule id (e.g. ``"forbidden_token_claude"`` /
-    ``"first_person_plural_we"`` / ``"inflate_py_loc_over_budget"``)."""
+    ``"first_person_plural_we"`` / ``"runtime_outside_archive"``)."""
 
     file_path: str
     """Path to the file containing the finding (canonical absolute or
@@ -801,11 +800,9 @@ def lint_inflate_py(
     loc_budget: int = DEFAULT_INFLATE_PY_LOC_BUDGET,
     waiver_rationale: str | None = None,
 ) -> tuple[LintFinding, ...]:
-    """Lint a bundled inflate.py against HNeRV parity L4 invariants.
+    """Lint a bundled ``inflate.py`` against runtime-closure invariants.
 
     Surfaces checked:
-      * LOC ≤ ``loc_budget`` (canonical default 200 per HNeRV parity L4)
-        OR substantive waiver rationale per Catalog #287.
       * Catalog #205 canonical ``select_inflate_device`` routing
         (canonical helper invocation OR inline-with-waiver pattern).
       * Catalog #295 PYTHONPATH self-containment (no bare ``from tac.*``
@@ -848,40 +845,9 @@ def lint_inflate_py(
         )
         return tuple(findings)
 
-    loc = len(source.splitlines()) if source else 0
-    if loc > loc_budget:
-        stripped = waiver_rationale.strip() if waiver_rationale else ""
-        if stripped in _PLACEHOLDER_RATIONALES or len(stripped) < 4:
-            findings.append(
-                LintFinding(
-                    surface=LintSurface.INFLATE_PY.value,
-                    severity=LintSeverity.ERROR.value,
-                    rule="inflate_py_loc_over_budget",
-                    file_path=str(path),
-                    line_number=None,
-                    matched_text=f"loc={loc} budget={loc_budget}",
-                    fix_suggestion=(
-                        f"inflate.py is {loc} LOC > budget {loc_budget} per HNeRV "
-                        "parity L4. Reduce LOC OR pass substantive waiver_rationale "
-                        "(>=4 chars, non-placeholder per Catalog #287)."
-                    ),
-                )
-            )
-        else:
-            findings.append(
-                LintFinding(
-                    surface=LintSurface.INFLATE_PY.value,
-                    severity=LintSeverity.WARN.value,
-                    rule="inflate_py_loc_over_budget_with_waiver",
-                    file_path=str(path),
-                    line_number=None,
-                    matched_text=f"loc={loc} budget={loc_budget}",
-                    fix_suggestion=(
-                        f"inflate.py is {loc} LOC > budget {loc_budget}; waiver supplied. "
-                        "Operator-routable to reduce LOC for reviewability."
-                    ),
-                )
-            )
+    # Compatibility-only arguments: physical source length has no lint
+    # authority after operator 2026-07-21.
+    _ = (loc_budget, waiver_rationale)
 
     has_canonical_helper = "select_inflate_device" in source
     has_inline_waiver = "INLINE_DEVICE_FORK_OK" in source
@@ -1368,8 +1334,7 @@ def lint_submission_bundle(
             supplied the body content is loaded from disk.
         pr_body_text: optional raw PR body text; supersedes
             ``pr_body_path`` when both supplied.
-        inflate_py_loc_waiver_rationale: substantive waiver for
-            inflate.py over-budget LOC (≥4 chars per Catalog #287).
+        inflate_py_loc_waiver_rationale: historical no-op compatibility field.
 
     Returns:
         :class:`LintVerdict` with canonical Provenance per Catalog #323.

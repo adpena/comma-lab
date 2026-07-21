@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Lane 12-v2 NeRV-as-renderer inflate (≤ 100 LOC, ≤ 2 deps).
+"""Lane 12-v2 NeRV-as-renderer inflate (source length unrestricted).
 
 Reads ``0.bin`` per ARCHIVE_GRAMMAR in the design memo §2 and reconstructs
 the renderer. Output: uint8 RGB frames at camera resolution (874, 1164).

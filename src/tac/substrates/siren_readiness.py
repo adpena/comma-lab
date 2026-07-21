@@ -236,8 +236,6 @@ def _audit_inflate(
 
     loc = len([line for line in text.splitlines() if line.strip()])
     evidence["inflate_nonblank_loc"] = loc
-    if loc > 100:
-        warnings.append(f"inflate_runtime_loc_budget_exceeded:{loc}")
 
 
 def _audit_score_aware_loss(
