@@ -1,0 +1,289 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "full_n600_claim": false,
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "research_only": true,
+    "score_claim": false
+  },
+  "canonical_law_resolution": {
+    "status": "DERIVED_LAWREF_NO_MEASUREMENT_AUTHORITY",
+    "custody_sha256": "291230db665c1bfd30ce0a7619314af0a9b6419367c7de812952d3c7714ed2c0",
+    "contains_timestamp": false,
+    "fallback_used": false,
+    "persistent_registry_mutated": false,
+    "numeric_laws": {
+      "global_waterfill_lambda": {
+        "equation_id": "realization_breakeven_bytes_v1",
+        "canonical_function": "tac.canonical_equations.day_consolidation_laws_20260720:breakeven_bytes",
+        "input_provenance": "unit 1.0 score recovery",
+        "derived_operation": "reciprocal_of_breakeven_bytes_for_unit_score_recovery",
+        "value": 6.658589531221714e-07,
+        "units": "score_units_per_byte"
+      },
+      "temporal_jitter_amortization_ratio": {
+        "equation_id": "partition_temporal_transport_amortization_jitter_bound_v1",
+        "canonical_builder": "tac.canonical_equations.partition_temporal_transport_amortization_20260715:build_partition_temporal_transport_amortization_v1",
+        "canonical_function": "tac.canonical_equations.partition_temporal_transport_amortization_20260715:amortization_ratio",
+        "anchor_id": "temporal_advection_stratified_n600_20260715",
+        "value": 0.7114048191973678,
+        "units": "dimensionless"
+      },
+      "segnet_centered_head_rank": {
+        "equation_id": "segnet_head_rank4_linear_flipdist_v1",
+        "canonical_builder": "tac.canonical_equations.segnet_head_rank4_flipdist_20260715:build_segnet_head_rank4_linear_flipdist_v1",
+        "canonical_function": "tac.canonical_equations.segnet_head_rank4_flipdist_20260715:head_difference_rank",
+        "anchor_id": "segnet_head_rank4_recon_fp32_20260715",
+        "value": 4,
+        "units": "centered_head_dimension"
+      }
+    },
+    "availability_only_no_numeric_consumption": {
+      "rate_law_ladder_v1": {
+        "source_path": "src/tac/canonical_equations/rate_law_ladder_20260713.py",
+        "status": "REUSED_IDENTITY_ONLY_NO_NUMERIC_VALUE_CONSUMED"
+      },
+      "#318": {
+        "source_path": "src/tac/preflight.py",
+        "symbol": "check_master_gradient_raw_byte_authority_not_landed",
+        "status": "REUSED_IDENTITY_ONLY_NO_NUMERIC_VALUE_CONSUMED"
+      }
+    }
+  },
+  "boundary_inverse_policy": {
+    "receipt_commit": "e2f679755fea09e4c55a12592db1bc615373c6a8",
+    "receipt_path": ".omx/research/boundary_inverse_custody_20260721T052100Z.json",
+    "receipt_sha256": "2c7c091c61d1676c80b5db1772a29d3b2f73934398966c8566b6175abc4021e3",
+    "axis": "[macOS-CPU advisory]",
+    "evidence_scope": "mask_fidelity_only_no_through_r_score",
+    "lossless_spatial_phase_atom_budget": false,
+    "spatial_phase_atom_status": "FORMULATION_SCOPED_NEGATIVE_EIGHT_BIN_ONLY",
+    "temporal_phase_status": "LIVE_R1_R2_CAUSAL_PATH",
+    "l4_candidate": {
+      "variant": "generic_2d_k4",
+      "finite_sidecar_bytes": 586,
+      "atom_count": 4,
+      "mask_f1_delta": 0.0046822634384159,
+      "remaining_false_negative_mask_pixels": 313271,
+      "through_r_priced": false,
+      "admitted": false
+    }
+  },
+  "m1_anchors": {
+    "receipt_commit": "9bd01e2232f6898c2564ab8bb7254609c1ebf645",
+    "receipt_path": ".omx/research/rep_mine_solved_binary_20260721T045500Z.json",
+    "receipt_sha256": "265302908fd7c4789891ab0d3b0f8aacaf9f178ea8e40f8737ed5f4fcd55b368",
+    "axis": "[macOS-CPU advisory]",
+    "kernel_energy_percent": 45.1668,
+    "kernel_energy_is_byte_savings": false,
+    "gauge_energy_percent": 31.1071,
+    "old_52_percent_gauge_rejected": true,
+    "gauge_surface": "teacher_logits_distinct_from_camera_array_bytes",
+    "gauge_additive_with_kernel_or_context": false,
+    "centered_rank": {
+      "status": "DERIVED_LAWREF_FROM_CANONICAL_M1_ANCHOR",
+      "equation_id": "segnet_head_rank4_linear_flipdist_v1",
+      "canonical_law_resolution_sha256": "291230db665c1bfd30ce0a7619314af0a9b6419367c7de812952d3c7714ed2c0",
+      "value": 4
+    },
+    "quotient_cell_constant_explained_percent": 83.1564,
+    "digital_cell_count": 21304,
+    "digital_cells_are_classical_ms_certificate": false,
+    "context_bits_per_cell": 0.0150856545,
+    "context_ideal_bytes": 222447.0271,
+    "context_estimate_optimistic": true,
+    "context_excludes": ["Pose", "model", "header"],
+    "context_is_lower_bound": false,
+    "target_bytes": 216222,
+    "flip_count": 17926,
+    "r2b_isolated_fraction_of_lambda_percent": 6.806,
+    "r2b_positive_interaction_measured": false,
+    "r2b_admission": "EATEN_ABSENT_POSITIVE_INTERACTION"
+  },
+  "b1_b5": {
+    "B1": {
+      "result": "600-stage receiver-only scorer-geometry fixture; no hard oracle/B2/score/promotion authority; completed old-code run preserved and not resumable under current source",
+      "status": "MEASURED_FULL_600_ENGINEERING"
+    },
+    "B2": {
+      "result": "real full-n600 CPU-Torch hard-oracle aggregate with byte-identical structured custody is absent",
+      "status": "BLOCKED_MEASUREMENT"
+    },
+    "B3": {
+      "result": "declared-constraint fixture is labeled non-authoritative; real desired cells remain non-source-ground-truth",
+      "status": "MEASURED_FIXTURE_NON_AUTHORITATIVE"
+    },
+    "B4": {
+      "result": "no real seven-stream same-joint-decode sweep, M1-bound all-17926-flip iterative recode fixed point, five-rung action-family pricing, attribution/edit telemetry, learned-tail three-way races, or nonlinear Pose-tube lambda crossing is supplied",
+      "status": "INCONCLUSIVE_NO_MEASURED_GLOBAL_JOINT_SWEEP"
+    },
+    "B5": {
+      "result": "component and named-container accounting interfaces built; real equal-fidelity causal-ladder comparison absent",
+      "status": "BUILT_INTERFACE_MEASUREMENT_BLOCKED"
+    }
+  },
+  "commit": {
+    "committed": false,
+    "landing_owner": "codex_serializer_then_MAIN",
+    "main_review_required": true,
+    "serializer_status": "PENDING_AT_ARTIFACT_SEAL_COMMIT_RECORDED_IN_CHECKPOINT_AND_HANDOFF"
+  },
+  "equation": {
+    "equation_id": "predict_project_cell_tube_uint8_projection_v1",
+    "global_joint_lambda_star": {
+      "status": "DERIVED_LAWREF",
+      "equation_id": "realization_breakeven_bytes_v1",
+      "canonical_law_resolution_sha256": "291230db665c1bfd30ce0a7619314af0a9b6419367c7de812952d3c7714ed2c0",
+      "value": 6.658589531221714e-07
+    },
+    "registration_allowed": false,
+    "registration_policy": "UNREGISTERED_UNTIL_B2_DECODER_GATES_GLOBAL_WATERFILL_ATTRIBUTION_EDITS_AND_LEARNED_TAIL_RACES",
+    "required_decoder_gates": [
+      "MS_native_rasterizer",
+      "G1_pose_blind_constraint_tightening",
+      "G2_camera_resolution_inverse_r",
+      "G3_frame_asymmetry",
+      "G4_cross_host_byte_identity",
+      "G5_named_section_container"
+    ],
+    "global_joint_waterfill_required_for_projection_equation": true,
+    "per_flip_sellback_status": "INCONCLUSIVE_NO_MEASURED_PER_FLIP_SELLBACK",
+    "action_level_ladder_status": "INCONCLUSIVE_NO_MEASURED_ACTION_LEVEL_LADDER",
+    "attribution_edit_telemetry_status": "INCONCLUSIVE_NO_MEASURED_ATTRIBUTION_EDIT_TELEMETRY",
+    "learned_tail_race_status": "INCONCLUSIVE_NO_MEASURED_LEARNED_TAIL_THREE_WAY_RACE",
+    "pose_tube_knee_status": "INCONCLUSIVE_NO_MEASURED_POSE_TUBE_KNEE",
+    "registry_mutated": false
+  },
+  "files": {
+    ".omx/research/ultimate_form_predict_project_20260721T043309Z.md": "a0509668855d78f638261083cf1446ca8671cb565f63033b007c3a94e00e5f14",
+    ".omx/research/ultimate_form_predict_project_DAG_FEED_20260721T043309Z.md": "f456cb02d56b92eee678a953f132b5297ea3ffeb64f7f67630e1bd477f2a82f0",
+    ".omx/research/ultimate_form_predict_project_build_spec_20260721.md": "68d170b6711c0c8c86cf4ada9de26d1ebcdb4bc5e146a39ab53d15600322b37f",
+    "src/tac/canonical_equations/predict_project_receiver_20260721.py": "68efccf7284a0f440b3774d8cf91f75d9853b398a8bec17908a042edb4c4ed64",
+    "src/tac/optimization/predict_project_receiver.py": "2614053bf2dfd766928eeb1da071cb0e6199e1646f5b32c2066393c469903cdc",
+    "src/tac/optimization/predict_project_schema.py": "acb2783e73b7a3e941dd58aba4ad744d0c2529872ca363b770ee70846d320992",
+    "src/tac/tests/test_predict_project_receiver.py": "edb2a1334dee9f71d68c1c415056cf8868ee303b61ebfe574da173d55518f7f4",
+    "src/tac/tests/test_predict_project_receiver_equation.py": "f3f12436c3f793df4f556721d1794d477ba20511685b9d082f94d68e80ceb664",
+    "src/tac/tests/test_predict_project_schema.py": "f1d98977297952d66e8ae034c3c0368a9b8594731ed16d489eee8008ba8f86b0",
+    "tools/measure_predict_project_receiver.py": "405681c04f6a763458bcf746f8b4c00958863f635304a7e2569eb1651520720f"
+  },
+  "gates": {
+    "MS_vineyard_native_rasterizer": {
+      "blocker": "MS_ARC_TO_CELL_RASTERIZATION_SEMANTICS_UNMEASURED",
+      "status": "MS_SCHEMA_BUILT_NATIVE_RASTERIZER_BLOCKED"
+    },
+    "causal_jitter_r0_r1_r2": {
+      "blocker": "equal-fidelity R0/R1/R2 canonical bytes and causal exception counts by stratum",
+      "status": "BUILT_INTERFACE_MEASUREMENT_BLOCKED"
+    },
+    "G1_pose_blind_constraint_tightening": {
+      "blocker": "real universal-within-box/tube proof for the pose-blind decoder",
+      "status": "BUILT_INTERFACE_MEASUREMENT_BLOCKED"
+    },
+    "G2_camera_resolution_inverse_r": {
+      "blocker": "full-n600 camera-resolution inverse-R uint8 parse-back",
+      "status": "BUILT_INTERFACE_MEASUREMENT_BLOCKED"
+    },
+    "G3_frame_asymmetry": {
+      "blocker": "exact full-n600 frame0 pose-only and frame1 Seg+Pose behavior",
+      "status": "BUILT_INTERFACE_MEASUREMENT_BLOCKED"
+    },
+    "G4_cross_host_byte_identity": {
+      "blocker": "full-n600 CPU-CUDA decoded-byte identity",
+      "status": "BUILT_INTERFACE_MEASUREMENT_BLOCKED"
+    },
+    "G5_named_section_container": {
+      "blocker": "real full-n600 named-section payload parse-back and exact receiver-consumption proof",
+      "status": "BUILT_INTERFACE_MEASUREMENT_BLOCKED"
+    },
+    "global_joint_waterfill": {
+      "blocker": "same-joint-decode per-stream curves and points, exact deltas, per-flip fixed point, five-rung family-action pricing, Pose knee, Lagrangian-minimum allocation, ordered admitted streams, overlap-once flips, all-strata eaten-flip decomposition, and symmetric interactions",
+      "status": "INCONCLUSIVE_NO_MEASURED_GLOBAL_JOINT_SWEEP"
+    },
+    "action_level_ladder": {
+      "blocker": "all-17926 family partition with same-decode measured L1-L5 bits/bytes, positive benefit, ERF collateral, cheapest valid rung, stratum distribution, and exact fixed-point/totals reconciliation is absent",
+      "status": "INCONCLUSIVE_NO_MEASURED_ACTION_LEVEL_LADDER"
+    },
+    "attribution_edit_telemetry": {
+      "blocker": "all-17926 #350 causal attribution receipts plus every L1-L5 #404/#420 edit command and deterministic same-joint-decode through-R response byte-identical to its action rung are absent",
+      "status": "INCONCLUSIVE_NO_MEASURED_ATTRIBUTION_EDIT_TELEMETRY"
+    },
+    "learned_tail_race": {
+      "blocker": "per-stream equal-fidelity literal-exception versus Rule-118-counted S3 generator versus eaten-flip races with unique strict winners are absent",
+      "status": "INCONCLUSIVE_NO_MEASURED_LEARNED_TAIL_THREE_WAY_RACE"
+    },
+    "per_flip_sellback": {
+      "blocker": "M1-bound all-17926-flip iterative #557 recode chain, r1b7 custody, threshold decisions, stratum ledger, and stable fixed point are absent",
+      "status": "INCONCLUSIVE_NO_MEASURED_PER_FLIP_SELLBACK"
+    },
+    "pose_tube_knee": {
+      "blocker": "same-joint-decode increasing-relaxation Pose sweep with exact nonlinear score marginals and measured lambda crossing is absent",
+      "status": "INCONCLUSIVE_NO_MEASURED_POSE_TUBE_KNEE"
+    }
+  },
+  "implementation_status": "BUILT_INTERFACE_MEASUREMENT_BLOCKED",
+  "latest_consumed_directive": "2026-07-21T06:21:21Z",
+  "b1_engineering_evidence": {
+    "receipt_path": "/Volumes/VertigoDataTier/pact/evidence/predict_project_20260721/b1_full600_scorer_geometry_fixture_20260721T050000Z/measurement/receipt.json",
+    "receipt_sha256": "1ea0e4bb571cf99f539ef18cf6210f622bc72968ff54e3e810d2ac0576a5575d",
+    "custody_manifest_sha256": "4d6aeab38cdb20e008934d041c4f626465160b529e7495be9536bfe151f7b141",
+    "axis": "[macOS-CPU advisory]",
+    "scope": "full_600_receiver_only_scorer_geometry_fixture",
+    "stage_count": 600,
+    "summed_stage_seconds": 879.9565938347951,
+    "peak_rss_bytes": 218087424,
+    "output_bytes": 117964800,
+    "double_decode_equal": true,
+    "hard_oracle_present": false,
+    "b2_status": "INCOMPLETE_NO_HARD_ORACLE",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "contest_authority": false,
+    "original_config_bound_source_hashes": false,
+    "resumable_under_current_source": false,
+    "ssd_bytes_touched": false
+  },
+  "measurement_resume": {
+    "implementation_sources": [
+      "src/tac/optimization/predict_project_receiver.py",
+      "src/tac/optimization/predict_project_schema.py",
+      "tools/measure_predict_project_receiver.py",
+      "src/tac/canonical_equations/predict_project_receiver_20260721.py"
+    ],
+    "policy": "EXACT_SOURCE_AND_CONFIG_ONLY_OLD_CODE_STAGES_REFUSED",
+    "old_code_ssd_run_resumable": false
+  },
+  "lane_id": "lane_ultimate_form_predict_project_597_20260721",
+  "pointer": "UNCHANGED_BY_IMPLEMENTATION",
+  "reuse_manifest": {
+    "canonical_path": ".omx/research/ultimate_form_predict_project_build_spec_20260721.md",
+    "table_id": "Canonical Task #597 reuse manifest",
+    "policy": "single_source_of_truth_no_parallel_duplicate",
+    "new_with_justification_rows": 0
+  },
+  "schema": "ultimate_form_predict_project_build_receipt.v0",
+  "structural_interfaces": {
+    "causal_jitter_r0_r1_r2": "BUILT_INTERFACE",
+    "action_level_ladder_validator": "BUILT_INTERFACE_MEASUREMENT_BLOCKED",
+    "attribution_edit_telemetry_validator": "BUILT_INTERFACE_MEASUREMENT_BLOCKED",
+    "learned_tail_three_way_race_validator": "BUILT_INTERFACE_MEASUREMENT_BLOCKED",
+    "native_constraint_grammar": "BUILT_INTERFACE_LEARNED_DEFAULT_ABSENT",
+    "frame0_pose_only_frame1_seg_pose": "BUILT_INTERFACE",
+    "global_joint_waterfill_evidence": "BUILT_INTERFACE_MEASUREMENT_BLOCKED",
+    "inverse_r_camera_uint8": "BUILT_INTERFACE",
+    "morse_smale_graph_vineyard": "MS_SCHEMA_BUILT_NATIVE_RASTERIZER_BLOCKED",
+    "ms_native_rasterizer_blocker": "MS_ARC_TO_CELL_RASTERIZATION_SEMANTICS_UNMEASURED",
+    "named_section_container": "BUILT_INTERFACE",
+    "per_flip_sellback_validator": "BUILT_INTERFACE_MEASUREMENT_BLOCKED",
+    "pose_tube_knee_validator": "BUILT_INTERFACE_MEASUREMENT_BLOCKED",
+    "proved_pose_tightening": "BUILT_INTERFACE_MEASUREMENT_BLOCKED"
+  },
+  "task": 597,
+  "verification": {
+    "focused_pytest": "56 passed in 3.28s",
+    "owned_diff_whitespace": "PASS",
+    "py_compile": "PASS",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS"
+  }
+}
