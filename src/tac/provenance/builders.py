@@ -117,6 +117,19 @@ def _sha256_of_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _sha256_of_tree(root: Path) -> str:
+    """Deterministic tree hash for DIRECTORY artifacts (per the disk-provenance
+    non-negotiable: 'SHA-256 or tree hash'): sorted relative paths + per-file
+    content digests; symlinks/non-regular files skipped."""
+    h = hashlib.sha256()
+    for path in sorted(p for p in root.rglob("*") if p.is_file() and not p.is_symlink()):
+        h.update(str(path.relative_to(root)).encode("utf-8"))
+        h.update(b"\x00")
+        h.update(_sha256_of_file(path).encode("ascii"))
+        h.update(b"\x00")
+    return h.hexdigest()
+
+
 def _sha256_of_archive_member(archive_zip_path: Path, member_name: str) -> str:
     """SHA-256 over the UNZIPPED member bytes (not the compressed bytes)."""
     with zipfile.ZipFile(archive_zip_path, "r") as zf, zf.open(member_name) as member:
@@ -245,7 +258,12 @@ def build_provenance_for_research_sidecar(
 
     # Allow missing sidecars so DEFERRED-pending-research artifacts can carry
     # Provenance with an explicit placeholder sha.
-    sha = "0" * 64 if not sidecar_path_obj.exists() else _sha256_of_file(sidecar_path_obj)
+    if not sidecar_path_obj.exists():
+        sha = "0" * 64
+    elif sidecar_path_obj.is_dir():
+        sha = _sha256_of_tree(sidecar_path_obj)
+    else:
+        sha = _sha256_of_file(sidecar_path_obj)
 
     return Provenance(
         artifact_kind=ProvenanceKind.RESEARCH_SIDECAR,
