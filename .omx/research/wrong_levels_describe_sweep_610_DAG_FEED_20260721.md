@@ -1,7 +1,9 @@
 # DAG FEED — Task #610 wrong-levels describe sweep
 
-UTC: 2026-07-21T22:09:16Z  
-Lane: `lane_wrong_levels_describe_sweep_610_20260721`  
+UTC: 2026-07-21T22:09:16Z
+
+Lane: `lane_wrong_levels_describe_sweep_610_20260721`
+
 Authority: research-only; MAIN landing review required; pointer unchanged
 
 ```text

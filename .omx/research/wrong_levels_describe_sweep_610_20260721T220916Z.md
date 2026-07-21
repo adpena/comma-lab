@@ -1,8 +1,11 @@
 # Task #610 — wrong levels describe sweep: receiver-rate custody verdict
 
-UTC: 2026-07-21T22:09:16Z  
-Lane: `lane_wrong_levels_describe_sweep_610_20260721`  
-Authority: research-only, local `$0`, seed 1234, `[macOS-CPU advisory]`; MAIN landing review required  
+UTC: 2026-07-21T22:09:16Z
+
+Lane: `lane_wrong_levels_describe_sweep_610_20260721`
+
+Authority: research-only, local `$0`, seed 1234, `[macOS-CPU advisory]`; MAIN landing review required
+
 Pointer: `0.1910828242 [contest-CPU]` **UNMOVED**
 
 ## Outcome first
