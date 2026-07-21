@@ -1,9 +1,9 @@
 # Costate ORGAN v2 exact anchor — landed result (2026-07-21T01:59Z)
 
-**Lane:** `p0_costate_organ_factorization_grounded_ABC`  
-**Verdict:** `BUILT + RETROSPECTIVE-DEVELOPMENT-BACKTEST-PASS + ADVISORY-ONLY`  
-**Axis:** `[macOS-CPU advisory] NON-PROMOTABLE`  
-**Authority:** `actuation=NONE`; no heavy/paid launch, stop, live-config mutation, score, promotion, or pointer change. MAIN landing review is required before merge.  
+**Lane:** `p0_costate_organ_factorization_grounded_ABC`
+**Verdict:** `BUILT + RETROSPECTIVE-DEVELOPMENT-BACKTEST-PASS + ADVISORY-ONLY`
+**Axis:** `[macOS-CPU advisory] NON-PROMOTABLE`
+**Authority:** `actuation=NONE`; no heavy/paid launch, stop, live-config mutation, score, promotion, or pointer change. MAIN landing review is required before merge.
 **Verdict scope:** rank improvement is retrospective on two #205 as-of decisions plus 22 C2 stride-5 carrier-smoke interventions. It is not a live/cross-run/contest-axis generalization. C2 trained-witness flat-amplitude negatives remain formulation-scoped.
 
 ## Outcome
@@ -49,7 +49,7 @@ The composition law `costate_organ_exact_anchor_product_v2` was deliberately
 
 ## Backtest receipt
 
-Artifact: `.omx/research/costate_organ_v2_exact_anchor_backtest_20260721.json`  
+Artifact: `.omx/research/costate_organ_v2_exact_anchor_backtest_20260721.json`
 SHA-256: `f733187fbc8e69e03d4854a8f45baa0951af4a2807a01bfc1841cffca8d59410`
 
 | Corpus | Rows | Custody/scope |
@@ -120,11 +120,11 @@ outside this lane's additive edits.
 
 ## Pointer and git proof
 
-Pointer delta: **NONE**. No score claim.  
+Pointer delta: **NONE**. No score claim.
 Implementation commit: `703a061dbe` (canonical patch-manifest serializer; 15 exact files;
-post-commit SHA verification passed).  
+post-commit SHA verification passed).
 Lane maturity: **L2 / INTEGRATION** (`impl_complete` plus custodied real-receipt
-retrospective empirical backtest); contest CPU/CUDA, `_prod`, and promotion remain false.  
+retrospective empirical backtest); contest CPU/CUDA, `_prod`, and promotion remain false.
 MAIN landing review: **REQUIRED** — inspect branch diff, rerun tests, verify registry append and source hashes, then merge intentionally.
 
 ## Stores consulted

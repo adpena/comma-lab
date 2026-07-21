@@ -1,7 +1,7 @@
 # FEED-costate-organ-v2-exact-anchor — DAG feed (2026-07-21T01:59Z)
 
-**Lane:** `p0_costate_organ_factorization_grounded_ABC`  
-**Status:** `BUILT`, `RETROSPECTIVE-DEVELOPMENT-BACKTEST-PASS`, `research_only=true`  
+**Lane:** `p0_costate_organ_factorization_grounded_ABC`
+**Status:** `BUILT`, `RETROSPECTIVE-DEVELOPMENT-BACKTEST-PASS`, `research_only=true`
 **Authority:** advisory-only, `actuation=NONE`, `_dev`, pointer unchanged, MAIN review required.
 
 ```text

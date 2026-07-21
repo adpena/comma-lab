@@ -1,7 +1,7 @@
 # Costate ORGAN v2 exact-anchor implementation spec (2026-07-21)
 
-**Lane:** `p0_costate_organ_factorization_grounded_ABC`  
-**Authority:** delegated `costate_exact_anchor_v2`; `advisory_only=true`; `actuation=NONE`; MAIN landing review required.  
+**Lane:** `p0_costate_organ_factorization_grounded_ABC`
+**Authority:** delegated `costate_exact_anchor_v2`; `advisory_only=true`; `actuation=NONE`; MAIN landing review required.
 **Verdict scope:** implementation spec derived before code. No score, promotion, stop, launch, live-config, or pointer authority.
 
 ## Objective and closed composition
