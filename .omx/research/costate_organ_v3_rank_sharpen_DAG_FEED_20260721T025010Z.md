@@ -1,6 +1,7 @@
 # DAG feed: costate organ v3 rank sharpening
 
-UTC: 2026-07-21T02:50:10Z  
+UTC: 2026-07-21T02:50:10Z
+
 `research_only=true` · `actuation=NONE` · `promotion_eligible=false`
 
 ## Dependency and decision DAG

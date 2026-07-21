@@ -1,9 +1,13 @@
 # Costate organ v3 rank-sharpening result
 
-UTC: 2026-07-21T02:50:10Z  
-Lane: `lane_costate_v3_rank_sharpen_20260721`  
-Axis: `[macOS-CPU advisory]`  
-Scope: `RETROSPECTIVE_DEVELOPMENT`, fixed n=24 only  
+UTC: 2026-07-21T02:50:10Z
+
+Lane: `lane_costate_v3_rank_sharpen_20260721`
+
+Axis: `[macOS-CPU advisory]`
+
+Scope: `RETROSPECTIVE_DEVELOPMENT`, fixed n=24 only
+
 Authority SHA-256: `d3ec1543d1c656f506d2c4817771795ca8cb9ac738560d76c7be6f536d6eb2a9`
 
 ## Verdict

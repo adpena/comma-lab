@@ -1,6 +1,7 @@
 # Equations: costate organ v3 rank sharpening
 
-UTC: 2026-07-21T02:50:10Z  
+UTC: 2026-07-21T02:50:10Z
+
 Equation family: `costate_v3_rank_sharpen_composition_v1`
 
 ## Graded receiver survival

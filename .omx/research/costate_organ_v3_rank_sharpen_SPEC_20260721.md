@@ -1,7 +1,8 @@
 # Costate organ v3 rank-sharpening build specification
 
-Date: 2026-07-21  
-Lane: `lane_costate_v3_rank_sharpen_20260721`  
+Date: 2026-07-21
+
+Lane: `lane_costate_v3_rank_sharpen_20260721`
 Authority: delegated prompt SHA-256
 `d3ec1543d1c656f506d2c4817771795ca8cb9ac738560d76c7be6f536d6eb2a9`
 

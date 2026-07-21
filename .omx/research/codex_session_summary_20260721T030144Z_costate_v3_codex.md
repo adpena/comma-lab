@@ -1,6 +1,7 @@
 # Codex TIER-0 session summary: costate organ v3
 
-UTC: 2026-07-21T03:01:44Z  
+UTC: 2026-07-21T03:01:44Z
+
 Lane: `lane_costate_v3_rank_sharpen_20260721` (`research_only=true`, L1)
 
 - Built zero-parameter graded-realizability, pool-KKT, EMA target/variance,
