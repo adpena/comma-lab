@@ -82388,6 +82388,49 @@
       },
       "notes": "FORMULATION-scoped same-artifact verdict; FAMILY strengthening refused because direct-description grammar remains open; direct-description minimizer PRIMARY, #366 FALLBACK-only; no dispatch; MAIN review required.",
       "research_only": true
+    },
+    {
+      "id": "lane_wrong_levels_describe_sweep_610_20260721",
+      "name": "Task 610 wrong-levels three-surface description sweep",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #610 research_only $0 CPU description audit complete: THREE_SURFACES_BLOCKED_RECEIVER_RATE_CUSTODY_FAMILIES_OPEN. Candidate stream/projected-archive fields remain null; pointer unchanged. Reactivate only after S1 has calibrated PNTG-to-xi/fixed-root custody plus a pure-knot XIP2 format/parser binding, S2 has unique-home ops sections, or S3 has a corrected-xi joint-chart receiver section; MAIN review required.",
+      "research_only": true,
+      "lane_class": "local_measurement"
     }
   ],
   "level_rules": {
