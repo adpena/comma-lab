@@ -1,8 +1,8 @@
 # Codex findings — realization G2c cell-interior fills
 
-Date: 2026-07-21  
-Task: #578, round 3  
-Lane: `lane_realization_g2c_interior_578_20260721`  
+Date: 2026-07-21
+Task: #578, round 3
+Lane: `lane_realization_g2c_interior_578_20260721`
 Authority: `[macOS-CPU advisory]`; no score claim; pointer `0.1910828242 [contest-CPU]` unmoved.
 
 ## Verdict
@@ -102,4 +102,3 @@ inboxes, and the final G2c SSD receipt/stage trees.
 MAIN landing review is required.  In particular, MAIN must verify the
 formulation scopes, the explicit frame0 limitation, receipt/source hashes, and
 the second empirical equation anchor before merge/registry population.
-

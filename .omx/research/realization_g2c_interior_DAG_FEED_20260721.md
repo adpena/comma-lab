@@ -50,4 +50,3 @@ false.  `R2 -> R4_EXCEPT -> FACTOR2 -> HARD` is priced and non-improving.
 
 Durable receipt:
 `.omx/research/realization_g2c_interior_receipt_20260721.json`.
-

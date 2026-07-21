@@ -1,8 +1,8 @@
 # Realization G2c cell-interior implementation spec
 
-Date: 2026-07-21  
-Task: #578, round 3  
-Lane: `lane_realization_g2c_interior_578_20260721`  
+Date: 2026-07-21
+Task: #578, round 3
+Lane: `lane_realization_g2c_interior_578_20260721`
 Axis: `[macOS-CPU advisory]`; pointer `0.1910828242 [contest-CPU]` unmoved.
 
 ## Objective
