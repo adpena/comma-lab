@@ -1,0 +1,98 @@
+{
+  "archive": {
+    "bytes": 451191,
+    "member": "0.bin",
+    "member_bytes": 1285943,
+    "member_count": 1,
+    "member_sha256": "595e69d41f96cc1a33ca7b58c0ed386549bfda6389a8176b24d7044d1f55955b",
+    "sha256": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed"
+  },
+  "binary_source_audit": {
+    "all_video_derived_bytes_required_in_0_bin": true,
+    "forbidden_imports": [],
+    "maximum_embedded_bytes_literal": 6,
+    "passed": true,
+    "runtime_sha256": "eef055896474b8327baf57ace016c37fe651f4c22534e2442ebc44da8c3f40b0",
+    "scorer_weights_loaded": false,
+    "source_video_loaded": false,
+    "tac_imports": []
+  },
+  "constant_inventory": {
+    "classification_counts": {
+      "generic": 2,
+      "video-derived": 2,
+      "weight-derived": 1
+    },
+    "classification_spine": [
+      "video-derived",
+      "weight-derived",
+      "generic"
+    ],
+    "entries": [
+      {
+        "classification": "generic",
+        "counted": false,
+        "name": "pair_and_image_geometry"
+      },
+      {
+        "classification": "generic",
+        "counted": false,
+        "name": "lzma1_raw_filter"
+      },
+      {
+        "classification": "video-derived",
+        "counted": true,
+        "name": "lane_camera_intrinsics"
+      },
+      {
+        "classification": "video-derived",
+        "counted": true,
+        "name": "lane_render_header"
+      },
+      {
+        "classification": "weight-derived",
+        "counted": true,
+        "name": "R2_max_margin_palette",
+        "scorer_loaded_at_inflate": false
+      }
+    ],
+    "passed": true,
+    "unclassified_constants": []
+  },
+  "input_custody": [
+    {
+      "bytes": 884872,
+      "name": "seed.ppcs",
+      "sha256": "a21dde38128bed7ff62860ef005b994b74202e0bd00a37d1df8824ee325e856b"
+    },
+    {
+      "bytes": 36011,
+      "name": "base.pbase3",
+      "sha256": "7f2c95f8993136ac99b6ab179cc793cd4bccdf08407b7e31593503b750a81d5b"
+    },
+    {
+      "bytes": 181904,
+      "name": "events.pce3",
+      "sha256": "47c94bb47c450ef6bf5793e9583dcb06d40bfb8f33baa64becdde9fc1796e8c6"
+    },
+    {
+      "bytes": 180196,
+      "name": "components.pcomp3",
+      "sha256": "32b41a7db1c6927e6812a49bdea568cd00fd2c19ca9798e38666385e8ed2e68d"
+    }
+  ],
+  "limitations": {
+    "causal_parameters": "selected zero-parameter policy",
+    "frame0_carrier": "absent; frame0 equals frame1",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "verdict_scope": "current merged seed/base/event/component sections plus the same-frame realization only"
+  },
+  "parity": {
+    "n16_n64_n600_repo_native_exact": true,
+    "n16_n64_n600_standalone_double_decode": true,
+    "n600_stream_sha256": "01f4581354e108092010399c00dd6889286b87ad0525ea111d6f27f669d683f8"
+  },
+  "schema": "s4_archive_composer_audit_bundle.v1",
+  "source_commit": "56657efc187951ece601a66c756ad957e9975e88"
+}
