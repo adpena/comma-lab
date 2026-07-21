@@ -1,0 +1,169 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "main_review_required": true,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "promotion_eligible": false,
+    "receiver_closed": false,
+    "research_only": true,
+    "score_claim": false,
+    "verdict": "PREDICTOR_TARGET_MISSED"
+  },
+  "components": [
+    {
+      "component": "constraint-seed schema serializer parser",
+      "disposition": "extended-additively-for-strict-v2-custody",
+      "path": "src/tac/optimization/predict_project_schema.py",
+      "sha256": "95f8c9311b12cc3b826cafb3ebe90129b82c7a689ddc3da2cf794e9ddd7afb05"
+    },
+    {
+      "component": "PROJECT receiver realization projection inverse-R hard-oracle ladder",
+      "disposition": "sibling-owned-reused-untouched-not-receiver-closed-by-task578",
+      "path": "src/tac/optimization/predict_project_receiver.py",
+      "sha256": "6f3704726c57f9e02e628a792127d0ce16f1979e27097bbede003542942dbd1f"
+    },
+    {
+      "component": "G1 hash-pinned measurement receipt",
+      "disposition": "reused-as-exact-calibration-and-proxy-scope-authority",
+      "path": ".omx/research/g1_worldsheet_g3_cellcode_measurements_20260720T210000Z.json",
+      "sha256": "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089"
+    },
+    {
+      "component": "canonical G1 plane-induced homography and persist warp",
+      "disposition": "reused-as-is-and-executed-on-five-one-hot-channels",
+      "path": "src/tac/boundary_math/warp_real_luma_frame0.py",
+      "sha256": "e291a7355eecb542c9146b8a75fc1c3e0e44e003e15fc23d54c5a0b91864a03f"
+    },
+    {
+      "component": "Task 595 coherent Lane finite packet",
+      "counting_basis": "binding brotli-11 bytes only",
+      "disposition": "decoded-rendered-per-pair-reconciled-external-counted-not-duplicated",
+      "executed": true,
+      "execution_scope": "task578_measurement_only",
+      "lane_chart_brotli_bytes": 41303,
+      "lane_chart_raw_bytes": 159386,
+      "lane_chart_zlib9_bytes_diagnostic_only": 47546,
+      "lane_chart_zlib9_sha256_diagnostic_only": "ef16824eea59415e71435b94c450c2d554e0db08c0981fae6b392ab08170d287",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/boundary_inverse_20260721/run_20260721T052100Z_threshold0p5/coherent_slot_none_dash.lbnd2",
+      "receiver_closed": false,
+      "sha256": "d2b2a62eeb6ebe45cbf908dafa7e081eabddaca0f424faac970b41eea650d810"
+    },
+    {
+      "component": "Task 595 canonical Lane decoder and renderer",
+      "disposition": "reused-as-is-and-executed-by-task578-measurement",
+      "path": "src/tac/boundary_math/analytic_lane_render_band.py",
+      "sha256": "0ca4a9c1dd97e4c9d813ea5e06482a69afaafaf446784a7165fd498e155240ae"
+    },
+    {
+      "component": "Task 139 static hood clamp",
+      "disposition": "reused-as-is",
+      "path": "src/tac/boundary_math/hood_static_component.py",
+      "sha256": "224b5dc188d6dde10851d0776c180e73440b27bd3060e5cfd7772042a1fa53ed"
+    },
+    {
+      "component": "Task 234 Hungarian movable correspondence",
+      "disposition": "reused-as-is-no-new-box-coder",
+      "path": "src/tac/boundary_math/movable_site_coder.py",
+      "sha256": "3b543bab6780921ce659d7e753fe65d11f04733bac549e44dd589bac3a6dd892"
+    },
+    {
+      "component": "predecessor B2 composer and seeds",
+      "disposition": "reused-as-is",
+      "path": "src/tac/optimization/seed_compose_b2.py",
+      "sha256": "db259daafaa7acba68060c7de8352611634a9de185d0e44c8f7f0fce408518f7"
+    },
+    {
+      "component": "Task 578 v2 predictor and resumable measurement",
+      "disposition": "new-with-justification",
+      "justification": "No existing compression-side direct G1 proxy projective categorical advection plus executed per-class reconciliation and Task 578 receipt surface existed.",
+      "path": "src/tac/optimization/predictor_upgrade_xi_chart.py",
+      "sha256": "a429f0ca855d1d7abb6481ba8f7298f07504987fd8d6c3a063bdc692ab34cdae"
+    }
+  ],
+  "counted_sections": {
+    "lane_chart": {
+      "brotli_counted_bytes": 41303,
+      "executed": true,
+      "execution_scope": "task578_measurement_only",
+      "raw_bytes": 159386,
+      "receiver_closed": false,
+      "sha256": "d2b2a62eeb6ebe45cbf908dafa7e081eabddaca0f424faac970b41eea650d810",
+      "zlib9_bytes_diagnostic_only": 47546,
+      "zlib9_sha256_diagnostic_only": "ef16824eea59415e71435b94c450c2d554e0db08c0981fae6b392ab08170d287"
+    },
+    "static_pxch": {
+      "counted_raw_bytes": 221195,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/predictor_upgrade_20260721/canonical_g1_d4_fixed_20260721/charts/static_charts_n64.pxch",
+      "sha256": "2b3665c47f7a404e7ac8ea1b30cad768d4ce2a84fd998e167d230b522e18ba43",
+      "source_split": "n64 development prefix only",
+      "zlib9_bytes_diagnostic_only": 835
+    }
+  },
+  "d3": [
+    {
+      "advisory_non_score_objective": 3.1827088078921717,
+      "name": "loose",
+      "ppcs_bytes": 544710,
+      "ppcs_sha256": "3efc74b65caed67623ad57561b2ed29487fdd6d8de1aa64f47bc85e66caf7d8c",
+      "total_counted_bytes": 807208
+    },
+    {
+      "advisory_non_score_objective": 3.4039465032758214,
+      "name": "knee",
+      "ppcs_bytes": 879071,
+      "ppcs_sha256": "b88490a398ab23d5a74551baf54594ffa9893ac56c5ec904960d140df533772e",
+      "total_counted_bytes": 1141569
+    },
+    {
+      "advisory_non_score_objective": 3.845767919778214,
+      "name": "tight",
+      "ppcs_bytes": 1546709,
+      "ppcs_sha256": "d287b8d5f065141b767fac465da345873c02db512af9d6c7b0ef9edc3140fb32",
+      "total_counted_bytes": 1809207
+    }
+  ],
+  "d4": {
+    "comparison_surface": "mask-only",
+    "exception_coding_baseline": {
+      "corrected_cells": 938050,
+      "raw_bytes": 9380500,
+      "remaining_errors": 0,
+      "sum_independent_chunk_zlib9_bytes": 2686108
+    },
+    "record_count": 938050,
+    "r1_fields": "null",
+    "top_level_corrected_cells": 0,
+    "top_level_remaining_errors": 938050,
+    "verdict": "FORMALIZATION_PENDING_THROUGH_R_REALIZED_SCORE_RECOVERY"
+  },
+  "measurement_receipt": {
+    "n600_lane_satisfaction": 0.7076678264621604,
+    "path": ".omx/research/predictor_upgrade_xi_chart_measurements_20260721.json",
+    "sha256": "7df2a4adb7bfc62d48baec829d87296b4156ea2b433347a3dddd093ee69af236",
+    "work_dir": "/Volumes/VertigoDataTier/pact/evidence/predictor_upgrade_20260721/canonical_g1_d4_fixed_20260721"
+  },
+  "motion_custody": {
+    "absolute_trajectory_fabricated": false,
+    "already_relative_twist_redifferenced": false,
+    "categorical_transport": "one_hot_bilinear_then_first_argmax.v1",
+    "g1_receipt_sha256": "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089",
+    "invalid_projection": "persist_source_cell.v1",
+    "pitch_json_pointer": "g1/transport_assumptions/calibration/pitch_rad",
+    "proxy_limitation": "no exact banked cross-pair target; uses pose[k+1] nearest-target-pair proxy",
+    "relative_motion": "gt_poses_t_nearest_target_pair_proxy_direct_twist.v1",
+    "worldsheet_transport": "tac.boundary_math.warp_real_luma_frame0.warp_frame0_native_numpy"
+  },
+  "policy_id": "xi_advected_prior_per_class_charts.v2",
+  "schema": "predictor_upgrade_xi_chart_reuse_manifest.v2",
+  "stage_configs": {
+    "n64": "d4860734107b066246a0cc1e305be76f1539ba91e8f722856778a4a502244be6",
+    "n600": "0859b6f17000820f436e9dd5831b886f6f750511ab237ae1f2716d77ef16bc58"
+  },
+  "superseded_evidence": {
+    "all_prior_trees_preserved": true,
+    "noncanonical_xi_generation": {
+      "manifest_sha256": "066a87c750c84411df9a1cd296ce264f727d2896cc4ff993ba9a1834753fe6d6",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/predictor_upgrade_20260721/superseded_parent_rejected_noncanonical_xi_advection_20260721"
+    }
+  }
+}
