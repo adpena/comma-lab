@@ -1,0 +1,123 @@
+{
+  "schema": "m1_575_governed_launch_refusal.v1",
+  "written_at_utc": "2026-07-20T09:47:00Z",
+  "task": "Task #575 C2 banded-around-source generator governed n600 launch",
+  "lane_id": "lane_joint_optimum_575_xhigh_20260720",
+  "delegation_checkpoint_key": "codex_delegate:joint_optimum_575_xhigh:20260720T090417Z",
+  "latest_operator_directive_consumed": "2026-07-20T09:21:49Z",
+  "verdict": "REFUSED_NEW_N600_LAUNCH_MEMORY_RC4_AND_POSITIVE_BAND_FIRE_CONFIG_RC6_BLOCKED",
+  "verdict_scope": "This is a refusal of the current full-n600 C2 launch instance. It is not a verdict against the C2 vehicle or banded-training family.",
+  "safety_chain": {
+    "typed_dsl": {
+      "status": "PASS",
+      "exact_trainer_parser_consumed": true,
+      "mode": "banded_training",
+      "basis": "raw_centered",
+      "ste": "saturation_aware_uint8",
+      "policy_sha256": "d3226b536f84be62fad5a4b66a5dab41fc76a1a18c6f13c0b89aa1c3fd7477ef",
+      "capacity_signature": "47706b51882310be63c10df5ae5cb04817c25c5971fd78698f58eb579c492672",
+      "overrides": {
+        "--integer-plane-emitter-basis": "raw_centered",
+        "--integer-plane-emitter-mode": "banded_training",
+        "--integer-plane-emitter-policy-sha256": "d3226b536f84be62fad5a4b66a5dab41fc76a1a18c6f13c0b89aa1c3fd7477ef"
+      }
+    },
+    "single_flight": {
+      "status": "PASS",
+      "active_dispatch_claim_count_after_harvest_close": 0,
+      "harvest_job_closed": "harvest_fc-01KX6DZWCHNPQ6KN59V2MZ845J",
+      "terminal_status": "completed_harvest_exact_pointer_candidate"
+    },
+    "memory_preflight": {
+      "command": ".venv/bin/python tools/witness_memory_preflight.py --num-pairs 600 --render-h 384 --render-w 512 --verdict-batch 16 --micro-batch-pairs 2 --safe-frac 0.70 --strict --system-aware",
+      "intrinsic_status": "SAFE",
+      "projected_peak_gib": 73.4,
+      "safe_ceiling_gib": 89.6,
+      "safe_fraction": 0.70,
+      "system_admission_status": "REFUSE",
+      "return_code": 4,
+      "system_total_gib": 128.0,
+      "system_current_used_gib": 41.5,
+      "system_active_growth_gib": 0.0,
+      "system_projected_used_gib": 114.9,
+      "system_adaptive_ceiling_gib": 100.9,
+      "projected_excess_gib": 14.0,
+      "active_jobs_observed": 4,
+      "bypass_used": false
+    },
+    "governed_materializer": {
+      "path": "tools/materialize_c2_integer_plane_emitter_fire.py",
+      "invoked_after_memory_refusal": false,
+      "reason_not_invoked": "The ordered safety chain stopped at the strict rc=4 system-memory refusal; proceeding to a launcher would violate fail-closed admission.",
+      "static_current_fire_config_status": "RC6_BY_CONSTRUCTION_AFTER_VALID_PDW2",
+      "static_refusal": "full fire blocked: #553 PDW2 remains target-only with no scorer-free spatial/RGB pullback in #543; the current C2 coordinate topology is a polynomial control, not a receiver-bound curvelet/shearlet carrier; executable Fisher/secant/QP EV field custody is required by the positive-band manifest",
+      "positive_anisotropic_band_manifest_found": false,
+      "search_scope": [
+        ".omx/research/*.json",
+        "/Volumes/VertigoDataTier/pact/evidence/m1_c2_glue_rebuild_20260719",
+        "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719",
+        "/Volumes/VertigoDataTier/pact/evidence maxdepth=4",
+        "/Volumes/APDataStore/pact/evidence maxdepth=4"
+      ],
+      "receiver_closure_blockers": [
+        "real n600 positive-anisotropic derive_hyperplane_channel_band artifact with winner/rival/VJP/pair-normal custody and measured 38,077-candidate Fisher EV ordering is absent",
+        "PDW2 #553 has no scorer-free coefficients-to-spatial/RGB pullback in the #543 factor-2 receiver",
+        "receiver-bound curvelet/shearlet carrier and executable first-order+secant+QP inner-Jacobian EV field are absent"
+      ]
+    },
+    "launcher": {
+      "spawned": false,
+      "paid_dispatch": false,
+      "new_training_process": false,
+      "reason": "strict system-aware memory admission refused before launcher actuation"
+    }
+  },
+  "preserved_measured_partial": {
+    "source_receipt": "/Volumes/VertigoDataTier/pact/evidence/m1_c2_glue_rebuild_20260719/receipt.json",
+    "source_receipt_sha256": "d28db2cdc80b3514c12ab6f81b5b66a3bf53014ef12669a3ecc6492278b39dd1",
+    "authority": "capped macOS-CPU hard-oracle; prefix n6; non-n600; non-score; non-promotion",
+    "logical_pair_count": 600,
+    "executed_pair_cap": 6,
+    "band_mode": "zero_radius_control",
+    "positive_anisotropic_band_active": false,
+    "checkpoint_count": 8,
+    "all_stages_completed": true,
+    "preserved_stage_end_checkpoints": ["warmup", "band_fit", "rate_polish"],
+    "resume_checkpoint": "/Volumes/VertigoDataTier/pact/evidence/m1_c2_glue_rebuild_20260719/checkpoints/m1_c2_glue_real_control_20260719__ipe_stage002_rate_polish_ep000001_step000000000009.json",
+    "post_archive_bytes": 94352,
+    "post_archive_sha256": "e9e4297170350cb23fffebf93c797d8165a7b46319849635d5acc376614006d9",
+    "d_seg": 0.003132290323264897,
+    "d_pose": 150.166140238444,
+    "training_moved_d_seg": false,
+    "score_claim": false
+  },
+  "separate_exact_candidate": {
+    "receipt": ".omx/research/joint_optimum_575_xhigh_exact_row_20260720.json",
+    "archive_sha256": "cb6cf0ba719a535bf8874b31675a4ec66a893423d320f1e4071a2012cd88a56f",
+    "archive_bytes": 177169,
+    "full_precision_same_container_score": 0.18961993049720982,
+    "relationship_to_task_575": "Useful pointer-crossing inverse-search evidence, but not the requested C2 training row and not a substitute for the refused launch."
+  },
+  "review": {
+    "round": 1,
+    "model": "gpt-5.6-sol",
+    "reasoning_effort": "high",
+    "mode": "single_pass_read_only_adversarial",
+    "verdict": "PASS_NO_ACTIONABLE_FINDINGS",
+    "verified": [
+      "2026-07-20T09:21:49Z operator correction honored with Task #575 C2 primary",
+      "typed DSL hash, zero single-flight, strict rc=4 memory refusal, and no launcher",
+      "prefix-n6 control non-score scope and eight resumable checkpoints",
+      "separate click-polish archive hashes, score arithmetic, rounded report, and full-precision row separation",
+      "no pointer mutation or joint-optimum claim",
+      "explicit legacy provenance gaps",
+      "canonical task in_progress to blocked transition",
+      "MAIN landing review required"
+    ]
+  },
+  "pointer": {
+    "session_start_contest_cpu": 0.19108282419209976,
+    "mutated_in_this_branch": false,
+    "main_review_required": true
+  }
+}

@@ -81219,6 +81219,47 @@
         "n24 actual archive with native-f32 parse-back and hard through-R oracle",
         "strict n600 fixed-C1 gate: bytes<=216223 and d_seg<=0.00015196 and d_pose<=0.00010184"
       ]
+    },
+    {
+      "id": "lane_joint_optimum_575_xhigh_20260720",
+      "name": "Task 575 joint KKT optimum executor",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Isolated delegated build/research/launch arm; MAIN landing review required; no pointer authority without exact contest row."
     }
   ],
   "level_rules": {
