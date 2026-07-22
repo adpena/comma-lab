@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Real fail-closed consumer for the Task #603 direct-description owner.
+"""Fail-closed PRIMARY consumer plus local Task #603 custody runner.
 
 The current PRIMARY spec seals ``execution_allowed=false``.  ``preflight``
 prints the authoritative DRAFT readiness record; ``optimize`` refuses before
-any subprocess, provider, GPU, scorer, or archive mutation.
+any subprocess, provider, GPU, scorer, or archive mutation.  The separately
+typed ``custody-smoke`` mode runs only the deterministic n64 integer receiver
+and bounded description-space search; it has no scorer or launch authority.
 """
 
 from __future__ import annotations
@@ -62,10 +64,13 @@ if __name__ == "__main__":
     _bootstrap_repo_python()
 
 from tac.optimization.direct_description_minimizer import (  # noqa: E402
+    DirectDescriptionCustodyProgramV1,
     DirectDescriptionError,
+    DirectDescriptionOptimizerConfigV1,
     build_direct_description_arg_parser,
     build_launch_readiness,
     load_stage_checkpoint,
+    run_n64_deterministic_custody_smoke,
     storage_preflight,
 )
 
@@ -93,6 +98,57 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         owner = _read_json_no_duplicates(args.owner_manifest)
+        if args.execution_allowed != "false":
+            raise DirectDescriptionError("current PRIMARY manifest only compiles --execution-allowed false")
+        if args.operator_go is not None:
+            raise DirectDescriptionError(
+                "an operator-GO cannot supersede execution_allowed:false; a reviewed spec update is required"
+            )
+        if args.mode == "custody-smoke":
+            if args.custody_config is None or args.output_dir is None:
+                raise DirectDescriptionError(
+                    "custody-smoke requires typed --custody-config and --output-dir"
+                )
+            if args.resume_from is not None:
+                raise DirectDescriptionError(
+                    "custody-smoke performs its own disk-resume control; external --resume-from is ambiguous"
+                )
+            # Reuse the owner verifier without pretending its launch gates are green.
+            build_launch_readiness(
+                owner,
+                storage_receipt={"outcome": "REFUSE", "reason": "local custody mode"},
+                memory_preflight_outcome="REFUSE",
+                governor_outcome="REFUSE",
+                operator_go=None,
+            )
+            config = DirectDescriptionOptimizerConfigV1.model_validate_json(
+                json.dumps(
+                    _read_json_no_duplicates(args.custody_config),
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                )
+            )
+            program = DirectDescriptionCustodyProgramV1(
+                owner_manifest_path=str(args.owner_manifest),
+                custody_config_path=str(args.custody_config),
+                output_directory=str(args.output_dir),
+            )
+            semantic_argv = program.compile_consumer_argv()
+            receipt, receipt_path = run_n64_deterministic_custody_smoke(
+                config,
+                output_directory=args.output_dir,
+                semantic_argv=semantic_argv,
+            )
+            print(
+                json.dumps(
+                    {"receipt_path": str(receipt_path), "receipt": receipt},
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+            )
+            return 0
+        if args.custody_config is not None or args.output_dir is not None:
+            raise DirectDescriptionError("custody arguments are valid only in custody-smoke mode")
         storage = storage_preflight(2 * 1024**3)
         readiness = build_launch_readiness(
             owner,
@@ -116,17 +172,11 @@ def main(argv: list[str] | None = None) -> int:
                 "continuation_runner_ready": False,
             }
         print(json.dumps(readiness, sort_keys=True, separators=(",", ":")))
-        if args.execution_allowed != "false":
-            raise DirectDescriptionError("current PRIMARY manifest only compiles --execution-allowed false")
-        if args.operator_go is not None:
-            raise DirectDescriptionError(
-                "an operator-GO cannot supersede execution_allowed:false; a reviewed spec update is required"
-            )
         if args.mode == "optimize":
             raise DirectDescriptionError("DRAFT_DO_NOT_FIRE: direct-description launch readiness predicates are red")
         if readiness.get("launch_ready") is not True:
             raise DirectDescriptionError("PREFLIGHT_REFUSE: launch readiness predicates are red")
-    except DirectDescriptionError as exc:
+    except (DirectDescriptionError, ValueError) as exc:
         print(f"REFUSE: {exc}", file=sys.stderr)
         return 2
     return 0

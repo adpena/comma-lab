@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: MIT
-"""Fail-closed builder surfaces for the Task #603 direct-description minimizer.
+"""Fail-closed builder and local custody surfaces for Task #603.
 
-This module does not launch an optimization.  It defines a counted-description
-schema, a deterministic legacy-control repacker, typed DSL custody, exact cap
-arithmetic, checkpoint serialization/restore audits, and fail-closed evidence
-verifiers.  It does not implement the PRIMARY receiver, optimizer, or stage
-continuation loop.  The current specification has ``execution_allowed=false``.
+This module does not launch training or an authority evaluation.  It defines a
+counted-description schema, a deterministic legacy-control repacker, typed DSL
+custody, exact cap arithmetic, checkpoint serialization/restore audits, and
+fail-closed evidence verifiers.  It also provides a separately versioned,
+independently framed integer/uint8 receiver and an actual deterministic local
+description-space search runner.  Those implementations are custody-smoke
+apparatus only; the current PRIMARY specification still has
+``execution_allowed=false``.
 
 The first archive compiler deliberately reuses the already measured S4 carrier
 container only to prove byte-exact legacy re-expression.  Its six section names
@@ -25,6 +28,7 @@ import math
 import os
 import re
 import shutil
+import struct
 import tempfile
 import zipfile
 from collections.abc import Mapping, Sequence
@@ -91,6 +95,40 @@ _APPLICABLE_STRATA: Final = {
     "Lane": frozenset({"cell_interior", "boundary_codim1"}),
     "Movable": frozenset({"boundary_codim1", "movable_track", "critical_event"}),
 }
+
+_V2_STREAM_ORDER: Final = (
+    "static_ground_coefficients",
+    "xi_curve_knots",
+    "pose6_dxi_residuals",
+    "sparse_events",
+    "entropy_state",
+    "exceptions",
+)
+_V2_MEMBER_BY_STREAM: Final = {
+    name: f"{index:02d}_{name}.dds2" for index, name in enumerate(_V2_STREAM_ORDER)
+}
+_V2_STREAM_BY_MEMBER: Final = {value: key for key, value in _V2_MEMBER_BY_STREAM.items()}
+_V2_STREAM_MAGIC: Final = {
+    "static_ground_coefficients": b"SGC2",
+    "xi_curve_knots": b"XIK2",
+    "pose6_dxi_residuals": b"P6R2",
+    "sparse_events": b"EVT2",
+    "entropy_state": b"ENT2",
+    "exceptions": b"EXC2",
+}
+_V2_BODY_BYTES: Final = {
+    "static_ground_coefficients": 128,
+    "xi_curve_knots": 128,
+    "pose6_dxi_residuals": 64 * 6,
+    "sparse_events": 64,
+    "entropy_state": 5,
+    "exceptions": 64,
+}
+_V2_STREAM_FRAME: Final = struct.Struct(">4sBBH")
+_ZIP_LOCAL_HEADER: Final = struct.Struct("<4s5H3I2H")
+_ZIP_CENTRAL_HEADER: Final = struct.Struct("<4s6H3I5H2I")
+_ZIP_EOCD: Final = struct.Struct("<4s4H2IH")
+_CUSTODY_OUTPUT_SHAPE: Final = (64, 2, 8, 8, 3)
 
 
 class DirectDescriptionError(ValueError):
@@ -405,6 +443,468 @@ def parse_direct_description_archive(archive: bytes | Path) -> DirectArchiveBuil
     return rebuilt
 
 
+class CountedDescriptionStreamV2(BaseModel):
+    """One live custody-smoke semantic body in the independently framed carrier."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    payload: bytes
+    codec: Literal["zip_stored_independent_frame"] = "zip_stored_independent_frame"
+    semantic_status: Literal["PRIMARY_CUSTODY_SMOKE_SEMANTIC_STREAM"] = (
+        "PRIMARY_CUSTODY_SMOKE_SEMANTIC_STREAM"
+    )
+
+
+class DirectDescriptionZV2(BaseModel):
+    """Complete local-custody description with six live semantic owners."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    static_ground_coefficients: CountedDescriptionStreamV2
+    xi_curve_knots: CountedDescriptionStreamV2
+    pose6_dxi_residuals: CountedDescriptionStreamV2
+    sparse_events: CountedDescriptionStreamV2
+    entropy_state: CountedDescriptionStreamV2
+    exceptions: CountedDescriptionStreamV2
+
+    @model_validator(mode="after")
+    def _exact_custody_lengths(self) -> DirectDescriptionZV2:
+        for stream_name in _V2_STREAM_ORDER:
+            payload = getattr(self, stream_name).payload
+            if len(payload) != _V2_BODY_BYTES[stream_name]:
+                raise ValueError(
+                    f"{stream_name} must contain exactly {_V2_BODY_BYTES[stream_name]} "
+                    "custody-smoke body bytes"
+                )
+        if not self.pose6_dxi_residuals.payload:
+            raise ValueError("the v2 Pose6/dxi stream is mandatory and nonempty")
+        return self
+
+    def replace_stream_byte(self, stream_name: str, index: int, value: int) -> DirectDescriptionZV2:
+        """Return one byte-coordinate proposal without mutating the frozen description."""
+
+        if stream_name not in _V2_STREAM_ORDER:
+            raise DirectDescriptionError(f"unknown v2 stream {stream_name!r}")
+        stream = getattr(self, stream_name)
+        if isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < len(stream.payload):
+            raise DirectDescriptionError("stream byte coordinate is out of range")
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 255:
+            raise DirectDescriptionError("stream byte proposal must be uint8")
+        payload = bytearray(stream.payload)
+        payload[index] = value
+        return self.model_copy(
+            update={stream_name: stream.model_copy(update={"payload": bytes(payload)})}
+        )
+
+    def payload_ledger(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "stream": stream_name,
+                "member": _V2_MEMBER_BY_STREAM[stream_name],
+                "semantic_payload_bytes": len(getattr(self, stream_name).payload),
+                "semantic_payload_sha256": _sha256(getattr(self, stream_name).payload),
+                "semantic_status": getattr(self, stream_name).semantic_status,
+            }
+            for stream_name in _V2_STREAM_ORDER
+        ]
+
+
+@dataclass(frozen=True, slots=True)
+class DirectArchiveBuildResultV2:
+    """Exact independently framed archive result for local custody work."""
+
+    archive: bytes
+    framed_members: Mapping[str, bytes]
+    z: DirectDescriptionZV2
+
+    def custody(self) -> dict[str, Any]:
+        homes = _zip_unique_home_ledger(self.archive)
+        return {
+            "schema": "direct_description_archive_build.v2",
+            "compiler": "ddm_independently_framed_zip_stored.v2",
+            "candidate_role": "custody_smoke_not_candidate",
+            "archive_bytes": len(self.archive),
+            "archive_sha256": _sha256(self.archive),
+            "member_count": len(self.framed_members),
+            "member_order": [_V2_MEMBER_BY_STREAM[name] for name in _V2_STREAM_ORDER],
+            "stream_ledger": self.z.payload_ledger(),
+            "unique_final_zip_homes": homes,
+            "unique_home_coverage_bytes": sum(row["home_bytes"] for row in homes),
+            "all_archive_bytes_have_one_home": (
+                sum(row["home_bytes"] for row in homes) == len(self.archive)
+            ),
+            "receiver_consumption_verified": False,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class DirectDescriptionReceiverResultV2:
+    """Deterministic integer/uint8 receiver output and consumption custody."""
+
+    archive: bytes
+    z: DirectDescriptionZV2
+    output: np.ndarray
+    custody: Mapping[str, Any]
+
+    @property
+    def output_sha256(self) -> str:
+        return _sha256(self.output.tobytes(order="C"))
+
+
+def _frame_v2_stream(stream_name: str, payload: bytes) -> bytes:
+    if stream_name not in _V2_STREAM_ORDER:
+        raise DirectDescriptionError(f"unknown v2 stream {stream_name!r}")
+    if not isinstance(payload, bytes) or len(payload) != _V2_BODY_BYTES[stream_name]:
+        raise DirectDescriptionError(f"{stream_name} body length is not canonical")
+    return _V2_STREAM_FRAME.pack(_V2_STREAM_MAGIC[stream_name], 2, 64, len(payload)) + payload
+
+
+def _parse_v2_stream(stream_name: str, framed: bytes) -> bytes:
+    if not isinstance(framed, bytes) or len(framed) < _V2_STREAM_FRAME.size:
+        raise DirectDescriptionError(f"{stream_name} frame is truncated")
+    magic, version, n_pairs, body_bytes = _V2_STREAM_FRAME.unpack_from(framed)
+    if magic != _V2_STREAM_MAGIC[stream_name] or version != 2 or n_pairs != 64:
+        raise DirectDescriptionError(f"{stream_name} frame identity mismatch")
+    body = framed[_V2_STREAM_FRAME.size :]
+    if body_bytes != len(body) or len(body) != _V2_BODY_BYTES[stream_name]:
+        raise DirectDescriptionError(f"{stream_name} frame length mismatch")
+    if _frame_v2_stream(stream_name, body) != framed:
+        raise DirectDescriptionError(f"{stream_name} frame is not canonical")
+    return body
+
+
+def _deterministic_v2_zip(framed_members: Mapping[str, bytes]) -> bytes:
+    buffer = io.BytesIO()
+    expected_names = tuple(_V2_MEMBER_BY_STREAM[name] for name in _V2_STREAM_ORDER)
+    if tuple(framed_members) != expected_names:
+        raise DirectDescriptionError("v2 framed member order is incomplete or reordered")
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.comment = b""
+        for member_name in expected_names:
+            info = zipfile.ZipInfo(member_name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_STORED
+            info.external_attr = 0o100644 << 16
+            info.create_system = 3
+            info.extra = b""
+            info.comment = b""
+            archive.writestr(info, framed_members[member_name], compress_type=zipfile.ZIP_STORED)
+    return buffer.getvalue()
+
+
+def compile_direct_description_archive_v2(z: DirectDescriptionZV2) -> DirectArchiveBuildResultV2:
+    """Compile one description to six independently framed deterministic ZIP members."""
+
+    if not isinstance(z, DirectDescriptionZV2):
+        raise DirectDescriptionError("z must be DirectDescriptionZV2")
+    framed = {
+        _V2_MEMBER_BY_STREAM[stream_name]: _frame_v2_stream(
+            stream_name, getattr(z, stream_name).payload
+        )
+        for stream_name in _V2_STREAM_ORDER
+    }
+    archive = _deterministic_v2_zip(framed)
+    return DirectArchiveBuildResultV2(archive=archive, framed_members=framed, z=z)
+
+
+def parse_direct_description_archive_v2(archive: bytes | Path) -> DirectArchiveBuildResultV2:
+    """Strictly parse and byte-exactly re-encode the independently framed carrier."""
+
+    archive_bytes, _source = _read_canonical_archive(archive)
+    expected_names = tuple(_V2_MEMBER_BY_STREAM[name] for name in _V2_STREAM_ORDER)
+    framed: dict[str, bytes] = {}
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive_bytes), "r") as handle:
+            members = handle.infolist()
+            if tuple(row.filename for row in members) != expected_names:
+                raise DirectDescriptionError("v2 archive member order is incomplete or reordered")
+            if handle.comment:
+                raise DirectDescriptionError("v2 archive comments are forbidden")
+            for row in members:
+                if (
+                    row.compress_type != zipfile.ZIP_STORED
+                    or row.flag_bits != 0
+                    or row.date_time != (1980, 1, 1, 0, 0, 0)
+                    or row.extra
+                    or row.comment
+                    or row.compress_size != row.file_size
+                ):
+                    raise DirectDescriptionError("v2 ZIP member framing is not canonical")
+                framed[row.filename] = handle.read(row.filename)
+    except DirectDescriptionError:
+        raise
+    except (
+        zipfile.BadZipFile,
+        KeyError,
+        OSError,
+        RuntimeError,
+        NotImplementedError,
+        ValueError,
+    ) as exc:
+        raise DirectDescriptionError("v2 archive ZIP is malformed") from exc
+    values: dict[str, CountedDescriptionStreamV2] = {}
+    for member_name in expected_names:
+        stream_name = _V2_STREAM_BY_MEMBER[member_name]
+        values[stream_name] = CountedDescriptionStreamV2(
+            payload=_parse_v2_stream(stream_name, framed[member_name])
+        )
+    z = DirectDescriptionZV2(**values)
+    rebuilt = compile_direct_description_archive_v2(z)
+    if rebuilt.framed_members != framed or rebuilt.archive != archive_bytes:
+        raise DirectDescriptionError("v2 archive parse/re-encode identity failed")
+    return rebuilt
+
+
+def _zip_unique_home_ledger(archive: bytes) -> list[dict[str, Any]]:
+    """Partition every final-ZIP byte into one semantic member or footer home."""
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive), "r") as handle:
+            infos = handle.infolist()
+    except zipfile.BadZipFile as exc:
+        raise DirectDescriptionError("cannot derive homes from malformed ZIP") from exc
+    eocd_offset = archive.rfind(b"PK\x05\x06")
+    if eocd_offset < 0 or eocd_offset + _ZIP_EOCD.size != len(archive):
+        raise DirectDescriptionError("v2 ZIP must end in one comment-free EOCD")
+    (
+        signature,
+        disk,
+        central_disk,
+        disk_entries,
+        total_entries,
+        central_bytes,
+        central_offset,
+        comment_bytes,
+    ) = _ZIP_EOCD.unpack_from(archive, eocd_offset)
+    if (
+        signature != b"PK\x05\x06"
+        or disk != 0
+        or central_disk != 0
+        or disk_entries != len(infos)
+        or total_entries != len(infos)
+        or comment_bytes != 0
+        or central_offset + central_bytes != eocd_offset
+    ):
+        raise DirectDescriptionError("v2 ZIP central directory custody mismatch")
+    rows: list[dict[str, Any]] = []
+    central_cursor = central_offset
+    coverage: list[tuple[int, int, str]] = []
+    for info in infos:
+        local = _ZIP_LOCAL_HEADER.unpack_from(archive, info.header_offset)
+        if local[0] != b"PK\x03\x04":
+            raise DirectDescriptionError("v2 local ZIP header signature mismatch")
+        local_name_bytes = local[-2]
+        local_extra_bytes = local[-1]
+        payload_start = info.header_offset + _ZIP_LOCAL_HEADER.size + local_name_bytes + local_extra_bytes
+        local_end = payload_start + info.compress_size
+        central = _ZIP_CENTRAL_HEADER.unpack_from(archive, central_cursor)
+        if central[0] != b"PK\x01\x02":
+            raise DirectDescriptionError("v2 central ZIP header signature mismatch")
+        name_bytes, extra_bytes, member_comment_bytes = central[10:13]
+        central_end = central_cursor + _ZIP_CENTRAL_HEADER.size + name_bytes + extra_bytes + member_comment_bytes
+        local_name = archive[
+            info.header_offset + _ZIP_LOCAL_HEADER.size :
+            info.header_offset + _ZIP_LOCAL_HEADER.size + local_name_bytes
+        ].decode("ascii")
+        central_name = archive[
+            central_cursor + _ZIP_CENTRAL_HEADER.size :
+            central_cursor + _ZIP_CENTRAL_HEADER.size + name_bytes
+        ].decode("ascii")
+        if local_name != info.filename or central_name != info.filename:
+            raise DirectDescriptionError("v2 ZIP member name custody mismatch")
+        stream_name = _V2_STREAM_BY_MEMBER.get(info.filename)
+        if stream_name is None:
+            raise DirectDescriptionError("v2 ZIP has an unowned member")
+        ranges = (
+            (info.header_offset, local_end, "local_header_frame_and_payload"),
+            (central_cursor, central_end, "central_directory_record"),
+        )
+        for start, end, kind in ranges:
+            coverage.append((start, end, f"{stream_name}:{kind}"))
+        rows.append(
+            {
+                "owner": stream_name,
+                "member": info.filename,
+                "home_ranges": [
+                    {"start": start, "end": end, "bytes": end - start, "kind": kind}
+                    for start, end, kind in ranges
+                ],
+                "member_payload_range": {
+                    "start": payload_start,
+                    "end": local_end,
+                    "bytes": local_end - payload_start,
+                },
+                "home_bytes": sum(end - start for start, end, _kind in ranges),
+            }
+        )
+        central_cursor = central_end
+    if central_cursor != eocd_offset:
+        raise DirectDescriptionError("v2 ZIP central directory has trailing bytes")
+    footer = (eocd_offset, len(archive), "container_framing:EOCD")
+    coverage.append(footer)
+    rows.append(
+        {
+            "owner": "container_framing",
+            "member": None,
+            "home_ranges": [
+                {
+                    "start": footer[0],
+                    "end": footer[1],
+                    "bytes": footer[1] - footer[0],
+                    "kind": "end_of_central_directory",
+                }
+            ],
+            "member_payload_range": None,
+            "home_bytes": footer[1] - footer[0],
+        }
+    )
+    ordered = sorted(coverage)
+    cursor = 0
+    for start, end, _label in ordered:
+        if start != cursor or end <= start:
+            raise DirectDescriptionError("v2 final-ZIP byte homes overlap or leave a gap")
+        cursor = end
+    if cursor != len(archive):
+        raise DirectDescriptionError("v2 final-ZIP byte homes do not cover the archive")
+    return rows
+
+
+def _receive_v2_z(z: DirectDescriptionZV2) -> np.ndarray:
+    """Consume all semantic bodies using portable integer/uint8 operations only."""
+
+    frame_bytes = 8 * 8 * 3
+    pair_bytes = 2 * frame_bytes
+    flat = np.zeros(64 * pair_bytes, dtype=np.uint16)
+    for pair in range(64):
+        pair_base = pair * pair_bytes
+        frame0 = pair_base
+        frame1 = pair_base + frame_bytes
+        pose = z.pose6_dxi_residuals.payload[pair * 6 : pair * 6 + 6]
+        static = z.static_ground_coefficients.payload[pair * 2 : pair * 2 + 2]
+        xi = z.xi_curve_knots.payload[pair * 2 : pair * 2 + 2]
+        event = z.sparse_events.payload[pair]
+        exception = z.exceptions.payload[pair]
+        for coordinate, value in enumerate(pose):
+            flat[frame0 + coordinate] = np.uint16(value)
+        for coordinate, value in enumerate(static):
+            flat[frame1 + coordinate] = np.uint16(value)
+        for coordinate, value in enumerate(xi):
+            flat[frame0 + 16 + coordinate] = np.uint16(value)
+            flat[frame1 + 2 + coordinate] = np.uint16(value)
+        flat[frame1 + 4] = np.uint16(event)
+        flat[frame1 + 5] = np.uint16(exception)
+    for index, value in enumerate(z.entropy_state.payload):
+        flat[frame_bytes + 6 + index] = np.uint16(value)
+    return flat.astype(np.uint8).reshape(_CUSTODY_OUTPUT_SHAPE)
+
+
+def receive_direct_description_archive_v2(
+    archive: bytes | Path,
+) -> DirectDescriptionReceiverResultV2:
+    """Parse, re-encode, consume, and receipt one nonempty Pose6 archive."""
+
+    parsed = parse_direct_description_archive_v2(archive)
+    output = _receive_v2_z(parsed.z)
+    if output.dtype != np.uint8 or output.shape != _CUSTODY_OUTPUT_SHAPE:
+        raise DirectDescriptionError("v2 receiver left the integer/uint8 custody domain")
+    archive_custody = parsed.custody()
+    stream_rows = []
+    for stream_name in _V2_STREAM_ORDER:
+        payload = getattr(parsed.z, stream_name).payload
+        stream_rows.append(
+            {
+                "stream": stream_name,
+                "member": _V2_MEMBER_BY_STREAM[stream_name],
+                "payload_bytes_read": len(payload),
+                "payload_sha256": _sha256(payload),
+                "consumption_count": 1,
+                "output_mutation_verified": False,
+            }
+        )
+    custody = {
+        **archive_custody,
+        "schema": "direct_description_integer_uint8_receiver.v2",
+        "receiver": "numpy_integer_uint8_reference.v2",
+        "receiver_domain": "integer_uint8_R_custody_fixture",
+        "n_pairs": 64,
+        "output_shape": list(output.shape),
+        "output_dtype": str(output.dtype),
+        "output_bytes": int(output.nbytes),
+        "output_sha256": _sha256(output.tobytes(order="C")),
+        "pose6_records_consumed": 64,
+        "pose6_scalar_residuals_consumed": len(parsed.z.pose6_dxi_residuals.payload),
+        "all_members_consumed_once": True,
+        "stream_consumption": stream_rows,
+        "receiver_consumption_verified": True,
+        "score_claim": False,
+        "evidence_axis": "[custody-smoke]",
+    }
+    return DirectDescriptionReceiverResultV2(
+        archive=parsed.archive,
+        z=parsed.z,
+        output=output,
+        custody=custody,
+    )
+
+
+def prove_v2_noop_detector(z: DirectDescriptionZV2) -> dict[str, Any]:
+    """Prove framing relevance and semantic output use for every counted byte."""
+
+    baseline = receive_direct_description_archive_v2(compile_direct_description_archive_v2(z).archive)
+    semantic_checked = 0
+    per_stream: list[dict[str, Any]] = []
+    for stream_name in _V2_STREAM_ORDER:
+        payload = getattr(z, stream_name).payload
+        changed = 0
+        for index, value in enumerate(payload):
+            mutated = z.replace_stream_byte(stream_name, index, value ^ 1)
+            result = receive_direct_description_archive_v2(
+                compile_direct_description_archive_v2(mutated).archive
+            )
+            if result.output_sha256 == baseline.output_sha256:
+                raise DirectDescriptionError(
+                    f"NOOP_DETECTOR: {stream_name}[{index}] is read but not used"
+                )
+            changed += 1
+        semantic_checked += changed
+        per_stream.append(
+            {
+                "stream": stream_name,
+                "semantic_payload_bytes_checked": changed,
+                "all_mutations_changed_receiver_output": True,
+            }
+        )
+    archive_checked = 0
+    archive_refused = 0
+    archive_changed = 0
+    for index, value in enumerate(baseline.archive):
+        mutated = bytearray(baseline.archive)
+        mutated[index] = value ^ 1
+        try:
+            result = receive_direct_description_archive_v2(bytes(mutated))
+        except DirectDescriptionError:
+            archive_refused += 1
+        else:
+            if result.output_sha256 == baseline.output_sha256:
+                raise DirectDescriptionError(
+                    f"NOOP_DETECTOR: final archive byte {index} has no receiver effect"
+                )
+            archive_changed += 1
+        archive_checked += 1
+    return {
+        "schema": "direct_description_counted_byte_noop_detector.v1",
+        "evidence_axis": "[custody-smoke]",
+        "archive_sha256": _sha256(baseline.archive),
+        "archive_bytes_checked": archive_checked,
+        "archive_mutations_refused": archive_refused,
+        "archive_mutations_changed_output": archive_changed,
+        "all_archive_bytes_read_or_output_effective": True,
+        "semantic_payload_bytes_checked": semantic_checked,
+        "all_semantic_payload_bytes_output_effective": True,
+        "per_stream": per_stream,
+        "score_claim": False,
+    }
+
+
 def prove_baseline_reexpression(archive_path: Path = Path(S4_BASELINE_ARCHIVE)) -> dict[str, Any]:
     """Measure whether the settled S4 control is byte-exact under the typed ``A``."""
 
@@ -662,7 +1162,7 @@ def build_direct_description_owner() -> dict[str, Any]:
         "custody_argv": list(post_argv),
         "consumer_argv": list(post_argv),
         "execution_allowed": False,
-        "launch_readiness": "BLOCKED_RECEIVER_AND_RUNNER_NOT_IMPLEMENTED",
+        "launch_readiness": "BLOCKED_PRIMARY_EXECUTION_FALSE_AND_AUTHORITY_GATES_RED",
     }
     semantic = _strip_volatile(bundle)
     bundle["dsl_compile_hash"] = _sha256(rfc8785_canonicalize(semantic))
@@ -674,10 +1174,12 @@ def build_direct_description_arg_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(description="Task #603 direct-description PRIMARY consumer")
     parser.add_argument("--owner-manifest", type=Path, required=True)
-    parser.add_argument("--mode", choices=("preflight", "optimize"), required=True)
+    parser.add_argument("--mode", choices=("preflight", "optimize", "custody-smoke"), required=True)
     parser.add_argument("--execution-allowed", choices=("false", "true"), required=True)
     parser.add_argument("--operator-go", type=Path)
     parser.add_argument("--resume-from", type=Path)
+    parser.add_argument("--custody-config", type=Path)
+    parser.add_argument("--output-dir", type=Path)
     return parser
 
 
@@ -1382,6 +1884,777 @@ def load_stage_checkpoint(
     if checkpoint.argv != argv:
         raise DirectDescriptionError("resume checkpoint argv differs from the governed run")
     return checkpoint
+
+
+class DirectDescriptionSearchStageV1(BaseModel):
+    """One honestly labelled bounded coordinate-search stage."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    name: StrictStr
+    role: Literal["candidate_search"] = "candidate_search"
+    objective_order: Literal["cells_first", "pose_first", "joint_integer_debt"]
+    stream_names: tuple[
+        Literal[
+            "static_ground_coefficients",
+            "xi_curve_knots",
+            "pose6_dxi_residuals",
+            "sparse_events",
+            "entropy_state",
+            "exceptions",
+        ],
+        ...,
+    ]
+    max_coordinate_steps: StrictInt = Field(ge=1, le=4096)
+
+    @model_validator(mode="after")
+    def _coherent_stage(self) -> DirectDescriptionSearchStageV1:
+        if _SAFE_COMPONENT_RE.fullmatch(self.name) is None:
+            raise ValueError("search stage name is not filename safe")
+        if not self.stream_names or len(set(self.stream_names)) != len(self.stream_names):
+            raise ValueError("search stage streams must be nonempty and unique")
+        if self.objective_order == "pose_first" and self.stream_names != (
+            "pose6_dxi_residuals",
+        ):
+            raise ValueError("pose-first search is restricted to the counted Pose6 owner")
+        return self
+
+
+class DirectDescriptionOptimizerConfigV1(BaseModel):
+    """Typed local-only configuration for deterministic description descent."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True, populate_by_name=True)
+
+    schema_: Literal["DirectDescriptionOptimizerConfigV1"] = Field(
+        default="DirectDescriptionOptimizerConfigV1",
+        alias="schema",
+        serialization_alias="schema",
+    )
+    run_id: StrictStr = "ddm_n64_custody_seed1234"
+    seed: Literal[SEED] = SEED
+    n_pairs: Literal[64] = 64
+    receiver: Literal["numpy_integer_uint8_reference.v2"] = "numpy_integer_uint8_reference.v2"
+    objective: Literal["custody_integer_l1_debt_plus_exact_archive_bytes"] = (
+        "custody_integer_l1_debt_plus_exact_archive_bytes"
+    )
+    evidence_axis: Literal["[custody-smoke]"] = "[custody-smoke]"
+    research_only: Literal[True] = True
+    execution_allowed: Literal[False] = False
+    checkpoint_policy: Literal["atomic_preserve_every_stage"] = "atomic_preserve_every_stage"
+    stages: tuple[DirectDescriptionSearchStageV1, ...] = (
+        DirectDescriptionSearchStageV1(
+            name="semantic_cells_search",
+            objective_order="cells_first",
+            stream_names=(
+                "static_ground_coefficients",
+                "sparse_events",
+                "entropy_state",
+                "exceptions",
+            ),
+            max_coordinate_steps=12,
+        ),
+        DirectDescriptionSearchStageV1(
+            name="pose6_causal_search",
+            objective_order="pose_first",
+            stream_names=("pose6_dxi_residuals",),
+            max_coordinate_steps=12,
+        ),
+        DirectDescriptionSearchStageV1(
+            name="xi_joint_search",
+            objective_order="joint_integer_debt",
+            stream_names=("xi_curve_knots",),
+            max_coordinate_steps=12,
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _sealed_custody_config(self) -> DirectDescriptionOptimizerConfigV1:
+        if _SAFE_COMPONENT_RE.fullmatch(self.run_id) is None:
+            raise ValueError("optimizer run_id is not filename safe")
+        if not self.stages or len({stage.name for stage in self.stages}) != len(self.stages):
+            raise ValueError("optimizer stages must be nonempty and uniquely named")
+        covered = {name for stage in self.stages for name in stage.stream_names}
+        if covered != set(_V2_STREAM_ORDER):
+            raise ValueError("optimizer stage plan must cover every counted semantic stream")
+        return self
+
+    def typed_config_hash(self) -> str:
+        return _sha256(rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True)))
+
+    def dsl_compile_hash(self) -> str:
+        return _sha256(
+            rfc8785_canonicalize(
+                {
+                    "compile_target": "direct_description_local_custody_optimizer.v1",
+                    "typed_config": self.model_dump(mode="json", by_alias=True),
+                }
+            )
+        )
+
+
+class DirectDescriptionCustodyProgramV1(BaseModel):
+    """Typed CLI compiler for the local n64 custody runner only."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    owner_manifest_path: StrictStr
+    custody_config_path: StrictStr
+    output_directory: StrictStr
+
+    def compile_consumer_argv(self) -> tuple[str, ...]:
+        argv = (
+            "/usr/bin/env",
+            "python3",
+            "tools/run_direct_description_minimizer.py",
+            "--owner-manifest",
+            self.owner_manifest_path,
+            "--mode",
+            "custody-smoke",
+            "--execution-allowed",
+            "false",
+            "--custody-config",
+            self.custody_config_path,
+            "--output-dir",
+            self.output_directory,
+        )
+        build_direct_description_arg_parser().parse_args(list(argv[3:]))
+        return argv
+
+
+def _seeded_stream_bytes(seed: int, stream_name: str, length: int) -> bytes:
+    output = bytearray()
+    counter = 0
+    while len(output) < length:
+        output.extend(
+            hashlib.sha256(
+                f"ddm-custody-v1\0{seed}\0{stream_name}\0{counter}".encode()
+            ).digest()
+        )
+        counter += 1
+    return bytes(output[:length])
+
+
+def build_n64_custody_descriptions(
+    config: DirectDescriptionOptimizerConfigV1,
+) -> tuple[DirectDescriptionZV2, DirectDescriptionZV2]:
+    """Derive deterministic initial/target descriptions from the one sealed seed."""
+
+    if not isinstance(config, DirectDescriptionOptimizerConfigV1):
+        raise DirectDescriptionError("custody descriptions require typed optimizer config")
+    target_values: dict[str, CountedDescriptionStreamV2] = {}
+    initial_values: dict[str, CountedDescriptionStreamV2] = {}
+    for stream_name in _V2_STREAM_ORDER:
+        target = _seeded_stream_bytes(config.seed, stream_name, _V2_BODY_BYTES[stream_name])
+        initial = bytes(value + 1 if value < 255 else value - 1 for value in target)
+        target_values[stream_name] = CountedDescriptionStreamV2(payload=target)
+        initial_values[stream_name] = CountedDescriptionStreamV2(payload=initial)
+    return DirectDescriptionZV2(**initial_values), DirectDescriptionZV2(**target_values)
+
+
+def _integer_custody_objective(
+    output: np.ndarray,
+    target_output: np.ndarray,
+    archive_bytes: int,
+) -> dict[str, int]:
+    if (
+        output.dtype != np.uint8
+        or target_output.dtype != np.uint8
+        or output.shape != _CUSTODY_OUTPUT_SHAPE
+        or target_output.shape != _CUSTODY_OUTPUT_SHAPE
+    ):
+        raise DirectDescriptionError("custody objective requires like-shaped uint8 receiver outputs")
+    output_i16 = output.astype(np.int16)
+    target_i16 = target_output.astype(np.int16)
+    cell_debt = int(np.abs(output_i16[:, 1] - target_i16[:, 1]).sum(dtype=np.int64))
+    output_delta = output_i16[:, 1] - output_i16[:, 0]
+    target_delta = target_i16[:, 1] - target_i16[:, 0]
+    pose_debt = int(np.abs(output_delta - target_delta).sum(dtype=np.int64))
+    return {
+        "cell_l1_debt": cell_debt,
+        "pose_pair_delta_l1_debt": pose_debt,
+        "joint_integer_debt": cell_debt + pose_debt,
+        "archive_bytes": _require_exact_nonnegative_int(archive_bytes, "archive_bytes"),
+    }
+
+
+def _stage_objective_key(
+    objective: Mapping[str, int],
+    order: str,
+) -> tuple[int, ...]:
+    cell = _require_exact_nonnegative_int(objective.get("cell_l1_debt"), "cell_l1_debt")
+    pose = _require_exact_nonnegative_int(
+        objective.get("pose_pair_delta_l1_debt"), "pose_pair_delta_l1_debt"
+    )
+    rate = _require_exact_nonnegative_int(objective.get("archive_bytes"), "archive_bytes")
+    if order == "cells_first":
+        return (cell, pose, rate)
+    if order == "pose_first":
+        return (pose, cell, rate)
+    if order == "joint_integer_debt":
+        return (cell + pose, cell, pose, rate)
+    raise DirectDescriptionError(f"unknown custody objective order {order!r}")
+
+
+class DirectDescriptionOptimizerCheckpointV1(BaseModel):
+    """Complete immutable continuation state for the real local search runner."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True, populate_by_name=True)
+
+    schema_: Literal["DirectDescriptionOptimizerCheckpointV1"] = Field(
+        default="DirectDescriptionOptimizerCheckpointV1",
+        alias="schema",
+        serialization_alias="schema",
+    )
+    config: dict[str, Any]
+    config_sha256: StrictStr
+    dsl_compile_hash: StrictStr
+    semantic_argv: tuple[StrictStr, ...]
+    semantic_argv_sha256: StrictStr
+    run_id: StrictStr
+    seed: Literal[SEED]
+    completed_stage_index: StrictInt = Field(ge=0)
+    completed_stage_name: StrictStr
+    next_stage_index: StrictInt = Field(ge=0)
+    global_step: StrictInt = Field(ge=0)
+    current_archive_b64: StrictStr
+    current_archive_sha256: StrictStr
+    current_archive_bytes: StrictInt = Field(ge=1)
+    target_archive_b64: StrictStr
+    target_archive_sha256: StrictStr
+    target_output_sha256: StrictStr
+    current_output_sha256: StrictStr
+    objective: dict[str, StrictInt]
+    optimizer_state: dict[str, Any]
+    rng_state: dict[str, Any]
+    stage_history: tuple[dict[str, Any], ...]
+    evidence_axis: Literal["[custody-smoke]"] = "[custody-smoke]"
+    score_claim: Literal[False] = False
+
+    @model_validator(mode="after")
+    def _complete_and_bound(self) -> DirectDescriptionOptimizerCheckpointV1:
+        for field in (
+            "config_sha256",
+            "dsl_compile_hash",
+            "semantic_argv_sha256",
+            "current_archive_sha256",
+            "target_archive_sha256",
+            "target_output_sha256",
+            "current_output_sha256",
+        ):
+            _require_sha256(getattr(self, field), field)
+        config = DirectDescriptionOptimizerConfigV1.model_validate_json(
+            json.dumps(self.config, separators=(",", ":"), ensure_ascii=False)
+        )
+        if config.typed_config_hash() != self.config_sha256:
+            raise ValueError("optimizer checkpoint config SHA-256 mismatch")
+        if config.dsl_compile_hash() != self.dsl_compile_hash:
+            raise ValueError("optimizer checkpoint DSL compile hash mismatch")
+        if config.run_id != self.run_id or config.seed != self.seed:
+            raise ValueError("optimizer checkpoint identity differs from typed config")
+        if self.next_stage_index != self.completed_stage_index + 1:
+            raise ValueError("optimizer checkpoint stage cursor is not a continuation")
+        if self.next_stage_index > len(config.stages):
+            raise ValueError("optimizer checkpoint stage cursor exceeds the stage plan")
+        if config.stages[self.completed_stage_index].name != self.completed_stage_name:
+            raise ValueError("optimizer checkpoint stage name differs from typed plan")
+        if not self.semantic_argv:
+            raise ValueError("optimizer checkpoint must preserve semantic argv")
+        if _sha256("\0".join(self.semantic_argv).encode("utf-8")) != self.semantic_argv_sha256:
+            raise ValueError("optimizer checkpoint semantic argv SHA-256 mismatch")
+        try:
+            current_archive = base64.b64decode(self.current_archive_b64, validate=True)
+            target_archive = base64.b64decode(self.target_archive_b64, validate=True)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("optimizer checkpoint archives are not canonical base64") from exc
+        if base64.b64encode(current_archive).decode("ascii") != self.current_archive_b64:
+            raise ValueError("optimizer current archive base64 is noncanonical")
+        if base64.b64encode(target_archive).decode("ascii") != self.target_archive_b64:
+            raise ValueError("optimizer target archive base64 is noncanonical")
+        if len(current_archive) != self.current_archive_bytes:
+            raise ValueError("optimizer current archive byte count mismatch")
+        if _sha256(current_archive) != self.current_archive_sha256:
+            raise ValueError("optimizer current archive SHA-256 mismatch")
+        if _sha256(target_archive) != self.target_archive_sha256:
+            raise ValueError("optimizer target archive SHA-256 mismatch")
+        current = receive_direct_description_archive_v2(current_archive)
+        target = receive_direct_description_archive_v2(target_archive)
+        if current.output_sha256 != self.current_output_sha256:
+            raise ValueError("optimizer current receiver output SHA-256 mismatch")
+        if target.output_sha256 != self.target_output_sha256:
+            raise ValueError("optimizer target receiver output SHA-256 mismatch")
+        if _integer_custody_objective(
+            current.output, target.output, len(current.archive)
+        ) != dict(self.objective):
+            raise ValueError("optimizer checkpoint objective was not recomputed from receiver bytes")
+        for field in ("optimizer_state", "rng_state"):
+            value = getattr(self, field)
+            if not value:
+                raise ValueError(f"optimizer checkpoint {field} must be nonempty")
+            rfc8785_canonicalize(value)
+        rfc8785_canonicalize(list(self.stage_history))
+        return self
+
+    def to_bytes(self) -> bytes:
+        body = self.model_dump(mode="json", by_alias=True)
+        return rfc8785_canonicalize(
+            {"body": body, "body_sha256": _sha256(rfc8785_canonicalize(body))}
+        )
+
+    @classmethod
+    def from_bytes(cls, payload: bytes) -> DirectDescriptionOptimizerCheckpointV1:
+        document = _duplicate_refusing_json(payload)
+        if not isinstance(document, dict) or set(document) != {"body", "body_sha256"}:
+            raise DirectDescriptionError("optimizer checkpoint envelope fields mismatch")
+        if rfc8785_canonicalize(document) != payload:
+            raise DirectDescriptionError("optimizer checkpoint bytes are not canonical JCS")
+        body = document.get("body")
+        if not isinstance(body, dict) or _sha256(rfc8785_canonicalize(body)) != _require_sha256(
+            document.get("body_sha256"), "body_sha256"
+        ):
+            raise DirectDescriptionError("optimizer checkpoint body hash mismatch")
+        body = dict(body)
+        for field in ("semantic_argv", "stage_history"):
+            if isinstance(body.get(field), list):
+                body[field] = tuple(body[field])
+        return cls.model_validate(body)
+
+    def filename(self) -> str:
+        return (
+            f"{self.run_id}__ddm_search_stage{self.completed_stage_index:03d}_"
+            f"{self.completed_stage_name}_step{self.global_step:012d}.json"
+        )
+
+    def write_new(self, directory: Path) -> Path:
+        return _publish_new_bytes(Path(directory) / self.filename(), self.to_bytes())
+
+
+def load_optimizer_checkpoint(
+    path: Path,
+    *,
+    expected_config: DirectDescriptionOptimizerConfigV1,
+    expected_semantic_argv: Sequence[str],
+) -> DirectDescriptionOptimizerCheckpointV1:
+    checkpoint = DirectDescriptionOptimizerCheckpointV1.from_bytes(
+        _read_regular_file_once(Path(path))
+    )
+    if checkpoint.config_sha256 != expected_config.typed_config_hash():
+        raise DirectDescriptionError("resume optimizer config differs from the typed program")
+    if checkpoint.dsl_compile_hash != expected_config.dsl_compile_hash():
+        raise DirectDescriptionError("resume optimizer DSL compile differs from the typed program")
+    if checkpoint.semantic_argv != tuple(expected_semantic_argv):
+        raise DirectDescriptionError("resume optimizer semantic argv differs from the typed program")
+    return checkpoint
+
+
+@dataclass(frozen=True, slots=True)
+class DirectDescriptionOptimizerRunResultV1:
+    """Terminal or deliberately partial result from the local search runner."""
+
+    config: DirectDescriptionOptimizerConfigV1
+    final_archive: bytes
+    final_receiver: DirectDescriptionReceiverResultV2
+    objective: Mapping[str, int]
+    stage_history: tuple[Mapping[str, Any], ...]
+    checkpoint_paths: tuple[Path, ...]
+    complete: bool
+
+
+def _stage_coordinates(stage: DirectDescriptionSearchStageV1) -> tuple[tuple[str, int], ...]:
+    coordinates: list[tuple[str, int]] = []
+    max_body_bytes = max(_V2_BODY_BYTES[name] for name in stage.stream_names)
+    for index in range(max_body_bytes):
+        for stream_name in stage.stream_names:
+            if index < _V2_BODY_BYTES[stream_name]:
+                coordinates.append((stream_name, index))
+                if len(coordinates) == stage.max_coordinate_steps:
+                    return tuple(coordinates)
+    return tuple(coordinates)
+
+
+def run_direct_description_optimizer(
+    config: DirectDescriptionOptimizerConfigV1,
+    *,
+    checkpoint_directory: Path,
+    semantic_argv: Sequence[str],
+    resume_from: Path | None = None,
+    stop_after_stage_index: int | None = None,
+) -> DirectDescriptionOptimizerRunResultV1:
+    """Run deterministic byte-coordinate descent and checkpoint every search stage."""
+
+    if not isinstance(config, DirectDescriptionOptimizerConfigV1):
+        raise DirectDescriptionError("optimizer runner requires typed config")
+    argv = tuple(semantic_argv)
+    if not argv:
+        raise DirectDescriptionError("optimizer runner requires nonempty semantic argv")
+    initial_z, target_z = build_n64_custody_descriptions(config)
+    target = receive_direct_description_archive_v2(
+        compile_direct_description_archive_v2(target_z).archive
+    )
+    prior_history: list[dict[str, Any]] = []
+    checkpoint_paths: list[Path] = []
+    global_step = 0
+    start_stage = 0
+    if resume_from is None:
+        current = receive_direct_description_archive_v2(
+            compile_direct_description_archive_v2(initial_z).archive
+        )
+    else:
+        checkpoint = load_optimizer_checkpoint(
+            resume_from,
+            expected_config=config,
+            expected_semantic_argv=argv,
+        )
+        current = receive_direct_description_archive_v2(
+            base64.b64decode(checkpoint.current_archive_b64, validate=True)
+        )
+        if checkpoint.target_archive_sha256 != _sha256(target.archive):
+            raise DirectDescriptionError("resume target differs from deterministic seed derivation")
+        prior_history = [dict(row) for row in checkpoint.stage_history]
+        global_step = checkpoint.global_step
+        start_stage = checkpoint.next_stage_index
+    current_z = current.z
+    objective = _integer_custody_objective(current.output, target.output, len(current.archive))
+    for stage_index in range(start_stage, len(config.stages)):
+        stage = config.stages[stage_index]
+        before = dict(objective)
+        cell_ceiling = before["cell_l1_debt"]
+        accepted = 0
+        rejected = 0
+        coordinates = _stage_coordinates(stage)
+        for stream_name, coordinate in coordinates:
+            value = getattr(current_z, stream_name).payload[coordinate]
+            proposals = tuple(candidate for candidate in (value - 1, value + 1) if 0 <= candidate <= 255)
+            best_z = current_z
+            best_receiver = current
+            best_objective = objective
+            best_key = _stage_objective_key(objective, stage.objective_order)
+            for candidate_value in proposals:
+                proposal_z = current_z.replace_stream_byte(stream_name, coordinate, candidate_value)
+                proposal_receiver = receive_direct_description_archive_v2(
+                    compile_direct_description_archive_v2(proposal_z).archive
+                )
+                proposal_objective = _integer_custody_objective(
+                    proposal_receiver.output,
+                    target.output,
+                    len(proposal_receiver.archive),
+                )
+                global_step += 1
+                if (
+                    stage.objective_order == "pose_first"
+                    and proposal_objective["cell_l1_debt"] > cell_ceiling
+                ):
+                    rejected += 1
+                    continue
+                proposal_key = _stage_objective_key(
+                    proposal_objective, stage.objective_order
+                )
+                if proposal_key < best_key:
+                    best_z = proposal_z
+                    best_receiver = proposal_receiver
+                    best_objective = proposal_objective
+                    best_key = proposal_key
+                else:
+                    rejected += 1
+            if best_z is not current_z:
+                current_z = best_z
+                current = best_receiver
+                objective = best_objective
+                accepted += 1
+        if _stage_objective_key(objective, stage.objective_order) >= _stage_objective_key(
+            before, stage.objective_order
+        ):
+            raise DirectDescriptionError(f"search stage {stage.name} made no strict descent")
+        history_row = {
+            "stage_index": stage_index,
+            "stage_name": stage.name,
+            "stage_role": stage.role,
+            "objective_order": stage.objective_order,
+            "coordinates_searched": len(coordinates),
+            "coordinates_by_stream": {
+                stream_name: sum(
+                    coordinate_stream == stream_name
+                    for coordinate_stream, _coordinate_index in coordinates
+                )
+                for stream_name in stage.stream_names
+            },
+            "accepted_coordinate_updates": accepted,
+            "rejected_candidate_proposals": rejected,
+            "objective_before": before,
+            "objective_after": dict(objective),
+            "strict_descent": True,
+            "pose_stage_cell_ceiling_preserved": (
+                stage.objective_order != "pose_first"
+                or objective["cell_l1_debt"] <= cell_ceiling
+            ),
+        }
+        prior_history.append(history_row)
+        checkpoint = DirectDescriptionOptimizerCheckpointV1(
+            config=config.model_dump(mode="json", by_alias=True),
+            config_sha256=config.typed_config_hash(),
+            dsl_compile_hash=config.dsl_compile_hash(),
+            semantic_argv=argv,
+            semantic_argv_sha256=_sha256("\0".join(argv).encode("utf-8")),
+            run_id=config.run_id,
+            seed=config.seed,
+            completed_stage_index=stage_index,
+            completed_stage_name=stage.name,
+            next_stage_index=stage_index + 1,
+            global_step=global_step,
+            current_archive_b64=base64.b64encode(current.archive).decode("ascii"),
+            current_archive_sha256=_sha256(current.archive),
+            current_archive_bytes=len(current.archive),
+            target_archive_b64=base64.b64encode(target.archive).decode("ascii"),
+            target_archive_sha256=_sha256(target.archive),
+            target_output_sha256=target.output_sha256,
+            current_output_sha256=current.output_sha256,
+            objective=dict(objective),
+            optimizer_state={
+                "algorithm": "deterministic_plus_minus_one_coordinate_descent",
+                "accepted_updates": sum(row["accepted_coordinate_updates"] for row in prior_history),
+                "candidate_evaluations": global_step,
+                "next_stage_index": stage_index + 1,
+            },
+            rng_state={
+                "algorithm": "sha256_counter_fixture_plus_lexicographic_coordinates",
+                "seed": config.seed,
+                "counter": global_step,
+            },
+            stage_history=tuple(prior_history),
+        )
+        checkpoint_paths.append(checkpoint.write_new(checkpoint_directory))
+        if stop_after_stage_index is not None and stage_index >= stop_after_stage_index:
+            break
+    complete = len(prior_history) == len(config.stages)
+    return DirectDescriptionOptimizerRunResultV1(
+        config=config,
+        final_archive=current.archive,
+        final_receiver=current,
+        objective=dict(objective),
+        stage_history=tuple(prior_history),
+        checkpoint_paths=tuple(checkpoint_paths),
+        complete=complete,
+    )
+
+
+def _checkpoint_hashes(paths: Sequence[Path]) -> list[str]:
+    return [_sha256(_read_regular_file_once(path)) for path in paths]
+
+
+def build_ddm_blocker_register_603(
+    *,
+    receipt_sha256: str,
+) -> list[dict[str, Any]]:
+    """Return the fixed 19-item implementation/readiness register for this landing."""
+
+    receipt_sha256 = _require_sha256(receipt_sha256, "receipt_sha256")
+    green = {
+        "POSE_CONSUMING_INTEGER_UINT8_RECEIVER",
+        "DDM_OPTIMIZER_AND_STAGE_CONTINUATION_RUNNER",
+        "N64_DETERMINISTIC_CUSTODY_SMOKE",
+        "INDEPENDENTLY_FRAMED_UNIQUE_HOME_RATE_CUSTODY",
+    }
+    inventory = (
+        "PRIMARY_SPEC_EXECUTION_ALLOWED_FALSE",
+        "FULL_PRECISION_SHA_BOUND_TARGET_RECEIPT",
+        "LIVE_V8_V9_OWNER_RECEIPTS",
+        "POSE_CONSUMING_INTEGER_UINT8_RECEIVER",
+        "DDM_OPTIMIZER_AND_STAGE_CONTINUATION_RUNNER",
+        "N64_DETERMINISTIC_CUSTODY_SMOKE",
+        "INDEPENDENTLY_FRAMED_UNIQUE_HOME_RATE_CUSTODY",
+        "CANONICAL_RESUME_REGISTRY_AND_CHECKPOINT_CADENCE",
+        "CANONICAL_TYPED_COMPILER_INTEGRATION",
+        "GOVERNED_LAUNCHER_AND_MEMORY_PREFLIGHT_ADAPTER",
+        "OPERATIONAL_CLEANUP_COLD_STORE_HOOK",
+        "FRESH_V3_FAMILY_POSE_IN_OBJECTIVE_RUNG_ZERO",
+        "FOUR_RUNG_CELLS_THEN_POSE_MEASUREMENT_LADDER",
+        "N600_SAME_ARTIFACT_ARCHIVE_CLOSURE",
+        "CONTEST_CPU_REPLAY",
+        "CONTEST_CUDA_REPLAY",
+        "HEALTHY_COMPLETION_CERTIFICATE",
+        "EXTERNALLY_ATTESTED_FAILURE_TOKEN",
+        "SEPARATE_SHA_BOUND_OPERATOR_GO",
+    )
+    return [
+        {
+            "blocker": blocker,
+            "before": "RED",
+            "after": "GREEN_CUSTODY_SCOPE" if blocker in green else "RED",
+            "flipped_green": blocker in green,
+            "evidence_sha256": receipt_sha256 if blocker in green else None,
+            "verdict_scope": (
+                "local deterministic n64 custody apparatus only"
+                if blocker in green
+                else "PRIMARY launch/admission remains blocked"
+            ),
+        }
+        for blocker in inventory
+    ]
+
+
+def _n64_stratified_fixture_assignments() -> list[dict[str, Any]]:
+    combinations = [
+        (class_name, stratum)
+        for class_name in ("Road", "Lane", "Undrivable", "Movable", "MyCar")
+        for stratum in sorted(_APPLICABLE_STRATA[class_name])
+    ]
+    rows = [
+        {
+            "pair_index": pair_index,
+            "class": combinations[pair_index % len(combinations)][0],
+            "stratum": combinations[pair_index % len(combinations)][1],
+        }
+        for pair_index in range(64)
+    ]
+    observed = {(row["class"], row["stratum"]) for row in rows}
+    if observed != set(combinations):
+        raise DirectDescriptionError("n64 fixture does not cover every applicable class/stratum")
+    return rows
+
+
+def run_n64_deterministic_custody_smoke(
+    config: DirectDescriptionOptimizerConfigV1,
+    *,
+    output_directory: Path,
+    semantic_argv: Sequence[str],
+) -> tuple[dict[str, Any], Path]:
+    """Run two exact searches plus checkpoint continuation; never score or launch."""
+
+    root = Path(output_directory)
+    root.mkdir(parents=True, exist_ok=True)
+    run_a = run_direct_description_optimizer(
+        config,
+        checkpoint_directory=root / "run_a" / "checkpoints",
+        semantic_argv=semantic_argv,
+    )
+    run_b = run_direct_description_optimizer(
+        config,
+        checkpoint_directory=root / "run_b" / "checkpoints",
+        semantic_argv=semantic_argv,
+    )
+    partial = run_direct_description_optimizer(
+        config,
+        checkpoint_directory=root / "run_resume" / "checkpoints",
+        semantic_argv=semantic_argv,
+        stop_after_stage_index=0,
+    )
+    if partial.complete or len(partial.checkpoint_paths) != 1:
+        raise DirectDescriptionError("custody resume control did not stop after stage zero")
+    resumed = run_direct_description_optimizer(
+        config,
+        checkpoint_directory=root / "run_resume" / "checkpoints",
+        semantic_argv=semantic_argv,
+        resume_from=partial.checkpoint_paths[-1],
+    )
+    if not run_a.complete or not run_b.complete or not resumed.complete:
+        raise DirectDescriptionError("custody optimizer did not complete every typed search stage")
+    archive_hashes = {
+        _sha256(run_a.final_archive),
+        _sha256(run_b.final_archive),
+        _sha256(resumed.final_archive),
+    }
+    output_hashes = {
+        run_a.final_receiver.output_sha256,
+        run_b.final_receiver.output_sha256,
+        resumed.final_receiver.output_sha256,
+    }
+    if len(archive_hashes) != 1 or len(output_hashes) != 1:
+        raise DirectDescriptionError("same-seed or resumed custody outputs are not bit-identical")
+    parsed = parse_direct_description_archive_v2(run_a.final_archive)
+    if compile_direct_description_archive_v2(parsed.z).archive != run_a.final_archive:
+        raise DirectDescriptionError("terminal receiver roundtrip is not byte exact")
+    noop = prove_v2_noop_detector(parsed.z)
+    receiver_custody = dict(run_a.final_receiver.custody)
+    receiver_custody["stream_consumption"] = [
+        {**row, "output_mutation_verified": True}
+        for row in receiver_custody["stream_consumption"]
+    ]
+    receiver_custody["counted_byte_noop_detector"] = noop
+    final_archive_path = _publish_new_bytes(
+        root / "ddm_n64_custody_final.not_a_candidate.zip", run_a.final_archive
+    )
+    receipt_without_register = {
+        "schema": "direct_description_n64_custody_smoke.v1",
+        "label": "[custody-smoke]",
+        "task": 603,
+        "seed": config.seed,
+        "n_pairs": 64,
+        "research_only": True,
+        "execution_allowed": False,
+        "score_claim": False,
+        "candidate_archive": False,
+        "pointer_moved": False,
+        "pointer": f"{POINTER_SCORE_TEXT} [contest-CPU]",
+        "typed_config": config.model_dump(mode="json", by_alias=True),
+        "typed_config_sha256": config.typed_config_hash(),
+        "dsl_compile_hash": config.dsl_compile_hash(),
+        "semantic_argv": list(semantic_argv),
+        "receiver": receiver_custody,
+        "optimizer": {
+            "algorithm": "deterministic_plus_minus_one_coordinate_descent",
+            "stage_labels": [stage.role for stage in config.stages],
+            "stage_names": [stage.name for stage in config.stages],
+            "stage_history": [dict(row) for row in run_a.stage_history],
+            "objective_initial": run_a.stage_history[0]["objective_before"],
+            "objective_final": dict(run_a.objective),
+            "strict_descent_every_stage": all(
+                row["strict_descent"] for row in run_a.stage_history
+            ),
+        },
+        "determinism": {
+            "same_seed_runs": 2,
+            "same_seed_final_archive_bit_identical": True,
+            "same_seed_receiver_output_bit_identical": True,
+            "same_seed_stage_checkpoint_hashes_identical": (
+                _checkpoint_hashes(run_a.checkpoint_paths)
+                == _checkpoint_hashes(run_b.checkpoint_paths)
+            ),
+            "final_archive_sha256": _sha256(run_a.final_archive),
+            "receiver_output_sha256": run_a.final_receiver.output_sha256,
+        },
+        "resume": {
+            "resumed_from_stage": 0,
+            "resume_final_archive_bit_identical": True,
+            "resume_receiver_output_bit_identical": True,
+            "all_stage_checkpoints_preserved": True,
+            "run_a_checkpoint_sha256": _checkpoint_hashes(run_a.checkpoint_paths),
+            "run_b_checkpoint_sha256": _checkpoint_hashes(run_b.checkpoint_paths),
+            "resume_checkpoint_sha256": _checkpoint_hashes(
+                (*partial.checkpoint_paths, *resumed.checkpoint_paths)
+            ),
+        },
+        "roundtrip": {
+            "parse_reencode_archive_byte_exact": True,
+            "archive_path": str(final_archive_path),
+            "archive_bytes": len(run_a.final_archive),
+            "archive_sha256": _sha256(run_a.final_archive),
+        },
+        "stratified_fixture_coverage": {
+            "pair_assignments": _n64_stratified_fixture_assignments(),
+            "pair_count": 64,
+            "applicable_class_stratum_combinations": sum(
+                len(strata) for strata in _APPLICABLE_STRATA.values()
+            ),
+            "all_applicable_combinations_covered": True,
+            "authority": "fixture coverage only; no scorer was loaded",
+        },
+        "cleanup": {
+            "bulk_artifacts_created": False,
+            "durable_outputs_are_small": True,
+            "scratch_policy": "in_memory_or_context_managed_only",
+        },
+        "verdict_scope": (
+            "n64 independently framed receiver, integer custody objective, deterministic "
+            "coordinate-search continuation, and no-op detection only"
+        ),
+    }
+    provisional_sha = _sha256(rfc8785_canonicalize(receipt_without_register))
+    receipt = {
+        **receipt_without_register,
+        "blocker_register": build_ddm_blocker_register_603(receipt_sha256=provisional_sha),
+    }
+    receipt_bytes = rfc8785_canonicalize(receipt) + b"\n"
+    receipt_path = _publish_new_bytes(root / "ddm_n64_custody_smoke_receipt.json", receipt_bytes)
+    return receipt, receipt_path
 
 
 def _publish_new_bytes(path: Path, payload: bytes) -> Path:
@@ -2355,27 +3628,45 @@ def build_launch_readiness(
 __all__ = [
     "ChargedFreePartitionRowV1",
     "CountedDescriptionStreamV1",
+    "CountedDescriptionStreamV2",
     "DescriptionStepMetricTelemetryV1",
     "DirectArchiveBuildResult",
+    "DirectArchiveBuildResultV2",
+    "DirectDescriptionCustodyProgramV1",
     "DirectDescriptionError",
     "DirectDescriptionOpsGrammarMinimizerV1",
+    "DirectDescriptionOptimizerCheckpointV1",
+    "DirectDescriptionOptimizerConfigV1",
+    "DirectDescriptionOptimizerRunResultV1",
+    "DirectDescriptionReceiverResultV2",
+    "DirectDescriptionSearchStageV1",
     "DirectDescriptionStageCheckpointV1",
     "DirectDescriptionTypedConfigV1",
     "DirectDescriptionWitnessProgramV1",
     "DirectDescriptionZV1",
+    "DirectDescriptionZV2",
     "MeasurementRungRowV1",
     "ToleranceAllocationNodeV1",
+    "build_ddm_blocker_register_603",
     "build_direct_description_arg_parser",
     "build_direct_description_owner",
     "build_launch_readiness",
+    "build_n64_custody_descriptions",
     "compile_direct_description_archive",
+    "compile_direct_description_archive_v2",
     "derive_ceil_minus_one_caps",
+    "load_optimizer_checkpoint",
     "load_stage_checkpoint",
     "numpy_reference_rank",
     "optimizer_admission_status",
     "parse_direct_description_archive",
+    "parse_direct_description_archive_v2",
     "prove_baseline_reexpression",
+    "prove_v2_noop_detector",
+    "receive_direct_description_archive_v2",
     "rfc8785_canonicalize",
+    "run_direct_description_optimizer",
+    "run_n64_deterministic_custody_smoke",
     "seal_failure_receipt",
     "storage_preflight",
     "validate_receiver_rate_custody",
