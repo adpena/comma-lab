@@ -70,6 +70,7 @@ from tac.optimization.direct_description_polytope_membership import (
     CLASS_NAMES,
     MARGIN_BANDS,
     _load_segnet_oracle,
+    iter_target_scorer_batches,
     measure_argmax_cell_membership,
     stream_decode_digest,
 )
@@ -1185,6 +1186,91 @@ class DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1(BaseModel):
 
 
 class DirectDescriptionSolvedPlaneToleranceWaterfillProgramV1(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    config_path: StrictStr
+    output_directory: StrictStr
+
+    def compile_consumer_argv(self) -> tuple[str, ...]:
+        return (
+            "/usr/bin/env",
+            "python3",
+            "tools/run_direct_description_entropy_priced_member.py",
+            "--config",
+            self.config_path,
+            "--output-dir",
+            self.output_directory,
+            "--execution-allowed",
+            "false",
+        )
+
+
+V8_RESULT_SCHEMA: Final = "direct_description_margin_gated_correction.v1"
+V8_CONFIG_SCHEMA: Final = "DirectDescriptionMarginGatedCorrectionConfigV1"
+V8_LANE_ID: Final = "ddm_v8_margin_gated_correction"
+V8_EVIDENCE_AXIS: Final = "[macOS-CPU frozen-scorer advisory]"
+V8_TAU_LADDER: Final = ("0.000000", "0.100000", "0.500000", "1.000000")
+V8_POSE_GUARD_TEXT: Final = "0.000250000000"
+
+
+class DirectDescriptionMarginGatedCorrectionConfigV1(BaseModel):
+    """Typed local-only argmax-aware correction allocation over settled v7."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True, populate_by_name=True)
+
+    schema_: Literal["DirectDescriptionMarginGatedCorrectionConfigV1"] = Field(
+        default=V8_CONFIG_SCHEMA, alias="schema", serialization_alias="schema"
+    )
+    run_id: Literal["ddm_v8_margin_gated_correction_seed1234"] = "ddm_v8_margin_gated_correction_seed1234"
+    seed: Literal[1234] = SEED
+    pair_start: StrictInt = Field(ge=0, le=536)
+    pair_count: StrictInt
+    v7_receipt_path: StrictStr
+    v7_receipt_sha256: StrictStr
+    upstream_root: StrictStr
+    scorer_batch_size: Literal[16] = 16
+    scorer_threads: StrictInt = Field(ge=1, le=16)
+    section_names: tuple[StrictStr, ...] = V7_SECTION_NAMES
+    tau_ladder: tuple[StrictStr, ...] = V8_TAU_LADDER
+    target_d_seg: Literal["0.001160000000"] = V6_TARGET_DSEG_TEXT
+    pose_guard_d_pose: Literal["0.000250000000"] = V8_POSE_GUARD_TEXT
+    falsifier_bytes: Literal[200000] = V7_EXACT_RESIDUAL_FALSIFIER_BYTES
+    checkpoint_policy: Literal["atomic_preserve_every_tau_and_candidate"] = (
+        "atomic_preserve_every_tau_and_candidate"
+    )
+    rate_authority: Literal["exact_len_of_receiver_closed_predictor_plus_margin_gated_correction_zip"] = (
+        "exact_len_of_receiver_closed_predictor_plus_margin_gated_correction_zip"
+    )
+    research_only: Literal[True] = True
+    execution_allowed: Literal[False] = False
+    score_claim: Literal[False] = False
+    d_seg_claim: Literal[False] = False
+
+    @model_validator(mode="after")
+    def _valid(self) -> DirectDescriptionMarginGatedCorrectionConfigV1:
+        if self.pair_count not in (64, 256) or self.pair_start + self.pair_count > 600:
+            raise ValueError("v8 measurement window must be exactly n64 or n256 inside [0,600)")
+        _require_sha256(self.v7_receipt_sha256, "v7_receipt_sha256")
+        if self.section_names != V7_SECTION_NAMES:
+            raise ValueError("section_names must preserve the canonical five roles plus Boundary")
+        if self.tau_ladder != V8_TAU_LADDER:
+            raise ValueError("tau_ladder must preserve the registered margin-band breakpoints")
+        if not Path(self.upstream_root).is_absolute():
+            raise ValueError("upstream_root must be absolute")
+        return self
+
+    def typed_config_hash(self) -> str:
+        return _sha256(rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True)))
+
+    def dsl_compile_hash(self) -> str:
+        return _sha256(
+            rfc8785_canonicalize(
+                {"compile_target": V8_RESULT_SCHEMA, "typed_config": self.model_dump(mode="json", by_alias=True)}
+            )
+        )
+
+
+class DirectDescriptionMarginGatedCorrectionProgramV1(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
     config_path: StrictStr
@@ -4020,14 +4106,70 @@ def compile_solved_plane_tolerance_archive(
     return first, homes
 
 
+def compile_margin_gated_correction_archive(
+    *,
+    predictor_archive: bytes,
+    tau: str,
+    sections: Sequence[PlaneCorrectionSectionBuildV1],
+) -> tuple[bytes, tuple[dict[str, Any], ...]]:
+    """Compile one v8 mask-gated member on the established v7 receiver grammar."""
+
+    if tau not in V8_TAU_LADDER:
+        raise DirectDescriptionError("v8 tau differs from the typed margin ladder")
+    if len(sections) != 6 or tuple(section.section_id for section in sections) != tuple(range(6)):
+        raise DirectDescriptionError("v8 correction sections must be complete and ordered")
+    if any(
+        section.schedule_id != CORRECTION_SCHEDULE_EVERY_PAIR or section.quant_step != 1
+        for section in sections
+    ):
+        raise DirectDescriptionError("v8 margin-gated sections must be exact every-pair corrections")
+    manifest = {
+        "schema": "direct_description_margin_gated_correction_archive.v1",
+        "pair_count": sections[0].n_pairs,
+        "policy_name": f"margin_tau_{tau.replace('.', 'p')}",
+        "tau": tau,
+        "predictor": {"bytes": len(predictor_archive), "sha256": _sha256(predictor_archive)},
+        "opaque_correction_sections": [
+            {
+                "section_id": section.section_id,
+                "frame_bytes": len(section.frame),
+                "frame_sha256": _sha256(section.frame),
+            }
+            for section in sections
+        ],
+        "receiver": "numpy_uint8_v6_predictor_plus_counted_margin_gated_site_value_corrections.v1",
+        "mask_semantics_required_by_receiver": False,
+        "ground_truth_argmax_table_present": False,
+        "scorer_weights_present": False,
+        "score_claim": False,
+    }
+    members = {
+        "manifest.json": rfc8785_canonicalize(manifest),
+        "predictor.zip": predictor_archive,
+        **{f"correction/section_{section.section_id}.bin": section.frame for section in sections},
+    }
+    first = _zip_stored(members)
+    if _zip_stored(members) != first:
+        raise DirectDescriptionError("v8 correction archive compiler is nondeterministic")
+    parsed, homes = _v7_zip_members(first)
+    if parsed != members or _zip_stored(parsed) != first:
+        raise DirectDescriptionError("v8 correction archive parse/re-encode identity failed")
+    return first, homes
+
+
 def receive_solved_plane_tolerance_archive(archive: bytes) -> SolvedPlaneToleranceReceiverV1:
     members, homes = _v7_zip_members(archive)
     try:
         manifest = json.loads(members["manifest.json"])
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise DirectDescriptionError("v7 correction manifest is invalid JSON") from exc
+    schema = manifest.get("schema")
     if (
-        manifest.get("schema") != "direct_description_solved_plane_tolerance_archive.v1"
+        schema
+        not in {
+            "direct_description_solved_plane_tolerance_archive.v1",
+            "direct_description_margin_gated_correction_archive.v1",
+        }
         or rfc8785_canonicalize(manifest) != members["manifest.json"]
         or manifest.get("ground_truth_argmax_table_present") is not False
         or manifest.get("scorer_weights_present") is not False
@@ -4056,11 +4198,16 @@ def receive_solved_plane_tolerance_archive(archive: bytes) -> SolvedPlaneToleran
         predictor=predictor,
         sections=sections,
         custody={
-            "schema": "direct_description_solved_plane_tolerance_receiver.v1",
+            "schema": (
+                "direct_description_margin_gated_correction_receiver.v1"
+                if schema == "direct_description_margin_gated_correction_archive.v1"
+                else "direct_description_solved_plane_tolerance_receiver.v1"
+            ),
             "all_archive_bytes_have_one_home": sum(row["zip_home_bytes"] for row in homes) == len(archive),
             "parse_reencode_identical": _zip_stored(members) == archive,
             "all_six_opaque_sections_consumed": True,
             "section_semantics_required_by_receiver": False,
+            "mask_semantics_required_by_receiver": False,
             "ground_truth_argmax_table_present": False,
             "scorer_weights_present": False,
             "score_claim": False,
@@ -4600,6 +4747,678 @@ def run_solved_plane_tolerance_waterfill(
     return result, receipt_path
 
 
+def _v8_storage_preflight(output_directory: Path) -> dict[str, Any]:
+    probe = Path(output_directory)
+    while not probe.exists() and probe != probe.parent:
+        probe = probe.parent
+    required = 512 * 1024 * 1024
+    free = shutil.disk_usage(probe).free
+    if free < required:
+        raise DirectDescriptionError("v8 margin-gated solve refuses: insufficient local receipt space")
+    return {
+        "output_tier": str(probe.resolve()),
+        "required_free_bytes": required,
+        "observed_free_bytes": free,
+        "free_space_gate_satisfied": True,
+        "bulk_target_tier": "/Volumes/VertigoDataTier/pact",
+        "bulk_target_read_only": True,
+        "status": "PASS",
+    }
+
+
+def _v8_resize_preimage_accumulator(delta: np.ndarray) -> dict[str, float | int]:
+    """Measure the exact 2x-bilinear linear preimage component of one uint8 delta batch."""
+
+    value = np.asarray(delta)
+    if value.ndim != 5 or value.shape[1:] != (2, *PAIR_SHAPE, 3):
+        raise DirectDescriptionError("v8 resize probe requires paired full-resolution RGB deltas")
+    f64 = value.astype(np.float64, copy=False)
+    blocks = f64.reshape(value.shape[0], 2, PAIR_SHAPE[0] // 2, 2, PAIR_SHAPE[1] // 2, 2, 3)
+    block_mean = blocks.mean(axis=(3, 5))
+    projected = np.repeat(np.repeat(block_mean, 2, axis=2), 2, axis=3)
+    null = f64 - projected
+    active = np.any(blocks != 0.0, axis=(3, 5, 6))
+    exact_null = active & np.all(blocks.sum(axis=(3, 5)) == 0.0, axis=-1)
+    return {
+        "total_energy": float(np.square(f64).sum(dtype=np.float64)),
+        "rowspace_energy": float(np.square(projected).sum(dtype=np.float64)),
+        "nullspace_energy": float(np.square(null).sum(dtype=np.float64)),
+        "active_blocks": int(np.count_nonzero(active)),
+        "exact_mean_zero_active_blocks": int(np.count_nonzero(exact_null)),
+    }
+
+
+def _v8_finalize_resize_preimage(rows: Sequence[Mapping[str, float | int]]) -> dict[str, Any]:
+    total = sum(float(row["total_energy"]) for row in rows)
+    rowspace = sum(float(row["rowspace_energy"]) for row in rows)
+    nullspace = sum(float(row["nullspace_energy"]) for row in rows)
+    active = sum(int(row["active_blocks"]) for row in rows)
+    exact_null = sum(int(row["exact_mean_zero_active_blocks"]) for row in rows)
+    if not math.isclose(total, rowspace + nullspace, rel_tol=1e-10, abs_tol=1e-6):
+        raise DirectDescriptionError("v8 resize row/null energy decomposition is inconsistent")
+    return {
+        "operator": "exact_half_pixel_2x_bilinear_block_mean_linearization_before_SegNet",
+        "measurement_kind": "DERIVED_PREIMAGE_FREEDOM_NOT_SCORE",
+        "total_delta_l2_energy": f"{total:.6f}",
+        "resize_rowspace_l2_energy": f"{rowspace:.6f}",
+        "resize_nullspace_l2_energy": f"{nullspace:.6f}",
+        "nullspace_energy_fraction": f"{(nullspace / total if total else 0.0):.12f}",
+        "active_2x2_rgb_blocks": active,
+        "exact_mean_zero_active_blocks": exact_null,
+        "exact_mean_zero_active_block_fraction": _fraction_text(exact_null, active),
+        "verdict_scope": "masked additive RGB delta under the linear 512x384-to-256x192 resize only",
+    }
+
+
+def _v8_section_masks(
+    cells: np.ndarray,
+    section_class_ids: Mapping[str, int | None],
+) -> tuple[np.ndarray, ...]:
+    boundary = boundary_mask_from_labels(cells)
+    masks = tuple(
+        boundary if section_class_ids[name] is None else (cells == section_class_ids[name]) & ~boundary
+        for name in V7_SECTION_NAMES
+    )
+    coverage = np.zeros(cells.shape, dtype=np.uint8)
+    for mask in masks:
+        coverage += mask.astype(np.uint8)
+    if not np.all(coverage == 1):
+        raise DirectDescriptionError("v8 solved-plane argmax strata do not partition the scorer plane")
+    return masks
+
+
+def _v8_build_tau_sections(
+    *,
+    config: DirectDescriptionMarginGatedCorrectionConfigV1,
+    target_receipt: Any,
+    predictor: ComposedStructuredMemberReceiverV1,
+    segnet_oracle: Callable[[np.ndarray, bool], tuple[np.ndarray, np.ndarray | None]],
+    section_class_ids: Mapping[str, int | None],
+    tau: str,
+) -> tuple[tuple[PlaneCorrectionSectionBuildV1, ...], dict[str, Any]]:
+    threshold = float(Decimal(tau))
+    records: list[dict[int, tuple[np.ndarray, np.ndarray]]] = [{} for _ in V7_SECTION_NAMES]
+    section_counts = [
+        {"selected_sites": 0, "predictor_argmax_mismatch_sites": 0, "low_margin_sites": 0}
+        for _ in V7_SECTION_NAMES
+    ]
+    target_cell_digest = hashlib.sha256()
+    target_margin_digest = hashlib.sha256()
+    predictor_cell_digest = hashlib.sha256()
+    mask_digest = hashlib.sha256()
+    resize_rows: list[dict[str, float | int]] = []
+    selected_sites = 0
+    mismatch_sites = 0
+    low_margin_sites = 0
+    observed = 0
+    replay_checked = False
+    sites_per_plane = PAIR_SHAPE[0] * PAIR_SHAPE[1]
+    for pair_ids, target in iter_target_scorer_batches(
+        target_receipt,
+        config.pair_count,
+        pair_start=config.pair_start,
+        batch_size=config.scorer_batch_size,
+    ):
+        predicted = predictor.render_pairs(pair_ids)
+        target_cells, target_margins = segnet_oracle(target, True)
+        predictor_cells, predictor_margins = segnet_oracle(predicted, False)
+        if target_margins is None or predictor_margins is not None:
+            raise DirectDescriptionError("v8 margin-gate scorer contract mismatch")
+        if not replay_checked:
+            replay_cells, replay_margins = segnet_oracle(target, True)
+            replay_predictor, _ = segnet_oracle(predicted, False)
+            if (
+                replay_margins is None
+                or not np.array_equal(target_cells, replay_cells)
+                or not np.array_equal(target_margins, replay_margins)
+                or not np.array_equal(predictor_cells, replay_predictor)
+            ):
+                raise DirectDescriptionError("v8 first scorer batch is not deterministic")
+            replay_checked = True
+        mismatch = predictor_cells != target_cells
+        low_margin = np.abs(target_margins) < threshold
+        selected = mismatch | low_margin
+        delta = (target.astype(np.int16) - predicted.astype(np.int16)) * selected[:, None, :, :, None]
+        resize_rows.append(_v8_resize_preimage_accumulator(delta))
+        for local_index, pair_id in enumerate(pair_ids):
+            masks = _v8_section_masks(target_cells[local_index], section_class_ids)
+            for section_id, stratum_mask in enumerate(masks):
+                support = selected[local_index] & stratum_mask
+                section_counts[section_id]["selected_sites"] += int(np.count_nonzero(support))
+                section_counts[section_id]["predictor_argmax_mismatch_sites"] += int(
+                    np.count_nonzero(mismatch[local_index] & stratum_mask)
+                )
+                section_counts[section_id]["low_margin_sites"] += int(
+                    np.count_nonzero(low_margin[local_index] & stratum_mask)
+                )
+                position_rows: list[np.ndarray] = []
+                value_rows: list[np.ndarray] = []
+                for plane_id in range(2):
+                    changed = np.any(target[local_index, plane_id] != predicted[local_index, plane_id], axis=-1)
+                    positions = np.flatnonzero(support & changed).astype(np.uint32)
+                    position_rows.append(positions + np.uint32(plane_id * sites_per_plane))
+                    value_rows.append(
+                        np.ascontiguousarray(target[local_index, plane_id].reshape(-1, 3)[positions])
+                    )
+                records[section_id][int(pair_id)] = (
+                    np.ascontiguousarray(np.concatenate(position_rows).astype("<u4", copy=False)),
+                    np.ascontiguousarray(np.concatenate(value_rows, axis=0).astype(np.uint8, copy=False)),
+                )
+        selected_sites += int(np.count_nonzero(selected))
+        mismatch_sites += int(np.count_nonzero(mismatch))
+        low_margin_sites += int(np.count_nonzero(low_margin))
+        target_cell_digest.update(target_cells.tobytes(order="C"))
+        target_margin_digest.update(target_margins.tobytes(order="C"))
+        predictor_cell_digest.update(predictor_cells.tobytes(order="C"))
+        mask_digest.update(selected.tobytes(order="C"))
+        observed += len(pair_ids)
+    if not replay_checked or observed != config.pair_count:
+        raise DirectDescriptionError("v8 margin-gate pair traversal is incomplete")
+    expected_keys = list(range(config.pair_count))
+    if any(sorted(section) != expected_keys for section in records):
+        raise DirectDescriptionError("v8 margin-gate records do not preserve every pair checkpoint")
+    sections = tuple(
+        encode_plane_correction_section(
+            section_id=section_id,
+            schedule_id=CORRECTION_SCHEDULE_EVERY_PAIR,
+            n_pairs=config.pair_count,
+            quant_step=1,
+            records=records[section_id],
+        )
+        for section_id in range(6)
+    )
+    total_sites = config.pair_count * PAIR_SHAPE[0] * PAIR_SHAPE[1]
+    measurement = {
+        "tau": tau,
+        "definition": "abs(solved_plane_top1_minus_top2_margin)<tau OR predictor_argmax!=solved_plane_argmax",
+        "solved_plane_argmax_sha256": target_cell_digest.hexdigest(),
+        "solved_plane_margin_f32_sha256": target_margin_digest.hexdigest(),
+        "predictor_argmax_sha256": predictor_cell_digest.hexdigest(),
+        "selected_mask_sha256": mask_digest.hexdigest(),
+        "selected_sites": selected_sites,
+        "sites": total_sites,
+        "selected_fraction": _fraction_text(selected_sites, total_sites),
+        "predictor_argmax_mismatch_sites": mismatch_sites,
+        "predictor_argmax_mismatch_fraction": _fraction_text(mismatch_sites, total_sites),
+        "low_margin_sites": low_margin_sites,
+        "low_margin_fraction": _fraction_text(low_margin_sites, total_sites),
+        "per_stream": [
+            {"stratum": name, **counts}
+            for name, counts in zip(V7_SECTION_NAMES, section_counts, strict=True)
+        ],
+        "resize_preimage_probe": _v8_finalize_resize_preimage(resize_rows),
+        "scorer_batch_size": config.scorer_batch_size,
+        "max_scorer_batches_resident": 1,
+        "max_source_chunks_resident": 1,
+        "ground_truth_argmax_table_shipped": False,
+        "scorer_weights_shipped": False,
+    }
+    return sections, measurement
+
+
+def _v8_load_or_build_tau_sections(
+    *,
+    config: DirectDescriptionMarginGatedCorrectionConfigV1,
+    target_receipt: Any,
+    predictor: ComposedStructuredMemberReceiverV1,
+    segnet_oracle: Callable[[np.ndarray, bool], tuple[np.ndarray, np.ndarray | None]],
+    section_class_ids: Mapping[str, int | None],
+    tau: str,
+    output_directory: Path,
+    predictor_sha256: str,
+) -> tuple[tuple[PlaneCorrectionSectionBuildV1, ...], dict[str, Any]]:
+    tau_token = tau.replace(".", "p")
+    tau_root = output_directory / "tau_checkpoints" / f"tau_{tau_token}"
+    section_paths = tuple(tau_root / f"section_{section_id}.bin" for section_id in range(6))
+    receipt_path = tau_root / "tau_receipt.json"
+    if receipt_path.exists():
+        receipt = json.loads(_read_regular_file_once(receipt_path))
+        if (
+            receipt.get("schema") != "direct_description_margin_gated_tau_checkpoint.v1"
+            or receipt.get("typed_config_sha256") != config.typed_config_hash()
+            or receipt.get("predictor_sha256") != predictor_sha256
+            or receipt.get("tau") != tau
+        ):
+            raise DirectDescriptionError(f"v8 tau checkpoint custody mismatch: {receipt_path}")
+        sections = tuple(parse_plane_correction_section(_read_regular_file_once(path)) for path in section_paths)
+        rows = receipt.get("sections")
+        if not isinstance(rows, list) or len(rows) != 6:
+            raise DirectDescriptionError("v8 tau checkpoint section ledger is incomplete")
+        if [section.ledger_row()["frame_sha256"] for section in sections] != [row["frame_sha256"] for row in rows]:
+            raise DirectDescriptionError("v8 tau checkpoint frame hashes differ")
+        return tuple(
+            replace(section, candidate_rows=tuple(rows[index]["candidate_rows"]))
+            for index, section in enumerate(sections)
+        ), receipt["mask_measurement"]
+    sections, measurement = _v8_build_tau_sections(
+        config=config,
+        target_receipt=target_receipt,
+        predictor=predictor,
+        segnet_oracle=segnet_oracle,
+        section_class_ids=section_class_ids,
+        tau=tau,
+    )
+    for path, section in zip(section_paths, sections, strict=True):
+        _publish_or_verify(path, section.frame)
+    receipt = {
+        "schema": "direct_description_margin_gated_tau_checkpoint.v1",
+        "typed_config_sha256": config.typed_config_hash(),
+        "predictor_sha256": predictor_sha256,
+        "v7_receipt_sha256": config.v7_receipt_sha256,
+        "tau": tau,
+        "frame_sha256": [section.ledger_row()["frame_sha256"] for section in sections],
+        "sections": [section.ledger_row() for section in sections],
+        "mask_measurement": measurement,
+        "all_stage_checkpoints_preserved": True,
+    }
+    _publish_or_verify(receipt_path, rfc8785_canonicalize(receipt) + b"\n")
+    return sections, measurement
+
+
+def _v8_candidate_scope(config: DirectDescriptionMarginGatedCorrectionConfigV1) -> str:
+    return (
+        f"MEASURED n{config.pair_count} source window "
+        f"[{config.pair_start},{config.pair_start + config.pair_count}) on {V8_EVIDENCE_AXIS}; "
+        "solved-plane-margin-gated exact RGB corrections over the bound v6 predictor; formulation-local"
+    )
+
+
+def _v8_load_completed_receipt(
+    config: DirectDescriptionMarginGatedCorrectionConfigV1,
+    root: Path,
+) -> tuple[dict[str, Any], Path] | None:
+    receipt_path = root / f"ddm_v8_margin_gated_correction_n{config.pair_count}_receipt.json"
+    if not receipt_path.exists():
+        return None
+    receipt = json.loads(_read_regular_file_once(receipt_path))
+    if (
+        receipt.get("schema") != V8_RESULT_SCHEMA
+        or receipt.get("typed_config_sha256") != config.typed_config_hash()
+        or receipt.get("dsl_compile_hash") != config.dsl_compile_hash()
+        or receipt.get("score_claim") is not False
+        or receipt.get("d_seg_claim") is not False
+        or receipt.get("d_pose_claim") is not False
+    ):
+        raise DirectDescriptionError("v8 completed receipt configuration or claim custody mismatch")
+    expected_producer = {
+        "solver_module": _committed_source_custody(
+            "src/tac/optimization/direct_description_entropy_priced_member.py"
+        ),
+        "stream_module": _committed_source_custody("src/tac/optimization/direct_description_entropy_streams.py"),
+        "cli": _committed_source_custody("tools/run_direct_description_entropy_priced_member.py"),
+    }
+    if receipt.get("producer") != expected_producer:
+        raise DirectDescriptionError("v8 completed receipt producer custody differs from committed sources")
+    candidates = receipt.get("candidates")
+    if not isinstance(candidates, list) or len(candidates) != len(V8_TAU_LADDER):
+        raise DirectDescriptionError("v8 completed receipt candidate table is incomplete")
+    for row in candidates:
+        archive = row.get("archive", {})
+        payload = _read_bound_file(Path(archive.get("path", "")), str(archive.get("sha256", "")), "v8 archive")
+        if len(payload) != archive.get("bytes"):
+            raise DirectDescriptionError("v8 completed candidate archive length mismatch")
+    for tau in V8_TAU_LADDER:
+        tau_root = root / "tau_checkpoints" / f"tau_{tau.replace('.', 'p')}"
+        tau_receipt = json.loads(_read_regular_file_once(tau_root / "tau_receipt.json"))
+        if tau_receipt.get("typed_config_sha256") != config.typed_config_hash() or tau_receipt.get("tau") != tau:
+            raise DirectDescriptionError("v8 completed tau checkpoint custody mismatch")
+        for section_id, digest in enumerate(tau_receipt.get("frame_sha256", [])):
+            _read_bound_file(tau_root / f"section_{section_id}.bin", str(digest), "v8 tau section")
+    return receipt, receipt_path
+
+
+def run_margin_gated_correction(
+    config: DirectDescriptionMarginGatedCorrectionConfigV1,
+    *,
+    output_directory: Path,
+    semantic_argv: Sequence[str],
+) -> tuple[dict[str, Any], Path]:
+    """Build and measure the receiver-closed v8 solved-plane margin gate."""
+
+    root = Path(output_directory)
+    root.mkdir(parents=True, exist_ok=True)
+    completed = _v8_load_completed_receipt(config, root)
+    if completed is not None:
+        return completed
+    storage = _v8_storage_preflight(root)
+    v7_receipt = _read_bound_json(Path(config.v7_receipt_path), config.v7_receipt_sha256, "v7_receipt_sha256")
+    if v7_receipt.get("schema") != V7_RESULT_SCHEMA:
+        raise DirectDescriptionError("v8 input receipt is not the settled v7 result")
+    typed_v7 = DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1.model_validate(v7_receipt["typed_config"])
+    if (typed_v7.pair_start, typed_v7.pair_count) != (config.pair_start, config.pair_count):
+        raise DirectDescriptionError("v8 typed window differs from the bound v7 receipt")
+    if Path(typed_v7.upstream_root).resolve() != Path(config.upstream_root).resolve():
+        raise DirectDescriptionError("v8 upstream scorer root differs from v7 custody")
+    v6_receipt = _read_bound_json(
+        Path(v7_receipt["predictor"]["v6_receipt_path"]),
+        v7_receipt["predictor"]["v6_receipt_sha256"],
+        "v8_v6_receipt_sha256",
+    )
+    base_row = next((row for row in v6_receipt["candidates"] if row["mode"] == V7_BASE_MODE), None)
+    if base_row is None:
+        raise DirectDescriptionError("v8 bound v6 receipt lacks the fixed predictor")
+    predictor_archive = _read_bound_file(
+        Path(base_row["archive"]["path"]), base_row["archive"]["sha256"], "v8_predictor_archive_sha256"
+    )
+    predictor = receive_structured_member_archive(predictor_archive)
+    if not isinstance(predictor, ComposedStructuredMemberReceiverV1):
+        raise DirectDescriptionError("v8 predictor is not the composed v6 receiver")
+    target_path = Path(typed_v7.target_receipt_path)
+    target_receipt = load_target_receipt(target_path, typed_v7.target_receipt_sha256)
+    cache_path = Path(target_receipt.source_cache.path)
+    if not cache_path.is_file() or cache_path.stat().st_size != target_receipt.source_cache.bytes:
+        raise DirectDescriptionError("v8 evaluator cache is unavailable")
+    try:
+        cached_lstars = open_stored_npy_memmap(cache_path, "lstars")
+        cached_margins = open_stored_npy_memmap(cache_path, "margins")
+        cached_poses = open_stored_npy_memmap(cache_path, "gt_poses")
+    except (OSError, ValueError) as exc:
+        raise DirectDescriptionError("v8 evaluator cache members are malformed") from exc
+    section_class_ids = v7_receipt["stratum_routing"]["section_class_ids"]
+    if (
+        set(section_class_ids) != set(V7_SECTION_NAMES)
+        or section_class_ids.get("Boundary") is not None
+        or sorted(int(value) for value in section_class_ids.values() if value is not None) != list(range(5))
+    ):
+        raise DirectDescriptionError("v8 inherited stratum mapping is not a five-class permutation")
+    segnet_oracle, segnet_custody = _load_segnet_oracle(
+        Path(config.upstream_root), threads=config.scorer_threads
+    )
+    posenet_oracle, posenet_custody = _load_posenet_oracle(
+        Path(config.upstream_root), threads=config.scorer_threads
+    )
+    rows: list[dict[str, Any]] = []
+    checkpoint_paths: list[str] = []
+    for candidate_index, tau in enumerate(config.tau_ladder):
+        policy_name = f"margin_tau_{tau.replace('.', 'p')}"
+        checkpoint_path = root / "candidate_receipts" / f"{candidate_index:02d}_{policy_name}.json"
+        sections, mask_measurement = _v8_load_or_build_tau_sections(
+            config=config,
+            target_receipt=target_receipt,
+            predictor=predictor,
+            segnet_oracle=segnet_oracle,
+            section_class_ids=section_class_ids,
+            tau=tau,
+            output_directory=root,
+            predictor_sha256=_sha256(predictor_archive),
+        )
+        if checkpoint_path.exists():
+            checkpoint = json.loads(_read_regular_file_once(checkpoint_path))
+            if (
+                checkpoint.get("schema") != "direct_description_margin_gated_candidate_checkpoint.v1"
+                or checkpoint.get("typed_config_sha256") != config.typed_config_hash()
+                or checkpoint.get("candidate", {}).get("policy_name") != policy_name
+            ):
+                raise DirectDescriptionError("v8 candidate checkpoint custody mismatch")
+            row = checkpoint["candidate"]
+            payload = _read_bound_file(Path(row["archive"]["path"]), row["archive"]["sha256"], "v8 archive")
+            if len(payload) != row["archive"]["bytes"]:
+                raise DirectDescriptionError("v8 candidate checkpoint archive length mismatch")
+            rows.append(row)
+            checkpoint_paths.append(str(checkpoint_path))
+            continue
+        archive, homes = compile_margin_gated_correction_archive(
+            predictor_archive=predictor_archive,
+            tau=tau,
+            sections=sections,
+        )
+        archive_path = _publish_or_verify(
+            root / f"ddm_v8_{policy_name}_n{config.pair_count}.not_a_candidate.zip.receipt-bytes",
+            archive,
+        )
+        receiver = receive_solved_plane_tolerance_archive(archive)
+        replay = receive_solved_plane_tolerance_archive(archive)
+        probe_ids = tuple(sorted({0, config.pair_count // 2, config.pair_count - 1}))
+        if not np.array_equal(receiver.render_pairs(probe_ids), replay.render_pairs(probe_ids)):
+            raise DirectDescriptionError("v8 receiver replay is not bit-identical")
+        bridge = _measure_evaluator_bridge(
+            receiver,  # type: ignore[arg-type]
+            pair_start=config.pair_start,
+            cached_lstars=cached_lstars,
+            cached_margins=cached_margins,
+            cached_poses=cached_poses,
+            segnet_oracle=segnet_oracle,
+            posenet_oracle=posenet_oracle,
+            batch_size=config.scorer_batch_size,
+        )
+        bridge["evidence_axis"] = V8_EVIDENCE_AXIS
+        home_by_name = {home["name"]: home for home in homes}
+        mask_by_stratum = {row["stratum"]: row for row in mask_measurement["per_stream"]}
+        stream_rows = []
+        for section_name, section in zip(V7_SECTION_NAMES, sections, strict=True):
+            member_name = f"correction/section_{section.section_id}.bin"
+            stream_rows.append(
+                {
+                    "stratum": section_name,
+                    **section.ledger_row(),
+                    **mask_by_stratum[section_name],
+                    "final_zip_home_bytes": home_by_name[member_name]["zip_home_bytes"],
+                }
+            )
+        d_seg = Decimal(bridge["segmentation"]["d_seg"])
+        d_pose = Decimal(bridge["pose"]["d_pose"])
+        row = {
+            "candidate_index": candidate_index,
+            "policy_name": policy_name,
+            "tau": tau,
+            "archive": {
+                "path": str(archive_path),
+                "bytes": len(archive),
+                "sha256": _sha256(archive),
+                "predictor_bytes": len(predictor_archive),
+                "all_bytes_have_one_home": sum(item["zip_home_bytes"] for item in homes) == len(archive),
+                "parse_reencode_identical": True,
+                "compiler_determinism_x2": True,
+                "receiver_replay_identical": True,
+                "not_a_candidate": True,
+            },
+            "mask_measurement": mask_measurement,
+            "stream_bytes": stream_rows,
+            "evaluator_bridge": bridge,
+            "gates": {
+                "d_seg_le_0_00116": d_seg <= Decimal(config.target_d_seg),
+                "d_pose_le_0_00025": d_pose <= Decimal(config.pose_guard_d_pose),
+                "joint_seg_pose_guard": (
+                    d_seg <= Decimal(config.target_d_seg) and d_pose <= Decimal(config.pose_guard_d_pose)
+                ),
+                "archive_bytes_le_falsifier": len(archive) <= config.falsifier_bytes,
+                "score_claim": False,
+                "promotion_eligible": False,
+            },
+            "verdict_scope": _v8_candidate_scope(config),
+        }
+        checkpoint = {
+            "schema": "direct_description_margin_gated_candidate_checkpoint.v1",
+            "typed_config_sha256": config.typed_config_hash(),
+            "dsl_compile_hash": config.dsl_compile_hash(),
+            "semantic_argv": list(semantic_argv),
+            "semantic_argv_sha256": _sha256("\0".join(semantic_argv).encode()),
+            "completed_candidate_index": candidate_index,
+            "next_candidate_index": candidate_index + 1,
+            "candidate": row,
+        }
+        _publish_or_verify(checkpoint_path, rfc8785_canonicalize(checkpoint) + b"\n")
+        rows.append(row)
+        checkpoint_paths.append(str(checkpoint_path))
+    inherited = next(row for row in v7_receipt["candidates"] if row["policy_name"] == "exact_all")
+    inherited_d_seg = Decimal(str(inherited["evaluator_bridge"]["d_seg"]))
+    inherited_d_pose = Decimal(str(inherited["evaluator_bridge"]["d_pose"]))
+    inherited_gates = {
+        **dict(inherited["gates"]),
+        "d_pose_le_0_00025": inherited_d_pose <= Decimal(config.pose_guard_d_pose),
+        "joint_seg_pose_guard": (
+            inherited_d_seg <= Decimal(config.target_d_seg)
+            and inherited_d_pose <= Decimal(config.pose_guard_d_pose)
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    inherited_reference = {
+        "candidate_index": len(rows),
+        "policy_name": "inherited_v7_exact_all",
+        "tau": "infinity_reference_not_rederived",
+        "archive": dict(inherited["archive"]),
+        "evaluator_bridge": inherited["evaluator_bridge"],
+        "inherited_settled_reference": True,
+        "source_receipt_path": config.v7_receipt_path,
+        "source_receipt_sha256": config.v7_receipt_sha256,
+        "gates": inherited_gates,
+        "verdict_scope": "settled v7 exact row bound by SHA; consumed without remeasurement",
+    }
+    measured_ladder = [*rows, inherited_reference]
+    qualifying = [row for row in measured_ladder if row["gates"]["d_seg_le_0_00116"]]
+    joint_qualifying = [row for row in measured_ladder if row["gates"].get("joint_seg_pose_guard", False)]
+    knee = min(qualifying, key=lambda row: (row["archive"]["bytes"], row["candidate_index"]))
+    joint_knee = (
+        min(joint_qualifying, key=lambda row: (row["archive"]["bytes"], row["candidate_index"]))
+        if joint_qualifying
+        else None
+    )
+    falsified = knee["archive"]["bytes"] > config.falsifier_bytes
+    waterfill = _v7_discrete_waterfill(measured_ladder)
+    result = {
+        "schema": V8_RESULT_SCHEMA,
+        "task": 603,
+        "feeds_task": 613,
+        "master_task": 578,
+        "lane_id": V8_LANE_ID,
+        "run_id": config.run_id,
+        "seed": config.seed,
+        "verdict": (
+            "FORMULATION_LEVEL_MARGIN_GATED_CORRECTION_RATE_WALL"
+            if falsified
+            else "MARGIN_GATED_CORRECTION_BELOW_PREREGISTERED_RATE_WALL"
+        ),
+        "verdict_scope": (
+            f"MEASURED finite tau ladder n{config.pair_count} over the bound v6 predictor plus the SHA-bound "
+            f"settled v7 exact reference on {V8_EVIDENCE_AXIS}; formulation only, no family or contest verdict"
+        ),
+        "research_only": True,
+        "execution_allowed": False,
+        "candidate_archive": False,
+        "score_claim": False,
+        "d_seg_claim": False,
+        "d_pose_claim": False,
+        "pointer": f"{POINTER_SCORE_TEXT} [contest-CPU]",
+        "pointer_moved": False,
+        "typed_config": config.model_dump(mode="json", by_alias=True),
+        "typed_config_sha256": config.typed_config_hash(),
+        "dsl_compile_hash": config.dsl_compile_hash(),
+        "semantic_argv": list(semantic_argv),
+        "predictor": {
+            "mode": V7_BASE_MODE,
+            "bytes": len(predictor_archive),
+            "sha256": _sha256(predictor_archive),
+            "v7_receipt_path": config.v7_receipt_path,
+            "v7_receipt_sha256": config.v7_receipt_sha256,
+        },
+        "mask_law": {
+            "definition": "abs(solved_plane_margin)<tau OR predictor_argmax!=solved_plane_argmax",
+            "margin_metric": "frozen SegNet top1-minus-top2 margin on solved target planes",
+            "tau_provenance": "registered MARGIN_BANDS breakpoints 0,0.1,0.5,1.0",
+            "correction_values": "exact solved-plane uint8 RGB only on selected sites; predictor elsewhere",
+            "mask_or_argmax_table_shipped_separately": False,
+        },
+        "candidates": rows,
+        "inherited_exact_reference": inherited_reference,
+        "candidate_table_sha256": _sha256(rfc8785_canonicalize(rows)),
+        "knee": {
+            "policy_name": knee["policy_name"],
+            "archive_bytes": knee["archive"]["bytes"],
+            "d_seg": knee["evaluator_bridge"]["segmentation"]["d_seg"],
+            "d_pose": knee["evaluator_bridge"]["pose"]["d_pose"],
+            "binder": "minimum exact bytes among measured rungs subject to advisory d_seg<=0.00116",
+            "inherited_settled_reference": knee.get("inherited_settled_reference", False),
+        },
+        "joint_pose_guard_knee": None
+        if joint_knee is None
+        else {
+            "policy_name": joint_knee["policy_name"],
+            "archive_bytes": joint_knee["archive"]["bytes"],
+            "d_seg": joint_knee["evaluator_bridge"]["segmentation"]["d_seg"],
+            "d_pose": joint_knee["evaluator_bridge"]["pose"]["d_pose"],
+            "guard": "d_seg<=0.00116 AND official-YUV6 d_pose<=0.00025",
+        },
+        "falsifier": {
+            "threshold_bytes": config.falsifier_bytes,
+            "cheapest_measured_dseg_feasible_bytes": knee["archive"]["bytes"],
+            "triggered": falsified,
+            "verdict_scope": "finite registered tau ladder plus settled exact endpoint; formulation only",
+        },
+        "waterfill": {
+            **waterfill,
+            "stop_rule": "stop at first marginal distortion gain per byte below 25/37545489",
+            "metric": "100*d_seg+sqrt(10*d_pose) with exact final-ZIP bytes; advisory only",
+        },
+        "stratum_routing": {
+            "section_names": list(V7_SECTION_NAMES),
+            "section_class_ids": section_class_ids,
+            "boundary_precedence": True,
+            "source": "settled v7 self-detected role mapping; partition evaluated on solved-plane argmax",
+            "section_semantics_shipped_in_archive": False,
+            "ground_truth_argmax_table_shipped": False,
+        },
+        "scorer_custody": {
+            "segnet": {**segnet_custody, "evidence_axis": V8_EVIDENCE_AXIS},
+            "posenet": {**posenet_custody, "evidence_axis": V8_EVIDENCE_AXIS},
+        },
+        "target_custody": {
+            "receipt_path": typed_v7.target_receipt_path,
+            "receipt_sha256": typed_v7.target_receipt_sha256,
+            "source_cache_path": str(cache_path),
+            "source_cache_sha256": target_receipt.source_cache.sha256,
+            "source_cache_mutated": False,
+        },
+        "resume": {
+            "policy": config.checkpoint_policy,
+            "tau_checkpoint_count": len(config.tau_ladder),
+            "candidate_checkpoints": checkpoint_paths,
+            "all_preserved": len(checkpoint_paths) == len(config.tau_ladder),
+            "atomic_publish": True,
+            "max_work_loss": "current tau or candidate only",
+        },
+        "blocker_delta": {
+            "SOLVED_PLANE_MARGIN_GATE": "RED_TO_GREEN_LOCAL_ADVISORY",
+            "EXACT_RECEIVER_BYTES_PER_TAU": "RED_TO_GREEN_LOCAL_ADVISORY",
+            "HONEST_POSE_GUARD": "RED_TO_GREEN_MEASURED_LOCAL_ADVISORY",
+            "RESIZE_PREIMAGE_FREEDOM": "RED_TO_GREEN_DERIVED_LINEAR_PROBE_NOT_SCORE",
+            "DSEG_FEASIBLE_RUNG_LE_200KB": "RED_FORMULATION_SCOPE" if falsified else "GREEN_LOCAL_ONLY",
+            "N600": "REMAINS_RED_NOT_RUN",
+            "CONTEST_CPU_CUDA_SCORE": "REMAINS_RED_NOT_AUTHORIZED",
+        },
+        "storage_preflight": storage,
+        "cleanup": {
+            "bulk_artifacts_created": True,
+            "all_tau_and_candidate_checkpoints_preserved": True,
+            "ssd_sources_read_only": True,
+            "scorer_policy": "batch16 with at most one target chunk plus one scorer batch resident",
+            "certify_or_block": "no deletion, movement, or source mutation performed",
+        },
+        "stores_consulted": [
+            "docs/operating_manual_craft_handoff.md",
+            "SPEC_v75_optimal_single_trunk_20260708.md and SPEC_v8_perclass_decomposition_20260708.md",
+            "settled ddm_v7_solved_plane_tolerance_waterfill receipts and coder winners",
+            "gt_n600 lstars/margins/gt_poses frozen scorer cache",
+            "2026-07-19 reverse-waterfill, Fisher-margin, inner-Jacobian, curvelet/shearlet, and xi directives",
+        ],
+        "producer": {
+            "solver_module": _committed_source_custody(
+                "src/tac/optimization/direct_description_entropy_priced_member.py"
+            ),
+            "stream_module": _committed_source_custody(
+                "src/tac/optimization/direct_description_entropy_streams.py"
+            ),
+            "cli": _committed_source_custody("tools/run_direct_description_entropy_priced_member.py"),
+        },
+        "main_landing_review_required": True,
+    }
+    receipt_path = _publish_or_verify(
+        root / f"ddm_v8_margin_gated_correction_n{config.pair_count}_receipt.json",
+        rfc8785_canonicalize(result) + b"\n",
+    )
+    return result, receipt_path
+
+
 __all__ = [
     "TOLERANCE_LADDER",
     "DirectDescriptionDsegBridgeAmortizeConfigV1",
@@ -4608,6 +5427,8 @@ __all__ = [
     "DirectDescriptionEntropyPricedMemberConfigV1",
     "DirectDescriptionEntropyPricedMemberProgramV1",
     "DirectDescriptionEntropyRungCheckpointV1",
+    "DirectDescriptionMarginGatedCorrectionConfigV1",
+    "DirectDescriptionMarginGatedCorrectionProgramV1",
     "DirectDescriptionRouteFixComposeConfigV1",
     "DirectDescriptionRouteFixComposeProgramV1",
     "DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1",
@@ -4617,6 +5438,7 @@ __all__ = [
     "DirectDescriptionStructuredCandidateCheckpointV1",
     "build_entropy_candidate_z",
     "compile_composed_structured_member_archive",
+    "compile_margin_gated_correction_archive",
     "compile_solved_plane_tolerance_archive",
     "compile_structured_member_archive",
     "load_structured_s4_sources",
@@ -4628,6 +5450,7 @@ __all__ = [
     "run_entropy_candidate_stages",
     "run_entropy_priced_member_n64",
     "run_entropy_rung_stages",
+    "run_margin_gated_correction",
     "run_route_fix_composed_member",
     "run_solved_plane_tolerance_waterfill",
     "run_stratum_structured_member_n64",
