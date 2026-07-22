@@ -21272,3 +21272,42 @@ OPERATOR (verbatim gist): "remember the chart level corrections we researched �
 - **Corpus convergence (recall-before-decide):** this formalizes #596 (forensic mining: native representation = data structures + ops + transforms + primitives) and applies #610 surface 4 (per-stratum ops-grammar coding, previously unapplied). Rule-118 reading: generic productions/interpreter FREE in inflate.py; the derivation string is the counted payload — grammar induction IS "compile the generator" at the symbol level.
 - **Routing (two fronts, same turn):** (1) inbox supplement sent to the LIVE ddm_v13 arm — typed per-stratum productions, one dash-phase parameter not per-dash events, ride-ξ-with-stored-deviations, MDL-scored vocabulary choices; (2) new arm `ddm_g1_grammar_induction` SPAWNED — extract the n600 reference worldsheets, induce candidate production sets per stratum from the BUILT parameter spaces (#503 island carriers · #287 dash-comb · #234 lane slots · #180 Morse-Smale · tac.lie), score by MEASURED two-part MDL (real coders, no estimates), rank vs the v12 residual decomposition; table consumed by v13 round-2.
 - Pointer 0.1910828242 [contest-CPU] UNMOVED (means/apparatus).
+
+### FEED-603-G2-solve-difference-operator-ledger (2026-07-22, delegated Codex arm; MAIN review required)
+
+- **Durable instrument + complete n600 pass:** `solve_diff_operator_mining.py` compares the
+  SHA-bound C1 solved scorer planes with the V12 add-zero receiver in bounded 12-pair chunks.  All
+  600 pairs completed as 50 immutable SSD stages; independent audit rehashed 163,800 typed rows
+  and 95,770,073 stage-member bytes.  Outputs include pair/stratum/costate/tolerance/START/window
+  JSONL and five PNG/HTML chart pairs.  Research-only `[macOS-CPU frozen-scorer advisory]`; no
+  scorer invocation, archive, dispatch, score, or promotion.
+- **Exact differential geometry:** solve-minus-predict camera energy is 61.680645% in the exact
+  factor-2 resize range and 38.319355% in its kernel (reconstruction max error 0; max
+  orthogonality residual 4.24e-8).  This measured energy split supersedes any attempt to use the
+  settled nullity dimension as an energy forecast; bounded-uint8 reachability remains separately
+  typed.
+- **Temporal falsification:** Lane/Movable one-step compact-chart persistence is high
+  (0.9473/0.9921), but held-out xi-only linear transport explains negative mean energy
+  (-0.00845/-0.01149).  Strict Movable support matching yields 65 unmatched birth cells, zero
+  xi-matched post-birth cells, and 2,008 post-birth residual cells.  V12's 0.989518 is conditional
+  Movable d-seg, NOT a temporal-predictability fraction.
+- **Four measured candidates, KKT still blocked:** compact parabolic shearlet 92,544 B < xi
+  transport 252,112 B < rank-four head chart 351,900 B << full residual 757,769,836 B.  These are
+  real coded bytes, but none has receiver delta-d-seg; admission stays
+  `BLOCKED_NO_RECEIVER_DELTA_DSEG`.  Next warranted rung is receiver-closed perturbation in the
+  measured shearlet and rank-four coordinates, ordered by realized delta-S/byte—not promotion by
+  byte rank.
+- **Late Lane/Movable hypotheses remain open with exact blockers:** phase symbols lack a
+  receiver-closed perturbation; the 16-channel stride-2 band lacks internal activation custody;
+  BEV jitter/openpilot grammar lacks typed worldsheet correspondence; Movable projective/template
+  claims lack track identity and receiver-closed reconstruction.  These are implementation-custody
+  gaps, not family negatives.
+- **Triality:** DSL/instrument `src/tac/optimization/solve_diff_operator_mining.py` + typed config;
+  DAG this row; equations
+  `ddm_g2_solve_diff_op_mining_canonical_equations_20260722.md`.  Aggregate ledger
+  `ddm_g2_solve_diff_op_mining_n600_20260722T194000Z/aggregate_ledger.json`; receipt SHA
+  `ada87717b39bc34ad67a3104d652574e544d82938fa3a1ea898acdf624c2bd67`.
+- **Custody/review:** Ruff and py_compile clean; focused tests 16/16; producer module SHA
+  `7290303774d6bfbb0a4f5686b598fa2cea1722490774d107cf91c5ea6facfe1e`, finalizer SHA
+  `2d073d97d512fdf0829441ee2fe328de08fe8ae15b3302e68cd951bec2419213`.  MAIN must independently
+  review before consumption.  Pointer `0.1910828242 [contest-CPU]` UNMOVED.
