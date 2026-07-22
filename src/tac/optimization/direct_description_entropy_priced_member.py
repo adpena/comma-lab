@@ -5084,7 +5084,9 @@ def run_margin_gated_correction(
     v7_receipt = _read_bound_json(Path(config.v7_receipt_path), config.v7_receipt_sha256, "v7_receipt_sha256")
     if v7_receipt.get("schema") != V7_RESULT_SCHEMA:
         raise DirectDescriptionError("v8 input receipt is not the settled v7 result")
-    typed_v7 = DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1.model_validate(v7_receipt["typed_config"])
+    typed_v7 = DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1.model_validate_json(
+        rfc8785_canonicalize(v7_receipt["typed_config"])
+    )
     if (typed_v7.pair_start, typed_v7.pair_count) != (config.pair_start, config.pair_count):
         raise DirectDescriptionError("v8 typed window differs from the bound v7 receipt")
     if Path(typed_v7.upstream_root).resolve() != Path(config.upstream_root).resolve():

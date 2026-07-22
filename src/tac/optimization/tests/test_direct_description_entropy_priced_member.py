@@ -834,6 +834,22 @@ def test_v8_config_program_and_margin_breakpoints_are_typed() -> None:
         )
 
 
+def test_v8_embedded_v7_config_roundtrips_through_strict_json() -> None:
+    settled = DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1(
+        pair_start=448,
+        pair_count=64,
+        v6_receipt_path="v6.json",
+        v6_receipt_sha256="1" * 64,
+        target_receipt_path="target.json",
+        target_receipt_sha256="2" * 64,
+        upstream_root="/absolute/upstream",
+        scorer_threads=1,
+    )
+    embedded_json = json.dumps(settled.model_dump(mode="json", by_alias=True)).encode()
+    parsed = DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1.model_validate_json(embedded_json)
+    assert parsed == settled
+
+
 def test_v8_archive_reuses_receiver_without_scorer_or_argmax_table() -> None:
     predictor, _ = compile_composed_structured_member_archive(
         compile_entropy_chart_archive(_structured_fixture_z()).archive,
