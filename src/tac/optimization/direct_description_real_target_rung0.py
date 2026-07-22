@@ -413,8 +413,10 @@ def _load_receipt_file(path: Path, expected_sha256: str) -> DirectDescriptionTar
         raise DirectDescriptionError("real-target receipt SHA-256 mismatch")
     if not payload.endswith(b"\n"):
         raise DirectDescriptionError("real-target receipt lacks exactly one canonical LF")
-    value, _ = _read_json(path, "real-target receipt")
-    receipt = DirectDescriptionTargetPlaneReceiptV1.model_validate(value)
+    try:
+        receipt = DirectDescriptionTargetPlaneReceiptV1.model_validate_json(payload)
+    except ValueError as exc:
+        raise DirectDescriptionError("real-target receipt schema is invalid") from exc
     if rfc8785_canonicalize(receipt.model_dump(mode="json", by_alias=True)) + b"\n" != payload:
         raise DirectDescriptionError("real-target receipt is not canonical JCS plus one LF")
     return receipt

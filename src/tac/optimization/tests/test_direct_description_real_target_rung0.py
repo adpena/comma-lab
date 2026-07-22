@@ -10,12 +10,17 @@ from tac.optimization.direct_description_minimizer import (
     DirectDescriptionError,
     compile_direct_description_archive_v2,
     receive_direct_description_archive_v2,
+    rfc8785_canonicalize,
 )
 from tac.optimization.direct_description_real_target_rung0 import (
     DirectDescriptionRealTargetRung0ConfigV1,
+    DirectDescriptionTargetPlaneReceiptV1,
     RealTargetSubsetV1,
+    TargetChunkV1,
+    TargetSourceFileV1,
     _block_mean_projection,
     _initial_description,
+    _load_receipt_file,
     _objective,
     _pose6_ordinal_codes,
     load_real_target_subset,
@@ -89,3 +94,49 @@ def test_config_and_receipt_hash_fail_closed(tmp_path: Path) -> None:
         load_real_target_subset(path, "0" * 64)
     with pytest.raises((DirectDescriptionError, ValueError)):
         load_real_target_subset(path, observed)
+
+
+def test_target_receipt_canonical_json_round_trip_accepts_array_fields(tmp_path: Path) -> None:
+    source = TargetSourceFileV1(path="/not/read/by_schema_test", bytes=1, sha256="0" * 64)
+    chunks = tuple(
+        TargetChunkV1(
+            chunk_index=index,
+            pair_ids=tuple(range(index * 12, index * 12 + 12)),
+            manifest=source,
+            y0=source,
+            y1=source,
+        )
+        for index in range(50)
+    )
+    receipt = DirectDescriptionTargetPlaneReceiptV1(
+        producer_path="tools/producer.py",
+        producer_git_sha="1" * 40,
+        producer_source_sha256="2" * 64,
+        materializer_git_sha="3" * 40,
+        upstream_repo_root="/repo",
+        upstream_snapshot_sha256="4" * 64,
+        upstream_evaluate_sha256="5" * 64,
+        prepare_receipt=source,
+        contest_cpu_receipt=source,
+        contest_cpu_provenance=source,
+        archive=source,
+        source_cache=source,
+        y0_sha256="6" * 64,
+        y1_sha256="7" * 64,
+        chunk_tree_sha256="8" * 64,
+        chunks=chunks,
+        subset_pair_ids=tuple(range(64)),
+        subset_y0_sha256="9" * 64,
+        subset_y1_sha256="a" * 64,
+        subset_projection_sha256="b" * 64,
+        pose6_source_sha256="c" * 64,
+        subset_pose6_source_sha256="d" * 64,
+        subset_pose6_target_codes_sha256="e" * 64,
+    )
+    payload = rfc8785_canonicalize(receipt.model_dump(mode="json", by_alias=True)) + b"\n"
+    path = tmp_path / "receipt.json"
+    path.write_bytes(payload)
+    observed = hashlib.sha256(payload).hexdigest()
+    loaded = _load_receipt_file(path, observed)
+    assert loaded.chunks == chunks
+    assert loaded.subset_pair_ids == tuple(range(64))
