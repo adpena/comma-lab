@@ -781,7 +781,12 @@ def _bundle_obligation_candidates(
     maximum_atoms: int,
     minimum_per_family: int,
 ) -> list[_SearchCandidate]:
-    """Group atomic obligations by canonical scorer batch for exact replay efficiency."""
+    """Group atomic obligations by scorer batch and obligation family.
+
+    A mixed whole-batch bundle aliases a useful local atom with unrelated harmful
+    strata.  Family-specific bundles preserve exact batch reuse while keeping the
+    measured admission question surgical enough for reverse water-filling.
+    """
 
     by_batch: dict[int, list[_SearchCandidate]] = {}
     for candidate in generated:
@@ -793,49 +798,53 @@ def _bundle_obligation_candidates(
         ):
             continue
         by_batch.setdefault(batch_start, []).append(candidate)
+    family_mechanisms = {
+        "lane_center": "Lane/center_canonical_batch_obligation_bundle",
+        "lane_width": "Lane/width_canonical_batch_obligation_bundle",
+        "lane_phase": "Lane/dash_phase_canonical_batch_obligation_bundle",
+        "road_boundary": "Road/canonical_batch_shearlet_obligation_bundle",
+        "undrivable_boundary": "Undrivable/canonical_batch_shearlet_obligation_bundle",
+        "movable_shape": "Movable/canonical_batch_shape_obligation_bundle",
+    }
     bundles: list[_SearchCandidate] = []
     for batch_start, rows in by_batch.items():
         ordered = sorted(rows, key=lambda row: (-row.fisher_priority, row.candidate_id))
         buckets = {name: [] for name in _OBLIGATION_FAMILY_ORDER}
         for row in ordered:
             buckets[_obligation_family(row)].append(row)
-        chosen: list[_SearchCandidate] = []
-        occupied: set[tuple[Any, ...]] = set()
-
-        def admit_atomic(
-            row: _SearchCandidate,
-            chosen: list[_SearchCandidate] = chosen,
-            occupied: set[tuple[Any, ...]] = occupied,
-        ) -> None:
-            conflicts = row.conflict_keys() & occupied
-            if conflicts or len(chosen) >= maximum_atoms:
-                return
-            chosen.append(row)
-            occupied.update(row.conflict_keys())
-
         for family in _OBLIGATION_FAMILY_ORDER:
-            for row in buckets[family][:minimum_per_family]:
-                admit_atomic(row)
-        for row in ordered:
-            admit_atomic(row)
-        if not chosen:
-            continue
-        lane = tuple(sorted(value for row in chosen for value in row.lane_symbols))
-        shearlets = tuple(sorted(value for row in chosen for value in row.boundary_shearlets))
-        islands = tuple(sorted(value for row in chosen for value in row.island_shapes))
-        source_ids = tuple(sorted({value for row in chosen for value in row.source_pair_ids}))
-        bundles.append(
-            _SearchCandidate(
-                f"obligation_bundle_batch_{batch_start:04d}",
-                "Joint/canonical_batch_obligation_bundle",
-                sum(row.fisher_priority for row in chosen),
-                source_ids,
-                lane_symbols=lane,
-                boundary_shearlets=shearlets,
-                island_shapes=islands,
+            chosen: list[_SearchCandidate] = []
+            occupied: set[tuple[Any, ...]] = set()
+            for row in buckets[family]:
+                if row.conflict_keys() & occupied:
+                    continue
+                chosen.append(row)
+                occupied.update(row.conflict_keys())
+                if len(chosen) >= maximum_atoms:
+                    break
+            if not chosen:
+                continue
+            lane = tuple(sorted(value for row in chosen for value in row.lane_symbols))
+            shearlets = tuple(sorted(value for row in chosen for value in row.boundary_shearlets))
+            islands = tuple(sorted(value for row in chosen for value in row.island_shapes))
+            source_ids = tuple(sorted({value for row in chosen for value in row.source_pair_ids}))
+            bundles.append(
+                _SearchCandidate(
+                    f"obligation_bundle_batch_{batch_start:04d}_{family}",
+                    family_mechanisms[family],
+                    sum(row.fisher_priority for row in chosen),
+                    source_ids,
+                    lane_symbols=lane,
+                    boundary_shearlets=shearlets,
+                    island_shapes=islands,
+                )
             )
-        )
-    return sorted(bundles, key=lambda row: (-row.fisher_priority, row.candidate_id))[:maximum_bundles]
+    return _select_obligation_candidates(
+        bundles,
+        pair_start=pair_start,
+        maximum=maximum_bundles,
+        minimum_per_family=minimum_per_family,
+    )
 
 
 def _derive_obligation_candidates(
@@ -2009,10 +2018,24 @@ def run_v11_search(
     final = ladder[-1]
     final_dseg = float(final["bridge"]["segmentation"]["d_seg"])
     final_bytes = int(final["archive"]["bytes"])
-    near_200kb_measured = final_bytes >= 180_000
+    atoms_in_measured_bundles = sum(_candidate_atom_count(row) for row in candidates)
+    unmeasured_bounded_atomic_count = max(0, len(generated) - atoms_in_measured_bundles)
+    measurement_inventory_exhausted = unmeasured_bounded_atomic_count == 0
+    ceiling_probe_total_bytes = max(
+        len(base_archive) + int(row["effective_added_budget_bytes"]) for row in ladder
+    )
+    near_200kb_budget_ceiling_probed = ceiling_probe_total_bytes >= (
+        config.total_archive_ceiling_bytes - 1024
+    )
     last_admission = max((index for index, row in enumerate(candidate_rows) if row["admitted"]), default=-1)
     flattened = last_admission < len(candidate_rows) - 4
-    plateau_falsifier = final_dseg > 0.00116 and near_200kb_measured and flattened
+    plateau_falsifier = (
+        config.pair_count == 600
+        and final_dseg > 0.00116
+        and near_200kb_budget_ceiling_probed
+        and flattened
+        and measurement_inventory_exhausted
+    )
     if final_dseg <= 0.00116 and final_bytes <= 154_600:
         verdict = "ADVISORY_INSTANCE_MEETS_SUB015_BOX_NOT_PROMOTABLE"
     elif plateau_falsifier:
@@ -2039,7 +2062,9 @@ def run_v11_search(
             "bounded_generated_atomic_count": len(generated),
             "generated_family_counts": generated_family_counts,
             "measured_bundle_count": len(candidates),
-            "atoms_in_measured_bundles": sum(_candidate_atom_count(row) for row in candidates),
+            "atoms_in_measured_bundles": atoms_in_measured_bundles,
+            "unmeasured_bounded_atomic_count": unmeasured_bounded_atomic_count,
+            "measurement_inventory_exhausted": measurement_inventory_exhausted,
             "evaluated_bundle_count": len(candidate_rows),
             "admitted_bundle_count": len(accepted),
             "admitted_atom_count": sum(_candidate_atom_count(row) for row in accepted),
@@ -2063,10 +2088,22 @@ def run_v11_search(
             "marginal_objective_drop_per_byte": f"{(marginal[knee_index - 1] if knee_index else 0.0):.12e}",
         },
         "falsifier": {
-            "condition": "joint-objective obligation curve flattens above d_seg 0.00116 near 200KB total",
-            "near_200kb_measured": near_200kb_measured,
+            "condition": "n600 joint-objective obligation curve flattens above d_seg 0.00116 after the measured obligation inventory is exhausted with the near-200KB budget ceiling probed",
+            "near_200kb_budget_ceiling_probed": near_200kb_budget_ceiling_probed,
+            "ceiling_probe_total_bytes": ceiling_probe_total_bytes,
+            "measurement_inventory_exhausted": measurement_inventory_exhausted,
+            "unmeasured_bounded_atomic_count": unmeasured_bounded_atomic_count,
             "flattened": flattened,
             "triggered": plateau_falsifier,
+            "not_triggered_reason": (
+                None
+                if plateau_falsifier
+                else (
+                    "bounded measurement cap left scorer-obligation atoms unmeasured; no formulation-level wrong-worldsheet inference"
+                    if not measurement_inventory_exhausted
+                    else "other preregistered falsifier conditions were not all met"
+                )
+            ),
             "final_total_bytes": final_bytes,
             "final_d_seg": f"{final_dseg:.12f}",
             "binding_decomposition": final["bridge"]["segmentation"]["strata"],

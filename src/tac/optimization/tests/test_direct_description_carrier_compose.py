@@ -269,8 +269,8 @@ def test_v11_bundles_absolute_pair_ids_against_window_relative_batch_geometry() 
         minimum_per_family=1,
     )
     assert {row.candidate_id for row in bundles} == {
-        "obligation_bundle_batch_0000",
-        "obligation_bundle_batch_0008",
+        "obligation_bundle_batch_0000_lane_center",
+        "obligation_bundle_batch_0008_lane_center",
     }
     assert all(455 not in row.source_pair_ids or 456 not in row.source_pair_ids for row in bundles)
 
