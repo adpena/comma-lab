@@ -14,17 +14,20 @@ from tac.optimization.direct_description_entropy_priced_member import (
     DirectDescriptionEntropyCandidateCheckpointV1,
     DirectDescriptionEntropyPricedMemberConfigV1,
     DirectDescriptionEntropyPricedMemberProgramV1,
+    DirectDescriptionRouteFixComposeConfigV1,
     DirectDescriptionStratumStructuredMemberConfigV1,
     StructuredS4SourcesV1,
     _decode_site_records,
     _encode_site_records,
     build_entropy_candidate_z,
+    compile_composed_structured_member_archive,
     compile_structured_member_archive,
     parse_structured_member_archive,
     receive_structured_member_archive,
     run_entropy_candidate_stages,
     run_entropy_rung_stages,
     run_structured_candidate_stages,
+    select_role_paint_values,
 )
 from tac.optimization.direct_description_entropy_streams import (
     CODER_AQC1,
@@ -138,9 +141,10 @@ def _zero_lane_payload() -> bytes:
 def _structured_sources() -> StructuredS4SourcesV1:
     empty = tuple(() for _ in range(64))
     classes: list[tuple[tuple[np.ndarray, ...], ...]] = [empty for _ in range(5)]
-    road = list(empty)
-    road[0] = (np.asarray([0, 1, 2], dtype=np.int64),)
-    classes[0] = tuple(road)
+    for class_id in range(5):
+        rows = list(empty)
+        rows[0] = (np.asarray([class_id * 8 + 0, class_id * 8 + 1, class_id * 8 + 2], dtype=np.int64),)
+        classes[class_id] = tuple(rows)
     static_road = np.zeros((384, 512), dtype=bool)
     static_road[100:104, 200:204] = True
     hood = np.zeros((384, 512), dtype=bool)
@@ -158,9 +162,27 @@ def _structured_sources() -> StructuredS4SourcesV1:
             "MyCar": hood,
         },
         lane_encoded=_zero_lane_payload(),
+        lane_lines=tuple(() for _ in range(600)),
+        lane_header={
+            "cx": 256.0,
+            "dash_forward_max_m": 50.0,
+            "dash_gate": True,
+            "rd": {"K": 0, "base_steps": [1.0] * 11, "d_slot": 11, "n_pairs": 600},
+            "softness": 1.0,
+            "v_h": 150.0,
+        },
         events=tuple(classes),
         components=tuple(empty for _ in range(5)),
         custody={"fixture": True},
+        role_class_ids={"Road": 0, "Lane": 1, "UndrivableBoundary": 2, "Movable": 3, "MyCar": 4},
+        role_rgb_u8={
+            "Road": (153, 255, 51),
+            "Lane": (51, 255, 204),
+            "UndrivableBoundary": (0, 153, 0),
+            "Movable": (102, 204, 51),
+            "MyCar": (0, 255, 153),
+        },
+        routing_custody={"fixture": True},
     )
 
 
@@ -437,6 +459,74 @@ def test_mycar_structured_receiver_changes_only_static_hood() -> None:
     mask = sources.static_masks["MyCar"]
     assert np.all(structured[0, 1, mask] == sources.palette[4])
     assert np.array_equal(structured[0, 1, ~mask], baseline[0, 1, ~mask])
+
+
+def test_role_value_selector_maximizes_each_self_detected_role_without_fixed_indices() -> None:
+    role_ids = {"Road": 3, "Lane": 4, "MyCar": 0, "UndrivableBoundary": 1, "Movable": 2}
+    winning_candidates = {"Road": 3, "Lane": 5, "MyCar": 0, "UndrivableBoundary": 1, "Movable": 2}
+    score_rows = {}
+    for role_index, (role, target_class_id) in enumerate(role_ids.items()):
+        score_rows[role] = [
+            {
+                "candidate_index": candidate_index,
+                "target_class_id": target_class_id,
+                "own_class_matches": 100
+                + candidate_index
+                + (1000 if candidate_index == winning_candidates[role] else 0),
+                "rgb_u8": [candidate_index, role_index, target_class_id],
+            }
+            for candidate_index in range(6)
+        ]
+    selected = select_role_paint_values(role_ids, score_rows)
+    for role in role_ids:
+        assert selected[role]["candidate_index"] == winning_candidates[role]
+        assert selected[role]["own_class_matches"] == max(
+            row["own_class_matches"] for row in score_rows[role]
+        )
+
+
+def test_composed_member_consumes_every_role_and_keeps_pose_in_one_receiver() -> None:
+    z = _structured_fixture_z()
+    baseline_archive = compile_entropy_chart_archive(z).archive
+    sources = _structured_sources()
+    archive, homes = compile_composed_structured_member_archive(
+        baseline_archive,
+        sources,
+        pair_start=0,
+    )
+    receiver = receive_structured_member_archive(archive)
+    assert [layer.role for layer in receiver.layers] == [
+        "UndrivableBoundary",
+        "Road",
+        "Lane",
+        "MyCar",
+        "Movable",
+    ]
+    assert receiver.pose6_codes[0].tolist() == [20, 21, 22, 23, 24, 25]
+    assert receiver.render_pairs((0,)).shape == (1, 2, 384, 512, 3)
+    assert receiver.custody["all_five_roles_consumed"] is True
+    assert sum(row["zip_home_bytes"] for row in homes) == len(archive)
+
+
+def test_v5_config_requires_probe_inside_n64_or_n256_state_window() -> None:
+    common = {
+        "pair_start": 448,
+        "pair_count": 64,
+        "target_receipt_path": "target.json",
+        "target_receipt_sha256": "0" * 64,
+        "upstream_root": "/absolute/upstream",
+        "scorer_threads": 1,
+        "s4_container_path": "/absolute/s4/0.bin",
+        "s4_container_sha256": "1" * 64,
+        "s4_runtime_path": "/absolute/s4/runtime/inflate.py",
+        "s4_runtime_sha256": "2" * 64,
+    }
+    config = DirectDescriptionRouteFixComposeConfigV1(**common)
+    assert config.pair_start == 448 and config.pair_count == 64
+    with pytest.raises(ValueError, match="n64 or n256"):
+        DirectDescriptionRouteFixComposeConfigV1(**{**common, "pair_count": 128})
+    with pytest.raises(ValueError, match="contained"):
+        DirectDescriptionRouteFixComposeConfigV1(**{**common, "pair_start": 384})
 
 
 def test_structured_candidate_stages_resume_and_preserve_every_archive(tmp_path: Path) -> None:

@@ -399,11 +399,45 @@ def iter_target_plane_chunks(
 ) -> Iterator[tuple[tuple[int, ...], np.ndarray]]:
     """Yield exact target planes in bounded SSD-backed chunks."""
 
-    if isinstance(n_pairs, bool) or not isinstance(n_pairs, int) or not 1 <= n_pairs <= receipt.pairs:
-        raise DirectDescriptionError("target chunk pair count must be an exact integer in [1,600]")
-    remaining = n_pairs
+    yield from iter_target_plane_window_chunks(receipt, pair_start=0, n_pairs=n_pairs)
+
+
+def iter_target_plane_window_chunks(
+    receipt: DirectDescriptionTargetPlaneReceiptV1,
+    *,
+    pair_start: int,
+    n_pairs: int,
+) -> Iterator[tuple[tuple[int, ...], np.ndarray]]:
+    """Yield a contiguous target window with local receiver pair IDs.
+
+    The target receipt is globally indexed over 600 pairs, while every counted
+    chart archive remains locally indexed from zero.  Keeping that distinction
+    explicit prevents a non-prefix event window from being silently paired with
+    prefix RGB/Pose targets.
+    """
+
+    if (
+        isinstance(pair_start, bool)
+        or not isinstance(pair_start, int)
+        or pair_start < 0
+        or isinstance(n_pairs, bool)
+        or not isinstance(n_pairs, int)
+        or n_pairs < 1
+        or pair_start + n_pairs > receipt.pairs
+    ):
+        raise DirectDescriptionError("target window must be an exact contiguous subset of [0,600)")
+    window_stop = pair_start + n_pairs
+    observed = 0
     for row in receipt.chunks:
-        if remaining <= 0:
+        row_start = row.pair_ids[0]
+        row_stop = row.pair_ids[-1] + 1
+        overlap_start = max(pair_start, row_start)
+        overlap_stop = min(window_stop, row_stop)
+        if overlap_start >= overlap_stop:
+            if row_start >= window_stop:
+                break
+            continue
+        if observed >= n_pairs:
             break
         manifest_payload = _verified_source_bytes(Path(row.manifest.path), row.manifest.bytes, row.manifest.sha256)
         try:
@@ -420,14 +454,16 @@ def iter_target_plane_chunks(
             raise DirectDescriptionError("target chunk manifest lineage mismatch")
         y0_payload = _verified_source_bytes(Path(row.y0.path), row.y0.bytes, row.y0.sha256)
         y1_payload = _verified_source_bytes(Path(row.y1.path), row.y1.bytes, row.y1.sha256)
-        take = min(remaining, len(row.pair_ids))
-        y0 = np.frombuffer(y0_payload, dtype=np.uint8).reshape(12, *PAIR_HW, 3)[:take]
-        y1 = np.frombuffer(y1_payload, dtype=np.uint8).reshape(12, *PAIR_HW, 3)[:take]
+        source_lo = overlap_start - row_start
+        source_hi = overlap_stop - row_start
+        y0 = np.frombuffer(y0_payload, dtype=np.uint8).reshape(12, *PAIR_HW, 3)[source_lo:source_hi]
+        y1 = np.frombuffer(y1_payload, dtype=np.uint8).reshape(12, *PAIR_HW, 3)[source_lo:source_hi]
         planes = np.ascontiguousarray(np.stack((y0, y1), axis=1))
-        yield row.pair_ids[:take], planes
-        remaining -= take
-    if remaining:
-        raise DirectDescriptionError("target receipt did not cover requested pair prefix")
+        local_ids = tuple(range(observed, observed + len(planes)))
+        yield local_ids, planes
+        observed += len(planes)
+    if observed != n_pairs:
+        raise DirectDescriptionError("target receipt did not cover requested contiguous pair window")
 
 
 def load_pose_target_codes(receipt: DirectDescriptionTargetPlaneReceiptV1) -> np.ndarray:
@@ -472,6 +508,8 @@ def fit_chart_description(
     receipt: DirectDescriptionTargetPlaneReceiptV1,
     pose_codes: np.ndarray,
     n_pairs: int,
+    *,
+    pair_start: int = 0,
 ) -> DirectDescriptionChartZV1:
     """Fit deterministic chart means while never retaining a full pair set."""
 
@@ -479,10 +517,11 @@ def fit_chart_description(
         raise DirectDescriptionError("Pose6 target codes must be uint8 [600,6]")
     bodies = {name: bytearray() for name in STREAM_ORDER}
     observed_pair = 0
-    for pair_ids, planes in iter_target_plane_chunks(receipt, n_pairs):
+    for pair_ids, planes in iter_target_plane_window_chunks(receipt, pair_start=pair_start, n_pairs=n_pairs):
         if pair_ids != tuple(range(observed_pair, observed_pair + len(pair_ids))):
             raise DirectDescriptionError("target fitter requires canonical contiguous pair order")
         for local_pair, pair_id in enumerate(pair_ids):
+            source_pair_id = pair_start + pair_id
             for plane_id in range(2):
                 means, ranges = _chart_means_and_ranges(planes[local_pair, plane_id])
                 anchor = ((means.astype(np.int64).sum(axis=(0, 1)) + CHARTS_PER_PLANE // 2) // CHARTS_PER_PLANE).astype(
@@ -537,7 +576,7 @@ def fit_chart_description(
                             )
                         )
             bodies["pose6_pair_codes"].extend(
-                _POSE_RECORD.pack(pair_id, *(int(value) for value in pose_codes[pair_id]))
+                _POSE_RECORD.pack(pair_id, *(int(value) for value in pose_codes[source_pair_id]))
             )
             observed_pair += 1
     if observed_pair != n_pairs:

@@ -15,7 +15,7 @@ import zipfile
 import zlib
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Final, Literal
@@ -24,7 +24,9 @@ import brotli
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, model_validator
 
+from tac.boundary_math.hood_static_component import identify_static_hood_class
 from tac.boundary_math.power_diagram_witness import open_stored_npy_memmap
+from tac.boundary_math.road_horizon_component import classify_segnet_regions
 from tac.optimization.direct_description_entropy_streams import (
     compile_entropy_chart_archive,
     parse_entropy_chart_archive,
@@ -33,8 +35,10 @@ from tac.optimization.direct_description_entropy_streams import (
 )
 from tac.optimization.direct_description_measurement_ladder import (
     DirectDescriptionChartZV1,
+    _fraction_text,
     compile_chart_archive,
     fit_chart_description,
+    iter_target_plane_window_chunks,
     load_pose_target_codes,
     load_target_receipt,
     prove_sampled_noop_honesty,
@@ -804,7 +808,6 @@ STRUCTURED_CONFIG_SCHEMA: Final = "DirectDescriptionStratumStructuredMemberConfi
 STRUCTURED_CHECKPOINT_SCHEMA: Final = "DirectDescriptionStructuredCandidateCheckpointV1"
 STRUCTURED_LANE_ID: Final = "lane_ddm_v4_stratum_structured_members_20260722"
 STRUCTURED_ROLES: Final = ("baseline", "Road", "Lane", "MyCar", "UndrivableBoundary", "Movable")
-ROLE_CLASS_ID: Final = {"Road": 0, "Lane": 1, "UndrivableBoundary": 2, "Movable": 3, "MyCar": 4}
 ROLE_TARGET_CLASS: Final = {
     "Road": "Road",
     "Lane": "Lane",
@@ -812,7 +815,13 @@ ROLE_TARGET_CLASS: Final = {
     "UndrivableBoundary": "Undrivable",
     "Movable": "Movable",
 }
+COMPOSED_ROLE_ORDER: Final = ("UndrivableBoundary", "Road", "Lane", "MyCar", "Movable")
+ROUTED_ROLES: Final = tuple(ROLE_TARGET_CLASS)
+V5_RESULT_SCHEMA: Final = "direct_description_route_fix_composed_member.v1"
+V5_CONFIG_SCHEMA: Final = "DirectDescriptionRouteFixComposeConfigV1"
+V5_LANE_ID: Final = "lane_ddm_v5_route_fix_compose_603_613_20260722"
 STRUCTURED_MEMBER_MAGIC: Final = b"D4S1"
+COMPOSED_MEMBER_MAGIC: Final = b"D5C1"
 SITE_STREAM_MAGIC: Final = b"D4E1"
 SITE_STREAM_HEADER: Final = struct.Struct(">4sHBBI")
 SITE_RECORD_HEADER: Final = struct.Struct(">HI")
@@ -876,6 +885,90 @@ class DirectDescriptionStratumStructuredMemberConfigV1(BaseModel):
 
 
 class DirectDescriptionStratumStructuredMemberProgramV1(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    config_path: StrictStr
+    output_directory: StrictStr
+
+    def compile_consumer_argv(self) -> tuple[str, ...]:
+        return (
+            "/usr/bin/env",
+            "python3",
+            "tools/run_direct_description_entropy_priced_member.py",
+            "--config",
+            self.config_path,
+            "--output-dir",
+            self.output_directory,
+            "--execution-allowed",
+            "false",
+        )
+
+
+class DirectDescriptionRouteFixComposeConfigV1(BaseModel):
+    """Typed local-only config for one route-fixed composed DDM member."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True, populate_by_name=True)
+
+    schema_: Literal["DirectDescriptionRouteFixComposeConfigV1"] = Field(
+        default=V5_CONFIG_SCHEMA, alias="schema", serialization_alias="schema"
+    )
+    run_id: Literal["ddm_v5_route_fix_compose_seed1234"] = "ddm_v5_route_fix_compose_seed1234"
+    seed: Literal[1234] = SEED
+    pair_start: StrictInt = Field(ge=0, le=536)
+    pair_count: StrictInt
+    routing_probe_start: Literal[448] = 448
+    routing_probe_count: Literal[16] = 16
+    target_receipt_path: StrictStr
+    target_receipt_sha256: StrictStr
+    upstream_root: StrictStr
+    scorer_batch_size: Literal[16] = 16
+    scorer_threads: StrictInt = Field(ge=1, le=16)
+    s4_container_path: StrictStr
+    s4_container_sha256: StrictStr
+    s4_runtime_path: StrictStr
+    s4_runtime_sha256: StrictStr
+    candidate_family: Literal[
+        "lbnd2_road_hood_undrivable_movable_pose_one_receiver_composition"
+    ] = "lbnd2_road_hood_undrivable_movable_pose_one_receiver_composition"
+    routing_policy: Literal[
+        "self_detect_roles_then_maximize_own_class_over_c1_role_median_rgb"
+    ] = "self_detect_roles_then_maximize_own_class_over_c1_role_median_rgb"
+    checkpoint_policy: Literal["atomic_preserve_route_then_composed_member"] = (
+        "atomic_preserve_route_then_composed_member"
+    )
+    rate_authority: Literal["exact_len_of_receiver_closed_composed_zip_A5_of_z"] = (
+        "exact_len_of_receiver_closed_composed_zip_A5_of_z"
+    )
+    research_only: Literal[True] = True
+    execution_allowed: Literal[False] = False
+    score_claim: Literal[False] = False
+
+    @model_validator(mode="after")
+    def _valid(self) -> DirectDescriptionRouteFixComposeConfigV1:
+        if self.pair_count not in (64, 256) or self.pair_start + self.pair_count > 600:
+            raise ValueError("v5 composition window must be exactly n64 or n256 inside [0,600)")
+        probe_stop = self.routing_probe_start + self.routing_probe_count
+        if not self.pair_start <= self.routing_probe_start or probe_stop > self.pair_start + self.pair_count:
+            raise ValueError("routing probe must be contained in the composed state window")
+        for name in ("target_receipt_sha256", "s4_container_sha256", "s4_runtime_sha256"):
+            _require_sha256(getattr(self, name), name)
+        for name in ("upstream_root", "s4_container_path", "s4_runtime_path"):
+            if not Path(getattr(self, name)).is_absolute():
+                raise ValueError(f"{name} must be absolute custody")
+        return self
+
+    def typed_config_hash(self) -> str:
+        return _sha256(rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True)))
+
+    def dsl_compile_hash(self) -> str:
+        return _sha256(
+            rfc8785_canonicalize(
+                {"compile_target": V5_RESULT_SCHEMA, "typed_config": self.model_dump(mode="json", by_alias=True)}
+            )
+        )
+
+
+class DirectDescriptionRouteFixComposeProgramV1(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
     config_path: StrictStr
@@ -1130,9 +1223,14 @@ class StructuredS4SourcesV1:
     camera: Mapping[str, Any]
     static_masks: Mapping[str, np.ndarray]
     lane_encoded: bytes
+    lane_lines: tuple[tuple[np.ndarray, ...], ...]
+    lane_header: Mapping[str, Any]
     events: tuple[tuple[tuple[np.ndarray, ...], ...], ...]
     components: tuple[tuple[tuple[np.ndarray, ...], ...], ...]
     custody: Mapping[str, Any]
+    role_class_ids: Mapping[str, int] | None = None
+    role_rgb_u8: Mapping[str, tuple[int, int, int]] | None = None
+    routing_custody: Mapping[str, Any] | None = None
 
 
 def _read_bound_file(path: Path, expected_sha256: str, label: str) -> bytes:
@@ -1173,17 +1271,20 @@ def load_structured_s4_sources(config: DirectDescriptionStratumStructuredMemberC
         raise DirectDescriptionError("S4 PCE3 source failed LZMA decode") from exc
     decoded_events = decode_component_event_alphabet_raw(event_raw)
     events = tuple(
-        tuple(tuple(np.asarray(row, dtype=np.int64) for row in decoded_events[pair][class_id]) for pair in range(64))
+        tuple(tuple(np.asarray(row, dtype=np.int64) for row in decoded_events[pair][class_id]) for pair in range(600))
         for class_id in range(5)
     )
     all_components = _decode_pcomp3(sections["components.pcomp3"].payload)
-    components = tuple(tuple(all_components[class_id][pair] for pair in range(64)) for class_id in range(5))
+    components = tuple(tuple(all_components[class_id][pair] for pair in range(600)) for class_id in range(5))
+    lane_lines, lane_header = _decode_s4_lane(lane_encoded)
     return StructuredS4SourcesV1(
-        pair_count=64,
+        pair_count=600,
         palette=palette,
         camera=dict(camera),
         static_masks={"Road": road, "Undrivable": undrivable, "MyCar": hood},
         lane_encoded=lane_encoded,
+        lane_lines=lane_lines,
+        lane_header=lane_header,
         events=events,
         components=components,
         custody={
@@ -1221,28 +1322,295 @@ def _unpack_mask(payload: bytes) -> np.ndarray:
     return np.unpackbits(np.frombuffer(raw, np.uint8), bitorder="little")[:sites].reshape(PAIR_SHAPE).astype(bool)
 
 
-def _payloads_for_role(role: str, sources: StructuredS4SourcesV1) -> dict[str, bytes]:
+def self_detect_structured_role_classes(lstars: np.ndarray) -> tuple[dict[str, int], dict[str, Any]]:
+    """Detect semantic role indices from target geometry; never trust channel order."""
+
+    labels = np.asarray(lstars)
+    if labels.ndim != 3 or labels.shape[1:] != PAIR_SHAPE or labels.shape[0] < 2:
+        raise DirectDescriptionError("structured role detection requires [N,384,512] target cells")
+    detected = classify_segnet_regions(labels, n_classes=5, lane_probe_frames=min(6, len(labels)))
+    hood_class, hood_evidence = identify_static_hood_class(labels, n_classes=5)
+    if hood_class != detected.hood:
+        raise DirectDescriptionError("independent hood and full-region self-detectors disagree")
+    role_class_ids = {
+        "Road": int(detected.road),
+        "Lane": int(detected.lane),
+        "UndrivableBoundary": int(detected.sky),
+        "Movable": int(detected.movable),
+        "MyCar": int(detected.hood),
+    }
+    if sorted(role_class_ids.values()) != list(range(5)):
+        raise DirectDescriptionError("self-detected structured roles are not a class permutation")
+    return role_class_ids, {
+        "method": "road_horizon_component.classify_segnet_regions plus hood_static_component crosscheck",
+        "role_class_ids": role_class_ids,
+        "hood_crosscheck_class": hood_class,
+        "full_region_evidence": [row.__dict__ for row in detected.evidence],
+        "hood_evidence": [row.__dict__ for row in hood_evidence],
+        "lane_detector_source": "lane_sdf_component cluster/fitter through classify_segnet_regions",
+    }
+
+
+def _require_structured_routing(sources: StructuredS4SourcesV1) -> tuple[Mapping[str, int], Mapping[str, tuple[int, int, int]]]:
+    if sources.role_class_ids is None or sources.role_rgb_u8 is None:
+        raise DirectDescriptionError("structured source lacks self-detected role/value routing")
+    if set(sources.role_class_ids) != set(ROUTED_ROLES) or set(sources.role_rgb_u8) != set(ROUTED_ROLES):
+        raise DirectDescriptionError("structured role/value routing is incomplete")
+    if sorted(int(value) for value in sources.role_class_ids.values()) != list(range(5)):
+        raise DirectDescriptionError("structured role classes must be a permutation")
+    for role, value in sources.role_rgb_u8.items():
+        if len(value) != 3 or any(isinstance(channel, bool) or not 0 <= int(channel) <= 255 for channel in value):
+            raise DirectDescriptionError(f"structured RGB routing for {role} is invalid")
+    return sources.role_class_ids, sources.role_rgb_u8
+
+
+def _structured_role_mask(
+    sources: StructuredS4SourcesV1,
+    role: str,
+    *,
+    source_pair_id: int,
+) -> np.ndarray:
+    role_class_ids, _ = _require_structured_routing(sources)
+    if role not in ROUTED_ROLES or not 0 <= source_pair_id < sources.pair_count:
+        raise DirectDescriptionError("structured role mask identity is invalid")
+    mask = np.zeros(PAIR_SHAPE, dtype=bool)
+    if role == "Road":
+        mask |= sources.static_masks["Road"]
+    elif role == "Lane":
+        mask |= _render_s4_lane_mask(sources.lane_lines[source_pair_id], sources.lane_header, sources.camera)
+    elif role == "MyCar":
+        mask |= sources.static_masks["MyCar"]
+    class_id = int(role_class_ids[role])
+    if role in {"Road", "Lane", "UndrivableBoundary", "Movable"}:
+        flat = mask.reshape(-1)
+        for sites in sources.events[class_id][source_pair_id]:
+            flat[sites] = True
+    if role in {"Road", "Lane", "UndrivableBoundary"}:
+        flat = mask.reshape(-1)
+        for sites in sources.components[class_id][source_pair_id]:
+            flat[sites] = True
+    return mask
+
+
+def select_role_paint_values(
+    role_class_ids: Mapping[str, int],
+    score_rows: Mapping[str, Sequence[Mapping[str, Any]]],
+) -> dict[str, Mapping[str, Any]]:
+    """Select each role's own-class membership maximum with deterministic ties."""
+
+    if set(role_class_ids) != set(ROUTED_ROLES) or sorted(role_class_ids.values()) != list(range(5)):
+        raise DirectDescriptionError("role-value selector requires a self-detected class permutation")
+    selected: dict[str, Mapping[str, Any]] = {}
+    for role in ROUTED_ROLES:
+        rows = tuple(score_rows.get(role, ()))
+        if not rows:
+            raise DirectDescriptionError(f"role-value selector has no candidates for {role}")
+        own_class = int(role_class_ids[role])
+        if any(int(row.get("target_class_id", -1)) != own_class for row in rows):
+            raise DirectDescriptionError("role-value selector candidate targets drifted")
+        selected[role] = max(
+            rows,
+            key=lambda row: (
+                int(row.get("own_class_matches", -1)),
+                -int(row.get("candidate_index", -1)),
+            ),
+        )
+    return selected
+
+
+def measure_structured_role_value_routing(
+    sources: StructuredS4SourcesV1,
+    *,
+    baseline: Any,
+    target_planes: np.ndarray,
+    target_cells: np.ndarray,
+    oracle: Callable[[np.ndarray, bool], tuple[np.ndarray, np.ndarray | None]],
+    source_pair_start: int,
+) -> tuple[StructuredS4SourcesV1, dict[str, Any]]:
+    """Measure and bind role->class->RGB routing on a small real receiver window."""
+
+    targets = np.asarray(target_planes)
+    cells = np.asarray(target_cells)
+    if (
+        targets.dtype != np.uint8
+        or targets.ndim != 5
+        or targets.shape[1:] != (2, *PAIR_SHAPE, 3)
+        or cells.shape != (len(targets), *PAIR_SHAPE)
+        or cells.dtype != np.int64
+        or baseline.z.n_pairs != len(targets)
+        or len(targets) != 16
+    ):
+        raise DirectDescriptionError("role-value routing probe requires one canonical n16 scorer batch")
+    role_class_ids, class_detection = self_detect_structured_role_classes(cells)
+    provisional_rgb = {
+        role: tuple(int(channel) for channel in sources.palette[class_id])
+        for role, class_id in role_class_ids.items()
+    }
+    routed = replace(
+        sources,
+        role_class_ids=role_class_ids,
+        role_rgb_u8=provisional_rgb,
+        routing_custody={"status": "CLASS_DETECTED_VALUE_PROVISIONAL"},
+    )
+    prototypes: list[dict[str, Any]] = []
+    for candidate_index, role in enumerate(ROUTED_ROLES):
+        class_id = role_class_ids[role]
+        values = targets[:, 1][cells == class_id]
+        if not len(values):
+            raise DirectDescriptionError(f"routing probe has no target RGB support for {role}")
+        rgb = tuple(int(value) for value in np.rint(np.median(values, axis=0)).astype(np.uint8))
+        prototypes.append(
+            {
+                "candidate_index": candidate_index,
+                "source_role": role,
+                "statistic": "channelwise_median_of_c1_member_on_self_detected_role_sites",
+                "rgb_u8": list(rgb),
+                "target_rgb_sites": len(values),
+            }
+        )
+    baseline_pairs = baseline.render_pairs(tuple(range(len(targets))))
+    score_rows: dict[str, list[dict[str, Any]]] = {}
+    role_probe: dict[str, Any] = {}
+    for role in ROUTED_ROLES:
+        class_id = role_class_ids[role]
+        masks = np.asarray(
+            [
+                _structured_role_mask(routed, role, source_pair_id=source_pair_start + local_pair_id)
+                for local_pair_id in range(len(targets))
+            ]
+        )
+        target_role = cells == class_id
+        correct_geometry = masks & target_role
+        geometry_sites = int(masks.sum(dtype=np.int64))
+        correct_geometry_sites = int(correct_geometry.sum(dtype=np.int64))
+        if geometry_sites == 0 or correct_geometry_sites == 0:
+            raise DirectDescriptionError(f"routing probe state window has no correct geometry support for {role}")
+        union = correct_geometry.any(axis=0)
+        yy, xx = np.where(union)
+        inherited = tuple(int(value) for value in sources.palette[class_id])
+        candidates = [
+            {**row, "candidate_family": "c1_role_median"}
+            for row in prototypes
+        ] + [
+            {
+                "candidate_index": len(prototypes),
+                "source_role": role,
+                "statistic": "self_detected_class_row_from_inherited_s4_palette",
+                "rgb_u8": list(inherited),
+                "target_rgb_sites": 0,
+                "candidate_family": "inherited_s4_palette",
+            }
+        ]
+        role_rows: list[dict[str, Any]] = []
+        for candidate in candidates:
+            painted = baseline_pairs.copy()
+            rgb = np.asarray(candidate["rgb_u8"], dtype=np.uint8)
+            painted[:, 0][masks] = rgb
+            painted[:, 1][masks] = rgb
+            described_cells, described_margins = oracle(painted, False)
+            if described_margins is not None:
+                raise DirectDescriptionError("routing probe oracle returned unrequested margins")
+            own_matches = int(np.count_nonzero(described_cells[correct_geometry] == class_id))
+            role_rows.append(
+                {
+                    **candidate,
+                    "target_class_id": class_id,
+                    "own_class_matches": own_matches,
+                    "correct_geometry_sites": correct_geometry_sites,
+                    "own_class_membership": _fraction_text(own_matches, correct_geometry_sites),
+                }
+            )
+        inherited_row = role_rows[-1]
+        score_rows[role] = role_rows
+        c1_values = targets[:, 1][correct_geometry]
+        role_probe[role] = {
+            "target_class_id": class_id,
+            "geometry": {
+                "mask_sites": geometry_sites,
+                "correct_target_sites_in_geometry": correct_geometry_sites,
+                "geometry_precision": _fraction_text(correct_geometry_sites, geometry_sites),
+                "geometry_recall": _fraction_text(correct_geometry_sites, int(target_role.sum(dtype=np.int64))),
+                "correct_site_union_row_span": [int(yy.min()), int(yy.max())],
+                "correct_site_union_col_span": [int(xx.min()), int(xx.max())],
+            },
+            "inherited_s4_paint": {
+                "rgb_u8": list(inherited),
+                "own_class_matches": inherited_row["own_class_matches"],
+                "correct_geometry_sites": correct_geometry_sites,
+                "own_class_membership": inherited_row["own_class_membership"],
+            },
+            "c1_member_same_sites": {
+                "rgb_mean": [format(float(value), ".6f") for value in c1_values.mean(axis=0)],
+                "rgb_median": [int(value) for value in np.median(c1_values, axis=0)],
+                "sites": len(c1_values),
+            },
+            "candidate_rows": role_rows,
+        }
+    selected = select_role_paint_values(role_class_ids, score_rows)
+    role_rgb_u8 = {role: tuple(int(value) for value in row["rgb_u8"]) for role, row in selected.items()}
+    for role, row in selected.items():
+        role_probe[role]["selected"] = dict(row)
+        if int(row["own_class_matches"]) != max(int(value["own_class_matches"]) for value in score_rows[role]):
+            raise DirectDescriptionError("role-value selector failed its own-class maximum invariant")
+    receipt = {
+        "schema": "direct_description_role_value_routing_probe.v1",
+        "source_pair_window": {
+            "start": source_pair_start,
+            "stop": source_pair_start + len(targets),
+            "count": len(targets),
+        },
+        "class_detection": class_detection,
+        "candidate_prototypes": prototypes,
+        "role_probe": role_probe,
+        "selected_role_rgb_u8": {role: list(value) for role, value in role_rgb_u8.items()},
+        "selection_rule": "maximum own-target-class membership on fixed correct geometry; deterministic candidate order tie-break",
+        "scorer_weights_stored_in_archive": False,
+        "evidence_axis": EVIDENCE_AXIS,
+        "score_claim": False,
+        "d_seg_claim": False,
+    }
+    return replace(
+        sources,
+        role_class_ids=role_class_ids,
+        role_rgb_u8=role_rgb_u8,
+        routing_custody=receipt,
+    ), receipt
+
+
+def _payloads_for_role(
+    role: str,
+    sources: StructuredS4SourcesV1,
+    *,
+    pair_start: int = 0,
+    pair_count: int = 64,
+) -> dict[str, bytes]:
     if role == "baseline":
         return {}
-    class_id = ROLE_CLASS_ID[role]
+    role_class_ids, _ = _require_structured_routing(sources)
+    class_id = int(role_class_ids[role])
+    stop = pair_start + pair_count
+    if pair_start < 0 or pair_count < 1 or stop > sources.pair_count:
+        raise DirectDescriptionError("structured payload window is outside S4 custody")
+    events = sources.events[class_id][pair_start:stop]
+    components = sources.components[class_id][pair_start:stop]
     if role == "Road":
         return {
             "structure/road_pxq1_mask.br": _pack_mask(sources.static_masks["Road"]),
             "structure/road_events.lz": _encode_site_records(
-                sources.events[class_id], class_id=class_id, source_id=1, coder="lzma1_raw_1MiB"
+                events, class_id=class_id, source_id=1, coder="lzma1_raw_1MiB"
             ),
             "structure/road_components.br": _encode_site_records(
-                sources.components[class_id], class_id=class_id, source_id=2, coder="brotli_q11"
+                components, class_id=class_id, source_id=2, coder="brotli_q11"
             ),
         }
     if role == "Lane":
         return {
             "structure/lane_lbnd2.lz": sources.lane_encoded,
             "structure/lane_events.lz": _encode_site_records(
-                sources.events[class_id], class_id=class_id, source_id=1, coder="lzma1_raw_1MiB"
+                events, class_id=class_id, source_id=1, coder="lzma1_raw_1MiB"
             ),
             "structure/lane_components.br": _encode_site_records(
-                sources.components[class_id], class_id=class_id, source_id=2, coder="brotli_q11"
+                components, class_id=class_id, source_id=2, coder="brotli_q11"
             ),
         }
     if role == "MyCar":
@@ -1250,16 +1618,16 @@ def _payloads_for_role(role: str, sources: StructuredS4SourcesV1) -> dict[str, b
     if role == "UndrivableBoundary":
         return {
             "structure/undrivable_events.lz": _encode_site_records(
-                sources.events[class_id], class_id=class_id, source_id=1, coder="lzma1_raw_1MiB"
+                events, class_id=class_id, source_id=1, coder="lzma1_raw_1MiB"
             ),
             "structure/undrivable_components.br": _encode_site_records(
-                sources.components[class_id], class_id=class_id, source_id=2, coder="brotli_q11"
+                components, class_id=class_id, source_id=2, coder="brotli_q11"
             ),
         }
     if role == "Movable":
         return {
             "structure/movable_events.lz": _encode_site_records(
-                sources.events[class_id], class_id=class_id, source_id=1, coder="lzma1_raw_1MiB"
+                events, class_id=class_id, source_id=1, coder="lzma1_raw_1MiB"
             )
         }
     raise DirectDescriptionError(f"unknown structured candidate role {role!r}")
@@ -1282,17 +1650,21 @@ def compile_structured_member_archive(
 ) -> tuple[bytes, tuple[dict[str, Any], ...]]:
     if role not in STRUCTURED_ROLES:
         raise DirectDescriptionError("structured member role is outside the typed family")
-    payloads = _payloads_for_role(role, sources)
+    baseline_pairs = receive_entropy_chart_archive(baseline_archive).z.n_pairs
+    role_class_ids, role_rgb_u8 = _require_structured_routing(sources)
+    payloads = _payloads_for_role(role, sources, pair_start=0, pair_count=baseline_pairs)
     declarations = [
         {"name": name, "bytes": len(payload), "sha256": _sha256(payload)} for name, payload in payloads.items()
     ]
     manifest = {
         "schema": "direct_description_stratum_structured_archive.v1",
         "magic": STRUCTURED_MEMBER_MAGIC.decode("ascii"),
-        "pair_count": sources.pair_count,
+        "pair_count": baseline_pairs,
+        "source_pair_start": 0,
         "role": role,
-        "class_id": ROLE_CLASS_ID.get(role),
+        "class_id": role_class_ids.get(role),
         "target_class": ROLE_TARGET_CLASS.get(role),
+        "paint_rgb_u8": list(role_rgb_u8[role]) if role != "baseline" else None,
         "palette_u8": sources.palette.tolist(),
         "lane_camera": dict(sources.camera),
         "baseline_chart": {"bytes": len(baseline_archive), "sha256": _sha256(baseline_archive)},
@@ -1325,6 +1697,71 @@ def compile_structured_member_archive(
     return first, homes
 
 
+def compile_composed_structured_member_archive(
+    baseline_archive: bytes,
+    sources: StructuredS4SourcesV1,
+    *,
+    pair_start: int,
+) -> tuple[bytes, tuple[dict[str, Any], ...]]:
+    """Compile one receiver-closed archive containing all five structured roles."""
+
+    baseline_pairs = receive_entropy_chart_archive(baseline_archive).z.n_pairs
+    role_class_ids, role_rgb_u8 = _require_structured_routing(sources)
+    payloads: dict[str, bytes] = {}
+    for role in COMPOSED_ROLE_ORDER:
+        overlap = set(payloads).intersection(
+            role_payloads := _payloads_for_role(
+                role, sources, pair_start=pair_start, pair_count=baseline_pairs
+            )
+        )
+        if overlap:
+            raise DirectDescriptionError(f"composed role payload homes overlap: {sorted(overlap)}")
+        payloads.update(role_payloads)
+    declarations = [
+        {"name": name, "bytes": len(payload), "sha256": _sha256(payload)} for name, payload in payloads.items()
+    ]
+    manifest = {
+        "schema": "direct_description_stratum_composed_archive.v1",
+        "magic": COMPOSED_MEMBER_MAGIC.decode("ascii"),
+        "pair_count": baseline_pairs,
+        "source_pair_start": pair_start,
+        "role": "composed",
+        "role_order": list(COMPOSED_ROLE_ORDER),
+        "role_class_ids": {role: int(role_class_ids[role]) for role in ROUTED_ROLES},
+        "role_rgb_u8": {role: list(role_rgb_u8[role]) for role in ROUTED_ROLES},
+        "palette_u8_inherited_diagnostic_only": sources.palette.tolist(),
+        "lane_camera": dict(sources.camera),
+        "baseline_chart": {"bytes": len(baseline_archive), "sha256": _sha256(baseline_archive)},
+        "structured_payloads": declarations,
+        "semantic_source": (
+            "S4 LBND2 Lane plus PXQ1 Road/static hood plus class-filtered PCE3/PCOMP3 "
+            "Undrivable/Movable paths and the unchanged counted Pose6 chart stream"
+        ),
+        "routing": {
+            "policy": "self_detected_role_classes_and_measured_c1_prototype_value_selection",
+            "scorer_weights_present": False,
+            "routing_receipt_sha256": _sha256(rfc8785_canonicalize(sources.routing_custody)),
+        },
+        "receiver": "numpy_uint8_v3_chart_plus_s4_composed_overrides.v1",
+        "scorer_weights_present": False,
+        "ground_truth_argmax_present": False,
+        "score_claim": False,
+    }
+    members: dict[str, bytes] = {
+        "manifest.json": rfc8785_canonicalize(manifest),
+        "chart.zip": baseline_archive,
+        **payloads,
+    }
+    first = _zip_stored(members)
+    second = _zip_stored(members)
+    if first != second:
+        raise DirectDescriptionError("composed structured archive compiler is nondeterministic")
+    parsed, homes = parse_structured_member_archive(first)
+    if parsed != members:
+        raise DirectDescriptionError("composed structured archive parse-back changed semantic members")
+    return first, homes
+
+
 def parse_structured_member_archive(archive: bytes) -> tuple[dict[str, bytes], tuple[dict[str, Any], ...]]:
     try:
         with zipfile.ZipFile(io.BytesIO(archive), "r") as reader:
@@ -1350,14 +1787,46 @@ def parse_structured_member_archive(archive: bytes) -> tuple[dict[str, bytes], t
         raise DirectDescriptionError("structured archive manifest is malformed") from exc
     if rfc8785_canonicalize(manifest) != members["manifest.json"]:
         raise DirectDescriptionError("structured archive manifest is noncanonical")
-    if (
-        manifest.get("schema") != "direct_description_stratum_structured_archive.v1"
-        or manifest.get("magic") != STRUCTURED_MEMBER_MAGIC.decode("ascii")
-        or manifest.get("pair_count") != 64
-        or manifest.get("role") not in STRUCTURED_ROLES
+    schema = manifest.get("schema")
+    composed = schema == "direct_description_stratum_composed_archive.v1"
+    single = schema == "direct_description_stratum_structured_archive.v1"
+    baseline_pairs = receive_entropy_chart_archive(members["chart.zip"]).z.n_pairs
+    pair_count = manifest.get("pair_count")
+    source_pair_start = manifest.get("source_pair_start")
+    common_invalid = (
+        not (single or composed)
+        or pair_count != baseline_pairs
+        or isinstance(source_pair_start, bool)
+        or not isinstance(source_pair_start, int)
+        or source_pair_start < 0
+        or source_pair_start + baseline_pairs > 600
         or set(members) != {"manifest.json", "chart.zip", *[row["name"] for row in manifest["structured_payloads"]]}
         or manifest["baseline_chart"] != {"bytes": len(members["chart.zip"]), "sha256": _sha256(members["chart.zip"])}
-    ):
+    )
+    single_invalid = single and (
+        manifest.get("magic") != STRUCTURED_MEMBER_MAGIC.decode("ascii")
+        or manifest.get("role") not in STRUCTURED_ROLES
+        or (
+            manifest.get("role") != "baseline"
+            and (
+                isinstance(manifest.get("class_id"), bool)
+                or not isinstance(manifest.get("class_id"), int)
+                or not 0 <= manifest["class_id"] < 5
+                or not isinstance(manifest.get("paint_rgb_u8"), list)
+                or len(manifest["paint_rgb_u8"]) != 3
+            )
+        )
+    )
+    composed_invalid = composed and (
+        manifest.get("magic") != COMPOSED_MEMBER_MAGIC.decode("ascii")
+        or manifest.get("role") != "composed"
+        or manifest.get("role_order") != list(COMPOSED_ROLE_ORDER)
+        or set(manifest.get("role_class_ids", ())) != set(ROUTED_ROLES)
+        or sorted(manifest.get("role_class_ids", {}).values()) != list(range(5))
+        or set(manifest.get("role_rgb_u8", ())) != set(ROUTED_ROLES)
+        or any(len(value) != 3 for value in manifest.get("role_rgb_u8", {}).values())
+    )
+    if common_invalid or single_invalid or composed_invalid:
         raise DirectDescriptionError("structured archive manifest identity is invalid")
     for declaration in manifest["structured_payloads"]:
         payload = members.get(declaration.get("name"))
@@ -1394,6 +1863,9 @@ class StructuredMemberReceiverV1:
     pose6_codes: np.ndarray
     baseline: Any
     role: str
+    class_id: int | None
+    paint_rgb_u8: np.ndarray | None
+    source_pair_start: int
     palette: np.ndarray
     camera: Mapping[str, Any]
     static_mask: np.ndarray | None
@@ -1408,14 +1880,16 @@ class StructuredMemberReceiverV1:
         output = self.baseline.render_pairs(indexes)
         if self.role == "baseline":
             return output
-        class_id = ROLE_CLASS_ID[self.role]
-        color = self.palette[class_id]
+        if self.class_id is None or self.paint_rgb_u8 is None:
+            raise DirectDescriptionError("structured receiver role/value routing is missing")
+        color = self.paint_rgb_u8
         for local_index, pair_id in enumerate(indexes):
+            source_pair_id = self.source_pair_start + pair_id
             mask = np.zeros(PAIR_SHAPE, dtype=bool)
             if self.static_mask is not None:
                 mask |= self.static_mask
             if self.lane_lines is not None and self.lane_header is not None:
-                mask |= _render_s4_lane_mask(self.lane_lines[pair_id], self.lane_header, self.camera)
+                mask |= _render_s4_lane_mask(self.lane_lines[source_pair_id], self.lane_header, self.camera)
             for rows in (self.event_rows, self.component_rows):
                 if rows is not None:
                     flat = mask.reshape(-1)
@@ -1426,9 +1900,157 @@ class StructuredMemberReceiverV1:
         return np.ascontiguousarray(output)
 
 
-def receive_structured_member_archive(archive: bytes) -> StructuredMemberReceiverV1:
+@dataclass(frozen=True, slots=True)
+class StructuredRoleLayerV1:
+    role: str
+    class_id: int
+    paint_rgb_u8: np.ndarray
+    static_mask: np.ndarray | None
+    lane_lines: tuple[tuple[np.ndarray, ...], ...] | None
+    lane_header: Mapping[str, Any] | None
+    event_rows: tuple[tuple[np.ndarray, ...], ...] | None
+    component_rows: tuple[tuple[np.ndarray, ...], ...] | None
+
+    def mask(self, *, local_pair_id: int, source_pair_id: int, camera: Mapping[str, Any]) -> np.ndarray:
+        value = np.zeros(PAIR_SHAPE, dtype=bool)
+        if self.static_mask is not None:
+            value |= self.static_mask
+        if self.lane_lines is not None and self.lane_header is not None:
+            value |= _render_s4_lane_mask(self.lane_lines[source_pair_id], self.lane_header, camera)
+        flat = value.reshape(-1)
+        for rows in (self.event_rows, self.component_rows):
+            if rows is not None:
+                for sites in rows[local_pair_id]:
+                    flat[sites] = True
+        return value
+
+
+@dataclass(frozen=True, slots=True)
+class ComposedStructuredMemberReceiverV1:
+    archive: bytes
+    z: DirectDescriptionChartZV1
+    pose6_codes: np.ndarray
+    baseline: Any
+    source_pair_start: int
+    camera: Mapping[str, Any]
+    layers: tuple[StructuredRoleLayerV1, ...]
+    custody: Mapping[str, Any]
+
+    def render_pairs(self, pair_ids: Sequence[int]) -> np.ndarray:
+        indexes = tuple(int(value) for value in pair_ids)
+        if any(value < 0 or value >= self.z.n_pairs for value in indexes):
+            raise DirectDescriptionError("composed receiver pair ID is outside the local state window")
+        output = self.baseline.render_pairs(indexes)
+        for layer in self.layers:
+            for local_index, pair_id in enumerate(indexes):
+                source_pair_id = self.source_pair_start + pair_id
+                mask = layer.mask(local_pair_id=pair_id, source_pair_id=source_pair_id, camera=self.camera)
+                output[local_index, 0, mask] = layer.paint_rgb_u8
+                output[local_index, 1, mask] = layer.paint_rgb_u8
+        return np.ascontiguousarray(output)
+
+
+def _decode_structured_role_layer(
+    role: str,
+    *,
+    class_id: int,
+    paint_rgb_u8: Sequence[int],
+    members: Mapping[str, bytes],
+) -> StructuredRoleLayerV1:
+    static_mask = None
+    lane_lines = None
+    lane_header = None
+    event_rows = None
+    component_rows = None
+    if role == "Road":
+        static_mask = _unpack_mask(members["structure/road_pxq1_mask.br"])
+        event_rows = _decode_site_records(
+            members["structure/road_events.lz"], expected_class=class_id, expected_source=1
+        )
+        component_rows = _decode_site_records(
+            members["structure/road_components.br"], expected_class=class_id, expected_source=2
+        )
+    elif role == "Lane":
+        lane_lines, lane_header = _decode_s4_lane(members["structure/lane_lbnd2.lz"])
+        event_rows = _decode_site_records(
+            members["structure/lane_events.lz"], expected_class=class_id, expected_source=1
+        )
+        component_rows = _decode_site_records(
+            members["structure/lane_components.br"], expected_class=class_id, expected_source=2
+        )
+    elif role == "MyCar":
+        static_mask = _unpack_mask(members["structure/mycar_static_hood.br"])
+    elif role == "UndrivableBoundary":
+        event_rows = _decode_site_records(
+            members["structure/undrivable_events.lz"], expected_class=class_id, expected_source=1
+        )
+        component_rows = _decode_site_records(
+            members["structure/undrivable_components.br"], expected_class=class_id, expected_source=2
+        )
+    elif role == "Movable":
+        event_rows = _decode_site_records(
+            members["structure/movable_events.lz"], expected_class=class_id, expected_source=1
+        )
+    else:
+        raise DirectDescriptionError(f"unknown composed structured role {role!r}")
+    return StructuredRoleLayerV1(
+        role=role,
+        class_id=class_id,
+        paint_rgb_u8=np.asarray(paint_rgb_u8, dtype=np.uint8),
+        static_mask=static_mask,
+        lane_lines=lane_lines,
+        lane_header=lane_header,
+        event_rows=event_rows,
+        component_rows=component_rows,
+    )
+
+
+def _receive_composed_structured_member_archive(
+    archive: bytes,
+    *,
+    members: Mapping[str, bytes],
+    homes: Sequence[Mapping[str, Any]],
+) -> ComposedStructuredMemberReceiverV1:
+    manifest = json.loads(members["manifest.json"])
+    baseline = receive_entropy_chart_archive(members["chart.zip"])
+    layers = tuple(
+        _decode_structured_role_layer(
+            role,
+            class_id=int(manifest["role_class_ids"][role]),
+            paint_rgb_u8=manifest["role_rgb_u8"][role],
+            members=members,
+        )
+        for role in manifest["role_order"]
+    )
+    return ComposedStructuredMemberReceiverV1(
+        archive=archive,
+        z=baseline.z,
+        pose6_codes=baseline.pose6_codes,
+        baseline=baseline,
+        source_pair_start=int(manifest["source_pair_start"]),
+        camera=manifest["lane_camera"],
+        layers=layers,
+        custody={
+            "schema": "direct_description_stratum_composed_receiver.v1",
+            "archive_bytes": len(archive),
+            "archive_sha256": _sha256(archive),
+            "unique_home_coverage_bytes": sum(row["zip_home_bytes"] for row in homes),
+            "all_archive_bytes_have_one_home": sum(row["zip_home_bytes"] for row in homes) == len(archive),
+            "member_homes": list(homes),
+            "all_five_roles_consumed": [row.role for row in layers] == list(COMPOSED_ROLE_ORDER),
+            "source_raw_reference_used": False,
+            "scorer_weights_present": False,
+        },
+    )
+
+
+def receive_structured_member_archive(
+    archive: bytes,
+) -> StructuredMemberReceiverV1 | ComposedStructuredMemberReceiverV1:
     members, homes = parse_structured_member_archive(archive)
     manifest = json.loads(members["manifest.json"])
+    if manifest["schema"] == "direct_description_stratum_composed_archive.v1":
+        return _receive_composed_structured_member_archive(archive, members=members, homes=homes)
     baseline = receive_entropy_chart_archive(members["chart.zip"])
     role = manifest["role"]
     palette = np.asarray(manifest["palette_u8"], dtype=np.uint8)
@@ -1439,34 +2061,38 @@ def receive_structured_member_archive(archive: bytes) -> StructuredMemberReceive
     lane_header = None
     event_rows = None
     component_rows = None
+    class_id = manifest.get("class_id")
+    paint_rgb_u8 = (
+        None if manifest.get("paint_rgb_u8") is None else np.asarray(manifest["paint_rgb_u8"], dtype=np.uint8)
+    )
     if role == "Road":
         static_mask = _unpack_mask(members["structure/road_pxq1_mask.br"])
         event_rows = _decode_site_records(
-            members["structure/road_events.lz"], expected_class=0, expected_source=1
+            members["structure/road_events.lz"], expected_class=class_id, expected_source=1
         )
         component_rows = _decode_site_records(
-            members["structure/road_components.br"], expected_class=0, expected_source=2
+            members["structure/road_components.br"], expected_class=class_id, expected_source=2
         )
     elif role == "Lane":
         lane_lines, lane_header = _decode_s4_lane(members["structure/lane_lbnd2.lz"])
         event_rows = _decode_site_records(
-            members["structure/lane_events.lz"], expected_class=1, expected_source=1
+            members["structure/lane_events.lz"], expected_class=class_id, expected_source=1
         )
         component_rows = _decode_site_records(
-            members["structure/lane_components.br"], expected_class=1, expected_source=2
+            members["structure/lane_components.br"], expected_class=class_id, expected_source=2
         )
     elif role == "MyCar":
         static_mask = _unpack_mask(members["structure/mycar_static_hood.br"])
     elif role == "UndrivableBoundary":
         event_rows = _decode_site_records(
-            members["structure/undrivable_events.lz"], expected_class=2, expected_source=1
+            members["structure/undrivable_events.lz"], expected_class=class_id, expected_source=1
         )
         component_rows = _decode_site_records(
-            members["structure/undrivable_components.br"], expected_class=2, expected_source=2
+            members["structure/undrivable_components.br"], expected_class=class_id, expected_source=2
         )
     elif role == "Movable":
         event_rows = _decode_site_records(
-            members["structure/movable_events.lz"], expected_class=3, expected_source=1
+            members["structure/movable_events.lz"], expected_class=class_id, expected_source=1
         )
     return StructuredMemberReceiverV1(
         archive=archive,
@@ -1474,6 +2100,9 @@ def receive_structured_member_archive(archive: bytes) -> StructuredMemberReceive
         pose6_codes=baseline.pose6_codes,
         baseline=baseline,
         role=role,
+        class_id=class_id,
+        paint_rgb_u8=paint_rgb_u8,
+        source_pair_start=manifest["source_pair_start"],
         palette=palette,
         camera=manifest["lane_camera"],
         static_mask=static_mask,
@@ -1666,8 +2295,9 @@ def run_structured_candidate_stages(
 
 def _event_subset_pricing_curve(sources: StructuredS4SourcesV1) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    role_class_ids, _ = _require_structured_routing(sources)
     for role in ("Road", "Lane", "UndrivableBoundary", "Movable"):
-        class_id = ROLE_CLASS_ID[role]
+        class_id = int(role_class_ids[role])
         for n_pairs in (8, 16, 32, 64):
             encoded = _encode_site_records(
                 sources.events[class_id][:n_pairs],
@@ -1713,6 +2343,20 @@ def run_stratum_structured_member_n64(
         raise DirectDescriptionError("structured-member cached target-cell source is malformed") from exc
     oracle, scorer_custody = _load_segnet_oracle(Path(config.upstream_root), threads=config.scorer_threads)
     sources = load_structured_s4_sources(config)
+    role_class_ids, class_detection = self_detect_structured_role_classes(np.asarray(cached_lstars[:64]))
+    sources = replace(
+        sources,
+        role_class_ids=role_class_ids,
+        role_rgb_u8={
+            role: tuple(int(channel) for channel in sources.palette[class_id])
+            for role, class_id in role_class_ids.items()
+        },
+        routing_custody={
+            "status": "V4_INHERITED_S4_VALUE_CONTROL",
+            "class_detection": class_detection,
+            "value_selection": "legacy S4 palette at self-detected class row",
+        },
+    )
     baseline_z = fit_chart_description(receipt, target_pose_codes, config.pair_count)
     baseline_archive = compile_entropy_chart_archive(baseline_z).archive
 
@@ -1878,23 +2522,340 @@ def run_stratum_structured_member_n64(
     return result, receipt_path
 
 
+def _target_window_planes(
+    receipt: Any,
+    *,
+    pair_start: int,
+    pair_count: int,
+) -> np.ndarray:
+    rows = [
+        planes
+        for _pair_ids, planes in iter_target_plane_window_chunks(
+            receipt, pair_start=pair_start, n_pairs=pair_count
+        )
+    ]
+    if not rows:
+        raise DirectDescriptionError("target window produced no scorer planes")
+    value = np.ascontiguousarray(np.concatenate(rows, axis=0))
+    if value.shape != (pair_count, 2, *PAIR_SHAPE, 3):
+        raise DirectDescriptionError("target window scorer-plane coverage is incomplete")
+    return value
+
+
+def _pose_completeness_window(
+    receiver: Any,
+    target_pose_codes: np.ndarray,
+    *,
+    pair_start: int,
+) -> dict[str, Any]:
+    target = np.asarray(target_pose_codes)
+    n_pairs = receiver.z.n_pairs
+    if target.dtype != np.uint8 or target.shape != (600, 6) or pair_start + n_pairs > 600:
+        raise DirectDescriptionError("composed Pose6 target window is invalid")
+    expected = target[pair_start : pair_start + n_pairs]
+    exact = receiver.pose6_codes == expected
+    coordinates = n_pairs * 6
+    matches = int(np.count_nonzero(exact))
+    return {
+        "coordinates": coordinates,
+        "exact_coordinates": matches,
+        "pose_completeness": _fraction_text(matches, coordinates),
+        "pose6_integer_l1_debt": int(
+            np.abs(receiver.pose6_codes.astype(np.int16) - expected.astype(np.int16)).sum(dtype=np.int64)
+        ),
+        "source_pair_window": {"start": pair_start, "stop": pair_start + n_pairs, "count": n_pairs},
+        "d_pose_claim": False,
+    }
+
+
+def run_route_fix_composed_member(
+    config: DirectDescriptionRouteFixComposeConfigV1,
+    *,
+    output_directory: Path,
+    semantic_argv: Sequence[str],
+) -> tuple[dict[str, Any], Path]:
+    """Build and measure one all-role receiver-closed member on n64 or n256."""
+
+    root = Path(output_directory)
+    storage = _storage_preflight(root)
+    root.mkdir(parents=True, exist_ok=True)
+    receipt = load_target_receipt(Path(config.target_receipt_path), config.target_receipt_sha256)
+    if Path(receipt.upstream_repo_root).resolve() / "upstream" != Path(config.upstream_root).resolve():
+        raise DirectDescriptionError("v5 composed-member scorer root differs from target custody")
+    target_pose_codes = load_pose_target_codes(receipt)
+    cache_path = Path(receipt.source_cache.path)
+    if not cache_path.is_file() or cache_path.stat().st_size != receipt.source_cache.bytes:
+        raise DirectDescriptionError("v5 composed-member cached target cells are unavailable")
+    try:
+        cached_lstars = open_stored_npy_memmap(cache_path, "lstars")
+    except (OSError, ValueError) as exc:
+        raise DirectDescriptionError("v5 composed-member cached target-cell source is malformed") from exc
+    oracle, scorer_custody = _load_segnet_oracle(Path(config.upstream_root), threads=config.scorer_threads)
+    sources = load_structured_s4_sources(config)  # type: ignore[arg-type]
+
+    probe_planes = _target_window_planes(
+        receipt,
+        pair_start=config.routing_probe_start,
+        pair_count=config.routing_probe_count,
+    )
+    probe_z = fit_chart_description(
+        receipt,
+        target_pose_codes,
+        config.routing_probe_count,
+        pair_start=config.routing_probe_start,
+    )
+    probe_baseline = receive_entropy_chart_archive(compile_entropy_chart_archive(probe_z).archive)
+    routed_sources, routing_receipt = measure_structured_role_value_routing(
+        sources,
+        baseline=probe_baseline,
+        target_planes=probe_planes,
+        target_cells=np.asarray(
+            cached_lstars[
+                config.routing_probe_start : config.routing_probe_start + config.routing_probe_count
+            ]
+        ),
+        oracle=oracle,
+        source_pair_start=config.routing_probe_start,
+    )
+    routing_path = _publish_new_bytes(
+        root / f"ddm_v5_role_value_routing_n{config.pair_count}.json",
+        rfc8785_canonicalize(routing_receipt) + b"\n",
+    )
+
+    baseline_z = fit_chart_description(
+        receipt,
+        target_pose_codes,
+        config.pair_count,
+        pair_start=config.pair_start,
+    )
+    baseline_archive = compile_entropy_chart_archive(baseline_z).archive
+    archive, homes = compile_composed_structured_member_archive(
+        baseline_archive,
+        routed_sources,
+        pair_start=config.pair_start,
+    )
+    replay_archive, replay_homes = compile_composed_structured_member_archive(
+        baseline_archive,
+        routed_sources,
+        pair_start=config.pair_start,
+    )
+    if archive != replay_archive or homes != replay_homes:
+        raise DirectDescriptionError("v5 composed archive compiler replay is not bit-identical")
+    receiver = receive_structured_member_archive(archive)
+    replay = receive_structured_member_archive(archive)
+    movable_local_pair = 456 - config.pair_start
+    probe_ids = tuple(sorted({0, movable_local_pair, config.pair_count - 1}))
+    if not np.array_equal(receiver.render_pairs(probe_ids), replay.render_pairs(probe_ids)):
+        raise DirectDescriptionError("v5 composed receiver deterministic replay failed")
+    membership = _compact_membership(
+        measure_argmax_cell_membership(
+            receiver,
+            receipt,
+            oracle=oracle,
+            cached_lstars=cached_lstars,
+            pair_start=config.pair_start,
+        )
+    )
+    pose = _pose_completeness_window(receiver, target_pose_codes, pair_start=config.pair_start)
+    if pose["pose_completeness"] != "1.000000000000":
+        raise DirectDescriptionError("v5 composed member lost Pose6 completeness")
+    if not isinstance(receiver, ComposedStructuredMemberReceiverV1):
+        raise DirectDescriptionError("v5 compiler did not produce the composed receiver type")
+    movable_layer = next(layer for layer in receiver.layers if layer.role == "Movable")
+    if movable_layer.event_rows is None:
+        raise DirectDescriptionError("v5 composed member lacks its Movable PCE3 stream")
+    movable_event_records = sum(len(rows) for rows in movable_layer.event_rows)
+    movable_event_sites = sum(len(sites) for rows in movable_layer.event_rows for sites in rows)
+    if movable_event_records == 0 or movable_event_sites == 0:
+        raise DirectDescriptionError("v5 state window failed to include nonempty Movable PCE3 support")
+    archive_path = _publish_new_bytes(
+        root / f"ddm_v5_route_fix_composed_n{config.pair_count}.not_a_candidate.zip.receipt-bytes",
+        archive,
+    )
+    per_target_class = {
+        name: row["same_c1_argmax_cell_fraction"]
+        for name, row in membership["strata"]["target_class"].items()
+    }
+    route_roles = routing_receipt["role_probe"]
+    adjudication = {
+        role: {
+            "verdict": "GEOMETRY_RIGHT_VALUES_WRONG_PALETTE",
+            "verdict_scope": (
+                "FORMULATION: fixed S4 geometry and inherited solid RGB on the n16 state-window routing probe; "
+                "no wider carrier-family or evaluator-score verdict"
+            ),
+            "mechanism": (
+                "self-detected target geometry has high target-class overlap while the inherited frozen-tile "
+                "palette produces zero own-class cells; a counted C1-derived prototype is selected by actual "
+                "receiver membership without shipping scorer weights"
+            ),
+            "geometry": route_roles[role]["geometry"],
+            "inherited_s4_paint": route_roles[role]["inherited_s4_paint"],
+            "c1_member_same_sites": route_roles[role]["c1_member_same_sites"],
+            "selected": route_roles[role]["selected"],
+        }
+        for role in ("Road", "MyCar")
+    }
+    result = {
+        "schema": V5_RESULT_SCHEMA,
+        "task": 603,
+        "master_task": 578,
+        "feeds_task": 613,
+        "lane_id": V5_LANE_ID,
+        "run_id": config.run_id,
+        "seed": config.seed,
+        "verdict": "MEASURED_ROUTE_FIXED_COMPOSED_MEMBER_POSITIVE_STATE_WINDOW",
+        "verdict_scope": (
+            f"n{config.pair_count} source-pair window [{config.pair_start},{config.pair_start + config.pair_count}) "
+            "through the local frozen-SegNet batch16 membership instrument; advisory only, no evaluator score"
+        ),
+        "research_only": True,
+        "execution_allowed": False,
+        "candidate_archive": False,
+        "score_claim": False,
+        "d_seg_claim": False,
+        "pointer": f"{POINTER_SCORE_TEXT} [contest-CPU]",
+        "pointer_moved": False,
+        "typed_config": config.model_dump(mode="json", by_alias=True),
+        "typed_config_sha256": config.typed_config_hash(),
+        "dsl_compile_hash": config.dsl_compile_hash(),
+        "semantic_argv": list(semantic_argv),
+        "producer": {
+            "solver_module": _committed_source_custody(
+                "src/tac/optimization/direct_description_entropy_priced_member.py"
+            ),
+            "measurement_module": _committed_source_custody(
+                "src/tac/optimization/direct_description_measurement_ladder.py"
+            ),
+            "membership_module": _committed_source_custody(
+                "src/tac/optimization/direct_description_polytope_membership.py"
+            ),
+            "cli": _committed_source_custody("tools/run_direct_description_entropy_priced_member.py"),
+        },
+        "routing_adjudication": adjudication,
+        "routing_receipt": {
+            "path": str(routing_path),
+            "sha256": _sha256(_read_regular_file_once(routing_path)),
+            "selected_role_rgb_u8": routing_receipt["selected_role_rgb_u8"],
+            "class_detection": routing_receipt["class_detection"],
+        },
+        "composition": {
+            "role_order": list(COMPOSED_ROLE_ORDER),
+            "roles_present": [layer.role for layer in receiver.layers],
+            "mechanisms": {
+                "Lane": "S4 LBND2 plus Lane PCE3/PCOMP3",
+                "Road": "S4 PXQ1 Road plus Road PCE3/PCOMP3 with corrected measured paint",
+                "MyCar": "S4 static ego-hood with corrected measured paint",
+                "UndrivableBoundary": "S4 Undrivable PCE3/PCOMP3 path",
+                "Movable": "S4 class-filtered PCE3 event path",
+                "Pose": "unchanged counted v3 Pose6 stream",
+            },
+            "source_pair_window": {
+                "start": config.pair_start,
+                "stop": config.pair_start + config.pair_count,
+                "count": config.pair_count,
+            },
+            "movable_pce3": {
+                "event_records": movable_event_records,
+                "event_sites": movable_event_sites,
+                "nonempty": True,
+                "contains_global_pair_456": config.pair_start <= 456 < config.pair_start + config.pair_count,
+                "verdict_scope": "selected contiguous state window, not the prior n64 prefix",
+            },
+        },
+        "archive": {
+            "path": str(archive_path),
+            "bytes": len(archive),
+            "sha256": _sha256(archive),
+            "below_approx_200000_byte_receiver_box": len(archive) <= 200_000,
+            "below_strict_154524_byte_task_cap": len(archive) <= 154_524,
+            "compiler_determinism_x2": True,
+            "parse_reencode_identical": True,
+            "receiver_replay_identical": True,
+            "member_homes": list(homes),
+            "all_bytes_have_one_home": sum(row["zip_home_bytes"] for row in homes) == len(archive),
+            "receiver_custody": dict(receiver.custody),
+        },
+        "membership": {
+            "evidence_axis": EVIDENCE_AXIS,
+            "overall": membership["same_c1_argmax_cell_fraction"],
+            "per_target_class": per_target_class,
+            "per_stratum": membership["strata"],
+            "promotion_eligible": False,
+            "d_seg_claim": False,
+        },
+        "pose": pose,
+        "s4_source_custody": dict(routed_sources.custody),
+        "target_custody": {
+            "receipt_path": config.target_receipt_path,
+            "receipt_sha256": config.target_receipt_sha256,
+            "source_cache_path": str(cache_path),
+            "source_cache_bytes": receipt.source_cache.bytes,
+            "source_cache_sha256": receipt.source_cache.sha256,
+            "source_cache_mutated": False,
+        },
+        "scorer_custody": scorer_custody,
+        "resume": {
+            "stage_checkpoints": [str(routing_path), str(archive_path)],
+            "route_stage_preserved_before_composition": True,
+            "composed_archive_preserved": True,
+            "atomic_publish": True,
+        },
+        "blocker_delta": {
+            "PALETTE_VS_GEOMETRY_ADJUDICATION": "RED_TO_GREEN_MEASURED_FORMULATION_SCOPE",
+            "ROLE_TO_VALUE_ROUTING": "RED_TO_GREEN_SELF_DETECTED_AND_RECEIVER_MEASURED",
+            "ONE_MEMBER_FIVE_STRATA_PLUS_POSE": "RED_TO_GREEN_RECEIVER_CLOSED_LOCAL_ADVISORY",
+            "MOVABLE_PREFIX_ARTIFACT": "RED_TO_GREEN_NONEMPTY_STATE_WINDOW_PAIR_456",
+            "N600_EVALUATOR_SCORE": "REMAINS_RED_NOT_AUTHORIZED_NOT_RUN",
+            "CONTEST_CPU_CUDA": "REMAINS_RED_NOT_AUTHORIZED",
+        },
+        "storage_preflight": storage,
+        "cleanup": {
+            "bulk_artifacts_created": False,
+            "s4_bulk_source_remained_read_only": True,
+            "scratch_policy": "bounded target chunks and batch16 scorer; immutable small stage receipts",
+            "certify_or_block": "no deletion, movement, or source mutation performed",
+        },
+        "stores_consulted": [
+            "direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md",
+            "v4 structured receipt 95c164b4 lineage",
+            "canonical S4 archive/runtime read-only",
+            "lane_sdf_component.py and hood_static_component.py role self-detection",
+            "2026-07-19 EV/Fisher operator directives",
+        ],
+        "main_landing_review_required": True,
+    }
+    receipt_path = _publish_new_bytes(
+        root / f"ddm_v5_route_fix_composed_n{config.pair_count}_receipt.json",
+        rfc8785_canonicalize(result) + b"\n",
+    )
+    return result, receipt_path
+
+
 __all__ = [
     "TOLERANCE_LADDER",
     "DirectDescriptionEntropyCandidateCheckpointV1",
     "DirectDescriptionEntropyPricedMemberConfigV1",
     "DirectDescriptionEntropyPricedMemberProgramV1",
     "DirectDescriptionEntropyRungCheckpointV1",
+    "DirectDescriptionRouteFixComposeConfigV1",
+    "DirectDescriptionRouteFixComposeProgramV1",
     "DirectDescriptionStratumStructuredMemberConfigV1",
     "DirectDescriptionStratumStructuredMemberProgramV1",
     "DirectDescriptionStructuredCandidateCheckpointV1",
     "build_entropy_candidate_z",
+    "compile_composed_structured_member_archive",
     "compile_structured_member_archive",
     "load_structured_s4_sources",
+    "measure_structured_role_value_routing",
     "parse_structured_member_archive",
     "receive_structured_member_archive",
     "run_entropy_candidate_stages",
     "run_entropy_priced_member_n64",
     "run_entropy_rung_stages",
+    "run_route_fix_composed_member",
     "run_stratum_structured_member_n64",
     "run_structured_candidate_stages",
+    "select_role_paint_values",
+    "self_detect_structured_role_classes",
 ]
