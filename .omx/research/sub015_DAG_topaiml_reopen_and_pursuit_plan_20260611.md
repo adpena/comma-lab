@@ -21004,3 +21004,23 @@ Equations leg: no new law this landing (blocked negative); tolerance-vs-bytes cu
 v2's verdict.
 
 **Pointer 0.1910828242 [contest-CPU] UNMOVED.**
+
+## FEED-603-fixedwidth-wall (2026-07-22, MAIN custody of mdl_member_solve_v2_priced)
+
+**Trajectory:** #603 priced member solve v2 landed (main 0a4967d7f1, 8 tests green). Exact final-ZIP
+pricing INSIDE selection is now GREEN apparatus (receiver-consumed six-member payload, pose ownership,
+n64). **MEASURED WALL (verdict_scope: FORMULATION — the fixed-record chart grammar):** every proposal
+at every tolerance rung (exact-cell, 1.52e-4, 3e-4, 5e-4, 8e-4) changed thousands of semantic values
+with Δbytes ≡ 0 — archive pinned at 274,664 B — because fixed-width records are length-invariant to
+values. Membership pinned at 0.4936 (the class-prior grammar unchanged). GT-cache crosscheck
+0.999874 preserved as caveat.
+
+**THE THREE-RUNG PRICING LADDER (composed lesson, one axis):** (1) #602 flat diagnostic pricing →
+no gradient → canonical degeneracy; (2) v2 exact pricing × fixed-width format → Δbytes≡0 → no
+gradient; (3) ⇒ MDL-in-the-solve is real only with VARIABLE-LENGTH entropy-coded streams. Fired:
+`mdl_member_solve_v3_entropy` (20260722T…) reusing the MEASURED #557 coder stack
+(context-arithmetic + Selfcomp block-FP) + L21-L32 stream lessons — the decisive test of whether
+byte-priced member search bends the (rung, bytes, membership) curve. Equations leg:
+`FORMALIZATION_PENDING:three-rung pricing-ladder law registers on v3's measured verdict`.
+
+**Pointer 0.1910828242 [contest-CPU] UNMOVED.**
