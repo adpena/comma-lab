@@ -112,12 +112,14 @@ Disposition: `CLEAN_AFTER_FIX_FOR_TWO_SCOPED_BLOCKERS`, not a PRIMARY seal. See
 ## Exact re-derivation argv
 
 ```text
-/usr/bin/env python3 tools/run_direct_description_real_target_rung0.py --config .omx/research/ddm_target_receipt_pose_rung0_603_20260722T010130Z.config.json --output-dir <new-empty-output-directory> --execution-allowed false
+/usr/bin/env python3 tools/run_direct_description_real_target_rung0.py --config .omx/research/ddm_target_receipt_pose_rung0_603_20260722T010130Z.config.json --output-dir .omx/research/ddm_target_receipt_pose_rung0_603_MAIN_REDERIVE --execution-allowed false
 ```
 
-The checked-in receipt uses the same argv with output directory
+The checked-in receipt uses output directory
 `.omx/research/ddm_target_receipt_pose_rung0_603_20260722T010130Z_artifacts`. Immutable outputs refuse
-overwrite by design, so MAIN should use a new empty directory for re-derivation and compare hashes.
+overwrite by design, so MAIN should use the new empty directory above. Re-derive the same target hashes,
+trajectory, and terminal archive hash. Checkpoint and rung-receipt hashes intentionally bind the exact
+semantic argv, so a different output path changes those wrapper hashes without changing the result.
 
 Focused verification:
 
