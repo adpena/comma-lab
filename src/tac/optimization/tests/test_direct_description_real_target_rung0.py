@@ -13,6 +13,7 @@ from tac.optimization.direct_description_minimizer import (
     rfc8785_canonicalize,
 )
 from tac.optimization.direct_description_real_target_rung0 import (
+    DirectDescriptionRealTargetCheckpointV1,
     DirectDescriptionRealTargetRung0ConfigV1,
     DirectDescriptionTargetPlaneReceiptV1,
     RealTargetSubsetV1,
@@ -24,6 +25,7 @@ from tac.optimization.direct_description_real_target_rung0 import (
     _objective,
     _pose6_ordinal_codes,
     load_real_target_subset,
+    run_real_target_optimizer,
 )
 
 
@@ -140,3 +142,22 @@ def test_target_receipt_canonical_json_round_trip_accepts_array_fields(tmp_path:
     loaded = _load_receipt_file(path, observed)
     assert loaded.chunks == chunks
     assert loaded.subset_pair_ids == tuple(range(64))
+
+    config = DirectDescriptionRealTargetRung0ConfigV1(target_receipt_path=str(path), target_receipt_sha256=observed)
+    target = RealTargetSubsetV1(
+        receipt=loaded,
+        receipt_path=path,
+        receipt_sha256=observed,
+        projection=np.zeros((64, 2, 8, 8, 3), dtype=np.uint8),
+        pose6_codes=np.zeros((64, 6), dtype=np.uint8),
+    )
+    result = run_real_target_optimizer(
+        config,
+        checkpoint_directory=tmp_path / "checkpoints",
+        semantic_argv=("test-real-target-rung",),
+        stop_after_stage_index=0,
+        loaded_target=target,
+    )
+    checkpoint = DirectDescriptionRealTargetCheckpointV1.from_bytes(result.checkpoint_paths[0].read_bytes())
+    assert checkpoint.next_stage_index == 1
+    assert checkpoint.semantic_argv == ("test-real-target-rung",)

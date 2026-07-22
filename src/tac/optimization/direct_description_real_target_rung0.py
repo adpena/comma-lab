@@ -646,7 +646,7 @@ class DirectDescriptionRealTargetCheckpointV1(BaseModel):
             "current_output_sha256",
         ):
             _require_sha256(getattr(self, field), field)
-        config = DirectDescriptionRealTargetRung0ConfigV1.model_validate(self.config)
+        config = DirectDescriptionRealTargetRung0ConfigV1.model_validate_json(rfc8785_canonicalize(self.config))
         if config.typed_config_hash() != self.config_sha256 or config.dsl_compile_hash() != self.dsl_compile_hash:
             raise ValueError("real-target checkpoint config/compile identity mismatch")
         if self.next_stage_index != self.completed_stage_index + 1 or self.next_stage_index > len(config.stages):
@@ -688,7 +688,7 @@ class DirectDescriptionRealTargetCheckpointV1(BaseModel):
             raise DirectDescriptionError("real-target checkpoint envelope/canonical bytes mismatch")
         if _sha256(rfc8785_canonicalize(value["body"])) != _require_sha256(value["body_sha256"], "body_sha256"):
             raise DirectDescriptionError("real-target checkpoint body hash mismatch")
-        return cls.model_validate(value["body"])
+        return cls.model_validate_json(rfc8785_canonicalize(value["body"]))
 
     def filename(self) -> str:
         return (
