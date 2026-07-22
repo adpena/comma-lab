@@ -1,0 +1,479 @@
+{
+  "blocker_delta_vs_603": "#603 per-pair score debt, Fisher/margin/topology cube, Pose sensitivity, byte amortization, scene covariates, and hard-subset replay are indexed; the canonical spawned v13 arm is SHA-bound. Live v13 consumption and contemporaneous candidate subset/full replay remain owed.",
+  "compact_outputs": [
+    {
+      "bytes": 5550,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_g3_score_atlas_20260722T201946Z/.omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/summary.json",
+      "sha256": "7e1f3918964f35729bf969b56eef6aebc949b22373f61e190d74d5c4825fa918"
+    },
+    {
+      "bytes": 5857,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_g3_score_atlas_20260722T201946Z/.omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/hard_pair_registry.json",
+      "sha256": "0c9ce6d0ce2b2c0830400f096438355242527d40f682fc1b201f67d8d951a4e4"
+    },
+    {
+      "bytes": 1829,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_g3_score_atlas_20260722T201946Z/.omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/live_v13_pointer.json",
+      "sha256": "97ee7c7c09a7e22ca2f47d39422371ab842861fd5fbf27d9c8754088723ee9c8"
+    }
+  ],
+  "d_pose_claim": false,
+  "d_seg_claim": false,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "execution_allowed": false,
+  "implementation_custody": {
+    "git_head_at_build": "7c019626f94d49f2bac5dfe61d5a8ae91e0802d8",
+    "source_files": [
+      {
+        "bytes": 53228,
+        "path": "src/tac/optimization/ddm_g3_score_atlas.py",
+        "sha256": "8364e6998075f35f6a5684311b4861c0843f4ac682c11f35ec2385b1304a63b9"
+      },
+      {
+        "bytes": 18257,
+        "path": "tools/build_ddm_g3_score_atlas.py",
+        "sha256": "2a3b59269a2616adae860b1de2cff1611ce915fdf76abc467228c5e3f0938e53"
+      },
+      {
+        "bytes": 1997,
+        "path": ".omx/research/configs/ddm_g3_score_atlas_n600_20260722.json",
+        "sha256": "cb057cf02b89147806691977cc735374e8afd03c0d8f4da53ade293f32a8f2ab"
+      }
+    ],
+    "typed_config_sha256": "6cdd027e2c0439fa333e383fb6487acd1b0bc93d9506b731ea37c81de0b420fc"
+  },
+  "main_landing_review_required": true,
+  "outputs": [
+    {
+      "bytes": 9121001,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_n600.jsonl",
+      "sha256": "faaff7299d86aa49c97e25e9cce2eeb0201f64e919f110015d31708788bcec09"
+    },
+    {
+      "bytes": 257194,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/measured_admission_efficiency.jsonl",
+      "sha256": "a72171c6933b587fe9384ab8e6e1c320624c557ea7bf69d2e3e4dc514a912326"
+    },
+    {
+      "bytes": 5550,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/summary.json",
+      "sha256": "7e1f3918964f35729bf969b56eef6aebc949b22373f61e190d74d5c4825fa918"
+    },
+    {
+      "bytes": 5857,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/hard_pair_registry.json",
+      "sha256": "0c9ce6d0ce2b2c0830400f096438355242527d40f682fc1b201f67d8d951a4e4"
+    },
+    {
+      "bytes": 3709,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/cleanup_manifest.json",
+      "sha256": "5db9e4d38cb22afe3a57b2359cf48b4cbf697c85a9b163ad254f260ccf725c4e"
+    },
+    {
+      "bytes": 132502,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/charts/measured_admission_efficiency.png",
+      "sha256": "b641579ebeb081850e162c57594bf6c77699429e06e69ecd01bdc7317c5dc19c"
+    },
+    {
+      "bytes": 10371,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/charts/score_atlas.html",
+      "sha256": "855d22ac29de5188dcd28d5cef126d4d57a4dc93647b080585af274ed62c72c6"
+    },
+    {
+      "bytes": 62273,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/charts/score_mass_rank_and_cumulative.png",
+      "sha256": "745645aaa40957a87e42ae0c733ac730d7565fbb8a13adcc8db5e819f325ca69"
+    },
+    {
+      "bytes": 177042,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/charts/score_mass_timeline.png",
+      "sha256": "c74f8903a21e13c2bc649775ded443d99b8f36171b21dc861467ccab60dd1c58"
+    }
+  ],
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "research_only": true,
+  "round1_self_review_required": true,
+  "run_id": "ddm_g3_score_atlas_n600_20260722T204000Z",
+  "schema": "ddm_g3_score_atlas_receipt.v1",
+  "score_claim": false,
+  "semantic_argv": [
+    "tools/build_ddm_g3_score_atlas.py",
+    "--config",
+    ".omx/research/configs/ddm_g3_score_atlas_n600_20260722.json",
+    "--resume"
+  ],
+  "source_custody": {
+    "cache_chunk_size": 16,
+    "evaluator_response_atlas_path": "/Volumes/VertigoDataTier/pact/evaluator_response_atlas_20260610T001515Z/evaluator_response_atlas.jsonl",
+    "evaluator_response_atlas_sha256": "63551d784a6919890d13bc311f3f42f368682bd14deac2dceb8d489d926aeb48",
+    "evaluator_response_cone_map_audit": {
+      "all_embedded_sha256_verified": true,
+      "consumability_verdict": "INTACT_FOR_GEOMETRY_ONLY",
+      "epistemic_status": "MEASURED_CURRENT_BYTES",
+      "map_bytes": 2540732982,
+      "map_count": 600,
+      "schema": "ddm_g3_evaluator_response_atlas_audit.v1",
+      "score_currency_verdict": "ROTTED_AS_RANK_KEY; cone/free-budget fields are diagnostic only"
+    },
+    "gt_cache_bytes": 5078017610,
+    "gt_cache_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "gt_cache_sha256_from_bound_target_receipt": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "measured_admission_receipts": [
+      {
+        "pair_count": 256,
+        "path": ".omx/research/ddm_v10_fisher_event_n256_20260722T130403Z_round2/ddm_v10_fisher_event_search_n256_receipt.json",
+        "sha256": "2c7907bcc337cd58ba16f01b16a2cb889523ae31daa01222decccf0380ee31da",
+        "version": "v10"
+      },
+      {
+        "pair_count": 600,
+        "path": ".omx/research/ddm_v11_obligation_n600_20260722T152000Z_round3/ddm_v11_obligation_search_n600_receipt.json",
+        "sha256": "bf82941b64a2e49ee88b23e4402daa1b49c510491cd39ee9e67877d8d5ded534",
+        "version": "v11"
+      },
+      {
+        "pair_count": 600,
+        "path": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+        "sha256": "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a",
+        "version": "v12"
+      }
+    ],
+    "oom_law": "canonical scorer batches <=16 only; never materialize a full-n600 scorer forward tensor",
+    "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "reuse_reason": "ALREADY_SETTLED v12 SHA-bound frozen-scorer canonical-batch caches",
+    "scorer_batch_size": 16,
+    "scorer_outputs_recomputed": false,
+    "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "v12_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_g3_score_atlas_20260722T201946Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+    "v12_receipt_sha256": "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a"
+  },
+  "storage_preflight": {
+    "observed_free_bytes": 659290333184,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z",
+    "required_free_bytes": 67108864,
+    "status": "PASS"
+  },
+  "stores_consulted": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "PROGRAM.md",
+    "docs/operating_manual_craft_handoff.md",
+    "/Volumes/VertigoDataTier/pact/evaluator_response_atlas_20260610T001515Z/evaluator_response_atlas.jsonl",
+    ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+    ".omx/research/ddm_v10_fisher_event_n256_20260722T130403Z_round2/ddm_v10_fisher_event_search_n256_receipt.json",
+    ".omx/research/ddm_v11_obligation_n600_20260722T152000Z_round3/ddm_v11_obligation_search_n600_receipt.json",
+    ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+    ".omx/state/operator_p0_ledger.jsonl",
+    ".omx/research/ddm_g2_solve_diff_op_mining_n600_20260722T194000Z/aggregate_ledger.json",
+    "reports/latest.md",
+    ".omx/state/lane_registry.json",
+    ".omx/state/canonical_task_status.jsonl"
+  ],
+  "summary": {
+    "energy_or_l2_rank_keys_allowed": false,
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "global_reconstruction": {
+      "advisory_objective": 43.84857657101479,
+      "archive_bytes": 106106,
+      "archive_sha256": "623f860e78a105a8a31efc46d92002597d32e3459447cfed642c81243441ed11",
+      "d_pose": 163.03471942288135,
+      "d_seg": 0.034003668891059026
+    },
+    "hard_subset_correlations": {
+      "correlations": {
+        "stratified_control24": {
+          "distortion_touched_rows": 66,
+          "nonzero_subset_estimate_rows_including_rate": 338,
+          "pair_count": 24,
+          "pearson_r": 0.2341751674433917
+        },
+        "top24": {
+          "distortion_touched_rows": 47,
+          "nonzero_subset_estimate_rows_including_rate": 338,
+          "pair_count": 24,
+          "pearson_r": 0.5953065905385343
+        },
+        "top64": {
+          "distortion_touched_rows": 73,
+          "nonzero_subset_estimate_rows_including_rate": 338,
+          "pair_count": 64,
+          "pearson_r": 0.57506286958047
+        }
+      },
+      "epistemic_status": "MEASURED_REPLAY",
+      "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+      "full_delta_definition": "measured full-n600 joint objective gain including exact marginal rate",
+      "max_full_replay_residual": 1.0973427028160287e-14,
+      "measurement_source": "v12 exact frozen-scorer measured admission proposals",
+      "n_measured_proposals": 338,
+      "schema": "ddm_g3_hard_subset_correlation.v1",
+      "score_claim": false,
+      "subset_delta_definition": "same objective with only subset pair distortion deltas plus exact marginal rate"
+    },
+    "hard_subsets": {
+      "stratified_control24": [
+        83,
+        59,
+        89,
+        40,
+        142,
+        190,
+        132,
+        105,
+        206,
+        266,
+        288,
+        247,
+        382,
+        367,
+        374,
+        331,
+        473,
+        474,
+        412,
+        440,
+        516,
+        507,
+        589,
+        573
+      ],
+      "top24": [
+        523,
+        54,
+        1,
+        90,
+        21,
+        446,
+        0,
+        14,
+        18,
+        327,
+        7,
+        60,
+        49,
+        41,
+        323,
+        44,
+        38,
+        42,
+        4,
+        36,
+        320,
+        55,
+        56,
+        16
+      ],
+      "top64": [
+        523,
+        54,
+        1,
+        90,
+        21,
+        446,
+        0,
+        14,
+        18,
+        327,
+        7,
+        60,
+        49,
+        41,
+        323,
+        44,
+        38,
+        42,
+        4,
+        36,
+        320,
+        55,
+        56,
+        16,
+        322,
+        5,
+        39,
+        24,
+        30,
+        316,
+        22,
+        63,
+        452,
+        27,
+        10,
+        318,
+        35,
+        47,
+        50,
+        28,
+        29,
+        31,
+        19,
+        20,
+        3,
+        8,
+        17,
+        51,
+        43,
+        37,
+        46,
+        53,
+        99,
+        33,
+        58,
+        445,
+        329,
+        305,
+        34,
+        451,
+        88,
+        73,
+        11,
+        57
+      ]
+    },
+    "heavy_tail_concentration": {
+      "joint_distortion": {
+        "top10": 0.019785252279635502,
+        "top100": 0.1870385612422957,
+        "top50": 0.09547602796013313
+      },
+      "pose": {
+        "top10": 0.02023901220323184,
+        "top100": 0.18922435825803857,
+        "top50": 0.09752072581300286
+      },
+      "seg": {
+        "top10": 0.03537936935149166,
+        "top100": 0.2685436608566537,
+        "top50": 0.15490188061734586
+      }
+    },
+    "heavy_tail_interpretation": "fractions are concentration diagnostics; the measured joint distribution is broad when top-k is low",
+    "n_pairs": 600,
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "primary_rank_key": "derived_exact_flip_pose_score_mass",
+    "promotion_eligible": false,
+    "rank_formula": "100*pair_flip_count/(600*384*512) + sqrt(10*global_d_pose)*pair_pose_squared_error/global_pose_squared_error",
+    "schema": "ddm_g3_score_atlas.v1",
+    "score_claim": false,
+    "top10_pairs": [
+      {
+        "d_pose_pair": 204.71536280748762,
+        "flip_count": 7279,
+        "pair_index": 523,
+        "scene_event_labels": [],
+        "score_mass": 0.090670956751584
+      },
+      {
+        "d_pose_pair": 198.9373451810876,
+        "flip_count": 7140,
+        "pair_index": 54,
+        "scene_event_labels": [],
+        "score_mass": 0.08816812950352054
+      },
+      {
+        "d_pose_pair": 200.41722497912374,
+        "flip_count": 5688,
+        "pair_index": 1,
+        "scene_event_labels": [],
+        "score_mass": 0.08754810464412266
+      },
+      {
+        "d_pose_pair": 198.03524513607394,
+        "flip_count": 5609,
+        "pair_index": 90,
+        "scene_event_labels": [],
+        "score_mass": 0.08649792439494704
+      },
+      {
+        "d_pose_pair": 199.02361008561675,
+        "flip_count": 5077,
+        "pair_index": 21,
+        "scene_event_labels": [],
+        "score_mass": 0.08645491034656516
+      },
+      {
+        "d_pose_pair": 179.47713594354516,
+        "flip_count": 13912,
+        "pair_index": 446,
+        "scene_event_labels": [],
+        "score_mass": 0.08587622384874818
+      },
+      {
+        "d_pose_pair": 195.25444211139575,
+        "flip_count": 5654,
+        "pair_index": 0,
+        "scene_event_labels": [],
+        "score_mass": 0.08538823778592708
+      },
+      {
+        "d_pose_pair": 197.4558215710282,
+        "flip_count": 4377,
+        "pair_index": 14,
+        "scene_event_labels": [],
+        "score_mass": 0.08521437607359733
+      },
+      {
+        "d_pose_pair": 195.6113631227854,
+        "flip_count": 5239,
+        "pair_index": 18,
+        "scene_event_labels": [],
+        "score_mass": 0.08518376440759014
+      },
+      {
+        "d_pose_pair": 178.7887540973801,
+        "flip_count": 13396,
+        "pair_index": 327,
+        "scene_event_labels": [],
+        "score_mass": 0.08515466147874035
+      }
+    ]
+  },
+  "typed_config": {
+    "admission_receipts": [
+      {
+        "pair_count": 256,
+        "path": ".omx/research/ddm_v10_fisher_event_n256_20260722T130403Z_round2/ddm_v10_fisher_event_search_n256_receipt.json",
+        "sha256": "2c7907bcc337cd58ba16f01b16a2cb889523ae31daa01222decccf0380ee31da",
+        "version": "v10"
+      },
+      {
+        "pair_count": 600,
+        "path": ".omx/research/ddm_v11_obligation_n600_20260722T152000Z_round3/ddm_v11_obligation_search_n600_receipt.json",
+        "sha256": "bf82941b64a2e49ee88b23e4402daa1b49c510491cd39ee9e67877d8d5ded534",
+        "version": "v11"
+      },
+      {
+        "pair_count": 600,
+        "path": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+        "sha256": "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a",
+        "version": "v12"
+      }
+    ],
+    "cache_chunk_size": 16,
+    "compact_receipt_directory": ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z",
+    "d_pose_claim": false,
+    "d_seg_claim": false,
+    "evaluator_atlas_path": "/Volumes/VertigoDataTier/pact/evaluator_response_atlas_20260610T001515Z/evaluator_response_atlas.jsonl",
+    "evaluator_atlas_sha256": "63551d784a6919890d13bc311f3f42f368682bd14deac2dceb8d489d926aeb48",
+    "execution_allowed": false,
+    "n_pairs": 600,
+    "output_directory": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z",
+    "research_only": true,
+    "row_bins": 12,
+    "run_id": "ddm_g3_score_atlas_n600_20260722T204000Z",
+    "schema": "DdmG3ScoreAtlasConfigV1",
+    "score_claim": false,
+    "seed": 1234,
+    "v12_receipt_path": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+    "v12_receipt_sha256": "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a",
+    "v13_pointer_ledger_path": ".omx/state/operator_p0_ledger.jsonl",
+    "v13_pointer_ledger_sha256": "6d2e819a9c05e99aa0524cd57d5a9f70e166415c9731678036ba1b4e2641d5aa",
+    "v13_pointer_p0_id": "p0_crux_knee_recursive_fractal_20260721"
+  },
+  "typed_config_sha256": "6cdd027e2c0439fa333e383fb6487acd1b0bc93d9506b731ea37c81de0b420fc",
+  "verdict": "MEASURED_ADVISORY_N600_SCORE_ATLAS_COMPLETE_V13_POINTER_BOUND",
+  "verdict_scope": "v12 frozen-scorer cached cells/poses joined to #36 response geometry; local advisory only; hard-subset correlations are historical replay over v12 measured proposals"
+}

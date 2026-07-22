@@ -1,0 +1,44 @@
+{
+  "schema": "ddm_g3_score_atlas_round1_self_review.v1",
+  "reviewed_at_utc": "2026-07-22T20:48:13Z",
+  "review_scope": "fresh re-derivation of score currency, custody, completeness, resumability, and semantic labels",
+  "checks": {
+    "typed_pair_coverage_600": "PASS",
+    "typed_jsonl_reload_validates_600": "PASS",
+    "exact_flip_total_4011236": "PASS",
+    "stratum_cube_flip_sum_4011236": "PASS",
+    "stratum_cube_score_mass_sum_matches_global_d_seg": "PASS",
+    "allocated_bytes_sum_106106": "PASS",
+    "energy_or_l2_rank_key_absent": "PASS",
+    "v10_v11_v12_measured_admission_signs_normalized": "PASS",
+    "v13_canonical_row_sha_bound": "PASS",
+    "hard_subset_replay_matches_receipt_max_abs_residual_le_2e_9": "PASS",
+    "resume_validates_all_ssd_and_compact_output_hashes": "PASS",
+    "scene_names_scoped_as_derived_proxies": "PASS",
+    "contest_pointer_unchanged": "PASS"
+  },
+  "findings_fixed": [
+    "added global d_seg and Seg score mass to every class-margin-topology cell",
+    "split joint, Seg, and Pose concentration so Pose domination cannot hide Seg structure",
+    "normalized v10, v11, and v12 admission sign conventions and denominators",
+    "replaced false v13-registration-owed wording with the SHA-bound spawned operator P0 row",
+    "renamed subset activity counts so the exact rate term cannot masquerade as touched distortion",
+    "marked all named scene events as deterministic covariate proxies rather than semantic ground truth",
+    "replaced strict tuple frame indices with JSON-native bounded lists after an independent JSONL round-trip failure"
+  ],
+  "remaining_risks": [
+    "subset/full correlations are historical v12 replay and must be refreshed for new candidate families",
+    "moderate correlation does not authorize subset-only rank or kill",
+    "cached macOS CPU frozen-scorer evidence is advisory and cannot move the contest pointer",
+    "MAIN must review consumer wiring before live v13 use"
+  ],
+  "test_receipt": {
+    "focused_pytest": "15 passed",
+    "ruff": "PASS",
+    "resume": "PASS"
+  },
+  "main_landing_review_required": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}
