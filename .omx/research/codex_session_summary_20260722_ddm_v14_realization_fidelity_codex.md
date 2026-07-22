@@ -1,7 +1,7 @@
 # Codex session summary — DDM v14 receiver-realization fidelity
 
-Date: 2026-07-22  
-Lane: `ddm_v14_realization_fidelity`  
+Date: 2026-07-22
+Lane: `ddm_v14_realization_fidelity`
 MAIN landing review required: true
 
 ## Landed

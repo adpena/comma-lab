@@ -1,9 +1,9 @@
 # DDM v14 receiver-realization fidelity — #603 DAG FEED
 
-Date: 2026-07-22  
-Lane: `ddm_v14_realization_fidelity`  
-Research only: true  
-Axis: `[macOS-CPU frozen-scorer advisory]`  
+Date: 2026-07-22
+Lane: `ddm_v14_realization_fidelity`
+Research only: true
+Axis: `[macOS-CPU frozen-scorer advisory]`
 MAIN landing review required: true
 
 ## Pointer delta

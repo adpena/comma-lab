@@ -1,12 +1,12 @@
 # DDM v14 receiver-realization fidelity — Codex findings
 
-Date: 2026-07-22  
-Lane: `ddm_v14_realization_fidelity`  
-Tasks: #603 / #613 / master #578  
-Axis: `[macOS-CPU frozen-scorer advisory]`  
-Authority: `score_claim=false`; `research_only=true`; `promotion_eligible=false`  
-Verdict: `ADVISORY_V14_RECEIVER_REALIZATION_REPAIR_PARTIAL_STATIC_CELL_FORECAST_FALSIFIED`  
-Verdict scope: INSTANCE for the counted v14 profile and three G4 static rules; FORMULATION for painting semantic masks through fixed RGB prototypes; predict-project and grammar families remain OPEN.  
+Date: 2026-07-22
+Lane: `ddm_v14_realization_fidelity`
+Tasks: #603 / #613 / master #578
+Axis: `[macOS-CPU frozen-scorer advisory]`
+Authority: `score_claim=false`; `research_only=true`; `promotion_eligible=false`
+Verdict: `ADVISORY_V14_RECEIVER_REALIZATION_REPAIR_PARTIAL_STATIC_CELL_FORECAST_FALSIFIED`
+Verdict scope: INSTANCE for the counted v14 profile and three G4 static rules; FORMULATION for painting semantic masks through fixed RGB prototypes; predict-project and grammar families remain OPEN.
 MAIN landing review: REQUIRED.
 
 ## Outcome first

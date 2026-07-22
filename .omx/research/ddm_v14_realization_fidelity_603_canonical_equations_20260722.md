@@ -1,7 +1,7 @@
 # DDM v14 receiver-realization fidelity — canonical equations note
 
-Date: 2026-07-22  
-Equation: `ddm_describe_line_rate_distortion_bracket_v1`  
+Date: 2026-07-22
+Equation: `ddm_describe_line_rate_distortion_bracket_v1`
 Axis: `[macOS-CPU frozen-scorer advisory]`; `score_claim=false`
 
 ## Receiver map
