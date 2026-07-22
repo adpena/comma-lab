@@ -34,11 +34,14 @@ from tac.optimization.direct_description_entropy_priced_member import (
     _v7_candidate_verdict_scope,
     _v7_discrete_waterfill,
     _v7_load_completed_receipt,
+    _v7_zip_members,
     _v8_bridge_distances,
     _v8_finalize_resize_preimage,
+    _v8_inherited_reference,
     _v8_resize_preimage_accumulator,
     _v8_section_masks,
     _xi_pose6_keyframes,
+    _zip_stored,
     build_entropy_candidate_z,
     compile_composed_structured_member_archive,
     compile_margin_gated_correction_archive,
@@ -47,6 +50,7 @@ from tac.optimization.direct_description_entropy_priced_member import (
     parse_structured_member_archive,
     receive_solved_plane_tolerance_archive,
     receive_structured_member_archive,
+    rfc8785_canonicalize,
     run_entropy_candidate_stages,
     run_entropy_rung_stages,
     run_structured_candidate_stages,
@@ -863,6 +867,34 @@ def test_v8_bridge_distances_require_nested_settled_schema() -> None:
         _v8_bridge_distances({"evaluator_bridge": {"d_seg": "0.001", "d_pose": "0.0002"}})
 
 
+def test_v8_inherited_endpoint_adds_the_joint_pose_guard() -> None:
+    config = DirectDescriptionMarginGatedCorrectionConfigV1(
+        pair_start=448,
+        pair_count=64,
+        v7_receipt_path="v7.json",
+        v7_receipt_sha256="3" * 64,
+        upstream_root="/absolute/upstream",
+        scorer_threads=1,
+    )
+    v7_receipt = {
+        "candidates": [
+            {
+                "policy_name": "exact_all",
+                "archive": {"bytes": 43112153, "sha256": "4" * 64},
+                "evaluator_bridge": {
+                    "segmentation": {"d_seg": "0.000171422958"},
+                    "pose": {"d_pose": "0.000081666650"},
+                },
+                "gates": {"d_seg_le_0_00116": True},
+            }
+        ]
+    }
+    inherited = _v8_inherited_reference(config, v7_receipt, candidate_index=4)
+    assert inherited["candidate_index"] == 4
+    assert inherited["gates"]["joint_seg_pose_guard"] is True
+    assert inherited["source_receipt_sha256"] == "3" * 64
+
+
 def test_v8_archive_reuses_receiver_without_scorer_or_argmax_table() -> None:
     predictor, _ = compile_composed_structured_member_archive(
         compile_entropy_chart_archive(_structured_fixture_z()).archive,
@@ -894,6 +926,12 @@ def test_v8_archive_reuses_receiver_without_scorer_or_argmax_table() -> None:
     assert receiver.custody["scorer_weights_present"] is False
     assert receiver.custody["mask_semantics_required_by_receiver"] is False
     assert sum(row["zip_home_bytes"] for row in homes) == len(archive)
+    members, _ = _v7_zip_members(archive)
+    weakened = json.loads(members["manifest.json"])
+    weakened["mask_semantics_required_by_receiver"] = True
+    members["manifest.json"] = rfc8785_canonicalize(weakened)
+    with pytest.raises(DirectDescriptionError, match="manifest custody"):
+        receive_solved_plane_tolerance_archive(_zip_stored(members))
 
 
 def test_v8_solved_argmax_strata_partition_and_resize_nullity_is_measured() -> None:

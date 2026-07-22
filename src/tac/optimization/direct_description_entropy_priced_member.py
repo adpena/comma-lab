@@ -4164,6 +4164,7 @@ def receive_solved_plane_tolerance_archive(archive: bytes) -> SolvedPlaneToleran
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise DirectDescriptionError("v7 correction manifest is invalid JSON") from exc
     schema = manifest.get("schema")
+    margin_gated = schema == "direct_description_margin_gated_correction_archive.v1"
     if (
         schema
         not in {
@@ -4173,6 +4174,16 @@ def receive_solved_plane_tolerance_archive(archive: bytes) -> SolvedPlaneToleran
         or rfc8785_canonicalize(manifest) != members["manifest.json"]
         or manifest.get("ground_truth_argmax_table_present") is not False
         or manifest.get("scorer_weights_present") is not False
+        or (
+            margin_gated
+            and (
+                manifest.get("tau") not in V8_TAU_LADDER
+                or manifest.get("policy_name")
+                != f"margin_tau_{str(manifest.get('tau')).replace('.', 'p')}"
+                or manifest.get("mask_semantics_required_by_receiver") is not False
+            )
+        )
+        or (not margin_gated and manifest.get("section_semantics_shipped") is not False)
     ):
         raise DirectDescriptionError("v7 correction manifest custody is invalid")
     predictor_bytes = members["predictor.zip"]
@@ -5035,6 +5046,148 @@ def _v8_bridge_distances(row: Mapping[str, Any]) -> tuple[Decimal, Decimal]:
     return d_seg, d_pose
 
 
+def _v8_inherited_reference(
+    config: DirectDescriptionMarginGatedCorrectionConfigV1,
+    v7_receipt: Mapping[str, Any],
+    *,
+    candidate_index: int,
+) -> dict[str, Any]:
+    try:
+        inherited = next(row for row in v7_receipt["candidates"] if row["policy_name"] == "exact_all")
+    except (KeyError, StopIteration, TypeError) as exc:
+        raise DirectDescriptionError("v8 bound v7 receipt lacks its settled exact endpoint") from exc
+    inherited_d_seg, inherited_d_pose = _v8_bridge_distances(inherited)
+    inherited_gates = {
+        **dict(inherited["gates"]),
+        "d_pose_le_0_00025": inherited_d_pose <= Decimal(config.pose_guard_d_pose),
+        "joint_seg_pose_guard": (
+            inherited_d_seg <= Decimal(config.target_d_seg)
+            and inherited_d_pose <= Decimal(config.pose_guard_d_pose)
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    return {
+        "candidate_index": candidate_index,
+        "policy_name": "inherited_v7_exact_all",
+        "tau": "infinity_reference_not_rederived",
+        "archive": dict(inherited["archive"]),
+        "evaluator_bridge": inherited["evaluator_bridge"],
+        "inherited_settled_reference": True,
+        "source_receipt_path": config.v7_receipt_path,
+        "source_receipt_sha256": config.v7_receipt_sha256,
+        "gates": inherited_gates,
+        "verdict_scope": "settled v7 exact row bound by SHA; consumed without remeasurement",
+    }
+
+
+def _v8_validate_completed_candidate(
+    *,
+    config: DirectDescriptionMarginGatedCorrectionConfigV1,
+    root: Path,
+    receipt: Mapping[str, Any],
+    candidate_index: int,
+    tau: str,
+    row: Mapping[str, Any],
+) -> None:
+    policy_name = f"margin_tau_{tau.replace('.', 'p')}"
+    if (
+        row.get("candidate_index") != candidate_index
+        or row.get("policy_name") != policy_name
+        or row.get("tau") != tau
+    ):
+        raise DirectDescriptionError("v8 completed candidate order differs from the typed tau ladder")
+    checkpoint_path = root / "candidate_receipts" / f"{candidate_index:02d}_{policy_name}.json"
+    checkpoint = json.loads(_read_regular_file_once(checkpoint_path))
+    semantic_argv = receipt.get("semantic_argv")
+    if (
+        not isinstance(semantic_argv, list)
+        or not semantic_argv
+        or not all(isinstance(item, str) for item in semantic_argv)
+        or checkpoint.get("schema") != "direct_description_margin_gated_candidate_checkpoint.v1"
+        or checkpoint.get("typed_config_sha256") != config.typed_config_hash()
+        or checkpoint.get("dsl_compile_hash") != config.dsl_compile_hash()
+        or checkpoint.get("semantic_argv") != semantic_argv
+        or checkpoint.get("semantic_argv_sha256") != _sha256("\0".join(semantic_argv).encode())
+        or checkpoint.get("completed_candidate_index") != candidate_index
+        or checkpoint.get("next_candidate_index") != candidate_index + 1
+        or checkpoint.get("candidate") != row
+    ):
+        raise DirectDescriptionError("v8 completed candidate checkpoint custody differs")
+
+    tau_root = root / "tau_checkpoints" / f"tau_{tau.replace('.', 'p')}"
+    tau_receipt = json.loads(_read_regular_file_once(tau_root / "tau_receipt.json"))
+    frame_digests = tau_receipt.get("frame_sha256")
+    section_rows = tau_receipt.get("sections")
+    if (
+        tau_receipt.get("schema") != "direct_description_margin_gated_tau_checkpoint.v1"
+        or tau_receipt.get("typed_config_sha256") != config.typed_config_hash()
+        or tau_receipt.get("v7_receipt_sha256") != config.v7_receipt_sha256
+        or tau_receipt.get("predictor_sha256") != receipt.get("predictor", {}).get("sha256")
+        or tau_receipt.get("tau") != tau
+        or tau_receipt.get("mask_measurement") != row.get("mask_measurement")
+        or tau_receipt.get("all_stage_checkpoints_preserved") is not True
+        or not isinstance(frame_digests, list)
+        or len(frame_digests) != 6
+        or not isinstance(section_rows, list)
+        or len(section_rows) != 6
+    ):
+        raise DirectDescriptionError("v8 completed tau checkpoint custody differs")
+
+    sections: list[PlaneCorrectionSectionBuildV1] = []
+    for section_id, (digest, section_row) in enumerate(zip(frame_digests, section_rows, strict=True)):
+        payload = _read_bound_file(
+            tau_root / f"section_{section_id}.bin",
+            str(digest),
+            "v8 tau section",
+        )
+        section = replace(
+            parse_plane_correction_section(payload),
+            candidate_rows=tuple(section_row.get("candidate_rows", ())),
+        )
+        if section.ledger_row() != section_row:
+            raise DirectDescriptionError("v8 completed tau section ledger differs from frame bytes")
+        sections.append(section)
+
+    archive = row.get("archive", {})
+    payload = _read_bound_file(Path(archive.get("path", "")), str(archive.get("sha256", "")), "v8 archive")
+    if len(payload) != archive.get("bytes"):
+        raise DirectDescriptionError("v8 completed candidate archive length mismatch")
+    members, homes = _v7_zip_members(payload)
+    receiver = receive_solved_plane_tolerance_archive(payload)
+    manifest = json.loads(members["manifest.json"])
+    if (
+        receiver.custody.get("schema") != "direct_description_margin_gated_correction_receiver.v1"
+        or manifest.get("tau") != tau
+        or manifest.get("policy_name") != policy_name
+        or manifest.get("predictor", {}).get("sha256") != receipt.get("predictor", {}).get("sha256")
+        or [
+            _sha256(members[f"correction/section_{section_id}.bin"])
+            for section_id in range(6)
+        ]
+        != frame_digests
+    ):
+        raise DirectDescriptionError("v8 completed candidate archive differs from tau custody")
+    home_by_name = {home["name"]: home for home in homes}
+    mask_by_stratum = {
+        stream["stratum"]: stream for stream in row["mask_measurement"]["per_stream"]
+    }
+    expected_streams = []
+    for section_name, section in zip(V7_SECTION_NAMES, sections, strict=True):
+        expected_streams.append(
+            {
+                "stratum": section_name,
+                **section.ledger_row(),
+                **mask_by_stratum[section_name],
+                "final_zip_home_bytes": home_by_name[
+                    f"correction/section_{section.section_id}.bin"
+                ]["zip_home_bytes"],
+            }
+        )
+    if row.get("stream_bytes") != expected_streams:
+        raise DirectDescriptionError("v8 completed per-stream ledger differs from exact archive homes")
+
+
 def _v8_load_completed_receipt(
     config: DirectDescriptionMarginGatedCorrectionConfigV1,
     root: Path,
@@ -5062,20 +5215,32 @@ def _v8_load_completed_receipt(
     if receipt.get("producer") != expected_producer:
         raise DirectDescriptionError("v8 completed receipt producer custody differs from committed sources")
     candidates = receipt.get("candidates")
-    if not isinstance(candidates, list) or len(candidates) != len(V8_TAU_LADDER):
+    if (
+        not isinstance(candidates, list)
+        or len(candidates) != len(V8_TAU_LADDER)
+        or receipt.get("candidate_table_sha256") != _sha256(rfc8785_canonicalize(candidates))
+    ):
         raise DirectDescriptionError("v8 completed receipt candidate table is incomplete")
-    for row in candidates:
-        archive = row.get("archive", {})
-        payload = _read_bound_file(Path(archive.get("path", "")), str(archive.get("sha256", "")), "v8 archive")
-        if len(payload) != archive.get("bytes"):
-            raise DirectDescriptionError("v8 completed candidate archive length mismatch")
-    for tau in V8_TAU_LADDER:
-        tau_root = root / "tau_checkpoints" / f"tau_{tau.replace('.', 'p')}"
-        tau_receipt = json.loads(_read_regular_file_once(tau_root / "tau_receipt.json"))
-        if tau_receipt.get("typed_config_sha256") != config.typed_config_hash() or tau_receipt.get("tau") != tau:
-            raise DirectDescriptionError("v8 completed tau checkpoint custody mismatch")
-        for section_id, digest in enumerate(tau_receipt.get("frame_sha256", [])):
-            _read_bound_file(tau_root / f"section_{section_id}.bin", str(digest), "v8 tau section")
+    expected_checkpoint_paths = []
+    for candidate_index, (tau, row) in enumerate(zip(V8_TAU_LADDER, candidates, strict=True)):
+        _v8_validate_completed_candidate(
+            config=config,
+            root=root,
+            receipt=receipt,
+            candidate_index=candidate_index,
+            tau=tau,
+            row=row,
+        )
+        expected_checkpoint_paths.append(
+            str(root / "candidate_receipts" / f"{candidate_index:02d}_margin_tau_{tau.replace('.', 'p')}.json")
+        )
+    if receipt.get("resume", {}).get("candidate_checkpoints") != expected_checkpoint_paths:
+        raise DirectDescriptionError("v8 completed receipt resume paths differ from preserved candidates")
+    v7_receipt = _read_bound_json(Path(config.v7_receipt_path), config.v7_receipt_sha256, "v7_receipt_sha256")
+    if receipt.get("inherited_exact_reference") != _v8_inherited_reference(
+        config, v7_receipt, candidate_index=len(candidates)
+    ):
+        raise DirectDescriptionError("v8 completed inherited endpoint differs from SHA-bound v7")
     return receipt, receipt_path
 
 
@@ -5253,30 +5418,7 @@ def run_margin_gated_correction(
         _publish_or_verify(checkpoint_path, rfc8785_canonicalize(checkpoint) + b"\n")
         rows.append(row)
         checkpoint_paths.append(str(checkpoint_path))
-    inherited = next(row for row in v7_receipt["candidates"] if row["policy_name"] == "exact_all")
-    inherited_d_seg, inherited_d_pose = _v8_bridge_distances(inherited)
-    inherited_gates = {
-        **dict(inherited["gates"]),
-        "d_pose_le_0_00025": inherited_d_pose <= Decimal(config.pose_guard_d_pose),
-        "joint_seg_pose_guard": (
-            inherited_d_seg <= Decimal(config.target_d_seg)
-            and inherited_d_pose <= Decimal(config.pose_guard_d_pose)
-        ),
-        "score_claim": False,
-        "promotion_eligible": False,
-    }
-    inherited_reference = {
-        "candidate_index": len(rows),
-        "policy_name": "inherited_v7_exact_all",
-        "tau": "infinity_reference_not_rederived",
-        "archive": dict(inherited["archive"]),
-        "evaluator_bridge": inherited["evaluator_bridge"],
-        "inherited_settled_reference": True,
-        "source_receipt_path": config.v7_receipt_path,
-        "source_receipt_sha256": config.v7_receipt_sha256,
-        "gates": inherited_gates,
-        "verdict_scope": "settled v7 exact row bound by SHA; consumed without remeasurement",
-    }
+    inherited_reference = _v8_inherited_reference(config, v7_receipt, candidate_index=len(rows))
     measured_ladder = [*rows, inherited_reference]
     qualifying = [row for row in measured_ladder if row["gates"]["d_seg_le_0_00116"]]
     joint_qualifying = [row for row in measured_ladder if row["gates"].get("joint_seg_pose_guard", False)]
