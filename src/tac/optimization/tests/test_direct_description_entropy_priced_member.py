@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import lzma
 import struct
+from decimal import Decimal
 from pathlib import Path
 
 import numpy as np
@@ -22,6 +23,7 @@ from tac.optimization.direct_description_entropy_priced_member import (
     _amortize_chart_z,
     _amortize_structured_sources,
     _decode_site_records,
+    _derived_membership_proxy,
     _encode_site_records,
     _xi_pose6_keyframes,
     build_entropy_candidate_z,
@@ -582,6 +584,14 @@ def test_v6_xi_schedule_is_counted_pose_derived_and_gap_bounded() -> None:
     assert first[0] == 0
     assert max(right - left for left, right in zip(first, (*first[1:], 64), strict=True)) <= 24
     assert receipt["unmeasured_motion_threshold_invented"] is False
+
+
+def test_v6_membership_proxy_is_an_explicit_triangle_bound() -> None:
+    proxy = _derived_membership_proxy("0.044353087743", measured_control="0.955627997716")
+    assert proxy["status"] == "MEASURED_CONTROL_PLUS_DERIVED_BOUND"
+    assert Decimal(proxy["same_c1_argmax_cell_fraction_lower"]) <= Decimal("0.955627997716")
+    assert Decimal(proxy["same_c1_argmax_cell_fraction_upper"]) >= Decimal("0.955627997716")
+    assert proxy["score_claim"] is False
 
 
 def test_v6_structured_hold_reuses_keyed_events_but_keeps_static_once() -> None:

@@ -1005,6 +1005,7 @@ V6_CANDIDATE_MODES: Final = (
 V6_TARGET_DSEG_TEXT: Final = "0.001160000000"
 V6_S4_KNEE_DSEG_TEXT: Final = "0.016000000000"
 V6_S4_KNEE_BYTES: Final = 216_207
+V6_C1_GT_MATCH_FRACTION_TEXT: Final = "0.999873638153"
 
 
 class DirectDescriptionDsegBridgeAmortizeConfigV1(BaseModel):
@@ -3067,6 +3068,25 @@ def _distribution(values: Sequence[float]) -> dict[str, str]:
     }
 
 
+def _derived_membership_proxy(d_seg_text: str, *, measured_control: str | None = None) -> dict[str, Any]:
+    d_seg = Decimal(d_seg_text)
+    target_escape = Decimal(1) - Decimal(V6_C1_GT_MATCH_FRACTION_TEXT)
+    center = Decimal(1) - d_seg
+    lower = max(Decimal(0), center - target_escape)
+    upper = min(Decimal(1), center + target_escape)
+    return {
+        "status": "MEASURED_CONTROL_PLUS_DERIVED_BOUND" if measured_control is not None else "DERIVED_BOUND",
+        "same_c1_argmax_cell_fraction_measured": measured_control,
+        "same_c1_argmax_cell_fraction_lower": f"{lower:.12f}",
+        "same_c1_argmax_cell_fraction_upper": f"{upper:.12f}",
+        "derivation": "triangle inequality between described-vs-GT d_seg and settled C1-vs-GT escape mass",
+        "settled_c1_gt_match_fraction": V6_C1_GT_MATCH_FRACTION_TEXT,
+        "settled_c1_gt_escape_fraction": f"{target_escape:.12f}",
+        "not_remeasured": measured_control is None,
+        "score_claim": False,
+    }
+
+
 def _load_posenet_oracle(
     upstream_root: Path,
     *,
@@ -3450,6 +3470,10 @@ def run_dseg_bridge_amortize(
             },
             "chart": chart_build.custody(),
             "evaluator_bridge": bridge,
+            "membership_proxy": _derived_membership_proxy(
+                bridge["segmentation"]["d_seg"],
+                measured_control=v5_receipt["membership"]["overall"] if mode == "v5_exact" else None,
+            ),
             "gates": {
                 "task_613_d_seg_le_0_00116": d_seg <= Decimal(V6_TARGET_DSEG_TEXT),
                 "s4_knee_d_seg_le_0_016": d_seg <= Decimal(V6_S4_KNEE_DSEG_TEXT),
