@@ -16,11 +16,11 @@ SPEC.loader.exec_module(measure)
 
 def test_cap_arithmetic_and_exact_archive_ratios() -> None:
     result = measure.cap_accounting()
-    assert result["rate_component_exact"] == "3865000/37545489"
-    assert result["remaining_sub_0_15_distortion_budget_exact"] == ("35336467/750909780")
-    assert result["rate_component"] == pytest.approx(25 * 154_600 / 37_545_489)
-    assert measure._archive_accounting(90_566)["cap_ratio_exact"] == "45283/77300"
-    assert measure._archive_accounting(451_191)["cap_ratio"] == pytest.approx(2.9184411384217337)
+    assert result["rate_component_exact"] == "1287700/12515163"
+    assert result["remaining_sub_0_15_distortion_budget_exact"] == ("11791489/250303260")
+    assert result["rate_component"] == pytest.approx(25 * 154_524 / 37_545_489)
+    assert measure._archive_accounting(90_566)["cap_ratio_exact"] == "45283/77262"
+    assert measure._archive_accounting(451_191)["cap_ratio"] == pytest.approx(2.9198765240351015)
 
 
 def test_vp_sensitivity_uses_measured_p50_and_labels_causal_null() -> None:
@@ -138,6 +138,21 @@ def test_current_v9_missing_surfaces_never_become_zero_byte_measurements() -> No
     assert result["diagnostic_is_archive"] is False
     assert result["historical_65172_byte_diagnostic"]["bytes"] == 65_172
     assert result["verdict"] == "NO_VERDICT_RECEIVER_RATE_CUSTODY"
+
+
+def test_requested_v9_refuses_nonlocal_deflate_receiver_rate_custody(tmp_path: Path) -> None:
+    custody_path = tmp_path / "receiver_rate_custody.json"
+    custody_path.write_text(
+        json.dumps(
+            {
+                "schema": "direct_description_receiver_rate_custody.v1",
+                "candidate_role": "fresh_primary_candidate",
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(measure.CustodyError, match="UNSUPPORTED_NONLOCAL_DEFLATE_ATTRIBUTION"):
+        measure.requested_v9_row(receiver_rate_custody_path=custody_path)
 
 
 def test_atomic_and_compact_receipt_bytes_are_deterministic(tmp_path: Path) -> None:

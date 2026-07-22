@@ -15,6 +15,7 @@ import math
 import os
 import re
 import shutil
+import sys
 import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from fractions import Fraction
@@ -22,6 +23,9 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 BEV_ROOT = Path("/Volumes/VertigoDataTier/pact/evidence/bev_staticity_v2_20260721/canonical_v1")
 M1_ROOT = Path("/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721")
 S4_ROOT = Path("/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721")
@@ -93,7 +97,9 @@ V9_REQUIRED_MODULES = (
 V9_RECEIPT_REL = ".omx/research/recursive_fractal_optimal_representation_v9_measurement_receipt_20260714.json"
 FRAME_COUNT = 600
 SOURCE_BYTES = 37_545_489
-CAP_BYTES = 154_600
+# Full-precision ceil-minus-one crossing corrected by the Task #603 PRIMARY
+# custody audit.  154,600 was a stale displayed approximation.
+CAP_BYTES = 154_524
 EXPECTED_POINTER = "0.1910828242"
 CLASS_NAMES = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
 CLASS_NAME_FROM_M1 = {"Undriv": "Undrivable"}
@@ -920,7 +926,10 @@ def _validate_s4() -> tuple[dict[str, Any], dict[str, str]]:
     }
 
 
-def requested_v9_row(repo_root: Path = REPO_ROOT) -> dict[str, Any]:
+def requested_v9_row(
+    repo_root: Path = REPO_ROOT,
+    receiver_rate_custody_path: Path | None = None,
+) -> dict[str, Any]:
     receipt, _ = _read_json(
         repo_root / V9_RECEIPT_REL,
         expected_sha256=REPO_INPUT_SHA256[V9_RECEIPT_REL],
@@ -939,7 +948,7 @@ def requested_v9_row(repo_root: Path = REPO_ROOT) -> dict[str, Any]:
     if authority.get("exact_evaluator_called") is not True:
         missing.append("exact_evaluator_receipt")
     missing.extend(("parser_consumed_section_registry", "unique_home_byte_attribution"))
-    dimensions = {
+    dimensions: dict[str, dict[str, Any]] = {
         name: {
             "settled_optimal_form": form,
             "exact_composed_bytes": None,
@@ -947,7 +956,7 @@ def requested_v9_row(repo_root: Path = REPO_ROOT) -> dict[str, Any]:
         }
         for name, form in V9_DIMENSIONS.items()
     }
-    return {
+    row = {
         "name": "requested_v9_composition",
         "module_presence": module_presence,
         "historical_65172_byte_diagnostic": _nested(
@@ -963,6 +972,46 @@ def requested_v9_row(repo_root: Path = REPO_ROOT) -> dict[str, Any]:
         "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY",
         "verdict_scope": "current checkout and #503 custody; representation family open",
     }
+    if receiver_rate_custody_path is None:
+        return row
+    from tac.optimization.direct_description_minimizer import (
+        DirectDescriptionError,
+        validate_receiver_rate_custody,
+    )
+
+    try:
+        custody = validate_receiver_rate_custody(receiver_rate_custody_path)
+    except DirectDescriptionError as exc:
+        raise CustodyError(f"invalid direct-description receiver-rate custody: {exc}") from exc
+    missing = [] if custody["exact_evaluator_called"] else ["exact_evaluator_receipt"]
+    row.update(
+        {
+            "total_archive_bytes": custody["archive_bytes"],
+            "archive_sha256": custody["archive_sha256"],
+            "dimension_bytes": custody["dimension_bytes"],
+            "per_stratum_bytes": custody["per_stratum_bytes"],
+            "dimensions": {
+                name: {
+                    **dimensions[name],
+                    "exact_composed_bytes": custody["dimension_bytes"][name],
+                    "claim_kind": "MEASURED_PARSER_CONSUMED_UNIQUE_HOME_CUSTODY",
+                }
+                for name in V9_DIMENSIONS
+            },
+            "receiver_rate_custody": custody,
+            "missing_required_custody": missing,
+            "verdict": (
+                "RECEIVER_RATE_CUSTODY_AND_EXACT_EVAL_PRESENT"
+                if not missing
+                else "RECEIVER_RATE_CUSTODY_PRESENT_EXACT_EVAL_OWED"
+            ),
+            "verdict_scope": (
+                "one fresh exact A(z) candidate with parser-consumed unique-home bytes; "
+                "no family claim or pointer movement"
+            ),
+        }
+    )
+    return row
 
 
 def _storage_preflight(output: Path) -> dict[str, Any]:
@@ -992,13 +1041,16 @@ def build_receipt(
     repo_root: Path = REPO_ROOT,
     bev_root: Path = BEV_ROOT,
     storage_preflight: Mapping[str, Any] | None = None,
+    receiver_rate_custody_path: Path | None = None,
 ) -> dict[str, Any]:
     repo_hashes = _validate_repo_inputs(repo_root)
     pointer = _validate_pointer(repo_root)
     bev, bev_hashes, _ = _validate_bev(bev_root)
     m1, m1_hashes, treatment_rows = _validate_m1()
     s4, s4_hashes = _validate_s4()
-    v9 = requested_v9_row(repo_root)
+    v9 = requested_v9_row(repo_root, receiver_rate_custody_path)
+    receiver_rate_present = v9["verdict"] != "NO_VERDICT_RECEIVER_RATE_CUSTODY"
+    exact_eval_present = v9["verdict"] == "RECEIVER_RATE_CUSTODY_AND_EXACT_EVAL_PRESENT"
     return {
         "schema": "per_stratum_recursive_fractal_optimal_receipt.v2",
         "authority": {
@@ -1038,7 +1090,11 @@ def build_receipt(
             "cleanup_required": False,
             "inputs_read_only": True,
         },
-        "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY",
+        "verdict": (
+            "CANDIDATE_RECEIVER_RATE_CUSTODY_PRESENT"
+            if exact_eval_present
+            else ("NO_VERDICT_EXACT_EVALUATOR_CUSTODY" if receiver_rate_present else "NO_VERDICT_RECEIVER_RATE_CUSTODY")
+        ),
         "verdict_scope": (
             "current V9 composition custody only; v8/v9 carrier families and independently "
             "calibrated ground-frame treatments remain open"
@@ -1075,6 +1131,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--compact-output", type=Path)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--bev-root", type=Path, default=BEV_ROOT)
+    parser.add_argument(
+        "--receiver-rate-custody",
+        type=Path,
+        help="typed fresh A(z) parser-consumption/unique-home receipt (never a control payload sum)",
+    )
     args = parser.parse_args(argv)
     try:
         preflight = _storage_preflight(args.output)
@@ -1082,6 +1143,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             repo_root=args.repo_root,
             bev_root=args.bev_root,
             storage_preflight=preflight,
+            receiver_rate_custody_path=args.receiver_rate_custody,
         )
         _atomic_json(args.output, receipt)
         if args.compact_output is not None:
