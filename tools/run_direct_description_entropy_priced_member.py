@@ -52,6 +52,8 @@ from tac.optimization.direct_description_entropy_priced_member import (  # noqa:
     DirectDescriptionDsegBridgeAmortizeProgramV1,
     DirectDescriptionEntropyPricedMemberConfigV1,
     DirectDescriptionEntropyPricedMemberProgramV1,
+    DirectDescriptionMarginGatedCorrectionConfigV1,
+    DirectDescriptionMarginGatedCorrectionProgramV1,
     DirectDescriptionRouteFixComposeConfigV1,
     DirectDescriptionRouteFixComposeProgramV1,
     DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1,
@@ -60,6 +62,7 @@ from tac.optimization.direct_description_entropy_priced_member import (  # noqa:
     DirectDescriptionStratumStructuredMemberProgramV1,
     run_dseg_bridge_amortize,
     run_entropy_priced_member_n64,
+    run_margin_gated_correction,
     run_route_fix_composed_member,
     run_solved_plane_tolerance_waterfill,
     run_stratum_structured_member_n64,
@@ -72,6 +75,7 @@ Config = (
     | DirectDescriptionRouteFixComposeConfigV1
     | DirectDescriptionDsegBridgeAmortizeConfigV1
     | DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1
+    | DirectDescriptionMarginGatedCorrectionConfigV1
 )
 
 
@@ -89,6 +93,8 @@ def _read_config(path: Path) -> Config:
             return DirectDescriptionDsegBridgeAmortizeConfigV1.model_validate_json(payload)
         if schema == "DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1":
             return DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1.model_validate_json(payload)
+        if schema == "DirectDescriptionMarginGatedCorrectionConfigV1":
+            return DirectDescriptionMarginGatedCorrectionConfigV1.model_validate_json(payload)
         raise DirectDescriptionError(f"entropy-priced member config schema is unknown: {schema!r}")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         raise DirectDescriptionError(f"entropy-priced member typed config is unreadable: {path}") from exc
@@ -104,7 +110,17 @@ def main(argv: list[str] | None = None) -> int:
         if args.execution_allowed != "false":
             raise DirectDescriptionError("entropy-priced member solve only compiles --execution-allowed false")
         config = _read_config(args.config)
-        if isinstance(config, DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1):
+        if isinstance(config, DirectDescriptionMarginGatedCorrectionConfigV1):
+            margin_program = DirectDescriptionMarginGatedCorrectionProgramV1(
+                config_path=str(args.config),
+                output_directory=str(args.output_dir),
+            )
+            receipt, receipt_path = run_margin_gated_correction(
+                config,
+                output_directory=args.output_dir,
+                semantic_argv=margin_program.compile_consumer_argv(),
+            )
+        elif isinstance(config, DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1):
             tolerance_program = DirectDescriptionSolvedPlaneToleranceWaterfillProgramV1(
                 config_path=str(args.config),
                 output_directory=str(args.output_dir),

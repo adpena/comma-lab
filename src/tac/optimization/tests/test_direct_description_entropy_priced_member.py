@@ -19,6 +19,8 @@ from tac.optimization.direct_description_entropy_priced_member import (
     DirectDescriptionEntropyCandidateCheckpointV1,
     DirectDescriptionEntropyPricedMemberConfigV1,
     DirectDescriptionEntropyPricedMemberProgramV1,
+    DirectDescriptionMarginGatedCorrectionConfigV1,
+    DirectDescriptionMarginGatedCorrectionProgramV1,
     DirectDescriptionRouteFixComposeConfigV1,
     DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1,
     DirectDescriptionSolvedPlaneToleranceWaterfillProgramV1,
@@ -32,14 +34,23 @@ from tac.optimization.direct_description_entropy_priced_member import (
     _v7_candidate_verdict_scope,
     _v7_discrete_waterfill,
     _v7_load_completed_receipt,
+    _v7_zip_members,
+    _v8_bridge_distances,
+    _v8_finalize_resize_preimage,
+    _v8_inherited_reference,
+    _v8_resize_preimage_accumulator,
+    _v8_section_masks,
     _xi_pose6_keyframes,
+    _zip_stored,
     build_entropy_candidate_z,
     compile_composed_structured_member_archive,
+    compile_margin_gated_correction_archive,
     compile_solved_plane_tolerance_archive,
     compile_structured_member_archive,
     parse_structured_member_archive,
     receive_solved_plane_tolerance_archive,
     receive_structured_member_archive,
+    rfc8785_canonicalize,
     run_entropy_candidate_stages,
     run_entropy_rung_stages,
     run_structured_candidate_stages,
@@ -801,6 +812,146 @@ def test_v7_scope_cannot_leak_the_v6_segnet_only_axis() -> None:
     assert V7_EVIDENCE_AXIS in scope
     assert EVIDENCE_AXIS not in scope
     assert _v7_load_completed_receipt(config, Path("missing-output-root")) is None
+
+
+def test_v8_config_program_and_margin_breakpoints_are_typed() -> None:
+    config = DirectDescriptionMarginGatedCorrectionConfigV1(
+        pair_start=448,
+        pair_count=64,
+        v7_receipt_path="v7.json",
+        v7_receipt_sha256="3" * 64,
+        upstream_root="/absolute/upstream",
+        scorer_threads=1,
+    )
+    assert config.tau_ladder == ("0.000000", "0.100000", "0.500000", "1.000000")
+    assert config.pose_guard_d_pose == "0.000250000000"
+    program = DirectDescriptionMarginGatedCorrectionProgramV1(config_path="v8.json", output_directory="out")
+    assert program.compile_consumer_argv()[-2:] == ("--execution-allowed", "false")
+    with pytest.raises(ValueError, match="margin-band"):
+        DirectDescriptionMarginGatedCorrectionConfigV1(
+            pair_start=448,
+            pair_count=64,
+            v7_receipt_path="v7.json",
+            v7_receipt_sha256="3" * 64,
+            upstream_root="/absolute/upstream",
+            scorer_threads=1,
+            tau_ladder=("0.000000",),
+        )
+
+
+def test_v8_embedded_v7_config_roundtrips_through_strict_json() -> None:
+    settled = DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1(
+        pair_start=448,
+        pair_count=64,
+        v6_receipt_path="v6.json",
+        v6_receipt_sha256="1" * 64,
+        target_receipt_path="target.json",
+        target_receipt_sha256="2" * 64,
+        upstream_root="/absolute/upstream",
+        scorer_threads=1,
+    )
+    embedded_json = json.dumps(settled.model_dump(mode="json", by_alias=True)).encode()
+    parsed = DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1.model_validate_json(embedded_json)
+    assert parsed == settled
+
+
+def test_v8_bridge_distances_require_nested_settled_schema() -> None:
+    row = {
+        "evaluator_bridge": {
+            "segmentation": {"d_seg": "0.001000000000"},
+            "pose": {"d_pose": "0.000200000000"},
+        }
+    }
+    assert _v8_bridge_distances(row) == (Decimal("0.001"), Decimal("0.0002"))
+    with pytest.raises(DirectDescriptionError, match="nested Seg/Pose"):
+        _v8_bridge_distances({"evaluator_bridge": {"d_seg": "0.001", "d_pose": "0.0002"}})
+
+
+def test_v8_inherited_endpoint_adds_the_joint_pose_guard() -> None:
+    config = DirectDescriptionMarginGatedCorrectionConfigV1(
+        pair_start=448,
+        pair_count=64,
+        v7_receipt_path="v7.json",
+        v7_receipt_sha256="3" * 64,
+        upstream_root="/absolute/upstream",
+        scorer_threads=1,
+    )
+    v7_receipt = {
+        "candidates": [
+            {
+                "policy_name": "exact_all",
+                "archive": {"bytes": 43112153, "sha256": "4" * 64},
+                "evaluator_bridge": {
+                    "segmentation": {"d_seg": "0.000171422958"},
+                    "pose": {"d_pose": "0.000081666650"},
+                },
+                "gates": {"d_seg_le_0_00116": True},
+            }
+        ]
+    }
+    inherited = _v8_inherited_reference(config, v7_receipt, candidate_index=4)
+    assert inherited["candidate_index"] == 4
+    assert inherited["gates"]["joint_seg_pose_guard"] is True
+    assert inherited["source_receipt_sha256"] == "3" * 64
+
+
+def test_v8_archive_reuses_receiver_without_scorer_or_argmax_table() -> None:
+    predictor, _ = compile_composed_structured_member_archive(
+        compile_entropy_chart_archive(_structured_fixture_z()).archive,
+        _structured_sources(),
+        pair_start=0,
+    )
+    empty = {
+        pair_id: (np.asarray([], dtype="<u4"), np.empty((0, 3), dtype=np.uint8))
+        for pair_id in range(64)
+    }
+    sections = tuple(
+        encode_plane_correction_section(
+            section_id=section_id,
+            schedule_id=CORRECTION_SCHEDULE_EVERY_PAIR,
+            n_pairs=64,
+            quant_step=1,
+            records=empty,
+        )
+        for section_id in range(6)
+    )
+    archive, homes = compile_margin_gated_correction_archive(
+        predictor_archive=predictor,
+        tau="0.100000",
+        sections=sections,
+    )
+    receiver = receive_solved_plane_tolerance_archive(archive)
+    assert receiver.custody["schema"] == "direct_description_margin_gated_correction_receiver.v1"
+    assert receiver.custody["ground_truth_argmax_table_present"] is False
+    assert receiver.custody["scorer_weights_present"] is False
+    assert receiver.custody["mask_semantics_required_by_receiver"] is False
+    assert sum(row["zip_home_bytes"] for row in homes) == len(archive)
+    members, _ = _v7_zip_members(archive)
+    weakened = json.loads(members["manifest.json"])
+    weakened["mask_semantics_required_by_receiver"] = True
+    members["manifest.json"] = rfc8785_canonicalize(weakened)
+    with pytest.raises(DirectDescriptionError, match="manifest custody"):
+        receive_solved_plane_tolerance_archive(_zip_stored(members))
+
+
+def test_v8_solved_argmax_strata_partition_and_resize_nullity_is_measured() -> None:
+    cells = np.zeros((384, 512), dtype=np.uint8)
+    for class_id in range(5):
+        cells[class_id * 70 : (class_id + 1) * 70] = class_id
+    masks = _v8_section_masks(
+        cells,
+        {"Road": 0, "Lane": 1, "Undrivable": 2, "Movable": 3, "MyCar": 4, "Boundary": None},
+    )
+    assert np.all(sum(mask.astype(np.uint8) for mask in masks) == 1)
+    delta = np.zeros((1, 2, 384, 512, 3), dtype=np.int16)
+    delta[0, 1, 0, 0, 0] = 1
+    delta[0, 1, 0, 1, 0] = -1
+    accumulated = _v8_resize_preimage_accumulator(delta)
+    probe = _v8_finalize_resize_preimage((accumulated,))
+    assert probe["active_2x2_rgb_blocks"] == 1
+    assert probe["exact_mean_zero_active_blocks"] == 1
+    assert probe["resize_rowspace_l2_energy"] == "0.000000"
+    assert probe["nullspace_energy_fraction"] == "1.000000000000"
 
 
 def test_structured_candidate_stages_resume_and_preserve_every_archive(tmp_path: Path) -> None:
