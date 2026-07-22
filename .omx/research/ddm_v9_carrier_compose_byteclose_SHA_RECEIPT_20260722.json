@@ -1,0 +1,48 @@
+{
+  "schema": "ddm_v9_carrier_compose_sha_receipt.v1",
+  "authority": {
+    "source": "launcher-owned delegated wrapped prompt",
+    "bytes": 8739,
+    "sha256": "1cdb6782c607864c23d2df6ce02b62a61893dba55475f3b557cdf795b3717de5"
+  },
+  "source": {
+    "src/tac/optimization/direct_description_carrier_compose.py": "9d8275bfdca45b3d6b25141b8f1da279aaf17cebb54d46c05b66e1f302ce643c",
+    "src/tac/optimization/tests/test_direct_description_carrier_compose.py": "736a4daaefc537e4beffc23157073d62cb76ed8cb464a2cafa7715b50231a843",
+    "tools/run_ddm_v9_carrier_compose.py": "03f77b7bd672738867bec56cea7bcda8a1674512dd63d92425511aeafb1d9a0b"
+  },
+  "configs": {
+    ".omx/research/configs/ddm_v9_carrier_compose_n64_20260722.json": "bcd539d47619a40ad847f01deee79c5e63f07c0f382dc1b431646bec8663854b",
+    ".omx/research/configs/ddm_v9_carrier_compose_n256_20260722.json": "027cff263d921ab0bb4d7e2b1ef7454f2fa0debbdc45f08f7f900f9fcf67e370"
+  },
+  "measurements": {
+    "n64_receipt": {
+      "path": ".omx/research/ddm_v9_carrier_compose_n64_603_613_20260722T122800Z/ddm_v9_carrier_compose_n64_receipt.json",
+      "sha256": "47beaefe0803157960f1e64860c599ee75a1ead287128d9ebca913ef8124ad39",
+      "archive_path": ".omx/research/ddm_v9_carrier_compose_n64_603_613_20260722T122800Z/ddm_v9_carrier_compose_n64.not_a_candidate.zip.receipt-bytes",
+      "archive_bytes": 51668,
+      "archive_sha256": "56b563f2f9fb442508134bfb144eb1dc67a07675c93e0c56ec3a569f649bac9a",
+      "build_checkpoint_sha256": "3e8c0ec2b5a9b89001fcfe4fc801d32e30d3873d5a81dfa4dd59327577063c70",
+      "measurement_checkpoint_sha256": "2aab8a6ff20f34d33b0747f3f0dac97d7dd51cc9782c1acf9d4dbb13daf229eb"
+    },
+    "n256_receipt": {
+      "path": ".omx/research/ddm_v9_carrier_compose_n256_603_613_20260722T123300Z/ddm_v9_carrier_compose_n256_receipt.json",
+      "sha256": "57cd12b103779731c2311dc364f1908e6acb476765b16ded66cd146ee076fdae",
+      "archive_path": ".omx/research/ddm_v9_carrier_compose_n256_603_613_20260722T123300Z/ddm_v9_carrier_compose_n256.not_a_candidate.zip.receipt-bytes",
+      "archive_bytes": 72397,
+      "archive_sha256": "4b26fdcc99a4d611f3a9b96e61681b53298adf32fbd300ee707479664a0f5ebd",
+      "build_checkpoint_sha256": "92949104c00531eaa019840d729a5359850a3bfb6adababfe26b57e9fa9bc4dd",
+      "measurement_checkpoint_sha256": "c6418b929fef6850e0e4127a746b381cd18931f6d7c4a892f0ac13b0bf2bdf75"
+    }
+  },
+  "documents": {
+    ".omx/research/codex_findings_ddm_v9_carrier_compose_byteclose_20260722_codex.md": "98e9fbc2fe2577709ec42fc19ec22e3857f2b4e9c8d441067309a9ba32852849",
+    ".omx/research/ddm_v9_carrier_compose_byteclose_DAG_FEED_20260722.md": "dac48d90fa572e297d36c76cfee0d92bfd25835e439a3553ad24908e9dbadf97",
+    ".omx/research/ddm_v9_carrier_compose_canonical_equations_20260722.md": "f91113a5ffa560ab6cc70d04115e9c242f72683d9344144dbe4c7c9d04338464",
+    ".omx/research/codex_session_summary_20260722T124000Z_codex.md": "af8399221b83c2b2b03e6b898fa6264a8eb4d2b832ae4ca0a15ea62485c9b6b6",
+    ".omx/research/ddm_v9_carrier_compose_byteclose_round1_review_20260722.json": "b519640b1d9b86896512ad84f47f0e427f3db8bf14390ecbb8058a6aea157bb9"
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "score_claim": false,
+  "main_landing_review_required": true
+}
