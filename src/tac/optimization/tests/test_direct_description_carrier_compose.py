@@ -12,11 +12,17 @@ import pytest
 
 from tac.optimization.direct_description_carrier_compose import (
     ARCHIVE_SCHEMA_V2,
+    ARCHIVE_SCHEMA_V3,
     BOUNDARY_CORRECTION_MEMBER,
+    BOUNDARY_SHEARLET_MEMBER,
     EVENT_CORRECTION_MEMBER,
+    ISLAND_SHAPE_MEMBER,
     BoundaryCoefficientDelta,
+    BoundaryShearletAtomV1,
     DirectDescriptionV9CarrierComposeConfigV1,
     DirectDescriptionV10FisherEventSearchConfigV1,
+    DirectDescriptionV11ObligationSearchConfigV1,
+    IslandShapeAtomV1,
     TopologyEventV1,
     compile_carrier_compose_archive,
     parse_carrier_compose_archive,
@@ -39,7 +45,12 @@ from tac.optimization.direct_description_measurement_ladder import (
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError
 from tac.optimization.predictor_upgrade_xi_chart import LaneCoefficientDelta
-from tools.run_ddm_v9_carrier_compose import _SearchCandidate, _select_diverse_candidates
+from tools.run_ddm_v9_carrier_compose import (
+    _bundle_obligation_candidates,
+    _joint_objective_delta,
+    _SearchCandidate,
+    _select_diverse_candidates,
+)
 
 
 def _z() -> DirectDescriptionChartZV1:
@@ -186,6 +197,84 @@ def test_v10_config_is_typed_candidate_search_and_budget_bounded() -> None:
         )
 
 
+def test_v11_config_binds_joint_objective_and_full_n600_window() -> None:
+    common = {
+        "run_id": "fixture_v11",
+        "v6_receipt_path": "v6.json",
+        "v6_receipt_sha256": "1" * 64,
+        "predictor_archive_path": "predictor.zip",
+        "predictor_archive_sha256": "2" * 64,
+        "upstream_root": "/absolute/upstream",
+        "scorer_threads": 1,
+    }
+    config = DirectDescriptionV11ObligationSearchConfigV1(pair_start=0, pair_count=600, **common)
+    assert config.admission_policy == "greedy_measured_joint_contest_objective_pose_tube_safety_only"
+    assert config.boundary_basis.endswith("fourier_free")
+    assert config.total_archive_ceiling_bytes == 200_000
+    assert config.score_claim is False
+    with pytest.raises(ValueError, match="v11 windows"):
+        DirectDescriptionV11ObligationSearchConfigV1(pair_start=0, pair_count=256, **common)
+
+
+def test_v11_joint_objective_can_admit_priced_pose_worsening() -> None:
+    seg_delta, pose_delta, rate_delta, joint_delta = _joint_objective_delta(
+        current_errors=10_000,
+        proposed_errors=9_000,
+        sites=64 * 384 * 512,
+        current_dpose=159.0,
+        proposed_dpose=159.001,
+        marginal_bytes=700,
+    )
+    assert seg_delta < 0.0 < pose_delta
+    assert rate_delta > 0.0
+    assert joint_delta < 0.0
+
+
+def test_v11_bundles_absolute_pair_ids_against_window_relative_batch_geometry() -> None:
+    candidates = [
+        _SearchCandidate(
+            "first",
+            "Lane/center_c0_rank4_obligation",
+            3.0,
+            (448,),
+            lane_symbols=(LaneCoefficientDelta(448, 0, 0, 1.0),),
+        ),
+        _SearchCandidate(
+            "last_in_batch",
+            "Lane/center_c0_rank4_obligation",
+            2.0,
+            (455,),
+            lane_symbols=(LaneCoefficientDelta(455, 0, 0, 1.0),),
+        ),
+        _SearchCandidate(
+            "next_batch",
+            "Lane/center_c0_rank4_obligation",
+            1.0,
+            (456,),
+            lane_symbols=(LaneCoefficientDelta(456, 0, 0, 1.0),),
+        ),
+        _SearchCandidate(
+            "crosses_batch",
+            "Lane/center_c0_rank4_obligation",
+            99.0,
+            (455, 456),
+        ),
+    ]
+    bundles = _bundle_obligation_candidates(
+        candidates,
+        pair_start=448,
+        batch_size=8,
+        maximum_bundles=2,
+        maximum_atoms=8,
+        minimum_per_family=1,
+    )
+    assert {row.candidate_id for row in bundles} == {
+        "obligation_bundle_batch_0000_lane_center",
+        "obligation_bundle_batch_0008_lane_center",
+    }
+    assert all(455 not in row.source_pair_ids or 456 not in row.source_pair_ids for row in bundles)
+
+
 def test_v10_candidate_cutoff_preserves_every_mechanism_family() -> None:
     rows = [
         _SearchCandidate(f"road_{index}", "Road/cubic_boundary_coefficients", 100.0 - index, (index,))
@@ -278,6 +367,41 @@ def test_v10_boundary_and_xi_event_vocab_are_counted_and_receiver_consumed() -> 
     assert rows[-2]["stratum"] == "road_boundary_coefficients"
     assert rows[-1]["stratum"] == "xi_topology_events"
     assert all(row["nested_unique_home_bytes"] > 0 for row in rows[-2:])
+
+
+def test_v11_obligation_atoms_are_counted_fourier_free_and_receiver_consumed() -> None:
+    predictor = _predictor()
+    lane = (LaneCoefficientDelta(0, 0, 5, 2.0),)
+    shearlets = (BoundaryShearletAtomV1(0, "Road", 200, 110, 8, 32, 0, 128),)
+    islands = (IslandShapeAtomV1(0, "birth", 1, 100, 200, 10, 18, 32, 8, -4, 12),)
+    archive, homes = compile_carrier_compose_archive(
+        predictor,
+        lane,
+        boundary_shearlets=shearlets,
+        island_shapes=islands,
+        obligation_vocabulary=True,
+    )
+    members, replay_homes = parse_carrier_compose_archive(archive)
+    receiver = receive_carrier_compose_archive(archive)
+    manifest = json.loads(members["manifest.json"])
+    assert manifest["schema"] == ARCHIVE_SCHEMA_V3
+    assert BOUNDARY_SHEARLET_MEMBER in members and ISLAND_SHAPE_MEMBER in members
+    assert "Fourier-free" in manifest["corrections"]["boundary_shearlet_atoms"]["basis"]
+    assert homes == replay_homes
+    assert receiver.boundary_shearlets == shearlets
+    assert receiver.island_shapes == islands
+    assert receiver.custody["boundary_shearlet_parse_reencode_identical"] is True
+    assert receiver.custody["island_shape_parse_reencode_identical"] is True
+    assert receiver.custody["pixel_coordinate_or_rgb_patch_present"] is False
+    assert not np.array_equal(
+        receive_carrier_compose_archive(compile_carrier_compose_archive(predictor)[0]).render_pairs((0,)),
+        receiver.render_pairs((0,)),
+    )
+    rows = recursive_carrier_byte_rows(archive)
+    assert [row["stratum"] for row in rows[-2:]] == [
+        "boundary_shearlet_obligations",
+        "movable_shape_obligations",
+    ]
 
 
 def test_v10_refuses_inert_or_out_of_window_semantic_events() -> None:

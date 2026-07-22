@@ -1,0 +1,41 @@
+{
+  "schema": "ddm_v11_obligation_cleanup_manifest.v1",
+  "created_utc": "2026-07-22T15:56:00Z",
+  "policy": "certify_or_block",
+  "entries": [
+    {
+      "original_path": ".omx/research/ddm_v11_obligation_n64_20260722T152000Z",
+      "file_bytes": 414626,
+      "sha256_tree_manifest": "87a88013dcde068f0e50c67ad82d108a78aa42af9607c6d3502e14129ae1b57c",
+      "command": ".venv/bin/python tools/run_ddm_v9_carrier_compose.py --config .omx/research/configs/ddm_v11_obligation_n64_20260722.json --output-directory .omx/research/ddm_v11_obligation_n64_20260722T152000Z",
+      "config_note": "pre-round2 config with max_atoms_per_measured_bundle=128",
+      "false_authority_flags": {
+        "score_claim": false,
+        "d_seg_claim": false,
+        "d_pose_claim": false,
+        "promotion_eligible": false
+      },
+      "deletion_reason": "invalid search formulation mixed every obligation family into one 128-atom batch proposal; superseded by family-specific round2 receipt",
+      "rebuildable": true,
+      "cold_store_destination": null
+    },
+    {
+      "original_path": ".omx/research/ddm_v11_obligation_n600_20260722T152000Z_round2",
+      "file_bytes": 733916,
+      "sha256_tree_manifest": "ffe6a287df75b9a525224041f40eae2c480770a28cb3a8558212e0b7a80b8ad7",
+      "command": ".venv/bin/python tools/run_ddm_v9_carrier_compose.py --config .omx/research/configs/ddm_v11_obligation_n600_20260722.json --output-directory .omx/research/ddm_v11_obligation_n600_20260722T152000Z_round2",
+      "config_note": "round2 search inputs; numerical archive and inventory hashes repeat byte-identically in preserved round3",
+      "false_authority_flags": {
+        "score_claim": false,
+        "d_seg_claim": false,
+        "d_pose_claim": false,
+        "promotion_eligible": false
+      },
+      "deletion_reason": "superseded receipt conflated unused near-200KB budget with exhausted vocabulary; round3 preserves identical measured bytes and correct falsifier semantics",
+      "rebuildable": true,
+      "cold_store_destination": null
+    }
+  ],
+  "ssd_write_performed": false,
+  "destructive_scope": "two explicitly named, generated, non-authoritative, superseded output directories only"
+}

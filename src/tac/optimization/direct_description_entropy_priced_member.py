@@ -960,8 +960,10 @@ class DirectDescriptionRouteFixComposeConfigV1(BaseModel):
 
     @model_validator(mode="after")
     def _valid(self) -> DirectDescriptionRouteFixComposeConfigV1:
-        if self.pair_count not in (64, 256) or self.pair_start + self.pair_count > 600:
-            raise ValueError("v5 composition window must be exactly n64 or n256 inside [0,600)")
+        if self.pair_count not in (64, 256, 600) or self.pair_start + self.pair_count > 600:
+            raise ValueError("v5 composition window must be exactly n64, n256, or n600 inside [0,600)")
+        if self.pair_count == 600 and self.pair_start != 0:
+            raise ValueError("v5 n600 composition must bind the full [0,600) window")
         probe_stop = self.routing_probe_start + self.routing_probe_count
         if not self.pair_start <= self.routing_probe_start or probe_stop > self.pair_start + self.pair_count:
             raise ValueError("routing probe must be contained in the composed state window")
@@ -1051,12 +1053,15 @@ class DirectDescriptionDsegBridgeAmortizeConfigV1(BaseModel):
 
     @model_validator(mode="after")
     def _valid(self) -> DirectDescriptionDsegBridgeAmortizeConfigV1:
-        if self.pair_count not in (64, 256) or self.pair_start + self.pair_count > 600:
-            raise ValueError("v6 measurement window must be exactly n64 or n256 inside [0,600)")
+        if self.pair_count not in (64, 256, 600) or self.pair_start + self.pair_count > 600:
+            raise ValueError("v6 measurement window must be exactly n64, n256, or n600 inside [0,600)")
+        if self.pair_count == 600 and self.pair_start != 0:
+            raise ValueError("v6 n600 measurement must bind the full [0,600) window")
         for name in ("v5_receipt_sha256", "v5_archive_sha256"):
             _require_sha256(getattr(self, name), name)
-        if self.candidate_modes != V6_CANDIDATE_MODES:
-            raise ValueError(f"candidate_modes must be exactly {V6_CANDIDATE_MODES!r}")
+        expected_modes = ("fixed_ar1_hold24",) if self.pair_count == 600 else V6_CANDIDATE_MODES
+        if self.candidate_modes != expected_modes:
+            raise ValueError(f"candidate_modes must be exactly {expected_modes!r} for n{self.pair_count}")
         return self
 
     def typed_config_hash(self) -> str:
@@ -3551,7 +3556,7 @@ def run_dseg_bridge_amortize(
         max_gap=config.max_key_gap,
     )
     fixed_keys = tuple(range(0, config.pair_count, config.max_key_gap))
-    candidates_spec = (
+    all_candidates_spec = (
         ("v5_exact", baseline_z, sources, tuple(range(config.pair_count))),
         (
             "fixed_ar1_hold24",
@@ -3587,6 +3592,9 @@ def run_dseg_bridge_amortize(
             (0,),
         ),
     )
+    candidates_spec = tuple(row for row in all_candidates_spec if row[0] in config.candidate_modes)
+    if tuple(row[0] for row in candidates_spec) != config.candidate_modes:
+        raise DirectDescriptionError("v6 candidate materialization order differs from the typed candidate modes")
     segnet_oracle, segnet_custody = _load_segnet_oracle(Path(v5_config.upstream_root), threads=config.scorer_threads)
     posenet_oracle, posenet_custody = _load_posenet_oracle(Path(v5_config.upstream_root), threads=config.scorer_threads)
     rows: list[dict[str, Any]] = []
@@ -3741,7 +3749,8 @@ def run_dseg_bridge_amortize(
             "archive_path": config.v5_archive_path,
             "archive_bytes": len(v5_archive),
             "archive_sha256": config.v5_archive_sha256,
-            "exact_recompilation_identical": True,
+            "exact_recompilation_identical": "v5_exact" in config.candidate_modes,
+            "exact_recompilation_not_requested": "v5_exact" not in config.candidate_modes,
         },
         "xi_schedule": xi_receipt,
         "candidates": rows,
@@ -3764,7 +3773,7 @@ def run_dseg_bridge_amortize(
         "resume": {
             "policy": config.checkpoint_policy,
             "candidate_checkpoints": checkpoint_paths,
-            "all_preserved": len(checkpoint_paths) == len(V6_CANDIDATE_MODES),
+            "all_preserved": len(checkpoint_paths) == len(config.candidate_modes),
             "atomic_publish": True,
             "max_work_loss": "current candidate only",
         },
@@ -3773,7 +3782,11 @@ def run_dseg_bridge_amortize(
             "V5_ACTUAL_DPOSE": "RED_TO_GREEN_LOCAL_OFFICIAL_YUV6_POSENET_ADVISORY",
             "PER_PAIR_AND_STRATUM_DISTRIBUTIONS": "RED_TO_GREEN",
             "TEMPORAL_BYTES_PER_PAIR_LE_300": "REQUIRES_N64_N256_CROSS_WINDOW_RECEIPT",
-            "N600_EVALUATOR_BRIDGE": "REMAINS_RED_TIME_BOUND_NOT_RUN",
+            "N600_EVALUATOR_BRIDGE": (
+                "RED_TO_GREEN_LOCAL_FROZEN_SCORER_ADVISORY"
+                if config.pair_count == 600
+                else "REMAINS_RED_TIME_BOUND_NOT_RUN"
+            ),
             "CONTEST_CPU_CUDA_SCORE": "REMAINS_RED_NOT_AUTHORIZED",
         },
         "storage_preflight": storage,
