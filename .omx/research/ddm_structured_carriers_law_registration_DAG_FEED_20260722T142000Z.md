@@ -77,4 +77,3 @@ dispatch occurred.
 STORES CONSULTED: delegated authority; governing manuals/specs; all ten DDM equation drafts; v7,
 v8, and v9 receipts/memos/FEEDs; SegNet ERF factorization; Brenier and Splay crosswalks; canonical
 equation/anti-pattern source and registries; current pointer/lane/task/subagent state; both inboxes.
-

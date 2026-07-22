@@ -74,4 +74,3 @@ canonical anti-pattern taxonomy; SegNet ERF factorization; Brenier/Splay crosswa
 DAG, pointer, lane, task, and subagent stores; delegated inboxes.
 
 `0.1910828242 [contest-CPU]` is unchanged. MAIN landing review is required.
-
