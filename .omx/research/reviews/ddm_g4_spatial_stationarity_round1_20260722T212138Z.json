@@ -1,0 +1,57 @@
+{
+  "schema": "ddm_g4_spatial_stationarity_adversarial_review.v1",
+  "review_id": "ddm_g4_spatial_stationarity_round1_20260722T212138Z",
+  "round": 1,
+  "reviewer": "codex-self-adversarial",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "receipt_sha256": "bea555b95aeaa11f4209df5333010c41c5495dd789def2a4f7a2a91973f3408c",
+  "checks": {
+    "authority_and_pointer": "PASS",
+    "flip_total_closure_4011236": "PASS",
+    "stationarity_partition_closure": "PASS",
+    "typed_ledger_rows_17": "PASS",
+    "receipt_custody_rows_21": "PASS",
+    "png_geometry_1152x864_rgba": "PASS",
+    "hash_validated_resume_0p36_seconds": "PASS",
+    "focused_tests_8": "PASS",
+    "score_claim_false": "PASS",
+    "physical_bev_fraction_null": "PASS",
+    "main_landing_review_required": "PASS"
+  },
+  "findings": [
+    {
+      "finding_id": "R1-F1",
+      "severity": "HIGH",
+      "finding": "Receiver pose6_codes are ordinal rank codes and cannot be inserted into the metric G1 homography.",
+      "disposition": "FIXED",
+      "fix": "Use SHA-bound target-cache metric Pose6; mark cross-pair transport mismatch and non-free side information; keep physical BEV null."
+    },
+    {
+      "finding_id": "R1-F2",
+      "severity": "MEDIUM",
+      "finding": "NumPy 2.4 Accelerate small-matrix matmul reported invalid floating-point flags on finite inputs.",
+      "disposition": "FIXED",
+      "fix": "Use explicit deterministic scalar ufunc products with finite checks and raise-on-overflow."
+    },
+    {
+      "finding_id": "R1-F3",
+      "severity": "MEDIUM",
+      "finding": "A stale 03_outputs_complete checkpoint from a prior rerun could enter the new receipt and then be overwritten, breaking resume custody.",
+      "disposition": "FIXED",
+      "fix": "Exclude the final marker from scientific receipt inputs; validate outputs, compact outputs, and source files on resume."
+    },
+    {
+      "finding_id": "R1-F4",
+      "severity": "SCOPE",
+      "finding": "The old #141 margin-saliency measurement is vehicle-relative to bc20 and no current v12 predictor-margin tensor is retained.",
+      "disposition": "BLOCKER_RETAINED",
+      "fix": "Report aggregate-pixel context separately; label boundary-distance as a topology proxy and require current predictor-margin custody before a margin-context claim."
+    }
+  ],
+  "verdict": "CLEAN_AFTER_FIXES_WITH_SCOPED_SUCCESSOR_BLOCKERS",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}
