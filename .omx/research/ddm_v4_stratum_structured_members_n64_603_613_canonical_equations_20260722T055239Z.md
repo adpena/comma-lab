@@ -66,3 +66,5 @@ Delta_Q(k,n_i,n_j) = Q(k,n_j) - Q(k,n_i)
 The measured `Q` curve is the bit-allocator input.  `Q(Movable,n)=62` for all measured prefixes
 because the first 64 frames contain zero Movable PCE3 records; this is a scoped empty-support
 result, not a dead-family verdict.
+
+CONSUMED-BY: `ddm_describe_line_rate_distortion_bracket_v1` structured-stratum lineage; registration landing `.omx/research/ddm_structured_carriers_law_registration_20260722T142000Z.md`; MAIN review required.

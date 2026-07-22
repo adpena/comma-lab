@@ -103,3 +103,5 @@ evaluator:
 authority: macOS CPU frozen SegNet/PoseNet advisory only
 score_claim: false
 ```
+
+CONSUMED-BY: `ddm_describe_line_rate_distortion_bracket_v1` evaluator bridge and measured amortization lineage; registration landing `.omx/research/ddm_structured_carriers_law_registration_20260722T142000Z.md`; MAIN review required.
