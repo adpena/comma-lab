@@ -82922,7 +82922,14 @@
           "evidence": ""
         }
       },
-      "notes": "Research-only measured coder selection over six real streams; feeds Task 603 v3 and Task 613."
+      "notes": "Measured six real stream coder assignments; exceptions global Brotli is the first exact probe, sparse events remain a representation blocker, no score/candidate/pointer authority, MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Measure global exception recode as exact final-ZIP delta with receiver parse-back",
+        "Measure raw versus Rice on actual signed dxi stream",
+        "Reduce event and PPCS representation before coder-only retry",
+        "MAIN review and merge"
+      ]
     }
   ],
   "level_rules": {
@@ -82932,5 +82939,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T04:44:38Z"
+  "updated_at": "2026-07-22T05:01:24Z"
 }
