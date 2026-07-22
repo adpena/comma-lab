@@ -52,6 +52,7 @@ from tools.run_ddm_v9_carrier_compose import (
     _BatchScore,
     _bundle_obligation_candidates,
     _bundle_obligation_candidates_full_drain,
+    _consecutive_flat_budget_tail_rungs,
     _joint_objective_delta,
     _load_batch_score_cache,
     _rank_values,
@@ -367,6 +368,27 @@ def test_v12_batch_score_cache_is_immutable_compact_roundtrip(tmp_path: Path) ->
 def test_v12_spearman_ranks_average_ties() -> None:
     values = np.asarray([3.0, 1.0, 1.0, 2.0, 3.0], dtype=np.float64)
     assert np.array_equal(_rank_values(values), np.asarray([3.5, 0.5, 0.5, 2.0, 3.5]))
+
+
+def test_v12_flattening_uses_exact_budget_rungs_not_candidate_count() -> None:
+    def rung(archive_sha: str, d_seg: str, d_pose: str) -> dict[str, object]:
+        return {
+            "archive": {"sha256": archive_sha},
+            "bridge": {
+                "segmentation": {"d_seg": d_seg},
+                "pose": {"d_pose": d_pose},
+            },
+        }
+
+    ladder = [
+        rung("base", "0.04", "164"),
+        rung("final", "0.034", "163"),
+        rung("final", "0.034", "163"),
+        rung("final", "0.034", "163"),
+    ]
+    assert _consecutive_flat_budget_tail_rungs(ladder) == 3
+    ladder[-2] = rung("different", "0.035", "163")
+    assert _consecutive_flat_budget_tail_rungs(ladder) == 1
 
 
 def test_v10_candidate_cutoff_preserves_every_mechanism_family() -> None:

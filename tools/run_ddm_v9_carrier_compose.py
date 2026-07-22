@@ -1383,6 +1383,30 @@ def _predicted_measured_correlation(rows: list[dict[str, Any]]) -> dict[str, Any
     }
 
 
+def _consecutive_flat_budget_tail_rungs(ladder: list[dict[str, Any]]) -> int:
+    """Count exact identical archive/bridge rungs from the budget ceiling down."""
+
+    if not ladder:
+        return 0
+    final = ladder[-1]
+    final_identity = (
+        final["archive"]["sha256"],
+        final["bridge"]["segmentation"]["d_seg"],
+        final["bridge"]["pose"]["d_pose"],
+    )
+    count = 0
+    for row in reversed(ladder):
+        identity = (
+            row["archive"]["sha256"],
+            row["bridge"]["segmentation"]["d_seg"],
+            row["bridge"]["pose"]["d_pose"],
+        )
+        if identity != final_identity:
+            break
+        count += 1
+    return count
+
+
 def _fraction_text(numerator: int, denominator: int) -> str:
     return f"{numerator / denominator:.12f}" if denominator else "0.000000000000"
 
@@ -2544,8 +2568,12 @@ def run_v11_search(
         len(base_archive) + int(row["effective_added_budget_bytes"]) for row in ladder
     )
     byte_ceiling_nonbinding = not byte_ceiling_rows
-    last_admission = max((index for index, row in enumerate(candidate_rows) if row["admitted"]), default=-1)
-    flattened = last_admission < len(candidate_rows) - 4
+    last_admission = max(
+        (index for index, row in enumerate(candidate_rows) if row["admitted"]),
+        default=-1,
+    )
+    consecutive_flat_budget_tail_rungs = _consecutive_flat_budget_tail_rungs(ladder)
+    flattened = consecutive_flat_budget_tail_rungs >= 3
     plateau_falsifier = (
         config.pair_count == 600
         and final_dseg > 0.00116
@@ -2640,6 +2668,12 @@ def run_v11_search(
             "exact_scorer_unmeasured_atomic_count": exact_scorer_unmeasured_atomic_count,
             "unpartitioned_bounded_atomic_count": unpartitioned_bounded_atomic_count,
             "conflict_exclusion_order_valid": conflict_order_valid,
+            "last_admission_bundle_index": last_admission,
+            "consecutive_flat_budget_tail_rungs": consecutive_flat_budget_tail_rungs,
+            "flatten_definition": (
+                "at least three consecutive highest-budget rungs have identical exact "
+                "archive SHA, d_seg, and d_pose"
+            ),
             "flattened": flattened,
             "triggered": plateau_falsifier,
             "not_triggered_reason": (
