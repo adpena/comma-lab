@@ -21109,3 +21109,29 @@ probe, fix the role→value mapping (self-detect classes, never hardcode index �
 class-order trap), COMPOSE Lane-LBND2 + corrected Road/MyCar + Undrivable into ONE member, price
 at n64→n256 with per-stratum table. Register stays 8/19 honestly (n256/n600 + exact-evaluator
 bridge red). Pointer 0.1910828242 [contest-CPU] UNMOVED (all means).
+
+## FEED-603-v5-composed-member (2026-07-22, MAIN custody of ddm_v5_route_fix_compose, merged e7579ab065)
+
+**Routing probe ADJUDICATED + first composed multi-stratum member.** Two-hypothesis probe resolved:
+`GEOMETRY_RIGHT_VALUES_WRONG_PALETTE` (verdict_scope: INSTANCE, FIXED — Road/MyCar geometry P/R
+.836/.971 and .990/.9997 while inherited paints scored 0 own-class; self-detected receiver-measured
+values restored Road .9591 / MyCar .99977 on correct sites). The v4 hypothesis call was correct.
+Composed member (MAIN verified: receipt hashes ab5332f2/3b2ea4c9 MATCH; 315 tests; per-class
+re-extraction exact; frozen-SegNet advisory, no score claim):
+- n64 [448,512): 119,335 B — Road .909 / Lane .582 / Undriv .997 / MyCar .9999 / Movable .0003
+- n256 [344,600): 324,260 B — Road .923 / Lane .633 / Undriv .995 / MyCar .999 / Movable .012 ·
+  pose 1536/1536
+**Structured-carriers law now has THREE anchors** (v3 smooth-collapse negative · v4 LBND2 positive ·
+v5 composed 4-of-5) — still FORMALIZATION_PENDING: the proper registry evaluator is the v6
+d_seg-bridge measurement (#540 debt).
+**Byte-rate decomposition (the next binding axis):** fixed ≈51 KB + marginal ≈1,068 B/pair
+(n64→n256 growth) → projected ≈692 KB at n600, ~2.4× the 440 B/pair box and >3× the 216 KB knee.
+Consistent with the survey verdict: per-pair stream REPRESENTATION (events/exceptions/coeffs) needs
+temporal amortization, not better coding. Remaining red (scoped): Movable efficacy (1 PCE3 record in
+both windows — still subset-thin) · marginal byte rate · n600 · EVALUATOR BRIDGE (membership vs C1
+cells ≠ advisory d_seg vs GT; the composed member's actual d_seg is unmeasured).
+**Next node (respawned): ddm_v6_dseg_bridge_amortize** — (1) measure the composed member's ACTUAL
+advisory d_seg/d_pose (frozen-scorer argmax vs gt_n600.lstars, per-stratum decomposed) — the number
+the #613 knee is denominated in; (2) attack the ~1,068 B/pair marginal via cross-pair temporal
+amortization (static-once + AR/ξ-keyed deltas per stream) with a per-stream marginal-cost table.
+Pointer 0.1910828242 [contest-CPU] UNMOVED (all means).
