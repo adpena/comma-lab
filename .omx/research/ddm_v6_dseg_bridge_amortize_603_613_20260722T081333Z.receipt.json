@@ -1,0 +1,104 @@
+{
+  "schema": "ddm_v6_dseg_bridge_amortize_cross_window.v1",
+  "task": 603,
+  "feeds_task": 613,
+  "master_task": 578,
+  "lane_id": "lane_ddm_v5_route_fix_compose_603_613_20260722",
+  "delegation_checkpoint_key": "codex_delegate:ddm_v6_dseg_bridge_amortize:20260722T072617Z",
+  "producer_commit": "0e7be4bbb6a73957aa80784681f52e697b6803c3",
+  "evidence_axis": "[macOS-CPU frozen-SegNet advisory]",
+  "score_claim": false,
+  "candidate_archive": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "verdict": "RATE_AMORTIZATION_GREEN_ABSOLUTE_EVALUATOR_DEBT_RED",
+  "verdict_scope": "MEASURED n64 [448,512) and n256 [344,600) receiver-closed composed-member formulations on macOS CPU frozen SegNet/PoseNet only; no n600 or contest-CPU/CUDA verdict",
+  "source_receipts": {
+    "n64": {
+      "path": ".omx/research/ddm_v6_dseg_bridge_amortize_n64_603_613_20260722T075903Z/ddm_v6_dseg_bridge_amortize_n64_receipt.json",
+      "sha256": "d531585f7a46d23d3cec31249e49ee9508892b757f8ab86365554ea30b32a1f0"
+    },
+    "n256": {
+      "path": ".omx/research/ddm_v6_dseg_bridge_amortize_n256_603_613_20260722T075903Z/ddm_v6_dseg_bridge_amortize_n256_receipt.json",
+      "sha256": "862f0e9eb83a60775e42e5ec20770efccc15f13c4954b7e9434dd9dfd10be7bf"
+    }
+  },
+  "points": [
+    {"mode":"v5_exact","pair_count":64,"archive_bytes":119335,"membership_status":"MEASURED_CONTROL","membership":"0.955627997716","membership_lower":"0.955520550410","membership_upper":"0.955773274104","advisory_d_seg":"0.044353087743","advisory_d_pose":"159.108007460341","per_pair_d_seg":{"min":"0.023605346680","q25":"0.033093770345","median":"0.039454142253","q75":"0.055141448974","max":"0.073501586914"}},
+    {"mode":"fixed_ar1_hold24","pair_count":64,"archive_bytes":50155,"membership_status":"DERIVED_TRIANGLE_BOUND","membership":null,"membership_lower":"0.954587141673","membership_upper":"0.954839865367","advisory_d_seg":"0.045286496480","advisory_d_pose":"159.104827981350","per_pair_d_seg":{"min":"0.024820963542","q25":"0.034296671550","median":"0.040852864584","q75":"0.055769602458","max":"0.072972615560"}},
+    {"mode":"xi_pose6_ar1_hold24","pair_count":64,"archive_bytes":50192,"membership_status":"DERIVED_TRIANGLE_BOUND","membership":null,"membership_lower":"0.954782724380","membership_upper":"0.955035448074","advisory_d_seg":"0.045090913773","advisory_d_pose":"159.094020290442","per_pair_d_seg":{"min":"0.027338663737","q25":"0.033751169841","median":"0.039090474447","q75":"0.055769602458","max":"0.072972615560"}},
+    {"mode":"residual_zero_static_once","pair_count":64,"archive_bytes":50661,"membership_status":"DERIVED_TRIANGLE_BOUND","membership":null,"membership_lower":"0.955247163773","membership_upper":"0.955499887467","advisory_d_seg":"0.044626474380","advisory_d_pose":"159.068233847613","per_pair_d_seg":{"min":"0.022644042969","q25":"0.034164428711","median":"0.039759318034","q75":"0.053724924723","max":"0.070795694987"}},
+    {"mode":"v5_exact","pair_count":256,"archive_bytes":324260,"membership_status":"MEASURED_CONTROL","membership":"0.961685518424","membership_lower":"0.961573104064","membership_upper":"0.961825827758","advisory_d_seg":"0.038300534089","advisory_d_pose":"157.800897199751","per_pair_d_seg":{"min":"0.020660400391","q25":"0.028799692790","median":"0.035382588704","q75":"0.043262481689","max":"0.073501586914"}},
+    {"mode":"fixed_ar1_hold24","pair_count":256,"archive_bytes":70883,"membership_status":"DERIVED_TRIANGLE_BOUND","membership":null,"membership_lower":"0.959704418977","membership_upper":"0.959957142671","advisory_d_seg":"0.040169219176","advisory_d_pose":"157.798907948748","per_pair_d_seg":{"min":"0.021728515625","q25":"0.029778798421","median":"0.037994384766","q75":"0.045944213867","max":"0.074605305990"}},
+    {"mode":"xi_pose6_ar1_hold24","pair_count":256,"archive_bytes":70916,"membership_status":"DERIVED_TRIANGLE_BOUND","membership":null,"membership_lower":"0.960068106651","membership_upper":"0.960320830345","advisory_d_seg":"0.039805531502","advisory_d_pose":"157.796182090838","per_pair_d_seg":{"min":"0.021728515625","q25":"0.030618031820","median":"0.036145528157","q75":"0.045017242432","max":"0.073282877604"}},
+    {"mode":"residual_zero_static_once","pair_count":256,"archive_bytes":71828,"membership_status":"DERIVED_TRIANGLE_BOUND","membership":null,"membership_lower":"0.958458364010","membership_upper":"0.958711087704","advisory_d_seg":"0.041415274143","advisory_d_pose":"157.683205618006","per_pair_d_seg":{"min":"0.018671671549","q25":"0.031901041667","median":"0.039141337076","q75":"0.047097524007","max":"0.077178955078"}}
+  ],
+  "membership_bound": {
+    "settled_c1_gt_match_fraction": "0.999873638153",
+    "settled_c1_gt_escape_fraction": "0.000126361847",
+    "equation": "1-d_seg-epsilon <= membership <= 1-d_seg+epsilon",
+    "status": "DERIVED for amortized points; exact v5 controls remain MEASURED",
+    "score_claim": false
+  },
+  "marginal_cost": [
+    {"mode":"v5_exact","n64_bytes":119335,"n256_bytes":324260,"delta_bytes":204925,"bytes_per_added_pair":"1067.317708333333","target_le_300":false},
+    {"mode":"fixed_ar1_hold24","n64_bytes":50155,"n256_bytes":70883,"delta_bytes":20728,"bytes_per_added_pair":"107.958333333333","target_le_300":true},
+    {"mode":"xi_pose6_ar1_hold24","n64_bytes":50192,"n256_bytes":70916,"delta_bytes":20724,"bytes_per_added_pair":"107.937500000000","target_le_300":true},
+    {"mode":"residual_zero_static_once","n64_bytes":50661,"n256_bytes":71828,"delta_bytes":21167,"bytes_per_added_pair":"110.244791666667","target_le_300":true}
+  ],
+  "chart_stream_marginal_bytes_per_added_pair": [
+    {"stream":"global_chart_anchors","v5_exact":"1.244791666667","fixed_ar1_hold24":"0.281250000000"},
+    {"stream":"axial_chart_gradients","v5_exact":"3.744791666667","fixed_ar1_hold24":"0.583333333333"},
+    {"stream":"low_variation_chart_residuals","v5_exact":"180.583333333333","fixed_ar1_hold24":"10.968750000000"},
+    {"stream":"mid_variation_chart_residuals","v5_exact":"235.854166666667","fixed_ar1_hold24":"13.369791666667"},
+    {"stream":"high_variation_chart_residuals","v5_exact":"248.479166666667","fixed_ar1_hold24":"13.453125000000"},
+    {"stream":"pose6_pair_codes","v5_exact":"5.750000000000","fixed_ar1_hold24":"5.750000000000"}
+  ],
+  "outer_home_marginal_bytes_per_added_pair": [
+    {"home":"manifest.json","v5_exact":"0.031250000000","fixed_ar1_hold24":"0.031250000000"},
+    {"home":"chart.zip","v5_exact":"675.656250000000","fixed_ar1_hold24":"44.406250000000"},
+    {"home":"structure/undrivable_events.lz","v5_exact":"82.229166666667","fixed_ar1_hold24":"16.885416666667"},
+    {"home":"structure/undrivable_components.br","v5_exact":"27.885416666667","fixed_ar1_hold24":"4.234375000000"},
+    {"home":"structure/road_pxq1_mask.br","v5_exact":"0.000000000000","fixed_ar1_hold24":"0.000000000000"},
+    {"home":"structure/road_events.lz","v5_exact":"149.609375000000","fixed_ar1_hold24":"20.968750000000"},
+    {"home":"structure/road_components.br","v5_exact":"89.687500000000","fixed_ar1_hold24":"12.015625000000"},
+    {"home":"structure/lane_lbnd2.lz","v5_exact":"0.000000000000","fixed_ar1_hold24":"0.000000000000"},
+    {"home":"structure/lane_events.lz","v5_exact":"37.505208333333","fixed_ar1_hold24":"7.442708333333"},
+    {"home":"structure/lane_components.br","v5_exact":"4.713541666667","fixed_ar1_hold24":"1.979166666667"},
+    {"home":"structure/mycar_static_hood.br","v5_exact":"0.000000000000","fixed_ar1_hold24":"0.000000000000"},
+    {"home":"structure/movable_events.lz","v5_exact":"0.000000000000","fixed_ar1_hold24":"-0.005208333333"},
+    {"home":"container_framing","v5_exact":"0.000000000000","fixed_ar1_hold24":"0.000000000000"}
+  ],
+  "stratum_and_per_pair_custody": {
+    "status": "FULL_TABLES_IN_SHA_BOUND_CANDIDATE_CHECKPOINTS",
+    "n64_candidate_checkpoint_sha256": ["cd350d9757bdac3c53c9f3860ccc87abb6fc279a730ef875fcece60a10217fc3","9df13ee104bc84ebb2244eff98c9c60f27640b51bf5ad28306bc0a16f4451b65","bf2e2baa1cad0340c11fe512a8326bb69dd69f400bab65f9bcbd6879df744300","e90e7e0ae1f0ef2c590383d90d00516156fa233ef082633dc63359c109f7a5ba"],
+    "n256_candidate_checkpoint_sha256": ["b6814d0d3535a806e8308337aa098b18492be56b257125d4088fc50845edfdec","cc58fe0722d6144130f8250fdb2c6eb0d64625c215a3c161614b5249cc44e58c","589b6ee5cd1e50456866e849d54c185199c73eca389852a3aa253fc2a2357fee","480a422939f3feeaef5ae5a9694b8f300f7d62632f0a004c2a2b7d57b442d483"],
+    "families": ["target_class","topology_boundary_codim1_vs_cell_interior","target_margin"],
+    "per_pair_rows_present": true
+  },
+  "thresholds": {
+    "task_613_d_seg_le_0_00116": "FAIL_ALL_MEASURED_FORMULATIONS",
+    "s4_knee_d_seg_le_0_016_at_216207_bytes": "FAIL_DSEG_ALL; RATE_PASS_AMORTIZED_ONLY",
+    "temporal_marginal_le_300_bytes_per_pair": "PASS_FIXED24_XI24_ZERO_STATIC",
+    "n600": "NOT_RUN_TIME_BOUND",
+    "contest_cpu_cuda": "NOT_RUN_NOT_AUTHORIZED"
+  },
+  "blocker_delta": {
+    "CANONICAL_603_REGISTER_COUNT": "8/19 UNCHANGED_ON_BRANCH; MAIN_REVIEWS_DRAFT_ROW",
+    "V5_ACTUAL_DSEG": "RED_TO_GREEN_LOCAL_ADVISORY",
+    "V5_ACTUAL_DPOSE": "RED_TO_GREEN_LOCAL_ADVISORY_OFFICIAL_YUV6",
+    "PER_PAIR_AND_STRATUM_DISTRIBUTIONS": "RED_TO_GREEN",
+    "TEMPORAL_BYTES_PER_PAIR_LE_300": "RED_TO_GREEN_MEASURED_107_94_TO_110_24",
+    "ABSOLUTE_DSEG_LE_0_016": "REMAINS_RED_FORMULATION_SCOPE",
+    "ABSOLUTE_DSEG_LE_0_00116": "REMAINS_RED_FORMULATION_SCOPE",
+    "N600_EVALUATOR_BRIDGE": "REMAINS_RED_TIME_BOUND",
+    "CONTEST_CPU_CUDA_SCORE": "REMAINS_RED_NOT_AUTHORIZED"
+  },
+  "round1_review": {
+    "finding": "amortized candidate rows initially omitted same-C1 membership",
+    "fix": "persist measured-control membership and an explicitly DERIVED triangle-inequality interval for amortized points; never relabel the bound as measured",
+    "verification": "ruff clean; focused pytest 39 passed",
+    "remaining_debt": "n600 and contest-axis evaluation remain owed; absolute evaluator debt makes immediate promotion inadmissible"
+  },
+  "main_landing_review_required": true
+}
