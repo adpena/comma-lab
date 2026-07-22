@@ -14,7 +14,6 @@ import io
 import json
 import shutil
 import struct
-import time
 import zipfile
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
@@ -1160,8 +1159,8 @@ def _storage_preflight(output_directory: Path) -> dict[str, Any]:
         raise DirectDescriptionError("measurement ladder refuses: insufficient local receipt space")
     return {
         "output_tier": str(probe.resolve()),
-        "free_bytes": usage.free,
         "required_free_bytes": required,
+        "free_space_gate_satisfied": True,
         "bulk_target_tier": "/Volumes/VertigoDataTier/pact",
         "bulk_target_read_only": True,
         "materializes_full_plane_cache": False,
@@ -1175,7 +1174,6 @@ def run_measurement_ladder(
     output_directory: Path,
     semantic_argv: Sequence[str],
 ) -> tuple[dict[str, Any], Path]:
-    started = time.monotonic()
     root = Path(output_directory)
     storage = _storage_preflight(root)
     root.mkdir(parents=True, exist_ok=True)
@@ -1305,7 +1303,6 @@ def run_measurement_ladder(
             "target_bulk_remains_read_only_on_ssd": True,
             "scratch_policy": "bounded in-memory chunks plus small immutable checkpoints",
         },
-        "wall_seconds": format(time.monotonic() - started, ".6f"),
     }
     payload = rfc8785_canonicalize(result) + b"\n"
     receipt_path = _publish_new_bytes(root / "ddm_measurement_ladder_rungs123_receipt.json", payload)
