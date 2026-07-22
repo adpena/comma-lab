@@ -3607,7 +3607,7 @@ def run_dseg_bridge_amortize(
             },
             "verdict_scope": (
                 f"MEASURED n{config.pair_count} source-pair window "
-                f"[{config.pair_start},{config.pair_start + config.pair_count}) on {V7_EVIDENCE_AXIS}; "
+                f"[{config.pair_start},{config.pair_start + config.pair_count}) on {EVIDENCE_AXIS}; "
                 "formulation-local and not contest-CPU/CUDA"
             ),
         }
@@ -4155,6 +4155,14 @@ def _v7_discrete_waterfill(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _v7_candidate_verdict_scope(config: DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1) -> str:
+    return (
+        f"MEASURED n{config.pair_count} source window "
+        f"[{config.pair_start},{config.pair_start + config.pair_count}) on {V7_EVIDENCE_AXIS}; "
+        "opaque counted corrections over one v6 predictor; formulation-local and not contest-CPU/CUDA"
+    )
+
+
 def run_solved_plane_tolerance_waterfill(
     config: DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1,
     *,
@@ -4254,6 +4262,9 @@ def run_solved_plane_tolerance_waterfill(
             )
             if len(archive_payload) != row["archive"]["bytes"]:
                 raise DirectDescriptionError("v7 candidate checkpoint archive length mismatch")
+            if row["evaluator_bridge"].get("evidence_axis") != V7_EVIDENCE_AXIS:
+                raise DirectDescriptionError("v7 candidate checkpoint evidence axis mismatch")
+            row["verdict_scope"] = _v7_candidate_verdict_scope(config)
             rows.append(row)
             checkpoint_paths.append(str(checkpoint_path))
             continue
@@ -4334,11 +4345,7 @@ def run_solved_plane_tolerance_waterfill(
                 "score_claim": False,
                 "promotion_eligible": False,
             },
-            "verdict_scope": (
-                f"MEASURED n{config.pair_count} source window "
-                f"[{config.pair_start},{config.pair_start + config.pair_count}) on {EVIDENCE_AXIS}; "
-                "opaque counted corrections over one v6 predictor; formulation-local and not contest-CPU/CUDA"
-            ),
+            "verdict_scope": _v7_candidate_verdict_scope(config),
         }
         checkpoint = {
             "schema": "direct_description_solved_plane_candidate_checkpoint.v1",

@@ -11,7 +11,9 @@ import numpy as np
 import pytest
 
 from tac.optimization.direct_description_entropy_priced_member import (
+    EVIDENCE_AXIS,
     TOLERANCE_LADDER,
+    V7_EVIDENCE_AXIS,
     DirectDescriptionDsegBridgeAmortizeConfigV1,
     DirectDescriptionDsegBridgeAmortizeProgramV1,
     DirectDescriptionEntropyCandidateCheckpointV1,
@@ -27,6 +29,7 @@ from tac.optimization.direct_description_entropy_priced_member import (
     _decode_site_records,
     _derived_membership_proxy,
     _encode_site_records,
+    _v7_candidate_verdict_scope,
     _v7_discrete_waterfill,
     _xi_pose6_keyframes,
     build_entropy_candidate_z,
@@ -780,6 +783,22 @@ def test_v7_waterfill_derives_a_strict_pareto_route_from_measurements() -> None:
     assert summary["dominated_policies"] == ["dominated"]
     assert all(item["added_bytes"] > 0 for item in summary["marginals"])
     assert all(Decimal(item["distortion_term_gain"]) > 0 for item in summary["marginals"])
+
+
+def test_v7_scope_cannot_leak_the_v6_segnet_only_axis() -> None:
+    config = DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1(
+        pair_start=448,
+        pair_count=64,
+        v6_receipt_path="v6.json",
+        v6_receipt_sha256="1" * 64,
+        target_receipt_path="target.json",
+        target_receipt_sha256="2" * 64,
+        upstream_root="/absolute/upstream",
+        scorer_threads=1,
+    )
+    scope = _v7_candidate_verdict_scope(config)
+    assert V7_EVIDENCE_AXIS in scope
+    assert EVIDENCE_AXIS not in scope
 
 
 def test_structured_candidate_stages_resume_and_preserve_every_archive(tmp_path: Path) -> None:
