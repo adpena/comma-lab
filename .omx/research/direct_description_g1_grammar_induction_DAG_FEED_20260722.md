@@ -68,7 +68,7 @@ main_landing_review_required: true
 
 1. Sensitivity map: consumes the v12 per-stratum ranking. No scorer forward or Fisher field was run,
    so mask error is not silently promoted to a sensitivity update.
-2. Pareto constraint: each row binds `(counted bytes, decoded mask errors, IoU)`. The joint 60-KB / 
+2. Pareto constraint: each row binds `(counted bytes, decoded mask errors, IoU)`. The joint 60-KB /
    0.005 gate remains false.
 3. Bit allocator: production bytes expose the measured rate owners—Lane center 12,367 B, dash
    6,314 B, width 5,632 B, range 3,176 B; Movable shape 27,032 B dominates its knee.
