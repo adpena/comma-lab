@@ -20,10 +20,15 @@ from tac.canonical_equations.ddm_describe_line_rate_distortion_bracket_20260722 
     V9_VERDICT,
     V12_N600_SHA256,
     V12_VERDICT,
+    V13_N600_SHA256,
+    V13_PHASE_N64_SHA256,
+    V13_PHASE_N600_SHA256,
+    V13_VERDICT,
     _v7_inputs,
     _v8_inputs,
     _v9_inputs,
     _v12_inputs,
+    _v13_inputs,
     build_ddm_describe_line_rate_distortion_bracket_v1,
     evaluate_ddm_describe_line_rate_distortion_bracket,
     populate_ddm_describe_line_rate_distortion_bracket_v1,
@@ -42,6 +47,7 @@ def test_three_measured_legs_and_n600_anchor_predict_scoped_receipt_verdicts() -
     v8 = evaluate_ddm_describe_line_rate_distortion_bracket(_v8_inputs())
     v9 = evaluate_ddm_describe_line_rate_distortion_bracket(_v9_inputs())
     v12 = evaluate_ddm_describe_line_rate_distortion_bracket(_v12_inputs())
+    v13 = evaluate_ddm_describe_line_rate_distortion_bracket(_v13_inputs())
 
     assert v7["leg"] == LEG_VALUE_EXACTNESS and v7["verdict"] == V7_VERDICT
     assert v7["evaluator_gate_green"] is True
@@ -77,6 +83,20 @@ def test_three_measured_legs_and_n600_anchor_predict_scoped_receipt_verdicts() -
         "prior_higher_ev_conflict_excluded_atoms": 36,
         "valid": True,
     }
+    assert v13["verdict"] == V13_VERDICT
+    assert v13["n600_projection_status"] == "MEASURED_N600_RECEIVER_CLOSED"
+    assert v13["g1_worldsheet_realization"] == {
+        "payload_exact": True,
+        "mask_level_clean_rest_dseg": pytest.approx(0.00028294881184895833),
+        "through_r_movable_dseg": pytest.approx(0.481331895297),
+        "receiver_projection_bound": True,
+        "operator_addenda_status": "PRE_ADDENDUM_BASELINE_SUCCESSORS_UNMEASURED",
+        "phase_receiver_closed": True,
+        "phase_result_status": "RAW_Q8_LANE_HELP_TOTAL_HARM",
+        "phase_total_dseg_delta": pytest.approx(0.000280736287),
+        "phase_lane_dseg_delta": pytest.approx(-0.029228004790),
+    }
+    assert v13["verdict_scope"].startswith("INSTANCE_G1")
 
 
 @pytest.mark.parametrize(
@@ -84,9 +104,7 @@ def test_three_measured_legs_and_n600_anchor_predict_scoped_receipt_verdicts() -
     [
         (lambda row: row.update({"leg": "unknown"}), "unknown describe-line leg"),
         (
-            lambda row: row["windows"].__setitem__(
-                0, {**row["windows"][0], "receiver_closed": 1}
-            ),
+            lambda row: row["windows"].__setitem__(0, {**row["windows"][0], "receiver_closed": 1}),
             "receiver_closed must be boolean",
         ),
         (
@@ -102,11 +120,21 @@ def test_law_fails_closed(mutator, match: str) -> None:
         evaluate_ddm_describe_line_rate_distortion_bracket(row)
 
 
-def test_equation_has_four_bound_nonpromotable_anchors_and_real_routes() -> None:
+def test_equation_has_five_bound_nonpromotable_anchors_and_real_routes() -> None:
     equation = build_ddm_describe_line_rate_distortion_bracket_v1()
     assert equation.equation_id == EQUATION_ID
-    assert len(equation.empirical_anchors) == 4
-    assert equation.domain_of_validity["formalization_status"].endswith("PLUS_N600_ANCHOR")
+    assert len(equation.empirical_anchors) == 5
+    assert equation.domain_of_validity["formalization_status"].endswith("G2_PHASE_ABLATION")
+    phase = equation.domain_of_validity["v13_g1_worldsheet_upgrade"]["raw_q8_phase_ablation"]
+    assert phase["status"] == "MEASURED_RECEIVER_CLOSED_LANE_HELP_TOTAL_HARM"
+    assert phase["n600_total_dseg_delta"] == pytest.approx(0.000280736287)
+    assert phase["n600_lane_conditional_dseg_delta"] == pytest.approx(-0.029228004790)
+    g3 = equation.domain_of_validity["v13_g1_worldsheet_upgrade"]["g3_allocation_policy"]
+    assert g3["debt_shape"] == "BROAD_NOT_HEAVY_TAILED"
+    assert g3["per_pair_topk_correction_allowed"] is False
+    assert g3["allocation_form"] == "AMORTIZED_SHARED_GRAMMAR_TEMPLATES_PROCESS_PRIORS"
+    assert g3["top24_policy"] == "SCREENING_ONLY_FULL_N600_VERDICT_REQUIRED"
+    assert g3["event_proxy_pairs"] == [279, 286, 452]
     assert equation.domain_of_validity["promotion_eligible"] is False
     assert equation.provenance.score_claim_valid is False
     assert equation.canonical_consumers == (
@@ -117,6 +145,7 @@ def test_equation_has_four_bound_nonpromotable_anchors_and_real_routes() -> None
     assert equation.canonical_producers == (
         "tools.run_direct_description_entropy_priced_member",
         "tools.run_ddm_v9_carrier_compose",
+        "tools.measure_ddm_v13_lane_phase_ablation",
     )
     for anchor in equation.empirical_anchors:
         assert anchor.predicted_output["verdict"] == anchor.empirical_output["verdict"]
@@ -131,11 +160,17 @@ def test_bound_cross_receipt_hashes_rederive_from_primary_artifacts() -> None:
         for anchor in equation.empirical_anchors
         for path, expected in anchor.inputs["receipt_sha256_bindings"].items()
     }
-    assert len(bindings) == 10
+    assert len(bindings) == 14
     assert {path: _sha256(REPO / path) for path in bindings} == bindings
-    assert {V7_CROSS_SHA256, V8_CROSS_SHA256, V9_CROSS_SHA256, V12_N600_SHA256}.issubset(
-        bindings.values()
-    )
+    assert {
+        V7_CROSS_SHA256,
+        V8_CROSS_SHA256,
+        V9_CROSS_SHA256,
+        V12_N600_SHA256,
+        V13_N600_SHA256,
+        V13_PHASE_N64_SHA256,
+        V13_PHASE_N600_SHA256,
+    }.issubset(bindings.values())
 
 
 def test_population_round_trips_through_isolated_locked_registry(tmp_path: Path) -> None:
@@ -151,6 +186,6 @@ def test_population_round_trips_through_isolated_locked_registry(tmp_path: Path)
     loaded = query_equations(path=registry)
     assert populated.equation_id == EQUATION_ID
     assert [equation.equation_id for equation in loaded] == [EQUATION_ID]
-    assert len(loaded[0].empirical_anchors) == 4
+    assert len(loaded[0].empirical_anchors) == 5
     assert rows[0]["event_type"] == "registered"
     assert "MAIN landing review required" in rows[0]["notes"]

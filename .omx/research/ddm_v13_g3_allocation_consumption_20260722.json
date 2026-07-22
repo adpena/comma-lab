@@ -1,0 +1,47 @@
+{
+  "schema": "ddm_v13_g3_allocation_consumption.v1",
+  "date_utc": "2026-07-22T21:30:00Z",
+  "lane_id": "ddm_v13_worldsheet_event_predictor",
+  "g3_binding": {
+    "merge_commit": "e472310d93",
+    "receipt_path_on_main": ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_receipt.json",
+    "receipt_sha256": "6c4157092a7bdf7ba44b458cd470725cc470d84a8fc77ed7d3dedb59160734f5",
+    "hard_pair_registry_sha256": "0c9ce6d0ce2b2c0830400f096438355242527d40f682fc1b201f67d8d951a4e4"
+  },
+  "measured_concentration": {
+    "joint_top10_mass_fraction": 0.019785252279635502,
+    "joint_top100_mass_fraction": 0.1870385612422957,
+    "seg_top100_mass_fraction": 0.2685436608566537,
+    "debt_shape": "BROAD_NOT_HEAVY_TAILED"
+  },
+  "allocation_contract": {
+    "per_pair_topk_correction_allowed": false,
+    "required_form": "AMORTIZED_SHARED_GRAMMAR_TEMPLATES_PROCESS_PRIORS",
+    "per_pair_stream_policy": "NEAR_UNIFORM_CHEAP_WHITENED_INNOVATIONS_ONLY",
+    "top24_policy": "SCREENING_ONLY_FULL_N600_VERDICT_REQUIRED",
+    "top24_full_objective_pearson_r": 0.5953065905385343,
+    "current_raw_q8_phase_disposition": "REJECT_TOTAL_OBJECTIVE_HARM_AND_DO_NOT_REPLACE_WITH_TOPK"
+  },
+  "event_proxy_coverage": {
+    "source_inventory_path": ".omx/research/ddm_v13_g1_worldsheet_predictor_n600_20260722T201500Z/stage_checkpoints/01_natural_production_inventory.json",
+    "source_inventory_sha256": "0db7f9a845e1ad87c83eaf2360fac759a7ec03f17bac89b7a033ee22b6278d78",
+    "source_g1_payload_sha256": "1066081727229e605462e67b8fdd26937d5e3552c13cb66a7444ea3b7360366f",
+    "pairs": [
+      {"pair_index": 279, "g3_label": "intersection_proxy", "movable_mask_pixels": 819, "active_lane_programs": 6},
+      {"pair_index": 286, "g3_label": "lane_change_proxy", "movable_mask_pixels": 1014, "active_lane_programs": 6},
+      {"pair_index": 452, "g3_label": "lead_car_pass_proxy", "movable_mask_pixels": 10404, "active_lane_programs": 6}
+    ],
+    "status": "REPRESENTATION_SUPPORT_PRESENT_NOT_SEMANTIC_GROUND_TRUTH",
+    "interpretation": "The counted n600 G1 EVENT worldsheet and Lane programs span all three proxies; this proves representation support only, not correct event semantics or score benefit."
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "d_seg_claim": false,
+  "d_pose_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

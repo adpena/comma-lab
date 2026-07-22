@@ -31,13 +31,17 @@ from tac.optimization.direct_description_carrier_compose import (  # noqa: E402
     RESULT_SCHEMA_V2,
     RESULT_SCHEMA_V3,
     RESULT_SCHEMA_V4,
+    RESULT_SCHEMA_V5,
     BoundaryCoefficientDelta,
     BoundaryShearletAtomV1,
     DirectDescriptionV9CarrierComposeConfigV1,
     DirectDescriptionV10FisherEventSearchConfigV1,
     DirectDescriptionV11ObligationSearchConfigV1,
     DirectDescriptionV12ObligationDrainConfigV1,
+    DirectDescriptionV13WorldsheetPredictorConfigV1,
     IslandShapeAtomV1,
+    LaneDriftKnotV1,
+    LanePeriodicProgramV1,
     TopologyEventV1,
     compile_carrier_compose_archive,
     prove_carrier_archive_fail_closed,
@@ -48,6 +52,10 @@ from tac.optimization.direct_description_entropy_priced_member import (  # noqa:
     _load_posenet_oracle,
     _measure_evaluator_bridge,
     _storage_preflight,
+)
+from tac.optimization.direct_description_g1_worldsheet import (  # noqa: E402
+    decode_g1_movable_worldsheet,
+    encode_g1_movable_worldsheet,
 )
 from tac.optimization.direct_description_measurement_ladder import load_target_receipt  # noqa: E402
 from tac.optimization.direct_description_minimizer import (  # noqa: E402
@@ -375,9 +383,7 @@ class _SearchCandidate:
         keys: set[tuple[Any, ...]] = {
             ("lane", row.pair_index, row.line_index, row.coefficient_index) for row in self.lane_symbols
         }
-        keys.update(
-            ("boundary", row.pair_index, row.role, row.coefficient_index) for row in self.boundary_symbols
-        )
+        keys.update(("boundary", row.pair_index, row.role, row.coefficient_index) for row in self.boundary_symbols)
         keys.update(
             (
                 "event",
@@ -393,13 +399,9 @@ class _SearchCandidate:
             for row in self.topology_events
         )
         keys.update(
-            ("shearlet", row.pair_index, row.role, row.center_y, row.center_x)
-            for row in self.boundary_shearlets
+            ("shearlet", row.pair_index, row.role, row.center_y, row.center_x) for row in self.boundary_shearlets
         )
-        keys.update(
-            ("island", row.pair_index, row.action, row.center_y, row.center_x)
-            for row in self.island_shapes
-        )
+        keys.update(("island", row.pair_index, row.action, row.center_y, row.center_x) for row in self.island_shapes)
         return frozenset(keys)
 
 
@@ -475,9 +477,7 @@ def _candidate_symbols(
     return lane, boundary, events
 
 
-def _compile_candidates(
-    predictor_archive: bytes, candidates: list[_SearchCandidate]
-) -> tuple[bytes, Any]:
+def _compile_candidates(predictor_archive: bytes, candidates: list[_SearchCandidate]) -> tuple[bytes, Any]:
     lane, boundary, events = _candidate_symbols(candidates)
     archive, _homes = compile_carrier_compose_archive(
         predictor_archive,
@@ -657,8 +657,10 @@ def _derive_candidates(
         if int(np.count_nonzero(lane_miss)) >= config.min_component_sites:
             sites = np.argwhere(lane_miss)
             y_center, x_center = sites.mean(axis=0)
-            forward = float(camera["height_m"]) * float(camera["fy_scorer"]) / max(
-                float(y_center) - float(lane_layer.lane_header["v_h"]), 1.0
+            forward = (
+                float(camera["height_m"])
+                * float(camera["fy_scorer"])
+                / max(float(y_center) - float(lane_layer.lane_header["v_h"]), 1.0)
             )
             centers: list[float] = []
             for vector in lane_layer.lane_lines[source_pair_id]:
@@ -925,12 +927,7 @@ def _bundle_obligation_candidates_full_drain(
     grouped: dict[tuple[tuple[int, ...], str], list[_SearchCandidate]] = {}
     for candidate in generated:
         impacted = tuple(
-            sorted(
-                {
-                    ((source_id - pair_start) // batch_size) * batch_size
-                    for source_id in candidate.source_pair_ids
-                }
-            )
+            sorted({((source_id - pair_start) // batch_size) * batch_size for source_id in candidate.source_pair_ids})
         )
         if not impacted or impacted[0] < 0:
             raise DirectDescriptionError("v12 obligation atom falls outside its canonical window")
@@ -1014,8 +1011,10 @@ def _derive_obligation_candidates(
         if int(np.count_nonzero(lane_error)) >= config.min_component_sites:
             sites = np.argwhere(lane_error)
             y_center, x_center = sites.mean(axis=0)
-            forward = float(camera["height_m"]) * float(camera["fy_scorer"]) / max(
-                float(y_center) - float(lane_layer.lane_header["v_h"]), 1.0
+            forward = (
+                float(camera["height_m"])
+                * float(camera["fy_scorer"])
+                / max(float(y_center) - float(lane_layer.lane_header["v_h"]), 1.0)
             )
             centers: list[float] = []
             for vector in lane_layer.lane_lines[source_pair_id]:
@@ -1041,9 +1040,7 @@ def _derive_obligation_candidates(
                                     lane_priority * scale,
                                     (source_pair_id,),
                                     lane_symbols=(
-                                        LaneCoefficientDelta(
-                                            source_pair_id, line_index, coefficient_index, delta
-                                        ),
+                                        LaneCoefficientDelta(source_pair_id, line_index, coefficient_index, delta),
                                     ),
                                 )
                             )
@@ -1065,17 +1062,13 @@ def _derive_obligation_candidates(
                                     lane_priority * scale,
                                     (source_pair_id,),
                                     lane_symbols=(
-                                        LaneCoefficientDelta(
-                                            source_pair_id, line_index, coefficient_index, delta
-                                        ),
+                                        LaneCoefficientDelta(source_pair_id, line_index, coefficient_index, delta),
                                     ),
                                 )
                             )
                 period = float(vector[6])
                 if period > 0.0:
-                    xi_key = int(receiver.pose6_codes[local_pair_id, 0]) - int(
-                        receiver.pose6_codes[local_pair_id, 1]
-                    )
+                    xi_key = int(receiver.pose6_codes[local_pair_id, 0]) - int(receiver.pose6_codes[local_pair_id, 1])
                     desired_phase = forward - 0.5 * float(vector[8]) * period + xi_key * period / 4096.0
                     phase_delta = (desired_phase - float(vector[7]) + period / 2.0) % period - period / 2.0
                     for scale in (0.5, 1.0):
@@ -1242,9 +1235,7 @@ def _obligation_family_stratum_mass(
     for class_id in range(len(CLASS_ORDER)):
         sites = np.asarray(target_cells) == class_id
         denominator = int(np.count_nonzero(sites))
-        conditional[class_id] = (
-            int(np.count_nonzero(errors & sites)) / denominator if denominator else 0.0
-        )
+        conditional[class_id] = int(np.count_nonzero(errors & sites)) / denominator if denominator else 0.0
     return {
         "lane_center": conditional[1],
         "lane_width": conditional[1],
@@ -1371,12 +1362,8 @@ def _predicted_measured_correlation(rows: list[dict[str, Any]]) -> dict[str, Any
         spearman = float(np.corrcoef(_rank_values(predicted), _rank_values(gains))[0, 1])
     return {
         "measured_bundle_count": len(measured),
-        "pearson_predicted_ev_vs_measured_objective_gain": (
-            None if pearson is None else f"{pearson:.12f}"
-        ),
-        "spearman_predicted_ev_vs_measured_objective_gain": (
-            None if spearman is None else f"{spearman:.12f}"
-        ),
+        "pearson_predicted_ev_vs_measured_objective_gain": (None if pearson is None else f"{pearson:.12f}"),
+        "spearman_predicted_ev_vs_measured_objective_gain": (None if spearman is None else f"{spearman:.12f}"),
         "positive_measured_gain_count": int(np.count_nonzero(gains > 0.0)),
         "nonpositive_measured_gain_count": int(np.count_nonzero(gains <= 0.0)),
         "prediction_role": "ordering only; exact canonical-batch bridge is admission authority",
@@ -1422,10 +1409,7 @@ def _compact_bridge_from_batches(
 
     target_class = {name: {"errors": 0, "sites": 0} for name in CLASS_ORDER}
     topology = {name: {"errors": 0, "sites": 0} for name in ("boundary_codim1", "cell_interior")}
-    bands = {
-        name: {"errors": 0, "sites": 0}
-        for name in ("[0,0.1)", "[0.1,0.5)", "[0.5,1)", "[1,inf)")
-    }
+    bands = {name: {"errors": 0, "sites": 0} for name in ("[0,0.1)", "[0.1,0.5)", "[0.5,1)", "[1,inf)")}
     total_errors = 0
     total_sites = 0
     pose_squared_error = 0.0
@@ -1707,8 +1691,10 @@ def run_v10_search(
                 and distortion_gain > rate_cost
                 and marginal_bytes > 0
             )
-            reason = "measured_distortion_gain_exceeds_exact_rate_cost_pose_contained" if admitted else (
-                "measured_candidate_failed_gain_rate_or_pose_containment"
+            reason = (
+                "measured_distortion_gain_exceeds_exact_rate_cost_pose_contained"
+                if admitted
+                else ("measured_candidate_failed_gain_rate_or_pose_containment")
             )
             row["measurement"] = {
                 "errors_before": current_errors,
@@ -1806,9 +1792,7 @@ def run_v10_search(
             "bridge": bridge,
             "per_stratum": _stratified_byte_rows(selected_archive, bridge),
             "objective_advisory": {
-                "score": _objective(
-                    len(selected_archive), bridge["segmentation"]["d_seg"], bridge["pose"]["d_pose"]
-                ),
+                "score": _objective(len(selected_archive), bridge["segmentation"]["d_seg"], bridge["pose"]["d_pose"]),
                 "formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
             },
         }
@@ -1848,8 +1832,7 @@ def run_v10_search(
         for index in range(1, len(ladder))
     ]
     byte_steps = [
-        ladder[index]["archive"]["bytes"] - ladder[index - 1]["archive"]["bytes"]
-        for index in range(1, len(ladder))
+        ladder[index]["archive"]["bytes"] - ladder[index - 1]["archive"]["bytes"] for index in range(1, len(ladder))
     ]
     marginal = [drop / step if step > 0 else 0.0 for drop, step in zip(dseg_drops, byte_steps, strict=True)]
     knee_index = int(np.argmax(marginal)) + 1 if marginal and max(marginal) > 0 else 0
@@ -2089,9 +2072,7 @@ def run_v11_search(
             "bounded_generated_count": len(generated),
             "measured_bundle_count": len(candidates),
             "generated_family_counts": generated_family_counts,
-            "family_stratum_mass": {
-                name: f"{value:.12f}" for name, value in family_stratum_mass.items()
-            },
+            "family_stratum_mass": {name: f"{value:.12f}" for name, value in family_stratum_mass.items()},
             "atoms_in_measured_bundles": sum(_candidate_atom_count(row) for row in candidates),
             "candidate_inventory_sha256": inventory_sha256,
         },
@@ -2135,9 +2116,7 @@ def run_v11_search(
             payload = _bound_bytes(path, cache_row["sha256"], "accepted candidate batch cache")
             if len(payload) != int(cache_row["bytes"]):
                 raise DirectDescriptionError("accepted candidate batch cache byte count mismatch")
-            current_batches[start] = _load_batch_score_cache(
-                path, identity=cache_identity, start=start
-            )
+            current_batches[start] = _load_batch_score_cache(path, identity=cache_identity, start=start)
     if accepted and not resume_cache_complete:
         current_batches = _score_batches(
             current_receiver,
@@ -2159,9 +2138,7 @@ def run_v11_search(
     invocation_candidate_started = time.perf_counter()
     invocation_stop = len(candidates)
     if is_v12:
-        invocation_stop = min(
-            len(candidates), processed + config.max_bundles_per_invocation
-        )
+        invocation_stop = min(len(candidates), processed + config.max_bundles_per_invocation)
     for index in range(processed, invocation_stop):
         candidate = candidates[index]
         candidate_started = time.perf_counter()
@@ -2179,19 +2156,14 @@ def run_v11_search(
         conflicts = sorted(candidate.conflict_keys() & occupied)
         admitted = False
         if conflicts:
-            conflicting_prior = [
-                prior for prior in accepted if prior.conflict_keys() & candidate.conflict_keys()
-            ]
+            conflicting_prior = [prior for prior in accepted if prior.conflict_keys() & candidate.conflict_keys()]
             row["greedy_conflict_exclusion"] = {
                 "conflict_keys": [list(value) for value in conflicts],
                 "prior_admitted_candidate_ids": [value.candidate_id for value in conflicting_prior],
-                "prior_predicted_ev": [
-                    f"{value.fisher_priority:.12e}" for value in conflicting_prior
-                ],
+                "prior_predicted_ev": [f"{value.fisher_priority:.12e}" for value in conflicting_prior],
                 "candidate_predicted_ev": f"{candidate.fisher_priority:.12e}",
                 "all_prior_predicted_ev_not_lower": all(
-                    value.fisher_priority >= candidate.fisher_priority
-                    for value in conflicting_prior
+                    value.fisher_priority >= candidate.fisher_priority for value in conflicting_prior
                 ),
                 "scorer_measurement_performed": False,
             }
@@ -2241,12 +2213,7 @@ def run_v11_search(
                             target_poses=target_poses,
                             segnet_oracle=segnet_oracle,
                             posenet_oracle=posenet_oracle,
-                            cache_root=(
-                                root
-                                / "stage_checkpoints"
-                                / "candidate_batches"
-                                / f"{index:04d}"
-                            ),
+                            cache_root=(root / "stage_checkpoints" / "candidate_batches" / f"{index:04d}"),
                             cache_identity=batch_cache_identity,
                         )
                         row["batch_cache_identity"] = batch_cache_identity
@@ -2267,7 +2234,9 @@ def run_v11_search(
                     proposed_pose_squared_error = current_pose_squared_error
                     for start, batch in proposed_batches.items():
                         proposed_errors += batch.errors - current_batches[start].errors
-                        proposed_pose_squared_error += batch.pose_squared_error - current_batches[start].pose_squared_error
+                        proposed_pose_squared_error += (
+                            batch.pose_squared_error - current_batches[start].pose_squared_error
+                        )
                     current_dpose = current_pose_squared_error / pose_coordinates
                     proposed_dpose = proposed_pose_squared_error / pose_coordinates
                     seg_delta, pose_delta, rate_delta, joint_delta = _joint_objective_delta(
@@ -2323,10 +2292,7 @@ def run_v11_search(
 
     if is_v12 and invocation_stop > processed:
         invocation_path = (
-            root
-            / "stage_checkpoints"
-            / "invocations"
-            / f"bundles_{processed:04d}_{invocation_stop:04d}.json"
+            root / "stage_checkpoints" / "invocations" / f"bundles_{processed:04d}_{invocation_stop:04d}.json"
         )
         _atomic_checkpoint(
             invocation_path,
@@ -2343,10 +2309,7 @@ def run_v11_search(
                 "all_candidate_checkpoints_preserved": True,
                 "measurement_tool_sha256": _sha256(_read_regular_file_once(Path(__file__))),
                 "receiver_lineage_sha256": _sha256(
-                    _read_regular_file_once(
-                        REPO_ROOT
-                        / "src/tac/optimization/direct_description_carrier_compose.py"
-                    )
+                    _read_regular_file_once(REPO_ROOT / "src/tac/optimization/direct_description_carrier_compose.py")
                 ),
             },
         )
@@ -2445,9 +2408,7 @@ def run_v11_search(
             "bridge": bridge,
             "per_stratum": _stratified_byte_rows(selected_archive, bridge),
             "objective_advisory": {
-                "score": _objective(
-                    len(selected_archive), bridge["segmentation"]["d_seg"], bridge["pose"]["d_pose"]
-                ),
+                "score": _objective(len(selected_archive), bridge["segmentation"]["d_seg"], bridge["pose"]["d_pose"]),
                 "formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
             },
         }
@@ -2477,18 +2438,12 @@ def run_v11_search(
     final_dseg = float(final["bridge"]["segmentation"]["d_seg"])
     final_bytes = int(final["archive"]["bytes"])
     atoms_in_partitioned_bundles = sum(_candidate_atom_count(row) for row in candidates)
-    exact_scorer_rows = [
-        row for row in candidate_rows if isinstance(row.get("measurement"), dict)
-    ]
+    exact_scorer_rows = [row for row in candidate_rows if isinstance(row.get("measurement"), dict)]
     strict_receiver_rows = [
-        row
-        for row in candidate_rows
-        if row.get("reason") == "strict_receiver_rejected_candidate_bundle"
+        row for row in candidate_rows if row.get("reason") == "strict_receiver_rejected_candidate_bundle"
     ]
     greedy_conflict_rows = [
-        row
-        for row in candidate_rows
-        if row.get("reason") == "address_conflict_with_earlier_measured_admission"
+        row for row in candidate_rows if row.get("reason") == "address_conflict_with_earlier_measured_admission"
     ]
     byte_ceiling_rows = [
         row
@@ -2499,24 +2454,12 @@ def run_v11_search(
             "preregistered_added_byte_ceiling_exceeded",
         }
     ]
-    exact_scorer_measured_atomic_count = sum(
-        int(row["atomic_obligation_count"]) for row in exact_scorer_rows
-    )
-    strict_receiver_rejected_atomic_count = sum(
-        int(row["atomic_obligation_count"]) for row in strict_receiver_rows
-    )
-    greedy_conflict_excluded_atomic_count = sum(
-        int(row["atomic_obligation_count"]) for row in greedy_conflict_rows
-    )
-    byte_ceiling_excluded_atomic_count = sum(
-        int(row["atomic_obligation_count"]) for row in byte_ceiling_rows
-    )
-    unpartitioned_bounded_atomic_count = max(
-        0, len(generated) - atoms_in_partitioned_bundles
-    )
-    exact_scorer_unmeasured_atomic_count = max(
-        0, len(generated) - exact_scorer_measured_atomic_count
-    )
+    exact_scorer_measured_atomic_count = sum(int(row["atomic_obligation_count"]) for row in exact_scorer_rows)
+    strict_receiver_rejected_atomic_count = sum(int(row["atomic_obligation_count"]) for row in strict_receiver_rows)
+    greedy_conflict_excluded_atomic_count = sum(int(row["atomic_obligation_count"]) for row in greedy_conflict_rows)
+    byte_ceiling_excluded_atomic_count = sum(int(row["atomic_obligation_count"]) for row in byte_ceiling_rows)
+    unpartitioned_bounded_atomic_count = max(0, len(generated) - atoms_in_partitioned_bundles)
+    exact_scorer_unmeasured_atomic_count = max(0, len(generated) - exact_scorer_measured_atomic_count)
     measurement_inventory_exhausted = exact_scorer_unmeasured_atomic_count == 0
     decision_inventory_exhausted = (
         len(candidate_rows) == len(candidates)
@@ -2528,23 +2471,15 @@ def run_v11_search(
     conflict_order_evidence: list[dict[str, Any]] = []
     for candidate, row in zip(candidates, candidate_rows, strict=True):
         if row.get("reason") == "address_conflict_with_earlier_measured_admission":
-            prior = [
-                value
-                for value in accepted_prior
-                if value.conflict_keys() & candidate.conflict_keys()
-            ]
-            valid = bool(prior) and all(
-                value.fisher_priority >= candidate.fisher_priority for value in prior
-            )
+            prior = [value for value in accepted_prior if value.conflict_keys() & candidate.conflict_keys()]
+            valid = bool(prior) and all(value.fisher_priority >= candidate.fisher_priority for value in prior)
             conflict_order_valid = conflict_order_valid and valid
             conflict_order_evidence.append(
                 {
                     "candidate_id": candidate.candidate_id,
                     "candidate_predicted_ev": f"{candidate.fisher_priority:.12e}",
                     "prior_admitted_candidate_ids": [value.candidate_id for value in prior],
-                    "prior_predicted_ev": [
-                        f"{value.fisher_priority:.12e}" for value in prior
-                    ],
+                    "prior_predicted_ev": [f"{value.fisher_priority:.12e}" for value in prior],
                     "valid_lower_or_equal_ev_exclusion": valid,
                 }
             )
@@ -2564,9 +2499,7 @@ def run_v11_search(
                 "receiver_lineage_sha256": row.get("receiver_lineage_sha256"),
             }
         )
-    maximum_budget_envelope_bytes = max(
-        len(base_archive) + int(row["effective_added_budget_bytes"]) for row in ladder
-    )
+    maximum_budget_envelope_bytes = max(len(base_archive) + int(row["effective_added_budget_bytes"]) for row in ladder)
     byte_ceiling_nonbinding = not byte_ceiling_rows
     last_admission = max(
         (index for index, row in enumerate(candidate_rows) if row["admitted"]),
@@ -2586,10 +2519,7 @@ def run_v11_search(
     if final_dseg <= 0.00116 and final_bytes <= 154_600:
         verdict = "ADVISORY_INSTANCE_MEETS_SUB015_BOX_NOT_PROMOTABLE"
     elif plateau_falsifier:
-        verdict = (
-            "ADVISORY_FORMULATION_PLATEAU_WITH_200KB_CEILING_NONBINDING_"
-            "V6_SUCCESSOR_NAMED"
-        )
+        verdict = "ADVISORY_FORMULATION_PLATEAU_WITH_200KB_CEILING_NONBINDING_V6_SUCCESSOR_NAMED"
     elif not decision_inventory_exhausted:
         verdict = "ADVISORY_BOUNDED_WATERFILL_ABOVE_TARGET_UNMEASURED_OBLIGATIONS_REMAIN"
     else:
@@ -2597,7 +2527,9 @@ def run_v11_search(
     search_seconds = time.perf_counter() - search_started
     receipt: dict[str, Any] = {
         "schema": RESULT_SCHEMA_V4 if is_v12 else RESULT_SCHEMA_V3,
-        "lane_id": "ddm_v12_drain_unmeasured_obligations" if is_v12 else "lane_ddm_v11_obligation_vocabulary_solve_20260722",
+        "lane_id": "ddm_v12_drain_unmeasured_obligations"
+        if is_v12
+        else "lane_ddm_v11_obligation_vocabulary_solve_20260722",
         "tasks": [603, 613, 578],
         "run_id": config.run_id,
         "seed": config.seed,
@@ -2611,15 +2543,9 @@ def run_v11_search(
             "raw_generated_atomic_count": raw_generated_count,
             "bounded_generated_atomic_count": len(generated),
             "generated_family_counts": generated_family_counts,
-            "family_stratum_mass": {
-                name: f"{value:.12f}" for name, value in family_stratum_mass.items()
-            },
-            "ev_order_policy": (
-                config.ev_order_policy if is_v12 else "fisher_priority_with_family_minimum"
-            ),
-            "drain_policy": (
-                config.drain_policy if is_v12 else "top_one_bundle_per_canonical_batch_family"
-            ),
+            "family_stratum_mass": {name: f"{value:.12f}" for name, value in family_stratum_mass.items()},
+            "ev_order_policy": (config.ev_order_policy if is_v12 else "fisher_priority_with_family_minimum"),
+            "drain_policy": (config.drain_policy if is_v12 else "top_one_bundle_per_canonical_batch_family"),
             "partitioned_bundle_count": len(candidates),
             "atoms_in_partitioned_bundles": atoms_in_partitioned_bundles,
             "exact_scorer_measured_bundle_count": len(exact_scorer_rows),
@@ -2671,8 +2597,7 @@ def run_v11_search(
             "last_admission_bundle_index": last_admission,
             "consecutive_flat_budget_tail_rungs": consecutive_flat_budget_tail_rungs,
             "flatten_definition": (
-                "at least three consecutive highest-budget rungs have identical exact "
-                "archive SHA, d_seg, and d_pose"
+                "at least three consecutive highest-budget rungs have identical exact archive SHA, d_seg, and d_pose"
             ),
             "flattened": flattened,
             "triggered": plateau_falsifier,
@@ -2706,10 +2631,7 @@ def run_v11_search(
             "receiver_lineage": {
                 "path": "src/tac/optimization/direct_description_carrier_compose.py",
                 "sha256": _sha256(
-                    _read_regular_file_once(
-                        REPO_ROOT
-                        / "src/tac/optimization/direct_description_carrier_compose.py"
-                    )
+                    _read_regular_file_once(REPO_ROOT / "src/tac/optimization/direct_description_carrier_compose.py")
                 ),
             },
         },
@@ -2782,6 +2704,477 @@ def run_v11_search(
     return receipt_path
 
 
+def _qclip(value: float, scale: int, minimum: int = -32768, maximum: int = 32767) -> int:
+    return int(np.clip(np.rint(float(value) * scale), minimum, maximum))
+
+
+def _derive_lane_programs(
+    receiver: Any,
+    *,
+    config: DirectDescriptionV13WorldsheetPredictorConfigV1,
+) -> tuple[tuple[LanePeriodicProgramV1, ...], tuple[LaneDriftKnotV1, ...], dict[str, Any]]:
+    lane_layer = next(row for row in receiver.layers if row.role == "Lane")
+    if lane_layer.lane_lines is None:
+        raise DirectDescriptionError("v13 natural Lane grammar lacks coherent-slot custody")
+    start, stop = config.pair_start, config.pair_start + config.pair_count
+    maximum_slots = max(len(lane_layer.lane_lines[pair]) for pair in range(start, stop))
+    programs: list[LanePeriodicProgramV1] = []
+    knots: list[LaneDriftKnotV1] = []
+    for slot in range(maximum_slots):
+        pairs = [pair for pair in range(start, stop) if slot < len(lane_layer.lane_lines[pair])]
+        if not pairs:
+            continue
+        birth, death = pairs[0], pairs[-1] + 1
+        template_phase = float(lane_layer.lane_lines[birth][slot][7])
+        local = np.asarray([pair - start for pair in pairs], dtype=np.int64)
+        xi = receiver.pose6_codes[local, 0].astype(np.int16).astype(np.float64)
+        xi -= xi[0]
+        phases = np.asarray([lane_layer.lane_lines[pair][slot][7] for pair in pairs], dtype=np.float64)
+        design = np.stack((np.ones_like(xi), xi), axis=1)
+        intercept, gain = np.linalg.lstsq(design, phases, rcond=None)[0]
+        origin_q8 = _qclip(intercept - template_phase, 256)
+        gain_q8 = _qclip(gain, 256)
+        programs.append(LanePeriodicProgramV1(slot, birth, death, origin_q8, gain_q8, 0, 0))
+        knot_pairs = sorted({*pairs[:: config.lane_knot_stride], pairs[-1]})
+        for pair in knot_pairs:
+            position = pairs.index(pair)
+            left = max(0, position - 2)
+            right = min(len(pairs), position + 3)
+            vectors = np.stack([lane_layer.lane_lines[pairs[index]][slot] for index in range(left, right)])
+            smooth = np.median(vectors, axis=0)
+            base = np.asarray(lane_layer.lane_lines[pair][slot], dtype=np.float64)
+            predicted_phase = (
+                template_phase
+                + origin_q8 / 256.0
+                + (
+                    receiver.pose6_codes[pair - start, 0].astype(np.int16)
+                    - receiver.pose6_codes[birth - start, 0].astype(np.int16)
+                )
+                * gain_q8
+                / 256.0
+            )
+            values = (
+                _qclip(smooth[0] - base[0], 1 << 24),
+                _qclip(smooth[1] - base[1], 1 << 18),
+                _qclip(smooth[2] - base[2], 1 << 12),
+                _qclip(smooth[3] - base[3], 1 << 8),
+                _qclip(smooth[4] - base[4], 1 << 8),
+                _qclip(smooth[7] - predicted_phase, 1 << 8),
+            )
+            if any(values):
+                knots.append(LaneDriftKnotV1(slot, pair, *values))
+    return (
+        tuple(programs),
+        tuple(sorted(knots)),
+        {
+            "extraction": "inherited Hungarian coherent slots -> xi least-squares single dash phase -> median polynomial/width drift knots",
+            "lane_object_count": len(programs),
+            "lane_knot_count": len(knots),
+            "per_dash_event_count": 0,
+            "road_adjacency_enforced_in_receiver": True,
+            "production_families": ["dash_phase", "polynomial_geometry", "width_profile", "visibility"],
+            "policy_status": config.lane_policy_status,
+            "successor_required": config.lane_successor_required,
+            "promotion_eligible": False,
+        },
+    )
+
+
+def _v13_lane_program_rows(
+    payload: dict[str, Any],
+) -> tuple[tuple[LanePeriodicProgramV1, ...], tuple[LaneDriftKnotV1, ...]]:
+    return (
+        tuple(LanePeriodicProgramV1(**row) for row in payload["lane_programs"]),
+        tuple(LaneDriftKnotV1(**row) for row in payload["lane_knots"]),
+    )
+
+
+def run_v13_predictor(
+    config: DirectDescriptionV13WorldsheetPredictorConfigV1,
+    output_directory: Path,
+    semantic_argv: list[str],
+) -> Path:
+    """Build/measure one resumable rung of the natural-production successor."""
+
+    root = output_directory
+    storage = _storage_preflight(root.resolve())
+    storage["output_tier"] = _portable_path(Path(str(storage.get("output_tier", root))))
+    root.mkdir(parents=True, exist_ok=True)
+    receipt_path = root / f"ddm_v13_worldsheet_predictor_n{config.pair_count}_receipt_v2.json"
+    if receipt_path.exists():
+        receipt = json.loads(_read_regular_file_once(receipt_path))
+        if receipt.get("typed_config_sha256") != config.typed_config_hash():
+            raise DirectDescriptionError("completed v13 receipt typed-config hash differs")
+        print(json.dumps({"resumed": True, "receipt": str(receipt_path), "verdict": receipt["verdict"]}))
+        return receipt_path
+
+    v6_receipt = _bound_json(Path(config.v6_receipt_path), config.v6_receipt_sha256, "v6 receipt")
+    if v6_receipt.get("schema") != "direct_description_dseg_bridge_amortize.v1":
+        raise DirectDescriptionError("v13 input is not the governed v6 receipt")
+    v6_typed = v6_receipt.get("typed_config", {})
+    if (v6_typed.get("pair_start"), v6_typed.get("pair_count")) != (config.pair_start, config.pair_count):
+        raise DirectDescriptionError("v13 window differs from bound v6 window")
+    _candidate_row(v6_receipt, config)
+    predictor_archive = _bound_bytes(
+        Path(config.predictor_archive_path), config.predictor_archive_sha256, "v6 predictor archive"
+    )
+    base_archive, _homes = compile_carrier_compose_archive(predictor_archive, obligation_vocabulary=True)
+    base_receiver = receive_carrier_compose_archive(base_archive)
+    v5_receipt = _bound_json(Path(v6_typed["v5_receipt_path"]), v6_typed["v5_receipt_sha256"], "v6-bound v5 receipt")
+    v5_typed = v5_receipt.get("typed_config", {})
+    target_receipt = load_target_receipt(Path(v5_typed["target_receipt_path"]), v5_typed["target_receipt_sha256"])
+    cache_path = Path(target_receipt.source_cache.path)
+    if not cache_path.is_file() or cache_path.stat().st_size != target_receipt.source_cache.bytes:
+        raise DirectDescriptionError("frozen scorer cache is unavailable")
+    cached_lstars = open_stored_npy_memmap(cache_path, "lstars")
+    cached_margins = open_stored_npy_memmap(cache_path, "margins")
+    cached_poses = open_stored_npy_memmap(cache_path, "gt_poses")
+    target_cells = cached_lstars[config.pair_start : config.pair_start + config.pair_count]
+
+    inventory_path = root / "stage_checkpoints" / "01_natural_production_inventory.json"
+    worldsheet_path = root / "stage_checkpoints" / "01a_movable_g1_eps1_worldsheet.g1s"
+    if inventory_path.exists():
+        inventory = json.loads(_read_regular_file_once(inventory_path))
+        if inventory.get("typed_config_sha256") != config.typed_config_hash():
+            raise DirectDescriptionError("v13 production inventory typed-config hash differs")
+        if inventory.get("schema") != "ddm_v13_g1_natural_production_inventory.v2":
+            raise DirectDescriptionError("v13 production inventory predates the adopted G1 grammar")
+        movable_g1 = inventory["movable_g1"]
+        worldsheet_payload = _bound_bytes(
+            Path(movable_g1["payload_path"]), movable_g1["payload_sha256"], "G1 Movable derivation"
+        )
+        decode_g1_movable_worldsheet(worldsheet_payload, expected_pairs=config.pair_count)
+        lane_programs, lane_knots = _v13_lane_program_rows(inventory)
+    else:
+        worldsheet_payload, movable_metadata = encode_g1_movable_worldsheet(target_cells)
+        _publish_identical_or_new(worldsheet_path, worldsheet_payload)
+        lane_programs, lane_knots, lane_diagnostics = _derive_lane_programs(base_receiver, config=config)
+        inventory = {
+            "schema": "ddm_v13_g1_natural_production_inventory.v2",
+            "stage": "g1_exact_production_adoption_plus_lane_natural_productions",
+            "typed_config_sha256": config.typed_config_hash(),
+            "source_cache_sha256": target_receipt.source_cache.sha256,
+            "predictor_archive_sha256": config.predictor_archive_sha256,
+            "movable_g1": {
+                **asdict(movable_metadata),
+                "payload_path": _portable_path(worldsheet_path),
+                "production_set": "EVENT + delta CENTROID + absolute relative SHAPE",
+                "epsilon_pixels": 1.0,
+                "reference_n600_payload_sha256": "1066081727229e605462e67b8fdd26937d5e3552c13cb66a7444ea3b7360366f",
+                "reference_n600_payload_bytes": 29810,
+                "reference_receipt_sha256": "aeeb916f973523d5ffa3389ee8d744901fe9477cc149af7e756726e2ead907f6",
+            },
+            "lane_programs": [asdict(row) for row in lane_programs],
+            "lane_knots": [asdict(row) for row in lane_knots],
+            "movable_diagnostics": {
+                "extraction": "ADOPTED G1 eps1 polygon worldsheet byte-for-byte",
+                "payload_sha256": movable_metadata.payload_sha256,
+                "payload_bytes": movable_metadata.payload_bytes,
+                "births": movable_metadata.births,
+                "persists": movable_metadata.persists,
+                "deaths": movable_metadata.deaths,
+                "object_slots": movable_metadata.max_slots,
+                "vertices": movable_metadata.vertices,
+                "mask_level_errors": movable_metadata.decoded_mask_errors,
+                "mask_level_clean_rest_dseg": movable_metadata.decoded_clean_rest_dseg,
+                "bbox_productions_present": False,
+                "dense_per_frame_argmax_table_present": False,
+            },
+            "lane_diagnostics": lane_diagnostics,
+            "grammar_induction_table": {
+                "status": "CONSUMED_BEFORE_ROUND2",
+                "merge_commit": "fbc24fb5ab",
+                "receipt_sha256": "aeeb916f973523d5ffa3389ee8d744901fe9477cc149af7e756726e2ead907f6",
+                "n600_payload_sha256": "1066081727229e605462e67b8fdd26937d5e3552c13cb66a7444ea3b7360366f",
+            },
+            "scorer_or_gt_bytes_in_archive": False,
+        }
+        _atomic_checkpoint(inventory_path, inventory)
+
+    archives: dict[str, tuple[bytes, Any]] = {
+        "base": (base_archive, base_receiver),
+    }
+    for name, include_islands, include_lane in (
+        ("islands", True, False),
+        ("lane", False, True),
+        ("both", True, True),
+    ):
+        archive, _ = compile_carrier_compose_archive(
+            predictor_archive,
+            worldsheet_g1_payload=worldsheet_payload if include_islands else b"",
+            lane_programs=lane_programs if include_lane else (),
+            lane_knots=lane_knots if include_lane else (),
+        )
+        archives[name] = (archive, receive_carrier_compose_archive(archive))
+    for name, (archive, _receiver) in archives.items():
+        _publish_identical_or_new(
+            root / f"ddm_v13_{name}_n{config.pair_count}.not_a_candidate.zip.receipt-bytes",
+            archive,
+        )
+    _atomic_checkpoint(
+        root / "stage_checkpoints" / "02_receiver_closed_composition_ladder.json",
+        {
+            "schema": "ddm_v13_receiver_closed_ladder.v1",
+            "typed_config_sha256": config.typed_config_hash(),
+            "ladder": {
+                name: {"bytes": len(archive), "sha256": _sha256(archive), "receiver_custody": dict(receiver.custody)}
+                for name, (archive, receiver) in archives.items()
+            },
+        },
+    )
+
+    segnet_oracle, segnet_custody = _load_segnet_oracle(Path(config.upstream_root), threads=config.scorer_threads)
+    posenet_oracle, posenet_custody = _load_posenet_oracle(Path(config.upstream_root), threads=config.scorer_threads)
+    measured_this_invocation = 0
+    for name in config.composition_ladder:
+        checkpoint = root / "stage_checkpoints" / "measurements" / f"{name}.json"
+        archive, receiver = archives[name]
+        if checkpoint.exists():
+            row = json.loads(_read_regular_file_once(checkpoint))
+            if row.get("typed_config_sha256") != config.typed_config_hash() or row.get("archive_sha256") != _sha256(
+                archive
+            ):
+                raise DirectDescriptionError("v13 rung checkpoint identity differs")
+            continue
+        started = time.perf_counter()
+        bridge = _measure_evaluator_bridge(
+            receiver,
+            pair_start=config.pair_start,
+            cached_lstars=cached_lstars,
+            cached_margins=cached_margins,
+            cached_poses=cached_poses,
+            segnet_oracle=segnet_oracle,
+            posenet_oracle=posenet_oracle,
+            batch_size=config.scorer_batch_size,
+        )
+        _atomic_checkpoint(
+            checkpoint,
+            {
+                "schema": "ddm_v13_composition_measurement.v1",
+                "typed_config_sha256": config.typed_config_hash(),
+                "rung": name,
+                "archive_sha256": _sha256(archive),
+                "archive_bytes": len(archive),
+                "bridge": bridge,
+                "objective_advisory": _objective(
+                    len(archive), bridge["segmentation"]["d_seg"], bridge["pose"]["d_pose"]
+                ),
+                "elapsed_seconds": f"{time.perf_counter() - started:.6f}",
+                "batch_release_law": "batch16 RGB released after each frozen-scorer call",
+                "evidence_axis": EVIDENCE_AXIS,
+                "score_claim": False,
+            },
+        )
+        measured_this_invocation += 1
+        if measured_this_invocation >= config.max_ladder_rungs_per_invocation:
+            break
+    missing = [
+        name
+        for name in config.composition_ladder
+        if not (root / "stage_checkpoints" / "measurements" / f"{name}.json").exists()
+    ]
+    if missing:
+        print(
+            json.dumps(
+                {"resumed": False, "complete": False, "measured": measured_this_invocation, "next_rung": missing[0]}
+            )
+        )
+        return root / "stage_checkpoints" / "measurements" / f"{config.composition_ladder[0]}.json"
+
+    ladder: list[dict[str, Any]] = []
+    for name in config.composition_ladder:
+        archive, receiver = archives[name]
+        measured = json.loads(_read_regular_file_once(root / "stage_checkpoints" / "measurements" / f"{name}.json"))
+        bridge = measured["bridge"]
+        rows = recursive_carrier_byte_rows(archive)
+        for row in rows:
+            if row["stratum"].startswith("movable_"):
+                row["conditional_d_seg"] = bridge["segmentation"]["strata"]["target_class"]["Movable"]["d_seg"]
+            elif row["stratum"].startswith("lane_"):
+                row["conditional_d_seg"] = bridge["segmentation"]["strata"]["target_class"]["Lane"]["d_seg"]
+            else:
+                row["conditional_d_seg"] = None
+        ladder.append(
+            {
+                "rung": name,
+                "archive": {
+                    "path": _portable_path(
+                        root / f"ddm_v13_{name}_n{config.pair_count}.not_a_candidate.zip.receipt-bytes"
+                    ),
+                    "bytes": len(archive),
+                    "sha256": _sha256(archive),
+                    "receiver_closed": True,
+                    "parse_reencode_identical": True,
+                },
+                "bridge": bridge,
+                "objective_advisory": measured["objective_advisory"],
+                "byte_streams": rows,
+                "receiver_custody": dict(receiver.custody),
+                "elapsed_seconds": measured["elapsed_seconds"],
+            }
+        )
+    base = ladder[0]
+    base_score = float(base["objective_advisory"])
+    base_bytes = int(base["archive"]["bytes"])
+    family_rows = []
+    for row in ladder[1:]:
+        byte_delta = int(row["archive"]["bytes"]) - base_bytes
+        score_delta = float(row["objective_advisory"]) - base_score
+        family_rows.append(
+            {
+                "rung": row["rung"],
+                "free_generic_grammar_bytes_charged": 0,
+                "counted_derivation_archive_byte_delta": byte_delta,
+                "measured_delta_S_vs_base": f"{score_delta:.12f}",
+                "measured_delta_S_per_counted_byte": None if byte_delta <= 0 else f"{score_delta / byte_delta:.12e}",
+                "pays_joint_rate": score_delta < 0.0,
+            }
+        )
+    selected = min(ladder, key=lambda row: float(row["objective_advisory"]))
+    final_dseg = float(selected["bridge"]["segmentation"]["d_seg"])
+    movable_dseg = float(selected["bridge"]["segmentation"]["strata"]["target_class"]["Movable"]["d_seg"])
+    within_box = int(selected["archive"]["bytes"]) <= config.total_archive_ceiling_bytes
+    falsifier_triggered = within_box and (movable_dseg > 0.5 or final_dseg > 0.01)
+    movable_diag = inventory["movable_diagnostics"]
+    if float(movable_diag["mask_level_clean_rest_dseg"]) <= 0.00116 and final_dseg > 0.01:
+        binding_mechanism = "receiver_projection"
+    elif float(movable_diag["mask_level_clean_rest_dseg"]) > 0.00116:
+        binding_mechanism = "shape_expressiveness"
+    else:
+        binding_mechanism = "track_fidelity"
+    lane_program_bytes = len(lane_programs) * 13
+    lane_knot_bytes = len(lane_knots) * 15
+    lane_decomposition = {
+        "dash_phase": {
+            "derivation_field_bytes": len(lane_programs) * 4 + len(lane_knots) * 2,
+            "mechanism": "one origin/gain pair per coherent lane object plus sparse phase deviations",
+        },
+        "geometry": {
+            "derivation_field_bytes": len(lane_knots) * 8,
+            "mechanism": "four anisotropically quantized polynomial drift coefficients per knot",
+        },
+        "thin_structure_erasure": {
+            "derivation_field_bytes": len(lane_programs) * 8 + len(lane_knots) * 2,
+            "mechanism": "visibility endpoints plus width profile and sparse width deviations",
+        },
+        "shared_packet_address_and_header_bytes": (
+            max(0, lane_program_bytes + lane_knot_bytes - (len(lane_programs) * 12 + len(lane_knots) * 12))
+            + 12 * int(bool(lane_programs))
+            + 12 * int(bool(lane_knots))
+        ),
+    }
+    fail_closed = prove_carrier_archive_fail_closed(archives[selected["rung"]][0])
+    if final_dseg <= 0.00116 and int(selected["archive"]["bytes"]) <= 200000:
+        verdict = "ADVISORY_INSTANCE_MEETS_DSEG_GATE_IN_BOX_FLAG_MAIN_R6_EXACT_EVAL"
+    elif falsifier_triggered:
+        verdict = "ADVISORY_V13_INSTANCE_FALSIFIER_TRIGGERED_FORMULATION_ONLY"
+    else:
+        verdict = "ADVISORY_V13_INSTANCE_INTERMEDIATE_NO_PROMOTION"
+    receipt = {
+        "schema": RESULT_SCHEMA_V5,
+        "derived_revision": 2,
+        "lane_id": "ddm_v13_worldsheet_event_predictor",
+        "tasks": [603, 613, 578],
+        "run_id": config.run_id,
+        "seed": config.seed,
+        "typed_config": config.model_dump(mode="json", by_alias=True),
+        "typed_config_sha256": config.typed_config_hash(),
+        "semantic_argv": semantic_argv,
+        "natural_production_inventory": inventory,
+        "composition_ladder": ladder,
+        "two_part_code_value": family_rows,
+        "selected_rung": selected["rung"],
+        "lane_residual_decomposition_and_price": lane_decomposition,
+        "falsifier": {
+            "condition": "Movable conditional d_seg > 0.5 OR total d_seg > 0.01 at <=200000 bytes",
+            "triggered": falsifier_triggered,
+            "selected_archive_bytes": selected["archive"]["bytes"],
+            "selected_total_d_seg": selected["bridge"]["segmentation"]["d_seg"],
+            "selected_movable_conditional_d_seg": selected["bridge"]["segmentation"]["strata"]["target_class"][
+                "Movable"
+            ]["d_seg"],
+            "binding_mechanism": binding_mechanism,
+            "verdict_scope": "INSTANCE of v13 natural-production extraction/quantization on the bound v6 predictor; families remain open",
+        },
+        "fail_closed_mutation_proof": fail_closed,
+        "scorer_custody": {"segnet": segnet_custody, "posenet": posenet_custody},
+        "target_custody": {
+            "receipt_path": v5_typed["target_receipt_path"],
+            "receipt_sha256": v5_typed["target_receipt_sha256"],
+            "cache_path": str(cache_path),
+            "cache_bytes": target_receipt.source_cache.bytes,
+            "cache_sha256": target_receipt.source_cache.sha256,
+        },
+        "resume": {
+            "policy": config.checkpoint_policy,
+            "inventory_checkpoint": _portable_path(inventory_path),
+            "movable_g1_derivation_checkpoint": _portable_path(worldsheet_path),
+            "composition_checkpoint": _portable_path(
+                root / "stage_checkpoints" / "02_receiver_closed_composition_ladder.json"
+            ),
+            "measurement_checkpoints": [
+                _portable_path(root / "stage_checkpoints" / "measurements" / f"{name}.json")
+                for name in config.composition_ladder
+            ],
+            "all_preserved": True,
+        },
+        "storage_preflight": storage,
+        "operator_addenda_consumption": {
+            "received_utc_range": ["2026-07-22T19:16:24Z", "2026-07-22T19:26:24Z"],
+            "measured_lane_rung_status": config.lane_policy_status,
+            "lane_successor_required": config.lane_successor_required,
+            "movable_successor_required": config.movable_successor_required,
+            "latest_successor_measured": False,
+            "promotion_blocked": True,
+            "blocker": (
+                "the measured Lane rung predates the binding BEV-curvature/anisotropic-AR1 addenda; "
+                "the exact G1 Movable rung predates projective-depth normalization and shared templates"
+            ),
+        },
+        "verdict": verdict,
+        "verdict_scope": "INSTANCE only; natural worldsheet and periodic Lane production families remain open",
+        "blocker_delta": (
+            "V12 post-solve correction debt is replaced by a receiver-consumed PREDICT grammar with native "
+            "Movable lifecycles/xi deviations/contour morphs and coherent Lane phase/drift/width/visibility. "
+            "Remaining debt is the measured v13 falsifier mechanism and contest-axis replay only if the local gate passes."
+        ),
+        "stores_consulted": [
+            config.v6_receipt_path,
+            config.predictor_archive_path,
+            v6_typed["v5_receipt_path"],
+            v5_typed["target_receipt_path"],
+            str(cache_path),
+            ".omx/research/codex_findings_ddm_v12_drain_unmeasured_obligations_20260722_codex.md",
+            ".omx/research/SPEC_v8_perclass_decomposition_20260708.md",
+            ".omx/research/wave_f_lane_band_rd_research_synthesis_20260702.md",
+            ".omx/research/wave_f_lane_tracking_coherent_fit_measured_20260702.md",
+            ".omx/research/openpilot_cross_surface_audit_20260706.md",
+            ".omx/research/openpilot_world_model_lane_alignment_plan_20260706.md",
+            "src/tac/boundary_math/analytic_lane_render_band.py",
+            "src/tac/boundary_math/dash_phase_carrier.py",
+            "src/tac/boundary_math/lane_ground_factorization.py",
+            "src/tac/boundary_math/lane_track_and_smooth.py",
+            "docs/operating_manual_craft_handoff.md",
+            "reports/latest.md",
+            ".omx/state/lane_registry.json",
+            ".omx/state/canonical_task_status.jsonl",
+        ],
+        "pointer": f"{POINTER_SCORE_TEXT} [contest-CPU]",
+        "pointer_moved": False,
+        "evidence_axis": EVIDENCE_AXIS,
+        "research_only": True,
+        "execution_allowed": False,
+        "score_claim": False,
+        "d_seg_claim": False,
+        "d_pose_claim": False,
+        "promotion_eligible": False,
+        "main_landing_review_required": True,
+    }
+    _publish_identical_or_new(receipt_path, rfc8785_canonicalize(receipt))
+    print(json.dumps({"resumed": False, "complete": True, "receipt": str(receipt_path), "verdict": verdict}))
+    return receipt_path
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
@@ -2796,7 +3189,10 @@ def main() -> int:
         "--output-directory",
         str(args.output_directory),
     ]
-    if config_payload.get("schema") == "DirectDescriptionV12ObligationDrainConfigV1":
+    if config_payload.get("schema") == "DirectDescriptionV13WorldsheetPredictorConfigV1":
+        config = DirectDescriptionV13WorldsheetPredictorConfigV1.model_validate_json(config_bytes)
+        run_v13_predictor(config, args.output_directory, semantic_argv)
+    elif config_payload.get("schema") == "DirectDescriptionV12ObligationDrainConfigV1":
         config = DirectDescriptionV12ObligationDrainConfigV1.model_validate_json(config_bytes)
         run_v11_search(config, args.output_directory, semantic_argv)
     elif config_payload.get("schema") == "DirectDescriptionV11ObligationSearchConfigV1":
