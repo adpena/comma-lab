@@ -20900,3 +20900,27 @@ These are STREAM controls, not archive deltas — the outer-deflate coupling law
 **Scoped negatives (all with named exits, none family-kills):** pose_from_embedding MLP as S1 replacement is INSTANCE-dead (4,782 params → 9,564 B raw fp16 > the whole 6,791 B PNTG stream, +0.00185 S even free elsewhere; weight-compression could change the instance). S2 tiny shared AE is UNMEASURED-N-A pending a real six-field byte/error row — measurement ownership routed to the ddm builder. A2 pretrained-decoder shapes (COIN++/VC-INR/foundation-codec/pre-fitted-prior) ROUTED to #604 U4 with both rule-118 readings characterized — properly NOT self-adjudicated; free-reading builds are research_only until U4 rules.
 
 **Cross-arm hygiene verified:** the arm polled the #574 worktree at base `74324e81fa` (pre-receipt), found no measurement, and did NOT duplicate the temporal predictor — clean sister-coherence. Consumers relayed same-turn: ddm inbox (probe ownership + admission law + fresh controls + dominated-if-loses-to-zlib9 bar), #604 metadata (U4 A2 queue), #614 completed. The candidate admissibility law stays UNREGISTERED as an equation until a real candidate + parser/receiver receipt exists (its own correct rule).
+
+## FEED-603-custody-ddm-scaffold-honest-negative (2026-07-21, MAIN full-artifact custody)
+
+**Landing:** direct_description_minimizer_builder (task #603/#578-R3-redirect, merge f2d6b8ccd0, arm commit 0e352c122a).
+**Verdict:** STATIC_SCAFFOLD_LANDED_LAUNCH_READINESS_FALSIFIED — honest negative, verdict_scope: LANDING/INSTANCE
+(this build attempt only; the direct-description PRIMARY family remains OPEN). Three internal reviews rejected the
+launch-ready interpretation: no DDM optimizer/continuation loop, no Pose6-consuming integer/uint8 receiver, no valid
+final-ZIP unique-home rate attribution (one Deflate member cannot give per-semantic-stream byte homes — the v1
+receiver-rate receipt is non-authorizing until a versioned independently framed carrier exists).
+**MAIN re-derivations (all EXACT):** settled S4 archive 451,191 B sha d84f2fe053… + member 0.bin 1,285,943 B sha
+595e69d41f… parse/re-encode byte-equal · owner-bundle sha 8a9381dd1d… matches receipt · fail-closed CLI rc=2,
+spawn_permitted=false, 19-blocker register; live governor + witness-memory-preflight both REFUSE (independent
+confirmation of the R3/M1 hold this tick).
+**Signal extracted (the register IS the worklist):** the 9 exact blockers are the ordered build list for the REAL
+minimizer — (1) unseal execution via operator-GO receipt, (2) Pose6-consuming uint8 receiver, (3) DDM optimizer +
+stage-continuation runner, (4) resume-registry/governed-launcher adapters, (5) canonical WitnessProgram compiler
+integration, (6) independently framed per-stream carrier (rate custody), (7) v3-family pose-in-objective rung-0 +
+4-rung ladder, (8) n64 custody smoke → n600 same-artifact closure, (9) CPU/CUDA replay receipts. Custody boundary
+re-affirmed: 216,207 B = legacy payload subtotal, NOT len(A(z)); planning caps 216,223/154,524 displayed-only,
+excluded from launch config (full-precision SHA-bound solved-target receipt absent).
+**Naive/toy audit:** PASS — no score claims, no proxy authority, planning arithmetic explicitly quarantined.
+**Named exit:** respawn arm `ddm_receiver_optimizer_build` at blockers 2+3 (the crux pair) — REAL code + n64 custody
+smoke, $0 local, no spawn of training. Fallback #366 remains ineligible until the describe-line verdict.
+**Pointer 0.1910828242 [contest-CPU] UNMOVED** (means/apparatus; the scaffold is custody, not progress).
