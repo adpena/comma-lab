@@ -82697,6 +82697,48 @@
         "contest CPU and CUDA replay",
         "operator GO"
       ]
+    },
+    {
+      "id": "lane_ddm_polytope_membership_n600_603_20260722",
+      "name": "DDM polytope membership and n600 closure task 603",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local-only membership-rung and same-artifact n600 custody extension; no scorer, score, candidate, provider, or pointer authority; MAIN review required.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -82706,5 +82748,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T02:27:21Z"
+  "updated_at": "2026-07-22T02:39:39Z"
 }
