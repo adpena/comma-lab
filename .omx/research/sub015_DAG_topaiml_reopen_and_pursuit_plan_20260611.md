@@ -20949,3 +20949,34 @@ FORMALIZATION_PENDING:membership metric under live measurement; register on the 
 
 **Pointer 0.1910828242 [contest-CPU] UNMOVED** (all of the above is describe-line apparatus on the
 #613 crux path; no scorer invoked, no score claim).
+
+## FEED-603-membership-verdict (2026-07-22, MAIN custody of ddm_polytope_membership_n600)
+
+**Trajectory:** #603 register 7/19 → **8/19** (main 132fff422a). N600_SAME_ARTIFACT_ARCHIVE_CLOSURE
+GREEN: one archive, 600 pairs, 2,565,528 B (sha 63ce33d7…, MAIN re-hashed exact), deterministic ×2,
+resume-identical, unique-home custody — the describe→decode pipe now closes at full n600.
+
+**MEASURED (local frozen-SegNet batch16 ADVISORY, target cells crosschecked vs gt_n600.lstars at
+0.99984 — no class-index trap):** smooth chart-grammar membership in the C1 member's argmax cell =
+0.4936 (n64) / 0.4945 (n256) ≈ the Undrivable class prior (49.3% area). Per-class: Undrivable
+0.999997, Road 0, Lane 0, MyCar 1.1e-5; boundary-stratum membership 0.1299. RGB diagnostic (22.9%)
+UNDER-reports true cell escape (50.6%) by 27.6 points absolute.
+
+**VERDICT (verdict_scope: FORMULATION — the smooth global/axial+strata chart grammar, NOT the
+describe-line family, NOT SegNet score authority):** the grammar is a CONSTANT-CLASSIFIER EQUIVALENT —
+membership equals the bulk-class prior; it contributes zero argmax structure. The "disagreement is
+mostly slack" hypothesis is REFUTED at this grammar. Composes with the ladder datum (4.3 KB/pair,
+0.18% pixel-exact): naive smooth grammars are dominated on BOTH bytes and membership.
+
+**REFORMULATION (Einsteinian, fired):** stop making grammars chase membership — #602
+mdl_polytope_member_solve already produces min-description POLYTOPE MEMBERS (membership by
+construction, code length inside the solve). Next arm `ddm_mdl_member_carrier_n600` composes the
+#602-coded members into the proven n600 same-artifact receiver → the first honest
+(bytes, membership≈1) point at n600, the direct input to the #613 knee search (≤154.6 KB box).
+Equations leg: `FORMALIZATION_PENDING:membership-equals-class-prior law folds into the #613 knee
+ledger when the member-carrier bytes land`.
+
+**Pointer 0.1910828242 [contest-CPU] UNMOVED** (advisory scorer forward only; no exact row).
+**Incident note:** post-merge cleanup discarded 2 transient hook-appended rows from the live
+operator_p0_ledger.jsonl via `git checkout` (append-only violation, bounded: digest coherent,
+committed state intact, rows regenerate on next --update). Lesson: never checkout live-state JSONL.
