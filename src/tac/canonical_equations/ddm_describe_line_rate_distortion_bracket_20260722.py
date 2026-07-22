@@ -12,6 +12,7 @@ Every anchor is macOS-CPU advisory and non-promotable.  The callable predicts
 only the scoped receipt verdict from measured inputs; it never manufactures a
 contest score or treats the n600 byte interpolation as a measurement.
 """
+
 from __future__ import annotations
 
 import math
@@ -39,15 +40,10 @@ LEG_STRUCTURED_CARRIER = "v9_structured_per_stratum_carrier"
 V7_VERDICT = "FORMULATION_LEVEL_EXACT_RESIDUAL_KOLMOGOROV_RATE_WALL"
 V8_VERDICT = "FORMULATION_LEVEL_MARGIN_GATED_CORRECTION_RATE_WALL"
 V9_VERDICT = "ADVISORY_INSTANCE_FAILS_SUB015_BOX_FORMULATION_OPEN"
-V12_VERDICT = (
-    "ADVISORY_FORMULATION_PLATEAU_WITH_200KB_CEILING_NONBINDING_"
-    "V6_SUCCESSOR_NAMED"
-)
+V12_VERDICT = "ADVISORY_FORMULATION_PLATEAU_WITH_200KB_CEILING_NONBINDING_V6_SUCCESSOR_NAMED"
+V13_VERDICT = "ADVISORY_V13_INSTANCE_FALSIFIER_TRIGGERED_FORMULATION_ONLY"
 
-V7_CROSS_RECEIPT = (
-    ".omx/research/"
-    "ddm_v7_solved_plane_tolerance_waterfill_603_613_20260722T102423Z.receipt.json"
-)
+V7_CROSS_RECEIPT = ".omx/research/ddm_v7_solved_plane_tolerance_waterfill_603_613_20260722T102423Z.receipt.json"
 V7_CROSS_SHA256 = "64658a05a8975707f98db308223cefff78b5352975bb59cc2aa8a4ff2f8d50fb"
 V7_N64_RECEIPT = (
     ".omx/research/ddm_v7_solved_plane_tolerance_waterfill_n64_603_613_"
@@ -60,10 +56,7 @@ V7_N256_RECEIPT = (
 )
 V7_N256_SHA256 = "d68f1d9ead9401173160b8cc4ec7fb9d49753a6bb0f298af23de293bc28d4274"
 
-V8_CROSS_RECEIPT = (
-    ".omx/research/"
-    "ddm_v8_margin_gated_correction_603_613_20260722T115052Z.receipt.json"
-)
+V8_CROSS_RECEIPT = ".omx/research/ddm_v8_margin_gated_correction_603_613_20260722T115052Z.receipt.json"
 V8_CROSS_SHA256 = "7051927df863a3ab01a6e1494550a914829715b00faeae15baa3abb951a49d1c"
 V8_N64_RECEIPT = (
     ".omx/research/ddm_v8_margin_gated_correction_n64_603_613_"
@@ -79,24 +72,41 @@ V8_N256_SHA256 = "99e0e1e9f639a2d42140c97306c9d8b50fd3b883cddd42ba4e2b55bcf26788
 V9_CROSS_RECEIPT = ".omx/research/ddm_v9_carrier_compose_byteclose_SHA_RECEIPT_20260722.json"
 V9_CROSS_SHA256 = "97bf956179ec46a52be0ccc8a5e16e399a682e11e94d1e0b9e33497a32bfafe6"
 V9_N64_RECEIPT = (
-    ".omx/research/ddm_v9_carrier_compose_n64_603_613_20260722T122800Z/"
-    "ddm_v9_carrier_compose_n64_receipt.json"
+    ".omx/research/ddm_v9_carrier_compose_n64_603_613_20260722T122800Z/ddm_v9_carrier_compose_n64_receipt.json"
 )
 V9_N64_SHA256 = "47beaefe0803157960f1e64860c599ee75a1ead287128d9ebca913ef8124ad39"
 V9_N256_RECEIPT = (
-    ".omx/research/ddm_v9_carrier_compose_n256_603_613_20260722T123300Z/"
-    "ddm_v9_carrier_compose_n256_receipt.json"
+    ".omx/research/ddm_v9_carrier_compose_n256_603_613_20260722T123300Z/ddm_v9_carrier_compose_n256_receipt.json"
 )
 V9_N256_SHA256 = "57cd12b103779731c2311dc364f1908e6acb476765b16ded66cd146ee076fdae"
 
-V12_N600_RECEIPT = (
-    ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/"
-    "ddm_v12_obligation_search_n600_receipt.json"
-)
+V12_N600_RECEIPT = ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json"
 V12_N600_SHA256 = "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a"
+V13_N64_RECEIPT = (
+    ".omx/research/ddm_v13_g1_worldsheet_predictor_n64_20260722T201500Z/"
+    "ddm_v13_worldsheet_predictor_n64_receipt_v2.json"
+)
+V13_N64_SHA256 = "0c51bb33e42dabeed1f434c838cad4b0ec51cce02ebb61b89e2fc9cbb2b3da4a"
+V13_N600_RECEIPT = (
+    ".omx/research/ddm_v13_g1_worldsheet_predictor_n600_20260722T201500Z/"
+    "ddm_v13_worldsheet_predictor_n600_receipt_v2.json"
+)
+V13_N600_SHA256 = "31fc55b3bfeec4dbc1b5a40155438cb71190b814dadc05ad73f678bcd9c46bf5"
+V13_PHASE_N64_RECEIPT = (
+    ".omx/research/ddm_v13_lane_phase_ablation_n64_20260722T204500Z/ddm_v13_lane_phase_ablation_n64_receipt.json"
+)
+V13_PHASE_N64_SHA256 = "b39b86b23517d1696cdc24316f05bd11066ecb3fe72d7acf7156bb76e9f7bf93"
+V13_PHASE_N600_RECEIPT = (
+    ".omx/research/ddm_v13_lane_phase_ablation_n600_20260722T204500Z/ddm_v13_lane_phase_ablation_n600_receipt.json"
+)
+V13_PHASE_N600_SHA256 = "622e6eda5b06e3fbe16ec494648dd85f6ba73545716b65fcdb07f797539f62ad"
+V13_G3_ATLAS_COMMIT = "e472310d93"
+V13_G3_ATLAS_RECEIPT_SHA256 = "6c4157092a7bdf7ba44b458cd470725cc470d84a8fc77ed7d3dedb59160734f5"
+V13_G1_PAYLOAD_SHA256 = "1066081727229e605462e67b8fdd26937d5e3552c13cb66a7444ea3b7360366f"
 
 CALIBRATION_UTC = "2026-07-22T14:08:53Z"
 V12_CALIBRATION_UTC = "2026-07-22T17:55:52Z"
+V13_CALIBRATION_UTC = "2026-07-22T21:15:00Z"
 
 
 def _strict_number(value: Any, name: str, *, minimum: float = 0.0) -> float:
@@ -130,19 +140,13 @@ def _windows(inputs: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
             raise ValueError(f"windows[{index}] must be a mapping")
         row = {
             "pair_count": _strict_int(item.get("pair_count"), f"windows[{index}].pair_count", minimum=1),
-            "archive_bytes": _strict_int(
-                item.get("archive_bytes"), f"windows[{index}].archive_bytes", minimum=1
-            ),
+            "archive_bytes": _strict_int(item.get("archive_bytes"), f"windows[{index}].archive_bytes", minimum=1),
             "d_seg": _strict_number(item.get("d_seg"), f"windows[{index}].d_seg"),
             "d_pose": _strict_number(item.get("d_pose"), f"windows[{index}].d_pose"),
-            "receiver_closed": _strict_bool(
-                item.get("receiver_closed"), f"windows[{index}].receiver_closed"
-            ),
+            "receiver_closed": _strict_bool(item.get("receiver_closed"), f"windows[{index}].receiver_closed"),
         }
         if "selected_fraction" in item:
-            selected = _strict_number(
-                item["selected_fraction"], f"windows[{index}].selected_fraction"
-            )
+            selected = _strict_number(item["selected_fraction"], f"windows[{index}].selected_fraction")
             if selected > 1.0:
                 raise ValueError(f"windows[{index}].selected_fraction must be <= 1")
             row["selected_fraction"] = selected
@@ -217,9 +221,7 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
             "score_claim": False,
         }
 
-    correction_symbols = _strict_int(
-        inputs.get("correction_symbols"), "correction_symbols"
-    )
+    correction_symbols = _strict_int(inputs.get("correction_symbols"), "correction_symbols")
     if not _strict_bool(inputs.get("region_coherent"), "region_coherent"):
         raise ValueError("v9 leg requires region_coherent=true")
     if _strict_bool(inputs.get("pixel_residual_present"), "pixel_residual_present"):
@@ -231,7 +233,45 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
     if not isinstance(full_obligation_drain, bool):
         raise ValueError("full_obligation_drain must be boolean")
     n600_rows = [row for row in rows if row["pair_count"] == 600]
-    if full_obligation_drain:
+    g1_worldsheet_predictor = inputs.get("g1_worldsheet_predictor", False)
+    if not isinstance(g1_worldsheet_predictor, bool):
+        raise ValueError("g1_worldsheet_predictor must be boolean")
+    if g1_worldsheet_predictor:
+        g1_payload_exact = _strict_bool(inputs.get("g1_payload_exact"), "g1_payload_exact")
+        mask_level_clean_rest_dseg = _strict_number(
+            inputs.get("mask_level_clean_rest_dseg"), "mask_level_clean_rest_dseg"
+        )
+        through_r_movable_dseg = _strict_number(inputs.get("through_r_movable_dseg"), "through_r_movable_dseg")
+        receiver_projection_bound = _strict_bool(inputs.get("receiver_projection_bound"), "receiver_projection_bound")
+        phase_receiver_closed = _strict_bool(inputs.get("phase_receiver_closed"), "phase_receiver_closed")
+        phase_total_dseg_delta = _strict_number(
+            inputs.get("phase_total_dseg_delta"), "phase_total_dseg_delta", minimum=-1.0
+        )
+        phase_lane_dseg_delta = _strict_number(
+            inputs.get("phase_lane_dseg_delta"), "phase_lane_dseg_delta", minimum=-1.0
+        )
+        phase_result_status = inputs.get("phase_result_status")
+        if phase_result_status != "RAW_Q8_LANE_HELP_TOTAL_HARM":
+            raise ValueError("v13 phase_result_status must preserve the measured split verdict")
+        addenda_status = inputs.get("operator_addenda_status")
+        if addenda_status != "PRE_ADDENDUM_BASELINE_SUCCESSORS_UNMEASURED":
+            raise ValueError("v13 operator_addenda_status must preserve the measured baseline scope")
+        verdict = (
+            V13_VERDICT
+            if receiver_closed
+            and rate_green
+            and dseg_red
+            and pose_red
+            and g1_payload_exact
+            and mask_level_clean_rest_dseg <= dseg_gate
+            and through_r_movable_dseg <= 0.5
+            and receiver_projection_bound
+            and phase_receiver_closed
+            and phase_total_dseg_delta > 0.0
+            and phase_lane_dseg_delta < 0.0
+            else "OPEN"
+        )
+    elif full_obligation_drain:
         if not n600_rows:
             raise ValueError("full obligation drain requires one measured n600 window")
         decision_inventory_exhausted = _strict_bool(
@@ -260,10 +300,7 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
             "prior_higher_ev_conflict_excluded_atoms",
         )
         decision_atom_partition_valid = (
-            scorer_measured_atoms
-            + strict_receiver_rejected_atoms
-            + conflict_excluded_atoms
-            == bounded_atoms
+            scorer_measured_atoms + strict_receiver_rejected_atoms + conflict_excluded_atoms == bounded_atoms
         )
         verdict = (
             V12_VERDICT
@@ -280,11 +317,7 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
     else:
         verdict = (
             V9_VERDICT
-            if receiver_closed
-            and rate_green
-            and dseg_red
-            and pose_red
-            and correction_symbols == 0
+            if receiver_closed and rate_green and dseg_red and pose_red and correction_symbols == 0
             else "OPEN"
         )
     lo, hi = rows[0], rows[-1]
@@ -303,16 +336,14 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
         "marginal_bytes_per_pair": float(slope),
         "marginal_bytes_per_pair_exact": f"{slope.numerator}/{slope.denominator}",
         "n600_projected_bytes": float(projected_n600),
-        "n600_projected_bytes_exact": (
-            f"{projected_n600.numerator}/{projected_n600.denominator}"
-        ),
+        "n600_projected_bytes_exact": (f"{projected_n600.numerator}/{projected_n600.denominator}"),
         "n600_projection_status": (
-            "MEASURED_N600_RECEIVER_CLOSED"
-            if n600_rows
-            else "DERIVED_FROM_MEASURED_N64_N256_NOT_MEASURED_N600"
+            "MEASURED_N600_RECEIVER_CLOSED" if n600_rows else "DERIVED_FROM_MEASURED_N64_N256_NOT_MEASURED_N600"
         ),
         "verdict_scope": (
-            "FORMULATION_CORRECT_A_BOUND_0P034_PREDICTOR_FAMILIES_OPEN"
+            "INSTANCE_G1_PRODUCTION_SET_RECEIVER_PROJECTION_FAMILIES_OPEN"
+            if g1_worldsheet_predictor
+            else "FORMULATION_CORRECT_A_BOUND_0P034_PREDICTOR_FAMILIES_OPEN"
             if full_obligation_drain
             else "INSTANCE_FORMULATION_OPEN"
         ),
@@ -333,6 +364,18 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
             "strict_receiver_rejected_atoms": strict_receiver_rejected_atoms,
             "prior_higher_ev_conflict_excluded_atoms": conflict_excluded_atoms,
             "valid": decision_atom_partition_valid,
+        }
+    if g1_worldsheet_predictor:
+        result["g1_worldsheet_realization"] = {
+            "payload_exact": g1_payload_exact,
+            "mask_level_clean_rest_dseg": mask_level_clean_rest_dseg,
+            "through_r_movable_dseg": through_r_movable_dseg,
+            "receiver_projection_bound": receiver_projection_bound,
+            "operator_addenda_status": addenda_status,
+            "phase_receiver_closed": phase_receiver_closed,
+            "phase_result_status": phase_result_status,
+            "phase_total_dseg_delta": phase_total_dseg_delta,
+            "phase_lane_dseg_delta": phase_lane_dseg_delta,
         }
     return result
 
@@ -454,6 +497,44 @@ def _v12_inputs() -> dict[str, Any]:
     }
 
 
+def _v13_inputs() -> dict[str, Any]:
+    return {
+        "leg": LEG_STRUCTURED_CARRIER,
+        "rate_budget_bytes": 200_000,
+        "dseg_gate": 0.00116,
+        "dpose_gate": 0.00025,
+        "correction_symbols": 0,
+        "region_coherent": True,
+        "pixel_residual_present": False,
+        "g1_worldsheet_predictor": True,
+        "g1_payload_exact": True,
+        "mask_level_clean_rest_dseg": 0.00028294881184895833,
+        "through_r_movable_dseg": 0.481331895297,
+        "receiver_projection_bound": True,
+        "phase_receiver_closed": True,
+        "phase_result_status": "RAW_Q8_LANE_HELP_TOTAL_HARM",
+        "phase_total_dseg_delta": 0.000280736287,
+        "phase_lane_dseg_delta": -0.029228004790,
+        "operator_addenda_status": "PRE_ADDENDUM_BASELINE_SUCCESSORS_UNMEASURED",
+        "windows": [
+            {
+                "pair_count": 64,
+                "archive_bytes": 57_408,
+                "d_seg": 0.045520385106,
+                "d_pose": 159.103546959451,
+                "receiver_closed": True,
+            },
+            {
+                "pair_count": 600,
+                "archive_bytes": 132_606,
+                "d_seg": 0.029592759874,
+                "d_pose": 163.016398660918,
+                "receiver_closed": True,
+            },
+        ],
+    }
+
+
 def _anchor(
     *,
     anchor_id: str,
@@ -492,7 +573,7 @@ def _anchor(
 
 
 def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
-    """Build the measured v7/v8/v9 bracket plus append-only V12 n600 anchor."""
+    """Build the measured bracket plus append-only V12 and V13 n600 anchors."""
 
     v7 = _anchor(
         anchor_id="ddm_v7_exact_value_rate_wall_n64_n256_20260722",
@@ -539,18 +620,31 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
         receipt_bindings={V12_N600_RECEIPT: V12_N600_SHA256},
         measurement_utc=V12_CALIBRATION_UTC,
     )
+    v13 = _anchor(
+        anchor_id="ddm_v13_g1_worldsheet_receiver_projection_n64_n600_20260722",
+        inputs=_v13_inputs(),
+        verdict=V13_VERDICT,
+        source_artifact=V13_N600_RECEIPT,
+        source_sha256=V13_N600_SHA256,
+        receipt_bindings={
+            V13_N64_RECEIPT: V13_N64_SHA256,
+            V13_N600_RECEIPT: V13_N600_SHA256,
+            V13_PHASE_N64_RECEIPT: V13_PHASE_N64_SHA256,
+            V13_PHASE_N600_RECEIPT: V13_PHASE_N600_SHA256,
+        },
+        measurement_utc=V13_CALIBRATION_UTC,
+    )
     provenance = build_provenance_for_macos_cpu_advisory(
-        archive_sha256=V12_N600_SHA256,
-        source_path=V12_N600_RECEIPT,
-        captured_at_utc=V12_CALIBRATION_UTC,
+        archive_sha256=V13_N600_SHA256,
+        source_path=V13_N600_RECEIPT,
+        captured_at_utc=V13_CALIBRATION_UTC,
     )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name="DDM direct-description measured rate/distortion bracket",
         one_line_summary=(
-            "Exact values are rate-dead, sparse pixel repairs are ERF-dead, and "
-            "structured carriers enter the byte box while exhaustive n600 correction of the "
-            "bound predictor plateaus above the distortion gate."
+            "Exact values are rate-dead; sparse pixels are ERF-dead; structured carriers enter "
+            "the box; G1 worldsheet isolates receiver projection as the remaining Movable barrier."
         ),
         latex_form=(
             r"(B_9,D_9)_{\mathrm{structured}}\;\leadsto\;"
@@ -564,7 +658,7 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
             "evaluate_ddm_describe_line_rate_distortion_bracket"
         ),
         domain_of_validity={
-            "formalization_status": "MEASURED_THREE_LEG_BRACKET_PLUS_N600_ANCHOR",
+            "formalization_status": "MEASURED_THREE_LEG_BRACKET_PLUS_V12_V13_N600_ANCHORS_PLUS_G2_PHASE_ABLATION",
             "tasks": [540, 578, 603, 613],
             "axis": AXIS,
             "advisory_only": True,
@@ -572,8 +666,7 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
             "promotion_eligible": False,
             "legs": {
                 LEG_VALUE_EXACTNESS: (
-                    "exact opaque solved-plane site/value descriptions; evaluator-green, "
-                    "rate-dead at 200000 bytes"
+                    "exact opaque solved-plane site/value descriptions; evaluator-green, rate-dead at 200000 bytes"
                 ),
                 LEG_SPARSE_PIXEL: (
                     "exact-value post-hoc pixel masks over photometrically alien predictor; "
@@ -589,17 +682,14 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
                 "v8_tight_n64_n256_bytes": [2_629_076, 9_360_569],
                 "v9_n64_n256_bytes": [51_668, 72_397],
                 "v12_n600_bytes": 106_106,
+                "v13_g1_worldsheet_n600_bytes": 132_606,
             },
             "v7_measured_binders": {
                 "rate": (
-                    "Road+Undrivable+MyCar opaque exact homes are 94.21-94.73 percent "
-                    "of final bytes across n64/n256"
+                    "Road+Undrivable+MyCar opaque exact homes are 94.21-94.73 percent of final bytes across n64/n256"
                 ),
                 "d_seg": "Lane plus Boundary remain the exact-rung evaluator binders",
-                "q4_n256": (
-                    "108637789 bytes; d_seg 0.001218597094; misses 0.00116 gate by "
-                    "0.000058597094"
-                ),
+                "q4_n256": ("108637789 bytes; d_seg 0.001218597094; misses 0.00116 gate by 0.000058597094"),
             },
             "v8_measured_support": {
                 "finite_tau_selected_fraction": [0.040182133516, 0.060744444529],
@@ -607,8 +697,7 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
                 "tight_mask_d_seg": [0.025907576084, 0.029359102249],
             },
             "derived_projection_rule": (
-                "linear n64-to-n256 exact-byte interpolation only; callable labels the "
-                "n600 result DERIVED_NOT_MEASURED"
+                "linear n64-to-n256 exact-byte interpolation only; callable labels the n600 result DERIVED_NOT_MEASURED"
             ),
             "derived_v9_projection": {
                 "measured_marginal_bytes_per_pair_exact": "20729/192",
@@ -625,6 +714,56 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
                 "exact_scorer_measured_atoms": 3_994,
                 "strict_receiver_rejected_atoms": 66,
                 "prior_higher_ev_conflict_excluded_atoms": 36,
+            },
+            "v13_g1_worldsheet_upgrade": {
+                "status": "MEASURED_N600_RECEIVER_CLOSED_INSTANCE_FALSIFIER_TRIGGERED",
+                "g1_payload_bytes": 29_810,
+                "g1_payload_sha256": V13_G1_PAYLOAD_SHA256,
+                "g1_mask_level_clean_rest_dseg": 0.00028294881184895833,
+                "selected_archive_bytes": 132_606,
+                "selected_d_seg": 0.029592759874,
+                "selected_d_pose": 163.016398660918,
+                "selected_movable_d_seg": 0.481331895297,
+                "binding_mechanism": "receiver_projection",
+                "operator_addenda_status": "PRE_ADDENDUM_BASELINE_SUCCESSORS_UNMEASURED",
+                "lane_successor": "bev_curvature_range_gate_anisotropic_ar1_innovations_unmeasured",
+                "movable_successor": "projective_depth_shared_templates_aspect_rotation_unmeasured",
+                "g2_corrections": {
+                    "ranker": "frozen_scorer_flip_margin_not_pixel_energy",
+                    "lane_topology": "birth_dominated_dash_comb_plus_events_confirmed",
+                    "movable_topology": "persistence_dominated_rel_velocity_plus_deviations_required",
+                    "xi_only_movable_predictive": False,
+                },
+                "raw_q8_phase_ablation": {
+                    "n64_total_dseg_delta": -0.000217199325,
+                    "n64_lane_conditional_dseg_delta": -0.036247253996,
+                    "n600_symbol_count": 130,
+                    "n600_added_bytes": 2_128,
+                    "n600_total_dseg_delta": 0.000280736287,
+                    "n600_lane_conditional_dseg_delta": -0.029228004790,
+                    "n600_joint_objective_delta": 0.028907928562,
+                    "status": "MEASURED_RECEIVER_CLOSED_LANE_HELP_TOTAL_HARM",
+                    "verdict_scope": (
+                        "raw q8 phase deviations over the inherited pre-addendum Lane chart only; "
+                        "anisotropic AR1-whitened BEV successor remains open"
+                    ),
+                },
+                "g3_allocation_policy": {
+                    "source_commit": V13_G3_ATLAS_COMMIT,
+                    "source_receipt_sha256": V13_G3_ATLAS_RECEIPT_SHA256,
+                    "joint_top10_mass_fraction": 0.019785252279635502,
+                    "joint_top100_mass_fraction": 0.1870385612422957,
+                    "seg_top100_mass_fraction": 0.2685436608566537,
+                    "debt_shape": "BROAD_NOT_HEAVY_TAILED",
+                    "per_pair_topk_correction_allowed": False,
+                    "allocation_form": "AMORTIZED_SHARED_GRAMMAR_TEMPLATES_PROCESS_PRIORS",
+                    "per_pair_stream_policy": "NEAR_UNIFORM_CHEAP_WHITENED_INNOVATIONS_ONLY",
+                    "top24_policy": "SCREENING_ONLY_FULL_N600_VERDICT_REQUIRED",
+                    "top24_full_objective_pearson_r": 0.5953065905385343,
+                    "event_proxy_pairs": [279, 286, 452],
+                    "event_proxy_coverage": "REPRESENTATION_SUPPORT_PRESENT_NOT_SEMANTIC_GROUND_TRUTH",
+                },
+                "main_r6_exact_eval_flag": False,
             },
             "erf_mechanism_context": (
                 "r50 approximately 50-160 px with median approximately 85; r90 approximately "
@@ -646,7 +785,10 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
             "verdict_scope": (
                 "v7 exact opaque values and v8 finite-tau post-hoc pixel values are "
                 "FORMULATION negatives; v9 is an INSTANCE/FORMULATION-open bracket point; "
-                "v12 closes only correct-a-bound-0.034-predictor; chart/event/carrier families "
+                "v12 closes only correct-a-bound-0.034-predictor; v13 is INSTANCE-scoped and "
+                "isolates G1 mask-to-RGB receiver projection; the 19:16-19:26 operator addendum "
+                "successors are explicitly unmeasured; G3 forbids per-pair top-k verdicts and "
+                "requires amortized shared structure plus full-n600 authority; chart/event/carrier families "
                 "and the describe-line paradigm remain open"
             ),
         },
@@ -663,14 +805,15 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
             "n600_projected_bytes": "derived bytes for anchors without an n600 endpoint",
             "n600_measured": "receiver-closed measured n600 row when present",
         },
-        empirical_anchors=(v7, v8, v9, v12),
+        empirical_anchors=(v7, v8, v9, v12, v13),
         predicted_vs_empirical_residual={
             "v7_scoped_receipt_verdict": 0.0,
             "v8_scoped_receipt_verdict": 0.0,
             "v9_scoped_receipt_verdict": 0.0,
             "v12_scoped_receipt_verdict": 0.0,
+            "v13_scoped_receipt_verdict": 0.0,
         },
-        last_calibration_utc=V12_CALIBRATION_UTC,
+        last_calibration_utc=V13_CALIBRATION_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "tac.optimization.v10_constructive_solver",
@@ -680,6 +823,7 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
         canonical_producers=(
             "tools.run_direct_description_entropy_priced_member",
             "tools.run_ddm_v9_carrier_compose",
+            "tools.measure_ddm_v13_lane_phase_ablation",
         ),
         provenance=provenance,
     )
@@ -704,7 +848,10 @@ def populate_ddm_describe_line_rate_distortion_bracket_v1(
         agent=agent,
         subagent_id=subagent_id,
         notes=(
-            "DDM v7/v8/v9 bracket plus measured V12 n600 anchor; tasks #540/#578/#603/#613; "
+            "DDM v7/v8/v9 bracket plus measured V12 and G1-adopted V13 n600 anchors; "
+            "G2 receiver-closed raw-q8 phase split (Lane help, total harm); "
+            "G3 broad-debt allocation forbids per-pair top-k authority; "
+            "tasks #540/#578/#603/#613; "
             "research-only; MAIN landing review required"
         ),
     )
@@ -729,6 +876,18 @@ __all__ = [
     "V12_N600_RECEIPT",
     "V12_N600_SHA256",
     "V12_VERDICT",
+    "V13_G1_PAYLOAD_SHA256",
+    "V13_G3_ATLAS_COMMIT",
+    "V13_G3_ATLAS_RECEIPT_SHA256",
+    "V13_N64_RECEIPT",
+    "V13_N64_SHA256",
+    "V13_N600_RECEIPT",
+    "V13_N600_SHA256",
+    "V13_PHASE_N64_RECEIPT",
+    "V13_PHASE_N64_SHA256",
+    "V13_PHASE_N600_RECEIPT",
+    "V13_PHASE_N600_SHA256",
+    "V13_VERDICT",
     "build_ddm_describe_line_rate_distortion_bracket_v1",
     "evaluate_ddm_describe_line_rate_distortion_bracket",
     "populate_ddm_describe_line_rate_distortion_bracket_v1",

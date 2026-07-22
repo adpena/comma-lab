@@ -1,0 +1,83 @@
+{
+  "schema": "ddm_v13_worldsheet_event_predictor_sha_receipt.v1",
+  "date_utc": "2026-07-22T21:30:00Z",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_v13_worldsheet_event_predictor_20260722T181444Z.wrapped.prompt.txt",
+    "bytes": 8730,
+    "sha256": "35679d3db0965ff3b154cea49453e8918b7df45750f6b1df19a9a9b40ba68931"
+  },
+  "base_commit": "f92e10cb3f3f455d263845edf30a0b5c7bd40305",
+  "g1_binding": {
+    "merge_commit": "fbc24fb5ab",
+    "compact_receipt_sha256": "aeeb916f973523d5ffa3389ee8d744901fe9477cc149af7e756726e2ead907f6",
+    "payload_bytes": 29810,
+    "payload_sha256": "1066081727229e605462e67b8fdd26937d5e3552c13cb66a7444ea3b7360366f"
+  },
+  "g2_binding": {
+    "merge_commit": "b8f3833d09",
+    "ranker": "frozen_scorer_flip_margin_not_pixel_energy",
+    "lane_topology": "birth_dominated_dash_comb_plus_events_confirmed",
+    "movable_topology": "persistence_dominated_rel_velocity_plus_deviations_required",
+    "xi_only_movable_predictive": false
+  },
+  "g3_binding": {
+    "merge_commit": "e472310d93",
+    "atlas_receipt_sha256": "6c4157092a7bdf7ba44b458cd470725cc470d84a8fc77ed7d3dedb59160734f5",
+    "hard_pair_registry_sha256": "0c9ce6d0ce2b2c0830400f096438355242527d40f682fc1b201f67d8d951a4e4",
+    "allocation_contract_sha256": "d2d917c3c30879d0304c6d02b0b5f7e58e13ffcd79fdfdafba87e4674bc0ef1d",
+    "per_pair_topk_correction_allowed": false,
+    "full_n600_verdict_required": true
+  },
+  "source_files": {
+    "src/tac/optimization/direct_description_g1_worldsheet.py": "fa3c95d6ead9943ee42182eb1f7ddcc02334d564717cb879006884e5e90d7053",
+    "src/tac/optimization/direct_description_carrier_compose.py": "c077c6fbfa906212cc19501b205013165083b15d01f27bab7a9cf32c04804698",
+    "src/tac/optimization/ddm_v13_lane_phase_ablation.py": "0492264a69110a702916674c0391813619f1a17fd15896a8788d2c5669c16d1c",
+    "src/tac/optimization/tests/test_direct_description_carrier_compose.py": "b4319863dd2b26b4e33db3484f96ecea199eb4c3cca5ec72b48024e2fca8bde1",
+    "src/tac/optimization/tests/test_ddm_v13_lane_phase_ablation.py": "0c90f0e38c4284b52d38d72f0dafe2a8f75ef5892225dc3fa93c61cebf6f7e98",
+    "tools/run_ddm_v9_carrier_compose.py": "8cc306c72b306a45b4d01c2810adcede583ead31687a62b97c9917f43bc12421",
+    "tools/measure_ddm_v13_lane_phase_ablation.py": "ed985fd18f61bca7153412fd08a3371b890162ea50848640aeea4e6af4a6cbde",
+    "src/tac/canonical_equations/ddm_describe_line_rate_distortion_bracket_20260722.py": "f5558156c3a70f9ba0318a98aba16f3a6af964fcca183e5a4f9c6ed6639f944a",
+    "src/tac/canonical_equations/tests/test_ddm_describe_line_rate_distortion_bracket_20260722.py": "4b7f2336def8478cc8a83a65ff51b98cab5d9aca6ce221a3e462b944ff17b605"
+  },
+  "configs": {
+    ".omx/research/configs/ddm_v13_worldsheet_predictor_n64_20260722.json": "e31298f2bc09d4d9f804add3f7be129f88d4e978ed91701a149f30af10a3e88f",
+    ".omx/research/configs/ddm_v13_worldsheet_predictor_n600_20260722.json": "3fe6042dd46c398a5f2a8136041105df77cf660d9fa43a0210ef0505bca3e607",
+    ".omx/research/configs/ddm_v13_lane_phase_ablation_n64_20260722.json": "58f9276120c21136d709d389c61cc714a7b05cdcf0219c90c60b434ab9845ea1",
+    ".omx/research/configs/ddm_v13_lane_phase_ablation_n600_20260722.json": "fdf92c415fe418753469aada5c5ec4189c4a5c23112de0589cc26f9ae9f3687a"
+  },
+  "receipts": {
+    "n64_v2": "0c51bb33e42dabeed1f434c838cad4b0ec51cce02ebb61b89e2fc9cbb2b3da4a",
+    "n600_v2": "31fc55b3bfeec4dbc1b5a40155438cb71190b814dadc05ad73f678bcd9c46bf5",
+    "phase_n64": "b39b86b23517d1696cdc24316f05bd11066ecb3fe72d7acf7156bb76e9f7bf93",
+    "phase_n600": "622e6eda5b06e3fbe16ec494648dd85f6ba73545716b65fcdb07f797539f62ad",
+    "operator_addenda_consumption": "2400b5fe20c9728be6bfe4f0df6a3343ae4326289939e8db49cfa42126f6d103",
+    "g3_allocation_consumption": "d2d917c3c30879d0304c6d02b0b5f7e58e13ffcd79fdfdafba87e4674bc0ef1d",
+    "canonical_equation_append_row": "15a976d91792fe958bde4e919ad686b2884130fdb2ca9d487c2638db09940585"
+  },
+  "n600_archives": {
+    "islands": {"bytes": 132606, "sha256": "be806f9a49ff8d58b0ab0bb9be0489f7c0b62edeb2aaa65364ed61f9f44cd652"},
+    "lane": {"bytes": 104999, "sha256": "4d6a5251b5aa761da39e67966520d102bfa0209e159c3e2eab0f46cd50c76557"},
+    "both": {"bytes": 135004, "sha256": "2fecb6c53b4e22cfcaeeb7b1d8b885cd0cafd07a566670f42b9161687256adb5"}
+  },
+  "phase_ablation": {
+    "phase_predict": {"bytes": 102871, "sha256": "9d6c3f8380b4998c81088ab06ef3255017ee8777743b327361e514d1b0acf9ea"},
+    "phase_symbols": {"bytes": 104999, "sha256": "501e95b1cd1fdf83a048b70cc8decca97c2370aedf6661ce9f7ccc99277bf4e2"},
+    "phase_symbol_count": 130,
+    "total_dseg_delta": "0.000280736287",
+    "lane_conditional_dseg_delta": "-0.029228004790",
+    "joint_objective_delta": "0.028907928562",
+    "disposition": "REJECT_RAW_Q8_INSTANCE_KEEP_AR1_WHITENED_BEV_SUCCESSOR_OPEN"
+  },
+  "verification": {
+    "focused_tests": "33 passed",
+    "ruff": "clean",
+    "py_compile": "clean",
+    "git_diff_check": "clean"
+  },
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "d_seg_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

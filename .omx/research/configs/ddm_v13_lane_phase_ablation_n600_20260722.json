@@ -1,0 +1,22 @@
+{
+  "schema": "DDMV13LanePhaseAblationConfigV1",
+  "run_id": "ddm_v13_lane_phase_ablation_n600_20260722T204500Z",
+  "pair_start": 0,
+  "pair_count": 600,
+  "v13_config_path": ".omx/research/configs/ddm_v13_worldsheet_predictor_n600_20260722.json",
+  "v13_config_sha256": "3fe6042dd46c398a5f2a8136041105df77cf660d9fa43a0210ef0505bca3e607",
+  "v13_receipt_path": ".omx/research/ddm_v13_g1_worldsheet_predictor_n600_20260722T201500Z/ddm_v13_worldsheet_predictor_n600_receipt_v2.json",
+  "v13_receipt_sha256": "31fc55b3bfeec4dbc1b5a40155438cb71190b814dadc05ad73f678bcd9c46bf5",
+  "scorer_batch_size": 16,
+  "scorer_threads": 4,
+  "max_measurements_per_invocation": 1,
+  "phase_policy": "xi_phase_predict_then_sparse_per_pair_phase_symbols_camera_resolution_before_R",
+  "successor_scope": "raw_phase_ablation_before_anisotropic_ar1_whitening",
+  "ranker": "frozen_scorer_flip_margin_not_pixel_energy",
+  "seed": 1234,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "d_seg_claim": false,
+  "d_pose_claim": false
+}

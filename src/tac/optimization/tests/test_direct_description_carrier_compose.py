@@ -14,17 +14,28 @@ import pytest
 from tac.optimization.direct_description_carrier_compose import (
     ARCHIVE_SCHEMA_V2,
     ARCHIVE_SCHEMA_V3,
+    ARCHIVE_SCHEMA_V4,
     BOUNDARY_CORRECTION_MEMBER,
     BOUNDARY_SHEARLET_MEMBER,
     EVENT_CORRECTION_MEMBER,
     ISLAND_SHAPE_MEMBER,
+    LANE_KNOT_MEMBER,
+    LANE_PROGRAM_MEMBER,
+    WORLDSHEET_G1_MEMBER,
+    WORLDSHEET_KNOT_MEMBER,
+    WORLDSHEET_TRACK_MEMBER,
     BoundaryCoefficientDelta,
     BoundaryShearletAtomV1,
     DirectDescriptionV9CarrierComposeConfigV1,
     DirectDescriptionV10FisherEventSearchConfigV1,
     DirectDescriptionV11ObligationSearchConfigV1,
     DirectDescriptionV12ObligationDrainConfigV1,
+    DirectDescriptionV13WorldsheetPredictorConfigV1,
     IslandShapeAtomV1,
+    LaneDriftKnotV1,
+    LanePeriodicProgramV1,
+    MovableWorldsheetKnotV1,
+    MovableWorldsheetTrackV1,
     TopologyEventV1,
     compile_carrier_compose_archive,
     parse_carrier_compose_archive,
@@ -37,6 +48,10 @@ from tac.optimization.direct_description_entropy_priced_member import (
     compile_composed_structured_member_archive,
 )
 from tac.optimization.direct_description_entropy_streams import STREAM_ORDER, compile_entropy_chart_archive
+from tac.optimization.direct_description_g1_worldsheet import (
+    decode_g1_movable_worldsheet,
+    encode_g1_movable_worldsheet,
+)
 from tac.optimization.direct_description_measurement_ladder import (
     _ANCHOR_RECORD,
     _GRADIENT_RECORD,
@@ -234,17 +249,34 @@ def test_v12_config_binds_full_n600_resumable_drain() -> None:
         "upstream_root": "/absolute/upstream",
         "scorer_threads": 1,
     }
-    config = DirectDescriptionV12ObligationDrainConfigV1(
-        pair_start=0, pair_count=600, **common
-    )
+    config = DirectDescriptionV12ObligationDrainConfigV1(pair_start=0, pair_count=600, **common)
     assert config.max_measured_candidates == 512
     assert config.max_bundles_per_invocation == 64
     assert config.drain_policy.startswith("exhaustive_conflict_free")
     assert config.base_cache_policy.startswith("immutable_zlib")
     with pytest.raises(ValueError, match="exact full n600"):
-        DirectDescriptionV12ObligationDrainConfigV1(
-            pair_start=448, pair_count=64, **common
-        )
+        DirectDescriptionV12ObligationDrainConfigV1(pair_start=448, pair_count=64, **common)
+
+
+def test_v13_config_seals_natural_production_ladder_and_false_authority() -> None:
+    config = DirectDescriptionV13WorldsheetPredictorConfigV1(
+        run_id="fixture_v13",
+        pair_start=448,
+        pair_count=64,
+        v6_receipt_path="v6.json",
+        v6_receipt_sha256="1" * 64,
+        predictor_archive_path="predictor.zip",
+        predictor_archive_sha256="2" * 64,
+        upstream_root="/absolute/upstream",
+        scorer_threads=1,
+    )
+    assert config.composition_ladder == ("base", "islands", "lane", "both")
+    assert "persist_unless_event" in config.worldsheet_policy
+    assert "periodic_dash_phase_xi" in config.lane_policy
+    assert config.lane_policy_status == "measured_pre_20260722T1916Z_operator_addenda_baseline_only"
+    assert config.lane_successor_required.startswith("bev_curvature_dash_comb_range_gate")
+    assert config.movable_successor_required.startswith("projective_flow_depth_magnification")
+    assert config.execution_allowed is config.score_claim is config.d_seg_claim is False
 
 
 def test_v11_joint_objective_can_admit_priced_pose_worsening() -> None:
@@ -455,9 +487,7 @@ def test_v10_boundary_and_xi_event_vocab_are_counted_and_receiver_consumed() -> 
         BoundaryCoefficientDelta(0, "Road", 0, 3.0),
         BoundaryCoefficientDelta(0, "Road", 1, 1.0),
     )
-    events = (
-        TopologyEventV1(0, "Movable", "birth", "ellipse", 2, 100, 200, 122, 232, 1, -1),
-    )
+    events = (TopologyEventV1(0, "Movable", "birth", "ellipse", 2, 100, 200, 122, 232, 1, -1),)
     archive, homes = compile_carrier_compose_archive(
         predictor,
         boundary_symbols=boundary,
@@ -518,6 +548,96 @@ def test_v11_obligation_atoms_are_counted_fourier_free_and_receiver_consumed() -
         "boundary_shearlet_obligations",
         "movable_shape_obligations",
     ]
+
+
+def test_v13_worldsheet_and_lane_natural_productions_are_counted_and_consumed() -> None:
+    predictor = _predictor()
+    tracks = (MovableWorldsheetTrackV1(7, 0, 3, 100, 200, 10, 18, 32, 8, -4, 12, 1, -1),)
+    worldsheet_knots = (MovableWorldsheetKnotV1(7, 1, 16, -16, 8, -8, 4, 0, 1, -1, 2),)
+    lane_programs = (LanePeriodicProgramV1(0, 0, 3, 32, 4, 512, 0),)
+    lane_knots = (LaneDriftKnotV1(0, 1, 0, 0, 0, 64, 64, 32),)
+    archive, homes = compile_carrier_compose_archive(
+        predictor,
+        worldsheet_tracks=tracks,
+        worldsheet_knots=worldsheet_knots,
+        lane_programs=lane_programs,
+        lane_knots=lane_knots,
+    )
+    members, replay_homes = parse_carrier_compose_archive(archive)
+    receiver = receive_carrier_compose_archive(archive)
+    manifest = json.loads(members["manifest.json"])
+    assert manifest["schema"] == ARCHIVE_SCHEMA_V4
+    assert set(members) == {
+        "manifest.json",
+        "predictor.zip",
+        WORLDSHEET_TRACK_MEMBER,
+        WORLDSHEET_KNOT_MEMBER,
+        LANE_PROGRAM_MEMBER,
+        LANE_KNOT_MEMBER,
+    }
+    assert manifest["grammar"]["temporal_default"] == "persist-unless-birth-or-death-event"
+    assert "one dash phase" in manifest["grammar"]["lane"]["periodic_programs"]["alphabet"]
+    assert homes == replay_homes
+    assert receiver.worldsheet_tracks == tracks
+    assert receiver.worldsheet_knots == worldsheet_knots
+    assert receiver.lane_programs == lane_programs
+    assert receiver.lane_knots == lane_knots
+    assert receiver.custody["worldsheet_stores_only_xi_deviations"] is True
+    assert receiver.custody["lane_one_dash_phase_per_object_not_per_dash"] is True
+    assert receiver.custody["pixel_coordinate_or_rgb_patch_present"] is False
+    base = receive_carrier_compose_archive(compile_carrier_compose_archive(predictor)[0])
+    assert not np.array_equal(base.render_pairs((0, 1, 2)), receiver.render_pairs((0, 1, 2)))
+    assert [row["stratum"] for row in recursive_carrier_byte_rows(archive)[-4:]] == [
+        "movable_worldsheet_lifecycle_shape",
+        "movable_worldsheet_xi_deviation_morph_knots",
+        "lane_periodic_phase_width_visibility",
+        "lane_polynomial_drift_knots",
+    ]
+
+
+def test_v13_adopted_g1_polygon_worldsheet_is_semantic_parseback_and_receiver_visible() -> None:
+    labels = np.zeros((64, 384, 512), dtype=np.int64)
+    for pair in range(64):
+        labels[pair, 24:40, 32 + pair : 48 + pair] = 3
+    payload, metadata = encode_g1_movable_worldsheet(labels)
+    decoded, replay_metadata = decode_g1_movable_worldsheet(payload, expected_pairs=64)
+    assert np.array_equal(decoded, labels == 3)
+    assert metadata.payload_sha256 == replay_metadata.payload_sha256
+    assert metadata.production_counted_bytes.keys() == {"EVENT", "CENTROID", "SHAPE", "envelope_header"}
+    archive, _homes = compile_carrier_compose_archive(_predictor(), worldsheet_g1_payload=payload)
+    members, _parse_homes = parse_carrier_compose_archive(archive)
+    receiver = receive_carrier_compose_archive(archive)
+    assert WORLDSHEET_G1_MEMBER in members
+    assert receiver.custody["worldsheet_g1_semantic_parseback"] is True
+    assert receiver.custody["worldsheet_g1_pair_count"] == 64
+    assert receiver.custody["pixel_coordinate_or_rgb_patch_present"] is False
+    assert recursive_carrier_byte_rows(archive)[-1]["stratum"] == "movable_g1_polygon_worldsheet_derivation"
+    base = receive_carrier_compose_archive(compile_carrier_compose_archive(_predictor())[0])
+    assert not np.array_equal(base.render_pairs((0, 63)), receiver.render_pairs((0, 63)))
+
+
+def test_v13_refuses_orphan_knots_and_postsolve_correction_mixing() -> None:
+    predictor = _predictor()
+    with pytest.raises(DirectDescriptionError, match="outside its declared object lifecycle"):
+        compile_carrier_compose_archive(
+            predictor,
+            worldsheet_knots=(MovableWorldsheetKnotV1(9, 1, 16),),
+        )
+    with pytest.raises(DirectDescriptionError, match="cannot be mixed"):
+        compile_carrier_compose_archive(
+            predictor,
+            symbols=(LaneCoefficientDelta(0, 0, 3, 0.5),),
+            worldsheet_tracks=(MovableWorldsheetTrackV1(1, 0, 2, 100, 200, 10, 18, 0, 0, 0, 0),),
+        )
+    labels = np.zeros((64, 384, 512), dtype=np.int64)
+    labels[:, 20:30, 20:30] = 3
+    payload, _metadata = encode_g1_movable_worldsheet(labels)
+    with pytest.raises(DirectDescriptionError, match="cannot be mixed with the superseded"):
+        compile_carrier_compose_archive(
+            predictor,
+            worldsheet_tracks=(MovableWorldsheetTrackV1(1, 0, 2, 100, 200, 10, 18, 0, 0, 0, 0),),
+            worldsheet_g1_payload=payload,
+        )
 
 
 def test_v10_refuses_inert_or_out_of_window_semantic_events() -> None:

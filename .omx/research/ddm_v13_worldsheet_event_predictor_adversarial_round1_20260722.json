@@ -1,0 +1,104 @@
+{
+  "schema": "ddm_v13_worldsheet_event_predictor_adversarial_review.v1",
+  "date_utc": "2026-07-22T21:30:00Z",
+  "lane_id": "ddm_v13_worldsheet_event_predictor",
+  "round": 1,
+  "clean_passes": 3,
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "review_disposition": "CLEAN_AFTER_SIX_CORRECTIONS_INSTANCE_FALSIFIER_RAW_PHASE_FALSIFIER_AND_G3_ALLOCATION_CONSTRAINT",
+  "corrections": [
+    {
+      "finding": "initial moment-ellipse worldsheet did not adopt the late G1 production table as-is",
+      "resolution": "replaced measured island leg with exact G1 eps1 EVENT/CENTROID/absolute-SHAPE payload before round 2",
+      "proof": "n600 payload 29810 bytes and SHA-256 1066081727229e605462e67b8fdd26937d5e3552c13cb66a7444ea3b7360366f"
+    },
+    {
+      "finding": "superseded extractor emitted spurious Accelerate 2-D matmul overflow warnings",
+      "resolution": "removed the superseded moment-ellipse extractor and its unused Hungarian dependency",
+      "proof": "focused archive/equation suite 29 passed"
+    },
+    {
+      "finding": "first derived receipt classified the n600 binder as track_fidelity",
+      "resolution": "re-derived from exact mask and through-R evidence; V2 receipt classifies receiver_projection",
+      "proof": "mask clean-rest d_seg 0.00028294881184895833; selected total d_seg 0.029592759874"
+    },
+    {
+      "finding": "19:16-19:26 operator addenda superseded the measured Lane grammar and extended the Movable successor",
+      "resolution": "marked the measured Lane rung pre-addendum baseline-only and blocked promotion pending the BEV-curvature AR1 innovation and projective lifecycle successors",
+      "proof": ".omx/research/ddm_v13_operator_addenda_consumption_20260722.json"
+    },
+    {
+      "finding": "20:15 G2 correction made pixel-energy ranking invalid and left phase claims blocked-untested",
+      "resolution": "bound flip-margin ranking and measured a receiver-closed phase-only n64/n600 pair with no geometry or width knot fields",
+      "proof": "n600 phase symbols improve Lane conditional d_seg by 0.029228004790 but worsen total d_seg by 0.000280736287; receipt SHA 622e6eda5b06e3fbe16ec494648dd85f6ba73545716b65fcdb07f797539f62ad"
+    },
+    {
+      "finding": "21:13 G3 atlas falsified heavy-tail allocation and prohibited per-pair top-k verdicts",
+      "resolution": "bound the canonical law and planning receipt to amortized shared grammar/templates/process priors, near-uniform-cheap per-pair innovations, top24 screening only, and full-n600 authority",
+      "proof": "G3 receipt SHA 6c4157092a7bdf7ba44b458cd470725cc470d84a8fc77ed7d3dedb59160734f5; joint top10 0.019785252279635502 and top100 0.1870385612422957"
+    }
+  ],
+  "checks": {
+    "g1_payload_exact": true,
+    "semantic_parseback": true,
+    "archive_parse_reencode_identical": true,
+    "unique_byte_homes_close": true,
+    "all_eight_final_archives_mutation_checked": true,
+    "receiver_consumes_g1_derivation": true,
+    "lane_one_phase_not_per_dash": true,
+    "lane_road_constraint_receiver_enforced": true,
+    "lane_addendum_successor_measured": false,
+    "movable_projective_successor_measured": false,
+    "pre_addendum_baseline_promotion_blocked": true,
+    "g2_energy_score_correction_consumed": true,
+    "g2_topology_split_consumed": true,
+    "g2_xi_only_movable_correction_consumed": true,
+    "phase_only_receiver_ablation_measured": true,
+    "phase_only_geometry_or_width_fields_present": false,
+    "raw_q8_phase_total_objective_admitted": false,
+    "ar1_whitened_bev_successor_open": true,
+    "g3_broad_debt_consumed": true,
+    "per_pair_topk_correction_allowed": false,
+    "top24_subset_verdict_authority": false,
+    "full_n600_verdict_required": true,
+    "g3_event_proxy_representation_support_checked": true,
+    "batch16_release": true,
+    "resumable_one_rung_per_invocation": true,
+    "scorer_or_gt_bytes_in_archive": false,
+    "pixel_or_rgb_patch_in_archive": false,
+    "paid_dispatch": false,
+    "r6_flag": false,
+    "pointer_moved": false
+  },
+  "measured_verdict": {
+    "selected_rung": "islands",
+    "archive_bytes": 132606,
+    "d_seg": "0.029592759874",
+    "d_pose": "163.016398660918",
+    "movable_conditional_d_seg": "0.481331895297",
+    "binding_mechanism": "receiver_projection",
+    "verdict": "ADVISORY_V13_INSTANCE_FALSIFIER_TRIGGERED_FORMULATION_ONLY",
+    "verdict_scope": "INSTANCE only; worldsheet, Lane, carrier, and describe-line families remain open"
+  },
+  "phase_ablation_verdict": {
+    "n64_receipt_sha256": "b39b86b23517d1696cdc24316f05bd11066ecb3fe72d7acf7156bb76e9f7bf93",
+    "n600_receipt_sha256": "622e6eda5b06e3fbe16ec494648dd85f6ba73545716b65fcdb07f797539f62ad",
+    "n600_added_bytes": 2128,
+    "n600_total_dseg_delta": "0.000280736287",
+    "n600_lane_conditional_dseg_delta": "-0.029228004790",
+    "n600_joint_objective_delta": "0.028907928562",
+    "disposition": "REJECT_RAW_Q8_INSTANCE_LANE_MECHANISM_SIGNAL_RETAINED",
+    "verdict_scope": "raw q8 phase deviations over the inherited pre-addendum Lane chart only; anisotropic AR1-whitened BEV successor remains open"
+  },
+  "tests": {
+    "command": "PYTHONPATH=src .venv/bin/python -m pytest -q src/tac/optimization/tests/test_ddm_v13_lane_phase_ablation.py src/tac/optimization/tests/test_direct_description_carrier_compose.py src/tac/canonical_equations/tests/test_ddm_describe_line_rate_distortion_bracket_20260722.py",
+    "passed": 33,
+    "failed": 0,
+    "ruff": "clean",
+    "py_compile": "clean"
+  },
+  "score_claim": false,
+  "d_seg_claim": false,
+  "promotion_eligible": false,
+  "main_landing_review_required": true
+}

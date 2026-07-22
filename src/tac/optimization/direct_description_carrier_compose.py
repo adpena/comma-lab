@@ -35,6 +35,7 @@ from tac.optimization.direct_description_entropy_priced_member import (
     rfc8785_canonicalize,
 )
 from tac.optimization.direct_description_entropy_streams import parse_entropy_chart_archive
+from tac.optimization.direct_description_g1_worldsheet import decode_g1_movable_worldsheet
 from tac.optimization.direct_description_minimizer import SEED, DirectDescriptionError, _require_sha256
 from tac.optimization.predictor_upgrade_xi_chart import (
     LaneCoefficientDelta,
@@ -46,16 +47,20 @@ CONFIG_SCHEMA: Final = "DirectDescriptionV9CarrierComposeConfigV1"
 ARCHIVE_SCHEMA: Final = "direct_description_v9_carrier_compose_archive.v1"
 ARCHIVE_SCHEMA_V2: Final = "direct_description_v10_fisher_event_archive.v1"
 ARCHIVE_SCHEMA_V3: Final = "direct_description_v11_obligation_archive.v1"
+ARCHIVE_SCHEMA_V4: Final = "direct_description_v13_worldsheet_predictor_archive.v1"
 RECEIVER_SCHEMA: Final = "direct_description_v9_carrier_compose_receiver.v1"
 RECEIVER_SCHEMA_V2: Final = "direct_description_v10_fisher_event_receiver.v1"
 RECEIVER_SCHEMA_V3: Final = "direct_description_v11_obligation_receiver.v1"
+RECEIVER_SCHEMA_V4: Final = "direct_description_v13_worldsheet_predictor_receiver.v1"
 RESULT_SCHEMA: Final = "direct_description_v9_carrier_compose_receipt.v1"
 RESULT_SCHEMA_V2: Final = "direct_description_v10_fisher_event_search_receipt.v1"
 RESULT_SCHEMA_V3: Final = "direct_description_v11_obligation_search_receipt.v1"
 RESULT_SCHEMA_V4: Final = "direct_description_v12_obligation_drain_receipt.v1"
+RESULT_SCHEMA_V5: Final = "direct_description_v13_worldsheet_predictor_receipt.v1"
 MAGIC: Final = "DDV9C1"
 MAGIC_V2: Final = "DDV10C1"
 MAGIC_V3: Final = "DDV11C1"
+MAGIC_V4: Final = "DDV13P1"
 EVIDENCE_AXIS: Final = "[macOS-CPU frozen-scorer advisory]"
 CLASS_ORDER: Final = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
 ROLE_CLASS_IDS: Final = {
@@ -70,6 +75,11 @@ BOUNDARY_CORRECTION_MEMBER: Final = "correction/road_boundary_coefficients.g2bc"
 EVENT_CORRECTION_MEMBER: Final = "correction/topology_events.g2ev"
 BOUNDARY_SHEARLET_MEMBER: Final = "correction/boundary_shearlet_atoms.g2sh"
 ISLAND_SHAPE_MEMBER: Final = "correction/movable_shape_atoms.g2is"
+WORLDSHEET_TRACK_MEMBER: Final = "predict/movable_worldsheet_tracks.ddwt"
+WORLDSHEET_KNOT_MEMBER: Final = "predict/movable_worldsheet_knots.ddwk"
+WORLDSHEET_G1_MEMBER: Final = "predict/movable_polygon_worldsheet.g1s"
+LANE_PROGRAM_MEMBER: Final = "predict/lane_periodic_programs.ddlp"
+LANE_KNOT_MEMBER: Final = "predict/lane_drift_knots.ddlk"
 
 _ROLE_TO_WIRE: Final = {name: index for index, name in enumerate(COMPOSED_ROLE_ORDER)}
 _WIRE_TO_ROLE: Final = {value: key for key, value in _ROLE_TO_WIRE.items()}
@@ -93,6 +103,18 @@ _ISLAND_MAGIC: Final = b"G2IS1"
 _ISLAND_VERSION: Final = 1
 _ISLAND_HEADER: Final = struct.Struct(">5sBHI")
 _ISLAND_ROW: Final = struct.Struct(">HBBHHBHBbbbbb")
+_WORLDSHEET_TRACK_MAGIC: Final = b"DDWT1"
+_WORLDSHEET_TRACK_HEADER: Final = struct.Struct(">5sBHI")
+_WORLDSHEET_TRACK_ROW: Final = struct.Struct(">HHHHHBHBbbbbb")
+_WORLDSHEET_KNOT_MAGIC: Final = b"DDWK1"
+_WORLDSHEET_KNOT_HEADER: Final = struct.Struct(">5sBHI")
+_WORLDSHEET_KNOT_ROW: Final = struct.Struct(">HHhhhhhhbbb")
+_LANE_PROGRAM_MAGIC: Final = b"DDLP1"
+_LANE_PROGRAM_HEADER: Final = struct.Struct(">5sBHI")
+_LANE_PROGRAM_ROW: Final = struct.Struct(">BHHhhhh")
+_LANE_KNOT_MAGIC: Final = b"DDLK1"
+_LANE_KNOT_HEADER: Final = struct.Struct(">5sBHI")
+_LANE_KNOT_ROW: Final = struct.Struct(">BHhhhhhh")
 
 
 @dataclass(frozen=True, order=True, slots=True)
@@ -239,6 +261,170 @@ class IslandShapeAtomV1:
             raise DirectDescriptionError("one-pair island shapes must not carry inert transport gains")
 
 
+@dataclass(frozen=True, order=True, slots=True)
+class MovableWorldsheetTrackV1:
+    """One persist-unless-event Movable object in the PREDICT grammar.
+
+    Birth and death are lifecycle productions.  The initial contour uses the
+    already-governed island-carrier moment/curvelet coordinates.  Between
+    events the receiver rides the sole counted Pose6/xi stream; instance bytes
+    store only sparse deviations and low-order morphs in
+    :class:`MovableWorldsheetKnotV1`.
+    """
+
+    object_id: int
+    birth_pair: int
+    death_pair_exclusive: int
+    center_y: int
+    center_x: int
+    radius_y: int
+    radius_x: int
+    angle_u8: int
+    skew_q6: int
+    taper_q6: int
+    curvelet_q6: int
+    transport_gain_x_q4: int = 0
+    transport_gain_y_q4: int = 0
+
+    def __post_init__(self) -> None:
+        if isinstance(self.object_id, bool) or not 0 <= self.object_id <= 0xFFFF:
+            raise DirectDescriptionError("worldsheet object ID is outside uint16")
+        if not 0 <= self.birth_pair < self.death_pair_exclusive <= 600:
+            raise DirectDescriptionError("worldsheet birth/death interval is invalid")
+        if not (0 <= self.center_y < 384 and 0 <= self.center_x < 512):
+            raise DirectDescriptionError("worldsheet initial center is outside scorer geometry")
+        if not (1 <= self.radius_y <= 191 and 1 <= self.radius_x <= 255):
+            raise DirectDescriptionError("worldsheet initial radius is outside scorer geometry")
+        if not 0 <= self.angle_u8 <= 255:
+            raise DirectDescriptionError("worldsheet angle is outside uint8")
+        for name in ("skew_q6", "taper_q6", "curvelet_q6"):
+            if not -96 <= getattr(self, name) <= 96:
+                raise DirectDescriptionError(f"worldsheet {name} is outside the stable q6 range")
+        for name in ("transport_gain_x_q4", "transport_gain_y_q4"):
+            if not -128 <= getattr(self, name) <= 127:
+                raise DirectDescriptionError(f"worldsheet {name} is outside int8")
+
+
+@dataclass(frozen=True, order=True, slots=True)
+class MovableWorldsheetKnotV1:
+    """Sparse deviation from xi transport plus low-order contour morph."""
+
+    object_id: int
+    pair_index: int
+    delta_center_y_q4: int = 0
+    delta_center_x_q4: int = 0
+    delta_radius_y_q4: int = 0
+    delta_radius_x_q4: int = 0
+    delta_angle_q4: int = 0
+    reserved_q4: int = 0
+    delta_skew_q6: int = 0
+    delta_taper_q6: int = 0
+    delta_curvelet_q6: int = 0
+
+    def __post_init__(self) -> None:
+        if isinstance(self.object_id, bool) or not 0 <= self.object_id <= 0xFFFF:
+            raise DirectDescriptionError("worldsheet-knot object ID is outside uint16")
+        if isinstance(self.pair_index, bool) or not 0 <= self.pair_index < 600:
+            raise DirectDescriptionError("worldsheet-knot pair index is outside [0,600)")
+        for name in (
+            "delta_center_y_q4",
+            "delta_center_x_q4",
+            "delta_radius_y_q4",
+            "delta_radius_x_q4",
+            "delta_angle_q4",
+        ):
+            if not -32768 <= getattr(self, name) <= 32767:
+                raise DirectDescriptionError(f"worldsheet-knot {name} is outside int16")
+        if self.reserved_q4 != 0:
+            raise DirectDescriptionError("worldsheet-knot reserved field must be zero")
+        for name in ("delta_skew_q6", "delta_taper_q6", "delta_curvelet_q6"):
+            if not -128 <= getattr(self, name) <= 127:
+                raise DirectDescriptionError(f"worldsheet-knot {name} is outside int8")
+        if not any(
+            getattr(self, name)
+            for name in (
+                "delta_center_y_q4",
+                "delta_center_x_q4",
+                "delta_radius_y_q4",
+                "delta_radius_x_q4",
+                "delta_angle_q4",
+                "delta_skew_q6",
+                "delta_taper_q6",
+                "delta_curvelet_q6",
+            )
+        ):
+            raise DirectDescriptionError("worldsheet knot must carry a nonzero deviation or morph")
+
+
+@dataclass(frozen=True, order=True, slots=True)
+class LanePeriodicProgramV1:
+    """One Lane object with a single xi-advanced dash phase production."""
+
+    line_index: int
+    birth_pair: int
+    death_pair_exclusive: int
+    dash_phase_origin_delta_q8: int
+    dash_phase_xi_gain_q8: int
+    width_bias_q8: int
+    width_slope_q12: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.line_index, bool) or not 0 <= self.line_index <= 255:
+            raise DirectDescriptionError("lane-program line index is outside uint8")
+        if not 0 <= self.birth_pair < self.death_pair_exclusive <= 600:
+            raise DirectDescriptionError("lane-program visibility interval is invalid")
+        for name in (
+            "dash_phase_origin_delta_q8",
+            "dash_phase_xi_gain_q8",
+            "width_bias_q8",
+            "width_slope_q12",
+        ):
+            if not -32768 <= getattr(self, name) <= 32767:
+                raise DirectDescriptionError(f"lane-program {name} is outside int16")
+
+
+@dataclass(frozen=True, order=True, slots=True)
+class LaneDriftKnotV1:
+    """Sparse polynomial/width/phase deviation for one coherent Lane object."""
+
+    line_index: int
+    pair_index: int
+    center_c0_delta_q24: int = 0
+    center_c1_delta_q18: int = 0
+    center_c2_delta_q12: int = 0
+    center_c3_delta_q8: int = 0
+    width_delta_q8: int = 0
+    phase_delta_q8: int = 0
+
+    def __post_init__(self) -> None:
+        if isinstance(self.line_index, bool) or not 0 <= self.line_index <= 255:
+            raise DirectDescriptionError("lane-knot line index is outside uint8")
+        if isinstance(self.pair_index, bool) or not 0 <= self.pair_index < 600:
+            raise DirectDescriptionError("lane-knot pair index is outside [0,600)")
+        for name in (
+            "center_c0_delta_q24",
+            "center_c1_delta_q18",
+            "center_c2_delta_q12",
+            "center_c3_delta_q8",
+            "width_delta_q8",
+            "phase_delta_q8",
+        ):
+            if not -32768 <= getattr(self, name) <= 32767:
+                raise DirectDescriptionError(f"lane-knot {name} is outside int16")
+        if not any(
+            getattr(self, name)
+            for name in (
+                "center_c0_delta_q24",
+                "center_c1_delta_q18",
+                "center_c2_delta_q12",
+                "center_c3_delta_q8",
+                "width_delta_q8",
+                "phase_delta_q8",
+            )
+        ):
+            raise DirectDescriptionError("lane drift knot must carry a nonzero derivation")
+
+
 def _encode_boundary_coefficient_deltas(symbols: Sequence[BoundaryCoefficientDelta]) -> bytes:
     rows = tuple(symbols)
     if not rows:
@@ -255,9 +441,7 @@ def _encode_boundary_coefficient_deltas(symbols: Sequence[BoundaryCoefficientDel
         )
         for row in rows
     )
-    return _BOUNDARY_HEADER.pack(
-        _BOUNDARY_MAGIC, _BOUNDARY_VERSION, len(rows), zlib.crc32(body) & 0xFFFFFFFF
-    ) + body
+    return _BOUNDARY_HEADER.pack(_BOUNDARY_MAGIC, _BOUNDARY_VERSION, len(rows), zlib.crc32(body) & 0xFFFFFFFF) + body
 
 
 def _decode_boundary_coefficient_deltas(payload: bytes) -> tuple[BoundaryCoefficientDelta, ...]:
@@ -274,9 +458,7 @@ def _decode_boundary_coefficient_deltas(payload: bytes) -> tuple[BoundaryCoeffic
         raise DirectDescriptionError("boundary coefficient packet CRC mismatch")
     rows: list[BoundaryCoefficientDelta] = []
     for index in range(count):
-        pair_index, role_id, coefficient_index, delta = _BOUNDARY_ROW.unpack_from(
-            body, index * _BOUNDARY_ROW.size
-        )
+        pair_index, role_id, coefficient_index, delta = _BOUNDARY_ROW.unpack_from(body, index * _BOUNDARY_ROW.size)
         if role_id not in _WIRE_TO_ROLE:
             raise DirectDescriptionError("boundary coefficient packet contains an unknown role")
         rows.append(BoundaryCoefficientDelta(pair_index, _WIRE_TO_ROLE[role_id], coefficient_index, delta))
@@ -340,7 +522,11 @@ def _decode_topology_events(payload: bytes) -> tuple[TopologyEventV1, ...]:
     for index in range(count):
         values = _EVENT_ROW.unpack_from(body, index * _EVENT_ROW.size)
         pair_index, role_id, action_id, shape_id, lifetime, y0, x0, y1, x1, gain_x, gain_y = values
-        if role_id not in _WIRE_TO_ROLE or action_id not in _WIRE_TO_EVENT_ACTION or shape_id not in _WIRE_TO_EVENT_SHAPE:
+        if (
+            role_id not in _WIRE_TO_ROLE
+            or action_id not in _WIRE_TO_EVENT_ACTION
+            or shape_id not in _WIRE_TO_EVENT_SHAPE
+        ):
             raise DirectDescriptionError("topology-event packet contains an unknown enum value")
         rows.append(
             TopologyEventV1(
@@ -383,9 +569,7 @@ def _encode_boundary_shearlet_atoms(atoms: Sequence[BoundaryShearletAtomV1]) -> 
         )
         for row in rows
     )
-    return _SHEARLET_HEADER.pack(
-        _SHEARLET_MAGIC, _SHEARLET_VERSION, len(rows), zlib.crc32(body) & 0xFFFFFFFF
-    ) + body
+    return _SHEARLET_HEADER.pack(_SHEARLET_MAGIC, _SHEARLET_VERSION, len(rows), zlib.crc32(body) & 0xFFFFFFFF) + body
 
 
 def _decode_boundary_shearlet_atoms(payload: bytes) -> tuple[BoundaryShearletAtomV1, ...]:
@@ -402,9 +586,7 @@ def _decode_boundary_shearlet_atoms(payload: bytes) -> tuple[BoundaryShearletAto
         raise DirectDescriptionError("boundary-shearlet packet CRC mismatch")
     rows: list[BoundaryShearletAtomV1] = []
     for index in range(count):
-        pair, role_id, cy, cx, sy, sx, shear, amplitude = _SHEARLET_ROW.unpack_from(
-            body, index * _SHEARLET_ROW.size
-        )
+        pair, role_id, cy, cx, sy, sx, shear, amplitude = _SHEARLET_ROW.unpack_from(body, index * _SHEARLET_ROW.size)
         if role_id not in _WIRE_TO_ROLE:
             raise DirectDescriptionError("boundary-shearlet packet contains an unknown role")
         rows.append(BoundaryShearletAtomV1(pair, _WIRE_TO_ROLE[role_id], cy, cx, sy, sx, shear, amplitude))
@@ -439,9 +621,7 @@ def _encode_island_shape_atoms(atoms: Sequence[IslandShapeAtomV1]) -> bytes:
         )
         for row in rows
     )
-    return _ISLAND_HEADER.pack(
-        _ISLAND_MAGIC, _ISLAND_VERSION, len(rows), zlib.crc32(body) & 0xFFFFFFFF
-    ) + body
+    return _ISLAND_HEADER.pack(_ISLAND_MAGIC, _ISLAND_VERSION, len(rows), zlib.crc32(body) & 0xFFFFFFFF) + body
 
 
 def _decode_island_shape_atoms(payload: bytes) -> tuple[IslandShapeAtomV1, ...]:
@@ -483,6 +663,192 @@ def _decode_island_shape_atoms(payload: bytes) -> tuple[IslandShapeAtomV1, ...]:
     if _encode_island_shape_atoms(result) != payload:
         raise DirectDescriptionError("island-shape packet is not canonical on parse-back")
     return result
+
+
+def _encode_fixed_rows(
+    rows: Sequence[Any],
+    *,
+    magic: bytes,
+    header: struct.Struct,
+    row_struct: struct.Struct,
+    values: Any,
+    keys: Any,
+    label: str,
+) -> bytes:
+    ordered = tuple(rows)
+    if not ordered:
+        return b""
+    addresses = [keys(row) for row in ordered]
+    if len(ordered) > 0xFFFF or addresses != sorted(set(addresses)):
+        raise DirectDescriptionError(f"{label} rows must be sorted, unique, and uint16-bounded")
+    body = b"".join(row_struct.pack(*values(row)) for row in ordered)
+    return header.pack(magic, 1, len(ordered), zlib.crc32(body) & 0xFFFFFFFF) + body
+
+
+def _decode_fixed_rows(
+    payload: bytes,
+    *,
+    magic: bytes,
+    header: struct.Struct,
+    row_struct: struct.Struct,
+    factory: Any,
+    encoder: Any,
+    label: str,
+) -> tuple[Any, ...]:
+    if not payload:
+        return ()
+    if len(payload) < header.size:
+        raise DirectDescriptionError(f"{label} packet is truncated")
+    found_magic, version, count, checksum = header.unpack_from(payload)
+    expected = header.size + count * row_struct.size
+    if found_magic != magic or version != 1 or count == 0 or len(payload) != expected:
+        raise DirectDescriptionError(f"{label} packet header/length is invalid")
+    body = payload[header.size :]
+    if (zlib.crc32(body) & 0xFFFFFFFF) != checksum:
+        raise DirectDescriptionError(f"{label} packet CRC mismatch")
+    rows = tuple(factory(*row_struct.unpack_from(body, index * row_struct.size)) for index in range(count))
+    if encoder(rows) != payload:
+        raise DirectDescriptionError(f"{label} packet is not canonical on parse-back")
+    return rows
+
+
+def _encode_worldsheet_tracks(rows: Sequence[MovableWorldsheetTrackV1]) -> bytes:
+    return _encode_fixed_rows(
+        rows,
+        magic=_WORLDSHEET_TRACK_MAGIC,
+        header=_WORLDSHEET_TRACK_HEADER,
+        row_struct=_WORLDSHEET_TRACK_ROW,
+        values=lambda row: (
+            row.object_id,
+            row.birth_pair,
+            row.death_pair_exclusive,
+            row.center_y,
+            row.center_x,
+            row.radius_y,
+            row.radius_x,
+            row.angle_u8,
+            row.skew_q6,
+            row.taper_q6,
+            row.curvelet_q6,
+            row.transport_gain_x_q4,
+            row.transport_gain_y_q4,
+        ),
+        keys=lambda row: row.object_id,
+        label="worldsheet-track",
+    )
+
+
+def _decode_worldsheet_tracks(payload: bytes) -> tuple[MovableWorldsheetTrackV1, ...]:
+    return _decode_fixed_rows(
+        payload,
+        magic=_WORLDSHEET_TRACK_MAGIC,
+        header=_WORLDSHEET_TRACK_HEADER,
+        row_struct=_WORLDSHEET_TRACK_ROW,
+        factory=MovableWorldsheetTrackV1,
+        encoder=_encode_worldsheet_tracks,
+        label="worldsheet-track",
+    )
+
+
+def _encode_worldsheet_knots(rows: Sequence[MovableWorldsheetKnotV1]) -> bytes:
+    return _encode_fixed_rows(
+        rows,
+        magic=_WORLDSHEET_KNOT_MAGIC,
+        header=_WORLDSHEET_KNOT_HEADER,
+        row_struct=_WORLDSHEET_KNOT_ROW,
+        values=lambda row: (
+            row.object_id,
+            row.pair_index,
+            row.delta_center_y_q4,
+            row.delta_center_x_q4,
+            row.delta_radius_y_q4,
+            row.delta_radius_x_q4,
+            row.delta_angle_q4,
+            row.reserved_q4,
+            row.delta_skew_q6,
+            row.delta_taper_q6,
+            row.delta_curvelet_q6,
+        ),
+        keys=lambda row: (row.object_id, row.pair_index),
+        label="worldsheet-knot",
+    )
+
+
+def _decode_worldsheet_knots(payload: bytes) -> tuple[MovableWorldsheetKnotV1, ...]:
+    return _decode_fixed_rows(
+        payload,
+        magic=_WORLDSHEET_KNOT_MAGIC,
+        header=_WORLDSHEET_KNOT_HEADER,
+        row_struct=_WORLDSHEET_KNOT_ROW,
+        factory=MovableWorldsheetKnotV1,
+        encoder=_encode_worldsheet_knots,
+        label="worldsheet-knot",
+    )
+
+
+def _encode_lane_programs(rows: Sequence[LanePeriodicProgramV1]) -> bytes:
+    return _encode_fixed_rows(
+        rows,
+        magic=_LANE_PROGRAM_MAGIC,
+        header=_LANE_PROGRAM_HEADER,
+        row_struct=_LANE_PROGRAM_ROW,
+        values=lambda row: (
+            row.line_index,
+            row.birth_pair,
+            row.death_pair_exclusive,
+            row.dash_phase_origin_delta_q8,
+            row.dash_phase_xi_gain_q8,
+            row.width_bias_q8,
+            row.width_slope_q12,
+        ),
+        keys=lambda row: row.line_index,
+        label="lane-program",
+    )
+
+
+def _decode_lane_programs(payload: bytes) -> tuple[LanePeriodicProgramV1, ...]:
+    return _decode_fixed_rows(
+        payload,
+        magic=_LANE_PROGRAM_MAGIC,
+        header=_LANE_PROGRAM_HEADER,
+        row_struct=_LANE_PROGRAM_ROW,
+        factory=LanePeriodicProgramV1,
+        encoder=_encode_lane_programs,
+        label="lane-program",
+    )
+
+
+def _encode_lane_knots(rows: Sequence[LaneDriftKnotV1]) -> bytes:
+    return _encode_fixed_rows(
+        rows,
+        magic=_LANE_KNOT_MAGIC,
+        header=_LANE_KNOT_HEADER,
+        row_struct=_LANE_KNOT_ROW,
+        values=lambda row: (
+            row.line_index,
+            row.pair_index,
+            row.center_c0_delta_q24,
+            row.center_c1_delta_q18,
+            row.center_c2_delta_q12,
+            row.center_c3_delta_q8,
+            row.width_delta_q8,
+            row.phase_delta_q8,
+        ),
+        keys=lambda row: (row.line_index, row.pair_index),
+        label="lane-knot",
+    )
+
+
+def _decode_lane_knots(payload: bytes) -> tuple[LaneDriftKnotV1, ...]:
+    return _decode_fixed_rows(
+        payload,
+        magic=_LANE_KNOT_MAGIC,
+        header=_LANE_KNOT_HEADER,
+        row_struct=_LANE_KNOT_ROW,
+        factory=LaneDriftKnotV1,
+        encoder=_encode_lane_knots,
+        label="lane-knot",
+    )
 
 
 class DirectDescriptionV9CarrierComposeConfigV1(BaseModel):
@@ -573,12 +939,12 @@ class DirectDescriptionV10FisherEventSearchConfigV1(BaseModel):
     max_components_per_pair_role: StrictInt = Field(default=3, ge=1, le=16)
     min_component_sites: StrictInt = Field(default=12, ge=2, le=4096)
     pose_dpose_increase_limit: float = Field(default=0.0, ge=0.0, le=1.0)
-    correction_policy: Literal[
+    correction_policy: Literal["greedy_measured_fisher_margin_candidate_search_g2cs1_boundary_xi_events_no_pixels"] = (
         "greedy_measured_fisher_margin_candidate_search_g2cs1_boundary_xi_events_no_pixels"
-    ] = "greedy_measured_fisher_margin_candidate_search_g2cs1_boundary_xi_events_no_pixels"
-    checkpoint_policy: Literal[
+    )
+    checkpoint_policy: Literal["atomic_preserve_inventory_every_candidate_every_budget"] = (
         "atomic_preserve_inventory_every_candidate_every_budget"
-    ] = "atomic_preserve_inventory_every_candidate_every_budget"
+    )
     rate_authority: Literal["exact_len_receiver_closed_v10_zip"] = "exact_len_receiver_closed_v10_zip"
     class_order: tuple[StrictStr, ...] = CLASS_ORDER
     research_only: Literal[True] = True
@@ -640,18 +1006,18 @@ class DirectDescriptionV11ObligationSearchConfigV1(BaseModel):
     max_components_per_pair_role: StrictInt = Field(default=2, ge=1, le=8)
     min_component_sites: StrictInt = Field(default=8, ge=2, le=4096)
     pose_tube_dpose_radius: float = Field(default=1.0, gt=0.0, le=10.0)
-    correction_policy: Literal[
+    correction_policy: Literal["obligation_derived_lane_full_curvelet_boundary_island_moments_no_pixels"] = (
         "obligation_derived_lane_full_curvelet_boundary_island_moments_no_pixels"
-    ] = "obligation_derived_lane_full_curvelet_boundary_island_moments_no_pixels"
-    admission_policy: Literal[
+    )
+    admission_policy: Literal["greedy_measured_joint_contest_objective_pose_tube_safety_only"] = (
         "greedy_measured_joint_contest_objective_pose_tube_safety_only"
-    ] = "greedy_measured_joint_contest_objective_pose_tube_safety_only"
-    boundary_basis: Literal[
+    )
+    boundary_basis: Literal["governed_compact_parabolic_shearlet_bank_fourier_free"] = (
         "governed_compact_parabolic_shearlet_bank_fourier_free"
-    ] = "governed_compact_parabolic_shearlet_bank_fourier_free"
-    checkpoint_policy: Literal[
+    )
+    checkpoint_policy: Literal["atomic_preserve_inventory_every_candidate_every_budget"] = (
         "atomic_preserve_inventory_every_candidate_every_budget"
-    ] = "atomic_preserve_inventory_every_candidate_every_budget"
+    )
     rate_authority: Literal["exact_len_receiver_closed_v11_zip"] = "exact_len_receiver_closed_v11_zip"
     class_order: tuple[StrictStr, ...] = CLASS_ORDER
     research_only: Literal[True] = True
@@ -696,18 +1062,18 @@ class DirectDescriptionV12ObligationDrainConfigV1(DirectDescriptionV11Obligation
     max_measured_candidates: StrictInt = Field(default=512, ge=32, le=4096)
     max_bundles_per_invocation: StrictInt = Field(default=64, ge=1, le=512)
     max_atoms_per_measured_bundle: StrictInt = Field(default=16, ge=1, le=64)
-    drain_policy: Literal[
+    drain_policy: Literal["exhaustive_conflict_free_canonical_batch_family_partition"] = (
         "exhaustive_conflict_free_canonical_batch_family_partition"
-    ] = "exhaustive_conflict_free_canonical_batch_family_partition"
-    ev_order_policy: Literal[
+    )
+    ev_order_policy: Literal["flip_distance_x_margin_band_x_stratum_mass_movable_lane_first"] = (
         "flip_distance_x_margin_band_x_stratum_mass_movable_lane_first"
-    ] = "flip_distance_x_margin_band_x_stratum_mass_movable_lane_first"
-    base_cache_policy: Literal[
+    )
+    base_cache_policy: Literal["immutable_zlib_argmax_pose_per_canonical_batch"] = (
         "immutable_zlib_argmax_pose_per_canonical_batch"
-    ] = "immutable_zlib_argmax_pose_per_canonical_batch"
-    checkpoint_policy: Literal[
+    )
+    checkpoint_policy: Literal["atomic_preserve_inventory_base_batches_every_candidate_every_budget"] = (
         "atomic_preserve_inventory_base_batches_every_candidate_every_budget"
-    ] = "atomic_preserve_inventory_base_batches_every_candidate_every_budget"
+    )
 
     @model_validator(mode="after")
     def _valid_v12(self) -> DirectDescriptionV12ObligationDrainConfigV1:
@@ -716,6 +1082,90 @@ class DirectDescriptionV12ObligationDrainConfigV1(DirectDescriptionV11Obligation
         if self.max_atoms_per_measured_bundle > 64:
             raise ValueError("v12 bundles are capped at 64 atomic chart/event obligations")
         return self
+
+
+class DirectDescriptionV13WorldsheetPredictorConfigV1(BaseModel):
+    """Typed local-only natural-production PREDICT successor contract."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True, populate_by_name=True)
+
+    schema_: Literal["DirectDescriptionV13WorldsheetPredictorConfigV1"] = Field(
+        default="DirectDescriptionV13WorldsheetPredictorConfigV1",
+        alias="schema",
+        serialization_alias="schema",
+    )
+    run_id: StrictStr
+    seed: Literal[1234] = SEED
+    pair_start: Literal[0, 448]
+    pair_count: Literal[64, 600]
+    v6_receipt_path: StrictStr
+    v6_receipt_sha256: StrictStr
+    predictor_archive_path: StrictStr
+    predictor_archive_sha256: StrictStr
+    upstream_root: StrictStr
+    scorer_batch_size: Literal[16] = 16
+    scorer_threads: StrictInt = Field(ge=1, le=16)
+    total_archive_ceiling_bytes: Literal[200000] = 200000
+    minimum_component_sites: StrictInt = Field(default=8, ge=2, le=4096)
+    maximum_worldsheet_tracks: StrictInt = Field(default=2048, ge=1, le=8192)
+    maximum_knots_per_track: StrictInt = Field(default=16, ge=1, le=64)
+    worldsheet_match_radius_pixels: StrictInt = Field(default=48, ge=4, le=192)
+    worldsheet_knot_error_pixels_q4: StrictInt = Field(default=64, ge=8, le=512)
+    lane_knot_stride: StrictInt = Field(default=24, ge=4, le=128)
+    max_ladder_rungs_per_invocation: Literal[1] = 1
+    composition_ladder: tuple[Literal["base", "islands", "lane", "both"], ...] = (
+        "base",
+        "islands",
+        "lane",
+        "both",
+    )
+    worldsheet_policy: Literal["g1_eps1_persist_unless_event_delta_centroid_absolute_relative_polygon_shape"] = (
+        "g1_eps1_persist_unless_event_delta_centroid_absolute_relative_polygon_shape"
+    )
+    lane_policy: Literal["coherent_multiframe_slot_periodic_dash_phase_xi_polynomial_drift_width_visibility"] = (
+        "coherent_multiframe_slot_periodic_dash_phase_xi_polynomial_drift_width_visibility"
+    )
+    lane_policy_status: Literal["measured_pre_20260722T1916Z_operator_addenda_baseline_only"] = (
+        "measured_pre_20260722T1916Z_operator_addenda_baseline_only"
+    )
+    lane_successor_required: Literal[
+        "bev_curvature_dash_comb_range_gate_anisotropic_ar1_whitened_innovations_road_polytope"
+    ] = "bev_curvature_dash_comb_range_gate_anisotropic_ar1_whitened_innovations_road_polytope"
+    movable_successor_required: Literal[
+        "projective_flow_depth_magnification_shared_template_aspect_rotation_sparse_events"
+    ] = "projective_flow_depth_magnification_shared_template_aspect_rotation_sparse_events"
+    grammar_hierarchy: Literal["stratum_then_object_then_production_with_cross_stratum_lane_road_adjacency"] = (
+        "stratum_then_object_then_production_with_cross_stratum_lane_road_adjacency"
+    )
+    rate_authority: Literal["exact_len_receiver_closed_v13_zip_two_part_derivation_code"] = (
+        "exact_len_receiver_closed_v13_zip_two_part_derivation_code"
+    )
+    checkpoint_policy: Literal["atomic_preserve_extraction_then_each_composition_measurement"] = (
+        "atomic_preserve_extraction_then_each_composition_measurement"
+    )
+    class_order: tuple[StrictStr, ...] = CLASS_ORDER
+    research_only: Literal[True] = True
+    execution_allowed: Literal[False] = False
+    score_claim: Literal[False] = False
+    d_seg_claim: Literal[False] = False
+    d_pose_claim: Literal[False] = False
+
+    @model_validator(mode="after")
+    def _valid_v13(self) -> DirectDescriptionV13WorldsheetPredictorConfigV1:
+        for name in ("v6_receipt_sha256", "predictor_archive_sha256"):
+            _require_sha256(getattr(self, name), name)
+        if (self.pair_start, self.pair_count) not in {(448, 64), (0, 600)}:
+            raise ValueError("v13 windows must be exactly [448,512) or [0,600)")
+        if not Path(self.upstream_root).is_absolute():
+            raise ValueError("upstream_root must be absolute scorer custody")
+        if self.class_order != CLASS_ORDER:
+            raise ValueError(f"class_order must be canonical {CLASS_ORDER!r}")
+        if self.composition_ladder != ("base", "islands", "lane", "both"):
+            raise ValueError("v13 composition ladder is sealed base -> islands -> lane -> both")
+        return self
+
+    def typed_config_hash(self) -> str:
+        return _sha256(rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True)))
 
 
 def _manifest_for(
@@ -727,7 +1177,89 @@ def _manifest_for(
     shearlet_payload: bytes = b"",
     island_payload: bytes = b"",
     obligation_vocabulary: bool = False,
+    worldsheet_track_payload: bytes = b"",
+    worldsheet_knot_payload: bytes = b"",
+    worldsheet_g1_payload: bytes = b"",
+    lane_program_payload: bytes = b"",
+    lane_knot_payload: bytes = b"",
 ) -> dict[str, Any]:
+    if worldsheet_track_payload or worldsheet_g1_payload or lane_program_payload:
+        tracks = _decode_worldsheet_tracks(worldsheet_track_payload)
+        worldsheet_knots = _decode_worldsheet_knots(worldsheet_knot_payload)
+        _worldsheet_mask, worldsheet_g1 = (
+            decode_g1_movable_worldsheet(worldsheet_g1_payload, expected_pairs=predictor.z.n_pairs)
+            if worldsheet_g1_payload
+            else (None, None)
+        )
+        lane_programs = _decode_lane_programs(lane_program_payload)
+        lane_knots = _decode_lane_knots(lane_knot_payload)
+        return {
+            "schema": ARCHIVE_SCHEMA_V4,
+            "magic": MAGIC_V4,
+            "pair_count": predictor.z.n_pairs,
+            "source_pair_start": predictor.source_pair_start,
+            "class_order": list(CLASS_ORDER),
+            "role_order": list(COMPOSED_ROLE_ORDER),
+            "role_class_ids": ROLE_CLASS_IDS,
+            "predictor": {"bytes": len(predictor_archive), "sha256": _sha256(predictor_archive)},
+            "grammar": {
+                "hierarchy": "stratum -> object -> production",
+                "temporal_default": "persist-unless-birth-or-death-event",
+                "cross_stratum_constraint": "Lane remains adjacent to the inherited Road boundary",
+                "free_generic_logic": "production interpreter and rasterizer only; no instance tables",
+                "counted_derivations_only": True,
+                "movable": {
+                    "g1_polygon_worldsheet": {
+                        "member": WORLDSHEET_G1_MEMBER if worldsheet_g1_payload else None,
+                        "bytes": len(worldsheet_g1_payload),
+                        "sha256": _sha256(worldsheet_g1_payload),
+                        "pair_count": 0 if worldsheet_g1 is None else worldsheet_g1.pair_count,
+                        "object_slots": 0 if worldsheet_g1 is None else worldsheet_g1.max_slots,
+                        "alphabet": "G1 eps1 EVENT + delta CENTROID + absolute relative polygon SHAPE",
+                        "g1_reference_payload_sha256": "1066081727229e605462e67b8fdd26937d5e3552c13cb66a7444ea3b7360366f",
+                    },
+                    "tracks": {
+                        "member": WORLDSHEET_TRACK_MEMBER if worldsheet_track_payload else None,
+                        "bytes": len(worldsheet_track_payload),
+                        "sha256": _sha256(worldsheet_track_payload),
+                        "symbol_count": len(tracks),
+                        "alphabet": "birth/death + xi ride + moment/curvelet initial contour",
+                    },
+                    "deviation_morph_knots": {
+                        "member": WORLDSHEET_KNOT_MEMBER if worldsheet_knot_payload else None,
+                        "bytes": len(worldsheet_knot_payload),
+                        "sha256": _sha256(worldsheet_knot_payload),
+                        "symbol_count": len(worldsheet_knots),
+                        "alphabet": "sparse deviations from xi prediction + low-order contour morph",
+                    },
+                },
+                "lane": {
+                    "periodic_programs": {
+                        "member": LANE_PROGRAM_MEMBER if lane_program_payload else None,
+                        "bytes": len(lane_program_payload),
+                        "sha256": _sha256(lane_program_payload),
+                        "symbol_count": len(lane_programs),
+                        "alphabet": "one dash phase advanced by xi + width profile + appear/disappear",
+                    },
+                    "drift_knots": {
+                        "member": LANE_KNOT_MEMBER if lane_knot_payload else None,
+                        "bytes": len(lane_knot_payload),
+                        "sha256": _sha256(lane_knot_payload),
+                        "symbol_count": len(lane_knots),
+                        "alphabet": "coherent polynomial drift/width/phase deviations; never per-dash events",
+                    },
+                },
+            },
+            "xi_pose6": {
+                "home": "predictor.zip::chart.zip::ddm_chart_v3/05_pose6_pair_codes.bin",
+                "ownership": "sole counted xi/Pose6 stream; both natural-production families consume it",
+            },
+            "pixel_coordinate_or_rgb_patch_present": False,
+            "scorer_weights_present": False,
+            "ground_truth_argmax_present": False,
+            "score_claim": False,
+            "evidence_axis": EVIDENCE_AXIS,
+        }
     if shearlet_payload or island_payload or obligation_vocabulary:
         return {
             "schema": ARCHIVE_SCHEMA_V3,
@@ -867,6 +1399,11 @@ def compile_carrier_compose_archive(
     boundary_shearlets: Sequence[BoundaryShearletAtomV1] = (),
     island_shapes: Sequence[IslandShapeAtomV1] = (),
     obligation_vocabulary: bool = False,
+    worldsheet_tracks: Sequence[MovableWorldsheetTrackV1] = (),
+    worldsheet_knots: Sequence[MovableWorldsheetKnotV1] = (),
+    worldsheet_g1_payload: bytes = b"",
+    lane_programs: Sequence[LanePeriodicProgramV1] = (),
+    lane_knots: Sequence[LaneDriftKnotV1] = (),
 ) -> tuple[bytes, tuple[dict[str, Any], ...]]:
     """Compile a byte-canonical outer archive around the five-carrier predictor.
 
@@ -884,14 +1421,50 @@ def compile_carrier_compose_archive(
         raise DirectDescriptionError("predictor role/class self-detection differs from canonical IDs")
     window_start = predictor.source_pair_start
     window_stop = window_start + predictor.z.n_pairs
-    addressed = [*symbols, *boundary_symbols, *topology_events, *boundary_shearlets, *island_shapes]
+    addressed = [
+        *symbols,
+        *boundary_symbols,
+        *topology_events,
+        *boundary_shearlets,
+        *island_shapes,
+    ]
     if any(row.pair_index < window_start or row.pair_index >= window_stop for row in addressed):
         raise DirectDescriptionError("correction symbol is outside the nested predictor source window")
     if any(row.pair_index + row.lifetime > window_stop for row in topology_events):
         raise DirectDescriptionError("topology-event lifetime escapes the nested predictor source window")
     if any(row.pair_index + row.lifetime > window_stop for row in island_shapes):
         raise DirectDescriptionError("island-shape lifetime escapes the nested predictor source window")
+    if any(
+        row.birth_pair < window_start or row.death_pair_exclusive > window_stop
+        for row in (*worldsheet_tracks, *lane_programs)
+    ):
+        raise DirectDescriptionError("v13 production lifecycle escapes the nested predictor source window")
+    track_by_id = {row.object_id: row for row in worldsheet_tracks}
+    if len(track_by_id) != len(worldsheet_tracks):
+        raise DirectDescriptionError("v13 worldsheet object IDs must be unique")
+    if any(
+        row.object_id not in track_by_id
+        or not track_by_id[row.object_id].birth_pair <= row.pair_index < track_by_id[row.object_id].death_pair_exclusive
+        for row in worldsheet_knots
+    ):
+        raise DirectDescriptionError("v13 worldsheet knot is outside its declared object lifecycle")
+    lane_by_id = {row.line_index: row for row in lane_programs}
+    if len(lane_by_id) != len(lane_programs):
+        raise DirectDescriptionError("v13 lane object IDs must be unique")
+    if any(
+        row.line_index not in lane_by_id
+        or not lane_by_id[row.line_index].birth_pair <= row.pair_index < lane_by_id[row.line_index].death_pair_exclusive
+        for row in lane_knots
+    ):
+        raise DirectDescriptionError("v13 lane knot is outside its declared object lifecycle")
+    if worldsheet_g1_payload and (worldsheet_tracks or worldsheet_knots):
+        raise DirectDescriptionError("G1 polygon worldsheet cannot be mixed with the superseded moment worldsheet")
+    if worldsheet_g1_payload:
+        decode_g1_movable_worldsheet(worldsheet_g1_payload, expected_pairs=predictor.z.n_pairs)
+    v13_requested = bool(worldsheet_tracks or worldsheet_knots or worldsheet_g1_payload or lane_programs or lane_knots)
     v11_requested = bool(boundary_shearlets or island_shapes or obligation_vocabulary)
+    if v13_requested and addressed:
+        raise DirectDescriptionError("v13 PREDICT productions cannot be mixed with post-solve correction vocabularies")
     if v11_requested and (boundary_symbols or topology_events):
         raise DirectDescriptionError("V10 and V11 correction vocabularies cannot be mixed in one archive")
     correction_payload = encode_lane_coefficient_deltas(tuple(symbols))
@@ -899,6 +1472,10 @@ def compile_carrier_compose_archive(
     event_payload = _encode_topology_events(tuple(topology_events))
     shearlet_payload = _encode_boundary_shearlet_atoms(tuple(boundary_shearlets))
     island_payload = _encode_island_shape_atoms(tuple(island_shapes))
+    worldsheet_track_payload = _encode_worldsheet_tracks(tuple(worldsheet_tracks))
+    worldsheet_knot_payload = _encode_worldsheet_knots(tuple(worldsheet_knots))
+    lane_program_payload = _encode_lane_programs(tuple(lane_programs))
+    lane_knot_payload = _encode_lane_knots(tuple(lane_knots))
     members = {
         "manifest.json": rfc8785_canonicalize(
             _manifest_for(
@@ -910,6 +1487,11 @@ def compile_carrier_compose_archive(
                 shearlet_payload,
                 island_payload,
                 v11_requested,
+                worldsheet_track_payload,
+                worldsheet_knot_payload,
+                worldsheet_g1_payload,
+                lane_program_payload,
+                lane_knot_payload,
             )
         ),
         "predictor.zip": predictor_archive,
@@ -924,6 +1506,16 @@ def compile_carrier_compose_archive(
         members[BOUNDARY_SHEARLET_MEMBER] = shearlet_payload
     if island_payload:
         members[ISLAND_SHAPE_MEMBER] = island_payload
+    if worldsheet_track_payload:
+        members[WORLDSHEET_TRACK_MEMBER] = worldsheet_track_payload
+    if worldsheet_knot_payload:
+        members[WORLDSHEET_KNOT_MEMBER] = worldsheet_knot_payload
+    if worldsheet_g1_payload:
+        members[WORLDSHEET_G1_MEMBER] = worldsheet_g1_payload
+    if lane_program_payload:
+        members[LANE_PROGRAM_MEMBER] = lane_program_payload
+    if lane_knot_payload:
+        members[LANE_KNOT_MEMBER] = lane_knot_payload
     first = _zip_stored(members)
     second = _zip_stored(members)
     if first != second:
@@ -941,7 +1533,7 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
         with zipfile.ZipFile(io.BytesIO(archive), "r") as reader:
             infos = reader.infolist()
             expected_prefix = ["manifest.json", "predictor.zip"]
-            if [row.filename for row in infos[:2]] != expected_prefix or not 2 <= len(infos) <= 7:
+            if [row.filename for row in infos[:2]] != expected_prefix or not 2 <= len(infos) <= 8:
                 raise DirectDescriptionError("carrier archive member order/cardinality is invalid")
             if any(
                 row.is_dir()
@@ -968,6 +1560,11 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
     events = members.get(EVENT_CORRECTION_MEMBER, b"")
     shearlets = members.get(BOUNDARY_SHEARLET_MEMBER, b"")
     islands = members.get(ISLAND_SHAPE_MEMBER, b"")
+    worldsheet_tracks_payload = members.get(WORLDSHEET_TRACK_MEMBER, b"")
+    worldsheet_knots_payload = members.get(WORLDSHEET_KNOT_MEMBER, b"")
+    worldsheet_g1_payload = members.get(WORLDSHEET_G1_MEMBER, b"")
+    lane_programs_payload = members.get(LANE_PROGRAM_MEMBER, b"")
+    lane_knots_payload = members.get(LANE_KNOT_MEMBER, b"")
     common_invalid = (
         rfc8785_canonicalize(manifest) != members["manifest.json"]
         or manifest.get("class_order") != list(CLASS_ORDER)
@@ -1040,6 +1637,49 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
             row = correction_rows.get(key, {})
             invalid = invalid or row.get("member") != (member_name if payload else None)
             invalid = invalid or row.get("bytes") != len(payload) or row.get("sha256") != _sha256(payload)
+    elif schema == ARCHIVE_SCHEMA_V4:
+        grammar = manifest.get("grammar", {})
+        movable = grammar.get("movable", {})
+        lane = grammar.get("lane", {})
+        expected_members = {
+            "manifest.json",
+            "predictor.zip",
+            *([WORLDSHEET_TRACK_MEMBER] if worldsheet_tracks_payload else []),
+            *([WORLDSHEET_KNOT_MEMBER] if worldsheet_knots_payload else []),
+            *([WORLDSHEET_G1_MEMBER] if worldsheet_g1_payload else []),
+            *([LANE_PROGRAM_MEMBER] if lane_programs_payload else []),
+            *([LANE_KNOT_MEMBER] if lane_knots_payload else []),
+        }
+        payloads = {
+            "worldsheet_tracks": (movable.get("tracks", {}), WORLDSHEET_TRACK_MEMBER, worldsheet_tracks_payload),
+            "worldsheet_knots": (
+                movable.get("deviation_morph_knots", {}),
+                WORLDSHEET_KNOT_MEMBER,
+                worldsheet_knots_payload,
+            ),
+            "worldsheet_g1": (
+                movable.get("g1_polygon_worldsheet", {}),
+                WORLDSHEET_G1_MEMBER,
+                worldsheet_g1_payload,
+            ),
+            "lane_programs": (lane.get("periodic_programs", {}), LANE_PROGRAM_MEMBER, lane_programs_payload),
+            "lane_knots": (lane.get("drift_knots", {}), LANE_KNOT_MEMBER, lane_knots_payload),
+        }
+        invalid = (
+            common_invalid
+            or manifest.get("magic") != MAGIC_V4
+            or correction
+            or boundary
+            or events
+            or shearlets
+            or islands
+            or set(members) != expected_members
+            or (not worldsheet_tracks_payload and not worldsheet_g1_payload and not lane_programs_payload)
+            or (bool(worldsheet_g1_payload) and bool(worldsheet_tracks_payload or worldsheet_knots_payload))
+        )
+        for row, member_name, payload in payloads.values():
+            invalid = invalid or row.get("member") != (member_name if payload else None)
+            invalid = invalid or row.get("bytes") != len(payload) or row.get("sha256") != _sha256(payload)
     else:
         invalid = True
     if invalid:
@@ -1052,6 +1692,11 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
         *([EVENT_CORRECTION_MEMBER] if events else []),
         *([BOUNDARY_SHEARLET_MEMBER] if shearlets else []),
         *([ISLAND_SHAPE_MEMBER] if islands else []),
+        *([WORLDSHEET_TRACK_MEMBER] if worldsheet_tracks_payload else []),
+        *([WORLDSHEET_KNOT_MEMBER] if worldsheet_knots_payload else []),
+        *([WORLDSHEET_G1_MEMBER] if worldsheet_g1_payload else []),
+        *([LANE_PROGRAM_MEMBER] if lane_programs_payload else []),
+        *([LANE_KNOT_MEMBER] if lane_knots_payload else []),
     ]
     if member_order != canonical_member_order:
         raise DirectDescriptionError("carrier correction member order is noncanonical")
@@ -1060,21 +1705,39 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
     topology_events = _decode_topology_events(events)
     boundary_shearlets = _decode_boundary_shearlet_atoms(shearlets)
     island_shapes = _decode_island_shape_atoms(islands)
+    worldsheet_tracks = _decode_worldsheet_tracks(worldsheet_tracks_payload)
+    worldsheet_knots = _decode_worldsheet_knots(worldsheet_knots_payload)
+    worldsheet_g1_metadata = (
+        decode_g1_movable_worldsheet(worldsheet_g1_payload, expected_pairs=manifest["pair_count"])[1]
+        if worldsheet_g1_payload
+        else None
+    )
+    lane_programs = _decode_lane_programs(lane_programs_payload)
+    lane_knots = _decode_lane_knots(lane_knots_payload)
     if schema == ARCHIVE_SCHEMA:
         counts_valid = manifest["correction"]["symbol_count"] == len(symbols)
     elif schema == ARCHIVE_SCHEMA_V2:
         counts_valid = (
             manifest["corrections"]["lane_g2cs1"]["symbol_count"] == len(symbols)
-            and manifest["corrections"]["road_boundary_coefficients"]["symbol_count"]
-            == len(boundary_symbols)
+            and manifest["corrections"]["road_boundary_coefficients"]["symbol_count"] == len(boundary_symbols)
             and manifest["corrections"]["topology_events"]["symbol_count"] == len(topology_events)
+        )
+    elif schema == ARCHIVE_SCHEMA_V3:
+        counts_valid = (
+            manifest["corrections"]["lane_full_coefficients"]["symbol_count"] == len(symbols)
+            and manifest["corrections"]["boundary_shearlet_atoms"]["symbol_count"] == len(boundary_shearlets)
+            and manifest["corrections"]["movable_shape_atoms"]["symbol_count"] == len(island_shapes)
         )
     else:
         counts_valid = (
-            manifest["corrections"]["lane_full_coefficients"]["symbol_count"] == len(symbols)
-            and manifest["corrections"]["boundary_shearlet_atoms"]["symbol_count"]
-            == len(boundary_shearlets)
-            and manifest["corrections"]["movable_shape_atoms"]["symbol_count"] == len(island_shapes)
+            manifest["grammar"]["movable"]["g1_polygon_worldsheet"]["pair_count"]
+            == (0 if worldsheet_g1_metadata is None else worldsheet_g1_metadata.pair_count)
+            and manifest["grammar"]["movable"]["g1_polygon_worldsheet"]["object_slots"]
+            == (0 if worldsheet_g1_metadata is None else worldsheet_g1_metadata.max_slots)
+            and manifest["grammar"]["movable"]["tracks"]["symbol_count"] == len(worldsheet_tracks)
+            and manifest["grammar"]["movable"]["deviation_morph_knots"]["symbol_count"] == len(worldsheet_knots)
+            and manifest["grammar"]["lane"]["periodic_programs"]["symbol_count"] == len(lane_programs)
+            and manifest["grammar"]["lane"]["drift_knots"]["symbol_count"] == len(lane_knots)
         )
     if not counts_valid:
         raise DirectDescriptionError("carrier correction count differs after parse-back")
@@ -1177,9 +1840,7 @@ def _apply_boundary_shearlet_atoms(
         u = (xx - atom.center_x) / float(atom.scale_x)
         ridge = atom.center_y + (atom.shear_q4 / 16.0) * (xx - atom.center_x)
         v = (yy - ridge) / float(atom.scale_y)
-        window = np.square(np.maximum(1.0 - np.square(u), 0.0)) * np.square(
-            np.maximum(1.0 - np.square(v), 0.0)
-        )
+        window = np.square(np.maximum(1.0 - np.square(u), 0.0)) * np.square(np.maximum(1.0 - np.square(v), 0.0))
         displacement = np.rint((atom.amplitude_q4 / 16.0) * window).astype(np.int64)
         source_y = np.arange(height, dtype=np.int64)[:, None] - displacement
         valid = (source_y >= 0) & (source_y < height)
@@ -1223,9 +1884,7 @@ def _event_mask(
     rx = max((x1 - x0) / 2.0, 0.5)
     ys = np.arange(clipped_y0, clipped_y1, dtype=np.float64)[:, None]
     xs = np.arange(clipped_x0, clipped_x1, dtype=np.float64)[None, :]
-    result[clipped_y0:clipped_y1, clipped_x0:clipped_x1] = (
-        np.square((ys - cy) / ry) + np.square((xs - cx) / rx) <= 1.0
-    )
+    result[clipped_y0:clipped_y1, clipped_x0:clipped_x1] = np.square((ys - cy) / ry) + np.square((xs - cx) / rx) <= 1.0
     return result
 
 
@@ -1264,12 +1923,170 @@ def _island_shape_mask(
     curvelet = atom.curvelet_q6 / 64.0
     tapered_radius = np.clip(1.0 + taper * v, 0.25, 2.0)
     shaped_u = (u - skew * v * np.maximum(1.0 - np.square(v), 0.0)) / tapered_radius
-    compact_lobe = np.maximum(1.0 - 4.0 * np.square(u - 0.5), 0.0) * np.maximum(
-        1.0 - np.square(v), 0.0
-    )
+    compact_lobe = np.maximum(1.0 - 4.0 * np.square(u - 0.5), 0.0) * np.maximum(1.0 - np.square(v), 0.0)
     threshold = np.maximum(0.25, 1.0 + curvelet * compact_lobe)
     result[y0:y1, x0:x1] = np.square(shaped_u) + np.square(v) <= threshold
     return result
+
+
+def _interpolate_sparse_rows(rows: Sequence[Any], pair_index: int, field: str) -> float:
+    if not rows:
+        return 0.0
+    ordered = tuple(sorted(rows, key=lambda row: row.pair_index))
+    if pair_index <= ordered[0].pair_index:
+        return float(getattr(ordered[0], field))
+    if pair_index >= ordered[-1].pair_index:
+        return float(getattr(ordered[-1], field))
+    right_index = next(index for index, row in enumerate(ordered) if row.pair_index >= pair_index)
+    left, right = ordered[right_index - 1], ordered[right_index]
+    if right.pair_index == left.pair_index:
+        return float(getattr(right, field))
+    alpha = (pair_index - left.pair_index) / float(right.pair_index - left.pair_index)
+    return (1.0 - alpha) * float(getattr(left, field)) + alpha * float(getattr(right, field))
+
+
+def _apply_lane_predictor_programs(
+    layers: Sequence[StructuredRoleLayerV1],
+    programs: Sequence[LanePeriodicProgramV1],
+    knots: Sequence[LaneDriftKnotV1],
+    *,
+    pose6_codes: np.ndarray,
+    source_pair_start: int,
+) -> tuple[StructuredRoleLayerV1, ...]:
+    if not programs:
+        return tuple(layers)
+    copied = list(layers)
+    lane_index = next((index for index, layer in enumerate(copied) if layer.role == "Lane"), None)
+    if lane_index is None or copied[lane_index].lane_lines is None:
+        raise DirectDescriptionError("v13 receiver lacks the inherited coherent Lane chart")
+    lines = [[np.asarray(value, dtype=np.float64).copy() for value in pair] for pair in copied[lane_index].lane_lines]
+    stop = source_pair_start + len(pose6_codes)
+    for program in programs:
+        relevant = tuple(row for row in knots if row.line_index == program.line_index)
+        birth_local = program.birth_pair - source_pair_start
+        if not 0 <= birth_local < len(pose6_codes):
+            raise DirectDescriptionError("v13 lane-program birth lacks xi/Pose6 custody")
+        template_pair = next(
+            (
+                pair_index
+                for pair_index in range(program.birth_pair, program.death_pair_exclusive)
+                if program.line_index < len(lines[pair_index])
+            ),
+            None,
+        )
+        if template_pair is None:
+            raise DirectDescriptionError("v13 lane-program object has no inherited coherent slot")
+        template_phase = float(lines[template_pair][program.line_index][7])
+        for pair_index in range(max(program.birth_pair, source_pair_start), min(program.death_pair_exclusive, stop)):
+            if program.line_index >= len(lines[pair_index]):
+                continue
+            vector = lines[pair_index][program.line_index]
+            if vector.size < 11:
+                raise DirectDescriptionError("v13 lane-program addressed an incomplete Lane vector")
+            for coefficient_index, (field, scale) in enumerate(
+                (
+                    ("center_c0_delta_q24", 1 << 24),
+                    ("center_c1_delta_q18", 1 << 18),
+                    ("center_c2_delta_q12", 1 << 12),
+                    ("center_c3_delta_q8", 1 << 8),
+                )
+            ):
+                vector[coefficient_index] += _interpolate_sparse_rows(relevant, pair_index, field) / scale
+            vector[4] += (
+                program.width_bias_q8 + _interpolate_sparse_rows(relevant, pair_index, "width_delta_q8")
+            ) / 256.0
+            vector[5] += program.width_slope_q12 / 4096.0
+            current_local = pair_index - source_pair_start
+            xi_delta = int(pose6_codes[current_local, 0]) - int(pose6_codes[birth_local, 0])
+            vector[7] = (
+                template_phase
+                + (
+                    program.dash_phase_origin_delta_q8
+                    + xi_delta * program.dash_phase_xi_gain_q8
+                    + _interpolate_sparse_rows(relevant, pair_index, "phase_delta_q8")
+                )
+                / 256.0
+            )
+            if not np.isfinite(vector).all():
+                raise DirectDescriptionError("v13 Lane production produced nonfinite coefficients")
+    copied[lane_index] = replace(copied[lane_index], lane_lines=tuple(tuple(value for value in pair) for pair in lines))
+    return tuple(copied)
+
+
+def _worldsheet_track_mask(
+    track: MovableWorldsheetTrackV1,
+    knots: Sequence[MovableWorldsheetKnotV1],
+    *,
+    source_pair_id: int,
+    source_pair_start: int,
+    pose6_codes: np.ndarray,
+) -> np.ndarray:
+    if not track.birth_pair <= source_pair_id < track.death_pair_exclusive:
+        return np.zeros((384, 512), dtype=bool)
+    birth_local = track.birth_pair - source_pair_start
+    current_local = source_pair_id - source_pair_start
+    if not (0 <= birth_local < len(pose6_codes) and 0 <= current_local < len(pose6_codes)):
+        raise DirectDescriptionError("v13 worldsheet track escaped xi/Pose6 custody")
+    pose_delta = pose6_codes[current_local].astype(np.int16) - pose6_codes[birth_local].astype(np.int16)
+    center_y = track.center_y + float(pose_delta[1]) * track.transport_gain_y_q4 / 16.0
+    center_x = track.center_x + float(pose_delta[0]) * track.transport_gain_x_q4 / 16.0
+    center_y += _interpolate_sparse_rows(knots, source_pair_id, "delta_center_y_q4") / 16.0
+    center_x += _interpolate_sparse_rows(knots, source_pair_id, "delta_center_x_q4") / 16.0
+    radius_y = track.radius_y + _interpolate_sparse_rows(knots, source_pair_id, "delta_radius_y_q4") / 16.0
+    radius_x = track.radius_x + _interpolate_sparse_rows(knots, source_pair_id, "delta_radius_x_q4") / 16.0
+    extent = max(radius_y, radius_x) * 2.0
+    if center_y + extent < 0 or center_y - extent >= 384 or center_x + extent < 0 or center_x - extent >= 512:
+        return np.zeros((384, 512), dtype=bool)
+    atom = IslandShapeAtomV1(
+        pair_index=source_pair_id,
+        action="birth",
+        lifetime=1,
+        center_y=int(np.clip(np.rint(center_y), 0, 383)),
+        center_x=int(np.clip(np.rint(center_x), 0, 511)),
+        radius_y=int(np.clip(np.rint(radius_y), 1, 191)),
+        radius_x=int(np.clip(np.rint(radius_x), 1, 255)),
+        angle_u8=int(np.rint(track.angle_u8 + _interpolate_sparse_rows(knots, source_pair_id, "delta_angle_q4") / 16.0))
+        % 256,
+        skew_q6=int(
+            np.clip(
+                np.rint(track.skew_q6 + _interpolate_sparse_rows(knots, source_pair_id, "delta_skew_q6")),
+                -96,
+                96,
+            )
+        ),
+        taper_q6=int(
+            np.clip(
+                np.rint(track.taper_q6 + _interpolate_sparse_rows(knots, source_pair_id, "delta_taper_q6")),
+                -96,
+                96,
+            )
+        ),
+        curvelet_q6=int(
+            np.clip(
+                np.rint(track.curvelet_q6 + _interpolate_sparse_rows(knots, source_pair_id, "delta_curvelet_q6")),
+                -96,
+                96,
+            )
+        ),
+    )
+    return _island_shape_mask(
+        atom,
+        source_pair_id=source_pair_id,
+        source_pair_start=source_pair_start,
+        pose6_codes=pose6_codes,
+    )
+
+
+def _dilate_one_pixel(mask: np.ndarray) -> np.ndarray:
+    source = np.asarray(mask, dtype=bool)
+    padded = np.pad(source, 1, mode="constant", constant_values=False)
+    return np.logical_or.reduce(
+        tuple(
+            padded[1 + dy : 1 + dy + source.shape[0], 1 + dx : 1 + dx + source.shape[1]]
+            for dy in (-1, 0, 1)
+            for dx in (-1, 0, 1)
+        )
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1283,6 +2100,11 @@ class CarrierComposeReceiverV1:
     boundary_shearlets: tuple[BoundaryShearletAtomV1, ...]
     island_shapes: tuple[IslandShapeAtomV1, ...]
     custody: Mapping[str, Any]
+    worldsheet_tracks: tuple[MovableWorldsheetTrackV1, ...] = ()
+    worldsheet_knots: tuple[MovableWorldsheetKnotV1, ...] = ()
+    worldsheet_g1_mask: np.ndarray | None = None
+    lane_programs: tuple[LanePeriodicProgramV1, ...] = ()
+    lane_knots: tuple[LaneDriftKnotV1, ...] = ()
 
     @property
     def z(self) -> Any:
@@ -1305,10 +2127,16 @@ class CarrierComposeReceiverV1:
                     source_pair_id=source_pair_id,
                     camera=self.predictor.camera,
                 )
+                if layer.role == "Lane" and self.lane_programs:
+                    road_layer = next(row for row in self.layers if row.role == "Road")
+                    road_mask = road_layer.mask(
+                        local_pair_id=pair_id,
+                        source_pair_id=source_pair_id,
+                        camera=self.predictor.camera,
+                    )
+                    mask &= _dilate_one_pixel(road_mask)
                 boundary = tuple(
-                    row
-                    for row in self.boundary_symbols
-                    if row.pair_index == source_pair_id and row.role == layer.role
+                    row for row in self.boundary_symbols if row.pair_index == source_pair_id and row.role == layer.role
                 )
                 if boundary:
                     mask = _apply_boundary_coefficients(mask, boundary)
@@ -1333,6 +2161,8 @@ class CarrierComposeReceiverV1:
                     else:
                         mask &= ~event_sites
                 if layer.role == "Movable":
+                    if self.worldsheet_g1_mask is not None:
+                        mask |= self.worldsheet_g1_mask[pair_id]
                     for atom in self.island_shapes:
                         atom_sites = _island_shape_mask(
                             atom,
@@ -1344,6 +2174,15 @@ class CarrierComposeReceiverV1:
                             mask |= atom_sites
                         else:
                             mask &= ~atom_sites
+                    for track in self.worldsheet_tracks:
+                        track_sites = _worldsheet_track_mask(
+                            track,
+                            tuple(row for row in self.worldsheet_knots if row.object_id == track.object_id),
+                            source_pair_id=source_pair_id,
+                            source_pair_start=self.predictor.source_pair_start,
+                            pose6_codes=self.pose6_codes,
+                        )
+                        mask |= track_sites
                 output[local_index, 0, mask] = layer.paint_rgb_u8
                 output[local_index, 1, mask] = layer.paint_rgb_u8
         return np.ascontiguousarray(output)
@@ -1360,6 +2199,16 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
     topology_events = _decode_topology_events(members.get(EVENT_CORRECTION_MEMBER, b""))
     boundary_shearlets = _decode_boundary_shearlet_atoms(members.get(BOUNDARY_SHEARLET_MEMBER, b""))
     island_shapes = _decode_island_shape_atoms(members.get(ISLAND_SHAPE_MEMBER, b""))
+    worldsheet_tracks = _decode_worldsheet_tracks(members.get(WORLDSHEET_TRACK_MEMBER, b""))
+    worldsheet_knots = _decode_worldsheet_knots(members.get(WORLDSHEET_KNOT_MEMBER, b""))
+    worldsheet_g1_payload = members.get(WORLDSHEET_G1_MEMBER, b"")
+    worldsheet_g1_mask, worldsheet_g1_metadata = (
+        decode_g1_movable_worldsheet(worldsheet_g1_payload, expected_pairs=predictor.z.n_pairs)
+        if worldsheet_g1_payload
+        else (None, None)
+    )
+    lane_programs = _decode_lane_programs(members.get(LANE_PROGRAM_MEMBER, b""))
+    lane_knots = _decode_lane_knots(members.get(LANE_KNOT_MEMBER, b""))
     start = predictor.source_pair_start
     stop = start + predictor.z.n_pairs
     addressed = [*symbols, *boundary_symbols, *topology_events, *boundary_shearlets, *island_shapes]
@@ -1369,8 +2218,29 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         raise DirectDescriptionError("topology-event lifetime escapes the nested predictor source window")
     if any(row.pair_index + row.lifetime > stop for row in island_shapes):
         raise DirectDescriptionError("island-shape lifetime escapes the nested predictor source window")
+    track_by_id = {row.object_id: row for row in worldsheet_tracks}
+    if len(track_by_id) != len(worldsheet_tracks) or any(
+        row.object_id not in track_by_id
+        or not track_by_id[row.object_id].birth_pair <= row.pair_index < track_by_id[row.object_id].death_pair_exclusive
+        for row in worldsheet_knots
+    ):
+        raise DirectDescriptionError("worldsheet track/knot lifecycle custody is invalid")
+    lane_by_id = {row.line_index: row for row in lane_programs}
+    if len(lane_by_id) != len(lane_programs) or any(
+        row.line_index not in lane_by_id
+        or not lane_by_id[row.line_index].birth_pair <= row.pair_index < lane_by_id[row.line_index].death_pair_exclusive
+        for row in lane_knots
+    ):
+        raise DirectDescriptionError("lane program/knot lifecycle custody is invalid")
     coefficient_limit = 9 if manifest["schema"] == ARCHIVE_SCHEMA_V3 else 4
     layers = _apply_chart_symbols(predictor.layers, symbols, coefficient_limit=coefficient_limit)
+    layers = _apply_lane_predictor_programs(
+        layers,
+        lane_programs,
+        lane_knots,
+        pose6_codes=predictor.pose6_codes,
+        source_pair_start=predictor.source_pair_start,
+    )
     first = CarrierComposeReceiverV1(
         archive=archive,
         predictor=predictor,
@@ -1381,6 +2251,11 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         boundary_shearlets=boundary_shearlets,
         island_shapes=island_shapes,
         custody={},
+        worldsheet_tracks=worldsheet_tracks,
+        worldsheet_knots=worldsheet_knots,
+        worldsheet_g1_mask=worldsheet_g1_mask,
+        lane_programs=lane_programs,
+        lane_knots=lane_knots,
     )
 
     lane_groups: dict[tuple[int, int], list[LaneCoefficientDelta]] = {}
@@ -1471,6 +2346,60 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         )
         if np.array_equal(predictor.render_pairs(local_ids), isolated.render_pairs(local_ids)):
             raise DirectDescriptionError("island-shape atom is a receiver-output no-op")
+    for track in worldsheet_tracks:
+        local_ids = tuple(range(track.birth_pair - start, track.death_pair_exclusive - start))
+        isolated = CarrierComposeReceiverV1(
+            archive=archive,
+            predictor=predictor,
+            layers=predictor.layers,
+            symbols=(),
+            boundary_symbols=(),
+            topology_events=(),
+            boundary_shearlets=(),
+            island_shapes=(),
+            custody={},
+            worldsheet_tracks=(track,),
+            worldsheet_knots=tuple(row for row in worldsheet_knots if row.object_id == track.object_id),
+        )
+        if np.array_equal(predictor.render_pairs(local_ids), isolated.render_pairs(local_ids)):
+            raise DirectDescriptionError("worldsheet track production is a receiver-output no-op")
+    if worldsheet_g1_mask is not None:
+        movable_layer = next(row for row in predictor.layers if row.role == "Movable")
+        changes_output = False
+        for local_pair_id in range(predictor.z.n_pairs):
+            source_pair_id = start + local_pair_id
+            inherited = movable_layer.mask(
+                local_pair_id=local_pair_id,
+                source_pair_id=source_pair_id,
+                camera=predictor.camera,
+            )
+            if np.any(worldsheet_g1_mask[local_pair_id] & ~inherited):
+                changes_output = True
+                break
+        if not changes_output:
+            raise DirectDescriptionError("G1 Movable polygon worldsheet is a receiver-output no-op")
+    for program in lane_programs:
+        local_ids = tuple(range(program.birth_pair - start, program.death_pair_exclusive - start))
+        isolated_layers = _apply_lane_predictor_programs(
+            predictor.layers,
+            (program,),
+            tuple(row for row in lane_knots if row.line_index == program.line_index),
+            pose6_codes=predictor.pose6_codes,
+            source_pair_start=start,
+        )
+        isolated = CarrierComposeReceiverV1(
+            archive=archive,
+            predictor=predictor,
+            layers=isolated_layers,
+            symbols=(),
+            boundary_symbols=(),
+            topology_events=(),
+            boundary_shearlets=(),
+            island_shapes=(),
+            custody={},
+        )
+        if np.array_equal(predictor.render_pairs(local_ids), isolated.render_pairs(local_ids)):
+            raise DirectDescriptionError("lane periodic production is a receiver-output no-op")
     probes = tuple(sorted({0, predictor.z.n_pairs - 1}))
     a = first.render_pairs(probes)
     b = first.render_pairs(probes)
@@ -1478,7 +2407,9 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         raise DirectDescriptionError("carrier receiver replay is nondeterministic")
     custody = {
         "schema": (
-            RECEIVER_SCHEMA_V3
+            RECEIVER_SCHEMA_V4
+            if manifest["schema"] == ARCHIVE_SCHEMA_V4
+            else RECEIVER_SCHEMA_V3
             if manifest["schema"] == ARCHIVE_SCHEMA_V3
             else RECEIVER_SCHEMA_V2
             if manifest["schema"] == ARCHIVE_SCHEMA_V2
@@ -1506,6 +2437,26 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         "island_shape_parse_reencode_identical": _encode_island_shape_atoms(island_shapes)
         == members.get(ISLAND_SHAPE_MEMBER, b""),
         "island_shapes_consume_counted_pose6_transport": any(row.lifetime > 1 for row in island_shapes),
+        "worldsheet_track_count": len(worldsheet_tracks),
+        "worldsheet_track_parse_reencode_identical": _encode_worldsheet_tracks(worldsheet_tracks)
+        == members.get(WORLDSHEET_TRACK_MEMBER, b""),
+        "worldsheet_knot_count": len(worldsheet_knots),
+        "worldsheet_knot_parse_reencode_identical": _encode_worldsheet_knots(worldsheet_knots)
+        == members.get(WORLDSHEET_KNOT_MEMBER, b""),
+        "worldsheet_g1_payload_bytes": len(worldsheet_g1_payload),
+        "worldsheet_g1_payload_sha256": _sha256(worldsheet_g1_payload),
+        "worldsheet_g1_pair_count": 0 if worldsheet_g1_metadata is None else worldsheet_g1_metadata.pair_count,
+        "worldsheet_g1_object_slots": 0 if worldsheet_g1_metadata is None else worldsheet_g1_metadata.max_slots,
+        "worldsheet_g1_semantic_parseback": worldsheet_g1_metadata is not None,
+        "worldsheet_persist_unless_event": bool(worldsheet_tracks or worldsheet_g1_payload),
+        "worldsheet_stores_only_xi_deviations": bool(worldsheet_tracks),
+        "lane_program_count": len(lane_programs),
+        "lane_program_parse_reencode_identical": _encode_lane_programs(lane_programs)
+        == members.get(LANE_PROGRAM_MEMBER, b""),
+        "lane_knot_count": len(lane_knots),
+        "lane_knot_parse_reencode_identical": _encode_lane_knots(lane_knots) == members.get(LANE_KNOT_MEMBER, b""),
+        "lane_one_dash_phase_per_object_not_per_dash": bool(lane_programs),
+        "lane_road_adjacency_constraint": "receiver intersects Lane with one-pixel dilation of inherited Road support",
         "region_coherent_chart_rerasterization": True,
         "pixel_coordinate_or_rgb_patch_present": False,
         "nested_pose6_owner_reused": True,
@@ -1564,6 +2515,11 @@ def recursive_carrier_byte_rows(archive: bytes) -> list[dict[str, Any]]:
         ("xi_topology_events", EVENT_CORRECTION_MEMBER),
         ("boundary_shearlet_obligations", BOUNDARY_SHEARLET_MEMBER),
         ("movable_shape_obligations", ISLAND_SHAPE_MEMBER),
+        ("movable_worldsheet_lifecycle_shape", WORLDSHEET_TRACK_MEMBER),
+        ("movable_worldsheet_xi_deviation_morph_knots", WORLDSHEET_KNOT_MEMBER),
+        ("movable_g1_polygon_worldsheet_derivation", WORLDSHEET_G1_MEMBER),
+        ("lane_periodic_phase_width_visibility", LANE_PROGRAM_MEMBER),
+        ("lane_polynomial_drift_knots", LANE_KNOT_MEMBER),
     ):
         correction_home = next((row for row in outer_homes if row["name"] == member_name), None)
         if correction_home is None:
@@ -1620,12 +2576,15 @@ __all__ = [
     "ARCHIVE_SCHEMA",
     "ARCHIVE_SCHEMA_V2",
     "ARCHIVE_SCHEMA_V3",
+    "ARCHIVE_SCHEMA_V4",
     "BOUNDARY_SHEARLET_MEMBER",
     "ISLAND_SHAPE_MEMBER",
     "RESULT_SCHEMA",
     "RESULT_SCHEMA_V2",
     "RESULT_SCHEMA_V3",
     "RESULT_SCHEMA_V4",
+    "RESULT_SCHEMA_V5",
+    "WORLDSHEET_G1_MEMBER",
     "BoundaryCoefficientDelta",
     "BoundaryShearletAtomV1",
     "CarrierComposeReceiverV1",
@@ -1633,7 +2592,12 @@ __all__ = [
     "DirectDescriptionV10FisherEventSearchConfigV1",
     "DirectDescriptionV11ObligationSearchConfigV1",
     "DirectDescriptionV12ObligationDrainConfigV1",
+    "DirectDescriptionV13WorldsheetPredictorConfigV1",
     "IslandShapeAtomV1",
+    "LaneDriftKnotV1",
+    "LanePeriodicProgramV1",
+    "MovableWorldsheetKnotV1",
+    "MovableWorldsheetTrackV1",
     "TopologyEventV1",
     "compile_carrier_compose_archive",
     "parse_carrier_compose_archive",

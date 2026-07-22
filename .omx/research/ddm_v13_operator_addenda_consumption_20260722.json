@@ -1,0 +1,64 @@
+{
+  "schema": "ddm_v13_operator_addenda_consumption.v1",
+  "date_utc": "2026-07-22T21:30:00Z",
+  "lane_id": "ddm_v13_worldsheet_event_predictor",
+  "directives_consumed": [
+    "2026-07-22T19:16:24Z Lane BEV plus phase symbols",
+    "2026-07-22T19:17:13Z anisotropic AR1 whitened boundary jitter",
+    "2026-07-22T19:18:17Z Movable projective lifecycle",
+    "2026-07-22T19:19:49Z anisotropic homography stretch",
+    "2026-07-22T19:26:24Z openpilot Road polytope and curvature chart",
+    "2026-07-22T20:15:50Z G2 metric topology transport and phase correction",
+    "2026-07-22T21:13:59Z G3 broad-debt allocation correction"
+  ],
+  "measured_round2_status": "PRE_ADDENDUM_BASELINE_ONLY",
+  "measured_lane_policy": "coherent_multiframe_slot_periodic_dash_phase_xi_polynomial_drift_width_visibility",
+  "required_lane_successor": "bev_curvature_dash_comb_range_gate_anisotropic_ar1_whitened_innovations_road_polytope",
+  "required_movable_successor": "projective_flow_depth_magnification_shared_template_aspect_rotation_sparse_events",
+  "g2_corrections": {
+    "ranker": "frozen_scorer_flip_margin_not_pixel_energy",
+    "lane_topology": "birth_dominated_dash_comb_plus_events_confirmed",
+    "movable_topology": "persistence_dominated_rel_velocity_plus_deviations_required",
+    "xi_only_movable_predictive": false,
+    "phase_status_before_ablation": "BLOCKED_UNTESTED"
+  },
+  "raw_q8_phase_ablation": {
+    "n64_receipt_sha256": "b39b86b23517d1696cdc24316f05bd11066ecb3fe72d7acf7156bb76e9f7bf93",
+    "n600_receipt_sha256": "622e6eda5b06e3fbe16ec494648dd85f6ba73545716b65fcdb07f797539f62ad",
+    "n600_phase_symbols": 130,
+    "n600_added_bytes": 2128,
+    "n600_total_dseg_delta": "0.000280736287",
+    "n600_lane_conditional_dseg_delta": "-0.029228004790",
+    "n600_joint_objective_delta": "0.028907928562",
+    "status": "MEASURED_RECEIVER_CLOSED_LANE_HELP_TOTAL_HARM",
+    "disposition": "REJECT_RAW_Q8_INSTANCE_KEEP_AR1_WHITENED_BEV_SUCCESSOR_OPEN"
+  },
+  "g3_allocation_contract": {
+    "merge_commit": "e472310d93",
+    "receipt_sha256": "6c4157092a7bdf7ba44b458cd470725cc470d84a8fc77ed7d3dedb59160734f5",
+    "debt_shape": "BROAD_NOT_HEAVY_TAILED",
+    "per_pair_topk_correction_allowed": false,
+    "required_form": "AMORTIZED_SHARED_GRAMMAR_TEMPLATES_PROCESS_PRIORS",
+    "top24_policy": "SCREENING_ONLY_FULL_N600_VERDICT_REQUIRED",
+    "event_proxy_pairs": [279, 286, 452]
+  },
+  "existing_surfaces_recalled": [
+    "src/tac/boundary_math/analytic_lane_render_band.py",
+    "src/tac/boundary_math/dash_phase_carrier.py",
+    "src/tac/boundary_math/lane_ground_factorization.py",
+    "src/tac/boundary_math/lane_track_and_smooth.py",
+    ".omx/research/wave_f_lane_band_rd_research_synthesis_20260702.md",
+    ".omx/research/wave_f_lane_tracking_coherent_fit_measured_20260702.md",
+    ".omx/research/openpilot_cross_surface_audit_20260706.md",
+    ".omx/research/openpilot_world_model_lane_alignment_plan_20260706.md"
+  ],
+  "promotion_blocked": true,
+  "r6_flag": false,
+  "score_claim": false,
+  "d_seg_claim": false,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "verdict_scope": "Measured G1 plus pre-addendum polynomial-drift Lane and raw q8 phase instance only; G3 constrains allocation but does not measure the anisotropic AR1-whitened BEV or projective Movable successors",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

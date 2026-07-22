@@ -83577,6 +83577,53 @@
         }
       },
       "notes": "research_only=true; local $0; [macOS-CPU frozen-scorer advisory]; score_claim=false; contest-CPU pointer unchanged pending MAIN landing review"
+    },
+    {
+      "id": "ddm_v13_worldsheet_event_predictor",
+      "name": "DDM v13 worldsheet event and lane predictor",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/direct_description_g1_worldsheet.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v13_g1_worldsheet_predictor_n600_20260722T192500Z/ddm_v13_worldsheet_predictor_n600_receipt_v2.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/optimization/tests/test_direct_description_carrier_compose.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v13_worldsheet_event_predictor_adversarial_round1_20260722.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L2 local advisory: exact G1 29,810 B adopted; n600 selected islands 132,606 B d_seg 0.029592759874 Movable 0.481331895297, receiver_projection bound. Pre-19:16 Lane baseline rejected and addendum successors unmeasured/promotion-blocked; pointer unchanged.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "receiver-visible G1 paint lowers total d_seg below 0.01 in-box",
+        "g2 Lane xi-predictability table supplies a paying periodic production",
+        "MAIN requests contest-axis replay after local d_seg <= 0.00116"
+      ]
     }
   ],
   "level_rules": {
