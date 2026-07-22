@@ -15,6 +15,7 @@ from tac.optimization.ddm_g3_score_atlas import (
     PRIMARY_RANK_KEY,
     DdmG3CostatePairSignalV1,
     DdmG3ScoreAtlasConfigV1,
+    DdmG3ScoreAtlasPairV1,
     ScoreAtlasError,
     ScoreMassV1,
     _accepted_bytes_by_pair,
@@ -135,6 +136,41 @@ def test_costate_consumer_schema_is_strict_and_score_currency_bound():
         DdmG3CostatePairSignalV1.model_validate({**row, "energy_rank_forbidden": False})
     with pytest.raises(ValidationError):
         DdmG3CostatePairSignalV1.model_validate({**row, "unknown": 1})
+
+
+def test_pair_schema_round_trips_through_json_native_lists():
+    row = {
+        "schema": "ddm_g3_score_atlas_pair.v1",
+        "pair_index": 0,
+        "frame_indices": [0, 1],
+        "scored_seg_frame_index": 1,
+        "score_rank": 1,
+        "score_mass": {
+            "seg_score_mass": 1.0,
+            "pose_score_mass": 2.0,
+            "distortion_score_mass": 3.0,
+            "rate_score_mass_diagnostic": 0.1,
+        },
+        "segmentation": {},
+        "pose": {},
+        "allocated_bytes": {},
+        "scene_covariates": {},
+        "evaluator_response_geometry": {},
+        "costate_signal": {
+            "schema": "ddm_g3_costate_pair_signal.v1",
+            "pair_index": 0,
+            "lambda_proxy_score_debt": 3.0,
+            "seg_flip_count": 1,
+            "median_rank4_flip_distance": 0.2,
+            "pose_squared_error_sum": 2.0,
+            "pose_binds_fraction": 0.5,
+            "allocated_bytes": 4.0,
+            "ranking_currency": "exact_flip_plus_pose_objective_mass",
+        },
+        "source_custody": {},
+    }
+    encoded = json.loads(DdmG3ScoreAtlasPairV1.model_validate(row).model_dump_json(by_alias=True))
+    assert DdmG3ScoreAtlasPairV1.model_validate(encoded).frame_indices == [0, 1]
 
 
 def test_rank4_flip_distance_uses_target_predicted_head_pair_norm():

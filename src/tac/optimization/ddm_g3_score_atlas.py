@@ -156,7 +156,7 @@ class DdmG3ScoreAtlasPairV1(_StrictModel):
         default=PAIR_SCHEMA, alias="schema", serialization_alias="schema"
     )
     pair_index: StrictInt = Field(ge=0, le=599)
-    frame_indices: tuple[StrictInt, StrictInt]
+    frame_indices: list[StrictInt] = Field(min_length=2, max_length=2)
     scored_seg_frame_index: StrictInt
     score_rank: StrictInt = Field(ge=1, le=600)
     score_mass: ScoreMassV1
@@ -604,7 +604,7 @@ def build_pair_rows(
         row = {
             "schema": PAIR_SCHEMA,
             "pair_index": pair_index,
-            "frame_indices": (2 * pair_index, 2 * pair_index + 1),
+            "frame_indices": [2 * pair_index, 2 * pair_index + 1],
             "scored_seg_frame_index": 2 * pair_index + 1,
             "score_rank": 0,
             "score_mass": {
