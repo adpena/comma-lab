@@ -18,6 +18,8 @@ from tac.optimization.direct_description_entropy_priced_member import (
     DirectDescriptionEntropyPricedMemberConfigV1,
     DirectDescriptionEntropyPricedMemberProgramV1,
     DirectDescriptionRouteFixComposeConfigV1,
+    DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1,
+    DirectDescriptionSolvedPlaneToleranceWaterfillProgramV1,
     DirectDescriptionStratumStructuredMemberConfigV1,
     StructuredS4SourcesV1,
     _amortize_chart_z,
@@ -28,8 +30,10 @@ from tac.optimization.direct_description_entropy_priced_member import (
     _xi_pose6_keyframes,
     build_entropy_candidate_z,
     compile_composed_structured_member_archive,
+    compile_solved_plane_tolerance_archive,
     compile_structured_member_archive,
     parse_structured_member_archive,
+    receive_solved_plane_tolerance_archive,
     receive_structured_member_archive,
     run_entropy_candidate_stages,
     run_entropy_rung_stages,
@@ -39,14 +43,18 @@ from tac.optimization.direct_description_entropy_priced_member import (
 from tac.optimization.direct_description_entropy_streams import (
     CODER_AQC1,
     CODER_HUFFMAN_RANK16,
+    CORRECTION_SCHEDULE_DROP,
+    CORRECTION_SCHEDULE_EVERY_PAIR,
     STREAM_ORDER,
     _decode_generic,
     _encode_aqc1,
     _encode_huffman_rank16,
     _transform_candidates,
     compile_entropy_chart_archive,
+    encode_plane_correction_section,
     parse_entropy_chart_archive,
     parse_entropy_stream,
+    parse_plane_correction_section,
     prove_entropy_home_fail_closed,
     receive_entropy_chart_archive,
 )
@@ -606,6 +614,134 @@ def test_v6_structured_hold_reuses_keyed_events_but_keeps_static_once() -> None:
     assert held.lane_encoded is sources.lane_encoded
     assert np.array_equal(held.events[0][23][0], sources.events[0][0][0])
     assert held.events[0][24] == sources.events[0][24]
+
+
+def test_v7_correction_section_roundtrips_survey_winner_and_refuses_trailing_bytes() -> None:
+    records = {
+        0: (
+            np.asarray([0, 17, 384 * 512], dtype="<u4"),
+            np.asarray([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.uint8),
+        ),
+        1: (
+            np.asarray([5], dtype="<u4"),
+            np.asarray([[10, 11, 12]], dtype=np.uint8),
+        ),
+    }
+    built = encode_plane_correction_section(
+        section_id=0,
+        schedule_id=CORRECTION_SCHEDULE_EVERY_PAIR,
+        n_pairs=2,
+        quant_step=4,
+        records=records,
+    )
+    parsed = parse_plane_correction_section(built.frame)
+    assert parsed.section_id == 0
+    assert parsed.quant_step == 4
+    assert np.array_equal(parsed.records[0][0], records[0][0])
+    assert np.array_equal(parsed.records[0][1], records[0][1])
+    assert {row["coder"] for row in built.candidate_rows} == {
+        "brotli_q11",
+        "lzma_xz_preset9_extreme",
+    }
+    with pytest.raises(DirectDescriptionError):
+        parse_plane_correction_section(built.frame + b"x")
+
+
+def test_v7_config_and_program_are_typed_local_only() -> None:
+    config = DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1(
+        pair_start=448,
+        pair_count=64,
+        v6_receipt_path="v6.json",
+        v6_receipt_sha256="1" * 64,
+        target_receipt_path="target.json",
+        target_receipt_sha256="2" * 64,
+        upstream_root="/absolute/upstream",
+        scorer_threads=1,
+    )
+    assert config.section_names == ("Road", "Lane", "Undrivable", "Movable", "MyCar", "Boundary")
+    assert config.exact_residual_falsifier_bytes == 200_000
+    program = DirectDescriptionSolvedPlaneToleranceWaterfillProgramV1(config_path="v7.json", output_directory="out")
+    assert program.compile_consumer_argv()[-2:] == ("--execution-allowed", "false")
+    with pytest.raises(ValueError, match="n64 or n256"):
+        DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1(
+            pair_start=448,
+            pair_count=128,
+            v6_receipt_path="v6.json",
+            v6_receipt_sha256="1" * 64,
+            target_receipt_path="target.json",
+            target_receipt_sha256="2" * 64,
+            upstream_root="/absolute/upstream",
+            scorer_threads=1,
+        )
+
+
+def test_v7_archive_keeps_correction_semantics_external_and_applies_all_sections() -> None:
+    predictor, _ = compile_composed_structured_member_archive(
+        compile_entropy_chart_archive(_structured_fixture_z()).archive,
+        _structured_sources(),
+        pair_start=0,
+    )
+    records = {
+        pair_id: (
+            np.asarray([pair_id], dtype="<u4"),
+            np.asarray([[pair_id + 1, pair_id + 2, pair_id + 3]], dtype=np.uint8),
+        )
+        for pair_id in range(64)
+    }
+    sections = [
+        encode_plane_correction_section(
+            section_id=0,
+            schedule_id=CORRECTION_SCHEDULE_EVERY_PAIR,
+            n_pairs=64,
+            quant_step=1,
+            records=records,
+        )
+    ]
+    empty = {
+        pair_id: (np.asarray([], dtype="<u4"), np.empty((0, 3), dtype=np.uint8)) for pair_id in range(64)
+    }
+    sections.extend(
+        encode_plane_correction_section(
+            section_id=section_id,
+            schedule_id=CORRECTION_SCHEDULE_EVERY_PAIR,
+            n_pairs=64,
+            quant_step=1,
+            records=empty,
+        )
+        for section_id in range(1, 6)
+    )
+    archive, homes = compile_solved_plane_tolerance_archive(
+        predictor_archive=predictor,
+        policy_name="exact_all",
+        rung_names=("exact",) * 6,
+        sections=sections,
+    )
+    receiver = receive_solved_plane_tolerance_archive(archive)
+    rendered = receiver.render_pairs((0, 17))
+    assert rendered[0].reshape(-1, 3)[0].tolist() == [1, 2, 3]
+    assert rendered[1].reshape(-1, 3)[17].tolist() == [18, 19, 20]
+    assert receiver.custody["ground_truth_argmax_table_present"] is False
+    assert receiver.custody["section_semantics_required_by_receiver"] is False
+    assert sum(row["zip_home_bytes"] for row in homes) == len(archive)
+
+
+def test_v7_drop_section_requires_no_keys_and_zero_step() -> None:
+    dropped = encode_plane_correction_section(
+        section_id=5,
+        schedule_id=CORRECTION_SCHEDULE_DROP,
+        n_pairs=64,
+        quant_step=0,
+        records={},
+    )
+    assert parse_plane_correction_section(dropped.frame).records == {}
+    with pytest.raises(DirectDescriptionError, match="no keyframes"):
+        encode_plane_correction_section(
+            section_id=5,
+            schedule_id=CORRECTION_SCHEDULE_DROP,
+            n_pairs=64,
+            quant_step=0,
+            records={0: (np.asarray([], dtype="<u4"), np.empty((0, 3), dtype=np.uint8))},
+        )
 
 
 def test_structured_candidate_stages_resume_and_preserve_every_archive(tmp_path: Path) -> None:
