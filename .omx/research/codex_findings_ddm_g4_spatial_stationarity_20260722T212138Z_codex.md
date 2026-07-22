@@ -1,6 +1,6 @@
 # Codex Findings: DDM G4 n600 spatial stationarity
 
-Date: 2026-07-22  
+Date: 2026-07-22
 Verdict: `MEASURED_ADVISORY_SPATIAL_STATIONARITY_COMPLETE_XI_PROXY_SCOPED`
 
 ## Outcome
