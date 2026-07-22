@@ -82834,6 +82834,54 @@
       "notes": "research_only=true; arXiv 2507.10482 pays-rent audit; no launch or score authority",
       "research_only": true,
       "lane_class": "research_crosswalk"
+    },
+    {
+      "id": "lane_ddm_mdl_member_solve_v2_priced_603_20260722",
+      "name": "DDM receiver-priced member solve v2 Task 603",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/direct_description_receiver_priced_member.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/ddm_receiver_priced_member_n64_603_20260722T040836Z_artifacts/ddm_receiver_priced_member_n64_receipt.json"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Measured n64 exact receiver-priced fixed-width formulation wall: 274664 bytes and 0.493605613708 membership across all five rungs; Pose6 complete; no score/candidate/pointer movement; MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Replace fixed-width residual records with receiver-proven variable-length semantic coding",
+        "Preserve pre-uint8 member state and measure realization loss",
+        "Scale exact priced selection and membership to n600",
+        "MAIN review and merge"
+      ]
     }
   ],
   "level_rules": {
