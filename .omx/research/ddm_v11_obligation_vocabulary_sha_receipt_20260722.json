@@ -1,0 +1,134 @@
+{
+  "schema": "ddm_v11_obligation_vocabulary_sha_receipt.v1",
+  "created_utc": "2026-07-22T16:05:00Z",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_v11_obligation_vocabulary_solve_20260722T142043Z.wrapped.prompt.txt",
+    "bytes": 8653,
+    "sha256": "811ec8f2e615c4be5d84e3580a3fbba62b39ba72614c5e36c9bf201595b8fbc2"
+  },
+  "git": {
+    "base": "154ca4a120",
+    "commits": [
+      "8188b5c102",
+      "69f19c05fc",
+      "59b8ba83d9",
+      "d28532c9fd"
+    ],
+    "branch": "codexwt/ddm_v11_obligation_vocabulary_solve_20260722T142043Z",
+    "main_landing_review_required": true
+  },
+  "source_files": [
+    {
+      "path": "src/tac/optimization/direct_description_entropy_priced_member.py",
+      "sha256": "1eaf18a831381232c7e60e82c43f994ce75d7e59b927dc40c1e4d9fbebb7a26a"
+    },
+    {
+      "path": "src/tac/optimization/direct_description_carrier_compose.py",
+      "sha256": "765ef04f4f633489c98744ef20b7b57a9adf78846f18ebf2e821e98f6a34f1bf"
+    },
+    {
+      "path": "tools/run_ddm_v9_carrier_compose.py",
+      "sha256": "8aa413da05d4f40b2e7250f8533afca5f14a95b7e1b15c3ac1533f27d5ac1ae8"
+    },
+    {
+      "path": "src/tac/optimization/tests/test_direct_description_carrier_compose.py",
+      "sha256": "396dac784b27555d41fe0780c169ced3148c9a33c272dc0ff48895bd45a5a8c5"
+    }
+  ],
+  "configs": [
+    {
+      "path": ".omx/research/configs/ddm_v5_route_fix_compose_n600_20260722.json",
+      "sha256": "28b50670493073132c60c830bfc5a7a1c087247f5a8ab3105a8e7089fc12aba0"
+    },
+    {
+      "path": ".omx/research/configs/ddm_v6_dseg_bridge_amortize_n600_20260722.json",
+      "sha256": "f3d56dd1818f9bbe77dcf72f6246ba24721349c87c91d6d3d40221ca0f99f34c"
+    },
+    {
+      "path": ".omx/research/configs/ddm_v11_obligation_n64_20260722.json",
+      "sha256": "7140f62fbff80ff9197db1bff6b7b1c0f0ce02d1ed46d6a57554fc69b9da1d89",
+      "typed_config_sha256": "426f598b7d59ffbbdb5d3206d0d9cf859edca35282e8794b5468dda2ca3a219d"
+    },
+    {
+      "path": ".omx/research/configs/ddm_v11_obligation_n256_20260722.json",
+      "sha256": "cddd82dd72fde961b4d55e0247d9e3e8affaa10530babb0278b9cd2ed1f976a1",
+      "typed_config_sha256": "389db391183ce38dc7a3a30e8104c699e5ca7b172b11f74fa69d2208c903087d"
+    },
+    {
+      "path": ".omx/research/configs/ddm_v11_obligation_n600_20260722.json",
+      "sha256": "8c46c9273c7ece10ee6c3457296c9bc42a82b03486ebc1936840bbeeea12638a",
+      "typed_config_sha256": "9a9c7a13927d5adc84cb5ba550988050fe7c9a8f3bdd12060782f38cecdd5dc7"
+    }
+  ],
+  "prerequisite_receipts": [
+    {
+      "path": ".omx/research/ddm_v5_route_fix_compose_n600_20260722T145500Z/ddm_v5_route_fix_composed_n600_receipt.json",
+      "sha256": "7f7d3c8e9b13164616d2de512eea3c4e9e8a09a3e1305417edd7145fb9c02957",
+      "archive_sha256": "83715cf1319e4a4abc4bc142ce6c095aa1024e46cb29d108b08a556426e26fe4"
+    },
+    {
+      "path": ".omx/research/ddm_v6_dseg_bridge_amortize_n600_20260722T151400Z/ddm_v6_dseg_bridge_amortize_n600_receipt.json",
+      "sha256": "41b2c0b39bf30334837618aedab8fde19e4814f6e3f1398491aa3147b7c3c35c",
+      "archive_sha256": "1c985404b19dd59b61d93543497c92ad1ea87cc81bd215b001f90ab63d4c287f"
+    }
+  ],
+  "v11_receipts": [
+    {
+      "window": "[448,512)",
+      "path": ".omx/research/ddm_v11_obligation_n64_20260722T152000Z_round2/ddm_v11_obligation_search_n64_receipt.json",
+      "sha256": "92922166766566666ab6ce67897d1f70680c1ef7ed2e282fa35d4bfb10bf4bf2",
+      "inventory_sha256": "ccc34bd5eac06d318eb86c99ff5f8aa7be1449218cf4603e19dde15c443de0e0",
+      "final_archive_bytes": 52523,
+      "final_archive_sha256": "cec30198ab7388b4c78f387306b0b2e80debf40d99c77167885b2b75824035c7"
+    },
+    {
+      "window": "[344,600)",
+      "path": ".omx/research/ddm_v11_obligation_n256_20260722T152000Z_round2/ddm_v11_obligation_search_n256_receipt.json",
+      "sha256": "7eb034e020f270683799ffdeb175985d6cf64443c2a65e6dcc2b9a232e6113ff",
+      "inventory_sha256": "8e0d7d8c6210c891052b73abe19918c3394376ce729c3aa17e7847b8e719074a",
+      "final_archive_bytes": 73508,
+      "final_archive_sha256": "76911965848146b4a345e2ac1652326b658816efb6df965c3fde549cdfa456a6"
+    },
+    {
+      "window": "[0,600)",
+      "path": ".omx/research/ddm_v11_obligation_n600_20260722T152000Z_round3/ddm_v11_obligation_search_n600_receipt.json",
+      "sha256": "bf82941b64a2e49ee88b23e4402daa1b49c510491cd39ee9e67877d8d5ded534",
+      "inventory_sha256": "72365d10a353d1979d5845d448d3f394f164369615922ce10bdbf261183c042f",
+      "final_archive_bytes": 102105,
+      "final_archive_sha256": "7a544e1d8a33f19f9045054d4ec2ab391d119e27e948b0bf33ab20f223df622a"
+    }
+  ],
+  "decision_artifacts": [
+    {
+      "path": ".omx/research/codex_findings_ddm_v11_obligation_vocabulary_solve_20260722_codex.md",
+      "sha256": "6e6ed3a69239528dc87b2bc31a94500d6b498d4091bc0d9e06589e1a8d71ac10"
+    },
+    {
+      "path": ".omx/research/ddm_v11_obligation_vocabulary_DAG_FEED_20260722.md",
+      "sha256": "09eb93c91099022e82dd33d0f5ccf07823eae58f8f62df1d6abba98bf12db7d4"
+    },
+    {
+      "path": ".omx/research/ddm_v11_obligation_vocabulary_canonical_equations_20260722.md",
+      "sha256": "635f45d3783ce7e26fbef27b03c0ff2f761d6421a231fc84b0b00dafd50fd46e"
+    },
+    {
+      "path": ".omx/research/ddm_v11_obligation_vocabulary_round1_review_20260722.json",
+      "sha256": "1c653984f59ae391578fb1b41209445cccd1ee934e88b1ed16175e80573dadec"
+    },
+    {
+      "path": ".omx/research/codex_session_summary_20260722T160000Z_ddm_v11_obligation_vocabulary_codex.md",
+      "sha256": "29b03eb93ef5f11e6f5fd428f519bb92c1c9cf97f4da6361a790e6c5163f13af"
+    },
+    {
+      "path": ".omx/research/ddm_v11_obligation_cleanup_manifest_20260722.json",
+      "sha256": "10c3103f6c5e4ab0c9ce1eaa222c8b38f844d68c4e841c31a4583f24fb0ab468"
+    }
+  ],
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "d_seg_claim": false,
+  "d_pose_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}
