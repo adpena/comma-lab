@@ -83590,7 +83590,7 @@
         },
         "real_archive_empirical": {
           "status": true,
-          "evidence": ".omx/research/ddm_v13_g1_worldsheet_predictor_n600_20260722T192500Z/ddm_v13_worldsheet_predictor_n600_receipt_v2.json"
+          "evidence": ".omx/research/ddm_v13_worldsheet_event_predictor_SHA_RECEIPT_20260722.json"
         },
         "contest_cuda": {
           "status": false,
