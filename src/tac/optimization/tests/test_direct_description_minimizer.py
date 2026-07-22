@@ -935,3 +935,138 @@ def test_launch_ticket_remains_structurally_draft(tmp_path: Path) -> None:
     forged["dsl_compile_hash"] = "0" * 64
     with pytest.raises(DirectDescriptionError, match="compile hash"):
         build_launch_readiness(forged, storage_receipt=storage)
+
+
+def test_v2_pose_receiver_roundtrip_unique_homes_and_noop_detector() -> None:
+    config = ddm.DirectDescriptionOptimizerConfigV1()
+    initial, _target = ddm.build_n64_custody_descriptions(config)
+    built = ddm.compile_direct_description_archive_v2(initial)
+    assert ddm.compile_direct_description_archive_v2(
+        ddm.parse_direct_description_archive_v2(built.archive).z
+    ).archive == built.archive
+    received = ddm.receive_direct_description_archive_v2(built.archive)
+    assert received.output.dtype.name == "uint8"
+    assert received.output.shape == (64, 2, 8, 8, 3)
+    assert received.custody["pose6_records_consumed"] == 64
+    assert received.custody["pose6_scalar_residuals_consumed"] == 384
+    homes = received.custody["unique_final_zip_homes"]
+    assert len(homes) == 7
+    assert sum(row["home_bytes"] for row in homes) == len(built.archive)
+    assert received.custody["all_archive_bytes_have_one_home"] is True
+
+    pose = initial.pose6_dxi_residuals.payload
+    mutated = initial.replace_stream_byte("pose6_dxi_residuals", 0, pose[0] ^ 1)
+    mutated_result = ddm.receive_direct_description_archive_v2(
+        ddm.compile_direct_description_archive_v2(mutated).archive
+    )
+    assert mutated_result.output_sha256 != received.output_sha256
+
+    noop = ddm.prove_v2_noop_detector(initial)
+    assert noop["archive_bytes_checked"] == len(built.archive)
+    assert noop["semantic_payload_bytes_checked"] == sum(ddm._V2_BODY_BYTES.values())
+    assert noop["all_archive_bytes_read_or_output_effective"] is True
+    assert noop["all_semantic_payload_bytes_output_effective"] is True
+
+
+def test_real_optimizer_descends_checkpoints_and_resumes_bit_exact(tmp_path: Path) -> None:
+    config = ddm.DirectDescriptionOptimizerConfigV1()
+    argv = ("ddm-local-custody", config.dsl_compile_hash())
+    run_a = ddm.run_direct_description_optimizer(
+        config,
+        checkpoint_directory=tmp_path / "a",
+        semantic_argv=argv,
+    )
+    run_b = ddm.run_direct_description_optimizer(
+        config,
+        checkpoint_directory=tmp_path / "b",
+        semantic_argv=argv,
+    )
+    partial = ddm.run_direct_description_optimizer(
+        config,
+        checkpoint_directory=tmp_path / "resume",
+        semantic_argv=argv,
+        stop_after_stage_index=0,
+    )
+    assert partial.complete is False
+    resumed = ddm.run_direct_description_optimizer(
+        config,
+        checkpoint_directory=tmp_path / "resume",
+        semantic_argv=argv,
+        resume_from=partial.checkpoint_paths[-1],
+    )
+    assert run_a.complete is run_b.complete is resumed.complete is True
+    assert run_a.final_archive == run_b.final_archive == resumed.final_archive
+    assert (
+        run_a.final_receiver.output_sha256
+        == run_b.final_receiver.output_sha256
+        == resumed.final_receiver.output_sha256
+    )
+    assert len(run_a.checkpoint_paths) == len(config.stages) == 3
+    assert len({path.name for path in run_a.checkpoint_paths}) == 3
+    assert all(path.is_file() for path in (*partial.checkpoint_paths, *resumed.checkpoint_paths))
+    assert all(row["stage_role"] == "candidate_search" for row in run_a.stage_history)
+    assert all(row["strict_descent"] is True for row in run_a.stage_history)
+    assert all(
+        all(count > 0 for count in row["coordinates_by_stream"].values())
+        for row in run_a.stage_history
+    )
+    assert run_a.objective["joint_integer_debt"] < run_a.stage_history[0]["objective_before"][
+        "joint_integer_debt"
+    ]
+    checkpoint = ddm.load_optimizer_checkpoint(
+        partial.checkpoint_paths[-1],
+        expected_config=config,
+        expected_semantic_argv=argv,
+    )
+    assert checkpoint.next_stage_index == 1
+    assert checkpoint.optimizer_state["candidate_evaluations"] > 0
+    with pytest.raises(DirectDescriptionError, match="config differs"):
+        ddm.load_optimizer_checkpoint(
+            partial.checkpoint_paths[-1],
+            expected_config=config.model_copy(update={"run_id": "different_run"}),
+            expected_semantic_argv=argv,
+        )
+    tampered_path = tmp_path / "tampered_checkpoint.json"
+    tampered = bytearray(partial.checkpoint_paths[-1].read_bytes())
+    tampered[-1] ^= 1
+    tampered_path.write_bytes(tampered)
+    with pytest.raises(DirectDescriptionError):
+        ddm.load_optimizer_checkpoint(
+            tampered_path,
+            expected_config=config,
+            expected_semantic_argv=argv,
+        )
+
+
+def test_n64_custody_smoke_receipts_five_scoped_green_blockers(tmp_path: Path) -> None:
+    config = ddm.DirectDescriptionOptimizerConfigV1()
+    argv = ("ddm-local-custody", config.dsl_compile_hash())
+    receipt, receipt_path = ddm.run_n64_deterministic_custody_smoke(
+        config,
+        output_directory=tmp_path / "smoke",
+        semantic_argv=argv,
+    )
+    assert receipt_path.is_file()
+    assert receipt["label"] == "[custody-smoke]"
+    assert receipt["score_claim"] is False
+    assert receipt["candidate_archive"] is False
+    assert receipt["determinism"]["same_seed_final_archive_bit_identical"] is True
+    assert receipt["resume"]["all_stage_checkpoints_preserved"] is True
+    assert receipt["roundtrip"]["parse_reencode_archive_byte_exact"] is True
+    register = receipt["blocker_register"]
+    assert len(register) == 19
+    assert sum(row["flipped_green"] for row in register) == 4
+    canonical_resume = next(
+        row
+        for row in register
+        if row["blocker"] == "CANONICAL_RESUME_REGISTRY_AND_CHECKPOINT_CADENCE"
+    )
+    assert canonical_resume["flipped_green"] is False
+    coverage = receipt["stratified_fixture_coverage"]
+    assert coverage["pair_count"] == len(coverage["pair_assignments"]) == 64
+    assert coverage["all_applicable_combinations_covered"] is True
+    assert all(
+        row["verdict_scope"] == "local deterministic n64 custody apparatus only"
+        for row in register
+        if row["flipped_green"]
+    )

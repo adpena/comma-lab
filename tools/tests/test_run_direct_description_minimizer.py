@@ -5,7 +5,10 @@ import json
 import subprocess
 from pathlib import Path
 
-from tac.optimization.direct_description_minimizer import build_direct_description_owner
+from tac.optimization.direct_description_minimizer import (
+    DirectDescriptionOptimizerConfigV1,
+    build_direct_description_owner,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOL_PATH = REPO_ROOT / "tools/run_direct_description_minimizer.py"
@@ -113,3 +116,38 @@ def test_exact_compiled_argv_bootstraps_repo_python_and_refuses() -> None:
     )
     assert completed.returncode == 2
     assert "PREFLIGHT_REFUSE" in completed.stderr
+
+
+def test_typed_custody_mode_runs_without_enabling_primary(tmp_path: Path, capsys) -> None:
+    tool = _load_tool()
+    owner_path = tmp_path / "owner.json"
+    owner_path.write_text(json.dumps(build_direct_description_owner()))
+    config_path = tmp_path / "custody.json"
+    config_path.write_text(
+        json.dumps(
+            DirectDescriptionOptimizerConfigV1().model_dump(mode="json", by_alias=True)
+        )
+    )
+    output_dir = tmp_path / "out"
+    assert (
+        tool.main(
+            [
+                "--owner-manifest",
+                str(owner_path),
+                "--mode",
+                "custody-smoke",
+                "--execution-allowed",
+                "false",
+                "--custody-config",
+                str(config_path),
+                "--output-dir",
+                str(output_dir),
+            ]
+        )
+        == 0
+    )
+    output = json.loads(capsys.readouterr().out)
+    assert output["receipt"]["label"] == "[custody-smoke]"
+    assert output["receipt"]["execution_allowed"] is False
+    assert output["receipt"]["score_claim"] is False
+    assert Path(output["receipt_path"]).is_file()

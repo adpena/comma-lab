@@ -1,0 +1,208 @@
+{
+  "schema": "ddm_receiver_optimizer_build_receipt.v1",
+  "utc": "2026-07-22T00:35:29Z",
+  "task": 603,
+  "master_task": 578,
+  "lane_id": "lane_ddm_receiver_optimizer_build_603_20260722",
+  "evidence_axis": "[custody-smoke]",
+  "verdict_scope": "local deterministic n64 receiver, exact byte custody, and search continuation only",
+  "execution_allowed": false,
+  "research_only": true,
+  "candidate_archive": false,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "typed_smoke_argv": [
+    "/usr/bin/env",
+    "python3",
+    "tools/run_direct_description_minimizer.py",
+    "--owner-manifest",
+    ".omx/research/direct_description_minimizer_owner_bundle_603_20260721T225631Z.json",
+    "--mode",
+    "custody-smoke",
+    "--execution-allowed",
+    "false",
+    "--custody-config",
+    ".omx/research/ddm_n64_custody_config_603_20260722T003529Z.json",
+    "--output-dir",
+    ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts"
+  ],
+  "measured_facts": {
+    "n_pairs": 64,
+    "pose6_records": 64,
+    "pose6_scalar_bytes": 384,
+    "semantic_payload_bytes": 773,
+    "semantic_payload_mutations_changed_output": 773,
+    "final_zip_bytes": 1585,
+    "final_zip_mutations_fail_closed": 1585,
+    "receiver_dtype": "uint8",
+    "receiver_bytes": 24576,
+    "receiver_sha256": "911e96dc398add283b5af450e685f0d1186c7e8cf4f83e45eed1380b475d3352",
+    "same_seed_exact_runs": 2,
+    "preserved_stage_checkpoints": 9,
+    "resume_from_stage": 0,
+    "resume_terminal_archive_exact": true,
+    "resume_terminal_receiver_exact": true,
+    "initial_custody_objective": [389, 143, 532, 1585],
+    "final_custody_objective": [365, 142, 507, 1585],
+    "applicable_class_stratum_combinations": 11,
+    "applicable_class_stratum_combinations_covered": 11,
+    "blockers_green_custody_scope": 4,
+    "blockers_red": 15
+  },
+  "verification": {
+    "focused_pytest": "30 passed",
+    "expanded_pytest": "50 passed in 2.34s",
+    "ruff": "PASS",
+    "python_compile": "PASS",
+    "git_diff_check": "PASS",
+    "round_1_adversarial_review": "CLEAN_AFTER_FIX_FOR_CUSTODY_SCOPE"
+  },
+  "artifacts": [
+    {
+      "path": "src/tac/optimization/direct_description_minimizer.py",
+      "bytes": 169807,
+      "sha256": "4029644b8aea5ff363e0d368f28466be5f087cccd8e2da9327a7596de4f842bc"
+    },
+    {
+      "path": "src/tac/optimization/tests/test_direct_description_minimizer.py",
+      "bytes": 45442,
+      "sha256": "a0d8b00df6699d37c78e57754ced0a03775552e0fc920faf428998ecab4312e7"
+    },
+    {
+      "path": "tools/run_direct_description_minimizer.py",
+      "bytes": 7636,
+      "sha256": "39efefddd1bdde59677f23b7f792992ff25126ed8ab01b15719654ee73a260c9"
+    },
+    {
+      "path": "tools/tests/test_run_direct_description_minimizer.py",
+      "bytes": 4634,
+      "sha256": "05f2f51aef1d11684333b04c3a73dbd65968dec39b669062acbc5701e517fca0"
+    },
+    {
+      "path": ".omx/research/direct_description_minimizer_owner_bundle_603_20260721T225631Z.json",
+      "bytes": 7478,
+      "sha256": "5dcc93f5f8d3fd24417e16fb697e53ac70975f1978effbdbd50d315b4beea35a"
+    },
+    {
+      "path": ".omx/research/ddm_n64_custody_config_603_20260722T003529Z.json",
+      "bytes": 873,
+      "sha256": "cd5e3fa4d5174c656f81a7c339c49685fab1bc22785d5c6dd7da715f53048981"
+    },
+    {
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/ddm_n64_custody_final.not_a_candidate.zip",
+      "bytes": 1585,
+      "sha256": "a504d876da469e1afec27f8aafd93fa2a06f0c157ddf7da04fcff75b1d74aa58"
+    },
+    {
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/ddm_n64_custody_smoke_receipt.json",
+      "bytes": 20830,
+      "sha256": "dfb4a3b57eaa3cb0311b6815e2475d92e60a9da3b68cbd2134de4020cf7cac8b"
+    },
+    {
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z.md",
+      "bytes": 7644,
+      "sha256": "840a08a6c656b031e840e55ba815489dc3ed2a0793f27fa9ed7278b1072c3ceb"
+    },
+    {
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_DAG_FEED_20260722T003529Z.md",
+      "bytes": 3208,
+      "sha256": "9958061f4d0b755f159a3694cdfdeb0b1643d10dd7eba7a8443a1866046acbb5"
+    },
+    {
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_canonical_equations_20260722T003529Z.md",
+      "bytes": 1488,
+      "sha256": "0ef26dff159571a50852e73350c09cdb861eb22da0064fd1007fc56da10d6950"
+    },
+    {
+      "path": ".omx/research/codex_findings_ddm_receiver_optimizer_build_603_20260722T003529Z_codex.md",
+      "bytes": 2866,
+      "sha256": "ce7e233a393c5b429d2802e5ef448eed490ed06196198ed53e4f657f7c51b253"
+    },
+    {
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_blocker_register_20260722T003529Z.json",
+      "bytes": 2464,
+      "sha256": "44d5c1cd8ee9ebd5fc967f2ffcb53100847c5d4e5f9e227af72cca04af291773"
+    }
+  ],
+  "stage_checkpoints": [
+    {
+      "run": "run_a",
+      "stage": 0,
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/run_a/checkpoints/ddm_n64_custody_seed1234__ddm_search_stage000_semantic_cells_search_step000000000024.json",
+      "bytes": 7589,
+      "sha256": "ffa0be5b6350beceac9c5cca83395b142f10abfe6b6dedf231dd7e75926a2074"
+    },
+    {
+      "run": "run_a",
+      "stage": 1,
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/run_a/checkpoints/ddm_n64_custody_seed1234__ddm_search_stage001_pose6_causal_search_step000000000048.json",
+      "bytes": 8140,
+      "sha256": "df1fd9c6557294c0c3d82d6b9b3a14bf22ea492c8ee571281907ae87efd55801"
+    },
+    {
+      "run": "run_a",
+      "stage": 2,
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/run_a/checkpoints/ddm_n64_custody_seed1234__ddm_search_stage002_xi_joint_search_step000000000072.json",
+      "bytes": 8689,
+      "sha256": "945e5a2a309c70b7189cc53c3fcc87f9537904ed7a700b940e5975c082501b14"
+    },
+    {
+      "run": "run_b",
+      "stage": 0,
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/run_b/checkpoints/ddm_n64_custody_seed1234__ddm_search_stage000_semantic_cells_search_step000000000024.json",
+      "bytes": 7589,
+      "sha256": "ffa0be5b6350beceac9c5cca83395b142f10abfe6b6dedf231dd7e75926a2074"
+    },
+    {
+      "run": "run_b",
+      "stage": 1,
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/run_b/checkpoints/ddm_n64_custody_seed1234__ddm_search_stage001_pose6_causal_search_step000000000048.json",
+      "bytes": 8140,
+      "sha256": "df1fd9c6557294c0c3d82d6b9b3a14bf22ea492c8ee571281907ae87efd55801"
+    },
+    {
+      "run": "run_b",
+      "stage": 2,
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/run_b/checkpoints/ddm_n64_custody_seed1234__ddm_search_stage002_xi_joint_search_step000000000072.json",
+      "bytes": 8689,
+      "sha256": "945e5a2a309c70b7189cc53c3fcc87f9537904ed7a700b940e5975c082501b14"
+    },
+    {
+      "run": "run_resume",
+      "stage": 0,
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/run_resume/checkpoints/ddm_n64_custody_seed1234__ddm_search_stage000_semantic_cells_search_step000000000024.json",
+      "bytes": 7589,
+      "sha256": "ffa0be5b6350beceac9c5cca83395b142f10abfe6b6dedf231dd7e75926a2074"
+    },
+    {
+      "run": "run_resume",
+      "stage": 1,
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/run_resume/checkpoints/ddm_n64_custody_seed1234__ddm_search_stage001_pose6_causal_search_step000000000048.json",
+      "bytes": 8140,
+      "sha256": "df1fd9c6557294c0c3d82d6b9b3a14bf22ea492c8ee571281907ae87efd55801"
+    },
+    {
+      "run": "run_resume",
+      "stage": 2,
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/run_resume/checkpoints/ddm_n64_custody_seed1234__ddm_search_stage002_xi_joint_search_step000000000072.json",
+      "bytes": 8689,
+      "sha256": "945e5a2a309c70b7189cc53c3fcc87f9537904ed7a700b940e5975c082501b14"
+    }
+  ],
+  "mutable_canonical_surfaces": [
+    ".omx/state/canonical_task_status.jsonl",
+    ".omx/state/lane_registry.json",
+    ".omx/state/lane_maturity_audit.log"
+  ],
+  "mutable_surface_note": "Mutable ledgers are committed but intentionally excluded from the immutable artifact SHA list; task completion is updated after the implementation commit.",
+  "stores_consulted": [
+    "delegated authority and live inboxes",
+    "CLAUDE.md and AGENTS.md",
+    "PROGRAM.md, HANDOFF.md, SYSTEM_MAP.md, and operating manual",
+    "v7.5 operating contract, v8 spec, DDM PRIMARY spec, predecessor builder/DAG/equation artifacts",
+    "canonical pointer, lane, task, subagent, and current sister-agent memo surfaces",
+    "fresh source diff, tests, typed smoke, archive, receiver output, and all nine checkpoints"
+  ]
+}
