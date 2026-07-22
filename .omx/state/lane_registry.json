@@ -82882,6 +82882,54 @@
         "Scale exact priced selection and membership to n600",
         "MAIN review and merge"
       ]
+    },
+    {
+      "id": "lane_truly_optimal_coder_survey_603_613_20260722",
+      "name": "Truly optimal coder survey for DDM v3 and floor proof",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Measured six real stream coder assignments; exceptions global Brotli is the first exact probe, sparse events remain a representation blocker, no score/candidate/pointer authority, MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Measure global exception recode as exact final-ZIP delta with receiver parse-back",
+        "Measure raw versus Rice on actual signed dxi stream",
+        "Reduce event and PPCS representation before coder-only retry",
+        "MAIN review and merge"
+      ]
     }
   ],
   "level_rules": {
@@ -82891,5 +82939,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T03:58:45Z"
+  "updated_at": "2026-07-22T05:01:24Z"
 }

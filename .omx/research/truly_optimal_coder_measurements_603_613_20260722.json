@@ -1,0 +1,266 @@
+{
+  "schema": "truly_optimal_coder_survey_measurement.v1",
+  "date_utc": "2026-07-22T04:47:13Z",
+  "task": 603,
+  "feeds_task": 613,
+  "lane_id": "lane_truly_optimal_coder_survey_603_613_20260722",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "candidate_archive": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "verdict": "MEASURED_STREAM_SPECIFIC_CODER_ASSIGNMENTS_AND_REPRESENTATION_FLOOR",
+  "verdict_scope": "Exact local lossless recodes and analytic bit counts over the named real S4/PPCS/PoseNet-derived source objects; legacy S4 aliases do not prove PRIMARY semantic ownership, the Pose ordinal stream is an apparatus proxy rather than a receiver-complete dxi payload, and independent stream bytes are not final-ZIP deltas.",
+  "main_landing_review_required": true,
+  "runtime": {
+    "python": "3.13 project venv for Brotli measurements; 3.14.6 system Python for custody checks",
+    "brotli": "1.2.0",
+    "zlib": "1.2.12",
+    "zstd": "unavailable on this local surface; no zstd bytes inferred",
+    "paid_cost_usd": 0
+  },
+  "source_custody": {
+    "settled_s4_archive": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/canonical_s4_20260721/archive.zip",
+      "bytes": 451191,
+      "sha256": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed",
+      "zip_member": "0.bin",
+      "zip_member_uncompressed_bytes": 1285943,
+      "source_mutated": false
+    },
+    "pose_cache": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "bytes": 5078017610,
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "array": "gt_poses float64 [600,6]",
+      "source_mutated": false
+    },
+    "xi_receipt": {
+      "path": ".omx/research/xi_temporal_delta_coder_574_20260721T222234Z.json",
+      "bytes": 6459,
+      "sha256": "7241ff90057287d58482e9abd55e5da17173cb6ebe09a39c2ca847cc02a9a8b9"
+    },
+    "task_603_v2_receiver_control": {
+      "path": ".omx/research/ddm_receiver_optimizer_build_603_20260722T003529Z_artifacts/ddm_n64_custody_final.not_a_candidate.zip",
+      "bytes": 1585,
+      "sha256": "a504d876da469e1afec27f8aafd93fa2a06f0c157ddf7da04fcff75b1d74aa58",
+      "use": "grammar/custody comparison only; seeded fixture bytes are not rate evidence"
+    }
+  },
+  "legacy_alias_warning": "The DirectDescriptionZV1 mapping is an opaque byte-exact re-expression of S4, not proof that S4 manifest/seed/base/causal/events/components have the future PRIMARY semantics named entropy/xi/static/pose/events/exceptions.",
+  "stream_measurements": {
+    "static_ground_coefficients": {
+      "real_object": "decoded PXQ1 static mask payload inside S4 base.pbase3",
+      "logical_bytes": 73738,
+      "source_shape": {
+        "mask_count": 3,
+        "universe_per_mask": 196608,
+        "ones": [45706, 97206, 50345],
+        "one_runs": [287, 136, 30]
+      },
+      "current_settled_encoded_bytes": 610,
+      "generic_exact_bytes": {
+        "raw": 73738,
+        "zlib9": 907,
+        "brotli_q11": 610,
+        "lzma1_raw_1MiB": 824,
+        "lzma_xz9": 884,
+        "AQc1_static_byte": 9152
+      },
+      "analytic_ceiling_bytes": {
+        "KT0": 9085,
+        "KT1": 1057
+      },
+      "structured_exact_or_ceiling": {
+        "run_gap_rice_best_bytes_including_header": 683,
+        "run_gap_elias_gamma_bytes_including_header": 703,
+        "run_gap_elias_delta_bytes_including_header": 643,
+        "colex_constant_weight_bytes_including_header": 63990,
+        "rice_k_by_mask": [9, 10, 12]
+      },
+      "winner": "brotli_q11",
+      "winner_bytes": 610,
+      "verdict": "KEEP_SETTLED_BROTLI; explicit run gaps nearly match but do not beat it"
+    },
+    "xi_curve_knots": {
+      "real_object": "PPCS trajectory object: 10 controls plus 254 autoregressive residuals",
+      "parent_ppcs_raw_bytes": 884872,
+      "parent_ppcs_zlib9_diagnostic_bytes": 78969,
+      "canonical_json_bytes": 11768,
+      "generic_on_json_bytes": {
+        "raw": 11768,
+        "zlib9": 902,
+        "brotli_q11": 586,
+        "lzma1_raw_1MiB": 578,
+        "lzma_xz9": 636,
+        "AQc1_static_byte": 6403,
+        "KT0_ceiling": 6258,
+        "KT1_ceiling": 2849
+      },
+      "schema_compact_varint_wire_bytes": 1063,
+      "generic_on_compact_wire_bytes": {
+        "raw": 1063,
+        "zlib9": 224,
+        "brotli_q11": 205,
+        "lzma1_raw_1MiB": 204,
+        "lzma_xz9": 264,
+        "AQc1_static_byte": 511,
+        "KT0_ceiling": 379,
+        "KT1_ceiling": 402
+      },
+      "structured_exact_or_ceiling": {
+        "control_count": 10,
+        "residual_count": 254,
+        "colex_time_support_bits": 643.285,
+        "control_value_rice_bits": 135,
+        "control_value_rice_k": 2,
+        "residual_value_rice_bits": 1822,
+        "residual_value_rice_k": 0,
+        "colex_plus_rice_bytes_including_64bit_header": 334
+      },
+      "winner": "lzma1_raw_1MiB",
+      "winner_bytes": 204,
+      "runner_up": "brotli_q11",
+      "runner_up_bytes": 205,
+      "verdict": "MEASURE_BOTH_ON_FINAL_V3_PAYLOAD_AND_SELECT_WITH_ONE_TAG; one-byte lead is not portable to a changed payload"
+    },
+    "pose6_dxi_residuals": {
+      "real_object": "600x6 PoseNet gt_pose transformed to the existing DDM ordinal uint8 target-code apparatus, then temporal-differenced per coordinate",
+      "authority_limitation": "lossless rate proxy only; not a receiver-complete dxi payload and not d_pose authority",
+      "logical_bytes": 3600,
+      "temporal_delta_values": 3594,
+      "temporal_delta_nonzero": 3558,
+      "generic_exact_bytes": {
+        "raw": 3600,
+        "brotli_q11": 3604,
+        "lzma1_raw_1MiB": 3613,
+        "lzma_xz9": 3660,
+        "zlib9": 3611,
+        "AQc1_static_byte": 5154
+      },
+      "analytic_ceiling_bytes": {
+        "KT0": 3672,
+        "KT1": 3613
+      },
+      "structured_exact_or_ceiling": {
+        "signed_varint_wire_bytes": 4322,
+        "rice_bytes_including_header": 3509,
+        "rice_k": 6,
+        "AQc1_over_temporal_delta_bytes": 5517
+      },
+      "winner": "per_coordinate_temporal_delta_plus_rice_k6",
+      "winner_bytes": 3509,
+      "saving_vs_raw_bytes": 91,
+      "verdict": "USE_MIN_RAW_RICE_TAG_ON_THE_REAL_V3_DXI_STREAM; current proxy advantage is only 2.53 percent"
+    },
+    "sparse_events": {
+      "real_object": "decoded S4 PCE3 event records",
+      "logical_bytes": 942475,
+      "record_count": 10919,
+      "type_counts": {"0": 3525, "1": 7394},
+      "nonempty_position_sets": 10064,
+      "position_values": 812231,
+      "record_skeleton_bytes": 33828,
+      "current_settled_encoded_bytes": 181904,
+      "generic_exact_bytes": {
+        "brotli_q11": 185327,
+        "lzma1_raw_1MiB": 181904,
+        "lzma_xz9": 181980,
+        "zlib9": 206145,
+        "AQc1_static_byte": 260785
+      },
+      "analytic_ceiling_bytes": {
+        "KT0": 259431,
+        "KT1": 207227
+      },
+      "structured_exact_or_ceiling": {
+        "position_gap_rice_best_bytes": 1116211,
+        "position_gap_elias_gamma_bytes": 354456,
+        "position_gap_elias_delta_bytes": 324606,
+        "colex_position_set_bytes": 1148631
+      },
+      "winner": "lzma1_raw_1MiB",
+      "winner_bytes": 181904,
+      "verdict": "KEEP_SETTLED_LZMA; event representation, not entropy backend, is the Task 613 bottleneck"
+    },
+    "entropy_state": {
+      "real_object": "canonical S4 manifest.json bytes",
+      "logical_bytes": 2534,
+      "generic_exact_bytes": {
+        "raw": 2534,
+        "zlib9": 1287,
+        "brotli_q11": 1086,
+        "lzma1_raw_1MiB": 1294,
+        "lzma_xz9": 1352,
+        "AQc1_static_byte": 2064
+      },
+      "analytic_ceiling_bytes": {
+        "KT0": 1727,
+        "KT1": 1872
+      },
+      "winner": "brotli_q11",
+      "winner_bytes": 1086,
+      "verdict": "BROTLI_FOR_CURRENT_BYTES; schema elision is a separate representation change requiring receiver proof"
+    },
+    "exceptions": {
+      "real_object": "globally length-framed decoded records from S4 PCOMP3 components",
+      "logical_bytes": 1162453,
+      "record_count": 1802,
+      "position_values": 1094309,
+      "current_per_record_zlib_bytes": 180196,
+      "generic_exact_bytes": {
+        "brotli_q11": 80478,
+        "lzma1_raw_1MiB": 82620,
+        "lzma_xz9": 82688,
+        "zlib9_global": 100126,
+        "AQc1_static_byte": 140725
+      },
+      "analytic_ceiling_bytes": {
+        "KT0": 139376,
+        "KT1": 103824
+      },
+      "structured_exact_or_ceiling": {
+        "position_gap_rice_best_bytes": 1230843,
+        "position_gap_elias_gamma_bytes": 245733,
+        "position_gap_elias_delta_bytes": 234043,
+        "colex_position_set_bytes": 1276422
+      },
+      "winner": "brotli_q11_global_stream",
+      "winner_bytes": 80478,
+      "saving_vs_current_per_record_zlib_bytes": 99718,
+      "saving_vs_current_per_record_zlib_fraction": 0.5533863126817465,
+      "verdict": "TOP_V3_RECODE_PROBE; must measure exact final-ZIP delta and receiver parse-back because isolated stream saving is not archive saving"
+    }
+  },
+  "noncomposable_budget_diagnostics": {
+    "warning": "These sums mix legacy opaque aliases with a Pose apparatus proxy and exclude final framing/outer-code coupling; they are blocker diagnostics, never a candidate archive.",
+    "six_winner_subtotal_bytes": 267791,
+    "six_winner_subtotal_bytes_per_pair": 446.3183333333333,
+    "excess_over_historical_440_bytes_per_pair_bar_bytes": 3791,
+    "plus_whole_ppcs_zlib9_diagnostic_bytes": 346760,
+    "plus_whole_ppcs_bytes_per_pair": 577.9333333333333,
+    "excess_over_pointer_cap_216223_bytes": 130537,
+    "excess_over_strict_cap_154524_bytes": 192236,
+    "sparse_events_alone_fraction_of_pointer_cap": 0.8412796048523977,
+    "sparse_events_alone_fraction_of_strict_cap": 1.1771893039268981,
+    "conclusion": "Entropy backend selection alone cannot close the budget. PCE3 event grammar and retained PPCS semantics require representation reduction; global exception recoding is the first cheap exact probe."
+  },
+  "task_557_crosscheck": {
+    "receipt_path": ".omx/research/arith_selfcomp_rate_coders_20260719_receipt.json",
+    "receipt_sha256": "8cd25a6bde36676285326ac10d49d041e9f58deb7ffb5f03e518a2185435490d",
+    "measured_base_weights_bytes": {"brotli": 63394, "repo_iid_arithmetic": 66322, "repo_spatial_arithmetic": 93991},
+    "measured_pair_code_bytes": {"brotli": 20518, "repo_iid_arithmetic": 35989, "repo_spatial_arithmetic": 37432},
+    "historical_pr103_anchor": "The PR101/PR103 lineage reports a 290-byte merged constriction arithmetic win over the PR100-style baseline across eight largest weight streams plus latent-hi. That is a different substrate, grouping, and model from the current #557 donor rows.",
+    "premise_correction": "The adaptive-arithmetic-beats-Brotli shorthand is a historical PR103-lineage anchor, not a result reproduced by the current #557 receipt. #557 rejects only its concrete current-donor arithmetic models; it does not reject adaptive arithmetic as a family."
+  },
+  "measurement_definitions": {
+    "golomb_rice": "zigzag signed integers when applicable; for nonnegative gaps q=floor(n/2^k) unary quotient plus k-bit remainder; exhaustive integer k selection; counts include explicit stream/header allowance stated per row",
+    "elias_gamma": "positive integer n has 2*floor(log2(n))+1 bits",
+    "elias_delta": "positive integer n has floor(log2(n))+2*floor(log2(floor(log2(n))+1))+1 bits",
+    "colex_enumerative": "constant-weight set support requires ceil(log2(binomial(N,K))) bits plus stated headers",
+    "KT0_KT1": "negative log2 Krichevsky-Trofimov predictive probability, rounded upward to whole bytes; a rate ceiling without a landed bitstream",
+    "AQc1_static_byte": "existing strict adaptive arithmetic byte model with full local framing and parse-back; measured bytes",
+    "generic_codecs": "whole logical stream, deterministic settings shown by key; exact compressed byte length, excluding any new outer ZIP coupling"
+  }
+}
