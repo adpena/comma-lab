@@ -82653,11 +82653,11 @@
       "id": "lane_ddm_measurement_ladder_rungs123_603_20260722",
       "name": "DDM measurement ladder rungs 1-3 task 603",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_measurement_ladder_rungs123_603_20260722T015737Z.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -82689,7 +82689,14 @@
         }
       },
       "notes": "Task 603 local-only full-resolution real-plane measurement ladder rungs 1-3; no scorer, score, candidate, provider, or pointer authority; MAIN review required.",
-      "research_only": true
+      "research_only": true,
+      "reactivation_criteria": [
+        "MAIN landing review",
+        "n600 same-artifact archive closure",
+        "canonical PRIMARY compiler-resume-launcher integration",
+        "contest CPU and CUDA replay",
+        "operator GO"
+      ]
     }
   ],
   "level_rules": {
@@ -82699,5 +82706,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T02:03:17Z"
+  "updated_at": "2026-07-22T02:27:21Z"
 }

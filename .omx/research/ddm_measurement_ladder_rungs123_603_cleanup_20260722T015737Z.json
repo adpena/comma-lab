@@ -1,0 +1,17 @@
+{
+  "schema": "certified_rebuildable_scratch_cleanup.v1",
+  "utc": "2026-07-22T02:25:04Z",
+  "task": 603,
+  "original_path": ".omx/tmp/ddm_measurement_ladder_rungs123_superseded_volatile_receipt_20260722T0222Z",
+  "files": 8,
+  "bytes": 8303507,
+  "tree_sha256": "46bb02c8f9acd12161be44297f78dee80b11772928dc7c614fa6976d93fc9fee",
+  "rebuild_command": "/usr/bin/env python3 tools/run_direct_description_measurement_ladder.py --config .omx/research/ddm_measurement_ladder_rungs123_603_20260722T015737Z.config.json --output-dir <fresh-output-dir> --execution-allowed false",
+  "producer_commits": ["579a1c504e4a67744b3346336dfa02b3c4e37202", "918edb44534edddb168bafa6a326b597c7b1be3a"],
+  "source_target_receipt_sha256": "a8d94f0f8338036fb3224a92078eff1f1fb5fd2eb598ed994a1f965b6561efb2",
+  "replacement_receipt_path": ".omx/research/ddm_measurement_ladder_rungs123_603_20260722T015737Z_artifacts/ddm_measurement_ladder_rungs123_receipt.json",
+  "replacement_receipt_sha256": "dac6a705f3efefb8c35f3c735d1aa7a7ad5b31b5ba122d88ef9402f4caa81b87",
+  "false_authority_flags": {"candidate_archive": false, "score_claim": false, "pointer_moved": false},
+  "reason": "superseded pre-fix receipt embedded volatile wall-time and exact free-space telemetry; exact archive/checkpoint bytes are rebuildable and a corrected durable replacement exists",
+  "cleanup_action": "delete certified rebuildable scratch after this record is written"
+}
