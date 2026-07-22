@@ -1,0 +1,26 @@
+{
+  "schema": "DirectDescriptionEntropyPricedMemberConfigV1",
+  "run_id": "ddm_entropy_priced_member_n64_seed1234",
+  "seed": 1234,
+  "pair_count": 64,
+  "tolerance_ladder": [
+    "0.000000",
+    "0.000152",
+    "0.000300",
+    "0.000500",
+    "0.000800"
+  ],
+  "target_receipt_path": ".omx/research/ddm_full_precision_target_planes_603_20260722T010130Z.json",
+  "target_receipt_sha256": "a8d94f0f8338036fb3224a92078eff1f1fb5fd2eb598ed994a1f965b6561efb2",
+  "upstream_root": "/Users/adpena/Projects/pact/upstream",
+  "scorer_batch_size": 16,
+  "scorer_threads": 4,
+  "candidate_checkpoint_policy": "atomic_preserve_every_subset",
+  "rung_checkpoint_policy": "atomic_preserve_every_rung",
+  "rate_authority": "exact_len_of_six_member_entropy_zip_stored_A_of_z",
+  "candidate_family": "exhaustive_power_set_of_three_safe_zero_residual_collapses",
+  "selection_rule": "minimum_exact_bytes_subject_to_absolute_stratum_membership_and_pose",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false
+}
