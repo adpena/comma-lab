@@ -1,0 +1,31 @@
+{
+  "atlas_jsonl": {
+    "bytes": 9121001,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_n600.jsonl",
+    "sha256": "faaff7299d86aa49c97e25e9cce2eeb0201f64e919f110015d31708788bcec09"
+  },
+  "canonical_pointer_evidence": {
+    "last_verified_utc": "2026-07-22T18:14:47Z",
+    "ledger_path": ".omx/state/operator_p0_ledger.jsonl",
+    "ledger_sha256": "6d2e819a9c05e99aa0524cd57d5a9f70e166415c9731678036ba1b4e2641d5aa",
+    "line_number": 319,
+    "next_action": "ddm_v13_worldsheet_event_predictor SPAWNED (the verdict's named successor): island worldsheet birth/death events + Lane treatment INTO the predict stage (composes #503 island carriers + #601/#605 xi-advection + #597 predict-project); falsifier pre-registered; d_seg<=0.00116 in-box -> flag for R6 exact eval",
+    "p0_id": "p0_crux_knee_recursive_fractal_20260721",
+    "resolved_path_at_measurement": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_g3_score_atlas_20260722T201946Z/.omx/state/operator_p0_ledger.jsonl",
+    "row_sha256": "7c6d12b338b3b6cbc94817d072106870a3a8e91b190597e39d2b4a0d2fffb078",
+    "status": "in_progress"
+  },
+  "consumer_arm": "ddm_v13_worldsheet_event_predictor",
+  "consumer_status": "SPAWNED_OPERATOR_P0_LEDGER_IN_PROGRESS",
+  "costate_consumer_contract": "read each ddm_g3_score_atlas_pair.v1 costate_signal object",
+  "hard_pair_registry": {
+    "bytes": 5857,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/hard_pair_registry.json",
+    "sha256": "0c9ce6d0ce2b2c0830400f096438355242527d40f682fc1b201f67d8d951a4e4"
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "schema": "ddm_g3_score_atlas_live_arm_pointer.v1",
+  "score_claim": false,
+  "source_arm": "ddm_g3_score_atlas_n600_20260722T204000Z"
+}
