@@ -1,0 +1,68 @@
+{
+  "schema": "ddm_entropy_priced_member_blocker_register.v1",
+  "written_at_utc": "2026-07-22T04:59:40Z",
+  "task": 603,
+  "master_task": 578,
+  "feeds_task": 613,
+  "lane_id": "lane_ddm_mdl_member_solve_v3_entropy_603_613_20260722",
+  "delegation_checkpoint_key": "codex_delegate:mdl_member_solve_v3_entropy:20260722T042323Z",
+  "research_only": true,
+  "score_claim": false,
+  "candidate_archive": false,
+  "verdict": "MEASURED_ENTROPY_RATE_GRADIENT_GREEN_ABSOLUTE_MEMBER_CONSTRAINT_INFEASIBLE_N64",
+  "verdict_scope": "lossless six-stream entropy recoding and exhaustive n64 power set of three maximal safe-zero residual collapses only; wider family open",
+  "primary_register": {
+    "green_rows_before": 8,
+    "green_rows_after": 8,
+    "total_rows": 19,
+    "status": "UNCHANGED_PRIMARY_LAUNCH_BLOCKED"
+  },
+  "lane_maturity": {
+    "level": 2,
+    "impl_complete": true,
+    "real_archive_empirical": true,
+    "global_validation": "NON_GREEN_110_INHERITED_MISSING_HISTORICAL_EVIDENCE_PATHS_OUTSIDE_THIS_LANE"
+  },
+  "measurement": {
+    "pairs": 64,
+    "rungs": 5,
+    "candidate_count": 8,
+    "fixed_width_archive_bytes": 274664,
+    "lossless_entropy_archive_bytes": 45369,
+    "lossless_byte_delta": -229295,
+    "candidate_archive_bytes": [45369, 34657, 31431, 20719, 31203, 20491, 17265, 6553],
+    "unique_candidate_archive_bytes": [6553, 17265, 20491, 20719, 31203, 31431, 34657, 45369],
+    "feasible_candidates_each_rung": [0, 0, 0, 0, 0],
+    "diagnostic_archive_bytes_each_rung": [45369, 45369, 45369, 45369, 45369],
+    "lossless_membership_fraction": "0.493605613708",
+    "pose_completeness_each_candidate": "1.000000000000",
+    "gt_cache_target_match_fraction": "0.999873638153"
+  },
+  "blocker_delta": {
+    "COUNTED_ARCHIVE_MDL_INSIDE_SOLVE": "GREEN_EXACT_VALUE_RESPONSIVE_ENTROPY_ZIP_RATE",
+    "VARIABLE_LENGTH_RECEIVER_GRAMMAR": "RED_TO_GREEN_N64_SIX_STREAM_END_TO_END",
+    "PER_STREAM_WATERFILL_BYTES": "RED_TO_GREEN_ALL_RUNG_HOME_AND_CODED_BYTE_ROWS",
+    "ABSOLUTE_PER_STRATUM_TOLERANCE_FEASIBILITY": "REMAINS_RED_THIS_EXHAUSTIVE_SAFE_ZERO_SUBSET_FORMULATION",
+    "PRE_UINT8_MEMBER_STATE": "REMAINS_RED_STRUCTURAL",
+    "N600_MEMBER_SOLVE_COVERAGE": "PARTIAL_GREEN_N64_MINIMUM; N600_REMAINS_OWED",
+    "POSE_STREAM_IN_MEMBER_PAYLOAD": "GREEN_N64_POSE6_COMPLETE"
+  },
+  "artifacts": {
+    "receipt_path": ".omx/research/ddm_entropy_priced_member_n64_603_613_20260722T044916Z_artifacts/ddm_entropy_priced_member_n64_receipt.json",
+    "receipt_bytes": 446613,
+    "receipt_sha256": "9ab2251e4826d56fd0498ffa861a48f9cf699dfde082f9f55338e5b5ed59ca04",
+    "lossless_archive_sha256": "cef61eb5aed49842fa41eba2092fa930a72f56b7506168ab983e42bc2a91abbb",
+    "smallest_measured_archive_bytes": 6553,
+    "smallest_measured_archive_sha256": "cb42e704026a53b1c99f38b007ec5598e69e081de4eb4430ce44cad41ce7f268",
+    "producer_commit": "7d0880932ed48cacfba9484258eae319c6cf599f"
+  },
+  "reactivation_criteria": [
+    "coefficient-level nonzero rate-distortion allocation against exact entropy bytes",
+    "independent pre-uint8 member state with measured realization loss",
+    "n600 exact entropy-priced selection and frozen-scorer membership",
+    "MAIN landing review and merge"
+  ],
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

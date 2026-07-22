@@ -82887,15 +82887,15 @@
       "id": "lane_ddm_mdl_member_solve_v3_entropy_603_613_20260722",
       "name": "DDM entropy-coded member solve v3 Task 603/613",
       "phase": 3.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/optimization/direct_description_entropy_priced_member.py"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_entropy_priced_member_n64_603_613_20260722T044916Z_artifacts/ddm_entropy_priced_member_n64_receipt.json"
         },
         "contest_cuda": {
           "status": false,
@@ -82932,5 +82932,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T04:30:38Z"
+  "updated_at": "2026-07-22T05:03:41Z"
 }
