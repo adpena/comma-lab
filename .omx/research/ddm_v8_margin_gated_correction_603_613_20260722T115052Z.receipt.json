@@ -1,0 +1,149 @@
+{
+  "schema": "ddm_v8_margin_gated_correction_cross_window.v1",
+  "task": 603,
+  "feeds_task": 613,
+  "master_task": 578,
+  "lane_id": "ddm_v8_margin_gated_correction",
+  "delegation_checkpoint_key": "codex_delegate:ddm_v8_margin_gated_correction:20260722T104341Z",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "research_only": true,
+  "execution_allowed": false,
+  "candidate_archive": false,
+  "score_claim": false,
+  "d_seg_claim": false,
+  "d_pose_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "verdict": "FORMULATION_LEVEL_MARGIN_GATED_CORRECTION_RATE_WALL",
+  "verdict_scope": "MEASURED exact-value margin-gated opaque corrections at tau in {0,0.1,0.5,1.0} over the bound v6 predictor plus the SHA-bound settled v7 exact endpoint on n64 [448,512) and n256 [344,600), macOS CPU frozen SegNet/PoseNet advisory only; closes this registered finite-tau exact-value formulation, not learned or analytic carriers, inner-Jacobian realization, or unmeasured argmax-safe quantization; no n600 or contest-axis verdict",
+  "pre_registered_falsifier_bytes": 200000,
+  "windows": [
+    {
+      "pair_count": 64,
+      "pair_start": 448,
+      "receipt_path": ".omx/research/ddm_v8_margin_gated_correction_n64_603_613_20260722T104341Z_rerun1/ddm_v8_margin_gated_correction_n64_receipt.json",
+      "receipt_bytes": 105613,
+      "receipt_sha256": "73217e3bd8649978c8da8dc3f1f30215c3022838f354304b90673f6aa1cc683f",
+      "typed_config_sha256": "3ac81c3b6e934760d1ab00537d551c37faec60c3083e3bbfb510a45d1a50d427",
+      "candidate_table_sha256": "20662940c2bbbb60f91073ee9dead2045aa8b0afebb4a6d73c201a19976824ef",
+      "tight_mask": {
+        "tau": "0.000000",
+        "selected_sites": 570032,
+        "selected_fraction": "0.045302073161",
+        "archive_bytes": 2629076,
+        "multiple_of_200kb": "13.145380",
+        "fraction_of_v7_exact_bytes": "0.060982247859",
+        "byte_collapse_vs_v7_exact": "0.939017752141",
+        "advisory_d_seg": "0.029359102249",
+        "advisory_d_pose": "117.509345241081"
+      },
+      "feasible_knee": {
+        "policy": "inherited_v7_exact_all",
+        "archive_bytes": 43112153,
+        "multiple_of_200kb": "215.560765",
+        "advisory_d_seg": "0.000171422958",
+        "advisory_d_pose": "0.000081666650"
+      },
+      "candidates": [
+        {"tau":"0.000000","selected_fraction":"0.045302073161","archive_bytes":2629076,"advisory_d_seg":"0.029359102249","advisory_d_pose":"117.509345241081"},
+        {"tau":"0.100000","selected_fraction":"0.046683390935","archive_bytes":2711431,"advisory_d_seg":"0.029486179352","advisory_d_pose":"110.196784712230"},
+        {"tau":"0.500000","selected_fraction":"0.052569468816","archive_bytes":3062403,"advisory_d_seg":"0.030277411143","advisory_d_pose":"67.326188740405"},
+        {"tau":"1.000000","selected_fraction":"0.060744444529","archive_bytes":3547665,"advisory_d_seg":"0.031822125117","advisory_d_pose":"17.403719517738"}
+      ],
+      "tight_mask_stream_bytes": {"Road":790533,"Lane":37384,"Undrivable":48596,"Movable":985888,"MyCar":446,"Boundary":714216},
+      "resize_nullspace_energy_fraction_by_tau": {"0.000000":"0.211953555982","0.100000":"0.216761130422","0.500000":"0.236887546695","1.000000":"0.245672690936"}
+    },
+    {
+      "pair_count": 256,
+      "pair_start": 344,
+      "receipt_path": ".omx/research/ddm_v8_margin_gated_correction_n256_603_613_20260722T104341Z_run1/ddm_v8_margin_gated_correction_n256_receipt.json",
+      "receipt_bytes": 271648,
+      "receipt_sha256": "99e0e1e9f639a2d42140c97306c9d8b50fd3b883cddd42ba4e2b55bcf267886e",
+      "typed_config_sha256": "23f98e1b995ed2eb0e584ceb0ee753ed4381f892fd51d0e2a3e027c9c20cb367",
+      "candidate_table_sha256": "6185206e9c5c27d5618702110878a37ff410c5dca26ed59327a3b8e2a0610445",
+      "tight_mask": {
+        "tau": "0.000000",
+        "selected_sites": 2022433,
+        "selected_fraction": "0.040182133516",
+        "archive_bytes": 9360569,
+        "multiple_of_200kb": "46.802845",
+        "fraction_of_v7_exact_bytes": "0.054633887829",
+        "byte_collapse_vs_v7_exact": "0.945366112171",
+        "advisory_d_seg": "0.025907576084",
+        "advisory_d_pose": "113.918588951715"
+      },
+      "feasible_knee": {
+        "policy": "inherited_v7_exact_all",
+        "archive_bytes": 171332654,
+        "multiple_of_200kb": "856.663270",
+        "advisory_d_seg": "0.000154534976",
+        "advisory_d_pose": "0.000104117518"
+      },
+      "candidates": [
+        {"tau":"0.000000","selected_fraction":"0.040182133516","archive_bytes":9360569,"advisory_d_seg":"0.025907576084","advisory_d_pose":"113.918588951715"},
+        {"tau":"0.100000","selected_fraction":"0.041494230429","archive_bytes":9675861,"advisory_d_seg":"0.026060779889","advisory_d_pose":"108.363288404228"},
+        {"tau":"0.500000","selected_fraction":"0.047119577726","archive_bytes":11003067,"advisory_d_seg":"0.026977002621","advisory_d_pose":"72.738685040068"},
+        {"tau":"1.000000","selected_fraction":"0.054786741734","archive_bytes":12811245,"advisory_d_seg":"0.028795083364","advisory_d_pose":"31.003158645132"}
+      ],
+      "tight_mask_stream_bytes": {"Road":2745416,"Lane":137424,"Undrivable":352076,"Movable":3390676,"MyCar":35052,"Boundary":2627176},
+      "resize_nullspace_energy_fraction_by_tau": {"0.000000":"0.183956747048","0.100000":"0.188804841836","0.500000":"0.210891801502","1.000000":"0.222172516836"}
+    }
+  ],
+  "pose_stream_attribution": {
+    "status": "MEASURED_ALLOCATION_ATTRIBUTION_NOT_CAUSAL_LEAVE_ONE_OUT",
+    "dominant_added_stream_as_pose_improves": "Boundary",
+    "evidence": "Boundary is the largest added ZIP-home stream at every adjacent tau transition in both windows while overall d_pose falls; n256 Boundary deltas are +307876, +1119452, and +924860 bytes",
+    "causal_stream_claim": false,
+    "verdict_scope": "allocation covariance on the registered tau ladder only; no per-stream PoseNet ablation was run"
+  },
+  "resize_preimage_probe": {
+    "measurement_kind": "DERIVED_PREIMAGE_FREEDOM_NOT_SCORE",
+    "operator": "exact half-pixel 2x bilinear block-mean linearization before SegNet",
+    "finding": "18.40% to 24.57% of masked RGB-delta L2 energy lies in the linear resize nullspace, but only one to three active blocks per rung are exactly mean-zero; no counted-byte saving was claimed",
+    "causal_score_claim": false
+  },
+  "resume_evidence": {
+    "all_four_tau_and_candidate_checkpoints_preserved_per_window": true,
+    "round1_sealed_validation_seconds": {"n64":"5.21","n256":"17.79"},
+    "pre_round1_receipt_sha256": {"n64":"6efe099e7357493b736d6ce2c9b68e39156acd5e9c0a5028f5b5a7b79d0f31c1","n256":"10063fc4226ce136509a1818d88205015fb21e1b526ee3a8a997c828abeade52"},
+    "validator_binds": "typed config, DSL hash, committed producer, candidate-table hash, exact checkpoint row and argv, all six tau frames and section ledgers, exact archive/receiver/frame homes, per-stream table, resume paths, and SHA-bound v7 endpoint"
+  },
+  "cleanup": {
+    "status": "BLOCKED_KEEP_BYTES_SSD_READ_ONLY_BY_DELEGATED_TASK",
+    "n64_local_bulk_bytes": 24022174,
+    "n64_local_file_count": 41,
+    "n256_local_bulk_bytes": 86496913,
+    "n256_local_file_count": 41,
+    "rebuild_authority": "typed config plus SHA-bound v7 receipt plus four tau receipts and four candidate receipts per window",
+    "cold_store_move_performed": false,
+    "reason": "Delegated boundary requires SSD read-only. Certify-or-block keeps all measurement and pre-round1 bytes; no deletion, movement, or source mutation was authorized."
+  },
+  "round1": {
+    "disposition": "PASS_AFTER_THREE_CUSTODY_FIXES",
+    "fixes": [
+      "revalidate embedded settled-v7 typed config through strict JSON mode instead of rejecting JSON tuple arrays",
+      "consume the nested segmentation/pose bridge schema and explicitly add the joint pose guard to the inherited exact endpoint",
+      "seal completed-receipt replay against candidate/checkpoint/tau-frame/archive/stream/v7 drift and fail closed on weakened receiver manifests"
+    ],
+    "focused_tests_passed": 51
+  },
+  "producer": {
+    "build_commit": "1cabec407c523e58f8aed14dea600017c7c01ff0",
+    "strict_json_fix_commit": "52f02d8fd1692dc85eeef9ec562f2e9849320489",
+    "nested_bridge_fix_commit": "53c66f4ee664ba1374e6e34ef7a1e16f81a9b348",
+    "round1_resume_seal_commit": "46d3a79370c80258963d46c338660b2cdde03eb3"
+  },
+  "blocker_delta": {
+    "SOLVED_PLANE_MARGIN_GATE": "RED_TO_GREEN_LOCAL_ADVISORY",
+    "EXACT_RECEIVER_BYTES_PER_TAU": "RED_TO_GREEN_LOCAL_ADVISORY",
+    "HONEST_POSE_GUARD": "RED_TO_GREEN_MEASURED_LOCAL_ADVISORY",
+    "RESIZE_PREIMAGE_FREEDOM": "RED_TO_GREEN_DERIVED_LINEAR_PROBE_NOT_SCORE",
+    "DSEG_FEASIBLE_RUNG_LE_200KB": "RED_FORMULATION_SCOPE_N64_AND_N256",
+    "CAUSAL_POSE_STREAM_BINDER": "REMAINS_RED_NO_LEAVE_ONE_OUT_PROBE",
+    "ARGMAX_SAFE_IN_MASK_QUANTIZATION": "OPEN_UNMEASURED_SEPARATE_FORMULATION_AXIS",
+    "N600": "REMAINS_RED_NOT_RUN_AFTER_N256_FALSIFIER",
+    "CONTEST_CPU_CUDA_SCORE": "REMAINS_RED_NOT_AUTHORIZED",
+    "CANONICAL_603_REGISTER_COUNT": "8/19 UNCHANGED_ON_BRANCH_MAIN_REVIEWS_DRAFT"
+  },
+  "main_landing_review_required": true
+}

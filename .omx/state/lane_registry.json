@@ -83106,15 +83106,15 @@
       "id": "ddm_v8_margin_gated_correction",
       "name": "DDM v8 margin-gated solved-plane correction tasks 603 613",
       "phase": 3.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/optimization/direct_description_entropy_priced_member.py"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_v8_margin_gated_correction_603_613_20260722T115052Z.receipt.json"
         },
         "contest_cuda": {
           "status": false,
@@ -83157,5 +83157,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T10:51:11Z"
+  "updated_at": "2026-07-22T11:56:00Z"
 }
