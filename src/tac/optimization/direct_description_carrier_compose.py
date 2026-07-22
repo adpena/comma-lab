@@ -45,12 +45,16 @@ from tac.optimization.predictor_upgrade_xi_chart import (
 CONFIG_SCHEMA: Final = "DirectDescriptionV9CarrierComposeConfigV1"
 ARCHIVE_SCHEMA: Final = "direct_description_v9_carrier_compose_archive.v1"
 ARCHIVE_SCHEMA_V2: Final = "direct_description_v10_fisher_event_archive.v1"
+ARCHIVE_SCHEMA_V3: Final = "direct_description_v11_obligation_archive.v1"
 RECEIVER_SCHEMA: Final = "direct_description_v9_carrier_compose_receiver.v1"
 RECEIVER_SCHEMA_V2: Final = "direct_description_v10_fisher_event_receiver.v1"
+RECEIVER_SCHEMA_V3: Final = "direct_description_v11_obligation_receiver.v1"
 RESULT_SCHEMA: Final = "direct_description_v9_carrier_compose_receipt.v1"
 RESULT_SCHEMA_V2: Final = "direct_description_v10_fisher_event_search_receipt.v1"
+RESULT_SCHEMA_V3: Final = "direct_description_v11_obligation_search_receipt.v1"
 MAGIC: Final = "DDV9C1"
 MAGIC_V2: Final = "DDV10C1"
+MAGIC_V3: Final = "DDV11C1"
 EVIDENCE_AXIS: Final = "[macOS-CPU frozen-scorer advisory]"
 CLASS_ORDER: Final = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
 ROLE_CLASS_IDS: Final = {
@@ -63,6 +67,8 @@ ROLE_CLASS_IDS: Final = {
 CORRECTION_MEMBER: Final = "correction/lane_chart_symbols.g2cs"
 BOUNDARY_CORRECTION_MEMBER: Final = "correction/road_boundary_coefficients.g2bc"
 EVENT_CORRECTION_MEMBER: Final = "correction/topology_events.g2ev"
+BOUNDARY_SHEARLET_MEMBER: Final = "correction/boundary_shearlet_atoms.g2sh"
+ISLAND_SHAPE_MEMBER: Final = "correction/movable_shape_atoms.g2is"
 
 _ROLE_TO_WIRE: Final = {name: index for index, name in enumerate(COMPOSED_ROLE_ORDER)}
 _WIRE_TO_ROLE: Final = {value: key for key, value in _ROLE_TO_WIRE.items()}
@@ -78,6 +84,14 @@ _EVENT_ACTION_TO_WIRE: Final = {"birth": 1, "death": 2}
 _WIRE_TO_EVENT_ACTION: Final = {value: key for key, value in _EVENT_ACTION_TO_WIRE.items()}
 _EVENT_SHAPE_TO_WIRE: Final = {"ellipse": 1, "box": 2}
 _WIRE_TO_EVENT_SHAPE: Final = {value: key for key, value in _EVENT_SHAPE_TO_WIRE.items()}
+_SHEARLET_MAGIC: Final = b"G2SH1"
+_SHEARLET_VERSION: Final = 1
+_SHEARLET_HEADER: Final = struct.Struct(">5sBHI")
+_SHEARLET_ROW: Final = struct.Struct(">HBHHBHbh")
+_ISLAND_MAGIC: Final = b"G2IS1"
+_ISLAND_VERSION: Final = 1
+_ISLAND_HEADER: Final = struct.Struct(">5sBHI")
+_ISLAND_ROW: Final = struct.Struct(">HBBHHBHBbbbbb")
 
 
 @dataclass(frozen=True, order=True, slots=True)
@@ -146,6 +160,82 @@ class TopologyEventV1:
                 raise DirectDescriptionError(f"{name} is outside int8")
         if self.lifetime == 1 and (self.transport_gain_x_q4 or self.transport_gain_y_q4):
             raise DirectDescriptionError("one-pair topology events must not carry inert transport gains")
+
+
+@dataclass(frozen=True, order=True, slots=True)
+class BoundaryShearletAtomV1:
+    """One localized, directional boundary-displacement obligation atom.
+
+    The compact parabolic atom is parameterized in chart space.  It is not a
+    pixel/value stream: the receiver synthesizes its displacement field from
+    center, anisotropic support, shear, and one quantized coefficient.
+    """
+
+    pair_index: int
+    role: str
+    center_y: int
+    center_x: int
+    scale_y: int
+    scale_x: int
+    shear_q4: int
+    amplitude_q4: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.pair_index, bool) or not 0 <= self.pair_index < 600:
+            raise DirectDescriptionError("boundary-shearlet pair index is outside [0,600)")
+        if self.role not in {"Road", "UndrivableBoundary"}:
+            raise DirectDescriptionError("boundary-shearlet role must be Road or UndrivableBoundary")
+        if not (0 <= self.center_y < 384 and 0 <= self.center_x < 512):
+            raise DirectDescriptionError("boundary-shearlet center is outside scorer geometry")
+        if not (2 <= self.scale_y <= 96 and 4 <= self.scale_x <= 256):
+            raise DirectDescriptionError("boundary-shearlet support scale is outside the governed bank")
+        if self.scale_x < 2 * self.scale_y:
+            raise DirectDescriptionError("boundary-shearlet support must preserve parabolic anisotropy")
+        if not -64 <= self.shear_q4 <= 64:
+            raise DirectDescriptionError("boundary-shearlet shear is outside q4 range")
+        if self.amplitude_q4 == 0 or not -512 <= self.amplitude_q4 <= 512:
+            raise DirectDescriptionError("boundary-shearlet amplitude is zero or outside q4 range")
+
+
+@dataclass(frozen=True, order=True, slots=True)
+class IslandShapeAtomV1:
+    """Low-order Movable island shape plus one Fourier-free curvelet lobe."""
+
+    pair_index: int
+    action: str
+    lifetime: int
+    center_y: int
+    center_x: int
+    radius_y: int
+    radius_x: int
+    angle_u8: int
+    skew_q6: int
+    taper_q6: int
+    curvelet_q6: int
+    transport_gain_x_q4: int = 0
+    transport_gain_y_q4: int = 0
+
+    def __post_init__(self) -> None:
+        if isinstance(self.pair_index, bool) or not 0 <= self.pair_index < 600:
+            raise DirectDescriptionError("island-shape pair index is outside [0,600)")
+        if self.action not in _EVENT_ACTION_TO_WIRE:
+            raise DirectDescriptionError("island-shape action is unknown")
+        if not 1 <= self.lifetime <= 255:
+            raise DirectDescriptionError("island-shape lifetime is outside [1,255]")
+        if not (0 <= self.center_y < 384 and 0 <= self.center_x < 512):
+            raise DirectDescriptionError("island-shape center is outside scorer geometry")
+        if not (1 <= self.radius_y <= 191 and 1 <= self.radius_x <= 255):
+            raise DirectDescriptionError("island-shape radius is outside scorer geometry")
+        if not 0 <= self.angle_u8 <= 255:
+            raise DirectDescriptionError("island-shape angle is outside uint8")
+        for name in ("skew_q6", "taper_q6", "curvelet_q6"):
+            if not -96 <= getattr(self, name) <= 96:
+                raise DirectDescriptionError(f"island-shape {name} is outside the stable q6 range")
+        for name in ("transport_gain_x_q4", "transport_gain_y_q4"):
+            if not -128 <= getattr(self, name) <= 127:
+                raise DirectDescriptionError(f"island-shape {name} is outside int8")
+        if self.lifetime == 1 and (self.transport_gain_x_q4 or self.transport_gain_y_q4):
+            raise DirectDescriptionError("one-pair island shapes must not carry inert transport gains")
 
 
 def _encode_boundary_coefficient_deltas(symbols: Sequence[BoundaryCoefficientDelta]) -> bytes:
@@ -269,6 +359,128 @@ def _decode_topology_events(payload: bytes) -> tuple[TopologyEventV1, ...]:
     result = tuple(rows)
     if _encode_topology_events(result) != payload:
         raise DirectDescriptionError("topology-event packet is not canonical on parse-back")
+    return result
+
+
+def _encode_boundary_shearlet_atoms(atoms: Sequence[BoundaryShearletAtomV1]) -> bytes:
+    rows = tuple(atoms)
+    if not rows:
+        return b""
+    keys = [(row.pair_index, _ROLE_TO_WIRE[row.role], row.center_y, row.center_x) for row in rows]
+    if len(rows) > 0xFFFF or keys != sorted(set(keys)):
+        raise DirectDescriptionError("boundary-shearlet atoms must be sorted, unique, and uint16-bounded")
+    body = b"".join(
+        _SHEARLET_ROW.pack(
+            row.pair_index,
+            _ROLE_TO_WIRE[row.role],
+            row.center_y,
+            row.center_x,
+            row.scale_y,
+            row.scale_x,
+            row.shear_q4,
+            row.amplitude_q4,
+        )
+        for row in rows
+    )
+    return _SHEARLET_HEADER.pack(
+        _SHEARLET_MAGIC, _SHEARLET_VERSION, len(rows), zlib.crc32(body) & 0xFFFFFFFF
+    ) + body
+
+
+def _decode_boundary_shearlet_atoms(payload: bytes) -> tuple[BoundaryShearletAtomV1, ...]:
+    if not payload:
+        return ()
+    if len(payload) < _SHEARLET_HEADER.size:
+        raise DirectDescriptionError("boundary-shearlet packet is truncated")
+    magic, version, count, checksum = _SHEARLET_HEADER.unpack_from(payload)
+    expected = _SHEARLET_HEADER.size + count * _SHEARLET_ROW.size
+    if magic != _SHEARLET_MAGIC or version != _SHEARLET_VERSION or count == 0 or len(payload) != expected:
+        raise DirectDescriptionError("boundary-shearlet packet header/length is invalid")
+    body = payload[_SHEARLET_HEADER.size :]
+    if (zlib.crc32(body) & 0xFFFFFFFF) != checksum:
+        raise DirectDescriptionError("boundary-shearlet packet CRC mismatch")
+    rows: list[BoundaryShearletAtomV1] = []
+    for index in range(count):
+        pair, role_id, cy, cx, sy, sx, shear, amplitude = _SHEARLET_ROW.unpack_from(
+            body, index * _SHEARLET_ROW.size
+        )
+        if role_id not in _WIRE_TO_ROLE:
+            raise DirectDescriptionError("boundary-shearlet packet contains an unknown role")
+        rows.append(BoundaryShearletAtomV1(pair, _WIRE_TO_ROLE[role_id], cy, cx, sy, sx, shear, amplitude))
+    result = tuple(rows)
+    if _encode_boundary_shearlet_atoms(result) != payload:
+        raise DirectDescriptionError("boundary-shearlet packet is not canonical on parse-back")
+    return result
+
+
+def _encode_island_shape_atoms(atoms: Sequence[IslandShapeAtomV1]) -> bytes:
+    rows = tuple(atoms)
+    if not rows:
+        return b""
+    keys = [(row.pair_index, _EVENT_ACTION_TO_WIRE[row.action], row.center_y, row.center_x) for row in rows]
+    if len(rows) > 0xFFFF or keys != sorted(set(keys)):
+        raise DirectDescriptionError("island-shape atoms must be sorted, unique, and uint16-bounded")
+    body = b"".join(
+        _ISLAND_ROW.pack(
+            row.pair_index,
+            _EVENT_ACTION_TO_WIRE[row.action],
+            row.lifetime,
+            row.center_y,
+            row.center_x,
+            row.radius_y,
+            row.radius_x,
+            row.angle_u8,
+            row.skew_q6,
+            row.taper_q6,
+            row.curvelet_q6,
+            row.transport_gain_x_q4,
+            row.transport_gain_y_q4,
+        )
+        for row in rows
+    )
+    return _ISLAND_HEADER.pack(
+        _ISLAND_MAGIC, _ISLAND_VERSION, len(rows), zlib.crc32(body) & 0xFFFFFFFF
+    ) + body
+
+
+def _decode_island_shape_atoms(payload: bytes) -> tuple[IslandShapeAtomV1, ...]:
+    if not payload:
+        return ()
+    if len(payload) < _ISLAND_HEADER.size:
+        raise DirectDescriptionError("island-shape packet is truncated")
+    magic, version, count, checksum = _ISLAND_HEADER.unpack_from(payload)
+    expected = _ISLAND_HEADER.size + count * _ISLAND_ROW.size
+    if magic != _ISLAND_MAGIC or version != _ISLAND_VERSION or count == 0 or len(payload) != expected:
+        raise DirectDescriptionError("island-shape packet header/length is invalid")
+    body = payload[_ISLAND_HEADER.size :]
+    if (zlib.crc32(body) & 0xFFFFFFFF) != checksum:
+        raise DirectDescriptionError("island-shape packet CRC mismatch")
+    rows: list[IslandShapeAtomV1] = []
+    for index in range(count):
+        values = _ISLAND_ROW.unpack_from(body, index * _ISLAND_ROW.size)
+        pair, action_id, lifetime, cy, cx, ry, rx, angle, skew, taper, curvelet, gain_x, gain_y = values
+        if action_id not in _WIRE_TO_EVENT_ACTION:
+            raise DirectDescriptionError("island-shape packet contains an unknown action")
+        rows.append(
+            IslandShapeAtomV1(
+                pair,
+                _WIRE_TO_EVENT_ACTION[action_id],
+                lifetime,
+                cy,
+                cx,
+                ry,
+                rx,
+                angle,
+                skew,
+                taper,
+                curvelet,
+                gain_x,
+                gain_y,
+            )
+        )
+    result = tuple(rows)
+    if _encode_island_shape_atoms(result) != payload:
+        raise DirectDescriptionError("island-shape packet is not canonical on parse-back")
     return result
 
 
@@ -397,13 +609,140 @@ class DirectDescriptionV10FisherEventSearchConfigV1(BaseModel):
         return _sha256(rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True)))
 
 
+class DirectDescriptionV11ObligationSearchConfigV1(BaseModel):
+    """Typed scorer-obligation vocabulary and measured joint-objective search."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True, populate_by_name=True)
+
+    schema_: Literal["DirectDescriptionV11ObligationSearchConfigV1"] = Field(
+        default="DirectDescriptionV11ObligationSearchConfigV1",
+        alias="schema",
+        serialization_alias="schema",
+    )
+    run_id: StrictStr
+    seed: Literal[1234] = SEED
+    pair_start: Literal[0, 344, 448]
+    pair_count: Literal[64, 256, 600]
+    v6_receipt_path: StrictStr
+    v6_receipt_sha256: StrictStr
+    predictor_archive_path: StrictStr
+    predictor_archive_sha256: StrictStr
+    upstream_root: StrictStr
+    scorer_batch_size: Literal[16] = 16
+    scorer_threads: StrictInt = Field(ge=1, le=16)
+    added_budget_bytes: tuple[StrictInt, ...] = (0, 16384, 49152, 98304, 147456)
+    total_archive_ceiling_bytes: Literal[200000] = 200000
+    max_generated_candidates: StrictInt = Field(default=4096, ge=128, le=16384)
+    max_measured_candidates: StrictInt = Field(default=32, ge=8, le=128)
+    max_atoms_per_measured_bundle: StrictInt = Field(default=128, ge=16, le=512)
+    minimum_candidates_per_family: StrictInt = Field(default=1, ge=1, le=8)
+    max_components_per_pair_role: StrictInt = Field(default=2, ge=1, le=8)
+    min_component_sites: StrictInt = Field(default=8, ge=2, le=4096)
+    pose_tube_dpose_radius: float = Field(default=1.0, gt=0.0, le=10.0)
+    correction_policy: Literal[
+        "obligation_derived_lane_full_curvelet_boundary_island_moments_no_pixels"
+    ] = "obligation_derived_lane_full_curvelet_boundary_island_moments_no_pixels"
+    admission_policy: Literal[
+        "greedy_measured_joint_contest_objective_pose_tube_safety_only"
+    ] = "greedy_measured_joint_contest_objective_pose_tube_safety_only"
+    boundary_basis: Literal[
+        "governed_compact_parabolic_shearlet_bank_fourier_free"
+    ] = "governed_compact_parabolic_shearlet_bank_fourier_free"
+    checkpoint_policy: Literal[
+        "atomic_preserve_inventory_every_candidate_every_budget"
+    ] = "atomic_preserve_inventory_every_candidate_every_budget"
+    rate_authority: Literal["exact_len_receiver_closed_v11_zip"] = "exact_len_receiver_closed_v11_zip"
+    class_order: tuple[StrictStr, ...] = CLASS_ORDER
+    research_only: Literal[True] = True
+    execution_allowed: Literal[False] = False
+    score_claim: Literal[False] = False
+    d_seg_claim: Literal[False] = False
+    d_pose_claim: Literal[False] = False
+
+    @model_validator(mode="after")
+    def _valid(self) -> DirectDescriptionV11ObligationSearchConfigV1:
+        for name in ("v6_receipt_sha256", "predictor_archive_sha256"):
+            _require_sha256(getattr(self, name), name)
+        if (self.pair_start, self.pair_count) not in {(448, 64), (344, 256), (0, 600)}:
+            raise ValueError("v11 windows must be exactly [448,512), [344,600), or [0,600)")
+        if not Path(self.upstream_root).is_absolute():
+            raise ValueError("upstream_root must be absolute scorer custody")
+        if self.class_order != CLASS_ORDER:
+            raise ValueError(f"class_order must be canonical {CLASS_ORDER!r}")
+        budgets = tuple(int(value) for value in self.added_budget_bytes)
+        if budgets != tuple(sorted(set(budgets))) or not budgets or budgets[0] != 0:
+            raise ValueError("v11 added budgets must be sorted, unique, nonempty, and begin at zero")
+        if budgets[-1] > 147456:
+            raise ValueError("v11 added-byte request exceeds the preregistered near-200KB ladder")
+        if self.minimum_candidates_per_family * 6 > self.max_measured_candidates:
+            raise ValueError("max_measured_candidates must cover all six obligation families")
+        if self.max_measured_candidates > self.max_generated_candidates:
+            raise ValueError("measured candidate cap cannot exceed generated candidate cap")
+        return self
+
+    def typed_config_hash(self) -> str:
+        return _sha256(rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True)))
+
+
 def _manifest_for(
     predictor_archive: bytes,
     predictor: ComposedStructuredMemberReceiverV1,
     correction_payload: bytes,
     boundary_payload: bytes = b"",
     event_payload: bytes = b"",
+    shearlet_payload: bytes = b"",
+    island_payload: bytes = b"",
+    obligation_vocabulary: bool = False,
 ) -> dict[str, Any]:
+    if shearlet_payload or island_payload or obligation_vocabulary:
+        return {
+            "schema": ARCHIVE_SCHEMA_V3,
+            "magic": MAGIC_V3,
+            "pair_count": predictor.z.n_pairs,
+            "source_pair_start": predictor.source_pair_start,
+            "class_order": list(CLASS_ORDER),
+            "role_order": list(COMPOSED_ROLE_ORDER),
+            "role_class_ids": ROLE_CLASS_IDS,
+            "predictor": {"bytes": len(predictor_archive), "sha256": _sha256(predictor_archive)},
+            "corrections": {
+                "lane_full_coefficients": {
+                    "member": CORRECTION_MEMBER if correction_payload else None,
+                    "bytes": len(correction_payload),
+                    "sha256": _sha256(correction_payload),
+                    "symbol_count": len(decode_lane_coefficient_deltas(correction_payload)),
+                    "coefficient_roles": "centerline_c0_c3_width_c4_c5_dash_phase_c7",
+                },
+                "boundary_shearlet_atoms": {
+                    "member": BOUNDARY_SHEARLET_MEMBER if shearlet_payload else None,
+                    "bytes": len(shearlet_payload),
+                    "sha256": _sha256(shearlet_payload),
+                    "symbol_count": len(_decode_boundary_shearlet_atoms(shearlet_payload)),
+                    "basis": "compact parabolic shearlet displacement atoms; Fourier-free",
+                },
+                "movable_shape_atoms": {
+                    "member": ISLAND_SHAPE_MEMBER if island_payload else None,
+                    "bytes": len(island_payload),
+                    "sha256": _sha256(island_payload),
+                    "symbol_count": len(_decode_island_shape_atoms(island_payload)),
+                    "basis": "birth/death plus low-order moments and one compact curvelet lobe; Fourier-free",
+                },
+                "pixel_coordinate_or_rgb_patch_present": False,
+                "admission": "measured receiver replay under the exact joint contest objective",
+            },
+            "merge_diff_correct": {
+                "merge": "five nested semantic carrier masks in canonical role order",
+                "diff": "scorer-obligation clusters ranked by rank-4 flip distance, margin band, and curvature",
+                "correct": "chart and parametric atoms rerasterize before canonical semantic paint",
+            },
+            "xi_pose6": {
+                "home": "predictor.zip::chart.zip::ddm_chart_v3/05_pose6_pair_codes.bin",
+                "ownership": "sole counted Pose6 owner; Lane phase and island transport consume it without duplication",
+            },
+            "scorer_weights_present": False,
+            "ground_truth_argmax_present": False,
+            "score_claim": False,
+            "evidence_axis": EVIDENCE_AXIS,
+        }
     if boundary_payload or event_payload:
         return {
             "schema": ARCHIVE_SCHEMA_V2,
@@ -491,11 +830,15 @@ def compile_carrier_compose_archive(
     symbols: Sequence[LaneCoefficientDelta] = (),
     boundary_symbols: Sequence[BoundaryCoefficientDelta] = (),
     topology_events: Sequence[TopologyEventV1] = (),
+    boundary_shearlets: Sequence[BoundaryShearletAtomV1] = (),
+    island_shapes: Sequence[IslandShapeAtomV1] = (),
+    obligation_vocabulary: bool = False,
 ) -> tuple[bytes, tuple[dict[str, Any], ...]]:
     """Compile a byte-canonical outer archive around the five-carrier predictor.
 
     With only Lane symbols this emits the byte-compatible V9 grammar.  Boundary
-    or topology symbols opt into V10 while preserving the same nested predictor.
+    or topology symbols opt into V10; obligation atoms opt into V11 while
+    preserving the same nested predictor and receiver lineage.
     """
 
     predictor = receive_structured_member_archive(predictor_archive)
@@ -507,14 +850,21 @@ def compile_carrier_compose_archive(
         raise DirectDescriptionError("predictor role/class self-detection differs from canonical IDs")
     window_start = predictor.source_pair_start
     window_stop = window_start + predictor.z.n_pairs
-    addressed = [*symbols, *boundary_symbols, *topology_events]
+    addressed = [*symbols, *boundary_symbols, *topology_events, *boundary_shearlets, *island_shapes]
     if any(row.pair_index < window_start or row.pair_index >= window_stop for row in addressed):
         raise DirectDescriptionError("correction symbol is outside the nested predictor source window")
     if any(row.pair_index + row.lifetime > window_stop for row in topology_events):
         raise DirectDescriptionError("topology-event lifetime escapes the nested predictor source window")
+    if any(row.pair_index + row.lifetime > window_stop for row in island_shapes):
+        raise DirectDescriptionError("island-shape lifetime escapes the nested predictor source window")
+    v11_requested = bool(boundary_shearlets or island_shapes or obligation_vocabulary)
+    if v11_requested and (boundary_symbols or topology_events):
+        raise DirectDescriptionError("V10 and V11 correction vocabularies cannot be mixed in one archive")
     correction_payload = encode_lane_coefficient_deltas(tuple(symbols))
     boundary_payload = _encode_boundary_coefficient_deltas(tuple(boundary_symbols))
     event_payload = _encode_topology_events(tuple(topology_events))
+    shearlet_payload = _encode_boundary_shearlet_atoms(tuple(boundary_shearlets))
+    island_payload = _encode_island_shape_atoms(tuple(island_shapes))
     members = {
         "manifest.json": rfc8785_canonicalize(
             _manifest_for(
@@ -523,6 +873,9 @@ def compile_carrier_compose_archive(
                 correction_payload,
                 boundary_payload,
                 event_payload,
+                shearlet_payload,
+                island_payload,
+                v11_requested,
             )
         ),
         "predictor.zip": predictor_archive,
@@ -533,6 +886,10 @@ def compile_carrier_compose_archive(
         members[BOUNDARY_CORRECTION_MEMBER] = boundary_payload
     if event_payload:
         members[EVENT_CORRECTION_MEMBER] = event_payload
+    if shearlet_payload:
+        members[BOUNDARY_SHEARLET_MEMBER] = shearlet_payload
+    if island_payload:
+        members[ISLAND_SHAPE_MEMBER] = island_payload
     first = _zip_stored(members)
     second = _zip_stored(members)
     if first != second:
@@ -550,7 +907,7 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
         with zipfile.ZipFile(io.BytesIO(archive), "r") as reader:
             infos = reader.infolist()
             expected_prefix = ["manifest.json", "predictor.zip"]
-            if [row.filename for row in infos[:2]] != expected_prefix or not 2 <= len(infos) <= 5:
+            if [row.filename for row in infos[:2]] != expected_prefix or not 2 <= len(infos) <= 7:
                 raise DirectDescriptionError("carrier archive member order/cardinality is invalid")
             if any(
                 row.is_dir()
@@ -575,6 +932,8 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
     correction = members.get(CORRECTION_MEMBER, b"")
     boundary = members.get(BOUNDARY_CORRECTION_MEMBER, b"")
     events = members.get(EVENT_CORRECTION_MEMBER, b"")
+    shearlets = members.get(BOUNDARY_SHEARLET_MEMBER, b"")
+    islands = members.get(ISLAND_SHAPE_MEMBER, b"")
     common_invalid = (
         rfc8785_canonicalize(manifest) != members["manifest.json"]
         or manifest.get("class_order") != list(CLASS_ORDER)
@@ -590,6 +949,8 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
             or manifest.get("magic") != MAGIC
             or boundary
             or events
+            or shearlets
+            or islands
             or manifest.get("correction", {}).get("member") != (CORRECTION_MEMBER if correction else None)
             or manifest.get("correction", {}).get("bytes") != len(correction)
             or manifest.get("correction", {}).get("sha256") != _sha256(correction)
@@ -609,7 +970,38 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
             "road_boundary_coefficients": (BOUNDARY_CORRECTION_MEMBER, boundary),
             "topology_events": (EVENT_CORRECTION_MEMBER, events),
         }
-        invalid = common_invalid or manifest.get("magic") != MAGIC_V2 or set(members) != expected_members
+        invalid = (
+            common_invalid
+            or manifest.get("magic") != MAGIC_V2
+            or shearlets
+            or islands
+            or set(members) != expected_members
+        )
+        for key, (member_name, payload) in payloads.items():
+            row = correction_rows.get(key, {})
+            invalid = invalid or row.get("member") != (member_name if payload else None)
+            invalid = invalid or row.get("bytes") != len(payload) or row.get("sha256") != _sha256(payload)
+    elif schema == ARCHIVE_SCHEMA_V3:
+        correction_rows = manifest.get("corrections", {})
+        expected_members = {
+            "manifest.json",
+            "predictor.zip",
+            *([CORRECTION_MEMBER] if correction else []),
+            *([BOUNDARY_SHEARLET_MEMBER] if shearlets else []),
+            *([ISLAND_SHAPE_MEMBER] if islands else []),
+        }
+        payloads = {
+            "lane_full_coefficients": (CORRECTION_MEMBER, correction),
+            "boundary_shearlet_atoms": (BOUNDARY_SHEARLET_MEMBER, shearlets),
+            "movable_shape_atoms": (ISLAND_SHAPE_MEMBER, islands),
+        }
+        invalid = (
+            common_invalid
+            or manifest.get("magic") != MAGIC_V3
+            or boundary
+            or events
+            or set(members) != expected_members
+        )
         for key, (member_name, payload) in payloads.items():
             row = correction_rows.get(key, {})
             invalid = invalid or row.get("member") != (member_name if payload else None)
@@ -624,20 +1016,31 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
         *([CORRECTION_MEMBER] if correction else []),
         *([BOUNDARY_CORRECTION_MEMBER] if boundary else []),
         *([EVENT_CORRECTION_MEMBER] if events else []),
+        *([BOUNDARY_SHEARLET_MEMBER] if shearlets else []),
+        *([ISLAND_SHAPE_MEMBER] if islands else []),
     ]
     if member_order != canonical_member_order:
         raise DirectDescriptionError("carrier correction member order is noncanonical")
     symbols = decode_lane_coefficient_deltas(correction)
     boundary_symbols = _decode_boundary_coefficient_deltas(boundary)
     topology_events = _decode_topology_events(events)
+    boundary_shearlets = _decode_boundary_shearlet_atoms(shearlets)
+    island_shapes = _decode_island_shape_atoms(islands)
     if schema == ARCHIVE_SCHEMA:
         counts_valid = manifest["correction"]["symbol_count"] == len(symbols)
-    else:
+    elif schema == ARCHIVE_SCHEMA_V2:
         counts_valid = (
             manifest["corrections"]["lane_g2cs1"]["symbol_count"] == len(symbols)
             and manifest["corrections"]["road_boundary_coefficients"]["symbol_count"]
             == len(boundary_symbols)
             and manifest["corrections"]["topology_events"]["symbol_count"] == len(topology_events)
+        )
+    else:
+        counts_valid = (
+            manifest["corrections"]["lane_full_coefficients"]["symbol_count"] == len(symbols)
+            and manifest["corrections"]["boundary_shearlet_atoms"]["symbol_count"]
+            == len(boundary_shearlets)
+            and manifest["corrections"]["movable_shape_atoms"]["symbol_count"] == len(island_shapes)
         )
     if not counts_valid:
         raise DirectDescriptionError("carrier correction count differs after parse-back")
@@ -674,6 +1077,8 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
 def _apply_chart_symbols(
     layers: Sequence[StructuredRoleLayerV1],
     symbols: Sequence[LaneCoefficientDelta],
+    *,
+    coefficient_limit: int = 4,
 ) -> tuple[StructuredRoleLayerV1, ...]:
     copied = list(layers)
     lane_index = next((index for index, layer in enumerate(copied) if layer.role == "Lane"), None)
@@ -684,8 +1089,10 @@ def _apply_chart_symbols(
         if symbol.pair_index >= len(lines) or symbol.line_index >= len(lines[symbol.pair_index]):
             raise DirectDescriptionError("G2CS1 address is absent from nested Lane chart")
         vector = lines[symbol.pair_index][symbol.line_index]
-        if symbol.coefficient_index >= min(4, vector.size):
-            raise DirectDescriptionError("G2CS1 correction must address a Lane centerline coefficient")
+        if symbol.coefficient_index >= min(coefficient_limit, vector.size):
+            raise DirectDescriptionError(
+                "G2CS1 correction addresses a coefficient outside the permitted Lane centerline/width/phase set"
+            )
         vector[symbol.coefficient_index] += symbol.coefficient_delta
         if not np.isfinite(vector).all():
             raise DirectDescriptionError("G2CS1 application produced nonfinite Lane coefficients")
@@ -717,6 +1124,35 @@ def _apply_boundary_coefficients(
     shifted = np.asarray(mask, dtype=bool)[clipped_y, source_x]
     shifted[~valid] = False
     return shifted
+
+
+def _apply_boundary_shearlet_atoms(
+    mask: np.ndarray,
+    atoms: Sequence[BoundaryShearletAtomV1],
+) -> np.ndarray:
+    """Apply compact parabolic shearlet atoms as a synthesized displacement field."""
+
+    result = np.asarray(mask, dtype=bool)
+    if not atoms:
+        return result
+    height, width = result.shape
+    yy = np.arange(height, dtype=np.float64)[:, None]
+    xx = np.arange(width, dtype=np.float64)[None, :]
+    source_x = np.broadcast_to(np.arange(width, dtype=np.int64)[None, :], (height, width))
+    for atom in atoms:
+        u = (xx - atom.center_x) / float(atom.scale_x)
+        ridge = atom.center_y + (atom.shear_q4 / 16.0) * (xx - atom.center_x)
+        v = (yy - ridge) / float(atom.scale_y)
+        window = np.square(np.maximum(1.0 - np.square(u), 0.0)) * np.square(
+            np.maximum(1.0 - np.square(v), 0.0)
+        )
+        displacement = np.rint((atom.amplitude_q4 / 16.0) * window).astype(np.int64)
+        source_y = np.arange(height, dtype=np.int64)[:, None] - displacement
+        valid = (source_y >= 0) & (source_y < height)
+        shifted = result[np.clip(source_y, 0, height - 1), source_x]
+        shifted[~valid] = False
+        result = shifted
+    return result
 
 
 def _event_mask(
@@ -759,6 +1195,49 @@ def _event_mask(
     return result
 
 
+def _island_shape_mask(
+    atom: IslandShapeAtomV1,
+    *,
+    source_pair_id: int,
+    source_pair_start: int,
+    pose6_codes: np.ndarray,
+) -> np.ndarray:
+    """Synthesize a moment-shaped island with one compact curvelet lobe."""
+
+    if not atom.pair_index <= source_pair_id < atom.pair_index + atom.lifetime:
+        return np.zeros((384, 512), dtype=bool)
+    birth_local = atom.pair_index - source_pair_start
+    current_local = source_pair_id - source_pair_start
+    if not (0 <= birth_local < len(pose6_codes) and 0 <= current_local < len(pose6_codes)):
+        raise DirectDescriptionError("island-shape Pose6 transport address escaped the local window")
+    pose_delta = pose6_codes[current_local].astype(np.int16) - pose6_codes[birth_local].astype(np.int16)
+    center_x = atom.center_x + int(np.rint(float(pose_delta[0]) * atom.transport_gain_x_q4 / 16.0))
+    center_y = atom.center_y + int(np.rint(float(pose_delta[1]) * atom.transport_gain_y_q4 / 16.0))
+    extent = max(atom.radius_x, atom.radius_y) * 2
+    y0, y1 = max(0, center_y - extent), min(384, center_y + extent + 1)
+    x0, x1 = max(0, center_x - extent), min(512, center_x + extent + 1)
+    result = np.zeros((384, 512), dtype=bool)
+    if y0 >= y1 or x0 >= x1:
+        return result
+    ys = np.arange(y0, y1, dtype=np.float64)[:, None] - center_y
+    xs = np.arange(x0, x1, dtype=np.float64)[None, :] - center_x
+    angle = atom.angle_u8 * np.pi / 256.0
+    cosine, sine = float(np.cos(angle)), float(np.sin(angle))
+    u = (cosine * xs + sine * ys) / float(atom.radius_x)
+    v = (-sine * xs + cosine * ys) / float(atom.radius_y)
+    skew = atom.skew_q6 / 64.0
+    taper = atom.taper_q6 / 64.0
+    curvelet = atom.curvelet_q6 / 64.0
+    tapered_radius = np.clip(1.0 + taper * v, 0.25, 2.0)
+    shaped_u = (u - skew * v * np.maximum(1.0 - np.square(v), 0.0)) / tapered_radius
+    compact_lobe = np.maximum(1.0 - 4.0 * np.square(u - 0.5), 0.0) * np.maximum(
+        1.0 - np.square(v), 0.0
+    )
+    threshold = np.maximum(0.25, 1.0 + curvelet * compact_lobe)
+    result[y0:y1, x0:x1] = np.square(shaped_u) + np.square(v) <= threshold
+    return result
+
+
 @dataclass(frozen=True, slots=True)
 class CarrierComposeReceiverV1:
     archive: bytes
@@ -767,6 +1246,8 @@ class CarrierComposeReceiverV1:
     symbols: tuple[LaneCoefficientDelta, ...]
     boundary_symbols: tuple[BoundaryCoefficientDelta, ...]
     topology_events: tuple[TopologyEventV1, ...]
+    boundary_shearlets: tuple[BoundaryShearletAtomV1, ...]
+    island_shapes: tuple[IslandShapeAtomV1, ...]
     custody: Mapping[str, Any]
 
     @property
@@ -797,6 +1278,13 @@ class CarrierComposeReceiverV1:
                 )
                 if boundary:
                     mask = _apply_boundary_coefficients(mask, boundary)
+                shearlets = tuple(
+                    row
+                    for row in self.boundary_shearlets
+                    if row.pair_index == source_pair_id and row.role == layer.role
+                )
+                if shearlets:
+                    mask = _apply_boundary_shearlet_atoms(mask, shearlets)
                 for event in self.topology_events:
                     if event.role != layer.role:
                         continue
@@ -810,6 +1298,18 @@ class CarrierComposeReceiverV1:
                         mask |= event_sites
                     else:
                         mask &= ~event_sites
+                if layer.role == "Movable":
+                    for atom in self.island_shapes:
+                        atom_sites = _island_shape_mask(
+                            atom,
+                            source_pair_id=source_pair_id,
+                            source_pair_start=self.predictor.source_pair_start,
+                            pose6_codes=self.pose6_codes,
+                        )
+                        if atom.action == "birth":
+                            mask |= atom_sites
+                        else:
+                            mask &= ~atom_sites
                 output[local_index, 0, mask] = layer.paint_rgb_u8
                 output[local_index, 1, mask] = layer.paint_rgb_u8
         return np.ascontiguousarray(output)
@@ -824,14 +1324,19 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
     symbols = decode_lane_coefficient_deltas(members.get(CORRECTION_MEMBER, b""))
     boundary_symbols = _decode_boundary_coefficient_deltas(members.get(BOUNDARY_CORRECTION_MEMBER, b""))
     topology_events = _decode_topology_events(members.get(EVENT_CORRECTION_MEMBER, b""))
+    boundary_shearlets = _decode_boundary_shearlet_atoms(members.get(BOUNDARY_SHEARLET_MEMBER, b""))
+    island_shapes = _decode_island_shape_atoms(members.get(ISLAND_SHAPE_MEMBER, b""))
     start = predictor.source_pair_start
     stop = start + predictor.z.n_pairs
-    addressed = [*symbols, *boundary_symbols, *topology_events]
+    addressed = [*symbols, *boundary_symbols, *topology_events, *boundary_shearlets, *island_shapes]
     if any(row.pair_index < start or row.pair_index >= stop for row in addressed):
         raise DirectDescriptionError("correction symbol is outside the nested predictor source window")
     if any(row.pair_index + row.lifetime > stop for row in topology_events):
         raise DirectDescriptionError("topology-event lifetime escapes the nested predictor source window")
-    layers = _apply_chart_symbols(predictor.layers, symbols)
+    if any(row.pair_index + row.lifetime > stop for row in island_shapes):
+        raise DirectDescriptionError("island-shape lifetime escapes the nested predictor source window")
+    coefficient_limit = 9 if manifest["schema"] == ARCHIVE_SCHEMA_V3 else 4
+    layers = _apply_chart_symbols(predictor.layers, symbols, coefficient_limit=coefficient_limit)
     first = CarrierComposeReceiverV1(
         archive=archive,
         predictor=predictor,
@@ -839,6 +1344,8 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         symbols=symbols,
         boundary_symbols=boundary_symbols,
         topology_events=topology_events,
+        boundary_shearlets=boundary_shearlets,
+        island_shapes=island_shapes,
         custody={},
     )
 
@@ -850,10 +1357,12 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         isolated = CarrierComposeReceiverV1(
             archive=archive,
             predictor=predictor,
-            layers=_apply_chart_symbols(predictor.layers, tuple(group)),
+            layers=_apply_chart_symbols(predictor.layers, tuple(group), coefficient_limit=coefficient_limit),
             symbols=tuple(group),
             boundary_symbols=(),
             topology_events=(),
+            boundary_shearlets=(),
+            island_shapes=(),
             custody={},
         )
         if np.array_equal(predictor.render_pairs((local_pair_id,)), isolated.render_pairs((local_pair_id,))):
@@ -871,6 +1380,8 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
             symbols=(),
             boundary_symbols=tuple(group),
             topology_events=(),
+            boundary_shearlets=(),
+            island_shapes=(),
             custody={},
         )
         if np.array_equal(predictor.render_pairs((local_pair_id,)), isolated.render_pairs((local_pair_id,))):
@@ -885,17 +1396,60 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
             symbols=(),
             boundary_symbols=(),
             topology_events=(event,),
+            boundary_shearlets=(),
+            island_shapes=(),
             custody={},
         )
         if np.array_equal(predictor.render_pairs(local_ids), isolated.render_pairs(local_ids)):
             raise DirectDescriptionError("topology event is a receiver-output no-op")
+
+    shearlet_groups: dict[tuple[int, str], list[BoundaryShearletAtomV1]] = {}
+    for atom in boundary_shearlets:
+        shearlet_groups.setdefault((atom.pair_index, atom.role), []).append(atom)
+    for (pair_index, _role), group in shearlet_groups.items():
+        local_pair_id = pair_index - predictor.source_pair_start
+        isolated = CarrierComposeReceiverV1(
+            archive=archive,
+            predictor=predictor,
+            layers=predictor.layers,
+            symbols=(),
+            boundary_symbols=(),
+            topology_events=(),
+            boundary_shearlets=tuple(group),
+            island_shapes=(),
+            custody={},
+        )
+        if np.array_equal(predictor.render_pairs((local_pair_id,)), isolated.render_pairs((local_pair_id,))):
+            raise DirectDescriptionError("boundary-shearlet atom group is a receiver-output no-op")
+
+    for atom in island_shapes:
+        local_ids = tuple(range(atom.pair_index - start, atom.pair_index - start + atom.lifetime))
+        isolated = CarrierComposeReceiverV1(
+            archive=archive,
+            predictor=predictor,
+            layers=predictor.layers,
+            symbols=(),
+            boundary_symbols=(),
+            topology_events=(),
+            boundary_shearlets=(),
+            island_shapes=(atom,),
+            custody={},
+        )
+        if np.array_equal(predictor.render_pairs(local_ids), isolated.render_pairs(local_ids)):
+            raise DirectDescriptionError("island-shape atom is a receiver-output no-op")
     probes = tuple(sorted({0, predictor.z.n_pairs - 1}))
     a = first.render_pairs(probes)
     b = first.render_pairs(probes)
     if not np.array_equal(a, b):
         raise DirectDescriptionError("carrier receiver replay is nondeterministic")
     custody = {
-        "schema": RECEIVER_SCHEMA_V2 if manifest["schema"] == ARCHIVE_SCHEMA_V2 else RECEIVER_SCHEMA,
+        "schema": (
+            RECEIVER_SCHEMA_V3
+            if manifest["schema"] == ARCHIVE_SCHEMA_V3
+            else RECEIVER_SCHEMA_V2
+            if manifest["schema"] == ARCHIVE_SCHEMA_V2
+            else RECEIVER_SCHEMA
+        ),
         "archive_bytes": len(archive),
         "archive_sha256": _sha256(archive),
         "member_homes": list(homes),
@@ -911,6 +1465,13 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         "topology_event_parse_reencode_identical": _encode_topology_events(topology_events)
         == members.get(EVENT_CORRECTION_MEMBER, b""),
         "topology_events_consume_counted_pose6_transport": any(row.lifetime > 1 for row in topology_events),
+        "boundary_shearlet_count": len(boundary_shearlets),
+        "boundary_shearlet_parse_reencode_identical": _encode_boundary_shearlet_atoms(boundary_shearlets)
+        == members.get(BOUNDARY_SHEARLET_MEMBER, b""),
+        "island_shape_count": len(island_shapes),
+        "island_shape_parse_reencode_identical": _encode_island_shape_atoms(island_shapes)
+        == members.get(ISLAND_SHAPE_MEMBER, b""),
+        "island_shapes_consume_counted_pose6_transport": any(row.lifetime > 1 for row in island_shapes),
         "region_coherent_chart_rerasterization": True,
         "pixel_coordinate_or_rgb_patch_present": False,
         "nested_pose6_owner_reused": True,
@@ -967,6 +1528,8 @@ def recursive_carrier_byte_rows(archive: bytes) -> list[dict[str, Any]]:
     for stratum, member_name in (
         ("road_boundary_coefficients", BOUNDARY_CORRECTION_MEMBER),
         ("xi_topology_events", EVENT_CORRECTION_MEMBER),
+        ("boundary_shearlet_obligations", BOUNDARY_SHEARLET_MEMBER),
+        ("movable_shape_obligations", ISLAND_SHAPE_MEMBER),
     ):
         correction_home = next((row for row in outer_homes if row["name"] == member_name), None)
         if correction_home is None:
@@ -1022,12 +1585,19 @@ def prove_carrier_archive_fail_closed(archive: bytes) -> dict[str, Any]:
 __all__ = [
     "ARCHIVE_SCHEMA",
     "ARCHIVE_SCHEMA_V2",
+    "ARCHIVE_SCHEMA_V3",
+    "BOUNDARY_SHEARLET_MEMBER",
+    "ISLAND_SHAPE_MEMBER",
     "RESULT_SCHEMA",
     "RESULT_SCHEMA_V2",
+    "RESULT_SCHEMA_V3",
     "BoundaryCoefficientDelta",
+    "BoundaryShearletAtomV1",
     "CarrierComposeReceiverV1",
     "DirectDescriptionV9CarrierComposeConfigV1",
     "DirectDescriptionV10FisherEventSearchConfigV1",
+    "DirectDescriptionV11ObligationSearchConfigV1",
+    "IslandShapeAtomV1",
     "TopologyEventV1",
     "compile_carrier_compose_archive",
     "parse_carrier_compose_archive",
