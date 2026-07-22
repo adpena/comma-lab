@@ -21085,3 +21085,27 @@ not full-tolerance feasibility: n256/n600 and exact evaluator d_seg/d_pose are s
 SHA-256 `95c164b4e8fde4b9f5437dca68c6c230154554c55958725b46b60d7153700e5e`;
 `score_claim=false`; `d_seg_claim=false`; frontier pointer
 `0.1910828242 [contest-CPU]` UNMOVED.
+
+## FEED-603-v4-structured-family-positive (2026-07-22, MAIN custody of ddm_v4_stratum_structured_members, merged 5a56cfea80)
+
+**THE FAMILY SWAP WORKS — first structured-stratum membership > 0 on the describe line.** The v3
+entropy-priced harness now admits per-stratum structured carriers (no fork). n64, frozen-SegNet
+advisory, receipt sha 95c164b4… (MAIN: 31/31 tests re-run; per-class table re-extracted; LBND2
+parity = canonical wire-grammar match + byte-identical semantic reconstruction + by-effect):
+- **Lane LBND2 carrier (84,918 B): Road 0.9420 · Lane 0.6866 · Undrivable 0.9969 — overall
+  agreement 0.7476 vs baseline 0.4936.** One structured carrier lifts THREE strata. This is the
+  SECOND anchor for the structured-carriers law (first: v3 smooth-family collapse) — law now has
+  positive + negative anchors; register in canonical_equations with the v5 composition as evaluator.
+- Road-role carrier (52,643 B): Road 0.000 but **MyCar 0.9977** — measured CROSS-CLASS ROUTING
+  failure (verdict_scope: INSTANCE — palette-vs-geometry two-hypothesis probe open; NOT Road
+  efficacy). MyCar static-hood role also 0.000 (likely same routing class — hood is IoU-0.994
+  static, a correct carrier cannot honestly score 0 while the Road-role scores 0.9977 in that cell).
+- Movable 0.000 = n64 SUBSET artifact (zero PCE3 records in the first 64 frames) — verdict_scope:
+  INSTANCE/subset, do not cite as a carrier negative.
+- Event-subset price curve landed (Road n64 3,082 B/170 records · Lane 2,117 B/192 · Undriv
+  2,413 B/151) — the events-representation bottleneck is TRACTABLE per-stratum at n64 scale.
+**Next node (respawned): ddm_v5_route_fix_compose** — adjudicate the palette-vs-geometry routing
+probe, fix the role→value mapping (self-detect classes, never hardcode index — the canonical
+class-order trap), COMPOSE Lane-LBND2 + corrected Road/MyCar + Undrivable into ONE member, price
+at n64→n256 with per-stratum table. Register stays 8/19 honestly (n256/n600 + exact-evaluator
+bridge red). Pointer 0.1910828242 [contest-CPU] UNMOVED (all means).
