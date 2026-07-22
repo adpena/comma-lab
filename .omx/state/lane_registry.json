@@ -83148,6 +83148,47 @@
         "MAIN review and merge",
         "contest CPU/CUDA replay remains separate authority"
       ]
+    },
+    {
+      "id": "lane_brenier_polar_factorization_crosswalk_20260722",
+      "name": "Brenier polar-factorization crosswalk",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; $0 source audit and named-consumer crosswalk; no launch, score, or promotion authority; MAIN review required"
     }
   ],
   "level_rules": {
@@ -83157,5 +83198,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T11:56:00Z"
+  "updated_at": "2026-07-22T12:39:41Z"
 }
