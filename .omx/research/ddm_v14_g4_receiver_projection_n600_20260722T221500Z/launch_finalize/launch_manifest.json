@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "-u",
+    "tools/measure_ddm_v14_g4_receiver_projection.py",
+    "--config",
+    ".omx/research/configs/ddm_v14_g4_receiver_projection_n600_20260722.json",
+    "--output-directory",
+    ".omx/research/ddm_v14_g4_receiver_projection_n600_20260722T221500Z"
+  ],
+  "authority": "delegated local-only ddm_v14_realization_fidelity plus landed G4 directive; score_claim=false; no Modal",
+  "cwd": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v14_realization_fidelity_20260722T213341Z",
+  "detach_method": "subprocess.Popen(start_new_session=True)",
+  "dry_run": false,
+  "generated_utc": "2026-07-22T22:43:17Z",
+  "git_sha": "24f8942da56790a89ef48c9a179dc90b3b26387f",
+  "log_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v14_realization_fidelity_20260722T213341Z/.omx/research/ddm_v14_g4_receiver_projection_n600_20260722T221500Z/launch_finalize/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v14_realization_fidelity_20260722T213341Z/.omx/research/ddm_v14_g4_receiver_projection_n600_20260722T221500Z/launch_finalize",
+  "pid": 45897,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v14_realization_fidelity_20260722T213341Z/.omx/research/ddm_v14_g4_receiver_projection_n600_20260722T221500Z/launch_finalize/run.pid",
+  "purpose": "finalize G4 static-field receiver projection receipt with exact joint-score and fail-closed custody",
+  "schema": "detached_local_process_launch.v1"
+}

@@ -1,0 +1,85 @@
+{
+  "schema": "codex_adversarial_review.v1",
+  "lane_id": "ddm_v14_realization_fidelity",
+  "round": 1,
+  "utc": "2026-07-22T22:55:09Z",
+  "reviewer": "codex",
+  "main_landing_review_required": true,
+  "authority": {
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "research_only": true,
+    "score_claim": false,
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false
+  },
+  "findings": [
+    {
+      "severity": "fixed",
+      "finding": "The G4 launcher imported tools relative to caller CWD and failed with ModuleNotFoundError.",
+      "disposition": "Repo root is inserted before imports; the initial failure log remains preserved."
+    },
+    {
+      "severity": "verified",
+      "finding": "Legacy V9-V13 render behavior must remain available.",
+      "disposition": "Legacy render_pairs path is unchanged and has focused regression coverage."
+    },
+    {
+      "severity": "verified",
+      "finding": "G1 islands must replace, not union with, inherited Movable support.",
+      "disposition": "V14 semantic composition makes G1 authoritative and reports movable_g1_replaces_inherited_mask=true."
+    },
+    {
+      "severity": "verified",
+      "finding": "Prototype and static-rule bytes require exact homes and parse-back.",
+      "disposition": "All exact archive bytes have one home; profile is 23 B; rules are 12/12/4107 B; parse-reencode tests pass."
+    },
+    {
+      "severity": "scoped",
+      "finding": "The sparse G4 rule is target-derived aggregate evidence.",
+      "disposition": "It is named not_a_candidate, research-only, has no per-frame GT argmax table, and cannot promote."
+    },
+    {
+      "severity": "verified",
+      "finding": "G4 context savings could be falsely subtracted from candidate bytes.",
+      "disposition": "Receipt records applied_to_candidate_archive=false and derives 534880 B before overhead."
+    },
+    {
+      "severity": "blocked",
+      "finding": "AR1-whitened BEV was requested without a physical decoder-free homography/pose surface.",
+      "disposition": "BLOCKED_NO_DECODER_FREE_PHYSICAL_BEV_CUSTODY; raw phase is not substituted."
+    },
+    {
+      "severity": "verified",
+      "finding": "Full-n600 measurements require bounded memory and resumability.",
+      "disposition": "Each candidate uses batch 16, 38 immutable checkpoints, deterministic first-batch replay, and one stage per invocation."
+    },
+    {
+      "severity": "verified",
+      "finding": "No paid or score-authority action is allowed.",
+      "disposition": "No Modal dispatch; score_claim=false; pointer unchanged."
+    }
+  ],
+  "receipt_sha256": {
+    "n64": "bc9d01c6a3691e1103a580d0e1a34088ff134258b2788b2380930fe85fbae703",
+    "n600": "82d3249908d42a86575c407ab3d7acdf9b3706b31225f2e46862b2472966e5a9",
+    "g4_receiver": "0b35be44d944bd5a929097bb3967ba7b7c7ce068e2f067d1546ab149cc9e44da"
+  },
+  "verification": {
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "focused_pytest": "31 passed",
+    "json_parse": "PASS",
+    "git_diff_check": "PASS",
+    "review_tracker_entities_marked": 150,
+    "lane_maturity": "L2_IMPL_PLUS_REAL_ARCHIVE_EMPIRICAL_ONLY",
+    "global_lane_registry_validation": "PREEXISTING_DEBT_111_MISSING_EVIDENCE_PATHS_OUTSIDE_THIS_LANE"
+  },
+  "fork": {
+    "condition": "d_seg <= 0.00116 and exact archive bytes <= 200000",
+    "passed": false,
+    "best_d_seg": "0.027416720920",
+    "best_archive_bytes": 133755,
+    "disposition": "STATIC_CELL_FORECAST_DOES_NOT_TRANSFER_TO_RGB_RECEIVER_DIRECT_SCORER_SOLVE_OPEN"
+  },
+  "verdict": "ROUND1_CLEAN_WITH_MAIN_LANDING_REVIEW_REQUIRED"
+}

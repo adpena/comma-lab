@@ -83624,6 +83624,54 @@
         "g2 Lane xi-predictability table supplies a paying periodic production",
         "MAIN requests contest-axis replay after local d_seg <= 0.00116"
       ]
+    },
+    {
+      "id": "ddm_v14_realization_fidelity",
+      "name": "DDM v14 receiver realization fidelity",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/direct_description_carrier_compose.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v14_g4_receiver_projection_n600_20260722T221500Z/ddm_v14_g4_receiver_projection_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Counted camera-resolution receiver repair and G4 projection; direct RGB scorer solve open; MAIN landing review required.",
+      "research_only": true,
+      "lane_class": "receiver_realization_research",
+      "reactivation_criteria": [
+        "direct_rgb_scorer_solve",
+        "decoder_free_physical_bev_custody",
+        "new_receiver_prototype"
+      ]
     }
   ],
   "level_rules": {
@@ -83633,5 +83681,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T21:03:38Z"
+  "updated_at": "2026-07-22T22:55:28Z"
 }
