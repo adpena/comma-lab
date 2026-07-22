@@ -1,0 +1,67 @@
+{
+  "schema": "ddm_v10_fisher_g2cs1_event_solve_sha_receipt.v1",
+  "authority": {
+    "source": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_v10_fisher_g2cs1_event_solve_20260722T130403Z.wrapped.prompt.txt",
+    "bytes": 8089,
+    "sha256": "f9dcf28b0fd55cc00035f3a814c462ebb7b70fd06f81c2f67b3fad21d5dd4093"
+  },
+  "source": {
+    "src/tac/optimization/direct_description_carrier_compose.py": "8c0707fea6000f98cfa589cc350fe23882134c96f5b39e82760697dec20d40af",
+    "src/tac/optimization/tests/test_direct_description_carrier_compose.py": "96289c4c0085208a5056bca8b9fb31c9b79b6e4f6b5292a5636ffffc987a15da",
+    "tools/run_ddm_v9_carrier_compose.py": "cf7e277e09b2652369929eb366b6c4c45421fdc22682a6a6783576478887d997"
+  },
+  "configs": {
+    ".omx/research/configs/ddm_v10_fisher_event_n64_20260722.json": "66ae7e1ed79daf4c5c9e5cee6c65e43ac20dd2f8f1ec7cf0cd9fc9d6fab2a4b4",
+    ".omx/research/configs/ddm_v10_fisher_event_n256_20260722.json": "2eb999569e998bf40af710229c35a8351de7b82951cf482009cca87c6ecb8d5e"
+  },
+  "measurements": {
+    "n64": {
+      "receipt_path": ".omx/research/ddm_v10_fisher_event_n64_20260722T130403Z_round2/ddm_v10_fisher_event_search_n64_receipt.json",
+      "receipt_sha256": "59e1c0cd6bfb5c6f5199097282c143fb6fab02d972ef40c88275917d216dee8a",
+      "final_archive_path": ".omx/research/ddm_v10_fisher_event_n64_20260722T130403Z_round2/ddm_v10_fisher_event_n64_add102400.not_a_candidate.zip.receipt-bytes",
+      "final_archive_bytes": 53021,
+      "final_archive_sha256": "534a6ea3a457d3ed3b911641ff7ae7577054d349e1aa65611b42786d801e62b1",
+      "candidate_inventory_checkpoint_sha256": "5f3adef1a61238d8ae69abf521a7d6fb6f6a9670d197e9e4a40d2d5569b672f1",
+      "candidate_completion_checkpoint_sha256": "4f1197b0e4db643d0d0b54856462ac2d615811f5136169fae6ac662a642607ed"
+    },
+    "n256": {
+      "receipt_path": ".omx/research/ddm_v10_fisher_event_n256_20260722T130403Z_round2/ddm_v10_fisher_event_search_n256_receipt.json",
+      "receipt_sha256": "2c7907bcc337cd58ba16f01b16a2cb889523ae31daa01222decccf0380ee31da",
+      "final_archive_path": ".omx/research/ddm_v10_fisher_event_n256_20260722T130403Z_round2/ddm_v10_fisher_event_n256_add102400.not_a_candidate.zip.receipt-bytes",
+      "final_archive_bytes": 72397,
+      "final_archive_sha256": "4b26fdcc99a4d611f3a9b96e61681b53298adf32fbd300ee707479664a0f5ebd",
+      "candidate_inventory_checkpoint_sha256": "9fa34ccff7074b026050bb67deb8f967f181e3ac1461b682026b5e08830bc823",
+      "candidate_completion_checkpoint_sha256": "1033170485e4a37618e8e415e40c5e99580e738f601ab68c7e062c670da11b62"
+    },
+    "superseded_n64_round1": {
+      "receipt_path": ".omx/research/ddm_v10_fisher_event_n64_20260722T130403Z/ddm_v10_fisher_event_search_n64_receipt.json",
+      "receipt_sha256": "ab7d27d717fe943d9db8bb345e182d975ed87d1fc1e42fcd227e894609ac8f1a",
+      "status": "SUPERSEDED_GLOBAL_CUTOFF_STARVED_LANE_AND_EVENT_FAMILIES"
+    }
+  },
+  "documents": {
+    ".omx/research/codex_findings_ddm_v10_fisher_g2cs1_event_solve_20260722_codex.md": "190e1332544d4e32fd789c6149abd60cc511a6556e0a693a297e56ec548f805b",
+    ".omx/research/ddm_v10_fisher_g2cs1_event_solve_DAG_FEED_20260722.md": "eb5e53c67acaff0a316c6d958d82fe9f8ed5c9f1650cebdf24e9400d50f4bca1",
+    ".omx/research/ddm_v10_fisher_g2cs1_event_solve_canonical_equations_20260722.md": "1f996bedfd1a9086f201c330c5edabbb0e60f579303baa19dfa0d961e8d223cc",
+    ".omx/research/ddm_v10_fisher_g2cs1_event_solve_round1_review_20260722.json": "09f7586ffd71137bec2ed72b002da850a2f3333c5f5536872adb81282e8b7441",
+    ".omx/research/codex_session_summary_20260722T140000Z_codex.md": "3baa5cde8592e63612657d5de46309fff46bbe82e65cc42b801f6ddaee803e6e"
+  },
+  "canonical_state": {
+    ".omx/state/canonical_task_status.jsonl": "ec2efcf19f3ec74c66d2c78fff0ce0c0de8308305560647382da8d1c882a7b5b",
+    ".omx/state/lane_registry.json": "49c73ed3cee6e320e1fb70d23278884b59ee34fc1d9357cca63ce8510ce9e9e7",
+    ".omx/state/lane_maturity_audit.log": "63bd77801436a80195bcf7ccb844c2c1e969a8d64724ac24774ee956da806b59"
+  },
+  "verification": {
+    "pytest": "9 passed in 8.08s",
+    "ruff": "All checks passed",
+    "py_compile": "passed",
+    "git_diff_check": "passed",
+    "canonical_task_status": "217 rows valid",
+    "lane_validation": "new lane internally valid; repository-wide validation has 110 pre-existing missing-evidence-path errors"
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "main_landing_review_required": true
+}

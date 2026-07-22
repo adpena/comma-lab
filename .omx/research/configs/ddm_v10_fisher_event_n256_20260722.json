@@ -1,0 +1,19 @@
+{
+  "schema": "DirectDescriptionV10FisherEventSearchConfigV1",
+  "run_id": "ddm_v10_fisher_event_n256_20260722T130403Z_round2",
+  "pair_start": 344,
+  "pair_count": 256,
+  "v6_receipt_path": ".omx/research/ddm_v6_dseg_bridge_amortize_n256_603_613_20260722T075903Z/ddm_v6_dseg_bridge_amortize_n256_receipt.json",
+  "v6_receipt_sha256": "862f0e9eb83a60775e42e5ec20770efccc15f13c4954b7e9434dd9dfd10be7bf",
+  "predictor_archive_path": ".omx/research/ddm_v6_dseg_bridge_amortize_n256_603_613_20260722T075903Z/ddm_v6_fixed_ar1_hold24_n256.not_a_candidate.zip.receipt-bytes",
+  "predictor_archive_sha256": "99c62b84e9cf1a41e688b1c09689f49358754ba64bf76b557299db69bdef6dbc",
+  "upstream_root": "/Users/adpena/Projects/pact/upstream",
+  "scorer_batch_size": 16,
+  "scorer_threads": 4,
+  "added_budget_bytes": [0, 5120, 15360, 40960, 102400],
+  "max_candidates": 12,
+  "minimum_candidates_per_family": 3,
+  "max_components_per_pair_role": 1,
+  "min_component_sites": 12,
+  "pose_dpose_increase_limit": 0.0
+}
