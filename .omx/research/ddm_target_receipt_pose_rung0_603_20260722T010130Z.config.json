@@ -1,0 +1,35 @@
+{
+  "schema": "DirectDescriptionRealTargetRung0ConfigV1",
+  "run_id": "ddm_real_target_pose_rung0_n64_seed1234",
+  "seed": 1234,
+  "n_pairs": 64,
+  "receiver": "numpy_integer_uint8_reference.v2",
+  "objective": "real_target_integer_plane_plus_pose6_rank_debt.v3_family",
+  "target_receipt_path": ".omx/research/ddm_full_precision_target_planes_603_20260722T010130Z.json",
+  "target_receipt_sha256": "a8d94f0f8338036fb3224a92078eff1f1fb5fd2eb598ed994a1f965b6561efb2",
+  "evidence_axis": "[macOS-CPU real-target subset n64 apparatus]",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "checkpoint_policy": "atomic_preserve_every_stage",
+  "stages": [
+    {
+      "name": "real_cells_rung0",
+      "objective_order": "cells_first",
+      "stream_names": ["static_ground_coefficients", "sparse_events", "entropy_state", "exceptions"],
+      "max_coordinate_steps": 12
+    },
+    {
+      "name": "real_pose6_rung0",
+      "objective_order": "pose_first",
+      "stream_names": ["pose6_dxi_residuals"],
+      "max_coordinate_steps": 12
+    },
+    {
+      "name": "real_xi_joint_rung0",
+      "objective_order": "joint_integer_debt",
+      "stream_names": ["xi_curve_knots"],
+      "max_coordinate_steps": 12
+    }
+  ]
+}
