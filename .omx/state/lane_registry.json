@@ -82697,6 +82697,52 @@
         "contest CPU and CUDA replay",
         "operator GO"
       ]
+    },
+    {
+      "id": "lane_ddm_polytope_membership_n600_603_20260722",
+      "name": "DDM polytope membership and n600 closure task 603",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_polytope_membership_n600_603_20260722T030238Z.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Measured n64/n256 frozen-SegNet membership and genuine scorer-free n600 same-artifact closure; aggregate membership is Undrivable-dominated; pointer unchanged; MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "MAIN review and merge",
+        "Per-class member solver that improves Road Lane and MyCar without Pose or rate regression"
+      ]
     }
   ],
   "level_rules": {
@@ -82706,5 +82752,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T02:27:21Z"
+  "updated_at": "2026-07-22T03:05:13Z"
 }

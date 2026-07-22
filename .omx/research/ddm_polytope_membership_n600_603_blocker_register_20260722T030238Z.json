@@ -1,0 +1,50 @@
+{
+  "schema": "ddm_task603_blocker_register.v1",
+  "utc": "2026-07-22T03:02:38Z",
+  "task": 603,
+  "verdict_scope": "local frozen-SegNet batch16 membership at n64/n256 plus scorer-free n600 same-artifact closure; PRIMARY launch, contest replay, score, and admission remain blocked",
+  "evidence_axis": "[macOS-CPU frozen-SegNet advisory + full-resolution real-plane apparatus]",
+  "predecessor_register_path": ".omx/research/ddm_measurement_ladder_rungs123_603_blocker_register_20260722T015737Z.json",
+  "predecessor_register_sha256": "4fe6a7f8288ee1461c4d3facdaefc326944e55eb233495b5a4072cf665759adc",
+  "measurement_receipt_path": ".omx/research/ddm_polytope_membership_n600_603_20260722T023416Z_artifacts/ddm_polytope_membership_n600_receipt.json",
+  "measurement_receipt_sha256": "3b6a7d41c7c6e63dd4ac02c252b52d96de7355d7c9c4b5508300d4f2939920b8",
+  "implementation_commits": ["67e35b897a82cd8f655b562eec73346b9751a600"],
+  "green_count": 8,
+  "red_count": 11,
+  "rows": [
+    {"blocker": "PRIMARY_SPEC_EXECUTION_ALLOWED_FALSE", "before": "RED", "after": "RED", "verdict_scope": "PRIMARY launch/admission remains blocked"},
+    {"blocker": "FULL_PRECISION_SHA_BOUND_TARGET_RECEIPT", "before": "GREEN_CUSTODY_SCOPE", "after": "GREEN_CUSTODY_SCOPE", "verdict_scope": "existing exact C1 target receipt reused read-only"},
+    {"blocker": "LIVE_V8_V9_OWNER_RECEIPTS", "before": "RED", "after": "RED", "verdict_scope": "PRIMARY launch/admission remains blocked"},
+    {"blocker": "POSE_CONSUMING_INTEGER_UINT8_RECEIVER", "before": "GREEN_CUSTODY_SCOPE", "after": "GREEN_CUSTODY_SCOPE", "verdict_scope": "n600 chart receiver consumes all counted Pose6 codes; no PoseNet claim"},
+    {"blocker": "DDM_OPTIMIZER_AND_STAGE_CONTINUATION_RUNNER", "before": "GREEN_CUSTODY_SCOPE", "after": "GREEN_CUSTODY_SCOPE", "verdict_scope": "local deterministic chart fit plus immutable stage continuation only"},
+    {"blocker": "N64_DETERMINISTIC_CUSTODY_SMOKE", "before": "GREEN_CUSTODY_SCOPE", "after": "GREEN_CUSTODY_SCOPE", "verdict_scope": "predecessor custody smoke retained"},
+    {"blocker": "INDEPENDENTLY_FRAMED_UNIQUE_HOME_RATE_CUSTODY", "before": "GREEN_CUSTODY_SCOPE", "after": "GREEN_CUSTODY_SCOPE", "verdict_scope": "all 2,565,528 n600 final ZIP bytes partitioned into exactly one semantic/container home"},
+    {"blocker": "CANONICAL_RESUME_REGISTRY_AND_CHECKPOINT_CADENCE", "before": "RED", "after": "RED", "verdict_scope": "local immutable checkpoints and resume identity are not canonical PRIMARY resume-registry integration"},
+    {"blocker": "CANONICAL_TYPED_COMPILER_INTEGRATION", "before": "RED", "after": "RED", "verdict_scope": "typed local compiler exists but PRIMARY WitnessProgram/Lever integration remains absent"},
+    {"blocker": "GOVERNED_LAUNCHER_AND_MEMORY_PREFLIGHT_ADAPTER", "before": "RED", "after": "RED", "verdict_scope": "local execution_allowed=false CLI is not the PRIMARY governed launcher"},
+    {"blocker": "OPERATIONAL_CLEANUP_COLD_STORE_HOOK", "before": "RED", "after": "RED", "verdict_scope": "bounded output is 11 MiB and no bulk was created; heavy-run cleanup/cold-store integration remains absent"},
+    {"blocker": "FRESH_V3_FAMILY_POSE_IN_OBJECTIVE_RUNG_ZERO", "before": "GREEN_CUSTODY_SCOPE", "after": "GREEN_CUSTODY_SCOPE", "verdict_scope": "predecessor real-target rung zero retained"},
+    {"blocker": "FOUR_RUNG_CELLS_THEN_POSE_MEASUREMENT_LADDER", "before": "GREEN_MEASURED_APPARATUS_SCOPE", "after": "GREEN_MEASURED_APPARATUS_SCOPE", "verdict_scope": "predecessor n64/n256 measurement ladder retained"},
+    {"blocker": "N600_SAME_ARTIFACT_ARCHIVE_CLOSURE", "before": "RED", "after": "GREEN_MEASURED_APPARATUS_SCOPE", "evidence_sha256": "3b6a7d41c7c6e63dd4ac02c252b52d96de7355d7c9c4b5508300d4f2939920b8", "verdict_scope": "one 2,565,528-byte archive genuinely describes and decodes 600 pairs with deterministic replay, resume identity, at most two combined chunks, and unique-home custody; not a candidate or score"},
+    {"blocker": "CONTEST_CPU_REPLAY", "before": "RED", "after": "RED", "verdict_scope": "no new contest-CPU replay"},
+    {"blocker": "CONTEST_CUDA_REPLAY", "before": "RED", "after": "RED", "verdict_scope": "no contest-CUDA replay"},
+    {"blocker": "HEALTHY_COMPLETION_CERTIFICATE", "before": "RED", "after": "RED", "verdict_scope": "PRIMARY completion certificate absent"},
+    {"blocker": "EXTERNALLY_ATTESTED_FAILURE_TOKEN", "before": "RED", "after": "RED", "verdict_scope": "external attestation absent"},
+    {"blocker": "SEPARATE_SHA_BOUND_OPERATOR_GO", "before": "RED", "after": "RED", "verdict_scope": "operator GO absent"}
+  ],
+  "supplemental_green_count": 1,
+  "supplemental_rows": [
+    {
+      "blocker": "POLYTOPE_MEMBERSHIP_RUNG",
+      "before": "UNREGISTERED",
+      "after": "GREEN_LOCAL_FROZEN_SCORER_MEASUREMENT_SCOPE",
+      "evidence_sha256": "3b6a7d41c7c6e63dd4ac02c252b52d96de7355d7c9c4b5508300d4f2939920b8",
+      "verdict_scope": "n64/n256 same-C1-argmax-cell curve measured with frozen batch16 CPU-Torch; not d_seg, contest score, family efficacy, or promotion authority"
+    }
+  ],
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "score_claim": false,
+  "execution_allowed": false,
+  "main_landing_review_required": true
+}
