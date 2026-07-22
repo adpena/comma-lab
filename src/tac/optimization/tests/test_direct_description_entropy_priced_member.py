@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
+import lzma
+import struct
 from pathlib import Path
 
 import numpy as np
@@ -11,9 +14,17 @@ from tac.optimization.direct_description_entropy_priced_member import (
     DirectDescriptionEntropyCandidateCheckpointV1,
     DirectDescriptionEntropyPricedMemberConfigV1,
     DirectDescriptionEntropyPricedMemberProgramV1,
+    DirectDescriptionStratumStructuredMemberConfigV1,
+    StructuredS4SourcesV1,
+    _decode_site_records,
+    _encode_site_records,
     build_entropy_candidate_z,
+    compile_structured_member_archive,
+    parse_structured_member_archive,
+    receive_structured_member_archive,
     run_entropy_candidate_stages,
     run_entropy_rung_stages,
+    run_structured_candidate_stages,
 )
 from tac.optimization.direct_description_entropy_streams import (
     CODER_AQC1,
@@ -72,6 +83,22 @@ def _fixture_z(n_pairs: int = 2) -> DirectDescriptionChartZV1:
     )
 
 
+def _structured_fixture_z() -> DirectDescriptionChartZV1:
+    bodies = {name: bytearray() for name in STREAM_ORDER}
+    for pair_id in range(64):
+        for plane_id in range(2):
+            bodies["global_chart_anchors"].extend(_ANCHOR_RECORD.pack(pair_id, plane_id, 96, 112, 128))
+            bodies["axial_chart_gradients"].extend(_GRADIENT_RECORD.pack(pair_id, plane_id, 0, 0, 0, 0, 0, 0))
+            for stratum, stream_name in enumerate(STREAM_ORDER[2:5]):
+                for chart_id in range(stratum * 64, (stratum + 1) * 64):
+                    bodies[stream_name].extend(_RESIDUAL_RECORD.pack(pair_id, plane_id, chart_id, 0, 0, 0))
+        bodies["pose6_pair_codes"].extend(_POSE_RECORD.pack(pair_id, *(20 + channel for channel in range(6))))
+    return DirectDescriptionChartZV1(
+        n_pairs=64,
+        **{name: CountedChartStreamV1(payload=bytes(bodies[name])) for name in STREAM_ORDER},
+    )
+
+
 def _config() -> DirectDescriptionEntropyPricedMemberConfigV1:
     return DirectDescriptionEntropyPricedMemberConfigV1(
         target_receipt_path="target.json",
@@ -89,6 +116,82 @@ def _membership(receiver: object) -> dict[str, object]:
         "strata": {
             "overall": {"all": {"argmax_cell_escape_fraction": "0.000000000000"}},
             "target_class": {"Road": {"argmax_cell_escape_fraction": "0.000000000000"}},
+        },
+    }
+
+
+def _zero_lane_payload() -> bytes:
+    header = {
+        "cx": 256.0,
+        "dash_forward_max_m": 50.0,
+        "dash_gate": True,
+        "rd": {"K": 0, "base_steps": [1.0] * 11, "d_slot": 11, "n_pairs": 600},
+        "softness": 1.0,
+        "v_h": 150.0,
+    }
+    raw_header = json.dumps(header, sort_keys=True, separators=(",", ":")).encode()
+    raw = b"LBND2\0" + struct.pack("<I", len(raw_header)) + raw_header + struct.pack("<I", 0)
+    filters = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 20, "lc": 3, "lp": 0, "pb": 2}]
+    return lzma.compress(raw, format=lzma.FORMAT_RAW, filters=filters)
+
+
+def _structured_sources() -> StructuredS4SourcesV1:
+    empty = tuple(() for _ in range(64))
+    classes: list[tuple[tuple[np.ndarray, ...], ...]] = [empty for _ in range(5)]
+    road = list(empty)
+    road[0] = (np.asarray([0, 1, 2], dtype=np.int64),)
+    classes[0] = tuple(road)
+    static_road = np.zeros((384, 512), dtype=bool)
+    static_road[100:104, 200:204] = True
+    hood = np.zeros((384, 512), dtype=bool)
+    hood[360:, 220:292] = True
+    return StructuredS4SourcesV1(
+        pair_count=64,
+        palette=np.asarray(
+            [[153, 255, 51], [51, 255, 204], [0, 153, 0], [102, 204, 51], [0, 255, 153]],
+            dtype=np.uint8,
+        ),
+        camera={"height_m": 1.2, "fx_scorer": 400.3, "fy_scorer": 399.5},
+        static_masks={
+            "Road": static_road,
+            "Undrivable": np.zeros((384, 512), dtype=bool),
+            "MyCar": hood,
+        },
+        lane_encoded=_zero_lane_payload(),
+        events=tuple(classes),
+        components=tuple(empty for _ in range(5)),
+        custody={"fixture": True},
+    )
+
+
+def _structured_config() -> DirectDescriptionStratumStructuredMemberConfigV1:
+    return DirectDescriptionStratumStructuredMemberConfigV1(
+        target_receipt_path="target.json",
+        target_receipt_sha256="0" * 64,
+        upstream_root="/absolute/upstream",
+        scorer_threads=1,
+        s4_container_path="/absolute/s4/0.bin",
+        s4_container_sha256="1" * 64,
+        s4_runtime_path="/absolute/s4/runtime/inflate.py",
+        s4_runtime_sha256="2" * 64,
+    )
+
+
+def _structured_membership(receiver: object) -> dict[str, object]:
+    n_pairs = receiver.z.n_pairs  # type: ignore[attr-defined]
+    classes = {
+        name: {
+            "same_c1_argmax_cell_fraction": "0.500000000000" if name == "MyCar" else "0.250000000000",
+            "argmax_cell_escape_fraction": "0.500000000000",
+        }
+        for name in ("Road", "Lane", "Undrivable", "Movable", "MyCar")
+    }
+    return {
+        "same_c1_argmax_cell_fraction": "0.400000000000",
+        "per_pair": [{"pair_id": pair_id} for pair_id in range(n_pairs)],
+        "strata": {
+            "overall": {"all": {"argmax_cell_escape_fraction": "0.600000000000"}},
+            "target_class": classes,
         },
     }
 
@@ -288,3 +391,88 @@ def test_candidate_and_rung_stages_resume_without_losing_checkpoints(tmp_path: P
     minimum = min(int(row["archive_bytes"]) for row in resumed.candidates)
     assert all(row["selected_archive_bytes"] == minimum for row in rung_resumed.curve)
     assert all(row["rung_feasible"] for row in rung_resumed.curve)
+
+
+def test_structured_site_stream_roundtrips_and_rejects_trailing_bytes() -> None:
+    rows = [() for _ in range(4)]
+    rows[1] = (np.asarray([3, 8, 21], dtype=np.int64),)
+    payload = _encode_site_records(rows, class_id=0, source_id=1, coder="lzma1_raw_1MiB")
+    decoded = _decode_site_records(payload, expected_class=0, expected_source=1)
+    assert decoded[1][0].tolist() == [3, 8, 21]
+    with pytest.raises(DirectDescriptionError):
+        _decode_site_records(payload + b"x", expected_class=0, expected_source=1)
+
+
+@pytest.mark.parametrize("role", ("baseline", "Road", "Lane", "MyCar", "UndrivableBoundary", "Movable"))
+def test_structured_archive_roundtrips_and_receiver_preserves_pose(role: str) -> None:
+    z = _structured_fixture_z()
+    baseline = compile_entropy_chart_archive(z).archive
+    first, homes = compile_structured_member_archive(baseline, _structured_sources(), role)
+    second, _ = compile_structured_member_archive(baseline, _structured_sources(), role)
+    assert first == second
+    members, parsed_homes = parse_structured_member_archive(first)
+    assert members["chart.zip"] == baseline
+    assert sum(row["zip_home_bytes"] for row in homes) == len(first)
+    assert homes == parsed_homes
+    receiver = receive_structured_member_archive(first)
+    assert receiver.pose6_codes[0].tolist() == [20, 21, 22, 23, 24, 25]
+    assert receiver.render_pairs((0,)).shape == (1, 2, 384, 512, 3)
+    assert receiver.custody["all_archive_bytes_have_one_home"] is True
+
+
+def test_structured_archive_refuses_appended_bytes() -> None:
+    baseline = compile_entropy_chart_archive(_structured_fixture_z()).archive
+    archive, _ = compile_structured_member_archive(baseline, _structured_sources(), "MyCar")
+    with pytest.raises(DirectDescriptionError, match="byte-canonical"):
+        parse_structured_member_archive(archive + b"x")
+
+
+def test_mycar_structured_receiver_changes_only_static_hood() -> None:
+    z = _structured_fixture_z()
+    baseline_archive = compile_entropy_chart_archive(z).archive
+    sources = _structured_sources()
+    archive, _ = compile_structured_member_archive(baseline_archive, sources, "MyCar")
+    structured = receive_structured_member_archive(archive).render_pairs((0,))
+    baseline = receive_entropy_chart_archive(baseline_archive).render_pairs((0,))
+    mask = sources.static_masks["MyCar"]
+    assert np.all(structured[0, 1, mask] == sources.palette[4])
+    assert np.array_equal(structured[0, 1, ~mask], baseline[0, 1, ~mask])
+
+
+def test_structured_candidate_stages_resume_and_preserve_every_archive(tmp_path: Path) -> None:
+    z = _structured_fixture_z()
+    pose = np.zeros((600, 6), dtype=np.uint8)
+    pose[:64] = receive_entropy_chart_archive(compile_entropy_chart_archive(z).archive).pose6_codes
+    config = _structured_config()
+    partial = run_structured_candidate_stages(
+        config,
+        baseline_archive=compile_entropy_chart_archive(z).archive,
+        sources=_structured_sources(),
+        target_pose_codes=pose,
+        membership_measure=_structured_membership,
+        semantic_argv=("python3", "tool.py"),
+        output_directory=tmp_path,
+        stop_after_candidate_index=2,
+    )
+    assert not partial.complete
+    resumed = run_structured_candidate_stages(
+        config,
+        baseline_archive=compile_entropy_chart_archive(z).archive,
+        sources=_structured_sources(),
+        target_pose_codes=pose,
+        membership_measure=_structured_membership,
+        semantic_argv=("python3", "tool.py"),
+        output_directory=tmp_path,
+        resume_from=partial.checkpoint_paths[-1],
+    )
+    assert resumed.complete
+    assert [row["role"] for row in resumed.candidates] == [
+        "baseline",
+        "Road",
+        "Lane",
+        "MyCar",
+        "UndrivableBoundary",
+        "Movable",
+    ]
+    assert all(row["pose_completeness"] == "1.000000000000" for row in resumed.candidates)
+    assert len(tuple((tmp_path / "candidate_receipts").iterdir())) == 6

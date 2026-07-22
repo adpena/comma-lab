@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Run the local-only Task #603/#613 entropy-priced member solve at n64."""
+"""Run the local-only Task #603/#613 v3 entropy or v4 structured member solve at n64."""
 
 from __future__ import annotations
 
@@ -50,15 +50,26 @@ if __name__ == "__main__":
 from tac.optimization.direct_description_entropy_priced_member import (  # noqa: E402
     DirectDescriptionEntropyPricedMemberConfigV1,
     DirectDescriptionEntropyPricedMemberProgramV1,
+    DirectDescriptionStratumStructuredMemberConfigV1,
+    DirectDescriptionStratumStructuredMemberProgramV1,
     run_entropy_priced_member_n64,
+    run_stratum_structured_member_n64,
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError  # noqa: E402
 
+Config = DirectDescriptionEntropyPricedMemberConfigV1 | DirectDescriptionStratumStructuredMemberConfigV1
 
-def _read_config(path: Path) -> DirectDescriptionEntropyPricedMemberConfigV1:
+
+def _read_config(path: Path) -> Config:
     try:
-        return DirectDescriptionEntropyPricedMemberConfigV1.model_validate_json(path.read_bytes())
-    except (OSError, ValueError) as exc:
+        payload = path.read_bytes()
+        schema = json.loads(payload).get("schema")
+        if schema == "DirectDescriptionEntropyPricedMemberConfigV1":
+            return DirectDescriptionEntropyPricedMemberConfigV1.model_validate_json(payload)
+        if schema == "DirectDescriptionStratumStructuredMemberConfigV1":
+            return DirectDescriptionStratumStructuredMemberConfigV1.model_validate_json(payload)
+        raise DirectDescriptionError(f"entropy-priced member config schema is unknown: {schema!r}")
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
         raise DirectDescriptionError(f"entropy-priced member typed config is unreadable: {path}") from exc
 
 
@@ -72,15 +83,26 @@ def main(argv: list[str] | None = None) -> int:
         if args.execution_allowed != "false":
             raise DirectDescriptionError("entropy-priced member solve only compiles --execution-allowed false")
         config = _read_config(args.config)
-        program = DirectDescriptionEntropyPricedMemberProgramV1(
-            config_path=str(args.config),
-            output_directory=str(args.output_dir),
-        )
-        receipt, receipt_path = run_entropy_priced_member_n64(
-            config,
-            output_directory=args.output_dir,
-            semantic_argv=program.compile_consumer_argv(),
-        )
+        if isinstance(config, DirectDescriptionStratumStructuredMemberConfigV1):
+            structured_program = DirectDescriptionStratumStructuredMemberProgramV1(
+                config_path=str(args.config),
+                output_directory=str(args.output_dir),
+            )
+            receipt, receipt_path = run_stratum_structured_member_n64(
+                config,
+                output_directory=args.output_dir,
+                semantic_argv=structured_program.compile_consumer_argv(),
+            )
+        else:
+            entropy_program = DirectDescriptionEntropyPricedMemberProgramV1(
+                config_path=str(args.config),
+                output_directory=str(args.output_dir),
+            )
+            receipt, receipt_path = run_entropy_priced_member_n64(
+                config,
+                output_directory=args.output_dir,
+                semantic_argv=entropy_program.compile_consumer_argv(),
+            )
     except (DirectDescriptionError, ValueError) as exc:
         print(f"REFUSE: {exc}", file=sys.stderr)
         return 2

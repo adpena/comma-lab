@@ -21063,3 +21063,25 @@ partition (Road/boundary/Movable) · smooth path retained for Undrivable; entrop
 survey winners; per-stratum (bytes, membership) curve; events-SUBSET pricing = the representation-
 bottleneck measurement. BEV route stays NO_VERDICT (hood-control instrument-invalid) — not a
 dependency. Pointer 0.1910828242 [contest-CPU] UNMOVED (all means).
+
+## FEED-603-v4-stratum-structured-members (2026-07-22T05:52:39Z; delegated arm; MAIN review required)
+
+**Triality:** DSL
+`src/tac/optimization/direct_description_entropy_priced_member.py` v4 + typed n64 config;
+DAG
+`ddm_v4_stratum_structured_members_n64_603_613_DAG_FEED_20260722T055239Z.md`;
+equations
+`ddm_v4_stratum_structured_members_n64_603_613_canonical_equations_20260722T055239Z.md`.
+
+**MEASURED, scoped local instrument:** the exact 84,918-byte Lane LBND2 archive has frozen-SegNet
+Lane membership `0.686570162333` and Pose completeness `1` on S4 frames 0:64.  All six measured
+archives are below the configured approximate 200,000-byte and strict 154,524-byte boxes.  The
+Road-role archive has Road membership `0` and MyCar membership `0.997696884575`, so this is a
+cross-class routing blocker, not Road efficacy.  MyCar and Movable target membership remain zero;
+the first 64 frames contain zero Movable event records.
+
+**Register disposition:** #603 remains `8/19`.  This is a positive representation rung for #613,
+not full-tolerance feasibility: n256/n600 and exact evaluator d_seg/d_pose are still owed.  Receipt
+SHA-256 `95c164b4e8fde4b9f5437dca68c6c230154554c55958725b46b60d7153700e5e`;
+`score_claim=false`; `d_seg_claim=false`; frontier pointer
+`0.1910828242 [contest-CPU]` UNMOVED.
