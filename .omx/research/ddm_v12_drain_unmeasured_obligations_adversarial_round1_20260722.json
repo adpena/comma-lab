@@ -1,0 +1,34 @@
+{
+  "schema": "ddm_v12_adversarial_review.v1",
+  "round": 1,
+  "lane_id": "ddm_v12_drain_unmeasured_obligations",
+  "reviewed_receipt_sha256": "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a",
+  "findings_fixed": [
+    {
+      "finding": "ordinal ranks gave tied predicted EV or measured gains arbitrary Spearman weight",
+      "fix": "average-tie ranks plus regression",
+      "disposition": "FIXED"
+    },
+    {
+      "finding": "partition coverage was mislabeled as every atom receiving an exact scorer call",
+      "fix": "separate 3994 scorer-measured, 66 strict-receiver-rejected, and 36 prior-higher-EV-conflict-excluded atoms",
+      "disposition": "FIXED"
+    },
+    {
+      "finding": "the available 200KB envelope was mislabeled as an actually filled near-ceiling archive",
+      "fix": "report the ceiling as non-binding; terminal archive is exactly 106106 bytes",
+      "disposition": "FIXED"
+    },
+    {
+      "finding": "last-admission candidate count was not the preregistered waterfill flatten surface",
+      "fix": "flattening now requires three or more identical exact highest-budget ladder rungs; four are measured",
+      "disposition": "FIXED"
+    }
+  ],
+  "clean_passes_after_last_fix": 3,
+  "unresolved_code_findings": [],
+  "scientific_scope_guard": "FORMULATION only: correct-a-bound-v6-0.0345-predictor; families and paradigm open",
+  "axis_guard": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+  "score_claim": false,
+  "main_landing_review_required": true
+}

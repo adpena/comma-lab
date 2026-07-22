@@ -1,0 +1,88 @@
+{
+  "schema": "ddm_v12_drain_unmeasured_obligations_sha_receipt.v1",
+  "lane_id": "ddm_v12_drain_unmeasured_obligations",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+  "research_only": true,
+  "score_claim": false,
+  "d_seg_claim": false,
+  "d_pose_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "primary_receipt": {
+    "path": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+    "bytes": 1157303,
+    "sha256": "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a"
+  },
+  "typed_config": {
+    "path": ".omx/research/configs/ddm_v12_obligation_n600_20260722.json",
+    "sha256": "a463cc3e56f69be755a85c8a099cdbbc61639eeb17a6a0786310f35c8d38423e"
+  },
+  "terminal_archive": {
+    "path": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_n600_add147456.not_a_candidate.zip.receipt-bytes",
+    "bytes": 106106,
+    "sha256": "623f860e78a105a8a31efc46d92002597d32e3459447cfed642c81243441ed11",
+    "not_a_candidate": true,
+    "receiver_closed": true
+  },
+  "output_tree": {
+    "root": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z",
+    "file_count_excluding_transient_launch_files": 769,
+    "bytes_excluding_transient_launch_files": 9026737,
+    "sha256": "ce09544ab69f82b5484cba5ac61dbf97228b2a85f1f0b460fa5bb80161868f71",
+    "algorithm": "sha256 of sorted lines '<file_sha256>  <root-relative-path>\\n'; launch run.pid and duplicate-console run.log files excluded as transient process metadata"
+  },
+  "stage_checkpoints": {
+    "base_batch_cache": "196a5bab1fc85659c7c5b8b3b696267e5a5f2021a620b3c059b655b8702a7518",
+    "obligation_inventory": "07a0d3f94f1c572ab1c995f0a0e48f9594844ebc68902b709105765d8854f919",
+    "candidate_search_complete": "c2a3069c6e3c9b6e260f80b4800dfa99a2e693fa6579d749514d85bfc7a7e930",
+    "invocations": {
+      "0000_0032": "5445c5fd99ccc893cf883983688cce005d2bd2d54d647565a3b674385ad79173",
+      "0032_0064": "29f2e4baec145b110b13b591f222ff48eeb1a17b5c458208780cee7442fa15da",
+      "0064_0096": "67cd0a89e27247efe5164d5f38ad2a028539b4fae473b20e0dce884dd73fc6a8",
+      "0096_0128": "a374c3c10b7176c6d60b3dc35c399d8f47720db53201f1245715f4ad8829707b",
+      "0128_0160": "511275107dd992b44115fcb24ff8793dc0f4a3609b2574334b87d12666d70438",
+      "0160_0192": "7211b92892ec53825bcf50fb34fce1f7e388026e035c66e864213f31db834736",
+      "0192_0224": "02d25f9cc11f3a1697b89939f435b07cde86d4bd2d440c83e42dc43f41b0e97e",
+      "0224_0256": "343a7078401fbd8479cbeab290e9d05c0846364bb045964a974332bdb5d553e2",
+      "0256_0288": "1ce2e46fe127fda8fb743ea53847c555ebc3a25b50228f35a94a138014195f30",
+      "0288_0320": "8e975ac2081c93bdbbdb763df5c198ff3dade907d7f1c3ea4dc13e9b727a027f",
+      "0320_0352": "bf988c665b038d4efac7b629d7861ae561b3297ade96935d13a1b0f4ae3c5d02",
+      "0352_0353": "522547a115ec5b2513d81ecaf68ab0be78759bf7e40d909dd1c117ae884f15a8"
+    },
+    "budgets": {
+      "0": "4f478de81b0d7faaa4ae431d733a68526de872cf56c49e13e0dce1b4110525a4",
+      "16384": "972f761381ad456f237beee3e7de80bfaa7c04deb15dae18ab9ddcac4719be2c",
+      "49152": "3993ee341e2339cd52f3e6be151eab3fee4b22ead2d6574aca23d74f56c4d156",
+      "98304": "7627e555d476f47eaf613ea046e34c016bba05a0d8b2b8c8177a5b6ce9cd6ab2",
+      "147456": "0bb2eaf9e6a2d841ce77ff191ec897f712b407237757754cb80c003211cd3ec2"
+    }
+  },
+  "implementation_history": [
+    {
+      "bundle_interval": "[0,192)",
+      "measurement_tool_sha256": "1c65ed7977f12982b8189e5f6e3b466c0e636181dca62c9f9add2d0789487bd4",
+      "receiver_lineage_sha256": "d75f86996ede1d1839d75e8faacf105c66e7f3475487dd9cfb4e55ad8bc0a5a8",
+      "note": "captured before terminal reporting fixes; scorer/admission loop is the same"
+    },
+    {
+      "bundle_interval": "[192,352)",
+      "measurement_tool_sha256": "d0dbd41854eb4a9a91c1933b094e25ba39cc3a112e973127473e0397a89b582b",
+      "receiver_lineage_sha256": "d75f86996ede1d1839d75e8faacf105c66e7f3475487dd9cfb4e55ad8bc0a5a8"
+    },
+    {
+      "bundle_interval": "[352,353] plus terminal ladder",
+      "measurement_tool_sha256": "2f4e5057546adf8d41e0ae1084ec3ec7313899c3c615e5b40e81c2bce30aaa02",
+      "receiver_lineage_sha256": "d75f86996ede1d1839d75e8faacf105c66e7f3475487dd9cfb4e55ad8bc0a5a8"
+    }
+  ],
+  "canonical_equation": {
+    "equation_id": "ddm_describe_line_rate_distortion_bracket_v1",
+    "source_sha256": "dc3b8303b7ff1355111a534b39d4d9bb0fd6ed7c36425e6237106f40403f4f11",
+    "registry_sha256_after_append": "974ef4963db13ef0763f0c7c10a55d75525effb0d332e5e213d45705e0ba9945",
+    "n600_status": "MEASURED_N600_RECEIVER_CLOSED"
+  },
+  "verdict": "ADVISORY_FORMULATION_PLATEAU_WITH_200KB_CEILING_NONBINDING_V6_SUCCESSOR_NAMED",
+  "verdict_scope": "post-solve correction of the bound v6 fixed_ar1_hold24 0.0345 predictor; chart/event/carrier families and the describe-line paradigm remain open",
+  "main_landing_review_required": true
+}

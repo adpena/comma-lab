@@ -21239,3 +21239,20 @@ OPERATOR (verbatim gist): "remember the chart level corrections we researched �
 - **verdict_scope: INSTANCE** (this measured slice + this EV ordering); vocabulary/event/carrier families open; the pre-registered ~200 KB formulation falsifier stays ARMED and resolves when the pool drains.
 - **Routing:** continuation arm `ddm_v12_drain_unmeasured_obligations` — EV-ordered drain of the 3,604-atom bounded pool, Movable-birth + Lane atoms first (they carry the mass), joint-objective admission unchanged, budget to the 200 KB ceiling; on flatten-with-pool-empty the FORMULATION verdict fires with full evidence → v6-successor predictor becomes the vehicle (#366-adjacent fork). The registered describe-line law (`ddm_describe_line_rate_distortion_bracket_v1`) gains its n600 anchor upgrade from DERIVED_NOT_MEASURED → MEASURED.
 - Pointer 0.1910828242 [contest-CPU] UNMOVED (means/apparatus).
+
+### FEED-603-v12-full-obligation-drain-formulation-falsifier-fired (2026-07-22, MAIN review pending)
+
+- **Debt resolved:** all 4,096 bounded n600 atoms have terminal dispositions — 3,994 exact
+  scorer-measured, 66 strict receiver no-ops, 36 lower-EV conflicts with prior admissions. Greedy
+  waterfill admitted 44 bundles / 407 atoms.
+- **Exact ladder:** 102,105 B / d_seg .034502249824 / d_pose 163.039648911962 → 106,106 B /
+  .034003668891 / 163.034719422881 at +4,001 B. Requested +16/49/98/147 KiB rungs are identical;
+  the 200KB ceiling is non-binding.
+- **FORMULATION falsifier FIRED:** post-solve correction of the bound v6 0.0345 predictor is
+  dominated. Movable .989518 and Lane .436911 remain/worsen; the v6 successor must carry Movable
+  island worldsheet events natively in PREDICT. Chart/event/carrier families and describe-line
+  paradigm remain OPEN.
+- **Law:** `ddm_describe_line_rate_distortion_bracket_v1` now has a SHA-bound measured n600 anchor;
+  historical projection remains DERIVED. Receipt `eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a`.
+- Research-only `[macOS-CPU frozen-scorer advisory]`; no score/promotion/dispatch. Pointer
+  `0.1910828242 [contest-CPU]` UNMOVED. MAIN landing review required.

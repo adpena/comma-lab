@@ -39,6 +39,10 @@ LEG_STRUCTURED_CARRIER = "v9_structured_per_stratum_carrier"
 V7_VERDICT = "FORMULATION_LEVEL_EXACT_RESIDUAL_KOLMOGOROV_RATE_WALL"
 V8_VERDICT = "FORMULATION_LEVEL_MARGIN_GATED_CORRECTION_RATE_WALL"
 V9_VERDICT = "ADVISORY_INSTANCE_FAILS_SUB015_BOX_FORMULATION_OPEN"
+V12_VERDICT = (
+    "ADVISORY_FORMULATION_PLATEAU_WITH_200KB_CEILING_NONBINDING_"
+    "V6_SUCCESSOR_NAMED"
+)
 
 V7_CROSS_RECEIPT = (
     ".omx/research/"
@@ -85,7 +89,14 @@ V9_N256_RECEIPT = (
 )
 V9_N256_SHA256 = "57cd12b103779731c2311dc364f1908e6acb476765b16ded66cd146ee076fdae"
 
+V12_N600_RECEIPT = (
+    ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/"
+    "ddm_v12_obligation_search_n600_receipt.json"
+)
+V12_N600_SHA256 = "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a"
+
 CALIBRATION_UTC = "2026-07-22T14:08:53Z"
+V12_CALIBRATION_UTC = "2026-07-22T17:55:52Z"
 
 
 def _strict_number(value: Any, name: str, *, minimum: float = 0.0) -> float:
@@ -216,18 +227,73 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
     rate_green = all(row["archive_bytes"] <= rate_budget for row in rows)
     dseg_red = all(row["d_seg"] > dseg_gate for row in rows)
     pose_red = all(row["d_pose"] > dpose_gate for row in rows)
-    verdict = (
-        V9_VERDICT
-        if receiver_closed and rate_green and dseg_red and pose_red and correction_symbols == 0
-        else "OPEN"
-    )
+    full_obligation_drain = inputs.get("full_obligation_drain", False)
+    if not isinstance(full_obligation_drain, bool):
+        raise ValueError("full_obligation_drain must be boolean")
+    n600_rows = [row for row in rows if row["pair_count"] == 600]
+    if full_obligation_drain:
+        if not n600_rows:
+            raise ValueError("full obligation drain requires one measured n600 window")
+        decision_inventory_exhausted = _strict_bool(
+            inputs.get("decision_inventory_exhausted"),
+            "decision_inventory_exhausted",
+        )
+        byte_ceiling_nonbinding = _strict_bool(
+            inputs.get("byte_ceiling_nonbinding"),
+            "byte_ceiling_nonbinding",
+        )
+        correct_a_bound_predictor = _strict_bool(
+            inputs.get("correct_a_bound_predictor"),
+            "correct_a_bound_predictor",
+        )
+        bounded_atoms = _strict_int(inputs.get("bounded_atoms"), "bounded_atoms", minimum=1)
+        scorer_measured_atoms = _strict_int(
+            inputs.get("exact_scorer_measured_atoms"),
+            "exact_scorer_measured_atoms",
+        )
+        strict_receiver_rejected_atoms = _strict_int(
+            inputs.get("strict_receiver_rejected_atoms"),
+            "strict_receiver_rejected_atoms",
+        )
+        conflict_excluded_atoms = _strict_int(
+            inputs.get("prior_higher_ev_conflict_excluded_atoms"),
+            "prior_higher_ev_conflict_excluded_atoms",
+        )
+        decision_atom_partition_valid = (
+            scorer_measured_atoms
+            + strict_receiver_rejected_atoms
+            + conflict_excluded_atoms
+            == bounded_atoms
+        )
+        verdict = (
+            V12_VERDICT
+            if receiver_closed
+            and rate_green
+            and dseg_red
+            and pose_red
+            and decision_inventory_exhausted
+            and byte_ceiling_nonbinding
+            and correct_a_bound_predictor
+            and decision_atom_partition_valid
+            else "OPEN"
+        )
+    else:
+        verdict = (
+            V9_VERDICT
+            if receiver_closed
+            and rate_green
+            and dseg_red
+            and pose_red
+            and correction_symbols == 0
+            else "OPEN"
+        )
     lo, hi = rows[0], rows[-1]
     slope = Fraction(
         hi["archive_bytes"] - lo["archive_bytes"],
         hi["pair_count"] - lo["pair_count"],
     )
     projected_n600 = Fraction(lo["archive_bytes"]) + slope * (600 - lo["pair_count"])
-    return {
+    result = {
         "leg": leg,
         "verdict": verdict,
         "receiver_closed": receiver_closed,
@@ -240,10 +306,35 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
         "n600_projected_bytes_exact": (
             f"{projected_n600.numerator}/{projected_n600.denominator}"
         ),
-        "n600_projection_status": "DERIVED_FROM_MEASURED_N64_N256_NOT_MEASURED_N600",
-        "verdict_scope": "INSTANCE_FORMULATION_OPEN",
+        "n600_projection_status": (
+            "MEASURED_N600_RECEIVER_CLOSED"
+            if n600_rows
+            else "DERIVED_FROM_MEASURED_N64_N256_NOT_MEASURED_N600"
+        ),
+        "verdict_scope": (
+            "FORMULATION_CORRECT_A_BOUND_0P034_PREDICTOR_FAMILIES_OPEN"
+            if full_obligation_drain
+            else "INSTANCE_FORMULATION_OPEN"
+        ),
         "score_claim": False,
     }
+    if n600_rows:
+        measured = n600_rows[0]
+        result["n600_measured"] = {
+            "archive_bytes": measured["archive_bytes"],
+            "d_seg": measured["d_seg"],
+            "d_pose": measured["d_pose"],
+            "receiver_closed": measured["receiver_closed"],
+        }
+    if full_obligation_drain:
+        result["decision_atom_partition"] = {
+            "bounded_atoms": bounded_atoms,
+            "exact_scorer_measured_atoms": scorer_measured_atoms,
+            "strict_receiver_rejected_atoms": strict_receiver_rejected_atoms,
+            "prior_higher_ev_conflict_excluded_atoms": conflict_excluded_atoms,
+            "valid": decision_atom_partition_valid,
+        }
+    return result
 
 
 register_evaluator(EQUATION_ID, evaluate_ddm_describe_line_rate_distortion_bracket)
@@ -333,6 +424,36 @@ def _v9_inputs() -> dict[str, Any]:
     }
 
 
+def _v12_inputs() -> dict[str, Any]:
+    return {
+        "leg": LEG_STRUCTURED_CARRIER,
+        "rate_budget_bytes": 200_000,
+        "dseg_gate": 0.00116,
+        "dpose_gate": 0.00025,
+        "correction_symbols": 407,
+        "region_coherent": True,
+        "pixel_residual_present": False,
+        "full_obligation_drain": True,
+        "decision_inventory_exhausted": True,
+        "byte_ceiling_nonbinding": True,
+        "correct_a_bound_predictor": True,
+        "bounded_atoms": 4_096,
+        "exact_scorer_measured_atoms": 3_994,
+        "strict_receiver_rejected_atoms": 66,
+        "prior_higher_ev_conflict_excluded_atoms": 36,
+        "windows": [
+            *_v9_inputs()["windows"],
+            {
+                "pair_count": 600,
+                "archive_bytes": 106_106,
+                "d_seg": 0.034003668891,
+                "d_pose": 163.034719422881,
+                "receiver_closed": True,
+            },
+        ],
+    }
+
+
 def _anchor(
     *,
     anchor_id: str,
@@ -341,11 +462,12 @@ def _anchor(
     source_artifact: str,
     source_sha256: str,
     receipt_bindings: Mapping[str, str],
+    measurement_utc: str = CALIBRATION_UTC,
 ) -> EmpiricalAnchor:
     predicted = evaluate_ddm_describe_line_rate_distortion_bracket(inputs)
     return EmpiricalAnchor(
         anchor_id=anchor_id,
-        measurement_utc=CALIBRATION_UTC,
+        measurement_utc=measurement_utc,
         inputs={**dict(inputs), "receipt_sha256_bindings": dict(receipt_bindings)},
         predicted_output={"verdict": predicted["verdict"]},
         empirical_output={
@@ -363,14 +485,14 @@ def _anchor(
         provenance=build_provenance_for_macos_cpu_advisory(
             archive_sha256=source_sha256,
             source_path=source_artifact,
-            captured_at_utc=CALIBRATION_UTC,
+            captured_at_utc=measurement_utc,
         ),
         empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
     )
 
 
 def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
-    """Build the measured v7/v8/v9 describe-line bracket."""
+    """Build the measured v7/v8/v9 bracket plus append-only V12 n600 anchor."""
 
     v7 = _anchor(
         anchor_id="ddm_v7_exact_value_rate_wall_n64_n256_20260722",
@@ -408,17 +530,27 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
             V9_CROSS_RECEIPT: V9_CROSS_SHA256,
         },
     )
+    v12 = _anchor(
+        anchor_id="ddm_v12_structured_carrier_n600_obligation_drain_20260722",
+        inputs=_v12_inputs(),
+        verdict=V12_VERDICT,
+        source_artifact=V12_N600_RECEIPT,
+        source_sha256=V12_N600_SHA256,
+        receipt_bindings={V12_N600_RECEIPT: V12_N600_SHA256},
+        measurement_utc=V12_CALIBRATION_UTC,
+    )
     provenance = build_provenance_for_macos_cpu_advisory(
-        archive_sha256=V9_CROSS_SHA256,
-        source_path=V9_CROSS_RECEIPT,
-        captured_at_utc=CALIBRATION_UTC,
+        archive_sha256=V12_N600_SHA256,
+        source_path=V12_N600_RECEIPT,
+        captured_at_utc=V12_CALIBRATION_UTC,
     )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name="DDM direct-description measured rate/distortion bracket",
         one_line_summary=(
             "Exact values are rate-dead, sparse pixel repairs are ERF-dead, and "
-            "structured carriers enter the byte box with distortion correction still owed."
+            "structured carriers enter the byte box while exhaustive n600 correction of the "
+            "bound predictor plateaus above the distortion gate."
         ),
         latex_form=(
             r"(B_9,D_9)_{\mathrm{structured}}\;\leadsto\;"
@@ -432,7 +564,7 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
             "evaluate_ddm_describe_line_rate_distortion_bracket"
         ),
         domain_of_validity={
-            "formalization_status": "MEASURED_THREE_LEG_BRACKET",
+            "formalization_status": "MEASURED_THREE_LEG_BRACKET_PLUS_N600_ANCHOR",
             "tasks": [540, 578, 603, 613],
             "axis": AXIS,
             "advisory_only": True,
@@ -456,6 +588,7 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
                 "v7_n64_n256_bytes": [43_112_153, 171_332_654],
                 "v8_tight_n64_n256_bytes": [2_629_076, 9_360_569],
                 "v9_n64_n256_bytes": [51_668, 72_397],
+                "v12_n600_bytes": 106_106,
             },
             "v7_measured_binders": {
                 "rate": (
@@ -482,14 +615,25 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
                 "n600_projected_bytes_exact": "2628875/24",
                 "status": "DERIVED_FROM_MEASURED_N64_N256_NOT_MEASURED_N600",
             },
+            "v12_n600_upgrade": {
+                "status": "MEASURED_N600_RECEIVER_CLOSED",
+                "base_bytes": 102_105,
+                "final_bytes": 106_106,
+                "final_d_seg": 0.034003668891,
+                "final_d_pose": 163.034719422881,
+                "decision_inventory_exhausted": True,
+                "exact_scorer_measured_atoms": 3_994,
+                "strict_receiver_rejected_atoms": 66,
+                "prior_higher_ev_conflict_excluded_atoms": 36,
+            },
             "erf_mechanism_context": (
                 "r50 approximately 50-160 px with median approximately 85; r90 approximately "
                 "206-424 px and operational check approximately 300; source is measured "
                 "segnet_recursive_fractal_factorization, not a new anchor here"
             ),
             "correction_successor": (
-                "joint Fisher-margin/curvature-ranked G2CS1 coefficients plus xi-transported "
-                "birth/death events; corrected inner-Jacobian and Pose-tube admission required"
+                "native Movable island worldsheet events in the PREDICT stage of a v6 successor, "
+                "not another post-solve correction pass"
             ),
             "optional_stream_probe": (
                 "Brenier pointwise monotone compander remains unmeasured; Splay/Jones/MTF "
@@ -502,7 +646,8 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
             "verdict_scope": (
                 "v7 exact opaque values and v8 finite-tau post-hoc pixel values are "
                 "FORMULATION negatives; v9 is an INSTANCE/FORMULATION-open bracket point; "
-                "learned, analytic, chart/event, and photometrically faithful-base families remain open"
+                "v12 closes only correct-a-bound-0.034-predictor; chart/event/carrier families "
+                "and the describe-line paradigm remain open"
             ),
         },
         units_in={
@@ -515,15 +660,17 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
         units_out={
             "verdict": "scoped categorical classification",
             "marginal_bytes_per_pair": "derived bytes per added pair",
-            "n600_projected_bytes": "derived bytes, explicitly not measured",
+            "n600_projected_bytes": "derived bytes for anchors without an n600 endpoint",
+            "n600_measured": "receiver-closed measured n600 row when present",
         },
-        empirical_anchors=(v7, v8, v9),
+        empirical_anchors=(v7, v8, v9, v12),
         predicted_vs_empirical_residual={
             "v7_scoped_receipt_verdict": 0.0,
             "v8_scoped_receipt_verdict": 0.0,
             "v9_scoped_receipt_verdict": 0.0,
+            "v12_scoped_receipt_verdict": 0.0,
         },
-        last_calibration_utc=CALIBRATION_UTC,
+        last_calibration_utc=V12_CALIBRATION_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "tac.optimization.v10_constructive_solver",
@@ -557,7 +704,7 @@ def populate_ddm_describe_line_rate_distortion_bracket_v1(
         agent=agent,
         subagent_id=subagent_id,
         notes=(
-            "DDM v7/v8/v9 measured describe-line bracket; tasks #540/#578/#603/#613; "
+            "DDM v7/v8/v9 bracket plus measured V12 n600 anchor; tasks #540/#578/#603/#613; "
             "research-only; MAIN landing review required"
         ),
     )
@@ -579,6 +726,9 @@ __all__ = [
     "V9_CROSS_RECEIPT",
     "V9_CROSS_SHA256",
     "V9_VERDICT",
+    "V12_N600_RECEIPT",
+    "V12_N600_SHA256",
+    "V12_VERDICT",
     "build_ddm_describe_line_rate_distortion_bracket_v1",
     "evaluate_ddm_describe_line_rate_distortion_bracket",
     "populate_ddm_describe_line_rate_distortion_bracket_v1",
