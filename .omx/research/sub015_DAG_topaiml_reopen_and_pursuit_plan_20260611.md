@@ -21164,3 +21164,21 @@ amortization + survey-winner machinery. Bar: per-stratum-waterfilled bytes vs d_
 ≤~200 KB — the #613 knee question in its final measurable form.
 **Next node (respawned): ddm_v7_solved_plane_tolerance_waterfill.** Register stays 8/19 honestly
 (n600 + contest axes red). Pointer 0.1910828242 [contest-CPU] UNMOVED (all means).
+
+## FEED-603-v7-tolerance-ladder-falsifier-fired (2026-07-22, MAIN custody of ddm_v7_solved_plane_tolerance_waterfill, merged 3eb6cd8bb0)
+
+**Node:** #603 G-register / #613 crux — solved-plane tolerance ladder (describe the C1 SOLVED planes at per-stratum tolerance). Producer commits c2351a8b0c..c811f215d4; receipts n64 `8db93c4e…` / n256 `d68f1d9e…` / cross-window `64658a05…`; all `[macOS-CPU frozen-scorer advisory]`, `score_claim=false`.
+
+**VERDICT (MEASURED, verdict_scope: FORMULATION — opaque site/value corrections over the v6 predictor):** the pre-registered falsifier FIRED. Losslessly describing the solved planes restores BOTH scorer legs (n64 d_seg 1.714e-4 / d_pose 8.17e-5; n256 1.545e-4 / 1.04e-4 — first rows meeting the 0.00116 bar on this line) but costs **43,112,153 B (n64) / 171,332,654 B (n256) = 215.6× / 856.7× the 200 KB box**. Only `exact_all` meets the bar; q4 misses by 5.86e-5 at 108.6 MB. Rate-optimal Pareto stopping points (ξ-hold24→q16 marginal 2.96e-7/B vs break-even 6.66e-7/B) never satisfy d_seg. NO admissible opaque-correction point exists near 200 KB. NOT closed: learned / analytic / curvelet-shearlet / evaluator-inverse descriptions of the same planes.
+
+**THE DECISIVE DECOMPOSITION (the signal):** rate binder and d_seg binder are DIFFERENT strata. Exact bytes: Undrivable 86.1 MB + MyCar 42.0 MB + Road 34.2 MB (n256) = ~95% of rate — the bulk interiors. Residual d_seg lives in Lane (.0037) + Boundary (.0069). But Lane+Boundary EXACT alone = 5.55 MB @ n256 (~28× box), and v6 measured dropping bulk corrections exposes image+pose debt through the predictor — the v6 coarse-paint sensitivity ranking does NOT license omitting bulk solved-plane signal. Also: mixed STRATUM-level policies are not useful Pareto points — the ladder quantized in VALUE space uniformly per stratum, never in ARGMAX/margin space.
+
+**Kolmogorov reading (honest):** the C1 solved planes are ~natural-video-like content (minimal perturbation of GT through the #549 joint solve); describing them exactly IS re-encoding the video — the describe line closed its own circle. Consistent with the standing L17 doctrine (sub-0.15 = trained/structured generator, not stored description) and the master-thesis realization crux.
+
+**Round-1 fixes (all 3 real, verified):** (1) handwritten waterfill emitted negative added-byte marginals → route now derived from measured discrete Pareto envelope with positivity assertions; (2) one candidate scope leaked v6's SegNet-only axis label → v7 joint-scorer scope constructor + checkpoint axis validation; (3) sealed-receipt replay broke on volatile `observed_free_bytes` → completed receipts validate-and-return before dynamic preflight (deterministic replay ×2 verified byte-identical, 0.81/1.05 s).
+
+**Law candidate (structured-carriers law, 4th anchor):** smooth families reproduce only bulk (v3) · structured carriers deliver strata (v4/v5) · paint-family evaluator-dead + rate GREEN via amortization (v6) · EXACT description evaluator-GREEN + rate-dead (v7). The registry evaluator remains the v7 ladder (#540 debt — draft rows on branch history, MAIN registration owed at the next equations-leg landing).
+
+**RESPAWN (Einsteinian reformulation, the untried formulation):** `ddm_v8_margin_gated_correction` — ARGMAX-AWARE allocation: gate corrections by the measured margin field (Fisher surrogate, Pearson 0.978) instead of stratum-uniform value quantization. Sites deep in argmax cells tolerate unbounded value error (correction dropped ⇒ ~0 B); only the margin band (codim-1 annulus) needs value fidelity. Tests whether the 43 MB exact mass collapses when the constraint is "preserve argmax + pose tube," not "preserve values." Composes #580 (80.67% resize nullity), #49/S12 preimage freedom, the registered margin/Fisher laws. n64→n256; same falsifier discipline.
+
+pointer 0.1910828242 [contest-CPU] UNMOVED (means; advisory rows only).
