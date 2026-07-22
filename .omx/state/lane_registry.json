@@ -82791,6 +82791,47 @@
         "Price exact final archive bytes inside solve",
         "Carry Pose with unique byte ownership in same artifact"
       ]
+    },
+    {
+      "id": "lane_ddm_mdl_member_solve_v2_priced_603_20260722",
+      "name": "DDM receiver-priced member solve v2 Task 603",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local-only isolated Codex arm; exact six-member ZIP_STORED receiver pricing, in-selection tolerance ladder, n64 minimum, MAIN review required."
     }
   ],
   "level_rules": {
@@ -82800,5 +82841,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T03:35:07Z"
+  "updated_at": "2026-07-22T03:57:30Z"
 }
