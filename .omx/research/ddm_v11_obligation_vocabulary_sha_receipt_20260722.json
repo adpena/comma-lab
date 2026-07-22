@@ -101,7 +101,7 @@
   "decision_artifacts": [
     {
       "path": ".omx/research/codex_findings_ddm_v11_obligation_vocabulary_solve_20260722_codex.md",
-      "sha256": "6e6ed3a69239528dc87b2bc31a94500d6b498d4091bc0d9e06589e1a8d71ac10"
+      "sha256": "e7dad587e735434cdda5aee3dbed77a8ce3935a18ef46e7fbf0fa92fd5e96f8e"
     },
     {
       "path": ".omx/research/ddm_v11_obligation_vocabulary_DAG_FEED_20260722.md",

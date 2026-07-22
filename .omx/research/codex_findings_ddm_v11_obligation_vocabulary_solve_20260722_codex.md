@@ -1,10 +1,15 @@
 # DDM V11 scorer-obligation vocabulary solve — advisory finding
 
-**Lane:** `lane_ddm_v11_obligation_vocabulary_solve_20260722`  
-**Tasks:** #603 / #613 on master #578  
-**Evidence:** `[macOS-CPU frozen-scorer advisory]`  
-**Authority:** `research_only=true`, `score_claim=false`, `d_seg_claim=false`, `d_pose_claim=false`  
-**Pointer:** `0.1910828242 [contest-CPU]` **UNCHANGED**  
+**Lane:** `lane_ddm_v11_obligation_vocabulary_solve_20260722`
+
+**Tasks:** #603 / #613 on master #578
+
+**Evidence:** `[macOS-CPU frozen-scorer advisory]`
+
+**Authority:** `research_only=true`, `score_claim=false`, `d_seg_claim=false`, `d_pose_claim=false`
+
+**Pointer:** `0.1910828242 [contest-CPU]` **UNCHANGED**
+
 **MAIN landing review:** **REQUIRED**
 
 ## Outcome first
