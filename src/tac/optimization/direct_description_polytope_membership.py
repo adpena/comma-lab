@@ -31,7 +31,7 @@ from tac.optimization.direct_description_measurement_ladder import (
     DirectDescriptionTargetPlaneReceiptV1,
     compile_chart_archive,
     fit_chart_description,
-    iter_target_plane_chunks,
+    iter_target_plane_window_chunks,
     load_pose_target_codes,
     load_target_receipt,
     measure_quantity_bridge,
@@ -213,6 +213,7 @@ def iter_target_scorer_batches(
     n_pairs: int,
     *,
     batch_size: int = SCORER_BATCH_SIZE,
+    pair_start: int = 0,
 ) -> Iterator[tuple[tuple[int, ...], np.ndarray]]:
     """Rebatch one source chunk at a time into canonical scorer batches."""
 
@@ -221,7 +222,9 @@ def iter_target_scorer_batches(
     batch = np.empty((batch_size, 2, *PAIR_HW, 3), dtype=np.uint8)
     batch_ids: list[int] = []
     cursor = 0
-    for pair_ids, planes in iter_target_plane_chunks(receipt, n_pairs):
+    for pair_ids, planes in iter_target_plane_window_chunks(
+        receipt, pair_start=pair_start, n_pairs=n_pairs
+    ):
         source_cursor = 0
         while source_cursor < len(pair_ids):
             take = min(batch_size - cursor, len(pair_ids) - source_cursor)
@@ -307,6 +310,7 @@ def measure_argmax_cell_membership(
     *,
     oracle: CellOracle,
     cached_lstars: np.ndarray,
+    pair_start: int = 0,
 ) -> dict[str, Any]:
     """Measure same-C1-member argmax-cell fraction in bounded batches."""
 
@@ -325,7 +329,7 @@ def measure_argmax_cell_membership(
     total_sites = n_pairs * PAIR_HW[0] * PAIR_HW[1]
     observed = 0
     replay_checked = False
-    for pair_ids, target in iter_target_scorer_batches(receipt, n_pairs):
+    for pair_ids, target in iter_target_scorer_batches(receipt, n_pairs, pair_start=pair_start):
         described = receiver.render_pairs(pair_ids)
         target_cells, target_margins = oracle(target, True)
         described_cells, described_margins = oracle(described, False)
@@ -342,7 +346,8 @@ def measure_argmax_cell_membership(
             ):
                 raise DirectDescriptionError("membership scorer deterministic replay failed")
             replay_checked = True
-        cached = np.ascontiguousarray(cache[np.asarray(pair_ids, dtype=np.int64)])
+        source_pair_ids = pair_start + np.asarray(pair_ids, dtype=np.int64)
+        cached = np.ascontiguousarray(cache[source_pair_ids])
         exact = np.all(described[:, 1] == target[:, 1], axis=-1)
         member = described_cells == target_cells
         batch_strata = membership_strata_counts(exact, member, target_cells, target_margins)
@@ -390,6 +395,7 @@ def measure_argmax_cell_membership(
     return {
         "schema": MEMBERSHIP_SCHEMA,
         "n_pairs": n_pairs,
+        "pair_window": {"start": pair_start, "stop": pair_start + n_pairs, "count": n_pairs},
         "archive_bytes": len(receiver.archive),
         "archive_sha256": _sha256(receiver.archive),
         "cell_family": CELL_FAMILY,
