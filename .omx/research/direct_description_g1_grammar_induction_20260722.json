@@ -1,0 +1,159 @@
+{
+  "schema": "ddm_g1_grammar_induction_compact_receipt.v1",
+  "date_utc": "2026-07-22",
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "candidate_archive": false,
+  "main_landing_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU] UNCHANGED",
+  "verdict_scope": "candidate-set optimality on frozen n600 reference-label masks; not receiver-visible RGB, through-R, Pose, final-ZIP, or contest score",
+  "source": {
+    "git_base": "f92e10cb3f3f455d263845edf30a0b5c7bd40305",
+    "harness": "experiments/direct_description/induce_per_stratum_grammar.py",
+    "harness_sha256": "4c3e71ee1724cc4a9908829d2feb0e8498aec8a56c67ab2146a2df63fe5be41c",
+    "tests": "experiments/direct_description/test_induce_per_stratum_grammar.py",
+    "tests_sha256": "d836e674d00fd671dcc124db161c7d0284ec5058e071b725c172ca52c406c0a7"
+  },
+  "input": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "bytes": 5078017610,
+    "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "member": "lstars.npy",
+    "shape": [600, 384, 512],
+    "dtype": "int64"
+  },
+  "primary_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_g1_grammar_induction_20260722T182036Z_semantic_v4/ddm_g1_grammar_induction_n600_receipt.json",
+    "sha256": "aeeb916f973523d5ffa3389ee8d744901fe9477cc149af7e756726e2ead907f6",
+    "stage_checkpoint_sha256": {
+      "01_movable.json": "7068bfd947909660417ab842c86322187062db8e2fb696d281288d3a553169d1",
+      "02_lane.json": "011c8e61cdb19fa2c535865856673e9383a60260dff53272f284c1262b100360",
+      "03_boundary.json": "fe96b9b7eef19b7827d62f6248e03050bfce069a1e1b952ae0a2fed8a72499a7"
+    },
+    "resume_validation_seconds": 2.567
+  },
+  "coder_contract": {
+    "real_coders": ["Brotli quality 11", "raw LZMA1 preset 1 dict 1MiB", "zlib level 9"],
+    "selection": "smallest actual coded bytes independently per production",
+    "counted_framing": "5-byte envelope header plus 10 bytes per production",
+    "entropy_estimates_used": false,
+    "semantic_parseback_required": true
+  },
+  "ranked_knees": {
+    "Movable": {
+      "lossless": {
+        "candidate": "movable_lossless_row_runs",
+        "counted_bytes": 59481,
+        "errors": 0,
+        "payload_sha256": "c8dc012c71b76dbdcbe7af77490117550447b40153e07f5b9ed92d55fdc2e930"
+      },
+      "lossy_knee": {
+        "candidate": "movable_track_shape_abs_eps1p0",
+        "counted_bytes": 29810,
+        "errors": 33378,
+        "dseg_oracle_clean_rest": 0.00028294881184895833,
+        "iou": 0.9773471195251976,
+        "payload_sha256": "1066081727229e605462e67b8fdd26937d5e3552c13cb66a7444ea3b7360366f",
+        "production_counted_bytes": {
+          "EVENT": 419,
+          "CENTROID": 2354,
+          "SHAPE": 27032,
+          "envelope_header": 5
+        },
+        "corpus": {
+          "births": 180,
+          "persists": 2017,
+          "deaths": 158,
+          "max_slots": 10,
+          "vertices": 19150
+        }
+      },
+      "morph_disambiguator": {
+        "eps1_absolute_bytes": 29810,
+        "eps1_morph_delta_bytes": 29960,
+        "eps2_absolute_bytes": 20967,
+        "eps2_morph_delta_bytes": 20763
+      }
+    },
+    "Lane": {
+      "lossless": {
+        "candidate": "lane_lossless_row_runs",
+        "counted_bytes": 180701,
+        "errors": 0,
+        "payload_sha256": "a70cb7f2f4dcd14b1823f3c0f4837b6bbcd64ad8735e388782da8cfc1596d92f"
+      },
+      "lossy_knee": {
+        "candidate": "lane_slots_delta_dash_tolx2p0",
+        "counted_bytes": 27692,
+        "errors": 583417,
+        "dseg_oracle_clean_rest": 0.0049456871880425345,
+        "iou": 0.38688879827821027,
+        "payload_sha256": "73b8de886ca569524bfea2d939f1bc4d1b96a6807616ad24d31328a61700a0f7",
+        "production_counted_bytes": {
+          "EVENT": 198,
+          "LANE_CENTER": 12367,
+          "LANE_WIDTH": 5632,
+          "LANE_DASH": 6314,
+          "LANE_RANGE": 3176,
+          "envelope_header": 5
+        },
+        "corpus": {
+          "slots": 6,
+          "total_lines": 2967,
+          "births": 1,
+          "deaths": 0,
+          "band_recall_mean": 0.5474557765871068
+        }
+      }
+    },
+    "Boundary": {
+      "lossless": {
+        "candidate": "boundary_lossless_row_runs",
+        "counted_bytes": 453123,
+        "errors": 0,
+        "payload_sha256": "faa4633ebfbc39473da842f1a0de76cfe072f71b23a928a53612b63f2c931f56"
+      },
+      "lossy_fidelity_knee": {
+        "candidate": "boundary_arc_eps2p0",
+        "counted_bytes": 219288,
+        "errors": 2245366,
+        "dseg_oracle_clean_rest": 0.019034203423394097,
+        "iou": 0.5223090010184116,
+        "payload_sha256": "367c92046fb5e4deabee026ec7fbd4efced2bfcc5a1ce4489c8bf8c327260dbb",
+        "production_counted_bytes": {
+          "ARC_EVENT": 448,
+          "ARC_VERTEX": 218835,
+          "envelope_header": 5
+        },
+        "verdict": "REJECT_FOR_60KB_LINE"
+      }
+    }
+  },
+  "coverage_projection": {
+    "epistemic_label": "DERIVED",
+    "method": "union upper bound of independently semantic-decoded Lane and Movable mask errors; Road, Undrivable, and MyCar assumed exact",
+    "lane_candidate": "lane_slots_delta_dash_tolx2p0",
+    "movable_candidate": "movable_track_shape_abs_eps1p0",
+    "counted_bytes": 57502,
+    "byte_budget": 60000,
+    "byte_slack": 2498,
+    "errors_union_upper": 616795,
+    "dseg_union_upper": 0.005228635999891493,
+    "target_0p005_passed": false,
+    "gap_vs_0p005": 0.000228635999891493,
+    "excess_errors_vs_0p005": 26971,
+    "ratio_vs_0p00116_box": 4.507444827492667,
+    "receiver_closed": false,
+    "pose_measured": false,
+    "score_claim": false
+  },
+  "blocker_delta_vs_603": "The unmeasured bounded-atom inventory is no longer the blocker on this surface. Actual PREDICT-native grammar strings are priced. The remaining blockers are 26971 mask errors at the 60KB target, receiver-visible RGB/through-R realization, cross-stratum composition, and Pose custody.",
+  "round1_self_review": [
+    "Fixed Lane inactive-slot values that contradicted the free-absence grammar; active persistence now emits deltas only.",
+    "Added semantic parseback for Movable absolute/morph shapes and Boundary arcs; envelope decompression alone is not accepted as reconstruction proof.",
+    "Retained the losing morph-delta rows instead of selecting them by intuition.",
+    "Scoped candidate-set optimality; no global grammar optimum, receiver closure, or score movement is claimed."
+  ]
+}
