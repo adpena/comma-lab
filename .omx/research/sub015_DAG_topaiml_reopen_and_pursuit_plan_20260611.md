@@ -20924,3 +20924,28 @@ excluded from launch config (full-precision SHA-bound solved-target receipt abse
 **Named exit:** respawn arm `ddm_receiver_optimizer_build` at blockers 2+3 (the crux pair) — REAL code + n64 custody
 smoke, $0 local, no spawn of training. Fallback #366 remains ineligible until the describe-line verdict.
 **Pointer 0.1910828242 [contest-CPU] UNMOVED** (means/apparatus; the scaffold is custody, not progress).
+
+## FEED-603-ladder-membership-pivot (2026-07-22, MAIN custody of ddm chain arms 2+3)
+
+**Trajectory:** #603 DDM register 4/19 → 6/19 → **7/19** across two custodied arms (main
+65c2e72935 → 49cc47902a). (1) `ddm_target_receipt_pose_rung0`: FULL_PRECISION_SHA_BOUND_TARGET_RECEIPT
+green — DDM objective now bound to the REAL C1 solved-pair n600 planes (SSD, archive e4cd154f…,
+600 pairs / 50 sha'd chunks; MAIN re-hashed exact) + pose-active rung zero (MAIN re-ran trajectory
+exact: pose debt 32,382→32,370). (2) `ddm_measurement_ladder_rungs123`: FOUR_RUNG ladder
+GREEN_MEASURED_APPARATUS_SCOPE at real 512×384 resolution, same-artifact n256 archive 1,095,272 B
+(MAIN re-derived bit-identical, sha 1c22f9b1…); N600 closure honestly RED_N256_ONLY.
+
+**MEASURED (apparatus axis, not score):** coarse describe grammar ≈4.3 KB/pair (~10× the ~440 B/pair
+box bar) yields pixel-exact 0.0018–0.0027, channel-exact ≈0.087–0.091, RGB-argmax-diagnostic
+disagreement 0.196–0.229 vs the C1 member. Pose6 ordinal codes complete (integer debt 0 — NOT d_pose).
+
+**SIGNAL (verdict_scope: FORMULATION):** pixel-exact reproduction of ONE solution-polytope member is
+the wrong objective for a smooth grammar — the C1 pair is a single member; #547/#549/#602 constraint
+surfaces define the whole polytope and any member scores identically. Open measured question: how much
+of the 20–23% disagreement is score-invisible slack? → live arm `ddm_polytope_membership_n600`
+(20260722T023416Z) adds the argmax-cell MEMBERSHIP metric (reusing #549/#602 surfaces) + attempts the
+genuine n600 same-artifact closure. Equations leg: membership-vs-exactness law NOT registered yet —
+FORMALIZATION_PENDING:membership metric under live measurement; register on the arm's verdict.
+
+**Pointer 0.1910828242 [contest-CPU] UNMOVED** (all of the above is describe-line apparatus on the
+#613 crux path; no scorer invoked, no score claim).
