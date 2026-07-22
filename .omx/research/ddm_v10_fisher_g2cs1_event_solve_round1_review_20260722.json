@@ -1,0 +1,71 @@
+{
+  "schema": "ddm_v10_fisher_g2cs1_event_solve_round1_review.v1",
+  "surface_id": "lane_ddm_v10_fisher_g2cs1_event_solve_20260722",
+  "review_status": "ROUND1_FINDINGS_FIXED_THREE_CLEAN_PASSES_MAIN_REVIEW_REQUIRED",
+  "round_1": {
+    "verdict": "NOT_CLEAN",
+    "findings": [
+      {
+        "id": "R1-1",
+        "severity": "critical",
+        "finding": "A global top-32 Fisher cutoff allowed Road proposals to erase every Lane and event proposal, contradicting the claimed joint search.",
+        "resolution": "Preregistered minimum inventory from Road-boundary, Lane-chart, Lane-event, and Movable-event families before filling remaining slots in Fisher order; reran n64 and n256 in new immutable roots.",
+        "regression": "test_v10_candidate_cutoff_preserves_every_mechanism_family",
+        "superseded_receipt_sha256": "ab7d27d717fe943d9db8bb345e182d975ed87d1fc1e42fcd227e894609ac8f1a"
+      },
+      {
+        "id": "R1-2",
+        "severity": "high",
+        "finding": "The CLI decoded JSON to Python before strict Pydantic validation, turning valid JSON arrays for typed tuples into a startup failure.",
+        "resolution": "Dispatch inspects the schema but validates the original bytes with model_validate_json; the failed invocation produced no measurement.",
+        "regression": "both typed JSON configs validate and both completed-receipt resume commands pass"
+      },
+      {
+        "id": "R1-3",
+        "severity": "high",
+        "finding": "The strict parser accepted a correction-member permutation before canonical ZIP re-encode caught it indirectly.",
+        "resolution": "Parser now enforces the exact optional correction order explicitly.",
+        "regression": "test_v10_refuses_noncanonical_correction_member_order"
+      },
+      {
+        "id": "R1-4",
+        "severity": "medium",
+        "finding": "Fresh search repeated the full baseline scorer pass and identical budget archives repeated full bridge measurements, consuming most of the n256 command budget.",
+        "resolution": "Fresh empty-accepted state reuses the captured baseline batches; byte-identical ladder archives reuse the exact hash-keyed bridge and record the source rung.",
+        "regression": "n256 total wall clock 390.35 seconds with 5 ladder rows; rungs 1-4 name budget 0 as identical-archive measurement source"
+      }
+    ]
+  },
+  "clean_rounds": [
+    {
+      "round": 2,
+      "lens": "binary grammar, canonical member order, individual no-op refusal, scorer and GT exclusion",
+      "verdict": "CLEAN"
+    },
+    {
+      "round": 3,
+      "lens": "mechanism diversity, exact canonical-batch marginal arithmetic, pose containment, exact rate break-even",
+      "verdict": "CLEAN"
+    },
+    {
+      "round": 4,
+      "lens": "immutable resume, exact budget ladder, claim hygiene, instance-scoped falsifier, no n600 fabrication",
+      "verdict": "CLEAN"
+    }
+  ],
+  "verification": {
+    "pytest": "9 passed",
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "git_diff_check": "PASS",
+    "n64_completed_receipt_resume": "PASS",
+    "n256_completed_receipt_resume": "PASS",
+    "n64_receipt_sha256": "59e1c0cd6bfb5c6f5199097282c143fb6fab02d972ef40c88275917d216dee8a",
+    "n256_receipt_sha256": "2c7907bcc337cd58ba16f01b16a2cb889523ae31daa01222decccf0380ee31da"
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "main_landing_review_required": true
+}

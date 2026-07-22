@@ -83274,6 +83274,48 @@
       },
       "notes": "research_only=true; local-paper and live-repository crosswalk; no launch; no score claim",
       "research_only": true
+    },
+    {
+      "id": "lane_ddm_v10_fisher_g2cs1_event_solve_20260722",
+      "name": "DDM v10 Fisher G2CS1 event solve tasks 603 613",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/direct_description_carrier_compose.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v10_fisher_event_n256_20260722T130403Z_round2/ddm_v10_fisher_event_search_n256_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/optimization/tests/test_direct_description_carrier_compose.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v10_fisher_g2cs1_event_solve_round1_review_20260722.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only local Fisher/event solve; exact n64/n256 advisory receipts; MAIN review required; pointer unchanged.",
+      "research_only": true
     }
   ],
   "level_rules": {
