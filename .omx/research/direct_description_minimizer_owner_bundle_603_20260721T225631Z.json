@@ -1,0 +1,249 @@
+{
+  "compile_target": "direct_description_minimizer.v1",
+  "consumer_argv": [
+    "/usr/bin/env",
+    "python3",
+    "tools/run_direct_description_minimizer.py",
+    "--owner-manifest",
+    ".omx/research/direct_description_minimizer_owner_bundle_603_20260721T225631Z.json",
+    "--mode",
+    "preflight",
+    "--execution-allowed",
+    "false"
+  ],
+  "custody_argv": [
+    "/usr/bin/env",
+    "python3",
+    "tools/run_direct_description_minimizer.py",
+    "--owner-manifest",
+    ".omx/research/direct_description_minimizer_owner_bundle_603_20260721T225631Z.json",
+    "--mode",
+    "preflight",
+    "--execution-allowed",
+    "false"
+  ],
+  "custody_argv_byte_identical": true,
+  "custody_constants_manifest": {
+    "--seed": {
+      "equation_id": "dsl_custodied_scalar_identity_v1",
+      "fallback_used": false,
+      "inputs": [
+        {
+          "config_tags": {},
+          "kind": "literal",
+          "name": "value",
+          "provenance": "PRIMARY spec exact deterministic seed; identity custody only, no derivation claim",
+          "sha256": null,
+          "source": "literal",
+          "staleness_days": null,
+          "value": 1234
+        }
+      ],
+      "ladder_class": "hardcoded_waiver",
+      "value": 1234,
+      "warnings": []
+    }
+  },
+  "dsl_compile_hash": "b52deb678fd63fc916fa3156520741f81056f0e292dd67b0bd828ccf9c0d932d",
+  "execution_allowed": false,
+  "launch_readiness": "BLOCKED_RECEIVER_AND_RUNNER_NOT_IMPLEMENTED",
+  "owner": {
+    "admission_authority": "hard_integer_uint8_receiver_oracle",
+    "all_stage_checkpoints_preserved": true,
+    "allocation_axis_order": [
+      "class",
+      "canonical_stratum",
+      "temporal_segment_or_event_window",
+      "class_pair_boundary",
+      "frequency_or_scale"
+    ],
+    "carrier_source": "governed_v8_v9_503_reuse",
+    "decision_variable": "complete_counted_archive_description",
+    "evidence_root": "/Volumes/VertigoDataTier/pact/evidence/ddm_builder_20260721",
+    "execution_allowed": false,
+    "full_precision_target_receipt_required": true,
+    "governed_launcher": "tools/launch_witness_run.py",
+    "grammar": "static_ground_coefficients_plus_xi_curve_plus_sparse_events",
+    "memory_preflight": "tools/witness_memory_preflight.py",
+    "n600_required_for_admission": true,
+    "n64_role": "deterministic_receiver_and_custody_smoke_only",
+    "objective_domain": "exact_contest_score",
+    "operator_go_required": true,
+    "pairwise_pose_targets_compose_to_absolute": "forbidden_without_coordinate_receipt",
+    "pose_owner": "counted_pose6_dxi_residuals_inside_xi_grammar",
+    "post_hoc_composition": "forbidden",
+    "rate_lambda_denominator": 37545489,
+    "rate_lambda_numerator": 25,
+    "rate_source": "exact_len_of_final_archive_zip_A_of_z",
+    "receiver_domain": "integer_uint8_R",
+    "research_only": true,
+    "schema": "DirectDescriptionOpsGrammarMinimizerV1",
+    "seed": 1234,
+    "solve_order": "seg_cells_then_pose_tube_within_seg_feasible_polytope",
+    "step_metric_readback": [
+      "euclidean_cosine",
+      "fisher_cosine",
+      "relative_norm_ratio",
+      "extensible_additional_metrics"
+    ],
+    "tolerance_rungs": [
+      "0.000152",
+      "0.000300",
+      "0.000500",
+      "0.000800"
+    ]
+  },
+  "pre_custody_typed_config_hash": "5aab5c89f5b2b5fbff68b30cd83b05b5884ba32509de71c947937ba10a14caae",
+  "program_manifest": {
+    "compile_target": "DirectDescriptionWitnessProgramV1",
+    "consumer_argv": [
+      "/usr/bin/env",
+      "python3",
+      "tools/run_direct_description_minimizer.py",
+      "--owner-manifest",
+      ".omx/research/direct_description_minimizer_owner_bundle_603_20260721T225631Z.json",
+      "--mode",
+      "preflight",
+      "--execution-allowed",
+      "false"
+    ],
+    "consumer_argv_sha256": "fd09dfc54ef301fe9cd9dbcabdf114b53287f57ca018c5a1164869a8c8668001",
+    "execution_allowed": false,
+    "schema": "direct_description_program_manifest.v1",
+    "typed_config_hash": "7ce188c4a9995986112b8886451ec5593c9c0086e7363d989d62db9a3f9725df"
+  },
+  "schema": "direct_description_typed_owner_bundle.v1",
+  "typed_config": {
+    "custody_levers": [
+      {
+        "epochs_delta": 0,
+        "lawref_declarations": {
+          "--seed": {
+            "equation_id": "dsl_custodied_scalar_identity_v1",
+            "fallback": 1234,
+            "fallback_waiver_reason": "operator-sealed PRIMARY seed; rederive only when a superseding spec changes it",
+            "inputs": {
+              "value": {
+                "artifact_path": null,
+                "config_tags": {},
+                "expected_sha256": null,
+                "extract": null,
+                "kind": "literal",
+                "max_staleness_days": null,
+                "provenance": "PRIMARY spec exact deterministic seed; identity custody only, no derivation claim",
+                "value": 1234
+              }
+            },
+            "ladder_class": "hardcoded_waiver"
+          }
+        },
+        "name": "direct_description_ops_grammar_minimizer_owner",
+        "notes": "custody attached last; argv-value-neutral; execution_allowed:false",
+        "overrides": {
+          "--seed": 1234
+        },
+        "policy_contracts": {
+          "direct_description_owner": {
+            "admission_authority": "hard_integer_uint8_receiver_oracle",
+            "all_stage_checkpoints_preserved": true,
+            "allocation_axis_order": [
+              "class",
+              "canonical_stratum",
+              "temporal_segment_or_event_window",
+              "class_pair_boundary",
+              "frequency_or_scale"
+            ],
+            "carrier_source": "governed_v8_v9_503_reuse",
+            "decision_variable": "complete_counted_archive_description",
+            "evidence_root": "/Volumes/VertigoDataTier/pact/evidence/ddm_builder_20260721",
+            "execution_allowed": false,
+            "full_precision_target_receipt_required": true,
+            "governed_launcher": "tools/launch_witness_run.py",
+            "grammar": "static_ground_coefficients_plus_xi_curve_plus_sparse_events",
+            "memory_preflight": "tools/witness_memory_preflight.py",
+            "n600_required_for_admission": true,
+            "n64_role": "deterministic_receiver_and_custody_smoke_only",
+            "objective_domain": "exact_contest_score",
+            "operator_go_required": true,
+            "pairwise_pose_targets_compose_to_absolute": "forbidden_without_coordinate_receipt",
+            "pose_owner": "counted_pose6_dxi_residuals_inside_xi_grammar",
+            "post_hoc_composition": "forbidden",
+            "rate_lambda_denominator": 37545489,
+            "rate_lambda_numerator": 25,
+            "rate_source": "exact_len_of_final_archive_zip_A_of_z",
+            "receiver_domain": "integer_uint8_R",
+            "research_only": true,
+            "schema": "DirectDescriptionOpsGrammarMinimizerV1",
+            "seed": 1234,
+            "solve_order": "seg_cells_then_pose_tube_within_seg_feasible_polytope",
+            "step_metric_readback": [
+              "euclidean_cosine",
+              "fisher_cosine",
+              "relative_norm_ratio",
+              "extensible_additional_metrics"
+            ],
+            "tolerance_rungs": [
+              "0.000152",
+              "0.000300",
+              "0.000500",
+              "0.000800"
+            ]
+          }
+        },
+        "runtime_receipt_schemas": {
+          "--seed": "direct_description_runtime_consumption.v1"
+        }
+      }
+    ],
+    "name": "direct_description_ops_grammar_minimizer_v1",
+    "owner": {
+      "admission_authority": "hard_integer_uint8_receiver_oracle",
+      "all_stage_checkpoints_preserved": true,
+      "allocation_axis_order": [
+        "class",
+        "canonical_stratum",
+        "temporal_segment_or_event_window",
+        "class_pair_boundary",
+        "frequency_or_scale"
+      ],
+      "carrier_source": "governed_v8_v9_503_reuse",
+      "decision_variable": "complete_counted_archive_description",
+      "evidence_root": "/Volumes/VertigoDataTier/pact/evidence/ddm_builder_20260721",
+      "execution_allowed": false,
+      "full_precision_target_receipt_required": true,
+      "governed_launcher": "tools/launch_witness_run.py",
+      "grammar": "static_ground_coefficients_plus_xi_curve_plus_sparse_events",
+      "memory_preflight": "tools/witness_memory_preflight.py",
+      "n600_required_for_admission": true,
+      "n64_role": "deterministic_receiver_and_custody_smoke_only",
+      "objective_domain": "exact_contest_score",
+      "operator_go_required": true,
+      "pairwise_pose_targets_compose_to_absolute": "forbidden_without_coordinate_receipt",
+      "pose_owner": "counted_pose6_dxi_residuals_inside_xi_grammar",
+      "post_hoc_composition": "forbidden",
+      "rate_lambda_denominator": 37545489,
+      "rate_lambda_numerator": 25,
+      "rate_source": "exact_len_of_final_archive_zip_A_of_z",
+      "receiver_domain": "integer_uint8_R",
+      "research_only": true,
+      "schema": "DirectDescriptionOpsGrammarMinimizerV1",
+      "seed": 1234,
+      "solve_order": "seg_cells_then_pose_tube_within_seg_feasible_polytope",
+      "step_metric_readback": [
+        "euclidean_cosine",
+        "fisher_cosine",
+        "relative_norm_ratio",
+        "extensible_additional_metrics"
+      ],
+      "tolerance_rungs": [
+        "0.000152",
+        "0.000300",
+        "0.000500",
+        "0.000800"
+      ]
+    },
+    "owner_manifest_path": ".omx/research/direct_description_minimizer_owner_bundle_603_20260721T225631Z.json",
+    "schema": "DirectDescriptionTypedConfigV1"
+  },
+  "typed_config_hash": "7ce188c4a9995986112b8886451ec5593c9c0086e7363d989d62db9a3f9725df"
+}
