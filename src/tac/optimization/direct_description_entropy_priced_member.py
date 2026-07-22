@@ -18,7 +18,7 @@ import zlib
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Final, Literal
 
@@ -5023,6 +5023,18 @@ def _v8_candidate_scope(config: DirectDescriptionMarginGatedCorrectionConfigV1) 
     )
 
 
+def _v8_bridge_distances(row: Mapping[str, Any]) -> tuple[Decimal, Decimal]:
+    try:
+        bridge = row["evaluator_bridge"]
+        d_seg = Decimal(str(bridge["segmentation"]["d_seg"]))
+        d_pose = Decimal(str(bridge["pose"]["d_pose"]))
+    except (KeyError, TypeError, InvalidOperation) as exc:
+        raise DirectDescriptionError("v8 evaluator bridge lacks nested Seg/Pose distances") from exc
+    if not d_seg.is_finite() or not d_pose.is_finite() or d_seg < 0 or d_pose < 0:
+        raise DirectDescriptionError("v8 evaluator bridge distances must be finite and nonnegative")
+    return d_seg, d_pose
+
+
 def _v8_load_completed_receipt(
     config: DirectDescriptionMarginGatedCorrectionConfigV1,
     root: Path,
@@ -5197,8 +5209,7 @@ def run_margin_gated_correction(
                     "final_zip_home_bytes": home_by_name[member_name]["zip_home_bytes"],
                 }
             )
-        d_seg = Decimal(bridge["segmentation"]["d_seg"])
-        d_pose = Decimal(bridge["pose"]["d_pose"])
+        d_seg, d_pose = _v8_bridge_distances({"evaluator_bridge": bridge})
         row = {
             "candidate_index": candidate_index,
             "policy_name": policy_name,
@@ -5243,8 +5254,7 @@ def run_margin_gated_correction(
         rows.append(row)
         checkpoint_paths.append(str(checkpoint_path))
     inherited = next(row for row in v7_receipt["candidates"] if row["policy_name"] == "exact_all")
-    inherited_d_seg = Decimal(str(inherited["evaluator_bridge"]["d_seg"]))
-    inherited_d_pose = Decimal(str(inherited["evaluator_bridge"]["d_pose"]))
+    inherited_d_seg, inherited_d_pose = _v8_bridge_distances(inherited)
     inherited_gates = {
         **dict(inherited["gates"]),
         "d_pose_le_0_00025": inherited_d_pose <= Decimal(config.pose_guard_d_pose),

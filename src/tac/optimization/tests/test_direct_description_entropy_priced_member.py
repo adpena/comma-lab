@@ -34,6 +34,7 @@ from tac.optimization.direct_description_entropy_priced_member import (
     _v7_candidate_verdict_scope,
     _v7_discrete_waterfill,
     _v7_load_completed_receipt,
+    _v8_bridge_distances,
     _v8_finalize_resize_preimage,
     _v8_resize_preimage_accumulator,
     _v8_section_masks,
@@ -848,6 +849,18 @@ def test_v8_embedded_v7_config_roundtrips_through_strict_json() -> None:
     embedded_json = json.dumps(settled.model_dump(mode="json", by_alias=True)).encode()
     parsed = DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1.model_validate_json(embedded_json)
     assert parsed == settled
+
+
+def test_v8_bridge_distances_require_nested_settled_schema() -> None:
+    row = {
+        "evaluator_bridge": {
+            "segmentation": {"d_seg": "0.001000000000"},
+            "pose": {"d_pose": "0.000200000000"},
+        }
+    }
+    assert _v8_bridge_distances(row) == (Decimal("0.001"), Decimal("0.0002"))
+    with pytest.raises(DirectDescriptionError, match="nested Seg/Pose"):
+        _v8_bridge_distances({"evaluator_bridge": {"d_seg": "0.001", "d_pose": "0.0002"}})
 
 
 def test_v8_archive_reuses_receiver_without_scorer_or_argmax_table() -> None:
