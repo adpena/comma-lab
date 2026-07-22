@@ -1,0 +1,47 @@
+{
+  "schema": "ddm_v11_obligation_vocabulary_round1_review.v1",
+  "reviewed_utc": "2026-07-22T16:00:00Z",
+  "lane_id": "lane_ddm_v11_obligation_vocabulary_solve_20260722",
+  "review_kind": "fresh_eyes_adversarial_round_1",
+  "disposition": "PASS_AFTER_FIXES_WITH_BOUNDED_SEARCH_COVERAGE_DEBT",
+  "issues_found_and_fixed": [
+    {
+      "class": "absolute_pair_batch_origin",
+      "finding": "obligation bundling referenced an undefined pair_start and could not bind absolute source IDs to window-relative scorer batches",
+      "fix": "typed pair_start is passed explicitly and a [448,512) regression proves batch boundaries"
+    },
+    {
+      "class": "mixed_family_bundle_aliasing",
+      "finding": "one 128-atom mixed bundle per batch aliased useful local atoms with unrelated harmful strata",
+      "fix": "family-specific canonical-batch bundles capped at 16 nonconflicting atoms"
+    },
+    {
+      "class": "budget_availability_vs_inventory_exhaustion",
+      "finding": "the first n600 receipt treated unspent budget as failure to probe the 200KB ceiling and omitted measurement-inventory coverage",
+      "fix": "receipt independently records ceiling coverage, measured atoms, unmeasured bounded atoms, inventory exhaustion, and falsifier reason"
+    }
+  ],
+  "verification": {
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "pytest": "64 passed",
+    "n600_round2_round3_base_sha_identical": true,
+    "n600_round2_round3_inventory_sha_identical": true,
+    "n600_round2_round3_ladder_archive_shas_identical": true,
+    "receiver_parse_reencode_identical": true,
+    "pixel_stream_present": false,
+    "scorer_or_gt_present_in_archive": false,
+    "pointer_moved": false
+  },
+  "remaining_debt": {
+    "classification": "BOUNDED_MEASUREMENT_COVERAGE_NOT_FORMULATION_CLOSURE",
+    "n600_bounded_atoms": 4096,
+    "n600_atoms_in_measured_bundles": 492,
+    "n600_unmeasured_bounded_atoms": 3604,
+    "contest_cpu": false,
+    "contest_cuda": false,
+    "three_clean_review": false,
+    "main_landing_review_required": true
+  },
+  "verdict_scope": "exact V11 grammar, generator cap, family-batch bundling, top-32 measured ordering, and bound fixed_ar1_hold24 realization only; all broader families remain open"
+}

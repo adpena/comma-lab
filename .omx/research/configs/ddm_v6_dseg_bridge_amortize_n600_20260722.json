@@ -1,0 +1,23 @@
+{
+  "schema": "DirectDescriptionDsegBridgeAmortizeConfigV1",
+  "run_id": "ddm_v6_dseg_bridge_amortize_seed1234",
+  "pair_start": 0,
+  "pair_count": 600,
+  "v5_receipt_path": ".omx/research/ddm_v5_route_fix_compose_n600_20260722T145500Z/ddm_v5_route_fix_composed_n600_receipt.json",
+  "v5_receipt_sha256": "7f7d3c8e9b13164616d2de512eea3c4e9e8a09a3e1305417edd7145fb9c02957",
+  "v5_archive_path": ".omx/research/ddm_v5_route_fix_compose_n600_20260722T145500Z/ddm_v5_route_fix_composed_n600.not_a_candidate.zip.receipt-bytes",
+  "v5_archive_sha256": "83715cf1319e4a4abc4bc142ce6c095aa1024e46cb29d108b08a556426e26fe4",
+  "scorer_batch_size": 16,
+  "scorer_threads": 4,
+  "max_key_gap": 24,
+  "candidate_modes": ["fixed_ar1_hold24"],
+  "checkpoint_policy": "atomic_preserve_every_candidate",
+  "rate_authority": "exact_len_of_receiver_closed_composed_zip_A6_of_z",
+  "target_d_seg": "0.001160000000",
+  "s4_knee_d_seg": "0.016000000000",
+  "s4_knee_archive_bytes": 216207,
+  "seed": 1234,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false
+}
