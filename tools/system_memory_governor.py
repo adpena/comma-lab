@@ -150,6 +150,34 @@ DEFAULT_FLOOR_CAP_FRAC = 0.5
 # the operator's documented sole-workload policy (>=10 fail-safe + ~10 margin ~= 20 GiB).
 SOLE_WORKLOAD_BURST_FRAC = 0.5
 SAFETY_FLOOR_ENV = "TAC_GOV_SAFETY_FLOOR_GIB"    # env override (GiB); CLI --safety-floor-gib wins
+# ── OPERATOR CEILING POLICY (operator verbatim 2026-07-21: "You can increase the ceiling to a
+# hundred and six gigabytes. We have a hundred and twenty eight gigabyte machine, and your
+# experiments are going to be the only thing running on it." — corrected same day: "Sorry. I
+# meant you can increase it to one hundred and sixteen gigabytes.") ─────────────────────────────
+# On boxes with total RAM >= OPERATOR_CEILING_MIN_TOTAL_GIB, the adaptive ceiling is raised to AT
+# LEAST OPERATOR_CEILING_GIB_DEFAULT (the margin is correspondingly capped at total-116, never
+# leaving less than ABS_MIN_SAFETY_FLOOR_GIB of headroom). Smaller fleet tiers (8 GiB M1 etc.)
+# are UNAFFECTED — the total-RAM guard exists so an absolute 128-GiB-box policy never eats a
+# small box. The policy is a RAISE-only override: if the derived ceiling is already higher, it
+# stands. Env TAC_GOV_OPERATOR_CEILING_GIB overrides (set 0 to disable). Value provenance:
+# operator-provided constant (operator directive 2026-07-21, sole-workload machine), NOT derived;
+# memory: operator_ceiling_106gib_sole_workload_20260721.md.
+OPERATOR_CEILING_GIB_DEFAULT = 116.0
+OPERATOR_CEILING_MIN_TOTAL_GIB = 120.0
+OPERATOR_CEILING_ENV = "TAC_GOV_OPERATOR_CEILING_GIB"
+
+
+def operator_ceiling_gib() -> float:
+    """The operator-policy absolute ceiling (GiB); 0.0 disables. Env-overridable."""
+    raw = os.environ.get(OPERATOR_CEILING_ENV)
+    if raw is None:
+        return OPERATOR_CEILING_GIB_DEFAULT
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return OPERATOR_CEILING_GIB_DEFAULT
+
+
 FLOOR_MODE_DERIVED = "derived"
 FLOOR_MODE_FIXED = "fixed"
 FLOOR_MODES = (FLOOR_MODE_DERIVED, FLOOR_MODE_FIXED)
@@ -1357,6 +1385,12 @@ def compute_adaptive_ceiling(
         )
         margin = floor.floor_gib
     ceiling = float(total_gib) - margin
+    # Operator ceiling policy (2026-07-21, sole-workload 128 GiB box): RAISE-only, guarded to
+    # big boxes so small fleet tiers keep their derived-floor protection unchanged.
+    _oc = operator_ceiling_gib()
+    if _oc > 0.0 and float(total_gib) >= OPERATOR_CEILING_MIN_TOTAL_GIB and ceiling < _oc:
+        ceiling = min(_oc, float(total_gib) - ABS_MIN_SAFETY_FLOOR_GIB)
+        margin = float(total_gib) - ceiling
     budget = ceiling - baseline
     return AdaptiveCeiling(
         total_gib=float(total_gib), used_gib=float(used_gib),

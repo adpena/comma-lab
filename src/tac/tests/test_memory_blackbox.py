@@ -35,6 +35,9 @@ def _job(label="probe", pid=1234):
 
 # ── sample shape ────────────────────────────────────────────────────────────────────────────────
 def test_sample_once_has_all_trust_and_ceiling_fields(monkeypatch):
+    # Operator-ceiling policy (2026-07-21, RAISE-only) disabled: this test asserts exact
+    # DERIVED-floor ceiling arithmetic on a 128 GiB scenario.
+    monkeypatch.setenv("TAC_GOV_OPERATOR_CEILING_GIB", "0")
     monkeypatch.delenv(gov.SAFETY_FLOOR_ENV, raising=False)  # hermetic vs a leaked floor override
     s = mbb.sample_once(jobs=[_job()], snapshot=_snap())
     for k in ("ts", "ts_iso", "mono", "boottime", "total_gib", "used_gib", "available_gib",

@@ -174,6 +174,9 @@ def test_override_wins_and_is_clamped_with_loud_log():
 
 
 def test_env_override_flows_through_adaptive_ceiling(monkeypatch):
+    # Operator-ceiling policy (2026-07-21, RAISE-only) disabled: this test exercises the
+    # tier-scaled DERIVED floor mechanism specifically.
+    monkeypatch.setenv(gov.OPERATOR_CEILING_ENV, "0")
     monkeypatch.setenv(gov.SAFETY_FLOOR_ENV, "20.0")
     c = gov.compute_adaptive_ceiling(total_gib=128.0, used_gib=24.0, tracked_current_gib=8.0)
     assert c.safety_margin_gib == 20.0
@@ -190,7 +193,10 @@ def test_smoother_rises_instantly_decays_slowly():
     assert s.update(19.0) == 19.0              # rises again instantly
 
 
-def test_flap_oscillating_control_plane_raw_flaps_smoothed_stable():
+def test_flap_oscillating_control_plane_raw_flaps_smoothed_stable(monkeypatch):
+    # Operator-ceiling policy (2026-07-21, RAISE-only) disabled: this test exercises the
+    # tier-scaled DERIVED floor mechanism specifically.
+    monkeypatch.setenv(gov.OPERATOR_CEILING_ENV, "0")
     """cp oscillates 4<->12 GiB @128 (raw floor 10.4<->18.4 -> raw ceiling 117.6<->109.6).
     A 95 GiB launch on used=20 projects to 115: RAW verdicts flap ADMIT/REFUSE tick-to-tick;
     SMOOTHED verdicts are stable (REFUSE) from the first high-cp tick onward."""

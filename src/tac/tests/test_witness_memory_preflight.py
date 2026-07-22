@@ -216,7 +216,10 @@ def test_parse_launch_flags_extracts_bank_flags():
     assert flags["n_dir_freqs"] == 2
 
 
-def test_launch_sh_bank6_refuses_at_true_in_feat(tmp_path):
+def test_launch_sh_bank6_refuses_at_true_in_feat(tmp_path, monkeypatch):
+    # Operator-ceiling policy (2026-07-21, RAISE-only 116 GiB) disabled: this test verifies the
+    # bank-6 in_feat DERIVATION mechanism via the pre-policy 0.70-frac refusal threshold.
+    monkeypatch.setenv("TAC_GOV_OPERATOR_CEILING_GIB", "0")
     """The C4 FALSE-SAFE regression: the bank-6 launch.sh must now project the TRUE peak
     (110.81 GiB per the review's executed number) and REFUSE on a 128 GiB box."""
     p = tmp_path / "launch.sh"
@@ -236,7 +239,10 @@ def test_launch_sh_bank4_safe_at_67_61(tmp_path):
     assert proj.safe
 
 
-def test_launch_sh_in_feat_override_honored(tmp_path):
+def test_launch_sh_in_feat_override_honored(tmp_path, monkeypatch):
+    # Operator-ceiling policy (2026-07-21, RAISE-only 116 GiB) disabled: this test verifies the
+    # bank-6 in_feat DERIVATION mechanism via the pre-policy 0.70-frac refusal threshold.
+    monkeypatch.setenv("TAC_GOV_OPERATOR_CEILING_GIB", "0")
     """--in-feat alongside --launch-sh must be honored (it was silently ignored pre-fix)."""
     p = tmp_path / "launch.sh"
     p.write_text(_BANK4_LAUNCH_BODY)
@@ -245,7 +251,10 @@ def test_launch_sh_in_feat_override_honored(tmp_path):
     assert not proj.safe
 
 
-def test_cli_launch_sh_bank6_strict_returns_3(tmp_path, capsys):
+def test_cli_launch_sh_bank6_strict_returns_3(tmp_path, capsys, monkeypatch):
+    # Operator-ceiling policy (2026-07-21, RAISE-only 116 GiB) disabled: this test verifies the
+    # bank-6 in_feat DERIVATION mechanism via the pre-policy 0.70-frac refusal threshold.
+    monkeypatch.setenv("TAC_GOV_OPERATOR_CEILING_GIB", "0")
     p = tmp_path / "launch.sh"
     p.write_text(_BANK6_LAUNCH_BODY)
     rc = wmp.main(["--launch-sh", str(p), "--total-ram-gib", "128", "--strict"])
@@ -254,7 +263,10 @@ def test_cli_launch_sh_bank6_strict_returns_3(tmp_path, capsys):
     assert "REFUSE" in out and "in_feat=176" in out
 
 
-def test_cli_launch_sh_honors_in_feat_override(tmp_path, capsys):
+def test_cli_launch_sh_honors_in_feat_override(tmp_path, capsys, monkeypatch):
+    # Operator-ceiling policy (2026-07-21, RAISE-only 116 GiB) disabled: this test verifies the
+    # bank-6 in_feat DERIVATION mechanism via the pre-policy 0.70-frac refusal threshold.
+    monkeypatch.setenv("TAC_GOV_OPERATOR_CEILING_GIB", "0")
     p = tmp_path / "launch.sh"
     p.write_text(_BANK4_LAUNCH_BODY)
     rc = wmp.main(["--launch-sh", str(p), "--in-feat", "176", "--total-ram-gib", "128", "--strict"])

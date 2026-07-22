@@ -60,6 +60,15 @@ VERDICT_PER_PAIR_GIB = 0.11          # marginal fp32-cast + EfficientNet/FastViT
 VERDICT_FLOOR_GIB = 6.0              # measured chunked floor (vbatch 8/32 both ~5.6)
 FIXED_OVERHEAD_GIB = 15.0            # python + torch scorers + MLX buffer pool + lstar/numpy caches (conservative)
 DEFAULT_SAFE_FRAC = 0.70             # refuse above this fraction of total RAM (control-plane + coexistence headroom)
+# ── OPERATOR CEILING POLICY (operator verbatim 2026-07-21: "You can increase the ceiling to a
+# hundred and six gigabytes ... your experiments are going to be the only thing running on it."
+# — corrected same day: "Sorry. I meant you can increase it to one hundred and sixteen
+# gigabytes."). Canonical policy lives in
+# tools/system_memory_governor.operator_ceiling_gib (ONE knob: TAC_GOV_OPERATOR_CEILING_GIB);
+# the constants here are the import-unavailable fallback ONLY. RAISE-only, guarded to boxes
+# >= 120 GiB total so small fleet tiers keep the safe-frac ceiling unchanged.
+OPERATOR_CEILING_GIB_FALLBACK = 116.0
+OPERATOR_CEILING_MIN_TOTAL_GIB = 120.0
 DEFAULT_VERDICT_BATCH = 32           # trainer default when --verdict-batch is not emitted
 # ── P11′ AA-supersample constants (T5 recess R3; P5 verdict F4 amendment 2026-07-07) ────────────
 # Faithful to the trainer's RECONCILED Q3 arithmetic (train_levelset_witness_realized_through_R_mlx.py
@@ -162,13 +171,19 @@ def project_peak_rss_gib(
     if total_ram_gib is None:
         total_ram_gib = _total_ram_gib()
     ceiling = safe_frac * total_ram_gib
+    ceiling_desc = f"{safe_frac:.0%} of {total_ram_gib:.0f} GiB"
+    _oc = _operator_ceiling_gib()
+    if _oc > 0.0 and total_ram_gib >= OPERATOR_CEILING_MIN_TOTAL_GIB and ceiling < _oc:
+        # Operator ceiling policy (2026-07-21, sole-workload 128 GiB box): RAISE-only.
+        ceiling = min(_oc, total_ram_gib - 2.0)
+        ceiling_desc = f"operator ceiling {_oc:.0f} GiB, 2026-07-21 sole-workload policy"
     safe = peak <= ceiling
     if safe:
         reason = (f"projected peak {peak:.1f} GiB <= safe ceiling {ceiling:.1f} GiB "
-                  f"({safe_frac:.0%} of {total_ram_gib:.0f} GiB)")
+                  f"({ceiling_desc})")
     else:
         reason = (f"projected peak {peak:.1f} GiB EXCEEDS safe ceiling {ceiling:.1f} GiB "
-                  f"({safe_frac:.0%} of {total_ram_gib:.0f} GiB) — would OOM / starve control-plane. "
+                  f"({ceiling_desc}) — would OOM / starve control-plane. "
                   f"Reduce --num-pairs, ensure --verdict-batch>0 (got {verdict_batch}), or free RAM.")
     return MemoryProjection(
         num_pairs=num_pairs, render_h=render_h, render_w=render_w, in_feat=in_feat,
@@ -181,6 +196,23 @@ def project_peak_rss_gib(
         fixed_overhead_gib=FIXED_OVERHEAD_GIB,
         projected_peak_gib=round(peak, 2), total_ram_gib=round(total_ram_gib, 1),
         safe_frac=safe_frac, safe_ceiling_gib=round(ceiling, 1), safe=safe, reason=reason)
+
+
+def _operator_ceiling_gib() -> float:
+    """Operator ceiling policy (2026-07-21). Canonical knob = the governor's; fallback here so a
+    missing governor import can never silently disable the operator's directive OR its env kill-switch."""
+    try:
+        import system_memory_governor as gov  # tools/ is on sys.path (same dir)
+
+        return float(gov.operator_ceiling_gib())
+    except Exception:
+        raw = os.environ.get("TAC_GOV_OPERATOR_CEILING_GIB")
+        if raw is None:
+            return OPERATOR_CEILING_GIB_FALLBACK
+        try:
+            return max(0.0, float(raw))
+        except ValueError:
+            return OPERATOR_CEILING_GIB_FALLBACK
 
 
 def _total_ram_gib() -> float:

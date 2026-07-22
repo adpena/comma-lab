@@ -133,10 +133,13 @@ def test_adaptive_ceiling_math_maxes_out_128():
     assert abs(c.training_budget_gib - 101.76) < 1e-6   # ceiling - baseline (>> old blind 90 GB cap)
 
 
-def test_adaptive_ceiling_default_is_derived_and_follows_control_plane():
+def test_adaptive_ceiling_default_is_derived_and_follows_control_plane(monkeypatch):
     """Default path: the floor FOLLOWS the measured control plane (baseline doubles as the
     dynamical leg's input): cp=16 -> floor 16+6.4=22.4 -> ceiling 105.6, budget 89.6; a realistic
-    live scenario (used 70, tracked 62 true GiB -> cp 8) -> floor 14.4 -> ceiling 113.6."""
+    live scenario (used 70, tracked 62 true GiB -> cp 8) -> floor 14.4 -> ceiling 113.6.
+    Operator-ceiling policy (2026-07-21, RAISE-only) disabled here: this test verifies the
+    DERIVED-floor path specifically."""
+    monkeypatch.setenv(gov.OPERATOR_CEILING_ENV, "0")
     d = gov.compute_adaptive_ceiling(total_gib=128.0, used_gib=24.0, tracked_current_gib=8.0)
     assert abs(d.safety_margin_gib - 22.4) < 1e-9
     assert abs(d.adaptive_ceiling_gib - 105.6) < 1e-9
@@ -171,7 +174,10 @@ def test_sole_workload_drops_the_double_count_but_keeps_proportional_burst_reser
             assert abs(sole.floor_gib - (gov.cp_headroom_gib(128.0) + 0.5 * cp)) < 1e-9
 
 
-def test_sole_workload_reproduces_operator_policy_at_measured_baseline():
+def test_sole_workload_reproduces_operator_policy_at_measured_baseline(monkeypatch):
+    # Operator-ceiling policy (2026-07-21, RAISE-only) disabled: this test asserts exact
+    # DERIVED-floor ceiling arithmetic on a 128 GiB scenario.
+    monkeypatch.setenv("TAC_GOV_OPERATOR_CEILING_GIB", "0")
     """At the ~27 GiB live control-plane baseline the sole reserve lands ~20 GiB = the operator's
     documented >=10 fail-safe + ~10 margin policy — and the run ADMITS (budget > a 71.5 GiB run)."""
     d = gov.compute_adaptive_ceiling(total_gib=128.0, used_gib=27.4, tracked_current_gib=0.2,
@@ -897,10 +903,13 @@ def test_reclaimable_accounting_idle_snapshot_exact():
     assert a.available_reclaimable_gib <= a.total_gib - a.wired_gib - a.compressor_gib
 
 
-def test_reclaimable_idle_admits_the_82gib_bench_that_ran_green():
+def test_reclaimable_idle_admits_the_82gib_bench_that_ran_green(monkeypatch):
     """(proof a) The EXACT false-refuse scenario: projected_new 71.54 GiB (the c2 delta-bench that
     ran GREEN twice + live tonight with no jetsam) on the idle box ADMITS under the committed
-    basis — and the same snapshot REFUSES under the legacy basis (pinning the bug we fixed)."""
+    basis — and the same snapshot REFUSES under the legacy basis (pinning the bug we fixed).
+    Operator-ceiling policy disabled: the legacy-contrast leg is a HISTORICAL replay of the
+    2026-07-16 false-refuse night, which predates the 2026-07-21 operator ceiling."""
+    monkeypatch.setenv(gov.OPERATOR_CEILING_ENV, "0")
     a = gov.reconcile_memory_accounting(**_IDLE_20260716)
     ctx = gov.live_admission_decision(projected_new_gib=71.54, snapshot=_snap_from_acct(a), jobs=[])
     assert ctx.decision.admit, ctx.decision.reason
@@ -1005,7 +1014,10 @@ def test_reclaimable_fail_safe_reduces_generous_available_too():
     assert a.available_reclaimable_gib < good.available_reclaimable_gib - 5.0
 
 
-def test_live_admission_uses_committed_basis_only_when_validated():
+def test_live_admission_uses_committed_basis_only_when_validated(monkeypatch):
+    # Operator-ceiling policy (2026-07-21, RAISE-only) disabled: this test asserts exact
+    # DERIVED-floor ceiling arithmetic on a 128 GiB scenario.
+    monkeypatch.setenv("TAC_GOV_OPERATOR_CEILING_GIB", "0")
     """The switch point: two snapshots identical except reclaimable_ok flip the 71.54 GiB verdict
     (validated committed basis ADMITS; unvalidated falls back to the legacy REFUSE)."""
     a = gov.reconcile_memory_accounting(**_IDLE_20260716)
@@ -1043,3 +1055,59 @@ def test_governed_descendant_excluded_from_tracked_current_sum():
     assert gov.sum_tracked_current_gib([parent]) == pytest.approx(63.56)
     assert child.to_json()["governed_descendant"] is True
     assert parent.governed_descendant is False   # default: registered rows are never descendants
+
+
+# ── OPERATOR CEILING POLICY (operator directive 2026-07-21, corrected same day: 116 GiB on the 128 GiB sole-workload
+# box) — RAISE-only, big-box-guarded, env-overridable ────────────────────────────────────────────
+class TestOperatorCeilingPolicy:
+    def test_128gib_box_ceiling_raised_to_116(self, monkeypatch):
+        monkeypatch.delenv(gov.OPERATOR_CEILING_ENV, raising=False)
+        ac = gov.compute_adaptive_ceiling(
+            total_gib=128.0, used_gib=41.5, tracked_current_gib=0.0)
+        assert ac.adaptive_ceiling_gib >= 116.0
+        assert ac.safety_margin_gib == pytest.approx(128.0 - ac.adaptive_ceiling_gib)
+        # budget stays physically consistent: ceiling - baseline
+        assert ac.training_budget_gib == pytest.approx(ac.adaptive_ceiling_gib - ac.baseline_gib)
+
+    def test_raise_only_never_lowers_a_higher_ceiling(self, monkeypatch):
+        monkeypatch.delenv(gov.OPERATOR_CEILING_ENV, raising=False)
+        # tiny explicit margin -> derived ceiling 126 > 106; the policy must NOT pull it down
+        ac = gov.compute_adaptive_ceiling(
+            total_gib=128.0, used_gib=10.0, tracked_current_gib=0.0, safety_margin_gib=2.0)
+        assert ac.adaptive_ceiling_gib == pytest.approx(126.0)
+
+    def test_small_box_unaffected(self, monkeypatch):
+        monkeypatch.delenv(gov.OPERATOR_CEILING_ENV, raising=False)
+        ac = gov.compute_adaptive_ceiling(
+            total_gib=8.0, used_gib=4.0, tracked_current_gib=0.0)
+        # an 8 GiB M1 must never inherit a 106 GiB absolute ceiling
+        assert ac.adaptive_ceiling_gib < 8.0
+
+    def test_env_zero_disables_policy(self, monkeypatch):
+        monkeypatch.setenv(gov.OPERATOR_CEILING_ENV, "0")
+        assert gov.operator_ceiling_gib() == 0.0
+        ac_off = gov.compute_adaptive_ceiling(
+            total_gib=128.0, used_gib=41.5, tracked_current_gib=0.0, safety_margin_gib=27.1)
+        assert ac_off.adaptive_ceiling_gib == pytest.approx(128.0 - 27.1)
+
+    def test_env_override_value_and_garbage(self, monkeypatch):
+        monkeypatch.setenv(gov.OPERATOR_CEILING_ENV, "110")
+        assert gov.operator_ceiling_gib() == pytest.approx(110.0)
+        monkeypatch.setenv(gov.OPERATOR_CEILING_ENV, "not-a-number")
+        assert gov.operator_ceiling_gib() == pytest.approx(gov.OPERATOR_CEILING_GIB_DEFAULT)
+
+    def test_ceiling_never_eats_abs_min_headroom(self, monkeypatch):
+        monkeypatch.setenv(gov.OPERATOR_CEILING_ENV, "127.5")
+        ac = gov.compute_adaptive_ceiling(
+            total_gib=128.0, used_gib=41.5, tracked_current_gib=0.0)
+        assert ac.adaptive_ceiling_gib <= 128.0 - gov.ABS_MIN_SAFETY_FLOOR_GIB
+
+    def test_preflight_intrinsic_leg_honors_operator_ceiling(self, monkeypatch):
+        monkeypatch.delenv(gov.OPERATOR_CEILING_ENV, raising=False)
+        import witness_memory_preflight as wmp
+        proj = wmp.project_peak_rss_gib(
+            num_pairs=600, verdict_batch=16, micro_batch_pairs=2, total_ram_gib=128.0)
+        assert proj.safe_ceiling_gib == pytest.approx(116.0, abs=0.1)
+        proj8 = wmp.project_peak_rss_gib(
+            num_pairs=24, self_orient=False, verdict_batch=8, total_ram_gib=8.0)
+        assert proj8.safe_ceiling_gib == pytest.approx(0.70 * 8.0, abs=0.1)
