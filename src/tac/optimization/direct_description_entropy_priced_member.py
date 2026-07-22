@@ -3607,7 +3607,7 @@ def run_dseg_bridge_amortize(
             },
             "verdict_scope": (
                 f"MEASURED n{config.pair_count} source-pair window "
-                f"[{config.pair_start},{config.pair_start + config.pair_count}) on {EVIDENCE_AXIS}; "
+                f"[{config.pair_start},{config.pair_start + config.pair_count}) on {V7_EVIDENCE_AXIS}; "
                 "formulation-local and not contest-CPU/CUDA"
             ),
         }
@@ -4088,6 +4088,73 @@ def _v7_exact_target_match(
     return {"bit_identical_to_solved_planes": True, "rendered_window_sha256": digest.hexdigest()}
 
 
+def _v7_discrete_waterfill(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Derive the cheap-to-faithful Pareto route from measured candidate rows."""
+
+    def distortion_term(row: Mapping[str, Any]) -> float:
+        bridge = row["evaluator_bridge"]
+        d_seg = float(bridge["segmentation"]["d_seg"])
+        d_pose = float(bridge["pose"]["d_pose"])
+        return 100.0 * d_seg + math.sqrt(10.0 * d_pose)
+
+    ordered = sorted(
+        rows,
+        key=lambda row: (
+            int(row["archive"]["bytes"]),
+            distortion_term(row),
+            int(row["candidate_index"]),
+        ),
+    )
+    frontier: list[Mapping[str, Any]] = []
+    dominated: list[str] = []
+    best_distortion = math.inf
+    for row in ordered:
+        distortion = distortion_term(row)
+        if distortion < best_distortion:
+            frontier.append(row)
+            best_distortion = distortion
+        else:
+            dominated.append(str(row["policy_name"]))
+    if len(frontier) < 2:
+        raise DirectDescriptionError("v7 waterfill requires at least two non-dominated measured states")
+
+    rate_price = 25.0 / float(SOURCE_BYTES)
+    marginals: list[dict[str, Any]] = []
+    first_break: str | None = None
+    for coarse, fine in itertools.pairwise(frontier):
+        coarse_name = str(coarse["policy_name"])
+        fine_name = str(fine["policy_name"])
+        added_bytes = int(fine["archive"]["bytes"]) - int(coarse["archive"]["bytes"])
+        if added_bytes <= 0:
+            raise DirectDescriptionError("v7 waterfill Pareto route is not strictly byte-monotone")
+        distortion_gain = distortion_term(coarse) - distortion_term(fine)
+        if distortion_gain <= 0.0:
+            raise DirectDescriptionError("v7 waterfill Pareto route is not strictly distortion-monotone")
+        gain_per_byte = distortion_gain / added_bytes
+        passes = gain_per_byte >= rate_price
+        if first_break is None and not passes:
+            first_break = f"{coarse_name}->{fine_name}"
+        marginals.append(
+            {
+                "from_policy": coarse_name,
+                "to_policy": fine_name,
+                "added_bytes": added_bytes,
+                "distortion_term_gain": f"{distortion_gain:.12f}",
+                "distortion_gain_per_added_byte": f"{gain_per_byte:.15f}",
+                "rate_price_per_byte": f"{rate_price:.15f}",
+                "passes_rate_break_even": passes,
+                "verdict_scope": "adjacent measured states on the discrete advisory Pareto envelope",
+            }
+        )
+    return {
+        "route": [str(row["policy_name"]) for row in frontier],
+        "dominated_policies": dominated,
+        "marginals": marginals,
+        "first_rate_break": first_break,
+        "route_derivation": "sort by exact archive bytes; retain strict distortion-record improvements",
+    }
+
+
 def run_solved_plane_tolerance_waterfill(
     config: DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1,
     *,
@@ -4297,46 +4364,7 @@ def run_solved_plane_tolerance_waterfill(
     exact_row = rows[0]
     exact_falsified = exact_row["archive"]["bytes"] > config.exact_residual_falsifier_bytes
     dominant = sorted(exact_row["stream_bytes"], key=lambda row: row["final_zip_home_bytes"], reverse=True)
-    rows_by_policy = {row["policy_name"]: row for row in rows}
-
-    def distortion_term(row: Mapping[str, Any]) -> float:
-        d_seg = float(row["evaluator_bridge"]["segmentation"]["d_seg"])
-        d_pose = float(row["evaluator_bridge"]["pose"]["d_pose"])
-        return 100.0 * d_seg + math.sqrt(10.0 * d_pose)
-
-    waterfill_route = (
-        "drop_to_predictor_all",
-        "q64_all",
-        "q16_all",
-        "waterfill_balanced",
-        "waterfill_sensitive_exact",
-        "q4_all",
-        "exact_all",
-    )
-    rate_price = 25.0 / float(SOURCE_BYTES)
-    waterfill_marginals: list[dict[str, Any]] = []
-    first_break: str | None = None
-    for coarse_name, fine_name in itertools.pairwise(waterfill_route):
-        coarse = rows_by_policy[coarse_name]
-        fine = rows_by_policy[fine_name]
-        added_bytes = int(fine["archive"]["bytes"]) - int(coarse["archive"]["bytes"])
-        distortion_gain = distortion_term(coarse) - distortion_term(fine)
-        gain_per_byte = distortion_gain / added_bytes if added_bytes > 0 else None
-        passes = gain_per_byte is not None and gain_per_byte >= rate_price
-        if first_break is None and not passes:
-            first_break = f"{coarse_name}->{fine_name}"
-        waterfill_marginals.append(
-            {
-                "from_policy": coarse_name,
-                "to_policy": fine_name,
-                "added_bytes": added_bytes,
-                "distortion_term_gain": f"{distortion_gain:.12f}",
-                "distortion_gain_per_added_byte": None if gain_per_byte is None else f"{gain_per_byte:.15f}",
-                "rate_price_per_byte": f"{rate_price:.15f}",
-                "passes_rate_break_even": passes,
-                "verdict_scope": "adjacent preregistered v7 waterfill states on one advisory source window",
-            }
-        )
+    waterfill = _v7_discrete_waterfill(rows)
     result = {
         "schema": V7_RESULT_SCHEMA,
         "task": 603,
@@ -4395,9 +4423,7 @@ def run_solved_plane_tolerance_waterfill(
             "binder": "minimum_bytes_subject_to_d_seg_le_0.00116" if qualifying else "closest_d_seg_no_feasible_row",
         },
         "waterfill": {
-            "route": list(waterfill_route),
-            "marginals": waterfill_marginals,
-            "first_rate_break": first_break,
+            **waterfill,
             "stop_rule": "stop future allocation at first marginal distortion gain per byte below 25/37545489",
             "metric": "100*d_seg+sqrt(10*d_pose) with exact final-ZIP bytes; advisory only",
         },

@@ -27,6 +27,7 @@ from tac.optimization.direct_description_entropy_priced_member import (
     _decode_site_records,
     _derived_membership_proxy,
     _encode_site_records,
+    _v7_discrete_waterfill,
     _xi_pose6_keyframes,
     build_entropy_candidate_z,
     compile_composed_structured_member_archive,
@@ -753,6 +754,32 @@ def test_v7_drop_section_requires_no_keys_and_zero_step() -> None:
             quant_step=0,
             records={0: (np.asarray([], dtype="<u4"), np.empty((0, 3), dtype=np.uint8))},
         )
+
+
+def test_v7_waterfill_derives_a_strict_pareto_route_from_measurements() -> None:
+    def row(index: int, name: str, archive_bytes: int, distortion: float) -> dict[str, object]:
+        return {
+            "candidate_index": index,
+            "policy_name": name,
+            "archive": {"bytes": archive_bytes},
+            "evaluator_bridge": {
+                "segmentation": {"d_seg": f"{distortion / 100.0:.12f}"},
+                "pose": {"d_pose": "0.000000000000"},
+            },
+        }
+
+    summary = _v7_discrete_waterfill(
+        (
+            row(0, "exact", 400, 1.0),
+            row(1, "dominated", 250, 4.0),
+            row(2, "cheap", 100, 5.0),
+            row(3, "middle", 200, 3.0),
+        )
+    )
+    assert summary["route"] == ["cheap", "middle", "exact"]
+    assert summary["dominated_policies"] == ["dominated"]
+    assert all(item["added_bytes"] > 0 for item in summary["marginals"])
+    assert all(Decimal(item["distortion_term_gain"]) > 0 for item in summary["marginals"])
 
 
 def test_structured_candidate_stages_resume_and_preserve_every_archive(tmp_path: Path) -> None:
