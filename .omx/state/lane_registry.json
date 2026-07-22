@@ -82599,6 +82599,55 @@
         }
       },
       "notes": "Task 603 local custody build complete: Pose6-consuming integer/uint8 V2 receiver, six independent ZIP_STORED semantic homes, all-byte no-op detector, typed three-stage candidate-search optimizer with immutable disk resume, and n64 deterministic smoke. 4/19 blockers GREEN_CUSTODY_SCOPE; 15 remain red; no scorer/score/candidate/dispatch; pointer unchanged; MAIN review required."
+    },
+    {
+      "id": "lane_ddm_target_receipt_pose_rung0_603_20260722",
+      "name": "DDM target receipt and pose rung zero task 603",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_target_receipt_pose_rung0_603_20260722T010130Z.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task 603 exact existing C1 target custody plus bounded n64 real-target Pose-active apparatus; 6/19 scoped green, 13/19 red; no scorer/score/dispatch; MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "MAIN landing review",
+        "canonical resume/compiler/launcher integration",
+        "four-rung ladder",
+        "n600 same-artifact CPU/CUDA closure",
+        "operator GO"
+      ]
     }
   ],
   "level_rules": {
@@ -82608,5 +82657,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T00:45:21Z"
+  "updated_at": "2026-07-22T01:39:58Z"
 }
