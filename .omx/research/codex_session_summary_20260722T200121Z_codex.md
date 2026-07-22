@@ -1,10 +1,10 @@
 # Codex session summary — DDM G2 solve-difference operator mining
 
-date_utc: 2026-07-22T20:01:21Z  
-lane_id: ddm_g2_solve_diff_op_mining_20260722  
-delegation_checkpoint: codex_delegate:ddm_g2_solve_diff_op_mining:20260722T182405Z  
-evidence_axis: [macOS-CPU frozen-scorer advisory]  
-score_claim: false  
+date_utc: 2026-07-22T20:01:21Z
+lane_id: ddm_g2_solve_diff_op_mining_20260722
+delegation_checkpoint: codex_delegate:ddm_g2_solve_diff_op_mining:20260722T182405Z
+evidence_axis: [macOS-CPU frozen-scorer advisory]
+score_claim: false
 main_landing_review_required: true
 
 ## Landed on the review branch

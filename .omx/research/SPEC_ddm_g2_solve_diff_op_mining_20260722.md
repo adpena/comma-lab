@@ -1,8 +1,8 @@
 # DDM G2 solve-minus-predict differential operator mining — frozen implementation spec
 
-Date: 2026-07-22  
-Lane: `ddm_g2_solve_diff_op_mining`  
-Delegation checkpoint: `codex_delegate:ddm_g2_solve_diff_op_mining:20260722T182405Z`  
+Date: 2026-07-22
+Lane: `ddm_g2_solve_diff_op_mining`
+Delegation checkpoint: `codex_delegate:ddm_g2_solve_diff_op_mining:20260722T182405Z`
 Authority: `ddm_g2_solve_diff_op_mining_20260722T182405Z.wrapped.prompt.txt`, SHA-256 `51f1de05508ff8c25cce0c71e9d638edf089bfb7f6be86435e25dd8530341119`
 
 ## Objective
