@@ -1,0 +1,16 @@
+{
+  "schema": "DdmG4SpatialStationarityConfigV1",
+  "run_id": "ddm_g4_spatial_stationarity_n600_20260722T212138Z",
+  "g3_receipt_path": ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_receipt.json",
+  "g3_receipt_sha256": "6c4157092a7bdf7ba44b458cd470725cc470d84a8fc77ed7d3dedb59160734f5",
+  "v12_receipt_path": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+  "v12_receipt_sha256": "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a",
+  "output_directory": "/Volumes/VertigoDataTier/pact/ddm_g4_spatial_stationarity_n600_20260722T212138Z",
+  "compact_receipt_directory": ".omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z",
+  "n_pairs": 600,
+  "chunk_pairs": 16,
+  "seed": 1234,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false
+}
