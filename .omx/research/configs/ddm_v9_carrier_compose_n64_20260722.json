@@ -1,0 +1,12 @@
+{
+  "schema": "DirectDescriptionV9CarrierComposeConfigV1",
+  "pair_start": 448,
+  "pair_count": 64,
+  "v6_receipt_path": ".omx/research/ddm_v6_dseg_bridge_amortize_n64_603_613_20260722T075903Z/ddm_v6_dseg_bridge_amortize_n64_receipt.json",
+  "v6_receipt_sha256": "d531585f7a46d23d3cec31249e49ee9508892b757f8ab86365554ea30b32a1f0",
+  "predictor_archive_path": ".omx/research/ddm_v6_dseg_bridge_amortize_n64_603_613_20260722T075903Z/ddm_v6_fixed_ar1_hold24_n64.not_a_candidate.zip.receipt-bytes",
+  "predictor_archive_sha256": "d27d689e223c0b215a01b219be55a9eb8000859d4708c627ba2cc3240476871d",
+  "upstream_root": "/Users/adpena/Projects/pact/upstream",
+  "scorer_batch_size": 16,
+  "scorer_threads": 4
+}

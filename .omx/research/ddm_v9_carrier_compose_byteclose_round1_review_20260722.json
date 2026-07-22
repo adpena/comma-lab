@@ -1,0 +1,64 @@
+{
+  "schema": "ddm_v9_carrier_compose_round1_review.v1",
+  "surface_id": "ddm_v9_carrier_compose_byteclose_20260722",
+  "reviewed_working_tree_sha256": "80823a94eeb8ea3949e31179f4668a63f30fb99a7448f3d903dfd696947f0df7",
+  "round_1": {
+    "verdict": "NOT_CLEAN",
+    "findings_count": 1,
+    "finding": "G2CS1 symbols outside the nested source window or too small/overwritten to change receiver RGB could be counted but semantically inert.",
+    "fix": "Compiler and receiver now refuse out-of-window symbols; receiver also renders every individual symbol and refuses a receiver-output no-op.",
+    "regression_test": "test_v9_refuses_pixel_or_absent_chart_addresses_and_sampled_mutations"
+  },
+  "clean_rounds": [
+    {
+      "round": 2,
+      "lens": "receiver grammar, exact homes, sole Pose6 owner, chart-only correction",
+      "verdict": "CLEAN"
+    },
+    {
+      "round": 3,
+      "lens": "fail-closed authority, local-only execution, scorer/GT exclusion, stage resume",
+      "verdict": "CLEAN"
+    },
+    {
+      "round": 4,
+      "lens": "tests, deterministic replay, completed-receipt resume, claim hygiene",
+      "verdict": "CLEAN"
+    }
+  ],
+  "portability_reaudit": {
+    "round_5": {
+      "verdict": "NOT_CLEAN",
+      "findings_count": 1,
+      "finding": "Generated receipts embedded the isolated .omx/tmp worktree prefix in operator-facing archive/checkpoint paths.",
+      "fix": "Runner and existing receipts now canonicalize repo-owned paths to durable repo-relative paths; body hashes were resealed and temporary-path scan is empty."
+    },
+    "clean_rounds": [
+      {
+        "round": 6,
+        "lens": "portable archive and checkpoint receipt paths",
+        "verdict": "CLEAN"
+      },
+      {
+        "round": 7,
+        "lens": "no operator-facing temporary path plus exact hash custody",
+        "verdict": "CLEAN"
+      },
+      {
+        "round": 8,
+        "lens": "portable completed-receipt resume and 55-test replay",
+        "verdict": "CLEAN"
+      }
+    ]
+  },
+  "verification": {
+    "ruff": "PASS",
+    "pytest": "55 passed",
+    "n64_completed_receipt_resume": "PASS",
+    "n256_completed_receipt_resume": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "score_claim": false,
+  "promotion_eligible": false,
+  "main_landing_review_required": true
+}
