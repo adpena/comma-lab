@@ -11,14 +11,19 @@ import pytest
 
 from tac.optimization.direct_description_entropy_priced_member import (
     TOLERANCE_LADDER,
+    DirectDescriptionDsegBridgeAmortizeConfigV1,
+    DirectDescriptionDsegBridgeAmortizeProgramV1,
     DirectDescriptionEntropyCandidateCheckpointV1,
     DirectDescriptionEntropyPricedMemberConfigV1,
     DirectDescriptionEntropyPricedMemberProgramV1,
     DirectDescriptionRouteFixComposeConfigV1,
     DirectDescriptionStratumStructuredMemberConfigV1,
     StructuredS4SourcesV1,
+    _amortize_chart_z,
+    _amortize_structured_sources,
     _decode_site_records,
     _encode_site_records,
+    _xi_pose6_keyframes,
     build_entropy_candidate_z,
     compile_composed_structured_member_archive,
     compile_structured_member_archive,
@@ -480,9 +485,7 @@ def test_role_value_selector_maximizes_each_self_detected_role_without_fixed_ind
     selected = select_role_paint_values(role_ids, score_rows)
     for role in role_ids:
         assert selected[role]["candidate_index"] == winning_candidates[role]
-        assert selected[role]["own_class_matches"] == max(
-            row["own_class_matches"] for row in score_rows[role]
-        )
+        assert selected[role]["own_class_matches"] == max(row["own_class_matches"] for row in score_rows[role])
 
 
 def test_composed_member_consumes_every_role_and_keeps_pose_in_one_receiver() -> None:
@@ -527,6 +530,72 @@ def test_v5_config_requires_probe_inside_n64_or_n256_state_window() -> None:
         DirectDescriptionRouteFixComposeConfigV1(**{**common, "pair_count": 128})
     with pytest.raises(ValueError, match="contained"):
         DirectDescriptionRouteFixComposeConfigV1(**{**common, "pair_start": 384})
+
+
+def test_v6_config_and_program_are_typed_local_only() -> None:
+    config = DirectDescriptionDsegBridgeAmortizeConfigV1(
+        pair_start=448,
+        pair_count=64,
+        v5_receipt_path="v5.json",
+        v5_receipt_sha256="1" * 64,
+        v5_archive_path="v5.zip",
+        v5_archive_sha256="2" * 64,
+        scorer_threads=1,
+    )
+    assert config.candidate_modes == (
+        "v5_exact",
+        "fixed_ar1_hold24",
+        "xi_pose6_ar1_hold24",
+        "residual_zero_static_once",
+    )
+    program = DirectDescriptionDsegBridgeAmortizeProgramV1(config_path="v6.json", output_directory="out")
+    assert program.compile_consumer_argv()[-2:] == ("--execution-allowed", "false")
+    with pytest.raises(ValueError, match="n64 or n256"):
+        DirectDescriptionDsegBridgeAmortizeConfigV1(
+            pair_start=448,
+            pair_count=128,
+            v5_receipt_path="v5.json",
+            v5_receipt_sha256="1" * 64,
+            v5_archive_path="v5.zip",
+            v5_archive_sha256="2" * 64,
+            scorer_threads=1,
+        )
+
+
+def test_v6_key_hold_preserves_pose_and_rewrites_pair_identity() -> None:
+    baseline = _fixture_z(64)
+    held = _amortize_chart_z(baseline, keyframes=(0, 24, 48))
+    assert held.pose6_pair_codes == baseline.pose6_pair_codes
+    original = receive_entropy_chart_archive(compile_entropy_chart_archive(baseline).archive)
+    receiver = receive_entropy_chart_archive(compile_entropy_chart_archive(held).archive)
+    assert np.array_equal(receiver.anchors[23], original.anchors[0])
+    assert np.array_equal(receiver.gradients[47], original.gradients[24])
+    assert np.array_equal(receiver.residuals[63], original.residuals[48])
+    assert np.array_equal(receiver.pose6_codes, original.pose6_codes)
+
+
+def test_v6_xi_schedule_is_counted_pose_derived_and_gap_bounded() -> None:
+    receiver = receive_entropy_chart_archive(compile_entropy_chart_archive(_fixture_z(64)).archive)
+    first, receipt = _xi_pose6_keyframes(receiver.pose6_codes, max_gap=24)
+    second, _ = _xi_pose6_keyframes(receiver.pose6_codes, max_gap=24)
+    assert first == second
+    assert first[0] == 0
+    assert max(right - left for left, right in zip(first, (*first[1:], 64), strict=True)) <= 24
+    assert receipt["unmeasured_motion_threshold_invented"] is False
+
+
+def test_v6_structured_hold_reuses_keyed_events_but_keeps_static_once() -> None:
+    sources = _structured_sources()
+    held = _amortize_structured_sources(
+        sources,
+        pair_start=0,
+        pair_count=64,
+        keyframes=(0, 24, 48),
+    )
+    assert held.static_masks is sources.static_masks
+    assert held.lane_encoded is sources.lane_encoded
+    assert np.array_equal(held.events[0][23][0], sources.events[0][0][0])
+    assert held.events[0][24] == sources.events[0][24]
 
 
 def test_structured_candidate_stages_resume_and_preserve_every_archive(tmp_path: Path) -> None:

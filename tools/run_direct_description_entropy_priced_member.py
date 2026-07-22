@@ -48,12 +48,15 @@ if __name__ == "__main__":
     _bootstrap_repo_python()
 
 from tac.optimization.direct_description_entropy_priced_member import (  # noqa: E402
+    DirectDescriptionDsegBridgeAmortizeConfigV1,
+    DirectDescriptionDsegBridgeAmortizeProgramV1,
     DirectDescriptionEntropyPricedMemberConfigV1,
     DirectDescriptionEntropyPricedMemberProgramV1,
     DirectDescriptionRouteFixComposeConfigV1,
     DirectDescriptionRouteFixComposeProgramV1,
     DirectDescriptionStratumStructuredMemberConfigV1,
     DirectDescriptionStratumStructuredMemberProgramV1,
+    run_dseg_bridge_amortize,
     run_entropy_priced_member_n64,
     run_route_fix_composed_member,
     run_stratum_structured_member_n64,
@@ -64,6 +67,7 @@ Config = (
     DirectDescriptionEntropyPricedMemberConfigV1
     | DirectDescriptionStratumStructuredMemberConfigV1
     | DirectDescriptionRouteFixComposeConfigV1
+    | DirectDescriptionDsegBridgeAmortizeConfigV1
 )
 
 
@@ -77,6 +81,8 @@ def _read_config(path: Path) -> Config:
             return DirectDescriptionStratumStructuredMemberConfigV1.model_validate_json(payload)
         if schema == "DirectDescriptionRouteFixComposeConfigV1":
             return DirectDescriptionRouteFixComposeConfigV1.model_validate_json(payload)
+        if schema == "DirectDescriptionDsegBridgeAmortizeConfigV1":
+            return DirectDescriptionDsegBridgeAmortizeConfigV1.model_validate_json(payload)
         raise DirectDescriptionError(f"entropy-priced member config schema is unknown: {schema!r}")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         raise DirectDescriptionError(f"entropy-priced member typed config is unreadable: {path}") from exc
@@ -92,7 +98,17 @@ def main(argv: list[str] | None = None) -> int:
         if args.execution_allowed != "false":
             raise DirectDescriptionError("entropy-priced member solve only compiles --execution-allowed false")
         config = _read_config(args.config)
-        if isinstance(config, DirectDescriptionRouteFixComposeConfigV1):
+        if isinstance(config, DirectDescriptionDsegBridgeAmortizeConfigV1):
+            bridge_program = DirectDescriptionDsegBridgeAmortizeProgramV1(
+                config_path=str(args.config),
+                output_directory=str(args.output_dir),
+            )
+            receipt, receipt_path = run_dseg_bridge_amortize(
+                config,
+                output_directory=args.output_dir,
+                semantic_argv=bridge_program.compile_consumer_argv(),
+            )
+        elif isinstance(config, DirectDescriptionRouteFixComposeConfigV1):
             compose_program = DirectDescriptionRouteFixComposeProgramV1(
                 config_path=str(args.config),
                 output_directory=str(args.output_dir),

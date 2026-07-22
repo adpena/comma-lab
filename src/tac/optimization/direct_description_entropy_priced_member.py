@@ -11,6 +11,7 @@ import json
 import lzma
 import shutil
 import struct
+import sys
 import zipfile
 import zlib
 from collections import Counter
@@ -24,6 +25,7 @@ import brotli
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, model_validator
 
+from tac.analysis.segnet_boundary_marginals import boundary_mask_from_labels
 from tac.boundary_math.hood_static_component import identify_static_hood_class
 from tac.boundary_math.power_diagram_witness import open_stored_npy_memmap
 from tac.boundary_math.road_horizon_component import classify_segnet_regions
@@ -56,6 +58,8 @@ from tac.optimization.direct_description_minimizer import (
     rfc8785_canonicalize,
 )
 from tac.optimization.direct_description_polytope_membership import (
+    CLASS_NAMES,
+    MARGIN_BANDS,
     _load_segnet_oracle,
     measure_argmax_cell_membership,
     stream_decode_digest,
@@ -837,9 +841,7 @@ class DirectDescriptionStratumStructuredMemberConfigV1(BaseModel):
     schema_: Literal["DirectDescriptionStratumStructuredMemberConfigV1"] = Field(
         default=STRUCTURED_CONFIG_SCHEMA, alias="schema", serialization_alias="schema"
     )
-    run_id: Literal["ddm_v4_stratum_structured_members_n64_seed1234"] = (
-        "ddm_v4_stratum_structured_members_n64_seed1234"
-    )
+    run_id: Literal["ddm_v4_stratum_structured_members_n64_seed1234"] = "ddm_v4_stratum_structured_members_n64_seed1234"
     seed: Literal[1234] = SEED
     pair_count: Literal[64] = 64
     target_receipt_path: StrictStr
@@ -851,9 +853,9 @@ class DirectDescriptionStratumStructuredMemberConfigV1(BaseModel):
     s4_container_sha256: StrictStr
     s4_runtime_path: StrictStr
     s4_runtime_sha256: StrictStr
-    candidate_family: Literal[
+    candidate_family: Literal["s4_pxq1_lane_curve_static_hood_and_class_filtered_event_component_members"] = (
         "s4_pxq1_lane_curve_static_hood_and_class_filtered_event_component_members"
-    ] = "s4_pxq1_lane_curve_static_hood_and_class_filtered_event_component_members"
+    )
     checkpoint_policy: Literal["atomic_preserve_every_structured_candidate"] = (
         "atomic_preserve_every_structured_candidate"
     )
@@ -879,7 +881,10 @@ class DirectDescriptionStratumStructuredMemberConfigV1(BaseModel):
     def dsl_compile_hash(self) -> str:
         return _sha256(
             rfc8785_canonicalize(
-                {"compile_target": STRUCTURED_RESULT_SCHEMA, "typed_config": self.model_dump(mode="json", by_alias=True)}
+                {
+                    "compile_target": STRUCTURED_RESULT_SCHEMA,
+                    "typed_config": self.model_dump(mode="json", by_alias=True),
+                }
             )
         )
 
@@ -927,12 +932,12 @@ class DirectDescriptionRouteFixComposeConfigV1(BaseModel):
     s4_container_sha256: StrictStr
     s4_runtime_path: StrictStr
     s4_runtime_sha256: StrictStr
-    candidate_family: Literal[
+    candidate_family: Literal["lbnd2_road_hood_undrivable_movable_pose_one_receiver_composition"] = (
         "lbnd2_road_hood_undrivable_movable_pose_one_receiver_composition"
-    ] = "lbnd2_road_hood_undrivable_movable_pose_one_receiver_composition"
-    routing_policy: Literal[
+    )
+    routing_policy: Literal["self_detect_roles_then_maximize_own_class_over_c1_role_median_rgb"] = (
         "self_detect_roles_then_maximize_own_class_over_c1_role_median_rgb"
-    ] = "self_detect_roles_then_maximize_own_class_over_c1_role_median_rgb"
+    )
     checkpoint_policy: Literal["atomic_preserve_route_then_composed_member"] = (
         "atomic_preserve_route_then_composed_member"
     )
@@ -969,6 +974,92 @@ class DirectDescriptionRouteFixComposeConfigV1(BaseModel):
 
 
 class DirectDescriptionRouteFixComposeProgramV1(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    config_path: StrictStr
+    output_directory: StrictStr
+
+    def compile_consumer_argv(self) -> tuple[str, ...]:
+        return (
+            "/usr/bin/env",
+            "python3",
+            "tools/run_direct_description_entropy_priced_member.py",
+            "--config",
+            self.config_path,
+            "--output-dir",
+            self.output_directory,
+            "--execution-allowed",
+            "false",
+        )
+
+
+V6_RESULT_SCHEMA: Final = "direct_description_dseg_bridge_amortize.v1"
+V6_CONFIG_SCHEMA: Final = "DirectDescriptionDsegBridgeAmortizeConfigV1"
+V6_LANE_ID: Final = "lane_ddm_v5_route_fix_compose_603_613_20260722"
+V6_CANDIDATE_MODES: Final = (
+    "v5_exact",
+    "fixed_ar1_hold24",
+    "xi_pose6_ar1_hold24",
+    "residual_zero_static_once",
+)
+V6_TARGET_DSEG_TEXT: Final = "0.001160000000"
+V6_S4_KNEE_DSEG_TEXT: Final = "0.016000000000"
+V6_S4_KNEE_BYTES: Final = 216_207
+
+
+class DirectDescriptionDsegBridgeAmortizeConfigV1(BaseModel):
+    """Typed local-only evaluator bridge and temporal-amortization config."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True, populate_by_name=True)
+
+    schema_: Literal["DirectDescriptionDsegBridgeAmortizeConfigV1"] = Field(
+        default=V6_CONFIG_SCHEMA, alias="schema", serialization_alias="schema"
+    )
+    run_id: Literal["ddm_v6_dseg_bridge_amortize_seed1234"] = "ddm_v6_dseg_bridge_amortize_seed1234"
+    seed: Literal[1234] = SEED
+    pair_start: StrictInt = Field(ge=0, le=536)
+    pair_count: StrictInt
+    v5_receipt_path: StrictStr
+    v5_receipt_sha256: StrictStr
+    v5_archive_path: StrictStr
+    v5_archive_sha256: StrictStr
+    scorer_batch_size: Literal[16] = 16
+    scorer_threads: StrictInt = Field(ge=1, le=16)
+    max_key_gap: Literal[24] = 24
+    candidate_modes: tuple[StrictStr, ...] = V6_CANDIDATE_MODES
+    checkpoint_policy: Literal["atomic_preserve_every_candidate"] = "atomic_preserve_every_candidate"
+    rate_authority: Literal["exact_len_of_receiver_closed_composed_zip_A6_of_z"] = (
+        "exact_len_of_receiver_closed_composed_zip_A6_of_z"
+    )
+    target_d_seg: Literal["0.001160000000"] = V6_TARGET_DSEG_TEXT
+    s4_knee_d_seg: Literal["0.016000000000"] = V6_S4_KNEE_DSEG_TEXT
+    s4_knee_archive_bytes: Literal[216207] = V6_S4_KNEE_BYTES
+    research_only: Literal[True] = True
+    execution_allowed: Literal[False] = False
+    score_claim: Literal[False] = False
+
+    @model_validator(mode="after")
+    def _valid(self) -> DirectDescriptionDsegBridgeAmortizeConfigV1:
+        if self.pair_count not in (64, 256) or self.pair_start + self.pair_count > 600:
+            raise ValueError("v6 measurement window must be exactly n64 or n256 inside [0,600)")
+        for name in ("v5_receipt_sha256", "v5_archive_sha256"):
+            _require_sha256(getattr(self, name), name)
+        if self.candidate_modes != V6_CANDIDATE_MODES:
+            raise ValueError(f"candidate_modes must be exactly {V6_CANDIDATE_MODES!r}")
+        return self
+
+    def typed_config_hash(self) -> str:
+        return _sha256(rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True)))
+
+    def dsl_compile_hash(self) -> str:
+        return _sha256(
+            rfc8785_canonicalize(
+                {"compile_target": V6_RESULT_SCHEMA, "typed_config": self.model_dump(mode="json", by_alias=True)}
+            )
+        )
+
+
+class DirectDescriptionDsegBridgeAmortizeProgramV1(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
     config_path: StrictStr
@@ -1043,7 +1134,9 @@ def _encode_site_records(
     return struct.pack(">BII32s", coder_id, len(canonical), len(coded), hashlib.sha256(canonical).digest()) + coded
 
 
-def _decode_site_records(payload: bytes, *, expected_class: int, expected_source: int) -> tuple[tuple[np.ndarray, ...], ...]:
+def _decode_site_records(
+    payload: bytes, *, expected_class: int, expected_source: int
+) -> tuple[tuple[np.ndarray, ...], ...]:
     if len(payload) < 41:
         raise DirectDescriptionError("structured site stream is truncated")
     coder_id, raw_bytes, coded_bytes, digest = struct.unpack_from(">BII32s", payload)
@@ -1158,7 +1251,9 @@ def _decode_s4_lane(encoded: bytes) -> tuple[tuple[tuple[np.ndarray, ...], ...],
     return lines, header
 
 
-def _render_s4_lane_mask(lines: Sequence[np.ndarray], header: Mapping[str, Any], camera: Mapping[str, Any]) -> np.ndarray:
+def _render_s4_lane_mask(
+    lines: Sequence[np.ndarray], header: Mapping[str, Any], camera: Mapping[str, Any]
+) -> np.ndarray:
     rows = np.arange(PAIR_SHAPE[0], dtype=np.float64)
     cols = np.arange(PAIR_SHAPE[1], dtype=np.float64)[None, :]
     horizon = float(header["v_h"])
@@ -1351,7 +1446,9 @@ def self_detect_structured_role_classes(lstars: np.ndarray) -> tuple[dict[str, i
     }
 
 
-def _require_structured_routing(sources: StructuredS4SourcesV1) -> tuple[Mapping[str, int], Mapping[str, tuple[int, int, int]]]:
+def _require_structured_routing(
+    sources: StructuredS4SourcesV1,
+) -> tuple[Mapping[str, int], Mapping[str, tuple[int, int, int]]]:
     if sources.role_class_ids is None or sources.role_rgb_u8 is None:
         raise DirectDescriptionError("structured source lacks self-detected role/value routing")
     if set(sources.role_class_ids) != set(ROUTED_ROLES) or set(sources.role_rgb_u8) != set(ROUTED_ROLES):
@@ -1443,8 +1540,7 @@ def measure_structured_role_value_routing(
         raise DirectDescriptionError("role-value routing probe requires one canonical n16 scorer batch")
     role_class_ids, class_detection = self_detect_structured_role_classes(cells)
     provisional_rgb = {
-        role: tuple(int(channel) for channel in sources.palette[class_id])
-        for role, class_id in role_class_ids.items()
+        role: tuple(int(channel) for channel in sources.palette[class_id]) for role, class_id in role_class_ids.items()
     }
     routed = replace(
         sources,
@@ -1488,10 +1584,7 @@ def measure_structured_role_value_routing(
         union = correct_geometry.any(axis=0)
         yy, xx = np.where(union)
         inherited = tuple(int(value) for value in sources.palette[class_id])
-        candidates = [
-            {**row, "candidate_family": "c1_role_median"}
-            for row in prototypes
-        ] + [
+        candidates = [{**row, "candidate_family": "c1_role_median"} for row in prototypes] + [
             {
                 "candidate_index": len(prototypes),
                 "source_role": role,
@@ -1710,9 +1803,7 @@ def compile_composed_structured_member_archive(
     payloads: dict[str, bytes] = {}
     for role in COMPOSED_ROLE_ORDER:
         overlap = set(payloads).intersection(
-            role_payloads := _payloads_for_role(
-                role, sources, pair_start=pair_start, pair_count=baseline_pairs
-            )
+            role_payloads := _payloads_for_role(role, sources, pair_start=pair_start, pair_count=baseline_pairs)
         )
         if overlap:
             raise DirectDescriptionError(f"composed role payload homes overlap: {sorted(overlap)}")
@@ -2145,9 +2236,7 @@ class DirectDescriptionStructuredCandidateCheckpointV1(BaseModel):
     def _identity(self) -> DirectDescriptionStructuredCandidateCheckpointV1:
         for name in ("config_sha256", "dsl_compile_hash", "semantic_argv_sha256"):
             _require_sha256(getattr(self, name), name)
-        config = DirectDescriptionStratumStructuredMemberConfigV1.model_validate_json(
-            rfc8785_canonicalize(self.config)
-        )
+        config = DirectDescriptionStratumStructuredMemberConfigV1.model_validate_json(rfc8785_canonicalize(self.config))
         if config.typed_config_hash() != self.config_sha256 or config.dsl_compile_hash() != self.dsl_compile_hash:
             raise ValueError("structured checkpoint config identity mismatch")
         if (
@@ -2290,7 +2379,9 @@ def run_structured_candidate_stages(
         paths.append(checkpoint.write_new(Path(output_directory) / "candidate_receipts"))
         if stop_after_candidate_index is not None and index >= stop_after_candidate_index:
             break
-    return StructuredCandidateRunV1(tuple(rows), tuple(paths), len(rows) == len(STRUCTURED_ROLES), resume_from is not None)
+    return StructuredCandidateRunV1(
+        tuple(rows), tuple(paths), len(rows) == len(STRUCTURED_ROLES), resume_from is not None
+    )
 
 
 def _event_subset_pricing_curve(sources: StructuredS4SourcesV1) -> list[dict[str, Any]]:
@@ -2467,7 +2558,9 @@ def run_stratum_structured_member_n64(
         "archive_box": {
             "approx_receiver_closed_target_bytes": 200_000,
             "strict_task_613_cap_bytes": 154_524,
-            "roles_below_approx_box": [row["role"] for row in candidates if row["below_approx_200000_byte_receiver_box"]],
+            "roles_below_approx_box": [
+                row["role"] for row in candidates if row["below_approx_200000_byte_receiver_box"]
+            ],
             "roles_below_strict_cap": [row["role"] for row in candidates if row["below_strict_154524_byte_task_cap"]],
         },
         "resume": {
@@ -2530,9 +2623,7 @@ def _target_window_planes(
 ) -> np.ndarray:
     rows = [
         planes
-        for _pair_ids, planes in iter_target_plane_window_chunks(
-            receipt, pair_start=pair_start, n_pairs=pair_count
-        )
+        for _pair_ids, planes in iter_target_plane_window_chunks(receipt, pair_start=pair_start, n_pairs=pair_count)
     ]
     if not rows:
         raise DirectDescriptionError("target window produced no scorer planes")
@@ -2610,9 +2701,7 @@ def run_route_fix_composed_member(
         baseline=probe_baseline,
         target_planes=probe_planes,
         target_cells=np.asarray(
-            cached_lstars[
-                config.routing_probe_start : config.routing_probe_start + config.routing_probe_count
-            ]
+            cached_lstars[config.routing_probe_start : config.routing_probe_start + config.routing_probe_count]
         ),
         oracle=oracle,
         source_pair_start=config.routing_probe_start,
@@ -2673,8 +2762,7 @@ def run_route_fix_composed_member(
         archive,
     )
     per_target_class = {
-        name: row["same_c1_argmax_cell_fraction"]
-        for name, row in membership["strata"]["target_class"].items()
+        name: row["same_c1_argmax_cell_fraction"] for name, row in membership["strata"]["target_class"].items()
     }
     route_roles = routing_receipt["role_probe"]
     adjudication = {
@@ -2832,8 +2920,661 @@ def run_route_fix_composed_member(
     return result, receipt_path
 
 
+def _read_bound_json(path: Path, expected_sha256: str, label: str) -> dict[str, Any]:
+    payload = _read_bound_file(path, expected_sha256, label)
+    try:
+        value = json.loads(payload)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise DirectDescriptionError(f"{label} is not valid JSON") from exc
+    if not isinstance(value, dict):
+        raise DirectDescriptionError(f"{label} must contain one JSON object")
+    return value
+
+
+def _publish_or_verify(path: Path, payload: bytes) -> Path:
+    if path.exists():
+        if _read_regular_file_once(path) != payload:
+            raise DirectDescriptionError(f"preserved stage differs from deterministic replay: {path}")
+        return path
+    return _publish_new_bytes(path, payload)
+
+
+def _latest_key_by_pair(n_pairs: int, keyframes: Sequence[int]) -> tuple[int, ...]:
+    keys = tuple(int(value) for value in keyframes)
+    if not keys or keys[0] != 0 or any(left >= right for left, right in itertools.pairwise(keys)):
+        raise DirectDescriptionError("amortization keyframes must be strictly increasing from zero")
+    if keys[-1] >= n_pairs:
+        raise DirectDescriptionError("amortization keyframe is outside the local pair window")
+    result: list[int] = []
+    cursor = 0
+    for pair_id in range(n_pairs):
+        while cursor + 1 < len(keys) and keys[cursor + 1] <= pair_id:
+            cursor += 1
+        result.append(keys[cursor])
+    return tuple(result)
+
+
+def _hold_semantic_stream(payload: bytes, *, n_pairs: int, records_per_pair: int, keyframes: Sequence[int]) -> bytes:
+    if n_pairs < 1 or records_per_pair < 1 or len(payload) % (n_pairs * records_per_pair):
+        raise DirectDescriptionError("semantic stream cannot be partitioned into canonical pair records")
+    record_bytes = len(payload) // (n_pairs * records_per_pair)
+    source_by_pair = _latest_key_by_pair(n_pairs, keyframes)
+    output = bytearray(len(payload))
+    pair_bytes = records_per_pair * record_bytes
+    for pair_id, source_pair_id in enumerate(source_by_pair):
+        source_start = source_pair_id * pair_bytes
+        target_start = pair_id * pair_bytes
+        output[target_start : target_start + pair_bytes] = payload[source_start : source_start + pair_bytes]
+        for record_id in range(records_per_pair):
+            struct.pack_into("<H", output, target_start + record_id * record_bytes, pair_id)
+    return bytes(output)
+
+
+def _amortize_chart_z(
+    baseline: DirectDescriptionChartZV1,
+    *,
+    keyframes: Sequence[int] | None = None,
+    zero_residuals: bool = False,
+) -> DirectDescriptionChartZV1:
+    if keyframes is not None and zero_residuals:
+        raise DirectDescriptionError("chart amortization must select key-hold or residual-zero, not both")
+    if zero_residuals:
+        value = baseline
+        for stream_name in RESIDUAL_STREAMS:
+            value = build_safe_zero_residual_proposal(value, stream_name).z
+        return value
+    if keyframes is None:
+        return baseline
+    records_per_pair = {
+        "global_chart_anchors": 2,
+        "axial_chart_gradients": 2,
+        "low_variation_chart_residuals": 128,
+        "mid_variation_chart_residuals": 128,
+        "high_variation_chart_residuals": 128,
+    }
+    value = baseline
+    for stream_name, count in records_per_pair.items():
+        value = value.replace_stream_payload(
+            stream_name,
+            _hold_semantic_stream(
+                getattr(baseline, stream_name).payload,
+                n_pairs=baseline.n_pairs,
+                records_per_pair=count,
+                keyframes=keyframes,
+            ),
+        )
+    return value
+
+
+def _xi_pose6_keyframes(pose6_codes: np.ndarray, *, max_gap: int) -> tuple[tuple[int, ...], dict[str, Any]]:
+    values = np.asarray(pose6_codes)
+    if values.dtype != np.uint8 or values.ndim != 2 or values.shape[1] != 6 or max_gap < 1:
+        raise DirectDescriptionError("xi key schedule requires uint8 [P,6] Pose6 codes and a positive gap")
+    motion = np.abs(np.diff(values.astype(np.int16), axis=0)).sum(axis=1, dtype=np.int64)
+    target_sections = (len(values) + max_gap - 1) // max_gap
+    budget = max(1, (int(motion.sum()) + target_sections - 1) // target_sections)
+    keys = [0]
+    accumulated = 0
+    for pair_id in range(1, len(values)):
+        accumulated += int(motion[pair_id - 1])
+        if accumulated >= budget or pair_id - keys[-1] >= max_gap:
+            keys.append(pair_id)
+            accumulated = 0
+    return tuple(keys), {
+        "derivation": "counted Pose6 L1 path length reverse-waterfilled into ceil(P/max_gap) sections",
+        "max_gap": max_gap,
+        "total_pose6_l1_motion": int(motion.sum()),
+        "section_motion_budget": budget,
+        "keyframes": keys,
+        "key_count": len(keys),
+        "target_sections": target_sections,
+        "unmeasured_motion_threshold_invented": False,
+    }
+
+
+def _amortize_structured_sources(
+    sources: StructuredS4SourcesV1,
+    *,
+    pair_start: int,
+    pair_count: int,
+    keyframes: Sequence[int],
+) -> StructuredS4SourcesV1:
+    source_by_pair = _latest_key_by_pair(pair_count, keyframes)
+
+    def remap(stream: tuple[tuple[tuple[np.ndarray, ...], ...], ...]) -> tuple[tuple[tuple[np.ndarray, ...], ...], ...]:
+        classes: list[tuple[tuple[np.ndarray, ...], ...]] = []
+        for class_rows in stream:
+            rows = list(class_rows)
+            for local_pair_id, key_id in enumerate(source_by_pair):
+                rows[pair_start + local_pair_id] = class_rows[pair_start + key_id]
+            classes.append(tuple(rows))
+        return tuple(classes)
+
+    return replace(sources, events=remap(sources.events), components=remap(sources.components))
+
+
+def _distribution(values: Sequence[float]) -> dict[str, str]:
+    array = np.asarray(values, dtype=np.float64)
+    if array.ndim != 1 or array.size == 0 or not np.isfinite(array).all():
+        raise DirectDescriptionError("distribution requires a nonempty finite vector")
+    return {
+        "min": f"{float(array.min()):.12f}",
+        "q25": f"{float(np.quantile(array, 0.25)):.12f}",
+        "median": f"{float(np.quantile(array, 0.5)):.12f}",
+        "q75": f"{float(np.quantile(array, 0.75)):.12f}",
+        "max": f"{float(array.max()):.12f}",
+        "mean": f"{float(array.mean()):.12f}",
+    }
+
+
+def _load_posenet_oracle(
+    upstream_root: Path,
+    *,
+    threads: int,
+) -> tuple[Callable[[np.ndarray], np.ndarray], dict[str, Any]]:
+    root = Path(upstream_root).resolve()
+    modules_path = root / "modules.py"
+    if threads < 1 or not modules_path.is_file():
+        raise DirectDescriptionError("PoseNet custody is unavailable")
+    sys.path.insert(0, str(root))
+    try:
+        import modules as upstream_modules
+        import torch
+        from safetensors.torch import load_file
+    except ImportError as exc:
+        raise DirectDescriptionError("PoseNet runtime imports are unavailable") from exc
+    if Path(upstream_modules.__file__).resolve() != modules_path:
+        raise DirectDescriptionError("PoseNet imported a non-custodied modules.py")
+    torch.set_num_threads(threads)
+    torch.manual_seed(SEED)
+    torch.use_deterministic_algorithms(True)
+    weights_path = Path(upstream_modules.posenet_sd_path).resolve()
+    if not weights_path.is_file():
+        raise DirectDescriptionError("PoseNet weights are missing")
+    posenet = upstream_modules.PoseNet().eval().to("cpu")
+    posenet.load_state_dict(load_file(str(weights_path), device="cpu"))
+    for parameter in posenet.parameters():
+        parameter.requires_grad_(False)
+
+    def oracle(pairs: np.ndarray) -> np.ndarray:
+        value = np.asarray(pairs)
+        if value.dtype != np.uint8 or value.ndim != 5 or value.shape[1:] != (2, *PAIR_SHAPE, 3):
+            raise DirectDescriptionError("PoseNet requires uint8 [B,2,384,512,3]")
+        tensor = torch.from_numpy(np.ascontiguousarray(value)).permute(0, 1, 4, 2, 3).contiguous().float()
+        with torch.inference_mode():
+            output = posenet(posenet.preprocess_input(tensor))
+            pose = output["pose"] if isinstance(output, dict) else output
+            result = pose[:, :6].cpu().numpy().astype(np.float64)
+        return np.ascontiguousarray(result)
+
+    return oracle, {
+        "implementation": "upstream.modules.PoseNet.native_cpu_torch_official_YUV6",
+        "modules_path": str(modules_path),
+        "modules_sha256": _sha256(_read_regular_file_once(modules_path)),
+        "weights_path": str(weights_path),
+        "weights_bytes": weights_path.stat().st_size,
+        "weights_sha256": _sha256(_read_regular_file_once(weights_path)),
+        "batch_size": 16,
+        "threads": threads,
+        "seed": SEED,
+        "deterministic_algorithms": True,
+        "device": "cpu",
+        "preprocess": "official PoseNet.preprocess_input RGB_to_YUV6 after bilinear resize",
+        "weights_shipped_in_archive": False,
+        "score_claim": False,
+        "evidence_axis": EVIDENCE_AXIS,
+    }
+
+
+def _measure_evaluator_bridge(
+    receiver: ComposedStructuredMemberReceiverV1,
+    *,
+    pair_start: int,
+    cached_lstars: np.ndarray,
+    cached_margins: np.ndarray,
+    cached_poses: np.ndarray,
+    segnet_oracle: Callable[[np.ndarray, bool], tuple[np.ndarray, np.ndarray | None]],
+    posenet_oracle: Callable[[np.ndarray], np.ndarray],
+    batch_size: int,
+) -> dict[str, Any]:
+    labels = np.asarray(cached_lstars)
+    margins = np.asarray(cached_margins)
+    poses = np.asarray(cached_poses)
+    if labels.shape != (600, *PAIR_SHAPE) or labels.dtype != np.int64:
+        raise DirectDescriptionError("evaluator bridge requires cached int64 lstars[600,384,512]")
+    if margins.shape != labels.shape or margins.dtype != np.float32:
+        raise DirectDescriptionError("evaluator bridge requires cached float32 margins[600,384,512]")
+    if poses.shape != (600, 6) or poses.dtype != np.float64:
+        raise DirectDescriptionError("evaluator bridge requires cached float64 gt_poses[600,6]")
+    strata: dict[str, dict[str, dict[str, int]]] = {
+        "target_class": {name: {"errors": 0, "sites": 0} for name in CLASS_NAMES},
+        "topology": {name: {"errors": 0, "sites": 0} for name in ("boundary_codim1", "cell_interior")},
+        "target_margin": {name: {"errors": 0, "sites": 0} for _lo, _hi, name in MARGIN_BANDS},
+    }
+    seg_rows: list[dict[str, Any]] = []
+    pose_rows: list[dict[str, Any]] = []
+    described_cell_digest = hashlib.sha256()
+    described_pose_digest = hashlib.sha256()
+    total_errors = 0
+    total_sites = 0
+    pose_squared_error = 0.0
+    replay_checked = False
+    for start in range(0, receiver.z.n_pairs, batch_size):
+        pair_ids = tuple(range(start, min(receiver.z.n_pairs, start + batch_size)))
+        source_ids = pair_start + np.asarray(pair_ids, dtype=np.int64)
+        described = receiver.render_pairs(pair_ids)
+        described_cells, described_margins = segnet_oracle(described, False)
+        if described_margins is not None:
+            raise DirectDescriptionError("evaluator SegNet bridge unexpectedly returned margins")
+        described_poses = posenet_oracle(described)
+        if not replay_checked:
+            replay_cells, _ = segnet_oracle(described, False)
+            replay_poses = posenet_oracle(described)
+            if not np.array_equal(described_cells, replay_cells) or not np.array_equal(described_poses, replay_poses):
+                raise DirectDescriptionError("evaluator bridge deterministic first-batch replay failed")
+            replay_checked = True
+        target_cells = np.ascontiguousarray(labels[source_ids])
+        target_margins = np.ascontiguousarray(margins[source_ids])
+        target_poses = np.ascontiguousarray(poses[source_ids])
+        errors = described_cells != target_cells
+        boundary = boundary_mask_from_labels(target_cells)
+        for local_index, pair_id in enumerate(pair_ids):
+            pair_errors = int(np.count_nonzero(errors[local_index]))
+            pair_sites = int(errors[local_index].size)
+            pose_error = float(np.mean((described_poses[local_index] - target_poses[local_index]) ** 2))
+            seg_rows.append(
+                {
+                    "pair_id": pair_id,
+                    "source_pair_id": int(source_ids[local_index]),
+                    "errors": pair_errors,
+                    "sites": pair_sites,
+                    "d_seg": _fraction_text(pair_errors, pair_sites),
+                }
+            )
+            pose_rows.append(
+                {
+                    "pair_id": pair_id,
+                    "source_pair_id": int(source_ids[local_index]),
+                    "d_pose": f"{pose_error:.12f}",
+                }
+            )
+        total_errors += int(np.count_nonzero(errors))
+        total_sites += int(errors.size)
+        pose_squared_error += float(np.square(described_poses - target_poses).sum(dtype=np.float64))
+        for class_id, class_name in enumerate(CLASS_NAMES):
+            mask = target_cells == class_id
+            strata["target_class"][class_name]["errors"] += int(np.count_nonzero(errors & mask))
+            strata["target_class"][class_name]["sites"] += int(np.count_nonzero(mask))
+        for name, mask in (("boundary_codim1", boundary), ("cell_interior", ~boundary)):
+            strata["topology"][name]["errors"] += int(np.count_nonzero(errors & mask))
+            strata["topology"][name]["sites"] += int(np.count_nonzero(mask))
+        for low, high, name in MARGIN_BANDS:
+            mask = (target_margins >= low) & (target_margins < high)
+            strata["target_margin"][name]["errors"] += int(np.count_nonzero(errors & mask))
+            strata["target_margin"][name]["sites"] += int(np.count_nonzero(mask))
+        described_cell_digest.update(described_cells.tobytes(order="C"))
+        described_pose_digest.update(described_poses.tobytes(order="C"))
+    if not replay_checked or total_sites != receiver.z.n_pairs * PAIR_SHAPE[0] * PAIR_SHAPE[1]:
+        raise DirectDescriptionError("evaluator bridge pair coverage is incomplete")
+    finalized_strata = {
+        family: {
+            name: {
+                **row,
+                "d_seg": _fraction_text(row["errors"], row["sites"]),
+            }
+            for name, row in rows.items()
+        }
+        for family, rows in strata.items()
+    }
+    d_seg = _fraction_text(total_errors, total_sites)
+    d_pose_value = pose_squared_error / (receiver.z.n_pairs * 6)
+    return {
+        "segmentation": {
+            "definition": "official frozen SegNet last-frame argmax disagreement against gt_n600.lstars",
+            "d_seg": d_seg,
+            "errors": total_errors,
+            "sites": total_sites,
+            "per_pair": seg_rows,
+            "per_pair_distribution": _distribution([float(row["d_seg"]) for row in seg_rows]),
+            "strata": finalized_strata,
+            "described_cells_sha256": described_cell_digest.hexdigest(),
+            "d_seg_measured": True,
+            "d_seg_claim": False,
+        },
+        "pose": {
+            "definition": "official frozen PoseNet YUV6 first-six-output MSE against gt_n600.gt_poses",
+            "d_pose": f"{d_pose_value:.12f}",
+            "squared_error_sum": f"{pose_squared_error:.12f}",
+            "coordinates": receiver.z.n_pairs * 6,
+            "per_pair": pose_rows,
+            "per_pair_distribution": _distribution([float(row["d_pose"]) for row in pose_rows]),
+            "described_pose6_f64_sha256": described_pose_digest.hexdigest(),
+            "pose6_payload_completeness": "1.000000000000",
+            "d_pose_measured": True,
+            "d_pose_claim": False,
+        },
+        "deterministic_first_batch_replay": True,
+        "scorer_batch_size": batch_size,
+        "max_scorer_batches_resident": 1,
+        "max_source_chunks_resident": 1,
+        "evidence_axis": EVIDENCE_AXIS,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+
+def run_dseg_bridge_amortize(
+    config: DirectDescriptionDsegBridgeAmortizeConfigV1,
+    *,
+    output_directory: Path,
+    semantic_argv: Sequence[str],
+) -> tuple[dict[str, Any], Path]:
+    """Measure v5 and receiver-closed amortized variants against frozen evaluator caches."""
+
+    root = Path(output_directory)
+    storage = _storage_preflight(root)
+    root.mkdir(parents=True, exist_ok=True)
+    v5_receipt = _read_bound_json(Path(config.v5_receipt_path), config.v5_receipt_sha256, "v5_receipt_sha256")
+    if v5_receipt.get("schema") != V5_RESULT_SCHEMA:
+        raise DirectDescriptionError("v6 input receipt is not the governed v5 result")
+    try:
+        v5_config = DirectDescriptionRouteFixComposeConfigV1.model_validate(v5_receipt["typed_config"])
+    except (KeyError, ValueError) as exc:
+        raise DirectDescriptionError("v5 typed config cannot be reconstructed") from exc
+    if (v5_config.pair_start, v5_config.pair_count) != (config.pair_start, config.pair_count):
+        raise DirectDescriptionError("v6 typed window differs from its bound v5 receipt")
+    v5_archive = _read_bound_file(Path(config.v5_archive_path), config.v5_archive_sha256, "v5_archive_sha256")
+    if v5_receipt["archive"] != {
+        **v5_receipt["archive"],
+        "bytes": len(v5_archive),
+        "sha256": _sha256(v5_archive),
+    }:
+        raise DirectDescriptionError("v5 archive receipt length/hash differs from bound bytes")
+    target_receipt = load_target_receipt(Path(v5_config.target_receipt_path), v5_config.target_receipt_sha256)
+    cache_path = Path(target_receipt.source_cache.path)
+    if not cache_path.is_file() or cache_path.stat().st_size != target_receipt.source_cache.bytes:
+        raise DirectDescriptionError("v6 evaluator cache is unavailable")
+    try:
+        cached_lstars = open_stored_npy_memmap(cache_path, "lstars")
+        cached_margins = open_stored_npy_memmap(cache_path, "margins")
+        cached_poses = open_stored_npy_memmap(cache_path, "gt_poses")
+    except (OSError, ValueError) as exc:
+        raise DirectDescriptionError("v6 evaluator cache members are malformed") from exc
+    sources = load_structured_s4_sources(v5_config)  # type: ignore[arg-type]
+    routing = _read_bound_json(
+        Path(v5_receipt["routing_receipt"]["path"]),
+        v5_receipt["routing_receipt"]["sha256"],
+        "v5_routing_receipt_sha256",
+    )
+    role_ids = routing["class_detection"]["role_class_ids"]
+    role_rgb = routing["selected_role_rgb_u8"]
+    sources = replace(
+        sources,
+        role_class_ids={name: int(value) for name, value in role_ids.items()},
+        role_rgb_u8={name: tuple(int(channel) for channel in value) for name, value in role_rgb.items()},
+        routing_custody=routing,
+    )
+    v5_members, _v5_homes = parse_structured_member_archive(v5_archive)
+    baseline_z = receive_entropy_chart_archive(v5_members["chart.zip"]).z
+    xi_keys, xi_receipt = _xi_pose6_keyframes(
+        receive_entropy_chart_archive(v5_members["chart.zip"]).pose6_codes,
+        max_gap=config.max_key_gap,
+    )
+    fixed_keys = tuple(range(0, config.pair_count, config.max_key_gap))
+    candidates_spec = (
+        ("v5_exact", baseline_z, sources, tuple(range(config.pair_count))),
+        (
+            "fixed_ar1_hold24",
+            _amortize_chart_z(baseline_z, keyframes=fixed_keys),
+            _amortize_structured_sources(
+                sources,
+                pair_start=config.pair_start,
+                pair_count=config.pair_count,
+                keyframes=fixed_keys,
+            ),
+            fixed_keys,
+        ),
+        (
+            "xi_pose6_ar1_hold24",
+            _amortize_chart_z(baseline_z, keyframes=xi_keys),
+            _amortize_structured_sources(
+                sources,
+                pair_start=config.pair_start,
+                pair_count=config.pair_count,
+                keyframes=xi_keys,
+            ),
+            xi_keys,
+        ),
+        (
+            "residual_zero_static_once",
+            _amortize_chart_z(baseline_z, zero_residuals=True),
+            _amortize_structured_sources(
+                sources,
+                pair_start=config.pair_start,
+                pair_count=config.pair_count,
+                keyframes=(0,),
+            ),
+            (0,),
+        ),
+    )
+    segnet_oracle, segnet_custody = _load_segnet_oracle(Path(v5_config.upstream_root), threads=config.scorer_threads)
+    posenet_oracle, posenet_custody = _load_posenet_oracle(Path(v5_config.upstream_root), threads=config.scorer_threads)
+    rows: list[dict[str, Any]] = []
+    checkpoint_paths: list[str] = []
+    for index, (mode, z, candidate_sources, keyframes) in enumerate(candidates_spec):
+        checkpoint_path = root / "candidate_receipts" / f"{index:02d}_{mode}.json"
+        if checkpoint_path.exists():
+            checkpoint = json.loads(_read_regular_file_once(checkpoint_path))
+            if (
+                checkpoint.get("schema") != "direct_description_dseg_bridge_candidate_checkpoint.v1"
+                or checkpoint.get("typed_config_sha256") != config.typed_config_hash()
+                or checkpoint.get("v5_archive_sha256") != config.v5_archive_sha256
+                or checkpoint.get("candidate", {}).get("mode") != mode
+            ):
+                raise DirectDescriptionError(f"v6 candidate checkpoint custody mismatch: {checkpoint_path}")
+            candidate_row = checkpoint["candidate"]
+            archive_path = Path(candidate_row["archive"]["path"])
+            archive_payload = _read_bound_file(
+                archive_path,
+                candidate_row["archive"]["sha256"],
+                f"{mode}_checkpoint_archive_sha256",
+            )
+            if len(archive_payload) != candidate_row["archive"]["bytes"]:
+                raise DirectDescriptionError(f"v6 candidate checkpoint archive size mismatch: {mode}")
+            rows.append(candidate_row)
+            checkpoint_paths.append(str(checkpoint_path))
+            continue
+        chart_build = compile_entropy_chart_archive(z)
+        archive, homes = compile_composed_structured_member_archive(
+            chart_build.archive,
+            candidate_sources,
+            pair_start=config.pair_start,
+        )
+        replay_archive, replay_homes = compile_composed_structured_member_archive(
+            chart_build.archive,
+            candidate_sources,
+            pair_start=config.pair_start,
+        )
+        if archive != replay_archive or homes != replay_homes:
+            raise DirectDescriptionError(f"v6 {mode} compiler replay is not bit-identical")
+        if mode == "v5_exact" and archive != v5_archive:
+            raise DirectDescriptionError("v6 exact-control recompilation differs from bound v5 bytes")
+        archive_path = _publish_or_verify(
+            root / f"ddm_v6_{mode}_n{config.pair_count}.not_a_candidate.zip.receipt-bytes",
+            archive,
+        )
+        receiver = receive_structured_member_archive(archive)
+        replay = receive_structured_member_archive(archive)
+        if not isinstance(receiver, ComposedStructuredMemberReceiverV1) or not isinstance(
+            replay, ComposedStructuredMemberReceiverV1
+        ):
+            raise DirectDescriptionError("v6 candidate did not decode as a composed receiver")
+        probe_ids = tuple(sorted({0, config.pair_count // 2, config.pair_count - 1}))
+        if not np.array_equal(receiver.render_pairs(probe_ids), replay.render_pairs(probe_ids)):
+            raise DirectDescriptionError(f"v6 {mode} receiver replay is not bit-identical")
+        bridge = _measure_evaluator_bridge(
+            receiver,
+            pair_start=config.pair_start,
+            cached_lstars=cached_lstars,
+            cached_margins=cached_margins,
+            cached_poses=cached_poses,
+            segnet_oracle=segnet_oracle,
+            posenet_oracle=posenet_oracle,
+            batch_size=config.scorer_batch_size,
+        )
+        d_seg = Decimal(bridge["segmentation"]["d_seg"])
+        candidate_row = {
+            "mode": mode,
+            "candidate_index": index,
+            "keyframes": list(keyframes),
+            "key_count": len(keyframes),
+            "key_policy": (
+                "every_pair_exact"
+                if mode == "v5_exact"
+                else "counted_Pose6_xi_adaptive"
+                if mode.startswith("xi_")
+                else "fixed_zero_order_hold"
+                if mode.startswith("fixed_")
+                else "one_static_key_plus_safe_zero_chart_residuals"
+            ),
+            "archive": {
+                "path": str(archive_path),
+                "bytes": len(archive),
+                "sha256": _sha256(archive),
+                "member_homes": list(homes),
+                "all_bytes_have_one_home": sum(row["zip_home_bytes"] for row in homes) == len(archive),
+                "receiver_closed": True,
+                "parse_reencode_identical": True,
+                "compiler_determinism_x2": True,
+                "receiver_replay_identical": True,
+            },
+            "chart": chart_build.custody(),
+            "evaluator_bridge": bridge,
+            "gates": {
+                "task_613_d_seg_le_0_00116": d_seg <= Decimal(V6_TARGET_DSEG_TEXT),
+                "s4_knee_d_seg_le_0_016": d_seg <= Decimal(V6_S4_KNEE_DSEG_TEXT),
+                "s4_knee_archive_bytes_le_216207": len(archive) <= V6_S4_KNEE_BYTES,
+                "score_claim": False,
+                "promotion_eligible": False,
+            },
+            "verdict_scope": (
+                f"MEASURED n{config.pair_count} source-pair window "
+                f"[{config.pair_start},{config.pair_start + config.pair_count}) on {EVIDENCE_AXIS}; "
+                "formulation-local and not contest-CPU/CUDA"
+            ),
+        }
+        checkpoint = {
+            "schema": "direct_description_dseg_bridge_candidate_checkpoint.v1",
+            "typed_config_sha256": config.typed_config_hash(),
+            "dsl_compile_hash": config.dsl_compile_hash(),
+            "semantic_argv": list(semantic_argv),
+            "semantic_argv_sha256": _sha256("\0".join(semantic_argv).encode()),
+            "v5_archive_sha256": config.v5_archive_sha256,
+            "completed_candidate_index": index,
+            "next_candidate_index": index + 1,
+            "candidate": candidate_row,
+        }
+        _publish_or_verify(checkpoint_path, rfc8785_canonicalize(checkpoint) + b"\n")
+        rows.append(candidate_row)
+        checkpoint_paths.append(str(checkpoint_path))
+    result = {
+        "schema": V6_RESULT_SCHEMA,
+        "task": 603,
+        "feeds_task": 613,
+        "lane_id": V6_LANE_ID,
+        "run_id": config.run_id,
+        "seed": config.seed,
+        "verdict": "MEASURED_EVALUATOR_BRIDGE_AND_TEMPORAL_AMORTIZATION",
+        "verdict_scope": (
+            f"n{config.pair_count} source-pair window [{config.pair_start},{config.pair_start + config.pair_count}) "
+            f"on {EVIDENCE_AXIS}; no contest score or promotion authority"
+        ),
+        "research_only": True,
+        "execution_allowed": False,
+        "candidate_archive": False,
+        "score_claim": False,
+        "d_seg_claim": False,
+        "d_pose_claim": False,
+        "pointer": f"{POINTER_SCORE_TEXT} [contest-CPU]",
+        "pointer_moved": False,
+        "typed_config": config.model_dump(mode="json", by_alias=True),
+        "typed_config_sha256": config.typed_config_hash(),
+        "dsl_compile_hash": config.dsl_compile_hash(),
+        "semantic_argv": list(semantic_argv),
+        "v5_control": {
+            "receipt_path": config.v5_receipt_path,
+            "receipt_sha256": config.v5_receipt_sha256,
+            "archive_path": config.v5_archive_path,
+            "archive_bytes": len(v5_archive),
+            "archive_sha256": config.v5_archive_sha256,
+            "exact_recompilation_identical": True,
+        },
+        "xi_schedule": xi_receipt,
+        "candidates": rows,
+        "candidate_table_sha256": _sha256(rfc8785_canonicalize(rows)),
+        "best_bytes": min(rows, key=lambda row: (row["archive"]["bytes"], row["candidate_index"]))["mode"],
+        "best_d_seg": min(
+            rows,
+            key=lambda row: (Decimal(row["evaluator_bridge"]["segmentation"]["d_seg"]), row["candidate_index"]),
+        )["mode"],
+        "scorer_custody": {"segnet": segnet_custody, "posenet": posenet_custody},
+        "target_custody": {
+            "receipt_path": v5_config.target_receipt_path,
+            "receipt_sha256": v5_config.target_receipt_sha256,
+            "source_cache_path": str(cache_path),
+            "source_cache_bytes": target_receipt.source_cache.bytes,
+            "source_cache_sha256": target_receipt.source_cache.sha256,
+            "cache_members": ["lstars", "margins", "gt_poses"],
+            "source_cache_mutated": False,
+        },
+        "resume": {
+            "policy": config.checkpoint_policy,
+            "candidate_checkpoints": checkpoint_paths,
+            "all_preserved": len(checkpoint_paths) == len(V6_CANDIDATE_MODES),
+            "atomic_publish": True,
+            "max_work_loss": "current candidate only",
+        },
+        "blocker_delta": {
+            "V5_ACTUAL_DSEG": "RED_TO_GREEN_LOCAL_FROZEN_SEGNET_ADVISORY",
+            "V5_ACTUAL_DPOSE": "RED_TO_GREEN_LOCAL_OFFICIAL_YUV6_POSENET_ADVISORY",
+            "PER_PAIR_AND_STRATUM_DISTRIBUTIONS": "RED_TO_GREEN",
+            "TEMPORAL_BYTES_PER_PAIR_LE_300": "REQUIRES_N64_N256_CROSS_WINDOW_RECEIPT",
+            "N600_EVALUATOR_BRIDGE": "REMAINS_RED_TIME_BOUND_NOT_RUN",
+            "CONTEST_CPU_CUDA_SCORE": "REMAINS_RED_NOT_AUTHORIZED",
+        },
+        "storage_preflight": storage,
+        "cleanup": {
+            "bulk_artifacts_created": False,
+            "ssd_sources_read_only": True,
+            "scorer_policy": "batch16 with one described batch and cache window resident",
+            "certify_or_block": "no deletion, movement, or source mutation performed",
+        },
+        "stores_consulted": [
+            "direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md",
+            "v5 route-fix composed receipts and exact archives",
+            "gt_n600 lstars/margins/gt_poses frozen scorer cache",
+            "canonical S4 archive/runtime read-only",
+            "2026-07-19 reverse-waterfill and xi directives",
+        ],
+        "producer": {
+            "solver_module": _committed_source_custody(
+                "src/tac/optimization/direct_description_entropy_priced_member.py"
+            ),
+            "cli": _committed_source_custody("tools/run_direct_description_entropy_priced_member.py"),
+        },
+        "main_landing_review_required": True,
+    }
+    receipt_path = _publish_or_verify(
+        root / f"ddm_v6_dseg_bridge_amortize_n{config.pair_count}_receipt.json",
+        rfc8785_canonicalize(result) + b"\n",
+    )
+    return result, receipt_path
+
+
 __all__ = [
     "TOLERANCE_LADDER",
+    "DirectDescriptionDsegBridgeAmortizeConfigV1",
+    "DirectDescriptionDsegBridgeAmortizeProgramV1",
     "DirectDescriptionEntropyCandidateCheckpointV1",
     "DirectDescriptionEntropyPricedMemberConfigV1",
     "DirectDescriptionEntropyPricedMemberProgramV1",
@@ -2850,6 +3591,7 @@ __all__ = [
     "measure_structured_role_value_routing",
     "parse_structured_member_archive",
     "receive_structured_member_archive",
+    "run_dseg_bridge_amortize",
     "run_entropy_candidate_stages",
     "run_entropy_priced_member_n64",
     "run_entropy_rung_stages",
