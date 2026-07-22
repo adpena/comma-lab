@@ -21024,3 +21024,42 @@ byte-priced member search bends the (rung, bytes, membership) curve. Equations l
 `FORMALIZATION_PENDING:three-rung pricing-ladder law registers on v3's measured verdict`.
 
 **Pointer 0.1910828242 [contest-CPU] UNMOVED.**
+
+## FEED-603-coder-survey-and-v3-stratum-wall (2026-07-22, MAIN custody of two #603 arm landings)
+
+**Arm 1 — truly_optimal_coder_survey (merged d439f72ea2, reviewed_committed).** No global-optimal
+coder: per-stream winners on the REAL S4/PPCS objects = static-ground Brotli-Q11 610 B · xi-knots
+raw-LZMA1 204 B · pose6-ordinal Rice k=6 3,509 B · events settled-LZMA1 181,904 B · manifest Brotli
+1,086 B · exceptions GLOBAL-Brotli 80,478 B (vs per-record zlib 180,196 B → 99,718 B isolated saving,
+final-ZIP delta + parse-back OWED). DECISION CLAIM VERIFIED (corroborated by predictor_r3 PCE3
+181,904 B + bracketed by KT1 ceiling 207,227 B): the events stream ALONE exceeds the 154,524 B strict
+cap — **coder substitution cannot close #613; event REPRESENTATION is the bottleneck.**
+verdict_scope: MEASURED_STREAM_SPECIFIC (exact local recodes on named real objects; not an archive,
+not a score). #557 premise CORRECTION registered: "adaptive arithmetic beats Brotli" was a
+PR103-lineage anchor, NOT reproduced by our repo coders (base weights: brotli 63,394 < iid-arith
+66,322 < spatial-arith 93,991). Artifacts: truly_optimal_coder_{survey,measurements,reference_mine,
+603_613_DAG_FEED,603_613_canonical_equations}_*20260722*.
+
+**Arm 2 — mdl_member_solve_v3_entropy (rc=0; 21/21 tests re-run by MAIN; receipt per-stratum table
+re-derived; merge pending MAIN's independent re-derivation run).** Entropy pricing GREEN: receiver
+archive 274,664 → 45,369 B (−83.482%), REAL byte gradient to 6,553 B across 8 candidates, exact ZIP
+pricing in-solve, pose completeness 1.0, container overhead 22 B — the three-rung pricing ladder
+(flat → fixed-width Δbytes≡0 → entropy-coded responsive) is now CLOSED-GREEN at rung 3. THE NEGATIVE
+(verdict_scope: FORMULATION — safe-zero anchors+gradients proposal family; harness intact): absolute
+per-stratum membership INFEASIBLE at n64 — Lane/Movable/MyCar/Road same-cell = 0.000 (100% escape),
+Undrivable 0.99999; the aggregate 0.4936 IS the Undrivable site share (decompose-every-headline
+vindicated at stratum level; aggregate membership is hereby a FORBIDDEN headline without the
+per-stratum table). C1 member itself matches gt cells 0.999874 — the solve is genuine; the smooth
+description family is what collapses on structured strata.
+
+**Convergence (3 independent measurements, one law candidate):** smooth global description families
+reproduce only the Undrivable bulk; the structured strata (Lane/Movable/MyCar/Road) + the event
+stream demand PER-STRATUM STRUCTURED description. Law candidate for canonical_equations (
+FORMALIZATION_PENDING:needs the v4 structured-family measurement as its second anchor):
+`smooth_family_membership == bulk_class_prior; structured_strata_require_structured_carriers`.
+**Next node (respawn per tick rule 3):** ddm_v4_stratum_structured_members — keep the v3 harness,
+swap the family: static hood mask (MyCar, IoU 0.994 ≈ free) · lane-SDF (#138) · S4 PXQ1+events
+partition (Road/boundary/Movable) · smooth path retained for Undrivable; entropy-priced with the
+survey winners; per-stratum (bytes, membership) curve; events-SUBSET pricing = the representation-
+bottleneck measurement. BEV route stays NO_VERDICT (hood-control instrument-invalid) — not a
+dependency. Pointer 0.1910828242 [contest-CPU] UNMOVED (all means).
