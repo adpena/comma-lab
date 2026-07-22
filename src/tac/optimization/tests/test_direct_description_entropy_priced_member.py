@@ -31,6 +31,7 @@ from tac.optimization.direct_description_entropy_priced_member import (
     _encode_site_records,
     _v7_candidate_verdict_scope,
     _v7_discrete_waterfill,
+    _v7_load_completed_receipt,
     _xi_pose6_keyframes,
     build_entropy_candidate_z,
     compile_composed_structured_member_archive,
@@ -799,6 +800,7 @@ def test_v7_scope_cannot_leak_the_v6_segnet_only_axis() -> None:
     scope = _v7_candidate_verdict_scope(config)
     assert V7_EVIDENCE_AXIS in scope
     assert EVIDENCE_AXIS not in scope
+    assert _v7_load_completed_receipt(config, Path("missing-output-root")) is None
 
 
 def test_structured_candidate_stages_resume_and_preserve_every_archive(tmp_path: Path) -> None:

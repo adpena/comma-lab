@@ -4163,6 +4163,96 @@ def _v7_candidate_verdict_scope(config: DirectDescriptionSolvedPlaneToleranceWat
     )
 
 
+def _v7_load_completed_receipt(
+    config: DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1,
+    root: Path,
+) -> tuple[dict[str, Any], Path] | None:
+    """Validate every preserved v7 stage and return an already-sealed final receipt."""
+
+    receipt_path = root / f"ddm_v7_solved_plane_tolerance_waterfill_n{config.pair_count}_receipt.json"
+    if not receipt_path.exists():
+        return None
+    try:
+        receipt = json.loads(_read_regular_file_once(receipt_path))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise DirectDescriptionError("v7 completed receipt is not valid JSON") from exc
+    if (
+        not isinstance(receipt, dict)
+        or receipt.get("schema") != V7_RESULT_SCHEMA
+        or receipt.get("typed_config_sha256") != config.typed_config_hash()
+        or receipt.get("dsl_compile_hash") != config.dsl_compile_hash()
+        or receipt.get("score_claim") is not False
+        or receipt.get("d_seg_claim") is not False
+        or receipt.get("d_pose_claim") is not False
+    ):
+        raise DirectDescriptionError("v7 completed receipt configuration or claim custody mismatch")
+    expected_producer = {
+        "solver_module": _committed_source_custody(
+            "src/tac/optimization/direct_description_entropy_priced_member.py"
+        ),
+        "stream_module": _committed_source_custody("src/tac/optimization/direct_description_entropy_streams.py"),
+        "cli": _committed_source_custody("tools/run_direct_description_entropy_priced_member.py"),
+    }
+    if receipt.get("producer") != expected_producer:
+        raise DirectDescriptionError("v7 completed receipt producer custody differs from committed sources")
+    rows = receipt.get("candidates")
+    if (
+        not isinstance(rows, list)
+        or [row.get("policy_name") for row in rows] != list(config.policy_names)
+        or receipt.get("candidate_table_sha256") != _sha256(rfc8785_canonicalize(rows))
+    ):
+        raise DirectDescriptionError("v7 completed receipt candidate-table custody mismatch")
+    checkpoint_paths = receipt.get("resume", {}).get("candidate_checkpoints")
+    if not isinstance(checkpoint_paths, list) or len(checkpoint_paths) != len(rows):
+        raise DirectDescriptionError("v7 completed receipt candidate checkpoint index mismatch")
+    for candidate_index, (row, checkpoint_value) in enumerate(zip(rows, checkpoint_paths, strict=True)):
+        bridge = row.get("evaluator_bridge", {})
+        if bridge.get("evidence_axis") != V7_EVIDENCE_AXIS:
+            raise DirectDescriptionError("v7 completed receipt candidate evidence axis mismatch")
+        archive = row.get("archive", {})
+        payload = _read_bound_file(
+            Path(archive.get("path", "")),
+            str(archive.get("sha256", "")),
+            f"v7_completed_candidate_{candidate_index}_archive_sha256",
+        )
+        if len(payload) != archive.get("bytes"):
+            raise DirectDescriptionError("v7 completed receipt candidate archive length mismatch")
+        checkpoint_path = Path(checkpoint_value)
+        try:
+            checkpoint = json.loads(_read_regular_file_once(checkpoint_path))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise DirectDescriptionError("v7 completed candidate checkpoint is not valid JSON") from exc
+        if (
+            checkpoint.get("schema") != "direct_description_solved_plane_candidate_checkpoint.v1"
+            or checkpoint.get("typed_config_sha256") != config.typed_config_hash()
+            or checkpoint.get("candidate", {}).get("archive", {}).get("sha256") != archive.get("sha256")
+        ):
+            raise DirectDescriptionError("v7 completed candidate checkpoint custody mismatch")
+    for rung_name in config.rung_names:
+        rung_root = root / "rung_checkpoints" / rung_name
+        rung_receipt_path = rung_root / "rung_receipt.json"
+        try:
+            rung_receipt = json.loads(_read_regular_file_once(rung_receipt_path))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise DirectDescriptionError("v7 completed rung checkpoint is not valid JSON") from exc
+        frame_sha256 = rung_receipt.get("frame_sha256")
+        if (
+            rung_receipt.get("schema") != "direct_description_solved_plane_rung_checkpoint.v1"
+            or rung_receipt.get("typed_config_sha256") != config.typed_config_hash()
+            or rung_receipt.get("rung_name") != rung_name
+            or not isinstance(frame_sha256, list)
+            or len(frame_sha256) != len(V7_SECTION_NAMES)
+        ):
+            raise DirectDescriptionError("v7 completed rung checkpoint custody mismatch")
+        for section_id, expected_sha256 in enumerate(frame_sha256):
+            _read_bound_file(
+                rung_root / f"section_{section_id}.bin",
+                str(expected_sha256),
+                f"v7_completed_{rung_name}_section_{section_id}_sha256",
+            )
+    return receipt, receipt_path
+
+
 def run_solved_plane_tolerance_waterfill(
     config: DirectDescriptionSolvedPlaneToleranceWaterfillConfigV1,
     *,
@@ -4172,8 +4262,11 @@ def run_solved_plane_tolerance_waterfill(
     """Build and measure the receiver-closed v7 solved-plane tolerance ladder."""
 
     root = Path(output_directory)
-    storage = _storage_preflight(root)
     root.mkdir(parents=True, exist_ok=True)
+    completed = _v7_load_completed_receipt(config, root)
+    if completed is not None:
+        return completed
+    storage = _storage_preflight(root)
     v6_receipt = _read_bound_json(Path(config.v6_receipt_path), config.v6_receipt_sha256, "v6_receipt_sha256")
     if v6_receipt.get("schema") != V6_RESULT_SCHEMA:
         raise DirectDescriptionError("v7 input receipt is not the governed v6 result")
