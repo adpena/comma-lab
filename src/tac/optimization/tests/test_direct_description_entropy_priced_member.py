@@ -660,6 +660,17 @@ def test_v7_config_and_program_are_typed_local_only() -> None:
     )
     assert config.section_names == ("Road", "Lane", "Undrivable", "Movable", "MyCar", "Boundary")
     assert config.exact_residual_falsifier_bytes == 200_000
+    strict_v6 = DirectDescriptionDsegBridgeAmortizeConfigV1(
+        pair_start=448,
+        pair_count=64,
+        v5_receipt_path="v5.json",
+        v5_receipt_sha256="3" * 64,
+        v5_archive_path="v5.zip",
+        v5_archive_sha256="4" * 64,
+        scorer_threads=1,
+    )
+    serialized_v6 = json.dumps(strict_v6.model_dump(mode="json", by_alias=True), separators=(",", ":"))
+    assert DirectDescriptionDsegBridgeAmortizeConfigV1.model_validate_json(serialized_v6) == strict_v6
     program = DirectDescriptionSolvedPlaneToleranceWaterfillProgramV1(config_path="v7.json", output_directory="out")
     assert program.compile_consumer_argv()[-2:] == ("--execution-allowed", "false")
     with pytest.raises(ValueError, match="n64 or n256"):

@@ -4102,7 +4102,9 @@ def run_solved_plane_tolerance_waterfill(
     v6_receipt = _read_bound_json(Path(config.v6_receipt_path), config.v6_receipt_sha256, "v6_receipt_sha256")
     if v6_receipt.get("schema") != V6_RESULT_SCHEMA:
         raise DirectDescriptionError("v7 input receipt is not the governed v6 result")
-    typed_v6 = DirectDescriptionDsegBridgeAmortizeConfigV1.model_validate(v6_receipt["typed_config"])
+    typed_v6 = DirectDescriptionDsegBridgeAmortizeConfigV1.model_validate_json(
+        rfc8785_canonicalize(v6_receipt["typed_config"])
+    )
     if (typed_v6.pair_start, typed_v6.pair_count) != (config.pair_start, config.pair_count):
         raise DirectDescriptionError("v7 typed window differs from the bound v6 receipt")
     base_row = next((row for row in v6_receipt["candidates"] if row["mode"] == config.base_mode), None)
