@@ -52,6 +52,7 @@ RECEIVER_SCHEMA_V3: Final = "direct_description_v11_obligation_receiver.v1"
 RESULT_SCHEMA: Final = "direct_description_v9_carrier_compose_receipt.v1"
 RESULT_SCHEMA_V2: Final = "direct_description_v10_fisher_event_search_receipt.v1"
 RESULT_SCHEMA_V3: Final = "direct_description_v11_obligation_search_receipt.v1"
+RESULT_SCHEMA_V4: Final = "direct_description_v12_obligation_drain_receipt.v1"
 MAGIC: Final = "DDV9C1"
 MAGIC_V2: Final = "DDV10C1"
 MAGIC_V3: Final = "DDV11C1"
@@ -682,6 +683,39 @@ class DirectDescriptionV11ObligationSearchConfigV1(BaseModel):
 
     def typed_config_hash(self) -> str:
         return _sha256(rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True)))
+
+
+class DirectDescriptionV12ObligationDrainConfigV1(DirectDescriptionV11ObligationSearchConfigV1):
+    """Typed exhaustive, resumable drain of the bounded V11 obligation pool."""
+
+    schema_: Literal["DirectDescriptionV12ObligationDrainConfigV1"] = Field(
+        default="DirectDescriptionV12ObligationDrainConfigV1",
+        alias="schema",
+        serialization_alias="schema",
+    )
+    max_measured_candidates: StrictInt = Field(default=512, ge=32, le=4096)
+    max_bundles_per_invocation: StrictInt = Field(default=64, ge=1, le=512)
+    max_atoms_per_measured_bundle: StrictInt = Field(default=16, ge=1, le=64)
+    drain_policy: Literal[
+        "exhaustive_conflict_free_canonical_batch_family_partition"
+    ] = "exhaustive_conflict_free_canonical_batch_family_partition"
+    ev_order_policy: Literal[
+        "flip_distance_x_margin_band_x_stratum_mass_movable_lane_first"
+    ] = "flip_distance_x_margin_band_x_stratum_mass_movable_lane_first"
+    base_cache_policy: Literal[
+        "immutable_zlib_argmax_pose_per_canonical_batch"
+    ] = "immutable_zlib_argmax_pose_per_canonical_batch"
+    checkpoint_policy: Literal[
+        "atomic_preserve_inventory_base_batches_every_candidate_every_budget"
+    ] = "atomic_preserve_inventory_base_batches_every_candidate_every_budget"
+
+    @model_validator(mode="after")
+    def _valid_v12(self) -> DirectDescriptionV12ObligationDrainConfigV1:
+        if (self.pair_start, self.pair_count) != (0, 600):
+            raise ValueError("v12 obligation drain is the exact full n600 [0,600) window")
+        if self.max_atoms_per_measured_bundle > 64:
+            raise ValueError("v12 bundles are capped at 64 atomic chart/event obligations")
+        return self
 
 
 def _manifest_for(
@@ -1591,12 +1625,14 @@ __all__ = [
     "RESULT_SCHEMA",
     "RESULT_SCHEMA_V2",
     "RESULT_SCHEMA_V3",
+    "RESULT_SCHEMA_V4",
     "BoundaryCoefficientDelta",
     "BoundaryShearletAtomV1",
     "CarrierComposeReceiverV1",
     "DirectDescriptionV9CarrierComposeConfigV1",
     "DirectDescriptionV10FisherEventSearchConfigV1",
     "DirectDescriptionV11ObligationSearchConfigV1",
+    "DirectDescriptionV12ObligationDrainConfigV1",
     "IslandShapeAtomV1",
     "TopologyEventV1",
     "compile_carrier_compose_archive",

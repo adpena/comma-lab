@@ -18,9 +18,12 @@ from tac.canonical_equations.ddm_describe_line_rate_distortion_bracket_20260722 
     V8_VERDICT,
     V9_CROSS_SHA256,
     V9_VERDICT,
+    V12_N600_SHA256,
+    V12_VERDICT,
     _v7_inputs,
     _v8_inputs,
     _v9_inputs,
+    _v12_inputs,
     build_ddm_describe_line_rate_distortion_bracket_v1,
     evaluate_ddm_describe_line_rate_distortion_bracket,
     populate_ddm_describe_line_rate_distortion_bracket_v1,
@@ -34,10 +37,11 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_three_measured_legs_predict_the_scoped_receipt_verdicts() -> None:
+def test_three_measured_legs_and_n600_anchor_predict_scoped_receipt_verdicts() -> None:
     v7 = evaluate_ddm_describe_line_rate_distortion_bracket(_v7_inputs())
     v8 = evaluate_ddm_describe_line_rate_distortion_bracket(_v8_inputs())
     v9 = evaluate_ddm_describe_line_rate_distortion_bracket(_v9_inputs())
+    v12 = evaluate_ddm_describe_line_rate_distortion_bracket(_v12_inputs())
 
     assert v7["leg"] == LEG_VALUE_EXACTNESS and v7["verdict"] == V7_VERDICT
     assert v7["evaluator_gate_green"] is True
@@ -56,6 +60,23 @@ def test_three_measured_legs_predict_the_scoped_receipt_verdicts() -> None:
     assert v9["marginal_bytes_per_pair_exact"] == "20729/192"
     assert v9["n600_projected_bytes_exact"] == "2628875/24"
     assert v9["n600_projection_status"].endswith("NOT_MEASURED_N600")
+
+    assert v12["verdict"] == V12_VERDICT
+    assert v12["n600_projection_status"] == "MEASURED_N600_RECEIVER_CLOSED"
+    assert v12["n600_measured"] == {
+        "archive_bytes": 106_106,
+        "d_seg": pytest.approx(0.034003668891),
+        "d_pose": pytest.approx(163.034719422881),
+        "receiver_closed": True,
+    }
+    assert v12["verdict_scope"].startswith("FORMULATION_CORRECT_A_BOUND")
+    assert v12["decision_atom_partition"] == {
+        "bounded_atoms": 4_096,
+        "exact_scorer_measured_atoms": 3_994,
+        "strict_receiver_rejected_atoms": 66,
+        "prior_higher_ev_conflict_excluded_atoms": 36,
+        "valid": True,
+    }
 
 
 @pytest.mark.parametrize(
@@ -81,11 +102,11 @@ def test_law_fails_closed(mutator, match: str) -> None:
         evaluate_ddm_describe_line_rate_distortion_bracket(row)
 
 
-def test_equation_has_three_bound_nonpromotable_anchors_and_real_routes() -> None:
+def test_equation_has_four_bound_nonpromotable_anchors_and_real_routes() -> None:
     equation = build_ddm_describe_line_rate_distortion_bracket_v1()
     assert equation.equation_id == EQUATION_ID
-    assert len(equation.empirical_anchors) == 3
-    assert equation.domain_of_validity["formalization_status"] == "MEASURED_THREE_LEG_BRACKET"
+    assert len(equation.empirical_anchors) == 4
+    assert equation.domain_of_validity["formalization_status"].endswith("PLUS_N600_ANCHOR")
     assert equation.domain_of_validity["promotion_eligible"] is False
     assert equation.provenance.score_claim_valid is False
     assert equation.canonical_consumers == (
@@ -110,9 +131,9 @@ def test_bound_cross_receipt_hashes_rederive_from_primary_artifacts() -> None:
         for anchor in equation.empirical_anchors
         for path, expected in anchor.inputs["receipt_sha256_bindings"].items()
     }
-    assert len(bindings) == 9
+    assert len(bindings) == 10
     assert {path: _sha256(REPO / path) for path in bindings} == bindings
-    assert {V7_CROSS_SHA256, V8_CROSS_SHA256, V9_CROSS_SHA256}.issubset(
+    assert {V7_CROSS_SHA256, V8_CROSS_SHA256, V9_CROSS_SHA256, V12_N600_SHA256}.issubset(
         bindings.values()
     )
 
@@ -130,6 +151,6 @@ def test_population_round_trips_through_isolated_locked_registry(tmp_path: Path)
     loaded = query_equations(path=registry)
     assert populated.equation_id == EQUATION_ID
     assert [equation.equation_id for equation in loaded] == [EQUATION_ID]
-    assert len(loaded[0].empirical_anchors) == 3
+    assert len(loaded[0].empirical_anchors) == 4
     assert rows[0]["event_type"] == "registered"
     assert "MAIN landing review required" in rows[0]["notes"]

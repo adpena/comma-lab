@@ -9,6 +9,7 @@ import math
 import os
 import sys
 import time
+import zlib
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -29,11 +30,13 @@ from tac.optimization.direct_description_carrier_compose import (  # noqa: E402
     RESULT_SCHEMA,
     RESULT_SCHEMA_V2,
     RESULT_SCHEMA_V3,
+    RESULT_SCHEMA_V4,
     BoundaryCoefficientDelta,
     BoundaryShearletAtomV1,
     DirectDescriptionV9CarrierComposeConfigV1,
     DirectDescriptionV10FisherEventSearchConfigV1,
     DirectDescriptionV11ObligationSearchConfigV1,
+    DirectDescriptionV12ObligationDrainConfigV1,
     IslandShapeAtomV1,
     TopologyEventV1,
     compile_carrier_compose_archive,
@@ -406,6 +409,61 @@ class _BatchScore:
     poses: np.ndarray
     errors: int
     pose_squared_error: float
+
+
+def _batch_score_cache_bytes(row: _BatchScore, *, identity: str, start: int) -> bytes:
+    cells = np.ascontiguousarray(row.cells)
+    poses = np.ascontiguousarray(row.poses)
+    if cells.size and (int(cells.min()) < 0 or int(cells.max()) >= len(CLASS_ORDER)):
+        raise DirectDescriptionError("scorer argmax cache contains a class outside the canonical order")
+    cells = cells.astype(np.uint8, copy=False)
+    header = {
+        "schema": "ddm_canonical_batch_score_cache.v1",
+        "identity": identity,
+        "start": start,
+        "cells_dtype": cells.dtype.str,
+        "cells_shape": list(cells.shape),
+        "cells_bytes": cells.nbytes,
+        "poses_dtype": poses.dtype.str,
+        "poses_shape": list(poses.shape),
+        "poses_bytes": poses.nbytes,
+        "errors": row.errors,
+        "pose_squared_error": f"{row.pose_squared_error:.17g}",
+    }
+    body = cells.tobytes(order="C") + poses.tobytes(order="C")
+    return rfc8785_canonicalize(header) + b"\n" + zlib.compress(body, level=9)
+
+
+def _load_batch_score_cache(path: Path, *, identity: str, start: int) -> _BatchScore:
+    payload = _read_regular_file_once(path)
+    try:
+        header_bytes, compressed = payload.split(b"\n", 1)
+        header = json.loads(header_bytes)
+        body = zlib.decompress(compressed)
+    except (ValueError, json.JSONDecodeError, zlib.error) as exc:
+        raise DirectDescriptionError(f"invalid canonical-batch score cache: {path}") from exc
+    if (
+        header.get("schema") != "ddm_canonical_batch_score_cache.v1"
+        or header.get("identity") != identity
+        or header.get("start") != start
+    ):
+        raise DirectDescriptionError(f"canonical-batch score cache identity mismatch: {path}")
+    cells_bytes = int(header["cells_bytes"])
+    poses_bytes = int(header["poses_bytes"])
+    if len(body) != cells_bytes + poses_bytes:
+        raise DirectDescriptionError(f"canonical-batch score cache byte count mismatch: {path}")
+    cells = np.frombuffer(body[:cells_bytes], dtype=np.dtype(header["cells_dtype"])).reshape(
+        tuple(header["cells_shape"])
+    )
+    poses = np.frombuffer(body[cells_bytes:], dtype=np.dtype(header["poses_dtype"])).reshape(
+        tuple(header["poses_shape"])
+    )
+    return _BatchScore(
+        cells=np.array(cells, copy=True),
+        poses=np.array(poses, copy=True),
+        errors=int(header["errors"]),
+        pose_squared_error=float(header["pose_squared_error"]),
+    )
 
 
 def _candidate_symbols(
@@ -847,13 +905,97 @@ def _bundle_obligation_candidates(
     )
 
 
+def _bundle_obligation_candidates_full_drain(
+    generated: list[_SearchCandidate],
+    *,
+    pair_start: int,
+    batch_size: int,
+    maximum_bundles: int,
+    maximum_atoms: int,
+    family_stratum_mass: dict[str, float],
+) -> list[_SearchCandidate]:
+    """Partition every bounded atom into a conflict-free full-batch bridge.
+
+    Unlike the V11 top-one bundle per batch/family selector, this colors each
+    address-conflict graph into as many bundles as required.  Every input atom
+    therefore enters exactly one measured bridge unless the explicit typed
+    bundle cap truncates a validated EV prefix.
+    """
+
+    grouped: dict[tuple[tuple[int, ...], str], list[_SearchCandidate]] = {}
+    for candidate in generated:
+        impacted = tuple(
+            sorted(
+                {
+                    ((source_id - pair_start) // batch_size) * batch_size
+                    for source_id in candidate.source_pair_ids
+                }
+            )
+        )
+        if not impacted or impacted[0] < 0:
+            raise DirectDescriptionError("v12 obligation atom falls outside its canonical window")
+        family = _obligation_family(candidate)
+        grouped.setdefault((impacted, family), []).append(candidate)
+
+    mechanisms = {
+        "lane_center": "Lane/center_full_bridge_obligation_bundle",
+        "lane_width": "Lane/width_full_bridge_obligation_bundle",
+        "lane_phase": "Lane/dash_phase_full_bridge_obligation_bundle",
+        "road_boundary": "Road/full_bridge_shearlet_obligation_bundle",
+        "undrivable_boundary": "Undrivable/full_bridge_shearlet_obligation_bundle",
+        "movable_shape": "Movable/full_bridge_shape_obligation_bundle",
+    }
+    bundles: list[_SearchCandidate] = []
+    for (impacted, family), rows in sorted(grouped.items()):
+        mass = family_stratum_mass[family]
+        ordered = sorted(rows, key=lambda row: (-row.fisher_priority * mass, row.candidate_id))
+        bins: list[tuple[list[_SearchCandidate], set[tuple[Any, ...]], int]] = []
+        for row in ordered:
+            atom_count = _candidate_atom_count(row)
+            placed = False
+            for bin_index, (chosen, occupied, count) in enumerate(bins):
+                if count + atom_count <= maximum_atoms and not (row.conflict_keys() & occupied):
+                    chosen.append(row)
+                    occupied.update(row.conflict_keys())
+                    bins[bin_index] = (chosen, occupied, count + atom_count)
+                    placed = True
+                    break
+            if not placed:
+                bins.append(([row], set(row.conflict_keys()), atom_count))
+        for color, (chosen, _occupied, _count) in enumerate(bins):
+            lane = tuple(sorted(value for row in chosen for value in row.lane_symbols))
+            shearlets = tuple(sorted(value for row in chosen for value in row.boundary_shearlets))
+            islands = tuple(sorted(value for row in chosen for value in row.island_shapes))
+            source_ids = tuple(sorted({value for row in chosen for value in row.source_pair_ids}))
+            batch_text = "_".join(f"{value:04d}" for value in impacted)
+            bundles.append(
+                _SearchCandidate(
+                    f"obligation_drain_batch_{batch_text}_{family}_color_{color:03d}",
+                    mechanisms[family],
+                    sum(row.fisher_priority * mass for row in chosen),
+                    source_ids,
+                    lane_symbols=lane,
+                    boundary_shearlets=shearlets,
+                    island_shapes=islands,
+                )
+            )
+
+    def order_key(row: _SearchCandidate) -> tuple[int, float, str]:
+        family = _obligation_family(row)
+        movable_lane_tier = 0 if family in {"movable_shape", "lane_center", "lane_width", "lane_phase"} else 1
+        return movable_lane_tier, -row.fisher_priority, row.candidate_id
+
+    bundles.sort(key=order_key)
+    return bundles[:maximum_bundles]
+
+
 def _derive_obligation_candidates(
     receiver: Any,
     *,
     target_cells: np.ndarray,
     target_margins: np.ndarray,
     described_cells: np.ndarray,
-    config: DirectDescriptionV11ObligationSearchConfigV1,
+    config: DirectDescriptionV11ObligationSearchConfigV1 | DirectDescriptionV12ObligationDrainConfigV1,
 ) -> tuple[list[_SearchCandidate], list[_SearchCandidate], int]:
     """Derive chart atoms from measured scorer-visible error obligations."""
 
@@ -1070,15 +1212,47 @@ def _derive_obligation_candidates(
     generated = sorted(generated, key=lambda row: (-row.fisher_priority, row.candidate_id))[
         : config.max_generated_candidates
     ]
-    measured = _bundle_obligation_candidates(
-        generated,
-        pair_start=config.pair_start,
-        batch_size=config.scorer_batch_size,
-        maximum_bundles=config.max_measured_candidates,
-        maximum_atoms=config.max_atoms_per_measured_bundle,
-        minimum_per_family=config.minimum_candidates_per_family,
-    )
+    if isinstance(config, DirectDescriptionV12ObligationDrainConfigV1):
+        measured = _bundle_obligation_candidates_full_drain(
+            generated,
+            pair_start=config.pair_start,
+            batch_size=config.scorer_batch_size,
+            maximum_bundles=config.max_measured_candidates,
+            maximum_atoms=config.max_atoms_per_measured_bundle,
+            family_stratum_mass=_obligation_family_stratum_mass(target_cells, described_cells),
+        )
+    else:
+        measured = _bundle_obligation_candidates(
+            generated,
+            pair_start=config.pair_start,
+            batch_size=config.scorer_batch_size,
+            maximum_bundles=config.max_measured_candidates,
+            maximum_atoms=config.max_atoms_per_measured_bundle,
+            minimum_per_family=config.minimum_candidates_per_family,
+        )
     return generated, measured, raw_count
+
+
+def _obligation_family_stratum_mass(
+    target_cells: np.ndarray,
+    described_cells: np.ndarray,
+) -> dict[str, float]:
+    errors = np.asarray(target_cells) != np.asarray(described_cells)
+    conditional: dict[int, float] = {}
+    for class_id in range(len(CLASS_ORDER)):
+        sites = np.asarray(target_cells) == class_id
+        denominator = int(np.count_nonzero(sites))
+        conditional[class_id] = (
+            int(np.count_nonzero(errors & sites)) / denominator if denominator else 0.0
+        )
+    return {
+        "lane_center": conditional[1],
+        "lane_width": conditional[1],
+        "lane_phase": conditional[1],
+        "road_boundary": conditional[0],
+        "undrivable_boundary": conditional[2],
+        "movable_shape": conditional[3],
+    }
 
 
 def _score_batches(
@@ -1111,8 +1285,126 @@ def _score_batches(
     return result
 
 
+def _score_batches_cached(
+    receiver: Any,
+    *,
+    batch_starts: list[int],
+    pair_start: int,
+    pair_count: int,
+    batch_size: int,
+    target_cells: np.ndarray,
+    target_poses: np.ndarray,
+    segnet_oracle: Any,
+    posenet_oracle: Any,
+    cache_root: Path,
+    cache_identity: str,
+) -> tuple[dict[int, _BatchScore], list[dict[str, Any]]]:
+    rows: dict[int, _BatchScore] = {}
+    manifest: list[dict[str, Any]] = []
+    for start in batch_starts:
+        path = cache_root / f"{start:04d}.score.zlib"
+        if path.exists():
+            row = _load_batch_score_cache(path, identity=cache_identity, start=start)
+        else:
+            row = _score_batches(
+                receiver,
+                batch_starts=[start],
+                pair_start=pair_start,
+                pair_count=pair_count,
+                batch_size=batch_size,
+                target_cells=target_cells,
+                target_poses=target_poses,
+                segnet_oracle=segnet_oracle,
+                posenet_oracle=posenet_oracle,
+            )[start]
+            _publish_identical_or_new(
+                path,
+                _batch_score_cache_bytes(row, identity=cache_identity, start=start),
+            )
+        payload = _read_regular_file_once(path)
+        rows[start] = row
+        manifest.append(
+            {
+                "start": start,
+                "path": _portable_path(path),
+                "bytes": len(payload),
+                "sha256": _sha256(payload),
+            }
+        )
+    return rows, manifest
+
+
 def _score_totals(rows: dict[int, _BatchScore]) -> tuple[int, float]:
     return sum(row.errors for row in rows.values()), sum(row.pose_squared_error for row in rows.values())
+
+
+def _rank_values(values: np.ndarray) -> np.ndarray:
+    """Return average ranks so tied EV/gain values have honest Spearman weight."""
+
+    order = np.argsort(values, kind="stable")
+    ranks = np.empty(len(values), dtype=np.float64)
+    ordered = values[order]
+    start = 0
+    while start < len(values):
+        stop = start + 1
+        while stop < len(values) and ordered[stop] == ordered[start]:
+            stop += 1
+        ranks[order[start:stop]] = (start + stop - 1) / 2.0
+        start = stop
+    return ranks
+
+
+def _predicted_measured_correlation(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    measured = [row for row in rows if isinstance(row.get("measurement"), dict)]
+    predicted = np.asarray(
+        [float(row["predicted_ev_flip_margin_stratum_mass"]) for row in measured],
+        dtype=np.float64,
+    )
+    gains = np.asarray(
+        [float(row["measurement"]["measured_objective_gain"]) for row in measured],
+        dtype=np.float64,
+    )
+    if len(measured) < 2 or np.ptp(predicted) == 0.0 or np.ptp(gains) == 0.0:
+        pearson = spearman = None
+    else:
+        pearson = float(np.corrcoef(predicted, gains)[0, 1])
+        spearman = float(np.corrcoef(_rank_values(predicted), _rank_values(gains))[0, 1])
+    return {
+        "measured_bundle_count": len(measured),
+        "pearson_predicted_ev_vs_measured_objective_gain": (
+            None if pearson is None else f"{pearson:.12f}"
+        ),
+        "spearman_predicted_ev_vs_measured_objective_gain": (
+            None if spearman is None else f"{spearman:.12f}"
+        ),
+        "positive_measured_gain_count": int(np.count_nonzero(gains > 0.0)),
+        "nonpositive_measured_gain_count": int(np.count_nonzero(gains <= 0.0)),
+        "prediction_role": "ordering only; exact canonical-batch bridge is admission authority",
+    }
+
+
+def _consecutive_flat_budget_tail_rungs(ladder: list[dict[str, Any]]) -> int:
+    """Count exact identical archive/bridge rungs from the budget ceiling down."""
+
+    if not ladder:
+        return 0
+    final = ladder[-1]
+    final_identity = (
+        final["archive"]["sha256"],
+        final["bridge"]["segmentation"]["d_seg"],
+        final["bridge"]["pose"]["d_pose"],
+    )
+    count = 0
+    for row in reversed(ladder):
+        identity = (
+            row["archive"]["sha256"],
+            row["bridge"]["segmentation"]["d_seg"],
+            row["bridge"]["pose"]["d_pose"],
+        )
+        if identity != final_identity:
+            break
+        count += 1
+    return count
 
 
 def _fraction_text(numerator: int, denominator: int) -> str:
@@ -1666,23 +1958,26 @@ def _candidate_atom_count(candidate: _SearchCandidate) -> int:
 
 
 def run_v11_search(
-    config: DirectDescriptionV11ObligationSearchConfigV1,
+    config: DirectDescriptionV11ObligationSearchConfigV1 | DirectDescriptionV12ObligationDrainConfigV1,
     output_directory: Path,
     semantic_argv: list[str],
 ) -> Path:
     """Run the bounded scorer-obligation solve with exact joint-objective admission."""
 
     root = output_directory
+    is_v12 = isinstance(config, DirectDescriptionV12ObligationDrainConfigV1)
+    version = "v12" if is_v12 else "v11"
+    checkpoint_schema = f"ddm_{version}_obligation_search_checkpoint.v1"
     storage = _storage_preflight(root.resolve())
     storage["output_tier"] = _portable_path(Path(str(storage.get("output_tier", root))))
     root.mkdir(parents=True, exist_ok=True)
-    receipt_path = root / f"ddm_v11_obligation_search_n{config.pair_count}_receipt.json"
+    receipt_path = root / f"ddm_{version}_obligation_search_n{config.pair_count}_receipt.json"
     if receipt_path.exists():
         receipt = json.loads(_read_regular_file_once(receipt_path))
         if receipt.get("typed_config_sha256") != config.typed_config_hash():
             raise DirectDescriptionError("completed v11 receipt typed-config hash differs")
         for rung in receipt["ladder"]:
-            _bound_bytes(Path(rung["archive"]["path"]), rung["archive"]["sha256"], "completed v11 rung")
+            _bound_bytes(Path(rung["archive"]["path"]), rung["archive"]["sha256"], f"completed {version} rung")
         print(json.dumps({"resumed": True, "receipt": str(receipt_path), "verdict": receipt["verdict"]}))
         return receipt_path
 
@@ -1716,19 +2011,59 @@ def run_v11_search(
     posenet_oracle, posenet_custody = _load_posenet_oracle(Path(config.upstream_root), threads=config.scorer_threads)
     all_batch_starts = list(range(0, config.pair_count, config.scorer_batch_size))
     search_started = time.perf_counter()
-    baseline_batches = _score_batches(
-        base_receiver,
-        batch_starts=all_batch_starts,
-        pair_start=config.pair_start,
-        pair_count=config.pair_count,
-        batch_size=config.scorer_batch_size,
-        target_cells=target_cells,
-        target_poses=target_poses,
-        segnet_oracle=segnet_oracle,
-        posenet_oracle=posenet_oracle,
+    base_cache_identity = _sha256(
+        rfc8785_canonicalize(
+            {
+                "typed_config_sha256": config.typed_config_hash(),
+                "base_archive_sha256": _sha256(base_archive),
+                "target_cache_sha256": target_receipt.source_cache.sha256,
+                "segnet_custody": segnet_custody,
+                "posenet_custody": posenet_custody,
+                "scorer_batch_size": config.scorer_batch_size,
+            }
+        )
     )
+    if is_v12:
+        baseline_batches, base_cache_manifest = _score_batches_cached(
+            base_receiver,
+            batch_starts=all_batch_starts,
+            pair_start=config.pair_start,
+            pair_count=config.pair_count,
+            batch_size=config.scorer_batch_size,
+            target_cells=target_cells,
+            target_poses=target_poses,
+            segnet_oracle=segnet_oracle,
+            posenet_oracle=posenet_oracle,
+            cache_root=root / "stage_checkpoints" / "base_batches",
+            cache_identity=base_cache_identity,
+        )
+        _atomic_checkpoint(
+            root / "stage_checkpoints" / "00_base_batch_cache_complete.json",
+            {
+                "schema": checkpoint_schema,
+                "stage": "immutable_base_batch_cache_complete",
+                "typed_config_sha256": config.typed_config_hash(),
+                "base_cache_identity": base_cache_identity,
+                "canonical_batch_count": len(base_cache_manifest),
+                "batch_cache": base_cache_manifest,
+            },
+        )
+    else:
+        baseline_batches = _score_batches(
+            base_receiver,
+            batch_starts=all_batch_starts,
+            pair_start=config.pair_start,
+            pair_count=config.pair_count,
+            batch_size=config.scorer_batch_size,
+            target_cells=target_cells,
+            target_poses=target_poses,
+            segnet_oracle=segnet_oracle,
+            posenet_oracle=posenet_oracle,
+        )
+        base_cache_manifest = []
     baseline_errors, baseline_pose_squared_error = _score_totals(baseline_batches)
     described_cells = np.concatenate([baseline_batches[start].cells for start in all_batch_starts], axis=0)
+    family_stratum_mass = _obligation_family_stratum_mass(target_cells, described_cells)
     generated, candidates, raw_generated_count = _derive_obligation_candidates(
         base_receiver,
         target_cells=target_cells,
@@ -1747,13 +2082,16 @@ def run_v11_search(
     _atomic_checkpoint(
         root / "stage_checkpoints" / "01_obligation_inventory.json",
         {
-            "schema": "ddm_v11_obligation_search_checkpoint.v1",
+            "schema": checkpoint_schema,
             "stage": "obligation_inventory",
             "typed_config_sha256": config.typed_config_hash(),
             "raw_generated_count": raw_generated_count,
             "bounded_generated_count": len(generated),
             "measured_bundle_count": len(candidates),
             "generated_family_counts": generated_family_counts,
+            "family_stratum_mass": {
+                name: f"{value:.12f}" for name, value in family_stratum_mass.items()
+            },
             "atoms_in_measured_bundles": sum(_candidate_atom_count(row) for row in candidates),
             "candidate_inventory_sha256": inventory_sha256,
         },
@@ -1781,7 +2119,26 @@ def run_v11_search(
         processed += 1
 
     current_archive, current_receiver = _compile_obligation_candidates(predictor_archive, accepted)
-    if accepted:
+    current_batches = dict(baseline_batches)
+    resume_cache_complete = True
+    for row in candidate_rows:
+        if not row["admitted"]:
+            continue
+        cache_identity = row.get("batch_cache_identity")
+        cache_rows = row.get("batch_score_cache")
+        if not isinstance(cache_identity, str) or not isinstance(cache_rows, list):
+            resume_cache_complete = False
+            break
+        for cache_row in cache_rows:
+            start = int(cache_row["start"])
+            path = REPO_ROOT / cache_row["path"]
+            payload = _bound_bytes(path, cache_row["sha256"], "accepted candidate batch cache")
+            if len(payload) != int(cache_row["bytes"]):
+                raise DirectDescriptionError("accepted candidate batch cache byte count mismatch")
+            current_batches[start] = _load_batch_score_cache(
+                path, identity=cache_identity, start=start
+            )
+    if accepted and not resume_cache_complete:
         current_batches = _score_batches(
             current_receiver,
             batch_starts=all_batch_starts,
@@ -1793,19 +2150,23 @@ def run_v11_search(
             segnet_oracle=segnet_oracle,
             posenet_oracle=posenet_oracle,
         )
-        current_errors, current_pose_squared_error = _score_totals(current_batches)
-    else:
-        current_batches = dict(baseline_batches)
-        current_errors, current_pose_squared_error = baseline_errors, baseline_pose_squared_error
+    current_errors, current_pose_squared_error = _score_totals(current_batches)
     occupied = set().union(*(candidate.conflict_keys() for candidate in accepted)) if accepted else set()
     sites = config.pair_count * 384 * 512
     pose_coordinates = config.pair_count * 6
     baseline_dpose = baseline_pose_squared_error / pose_coordinates
     pose_tube_ceiling = baseline_dpose + config.pose_tube_dpose_radius
-    for index in range(processed, len(candidates)):
+    invocation_candidate_started = time.perf_counter()
+    invocation_stop = len(candidates)
+    if is_v12:
+        invocation_stop = min(
+            len(candidates), processed + config.max_bundles_per_invocation
+        )
+    for index in range(processed, invocation_stop):
         candidate = candidates[index]
+        candidate_started = time.perf_counter()
         row: dict[str, Any] = {
-            "schema": "ddm_v11_obligation_search_checkpoint.v1",
+            "schema": checkpoint_schema,
             "stage": "measured_joint_objective_admission",
             "typed_config_sha256": config.typed_config_hash(),
             "candidate_inventory_sha256": inventory_sha256,
@@ -1813,10 +2174,27 @@ def run_v11_search(
             "candidate_fingerprint": candidate.fingerprint(),
             "candidate": candidate.row(),
             "atomic_obligation_count": _candidate_atom_count(candidate),
+            "predicted_ev_flip_margin_stratum_mass": f"{candidate.fisher_priority:.12e}",
         }
         conflicts = sorted(candidate.conflict_keys() & occupied)
         admitted = False
         if conflicts:
+            conflicting_prior = [
+                prior for prior in accepted if prior.conflict_keys() & candidate.conflict_keys()
+            ]
+            row["greedy_conflict_exclusion"] = {
+                "conflict_keys": [list(value) for value in conflicts],
+                "prior_admitted_candidate_ids": [value.candidate_id for value in conflicting_prior],
+                "prior_predicted_ev": [
+                    f"{value.fisher_priority:.12e}" for value in conflicting_prior
+                ],
+                "candidate_predicted_ev": f"{candidate.fisher_priority:.12e}",
+                "all_prior_predicted_ev_not_lower": all(
+                    value.fisher_priority >= candidate.fisher_priority
+                    for value in conflicting_prior
+                ),
+                "scorer_measurement_performed": False,
+            }
             reason = "address_conflict_with_earlier_measured_admission"
         else:
             try:
@@ -1840,17 +2218,51 @@ def run_v11_search(
                             for source_pair_id in candidate.source_pair_ids
                         }
                     )
-                    proposed_batches = _score_batches(
-                        proposed_receiver,
-                        batch_starts=impacted_starts,
-                        pair_start=config.pair_start,
-                        pair_count=config.pair_count,
-                        batch_size=config.scorer_batch_size,
-                        target_cells=target_cells,
-                        target_poses=target_poses,
-                        segnet_oracle=segnet_oracle,
-                        posenet_oracle=posenet_oracle,
+                    batch_cache_identity = _sha256(
+                        rfc8785_canonicalize(
+                            {
+                                "typed_config_sha256": config.typed_config_hash(),
+                                "candidate_inventory_sha256": inventory_sha256,
+                                "candidate_index": index,
+                                "candidate_fingerprint": candidate.fingerprint(),
+                                "current_archive_sha256": _sha256(current_archive),
+                                "proposed_archive_sha256": _sha256(proposed_archive),
+                            }
+                        )
                     )
+                    if is_v12:
+                        proposed_batches, batch_cache_manifest = _score_batches_cached(
+                            proposed_receiver,
+                            batch_starts=impacted_starts,
+                            pair_start=config.pair_start,
+                            pair_count=config.pair_count,
+                            batch_size=config.scorer_batch_size,
+                            target_cells=target_cells,
+                            target_poses=target_poses,
+                            segnet_oracle=segnet_oracle,
+                            posenet_oracle=posenet_oracle,
+                            cache_root=(
+                                root
+                                / "stage_checkpoints"
+                                / "candidate_batches"
+                                / f"{index:04d}"
+                            ),
+                            cache_identity=batch_cache_identity,
+                        )
+                        row["batch_cache_identity"] = batch_cache_identity
+                        row["batch_score_cache"] = batch_cache_manifest
+                    else:
+                        proposed_batches = _score_batches(
+                            proposed_receiver,
+                            batch_starts=impacted_starts,
+                            pair_start=config.pair_start,
+                            pair_count=config.pair_count,
+                            batch_size=config.scorer_batch_size,
+                            target_cells=target_cells,
+                            target_poses=target_poses,
+                            segnet_oracle=segnet_oracle,
+                            posenet_oracle=posenet_oracle,
+                        )
                     proposed_errors = current_errors
                     proposed_pose_squared_error = current_pose_squared_error
                     for start, batch in proposed_batches.items():
@@ -1883,6 +2295,7 @@ def run_v11_search(
                         "pose_objective_delta": f"{pose_delta:.12e}",
                         "rate_objective_delta": f"{rate_delta:.12e}",
                         "joint_objective_delta": f"{joint_delta:.12e}",
+                        "measured_objective_gain": f"{-joint_delta:.12e}",
                         "marginal_archive_bytes": marginal_bytes,
                         "canonical_batch_starts_replayed": impacted_starts,
                     }
@@ -1904,8 +2317,53 @@ def run_v11_search(
         row["reason"] = reason
         row["accepted_candidate_count_after"] = len(accepted)
         row["exact_added_bytes_after"] = len(current_archive) - len(base_archive)
+        row["measurement_wall_seconds"] = f"{time.perf_counter() - candidate_started:.6f}"
         _atomic_checkpoint(root / "stage_checkpoints" / "candidates" / f"{index:04d}.json", row)
         candidate_rows.append(row)
+
+    if is_v12 and invocation_stop > processed:
+        invocation_path = (
+            root
+            / "stage_checkpoints"
+            / "invocations"
+            / f"bundles_{processed:04d}_{invocation_stop:04d}.json"
+        )
+        _atomic_checkpoint(
+            invocation_path,
+            {
+                "schema": checkpoint_schema,
+                "stage": "resumable_measurement_invocation_complete",
+                "typed_config_sha256": config.typed_config_hash(),
+                "candidate_inventory_sha256": inventory_sha256,
+                "bundle_start": processed,
+                "bundle_stop": invocation_stop,
+                "bundle_total": len(candidates),
+                "candidate_measurement_seconds": f"{time.perf_counter() - invocation_candidate_started:.6f}",
+                "command_total_seconds": f"{time.perf_counter() - search_started:.6f}",
+                "all_candidate_checkpoints_preserved": True,
+                "measurement_tool_sha256": _sha256(_read_regular_file_once(Path(__file__))),
+                "receiver_lineage_sha256": _sha256(
+                    _read_regular_file_once(
+                        REPO_ROOT
+                        / "src/tac/optimization/direct_description_carrier_compose.py"
+                    )
+                ),
+            },
+        )
+    if is_v12 and invocation_stop < len(candidates):
+        print(
+            json.dumps(
+                {
+                    "resumed": processed > 0,
+                    "partial": True,
+                    "progress_checkpoint": str(invocation_path),
+                    "evaluated_bundles": invocation_stop,
+                    "total_bundles": len(candidates),
+                    "next_bundle": invocation_stop,
+                }
+            )
+        )
+        return invocation_path
 
     baseline_bridge = _compact_bridge_from_batches(
         baseline_batches,
@@ -1934,7 +2392,7 @@ def run_v11_search(
     _atomic_checkpoint(
         root / "stage_checkpoints" / "02_candidate_search_complete.json",
         {
-            "schema": "ddm_v11_obligation_search_checkpoint.v1",
+            "schema": checkpoint_schema,
             "stage": "candidate_search_complete",
             "typed_config_sha256": config.typed_config_hash(),
             "candidate_inventory_sha256": inventory_sha256,
@@ -1959,7 +2417,7 @@ def run_v11_search(
         if len(selected_archive) != state["archive_bytes"]:
             raise DirectDescriptionError("v11 ladder state differs from its accepted-prefix archive bytes")
         archive_path = root / (
-            f"ddm_v11_obligation_n{config.pair_count}_add{requested_budget}.not_a_candidate.zip.receipt-bytes"
+            f"ddm_{version}_obligation_n{config.pair_count}_add{requested_budget}.not_a_candidate.zip.receipt-bytes"
         )
         _publish_identical_or_new(archive_path, selected_archive)
         lane, shearlets, islands = _obligation_symbols(selected)
@@ -1997,7 +2455,7 @@ def run_v11_search(
         _atomic_checkpoint(
             root / "stage_checkpoints" / "budgets" / f"add_{requested_budget:06d}.json",
             {
-                "schema": "ddm_v11_obligation_search_checkpoint.v1",
+                "schema": checkpoint_schema,
                 "stage": "exact_budget_ladder_rung",
                 "typed_config_sha256": config.typed_config_hash(),
                 "requested_added_budget_bytes": requested_budget,
@@ -2018,36 +2476,128 @@ def run_v11_search(
     final = ladder[-1]
     final_dseg = float(final["bridge"]["segmentation"]["d_seg"])
     final_bytes = int(final["archive"]["bytes"])
-    atoms_in_measured_bundles = sum(_candidate_atom_count(row) for row in candidates)
-    unmeasured_bounded_atomic_count = max(0, len(generated) - atoms_in_measured_bundles)
-    measurement_inventory_exhausted = unmeasured_bounded_atomic_count == 0
-    ceiling_probe_total_bytes = max(
+    atoms_in_partitioned_bundles = sum(_candidate_atom_count(row) for row in candidates)
+    exact_scorer_rows = [
+        row for row in candidate_rows if isinstance(row.get("measurement"), dict)
+    ]
+    strict_receiver_rows = [
+        row
+        for row in candidate_rows
+        if row.get("reason") == "strict_receiver_rejected_candidate_bundle"
+    ]
+    greedy_conflict_rows = [
+        row
+        for row in candidate_rows
+        if row.get("reason") == "address_conflict_with_earlier_measured_admission"
+    ]
+    byte_ceiling_rows = [
+        row
+        for row in candidate_rows
+        if row.get("reason")
+        in {
+            "preregistered_total_archive_ceiling_exceeded",
+            "preregistered_added_byte_ceiling_exceeded",
+        }
+    ]
+    exact_scorer_measured_atomic_count = sum(
+        int(row["atomic_obligation_count"]) for row in exact_scorer_rows
+    )
+    strict_receiver_rejected_atomic_count = sum(
+        int(row["atomic_obligation_count"]) for row in strict_receiver_rows
+    )
+    greedy_conflict_excluded_atomic_count = sum(
+        int(row["atomic_obligation_count"]) for row in greedy_conflict_rows
+    )
+    byte_ceiling_excluded_atomic_count = sum(
+        int(row["atomic_obligation_count"]) for row in byte_ceiling_rows
+    )
+    unpartitioned_bounded_atomic_count = max(
+        0, len(generated) - atoms_in_partitioned_bundles
+    )
+    exact_scorer_unmeasured_atomic_count = max(
+        0, len(generated) - exact_scorer_measured_atomic_count
+    )
+    measurement_inventory_exhausted = exact_scorer_unmeasured_atomic_count == 0
+    decision_inventory_exhausted = (
+        len(candidate_rows) == len(candidates)
+        and unpartitioned_bounded_atomic_count == 0
+        and all(isinstance(row.get("reason"), str) and row["reason"] for row in candidate_rows)
+    )
+    conflict_order_valid = True
+    accepted_prior: list[_SearchCandidate] = []
+    conflict_order_evidence: list[dict[str, Any]] = []
+    for candidate, row in zip(candidates, candidate_rows, strict=True):
+        if row.get("reason") == "address_conflict_with_earlier_measured_admission":
+            prior = [
+                value
+                for value in accepted_prior
+                if value.conflict_keys() & candidate.conflict_keys()
+            ]
+            valid = bool(prior) and all(
+                value.fisher_priority >= candidate.fisher_priority for value in prior
+            )
+            conflict_order_valid = conflict_order_valid and valid
+            conflict_order_evidence.append(
+                {
+                    "candidate_id": candidate.candidate_id,
+                    "candidate_predicted_ev": f"{candidate.fisher_priority:.12e}",
+                    "prior_admitted_candidate_ids": [value.candidate_id for value in prior],
+                    "prior_predicted_ev": [
+                        f"{value.fisher_priority:.12e}" for value in prior
+                    ],
+                    "valid_lower_or_equal_ev_exclusion": valid,
+                }
+            )
+        if row.get("admitted"):
+            accepted_prior.append(candidate)
+    predicted_measured_correlation = _predicted_measured_correlation(candidate_rows)
+    invocation_checkpoints = []
+    for path in sorted((root / "stage_checkpoints" / "invocations").glob("*.json")):
+        row = json.loads(_read_regular_file_once(path))
+        invocation_checkpoints.append(
+            {
+                "path": _portable_path(path),
+                "bundle_start": row["bundle_start"],
+                "bundle_stop": row["bundle_stop"],
+                "command_total_seconds": row["command_total_seconds"],
+                "measurement_tool_sha256": row.get("measurement_tool_sha256"),
+                "receiver_lineage_sha256": row.get("receiver_lineage_sha256"),
+            }
+        )
+    maximum_budget_envelope_bytes = max(
         len(base_archive) + int(row["effective_added_budget_bytes"]) for row in ladder
     )
-    near_200kb_budget_ceiling_probed = ceiling_probe_total_bytes >= (
-        config.total_archive_ceiling_bytes - 1024
+    byte_ceiling_nonbinding = not byte_ceiling_rows
+    last_admission = max(
+        (index for index, row in enumerate(candidate_rows) if row["admitted"]),
+        default=-1,
     )
-    last_admission = max((index for index, row in enumerate(candidate_rows) if row["admitted"]), default=-1)
-    flattened = last_admission < len(candidate_rows) - 4
+    consecutive_flat_budget_tail_rungs = _consecutive_flat_budget_tail_rungs(ladder)
+    flattened = consecutive_flat_budget_tail_rungs >= 3
     plateau_falsifier = (
         config.pair_count == 600
         and final_dseg > 0.00116
-        and near_200kb_budget_ceiling_probed
+        and maximum_budget_envelope_bytes == config.total_archive_ceiling_bytes
+        and byte_ceiling_nonbinding
         and flattened
-        and measurement_inventory_exhausted
+        and decision_inventory_exhausted
+        and conflict_order_valid
     )
     if final_dseg <= 0.00116 and final_bytes <= 154_600:
         verdict = "ADVISORY_INSTANCE_MEETS_SUB015_BOX_NOT_PROMOTABLE"
     elif plateau_falsifier:
-        verdict = "ADVISORY_FORMULATION_PLATEAU_NEAR_200KB_V6_SUCCESSOR_NAMED"
-    elif len(generated) > sum(_candidate_atom_count(row) for row in candidates):
+        verdict = (
+            "ADVISORY_FORMULATION_PLATEAU_WITH_200KB_CEILING_NONBINDING_"
+            "V6_SUCCESSOR_NAMED"
+        )
+    elif not decision_inventory_exhausted:
         verdict = "ADVISORY_BOUNDED_WATERFILL_ABOVE_TARGET_UNMEASURED_OBLIGATIONS_REMAIN"
     else:
         verdict = "ADVISORY_FORMULATION_ABOVE_TARGET_AFTER_OBLIGATION_INVENTORY"
     search_seconds = time.perf_counter() - search_started
     receipt: dict[str, Any] = {
-        "schema": RESULT_SCHEMA_V3,
-        "lane_id": "lane_ddm_v11_obligation_vocabulary_solve_20260722",
+        "schema": RESULT_SCHEMA_V4 if is_v12 else RESULT_SCHEMA_V3,
+        "lane_id": "ddm_v12_drain_unmeasured_obligations" if is_v12 else "lane_ddm_v11_obligation_vocabulary_solve_20260722",
         "tasks": [603, 613, 578],
         "run_id": config.run_id,
         "seed": config.seed,
@@ -2061,14 +2611,36 @@ def run_v11_search(
             "raw_generated_atomic_count": raw_generated_count,
             "bounded_generated_atomic_count": len(generated),
             "generated_family_counts": generated_family_counts,
-            "measured_bundle_count": len(candidates),
-            "atoms_in_measured_bundles": atoms_in_measured_bundles,
-            "unmeasured_bounded_atomic_count": unmeasured_bounded_atomic_count,
+            "family_stratum_mass": {
+                name: f"{value:.12f}" for name, value in family_stratum_mass.items()
+            },
+            "ev_order_policy": (
+                config.ev_order_policy if is_v12 else "fisher_priority_with_family_minimum"
+            ),
+            "drain_policy": (
+                config.drain_policy if is_v12 else "top_one_bundle_per_canonical_batch_family"
+            ),
+            "partitioned_bundle_count": len(candidates),
+            "atoms_in_partitioned_bundles": atoms_in_partitioned_bundles,
+            "exact_scorer_measured_bundle_count": len(exact_scorer_rows),
+            "exact_scorer_measured_atomic_count": exact_scorer_measured_atomic_count,
+            "strict_receiver_rejected_bundle_count": len(strict_receiver_rows),
+            "strict_receiver_rejected_atomic_count": strict_receiver_rejected_atomic_count,
+            "greedy_conflict_excluded_bundle_count": len(greedy_conflict_rows),
+            "greedy_conflict_excluded_atomic_count": greedy_conflict_excluded_atomic_count,
+            "byte_ceiling_excluded_bundle_count": len(byte_ceiling_rows),
+            "byte_ceiling_excluded_atomic_count": byte_ceiling_excluded_atomic_count,
+            "unpartitioned_bounded_atomic_count": unpartitioned_bounded_atomic_count,
+            "exact_scorer_unmeasured_atomic_count": exact_scorer_unmeasured_atomic_count,
             "measurement_inventory_exhausted": measurement_inventory_exhausted,
+            "decision_inventory_exhausted": decision_inventory_exhausted,
+            "conflict_exclusion_order_valid": conflict_order_valid,
+            "conflict_exclusion_order_evidence": conflict_order_evidence,
             "evaluated_bundle_count": len(candidate_rows),
             "admitted_bundle_count": len(accepted),
             "admitted_atom_count": sum(_candidate_atom_count(row) for row in accepted),
             "inventory_sha256": inventory_sha256,
+            "predicted_vs_measured_correlation": predicted_measured_correlation,
             "admission_rows": candidate_rows,
             "waterfill_stop_law": "admit iff measured delta of 100*d_seg+sqrt(10*d_pose)+25*bytes/37545489 is negative; pose tube is safety ceiling only",
             "pose_tube": {
@@ -2088,32 +2660,59 @@ def run_v11_search(
             "marginal_objective_drop_per_byte": f"{(marginal[knee_index - 1] if knee_index else 0.0):.12e}",
         },
         "falsifier": {
-            "condition": "n600 joint-objective obligation curve flattens above d_seg 0.00116 after the measured obligation inventory is exhausted with the near-200KB budget ceiling probed",
-            "near_200kb_budget_ceiling_probed": near_200kb_budget_ceiling_probed,
-            "ceiling_probe_total_bytes": ceiling_probe_total_bytes,
+            "condition": "n600 joint-objective obligation curve flattens above d_seg 0.00116 after every bounded atom has an exact scorer, strict-receiver, or prior-higher-EV-conflict disposition and the 200KB ceiling remains non-binding",
+            "maximum_budget_envelope_bytes": maximum_budget_envelope_bytes,
+            "byte_ceiling_nonbinding": byte_ceiling_nonbinding,
             "measurement_inventory_exhausted": measurement_inventory_exhausted,
-            "unmeasured_bounded_atomic_count": unmeasured_bounded_atomic_count,
+            "decision_inventory_exhausted": decision_inventory_exhausted,
+            "exact_scorer_unmeasured_atomic_count": exact_scorer_unmeasured_atomic_count,
+            "unpartitioned_bounded_atomic_count": unpartitioned_bounded_atomic_count,
+            "conflict_exclusion_order_valid": conflict_order_valid,
+            "last_admission_bundle_index": last_admission,
+            "consecutive_flat_budget_tail_rungs": consecutive_flat_budget_tail_rungs,
+            "flatten_definition": (
+                "at least three consecutive highest-budget rungs have identical exact "
+                "archive SHA, d_seg, and d_pose"
+            ),
             "flattened": flattened,
             "triggered": plateau_falsifier,
             "not_triggered_reason": (
                 None
                 if plateau_falsifier
                 else (
-                    "bounded measurement cap left scorer-obligation atoms unmeasured; no formulation-level wrong-worldsheet inference"
-                    if not measurement_inventory_exhausted
+                    "bounded decision inventory remains unresolved; no formulation-level wrong-worldsheet inference"
+                    if not decision_inventory_exhausted
                     else "other preregistered falsifier conditions were not all met"
                 )
             ),
             "final_total_bytes": final_bytes,
             "final_d_seg": f"{final_dseg:.12f}",
             "binding_decomposition": final["bridge"]["segmentation"]["strata"],
-            "verdict_scope": "declared v11 obligation grammar over the bound v6 fixed_ar1_hold24 realization",
+            "verdict_scope": f"declared {version} obligation grammar over the bound v6 fixed_ar1_hold24 realization",
             "family_closed": False,
-            "next_vehicle_if_triggered": "v6-successor predictor with lower wrong-worldsheet baseline before post-solve correction",
+            "next_vehicle_if_triggered": (
+                "v6-successor predictor with native Movable island worldsheet events in PREDICT, not correct; "
+                "chart/event/carrier families and the describe-line paradigm remain open"
+            ),
         },
         "receiver_custody": dict(current_receiver.custody),
         "fail_closed_mutation_proof": fail_closed,
         "scorer_custody": {"segnet": segnet_custody, "posenet": posenet_custody},
+        "implementation_custody": {
+            "measurement_tool": {
+                "path": _portable_path(Path(__file__)),
+                "sha256": _sha256(_read_regular_file_once(Path(__file__))),
+            },
+            "receiver_lineage": {
+                "path": "src/tac/optimization/direct_description_carrier_compose.py",
+                "sha256": _sha256(
+                    _read_regular_file_once(
+                        REPO_ROOT
+                        / "src/tac/optimization/direct_description_carrier_compose.py"
+                    )
+                ),
+            },
+        },
         "target_custody": {
             "receipt_path": v5_typed["target_receipt_path"],
             "receipt_sha256": v5_typed["target_receipt_sha256"],
@@ -2125,12 +2724,24 @@ def run_v11_search(
             "total_seconds": f"{search_seconds:.6f}",
             "n600_status": "MEASURED_FULL_0_600_CHUNKED" if config.pair_count == 600 else "WINDOW_LADDER_RUNG",
             "oom_law": "batch16 RGB is released after each scorer call; one source chunk and one RGB scorer batch resident; retained argmax cells only",
-            "bounded_rederive_under_600_seconds": search_seconds <= 600.0,
+            "bounded_rederive_under_600_seconds": (
+                max(float(row["command_total_seconds"]) for row in invocation_checkpoints) <= 600.0
+                if invocation_checkpoints
+                else search_seconds <= 600.0
+            ),
+            "resumable_invocations": invocation_checkpoints,
+            "maximum_command_seconds": (
+                max(float(row["command_total_seconds"]) for row in invocation_checkpoints)
+                if invocation_checkpoints
+                else search_seconds
+            ),
         },
         "storage_preflight": storage,
         "resume": {
             "policy": config.checkpoint_policy,
             "candidate_checkpoints": len(candidate_rows),
+            "base_batch_cache": base_cache_manifest,
+            "invocation_checkpoints": invocation_checkpoints,
             "budget_checkpoints": len(ladder),
             "all_preserved": True,
         },
@@ -2185,7 +2796,10 @@ def main() -> int:
         "--output-directory",
         str(args.output_directory),
     ]
-    if config_payload.get("schema") == "DirectDescriptionV11ObligationSearchConfigV1":
+    if config_payload.get("schema") == "DirectDescriptionV12ObligationDrainConfigV1":
+        config = DirectDescriptionV12ObligationDrainConfigV1.model_validate_json(config_bytes)
+        run_v11_search(config, args.output_directory, semantic_argv)
+    elif config_payload.get("schema") == "DirectDescriptionV11ObligationSearchConfigV1":
         config = DirectDescriptionV11ObligationSearchConfigV1.model_validate_json(config_bytes)
         run_v11_search(config, args.output_directory, semantic_argv)
     elif config_payload.get("schema") == "DirectDescriptionV10FisherEventSearchConfigV1":

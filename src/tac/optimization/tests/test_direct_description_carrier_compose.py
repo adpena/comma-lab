@@ -6,6 +6,7 @@ import json
 import lzma
 import struct
 import zipfile
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -22,6 +23,7 @@ from tac.optimization.direct_description_carrier_compose import (
     DirectDescriptionV9CarrierComposeConfigV1,
     DirectDescriptionV10FisherEventSearchConfigV1,
     DirectDescriptionV11ObligationSearchConfigV1,
+    DirectDescriptionV12ObligationDrainConfigV1,
     IslandShapeAtomV1,
     TopologyEventV1,
     compile_carrier_compose_archive,
@@ -46,8 +48,14 @@ from tac.optimization.direct_description_measurement_ladder import (
 from tac.optimization.direct_description_minimizer import DirectDescriptionError
 from tac.optimization.predictor_upgrade_xi_chart import LaneCoefficientDelta
 from tools.run_ddm_v9_carrier_compose import (
+    _batch_score_cache_bytes,
+    _BatchScore,
     _bundle_obligation_candidates,
+    _bundle_obligation_candidates_full_drain,
+    _consecutive_flat_budget_tail_rungs,
     _joint_objective_delta,
+    _load_batch_score_cache,
+    _rank_values,
     _SearchCandidate,
     _select_diverse_candidates,
 )
@@ -216,6 +224,29 @@ def test_v11_config_binds_joint_objective_and_full_n600_window() -> None:
         DirectDescriptionV11ObligationSearchConfigV1(pair_start=0, pair_count=256, **common)
 
 
+def test_v12_config_binds_full_n600_resumable_drain() -> None:
+    common = {
+        "run_id": "fixture_v12",
+        "v6_receipt_path": "v6.json",
+        "v6_receipt_sha256": "1" * 64,
+        "predictor_archive_path": "predictor.zip",
+        "predictor_archive_sha256": "2" * 64,
+        "upstream_root": "/absolute/upstream",
+        "scorer_threads": 1,
+    }
+    config = DirectDescriptionV12ObligationDrainConfigV1(
+        pair_start=0, pair_count=600, **common
+    )
+    assert config.max_measured_candidates == 512
+    assert config.max_bundles_per_invocation == 64
+    assert config.drain_policy.startswith("exhaustive_conflict_free")
+    assert config.base_cache_policy.startswith("immutable_zlib")
+    with pytest.raises(ValueError, match="exact full n600"):
+        DirectDescriptionV12ObligationDrainConfigV1(
+            pair_start=448, pair_count=64, **common
+        )
+
+
 def test_v11_joint_objective_can_admit_priced_pose_worsening() -> None:
     seg_delta, pose_delta, rate_delta, joint_delta = _joint_objective_delta(
         current_errors=10_000,
@@ -273,6 +304,91 @@ def test_v11_bundles_absolute_pair_ids_against_window_relative_batch_geometry() 
         "obligation_bundle_batch_0008_lane_center",
     }
     assert all(455 not in row.source_pair_ids or 456 not in row.source_pair_ids for row in bundles)
+
+
+def test_v12_full_drain_partitions_conflicts_and_covers_every_atom() -> None:
+    rows = [
+        _SearchCandidate(
+            f"lane_{index}",
+            "Lane/center_c0_rank4_obligation",
+            10.0 - index,
+            (index // 2,),
+            lane_symbols=(LaneCoefficientDelta(index // 2, 0, 0, float(index + 1)),),
+        )
+        for index in range(4)
+    ]
+    rows.append(
+        _SearchCandidate(
+            "movable",
+            "Movable/birth_moments_curvelet_xi_transport",
+            1.0,
+            (0,),
+            island_shapes=(IslandShapeAtomV1(0, "birth", 1, 100, 200, 10, 18, 32, 8, -4, 12),),
+        )
+    )
+    bundles = _bundle_obligation_candidates_full_drain(
+        rows,
+        pair_start=0,
+        batch_size=16,
+        maximum_bundles=16,
+        maximum_atoms=2,
+        family_stratum_mass={
+            "lane_center": 0.4,
+            "lane_width": 0.4,
+            "lane_phase": 0.4,
+            "road_boundary": 0.1,
+            "undrivable_boundary": 0.1,
+            "movable_shape": 0.9,
+        },
+    )
+    assert sum(len(row.lane_symbols) + len(row.island_shapes) for row in bundles) == len(rows)
+    assert len(bundles) == 3
+    assert all(len(row.conflict_keys()) == len(row.lane_symbols) + len(row.island_shapes) for row in bundles)
+    assert all(row.mechanism.startswith(("Lane/", "Movable/")) for row in bundles)
+
+
+def test_v12_batch_score_cache_is_immutable_compact_roundtrip(tmp_path: Path) -> None:
+    score = _BatchScore(
+        cells=np.arange(32, dtype=np.uint8).reshape(2, 4, 4) % 5,
+        poses=np.arange(12, dtype=np.float32).reshape(2, 6),
+        errors=7,
+        pose_squared_error=1.25,
+    )
+    path = tmp_path / "0000.score.zlib"
+    payload = _batch_score_cache_bytes(score, identity="a" * 64, start=0)
+    path.write_bytes(payload)
+    loaded = _load_batch_score_cache(path, identity="a" * 64, start=0)
+    assert np.array_equal(loaded.cells, score.cells)
+    assert np.array_equal(loaded.poses, score.poses)
+    assert loaded.errors == score.errors
+    assert loaded.pose_squared_error == score.pose_squared_error
+    assert len(payload) < score.cells.nbytes + score.poses.nbytes + 512
+
+
+def test_v12_spearman_ranks_average_ties() -> None:
+    values = np.asarray([3.0, 1.0, 1.0, 2.0, 3.0], dtype=np.float64)
+    assert np.array_equal(_rank_values(values), np.asarray([3.5, 0.5, 0.5, 2.0, 3.5]))
+
+
+def test_v12_flattening_uses_exact_budget_rungs_not_candidate_count() -> None:
+    def rung(archive_sha: str, d_seg: str, d_pose: str) -> dict[str, object]:
+        return {
+            "archive": {"sha256": archive_sha},
+            "bridge": {
+                "segmentation": {"d_seg": d_seg},
+                "pose": {"d_pose": d_pose},
+            },
+        }
+
+    ladder = [
+        rung("base", "0.04", "164"),
+        rung("final", "0.034", "163"),
+        rung("final", "0.034", "163"),
+        rung("final", "0.034", "163"),
+    ]
+    assert _consecutive_flat_budget_tail_rungs(ladder) == 3
+    ladder[-2] = rung("different", "0.035", "163")
+    assert _consecutive_flat_budget_tail_rungs(ladder) == 1
 
 
 def test_v10_candidate_cutoff_preserves_every_mechanism_family() -> None:

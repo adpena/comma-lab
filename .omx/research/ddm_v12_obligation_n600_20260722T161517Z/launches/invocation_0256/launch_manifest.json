@@ -1,0 +1,22 @@
+{
+  "argv": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "tools/run_ddm_v9_carrier_compose.py",
+    "--config",
+    ".omx/research/configs/ddm_v12_obligation_n600_20260722.json",
+    "--output-directory",
+    ".omx/research/ddm_v12_obligation_n600_20260722T161517Z"
+  ],
+  "authority": "codex_delegate:ddm_v12_drain_unmeasured_obligations:20260722T161517Z local macOS-CPU advisory only",
+  "cwd": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v12_drain_unmeasured_obligations_20260722T161517Z",
+  "detach_method": "subprocess.Popen(start_new_session=True)",
+  "dry_run": false,
+  "generated_utc": "2026-07-22T17:31:02Z",
+  "git_sha": "890393eaa4483c6c16250b5c08286108dce46a66",
+  "log_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v12_drain_unmeasured_obligations_20260722T161517Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/launches/invocation_0256/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v12_drain_unmeasured_obligations_20260722T161517Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/launches/invocation_0256",
+  "pid": 7492,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v12_drain_unmeasured_obligations_20260722T161517Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/launches/invocation_0256/run.pid",
+  "purpose": "V12 bounded n600 EV-ordered obligation drain bundles 256 onward",
+  "schema": "detached_local_process_launch.v1"
+}
