@@ -552,7 +552,11 @@ def test_v5_config_requires_probe_inside_n64_or_n256_state_window() -> None:
     }
     config = DirectDescriptionRouteFixComposeConfigV1(**common)
     assert config.pair_start == 448 and config.pair_count == 64
-    with pytest.raises(ValueError, match="n64 or n256"):
+    n600 = DirectDescriptionRouteFixComposeConfigV1(
+        **{**common, "pair_start": 0, "pair_count": 600}
+    )
+    assert (n600.pair_start, n600.pair_count) == (0, 600)
+    with pytest.raises(ValueError, match="n64, n256, or n600"):
         DirectDescriptionRouteFixComposeConfigV1(**{**common, "pair_count": 128})
     with pytest.raises(ValueError, match="contained"):
         DirectDescriptionRouteFixComposeConfigV1(**{**common, "pair_start": 384})
@@ -574,9 +578,30 @@ def test_v6_config_and_program_are_typed_local_only() -> None:
         "xi_pose6_ar1_hold24",
         "residual_zero_static_once",
     )
+    n600 = DirectDescriptionDsegBridgeAmortizeConfigV1(
+        pair_start=0,
+        pair_count=600,
+        v5_receipt_path="v5_n600.json",
+        v5_receipt_sha256="1" * 64,
+        v5_archive_path="v5_n600.zip",
+        v5_archive_sha256="2" * 64,
+        scorer_threads=1,
+        candidate_modes=("fixed_ar1_hold24",),
+    )
+    assert n600.candidate_modes == ("fixed_ar1_hold24",)
+    with pytest.raises(ValueError, match="candidate_modes"):
+        DirectDescriptionDsegBridgeAmortizeConfigV1(
+            pair_start=0,
+            pair_count=600,
+            v5_receipt_path="v5_n600.json",
+            v5_receipt_sha256="1" * 64,
+            v5_archive_path="v5_n600.zip",
+            v5_archive_sha256="2" * 64,
+            scorer_threads=1,
+        )
     program = DirectDescriptionDsegBridgeAmortizeProgramV1(config_path="v6.json", output_directory="out")
     assert program.compile_consumer_argv()[-2:] == ("--execution-allowed", "false")
-    with pytest.raises(ValueError, match="n64 or n256"):
+    with pytest.raises(ValueError, match="n64, n256, or n600"):
         DirectDescriptionDsegBridgeAmortizeConfigV1(
             pair_start=448,
             pair_count=128,
