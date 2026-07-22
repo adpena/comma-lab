@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import lzma
 import struct
 import zipfile
 import zlib
@@ -48,10 +49,12 @@ ARCHIVE_SCHEMA: Final = "direct_description_v9_carrier_compose_archive.v1"
 ARCHIVE_SCHEMA_V2: Final = "direct_description_v10_fisher_event_archive.v1"
 ARCHIVE_SCHEMA_V3: Final = "direct_description_v11_obligation_archive.v1"
 ARCHIVE_SCHEMA_V4: Final = "direct_description_v13_worldsheet_predictor_archive.v1"
+ARCHIVE_SCHEMA_V5: Final = "direct_description_v14_realization_fidelity_archive.v1"
 RECEIVER_SCHEMA: Final = "direct_description_v9_carrier_compose_receiver.v1"
 RECEIVER_SCHEMA_V2: Final = "direct_description_v10_fisher_event_receiver.v1"
 RECEIVER_SCHEMA_V3: Final = "direct_description_v11_obligation_receiver.v1"
 RECEIVER_SCHEMA_V4: Final = "direct_description_v13_worldsheet_predictor_receiver.v1"
+RECEIVER_SCHEMA_V5: Final = "direct_description_v14_realization_fidelity_receiver.v1"
 RESULT_SCHEMA: Final = "direct_description_v9_carrier_compose_receipt.v1"
 RESULT_SCHEMA_V2: Final = "direct_description_v10_fisher_event_search_receipt.v1"
 RESULT_SCHEMA_V3: Final = "direct_description_v11_obligation_search_receipt.v1"
@@ -61,6 +64,7 @@ MAGIC: Final = "DDV9C1"
 MAGIC_V2: Final = "DDV10C1"
 MAGIC_V3: Final = "DDV11C1"
 MAGIC_V4: Final = "DDV13P1"
+MAGIC_V5: Final = "DDV14R1"
 EVIDENCE_AXIS: Final = "[macOS-CPU frozen-scorer advisory]"
 CLASS_ORDER: Final = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
 ROLE_CLASS_IDS: Final = {
@@ -80,6 +84,21 @@ WORLDSHEET_KNOT_MEMBER: Final = "predict/movable_worldsheet_knots.ddwk"
 WORLDSHEET_G1_MEMBER: Final = "predict/movable_polygon_worldsheet.g1s"
 LANE_PROGRAM_MEMBER: Final = "predict/lane_periodic_programs.ddlp"
 LANE_KNOT_MEMBER: Final = "predict/lane_drift_knots.ddlk"
+REALIZATION_PROFILE_MEMBER: Final = "render/receiver_realization.ddrp"
+REALIZATION_STATIC_RULE_MEMBER: Final = "render/static_cell_rule.g4sr"
+REALIZATION_PAINT_ORDER: Final = ("UndrivableBoundary", "Road", "Lane", "Movable", "MyCar")
+_REALIZATION_MAGIC: Final = b"DDRP1"
+_REALIZATION_VERSION: Final = 1
+_STATIC_RULE_CODEC_RAW: Final = 0
+_STATIC_RULE_CODEC_LZMA_RAW: Final = 1
+_STATIC_RULE_IDS: Final = {
+    "movable_midband_parametric": b"G4MB",
+    "horizon_row_parametric": b"G4HR",
+    "static_image_sparse_all": b"G4SR",
+}
+_STATIC_RULE_LZMA_FILTERS: Final = [
+    {"id": lzma.FILTER_LZMA1, "dict_size": 1 << 20, "lc": 3, "lp": 0, "pb": 2}
+]
 
 _ROLE_TO_WIRE: Final = {name: index for index, name in enumerate(COMPOSED_ROLE_ORDER)}
 _WIRE_TO_ROLE: Final = {value: key for key, value in _ROLE_TO_WIRE.items()}
@@ -115,6 +134,148 @@ _LANE_PROGRAM_ROW: Final = struct.Struct(">BHHhhhh")
 _LANE_KNOT_MAGIC: Final = b"DDLK1"
 _LANE_KNOT_HEADER: Final = struct.Struct(">5sBHI")
 _LANE_KNOT_ROW: Final = struct.Struct(">BHhhhhhh")
+
+
+@dataclass(frozen=True, slots=True)
+class ReceiverRealizationProfileV1:
+    """Counted camera-resolution semantic-paint contract.
+
+    Colours are ordered by :data:`REALIZATION_PAINT_ORDER`.  The profile is a
+    few-byte template, never a pixel/RGB patch: generic nearest coverage and
+    semantic compositing remain free receiver logic.
+    """
+
+    role_rgb_u8: tuple[tuple[int, int, int], ...]
+    coverage_radius: int = 0
+    amplitude_u8: int = 255
+
+    def __post_init__(self) -> None:
+        if len(self.role_rgb_u8) != len(REALIZATION_PAINT_ORDER):
+            raise DirectDescriptionError("realization profile must bind exactly five role colours")
+        if any(len(row) != 3 or any(isinstance(value, bool) or not 0 <= value <= 255 for value in row) for row in self.role_rgb_u8):
+            raise DirectDescriptionError("realization profile colours must be uint8 RGB triples")
+        if self.coverage_radius != 0:
+            raise DirectDescriptionError("measured v14 realization profile requires zero coverage expansion")
+        if self.amplitude_u8 != 255:
+            raise DirectDescriptionError("measured v14 realization profile requires the full uint8 amplitude floor")
+
+    def colour_for(self, role: str) -> np.ndarray:
+        try:
+            index = REALIZATION_PAINT_ORDER.index(role)
+        except ValueError as exc:
+            raise DirectDescriptionError(f"realization profile role is unknown: {role!r}") from exc
+        return np.asarray(self.role_rgb_u8[index], dtype=np.uint8)
+
+
+def _encode_realization_profile(profile: ReceiverRealizationProfileV1 | None) -> bytes:
+    if profile is None:
+        return b""
+    channels = [value for row in profile.role_rgb_u8 for value in row]
+    return _REALIZATION_MAGIC + bytes(
+        [_REALIZATION_VERSION, *channels, profile.coverage_radius, profile.amplitude_u8]
+    )
+
+
+def _decode_realization_profile(payload: bytes) -> ReceiverRealizationProfileV1 | None:
+    if not payload:
+        return None
+    expected = len(_REALIZATION_MAGIC) + 1 + 15 + 2
+    if len(payload) != expected or payload[: len(_REALIZATION_MAGIC)] != _REALIZATION_MAGIC:
+        raise DirectDescriptionError("receiver realization profile header/length is invalid")
+    body = payload[len(_REALIZATION_MAGIC) :]
+    if body[0] != _REALIZATION_VERSION:
+        raise DirectDescriptionError("receiver realization profile version is unsupported")
+    channels = body[1:16]
+    colours = tuple(tuple(channels[3 * index : 3 * index + 3]) for index in range(5))
+    profile = ReceiverRealizationProfileV1(
+        role_rgb_u8=colours,
+        coverage_radius=body[16],
+        amplitude_u8=body[17],
+    )
+    if _encode_realization_profile(profile) != payload:
+        raise DirectDescriptionError("receiver realization profile parse/re-encode changed bytes")
+    return profile
+
+
+def _read_uleb128(payload: bytes, offset: int) -> tuple[int, int]:
+    value = shift = 0
+    for _ in range(10):
+        if offset >= len(payload):
+            raise DirectDescriptionError("static rule ULEB128 is truncated")
+        byte = payload[offset]
+        offset += 1
+        value |= (byte & 0x7F) << shift
+        if not byte & 0x80:
+            return value, offset
+        shift += 7
+    raise DirectDescriptionError("static rule ULEB128 is overlong")
+
+
+def _decode_realization_static_rule(
+    payload: bytes,
+    opportunity_id: str | None,
+) -> np.ndarray | None:
+    """Decode one G4 one-time rule into a 384x512 source-to-target code field."""
+
+    if not payload:
+        if opportunity_id is not None:
+            raise DirectDescriptionError("static rule identifier has no payload")
+        return None
+    if opportunity_id not in _STATIC_RULE_IDS:
+        raise DirectDescriptionError("static rule opportunity identifier is unsupported")
+    codec, coded = payload[0], payload[1:]
+    if codec == _STATIC_RULE_CODEC_RAW:
+        raw = coded
+    elif codec == _STATIC_RULE_CODEC_LZMA_RAW:
+        try:
+            raw = lzma.decompress(coded, format=lzma.FORMAT_RAW, filters=_STATIC_RULE_LZMA_FILTERS)
+        except lzma.LZMAError as exc:
+            raise DirectDescriptionError("static rule raw-LZMA payload is invalid") from exc
+    else:
+        raise DirectDescriptionError("static rule codec tag is unsupported")
+    if raw[:4] != _STATIC_RULE_IDS[opportunity_id]:
+        raise DirectDescriptionError("static rule magic differs from its opportunity identifier")
+    codes = np.full((384, 512), -1, dtype=np.int16)
+    if opportunity_id == "movable_midband_parametric":
+        row = struct.Struct(">4sBHHBB")
+        if len(raw) != row.size:
+            raise DirectDescriptionError("Movable-midband static rule length is invalid")
+        _magic, version, start, stop, source, target = row.unpack(raw)
+        if version != 1 or (start, stop, source, target) != (174, 215, 1, 0):
+            raise DirectDescriptionError("Movable-midband static rule geometry is invalid")
+        codes[start : stop + 1] = source * 5 + target
+    elif opportunity_id == "horizon_row_parametric":
+        row = struct.Struct(">4sBHBBBB")
+        if len(raw) != row.size:
+            raise DirectDescriptionError("horizon static rule length is invalid")
+        _magic, version, center, halfwidth, source, target, reserved = row.unpack(raw)
+        if version != 1 or (center, halfwidth, source, target, reserved) != (212, 4, 2, 0, 0):
+            raise DirectDescriptionError("horizon static rule geometry is invalid")
+        codes[max(0, center - halfwidth) : min(384, center + halfwidth + 1)] = source * 5 + target
+    else:
+        header = struct.Struct(">4sBHHI")
+        if len(raw) < header.size:
+            raise DirectDescriptionError("sparse static rule header is truncated")
+        _magic, version, height, width, count = header.unpack_from(raw)
+        if version != 1 or (height, width, count) != (384, 512, 19_661):
+            raise DirectDescriptionError("sparse static rule header is invalid")
+        offset = header.size
+        previous = -1
+        flat = codes.reshape(-1)
+        for _ in range(count):
+            delta, offset = _read_uleb128(raw, offset)
+            index = previous + 1 + delta
+            if index >= flat.size or offset >= len(raw):
+                raise DirectDescriptionError("sparse static rule row is out of bounds")
+            flat[index] = raw[offset]
+            offset += 1
+            previous = index
+        if offset != len(raw):
+            raise DirectDescriptionError("sparse static rule has trailing bytes")
+    active = codes >= 0
+    if np.any(codes[active] >= 25) or np.any(codes[active] // 5 == codes[active] % 5):
+        raise DirectDescriptionError("static rule transition codes are invalid")
+    return np.ascontiguousarray(codes)
 
 
 @dataclass(frozen=True, order=True, slots=True)
@@ -1404,6 +1565,9 @@ def compile_carrier_compose_archive(
     worldsheet_g1_payload: bytes = b"",
     lane_programs: Sequence[LanePeriodicProgramV1] = (),
     lane_knots: Sequence[LaneDriftKnotV1] = (),
+    realization_profile: ReceiverRealizationProfileV1 | None = None,
+    realization_static_rule_payload: bytes = b"",
+    realization_static_rule_id: str | None = None,
 ) -> tuple[bytes, tuple[dict[str, Any], ...]]:
     """Compile a byte-canonical outer archive around the five-carrier predictor.
 
@@ -1462,6 +1626,11 @@ def compile_carrier_compose_archive(
     if worldsheet_g1_payload:
         decode_g1_movable_worldsheet(worldsheet_g1_payload, expected_pairs=predictor.z.n_pairs)
     v13_requested = bool(worldsheet_tracks or worldsheet_knots or worldsheet_g1_payload or lane_programs or lane_knots)
+    if realization_profile is not None and not worldsheet_g1_payload:
+        raise DirectDescriptionError("receiver realization profile requires the exact G1 worldsheet")
+    if realization_static_rule_payload and realization_profile is None:
+        raise DirectDescriptionError("static realization rule requires the counted realization profile")
+    _decode_realization_static_rule(realization_static_rule_payload, realization_static_rule_id)
     v11_requested = bool(boundary_shearlets or island_shapes or obligation_vocabulary)
     if v13_requested and addressed:
         raise DirectDescriptionError("v13 PREDICT productions cannot be mixed with post-solve correction vocabularies")
@@ -1476,24 +1645,47 @@ def compile_carrier_compose_archive(
     worldsheet_knot_payload = _encode_worldsheet_knots(tuple(worldsheet_knots))
     lane_program_payload = _encode_lane_programs(tuple(lane_programs))
     lane_knot_payload = _encode_lane_knots(tuple(lane_knots))
+    realization_payload = _encode_realization_profile(realization_profile)
+    manifest = _manifest_for(
+        predictor_archive,
+        predictor,
+        correction_payload,
+        boundary_payload,
+        event_payload,
+        shearlet_payload,
+        island_payload,
+        v11_requested,
+        worldsheet_track_payload,
+        worldsheet_knot_payload,
+        worldsheet_g1_payload,
+        lane_program_payload,
+        lane_knot_payload,
+    )
+    if realization_payload:
+        manifest["schema"] = ARCHIVE_SCHEMA_V5
+        manifest["magic"] = MAGIC_V5
+        manifest["realization_profile"] = {
+            "member": REALIZATION_PROFILE_MEMBER,
+            "bytes": len(realization_payload),
+            "sha256": _sha256(realization_payload),
+            "paint_order": list(REALIZATION_PAINT_ORDER),
+            "placement": "hard_semantic_coverage_at_camera_874x1164_before_scorer_R_down",
+            "worldsheet_policy": "replace_inherited_movable_mask",
+            "edge_policy": "nearest_camera_coverage_no_expansion",
+            "amplitude_floor_u8": realization_profile.amplitude_u8,
+            "pixel_coordinate_or_rgb_patch_present": False,
+        }
+        if realization_static_rule_payload:
+            manifest["realization_static_rule"] = {
+                "member": REALIZATION_STATIC_RULE_MEMBER,
+                "opportunity_id": realization_static_rule_id,
+                "bytes": len(realization_static_rule_payload),
+                "sha256": _sha256(realization_static_rule_payload),
+                "placement": "decoder_derived_source_semantic_mask_then_camera_resolution_target_prototype",
+                "target_custody": "G4_static_cell_rule_only_no_scorer_or_ground_truth_table",
+            }
     members = {
-        "manifest.json": rfc8785_canonicalize(
-            _manifest_for(
-                predictor_archive,
-                predictor,
-                correction_payload,
-                boundary_payload,
-                event_payload,
-                shearlet_payload,
-                island_payload,
-                v11_requested,
-                worldsheet_track_payload,
-                worldsheet_knot_payload,
-                worldsheet_g1_payload,
-                lane_program_payload,
-                lane_knot_payload,
-            )
-        ),
+        "manifest.json": rfc8785_canonicalize(manifest),
         "predictor.zip": predictor_archive,
     }
     if correction_payload:
@@ -1512,6 +1704,10 @@ def compile_carrier_compose_archive(
         members[WORLDSHEET_KNOT_MEMBER] = worldsheet_knot_payload
     if worldsheet_g1_payload:
         members[WORLDSHEET_G1_MEMBER] = worldsheet_g1_payload
+    if realization_payload:
+        members[REALIZATION_PROFILE_MEMBER] = realization_payload
+    if realization_static_rule_payload:
+        members[REALIZATION_STATIC_RULE_MEMBER] = realization_static_rule_payload
     if lane_program_payload:
         members[LANE_PROGRAM_MEMBER] = lane_program_payload
     if lane_knot_payload:
@@ -1533,7 +1729,7 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
         with zipfile.ZipFile(io.BytesIO(archive), "r") as reader:
             infos = reader.infolist()
             expected_prefix = ["manifest.json", "predictor.zip"]
-            if [row.filename for row in infos[:2]] != expected_prefix or not 2 <= len(infos) <= 8:
+            if [row.filename for row in infos[:2]] != expected_prefix or not 2 <= len(infos) <= 10:
                 raise DirectDescriptionError("carrier archive member order/cardinality is invalid")
             if any(
                 row.is_dir()
@@ -1563,6 +1759,8 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
     worldsheet_tracks_payload = members.get(WORLDSHEET_TRACK_MEMBER, b"")
     worldsheet_knots_payload = members.get(WORLDSHEET_KNOT_MEMBER, b"")
     worldsheet_g1_payload = members.get(WORLDSHEET_G1_MEMBER, b"")
+    realization_payload = members.get(REALIZATION_PROFILE_MEMBER, b"")
+    realization_static_rule_payload = members.get(REALIZATION_STATIC_RULE_MEMBER, b"")
     lane_programs_payload = members.get(LANE_PROGRAM_MEMBER, b"")
     lane_knots_payload = members.get(LANE_KNOT_MEMBER, b"")
     common_invalid = (
@@ -1637,7 +1835,7 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
             row = correction_rows.get(key, {})
             invalid = invalid or row.get("member") != (member_name if payload else None)
             invalid = invalid or row.get("bytes") != len(payload) or row.get("sha256") != _sha256(payload)
-    elif schema == ARCHIVE_SCHEMA_V4:
+    elif schema in {ARCHIVE_SCHEMA_V4, ARCHIVE_SCHEMA_V5}:
         grammar = manifest.get("grammar", {})
         movable = grammar.get("movable", {})
         lane = grammar.get("lane", {})
@@ -1647,6 +1845,8 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
             *([WORLDSHEET_TRACK_MEMBER] if worldsheet_tracks_payload else []),
             *([WORLDSHEET_KNOT_MEMBER] if worldsheet_knots_payload else []),
             *([WORLDSHEET_G1_MEMBER] if worldsheet_g1_payload else []),
+            *([REALIZATION_PROFILE_MEMBER] if realization_payload else []),
+            *([REALIZATION_STATIC_RULE_MEMBER] if realization_static_rule_payload else []),
             *([LANE_PROGRAM_MEMBER] if lane_programs_payload else []),
             *([LANE_KNOT_MEMBER] if lane_knots_payload else []),
         }
@@ -1667,7 +1867,7 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
         }
         invalid = (
             common_invalid
-            or manifest.get("magic") != MAGIC_V4
+            or manifest.get("magic") != (MAGIC_V5 if schema == ARCHIVE_SCHEMA_V5 else MAGIC_V4)
             or correction
             or boundary
             or events
@@ -1676,7 +1876,36 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
             or set(members) != expected_members
             or (not worldsheet_tracks_payload and not worldsheet_g1_payload and not lane_programs_payload)
             or (bool(worldsheet_g1_payload) and bool(worldsheet_tracks_payload or worldsheet_knots_payload))
+            or bool(realization_payload) != (schema == ARCHIVE_SCHEMA_V5)
         )
+        realization_row = manifest.get("realization_profile", {})
+        static_rule_row = manifest.get("realization_static_rule", {})
+        if schema == ARCHIVE_SCHEMA_V5:
+            invalid = (
+                invalid
+                or not worldsheet_g1_payload
+                or realization_row.get("member") != REALIZATION_PROFILE_MEMBER
+                or realization_row.get("bytes") != len(realization_payload)
+                or realization_row.get("sha256") != _sha256(realization_payload)
+                or realization_row.get("paint_order") != list(REALIZATION_PAINT_ORDER)
+                or realization_row.get("pixel_coordinate_or_rgb_patch_present") is not False
+            )
+            _decode_realization_profile(realization_payload)
+            if realization_static_rule_payload:
+                invalid = (
+                    invalid
+                    or static_rule_row.get("member") != REALIZATION_STATIC_RULE_MEMBER
+                    or static_rule_row.get("bytes") != len(realization_static_rule_payload)
+                    or static_rule_row.get("sha256") != _sha256(realization_static_rule_payload)
+                )
+                _decode_realization_static_rule(
+                    realization_static_rule_payload,
+                    static_rule_row.get("opportunity_id"),
+                )
+            else:
+                invalid = invalid or bool(static_rule_row)
+        else:
+            invalid = invalid or bool(realization_row) or bool(static_rule_row) or bool(realization_static_rule_payload)
         for row, member_name, payload in payloads.values():
             invalid = invalid or row.get("member") != (member_name if payload else None)
             invalid = invalid or row.get("bytes") != len(payload) or row.get("sha256") != _sha256(payload)
@@ -1695,6 +1924,8 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
         *([WORLDSHEET_TRACK_MEMBER] if worldsheet_tracks_payload else []),
         *([WORLDSHEET_KNOT_MEMBER] if worldsheet_knots_payload else []),
         *([WORLDSHEET_G1_MEMBER] if worldsheet_g1_payload else []),
+        *([REALIZATION_PROFILE_MEMBER] if realization_payload else []),
+        *([REALIZATION_STATIC_RULE_MEMBER] if realization_static_rule_payload else []),
         *([LANE_PROGRAM_MEMBER] if lane_programs_payload else []),
         *([LANE_KNOT_MEMBER] if lane_knots_payload else []),
     ]
@@ -2105,6 +2336,9 @@ class CarrierComposeReceiverV1:
     worldsheet_g1_mask: np.ndarray | None = None
     lane_programs: tuple[LanePeriodicProgramV1, ...] = ()
     lane_knots: tuple[LaneDriftKnotV1, ...] = ()
+    realization_profile: ReceiverRealizationProfileV1 | None = None
+    realization_static_rule_codes: np.ndarray | None = None
+    realization_static_rule_id: str | None = None
 
     @property
     def z(self) -> Any:
@@ -2114,77 +2348,138 @@ class CarrierComposeReceiverV1:
     def pose6_codes(self) -> np.ndarray:
         return self.predictor.pose6_codes
 
+    def _mask_for_layer(
+        self,
+        layer: StructuredRoleLayerV1,
+        pair_id: int,
+        *,
+        replace_g1_movable: bool,
+    ) -> np.ndarray:
+        source_pair_id = self.predictor.source_pair_start + pair_id
+        mask = layer.mask(
+            local_pair_id=pair_id,
+            source_pair_id=source_pair_id,
+            camera=self.predictor.camera,
+        )
+        if layer.role == "Lane" and self.lane_programs:
+            road_layer = next(row for row in self.layers if row.role == "Road")
+            road_mask = road_layer.mask(
+                local_pair_id=pair_id,
+                source_pair_id=source_pair_id,
+                camera=self.predictor.camera,
+            )
+            mask &= _dilate_one_pixel(road_mask)
+        boundary = tuple(
+            row for row in self.boundary_symbols if row.pair_index == source_pair_id and row.role == layer.role
+        )
+        if boundary:
+            mask = _apply_boundary_coefficients(mask, boundary)
+        shearlets = tuple(
+            row for row in self.boundary_shearlets if row.pair_index == source_pair_id and row.role == layer.role
+        )
+        if shearlets:
+            mask = _apply_boundary_shearlet_atoms(mask, shearlets)
+        for event in self.topology_events:
+            if event.role != layer.role:
+                continue
+            event_sites = _event_mask(
+                event,
+                source_pair_id=source_pair_id,
+                source_pair_start=self.predictor.source_pair_start,
+                pose6_codes=self.pose6_codes,
+            )
+            if event.action == "birth":
+                mask |= event_sites
+            else:
+                mask &= ~event_sites
+        if layer.role == "Movable":
+            if self.worldsheet_g1_mask is not None:
+                if replace_g1_movable:
+                    mask = self.worldsheet_g1_mask[pair_id].copy()
+                else:
+                    mask |= self.worldsheet_g1_mask[pair_id]
+            for atom in self.island_shapes:
+                atom_sites = _island_shape_mask(
+                    atom,
+                    source_pair_id=source_pair_id,
+                    source_pair_start=self.predictor.source_pair_start,
+                    pose6_codes=self.pose6_codes,
+                )
+                if atom.action == "birth":
+                    mask |= atom_sites
+                else:
+                    mask &= ~atom_sites
+            for track in self.worldsheet_tracks:
+                track_sites = _worldsheet_track_mask(
+                    track,
+                    tuple(row for row in self.worldsheet_knots if row.object_id == track.object_id),
+                    source_pair_id=source_pair_id,
+                    source_pair_start=self.predictor.source_pair_start,
+                    pose6_codes=self.pose6_codes,
+                )
+                mask |= track_sites
+        return mask
+
     def render_pairs(self, pair_ids: Sequence[int]) -> np.ndarray:
+        """Legacy scorer-grid render retained byte-for-byte for V9--V13."""
+
         indexes = tuple(int(value) for value in pair_ids)
         if any(value < 0 or value >= self.z.n_pairs for value in indexes):
             raise DirectDescriptionError("v9 receiver pair ID is outside its local window")
         output = self.predictor.baseline.render_pairs(indexes)
         for layer in self.layers:
             for local_index, pair_id in enumerate(indexes):
-                source_pair_id = self.predictor.source_pair_start + pair_id
-                mask = layer.mask(
-                    local_pair_id=pair_id,
-                    source_pair_id=source_pair_id,
-                    camera=self.predictor.camera,
-                )
-                if layer.role == "Lane" and self.lane_programs:
-                    road_layer = next(row for row in self.layers if row.role == "Road")
-                    road_mask = road_layer.mask(
-                        local_pair_id=pair_id,
-                        source_pair_id=source_pair_id,
-                        camera=self.predictor.camera,
-                    )
-                    mask &= _dilate_one_pixel(road_mask)
-                boundary = tuple(
-                    row for row in self.boundary_symbols if row.pair_index == source_pair_id and row.role == layer.role
-                )
-                if boundary:
-                    mask = _apply_boundary_coefficients(mask, boundary)
-                shearlets = tuple(
-                    row
-                    for row in self.boundary_shearlets
-                    if row.pair_index == source_pair_id and row.role == layer.role
-                )
-                if shearlets:
-                    mask = _apply_boundary_shearlet_atoms(mask, shearlets)
-                for event in self.topology_events:
-                    if event.role != layer.role:
-                        continue
-                    event_sites = _event_mask(
-                        event,
-                        source_pair_id=source_pair_id,
-                        source_pair_start=self.predictor.source_pair_start,
-                        pose6_codes=self.pose6_codes,
-                    )
-                    if event.action == "birth":
-                        mask |= event_sites
-                    else:
-                        mask &= ~event_sites
-                if layer.role == "Movable":
-                    if self.worldsheet_g1_mask is not None:
-                        mask |= self.worldsheet_g1_mask[pair_id]
-                    for atom in self.island_shapes:
-                        atom_sites = _island_shape_mask(
-                            atom,
-                            source_pair_id=source_pair_id,
-                            source_pair_start=self.predictor.source_pair_start,
-                            pose6_codes=self.pose6_codes,
-                        )
-                        if atom.action == "birth":
-                            mask |= atom_sites
-                        else:
-                            mask &= ~atom_sites
-                    for track in self.worldsheet_tracks:
-                        track_sites = _worldsheet_track_mask(
-                            track,
-                            tuple(row for row in self.worldsheet_knots if row.object_id == track.object_id),
-                            source_pair_id=source_pair_id,
-                            source_pair_start=self.predictor.source_pair_start,
-                            pose6_codes=self.pose6_codes,
-                        )
-                        mask |= track_sites
+                mask = self._mask_for_layer(layer, pair_id, replace_g1_movable=False)
                 output[local_index, 0, mask] = layer.paint_rgb_u8
                 output[local_index, 1, mask] = layer.paint_rgb_u8
+        return np.ascontiguousarray(output)
+
+    def render_camera_pairs(self, pair_ids: Sequence[int]) -> np.ndarray:
+        """V14 camera-res placement before the evaluator-owned R-down stage."""
+
+        if self.realization_profile is None:
+            raise DirectDescriptionError("camera-resolution render requires a counted realization profile")
+        indexes = tuple(int(value) for value in pair_ids)
+        if any(value < 0 or value >= self.z.n_pairs for value in indexes):
+            raise DirectDescriptionError("v14 receiver pair ID is outside its local window")
+        from tac.through_r.resolution_chain import CAMERA_H, CAMERA_W, render_grid_to_camera_uint8
+
+        render_grid = self.predictor.baseline.render_pairs(indexes)
+        output = np.empty((len(indexes), 2, CAMERA_H, CAMERA_W, 3), dtype=np.uint8)
+        for local_index in range(len(indexes)):
+            for frame_index in range(2):
+                output[local_index, frame_index] = render_grid_to_camera_uint8(
+                    render_grid[local_index, frame_index]
+                )
+        ys = (np.arange(CAMERA_H) * 384 // CAMERA_H).clip(0, 383)
+        xs = (np.arange(CAMERA_W) * 512 // CAMERA_W).clip(0, 511)
+        layer_by_role = {row.role: row for row in self.layers}
+        semantic_cells = np.full((len(indexes), 384, 512), -1, dtype=np.int16)
+        for role in REALIZATION_PAINT_ORDER:
+            layer = layer_by_role[role]
+            colour = self.realization_profile.colour_for(role)
+            for local_index, pair_id in enumerate(indexes):
+                mask = self._mask_for_layer(layer, pair_id, replace_g1_movable=True)
+                semantic_cells[local_index, mask] = ROLE_CLASS_IDS[role]
+                camera_mask = mask[np.ix_(ys, xs)]
+                output[local_index, 0, camera_mask] = colour
+                output[local_index, 1, camera_mask] = colour
+        if self.realization_static_rule_codes is not None:
+            rules = self.realization_static_rule_codes
+            source = rules // 5
+            target = rules % 5
+            for local_index in range(len(indexes)):
+                admitted = (rules >= 0) & (semantic_cells[local_index] == source)
+                for target_id, role in enumerate(CLASS_ORDER):
+                    target_mask = admitted & (target == target_id)
+                    if not np.any(target_mask):
+                        continue
+                    camera_mask = target_mask[np.ix_(ys, xs)]
+                    colour = self.realization_profile.colour_for(
+                        "UndrivableBoundary" if role == "Undrivable" else role
+                    )
+                    output[local_index, 0, camera_mask] = colour
+                    output[local_index, 1, camera_mask] = colour
         return np.ascontiguousarray(output)
 
 
@@ -2206,6 +2501,13 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         decode_g1_movable_worldsheet(worldsheet_g1_payload, expected_pairs=predictor.z.n_pairs)
         if worldsheet_g1_payload
         else (None, None)
+    )
+    realization_profile = _decode_realization_profile(members.get(REALIZATION_PROFILE_MEMBER, b""))
+    static_rule_row = manifest.get("realization_static_rule", {})
+    realization_static_rule_id = static_rule_row.get("opportunity_id")
+    realization_static_rule_codes = _decode_realization_static_rule(
+        members.get(REALIZATION_STATIC_RULE_MEMBER, b""),
+        realization_static_rule_id,
     )
     lane_programs = _decode_lane_programs(members.get(LANE_PROGRAM_MEMBER, b""))
     lane_knots = _decode_lane_knots(members.get(LANE_KNOT_MEMBER, b""))
@@ -2256,6 +2558,9 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         worldsheet_g1_mask=worldsheet_g1_mask,
         lane_programs=lane_programs,
         lane_knots=lane_knots,
+        realization_profile=realization_profile,
+        realization_static_rule_codes=realization_static_rule_codes,
+        realization_static_rule_id=realization_static_rule_id,
     )
 
     lane_groups: dict[tuple[int, int], list[LaneCoefficientDelta]] = {}
@@ -2401,13 +2706,16 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         if np.array_equal(predictor.render_pairs(local_ids), isolated.render_pairs(local_ids)):
             raise DirectDescriptionError("lane periodic production is a receiver-output no-op")
     probes = tuple(sorted({0, predictor.z.n_pairs - 1}))
-    a = first.render_pairs(probes)
-    b = first.render_pairs(probes)
+    render_probe = first.render_camera_pairs if realization_profile is not None else first.render_pairs
+    a = render_probe(probes)
+    b = render_probe(probes)
     if not np.array_equal(a, b):
         raise DirectDescriptionError("carrier receiver replay is nondeterministic")
     custody = {
         "schema": (
-            RECEIVER_SCHEMA_V4
+            RECEIVER_SCHEMA_V5
+            if manifest["schema"] == ARCHIVE_SCHEMA_V5
+            else RECEIVER_SCHEMA_V4
             if manifest["schema"] == ARCHIVE_SCHEMA_V4
             else RECEIVER_SCHEMA_V3
             if manifest["schema"] == ARCHIVE_SCHEMA_V3
@@ -2448,6 +2756,19 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         "worldsheet_g1_pair_count": 0 if worldsheet_g1_metadata is None else worldsheet_g1_metadata.pair_count,
         "worldsheet_g1_object_slots": 0 if worldsheet_g1_metadata is None else worldsheet_g1_metadata.max_slots,
         "worldsheet_g1_semantic_parseback": worldsheet_g1_metadata is not None,
+        "realization_profile_bytes": len(members.get(REALIZATION_PROFILE_MEMBER, b"")),
+        "realization_profile_sha256": _sha256(members.get(REALIZATION_PROFILE_MEMBER, b"")),
+        "realization_static_rule_bytes": len(members.get(REALIZATION_STATIC_RULE_MEMBER, b"")),
+        "realization_static_rule_sha256": _sha256(members.get(REALIZATION_STATIC_RULE_MEMBER, b"")),
+        "realization_static_rule_id": realization_static_rule_id,
+        "realization_static_rule_active_sites": (
+            0 if realization_static_rule_codes is None else int(np.count_nonzero(realization_static_rule_codes >= 0))
+        ),
+        "camera_resolution_placement": realization_profile is not None,
+        "movable_g1_replaces_inherited_mask": realization_profile is not None,
+        "semantic_paint_order": (
+            list(REALIZATION_PAINT_ORDER) if realization_profile is not None else list(COMPOSED_ROLE_ORDER)
+        ),
         "worldsheet_persist_unless_event": bool(worldsheet_tracks or worldsheet_g1_payload),
         "worldsheet_stores_only_xi_deviations": bool(worldsheet_tracks),
         "lane_program_count": len(lane_programs),
@@ -2518,6 +2839,8 @@ def recursive_carrier_byte_rows(archive: bytes) -> list[dict[str, Any]]:
         ("movable_worldsheet_lifecycle_shape", WORLDSHEET_TRACK_MEMBER),
         ("movable_worldsheet_xi_deviation_morph_knots", WORLDSHEET_KNOT_MEMBER),
         ("movable_g1_polygon_worldsheet_derivation", WORLDSHEET_G1_MEMBER),
+        ("receiver_realization_profile", REALIZATION_PROFILE_MEMBER),
+        ("receiver_static_cell_rule", REALIZATION_STATIC_RULE_MEMBER),
         ("lane_periodic_phase_width_visibility", LANE_PROGRAM_MEMBER),
         ("lane_polynomial_drift_knots", LANE_KNOT_MEMBER),
     ):
@@ -2540,7 +2863,8 @@ def prove_carrier_archive_fail_closed(archive: bytes) -> dict[str, Any]:
 
     baseline = receive_carrier_compose_archive(archive)
     probe_ids = tuple(sorted({0, baseline.z.n_pairs - 1}))
-    digest = hashlib.sha256(baseline.render_pairs(probe_ids).tobytes()).hexdigest()
+    render_probe = baseline.render_camera_pairs if baseline.realization_profile is not None else baseline.render_pairs
+    digest = hashlib.sha256(render_probe(probe_ids).tobytes()).hexdigest()
     _members, homes = parse_carrier_compose_archive(archive)
     positions: list[int] = []
     with zipfile.ZipFile(io.BytesIO(archive), "r") as reader:
@@ -2559,7 +2883,10 @@ def prove_carrier_archive_fail_closed(archive: bytes) -> dict[str, Any]:
         except (DirectDescriptionError, OSError, ValueError, zipfile.BadZipFile):
             refused += 1
             continue
-        candidate_digest = hashlib.sha256(candidate.render_pairs(probe_ids).tobytes()).hexdigest()
+        candidate_render = (
+            candidate.render_camera_pairs if candidate.realization_profile is not None else candidate.render_pairs
+        )
+        candidate_digest = hashlib.sha256(candidate_render(probe_ids).tobytes()).hexdigest()
         if candidate_digest == digest:
             raise DirectDescriptionError("sampled archive mutation was accepted as a receiver no-op")
         changed += 1
@@ -2577,8 +2904,11 @@ __all__ = [
     "ARCHIVE_SCHEMA_V2",
     "ARCHIVE_SCHEMA_V3",
     "ARCHIVE_SCHEMA_V4",
+    "ARCHIVE_SCHEMA_V5",
     "BOUNDARY_SHEARLET_MEMBER",
     "ISLAND_SHAPE_MEMBER",
+    "REALIZATION_PROFILE_MEMBER",
+    "REALIZATION_STATIC_RULE_MEMBER",
     "RESULT_SCHEMA",
     "RESULT_SCHEMA_V2",
     "RESULT_SCHEMA_V3",
@@ -2598,6 +2928,7 @@ __all__ = [
     "LanePeriodicProgramV1",
     "MovableWorldsheetKnotV1",
     "MovableWorldsheetTrackV1",
+    "ReceiverRealizationProfileV1",
     "TopologyEventV1",
     "compile_carrier_compose_archive",
     "parse_carrier_compose_archive",

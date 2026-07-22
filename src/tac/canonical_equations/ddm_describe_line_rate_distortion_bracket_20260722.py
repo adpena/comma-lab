@@ -42,6 +42,7 @@ V8_VERDICT = "FORMULATION_LEVEL_MARGIN_GATED_CORRECTION_RATE_WALL"
 V9_VERDICT = "ADVISORY_INSTANCE_FAILS_SUB015_BOX_FORMULATION_OPEN"
 V12_VERDICT = "ADVISORY_FORMULATION_PLATEAU_WITH_200KB_CEILING_NONBINDING_V6_SUCCESSOR_NAMED"
 V13_VERDICT = "ADVISORY_V13_INSTANCE_FALSIFIER_TRIGGERED_FORMULATION_ONLY"
+V14_VERDICT = "ADVISORY_V14_RECEIVER_REALIZATION_REPAIR_PARTIAL_STATIC_CELL_FORECAST_FALSIFIED"
 
 V7_CROSS_RECEIPT = ".omx/research/ddm_v7_solved_plane_tolerance_waterfill_603_613_20260722T102423Z.receipt.json"
 V7_CROSS_SHA256 = "64658a05a8975707f98db308223cefff78b5352975bb59cc2aa8a4ff2f8d50fb"
@@ -103,10 +104,26 @@ V13_PHASE_N600_SHA256 = "622e6eda5b06e3fbe16ec494648dd85f6ba73545716b65fcdb07f79
 V13_G3_ATLAS_COMMIT = "e472310d93"
 V13_G3_ATLAS_RECEIPT_SHA256 = "6c4157092a7bdf7ba44b458cd470725cc470d84a8fc77ed7d3dedb59160734f5"
 V13_G1_PAYLOAD_SHA256 = "1066081727229e605462e67b8fdd26937d5e3552c13cb66a7444ea3b7360366f"
+V14_N64_RECEIPT = (
+    ".omx/research/ddm_v14_realization_fidelity_n64_20260722T215500Z/"
+    "ddm_v14_realization_fidelity_n64_receipt.json"
+)
+V14_N64_SHA256 = "bc9d01c6a3691e1103a580d0e1a34088ff134258b2788b2380930fe85fbae703"
+V14_N600_RECEIPT = (
+    ".omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z/"
+    "ddm_v14_realization_fidelity_n600_receipt.json"
+)
+V14_N600_SHA256 = "82d3249908d42a86575c407ab3d7acdf9b3706b31225f2e46862b2472966e5a9"
+V14_G4_RECEIPT = (
+    ".omx/research/ddm_v14_g4_receiver_projection_n600_20260722T221500Z/"
+    "ddm_v14_g4_receiver_projection_receipt.json"
+)
+V14_G4_SHA256 = "0b35be44d944bd5a929097bb3967ba7b7c7ce068e2f067d1546ab149cc9e44da"
 
 CALIBRATION_UTC = "2026-07-22T14:08:53Z"
 V12_CALIBRATION_UTC = "2026-07-22T17:55:52Z"
 V13_CALIBRATION_UTC = "2026-07-22T21:15:00Z"
+V14_CALIBRATION_UTC = "2026-07-22T22:50:00Z"
 
 
 def _strict_number(value: Any, name: str, *, minimum: float = 0.0) -> float:
@@ -236,6 +253,11 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
     g1_worldsheet_predictor = inputs.get("g1_worldsheet_predictor", False)
     if not isinstance(g1_worldsheet_predictor, bool):
         raise ValueError("g1_worldsheet_predictor must be boolean")
+    receiver_realization_profile = inputs.get("receiver_realization_profile", False)
+    if not isinstance(receiver_realization_profile, bool):
+        raise ValueError("receiver_realization_profile must be boolean")
+    if receiver_realization_profile and not g1_worldsheet_predictor:
+        raise ValueError("receiver realization profile requires g1_worldsheet_predictor=true")
     if g1_worldsheet_predictor:
         g1_payload_exact = _strict_bool(inputs.get("g1_payload_exact"), "g1_payload_exact")
         mask_level_clean_rest_dseg = _strict_number(
@@ -243,34 +265,73 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
         )
         through_r_movable_dseg = _strict_number(inputs.get("through_r_movable_dseg"), "through_r_movable_dseg")
         receiver_projection_bound = _strict_bool(inputs.get("receiver_projection_bound"), "receiver_projection_bound")
-        phase_receiver_closed = _strict_bool(inputs.get("phase_receiver_closed"), "phase_receiver_closed")
-        phase_total_dseg_delta = _strict_number(
-            inputs.get("phase_total_dseg_delta"), "phase_total_dseg_delta", minimum=-1.0
-        )
-        phase_lane_dseg_delta = _strict_number(
-            inputs.get("phase_lane_dseg_delta"), "phase_lane_dseg_delta", minimum=-1.0
-        )
-        phase_result_status = inputs.get("phase_result_status")
-        if phase_result_status != "RAW_Q8_LANE_HELP_TOTAL_HARM":
-            raise ValueError("v13 phase_result_status must preserve the measured split verdict")
-        addenda_status = inputs.get("operator_addenda_status")
-        if addenda_status != "PRE_ADDENDUM_BASELINE_SUCCESSORS_UNMEASURED":
-            raise ValueError("v13 operator_addenda_status must preserve the measured baseline scope")
-        verdict = (
-            V13_VERDICT
-            if receiver_closed
-            and rate_green
-            and dseg_red
-            and pose_red
-            and g1_payload_exact
-            and mask_level_clean_rest_dseg <= dseg_gate
-            and through_r_movable_dseg <= 0.5
-            and receiver_projection_bound
-            and phase_receiver_closed
-            and phase_total_dseg_delta > 0.0
-            and phase_lane_dseg_delta < 0.0
-            else "OPEN"
-        )
+        if receiver_realization_profile:
+            profile_bytes = _strict_int(inputs.get("profile_bytes"), "profile_bytes", minimum=1)
+            camera_resolution_placement = _strict_bool(
+                inputs.get("camera_resolution_placement"), "camera_resolution_placement"
+            )
+            exact_g1_replacement = _strict_bool(inputs.get("exact_g1_replacement"), "exact_g1_replacement")
+            static_fields_measured = _strict_int(
+                inputs.get("static_fields_measured"), "static_fields_measured", minimum=1
+            )
+            static_joint_positive_count = _strict_int(
+                inputs.get("static_joint_positive_count"), "static_joint_positive_count"
+            )
+            best_static_joint_score_delta = _strict_number(
+                inputs.get("best_static_joint_score_delta"),
+                "best_static_joint_score_delta",
+                minimum=-1.0,
+            )
+            ar1_bev_status = inputs.get("ar1_bev_status")
+            if ar1_bev_status != "BLOCKED_NO_DECODER_FREE_PHYSICAL_BEV_CUSTODY":
+                raise ValueError("v14 AR1-BEV status must preserve the G4 custody blocker")
+            verdict = (
+                V14_VERDICT
+                if receiver_closed
+                and rate_green
+                and dseg_red
+                and pose_red
+                and g1_payload_exact
+                and mask_level_clean_rest_dseg <= dseg_gate
+                and through_r_movable_dseg <= 0.3
+                and receiver_projection_bound
+                and profile_bytes == 23
+                and camera_resolution_placement
+                and exact_g1_replacement
+                and static_fields_measured == 3
+                and static_joint_positive_count == 1
+                and best_static_joint_score_delta < 0.0
+                else "OPEN"
+            )
+        else:
+            phase_receiver_closed = _strict_bool(inputs.get("phase_receiver_closed"), "phase_receiver_closed")
+            phase_total_dseg_delta = _strict_number(
+                inputs.get("phase_total_dseg_delta"), "phase_total_dseg_delta", minimum=-1.0
+            )
+            phase_lane_dseg_delta = _strict_number(
+                inputs.get("phase_lane_dseg_delta"), "phase_lane_dseg_delta", minimum=-1.0
+            )
+            phase_result_status = inputs.get("phase_result_status")
+            if phase_result_status != "RAW_Q8_LANE_HELP_TOTAL_HARM":
+                raise ValueError("v13 phase_result_status must preserve the measured split verdict")
+            addenda_status = inputs.get("operator_addenda_status")
+            if addenda_status != "PRE_ADDENDUM_BASELINE_SUCCESSORS_UNMEASURED":
+                raise ValueError("v13 operator_addenda_status must preserve the measured baseline scope")
+            verdict = (
+                V13_VERDICT
+                if receiver_closed
+                and rate_green
+                and dseg_red
+                and pose_red
+                and g1_payload_exact
+                and mask_level_clean_rest_dseg <= dseg_gate
+                and through_r_movable_dseg <= 0.5
+                and receiver_projection_bound
+                and phase_receiver_closed
+                and phase_total_dseg_delta > 0.0
+                and phase_lane_dseg_delta < 0.0
+                else "OPEN"
+            )
     elif full_obligation_drain:
         if not n600_rows:
             raise ValueError("full obligation drain requires one measured n600 window")
@@ -341,7 +402,9 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
             "MEASURED_N600_RECEIVER_CLOSED" if n600_rows else "DERIVED_FROM_MEASURED_N64_N256_NOT_MEASURED_N600"
         ),
         "verdict_scope": (
-            "INSTANCE_G1_PRODUCTION_SET_RECEIVER_PROJECTION_FAMILIES_OPEN"
+            "INSTANCE_V14_COUNTED_REALIZATION_AND_THREE_G4_STATIC_FIELDS_DIRECT_RGB_SOLVE_OPEN"
+            if receiver_realization_profile
+            else "INSTANCE_G1_PRODUCTION_SET_RECEIVER_PROJECTION_FAMILIES_OPEN"
             if g1_worldsheet_predictor
             else "FORMULATION_CORRECT_A_BOUND_0P034_PREDICTOR_FAMILIES_OPEN"
             if full_obligation_drain
@@ -371,12 +434,30 @@ def evaluate_ddm_describe_line_rate_distortion_bracket(
             "mask_level_clean_rest_dseg": mask_level_clean_rest_dseg,
             "through_r_movable_dseg": through_r_movable_dseg,
             "receiver_projection_bound": receiver_projection_bound,
-            "operator_addenda_status": addenda_status,
-            "phase_receiver_closed": phase_receiver_closed,
-            "phase_result_status": phase_result_status,
-            "phase_total_dseg_delta": phase_total_dseg_delta,
-            "phase_lane_dseg_delta": phase_lane_dseg_delta,
         }
+        if receiver_realization_profile:
+            result["g1_worldsheet_realization"].update(
+                {
+                    "receiver_realization_profile": True,
+                    "profile_bytes": profile_bytes,
+                    "camera_resolution_placement": camera_resolution_placement,
+                    "exact_g1_replacement": exact_g1_replacement,
+                    "static_fields_measured": static_fields_measured,
+                    "static_joint_positive_count": static_joint_positive_count,
+                    "best_static_joint_score_delta": best_static_joint_score_delta,
+                    "ar1_bev_status": ar1_bev_status,
+                }
+            )
+        else:
+            result["g1_worldsheet_realization"].update(
+                {
+                    "operator_addenda_status": addenda_status,
+                    "phase_receiver_closed": phase_receiver_closed,
+                    "phase_result_status": phase_result_status,
+                    "phase_total_dseg_delta": phase_total_dseg_delta,
+                    "phase_lane_dseg_delta": phase_lane_dseg_delta,
+                }
+            )
     return result
 
 
@@ -535,6 +616,47 @@ def _v13_inputs() -> dict[str, Any]:
     }
 
 
+def _v14_inputs() -> dict[str, Any]:
+    return {
+        "leg": LEG_STRUCTURED_CARRIER,
+        "rate_budget_bytes": 200_000,
+        "dseg_gate": 0.00116,
+        "dpose_gate": 0.00025,
+        "correction_symbols": 0,
+        "region_coherent": True,
+        "pixel_residual_present": False,
+        "g1_worldsheet_predictor": True,
+        "g1_payload_exact": True,
+        "mask_level_clean_rest_dseg": 0.00028294881184895833,
+        "through_r_movable_dseg": 0.291615222639,
+        "receiver_projection_bound": True,
+        "receiver_realization_profile": True,
+        "profile_bytes": 23,
+        "camera_resolution_placement": True,
+        "exact_g1_replacement": True,
+        "static_fields_measured": 3,
+        "static_joint_positive_count": 1,
+        "best_static_joint_score_delta": -0.005003006483,
+        "ar1_bev_status": "BLOCKED_NO_DECODER_FREE_PHYSICAL_BEV_CUSTODY",
+        "windows": [
+            {
+                "pair_count": 64,
+                "archive_bytes": 58_049,
+                "d_seg": 0.041460116704,
+                "d_pose": 159.134995392648,
+                "receiver_closed": True,
+            },
+            {
+                "pair_count": 600,
+                "archive_bytes": 133_247,
+                "d_seg": 0.027470296224,
+                "d_pose": 163.061327281443,
+                "receiver_closed": True,
+            },
+        ],
+    }
+
+
 def _anchor(
     *,
     anchor_id: str,
@@ -573,7 +695,7 @@ def _anchor(
 
 
 def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
-    """Build the measured bracket plus append-only V12 and V13 n600 anchors."""
+    """Build the measured bracket plus append-only V12--V14 n600 anchors."""
 
     v7 = _anchor(
         anchor_id="ddm_v7_exact_value_rate_wall_n64_n256_20260722",
@@ -634,17 +756,30 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
         },
         measurement_utc=V13_CALIBRATION_UTC,
     )
+    v14 = _anchor(
+        anchor_id="ddm_v14_receiver_realization_and_g4_static_projection_n64_n600_20260722",
+        inputs=_v14_inputs(),
+        verdict=V14_VERDICT,
+        source_artifact=V14_G4_RECEIPT,
+        source_sha256=V14_G4_SHA256,
+        receipt_bindings={
+            V14_N64_RECEIPT: V14_N64_SHA256,
+            V14_N600_RECEIPT: V14_N600_SHA256,
+            V14_G4_RECEIPT: V14_G4_SHA256,
+        },
+        measurement_utc=V14_CALIBRATION_UTC,
+    )
     provenance = build_provenance_for_macos_cpu_advisory(
-        archive_sha256=V13_N600_SHA256,
-        source_path=V13_N600_RECEIPT,
-        captured_at_utc=V13_CALIBRATION_UTC,
+        archive_sha256=V14_G4_SHA256,
+        source_path=V14_G4_RECEIPT,
+        captured_at_utc=V14_CALIBRATION_UTC,
     )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name="DDM direct-description measured rate/distortion bracket",
         one_line_summary=(
             "Exact values are rate-dead; sparse pixels are ERF-dead; structured carriers enter "
-            "the box; G1 worldsheet isolates receiver projection as the remaining Movable barrier."
+            "the box; V14 repairs part of G1 realization and shows only the horizon static rule transfers."
         ),
         latex_form=(
             r"(B_9,D_9)_{\mathrm{structured}}\;\leadsto\;"
@@ -658,7 +793,7 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
             "evaluate_ddm_describe_line_rate_distortion_bracket"
         ),
         domain_of_validity={
-            "formalization_status": "MEASURED_THREE_LEG_BRACKET_PLUS_V12_V13_N600_ANCHORS_PLUS_G2_PHASE_ABLATION",
+            "formalization_status": "MEASURED_THREE_LEG_BRACKET_PLUS_V12_V13_V14_N600_ANCHORS_PLUS_G4_STATIC_PROJECTION",
             "tasks": [540, 578, 603, 613],
             "axis": AXIS,
             "advisory_only": True,
@@ -683,6 +818,8 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
                 "v9_n64_n256_bytes": [51_668, 72_397],
                 "v12_n600_bytes": 106_106,
                 "v13_g1_worldsheet_n600_bytes": 132_606,
+                "v14_realization_n600_bytes": 133_247,
+                "v14_horizon_static_n600_bytes": 133_755,
             },
             "v7_measured_binders": {
                 "rate": (
@@ -765,6 +902,30 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
                 },
                 "main_r6_exact_eval_flag": False,
             },
+            "v14_receiver_realization_upgrade": {
+                "status": "MEASURED_N600_PARTIAL_REALIZATION_REPAIR_GATE_MISSED",
+                "profile_payload_bytes": 23,
+                "profile_rgb_movable": [107, 0, 114],
+                "placement": "camera_874x1164_before_evaluator_bilinear_down",
+                "coverage_radius": 0,
+                "amplitude_u8": 255,
+                "base_archive_bytes": 133_247,
+                "base_d_seg": 0.027470296224,
+                "base_d_pose": 163.061327281443,
+                "base_movable_d_seg": 0.291615222639,
+                "horizon_archive_bytes": 133_755,
+                "horizon_d_seg": 0.027416720920,
+                "horizon_d_pose": 163.061458661133,
+                "horizon_joint_score_delta": -0.005003006483,
+                "horizon_realization_fraction_of_cell_forecast": 0.052866679113,
+                "movable_midband_joint_score_delta": 0.085178042141,
+                "sparse_all_joint_score_delta": 0.243312458532,
+                "static_cell_forecast_status": "ONE_OF_THREE_POSITIVE_TRANSFER_BADLY_MISCALIBRATED",
+                "free_context_savings_bytes": 89_161,
+                "free_context_applied_to_candidate": False,
+                "ar1_bev_status": "BLOCKED_NO_DECODER_FREE_PHYSICAL_BEV_CUSTODY",
+                "main_r6_exact_eval_flag": False,
+            },
             "erf_mechanism_context": (
                 "r50 approximately 50-160 px with median approximately 85; r90 approximately "
                 "206-424 px and operational check approximately 300; source is measured "
@@ -805,15 +966,16 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
             "n600_projected_bytes": "derived bytes for anchors without an n600 endpoint",
             "n600_measured": "receiver-closed measured n600 row when present",
         },
-        empirical_anchors=(v7, v8, v9, v12, v13),
+        empirical_anchors=(v7, v8, v9, v12, v13, v14),
         predicted_vs_empirical_residual={
             "v7_scoped_receipt_verdict": 0.0,
             "v8_scoped_receipt_verdict": 0.0,
             "v9_scoped_receipt_verdict": 0.0,
             "v12_scoped_receipt_verdict": 0.0,
             "v13_scoped_receipt_verdict": 0.0,
+            "v14_scoped_receipt_verdict": 0.0,
         },
-        last_calibration_utc=V13_CALIBRATION_UTC,
+        last_calibration_utc=V14_CALIBRATION_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "tac.optimization.v10_constructive_solver",
@@ -824,6 +986,8 @@ def build_ddm_describe_line_rate_distortion_bracket_v1() -> CanonicalEquation:
             "tools.run_direct_description_entropy_priced_member",
             "tools.run_ddm_v9_carrier_compose",
             "tools.measure_ddm_v13_lane_phase_ablation",
+            "tools.measure_ddm_v14_realization_fidelity",
+            "tools.measure_ddm_v14_g4_receiver_projection",
         ),
         provenance=provenance,
     )
@@ -848,9 +1012,10 @@ def populate_ddm_describe_line_rate_distortion_bracket_v1(
         agent=agent,
         subagent_id=subagent_id,
         notes=(
-            "DDM v7/v8/v9 bracket plus measured V12 and G1-adopted V13 n600 anchors; "
+            "DDM v7/v8/v9 bracket plus measured V12, G1-adopted V13, and realization-fixed V14 n600 anchors; "
             "G2 receiver-closed raw-q8 phase split (Lane help, total harm); "
             "G3 broad-debt allocation forbids per-pair top-k authority; "
+            "G4 three-field receiver projection admits only the horizon control; "
             "tasks #540/#578/#603/#613; "
             "research-only; MAIN landing review required"
         ),
@@ -888,6 +1053,13 @@ __all__ = [
     "V13_PHASE_N600_RECEIPT",
     "V13_PHASE_N600_SHA256",
     "V13_VERDICT",
+    "V14_G4_RECEIPT",
+    "V14_G4_SHA256",
+    "V14_N64_RECEIPT",
+    "V14_N64_SHA256",
+    "V14_N600_RECEIPT",
+    "V14_N600_SHA256",
+    "V14_VERDICT",
     "build_ddm_describe_line_rate_distortion_bracket_v1",
     "evaluate_ddm_describe_line_rate_distortion_bracket",
     "populate_ddm_describe_line_rate_distortion_bracket_v1",

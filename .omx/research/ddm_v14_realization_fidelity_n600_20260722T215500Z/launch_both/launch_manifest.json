@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "-u",
+    "tools/measure_ddm_v14_realization_fidelity.py",
+    "--config",
+    ".omx/research/configs/ddm_v14_realization_fidelity_n600_20260722.json",
+    "--output-directory",
+    ".omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z"
+  ],
+  "authority": "delegated local-only ddm_v14_realization_fidelity; score_claim=false; no Modal",
+  "cwd": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v14_realization_fidelity_20260722T213341Z",
+  "detach_method": "subprocess.Popen(start_new_session=True)",
+  "dry_run": false,
+  "generated_utc": "2026-07-22T22:11:45Z",
+  "git_sha": "24f8942da56790a89ef48c9a179dc90b3b26387f",
+  "log_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v14_realization_fidelity_20260722T213341Z/.omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z/launch_both/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v14_realization_fidelity_20260722T213341Z/.omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z/launch_both",
+  "pid": 86525,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v14_realization_fidelity_20260722T213341Z/.omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z/launch_both/run.pid",
+  "purpose": "resumable n600 V14 both camera-path advisory measurement",
+  "schema": "detached_local_process_launch.v1"
+}

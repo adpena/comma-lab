@@ -15,12 +15,15 @@ from tac.optimization.direct_description_carrier_compose import (
     ARCHIVE_SCHEMA_V2,
     ARCHIVE_SCHEMA_V3,
     ARCHIVE_SCHEMA_V4,
+    ARCHIVE_SCHEMA_V5,
     BOUNDARY_CORRECTION_MEMBER,
     BOUNDARY_SHEARLET_MEMBER,
     EVENT_CORRECTION_MEMBER,
     ISLAND_SHAPE_MEMBER,
     LANE_KNOT_MEMBER,
     LANE_PROGRAM_MEMBER,
+    REALIZATION_PROFILE_MEMBER,
+    REALIZATION_STATIC_RULE_MEMBER,
     WORLDSHEET_G1_MEMBER,
     WORLDSHEET_KNOT_MEMBER,
     WORLDSHEET_TRACK_MEMBER,
@@ -36,6 +39,7 @@ from tac.optimization.direct_description_carrier_compose import (
     LanePeriodicProgramV1,
     MovableWorldsheetKnotV1,
     MovableWorldsheetTrackV1,
+    ReceiverRealizationProfileV1,
     TopologyEventV1,
     compile_carrier_compose_archive,
     parse_carrier_compose_archive,
@@ -62,6 +66,7 @@ from tac.optimization.direct_description_measurement_ladder import (
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError
 from tac.optimization.predictor_upgrade_xi_chart import LaneCoefficientDelta
+from tools.measure_ddm_v14_realization_fidelity import DDMV14RealizationFidelityConfigV1
 from tools.run_ddm_v9_carrier_compose import (
     _batch_score_cache_bytes,
     _BatchScore,
@@ -614,6 +619,83 @@ def test_v13_adopted_g1_polygon_worldsheet_is_semantic_parseback_and_receiver_vi
     assert recursive_carrier_byte_rows(archive)[-1]["stratum"] == "movable_g1_polygon_worldsheet_derivation"
     base = receive_carrier_compose_archive(compile_carrier_compose_archive(_predictor())[0])
     assert not np.array_equal(base.render_pairs((0, 63)), receiver.render_pairs((0, 63)))
+
+
+def test_v14_counted_realization_profile_places_hard_semantics_at_camera_resolution() -> None:
+    labels = np.zeros((64, 384, 512), dtype=np.int64)
+    labels[:, 24:40, 32:48] = 3
+    payload, _metadata = encode_g1_movable_worldsheet(labels)
+    profile = ReceiverRealizationProfileV1(
+        role_rgb_u8=((0, 153, 0), (11, 3, 9), (51, 255, 204), (107, 0, 114), (63, 72, 63))
+    )
+    legacy_archive, _ = compile_carrier_compose_archive(_predictor(), worldsheet_g1_payload=payload)
+    archive, _homes = compile_carrier_compose_archive(
+        _predictor(),
+        worldsheet_g1_payload=payload,
+        realization_profile=profile,
+    )
+    members, _parse_homes = parse_carrier_compose_archive(archive)
+    receiver = receive_carrier_compose_archive(archive)
+    assert json.loads(members["manifest.json"])["schema"] == ARCHIVE_SCHEMA_V5
+    assert len(members[REALIZATION_PROFILE_MEMBER]) == 23
+    assert receiver.custody["camera_resolution_placement"] is True
+    assert receiver.custody["movable_g1_replaces_inherited_mask"] is True
+    assert receiver.custody["pixel_coordinate_or_rgb_patch_present"] is False
+    assert np.array_equal(
+        receive_carrier_compose_archive(legacy_archive).render_pairs((0, 63)),
+        receiver.render_pairs((0, 63)),
+    )
+    camera = receiver.render_camera_pairs((0, 63))
+    assert camera.shape == (2, 2, 874, 1164, 3)
+    assert camera.dtype == np.uint8
+    assert any(row["stratum"] == "receiver_realization_profile" for row in recursive_carrier_byte_rows(archive))
+
+    static_rule = b"\x00" + struct.pack(">4sBHHBB", b"G4MB", 1, 174, 215, 1, 0)
+    ruled_archive, _ = compile_carrier_compose_archive(
+        _predictor(),
+        worldsheet_g1_payload=payload,
+        realization_profile=profile,
+        realization_static_rule_payload=static_rule,
+        realization_static_rule_id="movable_midband_parametric",
+    )
+    ruled_members, _ = parse_carrier_compose_archive(ruled_archive)
+    ruled = receive_carrier_compose_archive(ruled_archive)
+    assert ruled_members[REALIZATION_STATIC_RULE_MEMBER] == static_rule
+    assert ruled.custody["realization_static_rule_bytes"] == 12
+    assert ruled.custody["realization_static_rule_active_sites"] == 42 * 512
+    assert ruled.custody["realization_static_rule_id"] == "movable_midband_parametric"
+    assert any(row["stratum"] == "receiver_static_cell_rule" for row in recursive_carrier_byte_rows(ruled_archive))
+    assert not np.array_equal(camera, ruled.render_camera_pairs((0, 63)))
+
+
+def test_v14_measurement_config_is_full_window_local_only_and_stage_bounded() -> None:
+    config = DDMV14RealizationFidelityConfigV1(
+        run_id="fixture_v14",
+        pair_start=0,
+        pair_count=600,
+        v13_receipt_path="v13.json",
+        v13_receipt_sha256="1" * 64,
+        lane_phase_receipt_path="phase.json",
+        lane_phase_receipt_sha256="2" * 64,
+        target_cache_path="gt_n600.npz",
+        target_cache_bytes=5_078_017_610,
+        target_cache_sha256="3" * 64,
+        upstream_root="/absolute/upstream",
+        scorer_threads=1,
+    )
+    assert config.candidate_ladder == ("islands", "both")
+    assert config.max_candidate_stages_per_invocation == 1
+    assert config.movable_prototype_rgb_u8 == (107, 0, 114)
+    assert config.execution_allowed is False
+    assert config.score_claim is False
+    with pytest.raises(ValueError, match="v14 windows"):
+        DDMV14RealizationFidelityConfigV1(
+            **{
+                **config.model_dump(by_alias=True),
+                "pair_start": 448,
+                "pair_count": 600,
+            }
+        )
 
 
 def test_v13_refuses_orphan_knots_and_postsolve_correction_mixing() -> None:

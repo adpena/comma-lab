@@ -1,0 +1,31 @@
+{
+  "schema": "DDMV14G4ProjectionConfigV1",
+  "run_id": "ddm_v14_g4_receiver_projection_n600_20260722T221500Z",
+  "seed": 1234,
+  "base_config_path": ".omx/research/configs/ddm_v14_realization_fidelity_n600_20260722.json",
+  "base_config_sha256": "9c7d52d927c4086c24ab1892e1841f109d1531810f46f3f3bbaecce8ae74b5c6",
+  "base_archive_path": ".omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z/ddm_v14_islands_n600.not_a_candidate.zip.receipt-bytes",
+  "base_archive_sha256": "2578d4909b99ce58e01575bafe8a8bb05e680019bd2157ca517aea02602c3e17",
+  "base_measurement_path": ".omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z/stage_checkpoints/01_islands_measurement.json",
+  "base_measurement_sha256": "abc3f72986f4c255ddfe01963acd1a2e8200b8eb3adbda1e1ff6a68b478874d9",
+  "base_receipt_path": ".omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z/ddm_v14_realization_fidelity_n600_receipt.json",
+  "base_receipt_sha256": "82d3249908d42a86575c407ab3d7acdf9b3706b31225f2e46862b2472966e5a9",
+  "g4_receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z/ddm_g4_spatial_stationarity_receipt.json",
+  "g4_receipt_sha256": "bea555b95aeaa11f4209df5333010c41c5495dd789def2a4f7a2a91973f3408c",
+  "g4_summary_path": "/Users/adpena/Projects/pact/.omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z/summary.json",
+  "g4_summary_sha256": "1e522f92014388454ee0b01d3e4a6abd8c740cac7a4ddcbf341935cdde3a1361",
+  "g4_recurrence_path": "/Volumes/VertigoDataTier/pact/ddm_g4_spatial_stationarity_n600_20260722T212138Z/stage_checkpoints/01_recurrence_arrays.npz",
+  "g4_recurrence_bytes": 396209,
+  "g4_recurrence_sha256": "dbc85e7a4f593ab9b7a7f4ed017dbb63a064cb681df806d0bb93277ae8f42451",
+  "candidate_ladder": [
+    "movable_midband_parametric",
+    "horizon_row_parametric",
+    "static_image_sparse_all"
+  ],
+  "max_candidate_stages_per_invocation": 1,
+  "dseg_gate": 0.00116,
+  "archive_box_bytes": 200000,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false
+}
