@@ -83017,15 +83017,15 @@
       "id": "lane_ddm_v5_route_fix_compose_603_613_20260722",
       "name": "DDM v5 route-fix composed member tasks 603 613",
       "phase": 3.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/optimization/direct_description_entropy_priced_member.py"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_v5_route_fix_compose_n64_603_613_20260722T070530Z/ddm_v5_route_fix_composed_n64_receipt.json"
         },
         "contest_cuda": {
           "status": false,
@@ -83067,5 +83067,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T06:21:04Z"
+  "updated_at": "2026-07-22T07:18:51Z"
 }
