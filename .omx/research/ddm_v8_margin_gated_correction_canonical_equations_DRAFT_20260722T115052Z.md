@@ -74,3 +74,5 @@ preimage fact only; it does not authorize a through-R or byte-saving claim.
 
 Receipt anchor:
 `7051927df863a3ab01a6e1494550a914829715b00faeae15baa3abb951a49d1c`.
+
+STORES CONSULTED: DAG `.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md` (FEED-603-v7 falsifier row + FEED-REALIZATION-VERDICT-20260721T210858Z #612 fork + FEED-V9-RECURSIVE-FRACTAL-ALREADY-BUILT + FEED-STANDING-RECALL-V7-V8-V9-FIRST); v7/v8 SHA-bound receipts (64658a05 / 8db93c4e / d68f1d9e / 7051927d) + bounded replays ×2; memory `segnet_recursive_fractal_factorization_20260715.md` (ERF r50≈85px — the mechanism convergence) + the standing SegNet-sees-REGIONS law (CLAUDE.md §unified flow + flip-pixel NO-GO ×3); SPEC_366 header (FALLBACK_ONLY_TRIGGER_NOT_MET — routing correction) + `direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md`; canonical_equations registry (structured-carriers law still unregistered, #540 debt — this draft extends its anchor candidates); task ledger #603/#612/#613/#578. NOT consulted this pass: graph-memory recall tool (custody performed against primary artifacts directly).
