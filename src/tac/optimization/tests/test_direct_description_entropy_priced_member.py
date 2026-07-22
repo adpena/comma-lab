@@ -463,20 +463,23 @@ def test_mycar_structured_receiver_changes_only_static_hood() -> None:
 
 def test_role_value_selector_maximizes_each_self_detected_role_without_fixed_indices() -> None:
     role_ids = {"Road": 3, "Lane": 4, "MyCar": 0, "UndrivableBoundary": 1, "Movable": 2}
+    winning_candidates = {"Road": 3, "Lane": 5, "MyCar": 0, "UndrivableBoundary": 1, "Movable": 2}
     score_rows = {}
     for role_index, (role, target_class_id) in enumerate(role_ids.items()):
         score_rows[role] = [
             {
                 "candidate_index": candidate_index,
                 "target_class_id": target_class_id,
-                "own_class_matches": 100 + candidate_index + (1000 if candidate_index == role_index else 0),
+                "own_class_matches": 100
+                + candidate_index
+                + (1000 if candidate_index == winning_candidates[role] else 0),
                 "rgb_u8": [candidate_index, role_index, target_class_id],
             }
-            for candidate_index in range(5)
+            for candidate_index in range(6)
         ]
     selected = select_role_paint_values(role_ids, score_rows)
-    for role_index, role in enumerate(role_ids):
-        assert selected[role]["candidate_index"] == role_index
+    for role in role_ids:
+        assert selected[role]["candidate_index"] == winning_candidates[role]
         assert selected[role]["own_class_matches"] == max(
             row["own_class_matches"] for row in score_rows[role]
         )

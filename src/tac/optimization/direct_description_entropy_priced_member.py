@@ -1491,6 +1491,15 @@ def measure_structured_role_value_routing(
         candidates = [
             {**row, "candidate_family": "c1_role_median"}
             for row in prototypes
+        ] + [
+            {
+                "candidate_index": len(prototypes),
+                "source_role": role,
+                "statistic": "self_detected_class_row_from_inherited_s4_palette",
+                "rgb_u8": list(inherited),
+                "target_rgb_sites": 0,
+                "candidate_family": "inherited_s4_palette",
+            }
         ]
         role_rows: list[dict[str, Any]] = []
         for candidate in candidates:
@@ -1511,12 +1520,7 @@ def measure_structured_role_value_routing(
                     "own_class_membership": _fraction_text(own_matches, correct_geometry_sites),
                 }
             )
-        inherited_painted = baseline_pairs.copy()
-        inherited_rgb = np.asarray(inherited, dtype=np.uint8)
-        inherited_painted[:, 0][masks] = inherited_rgb
-        inherited_painted[:, 1][masks] = inherited_rgb
-        inherited_cells, _ = oracle(inherited_painted, False)
-        inherited_matches = int(np.count_nonzero(inherited_cells[correct_geometry] == class_id))
+        inherited_row = role_rows[-1]
         score_rows[role] = role_rows
         c1_values = targets[:, 1][correct_geometry]
         role_probe[role] = {
@@ -1531,9 +1535,9 @@ def measure_structured_role_value_routing(
             },
             "inherited_s4_paint": {
                 "rgb_u8": list(inherited),
-                "own_class_matches": inherited_matches,
+                "own_class_matches": inherited_row["own_class_matches"],
                 "correct_geometry_sites": correct_geometry_sites,
-                "own_class_membership": _fraction_text(inherited_matches, correct_geometry_sites),
+                "own_class_membership": inherited_row["own_class_membership"],
             },
             "c1_member_same_sites": {
                 "rgb_mean": [format(float(value), ".6f") for value in c1_values.mean(axis=0)],
