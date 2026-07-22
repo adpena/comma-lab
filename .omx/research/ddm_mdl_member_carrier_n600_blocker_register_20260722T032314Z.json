@@ -1,0 +1,32 @@
+{
+  "schema": "ddm_task603_blocker_register_delta.v1",
+  "utc": "2026-07-22T03:23:14Z",
+  "task": 603,
+  "feeds_task": 613,
+  "master_task": 578,
+  "source_task": 602,
+  "lane_id": "lane_ddm_mdl_member_carrier_n600_20260722",
+  "predecessor_register_path": ".omx/research/ddm_polytope_membership_n600_603_blocker_register_20260722T030238Z.json",
+  "predecessor_register_sha256": "38d0e88b7f0a8b74c6768458eb48eec7fe47f83e2e4fef4f2dea8bdb400b3b4b",
+  "measurement_receipt_path": ".omx/research/ddm_mdl_member_carrier_n600_20260722T032314Z.json",
+  "measurement_receipt_sha256": "49192a5ea82263162c632420501a6b78c9b3496502f0af8febd87224b00a0d2a",
+  "primary_green_count_before": 8,
+  "primary_green_count_after": 8,
+  "primary_red_count_before": 11,
+  "primary_red_count_after": 11,
+  "supplemental_rows_appended": [
+    {
+      "blocker": "MDL_MEMBER_CARRIER_POINT",
+      "before": "UNREGISTERED",
+      "after": "RED_FORMULATION_OUTPUT_INTERFACE",
+      "evidence_sha256": "49192a5ea82263162c632420501a6b78c9b3496502f0af8febd87224b00a0d2a",
+      "verdict_scope": "preserved Task #602 n64 bounded uint8 member-search outputs lack a receiver-carriable coded payload, independent pre-uint8 state, exact archive-byte admission, and Pose byte ownership; family remains open"
+    }
+  ],
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}
