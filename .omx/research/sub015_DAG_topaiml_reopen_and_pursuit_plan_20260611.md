@@ -21135,3 +21135,32 @@ advisory d_seg/d_pose (frozen-scorer argmax vs gt_n600.lstars, per-stratum decom
 the #613 knee is denominated in; (2) attack the ~1,068 B/pair marginal via cross-pair temporal
 amortization (static-once + AR/ξ-keyed deltas per stream) with a per-stream marginal-cost table.
 Pointer 0.1910828242 [contest-CPU] UNMOVED (all means).
+
+## FEED-603-v6-bridge-verdict (2026-07-22, MAIN custody of ddm_v6_dseg_bridge_amortize, merged 8b2b8b24d4)
+
+**THE BRIDGE MEASUREMENT — the describe line's honest position, decomposed.** (MAIN verified: 320
+tests; d_pose via OFFICIAL CPU-torch YUV6 PoseNet; MEASURED-vs-DERIVED membership labels; all
+[macOS-CPU advisory], score_claim=false.)
+- **Rate axis GREEN:** temporal amortization (unit-root AR(1) hold24 + ξ/Pose6-keyed) cut the
+  marginal 1,067.32 → 107.94–110.24 B/pair (10×); n256 composed member 324,260 → ~70,900 B.
+  Projected n600 payload ≈ 115 KB — INSIDE the 154.6 KB strict box. Per-stream marginal table
+  landed (residual streams were 180-248 B/pair → 11-13; events 37-150 → 7-21).
+- **Distortion axis RED (verdict_scope: FORMULATION — the structured-PAINT family):** actual
+  advisory d_seg of the composed member = 0.0383 (n256) / 0.0444 (n64) — 33× the #613 bar
+  (0.00116) and 2.4× worse than the S4 knee (0.016). Membership 0.96 was an optimistic proxy:
+  escaped cells DO flip argmax. Per-stratum: **Undrivable .0049 + MyCar .0011 ≈ SOLVED; Lane .367 /
+  Movable .988 / Boundary .469 carry the whole miss** — the measured per-stratum tolerance map the
+  waterfill needs.
+- **Pose axis RED (photometric wall MEASURED on this vehicle):** d_pose ≈ 157.8–159.1 through the
+  official YUV6 path — painted-partition frames carry no PoseNet-legible photometrics. Confirms
+  L68 on the describe line: a complete pose6 STREAM ≠ pose-legible FRAMES. Amortization is
+  pose-neutral (Δd_pose ≤ 0.04 across modes) — the wall is the family, not the coding.
+**The reformulation (Einsteinian, consumes all three axes):** stop describing PAINT approximations;
+describe THE C1 SOLVED PLANES at per-stratum tolerance. The C1 planes already satisfy BOTH scorers
+(d_seg 1.52e-4 AND pose via the #549 joint solve) — faithful description recovers pose for free,
+dissolving the photometric wall. Spend tolerance per the MEASURED sensitivity map (quantize/amortize
+hard on Undrivable/MyCar; near-exact on Lane/Movable/Boundary bands), priced by the now-proven
+amortization + survey-winner machinery. Bar: per-stratum-waterfilled bytes vs d_seg ≤0.00116 at
+≤~200 KB — the #613 knee question in its final measurable form.
+**Next node (respawned): ddm_v7_solved_plane_tolerance_waterfill.** Register stays 8/19 honestly
+(n600 + contest axes red). Pointer 0.1910828242 [contest-CPU] UNMOVED (all means).
