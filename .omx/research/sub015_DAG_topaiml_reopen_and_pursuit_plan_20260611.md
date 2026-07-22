@@ -20980,3 +20980,27 @@ ledger when the member-carrier bytes land`.
 **Incident note:** post-merge cleanup discarded 2 transient hook-appended rows from the live
 operator_p0_ledger.jsonl via `git checkout` (append-only violation, bounded: digest coherent,
 committed state intact, rows regenerate on next --update). Lesson: never checkout live-state JSONL.
+
+## FEED-603-carrier-blocked + FEED-615-paper-drop (2026-07-22, MAIN custody)
+
+**Trajectory:** carrier arm `ddm_mdl_member_carrier_n600` landed an honest BLOCKED negative (main
+7493d3a8da): #602's preserved solve `selected_equals_canonical_pairs` for all 64 pairs under
+DIAGNOSTIC zlib pricing — zero receiver-consumable coded-member payloads exist; the 77,651,017 B
+figure was diagnostic (1.21 MB/pair, 2757× the 440 B/pair bar) and was correctly REFUSED as a curve
+point. verdict_scope: FORMULATION_OUTPUT_INTERFACE — MDL-member family OPEN. Root cause (verified
+from #602's own receipt): code length was NOT truly inside the solve — flat diagnostic pricing gave
+the search no gradient toward cheap members, so it degenerated to identity selection. This is also a
+disposition≠consumption instance: #602 was marked complete with an output no consumer could carry.
+Five exact blockers registered (n600 coverage · coded payload · exact-ZIP pricing in-solve ·
+pre-uint8 member state (structural) · pose section).
+
+**Fired:** `mdl_member_solve_v2_priced` (20260722T035050Z) — member solve v2 with RECEIVER-PRICED
+exact code length + the #604-U1 distortion-tolerance LADDER inside selection → the (tolerance,
+bytes, membership) recursive-fractal curve #613 needs. Parallel: operator paper drop arXiv
+2507.10482 "Orthologic Type Systems" (Guilloud & Kuncak) → task #615 + crosswalk arm
+`orthologic_crosswalk_615` (STRICT pays-rent bar; candidate touchpoints: canonical-form
+normalization vs our gauge-fixing laws · ortholattice order vs argmax-cell/tropical structure).
+Equations leg: no new law this landing (blocked negative); tolerance-vs-bytes curve registerable on
+v2's verdict.
+
+**Pointer 0.1910828242 [contest-CPU] UNMOVED.**
