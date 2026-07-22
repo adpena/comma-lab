@@ -83493,6 +83493,49 @@
         "receiver-visible DDM v13 consumes table",
         "new xi or cross-stratum derivation becomes available"
       ]
+    },
+    {
+      "id": "ddm_g2_solve_diff_op_mining",
+      "name": "DDM G2 solve-minus-predict differential operator mining",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_g2_solve_diff_op_mining_20260722T200121Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_g2_solve_diff_op_mining_n600_20260722T194000Z/aggregate_ledger.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #603/#613 under master #578; isolated-worktree local macOS-CPU frozen-scorer advisory derivative-production and diff-op mining only; zero paid dispatch; no archive; score_claim=false; pointer 0.1910828242 contest-CPU unchanged; research_only=true; MAIN landing review required.",
+      "research_only": true,
+      "lane_class": "substrate_engineering"
     }
   ],
   "level_rules": {
