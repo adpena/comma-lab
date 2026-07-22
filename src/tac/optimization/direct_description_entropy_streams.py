@@ -17,6 +17,7 @@ receiver is invoked.
 from __future__ import annotations
 
 import io
+import itertools
 import math
 import struct
 import zipfile
@@ -65,6 +66,7 @@ from tac.optimization.direct_description_measurement_ladder import (
     _RESIDUAL_RECORD,
     CHARTS_PER_PLANE,
     MEMBER_BY_STREAM,
+    PAIR_HW,
     STREAM_BY_MEMBER,
     STREAM_MAGIC,
     STREAM_ORDER,
@@ -125,6 +127,21 @@ _ENTROPY_MAGIC: Final = {
     name: bytes((STREAM_MAGIC[name][0] ^ 0x20,)) + STREAM_MAGIC[name][1:7] + b"E" for name in STREAM_ORDER
 }
 
+CORRECTION_SCHEDULE_EVERY_PAIR: Final = 1
+CORRECTION_SCHEDULE_FIXED_HOLD24: Final = 2
+CORRECTION_SCHEDULE_XI_HOLD24: Final = 3
+CORRECTION_SCHEDULE_DROP: Final = 4
+CORRECTION_SCHEDULE_NAME: Final = {
+    CORRECTION_SCHEDULE_EVERY_PAIR: "every_pair",
+    CORRECTION_SCHEDULE_FIXED_HOLD24: "fixed_hold24",
+    CORRECTION_SCHEDULE_XI_HOLD24: "xi_hold24",
+    CORRECTION_SCHEDULE_DROP: "drop_to_predictor",
+}
+_CORRECTION_MAGIC: Final = b"DDMCRS1\0"
+_CORRECTION_FRAME = struct.Struct("<8sBBBBHHHII32s")
+_CORRECTION_KEY = struct.Struct("<HI")
+_CORRECTION_SITES_PER_PAIR: Final = 2 * PAIR_HW[0] * PAIR_HW[1]
+
 
 @dataclass(frozen=True, slots=True)
 class TransformBodyV1:
@@ -175,6 +192,46 @@ class EntropyStreamBuildV1:
             "candidate_rows": [dict(row) for row in self.candidate_rows],
             "split_detail": dict(self.split_detail) if self.split_detail is not None else None,
             "exact_semantic_roundtrip": True,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class PlaneCorrectionSectionBuildV1:
+    """One opaque counted correction section for the v7 solved-plane ladder.
+
+    Section semantics stay outside the shipped archive.  The receiver sees
+    only changed site/value records, so no GT argmax table or scorer is part of
+    the runtime.  The builder still keeps the self-detected stratum mapping in
+    its external custody receipt.
+    """
+
+    section_id: int
+    schedule_id: int
+    n_pairs: int
+    quant_step: int
+    coder_id: int
+    frame: bytes
+    canonical_body: bytes
+    coded_payload: bytes
+    records: Mapping[int, tuple[np.ndarray, np.ndarray]]
+    candidate_rows: tuple[Mapping[str, Any], ...]
+
+    def ledger_row(self) -> dict[str, Any]:
+        return {
+            "section_id": self.section_id,
+            "schedule": CORRECTION_SCHEDULE_NAME[self.schedule_id],
+            "n_pairs": self.n_pairs,
+            "quant_step": self.quant_step,
+            "keyframes": sorted(int(value) for value in self.records),
+            "changed_sites": sum(int(row[0].size) for row in self.records.values()),
+            "coder": CODER_NAME[self.coder_id],
+            "canonical_body_bytes": len(self.canonical_body),
+            "canonical_body_sha256": _sha256(self.canonical_body),
+            "coded_payload_bytes": len(self.coded_payload),
+            "frame_bytes": len(self.frame),
+            "frame_sha256": _sha256(self.frame),
+            "candidate_rows": [dict(row) for row in self.candidate_rows],
+            "exact_parseback": True,
         }
 
 
@@ -598,6 +655,209 @@ def _decode_generic(coder_id: int, payload: bytes, expected_bytes: int) -> bytes
     return decoded
 
 
+def _validate_correction_schedule(schedule_id: int, n_pairs: int, keyframes: tuple[int, ...]) -> None:
+    if schedule_id not in CORRECTION_SCHEDULE_NAME or not 1 <= n_pairs <= 600:
+        raise DirectDescriptionError("plane correction schedule identity is invalid")
+    if schedule_id == CORRECTION_SCHEDULE_DROP:
+        if keyframes:
+            raise DirectDescriptionError("drop-to-predictor correction section must have no keyframes")
+        return
+    if not keyframes or keyframes[0] != 0 or any(left >= right for left, right in itertools.pairwise(keyframes)):
+        raise DirectDescriptionError("plane correction keyframes must increase strictly from zero")
+    if keyframes[-1] >= n_pairs:
+        raise DirectDescriptionError("plane correction keyframe is outside the pair window")
+    if schedule_id == CORRECTION_SCHEDULE_EVERY_PAIR and keyframes != tuple(range(n_pairs)):
+        raise DirectDescriptionError("every-pair correction schedule must contain every local pair")
+    if schedule_id == CORRECTION_SCHEDULE_FIXED_HOLD24 and keyframes != tuple(range(0, n_pairs, 24)):
+        raise DirectDescriptionError("fixed-hold correction schedule must use the sealed 24-pair cadence")
+    if schedule_id == CORRECTION_SCHEDULE_XI_HOLD24:
+        stops = (*keyframes[1:], n_pairs)
+        if any(stop - start > 24 for start, stop in zip(keyframes, stops, strict=True)):
+            raise DirectDescriptionError("xi correction schedule exceeds the sealed 24-pair maximum gap")
+
+
+def _canonicalize_correction_records(
+    *,
+    schedule_id: int,
+    n_pairs: int,
+    records: Mapping[int, tuple[np.ndarray, np.ndarray]],
+) -> tuple[bytes, dict[int, tuple[np.ndarray, np.ndarray]]]:
+    keys = tuple(sorted(int(value) for value in records))
+    _validate_correction_schedule(schedule_id, n_pairs, keys)
+    body = bytearray()
+    normalized: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+    for key in keys:
+        positions = np.asarray(records[key][0])
+        values = np.asarray(records[key][1])
+        if positions.dtype != np.dtype("<u4") or positions.ndim != 1:
+            raise DirectDescriptionError("plane correction positions must be little-endian uint32")
+        if values.dtype != np.uint8 or values.shape != (positions.size, 3):
+            raise DirectDescriptionError("plane correction values must be uint8 [changed_sites,3]")
+        if positions.size and (
+            int(positions[-1]) >= _CORRECTION_SITES_PER_PAIR
+            or np.any(np.diff(positions.astype(np.int64)) <= 0)
+        ):
+            raise DirectDescriptionError("plane correction positions must be unique, increasing, and in range")
+        positions = np.ascontiguousarray(positions.astype("<u4", copy=False))
+        values = np.ascontiguousarray(values)
+        body.extend(_CORRECTION_KEY.pack(key, int(positions.size)))
+        body.extend(positions.tobytes(order="C"))
+        body.extend(values.tobytes(order="C"))
+        normalized[key] = (positions, values)
+    return bytes(body), normalized
+
+
+def _survey_correction_coder_candidates(canonical_body: bytes) -> tuple[tuple[int, bytes, str | None], ...]:
+    """Measure the two survey winners for exception-like correction payloads."""
+
+    rows: list[tuple[int, bytes, str | None]] = []
+    for coder_id, encoder in ((CODER_BROTLI_Q11, encode_brotli_q11), (CODER_LZMA_XZ9, encode_lzma)):
+        try:
+            encoded = encoder(canonical_body)
+            if _decode_generic(coder_id, encoded, len(canonical_body)) != canonical_body:
+                raise DirectDescriptionError("plane correction coder parse-back differs")
+            rows.append((coder_id, encoded, None))
+        except (DirectDescriptionError, RateCoderError, ValueError) as exc:
+            rows.append((coder_id, b"", str(exc)))
+    return tuple(rows)
+
+
+def encode_plane_correction_section(
+    *,
+    section_id: int,
+    schedule_id: int,
+    n_pairs: int,
+    quant_step: int,
+    records: Mapping[int, tuple[np.ndarray, np.ndarray]],
+) -> PlaneCorrectionSectionBuildV1:
+    """Entropy-price one correction section with exact Brotli/LZMA parse-back."""
+
+    if isinstance(section_id, bool) or not isinstance(section_id, int) or not 0 <= section_id < 6:
+        raise DirectDescriptionError("plane correction section id must be in [0,6)")
+    if isinstance(quant_step, bool) or not isinstance(quant_step, int) or not 0 <= quant_step <= 255:
+        raise DirectDescriptionError("plane correction quantization step must be uint8-sized")
+    if schedule_id == CORRECTION_SCHEDULE_DROP:
+        if quant_step != 0:
+            raise DirectDescriptionError("drop-to-predictor correction step must be zero")
+    elif quant_step < 1:
+        raise DirectDescriptionError("active plane correction step must be positive")
+    canonical, normalized = _canonicalize_correction_records(
+        schedule_id=schedule_id,
+        n_pairs=n_pairs,
+        records=records,
+    )
+    candidates = _survey_correction_coder_candidates(canonical)
+    available = tuple(row for row in candidates if row[2] is None)
+    if not available:
+        raise DirectDescriptionError("no surveyed correction coder completed exact parse-back")
+    coder_id, coded, _ = min(available, key=lambda row: (len(row[1]), row[0]))
+    frame = _CORRECTION_FRAME.pack(
+        _CORRECTION_MAGIC,
+        1,
+        section_id,
+        schedule_id,
+        coder_id,
+        n_pairs,
+        quant_step,
+        len(normalized),
+        len(canonical),
+        len(coded),
+        bytes.fromhex(_sha256(canonical)),
+    ) + coded
+    candidate_rows = tuple(
+        {
+            "coder": CODER_NAME[candidate_id],
+            "coded_payload_bytes": None if refusal is not None else len(payload),
+            "available": refusal is None,
+            "refusal_reason": refusal,
+        }
+        for candidate_id, payload, refusal in candidates
+    )
+    return PlaneCorrectionSectionBuildV1(
+        section_id=section_id,
+        schedule_id=schedule_id,
+        n_pairs=n_pairs,
+        quant_step=quant_step,
+        coder_id=coder_id,
+        frame=frame,
+        canonical_body=canonical,
+        coded_payload=coded,
+        records=normalized,
+        candidate_rows=candidate_rows,
+    )
+
+
+def parse_plane_correction_section(frame: bytes) -> PlaneCorrectionSectionBuildV1:
+    """Decode one v7 correction frame without needing scorer or stratum semantics."""
+
+    if len(frame) < _CORRECTION_FRAME.size:
+        raise DirectDescriptionError("plane correction frame is truncated")
+    (
+        magic,
+        version,
+        section_id,
+        schedule_id,
+        coder_id,
+        n_pairs,
+        quant_step,
+        key_count,
+        canonical_bytes,
+        coded_bytes,
+        digest,
+    ) = _CORRECTION_FRAME.unpack_from(frame)
+    if magic != _CORRECTION_MAGIC or version != 1 or coder_id not in (CODER_BROTLI_Q11, CODER_LZMA_XZ9):
+        raise DirectDescriptionError("plane correction frame identity is invalid")
+    if not 0 <= section_id < 6 or not 0 <= quant_step <= 255:
+        raise DirectDescriptionError("plane correction frame section/step is invalid")
+    if (schedule_id == CORRECTION_SCHEDULE_DROP) != (quant_step == 0):
+        raise DirectDescriptionError("plane correction frame schedule/step contract is invalid")
+    coded = frame[_CORRECTION_FRAME.size :]
+    if len(coded) != coded_bytes:
+        raise DirectDescriptionError("plane correction frame has truncated or trailing coded bytes")
+    canonical = _decode_generic(coder_id, coded, canonical_bytes)
+    if bytes.fromhex(_sha256(canonical)) != digest:
+        raise DirectDescriptionError("plane correction canonical-body digest mismatch")
+    cursor = 0
+    records: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+    for _ in range(key_count):
+        if cursor + _CORRECTION_KEY.size > len(canonical):
+            raise DirectDescriptionError("plane correction key header is truncated")
+        key, count = _CORRECTION_KEY.unpack_from(canonical, cursor)
+        cursor += _CORRECTION_KEY.size
+        position_bytes = count * np.dtype("<u4").itemsize
+        value_bytes = count * 3
+        if cursor + position_bytes + value_bytes > len(canonical):
+            raise DirectDescriptionError("plane correction key payload is truncated")
+        positions = np.frombuffer(canonical[cursor : cursor + position_bytes], dtype="<u4").copy()
+        cursor += position_bytes
+        values = np.frombuffer(canonical[cursor : cursor + value_bytes], dtype=np.uint8).reshape(count, 3).copy()
+        cursor += value_bytes
+        if key in records:
+            raise DirectDescriptionError("plane correction frame repeats a keyframe")
+        records[int(key)] = (positions, values)
+    if cursor != len(canonical):
+        raise DirectDescriptionError("plane correction canonical body has trailing bytes")
+    rebuilt_body, normalized = _canonicalize_correction_records(
+        schedule_id=schedule_id,
+        n_pairs=n_pairs,
+        records=records,
+    )
+    if rebuilt_body != canonical:
+        raise DirectDescriptionError("plane correction semantic parse-back is not canonical")
+    return PlaneCorrectionSectionBuildV1(
+        section_id=section_id,
+        schedule_id=schedule_id,
+        n_pairs=n_pairs,
+        quant_step=quant_step,
+        coder_id=coder_id,
+        frame=frame,
+        canonical_body=canonical,
+        coded_payload=coded,
+        records=normalized,
+        candidate_rows=(),
+    )
+
+
 def _encode_split_rice(canonical: bytes) -> tuple[bytes, dict[str, Any]]:
     metadata, values = _parse_transform_body(canonical)
     header = canonical[: _TRANSFORM_HEADER.size]
@@ -929,13 +1189,21 @@ def prove_entropy_home_fail_closed(z: DirectDescriptionChartZV1) -> dict[str, An
 
 __all__ = [
     "CODER_NAME",
+    "CORRECTION_SCHEDULE_DROP",
+    "CORRECTION_SCHEDULE_EVERY_PAIR",
+    "CORRECTION_SCHEDULE_FIXED_HOLD24",
+    "CORRECTION_SCHEDULE_NAME",
+    "CORRECTION_SCHEDULE_XI_HOLD24",
     "TRANSFORM_NAME",
     "EntropyChartArchiveBuildResultV1",
     "EntropyChartReceiverResultV1",
+    "PlaneCorrectionSectionBuildV1",
     "compile_entropy_chart_archive",
     "encode_entropy_stream",
+    "encode_plane_correction_section",
     "parse_entropy_chart_archive",
     "parse_entropy_stream",
+    "parse_plane_correction_section",
     "prove_entropy_home_fail_closed",
     "receive_entropy_chart_archive",
 ]

@@ -1,0 +1,132 @@
+{
+  "schema": "ddm_v7_solved_plane_tolerance_waterfill_cross_window.v1",
+  "task": 603,
+  "feeds_task": 613,
+  "master_task": 578,
+  "lane_id": "ddm_v7_solved_plane_tolerance_waterfill",
+  "delegation_checkpoint_key": "codex_delegate:ddm_v7_solved_plane_tolerance_waterfill:20260722T083215Z",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "research_only": true,
+  "execution_allowed": false,
+  "candidate_archive": false,
+  "score_claim": false,
+  "d_seg_claim": false,
+  "d_pose_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "verdict": "FORMULATION_LEVEL_EXACT_RESIDUAL_KOLMOGOROV_RATE_WALL",
+  "verdict_scope": "MEASURED n64 [448,512) and n256 [344,600) opaque site/value solved-plane corrections over the bound v6 fixed_ar1_hold24 predictor on macOS CPU frozen SegNet/PoseNet; closes only this exact-correction formulation, not learned or analytic solved-plane descriptions; no n600 or contest-axis verdict",
+  "pre_registered_falsifier_bytes": 200000,
+  "windows": [
+    {
+      "pair_count": 64,
+      "pair_start": 448,
+      "receipt_path": ".omx/research/ddm_v7_solved_plane_tolerance_waterfill_n64_603_613_20260722T085852Z/ddm_v7_solved_plane_tolerance_waterfill_n64_receipt.json",
+      "receipt_bytes": 174122,
+      "receipt_sha256": "8db93c4ef90e6d7f29943b4334a0d441f5cfbe226bf68fceb7ed03e59730970b",
+      "typed_config_sha256": "c08abe5d5e93c50363309ad0374c8005d3875d6b4579d921202c0117a815a95b",
+      "dsl_compile_hash": "e275a2ea63d8043e2ef1472d44751dc6a571e866c90fa252bbb5091eb1298c3b",
+      "candidate_table_sha256": "afb69697a18886c3b362bcffe4fe306a71a0d865bc5cd7dec108060e081ae1fe",
+      "exact_target_proof": {
+        "bit_identical_to_solved_planes": true,
+        "rendered_window_sha256": "f637338b5d39a5f97280cbe3738ffada25d892e4c415bf3901328b0c07083861"
+      },
+      "knee": {
+        "policy_name": "exact_all",
+        "archive_bytes": 43112153,
+        "multiple_of_falsifier": "215.560765",
+        "advisory_d_seg": "0.000171422958",
+        "advisory_d_pose": "0.000081666650"
+      },
+      "waterfill_first_rate_break": "xi_hold24_all->q16_all",
+      "candidates": [
+        {"policy":"exact_all","archive_bytes":43112153,"advisory_d_seg":"0.000171422958","advisory_d_pose":"0.000081666650"},
+        {"policy":"q4_all","archive_bytes":27479944,"advisory_d_seg":"0.001374244690","advisory_d_pose":"0.002485906775"},
+        {"policy":"waterfill_sensitive_exact","archive_bytes":4179132,"advisory_d_seg":"0.012644211451","advisory_d_pose":"8.479886633718"},
+        {"policy":"waterfill_balanced","archive_bytes":3534452,"advisory_d_seg":"0.012602090836","advisory_d_pose":"8.451518574362"},
+        {"policy":"q16_all","archive_bytes":10761809,"advisory_d_seg":"0.005078713099","advisory_d_pose":"0.060651052613"},
+        {"policy":"q64_all","archive_bytes":1608262,"advisory_d_seg":"0.033052523931","advisory_d_pose":"8.929935045545"},
+        {"policy":"fixed_hold24_all","archive_bytes":2239211,"advisory_d_seg":"0.027928272883","advisory_d_pose":"0.121842519507"},
+        {"policy":"xi_hold24_all","archive_bytes":2218850,"advisory_d_seg":"0.028261661530","advisory_d_pose":"0.097639616130"},
+        {"policy":"drop_to_predictor_all","archive_bytes":52697,"advisory_d_seg":"0.045286496480","advisory_d_pose":"159.104827981350"}
+      ]
+    },
+    {
+      "pair_count": 256,
+      "pair_start": 344,
+      "receipt_path": ".omx/research/ddm_v7_solved_plane_tolerance_waterfill_n256_603_613_20260722T085852Z/ddm_v7_solved_plane_tolerance_waterfill_n256_receipt.json",
+      "receipt_bytes": 464164,
+      "receipt_sha256": "d68f1d9ead9401173160b8cc4ec7fb9d49753a6bb0f298af23de293bc28d4274",
+      "typed_config_sha256": "73ab7b1368b2114c95233cdb77b5c87e1675afbc0191885b8383dacbbb1c8749",
+      "dsl_compile_hash": "be7bccf1d9bec0313aa6c97ea84f976ad603d9bfa8d8461f44854ba21e73603a",
+      "candidate_table_sha256": "cd8cc5a74cb3d80119a363a2967b84aa2ab16340b40fc7dfe2676febad8cc89a",
+      "exact_target_proof": {
+        "bit_identical_to_solved_planes": true,
+        "rendered_window_sha256": "06101a0cc87bda43ed9e3ef85990d0834b53abb695c059e462bfa731c86131fc"
+      },
+      "knee": {
+        "policy_name": "exact_all",
+        "archive_bytes": 171332654,
+        "multiple_of_falsifier": "856.663270",
+        "advisory_d_seg": "0.000154534976",
+        "advisory_d_pose": "0.000104117518"
+      },
+      "waterfill_first_rate_break": "fixed_hold24_all->xi_hold24_all",
+      "candidates": [
+        {"policy":"exact_all","archive_bytes":171332654,"advisory_d_seg":"0.000154534976","advisory_d_pose":"0.000104117518"},
+        {"policy":"q4_all","archive_bytes":108637789,"advisory_d_seg":"0.001218597094","advisory_d_pose":"0.004350660189"},
+        {"policy":"waterfill_sensitive_exact","archive_bytes":15571267,"advisory_d_seg":"0.010529518127","advisory_d_pose":"7.994121936780"},
+        {"policy":"waterfill_balanced","archive_bytes":13250967,"advisory_d_seg":"0.010495305061","advisory_d_pose":"7.990826227167"},
+        {"policy":"q16_all","archive_bytes":42253555,"advisory_d_seg":"0.004773457845","advisory_d_pose":"0.093786208900"},
+        {"policy":"q64_all","archive_bytes":6264275,"advisory_d_seg":"0.025728523731","advisory_d_pose":"10.969005841337"},
+        {"policy":"fixed_hold24_all","archive_bytes":7796629,"advisory_d_seg":"0.026270667712","advisory_d_pose":"0.229579410911"},
+        {"policy":"xi_hold24_all","archive_bytes":8501332,"advisory_d_seg":"0.025154093901","advisory_d_pose":"0.198460411219"},
+        {"policy":"drop_to_predictor_all","archive_bytes":73426,"advisory_d_seg":"0.040169219176","advisory_d_pose":"157.798907948748"}
+      ]
+    }
+  ],
+  "dominant_exact_streams": {
+    "n64": {"Undrivable":21551775,"MyCar":10459480,"Road":8606120,"Boundary":1362996,"Movable":985456,"Lane":94284},
+    "n256": {"Undrivable":86082475,"MyCar":42001617,"Road":34212776,"Boundary":5161372,"Movable":3409572,"Lane":392068}
+  },
+  "full_decomposition_authority": "Each SHA-bound source receipt carries bytes by all six streams and advisory d_seg by five target classes, boundary/interior topology, and margin band for every candidate; this cross-window receipt does not duplicate those full tables.",
+  "resume_evidence": {
+    "fresh_build_seconds": {"n64":"727.27","n256":"2831.91"},
+    "regenerate_from_stage_checkpoints_seconds": {"n64":"7.85","n256":"25.62"},
+    "sealed_final_validation_seconds": {"n64":"0.81","n256":"1.05"},
+    "all_seven_rungs_and_nine_candidates_preserved_per_window": true
+  },
+  "cleanup": {
+    "status": "BLOCKED_KEEP_BYTES_SSD_READ_ONLY_BY_DELEGATED_TASK",
+    "n64_local_bulk_bytes": 183020989,
+    "n64_local_file_count": 70,
+    "n256_local_bulk_bytes": 719471409,
+    "n256_local_file_count": 69,
+    "rebuild_authority": "typed config plus source receipt plus seven rung receipts plus nine candidate receipts per window",
+    "cold_store_move_performed": false,
+    "reason": "Delegated boundary requires SSD read-only. Certify-or-block therefore keeps all local bytes; no deletion, movement, or source mutation is authorized."
+  },
+  "round1": {
+    "disposition": "PASS_AFTER_THREE_REPORT_AND_RESUME_FIXES",
+    "invalid_round0_n64_report_sha256": "217bd957e2d1e24ab623f6bfc8464e4c135fadc3f07fb0f86070448d77511062",
+    "fixes": [
+      "derive the waterfill route from the measured discrete Pareto envelope rather than a handwritten non-monotone order",
+      "bind every candidate scope to the joint frozen-scorer axis without leaking the v6 SegNet-only label",
+      "validate and return sealed final receipts instead of regenerating volatile free-space telemetry"
+    ]
+  },
+  "producer": {
+    "solver_commit": "e16e25b025324c475f1b6152049f55366350160f",
+    "build_commit": "c2351a8b0c4859b1f8e898a759bb8c433eceaf11"
+  },
+  "blocker_delta": {
+    "SOLVED_PLANE_EXACT_RECEIVER": "RED_TO_GREEN_LOCAL_ADVISORY",
+    "PER_STRATUM_TOLERANCE_LADDER": "RED_TO_GREEN_LOCAL_ADVISORY",
+    "DSEG_LE_0_00116": "RED_TO_GREEN_ONLY_AT_EXACT_ALL_LOCAL_ADVISORY",
+    "EXACT_RESIDUAL_LE_200KB": "RED_FORMULATION_SCOPE_N64_AND_N256",
+    "N600": "REMAINS_RED_TIME_BOUND_NOT_RUN",
+    "CONTEST_CPU_CUDA_SCORE": "REMAINS_RED_NOT_AUTHORIZED",
+    "CANONICAL_603_REGISTER_COUNT": "8/19 UNCHANGED_ON_BRANCH_MAIN_REVIEWS_DRAFT"
+  },
+  "main_landing_review_required": true
+}
