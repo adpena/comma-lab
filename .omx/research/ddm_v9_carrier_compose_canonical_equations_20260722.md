@@ -65,3 +65,5 @@ The exact instance falsifier is
 `F_instance = [B≤154,600] ∧ [D_seg≤0.00116] ∧ [Pose tube green]`.
 
 The measured n64/n256 archives satisfy the byte term but fail the semantic and Pose terms. Therefore the verdict is an **INSTANCE/FORMULATION** negative, not a carrier-family negative. The primary remaining degree of freedom is the joint Fisher-ranked G2CS1 + xi-event solve.
+
+CONSUMED-BY: `ddm_describe_line_rate_distortion_bracket_v1` v9 structured in-box anchor; registration landing `.omx/research/ddm_structured_carriers_law_registration_20260722T142000Z.md`; MAIN review required.

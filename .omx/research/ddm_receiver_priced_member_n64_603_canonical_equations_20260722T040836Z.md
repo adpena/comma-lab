@@ -51,3 +51,4 @@ break-even gate.
 
 0.1910828242 [contest-CPU] — unchanged.
 
+CONSUMED-BY: `ddm_describe_line_rate_distortion_bracket_v1` exact-rate and universal-constraint history; registration landing `.omx/research/ddm_structured_carriers_law_registration_20260722T142000Z.md`; MAIN review required.

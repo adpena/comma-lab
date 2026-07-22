@@ -85,3 +85,4 @@ score_claim: false
 d_seg_claim: false
 ```
 
+CONSUMED-BY: `ddm_describe_line_rate_distortion_bracket_v1` composed-role lineage; registration landing `.omx/research/ddm_structured_carriers_law_registration_20260722T142000Z.md`; MAIN review required.

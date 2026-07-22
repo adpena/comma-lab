@@ -39,3 +39,5 @@ and boundary/interior stratum.
 This note is not appended to the canonical equation registry. Promotion requires MAIN review of the
 measurement definition, cache-crosscheck semantics, and whether a future solver consumes the typed
 receipt without converting advisory membership into score authority.
+
+CONSUMED-BY: `ddm_describe_line_rate_distortion_bracket_v1` membership-to-evaluator scope history; registration landing `.omx/research/ddm_structured_carriers_law_registration_20260722T142000Z.md`; MAIN review required.

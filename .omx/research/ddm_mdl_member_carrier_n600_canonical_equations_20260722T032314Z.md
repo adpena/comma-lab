@@ -53,3 +53,5 @@ is zlib-9 over decoded uint8 camera arrays, not `B`; it is non-registerable.
 No canonical equation or member-carrier byte row is appended in this landing. Promotion requires a
 measured `C_carrier=1` tuple plus MAIN review; recording undefined quantities as zero would violate
 NO-FAKE and corrupt the #613 knee.
+
+CONSUMED-BY: `ddm_describe_line_rate_distortion_bracket_v1` receiver-admissibility history; registration landing `.omx/research/ddm_structured_carriers_law_registration_20260722T142000Z.md`; MAIN review required.

@@ -35,3 +35,5 @@ and `D_pose6 = ||pose_codes(z) - ordinal_n600(Pose6)||_1`.
 At n256 the measured tuple is `(1,095,272, 0.001762549082, 0)`. The third coordinate is integer
 ordinal-code debt, not `d_pose`; `Delta_rgb_argmax` is RGB-channel input apparatus, not SegNet
 argmax. None of these values can rank, kill, promote, or move the contest pointer.
+
+CONSUMED-BY: `ddm_describe_line_rate_distortion_bracket_v1` apparatus provenance; registration landing `.omx/research/ddm_structured_carriers_law_registration_20260722T142000Z.md`; MAIN review required.
