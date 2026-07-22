@@ -888,13 +888,13 @@ def run_real_target_pose_rung_zero(
     target = load_real_target_subset(Path(config.target_receipt_path), config.target_receipt_sha256)
     primary = run_real_target_optimizer(
         config,
-        checkpoint_directory=root / "primary" / "checkpoints",
+        checkpoint_directory=root / "primary_stage_receipts",
         semantic_argv=semantic_argv,
         loaded_target=target,
     )
     partial = run_real_target_optimizer(
         config,
-        checkpoint_directory=root / "resume" / "checkpoints",
+        checkpoint_directory=root / "resume_stage_receipts",
         semantic_argv=semantic_argv,
         stop_after_stage_index=0,
         loaded_target=target,
@@ -903,7 +903,7 @@ def run_real_target_pose_rung_zero(
         raise DirectDescriptionError("real-target resume control did not stop after rung stage zero")
     resumed = run_real_target_optimizer(
         config,
-        checkpoint_directory=root / "resume" / "checkpoints",
+        checkpoint_directory=root / "resume_stage_receipts",
         semantic_argv=semantic_argv,
         resume_from=partial.checkpoint_paths[-1],
         loaded_target=target,
@@ -920,7 +920,8 @@ def run_real_target_pose_rung_zero(
     if compile_direct_description_archive_v2(parsed.z).archive != primary.final_receiver.archive:
         raise DirectDescriptionError("real-target terminal archive parse/re-encode mismatch")
     final_archive = _publish_new_bytes(
-        root / "ddm_real_target_pose_rung0_final.not_a_candidate.zip", primary.final_receiver.archive
+        root / "ddm_real_target_pose_rung0_final.not_a_candidate.zip.receipt-bytes",
+        primary.final_receiver.archive,
     )
     receipt = {
         "schema": RUNG_SCHEMA,
