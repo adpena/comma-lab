@@ -218,6 +218,21 @@ def _git_output(args: Sequence[str], repo_root: Path) -> bytes:
     return bytes(completed.stdout)
 
 
+def _committed_source_custody(relative_path: str) -> dict[str, str]:
+    """Bind a runtime source to the last commit that contains its exact bytes."""
+
+    repo_root = Path(__file__).resolve().parents[3]
+    source_path = repo_root / relative_path
+    source_sha256 = _stream_sha256(source_path)
+    git_sha = _git_output(["log", "-n", "1", "--format=%H", "--", relative_path], repo_root).decode().strip()
+    if len(git_sha) != 40:
+        raise DirectDescriptionError(f"source git custody is not full length: {relative_path}")
+    committed_source = _git_output(["show", f"{git_sha}:{relative_path}"], repo_root)
+    if _sha256(committed_source) != source_sha256:
+        raise DirectDescriptionError(f"runtime source is not committed at its claimed git SHA: {relative_path}")
+    return {"path": relative_path, "sha256": source_sha256, "git_sha": git_sha}
+
+
 def _block_mean_projection(planes: np.ndarray) -> np.ndarray:
     value = np.asarray(planes)
     if value.dtype != np.uint8 or value.ndim != 4 or value.shape[1:] != (384, 512, 3):
@@ -866,6 +881,10 @@ def run_real_target_pose_rung_zero(
 ) -> tuple[dict[str, Any], Path]:
     root = Path(output_directory)
     root.mkdir(parents=True, exist_ok=True)
+    producer = {
+        "module": _committed_source_custody("src/tac/optimization/direct_description_real_target_rung0.py"),
+        "cli": _committed_source_custody("tools/run_direct_description_real_target_rung0.py"),
+    }
     target = load_real_target_subset(Path(config.target_receipt_path), config.target_receipt_sha256)
     primary = run_real_target_optimizer(
         config,
@@ -922,6 +941,7 @@ def run_real_target_pose_rung_zero(
         "typed_config_sha256": config.typed_config_hash(),
         "dsl_compile_hash": config.dsl_compile_hash(),
         "semantic_argv": list(semantic_argv),
+        "producer": producer,
         "target_receipt_path": str(Path(config.target_receipt_path)),
         "target_receipt_sha256": config.target_receipt_sha256,
         "target_source": {
