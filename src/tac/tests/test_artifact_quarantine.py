@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -10,6 +11,7 @@ import pytest
 from tac.artifact_quarantine import (
     QuarantineManifestError,
     has_waiver,
+    is_quarantined_archive_bytes,
     load_manifest,
     refuse_message,
     scan_text,
@@ -65,6 +67,14 @@ def test_sha_prefix_is_case_sensitive_token_ci_is_not(tmp_path):
     root = _mk_root(tmp_path, rows)
     assert len(scan_text("uses 149fefd097c1fa85... bytes", repo_root=root)) == 1
     assert len(scan_text("transplant the R1 DXI section", repo_root=root)) == 1
+
+
+def test_archive_bytes_digest_cannot_bypass_quarantine_by_rename(tmp_path):
+    payload = b"exact quarantined archive bytes"
+    digest = hashlib.sha256(payload).hexdigest()
+    root = _mk_root(tmp_path, [{"id": digest[:16], "kind": "archive_sha_prefix"}])
+    hits = is_quarantined_archive_bytes(payload, repo_root=root)
+    assert [hit.identifier for hit in hits] == [digest[:16]]
 
 
 def test_missing_manifest_falls_back_to_tracked_defaults(tmp_path):

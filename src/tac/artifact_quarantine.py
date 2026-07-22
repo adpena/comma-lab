@@ -216,6 +216,21 @@ def is_quarantined_archive(
     return uniq
 
 
+def is_quarantined_archive_bytes(
+    payload: bytes, repo_root: Path | None = None
+) -> list[QuarantineHit]:
+    """Quarantine hits for already-open archive bytes.
+
+    Decode paths that accept bytes must not become a rename/raw-bytes bypass of
+    :func:`is_quarantined_archive`.  Only the content digest is available here;
+    callers with a path must continue to use the path-aware function as well.
+    """
+
+    if not isinstance(payload, bytes):
+        raise TypeError("archive payload must be exact bytes")
+    return scan_text(hashlib.sha256(payload).hexdigest(), repo_root)
+
+
 def assert_not_quarantined_archive(
     path: Path | str, *, context: str = "", repo_root: Path | None = None
 ) -> None:
