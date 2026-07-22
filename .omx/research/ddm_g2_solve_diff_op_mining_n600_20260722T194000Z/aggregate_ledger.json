@@ -1,0 +1,219 @@
+{
+  "schema": "solve_diff_aggregate_ledger.v1",
+  "generated_at_utc": "2026-07-22T20:01:21Z",
+  "run_id": "ddm_g2_solve_diff_op_mining_n600_20260722",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "archive_emitted": false,
+  "pointer_moved": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "immutable_stage_validation": {
+    "status": "PASS",
+    "stage_count": 50,
+    "pair_count": 600,
+    "pair_ids": "exact_contiguous_[0,600)",
+    "typed_member_rows": 163800,
+    "typed_member_bytes": 95770073,
+    "stage_producer_module_sha256": "7290303774d6bfbb0a4f5686b598fa2cea1722490774d107cf91c5ea6facfe1e",
+    "finalizer_module_sha256": "2d073d97d512fdf0829441ee2fe328de08fe8ae15b3302e68cd951bec2419213",
+    "mixed_stage_producers": false
+  },
+  "endpoint_delta": {
+    "total_energy": 4114383075776.0,
+    "range_energy": 2537778030775.775,
+    "ker_energy": 1576605045000.225,
+    "range_fraction_weighted": 0.6168064528841017,
+    "ker_fraction_weighted": 0.38319354711589826,
+    "reconstruction_max_abs_max": 0.0,
+    "orthogonality_abs_max": 4.237517714500427e-08,
+    "reachable_basis_lower_bound_sum": 1029204178,
+    "full_basis_directions_sum": 2954620800,
+    "irreducible_residual_selected_coder_bytes": 757769836
+  },
+  "active_target_class_partition": {
+    "partition_energy_total": 512513343861.0,
+    "partition_selected_coder_bytes_total": 277552781,
+    "Lane": {
+      "pixel_count": 690639,
+      "scorer_delta_energy": 26307028053.0,
+      "energy_fraction": 0.05132944999015439,
+      "selected_coder_bytes": 3078364
+    },
+    "Movable": {
+      "pixel_count": 1460325,
+      "scorer_delta_energy": 30478385479.0,
+      "energy_fraction": 0.059468472077999435,
+      "selected_coder_bytes": 5219266
+    },
+    "MyCar": {
+      "pixel_count": 29993509,
+      "scorer_delta_energy": 289075446986.0,
+      "energy_fraction": 0.5640349669888807,
+      "selected_coder_bytes": 63713099
+    },
+    "Road": {
+      "pixel_count": 27407046,
+      "scorer_delta_energy": 144402946073.0,
+      "energy_fraction": 0.28175451000972157,
+      "selected_coder_bytes": 60886967
+    },
+    "Undrivable": {
+      "pixel_count": 58413281,
+      "scorer_delta_energy": 22249537270.0,
+      "energy_fraction": 0.0434126009332439,
+      "selected_coder_bytes": 144655085
+    }
+  },
+  "active_topology_partition": {
+    "Lane": {
+      "birth_energy": 14524997960.0,
+      "persistent_energy": 11782030093.0
+    },
+    "Movable": {
+      "birth_energy": 1785602866.0,
+      "persistent_energy": 28692782613.0
+    },
+    "MyCar": {
+      "birth_energy": 425147347.0,
+      "persistent_energy": 288650299639.0
+    },
+    "Road": {
+      "birth_energy": 5421736034.0,
+      "persistent_energy": 138981210039.0
+    },
+    "Undrivable": {
+      "birth_energy": 509714223.0,
+      "persistent_energy": 21739823047.0
+    }
+  },
+  "temporal_transport": {
+    "window_count_per_stratum": 150,
+    "all_endpoint": {
+      "heldout_explained_energy_mean": -0.009802107439448043,
+      "persistence_explained_energy_mean": 0.9987990649278142
+    },
+    "Lane": {
+      "heldout_xi_explained_energy_mean": -0.008449756757815318,
+      "heldout_xi_explained_energy_median": -0.009723501990693384,
+      "positive_window_fraction": 0.38,
+      "persistence_explained_energy_mean": 0.9472660289046692
+    },
+    "Movable": {
+      "heldout_xi_explained_energy_mean": -0.011487239151933141,
+      "heldout_xi_explained_energy_median": -0.006985919655462913,
+      "positive_window_fraction": 0.22666666666666666,
+      "persistence_explained_energy_mean": 0.9921018313282505,
+      "birth_frame_unmatched_support_cells": 65.0,
+      "xi_matched_post_birth_support_cells": 0.0,
+      "unmatched_post_birth_support_cells": 2008.0,
+      "strict_xi_predictable_after_birth_fraction": 0.0
+    },
+    "interpretation": "High one-step persistence is measured; held-out xi-only linear transport is not predictive in this compact feature chart. The V12 value 0.989518086727 is measured Movable target-class d_seg at ladder rungs 1-4, not a predictability fraction."
+  },
+  "start_sensitivity_v12_budget_ladder": {
+    "rung_0": {
+      "effective_added_budget_bytes": 0,
+      "archive_bytes": 102105,
+      "global_d_seg": 0.034502249824,
+      "global_d_pose": 163.039648911962,
+      "Lane_d_seg": 0.424611121005,
+      "Movable_d_seg": 0.988264941023
+    },
+    "rung_1": {
+      "effective_added_budget_bytes": 16384,
+      "archive_bytes": 106106,
+      "global_d_seg": 0.034003668891,
+      "global_d_pose": 163.034719422881,
+      "Lane_d_seg": 0.436911324151,
+      "Movable_d_seg": 0.989518086727
+    },
+    "higher_declared_budget_rungs": "byte-identical_to_rung_1",
+    "attribution": "MEASURED_RECEIPT_AGGREGATE_STRATUM",
+    "verdict": "The only realized archive change improves global d_seg by 0.000498580933 and d_pose by 0.004929489081, while Lane and Movable target-class d_seg worsen. The receipt does not identify which predictor component caused a column change."
+  },
+  "end_sensitivity_derived_tolerance_ladder": [
+    {
+      "retained_energy_fraction": 1.0,
+      "derived_energy": 1028595768944.0,
+      "selected_coder_bytes": 543163764
+    },
+    {
+      "retained_energy_fraction": 0.75,
+      "derived_energy": 771446826708.0,
+      "selected_coder_bytes": 624237952
+    },
+    {
+      "retained_energy_fraction": 0.5,
+      "derived_energy": 514297884472.0,
+      "selected_coder_bytes": 622324640
+    },
+    {
+      "retained_energy_fraction": 0.25,
+      "derived_energy": 257148942236.0,
+      "selected_coder_bytes": 541985560
+    },
+    {
+      "retained_energy_fraction": 0.0,
+      "derived_energy": 0.0,
+      "selected_coder_bytes": 69295720
+    }
+  ],
+  "candidate_operator_byte_waterfall": [
+    {
+      "rank_by_bytes": 1,
+      "operator": "compact_parabolic_shearlet",
+      "measured_coded_bytes": 92544
+    },
+    {
+      "rank_by_bytes": 2,
+      "operator": "xi_transport",
+      "measured_coded_bytes": 252112
+    },
+    {
+      "rank_by_bytes": 3,
+      "operator": "rank4_head_chart",
+      "measured_coded_bytes": 351900
+    },
+    {
+      "rank_by_bytes": 4,
+      "operator": "irreducible_residual",
+      "measured_coded_bytes": 757769836
+    }
+  ],
+  "candidate_admission": {
+    "status": "BLOCKED_NO_RECEIVER_DELTA_DSEG",
+    "inner_encoder_jacobian": "ABSENT",
+    "blocker_status": "INNER_ENCODER_JACOBIAN_NOT_MEASURED_PRIMARY_PATH",
+    "registered_rate_stop_law": 6.658589531221714e-07,
+    "recommendation": "Build receiver-closed coefficient perturbations in the measured compact shearlet and rank4 charts, then order them by realized delta-S per byte. Byte rank alone does not authorize a production carrier."
+  },
+  "operator_addenda_disposition": {
+    "Lane_subpixel_phase_symbols": "BLOCKED_NO_RECEIVER_CLOSED_PHASE_PERTURBATION",
+    "Lane_stride2_skip_band": "BLOCKED_NO_SEGNET_INTERNAL_ACTIVATION_CUSTODY",
+    "Lane_BEV_jitter_and_openpilot_chart": "BLOCKED_NO_WORLD_SHEET_CORRESPONDENCE_IN_TYPED_STAGE_ROWS",
+    "Movable_projective_tracks_and_template_codebook": "BLOCKED_NO_TRACK_IDENTITY_OR_RECEIVER_CLOSED_PROJECTIVE_RECONSTRUCTION",
+    "scope_note": "These are implementation-custody blockers, not negative family verdicts. Cached labels and endpoint RGB-plane residuals do not identify internal 16-channel activations, per-track templates, or receiver d_seg of proposed perturbations."
+  },
+  "hard_pairs": [
+    {
+      "pair_id": 327,
+      "measured_endpoint_residual_energy": 9146048060.0
+    },
+    {
+      "pair_id": 245,
+      "measured_endpoint_residual_energy": 8554293800.0
+    },
+    {
+      "pair_id": 323,
+      "measured_endpoint_residual_energy": 8517296964.0
+    }
+  ],
+  "durable_copy_sha256": {
+    "receipt.json": "ada87717b39bc34ad67a3104d652574e544d82938fa3a1ea898acdf624c2bd67",
+    "summary.json": "cc9c2a933ca93a0a344b34a8a881c0ecb938bee8a53a08eed476388eeca348b1",
+    "cleanup_manifest.json": "98f76cdd54c37dbf01effa8cf58675b3a0e0bc7b83eca6c21dad42803fb9ce96"
+  }
+}
