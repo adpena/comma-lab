@@ -67,3 +67,5 @@ payloads with structured carriers and retain the same evaluator, archive, and wa
 
 Receipt anchor:
 `64658a05a8975707f98db308223cefff78b5352975bb59cc2aa8a4ff2f8d50fb`.
+
+STORES CONSULTED: DAG `.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md` (FEED-603-coder-survey / v4 / v5 / v6 rows — the measured grounds this ladder consumes); v5/v6 SHA-bound receipts (ab5332f2/3b2ea4c9 + the v6 bridge receipt) + the v7 window receipts (8db93c4e/d68f1d9e/64658a05); target-plane receipt a8d94f0f (600-pair solved planes); canonical_equations registry via `tac.canonical_equations` (structured-carriers law NOT yet registered — this draft is its 4th-anchor candidate; #540 debt); SPEC_v75/SPEC_v8 + `direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md`; MEMORY.md CURRENT-STATE hooks (L17 trained-generator doctrine, opportunity-pools non-additive law); task ledger #603/#613/#578. NOT consulted: graph-memory recall tool (custody performed against primary artifacts directly).
