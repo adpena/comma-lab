@@ -18,4 +18,3 @@ main_landing_review_required: true
   claim was made.
 - Next operator-independent build after MAIN review: a paired Road palette-versus-geometry probe,
   followed by a non-empty-support Movable prefix only if canonical S4 support exists.
-

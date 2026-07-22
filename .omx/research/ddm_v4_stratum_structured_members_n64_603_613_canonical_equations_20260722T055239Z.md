@@ -66,4 +66,3 @@ Delta_Q(k,n_i,n_j) = Q(k,n_j) - Q(k,n_i)
 The measured `Q` curve is the bit-allocator input.  `Q(Movable,n)=62` for all measured prefixes
 because the first 64 frames contain zero Movable PCE3 records; this is a scoped empty-support
 result, not a dead-family verdict.
-

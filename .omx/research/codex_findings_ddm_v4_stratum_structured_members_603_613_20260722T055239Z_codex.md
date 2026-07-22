@@ -38,4 +38,3 @@ score, d_seg, promotion, or full-tolerance claim.
 - Inspect Road palette semantics versus source-mask geometry using a paired disambiguator.
 - Verify the 31 focused tests on MAIN after merge.
 - Preserve pointer `0.1910828242 [contest-CPU]`; no score authority entered this arm.
-

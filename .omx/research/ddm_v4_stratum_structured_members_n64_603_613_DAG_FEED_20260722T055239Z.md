@@ -54,4 +54,3 @@ S4 0.bin + runtime + target receipt
    promoted from a non-authority scorer.
 6. Probe disambiguator: Road palette routing versus carrier geometry remains a two-hypothesis
    blocker and requires a future paired probe before design choice.
-
