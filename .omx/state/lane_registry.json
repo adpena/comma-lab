@@ -84292,6 +84292,90 @@
       },
       "notes": "J5 pure-priced Q8 realized-acceptance opening landed; exact bounded n600 READY_TO_FIRE_UNDER_STANDING_GO; no campaign/score/pointer move; MAIN adversarial review required before standing-GO fire.",
       "research_only": true
+    },
+    {
+      "id": "ddm_j6_366_prefire_adversarial_review_20260723T065554Z",
+      "name": "DDM J6 #366 prefire adversarial review",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; $0 independent prefire gate; no campaign launch; MAIN landing review required",
+      "research_only": true
+    },
+    {
+      "id": "ddm_j6a_366_prefire_contract_hardening",
+      "name": "DDM #366 prefire contract hardening",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "$0 local build and bounded verification only; pose engage + cumulative fire gate + worst-geometry memory + governed stop; no campaign launch; MAIN review required",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -84301,5 +84385,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T03:33:03Z"
+  "updated_at": "2026-07-23T07:11:45Z"
 }

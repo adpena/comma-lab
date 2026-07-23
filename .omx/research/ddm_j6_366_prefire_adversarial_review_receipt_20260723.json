@@ -1,0 +1,191 @@
+{
+  "schema": "ddm_j6_366_prefire_adversarial_review_receipt.v1",
+  "utc": "2026-07-23T07:08:32Z",
+  "lane_id": "ddm_j6_366_prefire_adversarial_review_20260723T065554Z",
+  "verdict": "BLOCK",
+  "verdict_scope": "EXACT SEALED J5 TICKET AND CURRENT CONSUMER/LAUNCHER PREFIRE CONTRACT ONLY; no formulation-family, contest-axis, score, or promotion verdict",
+  "research_only": true,
+  "execution_allowed": false,
+  "campaign_launched": false,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j6_366_prefire_adversarial_review_20260723T065554Z.wrapped.prompt.txt",
+    "sha256": "f0c8fb3cac6b0fa06fb26d6f3d29a41ea3d6200b91d5e2e0ad316b6cda3a93b4",
+    "bytes": 7982,
+    "checkpoint_key": "codex_delegate:ddm_j6_366_prefire_adversarial_review:20260723T065554Z"
+  },
+  "sealed_ticket": {
+    "path": ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json",
+    "file_sha256": "2ae7da9058f8c5a421ffc494ab0407947391ea28ede1b1384248f298906fdf43",
+    "semantic_program_sha256": "13e194a8a354d53489f0ff68a5042237e69b4b6841a6b7959a15873fffa7b6e8",
+    "typed_config_hash": "d43608af799b2f2d04e248413ceb944c093701441eafb222f2b3cdf3d32b8d80"
+  },
+  "source_custody": {
+    "consumer": {
+      "path": "src/tac/optimization/direct_description_joint_descent.py",
+      "sha256": "bc6aca6a6ea533f50a3f20272f726b0fef701cb0f5554762ad8503efcc4c4900"
+    },
+    "launcher": {
+      "path": "tools/launch_ddm_joint_descent.py",
+      "sha256": "771a6acd88d320ab268885cf848c1354dfac03eeeb9855ed0aae6f87f8eaa668"
+    }
+  },
+  "producer_receipts_reverified": {
+    "full_run_receipt_sha256": "975a3529481fac12a63b94a4820709e1f51e08e56ceefded0bd310fa1a25ab45",
+    "runtime_memory_receipt_sha256": "4af05223624359fc305c82e30ee4a008da43d609251830d6e1a70724804ceec7",
+    "baseline_verdict_sha256": "5b19b564da1fb528af2c0d944da36bf1d357e28503be5988cb14ad59c4a6a261",
+    "proposal_verdict_sha256": "335d15db69dc25b0de80258e10e472f6e9ff282cd7d0325eca989bf92bade1f2",
+    "checkpoint_sha256": "1399292164682955bd9937d204692521542687f69223ddc9cc1e669ae05a944e",
+    "governed_dry_run_sha256": "1b5a9c4a77c97709f3b12f458387c785c354fd5503479ccb82bf821568aaf0f0"
+  },
+  "review_targets": [
+    {
+      "id": 1,
+      "name": "active_pair and lifecycle proposal mask",
+      "disposition": "PASS",
+      "evidence": [
+        "The opening mask selects tracks touching the sealed eight-pair set and checks the proposed axis shift against every knot in each selected track.",
+        "The exact winner realizes 18 center_x coordinates and is byte-identical to the measured V19 archive.",
+        "Lane is intentionally held only in stage 1 and becomes active in stages 2 and 3."
+      ],
+      "code_locations": [
+        "src/tac/optimization/direct_description_joint_descent.py:1460",
+        "src/tac/optimization/direct_description_joint_descent.py:1476",
+        "tools/launch_ddm_joint_descent.py:1006"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Q8 acceptance and rollback through real uint8 R scorer",
+      "disposition": "PASS",
+      "evidence": [
+        "Q8 is deterministic optimizer-state staging; admission occurs only after integer receiver realization changes.",
+        "The candidate is compiled to an exact archive and replayed through receiver camera bytes, evaluator R, and frozen CPU SegNet/PoseNet.",
+        "Rejected candidates are separate immutable AdamStateV1 values; the admitted state is not assigned until acceptance. Exhausted shrink ladders persist and immediately parse back the prior admitted state."
+      ],
+      "code_locations": [
+        "src/tac/optimization/direct_description_joint_descent.py:1413",
+        "tools/launch_ddm_joint_descent.py:1081",
+        "tools/launch_ddm_joint_descent.py:1110",
+        "tools/launch_ddm_joint_descent.py:1252"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "C1 role residual bucket reconciliation",
+      "disposition": "BLOCK",
+      "evidence": [
+        "The measured row reconciles exactly: role -1314 plus residual -2013 equals global -3327.",
+        "The scorer path fail-closes unless the five-class partition sums to the global count.",
+        "The fire-ready latch is nevertheless local to the last pure-price-admitted state. The code computes a cumulative delta versus baseline but does not use it to set warm_start_component_safe, so a locally safe second move can declare fire readiness while cumulative d_seg still regresses versus the sealed baseline."
+      ],
+      "code_locations": [
+        "tools/launch_ddm_joint_descent.py:651",
+        "tools/launch_ddm_joint_descent.py:1153",
+        "tools/launch_ddm_joint_descent.py:1200",
+        "tools/launch_ddm_joint_descent.py:1231"
+      ],
+      "minimal_fix": "Keep pure-price admission local, but derive the component/residual fire-ready latch from the candidate versus stage00 baseline using c1_bucket_delta_cumulative_vs_baseline; add a two-admission regression where the second move is locally safe but cumulative d_seg is above baseline."
+    },
+    {
+      "id": 4,
+      "name": "pose finish engagement",
+      "disposition": "BLOCK",
+      "evidence": [
+        "The sealed field pose_objective_engage_condition is only string-validated.",
+        "The launcher switches the exact sqrt-pose term from weight 0 to weight 1 immediately after any strict Seg admission; it has no #383 conditioning detector, engage telemetry, hysteresis, or run-owned pose-finish state.",
+        "The ticket uses the quarantined banked-R1 comparator d_pose 0.001610 as a binding stage target rather than comparator-only evidence. No banked bytes or weights are consumed, which is correct, but no measured same-vehicle path from d_pose 163.0613 to that target is bound."
+      ],
+      "code_locations": [
+        ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json:99",
+        ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json:169",
+        "src/tac/optimization/direct_description_joint_descent.py:208",
+        "tools/launch_ddm_joint_descent.py:1018"
+      ],
+      "minimal_fix": "Replace the declarative string/binary switch with a typed, checkpointed pose-finish engage state driven by the run's exact verdict history; preserve the exact sqrt-pose objective after engagement, emit engage/non-engage telemetry, and move 0.001610 to non-binding comparator metadata."
+    },
+    {
+      "id": 5,
+      "name": "real config memory and resumability",
+      "disposition": "BLOCK",
+      "evidence": [
+        "Atomic preserved checkpoints contain live theta, EMA, Adam moments, typed identity, run cursor, exact archive identity, and the canonical resume registry. Mid-stage resume is structurally present and the J5 checkpoint immediately parses back exactly.",
+        "The admitted memory row measured stage-1 pair447 geometry only. Static enumeration of the sealed lifecycle shows 8 island secants in that measured window, versus a worst stage-3 window with 28 island plus 24 Lane secants.",
+        "The realized-secant basis alone is DERIVED as 0.7276554108 GiB in the measured window and 4.7297601700 GiB at the stage-3 maximum. The 116-GiB ceiling likely has ample headroom, but the required worst-geometry full-config peak was not MEASURED.",
+        "The ticket still binds the older J3 preflight SHA and values; the fresh J5 runtime memory receipt has a different SHA. Runtime receipt admission checks typed config and target cache but does not close over final launcher/consumer source hashes."
+      ],
+      "code_locations": [
+        ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json:78",
+        "tools/launch_ddm_joint_descent.py:224",
+        "tools/launch_ddm_joint_descent.py:832",
+        "tools/launch_ddm_joint_descent.py:1029",
+        "src/tac/optimization/direct_description_joint_descent.py:1494"
+      ],
+      "minimal_fix": "Add a bounded stage-3 worst-window memory bootstrap at pair start 498 or 499 with all 52 secants active, bind its receipt and final source hashes into the ticket/admission check, and perform one J5-typed forced-process resume from its checkpoint."
+    },
+    {
+      "id": 6,
+      "name": "convergence stage exit and governed stop",
+      "disposition": "BLOCK",
+      "evidence": [
+        "The three d_seg values are preregistered fractional thresholds, not a measured trajectory or floor; one improving proposal does not validate them.",
+        "At maximum_steps, a stage advances even when the exact classifier says REALIZED_STAGE_DESCENT_CONTINUE and the target remains unmet.",
+        "The plateau predicate requires both components to be flat or worse, but the same exact row is first classified BLOCKED or REFUSE, so campaign_blocker prevents the documented plateau stage exit.",
+        "After three maximum-step advances the launcher reports FULL_RUN_SCHEDULE_COMPLETE without requiring the final d_seg/d_pose targets."
+      ],
+      "code_locations": [
+        ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json:137",
+        "tools/launch_ddm_joint_descent.py:1402",
+        "tools/launch_ddm_joint_descent.py:1427",
+        "tools/launch_ddm_joint_descent.py:1436",
+        "tools/launch_ddm_joint_descent.py:1536"
+      ],
+      "minimal_fix": "Make target-unmet stage limits and plateaus governed non-promoting stops, never successful stage transitions; require an exact final target verdict before FULL_RUN_SCHEDULE_COMPLETE and reseal the ticket with a measured or explicitly speculative trajectory/floor contract."
+    }
+  ],
+  "bounded_rederivations": {
+    "focused_tests": "34 passed in 79.52s",
+    "worst_geometry": {
+      "train_batch": 4,
+      "measured_pair_start": 447,
+      "measured_island_secants": 8,
+      "maximum_island_secants": 28,
+      "maximum_pair_starts": [
+        498,
+        499
+      ],
+      "stage3_lane_secants": 24,
+      "stage3_total_secants": 52,
+      "measured_window_basis_gib_derived": 0.7276554107666016,
+      "stage3_max_basis_gib_derived": 4.72976016998291
+    },
+    "synthetic_control_flow": {
+      "first_pure_price_move_can_be_admitted_with_dseg_regression": true,
+      "second_move_can_be_locally_component_safe_while_cumulative_dseg_regresses": true,
+      "example_cumulative_dseg_regression": 0.00008000000000000021,
+      "target_unmet_stage_limit_currently_advances": true,
+      "flat_plateau_is_preempted_by_blocker": true
+    }
+  },
+  "single_reformulated_zero_dollar_fix_arm": {
+    "lane_id": "ddm_j6a_366_prefire_contract_hardening",
+    "name": "Pose engage, cumulative fire gate, worst-geometry memory, and governed-stop hardening",
+    "registered_at_l0": true,
+    "authority": "$0 local build and bounded verification only; no campaign launch",
+    "required_closeout": [
+      "typed checkpointed pose-finish engage state with comparator-only R1 numbers",
+      "baseline-cumulative component and residual fire gate",
+      "worst-stage memory receipt plus J5 process-boundary resume proof",
+      "target-unmet and plateau governed stops plus exact final-target completion gate",
+      "resealed semantic and typed hashes, focused regressions, and independent MAIN landing review"
+    ]
+  },
+  "inbox": {
+    "per_arm_new_directives": 0,
+    "latest_consumed_broadcast_utc": "2026-07-21T13:15:53Z",
+    "mission_specific_directives": 0
+  }
+}
