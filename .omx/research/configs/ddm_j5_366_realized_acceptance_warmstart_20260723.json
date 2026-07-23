@@ -1,0 +1,223 @@
+{
+  "schema": "ddm_joint_descent_witness_program_ticket.v1",
+  "authority": {
+    "delegation_prompt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j5_366_realized_acceptance_warmstart_20260723T053412Z.wrapped.prompt.txt",
+    "delegation_prompt_sha256": "deea6ed4c6be4c3d7e525ef71fcc5e64f0576e470d1886fd5686c4d5b5700e39",
+    "delegation_prompt_bytes": 7367,
+    "source_commit": "de725c0f21",
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false
+  },
+  "compile_custody": {
+    "typed_schema": "DirectDescriptionJointDescentTypedConfigV1",
+    "hash_scope": "RFC8785 canonical bytes of semantic_program",
+    "hash_algorithm": "sha256",
+    "semantic_program_sha256": "13e194a8a354d53489f0ff68a5042237e69b4b6841a6b7959a15873fffa7b6e8",
+    "typed_config_hash": "d43608af799b2f2d04e248413ceb944c093701441eafb222f2b3cdf3d32b8d80",
+    "existing_compiler_accepts_schema": true,
+    "existing_governed_launcher_accepts_named_config": true,
+    "claim": "HASH_SEALED_EXECUTABLE_TYPED_BOUNDED_OPENING_CONFIG"
+  },
+  "semantic_program": {
+    "schema": "DirectDescriptionJointDescentTypedConfigV1",
+    "program_id": "ddm_j5_366_realized_acceptance_warmstart_n600_seed0",
+    "seed": 0,
+    "deterministic_algorithms": true,
+    "num_pairs": 600,
+    "target_cache": {
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "bytes": 5078017610,
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "warm_start": {
+      "kind": "receiver_closed_v15_composed_carrier_archive",
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+      "bytes": 133941,
+      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+      "receipt_path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_scorer_solved_templates_n600_receipt.json",
+      "optimizer_state_loadable": false,
+      "optimizer_state_contract": "fresh Adam moments retain the beta2-derived rewarmup; every accepted or rolled-back exact receiver state persists through ResumeRegistry"
+    },
+    "receiver_effective_surface": {
+      "parameter_count": 368,
+      "island_worldsheet_track_translation_count": 326,
+      "lane_periodic_wire_coordinate_count": 24,
+      "shared_template_channel_count": 18,
+      "opening_selective_unfreeze": [
+        "island_worldsheet.center_x and center_y coherent candidates",
+        "shared_template_dof local Q8 candidate"
+      ],
+      "opening_held_group": "lane_program",
+      "selection_authority": "exact n600 C1 residual-bucket effect, not parameter-group name"
+    },
+    "joint_objective": {
+      "formula": "100*d_seg_R + sqrt(10*d_pose_YUV6_R) + 25*archive_bytes/37545489",
+      "roundtrip": "proposal -> camera Q8 -> final uint8 -> evaluator R -> frozen scorers",
+      "ema_decay": 0.997,
+      "stability": {
+        "preset": "amber",
+        "grad_clip": 0.5,
+        "pose_grad_coeff_max": 25,
+        "grad_normalize": true,
+        "per_group_grad_clip": true
+      }
+    },
+    "compute_contract": {
+      "baseline": {
+        "device": "MLX_GPU",
+        "environment": {
+          "TAC_MLX_CUSTOM_GROUPED_BACKWARD": "1"
+        },
+        "required_kernels": [
+          "custom grouped backward measured active",
+          "fused differentiable-R bit-identical to NumPy-fp32"
+        ],
+        "chunked_verdicts": true,
+        "authority": "speed path only; exact chunked frozen CPU-torch replay is macOS advisory and score_claim=false"
+      },
+      "memory_ceiling_gib": 116.0,
+      "measured_full_path_peak_rss_gib": 10.47418212890625,
+      "derived_projected_peak_gib": 13.5690185546875,
+      "preflight_external_receipt_sha256": "20703c8c8197036a00876fa201b662ca2f66006ca124d81c94e94cf381c3abdb"
+    },
+    "full_run_schedule": {
+      "train_batch": 4,
+      "learning_rate_quantum_fraction": 0.25,
+      "checkpoint_interval_steps": 37,
+      "plateau_verdicts": 2,
+      "warm_start_pair": 447,
+      "warm_start_steps": 4,
+      "warm_start_reform": {
+        "adam_beta2": 0.999,
+        "lr_rewarmup_c": 2.0,
+        "lr_rewarmup_steps": 2000,
+        "lr_rewarmup_floor": 0.1,
+        "lr_rewarmup_shape": "linear",
+        "maximum_continuous_update_quantum_fraction": null,
+        "frozen_groups_until_first_admission": [],
+        "group_release_condition": "first_component_safe_n600_residual_admission",
+        "pose_objective_engage_condition": "after_first_strict_n600_seg_admission",
+        "first_realized_admission": "exact_n600_joint_delta_s_lt_zero_else_shrink_and_exact_rollback",
+        "realized_acceptance_policy": "pure_priced_exact_n600",
+        "proposal_staging": "camera_874x1164_q8_pre_final_uint8",
+        "proposal_q8_denominator": 256,
+        "proposal_multipliers": [
+          32.0,
+          16.0,
+          8.0,
+          4.0,
+          2.0,
+          1.0,
+          0.5,
+          0.25
+        ],
+        "opening_active_groups": [
+          "island_worldsheet",
+          "shared_template_dof"
+        ],
+        "opening_candidate_ids": [
+          "worldsheet_joint_active_x_+1",
+          "worldsheet_joint_active_x_-1",
+          "worldsheet_joint_active_y_-1",
+          "local_exact_gradient"
+        ],
+        "opening_candidate_pair_ids": [
+          447,
+          53,
+          416,
+          296,
+          547,
+          278,
+          501,
+          346
+        ],
+        "residual_bucket_admission_required": true,
+        "component_fire_gate": "dseg_flat_or_down_pose_not_worse_and_any_component_descends"
+      },
+      "measured_seconds_per_step": 104.09510249993764,
+      "measured_seconds_per_step_low": 100.87168033304624,
+      "measured_seconds_per_step_high": 104.09510249993764,
+      "derived_steps_per_n600_exposure": 150,
+      "derived_total_steps": 450,
+      "derived_wall_clock_hours_low": 13.31387624311125,
+      "derived_wall_clock_hours_high": 13.79371420691443,
+      "stage_transition_rule": "opening proposals shrink on exact joint-score ascent and roll back exactly; fire readiness additionally requires dseg flat/down, pose non-worse, at least one component descent, and C1 residual-bucket descent",
+      "stages": [
+        {
+          "stage_id": "01_residual_bucket_realized_acceptance",
+          "active_groups": [
+            "island_worldsheet",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "verdict_interval_steps": 50,
+          "target_d_seg": 0.020602722168,
+          "target_d_pose": null
+        },
+        {
+          "stage_id": "02_lane_production_joint_descent",
+          "active_groups": [
+            "lane_program",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "verdict_interval_steps": 50,
+          "target_d_seg": 0.013735148112,
+          "target_d_pose": null
+        },
+        {
+          "stage_id": "03_pose_coupled_finish",
+          "active_groups": [
+            "island_worldsheet",
+            "lane_program",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "verdict_interval_steps": 50,
+          "target_d_seg": 0.006867574056,
+          "target_d_pose": 0.00161
+        }
+      ]
+    },
+    "value_provenance": {
+      "beta2_ramp": "PRESERVED J4 LawRef adam_v_variance_warmup_length_v1: ceil(2/(1-0.999)) = 2000",
+      "cap_removed": "MEASURED V19: strict realized joint delta-S admitted coherent moves that fixed collateral and quarter-quantum rules rejected",
+      "proposal_ladder": "DERIVED shrink ladder: first multiplier 32 maps the ramp-floor 0.025 base step to 0.8 receiver quantum; halve on exact ascent",
+      "camera_q8": "MEASURED V19: three of three pre-final-uint8 camera-Q8 variants were exact joint-score admissible",
+      "opening_groups": "C1-GUIDED: Lane remains held while coherent worldsheet and shared-template candidates are ranked by exact residual-bucket effect; no blanket template freeze",
+      "bucket_partition": "MEASURED/DERIVED C1: Lane+Movable role ceiling 726416; Road+Undrivable+MyCar minus integer target allowance yields 2377273 baseline residual debt",
+      "coherent_x_plus_1": "MEASURED V19 grammar-native eight-pair advisory on pair ids 447,53,416,296,547,278,501,346: both d_seg and d_pose descended with exact archive-byte pricing; J5 remeasures the exact lifecycle-feasible candidate through n600"
+    },
+    "checkpoint_contract": {
+      "resume_from_disk": true,
+      "atomic_write": "temporary file plus fsync plus os.replace",
+      "periodic_intra_stage": true,
+      "every_stage_end": true,
+      "all_stage_files_preserved": true,
+      "distinct_stage_encoded_names": true,
+      "ema_shadow_saved": true,
+      "exact_rejection_rollback_saved": true
+    },
+    "telemetry": {
+      "every_exact_move": [
+        "pure-priced Seg/Pose/rate/joint deltas",
+        "C1 role-bucket delta",
+        "C1 residual-bucket per-move and cumulative delta",
+        "candidate id, shrink multiplier, Q8 staging, realized DOFs",
+        "component fire gate and exact archive identity"
+      ],
+      "chunked_n600_verdict": true,
+      "verdict_batch": 16,
+      "pointer_promotion_from_advisory_forbidden": true,
+      "score_claim": false
+    },
+    "execution_boundary": {
+      "research_only": true,
+      "score_claim": false,
+      "this_branch_campaign_launch_authorized": false,
+      "bounded_n600_smoke_only": true,
+      "main_review_required": true,
+      "standing_go_applies_only_after_main_review_and_READY_TO_FIRE_UNDER_STANDING_GO": true
+    }
+  }
+}

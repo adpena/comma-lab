@@ -1,0 +1,97 @@
+{
+  "schema": "ddm_j5_366_ticket_reseal_diff.v1",
+  "utc": "2026-07-23T06:34:00Z",
+  "old_ticket": {
+    "path": ".omx/research/configs/ddm_j4_366_joint_descent_warm_start_reform_20260723.json",
+    "semantic_program_sha256": "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b",
+    "typed_config_hash": "ca13e172e195731026de80ecaa0dff8ea307c1212fcc13ac4d17c6285ee9d7ab",
+    "file_sha256": "0e9f4788ef00f224315eaf2198c2561c346dfd0cd63a0bebeaee6fffb7e49eb3",
+    "bounded_outcome": "BLOCKED_REALIZED_NO_COMPONENT_DESCENT"
+  },
+  "new_ticket": {
+    "path": ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json",
+    "semantic_program_sha256": "13e194a8a354d53489f0ff68a5042237e69b4b6841a6b7959a15873fffa7b6e8",
+    "typed_config_hash": "d43608af799b2f2d04e248413ceb944c093701441eafb222f2b3cdf3d32b8d80",
+    "file_sha256": "2ae7da9058f8c5a421ffc494ab0407947391ea28ede1b1384248f298906fdf43",
+    "bounded_outcome": "READY_TO_FIRE_UNDER_STANDING_GO"
+  },
+  "justified_semantic_changes": [
+    {
+      "field": "maximum_continuous_update_quantum_fraction",
+      "old": 0.25,
+      "new": null,
+      "reason": "J4 measured zero receiver realization; V19 measured strict joint-score realized admissions that a blanket sub-quantum cap excludes"
+    },
+    {
+      "field": "frozen_groups_until_first_admission",
+      "old": [
+        "shared_template_dof"
+      ],
+      "new": [],
+      "reason": "drop the blanket template freeze; the opening exposes worldsheet plus template candidates while holding Lane"
+    },
+    {
+      "field": "realized_acceptance_policy",
+      "old": "component_safe_exact_n600",
+      "new": "pure_priced_exact_n600",
+      "reason": "admit only exact paint-to-uint8-to-R-to-frozen-scorer moves with strict joint delta-S below zero; collateral and bytes are priced"
+    },
+    {
+      "field": "proposal_staging",
+      "old": "continuous_receiver_wire",
+      "new": "camera_874x1164_q8_pre_final_uint8",
+      "reason": "V19 measured 3 of 3 Q8 pre-final-uint8 variants admitted"
+    },
+    {
+      "field": "opening_candidate_pair_ids",
+      "old": [],
+      "new": [
+        447,
+        53,
+        416,
+        296,
+        547,
+        278,
+        501,
+        346
+      ],
+      "reason": "reproduce the exact V19 active grammar mask; whole-lifecycle geometry bounds fail closed before archive compile"
+    },
+    {
+      "field": "opening_active_groups",
+      "old": [
+        "island_worldsheet"
+      ],
+      "new": [
+        "island_worldsheet",
+        "shared_template_dof"
+      ],
+      "reason": "C1 residual-first exact telemetry ranks available trunk/template proposals; Lane remains correction-owned and held"
+    },
+    {
+      "field": "residual_bucket_admission_required",
+      "old": false,
+      "new": true,
+      "reason": "fire readiness requires exact descent in Road plus Undrivable plus MyCar residual debt, not only Lane plus Movable role debt"
+    }
+  ],
+  "preserved_contracts": [
+    "adam_beta2=0.999 and beta2-derived 2000-step rewarmup",
+    "Pose objective engages only after strict n600 Seg admission",
+    "exact rejection rollback checkpoint and immediate parse-back",
+    "chunked n600 frozen-scorer verdicts",
+    "116 GiB governor ceiling",
+    "seed 0, deterministic algorithms, stage-preserving resumability",
+    "score_claim=false and pointer unmoved"
+  ],
+  "historical_compatibility": {
+    "j3_semantic_sha256": "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab2935a2c403b824",
+    "j3_typed_hash": "fa63e79492d916a9cc6fe144207bdcb627d07e416883e131ecb90c289f8ccec0",
+    "j4_semantic_sha256": "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b",
+    "j4_typed_hash": "ca13e172e195731026de80ecaa0dff8ea307c1212fcc13ac4d17c6285ee9d7ab",
+    "legacy_resume_bucket_fallback": "new C1 bucket deltas derive from historical per_class rows when c1_debt_buckets is absent"
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "main_review_required": true
+}

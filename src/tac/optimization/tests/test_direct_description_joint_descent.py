@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from tac.optimization.direct_description_g1_worldsheet import (
 from tac.optimization.direct_description_joint_descent import (
     EXPECTED_PROGRAM_SHA256,
     J3_PROGRAM_SHA256,
+    J5_PROGRAM_SHA256,
     LEGACY_PROGRAM_SHA256,
     AdamStateV1,
     DirectDescriptionJointDescentTypedConfigV1,
@@ -27,6 +29,7 @@ from tac.optimization.direct_description_joint_descent import (
     lift_v15_archive,
     linear_rewarmup_factor,
     load_stage_checkpoint,
+    opening_candidate_gradient,
     parameter_group_indices,
     save_stage_checkpoint,
 )
@@ -36,6 +39,7 @@ REPO = Path(__file__).resolve().parents[4]
 TICKET = REPO / ".omx/research/configs/ddm_j1_366_joint_descent_witness_program_20260723.json"
 FULL_RUN_TICKET = REPO / ".omx/research/configs/ddm_j4_366_joint_descent_warm_start_reform_20260723.json"
 J3_TICKET = REPO / ".omx/research/configs/ddm_j3_366_joint_descent_witness_program_20260723.json"
+J5_TICKET = REPO / ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json"
 
 
 def test_g1_lift_preserves_exact_stream_and_explicit_lifecycle() -> None:
@@ -101,6 +105,25 @@ def test_historical_j3_ticket_remains_typed_and_hash_compatible() -> None:
     assert config.typed_config_hash() == "fa63e79492d916a9cc6fe144207bdcb627d07e416883e131ecb90c289f8ccec0"
     assert schedule is not None
     assert schedule.warm_start_reform is None
+
+
+def test_j5_resealed_ticket_uses_cap_free_realized_acceptance_and_q8_staging() -> None:
+    config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(J5_TICKET)
+    schedule = config.full_run_schedule
+    assert config.dsl_compile_hash == J5_PROGRAM_SHA256
+    assert config.typed_config_hash() == "d43608af799b2f2d04e248413ceb944c093701441eafb222f2b3cdf3d32b8d80"
+    assert schedule is not None
+    reform = schedule.warm_start_reform
+    assert reform is not None
+    assert reform.maximum_continuous_update_quantum_fraction is None
+    assert reform.realized_acceptance_policy == "pure_priced_exact_n600"
+    assert reform.proposal_staging == "camera_874x1164_q8_pre_final_uint8"
+    assert reform.proposal_q8_denominator == 256
+    assert reform.proposal_multipliers == (32.0, 16.0, 8.0, 4.0, 2.0, 1.0, 0.5, 0.25)
+    assert reform.opening_active_groups == ("island_worldsheet", "shared_template_dof")
+    assert reform.opening_candidate_pair_ids == (447, 53, 416, 296, 547, 278, 501, 346)
+    assert "shared_template_dof" not in reform.frozen_groups_until_first_admission
+    assert reform.residual_bucket_admission_required is True
 
 
 @pytest.mark.parametrize(
@@ -308,6 +331,49 @@ def test_beta2_rewarmup_and_quarter_quantum_cap_remove_fresh_adam_jump() -> None
         )
 
 
+def test_j5_q8_staging_and_coherent_worldsheet_direction_are_deterministic() -> None:
+    config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(J5_TICKET)
+    archive = (REPO / config.source_archive_path).read_bytes()
+    lift = lift_v15_archive(archive)
+    local = np.linspace(-0.2, 0.2, len(lift.parameter_names), dtype=np.float32)
+    reform = config.full_run_schedule.warm_start_reform
+    assert reform is not None
+    proposal = opening_candidate_gradient(
+        lift,
+        "worldsheet_joint_active_x_+1",
+        local,
+        active_pair_ids=reform.opening_candidate_pair_ids,
+    )
+    selected = np.flatnonzero(proposal)
+    assert 0 < len(selected) < len(lift.g1.tracks)
+    assert np.all(proposal[selected] == -1.0)
+
+    state = clipped_adam_step(
+        initial_adam_state(len(lift.parameter_names)),
+        proposal,
+        learning_rate=0.8,
+        grad_clip=0.5,
+        ema_decay=config.ema_decay,
+        beta2=0.999,
+        maximum_update=None,
+        theta_lattice_denominator=256,
+    )
+    assert np.all(state.theta[selected] == np.float32(205 / 256))
+    assert np.all(state.theta * 256 == np.rint(state.theta * 256))
+    realized = np.rint(state.theta)
+    assert np.all(realized[selected] == 1.0)
+    assert np.count_nonzero(realized) == len(selected)
+    candidate_archive, candidate_realized = compile_parameterized_archive(
+        lift,
+        state.theta,
+        include_lane_programs=False,
+    )
+    assert np.array_equal(candidate_realized, realized.astype(np.float32))
+    assert hashlib.sha256(candidate_archive).hexdigest() == (
+        "d4eb1450f461437e714d08a9349cc735fe79b53a1739a2de92ef4850287dfd0d"
+    )
+
+
 def test_rewarmup_length_must_rederive_from_beta2_law() -> None:
     ticket = json.loads(FULL_RUN_TICKET.read_bytes())
     semantic = ticket["semantic_program"]
@@ -320,7 +386,18 @@ def test_launcher_has_first_integer_n600_abort_and_release_gates() -> None:
     source = (REPO / "tools/launch_ddm_joint_descent.py").read_text(encoding="utf-8")
     assert "FIRST_INTEGER_REALIZATION_EXACT_N600_ABORT_ROLLBACK" in source
     assert 'set(reform["frozen_groups_until_first_admission"])' in source
-    assert "pose_objective_weight = 0.0 if reform_active else 1.0" in source
+    assert "pose_objective_weight = 0.0 if reform_active and not warm_start_seg_admitted else 1.0" in source
     assert "warm_start_realized_admitted" in source
     assert "warm_start_rejected_proposal_rollback" in source
     assert "warm-start rollback checkpoint immediate parse-back differs" in source
+
+
+def test_launcher_has_j5_pure_price_shrink_bucket_and_fire_gates() -> None:
+    source = (REPO / "tools/launch_ddm_joint_descent.py").read_text(encoding="utf-8")
+    assert "pure_priced_realized_delta" in source
+    assert "proposal_q8_denominator" in source
+    assert "c1_bucket_delta_vs_last_admitted" in source
+    assert "c1_bucket_delta_cumulative_vs_baseline" in source
+    assert "residual_bucket_descended" in source
+    assert "BLOCKED_REALIZED_NO_PURE_PRICED_DESCENT_AFTER_SHRINK_LADDER" in source
+    assert 'final_run_verdict = "READY_TO_FIRE_UNDER_STANDING_GO"' in source

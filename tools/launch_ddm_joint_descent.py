@@ -62,6 +62,7 @@ from tac.optimization.direct_description_joint_descent import (  # noqa: E402
     lift_v15_archive,
     linear_rewarmup_factor,
     load_stage_checkpoint,
+    opening_candidate_gradient,
     parameter_group_indices,
     realize_parameter_theta,
     realized_training_state,
@@ -70,10 +71,17 @@ from tac.optimization.direct_description_joint_descent import (  # noqa: E402
     verify_trainable_group_ownership,
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError  # noqa: E402
+from tac.optimization.pure_priced_realized_objective import (  # noqa: E402
+    RealizedObjectiveState,
+    pure_priced_realized_delta,
+)
 
-DEFAULT_TICKET = REPO / ".omx/research/configs/ddm_j4_366_joint_descent_warm_start_reform_20260723.json"
+DEFAULT_TICKET = REPO / ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json"
 POINTER_DSEG = 0.027470296224
 STATIC_BOOTSTRAP_BOUND_GIB = 16.0
+C1_INTEGER_TARGET_ERROR_MAX = 136_839
+C1_ROLE_CLASS_IDS = (1, 3)
+C1_RESIDUAL_CLASS_IDS = (0, 2, 4)
 EXIT_REFUSE = 4
 EXIT_HASH = 8
 
@@ -643,6 +651,8 @@ def _chunked_n600_verdict(
     if errors != int(class_errors.sum()) or sites != int(class_sites.sum()):
         raise DirectDescriptionError("chunked full-run verdict global/per-class totals differ")
     archive_bytes = len(archive)
+    role_errors = int(class_errors[list(C1_ROLE_CLASS_IDS)].sum())
+    residual_errors = int(class_errors[list(C1_RESIDUAL_CLASS_IDS)].sum())
     return {
         "schema": "ddm_joint_descent_chunked_stage_verdict.v1",
         "num_pairs": 600,
@@ -651,6 +661,7 @@ def _chunked_n600_verdict(
         "d_seg": d_seg,
         "d_pose": d_pose,
         "archive_bytes": archive_bytes,
+        "archive_sha256": hashlib.sha256(archive).hexdigest(),
         "advisory_action": 100.0 * d_seg + math.sqrt(10.0 * d_pose) + 25.0 * archive_bytes / 37_545_489,
         "per_class": {
             name: {
@@ -661,12 +672,79 @@ def _chunked_n600_verdict(
             }
             for class_id, name in enumerate(("Road", "Lane", "Undrivable", "Movable", "MyCar"))
         },
+        "c1_debt_buckets": {
+            "role_correction_owned": {
+                "target_classes": ["Lane", "Movable"],
+                "errors": role_errors,
+                "baseline_ceiling_errors": 726_416,
+            },
+            "residual_trunk_owned": {
+                "target_classes": ["Road", "Undrivable", "MyCar"],
+                "errors": residual_errors,
+                "integer_target_error_allowance": C1_INTEGER_TARGET_ERROR_MAX,
+                "errors_above_target_allowance": max(
+                    residual_errors - C1_INTEGER_TARGET_ERROR_MAX,
+                    0,
+                ),
+                "baseline_errors_above_target_allowance": 2_377_273,
+            },
+            "partition_check": {
+                "role_plus_residual_errors": role_errors + residual_errors,
+                "global_errors": errors,
+            },
+        },
         "elapsed_seconds": time.monotonic() - started,
         "evidence_axis": EVIDENCE_AXIS,
         "score_claim": False,
         "promotion_eligible": False,
         "pointer": POINTER,
         "pointer_moved": False,
+    }
+
+
+def _c1_bucket_delta(
+    reference: dict[str, Any],
+    candidate: dict[str, Any],
+) -> dict[str, Any]:
+    """Attribute one exact realized move to the fixed C1 error partition."""
+
+    def debt_buckets(verdict: dict[str, Any]) -> dict[str, Any]:
+        buckets = verdict.get("c1_debt_buckets")
+        if buckets is not None:
+            return buckets
+        per_class = verdict.get("per_class")
+        if not isinstance(per_class, dict):
+            raise DirectDescriptionError("C1 bucket delta lacks canonical per-class error custody")
+        try:
+            role_errors = sum(int(per_class[name]["errors"]) for name in ("Lane", "Movable"))
+            residual_errors = sum(int(per_class[name]["errors"]) for name in ("Road", "Undrivable", "MyCar"))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise DirectDescriptionError("C1 bucket delta per-class custody is incomplete") from exc
+        return {
+            "role_correction_owned": {"errors": role_errors},
+            "residual_trunk_owned": {
+                "errors": residual_errors,
+                "errors_above_target_allowance": max(
+                    residual_errors - C1_INTEGER_TARGET_ERROR_MAX,
+                    0,
+                ),
+            },
+        }
+
+    before = debt_buckets(reference)
+    after = debt_buckets(candidate)
+    role_delta = int(after["role_correction_owned"]["errors"]) - int(before["role_correction_owned"]["errors"])
+    residual_delta = int(after["residual_trunk_owned"]["errors"]) - int(before["residual_trunk_owned"]["errors"])
+    residual_debt_delta = int(after["residual_trunk_owned"]["errors_above_target_allowance"]) - int(
+        before["residual_trunk_owned"]["errors_above_target_allowance"]
+    )
+    return {
+        "role_correction_owned_delta_errors": role_delta,
+        "residual_trunk_owned_delta_errors": residual_delta,
+        "residual_trunk_debt_delta_errors": residual_debt_delta,
+        "global_delta_errors": role_delta + residual_delta,
+        "residual_bucket_descended": residual_delta < 0,
+        "sign_convention": "candidate_minus_reference; negative removes errors",
     }
 
 
@@ -725,6 +803,15 @@ def _sealed_schedule(config: DirectDescriptionJointDescentTypedConfigV1, args: a
                 "group_release_condition": reform.group_release_condition,
                 "pose_objective_engage_condition": reform.pose_objective_engage_condition,
                 "first_realized_admission": reform.first_realized_admission,
+                "realized_acceptance_policy": reform.realized_acceptance_policy,
+                "proposal_staging": reform.proposal_staging,
+                "proposal_q8_denominator": reform.proposal_q8_denominator,
+                "proposal_multipliers": reform.proposal_multipliers,
+                "opening_active_groups": reform.opening_active_groups,
+                "opening_candidate_ids": reform.opening_candidate_ids,
+                "opening_candidate_pair_ids": reform.opening_candidate_pair_ids,
+                "residual_bucket_admission_required": reform.residual_bucket_admission_required,
+                "component_fire_gate": reform.component_fire_gate,
             }
         ),
         "stages": [
@@ -902,6 +989,10 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
         latest_stage_decision: str | None = None
         reform = schedule.get("warm_start_reform")
         warm_start_admitted = any(row.get("warm_start_realized_admitted") is True for row in verdict_history)
+        warm_start_seg_admitted = any(row.get("warm_start_seg_admitted") is True for row in verdict_history)
+        warm_start_component_safe = any(
+            row.get("warm_start_component_safe_residual_admitted") is True for row in verdict_history
+        )
         while stage_index < len(schedule["stages"]):
             stage = schedule["stages"][stage_index]
             if stop_global is not None and state.step >= stop_global:
@@ -915,10 +1006,16 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             include_lanes = any(
                 "lane_program" in prior["active_groups"] for prior in schedule["stages"][: stage_index + 1]
             )
-            reform_active = reform is not None and not warm_start_admitted and stage_index == 0
-            frozen_groups = set(reform["frozen_groups_until_first_admission"]) if reform_active else set()
-            active_groups = tuple(group for group in stage["active_groups"] if group not in frozen_groups)
-            pose_objective_weight = 0.0 if reform_active else 1.0
+            reform_active = reform is not None and not warm_start_component_safe and stage_index == 0
+            if reform_active and reform.get("opening_active_groups"):
+                active_groups = tuple(
+                    group for group in stage["active_groups"] if group in set(reform["opening_active_groups"])
+                )
+                frozen_groups = set(stage["active_groups"]) - set(active_groups)
+            else:
+                frozen_groups = set(reform["frozen_groups_until_first_admission"]) if reform_active else set()
+                active_groups = tuple(group for group in stage["active_groups"] if group not in frozen_groups)
+            pose_objective_weight = 0.0 if reform_active and not warm_start_seg_admitted else 1.0
             rewarmup_factor = (
                 linear_rewarmup_factor(
                     completed_steps=state.step,
@@ -959,95 +1056,201 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             gradient_norm = float(np.linalg.norm(gradient.astype(np.float64)))
             if not math.isfinite(gradient_norm) or gradient_norm <= 0.0:
                 raise DirectDescriptionError("INSTANCE_BLOCKER_FULL_RUN_ACTIVE_GRADIENT_ZERO_OR_NONFINITE")
-            accepted: tuple[AdamStateV1, dict[str, float], float, bool] | None = None
+            accepted: tuple[AdamStateV1, dict[str, float], float, bool, str, float] | None = None
             rejected_realized_verdict: dict[str, Any] | None = None
-            for multiplier in (1.0, 0.5, 0.25):
-                learning_rate = float(schedule["learning_rate"]) * rewarmup_factor * multiplier
-                candidate = clipped_adam_step(
-                    state,
+            candidate_ids = (
+                tuple(reform["opening_candidate_ids"])
+                if reform_active and reform.get("opening_candidate_ids")
+                else ("local_exact_gradient",)
+            )
+            multipliers = (
+                tuple(float(value) for value in reform["proposal_multipliers"]) if reform_active else (1.0, 0.5, 0.25)
+            )
+            for candidate_id in candidate_ids:
+                proposal_gradient = opening_candidate_gradient(
+                    lift,
+                    candidate_id,
                     gradient,
-                    learning_rate=learning_rate,
-                    grad_clip=config.grad_clip,
-                    ema_decay=config.ema_decay,
-                    beta2=(float(reform["adam_beta2"]) if reform_active else 0.999),
-                    maximum_update=(
-                        float(reform["maximum_continuous_update_quantum_fraction"]) if reform_active else None
-                    ),
+                    active_pair_ids=(tuple(reform["opening_candidate_pair_ids"]) if reform_active else ()),
                 )
-                candidate_local = candidate.theta - (state.theta - local_theta)
-                metrics = model.measure_components(
-                    candidate_local,
-                    pair_ids=pair_ids,
-                    base_camera=base_camera,
-                    template_masks=template_masks,
-                    realized_secant_basis=basis,
-                    realized_secant_indices=basis_indices,
-                )
-                candidate_objective = 100.0 * metrics["seg_ce_margin"] + (
-                    pose_objective_weight * math.sqrt(10.0 * metrics["d_pose"] + 1.0e-12)
-                )
-                candidate_realized = realize_parameter_theta(lift, candidate.theta)
-                realized_changed = not np.array_equal(candidate_realized, current_realized)
-                if candidate_objective >= loss:
+                proposal_gradient[[index for index in range(len(proposal_gradient)) if index not in active]] = 0.0
+                if not np.any(proposal_gradient):
                     continue
-                if reform_active and realized_changed:
-                    candidate_archive, _ = compile_parameterized_archive(
-                        lift,
-                        candidate.theta,
-                        include_lane_programs=include_lanes,
+                for multiplier_index, multiplier in enumerate(multipliers):
+                    learning_rate = float(schedule["learning_rate"]) * rewarmup_factor * multiplier
+                    candidate = clipped_adam_step(
+                        state,
+                        proposal_gradient,
+                        learning_rate=learning_rate,
+                        grad_clip=config.grad_clip,
+                        ema_decay=config.ema_decay,
+                        beta2=(float(reform["adam_beta2"]) if reform_active else 0.999),
+                        maximum_update=(
+                            reform["maximum_continuous_update_quantum_fraction"] if reform_active else None
+                        ),
+                        theta_lattice_denominator=(int(reform["proposal_q8_denominator"]) if reform_active else None),
                     )
-                    if cpu_scorers is None:
-                        cpu_scorers = _load_cpu_frozen_scorers(config.upstream_root)
-                    realized_verdict = _chunked_n600_verdict(
-                        archive=candidate_archive,
-                        labels=labels,
-                        poses=poses,
-                        segnet=cpu_scorers[0],
-                        posenet=cpu_scorers[1],
-                        batch_size=config.verdict_batch,
+                    candidate_local = candidate.theta - (state.theta - local_theta)
+                    metrics = model.measure_components(
+                        candidate_local,
+                        pair_ids=pair_ids,
+                        base_camera=base_camera,
+                        template_masks=template_masks,
+                        realized_secant_basis=basis,
+                        realized_secant_indices=basis_indices,
                     )
-                    decision = classify_realized_stage_verdict(
-                        reference_d_seg=float(baseline_verdict["d_seg"]),
-                        reference_d_pose=float(baseline_verdict["d_pose"]),
-                        candidate_d_seg=float(realized_verdict["d_seg"]),
-                        candidate_d_pose=float(realized_verdict["d_pose"]),
-                        target_d_seg=float(stage["target_d_seg"]),
-                        target_d_pose=stage["target_d_pose"],
+                    candidate_objective = 100.0 * metrics["seg_ce_margin"] + (
+                        pose_objective_weight * math.sqrt(10.0 * metrics["d_pose"] + 1.0e-12)
                     )
-                    realized_verdict.update(
-                        {
-                            "stage_id": stage["stage_id"],
-                            "stage_step": stage_step + 1,
-                            "global_step": candidate.step,
-                            "reference_d_seg": float(baseline_verdict["d_seg"]),
-                            "reference_d_pose": float(baseline_verdict["d_pose"]),
-                            "realized_stage_decision": decision,
-                            "warm_start_realized_admitted": decision
-                            in {
-                                "REALIZED_STAGE_TARGET_MET",
-                                "REALIZED_STAGE_DESCENT_CONTINUE",
-                                "REALIZED_STAGE_SEG_FLAT_POSE_DESCENT_CONTINUE",
-                            },
-                            "parameter_shadow": "live_opening_candidate",
-                            "realized_parameter_count": int(np.count_nonzero(candidate_realized)),
-                            "decision_basis": ("FIRST_INTEGER_REALIZATION_EXACT_N600_ABORT_ROLLBACK"),
-                            "model_predicted_plateau_used": False,
+                    candidate_realized = realize_parameter_theta(lift, candidate.theta)
+                    realized_changed = not np.array_equal(candidate_realized, current_realized)
+                    if not realized_changed and candidate_objective >= loss:
+                        continue
+                    if reform_active and realized_changed:
+                        candidate_archive, _ = compile_parameterized_archive(
+                            lift,
+                            candidate.theta,
+                            include_lane_programs=include_lanes,
+                        )
+                        if cpu_scorers is None:
+                            cpu_scorers = _load_cpu_frozen_scorers(config.upstream_root)
+                        realized_verdict = _chunked_n600_verdict(
+                            archive=candidate_archive,
+                            labels=labels,
+                            poses=poses,
+                            segnet=cpu_scorers[0],
+                            posenet=cpu_scorers[1],
+                            batch_size=config.verdict_batch,
+                        )
+                        reference_verdict = next(
+                            (
+                                row
+                                for row in reversed(verdict_history)
+                                if row.get("warm_start_realized_admitted") is True
+                            ),
+                            baseline_verdict,
+                        )
+                        component_decision = classify_realized_stage_verdict(
+                            reference_d_seg=float(reference_verdict["d_seg"]),
+                            reference_d_pose=float(reference_verdict["d_pose"]),
+                            candidate_d_seg=float(realized_verdict["d_seg"]),
+                            candidate_d_pose=float(realized_verdict["d_pose"]),
+                            target_d_seg=float(stage["target_d_seg"]),
+                            target_d_pose=stage["target_d_pose"],
+                        )
+                        pure_delta = pure_priced_realized_delta(
+                            RealizedObjectiveState(
+                                float(reference_verdict["d_seg"]),
+                                float(reference_verdict["d_pose"]),
+                                int(reference_verdict["archive_bytes"]),
+                            ),
+                            RealizedObjectiveState(
+                                float(realized_verdict["d_seg"]),
+                                float(realized_verdict["d_pose"]),
+                                int(realized_verdict["archive_bytes"]),
+                            ),
+                        )
+                        bucket_delta = _c1_bucket_delta(reference_verdict, realized_verdict)
+                        cumulative_bucket_delta = _c1_bucket_delta(baseline_verdict, realized_verdict)
+                        component_safe = component_decision in {
+                            "REALIZED_STAGE_TARGET_MET",
+                            "REALIZED_STAGE_DESCENT_CONTINUE",
+                            "REALIZED_STAGE_SEG_FLAT_POSE_DESCENT_CONTINUE",
                         }
+                        exact_admitted = (
+                            pure_delta.accepted
+                            if reform["realized_acceptance_policy"] == "pure_priced_exact_n600"
+                            else component_safe
+                        )
+                        residual_admitted = (
+                            bucket_delta["residual_bucket_descended"]
+                            if reform["residual_bucket_admission_required"]
+                            else True
+                        )
+                        slug = candidate_id.replace("+", "plus").replace("-", "minus")
+                        proposal_receipt_relpath = Path("verdicts") / (
+                            f"warm_start_proposal_step{candidate.step:06d}_{slug}_"
+                            f"shrink{multiplier_index:02d}_n600.json"
+                        )
+                        realized_verdict.update(
+                            {
+                                "stage_id": stage["stage_id"],
+                                "stage_step": stage_step + 1,
+                                "global_step": candidate.step,
+                                "proposal_source": candidate_id,
+                                "proposal_multiplier": multiplier,
+                                "proposal_staging": reform["proposal_staging"],
+                                "reference_d_seg": float(reference_verdict["d_seg"]),
+                                "reference_d_pose": float(reference_verdict["d_pose"]),
+                                "reference_archive_bytes": int(reference_verdict["archive_bytes"]),
+                                "component_gate_decision": component_decision,
+                                "pure_priced_delta": {
+                                    "seg_term": pure_delta.seg_term,
+                                    "pose_term": pure_delta.pose_term,
+                                    "rate_term": pure_delta.rate_term,
+                                    "joint_delta": pure_delta.joint_delta,
+                                    "accepted": pure_delta.accepted,
+                                    "acceptance_authority": "strict_joint_delta_lt_zero",
+                                },
+                                "c1_bucket_delta_vs_last_admitted": bucket_delta,
+                                "c1_bucket_delta_cumulative_vs_baseline": cumulative_bucket_delta,
+                                "warm_start_realized_admitted": exact_admitted,
+                                "warm_start_seg_admitted": exact_admitted
+                                and float(realized_verdict["d_seg"]) < float(reference_verdict["d_seg"]),
+                                "warm_start_component_safe_residual_admitted": (
+                                    exact_admitted and component_safe and residual_admitted
+                                ),
+                                "parameter_shadow": "live_opening_candidate",
+                                "realized_parameter_count": int(np.count_nonzero(candidate_realized)),
+                                "realized_changed_parameter_count": int(
+                                    np.count_nonzero(candidate_realized != current_realized)
+                                ),
+                                "decision_basis": (
+                                    "PAINT_UINT8_R_FROZEN_SCORERS_EXACT_ARCHIVE_BYTES_PURE_PRICED"
+                                    if reform["realized_acceptance_policy"] == "pure_priced_exact_n600"
+                                    else "FIRST_INTEGER_REALIZATION_EXACT_N600_ABORT_ROLLBACK"
+                                ),
+                                "model_predicted_plateau_used": False,
+                                "proposal_receipt_relpath": str(proposal_receipt_relpath),
+                            }
+                        )
+                        realized_verdict = _write_immutable_json(
+                            out_dir / proposal_receipt_relpath,
+                            realized_verdict,
+                            volatile_fields=("elapsed_seconds",),
+                        )
+                        latest_stage_decision = component_decision
+                        if not exact_admitted:
+                            rejected_realized_verdict = realized_verdict
+                            if reform["realized_acceptance_policy"] == "component_safe_exact_n600":
+                                break
+                            continue
+                        verdict_history.append(realized_verdict)
+                        warm_start_admitted = True
+                        warm_start_seg_admitted = warm_start_seg_admitted or realized_verdict["warm_start_seg_admitted"]
+                        warm_start_component_safe = (
+                            warm_start_component_safe or realized_verdict["warm_start_component_safe_residual_admitted"]
+                        )
+                    accepted = (
+                        candidate,
+                        metrics,
+                        learning_rate,
+                        realized_changed,
+                        candidate_id,
+                        multiplier,
                     )
-                    realized_verdict = _write_immutable_json(
-                        out_dir / "verdicts" / f"warm_start_proposal_step{candidate.step:06d}_n600.json",
-                        realized_verdict,
-                        volatile_fields=("elapsed_seconds",),
-                    )
-                    latest_stage_decision = decision
-                    verdict_history.append(realized_verdict)
-                    if not realized_verdict["warm_start_realized_admitted"]:
-                        rejected_realized_verdict = realized_verdict
-                        break
-                accepted = candidate, metrics, learning_rate, realized_changed
-                break
-            if rejected_realized_verdict is not None:
-                campaign_blocker = str(rejected_realized_verdict["realized_stage_decision"])
+                    break
+                if (
+                    accepted is None
+                    and rejected_realized_verdict is not None
+                    and reform_active
+                    and reform["realized_acceptance_policy"] == "component_safe_exact_n600"
+                ):
+                    break
+                if accepted is not None:
+                    break
+            if rejected_realized_verdict is not None and accepted is None:
+                campaign_blocker = "BLOCKED_REALIZED_NO_PURE_PRICED_DESCENT_AFTER_SHRINK_LADDER"
                 rollback_event = {
                     "schema": "ddm_joint_descent_warm_start_rollback.v1",
                     "event": "warm_start_rejected_proposal_rollback",
@@ -1056,10 +1259,8 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                     "stage_id": stage["stage_id"],
                     "stage_step": stage_step,
                     "realized_stage_decision": campaign_blocker,
-                    "rejected_proposal_receipt": (
-                        f"verdicts/warm_start_proposal_step"
-                        f"{int(rejected_realized_verdict['global_step']):06d}_n600.json"
-                    ),
+                    "rejected_joint_delta": rejected_realized_verdict["pure_priced_delta"]["joint_delta"],
+                    "rejected_proposal_receipt": (rejected_realized_verdict["proposal_receipt_relpath"]),
                     "rollback_state": "last_admitted_receiver_state",
                     "score_claim": False,
                 }
@@ -1109,9 +1310,9 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 break
             if accepted is None:
                 raise DirectDescriptionError("INSTANCE_BLOCKER_FULL_RUN_NO_LOCAL_OBJECTIVE_DESCENT_DURING_REWARMUP")
-            state, final, learning_rate, realized_boundary_crossed = accepted
-            if reform_active and realized_boundary_crossed:
-                warm_start_admitted = True
+            state, final, learning_rate, realized_boundary_crossed, accepted_candidate_id, accepted_multiplier = (
+                accepted
+            )
             stage_step += 1
             elapsed = time.monotonic() - step_started
             step_seconds.append(elapsed)
@@ -1135,6 +1336,10 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 "maximum_continuous_update_quantum_fraction": (
                     reform["maximum_continuous_update_quantum_fraction"] if reform_active else None
                 ),
+                "proposal_source": accepted_candidate_id,
+                "proposal_multiplier": accepted_multiplier,
+                "proposal_staging": reform["proposal_staging"] if reform_active else None,
+                "proposal_q8_denominator": reform["proposal_q8_denominator"] if reform_active else None,
                 "realized_boundary_crossed": realized_boundary_crossed,
                 "initial": initial,
                 "final": final,
@@ -1158,6 +1363,8 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             verdict_due = stage_step % int(stage["verdict_interval_steps"]) == 0
             if bounded_stop and args.stage_exit_on_stop:
                 verdict_due = True
+            if bounded_stop and warm_start_component_safe:
+                verdict_due = False
             verdict: dict[str, Any] | None = None
             live_archive, live_realized_theta = compile_parameterized_archive(
                 lift, state.theta, include_lane_programs=include_lanes
@@ -1314,6 +1521,10 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
         final_run_verdict = "REFUSE_FULL_RUN_MEMORY_PROJECTION"
     elif campaign_blocker is not None:
         final_run_verdict = campaign_blocker
+    elif args.max_steps is not None and warm_start_component_safe:
+        final_run_verdict = "READY_TO_FIRE_UNDER_STANDING_GO"
+    elif args.max_steps is not None and warm_start_admitted:
+        final_run_verdict = "BLOCKED_COMPONENT_OR_RESIDUAL_FIRE_GATE_AFTER_PURE_PRICED_ADMISSION"
     elif args.max_steps is not None and latest_stage_decision in {
         "REALIZED_STAGE_TARGET_MET",
         "REALIZED_STAGE_DESCENT_CONTINUE",
@@ -1368,10 +1579,14 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
         "verdict": final_run_verdict,
         "campaign_blocker": campaign_blocker,
         "latest_realized_stage_decision": latest_stage_decision,
+        "warm_start_realized_admitted": warm_start_admitted,
+        "warm_start_seg_admitted": warm_start_seg_admitted,
+        "warm_start_component_safe_residual_admitted": warm_start_component_safe,
     }
     _atomic_json(out_dir / "full_run_receipt.json", receipt)
     print(json.dumps(receipt, sort_keys=True))
-    return 0 if admission and campaign_blocker is None else EXIT_REFUSE
+    bounded_fire_blocked = args.max_steps is not None and final_run_verdict.startswith("BLOCKED_")
+    return 0 if admission and campaign_blocker is None and not bounded_fire_blocked else EXIT_REFUSE
 
 
 def _full_run(args: argparse.Namespace, config: DirectDescriptionJointDescentTypedConfigV1) -> int:

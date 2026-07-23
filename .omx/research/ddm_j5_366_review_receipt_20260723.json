@@ -1,0 +1,75 @@
+{
+  "schema": "ddm_j5_366_review_receipt.v1",
+  "utc": "2026-07-23T06:46:00Z",
+  "lane_id": "ddm_j5_366_realized_acceptance_warmstart",
+  "source_custody": {
+    "consumer": {
+      "path": "src/tac/optimization/direct_description_joint_descent.py",
+      "sha256": "bc6aca6a6ea533f50a3f20272f726b0fef701cb0f5554762ad8503efcc4c4900",
+      "reviewed_entities": 48
+    },
+    "launcher": {
+      "path": "tools/launch_ddm_joint_descent.py",
+      "sha256": "771a6acd88d320ab268885cf848c1354dfac03eeeb9855ed0aae6f87f8eaa668",
+      "reviewed_entities": 30
+    },
+    "consumer_tests": {
+      "path": "src/tac/optimization/tests/test_direct_description_joint_descent.py",
+      "sha256": "33421f3214c4e1c445424f863ca8ddb860e7280c2a6bbb0813420d34aaf7ff8f",
+      "reviewed_entities": 17
+    },
+    "launcher_tests": {
+      "path": "tools/tests/test_launch_ddm_joint_descent_j5.py",
+      "sha256": "a9b8bbd798e1153fb17cee562fd610815b03f96c4c41959dc3ded4aab402c436",
+      "reviewed_entities": 3
+    },
+    "runtime_source_note": "The smoke and governed preflight preserve the exact pre-review-format source hashes b69b4a2d... and 59a22ad9.... Ruff formatting was the only subsequent source rewrite; the exact archive regression and all focused tests were rerun against the final reviewed hashes above."
+  },
+  "review_tracker": {
+    "reviewer": "codex-ddm-j5",
+    "consecutive_clean_passes": [
+      "ddm_j5_structural",
+      "ddm_j5_semantic_compatibility",
+      "ddm_j5_exact_custody"
+    ],
+    "all_touched_python_entities_reviewed": true
+  },
+  "adversarial_findings_fixed_before_clean_passes": [
+    "The preliminary coherent proposal shifted every G1 track and escaped scorer geometry; the final proposal mask is restricted to the sealed V19 eight-pair active set and whole-lifecycle axis feasibility.",
+    "Historical n600 baseline receipts lack c1_debt_buckets; the bucket-delta consumer now derives the fixed C1 partition from canonical per-class errors and has a regression test.",
+    "Historical J3 and J4 tickets would have changed typed identity if additive J5 fields were serialized unconditionally; the final encoder preserves both historical typed hashes."
+  ],
+  "verification": {
+    "pytest_command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python -m pytest --timeout=180 -q src/tac/optimization/tests/test_direct_description_joint_descent.py tools/tests/test_launch_ddm_joint_descent_j5.py src/tac/optimization/tests/test_pure_priced_realized_objective.py",
+    "pytest_result": "34 passed in 75.64s",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS",
+    "py_compile": "PASS",
+    "json_parse": "PASS",
+    "git_diff_check": "PASS",
+    "j3_semantic_sha256": "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab2935a2c403b824",
+    "j3_typed_config_hash": "fa63e79492d916a9cc6fe144207bdcb627d07e416883e131ecb90c289f8ccec0",
+    "j4_semantic_sha256": "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b",
+    "j4_typed_config_hash": "ca13e172e195731026de80ecaa0dff8ea307c1212fcc13ac4d17c6285ee9d7ab",
+    "j5_semantic_sha256": "13e194a8a354d53489f0ff68a5042237e69b4b6841a6b7959a15873fffa7b6e8",
+    "j5_typed_config_hash": "d43608af799b2f2d04e248413ceb944c093701441eafb222f2b3cdf3d32b8d80",
+    "j5_ticket_file_sha256": "2ae7da9058f8c5a421ffc494ab0407947391ea28ede1b1384248f298906fdf43",
+    "exact_candidate_archive_sha256": "d4eb1450f461437e714d08a9349cc735fe79b53a1739a2de92ef4850287dfd0d",
+    "external_artifact_hashes_reverified": 7
+  },
+  "bounded_smoke": {
+    "smoke_receipt_sha256": "a623437d69674ddbcebd12c3b17050f82f7886eb027bf99a7c6e04b6d943373e",
+    "preflight_receipt_sha256": "ba52893b2efb2ff0e0d65e94bcd783915267f13478f6be4bf059abd24cd81207",
+    "producer_receipt_sha256": "975a3529481fac12a63b94a4820709e1f51e08e56ceefded0bd310fa1a25ab45",
+    "pure_priced_joint_delta_s": -0.002843840398518996,
+    "global_delta_errors": -3327,
+    "role_correction_owned_delta_errors": -1314,
+    "residual_trunk_owned_delta_errors": -2013,
+    "verdict": "READY_TO_FIRE_UNDER_STANDING_GO",
+    "campaign_launched": false
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_review_required": true
+}
