@@ -6,6 +6,7 @@
 
 | timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |
 |---|---|---|---|---|---|---|---|
+| 2026-07-23T08:00:39Z | codex:gpt-5.6-sol | lane_ddm_m2_kinetic_laguerre_probe_20260723 | local_macos_cpu_advisory | ddm_m2_kinetic_laguerre_probe_20260723T064512Z |  | completed_formulation_falsified | Terminal closure of this exact active claim after 72/72 n600 cells; 0 Stage-A winners; Stage B closed; score_claim=false; MAIN review required |
 | 2026-07-23T07:17:34Z | codex:gpt-5.6-sol | lane_ddm_m2_kinetic_laguerre_probe_20260723 | local_macos_cpu_advisory | ddm_m2_kinetic_laguerre_probe_20260723T064512Z |  | local_bounded_probe | Authority cb5bc9d9; zero-dollar n64-to-n600 cached-label probe; frozen-scorer Stage B only if Stage A passes; score_claim=false |
 | 2026-07-20T21:09:04Z | codex:gpt-5.6-sol-high | r1b5_row_closer | macos_cpu_local | r1b5_vjp_close_20260720T2030Z |  | completed_n600 | VJP custody COMPLETE_N600 600/600, refused=[]; macOS-CPU advisory; pointer unchanged. |
 | 2026-07-20T20:30:16Z | codex:gpt-5.6-sol-high | r1b5_row_closer | macos_cpu_local | r1b5_vjp_close_20260720T2030Z | 2026-07-20T20:50Z | local_cpu_eval | Local-only resumable 35-pair VJP custody closure; seven fresh-native singleton retries plus nonrefused tails; macOS-CPU advisory; pointer unchanged. |
