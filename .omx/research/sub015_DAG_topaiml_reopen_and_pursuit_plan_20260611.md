@@ -22032,3 +22032,22 @@ built exact objects):**
 **Operational consequence:** cycle updates propagate through the exact chain for free (linear parts need
 no re-measurement); full re-MEASUREMENT is reserved for J_paint blocks and wherever J-of-J says the
 linearization exited its validity radius. Routed to dv2+e1. Pointer UNMOVED 0.19108.
+
+---
+
+## FEED-603-gap-sweep (2026-07-23, MAIN — operator: "what other processes/protocols/representations/operations are we missing or might be optimized/enhanced/consolidated")
+
+**MISSING (routed):** R6 rehearsal — official evaluate.py end-to-end on e1's exported dir (the #604 U3 smoke,
+never done; first harness contact ≠ the real candidate) → e1 G1 · language versioning (spec in #533 registry,
+version stamps in manifest) → e1 G2/dv2 G2 · joint state object w/ per-block version stamps (Law v3 warm-carry
+keys) → e1 manifest · pose TUBE folded into the sentence solve (in-cycle projection, #601/#605 stream) → dv2 G1
+· J_paint ownership → e1 G3 (completes the exact chain).
+**OPTIMIZE (routed):** #456 cheap-forward + #495 pose-verdict-skip into recursion inner loops (e1 G4) · inbox
+`applies_to_stage` + consumption acknowledgment (dv2) · charter templatization from receipt fields (#338 module,
+next quiet boundary).
+**CONSOLIDATE (queued, next quiet boundary):** basis-conversion registry (cell-space/realized/S + control-vs-v12
+bases — kills the class dv1 handled manually) · coder registry (D4 SoT: #557 + g1 + zlib controls, measured
+rate/stream-type) · FEED-603 language-law fold into canonical_equations + DSL (consolidation monitor at
+signal-ratio 13.0; the triality debt) · MAIN process fix effective now: p0-ledger update in the same command
+block as every FEED.
+Pointer UNMOVED 0.19108.
