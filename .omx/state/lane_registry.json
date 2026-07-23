@@ -84759,6 +84759,48 @@
       },
       "notes": "Build #636 exact n600 runtime export; macOS-CPU advisory only; MAIN landing review required; contest CPU/CUDA gates intentionally open.",
       "research_only": true
+    },
+    {
+      "id": "ddm_dr2_scc_outside_view",
+      "name": "DDM DR2 SCC outside view",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
     }
   ],
   "level_rules": {

@@ -1,0 +1,1643 @@
+{
+  "authority": "LOCAL_CPU_EXACT_FACT_CONTROL_ONLY",
+  "baseline": {
+    "bytes": 68464,
+    "row_id": "whole_typed_section_causal_delta",
+    "source": ".omx/research/ddm_dv2_sdwl1_n600_20260723/receipt.json"
+  },
+  "global_audit_triple": {
+    "candidate_admissible": false,
+    "scorer_visibility": "FAIL_UNPROVEN",
+    "sensitivity_priced_tolerance": "FAIL_EXACT_ONLY",
+    "three_layer_decomposition": "FAIL_COMPACT_DOF_UNMEASURED"
+  },
+  "implementation": {
+    "numpy": "2.4.3",
+    "python": "3.14.6",
+    "tool_path": "tools/measure_ddm_dr2_scc_outside_view.py",
+    "tool_sha256": "d3531439db6d1144f270a592d11208121b1111fcf0a3c9a674b4760ade341339"
+  },
+  "inventory": {
+    "bytes": 422528,
+    "path": ".omx/research/ddm_dv2_sdwl1_n600_20260723/payloads/fact_inventory.npy",
+    "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+    "sha256": "9208797cdda6676e9298a20f8d128bb02a58c40255167056297b6098fea9e8fc",
+    "shape": [
+      600,
+      11,
+      8
+    ],
+    "stage_path": ".omx/research/ddm_dv2_sdwl1_n600_20260723/stage_10_fact_inventory.json",
+    "stage_sha256": "5b2e4cc804836f31fcdf5e4dddf531128d3e95c557b4b734b7ccb9ecf00f6722"
+  },
+  "measurement_envelope": {
+    "definition": "favorable measurement-only envelope: 11 selected exact streams with fixed row/mode/length/SHA framing; SDWL1 lexicon and schema omitted",
+    "inner_bytes": 92866,
+    "outer_zlib9_bytes": 70700,
+    "outer_zlib9_sha256": "6a69aed0f991b91be757cd2e38950ff3fbdcac0481aed2481b594b56555ffde8",
+    "parseback_exact": true,
+    "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3"
+  },
+  "non_redundancy_audit": {
+    "corrections_are_deltas": {
+      "status": "NOT_APPLICABLE",
+      "verdict": "This control emits no correction stream."
+    },
+    "cross_stream_conditional_coding": {
+      "pairwise_redundancy": {
+        "definition": "ordered A->B outer-zlib9 marginal proxy: bytes(B)-(bytes(zlib(A||B))-bytes(zlib(A))); complete fixed stream framing included",
+        "interpretation": "positive values detect pairwise overlap, zero does not prove independence, negative values are framing/model interference and not a credit",
+        "maximum_positive_overlap_bytes": 137,
+        "ordered_pair_count": 110,
+        "ordered_pairs": [
+          {
+            "conditional_marginal_bytes": 7503,
+            "conditioned_on_row": 0,
+            "conditioned_on_row_name": "Road partition_cell",
+            "redundancy_bytes": 50,
+            "target_row": 1,
+            "target_row_name": "Lane partition_cell",
+            "target_standalone_bytes": 7553
+          },
+          {
+            "conditional_marginal_bytes": 5265,
+            "conditioned_on_row": 0,
+            "conditioned_on_row_name": "Road partition_cell",
+            "redundancy_bytes": 72,
+            "target_row": 2,
+            "target_row_name": "Undrivable partition_cell",
+            "target_standalone_bytes": 5337
+          },
+          {
+            "conditional_marginal_bytes": 6067,
+            "conditioned_on_row": 0,
+            "conditioned_on_row_name": "Road partition_cell",
+            "redundancy_bytes": 68,
+            "target_row": 3,
+            "target_row_name": "Movable partition_cell",
+            "target_standalone_bytes": 6135
+          },
+          {
+            "conditional_marginal_bytes": 4917,
+            "conditioned_on_row": 0,
+            "conditioned_on_row_name": "Road partition_cell",
+            "redundancy_bytes": 75,
+            "target_row": 4,
+            "target_row_name": "MyCar partition_cell",
+            "target_standalone_bytes": 4992
+          },
+          {
+            "conditional_marginal_bytes": 6178,
+            "conditioned_on_row": 0,
+            "conditioned_on_row_name": "Road partition_cell",
+            "redundancy_bytes": 69,
+            "target_row": 5,
+            "target_row_name": "Road separatrix",
+            "target_standalone_bytes": 6247
+          },
+          {
+            "conditional_marginal_bytes": 4706,
+            "conditioned_on_row": 0,
+            "conditioned_on_row_name": "Road partition_cell",
+            "redundancy_bytes": 65,
+            "target_row": 6,
+            "target_row_name": "Lane separatrix",
+            "target_standalone_bytes": 4771
+          },
+          {
+            "conditional_marginal_bytes": 6161,
+            "conditioned_on_row": 0,
+            "conditioned_on_row_name": "Road partition_cell",
+            "redundancy_bytes": 64,
+            "target_row": 7,
+            "target_row_name": "Undrivable separatrix",
+            "target_standalone_bytes": 6225
+          },
+          {
+            "conditional_marginal_bytes": 4675,
+            "conditioned_on_row": 0,
+            "conditioned_on_row_name": "Road partition_cell",
+            "redundancy_bytes": 70,
+            "target_row": 8,
+            "target_row_name": "Movable separatrix",
+            "target_standalone_bytes": 4745
+          },
+          {
+            "conditional_marginal_bytes": 5409,
+            "conditioned_on_row": 0,
+            "conditioned_on_row_name": "Road partition_cell",
+            "redundancy_bytes": 61,
+            "target_row": 9,
+            "target_row_name": "MyCar separatrix",
+            "target_standalone_bytes": 5470
+          },
+          {
+            "conditional_marginal_bytes": 14160,
+            "conditioned_on_row": 0,
+            "conditioned_on_row_name": "Road partition_cell",
+            "redundancy_bytes": 57,
+            "target_row": 10,
+            "target_row_name": "Pose pair_screw",
+            "target_standalone_bytes": 14217
+          },
+          {
+            "conditional_marginal_bytes": 5734,
+            "conditioned_on_row": 1,
+            "conditioned_on_row_name": "Lane partition_cell",
+            "redundancy_bytes": 52,
+            "target_row": 0,
+            "target_row_name": "Road partition_cell",
+            "target_standalone_bytes": 5786
+          },
+          {
+            "conditional_marginal_bytes": 5275,
+            "conditioned_on_row": 1,
+            "conditioned_on_row_name": "Lane partition_cell",
+            "redundancy_bytes": 62,
+            "target_row": 2,
+            "target_row_name": "Undrivable partition_cell",
+            "target_standalone_bytes": 5337
+          },
+          {
+            "conditional_marginal_bytes": 6069,
+            "conditioned_on_row": 1,
+            "conditioned_on_row_name": "Lane partition_cell",
+            "redundancy_bytes": 66,
+            "target_row": 3,
+            "target_row_name": "Movable partition_cell",
+            "target_standalone_bytes": 6135
+          },
+          {
+            "conditional_marginal_bytes": 4926,
+            "conditioned_on_row": 1,
+            "conditioned_on_row_name": "Lane partition_cell",
+            "redundancy_bytes": 66,
+            "target_row": 4,
+            "target_row_name": "MyCar partition_cell",
+            "target_standalone_bytes": 4992
+          },
+          {
+            "conditional_marginal_bytes": 6185,
+            "conditioned_on_row": 1,
+            "conditioned_on_row_name": "Lane partition_cell",
+            "redundancy_bytes": 62,
+            "target_row": 5,
+            "target_row_name": "Road separatrix",
+            "target_standalone_bytes": 6247
+          },
+          {
+            "conditional_marginal_bytes": 4702,
+            "conditioned_on_row": 1,
+            "conditioned_on_row_name": "Lane partition_cell",
+            "redundancy_bytes": 69,
+            "target_row": 6,
+            "target_row_name": "Lane separatrix",
+            "target_standalone_bytes": 4771
+          },
+          {
+            "conditional_marginal_bytes": 6166,
+            "conditioned_on_row": 1,
+            "conditioned_on_row_name": "Lane partition_cell",
+            "redundancy_bytes": 59,
+            "target_row": 7,
+            "target_row_name": "Undrivable separatrix",
+            "target_standalone_bytes": 6225
+          },
+          {
+            "conditional_marginal_bytes": 4671,
+            "conditioned_on_row": 1,
+            "conditioned_on_row_name": "Lane partition_cell",
+            "redundancy_bytes": 74,
+            "target_row": 8,
+            "target_row_name": "Movable separatrix",
+            "target_standalone_bytes": 4745
+          },
+          {
+            "conditional_marginal_bytes": 5406,
+            "conditioned_on_row": 1,
+            "conditioned_on_row_name": "Lane partition_cell",
+            "redundancy_bytes": 64,
+            "target_row": 9,
+            "target_row_name": "MyCar separatrix",
+            "target_standalone_bytes": 5470
+          },
+          {
+            "conditional_marginal_bytes": 14168,
+            "conditioned_on_row": 1,
+            "conditioned_on_row_name": "Lane partition_cell",
+            "redundancy_bytes": 49,
+            "target_row": 10,
+            "target_row_name": "Pose pair_screw",
+            "target_standalone_bytes": 14217
+          },
+          {
+            "conditional_marginal_bytes": 5706,
+            "conditioned_on_row": 2,
+            "conditioned_on_row_name": "Undrivable partition_cell",
+            "redundancy_bytes": 80,
+            "target_row": 0,
+            "target_row_name": "Road partition_cell",
+            "target_standalone_bytes": 5786
+          },
+          {
+            "conditional_marginal_bytes": 7498,
+            "conditioned_on_row": 2,
+            "conditioned_on_row_name": "Undrivable partition_cell",
+            "redundancy_bytes": 55,
+            "target_row": 1,
+            "target_row_name": "Lane partition_cell",
+            "target_standalone_bytes": 7553
+          },
+          {
+            "conditional_marginal_bytes": 6063,
+            "conditioned_on_row": 2,
+            "conditioned_on_row_name": "Undrivable partition_cell",
+            "redundancy_bytes": 72,
+            "target_row": 3,
+            "target_row_name": "Movable partition_cell",
+            "target_standalone_bytes": 6135
+          },
+          {
+            "conditional_marginal_bytes": 4905,
+            "conditioned_on_row": 2,
+            "conditioned_on_row_name": "Undrivable partition_cell",
+            "redundancy_bytes": 87,
+            "target_row": 4,
+            "target_row_name": "MyCar partition_cell",
+            "target_standalone_bytes": 4992
+          },
+          {
+            "conditional_marginal_bytes": 6180,
+            "conditioned_on_row": 2,
+            "conditioned_on_row_name": "Undrivable partition_cell",
+            "redundancy_bytes": 67,
+            "target_row": 5,
+            "target_row_name": "Road separatrix",
+            "target_standalone_bytes": 6247
+          },
+          {
+            "conditional_marginal_bytes": 4701,
+            "conditioned_on_row": 2,
+            "conditioned_on_row_name": "Undrivable partition_cell",
+            "redundancy_bytes": 70,
+            "target_row": 6,
+            "target_row_name": "Lane separatrix",
+            "target_standalone_bytes": 4771
+          },
+          {
+            "conditional_marginal_bytes": 6159,
+            "conditioned_on_row": 2,
+            "conditioned_on_row_name": "Undrivable partition_cell",
+            "redundancy_bytes": 66,
+            "target_row": 7,
+            "target_row_name": "Undrivable separatrix",
+            "target_standalone_bytes": 6225
+          },
+          {
+            "conditional_marginal_bytes": 4666,
+            "conditioned_on_row": 2,
+            "conditioned_on_row_name": "Undrivable partition_cell",
+            "redundancy_bytes": 79,
+            "target_row": 8,
+            "target_row_name": "Movable separatrix",
+            "target_standalone_bytes": 4745
+          },
+          {
+            "conditional_marginal_bytes": 5405,
+            "conditioned_on_row": 2,
+            "conditioned_on_row_name": "Undrivable partition_cell",
+            "redundancy_bytes": 65,
+            "target_row": 9,
+            "target_row_name": "MyCar separatrix",
+            "target_standalone_bytes": 5470
+          },
+          {
+            "conditional_marginal_bytes": 14160,
+            "conditioned_on_row": 2,
+            "conditioned_on_row_name": "Undrivable partition_cell",
+            "redundancy_bytes": 57,
+            "target_row": 10,
+            "target_row_name": "Pose pair_screw",
+            "target_standalone_bytes": 14217
+          },
+          {
+            "conditional_marginal_bytes": 5718,
+            "conditioned_on_row": 3,
+            "conditioned_on_row_name": "Movable partition_cell",
+            "redundancy_bytes": 68,
+            "target_row": 0,
+            "target_row_name": "Road partition_cell",
+            "target_standalone_bytes": 5786
+          },
+          {
+            "conditional_marginal_bytes": 7490,
+            "conditioned_on_row": 3,
+            "conditioned_on_row_name": "Movable partition_cell",
+            "redundancy_bytes": 63,
+            "target_row": 1,
+            "target_row_name": "Lane partition_cell",
+            "target_standalone_bytes": 7553
+          },
+          {
+            "conditional_marginal_bytes": 5271,
+            "conditioned_on_row": 3,
+            "conditioned_on_row_name": "Movable partition_cell",
+            "redundancy_bytes": 66,
+            "target_row": 2,
+            "target_row_name": "Undrivable partition_cell",
+            "target_standalone_bytes": 5337
+          },
+          {
+            "conditional_marginal_bytes": 4915,
+            "conditioned_on_row": 3,
+            "conditioned_on_row_name": "Movable partition_cell",
+            "redundancy_bytes": 77,
+            "target_row": 4,
+            "target_row_name": "MyCar partition_cell",
+            "target_standalone_bytes": 4992
+          },
+          {
+            "conditional_marginal_bytes": 6176,
+            "conditioned_on_row": 3,
+            "conditioned_on_row_name": "Movable partition_cell",
+            "redundancy_bytes": 71,
+            "target_row": 5,
+            "target_row_name": "Road separatrix",
+            "target_standalone_bytes": 6247
+          },
+          {
+            "conditional_marginal_bytes": 4698,
+            "conditioned_on_row": 3,
+            "conditioned_on_row_name": "Movable partition_cell",
+            "redundancy_bytes": 73,
+            "target_row": 6,
+            "target_row_name": "Lane separatrix",
+            "target_standalone_bytes": 4771
+          },
+          {
+            "conditional_marginal_bytes": 6159,
+            "conditioned_on_row": 3,
+            "conditioned_on_row_name": "Movable partition_cell",
+            "redundancy_bytes": 66,
+            "target_row": 7,
+            "target_row_name": "Undrivable separatrix",
+            "target_standalone_bytes": 6225
+          },
+          {
+            "conditional_marginal_bytes": 4663,
+            "conditioned_on_row": 3,
+            "conditioned_on_row_name": "Movable partition_cell",
+            "redundancy_bytes": 82,
+            "target_row": 8,
+            "target_row_name": "Movable separatrix",
+            "target_standalone_bytes": 4745
+          },
+          {
+            "conditional_marginal_bytes": 5402,
+            "conditioned_on_row": 3,
+            "conditioned_on_row_name": "Movable partition_cell",
+            "redundancy_bytes": 68,
+            "target_row": 9,
+            "target_row_name": "MyCar separatrix",
+            "target_standalone_bytes": 5470
+          },
+          {
+            "conditional_marginal_bytes": 14160,
+            "conditioned_on_row": 3,
+            "conditioned_on_row_name": "Movable partition_cell",
+            "redundancy_bytes": 57,
+            "target_row": 10,
+            "target_row_name": "Pose pair_screw",
+            "target_standalone_bytes": 14217
+          },
+          {
+            "conditional_marginal_bytes": 5714,
+            "conditioned_on_row": 4,
+            "conditioned_on_row_name": "MyCar partition_cell",
+            "redundancy_bytes": 72,
+            "target_row": 0,
+            "target_row_name": "Road partition_cell",
+            "target_standalone_bytes": 5786
+          },
+          {
+            "conditional_marginal_bytes": 7487,
+            "conditioned_on_row": 4,
+            "conditioned_on_row_name": "MyCar partition_cell",
+            "redundancy_bytes": 66,
+            "target_row": 1,
+            "target_row_name": "Lane partition_cell",
+            "target_standalone_bytes": 7553
+          },
+          {
+            "conditional_marginal_bytes": 5259,
+            "conditioned_on_row": 4,
+            "conditioned_on_row_name": "MyCar partition_cell",
+            "redundancy_bytes": 78,
+            "target_row": 2,
+            "target_row_name": "Undrivable partition_cell",
+            "target_standalone_bytes": 5337
+          },
+          {
+            "conditional_marginal_bytes": 6054,
+            "conditioned_on_row": 4,
+            "conditioned_on_row_name": "MyCar partition_cell",
+            "redundancy_bytes": 81,
+            "target_row": 3,
+            "target_row_name": "Movable partition_cell",
+            "target_standalone_bytes": 6135
+          },
+          {
+            "conditional_marginal_bytes": 6174,
+            "conditioned_on_row": 4,
+            "conditioned_on_row_name": "MyCar partition_cell",
+            "redundancy_bytes": 73,
+            "target_row": 5,
+            "target_row_name": "Road separatrix",
+            "target_standalone_bytes": 6247
+          },
+          {
+            "conditional_marginal_bytes": 4698,
+            "conditioned_on_row": 4,
+            "conditioned_on_row_name": "MyCar partition_cell",
+            "redundancy_bytes": 73,
+            "target_row": 6,
+            "target_row_name": "Lane separatrix",
+            "target_standalone_bytes": 4771
+          },
+          {
+            "conditional_marginal_bytes": 6155,
+            "conditioned_on_row": 4,
+            "conditioned_on_row_name": "MyCar partition_cell",
+            "redundancy_bytes": 70,
+            "target_row": 7,
+            "target_row_name": "Undrivable separatrix",
+            "target_standalone_bytes": 6225
+          },
+          {
+            "conditional_marginal_bytes": 4660,
+            "conditioned_on_row": 4,
+            "conditioned_on_row_name": "MyCar partition_cell",
+            "redundancy_bytes": 85,
+            "target_row": 8,
+            "target_row_name": "Movable separatrix",
+            "target_standalone_bytes": 4745
+          },
+          {
+            "conditional_marginal_bytes": 5396,
+            "conditioned_on_row": 4,
+            "conditioned_on_row_name": "MyCar partition_cell",
+            "redundancy_bytes": 74,
+            "target_row": 9,
+            "target_row_name": "MyCar separatrix",
+            "target_standalone_bytes": 5470
+          },
+          {
+            "conditional_marginal_bytes": 14155,
+            "conditioned_on_row": 4,
+            "conditioned_on_row_name": "MyCar partition_cell",
+            "redundancy_bytes": 62,
+            "target_row": 10,
+            "target_row_name": "Pose pair_screw",
+            "target_standalone_bytes": 14217
+          },
+          {
+            "conditional_marginal_bytes": 5720,
+            "conditioned_on_row": 5,
+            "conditioned_on_row_name": "Road separatrix",
+            "redundancy_bytes": 66,
+            "target_row": 0,
+            "target_row_name": "Road partition_cell",
+            "target_standalone_bytes": 5786
+          },
+          {
+            "conditional_marginal_bytes": 7492,
+            "conditioned_on_row": 5,
+            "conditioned_on_row_name": "Road separatrix",
+            "redundancy_bytes": 61,
+            "target_row": 1,
+            "target_row_name": "Lane partition_cell",
+            "target_standalone_bytes": 7553
+          },
+          {
+            "conditional_marginal_bytes": 5272,
+            "conditioned_on_row": 5,
+            "conditioned_on_row_name": "Road separatrix",
+            "redundancy_bytes": 65,
+            "target_row": 2,
+            "target_row_name": "Undrivable partition_cell",
+            "target_standalone_bytes": 5337
+          },
+          {
+            "conditional_marginal_bytes": 6068,
+            "conditioned_on_row": 5,
+            "conditioned_on_row_name": "Road separatrix",
+            "redundancy_bytes": 67,
+            "target_row": 3,
+            "target_row_name": "Movable partition_cell",
+            "target_standalone_bytes": 6135
+          },
+          {
+            "conditional_marginal_bytes": 4922,
+            "conditioned_on_row": 5,
+            "conditioned_on_row_name": "Road separatrix",
+            "redundancy_bytes": 70,
+            "target_row": 4,
+            "target_row_name": "MyCar partition_cell",
+            "target_standalone_bytes": 4992
+          },
+          {
+            "conditional_marginal_bytes": 4647,
+            "conditioned_on_row": 5,
+            "conditioned_on_row_name": "Road separatrix",
+            "redundancy_bytes": 124,
+            "target_row": 6,
+            "target_row_name": "Lane separatrix",
+            "target_standalone_bytes": 4771
+          },
+          {
+            "conditional_marginal_bytes": 6095,
+            "conditioned_on_row": 5,
+            "conditioned_on_row_name": "Road separatrix",
+            "redundancy_bytes": 130,
+            "target_row": 7,
+            "target_row_name": "Undrivable separatrix",
+            "target_standalone_bytes": 6225
+          },
+          {
+            "conditional_marginal_bytes": 4617,
+            "conditioned_on_row": 5,
+            "conditioned_on_row_name": "Road separatrix",
+            "redundancy_bytes": 128,
+            "target_row": 8,
+            "target_row_name": "Movable separatrix",
+            "target_standalone_bytes": 4745
+          },
+          {
+            "conditional_marginal_bytes": 5339,
+            "conditioned_on_row": 5,
+            "conditioned_on_row_name": "Road separatrix",
+            "redundancy_bytes": 131,
+            "target_row": 9,
+            "target_row_name": "MyCar separatrix",
+            "target_standalone_bytes": 5470
+          },
+          {
+            "conditional_marginal_bytes": 14118,
+            "conditioned_on_row": 5,
+            "conditioned_on_row_name": "Road separatrix",
+            "redundancy_bytes": 99,
+            "target_row": 10,
+            "target_row_name": "Pose pair_screw",
+            "target_standalone_bytes": 14217
+          },
+          {
+            "conditional_marginal_bytes": 5721,
+            "conditioned_on_row": 6,
+            "conditioned_on_row_name": "Lane separatrix",
+            "redundancy_bytes": 65,
+            "target_row": 0,
+            "target_row_name": "Road partition_cell",
+            "target_standalone_bytes": 5786
+          },
+          {
+            "conditional_marginal_bytes": 7489,
+            "conditioned_on_row": 6,
+            "conditioned_on_row_name": "Lane separatrix",
+            "redundancy_bytes": 64,
+            "target_row": 1,
+            "target_row_name": "Lane partition_cell",
+            "target_standalone_bytes": 7553
+          },
+          {
+            "conditional_marginal_bytes": 5271,
+            "conditioned_on_row": 6,
+            "conditioned_on_row_name": "Lane separatrix",
+            "redundancy_bytes": 66,
+            "target_row": 2,
+            "target_row_name": "Undrivable partition_cell",
+            "target_standalone_bytes": 5337
+          },
+          {
+            "conditional_marginal_bytes": 6063,
+            "conditioned_on_row": 6,
+            "conditioned_on_row_name": "Lane separatrix",
+            "redundancy_bytes": 72,
+            "target_row": 3,
+            "target_row_name": "Movable partition_cell",
+            "target_standalone_bytes": 6135
+          },
+          {
+            "conditional_marginal_bytes": 4920,
+            "conditioned_on_row": 6,
+            "conditioned_on_row_name": "Lane separatrix",
+            "redundancy_bytes": 72,
+            "target_row": 4,
+            "target_row_name": "MyCar partition_cell",
+            "target_standalone_bytes": 4992
+          },
+          {
+            "conditional_marginal_bytes": 6123,
+            "conditioned_on_row": 6,
+            "conditioned_on_row_name": "Lane separatrix",
+            "redundancy_bytes": 124,
+            "target_row": 5,
+            "target_row_name": "Road separatrix",
+            "target_standalone_bytes": 6247
+          },
+          {
+            "conditional_marginal_bytes": 6104,
+            "conditioned_on_row": 6,
+            "conditioned_on_row_name": "Lane separatrix",
+            "redundancy_bytes": 121,
+            "target_row": 7,
+            "target_row_name": "Undrivable separatrix",
+            "target_standalone_bytes": 6225
+          },
+          {
+            "conditional_marginal_bytes": 4623,
+            "conditioned_on_row": 6,
+            "conditioned_on_row_name": "Lane separatrix",
+            "redundancy_bytes": 122,
+            "target_row": 8,
+            "target_row_name": "Movable separatrix",
+            "target_standalone_bytes": 4745
+          },
+          {
+            "conditional_marginal_bytes": 5351,
+            "conditioned_on_row": 6,
+            "conditioned_on_row_name": "Lane separatrix",
+            "redundancy_bytes": 119,
+            "target_row": 9,
+            "target_row_name": "MyCar separatrix",
+            "target_standalone_bytes": 5470
+          },
+          {
+            "conditional_marginal_bytes": 14128,
+            "conditioned_on_row": 6,
+            "conditioned_on_row_name": "Lane separatrix",
+            "redundancy_bytes": 89,
+            "target_row": 10,
+            "target_row_name": "Pose pair_screw",
+            "target_standalone_bytes": 14217
+          },
+          {
+            "conditional_marginal_bytes": 5725,
+            "conditioned_on_row": 7,
+            "conditioned_on_row_name": "Undrivable separatrix",
+            "redundancy_bytes": 61,
+            "target_row": 0,
+            "target_row_name": "Road partition_cell",
+            "target_standalone_bytes": 5786
+          },
+          {
+            "conditional_marginal_bytes": 7495,
+            "conditioned_on_row": 7,
+            "conditioned_on_row_name": "Undrivable separatrix",
+            "redundancy_bytes": 58,
+            "target_row": 1,
+            "target_row_name": "Lane partition_cell",
+            "target_standalone_bytes": 7553
+          },
+          {
+            "conditional_marginal_bytes": 5277,
+            "conditioned_on_row": 7,
+            "conditioned_on_row_name": "Undrivable separatrix",
+            "redundancy_bytes": 60,
+            "target_row": 2,
+            "target_row_name": "Undrivable partition_cell",
+            "target_standalone_bytes": 5337
+          },
+          {
+            "conditional_marginal_bytes": 6072,
+            "conditioned_on_row": 7,
+            "conditioned_on_row_name": "Undrivable separatrix",
+            "redundancy_bytes": 63,
+            "target_row": 3,
+            "target_row_name": "Movable partition_cell",
+            "target_standalone_bytes": 6135
+          },
+          {
+            "conditional_marginal_bytes": 4923,
+            "conditioned_on_row": 7,
+            "conditioned_on_row_name": "Undrivable separatrix",
+            "redundancy_bytes": 69,
+            "target_row": 4,
+            "target_row_name": "MyCar partition_cell",
+            "target_standalone_bytes": 4992
+          },
+          {
+            "conditional_marginal_bytes": 6118,
+            "conditioned_on_row": 7,
+            "conditioned_on_row_name": "Undrivable separatrix",
+            "redundancy_bytes": 129,
+            "target_row": 5,
+            "target_row_name": "Road separatrix",
+            "target_standalone_bytes": 6247
+          },
+          {
+            "conditional_marginal_bytes": 4656,
+            "conditioned_on_row": 7,
+            "conditioned_on_row_name": "Undrivable separatrix",
+            "redundancy_bytes": 115,
+            "target_row": 6,
+            "target_row_name": "Lane separatrix",
+            "target_standalone_bytes": 4771
+          },
+          {
+            "conditional_marginal_bytes": 4619,
+            "conditioned_on_row": 7,
+            "conditioned_on_row_name": "Undrivable separatrix",
+            "redundancy_bytes": 126,
+            "target_row": 8,
+            "target_row_name": "Movable separatrix",
+            "target_standalone_bytes": 4745
+          },
+          {
+            "conditional_marginal_bytes": 5345,
+            "conditioned_on_row": 7,
+            "conditioned_on_row_name": "Undrivable separatrix",
+            "redundancy_bytes": 125,
+            "target_row": 9,
+            "target_row_name": "MyCar separatrix",
+            "target_standalone_bytes": 5470
+          },
+          {
+            "conditional_marginal_bytes": 14126,
+            "conditioned_on_row": 7,
+            "conditioned_on_row_name": "Undrivable separatrix",
+            "redundancy_bytes": 91,
+            "target_row": 10,
+            "target_row_name": "Pose pair_screw",
+            "target_standalone_bytes": 14217
+          },
+          {
+            "conditional_marginal_bytes": 5717,
+            "conditioned_on_row": 8,
+            "conditioned_on_row_name": "Movable separatrix",
+            "redundancy_bytes": 69,
+            "target_row": 0,
+            "target_row_name": "Road partition_cell",
+            "target_standalone_bytes": 5786
+          },
+          {
+            "conditional_marginal_bytes": 7483,
+            "conditioned_on_row": 8,
+            "conditioned_on_row_name": "Movable separatrix",
+            "redundancy_bytes": 70,
+            "target_row": 1,
+            "target_row_name": "Lane partition_cell",
+            "target_standalone_bytes": 7553
+          },
+          {
+            "conditional_marginal_bytes": 5263,
+            "conditioned_on_row": 8,
+            "conditioned_on_row_name": "Movable separatrix",
+            "redundancy_bytes": 74,
+            "target_row": 2,
+            "target_row_name": "Undrivable partition_cell",
+            "target_standalone_bytes": 5337
+          },
+          {
+            "conditional_marginal_bytes": 6056,
+            "conditioned_on_row": 8,
+            "conditioned_on_row_name": "Movable separatrix",
+            "redundancy_bytes": 79,
+            "target_row": 3,
+            "target_row_name": "Movable partition_cell",
+            "target_standalone_bytes": 6135
+          },
+          {
+            "conditional_marginal_bytes": 4913,
+            "conditioned_on_row": 8,
+            "conditioned_on_row_name": "Movable separatrix",
+            "redundancy_bytes": 79,
+            "target_row": 4,
+            "target_row_name": "MyCar partition_cell",
+            "target_standalone_bytes": 4992
+          },
+          {
+            "conditional_marginal_bytes": 6111,
+            "conditioned_on_row": 8,
+            "conditioned_on_row_name": "Movable separatrix",
+            "redundancy_bytes": 136,
+            "target_row": 5,
+            "target_row_name": "Road separatrix",
+            "target_standalone_bytes": 6247
+          },
+          {
+            "conditional_marginal_bytes": 4655,
+            "conditioned_on_row": 8,
+            "conditioned_on_row_name": "Movable separatrix",
+            "redundancy_bytes": 116,
+            "target_row": 6,
+            "target_row_name": "Lane separatrix",
+            "target_standalone_bytes": 4771
+          },
+          {
+            "conditional_marginal_bytes": 6103,
+            "conditioned_on_row": 8,
+            "conditioned_on_row_name": "Movable separatrix",
+            "redundancy_bytes": 122,
+            "target_row": 7,
+            "target_row_name": "Undrivable separatrix",
+            "target_standalone_bytes": 6225
+          },
+          {
+            "conditional_marginal_bytes": 5343,
+            "conditioned_on_row": 8,
+            "conditioned_on_row_name": "Movable separatrix",
+            "redundancy_bytes": 127,
+            "target_row": 9,
+            "target_row_name": "MyCar separatrix",
+            "target_standalone_bytes": 5470
+          },
+          {
+            "conditional_marginal_bytes": 14122,
+            "conditioned_on_row": 8,
+            "conditioned_on_row_name": "Movable separatrix",
+            "redundancy_bytes": 95,
+            "target_row": 10,
+            "target_row_name": "Pose pair_screw",
+            "target_standalone_bytes": 14217
+          },
+          {
+            "conditional_marginal_bytes": 5721,
+            "conditioned_on_row": 9,
+            "conditioned_on_row_name": "MyCar separatrix",
+            "redundancy_bytes": 65,
+            "target_row": 0,
+            "target_row_name": "Road partition_cell",
+            "target_standalone_bytes": 5786
+          },
+          {
+            "conditional_marginal_bytes": 7496,
+            "conditioned_on_row": 9,
+            "conditioned_on_row_name": "MyCar separatrix",
+            "redundancy_bytes": 57,
+            "target_row": 1,
+            "target_row_name": "Lane partition_cell",
+            "target_standalone_bytes": 7553
+          },
+          {
+            "conditional_marginal_bytes": 5275,
+            "conditioned_on_row": 9,
+            "conditioned_on_row_name": "MyCar separatrix",
+            "redundancy_bytes": 62,
+            "target_row": 2,
+            "target_row_name": "Undrivable partition_cell",
+            "target_standalone_bytes": 5337
+          },
+          {
+            "conditional_marginal_bytes": 6070,
+            "conditioned_on_row": 9,
+            "conditioned_on_row_name": "MyCar separatrix",
+            "redundancy_bytes": 65,
+            "target_row": 3,
+            "target_row_name": "Movable partition_cell",
+            "target_standalone_bytes": 6135
+          },
+          {
+            "conditional_marginal_bytes": 4916,
+            "conditioned_on_row": 9,
+            "conditioned_on_row_name": "MyCar separatrix",
+            "redundancy_bytes": 76,
+            "target_row": 4,
+            "target_row_name": "MyCar partition_cell",
+            "target_standalone_bytes": 4992
+          },
+          {
+            "conditional_marginal_bytes": 6110,
+            "conditioned_on_row": 9,
+            "conditioned_on_row_name": "MyCar separatrix",
+            "redundancy_bytes": 137,
+            "target_row": 5,
+            "target_row_name": "Road separatrix",
+            "target_standalone_bytes": 6247
+          },
+          {
+            "conditional_marginal_bytes": 4656,
+            "conditioned_on_row": 9,
+            "conditioned_on_row_name": "MyCar separatrix",
+            "redundancy_bytes": 115,
+            "target_row": 6,
+            "target_row_name": "Lane separatrix",
+            "target_standalone_bytes": 4771
+          },
+          {
+            "conditional_marginal_bytes": 6104,
+            "conditioned_on_row": 9,
+            "conditioned_on_row_name": "MyCar separatrix",
+            "redundancy_bytes": 121,
+            "target_row": 7,
+            "target_row_name": "Undrivable separatrix",
+            "target_standalone_bytes": 6225
+          },
+          {
+            "conditional_marginal_bytes": 4620,
+            "conditioned_on_row": 9,
+            "conditioned_on_row_name": "MyCar separatrix",
+            "redundancy_bytes": 125,
+            "target_row": 8,
+            "target_row_name": "Movable separatrix",
+            "target_standalone_bytes": 4745
+          },
+          {
+            "conditional_marginal_bytes": 14124,
+            "conditioned_on_row": 9,
+            "conditioned_on_row_name": "MyCar separatrix",
+            "redundancy_bytes": 93,
+            "target_row": 10,
+            "target_row_name": "Pose pair_screw",
+            "target_standalone_bytes": 14217
+          },
+          {
+            "conditional_marginal_bytes": 5738,
+            "conditioned_on_row": 10,
+            "conditioned_on_row_name": "Pose pair_screw",
+            "redundancy_bytes": 48,
+            "target_row": 0,
+            "target_row_name": "Road partition_cell",
+            "target_standalone_bytes": 5786
+          },
+          {
+            "conditional_marginal_bytes": 7508,
+            "conditioned_on_row": 10,
+            "conditioned_on_row_name": "Pose pair_screw",
+            "redundancy_bytes": 45,
+            "target_row": 1,
+            "target_row_name": "Lane partition_cell",
+            "target_standalone_bytes": 7553
+          },
+          {
+            "conditional_marginal_bytes": 5298,
+            "conditioned_on_row": 10,
+            "conditioned_on_row_name": "Pose pair_screw",
+            "redundancy_bytes": 39,
+            "target_row": 2,
+            "target_row_name": "Undrivable partition_cell",
+            "target_standalone_bytes": 5337
+          },
+          {
+            "conditional_marginal_bytes": 6089,
+            "conditioned_on_row": 10,
+            "conditioned_on_row_name": "Pose pair_screw",
+            "redundancy_bytes": 46,
+            "target_row": 3,
+            "target_row_name": "Movable partition_cell",
+            "target_standalone_bytes": 6135
+          },
+          {
+            "conditional_marginal_bytes": 4938,
+            "conditioned_on_row": 10,
+            "conditioned_on_row_name": "Pose pair_screw",
+            "redundancy_bytes": 54,
+            "target_row": 4,
+            "target_row_name": "MyCar partition_cell",
+            "target_standalone_bytes": 4992
+          },
+          {
+            "conditional_marginal_bytes": 6150,
+            "conditioned_on_row": 10,
+            "conditioned_on_row_name": "Pose pair_screw",
+            "redundancy_bytes": 97,
+            "target_row": 5,
+            "target_row_name": "Road separatrix",
+            "target_standalone_bytes": 6247
+          },
+          {
+            "conditional_marginal_bytes": 4689,
+            "conditioned_on_row": 10,
+            "conditioned_on_row_name": "Pose pair_screw",
+            "redundancy_bytes": 82,
+            "target_row": 6,
+            "target_row_name": "Lane separatrix",
+            "target_standalone_bytes": 4771
+          },
+          {
+            "conditional_marginal_bytes": 6137,
+            "conditioned_on_row": 10,
+            "conditioned_on_row_name": "Pose pair_screw",
+            "redundancy_bytes": 88,
+            "target_row": 7,
+            "target_row_name": "Undrivable separatrix",
+            "target_standalone_bytes": 6225
+          },
+          {
+            "conditional_marginal_bytes": 4656,
+            "conditioned_on_row": 10,
+            "conditioned_on_row_name": "Pose pair_screw",
+            "redundancy_bytes": 89,
+            "target_row": 8,
+            "target_row_name": "Movable separatrix",
+            "target_standalone_bytes": 4745
+          },
+          {
+            "conditional_marginal_bytes": 5374,
+            "conditioned_on_row": 10,
+            "conditioned_on_row_name": "Pose pair_screw",
+            "redundancy_bytes": 96,
+            "target_row": 9,
+            "target_row_name": "MyCar separatrix",
+            "target_standalone_bytes": 5470
+          }
+        ],
+        "positive_overlap_pair_count": 110,
+        "positive_overlap_total_bytes_nonadditive": 8716
+      },
+      "status": "FAIL_UNCONDITIONED_ARITHMETIC_STREAMS"
+    },
+    "dimension_homes": {
+      "status": "FAIL_UNMEASURED",
+      "verdict": "All 600 exact per-pair states are coded; no persistent-primitive versus innovation/event ownership split has been measured."
+    },
+    "single_owner_fact_rule": {
+      "status": "PASS_WITHIN_DECLARED_TENSOR_ONLY",
+      "verdict": "Each of the 45,600 declared scalar coordinates has one row owner; ownership against a future receiver/correction stream is not established."
+    }
+  },
+  "result": {
+    "byte_delta_vs_68464": 2236,
+    "candidate_admissible": false,
+    "selected_mode_counts": {
+      "re_key": 5,
+      "track": 6
+    },
+    "verdict": "DOMINATED_EXACT_CODER_LAYER_CONTROL"
+  },
+  "rows": [
+    {
+      "adjacent_changes": 599,
+      "audit_triple": {
+        "scorer_visibility": {
+          "status": "UNPROVEN",
+          "verdict": "No record-to-RGB receiver or per-DOF scorer-null quotient is present."
+        },
+        "sensitivity_priced_tolerance": {
+          "status": "UNMEASURED",
+          "verdict": "Exact fact parse-back only; no margin/g3-lambda/c1-dual tolerance is applied."
+        },
+        "three_layer_decomposition": {
+          "coder_gain": {
+            "re_key_bytes": 11255,
+            "selected_bytes": 8948,
+            "selected_mode": "track",
+            "track_bytes": 8948
+          },
+          "descriptive_form": "Road partition_cell",
+          "inherently_compact_dof_count": null,
+          "status": "INCOMPLETE"
+        }
+      },
+      "available_modes": {
+        "re_key": {
+          "bytes": 11255,
+          "definition": "whole-record absolute arithmetic control",
+          "parseback_exact": true
+        },
+        "static": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "record is not temporally static"
+        },
+        "track": {
+          "bytes": 8948,
+          "definition": "first absolute state plus causal deltas",
+          "parseback_exact": true
+        },
+        "xi_advect": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "no decoder-free xi-to-aggregate-fact transport map or priced side information"
+        }
+      },
+      "row_index": 0,
+      "row_name": "Road partition_cell",
+      "selected_exact_mode": "track",
+      "selected_stream_bytes": 8948,
+      "selected_stream_sha256": "70b78a3b8516ef96f8cf107ca2e887cf7a76b010196ddb227f8de34abefba8e7",
+      "unique_states": 600
+    },
+    {
+      "adjacent_changes": 599,
+      "audit_triple": {
+        "scorer_visibility": {
+          "status": "UNPROVEN",
+          "verdict": "No record-to-RGB receiver or per-DOF scorer-null quotient is present."
+        },
+        "sensitivity_priced_tolerance": {
+          "status": "UNMEASURED",
+          "verdict": "Exact fact parse-back only; no margin/g3-lambda/c1-dual tolerance is applied."
+        },
+        "three_layer_decomposition": {
+          "coder_gain": {
+            "re_key_bytes": 10863,
+            "selected_bytes": 10666,
+            "selected_mode": "track",
+            "track_bytes": 10666
+          },
+          "descriptive_form": "Lane partition_cell",
+          "inherently_compact_dof_count": null,
+          "status": "INCOMPLETE"
+        }
+      },
+      "available_modes": {
+        "re_key": {
+          "bytes": 10863,
+          "definition": "whole-record absolute arithmetic control",
+          "parseback_exact": true
+        },
+        "static": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "record is not temporally static"
+        },
+        "track": {
+          "bytes": 10666,
+          "definition": "first absolute state plus causal deltas",
+          "parseback_exact": true
+        },
+        "xi_advect": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "no decoder-free xi-to-aggregate-fact transport map or priced side information"
+        }
+      },
+      "row_index": 1,
+      "row_name": "Lane partition_cell",
+      "selected_exact_mode": "track",
+      "selected_stream_bytes": 10666,
+      "selected_stream_sha256": "afb7907f1dc3ea34083bb6c4b226dd52ae0d51e4c221c0ccc6d555c75a13b9f3",
+      "unique_states": 600
+    },
+    {
+      "adjacent_changes": 599,
+      "audit_triple": {
+        "scorer_visibility": {
+          "status": "UNPROVEN",
+          "verdict": "No record-to-RGB receiver or per-DOF scorer-null quotient is present."
+        },
+        "sensitivity_priced_tolerance": {
+          "status": "UNMEASURED",
+          "verdict": "Exact fact parse-back only; no margin/g3-lambda/c1-dual tolerance is applied."
+        },
+        "three_layer_decomposition": {
+          "coder_gain": {
+            "re_key_bytes": 10448,
+            "selected_bytes": 8495,
+            "selected_mode": "track",
+            "track_bytes": 8495
+          },
+          "descriptive_form": "Undrivable partition_cell",
+          "inherently_compact_dof_count": null,
+          "status": "INCOMPLETE"
+        }
+      },
+      "available_modes": {
+        "re_key": {
+          "bytes": 10448,
+          "definition": "whole-record absolute arithmetic control",
+          "parseback_exact": true
+        },
+        "static": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "record is not temporally static"
+        },
+        "track": {
+          "bytes": 8495,
+          "definition": "first absolute state plus causal deltas",
+          "parseback_exact": true
+        },
+        "xi_advect": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "no decoder-free xi-to-aggregate-fact transport map or priced side information"
+        }
+      },
+      "row_index": 2,
+      "row_name": "Undrivable partition_cell",
+      "selected_exact_mode": "track",
+      "selected_stream_bytes": 8495,
+      "selected_stream_sha256": "933ee90d0361b72685979c31e08dfd97142fd7f49ace6260a05af676b61ea2a6",
+      "unique_states": 600
+    },
+    {
+      "adjacent_changes": 599,
+      "audit_triple": {
+        "scorer_visibility": {
+          "status": "UNPROVEN",
+          "verdict": "No record-to-RGB receiver or per-DOF scorer-null quotient is present."
+        },
+        "sensitivity_priced_tolerance": {
+          "status": "UNMEASURED",
+          "verdict": "Exact fact parse-back only; no margin/g3-lambda/c1-dual tolerance is applied."
+        },
+        "three_layer_decomposition": {
+          "coder_gain": {
+            "re_key_bytes": 11144,
+            "selected_bytes": 9208,
+            "selected_mode": "track",
+            "track_bytes": 9208
+          },
+          "descriptive_form": "Movable partition_cell",
+          "inherently_compact_dof_count": null,
+          "status": "INCOMPLETE"
+        }
+      },
+      "available_modes": {
+        "re_key": {
+          "bytes": 11144,
+          "definition": "whole-record absolute arithmetic control",
+          "parseback_exact": true
+        },
+        "static": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "record is not temporally static"
+        },
+        "track": {
+          "bytes": 9208,
+          "definition": "first absolute state plus causal deltas",
+          "parseback_exact": true
+        },
+        "xi_advect": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "no decoder-free xi-to-aggregate-fact transport map or priced side information"
+        }
+      },
+      "row_index": 3,
+      "row_name": "Movable partition_cell",
+      "selected_exact_mode": "track",
+      "selected_stream_bytes": 9208,
+      "selected_stream_sha256": "107cd5f919dadde0c3644613312dd65fad22a29696fdb52304685234f82ca137",
+      "unique_states": 600
+    },
+    {
+      "adjacent_changes": 599,
+      "audit_triple": {
+        "scorer_visibility": {
+          "status": "UNPROVEN",
+          "verdict": "No record-to-RGB receiver or per-DOF scorer-null quotient is present."
+        },
+        "sensitivity_priced_tolerance": {
+          "status": "UNMEASURED",
+          "verdict": "Exact fact parse-back only; no margin/g3-lambda/c1-dual tolerance is applied."
+        },
+        "three_layer_decomposition": {
+          "coder_gain": {
+            "re_key_bytes": 10494,
+            "selected_bytes": 8160,
+            "selected_mode": "track",
+            "track_bytes": 8160
+          },
+          "descriptive_form": "MyCar partition_cell",
+          "inherently_compact_dof_count": null,
+          "status": "INCOMPLETE"
+        }
+      },
+      "available_modes": {
+        "re_key": {
+          "bytes": 10494,
+          "definition": "whole-record absolute arithmetic control",
+          "parseback_exact": true
+        },
+        "static": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "record is not temporally static"
+        },
+        "track": {
+          "bytes": 8160,
+          "definition": "first absolute state plus causal deltas",
+          "parseback_exact": true
+        },
+        "xi_advect": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "no decoder-free xi-to-aggregate-fact transport map or priced side information"
+        }
+      },
+      "row_index": 4,
+      "row_name": "MyCar partition_cell",
+      "selected_exact_mode": "track",
+      "selected_stream_bytes": 8160,
+      "selected_stream_sha256": "c7ecc8c0aa501e4280f652eade73358489b9f712b73674bc34545f68ef61d07f",
+      "unique_states": 600
+    },
+    {
+      "adjacent_changes": 599,
+      "audit_triple": {
+        "scorer_visibility": {
+          "status": "UNPROVEN",
+          "verdict": "No record-to-RGB receiver or per-DOF scorer-null quotient is present."
+        },
+        "sensitivity_priced_tolerance": {
+          "status": "UNMEASURED",
+          "verdict": "Exact fact parse-back only; no margin/g3-lambda/c1-dual tolerance is applied."
+        },
+        "three_layer_decomposition": {
+          "coder_gain": {
+            "re_key_bytes": 7055,
+            "selected_bytes": 7055,
+            "selected_mode": "re_key",
+            "track_bytes": 8213
+          },
+          "descriptive_form": "Road separatrix",
+          "inherently_compact_dof_count": null,
+          "status": "INCOMPLETE"
+        }
+      },
+      "available_modes": {
+        "re_key": {
+          "bytes": 7055,
+          "definition": "whole-record absolute arithmetic control",
+          "parseback_exact": true
+        },
+        "static": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "record is not temporally static"
+        },
+        "track": {
+          "bytes": 8213,
+          "definition": "first absolute state plus causal deltas",
+          "parseback_exact": true
+        },
+        "xi_advect": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "no decoder-free xi-to-aggregate-fact transport map or priced side information"
+        }
+      },
+      "row_index": 5,
+      "row_name": "Road separatrix",
+      "selected_exact_mode": "re_key",
+      "selected_stream_bytes": 7055,
+      "selected_stream_sha256": "0e050d2739180aa433d190a592e7168ef7722aa1cc037d809264d27d72f5b785",
+      "unique_states": 600
+    },
+    {
+      "adjacent_changes": 599,
+      "audit_triple": {
+        "scorer_visibility": {
+          "status": "UNPROVEN",
+          "verdict": "No record-to-RGB receiver or per-DOF scorer-null quotient is present."
+        },
+        "sensitivity_priced_tolerance": {
+          "status": "UNMEASURED",
+          "verdict": "Exact fact parse-back only; no margin/g3-lambda/c1-dual tolerance is applied."
+        },
+        "three_layer_decomposition": {
+          "coder_gain": {
+            "re_key_bytes": 5621,
+            "selected_bytes": 5621,
+            "selected_mode": "re_key",
+            "track_bytes": 7866
+          },
+          "descriptive_form": "Lane separatrix",
+          "inherently_compact_dof_count": null,
+          "status": "INCOMPLETE"
+        }
+      },
+      "available_modes": {
+        "re_key": {
+          "bytes": 5621,
+          "definition": "whole-record absolute arithmetic control",
+          "parseback_exact": true
+        },
+        "static": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "record is not temporally static"
+        },
+        "track": {
+          "bytes": 7866,
+          "definition": "first absolute state plus causal deltas",
+          "parseback_exact": true
+        },
+        "xi_advect": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "no decoder-free xi-to-aggregate-fact transport map or priced side information"
+        }
+      },
+      "row_index": 6,
+      "row_name": "Lane separatrix",
+      "selected_exact_mode": "re_key",
+      "selected_stream_bytes": 5621,
+      "selected_stream_sha256": "7d960b72418b0220d14a602dfc7b633887009304102e28251fa727ccc789bebb",
+      "unique_states": 600
+    },
+    {
+      "adjacent_changes": 599,
+      "audit_triple": {
+        "scorer_visibility": {
+          "status": "UNPROVEN",
+          "verdict": "No record-to-RGB receiver or per-DOF scorer-null quotient is present."
+        },
+        "sensitivity_priced_tolerance": {
+          "status": "UNMEASURED",
+          "verdict": "Exact fact parse-back only; no margin/g3-lambda/c1-dual tolerance is applied."
+        },
+        "three_layer_decomposition": {
+          "coder_gain": {
+            "re_key_bytes": 7033,
+            "selected_bytes": 7033,
+            "selected_mode": "re_key",
+            "track_bytes": 7511
+          },
+          "descriptive_form": "Undrivable separatrix",
+          "inherently_compact_dof_count": null,
+          "status": "INCOMPLETE"
+        }
+      },
+      "available_modes": {
+        "re_key": {
+          "bytes": 7033,
+          "definition": "whole-record absolute arithmetic control",
+          "parseback_exact": true
+        },
+        "static": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "record is not temporally static"
+        },
+        "track": {
+          "bytes": 7511,
+          "definition": "first absolute state plus causal deltas",
+          "parseback_exact": true
+        },
+        "xi_advect": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "no decoder-free xi-to-aggregate-fact transport map or priced side information"
+        }
+      },
+      "row_index": 7,
+      "row_name": "Undrivable separatrix",
+      "selected_exact_mode": "re_key",
+      "selected_stream_bytes": 7033,
+      "selected_stream_sha256": "713b5682543b2df0e0b64859e5b4d603f7318b65c46e383c3467de5769826cb7",
+      "unique_states": 600
+    },
+    {
+      "adjacent_changes": 599,
+      "audit_triple": {
+        "scorer_visibility": {
+          "status": "UNPROVEN",
+          "verdict": "No record-to-RGB receiver or per-DOF scorer-null quotient is present."
+        },
+        "sensitivity_priced_tolerance": {
+          "status": "UNMEASURED",
+          "verdict": "Exact fact parse-back only; no margin/g3-lambda/c1-dual tolerance is applied."
+        },
+        "three_layer_decomposition": {
+          "coder_gain": {
+            "re_key_bytes": 5568,
+            "selected_bytes": 5568,
+            "selected_mode": "re_key",
+            "track_bytes": 7253
+          },
+          "descriptive_form": "Movable separatrix",
+          "inherently_compact_dof_count": null,
+          "status": "INCOMPLETE"
+        }
+      },
+      "available_modes": {
+        "re_key": {
+          "bytes": 5568,
+          "definition": "whole-record absolute arithmetic control",
+          "parseback_exact": true
+        },
+        "static": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "record is not temporally static"
+        },
+        "track": {
+          "bytes": 7253,
+          "definition": "first absolute state plus causal deltas",
+          "parseback_exact": true
+        },
+        "xi_advect": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "no decoder-free xi-to-aggregate-fact transport map or priced side information"
+        }
+      },
+      "row_index": 8,
+      "row_name": "Movable separatrix",
+      "selected_exact_mode": "re_key",
+      "selected_stream_bytes": 5568,
+      "selected_stream_sha256": "47070d388590438a0df3d05659b2fd1e624d74dd2748e83570128f99eae200bd",
+      "unique_states": 600
+    },
+    {
+      "adjacent_changes": 599,
+      "audit_triple": {
+        "scorer_visibility": {
+          "status": "UNPROVEN",
+          "verdict": "No record-to-RGB receiver or per-DOF scorer-null quotient is present."
+        },
+        "sensitivity_priced_tolerance": {
+          "status": "UNMEASURED",
+          "verdict": "Exact fact parse-back only; no margin/g3-lambda/c1-dual tolerance is applied."
+        },
+        "three_layer_decomposition": {
+          "coder_gain": {
+            "re_key_bytes": 6279,
+            "selected_bytes": 6279,
+            "selected_mode": "re_key",
+            "track_bytes": 7040
+          },
+          "descriptive_form": "MyCar separatrix",
+          "inherently_compact_dof_count": null,
+          "status": "INCOMPLETE"
+        }
+      },
+      "available_modes": {
+        "re_key": {
+          "bytes": 6279,
+          "definition": "whole-record absolute arithmetic control",
+          "parseback_exact": true
+        },
+        "static": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "record is not temporally static"
+        },
+        "track": {
+          "bytes": 7040,
+          "definition": "first absolute state plus causal deltas",
+          "parseback_exact": true
+        },
+        "xi_advect": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "no decoder-free xi-to-aggregate-fact transport map or priced side information"
+        }
+      },
+      "row_index": 9,
+      "row_name": "MyCar separatrix",
+      "selected_exact_mode": "re_key",
+      "selected_stream_bytes": 6279,
+      "selected_stream_sha256": "c2df19b3c76bf380fe3d5a4de6823da4d07a5fca6c61d6a9f560ba96be608c4a",
+      "unique_states": 600
+    },
+    {
+      "adjacent_changes": 599,
+      "audit_triple": {
+        "scorer_visibility": {
+          "status": "UNPROVEN",
+          "verdict": "No record-to-RGB receiver or per-DOF scorer-null quotient is present."
+        },
+        "sensitivity_priced_tolerance": {
+          "status": "UNMEASURED",
+          "verdict": "Exact fact parse-back only; no margin/g3-lambda/c1-dual tolerance is applied."
+        },
+        "three_layer_decomposition": {
+          "coder_gain": {
+            "re_key_bytes": 16350,
+            "selected_bytes": 15322,
+            "selected_mode": "track",
+            "track_bytes": 15322
+          },
+          "descriptive_form": "Pose pair_screw",
+          "inherently_compact_dof_count": null,
+          "status": "INCOMPLETE"
+        }
+      },
+      "available_modes": {
+        "re_key": {
+          "bytes": 16350,
+          "definition": "whole-record absolute arithmetic control",
+          "parseback_exact": true
+        },
+        "static": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "record is not temporally static"
+        },
+        "track": {
+          "bytes": 15322,
+          "definition": "first absolute state plus causal deltas",
+          "parseback_exact": true
+        },
+        "xi_advect": {
+          "admissible_exact": false,
+          "bytes": null,
+          "reason": "no decoder-free xi-to-aggregate-fact transport map or priced side information"
+        }
+      },
+      "row_index": 10,
+      "row_name": "Pose pair_screw",
+      "selected_exact_mode": "track",
+      "selected_stream_bytes": 15322,
+      "selected_stream_sha256": "cd6b2fe98f1d4bebebdd1e6c0acf5759d2911c0857404ecf94540c67a30a50c4",
+      "unique_states": 600
+    }
+  ],
+  "schema": "ddm.dr2.scc_outside_view.mode_race.v1",
+  "verdict_scope": "exact frozen SDWL1 fact tensor and favorable measurement framing only; excludes tolerance, scorer-null quotient, RGB receiver, R survival, evaluator output, archive bytes, and contest score"
+}
