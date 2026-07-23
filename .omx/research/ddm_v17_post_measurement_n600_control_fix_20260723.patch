@@ -1,0 +1,75 @@
+diff --git a/tools/probe_ddm_a1_bounded_collateral_realized.py b/tools/probe_ddm_a1_bounded_collateral_realized.py
+--- a/tools/probe_ddm_a1_bounded_collateral_realized.py
++++ b/tools/probe_ddm_a1_bounded_collateral_realized.py
+@@ -817,6 +817,7 @@ def _run_ladder(
+     problem: dict[str, Any],
+     final_iteration: dict[str, Any],
+     v15_receipt: dict[str, Any],
++    v15_n600_receipt: dict[str, Any],
+     n64_config: Any,
+     n64_archive: bytes,
+     n600_config: Any,
+@@ -872,24 +873,13 @@ def _run_ladder(
+         segnet=segnet,
+         posenet=posenet,
+     )
+-    if rung == "n64":
+-        control = _source_control(v15_receipt)
+-    else:
+-        # The v16-bound v15 n600 archive is the byte control; the exact candidate
+-        # measurement carries its own delta-vs-v15 camera accounting.  No
+-        # unbound score row is silently substituted here.
+-        control = {
+-            "archive_bytes": len(n600_archive),
+-            "archive_sha256": _sha256(n600_archive),
+-            "score_row": "BOUND_ARCHIVE_ONLY; exact v15 receipt retained in v16 custody",
+-        }
+-    control_objective = (
+-        float(control["advisory_score_formula_value"])
+-        if control.get("advisory_score_formula_value") is not None
+-        else None
+-    )
++    control = _source_control(v15_receipt if rung == "n64" else v15_n600_receipt)
++    expected_control_sha = _sha256(n64_archive if rung == "n64" else n600_archive)
++    if control["archive_sha256"] != expected_control_sha:
++        raise DirectDescriptionError(f"Probe A {rung} bound-control archive SHA differs")
++    control_objective = float(control["advisory_score_formula_value"])
+     objective = float(measurement["advisory_score_formula_value"])
+-    no_worse = control_objective is None or objective <= control_objective + 1e-12
++    no_worse = objective <= control_objective + 1e-12
+     receipt = {
+         "schema": "ddm_a1_bounded_collateral_realized_ladder.v1",
+         "rung": rung,
+@@ -905,7 +893,7 @@ def _run_ladder(
+         "measurement": measurement,
+         "control": control,
+         "no_worse_than_bound_control": no_worse,
+-        "objective_delta_vs_control": None if control_objective is None else objective - control_objective,
++        "objective_delta_vs_control": objective - control_objective,
+         "exact_byte_accounting": {
+             "nested_base_bytes": len(nested_base),
+             "program_bytes": len(encode_coupled_margin_program(program)),
+@@ -1090,6 +1078,6 @@ def run(
+     v15_receipt, v16_receipt, v16_config = _bindings(config)
+     target = _target_custody(v16_config, root)
+-    n64_receipt, n64_config, n64_archive, _n600_receipt, n600_config, n600_archive = _v15_bindings(v16_config)
++    n64_receipt, n64_config, n64_archive, n600_receipt, n600_config, n600_archive = _v15_bindings(v16_config)
+     bank = receive_carrier_compose_archive(n600_archive).scorer_solved_templates
+     if bank is None:
+         raise DirectDescriptionError("Probe A lost the bound v15 template bank")
+@@ -1142,6 +1130,7 @@ def run(
+             problem=problem,
+             final_iteration=iterations[-1],
+             v15_receipt=v15_receipt,
++            v15_n600_receipt=n600_receipt,
+             n64_config=n64_config,
+             n64_archive=n64_archive,
+             n600_config=n600_config,
+@@ -1165,6 +1154,7 @@ def run(
+             problem=problem,
+             final_iteration=iterations[-1],
+             v15_receipt=v15_receipt,
++            v15_n600_receipt=n600_receipt,
+             n64_config=n64_config,
+             n64_archive=n64_archive,
+             n600_config=n600_config,
