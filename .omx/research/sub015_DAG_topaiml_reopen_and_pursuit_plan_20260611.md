@@ -22445,3 +22445,30 @@ receipt):** the queue text outlived the completed work across compaction; freshn
 receipt before firing) prevented a duplicate ~1h run + observer churn. #582(c) marked RESOLVED-STALE.
 #578-R3 = DONE-NEGATIVE; the composed-candidate path forward runs through menu1's priced compose curve, not
 another M1 firing. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-bigger-gains-audit (2026-07-23, MAIN — operator "gains could be even bigger" comprehensive sweep)
+Verified-arithmetic audit of the recent big-gain results for under-exploitation + naive residue.
+**Verified dominance/reach facts (recomputed from ddm_pt1_paint_mechanism_laws_v1 constants):**
+spectrum arm (186B → 1,034,847 errors) STRICTLY DOMINATED by stats arm (30B → 1,016,725) — same
+pool, never additive; stats-arm error cut 1,631,354 EXCEEDS its attributed BN/SE bucket 1,578,514
+(bucket ids = attribution labels, NOT reach ceilings); residual after the 30B arm = d_seg 0.008619
+= still 7.4× above the #613 box → amplitude alone cannot close, composition is load-bearing.
+**Under-exploited axes of the amplitude family (ranked):**
+1. **POSE TWIN never fired** → arm `ddm_pa1_posenet_amplitude_twin` FIRED (sol/xhigh, $0 n600):
+   PoseNet has the same frozen BN/LS/SE organ class (24 LS2d + 8 BN1d + 1 SE, sn1↔at1
+   cross-validated) and at1x's atlas already holds BN expected-stats tables for BOTH nets; the
+   pose debt was the dominant non-seg term (e2: 40.4/43.5). Null-gap outcome is itself decisive.
+2. **TEMPORAL rung unpriced** (30B affine measured STATIC over n600; lighting drift → per-pair/
+   knotted affine) + **sub-30B rung** (waterfill needs the marginal curve both directions) →
+   routed to menu1 via live inbox (priority=high) with the pool-discipline + pose-collateral-gate
+   additions. menu1's spatial-only locality ladder now carries both.
+3. **Stale-base exposure named**: v19c saturation asymptote 0.0248 (the #366 scope input), m5r
+   reach curves, and c1 swing arithmetic were all measured on amplitude-BIASED paint; menu1 step C
+   joint-remeasure covers menu rows, but the #366 scope + solve reach curves are OUTSIDE menu1 —
+   re-base decision fires on menu1's composed curve (if amplitude survives composition, #366's
+   residual shrinks before the campaign fires; do NOT fire #366 on the stale scope).
+**Naive-residue watch (no action, recorded):** "69,230×" is a marginal at ONE point, not an axis
+slope; three non-comparable "wall" definitions in circulation (pt1x 0.2693 / sn1 0.3444 / mp128)
+— never cross-cite; at1x contraction atlas 592/600 join-owed → organ λ-ranks near-blind until the
+V19 join stage; all pt1/pt1x receipts pose-blind by construction → pose-collateral gate added to
+the R6-CANDIDATE flag. Pointer 0.1910828242 [contest-CPU] UNMOVED.
