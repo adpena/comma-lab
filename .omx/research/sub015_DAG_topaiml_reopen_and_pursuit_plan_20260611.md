@@ -22472,3 +22472,25 @@ slope; three non-comparable "wall" definitions in circulation (pt1x 0.2693 / sn1
 — never cross-cite; at1x contraction atlas 592/600 join-owed → organ λ-ranks near-blind until the
 V19 join stage; all pt1/pt1x receipts pose-blind by construction → pose-collateral gate added to
 the R6-CANDIDATE flag. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-recall-repair (2026-07-23, MAIN — operator "feels like you have forgotten"; verified TRUE, 4 drops repaired)
+1. **m7 record CORRECTED**: verdict = BYTE-CLOSED_CANDIDATE_FOR_MODAL_EXACT_EVAL (177,169 B, sha
+   cb6cf0ba…, advisory S 0.18964681567 = −0.0014360085 vs pointer; d_seg 5.456e-4 · d_pose 2.931e-5
+   · rate 0.11797). Prior tick statements "no byte-closed candidate exists" were WRONG. Disposition:
+   NO Modal dispatch — PR110-lineage (old-lineage ban: harvest/non-submission class) AND dominated by
+   the 0.18804 Modal-exact bank row (0.18965 > 0.18804, same non-submission class); spending envelope
+   on a dominated bank row buys nothing. m7 stands as pipeline-validation signal (relaxed-receiver →
+   real receiver → uint8 → frozen scorers end-to-end) + a rate-term anchor (0.11797 at 177KB).
+2. **e2 pose baseline CORRECTED into pa1**: e2 = BLOCKED compact pose closure (d_pose 162.58 outside
+   tube; "no compact code-to-photometry inverse" = the photometric wall on THIS vehicle) — NOT closed.
+   pa1 inbox directive: baseline restated + post-hoc-dead LAW carried + pre-registered falsifier
+   (small stats gap + unmoved d_pose ⇒ pose-VALUE absence, FORMULATION scope, stop — don't ladder).
+3. **FREE∪NULL∪COUNTED STEP-0 applied to the amplitude family** (was missing): scorer-BN-derived
+   affine targets (at1x closed-form tables, derived from frozen scorer WEIGHTS not video) are
+   candidate rule-118 FREE inflate.py constants → the 30 counted bytes may be 0; GT-fit locality
+   TABLES stay COUNTED. Both arms directed to price the partition on every row (pa1 pose side,
+   menu1 seg side + all menu rows).
+4. **frame_0 seg-free placement** (measured 8.5e-9; e2 already exploits) added to pa1's ladder.
+Structural fix landed: memory `charter_composition_must_regrep_laws_recall_failure_20260723`
+(charters MAIN composes carry the STORES-CONSULTED laws-grep; quote VERDICT tokens verbatim;
+"no X exists" only from same-session grep). Pointer 0.1910828242 [contest-CPU] UNMOVED.
