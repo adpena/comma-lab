@@ -84124,6 +84124,47 @@
       "notes": "Local macOS-CPU frozen-scorer pure-priced receiver solve; score_claim=false; no dispatch; MAIN landing review required.",
       "research_only": true,
       "lane_class": "receiver_realization_research"
+    },
+    {
+      "id": "ddm_v19b_joint_remeasure_stack",
+      "name": "DDM v19b joint remeasurement stack",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/measure_ddm_v19b_joint_remeasure_stack.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v19b_joint_remeasure_stack_20260723T051914Z/ddm_v19b_joint_remeasure_stack_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_v19b_joint_remeasure_stack_20260723_codex.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -84133,5 +84174,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T03:33:03Z"
+  "updated_at": "2026-07-23T06:17:02Z"
 }

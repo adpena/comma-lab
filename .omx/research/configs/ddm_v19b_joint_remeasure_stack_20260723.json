@@ -1,0 +1,18 @@
+{
+  "schema": "DDMV19BJointRemeasureStackConfigV1",
+  "run_id": "ddm_v19b_joint_remeasure_stack_20260723T051914Z",
+  "seed": 1234,
+  "v19_config_path": ".omx/research/configs/ddm_v19_pure_priced_objective_20260723.json",
+  "v19_config_sha256": "61138fa71ce2adb388e619a5773ad49df9f5d83c7637241e5f7b9ee6eed9abed",
+  "v19_receipt_path": ".omx/research/ddm_v19_pure_priced_objective_20260723T041500Z/ddm_v19_pure_priced_objective_receipt.json",
+  "v19_receipt_sha256": "ec6d49b5ba89c352d1c76bbf8e4e1783374a36d61db6aa2262099a59d52294db",
+  "scorer_batch_size": 16,
+  "greedy_order": "forced_405_then_single_step_joint_delta",
+  "post_int8_merge": "add_candidate_delta_then_clip_wire_domain",
+  "grammar_merge": "add_integer_track_translation",
+  "preuint8_merge": "sum_q8_before_one_final_uint8",
+  "memory_ceiling_gib": 116,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false
+}
