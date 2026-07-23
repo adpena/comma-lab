@@ -83715,6 +83715,55 @@
         "decoder_free_physical_bev_custody",
         "new_receiver_prototype"
       ]
+    },
+    {
+      "id": "ddm_v15_grammar_parametrized_scorer_solve",
+      "name": "DDM v15 grammar-parametrized scorer solve",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/direct_description_carrier_compose.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_scorer_solved_templates_n600_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local $0 encode-side constrained RGB template solve extending v14 receiver; advisory score_claim=false; AR1 deferred absent physical BEV custody; MAIN review required.",
+      "lane_class": "receiver_realization_research",
+      "research_only": true,
+      "reactivation_criteria": [
+        "larger_shared_patch",
+        "true_constrained_qp",
+        "joint_predictor_template_training_366",
+        "decoder_free_physical_bev_custody"
+      ]
     }
   ],
   "level_rules": {
@@ -83724,5 +83773,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-22T21:03:38Z"
+  "updated_at": "2026-07-23T00:10:13Z"
 }

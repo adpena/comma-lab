@@ -1,0 +1,69 @@
+{
+  "schema": "ddm_v15_grammar_parametrized_scorer_solve_sha_receipt.v1",
+  "lane_id": "ddm_v15_grammar_parametrized_scorer_solve",
+  "base_git_sha": "ff02bfcd89fd9bf3a9aadcfb1ce25183978dd49f",
+  "files": [
+    {
+      "path": "tools/measure_ddm_v15_scorer_solved_templates.py",
+      "sha256": "a39dad6f79a560f3f7d544593d3aa49e9d68f234d83e9263551d2e277d8456d2"
+    },
+    {
+      "path": "src/tac/optimization/direct_description_carrier_compose.py",
+      "sha256": "1a3622a64b307c8b5a6b1987f8bdb86d9df441d0159a3a420bd9c283d41f0824"
+    },
+    {
+      "path": ".omx/research/configs/ddm_v15_scorer_solved_templates_n64_20260722.json",
+      "sha256": "84dc41ed05456efa58f69f1b16c1cde3ed20a87fe118d61735181e8e5143c6cd"
+    },
+    {
+      "path": ".omx/research/configs/ddm_v15_scorer_solved_templates_n600_20260722.json",
+      "sha256": "626b17a1f8870e32f40388c457af9cf7b80a2ff1e49b5fb81124c902218cfb1b"
+    },
+    {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n64_20260723T011500Z/ddm_v15_scorer_solved_templates_n64_receipt.json",
+      "sha256": "be679f30d913ced637001548e3a8e5d44ec992c64489ce3ee44bc1c4a1849639"
+    },
+    {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n64_20260723T011500Z/ddm_v15_solved_templates_n64.not_a_candidate.zip.receipt-bytes",
+      "sha256": "3fdc74a56fbbc94c8668b4e8093ff856d91e02b4df6bf27135ebc83879f43006"
+    },
+    {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_scorer_solved_templates_n600_receipt.json",
+      "sha256": "5ed6f830b3749a51e0d300a9104fda9a77e86bbeb3b81428a20e1ec0d3dcfcb8"
+    },
+    {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
+    },
+    {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/scorer_solved_templates.ddst",
+      "sha256": "515ecd3cbcee5c13251b283d0448b851883a3d917157fb754fee183531be7cdc"
+    },
+    {
+      "path": "src/tac/canonical_equations/ddm_v15_grammar_parametrized_scorer_solve_20260723.py",
+      "sha256": "1d8171bffcddaa7b598b10bd4af50874900a6296c21827323b65edfa913a9ea3"
+    },
+    {
+      "path": ".omx/research/ddm_v15_grammar_parametrized_scorer_solve_invalidation_20260723.json",
+      "sha256": "76dd0a4bfdc8152d82267f81d3e52adc2f477d3461c51b548f18045b3d616652"
+    },
+    {
+      "path": ".omx/research/ddm_v15_grammar_parametrized_scorer_solve_canonical_equations_20260723.md",
+      "sha256": "e6b3283cf8dc5eaa28f9601a21068df2fa538f1c72b7c2dc79f0487ddf3541e7"
+    },
+    {
+      "path": ".omx/research/ddm_v15_grammar_parametrized_scorer_solve_DAG_FEED_20260723.md",
+      "sha256": "ca65660e23e59e18746ad360d041bf3f0316258edea5f65c4022beb00c55eea3"
+    },
+    {
+      "path": ".omx/research/codex_findings_ddm_v15_grammar_parametrized_scorer_solve_20260723_codex.md",
+      "sha256": "e878110fa3962b7dc87c411058caabfdc540a3040eb28da8fb741d01ab4e5992"
+    }
+  ],
+  "archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+  "archive_bytes": 133941,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

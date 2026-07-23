@@ -1,0 +1,53 @@
+{
+  "schema": "ddm_v15_scorer_solve_invalidation.v1",
+  "lane_id": "ddm_v15_grammar_parametrized_scorer_solve",
+  "authoritative_n64_receipt": {
+    "path": ".omx/research/ddm_v15_scorer_solved_templates_n64_20260723T011500Z/ddm_v15_scorer_solved_templates_n64_receipt.json",
+    "sha256": "be679f30d913ced637001548e3a8e5d44ec992c64489ce3ee44bc1c4a1849639"
+  },
+  "authoritative_n600_receipt": {
+    "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_scorer_solved_templates_n600_receipt.json",
+    "sha256": "5ed6f830b3749a51e0d300a9104fda9a77e86bbeb3b81428a20e1ec0d3dcfcb8"
+  },
+  "invalid_or_superseded": [
+    {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n64_20260722T233000Z/ddm_v15_scorer_solved_templates_n64_receipt.json",
+      "sha256": "0128586da63ad2878ede625ce5c62c539113aaa7a19d5d95a41790b4b2c9f5c4",
+      "disposition": "INVALID_RECEIVER_ORDER",
+      "reason": "templates were applied after all semantic roles and could overwrite later paint owners"
+    },
+    {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n64_20260722T234500Z/ddm_v15_scorer_solved_templates_n64_receipt.json",
+      "sha256": "884aa3847f26263b5a1495719897934f1bfd55c1aeaea831f1ced1f9e1d272ed",
+      "disposition": "INVALID_SOLVER_SUPPORT",
+      "reason": "optimizer support included template cells later overwritten by higher-priority semantic roles"
+    },
+    {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n64_20260723T000000Z/ddm_v15_scorer_solved_templates_n64_receipt.json",
+      "sha256": "8dcdd8918c91b6300d3fa42ab40365aabeeb98be4a007a3babf71221a3d044b6",
+      "disposition": "SUPERSEDED_PRODUCER_CUSTODY",
+      "reason": "scientific row reproduced later, but producer bytes no longer matched the final reviewed source"
+    },
+    {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T001500Z/ddm_v15_scorer_solved_templates_n600_receipt.json",
+      "sha256": "8486f818f8e030c42d18485a1a232cd32e8a1187de54342652f7e9c5d894895c",
+      "disposition": "SUPERSEDED_PRODUCER_CUSTODY",
+      "reason": "scientific row reproduced later, but producer bytes no longer matched the final reviewed source"
+    },
+    {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n64_20260723T004500Z/ddm_v15_scorer_solved_templates_n64_receipt.json",
+      "sha256": "3d6be2dfd15b7752cf47a3b69cf9012b5d35fa08503e49723fb2cc439857ce55",
+      "disposition": "SUPERSEDED_VOLATILE_RECEIPT",
+      "reason": "persisted storage preflight contained live free bytes and an absolute worktree path"
+    },
+    {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T010000Z/ddm_v15_scorer_solved_templates_n600_receipt.json",
+      "sha256": "c92ba93cfe15e9e93c37c43344c2edf72e88bf509572ca176bf30fb3917c6e8b",
+      "disposition": "SUPERSEDED_VOLATILE_RECEIPT",
+      "reason": "persisted storage preflight contained live free bytes and an absolute worktree path"
+    }
+  ],
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

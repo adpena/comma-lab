@@ -16,6 +16,7 @@ from tac.optimization.direct_description_carrier_compose import (
     ARCHIVE_SCHEMA_V3,
     ARCHIVE_SCHEMA_V4,
     ARCHIVE_SCHEMA_V5,
+    ARCHIVE_SCHEMA_V6,
     BOUNDARY_CORRECTION_MEMBER,
     BOUNDARY_SHEARLET_MEMBER,
     EVENT_CORRECTION_MEMBER,
@@ -24,6 +25,7 @@ from tac.optimization.direct_description_carrier_compose import (
     LANE_PROGRAM_MEMBER,
     REALIZATION_PROFILE_MEMBER,
     REALIZATION_STATIC_RULE_MEMBER,
+    SCORER_SOLVED_TEMPLATE_MEMBER,
     WORLDSHEET_G1_MEMBER,
     WORLDSHEET_KNOT_MEMBER,
     WORLDSHEET_TRACK_MEMBER,
@@ -40,8 +42,12 @@ from tac.optimization.direct_description_carrier_compose import (
     MovableWorldsheetKnotV1,
     MovableWorldsheetTrackV1,
     ReceiverRealizationProfileV1,
+    RowBandScorerTemplateV1,
+    ScorerSolvedTemplateBankV1,
     TopologyEventV1,
     compile_carrier_compose_archive,
+    decode_scorer_solved_template_bank,
+    encode_scorer_solved_template_bank,
     parse_carrier_compose_archive,
     prove_carrier_archive_fail_closed,
     receive_carrier_compose_archive,
@@ -666,6 +672,79 @@ def test_v14_counted_realization_profile_places_hard_semantics_at_camera_resolut
     assert ruled.custody["realization_static_rule_id"] == "movable_midband_parametric"
     assert any(row["stratum"] == "receiver_static_cell_rule" for row in recursive_carrier_byte_rows(ruled_archive))
     assert not np.array_equal(camera, ruled.render_camera_pairs((0, 63)))
+
+
+def test_v15_counted_row_band_templates_extend_v14_receiver_without_decode_scorer() -> None:
+    labels = np.zeros((64, 384, 512), dtype=np.int64)
+    labels[:, 24:40, 32:48] = 3
+    payload, _metadata = encode_g1_movable_worldsheet(labels)
+    profile = ReceiverRealizationProfileV1(
+        role_rgb_u8=((0, 153, 0), (11, 3, 9), (51, 255, 204), (107, 0, 114), (63, 72, 63))
+    )
+    bank = ScorerSolvedTemplateBankV1(
+        (
+            RowBandScorerTemplateV1("Lane", "inner_boundary", 0, 384, 1, 2, bytes((5, 6, 7, 8, 9, 10))),
+            RowBandScorerTemplateV1("Movable", "fill", 0, 192, 2, 2, bytes(range(12))),
+            RowBandScorerTemplateV1("Movable", "fill", 192, 384, 1, 1, bytes((200, 20, 80))),
+        )
+    )
+    encoded = encode_scorer_solved_template_bank(bank)
+    assert decode_scorer_solved_template_bank(encoded) == bank
+    v14_archive, _ = compile_carrier_compose_archive(
+        _predictor(), worldsheet_g1_payload=payload, realization_profile=profile
+    )
+    noop_bank = ScorerSolvedTemplateBankV1(
+        (
+            RowBandScorerTemplateV1("Lane", "inner_boundary", 0, 384, 1, 1, bytes((51, 255, 204))),
+            RowBandScorerTemplateV1("Movable", "fill", 0, 384, 1, 1, bytes((107, 0, 114))),
+        )
+    )
+    noop_archive, _ = compile_carrier_compose_archive(
+        _predictor(),
+        worldsheet_g1_payload=payload,
+        realization_profile=profile,
+        scorer_solved_templates=noop_bank,
+    )
+    v14_camera = receive_carrier_compose_archive(v14_archive).render_camera_pairs((0, 63))
+    noop_receiver = receive_carrier_compose_archive(noop_archive)
+    assert np.array_equal(v14_camera, noop_receiver.render_camera_pairs((0, 63)))
+    lane_mask = noop_receiver.template_camera_masks((0, 63), noop_bank.templates[0])
+    patched = v14_camera.copy()
+    for index, mask in enumerate(lane_mask):
+        patched[index, 0, mask] = (51, 255, 204)
+        patched[index, 1, mask] = (51, 255, 204)
+    assert np.array_equal(v14_camera, patched)
+    archive, _homes = compile_carrier_compose_archive(
+        _predictor(),
+        worldsheet_g1_payload=payload,
+        realization_profile=profile,
+        scorer_solved_templates=bank,
+    )
+    members, _parse_homes = parse_carrier_compose_archive(archive)
+    receiver = receive_carrier_compose_archive(archive)
+    manifest = json.loads(members["manifest.json"])
+    assert manifest["schema"] == ARCHIVE_SCHEMA_V6
+    assert members[SCORER_SOLVED_TEMPLATE_MEMBER] == encoded
+    assert manifest["scorer_solved_templates"]["decode_boundary"] == "deterministic_template_tiling_no_scorer"
+    assert receiver.custody["scorer_solved_template_count"] == 3
+    assert receiver.custody["decode_scorer_dependency"] is False
+    assert receiver.custody["pixel_coordinate_or_rgb_patch_present"] is True
+    assert any(
+        row["stratum"] == "encode_side_scorer_solved_shared_templates" for row in recursive_carrier_byte_rows(archive)
+    )
+    assert not np.array_equal(
+        receive_carrier_compose_archive(v14_archive).render_camera_pairs((0, 63)),
+        receiver.render_camera_pairs((0, 63)),
+    )
+    assert receiver.template_camera_masks((0,), bank.templates[1]).shape == (1, 874, 1164)
+
+    with pytest.raises(DirectDescriptionError, match="overlap"):
+        ScorerSolvedTemplateBankV1(
+            (
+                RowBandScorerTemplateV1("Movable", "fill", 0, 200, 1, 1, b"\x00\x00\x00"),
+                RowBandScorerTemplateV1("Movable", "fill", 100, 384, 1, 1, b"\x00\x00\x00"),
+            )
+        )
 
 
 def test_v14_measurement_config_is_full_window_local_only_and_stage_bounded() -> None:
