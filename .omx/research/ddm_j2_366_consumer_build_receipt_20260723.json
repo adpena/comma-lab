@@ -1,0 +1,129 @@
+{
+  "schema": "ddm_j2_366_consumer_build_receipt.v1",
+  "utc": "2026-07-23T01:48:29Z",
+  "lane_id": "ddm_j1_366_joint_descent_ticket",
+  "verdict": "CONSUMER_READY_TICKET_REVALIDATION_OWED",
+  "verdict_scope": "executable typed consumer, exact stage-00 adapter, actual n600-config bounded MLX smoke, memory admission, and crash-resume apparatus; no long-run efficacy, contest-axis, score, or promotion claim",
+  "source_commit": "c5a418a286aeb4b803cf824d21f75c2863a37ab5",
+  "source_custody": {
+    "src/tac/optimization/direct_description_g1_worldsheet.py": "bdc5050aeee4c958d8c1bf47b4c70f5ed192b7fbcc0a8fbb927f03a499a3ab44",
+    "src/tac/optimization/direct_description_joint_descent.py": "898dc1dc4d228e15a66afe47a397c14bcb7039201f006e94c25348fdba461bd9",
+    "tools/launch_ddm_joint_descent.py": "a154d33fd264d3441067ec13b3f2b1e7c4728d825cd3f7280201b28dbe817594"
+  },
+  "compile_custody": {
+    "ticket": ".omx/research/configs/ddm_j1_366_joint_descent_witness_program_20260723.json",
+    "semantic_program_sha256": "68a8aa97b25a6be2f8f08e36fcf4957fe032233e43b1050b75ad13c9d7dad89c",
+    "typed_config_hash": "506bcb345a2e4f44b5991cac2a5ea3aea1b127279c80b3fe59aec71ad5935dfe",
+    "seed": 0,
+    "num_pairs": 600
+  },
+  "stage00": {
+    "archive_bytes": 133941,
+    "archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+    "archive_reemit_byte_identical": true,
+    "camera_replay_byte_identical": true,
+    "inherited_d_seg": 0.027470296224,
+    "inherited_d_seg_provenance": "DERIVED_FROM_EXACT_V15_ARCHIVE_BYTE_IDENTITY_AND_BOUND_RECEIPT",
+    "g1_payload_bytes": 29810,
+    "g1_payload_sha256": "1066081727229e605462e67b8fdd26937d5e3552c13cb66a7444ea3b7360366f",
+    "worldsheet_tracks": 163,
+    "worldsheet_knots": 2197,
+    "worldsheet_shape_templates": 2047,
+    "lane_program_seeds": 6,
+    "lane_seed_archive_bytes": 134211,
+    "lane_seed_archive_sha256": "3d5ab9786cc3d3eedd9a5fd1d878aea8186fbcf450ffcb781862db63ac2ca0cd",
+    "lane_seed_counted_byte_delta": 270,
+    "shared_scorer_templates": 6,
+    "low_dim_parameters": 706
+  },
+  "receiver_ownership": {
+    "island_worldsheet": {
+      "archive_sha256": "9e6f75ad626e3e87ac0de84715b3ac2808aa6d863cfae3f55eac029e1a7b0648",
+      "receiver_camera_changed_values": 378
+    },
+    "lane_program": {
+      "archive_sha256": "9fef5ce767eb8e203f17515ef45f636e2310b36960893c7cb57e03ff81b8c57b",
+      "receiver_camera_changed_values": 65752,
+      "base_range_gate_forward_max_m": 55.0,
+      "complete_seed_counted_before_gradient": true
+    },
+    "shared_template": {
+      "archive_sha256": "374e6acf80579b123bf037d7e5fc8e1b49175c5e69bbd6f096a185bde63bdfbc",
+      "receiver_camera_changed_values": 27702
+    }
+  },
+  "kernel_custody": {
+    "mlx_device": "Device(gpu, 0)",
+    "custom_grouped_backward_active": true,
+    "fused_r_forward_max_abs_delta_vs_numpy_fp32": 0.0,
+    "fused_r_vjp_max_abs_delta_vs_numpy_fp32": 0.0,
+    "fused_r_custom_vjp_max_abs_delta_vs_numpy_fp32": 0.0
+  },
+  "memory_preflight": {
+    "actual_consumer_peak_rss_gib": 3.931182861328125,
+    "free_memory_floor_gib": 87.11822509765625,
+    "projected_peak_gib": 5.931182861328125,
+    "projection_formula": "DERIVED max(measured*1.2+1GiB, measured+2GiB)",
+    "operator_ceiling_gib": 116.0,
+    "admission": true,
+    "receipt_sha256": "ef53a80a16d519cfc6f02e9d6a80f8bac28d9daf5ff1e48d71b56bd1e8cf7ba3"
+  },
+  "bounded_resume_smoke": {
+    "pair_id": 447,
+    "step1": {
+      "d_seg_before": 0.0228118896484375,
+      "d_seg_after": 0.0227762870490551,
+      "pose_mse_before": 38.90690994262695,
+      "pose_mse_after": 38.906776428222656,
+      "checkpoint_sha256": "903aa60046bf81198b322c3aa30bbe3c3cdff37d942542b2d95bc75b70c2b7e2",
+      "forced_process_exit_rc": 23,
+      "kill_boundary_receipt_sha256": "ef5b539661bd0065f8521a9b968034a0f6affefda10dfede1f2fae778b6fd303"
+    },
+    "step2_after_new_process_resume": {
+      "d_seg_before": 0.0227762870490551,
+      "d_seg_after": 0.022705078125,
+      "pose_mse_before": 38.906776428222656,
+      "pose_mse_after": 38.906646728515625,
+      "checkpoint_sha256": "a3a3839646efe05ca07a6473ea0c7e041cfa54da0493eb2d73f9b90693697463",
+      "canonical_resume_registry_restored": true,
+      "checkpoint_parseback_bit_exact": true
+    },
+    "step1_receipt_sha256": "da0497ede76ff1af3e2e691a363a4e17efdab7a1bd109de4d56db6541cd9d653",
+    "step2_receipt_sha256": "5381396e141b23ad371246e125b47936eb0d5b1f309e6c0c50bb6ff86d0a4d95"
+  },
+  "governed_dry_run": {
+    "verdict": "DRY_RUN_GREEN_MAIN_REVIEW_AND_OPERATOR_GO_STILL_REQUIRED",
+    "receipt_sha256": "2c3a3a499fee28e6ef9adeba8bc91d074baef02bca1de57c68afab7c52f9c38d"
+  },
+  "verification": {
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "pytest": "118 passed, 1 skipped",
+    "review_passes": 3
+  },
+  "lane_registry": {
+    "id": "ddm_j1_366_joint_descent_ticket",
+    "level": 2,
+    "gates_marked": [
+      "impl_complete",
+      "real_archive_empirical",
+      "strict_preflight",
+      "three_clean_review",
+      "memory_entry"
+    ],
+    "target_lane_audit": "L2",
+    "global_validate": "PREEXISTING_REPOSITORY_DEBT_110_MISSING_LEGACY_EVIDENCE_PATHS_NOT_INTRODUCED_BY_THIS_LANE"
+  },
+  "external_evidence_root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j2_366_consumer_build_c5a418a286_20260723T014300Z",
+  "remaining_gates": [
+    "MAIN_LANDING_REVIEW_AND_SEALED_TICKET_REVALIDATION",
+    "SEPARATE_OPERATOR_GO_BINDING_EXACT_COMPILED_HASH",
+    "LONG_CAMPAIGN_CONFIG_FRESHNESS_AND_STAGE_SCHEDULE_REVIEW",
+    "CHUNKED_N600_EXACT_STAGE_EXIT_VERDICTS",
+    "CONTEST_CPU_AND_CONTEST_CUDA_BOX_FORK_ONLY_IF_THRESHOLDS_FIRE"
+  ],
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}
