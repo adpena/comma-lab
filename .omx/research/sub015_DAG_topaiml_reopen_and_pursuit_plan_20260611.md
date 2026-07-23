@@ -22141,3 +22141,8 @@ equations=`ddm_costate_organ_elevation2_equations_20260723.md` plus
 `tac.ddm_costate_law`; receipt=`ddm_costate_organ_elevation2_20260723T154610Z/`.
 `research_only=true`; `execution_allowed=false`; `actuation=NONE`; score claim false; pointer
 unmoved; MAIN landing review required.
+
+## FEED-603-dv2-sdwl1-custody (2026-07-23, MAIN — dv2 landed + merged ed196684f7)
+- **MEASURED (SDWL1, n600, verified 17-tests + receipt):** the sentence layer EXISTS and pays: typed-section + causal-delta layout codes the full n600 fact inventory in **68,464 B** vs 521,139 B independent-per-pair baseline (**7.6×**) and 91,903 B whole-absolute monolithic (**1.34×** from temporal causal deltas + typed sectioning). MDL-pruned dimensions each MEASURED (frame indices +938 B · provenance +226 B · event masks +157 B · split topology vocab +11 B — all rejected by the coder, honest per-dimension negatives). Exact parse-back all rows; resume reproduces receipt SHA. Real #557 arithmetic coders + zlib9 outer. verdict_scope: exact declared fact inventory + payload bytes ONLY — not pixels, not witness closure, not score. Directives consumed (exporter-realizable syntax + dominated-if-loses-to-zlib9 admission).
+- **ROUTE:** SDWL1 IS the c1 composed-candidate description-stream format candidate — 68,464 B for the worldsheet/sentence stream fits INSIDE the c1 200,000 B waterfilled budget with room for corrections+pose. Named consumer = ddm_e1 runtime exporter (syntax spec exporter-realizable BY CONSTRUCTION per the inbox directive it honored). Next gap unchanged: receiver REALIZATION (cell-space → RGB through R → scorer) — owed to e1 + the dv1 J_paint duty (organ rank-1).
+- Pointer 0.19108 [contest-CPU] UNMOVED (means; advisory rows only).
