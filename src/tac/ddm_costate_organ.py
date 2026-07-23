@@ -23,7 +23,6 @@ import hashlib
 import json
 import math
 import os
-import statistics
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,8 +34,8 @@ from tac.ddm_costate_law import (
     SCHEDULER_EQUATION_ID,
     ddm_joint_costate,
     gauss_southwell_validity_score,
-    realized_pair_distortion_delta,
 )
+from tac.optimization.scorer_analytic_atlas import build_ddm_lambda_bundle
 
 SCHEMA = "ddm_live_costate_organ.v1"
 CHECKPOINT_SCHEMA = "ddm_live_costate_checkpoint.v1"
@@ -93,17 +92,24 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         "e1",
-        "ddm_e1_*/receipt.json",
-        None,
+        "ddm_e1_runtime_exporter_n600_*/ddm_e1_runtime_export_receipt.json",
+        "ddm_e1_runtime_export_receipt.v1",
         False,
-        "pending producer; consume by schema and hash when it lands",
+        "content-hash valid until E1 packet/exporter inputs change",
+    ),
+    SourceSpec(
+        "e2",
+        "ddm_e2_pose_stream_and_doctrine_export_*/ddm_e2_runtime_export_receipt.json",
+        "ddm_e2_runtime_export_receipt.v1",
+        False,
+        "content-hash valid until E2 packet/exporter inputs change",
     ),
     SourceSpec(
         "dv2",
         "ddm_dv2_*/receipt.json",
-        None,
+        "sdwl1.n600_measurement_receipt.v1",
         False,
-        "pending later producer; consume by schema and hash when it lands",
+        "content-hash valid until SDWL1 inventory, grammar, or source custody changes",
     ),
 )
 
@@ -195,9 +201,9 @@ def _validate_receipt(spec: SourceSpec, path: Path, payload: Mapping[str, Any]) 
         if key in payload and payload.get(key) is not expected:
             raise ValueError(f"{spec.name}: authority firewall drift at {key}")
     run_id = payload.get("run_id")
-    if not isinstance(run_id, str) or not run_id:
+    if spec.required and (not isinstance(run_id, str) or not run_id):
         raise ValueError(f"{spec.name}: receipt has no run_id")
-    if path.parent.name != run_id:
+    if run_id is not None and path.parent.name != run_id:
         raise ValueError(f"{spec.name}: latest-run custody mismatch: directory={path.parent.name!r} receipt={run_id!r}")
     if not path.is_file():
         raise ValueError(f"{spec.name}: source is not a file")
@@ -228,7 +234,12 @@ def discover_sources(repo_root: Path = REPO) -> dict[str, dict[str, Any]]:
             "horizon": spec.horizon,
             "path": str(path.relative_to(repo_root)),
             "sha256": _sha256(path),
-            "run_id": payload.get("run_id"),
+            "run_id": payload.get("run_id") or path.parent.name,
+            "run_id_custody": (
+                "RECEIPT_FIELD"
+                if payload.get("run_id")
+                else "DIRECTORY_ID_PLUS_SCHEMA_AND_CONTENT_HASH"
+            ),
             "schema": payload.get("schema"),
             "payload": payload,
         }
@@ -301,148 +312,6 @@ def _number(value: Any) -> float:
     if not math.isfinite(out):
         raise ValueError("non-finite numeric receipt value")
     return out
-
-
-def _rankdata(values: Sequence[float]) -> list[float]:
-    order = sorted(range(len(values)), key=lambda i: values[i])
-    ranks = [0.0] * len(values)
-    start = 0
-    while start < len(order):
-        end = start + 1
-        while end < len(order) and values[order[end]] == values[order[start]]:
-            end += 1
-        rank = (start + 1 + end) / 2.0
-        for idx in order[start:end]:
-            ranks[idx] = rank
-        start = end
-    return ranks
-
-
-def _pearson(xs: Sequence[float], ys: Sequence[float]) -> float | None:
-    if len(xs) != len(ys) or len(xs) < 2:
-        return None
-    mx, my = statistics.fmean(xs), statistics.fmean(ys)
-    dx = [x - mx for x in xs]
-    dy = [y - my for y in ys]
-    denom = math.sqrt(sum(x * x for x in dx) * sum(y * y for y in dy))
-    return None if denom == 0.0 else sum(x * y for x, y in zip(dx, dy, strict=True)) / denom
-
-
-def _ndcg(predicted: Sequence[float], relevance: Sequence[float], k: int) -> float | None:
-    if not predicted or len(predicted) != len(relevance):
-        return None
-    k = min(k, len(predicted))
-
-    def dcg(order: Iterable[int]) -> float:
-        return sum(relevance[idx] / math.log2(rank + 2.0) for rank, idx in enumerate(list(order)[:k]))
-
-    pred_order = sorted(range(len(predicted)), key=lambda i: predicted[i], reverse=True)
-    ideal_order = sorted(range(len(relevance)), key=lambda i: relevance[i], reverse=True)
-    ideal = dcg(ideal_order)
-    return None if ideal == 0.0 else dcg(pred_order) / ideal
-
-
-def _pair_and_site_costates(
-    *,
-    atlas: Mapping[int, Mapping[str, Any]],
-    v19: Mapping[str, Any],
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
-    pairs: list[dict[str, Any]] = []
-    sites: list[dict[str, Any]] = []
-    for measured in v19["pair_recursion_ledger"]["rows"]:
-        pair_id = int(measured["source_pair_id"])
-        g3 = atlas.get(pair_id)
-        if g3 is None:
-            continue
-        gap = _number(g3["costate_signal"]["lambda_proxy_score_debt"])
-        allocated = _number(g3["allocated_bytes"]["allocated_bytes"])
-        geometry = g3["evaluator_response_geometry"]["joint_cone_summary_diagnostic_only"]
-        visibility = max(0.0, min(1.0, 1.0 - _number(geometry["empty_cone_fraction"])))
-        changed = max(1, int(measured["changed_argmax_cells"]))
-        realizability = max(0.0, min(1.0, int(measured["helpful_flips"]) / changed))
-        delta_s = realized_pair_distortion_delta(
-            d_seg_before=_number(measured["d_seg_before"]),
-            d_seg_after=_number(measured["d_seg_after"]),
-            d_pose_before=_number(measured["d_pose_before"]),
-            d_pose_after=_number(measured["d_pose_after"]),
-        )
-        realized_closure = max(0.0, -delta_s)
-        d2 = min(1.0, realized_closure / gap) if gap > 0.0 else 0.0
-        byte_price = 1.0 / max(allocated, 1.0)
-        pre_d2 = ddm_joint_costate(gap, visibility, realizability, byte_price, 1.0)
-        value = ddm_joint_costate(gap, visibility, realizability, byte_price, d2)
-        pair = {
-            "pair_index": pair_id,
-            "exact_gap": gap,
-            "visibility": visibility,
-            "uint8_realizability": realizability,
-            "allocated_baseline_bytes": allocated,
-            "candidate_shared_bytes": measured.get("per_pair_byte_allocation"),
-            "candidate_shared_byte_status": "OWED_NOT_INVENTED",
-            "byte_price": byte_price,
-            "realized_distortion_delta_s": delta_s,
-            "dual_tolerance_d2": d2,
-            "lambda_pre_d2": pre_d2,
-            "lambda_d2": value,
-            "validity_radius": d2,
-            "validity_kind": "MEASURED_REALIZED_CLOSURE_FRACTION_NOT_UNIVERSAL",
-            "epistemic_status": "MEASURED_PLUS_DERIVED",
-        }
-        pairs.append(pair)
-
-        flips = g3["segmentation"]["class_flip_counts"]
-        total_flips = max(1, sum(int(v) for v in flips.values()))
-        for stratum, row in measured["per_stratum"].items():
-            stratum_gap = gap * int(flips.get(stratum, 0)) / total_flips
-            before = max(1, int(row["errors_before"]))
-            closure = max(0, int(row["errors_before"]) - int(row["errors_after"]))
-            site_realizability = min(1.0, closure / before)
-            sites.append(
-                {
-                    "pair_index": pair_id,
-                    "stratum": stratum,
-                    "exact_gap": stratum_gap,
-                    "visibility": visibility,
-                    "uint8_realizability": site_realizability,
-                    "byte_price": byte_price,
-                    "dual_tolerance_d2": d2,
-                    "lambda_d2": ddm_joint_costate(
-                        stratum_gap,
-                        visibility,
-                        site_realizability,
-                        byte_price,
-                        d2,
-                    ),
-                    "errors_before": int(row["errors_before"]),
-                    "errors_after": int(row["errors_after"]),
-                    "allocation_status": "G3_CLASS_FLIP_SHARE_DERIVED; V19_SHARED_BYTES_UNALLOCATED",
-                }
-            )
-
-    pairs.sort(key=lambda row: row["lambda_d2"], reverse=True)
-    sites.sort(key=lambda row: row["lambda_d2"], reverse=True)
-    predicted = [row["lambda_pre_d2"] for row in pairs]
-    realized = [max(0.0, -row["realized_distortion_delta_s"]) for row in pairs]
-    spearman = _pearson(_rankdata(predicted), _rankdata(realized))
-    return (
-        pairs,
-        sites,
-        {
-            "schema": "ddm_factorized_adjoint_backtest.v1",
-            "n_pairs": len(pairs),
-            "predictor": "g3_gap * g3_usable_support * v19_helpful/changed * 1/g3_allocated_bytes",
-            "target": "positive exact v19 Seg/Pose distortion closure; shared rate bytes excluded",
-            "spearman_rho": spearman,
-            "ndcg_at_4": _ndcg(predicted, realized, 4),
-            "positive_realized_pairs": sum(v > 0.0 for v in realized),
-            "verdict": (
-                "FACTORIZED_ADJOINT_VALID_ON_THIS_EIGHT_PAIR_BACKTEST"
-                if spearman is not None and spearman >= 0.5
-                else "FACTORIZED_ADJOINT_INVALID_OR_UNIDENTIFIABLE"
-            ),
-            "verdict_scope": "INSTANCE:V19_EIGHT_PAIR_EXACT_RECEIVER_REPLAY_X_G3_ATLAS",
-        },
-    )
 
 
 def _block_costates(v19b: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -779,7 +648,14 @@ def build_live_ddm_costate(
             changed = [name for name in changed if prior.get(name) != hashes.get(name)]
             raise ValueError("resume source hashes are stale; re-derive instead of restoring: " + ",".join(changed))
 
-    pairs, sites, backtest = _pair_and_site_costates(atlas=g3_atlas, v19=v19)
+    lambda_bundle = build_ddm_lambda_bundle(
+        atlas=g3_atlas,
+        v19=v19,
+        source_hashes=hashes,
+    )
+    pairs = list(lambda_bundle["pair_rows"])
+    sites = list(lambda_bundle["site_rows"])
+    backtest = dict(lambda_bundle["backtest"])
     blocks = _block_costates(v19b)
     primitives = _primitive_costates(dv1, g4)
     scheduler = _scheduler(dv1, g4, blocks)
@@ -793,7 +669,11 @@ def build_live_ddm_costate(
         if row["measurement"]["candidate_id"] == "persistent_level_set_ground_partition"
     )["measurement"]
     n600 = v19b["n600"]
-    optional_missing = [name for name in ("e1", "dv2") if not sources[name]["available"]]
+    optional_missing = [
+        spec.name
+        for spec in SOURCE_SPECS
+        if not spec.required and not sources[spec.name]["available"]
+    ]
     queue = [
         {
             "producer": name,
@@ -871,6 +751,16 @@ def build_live_ddm_costate(
             "quarantined_20260717_run_consulted": False,
         },
         "lambda": {
+            "producer": lambda_bundle["producer"],
+            "producer_schema": lambda_bundle["schema"],
+            "producer_status": lambda_bundle["status"],
+            "producer_content_sha256": lambda_bundle["content_sha256"],
+            "missing_exact_pair_lambda_count": lambda_bundle[
+                "missing_exact_pair_lambda_count"
+            ],
+            "unconsumed_missing_pairs_counted_inert": lambda_bundle[
+                "unconsumed_missing_pairs_counted_inert"
+            ],
             "law": ("lambda_D2=exact_gap*visibility*uint8_realizability*byte_price*dual_tolerance_D2"),
             "pair_rows": pairs,
             "site_rows": sites,
