@@ -21814,3 +21814,21 @@ verdict_scope: formulation — the generated-vocabulary column-generation FORMUL
 - **ddm_m5r_road_frame1_fresh_solve** (20260723T115443Z, task #649) — kills confound 1: the fresh solve m5 never ran; Road reach curve → #366 true scope + greedy-vs-solve gap.
 
 Pointer honest: **0.1910828242 [contest-CPU] UNMOVED.**
+
+---
+
+## FEED-603-m7-realized-row-borrowed-adjudication (2026-07-23, MAIN, from ddm_m7 rc=0 merged 39b0692f4c)
+
+**THE REALIZED ROW (all-600, 38 ckpts revalidated, [macOS-CPU frozen-scorer advisory], score_claim=false):**
+archive 177,169 B (SHA cb6cf0ba…, roundtrip byte-exact ×3) → **d_seg 5.456e-4 · d_pose 2.931e-5 · S = 0.18965** = below submittable pointer 0.19108 by 0.00144.
+
+**Decomposition:** seg 0.05456 + pose 0.01712 + rate 0.11797. Realization-transfer ratios MEASURED: **d_seg ×3.590 worse, d_pose ×0.288 BETTER** through parse-back→R→uint8→frozen scorers (canonical-equations leg landed on the m7 branch).
+
+**Three adjudications:**
+1. **RETRACTION (MAIN's own composition error, caught by the arm):** the 0.16508 "two-vehicle reconciliation" estimate composed this member's 177KB rate with the exact-C1 solve distortions (1.52e-4/1.02e-4) — but those belonged to the 409MB exact-C1 object, NEVER this member. The FEED-603-m5/m6 arithmetic rows citing 0.16508 are superseded by the REALIZED 0.18965. (The #366-domination conclusion SURVIVES — 0.18965 realized still dominates the correction vehicle's ~2.78.)
+2. **MODAL DISPATCH HELD:** the member is **PR110-LINEAGE** (our solved (600,28) uint8 latent table consumed by the borrowed PR110 decoder/sidecar/DQS1 stack) → NO-FAKE#7 borrowed-substrate class → NON-SUBMISSION per operator standing rule ("borrowed=HARVEST-ONLY") → and it is **DOMINATED by the existing borrowed bank exact row 0.18804** (07-12 Modal, sha 196acd18, PR128-splice-on-PR110). An exact row here moves no pointer and adds no information. Envelope preserved.
+3. **THE SHARP NEW FRAMING:** this member **numerically satisfies the #613 crux box** — d_seg 5.46e-4 ≤ 0.00116, 177KB ≤ ~200KB, pose stream present — **on the borrowed decoder**. The crux is now PURE SUBSTRATE-OWNERSHIP: replace the PR110 decoder with OUR receiver at equal rate/distortion. The named gap is #636 (DDM runtime exporter) + the from-scratch describe line (v19c/m5r feeding it). The realization-transfer law (×3.59 seg) is the calibration every from-scratch candidate must now clear: a from-scratch solve needs solve-d_seg ≤ ~3.2e-4 to realize ≤0.00116.
+
+`verdict_scope: instance — one named PR110-lineage member; the realized row and transfer ratios are member-specific measurements; the transfer LAW's generality across members is the registered open question.`
+
+Pointer honest: **0.1910828242 [contest-CPU] UNMOVED** (submittable) · bank 0.18804 (borrowed, non-submission) unchanged.
