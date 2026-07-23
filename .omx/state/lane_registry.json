@@ -85147,6 +85147,48 @@
       },
       "notes": "v10/DDM local CPU analysis only; optional score-neutral telemetry; no upstream edits, launch, score claim, or pointer write; MAIN landing review required.",
       "research_only": true
+    },
+    {
+      "id": "lane_ddm_pa1_posenet_amplitude_twin_20260723",
+      "name": "DDM PA1 PoseNet amplitude twin",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/measure_ddm_pa1_posenet_amplitude_twin.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_pa1_posenet_amplitude_twin_20260723T221923Z/ddm_pa1_posenet_amplitude_twin_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "tests/test_measure_ddm_pa1_posenet_amplitude_twin.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_pa1_posenet_amplitude_twin_20260723_codex.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local-only n600 [macOS-CPU frozen-scorer advisory] measurement; research_only=true; score_claim=false; no paid/remote/contest eval; MAIN landing review required.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -85156,5 +85198,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T19:36:26Z"
+  "updated_at": "2026-07-23T23:14:07Z"
 }
