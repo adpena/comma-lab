@@ -22072,3 +22072,22 @@ their input-hash sets; cached duals/coders/residual-models hash-verified before 
 #569 freshness/tombstone SLA, drift-detector, config-freshness rc=6, pointer `--strict` — consolidate under
 ONE staleness-aware artifact discipline at the queued consolidation boundary (the basis-conversion + coder +
 version registries are all the SAME registry with freshness columns). Pointer UNMOVED 0.19108.
+
+---
+
+## FEED-603-recursion-order-and-resize-anchoring (2026-07-23, MAIN — operator: "recursion as much as possible at and across all levels, but in the order that is optimal; also remember upstream and the rescaling and resizing")
+
+**RECURSION ORDER IS DERIVED (Law v3 addendum):** three composable rules — (1) **topological** on the
+Jacobian dependency graph (producers first; equivalently: the order minimizing the staleness-invalidation
+cascade — the order law and the staleness law are the SAME law seen from two sides); (2) **coarse-to-fine**
+within levels (persistent/subject mass first — dv1: 283 B carries 79.5%; the proven Morse-Smale persistence
+order from the training line); (3) **largest-marginal-first** among independent blocks (Gauss-Southwell:
+gain ≈ |dual| × validity-radius — the costate-organ ranking IS this rule); byte-freeing blocks (trim, coder
+re-fit) precede byte-spending blocks each cycle.
+
+**RESIZE-ANCHORED SCALES:** the recursion's multiresolution IS the upstream resize chain (render grid →
+bicubic↑ 874×1164 → uint8 → bilinear↓ 512×384; A exact per #391/#580) — (i) description spatial quantum =
+scorer grid/ERF scale, never camera res; (ii) no invented pyramids — the chain's ladder is the native one;
+(iii) per-level edits projected through the exact A kernels so edits align with what survives resampling
+(ker(A) 80.67% never spoken); (iv) uint8 sits between scales → edits are int-lattice-native in-level (#532),
+never rounded at the end. Routed dv2+e1. Pointer UNMOVED 0.19108.
