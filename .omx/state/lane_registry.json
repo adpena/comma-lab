@@ -84166,6 +84166,47 @@
       },
       "notes": "J3 opening regression localized and J4 reform landed; final-source exact bounded n600 smoke BLOCKED_REALIZED_NO_COMPONENT_DESCENT; no campaign launch; score_claim=false; MAIN review required.",
       "research_only": true
+    },
+    {
+      "id": "ddm_v19b_joint_remeasure_stack",
+      "name": "DDM v19b joint remeasurement stack",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/measure_ddm_v19b_joint_remeasure_stack.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v19b_joint_remeasure_stack_20260723T051914Z/ddm_v19b_joint_remeasure_stack_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_v19b_joint_remeasure_stack_20260723_codex.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
