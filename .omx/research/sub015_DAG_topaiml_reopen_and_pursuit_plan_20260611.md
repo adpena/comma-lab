@@ -21971,3 +21971,19 @@ generalized). Alternating minimization on OUR objects (Lloyd/EM over the polytop
 bytes. Deliverable elevated: the **ITERATION CURVE** (described-fraction vs cycle at fixed bytes) is a
 first-class law-object per composition. Sister of #503 recursive-fractal + #629 iterative-realized-trust-region
 (same re-linearize-per-accepted-step physics, applied to the describe line). Pointer UNMOVED 0.19108.
+
+---
+
+## FEED-603-recursion-law-v2-joint (2026-07-23, MAIN — operator: "recursion combined with all of that, necessary inside AND outside the sentence structure and linguistic metaphor")
+
+**RECURSION LAW v2 (supersedes v1's within-language scope):** the recursive process is **JOINT
+block-coordinate descent over the full product object** — (L) language refinement ↔ (D2) tolerance-dual
+re-waterfill ↔ (D1) amplitude/field re-solve ↔ (D4) coder-measure re-fit ↔ (D6) realization re-measure ↔
+(D5) joint interaction remeasure — each block re-solved against the LATEST state of the others, to a JOINT
+fixed point. Two binding refinements over v1: (1) **freed bytes are reinvested GLOBALLY across blocks**
+(the waterfill is one pool, not per-block); (2) **the coder measure goes stale after every language change**
+(the sentence symbol stream ≠ the 600-independent stream — D4 re-fit is mandatory per cycle, and is itself a
+$0 byte source). Deliverable: the JOINT iteration curve (per-block bytes + described-fraction + realized
+proxy vs joint-cycle index). Routed to dv2+e1. This unifies: v1 recursion (within-language) + the
+non-linguistic dimension register + the global waterfill (#157/#536) into ONE fixed-point process — the
+sub-0.15 candidate is the fixed point of THIS iteration, not any single pass. Pointer UNMOVED 0.19108.
