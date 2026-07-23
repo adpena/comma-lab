@@ -1,0 +1,1698 @@
+{
+  "artifacts": {
+    "budget_json": {
+      "bytes": 2116,
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/error_source_budget.json",
+      "sha256": "8165cd44873274f58b290602fc4a1bbbc2a5aca6b638eb25b75f293f70e4b695"
+    },
+    "budget_markdown": {
+      "bytes": 1255,
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/error_source_budget.md",
+      "sha256": "51123fb94fa97910deeec573d7896380b9e988c6a95362cc7619a51cba939e54"
+    },
+    "paint_floor_mechanism_budget": {
+      "bytes": 26083,
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/paint_floor_mechanism_budget.json",
+      "sha256": "a85d882550bebc179944bf12885ee9b7bb545798d01dc46a2f3ed1addb3678dd"
+    },
+    "posenet_analytic_knowledge": {
+      "bytes": 4678411,
+      "compression": "gzip_level_9_mtime_0",
+      "jsonl_bytes": 17716213,
+      "jsonl_sha256": "88b0eef93292e8adb125041a74490325e11a83b0a65c9e03f8d09592781a9326",
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/posenet_analytic_knowledge.jsonl.gz",
+      "row_count": 1,
+      "sha256": "c06c2e2a0818a059189a5ee475014c875a114f0fc95baed3a7992673efcede83"
+    },
+    "posenet_scorer_native_product": {
+      "bytes": 2687473,
+      "compression": "gzip_level_9_mtime_0",
+      "jsonl_bytes": 5938300,
+      "jsonl_sha256": "09c56657fd262a5d8ce60cfea11077de285ba601783a4bf3bba89f47d32bcc93",
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/posenet_scorer_native_product_n600.jsonl.gz",
+      "row_count": 1,
+      "sha256": "5ce7d4ebbe3a239bb8f140cb22eb1a96699d3cf69e2cc56683e5c4bb7187a4dc"
+    },
+    "segnet_analytic_knowledge": {
+      "bytes": 9519240,
+      "compression": "gzip_level_9_mtime_0",
+      "jsonl_bytes": 31239131,
+      "jsonl_sha256": "33acf88ae74f61ce291cc6cbe1bc6af94b5f7f6b6cdaed3d2dfa88b78e31d1ff",
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/segnet_analytic_knowledge.jsonl.gz",
+      "row_count": 1,
+      "sha256": "62974d707bedfb7ab879dfe281d9ff6d9cb43e69d27a65d64799a9008977c787"
+    },
+    "segnet_scorer_native_product": {
+      "bytes": 6193369,
+      "compression": "gzip_level_9_mtime_0",
+      "jsonl_bytes": 13332275,
+      "jsonl_sha256": "154d063b7468a51142a6a54560096604f91c9cd9e89c6205a762a26591096c3a",
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/segnet_scorer_native_product_n600.jsonl.gz",
+      "row_count": 1,
+      "sha256": "596531dc66cf1f72aad69cb11305937263278c8904eff0946c8141c2da9616a1"
+    },
+    "solve_menu": {
+      "bytes": 3831087,
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/error_source_solve_menu.jsonl",
+      "sha256": "0276766b78ec163c8a11dffebf45f2abd8f1d1c1d5a3eb2aca2aa68beca15072"
+    },
+    "stage_checkpoint_cold_store_manifest": {
+      "bytes": 1508,
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/stage_checkpoint_cold_store_manifest.json",
+      "sha256": "09df77c24f4ad5690c0a70165561b02a65c5cd4264b1c17c7fd51983cacc5b91"
+    },
+    "survival_wall_149": {
+      "bytes": 1604,
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/survival_wall_149_n600.json",
+      "sha256": "27dfffa08ac3248cd9a57471c04ecd57512a3d3050c41e577b4d5040a260e6de"
+    },
+    "tensor": {
+      "bytes": 9728402,
+      "compression": "gzip_level_9_mtime_0",
+      "jsonl_bytes": 323057009,
+      "jsonl_sha256": "f7fa2f3409e51a32bcec82487264f98d02ed78a2ca6ac06681d54e393a9e3284",
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/error_source_tensor_n600.jsonl.gz",
+      "row_count": 94575,
+      "sha256": "fee40d634f1093a9ae251b2b35b1e6b1372d57eedc5bd9d6172b5eba152bb4de"
+    },
+    "vocabulary_gap_ranking": {
+      "bytes": 1241,
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/vocabulary_gap_ranking.json",
+      "sha256": "d9f777c4d06c3f8716865c404b3249ffaf235f75bdf58d480956beee75b48586"
+    }
+  },
+  "axis": "[macOS-CPU frozen-SegNet+PoseNet advisory]",
+  "cross_checks": {
+    "e1_authority": "exporter identity and receiver survival cross-check only",
+    "e1_receipt_sha256": "69d19eee47c0435868d806947850d4f6099d9f2be1e35c399795816272fd54ba",
+    "e1_schema": "ddm_e1_runtime_verification_receipt.v1",
+    "g2_aggregate_sha256": "061220fd8c1ca047b210841235fc805194a96175e933ee110ba4ac8bb2077d84",
+    "g2_authority": "class-level energy/byte marginal; no per-cell chart-expressibility claim",
+    "g2_receipt_schema": "solve_diff_mining_receipt.v1",
+    "g2_receipt_sha256": "ada87717b39bc34ad67a3104d652574e544d82938fa3a1ea898acdf624c2bd67",
+    "v14_authority": "historical realization-fidelity cross-check only",
+    "v14_receipt_sha256": "82d3249908d42a86575c407ab3d7acdf9b3706b31225f2e46862b2472966e5a9",
+    "v14_schema": "ddm_v14_realization_fidelity_receipt.v1"
+  },
+  "dv1": {
+    "authority": "semantic-cell reach; RGB realization and Pose are open",
+    "new_joint_section_bytes": 1610,
+    "new_joint_section_sha256": "03897224767612de0dc37c355710252a9eb418ff8a960c6cbd99276fcc4e76b3",
+    "selected_candidate": "spline_plus_events",
+    "spline_metadata": {
+      "horizontal_knots": 33,
+      "horizontal_stride": 16,
+      "pair_count": 600,
+      "temporal_knots": 76,
+      "temporal_stride": 8
+    }
+  },
+  "execution_allowed": false,
+  "finalization": {
+    "command": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "-u",
+      "tools/build_ddm_sn1_error_source_tensor.py",
+      "--config",
+      ".omx/research/configs/ddm_sn1_error_source_tensor_20260723.json",
+      "--finalize-only-from-bundle",
+      "4e5306e70dc6b8dff17d5d8bb30ae14adfa0d2eeb1817e8592484479b01eb973"
+    ],
+    "mode": "COMPLETE_CHECKPOINT_TREE_REFINALIZATION"
+  },
+  "implementation": {
+    "bundle_sha256": "0e618f4ad862a14b0c6158e941f16d1953e589086900d5d49a1316a90f29f8e8",
+    "files": {
+      "amplitude_library": {
+        "bytes": 22155,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/analysis/segnet_amplitude_telemetry.py",
+        "sha256": "9d02fa1d18a90037e56b92e6492b1436d963e663ae5a0b583ebfa3eb3804fc30"
+      },
+      "full_screw_geometry": {
+        "bytes": 32808,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/boundary_math/warp_real_luma_frame0.py",
+        "sha256": "e291a7355eecb542c9146b8a75fc1c3e0e44e003e15fc23d54c5a0b91864a03f"
+      },
+      "full_screw_mapping": {
+        "bytes": 171353,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/optimization/predict_project_receiver.py",
+        "sha256": "94588e0d79339904c9418dbc769e52354a2de525e93b65f317d8570a58045816"
+      },
+      "runner": {
+        "bytes": 94042,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/tools/build_ddm_sn1_error_source_tensor.py",
+        "sha256": "ef31325b29ec2f7d993e8e7410baddbf6b6cfe8d833f14be2e84b7c42f96f2a0"
+      },
+      "scorer_native_diff_library": {
+        "bytes": 47554,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/analysis/scorer_native_diff.py",
+        "sha256": "2abf581e622915061573a5695029d7d484a87942e89d9eb85ee32332b4a3665c"
+      },
+      "tensor_library": {
+        "bytes": 16051,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/analysis/ddm_sn1_error_source_tensor.py",
+        "sha256": "9fe531d344d4bc679fd190e90b3c514b550761c2faa0ec84a8a2247e57aa3c39"
+      }
+    },
+    "schema": "ddm_sn1_error_source_tensor_implementation.v1"
+  },
+  "inverse": {
+    "high_collateral_warning": true,
+    "majority_transition_realized_count": 3,
+    "segment_count": 3
+  },
+  "main_landing_review_required": true,
+  "measurement_implementation": {
+    "bundle_sha256": "4e5306e70dc6b8dff17d5d8bb30ae14adfa0d2eeb1817e8592484479b01eb973",
+    "files": {
+      "amplitude_library": {
+        "bytes": 22155,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/analysis/segnet_amplitude_telemetry.py",
+        "sha256": "9d02fa1d18a90037e56b92e6492b1436d963e663ae5a0b583ebfa3eb3804fc30"
+      },
+      "full_screw_geometry": {
+        "bytes": 32808,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/boundary_math/warp_real_luma_frame0.py",
+        "sha256": "e291a7355eecb542c9146b8a75fc1c3e0e44e003e15fc23d54c5a0b91864a03f"
+      },
+      "full_screw_mapping": {
+        "bytes": 171353,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/optimization/predict_project_receiver.py",
+        "sha256": "94588e0d79339904c9418dbc769e52354a2de525e93b65f317d8570a58045816"
+      },
+      "runner": {
+        "bytes": 91283,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/tools/build_ddm_sn1_error_source_tensor.py",
+        "sha256": "8579d919fbaa167f159701f97b4e72d4404895d2a9212991626d99a3594a5f6d"
+      },
+      "scorer_native_diff_library": {
+        "bytes": 46260,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/analysis/scorer_native_diff.py",
+        "sha256": "843c4e49b7449b2a6f48f696114db2ca54559b2cf0f67736b5faa397ef532c65"
+      },
+      "tensor_library": {
+        "bytes": 16051,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/analysis/ddm_sn1_error_source_tensor.py",
+        "sha256": "9fe531d344d4bc679fd190e90b3c514b550761c2faa0ec84a8a2247e57aa3c39"
+      }
+    },
+    "schema": "ddm_sn1_error_source_tensor_implementation.v1"
+  },
+  "paint_floor_mechanism_budget": {
+    "adjudication_status": "OBSERVABLE_AXIS_ASSOCIATION_NOT_HIDDEN_STATE_CAUSAL_PROOF",
+    "axis": "[macOS-CPU frozen-SegNet+PoseNet advisory]",
+    "described_but_realization_lost": {
+      "COARSE_DESCRIPTION": 587913,
+      "PAINT_FUNCTION": 208623,
+      "TEXTURE_PRIOR_REGION_ERF": 96174
+    },
+    "rows": [
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 37,
+        "global_d_seg": 3.1365288628472223e-07,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 1987,
+        "global_d_seg": 1.6844007703993056e-05,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 8,
+        "global_d_seg": 6.781684027777778e-08,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 1,
+        "global_d_seg": 8.477105034722222e-09,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 227,
+        "global_d_seg": 1.9243028428819446e-06,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 189,
+        "global_d_seg": 1.6021728515625e-06,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 214947,
+        "global_d_seg": 0.0018221282958984376,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 335256,
+        "global_d_seg": 0.0028420003255208333,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 32876,
+        "global_d_seg": 0.00027869330512152776,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 46244,
+        "global_d_seg": 0.00039201524522569447,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 139992,
+        "global_d_seg": 0.0011867268880208332,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 20550,
+        "global_d_seg": 0.00017420450846354166,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 2470,
+        "global_d_seg": 2.093844943576389e-05,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 20680,
+        "global_d_seg": 0.00017530653211805556,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 907,
+        "global_d_seg": 7.688734266493056e-06,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 49839,
+        "global_d_seg": 0.0004224904378255208,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 21471,
+        "global_d_seg": 0.00018201192220052083,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 1386,
+        "global_d_seg": 1.1749267578125e-05,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 1018,
+        "global_d_seg": 8.629692925347223e-06,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 398,
+        "global_d_seg": 3.3738878038194446e-06,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 923,
+        "global_d_seg": 7.824367947048611e-06,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 313,
+        "global_d_seg": 2.6533338758680557e-06,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 373,
+        "global_d_seg": 3.161960177951389e-06,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 43,
+        "global_d_seg": 3.6451551649305557e-07,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 28,
+        "global_d_seg": 2.3735894097222222e-07,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 67,
+        "global_d_seg": 5.679660373263888e-07,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 480,
+        "global_d_seg": 4.069010416666667e-06,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 159823,
+        "global_d_seg": 0.0013548363579644097,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 151863,
+        "global_d_seg": 0.001287358601888021,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 37195,
+        "global_d_seg": 0.00031530592176649304,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 47526,
+        "global_d_seg": 0.0004028828938802083,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 24649,
+        "global_d_seg": 0.00020895216200086806,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 27552,
+        "global_d_seg": 0.00023356119791666667,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 1450,
+        "global_d_seg": 1.2291802300347223e-05,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 1701,
+        "global_d_seg": 1.44195556640625e-05,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 1399,
+        "global_d_seg": 1.185946994357639e-05,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 54857,
+        "global_d_seg": 0.00046502855088975697,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 13235,
+        "global_d_seg": 0.00011219448513454861,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 86405,
+        "global_d_seg": 0.0007324642605251736,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 75601,
+        "global_d_seg": 0.0006408776177300348,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 24473,
+        "global_d_seg": 0.00020746019151475696,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 5607,
+        "global_d_seg": 4.75311279296875e-05,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 2064,
+        "global_d_seg": 1.7496744791666668e-05,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 617,
+        "global_d_seg": 5.230373806423611e-06,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 1971,
+        "global_d_seg": 1.67083740234375e-05,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 2134,
+        "global_d_seg": 1.809014214409722e-05,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 324,
+        "global_d_seg": 2.74658203125e-06,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 94,
+        "global_d_seg": 7.968478732638889e-07,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 17550,
+        "global_d_seg": 0.000148773193359375,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 3646,
+        "global_d_seg": 3.090752495659722e-05,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 27550,
+        "global_d_seg": 0.00023354424370659722,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 1495,
+        "global_d_seg": 1.2673272026909723e-05,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 2,
+        "global_d_seg": 1.6954210069444444e-08,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 221,
+        "global_d_seg": 1.873440212673611e-06,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 13,
+        "global_d_seg": 1.1020236545138888e-07,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 134,
+        "global_d_seg": 1.1359320746527777e-06,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 149,
+        "global_d_seg": 1.2630886501736112e-06,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 23,
+        "global_d_seg": 1.9497341579861112e-07,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 27,
+        "global_d_seg": 2.288818359375e-07,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 1528,
+        "global_d_seg": 1.2953016493055556e-05,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 35740,
+        "global_d_seg": 0.0003029717339409722,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 307819,
+        "global_d_seg": 0.0026094139946831597,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 3284,
+        "global_d_seg": 2.783881293402778e-05,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 24489,
+        "global_d_seg": 0.0002075958251953125,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 31534,
+        "global_d_seg": 0.00026731703016493055,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 7365,
+        "global_d_seg": 6.243387858072917e-05,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 29055,
+        "global_d_seg": 0.00024630228678385415,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 35720,
+        "global_d_seg": 0.0003028021918402778,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 9905,
+        "global_d_seg": 8.396572536892362e-05,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 41467,
+        "global_d_seg": 0.0003515201144748264,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 2280,
+        "global_d_seg": 1.9327799479166666e-05,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 7477,
+        "global_d_seg": 6.338331434461806e-05,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 62233,
+        "global_d_seg": 0.000527555677625868,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 298,
+        "global_d_seg": 2.5261773003472224e-06,
+        "paint_floor_mechanism": "COARSE_DESCRIPTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 150,
+        "global_d_seg": 1.2715657552083333e-06,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 599,
+        "global_d_seg": 5.077785915798611e-06,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "COSTED_6_TO_8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 4,
+        "global_d_seg": 3.390842013888889e-08,
+        "paint_floor_mechanism": "PAINT_FUNCTION",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "ANNULUS_2_TO_5",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 28,
+        "global_d_seg": 2.3735894097222222e-07,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "BOUNDARY_BAND_LE1",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 732,
+        "global_d_seg": 6.205240885416667e-06,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "CONTINUOUS_LANE_CURVE_AVAILABLE",
+        "errors": 32,
+        "global_d_seg": 2.712673611111111e-07,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Undrivable"
+      },
+      {
+        "boundary_distance_band": "INTERIOR_GT8",
+        "curve_availability": "NO_CONTINUOUS_LANE_CURVE",
+        "errors": 12,
+        "global_d_seg": 1.0172526041666667e-07,
+        "paint_floor_mechanism": "TEXTURE_PRIOR_REGION_ERF",
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Undrivable"
+      }
+    ],
+    "schema": "ddm_sn1_paint_floor_mechanism_budget.v1",
+    "score_claim": false,
+    "total_errors": 2265811
+  },
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "research_only": true,
+  "run_id": "ddm_sn1_error_source_tensor_n600_20260723",
+  "schema": "ddm_sn1_error_source_tensor_receipt.v1",
+  "score_claim": false,
+  "scorer_native_telemetry": {
+    "analytic_weight_derived": {
+      "posenet": {
+        "bytes": 4678411,
+        "compression": "gzip_level_9_mtime_0",
+        "jsonl_bytes": 17716213,
+        "jsonl_sha256": "88b0eef93292e8adb125041a74490325e11a83b0a65c9e03f8d09592781a9326",
+        "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/posenet_analytic_knowledge.jsonl.gz",
+        "row_count": 1,
+        "sha256": "c06c2e2a0818a059189a5ee475014c875a114f0fc95baed3a7992673efcede83"
+      },
+      "segnet": {
+        "bytes": 9519240,
+        "compression": "gzip_level_9_mtime_0",
+        "jsonl_bytes": 31239131,
+        "jsonl_sha256": "33acf88ae74f61ce291cc6cbe1bc6af94b5f7f6b6cdaed3d2dfa88b78e31d1ff",
+        "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/segnet_analytic_knowledge.jsonl.gz",
+        "row_count": 1,
+        "sha256": "62974d707bedfb7ab879dfe281d9ff6d9cb43e69d27a65d64799a9008977c787"
+      }
+    },
+    "full_screw_transport": {
+      "pitch_custody": {
+        "categorical_transport": "one_hot_bilinear_then_first_argmax.v1",
+        "estimator": "tac.boundary_math.warp_real_luma_frame0.xi_from_pose_calibration",
+        "g1_cross_pair_proxy_anchor": {
+          "event_fraction_gt4_px": 0.08249694465142526,
+          "measurement_label": "MEASURED external G1 nearest-target-pair proxy custody",
+          "median_of_transition_medians_px": 0.2798490886048264
+        },
+        "g1_receipt_path": ".omx/research/g1_worldsheet_g3_cellcode_measurements_20260720T210000Z.json",
+        "g1_receipt_sha256": "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089",
+        "invalid_projection": "persist_source_cell.v1",
+        "lawref_equation_ids": [
+          "dsl_custodied_scalar_identity_v1:s_r",
+          "dsl_custodied_scalar_identity_v1:s_t"
+        ],
+        "lawref_resolutions": {
+          "s_r": {
+            "equation_id": "dsl_custodied_scalar_identity_v1",
+            "resolved_value": 0.0,
+            "source_path": ".omx/research/g1_worldsheet_g3_cellcode_measurements_20260720T210000Z.json",
+            "source_sha256": "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089"
+          },
+          "s_t": {
+            "equation_id": "dsl_custodied_scalar_identity_v1",
+            "resolved_value": -0.00143,
+            "source_path": ".omx/research/g1_worldsheet_g3_cellcode_measurements_20260720T210000Z.json",
+            "source_sha256": "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089"
+          }
+        },
+        "pitch_custody": {
+          "json_pointer": "g1/transport_assumptions/calibration/pitch_rad",
+          "resolved_value": -0.05,
+          "source_path": ".omx/research/g1_worldsheet_g3_cellcode_measurements_20260720T210000Z.json",
+          "source_sha256": "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089"
+        },
+        "pitch_json_pointer": "g1/transport_assumptions/calibration/pitch_rad",
+        "proxy_limitation": "no exact banked cross-pair target; uses pose[k+1] nearest-target-pair proxy",
+        "relative_motion": "gt_poses_t_nearest_target_pair_proxy_direct_twist.v1",
+        "worldsheet_transport": "tac.boundary_math.warp_real_luma_frame0.warp_frame0_native_numpy"
+      },
+      "pitch_radians": -0.05,
+      "prior_receipt": {
+        "bytes": 6734,
+        "path": "/Users/adpena/Projects/pact/.omx/research/advected_screw6_chartlevel_20260721.json",
+        "sha256": "98ccf6af4a3b482c71e2654353180aac32b99ad85be8647c36046f4591cd4f2a"
+      },
+      "prior_verdict": "N16_TWO_AXIS_GATE_FAIL_STOP_BEFORE_N64",
+      "verdict_scope": "stored-PoseNet full-screw ground-plane proxy; the prior n16 formulation failed its two-axis rate gate, not the family",
+      "xi_custody": {
+        "additional_video_derived_bytes": 0,
+        "all_six_source_coordinates_consumed": true,
+        "decoder_scorer_invocations": 0,
+        "lawref_equation_ids": [
+          "ego_motion_cumulative_se3_bspline_v1",
+          "xi_advected_prior_per_class_chart_reconciliation_v1",
+          "lane_band_ego_factorization_source_reparam_v1",
+          "lane_band_source_reparam_measured_resolution_v1"
+        ],
+        "mapping": "xi=log_se3(make_T(exp_so3(s_r*[pose3,pose4,pose5]),s_t*[pose2,pose1,pose0]))",
+        "pair_range": [
+          0,
+          600
+        ],
+        "pitch_rad_ground_geometry": -0.05,
+        "rotation_scale": 1.0,
+        "schema": "predict_project_counted_full_screw_xi.v1",
+        "source_coordinate_order": [
+          "forward",
+          "lateral",
+          "vertical",
+          "rot0",
+          "rot1",
+          "rot2"
+        ],
+        "source_nonzero_count_by_coordinate": [
+          600,
+          600,
+          600,
+          600,
+          600,
+          600
+        ],
+        "source_section": "gt_n600.gt_poses already-counted six-coordinate pose sidecar",
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+        "translation_first": true,
+        "translation_scale": 0.16,
+        "xi_coordinate_order": [
+          "rho_x",
+          "rho_y",
+          "rho_z",
+          "omega_x",
+          "omega_y",
+          "omega_z"
+        ],
+        "xi_nonzero_count_by_coordinate": [
+          600,
+          600,
+          600,
+          600,
+          600,
+          600
+        ]
+      }
+    },
+    "posenet": {
+      "batchnorm_peak": {
+        "gt_group": "gt_pair",
+        "gt_running_mean_z_rms": 9.050184370893074e-05,
+        "layer": "summarizer.2.block_b.5.bn",
+        "log_variance_rms": 1.2673895082273638,
+        "mean_rms": 3.690342539592233,
+        "painted_group": "painted_pair",
+        "painted_running_mean_z_rms": 0.10642571741028105
+      },
+      "causal_status": "MEASURED_SCORER_NATIVE_ASSOCIATION_AND_DIRECTIONAL_SECANT; NO_INTERMEDIATE_HEAD_PULLBACK_OR_FULL_JACOBIAN_CUSTODY",
+      "directional_expansion_peak": {
+        "gap_rms": 9.101661967369807,
+        "layer": "hydra.final_layer.pose",
+        "local_expansion_vs_previous_relay": 35.65230479836784,
+        "status": "MEASURED_TRAJECTORY_SECANT_NOT_FULL_JACOBIAN_CONDITION_NUMBER"
+      },
+      "divergence_onset": {
+        "layer": "vision.stem",
+        "rms": 1.117907745157711,
+        "threshold": 0.9101661967369807
+      },
+      "divergence_peak": {
+        "frequency_energy": null,
+        "geometry_residual_fraction": 0.0,
+        "layer": "hydra.final_layer.pose",
+        "rms": 9.101661967369807,
+        "uniform_shift_fraction": 1.0
+      },
+      "full_artifact": {
+        "bytes": 2687473,
+        "compression": "gzip_level_9_mtime_0",
+        "jsonl_bytes": 5938300,
+        "jsonl_sha256": "09c56657fd262a5d8ce60cfea11077de285ba601783a4bf3bba89f47d32bcc93",
+        "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/posenet_scorer_native_product_n600.jsonl.gz",
+        "row_count": 1,
+        "sha256": "5ce7d4ebbe3a239bb8f140cb22eb1a96699d3cf69e2cc56683e5c4bb7187a4dc"
+      },
+      "layer_scale_peak": {
+        "gt_group": "gt_pair",
+        "layer": "vision.stages.3.blocks.1.layer_scale",
+        "log_variance_rms": 2.193979918215984,
+        "mean_rms": 0.8972970676941759,
+        "painted_group": "painted_pair"
+      },
+      "limitations": {
+        "intermediate_fisher": "NO_INTERMEDIATE_HEAD_PULLBACK_CUSTODY; final decision surface only, no fabricated per-layer Fisher weight",
+        "jacobian": "directional secants measured; full singular spectrum not claimed",
+        "spatial": "joint channel x pooled-spatial energy retained; raw full-video feature tensors deliberately not persisted"
+      },
+      "pair_count": 600,
+      "primary_contrast": "painted_pair_vs_gt_pair",
+      "product_axes": {
+        "across_frame": "painted and GT temporal contrasts",
+        "across_pair": "channel-mean trajectory stationarity",
+        "channel": "exact channel moments and contrast energy",
+        "clip": "n-pair aggregate plus temporal spectrum",
+        "frequency": [
+          "LOW_0_TO_1_16",
+          "MIDLOW_1_16_TO_1_8",
+          "MIDHIGH_1_8_TO_1_4",
+          "HIGH_1_4_TO_CORNER"
+        ],
+        "layer": "every declared relay",
+        "spatial": "8x8 pooled native-feature energy grid",
+        "within_frame": "painted-vs-GT contrasts",
+        "xi_advected": "NOT_REQUESTED"
+      },
+      "relay_ranking_top5": [
+        {
+          "downstream_directional_secant_product": 91.5890975865646,
+          "gap_relative_to_downstream_product": 0.0006070963406824651,
+          "gt_trajectory_stable_rank": 3.235338793029155,
+          "interpretation": "higher favors low-rank, forgiving relay; advisory directional selector only",
+          "layer": "vision.head",
+          "rank": 1,
+          "relay_score": 509.12288590294634
+        },
+        {
+          "downstream_directional_secant_product": 163.68892885461395,
+          "gap_relative_to_downstream_product": 0.0031705143513876374,
+          "gt_trajectory_stable_rank": 2.266579092590594,
+          "interpretation": "higher favors low-rank, forgiving relay; advisory directional selector only",
+          "layer": "summarizer",
+          "rank": 2,
+          "relay_score": 139.15518665953243
+        },
+        {
+          "downstream_directional_secant_product": 50.153675659659655,
+          "gap_relative_to_downstream_product": 0.004447525967106982,
+          "gt_trajectory_stable_rank": 4.35671954513995,
+          "interpretation": "higher favors low-rank, forgiving relay; advisory directional selector only",
+          "layer": "vision.stages.2.blocks.1",
+          "rank": 3,
+          "relay_score": 51.608579270147935
+        },
+        {
+          "downstream_directional_secant_product": 40.80369028350686,
+          "gap_relative_to_downstream_product": 0.006259541554926518,
+          "gt_trajectory_stable_rank": 4.051503666665897,
+          "interpretation": "higher favors low-rank, forgiving relay; advisory directional selector only",
+          "layer": "vision.stages.2.blocks.2",
+          "rank": 4,
+          "relay_score": 39.43131283451745
+        },
+        {
+          "downstream_directional_secant_product": 35.635161598478476,
+          "gap_relative_to_downstream_product": 0.008895352126402519,
+          "gt_trajectory_stable_rank": 3.745695243348187,
+          "interpretation": "higher favors low-rank, forgiving relay; advisory directional selector only",
+          "layer": "vision.stages.2.blocks.3",
+          "rank": 5,
+          "relay_score": 30.012655003056704
+        }
+      ],
+      "schema": "scorer_native_diff.v1",
+      "scorer": "posenet",
+      "se_gate_peak": {
+        "gt_group": "gt_pair",
+        "layer": "vision.final_conv.se.gate",
+        "log_variance_rms": 4.936739368290609,
+        "mean_rms": 0.2054533085806211,
+        "painted_group": "painted_pair"
+      },
+      "xi_advected_transport_peak": null
+    },
+    "posenet_first_six": {
+      "axis": "[macOS-CPU frozen-SegNet+PoseNet advisory]",
+      "batch_geometry": "painted and GT pairs concatenated within each configured telemetry microbatch",
+      "coordinate_count": 3600,
+      "d_pose_first_six_mse": 163.06120732858346,
+      "gt_cache_replay_max_abs": 1.1444091796875e-05,
+      "painted_vs_gt_sse": 587020.3463829005,
+      "pair_count": 600,
+      "score_claim": false
+    },
+    "segnet": {
+      "batchnorm_peak": {
+        "gt_group": "gt_f1",
+        "gt_running_mean_z_rms": 0.6963932588367626,
+        "layer": "encoder.model.bn1",
+        "log_variance_rms": 0.9892206214991585,
+        "mean_rms": 19.15538563057536,
+        "painted_group": "painted_f1",
+        "painted_running_mean_z_rms": 0.617315968450692
+      },
+      "causal_status": "MEASURED_SCORER_NATIVE_ASSOCIATION_AND_DIRECTIONAL_SECANT; NO_INTERMEDIATE_HEAD_PULLBACK_OR_FULL_JACOBIAN_CUSTODY",
+      "directional_expansion_peak": {
+        "gap_rms": 1.7439094926199048,
+        "layer": "segmentation_head",
+        "local_expansion_vs_previous_relay": 5.88310527744157,
+        "status": "MEASURED_TRAJECTORY_SECANT_NOT_FULL_JACOBIAN_CONDITION_NUMBER"
+      },
+      "divergence_onset": {
+        "layer": "encoder.model.conv_stem",
+        "rms": 111.34705997872587,
+        "threshold": 11.134705997872587
+      },
+      "divergence_peak": {
+        "frequency_energy": {
+          "HIGH_1_4_TO_CORNER": 8601797214.087557,
+          "LOW_0_TO_1_16": 86511479906.33517,
+          "MIDHIGH_1_8_TO_1_4": 12256118552.909184,
+          "MIDLOW_1_16_TO_1_8": 86473693573.23798
+        },
+        "geometry_residual_fraction": 0.967246720836608,
+        "layer": "encoder.model.conv_stem",
+        "rms": 111.34705997872587,
+        "uniform_shift_fraction": 0.03275327916339188
+      },
+      "full_artifact": {
+        "bytes": 6193369,
+        "compression": "gzip_level_9_mtime_0",
+        "jsonl_bytes": 13332275,
+        "jsonl_sha256": "154d063b7468a51142a6a54560096604f91c9cd9e89c6205a762a26591096c3a",
+        "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/segnet_scorer_native_product_n600.jsonl.gz",
+        "row_count": 1,
+        "sha256": "596531dc66cf1f72aad69cb11305937263278c8904eff0946c8141c2da9616a1"
+      },
+      "layer_scale_peak": null,
+      "limitations": {
+        "intermediate_fisher": "NO_INTERMEDIATE_HEAD_PULLBACK_CUSTODY; final decision surface only, no fabricated per-layer Fisher weight",
+        "jacobian": "directional secants measured; full singular spectrum not claimed",
+        "spatial": "joint channel x pooled-spatial energy retained; raw full-video feature tensors deliberately not persisted"
+      },
+      "pair_count": 600,
+      "primary_contrast": "painted_f1_vs_gt_f1",
+      "product_axes": {
+        "across_frame": "painted and GT temporal contrasts",
+        "across_pair": "channel-mean trajectory stationarity",
+        "channel": "exact channel moments and contrast energy",
+        "clip": "n-pair aggregate plus temporal spectrum",
+        "frequency": [
+          "LOW_0_TO_1_16",
+          "MIDLOW_1_16_TO_1_8",
+          "MIDHIGH_1_8_TO_1_4",
+          "HIGH_1_4_TO_CORNER"
+        ],
+        "layer": "every declared relay",
+        "spatial": "8x8 pooled native-feature energy grid",
+        "within_frame": "painted-vs-GT contrasts",
+        "xi_advected": "GROUND_HOMOGRAPHY_PROXY"
+      },
+      "relay_ranking_top5": [
+        {
+          "downstream_directional_secant_product": 6.537004460062466,
+          "gap_relative_to_downstream_product": 0.04534595370426979,
+          "gt_trajectory_stable_rank": 1.9821679216163106,
+          "interpretation": "higher favors low-rank, forgiving relay; advisory directional selector only",
+          "layer": "decoder.blocks.4",
+          "rank": 1,
+          "relay_score": 11.125537867068847
+        },
+        {
+          "downstream_directional_secant_product": 3.9903359058127377,
+          "gap_relative_to_downstream_product": 0.06685527881489839,
+          "gt_trajectory_stable_rank": 1.4383242660266058,
+          "interpretation": "higher favors low-rank, forgiving relay; advisory directional selector only",
+          "layer": "decoder.blocks.3",
+          "rank": 2,
+          "relay_score": 10.399380963880041
+        },
+        {
+          "downstream_directional_secant_product": 2.929769067774581,
+          "gap_relative_to_downstream_product": 0.1491698648193033,
+          "gt_trajectory_stable_rank": 2.1361693917691946,
+          "interpretation": "higher favors low-rank, forgiving relay; advisory directional selector only",
+          "layer": "decoder.blocks.2",
+          "rank": 3,
+          "relay_score": 3.1382187717536243
+        },
+        {
+          "downstream_directional_secant_product": 5.88310527744157,
+          "gap_relative_to_downstream_product": 0.2964267016105977,
+          "gt_trajectory_stable_rank": 1.7462302877947427,
+          "interpretation": "higher favors low-rank, forgiving relay; advisory directional selector only",
+          "layer": "segmentation_head",
+          "rank": 4,
+          "relay_score": 1.9318845166119547
+        },
+        {
+          "downstream_directional_secant_product": 2.755796926976561,
+          "gap_relative_to_downstream_product": 0.2159948223422781,
+          "gt_trajectory_stable_rank": 4.455227032161749,
+          "interpretation": "higher favors low-rank, forgiving relay; advisory directional selector only",
+          "layer": "decoder.blocks.1",
+          "rank": 5,
+          "relay_score": 1.039170523531658
+        }
+      ],
+      "schema": "scorer_native_diff.v1",
+      "scorer": "segnet",
+      "se_gate_peak": {
+        "gt_group": "gt_f1",
+        "layer": "encoder.model.blocks.4.1.se.gate",
+        "log_variance_rms": 2.3153427245848834,
+        "mean_rms": 0.204972352176972,
+        "painted_group": "painted_f1"
+      },
+      "xi_advected_transport_peak": {
+        "element_count": 943718400,
+        "layer": "encoder.model.conv_stem",
+        "rms": 67.58499334103823,
+        "total_sse": 4310652097572.229,
+        "transport": "stored-PoseNet full-screw ground-homography proxy, scaled to layer grid",
+        "valid_projection_fraction_mean": 0.6408037312825521,
+        "verdict_scope": "stored-PoseNet full-screw one-ground-plane proxy; prior n16 formulation failed rate gate, family remains open"
+      }
+    }
+  },
+  "source_budget": {
+    "axis": "[macOS-CPU frozen-SegNet+PoseNet advisory]",
+    "expected_endpoint": 2265811,
+    "global_d_seg": 0.019207517835828993,
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "rows": [
+      {
+        "conditional_error_rate": 0.03229943132142005,
+        "errors": 885232,
+        "global_d_seg": 0.007504204644097222,
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Road"
+      },
+      {
+        "conditional_error_rate": 8.609343481322338e-05,
+        "errors": 5029,
+        "global_d_seg": 4.263136121961806e-05,
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "Undrivable"
+      },
+      {
+        "conditional_error_rate": 8.16509998880091e-05,
+        "errors": 2449,
+        "global_d_seg": 2.076043023003472e-05,
+        "source": "DESCRIBED_BUT_REALIZATION_LOST",
+        "stratum": "MyCar"
+      },
+      {
+        "conditional_error_rate": 0.01901883187265056,
+        "errors": 521250,
+        "global_d_seg": 0.004418690999348958,
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Road"
+      },
+      {
+        "conditional_error_rate": 0.0037121694978920973,
+        "errors": 216840,
+        "global_d_seg": 0.0018381754557291667,
+        "source": "NEVER_DESCRIBED",
+        "stratum": "Undrivable"
+      },
+      {
+        "conditional_error_rate": 0.0,
+        "errors": 0,
+        "global_d_seg": 0.0,
+        "source": "NEVER_DESCRIBED",
+        "stratum": "MyCar"
+      },
+      {
+        "conditional_error_rate": 0.019289127328789832,
+        "errors": 528658,
+        "global_d_seg": 0.004481489393446181,
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Road"
+      },
+      {
+        "conditional_error_rate": 0.0012251494655812947,
+        "errors": 71565,
+        "global_d_seg": 0.0006066640218098958,
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "Undrivable"
+      },
+      {
+        "conditional_error_rate": 0.001159850953084549,
+        "errors": 34788,
+        "global_d_seg": 0.0002949015299479167,
+        "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+        "stratum": "MyCar"
+      }
+    ],
+    "schema": "ddm_sn1_error_source_budget.v1",
+    "score_claim": false,
+    "total_errors": 2265811
+  },
+  "source_custody": {
+    "advected_screw6_receipt_path": {
+      "bytes": 6734,
+      "path": "/Users/adpena/Projects/pact/.omx/research/advected_screw6_chartlevel_20260721.json",
+      "sha256": "98ccf6af4a3b482c71e2654353180aac32b99ad85be8647c36046f4591cd4f2a"
+    },
+    "dv1_receipt_path": {
+      "bytes": 17710,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/receipt.json",
+      "sha256": "e0c875346978f8768eedf96793bcff2fb472a37eba4ebbcec7254d107fc00333"
+    },
+    "dv1_selected_payload_path": {
+      "bytes": 1610,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/payloads/selected_joint_ground_vocabulary.dv1",
+      "sha256": "03897224767612de0dc37c355710252a9eb418ff8a960c6cbd99276fcc4e76b3"
+    },
+    "dv1_summary_path": {
+      "bytes": 29724,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/summary.json",
+      "sha256": "5ea75c1495fdcb37852c3e308d87156645b81e2d8554a56e8988a21548fde581"
+    },
+    "e1_receipt_path": {
+      "bytes": 10654,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_e1_runtime_exporter_n600_20260723/ddm_e1_runtime_verification_receipt.json",
+      "sha256": "69d19eee47c0435868d806947850d4f6099d9f2be1e35c399795816272fd54ba"
+    },
+    "g2_aggregate_path": {
+      "bytes": 8079,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_g2_solve_diff_op_mining_n600_20260722T194000Z/aggregate_ledger.json",
+      "sha256": "061220fd8c1ca047b210841235fc805194a96175e933ee110ba4ac8bb2077d84"
+    },
+    "g2_receipt_path": {
+      "bytes": 10192,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_g2_solve_diff_op_mining_n600_20260722T194000Z/receipt.json",
+      "sha256": "ada87717b39bc34ad67a3104d652574e544d82938fa3a1ea898acdf624c2bd67"
+    },
+    "g3_atlas_path": {
+      "bytes": 9121001,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_n600.jsonl",
+      "sha256": "faaff7299d86aa49c97e25e9cce2eeb0201f64e919f110015d31708788bcec09"
+    },
+    "g4_arrays_path": {
+      "bytes": 396209,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g4_spatial_stationarity_n600_20260722T212138Z/stage_checkpoints/01_recurrence_arrays.npz",
+      "sha256": "dbc85e7a4f593ab9b7a7f4ed017dbb63a064cb681df806d0bb93277ae8f42451"
+    },
+    "inverse_receipt_path": {
+      "bytes": 5194,
+      "path": ".omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/inverse_solve_three_segments_receipt.json",
+      "sha256": "2703260c297b4f9a7cf7e09552cfbad2745cbae69c22ea4551e27c526961d945"
+    },
+    "posenet_weights_path": {
+      "bytes": 55835560,
+      "path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+      "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+    },
+    "segnet_weights_path": {
+      "bytes": 38502892,
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "sided_tolerance_path": {
+      "bytes": 68517,
+      "path": ".omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/sdwl1_sided_tolerance_n600.jsonl",
+      "sha256": "be4179a1737f9fcc7651d763d747bc75cc0702f3def16920ce58d2b193015d02"
+    },
+    "survival_wall_149_path": {
+      "bytes": 23333,
+      "path": ".omx/research/curve_core_dseg_feasibility_gate_20260619T010157Z.json",
+      "sha256": "10d93a76275526839e5a4e8037ebeba63acb4acd7eec53769e8ee236565d2cbc"
+    },
+    "target_cache_path": {
+      "bytes": 5078017610,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "upstream_modules_path": {
+      "bytes": 8322,
+      "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    },
+    "v14_receipt_path": {
+      "bytes": 174966,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z/ddm_v14_realization_fidelity_n600_receipt.json",
+      "sha256": "82d3249908d42a86575c407ab3d7acdf9b3706b31225f2e46862b2472966e5a9"
+    },
+    "v19c_final_archive_path": {
+      "bytes": 137827,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_v19c_correction_saturation_20260723T063500Z/ddm_v19c_final_n600.zip.receipt-bytes",
+      "sha256": "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9"
+    },
+    "v19c_receipt_path": {
+      "bytes": 107787,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_v19c_correction_saturation_20260723T063500Z/ddm_v19c_correction_saturation_receipt.json",
+      "sha256": "506fb1dfed849beb06358d3a30d624fa8cbdad3c6e0da6cf1bf1ec14960472ae"
+    },
+    "v19c_strict_batch_directory": {
+      "batch_count": 38,
+      "digest_chain_sha256": "3efcc943769209a5393ee03ee59b80d4287b689d16f03dfcc29589f52ded6cc3",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_v19c_correction_saturation_20260723T063500Z/stage_checkpoints/02_n600_final_strict_replay"
+    }
+  },
+  "source_totals": {
+    "DESCRIBED_BUT_REALIZATION_LOST": 892710,
+    "NEVER_DESCRIBED": 738090,
+    "STRUCTURALLY_HARD_IRREDUCIBLE": 635011
+  },
+  "stage_checkpoint_cold_store": {
+    "bytes": 5115498029,
+    "cold_store_destination": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_n600_20260723/stage_checkpoints_8e33d8a2a38d332c_4e5306e70dc6b8df",
+    "command": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "-u",
+      "tools/build_ddm_sn1_error_source_tensor.py",
+      "--config",
+      ".omx/research/configs/ddm_sn1_error_source_tensor_20260723.json"
+    ],
+    "false_authority_flags": {
+      "pointer_moved": false,
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    "file_count": 153,
+    "implementation_bundle_sha256": "4e5306e70dc6b8dff17d5d8bb30ae14adfa0d2eeb1817e8592484479b01eb973",
+    "manifest_artifact": {
+      "bytes": 1508,
+      "path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/stage_checkpoint_cold_store_manifest.json",
+      "sha256": "09df77c24f4ad5690c0a70165561b02a65c5cd4264b1c17c7fd51983cacc5b91"
+    },
+    "move_policy": "LOSSLESS_SSD_MOVE_WITH_ORIGINAL_PATH_SYMLINK",
+    "original_path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/stage_checkpoints",
+    "reason": "Preserve all crash-resume and per-stage measurement checkpoints without leaving 4+ GiB of rebuildable bulk on the source tier.",
+    "rebuildable": true,
+    "schema": "ddm_sn1_stage_checkpoint_cold_store.v1",
+    "source_archive_sha256": "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9",
+    "target_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "tree_hash_contract": "sha256 of concatenated sorted '<file_sha256>  <relative_path>\\n' records over regular files",
+    "tree_sha256": "d477c65b1c6f80d5bf18fdf2f61c3c1795398f9b4dc606709c6b0722ce60c746",
+    "typed_config_sha256": "8e33d8a2a38d332cfd49b8c4bb29f05bae4a0b853bf7d6fa0d40f3f1ee0f1d7a"
+  },
+  "storage_preflight": {
+    "cleanup": "Tensor and resumable batch JSONL are atomically emitted as deterministic gzip; bulky stage checkpoints are written directly to the selected SSD scratch tier through a source-path symlink and certified at finalization.",
+    "large_artifact_policy": "CERTIFY_OR_BLOCK",
+    "observed_free_bytes": 580543279104,
+    "required_free_bytes": 8589934592,
+    "scratch_directory": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_n600_20260723",
+    "selected_root": "/Volumes/VertigoDataTier/pact",
+    "status": "PASS"
+  },
+  "survival_wall_149": {
+    "axis": "[macOS-CPU frozen-SegNet+PoseNet advisory]",
+    "boundary_definition": "two-sided 4-neighbour target-label boundary followed by one binary-dilation iteration",
+    "comparability": "same boundary-band/error-fraction formula; different receiver and 600-frame versus three-frame scope",
+    "current_minus_prior_fraction": 0.18379609919424744,
+    "current_over_prior_ratio": 2.1444622981111303,
+    "current_v19c_n600": {
+      "all_classes": {
+        "error_fraction": 0.34439212712596035,
+        "errors": 1613214,
+        "sites": 4684236
+      },
+      "by_target_class": {
+        "Lane": {
+          "error_fraction": 0.4356727829935518,
+          "errors": 280057,
+          "sites": 642815
+        },
+        "Movable": {
+          "error_fraction": 0.4038299935956999,
+          "errors": 109087,
+          "sites": 270131
+        },
+        "MyCar": {
+          "error_fraction": 0.048935354795125625,
+          "errors": 30134,
+          "sites": 615792
+        },
+        "Road": {
+          "error_fraction": 0.42065006647240794,
+          "errors": 1049214,
+          "sites": 2494268
+        },
+        "Undrivable": {
+          "error_fraction": 0.2188678674591292,
+          "errors": 144722,
+          "sites": 661230
+        }
+      }
+    },
+    "historical_mp128_prior": {
+      "axis": "[contest-CPU advisory]",
+      "boundary_band_flip": 0.1605960279317129,
+      "n_frames": 3,
+      "scope": "three-frame mp128 curve/sine-family receiver; contextual prior, not pooled with current v19c",
+      "source_sha256": "10d93a76275526839e5a4e8037ebeba63acb4acd7eec53769e8ee236565d2cbc"
+    },
+    "schema": "ddm_sn1_survival_wall_149.v1",
+    "score_claim": false
+  },
+  "triality": {
+    "dag": ".omx/research/ddm_sn1_error_source_tensor_603_DAG_FEED_20260723.md",
+    "dsl": "DDMErrorSourceTensorConfigV1",
+    "equations": ".omx/research/ddm_sn1_error_source_tensor_canonical_equations_20260723.md"
+  },
+  "typed_config": {
+    "advected_screw6_receipt_path": "/Users/adpena/Projects/pact/.omx/research/advected_screw6_chartlevel_20260721.json",
+    "batch_size": 16,
+    "dv1_receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/receipt.json",
+    "dv1_selected_payload_path": "/Users/adpena/Projects/pact/.omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/payloads/selected_joint_ground_vocabulary.dv1",
+    "dv1_summary_path": "/Users/adpena/Projects/pact/.omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/summary.json",
+    "e1_receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_e1_runtime_exporter_n600_20260723/ddm_e1_runtime_verification_receipt.json",
+    "expected_residual_errors": 2265811,
+    "expected_residual_errors_by_class": {
+      "MyCar": 37237,
+      "Road": 1935140,
+      "Undrivable": 293434
+    },
+    "g2_aggregate_path": "/Users/adpena/Projects/pact/.omx/research/ddm_g2_solve_diff_op_mining_n600_20260722T194000Z/aggregate_ledger.json",
+    "g2_receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_g2_solve_diff_op_mining_n600_20260722T194000Z/receipt.json",
+    "g3_atlas_path": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_n600.jsonl",
+    "g4_arrays_path": "/Volumes/VertigoDataTier/pact/ddm_g4_spatial_stationarity_n600_20260722T212138Z/stage_checkpoints/01_recurrence_arrays.npz",
+    "inverse_receipt_path": ".omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/inverse_solve_three_segments_receipt.json",
+    "output_directory": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723",
+    "run_id": "ddm_sn1_error_source_tensor_n600_20260723",
+    "schema": "ddm_sn1_error_source_tensor_config.v1",
+    "scratch_directory": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_n600_20260723",
+    "seed": 210,
+    "sided_tolerance_path": ".omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/sdwl1_sided_tolerance_n600.jsonl",
+    "source_repo_root": "/Users/adpena/Projects/pact",
+    "source_sha256": {
+      "advected_screw6_receipt_path": "98ccf6af4a3b482c71e2654353180aac32b99ad85be8647c36046f4591cd4f2a",
+      "dv1_receipt_path": "e0c875346978f8768eedf96793bcff2fb472a37eba4ebbcec7254d107fc00333",
+      "dv1_selected_payload_path": "03897224767612de0dc37c355710252a9eb418ff8a960c6cbd99276fcc4e76b3",
+      "dv1_summary_path": "5ea75c1495fdcb37852c3e308d87156645b81e2d8554a56e8988a21548fde581",
+      "e1_receipt_path": "69d19eee47c0435868d806947850d4f6099d9f2be1e35c399795816272fd54ba",
+      "g2_aggregate_path": "061220fd8c1ca047b210841235fc805194a96175e933ee110ba4ac8bb2077d84",
+      "g2_receipt_path": "ada87717b39bc34ad67a3104d652574e544d82938fa3a1ea898acdf624c2bd67",
+      "g3_atlas_path": "faaff7299d86aa49c97e25e9cce2eeb0201f64e919f110015d31708788bcec09",
+      "g4_arrays_path": "dbc85e7a4f593ab9b7a7f4ed017dbb63a064cb681df806d0bb93277ae8f42451",
+      "inverse_receipt_path": "2703260c297b4f9a7cf7e09552cfbad2745cbae69c22ea4551e27c526961d945",
+      "posenet_weights_path": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+      "segnet_weights_path": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+      "sided_tolerance_path": "be4179a1737f9fcc7651d763d747bc75cc0702f3def16920ce58d2b193015d02",
+      "survival_wall_149_path": "10d93a76275526839e5a4e8037ebeba63acb4acd7eec53769e8ee236565d2cbc",
+      "target_cache_path": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "upstream_modules_path": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "v14_receipt_path": "82d3249908d42a86575c407ab3d7acdf9b3706b31225f2e46862b2472966e5a9",
+      "v19c_final_archive_path": "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9",
+      "v19c_receipt_path": "506fb1dfed849beb06358d3a30d624fa8cbdad3c6e0da6cf1bf1ec14960472ae"
+    },
+    "strict_replay_digest_chain_sha256": "3efcc943769209a5393ee03ee59b80d4287b689d16f03dfcc29589f52ded6cc3",
+    "survival_wall_149_path": ".omx/research/curve_core_dseg_feasibility_gate_20260619T010157Z.json",
+    "target_cache_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "telemetry_microbatch_size": 2,
+    "torch_threads": 4,
+    "upstream_root": "/Users/adpena/Projects/pact/upstream",
+    "v14_receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z/ddm_v14_realization_fidelity_n600_receipt.json",
+    "v19c_final_archive_path": "/Users/adpena/Projects/pact/.omx/research/ddm_v19c_correction_saturation_20260723T063500Z/ddm_v19c_final_n600.zip.receipt-bytes",
+    "v19c_receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_v19c_correction_saturation_20260723T063500Z/ddm_v19c_correction_saturation_receipt.json",
+    "v19c_strict_batch_directory": "/Users/adpena/Projects/pact/.omx/research/ddm_v19c_correction_saturation_20260723T063500Z/stage_checkpoints/02_n600_final_strict_replay"
+  },
+  "typed_config_sha256": "8e33d8a2a38d332cfd49b8c4bb29f05bae4a0b853bf7d6fa0d40f3f1ee0f1d7a",
+  "v19c_join": {
+    "all_lazy_camera_and_cell_batches_match_strict_replay": true,
+    "commit_reference": "6be800b1f3",
+    "endpoint_residual_errors": 2265811,
+    "endpoint_residual_errors_by_class": {
+      "MyCar": 37237,
+      "Road": 1935140,
+      "Undrivable": 293434
+    },
+    "strict_batch_count": 38,
+    "strict_digest_chain_sha256": "3efcc943769209a5393ee03ee59b80d4287b689d16f03dfcc29589f52ded6cc3"
+  },
+  "v19c_receipt_schema": "ddm_v19c_correction_saturation_receipt.v1",
+  "verdict": "SOLVE_FIRST_ERROR_SOURCE_BUDGET_MEASURED",
+  "verdict_scope": "Exact n600 v19c residual-error partition under current receiver semantics and one SHA-pinned DV1 spline_plus_events extension. Historical G3/G4/v14 fields are joins, not current causal measurements. Scorer-native BN/SE, relay, spectral, temporal, transport, and paint-floor mechanism fields are associations/directional secants, not per-cell causal proof or a full Jacobian spectrum. No score, Pose admission, byte admission, promotion, or global family-impossibility claim is made."
+}

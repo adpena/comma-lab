@@ -1,0 +1,337 @@
+{
+  "all_preserved": true,
+  "checkpoint_policy": "atomic_preserve_each_batch_resume_by_sha",
+  "complete": true,
+  "completed_batches": [
+    {
+      "pair_window": [
+        0,
+        16
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0000_0016.json",
+      "sha256": "0303a807ccf162118733ae54836895326391d06edb3bed7713411178f5c02a05"
+    },
+    {
+      "pair_window": [
+        16,
+        32
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0016_0032.json",
+      "sha256": "dc3b9a57b762a30830b141727122f01261d0275046b979a5733f6d746e74c873"
+    },
+    {
+      "pair_window": [
+        32,
+        48
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0032_0048.json",
+      "sha256": "2961c4df1e5577d0a6917ca7916a62c6591a2eb4ea0cb4cc45903721127de779"
+    },
+    {
+      "pair_window": [
+        48,
+        64
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0048_0064.json",
+      "sha256": "f4ee2eaac7e20eca3d8b134f26a62519e2ad78efc1c6e61192c73a144af46b85"
+    },
+    {
+      "pair_window": [
+        64,
+        80
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0064_0080.json",
+      "sha256": "2af7242ef00e667257c314f5b435eba67fd21e45d83466f2eeaffc0a8503dbfd"
+    },
+    {
+      "pair_window": [
+        80,
+        96
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0080_0096.json",
+      "sha256": "1498deccf67a34041f396524c5eee936ea79d0a978042241300e922b741e3c34"
+    },
+    {
+      "pair_window": [
+        96,
+        112
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0096_0112.json",
+      "sha256": "e676d69a88519de6e8be46ff09b07ab2a22ba1ebd061f457bc4db15d26737f91"
+    },
+    {
+      "pair_window": [
+        112,
+        128
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0112_0128.json",
+      "sha256": "a763784affbd394bfb93c1b48bdf20be22fb6da379720291a39eeffcd92fda25"
+    },
+    {
+      "pair_window": [
+        128,
+        144
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0128_0144.json",
+      "sha256": "8d9e5933508dc584b38879c45cf35b50e303702431f18b2e60da9db0e60407bb"
+    },
+    {
+      "pair_window": [
+        144,
+        160
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0144_0160.json",
+      "sha256": "01b4f3141b1472588332ed268808e53ce6d290c009c61a900409983372fc04a9"
+    },
+    {
+      "pair_window": [
+        160,
+        176
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0160_0176.json",
+      "sha256": "88c7c097701000eb802a91ca866860f4f6c5ea5d73c39b461fe176a13c0142b6"
+    },
+    {
+      "pair_window": [
+        176,
+        192
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0176_0192.json",
+      "sha256": "b3eb0125bbde6b69857c2117b5fe5b35def809f67631a7144d65e7b1f0cbbdc8"
+    },
+    {
+      "pair_window": [
+        192,
+        208
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0192_0208.json",
+      "sha256": "79364eb6dbacc2ce54e511d7a7510a27e6b52802276d2c275790ff8e1b3f6a79"
+    },
+    {
+      "pair_window": [
+        208,
+        224
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0208_0224.json",
+      "sha256": "b848d5630f004306092c7c76bc929ae50ca34f42fb14b2b1de9163b907e79e94"
+    },
+    {
+      "pair_window": [
+        224,
+        240
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0224_0240.json",
+      "sha256": "65b423441738da6707413fe5b07d9ad23b8e6e313ea8f9fda5d82658f165143d"
+    },
+    {
+      "pair_window": [
+        240,
+        256
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0240_0256.json",
+      "sha256": "f82f8c60c95c1b5938e55e5bdb64c7ce20b129411a6a73506a07f3825b7c8e1b"
+    },
+    {
+      "pair_window": [
+        256,
+        272
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0256_0272.json",
+      "sha256": "e4035fa5f4f9428852687a93bd7c15382402e6cc2be699e79291c7d7223b9502"
+    },
+    {
+      "pair_window": [
+        272,
+        288
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0272_0288.json",
+      "sha256": "1ebbb3353458ff7ec12d86420bb8ba513d74a5209a9e9509143db8b4f02e5901"
+    },
+    {
+      "pair_window": [
+        288,
+        304
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0288_0304.json",
+      "sha256": "4d6631095e255e0d629e02480432fb33a23a564a45b0da38bdcb74da080aa84a"
+    },
+    {
+      "pair_window": [
+        304,
+        320
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0304_0320.json",
+      "sha256": "85a1c43be5257e4f4e90302bd5bebedd1682aa22fb7c4b433d5f595822b87fcc"
+    },
+    {
+      "pair_window": [
+        320,
+        336
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0320_0336.json",
+      "sha256": "471673dc1bd4a15d17c990a1e00e9aeddd742d3827da73a4854280412ac65c65"
+    },
+    {
+      "pair_window": [
+        336,
+        352
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0336_0352.json",
+      "sha256": "71875b16f54ec3dcf91b401873964656fbad2a8ebfeb483a115e5139678d632c"
+    },
+    {
+      "pair_window": [
+        352,
+        368
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0352_0368.json",
+      "sha256": "da9200007f12e33f4176a4c219a964fb241d422313cf2a4d1232b1e977f76acb"
+    },
+    {
+      "pair_window": [
+        368,
+        384
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0368_0384.json",
+      "sha256": "69ff724240710f08fbfda719d3a5232f053b2bd28e753fa52b99cae1b5ebfc55"
+    },
+    {
+      "pair_window": [
+        384,
+        400
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0384_0400.json",
+      "sha256": "4db7dfb9638b759367c43cf5fdf8f5fd998e9246e11aabbc24e381cc2d392fe9"
+    },
+    {
+      "pair_window": [
+        400,
+        416
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0400_0416.json",
+      "sha256": "4e1f016c1ec2cc48908630ad97f73be76d4bfc9600f3c0ee0d00d96b472ab095"
+    },
+    {
+      "pair_window": [
+        416,
+        432
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0416_0432.json",
+      "sha256": "eff59d20f986dff59d03750aada614506b5d7fccf015794769c185a0bba8b3e4"
+    },
+    {
+      "pair_window": [
+        432,
+        448
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0432_0448.json",
+      "sha256": "084b76e2bef3c3cd081252e06abe57b6465d7f3d2f2b28e08da48a927b8b3226"
+    },
+    {
+      "pair_window": [
+        448,
+        464
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0448_0464.json",
+      "sha256": "781b991493150adc8f7448269410ad10aefb93e77584803a5d7e61682d918ae9"
+    },
+    {
+      "pair_window": [
+        464,
+        480
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0464_0480.json",
+      "sha256": "8e82213bc787f65c28ba313b241d1aca5dbdf792d104683989024fe7adaeb574"
+    },
+    {
+      "pair_window": [
+        480,
+        496
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0480_0496.json",
+      "sha256": "1e73b15b0c38cd86e9fd08c2b8605102f92ae857d5ced728488b913a432d2991"
+    },
+    {
+      "pair_window": [
+        496,
+        512
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0496_0512.json",
+      "sha256": "e96118aad508ee875557a288b85d087ba410200482076839e685c7b300b13932"
+    },
+    {
+      "pair_window": [
+        512,
+        528
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0512_0528.json",
+      "sha256": "7c94ed13acf192a0e5a6977fe7f5e2761101ef950380c097061ef96900fd360a"
+    },
+    {
+      "pair_window": [
+        528,
+        544
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0528_0544.json",
+      "sha256": "b9668a952f228f024260d79f597a2dba84d67b25e21b1b193111933b3b3b62e1"
+    },
+    {
+      "pair_window": [
+        544,
+        560
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0544_0560.json",
+      "sha256": "b315a4363c103fb6a7c3805fef7757e8483f4af2f7eee343be43f45e3b57ecb2"
+    },
+    {
+      "pair_window": [
+        560,
+        576
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0560_0576.json",
+      "sha256": "c8d69d31ff5aa977950d04549146ca031a2d0b57b9b515b09e34def62203acb5"
+    },
+    {
+      "pair_window": [
+        576,
+        592
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0576_0592.json",
+      "sha256": "cb1c03b2260b7876b8c3f020f586a0f4a3b139c0e48fdfa5bab837b72934efae"
+    },
+    {
+      "pair_window": [
+        592,
+        600
+      ],
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/stage_checkpoints/batch_0592_0600.json",
+      "sha256": "7bae1bcd4db9dec94db06229a3646c45d4fc74985057b0c4b632653c92609a84"
+    }
+  ],
+  "completed_pair_count": 600,
+  "config_sha256": "7065587ae16f0652ec566198f5c2dff5d434c0cd1b1c63d724ec81f3f43ee1ac",
+  "implementation_identity": {
+    "bundle_sha256": "1d7c0b7386456ff7ca2b3de3d061bc079a2407005c3804cfafa186f73da26f5b",
+    "files": {
+      "runner": {
+        "bytes": 52699,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/tools/run_ddm_sn1_segnet_telemetry_asymmetry.py",
+        "sha256": "020dd1181cda527c4d4f3c90a0b3ae442641eb807f82b10e2660c68986758048"
+      },
+      "sided_tolerance": {
+        "bytes": 18607,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/optimization/ddm_sn1_sided_tolerance.py",
+        "sha256": "2659790fafa5d8cb039f5be94a171284e4f98a4fb0f99d37d5b375371cfe9967"
+      },
+      "telemetry": {
+        "bytes": 20457,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/analysis/segnet_internal_telemetry.py",
+        "sha256": "8fa7454d1451b1fa50517e379a5980afe6e0987ce8d968fc82875791887f2bf4"
+      }
+    },
+    "schema": "ddm_sn1_implementation_identity.v1"
+  },
+  "next_pair": 600,
+  "run_id": "ddm_sn1_segnet_telemetry_asymmetry_n600_20260723",
+  "schema": "ddm_sn1_segnet_telemetry_asymmetry_progress.v1"
+}

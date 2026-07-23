@@ -1,0 +1,154 @@
+{
+  "axis": "[macOS-CPU frozen-SegNet advisory]",
+  "majority_transition_realized_count": 3,
+  "promotion_eligible": false,
+  "rows": [
+    {
+      "after_mean_margin": -3.2397994995117188,
+      "all_argmax_changes": 377,
+      "before_mean_margin": 0.0012801488628610969,
+      "camera_bbox_half_open_yx": [
+        546,
+        739,
+        532,
+        730
+      ],
+      "coordinates_yx": [
+        [
+          282,
+          276
+        ],
+        [
+          282,
+          277
+        ],
+        [
+          282,
+          278
+        ]
+      ],
+      "desired_rival_realized_count": 3,
+      "desired_rival_realized_fraction": 1.0,
+      "majority_segment_transition_realized": true,
+      "max_linf_uint8": 24,
+      "off_segment_argmax_changes": 374,
+      "orientation": "MyCar->Road",
+      "pair_id": 93,
+      "promotion_eligible": false,
+      "rival_id": 0,
+      "schema": "ddm_sn1_segnet_sided_inverse_demo.v1",
+      "score_claim": false,
+      "segment_pixel_count": 3,
+      "sparse_delta_artifact": {
+        "bytes": 176405,
+        "changed_camera_bytes": 87736,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/inverse_deltas/segment_00_pair_0093.npz",
+        "reconstruction": "copy gt_f1[pair_id], flatten C-order HWC, assign replacement_uint8 at flat_indices, reshape",
+        "sha256": "302b6ef6e37eb9393986c7a4f0272e8d9f2c68a19e67d956469fed3446bda6b9"
+      },
+      "steps_run": 1,
+      "through_r_contract": "camera uint8 -> upstream SegNet.preprocess_input bilinear 384x512 -> frozen CPU-Torch SegNet -> argmax",
+      "verdict_scope": "bounded projected sign descent for this real boundary segment only; failure does not close the ordered-pair or inverse-receiver family",
+      "winner_id": 4
+    },
+    {
+      "after_mean_margin": -2.2721216678619385,
+      "all_argmax_changes": 234,
+      "before_mean_margin": 0.0030434131622314453,
+      "camera_bbox_half_open_yx": [
+        562,
+        755,
+        209,
+        407
+      ],
+      "coordinates_yx": [
+        [
+          289,
+          136
+        ],
+        [
+          289,
+          135
+        ],
+        [
+          289,
+          134
+        ]
+      ],
+      "desired_rival_realized_count": 3,
+      "desired_rival_realized_fraction": 1.0,
+      "majority_segment_transition_realized": true,
+      "max_linf_uint8": 24,
+      "off_segment_argmax_changes": 231,
+      "orientation": "Road->MyCar",
+      "pair_id": 96,
+      "promotion_eligible": false,
+      "rival_id": 4,
+      "schema": "ddm_sn1_segnet_sided_inverse_demo.v1",
+      "score_claim": false,
+      "segment_pixel_count": 3,
+      "sparse_delta_artifact": {
+        "bytes": 185661,
+        "changed_camera_bytes": 87381,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/inverse_deltas/segment_01_pair_0096.npz",
+        "reconstruction": "copy gt_f1[pair_id], flatten C-order HWC, assign replacement_uint8 at flat_indices, reshape",
+        "sha256": "1c139c3a9250239deb66597d225ad2a9ea8335cb5b0c124407de211eefc794f7"
+      },
+      "steps_run": 1,
+      "through_r_contract": "camera uint8 -> upstream SegNet.preprocess_input bilinear 384x512 -> frozen CPU-Torch SegNet -> argmax",
+      "verdict_scope": "bounded projected sign descent for this real boundary segment only; failure does not close the ordered-pair or inverse-receiver family",
+      "winner_id": 0
+    },
+    {
+      "after_mean_margin": -0.3668311536312103,
+      "all_argmax_changes": 102,
+      "before_mean_margin": 0.05236514285206795,
+      "camera_bbox_half_open_yx": [
+        330,
+        526,
+        446,
+        641
+      ],
+      "coordinates_yx": [
+        [
+          187,
+          239
+        ],
+        [
+          188,
+          239
+        ],
+        [
+          188,
+          238
+        ]
+      ],
+      "desired_rival_realized_count": 3,
+      "desired_rival_realized_fraction": 1.0,
+      "majority_segment_transition_realized": true,
+      "max_linf_uint8": 24,
+      "off_segment_argmax_changes": 99,
+      "orientation": "Lane->Road",
+      "pair_id": 204,
+      "promotion_eligible": false,
+      "rival_id": 0,
+      "schema": "ddm_sn1_segnet_sided_inverse_demo.v1",
+      "score_claim": false,
+      "segment_pixel_count": 3,
+      "sparse_delta_artifact": {
+        "bytes": 187969,
+        "changed_camera_bytes": 88698,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/inverse_deltas/segment_02_pair_0204.npz",
+        "reconstruction": "copy gt_f1[pair_id], flatten C-order HWC, assign replacement_uint8 at flat_indices, reshape",
+        "sha256": "a618f304503aa8a8a8f13269afa5858c5c5f7c93072d2c236be638e7357437bd"
+      },
+      "steps_run": 1,
+      "through_r_contract": "camera uint8 -> upstream SegNet.preprocess_input bilinear 384x512 -> frozen CPU-Torch SegNet -> argmax",
+      "verdict_scope": "bounded projected sign descent for this real boundary segment only; failure does not close the ordered-pair or inverse-receiver family",
+      "winner_id": 1
+    }
+  ],
+  "schema": "ddm_sn1_segnet_sided_inverse_demo_receipt.v1",
+  "score_claim": false,
+  "segment_count": 3
+}

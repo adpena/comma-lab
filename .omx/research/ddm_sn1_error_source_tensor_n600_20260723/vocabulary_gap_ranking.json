@@ -1,0 +1,35 @@
+{
+  "axis": "[macOS-CPU frozen-SegNet+PoseNet advisory]",
+  "preference": "vocabulary > chart_or_parameter > point_correction",
+  "rows": [
+    {
+      "candidate": "spline_plus_events plus persistent ground partition",
+      "error_mass_per_shared_byte": 458.44099378881987,
+      "measured_error_mass": 738090,
+      "measured_shared_bytes": 1610,
+      "move_family": "VOCABULARY",
+      "rank": 1,
+      "realization_status": "SEMANTIC_REACH_ONLY_RECEIVER_REALIZATION_OWED"
+    },
+    {
+      "candidate": "SDWL1 asymmetric paint/preuint8 placement",
+      "error_mass_per_shared_byte": null,
+      "measured_error_mass": 892710,
+      "measured_shared_bytes": null,
+      "move_family": "CHART_OR_PARAMETER",
+      "rank": 2,
+      "realization_status": "THREE_SEGMENT_FEASIBILITY_WITH_HIGH_COLLATERAL"
+    },
+    {
+      "candidate": "#366 receiver-closed sparse/lattice re-solve",
+      "error_mass_per_shared_byte": null,
+      "measured_error_mass": 635011,
+      "measured_shared_bytes": null,
+      "move_family": "POINT_CORRECTION_LAST",
+      "rank": 3,
+      "realization_status": "ONLY_MEASURED_LEFTOVER_AFTER_CURRENT_AND_TESTED_VOCABULARY"
+    }
+  ],
+  "schema": "ddm_sn1_vocabulary_gap_ranking.v1",
+  "score_claim": false
+}

@@ -1,0 +1,50 @@
+{
+  "axis": "[macOS-CPU frozen-SegNet+PoseNet advisory]",
+  "boundary_definition": "two-sided 4-neighbour target-label boundary followed by one binary-dilation iteration",
+  "comparability": "same boundary-band/error-fraction formula; different receiver and 600-frame versus three-frame scope",
+  "current_minus_prior_fraction": 0.18379609919424744,
+  "current_over_prior_ratio": 2.1444622981111303,
+  "current_v19c_n600": {
+    "all_classes": {
+      "error_fraction": 0.34439212712596035,
+      "errors": 1613214,
+      "sites": 4684236
+    },
+    "by_target_class": {
+      "Lane": {
+        "error_fraction": 0.4356727829935518,
+        "errors": 280057,
+        "sites": 642815
+      },
+      "Movable": {
+        "error_fraction": 0.4038299935956999,
+        "errors": 109087,
+        "sites": 270131
+      },
+      "MyCar": {
+        "error_fraction": 0.048935354795125625,
+        "errors": 30134,
+        "sites": 615792
+      },
+      "Road": {
+        "error_fraction": 0.42065006647240794,
+        "errors": 1049214,
+        "sites": 2494268
+      },
+      "Undrivable": {
+        "error_fraction": 0.2188678674591292,
+        "errors": 144722,
+        "sites": 661230
+      }
+    }
+  },
+  "historical_mp128_prior": {
+    "axis": "[contest-CPU advisory]",
+    "boundary_band_flip": 0.1605960279317129,
+    "n_frames": 3,
+    "scope": "three-frame mp128 curve/sine-family receiver; contextual prior, not pooled with current v19c",
+    "source_sha256": "10d93a76275526839e5a4e8037ebeba63acb4acd7eec53769e8ee236565d2cbc"
+  },
+  "schema": "ddm_sn1_survival_wall_149.v1",
+  "score_claim": false
+}

@@ -1,0 +1,122 @@
+{
+  "action": "move_certified_superseded_bulk_to_first_ssd_tier",
+  "cold_store_root": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_superseded_20260723",
+  "entries": [
+    {
+      "bytes": 282107517,
+      "cold_store_destination": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_superseded_20260723/raw_pre_compression_g2_explicit",
+      "false_authority_flags": {
+        "pointer_moved": false,
+        "promotion_eligible": false,
+        "score_claim": false
+      },
+      "file_count": 83,
+      "original_path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723",
+      "reason": "Superseded implementation emitted duplicate raw final and checkpoint JSONL despite certify-or-block policy; exact source partition was preserved but this build is not the landing receipt.",
+      "rebuildable": true,
+      "tree_sha256": "b1d4655455b9f1d0a435ba41a21981bf4fe36dd2deb549a0916aab7e16d1a10a"
+    },
+    {
+      "bytes": 247851503,
+      "cold_store_destination": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_superseded_20260723/raw_pre_g2_marginal",
+      "false_authority_flags": {
+        "pointer_moved": false,
+        "promotion_eligible": false,
+        "score_claim": false
+      },
+      "file_count": 83,
+      "original_path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723_pre_g2_marginal",
+      "reason": "Superseded audit build omitted the explicit G2 class-level marginal from menu rows; assignments and budget were unchanged but the operator-requested custody field was incomplete.",
+      "rebuildable": true,
+      "tree_sha256": "3187c91a268285a219df2e2bea77ecd82e90cb056f07fe82354592c0d56098f1"
+    },
+    {
+      "bytes": 5562,
+      "cold_store_destination": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_superseded_20260723/failed_null_sided_reference",
+      "false_authority_flags": {
+        "pointer_moved": false,
+        "promotion_eligible": false,
+        "score_claim": false
+      },
+      "file_count": 1,
+      "original_path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723_failed_null_sided_reference",
+      "reason": "Fail-closed identity checkpoint from the run that discovered a legitimate ordered orientation with no sided reference support.",
+      "rebuildable": true,
+      "tree_sha256": "654fc2094328f60cd8cc787f1b50c6525116c79797d8522ce400094bc2a75ebb"
+    },
+    {
+      "bytes": 12714367,
+      "cold_store_destination": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_superseded_20260723/compressed_pre_resume_identity_fix",
+      "false_authority_flags": {
+        "pointer_moved": false,
+        "promotion_eligible": false,
+        "score_claim": false
+      },
+      "file_count": 83,
+      "original_path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723",
+      "reason": "Compressed output was content-correct, but its checkpoint identity included volatile observed_free_bytes and could refuse a valid crash-resume after disk usage changed.",
+      "rebuildable": true,
+      "tree_sha256": "161f5ecf1a4e32fca9541274acf51744bc0a6e980f8b48955b223d8ae3395c96"
+    },
+    {
+      "bytes": 2301347,
+      "cold_store_destination": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_superseded_20260723/interrupted_pre_stable_receipt_fix",
+      "false_authority_flags": {
+        "pointer_moved": false,
+        "promotion_eligible": false,
+        "score_claim": false
+      },
+      "file_count": 33,
+      "original_path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723",
+      "reason": "Operator-stopped partial replay after discovering that the stable resume comparison still allowed volatile free-space telemetry to rewrite the final receipt; no final receipt was emitted.",
+      "rebuildable": true,
+      "tree_sha256": "7daeba7dd5f92f41f4a7b540ce9cb2d04829fa92074a565c40cb115086ef161f"
+    },
+    {
+      "bytes": 12714372,
+      "cold_store_destination": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_superseded_20260723/pre_amplitude_mechanism_extension",
+      "false_authority_flags": {
+        "pointer_moved": false,
+        "promotion_eligible": false,
+        "score_claim": false
+      },
+      "file_count": 83,
+      "original_path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723",
+      "reason": "Superseded complete tensor predates the binding per-layer amplitude, paint-mechanism, and current-vehicle survival-wall extensions; exact source partition remains cold-store reproducible.",
+      "rebuildable": true,
+      "tree_sha256": "e069eb7ede35bb212850163e528d2a074e97214ba7f733300937bf0ffb45b541"
+    },
+    {
+      "bytes": 4917038123,
+      "cold_store_destination": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_superseded_20260723/pre_stable_rank_scaling_and_checkpoint_coldstore",
+      "false_authority_flags": {
+        "pointer_moved": false,
+        "promotion_eligible": false,
+        "score_claim": false
+      },
+      "file_count": 165,
+      "original_path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723",
+      "reason": "Superseded complete scorer-native build emitted overflow warnings in the stable-rank power iteration and retained 4.8 GiB of resumable telemetry checkpoints on the source tier; final values were finite, but warning-free derived custody and automatic SSD checkpoint externalization are required before landing.",
+      "rebuildable": true,
+      "receipt_sha256": "4ef0cf3e3776294c117ac8e440cada7beeca9b849ef2d5eeb9f1abc4964354ea",
+      "tree_sha256": "853ec78bd078fb0c55f9495e72f62395e814b2af703a7d27b518bce226413005"
+    }
+  ],
+  "rebuild_contract": {
+    "command": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "-u",
+      "tools/build_ddm_sn1_error_source_tensor.py",
+      "--config",
+      ".omx/research/configs/ddm_sn1_error_source_tensor_20260723.json"
+    ],
+    "config_sha256": "2e0dafdea083245d82efa7974e7e1838c828d873e8baab95ed90043f1d538c32",
+    "base_commit": "b04d1d48813198803928285679f0211486ffbeb7",
+    "runner_sha256": "ef31325b29ec2f7d993e8e7410baddbf6b6cfe8d833f14be2e84b7c42f96f2a0",
+    "source_archive_sha256": "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9",
+    "target_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "schema": "ddm_sn1_error_source_tensor_cleanup_manifest.v1",
+  "tree_hash_contract": "sha256 of sorted shasum-a-256 output over every regular file at the original path",
+  "utc_date": "2026-07-23"
+}

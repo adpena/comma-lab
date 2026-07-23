@@ -1,0 +1,75 @@
+{
+  "axis": "[macOS-CPU frozen-SegNet+PoseNet advisory]",
+  "expected_endpoint": 2265811,
+  "global_d_seg": 0.019207517835828993,
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "rows": [
+    {
+      "conditional_error_rate": 0.03229943132142005,
+      "errors": 885232,
+      "global_d_seg": 0.007504204644097222,
+      "source": "DESCRIBED_BUT_REALIZATION_LOST",
+      "stratum": "Road"
+    },
+    {
+      "conditional_error_rate": 8.609343481322338e-05,
+      "errors": 5029,
+      "global_d_seg": 4.263136121961806e-05,
+      "source": "DESCRIBED_BUT_REALIZATION_LOST",
+      "stratum": "Undrivable"
+    },
+    {
+      "conditional_error_rate": 8.16509998880091e-05,
+      "errors": 2449,
+      "global_d_seg": 2.076043023003472e-05,
+      "source": "DESCRIBED_BUT_REALIZATION_LOST",
+      "stratum": "MyCar"
+    },
+    {
+      "conditional_error_rate": 0.01901883187265056,
+      "errors": 521250,
+      "global_d_seg": 0.004418690999348958,
+      "source": "NEVER_DESCRIBED",
+      "stratum": "Road"
+    },
+    {
+      "conditional_error_rate": 0.0037121694978920973,
+      "errors": 216840,
+      "global_d_seg": 0.0018381754557291667,
+      "source": "NEVER_DESCRIBED",
+      "stratum": "Undrivable"
+    },
+    {
+      "conditional_error_rate": 0.0,
+      "errors": 0,
+      "global_d_seg": 0.0,
+      "source": "NEVER_DESCRIBED",
+      "stratum": "MyCar"
+    },
+    {
+      "conditional_error_rate": 0.019289127328789832,
+      "errors": 528658,
+      "global_d_seg": 0.004481489393446181,
+      "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+      "stratum": "Road"
+    },
+    {
+      "conditional_error_rate": 0.0012251494655812947,
+      "errors": 71565,
+      "global_d_seg": 0.0006066640218098958,
+      "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+      "stratum": "Undrivable"
+    },
+    {
+      "conditional_error_rate": 0.001159850953084549,
+      "errors": 34788,
+      "global_d_seg": 0.0002949015299479167,
+      "source": "STRUCTURALLY_HARD_IRREDUCIBLE",
+      "stratum": "MyCar"
+    }
+  ],
+  "schema": "ddm_sn1_error_source_budget.v1",
+  "score_claim": false,
+  "total_errors": 2265811
+}
