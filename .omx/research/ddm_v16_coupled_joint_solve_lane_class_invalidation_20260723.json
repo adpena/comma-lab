@@ -1,0 +1,26 @@
+{
+  "schema": "ddm_v16_coupled_joint_solve_invalidation.v1",
+  "lane_id": "ddm_v16_coupled_joint_solve",
+  "reason": "TARGET_ROLES mapped Lane to scorer class 4 (MyCar); canonical comma10k scorer order is Road=0, Lane=1, Undrivable=2, Movable=3, MyCar=4",
+  "invalidated_receipt": {
+    "path": ".omx/research/ddm_v16_coupled_joint_solve_20260723T002500Z/ddm_v16_coupled_joint_solve_receipt.json",
+    "sha256": "170adb825d4d709eebf929daf47e87c4de6736c15f7047572d16315b518ce0e4"
+  },
+  "invalidated_runner_sha256": "934fadacd6612d6525daa779a8222023234e9eef35674a084931503e7b52710e",
+  "affected_authority": [
+    "Lane target-cell selection",
+    "Lane conditional ladder rows",
+    "coupling operator M row geometry",
+    "joint-solve candidate measurements",
+    "fork verdict and downstream warm-start suitability"
+  ],
+  "disposition": "PRESERVE_BYTES_FORENSIC_ONLY_DO_NOT_CONSUME_AS_V16_MEASUREMENT",
+  "superseding_config": ".omx/research/configs/ddm_v16_coupled_joint_solve_lane_fix_20260723.json",
+  "superseding_run_directory": ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}
