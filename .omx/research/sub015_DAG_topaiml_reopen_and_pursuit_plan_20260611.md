@@ -21851,3 +21851,33 @@ Measured (all-n600, [macOS-CPU frozen-scorer advisory], score_claim=false):
 **THE CONVERGENT SIGNAL (m5 × m5r × m7, decomposed):** 326/368 of the live DOF space is island TRANSLATIONS — a *correction* vocabulary. Road's 2,210,770-error mass is unreachable by corrections in BOTH tested instruments (greedy +3.7%, fresh solve −1.3%). Road needs a *description* vocabulary (trunk/describe line). This triangulates with m7 (crux box CLOSED-ON-BORROWED at 177KB): **the single remaining problem is the OUR-SUBSTRATE describe line + the #636 runtime exporter that turns a composed our-substrate state into an eval-able archive.** v19c's saturation asymptote (still running) will quantify the correction ceiling but cannot change this structure.
 
 Pointer honest: **0.1910828242 [contest-CPU] UNMOVED.**
+
+---
+
+## FEED-603-OPERATOR-lineage-ban-and-vocabulary-directive (2026-07-23, MAIN, operator verbatim "don't inherit or reuse or borrow anything from the old lineages" + "enhance the description vocabulary and continue iterating and optimizing our original work")
+
+**THE BAN (binding, all agents/prompts — memory `no_old_lineage_ban_hnerv_pr_substrates_20260723`):**
+HNeRV / NeRV-family / PR95 / PR101 / PR110 / PR128 substrates (decoders, receivers, latent tables,
+archive members/formats, weights, curricula) are BANNED as vehicles, carriers, measurement threads,
+warm-starts, or calibration references. Lessons-only, never code/formats/numbers/members.
+- **The relaxed-receiver thread (m4→m6→m7 objects) is CLOSED as a vehicle** — it was PR110-lineage.
+  Its rows stand as historical record; NO further arms measure/realize/extend it.
+- **m7's realization-transfer ×3.59 is DE-CALIBRATED** for our vehicle (measured on the banned
+  lineage; L18 ancestor-numbers-don't-transfer). Our chain measures its own transfer law (e1).
+- Extends the standing anti-cargo-cult laws (PR95-reskin ban, archive-gravity guard) from
+  "don't reskin" to "don't TOUCH."
+
+**Contamination audit this turn:** e1 exporter worktree inspected LIVE — new sources CLEAN (consumes
+OUR `chart.ddb`/`composed.dds`, zero lineage tokens). The contamination vector was MAIN's own m4/m7
+framing + the e1 prompt's m7-calibration citation → e1 inbox-corrected (drop the citation, measure own
+transfer behavior); MAIN's spawn-prompt checklist updated in the memory.
+
+**The directed line:** `ddm_dv1_description_vocabulary` SPAWNED (20260723T141407Z, task #650) — the
+operator's explicit ask, aimed at the m5r-proven gap (326/368 DOFs are translations; Road's 2.21M mass
+needs DESCRIPTION primitives): measured Road-mass decomposition (g2-ledger × g4-stationarity) → ≥3 new
+primitives from OUR math (BEV-static ground coeffs, ξ-advected separatrix worldsheet splines,
+per-stratum curvature grammar, power-diagram tracks) → real-coder (bytes, described-fraction) rows →
+enriched g1 MDL table vs the translation baseline, decisive column = Road described-fraction at the
+c1 box. Fleet: v19c (asymptote) + e1 (our-format exporter) + dv1 = 3/4.
+
+Pointer honest: **0.1910828242 [contest-CPU] UNMOVED.**
