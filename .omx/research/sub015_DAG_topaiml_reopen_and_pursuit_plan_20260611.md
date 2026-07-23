@@ -22009,3 +22009,26 @@ transfer)**; (D) measured-decomposition-first lever selection, everywhere; (E) b
 every row, all lines.
 
 Pointer UNMOVED 0.19108.
+
+---
+
+## FEED-603-nested-jacobian-recursion (2026-07-23, MAIN — operator recall: "Jacobians and Jacobians of Jacobians... nested recursive with Hessians... changes at all levels in their impact across all other levels... and what we learned about changes at the frame and pair levels and down")
+
+**RECURSION LAW v3 (upgrades v2 from first-order alternation to Newton-like coupled descent, using ONLY
+built exact objects):**
+1. **The exact chain** — ∂(realized d_seg)/∂(description) = J_head (rank-4 Laguerre #559, EXACT) ×
+   J_R (exact resize adjoint #391, EXACT-linear) × J_paint (realization Jacobian — the ONE block still to
+   derive/measure, lives in D6). The costate organ's exact factorized adjoint (#516: head-rank-4 ×
+   ker(A)-projector × pair-prior) already IS this factorization — consumed, not re-derived.
+2. **Second order where it pays** — D2 duals are first-order ∂S/∂tolerance; the J-of-J (Hessian) term is
+   WHEN a dual goes stale after a language edit = the T2 validity radius DERIVED instead of guessed.
+   Built/measured second-order stock: v17 M-preconditioner, g2f bidirectional secants (empirical Hessian
+   rows), #423 Hessian-preconditioned TerminalSolve, #584 Fréchet corpus.
+3. **The level hierarchy** — change-impact = composition of per-level Jacobians
+   clip→pair→frame→stratum→cell→pixel, with the PROVEN factorizations exploited: pair→frame J is
+   block-sparse (SegNet reads frame_1 only; frame_0 column seg-zero = the free pose carrier); frame-level
+   J dense within-frame (SE +0.0805) but sparse across frames; clip→pair mass concentrated on the g3
+   heavy tail.
+**Operational consequence:** cycle updates propagate through the exact chain for free (linear parts need
+no re-measurement); full re-MEASUREMENT is reserved for J_paint blocks and wherever J-of-J says the
+linearization exited its validity radius. Routed to dv2+e1. Pointer UNMOVED 0.19108.
