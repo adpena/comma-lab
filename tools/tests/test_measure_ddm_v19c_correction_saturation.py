@@ -140,3 +140,10 @@ def test_track_events_accumulate_and_template_swap_is_stateful() -> None:
     }
     state = _apply_proposal(state, swap, problem=_problem(), ctx=_ctx())
     assert state.template_delta.tolist() == [[[[10]]], [[[-10]]]]
+
+
+def test_resume_proposal_identity_is_cycle_stable() -> None:
+    inventory = [{"base_id": f"candidate_{index}", "family": FAMILIES[index]} for index in range(len(FAMILIES))]
+    first = [_proposal_at(inventory, index) for index in range(13)]
+    replay = [_proposal_at(inventory, index) for index in range(13)]
+    assert [row["candidate_id"] for row in replay] == [row["candidate_id"] for row in first]

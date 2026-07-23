@@ -762,6 +762,33 @@ def _stage_dev(
     consecutive_failures = 0
     proposal_index = 0
     initial_bytes = len(initial_archive)
+    existing = sorted(row_root.glob("proposal_*.json"))
+    for expected_index, checkpoint in enumerate(existing):
+        proposal = _proposal_at(inventory, expected_index)
+        prior = _load_stage(checkpoint, config.typed_config_hash())
+        if prior is None or prior.get("proposal", {}).get("candidate_id") != proposal["candidate_id"]:
+            raise DirectDescriptionError("v19c DEV resume proposal order differs")
+        rows.append(prior)
+        if prior["accepted"]:
+            state = _apply_proposal(state, proposal, problem=ctx["problem"], ctx=ctx)
+        consecutive_failures = int(prior["consecutive_failures_after"])
+        proposal_index += 1
+    if rows:
+        resumed_archive, resumed_factory, _resumed_compile = _compile_state(
+            state, rung="dev", v19_config=v19_config, ctx=ctx
+        )
+        current, current_cells, current_camera = _measure_dev(
+            archive=resumed_archive,
+            receiver_factory=resumed_factory,
+            v19_config=v19_config,
+            ctx=ctx,
+        )
+        resumed_expected = rows[-1]["current_after"]
+        if (
+            current["archive_sha256"] != resumed_expected["archive_sha256"]
+            or current["cells_sha256"] != resumed_expected["cells_sha256"]
+        ):
+            raise DirectDescriptionError("v19c DEV resumed scorer endpoint differs")
     while True:
         if consecutive_failures >= config.consecutive_failure_limit:
             stop_reason = "K_CONSECUTIVE_PROPOSALS_FAILED"
@@ -771,14 +798,8 @@ def _stage_dev(
             break
         proposal = _proposal_at(inventory, proposal_index)
         checkpoint = row_root / (f"proposal_{proposal_index:05d}_{_safe_name(proposal['base_id'])}.json")
-        prior = _load_stage(checkpoint, config.typed_config_hash())
-        if prior is not None:
-            rows.append(prior)
-            if prior["accepted"]:
-                state = _apply_proposal(state, proposal, problem=ctx["problem"], ctx=ctx)
-            consecutive_failures = int(prior["consecutive_failures_after"])
-            proposal_index += 1
-            continue
+        if checkpoint.exists():
+            raise DirectDescriptionError("v19c DEV checkpoint gap or duplicate detected")
         trial_state = _apply_proposal(state, proposal, problem=ctx["problem"], ctx=ctx)
         try:
             archive, factory, compile_receipt = _compile_state(trial_state, rung="dev", v19_config=v19_config, ctx=ctx)
@@ -791,6 +812,7 @@ def _stage_dev(
                 "accepted": False,
                 "disposition": "INFEASIBLE_COMPILE",
                 "compile_error": f"{type(exc).__name__}: {exc}",
+                "current_after": current,
                 "consecutive_failures_after": consecutive_failures,
                 "score_claim": False,
                 "evidence_axis": AXIS,
@@ -821,6 +843,7 @@ def _stage_dev(
                 },
                 "compile": compile_receipt,
                 "added_bytes_vs_v19b": added_bytes,
+                "current_after": current,
                 "consecutive_failures_after": consecutive_failures,
                 "score_claim": False,
                 "evidence_axis": AXIS,
