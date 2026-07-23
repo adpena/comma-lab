@@ -84462,6 +84462,49 @@
       "notes": "research_only=true; $0 evidence audit and bounded re-derivation only; no launch, no #366 config change; MAIN review required",
       "research_only": true,
       "lane_class": "measurement_derivation_spec"
+    },
+    {
+      "id": "lane_ddm_m5_multicoefficient_solve_coverage_20260723",
+      "name": "DDM M5 multicoefficient solve coverage",
+      "phase": 5.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/audit_ddm_m5_multicoefficient_solve_coverage.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_m5_multicoefficient_solve_coverage_20260723T103457Z/ddm_m5_multicoefficient_solve_coverage_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_m5_multicoefficient_solve_coverage_three_clean_review_20260723.json"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_session_summary_20260723_ddm_m5_multicoefficient_solve_coverage_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; exact n600 receiver transition audit; numeric #366 scope refused absent exhaustive finite-set certificate; no launch; MAIN review required",
+      "research_only": true,
+      "lane_class": "measurement_derivation_spec"
     }
   ],
   "level_rules": {
@@ -84471,5 +84514,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T10:14:44Z"
+  "updated_at": "2026-07-23T11:05:39Z"
 }

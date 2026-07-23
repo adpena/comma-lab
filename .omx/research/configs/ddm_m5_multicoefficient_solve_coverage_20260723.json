@@ -1,0 +1,21 @@
+{
+  "schema": "DDMV5CoverageConfigV1",
+  "run_id": "ddm_m5_multicoefficient_solve_coverage_20260723T103457Z",
+  "seed": 1234,
+  "m3_receipt_path": ".omx/research/ddm_m3_necessary_scope_repartition_receipt_20260723.json",
+  "m3_receipt_sha256": "e681b5fce75af69c67550e3bfbfc0c90ca361ebfa2ac32449163d2cd1be35704",
+  "c1_ledger_path": ".omx/research/ddm_c1_composed_candidate_ledger_603_613_20260723.json",
+  "c1_ledger_sha256": "14fdf1570b43df65ac949fe157e68ea328ff584f7df1331acf25cca8f900d936",
+  "v19b_config_path": ".omx/research/configs/ddm_v19b_joint_remeasure_stack_20260723.json",
+  "v19b_config_sha256": "499242891d44deb6e769630e71760e59bcdd3122059f715d489d4176e6edf816",
+  "v19b_receipt_path": ".omx/research/ddm_v19b_joint_remeasure_stack_20260723T051914Z/ddm_v19b_joint_remeasure_stack_receipt.json",
+  "v19b_receipt_sha256": "4bb5d6b4b793b667c7cbe15e37cbf9a27f6c0e75451374839fb5df8ca1c1b8e8",
+  "j5_smoke_receipt_path": ".omx/research/ddm_j5_366_realized_acceptance_smoke_receipt_20260723.json",
+  "j5_smoke_receipt_sha256": "a623437d69674ddbcebd12c3b17050f82f7886eb027bf99a7c6e04b6d943373e",
+  "scorer_batch_size": 16,
+  "pair_count": 600,
+  "byte_box": 200000,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false
+}
