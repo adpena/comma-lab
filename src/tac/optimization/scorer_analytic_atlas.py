@@ -457,15 +457,17 @@ def derive_se_gate_closed_form(
     expand_weight: np.ndarray,
     expand_bias: np.ndarray,
     source_hashes: Sequence[SourceHashStamp],
+    activation: Literal["relu", "silu"] = "silu",
 ) -> AnalyticFactor:
-    """Record ``sigmoid(W2*silu(W1*GAP(z)+b1)+b2)`` from frozen weights."""
+    """Record one frozen SE gate with its source-defined hidden activation."""
 
     w1 = np.asarray(reduce_weight, dtype=np.float64)
     b1 = np.asarray(reduce_bias, dtype=np.float64)
     w2 = np.asarray(expand_weight, dtype=np.float64)
     b2 = np.asarray(expand_bias, dtype=np.float64)
     if (
-        w1.ndim != 2
+        activation not in {"relu", "silu"}
+        or w1.ndim != 2
         or w2.ndim != 2
         or b1.shape != (w1.shape[0],)
         or b2.shape != (w2.shape[0],)
@@ -473,8 +475,14 @@ def derive_se_gate_closed_form(
         or any(not np.isfinite(row).all() for row in (w1, b1, w2, b2))
     ):
         raise AnalyticAtlasError("SE gate weight geometry is invalid")
+    hidden_formula = (
+        "relu(W_reduce*GAP(z)+b_reduce)"
+        if activation == "relu"
+        else "silu(W_reduce*GAP(z)+b_reduce)"
+    )
     payload = {
-        "formula": "gate=sigmoid(W_expand*silu(W_reduce*GAP(z)+b_reduce)+b_expand)",
+        "formula": f"gate=sigmoid(W_expand*{hidden_formula}+b_expand)",
+        "hidden_activation": activation,
         "reduce_weight": w1.tolist(),
         "reduce_bias": b1.tolist(),
         "expand_weight": w2.tolist(),
@@ -506,7 +514,13 @@ def evaluate_se_gate_factor(
     if x.shape[-1] != w1.shape[1]:
         raise AnalyticAtlasError("SE input channel count changed")
     hidden = x @ w1.T + b1
-    hidden = hidden / (1.0 + np.exp(-hidden))
+    activation = factor.payload.get("hidden_activation")
+    if activation == "relu":
+        hidden = np.maximum(hidden, 0.0)
+    elif activation == "silu":
+        hidden = hidden / (1.0 + np.exp(-hidden))
+    else:
+        raise AnalyticAtlasError("SE factor hidden activation is unsupported")
     logits = hidden @ w2.T + b2
     return 1.0 / (1.0 + np.exp(-logits))
 

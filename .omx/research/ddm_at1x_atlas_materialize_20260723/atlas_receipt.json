@@ -1,0 +1,212 @@
+{
+  "schema": "ddm_at1x_atlas_materialize_tracked_receipt.v1",
+  "written_at_utc": "2026-07-23T21:57:00Z",
+  "authority": "codex_delegate:ddm_at1x_atlas_materialize:20260723T203027Z",
+  "lane_id": "lane_ddm_at1_scorer_analytic_atlas_20260723",
+  "branch": "codexwt/ddm_at1x_atlas_materialize_20260723T203027Z",
+  "base_commit": "a6dd0d62b3011489a06a83448c891a22c17a360e",
+  "first_rung": true,
+  "research_only": true,
+  "score_claim": false,
+  "evidence_axis": "[macOS-CPU locked-env upstream frozen-harness advisory]",
+  "verdict": "PASS_ATLAS_MATERIALIZED__FULL_EVALUATE_SH_BLOCKED_MISSING_LOCKED_BROTLI",
+  "environment": {
+    "lock_validation": {
+      "status": "REJECTED_STALE_LOCK_METADATA",
+      "receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/stage_environment_failure.json",
+        "bytes": 2688,
+        "sha256": "35436a27086cfdf92e603ac60ef60d7b5362555b75b2541728fbceec162f59a8"
+      }
+    },
+    "materialization": {
+      "argv": [
+        "uv",
+        "sync",
+        "--frozen",
+        "--group",
+        "cpu",
+        "--python",
+        "3.11"
+      ],
+      "interpretation": "the supplied uv.lock was consumed verbatim without modifying upstream",
+      "receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/stage_environment.json",
+        "bytes": 3617422,
+        "sha256": "42e64340dfeca68d22d9e92af705724493cb8061f1ebcef2f211aa407c12f1c7"
+      },
+      "tree": {
+        "file_count": 19505,
+        "bytes": 539126642,
+        "sha256": "fcf16c85bf098ff886d711a1306773b8e1ac1ac5390f9fae6dfb6fcab602287f"
+      },
+      "version_set_sha256": "10b7bf90dc65a5af57b6d3d5271fc818422894b964c31857faebc54c16dd8327"
+    },
+    "inventory": {
+      "gate": "PASS_LOCKED_LIBRARY_SOURCES_MATERIALIZED",
+      "version_drift": {},
+      "posenet_module_count": 616,
+      "segnet_module_count": 540,
+      "receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/stage_inventory.json",
+        "bytes": 812713,
+        "sha256": "9533c7ff23fa3a5ca327a0ea5e9b3b65d3c33bf431f3ba91ca6695223838a8e1"
+      }
+    }
+  },
+  "closed_forms": {
+    "factor_count": 438,
+    "kind_counts": {
+      "closed_form.batchnorm_expected_stats": 166,
+      "closed_form.bn_silu_contrast": 45,
+      "closed_form.kernel_dft_frequency_phase": 203,
+      "closed_form.squeeze_excite_gate": 24
+    },
+    "network_counts": {
+      "posenet": 167,
+      "segnet": 271
+    },
+    "se_hidden_activation_counts": {
+      "relu": 1,
+      "silu": 23
+    },
+    "factor_shard_bytes": 667132546,
+    "receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/stage_closed_forms.json",
+      "bytes": 228049,
+      "sha256": "0d87eb0f1e89193699bb63dbf2495c232520fd9b76d780e8353d0121163ff7e1"
+    }
+  },
+  "gaze_contraction": {
+    "pair_count": 600,
+    "tensor_index_count": 4200,
+    "version_stamp_count": 4200,
+    "measured_relay_depths": [
+      "scorer_plane_y",
+      "camera_input_x"
+    ],
+    "pose_trace_mean": {
+      "scorer_plane_y": 0.009099998989996678,
+      "camera_input_x": 0.00404366902722937
+    },
+    "seg_contracted_singular_energy_mean": {
+      "scorer_plane_y": 309098.2538985123,
+      "camera_input_x": 137470.44368699292
+    },
+    "v19_exact_join_pair_ids": [
+      53,
+      278,
+      296,
+      346,
+      416,
+      447,
+      501,
+      547
+    ],
+    "v19_exact_join_count": 8,
+    "gaze_measured_v19_join_owed_counted_inert": 592,
+    "atlas": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/gaze_contraction_atlas.json",
+      "bytes": 3178175,
+      "sha256": "a9e444cd7652061368d6daa8cf85e4c793c1b57da385890799ce7de19fd311e4"
+    },
+    "stage_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/stage_gaze.json",
+      "bytes": 1568,
+      "sha256": "7d1229ac6b7864eee0429154e728eac7a0de4dc6b98c558b187fa4218c7dbda1"
+    }
+  },
+  "calibration": {
+    "full_evaluate_sh": {
+      "status": "BLOCKED_LOCKED_RUNTIME_DEPENDENCY",
+      "missing_module": "brotli",
+      "locked_environment_measurement": "NOT_MEASURED",
+      "receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/stage_calibration_blocked.json",
+        "bytes": 4828,
+        "sha256": "5bf8959d8c5ae9f5a5b095e4a1c6c5ec93b43163e5be8df00c5bab96d1c5488f"
+      }
+    },
+    "official_evaluate_py_scorer_only": {
+      "status": "MEASURED",
+      "full_harness_passed": false,
+      "scope": "official evaluate.py over the prior SHA-certified E2 inflation",
+      "wallclock_seconds": 1663,
+      "archive_bytes": 343466,
+      "d_seg": 0.02861482,
+      "d_pose": 162.58094788,
+      "formula_total": 43.41150975143166,
+      "signed_drift_locked_minus_observed": {
+        "archive_bytes": 0,
+        "d_seg": 0.0,
+        "d_pose": 0.0,
+        "score_term_seg": 0.0,
+        "score_term_pose": 0.0,
+        "score_term_rate": 0.0,
+        "formula_total_roundoff": -3.410605131648481e-13
+      },
+      "frozen_scorer_realization": {
+        "d_seg": 0.027470296224,
+        "signed_observed_minus_frozen": 0.0011445237759999984
+      },
+      "receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/stage_calibration.json",
+        "bytes": 5349,
+        "sha256": "98deb0cae983776b6d6f45559b2f32db78e6e3c97d2ab33ad5d06fd99a185e53"
+      }
+    }
+  },
+  "atlas_manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/atlas_manifest.json",
+    "bytes": 16926,
+    "sha256": "251cc1e4268fb909a9f9a3ac2af845614c98aab15948f90d33d43a8c1542a1d9",
+    "counts": {
+      "closed_forms": 438,
+      "gaze_pairs": 600,
+      "jacobian_contraction_rows": 600,
+      "nonadditive_pools": 45
+    }
+  },
+  "amplitude_factors": {
+    "count": 0,
+    "why": "no through-R or uint8 survival row exists"
+  },
+  "frequency_dead_band": {
+    "exact_dead_band_ids": [],
+    "admission": "REFUSE_ZERO_BYTE_TRUNCATION"
+  },
+  "freshness": {
+    "rule": "exact input-hash and version-set equality at consumption",
+    "stale_action": "FAIL_CLOSED_REDERIVE_DO_NOT_CONFIRM"
+  },
+  "directive_consumption": [
+    {
+      "directive_timestamp": "2026-07-19T19:42:07Z",
+      "status": "CONSUMED"
+    },
+    {
+      "directive_timestamp": "2026-07-19T19:48:01Z",
+      "status": "CONSUMED"
+    }
+  ],
+  "storage": {
+    "policy": "certify-or-block; large factors and environment remain on SSD",
+    "automatic_delete": false,
+    "pointer": "UNCHANGED"
+  },
+  "triality": {
+    "dsl": "tools/materialize_ddm_at1x_atlas.py stage graph",
+    "dag": "locked_env -> inventory -> closed_forms + n600_index -> calibration -> manifest",
+    "equations": [
+      "segnet_head_rank4_linear_flipdist_v1",
+      "pose_six_by_six_row_gram_eigenspectrum_v1",
+      "ddm_at1x_two_relay_contracted_singular_energy_v1"
+    ]
+  },
+  "tests": {
+    "command": "PYTHONPATH=$PWD/src /Users/adpena/Projects/pact/.venv/bin/python -m pytest -q src/tac/tests/test_scorer_atlas_materialization.py src/tac/tests/test_scorer_analytic_atlas.py",
+    "passed": 30,
+    "failed": 0
+  },
+  "main_landing_review_required": true
+}
