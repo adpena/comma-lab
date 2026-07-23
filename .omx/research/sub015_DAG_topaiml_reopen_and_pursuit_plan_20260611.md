@@ -21881,3 +21881,34 @@ enriched g1 MDL table vs the translation baseline, decisive column = Road descri
 c1 box. Fleet: v19c (asymptote) + e1 (our-format exporter) + dv1 = 3/4.
 
 Pointer honest: **0.1910828242 [contest-CPU] UNMOVED.**
+
+---
+
+## FEED-603-OPERATOR-language-authority-scorer-derived (2026-07-23, MAIN — three operator grants, one turn)
+
+**Grant 1 (authority):** *"You can continue adding and enhancing and extending our vocabulary and grammar and
+syntax and sentences and anything else necessary. You can also trim it and streamline it as necessary. You can
+add extra dimensions. You can do anything, but it all must be original."*
+**Grant 2 (derivation principle):** *"All should fall out of upstream/modules.py, and the deep math and geometry
+we've used to solve it and model it and carry and store and represent it."*
+**Grant 3 (source-set amendment):** *"Also from the openpilot, polytopes, and other."*
+
+**Encoded as THE DERIVATION RULE (routed to dv1+dv2 via inbox, binding on all language work):** every
+vocabulary primitive, grammar production, syntax form, and dimension carries a **provenance line naming its
+source** in one of the four legal source classes — (A) the frozen scorer's exact structure (`upstream/modules.py`:
+rank-4 Laguerre head #559, ker(A) 80.67%/range(A) #580, exact R adjoint #391, last-frame-only factorization,
+stride-2 ERF r50~85/r90~300px = the language's natural spatial quantum, YUV6 pose path); (B) openpilot geometry
+(#145/#325-#327: ground-plane homography = the free BEV chart, lane-polynomial basis, ego-kinematics ξ priors) —
+generic domain structure, not contest-video-derived, not old-codec lineage; (C) the polytope corpus (argmax-cell/
+margin polytopes #52/#73, Laguerre power diagrams #284/#539, KKT/waterfill duality #157, tropical PL, Whitney
+bounds) — the partition IS a polytope complex, primitives may be polytope-native; (D) the rest of OUR derived
+math (Morse-Smale separatrices, curvelet/shearlet #502, OT/Brenier #616, se(3)/Chasles, Fisher/margin 0.978,
+eikonal/level-set). **An element with no named source is REFUSED.** Old-lineage ban absolute (sister FEED).
+
+**Fleet realization:** dv1 (primitives+per-stratum vocabulary, widened: trim/streamline + measured extra
+dimensions) ∥ dv2 SPAWNED (20260723T142512Z, task #651 — composition grammar with persistent SUBJECTS declared
+once, whole-clip SENTENCES: one clip = one sentence + 600 clause-deltas, the temporal-sharing rate measurement
+vs the 600-independent baseline = THE number; byte syntax co-designed with e1's exporter; MDL trim; measured
+dimensions) ∥ e1 (our-format exporter) ∥ v19c (asymptote). 4/4 at cap, all on OUR original line.
+
+Pointer honest: **0.1910828242 [contest-CPU] UNMOVED.**
