@@ -1715,13 +1715,6 @@ def _candidate_n600_batches(
                     baseline_camera = baseline_receiver.render_camera_pairs(local_ids)
                     baseline_camera_cache[batch_index] = baseline_camera
                 cells, pose6 = _forward(segnet, posenet, camera)
-                replay_cells, replay_pose6 = _forward(segnet, posenet, camera)
-                if not np.array_equal(cells, replay_cells) or not np.array_equal(
-                    pose6, replay_pose6
-                ):
-                    raise DirectDescriptionError(
-                        f"v19c {name} deterministic changed-batch replay failed"
-                    )
                 labels = np.asarray(labels_all[source_ids])
                 poses = np.asarray(poses_all[source_ids])
                 errors = cells != labels
@@ -1782,6 +1775,112 @@ def _candidate_n600_batches(
     measurement["decoded_receiver_pair_support"] = support_receipt
     measurement["resident_camera_cache_batch_count"] = len(candidate_camera_cache)
     return measurement, rows, candidate_receiver, candidate_camera_cache
+
+
+def _strict_final_n600_replay(
+    *,
+    archive: bytes,
+    receiver: Any,
+    current_batches: Sequence[Mapping[str, Any]],
+    source_pair_ids: Sequence[int],
+    local_pair_ids: Sequence[int],
+    labels_all: np.ndarray,
+    poses_all: np.ndarray,
+    segnet: Any,
+    posenet: Any,
+    batch_size: int,
+    root: Path,
+    config_hash: str,
+) -> dict[str, Any]:
+    """Re-derive every final scorer row from the strict published receiver."""
+
+    source = np.asarray(source_pair_ids, dtype=np.int64)
+    local = np.asarray(local_pair_ids, dtype=np.int64)
+    if source.shape != local.shape or len(current_batches) != math.ceil(len(source) / batch_size):
+        raise DirectDescriptionError("v19c strict final replay geometry differs")
+    archive_sha = _sha256(archive)
+    replay_rows = []
+    stage = root / "stage_checkpoints" / "02_n600_final_strict_replay"
+    for batch_index, start in enumerate(range(0, len(source), batch_size)):
+        stop = min(start + batch_size, len(source))
+        checkpoint = stage / f"batch_{start:04d}_{stop:04d}.json"
+        prior = _load_stage(checkpoint, config_hash)
+        if prior is not None:
+            if (
+                prior.get("archive_sha256") != archive_sha
+                or prior.get("source_pair_ids") != source[start:stop].tolist()
+            ):
+                raise DirectDescriptionError("v19c strict final replay resume identity differs")
+            replay_rows.append(prior)
+            continue
+        local_ids = tuple(int(value) for value in local[start:stop])
+        source_ids = source[start:stop]
+        camera = receiver.render_camera_pairs(local_ids)
+        cells, pose6 = _forward(segnet, posenet, camera)
+        labels = np.asarray(labels_all[source_ids])
+        poses = np.asarray(poses_all[source_ids])
+        errors = cells != labels
+        class_rows = {}
+        for class_id, class_name in CLASS_NAMES.items():
+            mask = labels == class_id
+            class_rows[class_name] = {
+                "errors": int(np.count_nonzero(errors & mask)),
+                "sites": int(np.count_nonzero(mask)),
+            }
+        row = {
+            "schema": "ddm_v19c_strict_final_receiver_batch.v1",
+            "typed_config_sha256": config_hash,
+            "archive_sha256": archive_sha,
+            "source_pair_ids": source_ids.tolist(),
+            "camera_sha256": _sha256_array(camera),
+            "cells_sha256": _sha256_array(cells),
+            "pose6_sha256": _sha256_array(pose6),
+            "errors": int(np.count_nonzero(errors)),
+            "sites": int(errors.size),
+            "pose_squared_error_sum": (
+                f"{float(np.square(pose6 - poses).sum(dtype=np.float64)):.12f}"
+            ),
+            "pose_coordinates": int(pose6.size),
+            "class_rows": class_rows,
+            "score_claim": False,
+            "evidence_axis": AXIS,
+        }
+        expected = current_batches[batch_index]
+        expected_camera_sha = expected.get(
+            "candidate_camera_sha256",
+            expected["camera_diff_vs_v15"]["candidate_camera_sha256"],
+        )
+        for key, expected_value in (
+            ("camera_sha256", expected_camera_sha),
+            ("cells_sha256", expected["cells_sha256"]),
+            ("pose6_sha256", expected["pose6_sha256"]),
+            ("errors", int(expected["errors"])),
+            ("sites", int(expected["sites"])),
+            ("pose_squared_error_sum", expected["pose_squared_error_sum"]),
+            ("pose_coordinates", int(expected["pose_coordinates"])),
+            ("class_rows", expected["class_rows"]),
+        ):
+            if row[key] != expected_value:
+                raise DirectDescriptionError(
+                    f"v19c strict final replay differs for {key} at batch {batch_index}"
+                )
+        _write(checkpoint, row)
+        replay_rows.append(row)
+    return {
+        "status": "STRICT_FULL_N600_REPLAY_IDENTICAL_TO_SEQUENTIAL_ACCEPTANCE_ROWS",
+        "archive_sha256": archive_sha,
+        "batch_count": len(replay_rows),
+        "batch_size": batch_size,
+        "all_batch_checkpoints_preserved": True,
+        "digest_chain_sha256": hashlib.sha256(
+            "".join(
+                row["camera_sha256"] + row["cells_sha256"] + row["pose6_sha256"]
+                for row in replay_rows
+            ).encode()
+        ).hexdigest(),
+        "score_claim": False,
+        "evidence_axis": AXIS,
+    }
 
 
 def _stage_n600(
@@ -1966,6 +2065,20 @@ def _stage_n600(
     if _sha256(final_archive) != current["archive_sha256"]:
         raise DirectDescriptionError("v19c n600 final archive/measurement identity differs")
     strict_final_receiver = receive_preuint8_q8_archive(final_archive)
+    strict_final_replay = _strict_final_n600_replay(
+        archive=final_archive,
+        receiver=strict_final_receiver,
+        current_batches=current_batches,
+        source_pair_ids=geometry["source_pair_ids"],
+        local_pair_ids=geometry["local_pair_ids"],
+        labels_all=ctx["labels_all"],
+        poses_all=ctx["poses_all"],
+        segnet=ctx["segnet"],
+        posenet=ctx["posenet"],
+        batch_size=config.scorer_batch_size,
+        root=root,
+        config_hash=config.typed_config_hash(),
+    )
     accepted = [row for row in rows if row["accepted"]]
     result = {
         "schema": "ddm_v19c_n600_saturation_curve.v1",
@@ -2014,6 +2127,7 @@ def _stage_n600(
         "strict_published_stage_exit_receiver_custody": dict(
             strict_final_receiver.custody
         ),
+        "strict_final_full_n600_replay": strict_final_replay,
         "score_claim": False,
         "evidence_axis": AXIS,
     }
