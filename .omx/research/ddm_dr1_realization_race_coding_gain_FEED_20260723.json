@@ -1,0 +1,138 @@
+{
+  "schema": "ddm_dr1_realization_race_coding_gain_DAG_FEED.v1",
+  "feed_id": "FEED-603-613-dr1-realization-race-coding-gain",
+  "lane_id": "lane_ddm_c1_composed_candidate_spec_603_613_20260723",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "main_landing_review_required": true,
+  "nodes": [
+    {
+      "id": "sha_bound_sources",
+      "kind": "source",
+      "authority": "SHA_BOUND",
+      "source_count": 10
+    },
+    {
+      "id": "typed_dr1_config",
+      "kind": "dsl",
+      "sha256": "461c55d050cadda38f1843e1039c77a3a011b1808e9c219b5229ea38dddd5e94"
+    },
+    {
+      "id": "application_stage_compile",
+      "kind": "receiver_compile",
+      "arms": [
+        "post_int8_lattice",
+        "preuint8_uniform_lattice",
+        "preuint8_bayer8_dither",
+        "preuint8_resize_null_sigma_delta"
+      ]
+    },
+    {
+      "id": "n600_uint8_R_replay",
+      "kind": "exact_uint8_R_frozen_scorers",
+      "batch_count_per_arm": 38,
+      "batch_size": 16,
+      "arm_count_including_control": 5
+    },
+    {
+      "id": "strict_joint_selection",
+      "kind": "realized_joint_objective_only",
+      "winner": "post_int8_lattice",
+      "joint_delta": -0.12083155237745034
+    },
+    {
+      "id": "equal_rate_receiver_proof",
+      "kind": "parseback_and_n600_camera_equivalence",
+      "exact_archive_bytes": 137650,
+      "camera_uint8_sha256": "62ac2e91065c50b840cac5b851046e51140da2483f6aef4bce075675a336c058"
+    },
+    {
+      "id": "dither_falsifier",
+      "kind": "measured_instance_verdict",
+      "threshold": 0.1,
+      "recovery_fraction": 0.0,
+      "verdict": "INSTANCE_NEGATIVE_FOR_TESTED_MOVE_CLASSES"
+    },
+    {
+      "id": "resize_null_sigma_delta_derivation",
+      "kind": "receiver_derived_quantizer",
+      "geometry": "exact_disjoint_bilinear_resize_numerators",
+      "fisher_tie_break": "BLOCKED_NOT_IMPLEMENTED"
+    },
+    {
+      "id": "derived_kernel_prediction",
+      "kind": "measured_instance_verdict",
+      "generic_comparator": "Bayer8_ordered_dither",
+      "generic_recovery_fraction": 0.0,
+      "derived_recovery_fraction": 0.0,
+      "verdict": "FALSIFIED_INSTANCE",
+      "literal_floyd_steinberg": "NOT_MEASURED"
+    },
+    {
+      "id": "sdwl1_context_parseback",
+      "kind": "exact_coder_parseback",
+      "control_bytes": 68464,
+      "context_bytes": 68464,
+      "delta_bytes": 0
+    },
+    {
+      "id": "persistent_undrivable_rows",
+      "kind": "sha_bound_semantic_cell_measurement",
+      "standalone_described_fraction": 0.5613179489259305,
+      "joint_described_fraction": 0.5606318692460559,
+      "ordered_pair_redundancy_bytes": -25
+    },
+    {
+      "id": "four_clause_rate_audit",
+      "kind": "admission_guard",
+      "status": "FAIL_CLOSED_MISSING_SENSITIVITY_AND_PAIRWISE_ROWS"
+    },
+    {
+      "id": "composed_candidate",
+      "kind": "promotion_gate",
+      "status": "BLOCKED_NOT_ADMISSIBLE"
+    }
+  ],
+  "edges": [
+    ["sha_bound_sources", "typed_dr1_config"],
+    ["typed_dr1_config", "application_stage_compile"],
+    ["typed_dr1_config", "resize_null_sigma_delta_derivation"],
+    ["resize_null_sigma_delta_derivation", "application_stage_compile"],
+    ["application_stage_compile", "n600_uint8_R_replay"],
+    ["n600_uint8_R_replay", "strict_joint_selection"],
+    ["application_stage_compile", "equal_rate_receiver_proof"],
+    ["n600_uint8_R_replay", "dither_falsifier"],
+    ["equal_rate_receiver_proof", "dither_falsifier"],
+    ["n600_uint8_R_replay", "derived_kernel_prediction"],
+    ["equal_rate_receiver_proof", "derived_kernel_prediction"],
+    ["sha_bound_sources", "sdwl1_context_parseback"],
+    ["sha_bound_sources", "persistent_undrivable_rows"],
+    ["strict_joint_selection", "four_clause_rate_audit"],
+    ["sdwl1_context_parseback", "four_clause_rate_audit"],
+    ["persistent_undrivable_rows", "four_clause_rate_audit"],
+    ["four_clause_rate_audit", "composed_candidate"]
+  ],
+  "solver_stack_wire_in": {
+    "sensitivity_map": "realized n600 Seg/Pose response is bound for every application-stage arm; per-record margin-priced tolerance remains owed",
+    "pareto_constraint": "strict joint Seg/Pose/rate delta selects the stage; no separate collateral veto",
+    "bit_allocator": "exact archive deltas are charged; missing ordered conditional-byte measurements fail closed",
+    "cathedral_autopilot": "research-only hold; no launch, dispatch, promotion, or pointer actuation",
+    "continual_learning": "machine receipt and Codex findings preserve the instance-negative dither result, the falsified derived-kernel prediction, and the post-int8 first rung",
+    "probe_disambiguator": "post-int8, preuint8-uniform, preuint8-Bayer8, and preuint8-resize-null-sigma-delta share one typed source contract and n600 receiver geometry"
+  },
+  "rate_doctrine": {
+    "scorer_visibility": "RECORDED_PER_ROW",
+    "sensitivity_priced_tolerance": "BLOCKED_NOT_MEASURED_FOR_COMPOSED_ADMISSION",
+    "three_layer_decomposition": "RECORDED_PER_ROW",
+    "nonredundancy": "MEASURED_WHERE_AVAILABLE_ELSE_EXPLICIT_BLOCKER"
+  },
+  "receipt": {
+    "path": ".omx/research/ddm_dr1_realization_race_coding_gain_n600_20260723/receipt.json",
+    "sha256": "a84112f0fc0063e43711a0e9c0777a51abac85795b990281ca08899b122a1104"
+  },
+  "verdict": "POST_INT8_STAGE_WINNER_DITHER_INSTANCE_NEGATIVE_DERIVED_KERNEL_PREDICTION_FALSIFIED_INSTANCE_COMPOSED_ADMISSION_BLOCKED",
+  "verdict_scope": "INSTANCE x SHA-bound horizon and admitted move classes; exact SDWL1 formulation row and semantic-cell DV1 rows retain their own narrower scopes",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

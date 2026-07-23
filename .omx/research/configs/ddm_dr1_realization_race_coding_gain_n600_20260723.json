@@ -1,0 +1,51 @@
+{
+  "schema": "DDMDR1RealizationRaceCodingGainConfigV1",
+  "run_id": "ddm_dr1_realization_race_coding_gain_n600_20260723",
+  "seed": 1234,
+  "c1_ledger": {
+    "path": ".omx/research/ddm_c1_composed_candidate_ledger_603_613_20260723.json",
+    "sha256": "14fdf1570b43df65ac949fe157e68ea328ff584f7df1331acf25cca8f900d936"
+  },
+  "dv2_receipt": {
+    "path": ".omx/research/ddm_dv2_sdwl1_n600_20260723/receipt.json",
+    "sha256": "efc43fcda1f12f28df2b6059cd5e51e7ee2509a356d99b59e317b253927a709c"
+  },
+  "dv2_selected_payload": {
+    "path": ".omx/research/ddm_dv2_sdwl1_n600_20260723/payloads/whole_typed_section_causal_delta.zlib",
+    "sha256": "2b67caa997f353d1aee25b66737fcae1c0067deb92a0850401ce56f2f2537cab"
+  },
+  "g4_receipt": {
+    "path": ".omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z/ddm_g4_spatial_stationarity_receipt.json",
+    "sha256": "bea555b95aeaa11f4209df5333010c41c5495dd789def2a4f7a2a91973f3408c"
+  },
+  "g4_projection_receipt": {
+    "path": ".omx/research/ddm_v14_g4_receiver_projection_n600_20260722T221500Z/ddm_v14_g4_receiver_projection_receipt.json",
+    "sha256": "0b35be44d944bd5a929097bb3967ba7b7c7ce068e2f067d1546ab149cc9e44da"
+  },
+  "horizon_archive": {
+    "path": ".omx/research/ddm_v14_g4_receiver_projection_n600_20260722T221500Z/ddm_v14_g4_horizon_row_parametric_n600.not_a_candidate.zip.receipt-bytes",
+    "sha256": "312acff3aa30c37dd7bcf76dfedddf017a9a5836ddd20e272eda39430f58dc6f"
+  },
+  "dv1_receipt": {
+    "path": ".omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/receipt.json",
+    "sha256": "e0c875346978f8768eedf96793bcff2fb472a37eba4ebbcec7254d107fc00333"
+  },
+  "dv1_ledger": {
+    "path": ".omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/description_vocabulary_ledger.jsonl",
+    "sha256": "e6e04c7776504caa6633cef625e1a27cf090bb4bb46ce3c422f8b1516cb2630b"
+  },
+  "v19b_config": {
+    "path": ".omx/research/configs/ddm_v19b_joint_remeasure_stack_20260723.json",
+    "sha256": "499242891d44deb6e769630e71760e59bcdd3122059f715d489d4176e6edf816"
+  },
+  "v19b_receipt": {
+    "path": ".omx/research/ddm_v19b_joint_remeasure_stack_20260723T051914Z/ddm_v19b_joint_remeasure_stack_receipt.json",
+    "sha256": "4bb5d6b4b793b667c7cbe15e37cbf9a27f6c0e75451374839fb5df8ca1c1b8e8"
+  },
+  "scorer_batch_size": 16,
+  "q8_mode": "move_post_int8_fields_to_camera_q8",
+  "post_rounding": "nearest_integer_half_up",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false
+}

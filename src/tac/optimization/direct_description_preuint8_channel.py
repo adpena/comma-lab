@@ -16,6 +16,7 @@ import struct
 import zipfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Final
 
@@ -28,6 +29,7 @@ from tac.optimization.direct_description_coupled_margin import (
 from tac.optimization.direct_description_entropy_priced_member import _sha256, _zip_stored
 from tac.optimization.direct_description_minimizer import DirectDescriptionError
 from tac.optimization.pure_priced_realized_objective import SOURCE_VIDEO_BYTES
+from tac.optimization.uint8_lattice_feasibility import DisjointResizeOperator
 from tac.through_r.resolution_chain import CAMERA_H, CAMERA_W
 
 ARCHIVE_SCHEMA: Final = "direct_description_preuint8_q8_channel_archive.v1"
@@ -40,6 +42,16 @@ PROGRAM_VERSION: Final = 1
 _HEADER: Final = struct.Struct(">5sBBHH")
 _TEMPLATE_HEADER: Final = struct.Struct(">HHH")
 _SPARSE: Final = struct.Struct(">HBHHhhh")
+_DITHER_MODES: Final = {
+    "off": 0,
+    "bayer8": 1,
+    "resize_null_sigma_delta": 2,
+}
+_DITHER_NAMES: Final = {value: key for key, value in _DITHER_MODES.items()}
+_BINARY_ROUNDING_CHOICES: Final = np.asarray(
+    [[(choice >> shift) & 1 for shift in range(4)] for choice in range(16)],
+    dtype=np.int32,
+)
 _BAYER8: Final = np.asarray(
     [
         [0, 48, 12, 60, 3, 51, 15, 63],
@@ -101,7 +113,7 @@ class PreUint8Q8ProgramV1:
     dither_seed: int = 210
 
     def __post_init__(self) -> None:
-        if self.dither_mode not in {"off", "bayer8"}:
+        if self.dither_mode not in _DITHER_MODES:
             raise DirectDescriptionError("preuint8 dither mode is unsupported")
         if isinstance(self.dither_seed, bool) or not isinstance(self.dither_seed, int) or not 0 <= self.dither_seed <= 255:
             raise DirectDescriptionError("preuint8 dither seed is out of range")
@@ -114,7 +126,7 @@ class PreUint8Q8ProgramV1:
 
 
 def encode_preuint8_q8_program(program: PreUint8Q8ProgramV1) -> bytes:
-    mode = 0 if program.dither_mode == "off" else 1
+    mode = _DITHER_MODES[program.dither_mode]
     body = bytearray(_HEADER.pack(PROGRAM_MAGIC, PROGRAM_VERSION, mode, program.dither_seed, len(program.templates)))
     body.extend(struct.pack(">H", len(program.sparse)))
     for row in program.templates:
@@ -129,7 +141,7 @@ def decode_preuint8_q8_program(payload: bytes) -> PreUint8Q8ProgramV1:
     if len(payload) < _HEADER.size + 2:
         raise DirectDescriptionError("preuint8 program header is truncated")
     magic, version, mode, seed, template_count = _HEADER.unpack_from(payload)
-    if magic != PROGRAM_MAGIC or version != PROGRAM_VERSION or mode not in (0, 1):
+    if magic != PROGRAM_MAGIC or version != PROGRAM_VERSION or mode not in _DITHER_NAMES:
         raise DirectDescriptionError("preuint8 program header is invalid")
     cursor = _HEADER.size
     sparse_count = struct.unpack_from(">H", payload, cursor)[0]
@@ -158,7 +170,7 @@ def decode_preuint8_q8_program(payload: bytes) -> PreUint8Q8ProgramV1:
     result = PreUint8Q8ProgramV1(
         tuple(templates),
         tuple(sparse),
-        "off" if mode == 0 else "bayer8",
+        _DITHER_NAMES[mode],
         seed,
     )
     if encode_preuint8_q8_program(result) != payload:
@@ -316,6 +328,8 @@ class PreUint8Q8ReceiverV1:
                 q8[local, row.frame_index, row.camera_y, row.camera_x] += np.asarray(
                     row.delta_q8, dtype=np.int32
                 )
+        if self.program.dither_mode == "resize_null_sigma_delta":
+            return _resize_null_sigma_delta_round_q8(q8)
         if self.program.dither_mode == "off":
             threshold = np.full((CAMERA_H, CAMERA_W), 128, dtype=np.int32)
         else:
@@ -331,6 +345,149 @@ class PreUint8Q8ReceiverV1:
             )
         rounded = np.floor_divide(q8 + threshold[None, None, :, :, None], 256)
         return np.ascontiguousarray(np.clip(rounded, 0, 255).astype(np.uint8))
+
+
+@lru_cache(maxsize=1)
+def _scorer_resize_operator() -> DisjointResizeOperator:
+    return DisjointResizeOperator.build(
+        camera_h=CAMERA_H,
+        camera_w=CAMERA_W,
+        scorer_h=384,
+        scorer_w=512,
+    )
+
+
+def _resize_null_sigma_delta_round_q8(q8: np.ndarray) -> np.ndarray:
+    """Round Q8 blocks while minimizing exact scorer-resize numerator error.
+
+    Each scorer cell has one disjoint 2x2 camera support. For every support
+    containing a fractional Q8 value, this generalized block sigma-delta
+    quantizer chooses among the adjacent integer lattice points and minimizes
+    the exact separable bilinear numerator residual. The unavoidable residual
+    is thereby pushed into the resize kernel as far as the local lattice
+    permits. Blind coordinates retain ordinary nearest rounding.
+    """
+
+    raw = np.asarray(q8)
+    if (
+        raw.dtype.kind not in "iu"
+        or raw.ndim < 3
+        or raw.shape[-3:-1] != (CAMERA_H, CAMERA_W)
+        or raw.shape[-1] < 1
+    ):
+        raise DirectDescriptionError(
+            "resize-null sigma-delta requires integer [...,camera_h,camera_w,C] Q8"
+        )
+    clipped = np.clip(raw, 0, 255 * 256).astype(np.int32, copy=False)
+    prefix = clipped.shape[:-3]
+    channels = clipped.shape[-1]
+    planes = clipped.reshape(-1, CAMERA_H, CAMERA_W, channels)
+    floors = np.floor_divide(planes, 256)
+    fractions = planes - floors * 256
+    output = floors + (fractions >= 128)
+
+    operator = _scorer_resize_operator()
+    row_owner = np.full(CAMERA_H, -1, dtype=np.int32)
+    col_owner = np.full(CAMERA_W, -1, dtype=np.int32)
+    for index, support in enumerate(operator.row_supports):
+        row_owner[np.asarray(support.indices, dtype=np.intp)] = index
+    for index, support in enumerate(operator.col_supports):
+        col_owner[np.asarray(support.indices, dtype=np.intp)] = index
+
+    fractional = np.argwhere(fractions != 0)
+    if fractional.size == 0:
+        return np.ascontiguousarray(output.reshape(*prefix, CAMERA_H, CAMERA_W, channels).astype(np.uint8))
+    owned_rows = row_owner[fractional[:, 1]]
+    owned_cols = col_owner[fractional[:, 2]]
+    owned = (owned_rows >= 0) & (owned_cols >= 0)
+    if not np.any(owned):
+        return np.ascontiguousarray(output.reshape(*prefix, CAMERA_H, CAMERA_W, channels).astype(np.uint8))
+
+    keys = np.ravel_multi_index(
+        (
+            fractional[owned, 0],
+            owned_rows[owned],
+            owned_cols[owned],
+            fractional[owned, 3],
+        ),
+        (planes.shape[0], operator.scorer_h, operator.scorer_w, channels),
+    )
+    unique = np.unique(keys)
+    plane_ids, scorer_rows, scorer_cols, channel_ids = np.unravel_index(
+        unique,
+        (planes.shape[0], operator.scorer_h, operator.scorer_w, channels),
+    )
+    row_indices = np.asarray(
+        [operator.row_supports[index].indices for index in scorer_rows],
+        dtype=np.intp,
+    )
+    col_indices = np.asarray(
+        [operator.col_supports[index].indices for index in scorer_cols],
+        dtype=np.intp,
+    )
+    row_numerators = np.asarray(
+        [operator.row_supports[index].numerators for index in scorer_rows],
+        dtype=np.int64,
+    )
+    col_numerators = np.asarray(
+        [operator.col_supports[index].numerators for index in scorer_cols],
+        dtype=np.int64,
+    )
+    coefficients = (
+        row_numerators[:, :, None] * col_numerators[:, None, :]
+    ).reshape(-1, 4)
+
+    chunk_size = 65_536
+    choices = _BINARY_ROUNDING_CHOICES
+    for start in range(0, unique.size, chunk_size):
+        stop = min(start + chunk_size, unique.size)
+        count = stop - start
+        values = np.empty((count, 4), dtype=np.int32)
+        for position, (row_offset, col_offset) in enumerate(
+            ((0, 0), (0, 1), (1, 0), (1, 1))
+        ):
+            values[:, position] = planes[
+                plane_ids[start:stop],
+                row_indices[start:stop, row_offset],
+                col_indices[start:stop, col_offset],
+                channel_ids[start:stop],
+            ]
+        local_floors = np.floor_divide(values, 256)
+        local_fractions = values - local_floors * 256
+        candidates = local_floors[:, None, :] + choices[None, :, :]
+        invalid = np.any(
+            (choices[None, :, :] != 0) & (local_fractions[:, None, :] == 0),
+            axis=2,
+        )
+        weights = coefficients[start:stop]
+        target = np.sum(weights * values, axis=1, dtype=np.int64)
+        candidate_numerators = np.sum(
+            candidates.astype(np.int64) * weights[:, None, :],
+            axis=2,
+            dtype=np.int64,
+        )
+        residual = np.abs(candidate_numerators * 256 - target[:, None])
+        residual[invalid] = np.iinfo(np.int64).max
+        pixel_error = np.sum(
+            np.square(candidates * 256 - values[:, None, :], dtype=np.int64),
+            axis=2,
+            dtype=np.int64,
+        )
+        best_residual = np.min(residual, axis=1)
+        pixel_error[residual != best_residual[:, None]] = np.iinfo(np.int64).max
+        selected = candidates[np.arange(count), np.argmin(pixel_error, axis=1)]
+        for position, (row_offset, col_offset) in enumerate(
+            ((0, 0), (0, 1), (1, 0), (1, 1))
+        ):
+            output[
+                plane_ids[start:stop],
+                row_indices[start:stop, row_offset],
+                col_indices[start:stop, col_offset],
+                channel_ids[start:stop],
+            ] = selected[:, position]
+    return np.ascontiguousarray(
+        output.reshape(*prefix, CAMERA_H, CAMERA_W, channels).astype(np.uint8)
+    )
 
 
 def _validate_program(program: PreUint8Q8ProgramV1, receiver: CoupledMarginReceiverV1) -> None:
