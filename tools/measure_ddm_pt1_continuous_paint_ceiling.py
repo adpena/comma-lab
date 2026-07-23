@@ -273,7 +273,12 @@ def _source_binding() -> dict[str, Any]:
     }
 
 
-def _four_clause_audit() -> dict[str, Any]:
+def _four_clause_audit(*, measured: bool = False) -> dict[str, Any]:
+    measurement_status = (
+        "MEASURED_N600_ADVISORY"
+        if measured
+        else "PENDING_N600_EXECUTION"
+    )
     return {
         "schema": "ddm_four_clause_rate_doctrine.v1",
         "first_rung": True,
@@ -320,11 +325,11 @@ def _four_clause_audit() -> dict[str, Any]:
                     },
                     "scorer_visibility": {
                         "authority_surface": "SegNet frame1 after hard camera placement and R",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                     "sensitivity_priced_tolerance": {
                         "metric": "rank4 |margin|/||Delta w|| plus realized transition",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                 },
                 "verdict_scope": "reused DV1 curve sites only",
@@ -345,11 +350,11 @@ def _four_clause_audit() -> dict[str, Any]:
                     },
                     "scorer_visibility": {
                         "authority_surface": "SegNet frame1 after hard camera placement and R",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                     "sensitivity_priced_tolerance": {
                         "metric": "rank4 |margin|/||Delta w|| plus realized transition",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                 },
                 "verdict_scope": (
@@ -374,11 +379,11 @@ def _four_clause_audit() -> dict[str, Any]:
                     },
                     "scorer_visibility": {
                         "authority_surface": "frozen SegNet after exact R",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                     "sensitivity_priced_tolerance": {
                         "metric": "d_seg and per-layer Fisher-weighted divergence",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                 },
                 "verdict_scope": "global amplitude-statistics mechanism only",
@@ -406,13 +411,13 @@ def _four_clause_audit() -> dict[str, Any]:
                     },
                     "scorer_visibility": {
                         "authority_surface": "frozen SegNet after exact R",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                     "sensitivity_priced_tolerance": {
                         "metric": (
                             "d_seg, Fisher-weighted layer divergence, and trajectory depth"
                         ),
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                 },
                 "verdict_scope": "local spectrum or region-ERF mechanism only",
@@ -427,7 +432,11 @@ def _four_clause_audit() -> dict[str, Any]:
             "status": "PASS_SEPARATE_DESCRIPTION_OWNERS",
         },
         "verdict_scope": (
-            "PT1 prepared description streams; scorer tolerance rows remain unmeasured"
+            "PT1 n600 advisory description streams; scorer visibility and "
+            "tolerance rows measured under the frozen macOS-CPU surface"
+            if measured
+            else "PT1 prepared description streams; scorer tolerance rows "
+            "remain unmeasured"
         ),
     }
 
@@ -1901,7 +1910,7 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
             "residual": primary_dseg - config.box_floor_d_seg,
             "pass": box_bar,
         },
-        "rate_doctrine": _four_clause_audit(),
+        "rate_doctrine": _four_clause_audit(measured=True),
         "scorer_native_diff_profile": {
             "schema": "ddm_pt1_scorer_native_diff_profile.v1",
             "batch_count": len(batch_rows),
