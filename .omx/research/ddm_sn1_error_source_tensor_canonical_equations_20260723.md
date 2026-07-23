@@ -1,8 +1,8 @@
 # DDM SN1 error-source tensor — canonical equations
 
-Date: 2026-07-23  
-Lane: `ddm_sn1_segnet_telemetry_asymmetry`  
-Axis: `[macOS-CPU frozen-SegNet+PoseNet advisory]`  
+Date: 2026-07-23
+Lane: `ddm_sn1_segnet_telemetry_asymmetry`
+Axis: `[macOS-CPU frozen-SegNet+PoseNet advisory]`
 Scope: `research_only=true`, `score_claim=false`, pointer unmoved
 
 ## Exact residual partition

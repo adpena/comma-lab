@@ -1,7 +1,7 @@
 # Codex session summary — DDM SN1
 
-Date: 2026-07-23  
-Lane: `ddm_sn1_segnet_telemetry_asymmetry`  
+Date: 2026-07-23
+Lane: `ddm_sn1_segnet_telemetry_asymmetry`
 Authority: delegated prompt SHA-256
 `eef197f9221c4ec94e56840aac93d110d6250478b4bdf2233b82c06e4c323ecd`
 

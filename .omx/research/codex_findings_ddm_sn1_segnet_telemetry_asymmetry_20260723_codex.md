@@ -1,10 +1,10 @@
 # Codex findings — DDM SN1 telemetry and error-source asymmetry
 
-Date: 2026-07-23  
-Lane: `ddm_sn1_segnet_telemetry_asymmetry`  
-Axis: `[macOS-CPU frozen-SegNet+PoseNet advisory]`  
+Date: 2026-07-23
+Lane: `ddm_sn1_segnet_telemetry_asymmetry`
+Axis: `[macOS-CPU frozen-SegNet+PoseNet advisory]`
 Verdict: `MEASURED`, `research_only=true`, `score_claim=false`,
-`promotion_eligible=false`, pointer unmoved  
+`promotion_eligible=false`, pointer unmoved
 Landing: isolated Codex worktree; MAIN review required
 
 ## Disposition

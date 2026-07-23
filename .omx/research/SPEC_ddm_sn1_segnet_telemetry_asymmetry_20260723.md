@@ -1,12 +1,12 @@
 # DDM SN1 SegNet telemetry and separatrix asymmetry — implementation spec
 
-Date: 2026-07-23  
-Lane: `ddm_sn1_segnet_telemetry_asymmetry`  
-Authority SHA-256: `eef197f9221c4ec94e56840aac93d110d6250478b4bdf2233b82c06e4c323ecd`  
-Lineage: v10/DDM only  
-Execution: local CPU, `$0`, resumable analysis; no remote/GPU launch  
+Date: 2026-07-23
+Lane: `ddm_sn1_segnet_telemetry_asymmetry`
+Authority SHA-256: `eef197f9221c4ec94e56840aac93d110d6250478b4bdf2233b82c06e4c323ecd`
+Lineage: v10/DDM only
+Execution: local CPU, `$0`, resumable analysis; no remote/GPU launch
 Authority: `[macOS-CPU frozen-SegNet+PoseNet advisory]`,
-`score_claim=false`, pointer write forbidden  
+`score_claim=false`, pointer write forbidden
 Landing: isolated Codex branch; MAIN landing review required
 
 ## Outcome

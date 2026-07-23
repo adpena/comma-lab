@@ -1,7 +1,7 @@
 # DDM SN1 error-source tensor — DAG / FEED 603
 
-Date: 2026-07-23  
-Lane: `ddm_sn1_segnet_telemetry_asymmetry`  
+Date: 2026-07-23
+Lane: `ddm_sn1_segnet_telemetry_asymmetry`
 State: advisory research instrument; `research_only=true`,
 `execution_allowed=false`, `score_claim=false`
 
