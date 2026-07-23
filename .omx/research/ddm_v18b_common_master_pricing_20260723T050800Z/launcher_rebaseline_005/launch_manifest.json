@@ -1,0 +1,24 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/run_ddm_v18b_common_master_pricing.py",
+    "--config",
+    ".omx/research/configs/ddm_a1_column_generated_n64_20260723.json",
+    "--output-directory",
+    ".omx/research/ddm_v18b_common_master_pricing_20260723T050800Z",
+    "--max-work-items",
+    "64"
+  ],
+  "authority": "delegated task authority sha256 86526d862ed35afb2aaa363b2eb91f0eab103d581f7a7d6f4223fed24b722fd2; macOS CPU advisory; score_claim=false; fixed v12 pool sequential greedy",
+  "cwd": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v18b_common_master_rebaseline_and_pricing_20260723T033945Z",
+  "detach_method": "subprocess.Popen(start_new_session=True)",
+  "dry_run": false,
+  "generated_utc": "2026-07-23T07:45:59Z",
+  "git_sha": "9e2f20be3f2752a587d95571b43eae097680b196",
+  "log_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v18b_common_master_rebaseline_and_pricing_20260723T033945Z/.omx/research/ddm_v18b_common_master_pricing_20260723T050800Z/launcher_rebaseline_005/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v18b_common_master_rebaseline_and_pricing_20260723T033945Z/.omx/research/ddm_v18b_common_master_pricing_20260723T050800Z/launcher_rebaseline_005",
+  "pid": 82232,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_v18b_common_master_rebaseline_and_pricing_20260723T033945Z/.omx/research/ddm_v18b_common_master_pricing_20260723T050800Z/launcher_rebaseline_005/run.pid",
+  "purpose": "DDM v18b n600 exact common-receiver v12 rebaseline resume at candidate 149",
+  "schema": "detached_local_process_launch.v1"
+}

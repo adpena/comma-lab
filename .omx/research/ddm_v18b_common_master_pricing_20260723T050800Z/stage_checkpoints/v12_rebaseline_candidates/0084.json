@@ -1,0 +1,173 @@
+{
+  "accepted_batch_updates": {},
+  "accepted_count_after": 7,
+  "candidate": {
+    "candidate": {
+      "boundary_shearlets": [],
+      "boundary_symbols": [],
+      "candidate_id": "obligation_drain_batch_0528_lane_phase_color_000",
+      "fisher_priority": "3.260995382410e+05",
+      "island_shapes": [],
+      "lane_symbols": [
+        {
+          "coefficient_delta": -1.0458264350891113,
+          "coefficient_index": 7,
+          "line_index": 4,
+          "pair_index": 528
+        },
+        {
+          "coefficient_delta": -1.8138320446014404,
+          "coefficient_index": 7,
+          "line_index": 4,
+          "pair_index": 529
+        },
+        {
+          "coefficient_delta": 3.1459944248199463,
+          "coefficient_index": 7,
+          "line_index": 4,
+          "pair_index": 530
+        },
+        {
+          "coefficient_delta": -2.1206283569335938,
+          "coefficient_index": 7,
+          "line_index": 4,
+          "pair_index": 531
+        },
+        {
+          "coefficient_delta": 0.6934790015220642,
+          "coefficient_index": 7,
+          "line_index": 4,
+          "pair_index": 532
+        },
+        {
+          "coefficient_delta": 2.65750789642334,
+          "coefficient_index": 7,
+          "line_index": 4,
+          "pair_index": 533
+        },
+        {
+          "coefficient_delta": -0.7795080542564392,
+          "coefficient_index": 7,
+          "line_index": 5,
+          "pair_index": 534
+        },
+        {
+          "coefficient_delta": -2.761575937271118,
+          "coefficient_index": 7,
+          "line_index": 4,
+          "pair_index": 535
+        },
+        {
+          "coefficient_delta": -0.021687107160687447,
+          "coefficient_index": 7,
+          "line_index": 4,
+          "pair_index": 536
+        },
+        {
+          "coefficient_delta": 2.1176605224609375,
+          "coefficient_index": 7,
+          "line_index": 5,
+          "pair_index": 537
+        },
+        {
+          "coefficient_delta": -2.1362993717193604,
+          "coefficient_index": 7,
+          "line_index": 5,
+          "pair_index": 538
+        },
+        {
+          "coefficient_delta": 0.07663281261920929,
+          "coefficient_index": 7,
+          "line_index": 5,
+          "pair_index": 539
+        },
+        {
+          "coefficient_delta": -2.244554281234741,
+          "coefficient_index": 7,
+          "line_index": 5,
+          "pair_index": 540
+        },
+        {
+          "coefficient_delta": 0.687828004360199,
+          "coefficient_index": 7,
+          "line_index": 4,
+          "pair_index": 541
+        },
+        {
+          "coefficient_delta": -2.913465738296509,
+          "coefficient_index": 7,
+          "line_index": 4,
+          "pair_index": 542
+        },
+        {
+          "coefficient_delta": 1.1747958660125732,
+          "coefficient_index": 7,
+          "line_index": 4,
+          "pair_index": 543
+        }
+      ],
+      "mechanism": "Lane/dash_phase_full_bridge_obligation_bundle",
+      "source_pair_ids": [
+        528,
+        529,
+        530,
+        531,
+        532,
+        533,
+        534,
+        535,
+        536,
+        537,
+        538,
+        539,
+        540,
+        541,
+        542,
+        543
+      ],
+      "topology_events": []
+    },
+    "column_id": "obligation_drain_batch_0528_lane_phase_color_000",
+    "conflict_keys": [
+      "('lane', 528, 4, 7)",
+      "('lane', 529, 4, 7)",
+      "('lane', 530, 4, 7)",
+      "('lane', 531, 4, 7)",
+      "('lane', 532, 4, 7)",
+      "('lane', 533, 4, 7)",
+      "('lane', 534, 5, 7)",
+      "('lane', 535, 4, 7)",
+      "('lane', 536, 4, 7)",
+      "('lane', 537, 5, 7)",
+      "('lane', 538, 5, 7)",
+      "('lane', 539, 5, 7)",
+      "('lane', 540, 5, 7)",
+      "('lane', 541, 4, 7)",
+      "('lane', 542, 4, 7)",
+      "('lane', 543, 4, 7)"
+    ],
+    "family": "v12_control",
+    "origin": "v12_fixed_pool_bundle_control",
+    "priority": "3.260995382410e+05",
+    "template": null,
+    "template_index": null
+  },
+  "candidate_index": 84,
+  "exact_archive_before": {
+    "bytes": 104717,
+    "sha256": "f71a4794cea3397cb3d6c2ad85308777a1debe78f8b7c106776787f623c3b695"
+  },
+  "exact_receiver_compile_refusal": "G2CS1 line-coefficient group is a receiver-output no-op",
+  "failure_evidence": {
+    "launcher_log_path": ".omx/research/ddm_v18b_common_master_pricing_20260723T050800Z/launcher_rebaseline_002/run.log",
+    "launcher_log_sha256": "bb5671bcfa21fa46697d0a6b47334122e0bf85ee4b35b995c3cb6bbc4e33a37a",
+    "runner_git_sha": "9e2f20be3f2752a587d95571b43eae097680b196"
+  },
+  "admitted": false,
+  "reason": "exact_receiver_parseback_refused_output_noop",
+  "schema": "ddm_v18b_common_master_pricing_checkpoint.v1",
+  "score_claim": false,
+  "stage": "v12_common_exact_r_sequential_greedy",
+  "typed_config_sha256": "631379cfc261e90a91af0fe3c7523293184c38656b5e5a93efca8b7e0a48083c",
+  "verdict_scope": "this exact fixed-pool bundle is a receiver-output no-op; no broader family conclusion"
+}
