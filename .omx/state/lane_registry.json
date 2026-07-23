@@ -84207,6 +84207,48 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "ddm_v19c_correction_saturation",
+      "name": "DDM v19c correction saturation",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local-only [macOS-CPU frozen-scorer advisory] correction saturation; score_claim=false; MAIN review required.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -84216,5 +84258,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T03:33:03Z"
+  "updated_at": "2026-07-23T06:32:54Z"
 }
