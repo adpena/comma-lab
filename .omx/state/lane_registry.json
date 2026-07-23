@@ -84124,6 +84124,48 @@
       "notes": "Local macOS-CPU frozen-scorer pure-priced receiver solve; score_claim=false; no dispatch; MAIN landing review required.",
       "research_only": true,
       "lane_class": "receiver_realization_research"
+    },
+    {
+      "id": "ddm_j4_366_warm_start_reform",
+      "name": "DDM J4 #366 warm-start reform",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_j4_366_warm_start_DAG_FEED_20260723.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_j4_366_warm_start_smoke_receipt_20260723.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/ddm_j4_366_review_receipt_20260723.json"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_j4_366_review_receipt_20260723.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "J3 opening regression localized and J4 reform landed; final-source exact bounded n600 smoke BLOCKED_REALIZED_NO_COMPONENT_DESCENT; no campaign launch; score_claim=false; MAIN review required.",
+      "research_only": true
     }
   ],
   "level_rules": {

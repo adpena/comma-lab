@@ -1,0 +1,96 @@
+{
+  "schema": "ddm_j4_366_warm_start_diagnosis_receipt.v1",
+  "utc": "2026-07-23T04:55:00Z",
+  "lane_id": "ddm_j4_366_warm_start_reform",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j4_366_warm_start_reform_20260723T035657Z.wrapped.prompt.txt",
+    "sha256": "f50a5a494d027fa9fa829202015cde8744aac54fcbf5130e7fc8a055af4bf565",
+    "bytes": 6593
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "source_j3": {
+    "run_root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j3_366_fullrun_finalsmoke_64c421698c_20260723T030700Z",
+    "producer_receipt_sha256": "ff8e85df7fcd4da5b0fce11691ce874bd485555c1545fe6e27ab657709dac5cb",
+    "step4_checkpoint_sha256": "a4892de5b6af4cfabdf4c06d807e20ececc85498d7f93a137f189813693d2c58",
+    "step1_telemetry_sha256": "1b827d7b4b50d2c3d5a353079a58b48b39fe1531b63e039e968d3943b49d859b",
+    "step4_telemetry_sha256": "f8243557f20d689911711be9d70b6615244dbd36bd9633a5c92fecd238acda55",
+    "baseline": {
+      "d_seg": 0.027470296223958333,
+      "d_pose": 163.0613272814428
+    },
+    "candidate_step4": {
+      "d_seg": 0.027603208753797744,
+      "d_pose": 163.0613308426994,
+      "delta_d_seg": 0.00013291252983941085,
+      "delta_d_pose": 0.0000035612565909559635,
+      "realized_parameter_count": 14
+    }
+  },
+  "exact_failure_localization": {
+    "term": "fresh-Adam second-moment transient at the opening learning rate, admitted by a four-pair Seg CE-plus-margin surrogate instead of an exact n600 receiver verdict",
+    "group": "five island_worldsheet quanta plus nine shared_template_dof RGB quanta",
+    "step": "global step 4, the first bounded window with 14 integer-realized receiver coordinates",
+    "optimizer_state": {
+      "warm_start_optimizer_state_loadable": false,
+      "implicit_adam_beta2": 0.999,
+      "step1_theta_l2": 0.9999966025352478,
+      "step1_theta_max_abs": 0.25,
+      "step1_theta_nonzero": 16,
+      "step1_ema_max_abs": 0.000750000006519258,
+      "step4_theta_l2": 3.507678508758545,
+      "step4_theta_max_abs": 1.0025324821472168,
+      "step4_theta_nonzero": 19,
+      "step4_ema_max_abs": 0.007489411160349846,
+      "inference": "fresh moments normalized each nonzero opening gradient to an approximately sign-only quarter-quantum update; EMA remained below receiver realization and is exonerated as the triggering cause"
+    },
+    "pose_engage": "Pose was active from step 1 in J3 and was not protected by a first exact Seg admission gate",
+    "receiver_law": "the four-pair surrogate can descend while exact n600 uint8 parse-back regresses; one realized quantum or a shrunken local step is not admission authority"
+  },
+  "controlled_exact_n600_group_split": {
+    "method": "load the immutable J3 step4 theta; retain only one parameter group; compile the receiver-closed archive; run the same chunked n600 frozen CPU-torch SegNet/PoseNet verdict",
+    "baseline_archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+    "island_only": {
+      "archive_sha256": "39b1be80c15c81a4d0d6955e8596aa3ed7ea68b257d39f349acac4b4a7e624ab",
+      "realized_parameter_count": 5,
+      "d_seg": 0.027578989664713543,
+      "d_pose": 163.06142724807248,
+      "delta_d_seg": 0.0001086934407552104,
+      "delta_d_pose": 0.00009996662967370917,
+      "verdict": "BLOCKED_BOTH_COMPONENTS_REGRESS"
+    },
+    "shared_template_only": {
+      "archive_sha256": "f03c397b57fd7df5dd09bc6c00012fe2924e264662d611fdc865154260639d64",
+      "realized_parameter_count": 9,
+      "d_seg": 0.027500830756293403,
+      "d_pose": 163.06122348733703,
+      "delta_d_seg": 0.00003053453233506913,
+      "delta_d_pose": -0.00010379410576844017,
+      "verdict": "BLOCKED_DSEG_REGRESSION_DESPITE_DPOSE_DESCENT"
+    }
+  },
+  "realized_coordinates_step4": {
+    "island_worldsheet": [
+      "119 island.track59.center_y +1",
+      "164 island.track82.center_x +1",
+      "165 island.track82.center_y -1",
+      "174 island.track87.center_x -1",
+      "177 island.track88.center_y +1"
+    ],
+    "shared_template_dof": [
+      "353 template.row1.rgb_r +1",
+      "355 template.row1.rgb_b -1",
+      "356 template.row2.rgb_r +1",
+      "358 template.row2.rgb_b -1",
+      "362 template.row4.rgb_r -1",
+      "364 template.row4.rgb_b +1",
+      "365 template.row5.rgb_r +1",
+      "366 template.row5.rgb_g +1",
+      "367 template.row5.rgb_b -1"
+    ]
+  },
+  "verdict": "CONFIRMED_INSTANCE_FAILURE_LOCALIZED",
+  "verdict_scope": "INSTANCE: the J3 fresh-moment pair447 four-step opening policy; the 368-coordinate formulation and representation family remain open"
+}

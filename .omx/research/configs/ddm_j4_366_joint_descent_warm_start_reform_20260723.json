@@ -1,0 +1,216 @@
+{
+  "schema": "ddm_joint_descent_witness_program_ticket.v1",
+  "authority": {
+    "delegation_prompt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j4_366_warm_start_reform_20260723T035657Z.wrapped.prompt.txt",
+    "delegation_prompt_sha256": "f50a5a494d027fa9fa829202015cde8744aac54fcbf5130e7fc8a055af4bf565",
+    "delegation_prompt_bytes": 6593,
+    "source_commit": "f3e9c680faab55e836f7bfe1a4fedb3c3c90572a",
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false
+  },
+  "compile_custody": {
+    "typed_schema": "DirectDescriptionJointDescentTypedConfigV1",
+    "hash_scope": "RFC8785 canonical bytes of semantic_program",
+    "hash_algorithm": "sha256",
+    "semantic_program_sha256": "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b",
+    "typed_config_hash": "ca13e172e195731026de80ecaa0dff8ea307c1212fcc13ac4d17c6285ee9d7ab",
+    "existing_compiler_accepts_schema": true,
+    "existing_governed_launcher_accepts_named_config": true,
+    "claim": "HASH_SEALED_EXECUTABLE_TYPED_FULL_RUN_CONFIG"
+  },
+  "semantic_program": {
+    "schema": "DirectDescriptionJointDescentTypedConfigV1",
+    "program_id": "ddm_j4_366_joint_descent_warm_start_reform_n600_seed0",
+    "seed": 0,
+    "deterministic_algorithms": true,
+    "num_pairs": 600,
+    "target_cache": {
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "bytes": 5078017610,
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "warm_start": {
+      "kind": "receiver_closed_v15_composed_carrier_archive",
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+      "bytes": 133941,
+      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+      "receipt_path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_scorer_solved_templates_n600_receipt.json",
+      "receiver_parse_reencode_custody": "GREEN_LANDED_RECEIPT",
+      "optimizer_state_loadable": false,
+      "optimizer_state_contract": "the V15 byte warm start has no optimizer moments; initialize fresh Adam under the beta2-derived rewarmup law, then persist every Adam/EMA/RNG/cursor checkpoint through ResumeRegistry"
+    },
+    "receiver_effective_surface": {
+      "parameter_count": 368,
+      "island_worldsheet_track_translation_count": 326,
+      "lane_periodic_wire_coordinate_count": 24,
+      "shared_template_channel_count": 18,
+      "j2_named_count_superseded": 706,
+      "exclusion_rule": "exclude lift metadata and seed fields absent from current receiver wire encoding",
+      "excluded_j2_names": [
+        "326 island aspect_log/rotation metadata coordinates",
+        "12 Lane BEV/range seed coordinates"
+      ],
+      "knot_surface_decision": "do not stage 2197 individual knots: track translations are the currently counted receiver-effective low-dimensional energy coordinates; knot expansion requires a separately counted wire grammar and measured marginal delta-S per byte"
+    },
+    "joint_objective": {
+      "formula": "100*d_seg_R + sqrt(10*d_pose_YUV6_R) + 25*archive_bytes/37545489",
+      "segnet": "frozen contest SegNet with margin hinge",
+      "posenet": "frozen official two-frame YUV6 PoseNet",
+      "roundtrip": "receiver parse-back paint to camera uint8 STE through fused R",
+      "ema_decay": 0.997,
+      "ema_decision": "EMA shadow is complete checkpoint state but is not the opening failure: j3 max |EMA|=0.007489411 remained below receiver realization; opening exact admission uses live candidate bytes, scheduled decisions use EMA only after a strict n600 admission",
+      "stability": {
+        "preset": "amber",
+        "grad_clip": 0.5,
+        "pose_grad_coeff_max": 25,
+        "grad_normalize": true,
+        "per_group_grad_clip": true
+      }
+    },
+    "compute_contract": {
+      "baseline": {
+        "device": "MLX_GPU",
+        "environment": {
+          "TAC_MLX_CUSTOM_GROUPED_BACKWARD": "1"
+        },
+        "required_kernels": [
+          "custom grouped backward measured active",
+          "fused differentiable-R bit-identical to NumPy-fp32"
+        ],
+        "chunked_verdicts": true,
+        "authority": "speed path only; exact chunked frozen CPU-torch replay is macOS advisory and score_claim=false"
+      },
+      "memory_ceiling_gib": 116.0,
+      "measured_full_path_peak_rss_gib": 10.47418212890625,
+      "derived_projected_peak_gib": 13.5690185546875,
+      "preflight_external_receipt_sha256": "20703c8c8197036a00876fa201b662ca2f66006ca124d81c94e94cf381c3abdb"
+    },
+    "full_run_schedule": {
+      "train_batch": 4,
+      "learning_rate_quantum_fraction": 0.25,
+      "checkpoint_interval_steps": 37,
+      "plateau_verdicts": 2,
+      "warm_start_pair": 447,
+      "warm_start_steps": 4,
+      "warm_start_reform": {
+        "adam_beta2": 0.999,
+        "lr_rewarmup_c": 2.0,
+        "lr_rewarmup_steps": 2000,
+        "lr_rewarmup_floor": 0.1,
+        "lr_rewarmup_shape": "linear",
+        "maximum_continuous_update_quantum_fraction": 0.25,
+        "frozen_groups_until_first_admission": [
+          "shared_template_dof"
+        ],
+        "group_release_condition": "first_strict_n600_island_admission",
+        "pose_objective_engage_condition": "after_first_strict_n600_seg_admission",
+        "first_realized_admission": "exact_n600_dseg_descent_and_dpose_nonregression_else_abort_rollback"
+      },
+      "measured_seconds_per_step": 104.09510249993764,
+      "measured_seconds_per_step_low": 100.87168033304624,
+      "measured_seconds_per_step_high": 104.09510249993764,
+      "derived_steps_per_n600_exposure": 150,
+      "derived_total_steps": 450,
+      "derived_wall_clock_hours_low": 13.31387624311125,
+      "derived_wall_clock_hours_high": 13.79371420691443,
+      "wall_clock_formula": "450*s_per_step + 10*chunked_n600_verdict_seconds + measured_startup_seconds",
+      "stage_transition_rule": "the first integer receiver realization is an immediate strict n600 admission boundary with rollback on any component regression; thereafter third-exposure and stage-exit measurements may advance only on realized target or component-safe descent; never model-predicted plateau",
+      "stages": [
+        {
+          "stage_id": "01_island_worldsheet_joint_descent",
+          "active_groups": [
+            "island_worldsheet",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "verdict_interval_steps": 50,
+          "target_d_seg": 0.020602722168,
+          "target_d_pose": null
+        },
+        {
+          "stage_id": "02_lane_production_joint_descent",
+          "active_groups": [
+            "lane_program",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "verdict_interval_steps": 50,
+          "target_d_seg": 0.013735148112,
+          "target_d_pose": null
+        },
+        {
+          "stage_id": "03_pose_coupled_finish",
+          "active_groups": [
+            "island_worldsheet",
+            "lane_program",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "verdict_interval_steps": 50,
+          "target_d_seg": 0.006867574056,
+          "target_d_pose": 0.00161
+        }
+      ]
+    },
+    "value_provenance": {
+      "train_batch_4": "DERIVED-LIVE: batch4 104.095102 s/step versus batch1 100.871680 s/step; n600 pass 4.3373h versus 16.8119h; both actual --full-run paths",
+      "learning_rate_0.25": "DERIVED CAP: operator v16 warning and measured v17 negative rho invalidate extrapolation even at one uint8 quantum; every continuous opening coordinate update is capped at one quarter quantum and the first integer realization requires exact n600 admission",
+      "adam_beta2_0.999": "INHERITED IMPLEMENTATION VALUE MADE EXPLICIT: clipped_adam_step previously hid beta2=0.999 as a default; j3 fresh moments exposed the normalized-sign transient",
+      "lr_rewarmup_steps_2000": "DERIVED LawRef adam_v_variance_warmup_length_v1: ceil(c/(1-beta2)) with c=2 and beta2=0.999 = 2000 optimizer steps; the linear ramp starts at factor 0.1",
+      "opening_group_order": "MEASURED J4 split n600 replay: five island quanta regressed d_seg +0.000108693441 and d_pose +0.000099966630; nine template quanta regressed d_seg +0.000030534532 while improving d_pose -0.000103794106. Freeze global templates and the Pose objective until a strict island-only n600 Seg admission; exact guard still protects Pose.",
+      "checkpoint_interval_37": "DERIVED: floor((600/4)/4), a quarter of one complete n600 exposure; stage-end step150 is separately preserved",
+      "plateau_verdicts_2": "DERIVED: third-exposure verdict interval 50 yields a two-verdict measured early-stop at step 100 before the step-150 maximum; require both adjacent Seg and Pose measurements non-improving; component regression blocks immediately",
+      "warm_start_pair_447": "MEASURED J2: bounded process-boundary smoke descended both d_seg and d_pose on pair447",
+      "warm_start_steps_4": "PRESERVED BOUNDED DIAGNOSTIC WINDOW ONLY: j3's four steps are no longer treated as one admitted quantum; under the beta2 ramp they measure whether the opening remains inside the same receiver cell",
+      "stage_steps_150": "DERIVED ENERGY LOGIC: each newly admitted force group receives exactly one complete n600 exposure before composition advances; ceil(600/4)=150",
+      "stage_targets": "INHERITED PREREGISTERED J1 fractional energy-debt ladder; transitions consume only realized stage-exit measurements",
+      "timing_band": "MEASURED actual full-run batch1 and batch4 s/step plus measured 248.620506-276.308176s chunked verdicts and 51.493261s startup",
+      "effective_368": "DERIVED BY CURRENT RECEIVER WIRE: 2*163 + 4*6 + 3*6; J2 706 included 338 unencoded names"
+    },
+    "checkpoint_contract": {
+      "resume_from_disk": true,
+      "atomic_write": "temporary file plus fsync plus os.replace",
+      "periodic_intra_stage": true,
+      "every_stage_end": true,
+      "all_stage_files_preserved": true,
+      "distinct_stage_encoded_names": true,
+      "ema_shadow_saved": true,
+      "required_state": [
+        "368 low-dimensional receiver-effective coordinates",
+        "Adam first and second moments",
+        "EMA shadow",
+        "stage index, stage step and global step",
+        "deterministic seed and no-sampling RNG contract",
+        "typed config, source archive and target cache hashes",
+        "verdict history and realized archive identity"
+      ]
+    },
+    "telemetry": {
+      "every_step": [
+        "stage and pair IDs",
+        "active and realized-secant coordinate counts",
+        "loss, gradient norm, beta2-derived LR factor, quarter-quantum cap, frozen groups and Pose objective weight",
+        "d_seg and d_pose research-signal before and after",
+        "step seconds and parse-back archive SHA"
+      ],
+      "every_stage_exit": [
+        "global and per-class d_seg",
+        "official YUV6 d_pose",
+        "archive bytes and advisory action",
+        "memory and free-memory floor",
+        "receiver parse-back identity"
+      ],
+      "chunked_n600_verdict": true,
+      "verdict_batch": 16,
+      "pointer_promotion_from_advisory_forbidden": true,
+      "score_claim": false
+    },
+    "execution_boundary": {
+      "research_only": true,
+      "score_claim": false,
+      "this_branch_launch_authorized": false,
+      "main_review_required": true,
+      "standing_go_applies_only_after_main_review_and_a_green_bounded_exact_n600_admission": true
+    }
+  }
+}

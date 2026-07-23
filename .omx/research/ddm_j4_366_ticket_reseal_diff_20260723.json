@@ -1,0 +1,77 @@
+{
+  "schema": "ddm_j4_366_ticket_reseal_diff.v1",
+  "utc": "2026-07-23T04:55:00Z",
+  "historical_ticket_preserved": {
+    "path": ".omx/research/configs/ddm_j3_366_joint_descent_witness_program_20260723.json",
+    "semantic_program_sha256": "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab2935a2c403b824",
+    "typed_config_hash": "fa63e79492d916a9cc6fe144207bdcb627d07e416883e131ecb90c289f8ccec0",
+    "git_diff_from_head": "NONE"
+  },
+  "resealed_ticket": {
+    "path": ".omx/research/configs/ddm_j4_366_joint_descent_warm_start_reform_20260723.json",
+    "semantic_program_sha256": "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b",
+    "typed_config_hash": "ca13e172e195731026de80ecaa0dff8ea307c1212fcc13ac4d17c6285ee9d7ab",
+    "file_sha256": "0e9f4788ef00f224315eaf2198c2561c346dfd0cd63a0bebeaee6fffb7e49eb3"
+  },
+  "semantic_delta": [
+    {
+      "field": "warm_start.optimizer_state_loadable",
+      "old": true,
+      "new": false,
+      "provenance": "MEASURED source archive has bytes but no optimizer moments"
+    },
+    {
+      "field": "full_run_schedule.warm_start_reform.adam_beta2",
+      "old": "implicit 0.999",
+      "new": 0.999,
+      "provenance": "IMPLEMENTATION VALUE MADE HASH-EXPLICIT"
+    },
+    {
+      "field": "full_run_schedule.warm_start_reform.lr_rewarmup_steps",
+      "old": null,
+      "new": 2000,
+      "provenance": "DERIVED ceil(2/(1-0.999)) by adam_v_variance_warmup_length_v1"
+    },
+    {
+      "field": "full_run_schedule.warm_start_reform.lr_rewarmup_floor",
+      "old": null,
+      "new": 0.1,
+      "provenance": "CONFIG opening floor, linearly ramped over the derived window"
+    },
+    {
+      "field": "full_run_schedule.warm_start_reform.maximum_continuous_update_quantum_fraction",
+      "old": "learning rate 0.25 only",
+      "new": 0.25,
+      "provenance": "DERIVED hard per-coordinate cap; LR shrink never confers receiver admission"
+    },
+    {
+      "field": "full_run_schedule.warm_start_reform.frozen_groups_until_first_admission",
+      "old": [],
+      "new": [
+        "shared_template_dof"
+      ],
+      "provenance": "MEASURED template-only n600 Seg regression"
+    },
+    {
+      "field": "full_run_schedule.warm_start_reform.pose_objective_engage_condition",
+      "old": "active at step 1",
+      "new": "after_first_strict_n600_seg_admission",
+      "provenance": "MEASURED group split plus component-safe trust-region ordering"
+    },
+    {
+      "field": "full_run_schedule.warm_start_reform.first_realized_admission",
+      "old": "four-pair surrogate then stage-exit exact verdict",
+      "new": "exact_n600_dseg_descent_and_dpose_nonregression_else_abort_rollback",
+      "provenance": "MEASURED J3 local/exact mismatch and v17 receiver law"
+    }
+  ],
+  "bounded_remeasure": {
+    "delta_d_seg": 0.0,
+    "delta_d_pose": 0.0,
+    "verdict": "BLOCKED_REALIZED_NO_COMPONENT_DESCENT",
+    "campaign_launched": false
+  },
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_review_required": true
+}

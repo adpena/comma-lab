@@ -1,0 +1,86 @@
+{
+  "schema": "ddm_j4_366_warm_start_smoke_receipt.v1",
+  "utc": "2026-07-23T04:55:00Z",
+  "lane_id": "ddm_j4_366_warm_start_reform",
+  "ticket": {
+    "path": ".omx/research/configs/ddm_j4_366_joint_descent_warm_start_reform_20260723.json",
+    "semantic_program_sha256": "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b",
+    "typed_config_hash": "ca13e172e195731026de80ecaa0dff8ea307c1212fcc13ac4d17c6285ee9d7ab",
+    "file_sha256": "0e9f4788ef00f224315eaf2198c2561c346dfd0cd63a0bebeaee6fffb7e49eb3"
+  },
+  "bounded_smoke": {
+    "root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j4_366_warmstart_smoke_final_9c3575aa_20260723T051000Z",
+    "producer_receipt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j4_366_warmstart_smoke_final_9c3575aa_20260723T051000Z/full_run_receipt.json",
+    "producer_receipt_sha256": "abea0b0e24e22fcd77b413b07e0a7aaba4ef953eb8fbf86f92cabf3d31678219",
+    "blocked_checkpoint_sha256": "f4a74fde6b08db9f26386b5526ba58ef72a99bd3e7239582622bc3573c30e418",
+    "final_verdict_sha256": "7cede433458e32c16feb1758707ac7b0954c544271bb39af158d9050da2ac73f",
+    "step1_telemetry_sha256": "22fac842f629d9706bb0a54fda5ab3d4d0c82e41ecc10b329d6252ba3ee1aaa3",
+    "step4_telemetry_sha256": "ede3f5260725b4c0bd172e256ec87807bd87025bef7b697f05223d034d475c9a",
+    "global_steps": 4,
+    "elapsed_seconds": 1040.1619794589933,
+    "step_seconds": [
+      108.19854441704229,
+      105.62144141690806,
+      105.51050854218192,
+      104.46263675019145
+    ],
+    "campaign_launched": false
+  },
+  "opening_controls_measured": {
+    "active_groups": [
+      "island_worldsheet"
+    ],
+    "frozen_groups": [
+      "shared_template_dof"
+    ],
+    "pose_objective_weight": 0.0,
+    "adam_beta2": 0.999,
+    "rewarmup_steps": 2000,
+    "step1_lr_factor": 0.1,
+    "step1_lr_quantum_fraction": 0.025,
+    "step4_lr_factor": 0.10135000000000001,
+    "step4_lr_quantum_fraction": 0.025337500000000002,
+    "maximum_continuous_update_quantum_fraction": 0.25,
+    "realized_boundary_crossed": false,
+    "realized_parameter_count": 0
+  },
+  "exact_n600": {
+    "baseline": {
+      "archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+      "archive_bytes": 133941,
+      "d_seg": 0.027470296223958333,
+      "d_pose": 163.0613272814428
+    },
+    "final": {
+      "archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+      "archive_bytes": 133941,
+      "d_seg": 0.027470296223958333,
+      "d_pose": 163.0613272814428
+    },
+    "delta_d_seg": 0.0,
+    "delta_d_pose": 0.0,
+    "delta_archive_bytes": 0,
+    "component_acceptance": "not met: neither component descended"
+  },
+  "custody": {
+    "seed": 0,
+    "deterministic_algorithms": true,
+    "target_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "admission_memory_receipt_sha256": "bfc0bfc427de0753e9edcbfc25c857bb1c5f8b5764b260dac7d16366db9294f7",
+    "runtime_memory_receipt_sha256": "b77e351d36baf5502e6a1fb1b66ccfe21637cfa9204fc762e158bd39b5f9f2cc",
+    "dry_run_receipt_sha256": "89f2470ab9d67395751257bcd9de358ef026954f30dceb7e373d9fe48bc26bfa",
+    "measured_producer_consumer_sha256": "18ca2e5072838889c34741243e4fa6e10fa8716b0916f155033eb50cfd1fc054",
+    "measured_producer_launcher_sha256": "bc81258a38a086c3084a8644bd555dc536a84cbb61f47f9a052270c2bcb23e61",
+    "memory_ceiling_gib": 116.0,
+    "projected_peak_gib": 13.5690185546875,
+    "storage_tier": "/Volumes/VertigoDataTier/pact"
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "verdict": "BLOCKED_REALIZED_NO_COMPONENT_DESCENT",
+  "verdict_scope": "INSTANCE: the bounded four-step J4 opening did not cross a receiver boundary; no campaign, formulation, family, or score verdict",
+  "main_review_required": true
+}

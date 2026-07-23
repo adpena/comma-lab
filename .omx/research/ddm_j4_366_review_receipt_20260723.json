@@ -1,0 +1,59 @@
+{
+  "schema": "ddm_j4_366_review_receipt.v1",
+  "utc": "2026-07-23T05:24:00Z",
+  "lane_id": "ddm_j4_366_warm_start_reform",
+  "source_custody": {
+    "consumer": {
+      "path": "src/tac/optimization/direct_description_joint_descent.py",
+      "sha256": "18ca2e5072838889c34741243e4fa6e10fa8716b0916f155033eb50cfd1fc054",
+      "reviewed_entities": 47
+    },
+    "launcher": {
+      "path": "tools/launch_ddm_joint_descent.py",
+      "sha256": "bc81258a38a086c3084a8644bd555dc536a84cbb61f47f9a052270c2bcb23e61",
+      "reviewed_entities": 29
+    },
+    "tests": {
+      "path": "src/tac/optimization/tests/test_direct_description_joint_descent.py",
+      "sha256": "71f7efe8c7586f6a1a115803c3f1e25d32ff0bf76da5325259929af12f53c073",
+      "reviewed_entities": 14
+    }
+  },
+  "review_tracker": {
+    "reviewer": "codex-ddm-j4",
+    "consecutive_clean_passes": [
+      "ddm_j4_structural",
+      "ddm_j4_resume_custody",
+      "ddm_j4_exact_verdict"
+    ],
+    "all_touched_python_entities_reviewed": true
+  },
+  "adversarial_findings_fixed_before_clean_passes": [
+    "historical J3 semantic SHA was listed as supported but the new parser initially required a J4-only field; fixed with explicit optional legacy parsing and typed-hash regression coverage",
+    "a rejected first integer proposal initially rolled back only in memory; fixed with an atomic preserved rollback checkpoint plus immediate bit-exact reload verification",
+    "non-finite Adam hyperparameters and update caps were not uniformly rejected; fixed fail-closed"
+  ],
+  "verification": {
+    "pytest_command": "PYTHONPATH=src .venv/bin/python3 -m pytest -q src/tac/optimization/tests/test_direct_description_joint_descent.py src/tac/optimization/tests/test_direct_description_carrier_compose.py",
+    "pytest_result": "46 passed in 72.56s",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS",
+    "py_compile": "PASS",
+    "json_parse": "PASS",
+    "git_diff_check": "PASS",
+    "historical_j3_ticket_git_diff": "NONE",
+    "j3_typed_config_hash": "fa63e79492d916a9cc6fe144207bdcb627d07e416883e131ecb90c289f8ccec0",
+    "j4_typed_config_hash": "ca13e172e195731026de80ecaa0dff8ea307c1212fcc13ac4d17c6285ee9d7ab"
+  },
+  "final_source_custody_smoke": {
+    "producer_receipt_sha256": "abea0b0e24e22fcd77b413b07e0a7aaba4ef953eb8fbf86f92cabf3d31678219",
+    "delta_d_seg": 0.0,
+    "delta_d_pose": 0.0,
+    "verdict": "BLOCKED_REALIZED_NO_COMPONENT_DESCENT",
+    "campaign_launched": false
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_review_required": true
+}

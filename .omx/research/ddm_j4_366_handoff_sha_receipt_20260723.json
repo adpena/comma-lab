@@ -1,0 +1,59 @@
+{
+  "schema": "ddm_j4_366_handoff_sha_receipt.v1",
+  "utc": "2026-07-23T05:29:00Z",
+  "lane_id": "ddm_j4_366_warm_start_reform",
+  "branch": "codexwt/ddm_j4_366_warm_start_reform_20260723T035657Z",
+  "implementation_commit": "1e40813c0c410b53673a9406183c104711582c61",
+  "ticket": {
+    "path": ".omx/research/configs/ddm_j4_366_joint_descent_warm_start_reform_20260723.json",
+    "file_sha256": "0e9f4788ef00f224315eaf2198c2561c346dfd0cd63a0bebeaee6fffb7e49eb3",
+    "semantic_program_sha256": "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b",
+    "typed_config_hash": "ca13e172e195731026de80ecaa0dff8ea307c1212fcc13ac4d17c6285ee9d7ab"
+  },
+  "receipts": {
+    "diagnosis": {
+      "path": ".omx/research/ddm_j4_366_warm_start_diagnosis_receipt_20260723.json",
+      "sha256": "a4ac23d6a3ae4f8776536ee7adf9649432405a8df98013fc6cedd374c03dfbb5"
+    },
+    "smoke": {
+      "path": ".omx/research/ddm_j4_366_warm_start_smoke_receipt_20260723.json",
+      "sha256": "befe2aeefb3ae8c008fd263f45d32a0d8f18e1dabb1f4b8b24e8e47de6f9be2d"
+    },
+    "review": {
+      "path": ".omx/research/ddm_j4_366_review_receipt_20260723.json",
+      "sha256": "138909fc02ab286acb5437cad069c22d41809a256d19b67b21ec6e96f0336f26"
+    },
+    "reseal_diff": {
+      "path": ".omx/research/ddm_j4_366_ticket_reseal_diff_20260723.json",
+      "sha256": "0b9d5ba384559218e645719781a3eafc1ee1d4b267cab27c171f2e0a514ecda2"
+    },
+    "external_final_source_smoke": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j4_366_warmstart_smoke_final_9c3575aa_20260723T051000Z/full_run_receipt.json",
+      "sha256": "abea0b0e24e22fcd77b413b07e0a7aaba4ef953eb8fbf86f92cabf3d31678219"
+    }
+  },
+  "triality": {
+    "dsl_sha256": "0e9f4788ef00f224315eaf2198c2561c346dfd0cd63a0bebeaee6fffb7e49eb3",
+    "dag_feed_sha256": "4120a4b00e9d950d549164d3a95a68ee7f8c434d0d398a00df7ee5983e41e3e4",
+    "equations_sha256": "ed7e712b88a5575fd0d840e7098a0445c18a0fe0f38f0928037372d3cdeffcf4"
+  },
+  "bounded_verdict": {
+    "delta_d_seg": 0.0,
+    "delta_d_pose": 0.0,
+    "realized_parameter_count": 0,
+    "verdict": "BLOCKED_REALIZED_NO_COMPONENT_DESCENT",
+    "verdict_scope": "INSTANCE: bounded J4 four-step opening; formulation and family remain open",
+    "campaign_launched": false
+  },
+  "verification": {
+    "tests": "46 passed",
+    "review_passes": 3,
+    "lane_level": 2,
+    "global_lane_validate": "FAILED_ON_110_PREEXISTING_UNRELATED_MISSING_EVIDENCE_PATHS"
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review": "REQUIRED_INDEPENDENT_REVIEW_BEFORE_MERGE_OR_FIRE"
+}
