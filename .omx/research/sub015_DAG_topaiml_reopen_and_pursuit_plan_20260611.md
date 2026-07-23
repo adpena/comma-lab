@@ -22051,3 +22051,24 @@ rate/stream-type) · FEED-603 language-law fold into canonical_equations + DSL (
 signal-ratio 13.0; the triality debt) · MAIN process fix effective now: p0-ledger update in the same command
 block as every FEED.
 Pointer UNMOVED 0.19108.
+
+---
+
+## FEED-603-staleness-confound-law (2026-07-23, MAIN — operator: "staleness is becoming a source of confounding and poison; account for that too")
+
+**STALENESS = a first-class confound class** (memory `staleness-is-a-named-confound-class-...`): one class,
+many costumes, four hit TODAY — charter-stale (dv1's late directives), calibration-stale (m7 ×3.59 on the
+banned lineage), coder-stale (Law v2), dual-stale (Law v3). Signature: consumer reads a producer's output
+after the producer's INPUTS changed → silently measures a mixture of two states (the confound triple on the
+time axis).
+
+**THE LAW — freshness at CONSUMPTION:** (1) input-hash LINEAGE on every artifact; (2) VALIDITY HORIZON —
+derived via the J-of-J/Hessian bound where the math allows (Law v3's T2 radius = staleness, derived), declared
+with reason elsewhere (#569 SLA); (3) CONSUMER-side verification at read time — fail-closed re-derive, or the
+read is tagged `[stale-advisory]`. Production stamps alone insufficient. Routed to dv2+e1 (rows/receipts state
+their input-hash sets; cached duals/coders/residual-models hash-verified before use).
+
+**Unification note:** the existing surfaces are instances — version stamps (G2), `applies_to_stage` inbox,
+#569 freshness/tombstone SLA, drift-detector, config-freshness rc=6, pointer `--strict` — consolidate under
+ONE staleness-aware artifact discipline at the queued consolidation boundary (the basis-conversion + coder +
+version registries are all the SAME registry with freshness columns). Pointer UNMOVED 0.19108.
