@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 
@@ -11,6 +13,7 @@ from tools.measure_ddm_v19c_correction_saturation import (
     _apply_proposal,
     _interleave,
     _proposal_at,
+    _restore_n600_decisions,
     _scope_scale,
 )
 
@@ -147,3 +150,46 @@ def test_resume_proposal_identity_is_cycle_stable() -> None:
     first = [_proposal_at(inventory, index) for index in range(13)]
     replay = [_proposal_at(inventory, index) for index in range(13)]
     assert [row["candidate_id"] for row in replay] == [row["candidate_id"] for row in first]
+
+
+def test_n600_resume_restores_only_admitted_state(tmp_path) -> None:
+    config_hash = "a" * 64
+    inventory = [
+        {
+            "base_id": "q8_all_32",
+            "family": "preuint8_q8_region",
+            "scope": "all",
+            "scale_q8": 32,
+        },
+        {
+            "base_id": "q8_sparse_64",
+            "family": "preuint8_q8_region",
+            "scope": "sparse",
+            "scale_q8": 64,
+        },
+    ]
+    for index, accepted in enumerate((True, False)):
+        proposal = _proposal_at(inventory, index)
+        payload = {
+            "typed_config_sha256": config_hash,
+            "dev_admission_index": index,
+            "proposal": proposal,
+            "accepted": accepted,
+            "current_after": {
+                "archive_bytes": 100 + index,
+                "archive_sha256": str(index) * 64,
+            },
+        }
+        (tmp_path / f"candidate_{index:04d}.json").write_text(json.dumps(payload))
+    rows, state, current = _restore_n600_decisions(
+        decision_root=tmp_path,
+        config_hash=config_hash,
+        proposal_indices=[0, 1],
+        inventory=inventory,
+        state=_state(),
+        problem=_problem(),
+        ctx=_ctx(),
+    )
+    assert len(rows) == 2
+    assert state.q8_directives == (("all", 32),)
+    assert current == {"archive_bytes": 101, "archive_sha256": "1" * 64}

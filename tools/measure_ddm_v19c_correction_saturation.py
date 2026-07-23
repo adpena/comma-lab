@@ -977,6 +977,37 @@ def _bucket_delta(before: Mapping[str, Any], after: Mapping[str, Any]) -> dict[s
     return result
 
 
+def _restore_n600_decisions(
+    *,
+    decision_root: Path,
+    config_hash: str,
+    proposal_indices: Sequence[int],
+    inventory: Sequence[Mapping[str, Any]],
+    state: SaturationState,
+    problem: Mapping[str, Any],
+    ctx: Mapping[str, Any],
+) -> tuple[list[dict[str, Any]], SaturationState, Mapping[str, Any] | None]:
+    rows: list[dict[str, Any]] = []
+    current: Mapping[str, Any] | None = None
+    for expected_index, checkpoint in enumerate(sorted(decision_root.glob("candidate_*.json"))):
+        if expected_index >= len(proposal_indices):
+            raise DirectDescriptionError("v19c n600 resume has more decisions than DEV admissions")
+        proposal_index = proposal_indices[expected_index]
+        proposal = _proposal_at(inventory, proposal_index)
+        prior = _load_stage(checkpoint, config_hash)
+        if (
+            prior is None
+            or int(prior.get("dev_admission_index", -1)) != expected_index
+            or prior.get("proposal", {}).get("candidate_id") != proposal["candidate_id"]
+        ):
+            raise DirectDescriptionError("v19c n600 resume proposal order differs")
+        rows.append(prior)
+        if prior["accepted"]:
+            state = _apply_proposal(state, proposal, problem=problem, ctx=ctx)
+        current = prior["current_after"]
+    return rows, state, current
+
+
 def _stage_n600(
     config: DDMV19CCorrectionSaturationConfigV1,
     root: Path,
@@ -998,9 +1029,7 @@ def _stage_n600(
     )
     state = _initial_state(v19b_receipt, v19_receipt, ctx)
     baseline = v19b_receipt["n600"]["measurement"]
-    current = baseline
     initial_bytes = int(baseline["archive_bytes"])
-    rows = []
     accepted_dev = {
         row["proposal"]["proposal_index"]: row
         for row in (
@@ -1010,7 +1039,28 @@ def _stage_n600(
         if row.get("accepted") is True
     }
     geometry = _rung_geometry("n600", v19_config, ctx)
-    for n600_index, proposal_index in enumerate(sorted(accepted_dev)):
+    proposal_indices = sorted(accepted_dev)
+    decision_root = root / "stage_checkpoints" / "02_n600_decisions"
+    rows, state, restored_current = _restore_n600_decisions(
+        decision_root=decision_root,
+        config_hash=config.typed_config_hash(),
+        proposal_indices=proposal_indices,
+        inventory=inventory,
+        state=state,
+        problem=ctx["problem"],
+        ctx=ctx,
+    )
+    current = restored_current or baseline
+    if rows:
+        resumed_archive, _resumed_factory, _resumed_compile = _compile_state(
+            state, rung="n600", v19_config=v19_config, ctx=ctx
+        )
+        if (
+            _sha256(resumed_archive) != current["archive_sha256"]
+            or len(resumed_archive) != int(current["archive_bytes"])
+        ):
+            raise DirectDescriptionError("v19c n600 resumed archive endpoint differs")
+    for n600_index, proposal_index in enumerate(proposal_indices[len(rows) :], start=len(rows)):
         proposal = _proposal_at(inventory, proposal_index)
         trial_state = _apply_proposal(state, proposal, problem=ctx["problem"], ctx=ctx)
         archive, factory, compile_receipt = _compile_state(trial_state, rung="n600", v19_config=v19_config, ctx=ctx)
@@ -1063,7 +1113,9 @@ def _stage_n600(
             "score_claim": False,
             "evidence_axis": AXIS,
         }
-        checkpoint = root / "stage_checkpoints" / "02_n600_decisions" / f"candidate_{n600_index:04d}.json"
+        checkpoint = decision_root / f"candidate_{n600_index:04d}.json"
+        if checkpoint.exists():
+            raise DirectDescriptionError("v19c n600 checkpoint gap or duplicate detected")
         _write(checkpoint, row)
         rows.append(row)
         if accepted:
