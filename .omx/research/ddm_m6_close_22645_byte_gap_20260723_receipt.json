@@ -1,0 +1,254 @@
+{
+  "candidate_and_dispatch": {
+    "byte_close_candidate_flagged": false,
+    "maximum_authorized_future_exact_eval_cost_usd": 20,
+    "r6_exact_eval_flagged": false,
+    "reason": "Y=13 is below the 22645-byte gap; no candidate archive was written"
+  },
+  "execution": {
+    "config_changed": false,
+    "cost_usd": 0,
+    "exact_eval_dispatched": false,
+    "method": "bounded deterministic packet parse-back and receipt re-derivation",
+    "new_launch": false,
+    "new_scorer_run": false
+  },
+  "g2g2_scope_check": {
+    "admitted_pair_count": 0,
+    "all_prefixes_double_decode": true,
+    "all_prefixes_factor2_uint8_exact": true,
+    "all_prefixes_receiver_rgb": true,
+    "axis": "[macOS-CPU advisory]",
+    "base_counted_bytes": 121128,
+    "measured_prefix_count": 13,
+    "pair_count": 6,
+    "pair_indices": [
+      0,
+      34,
+      37,
+      46,
+      22,
+      30
+    ],
+    "source_vehicle_matches_177169_fp11": false,
+    "verdict": "MEASURED_G2G2_RATE_BREAK_EVEN_STOP_FAMILY_OPEN",
+    "verdict_scope": "bounded projected greedy/polish/swap over every decoded LaneLine centerline coordinate for the six hash-pinned G2f-selected pairs; a stall or all-address underreach applies only to this linearized LaneLine realization formulation and is not a chart-family infeasibility or rate-domination proof"
+  },
+  "generated_at_utc": "2026-07-23T11:06:50Z",
+  "lane_id": "ddm_m6_close_22645_byte_gap",
+  "lever_attribution": [
+    {
+      "authority": "MEASURED_ZERO",
+      "lever": "ker(A) payload hiding",
+      "measured_reduction_bytes": 0,
+      "pool_id": "P_NULL_GAUGE",
+      "scope": "nullity is geometry, not an archive-byte fraction"
+    },
+    {
+      "authority": "MEASURED_TRANSITIVE_EXACT_RECEIVER_PARSEBACK",
+      "lever": "rule-118 free migration",
+      "measured_reduction_bytes": 13,
+      "pool_id": "P_TEMPORAL_DESCRIPTION",
+      "scope": "13 fixed/derived framing bytes only"
+    },
+    {
+      "authority": "MEASURED_ZERO_PREMISE_CONFLATION",
+      "lever": "g2g2 integer lattice native",
+      "measured_reduction_bytes": 0,
+      "pool_id": "P_REALIZE",
+      "scope": "g2g2 factor2 uint8 is already exact; n16 -1.4% is a different absolute-write formulation and not a recoverable byte measurement"
+    }
+  ],
+  "main_landing_review": {
+    "focus": [
+      "confirm the 13-byte migration contains only fixed or derived framing",
+      "confirm compact-to-legacy reconstruction is archive-byte-identical",
+      "confirm g2g2 exact-factor2 custody falsifies the proposed -1.4% transfer",
+      "confirm ker(A) remains zero byte credit and pools are not naively summed",
+      "confirm no exact eval, launch, score, pointer, or promotion claim occurred"
+    ],
+    "required": true
+  },
+  "pool_aware_composition": {
+    "Y_bytes": 13,
+    "law": "one joint credit per non-additive pool; final admitted Y is the same-artifact receiver-closed archive delta, never singleton addition",
+    "pool_credits": [
+      {
+        "evidence_scope": "g2g2 already enforces exact factor2 uint8 receiver replay, is a 121128-byte different vehicle, and admits 0/6 pairs; the n16 absolute-write -1.4% result is unmet score debt, not byte credit",
+        "joint_reduction_bytes": 0,
+        "lever_ids": [
+          "g2g2_integer_lattice_native"
+        ],
+        "pool_id": "P_REALIZE",
+        "receiver_closed": true
+      },
+      {
+        "evidence_scope": "compact archive reconstructs the exact source member and exact source archive; only FP11/CTXR fixed magic, fixed version, and derived source length move into generic receiver code",
+        "joint_reduction_bytes": 13,
+        "lever_ids": [
+          "rule118_implicit_fp11_ctxr_framing"
+        ],
+        "pool_id": "P_TEMPORAL_DESCRIPTION",
+        "receiver_closed": true
+      },
+      {
+        "evidence_scope": "80.6742315223% mathematical nullity does not identify any removable parser-consumed counted payload; measured incremental byte credit is zero",
+        "joint_reduction_bytes": 0,
+        "lever_ids": [
+          "ker(A)_payload_hiding"
+        ],
+        "pool_id": "P_NULL_GAUGE",
+        "receiver_closed": true
+      }
+    ],
+    "residual_gap_bytes": 22632,
+    "result": {
+      "admitted_reduction_bytes": 13,
+      "baseline_archive_bytes": 177169,
+      "final_archive_bytes": 177156,
+      "pool_credit_upper_bound_bytes": 13,
+      "residual_gap_bytes": 22632,
+      "strict_cap_bytes": 154524,
+      "sub015_reached": false
+    },
+    "sub015_reached": false
+  },
+  "promotion_eligible": false,
+  "research_only": true,
+  "rule_118_receiver_adapter": {
+    "archive_reduction_bytes": 13,
+    "candidate_archive_written": false,
+    "compact_archive_bytes": 177156,
+    "compact_archive_sha256": "3fb7fe6d9e37e5545d9b8757514d3b82ff6c2296b474bf29026ac3875128ff3f",
+    "compact_format": "3xu24 section lengths | decoder | latent | sidecar | u16 selector length | selector | DQS1 tail",
+    "compact_member_bytes": 177056,
+    "compact_member_sha256": "4b923aa36bc9a4ca31a8335b092a8fb58867111f2afa7b99ebc7447e6d1e205b",
+    "consumption_proof": {
+      "all_retained_fields_consumed": true,
+      "method": "mutate each retained field then reconstruct and strict-parse legacy member",
+      "rows": [
+        {
+          "field": "decoder_section",
+          "mutation": "last_byte_xor_1",
+          "only_target_field_changed": true,
+          "reconstructed_legacy_member_changed": true
+        },
+        {
+          "field": "latent_section",
+          "mutation": "last_byte_xor_1",
+          "only_target_field_changed": true,
+          "reconstructed_legacy_member_changed": true
+        },
+        {
+          "field": "sidecar",
+          "mutation": "last_byte_xor_1",
+          "only_target_field_changed": true,
+          "reconstructed_legacy_member_changed": true
+        },
+        {
+          "field": "selector",
+          "mutation": "last_byte_xor_1",
+          "only_target_field_changed": true,
+          "reconstructed_legacy_member_changed": true
+        },
+        {
+          "field": "dqs1_tail",
+          "mutation": "last_byte_xor_1",
+          "only_target_field_changed": true,
+          "reconstructed_legacy_member_changed": true
+        }
+      ]
+    },
+    "exact_eval_required_for_13_byte_structural_identity": false,
+    "migrated_to_generic_receiver_code": [
+      {
+        "bytes": 4,
+        "field": "FP11 magic"
+      },
+      {
+        "bytes": 4,
+        "field": "derived source length"
+      },
+      {
+        "bytes": 4,
+        "field": "CTXR magic"
+      },
+      {
+        "bytes": 1,
+        "field": "fixed CTXR version 1"
+      }
+    ],
+    "original_receiver_input_therefore_byte_identical": true,
+    "reconstructed_archive_byte_identical": true,
+    "reconstructed_archive_sha256": "cb6cf0ba719a535bf8874b31675a4ec66a893423d320f1e4071a2012cd88a56f",
+    "reconstructed_member_byte_identical": true,
+    "retained_boundary_bytes": {
+      "three_u24_section_lengths": 9,
+      "u16_selector_length": 2
+    },
+    "retained_counted_sections": [
+      {
+        "bytes": 161104,
+        "rule_118_class": "COUNTED_VIDEO_DERIVED",
+        "section": "decoder_section",
+        "sha256": "35fd7beaaeac8a0fe4f74c15e6a7a906b153dd18b9d2e66bf99bab435508cece"
+      },
+      {
+        "bytes": 15070,
+        "rule_118_class": "COUNTED_VIDEO_DERIVED",
+        "section": "latent_section",
+        "sha256": "f4d19f0cc54a93166f51df8757b621994dbe5353b00de1a2e2f013f39d2ad60b"
+      },
+      {
+        "bytes": 607,
+        "rule_118_class": "COUNTED_VIDEO_DERIVED",
+        "section": "sidecar",
+        "sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+      },
+      {
+        "bytes": 222,
+        "rule_118_class": "COUNTED_VIDEO_DERIVED",
+        "section": "selector",
+        "sha256": "a55e79bdbf33c58a8571a16682c5144e8636d6aef16fb27f03dbf9cb482ee5ac"
+      },
+      {
+        "bytes": 42,
+        "rule_118_class": "COUNTED_VIDEO_DERIVED",
+        "section": "dqs1_tail",
+        "sha256": "483d56aa00373c1efde657b2dd3f4828e4e4ba3a88e43d85c526118db7f59049"
+      }
+    ],
+    "scope": "fixed framing only; no video-derived payload, section boundary, ZIP overhead, decoder, latent, sidecar, selector, or DQS1 byte is free",
+    "status": "MEASURED_TRANSITIVE_EXACT_RECEIVER_PARSEBACK",
+    "submission_runtime_staged": false
+  },
+  "schema": "ddm_m6_close_22645_byte_gap_receipt.v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 177169,
+    "historical_axis": "[contest-CPU candidate-selection in-container]",
+    "historical_d_pose": "0.00002930838566754801",
+    "historical_d_seg": "0.0005453067355847452",
+    "historical_score_reused_not_remeasured": true,
+    "member_bytes": 177069,
+    "member_sha256": "e9ebce6e7b89eb2d611641df9112c45aa4014197dfbbcf70f0c4a82e064abe18",
+    "path": "/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1/candidate_archive.zip",
+    "sha256": "cb6cf0ba719a535bf8874b31675a4ec66a893423d320f1e4071a2012cd88a56f",
+    "zip_overhead_bytes": 100
+  },
+  "source_receipts": {
+    "g2g2": {
+      "bytes": 860288,
+      "canonical_receipt_sha256": "b54e9816c3ef6ec7a93303fce62127c0b2fa0c59f094a3182e266af5cf8157f4",
+      "file_sha256": "928d3cd74cc92ef52aa9f821229ada12fbf4c3e9dad772e8a76adffcfcfcb078",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/g2g2_joint_multichart_20260721/measurement_20260721T172244Z/receipt.json"
+    },
+    "m4": {
+      "bytes": 12113,
+      "path": ".omx/research/ddm_m4_rate_floor_einstein_avenue_20260723_receipt.json",
+      "sha256": "e74ae0079733a4a3babf46cef23f0583b143d6015e7b32a656690ea1ce724972"
+    }
+  },
+  "verdict": "SUB015_NOT_REACHED_Y13_RESIDUAL22632",
+  "verdict_scope": "the exact 177169-byte FP11/CTXR #575 vehicle and three delegated levers; not a global MDL or family-impossibility result"
+}
