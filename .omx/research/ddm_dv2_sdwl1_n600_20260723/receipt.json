@@ -1,0 +1,3346 @@
+{
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "candidate_archive": false,
+  "checkpoint_policy": "atomic source/inventory/row receipts and preserved payloads; --resume hash-binds and strictly reparses every stage",
+  "cleanup": {
+    "bulk_artifacts_created": false,
+    "policy": "preserve small receipts/payloads; source remained read-only",
+    "source_copied": false
+  },
+  "coverage": {
+    "counterfactual_fields": [
+      "explicit_frame_indices",
+      "repeated_provenance",
+      "redundant_event_masks",
+      "split_topology_vocabulary"
+    ],
+    "independent_baseline_definition": "600 separately framed absolute SDWL1 descriptions with arithmetic state reset per pair, then one complete zlib9 outer payload",
+    "layouts": [
+      "monolithic",
+      "typed_section",
+      "stratum_section"
+    ],
+    "row_count": 33,
+    "temporal_modes": [
+      "absolute",
+      "causal_delta"
+    ]
+  },
+  "described_fraction": 1,
+  "dimension_selection": {
+    "admitted_counterfactual_dimensions": [],
+    "layout_candidates": [
+      {
+        "best_outer_deflate_bytes": 91958,
+        "best_temporal_mode": "causal_delta",
+        "layout": "monolithic",
+        "selected": false
+      },
+      {
+        "best_outer_deflate_bytes": 68464,
+        "best_temporal_mode": "causal_delta",
+        "layout": "typed_section",
+        "selected": true
+      },
+      {
+        "best_outer_deflate_bytes": 75197,
+        "best_temporal_mode": "causal_delta",
+        "layout": "stratum_section",
+        "selected": false
+      }
+    ],
+    "pruned_counterfactual_dimensions": [
+      "explicit_frame_indices",
+      "redundant_event_masks",
+      "repeated_provenance",
+      "split_topology_vocabulary"
+    ],
+    "selected_layout": "typed_section",
+    "selected_temporal_mode": "causal_delta",
+    "temporal_candidates_for_selected_layout": [
+      {
+        "outer_deflate_bytes": 91903,
+        "selected": false,
+        "temporal_mode": "absolute"
+      },
+      {
+        "outer_deflate_bytes": 68464,
+        "selected": true,
+        "temporal_mode": "causal_delta"
+      }
+    ],
+    "zero_use_vocabulary_pruned": {
+      "modifiers": [
+        "chroma_phase",
+        "erf_band",
+        "head_normal",
+        "road_frame",
+        "scale_band"
+      ],
+      "predicates": [
+        "hold",
+        "omit_kernel",
+        "project_range"
+      ],
+      "subjects": [
+        "lane_chart",
+        "resize_range_atom"
+      ]
+    }
+  },
+  "execution_allowed": false,
+  "grammar": {
+    "name": "Scorer-Derived Worldsheet Language v1",
+    "pair_record_count": 11,
+    "pair_scalar_fact_count": 76,
+    "short_name": "SDWL1"
+  },
+  "implementation": {
+    "files": {
+      "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+        "bytes": 45917,
+        "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+      },
+      "src/tac/optimization/ddm_dv2_sdwl1.py": {
+        "bytes": 51314,
+        "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+      },
+      "tools/measure_ddm_dv2_sdwl1.py": {
+        "bytes": 32617,
+        "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+      }
+    },
+    "runtime": {
+      "numpy": "1.26.4",
+      "python": "3.13.12",
+      "zlib_compile": "1.2.12",
+      "zlib_runtime": "1.2.12"
+    }
+  },
+  "inventory_stage": {
+    "binding": {
+      "implementation": {
+        "files": {
+          "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+            "bytes": 45917,
+            "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+          },
+          "src/tac/optimization/ddm_dv2_sdwl1.py": {
+            "bytes": 51314,
+            "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+          },
+          "tools/measure_ddm_dv2_sdwl1.py": {
+            "bytes": 32617,
+            "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+          }
+        },
+        "runtime": {
+          "numpy": "1.26.4",
+          "python": "3.13.12",
+          "zlib_compile": "1.2.12",
+          "zlib_runtime": "1.2.12"
+        }
+      },
+      "pair_count": 600,
+      "schema": "sdwl1.measurement_binding.v1",
+      "source_bytes": 5078017610,
+      "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "described_record_count": 6600,
+    "described_scalar_fact_count": 45600,
+    "pair_count": 600,
+    "payload": {
+      "bytes": 422528,
+      "path": "payloads/fact_inventory.npy",
+      "sha256": "9208797cdda6676e9298a20f8d128bb02a58c40255167056297b6098fea9e8fc"
+    },
+    "schema": "sdwl1.fact_inventory_stage.v1",
+    "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+    "source_geometry": [
+      384,
+      512
+    ]
+  },
+  "main_landing_review_required": true,
+  "mdl_pruning": [
+    {
+      "admitted": false,
+      "counterfactual": "explicit_frame_indices",
+      "mdl_delta_outer_bytes": 938,
+      "outer_deflate_bytes": 69402,
+      "verdict": "PRUNE"
+    },
+    {
+      "admitted": false,
+      "counterfactual": "repeated_provenance",
+      "mdl_delta_outer_bytes": 226,
+      "outer_deflate_bytes": 68690,
+      "verdict": "PRUNE"
+    },
+    {
+      "admitted": false,
+      "counterfactual": "redundant_event_masks",
+      "mdl_delta_outer_bytes": 157,
+      "outer_deflate_bytes": 68621,
+      "verdict": "PRUNE"
+    },
+    {
+      "admitted": false,
+      "counterfactual": "split_topology_vocabulary",
+      "mdl_delta_outer_bytes": 11,
+      "outer_deflate_bytes": 68475,
+      "verdict": "PRUNE"
+    }
+  ],
+  "pointer_moved": false,
+  "production_counts": {
+    "modifiers": {
+      "chroma_phase": 0,
+      "erf_band": 0,
+      "frame_role": 6600,
+      "head_normal": 0,
+      "margin_band": 12000,
+      "road_frame": 0,
+      "scale_band": 0,
+      "stratum": 6000
+    },
+    "predicates": {
+      "declare": 11,
+      "deform": 4928,
+      "hold": 0,
+      "omit_kernel": 0,
+      "project_range": 0,
+      "topology_delta": 1062,
+      "transport": 599
+    },
+    "subjects": {
+      "lane_chart": 0,
+      "pair_screw": 600,
+      "partition_cell": 3000,
+      "resize_range_atom": 0,
+      "separatrix": 3000
+    },
+    "topology_births": 530,
+    "topology_deaths": 532
+  },
+  "promotion_eligible": false,
+  "rederive": {
+    "argv": [
+      ".venv/bin/python",
+      "tools/measure_ddm_dv2_sdwl1.py",
+      "--source-cache",
+      "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "--output-dir",
+      ".omx/research/ddm_dv2_sdwl1_n600_20260723",
+      "--n-pairs",
+      "600"
+    ],
+    "resume_flag": "--resume"
+  },
+  "research_only": true,
+  "rows": [
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": null,
+      "mdl_delta_outer_bytes": null,
+      "measurement": {
+        "bytes_per_described_fact": 9.254188596491229,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 5688930,
+        "inner_sha256": "7a0b193abfc8ced985863533b25ef9f45f0810f8a6442fa8ee9011ec5203c960",
+        "outer_deflate_bytes": 421991,
+        "outer_deflate_sha256": "524af2f54eeeadeec903bbb70ecca907fc1e2dc7f2472aec141b70f2bf0506f1",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 421991,
+        "path": "payloads/independent_monolithic_absolute.zlib",
+        "sha256": "524af2f54eeeadeec903bbb70ecca907fc1e2dc7f2472aec141b70f2bf0506f1"
+      },
+      "same_semantics_control_outer_bytes": null,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": null,
+        "kind": "independent",
+        "layout": "monolithic",
+        "row_id": "independent_monolithic_absolute",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": null,
+      "temporal_sharing_gain_fraction": null
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": null,
+      "mdl_delta_outer_bytes": null,
+      "measurement": {
+        "bytes_per_described_fact": 11.428486842105263,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 6781910,
+        "inner_sha256": "9ec4b7f42fc6894ef4ebad71140851948dd1b300197f5a22aa397ced32bd9c4d",
+        "outer_deflate_bytes": 521139,
+        "outer_deflate_sha256": "5cf3ff1d5e2b13c768779ea2a6650dfc3d3973af0cea00d5cdc115601516fb39",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 521139,
+        "path": "payloads/independent_typed_section_absolute.zlib",
+        "sha256": "5cf3ff1d5e2b13c768779ea2a6650dfc3d3973af0cea00d5cdc115601516fb39"
+      },
+      "same_semantics_control_outer_bytes": null,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": null,
+        "kind": "independent",
+        "layout": "typed_section",
+        "row_id": "independent_typed_section_absolute",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": null,
+      "temporal_sharing_gain_fraction": null
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": null,
+      "mdl_delta_outer_bytes": null,
+      "measurement": {
+        "bytes_per_described_fact": 15.958530701754386,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 9510754,
+        "inner_sha256": "8b641510dee04fe45ad58dcdd97b58d375a967b80c19e534d1fab8037e6bc106",
+        "outer_deflate_bytes": 727709,
+        "outer_deflate_sha256": "c82d974b12a051a9207eb0a77daff465036bb747cc83f33a5674f19a890af826",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 727709,
+        "path": "payloads/independent_stratum_section_absolute.zlib",
+        "sha256": "c82d974b12a051a9207eb0a77daff465036bb747cc83f33a5674f19a890af826"
+      },
+      "same_semantics_control_outer_bytes": null,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": null,
+        "kind": "independent",
+        "layout": "stratum_section",
+        "row_id": "independent_stratum_section_absolute",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": null,
+      "temporal_sharing_gain_fraction": null
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": null,
+      "mdl_delta_outer_bytes": null,
+      "measurement": {
+        "bytes_per_described_fact": 2.553135964912281,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 128072,
+        "inner_sha256": "11236f8d875cc9af7d5676fc4f9ab88872487bc3ad2c54467f227948e01e0496",
+        "outer_deflate_bytes": 116423,
+        "outer_deflate_sha256": "f8498e26e6c679b0754a55ffd059f93a324d5aff50e4d9b42f1452ede3e0d576",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 116423,
+        "path": "payloads/whole_monolithic_absolute.zlib",
+        "sha256": "f8498e26e6c679b0754a55ffd059f93a324d5aff50e4d9b42f1452ede3e0d576"
+      },
+      "same_semantics_control_outer_bytes": null,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": null,
+        "kind": "whole",
+        "layout": "monolithic",
+        "row_id": "whole_monolithic_absolute",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 305568,
+      "temporal_sharing_gain_fraction": 0.724110229839025
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 965,
+      "measurement": {
+        "bytes_per_described_fact": 2.574298245614035,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 131053,
+        "inner_sha256": "468aa9fe902d7af7b19c7f354e25cd6f2a9dddf560e96821f99719f0cb0f8716",
+        "outer_deflate_bytes": 117388,
+        "outer_deflate_sha256": "3d0fdcfffca658493c3106cb7ac3f0f2d659a16e80b0aaf264b4a7f14a7261fd",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 117388,
+        "path": "payloads/whole_monolithic_absolute__mdl_explicit_frame_indices.zlib",
+        "sha256": "3d0fdcfffca658493c3106cb7ac3f0f2d659a16e80b0aaf264b4a7f14a7261fd"
+      },
+      "same_semantics_control_outer_bytes": 116423,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "explicit_frame_indices",
+        "kind": "counterfactual",
+        "layout": "monolithic",
+        "row_id": "whole_monolithic_absolute__mdl_explicit_frame_indices",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 304603,
+      "temporal_sharing_gain_fraction": 0.7218234512110447
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 233,
+      "measurement": {
+        "bytes_per_described_fact": 2.5582456140350875,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 147315,
+        "inner_sha256": "4d4d777a2a46323d0dfdc61150a0a6b119e129430af92aa3789479d5dac1c4ea",
+        "outer_deflate_bytes": 116656,
+        "outer_deflate_sha256": "892e60ca1c4fd0829ace3e3da80ec83e17c5aa71c3a523a242974c3d2ff3d0ad",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 116656,
+        "path": "payloads/whole_monolithic_absolute__mdl_repeated_provenance.zlib",
+        "sha256": "892e60ca1c4fd0829ace3e3da80ec83e17c5aa71c3a523a242974c3d2ff3d0ad"
+      },
+      "same_semantics_control_outer_bytes": 116423,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "repeated_provenance",
+        "kind": "counterfactual",
+        "layout": "monolithic",
+        "row_id": "whole_monolithic_absolute__mdl_repeated_provenance",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 305335,
+      "temporal_sharing_gain_fraction": 0.72355808536201
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 150,
+      "measurement": {
+        "bytes_per_described_fact": 2.556425438596491,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 128525,
+        "inner_sha256": "04691147da5a39bd3a5bd4db370df90cf32875a95f520a6e2a7597cd5608906c",
+        "outer_deflate_bytes": 116573,
+        "outer_deflate_sha256": "c20e7566be17865630c9a48dd63a4e17b669c3ae4ee443a6cb374a9af743a5c6",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 116573,
+        "path": "payloads/whole_monolithic_absolute__mdl_redundant_event_masks.zlib",
+        "sha256": "c20e7566be17865630c9a48dd63a4e17b669c3ae4ee443a6cb374a9af743a5c6"
+      },
+      "same_semantics_control_outer_bytes": 116423,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "redundant_event_masks",
+        "kind": "counterfactual",
+        "layout": "monolithic",
+        "row_id": "whole_monolithic_absolute__mdl_redundant_event_masks",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 305418,
+      "temporal_sharing_gain_fraction": 0.7237547720212042
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 7,
+      "measurement": {
+        "bytes_per_described_fact": 2.5532894736842104,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 128161,
+        "inner_sha256": "5cf224aa6ed8d785046ae21ea3a1a19d734692548d68319ad0d8284b4d72594b",
+        "outer_deflate_bytes": 116430,
+        "outer_deflate_sha256": "92b3a251d8a9d25b006a657d37d51ea9bc379028d9a197c3d22bf53453dccfca",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 116430,
+        "path": "payloads/whole_monolithic_absolute__mdl_split_topology_vocabulary.zlib",
+        "sha256": "92b3a251d8a9d25b006a657d37d51ea9bc379028d9a197c3d22bf53453dccfca"
+      },
+      "same_semantics_control_outer_bytes": 116423,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "split_topology_vocabulary",
+        "kind": "counterfactual",
+        "layout": "monolithic",
+        "row_id": "whole_monolithic_absolute__mdl_split_topology_vocabulary",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 305561,
+      "temporal_sharing_gain_fraction": 0.7240936418075267
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": null,
+      "mdl_delta_outer_bytes": null,
+      "measurement": {
+        "bytes_per_described_fact": 2.016622807017544,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 117736,
+        "inner_sha256": "498aee0dba6903c9547642ffa151dfec3eea7a71ca5aa10ec7e559dbdde79f6b",
+        "outer_deflate_bytes": 91958,
+        "outer_deflate_sha256": "517d970f99dfaa4c69643281ac2dc50a71e6250ab72375717a61b5d8c2528bbd",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 91958,
+        "path": "payloads/whole_monolithic_causal_delta.zlib",
+        "sha256": "517d970f99dfaa4c69643281ac2dc50a71e6250ab72375717a61b5d8c2528bbd"
+      },
+      "same_semantics_control_outer_bytes": null,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": null,
+        "kind": "whole",
+        "layout": "monolithic",
+        "row_id": "whole_monolithic_causal_delta",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 330033,
+      "temporal_sharing_gain_fraction": 0.7820853999255908
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 951,
+      "measurement": {
+        "bytes_per_described_fact": 2.0374780701754385,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 120717,
+        "inner_sha256": "7fe0b61fed5971f5b7ebf61a8689aef64cc56fdcd0c7df5288485eb9456d31f3",
+        "outer_deflate_bytes": 92909,
+        "outer_deflate_sha256": "2feb9b61f185e894c909a4fc0925a183de0223fcfe56f744506f7ae776391844",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 92909,
+        "path": "payloads/whole_monolithic_causal_delta__mdl_explicit_frame_indices.zlib",
+        "sha256": "2feb9b61f185e894c909a4fc0925a183de0223fcfe56f744506f7ae776391844"
+      },
+      "same_semantics_control_outer_bytes": 91958,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "explicit_frame_indices",
+        "kind": "counterfactual",
+        "layout": "monolithic",
+        "row_id": "whole_monolithic_causal_delta__mdl_explicit_frame_indices",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 329082,
+      "temporal_sharing_gain_fraction": 0.7798317973606073
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 231,
+      "measurement": {
+        "bytes_per_described_fact": 2.021688596491228,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 136979,
+        "inner_sha256": "92f5e3cc61b75443e59b1208cddff1b3757806bd216ed90d7e3836da80d714b5",
+        "outer_deflate_bytes": 92189,
+        "outer_deflate_sha256": "105e0fef0fcd7c38eb67bba7dce874a257c5a159fa28b71b70876d45c810a065",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 92189,
+        "path": "payloads/whole_monolithic_causal_delta__mdl_repeated_provenance.zlib",
+        "sha256": "105e0fef0fcd7c38eb67bba7dce874a257c5a159fa28b71b70876d45c810a065"
+      },
+      "same_semantics_control_outer_bytes": 91958,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "repeated_provenance",
+        "kind": "counterfactual",
+        "layout": "monolithic",
+        "row_id": "whole_monolithic_causal_delta__mdl_repeated_provenance",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 329802,
+      "temporal_sharing_gain_fraction": 0.7815379948861468
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 169,
+      "measurement": {
+        "bytes_per_described_fact": 2.020328947368421,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 118189,
+        "inner_sha256": "0bd4f68aacc4e6f5d71f211f5610f587e80dd554a9f65606c0a379fd22d08009",
+        "outer_deflate_bytes": 92127,
+        "outer_deflate_sha256": "cc7d1f89232c6fca0f9211ef9bfefd11d1e5b2416a07a1b724cc5fa2c9267cc4",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 92127,
+        "path": "payloads/whole_monolithic_causal_delta__mdl_redundant_event_masks.zlib",
+        "sha256": "cc7d1f89232c6fca0f9211ef9bfefd11d1e5b2416a07a1b724cc5fa2c9267cc4"
+      },
+      "same_semantics_control_outer_bytes": 91958,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "redundant_event_masks",
+        "kind": "counterfactual",
+        "layout": "monolithic",
+        "row_id": "whole_monolithic_causal_delta__mdl_redundant_event_masks",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 329864,
+      "temporal_sharing_gain_fraction": 0.7816849174508461
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 8,
+      "measurement": {
+        "bytes_per_described_fact": 2.016798245614035,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 117825,
+        "inner_sha256": "4f42028e81ccde8b06f776a19f9ad073a86649540cd96d430233908d3b23c309",
+        "outer_deflate_bytes": 91966,
+        "outer_deflate_sha256": "e4835a602d85d10c73bdac4c4595860e934ed2d1cd1fd020d97ffb52a86eb553",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 91966,
+        "path": "payloads/whole_monolithic_causal_delta__mdl_split_topology_vocabulary.zlib",
+        "sha256": "e4835a602d85d10c73bdac4c4595860e934ed2d1cd1fd020d97ffb52a86eb553"
+      },
+      "same_semantics_control_outer_bytes": 91958,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "split_topology_vocabulary",
+        "kind": "counterfactual",
+        "layout": "monolithic",
+        "row_id": "whole_monolithic_causal_delta__mdl_split_topology_vocabulary",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 330025,
+      "temporal_sharing_gain_fraction": 0.7820664421753071
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": null,
+      "mdl_delta_outer_bytes": null,
+      "measurement": {
+        "bytes_per_described_fact": 2.015416666666667,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 106277,
+        "inner_sha256": "bebf5dd227497c1cf7f0adb610cc0a7e57381526b39f94129709983d022a79a3",
+        "outer_deflate_bytes": 91903,
+        "outer_deflate_sha256": "541b55fd0bf1503a0da018336d89dfb98c0d0277f91efe6ca460d00fba1c59e0",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 91903,
+        "path": "payloads/whole_typed_section_absolute.zlib",
+        "sha256": "541b55fd0bf1503a0da018336d89dfb98c0d0277f91efe6ca460d00fba1c59e0"
+      },
+      "same_semantics_control_outer_bytes": null,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": null,
+        "kind": "whole",
+        "layout": "typed_section",
+        "row_id": "whole_typed_section_absolute",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 429236,
+      "temporal_sharing_gain_fraction": 0.8236497364426765
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 985,
+      "measurement": {
+        "bytes_per_described_fact": 2.037017543859649,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 109258,
+        "inner_sha256": "eabba6dd93dd806613773e8ddaca12eae0bf10e1b027bc98bf939f504504ce19",
+        "outer_deflate_bytes": 92888,
+        "outer_deflate_sha256": "9a90ab88e9edcd82a2de2ca7d469e882e50e0a5c3f13abd21f4d4bb61dd2b692",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 92888,
+        "path": "payloads/whole_typed_section_absolute__mdl_explicit_frame_indices.zlib",
+        "sha256": "9a90ab88e9edcd82a2de2ca7d469e882e50e0a5c3f13abd21f4d4bb61dd2b692"
+      },
+      "same_semantics_control_outer_bytes": 91903,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "explicit_frame_indices",
+        "kind": "counterfactual",
+        "layout": "typed_section",
+        "row_id": "whole_typed_section_absolute__mdl_explicit_frame_indices",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 428251,
+      "temporal_sharing_gain_fraction": 0.8217596456991321
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 229,
+      "measurement": {
+        "bytes_per_described_fact": 2.020438596491228,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 125520,
+        "inner_sha256": "b2c11dbe50d3d6e76fb9541f7c0f9db00dc3da785af4c5a336a319f50d4b80c9",
+        "outer_deflate_bytes": 92132,
+        "outer_deflate_sha256": "a7d6f3969fa985c75d02dd37e01c3f8110768e7a5f8a9f26bc74ab9e22a7d6c5",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 92132,
+        "path": "payloads/whole_typed_section_absolute__mdl_repeated_provenance.zlib",
+        "sha256": "a7d6f3969fa985c75d02dd37e01c3f8110768e7a5f8a9f26bc74ab9e22a7d6c5"
+      },
+      "same_semantics_control_outer_bytes": 91903,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "repeated_provenance",
+        "kind": "counterfactual",
+        "layout": "typed_section",
+        "row_id": "whole_typed_section_absolute__mdl_repeated_provenance",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 429007,
+      "temporal_sharing_gain_fraction": 0.8232103143307256
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 203,
+      "measurement": {
+        "bytes_per_described_fact": 2.0198684210526316,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 106730,
+        "inner_sha256": "7852b54a2e3aefd8db6033d4f1b7d465e2e6fb37a9e4f80256fc3ac9cbf47dee",
+        "outer_deflate_bytes": 92106,
+        "outer_deflate_sha256": "21c7a7dd3a6ffc62b08805dcd92a5d3de153fd83d300a36fad6379676f32dc2a",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 92106,
+        "path": "payloads/whole_typed_section_absolute__mdl_redundant_event_masks.zlib",
+        "sha256": "21c7a7dd3a6ffc62b08805dcd92a5d3de153fd83d300a36fad6379676f32dc2a"
+      },
+      "same_semantics_control_outer_bytes": 91903,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "redundant_event_masks",
+        "kind": "counterfactual",
+        "layout": "typed_section",
+        "row_id": "whole_typed_section_absolute__mdl_redundant_event_masks",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 429033,
+      "temporal_sharing_gain_fraction": 0.8232602050508597
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 11,
+      "measurement": {
+        "bytes_per_described_fact": 2.015657894736842,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 106366,
+        "inner_sha256": "5d35fd1ec46db87e5b6054fbedd2127e36fdd8ca8b3d3068429307a8d4dd42b9",
+        "outer_deflate_bytes": 91914,
+        "outer_deflate_sha256": "0b875e22f0aaa9bc7af7cd0d6ab1a82f92da744e402b945b5f7717ca64ae6025",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 91914,
+        "path": "payloads/whole_typed_section_absolute__mdl_split_topology_vocabulary.zlib",
+        "sha256": "0b875e22f0aaa9bc7af7cd0d6ab1a82f92da744e402b945b5f7717ca64ae6025"
+      },
+      "same_semantics_control_outer_bytes": 91903,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "split_topology_vocabulary",
+        "kind": "counterfactual",
+        "layout": "typed_section",
+        "row_id": "whole_typed_section_absolute__mdl_split_topology_vocabulary",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 429225,
+      "temporal_sharing_gain_fraction": 0.8236286288303121
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": null,
+      "mdl_delta_outer_bytes": null,
+      "measurement": {
+        "bytes_per_described_fact": 1.5014035087719297,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 120404,
+        "inner_sha256": "f3d41bc9fba847c3cedffb5489dd1b2a83fb3f1174afc9134e1fdcc0dd20d469",
+        "outer_deflate_bytes": 68464,
+        "outer_deflate_sha256": "2b67caa997f353d1aee25b66737fcae1c0067deb92a0850401ce56f2f2537cab",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 68464,
+        "path": "payloads/whole_typed_section_causal_delta.zlib",
+        "sha256": "2b67caa997f353d1aee25b66737fcae1c0067deb92a0850401ce56f2f2537cab"
+      },
+      "same_semantics_control_outer_bytes": null,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": null,
+        "kind": "whole",
+        "layout": "typed_section",
+        "row_id": "whole_typed_section_causal_delta",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 452675,
+      "temporal_sharing_gain_fraction": 0.8686262206436287
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 938,
+      "measurement": {
+        "bytes_per_described_fact": 1.5219736842105263,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 123385,
+        "inner_sha256": "2866f36af94d6c3b119d12d9b6334bc73d24b002a736887e842d701c1b6d8701",
+        "outer_deflate_bytes": 69402,
+        "outer_deflate_sha256": "3805f5bd764806d7dcf8aa8519746dcce5454ec5f4100a89b0b1d7c2bac80b09",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 69402,
+        "path": "payloads/whole_typed_section_causal_delta__mdl_explicit_frame_indices.zlib",
+        "sha256": "3805f5bd764806d7dcf8aa8519746dcce5454ec5f4100a89b0b1d7c2bac80b09"
+      },
+      "same_semantics_control_outer_bytes": 68464,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "explicit_frame_indices",
+        "kind": "counterfactual",
+        "layout": "typed_section",
+        "row_id": "whole_typed_section_causal_delta__mdl_explicit_frame_indices",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 451737,
+      "temporal_sharing_gain_fraction": 0.866826316971096
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 226,
+      "measurement": {
+        "bytes_per_described_fact": 1.506359649122807,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 139647,
+        "inner_sha256": "8c91b5873388cd741313886797cbe022728796f66da003189d18f22f0809441b",
+        "outer_deflate_bytes": 68690,
+        "outer_deflate_sha256": "878c60c6b1c9be32146db07a28fa205679f6a0e26f122e874bf9208d6fd13c00",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 68690,
+        "path": "payloads/whole_typed_section_causal_delta__mdl_repeated_provenance.zlib",
+        "sha256": "878c60c6b1c9be32146db07a28fa205679f6a0e26f122e874bf9208d6fd13c00"
+      },
+      "same_semantics_control_outer_bytes": 68464,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "repeated_provenance",
+        "kind": "counterfactual",
+        "layout": "typed_section",
+        "row_id": "whole_typed_section_causal_delta__mdl_repeated_provenance",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 452449,
+      "temporal_sharing_gain_fraction": 0.8681925551532317
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 157,
+      "measurement": {
+        "bytes_per_described_fact": 1.5048464912280701,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 120857,
+        "inner_sha256": "7ef4aa7d500aecfc49ad25f239ae6fb7461c5b7fcbd3a94bbcc9fb37909994e8",
+        "outer_deflate_bytes": 68621,
+        "outer_deflate_sha256": "1396940ccd0881a945db5d5d571fbeaf72f041d058b669b72a21d42b58543061",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 68621,
+        "path": "payloads/whole_typed_section_causal_delta__mdl_redundant_event_masks.zlib",
+        "sha256": "1396940ccd0881a945db5d5d571fbeaf72f041d058b669b72a21d42b58543061"
+      },
+      "same_semantics_control_outer_bytes": 68464,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "redundant_event_masks",
+        "kind": "counterfactual",
+        "layout": "typed_section",
+        "row_id": "whole_typed_section_causal_delta__mdl_redundant_event_masks",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 452518,
+      "temporal_sharing_gain_fraction": 0.8683249574489723
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 11,
+      "measurement": {
+        "bytes_per_described_fact": 1.5016447368421053,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 120493,
+        "inner_sha256": "2d44927fa64c13e986e734695b3f6fe87864ae25912eca70234b95e7127aca08",
+        "outer_deflate_bytes": 68475,
+        "outer_deflate_sha256": "2e91aaa478d86e9b72cb683053dbe450ba38ec409756451aea15b4c8cbb01c64",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 68475,
+        "path": "payloads/whole_typed_section_causal_delta__mdl_split_topology_vocabulary.zlib",
+        "sha256": "2e91aaa478d86e9b72cb683053dbe450ba38ec409756451aea15b4c8cbb01c64"
+      },
+      "same_semantics_control_outer_bytes": 68464,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "split_topology_vocabulary",
+        "kind": "counterfactual",
+        "layout": "typed_section",
+        "row_id": "whole_typed_section_causal_delta__mdl_split_topology_vocabulary",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 452664,
+      "temporal_sharing_gain_fraction": 0.8686051130312642
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": null,
+      "mdl_delta_outer_bytes": null,
+      "measurement": {
+        "bytes_per_described_fact": 2.0275657894736843,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 115354,
+        "inner_sha256": "822cd830b4c757e23eaf9f5ed95042fc7eb3ea9f2eccd8bd699cf735c84102b0",
+        "outer_deflate_bytes": 92457,
+        "outer_deflate_sha256": "43921a41545636fe1d919498a695a19fbb9a40164428d53c8cf58359eb5dde9a",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 92457,
+        "path": "payloads/whole_stratum_section_absolute.zlib",
+        "sha256": "43921a41545636fe1d919498a695a19fbb9a40164428d53c8cf58359eb5dde9a"
+      },
+      "same_semantics_control_outer_bytes": null,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": null,
+        "kind": "whole",
+        "layout": "stratum_section",
+        "row_id": "whole_stratum_section_absolute",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 635252,
+      "temporal_sharing_gain_fraction": 0.8729478404142315
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 987,
+      "measurement": {
+        "bytes_per_described_fact": 2.0492105263157896,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 118335,
+        "inner_sha256": "d4fab147633c6fbb86c2ea36487408304d05ac70c2a8c195dca64f28bc94ccea",
+        "outer_deflate_bytes": 93444,
+        "outer_deflate_sha256": "4fcf01ca288e46f751d0c87e38cabc4211ae095d8f95434f18038e0f5e573c24",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 93444,
+        "path": "payloads/whole_stratum_section_absolute__mdl_explicit_frame_indices.zlib",
+        "sha256": "4fcf01ca288e46f751d0c87e38cabc4211ae095d8f95434f18038e0f5e573c24"
+      },
+      "same_semantics_control_outer_bytes": 92457,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "explicit_frame_indices",
+        "kind": "counterfactual",
+        "layout": "stratum_section",
+        "row_id": "whole_stratum_section_absolute__mdl_explicit_frame_indices",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 634265,
+      "temporal_sharing_gain_fraction": 0.8715915290315223
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 231,
+      "measurement": {
+        "bytes_per_described_fact": 2.0326315789473686,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 134597,
+        "inner_sha256": "0e5bab4d1c210a38fa9c054e9ad5bd62c2f4e8418c9e5764d941faa2dc001693",
+        "outer_deflate_bytes": 92688,
+        "outer_deflate_sha256": "31f1a7a01f3785c3f37e2541610765ef5910c037fe2da5055645caab1e34d82f",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 92688,
+        "path": "payloads/whole_stratum_section_absolute__mdl_repeated_provenance.zlib",
+        "sha256": "31f1a7a01f3785c3f37e2541610765ef5910c037fe2da5055645caab1e34d82f"
+      },
+      "same_semantics_control_outer_bytes": 92457,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "repeated_provenance",
+        "kind": "counterfactual",
+        "layout": "stratum_section",
+        "row_id": "whole_stratum_section_absolute__mdl_repeated_provenance",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 635021,
+      "temporal_sharing_gain_fraction": 0.8726304058352996
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 205,
+      "measurement": {
+        "bytes_per_described_fact": 2.032061403508772,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 115807,
+        "inner_sha256": "ca312d6ddb0d9c9331ff35df6993f3de444fc2f25fc8c1daf576021a56ea6d3a",
+        "outer_deflate_bytes": 92662,
+        "outer_deflate_sha256": "65ff8f77acbda24f8527f29aaff96402f5ad43a26dd7aba161f90ef7a2670cb2",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 92662,
+        "path": "payloads/whole_stratum_section_absolute__mdl_redundant_event_masks.zlib",
+        "sha256": "65ff8f77acbda24f8527f29aaff96402f5ad43a26dd7aba161f90ef7a2670cb2"
+      },
+      "same_semantics_control_outer_bytes": 92457,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "redundant_event_masks",
+        "kind": "counterfactual",
+        "layout": "stratum_section",
+        "row_id": "whole_stratum_section_absolute__mdl_redundant_event_masks",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 635047,
+      "temporal_sharing_gain_fraction": 0.8726661344026252
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 9,
+      "measurement": {
+        "bytes_per_described_fact": 2.027763157894737,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 115443,
+        "inner_sha256": "20ff4cb96699e9c9d931070cc2e2ab9b1064b3453cded5f5c39dc2cf4a51aff7",
+        "outer_deflate_bytes": 92466,
+        "outer_deflate_sha256": "a381b706e12e4bf5d69e6ea1773958904ecde922305db35a094dd05f1bdda5d3",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 92466,
+        "path": "payloads/whole_stratum_section_absolute__mdl_split_topology_vocabulary.zlib",
+        "sha256": "a381b706e12e4bf5d69e6ea1773958904ecde922305db35a094dd05f1bdda5d3"
+      },
+      "same_semantics_control_outer_bytes": 92457,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "split_topology_vocabulary",
+        "kind": "counterfactual",
+        "layout": "stratum_section",
+        "row_id": "whole_stratum_section_absolute__mdl_split_topology_vocabulary",
+        "temporal_mode": "absolute"
+      },
+      "temporal_sharing_gain_bytes": 635243,
+      "temporal_sharing_gain_fraction": 0.8729354728332341
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": null,
+      "mdl_delta_outer_bytes": null,
+      "measurement": {
+        "bytes_per_described_fact": 1.6490570175438597,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 182831,
+        "inner_sha256": "90684e6f516088bda2c4202ffadfd4559b223fd137cbe59746307e531b3bbd11",
+        "outer_deflate_bytes": 75197,
+        "outer_deflate_sha256": "8de6ea3fe3ca9598b7afd813247994e9f1b1427b27f7af93273b115fccca3d80",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 75197,
+        "path": "payloads/whole_stratum_section_causal_delta.zlib",
+        "sha256": "8de6ea3fe3ca9598b7afd813247994e9f1b1427b27f7af93273b115fccca3d80"
+      },
+      "same_semantics_control_outer_bytes": null,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": null,
+        "kind": "whole",
+        "layout": "stratum_section",
+        "row_id": "whole_stratum_section_causal_delta",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 652512,
+      "temporal_sharing_gain_fraction": 0.8966661124158145
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 987,
+      "measurement": {
+        "bytes_per_described_fact": 1.670701754385965,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 185812,
+        "inner_sha256": "f8df0d22a6aa8ff77338b115cdef2e69ca6c41ff52e7369dfa55ad2508c073ba",
+        "outer_deflate_bytes": 76184,
+        "outer_deflate_sha256": "3149c8eede5b416194af577a2ce2068389495d8e9782b8e9fe2c4ad6647ea12f",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 76184,
+        "path": "payloads/whole_stratum_section_causal_delta__mdl_explicit_frame_indices.zlib",
+        "sha256": "3149c8eede5b416194af577a2ce2068389495d8e9782b8e9fe2c4ad6647ea12f"
+      },
+      "same_semantics_control_outer_bytes": 75197,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "explicit_frame_indices",
+        "kind": "counterfactual",
+        "layout": "stratum_section",
+        "row_id": "whole_stratum_section_causal_delta__mdl_explicit_frame_indices",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 651525,
+      "temporal_sharing_gain_fraction": 0.8953098010331053
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 219,
+      "measurement": {
+        "bytes_per_described_fact": 1.653859649122807,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 202074,
+        "inner_sha256": "56a48e0285492ec7a541b42101ecdef45691a57bcffe10778bbefdf5d805b4d9",
+        "outer_deflate_bytes": 75416,
+        "outer_deflate_sha256": "284317ad93e2f61d962a67cd9855bcd2f5700e7797d87abdf593d8d93dca9555",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 75416,
+        "path": "payloads/whole_stratum_section_causal_delta__mdl_repeated_provenance.zlib",
+        "sha256": "284317ad93e2f61d962a67cd9855bcd2f5700e7797d87abdf593d8d93dca9555"
+      },
+      "same_semantics_control_outer_bytes": 75197,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "repeated_provenance",
+        "kind": "counterfactual",
+        "layout": "stratum_section",
+        "row_id": "whole_stratum_section_causal_delta__mdl_repeated_provenance",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 652293,
+      "temporal_sharing_gain_fraction": 0.8963651679448791
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 204,
+      "measurement": {
+        "bytes_per_described_fact": 1.6535307017543859,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 183284,
+        "inner_sha256": "975eddf384b09fa595d7560fb15487d56aca7bdb9dcf936311d7c9075f4ad9bf",
+        "outer_deflate_bytes": 75401,
+        "outer_deflate_sha256": "aa7a2d9c5af48520cdc5ef3af17c75f1ca40e6c3fa9027899e3f13d9c800730a",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 75401,
+        "path": "payloads/whole_stratum_section_causal_delta__mdl_redundant_event_masks.zlib",
+        "sha256": "aa7a2d9c5af48520cdc5ef3af17c75f1ca40e6c3fa9027899e3f13d9c800730a"
+      },
+      "same_semantics_control_outer_bytes": 75197,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "redundant_event_masks",
+        "kind": "counterfactual",
+        "layout": "stratum_section",
+        "row_id": "whole_stratum_section_causal_delta__mdl_redundant_event_masks",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 652308,
+      "temporal_sharing_gain_fraction": 0.8963857805798746
+    },
+    {
+      "binding": {
+        "implementation": {
+          "files": {
+            "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+              "bytes": 45917,
+              "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+            },
+            "src/tac/optimization/ddm_dv2_sdwl1.py": {
+              "bytes": 51314,
+              "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+            },
+            "tools/measure_ddm_dv2_sdwl1.py": {
+              "bytes": 32617,
+              "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+            }
+          },
+          "runtime": {
+            "numpy": "1.26.4",
+            "python": "3.13.12",
+            "zlib_compile": "1.2.12",
+            "zlib_runtime": "1.2.12"
+          }
+        },
+        "pair_count": 600,
+        "schema": "sdwl1.measurement_binding.v1",
+        "source_bytes": 5078017610,
+        "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "dimension_admitted": false,
+      "mdl_delta_outer_bytes": 9,
+      "measurement": {
+        "bytes_per_described_fact": 1.6492543859649123,
+        "described_fact_count": 45600,
+        "described_fraction": 1,
+        "described_record_count": 6600,
+        "described_scalar_fact_count": 45600,
+        "exact_parseback": true,
+        "inner_framed_bytes": 182920,
+        "inner_sha256": "4fefb5462cce10c16a90998065afe3a493bc0fc891612f27a2294e431b636fce",
+        "outer_deflate_bytes": 75206,
+        "outer_deflate_sha256": "6df887c99f87f48076e7d990589d708e931643dffc9f5f26e02591e75d7758f4",
+        "production_counts": {
+          "modifiers": {
+            "chroma_phase": 0,
+            "erf_band": 0,
+            "frame_role": 6600,
+            "head_normal": 0,
+            "margin_band": 12000,
+            "road_frame": 0,
+            "scale_band": 0,
+            "stratum": 6000
+          },
+          "predicates": {
+            "declare": 11,
+            "deform": 4928,
+            "hold": 0,
+            "omit_kernel": 0,
+            "project_range": 0,
+            "topology_delta": 1062,
+            "transport": 599
+          },
+          "subjects": {
+            "lane_chart": 0,
+            "pair_screw": 600,
+            "partition_cell": 3000,
+            "resize_range_atom": 0,
+            "separatrix": 3000
+          },
+          "topology_births": 530,
+          "topology_deaths": 532
+        }
+      },
+      "outer_payload": {
+        "bytes": 75206,
+        "path": "payloads/whole_stratum_section_causal_delta__mdl_split_topology_vocabulary.zlib",
+        "sha256": "6df887c99f87f48076e7d990589d708e931643dffc9f5f26e02591e75d7758f4"
+      },
+      "same_semantics_control_outer_bytes": 75197,
+      "schema": "sdwl1.measurement_row.v1",
+      "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+      "spec": {
+        "counterfactual": "split_topology_vocabulary",
+        "kind": "counterfactual",
+        "layout": "stratum_section",
+        "row_id": "whole_stratum_section_causal_delta__mdl_split_topology_vocabulary",
+        "temporal_mode": "causal_delta"
+      },
+      "temporal_sharing_gain_bytes": 652503,
+      "temporal_sharing_gain_fraction": 0.8966537448348172
+    }
+  ],
+  "schema": "sdwl1.n600_measurement_receipt.v1",
+  "score_claim": false,
+  "selected_base_row": {
+    "outer_deflate_bytes": 68464,
+    "outer_deflate_sha256": "2b67caa997f353d1aee25b66737fcae1c0067deb92a0850401ce56f2f2537cab",
+    "row_id": "whole_typed_section_causal_delta"
+  },
+  "source_custody": {
+    "access": "complete_file_hash_then_direct_zip_stored_npy_read_only_memmap",
+    "bytes": 5078017610,
+    "expected_bytes": 5078017610,
+    "expected_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "members": {
+      "gt_poses": {
+        "compress_type": 0,
+        "crc32": "f81bcc68",
+        "data_bytes": 28800,
+        "data_offset": 5077988338,
+        "dtype": "<f8",
+        "file_size": 28928,
+        "fortran_order": false,
+        "header_offset": 5077988148,
+        "member": "gt_poses.npy",
+        "npy_version": [
+          1,
+          0
+        ],
+        "shape": [
+          600,
+          6
+        ],
+        "source_access": "direct_zip_stored_npy_read_only_memmap"
+      },
+      "lstars": {
+        "compress_type": 0,
+        "crc32": "7a4eb960",
+        "data_bytes": 943718400,
+        "data_offset": 3662410359,
+        "dtype": "<i8",
+        "file_size": 943718528,
+        "fortran_order": false,
+        "header_offset": 3662410171,
+        "member": "lstars.npy",
+        "npy_version": [
+          1,
+          0
+        ],
+        "shape": [
+          600,
+          384,
+          512
+        ],
+        "source_access": "direct_zip_stored_npy_read_only_memmap"
+      },
+      "margins": {
+        "compress_type": 0,
+        "crc32": "7b08b84d",
+        "data_bytes": 471859200,
+        "data_offset": 4606128948,
+        "dtype": "<f4",
+        "file_size": 471859328,
+        "fortran_order": false,
+        "header_offset": 4606128759,
+        "member": "margins.npy",
+        "npy_version": [
+          1,
+          0
+        ],
+        "shape": [
+          600,
+          384,
+          512
+        ],
+        "source_access": "direct_zip_stored_npy_read_only_memmap"
+      }
+    },
+    "mutated": false,
+    "pair_count": 600,
+    "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "storage_preflight": {
+      "available_free_bytes": 439935475712,
+      "bulk_source_copied": false,
+      "output_dir": ".omx/research/ddm_dv2_sdwl1_n600_20260723",
+      "preflight_path": ".omx/research",
+      "required_free_bytes": 134217728,
+      "status": "PASS"
+    }
+  },
+  "syntax": {
+    "arithmetic_coder": "tac.optimization.arith_selfcomp_rate_coders.encode_spatial_context_arithmetic",
+    "collection_magic": "SDWL1IC\\x00",
+    "json": "UTF-8 canonical sorted-key compact JSON",
+    "outer_coder": "zlib level 9 over the complete framed object",
+    "packet_magic": "SDWL1PK\\x00",
+    "section_frame": "tag:u32 + payload_bytes:u64 + payload_sha256:32B",
+    "strict_parseback": true,
+    "version": 1
+  },
+  "verdict_scope": "exact declared SDWL1 fact inventory and complete outer-zlib payloads only; not pixels, witness closure, evaluator output, or contest score"
+}
