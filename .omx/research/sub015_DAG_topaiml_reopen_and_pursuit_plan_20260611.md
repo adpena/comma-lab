@@ -21547,3 +21547,9 @@ OPERATOR (verbatim gist): "remember the chart level corrections we researched �
 - **Mechanistic reading of the v17 validity law:** a local input-space Jacobian is structurally blind to the SE-gate shift a large coherent move excites — a concrete suspect for ρ<0 at all radii. Testable prediction routed to v19: acceptance rate vs proposal spatial-coherence/extent (large coherent grammar-native moves better-behaved than small local ones); frame-sharing proposals evaluated JOINTLY.
 - **Composition consequence routed to c1:** the non-additive-pools law binds WITHIN frames too — same-frame corrections priced measured-jointly or flagged UNMEASURED-JOINT, never summed from independent rows; realized joint measurements are the only admissible efficiency numbers in the debt-closure arithmetic.
 - Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-multiscale-corrections-fp-and-int8 (2026-07-23, operator "corrections at different or multiple scales — higher resolution FP and also at int8")
+
+- **New proposal/composition dimension routed: STAGE-OF-APPLICATION.** Corrections may live at (A) int8 post-quantization (exact lattice, quantization-gated reach — #532 measured uint8 breaks range(A) exactness Δ=62.74, some intents unreachable), (B) high-res FP pre-uint8 at the 874×1164 camera field (sub-quantum by design via dither/error-diffusion — banks sub-quantum contributions into intended realized flips, cures the minimal-writes-die-at-uint8 gate; #149 measured camera-res placement owns the 1px band), (C) render-grid vs camera-grid scale choice. All receiver-legal (apply-code generic/free; stored values counted) → per-correction BYTE RACE decides the stage; mixed placement = the optimal form.
+- Routed to v19 (per-channel acceptance + bytes/realized-flip; 405-class tried at BOTH stages) + c1 (waterfill allocates across stages, not just streams).
+- Pointer 0.1910828242 [contest-CPU] UNMOVED.
