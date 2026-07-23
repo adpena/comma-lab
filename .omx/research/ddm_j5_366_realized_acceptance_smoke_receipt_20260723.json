@@ -1,0 +1,161 @@
+{
+  "schema": "ddm_j5_366_realized_acceptance_smoke_receipt.v1",
+  "utc": "2026-07-23T06:34:00Z",
+  "lane_id": "ddm_j5_366_realized_acceptance_warmstart",
+  "delegation": {
+    "checkpoint_key": "codex_delegate:ddm_j5_366_realized_acceptance_warmstart:20260723T053412Z",
+    "authority_file": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j5_366_realized_acceptance_warmstart_20260723T053412Z.wrapped.prompt.txt",
+    "authority_file_sha256": "deea6ed4c6be4c3d7e525ef71fcc5e64f0576e470d1886fd5686c4d5b5700e39",
+    "authority_file_bytes": 7367
+  },
+  "ticket": {
+    "path": ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json",
+    "semantic_program_sha256": "13e194a8a354d53489f0ff68a5042237e69b4b6841a6b7959a15873fffa7b6e8",
+    "typed_config_hash": "d43608af799b2f2d04e248413ceb944c093701441eafb222f2b3cdf3d32b8d80",
+    "file_sha256": "2ae7da9058f8c5a421ffc494ab0407947391ea28ede1b1384248f298906fdf43"
+  },
+  "bounded_smoke": {
+    "root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z",
+    "argv": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "tools/launch_ddm_joint_descent.py",
+      "--ticket",
+      ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json",
+      "--out-dir",
+      "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z",
+      "--full-run",
+      "--bootstrap-measurement",
+      "--max-steps",
+      "1",
+      "--stage-exit-on-stop"
+    ],
+    "launch_manifest_sha256": "13ccb58bc520451939b544ca074707a27ca93f6a435152aa26a2cb26b23d36f3",
+    "producer_receipt_sha256": "975a3529481fac12a63b94a4820709e1f51e08e56ceefded0bd310fa1a25ab45",
+    "baseline_verdict_sha256": "5b19b564da1fb528af2c0d944da36bf1d357e28503be5988cb14ad59c4a6a261",
+    "proposal_verdict_sha256": "335d15db69dc25b0de80258e10e472f6e9ff282cd7d0325eca989bf92bade1f2",
+    "checkpoint_sha256": "1399292164682955bd9937d204692521542687f69223ddc9cc1e669ae05a944e",
+    "telemetry_sha256": "fc73671edead9856c9207fbb178ec30d20aaff105b823c76ae37339e76423404",
+    "run_log_sha256": "679a0a036a1297bd0688a8a597b08fc6a650831dd682483e72617f50936b9215",
+    "global_steps": 1,
+    "step_seconds": [
+      379.21863954211585
+    ],
+    "elapsed_seconds": 700.3012389589567,
+    "memory_admission": true,
+    "campaign_launched": false
+  },
+  "opening_controls_measured": {
+    "active_groups": [
+      "island_worldsheet",
+      "shared_template_dof"
+    ],
+    "held_group": "lane_program",
+    "proposal_source": "worldsheet_joint_active_x_+1",
+    "proposal_active_pair_ids": [
+      447,
+      53,
+      416,
+      296,
+      547,
+      278,
+      501,
+      346
+    ],
+    "proposal_lifecycle_geometry_filtered": true,
+    "proposal_multiplier": 32.0,
+    "proposal_q8_denominator": 256,
+    "proposal_staging": "camera_874x1164_q8_pre_final_uint8",
+    "adam_beta2": 0.999,
+    "rewarmup_steps": 2000,
+    "rewarmup_factor": 0.1,
+    "learning_rate_quantum_fraction": 0.8,
+    "maximum_continuous_update_quantum_fraction": null,
+    "pose_objective_weight": 0.0,
+    "realized_parameter_count": 18,
+    "realized_changed_parameter_count": 18,
+    "unfrozen_dof": "18 lifecycle-feasible G1 worldsheet center_x coordinates selected by the sealed v19 eight-pair active set; shared-template DOF were available to the local fallback but did not move; Lane remained held"
+  },
+  "exact_n600": {
+    "baseline": {
+      "archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+      "archive_bytes": 133941,
+      "d_seg": 0.027470296223958333,
+      "d_pose": 163.0613272814428,
+      "global_errors": 3240528,
+      "role_correction_owned_errors": 726416,
+      "residual_trunk_owned_errors": 2514112,
+      "residual_trunk_debt_above_allowance": 2377273
+    },
+    "candidate": {
+      "archive_sha256": "d4eb1450f461437e714d08a9349cc735fe79b53a1739a2de92ef4850287dfd0d",
+      "archive_bytes": 133936,
+      "d_seg": 0.02744209289550781,
+      "d_pose": 163.06116431842463,
+      "global_errors": 3237201,
+      "role_correction_owned_errors": 725102,
+      "residual_trunk_owned_errors": 2512099,
+      "residual_trunk_debt_above_allowance": 2375260
+    },
+    "per_move_delta": {
+      "delta_d_seg": -0.000028203328450521203,
+      "delta_d_pose": -0.00016296301816964842,
+      "delta_archive_bytes": -5,
+      "seg_term": -0.0028203328450521203,
+      "pose_term": -0.00002017825870126444,
+      "rate_term": -0.000003329294765610857,
+      "joint_delta_s": -0.002843840398518996,
+      "global_delta_errors": -3327,
+      "role_correction_owned_delta_errors": -1314,
+      "residual_trunk_owned_delta_errors": -2013,
+      "per_class_delta_errors": {
+        "Road": -1780,
+        "Lane": -30,
+        "Undrivable": 597,
+        "Movable": -1284,
+        "MyCar": -830
+      }
+    },
+    "cumulative_delta": {
+      "delta_d_seg": -0.000028203328450521203,
+      "delta_d_pose": -0.00016296301816964842,
+      "delta_archive_bytes": -5,
+      "joint_delta_s": -0.002843840398518996,
+      "global_delta_errors": -3327,
+      "role_correction_owned_delta_errors": -1314,
+      "residual_trunk_owned_delta_errors": -2013
+    },
+    "pure_priced_admitted": true,
+    "component_gate_decision": "REALIZED_STAGE_DESCENT_CONTINUE",
+    "component_safe_residual_admitted": true,
+    "decision_basis": "PAINT_UINT8_R_FROZEN_SCORERS_EXACT_ARCHIVE_BYTES_PURE_PRICED"
+  },
+  "preliminary_refusal_and_correction": {
+    "failed_attempt_root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_7e740088_20260723T063500Z",
+    "run_log_sha256": "2a3873cdab3801cc02858555cc7c00d6c9b134d0bfb35324fd73f372b93baeca",
+    "refusal": "G1 Movable polygon escaped scorer geometry",
+    "root_cause": "the first implementation shifted all 163 tracks instead of reproducing v19 active-track and lifecycle-feasibility selection",
+    "correction": "typed the exact v19 eight-pair active set and filtered each proposed axis shift by whole-lifecycle scorer-grid bounds",
+    "regression_authority": "the corrected Q8 proposal compiles byte-identically to the measured v19 archive d4eb1450f461437e714d08a9349cc735fe79b53a1739a2de92ef4850287dfd0d",
+    "verdict_scope": "implementation defect in the preliminary proposal mask; not a realized-acceptance or trunk-family negative"
+  },
+  "custody": {
+    "seed": 0,
+    "deterministic_algorithms": true,
+    "target_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "runtime_memory_receipt_sha256": "4af05223624359fc305c82e30ee4a008da43d609251830d6e1a70724804ceec7",
+    "consumer_sha256": "b69b4a2dab6c61ec9c44ffe6cd8064e8efdbaa4b8dc70c1fcfbc4b3cd40990c1",
+    "launcher_sha256": "59a22ad9bbd9b409141f20aba26fd51aa7db45833727d7968f33c6ef85fad5df",
+    "memory_ceiling_gib": 116.0,
+    "storage_tier": "/Volumes/VertigoDataTier/pact",
+    "checkpoint_immediate_parseback_identical": true
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "execution_allowed_by_this_receipt": false,
+  "verdict": "READY_TO_FIRE_UNDER_STANDING_GO",
+  "verdict_scope": "bounded executable-consumer n600 smoke; no contest score, promotion, campaign, formulation-family, or MAIN-landing verdict",
+  "main_review_required": true
+}

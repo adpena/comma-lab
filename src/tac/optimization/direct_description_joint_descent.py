@@ -59,10 +59,13 @@ MEMORY_RECEIPT_SCHEMA: Final = "ddm_joint_descent_memory_preflight.v1"
 CHECKPOINT_SCHEMA: Final = "ddm_joint_descent_stage_checkpoint.v1"
 LEGACY_PROGRAM_SHA256: Final = "68a8aa97b25a6be2f8f08e36fcf4957fe032233e43b1050b75ad13c9d7dad89c"
 J3_PROGRAM_SHA256: Final = "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab2935a2c403b824"
+J5_PROGRAM_SHA256: Final = "13e194a8a354d53489f0ff68a5042237e69b4b6841a6b7959a15873fffa7b6e8"
 # Resealed after editing the semantic ticket; updated by the deterministic hash
 # seal step in this landing.
 EXPECTED_PROGRAM_SHA256: Final = "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b"
-SUPPORTED_PROGRAM_SHA256: Final = frozenset({LEGACY_PROGRAM_SHA256, J3_PROGRAM_SHA256, EXPECTED_PROGRAM_SHA256})
+SUPPORTED_PROGRAM_SHA256: Final = frozenset(
+    {LEGACY_PROGRAM_SHA256, J3_PROGRAM_SHA256, EXPECTED_PROGRAM_SHA256, J5_PROGRAM_SHA256}
+)
 EXPECTED_ARCHIVE_SHA256: Final = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
 EXPECTED_ARCHIVE_BYTES: Final = 133_941
 POINTER: Final = "0.1910828242 [contest-CPU]"
@@ -128,11 +131,20 @@ class WarmStartReformV1:
     lr_rewarmup_steps: int
     lr_rewarmup_floor: float
     lr_rewarmup_shape: str
-    maximum_continuous_update_quantum_fraction: float
+    maximum_continuous_update_quantum_fraction: float | None
     frozen_groups_until_first_admission: tuple[str, ...]
     group_release_condition: str
     pose_objective_engage_condition: str
     first_realized_admission: str
+    realized_acceptance_policy: str
+    proposal_staging: str
+    proposal_q8_denominator: int
+    proposal_multipliers: tuple[float, ...]
+    opening_active_groups: tuple[str, ...]
+    opening_candidate_ids: tuple[str, ...]
+    opening_candidate_pair_ids: tuple[int, ...]
+    residual_bucket_admission_required: bool
+    component_fire_gate: str
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> WarmStartReformV1:
@@ -144,13 +156,31 @@ class WarmStartReformV1:
             lr_rewarmup_steps=int(payload["lr_rewarmup_steps"]),
             lr_rewarmup_floor=float(payload["lr_rewarmup_floor"]),
             lr_rewarmup_shape=str(payload["lr_rewarmup_shape"]),
-            maximum_continuous_update_quantum_fraction=float(payload["maximum_continuous_update_quantum_fraction"]),
+            maximum_continuous_update_quantum_fraction=(
+                None
+                if payload.get("maximum_continuous_update_quantum_fraction") is None
+                else float(payload["maximum_continuous_update_quantum_fraction"])
+            ),
             frozen_groups_until_first_admission=tuple(
                 str(value) for value in payload["frozen_groups_until_first_admission"]
             ),
             group_release_condition=str(payload["group_release_condition"]),
             pose_objective_engage_condition=str(payload["pose_objective_engage_condition"]),
             first_realized_admission=str(payload["first_realized_admission"]),
+            realized_acceptance_policy=str(payload.get("realized_acceptance_policy", "component_safe_exact_n600")),
+            proposal_staging=str(payload.get("proposal_staging", "continuous_receiver_wire")),
+            proposal_q8_denominator=int(payload.get("proposal_q8_denominator", 1)),
+            proposal_multipliers=tuple(float(value) for value in payload.get("proposal_multipliers", (1.0, 0.5, 0.25))),
+            opening_active_groups=tuple(str(value) for value in payload.get("opening_active_groups", ())),
+            opening_candidate_ids=tuple(str(value) for value in payload.get("opening_candidate_ids", ())),
+            opening_candidate_pair_ids=tuple(int(value) for value in payload.get("opening_candidate_pair_ids", ())),
+            residual_bucket_admission_required=bool(payload.get("residual_bucket_admission_required", False)),
+            component_fire_gate=str(
+                payload.get(
+                    "component_fire_gate",
+                    "dseg_flat_or_down_pose_not_worse_and_any_component_descends",
+                )
+            ),
         )
         if not 0.0 < result.adam_beta2 < 1.0 or result.lr_rewarmup_c <= 0.0:
             raise DirectDescriptionError("warm-start Adam beta2/rewarmup multiple is invalid")
@@ -163,16 +193,73 @@ class WarmStartReformV1:
             raise DirectDescriptionError("warm-start rewarmup steps differ from adam_v_variance_warmup_length_v1")
         if not 0.0 < result.lr_rewarmup_floor <= 1.0 or result.lr_rewarmup_shape != "linear":
             raise DirectDescriptionError("warm-start LR rewarmup floor/shape is invalid")
-        if not 0.0 < result.maximum_continuous_update_quantum_fraction <= 0.25:
+        if result.maximum_continuous_update_quantum_fraction is not None and not (
+            0.0 < result.maximum_continuous_update_quantum_fraction <= 0.25
+        ):
             raise DirectDescriptionError("warm-start update exceeds the quarter-quantum cap")
-        if set(result.frozen_groups_until_first_admission) - {"shared_template_dof"}:
+        allowed_groups = {"island_worldsheet", "lane_program", "shared_template_dof"}
+        if set(result.frozen_groups_until_first_admission) - allowed_groups:
             raise DirectDescriptionError("warm-start frozen group policy is invalid")
-        if result.group_release_condition != "first_strict_n600_island_admission":
+        if result.group_release_condition not in {
+            "first_strict_n600_island_admission",
+            "first_component_safe_n600_residual_admission",
+        }:
             raise DirectDescriptionError("warm-start group release condition is invalid")
         if result.pose_objective_engage_condition != "after_first_strict_n600_seg_admission":
             raise DirectDescriptionError("warm-start Pose engage condition is invalid")
-        if result.first_realized_admission != "exact_n600_dseg_descent_and_dpose_nonregression_else_abort_rollback":
+        if result.first_realized_admission not in {
+            "exact_n600_dseg_descent_and_dpose_nonregression_else_abort_rollback",
+            "exact_n600_joint_delta_s_lt_zero_else_shrink_and_exact_rollback",
+        }:
             raise DirectDescriptionError("warm-start realized admission law is invalid")
+        if result.realized_acceptance_policy not in {
+            "component_safe_exact_n600",
+            "pure_priced_exact_n600",
+        }:
+            raise DirectDescriptionError("warm-start realized acceptance policy is invalid")
+        if result.proposal_staging not in {
+            "continuous_receiver_wire",
+            "camera_874x1164_q8_pre_final_uint8",
+        }:
+            raise DirectDescriptionError("warm-start proposal staging is invalid")
+        expected_q8 = 256 if result.proposal_staging == "camera_874x1164_q8_pre_final_uint8" else 1
+        if result.proposal_q8_denominator != expected_q8:
+            raise DirectDescriptionError("warm-start proposal Q8 denominator differs from staging")
+        if (
+            not result.proposal_multipliers
+            or any(not math.isfinite(value) or value <= 0.0 for value in result.proposal_multipliers)
+            or tuple(sorted(result.proposal_multipliers, reverse=True)) != result.proposal_multipliers
+        ):
+            raise DirectDescriptionError("warm-start proposal shrink ladder is invalid")
+        if set(result.opening_active_groups) - allowed_groups:
+            raise DirectDescriptionError("warm-start opening active groups are invalid")
+        known_candidates = {
+            "local_exact_gradient",
+            "worldsheet_joint_active_x_+1",
+            "worldsheet_joint_active_x_-1",
+            "worldsheet_joint_active_y_+1",
+            "worldsheet_joint_active_y_-1",
+        }
+        if set(result.opening_candidate_ids) - known_candidates:
+            raise DirectDescriptionError("warm-start opening candidate id is invalid")
+        if len(set(result.opening_candidate_pair_ids)) != len(result.opening_candidate_pair_ids) or any(
+            pair_id < 0 or pair_id >= 600 for pair_id in result.opening_candidate_pair_ids
+        ):
+            raise DirectDescriptionError("warm-start opening candidate pair ids are invalid")
+        if result.realized_acceptance_policy == "pure_priced_exact_n600":
+            if result.maximum_continuous_update_quantum_fraction is not None:
+                raise DirectDescriptionError("pure-priced warm start must drop the quarter-quantum cap")
+            if (
+                result.first_realized_admission != "exact_n600_joint_delta_s_lt_zero_else_shrink_and_exact_rollback"
+                or result.group_release_condition != "first_component_safe_n600_residual_admission"
+                or not result.opening_active_groups
+                or not result.opening_candidate_ids
+                or not result.opening_candidate_pair_ids
+                or not result.residual_bucket_admission_required
+            ):
+                raise DirectDescriptionError("pure-priced warm-start opening contract is incomplete")
+        if result.component_fire_gate != "dseg_flat_or_down_pose_not_worse_and_any_component_descends":
+            raise DirectDescriptionError("warm-start component fire gate is invalid")
         return result
 
 
@@ -392,7 +479,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
             }
             if self.full_run_schedule.warm_start_reform is not None:
                 reform = self.full_run_schedule.warm_start_reform
-                schedule_payload["warm_start_reform"] = {
+                reform_payload: dict[str, Any] = {
                     "adam_beta2": reform.adam_beta2,
                     "lr_rewarmup_c": reform.lr_rewarmup_c,
                     "lr_rewarmup_steps": reform.lr_rewarmup_steps,
@@ -404,6 +491,24 @@ class DirectDescriptionJointDescentTypedConfigV1:
                     "pose_objective_engage_condition": reform.pose_objective_engage_condition,
                     "first_realized_admission": reform.first_realized_admission,
                 }
+                # Preserve the canonical typed hashes of historical J4 tickets.
+                # J5 fields are additive and enter identity only for the new
+                # pure-priced policy.
+                if reform.realized_acceptance_policy == "pure_priced_exact_n600":
+                    reform_payload.update(
+                        {
+                            "realized_acceptance_policy": reform.realized_acceptance_policy,
+                            "proposal_staging": reform.proposal_staging,
+                            "proposal_q8_denominator": reform.proposal_q8_denominator,
+                            "proposal_multipliers": list(reform.proposal_multipliers),
+                            "opening_active_groups": list(reform.opening_active_groups),
+                            "opening_candidate_ids": list(reform.opening_candidate_ids),
+                            "opening_candidate_pair_ids": list(reform.opening_candidate_pair_ids),
+                            "residual_bucket_admission_required": reform.residual_bucket_admission_required,
+                            "component_fire_gate": reform.component_fire_gate,
+                        }
+                    )
+                schedule_payload["warm_start_reform"] = reform_payload
             payload["full_run_schedule"] = schedule_payload
         return payload
 
@@ -1266,6 +1371,7 @@ def clipped_adam_step(
     beta1: float = 0.9,
     beta2: float = 0.999,
     maximum_update: float | None = None,
+    theta_lattice_denominator: int | None = None,
 ) -> AdamStateV1:
     grad = np.asarray(gradient, dtype=np.float32)
     if grad.shape != state.theta.shape or any(
@@ -1281,6 +1387,14 @@ def clipped_adam_step(
         or not 0.0 < beta1 < 1.0
         or not 0.0 < beta2 < 1.0
         or (maximum_update is not None and (not math.isfinite(float(maximum_update)) or maximum_update <= 0.0))
+        or (
+            theta_lattice_denominator is not None
+            and (
+                isinstance(theta_lattice_denominator, bool)
+                or not isinstance(theta_lattice_denominator, int)
+                or theta_lattice_denominator <= 0
+            )
+        )
     ):
         raise DirectDescriptionError("joint-descent Adam hyperparameters are invalid")
     norm = float(np.linalg.norm(grad.astype(np.float64)))
@@ -1297,6 +1411,9 @@ def clipped_adam_step(
     if maximum_update is not None:
         update = np.clip(update, -float(maximum_update), float(maximum_update))
     theta = state.theta - update
+    if theta_lattice_denominator is not None:
+        denominator = float(theta_lattice_denominator)
+        theta = np.rint(theta.astype(np.float64) * denominator) / denominator
     ema = ema_decay * state.ema + (1.0 - ema_decay) * theta
     return AdamStateV1(
         step=step,
@@ -1305,6 +1422,73 @@ def clipped_adam_step(
         first_moment=np.asarray(first, dtype=np.float32),
         second_moment=np.asarray(second, dtype=np.float32),
     )
+
+
+def opening_candidate_gradient(
+    lift: JointDescriptionParameterLiftV1,
+    candidate_id: str,
+    local_gradient: np.ndarray,
+    *,
+    active_pair_ids: Sequence[int] = (),
+) -> np.ndarray:
+    """Return one typed J5 proposal direction in optimizer-gradient sign.
+
+    The coherent worldsheet rows are the exact grammar-native v19 proposal
+    family.  They are only proposal sources: receiver parse-back plus frozen
+    n600 scorers and exact archive bytes remain the admission authority.
+    """
+
+    gradient = np.asarray(local_gradient, dtype=np.float32)
+    if gradient.shape != (len(lift.parameter_names),) or not np.all(np.isfinite(gradient)):
+        raise DirectDescriptionError("warm-start local proposal gradient is invalid")
+    if candidate_id == "local_exact_gradient":
+        return np.ascontiguousarray(gradient)
+    axes = {
+        "worldsheet_joint_active_x_+1": (".center_x", 0, 1, -1.0),
+        "worldsheet_joint_active_x_-1": (".center_x", 0, -1, 1.0),
+        "worldsheet_joint_active_y_+1": (".center_y", 1, 1, -1.0),
+        "worldsheet_joint_active_y_-1": (".center_y", 1, -1, 1.0),
+    }
+    try:
+        suffix, axis_offset, realized_shift, optimizer_sign = axes[candidate_id]
+    except KeyError as exc:
+        raise DirectDescriptionError("warm-start opening candidate id is invalid") from exc
+    pair_set = {int(value) for value in active_pair_ids}
+    if not pair_set or any(value < 0 or value >= 600 for value in pair_set):
+        raise DirectDescriptionError("warm-start coherent proposal pair selection is invalid")
+
+    templates = {row.template_ref: row for row in lift.g1.templates}
+
+    def translation_bound(track_index: int) -> tuple[int, int]:
+        minimum = 1 << 30
+        maximum = -(1 << 30)
+        for knot_index in lift.g1.tracks[track_index].knot_indices:
+            knot = lift.g1.knots[knot_index]
+            vertices = templates[knot.template_ref].relative_vertices_xy
+            coordinates = [
+                (knot.center_x if axis_offset == 0 else knot.center_y) + int(vertex[axis_offset]) for vertex in vertices
+            ]
+            minimum = min(minimum, min(coordinates))
+            maximum = max(maximum, max(coordinates))
+        extent = 511 if axis_offset == 0 else 383
+        return -minimum, extent - maximum
+
+    result = np.zeros_like(gradient)
+    selected = []
+    for track_index, track in enumerate(lift.g1.tracks):
+        if not any(lift.g1.knots[index].pair_index in pair_set for index in track.knot_indices):
+            continue
+        lower, upper = translation_bound(track_index)
+        if not lower <= realized_shift <= upper:
+            continue
+        parameter_index = 2 * track_index + axis_offset
+        if not lift.parameter_names[parameter_index].endswith(suffix):
+            raise DirectDescriptionError("warm-start coherent proposal parameter ordering differs")
+        selected.append(parameter_index)
+    if not selected:
+        raise DirectDescriptionError("warm-start coherent proposal selected zero receiver DOFs")
+    result[np.asarray(selected, dtype=np.int64)] = np.float32(optimizer_sign)
+    return np.ascontiguousarray(result)
 
 
 def save_stage_checkpoint(
@@ -1421,6 +1605,7 @@ def classify_memory_preflight(projected_peak_gib: float, *, ceiling_gib: float =
 
 
 __all__ = [
+    "J5_PROGRAM_SHA256",
     "AdamStateV1",
     "DirectDescriptionJointDescentMLXModule",
     "DirectDescriptionJointDescentTypedConfigV1",
@@ -1439,6 +1624,7 @@ __all__ = [
     "lift_v15_archive",
     "linear_rewarmup_factor",
     "load_stage_checkpoint",
+    "opening_candidate_gradient",
     "parameter_group_indices",
     "realize_parameter_theta",
     "realized_training_state",

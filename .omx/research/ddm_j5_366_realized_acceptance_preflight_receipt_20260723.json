@@ -1,0 +1,39 @@
+{
+  "schema": "ddm_j5_366_realized_acceptance_preflight_receipt.v1",
+  "utc": "2026-07-23T06:33:00Z",
+  "lane_id": "ddm_j5_366_realized_acceptance_warmstart",
+  "ticket": {
+    "path": ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json",
+    "semantic_program_sha256": "13e194a8a354d53489f0ff68a5042237e69b4b6841a6b7959a15873fffa7b6e8",
+    "typed_config_hash": "d43608af799b2f2d04e248413ceb944c093701441eafb222f2b3cdf3d32b8d80",
+    "file_sha256": "2ae7da9058f8c5a421ffc494ab0407947391ea28ede1b1384248f298906fdf43"
+  },
+  "producer": {
+    "root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_preflight_13e194a8_20260723T063200Z",
+    "receipt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_preflight_13e194a8_20260723T063200Z/governed_dry_run.json",
+    "receipt_sha256": "1b5a9c4a77c97709f3b12f458387c785c354fd5503479ccb82bf821568aaf0f0",
+    "memory_receipt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/full_run_memory_preflight.json",
+    "memory_receipt_sha256": "4af05223624359fc305c82e30ee4a008da43d609251830d6e1a70724804ceec7"
+  },
+  "governor": {
+    "decision": "ADMIT",
+    "projected_peak_gib": 13.456170654296875,
+    "adaptive_ceiling_gib": 116.0,
+    "headroom_after_gib": 64.947,
+    "storage_tier": "/Volumes/VertigoDataTier/pact",
+    "active_jobs": []
+  },
+  "source_custody": {
+    "consumer_sha256": "b69b4a2dab6c61ec9c44ffe6cd8064e8efdbaa4b8dc70c1fcfbc4b3cd40990c1",
+    "launcher_sha256": "59a22ad9bbd9b409141f20aba26fd51aa7db45833727d7968f33c6ef85fad5df",
+    "g1_lift_sha256": "bdc5050aeee4c958d8c1bf47b4c70f5ed192b7fbcc0a8fbb927f03a499a3ab44"
+  },
+  "verdict": "DRY_RUN_GREEN_MAIN_REVIEW_AND_OPERATOR_GO_STILL_REQUIRED",
+  "execution_allowed": false,
+  "long_launch_surface_present": false,
+  "research_only": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_review_required": true
+}
