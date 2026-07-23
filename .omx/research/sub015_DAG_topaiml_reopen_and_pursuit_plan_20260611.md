@@ -21758,3 +21758,27 @@ verdict_scope: formulation — the generated-vocabulary column-generation FORMUL
 1. Highest-EV next action: verify the 177KB relaxed-receiver member is BYTE-CLOSEABLE with REALIZED distortion (through real receiver + uint8). If S_realized < 0.191 → immediate pointer-mover candidate (0.191→~0.165), exact-eval-verifiable within the ≤$20 Modal envelope (#381), operator-GO. This is the guaranteed-better fallback, distinct from m6's sub-0.15 (154KB) target.
 2. #366 is very likely DOMINATED/retirable — re-scope decision owed. It is already on operator HOLD; this reconciliation strengthens the case to retire rather than fire the 13h campaign.
 3. m6 (close 22,645 B gap on the relaxed receiver) remains the live sub-0.15 path.
+
+---
+
+## FEED-603-m6-close-22645-gap-NEGATIVE (2026-07-23, held_entangled behind v19c, Opus-4.8 non-Fable custody-only)
+
+**Arm:** ddm_m6_close_22645_byte_gap (worktree commits ec26284f5c, b2350de85c on codexwt/ddm_m6_close_22645_byte_gap_20260723T104501Z; HELD-entangled, merge deferred to restored Fable thread). Receipt SHA 194c6951…
+
+**Verdict: `SUB015_NOT_REACHED_Y13_RESIDUAL22632`.** The three identified zero/tiny rate levers close only **13 B** of the ~22.6 KB gap on the relaxed-receiver vehicle:
+
+| Lever | Pool | Credit |
+|---|---|---:|
+| ker(A) payload-hiding | P_NULL_GAUGE | **0 B** |
+| Rule-118 framing migration | P_TEMPORAL_DESCRIPTION | **13 B** |
+| g2g2 lattice transfer | P_REALIZE | **0 B** |
+
+- Exact receiver-closed structural form **177,156 B** vs sub-0.15 cap **154,524 B** → **22,632 B residual** (matches m4's 22,645 within refinement). No candidate flagged, no R6 eval, no pointer change.
+
+`verdict_scope: formulation — the currently-identified zero/tiny rate levers do NOT close the 22,632 B gap; this does NOT falsify sub-0.15 in principle. The single biggest OPEN capacity is ker(A): 80.67% resize-nullity is AVAILABLE but the receiver routes 0 B of counted payload through it — closing the gap needs a RECEIVER REDESIGN that routes counted description through ker(A), a genuinely open reformulation, plus untested description/coder families. NOT a dead end.`
+
+**Where this leaves the two-vehicle picture (composed with FEED-603-m5):**
+- The relaxed-receiver vehicle is a solid **~0.165-arithmetic candidate at 177 KB** (below pointer 0.191) — the guaranteed-better fallback if byte-closeable with realized distortion.
+- It is **NOT sub-0.15** by the three measured zero-rate levers. Sub-0.15 (154 KB) needs either a receiver redesign routing payload through ker(A)'s 80.67% nullity, or a different description family — both OPEN, none closed.
+
+**HANDOFF (unchanged, for restored Fable thread + operator GO):** highest-EV is still to verify the 177 KB member byte-closes with REALIZED distortion → immediate ~0.165 pointer-mover candidate (Modal ≤$20). The ker(A)-payload-routing receiver redesign is the named next sub-0.15 reformulation.
