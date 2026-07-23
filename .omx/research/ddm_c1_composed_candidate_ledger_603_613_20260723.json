@@ -1,0 +1,472 @@
+{
+  "schema": "ddm_c1_composed_candidate_spec.v1",
+  "candidate_id": "DDM-C1-COMPOSED-200K-v1",
+  "lane_id": "lane_ddm_c1_composed_candidate_spec_603_613_20260723",
+  "tasks": [578, 603, 613, 366],
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "d_seg_claim": false,
+  "d_pose_claim": false,
+  "promotion_eligible": false,
+  "main_landing_review_required": true,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "verdict": "INFEASIBILITY_CERTIFIED_FOR_EXACT_COMPUTED_SET_FULL_COMPOSITION_COMPUTABLE_NOT_YET_COMPUTED",
+  "verdict_scope": "COMPOSITION x measured n600 receiver-closed prices; no family, launch, contest-axis, score, or promotion verdict",
+  "box": {
+    "archive_bytes_max": 200000,
+    "d_seg_max": "0.001160000000",
+    "pose_stream_required": true,
+    "joint_finish_d_pose_max": "0.001610000000",
+    "decode_timeout_seconds": 1800
+  },
+  "control": {
+    "archive_bytes": 133941,
+    "seeded_archive_bytes": 134211,
+    "seeded_lane_delta_bytes": 270,
+    "d_seg": "0.027470296224",
+    "d_pose": "163.061327281443",
+    "seg_errors": 3240528,
+    "sites": 117964800,
+    "archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
+  },
+  "debt": {
+    "continuous_target_error_allowance": "136839.168000",
+    "integer_target_error_max": 136839,
+    "integer_errors_to_remove": 3103689,
+    "continuous_d_seg_reduction_required": "0.026310296224",
+    "lane_errors": 300563,
+    "movable_errors": 425853,
+    "lane_plus_movable_error_ceiling": 726416,
+    "lane_plus_movable_fraction_of_continuous_debt": "0.234049236029",
+    "integer_residual_after_perfect_lane_plus_movable": 2377273,
+    "residual_global_d_seg": "0.020152392917",
+    "coupled_closure_law": "E_v17 + E_v18b + E_j3 >= 3103689; 0 <= E_v17 <= 726416; credit assigned only by sequential exact replay on one artifact"
+  },
+  "architecture": [
+    {
+      "order": 1,
+      "stage": "PREDICT",
+      "selected": [
+        "v13 birth/death worldsheet events",
+        "G1 Movable worldsheet",
+        "J2 Lane production seed",
+        "counted Pose6/xi temporal chart"
+      ],
+      "debt_owner": "description_and_temporal_support_only_until_exact_R",
+      "non_additive_competitors": [
+        "G1 Lane knee versus inherited nested Lane stream",
+        "planar3 and Screw6 transport controls"
+      ]
+    },
+    {
+      "order": 2,
+      "stage": "PROJECT",
+      "selected": ["camera_resolution_receiver", "uint8_projection", "evaluator_R", "frozen_dual_scorers"],
+      "debt_owner": "accounting_authority_no_declared_reduction"
+    },
+    {
+      "order": 3,
+      "stage": "REALIZE",
+      "selected": [
+        "shared_scorer_solved_templates",
+        "contextual_2x2_high_resolution_FP_pre_uint8",
+        "contextual_2x2_post_quantization_int8_lattice",
+        "boundary_normal_2x2_high_resolution_FP_pre_uint8",
+        "boundary_normal_2x2_post_quantization_int8_lattice",
+        "epsilon_collateral_0_16_32_64",
+        "iterative_realized_acceptance"
+      ],
+      "debt_owner": "lane_plus_movable_up_to_726416_errors",
+      "current_v17_credit": 0,
+      "current_v17_result": "rho_below_zero_at_all_measured_validity_radii",
+      "same_frame_effect_status": "COMPUTABLE_NOT_YET_COMPUTED",
+      "same_frame_joint_replay_required": true
+    },
+    {
+      "order": 4,
+      "stage": "FINISH",
+      "selected": [
+        "J3_joint_descent_over_706_lifted_DOF",
+        "v18b_generated_columns_on_common_exact_R_master",
+        "xi_event_pose_finish"
+      ],
+      "debt_owner": "all_role_residual_at_least_2377273_errors_after_maximal_REALIZE_plus_d_pose_at_most_0.00161"
+    },
+    {
+      "order": 5,
+      "stage": "CODE",
+      "selected": [
+        "Aurenhammer_LP_representative",
+        "context_arithmetic_and_Selfcomp_race",
+        "xi_keyed_delta",
+        "structured_2_of_4_entrant",
+        "MX_int4_shared_scale_entrant"
+      ],
+      "debt_owner": "rate_only_unless_exact_R_output_changes"
+    }
+  ],
+  "byte_budget": [
+    {
+      "stream": "v15_predictor_zip_outer_home",
+      "bytes": 100099,
+      "provenance": "MEASURED",
+      "contains_non_additive": {"xi_pose6_nested_home_bytes": 3721}
+    },
+    {
+      "stream": "g1_movable_worldsheet_outer_home",
+      "bytes": 29878,
+      "provenance": "MEASURED",
+      "semantic_payload_bytes": 29810
+    },
+    {"stream": "receiver_realization_profile", "bytes": 85, "provenance": "MEASURED"},
+    {"stream": "solved_template_outer_home", "bytes": 151, "provenance": "MEASURED"},
+    {"stream": "manifest", "bytes": 3345, "provenance": "MEASURED"},
+    {"stream": "central_directory_and_eocd", "bytes": 383, "provenance": "MEASURED"},
+    {"stream": "v15_exact_control_subtotal", "bytes": 133941, "provenance": "MEASURED"},
+    {"stream": "lane_program_seed", "bytes": 270, "provenance": "MEASURED"},
+    {
+      "stream": "contextual_bounded_collateral_shared_application_stage_reserve",
+      "bytes": 25789,
+      "provenance": "DERIVED_COMPUTABLE_NOT_YET_COMPUTED",
+      "archive_ceiling_after_reserve": 160000,
+      "competing_application_stages": [
+        {
+          "application_stage": "high_resolution_FP_pre_uint8",
+          "exact_added_bytes": null,
+          "realized_flips": null,
+          "status": "COMPUTABLE_NOT_YET_COMPUTED",
+          "joint_replay_required": true
+        },
+        {
+          "application_stage": "post_quantization_int8_lattice",
+          "exact_added_bytes": null,
+          "realized_flips": null,
+          "status": "COMPUTABLE_NOT_YET_COMPUTED",
+          "joint_replay_required": true
+        }
+      ]
+    },
+    {
+      "stream": "v18b_first_exact_pricing_rung_reserve",
+      "bytes": 16384,
+      "provenance": "PREREGISTERED_COMPUTABLE_NOT_YET_COMPUTED"
+    },
+    {
+      "stream": "j3_finish_and_xi_refinement_reserve",
+      "bytes": 16384,
+      "provenance": "DERIVED_COMPUTABLE_NOT_YET_COMPUTED"
+    },
+    {
+      "stream": "final_coder_and_container_contingency",
+      "bytes": 7232,
+      "provenance": "DERIVED_COMPUTABLE_NOT_YET_COMPUTED"
+    },
+    {"stream": "hard_total", "bytes": 200000, "provenance": "DERIVED_PLANNING_EQUALITY"}
+  ],
+  "waterfill": {
+    "score_byte_dual": "0.0000006658589531221713",
+    "law": "allocate measured receiver-closed stream-and-application-stage marginal while negative_delta_joint_score_per_byte exceeds 25/37545489; same-debt and same-frame alternatives use the jointly measured lower convex envelope",
+    "current_status": "NO_MEASURED_KKT_FEASIBLE_ALLOCATION_CLOSES_THE_BOX",
+    "free_context": {
+      "gain_bytes": 89161,
+      "gain_fraction": "0.181666850043",
+      "payload_bytes": 0,
+      "scope": "future innovation stream only; not subtractable from current exact control"
+    },
+    "measured_narrow_positive": {
+      "id": "g4_horizon_row_parametric",
+      "added_archive_bytes": 508,
+      "errors_removed": 6320,
+      "errors_removed_per_added_byte": "12.440944881890",
+      "d_seg_after": "0.027416720920",
+      "d_pose_after": "163.061458661133"
+    }
+  },
+  "pair_recursive_contract": {
+    "source": "G3_atlas_plus_current_waterfill",
+    "global_pair_threshold_constant_allowed": false,
+    "loop": [
+      "solve",
+      "exact_R_diff",
+      "G4_shared_or_pair_local_route",
+      "repair",
+      "exact_R_replay",
+      "append_convergence_row"
+    ],
+    "terminal_states": [
+      "threshold-met",
+      "infeasible-certified",
+      "budget-exhausted"
+    ],
+    "threshold_law": "derive integer t_p from G3 pair debt and the current receiver-closed waterfill allocation; require sum_p t_p = 136839",
+    "shared_byte_law": "charge a shared_component_id exactly once to its first_owner_pair_id; later pair rows reference the same content hash with zero incremental shared bytes",
+    "standing_telemetry_artifact": "<run_dir>/pair_convergence.jsonl",
+    "row_schema": [
+      "pair_id",
+      "g3_atlas_receipt_sha256",
+      "pre_archive_sha256",
+      "pre_runtime_tree_sha256",
+      "derived_integer_error_threshold",
+      "waterfill_dual",
+      "allocated_bytes",
+      "candidate_id",
+      "application_stage",
+      "g4_recurrence_class",
+      "repair_route",
+      "shared_component_id",
+      "shared_component_first_owner",
+      "incremental_archive_bytes",
+      "final_archive_bytes",
+      "pre_errors",
+      "post_errors",
+      "pre_d_pose",
+      "post_d_pose",
+      "terminal_state",
+      "terminal_reason",
+      "checkpoint_id",
+      "post_archive_sha256",
+      "post_runtime_tree_sha256"
+    ],
+    "r6_refusal_conditions": [
+      "missing_pair",
+      "nonterminal_pair",
+      "duplicate_shared_component_charge",
+      "sum_final_pair_errors_above_136839",
+      "post_hashes_not_equal_to_adjudicated_artifact"
+    ],
+    "current_status": "COMPUTABLE_NOT_YET_COMPUTED",
+    "current_blocker": "PAIR_CONVERGENCE_LEDGER_EMITTER_AND_VALIDATOR_ABSENT_ON_BRANCH"
+  },
+  "swing_thresholds": {
+    "v17": {
+      "full_slice_errors_removed": 726416,
+      "archive_bytes_max": 160000,
+      "errors_per_reserved_byte": "28.167668385746",
+      "pose_requirement": "non_worse",
+      "solo_box_closure_possible_under_role_ceiling": false,
+      "current_credit": 0,
+      "current_result": "rho_below_zero_at_all_measured_validity_radii",
+      "successor": "race_high_resolution_FP_pre_uint8_vs_post_quantization_int8_lattice_per_correction",
+      "required_fields_per_correction": [
+        "application_stage",
+        "exact_added_bytes",
+        "realized_flips",
+        "joint_same_frame_replay"
+      ]
+    },
+    "v18b": {
+      "solo_errors_removed_after_max_v17": 2377273,
+      "shared_residual_headroom_bytes": 40000,
+      "errors_per_byte_if_consuming_all_shared_headroom": "59.431825000000",
+      "required_pricing_rounds": 3,
+      "current_credit": 0,
+      "current_blocker": "NO_COMMON_EXACT_R_MASTER"
+    },
+    "j3": {
+      "solo_errors_removed_after_max_v17_and_zero_v18b": 2377273,
+      "conditional_law": "E_j3 >= 3103689 - E_v17 - E_v18b",
+      "final_archive_bytes_max": 200000,
+      "d_pose_max": "0.001610000000",
+      "current_efficacy_status": "PAIR447_EXACT_COMPUTED_FULL_N600_COMPUTABLE_NOT_YET_COMPUTED"
+    }
+  },
+  "measurement_chain": [
+    {"rung": "R0", "gate": "spec_and_source_closure", "tools": ["tools/lane_maturity.py"]},
+    {
+      "rung": "R1",
+      "gate": "deterministic_receiver_compile_and_parseback",
+      "tools": ["tools/measure_ddm_v15_scorer_solved_templates.py", "tools/launch_ddm_joint_descent.py"]
+    },
+    {
+      "rung": "R2",
+      "gate": "per_pair_recursive_telescoping_v17_v18b_j3_solve_chain",
+      "tools": [
+        "tools/measure_ddm_v16_coupled_joint_solve.py",
+        "tools/probe_ddm_a1_column_generated_correction.py",
+        "tools/launch_ddm_joint_descent.py"
+      ],
+      "pair_threshold_source": "G3_atlas_plus_current_waterfill",
+      "terminal_states": ["threshold-met", "infeasible-certified", "budget-exhausted"],
+      "standing_telemetry_artifact": "<run_dir>/pair_convergence.jsonl",
+      "blockers": [
+        "V17_MULTISCALE_APPLICATION_STAGE_RUNNER_ABSENT_ON_BRANCH",
+        "J3_FULL_RUN_MODE_PENDING",
+        "PAIR_CONVERGENCE_LEDGER_EMITTER_AND_VALIDATOR_ABSENT_ON_BRANCH"
+      ]
+    },
+    {
+      "rung": "R3",
+      "gate": "full_n600_macOS_CPU_advisory_dual_axis",
+      "tools": ["tools/measure_ddm_v14_realization_fidelity.py", "tools/measure_ddm_v14_g4_receiver_projection.py"]
+    },
+    {
+      "rung": "R4",
+      "gate": "contest_packet_byte_close_and_runtime_identity",
+      "tools": ["tools/audit_archive.py"],
+      "blocker": "DDM_COMPOSED_RUNTIME_EXPORTER_MISSING"
+    },
+    {
+      "rung": "R5",
+      "gate": "contest_CPU_exact",
+      "tools": ["experiments/contest_auth_eval.py", "scripts/adjudicate_contest_auth_eval.py"]
+    },
+    {
+      "rung": "R6",
+      "gate": "contest_CUDA_exact_paired_adjudication_and_complete_pair_convergence",
+      "tools": ["experiments/contest_auth_eval.py", "scripts/adjudicate_contest_auth_eval.py"]
+    }
+  ],
+  "omniscience_inversion": {
+    "allowed_statuses": [
+      "EXACT_COMPUTED",
+      "COMPUTABLE_NOT_YET_COMPUTED",
+      "INFEASIBILITY_CERTIFIED"
+    ],
+    "epistemic_unknown_category": false,
+    "current_exact_set_status": "INFEASIBILITY_CERTIFIED",
+    "full_composition_status": "COMPUTABLE_NOT_YET_COMPUTED",
+    "exact_surfaces": [
+      {
+        "catalog": "#391",
+        "purpose": "exact resize adjoint, correction support, and flip prediction",
+        "path": "src/tac/through_r/flip_inverse.py"
+      },
+      {
+        "catalog": "#549",
+        "purpose": "exact lattice and joint Seg/Pose solve",
+        "paths": [
+          "tools/measure_realization_g2_lattice.py",
+          "tools/measure_joint_seg_pose_rate.py"
+        ]
+      },
+      {
+        "catalog": "#580",
+        "purpose": "full resize-kernel projector and preimage placement",
+        "path": "tools/measure_resize_full_kernel.py"
+      },
+      {
+        "catalog": "#557",
+        "purpose": "real context-arithmetic and Selfcomp byte race",
+        "path": "tools/measure_arith_selfcomp_rate_coders.py"
+      }
+    ]
+  },
+  "receipts": [
+    {
+      "label": "A1_audit",
+      "path": ".omx/research/ddm_a1_naive_verdict_audit_20260723_codex.md",
+      "sha256": "e5f6b93b9f2b04c860cc4a07d46ba1c53fc31a4d1967cc21421db7f2fa5d07ab"
+    },
+    {
+      "label": "G1",
+      "path": ".omx/research/direct_description_g1_grammar_induction_20260722.json",
+      "sha256": "f4cdfbc3765c4dbaaa9383741f4b9d2f8d4eb5ab411595fad100ec0373d263e5"
+    },
+    {
+      "label": "G2",
+      "path": ".omx/research/ddm_g2_solve_diff_op_mining_n600_20260722T194000Z/aggregate_ledger.json",
+      "sha256": "061220fd8c1ca047b210841235fc805194a96175e933ee110ba4ac8bb2077d84"
+    },
+    {
+      "label": "G3",
+      "path": ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_receipt.json",
+      "sha256": "6c4157092a7bdf7ba44b458cd470725cc470d84a8fc77ed7d3dedb59160734f5"
+    },
+    {
+      "label": "G4",
+      "path": ".omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z/ddm_g4_spatial_stationarity_receipt.json",
+      "sha256": "bea555b95aeaa11f4209df5333010c41c5495dd789def2a4f7a2a91973f3408c"
+    },
+    {
+      "label": "v12_fixed_pool",
+      "path": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+      "sha256": "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a"
+    },
+    {
+      "label": "v13_worldsheet_events",
+      "path": ".omx/research/ddm_v13_g1_worldsheet_predictor_n600_20260722T201500Z/ddm_v13_worldsheet_predictor_n600_receipt_v2.json",
+      "sha256": "31fc55b3bfeec4dbc1b5a40155438cb71190b814dadc05ad73f678bcd9c46bf5"
+    },
+    {
+      "label": "v14",
+      "path": ".omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z/ddm_v14_realization_fidelity_n600_receipt.json",
+      "sha256": "82d3249908d42a86575c407ab3d7acdf9b3706b31225f2e46862b2472966e5a9"
+    },
+    {
+      "label": "v14_G4_receiver",
+      "path": ".omx/research/ddm_v14_g4_receiver_projection_n600_20260722T221500Z/ddm_v14_g4_receiver_projection_receipt.json",
+      "sha256": "0b35be44d944bd5a929097bb3967ba7b7c7ce068e2f067d1546ab149cc9e44da"
+    },
+    {
+      "label": "v15",
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_scorer_solved_templates_n600_receipt.json",
+      "sha256": "5ed6f830b3749a51e0d300a9104fda9a77e86bbeb3b81428a20e1ec0d3dcfcb8"
+    },
+    {
+      "label": "v16",
+      "path": ".omx/research/ddm_v16_coupled_joint_solve_20260723T002500Z/ddm_v16_coupled_joint_solve_receipt.json",
+      "sha256": "170adb825d4d709eebf929daf47e87c4de6736c15f7047572d16315b518ce0e4"
+    },
+    {
+      "label": "J2",
+      "path": ".omx/research/ddm_j2_366_consumer_build_receipt_20260723.json",
+      "sha256": "6712a6605754553422add1c5fed17e02e38bbd0e5a9a50c16970160c0233aca6"
+    },
+    {
+      "label": "v18_initial_blocked",
+      "path": ".omx/research/ddm_v18_column_generation_vocabulary_20260723T030000Z/ddm_a1_column_generated_correction_receipt.json",
+      "sha256": "f8daae958510e6cea9cf39b499ec820d6747dd968e9a51157e0a5a3e25601a96"
+    },
+    {
+      "label": "Screw6",
+      "path": ".omx/research/advected_screw6_chartlevel_20260721.json",
+      "sha256": "98ccf6af4a3b482c71e2654353180aac32b99ad85be8647c36046f4591cd4f2a"
+    },
+    {
+      "label": "planar3_advection",
+      "path": ".omx/research/advected_motion_base_20260721.json",
+      "sha256": "f96d870301df9d81326f42db98f3e76689e7a707c19df5a37fabf8a342b1dea2"
+    },
+    {
+      "label": "context_arithmetic_selfcomp",
+      "path": ".omx/research/arith_selfcomp_rate_coders_20260719_receipt.json",
+      "sha256": "8cd25a6bde36676285326ac10d49d041e9f58deb7ffb5f03e518a2185435490d"
+    },
+    {
+      "label": "Aurenhammer_vs_tropical",
+      "path": ".omx/research/pdw2_gauge_packet_probe_20260719_codex.md",
+      "sha256": "170fc5cd3470822e291e9951bc6f7ddba4b53ca2386533c3d27d4a4612608416"
+    },
+    {
+      "label": "xi_delta",
+      "path": ".omx/research/xi_temporal_delta_coder_574_20260721T222234Z.json",
+      "sha256": "7241ff90057287d58482e9abd55e5da17173cb6ebe09a39c2ca847cc02a9a8b9"
+    }
+  ],
+  "triality": {
+    "dsl_data": ".omx/research/ddm_c1_composed_candidate_ledger_603_613_20260723.json",
+    "dag": ".omx/research/ddm_c1_composed_candidate_spec_DAG_FEED_20260723.md",
+    "equations": ".omx/research/ddm_c1_composed_candidate_spec_canonical_equations_20260723.md"
+  },
+  "later_operator_supplements_consumed": [
+    {
+      "utc": "2026-07-23T04:07:14Z",
+      "effect": "SegNet squeeze-excite makes same-frame correction effects nonlocal and non-additive; require joint replay"
+    },
+    {
+      "utc": "2026-07-23T04:08:07Z",
+      "effect": "race high-resolution FP pre-uint8 against post-quantization int8 application per correction with measured bytes and realized flips"
+    },
+    {
+      "utc": "2026-07-23T04:11:17Z",
+      "effect": "omniscience inversion: pending efficiencies are computable-not-yet-computed on named exact surfaces, never epistemically unknown"
+    },
+    {
+      "utc": "2026-07-23T04:16:28Z",
+      "effect": "per-pair recursive solve-diff-repair, G3-plus-waterfill thresholds, terminal convergence ledger, and G4 shared-once routing feed R6"
+    }
+  ]
+}
