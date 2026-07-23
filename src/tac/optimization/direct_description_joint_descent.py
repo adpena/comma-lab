@@ -54,11 +54,146 @@ TYPED_SCHEMA: Final = "DirectDescriptionJointDescentTypedConfigV1"
 TICKET_SCHEMA: Final = "ddm_joint_descent_witness_program_ticket.v1"
 MEMORY_RECEIPT_SCHEMA: Final = "ddm_joint_descent_memory_preflight.v1"
 CHECKPOINT_SCHEMA: Final = "ddm_joint_descent_stage_checkpoint.v1"
-EXPECTED_PROGRAM_SHA256: Final = "68a8aa97b25a6be2f8f08e36fcf4957fe032233e43b1050b75ad13c9d7dad89c"
+LEGACY_PROGRAM_SHA256: Final = "68a8aa97b25a6be2f8f08e36fcf4957fe032233e43b1050b75ad13c9d7dad89c"
+EXPECTED_PROGRAM_SHA256: Final = "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab2935a2c403b824"
+SUPPORTED_PROGRAM_SHA256: Final = frozenset({LEGACY_PROGRAM_SHA256, EXPECTED_PROGRAM_SHA256})
 EXPECTED_ARCHIVE_SHA256: Final = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
 EXPECTED_ARCHIVE_BYTES: Final = 133_941
 POINTER: Final = "0.1910828242 [contest-CPU]"
 EVIDENCE_AXIS: Final = "[macOS-CPU frozen-scorer advisory]"
+BASELINE_DSEG: Final = 0.027470296224
+
+
+def classify_realized_stage_verdict(
+    *,
+    reference_d_seg: float,
+    reference_d_pose: float,
+    candidate_d_seg: float,
+    candidate_d_pose: float,
+    target_d_seg: float,
+    target_d_pose: float | None,
+) -> str:
+    """Classify only an exact realized-through-receiver stage measurement.
+
+    A stage may continue only after strict total d_seg descent without any pose
+    regression.  This deliberately refuses proxy-loss, STE, or first-order
+    predictions as campaign decisions.
+    """
+
+    values = (
+        reference_d_seg,
+        reference_d_pose,
+        candidate_d_seg,
+        candidate_d_pose,
+        target_d_seg,
+    )
+    if not all(math.isfinite(float(value)) and float(value) >= 0.0 for value in values):
+        return "REFUSE_REALIZED_STAGE_VERDICT_NONFINITE_OR_NEGATIVE"
+    if target_d_pose is not None and (
+        not math.isfinite(float(target_d_pose)) or float(target_d_pose) < 0.0
+    ):
+        return "REFUSE_REALIZED_STAGE_TARGET_NONFINITE_OR_NEGATIVE"
+    if candidate_d_seg > reference_d_seg:
+        return "BLOCKED_REALIZED_DSEG_REGRESSION"
+    if candidate_d_pose > reference_d_pose:
+        return "BLOCKED_REALIZED_DPOSE_REGRESSION"
+    if candidate_d_seg >= reference_d_seg:
+        return "REALIZED_STAGE_NO_TOTAL_DSEG_DESCENT"
+    target_met = candidate_d_seg <= target_d_seg and (
+        target_d_pose is None or candidate_d_pose <= target_d_pose
+    )
+    return "REALIZED_STAGE_TARGET_MET" if target_met else "REALIZED_STAGE_DESCENT_CONTINUE"
+
+
+@dataclass(frozen=True, slots=True)
+class FullRunStageV1:
+    stage_id: str
+    active_groups: tuple[str, ...]
+    maximum_steps: int
+    verdict_interval_steps: int
+    target_d_seg: float
+    target_d_pose: float | None
+
+
+@dataclass(frozen=True, slots=True)
+class FullRunScheduleV1:
+    """Hash-sealed schedule consumed only by the real n600 full-run path."""
+
+    train_batch: int
+    learning_rate_quantum_fraction: float
+    checkpoint_interval_steps: int
+    plateau_verdicts: int
+    warm_start_pair: int
+    warm_start_steps: int
+    measured_seconds_per_step: float
+    measured_seconds_per_step_low: float
+    measured_seconds_per_step_high: float
+    stages: tuple[FullRunStageV1, ...]
+
+    @classmethod
+    def from_semantic_program(cls, semantic: Mapping[str, Any]) -> FullRunScheduleV1 | None:
+        payload = semantic.get("full_run_schedule")
+        if payload is None:
+            return None
+        if not isinstance(payload, Mapping):
+            raise DirectDescriptionError("full-run schedule must be a mapping")
+        stages_raw = payload.get("stages")
+        if not isinstance(stages_raw, list) or not stages_raw:
+            raise DirectDescriptionError("full-run schedule requires nonempty stages")
+        stages = tuple(
+            FullRunStageV1(
+                stage_id=str(row["stage_id"]),
+                active_groups=tuple(str(value) for value in row["active_groups"]),
+                maximum_steps=int(row["maximum_steps"]),
+                verdict_interval_steps=int(row["verdict_interval_steps"]),
+                target_d_seg=float(row["target_d_seg"]),
+                target_d_pose=None if row.get("target_d_pose") is None else float(row["target_d_pose"]),
+            )
+            for row in stages_raw
+        )
+        result = cls(
+            train_batch=int(payload["train_batch"]),
+            learning_rate_quantum_fraction=float(payload["learning_rate_quantum_fraction"]),
+            checkpoint_interval_steps=int(payload["checkpoint_interval_steps"]),
+            plateau_verdicts=int(payload["plateau_verdicts"]),
+            warm_start_pair=int(payload["warm_start_pair"]),
+            warm_start_steps=int(payload["warm_start_steps"]),
+            measured_seconds_per_step=float(payload["measured_seconds_per_step"]),
+            measured_seconds_per_step_low=float(payload["measured_seconds_per_step_low"]),
+            measured_seconds_per_step_high=float(payload["measured_seconds_per_step_high"]),
+            stages=stages,
+        )
+        if not 1 <= result.train_batch <= 600:
+            raise DirectDescriptionError("full-run train batch is outside n600")
+        if not 0.0 < result.learning_rate_quantum_fraction <= 0.25:
+            raise DirectDescriptionError("full-run learning rate exceeds the realized uint8 quarter-quantum bound")
+        if result.checkpoint_interval_steps <= 0 or result.plateau_verdicts <= 0:
+            raise DirectDescriptionError("full-run checkpoint/plateau schedule is invalid")
+        if not 0 <= result.warm_start_pair < 600:
+            raise DirectDescriptionError("full-run warm-start pair is outside n600")
+        if result.warm_start_steps <= 0:
+            raise DirectDescriptionError("full-run warm-start steps are invalid")
+        timings = (
+            result.measured_seconds_per_step_low,
+            result.measured_seconds_per_step,
+            result.measured_seconds_per_step_high,
+        )
+        if not all(math.isfinite(value) and value > 0.0 for value in timings) or not (
+            timings[0] <= timings[1] <= timings[2]
+        ):
+            raise DirectDescriptionError("full-run measured timing band is invalid")
+        allowed_groups = {"island_worldsheet", "lane_program", "shared_template_dof"}
+        if any(
+            stage.maximum_steps <= 0
+            or stage.verdict_interval_steps <= 0
+            or stage.verdict_interval_steps > stage.maximum_steps
+            or not set(stage.active_groups) <= allowed_groups
+            or not 0.0 <= stage.target_d_seg <= BASELINE_DSEG
+            or (stage.target_d_pose is not None and stage.target_d_pose < 0.0)
+            for stage in result.stages
+        ):
+            raise DirectDescriptionError("full-run stage schedule is invalid")
+        return result
 
 
 def _sha256(payload: bytes) -> str:
@@ -101,6 +236,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
     memory_ceiling_gib: float
     custom_grouped_backward_required: bool
     fused_r_required: bool
+    full_run_schedule: FullRunScheduleV1 | None
     score_claim: bool = False
     research_only: bool = True
 
@@ -115,7 +251,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
             raise DirectDescriptionError("joint-descent ticket lacks a semantic program")
         semantic_hash = _sha256(rfc8785_canonicalize(semantic))
         sealed = ticket.get("compile_custody", {}).get("semantic_program_sha256")
-        if semantic_hash != sealed or semantic_hash != EXPECTED_PROGRAM_SHA256:
+        if semantic_hash != sealed or semantic_hash not in SUPPORTED_PROGRAM_SHA256:
             raise DirectDescriptionError(
                 f"joint-descent DSL hash mismatch: computed={semantic_hash} sealed={sealed}"
             )
@@ -148,10 +284,11 @@ class DirectDescriptionJointDescentTypedConfigV1:
             memory_ceiling_gib=116.0,
             custom_grouped_backward_required=env.get("TAC_MLX_CUSTOM_GROUPED_BACKWARD") == "1",
             fused_r_required="fused differentiable-r" in required_kernels,
+            full_run_schedule=FullRunScheduleV1.from_semantic_program(semantic),
         )
 
     def identity_payload(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "schema": TYPED_SCHEMA,
             "dsl_compile_hash": self.dsl_compile_hash,
             "source_archive_sha256": self.source_archive_sha256,
@@ -167,6 +304,30 @@ class DirectDescriptionJointDescentTypedConfigV1:
             "score_claim": False,
             "research_only": True,
         }
+        if self.full_run_schedule is not None:
+            payload["full_run_schedule"] = {
+                "train_batch": self.full_run_schedule.train_batch,
+                "learning_rate_quantum_fraction": self.full_run_schedule.learning_rate_quantum_fraction,
+                "checkpoint_interval_steps": self.full_run_schedule.checkpoint_interval_steps,
+                "plateau_verdicts": self.full_run_schedule.plateau_verdicts,
+                "warm_start_pair": self.full_run_schedule.warm_start_pair,
+                "warm_start_steps": self.full_run_schedule.warm_start_steps,
+                "measured_seconds_per_step": self.full_run_schedule.measured_seconds_per_step,
+                "measured_seconds_per_step_low": self.full_run_schedule.measured_seconds_per_step_low,
+                "measured_seconds_per_step_high": self.full_run_schedule.measured_seconds_per_step_high,
+                "stages": [
+                    {
+                        "stage_id": stage.stage_id,
+                        "active_groups": list(stage.active_groups),
+                        "maximum_steps": stage.maximum_steps,
+                        "verdict_interval_steps": stage.verdict_interval_steps,
+                        "target_d_seg": stage.target_d_seg,
+                        "target_d_pose": stage.target_d_pose,
+                    }
+                    for stage in self.full_run_schedule.stages
+                ],
+            }
+        return payload
 
     def typed_config_hash(self) -> str:
         return _sha256(rfc8785_canonicalize(self.identity_payload()))
@@ -231,7 +392,12 @@ def derive_lane_program_seeds(receiver: CarrierComposeReceiverV1) -> tuple[LaneP
                 line_index=line_index,
                 birth_pair=birth,
                 death_pair_exclusive=death,
-                bev_coefficients=tuple(float(value) for value in representative[:4]),
+                bev_coefficients=(
+                    float(representative[0]),
+                    float(representative[1]),
+                    float(representative[2]),
+                    float(representative[3]),
+                ),
                 width_bias=float(representative[4]),
                 width_slope=float(representative[5]),
                 dash_phase_origin=float(intercept),
@@ -325,15 +491,21 @@ def lift_v15_archive(archive: bytes) -> JointDescriptionParameterLiftV1:
         raise DirectDescriptionError("joint-descent V15 warm start lacks its counted template bank")
     lanes = derive_lane_program_seeds(receiver)
     names: list[str] = []
+    # Only coordinates that survive the current receiver encoder belong in the
+    # optimizer surface.  ``aspect_log``/``rotation_radians`` are lift metadata
+    # but are not encoded by G1S1; the inherited BEV/range seed values likewise
+    # have no LanePeriodicProgramV1 wire fields.  Counting those was the J2
+    # 706-name overstatement.  The executable surface is therefore 368 DOFs:
+    # 2*163 track translations + 4*6 counted Lane fields + 3*6 template bytes.
     for track in g1.tracks:
         names.extend(
             f"island.track{track.object_id}.{field}"
-            for field in ("center_x", "center_y", "aspect_log", "rotation")
+            for field in ("center_x", "center_y")
         )
     for lane in lanes:
         names.extend(
             f"lane.line{lane.line_index}.{field}"
-            for field in ("bev_c0", "bev_c1", "bev_c2", "bev_c3", "dash_phase", "range_gate")
+            for field in ("dash_phase_origin_q8", "dash_phase_xi_gain_q8", "width_bias_q8", "width_slope_q12")
         )
     template_start = len(names)
     template_rows = receiver.scorer_solved_templates.templates
@@ -358,6 +530,7 @@ def _compile_lift_variant(
     g1: G1WorldsheetParameterLiftV1 | None = None,
     lane_programs: Sequence[LanePeriodicProgramV1] = (),
     template_rows: Sequence[RowBandScorerTemplateV1] | None = None,
+    verify_member_effects: bool = True,
 ) -> bytes:
     """Compile one receiver-consumed parameter mutation from the sealed base."""
 
@@ -377,8 +550,168 @@ def _compile_lift_variant(
         realization_static_rule_id=receiver.realization_static_rule_id,
         scorer_solved_templates=bank,
     )
-    receive_carrier_compose_archive(archive)
+    receive_carrier_compose_archive(archive, verify_member_effects=verify_member_effects)
     return archive
+
+
+def parameter_group_indices(lift: JointDescriptionParameterLiftV1) -> dict[str, tuple[int, ...]]:
+    """Return the three receiver-effective parameter groups by exact name."""
+
+    groups = {
+        "island_worldsheet": tuple(
+            index for index, name in enumerate(lift.parameter_names) if name.startswith("island.")
+        ),
+        "lane_program": tuple(
+            index for index, name in enumerate(lift.parameter_names) if name.startswith("lane.")
+        ),
+        "shared_template_dof": tuple(
+            index for index, name in enumerate(lift.parameter_names) if name.startswith("template.")
+        ),
+    }
+    if tuple(len(groups[name]) for name in groups) != (2 * len(lift.g1.tracks), 4 * len(lift.lane_seeds), 3 * len(lift.template_rows)):
+        raise DirectDescriptionError("joint-descent receiver-effective parameter grouping differs")
+    return groups
+
+
+def realize_parameter_theta(lift: JointDescriptionParameterLiftV1, theta: np.ndarray) -> np.ndarray:
+    """Quantize optimizer coordinates into exact receiver wire quanta."""
+
+    value = np.asarray(theta, dtype=np.float32)
+    if value.shape != (len(lift.parameter_names),) or not np.all(np.isfinite(value)):
+        raise DirectDescriptionError("joint-descent parameter theta is invalid")
+    realized = np.rint(value.astype(np.float64))
+    groups = parameter_group_indices(lift)
+    island = np.asarray(groups["island_worldsheet"], dtype=np.int64)
+    lane = np.asarray(groups["lane_program"], dtype=np.int64)
+    if np.any(np.abs(realized[island]) > 4096):
+        raise DirectDescriptionError("joint-descent island translation exceeds the guarded scorer grid")
+    realized[lane] = np.clip(realized[lane], -32768, 32767)
+    return np.ascontiguousarray(realized, dtype=np.float32)
+
+
+def compile_parameterized_archive(
+    lift: JointDescriptionParameterLiftV1,
+    theta: np.ndarray,
+    *,
+    include_lane_programs: bool,
+) -> tuple[bytes, np.ndarray]:
+    """Compile quantized low-dimensional state into one receiver-closed archive."""
+
+    realized = realize_parameter_theta(lift, theta)
+    cursor = 0
+    knots = list(lift.g1.knots)
+    for track in lift.g1.tracks:
+        dx, dy = (int(realized[cursor]), int(realized[cursor + 1]))
+        cursor += 2
+        for knot_index in track.knot_indices:
+            knot = knots[knot_index]
+            knots[knot_index] = replace(knot, center_x=knot.center_x + dx, center_y=knot.center_y + dy)
+    g1 = replace(lift.g1, knots=tuple(knots))
+
+    lanes: list[LanePeriodicProgramV1] = []
+    for seed in lift.lane_seeds:
+        base = seed.counted_record()
+        deltas = tuple(int(value) for value in realized[cursor : cursor + 4])
+        cursor += 4
+        lanes.append(
+            replace(
+                base,
+                dash_phase_origin_delta_q8=int(np.clip(base.dash_phase_origin_delta_q8 + deltas[0], -32768, 32767)),
+                dash_phase_xi_gain_q8=int(np.clip(base.dash_phase_xi_gain_q8 + deltas[1], -32768, 32767)),
+                width_bias_q8=int(np.clip(base.width_bias_q8 + deltas[2], -32768, 32767)),
+                width_slope_q12=int(np.clip(base.width_slope_q12 + deltas[3], -32768, 32767)),
+            )
+        )
+
+    templates: list[RowBandScorerTemplateV1] = []
+    for row in lift.template_rows:
+        channel_delta = np.asarray(realized[cursor : cursor + 3], dtype=np.int16)
+        cursor += 3
+        rgb = np.frombuffer(row.rgb_u8, dtype=np.uint8).reshape(-1, 3).astype(np.int16)
+        rgb = np.clip(rgb + channel_delta[None, :], 0, 255).astype(np.uint8)
+        templates.append(replace(row, rgb_u8=rgb.tobytes()))
+    if cursor != len(realized):
+        raise DirectDescriptionError("joint-descent parameter compiler left coordinates unconsumed")
+    archive = _compile_lift_variant(
+        lift,
+        g1=g1,
+        lane_programs=lanes if include_lane_programs else (),
+        template_rows=templates,
+        verify_member_effects=False,
+    )
+    return archive, realized
+
+
+def realized_training_state(
+    lift: JointDescriptionParameterLiftV1,
+    theta: np.ndarray,
+    *,
+    pair_ids: Sequence[int],
+    active_groups: Sequence[str],
+    include_lane_programs: bool,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, tuple[int, ...], np.ndarray, bytes]:
+    """Build sparse exact +1-quantum secants around current parse-back state.
+
+    The returned basis contains only receiver-effective island/Lane coordinates
+    that can affect this pair window.  Shared-template coordinates use their
+    exact grammar masks in :class:`DirectDescriptionJointDescentMLXModule`.
+    """
+
+    indexes = tuple(int(value) for value in pair_ids)
+    archive, realized = compile_parameterized_archive(
+        lift, theta, include_lane_programs=include_lane_programs
+    )
+    receiver = receive_carrier_compose_archive(archive, verify_member_effects=False)
+    camera = receiver.render_camera_pairs(indexes).astype(np.float32)
+    template_rows = receiver.scorer_solved_templates
+    if template_rows is None:
+        raise DirectDescriptionError("parameterized archive lost its template bank")
+    masks = np.stack(
+        [receiver.template_camera_masks(indexes, row).astype(np.float32) for row in template_rows.templates],
+        axis=0,
+    )
+    if "shared_template_dof" not in active_groups:
+        masks.fill(0.0)
+    if np.any(masks.sum(axis=0) > 1.0):
+        raise DirectDescriptionError("parameterized template masks overlap")
+
+    groups = parameter_group_indices(lift)
+    selected: list[int] = []
+    if "island_worldsheet" in active_groups:
+        pair_set = set(indexes)
+        for track_index, track in enumerate(lift.g1.tracks):
+            if any(lift.g1.knots[knot_index].pair_index in pair_set for knot_index in track.knot_indices):
+                selected.extend((2 * track_index, 2 * track_index + 1))
+    if "lane_program" in active_groups:
+        selected.extend(groups["lane_program"])
+    secants: list[np.ndarray] = []
+    for parameter_index in selected:
+        secant: np.ndarray | None = None
+        errors: list[str] = []
+        for direction in (1.0, -1.0):
+            probe = realized.copy()
+            probe[parameter_index] += np.float32(direction)
+            try:
+                probe_archive, _ = compile_parameterized_archive(
+                    lift, probe, include_lane_programs=include_lane_programs
+                )
+                probe_camera = receive_carrier_compose_archive(
+                    probe_archive, verify_member_effects=False
+                ).render_camera_pairs(indexes)
+            except DirectDescriptionError as exc:
+                errors.append(str(exc))
+                continue
+            secant = (probe_camera.astype(np.float32) - camera) / np.float32(direction)
+            break
+        if secant is None:
+            raise DirectDescriptionError(
+                "joint-descent coordinate has no feasible one-quantum secant: "
+                f"{lift.parameter_names[parameter_index]}: {'; '.join(errors)}"
+            )
+        secants.append(secant)
+    basis = np.stack(secants, axis=0) if secants else np.empty((0, *camera.shape), dtype=np.float32)
+    local_theta = np.asarray(theta, dtype=np.float32) - realized
+    return camera, masks, basis, tuple(selected), local_theta, archive
 
 
 def verify_trainable_group_ownership(lift: JointDescriptionParameterLiftV1) -> dict[str, Any]:
@@ -569,6 +902,7 @@ class DirectDescriptionJointDescentMLXModule:
         base_camera: np.ndarray,
         template_masks: np.ndarray,
         realized_secant_basis: np.ndarray | None,
+        realized_secant_indices: Sequence[int] | None,
     ) -> None:
         count = len(tuple(pair_ids))
         if np.asarray(theta).shape != (self.parameter_count,):
@@ -578,7 +912,7 @@ class DirectDescriptionJointDescentMLXModule:
         if np.asarray(template_masks).shape != (len(self.lift.template_rows), count, 874, 1164):
             raise DirectDescriptionError("joint-descent template-mask geometry differs")
         if realized_secant_basis is not None and np.asarray(realized_secant_basis).shape != (
-            self.parameter_count,
+            len(tuple(realized_secant_indices or ())),
             count,
             2,
             874,
@@ -586,6 +920,10 @@ class DirectDescriptionJointDescentMLXModule:
             3,
         ):
             raise DirectDescriptionError("joint-descent realized-secant basis geometry differs")
+        if realized_secant_basis is not None and any(
+            index < 0 or index >= self.parameter_count for index in tuple(realized_secant_indices or ())
+        ):
+            raise DirectDescriptionError("joint-descent realized-secant index is outside theta")
 
     def _render_camera(
         self,
@@ -593,6 +931,7 @@ class DirectDescriptionJointDescentMLXModule:
         base_camera: Any,
         template_masks: Any,
         realized_secant_basis: Any | None,
+        realized_secant_indices: Sequence[int] | None,
     ) -> Any:
         mx = self.mx
         template_count = len(self.lift.template_rows)
@@ -602,10 +941,11 @@ class DirectDescriptionJointDescentMLXModule:
         paint_delta = mx.einsum("kbhw,kc->bhwc", template_masks, colour_delta)
         camera = base_camera + paint_delta[:, None, :, :, :]
         if realized_secant_basis is not None:
-            # Basis is P,B,2,H,W,3 and is derived from exact archive finite
+            # Basis is K,B,2,H,W,3 and is derived from exact archive finite
             # secants.  It is immutable receiver geometry, never a trainable
             # frame table; theta is the sole differentiable state.
-            camera = camera + mx.tensordot(theta, realized_secant_basis, axes=([0], [0]))
+            selected = theta[mx.array(np.asarray(realized_secant_indices, dtype=np.int32))]
+            camera = camera + mx.tensordot(selected, realized_secant_basis, axes=[[0], [0]])
         clipped = mx.clip(camera, 0.0, 255.0)
         return clipped + mx.stop_gradient(mx.round(clipped) - clipped)
 
@@ -617,6 +957,7 @@ class DirectDescriptionJointDescentMLXModule:
         base_camera: Any,
         template_masks: Any,
         realized_secant_basis: Any | None,
+        realized_secant_indices: Sequence[int] | None,
     ) -> Any:
         mx = self.mx
         seg, pose_mse, _ = self._components(
@@ -625,6 +966,7 @@ class DirectDescriptionJointDescentMLXModule:
             base_camera=base_camera,
             template_masks=template_masks,
             realized_secant_basis=realized_secant_basis,
+            realized_secant_indices=realized_secant_indices,
         )
         # The sqrt term is the exact contest action; epsilon only defines its
         # derivative at zero and is far below the observed warm-start value.
@@ -638,6 +980,7 @@ class DirectDescriptionJointDescentMLXModule:
         base_camera: Any,
         template_masks: Any,
         realized_secant_basis: Any | None,
+        realized_secant_indices: Sequence[int] | None,
     ) -> tuple[Any, Any, Any]:
         mx = self.mx
         from tac.local_acceleration.metal_fused_r_operator import fused_r_roundtrip
@@ -648,7 +991,13 @@ class DirectDescriptionJointDescentMLXModule:
             pose_loss_mlx,
         )
 
-        camera = self._render_camera(theta, base_camera, template_masks, realized_secant_basis)
+        camera = self._render_camera(
+            theta,
+            base_camera,
+            template_masks,
+            realized_secant_basis,
+            realized_secant_indices,
+        )
         flat = mx.reshape(camera, (-1, 874, 1164, 3))
         scorer_rgb = fused_r_roundtrip(
             flat,
@@ -669,7 +1018,7 @@ class DirectDescriptionJointDescentMLXModule:
         pose_input = mx.reshape(mx.transpose(yuv6, (0, 2, 3, 1, 4)), (-1, 192, 256, 12))
         pose = self.scorer.posenet(pose_input)["pose"][..., :6]
         pose_mse = pose_loss_mlx(pose, self.pose_targets[pair_ids])
-        d_seg = mx.mean((mx.argmax(seg_logits, axis=-1) != targets).astype(mx.float32))
+        d_seg = mx.mean(mx.not_equal(mx.argmax(seg_logits, axis=-1), targets).astype(mx.float32))
         return seg, pose_mse, d_seg
 
     def loss_and_grad(
@@ -680,8 +1029,16 @@ class DirectDescriptionJointDescentMLXModule:
         base_camera: np.ndarray,
         template_masks: np.ndarray,
         realized_secant_basis: np.ndarray | None = None,
+        realized_secant_indices: Sequence[int] | None = None,
     ) -> tuple[float, np.ndarray]:
-        self._validate_step_arrays(theta, pair_ids, base_camera, template_masks, realized_secant_basis)
+        self._validate_step_arrays(
+            theta,
+            pair_ids,
+            base_camera,
+            template_masks,
+            realized_secant_basis,
+            realized_secant_indices,
+        )
         mx = self.mx
         pair_mx = mx.array(np.asarray(pair_ids, dtype=np.int32))
         base_mx = mx.array(np.asarray(base_camera, dtype=np.float32))
@@ -697,6 +1054,7 @@ class DirectDescriptionJointDescentMLXModule:
                 base_camera=base_mx,
                 template_masks=masks_mx,
                 realized_secant_basis=basis_mx,
+                realized_secant_indices=realized_secant_indices,
             )
 
         value, gradient = mx.value_and_grad(closure)(mx.array(np.asarray(theta, dtype=np.float32)))
@@ -711,10 +1069,18 @@ class DirectDescriptionJointDescentMLXModule:
         base_camera: np.ndarray,
         template_masks: np.ndarray,
         realized_secant_basis: np.ndarray | None = None,
+        realized_secant_indices: Sequence[int] | None = None,
     ) -> dict[str, float]:
         """Measure the same MLX research-signal components without updating state."""
 
-        self._validate_step_arrays(theta, pair_ids, base_camera, template_masks, realized_secant_basis)
+        self._validate_step_arrays(
+            theta,
+            pair_ids,
+            base_camera,
+            template_masks,
+            realized_secant_basis,
+            realized_secant_indices,
+        )
         mx = self.mx
         pair_mx = mx.array(np.asarray(pair_ids, dtype=np.int32))
         basis = None if realized_secant_basis is None else mx.array(
@@ -726,6 +1092,7 @@ class DirectDescriptionJointDescentMLXModule:
             base_camera=mx.array(np.asarray(base_camera, dtype=np.float32)),
             template_masks=mx.array(np.asarray(template_masks, dtype=np.float32)),
             realized_secant_basis=basis,
+            realized_secant_indices=realized_secant_indices,
         )
         objective = 100.0 * seg + mx.sqrt(10.0 * pose + 1.0e-12)
         mx.eval(seg, pose, d_seg, objective)
@@ -847,6 +1214,8 @@ def save_stage_checkpoint(
     stage_id: str,
     config: DirectDescriptionJointDescentTypedConfigV1,
     telemetry: Sequence[Mapping[str, Any]],
+    run_cursor: Mapping[str, Any] | None = None,
+    realized_archive: Mapping[str, Any] | None = None,
 ) -> str:
     """Atomically preserve a distinct stage/step checkpoint; never overwrite."""
 
@@ -873,6 +1242,8 @@ def save_stage_checkpoint(
             "manifest_key": RESUME_REGISTRY_MANIFEST_KEY,
         },
         "telemetry": list(telemetry),
+        "run_cursor": dict(run_cursor or {}),
+        "realized_archive": dict(realized_archive or {}),
         "score_claim": False,
         "evidence_axis": EVIDENCE_AXIS,
         "pointer": POINTER,
@@ -953,15 +1324,22 @@ __all__ = [
     "AdamStateV1",
     "DirectDescriptionJointDescentMLXModule",
     "DirectDescriptionJointDescentTypedConfigV1",
+    "FullRunScheduleV1",
+    "FullRunStageV1",
     "JointDescentResumeControllerV1",
     "JointDescriptionParameterLiftV1",
     "LaneProgramSeedV1",
     "classify_memory_preflight",
+    "classify_realized_stage_verdict",
     "clipped_adam_step",
+    "compile_parameterized_archive",
     "derive_lane_program_seeds",
     "initial_adam_state",
     "lift_v15_archive",
     "load_stage_checkpoint",
+    "parameter_group_indices",
+    "realize_parameter_theta",
+    "realized_training_state",
     "save_stage_checkpoint",
     "template_camera_state",
     "verify_trainable_group_ownership",

@@ -1,0 +1,77 @@
+{
+  "schema": "ddm_j3_366_ticket_reseal_diff.v1",
+  "utc": "2026-07-23T03:25:00Z",
+  "old_ticket": ".omx/research/configs/ddm_j1_366_joint_descent_witness_program_20260723.json",
+  "new_ticket": ".omx/research/configs/ddm_j3_366_joint_descent_witness_program_20260723.json",
+  "old_semantic_program_sha256": "68a8aa97b25a6be2f8f08e36fcf4957fe032233e43b1050b75ad13c9d7dad89c",
+  "new_semantic_program_sha256": "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab2935a2c403b824",
+  "old_typed_config_hash": "506bcb345a2e4f44b5991cac2a5ea3aea1b127279c80b3fe59aec71ad5935dfe",
+  "new_typed_config_hash": "fa63e79492d916a9cc6fe144207bdcb627d07e416883e131ecb90c289f8ccec0",
+  "field_diffs": [
+    {
+      "field": "compile_custody",
+      "old": "declarative proposed schema; executable compiler=false; governed launcher=false",
+      "new": "executable typed schema; compiler=true; governed launcher=true",
+      "justification": "MEASURED/BUILT: the ticket now compiles into the real full-run consumer and its typed identity is hash sealed"
+    },
+    {
+      "field": "receiver_effective_surface.parameter_count",
+      "old": 706,
+      "new": 368,
+      "justification": "DERIVED: 2*163 track translations + 4*6 Lane wire coordinates + 3*6 template bytes; 326 aspect/rotation metadata names and 12 Lane BEV/range seed names have no current receiver wire coordinate"
+    },
+    {
+      "field": "receiver_effective_surface.knot_expansion",
+      "old": "2197 knots present in the lifted source but unresolved for campaign staging",
+      "new": "not admitted",
+      "justification": "DERIVED: individual-knot expansion lacks a separately counted wire grammar and measured marginal delta-S per byte; current track translations are receiver-effective"
+    },
+    {
+      "field": "full_run_schedule.train_batch",
+      "old": "unspecified",
+      "new": 4,
+      "justification": "MEASURED: actual full-run batch4 step=104.09510249993764s and one n600 exposure=4.3373h; batch1 step=100.87168033304624s and one exposure=16.8119h"
+    },
+    {
+      "field": "full_run_schedule.learning_rate_quantum_fraction",
+      "old": "no realized-quantum bound",
+      "new": 0.25,
+      "justification": "DERIVED from the v16 binding warning: first-order extrapolation is invalid beyond one uint8 quantum; quarter-quantum is the largest admitted step and line search only decreases it"
+    },
+    {
+      "field": "full_run_schedule.steps",
+      "old": "17-30h estimate written before an executable consumer; no step schedule",
+      "new": "150 steps per stage, 3 stages, 450 total",
+      "justification": "DERIVED ENERGY LOGIC: ceil(600/4)=150 gives each newly admitted force group one complete n600 exposure before composition advances"
+    },
+    {
+      "field": "full_run_schedule.checkpoint_interval_steps",
+      "old": "per-stage requirement without a periodic interval",
+      "new": 37,
+      "justification": "DERIVED: floor(150/4)=37, at most one quarter-exposure between preserved intra-stage checkpoints; stage boundaries are separately preserved"
+    },
+    {
+      "field": "full_run_schedule.warm_start",
+      "old": "pair447 empirical seed without a realized-quantum duration",
+      "new": "pair447 for 4 steps",
+      "justification": "MEASURED+DERIVED: J2 found pair447 local descent; ceil(1 uint8 quantum / 0.25 quantum per step)=4 before the first exact n600 decision"
+    },
+    {
+      "field": "full_run_schedule.wall_clock_hours",
+      "old": "17-30h DERIVED before the consumer existed",
+      "new": [13.31387624311125, 13.79371420691443],
+      "justification": "DERIVED from actual full-run s/step plus ten chunked n600 verdicts (baseline and three per stage) and measured startup; two exact decisions can stop at step 100 before the step-150 maximum"
+    },
+    {
+      "field": "stage_decision_law",
+      "old": "targets declared but no executable exact stage-exit law",
+      "new": "realized archive/parse-back/paint/uint8/R/frozen-scorer verdicts only; predicted plateaus forbidden; component regression checkpoints and blocks",
+      "justification": "BINDING operator v16 warning plus the measured four-step smoke regression"
+    }
+  ],
+  "current_fire_status": "BLOCKED_REALIZED_DSEG_REGRESSION",
+  "research_only": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

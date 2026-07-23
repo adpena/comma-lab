@@ -2743,7 +2743,19 @@ class CarrierComposeReceiverV1:
         return np.ascontiguousarray(output)
 
 
-def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
+def receive_carrier_compose_archive(
+    archive: bytes,
+    *,
+    verify_member_effects: bool = True,
+) -> CarrierComposeReceiverV1:
+    """Parse a carrier archive, strictly proving member effects by default.
+
+    ``verify_member_effects=False`` exists only for optimizer inner-loop finite
+    secants after a strict source admission.  It still validates the complete
+    typed wire grammar and lifecycle geometry, but skips the expensive isolated
+    no-op renders and returns empty custody.  Such a receiver is never evidence;
+    stage exits and published receipts must call the strict default.
+    """
     members, homes = parse_carrier_compose_archive(archive)
     manifest = json.loads(members["manifest.json"])
     predictor = receive_structured_member_archive(members["predictor.zip"])
@@ -2824,6 +2836,9 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         realization_static_rule_id=realization_static_rule_id,
         scorer_solved_templates=scorer_solved_templates,
     )
+
+    if not verify_member_effects:
+        return first
 
     lane_groups: dict[tuple[int, int], list[LaneCoefficientDelta]] = {}
     for symbol in symbols:
