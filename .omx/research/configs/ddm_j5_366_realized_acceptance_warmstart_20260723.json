@@ -1,10 +1,10 @@
 {
   "schema": "ddm_joint_descent_witness_program_ticket.v1",
   "authority": {
-    "delegation_prompt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j5_366_realized_acceptance_warmstart_20260723T053412Z.wrapped.prompt.txt",
-    "delegation_prompt_sha256": "deea6ed4c6be4c3d7e525ef71fcc5e64f0576e470d1886fd5686c4d5b5700e39",
-    "delegation_prompt_bytes": 7367,
-    "source_commit": "de725c0f21",
+    "delegation_prompt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j6a_366_prefire_contract_hardening_20260723T071826Z.wrapped.prompt.txt",
+    "delegation_prompt_sha256": "a0024abeba9ea82be3f45366996490f59a157972070f96eba098348acd3e6ae4",
+    "delegation_prompt_bytes": 7591,
+    "source_commit": "1119a9383b",
     "pointer": "0.1910828242 [contest-CPU]",
     "pointer_moved": false
   },
@@ -12,15 +12,57 @@
     "typed_schema": "DirectDescriptionJointDescentTypedConfigV1",
     "hash_scope": "RFC8785 canonical bytes of semantic_program",
     "hash_algorithm": "sha256",
-    "semantic_program_sha256": "13e194a8a354d53489f0ff68a5042237e69b4b6841a6b7959a15873fffa7b6e8",
-    "typed_config_hash": "d43608af799b2f2d04e248413ceb944c093701441eafb222f2b3cdf3d32b8d80",
+    "semantic_program_sha256": "3ba05e4d8fd2f85475173f0a9e17e668198507350d353a4257aaf196692b98c2",
+    "typed_config_hash": "35c929d0031ef3ae3225afdfeb09997619bb70016f27527ea4ce1e7bed31ff47",
     "existing_compiler_accepts_schema": true,
     "existing_governed_launcher_accepts_named_config": true,
-    "claim": "HASH_SEALED_EXECUTABLE_TYPED_BOUNDED_OPENING_CONFIG"
+    "claim": "HASH_SEALED_EXECUTABLE_TYPED_J6A_PREFIRE_CONTRACT"
+  },
+  "execution_custody": {
+    "source_files": {
+      "consumer": {
+        "path": "src/tac/optimization/direct_description_joint_descent.py",
+        "sha256": "76c66ceb6ad554898ae2b02db3230d669f104b97e617dd08881c9357154c9f51"
+      },
+      "launcher": {
+        "path": "tools/launch_ddm_joint_descent.py",
+        "sha256": "361f35e485fa624f75f665f05040b894d633d325f62edcc340cce1e5cc7eb051"
+      }
+    },
+    "j5_producer_artifacts": {
+      "baseline_verdict": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/verdicts/stage00_baseline_n600.json",
+        "sha256": "5b19b564da1fb528af2c0d944da36bf1d357e28503be5988cb14ad59c4a6a261"
+      },
+      "proposal_verdict": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
+        "sha256": "335d15db69dc25b0de80258e10e472f6e9ff282cd7d0325eca989bf92bade1f2"
+      },
+      "runtime_memory_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/full_run_memory_preflight.json",
+        "sha256": "4af05223624359fc305c82e30ee4a008da43d609251830d6e1a70724804ceec7"
+      },
+      "checkpoint": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000001.npz",
+        "sha256": "1399292164682955bd9937d204692521542687f69223ddc9cc1e669ae05a944e"
+      }
+    },
+    "worst_geometry_memory_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_finalsource_20260723T083200Z/worst_geometry_memory_preflight.json",
+      "sha256": "45a0e5d23fc04822c75036fefc78efcfc1503b75bb41838eb4617b6bf4b6a661"
+    },
+    "banked_r1_comparator": {
+      "d_pose": 0.00161,
+      "score_contribution": 0.127,
+      "payload_bytes": 7200,
+      "authority": "comparator_and_fallback_harvest_signal_only",
+      "binding_target": false,
+      "promotion_eligible": false
+    }
   },
   "semantic_program": {
     "schema": "DirectDescriptionJointDescentTypedConfigV1",
-    "program_id": "ddm_j5_366_realized_acceptance_warmstart_n600_seed0",
+    "program_id": "ddm_j6a_366_prefire_contract_hardening_n600_seed0",
     "seed": 0,
     "deterministic_algorithms": true,
     "num_pairs": 600,
@@ -76,9 +118,23 @@
         "authority": "speed path only; exact chunked frozen CPU-torch replay is macOS advisory and score_claim=false"
       },
       "memory_ceiling_gib": 116.0,
-      "measured_full_path_peak_rss_gib": 10.47418212890625,
-      "derived_projected_peak_gib": 13.5690185546875,
-      "preflight_external_receipt_sha256": "20703c8c8197036a00876fa201b662ca2f66006ca124d81c94e94cf381c3abdb"
+      "historical_j5_measured_stage1_peak_rss_gib": 10.47418212890625,
+      "historical_j5_projected_peak_gib": 13.5690185546875,
+      "historical_j5_geometry_limit": "8 island secants at pair447; not admission authority for stage3"
+    },
+    "worst_geometry_memory_preflight": {
+      "schema": "ddm_joint_descent_worst_geometry_memory_contract.v1",
+      "selected_pair_start": 498,
+      "train_batch": 4,
+      "active_groups": [
+        "island_worldsheet",
+        "lane_program",
+        "shared_template_dof"
+      ],
+      "expected_island_secants": 28,
+      "expected_lane_secants": 24,
+      "expected_total_secants": 52,
+      "derived_basis_gib": 4.72976016998291
     },
     "full_run_schedule": {
       "train_batch": 4,
@@ -96,7 +152,6 @@
         "maximum_continuous_update_quantum_fraction": null,
         "frozen_groups_until_first_admission": [],
         "group_release_condition": "first_component_safe_n600_residual_admission",
-        "pose_objective_engage_condition": "after_first_strict_n600_seg_admission",
         "first_realized_admission": "exact_n600_joint_delta_s_lt_zero_else_shrink_and_exact_rollback",
         "realized_acceptance_policy": "pure_priced_exact_n600",
         "proposal_staging": "camera_874x1164_q8_pre_final_uint8",
@@ -132,7 +187,18 @@
           346
         ],
         "residual_bucket_admission_required": true,
-        "component_fire_gate": "dseg_flat_or_down_pose_not_worse_and_any_component_descends"
+        "component_fire_gate": "cumulative_vs_stage00_dseg_flat_or_down_pose_not_worse_any_component_and_residual_descend"
+      },
+      "pose_finish_engage": {
+        "schema": "ddm_pose_finish_exact_verdict_plateau.v1",
+        "detector": "rolling_relative_slope_plateau",
+        "metric": "exact_n600_d_seg_realized_through_R",
+        "ema_span": 3,
+        "settle_window": 3,
+        "hysteresis": 3,
+        "flat_relative_slope_band": 0.0003,
+        "minimum_strict_seg_admissions": 1,
+        "fallback_policy": "emit_banked_r1_comparator_harvest_signal_non_promoting"
       },
       "measured_seconds_per_step": 104.09510249993764,
       "measured_seconds_per_step_low": 100.87168033304624,
@@ -141,7 +207,7 @@
       "derived_total_steps": 450,
       "derived_wall_clock_hours_low": 13.31387624311125,
       "derived_wall_clock_hours_high": 13.79371420691443,
-      "stage_transition_rule": "opening proposals shrink on exact joint-score ascent and roll back exactly; fire readiness additionally requires dseg flat/down, pose non-worse, at least one component descent, and C1 residual-bucket descent",
+      "stage_transition_rule": "opening proposals shrink on exact joint-score ascent and roll back exactly; fire readiness uses cumulative stage00 component and residual safety; only an exact stage target advances; target-unmet limits and plateaus stop non-promoting",
       "stages": [
         {
           "stage_id": "01_residual_bucket_realized_acceptance",
@@ -175,7 +241,7 @@
           "maximum_steps": 150,
           "verdict_interval_steps": 50,
           "target_d_seg": 0.006867574056,
-          "target_d_pose": 0.00161
+          "target_d_pose": 163.06116431842463
         }
       ]
     },
@@ -187,6 +253,11 @@
       "opening_groups": "C1-GUIDED: Lane remains held while coherent worldsheet and shared-template candidates are ranked by exact residual-bucket effect; no blanket template freeze",
       "bucket_partition": "MEASURED/DERIVED C1: Lane+Movable role ceiling 726416; Road+Undrivable+MyCar minus integer target allowance yields 2377273 baseline residual debt",
       "coherent_x_plus_1": "MEASURED V19 grammar-native eight-pair advisory on pair ids 447,53,416,296,547,278,501,346: both d_seg and d_pose descended with exact archive-byte pricing; J5 remeasures the exact lifecycle-feasible candidate through n600"
+      ,
+      "pose_finish_engage": "DERIVED #383 sibling: exact n600 d_seg uses the same EMA3, window3, hysteresis3, and 3e-4 rolling-relative-slope band; latch is run-owned and checkpointed",
+      "same_vehicle_pose_floor": "MEASURED J5 exact proposal d_pose=163.06116431842463; governed non-regression floor for final target; banked R1 0.001610 is comparator-only",
+      "worst_geometry": "DERIVED static lifecycle enumeration: pair498 has 28 island plus 24 Lane realized secants; memory-only bootstrap must measure this exact all-groups window",
+      "governed_stop": "DERIVED control invariant: only exact target-met advances; maximum-step and plateau exits below target are non-promoting stops"
     },
     "checkpoint_contract": {
       "resume_from_disk": true,
@@ -205,6 +276,9 @@
         "C1 residual-bucket per-move and cumulative delta",
         "candidate id, shrink multiplier, Q8 staging, realized DOFs",
         "component fire gate and exact archive identity"
+        ,
+        "pose-finish exact-verdict rolling-slope state and monotone engage latch",
+        "governed stage-exit decision and exact final-target gate"
       ],
       "chunked_n600_verdict": true,
       "verdict_batch": 16,

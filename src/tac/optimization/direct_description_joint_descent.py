@@ -22,6 +22,7 @@ import math
 import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, Final
 
@@ -48,23 +49,40 @@ from tac.optimization.direct_description_g1_worldsheet import (
     lift_g1_movable_worldsheet,
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError
+from tac.witness_control.costate_estimator import slope_with_stderr
 from tac.witness_control.resume_registry import (
     RESUME_REGISTRY_MANIFEST_KEY,
     ResumeRegistry,
+)
+from tac.witness_control.sigma_min_plateau import (
+    DEFAULT_EMA_SPAN,
+    DEFAULT_FLAT_REL_BAND,
+    DEFAULT_HYSTERESIS,
+    DEFAULT_SETTLE_WINDOW,
 )
 
 TYPED_SCHEMA: Final = "DirectDescriptionJointDescentTypedConfigV1"
 TICKET_SCHEMA: Final = "ddm_joint_descent_witness_program_ticket.v1"
 MEMORY_RECEIPT_SCHEMA: Final = "ddm_joint_descent_memory_preflight.v1"
 CHECKPOINT_SCHEMA: Final = "ddm_joint_descent_stage_checkpoint.v1"
+POSE_FINISH_ENGAGE_CONFIG_SCHEMA: Final = "ddm_pose_finish_exact_verdict_plateau.v1"
+POSE_FINISH_ENGAGE_STATE_SCHEMA: Final = "ddm_pose_finish_exact_verdict_plateau_state.v1"
+WORST_GEOMETRY_MEMORY_SCHEMA: Final = "ddm_joint_descent_worst_geometry_memory_contract.v1"
 LEGACY_PROGRAM_SHA256: Final = "68a8aa97b25a6be2f8f08e36fcf4957fe032233e43b1050b75ad13c9d7dad89c"
 J3_PROGRAM_SHA256: Final = "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab2935a2c403b824"
 J5_PROGRAM_SHA256: Final = "13e194a8a354d53489f0ff68a5042237e69b4b6841a6b7959a15873fffa7b6e8"
+J6A_PROGRAM_SHA256: Final = "3ba05e4d8fd2f85475173f0a9e17e668198507350d353a4257aaf196692b98c2"
 # Resealed after editing the semantic ticket; updated by the deterministic hash
 # seal step in this landing.
 EXPECTED_PROGRAM_SHA256: Final = "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b"
 SUPPORTED_PROGRAM_SHA256: Final = frozenset(
-    {LEGACY_PROGRAM_SHA256, J3_PROGRAM_SHA256, EXPECTED_PROGRAM_SHA256, J5_PROGRAM_SHA256}
+    {
+        LEGACY_PROGRAM_SHA256,
+        J3_PROGRAM_SHA256,
+        EXPECTED_PROGRAM_SHA256,
+        J5_PROGRAM_SHA256,
+        J6A_PROGRAM_SHA256,
+    }
 )
 EXPECTED_ARCHIVE_SHA256: Final = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
 EXPECTED_ARCHIVE_BYTES: Final = 133_941
@@ -112,6 +130,95 @@ def classify_realized_stage_verdict(
     return "REALIZED_STAGE_TARGET_MET" if target_met else "REALIZED_STAGE_DESCENT_CONTINUE"
 
 
+def classify_cumulative_fire_gate(
+    *,
+    baseline_d_seg: float,
+    baseline_d_pose: float,
+    candidate_d_seg: float,
+    candidate_d_pose: float,
+    cumulative_residual_delta_errors: int,
+    residual_descent_required: bool,
+) -> tuple[bool, str]:
+    """Fire readiness is cumulative against immutable stage00, never local."""
+
+    values = (baseline_d_seg, baseline_d_pose, candidate_d_seg, candidate_d_pose)
+    if not all(math.isfinite(float(value)) and float(value) >= 0.0 for value in values):
+        return False, "REFUSE_CUMULATIVE_FIRE_GATE_NONFINITE_OR_NEGATIVE"
+    if candidate_d_seg > baseline_d_seg:
+        return False, "BLOCKED_CUMULATIVE_DSEG_REGRESSION_VS_STAGE00"
+    if candidate_d_pose > baseline_d_pose:
+        return False, "BLOCKED_CUMULATIVE_DPOSE_REGRESSION_VS_STAGE00"
+    if candidate_d_seg == baseline_d_seg and candidate_d_pose == baseline_d_pose:
+        return False, "BLOCKED_CUMULATIVE_NO_COMPONENT_DESCENT_VS_STAGE00"
+    if residual_descent_required and int(cumulative_residual_delta_errors) >= 0:
+        return False, "BLOCKED_CUMULATIVE_RESIDUAL_NOT_DESCENDING_VS_STAGE00"
+    return True, "CUMULATIVE_COMPONENT_AND_RESIDUAL_FIRE_GATE_GREEN_VS_STAGE00"
+
+
+def classify_governed_stage_exit(
+    *,
+    target_met: bool,
+    stage_limit: bool,
+    plateau: bool,
+    component_decision: str | None,
+) -> str:
+    """Only an exact target hit advances; exhausted target-unmet work stops."""
+
+    if target_met:
+        return "ADVANCE_EXACT_TARGET_MET"
+    if component_decision is not None and component_decision in {
+        "BLOCKED_REALIZED_DSEG_REGRESSION",
+        "BLOCKED_REALIZED_DPOSE_REGRESSION",
+        "REFUSE_REALIZED_STAGE_VERDICT_NONFINITE_OR_NEGATIVE",
+        "REFUSE_REALIZED_STAGE_TARGET_NONFINITE_OR_NEGATIVE",
+    }:
+        return component_decision
+    if plateau:
+        return "STOPPED_BELOW_TARGET_PLATEAU"
+    if stage_limit:
+        return "STOPPED_BELOW_TARGET_MAXIMUM_STEPS"
+    return "CONTINUE_EXACT_TARGET_UNMET"
+
+
+def exact_final_target_gate(
+    *,
+    final_verdict: Mapping[str, Any] | None,
+    final_stage: FullRunStageV1 | Mapping[str, Any],
+) -> tuple[bool, str]:
+    if not isinstance(final_verdict, Mapping):
+        return False, "REFUSE_SCHEDULE_COMPLETE_WITHOUT_EXACT_FINAL_VERDICT"
+    stage_id = final_stage.stage_id if isinstance(final_stage, FullRunStageV1) else str(final_stage["stage_id"])
+    target_d_seg = (
+        final_stage.target_d_seg if isinstance(final_stage, FullRunStageV1) else float(final_stage["target_d_seg"])
+    )
+    target_d_pose = (
+        final_stage.target_d_pose if isinstance(final_stage, FullRunStageV1) else final_stage.get("target_d_pose")
+    )
+    if final_verdict.get("stage_id") != stage_id:
+        return False, "REFUSE_SCHEDULE_COMPLETE_FINAL_VERDICT_STAGE_MISMATCH"
+    try:
+        d_seg = float(final_verdict["d_seg"])
+        d_pose = float(final_verdict["d_pose"])
+    except (KeyError, TypeError, ValueError):
+        return False, "REFUSE_SCHEDULE_COMPLETE_FINAL_VERDICT_INVALID"
+    if (
+        not math.isfinite(d_seg)
+        or d_seg < 0.0
+        or not math.isfinite(d_pose)
+        or d_pose < 0.0
+        or not math.isfinite(float(target_d_seg))
+        or float(target_d_seg) < 0.0
+        or (
+            target_d_pose is not None
+            and (not math.isfinite(float(target_d_pose)) or float(target_d_pose) < 0.0)
+        )
+    ):
+        return False, "REFUSE_SCHEDULE_COMPLETE_FINAL_VERDICT_INVALID"
+    if d_seg > float(target_d_seg) or (target_d_pose is not None and d_pose > float(target_d_pose)):
+        return False, "REFUSE_SCHEDULE_COMPLETE_FINAL_TARGET_UNMET"
+    return True, "FULL_RUN_SCHEDULE_COMPLETE_EXACT_FINAL_TARGETS_MET"
+
+
 @dataclass(frozen=True, slots=True)
 class FullRunStageV1:
     stage_id: str
@@ -120,6 +227,290 @@ class FullRunStageV1:
     verdict_interval_steps: int
     target_d_seg: float
     target_d_pose: float | None
+
+
+@dataclass(frozen=True, slots=True)
+class PoseFinishEngageConfigV1:
+    """Typed #383-style conditioning latch over exact same-vehicle verdicts.
+
+    DDM does not expose the level-set vehicle's ξ→PoseNet Jacobian σ_min
+    series.  Reusing that metric would therefore fabricate telemetry.  This
+    sibling detector reuses #383's derived EMA/window/hysteresis/flat-band
+    constants, but applies them to the run-owned exact n600 d_seg trajectory.
+    It is deliberately slower to engage than the former one-bit
+    ``first Seg admission`` switch.
+    """
+
+    schema: str
+    detector: str
+    metric: str
+    ema_span: int
+    settle_window: int
+    hysteresis: int
+    flat_relative_slope_band: float
+    minimum_strict_seg_admissions: int
+    fallback_policy: str
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> PoseFinishEngageConfigV1:
+        if not isinstance(payload, Mapping):
+            raise DirectDescriptionError("pose-finish engage config must be a mapping")
+        result = cls(
+            schema=str(payload["schema"]),
+            detector=str(payload["detector"]),
+            metric=str(payload["metric"]),
+            ema_span=int(payload["ema_span"]),
+            settle_window=int(payload["settle_window"]),
+            hysteresis=int(payload["hysteresis"]),
+            flat_relative_slope_band=float(payload["flat_relative_slope_band"]),
+            minimum_strict_seg_admissions=int(payload["minimum_strict_seg_admissions"]),
+            fallback_policy=str(payload["fallback_policy"]),
+        )
+        if result.schema != POSE_FINISH_ENGAGE_CONFIG_SCHEMA:
+            raise DirectDescriptionError("pose-finish engage schema differs")
+        if result.detector != "rolling_relative_slope_plateau":
+            raise DirectDescriptionError("pose-finish engage detector differs from the governed mode")
+        if result.metric != "exact_n600_d_seg_realized_through_R":
+            raise DirectDescriptionError("pose-finish engage metric is not exact run-owned d_seg")
+        if (
+            result.ema_span != DEFAULT_EMA_SPAN
+            or result.settle_window != DEFAULT_SETTLE_WINDOW
+            or result.hysteresis != DEFAULT_HYSTERESIS
+            or result.flat_relative_slope_band != DEFAULT_FLAT_REL_BAND
+        ):
+            raise DirectDescriptionError("pose-finish engage constants differ from the #383 derived defaults")
+        if result.minimum_strict_seg_admissions < 1:
+            raise DirectDescriptionError("pose-finish engage requires a strict Seg admission")
+        if result.fallback_policy != "emit_banked_r1_comparator_harvest_signal_non_promoting":
+            raise DirectDescriptionError("pose-finish engage fallback policy differs")
+        return result
+
+    @property
+    def minimum_points(self) -> int:
+        return self.settle_window + self.hysteresis - 1
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "schema": self.schema,
+            "detector": self.detector,
+            "metric": self.metric,
+            "ema_span": self.ema_span,
+            "settle_window": self.settle_window,
+            "hysteresis": self.hysteresis,
+            "flat_relative_slope_band": self.flat_relative_slope_band,
+            "minimum_strict_seg_admissions": self.minimum_strict_seg_admissions,
+            "fallback_policy": self.fallback_policy,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class PoseFinishEngageStateV1:
+    """Checkpoint payload and monotone pose-finish latch for one DDM run."""
+
+    exact_verdict_steps: tuple[int, ...] = ()
+    exact_d_seg: tuple[float, ...] = ()
+    strict_seg_admission_steps: tuple[int, ...] = ()
+    strict_seg_admissions: int = 0
+    engaged_global_step: int | None = None
+    classification: str = "INSUFFICIENT_EXACT_VERDICTS"
+    latest_relative_slope: float | None = None
+    latest_relative_slope_stderr: float | None = None
+
+    def observe(
+        self,
+        *,
+        global_step: int,
+        d_seg: float,
+        strict_seg_admission: bool,
+        config: PoseFinishEngageConfigV1,
+    ) -> PoseFinishEngageStateV1:
+        step = int(global_step)
+        value = float(d_seg)
+        if step < 0 or not math.isfinite(value) or value < 0.0:
+            raise DirectDescriptionError("pose-finish engage observation is invalid")
+        if self.exact_verdict_steps and step <= self.exact_verdict_steps[-1]:
+            if step == self.exact_verdict_steps[-1] and value == self.exact_d_seg[-1]:
+                return self
+            raise DirectDescriptionError("pose-finish exact verdict history is non-monotone")
+        steps = (*self.exact_verdict_steps, step)
+        values = (*self.exact_d_seg, value)
+        strict_steps = (
+            (*self.strict_seg_admission_steps, step)
+            if strict_seg_admission
+            else self.strict_seg_admission_steps
+        )
+        strict = len(strict_steps)
+        if self.engaged_global_step is not None:
+            return replace(
+                self,
+                exact_verdict_steps=steps,
+                exact_d_seg=values,
+                strict_seg_admission_steps=strict_steps,
+                strict_seg_admissions=strict,
+                classification="POSE_FINISH_ENGAGED_LATCHED",
+            )
+        classification, slope, stderr = _classify_pose_finish_engage(
+            steps=steps,
+            values=values,
+            strict_seg_admissions=strict,
+            config=config,
+        )
+        engaged = step if classification == "POSE_FINISH_ENGAGED_PLATEAU" else None
+        return PoseFinishEngageStateV1(
+            exact_verdict_steps=steps,
+            exact_d_seg=values,
+            strict_seg_admission_steps=strict_steps,
+            strict_seg_admissions=strict,
+            engaged_global_step=engaged,
+            classification=classification,
+            latest_relative_slope=slope,
+            latest_relative_slope_stderr=stderr,
+        )
+
+    @property
+    def engaged(self) -> bool:
+        return self.engaged_global_step is not None
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "schema": POSE_FINISH_ENGAGE_STATE_SCHEMA,
+            "exact_verdict_steps": list(self.exact_verdict_steps),
+            "exact_d_seg": list(self.exact_d_seg),
+            "strict_seg_admission_steps": list(self.strict_seg_admission_steps),
+            "strict_seg_admissions": self.strict_seg_admissions,
+            "engaged_global_step": self.engaged_global_step,
+            "classification": self.classification,
+            "latest_relative_slope": self.latest_relative_slope,
+            "latest_relative_slope_stderr": self.latest_relative_slope_stderr,
+        }
+
+    @classmethod
+    def from_payload(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        config: PoseFinishEngageConfigV1,
+    ) -> PoseFinishEngageStateV1:
+        if payload.get("schema") != POSE_FINISH_ENGAGE_STATE_SCHEMA:
+            raise DirectDescriptionError("pose-finish engage checkpoint schema differs")
+        steps = tuple(int(value) for value in payload.get("exact_verdict_steps", ()))
+        values = tuple(float(value) for value in payload.get("exact_d_seg", ()))
+        strict_steps = tuple(int(value) for value in payload.get("strict_seg_admission_steps", ()))
+        if len(steps) != len(values) or any(after <= before for before, after in pairwise(steps)):
+            raise DirectDescriptionError("pose-finish engage checkpoint history differs")
+        if (
+            any(step not in steps for step in strict_steps)
+            or len(set(strict_steps)) != len(strict_steps)
+            or len(strict_steps) != int(payload.get("strict_seg_admissions", 0))
+        ):
+            raise DirectDescriptionError("pose-finish engage checkpoint strict-admission history differs")
+        state = cls()
+        for step, value in zip(steps, values, strict=True):
+            state = state.observe(
+                global_step=step,
+                d_seg=value,
+                strict_seg_admission=step in strict_steps,
+                config=config,
+            )
+        expected_engaged = payload.get("engaged_global_step")
+        if state.engaged_global_step != expected_engaged:
+            raise DirectDescriptionError("pose-finish engage checkpoint latch differs on re-derivation")
+        if state.classification != payload.get("classification"):
+            raise DirectDescriptionError("pose-finish engage checkpoint classification differs on re-derivation")
+        return state
+
+
+def _classify_pose_finish_engage(
+    *,
+    steps: Sequence[int],
+    values: Sequence[float],
+    strict_seg_admissions: int,
+    config: PoseFinishEngageConfigV1,
+) -> tuple[str, float | None, float | None]:
+    if strict_seg_admissions < config.minimum_strict_seg_admissions:
+        return "WAITING_FOR_STRICT_SEG_ADMISSION", None, None
+    if len(values) < config.minimum_points:
+        return "INSUFFICIENT_EXACT_VERDICTS", None, None
+    alpha = 2.0 / (config.ema_span + 1.0)
+    smoothed: list[float] = []
+    for value in values:
+        smoothed.append(float(value) if not smoothed else alpha * float(value) + (1.0 - alpha) * smoothed[-1])
+    flat_windows: list[bool] = []
+    latest_slope: float | None = None
+    latest_stderr: float | None = None
+    for offset in range(config.hysteresis):
+        end = len(values) - offset
+        start = end - config.settle_window
+        xs = [float(value) for value in steps[start:end]]
+        ys = smoothed[start:end]
+        fit = slope_with_stderr(xs, ys)
+        level = sum(ys) / len(ys)
+        if level <= 0.0:
+            return "DEGENERATE_EXACT_DSEG_HISTORY", None, None
+        relative_slope = float(fit.slope / level)
+        relative_stderr = None if fit.stderr is None else float(fit.stderr / level)
+        if offset == 0:
+            latest_slope = relative_slope
+            latest_stderr = relative_stderr
+        flat_windows.append(
+            abs(relative_slope) <= config.flat_relative_slope_band and relative_slope <= 0.0
+        )
+    if latest_stderr is None or latest_stderr > config.flat_relative_slope_band:
+        return "DEGENERATE_EXACT_DSEG_HISTORY", latest_slope, latest_stderr
+    if all(flat_windows):
+        return "POSE_FINISH_ENGAGED_PLATEAU", latest_slope, latest_stderr
+    return "DSEG_STILL_TRENDING", latest_slope, latest_stderr
+
+
+@dataclass(frozen=True, slots=True)
+class WorstGeometryMemoryContractV1:
+    schema: str
+    selected_pair_start: int
+    train_batch: int
+    active_groups: tuple[str, ...]
+    expected_island_secants: int
+    expected_lane_secants: int
+    expected_total_secants: int
+    derived_basis_gib: float
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> WorstGeometryMemoryContractV1:
+        if not isinstance(payload, Mapping):
+            raise DirectDescriptionError("worst-geometry memory contract must be a mapping")
+        result = cls(
+            schema=str(payload["schema"]),
+            selected_pair_start=int(payload["selected_pair_start"]),
+            train_batch=int(payload["train_batch"]),
+            active_groups=tuple(str(value) for value in payload["active_groups"]),
+            expected_island_secants=int(payload["expected_island_secants"]),
+            expected_lane_secants=int(payload["expected_lane_secants"]),
+            expected_total_secants=int(payload["expected_total_secants"]),
+            derived_basis_gib=float(payload["derived_basis_gib"]),
+        )
+        if (
+            result.schema != WORST_GEOMETRY_MEMORY_SCHEMA
+            or result.selected_pair_start not in {498, 499}
+            or result.train_batch != 4
+            or result.active_groups != ("island_worldsheet", "lane_program", "shared_template_dof")
+            or result.expected_island_secants != 28
+            or result.expected_lane_secants != 24
+            or result.expected_total_secants != 52
+            or not math.isclose(result.derived_basis_gib, 4.72976016998291, rel_tol=0.0, abs_tol=1.0e-12)
+        ):
+            raise DirectDescriptionError("worst-geometry memory contract differs from the J6 re-derivation")
+        return result
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "schema": self.schema,
+            "selected_pair_start": self.selected_pair_start,
+            "train_batch": self.train_batch,
+            "active_groups": list(self.active_groups),
+            "expected_island_secants": self.expected_island_secants,
+            "expected_lane_secants": self.expected_lane_secants,
+            "expected_total_secants": self.expected_total_secants,
+            "derived_basis_gib": self.derived_basis_gib,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,7 +525,7 @@ class WarmStartReformV1:
     maximum_continuous_update_quantum_fraction: float | None
     frozen_groups_until_first_admission: tuple[str, ...]
     group_release_condition: str
-    pose_objective_engage_condition: str
+    pose_objective_engage_condition: str | None
     first_realized_admission: str
     realized_acceptance_policy: str
     proposal_staging: str
@@ -165,7 +556,11 @@ class WarmStartReformV1:
                 str(value) for value in payload["frozen_groups_until_first_admission"]
             ),
             group_release_condition=str(payload["group_release_condition"]),
-            pose_objective_engage_condition=str(payload["pose_objective_engage_condition"]),
+            pose_objective_engage_condition=(
+                None
+                if payload.get("pose_objective_engage_condition") is None
+                else str(payload["pose_objective_engage_condition"])
+            ),
             first_realized_admission=str(payload["first_realized_admission"]),
             realized_acceptance_policy=str(payload.get("realized_acceptance_policy", "component_safe_exact_n600")),
             proposal_staging=str(payload.get("proposal_staging", "continuous_receiver_wire")),
@@ -205,7 +600,10 @@ class WarmStartReformV1:
             "first_component_safe_n600_residual_admission",
         }:
             raise DirectDescriptionError("warm-start group release condition is invalid")
-        if result.pose_objective_engage_condition != "after_first_strict_n600_seg_admission":
+        if result.pose_objective_engage_condition not in {
+            None,
+            "after_first_strict_n600_seg_admission",
+        }:
             raise DirectDescriptionError("warm-start Pose engage condition is invalid")
         if result.first_realized_admission not in {
             "exact_n600_dseg_descent_and_dpose_nonregression_else_abort_rollback",
@@ -258,8 +656,17 @@ class WarmStartReformV1:
                 or not result.residual_bucket_admission_required
             ):
                 raise DirectDescriptionError("pure-priced warm-start opening contract is incomplete")
-        if result.component_fire_gate != "dseg_flat_or_down_pose_not_worse_and_any_component_descends":
+        if result.component_fire_gate not in {
+            "dseg_flat_or_down_pose_not_worse_and_any_component_descends",
+            "cumulative_vs_stage00_dseg_flat_or_down_pose_not_worse_any_component_and_residual_descend",
+        }:
             raise DirectDescriptionError("warm-start component fire gate is invalid")
+        if (
+            result.pose_objective_engage_condition is None
+            and result.component_fire_gate
+            != "cumulative_vs_stage00_dseg_flat_or_down_pose_not_worse_any_component_and_residual_descend"
+        ):
+            raise DirectDescriptionError("typed pose engage requires the cumulative stage00 fire gate")
         return result
 
 
@@ -277,6 +684,7 @@ class FullRunScheduleV1:
     measured_seconds_per_step_low: float
     measured_seconds_per_step_high: float
     warm_start_reform: WarmStartReformV1 | None
+    pose_finish_engage: PoseFinishEngageConfigV1 | None
     stages: tuple[FullRunStageV1, ...]
 
     @classmethod
@@ -315,6 +723,11 @@ class FullRunScheduleV1:
                 if payload.get("warm_start_reform") is None
                 else WarmStartReformV1.from_payload(payload["warm_start_reform"])
             ),
+            pose_finish_engage=(
+                None
+                if payload.get("pose_finish_engage") is None
+                else PoseFinishEngageConfigV1.from_payload(payload["pose_finish_engage"])
+            ),
             stages=stages,
         )
         if not 1 <= result.train_batch <= 600:
@@ -341,12 +754,19 @@ class FullRunScheduleV1:
             stage.maximum_steps <= 0
             or stage.verdict_interval_steps <= 0
             or stage.verdict_interval_steps > stage.maximum_steps
+            or stage.maximum_steps % stage.verdict_interval_steps != 0
             or not set(stage.active_groups) <= allowed_groups
             or not 0.0 <= stage.target_d_seg <= BASELINE_DSEG
             or (stage.target_d_pose is not None and stage.target_d_pose < 0.0)
             for stage in result.stages
         ):
             raise DirectDescriptionError("full-run stage schedule is invalid")
+        if (
+            result.warm_start_reform is not None
+            and result.warm_start_reform.pose_objective_engage_condition is None
+            and result.pose_finish_engage is None
+        ):
+            raise DirectDescriptionError("typed pose-finish engage config is required when the legacy string is absent")
         return result
 
 
@@ -364,6 +784,53 @@ def _bound_file(path: Path, expected_sha256: str, expected_bytes: int | None = N
     if actual != expected_sha256:
         raise DirectDescriptionError(f"bound file sha256 differs for {path}: {actual} != {expected_sha256}")
     return payload
+
+
+def _validate_execution_custody(payload: Mapping[str, Any]) -> None:
+    """Validate the non-semantic artifact bindings without creating a hash cycle.
+
+    Source bytes and the newly measured memory receipt are sealed at the ticket
+    top level after the semantic DSL hash is known.  They intentionally do not
+    enter ``typed_config_hash``: the consumer source embeds the semantic hash,
+    while the memory receipt embeds the typed hash.
+    """
+
+    def binding(row: Any, *, allow_pending_sha: bool = False) -> None:
+        if not isinstance(row, Mapping) or not isinstance(row.get("path"), str) or not row["path"]:
+            raise DirectDescriptionError("execution custody binding lacks a path")
+        digest = row.get("sha256")
+        if digest is None and allow_pending_sha:
+            return
+        if not isinstance(digest, str) or len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+            raise DirectDescriptionError("execution custody binding lacks a canonical SHA-256")
+
+    sources = payload.get("source_files")
+    artifacts = payload.get("j5_producer_artifacts")
+    memory = payload.get("worst_geometry_memory_receipt")
+    if not isinstance(sources, Mapping) or set(sources) != {"consumer", "launcher"}:
+        raise DirectDescriptionError("execution custody source-file set differs")
+    if not isinstance(artifacts, Mapping) or set(artifacts) != {
+        "baseline_verdict",
+        "proposal_verdict",
+        "runtime_memory_receipt",
+        "checkpoint",
+    }:
+        raise DirectDescriptionError("execution custody J5 artifact set differs")
+    for row in sources.values():
+        binding(row)
+    for row in artifacts.values():
+        binding(row)
+    binding(memory, allow_pending_sha=True)
+    comparator = payload.get("banked_r1_comparator")
+    if not isinstance(comparator, Mapping) or comparator != {
+        "d_pose": 0.00161,
+        "score_contribution": 0.127,
+        "payload_bytes": 7200,
+        "authority": "comparator_and_fallback_harvest_signal_only",
+        "binding_target": False,
+        "promotion_eligible": False,
+    }:
+        raise DirectDescriptionError("banked R1 comparator custody differs")
 
 
 @dataclass(frozen=True, slots=True)
@@ -389,6 +856,8 @@ class DirectDescriptionJointDescentTypedConfigV1:
     custom_grouped_backward_required: bool
     fused_r_required: bool
     full_run_schedule: FullRunScheduleV1 | None
+    worst_geometry_memory_contract: WorstGeometryMemoryContractV1 | None
+    execution_custody: Mapping[str, Any] | None
     score_claim: bool = False
     research_only: bool = True
 
@@ -409,12 +878,18 @@ class DirectDescriptionJointDescentTypedConfigV1:
         cache = semantic["target_cache"]
         stability = semantic["joint_objective"]["stability"]
         compute = semantic["compute_contract"]["baseline"]
+        worst_geometry_payload = semantic.get("worst_geometry_memory_preflight")
+        execution_custody = ticket.get("execution_custody")
         if int(semantic["num_pairs"]) != 600 or int(semantic["seed"]) != 0:
             raise DirectDescriptionError("joint-descent ticket must remain n600/seed0")
         if warm["sha256"] != EXPECTED_ARCHIVE_SHA256 or int(warm["bytes"]) != EXPECTED_ARCHIVE_BYTES:
             raise DirectDescriptionError("joint-descent warm-start identity drifted")
         env = compute.get("environment", {})
         required_kernels = " ".join(str(value) for value in compute.get("required_kernels", ())).lower()
+        if semantic_hash == J6A_PROGRAM_SHA256:
+            if worst_geometry_payload is None or not isinstance(execution_custody, Mapping):
+                raise DirectDescriptionError("J6A ticket lacks worst-geometry or execution custody")
+            _validate_execution_custody(execution_custody)
         return cls(
             ticket_path=str(ticket_path),
             semantic_program=semantic,
@@ -435,6 +910,12 @@ class DirectDescriptionJointDescentTypedConfigV1:
             custom_grouped_backward_required=env.get("TAC_MLX_CUSTOM_GROUPED_BACKWARD") == "1",
             fused_r_required="fused differentiable-r" in required_kernels,
             full_run_schedule=FullRunScheduleV1.from_semantic_program(semantic),
+            worst_geometry_memory_contract=(
+                None
+                if worst_geometry_payload is None
+                else WorstGeometryMemoryContractV1.from_payload(worst_geometry_payload)
+            ),
+            execution_custody=execution_custody,
         )
 
     def identity_payload(self) -> dict[str, Any]:
@@ -454,6 +935,8 @@ class DirectDescriptionJointDescentTypedConfigV1:
             "score_claim": False,
             "research_only": True,
         }
+        if self.worst_geometry_memory_contract is not None:
+            payload["worst_geometry_memory_contract"] = self.worst_geometry_memory_contract.to_payload()
         if self.full_run_schedule is not None:
             schedule_payload: dict[str, Any] = {
                 "train_batch": self.full_run_schedule.train_batch,
@@ -488,9 +971,10 @@ class DirectDescriptionJointDescentTypedConfigV1:
                     "maximum_continuous_update_quantum_fraction": (reform.maximum_continuous_update_quantum_fraction),
                     "frozen_groups_until_first_admission": list(reform.frozen_groups_until_first_admission),
                     "group_release_condition": reform.group_release_condition,
-                    "pose_objective_engage_condition": reform.pose_objective_engage_condition,
                     "first_realized_admission": reform.first_realized_admission,
                 }
+                if reform.pose_objective_engage_condition is not None:
+                    reform_payload["pose_objective_engage_condition"] = reform.pose_objective_engage_condition
                 # Preserve the canonical typed hashes of historical J4 tickets.
                 # J5 fields are additive and enter identity only for the new
                 # pure-priced policy.
@@ -509,6 +993,8 @@ class DirectDescriptionJointDescentTypedConfigV1:
                         }
                     )
                 schedule_payload["warm_start_reform"] = reform_payload
+            if self.full_run_schedule.pose_finish_engage is not None:
+                schedule_payload["pose_finish_engage"] = self.full_run_schedule.pose_finish_engage.to_payload()
             payload["full_run_schedule"] = schedule_payload
         return payload
 
@@ -1606,6 +2092,7 @@ def classify_memory_preflight(projected_peak_gib: float, *, ceiling_gib: float =
 
 __all__ = [
     "J5_PROGRAM_SHA256",
+    "J6A_PROGRAM_SHA256",
     "AdamStateV1",
     "DirectDescriptionJointDescentMLXModule",
     "DirectDescriptionJointDescentTypedConfigV1",
@@ -1614,12 +2101,18 @@ __all__ = [
     "JointDescentResumeControllerV1",
     "JointDescriptionParameterLiftV1",
     "LaneProgramSeedV1",
+    "PoseFinishEngageConfigV1",
+    "PoseFinishEngageStateV1",
     "WarmStartReformV1",
+    "WorstGeometryMemoryContractV1",
+    "classify_cumulative_fire_gate",
+    "classify_governed_stage_exit",
     "classify_memory_preflight",
     "classify_realized_stage_verdict",
     "clipped_adam_step",
     "compile_parameterized_archive",
     "derive_lane_program_seeds",
+    "exact_final_target_gate",
     "initial_adam_state",
     "lift_v15_archive",
     "linear_rewarmup_factor",

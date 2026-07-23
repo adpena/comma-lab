@@ -54,10 +54,14 @@ from tac.optimization.direct_description_joint_descent import (  # noqa: E402
     AdamStateV1,
     DirectDescriptionJointDescentMLXModule,
     DirectDescriptionJointDescentTypedConfigV1,
+    PoseFinishEngageStateV1,
+    classify_cumulative_fire_gate,
+    classify_governed_stage_exit,
     classify_memory_preflight,
     classify_realized_stage_verdict,
     clipped_adam_step,
     compile_parameterized_archive,
+    exact_final_target_gate,
     initial_adam_state,
     lift_v15_archive,
     linear_rewarmup_factor,
@@ -79,6 +83,11 @@ from tac.optimization.pure_priced_realized_objective import (  # noqa: E402
 DEFAULT_TICKET = REPO / ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json"
 POINTER_DSEG = 0.027470296224
 STATIC_BOOTSTRAP_BOUND_GIB = 16.0
+# DERIVED: historical static one-pair bootstrap bound plus ceil(stage3
+# 4.72976016998291 GiB basis - measured stage1 0.7276554107666016 GiB basis).
+STATIC_WORST_GEOMETRY_BOOTSTRAP_BOUND_GIB = STATIC_BOOTSTRAP_BOUND_GIB + math.ceil(
+    4.72976016998291 - 0.7276554107666016
+)
 C1_INTEGER_TARGET_ERROR_MAX = 136_839
 C1_ROLE_CLASS_IDS = (1, 3)
 C1_RESIDUAL_CLASS_IDS = (0, 2, 4)
@@ -233,12 +242,74 @@ def _load_memory_receipt(path: Path, config: DirectDescriptionJointDescentTypedC
         raise DirectDescriptionError("memory receipt target-cache hash differs")
     if row.get("admission") is not True:
         raise DirectDescriptionError("memory receipt is not SAFE")
+    if config.execution_custody is not None:
+        expected_memory = config.execution_custody["worst_geometry_memory_receipt"]
+        if expected_memory.get("sha256") is None:
+            raise DirectDescriptionError("worst-geometry memory receipt SHA-256 is not sealed")
+        if path.resolve() != (REPO / expected_memory["path"]).resolve():
+            raise DirectDescriptionError("memory receipt path differs from the sealed worst-geometry receipt")
+        if _sha256_file(path) != expected_memory["sha256"]:
+            raise DirectDescriptionError("memory receipt SHA-256 differs from the sealed worst-geometry receipt")
+        _verify_execution_custody(config)
+        contract = config.worst_geometry_memory_contract
+        if contract is None:
+            raise DirectDescriptionError("memory receipt lacks a typed worst-geometry contract")
+        _assert_worst_geometry_receipt(row.get("memory_geometry"), contract)
+        if row.get("j5_producer_artifacts") != config.execution_custody["j5_producer_artifacts"]:
+            raise DirectDescriptionError("memory receipt J5 producer custody differs")
+        expected_sources = {
+            name: binding["sha256"] for name, binding in config.execution_custody["source_files"].items()
+        }
+        measured_sources = {
+            name: binding["sha256"]
+            for name, binding in row.get("source_custody", {}).items()
+            if name in {"consumer", "launcher"}
+        }
+        if measured_sources != expected_sources:
+            raise DirectDescriptionError("memory receipt final launcher/consumer custody differs")
     admitted, reason = classify_memory_preflight(
         float(row["projected_peak_gib"]), ceiling_gib=config.memory_ceiling_gib
     )
     if not admitted:
         raise DirectDescriptionError(reason)
     return row
+
+
+def _assert_worst_geometry_receipt(geometry: Any, contract: Any) -> None:
+    expected = {
+        "pair_start": contract.selected_pair_start,
+        "pair_ids": list(range(contract.selected_pair_start, contract.selected_pair_start + contract.train_batch)),
+        "active_groups": list(contract.active_groups),
+        "island_secants": contract.expected_island_secants,
+        "lane_secants": contract.expected_lane_secants,
+        "total_secants": contract.expected_total_secants,
+        "derived_basis_gib": contract.derived_basis_gib,
+    }
+    if not isinstance(geometry, dict) or geometry != expected:
+        raise DirectDescriptionError("memory receipt did not measure the sealed worst geometry")
+
+
+def _verify_execution_custody(config: DirectDescriptionJointDescentTypedConfigV1) -> dict[str, Any]:
+    custody = config.execution_custody
+    if custody is None:
+        return {}
+    verified: dict[str, Any] = {"source_files": {}, "j5_producer_artifacts": {}}
+    for group in ("source_files", "j5_producer_artifacts"):
+        for name, binding in custody[group].items():
+            path = Path(binding["path"])
+            if not path.is_absolute():
+                path = REPO / path
+            if not path.is_file() or path.is_symlink():
+                raise DirectDescriptionError(f"bound execution-custody file is unavailable: {path}")
+            actual = _sha256_file(path)
+            if actual != binding["sha256"]:
+                raise DirectDescriptionError(f"bound execution-custody SHA-256 differs: {path}")
+            verified[group][name] = {
+                "path": str(path),
+                "bytes": path.stat().st_size,
+                "sha256": actual,
+            }
+    return verified
 
 
 def _governor(projected_gib: float) -> dict[str, Any]:
@@ -255,7 +326,7 @@ def _base_receipt(config: DirectDescriptionJointDescentTypedConfigV1) -> dict[st
     launcher_source = Path(__file__).resolve()
     consumer_source = REPO / "src/tac/optimization/direct_description_joint_descent.py"
     lift_source = REPO / "src/tac/optimization/direct_description_g1_worldsheet.py"
-    return {
+    payload = {
         "written_at_utc": _utc(),
         "git_sha": subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -283,6 +354,9 @@ def _base_receipt(config: DirectDescriptionJointDescentTypedConfigV1) -> dict[st
         "research_only": True,
         "verdict_scope": "bounded executable-consumer smoke; no formulation, family, or score verdict",
     }
+    if config.execution_custody is not None:
+        payload["banked_r1_comparator"] = dict(config.execution_custody["banked_r1_comparator"])
+    return payload
 
 
 def _dry_run(
@@ -814,6 +888,9 @@ def _sealed_schedule(config: DirectDescriptionJointDescentTypedConfigV1, args: a
                 "component_fire_gate": reform.component_fire_gate,
             }
         ),
+        "pose_finish_engage": (
+            None if schedule.pose_finish_engage is None else schedule.pose_finish_engage.to_payload()
+        ),
         "stages": [
             {
                 "stage_id": stage.stage_id,
@@ -884,6 +961,273 @@ def _write_immutable_json(
     return payload
 
 
+def _worst_geometry_memory_bootstrap_locked(
+    args: argparse.Namespace,
+    config: DirectDescriptionJointDescentTypedConfigV1,
+) -> int:
+    """Measure the sealed stage-3 all-groups geometry without a campaign step."""
+
+    import mlx.core as mx
+
+    contract = config.worst_geometry_memory_contract
+    if contract is None or config.execution_custody is None:
+        raise DirectDescriptionError("worst-geometry bootstrap requires the J6A typed custody contract")
+    if args.resume_from is not None:
+        raise DirectDescriptionError("worst-geometry bootstrap creates, rather than resumes, its checkpoint")
+    out_dir = Path(args.out_dir)
+    storage = _storage_receipt(out_dir)
+    verified_execution = _verify_execution_custody(config)
+    governor = _governor(STATIC_WORST_GEOMETRY_BOOTSTRAP_BOUND_GIB)
+    source_path = _resolve_input(config.source_archive_path)
+    cache_path = _resolve_input(config.target_cache_path, allow_authority_cache=True)
+    source_custody = _verify_regular(
+        source_path,
+        expected_bytes=config.source_archive_bytes,
+        expected_sha256=config.source_archive_sha256,
+    )
+    cache_custody = _verify_regular(
+        cache_path,
+        expected_bytes=config.target_cache_bytes,
+        expected_sha256=config.target_cache_sha256,
+    )
+    pair_ids = tuple(range(contract.selected_pair_start, contract.selected_pair_start + contract.train_batch))
+    os.environ["TAC_MLX_CUSTOM_GROUPED_BACKWARD"] = "1"
+    np.random.seed(config.seed)
+    started = time.monotonic()
+    with _RSSMonitor() as monitor, temporary_mlx_device("gpu"):
+        mx.random.seed(config.seed)
+        fused_r_parity = assert_metal_matches_cpu_oracle(seed=config.seed)
+        custom_active, custom_reason = _custom_metal_backward_status()
+        if config.custom_grouped_backward_required and not custom_active:
+            raise DirectDescriptionError("REFUSE_CUSTOM_GROUPED_BACKWARD_INACTIVE: " + custom_reason)
+        archive = source_path.read_bytes()
+        lift = lift_v15_archive(archive)
+        groups = parameter_group_indices(lift)
+        labels = open_stored_npy_memmap(cache_path, "lstars")
+        poses = open_stored_npy_memmap(cache_path, "gt_poses")
+        adapter = load_mlx_distortion_scorer_adapter_from_upstream(config.upstream_root, device="cpu")
+        model = DirectDescriptionJointDescentMLXModule(
+            lift=lift,
+            scorer_adapter=adapter,
+            seg_targets=labels,
+            pose_targets=poses,
+        )
+        state = initial_adam_state(model.parameter_count)
+        base_camera, template_masks, basis, basis_indices, local_theta, current_archive = realized_training_state(
+            lift,
+            state.theta,
+            pair_ids=pair_ids,
+            active_groups=contract.active_groups,
+            include_lane_programs=True,
+        )
+        basis_index_set = {int(value) for value in basis_indices}
+        island_secants = len(basis_index_set.intersection(groups["island_worldsheet"]))
+        lane_secants = len(basis_index_set.intersection(groups["lane_program"]))
+        total_secants = len(basis_indices)
+        actual_basis_gib = float(basis.nbytes / 1024**3)
+        if (
+            island_secants != contract.expected_island_secants
+            or lane_secants != contract.expected_lane_secants
+            or total_secants != contract.expected_total_secants
+            or not math.isclose(actual_basis_gib, contract.derived_basis_gib, rel_tol=0.0, abs_tol=1.0e-12)
+        ):
+            raise DirectDescriptionError(
+                "REFUSE_WORST_GEOMETRY_DIFFERS: "
+                f"island={island_secants}, lane={lane_secants}, total={total_secants}, "
+                f"basis_gib={actual_basis_gib}"
+            )
+        step_started = time.monotonic()
+        loss, gradient = model.loss_and_grad(
+            local_theta,
+            pair_ids=pair_ids,
+            base_camera=base_camera,
+            template_masks=template_masks,
+            realized_secant_basis=basis,
+            realized_secant_indices=basis_indices,
+            pose_objective_weight=1.0,
+        )
+        gradient_norm = float(np.linalg.norm(gradient.astype(np.float64)))
+        if not math.isfinite(float(loss)) or not math.isfinite(gradient_norm) or gradient_norm <= 0.0:
+            raise DirectDescriptionError("REFUSE_WORST_GEOMETRY_FORWARD_BACKWARD_INVALID")
+        mx.eval()
+        step_seconds = time.monotonic() - step_started
+        pose_state = PoseFinishEngageStateV1()
+        checkpoint = out_dir / "checkpoints" / "03_pose_coupled_finish_worst_geometry_global000000.npz"
+        checkpoint_sha = save_stage_checkpoint(
+            checkpoint,
+            state,
+            stage_id="03_pose_coupled_finish_worst_geometry_memory_only",
+            config=config,
+            telemetry=(
+                {
+                    "event": "worst_geometry_memory_only",
+                    "pair_ids": list(pair_ids),
+                    "island_secants": island_secants,
+                    "lane_secants": lane_secants,
+                    "total_secants": total_secants,
+                    "loss": float(loss),
+                    "gradient_norm": gradient_norm,
+                    "score_claim": False,
+                },
+            ),
+            run_cursor={
+                "stage_index": 0,
+                "stage_step": 0,
+                "global_step": 0,
+                "verdict_history": [],
+                "baseline_verdict": None,
+                "pose_finish_engage_state": pose_state.to_payload(),
+                "stage_end_reason": "memory_measurement_only",
+                "campaign_blocker": None,
+            },
+            realized_archive={
+                "bytes": len(current_archive),
+                "sha256": hashlib.sha256(current_archive).hexdigest(),
+                "lane_programs_materialized": True,
+                "parameter_shadow": "zero_state_memory_measurement_only",
+                "realized_parameter_count": 0,
+            },
+        )
+        loaded, loaded_metadata = load_stage_checkpoint(checkpoint, config=config)
+        if loaded.step != 0 or any(
+            not np.array_equal(getattr(state, field), getattr(loaded, field))
+            for field in ("theta", "ema", "first_moment", "second_moment")
+        ):
+            raise DirectDescriptionError("worst-geometry checkpoint immediate parse-back differs")
+        PoseFinishEngageStateV1.from_payload(
+            loaded_metadata["run_cursor"]["pose_finish_engage_state"],
+            config=config.full_run_schedule.pose_finish_engage,
+        )
+    measured_peak_gib = monitor.peak_rss_bytes / 1024**3
+    projected_peak_gib = _memory_projection(measured_peak_gib)
+    admission, reason = classify_memory_preflight(
+        projected_peak_gib,
+        ceiling_gib=config.memory_ceiling_gib,
+    )
+    receipt = {
+        "schema": MEMORY_RECEIPT_SCHEMA,
+        **_base_receipt(config),
+        "target_cache_sha256": config.target_cache_sha256,
+        "num_pairs": config.num_pairs,
+        "verdict_batch": config.verdict_batch,
+        "consumer_window": (
+            "sealed stage3 max window: all receiver-effective groups, 52 realized secants, "
+            "paint/uint8-STE/R/frozen MLX scorer forward-backward"
+        ),
+        "memory_geometry": {
+            "pair_start": contract.selected_pair_start,
+            "pair_ids": list(pair_ids),
+            "active_groups": list(contract.active_groups),
+            "island_secants": island_secants,
+            "lane_secants": lane_secants,
+            "total_secants": total_secants,
+            "derived_basis_gib": actual_basis_gib,
+        },
+        "measured_step_seconds": [step_seconds],
+        "maximum_measured_peak_rss_gib": measured_peak_gib,
+        "measured_free_memory_floor_gib": monitor.free_floor_bytes / 1024**3,
+        "projection_formula": "DERIVED max(measured*1.2+1GiB, measured+2GiB)",
+        "projected_peak_gib": projected_peak_gib,
+        "operator_ceiling_gib": config.memory_ceiling_gib,
+        "admission": admission,
+        "reason": reason,
+        "bootstrap_governor": governor,
+        "storage": storage,
+        "source_archive": source_custody,
+        "target_cache": cache_custody,
+        "kernels": {
+            "mlx_default_device": str(mx.default_device()),
+            "custom_grouped_backward_active": custom_active,
+            "custom_grouped_backward_reason": custom_reason,
+            "fused_r_numpy_fp32_parity": fused_r_parity,
+        },
+        "execution_custody_verified": verified_execution,
+        "j5_producer_artifacts": dict(config.execution_custody["j5_producer_artifacts"]),
+        "checkpoint": {
+            "path": str(checkpoint),
+            "sha256": checkpoint_sha,
+            "immediate_parseback_bit_exact": True,
+        },
+        "elapsed_seconds": time.monotonic() - started,
+        "memory_measurement_only": True,
+        "campaign_launched": False,
+        "execution_allowed_by_this_receipt": False,
+        "score_claim": False,
+        "verdict": (
+            "SAFE_WORST_GEOMETRY_WITHIN_116_GIB_CEILING"
+            if admission
+            else "REFUSE_WORST_GEOMETRY_EXCEEDS_116_GIB_CEILING"
+        ),
+    }
+    receipt_path = out_dir / "worst_geometry_memory_preflight.json"
+    _atomic_json(receipt_path, receipt)
+    print(json.dumps(receipt, sort_keys=True))
+    return 0 if admission else EXIT_REFUSE
+
+
+def _worst_geometry_memory_bootstrap(
+    args: argparse.Namespace,
+    config: DirectDescriptionJointDescentTypedConfigV1,
+) -> int:
+    out_dir = Path(args.out_dir)
+    _storage_receipt(out_dir)
+    with _same_outdir_guard(out_dir, config):
+        return _worst_geometry_memory_bootstrap_locked(args, config)
+
+
+def _resume_proof(
+    args: argparse.Namespace,
+    config: DirectDescriptionJointDescentTypedConfigV1,
+) -> int:
+    if args.resume_from is None or args.memory_receipt is None:
+        raise DirectDescriptionError("resume proof requires --resume-from and --memory-receipt")
+    storage = _storage_receipt(Path(args.out_dir))
+    memory = _load_memory_receipt(Path(args.memory_receipt), config)
+    governor = _governor(float(memory["projected_peak_gib"]))
+    state, metadata = load_stage_checkpoint(Path(args.resume_from), config=config)
+    cursor = metadata.get("run_cursor", {})
+    pose_config = config.full_run_schedule.pose_finish_engage
+    if pose_config is None:
+        raise DirectDescriptionError("resume proof lacks typed pose-finish engage config")
+    pose_state = PoseFinishEngageStateV1.from_payload(
+        cursor.get("pose_finish_engage_state", {}),
+        config=pose_config,
+    )
+    expected_checkpoint = memory.get("checkpoint", {})
+    if (
+        _sha256_file(Path(args.resume_from)) != expected_checkpoint.get("sha256")
+        or state.step != int(cursor.get("global_step", -1))
+    ):
+        raise DirectDescriptionError("resume proof checkpoint custody differs")
+    receipt = {
+        "schema": "ddm_joint_descent_process_boundary_resume_proof.v1",
+        **_base_receipt(config),
+        "process_pid": os.getpid(),
+        "checkpoint": {
+            "path": str(Path(args.resume_from)),
+            "sha256": expected_checkpoint["sha256"],
+            "global_step": state.step,
+            "optimizer_arrays_bit_close_loadable": True,
+        },
+        "pose_finish_engage_state": pose_state.to_payload(),
+        "memory_receipt": {
+            "path": str(Path(args.memory_receipt)),
+            "sha256": _sha256_file(Path(args.memory_receipt)),
+            "worst_geometry_total_secants": memory["memory_geometry"]["total_secants"],
+        },
+        "storage": storage,
+        "governor": governor,
+        "execution_custody_verified": _verify_execution_custody(config),
+        "campaign_launched": False,
+        "execution_allowed_by_this_receipt": False,
+        "score_claim": False,
+        "verdict": "FRESH_PROCESS_RESUME_PROOF_GREEN",
+    }
+    _atomic_json(Path(args.out_dir) / "process_boundary_resume_proof.json", receipt)
+    print(json.dumps(receipt, sort_keys=True))
+    return 0
+
+
 def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDescentTypedConfigV1) -> int:
     import mlx.core as mx
 
@@ -945,6 +1289,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             stage_step = 0
             verdict_history: list[dict[str, Any]] = []
             baseline_verdict = None
+            restored_pose_finish_payload = None
         else:
             state, metadata = load_stage_checkpoint(Path(args.resume_from), config=config)
             cursor = metadata.get("run_cursor", {})
@@ -952,6 +1297,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             stage_step = int(cursor.get("stage_step", 0))
             verdict_history = list(cursor.get("verdict_history", ()))
             baseline_verdict = cursor.get("baseline_verdict")
+            restored_pose_finish_payload = cursor.get("pose_finish_engage_state")
             if state.theta.size != model.parameter_count:
                 raise DirectDescriptionError("full-run resume parameter count differs")
         if stage_index >= len(schedule["stages"]):
@@ -983,6 +1329,35 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 )
             _write_immutable_json(baseline_path, baseline_verdict)
 
+        pose_finish_config = (
+            None
+            if config.full_run_schedule is None
+            else config.full_run_schedule.pose_finish_engage
+        )
+        pose_finish_state: PoseFinishEngageStateV1 | None = None
+        if pose_finish_config is not None:
+            if restored_pose_finish_payload is not None:
+                pose_finish_state = PoseFinishEngageStateV1.from_payload(
+                    restored_pose_finish_payload,
+                    config=pose_finish_config,
+                )
+            else:
+                pose_finish_state = PoseFinishEngageStateV1().observe(
+                    global_step=0,
+                    d_seg=float(baseline_verdict["d_seg"]),
+                    strict_seg_admission=False,
+                    config=pose_finish_config,
+                )
+                for historical in verdict_history:
+                    if "global_step" not in historical or "d_seg" not in historical:
+                        continue
+                    pose_finish_state = pose_finish_state.observe(
+                        global_step=int(historical["global_step"]),
+                        d_seg=float(historical["d_seg"]),
+                        strict_seg_admission=bool(historical.get("warm_start_seg_admitted", False)),
+                        config=pose_finish_config,
+                    )
+
         stop_global = args.max_steps
         run_telemetry: list[dict[str, Any]] = []
         campaign_blocker: str | None = None
@@ -990,8 +1365,17 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
         reform = schedule.get("warm_start_reform")
         warm_start_admitted = any(row.get("warm_start_realized_admitted") is True for row in verdict_history)
         warm_start_seg_admitted = any(row.get("warm_start_seg_admitted") is True for row in verdict_history)
-        warm_start_component_safe = any(
-            row.get("warm_start_component_safe_residual_admitted") is True for row in verdict_history
+        latest_warm_start_admission = next(
+            (
+                row
+                for row in reversed(verdict_history)
+                if row.get("warm_start_realized_admitted") is True
+            ),
+            None,
+        )
+        warm_start_component_safe = bool(
+            latest_warm_start_admission is not None
+            and latest_warm_start_admission.get("warm_start_component_safe_residual_admitted") is True
         )
         while stage_index < len(schedule["stages"]):
             stage = schedule["stages"][stage_index]
@@ -1015,7 +1399,13 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             else:
                 frozen_groups = set(reform["frozen_groups_until_first_admission"]) if reform_active else set()
                 active_groups = tuple(group for group in stage["active_groups"] if group not in frozen_groups)
-            pose_objective_weight = 0.0 if reform_active and not warm_start_seg_admitted else 1.0
+            pose_objective_weight = (
+                1.0
+                if pose_finish_state is None
+                else 1.0
+                if pose_finish_state.engaged
+                else 0.0
+            )
             rewarmup_factor = (
                 linear_rewarmup_factor(
                     completed_steps=state.step,
@@ -1157,16 +1547,31 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                             "REALIZED_STAGE_DESCENT_CONTINUE",
                             "REALIZED_STAGE_SEG_FLAT_POSE_DESCENT_CONTINUE",
                         }
+                        cumulative_fire_green, cumulative_fire_decision = classify_cumulative_fire_gate(
+                            baseline_d_seg=float(baseline_verdict["d_seg"]),
+                            baseline_d_pose=float(baseline_verdict["d_pose"]),
+                            candidate_d_seg=float(realized_verdict["d_seg"]),
+                            candidate_d_pose=float(realized_verdict["d_pose"]),
+                            cumulative_residual_delta_errors=int(
+                                cumulative_bucket_delta["residual_trunk_owned_delta_errors"]
+                            ),
+                            residual_descent_required=bool(reform["residual_bucket_admission_required"]),
+                        )
                         exact_admitted = (
                             pure_delta.accepted
                             if reform["realized_acceptance_policy"] == "pure_priced_exact_n600"
                             else component_safe
                         )
-                        residual_admitted = (
-                            bucket_delta["residual_bucket_descended"]
-                            if reform["residual_bucket_admission_required"]
-                            else True
-                        )
+                        candidate_pose_finish_state = pose_finish_state
+                        if exact_admitted and pose_finish_state is not None:
+                            candidate_pose_finish_state = pose_finish_state.observe(
+                                global_step=candidate.step,
+                                d_seg=float(realized_verdict["d_seg"]),
+                                strict_seg_admission=(
+                                    float(realized_verdict["d_seg"]) < float(baseline_verdict["d_seg"])
+                                ),
+                                config=pose_finish_config,
+                            )
                         slug = candidate_id.replace("+", "plus").replace("-", "minus")
                         proposal_receipt_relpath = Path("verdicts") / (
                             f"warm_start_proposal_step{candidate.step:06d}_{slug}_"
@@ -1194,11 +1599,17 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                                 },
                                 "c1_bucket_delta_vs_last_admitted": bucket_delta,
                                 "c1_bucket_delta_cumulative_vs_baseline": cumulative_bucket_delta,
+                                "cumulative_fire_gate_decision": cumulative_fire_decision,
                                 "warm_start_realized_admitted": exact_admitted,
                                 "warm_start_seg_admitted": exact_admitted
-                                and float(realized_verdict["d_seg"]) < float(reference_verdict["d_seg"]),
+                                and float(realized_verdict["d_seg"]) < float(baseline_verdict["d_seg"]),
                                 "warm_start_component_safe_residual_admitted": (
-                                    exact_admitted and component_safe and residual_admitted
+                                    exact_admitted and cumulative_fire_green
+                                ),
+                                "pose_finish_engage_state": (
+                                    None
+                                    if candidate_pose_finish_state is None
+                                    else candidate_pose_finish_state.to_payload()
                                 ),
                                 "parameter_shadow": "live_opening_candidate",
                                 "realized_parameter_count": int(np.count_nonzero(candidate_realized)),
@@ -1226,10 +1637,11 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                                 break
                             continue
                         verdict_history.append(realized_verdict)
+                        pose_finish_state = candidate_pose_finish_state
                         warm_start_admitted = True
                         warm_start_seg_admitted = warm_start_seg_admitted or realized_verdict["warm_start_seg_admitted"]
-                        warm_start_component_safe = (
-                            warm_start_component_safe or realized_verdict["warm_start_component_safe_residual_admitted"]
+                        warm_start_component_safe = bool(
+                            realized_verdict["warm_start_component_safe_residual_admitted"]
                         )
                     accepted = (
                         candidate,
@@ -1270,6 +1682,9 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                     "global_step": state.step,
                     "verdict_history": verdict_history,
                     "baseline_verdict": baseline_verdict,
+                    "pose_finish_engage_state": (
+                        None if pose_finish_state is None else pose_finish_state.to_payload()
+                    ),
                     "stage_end_reason": campaign_blocker,
                     "campaign_blocker": campaign_blocker,
                 }
@@ -1333,6 +1748,9 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 "learning_rate_uint8_quantum_fraction": learning_rate,
                 "lr_rewarmup_factor": rewarmup_factor,
                 "pose_objective_weight": pose_objective_weight,
+                "pose_finish_engage_state": (
+                    None if pose_finish_state is None else pose_finish_state.to_payload()
+                ),
                 "maximum_continuous_update_quantum_fraction": (
                     reform["maximum_continuous_update_quantum_fraction"] if reform_active else None
                 ),
@@ -1416,15 +1834,41 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 verdict["reference_d_pose"] = float(previous_verdict["d_pose"])
                 verdict["realized_stage_decision"] = latest_stage_decision
                 target_met = latest_stage_decision == "REALIZED_STAGE_TARGET_MET"
-                if latest_stage_decision.startswith(("BLOCKED_", "REFUSE_")):
-                    campaign_blocker = latest_stage_decision
+                if (
+                    pose_finish_state is not None
+                    and (
+                        not pose_finish_state.exact_verdict_steps
+                        or state.step > pose_finish_state.exact_verdict_steps[-1]
+                    )
+                ):
+                    pose_finish_state = pose_finish_state.observe(
+                        global_step=state.step,
+                        d_seg=float(verdict["d_seg"]),
+                        strict_seg_admission=(
+                            latest_stage_decision
+                            in {
+                                "REALIZED_STAGE_TARGET_MET",
+                                "REALIZED_STAGE_DESCENT_CONTINUE",
+                            }
+                            and float(verdict["d_seg"]) < float(previous_verdict["d_seg"])
+                        ),
+                        config=pose_finish_config,
+                    )
+                verdict["pose_finish_engage_state"] = (
+                    None if pose_finish_state is None else pose_finish_state.to_payload()
+                )
                 verdict = _write_immutable_json(
                     out_dir / "verdicts" / f"{stage['stage_id']}_step{state.step:06d}_n600.json",
                     verdict,
                     volatile_fields=("elapsed_seconds",),
                 )
                 verdict_history.append(verdict)
-            recent = [row for row in verdict_history if row.get("stage_id") == stage["stage_id"]]
+            recent = [
+                row
+                for row in verdict_history
+                if row.get("stage_id") == stage["stage_id"]
+                and row.get("realized_stage_decision") is not None
+            ]
             plateau = len(recent) >= int(schedule["plateau_verdicts"]) and all(
                 float(after["d_seg"]) >= float(before["d_seg"]) and float(after["d_pose"]) >= float(before["d_pose"])
                 for before, after in zip(
@@ -1433,25 +1877,25 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                     strict=True,
                 )
             )
-            stage_end = campaign_blocker is None and (target_met or stage_limit or plateau)
+            stage_exit_decision = classify_governed_stage_exit(
+                target_met=target_met,
+                stage_limit=stage_limit,
+                plateau=plateau,
+                component_decision=latest_stage_decision,
+            )
+            stage_end = campaign_blocker is None and stage_exit_decision == "ADVANCE_EXACT_TARGET_MET"
+            if stage_exit_decision.startswith(("STOPPED_", "BLOCKED_", "REFUSE_")):
+                campaign_blocker = stage_exit_decision
             cursor = {
                 "stage_index": stage_index + (1 if stage_end else 0),
                 "stage_step": 0 if stage_end else stage_step,
                 "global_step": state.step,
                 "verdict_history": verdict_history,
                 "baseline_verdict": baseline_verdict,
-                "stage_end_reason": (
-                    campaign_blocker
-                    or (
-                        "realized_target_met"
-                        if target_met
-                        else "realized_plateau"
-                        if plateau
-                        else "maximum_steps"
-                        if stage_limit
-                        else None
-                    )
+                "pose_finish_engage_state": (
+                    None if pose_finish_state is None else pose_finish_state.to_payload()
                 ),
+                "stage_end_reason": campaign_blocker or stage_exit_decision,
                 "campaign_blocker": campaign_blocker,
             }
             if periodic or stage_end or bounded_stop or campaign_blocker or args.simulate_kill_after_checkpoint:
@@ -1478,6 +1922,13 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                     for field in ("theta", "ema", "first_moment", "second_moment")
                 ):
                     raise DirectDescriptionError("full-run checkpoint immediate parse-back differs")
+                if pose_finish_state is not None:
+                    restored_pose_state = PoseFinishEngageStateV1.from_payload(
+                        loaded_metadata["run_cursor"]["pose_finish_engage_state"],
+                        config=pose_finish_config,
+                    )
+                    if restored_pose_state != pose_finish_state:
+                        raise DirectDescriptionError("pose-finish engage checkpoint immediate parse-back differs")
                 memory_receipt = _full_run_memory_receipt(
                     config=config,
                     monitor=monitor,
@@ -1517,12 +1968,22 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
         _atomic_json(runtime_memory_path, memory_receipt)
     admission = bool(memory_receipt["admission"])
     final_verdict = verdict_history[-1] if verdict_history else None
+    pose_finish_engaged = pose_finish_state is None or pose_finish_state.engaged
+    final_target_green = False
+    final_target_decision = "FINAL_TARGET_GATE_NOT_REACHED"
+    if stage_index >= len(schedule["stages"]):
+        final_target_green, final_target_decision = exact_final_target_gate(
+            final_verdict=final_verdict,
+            final_stage=schedule["stages"][-1],
+        )
     if not admission:
         final_run_verdict = "REFUSE_FULL_RUN_MEMORY_PROJECTION"
     elif campaign_blocker is not None:
         final_run_verdict = campaign_blocker
-    elif args.max_steps is not None and warm_start_component_safe:
+    elif args.max_steps is not None and warm_start_component_safe and pose_finish_engaged:
         final_run_verdict = "READY_TO_FIRE_UNDER_STANDING_GO"
+    elif args.max_steps is not None and warm_start_component_safe and not pose_finish_engaged:
+        final_run_verdict = "BLOCKED_POSE_FINISH_CONDITIONING_HISTORY_INSUFFICIENT"
     elif args.max_steps is not None and warm_start_admitted:
         final_run_verdict = "BLOCKED_COMPONENT_OR_RESIDUAL_FIRE_GATE_AFTER_PURE_PRICED_ADMISSION"
     elif args.max_steps is not None and latest_stage_decision in {
@@ -1533,8 +1994,10 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
         final_run_verdict = "FULL_RUN_BOUNDED_REALIZED_DESCENT_GREEN"
     elif args.max_steps is not None:
         final_run_verdict = "FULL_RUN_BOUNDED_EXECUTION_GREEN_NO_N600_VERDICT"
+    elif stage_index >= len(schedule["stages"]) and not pose_finish_engaged:
+        final_run_verdict = "REFUSE_SCHEDULE_COMPLETE_WITHOUT_POSE_FINISH_ENGAGEMENT"
     elif stage_index >= len(schedule["stages"]):
-        final_run_verdict = "FULL_RUN_SCHEDULE_COMPLETE"
+        final_run_verdict = final_target_decision
     else:
         final_run_verdict = "FULL_RUN_ACTIVE_CHECKPOINTED"
     receipt = {
@@ -1582,11 +2045,24 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
         "warm_start_realized_admitted": warm_start_admitted,
         "warm_start_seg_admitted": warm_start_seg_admitted,
         "warm_start_component_safe_residual_admitted": warm_start_component_safe,
+        "pose_finish_engage_state": (
+            None if pose_finish_state is None else pose_finish_state.to_payload()
+        ),
+        "pose_finish_engaged": pose_finish_engaged,
+        "banked_r1_fallback_harvest_signal": (
+            pose_finish_state is not None and not pose_finish_state.engaged
+        ),
+        "banked_r1_fallback_is_comparator_only": config.execution_custody is not None,
+        "final_target_gate": {
+            "evaluated": stage_index >= len(schedule["stages"]),
+            "green": final_target_green,
+            "decision": final_target_decision,
+        },
     }
     _atomic_json(out_dir / "full_run_receipt.json", receipt)
     print(json.dumps(receipt, sort_keys=True))
-    bounded_fire_blocked = args.max_steps is not None and final_run_verdict.startswith("BLOCKED_")
-    return 0 if admission and campaign_blocker is None and not bounded_fire_blocked else EXIT_REFUSE
+    non_promoting_stop = final_run_verdict.startswith(("BLOCKED_", "STOPPED_", "REFUSE_"))
+    return 0 if admission and campaign_blocker is None and not non_promoting_stop else EXIT_REFUSE
 
 
 def _full_run(args: argparse.Namespace, config: DirectDescriptionJointDescentTypedConfigV1) -> int:
@@ -1605,6 +2081,8 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--dry-run", action="store_true")
     mode.add_argument("--bounded-smoke", action="store_true")
     mode.add_argument("--full-run", action="store_true")
+    mode.add_argument("--worst-geometry-memory-bootstrap", action="store_true")
+    mode.add_argument("--resume-proof", action="store_true")
     parser.add_argument("--bootstrap-measurement", action="store_true")
     parser.add_argument("--resume-from", type=Path)
     parser.add_argument("--stop-after-step", type=int, choices=(1, 2), default=1)
@@ -1618,6 +2096,37 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(args.ticket)
+        if args.worst_geometry_memory_bootstrap:
+            if (
+                args.bootstrap_measurement
+                or args.resume_from is not None
+                or args.memory_receipt is not None
+                or args.simulate_kill_after_checkpoint
+                or args.max_steps is not None
+                or args.stage_exit_on_stop
+                or args.measure_full_config_window
+                or args.measurement_train_batch != 1
+                or args.verify_group_ownership
+                or args.pair_id != 447
+                or args.stop_after_step != 1
+            ):
+                raise DirectDescriptionError("worst-geometry memory bootstrap accepts no campaign controls")
+            return _worst_geometry_memory_bootstrap(args, config)
+        if args.resume_proof:
+            if (
+                args.bootstrap_measurement
+                or args.simulate_kill_after_checkpoint
+                or args.max_steps is not None
+                or args.stage_exit_on_stop
+                or args.measure_full_config_window
+                or args.measurement_train_batch != 1
+                or args.verify_group_ownership
+                or args.pair_id != 447
+                or args.stop_after_step != 1
+            ):
+                raise DirectDescriptionError("resume proof accepts only its checkpoint and memory receipt")
+            with _same_outdir_guard(Path(args.out_dir), config):
+                return _resume_proof(args, config)
         if args.dry_run:
             if (
                 args.bootstrap_measurement

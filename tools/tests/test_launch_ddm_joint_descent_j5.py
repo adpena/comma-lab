@@ -1,6 +1,20 @@
 from __future__ import annotations
 
-from tools.launch_ddm_joint_descent import _c1_bucket_delta
+from pathlib import Path
+
+import pytest
+
+from tac.optimization.direct_description_joint_descent import (
+    DirectDescriptionJointDescentTypedConfigV1,
+)
+from tac.optimization.direct_description_minimizer import DirectDescriptionError
+from tools.launch_ddm_joint_descent import (
+    _assert_worst_geometry_receipt,
+    _c1_bucket_delta,
+)
+
+REPO = Path(__file__).resolve().parents[2]
+TICKET = REPO / ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json"
 
 
 def _verdict(*, role_errors: int, residual_errors: int) -> dict:
@@ -52,3 +66,25 @@ def test_c1_bucket_delta_accepts_legacy_per_class_verdict_for_resume() -> None:
     assert row["residual_trunk_owned_delta_errors"] == -12
     assert row["residual_trunk_debt_delta_errors"] == -12
     assert row["residual_bucket_descended"] is True
+
+
+def test_worst_geometry_receipt_must_bind_all_52_stage3_secants() -> None:
+    config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(TICKET)
+    contract = config.worst_geometry_memory_contract
+    geometry = {
+        "pair_start": 498,
+        "pair_ids": [498, 499, 500, 501],
+        "active_groups": [
+            "island_worldsheet",
+            "lane_program",
+            "shared_template_dof",
+        ],
+        "island_secants": 28,
+        "lane_secants": 24,
+        "total_secants": 52,
+        "derived_basis_gib": 4.72976016998291,
+    }
+    _assert_worst_geometry_receipt(geometry, contract)
+    geometry["total_secants"] = 8
+    with pytest.raises(DirectDescriptionError, match="sealed worst geometry"):
+        _assert_worst_geometry_receipt(geometry, contract)

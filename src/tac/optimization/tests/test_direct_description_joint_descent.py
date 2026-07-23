@@ -17,14 +17,19 @@ from tac.optimization.direct_description_joint_descent import (
     EXPECTED_PROGRAM_SHA256,
     J3_PROGRAM_SHA256,
     J5_PROGRAM_SHA256,
+    J6A_PROGRAM_SHA256,
     LEGACY_PROGRAM_SHA256,
     AdamStateV1,
     DirectDescriptionJointDescentTypedConfigV1,
     FullRunScheduleV1,
+    PoseFinishEngageStateV1,
+    classify_cumulative_fire_gate,
+    classify_governed_stage_exit,
     classify_memory_preflight,
     classify_realized_stage_verdict,
     clipped_adam_step,
     compile_parameterized_archive,
+    exact_final_target_gate,
     initial_adam_state,
     lift_v15_archive,
     linear_rewarmup_factor,
@@ -110,8 +115,9 @@ def test_historical_j3_ticket_remains_typed_and_hash_compatible() -> None:
 def test_j5_resealed_ticket_uses_cap_free_realized_acceptance_and_q8_staging() -> None:
     config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(J5_TICKET)
     schedule = config.full_run_schedule
-    assert config.dsl_compile_hash == J5_PROGRAM_SHA256
-    assert config.typed_config_hash() == "d43608af799b2f2d04e248413ceb944c093701441eafb222f2b3cdf3d32b8d80"
+    assert config.dsl_compile_hash == J6A_PROGRAM_SHA256
+    assert config.dsl_compile_hash != J5_PROGRAM_SHA256
+    assert config.typed_config_hash() == "35c929d0031ef3ae3225afdfeb09997619bb70016f27527ea4ce1e7bed31ff47"
     assert schedule is not None
     reform = schedule.warm_start_reform
     assert reform is not None
@@ -124,6 +130,13 @@ def test_j5_resealed_ticket_uses_cap_free_realized_acceptance_and_q8_staging() -
     assert reform.opening_candidate_pair_ids == (447, 53, 416, 296, 547, 278, 501, 346)
     assert "shared_template_dof" not in reform.frozen_groups_until_first_admission
     assert reform.residual_bucket_admission_required is True
+    assert reform.pose_objective_engage_condition is None
+    assert schedule.pose_finish_engage is not None
+    assert schedule.pose_finish_engage.minimum_points == 5
+    assert schedule.stages[-1].target_d_pose == pytest.approx(163.06116431842463)
+    assert config.execution_custody["banked_r1_comparator"]["binding_target"] is False
+    assert config.execution_custody["banked_r1_comparator"]["promotion_eligible"] is False
+    assert config.worst_geometry_memory_contract.expected_total_secants == 52
 
 
 @pytest.mark.parametrize(
@@ -386,7 +399,8 @@ def test_launcher_has_first_integer_n600_abort_and_release_gates() -> None:
     source = (REPO / "tools/launch_ddm_joint_descent.py").read_text(encoding="utf-8")
     assert "FIRST_INTEGER_REALIZATION_EXACT_N600_ABORT_ROLLBACK" in source
     assert 'set(reform["frozen_groups_until_first_admission"])' in source
-    assert "pose_objective_weight = 0.0 if reform_active and not warm_start_seg_admitted else 1.0" in source
+    assert "pose_finish_state.engaged" in source
+    assert "pose_objective_weight = 0.0 if reform_active and not warm_start_seg_admitted else 1.0" not in source
     assert "warm_start_realized_admitted" in source
     assert "warm_start_rejected_proposal_rollback" in source
     assert "warm-start rollback checkpoint immediate parse-back differs" in source
@@ -398,6 +412,145 @@ def test_launcher_has_j5_pure_price_shrink_bucket_and_fire_gates() -> None:
     assert "proposal_q8_denominator" in source
     assert "c1_bucket_delta_vs_last_admitted" in source
     assert "c1_bucket_delta_cumulative_vs_baseline" in source
+    assert "warm_start_component_safe or" not in source
     assert "residual_bucket_descended" in source
     assert "BLOCKED_REALIZED_NO_PURE_PRICED_DESCENT_AFTER_SHRINK_LADDER" in source
     assert 'final_run_verdict = "READY_TO_FIRE_UNDER_STANDING_GO"' in source
+
+
+def test_pose_finish_engage_is_typed_rolling_slope_latched_and_checkpoint_roundtrippable() -> None:
+    config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(J5_TICKET)
+    engage = config.full_run_schedule.pose_finish_engage
+    assert engage is not None
+    state = PoseFinishEngageStateV1().observe(
+        global_step=0,
+        d_seg=0.027470296223958333,
+        strict_seg_admission=False,
+        config=engage,
+    )
+    state = state.observe(
+        global_step=1,
+        d_seg=0.02744209289550781,
+        strict_seg_admission=True,
+        config=engage,
+    )
+    for step in range(2, 24):
+        state = state.observe(
+            global_step=step,
+            d_seg=0.02744209289550781,
+            strict_seg_admission=False,
+            config=engage,
+        )
+    assert state.engaged
+    assert state.classification in {"POSE_FINISH_ENGAGED_PLATEAU", "POSE_FINISH_ENGAGED_LATCHED"}
+    assert PoseFinishEngageStateV1.from_payload(state.to_payload(), config=engage) == state
+
+
+def test_pose_finish_engage_refuses_binary_first_admission_and_rising_history() -> None:
+    config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(J5_TICKET)
+    engage = config.full_run_schedule.pose_finish_engage
+    state = PoseFinishEngageStateV1()
+    for step in range(12):
+        state = state.observe(
+            global_step=step,
+            d_seg=0.02747 - 0.0001 * step,
+            strict_seg_admission=step == 1,
+            config=engage,
+        )
+    assert state.strict_seg_admissions == 1
+    assert not state.engaged
+    assert state.classification == "DSEG_STILL_TRENDING"
+
+
+def test_cumulative_fire_gate_catches_locally_safe_second_move() -> None:
+    green, decision = classify_cumulative_fire_gate(
+        baseline_d_seg=0.02000,
+        baseline_d_pose=1.0,
+        candidate_d_seg=0.02008,
+        candidate_d_pose=0.89,
+        cumulative_residual_delta_errors=-2,
+        residual_descent_required=True,
+    )
+    assert green is False
+    assert decision == "BLOCKED_CUMULATIVE_DSEG_REGRESSION_VS_STAGE00"
+    green, decision = classify_cumulative_fire_gate(
+        baseline_d_seg=0.02000,
+        baseline_d_pose=1.0,
+        candidate_d_seg=0.01999,
+        candidate_d_pose=0.99,
+        cumulative_residual_delta_errors=-1,
+        residual_descent_required=True,
+    )
+    assert (green, decision) == (
+        True,
+        "CUMULATIVE_COMPONENT_AND_RESIDUAL_FIRE_GATE_GREEN_VS_STAGE00",
+    )
+
+
+def test_target_unmet_limits_and_plateaus_are_nonpromoting_stops() -> None:
+    assert classify_governed_stage_exit(
+        target_met=False,
+        stage_limit=True,
+        plateau=False,
+        component_decision="REALIZED_STAGE_DESCENT_CONTINUE",
+    ) == "STOPPED_BELOW_TARGET_MAXIMUM_STEPS"
+    assert classify_governed_stage_exit(
+        target_met=False,
+        stage_limit=False,
+        plateau=True,
+        component_decision="BLOCKED_REALIZED_NO_COMPONENT_DESCENT",
+    ) == "STOPPED_BELOW_TARGET_PLATEAU"
+    assert classify_governed_stage_exit(
+        target_met=True,
+        stage_limit=True,
+        plateau=True,
+        component_decision="REALIZED_STAGE_TARGET_MET",
+    ) == "ADVANCE_EXACT_TARGET_MET"
+
+
+def test_schedule_complete_requires_exact_final_target_verdict() -> None:
+    config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(J5_TICKET)
+    final_stage = config.full_run_schedule.stages[-1]
+    green, decision = exact_final_target_gate(
+        final_verdict={
+            "stage_id": final_stage.stage_id,
+            "d_seg": final_stage.target_d_seg + 1.0e-6,
+            "d_pose": final_stage.target_d_pose,
+        },
+        final_stage=final_stage,
+    )
+    assert (green, decision) == (False, "REFUSE_SCHEDULE_COMPLETE_FINAL_TARGET_UNMET")
+    green, decision = exact_final_target_gate(
+        final_verdict={
+            "stage_id": final_stage.stage_id,
+            "d_seg": final_stage.target_d_seg,
+            "d_pose": final_stage.target_d_pose,
+        },
+        final_stage=final_stage,
+    )
+    assert (green, decision) == (True, "FULL_RUN_SCHEDULE_COMPLETE_EXACT_FINAL_TARGETS_MET")
+    for field in ("d_seg", "d_pose"):
+        invalid = {
+            "stage_id": final_stage.stage_id,
+            "d_seg": final_stage.target_d_seg,
+            "d_pose": final_stage.target_d_pose,
+        }
+        invalid[field] = float("nan")
+        green, decision = exact_final_target_gate(
+            final_verdict=invalid,
+            final_stage=final_stage,
+        )
+        assert (green, decision) == (
+            False,
+            "REFUSE_SCHEDULE_COMPLETE_FINAL_VERDICT_INVALID",
+        )
+
+
+def test_launcher_seals_worst_geometry_and_governed_completion_paths() -> None:
+    source = (REPO / "tools/launch_ddm_joint_descent.py").read_text(encoding="utf-8")
+    assert "REFUSE_WORST_GEOMETRY_DIFFERS" in source
+    assert "expected_total_secants" in source
+    assert "STOPPED_BELOW_TARGET_MAXIMUM_STEPS" in (
+        REPO / "src/tac/optimization/direct_description_joint_descent.py"
+    ).read_text(encoding="utf-8")
+    assert 'final_run_verdict = "FULL_RUN_SCHEDULE_COMPLETE"' not in source
