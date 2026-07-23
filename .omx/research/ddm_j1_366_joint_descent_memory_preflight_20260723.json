@@ -1,0 +1,62 @@
+{
+  "schema": "ddm_joint_descent_memory_preflight_receipt.v1",
+  "ticket_id": "ddm_j1_366_joint_descent_20260723",
+  "utc": "2026-07-23T00:31:27Z",
+  "execution_allowed": false,
+  "research_only": true,
+  "admission_eligible": false,
+  "outcome": "REFUSE_NO_REAL_J1_CONFIG_MODEL",
+  "host_observation": {
+    "source": "psutil.virtual_memory read-only observation",
+    "observed_unix_ns": 1784766687103842000,
+    "total_bytes": 137438953472,
+    "total_gib": 128.0,
+    "available_bytes": 103320289280,
+    "available_gib": 96.22451782226562,
+    "used_bytes": 32099254272,
+    "used_gib": 29.894760131835938,
+    "drift_warning": "point-in-time observation; must be remeasured immediately before dry start and fire"
+  },
+  "operator_policy": {
+    "sole_workload_ceiling_gib": 116.0,
+    "source": "tools/witness_memory_preflight.py OPERATOR_CEILING_GIB_FALLBACK",
+    "source_sha256": "f332b8dcf84c9afb67b1328ab19fa3d01c216b8ddab43e98244cf1b4a99ab096"
+  },
+  "real_config_projection": {
+    "projected_peak_gib": null,
+    "free_memory_headroom_gib": null,
+    "reason": "No executable DirectDescriptionJointDescentTypedConfigV1, v15-to-optimizer adapter, or memory-model branch exists. The current tool models the level-set trainer tensors and would be a surrogate-green receipt for J1."
+  },
+  "historical_surrogate": {
+    "vehicle": "R1 level-set store-nothing joint descent",
+    "projected_peak_gib": 67.6,
+    "available_minus_projected_gib_at_observation": 28.62451782226562,
+    "ceiling_minus_projected_gib": 48.4,
+    "provenance": "MEASURED historical memory-model output in joint_descent_p0_launch_prep_20260708.md",
+    "source_sha256": "822e8c8f08357b91bf44d298476f4bb8825e94f9c62d6130aaada4b95eea7cc1",
+    "authority": "SURROGATE_ONLY_NOT_J1_ADMISSION"
+  },
+  "required_green_successor_receipt": {
+    "config_identity": "semantic_program_sha256 must equal sealed ticket",
+    "projection": "witness_memory_preflight must parse the real emitted launch config and all memory-relevant flags",
+    "system_aware": true,
+    "strict": true,
+    "real_n600": true,
+    "current_free_memory_recorded": true,
+    "active_governed_jobs_summed": true,
+    "bounded_dry_start_peak_measured": true,
+    "projection_vs_actual_reconciled": true,
+    "storage_waterfall_green": true
+  },
+  "wallclock": {
+    "historical_anchor": "R1 approximately 48 minutes per epoch with a full n600 verdict every epoch; plateau in approximately 108 warm-started epochs",
+    "idealized_eval_every_5_hours": 17.28,
+    "planning_band_hours": [17.0, 30.0],
+    "provenance": "DERIVED_SURROGATE_NOT_MEASURED_J1",
+    "fire_gate": "bounded real-config timing smoke required",
+    "compute_baseline": "MLX-GPU with TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 plus fused differentiable-R; optional kernels are speed-only and conditional on measured binding components"
+  },
+  "main_landing_review_required": true,
+  "verdict_scope": "memory and wall-clock readiness of the proposed J1 consumer only; no claim about historical R1 safety under current load",
+  "craft_authority": "docs/operating_manual_craft_handoff.md"
+}

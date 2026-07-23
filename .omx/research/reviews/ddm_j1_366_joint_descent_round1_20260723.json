@@ -1,0 +1,73 @@
+{
+  "schema": "ddm_joint_descent_ticket_round1_review.v1",
+  "utc": "2026-07-23T00:32:10Z",
+  "ticket_path": ".omx/research/configs/ddm_j1_366_joint_descent_witness_program_20260723.json",
+  "reviewer": "codex",
+  "review_round": 1,
+  "disposition": "MAJOR_BLOCKING_FINDING_EXECUTION_REMAINS_DISABLED",
+  "execution_allowed": false,
+  "main_landing_review_required": true,
+  "checks": [
+    {
+      "check": "authority_file_hash_and_size",
+      "result": "PASS",
+      "evidence": "6807 bytes; sha256 274937bc20f08b1e2492631ba57d747620fe91b79459c996f8c6fc304174c5cf"
+    },
+    {
+      "check": "payload_small_and_counted",
+      "result": "PASS_SPEC_ONLY",
+      "evidence": "v15 exact archive is 133941 bytes; ticket restricts trainable payload to grammar/template/xi parameters and forbids scorer/GT/frame-plane payloads"
+    },
+    {
+      "check": "warm_start_receiver_loadable",
+      "result": "PASS_LANDED_RECEIPT",
+      "evidence": "v15 receipt 5ed6f830b3749a51e0d300a9104fda9a77e86bbeb3b81428a20e1ec0d3dcfcb8 records strict parse/re-encode and receiver custody"
+    },
+    {
+      "check": "warm_start_optimizer_loadable",
+      "result": "FAIL_BLOCKING",
+      "evidence": "No direct-description joint-descent consumer or v15-to-optimizer adapter exists; current receipt has a 29810-byte G1 payload but zero explicit worldsheet track/knot and lane-program/knot records, so typed parameter-lift and counted lane seed semantics are also owed"
+    },
+    {
+      "check": "dsl_compiled_executable_config",
+      "result": "FAIL_BLOCKING",
+      "evidence": "Semantic program is proposed typed JSON and hashable, but DirectDescriptionJointDescentTypedConfigV1 and launcher named-config route do not exist"
+    },
+    {
+      "check": "resumable_per_stage_ema",
+      "result": "PASS_CONTRACT_UNMEASURED_IMPLEMENTATION",
+      "evidence": "Ticket requires atomic distinct stage EMA checkpoints plus full optimizer/RNG/hash state; no J1 resume replay exists"
+    },
+    {
+      "check": "real_memory_projection",
+      "result": "FAIL_BLOCKING",
+      "evidence": "Historical 67.6 GiB R1 projection is for the level-set consumer; no J1 tensor geometry/model exists"
+    },
+    {
+      "check": "governed_launcher_and_freshness",
+      "result": "FAIL_BLOCKING",
+      "evidence": "Proposed named config is not accepted; ticket requires fail-closed rc=6 freshness, rc=8 hash binding, same-outdir guard, startup telemetry, and governor ADMIT after MAIN build"
+    },
+    {
+      "check": "compute_baseline_and_kernel_authority",
+      "result": "PASS_SPEC_ONLY",
+      "evidence": "Ticket requires MLX-GPU custom grouped backward plus fused diff-R, gates optional kernels on measured timing/memory, labels expected gains SPECULATIVE, and forbids kernels from becoming score authority"
+    },
+    {
+      "check": "no_launch_no_paid_dispatch",
+      "result": "PASS",
+      "evidence": "Only read-only inspection, local hashing, state registration, and documentation occurred"
+    }
+  ],
+  "required_main_review_focus": [
+    "v15 stream-to-parameter ownership and byte-identical stage-00 replay",
+    "no hidden video-derived state outside counted archive payload",
+    "joint Seg/Pose gradients through exact R and official YUV6",
+    "typed compiler/hash and governed launcher route",
+    "real J1 memory-model geometry and bounded n600 resume smoke"
+  ],
+  "verdict_scope": "ticket/build readiness only; no efficacy or score verdict",
+  "craft_authority": "docs/operating_manual_craft_handoff.md",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}
