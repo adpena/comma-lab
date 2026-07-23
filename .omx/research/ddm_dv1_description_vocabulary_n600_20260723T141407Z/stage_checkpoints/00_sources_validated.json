@@ -1,0 +1,27 @@
+{
+  "argmax_batch_chain_sha256": "9594215cdcb19507a19e4c5875da922b7e394af32e333ced3172f6244fffc80b",
+  "argmax_batch_count": 38,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "existing_event_archive_sha256": "be806f9a49ff8d58b0ab0bb9be0489f7c0b62edeb2aaa65364ed61f9f44cd652",
+  "g2_aggregate_sha256": "061220fd8c1ca047b210841235fc805194a96175e933ee110ba4ac8bb2077d84",
+  "g4_arrays_sha256": "dbc85e7a4f593ab9b7a7f4ed017dbb63a064cb681df806d0bb93277ae8f42451",
+  "pair_window": [
+    0,
+    600
+  ],
+  "score_claim": false,
+  "status": "PASS",
+  "target_cache": {
+    "bytes": 5078017610,
+    "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "sha256_from_bound_receipt": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "v12_receipt": {
+    "admission_rows": 353,
+    "final_archive_bytes": 106106,
+    "final_archive_sha256": "623f860e78a105a8a31efc46d92002597d32e3459447cfed642c81243441ed11",
+    "final_errors": 4011236,
+    "path": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+    "sha256": "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a"
+  }
+}

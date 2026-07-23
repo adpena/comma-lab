@@ -1,0 +1,307 @@
+{
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "execution_allowed": false,
+  "implementation_custody": {
+    "source_files": [
+      {
+        "bytes": 22234,
+        "path": "src/tac/optimization/ddm_description_vocabulary.py",
+        "sha256": "b25a244aec7329c711728e288f20798910fa5acbf33f1eedc147781cbe4c4ee7"
+      },
+      {
+        "bytes": 37722,
+        "path": "tools/measure_ddm_description_vocabulary.py",
+        "sha256": "ef6d5f9ea86a850df9a87485fc57eda6665fae0defc33d3aa3fc3790cf2e906d"
+      },
+      {
+        "bytes": 3346,
+        "path": "tests/test_ddm_description_vocabulary.py",
+        "sha256": "1146512637302046b63936fe038278fde726a0066e5b0f2d8836932a4e31e297"
+      }
+    ]
+  },
+  "implementation_head_at_measurement": "b61bd8cc861a3f2bb9f03795d86c9de15656ad05",
+  "main_landing_review_required": true,
+  "outputs": [
+    {
+      "bytes": 29724,
+      "path": ".omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/summary.json",
+      "sha256": "5ea75c1495fdcb37852c3e308d87156645b81e2d8554a56e8988a21548fde581"
+    },
+    {
+      "bytes": 17677,
+      "path": ".omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/description_vocabulary_ledger.jsonl",
+      "sha256": "e6e04c7776504caa6633cef625e1a27cf090bb4bb46ce3c422f8b1516cb2630b"
+    },
+    {
+      "bytes": 1610,
+      "path": ".omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/payloads/selected_joint_ground_vocabulary.dv1",
+      "sha256": "03897224767612de0dc37c355710252a9eb418ff8a960c6cbd99276fcc4e76b3"
+    }
+  ],
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "research_only": true,
+  "run_id": "ddm_dv1_description_vocabulary_n600_20260723T141407Z",
+  "schema": "ddm_description_vocabulary_receipt.v1",
+  "score_claim": false,
+  "semantic_argv": [
+    "tools/measure_ddm_description_vocabulary.py"
+  ],
+  "source_custody": {
+    "argmax_batch_chain": [
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0346/0000.score.zlib",
+        "sha256": "546f59f0dca635b79dd75522d83092fea8ddc6d0ac4121ea63f6ff5cd25c6098",
+        "start": 0,
+        "stop": 16
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0016.score.zlib",
+        "sha256": "9ae39c60f26d9c86e9ec13b8b8cd10613cfe6e8e74981d91475bec3a02325777",
+        "start": 16,
+        "stop": 32
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0032.score.zlib",
+        "sha256": "bd20950b5baf543d22b33debef85d2bb8e08375ab33ff14737e2e9e45d96eb31",
+        "start": 32,
+        "stop": 48
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0152/0048.score.zlib",
+        "sha256": "bdaae5f243eb68ea8f421502be9b2a4b695a7a8b87151dd62a7240116efd8e76",
+        "start": 48,
+        "stop": 64
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0235/0064.score.zlib",
+        "sha256": "1a1740c20e5f45ada8a1df72e43d483f8c49b165c0c05cc0d28bd7551d6c8c75",
+        "start": 64,
+        "stop": 80
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0335/0080.score.zlib",
+        "sha256": "69066cfb272564e6263005f97e91fd702056ef80e288244a558f8e2a5a411fd4",
+        "start": 80,
+        "stop": 96
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0283/0096.score.zlib",
+        "sha256": "167944ed029f54a536d6e3d36f0943fede488b5cc815c69103d0024478a3770c",
+        "start": 96,
+        "stop": 112
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0112.score.zlib",
+        "sha256": "971cc019a8f2f23c73b0e7a55776ef885e034e4ba002cbfe6ac6cd46bbd2d4b1",
+        "start": 112,
+        "stop": 128
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0128.score.zlib",
+        "sha256": "bfa82f98f5f84d092644f3e1188865000a47c428944f7f9d2222a8ca1b1f363c",
+        "start": 128,
+        "stop": 144
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0327/0144.score.zlib",
+        "sha256": "14c6cde9a63295efc3c23b1e9dcddc3f9a679ceae04c18a519f5ebfe5f395451",
+        "start": 144,
+        "stop": 160
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0160.score.zlib",
+        "sha256": "9bb9c717b0c80bc77ede23955ac188abe9185b7bd2b3470c7fb8c1cdcd7094de",
+        "start": 160,
+        "stop": 176
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0176.score.zlib",
+        "sha256": "482e3839799007c23ea491ef36bd5c372898eebe3373ad11b8b25047260a8199",
+        "start": 176,
+        "stop": 192
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0192.score.zlib",
+        "sha256": "bc4bfd5eb44eb9d8f23e7023aa69101ef0670acb28b9129ae0c867a561b23399",
+        "start": 192,
+        "stop": 208
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0340/0208.score.zlib",
+        "sha256": "da5932dc4086b83303602d5a9b33f10b7e76a99fdeeb107cf5a476b5281ae241",
+        "start": 208,
+        "stop": 224
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0224.score.zlib",
+        "sha256": "d5a44e3cc541848951b4dc9c92e01260f4b5e53a46632f47e0e11892b3a4a518",
+        "start": 224,
+        "stop": 240
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0240.score.zlib",
+        "sha256": "87d601113d8e9fd44978f2ba1ec45b75eb17b24a79eece9574d94a6f4036fec8",
+        "start": 240,
+        "stop": 256
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0351/0256.score.zlib",
+        "sha256": "48a367fb3aad1194da5a5f891d427db5f57e370e9a582160ca138fb387c296c0",
+        "start": 256,
+        "stop": 272
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0318/0272.score.zlib",
+        "sha256": "84c22a97e55a9f059bb332e6674bed84d3ca59d80036a4af9061e977f35c294d",
+        "start": 272,
+        "stop": 288
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0341/0288.score.zlib",
+        "sha256": "39fc1a10a8847d1d628df07769615144b677820e9c11e1ebf9a730c3256fd907",
+        "start": 288,
+        "stop": 304
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0277/0304.score.zlib",
+        "sha256": "640e3b2e8cadb2990da5a0a0ef9ecfcc13628d3f5fcfc0a101a17040ef6dcb22",
+        "start": 304,
+        "stop": 320
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0350/0320.score.zlib",
+        "sha256": "bcf99305002cca12c7defd8d27f2a62acda918e903a592506f0315a1390eea6f",
+        "start": 320,
+        "stop": 336
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0157/0336.score.zlib",
+        "sha256": "278c99d60c0b3984ee17cd3b9f2414b6c09de08f3ae12097b9e48247e9d3e5ac",
+        "start": 336,
+        "stop": 352
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0352.score.zlib",
+        "sha256": "91b83eb4464b0c28e4d8a9dee3f9fde9f045adef0ff407d6ded1ca8225e93d79",
+        "start": 352,
+        "stop": 368
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0368.score.zlib",
+        "sha256": "6c89b053c2e9a79a6ab9233d2d243c13eb081dcd911a71e898b7e6baaf30e8fb",
+        "start": 368,
+        "stop": 384
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0343/0384.score.zlib",
+        "sha256": "564f75dfe184edbae1a091f3e39a6848507af674778fc7bab0f29061260ed47c",
+        "start": 384,
+        "stop": 400
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0189/0400.score.zlib",
+        "sha256": "7e77068bd4f16796cafd2667db84974f3c9a5a419c42c863d2c9cda01429c4a7",
+        "start": 400,
+        "stop": 416
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0297/0416.score.zlib",
+        "sha256": "02bcf0b950dca2f41a8e2ec1d6a0bc428f30c3aa60f9e3578cede4bd2455cead",
+        "start": 416,
+        "stop": 432
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0186/0432.score.zlib",
+        "sha256": "1cc24bd82734b50fc0336c5fe287d01ab08c2a3f3b9f7f7bc64039c2050c0b6a",
+        "start": 432,
+        "stop": 448
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0448.score.zlib",
+        "sha256": "0c6b61e9fa68a03abbd02a4e2a9d0381ffe6dee2f9b94694bb4b3b4284ddce2e",
+        "start": 448,
+        "stop": 464
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0464.score.zlib",
+        "sha256": "ec1e011837f9b3c21f447e16266e5b775e5a3a2a26fea206ebe8e9ab5090889f",
+        "start": 464,
+        "stop": 480
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0338/0480.score.zlib",
+        "sha256": "b86f2a2a0819971bc622afce4fad05c74c68aac278618b8c191bf6e72850177f",
+        "start": 480,
+        "stop": 496
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0496.score.zlib",
+        "sha256": "6137cf515107eccf668e9cb2716f1c2144c5d39b6fcbdc2c0dd2d1324832010a",
+        "start": 496,
+        "stop": 512
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0278/0512.score.zlib",
+        "sha256": "2302c68a958f1b41b3cb0b27d73a659459c10a8f5a334fdc536a3489eca24f6e",
+        "start": 512,
+        "stop": 528
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0347/0528.score.zlib",
+        "sha256": "62fe721a51786c80a92479c059b2160e9d0998c86fdc7677f18ee52b661b7c29",
+        "start": 528,
+        "stop": 544
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0238/0544.score.zlib",
+        "sha256": "c5a4d18fbaff46cf963eab638225526ef5bd40b85ee306c76582a1081368a018",
+        "start": 544,
+        "stop": 560
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/candidate_batches/0050/0560.score.zlib",
+        "sha256": "b21dbe1b0ff4f750ea6d8ecb19f8972e8cada536bd26188565e4e300d944725a",
+        "start": 560,
+        "stop": 576
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0576.score.zlib",
+        "sha256": "b6ddb22de411cc925a8868aaf96f9cd199007305718f33c25ba705542e3a05fd",
+        "start": 576,
+        "stop": 592
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_dv1_description_vocabulary_20260723T141407Z/.omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints/base_batches/0592.score.zlib",
+        "sha256": "aabaa6638c60cf8d2934cb107d093522f299523cb3ae29c4c4bf54c2061241d7",
+        "start": 592,
+        "stop": 600
+      }
+    ],
+    "existing_event_archive": {
+      "bytes": 132606,
+      "path": ".omx/research/ddm_v13_g1_worldsheet_predictor_n600_20260722T201500Z/ddm_v13_islands_n600.not_a_candidate.zip.receipt-bytes",
+      "sha256": "be806f9a49ff8d58b0ab0bb9be0489f7c0b62edeb2aaa65364ed61f9f44cd652"
+    },
+    "g2_aggregate": {
+      "path": ".omx/research/ddm_g2_solve_diff_op_mining_n600_20260722T194000Z/aggregate_ledger.json",
+      "sha256": "061220fd8c1ca047b210841235fc805194a96175e933ee110ba4ac8bb2077d84"
+    },
+    "g4_arrays": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g4_spatial_stationarity_n600_20260722T212138Z/stage_checkpoints/01_recurrence_arrays.npz",
+      "sha256": "dbc85e7a4f593ab9b7a7f4ed017dbb63a064cb681df806d0bb93277ae8f42451"
+    },
+    "target_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "v12_receipt": {
+      "final_archive_bytes": 106106,
+      "final_archive_sha256": "623f860e78a105a8a31efc46d92002597d32e3459447cfed642c81243441ed11",
+      "final_errors": 4011236,
+      "path": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+      "sha256": "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a"
+    }
+  },
+  "verdict": "ROAD_DESCRIPTION_REACH_CONFIRMED_IN_CELL_SPACE_RECEIVER_REALIZATION_OWED",
+  "verdict_scope": "Full n600 semantic description reach under actual real-coded derivation strings and exact cached argmax cells. The negative/positive verdict does not extend to RGB receiver survival, Pose, exact archive packaging, or contest score."
+}
