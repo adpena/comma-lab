@@ -1,6 +1,6 @@
 # DDM AT1 scorer analytic atlas — DAG / FEED handoff
 
-**Date:** 2026-07-23  
+**Date:** 2026-07-23
 **Authority:** research-only; no execution, score, actuation, promotion, or
 pointer movement. MAIN landing review required.
 
@@ -85,4 +85,3 @@ invalidate:
 After exact locked-source materialization, the next gate is n600 gaze/Jacobian
 materialization. No consumer may skip directly from this Phase-0 branch to a
 promotion or scorer claim.
-

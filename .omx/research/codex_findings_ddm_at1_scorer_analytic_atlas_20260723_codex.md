@@ -1,11 +1,11 @@
 # Codex findings — DDM AT1 scorer analytic atlas Phase 0
 
-**Date:** 2026-07-23  
-**Lane:** `lane_ddm_at1_scorer_analytic_atlas_20260723`  
+**Date:** 2026-07-23
+**Lane:** `lane_ddm_at1_scorer_analytic_atlas_20260723`
 **Authority:** `research_only=true`; `score_claim=false`;
-`execution_allowed=false`; `[macOS-CPU frozen-scorer advisory]`  
+`execution_allowed=false`; `[macOS-CPU frozen-scorer advisory]`
 **Verdict:** **STRUCTURAL MODERNIZATION LANDED; LOCKED-SOURCE FACTOR
-MATERIALIZATION BLOCKED; FULL n600 GAZE OWED.**  
+MATERIALIZATION BLOCKED; FULL n600 GAZE OWED.**
 **Pointer:** unchanged. No candidate archive, contest-CPU/CUDA replay, score
 claim, launch, or promotion authority.
 
@@ -252,4 +252,3 @@ MAIN should not rubber-stamp the branch. Review:
    promotion claim.
 
 Only after that review should MAIN merge the isolated worktree commit.
-
