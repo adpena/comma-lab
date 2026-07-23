@@ -1,12 +1,12 @@
 # Codex session summary — DDM M6 22,645-byte gap closure
 
-date_utc: 2026-07-23  
-actor: codex  
-lane_id: `ddm_m6_close_22645_byte_gap`  
+date_utc: 2026-07-23
+actor: codex
+lane_id: `ddm_m6_close_22645_byte_gap`
 delegation_checkpoint_key:
-`codex_delegate:ddm_m6_close_22645_byte_gap:20260723T104501Z`  
-score_claim: false  
-promotion_eligible: false  
+`codex_delegate:ddm_m6_close_22645_byte_gap:20260723T104501Z`
+score_claim: false
+promotion_eligible: false
 main_landing_review_required: true
 
 ## What landed

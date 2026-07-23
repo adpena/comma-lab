@@ -1,7 +1,7 @@
 # Codex findings — DDM M6 close the 22,645-byte gap
 
-UTC: 2026-07-23  
-Lane: `ddm_m6_close_22645_byte_gap`  
+UTC: 2026-07-23
+Lane: `ddm_m6_close_22645_byte_gap`
 Authority: delegated bounded build/audit; `$0`; no launch; no scorer run; no config
 change; `research_only=true`; `score_claim=false`; pointer unchanged; MAIN landing
 review required.
