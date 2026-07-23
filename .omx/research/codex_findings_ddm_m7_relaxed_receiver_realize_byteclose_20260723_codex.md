@@ -1,9 +1,9 @@
 # Codex findings — DDM M7 relaxed receiver realization
 
-Date: 2026-07-23  
-Lane: `ddm_m7_relaxed_receiver_realize_byteclose`  
+Date: 2026-07-23
+Lane: `ddm_m7_relaxed_receiver_realize_byteclose`
 Verdict scope: one explicitly named 177,169-byte PR110-lineage receiver
-member, measured locally on the macOS CPU advisory axis.  
+member, measured locally on the macOS CPU advisory axis.
 Authority: local `$0` only. No Modal, remote, GPU, paid dispatch, score claim,
 promotion, or pointer mutation was authorized or performed.
 
@@ -102,4 +102,3 @@ requires MAIN landing review. The only canonical validation debt observed was
 pre-existing global lane-registry debt: `lane_maturity.py validate` reports
 110 missing historical evidence paths unrelated to this lane; this lane's
 evidence paths exist and its own record is internally consistent.
-

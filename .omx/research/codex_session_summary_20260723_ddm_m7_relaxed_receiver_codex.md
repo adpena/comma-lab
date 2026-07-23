@@ -25,4 +25,3 @@ move the 0.1910828242 pointer. No dispatch occurred.
 Review this isolated landing, its exact archive/runtime/upstream custody, and
 the three-clean-pass receipt. If accepted, MAIN owns the lane claim and Task
 #381 exact contest-CPU/CUDA dispatch. The advisory lane must not self-promote.
-

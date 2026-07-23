@@ -1,7 +1,7 @@
 # DDM M7 relaxed receiver realization — canonical DAG feed
 
-Date: 2026-07-23  
-`research_only=true`  
+Date: 2026-07-23
+`research_only=true`
 MAIN landing review and MAIN-owned Task #381 dispatch are required.
 
 ## Executed trajectory
@@ -76,4 +76,3 @@ custody, MAIN may claim Task #381 and dispatch exact contest-CPU/CUDA replay.
 Until those axis-specific results land, consumers must retain:
 `score_claim=false`, `promotion_eligible=false`,
 `ready_for_exact_eval_dispatch=false`, and the unchanged canonical pointer.
-
