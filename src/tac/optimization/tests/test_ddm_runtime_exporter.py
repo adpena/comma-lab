@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 
 import pytest
+import torch
 
 from tac.optimization import ddm_runtime_exporter as exporter
 from tac.optimization import ddm_runtime_receiver as receiver
@@ -248,3 +249,64 @@ def test_config_refuses_non_ssd_proof_root() -> None:
             proof_root="/tmp/proof",
             minimum_free_bytes=8 * 1024 * 1024 * 1024,
         )
+
+
+def test_four_clause_audit_requires_every_stream_and_ordered_pair() -> None:
+    chart_raw = bytes(range(64)) * 4
+    semantic_raw = b"\0\1\1\0" * 128
+    audit = exporter._rate_doctrine_manifest(
+        chart_raw=chart_raw,
+        chart_member=exporter._frame_blob(chart_raw, kind=0),
+        semantic_raw=semantic_raw,
+        semantic_member=exporter._frame_blob(
+            semantic_raw,
+            kind=1,
+            dimensions=(8, 8, 8),
+        ),
+    )
+    assert [row["member"] for row in audit["streams"]] == list(
+        exporter.EXPECTED_MEMBERS[1:]
+    )
+    assert {
+        (row["conditioner"], row["stream"])
+        for row in audit["ordered_redundancy_matrix"]
+    } == {
+        ("base/chart.ddb", "semantic/composed.dds"),
+        ("semantic/composed.dds", "base/chart.ddb"),
+    }
+    assert all(row["first_rung"] for row in audit["streams"])
+    malformed = {**audit, "streams": audit["streams"][:-1]}
+    with pytest.raises(exporter.ExporterError, match="missing"):
+        exporter._validate_rate_doctrine_manifest(malformed)
+
+
+def test_e2_frame0_is_structurally_seg_free() -> None:
+    anchors = torch.zeros((1, 2, 3), dtype=torch.int16)
+    gradients = torch.zeros((1, 2, 2, 3), dtype=torch.int16)
+    residuals = torch.zeros((1, 2, 12, 16, 3), dtype=torch.int16)
+    labels = torch.ones((1, 384, 512), dtype=torch.uint8)
+    palette = torch.tensor([[0, 0, 0], [17, 23, 31]], dtype=torch.uint8)
+    rows = torch.div(
+        torch.arange(874, dtype=torch.int64) * 384,
+        874,
+        rounding_mode="floor",
+    )
+    columns = torch.div(
+        torch.arange(1164, dtype=torch.int64) * 512,
+        1164,
+        rounding_mode="floor",
+    )
+    rendered = receiver._render_batch(
+        start=0,
+        stop=1,
+        anchors=anchors,
+        gradients=gradients,
+        residuals=residuals,
+        labels=labels,
+        palette=palette,
+        camera_rows=rows,
+        camera_columns=columns,
+        semantic_frame_policy="frame1_only_seg_free_frame0",
+    )
+    assert torch.count_nonzero(rendered[0, 0]) == 0
+    assert torch.all(rendered[0, 1] == palette[1])

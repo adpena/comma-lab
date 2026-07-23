@@ -5,9 +5,18 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
+import zipfile
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+import numpy as np
+import torch
+import torch.nn.functional as F
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
@@ -30,6 +39,12 @@ from tac.optimization.ddm_runtime_exporter import (  # noqa: E402
     _sha256_file,
     load_config,
 )
+from tac.optimization import ddm_runtime_receiver as runtime  # noqa: E402
+from tac.optimization.ddm_runtime_sensitivity import (  # noqa: E402
+    DDMRuntimeDecodedStateV1,
+    decode_runtime_state,
+    stage_argmax_transition_counts,
+)
 from tac.optimization.direct_description_measurement_ladder import (  # noqa: E402
     rfc8785_canonicalize,
 )
@@ -44,6 +59,27 @@ from tools.measure_ddm_v15_scorer_solved_templates import (  # noqa: E402
 
 class VerificationError(ValueError):
     """The runtime proof or scorer custody failed closed."""
+
+
+@dataclass(frozen=True)
+class _E2FrameOwnerReceiver:
+    """Adapter that removes Seg-owned paint from frame 0 before scoring."""
+
+    source: Any
+
+    @property
+    def custody(self) -> dict:
+        return dict(self.source.custody)
+
+    def render_camera_pairs(self, pair_ids: Sequence[int]) -> np.ndarray:
+        from tac.through_r.resolution_chain import render_grid_to_camera_uint8
+
+        indexes = tuple(int(value) for value in pair_ids)
+        camera = self.source.render_camera_pairs(indexes)
+        base = self.source.predictor.baseline.render_pairs(indexes)
+        for local in range(len(indexes)):
+            camera[local, 0] = render_grid_to_camera_uint8(base[local, 0])
+        return np.ascontiguousarray(camera)
 
 
 def _load_canonical_json(path: Path) -> dict:
@@ -72,12 +108,377 @@ def _find_fresh_runtime_receipt(proof_root: Path) -> tuple[Path, dict]:
     return path, _load_canonical_json(path)
 
 
+def _chart_frame1_grid(
+    state: DDMRuntimeDecodedStateV1,
+    *,
+    start: int,
+    stop: int,
+) -> torch.Tensor:
+    """Reconstruct the exact packet chart at its native scorer grid."""
+
+    anchors = state.anchors[start:stop, 1].to(torch.int64)
+    gradients = state.gradients[start:stop, 1].to(torch.int64)
+    residuals = state.residuals[start:stop, 1].to(torch.int64)
+    rows = torch.arange(12, dtype=torch.int64).reshape(1, 12, 1, 1)
+    columns = torch.arange(16, dtype=torch.int64).reshape(1, 1, 16, 1)
+    row_term = runtime._round_div_signed(
+        gradients[:, 0].reshape(stop - start, 1, 1, 3)
+        * (2 * rows - 11),
+        22,
+    )
+    column_term = runtime._round_div_signed(
+        gradients[:, 1].reshape(stop - start, 1, 1, 3)
+        * (2 * columns - 15),
+        30,
+    )
+    chart = (
+        anchors.reshape(stop - start, 1, 1, 3)
+        + row_term
+        + column_term
+        + residuals
+    )
+    if bool(torch.any((chart < 0) | (chart > 255))):
+        raise VerificationError("stage-attribution chart escaped uint8")
+    return (
+        chart.to(torch.uint8)
+        .repeat_interleave(32, dim=1)
+        .repeat_interleave(32, dim=2)
+        .contiguous()
+    )
+
+
+def _argmax_from_scorer_grid(segnet: Any, value: torch.Tensor) -> np.ndarray:
+    if (
+        value.dtype != torch.float32
+        or tuple(value.shape[1:]) != (3, runtime.PAIR_H, runtime.PAIR_W)
+    ):
+        raise VerificationError("stage scorer-grid tensor has wrong geometry")
+    with torch.inference_mode():
+        cells = segnet(value).argmax(dim=1)
+    return np.ascontiguousarray(cells.cpu().numpy().astype(np.uint8))
+
+
+def _aggregate_stage_rows(batch_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    stage_order = ["paint", "R_resample", "uint8", "scorer_consumption"]
+    stream_order = ["base/chart.ddb", "semantic/composed.dds"]
+    result: dict[str, Any] = {}
+    for stream in stream_order:
+        totals = {
+            stage: dict.fromkeys(
+                (
+                    "owner_sites",
+                    "argmax_diff_from_previous",
+                    "errors_before",
+                    "errors_after",
+                    "errors_introduced",
+                    "errors_corrected",
+                    "errors_persisting",
+                ),
+                0,
+            )
+            for stage in stage_order
+        }
+        for batch in batch_rows:
+            for stage in stage_order:
+                row = batch["streams"][stream]["stages"][stage]
+                for key in totals[stage]:
+                    totals[stage][key] += int(row[key])
+        if any(
+            totals[stage]["owner_sites"] != totals["paint"]["owner_sites"]
+            for stage in stage_order
+        ):
+            raise VerificationError("stage owner-site totals changed across transitions")
+        if (
+            totals["scorer_consumption"]["errors_after"]
+            != sum(totals[stage]["errors_introduced"] for stage in stage_order)
+            - sum(totals[stage]["errors_corrected"] for stage in stage_order)
+        ):
+            raise VerificationError("aggregate stage error-flow conservation failed")
+        result[stream] = {
+            "owner_definition": (
+                "semantic_label_code==0 at scorer grid"
+                if stream == "base/chart.ddb"
+                else "semantic_label_code>0 at scorer grid"
+            ),
+            "owner_sites": totals["paint"]["owner_sites"],
+            "stages": [
+                {"stage": stage, **totals[stage]} for stage in stage_order
+            ],
+        }
+    if (
+        sum(int(row["owner_sites"]) for row in result.values())
+        != 600 * runtime.PAIR_H * runtime.PAIR_W
+    ):
+        raise VerificationError("stream stage owners do not partition n600 scorer sites")
+    return result
+
+
+def _measure_e2_stage_attribution(
+    *,
+    archive_path: Path,
+    archive_sha256: str,
+    target_labels: np.ndarray,
+    segnet: Any,
+    root: Path,
+    input_hashes: dict[str, str],
+    batch_size: int,
+) -> dict[str, Any]:
+    """Emit resumable live-path paint/R/uint8/scorer argmax transitions."""
+
+    with zipfile.ZipFile(archive_path) as archive:
+        if tuple(archive.namelist()) != runtime.EXPECTED_MEMBERS:
+            raise VerificationError("stage attribution packet members changed")
+        members = {
+            name: archive.read(name)
+            for name in runtime.EXPECTED_MEMBERS
+        }
+    state = decode_runtime_state(members)
+    if state.semantic_frame_policy != "frame1_only_seg_free_frame0":
+        raise VerificationError("E2 stage attribution requires frame1-only paint")
+    verifier_sha256 = _sha256_file(Path(__file__))[1]
+    binding = {
+        "archive_sha256": archive_sha256,
+        "input_hashes": input_hashes,
+        "schema": "ddm_e2_stream_stage_loss_attribution.v1",
+        "stage_order": [
+            "paint",
+            "R_resample",
+            "uint8",
+            "scorer_consumption",
+        ],
+        "verifier_sha256": verifier_sha256,
+    }
+    binding_sha256 = _sha256(rfc8785_canonicalize(binding))
+    stage_root = root / "e2_stream_stage_loss" / binding_sha256
+    stage_root.mkdir(parents=True, exist_ok=True)
+    expected_batches = (600 + batch_size - 1) // batch_size
+    batch_rows: list[dict[str, Any]] = []
+    for start in range(0, 600, batch_size):
+        stop = min(start + batch_size, 600)
+        checkpoint = stage_root / f"batch_{start:04d}_{stop:04d}.json"
+        if checkpoint.exists():
+            row = _load_canonical_json(checkpoint)
+            if (
+                row.get("binding_sha256") != binding_sha256
+                or row.get("pair_range") != [start, stop]
+            ):
+                raise VerificationError("stage-attribution checkpoint custody changed")
+            batch_rows.append(row)
+            continue
+
+        labels = state.labels[start:stop]
+        target = np.ascontiguousarray(
+            np.asarray(target_labels[start:stop], dtype=np.uint8)
+        )
+        owner_masks = {
+            "base/chart.ddb": np.ascontiguousarray(labels.numpy() == 0),
+            "semantic/composed.dds": np.ascontiguousarray(labels.numpy() > 0),
+        }
+        chart = _chart_frame1_grid(state, start=start, stop=stop)
+        palette_grid = state.palette[labels.to(torch.int64)]
+        paint = torch.where(
+            (labels > 0).reshape(stop - start, runtime.PAIR_H, runtime.PAIR_W, 1),
+            palette_grid,
+            chart,
+        )
+        paint_cells = _argmax_from_scorer_grid(
+            segnet,
+            paint.permute(0, 3, 1, 2).contiguous().float(),
+        )
+
+        chart_nchw = chart.permute(0, 3, 1, 2).contiguous().float()
+        with torch.inference_mode():
+            camera_float = F.interpolate(
+                chart_nchw,
+                size=(runtime.CAMERA_H, runtime.CAMERA_W),
+                mode="bicubic",
+                align_corners=False,
+            )
+        overlay = (
+            labels.index_select(1, state.camera_rows)
+            .index_select(2, state.camera_columns)
+            .contiguous()
+        )
+        camera_colours = (
+            state.palette[overlay.to(torch.int64)]
+            .permute(0, 3, 1, 2)
+            .contiguous()
+        )
+        camera_mask = (overlay > 0).reshape(
+            stop - start,
+            1,
+            runtime.CAMERA_H,
+            runtime.CAMERA_W,
+        )
+        camera_float = torch.where(
+            camera_mask,
+            camera_colours.float(),
+            camera_float,
+        )
+        with torch.inference_mode():
+            resampled = F.interpolate(
+                camera_float,
+                size=(runtime.PAIR_H, runtime.PAIR_W),
+                mode="bilinear",
+                align_corners=False,
+            )
+        resampled_cells = _argmax_from_scorer_grid(segnet, resampled)
+
+        camera_uint8 = torch.where(
+            camera_mask,
+            camera_colours,
+            torch.clamp(torch.round(camera_float), 0.0, 255.0).to(torch.uint8),
+        )
+        with torch.inference_mode():
+            uint8_grid = F.interpolate(
+                camera_uint8.float(),
+                size=(runtime.PAIR_H, runtime.PAIR_W),
+                mode="bilinear",
+                align_corners=False,
+            )
+        uint8_cells = _argmax_from_scorer_grid(segnet, uint8_grid)
+
+        actual_camera = runtime._render_batch(
+            start=start,
+            stop=stop,
+            anchors=state.anchors,
+            gradients=state.gradients,
+            residuals=state.residuals,
+            labels=state.labels,
+            palette=state.palette,
+            camera_rows=state.camera_rows,
+            camera_columns=state.camera_columns,
+            semantic_frame_policy=state.semantic_frame_policy,
+        )
+        actual_btchw = (
+            actual_camera.permute(0, 1, 4, 2, 3).contiguous().float()
+        )
+        with torch.inference_mode():
+            official_input = segnet.preprocess_input(actual_btchw)
+            scorer_cells = (
+                segnet(official_input)
+                .argmax(dim=1)
+                .cpu()
+                .numpy()
+                .astype(np.uint8)
+            )
+        if not torch.equal(official_input, uint8_grid):
+            raise VerificationError(
+                "manual uint8 R-down differs from official scorer consumption"
+            )
+        scorer_cells = np.ascontiguousarray(scorer_cells)
+        streams: dict[str, Any] = {}
+        for stream, owner_mask in owner_masks.items():
+            stages = {
+                "paint": stage_argmax_transition_counts(
+                    before=target,
+                    after=paint_cells,
+                    target=target,
+                    owner_mask=owner_mask,
+                ),
+                "R_resample": stage_argmax_transition_counts(
+                    before=paint_cells,
+                    after=resampled_cells,
+                    target=target,
+                    owner_mask=owner_mask,
+                ),
+                "uint8": stage_argmax_transition_counts(
+                    before=resampled_cells,
+                    after=uint8_cells,
+                    target=target,
+                    owner_mask=owner_mask,
+                ),
+                "scorer_consumption": stage_argmax_transition_counts(
+                    before=uint8_cells,
+                    after=scorer_cells,
+                    target=target,
+                    owner_mask=owner_mask,
+                ),
+            }
+            streams[stream] = {"stages": stages}
+        row = {
+            "binding_sha256": binding_sha256,
+            "first_rung": True,
+            "pair_range": [start, stop],
+            "research_only": True,
+            "schema": "ddm_e2_stream_stage_loss_batch.v1",
+            "score_claim": False,
+            "scorer_cells_sha256": hashlib.sha256(
+                scorer_cells.tobytes(order="C")
+            ).hexdigest(),
+            "streams": streams,
+            "uint8_to_official_input_exact": True,
+        }
+        _publish_or_verify(
+            checkpoint,
+            rfc8785_canonicalize(row) + b"\n",
+        )
+        batch_rows.append(row)
+
+    if len(batch_rows) != expected_batches:
+        raise VerificationError("stage-attribution batch coverage is incomplete")
+    aggregate = _aggregate_stage_rows(batch_rows)
+    final_errors = sum(
+        int(row["stages"][-1]["errors_after"])
+        for row in aggregate.values()
+    )
+    final_sites = sum(int(row["owner_sites"]) for row in aggregate.values())
+    return {
+        "all_batches_checkpointed_and_preserved": True,
+        "batch_count": len(batch_rows),
+        "batch_digest_chain_sha256": hashlib.sha256(
+            "".join(
+                hashlib.sha256(
+                    rfc8785_canonicalize(row)
+                ).hexdigest()
+                for row in batch_rows
+            ).encode()
+        ).hexdigest(),
+        "batch_size": batch_size,
+        "binding": binding,
+        "binding_sha256": binding_sha256,
+        "error_flow_conservation": (
+            "errors_after=errors_before+introduced-corrected at every "
+            "stream x stage transition"
+        ),
+        "evidence_axis": EVIDENCE_AXIS,
+        "final_d_seg": format(final_errors / final_sites, ".12f"),
+        "first_rung": True,
+        "owner_partition": (
+            "exact scorer-grid packet semantic code: chart==0, semantic>0"
+        ),
+        "research_only": True,
+        "schema": "ddm_e2_stream_stage_loss_attribution.v1",
+        "score_claim": False,
+        "source_class": "(ii) live export realization-stage loss",
+        "stage_checkpoint_root": str(stage_root),
+        "stage_semantics": {
+            "paint": "perfect target argmax -> native-grid painted description",
+            "R_resample": "native-grid paint -> float bicubic-up/bilinear-down",
+            "uint8": "float R -> camera round/clamp uint8 R",
+            "scorer_consumption": (
+                "manual uint8 R-down -> official SegNet.preprocess_input + argmax"
+            ),
+        },
+        "streams": aggregate,
+        "verdict_scope": (
+            "E2 n600 frame1 SegNet argmax sites partitioned by packet fact owner; "
+            "counts are live-path error attribution, not causal Shapley values "
+            "and not PoseNet or contest-CPU/CUDA authority."
+        ),
+    }
+
+
 def verify(
     *,
     export_config_path: Path,
     scorer_config_path: Path,
 ) -> tuple[dict, Path]:
     export_config = load_config(export_config_path)
+    is_e2 = (
+        export_config.run_id
+        == "ddm_e2_pose_stream_and_doctrine_export_20260723"
+    )
     scorer_value = json.loads(scorer_config_path.read_bytes())
     scorer_config = DDMV15ScorerSolvedTemplateConfigV1.model_validate(scorer_value)
     if scorer_config.pair_start != 0 or scorer_config.pair_count != 600:
@@ -89,11 +490,21 @@ def verify(
         REPO_ROOT / export_config.output_directory
     ).resolve()
     export_receipt_path = (
-        output_root.parent / "ddm_e1_runtime_export_receipt.json"
+        output_root.parent
+        / (
+            "ddm_e2_runtime_export_receipt.json"
+            if is_e2
+            else "ddm_e1_runtime_export_receipt.json"
+        )
     )
     export_receipt = _load_canonical_json(export_receipt_path)
     upstream_receipt_path = (
-        output_root.parent / "ddm_e1_upstream_harness_receipt.json"
+        output_root.parent
+        / (
+            "ddm_e2_upstream_harness_receipt.json"
+            if is_e2
+            else "ddm_e1_upstream_harness_receipt.json"
+        )
     )
     upstream_receipt = _load_canonical_json(upstream_receipt_path)
     archive_path = output_root / "archive.zip"
@@ -168,9 +579,17 @@ def verify(
     measurement_root = proof_root / "scorer_measurement"
     measurement_root.mkdir(parents=True, exist_ok=True)
     measured = _measure_candidate(
-        name="seeded_source_state",
+        name=(
+            "e2_frame1_only_seeded_source_state"
+            if is_e2
+            else "seeded_source_state"
+        ),
         archive=state_archive,
-        receiver=state_receiver,
+        receiver=(
+            _E2FrameOwnerReceiver(state_receiver)
+            if is_e2
+            else state_receiver
+        ),
         config=scorer_config,
         root=measurement_root,
         labels=labels,
@@ -178,6 +597,27 @@ def verify(
         segnet=segnet,
         posenet=posenet,
     )
+    stream_stage_loss_attribution = None
+    if is_e2:
+        stream_stage_loss_attribution = _measure_e2_stage_attribution(
+            archive_path=archive_path,
+            archive_sha256=archive_sha256,
+            target_labels=labels,
+            segnet=segnet,
+            root=measurement_root / "stage_attribution",
+            input_hashes={
+                "scorer_cache_sha256": cache_identity[1],
+                "scorer_modules_sha256": model_custody["modules_sha256"],
+                "segnet_weights_sha256": model_custody[
+                    "segnet_weights_sha256"
+                ],
+            },
+            batch_size=scorer_config.scorer_batch_size,
+        )
+        if stream_stage_loss_attribution["final_d_seg"] != measured["d_seg"]:
+            raise VerificationError(
+                "stream stage-attribution final d_seg differs from canonical meter"
+            )
     terms = score_row(
         archive_bytes=archive_bytes,
         d_seg=float(measured["d_seg"]),
@@ -316,7 +756,11 @@ def verify(
             "total_seconds": runtime_receipt["total_seconds"],
             "under_1800_seconds": True,
         },
-        "schema": "ddm_e1_runtime_verification_receipt.v1",
+        "schema": (
+            "ddm_e2_runtime_verification_receipt.v2"
+            if is_e2
+            else "ddm_e1_runtime_verification_receipt.v1"
+        ),
         "score": {
             "archive_bytes": archive_bytes,
             "d_pose": measured["d_pose"],
@@ -345,15 +789,54 @@ def verify(
             "name": export_config.state_name,
         },
         "upstream_harness": upstream_receipt,
-        "verdict": "PASS_EXACT_N600_RUNTIME_EXPORT_ADVISORY_ONLY",
+        "verdict": (
+            "PASS_E2_RUNTIME_EXPORT_POSE_TUBE_BLOCKED_ADVISORY_ONLY"
+            if is_e2
+            else "PASS_EXACT_N600_RUNTIME_EXPORT_ADVISORY_ONLY"
+        ),
         "verdict_scope": (
             "Exact n600 source-versus-packaged camera raw identity and local "
             "single-thread decode timing; frozen-scorer row is macOS-CPU advisory, "
             "not contest-CPU/CUDA authority or promotion evidence."
         ),
     }
+    if is_e2:
+        result.update(
+            {
+                "pose_contract": export_receipt["pose_contract"],
+                "rate_doctrine": export_receipt["rate_doctrine"],
+                "stream_stage_loss_attribution": (
+                    stream_stage_loss_attribution
+                ),
+                "rate_decomposition": {
+                    "archive_counted_bytes": archive_bytes,
+                    "container_and_manifest_bytes": (
+                        archive_bytes
+                        - payload_bytes["base/chart.ddb"]
+                        - payload_bytes["semantic/composed.dds"]
+                    ),
+                    "runtime_inflate_py_bytes_not_counted": runtime_bytes,
+                    "state_archive_bytes_not_a_packet_member": len(state_archive),
+                    "stream_payload_bytes": {
+                        "base/chart.ddb": payload_bytes["base/chart.ddb"],
+                        "semantic/composed.dds": payload_bytes[
+                            "semantic/composed.dds"
+                        ],
+                    },
+                    "false_177KB_remainder_explanation": (
+                        "339094-134211-28108 mixes one counted archive with "
+                        "two nonmember quantities and is not a byte partition"
+                    ),
+                },
+            }
+        )
     receipt_path = _publish_or_verify(
-        output_root.parent / "ddm_e1_runtime_verification_receipt.json",
+        output_root.parent
+        / (
+            "ddm_e2_runtime_verification_receipt_v2.json"
+            if is_e2
+            else "ddm_e1_runtime_verification_receipt.json"
+        ),
         rfc8785_canonicalize(result) + b"\n",
     )
     return result, receipt_path

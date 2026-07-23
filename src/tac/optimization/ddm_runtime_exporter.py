@@ -40,8 +40,12 @@ from tac.optimization.direct_description_measurement_ladder import (
 )
 
 SCHEMA = "ddm_e1_runtime_archive.v1"
+E2_SCHEMA = "ddm_e2_runtime_archive.v1"
+RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
 CONFIG_SCHEMA = "DDME1RuntimeExporterConfigV1"
+E2_CONFIG_SCHEMA = "DDME2RuntimeExporterConfigV1"
 RESULT_SCHEMA = "ddm_e1_runtime_export_receipt.v1"
+E2_RESULT_SCHEMA = "ddm_e2_runtime_export_receipt.v1"
 SOURCE_BYTES = 133_941
 SOURCE_SHA256 = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
 STATE_BYTES = 134_211
@@ -132,10 +136,16 @@ class DDME1RuntimeExporterConfigV1(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
-    schema_: Literal["DDME1RuntimeExporterConfigV1"] = Field(
+    schema_: Literal[
+        "DDME1RuntimeExporterConfigV1",
+        "DDME2RuntimeExporterConfigV1",
+    ] = Field(
         default=CONFIG_SCHEMA, alias="schema", serialization_alias="schema"
     )
-    run_id: Literal["ddm_e1_runtime_exporter_n600_20260723"] = (
+    run_id: Literal[
+        "ddm_e1_runtime_exporter_n600_20260723",
+        "ddm_e2_pose_stream_and_doctrine_export_20260723",
+    ] = (
         "ddm_e1_runtime_exporter_n600_20260723"
     )
     source_archive_path: StrictStr
@@ -159,6 +169,13 @@ class DDME1RuntimeExporterConfigV1(BaseModel):
 
     @model_validator(mode="after")
     def _valid(self) -> DDME1RuntimeExporterConfigV1:
+        expected_schema = (
+            E2_CONFIG_SCHEMA
+            if self.run_id == "ddm_e2_pose_stream_and_doctrine_export_20260723"
+            else CONFIG_SCHEMA
+        )
+        if self.schema_ != expected_schema:
+            raise ValueError("run_id and exporter config schema disagree")
         if Path(self.source_archive_path).is_absolute():
             raise ValueError("source_archive_path must be repository-relative")
         if Path(self.output_directory).is_absolute():
@@ -257,6 +274,289 @@ def _frame_blob(raw: bytes, *, kind: int, dimensions: tuple[int, ...] = ()) -> b
         + (struct.pack(f">{len(dimensions)}I", *dimensions) if dimensions else b"")
         + coded
     )
+
+
+def _ordered_redundancy_matrix(
+    raw_streams: dict[str, bytes],
+) -> list[dict[str, Any]]:
+    """Measure bytes(B)-bytes(B|A decoded) with one fixed Brotli-Q11 coder."""
+
+    if tuple(raw_streams) != EXPECTED_MEMBERS[1:]:
+        raise ExporterError("redundancy streams are incomplete or reordered")
+    standalone = {
+        name: len(brotli.compress(payload, quality=11))
+        for name, payload in raw_streams.items()
+    }
+    rows: list[dict[str, Any]] = []
+    for conditioner, conditioner_payload in raw_streams.items():
+        conditioner_bytes = standalone[conditioner]
+        for stream, stream_payload in raw_streams.items():
+            if conditioner == stream:
+                continue
+            conditioned = (
+                len(
+                    brotli.compress(
+                        conditioner_payload + stream_payload,
+                        quality=11,
+                    )
+                )
+                - conditioner_bytes
+            )
+            rows.append(
+                {
+                    "conditioned_bytes": conditioned,
+                    "conditioner": conditioner,
+                    "first_rung": True,
+                    "redundancy_bytes": standalone[stream] - conditioned,
+                    "standalone_bytes": standalone[stream],
+                    "stream": stream,
+                }
+            )
+    return rows
+
+
+def _validate_rate_doctrine_manifest(value: Any) -> None:
+    """Fail closed if any counted stream lacks one audit-triple row."""
+
+    if (
+        not isinstance(value, dict)
+        or value.get("schema") != RATE_DOCTRINE_SCHEMA
+        or [row.get("member") for row in value.get("streams", [])]
+        != list(EXPECTED_MEMBERS[1:])
+    ):
+        raise ExporterError("four-clause stream audit is missing or reordered")
+    triple_keys = {
+        "scorer_visibility",
+        "sensitivity_priced_tolerance",
+        "three_layer_decomposition",
+    }
+    for row in value["streams"]:
+        triple = row.get("audit_triple")
+        if (
+            not isinstance(triple, dict)
+            or set(triple) != triple_keys
+            or any(
+                not isinstance(triple[key], dict) or not triple[key]
+                for key in triple_keys
+            )
+            or row.get("first_rung") is not True
+            or not isinstance(row.get("non_redundancy"), dict)
+            or not row["non_redundancy"]
+        ):
+            raise ExporterError(f"incomplete stream audit: {row.get('member')}")
+    expected = {
+        (left, right)
+        for left in EXPECTED_MEMBERS[1:]
+        for right in EXPECTED_MEMBERS[1:]
+        if left != right
+    }
+    matrix = value.get("ordered_redundancy_matrix")
+    if (
+        not isinstance(matrix, list)
+        or {
+            (row.get("conditioner"), row.get("stream"))
+            for row in matrix
+            if isinstance(row, dict)
+        }
+        != expected
+    ):
+        raise ExporterError("ordered redundancy matrix is incomplete")
+
+
+def _rate_doctrine_manifest(
+    *,
+    chart_raw: bytes,
+    chart_member: bytes,
+    semantic_raw: bytes,
+    semantic_member: bytes,
+) -> dict[str, Any]:
+    """Build the complete four-clause audit without promoting an adverse row."""
+
+    matrix = _ordered_redundancy_matrix(
+        {
+            "base/chart.ddb": chart_raw,
+            "semantic/composed.dds": semantic_raw,
+        }
+    )
+    rows = [
+        {
+            "audit_triple": {
+                "scorer_visibility": {
+                    "authority_surfaces": [
+                        "PoseNet:frame0+frame1",
+                        "SegNet:frame1",
+                    ],
+                    "frame0_seg_facts": 0,
+                    "instrument": (
+                        "DDMRuntimePerturbationV1 counted-to-output and "
+                        "output-to-single-owner checks"
+                    ),
+                    "status": "PARTIAL_STREAM_LEVEL_COORDINATE_FIELD_OWED",
+                },
+                "sensitivity_priced_tolerance": {
+                    "current_quantization": "exact int16 chart coordinates",
+                    "metric": (
+                        "Fisher-margin plus realized inner-Jacobian deltaS/byte"
+                    ),
+                    "score_byte_dual": "25/37545489",
+                    "status": "BLOCKED_UNMEASURED_PER_COORDINATE_TOLERANCE",
+                },
+                "three_layer_decomposition": {
+                    "coder": {
+                        "coded_bytes": len(chart_member),
+                        "codec": "Brotli-Q11",
+                        "raw_bytes": len(chart_raw),
+                    },
+                    "descriptive_form": (
+                        "two-frame 12x16 RGB chart: anchors + axial gradients "
+                        "+ conditioned residuals"
+                    ),
+                    "inherently_compact_dofs": {
+                        "count": len(chart_raw) // 2,
+                        "gauge_quotient": "not_yet_measured",
+                        "storage_dtype": "int16",
+                    },
+                },
+            },
+            "candidate_admissible": False,
+            "first_rung": True,
+            "member": "base/chart.ddb",
+            "non_redundancy": {
+                "canonical_dimension_home": "pair x frame x 12x16 chart",
+                "conditioned_on": [],
+                "single_owner_facts": [
+                    "base photometric chart",
+                    "within-pair low-frequency appearance difference",
+                ],
+            },
+            "verdict_scope": (
+                "Current exact-int16 chart formulation only; the compact-chart "
+                "family remains open pending receiver-closed tolerance rows."
+            ),
+        },
+        {
+            "audit_triple": {
+                "scorer_visibility": {
+                    "authority_surfaces": ["SegNet:frame1"],
+                    "frame0_seg_facts": 0,
+                    "receiver_policy": "frame1_only_seg_free_frame0",
+                    "status": "STRUCTURAL_FRAME_HOME_PROVEN",
+                },
+                "sensitivity_priced_tolerance": {
+                    "current_quantization": "exact categorical code per scorer cell",
+                    "metric": (
+                        "rank4 flip-distance x Fisher margin x realized "
+                        "inner-Jacobian"
+                    ),
+                    "score_byte_dual": "25/37545489",
+                    "status": "BLOCKED_UNMEASURED_BOUNDARY_TOLERANCE_FIELD",
+                },
+                "three_layer_decomposition": {
+                    "coder": {
+                        "coded_bytes": len(semantic_member),
+                        "codec": "Brotli-Q11",
+                        "raw_bytes": len(semantic_raw),
+                    },
+                    "descriptive_form": (
+                        "one frame1-only categorical semantic plane reused at "
+                        "camera resolution"
+                    ),
+                    "inherently_compact_dofs": {
+                        "count": len(semantic_raw),
+                        "gauge_quotient": (
+                            "frame0 semantic plane eliminated; region/boundary "
+                            "grammar factorization still owed"
+                        ),
+                        "storage_dtype": "uint8",
+                    },
+                },
+            },
+            "candidate_admissible": False,
+            "first_rung": True,
+            "member": "semantic/composed.dds",
+            "non_redundancy": {
+                "canonical_dimension_home": "pair x frame1 x scorer cell",
+                "conditioned_on": ["base/chart.ddb"],
+                "single_owner_facts": [
+                    "semantic role assignment",
+                    "role colour prototype reference",
+                ],
+            },
+            "verdict_scope": (
+                "Current exact-cell semantic formulation only; boundary/event "
+                "descriptions and sensitivity-priced coarsening remain open."
+            ),
+        },
+    ]
+    result = {
+        "candidate_admissible": all(
+            bool(row["candidate_admissible"]) for row in rows
+        )
+        and all(int(row["redundancy_bytes"]) <= 0 for row in matrix),
+        "correction_policy": {
+            "counted_correction_streams": [],
+            "description_owned_facts_reencoded": False,
+            "status": "PASS_ZERO_BYTE_CORRECTION_STREAM",
+        },
+        "ordered_redundancy_matrix": matrix,
+        "schema": RATE_DOCTRINE_SCHEMA,
+        "single_owner_facts": [
+            {
+                "dimension_home": "pair x frame x 12x16 chart",
+                "fact": "base photometric chart",
+                "first_rung": True,
+                "owner": "base/chart.ddb",
+            },
+            {
+                "dimension_home": "pair x frame1 x scorer cell",
+                "fact": "semantic role assignment",
+                "first_rung": True,
+                "owner": "semantic/composed.dds",
+            },
+        ],
+        "streams": rows,
+        "verdict_scope": (
+            "E2 exported stream formulations only. Adverse audit rows block "
+            "candidate admission, not the DDM family."
+        ),
+    }
+    _validate_rate_doctrine_manifest(result)
+    return result
+
+
+def _pose_contract(receiver: Any) -> dict[str, Any]:
+    pose6 = np.asarray(receiver.pose6_codes)
+    if pose6.shape != (600, 6) or pose6.dtype != np.uint8:
+        raise ExporterError("nested Pose6 custody changed")
+    return {
+        "classification": "ABSENT_FROM_COMPOSED_PACKET",
+        "compact_inverse_status": "BLOCKED_NOT_PRESENT",
+        "exact_lattice_control": {
+            "archive_bytes": 409_526_925,
+            "d_pose_n64": "0.000060022091887905524",
+            "receipt": (
+                ".omx/research/mdl_polytope_member_solve_receipt_20260721.json"
+            ),
+            "role": "high_byte_receiver_closed_control_not_pose_member",
+        },
+        "nested_pose6": {
+            "bytes": int(pose6.nbytes),
+            "consumption": "inter_pair_worldsheet_only_before_export",
+            "dtype": "uint8",
+            "sha256": _sha256(pose6.tobytes(order="C")),
+            "shape": list(pose6.shape),
+        },
+        "packet_member": None,
+        "receiver_bijection": {
+            "counted_pose_to_output": "NOT_APPLICABLE_ZERO_PACKET_BYTES",
+            "output_pose_effect_to_owner": "FAIL_NO_COMPACT_INVERSE_OWNER",
+        },
+        "verdict_scope": (
+            "E1/E2 composed runtime packet boundary only. Exact two-plane "
+            "lattice feasibility stands; compact code-to-photometry inversion "
+            "is the missing production object."
+        ),
+    }
 
 
 def _block_versions(*, chart_sha256: str, semantic_sha256: str) -> list[dict[str, Any]]:
@@ -520,7 +820,15 @@ def _validate_templates(receiver: Any) -> None:
             )
 
 
-def _compose_semantic_state(receiver: Any, *, batch_pairs: int) -> tuple[np.ndarray, int, str]:
+def _compose_semantic_state(
+    receiver: Any,
+    *,
+    batch_pairs: int,
+    semantic_frame_policy: Literal[
+        "both_frames",
+        "frame1_only_seg_free_frame0",
+    ] = "both_frames",
+) -> tuple[np.ndarray, int, str]:
     if receiver.realization_profile is None:
         raise ExporterError("seed state lacks a counted realization profile")
     _validate_templates(receiver)
@@ -565,6 +873,14 @@ def _compose_semantic_state(receiver: Any, *, batch_pairs: int) -> tuple[np.ndar
                         REALIZATION_PAINT_ORDER.index(role) + 1
                     )
         camera = receiver.render_camera_pairs(indexes)
+        if semantic_frame_policy == "frame1_only_seg_free_frame0":
+            from tac.through_r.resolution_chain import render_grid_to_camera_uint8
+
+            base_grid = receiver.predictor.baseline.render_pairs(indexes)
+            for local in range(stop - start):
+                camera[local, 0] = render_grid_to_camera_uint8(
+                    base_grid[local, 0]
+                )
         payload = np.ascontiguousarray(camera).tobytes(order="C")
         digest.update(payload)
         total += len(payload)
@@ -618,6 +934,11 @@ def export_runtime(
     *,
     config_path: Path,
 ) -> tuple[dict[str, Any], Path]:
+    is_e2 = config.run_id == "ddm_e2_pose_stream_and_doctrine_export_20260723"
+    archive_schema = E2_SCHEMA if is_e2 else SCHEMA
+    semantic_frame_policy = (
+        "frame1_only_seg_free_frame0" if is_e2 else "both_frames"
+    )
     source_path = _require_repo_path(
         config.source_archive_path, label="source_archive_path"
     )
@@ -640,12 +961,17 @@ def export_runtime(
 
     state_archive, receiver, dofs = _compile_seed_state(source_archive)
     labels, raw_bytes, raw_sha256 = _compose_semantic_state(
-        receiver, batch_pairs=config.batch_pairs
+        receiver,
+        batch_pairs=config.batch_pairs,
+        semantic_frame_policy=semantic_frame_policy,
     )
     chart_raw, chart_layout = _chart_payload(receiver)
     chart_member = _frame_blob(chart_raw, kind=0)
+    semantic_raw = labels.tobytes(order="C")
     semantic_member = _frame_blob(
-        labels.tobytes(order="C"), kind=1, dimensions=tuple(labels.shape)
+        semantic_raw,
+        kind=1,
+        dimensions=tuple(labels.shape),
     )
     profile = receiver.realization_profile
     assert profile is not None
@@ -678,7 +1004,7 @@ def export_runtime(
             "sha256": semantic_sha256,
         },
     ]
-    manifest = {
+    manifest: dict[str, Any] = {
         "archive": {
             "source_bytes": len(source_archive),
             "source_sha256": _sha256(source_archive),
@@ -712,7 +1038,7 @@ def export_runtime(
             "sha256": raw_sha256,
         },
         "refinement": dict(REFINEMENT_CONTRACT),
-        "schema": SCHEMA,
+        "schema": archive_schema,
         "sections": sections,
         "state": {
             "batch_pairs": config.batch_pairs,
@@ -720,6 +1046,19 @@ def export_runtime(
             "receiver_effective_dofs": dofs,
         },
     }
+    if is_e2:
+        manifest.update(
+            {
+                "pose_contract": _pose_contract(receiver),
+                "rate_doctrine": _rate_doctrine_manifest(
+                    chart_raw=chart_raw,
+                    chart_member=chart_member,
+                    semantic_raw=semantic_raw,
+                    semantic_member=semantic_member,
+                ),
+                "semantic_frame_policy": semantic_frame_policy,
+            }
+        )
     manifest_payload = rfc8785_canonicalize(manifest)
     members = {
         "manifest.json": manifest_payload,
@@ -763,7 +1102,11 @@ def export_runtime(
         "output_identity": {
             "bytes": raw_bytes,
             "sha256": raw_sha256,
-            "status": "SOURCE_RECEIVER_MEASURED_PACKAGED_RECEIVER_PENDING",
+            "status": (
+                "E2_FRAME1_ONLY_SOURCE_MEASURED_PACKAGED_RECEIVER_PENDING"
+                if is_e2
+                else "SOURCE_RECEIVER_MEASURED_PACKAGED_RECEIVER_PENDING"
+            ),
         },
         "pointer_moved": False,
         "paint_jacobian": paint_jacobian,
@@ -782,7 +1125,7 @@ def export_runtime(
                 "sha256": _sha256(script),
             },
         },
-        "schema": RESULT_SCHEMA,
+        "schema": E2_RESULT_SCHEMA if is_e2 else RESULT_SCHEMA,
         "score_claim": False,
         "seed": config.seed,
         "source": {
@@ -802,8 +1145,20 @@ def export_runtime(
         },
         "typed_config_sha256": config.typed_config_hash(),
     }
+    if is_e2:
+        result.update(
+            {
+                "pose_contract": manifest["pose_contract"],
+                "rate_doctrine": manifest["rate_doctrine"],
+            }
+        )
     receipt_path = _publish_or_verify(
-        output_dir.parent / "ddm_e1_runtime_export_receipt.json",
+        output_dir.parent
+        / (
+            "ddm_e2_runtime_export_receipt.json"
+            if is_e2
+            else "ddm_e1_runtime_export_receipt.json"
+        ),
         rfc8785_canonicalize(result) + b"\n",
     )
     return result, receipt_path
