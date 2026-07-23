@@ -21832,3 +21832,22 @@ archive 177,169 B (SHA cb6cf0ba…, roundtrip byte-exact ×3) → **d_seg 5.456e
 `verdict_scope: instance — one named PR110-lineage member; the realized row and transfer ratios are member-specific measurements; the transfer LAW's generality across members is the registered open question.`
 
 Pointer honest: **0.1910828242 [contest-CPU] UNMOVED** (submittable) · bank 0.18804 (borrowed, non-submission) unchanged.
+
+---
+
+## FEED-603-m5r-fresh-solve-refutes-greedy-confound (2026-07-23, MAIN, from ddm_m5r rc=0 merged 1f3e9dc38f)
+
+**Verdict `SUBSET_PROPOSAL_NOT_ADMITTED_AT_FULL_N600` — an honest negative that REFUTES MAIN's greedy-instrument-confound hypothesis (this instance) and closes the correction-line question on Road.**
+
+Measured (all-n600, [macOS-CPU frozen-scorer advisory], score_claim=false):
+- Fresh 368-DOF receiver-closed solve, top-24 exact reach states, knee `coherent_worldsheet_y_-1` @133,944B/936 errors.
+- Subset→full Pearson r=0.595 → full replay honestly REJECTED the selected state: **Road −28,599 (HARMED), Lane −151,610 (HARMED)**, Movable +14,550, MyCar +10,464, Undriv +27,057.
+- **Greedy comparison: fresh solve −1.29% Road vs v19b greedy +3.75%** → `GREEDY-INSTRUMENT-CONFOUND-NOT-CONFIRMED_BY_THIS_INSTANCE` (FEED-603-mchain-sweep confound #1 resolved AGAINST the hypothesis, this instrument).
+- c1 credited solvable fraction **0**; #366 interval unchanged [0, 2,377,273].
+- **Custody correction: "706-param lift" → 368 receiver-effective integer DOFs** (326 island-worldsheet translations + 18 shared-template + …) — j2/c1 citations of 706 are superseded.
+
+`verdict_scope: instance — V15 368-receiver-effective-DOF × top-24 proxy screen × exact restricted master order-4 × c1 200,000B box; explicitly NOT a negative claim about the representation family (arm's own scoping); v18b column family remains open under a reviewed hybrid compiler.`
+
+**THE CONVERGENT SIGNAL (m5 × m5r × m7, decomposed):** 326/368 of the live DOF space is island TRANSLATIONS — a *correction* vocabulary. Road's 2,210,770-error mass is unreachable by corrections in BOTH tested instruments (greedy +3.7%, fresh solve −1.3%). Road needs a *description* vocabulary (trunk/describe line). This triangulates with m7 (crux box CLOSED-ON-BORROWED at 177KB): **the single remaining problem is the OUR-SUBSTRATE describe line + the #636 runtime exporter that turns a composed our-substrate state into an eval-able archive.** v19c's saturation asymptote (still running) will quantify the correction ceiling but cannot change this structure.
+
+Pointer honest: **0.1910828242 [contest-CPU] UNMOVED.**
