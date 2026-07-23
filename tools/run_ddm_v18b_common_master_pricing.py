@@ -704,6 +704,16 @@ def _objective_delta(
     )
 
 
+def _source_resume_identity(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the immutable source identity without live preflight telemetry."""
+
+    identity = dict(payload)
+    storage = dict(identity.get("storage_preflight", {}))
+    storage.pop("free_bytes", None)
+    identity["storage_preflight"] = storage
+    return identity
+
+
 def _source_checkpoint(
     *,
     root: Path,
@@ -765,6 +775,18 @@ def _source_checkpoint(
     }
     if not payload["storage_preflight"]["pass"]:
         raise DirectDescriptionError("v18b storage preflight failed")
+    if path.exists():
+        existing = _json(path)
+        _require_checkpoint_identity(
+            existing,
+            config_hash=config.typed_config_hash(),
+            stage="common_exact_r_source_closure",
+        )
+        if rfc8785_canonicalize(_source_resume_identity(existing)) != rfc8785_canonicalize(
+            _source_resume_identity(payload)
+        ):
+            raise DirectDescriptionError("common exact-R source checkpoint custody differs")
+        return path
     _write_json(path, payload)
     return path
 

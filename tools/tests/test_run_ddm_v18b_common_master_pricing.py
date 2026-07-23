@@ -13,6 +13,7 @@ from tools.run_ddm_v18b_common_master_pricing import (
     _largest_prefix_not_exceeding,
     _load_bundle_rows,
     _miqp_diagonal_proposal,
+    _source_resume_identity,
 )
 
 
@@ -82,3 +83,29 @@ def test_falsifier_requires_three_clean_rounds_and_no_equal_byte_win() -> None:
     equal[-1]["beats_v12"] = False
     history[-1]["negative_reduced_cost_count"] = 1
     assert _formulation_falsified(history, equal) == (False, False, False)
+
+
+def test_source_resume_identity_excludes_only_live_free_space() -> None:
+    first = {
+        "schema": "checkpoint",
+        "common_master": {"sha256": "a" * 64},
+        "storage_preflight": {
+            "free_bytes": 10_000,
+            "required_free_bytes": 100,
+            "pass": True,
+        },
+    }
+    resumed = {
+        **first,
+        "storage_preflight": {
+            **first["storage_preflight"],
+            "free_bytes": 9_000,
+        },
+    }
+    drifted = {
+        **resumed,
+        "common_master": {"sha256": "b" * 64},
+    }
+
+    assert _source_resume_identity(first) == _source_resume_identity(resumed)
+    assert _source_resume_identity(first) != _source_resume_identity(drifted)
