@@ -860,9 +860,13 @@ def _stable_pose_advection(xi_segment: np.ndarray, mean_target: np.ndarray) -> n
         return np.zeros((x.shape[1], y.shape[1]), np.float64)
     x_centered = x - x.mean(axis=0, keepdims=True)
     y_centered = y - y.mean(axis=0, keepdims=True)
-    gram = x_centered.T @ x_centered
+    # NumPy linked against macOS Accelerate can emit false divide/overflow
+    # warnings for these small GEMMs even when the finite result is bit-equal
+    # to the scalar contraction.  Explicit einsum keeps the probe warning-clean.
+    gram = np.einsum("ni,nj->ij", x_centered, x_centered, optimize=False)
     gram.flat[:: gram.shape[0] + 1] += POSE_RIDGE_LAMBDA
-    advection = np.linalg.solve(gram, x_centered.T @ y_centered)
+    cross = np.einsum("ni,nj->ij", x_centered, y_centered, optimize=False)
+    advection = np.linalg.solve(gram, cross)
     if not np.all(np.isfinite(advection)):
         raise ProbeError("pose advection regression produced non-finite coefficients")
     return advection
@@ -993,7 +997,8 @@ def _fit_kinetic_program(
             if len(xi_segment) >= 2:
                 advection = _stable_pose_advection(xi_segment, mean_target)
                 xi_advection[segment, class_id] = advection
-                target = target - (xi_segment @ advection)[:, None, :]
+                pose_delta = np.einsum("nd,dc->nc", xi_segment, advection, optimize=False)
+                target = target - pose_delta[:, None, :]
             flattened = target.reshape(stop - start, -1)
             coefficients = np.linalg.lstsq(design, flattened, rcond=None)[0]
             site_coef[segment, indices] = coefficients.reshape(degree + 1, len(indices), 2).transpose(1, 0, 2)
@@ -1086,9 +1091,13 @@ def decode_program(program: ProgramState) -> DecodedProgram:
             sites[start:stop] = np.einsum("fd,kdc->fkc", design, coefficient[segment], optimize=True)
             weights[start:stop] = np.einsum("fd,cd->fc", design, weight_coef[segment], optimize=True)
             for class_id in range(N_CLASSES):
-                sites[start:stop, site_classes == class_id] += (xi[start:stop] @ advection[segment, class_id])[
-                    :, None, :
-                ]
+                pose_delta = np.einsum(
+                    "nd,dc->nc",
+                    xi[start:stop],
+                    advection[segment, class_id],
+                    optimize=False,
+                )
+                sites[start:stop, site_classes == class_id] += pose_delta[:, None, :]
     return DecodedProgram(
         metadata,
         site_classes,

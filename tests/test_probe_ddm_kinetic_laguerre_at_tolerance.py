@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -146,6 +147,16 @@ def test_rank_deficient_pose_regression_is_finite_and_quantizable() -> None:
     assert np.isfinite(advection).all()
     quantized = _quantize_checked(advection, 8.0, "<i2", "test_advection")
     assert quantized.dtype == np.dtype("<i2")
+
+
+def test_full_length_pose_regression_is_warning_clean() -> None:
+    rng = np.random.default_rng(1234)
+    xi = rng.normal(size=(600, 6))
+    target = rng.uniform(0, 512, size=(600, 2))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        advection = _stable_pose_advection(xi, target)
+    assert np.isfinite(advection).all()
 
 
 def test_quantization_fails_closed_on_nonfinite_or_overflow() -> None:
