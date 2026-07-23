@@ -1,0 +1,300 @@
+{
+  "schema": "ddm_joint_descent_witness_program_ticket.v1",
+  "ticket_id": "ddm_j1_366_joint_descent_20260723",
+  "lane_id": "ddm_j1_366_joint_descent_ticket",
+  "utc": "2026-07-23T00:32:10Z",
+  "status": "SEALED_PREPARED_BLOCKED_NOT_FIREABLE",
+  "execution_allowed": false,
+  "research_only": true,
+  "paid_dispatch_allowed": false,
+  "launcher_or_training_started": false,
+  "main_landing_review_required": true,
+  "authority": {
+    "delegation_prompt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j1_366_joint_descent_ticket_20260723T001755Z.wrapped.prompt.txt",
+    "delegation_prompt_sha256": "274937bc20f08b1e2492631ba57d747620fe91b79459c996f8c6fc304174c5cf",
+    "delegation_prompt_bytes": 6807,
+    "source_commit": "968e499a99640f811fd13da8e30531b2cf127425",
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false
+  },
+  "compile_custody": {
+    "typed_schema": "DirectDescriptionJointDescentTypedConfigV1.PROPOSED",
+    "hash_scope": "RFC8785 canonical bytes of semantic_program",
+    "hash_algorithm": "sha256",
+    "semantic_program_sha256": "68a8aa97b25a6be2f8f08e36fcf4957fe032233e43b1050b75ad13c9d7dad89c",
+    "existing_compiler_accepts_schema": false,
+    "existing_governed_launcher_accepts_named_config": false,
+    "claim": "HASH_SEALED_DECLARATIVE_TYPED_CONFIG_NOT_EXECUTABLE_COMPILE"
+  },
+  "settled_trigger": {
+    "trigger_fired": true,
+    "merged_commit": "968e499a99640f811fd13da8e30531b2cf127425",
+    "facts_are_cited_not_rederived": true,
+    "closed_post_hoc_formulations": [
+      "v12 plateau d_seg=0.034004 with 100 percent obligation-pool closure",
+      "v14 mask d_seg=0.000282948812 versus through-R Movable d_seg=0.291615222639; G4 transferred 5.29 percent",
+      "v15 zero-collateral feasible set EMPTY; zero updates admitted; minimum off-target collateral 13 Movable and 23 Lane cells",
+      "v13 priced trade was net-negative"
+    ],
+    "positive_joint_descent_anchor": "R1 crossed the photometric wall and reached byte-close d_pose=0.001610 where post-hoc composition failed"
+  },
+  "semantic_program": {
+    "schema": "DirectDescriptionJointDescentTypedConfigV1.PROPOSED",
+    "program_id": "ddm_j1_366_joint_descent_n600_seed0",
+    "seed": 0,
+    "deterministic_algorithms": true,
+    "num_pairs": 600,
+    "target_cache": {
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "bytes": 5078017610,
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "warm_start": {
+      "kind": "receiver_closed_v15_composed_carrier_archive",
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+      "bytes": 133941,
+      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+      "receipt_path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_scorer_solved_templates_n600_receipt.json",
+      "receipt_sha256": "5ed6f830b3749a51e0d300a9104fda9a77e86bbeb3b81428a20e1ec0d3dcfcb8",
+      "receiver_parse_reencode_custody": "GREEN_LANDED_RECEIPT",
+      "current_parametric_stream_counts": {
+        "worldsheet_g1_payload_bytes": 29810,
+        "worldsheet_g1_object_slots": 10,
+        "worldsheet_track_count": 0,
+        "worldsheet_knot_count": 0,
+        "lane_program_count": 0,
+        "lane_knot_count": 0,
+        "scorer_solved_template_count": 6
+      },
+      "optimizer_state_loadable": false,
+      "optimizer_state_load_blocker": "NO_DIRECT_DESCRIPTION_JOINT_DESCENT_CONSUMER_OR_V15_TO_OPTIMIZER_ADAPTER; CURRENT V15 OWNS A G1 WORLDSHEET PAYLOAD BUT ZERO EXPLICIT TRACK/KNOT OR LANE-PROGRAM RECORDS, SO A TYPED PARAMETER-LIFT OR COUNTED SEED IS REQUIRED"
+    },
+    "vehicle": {
+      "temporal_base": "nested counted v6 pose6 temporal stream already owned by the v15 archive",
+      "counted_parameterization": [
+        "island worldsheet tracks, knots, birth and death events",
+        "lane production programs, knots, dash phase, width and chart drift",
+        "six shared scorer-solved row-band RGB templates plus a bounded small solved-template DOF",
+        "existing compact v6 temporal pose6 stream and any admitted xi-event refinements"
+      ],
+      "forbidden_payloads": [
+        "scorer weights",
+        "ground-truth argmax tables",
+        "decoded per-frame masks or RGB planes",
+        "post-hoc pose composition",
+        "uncounted video-derived constants hidden in decoder code"
+      ],
+      "counted_payload_rule": "Only grammar parameters and admitted solved-template/xi degrees of freedom enter archive.zip. Generic deterministic receiver code is free; all video-derived state is counted."
+    },
+    "joint_objective": {
+      "formula": "100*d_seg_R + sqrt(10*d_pose_YUV6_R) + 25*archive_bytes/37545489",
+      "segnet": "frozen contest SegNet with #76 margin/Fisher loop",
+      "posenet": "frozen official two-frame YUV6 PoseNet",
+      "roundtrip": "eval_roundtrip through exact resize, uint8, parse-back and receiver",
+      "pose_gradient": "differentiable YUV6 inside the joint trust region; exact chunked evaluator verdicts remain authority",
+      "ema_decay": 0.997,
+      "stability": {
+        "preset": "amber",
+        "grad_clip": 0.5,
+        "pose_grad_coeff_max": 25,
+        "grad_normalize": true,
+        "per_group_grad_clip": true
+      },
+      "pose_engagement": {
+        "lever": "PoseFinishConditioningGate",
+        "source_commit": "b617cef5268f88b9f0ccaa33055ec0f7635ef969",
+        "sigma_min_plateau_primary": true,
+        "sigma_star_advisory_only": true,
+        "banked_r1_fallback_d_pose": 0.001610
+      },
+      "allocation": {
+        "rank_metric": "frozen scorer Fisher/top1-top2 margin",
+        "realization_predictor": "corrected first-order plus realized secant inner-Jacobian",
+        "residual_basis": "curvelet_or_shearlet_only",
+        "marginal_stop_delta_s_per_byte": 0.000000665860993116
+      }
+    },
+    "compute_contract": {
+      "baseline": {
+        "device": "MLX_GPU",
+        "environment": {
+          "TAC_MLX_CUSTOM_GROUPED_BACKWARD": "1"
+        },
+        "required_kernels": [
+          "custom grouped backward measured approximately 17x versus the unfused reference",
+          "fused differentiable-R kernel"
+        ],
+        "chunked_verdicts": true,
+        "authority": "speed path only; exact chunked evaluator replay on declared contest axes remains verdict authority"
+      },
+      "conditional_prelaunch_kernel_work": [
+        {
+          "work_item": "fuse worldsheet/lane grammar raster plus exact-R JVP/VJP",
+          "activate_if": "real J1 timing smoke projects more than 30 hours or materialized intermediates bind the 116 GiB ceiling",
+          "expected_gain": "SPECULATIVE 1.5x-3x step throughput and lower intermediate peak; must be measured by equal-config smoke",
+          "authority_change": false
+        },
+        {
+          "work_item": "batch official-YUV6 construction and Pose VJP without materializing redundant full-frame temporaries",
+          "activate_if": "component telemetry identifies YUV6/Pose backward as greater than 25 percent of step time or memory peak",
+          "expected_gain": "SPECULATIVE 1.2x-2x affected component throughput; must preserve NumPy-fp32 and exact-verdict parity",
+          "authority_change": false
+        }
+      ],
+      "ane_cpu_parallelism": "Allowed only for deterministic encode-side preprocessing or asynchronous read-only verdict preparation with explicit custody; never infer contest-axis results from ANE/MLX/macOS CPU."
+    },
+    "stage_plan": [
+      {
+        "stage_id": "00_receiver_replay_and_adapter",
+        "trainable_groups": [],
+        "entry_requirement": "v15 exact SHA and receipt validate; adapter emits identical receiver bytes before any optimizer step",
+        "exit_targets": {
+          "d_seg_max": 0.027470296224,
+          "movable_d_seg_max": 0.291615222639,
+          "lane_d_seg_max": 0.435195521828,
+          "archive_bytes_exact": 133941,
+          "target_provenance": "MEASURED_CURRENT_RECEIVER_REPLAY_NO_REGRESSION"
+        }
+      },
+      {
+        "stage_id": "01_island_worldsheet_joint_descent",
+        "trainable_groups": ["island_worldsheet", "shared_template_dof"],
+        "exit_targets": {
+          "d_seg_max": 0.020602722168,
+          "movable_d_seg_max": 0.1458076113195,
+          "lane_d_seg_max": 0.435195521828,
+          "target_provenance": "PREREGISTERED_DERIVED_FRACTION_LADDER_0.75_GLOBAL_0.5_MOVABLE"
+        }
+      },
+      {
+        "stage_id": "02_lane_production_joint_descent",
+        "trainable_groups": ["lane_program", "lane_knots", "dash_phase", "shared_template_dof"],
+        "exit_targets": {
+          "d_seg_max": 0.013735148112,
+          "movable_d_seg_max": 0.1458076113195,
+          "lane_d_seg_max": 0.217597760914,
+          "target_provenance": "PREREGISTERED_DERIVED_FRACTION_LADDER_0.5_GLOBAL_0.5_LANE"
+        }
+      },
+      {
+        "stage_id": "03_pose_coupled_finish",
+        "trainable_groups": ["island_worldsheet", "lane_program", "shared_template_dof", "xi_event"],
+        "exit_targets": {
+          "d_seg_max": 0.006867574056,
+          "movable_d_seg_max": 0.07290380565975,
+          "lane_d_seg_max": 0.108798880457,
+          "d_pose_max": 0.001610,
+          "target_provenance": "PREREGISTERED_DERIVED_QUARTER_LADDER_PLUS_MEASURED_BANKED_R1_POSE"
+        }
+      },
+      {
+        "stage_id": "04_exact_box_fork",
+        "trainable_groups": ["all_low_dim_counted_groups"],
+        "exit_targets": {
+          "d_seg_max": 0.00116,
+          "movable_d_seg_max": 0.01,
+          "lane_d_seg_max": 0.01,
+          "archive_bytes_max": 200000,
+          "target_provenance": "PREREGISTERED_BOX_FORK_GLOBAL_DSEG_AND_SPECULATIVE_PER_STRATUM_WATCH_TARGETS"
+        },
+        "fork": "If the same receiver-closed artifact satisfies global d_seg<=0.00116 and archive_bytes<=200000 with Pose present, run exact contest-CPU then contest-CUDA box evaluation. Otherwise stop with the active per-stratum or rate blocker; do not promote."
+      }
+    ],
+    "checkpoint_contract": {
+      "resume_from_disk": true,
+      "atomic_write": "temporary file plus os.replace",
+      "periodic_intra_stage": true,
+      "every_stage_end": true,
+      "all_stage_files_preserved": true,
+      "distinct_stage_encoded_names": true,
+      "ema_shadow_saved_not_live_weights": true,
+      "required_state": [
+        "all low-dimensional grammar and template parameters",
+        "optimizer and scheduler state",
+        "EMA shadow",
+        "stage id and step position",
+        "seed and deterministic RNG state",
+        "typed-config hash and source archive hash",
+        "evaluator/cache/source hashes",
+        "admission telemetry and per-stage exact receiver metrics"
+      ]
+    },
+    "telemetry": {
+      "every_exact_verdict": [
+        "d_seg global and per class",
+        "d_pose official YUV6",
+        "archive bytes",
+        "score-unit delta per byte",
+        "Fisher margin and realized secant error",
+        "effective step norm and amber clip direction cosine",
+        "peak memory and free-memory floor",
+        "receiver parse-back and output mutation"
+      ],
+      "chunked_n600_verdict": true,
+      "pointer_promotion_from_advisory_forbidden": true
+    }
+  },
+  "governed_invocation": {
+    "launcher": "tools/launch_witness_run.py",
+    "proposed_named_config": "ddm_j1_366_joint_descent",
+    "dry_run_argv_after_main_adapter_landing": [
+      "python3",
+      "tools/launch_witness_run.py",
+      "--gt-cache",
+      "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "--num-pairs",
+      "600",
+      "--config",
+      "ddm_j1_366_joint_descent",
+      "--out-dir",
+      "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j1_366_joint_descent_n600_seed0",
+      "--label",
+      "ddm-j1-366-joint-descent-n600-seed0",
+      "--purpose",
+      "#366 grammar-parametrized joint Seg/Pose descent from sealed v15 receiver",
+      "--dry-run"
+    ],
+    "fire_argv_after_all_gates_green": [
+      "python3",
+      "tools/launch_witness_run.py",
+      "--gt-cache",
+      "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "--num-pairs",
+      "600",
+      "--config",
+      "ddm_j1_366_joint_descent",
+      "--out-dir",
+      "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j1_366_joint_descent_n600_seed0",
+      "--label",
+      "ddm-j1-366-joint-descent-n600-seed0",
+      "--purpose",
+      "#366 grammar-parametrized joint Seg/Pose descent from sealed v15 receiver"
+    ],
+    "current_behavior": "ARGPARSE_REFUSE_UNKNOWN_CONFIG_BEFORE_ANY_LAUNCH",
+    "fire_authority": "MAIN_REVIEW_PLUS_SEPARATE_OPERATOR_GO_AFTER_ADAPTER_MEMORY_GOVERNOR_AND_DRY_START_GREEN"
+  },
+  "memory_and_wallclock": {
+    "real_config_projection_status": "BLOCKED_NO_EXECUTABLE_CONFIG_OR_MATCHING_MEMORY_MODEL",
+    "historical_r1_levelset_surrogate_peak_gib": 67.6,
+    "historical_r1_surrogate_label": "MEASURED_MODEL_OUTPUT_FOR_DIFFERENT_LEVELSET_CONSUMER_NOT_ADMISSION_AUTHORITY",
+    "observed_host_total_gib": 128.0,
+    "observed_host_available_gib": 96.22451782226562,
+    "operator_sole_workload_ceiling_gib": 116.0,
+    "wallclock_surrogate": "DERIVED 17.3 hours at 108 epochs if the historical 48 min/epoch full-verdict cost scaled ideally by eval-every=5; preregister 17-30 hours because no current J1 timing smoke exists; baseline assumes MLX-GPU custom grouped backward plus fused differentiable-R",
+    "admission": false
+  },
+  "prelaunch_blockers": [
+    "DIRECT_DESCRIPTION_JOINT_DESCENT_TYPED_CONFIG_COMPILER_MISSING",
+    "V15_RECEIVER_TO_OPTIMIZER_WARMSTART_ADAPTER_MISSING",
+    "V15_G1_PAYLOAD_TO_TRAINABLE_WORLDSHEET_PARAMETER_LIFT_MISSING",
+    "LANE_PROGRAM_ZERO_STATE_OR_COUNTED_SEED_CONTRACT_MISSING",
+    "GOVERNED_LAUNCHER_NAMED_CONFIG_ROUTE_MISSING",
+    "REAL_J1_MEMORY_PROJECTION_AND_SYSTEM_AWARE_RECEIPT_MISSING",
+    "REAL_N600_BOUNDED_DRY_START_AND_RESUME_ROUNDTRIP_MISSING",
+    "SAME_OUTDIR_AND_CONFIG_FRESHNESS_TELEMETRY_RECEIPTS_MISSING",
+    "MAIN_LANDING_REVIEW_AND_SEPARATE_OPERATOR_GO_MISSING"
+  ],
+  "verdict": "PREP_COMPLETE_EXECUTION_BLOCKED_BY_MISSING_CONSUMER_AND_REAL_PREFLIGHT",
+  "verdict_scope": "launch-ticket preparation for the proposed v15 grammar-parametrized #366 joint-descent vehicle; no statement about vehicle efficacy",
+  "craft_authority": "docs/operating_manual_craft_handoff.md"
+}
