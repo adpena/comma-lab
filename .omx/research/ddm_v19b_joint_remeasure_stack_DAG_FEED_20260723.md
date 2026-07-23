@@ -149,4 +149,3 @@ MAIN must independently verify:
 5. four n64 and 38 n600 batch checkpoints, archive identity, and digest chains;
 6. c1 role/residual arithmetic, 16,384-byte handoff formulas, false-authority
    labels, pointer immobility, and no inferred contest score.
-

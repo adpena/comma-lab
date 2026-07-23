@@ -166,4 +166,3 @@ template index and proves bit-identical receiver camera bytes.
 The equations govern only the SHA-bound v19b instance and its n64/n600
 macOS-CPU frozen-scorer advisory measurements. They do not establish a
 contest-CPU/CUDA score, family optimum, promotion, or pointer movement.
-
