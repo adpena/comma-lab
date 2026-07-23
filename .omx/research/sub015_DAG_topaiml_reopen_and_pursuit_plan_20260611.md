@@ -21782,3 +21782,35 @@ verdict_scope: formulation — the generated-vocabulary column-generation FORMUL
 - It is **NOT sub-0.15** by the three measured zero-rate levers. Sub-0.15 (154 KB) needs either a receiver redesign routing payload through ker(A)'s 80.67% nullity, or a different description family — both OPEN, none closed.
 
 **HANDOFF (unchanged, for restored Fable thread + operator GO):** highest-EV is still to verify the 177 KB member byte-closes with REALIZED distortion → immediate ~0.165 pointer-mover candidate (Modal ≤$20). The ker(A)-payload-routing receiver redesign is the named next sub-0.15 reformulation.
+
+---
+
+## FEED-603-mchain-naive-toy-confound-sweep (2026-07-23, MAIN, operator-directed "was m5 engineered correctly? m3 as well — naive/toy/confound sweep")
+
+**Scope:** m3 / m4 / m5 / m6 re-graded from their RECEIPTS (not their landing summaries), instrument-vs-charter lens. Two respawns fired.
+
+### Per-arm verdicts
+
+| Arm | Charter | Instrument actually used | Grade |
+|---|---|---|---|
+| **m3** (scope repartition) | audit landed receipts, name the certification gap | landed receipts (correct for an audit) | **OPTIMAL-FORM for its audit charter** — every uncertifiable field honestly `None`; it NAMED the gap ("no full-stratum multicoefficient solve") that spawned m5 |
+| **m4** (rate floor) | derive gap arithmetic + lever credits | in-custody member audit + measured coder rows | **OPTIMAL-FORM for a derivation arm** — no additivity claimed, pools named, exact-C1 409MB measured; flagged its own #575 custody gap |
+| **m5** (solve coverage) | **RUN the fresh per-stratum multicoefficient solve; Road frame_1 = THE decisive cell** | `measurement.multicoefficient_candidate.source = "v19b sequential joint stack"` — replay coverage of the pre-existing 10-move greedy stack; `Road_frame_1 = PARTIAL_REACH_MEASURED_FULL_SOLVE_NOT_CERTIFIED` | **PARTIAL/NAIVE** — surrogate-for-the-thing-itself; the decisive solve was never run. Internally honest (refused certification, scoped INSTANCE) — the arm did not fake; it under-delivered the charter |
+| **m6** (close 22,645B) | measure the 3 zero-rate levers' credits | current-receiver measured credits | **OPTIMAL-FORM for a $0 audit** — 13B honest; correctly framed ker(A) 0B as current-design fact, not capacity |
+
+### The named confounds (the sweep's real output)
+
+1. **GREEDY-INSTRUMENT MONOCULTURE (the big one):** m3 + m5 both measure "correction-line reach" through the v19b greedy 10-move stack. Every "correction cannot close Road (3.7%)" claim is scoped to THAT instrument. **v19c (running) extends the SAME greedy instrument — its saturation asymptote will be a GREEDY asymptote, not a solve reach.** Fresh-solve reach of Road frame_1 is genuinely UNMEASURED. → m5r respawned.
+2. **SOLVE-DISTORTION ≠ REALIZED-DISTORTION:** the relaxed-receiver 177,169B member's d_seg 1.5196e-4 / d_pose 1.0184e-4 are fp32-solve numbers; #532 (uint8 breaks range(A), Δ=62.74) + realization-is-quantization-gated mean realized distortion is UNKNOWN. **The 0.16508 arithmetic S is a HYPOTHESIS until realized through the actual decode.** → m7 respawned.
+3. **NOMENCLATURE:** "audited member" ≠ byte-closed candidate. No candidate exists yet; do not cite 0.165 as one.
+4. **MAIN CUSTODY ERROR (mine, corrected):** my m5 disposition + FEED-603-m5 framed "correction line CANNOT cleanly close Road" as if the charter question was answered. Honest reading: "the v19b greedy stack does not close Road; whether a fresh solve can is OPEN." This FEED supersedes that framing. The m4×m5 two-vehicle reconciliation SURVIVES (m4 is instrument-independent), but its m5 leg is instrument-scoped.
+5. **Linear counterfactual arithmetic:** m3's `2,377,273 − 73,945 = 2,303,328` subtracts v19b flips linearly despite v19b's own measured NON-additivity (+0.0805 amplification) — approximation, flag on any consumer.
+6. **m4 #575 custody gap:** mounted-code git head + upstream SHA not preserved (m4 self-flagged) — m7 charter fixes it for its landing.
+
+`verdict_scope: instance — per-arm grades; the correction-line-limit claims are re-scoped from FORMULATION to INSTANCE(v19b-greedy-stack); no family/paradigm closure asserted or retracted.`
+
+### Respawns fired (fleet: v19c + m7 + m5r = 3/4)
+- **ddm_m7_relaxed_receiver_realize_byteclose** (20260723T115430Z, task #648) — kills confounds 2+3+6: realize the 177KB member through real receiver + uint8, S_realized vs 0.19108 vs 0.16508; fork → BYTE-CLOSED_CANDIDATE_FOR_MODAL_EXACT_EVAL. **The frontier-lowering arm.**
+- **ddm_m5r_road_frame1_fresh_solve** (20260723T115443Z, task #649) — kills confound 1: the fresh solve m5 never ran; Road reach curve → #366 true scope + greedy-vs-solve gap.
+
+Pointer honest: **0.1910828242 [contest-CPU] UNMOVED.**
