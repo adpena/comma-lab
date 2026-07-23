@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import lzma
+import math
 import struct
 import zlib
 from collections.abc import Iterable, Sequence
@@ -48,6 +49,88 @@ class G1MovableWorldsheetMetadata:
     payload_sha256: str
     decoded_mask_errors: int | None
     decoded_clean_rest_dseg: float | None
+
+
+@dataclass(frozen=True, slots=True)
+class G1ShapeTemplateV1:
+    """One exact relative polygon owned by the counted G1 SHAPE stream.
+
+    ``template_ref`` is content-addressed.  Keeping the integer vertices in the
+    lift is intentional: they are already counted in G1 and are the lossless
+    residual around which the low-dimensional aspect/rotation coordinates move.
+    """
+
+    template_ref: str
+    relative_vertices_xy: tuple[tuple[int, int], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class G1WorldsheetKnotV1:
+    """Explicit per-island knot recovered from one G1 observation."""
+
+    object_id: int
+    slot_id: int
+    pair_index: int
+    center_x: int
+    center_y: int
+    template_ref: str
+    aspect_log: float
+    rotation_radians: float
+
+
+@dataclass(frozen=True, slots=True)
+class G1WorldsheetTrackV1:
+    """One contiguous birth/persist/death lifecycle in a reusable G1 slot."""
+
+    object_id: int
+    slot_id: int
+    generation: int
+    birth_pair: int
+    death_pair_exclusive: int
+    knot_indices: tuple[int, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class G1WorldsheetParameterLiftV1:
+    """Lossless typed parameter surface for a counted G1 derivation string.
+
+    The lift does not add a second payload.  Re-emission rebuilds EVENT,
+    CENTROID, and SHAPE from the typed records and passes them through the same
+    canonical codec selection as :func:`encode_g1_movable_worldsheet`.
+    """
+
+    pair_count: int
+    max_slots: int
+    tracks: tuple[G1WorldsheetTrackV1, ...]
+    knots: tuple[G1WorldsheetKnotV1, ...]
+    templates: tuple[G1ShapeTemplateV1, ...]
+    source_payload_sha256: str
+    source_payload_bytes: int
+
+
+def _shape_parameters(relative: np.ndarray) -> tuple[float, float]:
+    """Return deterministic log-aspect and major-axis rotation for one polygon."""
+
+    centered = np.asarray(relative, dtype=np.float64)
+    centered = centered - centered.mean(axis=0, keepdims=True)
+    covariance = centered.T @ centered / max(1, len(centered))
+    values, vectors = np.linalg.eigh(covariance)
+    major = max(float(values[-1]), 1.0e-12)
+    minor = max(float(values[0]), 1.0e-12)
+    aspect_log = 0.5 * math.log(major / minor)
+    vector = vectors[:, -1]
+    rotation = math.atan2(float(vector[1]), float(vector[0]))
+    # Eigenvectors have a sign ambiguity.  Canonicalize to [-pi/2, pi/2).
+    if rotation >= math.pi / 2:
+        rotation -= math.pi
+    elif rotation < -math.pi / 2:
+        rotation += math.pi
+    return aspect_log, rotation
+
+
+def _template_ref(relative: np.ndarray) -> str:
+    vertices = np.ascontiguousarray(relative, dtype="<i4")
+    return hashlib.sha256(struct.pack("<I", len(vertices)) + vertices.tobytes()).hexdigest()
 
 
 @dataclass(slots=True)
@@ -396,9 +479,206 @@ def decode_g1_movable_worldsheet(
     return rendered, metadata
 
 
+def lift_g1_movable_worldsheet(payload: bytes) -> G1WorldsheetParameterLiftV1:
+    """Lift a canonical G1 payload into explicit lifecycle and knot records.
+
+    This is a parser-to-parameters operation, not a mask re-extraction.  It
+    consumes the exact EVENT/CENTROID/SHAPE symbols, so slot identity, birth and
+    death, centroid deltas, polygon ordering, and codec-relevant integer values
+    survive.  G1's production encoder emits absolute relative shapes; a future
+    delta-shape revision is refused until it receives its own lossless lift.
+    """
+
+    streams = _decode_envelope(payload)
+    by_name = dict(streams)
+    event = by_name["EVENT"]
+    event_offset = 0
+    pairs, event_offset = _get_uleb(event, event_offset)
+    slots, event_offset = _get_uleb(event, event_offset)
+    presence_size = (pairs * slots + 7) // 8
+    if len(event) - event_offset != presence_size:
+        raise DirectDescriptionError("G1 lift EVENT stream length mismatch")
+    presence = (
+        np.unpackbits(np.frombuffer(event[event_offset:], dtype=np.uint8), bitorder="little")[: pairs * slots]
+        .reshape(pairs, slots)
+        .astype(bool)
+    )
+    centroid_values = _decode_signed(by_name["CENTROID"], int(presence.sum()) * 2)
+    centroid_offset = 0
+    shape = by_name["SHAPE"]
+    shape_offset = 0
+    previous_centroids: dict[int, np.ndarray] = {}
+    active_object: dict[int, int] = {}
+    generations = np.zeros(slots, dtype=np.int64)
+    track_rows: dict[int, dict[str, object]] = {}
+    knots: list[G1WorldsheetKnotV1] = []
+    templates: dict[str, G1ShapeTemplateV1] = {}
+    next_object_id = 0
+    for pair_index in range(pairs):
+        for slot_id in range(slots):
+            if not presence[pair_index, slot_id]:
+                previous_centroids.pop(slot_id, None)
+                object_id = active_object.pop(slot_id, None)
+                if object_id is not None:
+                    track_rows[object_id]["death_pair_exclusive"] = pair_index
+                continue
+            if slot_id not in active_object:
+                object_id = next_object_id
+                next_object_id += 1
+                active_object[slot_id] = object_id
+                track_rows[object_id] = {
+                    "object_id": object_id,
+                    "slot_id": slot_id,
+                    "generation": int(generations[slot_id]),
+                    "birth_pair": pair_index,
+                    "death_pair_exclusive": pairs,
+                    "knot_indices": [],
+                }
+                generations[slot_id] += 1
+            object_id = active_object[slot_id]
+            delta_centroid = centroid_values[centroid_offset : centroid_offset + 2]
+            centroid_offset += 2
+            old_centroid = previous_centroids.get(slot_id)
+            centroid = delta_centroid if old_centroid is None else old_centroid + delta_centroid
+            previous_centroids[slot_id] = centroid
+            header, shape_offset = _get_uleb(shape, shape_offset)
+            vertex_count = header >> 1
+            if header & 1:
+                raise DirectDescriptionError(
+                    "G1 lossless lift refuses delta-relative SHAPE; current v14/v15 payload must be absolute"
+                )
+            if not 1 <= vertex_count <= 4096:
+                raise DirectDescriptionError("G1 lift vertex count is invalid")
+            relative = np.empty((vertex_count, 2), dtype=np.int32)
+            for vertex in range(vertex_count):
+                x_value, shape_offset = _get_uleb(shape, shape_offset)
+                y_value, shape_offset = _get_uleb(shape, shape_offset)
+                relative[vertex] = (_unzigzag(x_value), _unzigzag(y_value))
+            template_ref = _template_ref(relative)
+            templates.setdefault(
+                template_ref,
+                G1ShapeTemplateV1(
+                    template_ref=template_ref,
+                    relative_vertices_xy=tuple((int(x), int(y)) for x, y in relative),
+                ),
+            )
+            aspect_log, rotation = _shape_parameters(relative)
+            knot_index = len(knots)
+            knots.append(
+                G1WorldsheetKnotV1(
+                    object_id=object_id,
+                    slot_id=slot_id,
+                    pair_index=pair_index,
+                    center_x=int(centroid[0]),
+                    center_y=int(centroid[1]),
+                    template_ref=template_ref,
+                    aspect_log=aspect_log,
+                    rotation_radians=rotation,
+                )
+            )
+            cast_indices = track_rows[object_id]["knot_indices"]
+            if not isinstance(cast_indices, list):  # defensive invariant for typed construction below
+                raise DirectDescriptionError("G1 lift internal knot-index state is invalid")
+            cast_indices.append(knot_index)
+    if centroid_offset != centroid_values.size or shape_offset != len(shape):
+        raise DirectDescriptionError("G1 lift streams have trailing values")
+    tracks = tuple(
+        G1WorldsheetTrackV1(
+            object_id=int(row["object_id"]),
+            slot_id=int(row["slot_id"]),
+            generation=int(row["generation"]),
+            birth_pair=int(row["birth_pair"]),
+            death_pair_exclusive=int(row["death_pair_exclusive"]),
+            knot_indices=tuple(int(value) for value in row["knot_indices"]),
+        )
+        for _, row in sorted(track_rows.items())
+    )
+    lift = G1WorldsheetParameterLiftV1(
+        pair_count=pairs,
+        max_slots=slots,
+        tracks=tracks,
+        knots=tuple(knots),
+        templates=tuple(templates[key] for key in sorted(templates)),
+        source_payload_sha256=hashlib.sha256(payload).hexdigest(),
+        source_payload_bytes=len(payload),
+    )
+    if encode_lifted_g1_movable_worldsheet(lift) != payload:
+        raise DirectDescriptionError("G1 typed lift failed exact payload re-emission")
+    return lift
+
+
+def encode_lifted_g1_movable_worldsheet(lift: G1WorldsheetParameterLiftV1) -> bytes:
+    """Re-emit EVENT/CENTROID/SHAPE solely from a typed lossless lift."""
+
+    if not 1 <= lift.pair_count <= 600 or not 1 <= lift.max_slots <= 64:
+        raise DirectDescriptionError("G1 lifted pair/slot bounds are invalid")
+    template_by_ref = {row.template_ref: row for row in lift.templates}
+    if len(template_by_ref) != len(lift.templates):
+        raise DirectDescriptionError("G1 lifted template refs must be unique")
+    by_pair_slot: dict[tuple[int, int], G1WorldsheetKnotV1] = {}
+    track_by_object = {row.object_id: row for row in lift.tracks}
+    if len(track_by_object) != len(lift.tracks):
+        raise DirectDescriptionError("G1 lifted object IDs must be unique")
+    for index, knot in enumerate(lift.knots):
+        track = track_by_object.get(knot.object_id)
+        if (
+            track is None
+            or knot.slot_id != track.slot_id
+            or not track.birth_pair <= knot.pair_index < track.death_pair_exclusive
+            or index not in track.knot_indices
+        ):
+            raise DirectDescriptionError("G1 lifted knot escaped its declared lifecycle")
+        key = (knot.pair_index, knot.slot_id)
+        if key in by_pair_slot:
+            raise DirectDescriptionError("G1 lifted pair/slot owns multiple knots")
+        if knot.template_ref not in template_by_ref:
+            raise DirectDescriptionError("G1 lifted knot references an unknown template")
+        by_pair_slot[key] = knot
+    if sum(len(row.knot_indices) for row in lift.tracks) != len(lift.knots):
+        raise DirectDescriptionError("G1 lifted knot ownership is not unique and complete")
+
+    presence = np.zeros((lift.pair_count, lift.max_slots), dtype=bool)
+    for pair_index, slot_id in by_pair_slot:
+        if not (0 <= pair_index < lift.pair_count and 0 <= slot_id < lift.max_slots):
+            raise DirectDescriptionError("G1 lifted knot address is out of bounds")
+        presence[pair_index, slot_id] = True
+    event = bytearray()
+    _put_uleb(event, lift.pair_count)
+    _put_uleb(event, lift.max_slots)
+    event.extend(np.packbits(presence.reshape(-1), bitorder="little").tobytes())
+    centroids: list[int] = []
+    shape = bytearray()
+    previous_centroids: dict[int, tuple[int, int]] = {}
+    for pair_index in range(lift.pair_count):
+        for slot_id in range(lift.max_slots):
+            knot = by_pair_slot.get((pair_index, slot_id))
+            if knot is None:
+                previous_centroids.pop(slot_id, None)
+                continue
+            current = (knot.center_x, knot.center_y)
+            old = previous_centroids.get(slot_id)
+            centroids.extend(current if old is None else (current[0] - old[0], current[1] - old[1]))
+            previous_centroids[slot_id] = current
+            relative = template_by_ref[knot.template_ref].relative_vertices_xy
+            _put_uleb(shape, len(relative) << 1)
+            for x_value, y_value in relative:
+                _put_uleb(shape, _zigzag(x_value))
+                _put_uleb(shape, _zigzag(y_value))
+    payload, _ = _encode_envelope(
+        [("EVENT", bytes(event)), ("CENTROID", _encode_signed(centroids)), ("SHAPE", bytes(shape))]
+    )
+    return payload
+
+
 __all__ = [
     "EPSILON_PIXELS",
     "G1MovableWorldsheetMetadata",
+    "G1ShapeTemplateV1",
+    "G1WorldsheetKnotV1",
+    "G1WorldsheetParameterLiftV1",
+    "G1WorldsheetTrackV1",
     "decode_g1_movable_worldsheet",
     "encode_g1_movable_worldsheet",
+    "encode_lifted_g1_movable_worldsheet",
+    "lift_g1_movable_worldsheet",
 ]
