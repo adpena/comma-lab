@@ -84081,6 +84081,49 @@
         "pair_convergence_ledger_emitter_validator",
         "ddm_runtime_exporter"
       ]
+    },
+    {
+      "id": "ddm_v19_pure_priced_objective_solve",
+      "name": "DDM v19 pure-priced realized objective solve",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/pure_priced_realized_objective.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v19_pure_priced_objective_20260723T041500Z/ddm_v19_pure_priced_objective_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "tools/tests/test_measure_ddm_v19_pure_priced_objective.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v19_pure_priced_objective_three_pass_review_20260723.json"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_session_summary_20260723T050000Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local macOS-CPU frozen-scorer pure-priced receiver solve; score_claim=false; no dispatch; MAIN landing review required.",
+      "research_only": true,
+      "lane_class": "receiver_realization_research"
     }
   ],
   "level_rules": {

@@ -1,0 +1,21 @@
+{
+  "schema": "DDMV19PurePricedObjectiveConfigV1",
+  "run_id": "ddm_v19_pure_priced_objective_20260723T041500Z",
+  "seed": 1234,
+  "pair_ids": [447, 53, 416, 296, 547, 278, 501, 346],
+  "v17_config_path": ".omx/research/configs/ddm_a1_bounded_collateral_realized_n64_20260723.json",
+  "v17_config_sha256": "77f4e513cb42672e0543ba7ccb8725de2ff5ca78a37391f904305dd3e75a314e",
+  "v17_receipt_path": ".omx/research/ddm_a1_bounded_collateral_realized_n64_20260723T031500Z/ddm_a1_bounded_collateral_realized_receipt.json",
+  "v17_receipt_sha256": "7cad1d17c5697b578234db282e6191ba3f2789b188051473874638392e18f53a",
+  "v17_problem_path": ".omx/research/ddm_a1_bounded_collateral_realized_n64_20260723T031500Z/stage_checkpoints/00_problem.json",
+  "v17_problem_sha256": "7dd103404338c7ec141ed41a0e6fc83d13bf1aeb5c12da9b10d3ffa9ac94c4c2",
+  "grammar_archive_path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+  "grammar_archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+  "preuint8_scales_q8": [128, 192, 256],
+  "tie_tight_terminal_coordinates": 8,
+  "tie_tight_sweeps": 4,
+  "memory_ceiling_gib": 116,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false
+}

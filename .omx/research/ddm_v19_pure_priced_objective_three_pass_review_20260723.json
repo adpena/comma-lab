@@ -1,0 +1,45 @@
+{
+  "schema": "ddm_v19_pure_priced_objective_three_pass_review.v1",
+  "lane_id": "ddm_v19_pure_priced_objective_solve",
+  "reviewer": "codex",
+  "passes": [
+    {
+      "name": "ddm_v19_pass1",
+      "focus": "equation, receiver schema, archive parse-back, bounds, and typed-config review",
+      "status": "CLEAN"
+    },
+    {
+      "name": "ddm_v19_pass2",
+      "focus": "authority labels, strict admission, stage/scale gate, pair-terminal, and receipt invariants",
+      "status": "CLEAN"
+    },
+    {
+      "name": "ddm_v19_pass3",
+      "focus": "fresh source reread, regression suite, deterministic archive parse-back, and diff hygiene",
+      "status": "CLEAN"
+    }
+  ],
+  "source_sha256": {
+    "src/tac/optimization/direct_description_preuint8_channel.py": "ca22c4be12fb9a30ec4ab200952d84b5167ae0ac62464408e27eff62dab6edce",
+    "src/tac/optimization/pure_priced_realized_objective.py": "f63cba70c3fd40fd8d7338b5995a1c601e703d6543796b2d4642b86d63c2300d",
+    "src/tac/optimization/tests/test_direct_description_preuint8_channel.py": "ef562feb60afbb7b346c6fddab118f849b34f10aa440a3c42a10d93aaa757f1f",
+    "src/tac/optimization/tests/test_pure_priced_realized_objective.py": "d81860d969f90f82a1592426a525f0b07364f175313ad4a0a66db9f23f787fc6",
+    "tools/measure_ddm_v19_pure_priced_objective.py": "a7310aa2d817d4c0310f8a7b5580ec54afca1dc9684c344797497b1a8071cc05",
+    "tools/tests/test_measure_ddm_v19_pure_priced_objective.py": "d0e600a2d311df2282faa2e1393e6b1bcdbda1440c0c4de86f56d4f186e6b8d1"
+  },
+  "verification": {
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "new_tests": "14 passed",
+    "related_tests": "34 passed",
+    "candidate_archive_parsebacks": "3/3 PASS",
+    "receipt_invariants": "PASS"
+  },
+  "known_repository_wide_validation_debt": {
+    "lane_maturity_validate": "FAIL_PREEXISTING",
+    "error_count": 110,
+    "scope": "missing historical evidence paths outside this lane; this lane's three evidence paths exist"
+  },
+  "score_claim": false,
+  "main_landing_review_required": true
+}
