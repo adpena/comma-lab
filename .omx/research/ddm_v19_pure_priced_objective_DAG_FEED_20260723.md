@@ -1,9 +1,13 @@
 # DDM v19 pure-priced realized-objective DAG feed — 2026-07-23
 
-`research_only=true`  
-`execution_allowed=false`  
-`score_claim=false`  
-`evidence_axis=[macOS-CPU frozen-scorer advisory]`  
+`research_only=true`
+
+`execution_allowed=false`
+
+`score_claim=false`
+
+`evidence_axis=[macOS-CPU frozen-scorer advisory]`
+
 `main_landing_review_required=true`
 
 ## Verdict

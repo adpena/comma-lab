@@ -25,7 +25,7 @@
     "src/tac/optimization/tests/test_direct_description_preuint8_channel.py": "ef562feb60afbb7b346c6fddab118f849b34f10aa440a3c42a10d93aaa757f1f",
     "src/tac/optimization/tests/test_pure_priced_realized_objective.py": "d81860d969f90f82a1592426a525f0b07364f175313ad4a0a66db9f23f787fc6",
     "tools/measure_ddm_v19_pure_priced_objective.py": "a7310aa2d817d4c0310f8a7b5580ec54afca1dc9684c344797497b1a8071cc05",
-    "tools/tests/test_measure_ddm_v19_pure_priced_objective.py": "542039fa94667b86df65885626c0c295e6e53a8cd00d2799c6f1669e43ffae6f"
+    "tools/tests/test_measure_ddm_v19_pure_priced_objective.py": "d0e600a2d311df2282faa2e1393e6b1bcdbda1440c0c4de86f56d4f186e6b8d1"
   },
   "verification": {
     "ruff": "PASS",

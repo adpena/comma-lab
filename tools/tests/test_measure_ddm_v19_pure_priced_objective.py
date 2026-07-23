@@ -57,4 +57,3 @@ def test_delta_payload_has_no_collateral_cap_and_uses_strict_joint_price() -> No
         "acceptance_authority",
         "collateral_cap_applied",
     }
-

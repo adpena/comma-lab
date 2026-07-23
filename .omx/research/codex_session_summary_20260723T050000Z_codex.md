@@ -30,4 +30,3 @@ Evidence is `[macOS-CPU frozen-scorer advisory]`, `score_claim=false`,
    frozen-module stagewise residual harness before claiming trunk preimages.
 4. Keep render-grid grammar and #579 families open; their current dispositions
    are scoped N/A/blockers, not negatives.
-

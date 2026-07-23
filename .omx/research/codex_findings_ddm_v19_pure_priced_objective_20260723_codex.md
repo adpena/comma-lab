@@ -1,10 +1,15 @@
 # Codex findings — DDM v19 pure-priced realized objective — 2026-07-23
 
-`research_only=true`  
-`execution_allowed=false`  
-`score_claim=false`  
-`evidence_axis=[macOS-CPU frozen-scorer advisory]`  
-`pointer_moved=false`  
+`research_only=true`
+
+`execution_allowed=false`
+
+`score_claim=false`
+
+`evidence_axis=[macOS-CPU frozen-scorer advisory]`
+
+`pointer_moved=false`
+
 `main_landing_review_required=true`
 
 ## Deliverable 1 — the 405-flip row
