@@ -60,8 +60,10 @@ from tac.optimization.direct_description_joint_descent import (  # noqa: E402
     compile_parameterized_archive,
     initial_adam_state,
     lift_v15_archive,
+    linear_rewarmup_factor,
     load_stage_checkpoint,
     parameter_group_indices,
+    realize_parameter_theta,
     realized_training_state,
     save_stage_checkpoint,
     template_camera_state,
@@ -69,7 +71,7 @@ from tac.optimization.direct_description_joint_descent import (  # noqa: E402
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError  # noqa: E402
 
-DEFAULT_TICKET = REPO / ".omx/research/configs/ddm_j3_366_joint_descent_witness_program_20260723.json"
+DEFAULT_TICKET = REPO / ".omx/research/configs/ddm_j4_366_joint_descent_warm_start_reform_20260723.json"
 POINTER_DSEG = 0.027470296224
 STATIC_BOOTSTRAP_BOUND_GIB = 16.0
 EXIT_REFUSE = 4
@@ -441,10 +443,13 @@ def _bounded_smoke_locked(args: argparse.Namespace, config: DirectDescriptionJoi
             telemetry=telemetry,
         )
         loaded, loaded_metadata = load_stage_checkpoint(checkpoint, config=config)
-        checkpoint_bit_exact = all(
-            np.array_equal(getattr(state, field), getattr(loaded, field))
-            for field in ("theta", "ema", "first_moment", "second_moment")
-        ) and state.step == loaded.step
+        checkpoint_bit_exact = (
+            all(
+                np.array_equal(getattr(state, field), getattr(loaded, field))
+                for field in ("theta", "ema", "first_moment", "second_moment")
+            )
+            and state.step == loaded.step
+        )
         if not checkpoint_bit_exact:
             raise DirectDescriptionError("checkpoint immediate parse-back is not bit-exact")
         mx.eval()
@@ -452,9 +457,7 @@ def _bounded_smoke_locked(args: argparse.Namespace, config: DirectDescriptionJoi
 
     measured_peak_gib = monitor.peak_rss_bytes / 1024**3
     projected_peak_gib = _memory_projection(measured_peak_gib)
-    admission, reason = classify_memory_preflight(
-        projected_peak_gib, ceiling_gib=config.memory_ceiling_gib
-    )
+    admission, reason = classify_memory_preflight(projected_peak_gib, ceiling_gib=config.memory_ceiling_gib)
     observations: list[dict[str, Any]] = []
     if memory_path.is_file():
         previous = json.loads(memory_path.read_bytes())
@@ -526,9 +529,7 @@ def _bounded_smoke_locked(args: argparse.Namespace, config: DirectDescriptionJoi
         "telemetry": telemetry,
         "memory_admission": admission,
         "simulated_kill_after_checkpoint": bool(args.simulate_kill_after_checkpoint),
-        "verdict": (
-            "BOUNDED_STEP_RESUME_GREEN" if admission else "REFUSE_REAL_CONSUMER_MEMORY_PROJECTION"
-        ),
+        "verdict": ("BOUNDED_STEP_RESUME_GREEN" if admission else "REFUSE_REAL_CONSUMER_MEMORY_PROJECTION"),
     }
     receipt_path = out_dir / f"smoke_step{state.step:06d}.json"
     _atomic_json(receipt_path, receipt)
@@ -683,6 +684,7 @@ def _measurement_schedule(args: argparse.Namespace) -> dict[str, Any]:
         "warm_start_pair": 447,
         "warm_start_steps": 1,
         "plateau_verdicts": 2,
+        "warm_start_reform": None,
         "stages": [
             {
                 "stage_id": "01_island_worldsheet_joint_descent",
@@ -701,6 +703,7 @@ def _sealed_schedule(config: DirectDescriptionJointDescentTypedConfigV1, args: a
     schedule = config.full_run_schedule
     if schedule is None:
         return _measurement_schedule(args)
+    reform = schedule.warm_start_reform
     return {
         "train_batch": schedule.train_batch,
         "learning_rate": schedule.learning_rate_quantum_fraction,
@@ -708,6 +711,22 @@ def _sealed_schedule(config: DirectDescriptionJointDescentTypedConfigV1, args: a
         "warm_start_pair": schedule.warm_start_pair,
         "warm_start_steps": schedule.warm_start_steps,
         "plateau_verdicts": schedule.plateau_verdicts,
+        "warm_start_reform": (
+            None
+            if reform is None
+            else {
+                "adam_beta2": reform.adam_beta2,
+                "lr_rewarmup_c": reform.lr_rewarmup_c,
+                "lr_rewarmup_steps": reform.lr_rewarmup_steps,
+                "lr_rewarmup_floor": reform.lr_rewarmup_floor,
+                "lr_rewarmup_shape": reform.lr_rewarmup_shape,
+                "maximum_continuous_update_quantum_fraction": (reform.maximum_continuous_update_quantum_fraction),
+                "frozen_groups_until_first_admission": reform.frozen_groups_until_first_admission,
+                "group_release_condition": reform.group_release_condition,
+                "pose_objective_engage_condition": reform.pose_objective_engage_condition,
+                "first_realized_admission": reform.first_realized_admission,
+            }
+        ),
         "stages": [
             {
                 "stage_id": stage.stage_id,
@@ -873,8 +892,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             )
             if abs(float(baseline_verdict["d_seg"]) - BASELINE_DSEG) > 5.0e-10:
                 raise DirectDescriptionError(
-                    "REFUSE_FULL_RUN_BASELINE_DSEG_CUSTODY_DRIFT: "
-                    f"{baseline_verdict['d_seg']} != {BASELINE_DSEG}"
+                    f"REFUSE_FULL_RUN_BASELINE_DSEG_CUSTODY_DRIFT: {baseline_verdict['d_seg']} != {BASELINE_DSEG}"
                 )
             _write_immutable_json(baseline_path, baseline_verdict)
 
@@ -882,6 +900,8 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
         run_telemetry: list[dict[str, Any]] = []
         campaign_blocker: str | None = None
         latest_stage_decision: str | None = None
+        reform = schedule.get("warm_start_reform")
+        warm_start_admitted = any(row.get("warm_start_realized_admitted") is True for row in verdict_history)
         while stage_index < len(schedule["stages"]):
             stage = schedule["stages"][stage_index]
             if stop_global is not None and state.step >= stop_global:
@@ -891,23 +911,32 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 if state.step < int(schedule["warm_start_steps"])
                 else ((state.step - 1) * int(schedule["train_batch"])) % 600
             )
-            pair_ids = tuple(
-                (pair_start + offset) % 600 for offset in range(int(schedule["train_batch"]))
-            )
+            pair_ids = tuple((pair_start + offset) % 600 for offset in range(int(schedule["train_batch"])))
             include_lanes = any(
-                "lane_program" in prior["active_groups"]
-                for prior in schedule["stages"][: stage_index + 1]
+                "lane_program" in prior["active_groups"] for prior in schedule["stages"][: stage_index + 1]
+            )
+            reform_active = reform is not None and not warm_start_admitted and stage_index == 0
+            frozen_groups = set(reform["frozen_groups_until_first_admission"]) if reform_active else set()
+            active_groups = tuple(group for group in stage["active_groups"] if group not in frozen_groups)
+            pose_objective_weight = 0.0 if reform_active else 1.0
+            rewarmup_factor = (
+                linear_rewarmup_factor(
+                    completed_steps=state.step,
+                    rewarmup_steps=int(reform["lr_rewarmup_steps"]),
+                    floor=float(reform["lr_rewarmup_floor"]),
+                )
+                if reform_active
+                else 1.0
             )
             step_started = time.monotonic()
-            base_camera, template_masks, basis, basis_indices, local_theta, current_archive = (
-                realized_training_state(
-                    lift,
-                    state.theta,
-                    pair_ids=pair_ids,
-                    active_groups=stage["active_groups"],
-                    include_lane_programs=include_lanes,
-                )
+            base_camera, template_masks, basis, basis_indices, local_theta, current_archive = realized_training_state(
+                lift,
+                state.theta,
+                pair_ids=pair_ids,
+                active_groups=active_groups,
+                include_lane_programs=include_lanes,
             )
+            current_realized = realize_parameter_theta(lift, state.theta)
             initial = model.measure_components(
                 local_theta,
                 pair_ids=pair_ids,
@@ -923,21 +952,27 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 template_masks=template_masks,
                 realized_secant_basis=basis,
                 realized_secant_indices=basis_indices,
+                pose_objective_weight=pose_objective_weight,
             )
-            active = set().union(*(groups[name] for name in stage["active_groups"]))
+            active = set().union(*(groups[name] for name in active_groups))
             gradient[[index for index in range(len(gradient)) if index not in active]] = 0.0
             gradient_norm = float(np.linalg.norm(gradient.astype(np.float64)))
             if not math.isfinite(gradient_norm) or gradient_norm <= 0.0:
                 raise DirectDescriptionError("INSTANCE_BLOCKER_FULL_RUN_ACTIVE_GRADIENT_ZERO_OR_NONFINITE")
-            accepted: tuple[AdamStateV1, dict[str, float], float] | None = None
+            accepted: tuple[AdamStateV1, dict[str, float], float, bool] | None = None
+            rejected_realized_verdict: dict[str, Any] | None = None
             for multiplier in (1.0, 0.5, 0.25):
-                learning_rate = float(schedule["learning_rate"]) * multiplier
+                learning_rate = float(schedule["learning_rate"]) * rewarmup_factor * multiplier
                 candidate = clipped_adam_step(
                     state,
                     gradient,
                     learning_rate=learning_rate,
                     grad_clip=config.grad_clip,
                     ema_decay=config.ema_decay,
+                    beta2=(float(reform["adam_beta2"]) if reform_active else 0.999),
+                    maximum_update=(
+                        float(reform["maximum_continuous_update_quantum_fraction"]) if reform_active else None
+                    ),
                 )
                 candidate_local = candidate.theta - (state.theta - local_theta)
                 metrics = model.measure_components(
@@ -948,14 +983,135 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                     realized_secant_basis=basis,
                     realized_secant_indices=basis_indices,
                 )
-                if metrics["d_seg"] < initial["d_seg"] and metrics["d_pose"] <= initial["d_pose"]:
-                    accepted = candidate, metrics, learning_rate
-                    break
-            if accepted is None:
-                raise DirectDescriptionError(
-                    "INSTANCE_BLOCKER_FULL_RUN_NO_REALIZED_BATCH_DESCENT_AT_QUARTER_QUANTUM_OR_BELOW"
+                candidate_objective = 100.0 * metrics["seg_ce_margin"] + (
+                    pose_objective_weight * math.sqrt(10.0 * metrics["d_pose"] + 1.0e-12)
                 )
-            state, final, learning_rate = accepted
+                candidate_realized = realize_parameter_theta(lift, candidate.theta)
+                realized_changed = not np.array_equal(candidate_realized, current_realized)
+                if candidate_objective >= loss:
+                    continue
+                if reform_active and realized_changed:
+                    candidate_archive, _ = compile_parameterized_archive(
+                        lift,
+                        candidate.theta,
+                        include_lane_programs=include_lanes,
+                    )
+                    if cpu_scorers is None:
+                        cpu_scorers = _load_cpu_frozen_scorers(config.upstream_root)
+                    realized_verdict = _chunked_n600_verdict(
+                        archive=candidate_archive,
+                        labels=labels,
+                        poses=poses,
+                        segnet=cpu_scorers[0],
+                        posenet=cpu_scorers[1],
+                        batch_size=config.verdict_batch,
+                    )
+                    decision = classify_realized_stage_verdict(
+                        reference_d_seg=float(baseline_verdict["d_seg"]),
+                        reference_d_pose=float(baseline_verdict["d_pose"]),
+                        candidate_d_seg=float(realized_verdict["d_seg"]),
+                        candidate_d_pose=float(realized_verdict["d_pose"]),
+                        target_d_seg=float(stage["target_d_seg"]),
+                        target_d_pose=stage["target_d_pose"],
+                    )
+                    realized_verdict.update(
+                        {
+                            "stage_id": stage["stage_id"],
+                            "stage_step": stage_step + 1,
+                            "global_step": candidate.step,
+                            "reference_d_seg": float(baseline_verdict["d_seg"]),
+                            "reference_d_pose": float(baseline_verdict["d_pose"]),
+                            "realized_stage_decision": decision,
+                            "warm_start_realized_admitted": decision
+                            in {
+                                "REALIZED_STAGE_TARGET_MET",
+                                "REALIZED_STAGE_DESCENT_CONTINUE",
+                                "REALIZED_STAGE_SEG_FLAT_POSE_DESCENT_CONTINUE",
+                            },
+                            "parameter_shadow": "live_opening_candidate",
+                            "realized_parameter_count": int(np.count_nonzero(candidate_realized)),
+                            "decision_basis": ("FIRST_INTEGER_REALIZATION_EXACT_N600_ABORT_ROLLBACK"),
+                            "model_predicted_plateau_used": False,
+                        }
+                    )
+                    realized_verdict = _write_immutable_json(
+                        out_dir / "verdicts" / f"warm_start_proposal_step{candidate.step:06d}_n600.json",
+                        realized_verdict,
+                        volatile_fields=("elapsed_seconds",),
+                    )
+                    latest_stage_decision = decision
+                    verdict_history.append(realized_verdict)
+                    if not realized_verdict["warm_start_realized_admitted"]:
+                        rejected_realized_verdict = realized_verdict
+                        break
+                accepted = candidate, metrics, learning_rate, realized_changed
+                break
+            if rejected_realized_verdict is not None:
+                campaign_blocker = str(rejected_realized_verdict["realized_stage_decision"])
+                rollback_event = {
+                    "schema": "ddm_joint_descent_warm_start_rollback.v1",
+                    "event": "warm_start_rejected_proposal_rollback",
+                    "rejected_candidate_global_step": int(rejected_realized_verdict["global_step"]),
+                    "preserved_global_step": state.step,
+                    "stage_id": stage["stage_id"],
+                    "stage_step": stage_step,
+                    "realized_stage_decision": campaign_blocker,
+                    "rejected_proposal_receipt": (
+                        f"verdicts/warm_start_proposal_step"
+                        f"{int(rejected_realized_verdict['global_step']):06d}_n600.json"
+                    ),
+                    "rollback_state": "last_admitted_receiver_state",
+                    "score_claim": False,
+                }
+                rollback_cursor = {
+                    "stage_index": stage_index,
+                    "stage_step": stage_step,
+                    "global_step": state.step,
+                    "verdict_history": verdict_history,
+                    "baseline_verdict": baseline_verdict,
+                    "stage_end_reason": campaign_blocker,
+                    "campaign_blocker": campaign_blocker,
+                }
+                rejected_step = int(rejected_realized_verdict["global_step"])
+                rollback_checkpoint = (
+                    out_dir
+                    / "checkpoints"
+                    / (f"{stage['stage_id']}_blocked_proposal{rejected_step:06d}_rollback_global{state.step:06d}.npz")
+                )
+                save_stage_checkpoint(
+                    rollback_checkpoint,
+                    state,
+                    stage_id=stage["stage_id"],
+                    config=config,
+                    telemetry=(rollback_event,),
+                    run_cursor=rollback_cursor,
+                    realized_archive={
+                        "bytes": len(current_archive),
+                        "sha256": hashlib.sha256(current_archive).hexdigest(),
+                        "lane_programs_materialized": include_lanes,
+                        "parameter_shadow": "last_admitted_live_resume_state",
+                        "realized_parameter_count": int(np.count_nonzero(current_realized)),
+                    },
+                )
+                loaded_rollback, loaded_rollback_metadata = load_stage_checkpoint(
+                    rollback_checkpoint,
+                    config=config,
+                )
+                if (
+                    loaded_rollback.step != state.step
+                    or loaded_rollback_metadata["run_cursor"]["campaign_blocker"] != campaign_blocker
+                    or any(
+                        not np.array_equal(getattr(state, field), getattr(loaded_rollback, field))
+                        for field in ("theta", "ema", "first_moment", "second_moment")
+                    )
+                ):
+                    raise DirectDescriptionError("warm-start rollback checkpoint immediate parse-back differs")
+                break
+            if accepted is None:
+                raise DirectDescriptionError("INSTANCE_BLOCKER_FULL_RUN_NO_LOCAL_OBJECTIVE_DESCENT_DURING_REWARMUP")
+            state, final, learning_rate, realized_boundary_crossed = accepted
+            if reform_active and realized_boundary_crossed:
+                warm_start_admitted = True
             stage_step += 1
             elapsed = time.monotonic() - step_started
             step_seconds.append(elapsed)
@@ -967,12 +1123,19 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 "stage_id": stage["stage_id"],
                 "stage_step": stage_step,
                 "pair_ids": list(pair_ids),
-                "active_groups": list(stage["active_groups"]),
+                "active_groups": list(active_groups),
+                "frozen_groups": sorted(frozen_groups),
                 "active_receiver_effective_coordinates": len(active),
                 "realized_secant_coordinates_in_window": len(basis_indices),
                 "loss_before": loss,
                 "gradient_norm": gradient_norm,
                 "learning_rate_uint8_quantum_fraction": learning_rate,
+                "lr_rewarmup_factor": rewarmup_factor,
+                "pose_objective_weight": pose_objective_weight,
+                "maximum_continuous_update_quantum_fraction": (
+                    reform["maximum_continuous_update_quantum_fraction"] if reform_active else None
+                ),
+                "realized_boundary_crossed": realized_boundary_crossed,
                 "initial": initial,
                 "final": final,
                 "seconds": elapsed,
@@ -1056,8 +1219,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 verdict_history.append(verdict)
             recent = [row for row in verdict_history if row.get("stage_id") == stage["stage_id"]]
             plateau = len(recent) >= int(schedule["plateau_verdicts"]) and all(
-                float(after["d_seg"]) >= float(before["d_seg"])
-                and float(after["d_pose"]) >= float(before["d_pose"])
+                float(after["d_seg"]) >= float(before["d_seg"]) and float(after["d_pose"]) >= float(before["d_pose"])
                 for before, after in zip(
                     recent[-int(schedule["plateau_verdicts"]) : -1],
                     recent[-int(schedule["plateau_verdicts"]) + 1 :],
@@ -1087,11 +1249,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             }
             if periodic or stage_end or bounded_stop or campaign_blocker or args.simulate_kill_after_checkpoint:
                 boundary = "blocked" if campaign_blocker else "stage_end" if stage_end else "intra"
-                checkpoint = (
-                    out_dir
-                    / "checkpoints"
-                    / f"{stage['stage_id']}_{boundary}_global{state.step:06d}.npz"
-                )
+                checkpoint = out_dir / "checkpoints" / f"{stage['stage_id']}_{boundary}_global{state.step:06d}.npz"
                 checkpoint_sha = save_stage_checkpoint(
                     checkpoint,
                     state,
@@ -1159,11 +1317,9 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
     elif args.max_steps is not None and latest_stage_decision in {
         "REALIZED_STAGE_TARGET_MET",
         "REALIZED_STAGE_DESCENT_CONTINUE",
+        "REALIZED_STAGE_SEG_FLAT_POSE_DESCENT_CONTINUE",
     }:
         final_run_verdict = "FULL_RUN_BOUNDED_REALIZED_DESCENT_GREEN"
-    elif args.max_steps is not None and latest_stage_decision == "REALIZED_STAGE_NO_TOTAL_DSEG_DESCENT":
-        final_run_verdict = "BLOCKED_BOUNDED_NO_TOTAL_DSEG_DESCENT"
-        campaign_blocker = final_run_verdict
     elif args.max_steps is not None:
         final_run_verdict = "FULL_RUN_BOUNDED_EXECUTION_GREEN_NO_N600_VERDICT"
     elif stage_index >= len(schedule["stages"]):

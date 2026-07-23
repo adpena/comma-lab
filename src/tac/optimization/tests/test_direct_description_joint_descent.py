@@ -14,6 +14,7 @@ from tac.optimization.direct_description_g1_worldsheet import (
 )
 from tac.optimization.direct_description_joint_descent import (
     EXPECTED_PROGRAM_SHA256,
+    J3_PROGRAM_SHA256,
     LEGACY_PROGRAM_SHA256,
     AdamStateV1,
     DirectDescriptionJointDescentTypedConfigV1,
@@ -24,6 +25,7 @@ from tac.optimization.direct_description_joint_descent import (
     compile_parameterized_archive,
     initial_adam_state,
     lift_v15_archive,
+    linear_rewarmup_factor,
     load_stage_checkpoint,
     parameter_group_indices,
     save_stage_checkpoint,
@@ -32,7 +34,8 @@ from tac.optimization.direct_description_minimizer import DirectDescriptionError
 
 REPO = Path(__file__).resolve().parents[4]
 TICKET = REPO / ".omx/research/configs/ddm_j1_366_joint_descent_witness_program_20260723.json"
-FULL_RUN_TICKET = REPO / ".omx/research/configs/ddm_j3_366_joint_descent_witness_program_20260723.json"
+FULL_RUN_TICKET = REPO / ".omx/research/configs/ddm_j4_366_joint_descent_warm_start_reform_20260723.json"
+J3_TICKET = REPO / ".omx/research/configs/ddm_j3_366_joint_descent_witness_program_20260723.json"
 
 
 def test_g1_lift_preserves_exact_stream_and_explicit_lifecycle() -> None:
@@ -76,14 +79,28 @@ def test_resealed_full_run_ticket_compiles_exact_schedule() -> None:
     config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(FULL_RUN_TICKET)
     schedule = config.full_run_schedule
     assert config.dsl_compile_hash == EXPECTED_PROGRAM_SHA256
-    assert config.typed_config_hash() == "fa63e79492d916a9cc6fe144207bdcb627d07e416883e131ecb90c289f8ccec0"
+    assert config.typed_config_hash() == "ca13e172e195731026de80ecaa0dff8ea307c1212fcc13ac4d17c6285ee9d7ab"
     assert schedule is not None
     assert schedule.train_batch == 4
     assert schedule.warm_start_pair == 447
     assert schedule.warm_start_steps == 4
+    assert schedule.warm_start_reform.adam_beta2 == 0.999
+    assert schedule.warm_start_reform.lr_rewarmup_steps == 2000
+    assert schedule.warm_start_reform.lr_rewarmup_floor == 0.1
+    assert schedule.warm_start_reform.maximum_continuous_update_quantum_fraction == 0.25
+    assert schedule.warm_start_reform.frozen_groups_until_first_admission == ("shared_template_dof",)
     assert schedule.checkpoint_interval_steps == 37
     assert all(stage.verdict_interval_steps == 50 for stage in schedule.stages)
     assert sum(stage.maximum_steps for stage in schedule.stages) == 450
+
+
+def test_historical_j3_ticket_remains_typed_and_hash_compatible() -> None:
+    config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(J3_TICKET)
+    schedule = config.full_run_schedule
+    assert config.dsl_compile_hash == J3_PROGRAM_SHA256
+    assert config.typed_config_hash() == "fa63e79492d916a9cc6fe144207bdcb627d07e416883e131ecb90c289f8ccec0"
+    assert schedule is not None
+    assert schedule.warm_start_reform is None
 
 
 @pytest.mark.parametrize(
@@ -205,6 +222,18 @@ def test_full_run_schedule_refuses_more_than_quarter_uint8_quantum() -> None:
             "measured_seconds_per_step": 2.0,
             "measured_seconds_per_step_low": 1.5,
             "measured_seconds_per_step_high": 2.5,
+            "warm_start_reform": {
+                "adam_beta2": 0.999,
+                "lr_rewarmup_c": 2.0,
+                "lr_rewarmup_steps": 2000,
+                "lr_rewarmup_floor": 0.1,
+                "lr_rewarmup_shape": "linear",
+                "maximum_continuous_update_quantum_fraction": 0.25,
+                "frozen_groups_until_first_admission": ["shared_template_dof"],
+                "group_release_condition": "first_strict_n600_island_admission",
+                "pose_objective_engage_condition": "after_first_strict_n600_seg_admission",
+                "first_realized_admission": ("exact_n600_dseg_descent_and_dpose_nonregression_else_abort_rollback"),
+            },
             "stages": [
                 {
                     "stage_id": "01_island_worldsheet_joint_descent",
@@ -226,7 +255,8 @@ def test_full_run_schedule_refuses_more_than_quarter_uint8_quantum() -> None:
     [
         (0.02760, 163.0, "BLOCKED_REALIZED_DSEG_REGRESSION"),
         (0.02740, 163.1, "BLOCKED_REALIZED_DPOSE_REGRESSION"),
-        (0.02747, 163.0, "REALIZED_STAGE_NO_TOTAL_DSEG_DESCENT"),
+        (0.02747, 162.9, "REALIZED_STAGE_SEG_FLAT_POSE_DESCENT_CONTINUE"),
+        (0.02747, 163.0, "BLOCKED_REALIZED_NO_COMPONENT_DESCENT"),
         (0.02740, 163.0, "REALIZED_STAGE_DESCENT_CONTINUE"),
         (0.02000, 163.0, "REALIZED_STAGE_TARGET_MET"),
     ],
@@ -247,3 +277,50 @@ def test_realized_stage_decision_is_fail_closed(
         )
         == expected
     )
+
+
+def test_beta2_rewarmup_and_quarter_quantum_cap_remove_fresh_adam_jump() -> None:
+    assert linear_rewarmup_factor(completed_steps=0, rewarmup_steps=2000, floor=0.1) == 0.1
+    assert linear_rewarmup_factor(completed_steps=1000, rewarmup_steps=2000, floor=0.1) == 0.55
+    assert linear_rewarmup_factor(completed_steps=2000, rewarmup_steps=2000, floor=0.1) == 1.0
+
+    initial = initial_adam_state(3)
+    gradient = np.asarray((2.0, -0.5, 0.0), dtype=np.float32)
+    stepped = clipped_adam_step(
+        initial,
+        gradient,
+        learning_rate=1.0,
+        grad_clip=10.0,
+        ema_decay=0.997,
+        beta2=0.999,
+        maximum_update=0.25,
+    )
+    assert np.array_equal(stepped.theta, np.asarray((-0.25, 0.25, 0.0), dtype=np.float32))
+    assert float(np.max(np.abs(stepped.ema))) < 0.001
+    with pytest.raises(DirectDescriptionError, match="hyperparameters"):
+        clipped_adam_step(
+            initial,
+            gradient,
+            learning_rate=1.0,
+            grad_clip=10.0,
+            ema_decay=0.997,
+            maximum_update=float("nan"),
+        )
+
+
+def test_rewarmup_length_must_rederive_from_beta2_law() -> None:
+    ticket = json.loads(FULL_RUN_TICKET.read_bytes())
+    semantic = ticket["semantic_program"]
+    semantic["full_run_schedule"]["warm_start_reform"]["lr_rewarmup_steps"] = 1999
+    with pytest.raises(DirectDescriptionError, match="adam_v_variance_warmup_length_v1"):
+        FullRunScheduleV1.from_semantic_program(semantic)
+
+
+def test_launcher_has_first_integer_n600_abort_and_release_gates() -> None:
+    source = (REPO / "tools/launch_ddm_joint_descent.py").read_text(encoding="utf-8")
+    assert "FIRST_INTEGER_REALIZATION_EXACT_N600_ABORT_ROLLBACK" in source
+    assert 'set(reform["frozen_groups_until_first_admission"])' in source
+    assert "pose_objective_weight = 0.0 if reform_active else 1.0" in source
+    assert "warm_start_realized_admitted" in source
+    assert "warm_start_rejected_proposal_rollback" in source
+    assert "warm-start rollback checkpoint immediate parse-back differs" in source

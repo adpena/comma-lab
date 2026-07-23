@@ -27,6 +27,9 @@ from typing import Any, Final
 
 import numpy as np
 
+from tac.canonical_equations.adam_v_variance_warmup_20260717 import (
+    adam_v_variance_warmup_epochs,
+)
 from tac.optimization.direct_description_carrier_compose import (
     LANE_PROGRAM_MEMBER,
     REALIZATION_STATIC_RULE_MEMBER,
@@ -55,8 +58,11 @@ TICKET_SCHEMA: Final = "ddm_joint_descent_witness_program_ticket.v1"
 MEMORY_RECEIPT_SCHEMA: Final = "ddm_joint_descent_memory_preflight.v1"
 CHECKPOINT_SCHEMA: Final = "ddm_joint_descent_stage_checkpoint.v1"
 LEGACY_PROGRAM_SHA256: Final = "68a8aa97b25a6be2f8f08e36fcf4957fe032233e43b1050b75ad13c9d7dad89c"
-EXPECTED_PROGRAM_SHA256: Final = "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab2935a2c403b824"
-SUPPORTED_PROGRAM_SHA256: Final = frozenset({LEGACY_PROGRAM_SHA256, EXPECTED_PROGRAM_SHA256})
+J3_PROGRAM_SHA256: Final = "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab2935a2c403b824"
+# Resealed after editing the semantic ticket; updated by the deterministic hash
+# seal step in this landing.
+EXPECTED_PROGRAM_SHA256: Final = "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b"
+SUPPORTED_PROGRAM_SHA256: Final = frozenset({LEGACY_PROGRAM_SHA256, J3_PROGRAM_SHA256, EXPECTED_PROGRAM_SHA256})
 EXPECTED_ARCHIVE_SHA256: Final = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
 EXPECTED_ARCHIVE_BYTES: Final = 133_941
 POINTER: Final = "0.1910828242 [contest-CPU]"
@@ -75,9 +81,9 @@ def classify_realized_stage_verdict(
 ) -> str:
     """Classify only an exact realized-through-receiver stage measurement.
 
-    A stage may continue only after strict total d_seg descent without any pose
-    regression.  This deliberately refuses proxy-loss, STE, or first-order
-    predictions as campaign decisions.
+    A stage may continue only when neither exact component regresses and at
+    least one exact component descends.  This deliberately refuses proxy-loss,
+    STE, or first-order predictions as campaign decisions.
     """
 
     values = (
@@ -89,19 +95,17 @@ def classify_realized_stage_verdict(
     )
     if not all(math.isfinite(float(value)) and float(value) >= 0.0 for value in values):
         return "REFUSE_REALIZED_STAGE_VERDICT_NONFINITE_OR_NEGATIVE"
-    if target_d_pose is not None and (
-        not math.isfinite(float(target_d_pose)) or float(target_d_pose) < 0.0
-    ):
+    if target_d_pose is not None and (not math.isfinite(float(target_d_pose)) or float(target_d_pose) < 0.0):
         return "REFUSE_REALIZED_STAGE_TARGET_NONFINITE_OR_NEGATIVE"
     if candidate_d_seg > reference_d_seg:
         return "BLOCKED_REALIZED_DSEG_REGRESSION"
     if candidate_d_pose > reference_d_pose:
         return "BLOCKED_REALIZED_DPOSE_REGRESSION"
-    if candidate_d_seg >= reference_d_seg:
-        return "REALIZED_STAGE_NO_TOTAL_DSEG_DESCENT"
-    target_met = candidate_d_seg <= target_d_seg and (
-        target_d_pose is None or candidate_d_pose <= target_d_pose
-    )
+    if candidate_d_seg == reference_d_seg:
+        if candidate_d_pose < reference_d_pose:
+            return "REALIZED_STAGE_SEG_FLAT_POSE_DESCENT_CONTINUE"
+        return "BLOCKED_REALIZED_NO_COMPONENT_DESCENT"
+    target_met = candidate_d_seg <= target_d_seg and (target_d_pose is None or candidate_d_pose <= target_d_pose)
     return "REALIZED_STAGE_TARGET_MET" if target_met else "REALIZED_STAGE_DESCENT_CONTINUE"
 
 
@@ -113,6 +117,63 @@ class FullRunStageV1:
     verdict_interval_steps: int
     target_d_seg: float
     target_d_pose: float | None
+
+
+@dataclass(frozen=True, slots=True)
+class WarmStartReformV1:
+    """Derived opening geometry and strict receiver-realized admission."""
+
+    adam_beta2: float
+    lr_rewarmup_c: float
+    lr_rewarmup_steps: int
+    lr_rewarmup_floor: float
+    lr_rewarmup_shape: str
+    maximum_continuous_update_quantum_fraction: float
+    frozen_groups_until_first_admission: tuple[str, ...]
+    group_release_condition: str
+    pose_objective_engage_condition: str
+    first_realized_admission: str
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> WarmStartReformV1:
+        if not isinstance(payload, Mapping):
+            raise DirectDescriptionError("full-run warm-start reform must be a mapping")
+        result = cls(
+            adam_beta2=float(payload["adam_beta2"]),
+            lr_rewarmup_c=float(payload["lr_rewarmup_c"]),
+            lr_rewarmup_steps=int(payload["lr_rewarmup_steps"]),
+            lr_rewarmup_floor=float(payload["lr_rewarmup_floor"]),
+            lr_rewarmup_shape=str(payload["lr_rewarmup_shape"]),
+            maximum_continuous_update_quantum_fraction=float(payload["maximum_continuous_update_quantum_fraction"]),
+            frozen_groups_until_first_admission=tuple(
+                str(value) for value in payload["frozen_groups_until_first_admission"]
+            ),
+            group_release_condition=str(payload["group_release_condition"]),
+            pose_objective_engage_condition=str(payload["pose_objective_engage_condition"]),
+            first_realized_admission=str(payload["first_realized_admission"]),
+        )
+        if not 0.0 < result.adam_beta2 < 1.0 or result.lr_rewarmup_c <= 0.0:
+            raise DirectDescriptionError("warm-start Adam beta2/rewarmup multiple is invalid")
+        derived_steps = adam_v_variance_warmup_epochs(
+            result.adam_beta2,
+            1,
+            c=result.lr_rewarmup_c,
+        )
+        if result.lr_rewarmup_steps != derived_steps:
+            raise DirectDescriptionError("warm-start rewarmup steps differ from adam_v_variance_warmup_length_v1")
+        if not 0.0 < result.lr_rewarmup_floor <= 1.0 or result.lr_rewarmup_shape != "linear":
+            raise DirectDescriptionError("warm-start LR rewarmup floor/shape is invalid")
+        if not 0.0 < result.maximum_continuous_update_quantum_fraction <= 0.25:
+            raise DirectDescriptionError("warm-start update exceeds the quarter-quantum cap")
+        if set(result.frozen_groups_until_first_admission) - {"shared_template_dof"}:
+            raise DirectDescriptionError("warm-start frozen group policy is invalid")
+        if result.group_release_condition != "first_strict_n600_island_admission":
+            raise DirectDescriptionError("warm-start group release condition is invalid")
+        if result.pose_objective_engage_condition != "after_first_strict_n600_seg_admission":
+            raise DirectDescriptionError("warm-start Pose engage condition is invalid")
+        if result.first_realized_admission != "exact_n600_dseg_descent_and_dpose_nonregression_else_abort_rollback":
+            raise DirectDescriptionError("warm-start realized admission law is invalid")
+        return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +189,7 @@ class FullRunScheduleV1:
     measured_seconds_per_step: float
     measured_seconds_per_step_low: float
     measured_seconds_per_step_high: float
+    warm_start_reform: WarmStartReformV1 | None
     stages: tuple[FullRunStageV1, ...]
 
     @classmethod
@@ -161,6 +223,11 @@ class FullRunScheduleV1:
             measured_seconds_per_step=float(payload["measured_seconds_per_step"]),
             measured_seconds_per_step_low=float(payload["measured_seconds_per_step_low"]),
             measured_seconds_per_step_high=float(payload["measured_seconds_per_step_high"]),
+            warm_start_reform=(
+                None
+                if payload.get("warm_start_reform") is None
+                else WarmStartReformV1.from_payload(payload["warm_start_reform"])
+            ),
             stages=stages,
         )
         if not 1 <= result.train_batch <= 600:
@@ -205,9 +272,7 @@ def _bound_file(path: Path, expected_sha256: str, expected_bytes: int | None = N
         raise DirectDescriptionError(f"bound regular file is unavailable: {path}")
     payload = path.read_bytes()
     if expected_bytes is not None and len(payload) != expected_bytes:
-        raise DirectDescriptionError(
-            f"bound file byte count differs for {path}: {len(payload)} != {expected_bytes}"
-        )
+        raise DirectDescriptionError(f"bound file byte count differs for {path}: {len(payload)} != {expected_bytes}")
     actual = _sha256(payload)
     if actual != expected_sha256:
         raise DirectDescriptionError(f"bound file sha256 differs for {path}: {actual} != {expected_sha256}")
@@ -252,9 +317,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
         semantic_hash = _sha256(rfc8785_canonicalize(semantic))
         sealed = ticket.get("compile_custody", {}).get("semantic_program_sha256")
         if semantic_hash != sealed or semantic_hash not in SUPPORTED_PROGRAM_SHA256:
-            raise DirectDescriptionError(
-                f"joint-descent DSL hash mismatch: computed={semantic_hash} sealed={sealed}"
-            )
+            raise DirectDescriptionError(f"joint-descent DSL hash mismatch: computed={semantic_hash} sealed={sealed}")
         warm = semantic["warm_start"]
         cache = semantic["target_cache"]
         stability = semantic["joint_objective"]["stability"]
@@ -305,7 +368,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
             "research_only": True,
         }
         if self.full_run_schedule is not None:
-            payload["full_run_schedule"] = {
+            schedule_payload: dict[str, Any] = {
                 "train_batch": self.full_run_schedule.train_batch,
                 "learning_rate_quantum_fraction": self.full_run_schedule.learning_rate_quantum_fraction,
                 "checkpoint_interval_steps": self.full_run_schedule.checkpoint_interval_steps,
@@ -327,6 +390,21 @@ class DirectDescriptionJointDescentTypedConfigV1:
                     for stage in self.full_run_schedule.stages
                 ],
             }
+            if self.full_run_schedule.warm_start_reform is not None:
+                reform = self.full_run_schedule.warm_start_reform
+                schedule_payload["warm_start_reform"] = {
+                    "adam_beta2": reform.adam_beta2,
+                    "lr_rewarmup_c": reform.lr_rewarmup_c,
+                    "lr_rewarmup_steps": reform.lr_rewarmup_steps,
+                    "lr_rewarmup_floor": reform.lr_rewarmup_floor,
+                    "lr_rewarmup_shape": reform.lr_rewarmup_shape,
+                    "maximum_continuous_update_quantum_fraction": (reform.maximum_continuous_update_quantum_fraction),
+                    "frozen_groups_until_first_admission": list(reform.frozen_groups_until_first_admission),
+                    "group_release_condition": reform.group_release_condition,
+                    "pose_objective_engage_condition": reform.pose_objective_engage_condition,
+                    "first_realized_admission": reform.first_realized_admission,
+                }
+            payload["full_run_schedule"] = schedule_payload
         return payload
 
     def typed_config_hash(self) -> str:
@@ -498,10 +576,7 @@ def lift_v15_archive(archive: bytes) -> JointDescriptionParameterLiftV1:
     # 706-name overstatement.  The executable surface is therefore 368 DOFs:
     # 2*163 track translations + 4*6 counted Lane fields + 3*6 template bytes.
     for track in g1.tracks:
-        names.extend(
-            f"island.track{track.object_id}.{field}"
-            for field in ("center_x", "center_y")
-        )
+        names.extend(f"island.track{track.object_id}.{field}" for field in ("center_x", "center_y"))
     for lane in lanes:
         names.extend(
             f"lane.line{lane.line_index}.{field}"
@@ -561,14 +636,16 @@ def parameter_group_indices(lift: JointDescriptionParameterLiftV1) -> dict[str, 
         "island_worldsheet": tuple(
             index for index, name in enumerate(lift.parameter_names) if name.startswith("island.")
         ),
-        "lane_program": tuple(
-            index for index, name in enumerate(lift.parameter_names) if name.startswith("lane.")
-        ),
+        "lane_program": tuple(index for index, name in enumerate(lift.parameter_names) if name.startswith("lane.")),
         "shared_template_dof": tuple(
             index for index, name in enumerate(lift.parameter_names) if name.startswith("template.")
         ),
     }
-    if tuple(len(groups[name]) for name in groups) != (2 * len(lift.g1.tracks), 4 * len(lift.lane_seeds), 3 * len(lift.template_rows)):
+    if tuple(len(groups[name]) for name in groups) != (
+        2 * len(lift.g1.tracks),
+        4 * len(lift.lane_seeds),
+        3 * len(lift.template_rows),
+    ):
         raise DirectDescriptionError("joint-descent receiver-effective parameter grouping differs")
     return groups
 
@@ -658,9 +735,7 @@ def realized_training_state(
     """
 
     indexes = tuple(int(value) for value in pair_ids)
-    archive, realized = compile_parameterized_archive(
-        lift, theta, include_lane_programs=include_lane_programs
-    )
+    archive, realized = compile_parameterized_archive(lift, theta, include_lane_programs=include_lane_programs)
     receiver = receive_carrier_compose_archive(archive, verify_member_effects=False)
     camera = receiver.render_camera_pairs(indexes).astype(np.float32)
     template_rows = receiver.scorer_solved_templates
@@ -823,9 +898,7 @@ def verify_trainable_group_ownership(lift: JointDescriptionParameterLiftV1) -> d
     }
 
     inert = [
-        name
-        for name, row in rows.items()
-        if not row["archive_changed"] or row["receiver_camera_changed_values"] <= 0
+        name for name, row in rows.items() if not row["archive_changed"] or row["receiver_camera_changed_values"] <= 0
     ]
     if inert:
         raise DirectDescriptionError(
@@ -888,9 +961,7 @@ class DirectDescriptionJointDescentMLXModule:
         self.scorer = scorer_adapter
         self.seg_targets = mx.array(np.asarray(seg_targets, dtype=np.int32))
         self.pose_targets = mx.array(np.asarray(pose_targets, dtype=np.float32))
-        self.margin_targets = None if margin_targets is None else mx.array(
-            np.asarray(margin_targets, dtype=np.float32)
-        )
+        self.margin_targets = None if margin_targets is None else mx.array(np.asarray(margin_targets, dtype=np.float32))
         self.margin_hinge_weight = float(margin_hinge_weight)
         self.margin_floor = float(margin_floor)
         self.parameter_count = len(lift.parameter_names)
@@ -958,6 +1029,7 @@ class DirectDescriptionJointDescentMLXModule:
         template_masks: Any,
         realized_secant_basis: Any | None,
         realized_secant_indices: Sequence[int] | None,
+        pose_objective_weight: float,
     ) -> Any:
         mx = self.mx
         seg, pose_mse, _ = self._components(
@@ -970,7 +1042,7 @@ class DirectDescriptionJointDescentMLXModule:
         )
         # The sqrt term is the exact contest action; epsilon only defines its
         # derivative at zero and is far below the observed warm-start value.
-        return 100.0 * seg + mx.sqrt(10.0 * pose_mse + 1.0e-12)
+        return 100.0 * seg + float(pose_objective_weight) * mx.sqrt(10.0 * pose_mse + 1.0e-12)
 
     def _components(
         self,
@@ -1030,6 +1102,7 @@ class DirectDescriptionJointDescentMLXModule:
         template_masks: np.ndarray,
         realized_secant_basis: np.ndarray | None = None,
         realized_secant_indices: Sequence[int] | None = None,
+        pose_objective_weight: float = 1.0,
     ) -> tuple[float, np.ndarray]:
         self._validate_step_arrays(
             theta,
@@ -1039,12 +1112,14 @@ class DirectDescriptionJointDescentMLXModule:
             realized_secant_basis,
             realized_secant_indices,
         )
+        if not math.isfinite(float(pose_objective_weight)) or not 0.0 <= pose_objective_weight <= 1.0:
+            raise DirectDescriptionError("joint-descent Pose objective weight is invalid")
         mx = self.mx
         pair_mx = mx.array(np.asarray(pair_ids, dtype=np.int32))
         base_mx = mx.array(np.asarray(base_camera, dtype=np.float32))
         masks_mx = mx.array(np.asarray(template_masks, dtype=np.float32))
-        basis_mx = None if realized_secant_basis is None else mx.array(
-            np.asarray(realized_secant_basis, dtype=np.float32)
+        basis_mx = (
+            None if realized_secant_basis is None else mx.array(np.asarray(realized_secant_basis, dtype=np.float32))
         )
 
         def closure(value: Any) -> Any:
@@ -1055,6 +1130,7 @@ class DirectDescriptionJointDescentMLXModule:
                 template_masks=masks_mx,
                 realized_secant_basis=basis_mx,
                 realized_secant_indices=realized_secant_indices,
+                pose_objective_weight=pose_objective_weight,
             )
 
         value, gradient = mx.value_and_grad(closure)(mx.array(np.asarray(theta, dtype=np.float32)))
@@ -1083,9 +1159,7 @@ class DirectDescriptionJointDescentMLXModule:
         )
         mx = self.mx
         pair_mx = mx.array(np.asarray(pair_ids, dtype=np.int32))
-        basis = None if realized_secant_basis is None else mx.array(
-            np.asarray(realized_secant_basis, dtype=np.float32)
-        )
+        basis = None if realized_secant_basis is None else mx.array(np.asarray(realized_secant_basis, dtype=np.float32))
         seg, pose, d_seg = self._components(
             mx.array(np.asarray(theta, dtype=np.float32)),
             pair_ids=pair_mx,
@@ -1168,6 +1242,20 @@ def initial_adam_state(parameter_count: int) -> AdamStateV1:
     return AdamStateV1(0, zeros.copy(), zeros.copy(), zeros.copy(), zeros.copy())
 
 
+def linear_rewarmup_factor(
+    *,
+    completed_steps: int,
+    rewarmup_steps: int,
+    floor: float,
+) -> float:
+    """Return the #518 linear LR factor at a fresh/resumed Adam boundary."""
+
+    if completed_steps < 0 or rewarmup_steps <= 0 or not 0.0 < floor <= 1.0:
+        raise DirectDescriptionError("joint-descent LR rewarmup geometry is invalid")
+    progress = min(float(completed_steps) / float(rewarmup_steps), 1.0)
+    return float(floor + (1.0 - floor) * progress)
+
+
 def clipped_adam_step(
     state: AdamStateV1,
     gradient: np.ndarray,
@@ -1177,14 +1265,23 @@ def clipped_adam_step(
     ema_decay: float,
     beta1: float = 0.9,
     beta2: float = 0.999,
+    maximum_update: float | None = None,
 ) -> AdamStateV1:
     grad = np.asarray(gradient, dtype=np.float32)
     if grad.shape != state.theta.shape or any(
-        value.shape != state.theta.shape
-        for value in (state.ema, state.first_moment, state.second_moment)
+        value.shape != state.theta.shape for value in (state.ema, state.first_moment, state.second_moment)
     ):
         raise DirectDescriptionError("joint-descent Adam state/gradient geometry differs")
-    if learning_rate <= 0.0 or grad_clip <= 0.0 or not 0.0 <= ema_decay < 1.0:
+    hyperparameters = (learning_rate, grad_clip, ema_decay, beta1, beta2)
+    if (
+        not all(math.isfinite(float(value)) for value in hyperparameters)
+        or learning_rate <= 0.0
+        or grad_clip <= 0.0
+        or not 0.0 <= ema_decay < 1.0
+        or not 0.0 < beta1 < 1.0
+        or not 0.0 < beta2 < 1.0
+        or (maximum_update is not None and (not math.isfinite(float(maximum_update)) or maximum_update <= 0.0))
+    ):
         raise DirectDescriptionError("joint-descent Adam hyperparameters are invalid")
     norm = float(np.linalg.norm(grad.astype(np.float64)))
     if not math.isfinite(norm):
@@ -1196,7 +1293,10 @@ def clipped_adam_step(
     second = beta2 * state.second_moment + (1.0 - beta2) * np.square(grad)
     first_hat = first / (1.0 - beta1**step)
     second_hat = second / (1.0 - beta2**step)
-    theta = state.theta - learning_rate * first_hat / (np.sqrt(second_hat) + 1.0e-8)
+    update = learning_rate * first_hat / (np.sqrt(second_hat) + 1.0e-8)
+    if maximum_update is not None:
+        update = np.clip(update, -float(maximum_update), float(maximum_update))
+    theta = state.theta - update
     ema = ema_decay * state.ema + (1.0 - ema_decay) * theta
     return AdamStateV1(
         step=step,
@@ -1294,16 +1394,16 @@ def load_stage_checkpoint(
             state.first_moment.shape,
             state.second_moment.shape,
         }
-        if len(shapes) != 1 or len(state.theta.shape) != 1 or not all(
-            np.all(np.isfinite(value))
-            for value in (state.theta, state.ema, state.first_moment, state.second_moment)
+        if (
+            len(shapes) != 1
+            or len(state.theta.shape) != 1
+            or not all(
+                np.all(np.isfinite(value))
+                for value in (state.theta, state.ema, state.first_moment, state.second_moment)
+            )
         ):
             raise DirectDescriptionError("joint-descent checkpoint optimizer arrays are invalid")
-        cfg = {
-            key: np.asarray(archive[key]).item()
-            for key in archive.files
-            if key.startswith("__")
-        }
+        cfg = {key: np.asarray(archive[key]).item() for key in archive.files if key.startswith("__")}
         report = _optimizer_resume_registry(state, config).restore(cfg)
         if not report.manifest_present or report.restored != {"ddm_joint_descent_optimizer": True}:
             raise DirectDescriptionError("joint-descent canonical resume-registry restore is incomplete")
@@ -1329,6 +1429,7 @@ __all__ = [
     "JointDescentResumeControllerV1",
     "JointDescriptionParameterLiftV1",
     "LaneProgramSeedV1",
+    "WarmStartReformV1",
     "classify_memory_preflight",
     "classify_realized_stage_verdict",
     "clipped_adam_step",
@@ -1336,6 +1437,7 @@ __all__ = [
     "derive_lane_program_seeds",
     "initial_adam_state",
     "lift_v15_archive",
+    "linear_rewarmup_factor",
     "load_stage_checkpoint",
     "parameter_group_indices",
     "realize_parameter_theta",
