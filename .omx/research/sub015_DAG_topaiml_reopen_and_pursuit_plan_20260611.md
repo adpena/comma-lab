@@ -22091,3 +22091,14 @@ scorer grid/ERF scale, never camera res; (ii) no invented pyramids — the chain
 (iii) per-level edits projected through the exact A kernels so edits align with what survives resampling
 (ker(A) 80.67% never spoken); (iv) uint8 sits between scales → edits are int-lattice-native in-level (#532),
 never rounded at the end. Routed dv2+e1. Pointer UNMOVED 0.19108.
+
+---
+
+## FEED-603-train-least-reaffirmed (2026-07-23, MAIN — operator: "as we go, we want to train the least amount possible")
+
+Standing TRAIN-LEAST law (memory `train_least_surgical_kolmogorov_projection_realization_doctrine`) explicitly
+bound into the language/recursion program. **Order of resort at every block/level: DERIVE → SOLVE → FIT →
+TRAIN(last, minimal — #531: only the quotient residual after G, ξ, seed, solve, projection, and only when the
+measured residual decomposition proves nothing cheaper reaches it).** A cycle reaching for descent before
+exhausting 1–3 is mis-ordered. Arms instructed: if a deliverable appears to need training, name the residual,
+show the failed derive/solve/fit attempts, STOP for review. Routed dv2+e1. Pointer UNMOVED 0.19108.
