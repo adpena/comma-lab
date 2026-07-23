@@ -1,0 +1,347 @@
+{
+  "schema": "ddm_q1_quantizr_gepa_crosswalk_receipt.v1",
+  "written_at_utc": "2026-07-23T17:54:00Z",
+  "lane_id": "lane_ddm_q1_quantizr_remine_gepa_omni_20260723",
+  "delegation": {
+    "authority_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_q1_quantizr_remine_gepa_omni_20260723T173443Z.wrapped.prompt.txt",
+    "authority_bytes": 6129,
+    "authority_sha256": "89843ead322c7694a902590821619d9ee58df7c6ba825f5e65959f1f21853086",
+    "checkpoint_key": "codex_delegate:ddm_q1_quantizr_remine_gepa_omni:20260723T173443Z",
+    "base_commit": "6be800b1f3d988b20e66cb40b6e0c84ebf9ad7d9"
+  },
+  "authority": {
+    "research_only": true,
+    "execution_allowed": false,
+    "actuation": "NONE",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "provider_dispatch": false,
+    "training_or_eval_launched": false,
+    "archive_mutated": false,
+    "frontier_pointer_mutated": false,
+    "main_landing_review_required": true
+  },
+  "findings_memo": {
+    "path": ".omx/research/codex_findings_ddm_q1_quantizr_remine_gepa_omni_20260723_codex.md",
+    "bytes": 26831,
+    "sha256": "f38675a263fbca88cee2c405fa919fd24a6aeff338f999decbfc4353c4c756ec"
+  },
+  "public_sources": {
+    "quantizr_pr53": {
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/53",
+      "head_commit": "ef78345815e5a31548dea65f30cf2942b36d0ddf",
+      "runtime_path": "submissions/mask2mask/inflate.py",
+      "runtime_git_blob_sha1": "637d13b15810bcb6114eb86a0ae31f365df2cb4c",
+      "runtime_bytes": 5068,
+      "runtime_sha256": "df55103115e8facb2a38012467c5ff3d06cac607ccb9f1576389f0c63575f1d8",
+      "public_report_d_seg": 0.00264182,
+      "public_report_axis": "CUDA report embedded in PR body",
+      "use": "source_metadata_only_not_pact_score_claim",
+      "mechanism_custody": "runtime_consumes_mask1_and_mask2_but_model_architecture_is_obfuscated",
+      "verdict_scope": "PUBLIC_SOURCE_RECOVERABILITY_ONLY"
+    },
+    "quantizr_pr55": {
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/55",
+      "head_commit": "e0b643b0a7c21f62cc93b5d920bcf3fc0d5a33d9",
+      "compress_path": "submissions/quantizr/compress.py",
+      "compress_git_blob_sha1": "689906eb8e835576df745ec4f940e142a35c2dd8",
+      "compress_bytes": 43725,
+      "compress_sha256": "39dc3fe24e639cc9048b4950999193f81d54b2612d9b26852e9afc844dc3676b",
+      "inflate_path": "submissions/quantizr/inflate.py",
+      "inflate_git_blob_sha1": "a123b9e534ec08252cbd6d52cf662152c4e9029f",
+      "inflate_bytes": 12705,
+      "inflate_sha256": "b2777611a9870e3eac8eb5fa8b1d727a950e582ea97ba6067976f0dc74e5edeb",
+      "public_report_d_seg": 0.00061113,
+      "public_report_axis": "CUDA report embedded in PR body",
+      "use": "source_metadata_only_not_pact_score_claim",
+      "mechanism_custody": "odd_second_mask_only_pose6_residual_film_no_warp",
+      "curriculum_custody": "author_states_combined_five_run_script_mimics_separate_scripts_and_was_not_run_end_to_end"
+    },
+    "selfcomp_pr56": {
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/56",
+      "head_commit": "2b2d76de6f5aa34c76352c2cc02b03ed44a03a26",
+      "inflate_path": "submissions/selfcomp/inflate.py",
+      "inflate_git_blob_sha1": "a815404e8b59b5c2fa7769c0275cbda77398bd56",
+      "inflate_bytes": 10991,
+      "inflate_sha256": "e4255f980c07b3ea5796e701ba98e7aa66479cf2e515c763688bdaea2216676e",
+      "public_report_d_seg": 0.00115296,
+      "public_report_axis": "CPU report embedded in PR body",
+      "use": "source_metadata_only_not_pact_score_claim",
+      "mechanism_custody": "one_gray_soft_class_field_per_pair_plus_per_output_frame_affine_shared_latent_sampling"
+    },
+    "gepa_optimize_anything_omni": {
+      "url": "https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/",
+      "published": "2026-07-22",
+      "retrieved": "2026-07-23",
+      "retrieved_html_sha256": "1757b6fafeef43e32640d800a2ed1a82279ca14697f78d17e9df1528074339d7",
+      "use": "concept_and_interface_crosswalk_only",
+      "external_result_transfer": false
+    }
+  },
+  "pact_inputs": {
+    "advected_motion_601": {
+      "path": ".omx/research/advected_motion_base_20260721.json",
+      "sha256": "f96d870301df9d81326f42db98f3e76689e7a707c19df5a37fabf8a342b1dea2"
+    },
+    "advected_screw6_605": {
+      "path": ".omx/research/advected_screw6_chartlevel_20260721.json",
+      "sha256": "98ccf6af4a3b482c71e2654353180aac32b99ad85be8647c36046f4591cd4f2a"
+    },
+    "e1_export_receipt": {
+      "path": ".omx/research/ddm_e1_runtime_exporter_n600_20260723/ddm_e1_runtime_export_receipt.json",
+      "sha256": "792b46a34746132f257c9835607de57628c63f5c69f0380a9e44a4c20b8d06b9"
+    },
+    "e1_runtime": {
+      "path": ".omx/research/ddm_e1_runtime_exporter_n600_20260723/packet/inflate.py",
+      "sha256": "453a9b5b6aaf133662f57e63105c3828d55ab7ef206e1722f8dc6e7c1a36b4e3"
+    },
+    "sdwl1_receipt": {
+      "path": ".omx/research/ddm_dv2_sdwl1_n600_20260723/receipt.json",
+      "sha256": "efc43fcda1f12f28df2b6059cd5e51e7ee2509a356d99b59e317b253927a709c"
+    },
+    "ddm_366_config": {
+      "path": ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json",
+      "sha256": "9aa12699eb53e77351fd0b96eed16d527eaf4a443b177f07512edd5ed6f3d88d"
+    },
+    "ddm_costate_organ": {
+      "path": "src/tac/ddm_costate_organ.py",
+      "sha256": "3dd8853e4be0dfd12dd44721cb2ef38320e0b0b682f9dbf99aae731163290c54"
+    },
+    "regime_dispatch": {
+      "path": "src/tac/witness_control/regime_dispatch.py",
+      "sha256": "1358a4c921a92067766b275f69bb56b85e9b760c779f2d7178625a06a6dc6fb1"
+    },
+    "existing_gepa_reflection": {
+      "path": "src/tac/witness_control/gepa_reflection.py",
+      "sha256": "9e8f86ec21eba9348495c4db02972c64f85af9d9ff723410f6889f1e2d342cad"
+    },
+    "duty_queue": {
+      "path": "src/tac/witness_dsl/duty_queue_fire_tickets_20260719.py",
+      "sha256": "65fac7fda0f9a42f13d4318707242f43164f797ce4bc5c91e1c72d2bf1bccc87"
+    },
+    "checkpoint_recovery": {
+      "path": "tools/subagent_checkpoint.py",
+      "sha256": "f32a5de476d30dadb4c539c11e24c29e3fc2970573483c73fc1428a47a2ab26f"
+    },
+    "probe_outcomes_ledger": {
+      "path": "src/tac/probe_outcomes_ledger.py",
+      "sha256": "d07b142f420b1ff35d9f140200e17cb2715ee264830f06f727a74803c8ea7111"
+    }
+  },
+  "quantizr_adjudication": {
+    "premise": "odd_frame_masks_plus_warp",
+    "verdict": "PREMISE_CONFLATES_THREE_DISTINCT_PUBLIC_MECHANISMS",
+    "facts": [
+      "PR53 consumes two masks and has author-described optical flow, but exact flow architecture is obfuscated",
+      "PR55 stores the odd/second mask and explicitly drops optical flow in favor of stored-pose FiLM",
+      "PR56 repeats one soft gray-class field across the pair and samples a shared latent with separate per-frame affine embeddings"
+    ],
+    "causal_warp_d_seg_verdict": "NO_CAUSAL_WARP_COST_IDENTIFIABLE_FROM_PUBLIC_ROWS",
+    "causal_warp_d_seg_verdict_scope": "CROSS_SUBMISSION_PUBLIC_REPORTS_WITH_ARCHITECTURE_PAYLOAD_AND_AXIS_CONFOUNDS",
+    "warp_family_status": "OPEN_AT_NAMED_BOUNDARY_POLICY_FIRST_RUNG"
+  },
+  "quantizr_ranked_rows": [
+    {
+      "rank": 1,
+      "lesson_id": "pr56_oversized_border_affine_latent",
+      "disposition": "ADOPT_BOUNDARY_POLICY_FIRST_RUNG",
+      "consumer": "#601/#605 depth-stratified advection successor",
+      "measurement": "same n16 source and exact receiver; existing boundary policy versus 1.25x shared latent canvas plus border extension; hold bytes and coefficients fixed",
+      "actuation": "NOT_EXECUTED"
+    },
+    {
+      "rank": 2,
+      "lesson_id": "pr55_pose6_late_residual_film",
+      "disposition": "ADOPT_CAUSAL_EDGE_PATTERN",
+      "consumer": "E1 successor/E2 pose-stream receiver",
+      "measurement": "pose-record mutation changes scoped output bytes; restoration reproduces exact hash; then exact joint receiver deltas and bytes",
+      "actuation": "NOT_EXECUTED"
+    },
+    {
+      "rank": 3,
+      "lesson_id": "pr56_soft_class_coordinate_lut",
+      "disposition": "ADOPT_AS_PROPOSAL_ONLY",
+      "consumer": "E2 perturb-realize-score API and paint/prototype proposal solver",
+      "measurement": "hard class IDs versus pinned 256x5 LUT under identical receiver and exact admission",
+      "actuation": "NOT_EXECUTED"
+    },
+    {
+      "rank": 4,
+      "lesson_id": "pr55_av1_screen_content_recurrence",
+      "disposition": "ALREADY_BETTER_OR_N_A_BY_TOOL",
+      "consumer": "SDWL1 exact-copy-token probe",
+      "measurement": "exact decoded-state copy token over frozen SDWL1 inventory with exact parseback and complete-byte comparison",
+      "actuation": "NOT_EXECUTED"
+    },
+    {
+      "rank": 5,
+      "lesson_id": "pr55_staging_and_t2_kl",
+      "disposition": "OUR_CUSTODY_BETTER_ADOPT_KL_PROPOSAL_AB_ONLY",
+      "consumer": "#366 proposal ordering only",
+      "measurement": "historical logits and stored exact realized verdicts; KL cannot replace exact admission",
+      "actuation": "NOT_EXECUTED"
+    },
+    {
+      "rank": 6,
+      "lesson_id": "pr55_88k_fp4_parameter_payload",
+      "disposition": "N_A_CURRENT_ANALYTIC_SUBSTRATE",
+      "consumer": null,
+      "measurement": null,
+      "actuation": "NONE"
+    },
+    {
+      "rank": 7,
+      "lesson_id": "pr53_obfuscated_optical_flow",
+      "disposition": "N_A_EXACT_MECHANISM",
+      "consumer": null,
+      "measurement": "do not infer a flow A/B from whole-submission rows",
+      "actuation": "NONE"
+    }
+  ],
+  "gepa_omni_adjudication": {
+    "adds": [
+      "common pluggable proposal-engine protocol",
+      "common evaluator returning scalar plus auxiliary state",
+      "matched-task-model-evaluator-budget cross-engine comparison",
+      "fresh different optimizer seeded from the best phase-one candidate",
+      "best-of parallel vote sequential and adaptive-sequential composition helpers"
+    ],
+    "pact_already_better": [
+      "exact source artifact and axis custody",
+      "explicit verdict scope and family-versus-formulation negatives",
+      "staleness hashes and validity horizon",
+      "resumable checkpoints and named-crux lineage",
+      "fail-closed duty and promotion boundaries"
+    ],
+    "pact_gap": "NO_SINGLE_CUSTODY_BEARING_ENGINE_ADAPTER_OR_MATCHED_BUDGET_CROSS_ENGINE_RECEIPT",
+    "safe_synthesis": "OMNI_AS_PROPOSAL_ADAPTER_BEHIND_PACT_AUTHORITY_FILTER_AND_COSTATE_DUTY_CONTROL",
+    "engine_superiority_verdict": "NO_VERDICT_DATA",
+    "external_blog_results_transfer": false
+  },
+  "gepa_ranked_rows": [
+    {
+      "rank": 1,
+      "lesson_id": "typed_candidate_evaluator_adapter",
+      "disposition": "ADOPT_THIN_TYPED_ADAPTER",
+      "consumers": [
+        "tac.ddm_costate_organ",
+        "tac.witness_control.gepa_reflection",
+        "tac.witness_control.regime_dispatch"
+      ],
+      "first_rung": "historical artifact envelope only; no optimizer invocation"
+    },
+    {
+      "rank": 2,
+      "lesson_id": "fresh_engine_plateau_reset",
+      "disposition": "ADOPT_CONDITIONALLY",
+      "consumers": [
+        "regime_dispatch plateau classifier",
+        "DDM duty scheduler",
+        "subagent checkpoint recovery manifest"
+      ],
+      "first_rung": "same-engine versus different-historical-engine replay at a named crux under equal recorded proposal count"
+    },
+    {
+      "rank": 3,
+      "lesson_id": "matched_budget_cross_engine_receipt",
+      "disposition": "ADOPT_MEASUREMENT",
+      "consumers": [
+        "tac.probe_outcomes_ledger.register_probe_outcome"
+      ],
+      "first_rung": "fixed historical candidate pool authority filter source hashes proposal count and evaluation count"
+    },
+    {
+      "rank": 4,
+      "lesson_id": "typed_auxiliary_state",
+      "disposition": "ADOPT_TYPED_ASI_SUBSET",
+      "consumers": [
+        "gepa_reflection",
+        "findings memo schema",
+        "duty-ticket provenance"
+      ],
+      "first_rung": "map existing exact failure deciding signal source hash verdict scope and next-rung fields"
+    },
+    {
+      "rank": 5,
+      "lesson_id": "engine_composition_helpers",
+      "disposition": "PARTIAL_ADOPT_DRY_COMPILE_ONLY",
+      "consumers": [
+        "DDM scheduler",
+        "duty queue"
+      ],
+      "first_rung": "dry historical compilation; vote cannot amplify authority"
+    },
+    {
+      "rank": 6,
+      "lesson_id": "reflect_pareto_dispose",
+      "disposition": "ALREADY_BETTER_CUSTODY_NOT_OMNI_COMPLETE",
+      "consumers": [
+        "existing gepa_reflection cycle"
+      ],
+      "first_rung": "preserve pending matched replay"
+    },
+    {
+      "rank": 7,
+      "lesson_id": "scalar_score_plus_info_selection",
+      "disposition": "PACT_STRICTLY_BETTER_AUTHORITY_FIREWALL",
+      "consumers": [
+        "future candidate adapter admission gate"
+      ],
+      "first_rung": "fail closed on missing candidate SHA parent SHA source hashes axis verdict scope validity first rung cost and resume state"
+    }
+  ],
+  "borrowed_substrate_accounting": {
+    "external_code_loc_copied": 0,
+    "external_artifact_bytes_incorporated": 0,
+    "external_weights_incorporated": 0,
+    "external_archive_bytes_incorporated": 0,
+    "status": "READ_ONLY_TECHNIQUE_MATH_GEOMETRY_TRANSFER_ONLY"
+  },
+  "triality": {
+    "equations": [
+      "soft semantic coordinate LUT",
+      "per-frame affine shared-latent sampling",
+      "late residual pose-FiLM",
+      "T=2 proposal-only logit KL",
+      "authority-filtered optimizer selection"
+    ],
+    "dsl": "minimum future adapter fields specified in findings memo; no executable schema or flags added",
+    "dag": "every adopted first rung names an existing consumer and remains NOT_EXECUTED"
+  },
+  "blockers": [
+    {
+      "id": "PR53_EXACT_FLOW",
+      "status": "BLOCKED_PUBLIC_ARCHITECTURE_OBFUSCATED",
+      "verdict_scope": "PUBLIC_SOURCE_RECOVERABILITY_ONLY"
+    },
+    {
+      "id": "WARP_ONLY_D_SEG",
+      "status": "NO_CAUSAL_AB_DATA",
+      "verdict_scope": "CROSS_SUBMISSION_PUBLIC_REPORTS"
+    },
+    {
+      "id": "PACT_ENGINE_SUPERIORITY",
+      "status": "NO_VERDICT_DATA",
+      "verdict_scope": "MATCHED_TASK_EVALUATOR_BUDGET_REPLAY_OWED"
+    },
+    {
+      "id": "LANE_REGISTRY_GLOBAL_VALIDATE",
+      "status": "110_PRE_EXISTING_MISSING_EVIDENCE_PATHS_OUTSIDE_NEW_LANE",
+      "verdict_scope": "REPOSITORY_WIDE_HISTORICAL_DEBT"
+    }
+  ],
+  "lane_state": {
+    "registry_path": ".omx/state/lane_registry.json",
+    "registry_post_edit_sha256": "5e3281e8bf5a99c3b75fd7a4db1a7deef23236dfb2a9d8d2cbb3a57f46dceaca",
+    "audit_path": ".omx/state/lane_maturity_audit.log",
+    "audit_post_edit_sha256": "a95465acb33d6adaa9eb2ac7c918f73a15dd58ae14f2824b55d472364e8e50a2",
+    "level": 0,
+    "research_only": true
+  },
+  "landing": {
+    "branch": "codexwt/ddm_q1_quantizr_remine_gepa_omni_20260723T173443Z",
+    "main_review_required": true,
+    "self_merge_permitted": false,
+    "pointer_untouched": true
+  }
+}
