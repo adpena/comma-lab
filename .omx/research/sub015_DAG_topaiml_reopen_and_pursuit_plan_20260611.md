@@ -22102,3 +22102,38 @@ TRAIN(last, minimal — #531: only the quotient residual after G, ξ, seed, solv
 measured residual decomposition proves nothing cheaper reaches it).** A cycle reaching for descent before
 exhausting 1–3 is mis-ordered. Arms instructed: if a deliverable appears to need training, name the residual,
 show the failed derive/solve/fit attempts, STOP for review. Routed dv2+e1. Pointer UNMOVED 0.19108.
+
+---
+
+## FEED-603-live-DDM-costate-organ-elevation2 (2026-07-23, CODEX advisory, MAIN review required)
+
+The costate SENSE/DECIDE surface is re-pointed from witness-training telemetry to the latest
+schema-checked DDM receipt fleet: dv1 → g3/g4 → v19/v19b, with e1 and dv2 registered as pending
+producers. Consumer-side SHA-256 verification covers the five receipts, dv1 summary, and full g3
+SSD atlas. The quarantined 20260717 witness run is not read. The old v2/v3 organ and its activation
+rows remain historical but are `DOMINATED_STALE` and not rank-eligible.
+
+**Canonical law:** `lambda_D2 = exact_gap × visibility × uint8_realizability × byte_price × D2`.
+Eight g3×v19 pair rows and forty pair×stratum rows now pay the previously owed pair/site costates.
+The v19 shared candidate-byte allocation remains null, so the organ does not multiply the global
+201-byte delta across pairs; g3's measured/derived per-pair baseline allocation prices the pair
+rows and the shared candidate rate stays explicitly owed. D2 is the measured realized-closure
+fraction for pair rows and the v19b joint-survival factor for block rows, each family-local and
+never promoted to a universal radius.
+
+**Scheduler law wired:** dependency-frontier filtering → freeing-before-spending → coarse-to-fine
+→ Gauss-Southwell `|lambda| × validity_radius` among independent same-scale blocks. The live next
+recommendation is `j_paint_dv1_persistent_ground`: its cell-space reach is an upper bound and its
+admitted lambda remains zero until receiver/uint8 realization is measured. R6 rehearsal is
+topologically downstream. This is an instrumentation recommendation, not actuation.
+
+**Staleness/resume:** every cycle persists the source-hash set, completed block IDs, and cycle
+index in `ddm_live_costate_checkpoint.v1`; resume refuses any changed input hash. Validity uses
+J-of-J radius when a producer emits one and a declared producer/mutation SLA otherwise. e1 and dv2
+are live re-derivation queue entries rather than fabricated inputs.
+
+**Triality pointers:** DAG=this FEED; DSL=`ddm_costate_organ_elevation2_DSL_20260723.md`;
+equations=`ddm_costate_organ_elevation2_equations_20260723.md` plus
+`tac.ddm_costate_law`; receipt=`ddm_costate_organ_elevation2_20260723T154610Z/`.
+`research_only=true`; `execution_allowed=false`; `actuation=NONE`; score claim false; pointer
+unmoved; MAIN landing review required.
