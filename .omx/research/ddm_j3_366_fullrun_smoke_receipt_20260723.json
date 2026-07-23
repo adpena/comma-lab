@@ -1,0 +1,67 @@
+{
+  "schema": "ddm_j3_366_full_run_smoke_truth_receipt.v1",
+  "utc": "2026-07-23T03:25:00Z",
+  "lane_id": "ddm_j3_366_fullrun_mode_and_ticket_reseal",
+  "verdict": "BLOCKED_REALIZED_DSEG_REGRESSION",
+  "verdict_scope": "INSTANCE: four-step pair447 warm-start policy on the resealed 368-coordinate formulation; the formulation and family remain open",
+  "exact_pipeline": "candidate archive -> strict parse-back -> paint -> uint8 -> R -> frozen CPU-torch SegNet/PoseNet",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "full_run_root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j3_366_fullrun_finalsmoke_64c421698c_20260723T030700Z",
+  "producer_receipt_sha256": "ff8e85df7fcd4da5b0fce11691ce874bd485555c1545fe6e27ab657709dac5cb",
+  "producer_receipt_label_invalidated": {
+    "old_label": "FULL_RUN_BOUNDED_GREEN",
+    "reason": "the old producer classified only memory admission and did not compare exact baseline/final stage components",
+    "fixed_guard": "classify_realized_stage_verdict plus nonzero refusal and no stage advance on component regression"
+  },
+  "baseline_n600": {
+    "archive_bytes": 133941,
+    "archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+    "d_seg": 0.027470296223958333,
+    "d_pose": 163.0613272814428,
+    "advisory_action": 43.217068235930284
+  },
+  "candidate_step4_n600": {
+    "archive_bytes": 133941,
+    "realized_parameter_count": 14,
+    "d_seg": 0.027603208753797744,
+    "d_pose": 163.0613308426994,
+    "advisory_action": 43.23035992987279
+  },
+  "measured_residual": {
+    "delta_d_seg": 0.00013291252983941085,
+    "relative_d_seg_percent": 0.48384090493895915,
+    "delta_d_pose": 0.0000035612565909559635,
+    "delta_advisory_action": 0.013291693942505144,
+    "required_for_green": "delta_d_seg < 0 and delta_d_pose <= 0",
+    "observed": "both components regressed"
+  },
+  "crash_resume": {
+    "forced_process_exit_rc": 23,
+    "kill_boundary_receipt_sha256": "bb85810caa3ecc59229b402a05f924ca37a0dafdb0205fc82ce1ee5cfff76e37",
+    "checkpoint_sha256": "6e85c716cf262039f0a5b18d9ea95ce9a2115b9aa46e4240dbddbd44cc578f56",
+    "checkpoint_cursor": {
+      "stage_index": 0,
+      "stage_step": 1,
+      "global_step": 1
+    },
+    "new_process_resume_completed_global_step": 4,
+    "optimizer_arrays_restored_bit_exact": true,
+    "canonical_resume_registry_restored": true
+  },
+  "step_seconds": [
+    102.97809004201554,
+    103.94577250001021,
+    103.42439970886335,
+    103.8034827078227
+  ],
+  "reformulation_queue": [
+    "replace the fixed pair447 four-step warm start with a realized n600-admitted warm-start selector",
+    "use the available v16 coupling operator as an optional preconditioner only after a bounded exact-archive A/B",
+    "retain quarter-quantum-or-smaller steps and strict component-wise rollback"
+  ],
+  "execution_allowed": false,
+  "main_review_required": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

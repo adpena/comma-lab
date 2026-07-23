@@ -1,0 +1,63 @@
+{
+  "schema": "ddm_j3_366_full_run_preflight_receipt.v1",
+  "utc": "2026-07-23T03:25:00Z",
+  "lane_id": "ddm_j3_366_fullrun_mode_and_ticket_reseal",
+  "verdict": "PREFLIGHT_SAFE_SMOKE_EFFICACY_BLOCKED",
+  "verdict_scope": "actual batch-4 full-run execution geometry, memory admission, measured timing, and advisory n600 scorer timing; no long-run, contest-axis, score, or promotion claim",
+  "actual_full_run_window": {
+    "external_receipt": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j3_366_fullrun_batch4_preseal_64c421698c_20260723T025300Z/full_run_memory_preflight.json",
+    "external_receipt_sha256": "20703c8c8197036a00876fa201b662ca2f66006ca124d81c94e94cf381c3abdb",
+    "train_batch": 4,
+    "measured_seconds_per_step": 104.09510249993764,
+    "derived_seconds_per_n600_exposure": 15614.265374990646,
+    "measured_peak_rss_gib": 10.47418212890625,
+    "projected_peak_rss_gib": 13.5690185546875,
+    "operator_ceiling_gib": 116.0,
+    "admission": true,
+    "projection_formula": "max(measured_peak*1.2+1GiB, measured_peak+2GiB)"
+  },
+  "timing_custody": {
+    "measured_seconds_per_step_low": 100.87168033304624,
+    "measured_seconds_per_step_central": 104.09510249993764,
+    "measured_seconds_per_step_high": 104.09510249993764,
+    "resumed_smoke_step_seconds": [
+      102.97809004201554,
+      103.94577250001021,
+      103.42439970886335,
+      103.8034827078227
+    ],
+    "chunked_n600_verdict_seconds_low": 248.62050645798445,
+    "chunked_n600_verdict_seconds_high": 276.30817591701634,
+    "measured_startup_seconds": 51.49326074984856,
+    "derived_total_steps": 450,
+    "derived_wall_clock_hours_low": 13.31387624311125,
+    "derived_wall_clock_hours_high": 13.79371420691443,
+    "wall_clock_formula": "450*s_per_step + 10*chunked_n600_verdict_seconds + measured_startup_seconds"
+  },
+  "compile_custody": {
+    "ticket": ".omx/research/configs/ddm_j3_366_joint_descent_witness_program_20260723.json",
+    "semantic_program_sha256": "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab2935a2c403b824",
+    "typed_config_hash": "fa63e79492d916a9cc6fe144207bdcb627d07e416883e131ecb90c289f8ccec0",
+    "receiver_effective_parameter_count": 368,
+    "seed": 0,
+    "num_pairs": 600
+  },
+  "launcher_admission_receipt": ".omx/research/ddm_j3_366_launcher_memory_preflight_20260723.json",
+  "final_hash_governed_dry_run": {
+    "external_receipt": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j3_366_resealed_dryrun_df8db01f_20260723T035000Z/governed_dry_run.json",
+    "external_receipt_sha256": "e8728f2fe7ca784fcde39fd6da03100a66ba6ab1f9beafc25368a874b00a1a46",
+    "launcher_memory_receipt_sha256": "d20079f35bfe7ef64108c8b1de6dc5171ab8da20c65db1f2f7384b23f2019062",
+    "governor_decision": "ADMIT",
+    "execution_allowed": false
+  },
+  "execution_boundary": {
+    "research_only": true,
+    "score_claim": false,
+    "this_branch_launch_authorized": false,
+    "main_review_required": true,
+    "efficacy_gate": "BLOCKED_REALIZED_DSEG_REGRESSION"
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}
