@@ -12,13 +12,16 @@ from tools.probe_ddm_kinetic_laguerre_at_tolerance import (
     CODEC_IDS,
     DDMKineticLaguerreAtToleranceProbeV1,
     MetricSpec,
+    ProbeError,
     ProgramState,
     _fit_independent_program,
     _fit_kinetic_program,
     _fit_pack_kinetic_waterfill,
     _kernel_contract,
     _program_parseback_receipt,
+    _quantize_checked,
     _regular_triangulation_edges,
+    _stable_pose_advection,
     coder_race,
     decode_envelope,
     decode_program,
@@ -135,6 +138,23 @@ def test_regular_triangulation_degeneracy_is_deterministic() -> None:
     assert first == second
 
 
+def test_rank_deficient_pose_regression_is_finite_and_quantizable() -> None:
+    xi = np.ones((8, 6), np.float64)
+    xi[:, 0] += np.linspace(0.0, 1e-12, len(xi))
+    target = np.column_stack((np.linspace(10, 20, len(xi)), np.linspace(30, 15, len(xi))))
+    advection = _stable_pose_advection(xi, target)
+    assert np.isfinite(advection).all()
+    quantized = _quantize_checked(advection, 8.0, "<i2", "test_advection")
+    assert quantized.dtype == np.dtype("<i2")
+
+
+def test_quantization_fails_closed_on_nonfinite_or_overflow() -> None:
+    with pytest.raises(ProbeError, match="non-finite"):
+        _quantize_checked(np.array([np.inf]), 1.0, "<i2", "bad")
+    with pytest.raises(ProbeError, match="exceeds"):
+        _quantize_checked(np.array([1e9]), 1.0, "<i2", "bad")
+
+
 def test_site_extraction_is_nested_deterministic_and_class_complete() -> None:
     labels = _synthetic_labels()
     first_schedule, first_receipt = derive_site_schedule(labels, 64)
@@ -237,6 +257,8 @@ def test_temporal_waterfill_charges_events_and_stays_inside_home() -> None:
     decoded = decode_envelope(payload)
     assert len(payload) <= 10_000
     assert receipt["within_predictor_home"] is True
+    assert receipt["minimum_frames_per_segment"] == 8
+    assert receipt["maximum_segment_count"] == 1
     assert decoded.metadata["regular_triangulation_event_count"] == len(decoded.event_rows)
 
 

@@ -61,6 +61,7 @@ LANE_ID = "lane_ddm_m2_kinetic_laguerre_probe_20260723"
 COORD_Q = 8.0
 WEIGHT_Q = 4.0
 XI_Q = 1024.0
+POSE_RIDGE_LAMBDA = 0.05
 METRIC_Q = 1_000_000.0
 TARGET_SOURCE_BYTES = 37_545_489
 V19B_MATCH_ERRORS = 3_137_206
@@ -835,6 +836,38 @@ def _normalize_xi(xi: np.ndarray) -> tuple[np.ndarray, list[float], list[float]]
     return (value - mean) / scale, mean.tolist(), scale.tolist()
 
 
+def _quantize_checked(values: np.ndarray, scale: float, dtype: str, name: str) -> np.ndarray:
+    scaled = np.rint(np.asarray(values, np.float64) * scale)
+    if not np.all(np.isfinite(scaled)):
+        raise ProbeError(f"{name} quantization received non-finite values")
+    info = np.iinfo(np.dtype(dtype))
+    observed_min = float(scaled.min(initial=0.0))
+    observed_max = float(scaled.max(initial=0.0))
+    if observed_min < info.min or observed_max > info.max:
+        raise ProbeError(
+            f"{name} quantization exceeds {dtype}: [{observed_min}, {observed_max}] "
+            f"outside [{info.min}, {info.max}]"
+        )
+    return scaled.astype(dtype)
+
+
+def _stable_pose_advection(xi_segment: np.ndarray, mean_target: np.ndarray) -> np.ndarray:
+    """Centered, ridge-stabilized pose pullback for short temporal segments."""
+
+    x = np.asarray(xi_segment, np.float64)
+    y = np.asarray(mean_target, np.float64)
+    if len(x) < 2:
+        return np.zeros((x.shape[1], y.shape[1]), np.float64)
+    x_centered = x - x.mean(axis=0, keepdims=True)
+    y_centered = y - y.mean(axis=0, keepdims=True)
+    gram = x_centered.T @ x_centered
+    gram.flat[:: gram.shape[0] + 1] += POSE_RIDGE_LAMBDA
+    advection = np.linalg.solve(gram, x_centered.T @ y_centered)
+    if not np.all(np.isfinite(advection)):
+        raise ProbeError("pose advection regression produced non-finite coefficients")
+    return advection
+
+
 def _regular_triangulation_edges(
     sites: np.ndarray,
     class_weights: np.ndarray,
@@ -906,12 +939,12 @@ def _fit_independent_program(
     pair_ids: Sequence[int],
 ) -> ProgramState:
     arrays = {
-        "class_weights_q": np.rint(weights * WEIGHT_Q).astype("<i4"),
+        "class_weights_q": _quantize_checked(weights, WEIGHT_Q, "<i4", "class_weights"),
         "event_rows": np.zeros((0, 4), "<i2"),
         "palette_rgb": np.asarray(palette, "<u1"),
         "pair_ids": np.asarray(pair_ids, "<u2"),
         "site_classes": np.asarray(site_classes, "<u1"),
-        "site_states_q": np.rint(sites * COORD_Q).astype("<i2"),
+        "site_states_q": _quantize_checked(sites, COORD_Q, "<i2", "site_states"),
     }
     return ProgramState(
         {
@@ -958,11 +991,7 @@ def _fit_kinetic_program(
             target = sites[start:stop, indices]
             mean_target = target.mean(axis=1)
             if len(xi_segment) >= 2:
-                advection = np.linalg.lstsq(
-                    xi_segment,
-                    mean_target - mean_target.mean(axis=0, keepdims=True),
-                    rcond=None,
-                )[0]
+                advection = _stable_pose_advection(xi_segment, mean_target)
                 xi_advection[segment, class_id] = advection
                 target = target - (xi_segment @ advection)[:, None, :]
             flattened = target.reshape(stop - start, -1)
@@ -970,15 +999,30 @@ def _fit_kinetic_program(
             site_coef[segment, indices] = coefficients.reshape(degree + 1, len(indices), 2).transpose(1, 0, 2)
         weight_coef[segment] = np.linalg.lstsq(design, weights[start:stop], rcond=None)[0].T
     arrays = {
-        "class_weights_coef_q": np.rint(weight_coef * WEIGHT_Q).astype("<i4"),
+        "class_weights_coef_q": _quantize_checked(
+            weight_coef,
+            WEIGHT_Q,
+            "<i4",
+            "class_weights_coefficients",
+        ),
         "event_rows": np.zeros((0, 4), "<i2"),
         "palette_rgb": np.asarray(palette, "<u1"),
         "pair_ids": np.asarray(pair_ids, "<u2"),
         "segment_bounds": bounds.astype("<u2"),
         "site_classes": np.asarray(site_classes, "<u1"),
-        "site_coefficients_q": np.rint(site_coef * COORD_Q).astype("<i2"),
-        "xi_advection_q": np.rint(xi_advection * COORD_Q).astype("<i2"),
-        "xi_q": np.rint(xi_norm * XI_Q).astype("<i2"),
+        "site_coefficients_q": _quantize_checked(
+            site_coef,
+            COORD_Q,
+            "<i2",
+            "site_coefficients",
+        ),
+        "xi_advection_q": _quantize_checked(
+            xi_advection,
+            COORD_Q,
+            "<i2",
+            "xi_advection",
+        ),
+        "xi_q": _quantize_checked(xi_norm, XI_Q, "<i2", "xi"),
     }
     metadata = {
         "schema": "kinetic_laguerre_program.v1",
@@ -991,6 +1035,10 @@ def _fit_kinetic_program(
         "xi_q": XI_Q,
         "xi_mean": xi_mean,
         "xi_scale": xi_scale,
+        "pose_advection_regression": {
+            "solver": "centered_tikhonov",
+            "lambda": POSE_RIDGE_LAMBDA,
+        },
         "shared_edge_accounting": "once",
         "xi_driven": True,
         "event_semantics": "regular-triangulation edge deletion/addition at segment starts",
@@ -1151,6 +1199,8 @@ def _fit_pack_kinetic_waterfill(
     """Largest deterministic temporal segment count admitted by real bytes."""
 
     n_frames = len(sites)
+    minimum_frames_per_segment = max(8, degree + 2)
+    maximum_segment_count = max(1, n_frames // minimum_frames_per_segment)
     cache: dict[int, tuple[bytes, dict[str, Any]]] = {}
 
     def compile_count(segment_count: int, *, events: bool) -> tuple[bytes, dict[str, Any]]:
@@ -1190,15 +1240,15 @@ def _fit_pack_kinetic_waterfill(
         selected_count = 1
     else:
         high = 2
-        while high <= n_frames:
+        while high <= maximum_segment_count:
             payload, row = compile_count(high, events=False)
             trace.append({**row, "selected_bytes": len(payload)})
             if len(payload) > home_bytes:
                 break
             low = high
             high *= 2
-        high = min(high, n_frames)
-        if high == n_frames and low < high:
+        high = min(high, maximum_segment_count)
+        if high == maximum_segment_count and low < high:
             payload, row = compile_count(high, events=False)
             trace.append({**row, "selected_bytes": len(payload)})
             if len(payload) <= home_bytes:
@@ -1231,6 +1281,12 @@ def _fit_pack_kinetic_waterfill(
             ),
         ),
         "selected_segment_count": selected_count,
+        "maximum_segment_count": maximum_segment_count,
+        "minimum_frames_per_segment": minimum_frames_per_segment,
+        "pose_advection_regression": {
+            "solver": "centered_tikhonov",
+            "lambda": POSE_RIDGE_LAMBDA,
+        },
         "complete_program_bytes": len(payload),
         "within_predictor_home": len(payload) <= home_bytes,
     }
