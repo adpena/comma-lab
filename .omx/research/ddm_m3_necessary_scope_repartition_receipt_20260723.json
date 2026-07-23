@@ -1,0 +1,393 @@
+{
+  "aggregate": {
+    "c1_assigned_residual_errors": 2377273,
+    "certified_infeasible_residual_errors": null,
+    "certified_over_scope_percent": null,
+    "current_master_counterfactual_residual_after_v19b_subtraction": 2303328,
+    "measured_stale_partition_evidence_percent": 3.110496775086412,
+    "target_error_max": 136839,
+    "true_necessary_scope_interval_errors": [
+      0,
+      2377273
+    ],
+    "v19b_amplified_gain_score_units": 0.08049672121725288,
+    "v19b_residual_bucket_net_flips": 73945,
+    "v19b_role_bucket_net_flips": 29377,
+    "v19b_shared_delta_bytes": 3884,
+    "v19b_total_net_flips": 103322,
+    "v19c_status": "PENDING_RECEIPT_ABSENT",
+    "verdict": "NUMERIC_TRUE_SCOPE_NOT_CERTIFIABLE_CURRENT_CUSTODY",
+    "verdict_scope": "INSTANCE:C1_V14_V19B_G2_LANDED_RECEIPTS; no full-stratum multicoefficient solve, solve-then-correct common master, v19c saturation receipt, or current-vehicle frame0 Pose preimage"
+  },
+  "coverage_gaps": [
+    "Road frame_1 full-stratum multicoefficient receiver solve",
+    "Lane frame_1 beyond six selected pairs and 20 centerline coordinates",
+    "Undrivable frame_1 full-stratum multicoefficient receiver solve",
+    "Movable frame_1 full-stratum multicoefficient receiver solve",
+    "MyCar frame_1 full-stratum multicoefficient receiver solve",
+    "v19c correction saturation receipt",
+    "solve-then-correct sequential common-master replay",
+    "current-vehicle conditional frame_0 Pose preimage at n600"
+  ],
+  "date_utc": "2026-07-23",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "execution_allowed": false,
+  "frontier": [
+    {
+      "certification_status": "NOT_CERTIFIED_COMPOSED_REACH_NOT_MEASURED",
+      "certified_infeasible_residual": null,
+      "control_errors": 2210770,
+      "control_sites": 27407046,
+      "frame": "frame_1",
+      "frame_separability": {
+        "pose_coupling": "POSE_NET_READS_BOTH_FRAMES",
+        "status": "SEG_FRAME_1_ONLY_EXACT"
+      },
+      "multicoefficient_inverse_solve": {
+        "certified_closed_errors": null,
+        "certified_closed_fraction": null,
+        "complete_bytes": null,
+        "off_target_collateral": null,
+        "reason": "G2G2 measured only six selected pairs and 20 Lane centerline coordinates; G2 n600 has no receiver delta d_seg.",
+        "status": "NOT_MEASURED_NO_FULL_STRATUM_MULTICOEFFICIENT_SOLVE"
+      },
+      "seg_incidence": "FULL",
+      "stratum": "Road",
+      "v19b_correction_common_master": {
+        "class_conditional_delta_d_seg_after_minus_before": -0.0030219966062741675,
+        "errors_after": 2127946,
+        "net_flips": 82824,
+        "off_target_collateral": "NOT_IDENTIFIABLE_FROM_RECEIPT",
+        "per_class_byte_allocation": null,
+        "shared_stack_delta_bytes": 3884,
+        "status": "MEASURED_NET_CLASS_EFFECT"
+      },
+      "v19c_saturation_top_up": {
+        "bytes": null,
+        "net_flips": null,
+        "status": "PENDING_RECEIPT_ABSENT"
+      }
+    },
+    {
+      "certification_status": "ZERO_SEG_OBLIGATION_EXACT",
+      "certified_infeasible_residual": 0,
+      "control_errors": 0,
+      "control_sites": null,
+      "correction_synergy": {
+        "bytes": 0,
+        "net_flips": 0,
+        "status": "NOT_APPLICABLE_FOR_DSEG"
+      },
+      "frame": "frame_0",
+      "frame_separability": {
+        "r1_comparator": {
+          "complete_bytes": 7195,
+          "d_pose": 0.00161,
+          "transferable_component": false
+        },
+        "status": "POSE_ONLY_PREIMAGE_OPEN_NOT_MEASURED_CURRENT_VEHICLE"
+      },
+      "multicoefficient_inverse_solve": {
+        "certified_closed_errors": 0,
+        "certified_closed_fraction": null,
+        "complete_bytes": 0,
+        "off_target_collateral": 0,
+        "status": "NOT_APPLICABLE_NO_SEGNET_INCIDENCE"
+      },
+      "seg_incidence": "ZERO_EXACT",
+      "stratum": "Road"
+    },
+    {
+      "certification_status": "NOT_CERTIFIED_COMPOSED_REACH_NOT_MEASURED",
+      "certified_infeasible_residual": null,
+      "control_errors": 300563,
+      "control_sites": 690639,
+      "frame": "frame_1",
+      "frame_separability": {
+        "pose_coupling": "POSE_NET_READS_BOTH_FRAMES",
+        "status": "SEG_FRAME_1_ONLY_EXACT"
+      },
+      "multicoefficient_inverse_solve": {
+        "certified_closed_errors": null,
+        "certified_closed_fraction": null,
+        "complete_bytes": null,
+        "off_target_collateral": null,
+        "reason": "G2G2 measured only six selected pairs and 20 Lane centerline coordinates; G2 n600 has no receiver delta d_seg.",
+        "status": "MEASURED_SUBSET_ONLY_N600_UNKNOWN"
+      },
+      "seg_incidence": "FULL",
+      "stratum": "Lane",
+      "v19b_correction_common_master": {
+        "class_conditional_delta_d_seg_after_minus_before": -0.0029002127015705743,
+        "errors_after": 298560,
+        "net_flips": 2003,
+        "off_target_collateral": "NOT_IDENTIFIABLE_FROM_RECEIPT",
+        "per_class_byte_allocation": null,
+        "shared_stack_delta_bytes": 3884,
+        "status": "MEASURED_NET_CLASS_EFFECT"
+      },
+      "v19c_saturation_top_up": {
+        "bytes": null,
+        "net_flips": null,
+        "status": "PENDING_RECEIPT_ABSENT"
+      }
+    },
+    {
+      "certification_status": "ZERO_SEG_OBLIGATION_EXACT",
+      "certified_infeasible_residual": 0,
+      "control_errors": 0,
+      "control_sites": null,
+      "correction_synergy": {
+        "bytes": 0,
+        "net_flips": 0,
+        "status": "NOT_APPLICABLE_FOR_DSEG"
+      },
+      "frame": "frame_0",
+      "frame_separability": {
+        "r1_comparator": {
+          "complete_bytes": 7195,
+          "d_pose": 0.00161,
+          "transferable_component": false
+        },
+        "status": "POSE_ONLY_PREIMAGE_OPEN_NOT_MEASURED_CURRENT_VEHICLE"
+      },
+      "multicoefficient_inverse_solve": {
+        "certified_closed_errors": 0,
+        "certified_closed_fraction": null,
+        "complete_bytes": 0,
+        "off_target_collateral": 0,
+        "status": "NOT_APPLICABLE_NO_SEGNET_INCIDENCE"
+      },
+      "seg_incidence": "ZERO_EXACT",
+      "stratum": "Lane"
+    },
+    {
+      "certification_status": "NOT_CERTIFIED_COMPOSED_REACH_NOT_MEASURED",
+      "certified_infeasible_residual": null,
+      "control_errors": 236896,
+      "control_sites": 58413281,
+      "frame": "frame_1",
+      "frame_separability": {
+        "pose_coupling": "POSE_NET_READS_BOTH_FRAMES",
+        "status": "SEG_FRAME_1_ONLY_EXACT"
+      },
+      "multicoefficient_inverse_solve": {
+        "certified_closed_errors": null,
+        "certified_closed_fraction": null,
+        "complete_bytes": null,
+        "off_target_collateral": null,
+        "reason": "G2G2 measured only six selected pairs and 20 Lane centerline coordinates; G2 n600 has no receiver delta d_seg.",
+        "status": "NOT_MEASURED_NO_FULL_STRATUM_MULTICOEFFICIENT_SOLVE"
+      },
+      "seg_incidence": "FULL",
+      "stratum": "Undrivable",
+      "v19b_correction_common_master": {
+        "class_conditional_delta_d_seg_after_minus_before": 0.00043125466621195274,
+        "errors_after": 262087,
+        "net_flips": -25191,
+        "off_target_collateral": "NET_HARM",
+        "per_class_byte_allocation": null,
+        "shared_stack_delta_bytes": 3884,
+        "status": "MEASURED_NET_CLASS_EFFECT"
+      },
+      "v19c_saturation_top_up": {
+        "bytes": null,
+        "net_flips": null,
+        "status": "PENDING_RECEIPT_ABSENT"
+      }
+    },
+    {
+      "certification_status": "ZERO_SEG_OBLIGATION_EXACT",
+      "certified_infeasible_residual": 0,
+      "control_errors": 0,
+      "control_sites": null,
+      "correction_synergy": {
+        "bytes": 0,
+        "net_flips": 0,
+        "status": "NOT_APPLICABLE_FOR_DSEG"
+      },
+      "frame": "frame_0",
+      "frame_separability": {
+        "r1_comparator": {
+          "complete_bytes": 7195,
+          "d_pose": 0.00161,
+          "transferable_component": false
+        },
+        "status": "POSE_ONLY_PREIMAGE_OPEN_NOT_MEASURED_CURRENT_VEHICLE"
+      },
+      "multicoefficient_inverse_solve": {
+        "certified_closed_errors": 0,
+        "certified_closed_fraction": null,
+        "complete_bytes": 0,
+        "off_target_collateral": 0,
+        "status": "NOT_APPLICABLE_NO_SEGNET_INCIDENCE"
+      },
+      "seg_incidence": "ZERO_EXACT",
+      "stratum": "Undrivable"
+    },
+    {
+      "certification_status": "NOT_CERTIFIED_COMPOSED_REACH_NOT_MEASURED",
+      "certified_infeasible_residual": null,
+      "control_errors": 425853,
+      "control_sites": 1460325,
+      "frame": "frame_1",
+      "frame_separability": {
+        "pose_coupling": "POSE_NET_READS_BOTH_FRAMES",
+        "status": "SEG_FRAME_1_ONLY_EXACT"
+      },
+      "multicoefficient_inverse_solve": {
+        "certified_closed_errors": null,
+        "certified_closed_fraction": null,
+        "complete_bytes": null,
+        "off_target_collateral": null,
+        "reason": "G2G2 measured only six selected pairs and 20 Lane centerline coordinates; G2 n600 has no receiver delta d_seg.",
+        "status": "NOT_MEASURED_NO_FULL_STRATUM_MULTICOEFFICIENT_SOLVE"
+      },
+      "seg_incidence": "FULL",
+      "stratum": "Movable",
+      "v19b_correction_common_master": {
+        "class_conditional_delta_d_seg_after_minus_before": -0.01874514234844983,
+        "errors_after": 398479,
+        "net_flips": 27374,
+        "off_target_collateral": "NOT_IDENTIFIABLE_FROM_RECEIPT",
+        "per_class_byte_allocation": null,
+        "shared_stack_delta_bytes": 3884,
+        "status": "MEASURED_NET_CLASS_EFFECT"
+      },
+      "v19c_saturation_top_up": {
+        "bytes": null,
+        "net_flips": null,
+        "status": "PENDING_RECEIPT_ABSENT"
+      }
+    },
+    {
+      "certification_status": "ZERO_SEG_OBLIGATION_EXACT",
+      "certified_infeasible_residual": 0,
+      "control_errors": 0,
+      "control_sites": null,
+      "correction_synergy": {
+        "bytes": 0,
+        "net_flips": 0,
+        "status": "NOT_APPLICABLE_FOR_DSEG"
+      },
+      "frame": "frame_0",
+      "frame_separability": {
+        "r1_comparator": {
+          "complete_bytes": 7195,
+          "d_pose": 0.00161,
+          "transferable_component": false
+        },
+        "status": "POSE_ONLY_PREIMAGE_OPEN_NOT_MEASURED_CURRENT_VEHICLE"
+      },
+      "multicoefficient_inverse_solve": {
+        "certified_closed_errors": 0,
+        "certified_closed_fraction": null,
+        "complete_bytes": 0,
+        "off_target_collateral": 0,
+        "status": "NOT_APPLICABLE_NO_SEGNET_INCIDENCE"
+      },
+      "seg_incidence": "ZERO_EXACT",
+      "stratum": "Movable"
+    },
+    {
+      "certification_status": "NOT_CERTIFIED_COMPOSED_REACH_NOT_MEASURED",
+      "certified_infeasible_residual": null,
+      "control_errors": 66446,
+      "control_sites": 29993509,
+      "frame": "frame_1",
+      "frame_separability": {
+        "pose_coupling": "POSE_NET_READS_BOTH_FRAMES",
+        "status": "SEG_FRAME_1_ONLY_EXACT"
+      },
+      "multicoefficient_inverse_solve": {
+        "certified_closed_errors": null,
+        "certified_closed_fraction": null,
+        "complete_bytes": null,
+        "off_target_collateral": null,
+        "reason": "G2G2 measured only six selected pairs and 20 Lane centerline coordinates; G2 n600 has no receiver delta d_seg.",
+        "status": "NOT_MEASURED_NO_FULL_STRATUM_MULTICOEFFICIENT_SOLVE"
+      },
+      "seg_incidence": "FULL",
+      "stratum": "MyCar",
+      "v19b_correction_common_master": {
+        "class_conditional_delta_d_seg_after_minus_before": -0.0005438510045623538,
+        "errors_after": 50134,
+        "net_flips": 16312,
+        "off_target_collateral": "NOT_IDENTIFIABLE_FROM_RECEIPT",
+        "per_class_byte_allocation": null,
+        "shared_stack_delta_bytes": 3884,
+        "status": "MEASURED_NET_CLASS_EFFECT"
+      },
+      "v19c_saturation_top_up": {
+        "bytes": null,
+        "net_flips": null,
+        "status": "PENDING_RECEIPT_ABSENT"
+      }
+    },
+    {
+      "certification_status": "ZERO_SEG_OBLIGATION_EXACT",
+      "certified_infeasible_residual": 0,
+      "control_errors": 0,
+      "control_sites": null,
+      "correction_synergy": {
+        "bytes": 0,
+        "net_flips": 0,
+        "status": "NOT_APPLICABLE_FOR_DSEG"
+      },
+      "frame": "frame_0",
+      "frame_separability": {
+        "r1_comparator": {
+          "complete_bytes": 7195,
+          "d_pose": 0.00161,
+          "transferable_component": false
+        },
+        "status": "POSE_ONLY_PREIMAGE_OPEN_NOT_MEASURED_CURRENT_VEHICLE"
+      },
+      "multicoefficient_inverse_solve": {
+        "certified_closed_errors": 0,
+        "certified_closed_fraction": null,
+        "complete_bytes": 0,
+        "off_target_collateral": 0,
+        "status": "NOT_APPLICABLE_NO_SEGNET_INCIDENCE"
+      },
+      "seg_incidence": "ZERO_EXACT",
+      "stratum": "MyCar"
+    }
+  ],
+  "lane_id": "lane_ddm_m3_necessary_scope_repartition_20260723",
+  "main_landing_review_required": true,
+  "named_missed_synergies": [
+    {
+      "name": "SOLVE_X_SE_CORRECTION",
+      "reason": "v19b starts from v15, not a full-stratum solve output",
+      "status": "NOT_MEASURED"
+    },
+    {
+      "amplified_gain_score_units": 0.08049672121725288,
+      "name": "CORRECTION_X_CORRECTION",
+      "status": "MEASURED_V19B"
+    },
+    {
+      "name": "FRAME1_SEG_X_FRAME0_POSE",
+      "status": "STRUCTURALLY_SEPARABLE_BUT_CURRENT_VEHICLE_RATE_NOT_MEASURED"
+    }
+  ],
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64]",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "research_only": true,
+  "schema": "ddm_m3_necessary_scope_repartition_receipt.v1",
+  "score_claim": false,
+  "source_paths": {
+    "c1": ".omx/research/ddm_c1_composed_candidate_ledger_603_613_20260723.json",
+    "g2": ".omx/research/ddm_g2_solve_diff_op_mining_n600_20260722T194000Z/aggregate_ledger.json",
+    "v14": ".omx/research/ddm_v14_realization_fidelity_n600_20260722T215500Z/ddm_v14_realization_fidelity_n600_receipt.json",
+    "v19b": ".omx/research/ddm_v19b_joint_remeasure_stack_20260723T051914Z/ddm_v19b_joint_remeasure_stack_receipt.json"
+  },
+  "source_sha256": {
+    "c1": "14fdf1570b43df65ac949fe157e68ea328ff584f7df1331acf25cca8f900d936",
+    "g2": "061220fd8c1ca047b210841235fc805194a96175e933ee110ba4ac8bb2077d84",
+    "v14": "82d3249908d42a86575c407ab3d7acdf9b3706b31225f2e46862b2472966e5a9",
+    "v19b": "4bb5d6b4b793b667c7cbe15e37cbf9a27f6c0e75451374839fb5df8ca1c1b8e8"
+  }
+}
