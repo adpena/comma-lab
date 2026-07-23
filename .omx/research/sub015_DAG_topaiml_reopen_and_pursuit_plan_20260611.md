@@ -22427,3 +22427,21 @@ Pointer 0.1910828242 [contest-CPU] UNMOVED.
 - Consumers: costate organ ABC (locked-env factors + contraction SENSE rows; maturity _dev, actuation NONE,
   V19 join owed) · menu1 (contraction atlas as pricing SENSE input) · #636 (the brotli fix) ·
   at1 divergence-table debt UNCHANGED.
+
+## FEED-603-m1-relaunch-stale-gate (2026-07-23, MAIN — the R3 gate was already satisfied)
+At the at1x landing boundary the #582(c)/#578-R3 "M1 relaunch" gate was evaluated live per standing GO (a):
+config f8e828ad… VALID/READY (19/19 flags real vs tac.boundary_math.integer_plane_banded_trainer argparse;
+base archive/decoder SHAs fresh) · witness_memory_preflight SAFE (projected 67.6 GiB; system-admission
+ADMIT 102.5 ≤ 116, reclaimable-aware — naive subtraction said 116.2, the exact confound the 07-16 fix cures)
+· governor ADMIT (108.3 ≤ 116, headroom 7.7). **FIRE ABORTED at the freshness check:** the output dir already
+holds the COMPLETED run — receipt `m1_c2_curvelet_full_n600_ready_20260721.training_receipt.json`
+(execution_scope=full_n600_training, 900/900 steps, stopped_early=False, peak RSS 7.3 GB — the 73.4 GiB
+projection belonged to the levelset formula, not this streaming trainer) — and the R3 row was ALREADY
+CUSTODIED 07-21T03:00Z: `m1_byteclose_first_row_20260721T030000Z.md`, verdict
+MEASURED_FORMULATION_NEGATIVE_EFFICACY_RATE_ONLY (candidate receiver-byte-identical to the 94,344 B control;
+Δd_seg=0 · Δd_pose=0 · −3,778 B; advisory ΔS −0.0025156). verdict_scope: FORMULATION (three-one-epoch-stage
+firing; no banded-generator/windowed-curvelet/shared-receiver family negative). **Lesson (staleness law
+receipt):** the queue text outlived the completed work across compaction; freshness-at-consumption (read the
+receipt before firing) prevented a duplicate ~1h run + observer churn. #582(c) marked RESOLVED-STALE.
+#578-R3 = DONE-NEGATIVE; the composed-candidate path forward runs through menu1's priced compose curve, not
+another M1 firing. Pointer 0.1910828242 [contest-CPU] UNMOVED.
