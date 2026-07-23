@@ -21673,3 +21673,32 @@ verdict_scope: formulation — the kinetic anisotropic Laguerre REGISTERED-LADDE
 - **Frame/pair separability = under-exploited axis.** SegNet reads x[:,-1] = LAST-frame-only → ALL d_seg lives in frame_1; frame_0 is seg-free (obligation 8.5e-9). So d_seg (frame_1) and the frame_0 pose carrier are STRUCTURALLY INDEPENDENT for seg. Optimal = multicoefficient-solve frame_1-for-seg + inverse-solve frame_0-for-pose INDEPENDENTLY, descend ONLY the coupling residual. If #366 jointly descends separable seg/pose it's over-scoped by construction.
 - **Multicoefficient-solve-EVERYTHING gap:** g2g2 (#608) proved the joint multi-coefficient chart-symbol solve works but was SUBSET-scoped (4 chart-rescued pairs). Not yet scaled to all n600 × all strata as the primary describe-line.
 - **m3 spawned ($0, no launch):** the SOLVE/DESCEND frontier table — per stratum × per frame, measure {multicoefficient-solve reach × correction-synergy top-up × frame-separability exploit} through the real R + frozen scorer → CERTIFIED-INFEASIBLE residual = #366's TRUE necessary scope. Verdict: #366 over-scoped by X% (re-scope smaller or ESCALATE if solve+correct nearly closes it) + multicoefficient coverage gap + named missed synergies. Fleet 3/4: v18b + v19c + m3. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-5day-retrospective-regrade (2026-07-23, operator: what's stale/weaker/potent/unknown-again after 5 days)
+
+The totality of 5 days RE-WEIGHTS the campaign. Honest re-grade:
+
+**STRONGER / MORE POTENT in retrospect:**
+- **The correction line** — v19b SE-synergy (+0.0805, up to 9.06×, 8/10 amplify): corrections co-reinforce through the global SE gates, NOT antagonize. Far more potent than the single-move result implied.
+- **The inverse-solve / describe line as the PRIMARY vehicle** — distortion (seg+pose) is SOLVED in fp32 (d_seg=1.52e-4, d_pose=1.02e-4). The describe line is the vehicle; training is the fallback.
+- **Frame separability** — frame_0 seg-free (obligation 8.5e-9) = a genuinely free pose carrier; d_seg is frame_1-ONLY.
+- **The exact-linear structure** — rank-4 head (closed-form flip dist) + ker(A) 80.67% nullity: the ENTIRE d_seg response + 80% of render-null is analytically known/free.
+
+**WEAKER / FALSIFIED in retrospect:**
+- **Temporal ξ-delta coding (#574) — MEASURED NEGATIVE, and it's a LAW:** ground-canonicalization and temporal-delta coding are the SAME redundancy lever at different stages — a chart that already absorbed ego-motion leaves NO cross-pair redundancy; differencing an already-decorrelated stream RAISES entropy. My "40-50% temporal meat on the bone" intuition is FALSIFIED. (Sister of non-additive-pools.)
+- **#366 joint descent as critical path** — weaker. It attacks realization-of-d_seg by EXPENSIVE training when distortion is solved and the true crux is min-description REALIZATION at low bytes. m3 measuring necessary scope.
+- **"Compose all levers additively"** — weaker/NAIVE. NON-ADDITIVE POOLS law: same-pool levers COMPETE, never sum ΔS. Every composed-stack byte estimate that ADDED lever gains is optimistic. m4 mapping the pool structure.
+- **c1's SOLVE/DESCEND partition** — stale (assigned 2.38M residual to #366 from pre-synergy single-move arithmetic).
+
+**STALE / STRANDED (high-value, not live):**
+- **Einstein-Avenue rate-only spec** (2026-07-20) — "inverse-solve the RATE axis ONLY at the settled distortion" is the CORRECT framing but was STRANDED (last touched Jul 21, no live consumer). m4 reactivates it.
+- Long-in_progress joint-optimum tasks (#536 3-axis waterfill, #541 constructive inverse-solve) — status-unverified; possible stall.
+
+**UNKNOWN-AGAIN / needs re-testing:**
+- **THE RATE FLOOR at the settled distortion** — the min-description byte count of the SOLVED (1.52e-4/1.02e-4) object through the real decode. THE decisive unknown for sub-0.15. (m4)
+- **The non-additive POOL STRUCTURE** — which of {solve, correct, frame-sep, ker(A)-hide, context-code, ξ-once} compete vs sum. Un-measured; de-naives all composition. (m4)
+- **Integer-lattice-native vs solve-then-round** — is the multicoefficient solve lattice-native? If not, the -1.4% uint8 loss is recoverable meat. (m4)
+- **#366's necessary scope** — unknown until m3 + v19c saturation land.
+- **Does "seg+pose SOLVED" transfer to the REALIZED vehicle?** — 1.52e-4 is fp32; realized-through-uint8 is 0.0275 for v14/v15. "Solved" is fp32-strong; realized-at-low-bytes is the whole open crux.
+
+**THE NAIVE-OF-ME meta-finding:** I've been treating d_seg (via #366 joint descent) as the critical path when distortion is SOLVED and the binding axis to sub-0.15 is RATE (min-description of the solved object, realized integer-lattice-native). The axis emphasis drifted toward the training-based d_seg finish and away from the v10 inverse-solve rate-floor doctrine. m3 (solve/descend frontier) + m4 (rate floor) correct it. Pointer 0.1910828242 [contest-CPU] UNMOVED.
