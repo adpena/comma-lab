@@ -1,6 +1,6 @@
 # Codex session summary — DDM J4 366
 
-Date: 2026-07-23  
+Date: 2026-07-23
 Lane: `ddm_j4_366_warm_start_reform`
 
 The J3 bounded regression was re-derived from immutable checkpoint, telemetry,

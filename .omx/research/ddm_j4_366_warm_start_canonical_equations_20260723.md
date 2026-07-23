@@ -1,8 +1,8 @@
 # DDM J4 warm-start reform equations
 
-Date: 2026-07-23  
-Lane: `ddm_j4_366_warm_start_reform`  
-Evidence axis: `[macOS-CPU frozen-scorer advisory]`  
+Date: 2026-07-23
+Lane: `ddm_j4_366_warm_start_reform`
+Evidence axis: `[macOS-CPU frozen-scorer advisory]`
 `score_claim=false`; pointer `0.1910828242 [contest-CPU]` unmoved.
 
 ## Settled inputs

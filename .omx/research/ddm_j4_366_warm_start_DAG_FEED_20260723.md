@@ -1,7 +1,7 @@
 # DDM J4 warm-start reform — DSL / DAG / equations / FEED
 
-Date: 2026-07-23  
-Lane: `ddm_j4_366_warm_start_reform`  
+Date: 2026-07-23
+Lane: `ddm_j4_366_warm_start_reform`
 Research-only; `[macOS-CPU frozen-scorer advisory]`; `score_claim=false`.
 
 ## DSL

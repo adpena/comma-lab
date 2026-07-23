@@ -34,8 +34,8 @@
   },
   "triality": {
     "dsl_sha256": "0e9f4788ef00f224315eaf2198c2561c346dfd0cd63a0bebeaee6fffb7e49eb3",
-    "dag_feed_sha256": "24574697fb77850467e104af34ea4d283cc3925a37624c9ebe2c234313250c99",
-    "equations_sha256": "127e5541cc3388366840e6bbe0832b9d65c8562956d3acc053d3159ed8a7522f"
+    "dag_feed_sha256": "4120a4b00e9d950d549164d3a95a68ee7f8c434d0d398a00df7ee5983e41e3e4",
+    "equations_sha256": "ed7e712b88a5575fd0d840e7098a0445c18a0fe0f38f0928037372d3cdeffcf4"
   },
   "bounded_verdict": {
     "delta_d_seg": 0.0,

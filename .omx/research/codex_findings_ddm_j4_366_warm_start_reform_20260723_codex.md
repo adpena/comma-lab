@@ -1,6 +1,6 @@
 # Codex findings — DDM J4 366 warm-start reform
 
-Date: 2026-07-23  
+Date: 2026-07-23
 Lane: `ddm_j4_366_warm_start_reform`
 
 ## Finding
