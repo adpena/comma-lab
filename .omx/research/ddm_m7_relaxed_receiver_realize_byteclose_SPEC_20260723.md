@@ -1,9 +1,9 @@
 # DDM M7 relaxed-receiver byte-close realization — implementation spec
 
-Date: 2026-07-23  
-Lane: `ddm_m7_relaxed_receiver_realize_byteclose`  
+Date: 2026-07-23
+Lane: `ddm_m7_relaxed_receiver_realize_byteclose`
 Authority: delegated M7 prompt, SHA-256
-`98c29589b60adec5a2b438a55821387d4ff89fe2e975a6d4c8ed1180dba304dd`  
+`98c29589b60adec5a2b438a55821387d4ff89fe2e975a6d4c8ed1180dba304dd`
 Execution authority: local `$0` only; no Modal, GPU, remote, paid dispatch, or
 frontier-pointer mutation. MAIN owns any Task #381 exact-eval dispatch.
 
@@ -136,5 +136,4 @@ from the historical #575 dispatch.
   findings memo.
 - Review: three bounded re-derivation passes over custody, math, and scope.
   This isolated branch is never self-promoting; MAIN landing review is
-  mandatory.
-
+mandatory.
