@@ -84589,6 +84589,48 @@
         }
       },
       "notes": "Local-only top24 proposal solve plus exact selected n600 replay; score_claim=false; MAIN review required."
+    },
+    {
+      "id": "lane_ddm_e1_runtime_exporter_20260723",
+      "name": "DDM E1 runtime exporter Build 636",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_runtime_exporter.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_e1_runtime_exporter_n600_20260723/ddm_e1_runtime_verification_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_e1_runtime_exporter_636_DAG_FEED_20260723.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Build #636 exact n600 runtime export; macOS-CPU advisory only; MAIN landing review required; contest CPU/CUDA gates intentionally open.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -84598,5 +84640,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T12:38:35Z"
+  "updated_at": "2026-07-23T16:40:28Z"
 }
