@@ -1,0 +1,65 @@
+{
+  "schema": "ddm_v17_iterative_realized_trust_region_three_pass_review.v1",
+  "reviewed_at_utc": "2026-07-23T03:58:00Z",
+  "lane_id": "ddm_v17_iterative_realized_trust_region_solve",
+  "verdict": "THREE_PASS_CLEAN_AFTER_ONE_UNEXECUTED_PATH_REPAIR",
+  "passes": [
+    {
+      "pass": 1,
+      "focus": "lattice_projection_trust_math_and_realized_only_acceptance",
+      "verdict": "CLEAN",
+      "checks": [
+        "all template projections are binary and integer preserving",
+        "Babai and ranked-prefix candidates are unique within each exact-call budget",
+        "negative rho hard-shrinks but never confers acceptance",
+        "only exact realized joint-objective improvement can select a step"
+      ]
+    },
+    {
+      "pass": 2,
+      "focus": "receiver_replay_hash_custody_and_resumability",
+      "verdict": "CLEAN",
+      "checks": [
+        "24 candidate archive paths rehashed to their recorded bytes and SHA-256 values",
+        "20 unique archive byte streams preserve the explicitly disclosed four 1x1 solve-control coincidences",
+        "three historical producer hashes, two source-receipt hashes, and the operator NPZ hash replayed",
+        "one immutable iteration per invocation and chunked n64/n600 checkpoints preserve restart state"
+      ]
+    },
+    {
+      "pass": 3,
+      "focus": "authority_scope_promotion_guards_and_negative_claim_hygiene",
+      "initial_verdict": "NEEDS_FIX",
+      "finding": "The unexecuted accepted-step n600 ladder treated an absent bound-control objective as automatically no worse.",
+      "executed_measurement_impact": "NONE: the measured initial grid accepted zero steps, so n64 and n600 were not run.",
+      "repair": "Bind the SHA-verified v15 n600 receipt, require its exact score row, verify its archive SHA against the bound bytes, and remove the permissive missing-objective branch.",
+      "regression": "tools/tests/test_probe_ddm_a1_bounded_collateral_realized.py",
+      "final_verdict": "CLEAN"
+    }
+  ],
+  "measurement_receipt": {
+    "path": ".omx/research/ddm_a1_bounded_collateral_realized_n64_20260723T031500Z/ddm_a1_bounded_collateral_realized_receipt.json",
+    "sha256": "7cad1d17c5697b578234db282e6191ba3f2789b188051473874638392e18f53a",
+    "producer_sha256_at_measurement": "fa20b377e16fb4960c0322407aff43945c8c326627c818aaf75673de41692c4f"
+  },
+  "post_measurement_repair": {
+    "current_producer_path": "tools/probe_ddm_a1_bounded_collateral_realized.py",
+    "current_producer_sha256": "147d9d3da9891fae58b8662d6cae03189f5234f6af67dea28d2ca1903085e900",
+    "historical_reconstruction_patch": ".omx/research/ddm_v17_post_measurement_n600_control_fix_20260723.patch",
+    "historical_reconstruction_patch_sha256": "9975c14fa095d4e5849e8cfa0be728de3b1e08bfc8341546841ba00f7ede17d8",
+    "reverse_patch_reconstructs_historical_sha256": true,
+    "test_path": "tools/tests/test_probe_ddm_a1_bounded_collateral_realized.py",
+    "test_sha256": "0a5384973e7d81f6778ccff9b95677d4fda219834ae213e01836e7f30daf1839"
+  },
+  "verification": {
+    "pytest": "19 passed",
+    "ruff": "all checks passed; 7 files formatted",
+    "py_compile": "passed",
+    "json_validation": "passed",
+    "historical_reconstruction": "reverse patch reproduced fa20b377e16fb4960c0322407aff43945c8c326627c818aaf75673de41692c4f"
+  },
+  "verdict_scope": "Executed Probe-A plateau path and current fail-closed accepted-step ladder implementation; MAIN must independently review before landing.",
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

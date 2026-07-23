@@ -1,0 +1,22 @@
+{
+  "schema": "DDMA1BoundedCollateralRealizedConfigV1",
+  "run_id": "ddm_a1_bounded_collateral_realized_n64_20260723T031500Z",
+  "seed": 1234,
+  "source_v15_receipt": ".omx/research/ddm_v15_scorer_solved_templates_n64_20260723T011500Z/ddm_v15_scorer_solved_templates_n64_receipt.json",
+  "source_v15_receipt_sha256": "be679f30d913ced637001548e3a8e5d44ec992c64489ce3ee44bc1c4a1849639",
+  "source_v16_receipt": ".omx/research/ddm_v16_coupled_joint_solve_20260723T002500Z/ddm_v16_coupled_joint_solve_receipt.json",
+  "source_v16_receipt_sha256": "170adb825d4d709eebf929daf47e87c4de6736c15f7047572d16315b518ce0e4",
+  "target_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+  "pair_ids": [447, 53, 416, 296, 547, 278, 501, 346],
+  "template_bases": ["1x1_rowband_control", "2x2_contextual", "boundary_normal_2x2"],
+  "epsilon_harmful_off_target_flips": [0, 16, 32, 64],
+  "lattice_radii_u8": [1, 2, 4, 8],
+  "maximum_realized_iterations": 8,
+  "relinearize_after_each_accepted_step": true,
+  "acceptance_authority": "exact_realized_joint_objective_after_uint8_R",
+  "pose_term_in_objective": true,
+  "maximum_archive_bytes": 160000,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false
+}

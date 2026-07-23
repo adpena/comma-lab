@@ -1,0 +1,81 @@
+{
+  "schema": "ddm_v17_iterative_realized_trust_region_sha_receipt.v1",
+  "sealed_at_utc": "2026-07-23T04:01:00Z",
+  "lane_id": "ddm_v17_iterative_realized_trust_region_solve",
+  "delegation_checkpoint_key": "codex_delegate:ddm_v17_iterative_realized_trust_region_solve:20260723T022322Z",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_v17_iterative_realized_trust_region_solve_20260723T022322Z.wrapped.prompt.txt",
+    "bytes": 7648,
+    "sha256": "15c3f26d924f68d2d712fdc5f70a763b6db1bdf0973ecc6b165bbaef648672dc"
+  },
+  "branch": {
+    "name": "codexwt/ddm_v17_iterative_realized_trust_region_solve_20260723T022322Z",
+    "base_commit": "3b0169129fa85d45d14c31f7b280eacffcc8d3cb",
+    "main_landing_review_required": true
+  },
+  "producer_and_tests": [
+    {"path": "src/tac/optimization/iterative_realized_trust_region.py", "sha256": "8c5c95c4d1fc3e994a72777e9e0e85cb563420419ce4b55b7d2dc5087a7df705"},
+    {"path": "src/tac/optimization/tests/test_iterative_realized_trust_region.py", "sha256": "940b510f008d61f622f5d5906bb1b419e622a7baa932dfb3e1060e136f6fbe7c"},
+    {"path": "tools/measure_ddm_v17_iterative_realized_trust_region.py", "sha256": "5098fa8ee6342da328e33f893b792e12e1e44940c24a941a92b875236f17c279"},
+    {"path": "tools/probe_ddm_a1_bounded_collateral_realized.py", "sha256": "147d9d3da9891fae58b8662d6cae03189f5234f6af67dea28d2ca1903085e900"},
+    {"path": "tools/tests/test_probe_ddm_a1_bounded_collateral_realized.py", "sha256": "0a5384973e7d81f6778ccff9b95677d4fda219834ae213e01836e7f30daf1839"},
+    {"path": "src/tac/canonical_equations/ddm_v17_validity_radius_law_20260723.py", "sha256": "1dd0e308e7cd6f2700921389a70eb00db5ea07ea65f451babe7f035a4f0fc5e3"},
+    {"path": "src/tac/canonical_equations/tests/test_ddm_v17_validity_radius_law_20260723.py", "sha256": "52220f1daf240092456cbf0110c97d70854cc19c1061de91a615adfab5e20917"}
+  ],
+  "configs": [
+    {"path": ".omx/research/configs/ddm_a1_bounded_collateral_realized_n64_20260723.json", "file_sha256": "77f4e513cb42672e0543ba7ccb8725de2ff5ca78a37391f904305dd3e75a314e", "typed_config_sha256": "2594e458c9a8567a386ab3c8bdfe6c82c825bfedfc913e0300449ef51197bed1"},
+    {"path": ".omx/research/configs/ddm_v17_iterative_realized_trust_region_20260723.json", "file_sha256": "75112c78e2a087f846ab78b05d1297b64f9f26dcae8916656579533cab9b285e", "authority": "PRESERVED_PRE_DIRECTIVE_EXPLORATORY_ONLY"}
+  ],
+  "authoritative_measurement": {
+    "directory": ".omx/research/ddm_a1_bounded_collateral_realized_n64_20260723T031500Z",
+    "file_count": 31,
+    "bytes": 3674232,
+    "tree_manifest_sha256": "786b4d8637f7eb7a4437f6e1edbab8377ab91c04263d2195e46fb57c619f37ec",
+    "receipt_path": ".omx/research/ddm_a1_bounded_collateral_realized_n64_20260723T031500Z/ddm_a1_bounded_collateral_realized_receipt.json",
+    "receipt_sha256": "7cad1d17c5697b578234db282e6191ba3f2789b188051473874638392e18f53a",
+    "iteration_receipt_sha256": "703eac629618d5cfe4d0ee2d5ce30d9d5af0178f892fc874d0fe3c2680f4fb4c",
+    "operator_sha256": "fe80c965e3d071d5eba3e3d4885a6aa3710afaf56cbe82b0e8b7766b5fadb87b",
+    "verdict": "MEASURED_ADVISORY_INITIAL_GRID_PLATEAU_FORMULATION_OPEN",
+    "accepted_iterations": 0,
+    "score_claim": false
+  },
+  "pre_directive_exploratory": {
+    "directory": ".omx/research/ddm_v17_iterative_realized_trust_region_20260723T023500Z",
+    "file_count": 37,
+    "bytes": 1961023,
+    "tree_manifest_sha256": "969713d5b0621d67bf5c4f8025fc9a0d8fb9f0df38ed60b12c7fd256bff65b47",
+    "authority": "NONE_FOR_SCORE_OR_V17_FINAL_VERDICT",
+    "invalidation_path": ".omx/research/ddm_v17_pre_directive_exploratory_invalidation_20260723.json",
+    "invalidation_sha256": "4f3a9a7871c7dabfd2787fcdaa4474d058ee5aee4faa91521bc8bdeca923c9e3"
+  },
+  "review_and_triality": [
+    {"path": ".omx/research/ddm_v17_iterative_realized_trust_region_DAG_FEED_20260723.json", "sha256": "44b55d8b44400645d0c438fcfcffdaafaa2594bc255e58cbd6206471cee0e7ae"},
+    {"path": ".omx/research/ddm_v17_iterative_realized_trust_region_three_pass_review_20260723.json", "sha256": "3e0a65d5e65169bb9e81ecbfff58ebb28b46922ee42761c29a16ccb5c3070e04"},
+    {"path": ".omx/research/ddm_v17_post_measurement_n600_control_fix_20260723.patch", "sha256": "9975c14fa095d4e5849e8cfa0be728de3b1e08bfc8341546841ba00f7ede17d8"},
+    {"path": ".omx/research/codex_findings_ddm_v17_iterative_realized_trust_region_20260723T034200Z_codex.md", "sha256": "2e76fe4091d3407f4cbcf381c8c4f72dccd6aeff087123f8e12157c75888fd79"},
+    {"path": ".omx/research/codex_session_summary_20260723T034200Z_codex.md", "sha256": "a1083930c058d603d83302b4d65c8f003e9ab281f1b85f70763e4edad0b5f1ee"}
+  ],
+  "canonical_state": {
+    "equation_id": "ddm_v17_realized_validity_ratio_uint8_v1",
+    "equations_registry_sha256": "26b8614fe96d2cfa61b183f071a8c48fcef9d5eda7cb8869c722a61e078f82f7",
+    "lane_level": 2,
+    "lane_registry_sha256": "e34619a90029755e58afb44d45423e9d7b9576d35091384a7092d9cd9b98fa46",
+    "lane_maturity_audit_sha256": "9f7eba9fa05207a26154c7899873b485839ef8f0fb5e2778251da3799cd72b51",
+    "lane_validate": "V17_CLEAN; GLOBAL_VALIDATE_HAS_110_INHERITED_MISSING_EVIDENCE_ERRORS"
+  },
+  "verification": {
+    "pytest": "19 passed",
+    "ruff_check": "passed",
+    "ruff_format_check": "7 files already formatted",
+    "py_compile": "passed",
+    "json_validation": "passed",
+    "git_diff_check": "pending_final_commit",
+    "review_tracker": "3 clean passes recorded for all 7 Python files"
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "main_landing_review_required": true
+}

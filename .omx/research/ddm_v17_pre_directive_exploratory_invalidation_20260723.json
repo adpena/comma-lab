@@ -1,0 +1,30 @@
+{
+  "schema": "ddm_v17_pre_directive_exploratory_invalidation.v1",
+  "status": "PRESERVED_PRE_DIRECTIVE_EXPLORATORY_NOT_AUTHORITY",
+  "superseding_directive_utc": "2026-07-23T02:55:15Z",
+  "reason": "The first run used the original g3-top24 contract and did not contain the operator-supplemented collateral ladder or three Probe-A template bases.",
+  "artifact_directory": ".omx/research/ddm_v17_iterative_realized_trust_region_20260723T023500Z",
+  "iteration_receipt": {
+    "path": ".omx/research/ddm_v17_iterative_realized_trust_region_20260723T023500Z/stage_checkpoints/iteration_01.json",
+    "sha256": "10de50445d614450d9169ebe331730a598f94149e8c013a763ba51449e2ec78c"
+  },
+  "operator": {
+    "path": ".omx/research/ddm_v17_iterative_realized_trust_region_20260723T023500Z/operators/iteration_01_M.npz",
+    "sha256": "052e5b1673fad0f422bd44461a4751a82ddb72ac6d4eddf9732dfd7cfa79c430"
+  },
+  "interrupted_n600": {
+    "complete_batch_count": 19,
+    "complete_half_open_source_pair_range": [0, 304],
+    "last_complete_source_pair_id": 303,
+    "complete_receipt": false,
+    "resumable": true,
+    "authority": "NONE_FOR_SCORE_OR_V17_FINAL_VERDICT"
+  },
+  "replacement_receipt": {
+    "path": ".omx/research/ddm_a1_bounded_collateral_realized_n64_20260723T031500Z/ddm_a1_bounded_collateral_realized_receipt.json",
+    "sha256": "7cad1d17c5697b578234db282e6191ba3f2789b188051473874638392e18f53a"
+  },
+  "bytes_deleted": 0,
+  "pointer_moved": false,
+  "score_claim": false
+}

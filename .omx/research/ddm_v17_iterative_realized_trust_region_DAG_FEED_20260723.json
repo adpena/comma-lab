@@ -1,0 +1,53 @@
+{
+  "schema": "ddm_v17_iterative_realized_trust_region_DAG_FEED.v1",
+  "feed_id": "FEED-603-v17-probe-a-realized-validity-curve",
+  "lane_id": "ddm_v17_iterative_realized_trust_region_solve",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "main_landing_review_required": true,
+  "nodes": [
+    {"id": "v15_v16_custody", "kind": "source", "authority": "SHA_BOUND"},
+    {"id": "probe_a_typed_dsl", "kind": "dsl", "sha256": "2594e458c9a8567a386ab3c8bdfe6c82c825bfedfc913e0300449ef51197bed1"},
+    {"id": "fresh_M", "kind": "sensitivity_map", "shape": [151, 141], "sha256": "fe80c965e3d071d5eba3e3d4885a6aa3710afaf56cbe82b0e8b7766b5fadb87b"},
+    {"id": "basis_projection", "kind": "integer_lattice", "bases": ["1x1_rowband_control", "2x2_contextual", "boundary_normal_2x2"]},
+    {"id": "model_proposals", "kind": "KKT_Babai_or_M_preconditioned", "exact_call_count": 12},
+    {"id": "model_disabled_j2", "kind": "control", "exact_call_count": 12},
+    {"id": "receiver_realization", "kind": "exact_uint8_R_frozen_scorers"},
+    {"id": "collateral_price", "kind": "pareto_constraint", "epsilon_ladder": [0, 16, 32, 64]},
+    {"id": "hard_selection", "kind": "realized_joint_objective_only"},
+    {"id": "plateau", "kind": "measured_verdict", "accepted_iterations": 0},
+    {"id": "validity_equation", "kind": "canonical_equation", "equation_id": "ddm_v17_realized_validity_ratio_uint8_v1"},
+    {"id": "n64_n600", "kind": "ladder", "status": "NOT_RUN_NO_ADMISSIBLE_DEV_WINNER"}
+  ],
+  "edges": [
+    ["v15_v16_custody", "probe_a_typed_dsl"],
+    ["probe_a_typed_dsl", "fresh_M"],
+    ["fresh_M", "basis_projection"],
+    ["basis_projection", "model_proposals"],
+    ["basis_projection", "model_disabled_j2"],
+    ["model_proposals", "receiver_realization"],
+    ["model_disabled_j2", "receiver_realization"],
+    ["receiver_realization", "collateral_price"],
+    ["collateral_price", "hard_selection"],
+    ["hard_selection", "plateau"],
+    ["receiver_realization", "validity_equation"],
+    ["plateau", "n64_n600"]
+  ],
+  "solver_stack_wire_in": {
+    "sensitivity_map": "fresh receiver-through-frozen-scorer M, preserved NPZ and activation/FD receipts",
+    "pareto_constraint": "harmful_off_target_flips <= epsilon with epsilon in {0,16,32,64}; full joint objective prices net Seg/Pose/rate",
+    "bit_allocator": "every exact candidate carries counted archive bytes and byte delta; no free-distortion admission",
+    "cathedral_autopilot": "research_only hold; no dispatch or promotion; MAIN review and new proposal family required",
+    "continual_learning": "basis-conditioned rho curve registered as ddm_v17_realized_validity_ratio_uint8_v1",
+    "probe_disambiguator": "all three preregistered template bases and four collateral/radius cells measured under one typed contract"
+  },
+  "receipt": {
+    "path": ".omx/research/ddm_a1_bounded_collateral_realized_n64_20260723T031500Z/ddm_a1_bounded_collateral_realized_receipt.json",
+    "sha256": "7cad1d17c5697b578234db282e6191ba3f2789b188051473874638392e18f53a"
+  },
+  "verdict": "MEASURED_ADVISORY_INITIAL_GRID_PLATEAU_FORMULATION_OPEN",
+  "verdict_scope": "INSTANCE x measured KKT/Babai and matched-prefix proposal grid; contextual template and joint-training families open",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

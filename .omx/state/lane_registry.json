@@ -83857,6 +83857,54 @@
       "notes": "Isolated-worktree local macOS-CPU frozen-scorer advisory coupled GN/KKT solve extending v14/v15 receiver and #549; score_claim=false; pointer 0.1910828242 contest-CPU unchanged; MAIN landing review required.",
       "research_only": true,
       "lane_class": "receiver_realization_research"
+    },
+    {
+      "id": "ddm_v17_iterative_realized_trust_region_solve",
+      "name": "DDM v17 iterative realized trust-region solve",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/iterative_realized_trust_region.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_a1_bounded_collateral_realized_n64_20260723T031500Z/ddm_a1_bounded_collateral_realized_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v17_iterative_realized_trust_region_three_pass_review_20260723.json"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_session_summary_20260723T034200Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local macOS-CPU frozen-scorer iterative realized-feedback solve; score_claim=false; no dispatch; MAIN landing review required.",
+      "research_only": true,
+      "lane_class": "receiver_realization_research",
+      "reactivation_criteria": [
+        "main_landing_review",
+        "contest_axis_replay",
+        "separate_operator_go"
+      ]
     }
   ],
   "level_rules": {
@@ -83866,5 +83914,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T01:50:41Z"
+  "updated_at": "2026-07-23T03:55:08Z"
 }
