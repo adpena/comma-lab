@@ -92,6 +92,7 @@ MAX_COLUMNS_PER_ROUND: Final = 64
 BEAM_FINALISTS: Final = 6
 LEGACY_SCORER_GRID_DSEG: Final = 0.034003668891
 V12_CHECKPOINT_ROOT: Final = ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/stage_checkpoints"
+PERMUTATION_GAUGE_CODER_ENTRANT: Final = "permutation_gauge_canonical_address_order"
 
 
 def _sha256(payload: bytes) -> str:
@@ -179,6 +180,78 @@ def _publish_immutable(path: Path, payload: bytes) -> None:
 
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:
     _publish_immutable(path, rfc8785_canonicalize(dict(value)))
+
+
+def _receiver_output_noop_rejection(
+    *,
+    error: DirectDescriptionError,
+    config_hash: str,
+    candidate_index: int,
+    spec: ColumnSpec,
+    current_archive: bytes,
+    accepted_count: int,
+) -> dict[str, Any]:
+    """Turn only an exact receiver-output no-op into a resumable rejection."""
+
+    message = str(error)
+    if "receiver-output no-op" not in message:
+        raise error
+    candidate = spec.row()
+    return {
+        "schema": CHECKPOINT_SCHEMA,
+        "stage": "v12_common_exact_r_sequential_greedy",
+        "typed_config_sha256": config_hash,
+        "candidate_index": candidate_index,
+        "candidate": candidate,
+        "candidate_inventory_row_sha256": _sha256(rfc8785_canonicalize(candidate)),
+        "exact_archive_before": {
+            "bytes": len(current_archive),
+            "sha256": _sha256(current_archive),
+        },
+        "exact_receiver_compile_refusal": message,
+        "failure_evidence": {
+            "classification": "automatic_exact_receiver_compile_refusal",
+            "runner_git_sha": _git_sha(),
+        },
+        "admitted": False,
+        "reason": "exact_receiver_parseback_refused_output_noop",
+        "accepted_batch_updates": {},
+        "accepted_count_after": accepted_count,
+        "verdict_scope": (
+            "this exact fixed-pool bundle is a receiver-output no-op; "
+            "no broader family conclusion"
+        ),
+        "score_claim": False,
+    }
+
+
+def _permutation_gauge_coder_row(
+    archive: bytes,
+    selected_column_ids: Sequence[str],
+) -> dict[str, Any]:
+    """Report the ordering-gauge race on the byte-canonical typed atom stream."""
+
+    selected_count = len(selected_column_ids)
+    empty = selected_count == 0
+    return {
+        "status": (
+            "MEASURED_TRIVIAL_EMPTY_SELECTED_PAYLOAD"
+            if empty
+            else "ALREADY_CANONICAL_BY_CONSTRUCTION_NO_DISTINCT_AS_IS_ENCODING"
+        ),
+        "measured": empty,
+        "as_is_archive_bytes": len(archive),
+        "canonical_archive_bytes": len(archive) if empty else None,
+        "canonical_minus_as_is_bytes": 0 if empty else None,
+        "archive_sha256": _sha256(archive),
+        "selected_column_count": selected_count,
+        "candidate_pool_is_counted_payload": False,
+        "ordering_rule": (
+            "lane, shearlet, and island atoms are sorted by typed address before encoding"
+        ),
+        "training_or_merging_claim": False,
+        "admitted_to_equal_byte_table": empty,
+    }
 
 
 def _json(path: Path) -> dict[str, Any]:
@@ -1329,12 +1402,24 @@ def _run_rebaseline_chunk(
                 "score_claim": False,
             }
         else:
-            candidate_archive = _compile_state(
-                predictor_archive=predictor_archive,
-                base_bank=base_bank,
-                specs=(*accepted, spec),
-                profile=profile,
-            )
+            try:
+                candidate_archive = _compile_state(
+                    predictor_archive=predictor_archive,
+                    base_bank=base_bank,
+                    specs=(*accepted, spec),
+                    profile=profile,
+                )
+            except DirectDescriptionError as error:
+                row = _receiver_output_noop_rejection(
+                    error=error,
+                    config_hash=config.typed_config_hash(),
+                    candidate_index=index,
+                    spec=spec,
+                    current_archive=current_archive,
+                    accepted_count=len(accepted),
+                )
+                _write_json(checkpoint, row)
+                continue
             starts = _batch_starts_for((spec,), pair_start=0, pair_count=600)
             update = _score_starts(
                 archive=candidate_archive,
@@ -1673,6 +1758,10 @@ def _n600_generated_rows(
                         "measured": False,
                         "admitted_to_equal_byte_table": False,
                     },
+                    PERMUTATION_GAUGE_CODER_ENTRANT: _permutation_gauge_coder_row(
+                        archive,
+                        ids,
+                    ),
                 },
             }
         )
@@ -1756,6 +1845,11 @@ def _final_receipt(
                 "No frozen-Jacobian predicted cost is used. V16 source-Jacobian endpoints "
                 "are only candidate coordinates; exact singleton and selected-set replay "
                 "through the current receiver are the pricing and admission authorities."
+            ),
+            "permutation_gauge_20260723T052721Z": (
+                "The coder race reports canonical typed-address ordering versus as-is bytes. "
+                "The candidate pool is not counted payload; an empty selected vocabulary has "
+                "a measured zero-byte ordering-gauge delta."
             )
         },
         "resume": {

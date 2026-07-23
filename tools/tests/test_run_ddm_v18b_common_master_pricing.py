@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
+
 from tac.optimization.ddm_column_generation import PricedColumn
 from tac.optimization.direct_description_carrier_compose import (
     RowBandScorerTemplateV1,
     rfc8785_canonicalize,
 )
+from tac.optimization.direct_description_minimizer import DirectDescriptionError
 from tools.run_ddm_v18b_common_master_pricing import (
     FIXED_BUDGETS,
     ColumnSpec,
@@ -13,6 +16,8 @@ from tools.run_ddm_v18b_common_master_pricing import (
     _largest_prefix_not_exceeding,
     _load_bundle_rows,
     _miqp_diagonal_proposal,
+    _permutation_gauge_coder_row,
+    _receiver_output_noop_rejection,
     _source_resume_identity,
 )
 
@@ -109,3 +114,63 @@ def test_source_resume_identity_excludes_only_live_free_space() -> None:
 
     assert _source_resume_identity(first) == _source_resume_identity(resumed)
     assert _source_resume_identity(first) != _source_resume_identity(drifted)
+
+
+def test_receiver_output_noop_is_resumable_but_other_compile_errors_fail_closed(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "tools.run_ddm_v18b_common_master_pricing._git_sha",
+        lambda: "a" * 40,
+    )
+    spec = ColumnSpec(
+        "template",
+        "realized_residual_vjp",
+        1.0,
+        template_index=0,
+        template=RowBandScorerTemplateV1(
+            "Lane",
+            "inner_boundary",
+            0,
+            128,
+            1,
+            1,
+            b"\x33\xff\xcc",
+        ),
+    )
+    row = _receiver_output_noop_rejection(
+        error=DirectDescriptionError("fixture is a receiver-output no-op"),
+        config_hash="b" * 64,
+        candidate_index=7,
+        spec=spec,
+        current_archive=b"archive",
+        accepted_count=3,
+    )
+    assert row["reason"] == "exact_receiver_parseback_refused_output_noop"
+    assert row["accepted_count_after"] == 3
+    assert row["exact_archive_before"]["sha256"]
+    assert row["candidate_inventory_row_sha256"] == (
+        hashlib.sha256(rfc8785_canonicalize(spec.row())).hexdigest()
+    )
+
+    try:
+        _receiver_output_noop_rejection(
+            error=DirectDescriptionError("unrelated parse-back failure"),
+            config_hash="b" * 64,
+            candidate_index=7,
+            spec=spec,
+            current_archive=b"archive",
+            accepted_count=3,
+        )
+    except DirectDescriptionError as error:
+        assert str(error) == "unrelated parse-back failure"
+    else:
+        raise AssertionError("unrelated compile errors must fail closed")
+
+
+def test_permutation_gauge_coder_row_reports_exact_empty_payload_identity() -> None:
+    row = _permutation_gauge_coder_row(b"archive", ())
+    assert row["status"] == "MEASURED_TRIVIAL_EMPTY_SELECTED_PAYLOAD"
+    assert row["as_is_archive_bytes"] == row["canonical_archive_bytes"] == 7
+    assert row["canonical_minus_as_is_bytes"] == 0
+    assert row["candidate_pool_is_counted_payload"] is False
