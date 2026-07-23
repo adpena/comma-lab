@@ -6,4 +6,3 @@
 - Added the typed counted-member perturb→parse-back→RGB→batch16 scorer API for g2/p581r sensitivity pricing.
 - Canonical receipts: `ddm_e2_pose_stream_and_doctrine_export_receipt.json`, `ddm_e2_pose_stream_and_doctrine_export_DAG_FEED_20260723.md`, and the dated premise-falsification memo.
 - Pending: MAIN diff review and merge; no promotion, paid dispatch, or pointer mutation is authorized by this branch.
-

@@ -24,4 +24,3 @@ The exact two-plane lattice control remains a valid feasibility witness (`d_pose
 ## Verdict scope
 
 Negative only for the current compact E1/E2 composed-export formulation. It is not a negative on DDM, the exact solve, ξ factorization, or future learned/analytic compact pose inverses.
-

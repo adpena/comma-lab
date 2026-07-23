@@ -55,4 +55,3 @@ Consumers: g2 compact-shearlet/rank-4 costate ranking; p581r sparsemax/Hopfield 
 ## FEED verdict
 
 E2 is a verified receiver/export apparatus and a sensitivity instrument. It is not a promotable candidate: the per-coordinate/per-boundary tolerance fields and compact pose inverse remain owed. MAIN must review this branch before landing.
-
