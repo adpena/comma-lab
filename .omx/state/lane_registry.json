@@ -85062,6 +85062,49 @@
       },
       "notes": "research_only=true; execution_allowed=false; prepares SHA-bound n600 AA-continuous paint falsifier; no score or promotion authority",
       "research_only": true
+    },
+    {
+      "id": "lane_ddm_at1_scorer_analytic_atlas_20260723",
+      "name": "DDM AT1 scorer analytic atlas phase-0",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only phase-0 modernization; score_claim=false; execution_allowed=false; MAIN landing review required.",
+      "lane_class": "research_analysis",
+      "research_only": true
     }
   ],
   "level_rules": {
