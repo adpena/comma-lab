@@ -1,0 +1,272 @@
+{
+  "artifacts": {
+    ".omx/research/codex_findings_ddm_dr2_scc_outside_view_20260723_codex.md": {
+      "bytes": 26767,
+      "sha256": "88d23a0f172f10c53afc75535020b0395dca73eb06ea40aac8839ab8beb34a2c"
+    },
+    ".omx/research/ddm_dr2_scc_outside_view_mode_race_20260723.json": {
+      "bytes": 59572,
+      "sha256": "5c7849bb72a7426ae179d4ca82cb7870157fd9cf1a1f7819dcc43392f728b602"
+    },
+    "tests/test_measure_ddm_dr2_scc_outside_view.py": {
+      "bytes": 2257,
+      "sha256": "3cc1a2fe71069b83678a04370c294435b28fdb7c246f507da9b00cb63ada271c"
+    },
+    "tools/measure_ddm_dr2_scc_outside_view.py": {
+      "bytes": 18692,
+      "sha256": "d3531439db6d1144f270a592d11208121b1111fcf0a3c9a674b4760ade341339"
+    }
+  },
+  "authority": {
+    "bytes": 5777,
+    "delegation_checkpoint_key": "codex_delegate:ddm_dr2_scc_outside_view:20260723T162816Z",
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_dr2_scc_outside_view_20260723T162816Z.wrapped.prompt.txt",
+    "sha256": "7de8863d5e28224d1afb08fa7a9c6ce037ce75c5242e9759e1947f36eac6746c"
+  },
+  "execution": {
+    "archive_built": false,
+    "cost_usd": 0,
+    "launch_performed": false,
+    "pointer_written": false,
+    "scorer_run": false,
+    "surface": "local_cpu_existing_fact_inventory_only"
+  },
+  "external_sources": {
+    "av1": {
+      "relationship": "palette and IntraBC source facts only; no syntax or format imported",
+      "url": "https://aomediacodec.github.io/av1-spec/av1-spec.pdf"
+    },
+    "evaluator_modules": {
+      "bytes": 8322,
+      "commit": "5387a097398ec6581c7e4e428231e1821fc62670",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/blob/5387a097398ec6581c7e4e428231e1821fc62670/modules.py"
+    },
+    "hevc_scc": {
+      "doi": "10.1109/TCSVT.2015.2478706",
+      "relationship": "palette and intra-block-copy source facts only; no syntax or format imported",
+      "url": "https://www.merl.com/publications/TR2015-126"
+    },
+    "vvc_gpm": {
+      "doi": "10.1109/TCSVT.2020.3040291",
+      "relationship": "angle-offset partition and encoder RDO source facts only; original DDM hard-wedge implementation proposed"
+    },
+    "wedgelets": {
+      "doi": "10.1214/aos/1018031261",
+      "relationship": "dyadic multiscale edge-dictionary source fact only; original DDM finite bank proposed"
+    }
+  },
+  "generated_at_utc": "2026-07-23T16:58:26Z",
+  "later_directives_consumed": [
+    {
+      "from": "MAIN",
+      "summary": "three-clause rate doctrine: scorer visibility, sensitivity-priced tolerance, and descriptive/compact/coder decomposition required per stream",
+      "timestamp_utc": "2026-07-23T16:36:35Z"
+    },
+    {
+      "from": "MAIN",
+      "summary": "fourth clause: single-owner facts, all ordered cross-stream redundancy, dimension homes, and correction deltas",
+      "timestamp_utc": "2026-07-23T16:45:43Z"
+    },
+    {
+      "from": "MAIN",
+      "summary": "signal recovery: consume task 574 via the per-record mode table and classify Einstein-Kolmogorov U5 coverage versus unfired rows",
+      "timestamp_utc": "2026-07-23T16:59:16Z"
+    }
+  ],
+  "lineage": {
+    "allowed": "v10_DDM_describe_line_only",
+    "old_lineage_code_imported": false,
+    "old_lineage_formats_imported": false,
+    "old_lineage_numbers_imported": false,
+    "techniques_in_formats_out": true
+  },
+  "main_landing_review": {
+    "focus": [
+      "confirm 99.1493 percent belongs to movable_band rather than Road",
+      "confirm the 70700 versus 68464 byte race and favorable omitted-schema framing",
+      "confirm the zlib ordered-pair redundancy matrix is interpreted only as an overlap detector",
+      "confirm description-side rate headroom is not receiver-closed sub-0.15 feasibility",
+      "confirm gate reorder toward sufficiency and sensitivity before further exact coder expansion",
+      "confirm task 574 consumed-by and U5 partial-versus-unfired classifications",
+      "confirm pointer and launch surfaces remained untouched"
+    ],
+    "required": true
+  },
+  "mode_race": {
+    "audit": {
+      "candidate_admissible": false,
+      "cross_stream_conditional_coding": "FAIL_UNCONDITIONED_ARITHMETIC_STREAMS",
+      "dimension_homes": "FAIL_UNMEASURED",
+      "scorer_visibility": "FAIL_UNPROVEN",
+      "sensitivity_priced_tolerance": "FAIL_EXACT_ONLY",
+      "single_owner": "PASS_WITHIN_DECLARED_TENSOR_ONLY",
+      "three_layer_decomposition": "FAIL_COMPACT_DOF_UNMEASURED"
+    },
+    "baseline_outer_bytes": 68464,
+    "byte_delta_vs_baseline": 2236,
+    "challenger_outer_bytes": 70700,
+    "challenger_outer_sha256": "6a69aed0f991b91be757cd2e38950ff3fbdcac0481aed2481b594b56555ffde8",
+    "exact_parseback": true,
+    "ordered_pair_redundancy": {
+      "definition": "outer-zlib9 marginal proxy over complete framed selected streams",
+      "maximum_positive_overlap_bytes": 137,
+      "ordered_pair_count": 110,
+      "positive_overlap_pair_count": 110,
+      "positive_overlap_total_bytes_nonadditive": 8716
+    },
+    "selected_mode_counts": {
+      "re_key": 5,
+      "track": 6
+    },
+    "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+    "verdict": "DOMINATED_EXACT_CODER_LAYER_CONTROL"
+  },
+  "pointer": {
+    "axis": "contest-CPU",
+    "moved": false,
+    "value": "0.1910828242"
+  },
+  "recovered_obligations": {
+    "einstein_kolmogorov_u5": {
+      "covered": [
+        "real exact per-record layout and coder byte race",
+        "strict semantic parse-back",
+        "complete outer-byte comparison against 68464 B"
+      ],
+      "status": "PARTIALLY_COVERED_EXACT_LAYOUT_RACE",
+      "still_unfired": [
+        "G4/G5 sensitivity-quantized coder race",
+        "receiver-aware realized-through-R race",
+        "complete archive and score admission"
+      ]
+    },
+    "task_574_inter_cae_style": {
+      "consumed_by": "DDM DR2 per-record static xi_advect track re_key table",
+      "measured": [
+        "static exact admissibility",
+        "track exact bytes",
+        "re_key exact bytes"
+      ],
+      "not_credited": "published shape-bit saving prior",
+      "status": "CONSUMED_WITH_XI_BRANCH_BLOCKED",
+      "xi_advect_blocker": "NO_DECODER_FREE_XI_TO_SDWL1_AGGREGATE_FACT_MAP_OR_PRICED_SIDE_INFORMATION"
+    }
+  },
+  "premise_correction": {
+    "all_records_adjacent_changes": 599,
+    "all_records_unique_states": 600,
+    "g4_lane_corridor_static_in_image_fraction": 0.9777958023930171,
+    "g4_movable_band_static_in_image_fraction": 0.9914933227057525,
+    "prompt_road_991_supported": false,
+    "verdict": "PROMPT_991_PRIOR_IS_MOVABLE_BAND_NOT_ROAD_AND_PIXEL_RECURRENCE_IS_NOT_RECORD_CONSTANCY"
+  },
+  "promotion_eligible": false,
+  "research_only": true,
+  "score_claim": false,
+  "schema": "ddm.dr2.scc_outside_view.receipt.v1",
+  "source_receipts": {
+    "c1": {
+      "path": ".omx/research/ddm_c1_composed_candidate_ledger_603_613_20260723.json",
+      "sha256": "14fdf1570b43df65ac949fe157e68ea328ff584f7df1331acf25cca8f900d936"
+    },
+    "dv1": {
+      "path": ".omx/research/ddm_dv1_description_vocabulary_n600_20260723T141407Z/receipt.json",
+      "sha256": "e0c875346978f8768eedf96793bcff2fb472a37eba4ebbcec7254d107fc00333"
+    },
+    "dv2": {
+      "path": ".omx/research/ddm_dv2_sdwl1_n600_20260723/receipt.json",
+      "sha256": "efc43fcda1f12f28df2b6059cd5e51e7ee2509a356d99b59e317b253927a709c"
+    },
+    "g1": {
+      "path": ".omx/research/direct_description_g1_grammar_induction_20260722.json",
+      "sha256": "f4cdfbc3765c4dbaaa9383741f4b9d2f8d4eb5ab411595fad100ec0373d263e5"
+    },
+    "g2": {
+      "path": ".omx/research/ddm_g2_solve_diff_op_mining_n600_20260722T194000Z/receipt.json",
+      "sha256": "ada87717b39bc34ad67a3104d652574e544d82938fa3a1ea898acdf624c2bd67"
+    },
+    "g3": {
+      "path": ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_receipt.json",
+      "sha256": "6c4157092a7bdf7ba44b458cd470725cc470d84a8fc77ed7d3dedb59160734f5"
+    },
+    "g4": {
+      "path": ".omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z/ddm_g4_spatial_stationarity_receipt.json",
+      "sha256": "bea555b95aeaa11f4209df5333010c41c5495dd789def2a4f7a2a91973f3408c"
+    },
+    "m4": {
+      "path": ".omx/research/ddm_m4_rate_floor_einstein_avenue_20260723_receipt.json",
+      "sha256": "e74ae0079733a4a3babf46cef23f0583b143d6015e7b32a656690ea1ce724972"
+    },
+    "task_574": {
+      "path": ".omx/research/xi_temporal_delta_coder_574_20260721T222234Z.json",
+      "sha256": "7241ff90057287d58482e9abd55e5da17173cb6ebe09a39c2ca847cc02a9a8b9"
+    }
+  },
+  "scc_crosswalk": {
+    "adopt": [
+      "typed semantic palette plus causal cross-section contexts",
+      "decoder-causal semantic sub-vector copy plus residual",
+      "hard angle-offset wedge under exact DDM RDO",
+      "finite dyadic multiscale wedge bank after hard-wedge proof"
+    ],
+    "already_better_scoped": [
+      "clip-global typed worldsheet semantics versus independent local RGB blocks",
+      "contest action and score-byte dual versus generic pixel-distortion RDO"
+    ],
+    "n_a": [
+      "literal HEVC AV1 or VVC bitstreams and syntax",
+      "unjustified RGB palette values",
+      "soft GPM blending without a receiver proof"
+    ]
+  },
+  "tests": {
+    "command": "uv run --no-project --isolated --python /opt/homebrew/bin/python3 --with pytest --with numpy python -m pytest tests/test_measure_ddm_dr2_scc_outside_view.py -q -rA",
+    "passed": 2,
+    "returncode": 0,
+    "warning": "pre-existing pytest configuration names unavailable timeout plugin",
+    "workspace_virtualenv_left": false
+  },
+  "triality": {
+    "dag_leg": ".omx/research/codex_findings_ddm_dr2_scc_outside_view_20260723_codex.md#dag-leg",
+    "dsl_leg": ".omx/research/codex_findings_ddm_dr2_scc_outside_view_20260723_codex.md#dsl-leg",
+    "equation_leg": ".omx/research/codex_findings_ddm_dr2_scc_outside_view_20260723_codex.md#equation-leg"
+  },
+  "u1_rescope": {
+    "exact_description_bytes": 68464,
+    "ladder": [
+      {
+        "description_bytes_at_tolerance": 68464,
+        "d_seg_target": "0.00015196",
+        "multiplier": 1,
+        "strict_sub015_cap_bytes_with_c1_pose_held": 154524,
+        "status": "RATE_FEASIBLE_DESCRIPTION_ONLY_RECEIVER_UNKNOWN"
+      },
+      {
+        "description_bytes_at_tolerance": null,
+        "d_seg_target": "0.00030392",
+        "multiplier": 2,
+        "strict_sub015_cap_bytes_with_c1_pose_held": 131702,
+        "status": "BLOCKED_NO_Q_TAU_OR_RECEIVER"
+      },
+      {
+        "description_bytes_at_tolerance": null,
+        "d_seg_target": "0.00075980",
+        "multiplier": 5,
+        "exact_description_gap_vs_cap_bytes": 5226,
+        "strict_sub015_cap_bytes_with_c1_pose_held": 63238,
+        "status": "BLOCKED_NO_Q_TAU_OR_RECEIVER"
+      },
+      {
+        "description_bytes_at_tolerance": null,
+        "d_seg_target": "0.00151960",
+        "multiplier": 10,
+        "status": "INFEASIBLE_FOR_SUB015_BY_SEG_TERM_ALONE"
+      }
+    ],
+    "verdict": "NONVACUOUS_RATE_SIDE_READ_BUT_NO_RECEIVER_CLOSED_FEASIBILITY",
+    "verdict_scope": "exact SDWL1 fact description and C1-held-pose counterfactual caps; no fact-to-RGB inverse, sensitivity quantizer, realized distortion, archive, or score"
+  },
+  "verdict": "SCC_IDEAS_ADOPT_AS_ORIGINAL_DDM_PATTERNS_PER_RECORD_EXACT_RDO_DOMINATED_AND_U1_RECEIVER_FEASIBILITY_OPEN",
+  "verdict_scope": "SHA-pinned v10/DDM receipts, public evaluator source, primary SCC and wedge sources, and exact frozen SDWL1 fact inventory only; no old-lineage substrate, live launch, receiver realization, evaluator run, contest score, promotion, or pointer change"
+}
