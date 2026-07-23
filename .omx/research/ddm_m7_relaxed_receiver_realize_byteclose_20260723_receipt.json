@@ -1,0 +1,97 @@
+{
+  "schema": "ddm_m7_relaxed_receiver_realization_repo_receipt.v1",
+  "date": "2026-07-23",
+  "lane_id": "ddm_m7_relaxed_receiver_realize_byteclose",
+  "research_only": true,
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_m7_relaxed_receiver_realize_byteclose_20260723T115430Z.wrapped.prompt.txt",
+    "bytes": 6446,
+    "sha256": "98c29589b60adec5a2b438a55821387d4ff89fe2e975a6d4c8ed1180dba304dd",
+    "execution_scope": "local_$0_only"
+  },
+  "measurement_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_m7_relaxed_receiver_realize_byteclose_20260723/ddm_m7_relaxed_receiver_realization_receipt.json",
+    "file_bytes": 17804,
+    "file_sha256": "429baa120a54af0246a7cb45bef53b326c40ac2a317e18e1f6081590ab7f8718",
+    "body_receipt_sha256": "3880180ff713f8ba3a918b012d525a8cb85c0db19be75a78cd5c22bc5104eae3",
+    "identity_sha256": "f6128379a29ef1a747aee3975c22ca2e66254eb9426b7b0c1ffbc902f1e67ed3"
+  },
+  "provenance": {
+    "git_head": "e961b08fad12e2c7446efdb1db01a89fe0c497a2",
+    "config_sha256": "38c7a50cbef215a37c6607e56278d5063517b3dfe4f8ade287f55d7ccf5e508a",
+    "runtime_manifest_sha256": "0e0702e374546b00a0169b00c836e54bc2c4b7268e096bf1dd34776e64335d1b",
+    "upstream_manifest_sha256": "826399224af95aec46bdc797b2ee93804d8b30574c05e95f50f9bce0c4688f69",
+    "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+    "source_video_bytes": 37545489,
+    "hardware": "Apple M5 Max arm64",
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "seed": 1234,
+    "batch_pairs": 16,
+    "num_threads": 2
+  },
+  "archive": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1/candidate_archive.zip",
+    "bytes": 177169,
+    "sha256": "cb6cf0ba719a535bf8874b31675a4ec66a893423d320f1e4071a2012cd88a56f",
+    "member_name": "x",
+    "member_bytes": 177069,
+    "member_sha256": "e9ebce6e7b89eb2d611641df9112c45aa4014197dfbbcf70f0c4a82e064abe18",
+    "compression": "ZIP_STORED",
+    "integer_lattice": {
+      "shape": [
+        600,
+        28
+      ],
+      "dtype": "uint8",
+      "solve_then_round_used": false
+    },
+    "roundtrip": {
+      "latent_raw_roundtrip_byte_exact": true,
+      "member_byte_exact": true,
+      "archive_byte_exact": true
+    }
+  },
+  "measurement": {
+    "pair_count": 600,
+    "checkpoint_count": 38,
+    "checkpoints_contiguous": true,
+    "checkpoint_body_hashes_revalidated": true,
+    "d_seg": 0.000545578002735662,
+    "d_pose": 0.00002930755865188909,
+    "score_terms": {
+      "seg": 0.054557800273566194,
+      "pose": 0.017119450532037846,
+      "rate": 0.11796956486570198,
+      "total": 0.18964681567130603
+    }
+  },
+  "comparisons": {
+    "pointer_score": 0.1910828242,
+    "delta_vs_pointer": -0.0014360085286939661,
+    "strict_fork_threshold": 0.19108,
+    "delta_vs_strict_fork_threshold": -0.001433184328693965,
+    "arithmetic_counterfactual_score": 0.1650779449085631,
+    "delta_vs_arithmetic_counterfactual": 0.024568870762742945,
+    "counterfactual_to_realized_gap": {
+      "seg": 0.03936180027356619,
+      "pose": -0.014792929510823262,
+      "rate": 0.0,
+      "total": 0.024568870762742945
+    },
+    "realization_transfer_ratios": {
+      "d_seg": 3.590273774254159,
+      "d_pose": 0.2877804266681961
+    }
+  },
+  "routing": {
+    "label": "BYTE-CLOSED_CANDIDATE_FOR_MODAL_EXACT_EVAL",
+    "main_landing_review_required": true,
+    "main_dispatch_required": true,
+    "dispatch_performed": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "pointer_mutated": false
+  },
+  "rederive_command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python tools/realize_ddm_m7_relaxed_receiver.py --config .omx/research/ddm_m7_relaxed_receiver_realize_byteclose_20260723.config.json"
+}
