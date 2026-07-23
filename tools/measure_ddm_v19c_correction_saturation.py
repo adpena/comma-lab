@@ -954,7 +954,10 @@ def _family_summary(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "strict_joint_gain": sum(
                 max(0.0, -float(row["joint_incremental_delta"]["joint_delta"])) for row in admitted
             ),
-            "compile_infeasible": sum(row.get("disposition") == "INFEASIBLE_COMPILE" for row in members),
+            "compile_infeasible": sum(
+                str(row.get("disposition", "")).startswith("INFEASIBLE_")
+                for row in members
+            ),
         }
     return summary
 
@@ -1975,14 +1978,45 @@ def _stage_n600(
     baseline_camera_cache: dict[int, np.ndarray] = {}
     for n600_index, proposal_index in enumerate(proposal_indices[len(rows) :], start=len(rows)):
         proposal = _proposal_at(inventory, proposal_index)
+        checkpoint = decision_root / f"candidate_{n600_index:04d}.json"
+        if checkpoint.exists():
+            raise DirectDescriptionError("v19c n600 checkpoint gap or duplicate detected")
         trial_state = _apply_proposal(state, proposal, problem=ctx["problem"], ctx=ctx)
-        archive, _factory, compile_receipt = _compile_state(
-            trial_state,
-            rung="n600",
-            v19_config=v19_config,
-            ctx=ctx,
-            n600_source_carrier=n600_source_carrier,
-        )
+        try:
+            archive, _factory, compile_receipt = _compile_state(
+                trial_state,
+                rung="n600",
+                v19_config=v19_config,
+                ctx=ctx,
+                n600_source_carrier=n600_source_carrier,
+            )
+        except (DirectDescriptionError, ValueError, OverflowError) as exc:
+            row = {
+                "schema": "ddm_v19c_n600_proposal.v1",
+                "typed_config_sha256": config.typed_config_hash(),
+                "dev_admission_index": n600_index,
+                "proposal": proposal,
+                "accepted": False,
+                "disposition": "INFEASIBLE_N600_COMPILE",
+                "compile_error": f"{type(exc).__name__}: {exc}",
+                "archive": None,
+                "compile": None,
+                "before": current,
+                "trial": None,
+                "current_after": current,
+                "joint_incremental_delta": {
+                    "acceptance_authority": "strict_joint_delta_lt_zero",
+                    "accepted": False,
+                    "joint_delta": None,
+                    "not_measured_reason": "INFEASIBLE_N600_COMPILE",
+                },
+                "bucket_transition": None,
+                "score_claim": False,
+                "evidence_axis": AXIS,
+            }
+            _write(checkpoint, row)
+            rows.append(row)
+            continue
         archive_path = (
             root / "candidate_archives" / (f"n600_{n600_index:04d}_{_safe_name(proposal['base_id'])}.zip.receipt-bytes")
         )
@@ -2041,9 +2075,6 @@ def _stage_n600(
             "score_claim": False,
             "evidence_axis": AXIS,
         }
-        checkpoint = decision_root / f"candidate_{n600_index:04d}.json"
-        if checkpoint.exists():
-            raise DirectDescriptionError("v19c n600 checkpoint gap or duplicate detected")
         _write(checkpoint, row)
         rows.append(row)
         if accepted:

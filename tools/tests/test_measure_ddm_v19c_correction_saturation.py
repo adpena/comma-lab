@@ -13,6 +13,7 @@ from tools.measure_ddm_v19c_correction_saturation import (
     SaturationState,
     _apply_proposal,
     _candidate_n600_batches,
+    _family_summary,
     _interleave,
     _proposal_at,
     _restore_n600_decisions,
@@ -152,6 +153,24 @@ def test_resume_proposal_identity_is_cycle_stable() -> None:
     first = [_proposal_at(inventory, index) for index in range(13)]
     replay = [_proposal_at(inventory, index) for index in range(13)]
     assert [row["candidate_id"] for row in replay] == [row["candidate_id"] for row in first]
+
+
+def test_family_summary_counts_n600_compile_infeasibility() -> None:
+    rows = [
+        {
+            "proposal": {"family": family},
+            "accepted": False,
+            "disposition": (
+                "INFEASIBLE_N600_COMPILE"
+                if family == "worldsheet_track_event"
+                else "REJECTED_NONNEGATIVE_N600_JOINT_DELTA"
+            ),
+        }
+        for family in FAMILIES
+    ]
+    summary = _family_summary(rows)
+    assert summary["worldsheet_track_event"]["compile_infeasible"] == 1
+    assert summary["preuint8_q8_region"]["compile_infeasible"] == 0
 
 
 def test_n600_resume_restores_only_admitted_state(tmp_path) -> None:
