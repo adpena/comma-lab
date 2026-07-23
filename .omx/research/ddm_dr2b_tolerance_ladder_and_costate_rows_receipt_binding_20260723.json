@@ -1,0 +1,71 @@
+{
+  "schema": "ddm_dr2b_tolerance_ladder_and_costate_rows_receipt_binding.v1",
+  "generated_at_utc": "2026-07-23T19:27:00Z",
+  "authority": {
+    "delegation_checkpoint_key": "codex_delegate:ddm_dr2b_tolerance_ladder_and_costate_rows:20260723T184128Z",
+    "prompt_bytes": 6233,
+    "prompt_sha256": "4a2efc4f4aa3ed38906d782fba0862271909cf045611ef0edbe0f4c593171981"
+  },
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "source_head": "e3923955954a94e54f7922f6f61a81a107078002",
+  "active_receipt": {
+    "path": ".omx/research/ddm_dr2b_tolerance_ladder_and_costate_rows_n600_20260723_v4/receipt.json",
+    "bytes": 53101,
+    "sha256": "9dedcc03d38942c4291a51505b754890a79ab48bfa53c1ac8daef61fe5a8c8c8",
+    "typed_config_sha256": "ccb2f54da9779d56a0ce3f03cb658f5e5e50c9094a495919d232ee85260f18cc"
+  },
+  "superseded_receipts": [
+    {
+      "path": ".omx/research/ddm_dr2b_tolerance_ladder_and_costate_rows_n600_20260723/receipt.json",
+      "bytes": 50209,
+      "sha256": "e4cc91c8f626c4653a33a43ff549a7c1a893c5457dca42f4dd3c1e0c0678a0cd",
+      "superseded_reason": "precedes MAIN frequency-band directive 2026-07-23T19:11:51Z"
+    },
+    {
+      "path": ".omx/research/ddm_dr2b_tolerance_ladder_and_costate_rows_n600_20260723_v2/receipt.json",
+      "bytes": 52785,
+      "sha256": "5bc5a420b7c9aedf02ec371c68e707af5aad89a38b5d1e197539b1573bc17adf",
+      "superseded_reason": "receiver-invalid row omitted the underlying ReceiverError cause"
+    },
+    {
+      "path": ".omx/research/ddm_dr2b_tolerance_ladder_and_costate_rows_n600_20260723_v3/receipt.json",
+      "bytes": 52947,
+      "sha256": "7b9f80ceef226640555843674205337dc07fa3a918dfa5facf2068ccd008ef35",
+      "superseded_reason": "frequency-band blocker lacked an explicit verdict_scope"
+    }
+  ],
+  "implementation_custody": [
+    {
+      "path": "src/tac/optimization/ddm_dr2b_tolerance_costate.py",
+      "bytes": 11743,
+      "sha256": "31cd356b8543bbfbee75b5097d3d5cba3619aacf94bf8dc82a3c35cb8ef2ab00"
+    },
+    {
+      "path": "tools/measure_ddm_dr2b_tolerance_costate.py",
+      "bytes": 51123,
+      "sha256": "9bbe43f2189159efc02dac2f5876db01ba2f6455077a1e43ef13840efbb9d082"
+    },
+    {
+      "path": "tools/tests/test_measure_ddm_dr2b_tolerance_costate.py",
+      "bytes": 6822,
+      "sha256": "490f57327603ed2885e742e3d18d49abab1aec3e1134d64f618a74b376e0ddb6"
+    },
+    {
+      "path": ".omx/research/configs/ddm_dr2b_tolerance_ladder_and_costate_rows_20260723.json",
+      "bytes": 4691,
+      "sha256": "73e74b9da701f7b56cc57e99d49861d8398739e3b3b4ccb41128bd5b87396f64"
+    }
+  ],
+  "reproduction": {
+    "command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python tools/measure_ddm_dr2b_tolerance_costate.py --config .omx/research/configs/ddm_dr2b_tolerance_ladder_and_costate_rows_20260723.json",
+    "resume_contract": "six immutable per-probe checkpoints bound to the typed config hash",
+    "test_command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python -m pytest -q tools/tests/test_measure_ddm_dr2b_tolerance_costate.py src/tac/optimization/tests/test_ddm_runtime_sensitivity.py",
+    "test_result": "16 passed"
+  },
+  "verdict": "MEASURED_E2_SPARSE_COSTATE_ROWS; BLOCKED_SDWL1_LADDER_MODE_RERACE_DR1_RECORD_PRUNING_AND_XI_DIRECTION"
+}

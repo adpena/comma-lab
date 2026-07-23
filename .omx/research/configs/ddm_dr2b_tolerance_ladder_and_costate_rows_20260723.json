@@ -1,0 +1,132 @@
+{
+  "schema": "DDMDR2BToleranceCostateConfigV1",
+  "run_id": "ddm_dr2b_tolerance_ladder_and_costate_rows_20260723",
+  "seed": 1234,
+  "scorer_threads": 4,
+  "scorer_batch_size": 16,
+  "authority_sha256": "4a2efc4f4aa3ed38906d782fba0862271909cf045611ef0edbe0f4c593171981",
+  "delegation_checkpoint_key": "codex_delegate:ddm_dr2b_tolerance_ladder_and_costate_rows:20260723T184128Z",
+  "e2_archive": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e2_pose_stream_and_doctrine_export_20260723/upstream_harness/submission/archive.zip",
+    "bytes": 343466,
+    "sha256": "8891012e4019e474d1e8ae7578104d74f27c25838c7b68a3798af35853469819"
+  },
+  "e2_verification_receipt": {
+    "path": ".omx/research/ddm_e2_pose_stream_and_doctrine_export_20260723/ddm_e2_runtime_verification_receipt_v2.json",
+    "bytes": 19381,
+    "sha256": "22a7bc6bbf5ae1f45a86ecaa838275acec4403e00370eb5f6875b5a252b979a6"
+  },
+  "e2_findings_receipt": {
+    "path": ".omx/research/ddm_e2_pose_stream_and_doctrine_export_receipt.json",
+    "bytes": 12182,
+    "sha256": "720ef23a4d2cfea6f60eae4593bd5558c132b81bf59e9daac901b477af374c90"
+  },
+  "dr2_receipt": {
+    "path": ".omx/research/ddm_dr2_scc_outside_view_receipt_20260723.json",
+    "bytes": 11683,
+    "sha256": "4e3cec44f9176342642b363d67e64b3ff92b010f01c879c8f4e44f00839f8ce7"
+  },
+  "dr1_receipt": {
+    "path": ".omx/research/ddm_dr1_realization_race_coding_gain_n600_20260723/receipt.json",
+    "bytes": 49338,
+    "sha256": "a84112f0fc0063e43711a0e9c0777a51abac85795b990281ca08899b122a1104"
+  },
+  "v19b_receipt": {
+    "path": ".omx/research/ddm_v19b_joint_remeasure_stack_20260723T051914Z/ddm_v19b_joint_remeasure_stack_receipt.json",
+    "bytes": 156350,
+    "sha256": "4bb5d6b4b793b667c7cbe15e37cbf9a27f6c0e75451374839fb5df8ca1c1b8e8"
+  },
+  "dv2_receipt": {
+    "path": ".omx/research/ddm_dv2_sdwl1_n600_20260723/receipt.json",
+    "bytes": 118311,
+    "sha256": "efc43fcda1f12f28df2b6059cd5e51e7ee2509a356d99b59e317b253927a709c"
+  },
+  "dv2_fact_inventory": {
+    "path": ".omx/research/ddm_dv2_sdwl1_n600_20260723/payloads/fact_inventory.npy",
+    "bytes": 422528,
+    "sha256": "9208797cdda6676e9298a20f8d128bb02a58c40255167056297b6098fea9e8fc"
+  },
+  "dv2_selected_payload": {
+    "path": ".omx/research/ddm_dv2_sdwl1_n600_20260723/payloads/whole_typed_section_causal_delta.zlib",
+    "bytes": 68464,
+    "sha256": "2b67caa997f353d1aee25b66737fcae1c0067deb92a0850401ce56f2f2537cab"
+  },
+  "scorer_config": {
+    "path": ".omx/research/configs/ddm_v15_scorer_solved_templates_n600_20260722.json",
+    "bytes": 1879,
+    "sha256": "626b17a1f8870e32f40388c457af9cf7b80a2ff1e49b5fb81124c902218cfb1b"
+  },
+  "output_directory": ".omx/research/ddm_dr2b_tolerance_ladder_and_costate_rows_n600_20260723_v4",
+  "probes": [
+    {
+      "probe_id": "chart_anchor_p447_f0_g_minus1",
+      "stream": "base/chart.anchors",
+      "flat_index": 2683,
+      "delta": -1,
+      "expected_original_value": 20,
+      "pair_id": 447,
+      "purpose": "chart_tolerance",
+      "first_rung": true
+    },
+    {
+      "probe_id": "chart_anchor_p447_f0_g_minus4",
+      "stream": "base/chart.anchors",
+      "flat_index": 2683,
+      "delta": -4,
+      "expected_original_value": 20,
+      "pair_id": 447,
+      "purpose": "chart_tolerance",
+      "first_rung": true
+    },
+    {
+      "probe_id": "chart_gradient_p447_f0_dy_g_plus4",
+      "stream": "base/chart.gradients",
+      "flat_index": 5365,
+      "delta": 4,
+      "expected_original_value": -5,
+      "pair_id": 447,
+      "purpose": "chart_tolerance",
+      "first_rung": true
+    },
+    {
+      "probe_id": "chart_residual_p447_f0_r6c8_g_plus1",
+      "stream": "base/chart.residuals",
+      "flat_index": 515257,
+      "delta": 1,
+      "expected_original_value": 45,
+      "pair_id": 447,
+      "purpose": "chart_tolerance",
+      "first_rung": true
+    },
+    {
+      "probe_id": "semantic_low_margin_p447_y260x511_4to2",
+      "stream": "semantic/composed",
+      "flat_index": 88017407,
+      "delta": -2,
+      "expected_original_value": 4,
+      "pair_id": 447,
+      "purpose": "semantic_boundary",
+      "semantic_y": 260,
+      "semantic_x": 511,
+      "first_rung": true
+    },
+    {
+      "probe_id": "semantic_high_margin_p447_y189x364_0to2",
+      "stream": "semantic/composed",
+      "flat_index": 87980908,
+      "delta": 2,
+      "expected_original_value": 0,
+      "pair_id": 447,
+      "purpose": "semantic_boundary",
+      "semantic_y": 189,
+      "semantic_x": 364,
+      "first_rung": true
+    }
+  ],
+  "sdwl1_to_e2_crosswalk": null,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

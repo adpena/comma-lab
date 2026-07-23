@@ -1,0 +1,89 @@
+{
+  "schema": "ddm_dr2b_tolerance_ladder_and_costate_rows_review_receipt.v1",
+  "created_at_utc": "2026-07-23T19:36:30Z",
+  "research_only": true,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "review_target": {
+    "active_measurement_receipt_path": ".omx/research/ddm_dr2b_tolerance_ladder_and_costate_rows_n600_20260723_v4/receipt.json",
+    "active_measurement_receipt_sha256": "9dedcc03d38942c4291a51505b754890a79ab48bfa53c1ac8daef61fe5a8c8c8",
+    "binding_path": ".omx/research/ddm_dr2b_tolerance_ladder_and_costate_rows_receipt_binding_20260723.json",
+    "binding_sha256": "65621802e9398a0d882c1c763b125c87f3e4830b91d115949a886b4e29fe73c7"
+  },
+  "reviewed_code": [
+    {
+      "path": "src/tac/optimization/ddm_dr2b_tolerance_costate.py",
+      "sha256": "31cd356b8543bbfbee75b5097d3d5cba3619aacf94bf8dc82a3c35cb8ef2ab00"
+    },
+    {
+      "path": "tools/measure_ddm_dr2b_tolerance_costate.py",
+      "sha256": "9bbe43f2189159efc02dac2f5876db01ba2f6455077a1e43ef13840efbb9d082"
+    },
+    {
+      "path": "tools/tests/test_measure_ddm_dr2b_tolerance_costate.py",
+      "sha256": "490f57327603ed2885e742e3d18d49abab1aec3e1134d64f618a74b376e0ddb6"
+    }
+  ],
+  "clean_passes": [
+    {
+      "pass": 1,
+      "perspective": "static contracts and fail-closed structure",
+      "checks": [
+        "ruff check",
+        "py_compile",
+        "git diff --check",
+        "review-tracker full-file marks"
+      ],
+      "result": "CLEAN"
+    },
+    {
+      "pass": 2,
+      "perspective": "behavior, resumption, and byte custody",
+      "checks": [
+        "16 focused tests passed",
+        "completed receipt resumed without mutation",
+        "all active/superseded receipt and implementation binding hashes matched disk"
+      ],
+      "result": "CLEAN"
+    },
+    {
+      "pass": 3,
+      "perspective": "adversarial epistemic scope and cross-formulation leakage",
+      "checks": [
+        "all positive rows are FIRST-RUNG and exact one-pair n600 rebases",
+        "receiver-invalid cause is preserved",
+        "no quarantined old-lineage token is referenced",
+        "SDWL1/E2 same-content premise is false without an irreducibility claim",
+        "all material blocker classes carry explicit verdict scope",
+        "v3 and v4 measured payloads are identical after removing typed-config hashes"
+      ],
+      "result": "CLEAN"
+    }
+  ],
+  "preclean_defect_extincted": {
+    "defect": "frequency-band blocker had a reason but no explicit verdict_scope",
+    "fix": "added FORMULATION scope and regenerated the immutable receipt as v4",
+    "regression_guard": "pass-3 receipt assertion requires the scope to begin with FORMULATION"
+  },
+  "durable_handoff": [
+    {
+      "path": ".omx/research/codex_findings_ddm_dr2b_tolerance_ladder_and_costate_rows_20260723_codex.md",
+      "sha256": "9eb8bc655e42ea0bbfe79f0825a31616080d109570955c51d54e5fca3c3511ee"
+    },
+    {
+      "path": ".omx/research/ddm_dr2b_tolerance_ladder_and_costate_rows_DAG_FEED_20260723.md",
+      "sha256": "25dc2313deb978d1ad9c252c06988b2bae3cc8b074e5effc101cf4854a899c2b"
+    }
+  ],
+  "review_tracker": {
+    "consecutive_full_file_marks": 3,
+    "reviewers": [
+      "codex_contract_review",
+      "codex_behavior_review",
+      "codex_custody_review"
+    ],
+    "policy_file_status": "ABSENT; no stronger repository review policy was available"
+  },
+  "verdict": "THREE_POSTFIX_CLEAN_PASSES; MAIN_LANDING_REVIEW_STILL_REQUIRED"
+}
