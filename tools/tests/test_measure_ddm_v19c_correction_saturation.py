@@ -6,11 +6,13 @@ import json
 import numpy as np
 import pytest
 
+import tools.measure_ddm_v19c_correction_saturation as v19c
 from tools.measure_ddm_v19c_correction_saturation import (
     FAMILIES,
     DDMV19CCorrectionSaturationConfigV1,
     SaturationState,
     _apply_proposal,
+    _candidate_n600_batches,
     _interleave,
     _proposal_at,
     _restore_n600_decisions,
@@ -193,3 +195,70 @@ def test_n600_resume_restores_only_admitted_state(tmp_path) -> None:
     assert len(rows) == 2
     assert state.q8_directives == (("all", 32),)
     assert current == {"archive_bytes": 101, "archive_sha256": "1" * 64}
+
+
+def test_n600_exact_camera_identity_reuses_scorer_row(tmp_path, monkeypatch) -> None:
+    camera = np.zeros((2, 2, 3, 4, 3), dtype=np.uint8)
+
+    class Receiver:
+        def render_camera_pairs(self, pair_ids):
+            assert tuple(pair_ids) == (0, 1)
+            return camera
+
+    def fail_forward(*_args, **_kwargs):
+        raise AssertionError("byte-identical camera batch must not invoke scorer")
+
+    monkeypatch.setattr(v19c, "_forward", fail_forward)
+    monkeypatch.setattr(
+        v19c,
+        "receive_carrier_compose_archive",
+        lambda _archive: Receiver(),
+    )
+    monkeypatch.setattr(
+        v19c,
+        "_archive_byte_rows",
+        lambda _archive, _factory: ([], {"fixture": True}),
+    )
+    current_batch = {
+        "errors": 2,
+        "sites": 12,
+        "pose_squared_error_sum": "6.000000000000",
+        "pose_coordinates": 6,
+        "class_rows": {
+            "Road": {"errors": 1, "sites": 3},
+            "Lane": {"errors": 1, "sites": 3},
+            "Undrivable": {"errors": 0, "sites": 2},
+            "Movable": {"errors": 0, "sites": 2},
+            "MyCar": {"errors": 0, "sites": 2},
+        },
+        "cells_sha256": "1" * 64,
+        "pose6_sha256": "2" * 64,
+        "camera_diff_vs_v15": {
+            "changed_channel_values": 0,
+            "changed_rgb_pixels": 0,
+            "l1_channel_sum": 0,
+        },
+    }
+    measurement, rows = _candidate_n600_batches(
+        name="fixture/candidate_0000",
+        archive=b"candidate",
+        receiver_factory=lambda _archive: Receiver(),
+        current_archive=b"current",
+        current_receiver_factory=lambda _archive: Receiver(),
+        current_batches=[current_batch],
+        baseline_archive=b"baseline",
+        source_pair_ids=(0, 1),
+        local_pair_ids=(0, 1),
+        root=tmp_path,
+        config_hash="a" * 64,
+        batch_size=2,
+        labels_all=np.zeros((2, 2, 3), dtype=np.int64),
+        poses_all=np.zeros((2, 6), dtype=np.float32),
+        segnet=object(),
+        posenet=object(),
+    )
+    assert rows[0]["camera_identity_reused_exact_scorer_row"] is True
+    assert measurement["exact_camera_identity_reused_batch_count"] == 1
+    assert measurement["changed_camera_rescored_batch_count"] == 0
+    assert measurement["errors"] == 2
+    assert measurement["d_pose"] == "1.000000000000"

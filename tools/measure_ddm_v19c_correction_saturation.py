@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 import sys
 from collections.abc import Callable, Mapping, Sequence
@@ -37,6 +38,7 @@ for _path in (REPO_ROOT / "src", REPO_ROOT):
 from tac.optimization.direct_description_carrier_compose import (  # noqa: E402
     WORLDSHEET_G1_MEMBER,
     parse_carrier_compose_archive,
+    receive_carrier_compose_archive,
     rfc8785_canonicalize,
 )
 from tac.optimization.direct_description_coupled_margin import (  # noqa: E402
@@ -64,12 +66,14 @@ from tac.optimization.pure_priced_realized_objective import (  # noqa: E402
 )
 from tools.measure_ddm_v14_realization_fidelity import (  # noqa: E402
     POINTER_SCORE_TEXT,
+    _forward,
     _publish_immutable,
     _storage_preflight,
 )
 from tools.measure_ddm_v16_coupled_joint_solve import (  # noqa: E402
     _base_v14_bytes,
     _ladder_archive,
+    _sha256_array,
 )
 from tools.measure_ddm_v19_pure_priced_objective import (  # noqa: E402
     AXIS,
@@ -82,9 +86,11 @@ from tools.measure_ddm_v19_pure_priced_objective import (  # noqa: E402
     _write,
 )
 from tools.measure_ddm_v19b_joint_remeasure_stack import (  # noqa: E402
+    CLASS_NAMES,
     FIRST_MOVE_ID,
     DDMV19BJointRemeasureStackConfigV1,
     _accepted_inventory,
+    _archive_byte_rows,
     _bucket_transition,
     _candidate_state,
     _carrier_with_worldsheet,
@@ -92,7 +98,6 @@ from tools.measure_ddm_v19b_joint_remeasure_stack import (  # noqa: E402
     _load_sources,
     _load_stage,
     _measure_dev,
-    _measure_window,
     _rung_geometry,
     _stack_from_ids,
     _template_order_gauge,
@@ -1008,6 +1013,230 @@ def _restore_n600_decisions(
     return rows, state, current
 
 
+def _aggregate_n600_batches(
+    *,
+    name: str,
+    archive: bytes,
+    receiver_factory: Callable[[bytes], Any],
+    batches: Sequence[Mapping[str, Any]],
+    batch_size: int,
+) -> dict[str, Any]:
+    errors = sum(int(row["errors"]) for row in batches)
+    sites = sum(int(row["sites"]) for row in batches)
+    pose_sse = sum(float(row["pose_squared_error_sum"]) for row in batches)
+    pose_coordinates = sum(int(row["pose_coordinates"]) for row in batches)
+    classes = {
+        class_name: {
+            "errors": sum(int(row["class_rows"][class_name]["errors"]) for row in batches),
+            "sites": sum(int(row["class_rows"][class_name]["sites"]) for row in batches),
+        }
+        for class_name in CLASS_NAMES.values()
+    }
+    for row in classes.values():
+        row["d_seg"] = f"{row['errors'] / max(1, row['sites']):.12f}"
+    d_seg = errors / sites
+    d_pose = pose_sse / pose_coordinates
+    byte_rows, custody = _archive_byte_rows(archive, receiver_factory)
+    return {
+        "candidate": name,
+        "archive_bytes": len(archive),
+        "archive_sha256": _sha256(archive),
+        "d_seg": f"{d_seg:.12f}",
+        "d_pose": f"{d_pose:.12f}",
+        "errors": errors,
+        "sites": sites,
+        "per_class": classes,
+        "c1_buckets": {
+            "role_bucket_Lane_plus_Movable": {
+                "errors": classes["Lane"]["errors"] + classes["Movable"]["errors"],
+                "sites": classes["Lane"]["sites"] + classes["Movable"]["sites"],
+            },
+            "residual_bucket_Road_Undrivable_MyCar": {
+                "errors": (
+                    classes["Road"]["errors"]
+                    + classes["Undrivable"]["errors"]
+                    + classes["MyCar"]["errors"]
+                ),
+                "sites": (
+                    classes["Road"]["sites"]
+                    + classes["Undrivable"]["sites"]
+                    + classes["MyCar"]["sites"]
+                ),
+            },
+        },
+        "advisory_score_formula_value": (
+            f"{100.0 * d_seg + math.sqrt(10.0 * d_pose) + 25.0 * len(archive) / SOURCE_BYTES:.12f}"
+        ),
+        "batch_count": len(batches),
+        "batch_size": batch_size,
+        "all_batches_checkpointed_and_preserved": True,
+        "batch_digest_chain_sha256": hashlib.sha256(
+            "".join(row["cells_sha256"] + row["pose6_sha256"] for row in batches).encode()
+        ).hexdigest(),
+        "camera_diff_vs_v15": {
+            key: sum(int(row["camera_diff_vs_v15"][key]) for row in batches)
+            for key in ("changed_channel_values", "changed_rgb_pixels", "l1_channel_sum")
+        },
+        "byte_streams": byte_rows,
+        "receiver_custody": dict(custody),
+        "score_claim": False,
+        "evidence_axis": AXIS,
+    }
+
+
+def _source_v19b_n600_batches(
+    *,
+    config: DDMV19CCorrectionSaturationConfigV1,
+    baseline: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    stage = (
+        (REPO_ROOT / config.v19b_receipt_path).parent
+        / "stage_checkpoints"
+        / "03_n600_batches"
+    )
+    batches = [json.loads(path.read_bytes()) for path in sorted(stage.glob("batch_*.json"))]
+    if len(batches) != int(baseline["batch_count"]):
+        raise DirectDescriptionError("v19c source v19b n600 batch coverage differs")
+    expected_start = 0
+    for row in batches:
+        pair_ids = [int(value) for value in row["source_pair_ids"]]
+        if (
+            not pair_ids
+            or pair_ids != list(range(expected_start, expected_start + len(pair_ids)))
+            or row["archive_sha256"] != baseline["archive_sha256"]
+        ):
+            raise DirectDescriptionError("v19c source v19b n600 batch identity differs")
+        expected_start += len(pair_ids)
+    if expected_start != 600:
+        raise DirectDescriptionError("v19c source v19b n600 pair coverage differs")
+    return batches
+
+
+def _candidate_n600_batches(
+    *,
+    name: str,
+    archive: bytes,
+    receiver_factory: Callable[[bytes], Any],
+    current_archive: bytes,
+    current_receiver_factory: Callable[[bytes], Any],
+    current_batches: Sequence[Mapping[str, Any]],
+    baseline_archive: bytes,
+    source_pair_ids: Sequence[int],
+    local_pair_ids: Sequence[int],
+    root: Path,
+    config_hash: str,
+    batch_size: int,
+    labels_all: np.ndarray,
+    poses_all: np.ndarray,
+    segnet: Any,
+    posenet: Any,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    stage = root / "stage_checkpoints" / name
+    source = np.asarray(source_pair_ids, dtype=np.int64)
+    local = np.asarray(local_pair_ids, dtype=np.int64)
+    if source.shape != local.shape or source.size == 0:
+        raise DirectDescriptionError("v19c incremental n600 pair geometry differs")
+    expected_batches = math.ceil(int(source.size) / batch_size)
+    if len(current_batches) != expected_batches:
+        raise DirectDescriptionError("v19c incremental n600 current batch coverage differs")
+    candidate_receiver = receiver_factory(archive)
+    current_receiver = current_receiver_factory(current_archive)
+    baseline_receiver = receive_carrier_compose_archive(baseline_archive)
+    candidate_sha = _sha256(archive)
+    current_sha = _sha256(current_archive)
+    rows: list[dict[str, Any]] = []
+    for batch_index, start in enumerate(range(0, int(source.size), batch_size)):
+        stop = min(start + batch_size, int(source.size))
+        checkpoint = stage / f"batch_{start:04d}_{stop:04d}.json"
+        resumed = _load_stage(checkpoint, config_hash)
+        if resumed is not None:
+            if (
+                resumed["archive_sha256"] != candidate_sha
+                or resumed["current_archive_sha256"] != current_sha
+                or resumed["source_pair_ids"] != source[start:stop].tolist()
+            ):
+                raise DirectDescriptionError("v19c incremental n600 batch resume identity differs")
+            rows.append(resumed)
+            continue
+        local_ids = tuple(int(value) for value in local[start:stop])
+        source_ids = source[start:stop]
+        camera = candidate_receiver.render_camera_pairs(local_ids)
+        current_camera = current_receiver.render_camera_pairs(local_ids)
+        if np.array_equal(camera, current_camera):
+            row = {
+                **dict(current_batches[batch_index]),
+                "schema": "ddm_v19c_receiver_batch.v1",
+                "typed_config_sha256": config_hash,
+                "candidate": name,
+                "archive_sha256": candidate_sha,
+                "current_archive_sha256": current_sha,
+                "source_pair_ids": source_ids.tolist(),
+                "camera_identity_reused_exact_scorer_row": True,
+                "candidate_camera_sha256": _sha256_array(camera),
+                "score_claim": False,
+                "evidence_axis": AXIS,
+            }
+        else:
+            baseline_camera = baseline_receiver.render_camera_pairs(local_ids)
+            cells, pose6 = _forward(segnet, posenet, camera)
+            replay_cells, replay_pose6 = _forward(segnet, posenet, camera)
+            if not np.array_equal(cells, replay_cells) or not np.array_equal(pose6, replay_pose6):
+                raise DirectDescriptionError(f"v19c {name} deterministic changed-batch replay failed")
+            labels = np.asarray(labels_all[source_ids])
+            poses = np.asarray(poses_all[source_ids])
+            errors = cells != labels
+            class_rows = {}
+            for class_id, class_name in CLASS_NAMES.items():
+                mask = labels == class_id
+                class_rows[class_name] = {
+                    "errors": int(np.count_nonzero(errors & mask)),
+                    "sites": int(np.count_nonzero(mask)),
+                }
+            diff = camera.astype(np.int16) - baseline_camera.astype(np.int16)
+            row = {
+                "schema": "ddm_v19c_receiver_batch.v1",
+                "typed_config_sha256": config_hash,
+                "candidate": name,
+                "archive_sha256": candidate_sha,
+                "current_archive_sha256": current_sha,
+                "source_pair_ids": source_ids.tolist(),
+                "errors": int(np.count_nonzero(errors)),
+                "sites": int(errors.size),
+                "pose_squared_error_sum": f"{float(np.square(pose6 - poses).sum(dtype=np.float64)):.12f}",
+                "pose_coordinates": int(pose6.size),
+                "class_rows": class_rows,
+                "cells_sha256": _sha256_array(cells),
+                "pose6_sha256": _sha256_array(pose6),
+                "camera_diff_vs_v15": {
+                    "changed_channel_values": int(np.count_nonzero(diff)),
+                    "changed_rgb_pixels": int(np.count_nonzero(np.any(diff != 0, axis=-1))),
+                    "l1_channel_sum": int(np.abs(diff).sum(dtype=np.int64)),
+                    "candidate_camera_sha256": _sha256_array(camera),
+                    "v15_camera_sha256": _sha256_array(baseline_camera),
+                },
+                "camera_identity_reused_exact_scorer_row": False,
+                "candidate_camera_sha256": _sha256_array(camera),
+                "score_claim": False,
+                "evidence_axis": AXIS,
+            }
+        _write(checkpoint, row)
+        rows.append(row)
+    measurement = _aggregate_n600_batches(
+        name=name,
+        archive=archive,
+        receiver_factory=receiver_factory,
+        batches=rows,
+        batch_size=batch_size,
+    )
+    measurement["exact_camera_identity_reused_batch_count"] = sum(
+        row["camera_identity_reused_exact_scorer_row"] is True for row in rows
+    )
+    measurement["changed_camera_rescored_batch_count"] = sum(
+        row["camera_identity_reused_exact_scorer_row"] is False for row in rows
+    )
+    return measurement, rows
+
+
 def _stage_n600(
     config: DDMV19CCorrectionSaturationConfigV1,
     root: Path,
@@ -1051,15 +1280,36 @@ def _stage_n600(
         ctx=ctx,
     )
     current = restored_current or baseline
-    if rows:
-        resumed_archive, _resumed_factory, _resumed_compile = _compile_state(
-            state, rung="n600", v19_config=v19_config, ctx=ctx
+    current_archive, current_factory, _current_compile = _compile_state(
+        state, rung="n600", v19_config=v19_config, ctx=ctx
+    )
+    if (
+        _sha256(current_archive) != current["archive_sha256"]
+        or len(current_archive) != int(current["archive_bytes"])
+    ):
+        raise DirectDescriptionError("v19c n600 resumed archive endpoint differs")
+    accepted_resume_indices = [
+        int(row["dev_admission_index"]) for row in rows if row["accepted"]
+    ]
+    if accepted_resume_indices:
+        last_accepted_index = accepted_resume_indices[-1]
+        current_batch_stage = (
+            root
+            / "stage_checkpoints"
+            / "02_n600_candidates"
+            / f"candidate_{last_accepted_index:04d}"
         )
+        current_batches = [
+            json.loads(path.read_bytes())
+            for path in sorted(current_batch_stage.glob("batch_*.json"))
+        ]
         if (
-            _sha256(resumed_archive) != current["archive_sha256"]
-            or len(resumed_archive) != int(current["archive_bytes"])
+            len(current_batches) != int(current["batch_count"])
+            or any(row["archive_sha256"] != current["archive_sha256"] for row in current_batches)
         ):
-            raise DirectDescriptionError("v19c n600 resumed archive endpoint differs")
+            raise DirectDescriptionError("v19c resumed accepted n600 batch state differs")
+    else:
+        current_batches = _source_v19b_n600_batches(config=config, baseline=baseline)
     for n600_index, proposal_index in enumerate(proposal_indices[len(rows) :], start=len(rows)):
         proposal = _proposal_at(inventory, proposal_index)
         trial_state = _apply_proposal(state, proposal, problem=ctx["problem"], ctx=ctx)
@@ -1068,10 +1318,13 @@ def _stage_n600(
             root / "candidate_archives" / (f"n600_{n600_index:04d}_{_safe_name(proposal['base_id'])}.zip.receipt-bytes")
         )
         _publish_immutable(archive_path, archive)
-        measurement = _measure_window(
+        measurement, candidate_batches = _candidate_n600_batches(
             name=f"02_n600_candidates/candidate_{n600_index:04d}",
             archive=archive,
             receiver_factory=factory,
+            current_archive=current_archive,
+            current_receiver_factory=current_factory,
+            current_batches=current_batches,
             baseline_archive=geometry["source_archive"],
             source_pair_ids=geometry["source_pair_ids"],
             local_pair_ids=geometry["local_pair_ids"],
@@ -1121,6 +1374,9 @@ def _stage_n600(
         if accepted:
             state = trial_state
             current = measurement
+            current_archive = archive
+            current_factory = factory
+            current_batches = candidate_batches
     final_archive, final_factory, final_compile = _compile_state(state, rung="n600", v19_config=v19_config, ctx=ctx)
     final_path_archive = root / "ddm_v19c_final_n600.zip.receipt-bytes"
     _publish_immutable(final_path_archive, final_archive)
