@@ -21987,3 +21987,25 @@ $0 byte source). Deliverable: the JOINT iteration curve (per-block bytes + descr
 proxy vs joint-cycle index). Routed to dv2+e1. This unifies: v1 recursion (within-language) + the
 non-linguistic dimension register + the global waterfill (#157/#536) into ONE fixed-point process — the
 sub-0.15 candidate is the fixed point of THIS iteration, not any single pass. Pointer UNMOVED 0.19108.
+
+---
+
+## FEED-603-cross-line-transfer-table (2026-07-23, MAIN — operator: "what lessons/techniques proved on another line optimize the described line, and vice versa")
+
+**Other→describe (12, routed to dv2+e1 as T1–T11):** realized-acceptance (v19/j5) · trust-region cycles
+(v17) · priced-collateral-never-forbid (v19-vs-v15) · per-frame SE joint-remeasure (v19b +0.0805) ·
+warm-carry duals across cycles (#518/j4) · v18b price-before-build admission · JRD prefix-ordering →
+any-prefix-valid streams (waterfill = truncation) · #157 sensitivity bit-depth per clause/coeff ·
+range(A)-projection before coding (#580, operational) · #410 identity-twin gating (e1) · best-so-far output ·
+apparatus-validity stamps on iteration curves.
+
+**Describe→other (5):** (A) **persistence-first** (Road 99.1%/Undriv 99.2% static; 283B→79.5%) → training
+line persistent-canvas parametrization (shared static + per-pair deltas — collapses training DOF as it did
+description bytes) + correction line targets ONLY the transient 0.88%; (B) subjects-declared-once = the
+principled cross-pair sharing schema (#461); (C) **vocabulary-limits-the-solver** (m5r −1.3% vs dv1 70.5%) →
+add description primitives (persistent level-set edits, separatrix spline moves) to the v19-family
+realized-acceptance PROPOSAL vocabulary — **named as v19c's successor charter (highest-EV reverse
+transfer)**; (D) measured-decomposition-first lever selection, everywhere; (E) basis-labeled bookkeeping on
+every row, all lines.
+
+Pointer UNMOVED 0.19108.
