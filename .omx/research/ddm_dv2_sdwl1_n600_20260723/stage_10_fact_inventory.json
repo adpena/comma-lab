@@ -1,0 +1,44 @@
+{
+  "binding": {
+    "implementation": {
+      "files": {
+        "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+          "bytes": 45917,
+          "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+        },
+        "src/tac/optimization/ddm_dv2_sdwl1.py": {
+          "bytes": 51314,
+          "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+        },
+        "tools/measure_ddm_dv2_sdwl1.py": {
+          "bytes": 32617,
+          "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+        }
+      },
+      "runtime": {
+        "numpy": "1.26.4",
+        "python": "3.13.12",
+        "zlib_compile": "1.2.12",
+        "zlib_runtime": "1.2.12"
+      }
+    },
+    "pair_count": 600,
+    "schema": "sdwl1.measurement_binding.v1",
+    "source_bytes": 5078017610,
+    "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "described_record_count": 6600,
+  "described_scalar_fact_count": 45600,
+  "pair_count": 600,
+  "payload": {
+    "bytes": 422528,
+    "path": "payloads/fact_inventory.npy",
+    "sha256": "9208797cdda6676e9298a20f8d128bb02a58c40255167056297b6098fea9e8fc"
+  },
+  "schema": "sdwl1.fact_inventory_stage.v1",
+  "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+  "source_geometry": [
+    384,
+    512
+  ]
+}

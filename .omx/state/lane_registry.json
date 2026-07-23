@@ -84589,6 +84589,48 @@
         }
       },
       "notes": "Local-only top24 proposal solve plus exact selected n600 replay; score_claim=false; MAIN review required."
+    },
+    {
+      "id": "lane_ddm_dv2_grammar_sentences_20260723",
+      "name": "DDM DV2 scorer-derived grammar and whole-clip sentences",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_dv2_sdwl1.py + tools/measure_ddm_dv2_sdwl1.py + 17 focused tests"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/REVIEW_ddm_dv2_sdwl1_round2_20260723.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only $0 n600 language measurement; score_claim=false; MAIN landing review required",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -84598,5 +84640,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T12:38:35Z"
+  "updated_at": "2026-07-23T16:08:20Z"
 }

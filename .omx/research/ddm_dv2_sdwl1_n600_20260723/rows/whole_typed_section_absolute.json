@@ -1,0 +1,86 @@
+{
+  "binding": {
+    "implementation": {
+      "files": {
+        "src/tac/optimization/arith_selfcomp_rate_coders.py": {
+          "bytes": 45917,
+          "sha256": "65a3df374df7ccb80b4dec4f6be15363e952df3a6623adfeeecfb6ab0ad50a22"
+        },
+        "src/tac/optimization/ddm_dv2_sdwl1.py": {
+          "bytes": 51314,
+          "sha256": "eb04c4e61fb2baa289a93e15042fc431a999ee27108594aa8f63e7e46e565993"
+        },
+        "tools/measure_ddm_dv2_sdwl1.py": {
+          "bytes": 32617,
+          "sha256": "0bf6c1beef6c1f63eac060c4944d032fdbed609dffcb7664d10100ed2dac5ba7"
+        }
+      },
+      "runtime": {
+        "numpy": "1.26.4",
+        "python": "3.13.12",
+        "zlib_compile": "1.2.12",
+        "zlib_runtime": "1.2.12"
+      }
+    },
+    "pair_count": 600,
+    "schema": "sdwl1.measurement_binding.v1",
+    "source_bytes": 5078017610,
+    "source_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "measurement": {
+    "bytes_per_described_fact": 2.015416666666667,
+    "described_fact_count": 45600,
+    "described_fraction": 1,
+    "described_record_count": 6600,
+    "described_scalar_fact_count": 45600,
+    "exact_parseback": true,
+    "inner_framed_bytes": 106277,
+    "inner_sha256": "bebf5dd227497c1cf7f0adb610cc0a7e57381526b39f94129709983d022a79a3",
+    "outer_deflate_bytes": 91903,
+    "outer_deflate_sha256": "541b55fd0bf1503a0da018336d89dfb98c0d0277f91efe6ca460d00fba1c59e0",
+    "production_counts": {
+      "modifiers": {
+        "chroma_phase": 0,
+        "erf_band": 0,
+        "frame_role": 6600,
+        "head_normal": 0,
+        "margin_band": 12000,
+        "road_frame": 0,
+        "scale_band": 0,
+        "stratum": 6000
+      },
+      "predicates": {
+        "declare": 11,
+        "deform": 4928,
+        "hold": 0,
+        "omit_kernel": 0,
+        "project_range": 0,
+        "topology_delta": 1062,
+        "transport": 599
+      },
+      "subjects": {
+        "lane_chart": 0,
+        "pair_screw": 600,
+        "partition_cell": 3000,
+        "resize_range_atom": 0,
+        "separatrix": 3000
+      },
+      "topology_births": 530,
+      "topology_deaths": 532
+    }
+  },
+  "outer_payload": {
+    "bytes": 91903,
+    "path": "payloads/whole_typed_section_absolute.zlib",
+    "sha256": "541b55fd0bf1503a0da018336d89dfb98c0d0277f91efe6ca460d00fba1c59e0"
+  },
+  "schema": "sdwl1.measurement_row.v1",
+  "semantic_sha256": "e7dee11d0fd162470bb206acca3c4667c79100cc41259d5d1ecb293e31e225f3",
+  "spec": {
+    "counterfactual": null,
+    "kind": "whole",
+    "layout": "typed_section",
+    "row_id": "whole_typed_section_absolute",
+    "temporal_mode": "absolute"
+  }
+}
