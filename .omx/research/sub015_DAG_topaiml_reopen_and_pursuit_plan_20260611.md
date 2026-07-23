@@ -21929,3 +21929,31 @@ typed-column + schema requirements — never forced into grammar):
 - (+ pose TUBE = feasibility region OVER the language, not in it.)
 Consequence encoded: every description row is INCOMPLETE without its field/dual columns; e1's schema keeps these
 as independently framed sections. Derivation rule + originality ban unchanged. Pointer UNMOVED 0.19108.
+
+---
+
+## FEED-603-dv1-road-describable (2026-07-23, MAIN, from ddm_dv1 rc=0 merged 41ecb4b024)
+
+**Verdict `ROAD_DESCRIPTION_REACH_CONFIRMED_IN_CELL_SPACE_RECEIVER_REALIZATION_OWED` — the first vocabulary
+that describes Road mass, on OUR primitives, lineage-clean.** ([macOS-CPU frozen-scorer advisory],
+score_claim=false; a DESCRIBE-stage row, NOT realized.)
+
+Measured (n600, real coders, exact cached argmax cells):
+- **Persistent level-set: 283 B → 79.5% of Road described standalone** — derived from the measured fact that
+  Road is **99.1% static-in-image** (G4; ξ-proxy 0%, transient 0.88%). Persistence, not advection, is Road's law.
+- Boundary worldsheet spline (1,299 B) + turning-angle curves (23,271 B): standalone NEGATIVE (collateral) but
+  **JOINT composition: 70.5% of Road described (1,360,311/1,928,555 v12-basis) at 134,216 counted B inside the
+  c1 box**; total semantic errors 4,011,236 → 1,181,857 (+2,829,379 net). Non-additive-pools honored —
+  standalone negatives are arbitration-scoped, the composition is the unit.
+- **Undrivable is ALSO 99.2% static-in-image** — the same shared separatrix family pays both large strata.
+- vs the m5r translation baseline: **0% → 70.5%** at essentially equal bytes (134,211 vs 134,216). The
+  vocabulary WAS the bottleneck, exactly as the m-chain sweep concluded.
+
+`verdict_scope: cell-space description reach, v12-error basis (1,928,555; m5r control basis 2,210,770 preserved
+separately — both labeled, no laundering). NOT a receiver/score verdict.`
+
+**Owed chain (explicit):** cell-space description → receiver realization (e1's exporter packages it) →
+realized d_seg through R+uint8 → pose safety → S row. **Retrofit routed to dv2:** provenance lines
+(post-hoc: persistent-level-set ← G4-staticity+level-set corpus; spline ← separatrix; turning-angle ←
+curvature grammar) + D1–D6 field/dual columns + basis labels, since dv1 finished before the three operator
+directives landed. Task #650 complete. Pointer honest: **0.1910828242 [contest-CPU] UNMOVED.**
