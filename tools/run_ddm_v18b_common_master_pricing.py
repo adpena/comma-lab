@@ -225,6 +225,17 @@ class ColumnSpec:
             origin = "v12_residual_ranked_island_coordinate"
         else:
             origin = "v12_fixed_pool_bundle_control"
+        template_row = None
+        if self.template is not None:
+            template_row = {
+                "role": self.template.role,
+                "application": self.template.application,
+                "scorer_row_start": self.template.scorer_row_start,
+                "scorer_row_stop": self.template.scorer_row_stop,
+                "patch_height": self.template.patch_height,
+                "patch_width": self.template.patch_width,
+                "rgb_u8_hex": self.template.rgb_u8.hex(),
+            }
         return {
             "column_id": self.column_id,
             "family": self.family,
@@ -232,7 +243,7 @@ class ColumnSpec:
             "priority": f"{self.priority:.12e}",
             "candidate": None if self.candidate is None else self.candidate.row(),
             "template_index": self.template_index,
-            "template": None if self.template is None else asdict(self.template),
+            "template": template_row,
             "conflict_keys": list(self.conflict_keys()),
         }
 

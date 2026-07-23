@@ -2,13 +2,39 @@
 from __future__ import annotations
 
 from tac.optimization.ddm_column_generation import PricedColumn
+from tac.optimization.direct_description_carrier_compose import (
+    RowBandScorerTemplateV1,
+    rfc8785_canonicalize,
+)
 from tools.run_ddm_v18b_common_master_pricing import (
     FIXED_BUDGETS,
+    ColumnSpec,
     _formulation_falsified,
     _largest_prefix_not_exceeding,
     _load_bundle_rows,
     _miqp_diagonal_proposal,
 )
+
+
+def test_template_column_audit_row_is_canonical_ijson() -> None:
+    template = RowBandScorerTemplateV1(
+        "Lane",
+        "inner_boundary",
+        0,
+        128,
+        1,
+        1,
+        b"\x33\xff\xcc",
+    )
+    row = ColumnSpec(
+        "template",
+        "realized_residual_vjp",
+        1.0,
+        template_index=0,
+        template=template,
+    ).row()
+    assert row["template"]["rgb_u8_hex"] == "33ffcc"
+    assert rfc8785_canonicalize(row)
 
 
 def test_bound_v12_inventory_is_exactly_4096_atoms_in_353_bundles() -> None:
