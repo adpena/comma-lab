@@ -211,13 +211,17 @@ def test_n600_exact_camera_identity_reuses_scorer_row(tmp_path, monkeypatch) -> 
     monkeypatch.setattr(v19c, "_forward", fail_forward)
     monkeypatch.setattr(
         v19c,
-        "receive_carrier_compose_archive",
-        lambda _archive: Receiver(),
+        "_candidate_receiver_and_support",
+        lambda **_kwargs: (
+            Receiver(),
+            set(),
+            {"method": "fixture", "source_pair_count": 0},
+        ),
     )
     monkeypatch.setattr(
         v19c,
-        "_archive_byte_rows",
-        lambda _archive, _factory: ([], {"fixture": True}),
+        "_preuint8_byte_rows_and_custody",
+        lambda _archive, _receiver: ([], {"fixture": True}),
     )
     current_batch = {
         "errors": 2,
@@ -237,16 +241,18 @@ def test_n600_exact_camera_identity_reuses_scorer_row(tmp_path, monkeypatch) -> 
             "changed_channel_values": 0,
             "changed_rgb_pixels": 0,
             "l1_channel_sum": 0,
+            "candidate_camera_sha256": "3" * 64,
         },
     }
-    measurement, rows = _candidate_n600_batches(
+    measurement, rows, _receiver, _camera_cache = _candidate_n600_batches(
         name="fixture/candidate_0000",
         archive=b"candidate",
-        receiver_factory=lambda _archive: Receiver(),
         current_archive=b"current",
-        current_receiver_factory=lambda _archive: Receiver(),
+        current_receiver=Receiver(),
         current_batches=[current_batch],
-        baseline_archive=b"baseline",
+        current_camera_cache={},
+        baseline_receiver=Receiver(),
+        baseline_camera_cache={},
         source_pair_ids=(0, 1),
         local_pair_ids=(0, 1),
         root=tmp_path,

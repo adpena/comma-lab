@@ -17,10 +17,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import math
 import re
 import sys
+import zipfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from itertools import zip_longest
@@ -35,16 +37,23 @@ for _path in (REPO_ROOT / "src", REPO_ROOT):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from tac.optimization import direct_description_coupled_margin as _ddcm  # noqa: E402
+from tac.optimization import direct_description_preuint8_channel as _ddq8  # noqa: E402
 from tac.optimization.direct_description_carrier_compose import (  # noqa: E402
+    SCORER_SOLVED_TEMPLATE_MEMBER,
     WORLDSHEET_G1_MEMBER,
+    decode_scorer_solved_template_bank,
+    encode_scorer_solved_template_bank,
     parse_carrier_compose_archive,
     receive_carrier_compose_archive,
     rfc8785_canonicalize,
 )
 from tac.optimization.direct_description_coupled_margin import (  # noqa: E402
     compile_coupled_margin_archive,
+    coupled_margin_byte_rows,
     receive_coupled_margin_archive,
 )
+from tac.optimization.direct_description_entropy_priced_member import _zip_stored  # noqa: E402
 from tac.optimization.direct_description_g1_worldsheet import (  # noqa: E402
     encode_lifted_g1_movable_worldsheet,
     lift_g1_movable_worldsheet,
@@ -75,6 +84,9 @@ from tools.measure_ddm_v16_coupled_joint_solve import (  # noqa: E402
     _ladder_archive,
     _sha256_array,
 )
+from tools.measure_ddm_v16_coupled_joint_solve import (  # noqa: E402
+    _program as _v16_program,
+)
 from tools.measure_ddm_v19_pure_priced_objective import (  # noqa: E402
     AXIS,
     DDMV19PurePricedObjectiveConfigV1,
@@ -90,7 +102,6 @@ from tools.measure_ddm_v19b_joint_remeasure_stack import (  # noqa: E402
     FIRST_MOVE_ID,
     DDMV19BJointRemeasureStackConfigV1,
     _accepted_inventory,
-    _archive_byte_rows,
     _bucket_transition,
     _candidate_state,
     _carrier_with_worldsheet,
@@ -633,22 +644,227 @@ def _preuint8_program(
     return PreUint8Q8ProgramV1(tuple(sorted(templates)), tuple(sorted(sparse)), "bayer8", 210)
 
 
+def _stored_zip_members(archive: bytes) -> dict[str, bytes]:
+    """Read one canonical stored ZIP without semantically decoding its G1 mask."""
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive), "r") as reader:
+            infos = reader.infolist()
+            if any(
+                row.is_dir()
+                or row.compress_type != zipfile.ZIP_STORED
+                or row.date_time != (1980, 1, 1, 0, 0, 0)
+                or row.filename.startswith("/")
+                or ".." in Path(row.filename).parts
+                for row in infos
+            ):
+                raise DirectDescriptionError("v19c fast compiler source ZIP is noncanonical")
+            members = {row.filename: reader.read(row) for row in infos}
+    except DirectDescriptionError:
+        raise
+    except (OSError, KeyError, zipfile.BadZipFile) as exc:
+        raise DirectDescriptionError("v19c fast compiler source ZIP is malformed") from exc
+    if _zip_stored(members) != archive:
+        raise DirectDescriptionError("v19c fast compiler source ZIP does not round-trip")
+    return members
+
+
+def _nested_carrier_archive(archive: bytes) -> bytes:
+    outer, _homes = _ddq8.parse_preuint8_q8_archive(archive)
+    coupled, _homes = _ddcm.parse_coupled_margin_archive(outer[_ddq8.BASE_MEMBER])
+    return coupled[_ddcm.BASE_MEMBER]
+
+
+def _n600_program(
+    *,
+    state: SaturationState,
+    problem: Mapping[str, Any],
+    source_start: int,
+    source_stop: int,
+) -> Any:
+    realized = _realized_post_state(state, problem)
+    all_supports = list(problem["sparse_compensation_support"])
+    all_compensation = np.asarray(realized["compensation_rgb_i8"], dtype=np.int16)
+    selected_indexes = [
+        index
+        for index, row in enumerate(all_supports)
+        if source_start <= int(row["source_pair_id"]) < source_stop
+    ]
+    supports = [all_supports[index] for index in selected_indexes]
+    compensation = (
+        all_compensation[np.asarray(selected_indexes, dtype=np.int64)]
+        if selected_indexes
+        else np.zeros((0, 3), dtype=np.int16)
+    )
+    pair_ids = [
+        int(pair_id)
+        for pair_id in problem["representative_source_pair_ids"]
+        if source_start <= int(pair_id) < source_stop
+    ]
+    return _v16_program(
+        pair_ids,
+        len(np.asarray(realized["template_values_u8"])),
+        realized["phases"],
+        supports,
+        compensation,
+    )
+
+
+def _replace_carrier_payloads(
+    *,
+    source_carrier: bytes,
+    template_values_u8: np.ndarray,
+    worldsheet_payload: bytes,
+) -> bytes:
+    """Produce the exact V15 carrier bytes while skipping repeated full-G1 raster proof.
+
+    DEV has already strict-decoded every admitted payload.  The n600 inner loop
+    therefore performs lossless typed lift/re-encode validation here and leaves
+    the expensive full 600-pair semantic decode to the published stage exit.
+    """
+
+    members = _stored_zip_members(source_carrier)
+    expected = {
+        "manifest.json",
+        "predictor.zip",
+        WORLDSHEET_G1_MEMBER,
+        "render/receiver_realization.ddrp",
+        SCORER_SOLVED_TEMPLATE_MEMBER,
+    }
+    unexpected = set(members) - expected - {"render/static_cell_rule.g4sr"}
+    if unexpected or not expected.issubset(members):
+        raise DirectDescriptionError(
+            f"v19c fast n600 carrier refuses unmodeled members: {sorted(unexpected)}"
+        )
+    bank = decode_scorer_solved_template_bank(members[SCORER_SOLVED_TEMPLATE_MEMBER])
+    values = np.asarray(template_values_u8, dtype=np.uint8)
+    if values.shape[0] != len(bank.templates):
+        raise DirectDescriptionError("v19c fast n600 template count differs")
+    templates = []
+    for index, template in enumerate(bank.templates):
+        expected_shape = (template.patch_height, template.patch_width, 3)
+        if values[index].shape != expected_shape:
+            raise DirectDescriptionError("v19c fast n600 template geometry differs")
+        templates.append(
+            replace(
+                template,
+                rgb_u8=bytes(np.ascontiguousarray(values[index]).reshape(-1).tolist()),
+            )
+        )
+    bank = replace(bank, templates=tuple(templates))
+    template_payload = encode_scorer_solved_template_bank(bank)
+    lift = lift_g1_movable_worldsheet(worldsheet_payload)
+    if encode_lifted_g1_movable_worldsheet(lift) != worldsheet_payload:
+        raise DirectDescriptionError("v19c fast n600 G1 lift/re-encode differs")
+    manifest = json.loads(members["manifest.json"])
+    g1_row = manifest["grammar"]["movable"]["g1_polygon_worldsheet"]
+    g1_row.update(
+        {
+            "bytes": len(worldsheet_payload),
+            "sha256": _sha256(worldsheet_payload),
+            "pair_count": int(lift.pair_count),
+            "object_slots": int(lift.max_slots),
+        }
+    )
+    template_row = manifest["scorer_solved_templates"]
+    template_row.update(
+        {
+            "bytes": len(template_payload),
+            "sha256": _sha256(template_payload),
+            "record_count": len(bank.templates),
+        }
+    )
+    members["manifest.json"] = rfc8785_canonicalize(manifest)
+    members[WORLDSHEET_G1_MEMBER] = worldsheet_payload
+    members[SCORER_SOLVED_TEMPLATE_MEMBER] = template_payload
+    archive = _zip_stored(members)
+    if _stored_zip_members(archive) != members:
+        raise DirectDescriptionError("v19c fast n600 carrier parse-back differs")
+    return archive
+
+
+def _compile_coupled_margin_fast(base_archive: bytes, program: Any) -> bytes:
+    encoded = _ddcm.encode_coupled_margin_program(program)
+    manifest = {
+        "schema": _ddcm.ARCHIVE_SCHEMA,
+        "base": {
+            "member": _ddcm.BASE_MEMBER,
+            "bytes": len(base_archive),
+            "sha256": _sha256(base_archive),
+        },
+        "program": {
+            "member": _ddcm.PROGRAM_MEMBER,
+            "bytes": len(encoded),
+            "sha256": _sha256(encoded),
+            "placement_count": len(program.placements),
+            "sparse_compensation_count": len(program.compensations),
+        },
+        "decode_boundary": "v15_receiver_then_pair_phase_templates_then_sparse_camera_compensation",
+        "scorer_present_at_decode": False,
+        "ground_truth_argmax_present_at_decode": False,
+        "score_claim": False,
+        "evidence_axis": AXIS,
+    }
+    members = {
+        _ddcm.MANIFEST_MEMBER: rfc8785_canonicalize(manifest),
+        _ddcm.BASE_MEMBER: base_archive,
+        _ddcm.PROGRAM_MEMBER: encoded,
+    }
+    archive = _zip_stored(members)
+    parsed, _homes = _ddcm.parse_coupled_margin_archive(archive)
+    if parsed != members:
+        raise DirectDescriptionError("v19c fast coupled-margin parse-back differs")
+    return archive
+
+
+def _compile_preuint8_fast(base_archive: bytes, program: PreUint8Q8ProgramV1) -> bytes:
+    encoded = _ddq8.encode_preuint8_q8_program(program)
+    manifest = {
+        "schema": _ddq8.ARCHIVE_SCHEMA,
+        "base": {
+            "member": _ddq8.BASE_MEMBER,
+            "bytes": len(base_archive),
+            "sha256": _sha256(base_archive),
+        },
+        "program": {
+            "member": _ddq8.PROGRAM_MEMBER,
+            "bytes": len(encoded),
+            "sha256": _sha256(encoded),
+            "template_count": len(program.templates),
+            "sparse_count": len(program.sparse),
+            "dither_mode": program.dither_mode,
+            "dither_seed": program.dither_seed,
+        },
+        "decode_boundary": "nested_uint8_camera_to_counted_q8_correction_then_deterministic_uint8",
+        "source_video_bytes": SOURCE_BYTES,
+        "scorer_present_at_decode": False,
+        "ground_truth_argmax_present_at_decode": False,
+        "score_claim": False,
+    }
+    members = {
+        _ddq8.MANIFEST_MEMBER: json.dumps(
+            manifest, sort_keys=True, separators=(",", ":")
+        ).encode(),
+        _ddq8.BASE_MEMBER: base_archive,
+        _ddq8.PROGRAM_MEMBER: encoded,
+    }
+    archive = _zip_stored(members)
+    parsed, _homes = _ddq8.parse_preuint8_q8_archive(archive)
+    if parsed != members:
+        raise DirectDescriptionError("v19c fast preuint8 parse-back differs")
+    return archive
+
+
 def _compile_state(
     state: SaturationState,
     *,
     rung: Literal["dev", "n600"],
     v19_config: DDMV19PurePricedObjectiveConfigV1,
     ctx: Mapping[str, Any],
+    n600_source_carrier: bytes | None = None,
 ) -> tuple[bytes, Callable[[bytes], Any], dict[str, Any]]:
     geometry = _rung_geometry(rung, v19_config, ctx)
     realized = _realized_post_state(state, ctx["problem"])
-    _compact, expanded_base, program = _ladder_archive(
-        state=realized,
-        problem=ctx["problem"],
-        v14_archive=_base_v14_bytes(ctx["n600_config"]),
-        source_start=geometry["source_start"],
-        source_stop=geometry["source_stop"],
-    )
     worldsheet, grammar = _worldsheet_payload(
         geometry["source_archive"],
         active_pair_ids=geometry["grammar_pair_ids"],
@@ -656,8 +872,29 @@ def _compile_state(
         track_translations=state.track_translations,
         grammar_ref_swaps=state.grammar_ref_swaps,
     )
-    carrier = _carrier_with_worldsheet(expanded_base, worldsheet)
-    coupled = compile_coupled_margin_archive(carrier, program)
+    if rung == "n600" and n600_source_carrier is not None:
+        program = _n600_program(
+            state=state,
+            problem=ctx["problem"],
+            source_start=geometry["source_start"],
+            source_stop=geometry["source_stop"],
+        )
+        carrier = _replace_carrier_payloads(
+            source_carrier=n600_source_carrier,
+            template_values_u8=np.asarray(realized["template_values_u8"], dtype=np.uint8),
+            worldsheet_payload=worldsheet,
+        )
+        coupled = _compile_coupled_margin_fast(carrier, program)
+    else:
+        _compact, expanded_base, program = _ladder_archive(
+            state=realized,
+            problem=ctx["problem"],
+            v14_archive=_base_v14_bytes(ctx["n600_config"]),
+            source_start=geometry["source_start"],
+            source_stop=geometry["source_stop"],
+        )
+        carrier = _carrier_with_worldsheet(expanded_base, worldsheet)
+        coupled = compile_coupled_margin_archive(carrier, program)
     q8_program = _preuint8_program(
         state=state,
         problem=ctx["problem"],
@@ -666,7 +903,11 @@ def _compile_state(
         source_start=geometry["source_start"],
         source_stop=geometry["source_stop"],
     )
-    archive = compile_preuint8_q8_archive(coupled, q8_program)
+    archive = (
+        _compile_preuint8_fast(coupled, q8_program)
+        if rung == "n600" and n600_source_carrier is not None
+        else compile_preuint8_q8_archive(coupled, q8_program)
+    )
     return (
         archive,
         receive_preuint8_q8_archive,
@@ -1013,11 +1254,271 @@ def _restore_n600_decisions(
     return rows, state, current
 
 
+def _program_pair_delta(
+    left: Sequence[Any],
+    right: Sequence[Any],
+) -> set[int]:
+    changed = set(left).symmetric_difference(set(right))
+    return {int(row.source_pair_id) for row in changed}
+
+
+def _g1_pair_polygons(payload: bytes) -> tuple[Any, dict[int, tuple[tuple[tuple[int, int], ...], ...]]]:
+    lift = lift_g1_movable_worldsheet(payload)
+    if encode_lifted_g1_movable_worldsheet(lift) != payload:
+        raise DirectDescriptionError("v19c G1 support lift/re-encode differs")
+    templates = {row.template_ref: row for row in lift.templates}
+    result: dict[int, list[tuple[tuple[int, int], ...]]] = {}
+    for knot in lift.knots:
+        relative = templates[knot.template_ref].relative_vertices_xy
+        polygon = tuple(
+            (knot.center_x + int(x), knot.center_y + int(y))
+            for x, y in relative
+        )
+        result.setdefault(int(knot.pair_index), []).append(polygon)
+    return lift, {
+        pair_id: tuple(sorted(polygons))
+        for pair_id, polygons in result.items()
+    }
+
+
+def _render_g1_pair(
+    polygons: Sequence[Sequence[tuple[int, int]]],
+    shape: tuple[int, int],
+) -> np.ndarray:
+    import cv2
+
+    mask = np.zeros(shape, dtype=np.uint8)
+    for polygon in polygons:
+        value = np.asarray(polygon, dtype=np.int32).reshape(-1, 1, 2)
+        cv2.fillPoly(mask, [value], 1)
+    return mask.astype(bool)
+
+
+def _receiver_custody(
+    archive: bytes,
+    base_archive: bytes,
+    program_payload: bytes,
+    program: Any,
+) -> dict[str, Any]:
+    return {
+        "schema": _ddq8.RECEIVER_SCHEMA,
+        "archive_bytes": len(archive),
+        "archive_sha256": _sha256(archive),
+        "base_archive_bytes": len(base_archive),
+        "base_archive_sha256": _sha256(base_archive),
+        "program_bytes": len(program_payload),
+        "program_sha256": _sha256(program_payload),
+        "template_count": len(program.templates),
+        "sparse_count": len(program.sparse),
+        "dither_mode": program.dither_mode,
+        "scorer_weights_present": False,
+        "ground_truth_argmax_present": False,
+        "score_claim": False,
+    }
+
+
+def _candidate_receiver_and_support(
+    *,
+    archive: bytes,
+    current_receiver: Any,
+) -> tuple[Any, set[int], dict[str, Any]]:
+    """Construct the exact candidate receiver by patching decoded changed support."""
+
+    outer, _homes = _ddq8.parse_preuint8_q8_archive(archive)
+    coupled_archive = outer[_ddq8.BASE_MEMBER]
+    coupled_members, coupled_homes = _ddcm.parse_coupled_margin_archive(coupled_archive)
+    carrier_archive = coupled_members[_ddcm.BASE_MEMBER]
+    current_carrier = current_receiver.base.base
+    candidate_carrier_members = _stored_zip_members(carrier_archive)
+    current_carrier_members = _stored_zip_members(current_carrier.archive)
+    changed_carrier_members = {
+        name
+        for name in set(candidate_carrier_members) | set(current_carrier_members)
+        if candidate_carrier_members.get(name) != current_carrier_members.get(name)
+    }
+    allowed = {"manifest.json", WORLDSHEET_G1_MEMBER, SCORER_SOLVED_TEMPLATE_MEMBER}
+    support_source_ids: set[int] = set()
+    fallback_full_decode = bool(changed_carrier_members - allowed)
+    if fallback_full_decode:
+        candidate_carrier = receive_carrier_compose_archive(
+            carrier_archive,
+            verify_member_effects=False,
+        )
+        support_source_ids.update(
+            range(
+                candidate_carrier.predictor.source_pair_start,
+                candidate_carrier.predictor.source_pair_start + candidate_carrier.z.n_pairs,
+            )
+        )
+    else:
+        candidate_mask = current_carrier.worldsheet_g1_mask
+        if WORLDSHEET_G1_MEMBER in changed_carrier_members:
+            if candidate_mask is None:
+                raise DirectDescriptionError("v19c changed G1 carrier has no current mask")
+            current_lift, current_polygons = _g1_pair_polygons(
+                current_carrier_members[WORLDSHEET_G1_MEMBER]
+            )
+            candidate_lift, candidate_polygons = _g1_pair_polygons(
+                candidate_carrier_members[WORLDSHEET_G1_MEMBER]
+            )
+            if (
+                current_lift.pair_count != candidate_lift.pair_count
+                or current_lift.max_slots != candidate_lift.max_slots
+            ):
+                raise DirectDescriptionError("v19c changed G1 carrier geometry differs")
+            candidate_mask = current_carrier.worldsheet_g1_mask.copy()
+            candidate_pairs = set(current_polygons) | set(candidate_polygons)
+            source_start = current_carrier.predictor.source_pair_start
+            for local_pair_id in sorted(candidate_pairs):
+                if current_polygons.get(local_pair_id) == candidate_polygons.get(local_pair_id):
+                    continue
+                rendered = _render_g1_pair(
+                    candidate_polygons.get(local_pair_id, ()),
+                    tuple(candidate_mask.shape[1:]),
+                )
+                if not np.array_equal(
+                    rendered,
+                    current_carrier.worldsheet_g1_mask[local_pair_id],
+                ):
+                    candidate_mask[local_pair_id] = rendered
+                    support_source_ids.add(source_start + local_pair_id)
+        candidate_bank = current_carrier.scorer_solved_templates
+        if SCORER_SOLVED_TEMPLATE_MEMBER in changed_carrier_members:
+            candidate_bank = decode_scorer_solved_template_bank(
+                candidate_carrier_members[SCORER_SOLVED_TEMPLATE_MEMBER]
+            )
+            support_source_ids.update(
+                range(
+                    current_carrier.predictor.source_pair_start,
+                    current_carrier.predictor.source_pair_start + current_carrier.z.n_pairs,
+                )
+            )
+        candidate_carrier = replace(
+            current_carrier,
+            archive=carrier_archive,
+            worldsheet_g1_mask=candidate_mask,
+            scorer_solved_templates=candidate_bank,
+            custody={},
+        )
+    coupled_program = _ddcm.decode_coupled_margin_program(
+        coupled_members[_ddcm.PROGRAM_MEMBER]
+    )
+    _ddcm._validate_program_against_receiver(coupled_program, candidate_carrier)
+    current_coupled_program = current_receiver.base.program
+    support_source_ids.update(
+        _program_pair_delta(current_coupled_program.placements, coupled_program.placements)
+    )
+    support_source_ids.update(
+        _program_pair_delta(
+            current_coupled_program.compensations,
+            coupled_program.compensations,
+        )
+    )
+    coupled_custody = {
+        "schema": _ddcm.RECEIVER_SCHEMA,
+        "archive_bytes": len(coupled_archive),
+        "archive_sha256": _sha256(coupled_archive),
+        "base_archive_bytes": len(carrier_archive),
+        "base_archive_sha256": _sha256(carrier_archive),
+        "program_bytes": len(coupled_members[_ddcm.PROGRAM_MEMBER]),
+        "program_sha256": _sha256(coupled_members[_ddcm.PROGRAM_MEMBER]),
+        "placement_count": len(coupled_program.placements),
+        "sparse_compensation_count": len(coupled_program.compensations),
+        "zip_homes_close": (
+            sum(int(row["zip_home_bytes"]) for row in coupled_homes)
+            < len(coupled_archive)
+        ),
+        "scorer_weights_present": False,
+        "ground_truth_argmax_present": False,
+        "score_claim": False,
+        "evidence_axis": AXIS,
+    }
+    coupled_receiver = _ddcm.CoupledMarginReceiverV1(
+        coupled_archive,
+        candidate_carrier,
+        coupled_program,
+        coupled_custody,
+    )
+    pre_program = _ddq8.decode_preuint8_q8_program(outer[_ddq8.PROGRAM_MEMBER])
+    _ddq8._validate_program(pre_program, coupled_receiver)
+    current_pre_program = current_receiver.program
+    if (
+        current_pre_program.dither_mode != pre_program.dither_mode
+        or current_pre_program.dither_seed != pre_program.dither_seed
+    ):
+        support_source_ids.update(
+            range(
+                candidate_carrier.predictor.source_pair_start,
+                candidate_carrier.predictor.source_pair_start + candidate_carrier.z.n_pairs,
+            )
+        )
+    support_source_ids.update(
+        _program_pair_delta(current_pre_program.templates, pre_program.templates)
+    )
+    support_source_ids.update(
+        _program_pair_delta(current_pre_program.sparse, pre_program.sparse)
+    )
+    custody = _receiver_custody(
+        archive,
+        coupled_archive,
+        outer[_ddq8.PROGRAM_MEMBER],
+        pre_program,
+    )
+    receiver = _ddq8.PreUint8Q8ReceiverV1(
+        archive,
+        coupled_receiver,
+        pre_program,
+        custody,
+    )
+    source_start = candidate_carrier.predictor.source_pair_start
+    source_stop = source_start + candidate_carrier.z.n_pairs
+    if any(not source_start <= pair_id < source_stop for pair_id in support_source_ids):
+        raise DirectDescriptionError("v19c receiver support escaped source custody")
+    return receiver, support_source_ids, {
+        "method": (
+            "FULL_RECEIVER_DECODE_CONSERVATIVE_SUPPORT"
+            if fallback_full_decode
+            else "EXACT_MEMBER_DELTA_PLUS_G1_PER_PAIR_RASTER_SUPPORT"
+        ),
+        "changed_carrier_members": sorted(changed_carrier_members),
+        "source_pair_count": len(support_source_ids),
+        "source_pair_ids": sorted(support_source_ids),
+        "inner_loop_full_g1_decode_skipped": not fallback_full_decode,
+        "published_stage_exit_requires_strict_full_receiver_decode": True,
+    }
+
+
+def _preuint8_byte_rows_and_custody(
+    archive: bytes,
+    receiver: Any,
+) -> tuple[list[dict[str, Any]], Mapping[str, Any]]:
+    members, homes = _ddq8.parse_preuint8_q8_archive(archive)
+    rows = [
+        {
+            "stratum": {
+                _ddq8.MANIFEST_MEMBER: "outer_manifest",
+                _ddq8.BASE_MEMBER: "nested_coupled_margin_receiver",
+                _ddq8.PROGRAM_MEMBER: "preuint8_q8_program",
+            }[row["name"]],
+            **row,
+        }
+        for row in homes
+    ]
+    rows.extend(
+        {
+            "nested_under": _ddq8.BASE_MEMBER,
+            **row,
+        }
+        for row in coupled_margin_byte_rows(members[_ddq8.BASE_MEMBER])
+    )
+    return rows, receiver.custody
+
+
 def _aggregate_n600_batches(
     *,
     name: str,
     archive: bytes,
-    receiver_factory: Callable[[bytes], Any],
+    receiver: Any,
     batches: Sequence[Mapping[str, Any]],
     batch_size: int,
 ) -> dict[str, Any]:
@@ -1036,7 +1537,7 @@ def _aggregate_n600_batches(
         row["d_seg"] = f"{row['errors'] / max(1, row['sites']):.12f}"
     d_seg = errors / sites
     d_pose = pose_sse / pose_coordinates
-    byte_rows, custody = _archive_byte_rows(archive, receiver_factory)
+    byte_rows, custody = _preuint8_byte_rows_and_custody(archive, receiver)
     return {
         "candidate": name,
         "archive_bytes": len(archive),
@@ -1116,11 +1617,12 @@ def _candidate_n600_batches(
     *,
     name: str,
     archive: bytes,
-    receiver_factory: Callable[[bytes], Any],
     current_archive: bytes,
-    current_receiver_factory: Callable[[bytes], Any],
+    current_receiver: Any,
     current_batches: Sequence[Mapping[str, Any]],
-    baseline_archive: bytes,
+    current_camera_cache: dict[int, np.ndarray],
+    baseline_receiver: Any,
+    baseline_camera_cache: dict[int, np.ndarray],
     source_pair_ids: Sequence[int],
     local_pair_ids: Sequence[int],
     root: Path,
@@ -1130,7 +1632,7 @@ def _candidate_n600_batches(
     poses_all: np.ndarray,
     segnet: Any,
     posenet: Any,
-) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+) -> tuple[dict[str, Any], list[dict[str, Any]], Any, dict[int, np.ndarray]]:
     stage = root / "stage_checkpoints" / name
     source = np.asarray(source_pair_ids, dtype=np.int64)
     local = np.asarray(local_pair_ids, dtype=np.int64)
@@ -1139,12 +1641,16 @@ def _candidate_n600_batches(
     expected_batches = math.ceil(int(source.size) / batch_size)
     if len(current_batches) != expected_batches:
         raise DirectDescriptionError("v19c incremental n600 current batch coverage differs")
-    candidate_receiver = receiver_factory(archive)
-    current_receiver = current_receiver_factory(current_archive)
-    baseline_receiver = receive_carrier_compose_archive(baseline_archive)
+    candidate_receiver, support_source_ids, support_receipt = (
+        _candidate_receiver_and_support(
+            archive=archive,
+            current_receiver=current_receiver,
+        )
+    )
     candidate_sha = _sha256(archive)
     current_sha = _sha256(current_archive)
     rows: list[dict[str, Any]] = []
+    candidate_camera_cache = dict(current_camera_cache)
     for batch_index, start in enumerate(range(0, int(source.size), batch_size)):
         stop = min(start + batch_size, int(source.size))
         checkpoint = stage / f"batch_{start:04d}_{stop:04d}.json"
@@ -1160,9 +1666,13 @@ def _candidate_n600_batches(
             continue
         local_ids = tuple(int(value) for value in local[start:stop])
         source_ids = source[start:stop]
-        camera = candidate_receiver.render_camera_pairs(local_ids)
-        current_camera = current_receiver.render_camera_pairs(local_ids)
-        if np.array_equal(camera, current_camera):
+        if not support_source_ids.intersection(int(value) for value in source_ids):
+            current_camera_sha = current_batches[batch_index].get(
+                "candidate_camera_sha256",
+                current_batches[batch_index]["camera_diff_vs_v15"][
+                    "candidate_camera_sha256"
+                ],
+            )
             row = {
                 **dict(current_batches[batch_index]),
                 "schema": "ddm_v19c_receiver_batch.v1",
@@ -1172,59 +1682,94 @@ def _candidate_n600_batches(
                 "current_archive_sha256": current_sha,
                 "source_pair_ids": source_ids.tolist(),
                 "camera_identity_reused_exact_scorer_row": True,
-                "candidate_camera_sha256": _sha256_array(camera),
+                "candidate_camera_sha256": current_camera_sha,
+                "reuse_proof": "DECODED_RECEIVER_PAIR_SUPPORT_EXCLUSION",
                 "score_claim": False,
                 "evidence_axis": AXIS,
             }
         else:
-            baseline_camera = baseline_receiver.render_camera_pairs(local_ids)
-            cells, pose6 = _forward(segnet, posenet, camera)
-            replay_cells, replay_pose6 = _forward(segnet, posenet, camera)
-            if not np.array_equal(cells, replay_cells) or not np.array_equal(pose6, replay_pose6):
-                raise DirectDescriptionError(f"v19c {name} deterministic changed-batch replay failed")
-            labels = np.asarray(labels_all[source_ids])
-            poses = np.asarray(poses_all[source_ids])
-            errors = cells != labels
-            class_rows = {}
-            for class_id, class_name in CLASS_NAMES.items():
-                mask = labels == class_id
-                class_rows[class_name] = {
-                    "errors": int(np.count_nonzero(errors & mask)),
-                    "sites": int(np.count_nonzero(mask)),
-                }
-            diff = camera.astype(np.int16) - baseline_camera.astype(np.int16)
-            row = {
-                "schema": "ddm_v19c_receiver_batch.v1",
-                "typed_config_sha256": config_hash,
-                "candidate": name,
-                "archive_sha256": candidate_sha,
-                "current_archive_sha256": current_sha,
-                "source_pair_ids": source_ids.tolist(),
-                "errors": int(np.count_nonzero(errors)),
-                "sites": int(errors.size),
-                "pose_squared_error_sum": f"{float(np.square(pose6 - poses).sum(dtype=np.float64)):.12f}",
-                "pose_coordinates": int(pose6.size),
-                "class_rows": class_rows,
-                "cells_sha256": _sha256_array(cells),
-                "pose6_sha256": _sha256_array(pose6),
-                "camera_diff_vs_v15": {
-                    "changed_channel_values": int(np.count_nonzero(diff)),
-                    "changed_rgb_pixels": int(np.count_nonzero(np.any(diff != 0, axis=-1))),
-                    "l1_channel_sum": int(np.abs(diff).sum(dtype=np.int64)),
+            camera = candidate_receiver.render_camera_pairs(local_ids)
+            current_camera = current_camera_cache.get(batch_index)
+            if current_camera is None:
+                current_camera = current_receiver.render_camera_pairs(local_ids)
+                current_camera_cache[batch_index] = current_camera
+            candidate_camera_cache[batch_index] = camera
+            if np.array_equal(camera, current_camera):
+                row = {
+                    **dict(current_batches[batch_index]),
+                    "schema": "ddm_v19c_receiver_batch.v1",
+                    "typed_config_sha256": config_hash,
+                    "candidate": name,
+                    "archive_sha256": candidate_sha,
+                    "current_archive_sha256": current_sha,
+                    "source_pair_ids": source_ids.tolist(),
+                    "camera_identity_reused_exact_scorer_row": True,
                     "candidate_camera_sha256": _sha256_array(camera),
-                    "v15_camera_sha256": _sha256_array(baseline_camera),
-                },
-                "camera_identity_reused_exact_scorer_row": False,
-                "candidate_camera_sha256": _sha256_array(camera),
-                "score_claim": False,
-                "evidence_axis": AXIS,
-            }
+                    "reuse_proof": "EXACT_NUMPY_CAMERA_ARRAY_IDENTITY",
+                    "score_claim": False,
+                    "evidence_axis": AXIS,
+                }
+            else:
+                baseline_camera = baseline_camera_cache.get(batch_index)
+                if baseline_camera is None:
+                    baseline_camera = baseline_receiver.render_camera_pairs(local_ids)
+                    baseline_camera_cache[batch_index] = baseline_camera
+                cells, pose6 = _forward(segnet, posenet, camera)
+                replay_cells, replay_pose6 = _forward(segnet, posenet, camera)
+                if not np.array_equal(cells, replay_cells) or not np.array_equal(
+                    pose6, replay_pose6
+                ):
+                    raise DirectDescriptionError(
+                        f"v19c {name} deterministic changed-batch replay failed"
+                    )
+                labels = np.asarray(labels_all[source_ids])
+                poses = np.asarray(poses_all[source_ids])
+                errors = cells != labels
+                class_rows = {}
+                for class_id, class_name in CLASS_NAMES.items():
+                    mask = labels == class_id
+                    class_rows[class_name] = {
+                        "errors": int(np.count_nonzero(errors & mask)),
+                        "sites": int(np.count_nonzero(mask)),
+                    }
+                diff = camera.astype(np.int16) - baseline_camera.astype(np.int16)
+                row = {
+                    "schema": "ddm_v19c_receiver_batch.v1",
+                    "typed_config_sha256": config_hash,
+                    "candidate": name,
+                    "archive_sha256": candidate_sha,
+                    "current_archive_sha256": current_sha,
+                    "source_pair_ids": source_ids.tolist(),
+                    "errors": int(np.count_nonzero(errors)),
+                    "sites": int(errors.size),
+                    "pose_squared_error_sum": (
+                        f"{float(np.square(pose6 - poses).sum(dtype=np.float64)):.12f}"
+                    ),
+                    "pose_coordinates": int(pose6.size),
+                    "class_rows": class_rows,
+                    "cells_sha256": _sha256_array(cells),
+                    "pose6_sha256": _sha256_array(pose6),
+                    "camera_diff_vs_v15": {
+                        "changed_channel_values": int(np.count_nonzero(diff)),
+                        "changed_rgb_pixels": int(
+                            np.count_nonzero(np.any(diff != 0, axis=-1))
+                        ),
+                        "l1_channel_sum": int(np.abs(diff).sum(dtype=np.int64)),
+                        "candidate_camera_sha256": _sha256_array(camera),
+                        "v15_camera_sha256": _sha256_array(baseline_camera),
+                    },
+                    "camera_identity_reused_exact_scorer_row": False,
+                    "candidate_camera_sha256": _sha256_array(camera),
+                    "reuse_proof": None,
+                    "score_claim": False,
+                    "evidence_axis": AXIS,
+                }
         _write(checkpoint, row)
         rows.append(row)
     measurement = _aggregate_n600_batches(
         name=name,
         archive=archive,
-        receiver_factory=receiver_factory,
+        receiver=candidate_receiver,
         batches=rows,
         batch_size=batch_size,
     )
@@ -1234,7 +1779,9 @@ def _candidate_n600_batches(
     measurement["changed_camera_rescored_batch_count"] = sum(
         row["camera_identity_reused_exact_scorer_row"] is False for row in rows
     )
-    return measurement, rows
+    measurement["decoded_receiver_pair_support"] = support_receipt
+    measurement["resident_camera_cache_batch_count"] = len(candidate_camera_cache)
+    return measurement, rows, candidate_receiver, candidate_camera_cache
 
 
 def _stage_n600(
@@ -1268,6 +1815,15 @@ def _stage_n600(
         if row.get("accepted") is True
     }
     geometry = _rung_geometry("n600", v19_config, ctx)
+    source_v19b_archive = _read_regular_file_once(
+        REPO_ROOT / v19b_receipt["n600"]["archive"]["path"]
+    )
+    if (
+        _sha256(source_v19b_archive) != baseline["archive_sha256"]
+        or len(source_v19b_archive) != int(baseline["archive_bytes"])
+    ):
+        raise DirectDescriptionError("v19c n600 source v19b archive custody differs")
+    n600_source_carrier = _nested_carrier_archive(source_v19b_archive)
     proposal_indices = sorted(accepted_dev)
     decision_root = root / "stage_checkpoints" / "02_n600_decisions"
     rows, state, restored_current = _restore_n600_decisions(
@@ -1280,8 +1836,12 @@ def _stage_n600(
         ctx=ctx,
     )
     current = restored_current or baseline
-    current_archive, current_factory, _current_compile = _compile_state(
-        state, rung="n600", v19_config=v19_config, ctx=ctx
+    current_archive, final_factory, _current_compile = _compile_state(
+        state,
+        rung="n600",
+        v19_config=v19_config,
+        ctx=ctx,
+        n600_source_carrier=n600_source_carrier,
     )
     if (
         _sha256(current_archive) != current["archive_sha256"]
@@ -1310,22 +1870,38 @@ def _stage_n600(
             raise DirectDescriptionError("v19c resumed accepted n600 batch state differs")
     else:
         current_batches = _source_v19b_n600_batches(config=config, baseline=baseline)
+    current_receiver = receive_preuint8_q8_archive(current_archive)
+    baseline_receiver = receive_carrier_compose_archive(geometry["source_archive"])
+    current_camera_cache: dict[int, np.ndarray] = {}
+    baseline_camera_cache: dict[int, np.ndarray] = {}
     for n600_index, proposal_index in enumerate(proposal_indices[len(rows) :], start=len(rows)):
         proposal = _proposal_at(inventory, proposal_index)
         trial_state = _apply_proposal(state, proposal, problem=ctx["problem"], ctx=ctx)
-        archive, factory, compile_receipt = _compile_state(trial_state, rung="n600", v19_config=v19_config, ctx=ctx)
+        archive, _factory, compile_receipt = _compile_state(
+            trial_state,
+            rung="n600",
+            v19_config=v19_config,
+            ctx=ctx,
+            n600_source_carrier=n600_source_carrier,
+        )
         archive_path = (
             root / "candidate_archives" / (f"n600_{n600_index:04d}_{_safe_name(proposal['base_id'])}.zip.receipt-bytes")
         )
         _publish_immutable(archive_path, archive)
-        measurement, candidate_batches = _candidate_n600_batches(
+        (
+            measurement,
+            candidate_batches,
+            candidate_receiver,
+            candidate_camera_cache,
+        ) = _candidate_n600_batches(
             name=f"02_n600_candidates/candidate_{n600_index:04d}",
             archive=archive,
-            receiver_factory=factory,
             current_archive=current_archive,
-            current_receiver_factory=current_factory,
+            current_receiver=current_receiver,
             current_batches=current_batches,
-            baseline_archive=geometry["source_archive"],
+            current_camera_cache=current_camera_cache,
+            baseline_receiver=baseline_receiver,
+            baseline_camera_cache=baseline_camera_cache,
             source_pair_ids=geometry["source_pair_ids"],
             local_pair_ids=geometry["local_pair_ids"],
             root=root,
@@ -1375,13 +1951,21 @@ def _stage_n600(
             state = trial_state
             current = measurement
             current_archive = archive
-            current_factory = factory
+            current_receiver = candidate_receiver
             current_batches = candidate_batches
-    final_archive, final_factory, final_compile = _compile_state(state, rung="n600", v19_config=v19_config, ctx=ctx)
+            current_camera_cache = candidate_camera_cache
+    final_archive, final_factory, final_compile = _compile_state(
+        state,
+        rung="n600",
+        v19_config=v19_config,
+        ctx=ctx,
+        n600_source_carrier=n600_source_carrier,
+    )
     final_path_archive = root / "ddm_v19c_final_n600.zip.receipt-bytes"
     _publish_immutable(final_path_archive, final_archive)
     if _sha256(final_archive) != current["archive_sha256"]:
         raise DirectDescriptionError("v19c n600 final archive/measurement identity differs")
+    strict_final_receiver = receive_preuint8_q8_archive(final_archive)
     accepted = [row for row in rows if row["accepted"]]
     result = {
         "schema": "ddm_v19c_n600_saturation_curve.v1",
@@ -1419,7 +2003,17 @@ def _stage_n600(
             "bucket_delta_vs_v19b": _bucket_delta(baseline, current),
         },
         "per_family": _family_summary(rows),
-        "template_order_gauge": _template_order_gauge(final_archive, final_factory),
+        "template_order_gauge": _template_order_gauge(
+            final_archive,
+            lambda candidate: (
+                strict_final_receiver
+                if candidate == final_archive
+                else final_factory(candidate)
+            ),
+        ),
+        "strict_published_stage_exit_receiver_custody": dict(
+            strict_final_receiver.custody
+        ),
         "score_claim": False,
         "evidence_axis": AXIS,
     }
