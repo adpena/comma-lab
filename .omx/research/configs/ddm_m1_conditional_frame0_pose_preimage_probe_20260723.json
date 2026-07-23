@@ -1,0 +1,154 @@
+{
+  "schema": "DDMConditionalFrame0PosePreimageProbeV1",
+  "run_id": "ddm_m1_conditional_frame0_pose_preimage_probe_20260723",
+  "seed": 1234,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "evidence_axis": "[future macOS-CPU frozen-scorer advisory]",
+  "runner": {
+    "path": "tools/probe_ddm_conditional_frame0_pose_preimage.py",
+    "present_in_delegated_snapshot": false,
+    "status": "SPECIFIED_NOT_BUILT_NOT_FIRED",
+    "semantic_argv": [
+      "/usr/bin/env",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "PYTHONPATH=src",
+      ".venv/bin/python",
+      "tools/probe_ddm_conditional_frame0_pose_preimage.py",
+      "--config",
+      ".omx/research/configs/ddm_m1_conditional_frame0_pose_preimage_probe_20260723.json",
+      "--output-directory",
+      ".omx/research/ddm_m1_conditional_frame0_pose_preimage_probe_20260723T000000Z"
+    ]
+  },
+  "inputs": {
+    "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+    "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+    "v19b_receipt_path": ".omx/research/ddm_v19b_joint_remeasure_stack_20260723T051914Z/ddm_v19b_joint_remeasure_stack_receipt.json",
+    "v19b_receipt_sha256": "4bb5d6b4b793b667c7cbe15e37cbf9a27f6c0e75451374839fb5df8ca1c1b8e8",
+    "v19b_n600_archive_path": ".omx/research/ddm_v19b_joint_remeasure_stack_20260723T051914Z/ddm_v19b_final_n600.zip.receipt-bytes",
+    "v19b_n600_archive_sha256": "74ede4194ed0eb6c2716f1033a47569c87a7afdf0c21fb1ee23ac059beff3aae",
+    "v19b_n600_archive_bytes": 137825,
+    "v19b_n600_d_seg": 0.026594424778,
+    "v19b_n600_d_pose": 163.061176604795,
+    "current_nested_xi_pose6_home_bytes": 3721,
+    "banked_r1_complete_artifact_prior": {
+      "d_pose": 0.00161,
+      "xi_effective_bytes": 7195,
+      "transfer_authority": false,
+      "reason": "the measured R1 xi payload is co-adapted with its complete R1 render and has no proved graft onto this DDM vehicle"
+    }
+  },
+  "population": {
+    "pair_ladder": [
+      64,
+      600
+    ],
+    "scorer_batch_size": 16,
+    "scorer_threads": 4,
+    "maximum_archive_bytes": 200000,
+    "maximum_pose_payload_bytes_for_dominance": 7195,
+    "maximum_d_pose": 0.00161
+  },
+  "invariants": {
+    "frame1_camera_bytes": "bit_identical_to_v19b_control",
+    "frame1_exact_R_cells": "bit_identical_to_v19b_control",
+    "d_seg_delta": 0.0,
+    "frame0_segnet_incidence": 0.0,
+    "pose_preprocess": "official two-frame RGB to YUV6 after evaluator resize",
+    "shared_xi_policy": "reuse the counted xi chart only where a measured chart-selection gate permits; do not assume Lane dual-use",
+    "archive_must_not_contain": [
+      "PoseNet_weights",
+      "SegNet_weights",
+      "pose_target_table",
+      "ground_truth_frames",
+      "video_derived_data_hidden_in_decoder_code"
+    ]
+  },
+  "candidate_ladder": [
+    {
+      "id": "A_hold",
+      "frame0": "v19b_control",
+      "purpose": "exact control"
+    },
+    {
+      "id": "B_xi_warp_only",
+      "frame0": "generic_projective_warp_of_fixed_frame1_from_existing_xi",
+      "purpose": "zero_new_pose_payload_control"
+    },
+    {
+      "id": "C_xi_plus_luma_pose_preimage",
+      "frame0": "xi_warp_plus_quantized_low_order_luma_preimage",
+      "coefficient_counts": [
+        6,
+        12,
+        24,
+        48
+      ],
+      "quantizers": [
+        4,
+        6,
+        8,
+        10
+      ]
+    },
+    {
+      "id": "D_xi_plus_YUV6_pose_preimage",
+      "frame0": "xi_warp_plus_quantized_joint_luma_chroma_preimage",
+      "coefficient_counts": [
+        12,
+        24,
+        48,
+        96
+      ],
+      "quantizers": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "purpose": "control against the unproved assumption that chroma is pose-null"
+    }
+  ],
+  "optimization": {
+    "decision_variable": "counted_frame0_residual_coefficients_conditioned_on_fixed_frame1_and_existing_xi",
+    "proposal_metric": "PoseNet secant_and_exact_finite_difference_trust_region",
+    "verdict_metric": "exact_official_YUV6_PoseNet_after_uint8_and_R_plus_complete_archive_bytes",
+    "joint_objective": "sqrt(10*d_pose)+(25/37545489)*incremental_complete_archive_bytes",
+    "relinearize_after_each_accepted_step": true,
+    "stop_rule": "reverse_waterfill_until_no_negative_exact_marginal_delta_S",
+    "real_coder_race": [
+      "brotli_q11",
+      "lzma_xz_preset9_extreme",
+      "split_metadata_plus_rice_golomb"
+    ],
+    "checkpoint_policy": "atomic_preserve_every_candidate_then_n64_then_n600"
+  },
+  "controls": [
+    "v19b_exact_frame0",
+    "existing_xi_warp_with_zero_residual",
+    "luma_only_preimage",
+    "joint_YUV6_preimage",
+    "banked_R1_complete_artifact_as_nontransferable_rate_target_only"
+  ],
+  "acceptance": {
+    "confirmed": "n600 d_pose<=0.00161 with exact frame1 bytes/cells unchanged and complete counted pose payload<=7195 bytes",
+    "useful_but_not_dominating": "n600 exact joint objective improves within the 62175-byte current box headroom but payload exceeds 7195 bytes",
+    "primary_falsifier": "no preregistered luma or joint-YUV6 candidate reaches d_pose<=0.00161 within 7195 complete payload bytes after exact n600 replay",
+    "secondary_falsifier": "any selected candidate changes frame1 camera bytes or exact-R Seg cells",
+    "falsifier_scope": "FORMULATION:XI_CONDITIONED_LOW_ORDER_FRAME0_POSE_PREIMAGE; broader conditional frame0 generator family remains open"
+  },
+  "storage": {
+    "waterfall": [
+      "/Volumes/VertigoDataTier/pact",
+      "/Volumes/APDataStore/pact"
+    ],
+    "local_bulk_allowed": false,
+    "preflight_required": true,
+    "success_only_scratch_cleanup": true,
+    "certify_or_block_cleanup": true
+  },
+  "main_landing_review_required": true
+}
