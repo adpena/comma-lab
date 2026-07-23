@@ -83857,6 +83857,49 @@
       "notes": "Isolated-worktree local macOS-CPU frozen-scorer advisory coupled GN/KKT solve extending v14/v15 receiver and #549; score_claim=false; pointer 0.1910828242 contest-CPU unchanged; MAIN landing review required.",
       "research_only": true,
       "lane_class": "receiver_realization_research"
+    },
+    {
+      "id": "lane_ddm_a1_naive_verdict_audit_3day_20260723",
+      "name": "DDM A1 three-day naive-verdict audit",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only read-only audit of 2026-07-20 through 2026-07-23 DDM verdicts; no measurement runs; pointer 0.1910828242 contest-CPU UNMOVED; MAIN landing review required.",
+      "research_only": true,
+      "lane_class": "research_audit"
     }
   ],
   "level_rules": {
@@ -83866,5 +83909,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T01:50:41Z"
+  "updated_at": "2026-07-23T02:36:58Z"
 }
