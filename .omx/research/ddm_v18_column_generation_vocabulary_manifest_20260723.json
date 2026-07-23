@@ -1,0 +1,41 @@
+{
+  "schema": "ddm_v18_column_generation_vocabulary_manifest.v1",
+  "lane_id": "ddm_v18_column_generation_vocabulary",
+  "branch": "codexwt/ddm_v18_column_generation_vocabulary_20260723T025614Z",
+  "base_commit": "f5b41a92dc0c89cce2d628dc95eeeb45e5426bd7",
+  "verdict": "BLOCKED_PRECONDITION_NO_COMMON_EXACT_R_MASTER",
+  "verdict_scope": "PRECONDITION only; all column and coder families remain open",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "receipt": {
+    "path": ".omx/research/ddm_v18_column_generation_vocabulary_20260723T030000Z/ddm_a1_column_generated_correction_receipt.json",
+    "sha256": "f8daae958510e6cea9cf39b499ec820d6747dd968e9a51157e0a5a3e25601a96"
+  },
+  "durable_artifacts": [
+    "src/tac/optimization/ddm_column_generation.py",
+    "src/tac/optimization/tests/test_ddm_column_generation.py",
+    "src/tac/canonical_equations/ddm_v18_column_pricing_law_20260723.py",
+    "src/tac/canonical_equations/tests/test_ddm_v18_column_pricing_law_20260723.py",
+    "tools/probe_ddm_a1_column_generated_correction.py",
+    "tools/tests/test_probe_ddm_a1_column_generated_correction.py",
+    ".omx/research/configs/ddm_a1_column_generated_n64_20260723.json",
+    ".omx/research/codex_premise_falsification_ddm_v18_column_generation_vocabulary_20260723_codex.md",
+    ".omx/research/ddm_v18_column_generation_vocabulary_DAG_FEED_20260723.md",
+    ".omx/research/ddm_v18_column_generation_vocabulary_adversarial_review_20260723.json"
+  ],
+  "validation": {
+    "targeted_tests_passed": 20,
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "fused_r_vjp_bit_identical_numpy_fp32": true,
+    "fused_r_vjp_max_abs_delta": 0
+  },
+  "operator_directives_consumed": [
+    "2026-07-19T19:42:07Z EV-ranked reverse waterfill",
+    "2026-07-19T19:48:01Z Fisher-margin, corrected inner Jacobian, and curvelet/shearlet basis",
+    "2026-07-23T03:17:44Z structured 2-of-4 and MX-block coder entrants"
+  ]
+}

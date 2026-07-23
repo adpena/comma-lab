@@ -1,0 +1,54 @@
+{
+  "schema": "ddm_v18_column_generation_vocabulary_adversarial_review.v1",
+  "lane_id": "ddm_v18_column_generation_vocabulary",
+  "review_disposition": "PASS_AFTER_FIXES",
+  "main_landing_review_required": true,
+  "score_claim": false,
+  "pointer_moved": false,
+  "receipt_sha256": "f8daae958510e6cea9cf39b499ec820d6747dd968e9a51157e0a5a3e25601a96",
+  "passes": [
+    {
+      "pass": 1,
+      "mode": "adversarial_contract_and_fail_closed_review",
+      "findings": [
+        "exact byte fields admitted noninteger runtime values",
+        "falsifier could accept nonfinite d_seg and did not bind the four budget identities",
+        "dependency cycles silently reduced the beam to the empty set",
+        "resume path did not revalidate source and producer custody"
+      ],
+      "resolution": "all four bug classes fixed with regression tests",
+      "clean_after_resolution": true
+    },
+    {
+      "pass": 2,
+      "mode": "independent_source_custody_rederivation",
+      "findings": [],
+      "checks": [
+        "v12 legacy scorer-grid receiver versus camera-resolution exact-R receiver",
+        "compiler hybrid-grammar refusal reproduced from exact bound archives",
+        "G1 receiver and Pose gaps read from bound receipt",
+        "v15 operating-point mismatch read from bound receipt",
+        "v16 linearization invalidation read from bound receipt",
+        "receipt resume revalidated exact source and producer hashes"
+      ],
+      "clean_after_resolution": true
+    },
+    {
+      "pass": 3,
+      "mode": "tests_lint_compile_and_receipt_semantics",
+      "findings": [],
+      "checks": {
+        "targeted_tests": "20 passed",
+        "ruff": "PASS",
+        "py_compile": "PASS",
+        "json_parse": "PASS",
+        "fused_r_vjp_bit_identical_numpy_fp32": true,
+        "pricing_round_nulls_not_zeros": true,
+        "equal_byte_rows_not_measured": true,
+        "formulation_falsifier_triggered": false
+      },
+      "clean_after_resolution": true
+    }
+  ],
+  "verdict_scope": "implementation and evidence packet clean for MAIN review; source precondition remains blocked and all formulation families remain open"
+}
