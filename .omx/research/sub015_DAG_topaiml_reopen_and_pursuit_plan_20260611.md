@@ -21957,3 +21957,17 @@ realized d_seg through R+uint8 → pose safety → S row. **Retrofit routed to d
 (post-hoc: persistent-level-set ← G4-staticity+level-set corpus; spline ← separatrix; turning-angle ←
 curvature grammar) + D1–D6 field/dual columns + basis labels, since dv1 finished before the three operator
 directives landed. Task #650 complete. Pointer honest: **0.1910828242 [contest-CPU] UNMOVED.**
+
+---
+
+## FEED-603-recursion-law (2026-07-23, MAIN — operator: "greater representation and description without an increase in bytes through iteration and optimization and measurement and repeating a recursive process")
+
+**THE RECURSION LAW (routed to dv2+e1, binding on all language work):** description reach at FIXED bytes is
+raised by the cycle **fit → describe → measure residual → re-derive against the residual → prune+reinvest →
+repeat to fixed point** (stop: a full cycle yields no net gain — the v18b no-negative-reduced-cost criterion,
+generalized). Alternating minimization on OUR objects (Lloyd/EM over the polytope complex + separatrix fits).
+**Measured proof of headroom (dv1):** joint composition 70.5% Road < its own persistent-level-set primitive's
+79.5% standalone — first-pass arbitration left collateral unre-solved; the 9-point gap is recoverable at $0
+bytes. Deliverable elevated: the **ITERATION CURVE** (described-fraction vs cycle at fixed bytes) is a
+first-class law-object per composition. Sister of #503 recursive-fractal + #629 iterative-realized-trust-region
+(same re-linearize-per-accepted-step physics, applied to the describe line). Pointer UNMOVED 0.19108.
