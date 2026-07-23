@@ -45,10 +45,8 @@ if str(_REPO / "src") not in sys.path:
     sys.path.insert(0, str(_REPO / "src"))
 if str(_REPO / "tools") not in sys.path:
     sys.path.insert(0, str(_REPO / "tools"))
-# Canonical witness run-artifact CONTRACT — single source of truth for the run's
-# emitted filenames (no hardcoding; see the module docstring).
-from tac import witness_run_artifacts as _wra  # noqa: E402
-
+# The historical witness artifact contract is imported lazily only inside the
+# legacy fallback.  A complete DDM fleet never initializes that lineage.
 _POINTER_JSON = _REPO / ".omx" / "state" / "canonical_frontier_pointer.json"
 _DAG_GLOB = str(_REPO / ".omx" / "research" / "sub015_DAG_topaiml_reopen_and_pursuit_plan_*.md")
 _DESIGN_DOC = ".omx/research/costate_controller_design_20260705.md"
@@ -119,6 +117,31 @@ def section_live_run() -> tuple[str, dict, Path | None]:
         return f"live run: unavailable ({type(exc).__name__}: {exc})", {"error": str(exc)}, None
 
 
+def section_live_ddm() -> tuple[list[str], dict | None]:
+    """Primary live DDM SENSE surface.
+
+    A complete, schema-checked DDM receipt fleet supersedes the retired
+    witness-training run lookup.  Partial or broken input stays fail-open and
+    is never blended into a live claim.
+    """
+    try:
+        from tac.ddm_costate_organ import (
+            build_live_ddm_costate,
+            digest_lines,
+        )
+
+        report = build_live_ddm_costate(repo_root=_REPO)
+        return digest_lines(report), report
+    except Exception as exc:
+        return [f"DDM-LIVE unavailable ({type(exc).__name__}: {exc})"], {
+            "available": False,
+            "status": "FAIL_OPEN",
+            "reason": f"{type(exc).__name__}: {exc}",
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+
+
 def section_annulus(run_dir: Path | None) -> tuple[str | None, dict | None]:
     """Annulus/convergence headline from the run's annulus_live.jsonl (#333 SENSE)."""
     if run_dir is None:
@@ -145,6 +168,8 @@ def section_shadow(run_dir: Path | None) -> tuple[list[str], dict | None]:
     """Latest shadow-observer DECIDE state (classification + pending recommendations)."""
     if run_dir is None:
         return [], None
+    from tac import witness_run_artifacts as _wra
+
     path = run_dir / _wra.COSTATE_JSONL
     row = _last_jsonl_row(path)
     if row is None and (run_dir / "run.log").is_file():
@@ -1319,53 +1344,152 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
     ptr_line, data["pointer"] = section_pointer()
     lines.append(ptr_line)  # NEVER dropped (amendment 1)
 
-    live_line, data["live_run"], run_dir = section_live_run()
-    lines.append(live_line)  # NEVER dropped
-
-    ann_line, data["annulus"] = section_annulus(run_dir)
-    if ann_line:
-        lines.append(ann_line)
-
-    shadow_lines, data["shadow"] = section_shadow(run_dir)
-    lines.extend(shadow_lines)
-    if isinstance(data["shadow"], dict):
-        data["costate_organ_v2"] = data["shadow"].get("costate_organ_v2")
+    ddm_lines, data["ddm_costate_organ"] = section_live_ddm()
+    ddm_live = bool(
+        isinstance(data["ddm_costate_organ"], dict)
+        and data["ddm_costate_organ"].get("available")
+    )
+    if ddm_live:
+        # The live DDM campaign is primary.  Do not even inspect the quarantined
+        # witness run; compatibility keys remain explicit dominated markers.
+        lines.extend(ddm_lines)
+        run_dir = None
+        report = data["ddm_costate_organ"]
+        data["live_run"] = {
+            "alive": False,
+            "status": "DOMINATED_BY_LIVE_DDM_RECEIPT_FLEET",
+            "legacy_lookup_performed": False,
+        }
+        data["annulus"] = None
+        data["shadow"] = {
+            "status": "DOMINATED_STALE",
+            "reason": report["legacy"]["reason"],
+        }
+        data["costate_organ_v2"] = {
+            "status": "DOMINATED_STALE",
+            "replacement": report["schema"],
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+        data["ncde"] = report["instruments"]["ncde"]
+        data["verdict_trend"] = None
+        data["pose_conditioning_gate"] = report["instruments"]["pose_gate"]
+        data["telemetry_binding"] = None
+        data["duty_to_measure"] = {
+            "ranked_top": [
+                {
+                    "lever": row["duty"],
+                    "activation_state": "live-ddm-duty",
+                    "why": row["reason"],
+                }
+                for row in report["duties"]["live_ranked"]
+            ],
+            **report["duties"],
+        }
+        data["factorized_sense"] = report["lambda"]["backtest"]
     else:
-        try:
-            from tac.witness_control.costate_organ_v2 import aggregate_readback
+        # Historical fallback is allowed only when no complete live DDM source
+        # fleet is available; partial DDM state is never mixed into it.
+        live_line, data["live_run"], run_dir = section_live_run()
+        lines.append(live_line)  # NEVER dropped
 
-            data["costate_organ_v2"] = aggregate_readback({}, maturity="_dev")
-            lines.append("costate-organ-v2: UNAVAILABLE_NO_VERDICT | pair/site lambda=OWED")
-        except Exception as exc:
-            data["costate_organ_v2"] = {
-                "status": "UNAVAILABLE", "reason": f"{type(exc).__name__}: {exc}",
-                "actuation": "NONE", "score_claim": False,
+        ann_line, data["annulus"] = section_annulus(run_dir)
+        if ann_line:
+            lines.append(ann_line)
+
+        shadow_lines, data["shadow"] = section_shadow(run_dir)
+        lines.extend(shadow_lines)
+        if isinstance(data["shadow"], dict):
+            data["costate_organ_v2"] = data["shadow"].get("costate_organ_v2")
+        else:
+            try:
+                from tac.witness_control.costate_organ_v2 import aggregate_readback
+
+                data["costate_organ_v2"] = aggregate_readback({}, maturity="_dev")
+                lines.append("costate-organ-v2: UNAVAILABLE_NO_VERDICT | pair/site lambda=OWED")
+            except Exception as exc:
+                data["costate_organ_v2"] = {
+                    "status": "UNAVAILABLE", "reason": f"{type(exc).__name__}: {exc}",
+                    "actuation": "NONE", "score_claim": False,
+                }
+
+        ncde_line, data["ncde"] = section_ncde(run_dir)
+        if ncde_line:
+            lines.append(ncde_line)
+
+        vtrend_line, data["verdict_trend"] = section_verdict_trend(run_dir)
+        if vtrend_line:
+            lines.append(vtrend_line)
+
+        posegate_line, data["pose_conditioning_gate"] = section_pose_conditioning_gate(run_dir)
+        if posegate_line:
+            lines.append(posegate_line)
+
+        tbind_line, data["telemetry_binding"] = section_telemetry_binding(run_dir)
+        if tbind_line:
+            lines.append(tbind_line)
+
+        # P8 floor-aware: feed the live run's MEASURED current d_seg (annulus SENSE) so at-floor levers rank ~0.
+        duty_line, data["duty_to_measure"] = section_duty_to_measure(_live_term_current(data.get("annulus")))
+        lines.append(duty_line)
+
+        # A+B (2026-07-17): exact-factorized duty ranking (ALTERNATIVE beside the statistical
+        # line above) + the realization-vs-gradient regime read — from persisted ledgers only.
+        fact_lines, data["factorized_sense"] = section_factorized_sense(run_dir)
+        lines.extend(fact_lines)
+
+    if ddm_live:
+        # Do not append the retired witness curriculum/deferral/schedule organ
+        # below.  Compatibility keys are explicit dominated markers so API
+        # consumers still receive a total schema without initializing the old
+        # instrumentation line.
+        dominated = {
+            "status": "DOMINATED_STALE",
+            "reason": "replaced by live DDM describe-line/joint-recursion state",
+        }
+        for key in (
+            "curriculum_pool",
+            "dsl_orphan",
+            "failure_ledger",
+            "chain_watchdog",
+            "zero_work_arms",
+            "deferral_ledger",
+        ):
+            data[key] = dict(dominated)
+        data["schedule"] = report["scheduler"]
+        data["verdict_scope"] = {
+            "evidence_axis": report["evidence_axis"],
+            "score_claim": report["score_claim"],
+            "promotion_eligible": report["promotion_eligible"],
+            "main_landing_review_required": report["main_landing_review_required"],
+        }
+        data["resume_spine"] = report["resume_state"]
+        data["active_convening"] = None
+        data["corpus_recall"] = []
+        data["graph_memory"] = None
+        data["costate_organ"] = report
+        if include_fm:
+            fm_lines, data["fm_advisory"] = section_fm_advisory(None, data)
+            lines.extend(fm_lines)
+        else:
+            data["fm_advisory"] = {
+                "available": None,
+                "enabled": False,
+                "reason": "compute-cost gate (fast path); set COSTATE_FM_ADVISORY=1",
             }
-
-    ncde_line, data["ncde"] = section_ncde(run_dir)
-    if ncde_line:
-        lines.append(ncde_line)
-
-    vtrend_line, data["verdict_trend"] = section_verdict_trend(run_dir)
-    if vtrend_line:
-        lines.append(vtrend_line)
-
-    posegate_line, data["pose_conditioning_gate"] = section_pose_conditioning_gate(run_dir)
-    if posegate_line:
-        lines.append(posegate_line)
-
-    tbind_line, data["telemetry_binding"] = section_telemetry_binding(run_dir)
-    if tbind_line:
-        lines.append(tbind_line)
-
-    # P8 floor-aware: feed the live run's MEASURED current d_seg (annulus SENSE) so at-floor levers rank ~0.
-    duty_line, data["duty_to_measure"] = section_duty_to_measure(_live_term_current(data.get("annulus")))
-    lines.append(duty_line)
-
-    # A+B (2026-07-17): exact-factorized duty ranking (ALTERNATIVE beside the statistical
-    # line above) + the realization-vs-gradient regime read — from persisted ledgers only.
-    fact_lines, data["factorized_sense"] = section_factorized_sense(run_dir)
-    lines.extend(fact_lines)
+        rc_line, data["review_counter"] = section_review_counter()
+        if rc_line:
+            lines.append(rc_line)
+        lines.append(
+            "BOUNDARY: autonomous = DDM advisory ranking + re-derivation queue + this digest. "
+            "Operator-GO = launches, run mutation, paid dispatch, or promotion."
+        )
+        lines.append(
+            "deeper: .omx/research/codex_findings_ddm_costate_organ_elevation2_"
+            "20260723T154610Z_codex.md"
+        )
+        data["wall_clock_s"] = round(time.time() - t0, 3)
+        return lines, data
 
     # #403 P0: the curriculum-candidate pool (ANY form) as a tracked costate class, beside the lever queue.
     cpool_line, data["curriculum_pool"] = section_curriculum_pool()
@@ -1418,8 +1542,11 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
     if gm_line:
         lines.append(gm_line)
 
-    organ_lines, data["costate_organ"] = section_costate_organ(run_dir)
-    lines.extend(organ_lines)
+    if ddm_live:
+        data["costate_organ"] = data["ddm_costate_organ"]
+    else:
+        organ_lines, data["costate_organ"] = section_costate_organ(run_dir)
+        lines.extend(organ_lines)
 
     # Task #522: on-device FM ADVISORY sense layer — PRESENT ONLY WHEN the fmtools venv exists
     # AND the compute-cost gate is enabled (⇒ byte-identical digest otherwise). Consumes the data

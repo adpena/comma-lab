@@ -1,4 +1,12 @@
-"""tac.witness_control — the θ* COSTATE shadow controller (task #303, Phase A) +
+"""tac.witness_control — the live DDM costate organ plus legacy witness controls.
+
+LIVE AUTHORITY OVERRIDE (2026-07-23): the agent-native costate SENSE/DECIDE
+surface is now ``ddm_costate_organ`` over the SHA-pinned dv1/g3/g4/v19 receipt
+fleet.  The witness-training modules below remain import-compatible historical
+apparatus; their run-local rows are dominated and are not rank-eligible for the
+DDM describe-line/joint-recursion campaign.
+
+Historical lineage: the θ* COSTATE shadow controller (task #303, Phase A) +
 the learned Pontryagin adjoint organ (task #426).
 
 The Hamiltonian/optimal-control meta-layer made concrete: the campaign triality
@@ -57,6 +65,14 @@ with least-squares standard errors honestly propagated) or ANALYTIC (exact parti
 of the contest score law); anything else is returned as ``UNIDENTIFIABLE`` with the
 probe that would identify it — never a canned/heuristic guess.
 """
+from tac.ddm_costate_organ import (  # noqa: F401
+    DdmCostateCheckpoint,
+    build_live_ddm_costate,
+    digest_lines as ddm_costate_digest_lines,
+    discover_sources as discover_live_ddm_sources,
+    rank_scheduler_blocks as rank_ddm_scheduler_blocks,
+    register_ddm_costate_checkpoint,
+)
 from tac.witness_control.costate_estimator import (  # noqa: F401
     ANALYTIC,
     MEASURED,

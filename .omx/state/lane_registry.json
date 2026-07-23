@@ -84632,6 +84632,49 @@
       "notes": "Original v10 DDM/worldsheet description vocabulary only; local n600 macOS-CPU frozen-scorer advisory; score_claim=false; execution_allowed=false; no dispatch; MAIN landing review required.",
       "lane_class": "substrate_engineering",
       "research_only": true
+    },
+    {
+      "id": "lane_ddm_costate_organ_elevation2_20260723",
+      "name": "DDM live costate organ elevation 2",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/ddm_costate_organ.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_costate_organ_elevation2_20260723T154610Z/ddm_costate_organ_elevation2_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_ddm_costate_organ.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_review_ddm_costate_organ_elevation2_20260723T160052Z_codex.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Advisory-only live DDM costate organ re-point; zero paid/heavy/live-run actuation; old witness lineage stale/dominated; MAIN landing review required.",
+      "research_only": true,
+      "lane_class": "decision_apparatus"
     }
   ],
   "level_rules": {
@@ -84641,5 +84684,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T14:42:01Z"
+  "updated_at": "2026-07-23T16:03:23Z"
 }

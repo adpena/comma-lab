@@ -22107,3 +22107,37 @@ show the failed derive/solve/fit attempts, STOP for review. Routed dv2+e1. Point
 - **AUDIT (measured, from costate_digest):** the organ is misaligned with the live campaign on 5 axes: (1) SENSE points at the DEAD 20260717 witness run — telemetry 123h+ stale (an INSTANCE of FEED-603-staleness-confound-law in our own instrument); # VERDICT_SCOPE_OK: "DEAD" = run PROCESS state (no live trainer pid), not a research negative on any formulation/family (2) organ-v2 λ = _dev / UNAVAILABLE_NO_VERDICT (exact-gap unavailable, pair/site-λ OWED); (3) factorized-adjoint BACKTESTED-FAIL (REJECTED_PAST_ONLY_ONE_STEP), NCDE instrument-invalid (r²=0.060); (4) 115 duty rows ranked against the RETIRED witness-training era, not the DDM describe/correct/solve lines; (5) recursion-order law (FEED-603-recursion-order) has NO scheduler owner.
 - **RESPONSE:** arm `ddm_co1_costate_organ_elevation2` SPAWNED (stamp 20260723T152120Z, sol/xhigh; first spawn REFUSED by artifact-quarantine on the dead-run path token — respawned with HARVEST-SIGNAL-ONLY waiver: reads telemetry rows only, never bytes/weights). 7 deliverables: SENSE re-point to live DDM producers (wra latest-run) · λ currency = per-block/per-primitive marginals over the joint-recursion object (organ-v2 factors × D2 duals, g3-fed pair/site-λ) · ORGAN AS RECURSION SCHEDULER (topological→coarse-to-fine→Gauss-Southwell |λ|×validity-radius, freeing-before-spending; advisory DECIDE output) · staleness SENSE (freshness ledger per the staleness law) · duty-queue re-rank vs the language program · instrument repairs (NCDE/adjoint/pose-gate) + _dev→_prod criteria · tests + triality legs. CONTAINMENT unchanged: advisory-only; heavy/paid = operator-GO.
 - verdict_scope: apparatus (organ elevation; no score claim). Pointer 0.19108 [contest-CPU] UNMOVED (means).
+---
+
+## FEED-603-live-DDM-costate-organ-elevation2 (2026-07-23, CODEX advisory, MAIN review required)
+
+The costate SENSE/DECIDE surface is re-pointed from witness-training telemetry to the latest
+schema-checked DDM receipt fleet: dv1 → g3/g4 → v19/v19b, with e1 and dv2 registered as pending
+producers. Consumer-side SHA-256 verification covers the five receipts, dv1 summary, and full g3
+SSD atlas. The quarantined 20260717 witness run is not read. The old v2/v3 organ and its activation
+rows remain historical but are `DOMINATED_STALE` and not rank-eligible.
+
+**Canonical law:** `lambda_D2 = exact_gap × visibility × uint8_realizability × byte_price × D2`.
+Eight g3×v19 pair rows and forty pair×stratum rows now pay the previously owed pair/site costates.
+The v19 shared candidate-byte allocation remains null, so the organ does not multiply the global
+201-byte delta across pairs; g3's measured/derived per-pair baseline allocation prices the pair
+rows and the shared candidate rate stays explicitly owed. D2 is the measured realized-closure
+fraction for pair rows and the v19b joint-survival factor for block rows, each family-local and
+never promoted to a universal radius.
+
+**Scheduler law wired:** dependency-frontier filtering → freeing-before-spending → coarse-to-fine
+→ Gauss-Southwell `|lambda| × validity_radius` among independent same-scale blocks. The live next
+recommendation is `j_paint_dv1_persistent_ground`: its cell-space reach is an upper bound and its
+admitted lambda remains zero until receiver/uint8 realization is measured. R6 rehearsal is
+topologically downstream. This is an instrumentation recommendation, not actuation.
+
+**Staleness/resume:** every cycle persists the source-hash set, completed block IDs, and cycle
+index in `ddm_live_costate_checkpoint.v1`; resume refuses any changed input hash. Validity uses
+J-of-J radius when a producer emits one and a declared producer/mutation SLA otherwise. e1 and dv2
+are live re-derivation queue entries rather than fabricated inputs.
+
+**Triality pointers:** DAG=this FEED; DSL=`ddm_costate_organ_elevation2_DSL_20260723.md`;
+equations=`ddm_costate_organ_elevation2_equations_20260723.md` plus
+`tac.ddm_costate_law`; receipt=`ddm_costate_organ_elevation2_20260723T154610Z/`.
+`research_only=true`; `execution_allowed=false`; `actuation=NONE`; score claim false; pointer
+unmoved; MAIN landing review required.
