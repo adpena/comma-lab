@@ -22502,3 +22502,16 @@ before registration — and the DOMINATED/no-dispatch disposition, so neither is
 re-litigated). The m7 module had existed UNREGISTERED since its landing — the same drop class the
 recall-repair memo names; now closed. canonical_equations note: consumers = #381 dispatch decisions ·
 c1 rate-term anchor · menu1.
+
+## FEED-603-pa1-custody (2026-07-23, MAIN) — PoseNet amplitude twin landed; mechanism CROSS-NET confirmed; pose wall still open
+**Arm:** ddm_pa1_posenet_amplitude_twin (sol/xhigh, worktree 6cfbc82ed4, MERGED to main; disposition reviewed_committed).
+**Verdict (quoted):** `PASS frame-0 PoseNet amplitude mechanism on the local advisory axis; REJECT joint-frame placement; BLOCK promotion pending governed inflate composition.` Receipt verdict token: `FRAME0_POSE_AMPLITUDE_POSITIVE_N600_ADVISORY`. All deltas RE-DERIVED exactly by MAIN from components (√(10·d_pose) arithmetic + seg error counts /117,964,800).
+**Measured rows (n600, [macOS-CPU frozen-scorer advisory], baseline = e2 export d_pose 162.580958694146 / d_seg 0.02861480712890625):**
+- frame0 **scorer-stat** (FREE-rate candidate, 0 B): d_pose → 147.49104204339514, frame_1 byte-identical (seg collateral structurally 0), joint ΔS **−1.9167666862** — pose term 40.3213 → 38.4046.
+- frame0 GT-stat (COUNTED, 24 B fp16): d_pose → 162.4231, joint ΔS −0.0195636. Scorer target BEATS GT target by 14.93 d_pose — the zero-byte arm stands on its own measured effect.
+- joint-frame scorer-stat: **REJECTED** — +838,270 seg errors (+0.7106 seg term) vs −0.106 pose term → joint ΔS **+0.6046**. Confirms frame_0-seg-free placement law at the amplitude family (verdict_scope: INSTANCE).
+**Decomposition honesty:** −1.92 is a 4.8% dent in the 40.32 pose term. The pose wall (tube needs d_pose ~1e-3) REMAINS OPEN — statistics matching ≠ pose-value encoding; the post-hoc-stored-corrections-dead law is explicitly carried and unaffected. This is a mechanism cross-net confirmation (pt1x seg 30B/61.6% ↔ pa1 pose 0B/−1.92 S), NOT pose closure.
+**STEP-0 partition applied:** scorer-only BN targets = rule-118 FREE candidates (frozen weights only); GT-moment targets = COUNTED (24/48 B); receiver-inert = NULL. FREE stands only after receiver survival.
+**Promotion blocker (FIRST-RUNG, routed):** compose the frame-0 scorer-stat transform into governed E2 inflate + exact archive parse-back + n600 remeasure — same surface as the #636 brotli dependency-closure fix → ONE follow-on arm (e3) fires both.
+**Triality:** equations leg `ddm_pa1_posenet_amplitude_twin_laws_v1` REGISTERED at custody with 2 anchors (deltas re-derived via the module's own joint_score_delta pre-registration; the arm had shipped the module UNREGISTERED — m7 drop class, caught at custody this time). DSL leg: no lever/config change (measurement arm). Consumers: menu1 pose_amplitude pool (distinct pool from seg amplitude — non-additive discipline), #636 exporter, #366 pose-wall scope.
+Pointer 0.1910828242 [contest-CPU] UNMOVED (advisory means).
