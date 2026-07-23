@@ -1,0 +1,40 @@
+{
+  "schema": "ddm_m5_multicoefficient_solve_coverage_three_clean_review.v1",
+  "utc": "2026-07-23T11:04:00Z",
+  "lane_id": "lane_ddm_m5_multicoefficient_solve_coverage_20260723",
+  "reviewed_files": {
+    "tools/audit_ddm_m5_multicoefficient_solve_coverage.py": "b07d7cf6d437935248610a03af1ae8c76dc3a04045b9f051629a536a4ea7d994",
+    "tools/tests/test_audit_ddm_m5_multicoefficient_solve_coverage.py": "c6053e3fbc5e2413f9f35a7477e51f506755e42be1e970fbcf799287f516e7e6"
+  },
+  "review_passes": [
+    "m5_clean_pass_1",
+    "m5_clean_pass_2",
+    "m5_clean_pass_3"
+  ],
+  "adversarial_checks": [
+    "helpful closures are separated from baseline-correct to candidate-wrong collateral",
+    "positive net class delta is never promoted to zero-collateral reach",
+    "class order is imported from the canonical receiver contract rather than locally redeclared",
+    "all 600 pair ids are contiguous and preserved in immutable batch-16 checkpoints",
+    "m3 per-class control counts rederive exactly before the receipt is admitted",
+    "C1 200000-byte box and exact control/candidate archive hashes are SHA-bound",
+    "numeric certified infeasibility fails closed without finite-set, exhaustive, and isolated-solve proof legs",
+    "R1 is signal-only and consumes zero bytes",
+    "no launch, score claim, promotion, pointer movement, or #366 config mutation"
+  ],
+  "verification": {
+    "focused_pytest": "16 passed",
+    "receipt_arithmetic": "PASS",
+    "ruff": "All checks passed",
+    "py_compile": "passed",
+    "git_diff_check": "passed",
+    "resume_revalidation": "passed"
+  },
+  "empirical_receipt": {
+    "path": ".omx/research/ddm_m5_multicoefficient_solve_coverage_20260723T103457Z/ddm_m5_multicoefficient_solve_coverage_receipt.json",
+    "sha256": "08357a70cb2dea9fc915155923088a2d7749ec203402bdcf52b8db14b4a451de"
+  },
+  "verdict": "THREE_CLEAN_REVIEW_PASSES_COMPLETE",
+  "verdict_scope": "M5 audit implementation, tests, exact n600 receipt arithmetic, and fail-closed certification boundary",
+  "main_landing_review_required": true
+}
