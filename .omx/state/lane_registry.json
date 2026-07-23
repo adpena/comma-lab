@@ -85020,6 +85020,48 @@
       "notes": "research_only; macOS-CPU advisory; execution_allowed=false; MAIN review required",
       "research_only": true,
       "lane_class": "research"
+    },
+    {
+      "id": "lane_ddm_pt1_continuous_paint_ceiling_20260723",
+      "name": "DDM PT1 continuous paint ceiling",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/measure_ddm_pt1_continuous_paint_ceiling.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_pt1_continuous_paint_ceiling_20260723_codex.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; execution_allowed=false; prepares SHA-bound n600 AA-continuous paint falsifier; no score or promotion authority",
+      "research_only": true
     }
   ],
   "level_rules": {
