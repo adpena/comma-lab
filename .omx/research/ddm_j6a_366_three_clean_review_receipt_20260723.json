@@ -1,0 +1,64 @@
+{
+  "schema": "ddm_j6a_366_three_clean_review_receipt.v1",
+  "utc": "2026-07-23T09:02:26Z",
+  "lane_id": "ddm_j6a_366_prefire_contract_hardening",
+  "reviewer": "codex-ddm-j6a",
+  "source_custody": {
+    "consumer_sha256": "76c66ceb6ad554898ae2b02db3230d669f104b97e617dd08881c9357154c9f51",
+    "launcher_sha256": "361f35e485fa624f75f665f05040b894d633d325f62edcc340cce1e5cc7eb051",
+    "ticket_sha256": "9aa12699eb53e77351fd0b96eed16d527eaf4a443b177f07512edd5ed6f3d88d",
+    "semantic_program_sha256": "3ba05e4d8fd2f85475173f0a9e17e668198507350d353a4257aaf196692b98c2",
+    "typed_config_hash": "35c929d0031ef3ae3225afdfeb09997619bb70016f27527ea4ce1e7bed31ff47"
+  },
+  "reviewed_python_files": [
+    "src/tac/optimization/direct_description_joint_descent.py",
+    "src/tac/optimization/tests/test_direct_description_joint_descent.py",
+    "tools/launch_ddm_joint_descent.py",
+    "tools/tests/test_launch_ddm_joint_descent_j5.py"
+  ],
+  "passes": [
+    {
+      "id": "ddm_j6a_pass1_static_custody",
+      "verdict": "CLEAN",
+      "checks": [
+        "ruff",
+        "py_compile",
+        "ticket JSON",
+        "durable receipt JSON",
+        "consumer/launcher/ticket SHA-256",
+        "git diff --check"
+      ]
+    },
+    {
+      "id": "ddm_j6a_pass2_behavioral_41",
+      "verdict": "CLEAN",
+      "command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python -m pytest --timeout=180 -q src/tac/optimization/tests/test_direct_description_joint_descent.py tools/tests/test_launch_ddm_joint_descent_j5.py src/tac/optimization/tests/test_pure_priced_realized_objective.py",
+      "result": "41 passed in 75.92s"
+    },
+    {
+      "id": "ddm_j6a_pass3_adversarial_receipts",
+      "verdict": "CLEAN",
+      "result": "7 gate-focused tests passed; ticket/source/memory/resume/bounded receipts independently re-hashed and their exact gate fields cross-checked"
+    }
+  ],
+  "review_tracker": {
+    "entities": 127,
+    "passes": 3,
+    "marked_reviewed_rows": 381,
+    "entities_with_mark_count_not_equal_to_three": 0
+  },
+  "review_finding_repaired_before_clean_passes": {
+    "finding": "IEEE NaN comparison could pass exact final-target ordering",
+    "repair": "exact_final_target_gate now refuses non-finite or negative verdict and target components",
+    "regression": "test_schedule_complete_requires_exact_final_target_verdict covers NaN d_seg and d_pose"
+  },
+  "worst_geometry_memory_receipt_sha256": "45a0e5d23fc04822c75036fefc78efcfc1503b75bb41838eb4617b6bf4b6a661",
+  "fresh_process_resume_receipt_sha256": "0e091c54b2a97ce1742b692cd05ca21e0ca609f0f0ab0fad1184da600b555f83",
+  "bounded_n600_receipt_sha256": "436fbb7b53ae6fcd4bc724d495f13181c535e300246e996c9a96dd334437e7a4",
+  "verdict": "THREE_CLEAN_REVIEW_PASSES_COMPLETE",
+  "main_landing_review_required": true,
+  "execution_allowed": false,
+  "campaign_launched": false,
+  "score_claim": false,
+  "pointer_moved": false
+}

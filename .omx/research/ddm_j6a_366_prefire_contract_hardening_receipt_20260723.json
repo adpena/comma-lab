@@ -1,0 +1,162 @@
+{
+  "schema": "ddm_j6a_366_prefire_contract_hardening_receipt.v1",
+  "utc": "2026-07-23T08:56:30Z",
+  "lane_id": "ddm_j6a_366_prefire_contract_hardening",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j6a_366_prefire_contract_hardening_20260723T071826Z.wrapped.prompt.txt",
+    "sha256": "a0024abeba9ea82be3f45366996490f59a157972070f96eba098348acd3e6ae4",
+    "bytes": 7591,
+    "checkpoint_key": "codex_delegate:ddm_j6a_366_prefire_contract_hardening:20260723T071826Z"
+  },
+  "ticket": {
+    "path": ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json",
+    "file_sha256": "9aa12699eb53e77351fd0b96eed16d527eaf4a443b177f07512edd5ed6f3d88d",
+    "semantic_program_sha256": "3ba05e4d8fd2f85475173f0a9e17e668198507350d353a4257aaf196692b98c2",
+    "typed_config_hash": "35c929d0031ef3ae3225afdfeb09997619bb70016f27527ea4ce1e7bed31ff47"
+  },
+  "source_custody": {
+    "consumer": {
+      "path": "src/tac/optimization/direct_description_joint_descent.py",
+      "sha256": "76c66ceb6ad554898ae2b02db3230d669f104b97e617dd08881c9357154c9f51"
+    },
+    "launcher": {
+      "path": "tools/launch_ddm_joint_descent.py",
+      "sha256": "361f35e485fa624f75f665f05040b894d633d325f62edcc340cce1e5cc7eb051"
+    }
+  },
+  "blocker_fixes": [
+    {
+      "id": "pose_finish",
+      "status": "FIXED_IN_CONTRACT_RESIDUAL_RUNTIME_HISTORY_OWED",
+      "code": [
+        "src/tac/optimization/direct_description_joint_descent.py:233",
+        "src/tac/optimization/direct_description_joint_descent.py:307",
+        "tools/launch_ddm_joint_descent.py:1402"
+      ],
+      "tests": [
+        "src/tac/optimization/tests/test_direct_description_joint_descent.py:421",
+        "src/tac/optimization/tests/test_direct_description_joint_descent.py:449"
+      ],
+      "result": "Typed exact-n600 d_seg rolling-slope state shares the #383 EMA/window/hysteresis/band defaults, is persisted in every run cursor, and keeps pose weight zero until its monotone latch fires. Banked R1 0.001610/0.127/7200 bytes is comparator and fallback-harvest metadata only. The final same-vehicle pose floor is the measured J5 proposal d_pose 163.06116431842463."
+    },
+    {
+      "id": "cumulative_fire_gate",
+      "status": "FIXED",
+      "code": [
+        "src/tac/optimization/direct_description_joint_descent.py:133",
+        "tools/launch_ddm_joint_descent.py:1602"
+      ],
+      "tests": [
+        "src/tac/optimization/tests/test_direct_description_joint_descent.py:465"
+      ],
+      "result": "Pure-price admission remains local, while the revocable fire-ready state now requires component and residual safety against immutable stage00."
+    },
+    {
+      "id": "worst_geometry_memory",
+      "status": "FIXED_AND_MEASURED",
+      "code": [
+        "tools/launch_ddm_joint_descent.py:233",
+        "tools/launch_ddm_joint_descent.py:278",
+        "tools/launch_ddm_joint_descent.py:964"
+      ],
+      "tests": [
+        "tools/tests/test_launch_ddm_joint_descent_j5.py:71"
+      ],
+      "result": "Admission now requires the sealed pair498 all-groups geometry, exact receipt SHA, final consumer/launcher hashes, and the four final J5 producer artifacts."
+    },
+    {
+      "id": "governed_stop_and_completion",
+      "status": "FIXED",
+      "code": [
+        "src/tac/optimization/direct_description_joint_descent.py:158",
+        "src/tac/optimization/direct_description_joint_descent.py:183",
+        "tools/launch_ddm_joint_descent.py:1880",
+        "tools/launch_ddm_joint_descent.py:1972"
+      ],
+      "tests": [
+        "src/tac/optimization/tests/test_direct_description_joint_descent.py:490",
+        "src/tac/optimization/tests/test_direct_description_joint_descent.py:511"
+      ],
+      "result": "Only exact target-met advances. Target-unmet maximum steps and plateaus stop non-promoting. Schedule completion requires an exact final-stage target verdict and pose engagement."
+    }
+  ],
+  "verification": {
+    "pytest": {
+      "command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python -m pytest --timeout=180 -q src/tac/optimization/tests/test_direct_description_joint_descent.py tools/tests/test_launch_ddm_joint_descent_j5.py src/tac/optimization/tests/test_pure_priced_realized_objective.py",
+      "result": "41 passed in 75.92s"
+    },
+    "static": {
+      "ruff": "All checks passed",
+      "py_compile": "passed",
+      "git_diff_check": "passed",
+      "ticket_json": "passed"
+    }
+  },
+  "three_clean_review": {
+    "path": ".omx/research/ddm_j6a_366_three_clean_review_receipt_20260723.json",
+    "sha256": "ee9f46f972820f0e1cd9e917cbd446591f2c1a3a3fbae923cee9c4f5038a749d",
+    "reviewed_entities": 127,
+    "review_passes": 3,
+    "verdict": "THREE_CLEAN_REVIEW_PASSES_COMPLETE"
+  },
+  "worst_geometry_memory": {
+    "command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python tools/launch_ddm_joint_descent.py --ticket .omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json --out-dir /Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_finalsource_20260723T083200Z --worst-geometry-memory-bootstrap",
+    "receipt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_finalsource_20260723T083200Z/worst_geometry_memory_preflight.json",
+    "receipt_sha256": "45a0e5d23fc04822c75036fefc78efcfc1503b75bb41838eb4617b6bf4b6a661",
+    "pair_start": 498,
+    "pair_ids": [
+      498,
+      499,
+      500,
+      501
+    ],
+    "island_secants": 28,
+    "lane_secants": 24,
+    "total_secants": 52,
+    "basis_gib": 4.72976016998291,
+    "maximum_measured_peak_rss_gib": 15.609344482421875,
+    "projected_peak_gib": 19.73121337890625,
+    "operator_ceiling_gib": 116.0,
+    "verdict": "SAFE_WORST_GEOMETRY_WITHIN_116_GIB_CEILING",
+    "checkpoint_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_finalsource_20260723T083200Z/checkpoints/03_pose_coupled_finish_worst_geometry_global000000.npz",
+    "checkpoint_sha256": "01bd84f51dd77bf545663c65de2dae18617745ac4b2f8b7f554858397d364090",
+    "campaign_launched": false
+  },
+  "fresh_process_resume": {
+    "command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python tools/launch_ddm_joint_descent.py --ticket .omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json --out-dir /Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_finalsource_20260723T083200Z --resume-proof --resume-from /Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_finalsource_20260723T083200Z/checkpoints/03_pose_coupled_finish_worst_geometry_global000000.npz --memory-receipt /Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_finalsource_20260723T083200Z/worst_geometry_memory_preflight.json",
+    "receipt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_finalsource_20260723T083200Z/process_boundary_resume_proof.json",
+    "receipt_sha256": "0e091c54b2a97ce1742b692cd05ca21e0ca609f0f0ab0fad1184da600b555f83",
+    "verdict": "FRESH_PROCESS_RESUME_PROOF_GREEN"
+  },
+  "bounded_n600_resmoke": {
+    "command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python tools/launch_ddm_joint_descent.py --ticket .omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json --out-dir /Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_bounded_finalsource_20260723T084400Z --memory-receipt /Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_finalsource_20260723T083200Z/worst_geometry_memory_preflight.json --full-run --max-steps 1 --stage-exit-on-stop",
+    "receipt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_bounded_finalsource_20260723T084400Z/full_run_receipt.json",
+    "receipt_sha256": "436fbb7b53ae6fcd4bc724d495f13181c535e300246e996c9a96dd334437e7a4",
+    "proposal_archive_sha256": "d4eb1450f461437e714d08a9349cc735fe79b53a1739a2de92ef4850287dfd0d",
+    "joint_delta_s": -0.002843840398518996,
+    "cumulative_fire_gate": "CUMULATIVE_COMPONENT_AND_RESIDUAL_FIRE_GATE_GREEN_VS_STAGE00",
+    "pose_finish_state": "INSUFFICIENT_EXACT_VERDICTS",
+    "exact_pose_gate_points": 2,
+    "required_pose_gate_points": 5,
+    "exit_code": 4,
+    "verdict": "BLOCKED_POSE_FINISH_CONDITIONING_HISTORY_INSUFFICIENT",
+    "execution_allowed_by_this_receipt": false,
+    "campaign_launched": false
+  },
+  "historical_j5_producer_artifacts_reverified": {
+    "baseline_verdict_sha256": "5b19b564da1fb528af2c0d944da36bf1d357e28503be5988cb14ad59c4a6a261",
+    "proposal_verdict_sha256": "335d15db69dc25b0de80258e10e472f6e9ff282cd7d0325eca989bf92bade1f2",
+    "runtime_memory_receipt_sha256": "4af05223624359fc305c82e30ee4a008da43d609251830d6e1a70724804ceec7",
+    "checkpoint_sha256": "1399292164682955bd9937d204692521542687f69223ddc9cc1e669ae05a944e"
+  },
+  "verdict": "BLOCKED_POSE_FINISH_CONDITIONING_HISTORY_INSUFFICIENT",
+  "verdict_scope": "J6A PREFIRE CONTRACT AND ONE-STEP BOUNDED MACOS ADVISORY RE-SMOKE ONLY",
+  "ready_to_fire": false,
+  "execution_allowed": false,
+  "campaign_launched": false,
+  "research_only": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}
