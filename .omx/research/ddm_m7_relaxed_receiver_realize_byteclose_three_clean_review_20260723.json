@@ -1,0 +1,56 @@
+{
+  "schema": "ddm_m7_relaxed_receiver_three_clean_review.v1",
+  "date": "2026-07-23",
+  "lane_id": "ddm_m7_relaxed_receiver_realize_byteclose",
+  "reviewer": "codex",
+  "passes": [
+    {
+      "pass": 1,
+      "focus": "archive_receiver_checkpoint_custody",
+      "status": "clean",
+      "evidence": {
+        "archive_bytes": 177169,
+        "archive_sha256": "cb6cf0ba719a535bf8874b31675a4ec66a893423d320f1e4071a2012cd88a56f",
+        "member_sha256": "e9ebce6e7b89eb2d611641df9112c45aa4014197dfbbcf70f0c4a82e064abe18",
+        "integer_lattice": "(600,28) uint8",
+        "all_roundtrip_legs": true,
+        "checkpoint_count": 38,
+        "checkpoint_body_hashes_revalidated": true,
+        "pair_ids_exactly_0_through_599": true
+      }
+    },
+    {
+      "pass": 2,
+      "focus": "independent_math_rederivation",
+      "status": "clean",
+      "evidence": {
+        "d_seg_from_checkpoint_rows": 0.000545578002735662,
+        "d_pose_from_checkpoint_rows": 0.00002930755865188909,
+        "seg_term": 0.054557800273566194,
+        "pose_term": 0.017119450532037846,
+        "rate_term": 0.11796956486570198,
+        "score": 0.18964681567130603,
+        "exactly_matches_receipt": true,
+        "gap_decomposition_closes": true,
+        "strict_fork_clears": true
+      }
+    },
+    {
+      "pass": 3,
+      "focus": "authority_scope_resumability",
+      "status": "clean",
+      "evidence": {
+        "second_invocation_reused_complete_prefix": true,
+        "receipt_file_sha256_unchanged": "429baa120a54af0246a7cb45bef53b326c40ac2a317e18e1f6081590ab7f8718",
+        "score_claim": false,
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "dispatch_performed": false,
+        "pointer_mutated": false,
+        "main_landing_review_required": true
+      }
+    }
+  ],
+  "overall_status": "three_clean_passes",
+  "verdict_scope": "single_named_archive_macos_cpu_advisory_only"
+}
