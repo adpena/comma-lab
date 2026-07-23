@@ -22494,3 +22494,11 @@ the R6-CANDIDATE flag. Pointer 0.1910828242 [contest-CPU] UNMOVED.
 Structural fix landed: memory `charter_composition_must_regrep_laws_recall_failure_20260723`
 (charters MAIN composes carry the STORES-CONSULTED laws-grep; quote VERDICT tokens verbatim;
 "no X exists" only from same-session grep). Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-recall-repair — equations leg (2026-07-23, drift-gate)
+Registered `ddm_m7_solve_to_realized_transfer_receiver_closed_v1` (2 anchors: the byte-closed realized
+row — S 0.18964681567 recomputed EXACTLY from components via the module's own `contest_score_terms`
+before registration — and the DOMINATED/no-dispatch disposition, so neither is ever re-derived or
+re-litigated). The m7 module had existed UNREGISTERED since its landing — the same drop class the
+recall-repair memo names; now closed. canonical_equations note: consumers = #381 dispatch decisions ·
+c1 rate-term anchor · menu1.
