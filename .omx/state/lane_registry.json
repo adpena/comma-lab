@@ -84212,15 +84212,15 @@
       "id": "ddm_v19c_correction_saturation",
       "name": "DDM v19c correction saturation",
       "phase": 0.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/measure_ddm_v19c_correction_saturation.py"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_v19c_correction_saturation_20260723T063500Z/ddm_v19c_correction_saturation_receipt.json"
         },
         "contest_cuda": {
           "status": false,
@@ -84258,5 +84258,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T06:32:54Z"
+  "updated_at": "2026-07-23T17:29:30Z"
 }
