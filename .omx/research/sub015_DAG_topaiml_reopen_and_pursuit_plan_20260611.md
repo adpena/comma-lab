@@ -22399,3 +22399,31 @@ Pointer 0.1910828242 [contest-CPU] UNMOVED.
 **Triality legs:** equations — `ddm_sn1_error_source_laws_v1` REGISTERED (3 anchors: partition closure · sided asymmetry · record-constancy negative; module `src/tac/canonical_equations/ddm_sn1_error_source_laws_20260723.py`, 2-pass reviewed, evaluators reproduce receipts). DAG — this FEED. Tasks — #654 completed; **menu1 (#656) FIRES NOW** (its gate "sn1+e2 landed" is satisfied).
 
 **FIRST-RUNG:** the solve-menu top cluster (Undrivable→Road coarse-description G3-tail) + pt1x's 30B amplitude-stats law + e2's stage ledger + dr2b's costate rows = the complete priced input set for **menu1's realized-flip menu compilation** — next measurement is menu1's composed per-cluster (Δd_seg, Δbytes) menu with receiver-closed pricing, feeding c1's 200,000B waterfill. The arm's own named next rung (receiver-closed probe against the highest-mass cluster with same-candidate frozen SegNet + official PoseNet + exact archive-byte custody) is folded INTO the menu1 charter, not executed by sn1's authority.
+
+## FEED-603-at1x-custody (2026-07-23, MAIN custody of ddm_at1x_atlas_materialize, merge a0bce981b2)
+**Verdict (verified by re-derivation):** PASS_ATLAS_MATERIALIZED__FULL_EVALUATE_SH_BLOCKED_MISSING_LOCKED_BROTLI.
+[macOS-CPU locked-env upstream frozen-harness advisory] · score_claim=false · pointer 0.1910828242 [contest-CPU] UNMOVED.
+- **Locked env**: uv sync --frozen (locked rejected on stale metadata — receipt preserved), 19,505 files,
+  tree SHA fcf16c85…; zero version drift; 616 PoseNet + 540 SegNet modules.
+- **438 closed-form factors** (166 BN affine + 24 SE gates [23 SiLU + 1 ReLU — REAL activation binding] +
+  203 conv-kernel DFT tables + 45 BN→SiLU compositions; sums verified). No global DFT dead band: exact set
+  EMPTY → REFUSE_ZERO_BYTE_TRUNCATION (honest zero, not a lever).
+- **n600 contraction atlas**: 600/600 pairs, 4,200 tensor-index rows, 2 relay depths (scorer_plane_y,
+  camera_input_x). Pose Gram trace 0.009100/0.004044; Seg contracted singular energy 309,098/137,470
+  (binds segnet_head_rank4_linear_flipdist_v1). ONLY 8 exact V19 joins (pairs 53,278,296,346,416,447,501,547);
+  592 rows GAZE_MEASURED_V19_JOIN_OWED_COUNTED_INERT — the organ's inert-λ fill is PARTIAL, join stage owed.
+- **Calibration exact-reproduce**: scorer-only official evaluate.py on the SHA-certified E2 inflation:
+  343,466 B · d_seg 0.02861482 · d_pose 162.58094788 · S 43.41150975143166 (recomputed EXACTLY, drift 0
+  on all components; binary64 roundoff -3.4e-13). Observed-minus-frozen realization gap +0.001144523776.
+- **⛔ R6-CHAIN BLOCKER (verdict_scope: ENVIRONMENT, measured)**: `brotli` ABSENT from upstream/pyproject.toml
+  + uv.lock (grep count 0, verified). Full evaluate.sh under the LOCKED env fails at E2 inflate.py BEFORE
+  scorer execution. Our LIVE #636 exporter/receiver (ddm_runtime_exporter.py + ddm_runtime_receiver.py)
+  uses brotli → any R6 candidate through this receiver FAILS the official locked harness. This is the
+  PR106 lesson-9 dependency-closure class measured against OUR OWN stack. FIRST-RUNG: #636 exporter fix —
+  inflate.sh self-installs brotli (declared runtime-tree dep, ≤2 allowed) OR swap sections to stdlib
+  zlib/lzma; then re-run full evaluate.sh smoke under the locked env BEFORE any R6 dispatch.
+- **Consistency**: SSD manifests SHA-verified (atlas_manifest 251cc1e4…, gaze atlas a9e444cd…);
+  certify-or-block honored; amplitude factors honest 0 (no through-R survival rows).
+- Consumers: costate organ ABC (locked-env factors + contraction SENSE rows; maturity _dev, actuation NONE,
+  V19 join owed) · menu1 (contraction atlas as pricing SENSE input) · #636 (the brotli fix) ·
+  at1 divergence-table debt UNCHANGED.
