@@ -25,6 +25,7 @@ from tac.optimization import ddm_runtime_receiver as runtime
 
 PERTURBATION_SCHEMA = "DDMRuntimePerturbationV1"
 SENSITIVITY_SCHEMA = "ddm_runtime_receiver_sensitivity.v1"
+STAGE_TRANSITION_SCHEMA = "ddm_stream_argmax_stage_transition.v1"
 SCORE_BYTE_DUAL = 25.0 / 37_545_489.0
 
 
@@ -102,6 +103,60 @@ class DDMRuntimeRealizedPerturbationV1:
     perturbed_member_bytes: int
     baseline_member_sha256: str
     perturbed_member_sha256: str
+
+
+def stage_argmax_transition_counts(
+    *,
+    before: np.ndarray,
+    after: np.ndarray,
+    target: np.ndarray,
+    owner_mask: np.ndarray,
+) -> dict[str, int | str]:
+    """Count one realized argmax transition on one stream's owned sites.
+
+    The same target and owner mask must be used for every transition in a
+    paint -> R-resample -> uint8 -> scorer-consumption chain.  Consequently,
+    ``errors_after = errors_before + introduced - corrected`` is an exact
+    conservation check, while ``argmax_diff_from_previous`` also counts
+    wrong-to-different-wrong changes that do not alter total distortion.
+    """
+
+    arrays = tuple(np.asarray(value) for value in (before, after, target))
+    mask = np.asarray(owner_mask)
+    if any(value.shape != arrays[0].shape for value in arrays[1:]) or (
+        mask.shape != arrays[0].shape
+    ):
+        raise RuntimeSensitivityError(
+            "stage argmax maps and owner mask must share one shape"
+        )
+    if mask.dtype != np.bool_:
+        raise RuntimeSensitivityError("stage owner mask must be boolean")
+    if any(not np.issubdtype(value.dtype, np.integer) for value in arrays):
+        raise RuntimeSensitivityError("stage argmax maps must be integer-valued")
+    before_wrong = arrays[0] != arrays[2]
+    after_wrong = arrays[1] != arrays[2]
+    introduced = mask & ~before_wrong & after_wrong
+    corrected = mask & before_wrong & ~after_wrong
+    errors_before = int(np.count_nonzero(mask & before_wrong))
+    errors_after = int(np.count_nonzero(mask & after_wrong))
+    introduced_count = int(np.count_nonzero(introduced))
+    corrected_count = int(np.count_nonzero(corrected))
+    if errors_after != errors_before + introduced_count - corrected_count:
+        raise RuntimeSensitivityError("stage error-flow conservation failed")
+    return {
+        "schema": STAGE_TRANSITION_SCHEMA,
+        "owner_sites": int(np.count_nonzero(mask)),
+        "argmax_diff_from_previous": int(
+            np.count_nonzero(mask & (arrays[0] != arrays[1]))
+        ),
+        "errors_before": errors_before,
+        "errors_after": errors_after,
+        "errors_introduced": introduced_count,
+        "errors_corrected": corrected_count,
+        "errors_persisting": int(
+            np.count_nonzero(mask & before_wrong & after_wrong)
+        ),
+    }
 
 
 def _sha256(payload: bytes) -> str:

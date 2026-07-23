@@ -46,11 +46,27 @@ DDMRuntimePerturbationV1
 
 Consumers: g2 compact-shearlet/rank-4 costate ranking; p581r sparsemax/Hopfield probes; E2 audit-clause sensitivity tolerances. The API refuses receiver-inert edits and records the unique stream owner of every output change.
 
+## SN1S source-class (ii) stage FEED
+
+```text
+perfect target argmax
+  → native-grid paint argmax
+  → float bicubic-up / bilinear-down R argmax
+  → camera round/clamp uint8 R argmax
+  → official SegNet.preprocess_input + scorer argmax
+       × exact packet fact-owner partition
+         ├─ chart: semantic code == 0
+         └─ semantic: semantic code > 0
+       → {argmax Δ, introduced errors, corrected errors, errors after}
+```
+
+The 38 preserved batch rows aggregate to chart `852,384` and semantic `2,523,156` final errors. Their `3,375,540 / 117,964,800` closure exactly reproduces `d_seg=0.028614807129`. The official scorer-consumption transition has zero argmax differences because its input tensor is exactly equal to the manually factored uint8 R-down tensor. SN1S can consume these source-class (ii) rows from `ddm_e2_runtime_verification_receipt_v2.json` without replay.
+
 ## Triality
 
 - DSL: E2 typed configs and `DDMRuntimePerturbationV1`.
-- DAG: the two flows above, with the pose break explicit.
-- Equations: `S=100 d_seg + sqrt(10 d_pose) + 25 B/37,545,489`; marginal admission at `-ΔS/ΔB > 25/37,545,489`; ordered redundancy `bytes(B)-[bytes(A||B)-bytes(A)]`.
+- DAG: the three flows above, with the pose break explicit.
+- Equations: `S=100 d_seg + sqrt(10 d_pose) + 25 B/37,545,489`; marginal admission at `-ΔS/ΔB > 25/37,545,489`; ordered redundancy `bytes(B)-[bytes(A||B)-bytes(A)]`; stage conservation `E_after=E_before+E_introduced-E_corrected`.
 
 ## FEED verdict
 

@@ -48,11 +48,31 @@ A real E2 semantic smoke changed one scorer-cell code, grew `composed.dds` from 
 
 The official-harness Seg realization gap is `0.02861482 - 0.027470296224 = 0.001144523776`, so the previously `GS=0` `J_paint` rank-1 duty now has a measured receiver-realization signal.
 
+## Live-path stage attribution for SN1S source class (ii)
+
+The v2 verification receipt replays the exact E2 packet in 38 preserved batch-16 checkpoints and partitions all `117,964,800` frame-1 scorer sites by packet fact owner (`semantic code == 0` → chart; `> 0` → semantic). Each stage is a frozen-SegNet argmax transition. The paint row starts from the perfect target argmax; every later row reports changes from the immediately preceding realized stage.
+
+| Stream · stage | Owner sites | Argmax Δ from prior | Introduced | Corrected | Errors after |
+|---|---:|---:|---:|---:|---:|
+| chart · paint | 58,788,923 | 860,296 | 860,296 | 0 | 860,296 |
+| chart · R-resample | 58,788,923 | 30,859 | 8,699 | 16,578 | 852,417 |
+| chart · uint8 | 58,788,923 | 2,715 | 1,085 | 1,118 | 852,384 |
+| chart · scorer consumption | 58,788,923 | 0 | 0 | 0 | 852,384 |
+| semantic · paint | 59,175,877 | 2,489,186 | 2,489,186 | 0 | 2,489,186 |
+| semantic · R-resample | 59,175,877 | 152,640 | 86,141 | 52,548 | 2,522,779 |
+| semantic · uint8 | 59,175,877 | 8,874 | 4,116 | 3,739 | 2,523,156 |
+| semantic · scorer consumption | 59,175,877 | 0 | 0 | 0 | 2,523,156 |
+
+Every row closes `errors_after = errors_before + introduced - corrected`. Final errors close to `3,375,540 / 117,964,800 = 0.028614807129`, exactly the independent meter. Scorer-consumption adds zero because the manually factored uint8 R-down tensor is identical to frozen `SegNet.preprocess_input`; this is a positive wrapper-parity result, not a missing measurement.
+
+Verdict scope: E2 n600 frame-1 SegNet sites, partitioned by packet fact owner. These are reusable live-path leak rows, not causal Shapley attribution, PoseNet attribution, or contest-CPU/CUDA authority.
+
 ## Verification
 
 - Standalone exact raw: 3,662,409,600 bytes, SHA-256 `4871b1c19074041e56294093cacce6a6df9875e6215ab7802aec21252b0867c7`; 38 preserved stage checkpoints; 222.31 seconds total.
 - Frozen upstream harness: PASS on local CPU advisory axis; archive SHA-256 `8891012e4019e474d1e8ae7578104d74f27c25838c7b68a3798af35853469819`.
+- Live export stage attribution: 38/38 preserved batch checkpoints; final d_seg closes exactly; v2 binding `b4176ddc24ccfbd1c466aec1326572201b4dfdeb03f980cd6e91d4a7fb19d9c3`.
 - Ruff: PASS.
-- Focused tests: 14 passed. Full nearby DDM suite: 72 passed in 81.07 seconds.
+- Focused tests: 21 passed. Broad DDM suite: 110 passed in 87.47 seconds.
 
 Canonical machine receipt: `.omx/research/ddm_e2_pose_stream_and_doctrine_export_receipt.json`.

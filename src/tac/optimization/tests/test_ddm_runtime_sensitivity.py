@@ -12,6 +12,7 @@ from tac.optimization.ddm_runtime_sensitivity import (
     RuntimeSensitivityError,
     realize_perturbation,
     score_realized_perturbation,
+    stage_argmax_transition_counts,
 )
 
 
@@ -167,3 +168,47 @@ def test_chunked_score_surface_prices_realized_edit() -> None:
     assert result["delta"]["bytes"] == 1
     assert result["first_rung"] is True
     assert result["receiver_bijection"]["serialized_member"] == "base/chart.ddb"
+
+
+def test_stage_argmax_transition_counts_conserve_owned_error_flow() -> None:
+    target = np.array([[0, 0, 1, 1, 2]], dtype=np.uint8)
+    before = np.array([[0, 2, 0, 1, 1]], dtype=np.uint8)
+    after = np.array([[1, 0, 2, 1, 1]], dtype=np.uint8)
+    owner = np.array([[True, True, True, True, False]])
+    row = stage_argmax_transition_counts(
+        before=before,
+        after=after,
+        target=target,
+        owner_mask=owner,
+    )
+    assert row == {
+        "schema": "ddm_stream_argmax_stage_transition.v1",
+        "owner_sites": 4,
+        "argmax_diff_from_previous": 3,
+        "errors_before": 2,
+        "errors_after": 2,
+        "errors_introduced": 1,
+        "errors_corrected": 1,
+        "errors_persisting": 1,
+    }
+
+
+@pytest.mark.parametrize(
+    ("owner", "match"),
+    [
+        (np.ones((1, 4), dtype=bool), "share one shape"),
+        (np.ones((1, 5), dtype=np.uint8), "must be boolean"),
+    ],
+)
+def test_stage_argmax_transition_counts_fail_closed(
+    owner: np.ndarray,
+    match: str,
+) -> None:
+    value = np.zeros((1, 5), dtype=np.uint8)
+    with pytest.raises(RuntimeSensitivityError, match=match):
+        stage_argmax_transition_counts(
+            before=value,
+            after=value,
+            target=value,
+            owner_mask=owner,
+        )
