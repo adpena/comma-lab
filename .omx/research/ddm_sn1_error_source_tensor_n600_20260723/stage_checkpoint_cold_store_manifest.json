@@ -1,0 +1,28 @@
+{
+  "bytes": 5115498029,
+  "cold_store_destination": "/Volumes/VertigoDataTier/pact/ddm_sn1_error_source_tensor_n600_20260723/stage_checkpoints_8e33d8a2a38d332c_4e5306e70dc6b8df",
+  "command": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "-u",
+    "tools/build_ddm_sn1_error_source_tensor.py",
+    "--config",
+    ".omx/research/configs/ddm_sn1_error_source_tensor_20260723.json"
+  ],
+  "false_authority_flags": {
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "file_count": 153,
+  "implementation_bundle_sha256": "4e5306e70dc6b8dff17d5d8bb30ae14adfa0d2eeb1817e8592484479b01eb973",
+  "move_policy": "LOSSLESS_SSD_MOVE_WITH_ORIGINAL_PATH_SYMLINK",
+  "original_path": ".omx/research/ddm_sn1_error_source_tensor_n600_20260723/stage_checkpoints",
+  "reason": "Preserve all crash-resume and per-stage measurement checkpoints without leaving 4+ GiB of rebuildable bulk on the source tier.",
+  "rebuildable": true,
+  "schema": "ddm_sn1_stage_checkpoint_cold_store.v1",
+  "source_archive_sha256": "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9",
+  "target_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+  "tree_hash_contract": "sha256 of concatenated sorted '<file_sha256>  <relative_path>\\n' records over regular files",
+  "tree_sha256": "d477c65b1c6f80d5bf18fdf2f61c3c1795398f9b4dc606709c6b0722ce60c746",
+  "typed_config_sha256": "8e33d8a2a38d332cfd49b8c4bb29f05bae4a0b853bf7d6fa0d40f3f1ee0f1d7a"
+}

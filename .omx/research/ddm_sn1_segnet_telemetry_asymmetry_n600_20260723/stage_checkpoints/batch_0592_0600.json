@@ -1,0 +1,6237 @@
+{
+  "argmax_cache_mismatch_count": 0,
+  "axis": "[macOS-CPU frozen-SegNet advisory]",
+  "config_sha256": "7065587ae16f0652ec566198f5c2dff5d434c0cd1b1c63d724ec81f3f43ee1ac",
+  "elapsed_seconds": 7.537325750105083,
+  "erf_probes": [
+    {
+      "gradient_energy": 0.001155745481977054,
+      "margin": 7.82012939453125e-05,
+      "orientation": "Road->Undrivable",
+      "pair_id": 599,
+      "probe": {
+        "rival": 2,
+        "winner": 0,
+        "x": 360,
+        "y": 191
+      },
+      "r50_pixels": 40.792156108742276,
+      "r90_pixels": 150.33296378372907,
+      "r99_pixels": 324.13731658048874,
+      "schema": "segnet_internal_telemetry.erf_probe.v1"
+    }
+  ],
+  "frame_rows": [
+    {
+      "boundary_pixel_count": 4719,
+      "ordered_pair_margins": [
+        {
+          "boundary_pixel_count": 1269,
+          "margin_quantiles": {
+            "max": 2.2406563758850098,
+            "median": 0.5569934844970703,
+            "min": 0.0007796287536621094,
+            "q01": 0.010330448150634766,
+            "q10": 0.10046997070312501,
+            "q90": 1.168158054351807,
+            "q99": 1.569069461822509
+          },
+          "orientation": "Road->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 449,
+          "margin_quantiles": {
+            "max": 1.7344216108322144,
+            "median": 0.4639315605163574,
+            "min": 0.0008716583251953125,
+            "q01": 0.009974136352539062,
+            "q10": 0.08653268814086915,
+            "q90": 0.865561580657959,
+            "q99": 1.3790458393096916
+          },
+          "orientation": "Road->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 113,
+          "margin_quantiles": {
+            "max": 0.8877530097961426,
+            "median": 0.2580280303955078,
+            "min": 0.0012285709381103516,
+            "q01": 0.0041226959228515625,
+            "q10": 0.045774984359741214,
+            "q90": 0.5965446472167969,
+            "q99": 0.8323888969421385
+          },
+          "orientation": "Road->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 500,
+          "margin_quantiles": {
+            "max": 1.6994656324386597,
+            "median": 0.42243528366088867,
+            "min": 0.0041961669921875,
+            "q01": 0.012178478240966796,
+            "q10": 0.0876375675201416,
+            "q90": 0.9935170650482179,
+            "q99": 1.2412325477600097
+          },
+          "orientation": "Road->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 992,
+          "margin_quantiles": {
+            "max": 1.3887982368469238,
+            "median": 0.4228849411010742,
+            "min": 0.0004754066467285156,
+            "q01": 0.009383368492126466,
+            "q10": 0.07428379058837892,
+            "q90": 0.8933879852294921,
+            "q99": 1.1441191720962527
+          },
+          "orientation": "Lane->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Lane->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 1,
+          "margin_quantiles": {
+            "max": 0.16854643821716309,
+            "median": 0.16854643821716309,
+            "min": 0.16854643821716309,
+            "q01": 0.16854643821716309,
+            "q10": 0.16854643821716309,
+            "q90": 0.16854643821716309,
+            "q99": 0.16854643821716309
+          },
+          "orientation": "Lane->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 12,
+          "margin_quantiles": {
+            "max": 1.5595383644104004,
+            "median": 1.270011067390442,
+            "min": 0.7072851657867432,
+            "q01": 0.7294369149208069,
+            "q10": 0.9238088130950928,
+            "q90": 1.550865387916565,
+            "q99": 1.5591904497146607
+          },
+          "orientation": "Lane->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 449,
+          "margin_quantiles": {
+            "max": 1.289001703262329,
+            "median": 0.43759608268737793,
+            "min": 9.5367431640625e-05,
+            "q01": 0.008228073120117188,
+            "q10": 0.09283714294433594,
+            "q90": 0.9156032562255858,
+            "q99": 1.2171497440338133
+          },
+          "orientation": "Undrivable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Undrivable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 179,
+          "margin_quantiles": {
+            "max": 0.7838414907455444,
+            "median": 0.23170042037963867,
+            "min": 0.00571441650390625,
+            "q01": 0.006294569969177246,
+            "q10": 0.040883541107177734,
+            "q90": 0.4917023181915285,
+            "q99": 0.7441560649871826
+          },
+          "orientation": "Undrivable->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Undrivable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 111,
+          "margin_quantiles": {
+            "max": 1.0861361026763916,
+            "median": 0.22878694534301758,
+            "min": 0.004616975784301758,
+            "q01": 0.013248491287231445,
+            "q10": 0.05510663986206055,
+            "q90": 0.6285157203674316,
+            "q99": 0.7791079044342042
+          },
+          "orientation": "Movable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 2,
+          "margin_quantiles": {
+            "max": 1.8764883279800415,
+            "median": 1.6178309917449951,
+            "min": 1.3591736555099487,
+            "q01": 1.3643468022346497,
+            "q10": 1.410905122756958,
+            "q90": 1.8247568607330322,
+            "q99": 1.8713151812553406
+          },
+          "orientation": "Movable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 162,
+          "margin_quantiles": {
+            "max": 0.6879973411560059,
+            "median": 0.18299967050552368,
+            "min": 8.916854858398438e-05,
+            "q01": 0.005772988796234131,
+            "q10": 0.043576180934906006,
+            "q90": 0.48261916637420665,
+            "q99": 0.6662927508354186
+          },
+          "orientation": "Movable->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 500,
+          "margin_quantiles": {
+            "max": 1.369565486907959,
+            "median": 0.4912238121032715,
+            "min": 0.001239776611328125,
+            "q01": 0.006653337478637695,
+            "q10": 0.09102654457092287,
+            "q90": 0.9465396404266361,
+            "q99": 1.1671784353256225
+          },
+          "orientation": "MyCar->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 12,
+          "margin_quantiles": {
+            "max": 1.2909009456634521,
+            "median": 0.4566535949707031,
+            "min": 0.3209226131439209,
+            "q01": 0.32411072969436644,
+            "q10": 0.349976921081543,
+            "q90": 0.7259733676910402,
+            "q99": 1.2314477372169497
+          },
+          "orientation": "MyCar->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "MyCar",
+          "winner_id": 4
+        }
+      ],
+      "pair_id": 592,
+      "per_class_logit_energy": {
+        "Lane": 18.73839878615591,
+        "Movable": 17.099118420245826,
+        "MyCar": 24.91189172662619,
+        "Road": 24.10562460636903,
+        "Undrivable": 10.959797810522808
+      },
+      "record_constancy": {
+        "claim": false,
+        "reason": "one frame row records a state; repeated pixel coordinates across frames do not establish record-level constancy"
+      },
+      "schema": "ddm_sn1_segnet_telemetry.frame.v1"
+    },
+    {
+      "boundary_pixel_count": 4359,
+      "ordered_pair_margins": [
+        {
+          "boundary_pixel_count": 1051,
+          "margin_quantiles": {
+            "max": 2.415452003479004,
+            "median": 0.5563106536865234,
+            "min": 0.00022125244140625,
+            "q01": 0.010821342468261719,
+            "q10": 0.10707378387451172,
+            "q90": 1.156320333480835,
+            "q99": 1.5325572490692139
+          },
+          "orientation": "Road->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 459,
+          "margin_quantiles": {
+            "max": 1.6180297136306763,
+            "median": 0.4389486312866211,
+            "min": 0.004220247268676758,
+            "q01": 0.014903955459594727,
+            "q10": 0.08656730651855471,
+            "q90": 0.9060212135314941,
+            "q99": 1.258595480918885
+          },
+          "orientation": "Road->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 107,
+          "margin_quantiles": {
+            "max": 1.4686089754104614,
+            "median": 0.26994991302490234,
+            "min": 0.004741191864013672,
+            "q01": 0.00563744068145752,
+            "q10": 0.07322874069213867,
+            "q90": 0.5665907859802247,
+            "q99": 1.346572034358977
+          },
+          "orientation": "Road->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 497,
+          "margin_quantiles": {
+            "max": 2.1473307609558105,
+            "median": 0.41043519973754883,
+            "min": 0.0012369155883789062,
+            "q01": 0.007423458099365235,
+            "q10": 0.05254039764404297,
+            "q90": 1.0410322666168215,
+            "q99": 1.5532376575469973
+          },
+          "orientation": "Road->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 829,
+          "margin_quantiles": {
+            "max": 1.349233627319336,
+            "median": 0.4108390808105469,
+            "min": 0.0016226768493652344,
+            "q01": 0.00647998809814453,
+            "q10": 0.08445348739624026,
+            "q90": 0.8883477210998536,
+            "q99": 1.1965933418273926
+          },
+          "orientation": "Lane->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Lane->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 2,
+          "margin_quantiles": {
+            "max": 1.2025986909866333,
+            "median": 0.7391151785850525,
+            "min": 0.2756316661834717,
+            "q01": 0.2849013364315033,
+            "q10": 0.3683283686637878,
+            "q90": 1.109901988506317,
+            "q99": 1.1933290207386016
+          },
+          "orientation": "Lane->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 15,
+          "margin_quantiles": {
+            "max": 2.0698413848876953,
+            "median": 0.2114853858947754,
+            "min": 0.02445673942565918,
+            "q01": 0.027281169891357423,
+            "q10": 0.05391573905944824,
+            "q90": 1.8621875047683716,
+            "q99": 2.0463145279884336
+          },
+          "orientation": "Lane->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 458,
+          "margin_quantiles": {
+            "max": 1.4308090209960938,
+            "median": 0.4142686128616333,
+            "min": 0.0010395050048828125,
+            "q01": 0.004867594242095948,
+            "q10": 0.06702795028686524,
+            "q90": 0.9319235682487488,
+            "q99": 1.2689267325401308
+          },
+          "orientation": "Undrivable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Undrivable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 186,
+          "margin_quantiles": {
+            "max": 1.6229124069213867,
+            "median": 0.20994657278060913,
+            "min": 0.004179477691650391,
+            "q01": 0.006244552135467529,
+            "q10": 0.03915667533874512,
+            "q90": 0.6465854644775391,
+            "q99": 1.2760004699230199
+          },
+          "orientation": "Undrivable->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Undrivable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 106,
+          "margin_quantiles": {
+            "max": 1.2198981046676636,
+            "median": 0.2765576243400574,
+            "min": 0.00024080276489257812,
+            "q01": 0.009172743558883667,
+            "q10": 0.047199130058288574,
+            "q90": 0.736762523651123,
+            "q99": 1.1627899527549743
+          },
+          "orientation": "Movable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 3,
+          "margin_quantiles": {
+            "max": 2.5208401679992676,
+            "median": 0.9073038101196289,
+            "min": 0.12763524055480957,
+            "q01": 0.14322861194610595,
+            "q10": 0.28356895446777347,
+            "q90": 2.1981328964233398,
+            "q99": 2.4885694408416748
+          },
+          "orientation": "Movable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 169,
+          "margin_quantiles": {
+            "max": 0.9315536022186279,
+            "median": 0.18360257148742676,
+            "min": 0.0016989707946777344,
+            "q01": 0.00202484130859375,
+            "q10": 0.027773332595825196,
+            "q90": 0.47848832607269287,
+            "q99": 0.8918065357208249
+          },
+          "orientation": "Movable->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 497,
+          "margin_quantiles": {
+            "max": 1.3302245140075684,
+            "median": 0.4409933090209961,
+            "min": 0.0003314018249511719,
+            "q01": 0.009286537170410156,
+            "q10": 0.08894166946411133,
+            "q90": 0.9449330329895019,
+            "q99": 1.2287109375000003
+          },
+          "orientation": "MyCar->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 15,
+          "margin_quantiles": {
+            "max": 1.9164299964904785,
+            "median": 1.1875286102294922,
+            "min": 0.10503554344177246,
+            "q01": 0.1174903678894043,
+            "q10": 0.32774424552917486,
+            "q90": 1.670766758918762,
+            "q99": 1.898744194507599
+          },
+          "orientation": "MyCar->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "MyCar",
+          "winner_id": 4
+        }
+      ],
+      "pair_id": 593,
+      "per_class_logit_energy": {
+        "Lane": 19.59254365273064,
+        "Movable": 17.32344118086594,
+        "MyCar": 24.873573953456912,
+        "Road": 22.4990939887968,
+        "Undrivable": 10.980867161060209
+      },
+      "record_constancy": {
+        "claim": false,
+        "reason": "one frame row records a state; repeated pixel coordinates across frames do not establish record-level constancy"
+      },
+      "schema": "ddm_sn1_segnet_telemetry.frame.v1"
+    },
+    {
+      "boundary_pixel_count": 4197,
+      "ordered_pair_margins": [
+        {
+          "boundary_pixel_count": 986,
+          "margin_quantiles": {
+            "max": 2.033524513244629,
+            "median": 0.5383338928222656,
+            "min": 0.000133514404296875,
+            "q01": 0.006388211250305175,
+            "q10": 0.10319161415100098,
+            "q90": 1.1329166889190674,
+            "q99": 1.4825909018516537
+          },
+          "orientation": "Road->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 469,
+          "margin_quantiles": {
+            "max": 1.541811466217041,
+            "median": 0.37401676177978516,
+            "min": 0.0007908344268798828,
+            "q01": 0.0048741912841796875,
+            "q10": 0.05852079391479493,
+            "q90": 0.8744879722595214,
+            "q99": 1.2627262210845944
+          },
+          "orientation": "Road->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 111,
+          "margin_quantiles": {
+            "max": 1.1594350337982178,
+            "median": 0.23075056076049805,
+            "min": 0.0012984275817871094,
+            "q01": 0.008347034454345703,
+            "q10": 0.0515594482421875,
+            "q90": 0.7614619731903076,
+            "q99": 1.0610260009765626
+          },
+          "orientation": "Road->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 496,
+          "margin_quantiles": {
+            "max": 1.9401650428771973,
+            "median": 0.4206197261810303,
+            "min": 0.00197601318359375,
+            "q01": 0.011942267417907715,
+            "q10": 0.09267187118530273,
+            "q90": 0.9747601747512817,
+            "q99": 1.2757160663604736
+          },
+          "orientation": "Road->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 734,
+          "margin_quantiles": {
+            "max": 1.2631721496582031,
+            "median": 0.39391136169433594,
+            "min": 0.0014052391052246094,
+            "q01": 0.012277569770812988,
+            "q10": 0.07750930786132812,
+            "q90": 0.8147512435913087,
+            "q99": 1.0733188438415524
+          },
+          "orientation": "Lane->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Lane->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Lane->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 16,
+          "margin_quantiles": {
+            "max": 0.47609925270080566,
+            "median": 0.411889910697937,
+            "min": 0.024151325225830078,
+            "q01": 0.03026078939437866,
+            "q10": 0.11670279502868652,
+            "q90": 0.46463990211486816,
+            "q99": 0.4745290517807007
+          },
+          "orientation": "Lane->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 471,
+          "margin_quantiles": {
+            "max": 1.3594865798950195,
+            "median": 0.3681802749633789,
+            "min": 8.440017700195312e-05,
+            "q01": 0.0065650463104248045,
+            "q10": 0.06717562675476074,
+            "q90": 0.9100487232208252,
+            "q99": 1.2661611557006838
+          },
+          "orientation": "Undrivable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Undrivable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 169,
+          "margin_quantiles": {
+            "max": 1.3235979080200195,
+            "median": 0.2687082290649414,
+            "min": 0.0018246173858642578,
+            "q01": 0.006341466903686523,
+            "q10": 0.05809168815612793,
+            "q90": 0.7297171592712404,
+            "q99": 1.204017643928527
+          },
+          "orientation": "Undrivable->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Undrivable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 109,
+          "margin_quantiles": {
+            "max": 1.117897391319275,
+            "median": 0.1643838882446289,
+            "min": 0.005921363830566406,
+            "q01": 0.007038373947143555,
+            "q10": 0.031789422035217285,
+            "q90": 0.5704030513763428,
+            "q99": 0.8879245471954346
+          },
+          "orientation": "Movable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 152,
+          "margin_quantiles": {
+            "max": 1.1332032680511475,
+            "median": 0.24431633949279785,
+            "min": 0.0009052753448486328,
+            "q01": 0.004167206287384033,
+            "q10": 0.028144681453704835,
+            "q90": 0.5910444021224976,
+            "q99": 0.9570458889007569
+          },
+          "orientation": "Movable->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 496,
+          "margin_quantiles": {
+            "max": 1.255964756011963,
+            "median": 0.5236365795135498,
+            "min": 0.0014739036560058594,
+            "q01": 0.01045398712158203,
+            "q10": 0.058106303215026855,
+            "q90": 0.8899228572845459,
+            "q99": 1.1565053701400758
+          },
+          "orientation": "MyCar->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 17,
+          "margin_quantiles": {
+            "max": 2.5546646118164062,
+            "median": 1.1179847717285156,
+            "min": 0.3421952724456787,
+            "q01": 0.4560807704925537,
+            "q10": 1.0565205097198487,
+            "q90": 1.7526121616363528,
+            "q99": 2.4698682403564454
+          },
+          "orientation": "MyCar->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "MyCar",
+          "winner_id": 4
+        }
+      ],
+      "pair_id": 594,
+      "per_class_logit_energy": {
+        "Lane": 18.159019952916555,
+        "Movable": 16.59136543326568,
+        "MyCar": 24.202813369835535,
+        "Road": 23.064032454722945,
+        "Undrivable": 10.257316026063386
+      },
+      "record_constancy": {
+        "claim": false,
+        "reason": "one frame row records a state; repeated pixel coordinates across frames do not establish record-level constancy"
+      },
+      "schema": "ddm_sn1_segnet_telemetry.frame.v1"
+    },
+    {
+      "boundary_pixel_count": 4326,
+      "ordered_pair_margins": [
+        {
+          "boundary_pixel_count": 1042,
+          "margin_quantiles": {
+            "max": 2.3903143405914307,
+            "median": 0.5724825859069824,
+            "min": 0.0015349388122558594,
+            "q01": 0.01673402786254883,
+            "q10": 0.12431607246398926,
+            "q90": 1.1884986400604247,
+            "q99": 1.6624681031703947
+          },
+          "orientation": "Road->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 478,
+          "margin_quantiles": {
+            "max": 1.4214673042297363,
+            "median": 0.3911912441253662,
+            "min": 0.004312992095947266,
+            "q01": 0.0076149320602417,
+            "q10": 0.07437224388122558,
+            "q90": 0.8825068712234497,
+            "q99": 1.2502078270912176
+          },
+          "orientation": "Road->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 92,
+          "margin_quantiles": {
+            "max": 0.9738823771476746,
+            "median": 0.23060345649719238,
+            "min": 0.0014843940734863281,
+            "q01": 0.009628672599792481,
+            "q10": 0.032226526737213136,
+            "q90": 0.6747157096862794,
+            "q99": 0.970828001499176
+          },
+          "orientation": "Road->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 489,
+          "margin_quantiles": {
+            "max": 1.3036489486694336,
+            "median": 0.4617462158203125,
+            "min": 0.001739501953125,
+            "q01": 0.009182243347167968,
+            "q10": 0.08119611740112305,
+            "q90": 1.0296448707580566,
+            "q99": 1.2168400192260742
+          },
+          "orientation": "Road->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 850,
+          "margin_quantiles": {
+            "max": 1.218808889389038,
+            "median": 0.4477090835571289,
+            "min": 0.0027756690979003906,
+            "q01": 0.008500275611877441,
+            "q10": 0.08874788284301757,
+            "q90": 0.8759935855865479,
+            "q99": 1.126652898788452
+          },
+          "orientation": "Lane->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 3,
+          "margin_quantiles": {
+            "max": 1.5731581449508667,
+            "median": 1.140967607498169,
+            "min": 0.6056668758392334,
+            "q01": 0.6163728904724121,
+            "q10": 0.7127270221710205,
+            "q90": 1.486720037460327,
+            "q99": 1.5645143342018126
+          },
+          "orientation": "Lane->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Lane->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 23,
+          "margin_quantiles": {
+            "max": 1.8352892398834229,
+            "median": 1.0262904167175293,
+            "min": 0.47664570808410645,
+            "q01": 0.5424352073669434,
+            "q10": 0.8973497867584228,
+            "q90": 1.4113507747650147,
+            "q99": 1.7889094257354738
+          },
+          "orientation": "Lane->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 479,
+          "margin_quantiles": {
+            "max": 1.365995168685913,
+            "median": 0.3638284206390381,
+            "min": 0.0010592937469482422,
+            "q01": 0.009807507991790773,
+            "q10": 0.0785562515258789,
+            "q90": 0.903326416015625,
+            "q99": 1.227296776771545
+          },
+          "orientation": "Undrivable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 3,
+          "margin_quantiles": {
+            "max": 2.9326117038726807,
+            "median": 2.140699863433838,
+            "min": 1.4844796657562256,
+            "q01": 1.4976040697097779,
+            "q10": 1.6157237052917481,
+            "q90": 2.774229335784912,
+            "q99": 2.9167734670639036
+          },
+          "orientation": "Undrivable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 160,
+          "margin_quantiles": {
+            "max": 0.9974275827407837,
+            "median": 0.2848172187805176,
+            "min": 0.007081270217895508,
+            "q01": 0.011349029541015625,
+            "q10": 0.08280569314956665,
+            "q90": 0.6581176519393921,
+            "q99": 0.9117043876647946
+          },
+          "orientation": "Undrivable->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Undrivable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 91,
+          "margin_quantiles": {
+            "max": 1.2421982288360596,
+            "median": 0.30140209197998047,
+            "min": 0.00942683219909668,
+            "q01": 0.0109619140625,
+            "q10": 0.04567885398864746,
+            "q90": 0.7129883766174316,
+            "q99": 1.1848768472671505
+          },
+          "orientation": "Movable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 142,
+          "margin_quantiles": {
+            "max": 0.7597255706787109,
+            "median": 0.22814029455184937,
+            "min": 8.213520050048828e-05,
+            "q01": 0.002554857730865478,
+            "q10": 0.0672296166419983,
+            "q90": 0.5160096168518068,
+            "q99": 0.7413457632064819
+          },
+          "orientation": "Movable->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 490,
+          "margin_quantiles": {
+            "max": 1.312547206878662,
+            "median": 0.5516300201416016,
+            "min": 0.0006647109985351562,
+            "q01": 0.017419023513793944,
+            "q10": 0.10215482711791993,
+            "q90": 1.0443280935287476,
+            "q99": 1.230490074157715
+          },
+          "orientation": "MyCar->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 23,
+          "margin_quantiles": {
+            "max": 1.4419894218444824,
+            "median": 0.24563336372375488,
+            "min": 0.14321231842041016,
+            "q01": 0.14531764030456543,
+            "q10": 0.1597397804260254,
+            "q90": 0.6106512546539308,
+            "q99": 1.297139625549317
+          },
+          "orientation": "MyCar->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "MyCar",
+          "winner_id": 4
+        }
+      ],
+      "pair_id": 595,
+      "per_class_logit_energy": {
+        "Lane": 17.600121410992156,
+        "Movable": 16.417099751876187,
+        "MyCar": 24.437800078076197,
+        "Road": 23.556805069760173,
+        "Undrivable": 11.197287092512346
+      },
+      "record_constancy": {
+        "claim": false,
+        "reason": "one frame row records a state; repeated pixel coordinates across frames do not establish record-level constancy"
+      },
+      "schema": "ddm_sn1_segnet_telemetry.frame.v1"
+    },
+    {
+      "boundary_pixel_count": 4404,
+      "ordered_pair_margins": [
+        {
+          "boundary_pixel_count": 1184,
+          "margin_quantiles": {
+            "max": 2.1540660858154297,
+            "median": 0.49669623374938965,
+            "min": 0.0005702972412109375,
+            "q01": 0.007383813858032226,
+            "q10": 0.08247404098510742,
+            "q90": 1.1129974842071533,
+            "q99": 1.4850364017486575
+          },
+          "orientation": "Road->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 478,
+          "margin_quantiles": {
+            "max": 1.6792473793029785,
+            "median": 0.3754833936691284,
+            "min": 0.0030944347381591797,
+            "q01": 0.016453962326049804,
+            "q10": 0.07930219173431396,
+            "q90": 0.7470069289207459,
+            "q99": 1.2312829113006596
+          },
+          "orientation": "Road->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 32,
+          "margin_quantiles": {
+            "max": 1.1442277431488037,
+            "median": 0.5220577716827393,
+            "min": 0.010440707206726074,
+            "q01": 0.010748319625854492,
+            "q10": 0.02254916429519654,
+            "q90": 0.7489056944847107,
+            "q99": 1.0805400729179384
+          },
+          "orientation": "Road->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 495,
+          "margin_quantiles": {
+            "max": 1.7099452018737793,
+            "median": 0.45279788970947266,
+            "min": 0.00027942657470703125,
+            "q01": 0.009565029144287111,
+            "q10": 0.1255240440368653,
+            "q90": 0.8918004989624024,
+            "q99": 1.186794605255127
+          },
+          "orientation": "Road->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 921,
+          "margin_quantiles": {
+            "max": 1.2244155406951904,
+            "median": 0.4334282875061035,
+            "min": 0.00016069412231445312,
+            "q01": 0.0052739143371582035,
+            "q10": 0.07664823532104492,
+            "q90": 0.912376880645752,
+            "q99": 1.13386697769165
+          },
+          "orientation": "Lane->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 6,
+          "margin_quantiles": {
+            "max": 1.8220586776733398,
+            "median": 1.4074920415878296,
+            "min": 0.9483978748321533,
+            "q01": 0.9550630271434783,
+            "q10": 1.015049397945404,
+            "q90": 1.7759940028190613,
+            "q99": 1.817452210187912
+          },
+          "orientation": "Lane->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Lane->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 17,
+          "margin_quantiles": {
+            "max": 2.2866334915161133,
+            "median": 0.19227886199951172,
+            "min": 0.028676748275756836,
+            "q01": 0.029231252670288085,
+            "q10": 0.03633451461791992,
+            "q90": 1.0673166751861578,
+            "q99": 2.2455166244506835
+          },
+          "orientation": "Lane->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 479,
+          "margin_quantiles": {
+            "max": 1.1732933521270752,
+            "median": 0.34956812858581543,
+            "min": 0.0017938613891601562,
+            "q01": 0.007324566841125489,
+            "q10": 0.06406245231628419,
+            "q90": 0.7967015266418457,
+            "q99": 1.072087907791137
+          },
+          "orientation": "Undrivable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 6,
+          "margin_quantiles": {
+            "max": 2.752877712249756,
+            "median": 1.6718197464942932,
+            "min": 0.9119222164154053,
+            "q01": 0.9378031015396118,
+            "q10": 1.1707310676574707,
+            "q90": 2.424079418182373,
+            "q99": 2.7199978828430176
+          },
+          "orientation": "Undrivable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 147,
+          "margin_quantiles": {
+            "max": 1.2555339336395264,
+            "median": 0.27401936054229736,
+            "min": 0.0012865066528320312,
+            "q01": 0.004360146522521972,
+            "q10": 0.057993364334106456,
+            "q90": 0.6704025268554688,
+            "q99": 1.0581293368339533
+          },
+          "orientation": "Undrivable->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Undrivable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 32,
+          "margin_quantiles": {
+            "max": 1.4155800342559814,
+            "median": 0.287073016166687,
+            "min": 0.017470598220825195,
+            "q01": 0.023697865009307862,
+            "q10": 0.09333609342575074,
+            "q90": 1.18758385181427,
+            "q99": 1.3817309534549715
+          },
+          "orientation": "Movable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 131,
+          "margin_quantiles": {
+            "max": 0.9379215240478516,
+            "median": 0.24688184261322021,
+            "min": 0.0002880096435546875,
+            "q01": 0.0008988142013549805,
+            "q10": 0.046044349670410156,
+            "q90": 0.5680794715881348,
+            "q99": 0.8852212190628052
+          },
+          "orientation": "Movable->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 495,
+          "margin_quantiles": {
+            "max": 1.3846709728240967,
+            "median": 0.45637989044189453,
+            "min": 0.00027179718017578125,
+            "q01": 0.010327062606811524,
+            "q10": 0.10485992431640626,
+            "q90": 0.8659568786621095,
+            "q99": 1.0995106649398805
+          },
+          "orientation": "MyCar->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 17,
+          "margin_quantiles": {
+            "max": 1.7031376361846924,
+            "median": 1.2325401306152344,
+            "min": 0.09354162216186523,
+            "q01": 0.19832719802856447,
+            "q10": 0.7705763339996338,
+            "q90": 1.4711159229278565,
+            "q99": 1.6681412982940673
+          },
+          "orientation": "MyCar->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "MyCar",
+          "winner_id": 4
+        }
+      ],
+      "pair_id": 596,
+      "per_class_logit_energy": {
+        "Lane": 17.395553708407192,
+        "Movable": 17.23671528856414,
+        "MyCar": 23.724299707960636,
+        "Road": 22.94684128876437,
+        "Undrivable": 9.96439892667014
+      },
+      "record_constancy": {
+        "claim": false,
+        "reason": "one frame row records a state; repeated pixel coordinates across frames do not establish record-level constancy"
+      },
+      "schema": "ddm_sn1_segnet_telemetry.frame.v1"
+    },
+    {
+      "boundary_pixel_count": 4449,
+      "ordered_pair_margins": [
+        {
+          "boundary_pixel_count": 1189,
+          "margin_quantiles": {
+            "max": 1.9514485597610474,
+            "median": 0.5916576385498047,
+            "min": 0.0002110004425048828,
+            "q01": 0.014580783843994142,
+            "q10": 0.11054706573486328,
+            "q90": 1.1933555603027346,
+            "q99": 1.5376373291015613
+          },
+          "orientation": "Road->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 482,
+          "margin_quantiles": {
+            "max": 1.5446851253509521,
+            "median": 0.3338218927383423,
+            "min": 0.0015091896057128906,
+            "q01": 0.009785799980163575,
+            "q10": 0.07445421218872071,
+            "q90": 0.6877747058868409,
+            "q99": 1.116691893339157
+          },
+          "orientation": "Road->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 30,
+          "margin_quantiles": {
+            "max": 1.0357434749603271,
+            "median": 0.5636971592903137,
+            "min": 0.006364583969116211,
+            "q01": 0.026382606029510498,
+            "q10": 0.07765179872512817,
+            "q90": 0.9098189651966095,
+            "q99": 1.0070772826671601
+          },
+          "orientation": "Road->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 504,
+          "margin_quantiles": {
+            "max": 1.1253318786621094,
+            "median": 0.48761487007141113,
+            "min": 0.0012464523315429688,
+            "q01": 0.013507161140441896,
+            "q10": 0.10422124862670899,
+            "q90": 0.9040779113769531,
+            "q99": 1.071567769050598
+          },
+          "orientation": "Road->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 910,
+          "margin_quantiles": {
+            "max": 1.2632932662963867,
+            "median": 0.42475342750549316,
+            "min": 0.00025272369384765625,
+            "q01": 0.007071802616119385,
+            "q10": 0.08040318489074708,
+            "q90": 0.9512673377990722,
+            "q99": 1.155225267410278
+          },
+          "orientation": "Lane->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 5,
+          "margin_quantiles": {
+            "max": 1.896127700805664,
+            "median": 1.7048652172088623,
+            "min": 1.1238073110580444,
+            "q01": 1.141511378288269,
+            "q10": 1.3008479833602906,
+            "q90": 1.871568489074707,
+            "q99": 1.8936717796325684
+          },
+          "orientation": "Lane->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 1,
+          "margin_quantiles": {
+            "max": 1.4652490615844727,
+            "median": 1.4652490615844727,
+            "min": 1.4652490615844727,
+            "q01": 1.4652490615844727,
+            "q10": 1.4652490615844727,
+            "q90": 1.4652490615844727,
+            "q99": 1.4652490615844727
+          },
+          "orientation": "Lane->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 8,
+          "margin_quantiles": {
+            "max": 1.9523122310638428,
+            "median": 1.3336749076843262,
+            "min": 0.9228801727294922,
+            "q01": 0.9466171312332153,
+            "q10": 1.1602497577667237,
+            "q90": 1.7318105220794677,
+            "q99": 1.9302620601654052
+          },
+          "orientation": "Lane->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 483,
+          "margin_quantiles": {
+            "max": 1.4129638671875,
+            "median": 0.35307812690734863,
+            "min": 0.001177072525024414,
+            "q01": 0.005090970993041993,
+            "q10": 0.07301340103149415,
+            "q90": 0.7695204257965088,
+            "q99": 1.1214331245422364
+          },
+          "orientation": "Undrivable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 5,
+          "margin_quantiles": {
+            "max": 2.5727596282958984,
+            "median": 1.7549477815628052,
+            "min": 0.6619037389755249,
+            "q01": 0.6787421083450318,
+            "q10": 0.8302874326705932,
+            "q90": 2.4187362670898436,
+            "q99": 2.557357292175293
+          },
+          "orientation": "Undrivable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 168,
+          "margin_quantiles": {
+            "max": 1.0782474279403687,
+            "median": 0.2999774217605591,
+            "min": 0.006302595138549805,
+            "q01": 0.008247212171554566,
+            "q10": 0.036586427688598634,
+            "q90": 0.6769907474517823,
+            "q99": 0.995235899090768
+          },
+          "orientation": "Undrivable->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Undrivable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 30,
+          "margin_quantiles": {
+            "max": 1.1340731382369995,
+            "median": 0.6279850900173187,
+            "min": 0.010075688362121582,
+            "q01": 0.01483361840248108,
+            "q10": 0.03506431579589844,
+            "q90": 0.9905531227588654,
+            "q99": 1.1287027537822723
+          },
+          "orientation": "Movable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 1,
+          "margin_quantiles": {
+            "max": 0.9218336343765259,
+            "median": 0.9218336343765259,
+            "min": 0.9218336343765259,
+            "q01": 0.9218336343765259,
+            "q10": 0.9218336343765259,
+            "q90": 0.9218336343765259,
+            "q99": 0.9218336343765259
+          },
+          "orientation": "Movable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 154,
+          "margin_quantiles": {
+            "max": 0.7978370189666748,
+            "median": 0.22784423828125,
+            "min": 0.004780769348144531,
+            "q01": 0.006895238161087036,
+            "q10": 0.027911305427551273,
+            "q90": 0.5860044002532961,
+            "q99": 0.7775512313842773
+          },
+          "orientation": "Movable->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 505,
+          "margin_quantiles": {
+            "max": 1.1383037567138672,
+            "median": 0.4817385673522949,
+            "min": 0.0015559196472167969,
+            "q01": 0.01411935806274414,
+            "q10": 0.10892925262451174,
+            "q90": 0.8743661403656007,
+            "q99": 1.064378089904785
+          },
+          "orientation": "MyCar->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 8,
+          "margin_quantiles": {
+            "max": 0.4282722473144531,
+            "median": 0.11467230319976807,
+            "min": 0.06612348556518555,
+            "q01": 0.06615402698516845,
+            "q10": 0.06642889976501465,
+            "q90": 0.31230046749114987,
+            "q99": 0.4166750693321228
+          },
+          "orientation": "MyCar->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "MyCar",
+          "winner_id": 4
+        }
+      ],
+      "pair_id": 597,
+      "per_class_logit_energy": {
+        "Lane": 17.467389468017085,
+        "Movable": 16.456673572824226,
+        "MyCar": 23.267919190802377,
+        "Road": 22.59555310312128,
+        "Undrivable": 10.545275871237648
+      },
+      "record_constancy": {
+        "claim": false,
+        "reason": "one frame row records a state; repeated pixel coordinates across frames do not establish record-level constancy"
+      },
+      "schema": "ddm_sn1_segnet_telemetry.frame.v1"
+    },
+    {
+      "boundary_pixel_count": 4150,
+      "ordered_pair_margins": [
+        {
+          "boundary_pixel_count": 964,
+          "margin_quantiles": {
+            "max": 1.811522126197815,
+            "median": 0.5427591800689697,
+            "min": 0.0002460479736328125,
+            "q01": 0.016561005115509033,
+            "q10": 0.11455156803131106,
+            "q90": 1.1020823001861575,
+            "q99": 1.4332412695884704
+          },
+          "orientation": "Road->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 484,
+          "margin_quantiles": {
+            "max": 1.5122544765472412,
+            "median": 0.3035224676132202,
+            "min": 0.0006244182586669922,
+            "q01": 0.008083863258361816,
+            "q10": 0.05808515548706055,
+            "q90": 0.7381209611892701,
+            "q99": 1.0967570018768316
+          },
+          "orientation": "Road->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 30,
+          "margin_quantiles": {
+            "max": 1.3520879745483398,
+            "median": 0.5157452821731567,
+            "min": 0.03832721710205078,
+            "q01": 0.045374141931533815,
+            "q10": 0.09451669454574586,
+            "q90": 0.7120462357997894,
+            "q99": 1.3395498061180116
+          },
+          "orientation": "Road->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 496,
+          "margin_quantiles": {
+            "max": 2.143669605255127,
+            "median": 0.46208345890045166,
+            "min": 0.002440929412841797,
+            "q01": 0.007247495651245117,
+            "q10": 0.08885431289672852,
+            "q90": 0.9073913097381592,
+            "q99": 1.1151201248168945
+          },
+          "orientation": "Road->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 784,
+          "margin_quantiles": {
+            "max": 1.288705825805664,
+            "median": 0.4486052989959717,
+            "min": 0.0017714500427246094,
+            "q01": 0.016931805610656738,
+            "q10": 0.08026847839355469,
+            "q90": 0.8734981536865235,
+            "q99": 1.1475157642364497
+          },
+          "orientation": "Lane->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 4,
+          "margin_quantiles": {
+            "max": 1.9009339809417725,
+            "median": 1.659487545490265,
+            "min": 1.1267040967941284,
+            "q01": 1.141017233133316,
+            "q10": 1.2698354601860047,
+            "q90": 1.845203721523285,
+            "q99": 1.8953609549999237
+          },
+          "orientation": "Lane->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Lane->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 16,
+          "margin_quantiles": {
+            "max": 0.8941512107849121,
+            "median": 0.6069463491439819,
+            "min": 0.27977895736694336,
+            "q01": 0.3029072880744934,
+            "q10": 0.435787558555603,
+            "q90": 0.8416695594787598,
+            "q99": 0.8913583159446716
+          },
+          "orientation": "Lane->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 484,
+          "margin_quantiles": {
+            "max": 1.3390705585479736,
+            "median": 0.27823925018310547,
+            "min": 0.0005452632904052734,
+            "q01": 0.007276043891906738,
+            "q10": 0.052564930915832524,
+            "q90": 0.7874807119369505,
+            "q99": 1.12248736858368
+          },
+          "orientation": "Undrivable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 4,
+          "margin_quantiles": {
+            "max": 2.2192187309265137,
+            "median": 1.7960273027420044,
+            "min": 0.8229422569274902,
+            "q01": 0.8410456228256226,
+            "q10": 1.0039759159088135,
+            "q90": 2.203153157234192,
+            "q99": 2.2176121735572814
+          },
+          "orientation": "Undrivable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 194,
+          "margin_quantiles": {
+            "max": 1.309577226638794,
+            "median": 0.2422657012939453,
+            "min": 0.0022907257080078125,
+            "q01": 0.008344955444335937,
+            "q10": 0.04022759199142456,
+            "q90": 0.6016996383666993,
+            "q99": 0.9939232993125909
+          },
+          "orientation": "Undrivable->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Undrivable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 29,
+          "margin_quantiles": {
+            "max": 1.5511701107025146,
+            "median": 0.29536914825439453,
+            "min": 0.0634768009185791,
+            "q01": 0.06666592597961425,
+            "q10": 0.10534372329711915,
+            "q90": 1.1405628442764282,
+            "q99": 1.4969007778167722
+          },
+          "orientation": "Movable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 181,
+          "margin_quantiles": {
+            "max": 0.8368768692016602,
+            "median": 0.18471908569335938,
+            "min": 0.003710031509399414,
+            "q01": 0.007879829406738282,
+            "q10": 0.03264284133911133,
+            "q90": 0.6300144195556641,
+            "q99": 0.775094032287597
+          },
+          "orientation": "Movable->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 496,
+          "margin_quantiles": {
+            "max": 1.2301101684570312,
+            "median": 0.4670379161834717,
+            "min": 0.0047454833984375,
+            "q01": 0.010202789306640625,
+            "q10": 0.0691225528717041,
+            "q90": 0.9239764213562012,
+            "q99": 1.1396274089813234
+          },
+          "orientation": "MyCar->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 17,
+          "margin_quantiles": {
+            "max": 2.069159507751465,
+            "median": 0.6538825035095215,
+            "min": 0.3432776927947998,
+            "q01": 0.38237208366394043,
+            "q10": 0.6008246898651123,
+            "q90": 1.054235601425171,
+            "q99": 1.9461994171142578
+          },
+          "orientation": "MyCar->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "MyCar",
+          "winner_id": 4
+        }
+      ],
+      "pair_id": 598,
+      "per_class_logit_energy": {
+        "Lane": 17.87011487336214,
+        "Movable": 17.100767877592265,
+        "MyCar": 22.963101645927555,
+        "Road": 21.852785368419603,
+        "Undrivable": 9.147697675362421
+      },
+      "record_constancy": {
+        "claim": false,
+        "reason": "one frame row records a state; repeated pixel coordinates across frames do not establish record-level constancy"
+      },
+      "schema": "ddm_sn1_segnet_telemetry.frame.v1"
+    },
+    {
+      "boundary_pixel_count": 4229,
+      "ordered_pair_margins": [
+        {
+          "boundary_pixel_count": 1010,
+          "margin_quantiles": {
+            "max": 1.8047707080841064,
+            "median": 0.5347788333892822,
+            "min": 0.0004782676696777344,
+            "q01": 0.01214740753173828,
+            "q10": 0.10557999610900878,
+            "q90": 1.0680662631988525,
+            "q99": 1.4011975491046902
+          },
+          "orientation": "Road->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 480,
+          "margin_quantiles": {
+            "max": 1.3269349336624146,
+            "median": 0.28835391998291016,
+            "min": 7.653236389160156e-05,
+            "q01": 0.003060727119445801,
+            "q10": 0.06107797622680666,
+            "q90": 0.7339556574821473,
+            "q99": 1.066096634864807
+          },
+          "orientation": "Road->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 30,
+          "margin_quantiles": {
+            "max": 1.5317914485931396,
+            "median": 0.3232516646385193,
+            "min": 0.011749505996704102,
+            "q01": 0.030812132358551025,
+            "q10": 0.09722446203231812,
+            "q90": 0.7439841032028207,
+            "q99": 1.4746829783916475
+          },
+          "orientation": "Road->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 512,
+          "margin_quantiles": {
+            "max": 1.0693864822387695,
+            "median": 0.36144280433654785,
+            "min": 0.0003504753112792969,
+            "q01": 0.00452925205230713,
+            "q10": 0.0903200626373291,
+            "q90": 0.7683833599090577,
+            "q99": 0.9911506605148315
+          },
+          "orientation": "Road->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Road",
+          "winner_id": 0
+        },
+        {
+          "boundary_pixel_count": 839,
+          "margin_quantiles": {
+            "max": 1.1982131004333496,
+            "median": 0.4574594497680664,
+            "min": 0.0015859603881835938,
+            "q01": 0.004921112060546876,
+            "q10": 0.0837977409362793,
+            "q90": 0.8707295417785645,
+            "q99": 1.0648443794250488
+          },
+          "orientation": "Lane->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 5,
+          "margin_quantiles": {
+            "max": 1.9102280139923096,
+            "median": 1.448500394821167,
+            "min": 0.5709701776504517,
+            "q01": 0.5791855955123901,
+            "q10": 0.6531243562698364,
+            "q90": 1.8173800945281982,
+            "q99": 1.9009432220458984
+          },
+          "orientation": "Lane->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 1,
+          "margin_quantiles": {
+            "max": 0.8376200199127197,
+            "median": 0.8376200199127197,
+            "min": 0.8376200199127197,
+            "q01": 0.8376200199127197,
+            "q10": 0.8376200199127197,
+            "q90": 0.8376200199127197,
+            "q99": 0.8376200199127197
+          },
+          "orientation": "Lane->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Lane->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Lane",
+          "winner_id": 1
+        },
+        {
+          "boundary_pixel_count": 481,
+          "margin_quantiles": {
+            "max": 1.1952719688415527,
+            "median": 0.2975735664367676,
+            "min": 0.0005545616149902344,
+            "q01": 0.0036476612091064452,
+            "q10": 0.056479454040527344,
+            "q90": 0.7654130458831787,
+            "q99": 1.1072336196899413
+          },
+          "orientation": "Undrivable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 5,
+          "margin_quantiles": {
+            "max": 2.2660133838653564,
+            "median": 1.893284797668457,
+            "min": 1.170355200767517,
+            "q01": 1.1743471240997314,
+            "q10": 1.2102744340896607,
+            "q90": 2.19101300239563,
+            "q99": 2.258513345718384
+          },
+          "orientation": "Undrivable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 185,
+          "margin_quantiles": {
+            "max": 1.3111345767974854,
+            "median": 0.3289794921875,
+            "min": 0.0030050277709960938,
+            "q01": 0.006214656829833984,
+            "q10": 0.05662798881530763,
+            "q90": 0.8186274051666257,
+            "q99": 1.1604118824005125
+          },
+          "orientation": "Undrivable->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Undrivable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Undrivable",
+          "winner_id": 2
+        },
+        {
+          "boundary_pixel_count": 31,
+          "margin_quantiles": {
+            "max": 1.4100483655929565,
+            "median": 0.3997204303741455,
+            "min": 0.0014138221740722656,
+            "q01": 0.013054215908050537,
+            "q10": 0.15648913383483887,
+            "q90": 1.2138497829437256,
+            "q99": 1.386049997806549
+          },
+          "orientation": "Movable->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 1,
+          "margin_quantiles": {
+            "max": 0.47867870330810547,
+            "median": 0.47867870330810547,
+            "min": 0.47867870330810547,
+            "q01": 0.47867870330810547,
+            "q10": 0.47867870330810547,
+            "q90": 0.47867870330810547,
+            "q99": 0.47867870330810547
+          },
+          "orientation": "Movable->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 168,
+          "margin_quantiles": {
+            "max": 1.274312973022461,
+            "median": 0.2550222873687744,
+            "min": 0.0010063648223876953,
+            "q01": 0.003185478448867798,
+            "q10": 0.058602309226989745,
+            "q90": 0.604076898097992,
+            "q99": 1.163125197887421
+          },
+          "orientation": "Movable->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "Movable->MyCar",
+          "rival": "MyCar",
+          "rival_id": 4,
+          "winner": "Movable",
+          "winner_id": 3
+        },
+        {
+          "boundary_pixel_count": 512,
+          "margin_quantiles": {
+            "max": 1.066511631011963,
+            "median": 0.4674239158630371,
+            "min": 0.00041675567626953125,
+            "q01": 0.013174433708190918,
+            "q10": 0.1114391803741455,
+            "q90": 0.8882714271545413,
+            "q99": 1.0399588537216184
+          },
+          "orientation": "MyCar->Road",
+          "rival": "Road",
+          "rival_id": 0,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Lane",
+          "rival": "Lane",
+          "rival_id": 1,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Undrivable",
+          "rival": "Undrivable",
+          "rival_id": 2,
+          "winner": "MyCar",
+          "winner_id": 4
+        },
+        {
+          "boundary_pixel_count": 0,
+          "margin_quantiles": {
+            "max": null,
+            "median": null,
+            "min": null,
+            "q01": null,
+            "q10": null,
+            "q90": null,
+            "q99": null
+          },
+          "orientation": "MyCar->Movable",
+          "rival": "Movable",
+          "rival_id": 3,
+          "winner": "MyCar",
+          "winner_id": 4
+        }
+      ],
+      "pair_id": 599,
+      "per_class_logit_energy": {
+        "Lane": 17.910750494960865,
+        "Movable": 18.59956813573939,
+        "MyCar": 23.80637434462103,
+        "Road": 21.4706350170656,
+        "Undrivable": 9.272186446258708
+      },
+      "record_constancy": {
+        "claim": false,
+        "reason": "one frame row records a state; repeated pixel coordinates across frames do not establish record-level constancy"
+      },
+      "schema": "ddm_sn1_segnet_telemetry.frame.v1"
+    }
+  ],
+  "implementation_identity": {
+    "bundle_sha256": "1d7c0b7386456ff7ca2b3de3d061bc079a2407005c3804cfafa186f73da26f5b",
+    "files": {
+      "runner": {
+        "bytes": 52699,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/tools/run_ddm_sn1_segnet_telemetry_asymmetry.py",
+        "sha256": "020dd1181cda527c4d4f3c90a0b3ae442641eb807f82b10e2660c68986758048"
+      },
+      "sided_tolerance": {
+        "bytes": 18607,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/optimization/ddm_sn1_sided_tolerance.py",
+        "sha256": "2659790fafa5d8cb039f5be94a171284e4f98a4fb0f99d37d5b375371cfe9967"
+      },
+      "telemetry": {
+        "bytes": 20457,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/analysis/segnet_internal_telemetry.py",
+        "sha256": "8fa7454d1451b1fa50517e379a5980afe6e0987ce8d968fc82875791887f2bf4"
+      }
+    },
+    "schema": "ddm_sn1_implementation_identity.v1"
+  },
+  "margin_arrays": {
+    "array_count": 160,
+    "bytes": 157930,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0592_0600_margins.npz",
+    "sha256": "09e5f8e38142eceb79573fcf89a71e8b039553ec8028ca29e6176099516544c1"
+  },
+  "pair_count": 8,
+  "pair_window": [
+    592,
+    600
+  ],
+  "promotion_eligible": false,
+  "run_id": "ddm_sn1_segnet_telemetry_asymmetry_n600_20260723",
+  "schema": "ddm_sn1_segnet_telemetry_asymmetry_batch.v1",
+  "score_claim": false,
+  "segment_candidates": [
+    {
+      "coordinates_yx": [
+        [
+          173,
+          258
+        ],
+        [
+          173,
+          257
+        ],
+        [
+          173,
+          256
+        ]
+      ],
+      "margin_max": 0.10429203510284424,
+      "margin_median": 0.020842790603637695,
+      "margin_min": 0.019356250762939453,
+      "orientation": "Undrivable->Movable",
+      "pair_id": 599,
+      "rival_id": 3,
+      "segment_pixel_count": 3,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          179,
+          210
+        ],
+        [
+          179,
+          211
+        ],
+        [
+          180,
+          211
+        ],
+        [
+          179,
+          212
+        ],
+        [
+          179,
+          213
+        ],
+        [
+          179,
+          214
+        ]
+      ],
+      "margin_max": 0.08730244636535645,
+      "margin_median": 0.02113199234008789,
+      "margin_min": 0.0007908344268798828,
+      "orientation": "Road->Undrivable",
+      "pair_id": 594,
+      "rival_id": 2,
+      "segment_pixel_count": 6,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          290,
+          137
+        ],
+        [
+          290,
+          136
+        ],
+        [
+          290,
+          135
+        ],
+        [
+          290,
+          134
+        ],
+        [
+          290,
+          133
+        ]
+      ],
+      "margin_max": 0.04881429672241211,
+      "margin_median": 0.022588253021240234,
+      "margin_min": 0.004709720611572266,
+      "orientation": "Road->MyCar",
+      "pair_id": 595,
+      "rival_id": 4,
+      "segment_pixel_count": 5,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          176,
+          97
+        ],
+        [
+          175,
+          97
+        ],
+        [
+          177,
+          97
+        ]
+      ],
+      "margin_max": 0.20839905738830566,
+      "margin_median": 0.024152755737304688,
+      "margin_min": 0.019060134887695312,
+      "orientation": "Movable->Undrivable",
+      "pair_id": 597,
+      "rival_id": 2,
+      "segment_pixel_count": 3,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          175,
+          135
+        ],
+        [
+          175,
+          136
+        ],
+        [
+          175,
+          137
+        ],
+        [
+          175,
+          138
+        ]
+      ],
+      "margin_max": 0.05690407752990723,
+      "margin_median": 0.024493932723999023,
+      "margin_min": 0.0009052753448486328,
+      "orientation": "Movable->Undrivable",
+      "pair_id": 594,
+      "rival_id": 2,
+      "segment_pixel_count": 4,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          292,
+          29
+        ],
+        [
+          292,
+          30
+        ],
+        [
+          292,
+          31
+        ],
+        [
+          292,
+          32
+        ],
+        [
+          292,
+          33
+        ],
+        [
+          292,
+          34
+        ],
+        [
+          292,
+          35
+        ],
+        [
+          292,
+          36
+        ],
+        [
+          292,
+          37
+        ]
+      ],
+      "margin_max": 0.057337284088134766,
+      "margin_median": 0.02507925033569336,
+      "margin_min": 0.00852823257446289,
+      "orientation": "Road->MyCar",
+      "pair_id": 593,
+      "rival_id": 4,
+      "segment_pixel_count": 9,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          180,
+          103
+        ],
+        [
+          180,
+          104
+        ],
+        [
+          180,
+          102
+        ],
+        [
+          180,
+          101
+        ]
+      ],
+      "margin_max": 0.1503009796142578,
+      "margin_median": 0.02553880214691162,
+      "margin_min": 0.006608009338378906,
+      "orientation": "Movable->Undrivable",
+      "pair_id": 598,
+      "rival_id": 2,
+      "segment_pixel_count": 4,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          285,
+          477
+        ],
+        [
+          285,
+          476
+        ],
+        [
+          285,
+          475
+        ],
+        [
+          285,
+          474
+        ]
+      ],
+      "margin_max": 0.047966957092285156,
+      "margin_median": 0.026839256286621094,
+      "margin_min": 0.009853363037109375,
+      "orientation": "MyCar->Road",
+      "pair_id": 594,
+      "rival_id": 0,
+      "segment_pixel_count": 4,
+      "winner_id": 4
+    },
+    {
+      "coordinates_yx": [
+        [
+          172,
+          255
+        ],
+        [
+          172,
+          256
+        ],
+        [
+          172,
+          254
+        ],
+        [
+          172,
+          257
+        ],
+        [
+          172,
+          253
+        ]
+      ],
+      "margin_max": 0.28230154514312744,
+      "margin_median": 0.028939247131347656,
+      "margin_min": 0.01036524772644043,
+      "orientation": "Undrivable->Movable",
+      "pair_id": 598,
+      "rival_id": 3,
+      "segment_pixel_count": 5,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          228,
+          507
+        ],
+        [
+          227,
+          507
+        ],
+        [
+          226,
+          507
+        ],
+        [
+          225,
+          507
+        ],
+        [
+          224,
+          507
+        ],
+        [
+          223,
+          507
+        ]
+      ],
+      "margin_max": 0.03738081455230713,
+      "margin_median": 0.03315526247024536,
+      "margin_min": 0.015216708183288574,
+      "orientation": "Road->Movable",
+      "pair_id": 595,
+      "rival_id": 3,
+      "segment_pixel_count": 6,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          172,
+          256
+        ],
+        [
+          172,
+          257
+        ],
+        [
+          172,
+          258
+        ]
+      ],
+      "margin_max": 0.06196951866149902,
+      "margin_median": 0.0343170166015625,
+      "margin_min": 0.013574600219726562,
+      "orientation": "Movable->Undrivable",
+      "pair_id": 593,
+      "rival_id": 2,
+      "segment_pixel_count": 3,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          199,
+          103
+        ],
+        [
+          199,
+          104
+        ],
+        [
+          199,
+          105
+        ]
+      ],
+      "margin_max": 0.15368318557739258,
+      "margin_median": 0.03510618209838867,
+      "margin_min": 0.007302284240722656,
+      "orientation": "Road->Lane",
+      "pair_id": 596,
+      "rival_id": 1,
+      "segment_pixel_count": 3,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          287,
+          438
+        ],
+        [
+          287,
+          437
+        ],
+        [
+          287,
+          436
+        ],
+        [
+          287,
+          435
+        ],
+        [
+          287,
+          434
+        ]
+      ],
+      "margin_max": 0.06693196296691895,
+      "margin_median": 0.036678314208984375,
+      "margin_min": 0.010689735412597656,
+      "orientation": "Road->MyCar",
+      "pair_id": 594,
+      "rival_id": 4,
+      "segment_pixel_count": 5,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          190,
+          240
+        ],
+        [
+          191,
+          240
+        ],
+        [
+          190,
+          241
+        ],
+        [
+          190,
+          242
+        ]
+      ],
+      "margin_max": 0.3418254852294922,
+      "margin_median": 0.0377960205078125,
+      "margin_min": 0.0018444061279296875,
+      "orientation": "Lane->Road",
+      "pair_id": 593,
+      "rival_id": 0,
+      "segment_pixel_count": 4,
+      "winner_id": 1
+    },
+    {
+      "coordinates_yx": [
+        [
+          178,
+          211
+        ],
+        [
+          178,
+          212
+        ],
+        [
+          178,
+          210
+        ],
+        [
+          178,
+          213
+        ],
+        [
+          178,
+          214
+        ]
+      ],
+      "margin_max": 0.06235766410827637,
+      "margin_median": 0.03882408142089844,
+      "margin_min": 0.02237725257873535,
+      "orientation": "Undrivable->Road",
+      "pair_id": 594,
+      "rival_id": 0,
+      "segment_pixel_count": 5,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          270,
+          501
+        ],
+        [
+          270,
+          502
+        ],
+        [
+          270,
+          503
+        ]
+      ],
+      "margin_max": 0.04718828201293945,
+      "margin_median": 0.042340755462646484,
+      "margin_min": 0.031152725219726562,
+      "orientation": "Movable->Road",
+      "pair_id": 593,
+      "rival_id": 0,
+      "segment_pixel_count": 3,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          290,
+          135
+        ],
+        [
+          290,
+          134
+        ],
+        [
+          290,
+          136
+        ],
+        [
+          290,
+          137
+        ],
+        [
+          290,
+          138
+        ],
+        [
+          290,
+          139
+        ],
+        [
+          290,
+          140
+        ],
+        [
+          290,
+          141
+        ],
+        [
+          290,
+          142
+        ],
+        [
+          290,
+          143
+        ],
+        [
+          290,
+          144
+        ],
+        [
+          290,
+          145
+        ],
+        [
+          290,
+          146
+        ],
+        [
+          290,
+          147
+        ],
+        [
+          290,
+          148
+        ],
+        [
+          290,
+          149
+        ],
+        [
+          290,
+          150
+        ],
+        [
+          290,
+          151
+        ],
+        [
+          290,
+          152
+        ]
+      ],
+      "margin_max": 0.09374094009399414,
+      "margin_median": 0.042807579040527344,
+      "margin_min": 0.0047454833984375,
+      "orientation": "MyCar->Road",
+      "pair_id": 598,
+      "rival_id": 0,
+      "segment_pixel_count": 19,
+      "winner_id": 4
+    },
+    {
+      "coordinates_yx": [
+        [
+          194,
+          236
+        ],
+        [
+          194,
+          237
+        ],
+        [
+          195,
+          236
+        ],
+        [
+          195,
+          237
+        ],
+        [
+          195,
+          235
+        ]
+      ],
+      "margin_max": 0.44331789016723633,
+      "margin_median": 0.04364633560180664,
+      "margin_min": 0.006308555603027344,
+      "orientation": "Lane->Road",
+      "pair_id": 597,
+      "rival_id": 0,
+      "segment_pixel_count": 5,
+      "winner_id": 1
+    },
+    {
+      "coordinates_yx": [
+        [
+          203,
+          73
+        ],
+        [
+          203,
+          72
+        ],
+        [
+          203,
+          71
+        ],
+        [
+          203,
+          70
+        ],
+        [
+          203,
+          69
+        ]
+      ],
+      "margin_max": 0.058754920959472656,
+      "margin_median": 0.0446019172668457,
+      "margin_min": 0.020472049713134766,
+      "orientation": "Lane->Road",
+      "pair_id": 592,
+      "rival_id": 0,
+      "segment_pixel_count": 5,
+      "winner_id": 1
+    },
+    {
+      "coordinates_yx": [
+        [
+          201,
+          88
+        ],
+        [
+          201,
+          87
+        ],
+        [
+          201,
+          86
+        ],
+        [
+          201,
+          85
+        ],
+        [
+          201,
+          84
+        ],
+        [
+          201,
+          83
+        ],
+        [
+          201,
+          82
+        ],
+        [
+          202,
+          82
+        ],
+        [
+          202,
+          81
+        ]
+      ],
+      "margin_max": 0.1211848258972168,
+      "margin_median": 0.046588897705078125,
+      "margin_min": 0.0020799636840820312,
+      "orientation": "Lane->Road",
+      "pair_id": 596,
+      "rival_id": 0,
+      "segment_pixel_count": 9,
+      "winner_id": 1
+    },
+    {
+      "coordinates_yx": [
+        [
+          223,
+          507
+        ],
+        [
+          223,
+          508
+        ],
+        [
+          223,
+          509
+        ],
+        [
+          223,
+          510
+        ],
+        [
+          223,
+          511
+        ]
+      ],
+      "margin_max": 0.09030723571777344,
+      "margin_median": 0.04911351203918457,
+      "margin_min": 0.019110918045043945,
+      "orientation": "Undrivable->Road",
+      "pair_id": 596,
+      "rival_id": 0,
+      "segment_pixel_count": 5,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          175,
+          244
+        ],
+        [
+          175,
+          243
+        ],
+        [
+          175,
+          245
+        ],
+        [
+          175,
+          242
+        ]
+      ],
+      "margin_max": 0.4560997486114502,
+      "margin_median": 0.051794588565826416,
+      "margin_min": 0.049602389335632324,
+      "orientation": "Undrivable->Movable",
+      "pair_id": 593,
+      "rival_id": 3,
+      "segment_pixel_count": 4,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          178,
+          160
+        ],
+        [
+          177,
+          160
+        ],
+        [
+          178,
+          159
+        ],
+        [
+          176,
+          160
+        ]
+      ],
+      "margin_max": 0.3192262649536133,
+      "margin_median": 0.05527067184448242,
+      "margin_min": 0.01940774917602539,
+      "orientation": "Movable->Undrivable",
+      "pair_id": 592,
+      "rival_id": 2,
+      "segment_pixel_count": 4,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          176,
+          246
+        ],
+        [
+          176,
+          247
+        ],
+        [
+          176,
+          248
+        ]
+      ],
+      "margin_max": 0.058199524879455566,
+      "margin_median": 0.0561065673828125,
+      "margin_min": 0.026709794998168945,
+      "orientation": "Undrivable->Road",
+      "pair_id": 599,
+      "rival_id": 0,
+      "segment_pixel_count": 3,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          176,
+          246
+        ],
+        [
+          176,
+          245
+        ],
+        [
+          176,
+          247
+        ],
+        [
+          176,
+          244
+        ],
+        [
+          176,
+          243
+        ],
+        [
+          176,
+          242
+        ]
+      ],
+      "margin_max": 0.23559236526489258,
+      "margin_median": 0.05930638313293457,
+      "margin_min": 0.004220247268676758,
+      "orientation": "Road->Undrivable",
+      "pair_id": 593,
+      "rival_id": 2,
+      "segment_pixel_count": 6,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          172,
+          262
+        ],
+        [
+          172,
+          263
+        ],
+        [
+          172,
+          264
+        ]
+      ],
+      "margin_max": 0.08464288711547852,
+      "margin_median": 0.06039595603942871,
+      "margin_min": 0.04131650924682617,
+      "orientation": "Movable->Undrivable",
+      "pair_id": 595,
+      "rival_id": 2,
+      "segment_pixel_count": 3,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          181,
+          261
+        ],
+        [
+          181,
+          262
+        ],
+        [
+          181,
+          263
+        ],
+        [
+          181,
+          264
+        ],
+        [
+          181,
+          265
+        ]
+      ],
+      "margin_max": 0.15021991729736328,
+      "margin_median": 0.06080985069274902,
+      "margin_min": 0.027653217315673828,
+      "orientation": "Movable->Road",
+      "pair_id": 594,
+      "rival_id": 0,
+      "segment_pixel_count": 5,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          222,
+          203
+        ],
+        [
+          222,
+          204
+        ],
+        [
+          221,
+          203
+        ]
+      ],
+      "margin_max": 0.12544918060302734,
+      "margin_median": 0.06353902816772461,
+      "margin_min": 0.030941009521484375,
+      "orientation": "Lane->Road",
+      "pair_id": 599,
+      "rival_id": 0,
+      "segment_pixel_count": 3,
+      "winner_id": 1
+    },
+    {
+      "coordinates_yx": [
+        [
+          174,
+          257
+        ],
+        [
+          174,
+          258
+        ],
+        [
+          174,
+          259
+        ]
+      ],
+      "margin_max": 0.11095035076141357,
+      "margin_median": 0.06598174571990967,
+      "margin_min": 0.02304518222808838,
+      "orientation": "Undrivable->Movable",
+      "pair_id": 596,
+      "rival_id": 3,
+      "segment_pixel_count": 3,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          176,
+          234
+        ],
+        [
+          176,
+          235
+        ],
+        [
+          176,
+          236
+        ]
+      ],
+      "margin_max": 0.1677933931350708,
+      "margin_median": 0.06600487232208252,
+      "margin_min": 0.040215134620666504,
+      "orientation": "Movable->Road",
+      "pair_id": 599,
+      "rival_id": 0,
+      "segment_pixel_count": 3,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          235,
+          507
+        ],
+        [
+          234,
+          507
+        ],
+        [
+          233,
+          507
+        ],
+        [
+          232,
+          507
+        ],
+        [
+          231,
+          507
+        ],
+        [
+          230,
+          507
+        ],
+        [
+          229,
+          507
+        ]
+      ],
+      "margin_max": 0.14893341064453125,
+      "margin_median": 0.06850957870483398,
+      "margin_min": 0.00942683219909668,
+      "orientation": "Movable->Road",
+      "pair_id": 595,
+      "rival_id": 0,
+      "segment_pixel_count": 7,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          263,
+          504
+        ],
+        [
+          263,
+          505
+        ],
+        [
+          263,
+          503
+        ],
+        [
+          263,
+          506
+        ],
+        [
+          263,
+          502
+        ],
+        [
+          263,
+          501
+        ]
+      ],
+      "margin_max": 0.10618925094604492,
+      "margin_median": 0.06872677803039551,
+      "margin_min": 0.042217254638671875,
+      "orientation": "Road->Movable",
+      "pair_id": 592,
+      "rival_id": 3,
+      "segment_pixel_count": 6,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          217,
+          509
+        ],
+        [
+          217,
+          510
+        ],
+        [
+          217,
+          511
+        ]
+      ],
+      "margin_max": 0.08337581157684326,
+      "margin_median": 0.07299315929412842,
+      "margin_min": 0.054325222969055176,
+      "orientation": "Undrivable->Movable",
+      "pair_id": 595,
+      "rival_id": 3,
+      "segment_pixel_count": 3,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          172,
+          238
+        ],
+        [
+          172,
+          239
+        ],
+        [
+          172,
+          240
+        ],
+        [
+          172,
+          241
+        ],
+        [
+          172,
+          242
+        ]
+      ],
+      "margin_max": 0.31355953216552734,
+      "margin_median": 0.07475972175598145,
+      "margin_min": 0.006302595138549805,
+      "orientation": "Undrivable->Movable",
+      "pair_id": 597,
+      "rival_id": 3,
+      "segment_pixel_count": 5,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          275,
+          410
+        ],
+        [
+          275,
+          409
+        ],
+        [
+          275,
+          408
+        ],
+        [
+          275,
+          407
+        ]
+      ],
+      "margin_max": 0.10966062545776367,
+      "margin_median": 0.0750892162322998,
+      "margin_min": 0.03279733657836914,
+      "orientation": "Lane->Road",
+      "pair_id": 594,
+      "rival_id": 0,
+      "segment_pixel_count": 4,
+      "winner_id": 1
+    },
+    {
+      "coordinates_yx": [
+        [
+          192,
+          140
+        ],
+        [
+          192,
+          139
+        ],
+        [
+          192,
+          141
+        ]
+      ],
+      "margin_max": 0.14162039756774902,
+      "margin_median": 0.07562518119812012,
+      "margin_min": 0.0692751407623291,
+      "orientation": "Road->Lane",
+      "pair_id": 592,
+      "rival_id": 1,
+      "segment_pixel_count": 3,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          208,
+          507
+        ],
+        [
+          208,
+          506
+        ],
+        [
+          208,
+          505
+        ]
+      ],
+      "margin_max": 0.10928225517272949,
+      "margin_median": 0.0760350227355957,
+      "margin_min": 0.016104936599731445,
+      "orientation": "Undrivable->Movable",
+      "pair_id": 594,
+      "rival_id": 3,
+      "segment_pixel_count": 3,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          174,
+          224
+        ],
+        [
+          174,
+          223
+        ],
+        [
+          174,
+          225
+        ],
+        [
+          174,
+          222
+        ]
+      ],
+      "margin_max": 0.21759867668151855,
+      "margin_median": 0.0793389081954956,
+      "margin_min": 0.027193903923034668,
+      "orientation": "Undrivable->Movable",
+      "pair_id": 592,
+      "rival_id": 3,
+      "segment_pixel_count": 4,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          212,
+          479
+        ],
+        [
+          212,
+          478
+        ],
+        [
+          212,
+          477
+        ],
+        [
+          212,
+          476
+        ]
+      ],
+      "margin_max": 0.21262264251708984,
+      "margin_median": 0.08045947551727295,
+      "margin_min": 0.0021965503692626953,
+      "orientation": "Road->Undrivable",
+      "pair_id": 599,
+      "rival_id": 2,
+      "segment_pixel_count": 4,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          239,
+          354
+        ],
+        [
+          239,
+          355
+        ],
+        [
+          239,
+          356
+        ],
+        [
+          238,
+          356
+        ],
+        [
+          237,
+          356
+        ]
+      ],
+      "margin_max": 0.2729496955871582,
+      "margin_median": 0.0829625129699707,
+      "margin_min": 0.04291725158691406,
+      "orientation": "Lane->Road",
+      "pair_id": 598,
+      "rival_id": 0,
+      "segment_pixel_count": 5,
+      "winner_id": 1
+    },
+    {
+      "coordinates_yx": [
+        [
+          290,
+          153
+        ],
+        [
+          290,
+          154
+        ],
+        [
+          290,
+          155
+        ],
+        [
+          290,
+          156
+        ],
+        [
+          290,
+          157
+        ],
+        [
+          290,
+          158
+        ],
+        [
+          290,
+          159
+        ],
+        [
+          290,
+          160
+        ],
+        [
+          290,
+          161
+        ],
+        [
+          290,
+          162
+        ],
+        [
+          290,
+          163
+        ],
+        [
+          290,
+          164
+        ],
+        [
+          290,
+          165
+        ],
+        [
+          290,
+          166
+        ]
+      ],
+      "margin_max": 0.11838912963867188,
+      "margin_median": 0.08321881294250488,
+      "margin_min": 0.017937183380126953,
+      "orientation": "Road->MyCar",
+      "pair_id": 598,
+      "rival_id": 4,
+      "segment_pixel_count": 14,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          265,
+          481
+        ],
+        [
+          265,
+          482
+        ],
+        [
+          265,
+          483
+        ],
+        [
+          265,
+          484
+        ],
+        [
+          265,
+          485
+        ],
+        [
+          265,
+          486
+        ],
+        [
+          265,
+          487
+        ]
+      ],
+      "margin_max": 0.47519540786743164,
+      "margin_median": 0.08403730392456055,
+      "margin_min": 0.0551910400390625,
+      "orientation": "Movable->Road",
+      "pair_id": 592,
+      "rival_id": 0,
+      "segment_pixel_count": 7,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          287,
+          442
+        ],
+        [
+          287,
+          441
+        ],
+        [
+          287,
+          440
+        ],
+        [
+          287,
+          439
+        ],
+        [
+          287,
+          438
+        ],
+        [
+          287,
+          437
+        ],
+        [
+          287,
+          436
+        ],
+        [
+          287,
+          435
+        ],
+        [
+          287,
+          434
+        ],
+        [
+          287,
+          433
+        ],
+        [
+          287,
+          432
+        ]
+      ],
+      "margin_max": 0.13223934173583984,
+      "margin_median": 0.08464241027832031,
+      "margin_min": 0.0041961669921875,
+      "orientation": "Road->MyCar",
+      "pair_id": 592,
+      "rival_id": 4,
+      "segment_pixel_count": 11,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          217,
+          494
+        ],
+        [
+          217,
+          495
+        ],
+        [
+          217,
+          496
+        ]
+      ],
+      "margin_max": 0.18093371391296387,
+      "margin_median": 0.0852046012878418,
+      "margin_min": 0.0005452632904052734,
+      "orientation": "Undrivable->Road",
+      "pair_id": 598,
+      "rival_id": 0,
+      "segment_pixel_count": 3,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          221,
+          508
+        ],
+        [
+          221,
+          509
+        ],
+        [
+          221,
+          507
+        ]
+      ],
+      "margin_max": 0.15325331687927246,
+      "margin_median": 0.08590102195739746,
+      "margin_min": 0.08541297912597656,
+      "orientation": "Road->Undrivable",
+      "pair_id": 598,
+      "rival_id": 2,
+      "segment_pixel_count": 3,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          287,
+          424
+        ],
+        [
+          287,
+          425
+        ],
+        [
+          287,
+          426
+        ],
+        [
+          287,
+          427
+        ],
+        [
+          287,
+          428
+        ]
+      ],
+      "margin_max": 0.14314055442810059,
+      "margin_median": 0.08601021766662598,
+      "margin_min": 0.0014581680297851562,
+      "orientation": "MyCar->Road",
+      "pair_id": 593,
+      "rival_id": 0,
+      "segment_pixel_count": 5,
+      "winner_id": 4
+    },
+    {
+      "coordinates_yx": [
+        [
+          214,
+          477
+        ],
+        [
+          214,
+          478
+        ],
+        [
+          214,
+          479
+        ],
+        [
+          214,
+          480
+        ],
+        [
+          214,
+          481
+        ],
+        [
+          214,
+          482
+        ]
+      ],
+      "margin_max": 0.23824703693389893,
+      "margin_median": 0.08689475059509277,
+      "margin_min": 0.049939632415771484,
+      "orientation": "Undrivable->Road",
+      "pair_id": 593,
+      "rival_id": 0,
+      "segment_pixel_count": 6,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          181,
+          264
+        ],
+        [
+          181,
+          265
+        ],
+        [
+          181,
+          266
+        ],
+        [
+          181,
+          267
+        ]
+      ],
+      "margin_max": 0.519747257232666,
+      "margin_median": 0.09580826759338379,
+      "margin_min": 0.07539224624633789,
+      "orientation": "Road->Movable",
+      "pair_id": 597,
+      "rival_id": 3,
+      "segment_pixel_count": 4,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          176,
+          240
+        ],
+        [
+          176,
+          239
+        ],
+        [
+          176,
+          241
+        ],
+        [
+          176,
+          238
+        ],
+        [
+          176,
+          237
+        ]
+      ],
+      "margin_max": 0.16510009765625,
+      "margin_median": 0.09780776500701904,
+      "margin_min": 0.011749505996704102,
+      "orientation": "Road->Movable",
+      "pair_id": 599,
+      "rival_id": 3,
+      "segment_pixel_count": 5,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          184,
+          116
+        ],
+        [
+          184,
+          117
+        ],
+        [
+          184,
+          118
+        ]
+      ],
+      "margin_max": 0.10996866226196289,
+      "margin_median": 0.10333871841430664,
+      "margin_min": 0.04591965675354004,
+      "orientation": "Movable->Undrivable",
+      "pair_id": 596,
+      "rival_id": 2,
+      "segment_pixel_count": 3,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          220,
+          495
+        ],
+        [
+          219,
+          495
+        ],
+        [
+          218,
+          495
+        ],
+        [
+          217,
+          495
+        ]
+      ],
+      "margin_max": 0.1266641616821289,
+      "margin_median": 0.10908949375152588,
+      "margin_min": 0.0515594482421875,
+      "orientation": "Road->Movable",
+      "pair_id": 594,
+      "rival_id": 3,
+      "segment_pixel_count": 4,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          190,
+          241
+        ],
+        [
+          191,
+          241
+        ],
+        [
+          191,
+          240
+        ]
+      ],
+      "margin_max": 0.24718332290649414,
+      "margin_median": 0.11297369003295898,
+      "margin_min": 0.05092954635620117,
+      "orientation": "Lane->Road",
+      "pair_id": 595,
+      "rival_id": 0,
+      "segment_pixel_count": 3,
+      "winner_id": 1
+    },
+    {
+      "coordinates_yx": [
+        [
+          283,
+          299
+        ],
+        [
+          283,
+          300
+        ],
+        [
+          283,
+          301
+        ],
+        [
+          283,
+          302
+        ],
+        [
+          283,
+          303
+        ],
+        [
+          283,
+          304
+        ],
+        [
+          283,
+          305
+        ],
+        [
+          283,
+          306
+        ],
+        [
+          283,
+          307
+        ],
+        [
+          283,
+          308
+        ],
+        [
+          283,
+          309
+        ],
+        [
+          283,
+          310
+        ],
+        [
+          283,
+          311
+        ],
+        [
+          283,
+          312
+        ],
+        [
+          283,
+          313
+        ],
+        [
+          283,
+          314
+        ],
+        [
+          283,
+          315
+        ],
+        [
+          283,
+          316
+        ],
+        [
+          283,
+          317
+        ],
+        [
+          283,
+          318
+        ],
+        [
+          283,
+          319
+        ],
+        [
+          283,
+          320
+        ]
+      ],
+      "margin_max": 0.16919469833374023,
+      "margin_median": 0.11431527137756348,
+      "margin_min": 0.01291799545288086,
+      "orientation": "MyCar->Road",
+      "pair_id": 595,
+      "rival_id": 0,
+      "segment_pixel_count": 22,
+      "winner_id": 4
+    },
+    {
+      "coordinates_yx": [
+        [
+          289,
+          122
+        ],
+        [
+          289,
+          121
+        ],
+        [
+          289,
+          123
+        ],
+        [
+          289,
+          120
+        ],
+        [
+          289,
+          124
+        ],
+        [
+          289,
+          119
+        ],
+        [
+          289,
+          125
+        ],
+        [
+          289,
+          118
+        ]
+      ],
+      "margin_max": 0.4282722473144531,
+      "margin_median": 0.11467230319976807,
+      "margin_min": 0.06612348556518555,
+      "orientation": "MyCar->Lane",
+      "pair_id": 597,
+      "rival_id": 1,
+      "segment_pixel_count": 8,
+      "winner_id": 4
+    },
+    {
+      "coordinates_yx": [
+        [
+          293,
+          3
+        ],
+        [
+          293,
+          2
+        ],
+        [
+          293,
+          1
+        ],
+        [
+          293,
+          0
+        ]
+      ],
+      "margin_max": 0.22846770286560059,
+      "margin_median": 0.12399935722351074,
+      "margin_min": 0.006447792053222656,
+      "orientation": "Road->MyCar",
+      "pair_id": 597,
+      "rival_id": 4,
+      "segment_pixel_count": 4,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          286,
+          414
+        ],
+        [
+          286,
+          415
+        ],
+        [
+          286,
+          416
+        ],
+        [
+          286,
+          417
+        ],
+        [
+          286,
+          418
+        ],
+        [
+          286,
+          419
+        ],
+        [
+          286,
+          420
+        ],
+        [
+          286,
+          421
+        ],
+        [
+          286,
+          422
+        ],
+        [
+          286,
+          423
+        ],
+        [
+          286,
+          424
+        ],
+        [
+          286,
+          425
+        ],
+        [
+          286,
+          426
+        ],
+        [
+          286,
+          427
+        ],
+        [
+          286,
+          428
+        ],
+        [
+          286,
+          429
+        ],
+        [
+          286,
+          430
+        ],
+        [
+          286,
+          431
+        ],
+        [
+          286,
+          432
+        ],
+        [
+          286,
+          433
+        ],
+        [
+          286,
+          434
+        ],
+        [
+          286,
+          435
+        ],
+        [
+          286,
+          436
+        ],
+        [
+          286,
+          437
+        ]
+      ],
+      "margin_max": 0.2470254898071289,
+      "margin_median": 0.12979888916015625,
+      "margin_min": 0.0003504753112792969,
+      "orientation": "Road->MyCar",
+      "pair_id": 599,
+      "rival_id": 4,
+      "segment_pixel_count": 24,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          270,
+          509
+        ],
+        [
+          270,
+          508
+        ],
+        [
+          270,
+          510
+        ],
+        [
+          270,
+          507
+        ],
+        [
+          270,
+          511
+        ],
+        [
+          270,
+          506
+        ],
+        [
+          270,
+          505
+        ],
+        [
+          270,
+          504
+        ]
+      ],
+      "margin_max": 0.3223752975463867,
+      "margin_median": 0.13619005680084229,
+      "margin_min": 0.004741191864013672,
+      "orientation": "Road->Movable",
+      "pair_id": 593,
+      "rival_id": 3,
+      "segment_pixel_count": 8,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          177,
+          231
+        ],
+        [
+          177,
+          232
+        ],
+        [
+          177,
+          233
+        ]
+      ],
+      "margin_max": 0.404300332069397,
+      "margin_median": 0.1375032663345337,
+      "margin_min": 0.01748514175415039,
+      "orientation": "Road->Undrivable",
+      "pair_id": 595,
+      "rival_id": 2,
+      "segment_pixel_count": 3,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          182,
+          196
+        ],
+        [
+          182,
+          195
+        ],
+        [
+          182,
+          194
+        ],
+        [
+          182,
+          193
+        ],
+        [
+          182,
+          192
+        ],
+        [
+          182,
+          191
+        ],
+        [
+          182,
+          190
+        ],
+        [
+          182,
+          189
+        ],
+        [
+          182,
+          188
+        ],
+        [
+          182,
+          187
+        ],
+        [
+          182,
+          186
+        ]
+      ],
+      "margin_max": 0.749727725982666,
+      "margin_median": 0.14034605026245117,
+      "margin_min": 0.03683900833129883,
+      "orientation": "Undrivable->Road",
+      "pair_id": 595,
+      "rival_id": 0,
+      "segment_pixel_count": 11,
+      "winner_id": 2
+    },
+    {
+      "coordinates_yx": [
+        [
+          270,
+          404
+        ],
+        [
+          269,
+          404
+        ],
+        [
+          271,
+          404
+        ]
+      ],
+      "margin_max": 0.16443300247192383,
+      "margin_median": 0.14614439010620117,
+      "margin_min": 0.055754661560058594,
+      "orientation": "Road->Lane",
+      "pair_id": 593,
+      "rival_id": 1,
+      "segment_pixel_count": 3,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          287,
+          435
+        ],
+        [
+          287,
+          436
+        ],
+        [
+          287,
+          437
+        ],
+        [
+          287,
+          438
+        ],
+        [
+          287,
+          439
+        ],
+        [
+          287,
+          440
+        ],
+        [
+          287,
+          441
+        ]
+      ],
+      "margin_max": 0.22371530532836914,
+      "margin_median": 0.14724302291870117,
+      "margin_min": 0.004214763641357422,
+      "orientation": "Road->MyCar",
+      "pair_id": 596,
+      "rival_id": 4,
+      "segment_pixel_count": 7,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          179,
+          91
+        ],
+        [
+          179,
+          90
+        ],
+        [
+          180,
+          91
+        ],
+        [
+          179,
+          89
+        ],
+        [
+          180,
+          90
+        ],
+        [
+          180,
+          92
+        ],
+        [
+          179,
+          88
+        ]
+      ],
+      "margin_max": 0.24550437927246094,
+      "margin_median": 0.1472640037536621,
+      "margin_min": 0.025037765502929688,
+      "orientation": "Movable->Undrivable",
+      "pair_id": 599,
+      "rival_id": 2,
+      "segment_pixel_count": 7,
+      "winner_id": 3
+    },
+    {
+      "coordinates_yx": [
+        [
+          180,
+          253
+        ],
+        [
+          180,
+          254
+        ],
+        [
+          180,
+          252
+        ],
+        [
+          180,
+          251
+        ]
+      ],
+      "margin_max": 0.4886178970336914,
+      "margin_median": 0.14942777156829834,
+      "margin_min": 0.03676199913024902,
+      "orientation": "Road->Lane",
+      "pair_id": 595,
+      "rival_id": 1,
+      "segment_pixel_count": 4,
+      "winner_id": 0
+    },
+    {
+      "coordinates_yx": [
+        [
+          181,
+          258
+        ],
+        [
+          181,
+          259
+        ],
+        [
+          181,
+          260
+        ],
+        [
+          181,
+          261
+        ],
+        [
+          181,
+          262
+        ],
+        [
+          181,
+          263
+        ],
+        [
+          181,
+          264
+        ],
+        [
+          181,
+          265
+        ],
+        [
+          181,
+          266
+        ]
+      ],
+      "margin_max": 0.2295985221862793,
+      "margin_median": 0.15049219131469727,
+      "margin_min": 0.017470598220825195,
+      "orientation": "Movable->Road",
+      "pair_id": 596,
+      "rival_id": 0,
+      "segment_pixel_count": 9,
+      "winner_id": 3
+    }
+  ],
+  "telemetry_accumulator": {
+    "frame_count": 8,
+    "layers": {
+      "decoder.blocks.0": {
+        "boundary_energy_sum": 232.96564901563417,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 5069.699875483874,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          256,
+          24,
+          32
+        ]
+      },
+      "decoder.blocks.0.skip": {
+        "boundary_energy_sum": 12839.337462802396,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 197736.1510810221,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          120,
+          24,
+          32
+        ]
+      },
+      "decoder.blocks.1": {
+        "boundary_energy_sum": 965.3168981102951,
+        "boundary_sample_count": 544,
+        "interior_energy_sum": 21784.57523081103,
+        "interior_sample_count": 24032,
+        "present": true,
+        "shape": [
+          1,
+          128,
+          48,
+          64
+        ]
+      },
+      "decoder.blocks.1.skip": {
+        "boundary_energy_sum": 60308.75338597626,
+        "boundary_sample_count": 544,
+        "interior_energy_sum": 875299.1121221588,
+        "interior_sample_count": 24032,
+        "present": true,
+        "shape": [
+          1,
+          48,
+          48,
+          64
+        ]
+      },
+      "decoder.blocks.2": {
+        "boundary_energy_sum": 2968.501765519889,
+        "boundary_sample_count": 2267,
+        "interior_energy_sum": 68702.54873755551,
+        "interior_sample_count": 96037,
+        "present": true,
+        "shape": [
+          1,
+          64,
+          96,
+          128
+        ]
+      },
+      "decoder.blocks.2.skip": {
+        "boundary_energy_sum": 480242.6487754873,
+        "boundary_sample_count": 2267,
+        "interior_energy_sum": 7372975.6627556775,
+        "interior_sample_count": 96037,
+        "present": true,
+        "shape": [
+          1,
+          24,
+          96,
+          128
+        ]
+      },
+      "decoder.blocks.3": {
+        "boundary_energy_sum": 7775.374733841683,
+        "boundary_sample_count": 8708,
+        "interior_energy_sum": 179678.57681384587,
+        "interior_sample_count": 384508,
+        "present": true,
+        "shape": [
+          1,
+          32,
+          192,
+          256
+        ]
+      },
+      "decoder.blocks.3.skip": {
+        "boundary_energy_sum": 854530.1058672299,
+        "boundary_sample_count": 8708,
+        "interior_energy_sum": 15131958.010020914,
+        "interior_sample_count": 384508,
+        "present": true,
+        "shape": [
+          1,
+          16,
+          192,
+          256
+        ]
+      },
+      "decoder.blocks.4": {
+        "boundary_energy_sum": 41164.52960497792,
+        "boundary_sample_count": 34833,
+        "interior_energy_sum": 960760.8918117072,
+        "interior_sample_count": 1538031,
+        "present": true,
+        "shape": [
+          1,
+          16,
+          384,
+          512
+        ]
+      },
+      "decoder.blocks.4.skip": {
+        "present": false,
+        "reason": "decoder block has no skip connection"
+      },
+      "encoder.model.blocks.0.0": {
+        "boundary_energy_sum": 400235.1987750161,
+        "boundary_sample_count": 8708,
+        "interior_energy_sum": 13366477.75253491,
+        "interior_sample_count": 384508,
+        "present": true,
+        "shape": [
+          1,
+          16,
+          192,
+          256
+        ]
+      },
+      "encoder.model.blocks.0.0.se.post": {
+        "boundary_energy_sum": 4727.165900757625,
+        "boundary_sample_count": 8708,
+        "interior_energy_sum": 147821.95387284472,
+        "interior_sample_count": 384508,
+        "present": true,
+        "shape": [
+          1,
+          32,
+          192,
+          256
+        ]
+      },
+      "encoder.model.blocks.0.0.se.pre": {
+        "boundary_energy_sum": 81622.52904731393,
+        "boundary_sample_count": 8708,
+        "interior_energy_sum": 1609499.988042526,
+        "interior_sample_count": 384508,
+        "present": true,
+        "shape": [
+          1,
+          32,
+          192,
+          256
+        ]
+      },
+      "encoder.model.blocks.0.1": {
+        "boundary_energy_sum": 854530.1058672299,
+        "boundary_sample_count": 8708,
+        "interior_energy_sum": 15131958.010020914,
+        "interior_sample_count": 384508,
+        "present": true,
+        "shape": [
+          1,
+          16,
+          192,
+          256
+        ]
+      },
+      "encoder.model.blocks.0.1.se.post": {
+        "boundary_energy_sum": 62445.73992800685,
+        "boundary_sample_count": 8708,
+        "interior_energy_sum": 2395580.7547365567,
+        "interior_sample_count": 384508,
+        "present": true,
+        "shape": [
+          1,
+          16,
+          192,
+          256
+        ]
+      },
+      "encoder.model.blocks.0.1.se.pre": {
+        "boundary_energy_sum": 142698.79427385985,
+        "boundary_sample_count": 8708,
+        "interior_energy_sum": 4482126.759343189,
+        "interior_sample_count": 384508,
+        "present": true,
+        "shape": [
+          1,
+          16,
+          192,
+          256
+        ]
+      },
+      "encoder.model.blocks.1.0": {
+        "boundary_energy_sum": 227660.18015503444,
+        "boundary_sample_count": 2267,
+        "interior_energy_sum": 2248670.762273654,
+        "interior_sample_count": 96037,
+        "present": true,
+        "shape": [
+          1,
+          24,
+          96,
+          128
+        ]
+      },
+      "encoder.model.blocks.1.0.se.post": {
+        "boundary_energy_sum": 62502.7466582074,
+        "boundary_sample_count": 2267,
+        "interior_energy_sum": 1254141.930667022,
+        "interior_sample_count": 96037,
+        "present": true,
+        "shape": [
+          1,
+          96,
+          96,
+          128
+        ]
+      },
+      "encoder.model.blocks.1.0.se.pre": {
+        "boundary_energy_sum": 96163.72353240954,
+        "boundary_sample_count": 2267,
+        "interior_energy_sum": 2093703.6697431316,
+        "interior_sample_count": 96037,
+        "present": true,
+        "shape": [
+          1,
+          96,
+          96,
+          128
+        ]
+      },
+      "encoder.model.blocks.1.1": {
+        "boundary_energy_sum": 351134.2321346754,
+        "boundary_sample_count": 2267,
+        "interior_energy_sum": 4455759.276616756,
+        "interior_sample_count": 96037,
+        "present": true,
+        "shape": [
+          1,
+          24,
+          96,
+          128
+        ]
+      },
+      "encoder.model.blocks.1.1.se.post": {
+        "boundary_energy_sum": 2607.6721220810477,
+        "boundary_sample_count": 2267,
+        "interior_energy_sum": 51147.09573820335,
+        "interior_sample_count": 96037,
+        "present": true,
+        "shape": [
+          1,
+          144,
+          96,
+          128
+        ]
+      },
+      "encoder.model.blocks.1.1.se.pre": {
+        "boundary_energy_sum": 8579.318790405623,
+        "boundary_sample_count": 2267,
+        "interior_energy_sum": 128183.72573183793,
+        "interior_sample_count": 96037,
+        "present": true,
+        "shape": [
+          1,
+          144,
+          96,
+          128
+        ]
+      },
+      "encoder.model.blocks.1.2": {
+        "boundary_energy_sum": 480242.6487754873,
+        "boundary_sample_count": 2267,
+        "interior_energy_sum": 7372975.6627556775,
+        "interior_sample_count": 96037,
+        "present": true,
+        "shape": [
+          1,
+          24,
+          96,
+          128
+        ]
+      },
+      "encoder.model.blocks.1.2.se.post": {
+        "boundary_energy_sum": 1740.318236875201,
+        "boundary_sample_count": 2267,
+        "interior_energy_sum": 24153.77634805056,
+        "interior_sample_count": 96037,
+        "present": true,
+        "shape": [
+          1,
+          144,
+          96,
+          128
+        ]
+      },
+      "encoder.model.blocks.1.2.se.pre": {
+        "boundary_energy_sum": 15557.82048464731,
+        "boundary_sample_count": 2267,
+        "interior_energy_sum": 115044.55043499371,
+        "interior_sample_count": 96037,
+        "present": true,
+        "shape": [
+          1,
+          144,
+          96,
+          128
+        ]
+      },
+      "encoder.model.blocks.2.0": {
+        "boundary_energy_sum": 46862.25800929418,
+        "boundary_sample_count": 544,
+        "interior_energy_sum": 560457.2238443778,
+        "interior_sample_count": 24032,
+        "present": true,
+        "shape": [
+          1,
+          48,
+          48,
+          64
+        ]
+      },
+      "encoder.model.blocks.2.0.se.post": {
+        "boundary_energy_sum": 1206.3961786522796,
+        "boundary_sample_count": 544,
+        "interior_energy_sum": 35914.24065711766,
+        "interior_sample_count": 24032,
+        "present": true,
+        "shape": [
+          1,
+          144,
+          48,
+          64
+        ]
+      },
+      "encoder.model.blocks.2.0.se.pre": {
+        "boundary_energy_sum": 7046.225005865804,
+        "boundary_sample_count": 544,
+        "interior_energy_sum": 112699.70959233347,
+        "interior_sample_count": 24032,
+        "present": true,
+        "shape": [
+          1,
+          144,
+          48,
+          64
+        ]
+      },
+      "encoder.model.blocks.2.1": {
+        "boundary_energy_sum": 51064.58819006164,
+        "boundary_sample_count": 544,
+        "interior_energy_sum": 670850.2096609488,
+        "interior_sample_count": 24032,
+        "present": true,
+        "shape": [
+          1,
+          48,
+          48,
+          64
+        ]
+      },
+      "encoder.model.blocks.2.1.se.post": {
+        "boundary_energy_sum": 239.0296045965259,
+        "boundary_sample_count": 544,
+        "interior_energy_sum": 4823.4774149233035,
+        "interior_sample_count": 24032,
+        "present": true,
+        "shape": [
+          1,
+          288,
+          48,
+          64
+        ]
+      },
+      "encoder.model.blocks.2.1.se.pre": {
+        "boundary_energy_sum": 2856.3756764909745,
+        "boundary_sample_count": 544,
+        "interior_energy_sum": 25991.086176337456,
+        "interior_sample_count": 24032,
+        "present": true,
+        "shape": [
+          1,
+          288,
+          48,
+          64
+        ]
+      },
+      "encoder.model.blocks.2.2": {
+        "boundary_energy_sum": 60308.75338597626,
+        "boundary_sample_count": 544,
+        "interior_energy_sum": 875299.1121221588,
+        "interior_sample_count": 24032,
+        "present": true,
+        "shape": [
+          1,
+          48,
+          48,
+          64
+        ]
+      },
+      "encoder.model.blocks.2.2.se.post": {
+        "boundary_energy_sum": 89.83057127439395,
+        "boundary_sample_count": 544,
+        "interior_energy_sum": 1697.1097154288464,
+        "interior_sample_count": 24032,
+        "present": true,
+        "shape": [
+          1,
+          288,
+          48,
+          64
+        ]
+      },
+      "encoder.model.blocks.2.2.se.pre": {
+        "boundary_energy_sum": 2661.92510938698,
+        "boundary_sample_count": 544,
+        "interior_energy_sum": 22018.244058033095,
+        "interior_sample_count": 24032,
+        "present": true,
+        "shape": [
+          1,
+          288,
+          48,
+          64
+        ]
+      },
+      "encoder.model.blocks.3.0": {
+        "boundary_energy_sum": 10136.953491583148,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 126078.46859468658,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          88,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.3.0.se.post": {
+        "boundary_energy_sum": 217.66301772220515,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 6871.232159050884,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          288,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.3.0.se.pre": {
+        "boundary_energy_sum": 1033.2388336240062,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 19734.17990929687,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          288,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.3.1": {
+        "boundary_energy_sum": 10779.790619338357,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 142288.4999749558,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          88,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.3.1.se.post": {
+        "boundary_energy_sum": 23.10344754107246,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 403.9645859856571,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          528,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.3.1.se.pre": {
+        "boundary_energy_sum": 625.4643923398829,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 5841.121752398968,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          528,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.3.2": {
+        "boundary_energy_sum": 12137.64656073977,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 168282.27460198136,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          88,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.3.2.se.post": {
+        "boundary_energy_sum": 14.121147932730247,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 314.7905901568405,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          528,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.3.2.se.pre": {
+        "boundary_energy_sum": 512.5124959308334,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 4752.517892709643,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          528,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.3.3": {
+        "boundary_energy_sum": 13103.566026805289,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 189392.54324496828,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          88,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.3.3.se.post": {
+        "boundary_energy_sum": 12.995308863717018,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 235.82293986810907,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          528,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.3.3.se.pre": {
+        "boundary_energy_sum": 465.95176843705434,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 4225.025409396345,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          528,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.0": {
+        "boundary_energy_sum": 8742.882438266548,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 123649.93606210109,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          120,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.0.se.post": {
+        "boundary_energy_sum": 53.80768466419321,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 1137.0990215717875,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          528,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.0.se.pre": {
+        "boundary_energy_sum": 306.9768653834644,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 3589.1762660706463,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          528,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.1": {
+        "boundary_energy_sum": 10070.084510678667,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 148308.8866093543,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          120,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.1.se.post": {
+        "boundary_energy_sum": 27.759576045605105,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 407.3055179324091,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          720,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.1.se.pre": {
+        "boundary_energy_sum": 401.750800640589,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 5363.741632200419,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          720,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.2": {
+        "boundary_energy_sum": 11534.395333466031,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 174139.06684255126,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          120,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.2.se.post": {
+        "boundary_energy_sum": 27.477930734122037,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 470.2644203442009,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          720,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.2.se.pre": {
+        "boundary_energy_sum": 326.72564044541826,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 5334.370911838006,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          720,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.3": {
+        "boundary_energy_sum": 12839.337462802396,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 197736.1510810221,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          120,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.3.se.post": {
+        "boundary_energy_sum": 27.60572110933516,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 407.782074574872,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          720,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.4.3.se.pre": {
+        "boundary_energy_sum": 275.5515027775662,
+        "boundary_sample_count": 172,
+        "interior_energy_sum": 4137.248372097515,
+        "interior_sample_count": 5972,
+        "present": true,
+        "shape": [
+          1,
+          720,
+          24,
+          32
+        ]
+      },
+      "encoder.model.blocks.5.0": {
+        "boundary_energy_sum": 1591.0643681687925,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 27559.274435236523,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          208,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.0.se.post": {
+        "boundary_energy_sum": 36.85214805905784,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 884.0801223392396,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          720,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.0.se.pre": {
+        "boundary_energy_sum": 73.42189946107548,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 1650.1765401355497,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          720,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.1": {
+        "boundary_energy_sum": 1803.912947872268,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 32784.74097745219,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          208,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.1.se.post": {
+        "boundary_energy_sum": 7.331410109403559,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 143.11478079485283,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          1248,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.1.se.pre": {
+        "boundary_energy_sum": 60.470840197304454,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 1236.731891309835,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          1248,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.2": {
+        "boundary_energy_sum": 2061.0979371184535,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 38719.21229877099,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          208,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.2.se.post": {
+        "boundary_energy_sum": 6.015624511824963,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 125.14619900547912,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          1248,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.2.se.pre": {
+        "boundary_energy_sum": 62.37523984849071,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 1338.1304512927102,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          1248,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.3": {
+        "boundary_energy_sum": 2445.9978007546374,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 45698.31021590213,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          208,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.3.se.post": {
+        "boundary_energy_sum": 5.762159866262505,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 107.49684661252972,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          1248,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.3.se.pre": {
+        "boundary_energy_sum": 72.17476252050413,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 1291.6014262468307,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          1248,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.4": {
+        "boundary_energy_sum": 2864.8295296467136,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 54770.67970153029,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          208,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.4.se.post": {
+        "boundary_energy_sum": 5.640011532361497,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 115.18680019507872,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          1248,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.5.4.se.pre": {
+        "boundary_energy_sum": 58.13771306377029,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 1161.521460782063,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          1248,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.6.0": {
+        "boundary_energy_sum": 347.2677453429093,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 11111.231132490815,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          352,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.6.0.se.post": {
+        "boundary_energy_sum": 17.81615510371854,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 574.678259315393,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          1248,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.6.0.se.pre": {
+        "boundary_energy_sum": 52.100876770124856,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 1709.3551946474506,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          1248,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.6.1": {
+        "boundary_energy_sum": 587.1218002418644,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 16858.04436098905,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          352,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.6.1.se.post": {
+        "boundary_energy_sum": 2.242756875475939,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 51.81734144228116,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          2112,
+          12,
+          16
+        ]
+      },
+      "encoder.model.blocks.6.1.se.pre": {
+        "boundary_energy_sum": 58.56315466285362,
+        "boundary_sample_count": 50,
+        "interior_energy_sum": 1224.9016764837124,
+        "interior_sample_count": 1486,
+        "present": true,
+        "shape": [
+          1,
+          2112,
+          12,
+          16
+        ]
+      },
+      "encoder.model.conv_stem": {
+        "boundary_energy_sum": 228727883.2143884,
+        "boundary_sample_count": 8708,
+        "interior_energy_sum": 2654999169.914211,
+        "interior_sample_count": 384508,
+        "present": true,
+        "shape": [
+          1,
+          32,
+          192,
+          256
+        ]
+      },
+      "segmentation_head": {
+        "boundary_energy_sum": 1445634.073402599,
+        "boundary_sample_count": 34833,
+        "interior_energy_sum": 27580100.96660678,
+        "interior_sample_count": 1538031,
+        "present": true,
+        "shape": [
+          1,
+          5,
+          384,
+          512
+        ]
+      }
+    },
+    "per_class_logit_energy_sum": {
+      "Lane": 144.73389234754256,
+      "Movable": 136.82474966097365,
+      "MyCar": 192.18777401730645,
+      "Road": 182.09137089701983,
+      "Undrivable": 82.32482700968768
+    }
+  },
+  "verdict_scope": "official-video source cache, frozen CPU-Torch SegNet, declared pair window; telemetry only, not score authority"
+}

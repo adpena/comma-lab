@@ -1,0 +1,30 @@
+{
+  "batch_pairs": 16,
+  "checkpoint_policy": "atomic_preserve_each_batch_resume_by_sha",
+  "erf_pair_ids": [
+    0,
+    299,
+    599
+  ],
+  "gt_cache_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+  "inverse_camera_radius": 96,
+  "inverse_max_linf": 24,
+  "inverse_max_steps": 32,
+  "inverse_segment_count": 3,
+  "output_directory": ".omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723",
+  "pair_count": 600,
+  "promotion_eligible": false,
+  "research_only": true,
+  "run_id": "ddm_sn1_segnet_telemetry_asymmetry_n600_20260723",
+  "schema": "DDMSN1SegNetTelemetryAsymmetryConfigV1",
+  "score_claim": false,
+  "scratch_directory": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723",
+  "seed": 1234,
+  "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+  "torch_threads": 4,
+  "upstream_modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+  "upstream_root": "/Users/adpena/Projects/pact/upstream",
+  "video_path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+  "video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+}

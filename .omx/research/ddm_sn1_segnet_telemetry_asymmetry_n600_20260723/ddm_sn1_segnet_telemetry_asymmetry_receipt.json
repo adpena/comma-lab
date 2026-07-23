@@ -1,0 +1,1749 @@
+{
+  "axis": "[macOS-CPU frozen-SegNet advisory]",
+  "config": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/configs/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723.json",
+    "sha256": "7065587ae16f0652ec566198f5c2dff5d434c0cd1b1c63d724ec81f3f43ee1ac",
+    "typed": {
+      "batch_pairs": 16,
+      "checkpoint_policy": "atomic_preserve_each_batch_resume_by_sha",
+      "erf_pair_ids": [
+        0,
+        299,
+        599
+      ],
+      "gt_cache_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "inverse_camera_radius": 96,
+      "inverse_max_linf": 24,
+      "inverse_max_steps": 32,
+      "inverse_segment_count": 3,
+      "output_directory": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723",
+      "pair_count": 600,
+      "promotion_eligible": false,
+      "research_only": true,
+      "run_id": "ddm_sn1_segnet_telemetry_asymmetry_n600_20260723",
+      "schema": "DDMSN1SegNetTelemetryAsymmetryConfigV1",
+      "score_claim": false,
+      "scratch_directory": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723",
+      "seed": 1234,
+      "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+      "torch_threads": 4,
+      "upstream_modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "upstream_root": "/Users/adpena/Projects/pact/upstream",
+      "video_path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+      "video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    }
+  },
+  "first_rung": "feed the sided bounds into one e1 receiver candidate and price the realized inner/outer errors with SHA-current e2 costates before spending any bytes",
+  "implementation_identity": {
+    "bundle_sha256": "1d7c0b7386456ff7ca2b3de3d061bc079a2407005c3804cfafa186f73da26f5b",
+    "files": {
+      "runner": {
+        "bytes": 52699,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/tools/run_ddm_sn1_segnet_telemetry_asymmetry.py",
+        "sha256": "020dd1181cda527c4d4f3c90a0b3ae442641eb807f82b10e2660c68986758048"
+      },
+      "sided_tolerance": {
+        "bytes": 18607,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/optimization/ddm_sn1_sided_tolerance.py",
+        "sha256": "2659790fafa5d8cb039f5be94a171284e4f98a4fb0f99d37d5b375371cfe9967"
+      },
+      "telemetry": {
+        "bytes": 20457,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/src/tac/analysis/segnet_internal_telemetry.py",
+        "sha256": "8fa7454d1451b1fa50517e379a5980afe6e0987ce8d968fc82875791887f2bf4"
+      }
+    },
+    "schema": "ddm_sn1_implementation_identity.v1"
+  },
+  "lane_id": "ddm_sn1_segnet_telemetry_asymmetry",
+  "main_landing_review_required": true,
+  "measurement": {
+    "aggregate": {
+      "frame_count": 600,
+      "layer_boundary_energy": {
+        "decoder.blocks.0": {
+          "boundary_mean_square": 1.3104924494020938,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 1.5388511203525426,
+          "interior_mean_square": 0.8516044418266187,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            256,
+            24,
+            32
+          ]
+        },
+        "decoder.blocks.0.skip": {
+          "boundary_mean_square": 72.51021590118668,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.227467721659058,
+          "interior_mean_square": 32.552757194245565,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            120,
+            24,
+            32
+          ]
+        },
+        "decoder.blocks.1": {
+          "boundary_mean_square": 1.7518201086843896,
+          "boundary_sample_count": 39596,
+          "boundary_to_interior_energy_ratio": 1.9144916567818764,
+          "interior_mean_square": 0.9150314666970522,
+          "interior_sample_count": 1803604,
+          "present": true,
+          "shape": [
+            1,
+            128,
+            48,
+            64
+          ]
+        },
+        "decoder.blocks.1.skip": {
+          "boundary_mean_square": 101.81125775291629,
+          "boundary_sample_count": 39596,
+          "boundary_to_interior_energy_ratio": 2.8185599575835876,
+          "interior_mean_square": 36.121728572416565,
+          "interior_sample_count": 1803604,
+          "present": true,
+          "shape": [
+            1,
+            48,
+            48,
+            64
+          ]
+        },
+        "decoder.blocks.2": {
+          "boundary_mean_square": 1.375691880121107,
+          "boundary_sample_count": 158787,
+          "boundary_to_interior_energy_ratio": 1.912491865313755,
+          "interior_mean_square": 0.7193190753234483,
+          "interior_sample_count": 7214013,
+          "present": true,
+          "shape": [
+            1,
+            64,
+            96,
+            128
+          ]
+        },
+        "decoder.blocks.2.skip": {
+          "boundary_mean_square": 178.08205957410235,
+          "boundary_sample_count": 158787,
+          "boundary_to_interior_energy_ratio": 2.2981829754096483,
+          "interior_mean_square": 77.48819892913855,
+          "interior_sample_count": 7214013,
+          "present": true,
+          "shape": [
+            1,
+            24,
+            96,
+            128
+          ]
+        },
+        "decoder.blocks.3": {
+          "boundary_mean_square": 0.9399579905762182,
+          "boundary_sample_count": 637976,
+          "boundary_to_interior_energy_ratio": 1.993194445866821,
+          "interior_mean_square": 0.47158368945155255,
+          "interior_sample_count": 28853224,
+          "present": true,
+          "shape": [
+            1,
+            32,
+            192,
+            256
+          ]
+        },
+        "decoder.blocks.3.skip": {
+          "boundary_mean_square": 78.18533563616894,
+          "boundary_sample_count": 637976,
+          "boundary_to_interior_energy_ratio": 1.969036592847217,
+          "interior_mean_square": 39.70740610925536,
+          "interior_sample_count": 28853224,
+          "present": true,
+          "shape": [
+            1,
+            16,
+            192,
+            256
+          ]
+        },
+        "decoder.blocks.4": {
+          "boundary_mean_square": 1.2463348949587498,
+          "boundary_sample_count": 2551382,
+          "boundary_to_interior_energy_ratio": 2.0369561827321534,
+          "interior_mean_square": 0.6118614163251419,
+          "interior_sample_count": 115413418,
+          "present": true,
+          "shape": [
+            1,
+            16,
+            384,
+            512
+          ]
+        },
+        "decoder.blocks.4.skip": {
+          "present": false,
+          "reason": "decoder block has no skip connection"
+        },
+        "encoder.model.blocks.0.0": {
+          "boundary_mean_square": 38.781340829503506,
+          "boundary_sample_count": 637976,
+          "boundary_to_interior_energy_ratio": 1.0684830228775917,
+          "interior_mean_square": 36.29570147503074,
+          "interior_sample_count": 28853224,
+          "present": true,
+          "shape": [
+            1,
+            16,
+            192,
+            256
+          ]
+        },
+        "encoder.model.blocks.0.0.se.post": {
+          "boundary_mean_square": 0.49944964041165146,
+          "boundary_sample_count": 637976,
+          "boundary_to_interior_energy_ratio": 1.303115037474965,
+          "interior_mean_square": 0.3832736374368228,
+          "interior_sample_count": 28853224,
+          "present": true,
+          "shape": [
+            1,
+            32,
+            192,
+            256
+          ]
+        },
+        "encoder.model.blocks.0.0.se.pre": {
+          "boundary_mean_square": 7.699362759151158,
+          "boundary_sample_count": 637976,
+          "boundary_to_interior_energy_ratio": 1.798049461576398,
+          "interior_mean_square": 4.282063938553126,
+          "interior_sample_count": 28853224,
+          "present": true,
+          "shape": [
+            1,
+            32,
+            192,
+            256
+          ]
+        },
+        "encoder.model.blocks.0.1": {
+          "boundary_mean_square": 78.18533563616894,
+          "boundary_sample_count": 637976,
+          "boundary_to_interior_energy_ratio": 1.969036592847217,
+          "interior_mean_square": 39.70740610925536,
+          "interior_sample_count": 28853224,
+          "present": true,
+          "shape": [
+            1,
+            16,
+            192,
+            256
+          ]
+        },
+        "encoder.model.blocks.0.1.se.post": {
+          "boundary_mean_square": 6.701549090422609,
+          "boundary_sample_count": 637976,
+          "boundary_to_interior_energy_ratio": 1.0645774818780513,
+          "interior_mean_square": 6.295031789137806,
+          "interior_sample_count": 28853224,
+          "present": true,
+          "shape": [
+            1,
+            16,
+            192,
+            256
+          ]
+        },
+        "encoder.model.blocks.0.1.se.pre": {
+          "boundary_mean_square": 14.277712539854544,
+          "boundary_sample_count": 637976,
+          "boundary_to_interior_energy_ratio": 1.2175713880289811,
+          "interior_mean_square": 11.726386378845083,
+          "interior_sample_count": 28853224,
+          "present": true,
+          "shape": [
+            1,
+            16,
+            192,
+            256
+          ]
+        },
+        "encoder.model.blocks.1.0": {
+          "boundary_mean_square": 76.15849423493897,
+          "boundary_sample_count": 158787,
+          "boundary_to_interior_energy_ratio": 3.2036647250438643,
+          "interior_mean_square": 23.772304773214437,
+          "interior_sample_count": 7214013,
+          "present": true,
+          "shape": [
+            1,
+            24,
+            96,
+            128
+          ]
+        },
+        "encoder.model.blocks.1.0.se.post": {
+          "boundary_mean_square": 22.894679421859152,
+          "boundary_sample_count": 158787,
+          "boundary_to_interior_energy_ratio": 1.7426723947016927,
+          "interior_mean_square": 13.13768410601249,
+          "interior_sample_count": 7214013,
+          "present": true,
+          "shape": [
+            1,
+            96,
+            96,
+            128
+          ]
+        },
+        "encoder.model.blocks.1.0.se.pre": {
+          "boundary_mean_square": 35.14190955016019,
+          "boundary_sample_count": 158787,
+          "boundary_to_interior_energy_ratio": 1.588873569441959,
+          "interior_mean_square": 22.11749897916841,
+          "interior_sample_count": 7214013,
+          "present": true,
+          "shape": [
+            1,
+            96,
+            96,
+            128
+          ]
+        },
+        "encoder.model.blocks.1.1": {
+          "boundary_mean_square": 125.38682612263115,
+          "boundary_sample_count": 158787,
+          "boundary_to_interior_energy_ratio": 2.656360831391386,
+          "interior_mean_square": 47.20248267512448,
+          "interior_sample_count": 7214013,
+          "present": true,
+          "shape": [
+            1,
+            24,
+            96,
+            128
+          ]
+        },
+        "encoder.model.blocks.1.1.se.post": {
+          "boundary_mean_square": 0.988639859594388,
+          "boundary_sample_count": 158787,
+          "boundary_to_interior_energy_ratio": 1.8319802271979815,
+          "interior_mean_square": 0.539656402900437,
+          "interior_sample_count": 7214013,
+          "present": true,
+          "shape": [
+            1,
+            144,
+            96,
+            128
+          ]
+        },
+        "encoder.model.blocks.1.1.se.pre": {
+          "boundary_mean_square": 2.9175227259017027,
+          "boundary_sample_count": 158787,
+          "boundary_to_interior_energy_ratio": 2.0986353327198866,
+          "interior_mean_square": 1.3901999458479128,
+          "interior_sample_count": 7214013,
+          "present": true,
+          "shape": [
+            1,
+            144,
+            96,
+            128
+          ]
+        },
+        "encoder.model.blocks.1.2": {
+          "boundary_mean_square": 178.08205957410235,
+          "boundary_sample_count": 158787,
+          "boundary_to_interior_energy_ratio": 2.2981829754096483,
+          "interior_mean_square": 77.48819892913855,
+          "interior_sample_count": 7214013,
+          "present": true,
+          "shape": [
+            1,
+            24,
+            96,
+            128
+          ]
+        },
+        "encoder.model.blocks.1.2.se.post": {
+          "boundary_mean_square": 0.6498372800811926,
+          "boundary_sample_count": 158787,
+          "boundary_to_interior_energy_ratio": 2.558111802305196,
+          "interior_mean_square": 0.2540300543141248,
+          "interior_sample_count": 7214013,
+          "present": true,
+          "shape": [
+            1,
+            144,
+            96,
+            128
+          ]
+        },
+        "encoder.model.blocks.1.2.se.pre": {
+          "boundary_mean_square": 5.026445435107256,
+          "boundary_sample_count": 158787,
+          "boundary_to_interior_energy_ratio": 4.00039807087323,
+          "interior_mean_square": 1.2564863161255486,
+          "interior_sample_count": 7214013,
+          "present": true,
+          "shape": [
+            1,
+            144,
+            96,
+            128
+          ]
+        },
+        "encoder.model.blocks.2.0": {
+          "boundary_mean_square": 72.34767647892387,
+          "boundary_sample_count": 39596,
+          "boundary_to_interior_energy_ratio": 3.1815064010138023,
+          "interior_mean_square": 22.740069438763328,
+          "interior_sample_count": 1803604,
+          "present": true,
+          "shape": [
+            1,
+            48,
+            48,
+            64
+          ]
+        },
+        "encoder.model.blocks.2.0.se.post": {
+          "boundary_mean_square": 2.046807695659105,
+          "boundary_sample_count": 39596,
+          "boundary_to_interior_energy_ratio": 1.3732019969938465,
+          "interior_mean_square": 1.4905364980096785,
+          "interior_sample_count": 1803604,
+          "present": true,
+          "shape": [
+            1,
+            144,
+            48,
+            64
+          ]
+        },
+        "encoder.model.blocks.2.0.se.pre": {
+          "boundary_mean_square": 11.078857685685206,
+          "boundary_sample_count": 39596,
+          "boundary_to_interior_energy_ratio": 2.376677179970294,
+          "interior_mean_square": 4.661490327358501,
+          "interior_sample_count": 1803604,
+          "present": true,
+          "shape": [
+            1,
+            144,
+            48,
+            64
+          ]
+        },
+        "encoder.model.blocks.2.1": {
+          "boundary_mean_square": 82.83211482544036,
+          "boundary_sample_count": 39596,
+          "boundary_to_interior_energy_ratio": 2.9996337526749297,
+          "interior_mean_square": 27.614076135653107,
+          "interior_sample_count": 1803604,
+          "present": true,
+          "shape": [
+            1,
+            48,
+            48,
+            64
+          ]
+        },
+        "encoder.model.blocks.2.1.se.post": {
+          "boundary_mean_square": 0.3931191736875993,
+          "boundary_sample_count": 39596,
+          "boundary_to_interior_energy_ratio": 1.9696671126217649,
+          "interior_mean_square": 0.19958660586271867,
+          "interior_sample_count": 1803604,
+          "present": true,
+          "shape": [
+            1,
+            288,
+            48,
+            64
+          ]
+        },
+        "encoder.model.blocks.2.1.se.pre": {
+          "boundary_mean_square": 3.64215480472023,
+          "boundary_sample_count": 39596,
+          "boundary_to_interior_energy_ratio": 3.5543247419178514,
+          "interior_mean_square": 1.02471075919613,
+          "interior_sample_count": 1803604,
+          "present": true,
+          "shape": [
+            1,
+            288,
+            48,
+            64
+          ]
+        },
+        "encoder.model.blocks.2.2": {
+          "boundary_mean_square": 101.81125775291629,
+          "boundary_sample_count": 39596,
+          "boundary_to_interior_energy_ratio": 2.8185599575835876,
+          "interior_mean_square": 36.121728572416565,
+          "interior_sample_count": 1803604,
+          "present": true,
+          "shape": [
+            1,
+            48,
+            48,
+            64
+          ]
+        },
+        "encoder.model.blocks.2.2.se.post": {
+          "boundary_mean_square": 0.15215281282001933,
+          "boundary_sample_count": 39596,
+          "boundary_to_interior_energy_ratio": 2.178035800151783,
+          "interior_mean_square": 0.06985781078961883,
+          "interior_sample_count": 1803604,
+          "present": true,
+          "shape": [
+            1,
+            288,
+            48,
+            64
+          ]
+        },
+        "encoder.model.blocks.2.2.se.pre": {
+          "boundary_mean_square": 4.560135653496494,
+          "boundary_sample_count": 39596,
+          "boundary_to_interior_energy_ratio": 4.970168914047233,
+          "interior_mean_square": 0.9175011417837615,
+          "interior_sample_count": 1803604,
+          "present": true,
+          "shape": [
+            1,
+            288,
+            48,
+            64
+          ]
+        },
+        "encoder.model.blocks.3.0": {
+          "boundary_mean_square": 58.04629318034495,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.757926244331669,
+          "interior_mean_square": 21.04707959454926,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            88,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.3.0.se.post": {
+          "boundary_mean_square": 1.272088598415039,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 1.101894869240976,
+          "interior_mean_square": 1.1544555056248682,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            288,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.3.0.se.pre": {
+          "boundary_mean_square": 5.9313629701252975,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 1.7857987107896363,
+          "interior_mean_square": 3.3214062336860994,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            288,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.3.1": {
+          "boundary_mean_square": 61.396677028464154,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.593753307913246,
+          "interior_mean_square": 23.67097782242817,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            88,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.3.1.se.post": {
+          "boundary_mean_square": 0.12833991147141488,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 1.8966326658339918,
+          "interior_mean_square": 0.06766724721309224,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            528,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.3.1.se.pre": {
+          "boundary_mean_square": 3.53148944551636,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 3.2179644405917625,
+          "interior_mean_square": 1.0974296051782793,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            528,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.3.2": {
+          "boundary_mean_square": 67.95806404604309,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.4503052861382186,
+          "interior_mean_square": 27.73452941986171,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            88,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.3.2.se.post": {
+          "boundary_mean_square": 0.0780881503685157,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 1.5374967916671776,
+          "interior_mean_square": 0.05078914687284724,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            528,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.3.2.se.pre": {
+          "boundary_mean_square": 2.382273692357653,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.933653880849528,
+          "interior_mean_square": 0.8120500199116175,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            528,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.3.3": {
+          "boundary_mean_square": 73.72499528916954,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.3680969668366427,
+          "interior_mean_square": 31.132591410584443,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            88,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.3.3.se.post": {
+          "boundary_mean_square": 0.07302385252199611,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 1.869071197988425,
+          "interior_mean_square": 0.03906959381782114,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            528,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.3.3.se.pre": {
+          "boundary_mean_square": 2.064592590092073,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 3.0211392249380418,
+          "interior_mean_square": 0.6833821404355883,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            528,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.0": {
+          "boundary_mean_square": 49.49043360857882,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.421781284789081,
+          "interior_mean_square": 20.435550443560828,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            120,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.0.se.post": {
+          "boundary_mean_square": 0.3057974294070223,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 1.614440807294765,
+          "interior_mean_square": 0.18941383792164623,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            528,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.0.se.pre": {
+          "boundary_mean_square": 1.609480055893952,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.656531811113162,
+          "interior_mean_square": 0.6058576257814636,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            528,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.1": {
+          "boundary_mean_square": 57.47390639760672,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.3648550459096884,
+          "interior_mean_square": 24.303352756024097,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            120,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.1.se.post": {
+          "boundary_mean_square": 0.14966622625710443,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.251295144815949,
+          "interior_mean_square": 0.0664800555368053,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            720,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.1.se.pre": {
+          "boundary_mean_square": 2.0275369996743513,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.362419904995478,
+          "interior_mean_square": 0.8582458162441837,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            720,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.2": {
+          "boundary_mean_square": 64.35162045894253,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.2578448317261,
+          "interior_mean_square": 28.501347636784395,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            120,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.2.se.post": {
+          "boundary_mean_square": 0.15901785729463888,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.017868056730162,
+          "interior_mean_square": 0.07880488358209015,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            720,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.2.se.pre": {
+          "boundary_mean_square": 1.7845723813914771,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.1711850942419986,
+          "interior_mean_square": 0.8219347056702712,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            720,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.3": {
+          "boundary_mean_square": 72.51021590118668,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.227467721659058,
+          "interior_mean_square": 32.552757194245565,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            120,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.3.se.post": {
+          "boundary_mean_square": 0.15012553712728358,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.1860553493239765,
+          "interior_mean_square": 0.0686741702005436,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            720,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.4.3.se.pre": {
+          "boundary_mean_square": 1.3342291507585242,
+          "boundary_sample_count": 12253,
+          "boundary_to_interior_energy_ratio": 2.001460075121478,
+          "interior_mean_square": 0.666627911964491,
+          "interior_sample_count": 448547,
+          "present": true,
+          "shape": [
+            1,
+            720,
+            24,
+            32
+          ]
+        },
+        "encoder.model.blocks.5.0": {
+          "boundary_mean_square": 29.883258830828655,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.6532161961701728,
+          "interior_mean_square": 18.07583236848028,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            208,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.0.se.post": {
+          "boundary_mean_square": 0.698824297745399,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.1960000199284702,
+          "interior_mean_square": 0.584301242559506,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            720,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.0.se.pre": {
+          "boundary_mean_square": 1.3327192884598067,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.23637330360393,
+          "interior_mean_square": 1.077926290202996,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            720,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.1": {
+          "boundary_mean_square": 33.60743949233462,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.5673363291224263,
+          "interior_mean_square": 21.44239169850156,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            208,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.1.se.post": {
+          "boundary_mean_square": 0.13479046009394435,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.4293085175941806,
+          "interior_mean_square": 0.094304664412708,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            1248,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.1.se.pre": {
+          "boundary_mean_square": 1.0460447463979625,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.3455077967780953,
+          "interior_mean_square": 0.7774349200374637,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            1248,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.2": {
+          "boundary_mean_square": 37.580131313612604,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.4933905822403502,
+          "interior_mean_square": 25.164301797883148,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            208,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.2.se.post": {
+          "boundary_mean_square": 0.10884303720504476,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.3771907141352298,
+          "interior_mean_square": 0.07903265400202023,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            1248,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.2.se.pre": {
+          "boundary_mean_square": 1.2280142547207056,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.3571469694287204,
+          "interior_mean_square": 0.904849866951129,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            1248,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.3": {
+          "boundary_mean_square": 44.291566810379045,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.504838507315698,
+          "interior_mean_square": 29.43277075583711,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            208,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.3.se.post": {
+          "boundary_mean_square": 0.09699205278185477,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.5155789696643114,
+          "interior_mean_square": 0.06399670008837463,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            1248,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.3.se.pre": {
+          "boundary_mean_square": 1.270372508146977,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.4949947780101631,
+          "interior_mean_square": 0.8497504652409835,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            1248,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.4": {
+          "boundary_mean_square": 51.81405771015495,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.4843819338841768,
+          "interior_mean_square": 34.90614950733959,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            208,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.4.se.post": {
+          "boundary_mean_square": 0.11161995292603101,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.4901892971680848,
+          "interior_mean_square": 0.07490320400109605,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            1248,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.5.4.se.pre": {
+          "boundary_mean_square": 1.1447295286946773,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.4458857288486466,
+          "interior_mean_square": 0.7917150753028187,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            1248,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.6.0": {
+          "boundary_mean_square": 6.772934823014119,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 0.9180877642537932,
+          "interior_mean_square": 7.377219353880672,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            352,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.6.0.se.post": {
+          "boundary_mean_square": 0.3592398071797066,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 0.9555191022114223,
+          "interior_mean_square": 0.3759629779753159,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            1248,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.6.0.se.pre": {
+          "boundary_mean_square": 1.005294892864485,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 0.9422815101453388,
+          "interior_mean_square": 1.0668732030085435,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            1248,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.6.1": {
+          "boundary_mean_square": 12.033767782698728,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.0903532033737986,
+          "interior_mean_square": 11.036577638753696,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            352,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.6.1.se.post": {
+          "boundary_mean_square": 0.047885805919345506,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.4753205527759552,
+          "interior_mean_square": 0.03245789928788278,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            2112,
+            12,
+            16
+          ]
+        },
+        "encoder.model.blocks.6.1.se.pre": {
+          "boundary_mean_square": 1.2363599696767698,
+          "boundary_sample_count": 4126,
+          "boundary_to_interior_energy_ratio": 1.4947433799549834,
+          "interior_mean_square": 0.8271386154016649,
+          "interior_sample_count": 111074,
+          "present": true,
+          "shape": [
+            1,
+            2112,
+            12,
+            16
+          ]
+        },
+        "encoder.model.conv_stem": {
+          "boundary_mean_square": 22973.789649717062,
+          "boundary_sample_count": 637976,
+          "boundary_to_interior_energy_ratio": 3.112432291144865,
+          "interior_mean_square": 7381.297808495127,
+          "interior_sample_count": 28853224,
+          "present": true,
+          "shape": [
+            1,
+            32,
+            192,
+            256
+          ]
+        },
+        "segmentation_head": {
+          "boundary_mean_square": 42.911234545126845,
+          "boundary_sample_count": 2551382,
+          "boundary_to_interior_energy_ratio": 2.4407561859232927,
+          "interior_mean_square": 17.581122929283623,
+          "interior_sample_count": 115413418,
+          "present": true,
+          "shape": [
+            1,
+            5,
+            384,
+            512
+          ]
+        }
+      },
+      "per_class_logit_energy": {
+        "Lane": 16.873259396450873,
+        "Movable": 16.354836562119303,
+        "MyCar": 23.31199528186599,
+        "Road": 23.81827214586698,
+        "Undrivable": 10.286491729926864
+      },
+      "schema": "ddm_sn1_segnet_telemetry.aggregate.v1"
+    },
+    "cache_argmax_mismatch_count": 0,
+    "e1_signed_bounds_examples": [
+      {
+        "inner_signed_bound": -0.02488675814049674,
+        "normal_coordinate": "frozen_head_D2",
+        "orientation": "Road->Lane",
+        "outer_signed_bound": 0.019704731403216966,
+        "renderer_contract": "e1 must realize both signed bounds through camera uint8, R, and the frozen SegNet before admission",
+        "reverse_orientation": "Lane->Road",
+        "schema": "ddm.e1.sided_normal_bounds.v1",
+        "score_claim": false
+      },
+      {
+        "inner_signed_bound": -0.019704731403216966,
+        "normal_coordinate": "frozen_head_D2",
+        "orientation": "Lane->Road",
+        "outer_signed_bound": 0.02488675814049674,
+        "renderer_contract": "e1 must realize both signed bounds through camera uint8, R, and the frozen SegNet before admission",
+        "reverse_orientation": "Road->Lane",
+        "schema": "ddm.e1.sided_normal_bounds.v1",
+        "score_claim": false
+      }
+    ],
+    "erf_probes": [
+      {
+        "gradient_energy": 0.00073160759483892,
+        "margin": 0.00040721893310546875,
+        "orientation": "Lane->Road",
+        "pair_id": 0,
+        "probe": {
+          "rival": 0,
+          "winner": 1,
+          "x": 476,
+          "y": 229
+        },
+        "r50_pixels": 6.324555320336759,
+        "r90_pixels": 60.41522986797286,
+        "r99_pixels": 322.3042041301975,
+        "schema": "segnet_internal_telemetry.erf_probe.v1"
+      },
+      {
+        "gradient_energy": 0.0019661409888596525,
+        "margin": 7.62939453125e-05,
+        "orientation": "Road->Undrivable",
+        "pair_id": 299,
+        "probe": {
+          "rival": 2,
+          "winner": 0,
+          "x": 55,
+          "y": 198
+        },
+        "r50_pixels": 14.142135623730951,
+        "r90_pixels": 79.51100552753688,
+        "r99_pixels": 350.8275929855005,
+        "schema": "segnet_internal_telemetry.erf_probe.v1"
+      },
+      {
+        "gradient_energy": 0.001155745481977054,
+        "margin": 7.82012939453125e-05,
+        "orientation": "Road->Undrivable",
+        "pair_id": 599,
+        "probe": {
+          "rival": 2,
+          "winner": 0,
+          "x": 360,
+          "y": 191
+        },
+        "r50_pixels": 40.792156108742276,
+        "r90_pixels": 150.33296378372907,
+        "r99_pixels": 324.13731658048874,
+        "schema": "segnet_internal_telemetry.erf_probe.v1"
+      }
+    ],
+    "head_norms_exact": {
+      "Lane->Movable": 4.007363904979667,
+      "Lane->MyCar": 3.8623831071204595,
+      "Lane->Road": 3.9534537796242772,
+      "Lane->Undrivable": 3.7478787098012747,
+      "Movable->Lane": 4.007363904979667,
+      "Movable->MyCar": 2.9097801708543907,
+      "Movable->Road": 2.9415187986422167,
+      "Movable->Undrivable": 2.9458495360246273,
+      "MyCar->Lane": 3.8623831071204595,
+      "MyCar->Movable": 2.9097801708543907,
+      "MyCar->Road": 2.7053475510328346,
+      "MyCar->Undrivable": 2.8686412302701556,
+      "Road->Lane": 3.9534537796242772,
+      "Road->Movable": 2.9415187986422167,
+      "Road->MyCar": 2.7053475510328346,
+      "Road->Undrivable": 2.601806228972597,
+      "Undrivable->Lane": 3.7478787098012747,
+      "Undrivable->Movable": 2.9458495360246273,
+      "Undrivable->MyCar": 2.8686412302701556,
+      "Undrivable->Road": 2.601806228972597
+    },
+    "inverse_demo": {
+      "majority_transition_realized_count": 3,
+      "segment_count": 3
+    },
+    "ordered_pair_count": 20,
+    "pair_count": 600,
+    "record_constancy_correction": "pixel recurrence is not record-level constancy; this analysis emits 600 distinct frame records and makes no static-record inference",
+    "temporal_strata": [
+      "n600_full",
+      "n600_first64_tail",
+      "n600_last64_tail"
+    ]
+  },
+  "outputs": [
+    {
+      "bytes": 3762510,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/segnet_internal_telemetry_n600.jsonl",
+      "sha256": "e8d26acd3b312e8213d04c48313b755de05e17268cc594e1d5b94927c443116b"
+    },
+    {
+      "bytes": 68517,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/sdwl1_sided_tolerance_n600.jsonl",
+      "sha256": "be4179a1737f9fcc7651d763d747bc75cc0702f3def16920ce58d2b193015d02"
+    },
+    {
+      "bytes": 5194,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_sn1_segnet_telemetry_asymmetry_20260723T172306Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/inverse_solve_three_segments_receipt.json",
+      "sha256": "2703260c297b4f9a7cf7e09552cfbad2745cbae69c22ea4551e27c526961d945"
+    }
+  ],
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "research_only": true,
+  "run_id": "ddm_sn1_segnet_telemetry_asymmetry_n600_20260723",
+  "runtime": {
+    "elapsed_seconds": 518.5680446249899,
+    "git_head": "b04d1d48813198803928285679f0211486ffbeb7",
+    "host": "Primary.local",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+    "seed": 1234,
+    "torch_threads": 4
+  },
+  "schema": "ddm_sn1_segnet_telemetry_asymmetry_receipt.v1",
+  "score_claim": false,
+  "scratch_artifacts": [
+    {
+      "array_count": 320,
+      "bytes": 316439,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0000_0016_margins.npz",
+      "sha256": "fb070190fc573079d7c89d36d86f9a6da7e902f83c4dda5ad9b48b1a53b31b4f"
+    },
+    {
+      "array_count": 320,
+      "bytes": 324276,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0016_0032_margins.npz",
+      "sha256": "df904c6a810d323715518a953eb55f7e96759511687e801dbf2415550031102b"
+    },
+    {
+      "array_count": 320,
+      "bytes": 320035,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0032_0048_margins.npz",
+      "sha256": "b2b1e051cbb240763cd9e43d952db89dc48665e1321596df0a6920de11e7a76a"
+    },
+    {
+      "array_count": 320,
+      "bytes": 311769,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0048_0064_margins.npz",
+      "sha256": "28e1daf6474b0d499caa7c1d89379a027c45431eda31c7fb93075a6551cff6d8"
+    },
+    {
+      "array_count": 320,
+      "bytes": 298661,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0064_0080_margins.npz",
+      "sha256": "ae8f2ec2a53eeea6327f08b149445c812530ffeaee18aa920e217ea1ec09dbbb"
+    },
+    {
+      "array_count": 320,
+      "bytes": 288339,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0080_0096_margins.npz",
+      "sha256": "1409c75e4ffce958ee4279aa338abfe1a4e21f0bde9e667a7802981943f93122"
+    },
+    {
+      "array_count": 320,
+      "bytes": 306262,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0096_0112_margins.npz",
+      "sha256": "65202793a3bca62352370609cf18fe31381ec1beba0718cebbdd3de8e05e6421"
+    },
+    {
+      "array_count": 320,
+      "bytes": 305756,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0112_0128_margins.npz",
+      "sha256": "dbe3735ba3befed3f45b27657cbe3b31dc2048288c48b1cc759de96471658364"
+    },
+    {
+      "array_count": 320,
+      "bytes": 295099,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0128_0144_margins.npz",
+      "sha256": "172a084f02beb27dede1296668114c79d03ba6de3f5d908a2cc9f95d8b9ac7be"
+    },
+    {
+      "array_count": 320,
+      "bytes": 301011,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0144_0160_margins.npz",
+      "sha256": "e469ea09b1bb9167f6edb3854518af427e63e17af677bb94016fc71dff3dc3dc"
+    },
+    {
+      "array_count": 320,
+      "bytes": 305374,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0160_0176_margins.npz",
+      "sha256": "73e4571e18ac6cba140b1e423ce943ddf6b20d9274a3be894625f4d3dc7ad3ff"
+    },
+    {
+      "array_count": 320,
+      "bytes": 310365,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0176_0192_margins.npz",
+      "sha256": "897a5823da389613831b09095a76a60dde1c0aa287e93589b0c45e8e69a03272"
+    },
+    {
+      "array_count": 320,
+      "bytes": 316096,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0192_0208_margins.npz",
+      "sha256": "c08c42d514fa7f5f0246c2cf3627fc9b5f8539824957b024739200730ef89c20"
+    },
+    {
+      "array_count": 320,
+      "bytes": 284191,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0208_0224_margins.npz",
+      "sha256": "e16c3f0f78517ffe874d53a93ac12c5557f4e2c5c5511c959b2207fee2474289"
+    },
+    {
+      "array_count": 320,
+      "bytes": 289714,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0224_0240_margins.npz",
+      "sha256": "b177a231be2bce54f8e4af103ac93255df88a3ab4dfe894d38f5c2eae62d1b57"
+    },
+    {
+      "array_count": 320,
+      "bytes": 285845,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0240_0256_margins.npz",
+      "sha256": "3850ac561288be528f44397b56164f8df7217588e2e9a2dab13029841391a3c2"
+    },
+    {
+      "array_count": 320,
+      "bytes": 309559,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0256_0272_margins.npz",
+      "sha256": "e09d70cc5fd3f409acd22d3448a546cc5de28c79b456c0d143814dc91d3a4ffd"
+    },
+    {
+      "array_count": 320,
+      "bytes": 313297,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0272_0288_margins.npz",
+      "sha256": "1af8b52adc97ccb3c1c5f0b51c89a361d7632eb044509a818e9da09d44b3828b"
+    },
+    {
+      "array_count": 320,
+      "bytes": 317969,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0288_0304_margins.npz",
+      "sha256": "32d9c7f616d1766dd64f3bdeead1273a1e05f3ab991fe34ec056749d938ea2c5"
+    },
+    {
+      "array_count": 320,
+      "bytes": 309998,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0304_0320_margins.npz",
+      "sha256": "932ec729dc6144432ccebcd4e5f02ec213a0f66f54729695d80d1558b1cb0957"
+    },
+    {
+      "array_count": 320,
+      "bytes": 317456,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0320_0336_margins.npz",
+      "sha256": "9b630938913add2b60e6b7d07396a6069ab4a65194fa949c0c2d0be442e9a119"
+    },
+    {
+      "array_count": 320,
+      "bytes": 315391,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0336_0352_margins.npz",
+      "sha256": "f44c86ea3a03e925330621eb634f323eca7e01f4a20ca3724aaefd8444dbcac4"
+    },
+    {
+      "array_count": 320,
+      "bytes": 311971,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0352_0368_margins.npz",
+      "sha256": "b7520029100bf55cb359e3da1ce20cebd6a3c28ad9397039ac4efdfb0ba57525"
+    },
+    {
+      "array_count": 320,
+      "bytes": 312307,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0368_0384_margins.npz",
+      "sha256": "9678c2d8d205559e11cf5366458fb874ef048dc813c4cdb73c7624d308851a46"
+    },
+    {
+      "array_count": 320,
+      "bytes": 314412,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0384_0400_margins.npz",
+      "sha256": "0130df44c893358a4963627d522b9584d105a995962d00d83a7a99d12aa53b88"
+    },
+    {
+      "array_count": 320,
+      "bytes": 309778,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0400_0416_margins.npz",
+      "sha256": "d8879b903f7122ad31a13b085edbf620c61ae5ef470f4e7576d8f5cd1e205957"
+    },
+    {
+      "array_count": 320,
+      "bytes": 293045,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0416_0432_margins.npz",
+      "sha256": "c50cc6c847ffe18aa4ea86c57cf3aba2924b9f11cd4aff5591f744da78d41965"
+    },
+    {
+      "array_count": 320,
+      "bytes": 287624,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0432_0448_margins.npz",
+      "sha256": "e7f13299dbb14674e34a1c6333b90b3e4cd6f9e5a5424821aeace6c06084706c"
+    },
+    {
+      "array_count": 320,
+      "bytes": 312156,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0448_0464_margins.npz",
+      "sha256": "97b9e95b8ab0037532db7c73d72457ac737903697171c64db6597997ca9748d3"
+    },
+    {
+      "array_count": 320,
+      "bytes": 327121,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0464_0480_margins.npz",
+      "sha256": "4381aa5d5d2d790c9238a4845a92717864c3c96de4f7878b3dab89fc3536606e"
+    },
+    {
+      "array_count": 320,
+      "bytes": 327465,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0480_0496_margins.npz",
+      "sha256": "f97f82fc686549bf85eb5939d957315292640e8ac9271e9e3e36918b94546508"
+    },
+    {
+      "array_count": 320,
+      "bytes": 351237,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0496_0512_margins.npz",
+      "sha256": "9ccdebb623c95d0eae392ddd56ebab2cb5a8e301a38c67a02c0751e31d7c7f8c"
+    },
+    {
+      "array_count": 320,
+      "bytes": 330572,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0512_0528_margins.npz",
+      "sha256": "c2eba96268424fe4081451fc3bd01052f443c0bef8f5aee355db6f9678ec86e0"
+    },
+    {
+      "array_count": 320,
+      "bytes": 314740,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0528_0544_margins.npz",
+      "sha256": "e4bbb9e2a3b027930c7ac3e31e46bcda4a12ba2efc8d0b9ba016416de06ceb21"
+    },
+    {
+      "array_count": 320,
+      "bytes": 303138,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0544_0560_margins.npz",
+      "sha256": "7f4b865ada101444870f35ecdf8407b60582f4a373cb25ecf66285ed45288b99"
+    },
+    {
+      "array_count": 320,
+      "bytes": 320782,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0560_0576_margins.npz",
+      "sha256": "ad8722aab3e9e503a8d1c140d99fb1b2556b496e9374947920f1d01d44760b22"
+    },
+    {
+      "array_count": 320,
+      "bytes": 310700,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0576_0592_margins.npz",
+      "sha256": "cd57e442c500ba187e0b8ab345279ecbaae9d74b77b891af171f78f202c25970"
+    },
+    {
+      "array_count": 160,
+      "bytes": 157930,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/batch_margins/batch_0592_0600_margins.npz",
+      "sha256": "09e5f8e38142eceb79573fcf89a71e8b039553ec8028ca29e6176099516544c1"
+    },
+    {
+      "bytes": 176405,
+      "changed_camera_bytes": 87736,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/inverse_deltas/segment_00_pair_0093.npz",
+      "reconstruction": "copy gt_f1[pair_id], flatten C-order HWC, assign replacement_uint8 at flat_indices, reshape",
+      "sha256": "302b6ef6e37eb9393986c7a4f0272e8d9f2c68a19e67d956469fed3446bda6b9"
+    },
+    {
+      "bytes": 185661,
+      "changed_camera_bytes": 87381,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/inverse_deltas/segment_01_pair_0096.npz",
+      "reconstruction": "copy gt_f1[pair_id], flatten C-order HWC, assign replacement_uint8 at flat_indices, reshape",
+      "sha256": "1c139c3a9250239deb66597d225ad2a9ea8335cb5b0c124407de211eefc794f7"
+    },
+    {
+      "bytes": 187969,
+      "changed_camera_bytes": 88698,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/inverse_deltas/segment_02_pair_0204.npz",
+      "reconstruction": "copy gt_f1[pair_id], flatten C-order HWC, assign replacement_uint8 at flat_indices, reshape",
+      "sha256": "a618f304503aa8a8a8f13269afa5858c5c5f7c93072d2c236be638e7357437bd"
+    }
+  ],
+  "semantic_argv": [
+    "tools/run_ddm_sn1_segnet_telemetry_asymmetry.py",
+    "--config",
+    ".omx/research/configs/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723.json"
+  ],
+  "source_custody": {
+    "gt_cache": {
+      "bytes": 5078017610,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "segnet_weights": {
+      "bytes": 38502892,
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "upstream_modules": {
+      "bytes": 8322,
+      "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    },
+    "video": {
+      "bytes": 37545489,
+      "path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+      "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    }
+  },
+  "storage_preflight": {
+    "automatic_cleanup": "batch margin NPZ and sparse inverse deltas are preserved resumable evidence; no deletion is authorized by this analysis",
+    "large_artifact_policy": "CERTIFY_OR_BLOCK",
+    "observed_free_bytes": 586027716608,
+    "required_free_bytes": 536870912,
+    "scratch_directory": "/Volumes/VertigoDataTier/pact/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723",
+    "selected_root": "/Volumes/VertigoDataTier/pact",
+    "status": "PASS",
+    "waterfall_order": [
+      "/Volumes/VertigoDataTier/pact",
+      "/Volumes/APDataStore/pact"
+    ]
+  },
+  "stores_consulted": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "PROGRAM.md",
+    "docs/operating_manual_craft_handoff.md",
+    ".omx/research/ddm_dv2_sdwl1_n600_20260723/receipt.json",
+    ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_receipt.json",
+    ".omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z/ddm_g4_spatial_stationarity_receipt.json",
+    ".omx/research/codex_findings_ddm_dr2_scc_outside_view_20260723_codex.md",
+    "reports/latest.md",
+    ".omx/state/lane_registry.json",
+    ".omx/state/canonical_task_status.jsonl"
+  ],
+  "telemetry_identity": {
+    "argmax_identical": true,
+    "argmax_mismatch_count": 0,
+    "coverage": {
+      "decoder_blocks": [
+        "decoder.blocks.0",
+        "decoder.blocks.1",
+        "decoder.blocks.2",
+        "decoder.blocks.3",
+        "decoder.blocks.4"
+      ],
+      "decoder_skips": [
+        "decoder.blocks.0.skip",
+        "decoder.blocks.1.skip",
+        "decoder.blocks.2.skip",
+        "decoder.blocks.3.skip",
+        "decoder.blocks.4.skip"
+      ],
+      "encoder_blocks": [
+        "encoder.model.blocks.0.0",
+        "encoder.model.blocks.0.1",
+        "encoder.model.blocks.1.0",
+        "encoder.model.blocks.1.1",
+        "encoder.model.blocks.1.2",
+        "encoder.model.blocks.2.0",
+        "encoder.model.blocks.2.1",
+        "encoder.model.blocks.2.2",
+        "encoder.model.blocks.3.0",
+        "encoder.model.blocks.3.1",
+        "encoder.model.blocks.3.2",
+        "encoder.model.blocks.3.3",
+        "encoder.model.blocks.4.0",
+        "encoder.model.blocks.4.1",
+        "encoder.model.blocks.4.2",
+        "encoder.model.blocks.4.3",
+        "encoder.model.blocks.5.0",
+        "encoder.model.blocks.5.1",
+        "encoder.model.blocks.5.2",
+        "encoder.model.blocks.5.3",
+        "encoder.model.blocks.5.4",
+        "encoder.model.blocks.6.0",
+        "encoder.model.blocks.6.1"
+      ],
+      "final_logits": [
+        "segmentation_head"
+      ],
+      "se_post": [
+        "encoder.model.blocks.0.0.se.post",
+        "encoder.model.blocks.0.1.se.post",
+        "encoder.model.blocks.1.0.se.post",
+        "encoder.model.blocks.1.1.se.post",
+        "encoder.model.blocks.1.2.se.post",
+        "encoder.model.blocks.2.0.se.post",
+        "encoder.model.blocks.2.1.se.post",
+        "encoder.model.blocks.2.2.se.post",
+        "encoder.model.blocks.3.0.se.post",
+        "encoder.model.blocks.3.1.se.post",
+        "encoder.model.blocks.3.2.se.post",
+        "encoder.model.blocks.3.3.se.post",
+        "encoder.model.blocks.4.0.se.post",
+        "encoder.model.blocks.4.1.se.post",
+        "encoder.model.blocks.4.2.se.post",
+        "encoder.model.blocks.4.3.se.post",
+        "encoder.model.blocks.5.0.se.post",
+        "encoder.model.blocks.5.1.se.post",
+        "encoder.model.blocks.5.2.se.post",
+        "encoder.model.blocks.5.3.se.post",
+        "encoder.model.blocks.5.4.se.post",
+        "encoder.model.blocks.6.0.se.post",
+        "encoder.model.blocks.6.1.se.post"
+      ],
+      "se_pre": [
+        "encoder.model.blocks.0.0.se.pre",
+        "encoder.model.blocks.0.1.se.pre",
+        "encoder.model.blocks.1.0.se.pre",
+        "encoder.model.blocks.1.1.se.pre",
+        "encoder.model.blocks.1.2.se.pre",
+        "encoder.model.blocks.2.0.se.pre",
+        "encoder.model.blocks.2.1.se.pre",
+        "encoder.model.blocks.2.2.se.pre",
+        "encoder.model.blocks.3.0.se.pre",
+        "encoder.model.blocks.3.1.se.pre",
+        "encoder.model.blocks.3.2.se.pre",
+        "encoder.model.blocks.3.3.se.pre",
+        "encoder.model.blocks.4.0.se.pre",
+        "encoder.model.blocks.4.1.se.pre",
+        "encoder.model.blocks.4.2.se.pre",
+        "encoder.model.blocks.4.3.se.pre",
+        "encoder.model.blocks.5.0.se.pre",
+        "encoder.model.blocks.5.1.se.pre",
+        "encoder.model.blocks.5.2.se.pre",
+        "encoder.model.blocks.5.3.se.pre",
+        "encoder.model.blocks.5.4.se.pre",
+        "encoder.model.blocks.6.0.se.pre",
+        "encoder.model.blocks.6.1.se.pre"
+      ],
+      "stem": [
+        "encoder.model.conv_stem"
+      ]
+    },
+    "logits_bitwise_identical": true
+  },
+  "verdict": "MEASURED_SIDED_ASYMMETRY_ADVISORY_POINTER_UNMOVED",
+  "verdict_scope": "real official-video n600 cached frames, exact frozen CPU-Torch SegNet, head-space D2 and bounded camera-uint8 inverse segments; no Pose, byte-closed archive, contest-CPU, or contest-CUDA authority"
+}
