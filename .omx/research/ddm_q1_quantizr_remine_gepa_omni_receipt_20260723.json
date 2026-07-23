@@ -23,8 +23,8 @@
   },
   "findings_memo": {
     "path": ".omx/research/codex_findings_ddm_q1_quantizr_remine_gepa_omni_20260723_codex.md",
-    "bytes": 26841,
-    "sha256": "21ccdd66e8d13b64ff4ec2995d4a6ddd2a0384e0df8923e3e065e994d5ca2711"
+    "bytes": 26831,
+    "sha256": "f38675a263fbca88cee2c405fa919fd24a6aeff338f999decbfc4353c4c756ec"
   },
   "public_sources": {
     "quantizr_pr53": {

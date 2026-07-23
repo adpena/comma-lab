@@ -1,11 +1,11 @@
 # Codex findings — Quantizr re-mine and GEPA Optimize Anything Omni crosswalk
 
-Date: 2026-07-23  
-Lane: `lane_ddm_q1_quantizr_remine_gepa_omni_20260723`  
+Date: 2026-07-23
+Lane: `lane_ddm_q1_quantizr_remine_gepa_omni_20260723`
 Delegation checkpoint:
-`codex_delegate:ddm_q1_quantizr_remine_gepa_omni:20260723T173443Z`  
-Authority: `research_only=true`; `$0`; `execution_allowed=false`; `actuation=NONE`  
-Verdict: `ADOPT_FOUR_BOUNDED_FIRST_RUNGS_MAIN_LANDING_REVIEW_REQUIRED`  
+`codex_delegate:ddm_q1_quantizr_remine_gepa_omni:20260723T173443Z`
+Authority: `research_only=true`; `$0`; `execution_allowed=false`; `actuation=NONE`
+Verdict: `ADOPT_FOUR_BOUNDED_FIRST_RUNGS_MAIN_LANDING_REVIEW_REQUIRED`
 Scope: public-source mechanism re-mine and apparatus crosswalk only; no training, eval,
 provider dispatch, archive mutation, promotion, or score claim
 
