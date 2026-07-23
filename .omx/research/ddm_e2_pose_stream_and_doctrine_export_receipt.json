@@ -1,0 +1,235 @@
+{
+  "schema": "ddm_e2_pose_stream_and_doctrine_export_receipt.v1",
+  "created_utc": "2026-07-23T17:47:30Z",
+  "authority": {
+    "bytes": 5878,
+    "sha256": "9540cb9669b2884e15e2ae4d666ded588968cc6e7c08976b5277477e607f81ad"
+  },
+  "lane_id": "lane_ddm_e2_pose_stream_and_doctrine_export_20260723",
+  "delegation_checkpoint_key": "codex_delegate:ddm_e2_pose_stream_and_doctrine_export:20260723T164758Z",
+  "research_only": true,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "verdict": "PASS_E2_EXPORT_AND_DOCTRINE_POSE_TUBE_BLOCKED",
+  "pose_root_cause": {
+    "classification": "ABSENT_FROM_COMPOSED_PACKET",
+    "nested_pose6": {
+      "shape": [600, 6],
+      "dtype": "uint8",
+      "bytes": 3600,
+      "sha256": "d23df2fa23f2aa6ef3cce63e5ab87f29b4de9c19687c9dd3fbeb645dc0b6f25e",
+      "consumption": "inter_pair_worldsheet_only_before_export"
+    },
+    "packet_member": null,
+    "bijection_checks": {
+      "counted_pose_to_output": "NOT_APPLICABLE_ZERO_PACKET_BYTES",
+      "output_pose_effect_to_owner": "FAIL_NO_COMPACT_INVERSE_OWNER"
+    },
+    "compact_inverse_status": "BLOCKED_NOT_PRESENT",
+    "verdict_scope": "E1/E2 composed runtime packet boundary only. The exact high-byte two-plane lattice control remains valid; this is not a DDM or exact-lattice family negative."
+  },
+  "score_rows": [
+    {
+      "id": "e1_official_harness_local_advisory",
+      "first_rung": true,
+      "archive_bytes": 339094,
+      "d_seg": "0.02861482",
+      "d_pose": "163.05291748",
+      "terms": {
+        "seg": "2.861482000000",
+        "pose": "40.379811475538",
+        "rate": "0.225788775850",
+        "total": "43.467082251388"
+      },
+      "score_claim": false
+    },
+    {
+      "id": "e2_official_harness_local_advisory",
+      "first_rung": true,
+      "archive_bytes": 343466,
+      "d_seg": "0.02861482",
+      "d_pose": "162.58094788",
+      "terms": {
+        "seg": "2.861482000000",
+        "pose": "40.321327840239",
+        "rate": "0.228699911193",
+        "total": "43.411509751432"
+      },
+      "delta_total_vs_e1": "-0.055572499956",
+      "added_bytes_vs_e1": 4372,
+      "net_score_benefit_per_added_byte": "0.000012711001819869",
+      "score_byte_dual": "0.0000006658589531221713",
+      "benefit_multiple_of_dual": "19.089631160275",
+      "score_claim": false
+    },
+    {
+      "id": "e2_independent_frozen_scorer",
+      "first_rung": true,
+      "archive_bytes": 343466,
+      "d_seg": "0.028614807129",
+      "d_pose": "162.580958694146",
+      "terms": {
+        "seg": "2.861480712900",
+        "pose": "40.321329181234",
+        "rate": "0.228699911193",
+        "total": "43.411509805327"
+      },
+      "score_claim": false
+    }
+  ],
+  "score_line": {
+    "formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "pointer_control": "0.1910828242",
+    "e2_gap_to_pointer": "43.220426927232",
+    "e2_zero_pose_floor": "3.090181911193",
+    "c1_waterfill": {
+      "score_byte_dual": "0.0000006658589531221713",
+      "archive_ceiling_after_reserve": 160000,
+      "rate_term_at_ceiling": "0.106537432500",
+      "remaining_distortion_term_budget": "0.084545391700",
+      "status": "NO_MEASURED_KKT_FEASIBLE_ALLOCATION_CLOSES_THE_SCORE_LINE"
+    },
+    "verdict_scope": "The E2 measured formulation cannot reach the pointer at any nonnegative archive size because its distortion terms already exceed the complete score line; this does not close successor representations."
+  },
+  "rate_decomposition": {
+    "archive_counted_bytes": 343466,
+    "member_homes": [
+      {
+        "member": "manifest.json",
+        "first_rung": true,
+        "home_bytes": 9592,
+        "payload_bytes": 9549
+      },
+      {
+        "member": "base/chart.ddb",
+        "first_rung": true,
+        "home_bytes": 18513,
+        "payload_bytes": 18469
+      },
+      {
+        "member": "semantic/composed.dds",
+        "first_rung": true,
+        "home_bytes": 315153,
+        "payload_bytes": 315102
+      },
+      {
+        "member": "container",
+        "first_rung": true,
+        "home_bytes": 208,
+        "payload_bytes": 0
+      }
+    ],
+    "state_archive_bytes_not_packet_member": 134211,
+    "runtime_inflate_py_bytes_not_counted": 34363,
+    "e1_false_remainder": {
+      "bytes": 176775,
+      "status": "INVALID_CROSS_CUSTODY_SUBTRACTION",
+      "explanation": "339094-134211-28108 subtracts two nonmembers from the counted archive. The counted E1 semantic member itself owned 315153 home bytes."
+    }
+  },
+  "four_clause_doctrine": {
+    "candidate_admissible": false,
+    "missing_audit_row_fails_closed": true,
+    "semantic_frame_policy": "frame1_only_seg_free_frame0",
+    "correction_stream_bytes": 0,
+    "ordered_redundancy_matrix": [
+      {
+        "conditioner": "base/chart.ddb",
+        "stream": "semantic/composed.dds",
+        "first_rung": true,
+        "standalone_bytes": 315033,
+        "conditioned_bytes": 318169,
+        "redundancy_bytes": -3136
+      },
+      {
+        "conditioner": "semantic/composed.dds",
+        "stream": "base/chart.ddb",
+        "first_rung": true,
+        "standalone_bytes": 18412,
+        "conditioned_bytes": 18461,
+        "redundancy_bytes": -49
+      }
+    ],
+    "verdict_scope": "Both measured ordered contexts hurt under Brotli-Q11, so no cross-stream overlap is deductible for these two formulations. Candidate admission remains blocked by unmeasured coordinate and boundary tolerance fields, not by the DDM family."
+  },
+  "typed_sensitivity_api": {
+    "schema": "DDMRuntimePerturbationV1",
+    "path": "src/tac/optimization/ddm_runtime_sensitivity.py",
+    "chain": "strict packet reopen -> typed coordinate edit -> actual member serialization -> receiver blob parse-back -> RGB realization -> batch16 SegNet/PoseNet -> delta score per measured byte",
+    "consumers": [
+      "g2 compact-shearlet and rank-4 costate ranking",
+      "p581r sparsemax and Hopfield probes",
+      "four-clause sensitivity-priced tolerance audit"
+    ],
+    "real_packet_smoke": {
+      "first_rung": true,
+      "stream": "semantic/composed",
+      "flat_index": 0,
+      "original_value": 0,
+      "perturbed_value": 1,
+      "baseline_member_bytes": 315102,
+      "perturbed_member_bytes": 315108,
+      "changed_camera_values": 27,
+      "baseline_member_sha256": "98b3537708abbec01fcda86d51b2849bf130418e9774d6437b7cca1381bafba4",
+      "perturbed_member_sha256": "813685bda73d7fa8fde0b809f15498e5993788c90a7095f213facaf9add79f68"
+    },
+    "verdict_scope": "The API makes receiver-closed rows measurable; it does not itself supply a compact pose inverse or promote any g2 or p581r candidate."
+  },
+  "j_paint_feedback": {
+    "first_rung": true,
+    "organ": "J_paint",
+    "prior_rank1_duty": "GS=0",
+    "official_harness_control_d_seg": "0.02861482",
+    "frozen_scorer_control_d_seg": "0.027470296224",
+    "realization_gap": "0.001144523776",
+    "status": "MEASURED_RECEIVER_REALIZATION_DUTY"
+  },
+  "execution_evidence": {
+    "standalone": {
+      "first_rung": true,
+      "raw_bytes": 3662409600,
+      "raw_sha256": "4871b1c19074041e56294093cacce6a6df9875e6215ab7802aec21252b0867c7",
+      "render_seconds": "35.974339",
+      "total_seconds": "222.308481",
+      "stage_checkpoints": 38,
+      "under_1800_seconds": true
+    },
+    "upstream_harness": {
+      "first_rung": true,
+      "status": "PASS",
+      "device": "cpu",
+      "evidence_axis": "[macOS-CPU upstream frozen-harness advisory]",
+      "score_claim": false
+    },
+    "verification": {
+      "ruff": "PASS",
+      "focused_tests": "14 passed",
+      "ddm_suite": "72 passed in 81.07s"
+    }
+  },
+  "triality": {
+    "dsl": "Typed E2 configs plus DDMRuntimePerturbationV1; missing or malformed audit rows fail compilation and receiver reopen.",
+    "dag": "State archive -> E2 exporter -> manifest/chart/semantic counted packet -> strict receiver -> raw RGB -> frozen scorer; perturbation branch reserializes and parse-backs one counted member before realization.",
+    "equations": [
+      "S=100*d_seg+sqrt(10*d_pose)+25*B/37545489",
+      "admit marginal iff -deltaS/deltaB > 25/37545489",
+      "redundancy(A->B)=bytes(B)-[bytes(A||B)-bytes(A)]"
+    ]
+  },
+  "directives_consumed": [
+    "2026-07-23T16:36:35Z three-clause audit triple",
+    "2026-07-23T16:45:43Z clause-4 non-redundancy",
+    "2026-07-23T16:59:16Z typed perturb-realize-score and J_paint recovery"
+  ],
+  "sha256_pins": {
+    "src/tac/optimization/ddm_runtime_exporter.py": "d9023ef95a88fa0806d87fffd83627b35dc95918ec680b8ec5876538221b28e8",
+    "src/tac/optimization/ddm_runtime_receiver.py": "3214564c2bf4399905809ec86d57abcbb3dc6f040efc1a256657e18f98f8695c",
+    "src/tac/optimization/ddm_runtime_sensitivity.py": "9142d36815e2700681f1334d65d85d6f293e178ee52eb834ad23c4432217656d",
+    "tools/verify_ddm_runtime_export.py": "52436e17065f71e7a0a2cdda7d855fbde13a986da83b63af21b2309cdc458ee9",
+    "ddm_e2_runtime_export_receipt.json": "64927cdf9d43fab2dfb3a79c9d137bfc31d4eb195571e9642b96b9aced812279",
+    "ddm_e2_runtime_verification_receipt.json": "bd27b931ce01c37b17d7c93753f3533f971d7cb7fc8e9c4620ed2bfa12405261",
+    "ddm_e2_upstream_harness_receipt.json": "30e9c669a20e599be78ff0538267f32d3153d467c2d32f6008e823eac540c91d",
+    "archive.zip": "8891012e4019e474d1e8ae7578104d74f27c25838c7b68a3798af35853469819"
+  }
+}

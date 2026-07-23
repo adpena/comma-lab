@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Run the actual frozen upstream harness on the exported DDM E1 packet."""
+"""Run the actual frozen upstream harness on an exported DDM E1/E2 packet."""
 
 from __future__ import annotations
 
@@ -38,8 +38,14 @@ class HarnessError(ValueError):
 class DDME1UpstreamHarnessConfigV1(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
-    schema_: Literal["DDME1UpstreamHarnessConfigV1"] = Field(alias="schema")
-    run_id: Literal["ddm_e1_upstream_harness_20260723"]
+    schema_: Literal[
+        "DDME1UpstreamHarnessConfigV1",
+        "DDME2UpstreamHarnessConfigV1",
+    ] = Field(alias="schema")
+    run_id: Literal[
+        "ddm_e1_upstream_harness_20260723",
+        "ddm_e2_upstream_harness_20260723",
+    ]
     export_config_path: StrictStr
     upstream_root: StrictStr
     submission_directory: StrictStr
@@ -113,10 +119,16 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
     export_config_path = (REPO_ROOT / config.export_config_path).resolve()
     export_config_path.relative_to(REPO_ROOT)
     export_config = load_config(export_config_path)
+    is_e2 = config.run_id == "ddm_e2_upstream_harness_20260723"
     packet = (REPO_ROOT / export_config.output_directory).resolve()
     output_root = packet.parent
     export_receipt_payload = (
-        output_root / "ddm_e1_runtime_export_receipt.json"
+        output_root
+        / (
+            "ddm_e2_runtime_export_receipt.json"
+            if is_e2
+            else "ddm_e1_runtime_export_receipt.json"
+        )
     ).read_bytes()
     export_receipt = json.loads(export_receipt_payload)
     if rfc8785_canonicalize(export_receipt) + b"\n" != export_receipt_payload:
@@ -262,7 +274,11 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
         "parsed_report": parsed,
         "raw": {"bytes": raw_identity[0], "sha256": raw_identity[1]},
         "research_only": True,
-        "schema": "ddm_e1_upstream_harness_receipt.v1",
+        "schema": (
+            "ddm_e2_upstream_harness_receipt.v1"
+            if is_e2
+            else "ddm_e1_upstream_harness_receipt.v1"
+        ),
         "score_claim": False,
         "status": "PASS" if not failure_reasons else "FAIL",
         "stderr": {
@@ -292,7 +308,12 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
         "wallclock_seconds": format(wallclock, ".6f"),
     }
     receipt_path = _publish_or_verify(
-        output_root / "ddm_e1_upstream_harness_receipt.json",
+        output_root
+        / (
+            "ddm_e2_upstream_harness_receipt.json"
+            if is_e2
+            else "ddm_e1_upstream_harness_receipt.json"
+        ),
         rfc8785_canonicalize(result) + b"\n",
     )
     if failure_reasons:

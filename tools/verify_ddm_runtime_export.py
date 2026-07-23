@@ -7,7 +7,12 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
@@ -46,6 +51,27 @@ class VerificationError(ValueError):
     """The runtime proof or scorer custody failed closed."""
 
 
+@dataclass(frozen=True)
+class _E2FrameOwnerReceiver:
+    """Adapter that removes Seg-owned paint from frame 0 before scoring."""
+
+    source: Any
+
+    @property
+    def custody(self) -> dict:
+        return dict(self.source.custody)
+
+    def render_camera_pairs(self, pair_ids: Sequence[int]) -> np.ndarray:
+        from tac.through_r.resolution_chain import render_grid_to_camera_uint8
+
+        indexes = tuple(int(value) for value in pair_ids)
+        camera = self.source.render_camera_pairs(indexes)
+        base = self.source.predictor.baseline.render_pairs(indexes)
+        for local in range(len(indexes)):
+            camera[local, 0] = render_grid_to_camera_uint8(base[local, 0])
+        return np.ascontiguousarray(camera)
+
+
 def _load_canonical_json(path: Path) -> dict:
     payload = path.read_bytes()
     try:
@@ -78,6 +104,10 @@ def verify(
     scorer_config_path: Path,
 ) -> tuple[dict, Path]:
     export_config = load_config(export_config_path)
+    is_e2 = (
+        export_config.run_id
+        == "ddm_e2_pose_stream_and_doctrine_export_20260723"
+    )
     scorer_value = json.loads(scorer_config_path.read_bytes())
     scorer_config = DDMV15ScorerSolvedTemplateConfigV1.model_validate(scorer_value)
     if scorer_config.pair_start != 0 or scorer_config.pair_count != 600:
@@ -89,11 +119,21 @@ def verify(
         REPO_ROOT / export_config.output_directory
     ).resolve()
     export_receipt_path = (
-        output_root.parent / "ddm_e1_runtime_export_receipt.json"
+        output_root.parent
+        / (
+            "ddm_e2_runtime_export_receipt.json"
+            if is_e2
+            else "ddm_e1_runtime_export_receipt.json"
+        )
     )
     export_receipt = _load_canonical_json(export_receipt_path)
     upstream_receipt_path = (
-        output_root.parent / "ddm_e1_upstream_harness_receipt.json"
+        output_root.parent
+        / (
+            "ddm_e2_upstream_harness_receipt.json"
+            if is_e2
+            else "ddm_e1_upstream_harness_receipt.json"
+        )
     )
     upstream_receipt = _load_canonical_json(upstream_receipt_path)
     archive_path = output_root / "archive.zip"
@@ -168,9 +208,17 @@ def verify(
     measurement_root = proof_root / "scorer_measurement"
     measurement_root.mkdir(parents=True, exist_ok=True)
     measured = _measure_candidate(
-        name="seeded_source_state",
+        name=(
+            "e2_frame1_only_seeded_source_state"
+            if is_e2
+            else "seeded_source_state"
+        ),
         archive=state_archive,
-        receiver=state_receiver,
+        receiver=(
+            _E2FrameOwnerReceiver(state_receiver)
+            if is_e2
+            else state_receiver
+        ),
         config=scorer_config,
         root=measurement_root,
         labels=labels,
@@ -316,7 +364,11 @@ def verify(
             "total_seconds": runtime_receipt["total_seconds"],
             "under_1800_seconds": True,
         },
-        "schema": "ddm_e1_runtime_verification_receipt.v1",
+        "schema": (
+            "ddm_e2_runtime_verification_receipt.v1"
+            if is_e2
+            else "ddm_e1_runtime_verification_receipt.v1"
+        ),
         "score": {
             "archive_bytes": archive_bytes,
             "d_pose": measured["d_pose"],
@@ -345,15 +397,51 @@ def verify(
             "name": export_config.state_name,
         },
         "upstream_harness": upstream_receipt,
-        "verdict": "PASS_EXACT_N600_RUNTIME_EXPORT_ADVISORY_ONLY",
+        "verdict": (
+            "PASS_E2_RUNTIME_EXPORT_POSE_TUBE_BLOCKED_ADVISORY_ONLY"
+            if is_e2
+            else "PASS_EXACT_N600_RUNTIME_EXPORT_ADVISORY_ONLY"
+        ),
         "verdict_scope": (
             "Exact n600 source-versus-packaged camera raw identity and local "
             "single-thread decode timing; frozen-scorer row is macOS-CPU advisory, "
             "not contest-CPU/CUDA authority or promotion evidence."
         ),
     }
+    if is_e2:
+        result.update(
+            {
+                "pose_contract": export_receipt["pose_contract"],
+                "rate_doctrine": export_receipt["rate_doctrine"],
+                "rate_decomposition": {
+                    "archive_counted_bytes": archive_bytes,
+                    "container_and_manifest_bytes": (
+                        archive_bytes
+                        - payload_bytes["base/chart.ddb"]
+                        - payload_bytes["semantic/composed.dds"]
+                    ),
+                    "runtime_inflate_py_bytes_not_counted": runtime_bytes,
+                    "state_archive_bytes_not_a_packet_member": len(state_archive),
+                    "stream_payload_bytes": {
+                        "base/chart.ddb": payload_bytes["base/chart.ddb"],
+                        "semantic/composed.dds": payload_bytes[
+                            "semantic/composed.dds"
+                        ],
+                    },
+                    "false_177KB_remainder_explanation": (
+                        "339094-134211-28108 mixes one counted archive with "
+                        "two nonmember quantities and is not a byte partition"
+                    ),
+                },
+            }
+        )
     receipt_path = _publish_or_verify(
-        output_root.parent / "ddm_e1_runtime_verification_receipt.json",
+        output_root.parent
+        / (
+            "ddm_e2_runtime_verification_receipt.json"
+            if is_e2
+            else "ddm_e1_runtime_verification_receipt.json"
+        ),
         rfc8785_canonicalize(result) + b"\n",
     )
     return result, receipt_path
