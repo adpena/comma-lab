@@ -16,6 +16,7 @@ import math
 import os
 import platform
 import shutil
+import subprocess
 import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
@@ -97,12 +98,52 @@ def _sha256(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(8 * 1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _portable(path: Path) -> str:
     resolved = path.resolve()
     try:
         return resolved.relative_to(REPO_ROOT).as_posix()
     except ValueError:
         return str(resolved)
+
+
+def _git_sha() -> str:
+    try:
+        return subprocess.check_output(
+            ("git", "rev-parse", "HEAD"),
+            cwd=REPO_ROOT,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise DirectDescriptionError("git SHA is unavailable for producer custody") from exc
+
+
+def _producer_custody() -> list[dict[str, Any]]:
+    paths = (
+        Path(__file__),
+        REPO_ROOT / "tools/probe_ddm_a1_column_generated_correction.py",
+        REPO_ROOT / "tools/run_ddm_v9_carrier_compose.py",
+        REPO_ROOT / "tools/measure_ddm_v14_realization_fidelity.py",
+        REPO_ROOT / "src/tac/optimization/ddm_v18_common_exact_r_master.py",
+        REPO_ROOT / "src/tac/optimization/ddm_column_generation.py",
+        REPO_ROOT / "src/tac/optimization/direct_description_carrier_compose.py",
+    )
+    return [
+        {
+            "path": _portable(path),
+            "bytes": path.stat().st_size,
+            "sha256": _sha256(_read_regular_file_once(path)),
+        }
+        for path in paths
+    ]
 
 
 def _bound_bytes(path: Path, digest: str, name: str) -> bytes:
@@ -709,6 +750,8 @@ def _source_checkpoint(
             },
         },
         "source_custody": dict(source_custody),
+        "git_sha": _git_sha(),
+        "producer_custody": _producer_custody(),
         "storage_preflight": {
             "free_bytes": storage.free,
             "memory_ceiling_gib": config.memory_ceiling_gib,
@@ -723,6 +766,35 @@ def _source_checkpoint(
     if not payload["storage_preflight"]["pass"]:
         raise DirectDescriptionError("v18b storage preflight failed")
     _write_json(path, payload)
+    return path
+
+
+def _scorer_checkpoint(
+    *,
+    root: Path,
+    config: DDMA1ColumnGeneratedCorrectionConfigV1,
+    v15_config: DDMV15ScorerSolvedTemplateConfigV1,
+    scorer_custody: Mapping[str, Any],
+) -> Path:
+    path = root / "stage_checkpoints" / "01_frozen_scorer_target_custody.json"
+    _write_json(
+        path,
+        {
+            "schema": CHECKPOINT_SCHEMA,
+            "stage": "frozen_scorer_target_custody",
+            "typed_config_sha256": config.typed_config_hash(),
+            "git_sha": _git_sha(),
+            "producer_custody": _producer_custody(),
+            "scorer_custody": dict(scorer_custody),
+            "target_custody": {
+                "path": v15_config.target_cache_path,
+                "bytes": v15_config.target_cache_bytes,
+                "sha256": v15_config.target_cache_sha256,
+                "binding": "SHA-bound v15 receipt and typed config",
+            },
+            "score_claim": False,
+        },
+    )
     return path
 
 
@@ -1635,6 +1707,7 @@ def _final_receipt(
             "predict_productions_present": False,
             "receiver_custody": dict(receive_common_exact_r_master(common_base).custody),
         },
+        "implementation_custody": _json(root / "stage_checkpoints" / "01_frozen_scorer_target_custody.json"),
         "v12_rebased_control_rows": list(controls),
         "pricing_round_history": history,
         "accepted_set_n600_replays": list(round_replays),
@@ -1736,9 +1809,17 @@ def run(
     target = Path(v15_cfg.target_cache_path)
     if target.stat().st_size != v15_cfg.target_cache_bytes:
         raise DirectDescriptionError("frozen n600 cache bytes differ")
+    if _sha256_file(target) != v15_cfg.target_cache_sha256:
+        raise DirectDescriptionError("frozen n600 cache SHA-256 differs")
     labels = open_stored_npy_memmap(target, "lstars")
     poses = open_stored_npy_memmap(target, "gt_poses")
-    segnet, posenet, _custody = _load_models(v15_cfg)
+    segnet, posenet, scorer_custody = _load_models(v15_cfg)
+    _scorer_checkpoint(
+        root=root,
+        config=config,
+        v15_config=v15_cfg,
+        scorer_custody=scorer_custody,
+    )
     for round_index in range(1, 4):
         path = root / "stage_checkpoints" / f"pricing_round_{round_index:02d}.json"
         if not path.exists():
