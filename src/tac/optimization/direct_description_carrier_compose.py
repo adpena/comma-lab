@@ -50,11 +50,13 @@ ARCHIVE_SCHEMA_V2: Final = "direct_description_v10_fisher_event_archive.v1"
 ARCHIVE_SCHEMA_V3: Final = "direct_description_v11_obligation_archive.v1"
 ARCHIVE_SCHEMA_V4: Final = "direct_description_v13_worldsheet_predictor_archive.v1"
 ARCHIVE_SCHEMA_V5: Final = "direct_description_v14_realization_fidelity_archive.v1"
+ARCHIVE_SCHEMA_V6: Final = "direct_description_v15_scorer_solved_template_archive.v1"
 RECEIVER_SCHEMA: Final = "direct_description_v9_carrier_compose_receiver.v1"
 RECEIVER_SCHEMA_V2: Final = "direct_description_v10_fisher_event_receiver.v1"
 RECEIVER_SCHEMA_V3: Final = "direct_description_v11_obligation_receiver.v1"
 RECEIVER_SCHEMA_V4: Final = "direct_description_v13_worldsheet_predictor_receiver.v1"
 RECEIVER_SCHEMA_V5: Final = "direct_description_v14_realization_fidelity_receiver.v1"
+RECEIVER_SCHEMA_V6: Final = "direct_description_v15_scorer_solved_template_receiver.v1"
 RESULT_SCHEMA: Final = "direct_description_v9_carrier_compose_receipt.v1"
 RESULT_SCHEMA_V2: Final = "direct_description_v10_fisher_event_search_receipt.v1"
 RESULT_SCHEMA_V3: Final = "direct_description_v11_obligation_search_receipt.v1"
@@ -65,6 +67,7 @@ MAGIC_V2: Final = "DDV10C1"
 MAGIC_V3: Final = "DDV11C1"
 MAGIC_V4: Final = "DDV13P1"
 MAGIC_V5: Final = "DDV14R1"
+MAGIC_V6: Final = "DDV15S1"
 EVIDENCE_AXIS: Final = "[macOS-CPU frozen-scorer advisory]"
 CLASS_ORDER: Final = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
 ROLE_CLASS_IDS: Final = {
@@ -86,6 +89,7 @@ LANE_PROGRAM_MEMBER: Final = "predict/lane_periodic_programs.ddlp"
 LANE_KNOT_MEMBER: Final = "predict/lane_drift_knots.ddlk"
 REALIZATION_PROFILE_MEMBER: Final = "render/receiver_realization.ddrp"
 REALIZATION_STATIC_RULE_MEMBER: Final = "render/static_cell_rule.g4sr"
+SCORER_SOLVED_TEMPLATE_MEMBER: Final = "render/scorer_solved_templates.ddst"
 REALIZATION_PAINT_ORDER: Final = ("UndrivableBoundary", "Road", "Lane", "Movable", "MyCar")
 _REALIZATION_MAGIC: Final = b"DDRP1"
 _REALIZATION_VERSION: Final = 1
@@ -96,9 +100,17 @@ _STATIC_RULE_IDS: Final = {
     "horizon_row_parametric": b"G4HR",
     "static_image_sparse_all": b"G4SR",
 }
-_STATIC_RULE_LZMA_FILTERS: Final = [
-    {"id": lzma.FILTER_LZMA1, "dict_size": 1 << 20, "lc": 3, "lp": 0, "pb": 2}
-]
+_STATIC_RULE_LZMA_FILTERS: Final = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 20, "lc": 3, "lp": 0, "pb": 2}]
+
+_SOLVED_TEMPLATE_MAGIC: Final = b"DDST1"
+_SOLVED_TEMPLATE_VERSION: Final = 1
+_SOLVED_TEMPLATE_HEADER: Final = struct.Struct(">5sBH")
+_SOLVED_TEMPLATE_ROW: Final = struct.Struct(">BBHHBBH")
+_SOLVED_TEMPLATE_APPLICATION_TO_WIRE: Final = {"fill": 0, "inner_boundary": 1}
+_SOLVED_TEMPLATE_WIRE_TO_APPLICATION: Final = {
+    value: key for key, value in _SOLVED_TEMPLATE_APPLICATION_TO_WIRE.items()
+}
+_MAX_SOLVED_TEMPLATE_PAYLOAD_BYTES: Final = 65_536
 
 _ROLE_TO_WIRE: Final = {name: index for index, name in enumerate(COMPOSED_ROLE_ORDER)}
 _WIRE_TO_ROLE: Final = {value: key for key, value in _ROLE_TO_WIRE.items()}
@@ -152,7 +164,10 @@ class ReceiverRealizationProfileV1:
     def __post_init__(self) -> None:
         if len(self.role_rgb_u8) != len(REALIZATION_PAINT_ORDER):
             raise DirectDescriptionError("realization profile must bind exactly five role colours")
-        if any(len(row) != 3 or any(isinstance(value, bool) or not 0 <= value <= 255 for value in row) for row in self.role_rgb_u8):
+        if any(
+            len(row) != 3 or any(isinstance(value, bool) or not 0 <= value <= 255 for value in row)
+            for row in self.role_rgb_u8
+        ):
             raise DirectDescriptionError("realization profile colours must be uint8 RGB triples")
         if self.coverage_radius != 0:
             raise DirectDescriptionError("measured v14 realization profile requires zero coverage expansion")
@@ -167,13 +182,83 @@ class ReceiverRealizationProfileV1:
         return np.asarray(self.role_rgb_u8[index], dtype=np.uint8)
 
 
+@dataclass(frozen=True, slots=True)
+class RowBandScorerTemplateV1:
+    """One counted RGB patch shared by a semantic role and scorer-row band.
+
+    The template is solved encode-side against the frozen scorer. Decode only
+    tiles these explicit uint8 bytes over a grammar-derived semantic mask; no
+    scorer weights, logits, gradients, or ground-truth table cross the wire.
+    """
+
+    role: str
+    application: str
+    scorer_row_start: int
+    scorer_row_stop: int
+    patch_height: int
+    patch_width: int
+    rgb_u8: bytes
+
+    def __post_init__(self) -> None:
+        if self.role not in REALIZATION_PAINT_ORDER:
+            raise DirectDescriptionError(f"scorer template role is unknown: {self.role!r}")
+        if self.application not in _SOLVED_TEMPLATE_APPLICATION_TO_WIRE:
+            raise DirectDescriptionError(f"scorer template application is unsupported: {self.application!r}")
+        if not 0 <= self.scorer_row_start < self.scorer_row_stop <= 384:
+            raise DirectDescriptionError("scorer template row band must be inside [0,384]")
+        if not 1 <= self.patch_height <= 8 or not 1 <= self.patch_width <= 8:
+            raise DirectDescriptionError("scorer template patch dimensions must be in [1,8]")
+        expected = self.patch_height * self.patch_width * 3
+        if len(self.rgb_u8) != expected:
+            raise DirectDescriptionError(
+                f"scorer template RGB payload expected {expected} bytes, got {len(self.rgb_u8)}"
+            )
+
+    def patch(self) -> np.ndarray:
+        return np.frombuffer(self.rgb_u8, dtype=np.uint8).reshape(self.patch_height, self.patch_width, 3)
+
+
+def _solved_template_sort_key(row: RowBandScorerTemplateV1) -> tuple[int, int, int, int, int, int]:
+    return (
+        REALIZATION_PAINT_ORDER.index(row.role),
+        _SOLVED_TEMPLATE_APPLICATION_TO_WIRE[row.application],
+        row.scorer_row_start,
+        row.scorer_row_stop,
+        row.patch_height,
+        row.patch_width,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class ScorerSolvedTemplateBankV1:
+    """Canonical row-band template bank consumed by the existing V14 renderer."""
+
+    templates: tuple[RowBandScorerTemplateV1, ...]
+
+    def __post_init__(self) -> None:
+        if not self.templates:
+            raise DirectDescriptionError("scorer-solved template bank must not be empty")
+        if len(self.templates) > 64:
+            raise DirectDescriptionError("scorer-solved template bank exceeds 64 records")
+        ordered = tuple(sorted(self.templates, key=_solved_template_sort_key))
+        if ordered != self.templates:
+            raise DirectDescriptionError("scorer-solved template records are not canonical-order")
+        previous: dict[tuple[str, str], int] = {}
+        for row in self.templates:
+            key = (row.role, row.application)
+            if row.scorer_row_start < previous.get(key, 0):
+                raise DirectDescriptionError("scorer template row bands overlap")
+            previous[key] = row.scorer_row_stop
+
+    def for_role(self, role: str) -> tuple[RowBandScorerTemplateV1, ...]:
+        return tuple(row for row in self.templates if row.role == role)
+
+
 def _encode_realization_profile(profile: ReceiverRealizationProfileV1 | None) -> bytes:
     if profile is None:
         return b""
     channels = [value for row in profile.role_rgb_u8 for value in row]
-    return _REALIZATION_MAGIC + bytes(
-        [_REALIZATION_VERSION, *channels, profile.coverage_radius, profile.amplitude_u8]
-    )
+    return _REALIZATION_MAGIC + bytes([_REALIZATION_VERSION, *channels, profile.coverage_radius, profile.amplitude_u8])
 
 
 def _decode_realization_profile(payload: bytes) -> ReceiverRealizationProfileV1 | None:
@@ -195,6 +280,79 @@ def _decode_realization_profile(payload: bytes) -> ReceiverRealizationProfileV1 
     if _encode_realization_profile(profile) != payload:
         raise DirectDescriptionError("receiver realization profile parse/re-encode changed bytes")
     return profile
+
+
+def encode_scorer_solved_template_bank(bank: ScorerSolvedTemplateBankV1 | None) -> bytes:
+    """Encode a bounded canonical template bank for counted archive storage."""
+
+    if bank is None:
+        return b""
+    body = bytearray(
+        _SOLVED_TEMPLATE_HEADER.pack(_SOLVED_TEMPLATE_MAGIC, _SOLVED_TEMPLATE_VERSION, len(bank.templates))
+    )
+    for row in bank.templates:
+        rgb = bytes(row.rgb_u8)
+        body.extend(
+            _SOLVED_TEMPLATE_ROW.pack(
+                _ROLE_TO_WIRE[row.role],
+                _SOLVED_TEMPLATE_APPLICATION_TO_WIRE[row.application],
+                row.scorer_row_start,
+                row.scorer_row_stop,
+                row.patch_height,
+                row.patch_width,
+                len(rgb),
+            )
+        )
+        body.extend(rgb)
+    if len(body) > _MAX_SOLVED_TEMPLATE_PAYLOAD_BYTES:
+        raise DirectDescriptionError("scorer-solved template payload exceeds 65536 bytes")
+    return bytes(body)
+
+
+def decode_scorer_solved_template_bank(payload: bytes) -> ScorerSolvedTemplateBankV1 | None:
+    """Strictly decode and byte-roundtrip a counted template bank."""
+
+    if not payload:
+        return None
+    if len(payload) > _MAX_SOLVED_TEMPLATE_PAYLOAD_BYTES or len(payload) < _SOLVED_TEMPLATE_HEADER.size:
+        raise DirectDescriptionError("scorer-solved template payload length is invalid")
+    magic, version, count = _SOLVED_TEMPLATE_HEADER.unpack_from(payload)
+    if magic != _SOLVED_TEMPLATE_MAGIC or version != _SOLVED_TEMPLATE_VERSION or not 1 <= count <= 64:
+        raise DirectDescriptionError("scorer-solved template header is invalid")
+    cursor = _SOLVED_TEMPLATE_HEADER.size
+    rows: list[RowBandScorerTemplateV1] = []
+    for _ in range(count):
+        if cursor + _SOLVED_TEMPLATE_ROW.size > len(payload):
+            raise DirectDescriptionError("scorer-solved template record is truncated")
+        role_wire, application_wire, y0, y1, patch_h, patch_w, rgb_bytes = _SOLVED_TEMPLATE_ROW.unpack_from(
+            payload, cursor
+        )
+        cursor += _SOLVED_TEMPLATE_ROW.size
+        if cursor + rgb_bytes > len(payload):
+            raise DirectDescriptionError("scorer-solved template RGB bytes are truncated")
+        try:
+            role = _WIRE_TO_ROLE[role_wire]
+            application = _SOLVED_TEMPLATE_WIRE_TO_APPLICATION[application_wire]
+        except KeyError as exc:
+            raise DirectDescriptionError("scorer-solved template enum is invalid") from exc
+        rows.append(
+            RowBandScorerTemplateV1(
+                role=role,
+                application=application,
+                scorer_row_start=y0,
+                scorer_row_stop=y1,
+                patch_height=patch_h,
+                patch_width=patch_w,
+                rgb_u8=payload[cursor : cursor + rgb_bytes],
+            )
+        )
+        cursor += rgb_bytes
+    if cursor != len(payload):
+        raise DirectDescriptionError("scorer-solved template payload has trailing bytes")
+    bank = ScorerSolvedTemplateBankV1(tuple(rows))
+    if encode_scorer_solved_template_bank(bank) != payload:
+        raise DirectDescriptionError("scorer-solved template parse/re-encode changed bytes")
+    return bank
 
 
 def _read_uleb128(payload: bytes, offset: int) -> tuple[int, int]:
@@ -1568,6 +1726,7 @@ def compile_carrier_compose_archive(
     realization_profile: ReceiverRealizationProfileV1 | None = None,
     realization_static_rule_payload: bytes = b"",
     realization_static_rule_id: str | None = None,
+    scorer_solved_templates: ScorerSolvedTemplateBankV1 | None = None,
 ) -> tuple[bytes, tuple[dict[str, Any], ...]]:
     """Compile a byte-canonical outer archive around the five-carrier predictor.
 
@@ -1630,6 +1789,8 @@ def compile_carrier_compose_archive(
         raise DirectDescriptionError("receiver realization profile requires the exact G1 worldsheet")
     if realization_static_rule_payload and realization_profile is None:
         raise DirectDescriptionError("static realization rule requires the counted realization profile")
+    if scorer_solved_templates is not None and realization_profile is None:
+        raise DirectDescriptionError("scorer-solved templates require the counted V14 realization profile")
     _decode_realization_static_rule(realization_static_rule_payload, realization_static_rule_id)
     v11_requested = bool(boundary_shearlets or island_shapes or obligation_vocabulary)
     if v13_requested and addressed:
@@ -1646,6 +1807,7 @@ def compile_carrier_compose_archive(
     lane_program_payload = _encode_lane_programs(tuple(lane_programs))
     lane_knot_payload = _encode_lane_knots(tuple(lane_knots))
     realization_payload = _encode_realization_profile(realization_profile)
+    solved_template_payload = encode_scorer_solved_template_bank(scorer_solved_templates)
     manifest = _manifest_for(
         predictor_archive,
         predictor,
@@ -1662,8 +1824,8 @@ def compile_carrier_compose_archive(
         lane_knot_payload,
     )
     if realization_payload:
-        manifest["schema"] = ARCHIVE_SCHEMA_V5
-        manifest["magic"] = MAGIC_V5
+        manifest["schema"] = ARCHIVE_SCHEMA_V6 if solved_template_payload else ARCHIVE_SCHEMA_V5
+        manifest["magic"] = MAGIC_V6 if solved_template_payload else MAGIC_V5
         manifest["realization_profile"] = {
             "member": REALIZATION_PROFILE_MEMBER,
             "bytes": len(realization_payload),
@@ -1673,7 +1835,7 @@ def compile_carrier_compose_archive(
             "worldsheet_policy": "replace_inherited_movable_mask",
             "edge_policy": "nearest_camera_coverage_no_expansion",
             "amplitude_floor_u8": realization_profile.amplitude_u8,
-            "pixel_coordinate_or_rgb_patch_present": False,
+            "pixel_coordinate_or_rgb_patch_present": bool(solved_template_payload),
         }
         if realization_static_rule_payload:
             manifest["realization_static_rule"] = {
@@ -1683,6 +1845,17 @@ def compile_carrier_compose_archive(
                 "sha256": _sha256(realization_static_rule_payload),
                 "placement": "decoder_derived_source_semantic_mask_then_camera_resolution_target_prototype",
                 "target_custody": "G4_static_cell_rule_only_no_scorer_or_ground_truth_table",
+            }
+        if solved_template_payload:
+            manifest["scorer_solved_templates"] = {
+                "member": SCORER_SOLVED_TEMPLATE_MEMBER,
+                "bytes": len(solved_template_payload),
+                "sha256": _sha256(solved_template_payload),
+                "record_count": len(scorer_solved_templates.templates),
+                "placement": "grammar_semantic_mask_x_scorer_row_band_x_periodic_uint8_patch",
+                "solve_boundary": "encode_side_only_frozen_scorer_through_exact_R",
+                "decode_boundary": "deterministic_template_tiling_no_scorer",
+                "target_custody": "counted_video_derived_shared_template_no_ground_truth_table",
             }
     members = {
         "manifest.json": rfc8785_canonicalize(manifest),
@@ -1708,6 +1881,8 @@ def compile_carrier_compose_archive(
         members[REALIZATION_PROFILE_MEMBER] = realization_payload
     if realization_static_rule_payload:
         members[REALIZATION_STATIC_RULE_MEMBER] = realization_static_rule_payload
+    if solved_template_payload:
+        members[SCORER_SOLVED_TEMPLATE_MEMBER] = solved_template_payload
     if lane_program_payload:
         members[LANE_PROGRAM_MEMBER] = lane_program_payload
     if lane_knot_payload:
@@ -1729,7 +1904,7 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
         with zipfile.ZipFile(io.BytesIO(archive), "r") as reader:
             infos = reader.infolist()
             expected_prefix = ["manifest.json", "predictor.zip"]
-            if [row.filename for row in infos[:2]] != expected_prefix or not 2 <= len(infos) <= 10:
+            if [row.filename for row in infos[:2]] != expected_prefix or not 2 <= len(infos) <= 11:
                 raise DirectDescriptionError("carrier archive member order/cardinality is invalid")
             if any(
                 row.is_dir()
@@ -1761,6 +1936,7 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
     worldsheet_g1_payload = members.get(WORLDSHEET_G1_MEMBER, b"")
     realization_payload = members.get(REALIZATION_PROFILE_MEMBER, b"")
     realization_static_rule_payload = members.get(REALIZATION_STATIC_RULE_MEMBER, b"")
+    solved_template_payload = members.get(SCORER_SOLVED_TEMPLATE_MEMBER, b"")
     lane_programs_payload = members.get(LANE_PROGRAM_MEMBER, b"")
     lane_knots_payload = members.get(LANE_KNOT_MEMBER, b"")
     common_invalid = (
@@ -1835,7 +2011,7 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
             row = correction_rows.get(key, {})
             invalid = invalid or row.get("member") != (member_name if payload else None)
             invalid = invalid or row.get("bytes") != len(payload) or row.get("sha256") != _sha256(payload)
-    elif schema in {ARCHIVE_SCHEMA_V4, ARCHIVE_SCHEMA_V5}:
+    elif schema in {ARCHIVE_SCHEMA_V4, ARCHIVE_SCHEMA_V5, ARCHIVE_SCHEMA_V6}:
         grammar = manifest.get("grammar", {})
         movable = grammar.get("movable", {})
         lane = grammar.get("lane", {})
@@ -1847,6 +2023,7 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
             *([WORLDSHEET_G1_MEMBER] if worldsheet_g1_payload else []),
             *([REALIZATION_PROFILE_MEMBER] if realization_payload else []),
             *([REALIZATION_STATIC_RULE_MEMBER] if realization_static_rule_payload else []),
+            *([SCORER_SOLVED_TEMPLATE_MEMBER] if solved_template_payload else []),
             *([LANE_PROGRAM_MEMBER] if lane_programs_payload else []),
             *([LANE_KNOT_MEMBER] if lane_knots_payload else []),
         }
@@ -1867,7 +2044,8 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
         }
         invalid = (
             common_invalid
-            or manifest.get("magic") != (MAGIC_V5 if schema == ARCHIVE_SCHEMA_V5 else MAGIC_V4)
+            or manifest.get("magic")
+            != ({ARCHIVE_SCHEMA_V4: MAGIC_V4, ARCHIVE_SCHEMA_V5: MAGIC_V5, ARCHIVE_SCHEMA_V6: MAGIC_V6}[schema])
             or correction
             or boundary
             or events
@@ -1876,11 +2054,13 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
             or set(members) != expected_members
             or (not worldsheet_tracks_payload and not worldsheet_g1_payload and not lane_programs_payload)
             or (bool(worldsheet_g1_payload) and bool(worldsheet_tracks_payload or worldsheet_knots_payload))
-            or bool(realization_payload) != (schema == ARCHIVE_SCHEMA_V5)
+            or bool(realization_payload) != (schema in {ARCHIVE_SCHEMA_V5, ARCHIVE_SCHEMA_V6})
+            or bool(solved_template_payload) != (schema == ARCHIVE_SCHEMA_V6)
         )
         realization_row = manifest.get("realization_profile", {})
         static_rule_row = manifest.get("realization_static_rule", {})
-        if schema == ARCHIVE_SCHEMA_V5:
+        solved_template_row = manifest.get("scorer_solved_templates", {})
+        if schema in {ARCHIVE_SCHEMA_V5, ARCHIVE_SCHEMA_V6}:
             invalid = (
                 invalid
                 or not worldsheet_g1_payload
@@ -1888,7 +2068,7 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
                 or realization_row.get("bytes") != len(realization_payload)
                 or realization_row.get("sha256") != _sha256(realization_payload)
                 or realization_row.get("paint_order") != list(REALIZATION_PAINT_ORDER)
-                or realization_row.get("pixel_coordinate_or_rgb_patch_present") is not False
+                or realization_row.get("pixel_coordinate_or_rgb_patch_present") != (schema == ARCHIVE_SCHEMA_V6)
             )
             _decode_realization_profile(realization_payload)
             if realization_static_rule_payload:
@@ -1904,8 +2084,29 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
                 )
             else:
                 invalid = invalid or bool(static_rule_row)
+            if schema == ARCHIVE_SCHEMA_V6:
+                bank = decode_scorer_solved_template_bank(solved_template_payload)
+                invalid = (
+                    invalid
+                    or bank is None
+                    or solved_template_row.get("member") != SCORER_SOLVED_TEMPLATE_MEMBER
+                    or solved_template_row.get("bytes") != len(solved_template_payload)
+                    or solved_template_row.get("sha256") != _sha256(solved_template_payload)
+                    or solved_template_row.get("record_count") != len(bank.templates)
+                    or solved_template_row.get("solve_boundary") != "encode_side_only_frozen_scorer_through_exact_R"
+                    or solved_template_row.get("decode_boundary") != "deterministic_template_tiling_no_scorer"
+                )
+            else:
+                invalid = invalid or bool(solved_template_row)
         else:
-            invalid = invalid or bool(realization_row) or bool(static_rule_row) or bool(realization_static_rule_payload)
+            invalid = (
+                invalid
+                or bool(realization_row)
+                or bool(static_rule_row)
+                or bool(realization_static_rule_payload)
+                or bool(solved_template_row)
+                or bool(solved_template_payload)
+            )
         for row, member_name, payload in payloads.values():
             invalid = invalid or row.get("member") != (member_name if payload else None)
             invalid = invalid or row.get("bytes") != len(payload) or row.get("sha256") != _sha256(payload)
@@ -1926,6 +2127,7 @@ def parse_carrier_compose_archive(archive: bytes) -> tuple[dict[str, bytes], tup
         *([WORLDSHEET_G1_MEMBER] if worldsheet_g1_payload else []),
         *([REALIZATION_PROFILE_MEMBER] if realization_payload else []),
         *([REALIZATION_STATIC_RULE_MEMBER] if realization_static_rule_payload else []),
+        *([SCORER_SOLVED_TEMPLATE_MEMBER] if solved_template_payload else []),
         *([LANE_PROGRAM_MEMBER] if lane_programs_payload else []),
         *([LANE_KNOT_MEMBER] if lane_knots_payload else []),
     ]
@@ -2320,6 +2522,24 @@ def _dilate_one_pixel(mask: np.ndarray) -> np.ndarray:
     )
 
 
+def _inner_boundary_one_cell(mask: np.ndarray) -> np.ndarray:
+    source = np.asarray(mask, dtype=bool)
+    padded = np.pad(source, 1, mode="constant", constant_values=False)
+    eroded = source.copy()
+    eroded &= padded[:-2, 1:-1]
+    eroded &= padded[2:, 1:-1]
+    eroded &= padded[1:-1, :-2]
+    eroded &= padded[1:-1, 2:]
+    return source & ~eroded
+
+
+def _template_camera_field(template: RowBandScorerTemplateV1, camera_h: int, camera_w: int) -> np.ndarray:
+    patch = template.patch()
+    rows = np.arange(camera_h, dtype=np.intp) % template.patch_height
+    cols = np.arange(camera_w, dtype=np.intp) % template.patch_width
+    return np.ascontiguousarray(patch[rows[:, None], cols[None, :]])
+
+
 @dataclass(frozen=True, slots=True)
 class CarrierComposeReceiverV1:
     archive: bytes
@@ -2339,6 +2559,7 @@ class CarrierComposeReceiverV1:
     realization_profile: ReceiverRealizationProfileV1 | None = None
     realization_static_rule_codes: np.ndarray | None = None
     realization_static_rule_id: str | None = None
+    scorer_solved_templates: ScorerSolvedTemplateBankV1 | None = None
 
     @property
     def z(self) -> Any:
@@ -2434,6 +2655,39 @@ class CarrierComposeReceiverV1:
                 output[local_index, 1, mask] = layer.paint_rgb_u8
         return np.ascontiguousarray(output)
 
+    def template_camera_masks(
+        self,
+        pair_ids: Sequence[int],
+        template: RowBandScorerTemplateV1,
+    ) -> np.ndarray:
+        """Return the exact grammar-derived camera mask consumed by one template."""
+
+        indexes = tuple(int(value) for value in pair_ids)
+        if any(value < 0 or value >= self.z.n_pairs for value in indexes):
+            raise DirectDescriptionError("v15 template receiver pair ID is outside its local window")
+        from tac.through_r.resolution_chain import CAMERA_H, CAMERA_W
+
+        ys = (np.arange(CAMERA_H) * 384 // CAMERA_H).clip(0, 383)
+        xs = (np.arange(CAMERA_W) * 512 // CAMERA_W).clip(0, 511)
+        layer = next(row for row in self.layers if row.role == template.role)
+        row_band = (np.arange(384) >= template.scorer_row_start) & (np.arange(384) < template.scorer_row_stop)
+        output = np.empty((len(indexes), CAMERA_H, CAMERA_W), dtype=bool)
+        for local_index, pair_id in enumerate(indexes):
+            mask = self._mask_for_layer(layer, pair_id, replace_g1_movable=True)
+            if template.application == "inner_boundary":
+                mask = _inner_boundary_one_cell(mask)
+            mask &= row_band[:, None]
+            role_index = REALIZATION_PAINT_ORDER.index(template.role)
+            for later_role in REALIZATION_PAINT_ORDER[role_index + 1 :]:
+                later_layer = next(row for row in self.layers if row.role == later_role)
+                mask &= ~self._mask_for_layer(
+                    later_layer,
+                    pair_id,
+                    replace_g1_movable=True,
+                )
+            output[local_index] = mask[np.ix_(ys, xs)]
+        return np.ascontiguousarray(output)
+
     def render_camera_pairs(self, pair_ids: Sequence[int]) -> np.ndarray:
         """V14 camera-res placement before the evaluator-owned R-down stage."""
 
@@ -2448,9 +2702,7 @@ class CarrierComposeReceiverV1:
         output = np.empty((len(indexes), 2, CAMERA_H, CAMERA_W, 3), dtype=np.uint8)
         for local_index in range(len(indexes)):
             for frame_index in range(2):
-                output[local_index, frame_index] = render_grid_to_camera_uint8(
-                    render_grid[local_index, frame_index]
-                )
+                output[local_index, frame_index] = render_grid_to_camera_uint8(render_grid[local_index, frame_index])
         ys = (np.arange(CAMERA_H) * 384 // CAMERA_H).clip(0, 383)
         xs = (np.arange(CAMERA_W) * 512 // CAMERA_W).clip(0, 511)
         layer_by_role = {row.role: row for row in self.layers}
@@ -2464,6 +2716,16 @@ class CarrierComposeReceiverV1:
                 camera_mask = mask[np.ix_(ys, xs)]
                 output[local_index, 0, camera_mask] = colour
                 output[local_index, 1, camera_mask] = colour
+            for template in (
+                ()
+                if self.scorer_solved_templates is None
+                else self.scorer_solved_templates.for_role(role)
+            ):
+                camera_masks = self.template_camera_masks(indexes, template)
+                field = _template_camera_field(template, CAMERA_H, CAMERA_W)
+                for local_index, camera_mask in enumerate(camera_masks):
+                    output[local_index, 0, camera_mask] = field[camera_mask]
+                    output[local_index, 1, camera_mask] = field[camera_mask]
         if self.realization_static_rule_codes is not None:
             rules = self.realization_static_rule_codes
             source = rules // 5
@@ -2475,9 +2737,7 @@ class CarrierComposeReceiverV1:
                     if not np.any(target_mask):
                         continue
                     camera_mask = target_mask[np.ix_(ys, xs)]
-                    colour = self.realization_profile.colour_for(
-                        "UndrivableBoundary" if role == "Undrivable" else role
-                    )
+                    colour = self.realization_profile.colour_for("UndrivableBoundary" if role == "Undrivable" else role)
                     output[local_index, 0, camera_mask] = colour
                     output[local_index, 1, camera_mask] = colour
         return np.ascontiguousarray(output)
@@ -2509,6 +2769,7 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         members.get(REALIZATION_STATIC_RULE_MEMBER, b""),
         realization_static_rule_id,
     )
+    scorer_solved_templates = decode_scorer_solved_template_bank(members.get(SCORER_SOLVED_TEMPLATE_MEMBER, b""))
     lane_programs = _decode_lane_programs(members.get(LANE_PROGRAM_MEMBER, b""))
     lane_knots = _decode_lane_knots(members.get(LANE_KNOT_MEMBER, b""))
     start = predictor.source_pair_start
@@ -2561,6 +2822,7 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         realization_profile=realization_profile,
         realization_static_rule_codes=realization_static_rule_codes,
         realization_static_rule_id=realization_static_rule_id,
+        scorer_solved_templates=scorer_solved_templates,
     )
 
     lane_groups: dict[tuple[int, int], list[LaneCoefficientDelta]] = {}
@@ -2713,7 +2975,9 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         raise DirectDescriptionError("carrier receiver replay is nondeterministic")
     custody = {
         "schema": (
-            RECEIVER_SCHEMA_V5
+            RECEIVER_SCHEMA_V6
+            if manifest["schema"] == ARCHIVE_SCHEMA_V6
+            else RECEIVER_SCHEMA_V5
             if manifest["schema"] == ARCHIVE_SCHEMA_V5
             else RECEIVER_SCHEMA_V4
             if manifest["schema"] == ARCHIVE_SCHEMA_V4
@@ -2764,6 +3028,19 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         "realization_static_rule_active_sites": (
             0 if realization_static_rule_codes is None else int(np.count_nonzero(realization_static_rule_codes >= 0))
         ),
+        "scorer_solved_template_bytes": len(members.get(SCORER_SOLVED_TEMPLATE_MEMBER, b"")),
+        "scorer_solved_template_sha256": _sha256(members.get(SCORER_SOLVED_TEMPLATE_MEMBER, b"")),
+        "scorer_solved_template_count": (
+            0 if scorer_solved_templates is None else len(scorer_solved_templates.templates)
+        ),
+        "scorer_solved_template_parse_reencode_identical": (
+            encode_scorer_solved_template_bank(scorer_solved_templates)
+            == members.get(SCORER_SOLVED_TEMPLATE_MEMBER, b"")
+        ),
+        "scorer_solve_boundary": (
+            None if scorer_solved_templates is None else "encode_side_only_frozen_scorer_through_exact_R"
+        ),
+        "decode_scorer_dependency": False,
         "camera_resolution_placement": realization_profile is not None,
         "movable_g1_replaces_inherited_mask": realization_profile is not None,
         "semantic_paint_order": (
@@ -2779,7 +3056,7 @@ def receive_carrier_compose_archive(archive: bytes) -> CarrierComposeReceiverV1:
         "lane_one_dash_phase_per_object_not_per_dash": bool(lane_programs),
         "lane_road_adjacency_constraint": "receiver intersects Lane with one-pixel dilation of inherited Road support",
         "region_coherent_chart_rerasterization": True,
-        "pixel_coordinate_or_rgb_patch_present": False,
+        "pixel_coordinate_or_rgb_patch_present": scorer_solved_templates is not None,
         "nested_pose6_owner_reused": True,
         "deterministic_probe_replay": True,
         "scorer_weights_present": False,
@@ -2841,6 +3118,7 @@ def recursive_carrier_byte_rows(archive: bytes) -> list[dict[str, Any]]:
         ("movable_g1_polygon_worldsheet_derivation", WORLDSHEET_G1_MEMBER),
         ("receiver_realization_profile", REALIZATION_PROFILE_MEMBER),
         ("receiver_static_cell_rule", REALIZATION_STATIC_RULE_MEMBER),
+        ("encode_side_scorer_solved_shared_templates", SCORER_SOLVED_TEMPLATE_MEMBER),
         ("lane_periodic_phase_width_visibility", LANE_PROGRAM_MEMBER),
         ("lane_polynomial_drift_knots", LANE_KNOT_MEMBER),
     ):
