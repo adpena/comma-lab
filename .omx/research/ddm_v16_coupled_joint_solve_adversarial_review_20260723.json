@@ -1,0 +1,23 @@
+{
+  "schema": "ddm_v16_coupled_joint_solve_adversarial_review.v1",
+  "canonical_receipt_path": ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/ddm_v16_coupled_joint_solve_receipt.json",
+  "canonical_receipt_sha256": "7b2d2c18f7790294bbfbbd875a6c4696e570a49826c8317109ca8a988c27f79d",
+  "invalidated_receipt_path": ".omx/research/ddm_v16_coupled_joint_solve_20260723T002500Z/ddm_v16_coupled_joint_solve_receipt.json",
+  "invalidated_receipt_sha256": "170adb825d4d709eebf929daf47e87c4de6736c15f7047572d16315b518ce0e4",
+  "findings": [
+    {"severity": "P0_FIXED", "finding": "Lane was mapped to MyCar class 4", "guard": "regression asserts Lane=1 and Movable=3"},
+    {"severity": "VERDICT", "finding": "all four KKT attempts are MAX_ITERATIONS_RESIDUAL_NOT_CLEAN", "scope": "configured local trust-box instance"},
+    {"severity": "VERDICT", "finding": "all non-control realized correlations are negative", "scope": "canonical eight-island operating point"},
+    {"severity": "CUSTODY", "finding": "FD pass covers eight sampled entries under absolute-or-relative tolerance; max relative error 1.346133728 on a near-zero entry", "scope": "sampled local derivative only"},
+    {"severity": "NUMERICAL", "finding": "numpy emitted overflow/divide/invalid matmul warnings while forming rejected solve proposals; persisted diagnostics are finite", "scope": "rejected proposal path"}
+  ],
+  "fork": "C",
+  "verdict_scope": "INSTANCE x canonical Lane=1 eight-island operating point x configured trust boxes",
+  "promotion_eligible": false,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "main_landing_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "ddm_v16_coupled_joint_solve_equations.v1",
+  "law_id": "DDM_V16_COUPLED_MARGIN_KKT_UINT8_RECEIVER_RELINEARIZE_20260723",
+  "variables": {
+    "u": "72 shared 2x2 template byte DOF plus 69 signed RGB compensation DOF on 23 measured supports",
+    "M": "151x141 receiver-through-R frozen-scorer signed-margin Jacobian",
+    "m": "32 targeted margins, 23 protected margins, and 96 two-sided pose trust margins",
+    "rho": "per-DOF trust box, halved for round 2 after round-1 receiver invalidity"
+  },
+  "conditional_qp": "min 1/2*d^T(G+M^TWM+lambda*I)d subject to M*d>=epsilon-m(u), -rho<=d<=rho",
+  "active_set_kkt": "[H,-A^T;A,0][d,mu]=[0,b]",
+  "outer_loop": "VJP_M -> conditional_KKT -> Babai_uint8 -> counted_receiver -> frozen_scorer -> measured_diff -> relinearize_if_pattern_changed",
+  "reductions": {
+    "receiver_and_R": "EXACT",
+    "fixed_local_affine_level_set_system": "EXACT_CONDITIONAL_EQUATIONS",
+    "coupling_operator_M": "MEASURED_LOCAL_DERIVATIVE_8_SAMPLED_FD_ENTRIES",
+    "Gauss_Newton_JtJ": "MODELED_LOCAL_CURVATURE",
+    "uint8_projection": "BABAI_NEAREST_PLANE_WITH_QUADRATIC_ERROR_BOUND",
+    "activation_pattern_switch": "BOUNDED_SEARCH",
+    "nonlinear_global_optimum": "NOT_CLAIMED"
+  },
+  "measurement": {
+    "operator_shape": [151, 141],
+    "operator_archive_sha256": "fe80c965e3d071d5eba3e3d4885a6aa3710afaf56cbe82b0e8b7766b5fadb87b",
+    "fd_sampled_entries": 8,
+    "fd_maximum_absolute_error": 0.000015648212865926325,
+    "fd_maximum_relative_error": 1.3461337280273438,
+    "fd_pass_rule": "absolute_error<=0.05 OR relative_error<=0.1",
+    "all_four_kkt_attempts_converged": false,
+    "round_1_realized_correlations": {
+      "gauss_newton": -0.135574217337,
+      "first_order": -0.159550840270
+    },
+    "round_2_realized_correlations": {
+      "gauss_newton": -0.101633253770,
+      "first_order": -0.101633253770
+    },
+    "selected_state": "HOLD_CONTROL_BOTH_ROUNDS",
+    "selected_sparse_compensation_records": 0,
+    "largest_rejected_sparse_compensation_records": 12
+  },
+  "verdict_scope": "INSTANCE x canonical Lane=1 eight-island operating point x configured trust boxes",
+  "fork": "C",
+  "research_only": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

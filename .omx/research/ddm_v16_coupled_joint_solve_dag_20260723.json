@@ -1,0 +1,33 @@
+{
+  "schema": "ddm_v16_coupled_joint_solve_dag.v1",
+  "feed_id": "FEED-603-ddm-v16-coupled-joint-solve",
+  "lane_id": "ddm_v16_coupled_joint_solve",
+  "nodes": [
+    {"id": "v15_control", "status": "MEASURED", "artifact": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_scorer_solved_templates_n600_receipt.json"},
+    {"id": "canonical_class_contract", "status": "FIXED_AND_REGRESSION_TESTED", "detail": "Lane=1, Movable=3"},
+    {"id": "exact_receiver_R", "status": "EXACT", "artifact": "src/tac/optimization/direct_description_coupled_margin.py"},
+    {"id": "coupling_operator_M", "status": "MEASURED_LOCAL", "detail": "151x141; eight sampled FD entries pass absolute-or-relative tolerance"},
+    {"id": "conditional_KKT", "status": "NOT_CONVERGED", "detail": "four of four first-order/GN attempts MAX_ITERATIONS_RESIDUAL_NOT_CLEAN"},
+    {"id": "uint8_receiver_admission", "status": "MEASURED_REJECT", "detail": "both rounds selected hold control"},
+    {"id": "receiver_ladder", "status": "MEASURED_ADVISORY", "detail": "eight-island -> n64 -> n600; 38 n600 batches preserved"},
+    {"id": "fork_C", "status": "FIRED", "detail": "instance validity radii and costate/preconditioner signal only"},
+    {"id": "catalog_366", "status": "OPEN_NOT_FIRED", "detail": "M may be reviewed as warm-start/costate signal; no live dispatch authorized"}
+  ],
+  "edges": [
+    ["v15_control", "canonical_class_contract"],
+    ["canonical_class_contract", "exact_receiver_R"],
+    ["exact_receiver_R", "coupling_operator_M"],
+    ["coupling_operator_M", "conditional_KKT"],
+    ["conditional_KKT", "uint8_receiver_admission"],
+    ["uint8_receiver_admission", "receiver_ladder"],
+    ["receiver_ladder", "fork_C"],
+    ["fork_C", "catalog_366"]
+  ],
+  "invalidated_predecessor": ".omx/research/ddm_v16_coupled_joint_solve_lane_class_invalidation_20260723.json",
+  "canonical_receipt": ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/ddm_v16_coupled_joint_solve_receipt.json",
+  "research_only": true,
+  "score_claim": false,
+  "main_landing_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

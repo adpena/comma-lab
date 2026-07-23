@@ -1,0 +1,43 @@
+{
+  "schema": "ddm_v16_coupled_joint_solve_sha_receipt.v1",
+  "lane_id": "ddm_v16_coupled_joint_solve",
+  "source_git_base": "7465130354bc6429c1154d3b1b71553bd5eb760c",
+  "canonical": [
+    {"path": ".omx/research/configs/ddm_v16_coupled_joint_solve_lane_fix_20260723.json", "sha256": "22ac273f01cc16f01c2d0c3ec7db31a7bfe4b3b1d9dd7ac6feb97b09f8ee0e63"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/ddm_v16_coupled_joint_solve_receipt.json", "sha256": "7b2d2c18f7790294bbfbbd875a6c4696e570a49826c8317109ca8a988c27f79d"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/operators/round_01_M.npz", "sha256": "fe80c965e3d071d5eba3e3d4885a6aa3710afaf56cbe82b0e8b7766b5fadb87b"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/operators/round_02_M.npz", "sha256": "fe80c965e3d071d5eba3e3d4885a6aa3710afaf56cbe82b0e8b7766b5fadb87b"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/ddm_v16_eight_island.not_a_candidate.zip.receipt-bytes", "sha256": "d56cce618807090f66a993bbf11f62d49dc56b4e89301e0ce86c99ab5a28a1c9"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/ddm_v16_n64.not_a_candidate.zip.receipt-bytes", "sha256": "8829d4a8fb3eff235b9f50d5b618bc8e92eba68685e4642f4519ba71f1376434"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/ddm_v16_n600.not_a_candidate.zip.receipt-bytes", "sha256": "d56cce618807090f66a993bbf11f62d49dc56b4e89301e0ce86c99ab5a28a1c9"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_lane_class_invalidation_20260723.json", "sha256": "9212c8008f7eead1f30639c94dc910a7b0b808a84f018585141e596cf4242b4a"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_equations_20260723.json", "sha256": "f555d02f209242507b6eb74859efe4f1f280208929272bf9bcaedbd33e776b4c"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_dag_20260723.json", "sha256": "0fce7fba2e44f5a8bf1a0ee6caf59f823bcd5f4333868c9c09a3df8fce57067b"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_canonical_equations_20260723.md", "sha256": "66785401ce472a52ac6494a51a63599bf1f13cb455d7b6075bc9200f67da6f0f"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_DAG_FEED_20260723.md", "sha256": "fe291a2c9633b0ffcd9cb5ceae169ca7b61df6da81c161f5ee8544bc5ee19cb4"},
+    {"path": ".omx/research/codex_findings_ddm_v16_coupled_joint_solve_20260723_codex.md", "sha256": "84cf90f5cabf4980b6b981489397bdb08f1c1a1922ec3030399908ecdb6190d9"},
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_adversarial_review_20260723.json", "sha256": "3f7aa7f6d1389b5d987ffd446decffc83258564816070b122a79958a1e2bbfa1"},
+    {"path": ".omx/research/codex_session_summary_20260723T020100Z_codex.md", "sha256": "807c665d34b75290cd51d4aee28c486c64c609d382c5f43a427506409ffed2e5"}
+  ],
+  "producers": [
+    {"path": "tools/measure_ddm_v16_coupled_joint_solve.py", "sha256": "6eed63f02d00b0cda70c3e4157b4d413e3420cea963132c6d626a6e1d52bd9a3"},
+    {"path": "src/tac/optimization/coupled_margin_levelset.py", "sha256": "6f131f371593f1a4d70c7acc19741096ffc5da68fbe3a6c6d14779802ddf9896"},
+    {"path": "src/tac/optimization/direct_description_coupled_margin.py", "sha256": "1ffbdbb2b18fd0228a5b9a9d1f1d94bf3982dd724c6481a5e856c5119ab34431"},
+    {"path": "src/tac/canonical_equations/ddm_v16_coupled_margin_law_20260723.py", "sha256": "06d2e7fc933c25547a70435dbd60a5ba9b71460a48b18bf56fa16fd66a77b3ba"}
+  ],
+  "tests": [
+    {"path": "tools/tests/test_measure_ddm_v16_coupled_joint_solve.py", "sha256": "138d0b9076fb01c8a79327c66086ca186421ebac7839f12f11b3e6363a120477"},
+    {"path": "src/tac/optimization/tests/test_coupled_margin_levelset.py", "sha256": "0e12e1944fe8e1f901a6b40b397a64964e5c16294fdb1f79e38e58e504306b3b"},
+    {"path": "src/tac/optimization/tests/test_direct_description_coupled_margin.py", "sha256": "9d28591d9955113fc5ad04cdd5cea6b7f39f85f412a6b3c48f7bc14401030a65"},
+    {"path": "src/tac/canonical_equations/tests/test_ddm_v16_coupled_margin_law_20260723.py", "sha256": "093e11b08afc2beed19dd16f59faac17450b1c726f9cccee651583b2d15b7c14"}
+  ],
+  "forensic_invalidated": [
+    {"path": ".omx/research/ddm_v16_coupled_joint_solve_20260723T002500Z/ddm_v16_coupled_joint_solve_receipt.json", "sha256": "170adb825d4d709eebf929daf47e87c4de6736c15f7047572d16315b518ce0e4", "reason": "Lane class contract used MyCar class 4"}
+  ],
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "main_landing_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

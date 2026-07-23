@@ -83764,6 +83764,49 @@
         "joint_predictor_template_training_366",
         "decoder_free_physical_bev_custody"
       ]
+    },
+    {
+      "id": "ddm_v16_coupled_joint_solve",
+      "name": "DDM v16 coupled joint scorer-margin solve",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/direct_description_coupled_margin.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/ddm_v16_coupled_joint_solve_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Isolated-worktree local macOS-CPU frozen-scorer advisory coupled GN/KKT solve extending v14/v15 receiver and #549; score_claim=false; pointer 0.1910828242 contest-CPU unchanged; MAIN landing review required.",
+      "research_only": true,
+      "lane_class": "receiver_realization_research"
     }
   ],
   "level_rules": {
@@ -83773,5 +83816,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T00:10:13Z"
+  "updated_at": "2026-07-23T01:57:26Z"
 }
