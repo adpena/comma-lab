@@ -1,0 +1,50 @@
+{
+  "schema": "DDMA1ColumnGeneratedCorrectionConfigV1",
+  "run_id": "ddm_a1_column_generated_n64_20260723T030000Z",
+  "seed": 1234,
+  "source_v12_receipt": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_search_n600_receipt.json",
+  "source_v12_receipt_sha256": "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a",
+  "source_v12_archive": ".omx/research/ddm_v12_obligation_n600_20260722T161517Z/ddm_v12_obligation_n600_add147456.not_a_candidate.zip.receipt-bytes",
+  "source_v12_archive_sha256": "623f860e78a105a8a31efc46d92002597d32e3459447cfed642c81243441ed11",
+  "grammar_receipt": ".omx/research/direct_description_g1_grammar_induction_20260722.json",
+  "grammar_receipt_sha256": "f4cdfbc3765c4dbaaa9383741f4b9d2f8d4eb5ab411595fad100ec0373d263e5",
+  "source_v15_receipt": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_scorer_solved_templates_n600_receipt.json",
+  "source_v15_receipt_sha256": "5ed6f830b3749a51e0d300a9104fda9a77e86bbeb3b81428a20e1ec0d3dcfcb8",
+  "source_v15_archive": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+  "source_v15_archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+  "source_v16_receipt": ".omx/research/ddm_v16_coupled_joint_solve_20260723T002500Z/ddm_v16_coupled_joint_solve_receipt.json",
+  "source_v16_receipt_sha256": "170adb825d4d709eebf929daf47e87c4de6736c15f7047572d16315b518ce0e4",
+  "pair_start": 448,
+  "pair_count": 64,
+  "column_families": [
+    "v12_control",
+    "g1_grammar_coordinate",
+    "realized_residual_vjp",
+    "curvelet_boundary"
+  ],
+  "pricing_metric": "realized_joint_objective_reduced_cost",
+  "selection_modes": [
+    "v12_sequential_greedy_control",
+    "beam_width_32",
+    "conflict_miqp"
+  ],
+  "coder_entrants": [
+    "unstructured_explicit_indices",
+    "structured_nm_2_of_4_coding_order",
+    "mx_block_shared_scale_int4"
+  ],
+  "coder_comparison_rule": "matched_realized_d_seg_minimum_exact_bytes",
+  "maximum_pricing_rounds": 3,
+  "maximum_new_columns_per_round": 64,
+  "added_byte_budgets": [
+    16384,
+    49152,
+    98304,
+    147456
+  ],
+  "exact_replay_after_each_selected_set": true,
+  "memory_ceiling_gib": 116,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false
+}
