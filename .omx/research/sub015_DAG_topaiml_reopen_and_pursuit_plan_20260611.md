@@ -21725,3 +21725,36 @@ verdict_scope: formulation — the generated-vocabulary column-generation FORMUL
 - **m4 (merged 8eb2c7c543): `SUB015_NOT_REACHED_22645_BYTE_GAP_NOT_RULED_OUT`** — the FIRST CERTIFIED distance to sub-0.15. Re-derived exact: smallest relaxed-receiver member **177,169 B** − sub-0.15 strict cap **154,524 B** = **22,645 B gap (12.78158%)**, NOT ruled out (plausibly closable). Exact-C1 member ~**409 MB** → exactness is astronomically expensive; the RELAXED receiver is the vehicle. **Three highest-leverage levers ALL measured at ZERO current exploitation** (the meat): (1) rule-118 free-migration = 0 B incremental; (2) **ker(A) payload-hiding = 0 B** (80.67% nullity available, receiver not routing payload through it — HIGHEST capacity); (3) g2g2 NOT lattice-native (0.016 debt = unmeasured recoverable). 7 levers → **4 conditional COMPETITION pools, NO additive savings** — the non-additive-pools de-naiving DONE, confirming the 5-day re-grade. verdict_scope: instance — the current relaxed-receiver member at 177,169 B is 22,645 B over the cap; NOT a family/paradigm negative (gap NOT ruled out, three unexploited levers remain).
 - **HYGIENE:** #575 custody gap (mounted-code git head + upstream snapshot SHA not preserved) — noted; does NOT invalidate m4 (its receipt deterministic-replay-passed).
 - **m6 spawned (reformulated arm at the crux, $0):** CLOSE the 22,645-B gap via the three measured-zero levers, pool-aware (NOT additive). Fork: composed reduction Y ≥ 22,645 → **sub-0.15 REACHED → byte-close → flag R6 dual-axis exact eval → ESCALATE** | Y < 22,645 → certified remaining distance named. This is the direct sub-0.15 attack. Fleet 3/4: v19c + m5 + m6. Pointer 0.1910828242 [contest-CPU] UNMOVED (means — until a byte-closed exact row moves it).
+
+---
+
+## FEED-603-m5-custody-two-vehicle-reconciliation (2026-07-23, MAIN custody, Opus-4.8 non-Fable custody-only turn)
+
+**Arm:** ddm_m5_multicoefficient_solve_coverage (commit e253802498, merged from /Users/adpena/Projects/pact worktree). Dispositioned reviewed_committed.
+
+**m5 measured (per-stratum, v19b receiver-closed replay, [macOS-CPU frozen-scorer advisory], score_claim=false):**
+- Road 2,210,770 control errors → +82,824 net closed = **3.7%** (residual 2,127,946)
+- Undrivable **NET-HARMED −25,191** (residual UP to 262,087)
+- Lane +2,003 · Movable +27,374 · MyCar +16,312
+- #366 TRUE-scope stays uncertifiable **[0, 2,377,273]** (no exhaustive $0 proof)
+- Verdict: refused a false #366-collapse certificate. Correction line CANNOT cleanly close Road; leaves collateral in EVERY stratum.
+
+`verdict_scope: instance — the v19b CORRECTION replay leaves collateral in every stratum and closes Road only 3.7%; this is NOT a proof that Road is unsolvable-in-principle (a fresh full multicoefficient solve was not run — that reformulation stays open).`
+
+**DECISIVE TWO-VEHICLE RECONCILIATION (m4 × m5, S-arithmetic estimate, NOT a byte-closed exact row):**
+
+| Vehicle | bytes | d_seg | d_pose | S (arith) | note |
+|---|---:|---:|---:|---:|---|
+| CORRECTION (v19b, what #366 grinds) | 137,825 | 0.026594 | — | **~2.783** | d_seg-DOMINATED, catastrophic |
+| RELAXED-RECEIVER (m4, distortion SOLVED) | 177,169 | 1.52e-4 | 1.02e-4 | **~0.16508** | BELOW pointer 0.19108 |
+| sub-0.15 cap (m4) | 154,524 | 1.52e-4 | 1.02e-4 | 0.15000 | self-consistent |
+
+- rate breakdown: relaxed 25·177169/37545489 = 0.11797 ; cap 0.10289.
+- **The relaxed-receiver inverse-solve vehicle DOMINATES the #366 correction grind by ~2.6 S.** #366's entire premise (grind the 2.78-vehicle to tolerance via 13h joint descent) is dominated by a vehicle that ALREADY realizes ~0.165 at 177KB.
+
+**CAVEAT (NO-FAKE, do NOT over-claim):** 0.16508 is an S-arithmetic estimate on the m4-AUDITED relaxed member. It is NOT byte-closed and NOT exact-eval'd. The distortion (1.52e-4/1.02e-4) is a SOLVE; #532 shows fp32-solve breaks at uint8, and realization-is-quantization-gated. Realized-through-decode S could be worse. **Pointer stays 0.1910828242 [contest-CPU] UNMOVED** until a real byte-closed upstream/evaluate.py row lands.
+
+**HANDOFF to the Fable main thread + operator (NOT acted on this turn — non-Fable custody-only):**
+1. Highest-EV next action: verify the 177KB relaxed-receiver member is BYTE-CLOSEABLE with REALIZED distortion (through real receiver + uint8). If S_realized < 0.191 → immediate pointer-mover candidate (0.191→~0.165), exact-eval-verifiable within the ≤$20 Modal envelope (#381), operator-GO. This is the guaranteed-better fallback, distinct from m6's sub-0.15 (154KB) target.
+2. #366 is very likely DOMINATED/retirable — re-scope decision owed. It is already on operator HOLD; this reconciliation strengthens the case to retire rather than fire the 13h campaign.
+3. m6 (close 22,645 B gap on the relaxed receiver) remains the live sub-0.15 path.
