@@ -84032,6 +84032,55 @@
         "contest_axis_replay",
         "separate_operator_go"
       ]
+    },
+    {
+      "id": "lane_ddm_c1_composed_candidate_spec_603_613_20260723",
+      "name": "DDM C1 composed candidate specification tasks 603 613",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only receiver-closed 200KB target spec. Exact-computed set infeasibility-certified: 3,103,689 errors owed, current v17 credit zero. Full multiscale/v18b/J3 per-pair composition and convergence ledger are computable-not-yet-computed on named exact surfaces. MAIN landing review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "v17_multiscale_joint_positive",
+        "v18b_common_exact_R_pricing",
+        "j3_full_n600_finish",
+        "pair_convergence_ledger_emitter_validator",
+        "ddm_runtime_exporter"
+      ]
     }
   ],
   "level_rules": {
