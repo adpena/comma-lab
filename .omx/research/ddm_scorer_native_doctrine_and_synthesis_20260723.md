@@ -111,3 +111,6 @@ doctrine wave re-based the COORDINATES at all scales simultaneously — that is 
 fractal rather than local, and why one wave touched every live arm. Two nested one-objects
 (witness physics facets; campaign representational views) now share a third: the scorer's own
 internal geometry as the common state space of both.
+
+### Doctrine point 9 (2026-07-23 — appended same-day): THE UPSTREAM-MINE PREFLIGHT
+Before designing/building anything mission-critical that derives or measures: MINE UPSTREAM FIRST — modules.py, the checkpoints' actual module trees, weights, shapes, norms, activations, per network. The derivation list is GENERATED from the enumerated inventory, never from recollection ("vibes"). First application caught 3 errors in MAIN's own routed mechanism table within 90 seconds (PoseNet: 1 SEModule not pervasive SE; LayerScale2d ×24 + BN1d head stats previously unnamed; GELUTanh not SiLU; large-kernel low-frequency convs). Per-network tables are separate derivations — no cross-network analogy. FEED-603-upstream-mine-law.
