@@ -1,0 +1,97 @@
+{
+  "axis": "[macOS-CPU advisory] target-cache analysis; no score authority",
+  "blockers": [
+    {
+      "adapter_input_space": "camera RGB or scorer-plane RGB continuous proposal",
+      "code": "MISSING_TYPED_CLASS_OR_RANK4_FEATURE_TO_RGB_PREIMAGE_PULLBACK",
+      "missing_map": "treatment space to camera/scorer-plane RGB continuous proposal",
+      "reason": "surface 1 preserves a supplied RGB proposal through the exact bounded uint8 solve, but it does not derive RGB from class probabilities or rank-4 SegNet-head features",
+      "treatment_space": "rank-4 frozen SegNet-head quotient features",
+      "verdict_scope": "matched class-logit/rank-4 treatment -> camera RGB bytes -> parse-back -> fresh frozen CPU-Torch SegNet HARD_ACCEPT composition only; individual prerequisite surfaces remain valid"
+    }
+  ],
+  "candidate_bytes_same_coder": null,
+  "created_at_utc": "2026-07-23T03:01:00Z",
+  "exact_oracle_calls": null,
+  "falsifier": "FALSIFIED if one frozen-prototype memory-prox step does not improve hard-accept count or exact-call cost versus no-prox on identical cells and budget.",
+  "falsifier_evaluated": false,
+  "git_head": "f5b41a92dc0c89cce2d628dc95eeeb45e5426bd7",
+  "hard_accepts": null,
+  "hard_cpu_torch_oracle": {
+    "authority": "fresh frozen SegNet on parsed RGB bytes",
+    "invoked": false,
+    "reason": "no well-typed RGB candidate exists for this treatment"
+  },
+  "inputs": {
+    "frozen_segnet_weights": {
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "hard_labels": {
+      "bytes": 117964800,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_segnet_argmax.u8",
+      "sha256": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68"
+    },
+    "logits": {
+      "bytes": 1179648000,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/gt_segnet_logits.f16",
+      "sha256": "41d3ef535f5b5855fe17aab678580114a50309dc48d04948af62c2f563ed3b52"
+    },
+    "prerequisite_manifest": {
+      "bytes": 1175,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_p581r_stale_gate_probe_rerun_20260723T025627Z/.omx/research/prereq_surfaces_flush_20260720/manifest.json",
+      "sha256": "4a8330e79353cfd45dd3c7580c55013a878b6e72fb3e242223c82a0dc03f766f"
+    },
+    "scale": 1.0,
+    "shape": [
+      600,
+      5,
+      384,
+      512
+    ]
+  },
+  "per_stratum_decomposition": {
+    "per_frozen_cell": {
+      "0": {
+        "prototype_label": 0,
+        "prototype_margin": 0.9999999403953552
+      },
+      "1": {
+        "prototype_label": 1,
+        "prototype_margin": 0.9999999403953552
+      },
+      "2": {
+        "prototype_label": 2,
+        "prototype_margin": 1.0
+      },
+      "3": {
+        "prototype_label": 3,
+        "prototype_margin": 1.0
+      },
+      "4": {
+        "prototype_label": 4,
+        "prototype_margin": 1.0
+      }
+    },
+    "prototype_sha256": "5ce0458949acb1cde21022aef7bf642b4491ddb03d1ab66838866b20cb7b162f",
+    "rank": 4,
+    "status": "FROZEN_BANK_MEASURED_BUT_RECEIVER_COMPOSITION_ABSENT"
+  },
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "probe_id": "probe_entropy_hopfield_preprox_uint8_v1",
+  "promotion_eligible": false,
+  "runtime": {
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "schema": "regmax_family_probe_receipt.v1",
+  "score_claim": false,
+  "surface_presence": {
+    "frozen_rank4_prototype_bank": true,
+    "matched_preimage_adapter": true,
+    "same_coder_comparator": true
+  },
+  "verdict": "BLOCKED_NOT_MEASURED",
+  "verdict_scope": "matched class-logit/rank-4 treatment -> camera RGB bytes -> parse-back -> fresh frozen CPU-Torch SegNet HARD_ACCEPT composition only; individual prerequisite surfaces remain valid"
+}
