@@ -1,0 +1,153 @@
+{
+  "schema": "DDMKineticLaguerreAtToleranceProbeV1",
+  "run_id": "ddm_m1_kinetic_laguerre_at_tolerance_probe_20260723",
+  "seed": 1234,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "evidence_axis": "[future macOS-CPU frozen-scorer advisory]",
+  "runner": {
+    "path": "tools/probe_ddm_kinetic_laguerre_at_tolerance.py",
+    "present_in_delegated_snapshot": false,
+    "status": "SPECIFIED_NOT_BUILT_NOT_FIRED",
+    "semantic_argv": [
+      "/usr/bin/env",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "PYTHONPATH=src",
+      ".venv/bin/python",
+      "tools/probe_ddm_kinetic_laguerre_at_tolerance.py",
+      "--config",
+      ".omx/research/configs/ddm_m1_kinetic_laguerre_at_tolerance_probe_20260723.json",
+      "--output-directory",
+      ".omx/research/ddm_m1_kinetic_laguerre_at_tolerance_probe_20260723T000000Z"
+    ]
+  },
+  "inputs": {
+    "target_cache_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "target_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "modules_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+    "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+    "v19b_receipt_path": ".omx/research/ddm_v19b_joint_remeasure_stack_20260723T051914Z/ddm_v19b_joint_remeasure_stack_receipt.json",
+    "v19b_receipt_sha256": "4bb5d6b4b793b667c7cbe15e37cbf9a27f6c0e75451374839fb5df8ca1c1b8e8",
+    "v19b_n600_archive_sha256": "74ede4194ed0eb6c2716f1033a47569c87a7afdf0c21fb1ee23ac059beff3aae",
+    "sealed_v8_control": {
+      "artifact": ".omx/research/v8_laguerre_generator_feasibility_and_perclass_hybrid_20260710.md",
+      "literal_global_k1024_bytes_per_frame": 3712,
+      "literal_global_k1024_residual": 0.0073,
+      "hybrid_bytes_per_frame": 229,
+      "hybrid_residual": 0.0079,
+      "reuse_without_rerun": true
+    }
+  },
+  "population": {
+    "pair_ladder": [
+      64,
+      600
+    ],
+    "seg_sites_n600": 117964800,
+    "maximum_seg_errors": 136839,
+    "maximum_d_seg": 0.001159998576,
+    "maximum_archive_bytes": 200000,
+    "current_predictor_home_bytes": 100099
+  },
+  "representation": {
+    "name": "kinetic_anisotropic_laguerre_regular_triangulation_event_code",
+    "decode_object": "image_plane_partition_then_scorer_free_rgb_pullback",
+    "spatial_charts": [
+      "camera_image",
+      "yaw_custodied_BEV_when_available"
+    ],
+    "site_counts": [
+      64,
+      128,
+      256,
+      512
+    ],
+    "trajectory_degrees": [
+      1,
+      2,
+      3
+    ],
+    "metric_modes": [
+      "isotropic_power_control",
+      "shared_chart_anisotropic_spd",
+      "projective_depth_stratified"
+    ],
+    "temporal_modes": [
+      "independent_frame_control",
+      "spline_sites_weights_plus_sparse_regular_triangulation_flips"
+    ],
+    "shared_edge_accounting": "each primal boundary and dual adjacency charged exactly once",
+    "event_types": [
+      "site_birth",
+      "site_death",
+      "regular_triangulation_flip",
+      "role_change"
+    ],
+    "real_coder_race": [
+      "brotli_q11",
+      "lzma_xz_preset9_extreme",
+      "split_metadata_plus_rice_golomb"
+    ],
+    "forbidden_archive_payloads": [
+      "SegNet_weights",
+      "PoseNet_weights",
+      "ground_truth_argmax_table",
+      "PDW2_affine_head_packet_as_scorer_weights",
+      "video_derived_data_hidden_in_decoder_code"
+    ]
+  },
+  "stages": [
+    {
+      "stage": "A_label_space_rate_distortion",
+      "input": "sealed_n600_argmax_cache",
+      "outputs": [
+        "serialized_partition_program",
+        "exact_program_bytes",
+        "global_and_per_role_label_errors",
+        "regular_triangulation_event_count",
+        "deterministic_parseback_hash"
+      ],
+      "checkpoint_policy": "atomic_preserve_every_site_degree_metric_temporal_cell",
+      "gate_to_next": "errors_at_most_136839_and_program_bytes_at_most_100099"
+    },
+    {
+      "stage": "B_receiver_closed_rgb_pullback",
+      "input": "best_stage_A_programs_only",
+      "outputs": [
+        "exact_uint8_camera_frames",
+        "exact_R_cells",
+        "official_YUV6_pose",
+        "exact_archive_bytes",
+        "double_decode_identity"
+      ],
+      "checkpoint_policy": "atomic_preserve_n64_then_n600",
+      "gate_to_next": "archive_bytes_at_most_200000_and_d_seg_at_most_0.001159998576_and_d_pose_at_most_0.00161"
+    }
+  ],
+  "controls": [
+    "import_sealed_literal_global_Euclidean_power_diagram_negative_without_rerun",
+    "import_sealed_v8_per_class_independent_hybrid",
+    "current_v19b_exact_archive",
+    "current_v13_worldsheet_predictor_home"
+  ],
+  "acceptance": {
+    "representation_confirmed": "Stage A reaches <=136839 errors in <=100099 complete serialized bytes and strictly dominates both sealed v8 controls at matched error",
+    "vehicle_confirmed": "Stage B reaches d_seg<=0.001159998576 and d_pose<=0.00161 in <=200000 exact archive bytes with scorer-free deterministic decode",
+    "primary_falsifier": "after every preregistered site_count x degree x metric x temporal cell, no Stage A point reaches <=136839 errors in <=100099 bytes",
+    "secondary_falsifier": "a Stage A winner cannot survive scorer-free RGB pullback and exact R inside 200000 bytes",
+    "falsifier_scope": "FORMULATION:KINETIC_ANISOTROPIC_LAGUERRE_REGISTERED_LADDER; literal global Euclidean few-generator form is already measured-dead; broader generator and ops-grammar families remain open"
+  },
+  "storage": {
+    "waterfall": [
+      "/Volumes/VertigoDataTier/pact",
+      "/Volumes/APDataStore/pact"
+    ],
+    "local_bulk_allowed": false,
+    "preflight_required": true,
+    "success_only_scratch_cleanup": true,
+    "certify_or_block_cleanup": true
+  },
+  "main_landing_review_required": true
+}
