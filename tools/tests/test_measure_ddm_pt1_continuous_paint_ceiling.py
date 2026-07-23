@@ -30,7 +30,10 @@ from tac.through_r.resolution_chain import CAMERA_HW, SEG_HW
 from tools.measure_ddm_pt1_continuous_paint_ceiling import (
     PT1Config,
     _depth_of_first_divergence,
+    _four_clause_audit,
+    _survival_wall_batch_row,
     execute,
+    measure_survival_wall,
     prepare,
 )
 
@@ -154,6 +157,28 @@ def test_mechanism_decomposition_is_disjoint_and_scoped() -> None:
     assert row.corrected_total_primary == 2
     assert row.corrected_total_statistics_only == 1
     assert row.corrected_total_secondary_only == 1
+
+
+def test_on_vehicle_survival_wall_is_boundary_scoped_and_first_rung() -> None:
+    target = _five_stripe_labels()
+    baseline = target.copy()
+    baseline[0, 0, 101] = 1
+    baseline[0, 100, 10] = 1
+    row = _survival_wall_batch_row(
+        target=target,
+        baseline=baseline,
+        dilation=1,
+    )
+    assert row["first_rung"] is True
+    assert row["boundary_errors"] == 1
+    assert row["total_errors"] == 2
+    assert row["measured_survival_wall_fraction"] == pytest.approx(
+        1 / row["boundary_sites"]
+    )
+
+
+def test_on_vehicle_wall_measurement_is_separate_from_candidate_execution() -> None:
+    assert measure_survival_wall is not execute
 
 
 def test_global_statistics_payload_is_exact_and_geometry_preserving() -> None:
@@ -286,6 +311,22 @@ def test_fitted_geometry_is_charged_by_exact_sdwl1_parseback() -> None:
     assert debt.exact_parseback is True
     assert len(debt.sha256) == 64
     assert debt.described_scalar_facts == 76
+
+
+def test_rate_doctrine_distinguishes_prepared_from_measured_status() -> None:
+    prepared = _four_clause_audit()
+    measured = _four_clause_audit(measured=True)
+    for stream in prepared["streams"]:
+        assert stream["audit_triple"]["scorer_visibility"]["status"] == (
+            "PENDING_N600_EXECUTION"
+        )
+    for stream in measured["streams"]:
+        assert stream["audit_triple"]["scorer_visibility"]["status"] == (
+            "MEASURED_N600_ADVISORY"
+        )
+        assert stream["audit_triple"]["sensitivity_priced_tolerance"]["status"] == (
+            "MEASURED_N600_ADVISORY"
+        )
 
 
 def test_checked_in_config_refuses_execution() -> None:

@@ -75,6 +75,7 @@ EVIDENCE_AXIS = "[macOS-CPU frozen-scorer advisory]"
 SCHEMA = "ddm_pt1_continuous_paint_ceiling.v1"
 PREPARED_SCHEMA = "ddm_pt1_continuous_paint_ceiling_prepared_receipt.v1"
 MEASURED_SCHEMA = "ddm_pt1_continuous_paint_ceiling_measurement_receipt.v1"
+SURVIVAL_WALL_SCHEMA = "ddm_pt1_on_vehicle_survival_wall_receipt.v1"
 RATE_DUAL = 25 / 37_545_489
 
 
@@ -272,7 +273,12 @@ def _source_binding() -> dict[str, Any]:
     }
 
 
-def _four_clause_audit() -> dict[str, Any]:
+def _four_clause_audit(*, measured: bool = False) -> dict[str, Any]:
+    measurement_status = (
+        "MEASURED_N600_ADVISORY"
+        if measured
+        else "PENDING_N600_EXECUTION"
+    )
     return {
         "schema": "ddm_four_clause_rate_doctrine.v1",
         "first_rung": True,
@@ -319,11 +325,11 @@ def _four_clause_audit() -> dict[str, Any]:
                     },
                     "scorer_visibility": {
                         "authority_surface": "SegNet frame1 after hard camera placement and R",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                     "sensitivity_priced_tolerance": {
                         "metric": "rank4 |margin|/||Delta w|| plus realized transition",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                 },
                 "verdict_scope": "reused DV1 curve sites only",
@@ -344,11 +350,11 @@ def _four_clause_audit() -> dict[str, Any]:
                     },
                     "scorer_visibility": {
                         "authority_surface": "SegNet frame1 after hard camera placement and R",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                     "sensitivity_priced_tolerance": {
                         "metric": "rank4 |margin|/||Delta w|| plus realized transition",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                 },
                 "verdict_scope": (
@@ -373,11 +379,11 @@ def _four_clause_audit() -> dict[str, Any]:
                     },
                     "scorer_visibility": {
                         "authority_surface": "frozen SegNet after exact R",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                     "sensitivity_priced_tolerance": {
                         "metric": "d_seg and per-layer Fisher-weighted divergence",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                 },
                 "verdict_scope": "global amplitude-statistics mechanism only",
@@ -405,13 +411,13 @@ def _four_clause_audit() -> dict[str, Any]:
                     },
                     "scorer_visibility": {
                         "authority_surface": "frozen SegNet after exact R",
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                     "sensitivity_priced_tolerance": {
                         "metric": (
                             "d_seg, Fisher-weighted layer divergence, and trajectory depth"
                         ),
-                        "status": "PENDING_N600_EXECUTION",
+                        "status": measurement_status,
                     },
                 },
                 "verdict_scope": "local spectrum or region-ERF mechanism only",
@@ -426,7 +432,11 @@ def _four_clause_audit() -> dict[str, Any]:
             "status": "PASS_SEPARATE_DESCRIPTION_OWNERS",
         },
         "verdict_scope": (
-            "PT1 prepared description streams; scorer tolerance rows remain unmeasured"
+            "PT1 n600 advisory description streams; scorer visibility and "
+            "tolerance rows measured under the frozen macOS-CPU surface"
+            if measured
+            else "PT1 prepared description streams; scorer tolerance rows "
+            "remain unmeasured"
         ),
     }
 
@@ -851,6 +861,39 @@ def _camera_batch_to_seg_rgb(rgb: np.ndarray) -> np.ndarray:
     )
 
 
+def _survival_wall_batch_row(
+    *,
+    target: np.ndarray,
+    baseline: np.ndarray,
+    dilation: int,
+) -> dict[str, Any]:
+    """Measure the current vehicle's flat-paint error fraction at target boundaries."""
+
+    target_value = np.asarray(target)
+    baseline_value = np.asarray(baseline)
+    if target_value.shape != baseline_value.shape:
+        raise ContinuousPaintError(
+            "survival-wall target and baseline argmax arrays must share shape"
+        )
+    boundary = target_boundary_band(target_value, dilation=dilation)
+    boundary_sites = int(np.count_nonzero(boundary))
+    if boundary_sites == 0:
+        raise ContinuousPaintError(
+            "survival-wall calibration has no target-boundary sites"
+        )
+    wrong = baseline_value != target_value
+    boundary_errors = int(np.count_nonzero(wrong & boundary))
+    return {
+        "schema": "ddm_pt1_on_vehicle_survival_wall_batch.v1",
+        "first_rung": True,
+        "boundary_dilation": dilation,
+        "boundary_sites": boundary_sites,
+        "boundary_errors": boundary_errors,
+        "total_errors": int(np.count_nonzero(wrong)),
+        "measured_survival_wall_fraction": boundary_errors / boundary_sites,
+    }
+
+
 def _fit_streaming_global_statistics(
     *,
     labels: np.ndarray,
@@ -991,6 +1034,176 @@ def _depth_of_first_divergence(
             metric="cross_batch_trajectory_delta_norm_relative",
         ),
     }
+
+
+def measure_survival_wall(
+    config: PT1Config,
+    output_path: Path,
+    semantic_argv: list[str],
+) -> Path:
+    """Measure an independent on-vehicle wall before any PT1 candidate arm.
+
+    This calibration uses only the PT1 native-grid flat-palette control.  It never
+    constructs the hard-placement, analytic, statistics, or spectrum arms.
+    The wall is the fraction of current target-boundary sites whose flat-paint
+    bytes fail to reproduce the SHA-bound target argmax after pinned R and the
+    real frozen ``SegNet.preprocess_input``.
+    """
+
+    target_path = Path(config.target_cache_path)
+    if target_path.stat().st_size != config.target_cache_bytes:
+        raise ContinuousPaintError("target cache byte count differs")
+    target_payload_sha = hashlib.sha256()
+    with target_path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(8 << 20), b""):
+            target_payload_sha.update(chunk)
+    if target_payload_sha.hexdigest() != config.target_cache_sha256:
+        raise ContinuousPaintError("target cache SHA-256 differs")
+    labels = open_stored_npy_memmap(target_path, "lstars")
+    target_camera = open_stored_npy_memmap(target_path, "gt_f1")
+    if labels.shape != (600, *SEG_HW):
+        raise ContinuousPaintError("target cache is not exact n600")
+    segnet, scorer_custody = _load_segnet(config)
+    palette = np.asarray(config.palette_rgb_u8, dtype=np.uint8)
+    stage_root = output_path.parent / "survival_wall_stage_checkpoints"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    batch_rows: list[dict[str, Any]] = []
+    for start in range(0, 600, config.batch_size):
+        stop = min(start + config.batch_size, 600)
+        checkpoint = stage_root / f"batch_{start:04d}_{stop:04d}.json"
+        if checkpoint.exists():
+            row = json.loads(_read(checkpoint))
+            if row.get("typed_config_sha256") != config.hash():
+                raise ContinuousPaintError(
+                    "survival-wall batch checkpoint config hash differs"
+                )
+            batch_rows.append(row)
+            continue
+        target = np.ascontiguousarray(labels[start:stop], dtype=np.uint8)
+        flat_camera_rgb = _render_grid_batch_to_camera(palette[target])
+        baseline_cells, _baseline_activations = _score_with_activations(
+            segnet,
+            flat_camera_rgb,
+            camera=True,
+            layers=(),
+        )
+        target_cells, _target_activations = _score_with_activations(
+            segnet,
+            np.array(
+                target_camera[start:stop],
+                dtype=np.uint8,
+                copy=True,
+                order="C",
+            ),
+            camera=True,
+            layers=(),
+        )
+        row = _survival_wall_batch_row(
+            target=target,
+            baseline=baseline_cells,
+            dilation=config.boundary_dilation,
+        )
+        row.update(
+            {
+                "typed_config_sha256": config.hash(),
+                "pair_range": [start, stop],
+                "target_cache_reference_drift": stage_transition(
+                    before=target,
+                    after=target_cells,
+                    target=target,
+                ),
+                "hashes": {
+                    "baseline_camera_u8": sha256_array(flat_camera_rgb),
+                    "baseline_cells": sha256_array(baseline_cells),
+                    "target": sha256_array(target),
+                    "target_cells_batch_geometry": sha256_array(target_cells),
+                },
+                "research_only": True,
+                "score_claim": False,
+            }
+        )
+        _publish(checkpoint, row)
+        batch_rows.append(row)
+
+    boundary_sites = sum(int(row["boundary_sites"]) for row in batch_rows)
+    boundary_errors = sum(int(row["boundary_errors"]) for row in batch_rows)
+    total_errors = sum(int(row["total_errors"]) for row in batch_rows)
+    target_cache_reference_drift_errors = sum(
+        int(row["target_cache_reference_drift"]["errors_after"])
+        for row in batch_rows
+    )
+    if boundary_sites <= 0:
+        raise ContinuousPaintError(
+            "n600 survival-wall calibration has no target-boundary sites"
+        )
+    wall = boundary_errors / boundary_sites
+    measured = {
+        "schema": SURVIVAL_WALL_SCHEMA,
+        "run_id": f"{config.run_id}_on_vehicle_survival_wall",
+        "status": "MEASURED_ADVISORY_NOT_PROMOTABLE",
+        "verdict": "MEASURED_CURRENT_VEHICLE_BOUNDARY_WALL",
+        "verdict_scope": (
+            "FORMULATION: PT1 native-grid flat-palette target-boundary failures "
+            "under the SHA-bound n600 vehicle, pinned R, and frozen SegNet; "
+            "not a universal geometry-family or contest CPU/CUDA verdict"
+        ),
+        "typed_config_sha256": config.hash(),
+        "semantic_argv": semantic_argv,
+        "evidence_axis": EVIDENCE_AXIS,
+        "first_rung": True,
+        "research_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "pointer_moved": False,
+        "main_landing_review_required": True,
+        "independent_of_pt1_candidate_arms": True,
+        "candidate_arms_constructed": [],
+        "calibration_arm": "pt1_native_grid_flat_palette_control",
+        "definition": (
+            "boundary_errors / boundary_sites after render-grid palette paint "
+            "-> pinned bicubic camera uint8 -> real SegNet.preprocess_input "
+            "bilinear down -> frozen SegNet argmax"
+        ),
+        "pair_count": config.pair_count,
+        "batch_size": config.batch_size,
+        "batch_count": len(batch_rows),
+        "all_batches_checkpointed_and_preserved": True,
+        "boundary_dilation": config.boundary_dilation,
+        "boundary_sites": boundary_sites,
+        "boundary_errors": boundary_errors,
+        "total_errors": total_errors,
+        "total_d_seg": f"{total_errors / config.total_seg_sites:.12f}",
+        "measured_survival_wall_fraction": wall,
+        "inherited_e2_anchor_comparison": {
+            "inherited_e2_paint_errors": config.expected_e2_paint_errors,
+            "pt1_flat_palette_errors": total_errors,
+            "signed_error_delta": total_errors - config.expected_e2_paint_errors,
+            "same_control": total_errors == config.expected_e2_paint_errors,
+            "disposition": (
+                "MATCH"
+                if total_errors == config.expected_e2_paint_errors
+                else "PREPARED_E2_FLAT_PAINT_PREMISE_FALSIFIED"
+            ),
+        },
+        "target_reference_custody": {
+            "authority": "SHA-bound cached lstars",
+            "current_gt_forward_batch_size": config.batch_size,
+            "batch_geometry_drift_errors": target_cache_reference_drift_errors,
+            "policy": (
+                "report measured drift; do not silently replace the cached target "
+                "or infer contest-axis equivalence"
+            ),
+        },
+        "scorer_custody": scorer_custody,
+        "target_cache_custody": {
+            "path": config.target_cache_path,
+            "bytes": config.target_cache_bytes,
+            "sha256": config.target_cache_sha256,
+        },
+        "source_binding": _source_binding(),
+    }
+    _publish(output_path, measured)
+    return output_path
 
 
 def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> Path:
@@ -1213,16 +1426,17 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
         )
         target_cells, target_activations = _score_with_activations(
             segnet,
-            np.ascontiguousarray(target_camera[start:stop], dtype=np.uint8),
+            np.array(
+                target_camera[start:stop],
+                dtype=np.uint8,
+                copy=True,
+                order="C",
+            ),
             camera=True,
             layers=config.scorer_native_layers,
         )
-        if not np.array_equal(target_cells, target):
-            raise ContinuousPaintError(
-                "SHA-bound target labels differ from frozen scorer on gt_f1"
-            )
         native_profiles = {
-            "e2_native_grid_paint_control": scorer_native_divergence_rows(
+            "pt1_native_grid_flat_palette_control": scorer_native_divergence_rows(
                 candidate=baseline_activations,
                 target=target_activations,
                 margins=margin_batch,
@@ -1268,7 +1482,7 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
             "spectrum": spectrum_activations,
         }
         profile_variant = {
-            "e2_native_grid_paint_control": "baseline",
+            "pt1_native_grid_flat_palette_control": "baseline",
             "hard_camera_placement": "hard",
             "analytic_coverage_blend": "analytic",
             "global_amplitude_statistics_match": "statistics",
@@ -1286,7 +1500,7 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
         if previous_endpoint is not None:
             previous_endpoint.close()
         cells_by_variant = {
-            "e2_native_grid_paint_control": baseline_cells,
+            "pt1_native_grid_flat_palette_control": baseline_cells,
             "hard_camera_placement": primary_cells,
             "analytic_coverage_blend": secondary_cells,
             "global_amplitude_statistics_match": statistics_cells,
@@ -1356,6 +1570,11 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
             "typed_config_sha256": config.hash(),
             "pair_range": [start, stop],
             "first_rung": True,
+            "target_cache_reference_drift": stage_transition(
+                before=target,
+                after=target_cells,
+                target=target,
+            ),
             "baseline_transition": stage_transition(
                 before=target,
                 after=baseline_cells,
@@ -1408,6 +1627,7 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
                 "spectrum_camera_u8": sha256_array(spectrum_rgb),
                 "spectrum_cells": sha256_array(spectrum_cells),
                 "target": sha256_array(target),
+                "target_cells_batch_geometry": sha256_array(target_cells),
             },
             "research_only": True,
             "score_claim": False,
@@ -1443,16 +1663,59 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
             total += int(value)
         return total
 
+    def sum_transition(owner: str, transition: str) -> dict[str, int]:
+        keys = batch_rows[0]["curve_provenance"][owner][transition]
+        aggregate = {
+            key: sum(
+                int(row["curve_provenance"][owner][transition][key])
+                for row in batch_rows
+            )
+            for key in keys
+        }
+        if (
+            aggregate["errors_after"]
+            != aggregate["errors_before"]
+            + aggregate["errors_introduced"]
+            - aggregate["errors_corrected"]
+        ):
+            raise ContinuousPaintError(
+                f"aggregate curve-provenance conservation failed for {owner}/{transition}"
+            )
+        return aggregate
+
     baseline_errors = sum_path("baseline_transition", "errors_after")
     primary_errors = sum_path("primary_transition", "errors_after")
     secondary_errors = sum_path("secondary_transition", "errors_after")
     statistics_errors = sum_path("statistics_transition", "errors_after")
     spectrum_errors = sum_path("spectrum_transition", "errors_after")
-    if baseline_errors != config.expected_e2_paint_errors:
-        raise ContinuousPaintError(
-            f"PT1 baseline paint errors {baseline_errors} != E2 {config.expected_e2_paint_errors}"
-        )
+    target_cache_reference_drift_errors = sum_path(
+        "target_cache_reference_drift",
+        "errors_after",
+    )
     fitted_debt = measure_fitted_geometry_sdwl1(labels, margins, poses)
+    curve_provenance = {
+        owner: {
+            "first_rung": True,
+            "delta_bytes": (
+                0
+                if owner == "already_described_curve_sites"
+                else fitted_debt.bytes
+            ),
+            **{
+                transition: sum_transition(owner, transition)
+                for transition in (
+                    "primary_transition",
+                    "secondary_transition",
+                    "statistics_transition",
+                    "spectrum_transition",
+                )
+            },
+        }
+        for owner in (
+            "already_described_curve_sites",
+            "freshly_fitted_curve_sites",
+        )
+    }
     attributable = sum_path("mechanisms", "placement_attributable")
     recovered = sum_path("mechanisms", "placement_recovered")
     observed_wall = 1.0 - recovered / attributable if attributable else 1.0
@@ -1462,6 +1725,22 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
         1.0 - independent_wall
     ) * attributable
     box_bar = primary_dseg <= config.box_floor_d_seg
+    mechanism_counts = {
+        "sub_cell_placement": sum_path("mechanisms", "sub_cell_placement"),
+        "bn_se_amplitude_statistics": sum_path(
+            "mechanisms", "bn_se_amplitude_statistics"
+        ),
+        "texture_prior_or_region_erf": sum_path(
+            "mechanisms", "texture_prior_or_region_erf"
+        ),
+        "class_interaction": sum_path("mechanisms", "class_interaction"),
+    }
+    texture_diagnostic_sites = mechanism_counts["texture_prior_or_region_erf"]
+    placement_correction_sites = (
+        mechanism_counts["sub_cell_placement"]
+        + mechanism_counts["class_interaction"]
+    )
+    texture_dominated = texture_diagnostic_sites > placement_correction_sites
     if attributable == 0:
         measured_verdict = "BLOCKED_NO_PLACEMENT_ATTRIBUTABLE_ERRORS"
     elif mechanism_bar:
@@ -1491,11 +1770,15 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
         "all_batches_checkpointed_and_preserved": True,
         "rows": [
             {
-                "arm": "e2_native_grid_paint_control",
+                "arm": "pt1_native_grid_flat_palette_control",
                 "first_rung": True,
                 "errors": baseline_errors,
                 "d_seg": f"{baseline_errors / config.total_seg_sites:.12f}",
                 "delta_bytes": 0,
+                "verdict_scope": (
+                    "PT1 flat-palette control only; not the inherited E2 chart-plus-"
+                    "semantic paint stream"
+                ),
             },
             {
                 "arm": "hard_camera_placement",
@@ -1543,6 +1826,31 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
             "exact_parseback": fitted_debt.exact_parseback,
             "described_scalar_facts": fitted_debt.described_scalar_facts,
         },
+        "curve_provenance": curve_provenance,
+        "inherited_e2_anchor_comparison": {
+            "inherited_e2_paint_errors": config.expected_e2_paint_errors,
+            "pt1_flat_palette_errors": baseline_errors,
+            "signed_error_delta": baseline_errors - config.expected_e2_paint_errors,
+            "same_control": baseline_errors == config.expected_e2_paint_errors,
+            "disposition": (
+                "MATCH"
+                if baseline_errors == config.expected_e2_paint_errors
+                else "PREPARED_E2_FLAT_PAINT_PREMISE_FALSIFIED"
+            ),
+        },
+        "target_reference_custody": {
+            "authority": "SHA-bound cached lstars",
+            "current_gt_forward_batch_size": config.batch_size,
+            "batch_geometry_drift_errors": target_cache_reference_drift_errors,
+            "profile_reference": (
+                "current batch-geometry GT activations; final argmax errors remain "
+                "against cached lstars"
+            ),
+            "policy": (
+                "report measured drift; do not silently replace the cached target "
+                "or infer contest-axis equivalence"
+            ),
+        },
         "mechanism_falsifier": {
             "placement_attributable": attributable,
             "placement_recovered": recovered,
@@ -1552,19 +1860,49 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
             "pass": mechanism_bar,
         },
         "mechanism_decomposition": {
-            "sub_cell_placement": sum_path(
-                "mechanisms", "sub_cell_placement"
-            ),
-            "bn_se_amplitude_statistics": sum_path(
-                "mechanisms", "bn_se_amplitude_statistics"
-            ),
-            "texture_prior_or_region_erf": sum_path(
-                "mechanisms", "texture_prior_or_region_erf"
-            ),
-            "class_interaction": sum_path(
-                "mechanisms", "class_interaction"
-            ),
+            **mechanism_counts,
             "disjoint_operational_attribution": True,
+            "verdict_scopes": {
+                "sub_cell_placement": (
+                    "baseline errors corrected by hard camera placement inside the "
+                    "target boundary band; this exact hard-placement formulation only"
+                ),
+                "bn_se_amplitude_statistics": (
+                    "primary residual errors corrected by the 30-byte global "
+                    "mean/variance arm after its flat-camera control; operational "
+                    "attribution, not a causal claim about one named layer"
+                ),
+                "texture_prior_or_region_erf": (
+                    "primary residual errors corrected by the 186-byte spectrum "
+                    "diagnostic and not by the statistics arm; routes evidence to "
+                    "texture/region-ERF follow-up, not a geometry-family negative"
+                ),
+                "class_interaction": (
+                    "baseline errors corrected by hard camera placement outside the "
+                    "target boundary band; class-interaction bucket for this "
+                    "formulation only"
+                ),
+            },
+        },
+        "honest_residual_fork": {
+            "texture_diagnostic_sites": texture_diagnostic_sites,
+            "placement_correction_sites": placement_correction_sites,
+            "texture_dominated": texture_dominated,
+            "route": (
+                "TEXTURE_FAMILY"
+                if texture_dominated
+                else "MIXED_OR_PLACEMENT_FOLLOWUP"
+            ),
+            "geometry_family_negative_allowed": False,
+            "law": (
+                "route to the texture family only when primary-residual errors "
+                "uniquely corrected by the spectrum diagnostic exceed combined "
+                "sub-cell and outside-band placement corrections"
+            ),
+            "verdict_scope": (
+                "operational n600 argmax attribution under the prepared probes; "
+                "not causal Shapley value or a universal representation verdict"
+            ),
         },
         "box_falsifier": {
             "threshold_d_seg": config.box_floor_d_seg,
@@ -1572,14 +1910,14 @@ def execute(config: PT1Config, output_path: Path, semantic_argv: list[str]) -> P
             "residual": primary_dseg - config.box_floor_d_seg,
             "pass": box_bar,
         },
-        "rate_doctrine": _four_clause_audit(),
+        "rate_doctrine": _four_clause_audit(measured=True),
         "scorer_native_diff_profile": {
             "schema": "ddm_pt1_scorer_native_diff_profile.v1",
             "batch_count": len(batch_rows),
             "all_variants_present": all(
                 set(row["scorer_native_diff_profile"]["variants"])
                 == {
-                    "e2_native_grid_paint_control",
+                    "pt1_native_grid_flat_palette_control",
                     "hard_camera_placement",
                     "analytic_coverage_blend",
                     "global_amplitude_statistics_match",
@@ -1612,6 +1950,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output", required=True, type=Path)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--prepare", action="store_true")
+    mode.add_argument("--measure-survival-wall", action="store_true")
     mode.add_argument("--execute", action="store_true")
     return parser.parse_args(argv)
 
@@ -1623,6 +1962,8 @@ def main(argv: list[str] | None = None) -> int:
         config = PT1Config.model_validate_json(_read(args.config))
         if args.prepare:
             output = prepare(config, args.output, semantic_argv)
+        elif args.measure_survival_wall:
+            output = measure_survival_wall(config, args.output, semantic_argv)
         else:
             output = execute(config, args.output, semantic_argv)
     except (ContinuousPaintError, OSError, ValueError) as exc:
