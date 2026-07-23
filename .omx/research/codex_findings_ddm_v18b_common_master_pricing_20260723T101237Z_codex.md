@@ -1,9 +1,9 @@
 # Codex findings: DDM v18b common-master rebaseline and pricing
 
-UTC: 2026-07-23T10:12:37Z  
-Lane ID: `ddm_v18_column_generation_vocabulary`  
-Evidence axis: `[macOS-CPU frozen-scorer advisory]`  
-Score claim: `false`  
+UTC: 2026-07-23T10:12:37Z
+Lane ID: `ddm_v18_column_generation_vocabulary`
+Evidence axis: `[macOS-CPU frozen-scorer advisory]`
+Score claim: `false`
 Pointer: `0.1910828242 [contest-CPU]`, **UNMOVED**
 
 ## Verdict
