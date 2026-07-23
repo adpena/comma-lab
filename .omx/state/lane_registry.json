@@ -84376,6 +84376,49 @@
       },
       "notes": "$0 local build and bounded verification only; pose engage + cumulative fire gate + worst-geometry memory + governed stop; no campaign launch; MAIN review required",
       "research_only": true
+    },
+    {
+      "id": "lane_ddm_m2_kinetic_laguerre_probe_20260723",
+      "name": "DDM M2 kinetic Laguerre at-tolerance probe",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/probe_ddm_kinetic_laguerre_at_tolerance.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_m2_kinetic_laguerre_probe_20260723T075745Z_codex.md"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Delegated $0 local BUILD+FIRE; n64 integrity then real n600; macOS-CPU frozen-scorer advisory only; score_claim=false; pointer unchanged unless contest authority separately lands; MAIN landing review required.",
+      "research_only": true,
+      "lane_class": "receiver_realization_research"
     }
   ],
   "level_rules": {

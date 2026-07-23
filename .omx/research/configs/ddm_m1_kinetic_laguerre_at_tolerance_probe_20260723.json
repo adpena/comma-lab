@@ -3,14 +3,19 @@
   "run_id": "ddm_m1_kinetic_laguerre_at_tolerance_probe_20260723",
   "seed": 1234,
   "research_only": true,
-  "execution_allowed": false,
+  "execution_allowed": true,
   "score_claim": false,
   "promotion_eligible": false,
-  "evidence_axis": "[future macOS-CPU frozen-scorer advisory]",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "execution_authority": {
+    "authority_file": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_m2_kinetic_laguerre_probe_20260723T064512Z.wrapped.prompt.txt",
+    "sha256": "cb5bc9d90cc9285407cd830dc9c4f310aabb706ce437cfa4effab3c5499248a8",
+    "delegation_checkpoint_key": "codex_delegate:ddm_m2_kinetic_laguerre_probe:20260723T064512Z"
+  },
   "runner": {
     "path": "tools/probe_ddm_kinetic_laguerre_at_tolerance.py",
-    "present_in_delegated_snapshot": false,
-    "status": "SPECIFIED_NOT_BUILT_NOT_FIRED",
+    "present_in_delegated_snapshot": true,
+    "status": "BUILT_FIRE_AUTHORIZED",
     "semantic_argv": [
       "/usr/bin/env",
       "PYTHONDONTWRITEBYTECODE=1",
