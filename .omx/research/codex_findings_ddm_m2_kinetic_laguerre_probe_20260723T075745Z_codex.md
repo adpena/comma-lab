@@ -41,11 +41,11 @@ remains open under the operator's optimal-form discipline.
 - Evidence axis: `[macOS-CPU cached-label advisory]` for Stage A.
 - Pointer: `0.1910828242 [contest-CPU]`, unchanged.
 
-The final output contains 292 files and 17,656,620 bytes: 144 immutable
-programs, 144 per-cell checkpoints, two rung aggregates, the final receipt,
-and its directory structure. Every cell reports real coder bytes, double
-decode identity, a deterministic prediction-state hash, and sampled
-NumPy-fp32 versus cKDTree bit identity.
+The final output contains 293 files and 17,659,042 bytes: 144 immutable
+programs, 144 per-cell checkpoints, two rung aggregates, one immutable
+preflight checkpoint, the Stage-B gate receipt, and the final receipt. Every
+cell reports real coder bytes, double decode identity, a deterministic
+prediction-state hash, and sampled NumPy-fp32 versus cKDTree bit identity.
 
 # Measured matrix
 
@@ -102,6 +102,12 @@ contract.
    warning-as-error diagnostic passed all eight waterfill segment counts.
 3. Qhull's randomized joggle path was removed. Exact lifted degeneracy now uses
    deterministic index-keyed perturbation.
+4. The initial final receipt embedded volatile SSD free-byte telemetry and
+   therefore refused a byte-identical resume. The final runner checkpoints the
+   first preflight, revalidates all static custody plus the current storage
+   gate, and ignores only the volatile free-byte counter when comparing
+   resumes. Two consecutive exact resumptions retained receipt SHA-256
+   `cd5783261128ae4a748c4129342b6401d4696d6fab3a79fd9e63481cbb108ef6`.
 
 The two pre-fix runs were stopped and preserved under
 `.omx/tmp/codex_quarantine/` with `INVALID` names. They are not cited as
@@ -140,7 +146,7 @@ Focused verification:
 
 ```text
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. .venv/bin/python -m pytest -q tests/test_probe_ddm_kinetic_laguerre_at_tolerance.py
-# 18 passed
+# 19 passed
 .venv/bin/python -m ruff check tools/probe_ddm_kinetic_laguerre_at_tolerance.py tests/test_probe_ddm_kinetic_laguerre_at_tolerance.py
 # All checks passed
 ```

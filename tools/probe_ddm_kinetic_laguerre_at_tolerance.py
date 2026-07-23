@@ -1878,6 +1878,15 @@ def _storage_preflight(config: DDMKineticLaguerreAtToleranceProbeV1) -> dict[str
     }
 
 
+def _preflight_static_projection(preflight: Mapping[str, Any]) -> dict[str, Any]:
+    """Remove only volatile storage telemetry before resume comparison."""
+
+    projected = json.loads(json.dumps(preflight))
+    for row in projected["storage"]["waterfall_rows"]:
+        row.pop("observed_free_bytes", None)
+    return projected
+
+
 def _preflight(
     config: DDMKineticLaguerreAtToleranceProbeV1,
     config_path: Path,
@@ -1924,7 +1933,7 @@ def _preflight(
     research_root = (REPO_ROOT / ".omx" / "research").resolve()
     if research_root not in resolved_output.parents:
         raise ProbeError("output directory must be a child of .omx/research")
-    return {
+    fresh = {
         "status": "PASS",
         "config_path": _portable(config_path),
         "typed_config_sha256": config.typed_config_hash(),
@@ -1945,6 +1954,30 @@ def _preflight(
         "no_paid_dispatch": True,
         "score_claim": False,
     }
+    checkpoint = output_root / "stage_checkpoints" / "preflight.json"
+    if checkpoint.exists():
+        existing = json.loads(_read_regular(checkpoint))
+        if _preflight_static_projection(existing) != _preflight_static_projection(fresh):
+            raise ProbeError("resumed preflight static custody differs")
+        return existing
+
+    # Compatibility recovery for a completed run produced before the
+    # standalone preflight checkpoint existed.  Revalidate current custody,
+    # then seed the checkpoint from the already-immutable final receipt so a
+    # live free-space counter cannot rewrite scientific evidence.
+    final_receipt = output_root / "ddm_m2_kinetic_laguerre_probe_receipt.json"
+    if final_receipt.exists():
+        receipt = json.loads(_read_regular(final_receipt))
+        existing = receipt.get("preflight")
+        if not isinstance(existing, dict):
+            raise ProbeError("existing final receipt has no typed preflight")
+        if _preflight_static_projection(existing) != _preflight_static_projection(fresh):
+            raise ProbeError("existing receipt preflight static custody differs")
+        _write_json(checkpoint, existing)
+        return existing
+
+    _write_json(checkpoint, fresh)
+    return fresh
 
 
 def _matched_race(

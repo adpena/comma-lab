@@ -19,6 +19,7 @@ from tools.probe_ddm_kinetic_laguerre_at_tolerance import (
     _fit_kinetic_program,
     _fit_pack_kinetic_waterfill,
     _kernel_contract,
+    _preflight_static_projection,
     _program_parseback_receipt,
     _quantize_checked,
     _regular_triangulation_edges,
@@ -164,6 +165,30 @@ def test_quantization_fails_closed_on_nonfinite_or_overflow() -> None:
         _quantize_checked(np.array([np.inf]), 1.0, "<i2", "bad")
     with pytest.raises(ProbeError, match="exceeds"):
         _quantize_checked(np.array([1e9]), 1.0, "<i2", "bad")
+
+
+def test_preflight_resume_projection_ignores_only_live_free_bytes() -> None:
+    first = {
+        "status": "PASS",
+        "authority": {"sha256": "abc"},
+        "storage": {
+            "status": "PASS",
+            "selected_bulk_tier": "/Volumes/VertigoDataTier/pact",
+            "waterfall_rows": [
+                {
+                    "path": "/Volumes/VertigoDataTier/pact",
+                    "status": "PASS",
+                    "required_free_bytes": 1,
+                    "observed_free_bytes": 10,
+                }
+            ],
+        },
+    }
+    second = json.loads(json.dumps(first))
+    second["storage"]["waterfall_rows"][0]["observed_free_bytes"] = 9
+    assert _preflight_static_projection(first) == _preflight_static_projection(second)
+    second["storage"]["waterfall_rows"][0]["status"] = "BLOCKED"
+    assert _preflight_static_projection(first) != _preflight_static_projection(second)
 
 
 def test_site_extraction_is_nested_deterministic_and_class_complete() -> None:

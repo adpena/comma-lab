@@ -31,12 +31,14 @@ remains open under the explicitly named reformulation queue.
 - nonfinite/overflowing quantization acceptance;
 - randomized Qhull degeneracy jitter;
 - macOS Accelerate false GEMM warnings in otherwise finite contractions.
+- volatile SSD free-byte telemetry inside the immutable resume receipt.
 
 ## Verification
 
-- 18 focused tests passed;
+- 19 focused tests passed;
 - Ruff, Python compilation, and diff checks passed;
 - actual n600 pose-fit warning-as-error diagnostic passed 8 / 8 segment counts;
+- two exact resumptions retained the identical final receipt SHA-256;
 - 72 / 72 n64 and 72 / 72 n600 cells dispositioned;
 - 0 Stage-A winners; Stage B gate closed;
 - pointer `0.1910828242 [contest-CPU]` unchanged.
