@@ -21912,3 +21912,20 @@ vs the 600-independent baseline = THE number; byte syntax co-designed with e1's 
 dimensions) ∥ e1 (our-format exporter) ∥ v19c (asymptote). 4/4 at cap, all on OUR original line.
 
 Pointer honest: **0.1910828242 [contest-CPU] UNMOVED.**
+
+---
+
+## FEED-603-nonlinguistic-dimension-register (2026-07-23, MAIN — operator: "other dimensions... that don't map nicely onto the sentence structure metaphor")
+
+The full object is a PRODUCT: **(description-language) × (fields/measures/duals over it)**. The language is ONE
+factor. Register of the non-linguistic dimensions (each measured-anchored, routed to dv1/dv2/e1 via inbox as
+typed-column + schema requirements — never forced into grammar):
+- **D1 AMPLITUDE/FIELD** — realized magnitudes, margin depths, uint8 floors (g2f ladder, #532).
+- **D2 TOLERANCE/DUAL** — per-element distortion tolerance = the waterfill λ (#157/#536); decides what to say sloppily.
+- **D3 TEXTURE QUOTIENT** — T of W=(G,ξ,T) (#531); statistics, not syntax.
+- **D4 PROBABILITY MEASURE** — the coder/context model OVER descriptions.
+- **D5 INTERACTION/SYNERGY** — non-additive pools + measured SE-coupling (+0.0805); joint remeasurement only.
+- **D6 REALIZATION MAP** — description→paint→R→uint8 fidelity ledger (v14 stages).
+- (+ pose TUBE = feasibility region OVER the language, not in it.)
+Consequence encoded: every description row is INCOMPLETE without its field/dual columns; e1's schema keeps these
+as independently framed sections. Derivation rule + originality ban unchanged. Pointer UNMOVED 0.19108.
