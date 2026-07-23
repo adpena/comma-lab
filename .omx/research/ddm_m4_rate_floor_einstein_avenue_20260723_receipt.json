@@ -1,0 +1,286 @@
+{
+  "audited_rows": [
+    {
+      "archive_bytes": 137825,
+      "d_pose": "163.061176604795",
+      "d_seg": "0.026594424778",
+      "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+      "n_pairs": 600,
+      "receiver_closed": true,
+      "row_id": "ddm_v19b_modern_low_byte_advisory"
+    },
+    {
+      "archive_bytes": 147513,
+      "d_pose": "0.000294",
+      "d_seg": "0.002384",
+      "evidence_axis": "[contest-CPU advisory]",
+      "n_pairs": 600,
+      "receiver_closed": true,
+      "row_id": "qaxis_n600_absmax_int6"
+    },
+    {
+      "archive_bytes": 174061,
+      "d_pose": "0.000222",
+      "d_seg": "0.001537",
+      "evidence_axis": "[contest-CPU advisory]",
+      "n_pairs": 600,
+      "receiver_closed": true,
+      "row_id": "qaxis_n600_absmax_int7"
+    },
+    {
+      "archive_bytes": 177169,
+      "d_pose": "0.00002930838566754801",
+      "d_seg": "0.0005453067355847452",
+      "evidence_axis": "[contest-CPU candidate-selection in-container]",
+      "n_pairs": 600,
+      "receiver_closed": true,
+      "row_id": "joint_optimum_575_full_precision_same_container"
+    },
+    {
+      "archive_bytes": 177169,
+      "d_pose": "0.000037",
+      "d_seg": "0.000594",
+      "evidence_axis": "[contest-CPU advisory]",
+      "n_pairs": 600,
+      "receiver_closed": true,
+      "row_id": "qaxis_n600_absmax_int8"
+    },
+    {
+      "archive_bytes": 409526925,
+      "d_pose": "0.00010184",
+      "d_seg": "0.00015196",
+      "evidence_axis": "[contest-CPU Linux x86_64]",
+      "n_pairs": 600,
+      "receiver_closed": true,
+      "row_id": "historical_tight_c1_contest_cpu"
+    }
+  ],
+  "execution": {
+    "config_changed": false,
+    "cost_usd": 0,
+    "method": "bounded deterministic re-derivation from existing receipts and exact bytes",
+    "new_launch": false,
+    "new_scorer_run": false
+  },
+  "generated_at_utc": "2026-07-23T10:16:15Z",
+  "integer_lattice": {
+    "current_multicoefficient_solver": "FLOAT_COEFFICIENT_SEARCH_THEN_UINT8_RECEIVER_GATE",
+    "evidence": "g2g2 serializes fp32 coefficient deltas and uses bounded projected greedy/coordinate search; factor2_uint8_exact is an acceptance gate, not an integer-lattice optimization variable",
+    "flips_after": 10009,
+    "flips_before": 10002,
+    "lattice_native": false,
+    "measured_n16_scheduled_recovery_s": "0.01583",
+    "measured_realized_fraction": "-0.014",
+    "measured_realized_score_delta_s": "-0.00022162",
+    "unrecovered_debt_is_measured_recoverable_gain": false,
+    "unrecovered_scheduled_debt_s": "0.01605162",
+    "verdict_scope": "FORMULATION:absolute-write source-closest-sign n16 minimal perturbations; not n600 and not a lattice-native solver result"
+  },
+  "ker_A": {
+    "bounded_integer_basis_reachability_lower_bound_percent": 34.193139099271214,
+    "byte_savings_status": "ZERO_MEASURED_NOT_80P67_PERCENT_OF_ARCHIVE",
+    "diagnostic_old_mask_brotli_delta_vs_original_bytes": -183778,
+    "diagnostic_old_mask_is_archive_byte_delta": false,
+    "domain_dimension_per_channel": 1017336,
+    "incremental_full_kernel_brotli_delta_vs_old_mask_bytes": 0,
+    "law": "ker(A) can make a perturbation distortion-invisible; it cannot make video-derived serialization free. Current exact receiver stores range(A) only and no parser-consumed ker(A) payload was removed.",
+    "measured_counted_bytes_hideable_for_free": 0,
+    "nullity_per_channel": 820728,
+    "nullity_percent": 80.67423152232891,
+    "rank_per_channel": 196608,
+    "selected_full_kernel_frames": 0
+  },
+  "lane_id": "ddm_m4_rate_floor_einstein_avenue",
+  "main_landing_review": {
+    "focus": [
+      "confirm 177169 B is an audited-set minimum, not a global MDL lower bound",
+      "confirm exact-C1 409526925 B and relaxed-box 177169 B are not conflated",
+      "confirm rule-118 and ker(A) both yield zero measured byte reduction",
+      "confirm pool assignments and the scoped n16 lattice debt"
+    ],
+    "required": true
+  },
+  "mdl_member_check": {
+    "canonical_member_bytes": 77651017,
+    "global_mdl_optimum_claim": false,
+    "n64_member_cut_fraction": 0.0,
+    "selected_member_bytes": 77651017,
+    "verdict": "MEASURED_NO_MEMBER_RATE_CUT_RETAIN_CANONICAL"
+  },
+  "nonadditive_pools": {
+    "composition_law": "Only within-pool joint replay receives credit. Cross-pool deltas are conditionally composable only after one final same-artifact decode/score.",
+    "pools": [
+      {
+        "evidence_scope": "Both change the same realized receiver field. Credit is the strict joint replay delta, never the sum of singleton deltas.",
+        "levers": [
+          "multicoefficient-solve",
+          "correction-synergy"
+        ],
+        "pool_id": "P_REALIZE",
+        "relationship": "COMPETE_WITHIN_POOL"
+      },
+      {
+        "evidence_scope": "All harvest redundancy from the post-chart temporal symbol stream. The xi-temporal coder is downstream of the canonical chart and cannot receive independent additive credit.",
+        "levers": [
+          "context-arithmetic-code",
+          "xi-once-for-pose",
+          "chart-canonicalization"
+        ],
+        "pool_id": "P_TEMPORAL_DESCRIPTION",
+        "relationship": "COMPETE_WITHIN_POOL"
+      },
+      {
+        "evidence_scope": "SegNet reads the last frame only, so frame-0 is structurally seg-free. Pose still couples the pair, so archive-byte credit requires joint replay.",
+        "levers": [
+          "frame-separation"
+        ],
+        "pool_id": "P_FRAME_OWNERSHIP",
+        "relationship": "ORTHOGONAL_FOR_DSEG_ONLY"
+      },
+      {
+        "evidence_scope": "A null direction is scorer-invisible geometry. It saves archive bytes only if a parser-consumed counted payload is actually removed.",
+        "levers": [
+          "ker(A)-hide"
+        ],
+        "pool_id": "P_NULL_GAUGE",
+        "relationship": "ORTHOGONAL_GEOMETRY_NOT_RATE"
+      }
+    ],
+    "v19b_joint_replay_evidence": {
+      "amplified_gain_total": 0.08049672121725288,
+      "degraded_gain_total": 0.001511203412498918,
+      "single_step_gain_total": 0.03742127019557973,
+      "survival_fraction": 0.9596164586450241,
+      "survived_gain_total": 0.03591006678308081
+    },
+    "xi_temporal_same_pool_negative_bytes": {
+      "LBND2_identity_settled": 0,
+      "XTDL1_identity_xi_context_control": 7020,
+      "XTDL1_planar3_from_composed_screw_predictor": 8508
+    }
+  },
+  "promotion_eligible": false,
+  "rate_floor": {
+    "audited_exact_c1_receiver_floor": {
+      "archive_bytes": 409526925,
+      "archive_sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42",
+      "d_pose": "0.00010184",
+      "d_seg": "0.00015196",
+      "evidence_axis": "[contest-CPU Linux x86_64]",
+      "global_minimum_claim": false,
+      "n_pairs": 600,
+      "new_measurement_this_lane": false,
+      "receiver_closed": true,
+      "row_id": "historical_tight_c1_contest_cpu",
+      "status": "MEASURED_SMALLEST_IN_EXPLICIT_AUDITED_EXACT_C1_SET"
+    },
+    "audited_relaxed_receiver_floor": {
+      "archive_bytes": 177169,
+      "archive_bytes_reverified_this_lane": true,
+      "archive_sha256": "cb6cf0ba719a535bf8874b31675a4ec66a893423d320f1e4071a2012cd88a56f",
+      "d_pose": "0.00002930838566754801",
+      "d_seg": "0.0005453067355847452",
+      "evidence_axis": "[contest-CPU candidate-selection in-container]",
+      "global_minimum_claim": false,
+      "legacy_provenance_gap": "mounted code git head and upstream snapshot SHA were not recorded by the historical dispatch; MAIN review remains required",
+      "n_pairs": 600,
+      "real_decode_and_n600_score_reused": true,
+      "receiver_closed": true,
+      "row_id": "joint_optimum_575_full_precision_same_container",
+      "status": "MEASURED_SMALLEST_IN_EXPLICIT_AUDITED_RECEIVER_SET"
+    },
+    "counterfactual_settled_score_at_relaxed_floor_bytes": {
+      "pose": "0.03191238004286110904550092051",
+      "rate": "0.1179695648657019755422548898",
+      "seg": "0.01519600",
+      "total": "0.1650779449085630845877558103"
+    },
+    "decisive_gap_bytes": 22645,
+    "fixed_c1_pointer_knee": {
+      "note": "#604 216207-byte row is description-only; 216223 is the exact score-law knee",
+      "relaxed_floor_below_knee_bytes": 39054,
+      "strict_max_archive_bytes": 216223
+    },
+    "strict_sub015_at_settled_c1": {
+      "audited_exact_c1_floor_gap_bytes": 409372401,
+      "audited_relaxed_floor_cut_required_fraction": "0.1278158142790217250196140408",
+      "audited_relaxed_floor_gap_bytes": 22645,
+      "continuous_crossing_bytes": "154524.64741171754807217378757866849541357609231823",
+      "max_archive_bytes": 154524,
+      "score_at_cap": "0.1499995689151115144137729917",
+      "score_at_cap_plus_one": "0.1500002347740646365851209265"
+    },
+    "sub015_reachability": "NOT_CURRENTLY_REACHED_BUT_NOT_RULED_OUT",
+    "universal_lower_bound_bytes": 0,
+    "universal_lower_bound_status": "ONLY_SOUND_MODEL_INDEPENDENT_BOUND"
+  },
+  "research_only": true,
+  "rule_118_partition": {
+    "counted_video_derived": [
+      "learned/video-fit weights, latents, coefficients, and initial conditions",
+      "video-derived xi values and per-pair pose carrier state",
+      "chart, topology, event, exception, and residual symbols",
+      "video-derived palette/camera constants or lookup tables even if hidden in code"
+    ],
+    "free_zero_rate": [
+      "generic archive parser and integrity checks",
+      "generic xi integrator and trajectory evaluator",
+      "generic power-diagram or chart rasterizer",
+      "generic deterministic seed-to-table expansion",
+      "generic receiver, resize plumbing, and codec interpreter logic"
+    ],
+    "measured_current_free_reclassification_reduction_bytes": 0,
+    "move_to_counted_bucket_bytes": 0,
+    "null_omitted": [
+      "gauge coordinates and deterministic dither with no receiver-visible statistic"
+    ],
+    "scope": "#604 audited S4 runtime source; no pointer-archive reclassification inferred"
+  },
+  "schema": "ddm_m4_rate_floor_einstein_avenue_receipt.v1",
+  "score_claim": false,
+  "source_receipts": {
+    "einstein_kolmogorov_ultra_604": {
+      "bytes": 26794,
+      "git_commit": "5cc81f1172",
+      "path": ".omx/research/einstein_kolmogorov_ultra_20260721T155726Z.md",
+      "sha256": "a70602fe531909fb82600f110d048280a7dc9720028e2328ccfb1ecdc3b16025"
+    },
+    "joint_optimum_575": {
+      "bytes": 9348,
+      "path": ".omx/research/joint_optimum_575_xhigh_exact_row_20260720.json",
+      "sha256": "4054c4f90f61569dc1d5c6a9e6733e5c1334cd608dfad59240d6026137f25cd9"
+    },
+    "mdl_member": {
+      "bytes": 6470,
+      "path": ".omx/research/mdl_polytope_member_solve_receipt_20260721.json",
+      "sha256": "fd32f745ccd106dc569532aaec53aae6dcd29d0cec2a380868fa90d0dd7d6005"
+    },
+    "null_kernel": {
+      "bytes": 7444,
+      "path": ".omx/research/null_compiler_full_kernel_20260720T163500Z.json",
+      "sha256": "76af5e7f8d155363a6668b4ee7bca576ea448472ea0cd1e7f938577bb4adfd74"
+    },
+    "qaxis": {
+      "bytes": 14076,
+      "path": ".omx/research/qaxis_bitdepth_response_surface_20260623T232215Z.json",
+      "sha256": "a0b13aa3b4cfc0eaa22c899945d0bdeb894a3cd3e9b5e3d3d905ab40e39d381e"
+    },
+    "tight_c1": {
+      "bytes": 14766,
+      "path": ".omx/research/inverse_solve_einstein_avenue_20260720T092250Z_receipt.json",
+      "sha256": "65d9f98df22a78f164d42d32bf8a91c42bd63ca1ae418865de63354d25c9bfe2"
+    },
+    "v19b": {
+      "bytes": 156350,
+      "path": ".omx/research/ddm_v19b_joint_remeasure_stack_20260723T051914Z/ddm_v19b_joint_remeasure_stack_receipt.json",
+      "sha256": "4bb5d6b4b793b667c7cbe15e37cbf9a27f6c0e75451374839fb5df8ca1c1b8e8"
+    },
+    "xi_temporal": {
+      "bytes": 6459,
+      "path": ".omx/research/xi_temporal_delta_coder_574_20260721T222234Z.json",
+      "sha256": "7241ff90057287d58482e9abd55e5da17173cb6ebe09a39c2ca847cc02a9a8b9"
+    }
+  },
+  "verdict": "SUB015_NOT_REACHED_22645_BYTE_GAP_NOT_RULED_OUT",
+  "verdict_scope": "Explicit audited set: #575 n600 exact row, qaxis n600 int8/int7/int6 rows, historical exact C1, and modern DDM v19b; existing receipts only. No global MDL optimum, family impossibility, new score, or promotion claim."
+}

@@ -1,0 +1,43 @@
+{
+  "schema": "pact.ddm_m4_rate_floor.three_pass_review.v1",
+  "created_utc": "2026-07-23T10:40:09Z",
+  "score_claim": false,
+  "main_landing_review_required": true,
+  "passes": [
+    {
+      "name": "receipt_and_archive_custody",
+      "verdict": "PASS_WITH_HISTORICAL_CUSTODY_CAVEAT",
+      "evidence": [
+        "The derivation tool verifies every source receipt hash.",
+        "The 177169-byte candidate archive was rehashed and its physical size remeasured.",
+        "The historical dispatch lacks mounted-code git-head and upstream-snapshot SHA custody, so this lane makes no score claim."
+      ]
+    },
+    {
+      "name": "blind_math_and_accounting",
+      "verdict": "PASS",
+      "evidence": [
+        "The strict integer cap for exact C1 is 154524 bytes.",
+        "The audited relaxed-receiver floor is 177169 bytes, leaving a 22645-byte gap.",
+        "Rule-118 compliant incremental reduction and currently admitted ker(A) hideable archive bytes are each zero."
+      ]
+    },
+    {
+      "name": "scope_and_nonadditivity",
+      "verdict": "PASS",
+      "evidence": [
+        "The seven levers are assigned to four explicit competition pools.",
+        "No cross-pool saving is credited without a same-artifact receiver-closed measurement.",
+        "The g2g2 formulation is scoped as non-lattice-native, and 0.01605162 is labeled scheduled-minus-realized debt rather than recoverable gain."
+      ]
+    }
+  ],
+  "reviewed_artifact_sha256": {
+    "src/tac/canonical_equations/ddm_m4_rate_floor_20260723.py": "1847d7ae4023b2e9bac3133398611a7733245de23d09108094fab672879f409e",
+    "src/tac/canonical_equations/tests/test_ddm_m4_rate_floor_20260723.py": "771c7c9a0886c1b7d4750e67065b2e9673d5ca1c662ef627be5b95c0ee03d907",
+    "tools/derive_ddm_m4_rate_floor.py": "2146202cc22118f7c3497f54dda89d03b5f575455b70bd42f91a469b68596b01",
+    ".omx/research/ddm_m4_rate_floor_einstein_avenue_20260723_receipt.json": "e74ae0079733a4a3babf46cef23f0583b143d6015e7b32a656690ea1ce724972",
+    ".omx/research/codex_findings_ddm_m4_rate_floor_einstein_avenue_20260723_codex.md": "1026ff1eabcdfe85d7566952b7507769ab3263afca1f557011ff13fc553fb8a6",
+    ".omx/research/ddm_m4_rate_floor_einstein_avenue_DAG_FEED_20260723.md": "438befd83acb4cb917013aca691f8a5ae5ce40583a923962376a7a6fe13d3dc7"
+  }
+}
