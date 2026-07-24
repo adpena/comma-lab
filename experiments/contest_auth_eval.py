@@ -1213,6 +1213,7 @@ _KNOWN_ARCHIVE_SUFFIXES = (
     ".json", ".txt",             # manifests / pose metadata
     ".bin.zst", ".bin.lzma",    # alternative compressors
     ".npy", ".npz",             # numpy state if used
+    ".ddj5",                     # DDM J5 grammar-state payload (WS1-line receiver states)
 )
 _KNOWN_BROTLI_LOGICAL_SUFFIXES = (
     ".bin",
