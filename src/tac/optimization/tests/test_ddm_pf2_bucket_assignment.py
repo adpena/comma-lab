@@ -164,6 +164,39 @@ def test_measured_table_preserves_partial_probe_custody_and_exact_join() -> None
     validate_assignment_table(measured, expected_pf2_sha256="a" * 64)
 
 
+def test_measured_table_preserves_sealed_membership_across_generations() -> None:
+    table = _table()
+    probe = {
+        "schema": PROBE_RESULT_SCHEMA,
+        "receiver_actuator_id": "j2.island.track0.center_x",
+        "direction_id": "POSITIVE_ONE_QUANTUM",
+        "status": "MEASURED_ARGMAX_PERTURBATION",
+        "checkpoint_sha256": "b" * 64,
+        "bucket_hits": [
+            {
+                "bucket_id": "bucket-0000",
+                "pair_ids": [0],
+                "event_count": 1,
+                "event_ids_sha256": "c" * 64,
+            }
+        ],
+    }
+    first_generation = build_measured_assignment_table(
+        base_table=table,
+        expected_pf2_sha256="a" * 64,
+        probe_results=[probe],
+    )
+    probe["checkpoint_sha256"] = "d" * 64
+    second_generation = build_measured_assignment_table(
+        base_table=first_generation,
+        expected_pf2_sha256="a" * 64,
+        probe_results=[probe],
+    )
+
+    assert second_generation["rows"][0]["pair_ids"] == [0]
+    assert second_generation["rows"][0]["pf2_membership_pair_ids"] == [0, 17]
+
+
 def test_measured_table_rejects_unknown_bucket_hit() -> None:
     table = _table()
     probe = {

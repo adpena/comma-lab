@@ -425,7 +425,12 @@ def build_measured_assignment_table(
             by_bucket.get(bucket_id, []),
             key=lambda value: (value["receiver_actuator_id"], value["direction_id"]),
         )
-        row["pf2_membership_pair_ids"] = list(source["pair_ids"])
+        # Iterative grammar extensions consume an already measured table. Its
+        # ``pair_ids`` are causal joins, not the sealed PF2 obligation set.
+        # Preserve the original membership foreign key across every generation.
+        row["pf2_membership_pair_ids"] = list(
+            source.get("pf2_membership_pair_ids", source["pair_ids"])
+        )
         row["measured_probe_assignments"] = assignments
         if assignments:
             row["assignment_status"] = RECOVERED_STATUS

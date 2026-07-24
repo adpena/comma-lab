@@ -40,6 +40,7 @@ SCHEMA: Final = "ddm_ms6_receiver_support_resume_summary.v1"
 CHECKPOINT_SCHEMA: Final = "ddm_ms6_receiver_support_probe_checkpoint.v2"
 TABLE_SCHEMA: Final = "ddm_ms5_pf2_bucket_assignment_table.v1"
 G3_SCHEMA: Final = "ddm_g3_hard_pair_registry.v1"
+RG2_ASSIGNMENT_SCHEMA: Final = "ddm_rg2_skeleton_amplitude_assignment.v1"
 EXPECTED_BASE_SHA256: Final = "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9"
 EXPECTED_PF2_SHA256: Final = "85084f7bd3a03dbd1b9f04fe6a9b84df4948a6caf64620beef42da8924345f73"
 EXPECTED_G3_SHA256: Final = "0c9ce6d0ce2b2c0830400f096438355242527d40f682fc1b201f67d8d951a4e4"
@@ -271,37 +272,99 @@ def _candidate_coordinate_families(atlas_key: Mapping[str, Any]) -> list[str]:
 def _coordinate_derivation(
     table_rows: Sequence[Mapping[str, Any]],
     coverage: Mapping[str, Any],
+    *,
+    rg2_assignment: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     by_bucket = {str(row["bucket_id"]): row for row in table_rows}
+    rg2_by_key = (
+        {
+            (int(row["pair_id"]), str(row["bucket_id"])): row
+            for row in rg2_assignment["rows"]
+        }
+        if rg2_assignment is not None
+        else {}
+    )
     residue = []
     for missing in coverage["missing_blocks"]:
         bucket_id = str(missing["bucket_id"])
+        pair_id = int(missing["pair_id"])
         row = by_bucket[bucket_id]
         atlas_key = row["atlas_key"]
+        rg2_row = rg2_by_key.get((pair_id, bucket_id))
+        unreachable = (
+            rg2_row is not None
+            and rg2_row["causal_join_status"]
+            == "UNREACHABLE_NO_SHA_BOUND_RECEIVER_CLASS_PAIR_SUPPORT"
+        )
+        if unreachable:
+            next_families = ["EVENT_LOCAL_SKELETON_CLASS_BIRTH_PRODUCTION"]
+            reason = "RG2_ADDRESS_UNREACHABLE_ZERO_SHA_BOUND_CLASS_PAIR_SUPPORT"
+        elif rg2_assignment is not None:
+            next_families = (
+                ["FINER_EVENT_LOCAL_SKELETON_AMPLITUDE_CODEBOOK"]
+                if str(atlas_key["class_stratum"]) == "boundary"
+                else ["FISHER_MARGIN_PER_STRATUM_SKELETON_AMPLITUDE_CODEBOOK"]
+            )
+            reason = "NO_MEASURED_RG2_AMPLITUDE_JOIN_AT_EXACT_PAIR_BUCKET"
+        else:
+            next_families = _candidate_coordinate_families(atlas_key)
+            reason = "NO_MEASURED_RG1_PROBE_JOIN_AT_EXACT_PAIR_BUCKET"
         residue.append(
             {
-                "pair_id": int(missing["pair_id"]),
+                "pair_id": pair_id,
                 "bucket_id": bucket_id,
                 "typed_key": dict(atlas_key),
-                "candidate_coordinate_families": _candidate_coordinate_families(atlas_key),
-                "reason": "NO_MEASURED_RG1_PROBE_JOIN_AT_EXACT_PAIR_BUCKET",
+                "candidate_coordinate_families": next_families,
+                "reason": reason,
+                **(
+                    {
+                        "rg2_receiver_actuator_id": rg2_row["receiver_actuator_id"],
+                        "rg2_receiver_derived_row_band": rg2_row["receiver_derived_row_band"],
+                    }
+                    if rg2_row is not None
+                    else {}
+                ),
             }
         )
-    return {
-        "derivation_rule": (
+    if rg2_assignment is not None:
+        derivation_rule = (
+            "RG2 amplitude rows that remain unjoined after both signed one-quantum "
+            "measurements require a finer event-local or Fisher-margin per-stratum "
+            "amplitude codebook. Rows with zero SHA-bound support require a distinct "
+            "class-birth production; RG2 does not invent an address for them."
+        )
+        coordinate_counts = {
+            family: sum(
+                family in row["candidate_coordinate_families"] for row in residue
+            )
+            for family in sorted(
+                {
+                    family
+                    for row in residue
+                    for family in row["candidate_coordinate_families"]
+                }
+            )
+        }
+        verdict_scope = "INSTANCE_EXTENDED_GRAMMAR_RG2"
+    else:
+        derivation_rule = (
             "Lane class keys require counted Lane-band productions; Movable keys "
             "require bounded G1 polygon coordinates; transient keys require pair-local "
             "post-solve corrections; remaining boundary/cell keys require event-local "
             "or per-stratum SKELETON production coordinates."
-        ),
-        "new_rg1_coordinate_counts": {
+        )
+        coordinate_counts = {
             "lane_program": 24,
             "pair_local_post_solve_correction": 6,
             "bounded_geometry_alternative": 10,
-        },
+        }
+        verdict_scope = "INSTANCE_EXTENDED_GRAMMAR_RG1"
+    return {
+        "derivation_rule": derivation_rule,
+        "next_coordinate_family_counts": coordinate_counts,
         "residual_missing_block_count": len(residue),
         "residual": residue,
-        "verdict_scope": "INSTANCE_EXTENDED_GRAMMAR_RG1",
+        "verdict_scope": verdict_scope,
     }
 
 
@@ -331,6 +394,7 @@ def build_summary(
     checkpoint_roots: Sequence[Path],
     assignment_table_path: Path,
     g3_path: Path,
+    rg2_assignment_path: Path | None = None,
 ) -> dict[str, Any]:
     table = _read_object(assignment_table_path)
     if table.get("schema") != TABLE_SCHEMA:
@@ -343,6 +407,14 @@ def build_summary(
     top24 = g3.get("top24")
     if not isinstance(top24, list) or len(top24) != 24:
         raise SummaryError("G3 top24 registry is malformed")
+    rg2_assignment = (
+        _read_object(rg2_assignment_path) if rg2_assignment_path is not None else None
+    )
+    if (
+        rg2_assignment is not None
+        and rg2_assignment.get("schema") != RG2_ASSIGNMENT_SCHEMA
+    ):
+        raise SummaryError("RG2 assignment schema differs")
 
     table_probe_sha = {
         (str(row["receiver_actuator_id"]), str(row["direction_id"])): str(row["checkpoint_sha256"])
@@ -415,6 +487,17 @@ def build_summary(
                 "path": str(g3_path.resolve()),
                 "sha256": g3_sha,
             },
+            **(
+                {
+                    "rg2_assignment": {
+                        "path": str(rg2_assignment_path.resolve()),
+                        "sha256": _sha256(rg2_assignment_path),
+                        "content_sha256": rg2_assignment["assignment_content_sha256"],
+                    }
+                }
+                if rg2_assignment_path is not None and rg2_assignment is not None
+                else {}
+            ),
             "base_archive_sha256": EXPECTED_BASE_SHA256,
             "pf2_receipt_sha256": EXPECTED_PF2_SHA256,
         },
@@ -435,7 +518,11 @@ def build_summary(
             },
         },
         "g3_top24_coverage": g3_coverage,
-        "receiver_coordinate_derivation": _coordinate_derivation(table_rows, g3_coverage),
+        "receiver_coordinate_derivation": _coordinate_derivation(
+            table_rows,
+            g3_coverage,
+            rg2_assignment=rg2_assignment,
+        ),
         "producer_rerun_eligible": False,
         "producer_rerun_reason": "set after the G3 coverage proof below",
         "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
@@ -445,7 +532,9 @@ def build_summary(
         "research_only": True,
         "main_landing_review_required": True,
         "verdict_scope": (
-            "INSTANCE_V19C_RG1_ENDPOINT_ONE_QUANTUM_SWEEP"
+            "INSTANCE_V19C_RG2_SKELETON_AMPLITUDE_ONE_QUANTUM_SWEEP"
+            if rg2_assignment is not None
+            else "INSTANCE_V19C_RG1_ENDPOINT_ONE_QUANTUM_SWEEP"
             if len(checkpoints) > 748
             else "INSTANCE_V19C_ENDPOINT_ONE_QUANTUM_SWEEP"
         ),
@@ -472,6 +561,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--assignment-table", type=Path, default=DEFAULT_TABLE)
     parser.add_argument("--g3", type=Path, default=DEFAULT_G3)
+    parser.add_argument("--rg2-assignment", type=Path)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     return parser.parse_args()
 
@@ -482,6 +572,7 @@ def main() -> int:
         checkpoint_roots=args.checkpoint_roots or [DEFAULT_CHECKPOINTS],
         assignment_table_path=args.assignment_table,
         g3_path=args.g3,
+        rg2_assignment_path=args.rg2_assignment,
     )
     _publish(args.output, summary)
     print(args.output)

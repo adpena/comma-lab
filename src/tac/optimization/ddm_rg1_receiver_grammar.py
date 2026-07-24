@@ -16,10 +16,12 @@ import json
 import struct
 import zipfile
 import zlib
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Final, Literal
+
+import numpy as np
 
 from tac.optimization.ddm_min_description_contract import (
     LayerHome,
@@ -27,6 +29,8 @@ from tac.optimization.ddm_min_description_contract import (
     TypedStreamTag,
 )
 from tac.optimization.direct_description_carrier_compose import (
+    REALIZATION_PAINT_ORDER,
+    ROLE_CLASS_IDS,
     CarrierComposeReceiverV1,
     LanePeriodicProgramV1,
     _apply_chart_symbols,
@@ -47,13 +51,31 @@ from tac.optimization.predictor_upgrade_xi_chart import (
 ARCHIVE_SCHEMA: Final = "ddm_rg1_joint_receiver_grammar_archive.v1"
 RECEIVER_SCHEMA: Final = "ddm_rg1_joint_receiver_grammar_receiver.v1"
 MAGIC: Final = "DDRG1"
+ARCHIVE_SCHEMA_RG2: Final = "ddm_rg2_joint_receiver_grammar_archive.v2"
+RECEIVER_SCHEMA_RG2: Final = "ddm_rg2_joint_receiver_grammar_receiver.v2"
+MAGIC_RG2: Final = "DDRG2"
 BASE_MEMBER: Final = "base/v13_v19c_carrier.zip"
 LANE_PROGRAM_MEMBER: Final = "production/lane_program_coordinates.rg1lp"
 CORRECTION_MEMBER: Final = "correction/lane_chart_symbols.g2cs2"
+SKELETON_AMPLITUDE_MEMBER: Final = "production/skeleton_amplitude_coordinates.rg2sa"
 LANE_PROGRAM_PACKET_MAGIC: Final = b"RG1LP"
 LANE_PROGRAM_PACKET_VERSION: Final = 1
 _LANE_HEADER: Final = struct.Struct(">5sBHI")
 _LANE_ROW: Final = struct.Struct(">BBh")
+SKELETON_AMPLITUDE_PACKET_MAGIC: Final = b"RG2SA"
+SKELETON_AMPLITUDE_PACKET_VERSION: Final = 1
+_AMPLITUDE_HEADER: Final = struct.Struct(">5sBHI")
+_AMPLITUDE_ROW: Final = struct.Struct(">HBBBBBb")
+_AMPLITUDE_FAMILY_TO_WIRE: Final = {
+    "EVENT_LOCAL_BOUNDARY": 0,
+    "PER_STRATUM_ROW_BAND": 1,
+}
+_AMPLITUDE_WIRE_TO_FAMILY: Final = {value: key for key, value in _AMPLITUDE_FAMILY_TO_WIRE.items()}
+_TEMPORAL_TO_WIRE: Final = {"STATIC_IN_IMAGE": 0, "TRANSIENT": 1}
+_WIRE_TO_TEMPORAL: Final = {value: key for key, value in _TEMPORAL_TO_WIRE.items()}
+_CLASS_TO_ROLE: Final = {value: key for key, value in ROLE_CLASS_IDS.items()}
+_ROW_BAND_HEIGHT: Final = 64
+_ROW_BAND_COUNT: Final = 6
 
 LANE_FIELDS: Final = (
     "dash_phase_origin_q8",
@@ -96,6 +118,140 @@ class LaneProgramCoordinateV1:
         return f"j2.lane.line{self.line_index}.{self.field}"
 
 
+@dataclass(frozen=True, order=True, slots=True)
+class SkeletonAmplitudeCoordinateV1:
+    """One isolated RG2 amplitude quantum at a typed pair/stratum address."""
+
+    pair_index: int
+    class_a: int
+    class_b: int
+    family: Literal["EVENT_LOCAL_BOUNDARY", "PER_STRATUM_ROW_BAND"]
+    temporal_class: Literal["STATIC_IN_IMAGE", "TRANSIENT"]
+    row_band: int
+    signed_quanta: Literal[-1, 1]
+
+    def __post_init__(self) -> None:
+        if isinstance(self.pair_index, bool) or not 0 <= self.pair_index < 600:
+            raise DirectDescriptionError("RG2 SKELETON pair index must be in [0,600)")
+        if isinstance(self.class_a, bool) or isinstance(self.class_b, bool) or not 0 <= self.class_a < self.class_b < 5:
+            raise DirectDescriptionError("RG2 SKELETON class address must be canonical 0<=a<b<5")
+        if self.family not in _AMPLITUDE_FAMILY_TO_WIRE:
+            raise DirectDescriptionError("RG2 SKELETON production family is unknown")
+        if self.temporal_class not in _TEMPORAL_TO_WIRE:
+            raise DirectDescriptionError("RG2 SKELETON temporal class is unknown")
+        if isinstance(self.row_band, bool) or not 0 <= self.row_band < _ROW_BAND_COUNT:
+            raise DirectDescriptionError("RG2 SKELETON row band must be in [0,6)")
+        if self.signed_quanta not in (-1, 1):
+            raise DirectDescriptionError("RG2 SKELETON coordinate must be exactly one signed quantum")
+
+    @property
+    def stratum(self) -> str:
+        return "boundary" if self.family == "EVENT_LOCAL_BOUNDARY" else "cell"
+
+    @property
+    def actuator_id(self) -> str:
+        temporal = self.temporal_class.lower()
+        return (
+            f"rg2.skeleton.pair{self.pair_index:03d}.class{self.class_a}_{self.class_b}."
+            f"{self.stratum}.{temporal}.band{self.row_band:02d}"
+        )
+
+
+def encode_skeleton_amplitude_coordinates(
+    rows: Sequence[SkeletonAmplitudeCoordinateV1],
+) -> bytes:
+    """Encode canonical, counted, address-unique RG2 amplitude coordinates."""
+
+    ordered = tuple(rows)
+    if not ordered:
+        return b""
+    keys = [
+        (
+            row.pair_index,
+            row.class_a,
+            row.class_b,
+            _AMPLITUDE_FAMILY_TO_WIRE[row.family],
+            _TEMPORAL_TO_WIRE[row.temporal_class],
+            row.row_band,
+        )
+        for row in ordered
+    ]
+    if len(ordered) > 64 or keys != sorted(set(keys)):
+        raise DirectDescriptionError("RG2 SKELETON coordinates must be sorted, unique, and at most 64")
+    body = b"".join(
+        _AMPLITUDE_ROW.pack(
+            row.pair_index,
+            row.class_a,
+            row.class_b,
+            _AMPLITUDE_FAMILY_TO_WIRE[row.family],
+            _TEMPORAL_TO_WIRE[row.temporal_class],
+            row.row_band,
+            row.signed_quanta,
+        )
+        for row in ordered
+    )
+    return (
+        _AMPLITUDE_HEADER.pack(
+            SKELETON_AMPLITUDE_PACKET_MAGIC,
+            SKELETON_AMPLITUDE_PACKET_VERSION,
+            len(ordered),
+            zlib.crc32(body) & 0xFFFFFFFF,
+        )
+        + body
+    )
+
+
+def decode_skeleton_amplitude_coordinates(
+    payload: bytes,
+) -> tuple[SkeletonAmplitudeCoordinateV1, ...]:
+    """Fail closed on RG2 length, CRC, enum vocabulary, address, and parse-back."""
+
+    if not isinstance(payload, bytes):
+        raise DirectDescriptionError("RG2 SKELETON amplitude payload must be bytes")
+    if not payload:
+        return ()
+    if len(payload) < _AMPLITUDE_HEADER.size:
+        raise DirectDescriptionError("RG2 SKELETON amplitude payload is truncated")
+    magic, version, count, checksum = _AMPLITUDE_HEADER.unpack_from(payload)
+    expected = _AMPLITUDE_HEADER.size + count * _AMPLITUDE_ROW.size
+    if (
+        magic != SKELETON_AMPLITUDE_PACKET_MAGIC
+        or version != SKELETON_AMPLITUDE_PACKET_VERSION
+        or not 1 <= count <= 64
+        or len(payload) != expected
+    ):
+        raise DirectDescriptionError("RG2 SKELETON amplitude header or length is invalid")
+    body = payload[_AMPLITUDE_HEADER.size :]
+    if zlib.crc32(body) & 0xFFFFFFFF != checksum:
+        raise DirectDescriptionError("RG2 SKELETON amplitude CRC differs")
+    try:
+        rows = tuple(
+            SkeletonAmplitudeCoordinateV1(
+                pair_index=pair_index,
+                class_a=class_a,
+                class_b=class_b,
+                family=_AMPLITUDE_WIRE_TO_FAMILY[family_id],
+                temporal_class=_WIRE_TO_TEMPORAL[temporal_id],
+                row_band=row_band,
+                signed_quanta=signed_quanta,
+            )
+            for (
+                pair_index,
+                class_a,
+                class_b,
+                family_id,
+                temporal_id,
+                row_band,
+                signed_quanta,
+            ) in (_AMPLITUDE_ROW.unpack_from(body, index * _AMPLITUDE_ROW.size) for index in range(count))
+        )
+    except KeyError as exc:
+        raise DirectDescriptionError("RG2 SKELETON amplitude enum tag is unknown") from exc
+    if encode_skeleton_amplitude_coordinates(rows) != payload:
+        raise DirectDescriptionError("RG2 SKELETON amplitude packet is not canonical on parse-back")
+    return rows
+
+
 def encode_lane_program_coordinates(rows: Sequence[LaneProgramCoordinateV1]) -> bytes:
     """Encode canonical, address-unique Lane program coordinates."""
 
@@ -105,16 +261,16 @@ def encode_lane_program_coordinates(rows: Sequence[LaneProgramCoordinateV1]) -> 
     keys = [(row.line_index, _FIELD_TO_WIRE[row.field]) for row in ordered]
     if len(ordered) > 24 or keys != sorted(set(keys)):
         raise DirectDescriptionError("RG1 Lane coordinates must be sorted, unique, and at most 24")
-    body = b"".join(
-        _LANE_ROW.pack(row.line_index, _FIELD_TO_WIRE[row.field], row.signed_quanta)
-        for row in ordered
+    body = b"".join(_LANE_ROW.pack(row.line_index, _FIELD_TO_WIRE[row.field], row.signed_quanta) for row in ordered)
+    return (
+        _LANE_HEADER.pack(
+            LANE_PROGRAM_PACKET_MAGIC,
+            LANE_PROGRAM_PACKET_VERSION,
+            len(ordered),
+            zlib.crc32(body) & 0xFFFFFFFF,
+        )
+        + body
     )
-    return _LANE_HEADER.pack(
-        LANE_PROGRAM_PACKET_MAGIC,
-        LANE_PROGRAM_PACKET_VERSION,
-        len(ordered),
-        zlib.crc32(body) & 0xFFFFFFFF,
-    ) + body
 
 
 def decode_lane_program_coordinates(payload: bytes) -> tuple[LaneProgramCoordinateV1, ...]:
@@ -146,8 +302,7 @@ def decode_lane_program_coordinates(payload: bytes) -> tuple[LaneProgramCoordina
                 signed_quanta=signed_quanta,
             )
             for line_index, field_id, signed_quanta in (
-                _LANE_ROW.unpack_from(body, index * _LANE_ROW.size)
-                for index in range(count)
+                _LANE_ROW.unpack_from(body, index * _LANE_ROW.size) for index in range(count)
             )
         )
     except KeyError as exc:
@@ -199,13 +354,17 @@ def project_polygon_center(
     return min(max(center, lower), upper)
 
 
-def _typed_tag(stream_type: StreamType, layer: LayerHome, counted_bytes: int) -> dict[str, Any]:
+def _typed_tag(
+    stream_type: StreamType,
+    layer: LayerHome,
+    counted_bytes: int,
+    *,
+    grammar: str = "RG1",
+) -> dict[str, Any]:
     return TypedStreamTag(
         type=stream_type,
         layer_home=layer,
-        evaluate_py_recursion_level_cited=(
-            f"{layer.value} counted RG1 stream -> L3_raster -> L4_scorer_feature"
-        ),
+        evaluate_py_recursion_level_cited=(f"{layer.value} counted {grammar} stream -> L3_raster -> L4_scorer_feature"),
         counted_bytes=counted_bytes,
         free_receiver_code=True,
     ).to_dict()
@@ -215,33 +374,48 @@ def _manifest(
     base_archive: bytes,
     lane_payload: bytes,
     correction_payload: bytes,
+    amplitude_payload: bytes = b"",
 ) -> dict[str, Any]:
-    return {
-        "schema": ARCHIVE_SCHEMA,
-        "magic": MAGIC,
+    grammar = "RG2" if amplitude_payload else "RG1"
+    manifest = {
+        "schema": ARCHIVE_SCHEMA_RG2 if amplitude_payload else ARCHIVE_SCHEMA,
+        "magic": MAGIC_RG2 if amplitude_payload else MAGIC,
         "base": {
             "member": BASE_MEMBER,
             "bytes": len(base_archive),
             "sha256": hashlib.sha256(base_archive).hexdigest(),
             "sealed_v13_v19c_mutated": False,
-            "typed_stream_tag": _typed_tag(StreamType.SKELETON, LayerHome.L1_PROGRAM, len(base_archive)),
+            "typed_stream_tag": _typed_tag(
+                StreamType.SKELETON,
+                LayerHome.L1_PROGRAM,
+                len(base_archive),
+                grammar=grammar,
+            ),
         },
         "worldsheet_productions": {
             "member": LANE_PROGRAM_MEMBER if lane_payload else None,
             "bytes": len(lane_payload),
             "sha256": hashlib.sha256(lane_payload).hexdigest(),
             "coordinate_count": len(decode_lane_program_coordinates(lane_payload)),
-            "coordinate_vocabulary": [
-                f"j2.lane.line{line}.{field}" for line in range(6) for field in LANE_FIELDS
-            ],
-            "typed_stream_tag": _typed_tag(StreamType.SKELETON, LayerHome.L1_PROGRAM, len(lane_payload)),
+            "coordinate_vocabulary": [f"j2.lane.line{line}.{field}" for line in range(6) for field in LANE_FIELDS],
+            "typed_stream_tag": _typed_tag(
+                StreamType.SKELETON,
+                LayerHome.L1_PROGRAM,
+                len(lane_payload),
+                grammar=grammar,
+            ),
         },
         "post_solve_corrections": {
             "member": CORRECTION_MEMBER if correction_payload else None,
             "bytes": len(correction_payload),
             "sha256": hashlib.sha256(correction_payload).hexdigest(),
             "symbol_count": len(decode_lane_coefficient_deltas(correction_payload)),
-            "typed_stream_tag": _typed_tag(StreamType.RESIDUAL, LayerHome.L2_CHART, len(correction_payload)),
+            "typed_stream_tag": _typed_tag(
+                StreamType.RESIDUAL,
+                LayerHome.L2_CHART,
+                len(correction_payload),
+                grammar=grammar,
+            ),
         },
         "composition_order": [
             "parse sealed V13/V19C worldsheet base",
@@ -250,13 +424,79 @@ def _manifest(
             "execute inherited region-coherent raster and exact R",
         ],
         "five_type_compatible": [member.value for member in StreamType],
-        "empty_stream_identity_policy": "no RG1 wrapper emitted",
+        "empty_stream_identity_policy": f"no {grammar} wrapper emitted",
         "pixel_coordinate_or_rgb_patch_present": False,
         "scorer_weights_present": False,
         "ground_truth_argmax_present": False,
         "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
         "score_claim": False,
     }
+    if amplitude_payload:
+        manifest["skeleton_amplitude_productions"] = {
+            "member": SKELETON_AMPLITUDE_MEMBER,
+            "bytes": len(amplitude_payload),
+            "sha256": hashlib.sha256(amplitude_payload).hexdigest(),
+            "coordinate_count": len(decode_skeleton_amplitude_coordinates(amplitude_payload)),
+            "addressing": (
+                "pair_index x ordered_class_pair x boundary_or_cell_family x temporal_class x receiver_derived_row_band"
+            ),
+            "typed_stream_tag": _typed_tag(
+                StreamType.SKELETON,
+                LayerHome.L3_RASTER,
+                len(amplitude_payload),
+                grammar=grammar,
+            ),
+        }
+        manifest["composition_order"] = [
+            "parse sealed V13/V19C worldsheet base",
+            "apply counted Lane program coordinates",
+            "apply counted post-solve G2CS2 chart corrections",
+            "execute inherited region-coherent raster to the camera surface",
+            "apply counted receiver-derived SKELETON amplitude masks",
+            "execute evaluator-owned exact R",
+        ]
+    return manifest
+
+
+def _compile_receiver_grammar(
+    base_archive: bytes,
+    *,
+    lane_coordinates: Sequence[LaneProgramCoordinateV1],
+    corrections: Sequence[LaneCoefficientDelta],
+    skeleton_amplitudes: Sequence[SkeletonAmplitudeCoordinateV1],
+) -> bytes:
+    if not isinstance(base_archive, bytes) or not base_archive:
+        raise DirectDescriptionError("RG1/RG2 requires nonempty sealed base carrier bytes")
+    lane_payload = encode_lane_program_coordinates(tuple(lane_coordinates))
+    correction_payload = encode_lane_coefficient_deltas(tuple(corrections))
+    amplitude_payload = encode_skeleton_amplitude_coordinates(tuple(skeleton_amplitudes))
+    if not lane_payload and not correction_payload and not amplitude_payload:
+        return base_archive
+    receive_carrier_compose_archive(base_archive, verify_member_effects=False)
+    manifest = _manifest(
+        base_archive,
+        lane_payload,
+        correction_payload,
+        amplitude_payload,
+    )
+    members = {
+        "manifest.json": rfc8785_canonicalize(manifest),
+        BASE_MEMBER: base_archive,
+    }
+    if lane_payload:
+        members[LANE_PROGRAM_MEMBER] = lane_payload
+    if amplitude_payload:
+        members[SKELETON_AMPLITUDE_MEMBER] = amplitude_payload
+    if correction_payload:
+        members[CORRECTION_MEMBER] = correction_payload
+    first = _zip_stored(members)
+    second = _zip_stored(members)
+    if first != second:
+        raise DirectDescriptionError("RG1/RG2 compiler is nondeterministic")
+    parsed = parse_rg1_receiver_grammar(first)
+    if parsed != members or _zip_stored(parsed) != first:
+        raise DirectDescriptionError("RG1/RG2 parse/re-encode changed bytes")
+    return first
 
 
 def compile_rg1_receiver_grammar(
@@ -267,31 +507,29 @@ def compile_rg1_receiver_grammar(
 ) -> bytes:
     """Compile RG1, returning the sealed base bytes for the inactive default."""
 
-    if not isinstance(base_archive, bytes) or not base_archive:
-        raise DirectDescriptionError("RG1 requires nonempty sealed base carrier bytes")
-    lane_payload = encode_lane_program_coordinates(tuple(lane_coordinates))
-    correction_payload = encode_lane_coefficient_deltas(tuple(corrections))
-    if not lane_payload and not correction_payload:
-        return base_archive
-    # Strictly admit the base before wrapping it.
-    receive_carrier_compose_archive(base_archive, verify_member_effects=False)
-    manifest = _manifest(base_archive, lane_payload, correction_payload)
-    members = {
-        "manifest.json": rfc8785_canonicalize(manifest),
-        BASE_MEMBER: base_archive,
-    }
-    if lane_payload:
-        members[LANE_PROGRAM_MEMBER] = lane_payload
-    if correction_payload:
-        members[CORRECTION_MEMBER] = correction_payload
-    first = _zip_stored(members)
-    second = _zip_stored(members)
-    if first != second:
-        raise DirectDescriptionError("RG1 compiler is nondeterministic")
-    parsed = parse_rg1_receiver_grammar(first)
-    if parsed != members or _zip_stored(parsed) != first:
-        raise DirectDescriptionError("RG1 parse/re-encode changed bytes")
-    return first
+    return _compile_receiver_grammar(
+        base_archive,
+        lane_coordinates=lane_coordinates,
+        corrections=corrections,
+        skeleton_amplitudes=(),
+    )
+
+
+def compile_rg2_receiver_grammar(
+    base_archive: bytes,
+    *,
+    lane_coordinates: Sequence[LaneProgramCoordinateV1] = (),
+    skeleton_amplitudes: Sequence[SkeletonAmplitudeCoordinateV1] = (),
+    corrections: Sequence[LaneCoefficientDelta] = (),
+) -> bytes:
+    """Compile the additive RG2 version of the same RG1 outer grammar."""
+
+    return _compile_receiver_grammar(
+        base_archive,
+        lane_coordinates=lane_coordinates,
+        corrections=corrections,
+        skeleton_amplitudes=skeleton_amplitudes,
+    )
 
 
 def parse_rg1_receiver_grammar(archive: bytes) -> dict[str, bytes]:
@@ -302,7 +540,7 @@ def parse_rg1_receiver_grammar(archive: bytes) -> dict[str, bytes]:
             infos = reader.infolist()
             if [row.filename for row in infos[:2]] != ["manifest.json", BASE_MEMBER]:
                 raise DirectDescriptionError("RG1 member prefix is invalid")
-            if not 3 <= len(infos) <= 4:
+            if not 3 <= len(infos) <= 5:
                 raise DirectDescriptionError("RG1 wrapper must carry at least one extension stream")
             if any(
                 row.is_dir()
@@ -323,31 +561,195 @@ def parse_rg1_receiver_grammar(archive: bytes) -> dict[str, bytes]:
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise DirectDescriptionError("RG1 manifest is malformed") from exc
     lane_payload = members.get(LANE_PROGRAM_MEMBER, b"")
+    amplitude_payload = members.get(SKELETON_AMPLITUDE_MEMBER, b"")
     correction_payload = members.get(CORRECTION_MEMBER, b"")
     expected_members = {
         "manifest.json",
         BASE_MEMBER,
         *([LANE_PROGRAM_MEMBER] if lane_payload else []),
+        *([SKELETON_AMPLITUDE_MEMBER] if amplitude_payload else []),
         *([CORRECTION_MEMBER] if correction_payload else []),
     }
-    expected_manifest = _manifest(members[BASE_MEMBER], lane_payload, correction_payload)
+    expected_manifest = _manifest(
+        members[BASE_MEMBER],
+        lane_payload,
+        correction_payload,
+        amplitude_payload,
+    )
     if (
         set(members) != expected_members
-        or (not lane_payload and not correction_payload)
+        or (not lane_payload and not amplitude_payload and not correction_payload)
         or manifest != expected_manifest
         or members["manifest.json"] != rfc8785_canonicalize(manifest)
     ):
         raise DirectDescriptionError("RG1 manifest or member binding differs")
     decode_lane_program_coordinates(lane_payload)
+    decode_skeleton_amplitude_coordinates(amplitude_payload)
     decode_lane_coefficient_deltas(correction_payload)
     return members
+
+
+def _dilate_four(mask: np.ndarray) -> np.ndarray:
+    padded = np.pad(np.asarray(mask, dtype=bool), 1, mode="constant")
+    return padded[1:-1, 1:-1] | padded[:-2, 1:-1] | padded[2:, 1:-1] | padded[1:-1, :-2] | padded[1:-1, 2:]
+
+
+def _base_masks_for_classes(
+    base: CarrierComposeReceiverV1,
+    *,
+    source_pair_id: int,
+    class_a: int,
+    class_b: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    local_pair_id = source_pair_id - base.predictor.source_pair_start
+    if not 0 <= local_pair_id < base.z.n_pairs:
+        raise DirectDescriptionError("RG2 SKELETON pair address escapes the SHA-bound base")
+    layer_by_role = {row.role: row for row in base.layers}
+    masks = []
+    for class_id in (class_a, class_b):
+        role = _CLASS_TO_ROLE[class_id]
+        layer = layer_by_role.get(role)
+        if layer is None:
+            raise DirectDescriptionError("RG2 SKELETON class role is absent from the base")
+        masks.append(
+            base._mask_for_layer(
+                layer,
+                local_pair_id,
+                replace_g1_movable=True,
+            )
+        )
+    return masks[0], masks[1]
+
+
+def derive_skeleton_amplitude_row_band(
+    base: CarrierComposeReceiverV1,
+    *,
+    pair_index: int,
+    class_a: int,
+    class_b: int,
+    family: Literal["EVENT_LOCAL_BOUNDARY", "PER_STRATUM_ROW_BAND"],
+) -> int:
+    """Choose the highest-mass receiver-derived band without scorer/label input."""
+
+    mask_a, mask_b = _base_masks_for_classes(
+        base,
+        source_pair_id=pair_index,
+        class_a=class_a,
+        class_b=class_b,
+    )
+    if family == "EVENT_LOCAL_BOUNDARY":
+        support = (_dilate_four(mask_a) & mask_b) | (_dilate_four(mask_b) & mask_a)
+    elif family == "PER_STRATUM_ROW_BAND":
+        support = mask_a | mask_b
+    else:
+        raise DirectDescriptionError("RG2 SKELETON row-band family is unknown")
+    masses = [
+        int(np.count_nonzero(support[start : start + _ROW_BAND_HEIGHT])) for start in range(0, 384, _ROW_BAND_HEIGHT)
+    ]
+    if not any(masses):
+        raise DirectDescriptionError("RG2 SKELETON typed class pair has no receiver support")
+    return int(np.argmax(np.asarray(masses, dtype=np.int64)))
+
+
+@dataclass(frozen=True, slots=True)
+class RG2ReceiverV1:
+    """Receiver adapter applying RG2 amplitudes before inherited outer corrections."""
+
+    archive: bytes
+    base: CarrierComposeReceiverV1
+    skeleton_amplitudes: tuple[SkeletonAmplitudeCoordinateV1, ...]
+    custody: Mapping[str, Any]
+
+    @property
+    def z(self) -> Any:
+        return self.base.z
+
+    @property
+    def pose6_codes(self) -> np.ndarray:
+        return self.base.pose6_codes
+
+    @property
+    def predictor(self) -> Any:
+        return self.base.predictor
+
+    @property
+    def layers(self) -> Any:
+        return self.base.layers
+
+    @property
+    def scorer_solved_templates(self) -> Any:
+        return self.base.scorer_solved_templates
+
+    def template_camera_masks(self, pair_ids: Sequence[int], template: Any) -> np.ndarray:
+        return self.base.template_camera_masks(pair_ids, template)
+
+    def render_camera_pairs(self, pair_ids: Sequence[int]) -> np.ndarray:
+        indexes = tuple(int(value) for value in pair_ids)
+        output = self.base.render_camera_pairs(indexes)
+        if self.base.realization_profile is None:
+            raise DirectDescriptionError("RG2 SKELETON receiver lost its realization profile")
+        from tac.through_r.resolution_chain import CAMERA_H, CAMERA_W
+
+        ys = (np.arange(CAMERA_H) * 384 // CAMERA_H).clip(0, 383)
+        xs = (np.arange(CAMERA_W) * 512 // CAMERA_W).clip(0, 511)
+        yy = np.arange(384, dtype=np.int64)[:, None]
+        xx = np.arange(512, dtype=np.int64)[None, :]
+        local_by_source = {
+            self.base.predictor.source_pair_start + local_pair: output_index
+            for output_index, local_pair in enumerate(indexes)
+        }
+        for row in self.skeleton_amplitudes:
+            output_index = local_by_source.get(row.pair_index)
+            if output_index is None:
+                continue
+            expected_band = derive_skeleton_amplitude_row_band(
+                self.base,
+                pair_index=row.pair_index,
+                class_a=row.class_a,
+                class_b=row.class_b,
+                family=row.family,
+            )
+            if row.row_band != expected_band:
+                raise DirectDescriptionError("RG2 SKELETON row-band/base binding differs")
+            mask_a, mask_b = _base_masks_for_classes(
+                self.base,
+                source_pair_id=row.pair_index,
+                class_a=row.class_a,
+                class_b=row.class_b,
+            )
+            role_a, role_b = _CLASS_TO_ROLE[row.class_a], _CLASS_TO_ROLE[row.class_b]
+            if REALIZATION_PAINT_ORDER.index(role_a) < REALIZATION_PAINT_ORDER.index(role_b):
+                early_role, late_role = role_a, role_b
+                early_mask, late_mask = mask_a, mask_b
+            else:
+                early_role, late_role = role_b, role_a
+                early_mask, late_mask = mask_b, mask_a
+            band = np.zeros((384, 512), dtype=bool)
+            start = row.row_band * _ROW_BAND_HEIGHT
+            band[start : start + _ROW_BAND_HEIGHT] = True
+            if row.family == "EVENT_LOCAL_BOUNDARY":
+                if row.signed_quanta > 0:
+                    sites = _dilate_four(late_mask) & early_mask & ~late_mask & band
+                    paint_role = late_role
+                else:
+                    sites = _dilate_four(early_mask) & late_mask & ~early_mask & band
+                    paint_role = early_role
+            else:
+                phase = (yy * 3 + xx * 5 + row.pair_index + row.class_a * 7 + row.class_b * 11) % 16 == 0
+                sites = (early_mask if row.signed_quanta > 0 else late_mask) & band & phase
+                paint_role = late_role if row.signed_quanta > 0 else early_role
+            camera_sites = sites[np.ix_(ys, xs)]
+            colour = self.base.realization_profile.colour_for(paint_role)
+            output[output_index, 0, camera_sites] = colour
+            output[output_index, 1, camera_sites] = colour
+        return np.ascontiguousarray(output)
 
 
 def receive_rg1_receiver_grammar(
     archive: bytes,
     *,
     verify_member_effects: bool = False,
-) -> CarrierComposeReceiverV1:
+) -> CarrierComposeReceiverV1 | RG2ReceiverV1:
     """Receive either a sealed base or a nonempty RG1 extension."""
 
     try:
@@ -361,6 +763,7 @@ def receive_rg1_receiver_grammar(
     base_archive = members[BASE_MEMBER]
     base = receive_carrier_compose_archive(base_archive, verify_member_effects=False)
     coordinates = decode_lane_program_coordinates(members.get(LANE_PROGRAM_MEMBER, b""))
+    amplitudes = decode_skeleton_amplitude_coordinates(members.get(SKELETON_AMPLITUDE_MEMBER, b""))
     corrections = decode_lane_coefficient_deltas(members.get(CORRECTION_MEMBER, b""))
     programs = _programs(coordinates)
     layers = _apply_lane_predictor_programs(
@@ -371,7 +774,7 @@ def receive_rg1_receiver_grammar(
         source_pair_start=base.predictor.source_pair_start,
     )
     layers = _apply_chart_symbols(layers, corrections, coefficient_limit=4)
-    receiver = replace(
+    receiver: CarrierComposeReceiverV1 | RG2ReceiverV1 = replace(
         base,
         archive=archive,
         layers=layers,
@@ -385,6 +788,7 @@ def receive_rg1_receiver_grammar(
             "lane_coordinate_count": len(coordinates),
             "lane_coordinate_ids": [row.actuator_id for row in coordinates],
             "correction_symbol_count": len(corrections),
+            "skeleton_amplitude_coordinate_count": len(amplitudes),
             "composition_order_enforced": True,
             "typed_stream_tags_validated": True,
             "sealed_v13_v19c_mutated": False,
@@ -392,19 +796,39 @@ def receive_rg1_receiver_grammar(
             "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
         },
     )
+    if amplitudes:
+        for row in amplitudes:
+            if row.row_band != derive_skeleton_amplitude_row_band(
+                receiver,
+                pair_index=row.pair_index,
+                class_a=row.class_a,
+                class_b=row.class_b,
+                family=row.family,
+            ):
+                raise DirectDescriptionError("RG2 SKELETON row-band/base binding differs")
+        receiver = RG2ReceiverV1(
+            archive=archive,
+            base=receiver,
+            skeleton_amplitudes=amplitudes,
+            custody={
+                **dict(receiver.custody),
+                "schema": RECEIVER_SCHEMA_RG2,
+                "skeleton_amplitude_coordinate_ids": [row.actuator_id for row in amplitudes],
+                "skeleton_amplitude_typed_stream": "SKELETON/L3_raster",
+            },
+        )
     if verify_member_effects:
         probe_ids = sorted(
             {
                 *(range(600) if coordinates else ()),
+                *(row.pair_index for row in amplitudes),
                 *(row.pair_index for row in corrections),
             }
         )
         if not probe_ids:
             raise DirectDescriptionError("RG1 wrapper has no effective coordinate")
         if all(
-            (
-                base.render_camera_pairs((pair_id,)) == receiver.render_camera_pairs((pair_id,))
-            ).all()
+            (base.render_camera_pairs((pair_id,)) == receiver.render_camera_pairs((pair_id,))).all()
             for pair_id in probe_ids
         ):
             raise DirectDescriptionError("RG1 extension is a receiver-output no-op")
@@ -413,14 +837,22 @@ def receive_rg1_receiver_grammar(
 
 __all__ = [
     "ARCHIVE_SCHEMA",
+    "ARCHIVE_SCHEMA_RG2",
     "BASE_MEMBER",
     "CORRECTION_MEMBER",
     "LANE_FIELDS",
     "LANE_PROGRAM_MEMBER",
+    "SKELETON_AMPLITUDE_MEMBER",
     "LaneProgramCoordinateV1",
+    "RG2ReceiverV1",
+    "SkeletonAmplitudeCoordinateV1",
     "compile_rg1_receiver_grammar",
+    "compile_rg2_receiver_grammar",
     "decode_lane_program_coordinates",
+    "decode_skeleton_amplitude_coordinates",
+    "derive_skeleton_amplitude_row_band",
     "encode_lane_program_coordinates",
+    "encode_skeleton_amplitude_coordinates",
     "parse_rg1_receiver_grammar",
     "project_polygon_center",
     "receive_rg1_receiver_grammar",

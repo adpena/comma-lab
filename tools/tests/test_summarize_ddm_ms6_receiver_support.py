@@ -11,6 +11,7 @@ from tools.summarize_ddm_ms6_receiver_support import (
     EXPECTED_BASE_SHA256,
     _assigned_bucket_summary,
     _candidate_coordinate_families,
+    _coordinate_derivation,
     _distribution,
     _g3_coverage,
     _load_checkpoints,
@@ -106,6 +107,53 @@ def test_assigned_bucket_summary_labels_probe_event_incidence() -> None:
     )
     assert value["probe_event_incidence_count"] == 12
     assert "not unique-event cardinality" in value["probe_event_incidence_semantics"]
+
+
+def test_rg2_coordinate_derivation_separates_unreachable_birth_from_finer_amplitude() -> None:
+    rows = [
+        {
+            "bucket_id": "boundary",
+            "atlas_key": {"class_stratum": "boundary"},
+        },
+        {
+            "bucket_id": "cell",
+            "atlas_key": {"class_stratum": "cell"},
+        },
+    ]
+    coverage = {
+        "missing_blocks": [
+            {"pair_id": 1, "bucket_id": "boundary"},
+            {"pair_id": 2, "bucket_id": "cell"},
+        ]
+    }
+    assignment = {
+        "rows": [
+            {
+                "pair_id": 1,
+                "bucket_id": "boundary",
+                "causal_join_status": "UNREACHABLE_NO_SHA_BOUND_RECEIVER_CLASS_PAIR_SUPPORT",
+                "receiver_actuator_id": None,
+                "receiver_derived_row_band": None,
+            },
+            {
+                "pair_id": 2,
+                "bucket_id": "cell",
+                "causal_join_status": "READY_FOR_SIGNED_PROBE",
+                "receiver_actuator_id": "rg2.skeleton.pair002.class0_1.cell.transient.band03",
+                "receiver_derived_row_band": 3,
+            },
+        ]
+    }
+
+    value = _coordinate_derivation(rows, coverage, rg2_assignment=assignment)
+
+    assert value["verdict_scope"] == "INSTANCE_EXTENDED_GRAMMAR_RG2"
+    assert value["residual"][0]["candidate_coordinate_families"] == [
+        "EVENT_LOCAL_SKELETON_CLASS_BIRTH_PRODUCTION"
+    ]
+    assert value["residual"][1]["candidate_coordinate_families"] == [
+        "FISHER_MARGIN_PER_STRATUM_SKELETON_AMPLITUDE_CODEBOOK"
+    ]
 
 
 def test_load_checkpoints_selects_assignment_bound_revision_across_roots(

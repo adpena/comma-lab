@@ -1,0 +1,50 @@
+{
+  "clean_passes": [
+    {
+      "evidence": "ruff and py_compile passed; 28 focused tests passed in 39.27s; git diff --check passed",
+      "name": "post_fix_code_and_regression",
+      "status": "CLEAN"
+    },
+    {
+      "evidence": "independent regenerations reproduced exact assignment, merged-table, and summary file SHA-256 values d90391cc5983cd851472db9c9759b25bfbfbb8378d293d57a48536255ef1d764, 49a4d52d839bcb7815639b7ffa7e66e8c8a6196f675ec66f1a50d2211a96a4ec, and 15b12224e3abb0d93f4fb9693402794d27969783b1d796114f0208277fe5a9ed; all four canonical content hashes and assignment-table validation passed; latest equation registry event binds the current receipt SHA",
+      "name": "determinism_and_content_custody",
+      "status": "CLEAN"
+    },
+    {
+      "evidence": "independent scan proved honest L3_raster ownership, 64 derivations, 51 addresses, 13 blockers, 102 unique fresh signed identities and candidate SHAs, disjoint superseded/current candidate SHA sets, exact 75/13/14 status split, 870 table SHA bindings, invariant RG1/RG2 G3 obligation counts, 64-to-36 missing-block closure, 7/24 complete pairs, latest equation receipt custody, and no MS4/frontier/pointer file mutation",
+      "name": "independent_adversarial_rederivation",
+      "status": "CLEAN"
+    }
+  ],
+  "findings": [
+    {
+      "disposition": "FIXED_AND_REMEASURED_ON_FRESH_EXACT_BYTES",
+      "finding": "The first RG2 manifest tagged the receiver-derived camera-surface amplitude as L1_program even though its first action occurs at the pre-R raster surface.",
+      "fix": "Retagged the counted SKELETON stream as honest L3_raster, corrected composition/equation language, preserved the superseded L1-labeled checkpoint root, and remeasured all 102 changed candidate archives in a fresh root.",
+      "severity": "CRITICAL"
+    },
+    {
+      "disposition": "FIXED_WITH_TWO_GENERATION_REGRESSION_TEST",
+      "finding": "The generic measured-table builder replaced sealed PF2 membership with a prior generation's causal joined pair_ids, causing a false 24/24 G3 pass on the first RG2 render.",
+      "fix": "Preserve existing pf2_membership_pair_ids across iterative generations and fall back to pair_ids only for the original table; regenerated RG2 against unchanged RG1 obligation counts.",
+      "severity": "CRITICAL"
+    },
+    {
+      "disposition": "FIXED_BEFORE_MEASUREMENT_MERGE",
+      "finding": "A naive 748+80 prior-root concatenation duplicated 60 RG1 replacement identities and would not reproduce the authoritative 768-row RG1 producer.",
+      "fix": "Later RG1 checkpoints supersede repeated identities while all historical files remain preserved; RG2 starts from exactly 768 prior rows.",
+      "severity": "HIGH"
+    },
+    {
+      "disposition": "FAIL_CLOSED_INSTANCE_SCOPED",
+      "finding": "RG2 closes 28 of 64 prior G3 blocks but leaves 36; only 7 of 24 hard pairs are complete.",
+      "fix": "Keep MS4 ineligible, emit all 36 residues and three derived next families, and stop without an RG3 iteration.",
+      "severity": "GATE"
+    }
+  ],
+  "main_landing_review_required": true,
+  "review_round": 1,
+  "schema": "ddm_rg2_skeleton_amplitude_productions_round1_review.v1",
+  "score_claim": false,
+  "verdict_scope": "INSTANCE_EXTENDED_GRAMMAR_RG2"
+}

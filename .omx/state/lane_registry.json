@@ -86037,6 +86037,47 @@
         }
       },
       "notes": "L0 isolated producer arm; materialize W_seg/W_joint, prove J5 lift identity, bounded falsifier, typed reseal; MAIN review required; no campaign fire."
+    },
+    {
+      "id": "lane_ddm_rg2_skeleton_amplitude_productions_20260724",
+      "name": "DDM RG2 SKELETON amplitude productions",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_rg1_receiver_grammar.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rg2_skeleton_amplitude_productions_20260724T094305Z/ddm_ms6_receiver_support_measurement_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rg2_skeleton_amplitude_productions_round1_review_20260724T094305Z.json"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_rg2_skeleton_amplitude_productions_20260724T094305Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {

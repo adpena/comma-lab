@@ -1,0 +1,50 @@
+{
+  "main_landing_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "rows": [
+    {
+      "directive": "delegated authority file is the complete task authority",
+      "evidence": "bytes=7198; sha256=faf2d0e7f241e02be22fc362197a2c75af31a630de30576e57268f165238f0e9",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "extend RG1 without mutating its sealed carrier or weakening empty identity",
+      "evidence": "RG2 is a versioned outer grammar; empty compile returns nested carrier sha256 7990fce786aac1f24bcb977882348867ca2d9cbc4d95d0337dd1167e593f46c6",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "derive one event-local or per-stratum SKELETON coordinate for each of RG1's 64 missing rows",
+      "evidence": "64 derivations; 51 canonical receiver addresses; 13 explicit zero-support blockers; no invented address",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "run only new signed probes through the existing resumable tool, SSD first, four Torch threads",
+      "evidence": "102 new checkpoints under /Volumes/VertigoDataTier/pact/ddm_rg2_skeleton_amplitude_productions_20260724T094305Z/probe_checkpoints_rg2_v2; threads=4",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "strict counted packet, TypedStreamTag SKELETON/L1 or the honest layer, CRC parse-back, canonical addressing",
+      "evidence": "RG2SA v1 packet and DDRG2 v2 manifest enforce one signed quantum, sorted unique addresses, CRC, strict member set, parse-back re-encoding, and honest L3_raster ownership at the pre-R receiver surface",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "do not launch paid, exact contest, training, or frontier-mutating work",
+      "evidence": "local frozen-scorer advisory measurement only; score_claim=false; no MS4 invocation; no dispatch",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "Fisher-margin rank, reverse-waterfill at 25/37,545,489, and no Fourier residual basis",
+      "evidence": "surviving per-stratum family is explicitly Fisher-margin addressed; admission remains owed; FEED forbids Fourier",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "if any G3 block remains, name every residue and next family, instance-scope the verdict, and do not iterate RG3",
+      "evidence": "36 machine-readable residues: 10 class-birth, 9 finer event-local amplitude, 17 Fisher-margin per-stratum amplitude; MS4 refused; no RG3",
+      "status": "CONSUMED"
+    }
+  ],
+  "schema": "ddm_rg2_skeleton_amplitude_directive_consumption.v1",
+  "score_claim": false,
+  "verdict_scope": "INSTANCE_EXTENDED_GRAMMAR_RG2"
+}

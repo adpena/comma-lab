@@ -3,16 +3,26 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
+from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
+from tac.optimization import ddm_rg1_receiver_grammar as rg1
 from tac.optimization.ddm_rg1_receiver_grammar import (
     LANE_FIELDS,
     LaneProgramCoordinateV1,
+    RG2ReceiverV1,
+    SkeletonAmplitudeCoordinateV1,
     compile_rg1_receiver_grammar,
+    compile_rg2_receiver_grammar,
     decode_lane_program_coordinates,
+    decode_skeleton_amplitude_coordinates,
+    derive_skeleton_amplitude_row_band,
     encode_lane_program_coordinates,
+    encode_skeleton_amplitude_coordinates,
     parse_rg1_receiver_grammar,
     project_polygon_center,
     receive_rg1_receiver_grammar,
@@ -21,10 +31,7 @@ from tac.optimization.direct_description_minimizer import DirectDescriptionError
 from tac.optimization.predictor_upgrade_xi_chart import LaneCoefficientDelta
 
 REPO = Path(__file__).resolve().parents[4]
-V19C = REPO / (
-    ".omx/research/ddm_v19c_correction_saturation_20260723T063500Z/"
-    "ddm_v19c_final_n600.zip.receipt-bytes"
-)
+V19C = REPO / (".omx/research/ddm_v19c_correction_saturation_20260723T063500Z/ddm_v19c_final_n600.zip.receipt-bytes")
 V19C_SHA256 = "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9"
 
 
@@ -35,18 +42,72 @@ def _v19c_carrier() -> bytes:
     archive = V19C.read_bytes()
     assert hashlib.sha256(archive).hexdigest() == V19C_SHA256
     pre_members, _ = preuint8.parse_preuint8_q8_archive(archive)
-    coupled_members, _ = coupled.parse_coupled_margin_archive(
-        pre_members[preuint8.BASE_MEMBER]
-    )
+    coupled_members, _ = coupled.parse_coupled_margin_archive(pre_members[preuint8.BASE_MEMBER])
     return coupled_members[coupled.BASE_MEMBER]
 
 
+class _FakeProfile:
+    def colour_for(self, role: str) -> np.ndarray:
+        value = {
+            "UndrivableBoundary": (20, 20, 20),
+            "Road": (40, 40, 40),
+            "Lane": (80, 80, 80),
+            "Movable": (120, 120, 120),
+            "MyCar": (200, 200, 200),
+        }[role]
+        return np.asarray(value, dtype=np.uint8)
+
+
+class _FakeCarrier:
+    def __init__(self) -> None:
+        self.predictor = SimpleNamespace(source_pair_start=0)
+        self.z = SimpleNamespace(n_pairs=600)
+        self.pose6_codes = np.zeros((600, 6), dtype=np.int16)
+        self.layers = tuple(
+            SimpleNamespace(role=role) for role in ("UndrivableBoundary", "Road", "Lane", "Movable", "MyCar")
+        )
+        self.realization_profile = _FakeProfile()
+        self.scorer_solved_templates = None
+        self.custody = {}
+        self._masks = {
+            "UndrivableBoundary": np.zeros((384, 512), dtype=bool),
+            "Road": np.pad(
+                np.ones((128, 320), dtype=bool),
+                ((128, 128), (0, 192)),
+            ),
+            "Lane": np.zeros((384, 512), dtype=bool),
+            "Movable": np.zeros((384, 512), dtype=bool),
+            "MyCar": np.pad(
+                np.ones((64, 128), dtype=bool),
+                ((256, 64), (192, 192)),
+            ),
+        }
+
+    def _mask_for_layer(
+        self,
+        layer: SimpleNamespace,
+        pair_id: int,
+        *,
+        replace_g1_movable: bool,
+    ) -> np.ndarray:
+        assert 0 <= pair_id < 600
+        assert replace_g1_movable is True
+        return self._masks[layer.role].copy()
+
+    def render_camera_pairs(self, pair_ids: tuple[int, ...]) -> np.ndarray:
+        from tac.through_r.resolution_chain import CAMERA_H, CAMERA_W
+
+        return np.zeros(
+            (len(pair_ids), 2, CAMERA_H, CAMERA_W, 3),
+            dtype=np.uint8,
+        )
+
+    def template_camera_masks(self, pair_ids: tuple[int, ...], template: object) -> np.ndarray:
+        raise AssertionError("no template is used by this fixture")
+
+
 def test_all_24_lane_coordinate_ids_are_unique_and_roundtrip() -> None:
-    rows = tuple(
-        LaneProgramCoordinateV1(line, field, 1)
-        for line in range(6)
-        for field in LANE_FIELDS
-    )
+    rows = tuple(LaneProgramCoordinateV1(line, field, 1) for line in range(6) for field in LANE_FIELDS)
     assert len(rows) == 24
     assert len({row.actuator_id for row in rows}) == 24
     payload = encode_lane_program_coordinates(rows)
@@ -68,13 +129,119 @@ def test_inactive_rg1_is_v19c_carrier_byte_identical() -> None:
     assert compile_rg1_receiver_grammar(carrier) == carrier
 
 
+def test_inactive_rg2_is_same_carrier_byte_identical() -> None:
+    carrier = _v19c_carrier()
+    assert compile_rg2_receiver_grammar(carrier) == carrier
+
+
+def test_rg2_skeleton_packet_is_typed_unique_crc_bound_and_roundtrips() -> None:
+    rows = (
+        SkeletonAmplitudeCoordinateV1(
+            14,
+            0,
+            4,
+            "EVENT_LOCAL_BOUNDARY",
+            "TRANSIENT",
+            2,
+            -1,
+        ),
+        SkeletonAmplitudeCoordinateV1(
+            54,
+            0,
+            4,
+            "PER_STRATUM_ROW_BAND",
+            "STATIC_IN_IMAGE",
+            3,
+            1,
+        ),
+    )
+    payload = encode_skeleton_amplitude_coordinates(rows)
+    assert decode_skeleton_amplitude_coordinates(payload) == rows
+    with pytest.raises(DirectDescriptionError, match="sorted, unique"):
+        encode_skeleton_amplitude_coordinates((rows[0], rows[0]))
+    mutated = bytearray(payload)
+    mutated[-1] ^= 1
+    with pytest.raises(DirectDescriptionError, match="CRC"):
+        decode_skeleton_amplitude_coordinates(bytes(mutated))
+
+
+def test_rg2_single_cell_amplitude_is_counted_and_receiver_effective(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base = _FakeCarrier()
+    band = derive_skeleton_amplitude_row_band(
+        base,
+        pair_index=54,
+        class_a=0,
+        class_b=4,
+        family="PER_STRATUM_ROW_BAND",
+    )
+    coordinate = SkeletonAmplitudeCoordinateV1(
+        54,
+        0,
+        4,
+        "PER_STRATUM_ROW_BAND",
+        "STATIC_IN_IMAGE",
+        band,
+        1,
+    )
+    monkeypatch.setattr(rg1, "receive_carrier_compose_archive", lambda *_args, **_kwargs: None)
+    archive = compile_rg2_receiver_grammar(
+        b"sealed-sha-bound-carrier",
+        skeleton_amplitudes=(coordinate,),
+    )
+    assert archive != b"sealed-sha-bound-carrier"
+    members = parse_rg1_receiver_grammar(archive)
+    assert members["base/v13_v19c_carrier.zip"] == b"sealed-sha-bound-carrier"
+    assert "production/skeleton_amplitude_coordinates.rg2sa" in members
+    manifest = json.loads(members["manifest.json"])
+    assert (
+        manifest["skeleton_amplitude_productions"]["typed_stream_tag"]["layer_home"]
+        == "L3_raster"
+    )
+    assert manifest["composition_order"][-1] == "execute evaluator-owned exact R"
+    receiver = RG2ReceiverV1(
+        archive=archive,
+        base=base,
+        skeleton_amplitudes=(coordinate,),
+        custody={"skeleton_amplitude_typed_stream": "SKELETON/L3_raster"},
+    )
+    assert (base.render_camera_pairs((54,)) != receiver.render_camera_pairs((54,))).any()
+
+
+def test_rg2_rejects_row_band_not_derived_from_bound_base() -> None:
+    base = _FakeCarrier()
+    band = derive_skeleton_amplitude_row_band(
+        base,
+        pair_index=54,
+        class_a=0,
+        class_b=4,
+        family="PER_STRATUM_ROW_BAND",
+    )
+    coordinate = SkeletonAmplitudeCoordinateV1(
+        54,
+        0,
+        4,
+        "PER_STRATUM_ROW_BAND",
+        "STATIC_IN_IMAGE",
+        (band + 1) % 6,
+        1,
+    )
+    receiver = RG2ReceiverV1(
+        archive=b"fixture",
+        base=base,
+        skeleton_amplitudes=(coordinate,),
+        custody={},
+    )
+    with pytest.raises(DirectDescriptionError, match="row-band/base binding"):
+        receiver.render_camera_pairs((54,))
+
+
 def test_joint_streams_are_separate_and_typed() -> None:
     carrier = _v19c_carrier()
     archive = compile_rg1_receiver_grammar(
         carrier,
-        lane_coordinates=(
-            LaneProgramCoordinateV1(0, "dash_phase_origin_q8", 1),
-        ),
+        lane_coordinates=(LaneProgramCoordinateV1(0, "dash_phase_origin_q8", 1),),
         corrections=(LaneCoefficientDelta(0, 4, 3, 0.008202752098441124),),
     )
     members = parse_rg1_receiver_grammar(archive)
