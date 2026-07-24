@@ -23044,3 +23044,27 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   (existing, replayed); j7 resolution encoded in ddm_train_decision_table_j7_resolution_20260724.json
   so planners cannot treat endpoint-only rows as executable states.
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-menu1-custody (2026-07-24, MAIN custody of ddm_menu1 post-charter join rc=0 — the composed menu does NOT close the box; weight shifts to descent + describe)
+- **VERDICT (92f62e8c4f cherry-picked clean; 8 tests pass; verdict_scope: FORMULATION — joined
+  post-charter menu at current measured prices; all families open):**
+  MENU1_POSTCHARTER_JOINED_BOX_NOT_REACHED. The four later landings (mc1/ws1/rd1/e4) compile into
+  ONE typed menu WITHOUT mixing incompatible base/rate domains — the compiler structurally refuses
+  cross-base subtraction (e.g. E4's E-line −95,100B canNOT be applied to V19C/WS1; 6 fail-closed
+  guards). MAIN re-derived: ws1 gap-to-box 2,709,004 errors EXACT (0.024124510·600·512·384 −
+  0.00116-allowance), mc1 joint delta +4.850055382139988 from the receipt.
+- **DECOMPOSED rows (the headline decomposed):** (1) mc1 hood reassert = REAL +1,747,057-error Seg
+  fix at +139B but joint-INADMISSIBLE (+4.85 — pose collateral; the reassert breaks the winner's
+  frame_1 pose-affine). (2) W_seg (ws1_seglex96) = best joined Seg base, d_seg 0.024124510 @138,031B,
+  still 2,709,004 errors above allowance; ROAD BINDS. (3) rd1's 162 typed dual cells remain
+  non-actionable pending metric custody (consistent with the ms-chain; ms6 live). (4) The 07-23
+  measured joint-pool winner (974B arm, S 26.28) is a POSE win with catastrophic Seg damage —
+  axis decomposition kept visible, never a "Seg win" claim.
+- **CAMPAIGN ROUTING (reconciles with FEED-603-v19c-fork):** corrections/description fixes at
+  current prices = FREE FINISHER, not the closer — the box closes via (a) #366 joint descent from a
+  PROPERLY MATERIALIZED start (ws2 live: W_seg custody producer + falsifier + reseal), (b) the
+  describe-realization line, (c) menu1's FIRST-RUNG: one Fisher-margin-ranked corrected-inner-
+  Jacobian actuator measured independently PER base curve (no base mixing, no Fourier residuals) —
+  fired as fr1. equations: addendum's canonical-equations note landed with the branch (existing
+  laws cited; the compiler's refusal algebra is the new coded guard, not a new law).
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
