@@ -1,0 +1,101 @@
+{
+  "schema": "ddm_dm1_25_row_solved_value_pricing_round1_review.v1",
+  "utc": "2026-07-24T12:59:00Z",
+  "lane_id": "lane_ddm_dm1_25_row_solved_value_pricing_20260724",
+  "reviewer": "codex",
+  "review_round": 1,
+  "disposition": "PASS_AFTER_FINDINGS_FIXED_MAIN_REVIEW_REQUIRED",
+  "research_only": true,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "findings_fixed": [
+    {
+      "severity": "blocking",
+      "finding": "PF2 receipt field and bucket-array indirection were initially interpreted with invented key names.",
+      "fix": "Use receipt index_sha256 and exact bucket_arrays mapping; refuse missing bindings.",
+      "regression_surface": "real SHA-bound 25-row materialization"
+    },
+    {
+      "severity": "blocking",
+      "finding": "A context-arithmetic padding-bit mutation could decode to the same raw record.",
+      "fix": "Require deterministic canonical re-encoding equality in addition to raw SHA parseback.",
+      "regression_surface": "test_each_codec_is_deterministic_and_exact"
+    },
+    {
+      "severity": "major",
+      "finding": "The first receipt bound data inputs but not the exact producer/dependency source bytes.",
+      "fix": "Bind seven implementation files by path, bytes, and SHA-256; regenerate the receipt and append a superseding canonical-equation registry event.",
+      "regression_surface": "receipt custody verification"
+    }
+  ],
+  "checks": [
+    {
+      "check": "authority_file_hash_and_size",
+      "result": "PASS",
+      "evidence": "7284 bytes; sha256 2486fab73378861a3e53e499f69ea8995fb1b09f950af2bdcdeb8362e7baa3d2"
+    },
+    {
+      "check": "input_and_implementation_custody",
+      "result": "PASS",
+      "evidence": "all demand/RG3/PF2/solved/scorer bindings plus seven implementation bindings independently rehashed"
+    },
+    {
+      "check": "bounded_materialization",
+      "result": "PASS",
+      "evidence": "25 rows = 16 boundary + 9 cell across 15 pairs and ten solved chunks; one pair resident at a time"
+    },
+    {
+      "check": "semantic_and_coder_parseback",
+      "result": "PASS",
+      "evidence": "all 25 semantic records, all 75 independent coder containers, and the joint 25-row container parse back exactly and canonically"
+    },
+    {
+      "check": "sealed_type_layer_contract",
+      "result": "PASS_MAIN_SEMANTIC_REVIEW_REQUIRED",
+      "evidence": "boundary SKELETON/L4 under deepest-surviving rule with L3 realization debt; cell FIBER/L4 on external SHA-bound support"
+    },
+    {
+      "check": "connection_claim_hygiene",
+      "result": "PASS_NULL",
+      "evidence": "zero same-bucket consecutive-pair comparators; CONNECTION relation and price remain NULL"
+    },
+    {
+      "check": "score_and_archive_firewall",
+      "result": "PASS",
+      "evidence": "no evaluate.py/PoseNet/archive/box arithmetic; score_claim=false; pointer unchanged; receiver-closed price NULL"
+    },
+    {
+      "check": "tests_and_static_checks",
+      "result": "PASS",
+      "evidence": "12 focused pytest tests; ruff clean; git diff --check clean"
+    }
+  ],
+  "clean_passes": [
+    {
+      "pass": 1,
+      "basis": "post-fix structural review, focused tests, ruff, and diff hygiene",
+      "result": "CLEAN"
+    },
+    {
+      "pass": 2,
+      "basis": "full SHA-bound materializer rerun produced byte-identical receipt 4c2fe779...de28",
+      "result": "CLEAN"
+    },
+    {
+      "pass": 3,
+      "basis": "blind receipt re-derivation plus 21 deterministic coder fuzz roundtrips",
+      "result": "CLEAN"
+    }
+  ],
+  "required_main_review_focus": [
+    "boundary L4 information home versus mandatory L3 realization debt",
+    "FIBER external-support SHA accounting and no coordinate double-count",
+    "container header and canonical re-encoding byte-price policy",
+    "semantic-price firewall against #613, 154522-byte tangent, archive, and score claims",
+    "latest registry event supersedes the preliminary receipt event after implementation custody was added"
+  ],
+  "verdict_scope": "round-1 structural and evidence review only; no receiver efficacy, archive, score, or promotion verdict",
+  "receipt_sha256": "4c2fe77927e300e341d5ce9ce00ae8a37c58dbebbde8e5860fe514958990de28",
+  "pointer": "0.1910828242 [contest-CPU]"
+}
