@@ -23263,3 +23263,18 @@ producer = is1 Directive-2 comparison (a) describe-cheaper vs (b) upstream+oracl
 descent. No existing kill/finisher verdict may be cited against a correction/solve family on these
 prices. Memory: distortion_byte_economics_are_upper_bounds_from_suboptimal_channel_20260724.
 Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-159x-pipeline-confound (2026-07-24, MAIN — operator: "If we're solving, that's an insane
+amount of errors... smoke and a sign of something naive and confounding"): PINNED ARITHMETIC —
+exact lattice solve = 17,931 errors @1.52e-4 (7.6× BELOW the 136,839 box), uint8-lattice-REALIZED;
+best described base = 2,845,843 errors (0.024125) → the describe/realize pipeline loses 159× vs
+the solve THROUGH THE SAME QUANTIZATION GATE. Quantization exonerated; the loss localizes to the
+description→RGB REGENERATION path (grammar/worldsheet re-prediction + paint + prototype colors) —
+the described bases describe the PROBLEM (scene) not the SOLUTION (solved RGB), discarding the
+solve's margin structure by construction. verdict_scope: all "must close 2.7M errors" framings
+(menu1 residual, correction menus, #366 implied workload) = CONFOUNDED-UNTIL-REBASED on
+solution-description. Anchors: v14 per-stage instrument (1700× Movable projection loss) · pt1
+0.0284 paint floor · a1 fixed-paint flag · realization_is_quantization_gated (the solve side).
+Routed: is1 Directive 4 (stage-decompose the 159×, attribute per named stage, price cures in the
+true-price table; only solution-description-irreducible residue is a training candidate). Pointer
+0.1910828242 [contest-CPU] UNMOVED.
