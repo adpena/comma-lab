@@ -23302,3 +23302,20 @@ economics re-scope labeled the bundle's pricing consumers upper-bound-channel ar
 may reshape which metric/pricing the campaign actually needs before we spend the measurement.
 Cherry-pick 229a140c41+2190f8d024+9aab0d7cfa clean; 27 touched-surface tests green + ruff clean on
 main. Pointer 0.1910828242 [contest-CPU] UNMOVED; all rows [macOS-CPU frozen-scorer advisory].
+
+FEED-603-residue-is-demand (2026-07-24, MAIN — operator: "Anything that doesn't close all? this
+signal into what is truly need for optimal"): INVERSION of the rg-ladder output — the 25 unclosed
+blocks are re-scoped from residue to MEASURED DEMAND: the positively-identified set of scorer
+events insensitive to EVERY counted coordinate the receiver vocabulary can express (one exact
+blocker class across all 25). The family closure gradient is the law-shaped signal: class-birth
+0/10 (a class interface cannot be conjured from receiver geometry — interface PLACEMENT is video
+information = genuinely counted payload; 10 concrete instances) · finer-boundary 3/9 · Fisher-cell
+8/17 (refinement of existing structure keeps paying) → an expressiveness ORDERING of vocabulary
+families, measured. Under solve-as-oracle (FEED-603-159x-pipeline-confound): each of the 25 rows
+is a place where Δ = solved − base contains mass NO current re-homing absorbs — the first 25
+concrete instances of the irreducible RESIDUAL type. Routed: is1 Directive 5 (the 25 rows =
+empirical testbed for "truly needed": per-row five-type × layer characterization of the oracle
+delta, priced with real coders; class-birth law to canonical_equations note; any inverse-solve
+path or training-necessity claim must reconcile with these rows). verdict_scope of the demand
+identification: INSTANCE(extended grammar rg1+rg2+rg3) for reach; the DEMAND itself is
+measurement-grounded. Pointer 0.1910828242 [contest-CPU] UNMOVED.
