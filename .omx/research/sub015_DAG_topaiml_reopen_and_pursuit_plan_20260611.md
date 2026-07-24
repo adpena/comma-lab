@@ -22683,3 +22683,35 @@ is standing (tools/measure_ddm_rd1_lambda_continuation_frontier.py). Triality: e
 registry rows (this feed); DSL leg N/A (no trainer lever — measurement instrument); tasks leg =
 #667 completed, blockers routed into #663 (ms2) + #657-successor (dr2b) + #669(a) gauge-ladder
 cross-check.
+
+## FEED-603-ws1-custody (2026-07-24) — ws1 LANDED: BOTH warm starts measured exact; the operator's pose-pretrain hypothesis now has a PREREGISTERED falsifier (R*=4.1215), not an opinion
+
+**Arm:** ddm_ws1_seg_lexicographic_warmstart_20260724T012924Z (#668; sol/xhigh). Landed on main
+7aa80fdd03 + 37bb554ea7 (registry union-merged → 810 rows; 10/10 tests pass on main). Disposition:
+reviewed_committed. All numbers [macOS-CPU frozen-scorer advisory] through the exact uint8 receiver
++ frozen scorers; score_claim=false; pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+**The two measured warm starts (n600 exact advisory):**
+| start | d_seg | d_pose | bytes | MyCar errors |
+|---|---:|---:|---:|---:|
+| W_seg seglex96 (V19B 10-move prefix + 96-of-104 V19C moves re-ranked seg-only + hood-masked temporal affine) | 0.024124510 | 146.36493 | 138,031 | 37,619 |
+| W_joint (statistics_hard_analytic_composed_frame1) | 0.070519231 | 36.61818 | 138,801 | 4,072,489 |
+Verified: seg-term gap 4.639472114 (W_seg favor) · pose-term gap 19.121792 (W_joint favor) →
+**R* = 4.1215446778** (both re-derived exactly from the endpoint distortions). Hood custody clean:
+filtered base MyCar 37,237 → W_seg 37,619 (the 4.07M MyCar mass is W_joint COMPOSITION damage —
+scoped correctly, not a base-hood failure). Hood masking on the temporal-affine move costs +676 seg
+errors (+5.73e-6 d_seg) but buys −4.378 pose and preserves locality — measured both ways.
+
+**What this settles:** the operator's 07-24 hypothesis ("pose pre-trains easy, seg plateaus — OK to
+trade") is now DECIDABLE, not debatable: the J5 4-step smoke spec (typed, checkpointed, spec-only —
+NOT executed) adopts W_seg iff pose-progress/seg-erosion ratio > R* AND pose progresses AND seg does
+not regress; otherwise W_joint. Falsifier preregistered per findings-are-first-rungs; equation
+`ddm_ws1_warm_start_slope_falsifier_v1` registered (pure-math module
+`tac.optimization.ddm_warm_start_slope_falsifier`, contest-term-exact forms). Metric-first receipts:
+Fisher/rank-4 + exact ≤6-dim pose quadratic authoritative; Euclid = labeled control only.
+
+**First rungs:** (a) J5 4-step smoke execution = the #366/j5 fire-gate input (fires at the next
+governed-launch window; spec + R* banked); (b) both warm-start rows are rd1-frontier points — free
+re-run of the continuation instrument adds them to the measured R(D) picture; (c) W_seg's seg-only
+re-rank rejecting 8-of-104 joint moves is a per-move type signal for ms2's typed blocks. Triality:
+equations leg registered; DSL N/A (measurement + spec, no trainer lever); tasks #668 completed.
