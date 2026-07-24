@@ -8,6 +8,7 @@ bytes live in the extracted archive directory and are covered by the manifest.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import lzma
@@ -33,6 +34,8 @@ SCHEMA = "ddm_e1_runtime_archive.v1"
 E2_SCHEMA = "ddm_e2_runtime_archive.v1"
 E3_SCHEMA = "ddm_e3_runtime_archive.v1"
 E4_SCHEMA = "ddm_e4_runtime_archive.v1"
+E4_WS1_SCHEMA = "ddm_e4_ws1_runtime_archive.v1"
+RECEIVER_GRAMMAR_ADMISSION_SCHEMA = "ddm_receiver_grammar_admission.v1"
 RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
 TYPED_STREAM_SCHEMA = "ddm_typed_stream_tag.v1"
 STREAM_TYPES = {"SKELETON", "CONNECTION", "FIBER", "GAUGE", "RESIDUAL"}
@@ -55,6 +58,7 @@ LZMA_FILTERS = [
     }
 ]
 EXPECTED_MEMBERS = ("manifest.json", "base/chart.ddb", "semantic/composed.dds")
+EXPECTED_WS1_MEMBERS = ("manifest.json", "state/ws1.ddj5")
 EXPECTED_EXTENSION_SLOTS = [
     {
         "active_member": None,
@@ -120,6 +124,8 @@ CHANNELS = 3
 FRAMES_PER_PAIR = 2
 SAFETY_BYTES = 256 * 1024 * 1024
 PA1_TRANSFORM_ID = "ddm_pa1_scorer_only_bn_inverse_frame0_receiver_v1"
+WS1_GRAMMAR_VERSION = "ddm_ws1_receiver_closed_warm_start.v1"
+WS1_SOURCE_BUNDLE_B85 = b""
 # Generic scorer constants. These values are derived only from the frozen
 # PoseNet first-stem convolution weights and BN running statistics. They are
 # video-independent rule-118 code, not learned or instance-derived payload.
@@ -223,6 +229,21 @@ def _read_exact_members(archive_dir: Path) -> dict[str, bytes]:
         path = archive_dir / name
         if path.is_symlink() or not path.is_file():
             raise ReceiverError(f"archive member is not one regular file: {name}")
+        result[name] = path.read_bytes()
+    return result
+
+
+def _read_exact_ws1_members(archive_dir: Path) -> dict[str, bytes]:
+    observed = tuple(
+        sorted(path.relative_to(archive_dir).as_posix() for path in archive_dir.rglob("*") if path.is_file())
+    )
+    if observed != tuple(sorted(EXPECTED_WS1_MEMBERS)):
+        raise ReceiverError(f"extracted WS1 packet members differ: {observed!r} != {EXPECTED_WS1_MEMBERS!r}")
+    result: dict[str, bytes] = {}
+    for name in EXPECTED_WS1_MEMBERS:
+        path = archive_dir / name
+        if path.is_symlink() or not path.is_file():
+            raise ReceiverError(f"WS1 packet member is not one regular file: {name}")
         result[name] = path.read_bytes()
     return result
 
@@ -470,10 +491,190 @@ def _validate_manifest(manifest: Any, members: dict[str, bytes]) -> dict[str, An
             or tag["counted_bytes"] != row["bytes"]
             or (tag["type"] == "GAUGE" and tag["counted_bytes"] != 0)
         ):
-            raise ReceiverError(
-                f"manifest typed-stream custody mismatch: {row['member']}"
-            )
+            raise ReceiverError(f"manifest typed-stream custody mismatch: {row['member']}")
     return manifest
+
+
+def _validate_ws1_manifest(
+    manifest: Any,
+    members: dict[str, bytes],
+) -> dict[str, Any]:
+    """Validate the explicit WS1/J5 grammar admission route."""
+
+    expected_keys = {
+        "dependencies",
+        "false_authority",
+        "geometry",
+        "grammar_admission",
+        "output",
+        "schema",
+        "sections",
+        "state",
+    }
+    if not isinstance(manifest, dict) or set(manifest) != expected_keys or manifest.get("schema") != E4_WS1_SCHEMA:
+        raise ReceiverError("WS1 manifest keys differ from the sealed schema")
+    if manifest["false_authority"] != {
+        "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+        "research_only": True,
+        "score_claim": False,
+    }:
+        raise ReceiverError("WS1 manifest false-authority contract changed")
+    if manifest["geometry"] != {
+        "camera_hw": [CAMERA_H, CAMERA_W],
+        "channels": CHANNELS,
+        "frames_per_pair": FRAMES_PER_PAIR,
+        "pair_count": 600,
+        "scorer_hw": [PAIR_H, PAIR_W],
+    }:
+        raise ReceiverError("WS1 manifest geometry mismatch")
+    state = manifest["state"]
+    if (
+        not isinstance(state, dict)
+        or set(state)
+        != {
+            "batch_pairs",
+            "name",
+            "receiver_effective_dofs",
+        }
+        or state["batch_pairs"] != 32
+        or not isinstance(state["name"], str)
+        or not state["name"]
+        or state["receiver_effective_dofs"] != 368
+    ):
+        raise ReceiverError("WS1 receiver-effective state changed")
+    framed = members["state/ws1.ddj5"]
+    if len(framed) < BLOB_HEADER.size:
+        raise ReceiverError("WS1 state frame is truncated")
+    codec = BLOB_HEADER.unpack_from(framed)[2]
+    if codec == 1:
+        expected_dependencies = ["numpy", "scipy", "torch", "brotli"]
+    elif codec == 2:
+        expected_dependencies = ["numpy", "scipy", "torch"]
+    else:
+        raise ReceiverError("WS1 packet coder contract changed")
+    if manifest["dependencies"] != expected_dependencies:
+        raise ReceiverError("WS1 runtime dependency contract changed")
+    sections = manifest["sections"]
+    if (
+        not isinstance(sections, list)
+        or len(sections) != 1
+        or not isinstance(sections[0], dict)
+        or set(sections[0]) != {"bytes", "member", "sha256", "typed_stream_tag"}
+        or sections[0]["member"] != "state/ws1.ddj5"
+        or sections[0]["bytes"] != len(framed)
+        or sections[0]["sha256"] != _sha256(framed)
+    ):
+        raise ReceiverError("WS1 packet section custody differs")
+    tag = sections[0]["typed_stream_tag"]
+    if (
+        not isinstance(tag, dict)
+        or set(tag)
+        != {
+            "schema",
+            "type",
+            "layer_home",
+            "evaluate_py_recursion_level_cited",
+            "counted_bytes",
+            "free_receiver_code",
+        }
+        or tag
+        != {
+            "schema": TYPED_STREAM_SCHEMA,
+            "type": "SKELETON",
+            "layer_home": "L1_program",
+            "evaluate_py_recursion_level_cited": ("L1_program -> L3_raster -> L4_scorer_feature -> L5_verdict"),
+            "counted_bytes": len(framed),
+            "free_receiver_code": True,
+        }
+    ):
+        raise ReceiverError("WS1 packet typed-stream custody differs")
+    output = manifest["output"]
+    if (
+        not isinstance(output, dict)
+        or set(output) != {"bytes", "sha256"}
+        or output["bytes"] != 600 * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
+        or not _is_lower_sha256(output["sha256"])
+    ):
+        raise ReceiverError("WS1 output identity is malformed")
+    return manifest
+
+
+def _reconstruct_ws1_state(
+    manifest: Mapping[str, Any],
+    members: dict[str, bytes],
+) -> tuple[bytes, tuple[dict[str, Any], ...]]:
+    """Decode and reassemble every admitted grammar stream byte-for-byte."""
+
+    archive, dimensions = _parse_blob(
+        members["state/ws1.ddj5"],
+        expected_kind=0,
+        label="state/ws1.ddj5",
+    )
+    if dimensions:
+        raise ReceiverError("WS1 state blob must be an opaque rank-zero container")
+    admission = manifest["grammar_admission"]
+    expected_keys = {
+        "archive_bytes",
+        "archive_sha256",
+        "grammar_version",
+        "receiver_consumption_complete",
+        "schema",
+        "streams",
+    }
+    if (
+        not isinstance(admission, dict)
+        or set(admission) != expected_keys
+        or admission["schema"] != RECEIVER_GRAMMAR_ADMISSION_SCHEMA
+        or admission["grammar_version"] != WS1_GRAMMAR_VERSION
+        or admission["receiver_consumption_complete"] is not True
+        or admission["archive_bytes"] != len(archive)
+        or admission["archive_sha256"] != _sha256(archive)
+    ):
+        raise ReceiverError("WS1 grammar admission header differs")
+    streams = admission["streams"]
+    if not isinstance(streams, list) or len(streams) != 2 or any(not isinstance(row, dict) for row in streams):
+        raise ReceiverError("WS1 grammar stream manifest differs")
+    expected_names = ["nested_preuint8_archive", "warm_start_payload"]
+    candidate = str(manifest["state"]["name"]).split(":", 1)[0]
+    if candidate not in {"W_seg", "W_joint"}:
+        raise ReceiverError("WS1 state name lacks a typed candidate prefix")
+    expected_consumers = {
+        "nested_preuint8_archive": "receive_preuint8_q8_archive",
+        "warm_start_payload": (
+            "apply_temporal_affine+reassert_frame1"
+            if candidate == "W_seg"
+            else "signed_distance_geometry+apply_local_statistics"
+        ),
+    }
+    cursor = 0
+    consumed: list[dict[str, Any]] = []
+    for index, row in enumerate(streams):
+        if (
+            set(row)
+            != {
+                "bytes",
+                "name",
+                "offset",
+                "receiver_consumer",
+                "sha256",
+            }
+            or row["name"] != expected_names[index]
+            or row["offset"] != cursor
+            or isinstance(row["bytes"], bool)
+            or not isinstance(row["bytes"], int)
+            or row["bytes"] <= 0
+            or row["receiver_consumer"] != expected_consumers[row["name"]]
+            or not _is_lower_sha256(row["sha256"])
+        ):
+            raise ReceiverError("WS1 grammar stream contract differs")
+        stop = cursor + row["bytes"]
+        if stop > len(archive) or _sha256(archive[cursor:stop]) != row["sha256"]:
+            raise ReceiverError(f"WS1 grammar stream custody differs: {row['name']}")
+        consumed.append(dict(row))
+        cursor = stop
+    if cursor != len(archive):
+        raise ReceiverError("WS1 grammar streams do not cover every archive byte")
+    return archive, tuple(consumed)
 
 
 def _validate_rate_doctrine(value: Any, members: dict[str, bytes]) -> None:
@@ -1052,6 +1253,182 @@ def _assemble_final(
     return observed
 
 
+def _install_ws1_source_bundle(checkpoint_root: Path) -> dict[str, Any]:
+    """Install the exporter-sealed generic receiver code without network I/O."""
+
+    if not WS1_SOURCE_BUNDLE_B85:
+        raise ReceiverError("WS1 runtime source bundle is absent")
+    try:
+        payload = base64.b85decode(WS1_SOURCE_BUNDLE_B85)
+    except ValueError as exc:
+        raise ReceiverError("WS1 runtime source bundle is malformed") from exc
+    bundle_sha256 = _sha256(payload)
+    bundle_path = checkpoint_root / f"ws1_receiver_sources_{bundle_sha256}.zip"
+    if bundle_path.exists():
+        if _sha256_file(bundle_path) != (len(payload), bundle_sha256):
+            raise ReceiverError("preserved WS1 runtime source bundle differs")
+    else:
+        temporary = bundle_path.with_name(bundle_path.name + f".partial.{os.getpid()}")
+        with temporary.open("xb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, bundle_path)
+    if str(bundle_path) not in sys.path:
+        sys.path.insert(0, str(bundle_path))
+    return {
+        "bytes": len(payload),
+        "path": str(bundle_path),
+        "sha256": bundle_sha256,
+    }
+
+
+def _inflate_ws1(
+    *,
+    archive_dir: Path,
+    output_dir: Path,
+    final_path: Path,
+    relative: PurePosixPath,
+    started: float,
+) -> dict[str, Any]:
+    members = _read_exact_ws1_members(archive_dir)
+    manifest_payload = members["manifest.json"]
+    manifest = _validate_ws1_manifest(
+        _duplicate_refusing_json(manifest_payload, label="manifest.json"),
+        members,
+    )
+    state_archive, consumed_streams = _reconstruct_ws1_state(manifest, members)
+    state_sha256 = _sha256(state_archive)
+    checkpoint_root = (
+        output_dir.parent
+        / ".ddm_runtime_checkpoints"
+        / state_sha256
+        / relative.with_suffix("").as_posix().replace("/", "__")
+    )
+    checkpoint_root.mkdir(parents=True, exist_ok=True)
+    expected_bytes = int(manifest["output"]["bytes"])
+    required_free_bytes = expected_bytes * 2 + SAFETY_BYTES
+    free_bytes = shutil.disk_usage(checkpoint_root).free
+    if free_bytes < required_free_bytes:
+        raise ReceiverError(f"storage preflight failed: {free_bytes} < {required_free_bytes}")
+    source_bundle = _install_ws1_source_bundle(checkpoint_root)
+    try:
+        from tac.optimization.ddm_ws1_warm_start import (
+            parse_ws1_warm_start_archive,
+            receive_ws1_warm_start_archive,
+        )
+    except ImportError as exc:
+        raise ReceiverError("bundled WS1 receiver import failed") from exc
+    parsed = parse_ws1_warm_start_archive(state_archive)
+    if parsed.exact_reemit() != state_archive:
+        raise ReceiverError("WS1 grammar parse/re-emit changed source bytes")
+    candidate = str(manifest["state"]["name"]).split(":", 1)[0]
+    if parsed.candidate != candidate:
+        raise ReceiverError("WS1 parsed candidate differs from typed state name")
+    source_receiver = receive_ws1_warm_start_archive(state_archive)
+
+    batch_pairs = int(manifest["state"]["batch_pairs"])
+    stage_rows: list[dict[str, Any]] = []
+    stage_paths: list[Path] = []
+    render_seconds = 0.0
+    for start in range(0, 600, batch_pairs):
+        stop = min(start + batch_pairs, 600)
+        stage_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.raw"
+        state_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.json"
+        expected_stage_bytes = (stop - start) * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
+        preserved = _load_preserved_stage(
+            stage_path=stage_path,
+            state_path=state_path,
+            manifest_sha256=state_sha256,
+            start=start,
+            stop=stop,
+            expected_bytes=expected_stage_bytes,
+        )
+        if preserved is None:
+            stage_started = time.monotonic()
+            camera = source_receiver.render_camera_pairs(tuple(range(start, stop)))
+            rendered = torch.from_numpy(camera)
+            if (
+                rendered.dtype != torch.uint8
+                or tuple(rendered.shape)
+                != (
+                    stop - start,
+                    FRAMES_PER_PAIR,
+                    CAMERA_H,
+                    CAMERA_W,
+                    CHANNELS,
+                )
+                or not rendered.is_contiguous()
+            ):
+                raise ReceiverError("WS1 receiver rendered noncanonical camera bytes")
+            render_seconds += time.monotonic() - stage_started
+            row = _write_or_adopt_rendered_stage(
+                stage_path=stage_path,
+                state_path=state_path,
+                rendered=rendered,
+                manifest_sha256=state_sha256,
+                start=start,
+                stop=stop,
+            )
+        else:
+            row = preserved
+        stage_rows.append(row)
+        stage_paths.append(stage_path)
+    final_bytes, final_sha256 = _assemble_final(
+        final_path=final_path,
+        stage_rows=stage_rows,
+        stage_paths=stage_paths,
+        expected_bytes=expected_bytes,
+        expected_sha256=str(manifest["output"]["sha256"]),
+    )
+    receipt = {
+        "coder": (
+            "brotli_q11" if BLOB_HEADER.unpack_from(members["state/ws1.ddj5"])[2] == 1 else "lzma1_raw_d1m_lc3_lp0_pb2"
+        ),
+        "dependencies": manifest["dependencies"],
+        "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+        "final": {
+            "bytes": final_bytes,
+            "path": str(final_path),
+            "sha256": final_sha256,
+        },
+        "grammar_admission": {
+            "archive_bytes": len(state_archive),
+            "archive_sha256": state_sha256,
+            "grammar_version": WS1_GRAMMAR_VERSION,
+            "parse_reemit_byte_identical": True,
+            "streams_consumed": list(consumed_streams),
+        },
+        "member_consumption": [
+            {
+                "bytes": len(members[name]),
+                "member": name,
+                "sha256": _sha256(members[name]),
+            }
+            for name in EXPECTED_WS1_MEMBERS
+        ],
+        "pair_count": 600,
+        "render_seconds": format(render_seconds, ".6f"),
+        "research_only": True,
+        "resume": {
+            "all_stage_checkpoints_preserved": True,
+            "checkpoint_root": str(checkpoint_root),
+            "stage_count": len(stage_rows),
+        },
+        "runtime_source_bundle": source_bundle,
+        "schema": "ddm_e4_ws1_runtime_inflate_receipt.v1",
+        "score_claim": False,
+        "fixed_torch_threads": 4,
+        "staleness": {
+            "consumption_time_input_hashes_verified": True,
+            "policy": "fail_closed_on_grammar_stream_hash_or_version_mismatch",
+        },
+        "total_seconds": format(time.monotonic() - started, ".6f"),
+    }
+    _atomic_json(checkpoint_root / "inflate_receipt.json", receipt)
+    return receipt
+
+
 def inflate(archive_dir: Path, output_dir: Path, video_names_file: Path) -> dict[str, Any]:
     started = time.monotonic()
     # PA1 was measured with this fixed thread count. PyTorch's bilinear CPU
@@ -1071,6 +1448,15 @@ def inflate(archive_dir: Path, output_dir: Path, video_names_file: Path) -> dict
     output_dir.mkdir(parents=True, exist_ok=True)
     final_path = output_dir.joinpath(*relative.parts)
     final_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if (archive_dir / "state/ws1.ddj5").is_file():
+        return _inflate_ws1(
+            archive_dir=archive_dir,
+            output_dir=output_dir,
+            final_path=final_path,
+            relative=relative,
+            started=started,
+        )
 
     members = _read_exact_members(archive_dir)
     manifest_payload = members["manifest.json"]

@@ -86421,6 +86421,47 @@
         "close pose-null/SE3 handling for the five harmful rows",
         "rerun the same exact receiver admission"
       ]
+    },
+    {
+      "id": "lane_ddm_e5_e4_ws1_exporter_adapter_20260724",
+      "name": "DDM E5 E4 WS1 exporter adapter",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_runtime_exporter.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_e5_e4_ws1_exporter_adapter_20260724/ddm_e5_e4_ws1_adapter_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/optimization/tests/test_ddm_runtime_exporter.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_e5_e4_ws1_exporter_adapter_round1_review_20260724.json"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_e5_e4_ws1_exporter_adapter_20260724_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Typed J5 admission path for E4; legacy V15 literal intact; local advisory evidence only; main_review_required."
     }
   ],
   "level_rules": {

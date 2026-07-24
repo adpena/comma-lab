@@ -7,6 +7,7 @@ import json
 import lzma
 import struct
 import zipfile
+from pathlib import Path
 
 import pytest
 import torch
@@ -14,6 +15,9 @@ import torch
 from tac.optimization import ddm_runtime_exporter as exporter
 from tac.optimization import ddm_runtime_receiver as receiver
 from tools import rehearse_ddm_runtime_upstream as harness
+
+REPO = Path(__file__).resolve().parents[4]
+W_SEG_CONFIG = REPO / ".omx/research/configs/ddm_e5_e4_ws1_wseg_brotli_20260724.json"
 
 
 def test_blob_frame_roundtrip_and_terminal_tamper_refusal() -> None:
@@ -59,7 +63,9 @@ def test_e4_missing_brotli_uses_exact_e3_lzma1_bytes(monkeypatch) -> None:
         + coded
     )
     assert framed == expected
-    assert hashlib.sha256(framed).hexdigest() == ("7ed8d0bcfcb1833c15291d72cd2266dc81e168db1ebd8a3559490739d26be7e0")
+    assert hashlib.sha256(framed).hexdigest() == (
+        "7ed8d0bcfcb1833c15291d72cd2266dc81e168db1ebd8a3559490739d26be7e0"
+    )
 
     monkeypatch.setattr(receiver, "brotli", None)
     decoded, shape = receiver._parse_blob(
@@ -69,6 +75,15 @@ def test_e4_missing_brotli_uses_exact_e3_lzma1_bytes(monkeypatch) -> None:
     )
     assert decoded == raw
     assert shape == (11, 251)
+
+
+def test_ws1_refuses_false_brotli_absent_fallback(monkeypatch) -> None:
+    monkeypatch.setattr(exporter, "brotli", None)
+    with pytest.raises(
+        exporter.ExporterError,
+        match="source grammar itself contains Brotli-coded streams",
+    ):
+        exporter._ws1_e4_coder()
 
 
 def test_e4_does_not_mask_brotli_coder_failure(monkeypatch) -> None:
@@ -115,11 +130,138 @@ def test_e4_brotli_frame_is_consumed_and_terminal_tamper_refused() -> None:
         )
 
 
+def test_ws1_grammar_route_is_explicit_and_legacy_literals_remain_sealed() -> None:
+    config = exporter.load_config(W_SEG_CONFIG)
+    assert isinstance(config, exporter.DDME4WS1RuntimeExporterConfigV1)
+    source = Path(config.source_archive_path).read_bytes()
+    _received, admission, dofs = exporter._ws1_grammar_state(source, config)
+    assert admission.archive_sha256 == config.source_archive_sha256
+    assert [row.name for row in admission.streams] == [
+        "nested_preuint8_archive",
+        "warm_start_payload",
+    ]
+    assert sum(row.bytes for row in admission.streams) == len(source)
+    assert dofs["total"] == 368
+
+    with pytest.raises(ValueError):
+        exporter.DDME1RuntimeExporterConfigV1(
+            schema="DDME4RuntimeExporterConfigV1",
+            run_id="ddm_e4_brotli_declared_dep_20260724",
+            source_archive_path="state.zip",
+            source_archive_bytes=len(source),
+            source_archive_sha256=hashlib.sha256(source).hexdigest(),
+            state_archive_bytes=len(source),
+            state_archive_sha256=hashlib.sha256(source).hexdigest(),
+            state_name="v15_j2_lane_seed_theta0",
+            output_directory="packet",
+            proof_root="/Volumes/VertigoDataTier/pact/evidence/test",
+            minimum_free_bytes=8 * 1024 * 1024 * 1024,
+        )
+
+
+def test_ws1_packet_reconstructs_source_and_refuses_stream_or_coder_tamper() -> None:
+    config = exporter.load_config(W_SEG_CONFIG)
+    assert isinstance(config, exporter.DDME4WS1RuntimeExporterConfigV1)
+    source = Path(config.source_archive_path).read_bytes()
+    _received, admission, _dofs = exporter._ws1_grammar_state(source, config)
+    framed = exporter._frame_blob(
+        source,
+        kind=0,
+        coder=exporter.BROTLI_Q11_CODER,
+    )
+    members = {
+        "manifest.json": b"",
+        "state/ws1.ddj5": framed,
+    }
+    manifest = {
+        "dependencies": ["numpy", "scipy", "torch", "brotli"],
+        "false_authority": {
+            "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+            "research_only": True,
+            "score_claim": False,
+        },
+        "geometry": {
+            "camera_hw": [874, 1164],
+            "channels": 3,
+            "frames_per_pair": 2,
+            "pair_count": 600,
+            "scorer_hw": [384, 512],
+        },
+        "grammar_admission": admission.to_dict(),
+        "output": {
+            "bytes": 600 * 2 * 874 * 1164 * 3,
+            "sha256": "a" * 64,
+        },
+        "schema": exporter.E4_WS1_SCHEMA,
+        "sections": [
+            {
+                "bytes": len(framed),
+                "member": "state/ws1.ddj5",
+                "sha256": hashlib.sha256(framed).hexdigest(),
+                "typed_stream_tag": {
+                    "schema": "ddm_typed_stream_tag.v1",
+                    "type": "SKELETON",
+                    "layer_home": "L1_program",
+                    "evaluate_py_recursion_level_cited": (
+                        "L1_program -> L3_raster -> L4_scorer_feature -> L5_verdict"
+                    ),
+                    "counted_bytes": len(framed),
+                    "free_receiver_code": True,
+                },
+            }
+        ],
+        "state": {
+            "batch_pairs": 32,
+            "name": config.state_name,
+            "receiver_effective_dofs": 368,
+        },
+    }
+    members["manifest.json"] = json.dumps(
+        manifest,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    validated = receiver._validate_ws1_manifest(manifest, members)
+    reconstructed, streams = receiver._reconstruct_ws1_state(
+        validated,
+        members,
+    )
+    assert reconstructed == source
+    assert len(streams) == 2
+
+    malformed = json.loads(json.dumps(manifest))
+    malformed["grammar_admission"]["streams"][1]["sha256"] = "0" * 64
+    with pytest.raises(receiver.ReceiverError, match="stream custody"):
+        receiver._reconstruct_ws1_state(malformed, members)
+    tampered = bytearray(framed)
+    tampered[-1] ^= 1
+    with pytest.raises(receiver.ReceiverError):
+        receiver._parse_blob(
+            bytes(tampered),
+            expected_kind=0,
+            label="state/ws1.ddj5",
+        )
+
+
+def test_ws1_runtime_payload_contains_only_a_sealed_generic_source_bundle() -> None:
+    payload = exporter._ws1_runtime_payload()
+    row = exporter._runtime_cleanliness(payload)
+    assert row["status"] == "PASS"
+    assert (
+        "embedded:tac.optimization.ddm_ws1_warm_start"
+        in row["allowed_dependency_roots"]
+    )
+    assert b'WS1_SOURCE_BUNDLE_B85 = b""' not in payload
+    assert len(exporter._ws1_runtime_source_bundle()) > 0
+
+
 def test_deterministic_zip_has_bijective_byte_homes() -> None:
     members = {
         "manifest.json": b"{}",
         "base/chart.ddb": exporter._frame_blob(b"chart", kind=0),
-        "semantic/composed.dds": exporter._frame_blob(b"\0" * 8, kind=1, dimensions=(2, 2, 2)),
+        "semantic/composed.dds": exporter._frame_blob(
+            b"\0" * 8, kind=1, dimensions=(2, 2, 2)
+        ),
     }
     first = exporter._deterministic_zip(members)
     second = exporter._deterministic_zip(members)
@@ -151,9 +293,15 @@ def test_public_exact_runtime_marginal_price_includes_container_and_parseback() 
         parseback=parseback,
     )
     assert row.parseback_verified is True
-    assert row.delta_archive_bytes == (row.candidate.archive_bytes - row.control.archive_bytes)
-    assert row.control.archive_bytes == (row.control.member_payload_bytes + row.control.container_bytes)
-    assert sum(int(home["home_bytes"]) for home in row.candidate.byte_home_ledger) == (row.candidate.archive_bytes)
+    assert row.delta_archive_bytes == (
+        row.candidate.archive_bytes - row.control.archive_bytes
+    )
+    assert row.control.archive_bytes == (
+        row.control.member_payload_bytes + row.control.container_bytes
+    )
+    assert sum(int(home["home_bytes"]) for home in row.candidate.byte_home_ledger) == (
+        row.candidate.archive_bytes
+    )
     with pytest.raises(exporter.ExporterError, match="parse-back"):
         exporter.price_exact_runtime_packet(control, parseback=lambda _archive: False)
 
@@ -177,7 +325,9 @@ def test_typed_extension_slots_and_joint_cycle_are_explicit_and_inactive() -> No
         "D6",
     ]
     assert all(row["active_member"] is None for row in exporter.EXTENSION_SLOTS)
-    assert all(row["rate_custody"] == "independent_member_bytes_sha256" for row in exporter.EXTENSION_SLOTS)
+    assert all(
+        row["rate_custody"] == "independent_member_bytes_sha256" for row in exporter.EXTENSION_SLOTS
+    )
     assert list(exporter.EXTENSION_SLOTS) == receiver.EXPECTED_EXTENSION_SLOTS
     assert exporter.REFINEMENT_CONTRACT == receiver.EXPECTED_REFINEMENT
     assert exporter.REFINEMENT_CONTRACT["block_order"] == [
@@ -206,7 +356,9 @@ def test_block_version_stamps_are_verified_at_consumption_time() -> None:
     with pytest.raises(receiver.ReceiverError, match="stale"):
         receiver._validate_block_versions(rows, members, amplitude_enabled=False)
     with pytest.raises(receiver.ReceiverError, match="order"):
-        receiver._validate_block_versions(["malformed"], members, amplitude_enabled=False)
+        receiver._validate_block_versions(
+            ["malformed"], members, amplitude_enabled=False
+        )
     amplitude_rows = exporter._block_versions(
         chart_sha256=hashlib.sha256(members["base/chart.ddb"]).hexdigest(),
         semantic_sha256=hashlib.sha256(members["semantic/composed.dds"]).hexdigest(),
@@ -276,7 +428,9 @@ def test_manifest_nested_state_and_section_types_fail_closed() -> None:
         },
         "block_versions": exporter._block_versions(
             chart_sha256=hashlib.sha256(members["base/chart.ddb"]).hexdigest(),
-            semantic_sha256=hashlib.sha256(members["semantic/composed.dds"]).hexdigest(),
+            semantic_sha256=hashlib.sha256(
+                members["semantic/composed.dds"]
+            ).hexdigest(),
         ),
         "chart": {},
         "dependencies": ["torch"],
@@ -306,11 +460,9 @@ def test_manifest_nested_state_and_section_types_fail_closed() -> None:
                 "sha256": hashlib.sha256(members[name]).hexdigest(),
                 "typed_stream_tag": {
                     "schema": "ddm_typed_stream_tag.v1",
-                    "type": (
-                        "FIBER"
+                    "type": ("FIBER"
                         if name == "base/chart.ddb"
-                        else "SKELETON"
-                    ),
+                        else "SKELETON"),
                     "layer_home": (
                         "L2_chart"
                         if name == "base/chart.ddb"
@@ -412,8 +564,12 @@ def test_four_clause_audit_requires_every_stream_and_ordered_pair() -> None:
             dimensions=(8, 8, 8),
         ),
     )
-    assert [row["member"] for row in audit["streams"]] == list(exporter.EXPECTED_MEMBERS[1:])
-    assert {(row["conditioner"], row["stream"]) for row in audit["ordered_redundancy_matrix"]} == {
+    assert [row["member"] for row in audit["streams"]] == list(
+        exporter.EXPECTED_MEMBERS[1:]
+    )
+    assert {
+        (row["conditioner"], row["stream"]) for row in audit["ordered_redundancy_matrix"]
+    } == {
         ("base/chart.ddb", "semantic/composed.dds"),
         ("semantic/composed.dds", "base/chart.ddb"),
     }
@@ -490,7 +646,9 @@ def test_pa1_decode_derived_affine_reproduces_sealed_arm() -> None:
     moments = {
         "count": count,
         "sum": [value * count for value in raw_mean],
-        "sum_sq": [(raw_variance[index] + raw_mean[index] ** 2) * count for index in range(12)],
+        "sum_sq": [
+            (raw_variance[index] + raw_mean[index] ** 2) * count for index in range(12)
+        ],
     }
     gain, bias = receiver._derive_pa1_affine(moments)
     assert gain.tolist() == pytest.approx(

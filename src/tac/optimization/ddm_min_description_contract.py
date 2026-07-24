@@ -9,6 +9,7 @@ scorers.  Donor-conditioned rows are structurally inadmissible.
 
 from __future__ import annotations
 
+import hashlib
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -19,6 +20,7 @@ from typing import Any
 HEADLINE_SCHEMA = "ddm_min_description_headline.v1"
 SOLVE_TYPING_SCHEMA = "ddm_recursive_solve_typing.v1"
 TYPED_STREAM_SCHEMA = "ddm_typed_stream_tag.v1"
+RECEIVER_GRAMMAR_ADMISSION_SCHEMA = "ddm_receiver_grammar_admission.v1"
 
 
 class MinimumDescriptionContractError(ValueError):
@@ -63,7 +65,9 @@ class TypedStreamTag:
 
     def __post_init__(self) -> None:
         if not isinstance(self.type, StreamType):
-            raise MinimumDescriptionContractError("typed stream type must be StreamType")
+            raise MinimumDescriptionContractError(
+                "typed stream type must be StreamType"
+            )
         if not isinstance(self.layer_home, LayerHome):
             raise MinimumDescriptionContractError("layer_home must be LayerHome")
         citation = self.evaluate_py_recursion_level_cited
@@ -134,6 +138,195 @@ class TypedStreamTag:
         )
 
 
+@dataclass(frozen=True)
+class ReceiverGrammarStream:
+    """One contiguous, receiver-consumed stream in a typed state archive."""
+
+    name: str
+    offset: int
+    bytes: int
+    sha256: str
+    receiver_consumer: str
+
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.name, str)
+            or not self.name
+            or self.name.strip() != self.name
+        ):
+            raise MinimumDescriptionContractError(
+                "receiver grammar stream name must be a nonempty canonical string"
+            )
+        for field, value in (("offset", self.offset), ("bytes", self.bytes)):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise MinimumDescriptionContractError(
+                    f"receiver grammar stream {field} must be a nonnegative exact integer"
+                )
+        if self.bytes == 0:
+            raise MinimumDescriptionContractError(
+                "receiver grammar streams must carry at least one byte"
+            )
+        _optional_sha256(self.sha256, "receiver grammar stream sha256")
+        if (
+            not isinstance(self.receiver_consumer, str)
+            or len(self.receiver_consumer.strip()) < 8
+        ):
+            raise MinimumDescriptionContractError(
+                "receiver grammar stream must name its concrete consumer"
+            )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "bytes": self.bytes,
+            "name": self.name,
+            "offset": self.offset,
+            "receiver_consumer": self.receiver_consumer,
+            "sha256": self.sha256,
+        }
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> ReceiverGrammarStream:
+        expected = {
+            "bytes",
+            "name",
+            "offset",
+            "receiver_consumer",
+            "sha256",
+        }
+        if not isinstance(value, Mapping) or set(value) != expected:
+            raise MinimumDescriptionContractError(
+                "receiver grammar stream keys differ from the sealed schema"
+            )
+        return cls(
+            name=value["name"],
+            offset=value["offset"],
+            bytes=value["bytes"],
+            sha256=value["sha256"],
+            receiver_consumer=value["receiver_consumer"],
+        )
+
+
+@dataclass(frozen=True)
+class ReceiverGrammarAdmission:
+    """Typed alternative to a literal archive identity.
+
+    Admission is intentionally stronger than a file hash alone: the grammar
+    version is explicit, every byte belongs to one ordered stream, every stream
+    is hash-bound, and every stream names the receiver path that consumes it.
+    """
+
+    grammar_version: str
+    archive_bytes: int
+    archive_sha256: str
+    streams: tuple[ReceiverGrammarStream, ...]
+
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.grammar_version, str)
+            or len(self.grammar_version.strip()) < 8
+        ):
+            raise MinimumDescriptionContractError(
+                "receiver grammar version must be a substantive string"
+            )
+        if (
+            isinstance(self.archive_bytes, bool)
+            or not isinstance(self.archive_bytes, int)
+            or self.archive_bytes <= 0
+        ):
+            raise MinimumDescriptionContractError(
+                "receiver grammar archive_bytes must be a positive exact integer"
+            )
+        _optional_sha256(self.archive_sha256, "receiver grammar archive_sha256")
+        if not isinstance(self.streams, tuple) or not self.streams:
+            raise MinimumDescriptionContractError(
+                "receiver grammar admission requires ordered streams"
+            )
+        cursor = 0
+        names: set[str] = set()
+        for stream in self.streams:
+            if not isinstance(stream, ReceiverGrammarStream):
+                raise MinimumDescriptionContractError(
+                    "receiver grammar streams must be typed"
+                )
+            if stream.name in names:
+                raise MinimumDescriptionContractError(
+                    "receiver grammar stream names must be unique"
+                )
+            if stream.offset != cursor:
+                raise MinimumDescriptionContractError(
+                    "receiver grammar streams must form a gap-free ordered partition"
+                )
+            names.add(stream.name)
+            cursor += stream.bytes
+        if cursor != self.archive_bytes:
+            raise MinimumDescriptionContractError(
+                "receiver grammar streams do not reconcile to archive_bytes"
+            )
+
+    def verify_archive(self, archive: bytes) -> None:
+        payload = bytes(archive)
+        if (
+            len(payload) != self.archive_bytes
+            or hashlib.sha256(payload).hexdigest() != self.archive_sha256
+        ):
+            raise MinimumDescriptionContractError(
+                "receiver grammar archive identity differs"
+            )
+        for stream in self.streams:
+            stop = stream.offset + stream.bytes
+            if (
+                hashlib.sha256(payload[stream.offset : stop]).hexdigest()
+                != stream.sha256
+            ):
+                raise MinimumDescriptionContractError(
+                    f"receiver grammar stream custody differs: {stream.name}"
+                )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "archive_bytes": self.archive_bytes,
+            "archive_sha256": self.archive_sha256,
+            "grammar_version": self.grammar_version,
+            "receiver_consumption_complete": True,
+            "schema": RECEIVER_GRAMMAR_ADMISSION_SCHEMA,
+            "streams": [stream.to_dict() for stream in self.streams],
+        }
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> ReceiverGrammarAdmission:
+        expected = {
+            "archive_bytes",
+            "archive_sha256",
+            "grammar_version",
+            "receiver_consumption_complete",
+            "schema",
+            "streams",
+        }
+        if not isinstance(value, Mapping) or set(value) != expected:
+            raise MinimumDescriptionContractError(
+                "receiver grammar admission keys differ from the sealed schema"
+            )
+        if value["schema"] != RECEIVER_GRAMMAR_ADMISSION_SCHEMA:
+            raise MinimumDescriptionContractError(
+                "receiver grammar admission schema differs"
+            )
+        if value["receiver_consumption_complete"] is not True:
+            raise MinimumDescriptionContractError(
+                "receiver grammar admission refuses an unconsumed stream"
+            )
+        streams = value["streams"]
+        if not isinstance(streams, Sequence) or isinstance(streams, (str, bytes)):
+            raise MinimumDescriptionContractError(
+                "receiver grammar admission streams must be an ordered sequence"
+            )
+        return cls(
+            grammar_version=value["grammar_version"],
+            archive_bytes=value["archive_bytes"],
+            archive_sha256=value["archive_sha256"],
+            streams=tuple(ReceiverGrammarStream.from_dict(row) for row in streams),
+        )
+
+
 def _typed_stream_tag(value: TypedStreamTag | Mapping[str, Any]) -> TypedStreamTag:
     if isinstance(value, TypedStreamTag):
         return value
@@ -148,7 +341,9 @@ def _optional_bytes(value: int | None, field: str) -> int | None:
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise MinimumDescriptionContractError(f"{field} must be a nonnegative exact integer or null")
+        raise MinimumDescriptionContractError(
+            f"{field} must be a nonnegative exact integer or null"
+        )
     return value
 
 
@@ -160,7 +355,9 @@ def _optional_sha256(value: str | None, field: str) -> str | None:
         or len(value) != 64
         or any(character not in "0123456789abcdef" for character in value)
     ):
-        raise MinimumDescriptionContractError(f"{field} must be a lowercase SHA-256 or null")
+        raise MinimumDescriptionContractError(
+            f"{field} must be a lowercase SHA-256 or null"
+        )
     return value
 
 
@@ -189,7 +386,9 @@ def build_recursive_solve_typing_contract(
         "per_dimension_quanta_active": per_dimension_quanta_active,
     }
     if any(not isinstance(value, bool) for value in declarations.values()):
-        raise MinimumDescriptionContractError("recursive solve-typing declarations must be exact booleans")
+        raise MinimumDescriptionContractError(
+            "recursive solve-typing declarations must be exact booleans"
+        )
     blockers = [
         blocker
         for field, blocker in (
@@ -216,7 +415,9 @@ def build_recursive_solve_typing_contract(
                 "range(A)/quotient coordinates only; ker(A) is gauge and is "
                 "realized by the preimage compiler plus deterministic free fill"
             ),
-            "metric": ("Seg rank-4 head plus margin-Fisher blocks and a <=6-dimensional Pose quadratic"),
+            "metric": (
+                "Seg rank-4 head plus margin-Fisher blocks and a <=6-dimensional Pose quadratic"
+            ),
             "subproblems": (
                 "alternate argmax-cell selection, within-cell continuous lattice solve, and real-coder pricing"
             ),
@@ -286,9 +487,7 @@ def build_minimum_description_headline(
                 "metric custody bundle failed freshness or schema validation"
             ) from exc
         metric_bundle_complete = loaded_bundle.complete
-        metric_pose_tube_complete = loaded_bundle.headline_flags()[
-            "pose_tube_active"
-        ]
+        metric_pose_tube_complete = loaded_bundle.headline_flags()["pose_tube_active"]
         metric_bundle = {
             "path": str(loaded_bundle.path),
             "bundle_id": loaded_bundle.bundle_id,
@@ -394,7 +593,9 @@ def build_minimum_description_headline(
         "status": (
             "HEADLINE_ELIGIBLE"
             if eligible
-            else ("INADMISSIBLE_DONOR_CONDITIONING" if donor_conditioned else "HEADLINE_BLOCKED")
+            else (
+                "INADMISSIBLE_DONOR_CONDITIONING" if donor_conditioned else "HEADLINE_BLOCKED"
+            )
         ),
         "headline_eligible": eligible,
         "stored_problem": {
@@ -456,10 +657,13 @@ def build_minimum_description_headline(
 
 __all__ = [
     "HEADLINE_SCHEMA",
+    "RECEIVER_GRAMMAR_ADMISSION_SCHEMA",
     "SOLVE_TYPING_SCHEMA",
     "TYPED_STREAM_SCHEMA",
     "LayerHome",
     "MinimumDescriptionContractError",
+    "ReceiverGrammarAdmission",
+    "ReceiverGrammarStream",
     "StreamType",
     "TypedStreamTag",
     "build_minimum_description_headline",

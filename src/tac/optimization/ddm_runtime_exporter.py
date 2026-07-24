@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import base64
 import hashlib
 import io
 import json
@@ -34,6 +35,8 @@ from tac.canonical_equations.ddm_runtime_export_identity_20260723 import (
 from tac.optimization import ddm_runtime_receiver as runtime
 from tac.optimization.ddm_min_description_contract import (
     LayerHome,
+    ReceiverGrammarAdmission,
+    ReceiverGrammarStream,
     StreamType,
     TypedStreamTag,
 )
@@ -57,15 +60,18 @@ SCHEMA = "ddm_e1_runtime_archive.v1"
 E2_SCHEMA = "ddm_e2_runtime_archive.v1"
 E3_SCHEMA = "ddm_e3_runtime_archive.v1"
 E4_SCHEMA = "ddm_e4_runtime_archive.v1"
+E4_WS1_SCHEMA = "ddm_e4_ws1_runtime_archive.v1"
 RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
 CONFIG_SCHEMA = "DDME1RuntimeExporterConfigV1"
 E2_CONFIG_SCHEMA = "DDME2RuntimeExporterConfigV1"
 E3_CONFIG_SCHEMA = "DDME3RuntimeExporterConfigV1"
 E4_CONFIG_SCHEMA = "DDME4RuntimeExporterConfigV1"
+E4_WS1_CONFIG_SCHEMA = "DDME4WS1RuntimeExporterConfigV1"
 RESULT_SCHEMA = "ddm_e1_runtime_export_receipt.v1"
 E2_RESULT_SCHEMA = "ddm_e2_runtime_export_receipt.v1"
 E3_RESULT_SCHEMA = "ddm_e3_runtime_export_receipt.v1"
 E4_RESULT_SCHEMA = "ddm_e4_runtime_export_receipt.v1"
+E4_WS1_RESULT_SCHEMA = "ddm_e4_ws1_runtime_export_receipt.v1"
 SOURCE_BYTES = 133_941
 SOURCE_SHA256 = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
 STATE_BYTES = 134_211
@@ -73,6 +79,7 @@ STATE_SHA256 = "3d5ab9786cc3d3eedd9a5fd1d878aea8186fbcf450ffcb781862db63ac2ca0cd
 STATE_NAME = "v15_j2_lane_seed_theta0"
 EXPECTED_DOF_COUNT = 368
 EXPECTED_MEMBERS = ("manifest.json", "base/chart.ddb", "semantic/composed.dds")
+EXPECTED_WS1_MEMBERS = ("manifest.json", "state/ws1.ddj5")
 EXTENSION_SLOTS = (
     {
         "active_member": None,
@@ -119,7 +126,9 @@ REFINEMENT_CONTRACT = {
     "apparatus_validity_stamps_required": True,
     "best_so_far_checkpoint": True,
     "block_order": ["L", "D2", "D1", "D4", "D6", "D5"],
-    "block_order_policy": ("dependency_topological_then_coarse_to_fine_then_largest_marginal_first"),
+    "block_order_policy": (
+        "dependency_topological_then_coarse_to_fine_then_largest_marginal_first"
+    ),
     "curve_authority": "verification_receipt",
     "cycle_index": 0,
     "fixed_budget": True,
@@ -130,6 +139,7 @@ REFINEMENT_CONTRACT = {
     "train_least_order": ["derive", "solve", "fit", "train_last"],
 }
 LANGUAGE_VERSION = "ddm_composed_language.v1"
+WS1_GRAMMAR_VERSION = "ddm_ws1_receiver_closed_warm_start.v1"
 BLOB_MAGIC = b"DDE1B"
 BLOB_HEADER = struct.Struct(">5sBBBBQQ32s")
 BROTLI_Q11_CODER = "brotli_q11"
@@ -192,10 +202,14 @@ class DDME1RuntimeExporterConfigV1(BaseModel):
     ] = "ddm_e1_runtime_exporter_n600_20260723"
     source_archive_path: StrictStr
     source_archive_bytes: Literal[133941] = SOURCE_BYTES
-    source_archive_sha256: Literal["759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"] = SOURCE_SHA256
+    source_archive_sha256: Literal[
+        "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
+    ] = SOURCE_SHA256
     state_name: Literal["v15_j2_lane_seed_theta0"] = STATE_NAME
     state_archive_bytes: Literal[134211] = STATE_BYTES
-    state_archive_sha256: Literal["3d5ab9786cc3d3eedd9a5fd1d878aea8186fbcf450ffcb781862db63ac2ca0cd"] = STATE_SHA256
+    state_archive_sha256: Literal[
+        "3d5ab9786cc3d3eedd9a5fd1d878aea8186fbcf450ffcb781862db63ac2ca0cd"
+    ] = STATE_SHA256
     output_directory: StrictStr
     proof_root: StrictStr
     batch_pairs: Literal[16] = 16
@@ -229,7 +243,9 @@ class DDME1RuntimeExporterConfigV1(BaseModel):
         return self
 
     def typed_config_hash(self) -> str:
-        return _sha256(rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True)))
+        return _sha256(
+            rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True))
+        )
 
     def compile_argv(self, config_path: str) -> tuple[str, ...]:
         return (
@@ -239,6 +255,92 @@ class DDME1RuntimeExporterConfigV1(BaseModel):
             "--config",
             config_path,
         )
+
+
+class DDME4WS1GrammarStreamConfigV1(BaseModel):
+    """Config-side declaration of one contiguous WS1 grammar stream."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    bytes: StrictInt = Field(gt=0)
+    name: StrictStr = Field(min_length=1)
+    offset: StrictInt = Field(ge=0)
+    receiver_consumer: StrictStr = Field(min_length=8)
+    sha256: StrictStr = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class DDME4WS1RuntimeExporterConfigV1(BaseModel):
+    """Explicit typed admission route for receiver-closed WS1/J5 states."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    schema_: Literal["DDME4WS1RuntimeExporterConfigV1"] = Field(
+        default=E4_WS1_CONFIG_SCHEMA,
+        alias="schema",
+        serialization_alias="schema",
+    )
+    run_id: Literal["ddm_e5_e4_ws1_exporter_adapter_20260724"] = (
+        "ddm_e5_e4_ws1_exporter_adapter_20260724"
+    )
+    candidate: Literal["W_seg", "W_joint"]
+    grammar_version: Literal["ddm_ws1_receiver_closed_warm_start.v1"] = (
+        WS1_GRAMMAR_VERSION
+    )
+    source_archive_path: StrictStr
+    source_archive_bytes: StrictInt = Field(gt=0)
+    source_archive_sha256: StrictStr = Field(pattern=r"^[0-9a-f]{64}$")
+    stream_manifest: list[DDME4WS1GrammarStreamConfigV1] = Field(min_length=2)
+    state_name: StrictStr = Field(min_length=8)
+    output_directory: StrictStr
+    proof_root: StrictStr
+    batch_pairs: Literal[32] = 32
+    minimum_free_bytes: StrictInt = Field(ge=8 * 1024 * 1024 * 1024)
+    seed: Literal[0] = 0
+    research_only: Literal[True] = True
+    execution_allowed: Literal[False] = False
+    score_claim: Literal[False] = False
+
+    @model_validator(mode="after")
+    def _valid(self) -> DDME4WS1RuntimeExporterConfigV1:
+        if len(self.stream_manifest) != 2:
+            raise ValueError("WS1 grammar route requires exactly two outer streams")
+        if not self.state_name.startswith(self.candidate + ":"):
+            raise ValueError("state_name must begin with the typed candidate")
+        source_path = Path(self.source_archive_path)
+        if source_path.is_absolute() and not (
+            self.source_archive_path.startswith("/Volumes/VertigoDataTier/pact/")
+            or self.source_archive_path.startswith("/Volumes/APDataStore/pact/")
+        ):
+            raise ValueError(
+                "absolute WS1 source_archive_path must use governed SSD custody"
+            )
+        if Path(self.output_directory).is_absolute():
+            raise ValueError("output_directory must be repository-relative")
+        if not Path(self.proof_root).is_absolute():
+            raise ValueError("proof_root must be absolute SSD custody")
+        if not (
+            self.proof_root.startswith("/Volumes/VertigoDataTier/pact/")
+            or self.proof_root.startswith("/Volumes/APDataStore/pact/")
+        ):
+            raise ValueError("proof_root must use the governed SSD waterfall")
+        return self
+
+    def typed_config_hash(self) -> str:
+        return _sha256(
+            rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True))
+        )
+
+    def compile_argv(self, config_path: str) -> tuple[str, ...]:
+        return (
+            "/usr/bin/env",
+            "python3",
+            "tools/export_ddm_runtime.py",
+            "--config",
+            config_path,
+        )
+
+
+RuntimeExporterConfig = DDME1RuntimeExporterConfigV1 | DDME4WS1RuntimeExporterConfigV1
 
 
 def _sha256(payload: bytes) -> str:
@@ -267,6 +369,19 @@ def _require_repo_path(value: str, *, label: str) -> Path:
     return resolved
 
 
+def _require_ws1_source_path(value: str) -> Path:
+    path = Path(value)
+    if not path.is_absolute():
+        return _require_repo_path(value, label="source_archive_path")
+    resolved = path.resolve()
+    if not (
+        str(resolved).startswith("/Volumes/VertigoDataTier/pact/")
+        or str(resolved).startswith("/Volumes/APDataStore/pact/")
+    ):
+        raise ExporterError("absolute WS1 source archive escaped governed SSD custody")
+    return resolved
+
+
 def _publish_or_verify(path: Path, payload: bytes, *, executable: bool = False) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
@@ -288,6 +403,20 @@ def _e4_coder() -> Literal["brotli_q11", "lzma1_raw_d1m_lc3_lp0_pb2"]:
     """Select E4's primary coder, falling back only after import failure."""
 
     return BROTLI_Q11_CODER if brotli is not None else E3_LZMA1_CODER
+
+
+def _ws1_e4_coder() -> Literal["brotli_q11"]:
+    """Fail closed when WS1's inner grammar makes E4 fallback impossible."""
+
+    coder = _e4_coder()
+    if coder != BROTLI_Q11_CODER:
+        raise ExporterError(
+            "WS1 raw-LZMA1 fallback is inadmissible: the reconstructed "
+            "receiver-closed source grammar itself contains Brotli-coded "
+            "streams, so a Brotli ImportError cannot produce a dependency-"
+            "closed decoder"
+        )
+    return BROTLI_Q11_CODER
 
 
 def _compress_blob(
@@ -324,7 +453,8 @@ def _frame_blob(
         raise ExporterError("opaque blob must be rank zero")
     product = 1
     for dimension in dimensions:
-        if isinstance(dimension, bool) or not isinstance(dimension, int) or dimension <= 0:
+        if ( isinstance(dimension, bool) or not isinstance(dimension, int) or dimension <= 0
+        ):
             raise ExporterError("blob dimensions must be positive integers")
         product *= dimension
     if kind == 1 and product != len(raw):
@@ -358,7 +488,9 @@ def _ordered_redundancy_matrix(
 
     if tuple(raw_streams) != EXPECTED_MEMBERS[1:]:
         raise ExporterError("redundancy streams are incomplete or reordered")
-    standalone = {name: len(_compress_blob(payload, coder=coder)) for name, payload in raw_streams.items()}
+    standalone = {
+        name: len(_compress_blob(payload, coder=coder)) for name, payload in raw_streams.items()
+    }
     rows: list[dict[str, Any]] = []
     for conditioner, conditioner_payload in raw_streams.items():
         conditioner_bytes = standalone[conditioner]
@@ -406,17 +538,23 @@ def _validate_rate_doctrine_manifest(value: Any) -> None:
         if (
             not isinstance(triple, dict)
             or set(triple) != triple_keys
-            or any(not isinstance(triple[key], dict) or not triple[key] for key in triple_keys)
+            or any(
+                not isinstance(triple[key], dict) or not triple[key] for key in triple_keys
+            )
             or row.get("first_rung") is not True
             or not isinstance(row.get("non_redundancy"), dict)
             or not row["non_redundancy"]
         ):
             raise ExporterError(f"incomplete stream audit: {row.get('member')}")
-    expected = {(left, right) for left in EXPECTED_MEMBERS[1:] for right in EXPECTED_MEMBERS[1:] if left != right}
+    expected = {
+        (left, right) for left in EXPECTED_MEMBERS[1:] for right in EXPECTED_MEMBERS[1:] if left != right
+    }
     matrix = value.get("ordered_redundancy_matrix")
     if (
         not isinstance(matrix, list)
-        or {(row.get("conditioner"), row.get("stream")) for row in matrix if isinstance(row, dict)} != expected
+        or {
+            (row.get("conditioner"), row.get("stream")) for row in matrix if isinstance(row, dict)
+        } != expected
     ):
         raise ExporterError("ordered redundancy matrix is incomplete")
 
@@ -441,7 +579,8 @@ def _rate_doctrine_manifest(
         },
         coder=coder,
     )
-    codec_label = "Brotli-Q11" if coder == BROTLI_Q11_CODER else "stdlib raw LZMA1 dict=1MiB lc=3 lp=0 pb=2"
+    codec_label = ( "Brotli-Q11" if coder == BROTLI_Q11_CODER else "stdlib raw LZMA1 dict=1MiB lc=3 lp=0 pb=2"
+    )
     rows = [
         {
             "audit_triple": {
@@ -451,12 +590,16 @@ def _rate_doctrine_manifest(
                         "SegNet:frame1",
                     ],
                     "frame0_seg_facts": 0,
-                    "instrument": ("DDMRuntimePerturbationV1 counted-to-output and output-to-single-owner checks"),
+                    "instrument": (
+                        "DDMRuntimePerturbationV1 counted-to-output and output-to-single-owner checks"
+                    ),
                     "status": "PARTIAL_STREAM_LEVEL_COORDINATE_FIELD_OWED",
                 },
                 "sensitivity_priced_tolerance": {
                     "current_quantization": "exact int16 chart coordinates",
-                    "metric": ("Fisher-margin plus realized inner-Jacobian deltaS/byte"),
+                    "metric": (
+                        "Fisher-margin plus realized inner-Jacobian deltaS/byte"
+                    ),
                     "score_byte_dual": "25/37545489",
                     "status": "BLOCKED_UNMEASURED_PER_COORDINATE_TOLERANCE",
                 },
@@ -502,7 +645,9 @@ def _rate_doctrine_manifest(
                 },
                 "sensitivity_priced_tolerance": {
                     "current_quantization": "exact categorical code per scorer cell",
-                    "metric": ("rank4 flip-distance x Fisher margin x realized inner-Jacobian"),
+                    "metric": (
+                        "rank4 flip-distance x Fisher margin x realized inner-Jacobian"
+                    ),
                     "score_byte_dual": "25/37545489",
                     "status": "BLOCKED_UNMEASURED_BOUNDARY_TOLERANCE_FIELD",
                 },
@@ -512,7 +657,9 @@ def _rate_doctrine_manifest(
                         "codec": codec_label,
                         "raw_bytes": len(semantic_raw),
                     },
-                    "descriptive_form": ("one frame1-only categorical semantic plane reused at camera resolution"),
+                    "descriptive_form": (
+                        "one frame1-only categorical semantic plane reused at camera resolution"
+                    ),
                     "inherently_compact_dofs": {
                         "count": len(semantic_raw),
                         "gauge_quotient": (
@@ -582,7 +729,9 @@ def _pose_contract(receiver: Any) -> dict[str, Any]:
         "exact_lattice_control": {
             "archive_bytes": 409_526_925,
             "d_pose_n64": "0.000060022091887905524",
-            "receipt": (".omx/research/mdl_polytope_member_solve_receipt_20260721.json"),
+            "receipt": (
+                ".omx/research/mdl_polytope_member_solve_receipt_20260721.json"
+            ),
             "role": "high_byte_receiver_closed_control_not_pose_member",
         },
         "nested_pose6": {
@@ -666,13 +815,17 @@ def _block_versions(
     return rows
 
 
-def _deterministic_zip(members: dict[str, bytes]) -> bytes:
-    if tuple(members) != EXPECTED_MEMBERS:
+def _deterministic_zip(
+    members: dict[str, bytes],
+    *,
+    expected_members: tuple[str, ...] = EXPECTED_MEMBERS,
+) -> bytes:
+    if tuple(members) != expected_members:
         raise ExporterError("runtime archive members are incomplete or reordered")
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_STORED) as archive:
         archive.comment = b""
-        for name in EXPECTED_MEMBERS:
+        for name in expected_members:
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_STORED
             info.external_attr = 0o100644 << 16
@@ -683,7 +836,11 @@ def _deterministic_zip(members: dict[str, bytes]) -> bytes:
     return buffer.getvalue()
 
 
-def _zip_home_ledger(archive: bytes) -> list[dict[str, Any]]:
+def _zip_home_ledger(
+    archive: bytes,
+    *,
+    expected_members: tuple[str, ...] = EXPECTED_MEMBERS,
+) -> list[dict[str, Any]]:
     """Partition every stored-ZIP byte into one member-local or container home."""
 
     try:
@@ -691,7 +848,7 @@ def _zip_home_ledger(archive: bytes) -> list[dict[str, Any]]:
             infos = handle.infolist()
     except zipfile.BadZipFile as exc:
         raise ExporterError("runtime ZIP is malformed") from exc
-    if [row.filename for row in infos] != list(EXPECTED_MEMBERS):
+    if [row.filename for row in infos] != list(expected_members):
         raise ExporterError("runtime ZIP member order changed")
     eocd_offset = archive.rfind(b"PK\x05\x06")
     if eocd_offset < 0 or eocd_offset + ZIP_EOCD.size != len(archive):
@@ -722,7 +879,8 @@ def _zip_home_ledger(archive: bytes) -> list[dict[str, Any]]:
         ):
             raise ExporterError("runtime ZIP local member is noncanonical")
         name_bytes, extra_bytes = int(local[-2]), int(local[-1])
-        payload_start = info.header_offset + ZIP_LOCAL_HEADER.size + name_bytes + extra_bytes
+        payload_start = ( info.header_offset + ZIP_LOCAL_HEADER.size + name_bytes + extra_bytes
+        )
         payload_end = payload_start + info.compress_size
         if (
             archive[
@@ -751,7 +909,9 @@ def _zip_home_ledger(archive: bytes) -> list[dict[str, Any]]:
         )
         cursor = payload_end
     if cursor != central_offset:
-        raise ExporterError("runtime ZIP local ranges do not reach the central directory")
+        raise ExporterError(
+            "runtime ZIP local ranges do not reach the central directory"
+        )
     rows.append(
         {
             "home_bytes": len(archive) - central_offset,
@@ -833,6 +993,7 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
             imports.add(node.module or "")
     allowed_roots = {
         "__future__",
+        "base64",
         "collections.abc",
         "hashlib",
         "json",
@@ -844,6 +1005,7 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
         "struct",
         "sys",
         "time",
+        "tac.optimization.ddm_ws1_warm_start",
         "typing",
         "brotli",
         "torch",
@@ -862,13 +1024,24 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
         )
         if token in text
     )
-    long_hex_literals = sorted(set(re.findall(r"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])", text)))
+    long_hex_literals = sorted(
+        set(re.findall(r"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])", text))
+    )
     if unexpected or forbidden_tokens or long_hex_literals:
         raise ExporterError(
             f"runtime cleanliness failed: imports={unexpected}, tokens={forbidden_tokens}, hex={long_hex_literals}"
         )
+    bundle_active = b'WS1_SOURCE_BUNDLE_B85 = b""' not in runtime
     return {
-        "allowed_dependency_roots": ["torch", "brotli"],
+        "allowed_dependency_roots": [
+            "torch",
+            "brotli",
+            *(
+                ["embedded:tac.optimization.ddm_ws1_warm_start"]
+                if bundle_active
+                else []
+            ),
+        ],
         "forbidden_tokens": forbidden_tokens,
         "imports": sorted(imports),
         "long_hex_literals": long_hex_literals,
@@ -879,7 +1052,9 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
 
 def _compile_seed_state(source_archive: bytes) -> tuple[bytes, Any, dict[str, Any]]:
     members, _ = parse_carrier_compose_archive(source_archive)
-    source_receiver = receive_carrier_compose_archive(source_archive, verify_member_effects=False)
+    source_receiver = receive_carrier_compose_archive(
+        source_archive, verify_member_effects=False
+    )
     lane_seeds = derive_lane_program_seeds(source_receiver)
     lane_records = tuple(row.counted_record() for row in lane_seeds)
     state_archive, _ = compile_carrier_compose_archive(
@@ -887,7 +1062,9 @@ def _compile_seed_state(source_archive: bytes) -> tuple[bytes, Any, dict[str, An
         worldsheet_g1_payload=members[WORLDSHEET_G1_MEMBER],
         lane_programs=lane_records,
         realization_profile=source_receiver.realization_profile,
-        realization_static_rule_payload=members.get(REALIZATION_STATIC_RULE_MEMBER, b""),
+        realization_static_rule_payload=members.get(
+            REALIZATION_STATIC_RULE_MEMBER, b""
+        ),
         realization_static_rule_id=source_receiver.realization_static_rule_id,
         scorer_solved_templates=source_receiver.scorer_solved_templates,
     )
@@ -900,7 +1077,9 @@ def _compile_seed_state(source_archive: bytes) -> tuple[bytes, Any, dict[str, An
     dof_count = 2 * len(g1.tracks) + 4 * len(lane_seeds) + 3 * template_count
     if dof_count != EXPECTED_DOF_COUNT:
         raise ExporterError(f"receiver-effective DOF count drifted: {dof_count}")
-    receiver = receive_carrier_compose_archive(state_archive, verify_member_effects=False)
+    receiver = receive_carrier_compose_archive(
+        state_archive, verify_member_effects=False
+    )
     return (
         state_archive,
         receiver,
@@ -922,7 +1101,8 @@ def _validate_templates(receiver: Any) -> None:
         raise ExporterError("template state lacks the counted realization profile")
     for template in bank.templates:
         colour = bytes(int(value) for value in profile.colour_for(template.role))
-        if template.patch_height != 1 or template.patch_width != 1 or template.rgb_u8 != colour:
+        if ( template.patch_height != 1 or template.patch_width != 1 or template.rgb_u8 != colour
+        ):
             raise ExporterError(
                 "current exporter materialization requires each shared template to equal its one-cell role colour"
             )
@@ -983,8 +1163,10 @@ def _compose_semantic_state(
                 admitted = (rules >= 0) & (semantic_cells[local] == source)
                 for target_id, class_role in enumerate(CLASS_ORDER):
                     target_mask = admitted & (target == target_id)
-                    role = "UndrivableBoundary" if class_role == "Undrivable" else class_role
-                    labels[pair_id, target_mask] = REALIZATION_PAINT_ORDER.index(role) + 1
+                    role = ( "UndrivableBoundary" if class_role == "Undrivable" else class_role
+                    )
+                    labels[pair_id, target_mask] = ( REALIZATION_PAINT_ORDER.index(role) + 1
+                    )
         camera = render_source_batch(indexes)
         payload = camera.tobytes(order="C")
         base_digest.update(payload)
@@ -1024,7 +1206,9 @@ def _compose_semantic_state(
         "moments": moments,
         "payload_bytes": 0,
         "rate_class": "FREE",
-        "target_derivation": ("frozen_posenet_first_stem_conv_and_bn_only_video_independent"),
+        "target_derivation": (
+            "frozen_posenet_first_stem_conv_and_bn_only_video_independent"
+        ),
         "transform_id": runtime.PA1_TRANSFORM_ID,
     }
     return labels, composed_total, composed_digest.hexdigest(), amplitude
@@ -1057,6 +1241,286 @@ def _chart_payload(receiver: Any) -> tuple[bytes, dict[str, Any]]:
     return raw, {"byteorder": "little", "dtype": "int16", "streams": rows}
 
 
+_WS1_SOURCE_BUNDLE_CACHE: bytes | None = None
+
+
+def _local_module_path(module_name: str) -> Path | None:
+    relative = Path(*module_name.split("."))
+    module_path = REPO_ROOT / "src" / relative.with_suffix(".py")
+    if module_path.is_file():
+        return module_path
+    package_path = REPO_ROOT / "src" / relative / "__init__.py"
+    return package_path if package_path.is_file() else None
+
+
+def _ws1_runtime_source_bundle() -> bytes:
+    """Build a deterministic source ZIP for the generic WS1 receiver closure."""
+
+    global _WS1_SOURCE_BUNDLE_CACHE
+    if _WS1_SOURCE_BUNDLE_CACHE is not None:
+        return _WS1_SOURCE_BUNDLE_CACHE
+    queue = ["tac.optimization.ddm_ws1_warm_start"]
+    visited: set[str] = set()
+    modules: dict[str, Path] = {}
+    while queue:
+        module_name = queue.pop()
+        if module_name in visited:
+            continue
+        visited.add(module_name)
+        path = _local_module_path(module_name)
+        if path is None:
+            continue
+        if path.name == "__init__.py":
+            # Runtime packages are namespace containers.  Executing the
+            # repository's convenience re-export initializers would pull in
+            # unrelated campaign modules that this receiver never consumes.
+            continue
+        modules[module_name] = path
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            imported: list[str] = []
+            if isinstance(node, ast.Import):
+                imported.extend(alias.name for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                if node.level:
+                    parts = module_name.split(".")
+                    parent = parts[: -node.level]
+                    base = ".".join(parent + (node.module or "").split("."))
+                elif node.module:
+                    base = node.module
+                else:
+                    base = ""
+                if base:
+                    imported.append(base)
+                    imported.extend(
+                        f"{base}.{alias.name}"
+                        for alias in node.names
+                        if alias.name != "*"
+                    )
+            queue.extend(name for name in imported if name.startswith("tac"))
+    paths = set(modules.values())
+    package_names: set[str] = set()
+    for path in paths:
+        relative = path.relative_to(REPO_ROOT / "src")
+        parts = relative.parts[:-1]
+        for index in range(1, len(parts) + 1):
+            package_names.add("/".join(parts[:index]) + "/__init__.py")
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(
+        buffer,
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+    ) as archive:
+        for name in sorted(package_names):
+            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o100644 << 16
+            info.create_system = 3
+            archive.writestr(
+                info,
+                b"# Deliberately empty runtime namespace package.\\n",
+            )
+        for path in sorted(
+            paths, key=lambda row: row.relative_to(REPO_ROOT / "src").as_posix()
+        ):
+            name = path.relative_to(REPO_ROOT / "src").as_posix()
+            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o100644 << 16
+            info.create_system = 3
+            archive.writestr(info, path.read_bytes())
+    _WS1_SOURCE_BUNDLE_CACHE = buffer.getvalue()
+    return _WS1_SOURCE_BUNDLE_CACHE
+
+
+def _ws1_runtime_payload() -> bytes:
+    source = RUNTIME_SOURCE.read_bytes()
+    marker = b'WS1_SOURCE_BUNDLE_B85 = b""'
+    if source.count(marker) != 1:
+        raise ExporterError("WS1 runtime source-bundle marker changed")
+    encoded = base64.b85encode(_ws1_runtime_source_bundle())
+    return source.replace(
+        marker, b"WS1_SOURCE_BUNDLE_B85 = " + repr(encoded).encode("ascii")
+    )
+
+
+def _ws1_grammar_state(
+    source_archive: bytes,
+    config: DDME4WS1RuntimeExporterConfigV1,
+) -> tuple[Any, ReceiverGrammarAdmission, dict[str, int]]:
+    """Strictly parse one typed WS1 state without any literal SHA allowlist."""
+
+    from tac.optimization.ddm_ws1_warm_start import (
+        parse_ws1_warm_start_archive,
+        receive_ws1_warm_start_archive,
+    )
+
+    parsed = parse_ws1_warm_start_archive(source_archive)
+    if parsed.exact_reemit() != source_archive:
+        raise ExporterError("WS1 source parse/re-emit changed archive bytes")
+    if parsed.candidate != config.candidate:
+        raise ExporterError("WS1 parsed candidate differs from typed config")
+    payload_consumer = (
+        "apply_temporal_affine+reassert_frame1"
+        if config.candidate == "W_seg"
+        else "signed_distance_geometry+apply_local_statistics"
+    )
+    derived_streams = (
+        ReceiverGrammarStream(
+            name="nested_preuint8_archive",
+            offset=0,
+            bytes=len(parsed.base_archive),
+            sha256=_sha256(parsed.base_archive),
+            receiver_consumer="receive_preuint8_q8_archive",
+        ),
+        ReceiverGrammarStream(
+            name="warm_start_payload",
+            offset=len(parsed.base_archive),
+            bytes=len(parsed.payload),
+            sha256=_sha256(parsed.payload),
+            receiver_consumer=payload_consumer,
+        ),
+    )
+    configured = ReceiverGrammarAdmission(
+        grammar_version=config.grammar_version,
+        archive_bytes=config.source_archive_bytes,
+        archive_sha256=config.source_archive_sha256,
+        streams=tuple(
+            ReceiverGrammarStream.from_dict(row.model_dump(mode="json"))
+            for row in config.stream_manifest
+        ),
+    )
+    configured.verify_archive(source_archive)
+    derived = ReceiverGrammarAdmission(
+        grammar_version=config.grammar_version,
+        archive_bytes=len(source_archive),
+        archive_sha256=_sha256(source_archive),
+        streams=derived_streams,
+    )
+    if configured != derived:
+        raise ExporterError(
+            "configured WS1 grammar streams differ from parser derivation"
+        )
+
+    carrier_members, _ = parse_carrier_compose_archive(parsed.carrier_archive)
+    carrier_receiver = receive_carrier_compose_archive(
+        parsed.carrier_archive,
+        verify_member_effects=False,
+    )
+    g1 = lift_g1_movable_worldsheet(carrier_members[WORLDSHEET_G1_MEMBER])
+    lane_seeds = derive_lane_program_seeds(carrier_receiver)
+    template_count = (
+        0
+        if carrier_receiver.scorer_solved_templates is None
+        else len(carrier_receiver.scorer_solved_templates.templates)
+    )
+    dofs = {
+        "island_translation_dofs": 2 * len(g1.tracks),
+        "lane_program_dofs": 4 * len(lane_seeds),
+        "shared_template_dofs": 3 * template_count,
+    }
+    dofs["total"] = sum(dofs.values())
+    if dofs["total"] != EXPECTED_DOF_COUNT:
+        raise ExporterError(
+            f"WS1 receiver-effective DOF count drifted: {dofs['total']}"
+        )
+    return receive_ws1_warm_start_archive(source_archive), derived, dofs
+
+
+def _measure_ws1_output_identity(
+    receiver: Any,
+    *,
+    batch_pairs: int,
+    checkpoint_root: Path,
+    state_sha256: str,
+) -> tuple[int, str, dict[str, Any]]:
+    checkpoint_root.mkdir(parents=True, exist_ok=True)
+    expected_total = 600 * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
+    free_bytes = shutil.disk_usage(checkpoint_root).free
+    if free_bytes < expected_total + 256 * 1024 * 1024:
+        raise ExporterError("WS1 output-identity checkpoint storage preflight failed")
+    digest = hashlib.sha256()
+    total = 0
+    stage_rows: list[dict[str, Any]] = []
+    for start in range(0, 600, batch_pairs):
+        stop = min(start + batch_pairs, 600)
+        raw_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.raw"
+        row_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.json"
+        expected_bytes = (
+            (stop - start) * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
+        )
+        if row_path.is_file() and raw_path.is_file():
+            row = json.loads(row_path.read_bytes())
+            if (
+                row
+                != {
+                    "bytes": row.get("bytes"),
+                    "pair_start": start,
+                    "pair_stop": stop,
+                    "sha256": row.get("sha256"),
+                    "state_sha256": state_sha256,
+                }
+                or row["bytes"] != expected_bytes
+                or _sha256_file(raw_path) != (row["bytes"], row["sha256"])
+            ):
+                raise ExporterError("WS1 output-identity checkpoint differs")
+        elif row_path.exists() or raw_path.exists():
+            raise ExporterError("WS1 output-identity checkpoint is incomplete")
+        else:
+            camera = receiver.render_camera_pairs(tuple(range(start, stop)))
+            if (
+                camera.dtype != np.uint8
+                or camera.shape
+                != (
+                    stop - start,
+                    FRAMES_PER_PAIR,
+                    CAMERA_H,
+                    CAMERA_W,
+                    CHANNELS,
+                )
+                or not camera.flags.c_contiguous
+            ):
+                raise ExporterError("WS1 receiver output geometry or dtype changed")
+            payload = camera.tobytes(order="C")
+            temporary = raw_path.with_name(raw_path.name + f".partial.{os.getpid()}")
+            with temporary.open("xb") as handle:
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, raw_path)
+            row = {
+                "bytes": len(payload),
+                "pair_start": start,
+                "pair_stop": stop,
+                "sha256": _sha256(payload),
+                "state_sha256": state_sha256,
+            }
+            _publish_or_verify(
+                row_path,
+                rfc8785_canonicalize(row) + b"\n",
+            )
+        with raw_path.open("rb") as handle:
+            while True:
+                chunk = handle.read(8 * 1024 * 1024)
+                if not chunk:
+                    break
+                digest.update(chunk)
+                total += len(chunk)
+        stage_rows.append(row)
+    if total != expected_total:
+        raise ExporterError("WS1 receiver output byte count differs from geometry")
+    return (
+        total,
+        digest.hexdigest(),
+        {
+            "all_stage_checkpoints_preserved": True,
+            "checkpoint_root": str(checkpoint_root),
+            "stage_count": len(stage_rows),
+        },
+    )
+
+
 def _inflate_sh() -> bytes:
     return b"""#!/usr/bin/env bash
 set -euo pipefail
@@ -1069,6 +1533,234 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # PYTHON selects the locked environment provisioned from that declaration.
 exec "${PYTHON:-python3}" "$HERE/inflate.py" "$1" "$2" "$3"
 """
+
+
+def export_ws1_runtime(
+    config: DDME4WS1RuntimeExporterConfigV1,
+    *,
+    config_path: Path,
+) -> tuple[dict[str, Any], Path]:
+    """Export one typed WS1/J5 state through E4's exact coder path."""
+
+    torch.set_num_threads(4)
+    try:
+        torch.set_num_interop_threads(1)
+    except RuntimeError:
+        pass
+    torch.use_deterministic_algorithms(True)
+    coder = _ws1_e4_coder()
+    source_path = _require_ws1_source_path(config.source_archive_path)
+    output_dir = _require_repo_path(
+        config.output_directory,
+        label="output_directory",
+    )
+    proof_root = Path(config.proof_root)
+    proof_root.mkdir(parents=True, exist_ok=True)
+    free_bytes = shutil.disk_usage(proof_root).free
+    if free_bytes < config.minimum_free_bytes:
+        raise ExporterError(
+            f"storage preflight failed: {free_bytes} < {config.minimum_free_bytes}"
+        )
+    source_archive = source_path.read_bytes()
+    if (len(source_archive), _sha256(source_archive)) != (
+        config.source_archive_bytes,
+        config.source_archive_sha256,
+    ):
+        raise ExporterError("typed WS1 source archive custody mismatch")
+    receiver, grammar_admission, dofs = _ws1_grammar_state(
+        source_archive,
+        config,
+    )
+    output_bytes, output_sha256, output_identity_resume = _measure_ws1_output_identity(
+        receiver,
+        batch_pairs=config.batch_pairs,
+        checkpoint_root=proof_root / "output_identity" / config.source_archive_sha256,
+        state_sha256=config.source_archive_sha256,
+    )
+    dependencies = ["numpy", "scipy", "torch", "brotli"]
+    state_member = _frame_blob(source_archive, kind=0, coder=coder)
+    state_member_sha256 = _sha256(state_member)
+    manifest = {
+        "dependencies": dependencies,
+        "false_authority": {
+            "evidence_axis": EVIDENCE_AXIS,
+            "research_only": True,
+            "score_claim": False,
+        },
+        "geometry": {
+            "camera_hw": [CAMERA_H, CAMERA_W],
+            "channels": CHANNELS,
+            "frames_per_pair": FRAMES_PER_PAIR,
+            "pair_count": 600,
+            "scorer_hw": [PAIR_H, PAIR_W],
+        },
+        "grammar_admission": grammar_admission.to_dict(),
+        "output": {
+            "bytes": output_bytes,
+            "sha256": output_sha256,
+        },
+        "schema": E4_WS1_SCHEMA,
+        "sections": [
+            {
+                "bytes": len(state_member),
+                "member": "state/ws1.ddj5",
+                "sha256": state_member_sha256,
+                "typed_stream_tag": TypedStreamTag(
+                    type=StreamType.SKELETON,
+                    layer_home=LayerHome.L1_PROGRAM,
+                    evaluate_py_recursion_level_cited=(
+                        "L1_program -> L3_raster -> L4_scorer_feature -> L5_verdict"
+                    ),
+                    counted_bytes=len(state_member),
+                    free_receiver_code=True,
+                ).to_dict(),
+            }
+        ],
+        "state": {
+            "batch_pairs": config.batch_pairs,
+            "name": config.state_name,
+            "receiver_effective_dofs": dofs["total"],
+        },
+    }
+    members = {
+        "manifest.json": rfc8785_canonicalize(manifest),
+        "state/ws1.ddj5": state_member,
+    }
+    archive = _deterministic_zip(
+        members,
+        expected_members=EXPECTED_WS1_MEMBERS,
+    )
+    if (
+        _deterministic_zip(
+            members,
+            expected_members=EXPECTED_WS1_MEMBERS,
+        )
+        != archive
+    ):
+        raise ExporterError("WS1 runtime archive compiler is nondeterministic")
+    homes = _zip_home_ledger(
+        archive,
+        expected_members=EXPECTED_WS1_MEMBERS,
+    )
+    with zipfile.ZipFile(io.BytesIO(archive), "r") as handle:
+        parsed_members = {name: handle.read(name) for name in EXPECTED_WS1_MEMBERS}
+    parsed_manifest = runtime._validate_ws1_manifest(
+        json.loads(parsed_members["manifest.json"]),
+        parsed_members,
+    )
+    reconstructed, consumed_streams = runtime._reconstruct_ws1_state(
+        parsed_manifest,
+        parsed_members,
+    )
+    if reconstructed != source_archive:
+        raise ExporterError("WS1 packet parse-back changed source archive bytes")
+
+    runtime_payload = _ws1_runtime_payload()
+    cleanliness = _runtime_cleanliness(runtime_payload)
+    script = _inflate_sh()
+    archive_path = _publish_or_verify(output_dir / "archive.zip", archive)
+    runtime_path = _publish_or_verify(
+        output_dir / "inflate.py",
+        runtime_payload,
+        executable=True,
+    )
+    script_path = _publish_or_verify(
+        output_dir / "inflate.sh",
+        script,
+        executable=True,
+    )
+    delta_bytes = len(archive) - len(source_archive)
+    result = {
+        "archive": {
+            "bytes": len(archive),
+            "compiler_determinism_x2": True,
+            "member_homes": homes,
+            "member_order": list(EXPECTED_WS1_MEMBERS),
+            "path": str(archive_path.relative_to(REPO_ROOT)),
+            "receiver_byte_home_bijection": True,
+            "sha256": _sha256(archive),
+        },
+        "cleanup": {
+            "bulk_proof_root": str(proof_root),
+            "certify_or_block": "no source or proof bytes deleted",
+            "source_archive_mutated": False,
+        },
+        "config": config.model_dump(mode="json", by_alias=True),
+        "config_path": str(config_path.relative_to(REPO_ROOT)),
+        "dofs": dofs,
+        "evidence_axis": EVIDENCE_AXIS,
+        "execution_allowed": False,
+        "grammar_admission": {
+            **grammar_admission.to_dict(),
+            "packet_parseback_source_byte_identical": True,
+            "streams_consumed": list(consumed_streams),
+        },
+        "output_identity": {
+            "bytes": output_bytes,
+            "resume": output_identity_resume,
+            "sha256": output_sha256,
+            "status": "WS1_SOURCE_RECEIVER_EXACT_MEASURED_PACKAGED_RECEIVER_PENDING",
+        },
+        "pointer": "0.1910828242 [contest-CPU]",
+        "pointer_moved": False,
+        "rate": {
+            "delta_s_rate_term_vs_unpacked": (25.0 * delta_bytes / 37_545_489),
+            "packed_archive_bytes": len(archive),
+            "packed_minus_unpacked_bytes": delta_bytes,
+            "unpacked_state_bytes": len(source_archive),
+        },
+        "research_only": True,
+        "runtime": {
+            "cleanliness": cleanliness,
+            "coder": {
+                "codec_id": CODER_IDS[coder],
+                "fallback_trigger": (
+                    "ImportError" if coder == E3_LZMA1_CODER else None
+                ),
+                "primary": BROTLI_Q11_CODER,
+                "selected": coder,
+            },
+            "dependencies": dependencies,
+            "inflate_py": {
+                "bytes": len(runtime_payload),
+                "path": str(runtime_path.relative_to(REPO_ROOT)),
+                "sha256": _sha256(runtime_payload),
+            },
+            "inflate_sh": {
+                "bytes": len(script),
+                "path": str(script_path.relative_to(REPO_ROOT)),
+                "sha256": _sha256(script),
+            },
+            "source_bundle": {
+                "bytes": len(_ws1_runtime_source_bundle()),
+                "sha256": _sha256(_ws1_runtime_source_bundle()),
+            },
+        },
+        "schema": E4_WS1_RESULT_SCHEMA,
+        "score_claim": False,
+        "seed": config.seed,
+        "source": {
+            "bytes": len(source_archive),
+            "path": config.source_archive_path,
+            "sha256": _sha256(source_archive),
+        },
+        "state": {
+            "bytes": len(source_archive),
+            "name": config.state_name,
+            "sha256": _sha256(source_archive),
+        },
+        "storage_preflight": {
+            "minimum_free_bytes": config.minimum_free_bytes,
+            "proof_root": str(proof_root),
+            "status": "PASS",
+        },
+        "typed_config_sha256": config.typed_config_hash(),
+    }
+    receipt_path = _publish_or_verify(
+        output_dir.parent / "ddm_e4_ws1_runtime_export_receipt.json",
+        rfc8785_canonicalize(result) + b"\n",
+    )
+    return result, receipt_path
 
 
 def export_runtime(
@@ -1086,17 +1778,23 @@ def export_runtime(
     is_e3 = config.run_id == "ddm_e3_inflate_compose_and_depclose_20260723"
     is_e4 = config.run_id == "ddm_e4_brotli_declared_dep_20260724"
     is_pose_stream = is_e2 or is_e3 or is_e4
-    archive_schema = E4_SCHEMA if is_e4 else E3_SCHEMA if is_e3 else E2_SCHEMA if is_e2 else SCHEMA
+    archive_schema = ( E4_SCHEMA if is_e4 else E3_SCHEMA if is_e3 else E2_SCHEMA if is_e2 else SCHEMA
+    )
     coder = _e4_coder() if is_e4 else E3_LZMA1_CODER
     dependencies = ["torch", "brotli"] if coder == BROTLI_Q11_CODER else ["torch"]
-    semantic_frame_policy = "frame1_only_seg_free_frame0" if is_pose_stream else "both_frames"
-    source_path = _require_repo_path(config.source_archive_path, label="source_archive_path")
+    semantic_frame_policy = ( "frame1_only_seg_free_frame0" if is_pose_stream else "both_frames"
+    )
+    source_path = _require_repo_path(
+        config.source_archive_path, label="source_archive_path"
+    )
     output_dir = _require_repo_path(config.output_directory, label="output_directory")
     proof_root = Path(config.proof_root)
     proof_root.mkdir(parents=True, exist_ok=True)
     free_bytes = shutil.disk_usage(proof_root).free
     if free_bytes < config.minimum_free_bytes:
-        raise ExporterError(f"storage preflight failed: {free_bytes} < {config.minimum_free_bytes}")
+        raise ExporterError(
+            f"storage preflight failed: {free_bytes} < {config.minimum_free_bytes}"
+        )
     source_archive = source_path.read_bytes()
     if (len(source_archive), _sha256(source_archive)) != (
         config.source_archive_bytes,
@@ -1246,7 +1944,9 @@ def export_runtime(
     script = _inflate_sh()
 
     archive_path = _publish_or_verify(output_dir / "archive.zip", archive)
-    runtime_path = _publish_or_verify(output_dir / "inflate.py", runtime_payload, executable=True)
+    runtime_path = _publish_or_verify(
+        output_dir / "inflate.py", runtime_payload, executable=True
+    )
     script_path = _publish_or_verify(output_dir / "inflate.sh", script, executable=True)
     result = {
         "archive": {
@@ -1288,7 +1988,9 @@ def export_runtime(
             "cleanliness": cleanliness,
             "coder": {
                 "codec_id": CODER_IDS[coder],
-                "fallback_trigger": ("ImportError" if coder == E3_LZMA1_CODER and is_e4 else None),
+                "fallback_trigger": (
+                    "ImportError" if coder == E3_LZMA1_CODER and is_e4 else None
+                ),
                 "primary": BROTLI_Q11_CODER,
                 "selected": coder,
             },
@@ -1362,7 +2064,7 @@ def export_runtime(
     return result, receipt_path
 
 
-def load_config(path: Path) -> DDME1RuntimeExporterConfigV1:
+def load_config(path: Path) -> RuntimeExporterConfig:
     payload = path.read_bytes()
     try:
         value = json.loads(payload)
@@ -1371,6 +2073,8 @@ def load_config(path: Path) -> DDME1RuntimeExporterConfigV1:
     canonical = rfc8785_canonicalize(value) + b"\n"
     if payload != canonical:
         raise ExporterError("exporter config must be canonical JSON plus one newline")
+    if value.get("schema") == E4_WS1_CONFIG_SCHEMA:
+        return DDME4WS1RuntimeExporterConfigV1.model_validate(value, strict=True)
     return DDME1RuntimeExporterConfigV1.model_validate(value, strict=True)
 
 
@@ -1384,7 +2088,13 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         raise ExporterError("config path must be inside the repository") from exc
     config = load_config(config_path)
-    result, receipt_path = export_runtime(config, config_path=config_path)
+    if isinstance(config, DDME4WS1RuntimeExporterConfigV1):
+        result, receipt_path = export_ws1_runtime(
+            config,
+            config_path=config_path,
+        )
+    else:
+        result, receipt_path = export_runtime(config, config_path=config_path)
     print(
         json.dumps(
             {
@@ -1400,8 +2110,11 @@ def main(argv: list[str] | None = None) -> int:
 
 __all__ = [
     "DDME1RuntimeExporterConfigV1",
+    "DDME4WS1GrammarStreamConfigV1",
+    "DDME4WS1RuntimeExporterConfigV1",
     "ExporterError",
     "export_runtime",
+    "export_ws1_runtime",
     "load_config",
     "main",
 ]
