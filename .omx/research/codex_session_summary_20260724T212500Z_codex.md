@@ -1,7 +1,7 @@
 # Codex session summary — DDM PA2 zero-byte decode family
 
-UTC: 2026-07-24T21:25:00Z  
-Lane: `lane_ddm_pa2_zero_byte_decode_family_20260724`  
+UTC: 2026-07-24T21:25:00Z
+Lane: `lane_ddm_pa2_zero_byte_decode_family_20260724`
 Authority: research-only, no score claim, MAIN landing review required
 
 ## Landed
