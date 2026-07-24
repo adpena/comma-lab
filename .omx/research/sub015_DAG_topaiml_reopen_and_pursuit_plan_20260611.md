@@ -23594,3 +23594,29 @@ generator argument for family (d); the named cures are row-targeted (corrected-J
 admission ×5 global rows · pose-null/SE(3) ×5 · composed-pair remeasure). verdict_scope:
 MEASURED/INSTANCE (bounded menu, advisory axis); not a minimum-preimage certificate; no family
 kill. Cherry-pick bf5c0ba680 + union-merge clean. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-e5-MAIN-review (2026-07-24, MAIN custody of ddm_e5_e4_ws1_exporter_adapter rc=0 — the
+R6-chain owed rung: WS1 warm-start states now ride the E4 packet path with REAL custody):
+Verified by MAIN: rate deltas re-derived exact (W_seg −7,161B → −0.0047682 S · W_joint −7,507B →
+−0.0049986 S at 25/37,545,489); exact batch32 endpoints REPRODUCE ws2's SHA-bound values to the
+last digit (W_seg d_seg 0.024124510023328993 @ source 138,031B → Brotli-Q11 packet 130,870B ·
+W_joint 0.07051923116048177 @ 138,801B → 131,294B); tests 21/21 + ruff re-run clean. WHAT LANDED:
+(1) TYPED ADMISSION, not a widened literal — the sealed V15 E4 config keeps ALL its byte-identity
+literals untouched; WS1 enters via a separate DDME4WS1RuntimeExporterConfigV1 (grammar version +
+ordered gap-free stream partition + per-stream bytes/offset/SHA/named-consumer + exact archive SHA
++ parser re-emit); no candidate SHA in exporter/receiver source — the ws2 fake-custody refusal is
+now structurally cured. (2) Both packet parse-backs reconstruct EXACT source bytes; both
+standalone receivers emit the full 3,662,409,600-byte raw stream at the source receiver's measured
+SHA. (3) Locked-env upstream evaluate.sh PASS ×2 (~26 min each — the VertigoDataTier workers seen
+in earlier ticks; rounded harness rows advisory, exact batch32 receipts remain the authority —
+correct authority ordering). (4) HONEST FALLBACK BLOCKER, formulation-scoped: raw-LZMA1 fallback
+BLOCKED_FAIL_CLOSED — traced to the INNER WS1 grammar (carrier_compose→g1_worldsheet→brotli.
+decompress): an outer LZMA packet would still hide a Brotli dependency inside the reconstructed
+source = fake dependency-closure; exporter refuses BEFORE source work; legacy V15 ImportError-only
+fallback unchanged; durable stderr logs SHA-bound on SSD. Named follow-on (not a blocker for the
+primary path, brotli IS declared dep #2 per e4): an inner-grammar LZMA re-encode IF a Brotli-free
+fallback is ever demanded for WS1-derived candidates. CONSEQUENCE: ws2 blocker 4 CLOSED — any
+WS1-derived candidate can now ride E4 export to R6 with real custody; pose axis unchanged
+(harness d_pose 146.4/36.6 — these are warm STARTS, pose finish is the re-aimed #366's job).
+verdict_scope: instance-positive ×2 + FORMULATION-scoped fallback negative. Cherry-pick 0718ff76af
+clean. Pointer 0.1910828242 [contest-CPU] UNMOVED.
