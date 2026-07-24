@@ -23985,3 +23985,21 @@ the 706-param lift = compact, compressibility unmeasured; grammar streams = both
 CONSEQUENCE for ms2r-r3 (#701): the typed-coordinate choice must RACE solution-direct vs
 problem-seed representations per stratum with real coders — the coordinate that codes shortest
 wins per bucket, mixed families allowed (single-owner rule preserved).
+
+### FEED-603-pose-vs-seg-carry-sizes (2026-07-24, operator "How big is pose versus how big is the seg carry?")
+MEASURED decomposition of the two carries:
+- POSE: complete reference information = 600 pairs × 6 scalars = 7.2KB fp16 RAW (scorer_targets);
+  #140 low-rank codec −2.7× → ~2.7KB; ξ-curve smoothness (AR/spline over knots) → sub-KB plausible.
+  Marginal byte cost of pose constraints INSIDE the joint lattice solve: W_joint−W_seg = +770B
+  (138,801−138,031 = 0.56%), buying d_pose 146.4→27.3 raw. On the solved plane pose is tube-grade
+  free: q1 control d_pose 1.02e-4. R1 dxi shipped 7.2KB (witness vehicle).
+- SEG: partition carry ≥130KB at d_seg 0.024–0.071 (W states, receiver-closed); box-grade 0.00116
+  description UNSOLVED below the ~200KB c1 budget (naive coordinate: 291MB, RAW-incompressible).
+- RATIO: pose ≈ 1–3% of the seg carry (≤7.2KB hard info ceiling vs ≥130KB seg floor-so-far);
+  seg dominates rate ~20–200×. INVERSION: pose = small-information / REALIZATION-hard in RGB
+  coordinates (photometric wall = coordinate artifact); seg = large-information / realization-known.
+  LESSON (operator): the describe line teaches pose carry — pose rides free in solution-direct
+  plane coordinates; separate pose carriers exist only because program/grammar representations
+  regenerate frames without pose constraints. Waterfill consequence: allocate ≤~5KB to pose in any
+  composed candidate; the seg description is where ~97% of the rate war is fought. Routed → pc1
+  design target + c1 waterfill.
