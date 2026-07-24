@@ -1,0 +1,83 @@
+{
+  "critical_ratio": 4.1215446777965665,
+  "equation_id": "ddm_ws1_warm_start_slope_falsifier_v1",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "inputs": {
+    "W_joint_full_run_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/full_run_receipt.json",
+      "sha256": "dca72cdc8c15a46be1a1d2e053bf813a79491d99c2793e57ec247f698be87e62"
+    },
+    "W_seg_full_run_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_seg_reformed_four_step_abort_shrink_20260724T122200Z/full_run_receipt.json",
+      "sha256": "e367f60c8d8a64ba8b5aa8710bbe0f8115f37be8664eb2520f7d6081c09d0ab3"
+    },
+    "W_seg_terminal_proposal": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_seg_reformed_four_step_abort_shrink_20260724T122200Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
+      "sha256": "266c6d34fbc0d7e5785f3976e4e1c0e01ae03d9ea1d5dab6dc04c4b947c64dea"
+    },
+    "producer_receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_ws3_window_completion_and_arbitration_20260724T103845Z/.omx/research/ddm_ws2_warm_start_custody_producer_receipt_20260724.json",
+      "sha256": "05581b02cc6ce789b6219302ebd888f1665ab4c3882038ce29e9be18f6174ea1"
+    }
+  },
+  "main_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "registered_slope_verdict": {
+    "decision": "KEEP_WJOINT",
+    "observed_ratio": 1.1735894458608507,
+    "pose_progress_per_step": 0.0028920699387597892,
+    "predicted_pose_repayment_steps": 6611.801236822376,
+    "predicted_seg_advantage_exhaustion_steps": 1882.677674578264,
+    "reason": "SEG_REGRESSION",
+    "seg_delta_per_step": 0.002464294433594194,
+    "seg_regression_per_step": 0.002464294433594194
+  },
+  "schema": "ddm_ws3_warm_start_slope_arbitration.v1",
+  "score_claim": false,
+  "selected_warm_start": "W_joint",
+  "verdict": "ARBITRATED_FORMULATION_STOP_KEEP_WJOINT",
+  "verdict_scope": "W_seg reformed-opening FORMULATION versus this exact W_joint INSTANCE; no family, paradigm, promotion, or score verdict",
+  "window_deltas": {
+    "W_joint": {
+      "pose_term_progress_per_step": 0.015854339538902806,
+      "seg_term_delta_per_step": -0.007588916354709152,
+      "total_distortion_term_delta": -0.09377302357444606
+    },
+    "W_seg_terminal_proposal": {
+      "pose_term_progress_per_step": 0.0028920699387597892,
+      "seg_term_delta_per_step": 0.002464294433594194,
+      "total_distortion_term_delta": -0.00042777550516603924
+    }
+  },
+  "window_status": {
+    "W_joint": {
+      "accepted_steps": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "exact_steps": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "status": "COMPLETE_EXACT_FOUR_STEP_WINDOW"
+    },
+    "W_seg": {
+      "accepted_steps": [
+        0
+      ],
+      "exact_steps": [
+        0,
+        1
+      ],
+      "status": "FORMULATION_STOP_AT_EXACT_TERMINAL_PROPOSAL"
+    }
+  }
+}

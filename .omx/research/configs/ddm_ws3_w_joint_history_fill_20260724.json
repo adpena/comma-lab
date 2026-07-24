@@ -5,7 +5,7 @@
     "delegation_prompt_sha256": "b36872d5ce619dc741cf619542878dd87ff244defb94a03eeb16a68fe1bbd6c7",
     "pointer": "0.1910828242 [contest-CPU]",
     "pointer_moved": false,
-    "source_commit": "b7d45f12dca6c316e8259883656b83f13ff48e76"
+    "source_commit": "3e72cd37f44ee43639cdcb37abf1326948fb71c5"
   },
   "compile_custody": {
     "claim": "HASH_SEALED_EXECUTABLE_TYPED_J7_POSE_HISTORY_RESEAL",
