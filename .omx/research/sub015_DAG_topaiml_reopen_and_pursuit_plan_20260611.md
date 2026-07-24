@@ -23517,3 +23517,25 @@ no representation-quality claim; stored pose targets ≠ measured d_pose (explic
 Consumers: #688 engine descends objective(contract_state); dm2's realized prices feed the exception
 stream; the lane-orbit certificate + dm1-wiring = the named $0 gap-closure measurements. Pointer
 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-DDM-GC1-SCHMIDHUBER-SYMPOSIUM-20260724 (2026-07-24, isolated Codex T3, MAIN review required):
+Verdict **PROCEED_WITH_REVISIONS** on the composition, not on execution. Schmidhuber led under the
+operator-frontier-override; all 14 canonical inner seats plus 13 topical grand seats attended,
+including the 6-of-6 sextet and the Shannon/Dykstra/Rudin/Daubechies co-leads. Q1: family (d) is
+the first prospective search family, NOT a proved minimum; the free `inflate.py` side is only a
+fixed video-independent interpreter, while every video-selected branch/dictionary/topology ID,
+parameter, latent, placement, exception, base byte, and framing byte is counted. Q2: #688 builds
+`DDMEventContinuationV1` for (d)-fitting; exact receiver-closed S remains sole admission authority;
+exact description progress is added as a separate Pareto acquisition coordinate with no scalar
+blend or borrowed constant. SCHED1's ten-item delta remains ten, with items 2/6/9 strengthened to
+type, persist, and hash S/B/work progress. Q3: DM1's 4,124→1,569 B joint-code saving proves shared
+description redundancy but CONNECTION remains NULL; the $0 discriminator is a same-bucket,
+consecutive-pair, leave-one-pair-out real conditional-codelength comparison with all history state
+charged and exact parse-back. dm2 stays PENDING/NULL until receipt SHA + MAIN review. Ranked
+consumers: OP1 event-engine build · OP2 two-part charge audit · OP3 dm2 ingest · OP4 CONNECTION-1 ·
+OP5 preregistered/non-executable n24 v14 falsifier. No RG4; standalone #366 not authorized; no
+launch/dispatch/eval/promotion. Full triality:
+`feedback_grand_council_ddm_capstone_composition_schmidhuber_lead_20260724.md` +
+`ddm_gc1_schmidhuber_symposium_DAG_FEED_20260724.md` +
+`ddm_gc1_schmidhuber_symposium_canonical_equations_20260724.md`.
+Pointer 0.1910828242 [contest-CPU] UNMOVED.

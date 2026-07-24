@@ -1,0 +1,123 @@
+{
+  "canonical_helper": "tac.council_continual_learning.append_council_anchor",
+  "canonical_operational_path": ".omx/state/council_deliberation_posterior.jsonl",
+  "deliberation_id": "ddm_gc1_schmidhuber_symposium_20260724",
+  "emission_status": "EMITTED_AND_STRICT_RELOAD_VERIFIED_IN_ISOLATED_WORKTREE",
+  "git_custody_note": "The canonical operational JSONL is intentionally gitignored. This tracked receipt preserves the exact reviewed payload so MAIN can append it on the canonical worktree after merge review.",
+  "local_operational_jsonl_sha256_after_emit": "6c0879e5502b001456a1a0fd4a58b0b540345800ef93de90a6322c5022cc2c19",
+  "payload": {
+    "deliberation_id": "ddm_gc1_schmidhuber_symposium_20260724",
+    "council_assumption_adversary_verdict": [
+      {
+        "assumption": "Exact S over the solution set is binding",
+        "classification": "HARD-EARNED",
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "evidence_artifact": ".omx/research/codex_findings_ddm_is1_full_inverse_solve_to_the_end_20260724_codex.md",
+        "rationale": "IS1 and FEED-603 solution-set objective agree"
+      },
+      {
+        "assumption": "Family (d) is already proved minimal",
+        "classification": "CARGO-CULTED",
+        "empirical_verification_status": "INFERRED_FROM_DOMAIN_LITERATURE",
+        "rationale": "DC1 has no receiver-closed fit"
+      },
+      {
+        "assumption": "The 25 semantic demands are small while L3 realization is open",
+        "classification": "HARD-EARNED",
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "evidence_artifact": ".omx/research/codex_findings_ddm_dm1_25_row_solved_value_pricing_20260724_codex.md",
+        "rationale": "DM1 measures 1569 joint bytes and leaves receiver closure NULL"
+      },
+      {
+        "assumption": "A fixed stage clock is admissible for #688",
+        "classification": "CARGO-CULTED",
+        "empirical_verification_status": "VERIFIED_VIA_SOURCE_INSPECTION",
+        "evidence_artifact": ".omx/research/codex_findings_ddm_sched1_derived_schedule_synthesis_20260724_codex.md",
+        "rationale": "SCHED1 source trace returns RESEAL_REQUIRED"
+      },
+      {
+        "assumption": "Compression progress predicts productive DDM search",
+        "classification": "UNCLEAR",
+        "empirical_verification_status": "INFERRED_FROM_DOMAIN_LITERATURE",
+        "rationale": "Record as acquisition telemetry with no acceptance authority"
+      },
+      {
+        "assumption": "The dm2 ratio can be filled now",
+        "classification": "UNCLEAR",
+        "empirical_verification_status": "ASSUMED_AWAITING_VERIFICATION",
+        "rationale": "dm2 is pending and must not be guessed"
+      }
+    ],
+    "council_attendees": [
+      "Shannon",
+      "Dykstra",
+      "Yousfi",
+      "Fridrich",
+      "Contrarian",
+      "Assumption-Adversary",
+      "Quantizr",
+      "Hotz",
+      "Selfcomp",
+      "MacKay",
+      "Balle",
+      "PR95Author",
+      "Rudin",
+      "Daubechies",
+      "Schmidhuber",
+      "Carmack",
+      "Tishby",
+      "Zaslavsky",
+      "Wyner",
+      "TimeTraveler",
+      "Atick",
+      "Rao",
+      "Ballard",
+      "vdOord",
+      "Mallat",
+      "Tao",
+      "FrankNielsen"
+    ],
+    "council_decisions_recorded": [
+      "OP-GC1-1 build #688 as DDMEventContinuationV1 for family-(d) fitting, execution disabled",
+      "OP-GC1-2 enforce the two-part-code charge boundary in the DC1 compiler",
+      "OP-GC1-3 ingest dm2 only after its receipt and MAIN review",
+      "OP-GC1-4 run the $0 CONNECTION conditional-codelength discriminator",
+      "OP-GC1-5 preregister but do not execute the n24 v14 falsifier fit"
+    ],
+    "council_dissent": [
+      {
+        "member": "Contrarian",
+        "verbatim": "Calling family (d) the true minimal program before one receiver-closed fit is a category error; proceed with the compiler and search, not with the proof claim."
+      },
+      {
+        "member": "Wyner",
+        "verbatim": "The free decoder is side information only when it is video-independent; every content-selected branch, dictionary, topology choice, and exception address must remain charged."
+      },
+      {
+        "member": "Tao",
+        "verbatim": "A prospective ordering of computable model classes is not a Kolmogorov-minimality theorem; preserve the ordering as a search prior and let exact codelength refute it."
+      },
+      {
+        "member": "FrankNielsen",
+        "verbatim": "Compression progress is admissible as an acquisition coordinate, but an arbitrary scalar blend with the exact contest functional would introduce an unproved geometry."
+      },
+      {
+        "member": "Assumption-Adversary",
+        "verbatim": "dm2 is pending. Any verdict that fills the semantic-to-realization ratio before its reviewed receipt arrives is invalid."
+      }
+    ],
+    "council_quorum_met": true,
+    "council_tier": "T3",
+    "council_verdict": "PROCEED_WITH_REVISIONS",
+    "event_type": "dispatched",
+    "memory_path": ".omx/research/feedback_grand_council_ddm_capstone_composition_schmidhuber_lead_20260724.md",
+    "notes": "Three-round T3; build-only verdict; dm2 pending; pointer 0.1910828242 contest-CPU unchanged; MAIN review required.",
+    "override_invoked": true,
+    "override_rationale": "Perhaps a grand council symposium led by schmidhuber is in order",
+    "parent_id_or_session": "codex_delegate:ddm_gc1_schmidhuber_symposium:20260724T133345Z",
+    "predicted_mission_contribution": "frontier_breaking",
+    "related_deliberation_ids": [],
+    "schema": "council_deliberation_posterior_v1",
+    "topic": "DDM capstone composition before the #688 event-engine build"
+  }
+}
