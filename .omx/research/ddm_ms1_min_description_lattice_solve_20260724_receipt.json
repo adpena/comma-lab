@@ -1,0 +1,160 @@
+{
+  "schema": "ddm_ms1_min_description_lattice_solve_repo_receipt.v1",
+  "run_id": "ddm_ms1_min_description_lattice_solve_20260723T233549Z",
+  "lane_id": "lane_ddm_ms1_min_description_lattice_solve_20260723",
+  "authority": {
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "research_only": true,
+    "execution_allowed": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "main_landing_review_required": true
+  },
+  "historical_v1_receipt": {
+    "path": ".omx/research/ddm_ms1_min_description_lattice_solve_20260723T233549Z/receipt.json",
+    "bytes": 8624,
+    "sha256": "546a7fddb0225edb15b2254ab73e362758b7b0f244e4ff39cb7bfef25f779098",
+    "schema": "ddm_min_description_lattice_solve_receipt.v1",
+    "terminology_translation": "The immutable v1 receipt uses origin in historical field names. This ingest treats A, B, and C only as diagnostic conditioning expansions; none is a counted own-lineage stored problem."
+  },
+  "input_custody": {
+    "raw": {
+      "bytes": 3662409600,
+      "sha256": "31d77be9ab9f00e9f814542368396a35ffa119a32571e701636d4747540e255b"
+    },
+    "targets": {
+      "bytes": 2064464,
+      "sha256": "e41718a047b77b9072828e72f8cbffa0f5ef7ddf462c7ef4329d997ace89de50"
+    },
+    "config_sha256": "4f7dcf23a981d4fc0f16dcd35d59db36df414028d90b49c8d3afac20c3ded124"
+  },
+  "resumability": {
+    "complete_pair_stages": 600,
+    "expected_pair_stages": 600,
+    "all_preserved": true,
+    "stage_loss_bound": "at most one pair",
+    "selected_payload_file_count": 0
+  },
+  "diagnostic_conditioning_coder": {
+    "coder": "one continuous zlib-9 stream over all 1200 uint8 frames in pair order",
+    "standalone_member_bytes": 744608961,
+    "previous_frame_exception_bytes": 731622325,
+    "previous_frame_delta_bytes": -12986636,
+    "previous_frame_fraction_of_standalone": 0.9825591193764858,
+    "previous_frame_fraction_saved": 0.01744088062351428,
+    "pose_xi_exception_bytes": 757544728,
+    "pose_xi_payload_bytes": 15083,
+    "pose_xi_total_bytes": 757559811,
+    "pose_xi_fraction_of_standalone": 1.0173928204981675,
+    "target_archive_bytes": 154524,
+    "best_exception_bytes_over_target": 4734.684094380161,
+    "best_exception_bytes_above_target": 731467801,
+    "winner": "previous_frame_conditional_expansion",
+    "receiver_closed": false,
+    "headline_eligible": false
+  },
+  "local_member_selection": {
+    "formulation": "saturated exact local integer-kernel closest-vector proposals with deterministic size reduction and strict real-zlib admission",
+    "pair_count": 600,
+    "proposal_count_per_conditioning_expansion": 1200,
+    "previous_frame": {
+      "canonical_member_bytes_stage_sum": 744297219,
+      "canonical_conditional_bytes_stage_sum": 731362522,
+      "proposed_conditional_bytes_stage_sum": 1063499710,
+      "proposal_wins": 0,
+      "changed_pairs": 0
+    },
+    "pose_xi": {
+      "canonical_member_bytes_stage_sum": 744297219,
+      "canonical_conditional_bytes_stage_sum": 757236164,
+      "proposed_conditional_bytes_stage_sum": 1238557814,
+      "proposal_wins": 0,
+      "changed_pairs": 0
+    },
+    "basis": {
+      "count": 589824,
+      "norm_min": 2.449489742783178,
+      "norm_p50": 38.23610858861032,
+      "norm_p95": 77.47257579298626,
+      "norm_max": 253.0177859360879
+    }
+  },
+  "realized_frozen_scorer_diagnostic": {
+    "batch_geometry": 32,
+    "pair_count": 600,
+    "argmax_identical_pairs": 600,
+    "pose6_bit_identical_pairs": 600,
+    "realized_d_seg": 0.0001519690619574653,
+    "realized_d_pose": 0.00010184327939026322,
+    "realized_uint8_r_frozen_scorers": true,
+    "scope_note": "This proves the selected unchanged member survives the final oracle. Pose was not an active constraint in the local-CVP selection, so it does not satisfy the campaign active-tube requirement."
+  },
+  "sense_custody": {
+    "pair_rows": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ms1_min_description_lattice_solve_20260723_final/sense/pair_rows.jsonl",
+      "bytes": 1170365,
+      "sha256": "276dde04cc0d6f4f4df1bfb1c7544f997800da189d49e789d00f87e699073803"
+    },
+    "historical_factorization": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ms1_min_description_lattice_solve_20260723_final/sense/factorization.json",
+      "bytes": 5232,
+      "sha256": "1c798be26b6e8aeb4b259d9e56beedd0cd99f5e5d6b5c2c6ba59f1a0ee03b450",
+      "numerical_factors_above_one_byte_floor": 6
+    },
+    "representation_distillation": {
+      "distilled_factor_count": 0,
+      "status": "BLOCKED_NO_PER_STRATUM_CODER_RACE",
+      "rule": "A numerical factor is not a vocabulary column. SKELETON or FIBER routing requires a strict measured per-stratum coder-race winner."
+    }
+  },
+  "campaign_headline": {
+    "schema": "ddm_min_description_headline.v1",
+    "campaign": "inverse_solve_minimum_description_witness",
+    "status": "HEADLINE_BLOCKED",
+    "headline_eligible": false,
+    "stored_problem": {
+      "bytes": null,
+      "sha256": null,
+      "own_lineage": false,
+      "receiver_expansion_closed": false
+    },
+    "solve_mandated_exceptions": {
+      "bytes": 731622325,
+      "sha256": null,
+      "conditional_coding_role": "diagnostic previous-frame conditioning only; not emitted by a counted own-lineage stored-problem receiver"
+    },
+    "joint_constraints": {
+      "pose_tube_active": false,
+      "realized_uint8_r_frozen_scorers": true
+    },
+    "donor_conditioned": false,
+    "decision_triple": {
+      "total_counted_bytes": null,
+      "realized_d_seg": null,
+      "realized_d_pose": null
+    },
+    "diagnostic_distortions": {
+      "realized_d_seg": 0.0001519690619574653,
+      "realized_d_pose": 0.00010184327939026322
+    },
+    "blockers": [
+      "OWN_LINEAGE_STORED_PROBLEM_NOT_PROVEN",
+      "STORED_PROBLEM_BYTE_CUSTODY_MISSING",
+      "SOLVE_EXCEPTION_BYTE_CUSTODY_MISSING",
+      "STORED_PROBLEM_EXPANSION_NOT_RECEIVER_CLOSED",
+      "POSE_TUBE_NOT_ACTIVE_IN_SOLVE"
+    ],
+    "score_claim": false,
+    "promotion_eligible": false
+  },
+  "verdict": "FULL_N600_LOCAL_CVP_MEMBER_SELECTION_NEGATIVE_CONDITIONAL_CODER_ONLY",
+  "verdict_scope": "Full n600 instance of saturated local-CVP exact-fibre proposals under diagnostic zlib and the A/B/C conditioning expansions. This is not a global lattice, branch-and-bound, sieve, tolerance-ladder, joint cell/tube, stored-problem representation, receiver, family, or paradigm verdict.",
+  "reformulation_queue": [
+    "Bind an exact counted own-lineage stored problem and deterministic receiver expansion.",
+    "Make Seg-cell and Pose-tube tolerances active in the integer solve and measure the tolerance knees.",
+    "Emit and SHA-bind the receiver-decodable conditional exception stream.",
+    "Test a bounded exact lattice sieve or branch-and-bound before any broader lattice-family verdict.",
+    "Measure per-stratum SKELETON-versus-FIBER coder races before distilling any numerical factor."
+  ]
+}

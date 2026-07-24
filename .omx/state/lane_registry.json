@@ -85189,6 +85189,48 @@
       },
       "notes": "Local-only n600 [macOS-CPU frozen-scorer advisory] measurement; research_only=true; score_claim=false; no paid/remote/contest eval; MAIN landing review required.",
       "research_only": true
+    },
+    {
+      "id": "lane_ddm_ms1_min_description_lattice_solve_20260723",
+      "name": "DDM MS1 minimum-description lattice solve",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ms1_min_description_lattice_solve_three_clean_review_20260724.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Delegated isolated-worktree successor to #547/#549/#602; research-only local frozen-scorer advisory; pointer unchanged; MAIN landing review required.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -85198,5 +85240,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T23:14:07Z"
+  "updated_at": "2026-07-24T02:03:08Z"
 }

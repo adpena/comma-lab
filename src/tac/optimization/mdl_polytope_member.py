@@ -25,6 +25,7 @@ from tac.contest_score import RATE_WEIGHT, UNCOMPRESSED_SIZE_BYTES
 from tac.optimization.resize_full_kernel import FullResizeKernel
 
 MDL_MEMBER_SCHEMA = "mdl_polytope_member.v1"
+MDL_ORIGIN_SOLVE_SCHEMA = "mdl_polytope_member_origin_solve.v1"
 ZLIB_LEVEL = 9
 DEFAULT_TILE_SCORER_HW = (16, 16)
 DEFAULT_CALIBRATION_ROWS = 192
@@ -76,6 +77,186 @@ def zlib9_bytes(value: np.ndarray) -> int:
     return len(zlib.compress(raw.tobytes(), level=ZLIB_LEVEL))
 
 
+def modular_uint8_residual(member: np.ndarray, origin: np.ndarray) -> np.ndarray:
+    """Return the exact one-byte group residual ``member - origin (mod 256)``.
+
+    The mapping is bijective for uint8 arrays, unlike a clipped signed
+    difference.  It is therefore a real residual-code surface: the decoder
+    reconstructs with uint8 modular addition and no side information.
+    """
+
+    x = np.asarray(member)
+    base = np.asarray(origin)
+    if x.dtype != np.uint8 or base.dtype != np.uint8 or x.shape != base.shape or x.size == 0:
+        raise MdlMemberError("member and origin must be same-shape nonempty uint8 arrays")
+    return np.subtract(x, base, dtype=np.uint8)
+
+
+def reconstruct_modular_uint8(origin: np.ndarray, residual: np.ndarray) -> np.ndarray:
+    """Invert :func:`modular_uint8_residual` exactly."""
+
+    base = np.asarray(origin)
+    code = np.asarray(residual)
+    if base.dtype != np.uint8 or code.dtype != np.uint8 or base.shape != code.shape or base.size == 0:
+        raise MdlMemberError("origin and residual must be same-shape nonempty uint8 arrays")
+    return np.add(base, code, dtype=np.uint8)
+
+
+def residual_zlib9_bytes(member: np.ndarray, origin: np.ndarray) -> int:
+    """Measure the real zlib-9 context code on an exact modular residual."""
+
+    residual = modular_uint8_residual(member, origin)
+    if not np.array_equal(reconstruct_modular_uint8(origin, residual), member):
+        raise MdlMemberError("modular residual failed exact parse-back")
+    return len(zlib.compress(residual.tobytes(), level=ZLIB_LEVEL))
+
+
+def _extended_gcd(first: int, second: int) -> tuple[int, int, int]:
+    old_r, r = abs(int(first)), abs(int(second))
+    old_s, s = 1, 0
+    old_t, t = 0, 1
+    while r:
+        quotient = old_r // r
+        old_r, r = r, old_r - quotient * r
+        old_s, s = s, old_s - quotient * s
+        old_t, t = t, old_t - quotient * t
+    if first < 0:
+        old_s = -old_s
+    if second < 0:
+        old_t = -old_t
+    return old_r, old_s, old_t
+
+
+def _nearest_integer_ratio(numerator: int, denominator: int) -> int:
+    if denominator <= 0:
+        raise MdlMemberError("integer reduction denominator must be positive")
+    magnitude = (2 * abs(numerator) + denominator) // (2 * denominator)
+    return -magnitude if numerator < 0 else magnitude
+
+
+def _integer_dot(first: Sequence[int], second: Sequence[int]) -> int:
+    return sum(
+        int(left) * int(right)
+        for left, right in zip(first, second, strict=True)
+    )
+
+
+def _rank_three_integer_rows(rows: np.ndarray) -> bool:
+    value = np.asarray(rows, dtype=object)
+    if value.shape != (3, 4):
+        return False
+    for omitted in range(4):
+        columns = [index for index in range(4) if index != omitted]
+        a, b, c = (
+            [int(value[row, column]) for column in columns]
+            for row in range(3)
+        )
+        determinant = (
+            a[0] * (b[1] * c[2] - b[2] * c[1])
+            - a[1] * (b[0] * c[2] - b[2] * c[0])
+            + a[2] * (b[0] * c[1] - b[1] * c[0])
+        )
+        if determinant:
+            return True
+    return False
+
+
+def reduce_integer_kernel_basis(basis: np.ndarray) -> np.ndarray:
+    """Deterministically size-reduce a rank-three integer basis.
+
+    This is the exact-integer fallback required when fplll is unavailable.
+    Every update is unimodular row subtraction or a row permutation, so the
+    represented lattice is unchanged.  It is a reduction/preconditioner, not
+    an LLL optimality claim and not the coder objective.
+    """
+
+    raw = np.asarray(basis)
+    if raw.shape != (3, 4) or raw.dtype.kind not in "iu":
+        raise MdlMemberError("kernel basis must be a 3x4 integer matrix")
+    rows = raw.astype(object, copy=True)
+    if not _rank_three_integer_rows(rows):
+        raise MdlMemberError("kernel basis must have rank three")
+    for _pass in range(64):
+        prior = rows.copy()
+        order = sorted(
+            range(3),
+            key=lambda index: (
+                _integer_dot(rows[index], rows[index]),
+                tuple(int(value) for value in rows[index]),
+            ),
+        )
+        rows = rows[order]
+        for index in range(1, 3):
+            for earlier in range(index):
+                denominator = _integer_dot(rows[earlier], rows[earlier])
+                numerator = _integer_dot(rows[index], rows[earlier])
+                quotient = _nearest_integer_ratio(numerator, denominator)
+                if quotient:
+                    candidate = rows[index] - quotient * rows[earlier]
+                    candidate_norm = _integer_dot(candidate, candidate)
+                    current_norm = _integer_dot(rows[index], rows[index])
+                    if candidate_norm < current_norm or (
+                        candidate_norm == current_norm
+                        and tuple(int(value) for value in candidate)
+                        < tuple(int(value) for value in rows[index])
+                    ):
+                        rows[index] = candidate
+        if np.array_equal(rows, prior):
+            break
+    else:
+        raise MdlMemberError("integer kernel size reduction did not converge")
+    try:
+        reduced = np.asarray(rows, dtype=np.int64)
+    except OverflowError as exc:
+        raise MdlMemberError("reduced integer kernel basis exceeds int64") from exc
+    if not _rank_three_integer_rows(reduced):
+        raise MdlMemberError("integer kernel reduction lost rank")
+    return reduced
+
+
+def saturated_integer_kernel_basis(coefficients: Sequence[int]) -> np.ndarray:
+    """Return a saturated, size-reduced Z-basis of ``ker(coefficients)``.
+
+    Successive exact unimodular column operations transform ``c`` to
+    ``(gcd(c),0,0,0)``.  The remaining columns are therefore the full integer
+    kernel, not the high-index atom sublattice used by the original #602
+    projector.  This is the narrow #586 mechanism adoption.
+    """
+
+    try:
+        row = [int(value) for value in coefficients]
+    except (TypeError, ValueError) as exc:
+        raise MdlMemberError("coefficients must be four positive integers") from exc
+    if len(row) != 4 or any(value <= 0 for value in row):
+        raise MdlMemberError("coefficients must be four positive integers")
+    transform = np.eye(4, dtype=object)
+    work = list(row)
+    for column in range(1, 4):
+        first, second = work[0], work[column]
+        divisor, bezout_first, bezout_second = _extended_gcd(first, second)
+        two_by_two = np.asarray(
+            [
+                [bezout_first, -(second // divisor)],
+                [bezout_second, first // divisor],
+            ],
+            dtype=object,
+        )
+        transform[:, [0, column]] = transform[:, [0, column]] @ two_by_two
+        work[0], work[column] = divisor, 0
+    basis_object = transform[:, 1:].T
+    try:
+        basis = np.asarray(basis_object, dtype=np.int64)
+    except OverflowError as exc:
+        raise MdlMemberError("saturated kernel basis exceeds int64") from exc
+    coefficient_row = np.asarray(row, dtype=np.int64)
+    if not np.array_equal(basis @ coefficient_row, np.zeros(3, dtype=np.int64)):
+        raise MdlMemberError("saturated kernel construction failed exact nullity")
+    reduced = reduce_integer_kernel_basis(basis)
+    if not np.array_equal(reduced @ coefficient_row, np.zeros(3, dtype=np.int64)):
+        raise MdlMemberError("integer reduction escaped the exact kernel")
+    return reduced
+
+
 def lawref_manifest() -> list[dict[str, Any]]:
     """Return the value-provenance ladder for every solver constant.
 
@@ -87,9 +268,10 @@ def lawref_manifest() -> list[dict[str, Any]]:
     return [
         {
             "name": "resize_geometry_and_integer_kernel",
-            "value": "runtime FullResizeKernel geometry",
+            "value": "runtime FullResizeKernel geometry plus saturated exact-integer local basis",
             "law_id": "separable_resize_full_kernel_direct_sum_v1",
             "ladder_class": "derived_live",
+            "crosswalk": "#586 exact saturation plus integer size reduction; no sieve analogy",
         },
         {
             "name": "coder_level",
@@ -209,6 +391,53 @@ class MemberSolveResult:
         return self.levels[-1].coder_bytes
 
 
+@dataclass(frozen=True)
+class OriginSolveResult:
+    """Exact-fibre member selected by a real residual coder."""
+
+    canonical: np.ndarray
+    selected: np.ndarray
+    origin: np.ndarray
+    canonical_member_bytes: int
+    canonical_residual_bytes: int
+    proposed_residual_bytes: int
+    selected_residual_bytes: int
+    selected_candidate: str
+    changed_values: int
+    exact_numerators_equal: bool
+    canonical_sha256: str
+    selected_sha256: str
+    origin_sha256: str
+
+    @property
+    def bytes_b_over_a(self) -> float:
+        return self.selected_residual_bytes / self.canonical_member_bytes
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema": MDL_ORIGIN_SOLVE_SCHEMA,
+            "coder": "zlib-9 over exact modular uint8 residual",
+            "canonical_member_bytes": self.canonical_member_bytes,
+            "canonical_residual_bytes": self.canonical_residual_bytes,
+            "proposed_residual_bytes": self.proposed_residual_bytes,
+            "selected_residual_bytes": self.selected_residual_bytes,
+            "bytes_b_over_a": self.bytes_b_over_a,
+            "selected_candidate": self.selected_candidate,
+            "changed_values": self.changed_values,
+            "exact_numerators_equal": self.exact_numerators_equal,
+            "canonical_sha256": self.canonical_sha256,
+            "selected_sha256": self.selected_sha256,
+            "origin_sha256": self.origin_sha256,
+            "byte_partition": {
+                "FREE": "generic modular add and saturated-basis construction code",
+                "NULL": "ker(A) coordinates pinned to origin; no payload credit",
+                "COUNTED": "zlib-9 residual bytes",
+            },
+            "pool_id": "solver_member_selection",
+            "score_claim": False,
+        }
+
+
 def _rankdata(value: np.ndarray) -> np.ndarray:
     order = np.argsort(value, kind="mergesort")
     ranks = np.empty(len(value), dtype=np.float64)
@@ -282,27 +511,29 @@ class MdlPolytopeMemberSolver:
             [support.indices for support in self.kernel.operator.col_supports], dtype=np.intp
         )
         self._basis, self._pinv = self._build_local_basis()
+        self._basis_norm_summary_cache: dict[str, float | int] | None = None
+        self._basis_type_cache: tuple[np.ndarray, np.ndarray] | None = None
+        self._facet_dimension_lookup_cache: np.ndarray | None = None
 
     def _build_local_basis(self) -> tuple[np.ndarray, np.ndarray]:
-        def primitive(first: int, second: int) -> tuple[int, int]:
-            divisor = int(np.gcd(abs(first), abs(second)))
-            return first // divisor, second // divisor
-
-        row_null = np.asarray(self.kernel.height.primitive_null_atoms(), dtype=np.int64)
-        row_space = np.asarray(
-            [primitive(*support.numerators) for support in self.kernel.operator.row_supports],
-            dtype=np.int64,
-        )
-        col_null = np.asarray(self.kernel.width.primitive_null_atoms(), dtype=np.int64)
         h, w = self.kernel.scorer_h, self.kernel.scorer_w
         basis = np.zeros((h, w, 4, 3), dtype=np.int64)
-        basis[:, :, 0, 0] = row_null[:, 0, None]
-        basis[:, :, 2, 0] = row_null[:, 1, None]
-        basis[:, :, 1, 1] = row_null[:, 0, None]
-        basis[:, :, 3, 1] = row_null[:, 1, None]
-        basis[:, :, :, 2] = (
-            row_space[:, None, :, None] * col_null[None, :, None, :]
-        ).reshape(h, w, 4)
+        cache: dict[tuple[int, ...], np.ndarray] = {}
+        row_supports = self.kernel.operator.row_supports
+        col_supports = self.kernel.operator.col_supports
+        for row_index, row_support in enumerate(row_supports):
+            for col_index, col_support in enumerate(col_supports):
+                coefficients = tuple(
+                    int(value)
+                    for value in np.outer(
+                        row_support.numerators, col_support.numerators
+                    ).reshape(-1)
+                )
+                reduced = cache.get(coefficients)
+                if reduced is None:
+                    reduced = saturated_integer_kernel_basis(coefficients)
+                    cache[coefficients] = reduced
+                basis[row_index, col_index] = reduced.T
         return basis, np.linalg.pinv(basis.astype(np.float64))
 
     def canonicalize(self, exact_member: np.ndarray) -> np.ndarray:
@@ -412,11 +643,143 @@ class MdlPolytopeMemberSolver:
             for name in CANDIDATE_ORDER
         }
 
+    def solve_against_origin(
+        self,
+        canonical: np.ndarray,
+        *,
+        origin: np.ndarray,
+    ) -> OriginSolveResult:
+        """Select the shortest exact-fibre residual against a free prediction.
+
+        The saturated local basis proposes a closest-vector member.  The
+        proposal is admitted only when the real zlib-9 residual is strictly
+        shorter; ties deterministically retain the canonical member.  Frozen
+        scorer admission remains a caller responsibility on the realized
+        uint8 output.
+        """
+
+        source = np.asarray(canonical)
+        base = np.asarray(origin)
+        expected_shape = (
+            self.kernel.camera_h,
+            self.kernel.camera_w,
+            3,
+        )
+        if (
+            source.dtype != np.uint8
+            or base.dtype != np.uint8
+            or source.shape != expected_shape
+            or base.shape != expected_shape
+        ):
+            raise MdlMemberError("canonical and origin must be camera-shaped uint8 RGB")
+        proposed = self.project_preference(
+            source,
+            "chart_temporal_xi",
+            temporal=base,
+        )
+        canonical_member_bytes = zlib9_bytes(source)
+        canonical_residual_bytes = residual_zlib9_bytes(source, base)
+        proposed_residual_bytes = residual_zlib9_bytes(proposed, base)
+        if proposed_residual_bytes < canonical_residual_bytes:
+            selected = proposed
+            selected_bytes = proposed_residual_bytes
+            selected_candidate = "saturated_local_cvp"
+        else:
+            selected = source.copy()
+            selected_bytes = canonical_residual_bytes
+            selected_candidate = "canonical_tie_break"
+        self._require_exact(source, selected)
+        return OriginSolveResult(
+            source.copy(),
+            selected,
+            base.copy(),
+            canonical_member_bytes,
+            canonical_residual_bytes,
+            proposed_residual_bytes,
+            selected_bytes,
+            selected_candidate,
+            int(np.count_nonzero(selected != source)),
+            True,
+            _sha256_array(source),
+            _sha256_array(selected),
+            _sha256_array(base),
+        )
+
     def _require_exact(self, reference: np.ndarray, candidate: np.ndarray) -> None:
         a, da = self.kernel.operator.apply_numerators(reference)
         b, db = self.kernel.operator.apply_numerators(candidate)
         if da != db or not np.array_equal(a, b):
             raise MdlMemberError("candidate escaped the exact integer resize fibre")
+
+    def basis_norm_summary(self) -> dict[str, float | int]:
+        """Return the exact invariant distribution summary of local basis norms."""
+
+        if self._basis_norm_summary_cache is None:
+            norms = np.linalg.norm(self._basis.astype(np.float64), axis=2).reshape(-1)
+            self._basis_norm_summary_cache = {
+                "count": int(norms.size),
+                "norm_min": float(norms.min()),
+                "norm_p50": float(np.quantile(norms, 0.5)),
+                "norm_p95": float(np.quantile(norms, 0.95)),
+                "norm_max": float(norms.max()),
+            }
+        return dict(self._basis_norm_summary_cache)
+
+    def local_facet_dimensions(self, member: np.ndarray) -> np.ndarray:
+        """Return exact continuous face dimensions for every local RGB block.
+
+        Each resized output coordinate has a rank-three affine fibre. Camera
+        coordinates at 0 or 255 activate box facets. The returned dimension is
+        ``3 - rank(B_active)`` for the saturated local basis ``B``. It measures
+        local polytope degeneracy; it does not claim integer-neighbour reach or
+        expose nonexistent optimizer duals.
+        """
+
+        value = np.asarray(member)
+        expected_shape = (self.kernel.camera_h, self.kernel.camera_w, 3)
+        if value.dtype != np.uint8 or value.shape != expected_shape:
+            raise MdlMemberError("facet member must be camera-shaped uint8 RGB")
+        h, w = self.kernel.scorer_h, self.kernel.scorer_w
+        blocks = value[
+            self._row_indices[:, None, :, None],
+            self._col_indices[None, :, None, :],
+            :,
+        ].reshape(h, w, 4, 3).transpose(0, 1, 3, 2)
+        active_masks = np.zeros(blocks.shape[:3], dtype=np.uint8)
+        active_bounds = (blocks == 0) | (blocks == 255)
+        for coordinate in range(4):
+            active_masks |= active_bounds[..., coordinate].astype(np.uint8) << coordinate
+
+        if self._basis_type_cache is None:
+            unique, inverse = np.unique(
+                self._basis.reshape(h * w, 12), axis=0, return_inverse=True
+            )
+            self._basis_type_cache = (
+                unique.reshape(-1, 4, 3),
+                inverse.reshape(h, w),
+            )
+        unique_basis, basis_types = self._basis_type_cache
+        if self._facet_dimension_lookup_cache is None:
+            lookup = np.empty((len(unique_basis), 16), dtype=np.uint8)
+            for basis_type, basis in enumerate(unique_basis):
+                for mask in range(16):
+                    active_rows = [
+                        index for index in range(4) if mask & (1 << index)
+                    ]
+                    rank = (
+                        0
+                        if not active_rows
+                        else int(
+                            np.linalg.matrix_rank(
+                                basis[active_rows].astype(np.float64)
+                            )
+                        )
+                    )
+                    lookup[basis_type, mask] = 3 - rank
+            self._facet_dimension_lookup_cache = lookup
+        return self._facet_dimension_lookup_cache[
+            basis_types[..., None], active_masks
+        ]
 
     def tile_slices(self) -> list[tuple[slice, slice, slice, slice]]:
         th, tw = self.tile_scorer_hw
@@ -657,11 +1020,18 @@ __all__ = [
     "DEFAULT_TILE_SCORER_HW",
     "FEATURE_NAMES",
     "MDL_MEMBER_SCHEMA",
+    "MDL_ORIGIN_SOLVE_SCHEMA",
     "MdlMemberError",
     "MdlPolytopeMemberSolver",
     "MemberSolveResult",
+    "OriginSolveResult",
     "ProxyCalibration",
     "fit_proxy",
     "lawref_manifest",
+    "modular_uint8_residual",
+    "reconstruct_modular_uint8",
+    "reduce_integer_kernel_basis",
+    "residual_zlib9_bytes",
+    "saturated_integer_kernel_basis",
     "zlib9_bytes",
 ]
