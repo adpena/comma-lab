@@ -82,6 +82,14 @@ from tac.optimization.pure_priced_realized_objective import (  # noqa: E402
 
 DEFAULT_TICKET = REPO / ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json"
 POINTER_DSEG = 0.027470296224
+WS1_BASELINE_DSEG_BY_ARCHIVE_SHA256 = {
+    "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9": (
+        0.024124510023328993
+    ),
+    "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e": (
+        0.07051923116048177
+    ),
+}
 STATIC_BOOTSTRAP_BOUND_GIB = 16.0
 # DERIVED: historical static one-pair bootstrap bound plus ceil(stage3
 # 4.72976016998291 GiB basis - measured stage1 0.7276554107666016 GiB basis).
@@ -97,6 +105,17 @@ EXIT_HASH = 8
 
 def _utc() -> str:
     return dt.datetime.now(tz=dt.UTC).isoformat()
+
+
+def _expected_full_run_baseline_dseg(
+    config: DirectDescriptionJointDescentTypedConfigV1,
+) -> float:
+    """Return the SHA-sealed receiver baseline for the selected warm start."""
+
+    return WS1_BASELINE_DSEG_BY_ARCHIVE_SHA256.get(
+        config.source_archive_sha256,
+        BASELINE_DSEG,
+    )
 
 
 def _sha256_file(path: Path) -> str:
@@ -1304,13 +1323,18 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             raise DirectDescriptionError("full-run resume cursor is already complete")
 
         cpu_scorers: tuple[Any, Any] | None = None
+        expected_baseline_dseg = _expected_full_run_baseline_dseg(config)
         baseline_path = out_dir / "verdicts" / "stage00_baseline_n600.json"
         if baseline_verdict is None and baseline_path.is_file():
             baseline_verdict = json.loads(baseline_path.read_bytes())
             if (
                 baseline_verdict.get("schema") != "ddm_joint_descent_chunked_stage_verdict.v1"
                 or int(baseline_verdict.get("num_pairs", 0)) != 600
-                or abs(float(baseline_verdict.get("d_seg", -1.0)) - BASELINE_DSEG) > 5.0e-10
+                or abs(
+                    float(baseline_verdict.get("d_seg", -1.0))
+                    - expected_baseline_dseg
+                )
+                > 5.0e-10
             ):
                 raise DirectDescriptionError("existing full-run baseline verdict custody differs")
         if baseline_verdict is None:
@@ -1323,9 +1347,16 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 posenet=cpu_scorers[1],
                 batch_size=config.verdict_batch,
             )
-            if abs(float(baseline_verdict["d_seg"]) - BASELINE_DSEG) > 5.0e-10:
+            if (
+                abs(
+                    float(baseline_verdict["d_seg"])
+                    - expected_baseline_dseg
+                )
+                > 5.0e-10
+            ):
                 raise DirectDescriptionError(
-                    f"REFUSE_FULL_RUN_BASELINE_DSEG_CUSTODY_DRIFT: {baseline_verdict['d_seg']} != {BASELINE_DSEG}"
+                    "REFUSE_FULL_RUN_BASELINE_DSEG_CUSTODY_DRIFT: "
+                    f"{baseline_verdict['d_seg']} != {expected_baseline_dseg}"
                 )
             _write_immutable_json(baseline_path, baseline_verdict)
 
