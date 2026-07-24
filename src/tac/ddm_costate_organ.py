@@ -29,6 +29,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.ddm_campaign_costate import (
+    build_campaign_costate,
+    campaign_consumer_view,
+)
 from tac.ddm_costate_law import (
     EQUATION_ID,
     RATE_BREAK_EVEN_SCORE_PER_BYTE,
@@ -649,13 +653,6 @@ def build_live_ddm_costate(
     hashes["dv1_summary"] = str(dv1_custody["sha256"])
     if g3_bulk.get("sha256"):
         hashes["g3_full_atlas"] = str(g3_bulk["sha256"])
-    if resume_state is not None:
-        prior = dict(resume_state.get("source_hashes") or {})
-        if prior and prior != hashes:
-            changed = sorted(set(prior) | set(hashes))
-            changed = [name for name in changed if prior.get(name) != hashes.get(name)]
-            raise ValueError("resume source hashes are stale; re-derive instead of restoring: " + ",".join(changed))
-
     lambda_bundle = build_ddm_lambda_bundle(
         atlas=g3_atlas,
         v19=v19,
@@ -663,6 +660,25 @@ def build_live_ddm_costate(
     )
     pairs = list(lambda_bundle["pair_rows"])
     sites = list(lambda_bundle["site_rows"])
+    campaign = build_campaign_costate(
+        repo_root=repo_root,
+        exact_pair_rows=len(pairs),
+        required_pair_rows=(
+            len(pairs) + int(lambda_bundle["missing_exact_pair_lambda_count"])
+        ),
+    )
+    for name, row in campaign["source_lineage"]["sources"].items():
+        hashes[f"campaign:{name}"] = str(row["sha256"])
+    j8f_source = campaign["source_lineage"]["j8f_verdict_stream"]
+    if j8f_source.get("sha256"):
+        hashes["campaign:j8f_verdict_stream"] = str(j8f_source["sha256"])
+    if resume_state is not None:
+        prior = dict(resume_state.get("source_hashes") or {})
+        if prior and prior != hashes:
+            changed = sorted(set(prior) | set(hashes))
+            changed = [name for name in changed if prior.get(name) != hashes.get(name)]
+            raise ValueError("resume source hashes are stale; re-derive instead of restoring: " + ",".join(changed))
+
     backtest = dict(lambda_bundle["backtest"])
     blocks = _block_costates(v19b)
     primitives = _primitive_costates(dv1, g4)
@@ -783,6 +799,7 @@ def build_live_ddm_costate(
         "scheduler": scheduler,
         "duties": duties,
         "instruments": instruments,
+        "campaign": campaign,
         "staleness": {
             "policy": "consumer verifies content hashes; J-of-J radius when emitted, SLA otherwise",
             "source_horizons": {name: row["horizon"] for name, row in sources.items()},
@@ -817,7 +834,12 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
     next_block = report["scheduler"]["next_block"]
     duties = report["duties"]
     stale_q = report["staleness"]["rederivation_queue"]
-    return [
+    campaign = report["campaign"]
+    campaign_digest = campaign_consumer_view(campaign, "digest")
+    campaign_nag = campaign_digest["activation_nag"]
+    plateau = campaign_digest["plateau_route"]
+    campaign_next = campaign_nag.get("next_duty") or {}
+    lines = [
         (
             f"DDM-LIVE reach={100.0 * reach:.3f}% Road[semantic-cell] box={box} "
             f"fleet={fleet['present']}/{fleet['registered']} "
@@ -847,6 +869,22 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
             "actuation=NONE MAIN-review=REQUIRED"
         ),
     ]
+    lines.extend(
+        (
+            (
+                f"DDM-campaign: verdicts={campaign_digest['verdict_count']} "
+                f"plateau={plateau['status']} fork={plateau.get('fork_id') or 'NONE'} "
+                f"state={campaign_digest['state_digest'][:12]} actuation=NONE"
+            ),
+            (
+                f"DDM-campaign-SENSE: unmeasured={campaign_nag['unmeasured_sense_rows']}/"
+                f"{campaign_nag['standing_sense_rows']} "
+                f"blockers={len(campaign_nag['blocker_ids'])} "
+                f"next={campaign_next.get('duty') or 'NONE'}"
+            ),
+        )
+    )
+    return lines
 
 
 def write_receipt_atomic(path: Path, report: Mapping[str, Any]) -> None:
