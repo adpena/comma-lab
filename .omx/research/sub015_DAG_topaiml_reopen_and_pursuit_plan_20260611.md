@@ -23068,3 +23068,31 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   fired as fr1. equations: addendum's canonical-equations note landed with the branch (existing
   laws cited; the compiler's refusal algebra is the new coded guard, not a new law).
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-fr1-custody (2026-07-24, MAIN custody of ddm_fr1_fisher_actuator_base_curves rc=0 — HONEST PREMEASUREMENT REFUSAL; my charter's executable-actuator assumption caught by the arm)
+- **VERDICT (57d8bc0b25 → main a54fd66952; 10 tests pass; MAIN re-ran the strict preflight on
+  current main: verdict + all 5 blockers REPRODUCE):**
+  BLOCKED_PREMEASUREMENT_CORRECTED_INNER_JACOBIAN_ACTUATOR_NOT_EXECUTABLE (verdict_scope:
+  INSTANCE — custody of the #583 rank-1 candidate + corrected-actuator binding + named parents
+  ONLY; explicitly NO actuator/base-curve/formulation/family efficacy verdict).
+- **THE CATCH (charter assumption falsified, NO-FAKE held):** the #583 rank-1 Fisher candidate
+  (pdw1_fisher_rank_00001_pair_0022_cell_225_0045_lane_from_road, margin 4.816e-5, flip distance
+  1.218e-5) is an ORDERED FIRST-ORDER VJP CANDIDATE, not the corrected-inner-Jacobian actuator the
+  first-order+secant+QP law requires: its M1-manifest correction-status reads
+  realized_backbone_secants=ABSENT, qp_receiver_closure=ABSENT, FORMALIZATION_PENDING. Executing
+  the naive unit pullback would have been the first-order-naive trap. ALSO: no typed bridge exists
+  between #583 (pair,row,col,RGB-pullback) coordinates and the runtime-sensitivity chart/semantic
+  API (blocker 5). All deltas honestly NOT_MEASURED; the base-dependence falsifier has NO verdict
+  data. G2e does not close these blockers (different base, n16, 0/31 trust regions, no QP).
+- **BASE CUSTODY PRESERVED (useful even in refusal):** V19C endpoint = a real MATERIALIZED archive
+  (137,827B, SHA dc767b59…, 2,923,991 errors, d_seg 0.024786979) — note this is BETTER than the
+  V15 control j7 measured (0.02747) and only 0.0007 behind W_seg; W_seg remains scored-endpoint-
+  not-state (ws2 live); no base mixing, no E-line subtraction.
+- **REFORMULATION (queued fr1b, GATED on ws2 landing — not fired now, it would block on the same
+  missing state):** swap the non-executable #583 candidate for an EXECUTABLE actuator the runtime
+  API natively accepts — the top J2 lifted receiver DOF (ms6 is sweeping exactly these through the
+  real receiver now; its support map picks the highest-leverage DOF) — then run the same per-base
+  exchange-rate measurement on V19C (materialized) vs ws2's materialized W_seg. The #583 correction
+  bridge (secants+QP+typed bridge, blockers 1-5) stays a NAMED build item for the solve line, not
+  a prerequisite for the base-dependence question.
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
