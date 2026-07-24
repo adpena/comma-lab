@@ -23429,3 +23429,10 @@ no Nesterov · wd 0.1 · 16-step PolarExpress · ε 1e-7 · ~0.2 RMS correction.
 (~5×). The divergence is SILENT — no note in repo or paper; the docstring's optional 0.2 mention
 cites arXiv 2502.16982 (Moonlight/Kimi), not their own recipe. Lesson unchanged and sharpened:
 paper-title identity ≠ config identity; read paper AND code at a pinned commit (sched1 mandate).
+
+FEED-603-px1-disclosure (2026-07-24, operator-approved public disclosure): filed
+https://github.com/NVIDIA-NeMo/Emerging-Optimizers/issues/259 — docs request noting the 4-axis
+silent divergence between the arXiv 2607.20548 recipe and the library's Muon constructor defaults
+(momentum 0.9→0.95 · wd 0.1→0.01 · 16-step PolarExpress→5-step quintic · ~0.2 RMS correction→off),
+verified at HEAD before filing; no prior issue covered it. Operator-attributed, constructive-docs
+framing, PR offer included. X amplification deferred pending maintainer response (operator's call).
