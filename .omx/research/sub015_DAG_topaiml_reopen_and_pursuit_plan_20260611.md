@@ -23865,3 +23865,12 @@ imports + full import-closure audit + genuinely-clean smoke venv. ms4d merged (B
 endpoint replays: exact-plane C1 409,526,925B → S=272.73 [RATE-DEAD quantified] · RD1 knee
 S=26.28); ms7 arm live (R0 mass-check → amplitude ladder → T-residual → direct-pixel reach for
 the 25 + bind the 5 PF3 edges → first real coder race). Pointer 0.1910828242 UNMOVED.
+
+### FEED-603-cv2-declared-dep (2026-07-24, MAIN — operator directive)
+Operator: "You can import cv2 and brotli that's fine." cv2 (opencv-python-headless) is APPROVED as
+runtime-tree dep #3 (torch + brotli + cv2), e4-precedent packet path (inflate.sh self-install +
+fail-closed ImportError fallback). The lesson-4 ≤2-external-deps guidance is operator-overridden
+for cv2. ic2's dep-closure directive superseded accordingly: keep cv2.fillPoly as-is; scipy (NOT
+named) stays out of the decode import closure via lazy import; clean-venv smoke now verifies the
+cv2 SELF-INSTALL bootstrap from a bare venv (the r5 lesson: prove the bootstrap, never assume host
+site-packages). This removes the byte-identity-rasterizer risk from the incumbent_v1 export path.
