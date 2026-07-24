@@ -23807,3 +23807,22 @@ tools/recover_modal_auth_eval.py. ROLE: CALIBRATION row (advisory↔contest-CPU 
 line, measured for the first time) + the frozen OOPS incumbent reference — NOT a pointer move (known
 ≥23 vs 0.19108; expectations pre-corrected to operator). verdict_scope: composition INSTANCE;
 exclusions = finite measured conflicts, no family closed.
+
+### FEED-603-ic1-modal-refire (2026-07-24, MAIN)
+FIRING ADDENDUM: attempt r1 REFUSED by the fail-closed runtime-tree gate (expected 0e7a7d1a… vs
+uploaded 675d0623…) — $0 spent, gate worked. DIAGNOSIS (measured, two independent confirmations):
+ic1 sealed its runtime-tree hash from its PRE-LANDING worktree state; MAIN's local recompute on
+current main == Modal's on-upload compute == 675d0623c25364…b396a (content bcfa4fe0…) — archive +
+packet file SHAs unchanged throughout (aba831de… re-verified). SIDE DISCOVERY, separate hazard:
+shared-.venv HIJACK — pf1 arm (07-23) editable-installed tac from ITS worktree into the shared
+.venv (__editable__ .pth → codex_worktrees path); every .venv `import tac` since ran stale arm
+source. FIXED (uv pip install -e . from root; tac.__file__ verified → main); memory
+shared_venv_editable_install_hijack_from_arm_worktree_20260724 + MEMORY.md line; GUARD OWED
+(scan .venv .pth targets for codex_worktrees — two-landing second surface). verdict_scope:
+instance — ic1 seal-timing + pf1 install hygiene; no measurement invalidated (runtime manifest
+covers submission/upstream files, not the hijacked package path; archive bytes SHA-pinned).
+REFIRE r2 ACCEPTED: call_id fc-01KYAGCAT9FF0445XJ6QZFMRZ2, claim rows spawning→spawned
+(claude:main-fable, TTL 19:47Z), expectation = double-confirmed 675d0623…, eval running n600
+contest-CPU. HARVEST OWED next tick: tools/recover_modal_auth_eval.py --output-dir .omx/research/
+ddm_ic1_…/modal_exact_eval_results/contest_cpu → terminal rows BOTH ledgers same-turn + the
+advisory↔contest-CPU gap decomposition vs S_adv 23.6617921.
