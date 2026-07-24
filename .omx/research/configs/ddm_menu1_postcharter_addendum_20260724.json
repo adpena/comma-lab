@@ -1,0 +1,17 @@
+{
+  "schema": "DDMMenu1PostcharterConfigV1",
+  "run_id": "ddm_menu1_postcharter_addendum_20260724T051016Z",
+  "menu1_receipt_path": ".omx/research/ddm_menu1_realized_flip_menu_20260723T214943Z/ddm_menu1_realized_flip_menu_receipt.json",
+  "menu1_receipt_sha256": "2fc12eb505aa7de140b5e785e5fb528c349fd72b423a1821f23b70ea21d6f29d",
+  "mc1_receipt_path": ".omx/research/ddm_mc1_hood_static_reassert_20260724T003346Z/ddm_mc1_hood_static_reassert_receipt.json",
+  "mc1_receipt_sha256": "458043413339551fe785e605d54751c46fe0d8b24c7c4ee59a67426872e320e8",
+  "ws1_receipt_path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+  "ws1_receipt_sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0",
+  "rd1_receipt_path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt_v5.json",
+  "rd1_receipt_sha256": "7449b4fedcbae41baf535018602435f9e36e6f09dd0dcd4d5f8ad4d022cbbce2",
+  "e4_receipt_path": ".omx/research/ddm_e4_brotli_declared_dep_20260724/ddm_e4_brotli_rate_recovery_receipt.json",
+  "e4_receipt_sha256": "1e381753adee710ef4032e407f867c7e486c4064f14584a047122cdeb715566e",
+  "execution_allowed": true,
+  "research_only": true,
+  "score_claim": false
+}

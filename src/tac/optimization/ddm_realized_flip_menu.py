@@ -27,6 +27,7 @@ LOCAL_STATS_SCHEMA = "ddm_local_statistics.v1"
 MASK_SCHEMA = "ddm_targeted_cluster_mask.v1"
 SCALAR_AFFINE_SCHEMA = "ddm_scalar_affine.v1"
 TEMPORAL_AFFINE_SCHEMA = "ddm_temporal_affine.v1"
+POSTCHARTER_SCHEMA = "ddm_realized_flip_menu.postcharter.v1"
 EVIDENCE_AXIS = "[macOS-CPU frozen-scorer advisory]"
 SOURCE_BYTES = 37_545_489
 RATE_DUAL = 25.0 / SOURCE_BYTES
@@ -724,6 +725,402 @@ def greedy_telescoping_curve(
     return curve
 
 
+def _require_advisory_receipt(
+    receipt: Mapping[str, Any],
+    *,
+    schema: str,
+    label: str,
+) -> None:
+    if receipt.get("schema") != schema:
+        raise RealizedFlipMenuError(f"{label} schema differs")
+    if receipt.get("score_claim") is not False:
+        raise RealizedFlipMenuError(f"{label} must be score_claim=false")
+    pointer_moved = receipt.get("pointer_moved")
+    if pointer_moved is None and isinstance(receipt.get("pointer"), Mapping):
+        pointer_moved = receipt["pointer"].get("moved")
+    if pointer_moved is not False:
+        raise RealizedFlipMenuError(f"{label} cannot claim a pointer move")
+    if not str(receipt.get("evidence_axis", "")).startswith("[macOS-CPU"):
+        raise RealizedFlipMenuError(f"{label} evidence axis differs")
+
+
+def _pointer_score_axis(receipt: Mapping[str, Any]) -> tuple[float, str]:
+    pointer = receipt.get("pointer")
+    if isinstance(pointer, str):
+        score_text, axis = pointer.split(" ", 1)
+        return float(score_text), axis
+    if isinstance(pointer, Mapping):
+        if "score" in pointer and "axis" in pointer:
+            return float(pointer["score"]), str(pointer["axis"])
+        if "contest_cpu" in pointer:
+            return float(pointer["contest_cpu"]), "[contest-CPU]"
+    raise RealizedFlipMenuError("pointer identity is not typed")
+
+
+def compile_postcharter_addendum(
+    *,
+    menu1: Mapping[str, Any],
+    mc1: Mapping[str, Any],
+    ws1: Mapping[str, Any],
+    rd1: Mapping[str, Any],
+    e4: Mapping[str, Any],
+    input_sha256: Mapping[str, str],
+) -> dict[str, Any]:
+    """Join later measured rows without laundering base or rate domains."""
+
+    _require_advisory_receipt(
+        menu1,
+        schema="ddm_menu1_realized_flip_menu_measurement.v1",
+        label="MENU1",
+    )
+    _require_advisory_receipt(
+        mc1,
+        schema="ddm_mc1_hood_static_reassert_measurement.v1",
+        label="MC1",
+    )
+    _require_advisory_receipt(
+        ws1,
+        schema="ddm_ws1_seglex96_filtered_warmstart_measurement.v1",
+        label="WS1",
+    )
+    _require_advisory_receipt(
+        rd1,
+        schema="ddm_rd1_lambda_continuation_frontier_receipt.v4",
+        label="RD1",
+    )
+    _require_advisory_receipt(
+        e4,
+        schema="ddm_e4_brotli_rate_recovery_receipt.v1",
+        label="E4",
+    )
+    if set(input_sha256) != {"menu1", "mc1", "ws1", "rd1", "e4"} or any(
+        len(value) != 64
+        or any(character not in "0123456789abcdef" for character in value)
+        for value in input_sha256.values()
+    ):
+        raise RealizedFlipMenuError("post-charter input hash custody differs")
+
+    box = menu1["box"]
+    target_errors = int(box["target_errors"])
+    target_d_seg = float(box["d_seg_max"])
+    byte_budget = int(box["archive_bytes_max"])
+    target_d_pose = float(box["d_pose_max"])
+    pointer_score, pointer_axis = _pointer_score_axis(menu1)
+    pointer = f"{pointer_score:.10f} {pointer_axis}"
+    if any(
+        _pointer_score_axis(receipt) != (pointer_score, pointer_axis)
+        for receipt in (mc1, ws1, rd1, e4)
+    ):
+        raise RealizedFlipMenuError("post-charter pointer custody differs")
+    menu_curve = {row["candidate_id"]: row for row in menu1["curve"]}
+    if len(menu_curve) != len(menu1["curve"]):
+        raise RealizedFlipMenuError("MENU1 curve candidate identities differ")
+    joint = menu_curve["statistics_hard_analytic_composed_frame1"]
+    ws_joint = ws1["warm_start_candidates"]["W_joint"]
+    joint_fields = ("candidate_id", "archive_bytes", "errors", "d_seg", "d_pose")
+    if any(ws_joint[field] != joint[field] for field in joint_fields):
+        raise RealizedFlipMenuError("WS1 W_joint does not bind the MENU1 endpoint")
+
+    mc = mc1["pool_winner"]
+    transition = mc["transition_from_parent"]
+    if (
+        mc["parent_candidate_id"] != joint["candidate_id"]
+        or int(transition["errors_before"]) != int(joint["errors"])
+        or int(transition["errors_after"]) != int(mc["errors"])
+        or int(transition["delta_errors_realized"])
+        != int(transition["errors_before"]) - int(transition["errors_after"])
+    ):
+        raise RealizedFlipMenuError("MC1 telescoping custody differs")
+    mc_delta_objective = float(mc["advisory_objective"]) - float(
+        joint["advisory_objective"]
+    )
+    if mc1["waterfill_route"]["admit"] is not False or mc_delta_objective <= 0.0:
+        raise RealizedFlipMenuError("MC1 joint-negative admission gate differs")
+    mc_partition = dict(mc["byte_partition"])
+    if (
+        sum(int(mc_partition[key]) for key in ("COUNTED", "FREE", "NULL"))
+        != int(mc["archive_bytes"]) - int(joint["archive_bytes"])
+    ):
+        raise RealizedFlipMenuError("MC1 byte partition does not close")
+    mc_partition["law"] = "FREE_UNION_NULL_UNION_COUNTED"
+    mc_partition["accounting_role"] = "incremental payload over MENU1 parent"
+    mc_row = {
+        "schema": ROW_SCHEMA,
+        "row_id": "mc1_hood_static_reassert_static_stored_frame1",
+        "row_role": "MEASURED_FIX",
+        "base_curve_id": "curve:v19c_menu1_joint",
+        "price_domain": "V19C_MENU1_EXACT_CHAIN",
+        "parent_candidate_id": joint["candidate_id"],
+        "candidate_id": mc["candidate_id"],
+        "cluster_id": "GLOBAL:MyCar",
+        "mechanism_bucket": "MYCAR_STATIC_REASSERT",
+        "composition_pool_id": mc["composition_pool_id"],
+        "delta_errors_realized": int(transition["delta_errors_realized"]),
+        "delta_counted_bytes": int(mc["byte_partition"]["COUNTED"]),
+        "byte_partition": mc_partition,
+        "collateral_retained": {
+            key: int(transition[key])
+            for key in (
+                "errors_corrected",
+                "errors_introduced",
+                "errors_persisting",
+            )
+        },
+        "archive_bytes": int(mc["archive_bytes"]),
+        "errors": int(mc["errors"]),
+        "d_seg": float(mc["d_seg"]),
+        "d_pose": float(mc["d_pose"]),
+        "advisory_objective": float(mc["advisory_objective"]),
+        "delta_advisory_objective": mc_delta_objective,
+        "measurement_status": "MEASURED_EXACT_MENU1_PARENT_CHAIN",
+        "waterfill_eligible": True,
+        "admitted": False,
+        "admission_reason": "NO_JOINT_GAIN",
+        "evidence_axis": EVIDENCE_AXIS,
+        "research_only": True,
+        "score_claim": False,
+    }
+
+    ws = ws1["warm_start_candidates"]["W_seg"]
+    if (
+        ws["candidate_id"] != "temporal_affine_16knot_frame1_seglex96_hood_masked"
+        or int(ws["errors"]) != sum(
+            int(row["errors"]) for row in ws["per_class"].values()
+        )
+        or int(ws["archive_bytes"]) > byte_budget
+    ):
+        raise RealizedFlipMenuError("WS1 base-state custody differs")
+    ws1_row = {
+        "schema": ROW_SCHEMA,
+        "row_id": "ws1_seglex96_wseg_base",
+        "row_role": "BASE_STATE",
+        "base_curve_id": "curve:ws1_seglex96",
+        "price_domain": "WS1_SEG_LEXICOGRAPHIC_EXACT_CHAIN",
+        "parent_candidate_id": "v19c_base",
+        "candidate_id": ws["candidate_id"],
+        "mechanism_bucket": "SEG_LEXICOGRAPHIC_WARM_START",
+        "composition_pool_id": "base_state:ws1_seglex96",
+        "delta_errors_realized_vs_v19c": int(menu_curve["v19c_base"]["errors"])
+        - int(ws["errors"]),
+        "delta_counted_bytes_vs_v19c": int(ws["archive_bytes"])
+        - int(menu_curve["v19c_base"]["archive_bytes"]),
+        "byte_partition": {
+            "COUNTED": int(ws["delta_payload_bytes"]),
+            "FREE": 0,
+            "NULL": 0,
+            "law": "FREE_UNION_NULL_UNION_COUNTED",
+            "accounting_role": "incremental payload over V19C base",
+        },
+        "archive_bytes": int(ws["archive_bytes"]),
+        "errors": int(ws["errors"]),
+        "d_seg": float(ws["d_seg"]),
+        "d_pose": float(ws["d_pose"]),
+        "advisory_objective": float(ws["advisory_objective"]),
+        "gap_errors_to_box": int(ws["errors"]) - target_errors,
+        "gap_d_seg_to_box": float(ws["d_seg"]) - target_d_seg,
+        "per_class": dict(ws["per_class"]),
+        "measurement_status": "MEASURED_SEPARATE_BASE_STATE",
+        "waterfill_eligible": True,
+        "admitted": True,
+        "admission_reason": "SEPARATE_BASE_NOT_COMPOSED_WITH_V19C_MENU1_CURVE",
+        "evidence_axis": EVIDENCE_AXIS,
+        "research_only": True,
+        "score_claim": False,
+    }
+
+    typed_duals = rd1["duals"]
+    if len(typed_duals) != 162:
+        raise RealizedFlipMenuError("RD1 typed dual cardinality differs")
+    actionable_typed = [
+        row for row in typed_duals if row.get("actionable_for_train_decision") is True
+    ]
+    if actionable_typed:
+        raise RealizedFlipMenuError("RD1 typed cells unexpectedly claim actionability")
+    aggregate_priors: list[dict[str, Any]] = []
+    for control in rd1["aggregate_scalarization_controls"]:
+        if (
+            control.get("lambda_bytes_per_D") is None
+            or control.get("marginal_D_reduction_per_byte") is None
+        ):
+            raise RealizedFlipMenuError("RD1 aggregate prior is incomplete")
+        aggregate_priors.append(
+            {
+                "row_id": f"rd1_aggregate_dual_{int(control['dual_index']):03d}",
+                "row_role": "WATERFILL_PRIOR",
+                "left_candidate_id": control["left_candidate_id"],
+                "right_candidate_id": control["right_candidate_id"],
+                "constraint_group": control["constraint_group"],
+                "delta_counted_bytes": int(control["delta_counted_bytes"]),
+                "delta_D_realized": float(control["delta_D_realized"]),
+                "lambda_bytes_per_D": float(control["lambda_bytes_per_D"]),
+                "marginal_D_reduction_per_byte": float(
+                    control["marginal_D_reduction_per_byte"]
+                ),
+                "advisory_only": True,
+                "waterfill_eligible": False,
+                "blocker": "TYPED_G4_AND_DIMENSION_RATE_HOME_CUSTODY_ABSENT",
+                "score_claim": False,
+            }
+        )
+    if len(aggregate_priors) != 3 or len(
+        {row["row_id"] for row in aggregate_priors}
+    ) != len(aggregate_priors):
+        raise RealizedFlipMenuError("RD1 aggregate prior identity differs")
+
+    rate = e4["rate_recovery_vs_e3"]["archive"]
+    section_rows = {
+        row["section"]: row for row in e4["coder_only_tagged_ab"]["sections"]
+    }
+    archive_after = e4["archive_custody"]["after_brotli_tagged"]
+    if (
+        int(rate["after_bytes"]) != int(archive_after["bytes"])
+        or int(rate["delta_bytes"])
+        != int(rate["after_bytes"]) - int(rate["before_bytes"])
+        or e4["section_consumption"]["raw_identity_across_coders"] is not True
+        or e4["distortion_trade"]["present"] is not False
+    ):
+        raise RealizedFlipMenuError("E4 lossless rate custody differs")
+    semantic = section_rows["semantic/composed.dds"]
+    chart = section_rows["base/chart.ddb"]
+    e4_row = {
+        "schema": ROW_SCHEMA,
+        "row_id": "e4_brotli_q11_e_line_rate",
+        "row_role": "RATE_ONLY_CODER",
+        "base_curve_id": "curve:e_line_export",
+        "price_domain": "E_LINE_EXPORT_ONLY",
+        "parent_candidate_id": "e3_lzma1_untagged",
+        "candidate_id": "e4_brotli_q11_tagged",
+        "mechanism_bucket": "ARCHIVE_LOSSLESS_CODER",
+        "composition_pool_id": "e_line_coder",
+        "delta_errors_realized": 0,
+        "delta_counted_bytes": int(rate["delta_bytes"]),
+        "byte_partition": {
+            "COUNTED": int(rate["after_bytes"]),
+            "FREE": 0,
+            "NULL": 0,
+            "law": "FREE_UNION_NULL_UNION_COUNTED",
+            "accounting_role": "post-coder total; delta stored separately",
+        },
+        "archive_bytes": int(rate["after_bytes"]),
+        "post_coder_section_bytes": {
+            "semantic/composed.dds": int(semantic["after_bytes"]),
+            "base/chart.ddb": int(chart["after_bytes"]),
+        },
+        "section_delta_bytes": {
+            "semantic/composed.dds": int(semantic["delta_bytes"]),
+            "base/chart.ddb": int(chart["delta_bytes"]),
+        },
+        "semantic_compression_fraction": -float(semantic["delta_bytes"])
+        / float(semantic["before_bytes"]),
+        "distortion_identity": "DECODED_RAW_BYTE_IDENTICAL",
+        "measurement_status": "MEASURED_POST_CODER_COUNTED_BYTES",
+        "waterfill_eligible": True,
+        "admitted": True,
+        "admission_reason": "RATE_IMPROVEMENT_WITHIN_E_LINE_DOMAIN_ONLY",
+        "cross_curve_composition_forbidden": True,
+        "evidence_axis": e4["evidence_axis"],
+        "research_only": True,
+        "score_claim": False,
+    }
+
+    joint_binding = max(
+        joint["per_class"], key=lambda name: int(joint["per_class"][name]["errors"])
+    )
+    ws1_binding = max(
+        ws["per_class"], key=lambda name: int(ws["per_class"][name]["errors"])
+    )
+    mc_binding = max(
+        mc["per_class"], key=lambda name: int(mc["per_class"][name]["errors_after"])
+    )
+    scorer_curves = (joint, ws)
+    any_seg_curve_entered = any(
+        float(row["d_seg"]) <= target_d_seg and int(row["archive_bytes"]) <= byte_budget
+        for row in scorer_curves
+    )
+    any_joint_curve_entered = any(
+        float(row["d_seg"]) <= target_d_seg
+        and float(row["d_pose"]) <= target_d_pose
+        and int(row["archive_bytes"]) <= byte_budget
+        for row in scorer_curves
+    )
+    return {
+        "schema": POSTCHARTER_SCHEMA,
+        "lane_id": "lane_ddm_menu1_realized_flip_menu_20260723",
+        "input_sha256": dict(input_sha256),
+        "menu_rows": [mc_row, ws1_row, e4_row],
+        "waterfill_priors": {
+            "rd1_typed_cell_count": len(typed_duals),
+            "rd1_actionable_typed_cell_count": 0,
+            "typed_cell_status": "NULL_PENDING_JOINT_G4_AND_RATE_HOME_CUSTODY",
+            "aggregate_rows": aggregate_priors,
+            "advisory_only": True,
+        },
+        "base_curves": {
+            "curve:v19c_menu1_joint": {
+                "candidate_id": joint["candidate_id"],
+                "archive_bytes": int(joint["archive_bytes"]),
+                "errors": int(joint["errors"]),
+                "d_seg": float(joint["d_seg"]),
+                "d_pose": float(joint["d_pose"]),
+                "advisory_objective": float(joint["advisory_objective"]),
+                "binding_bucket": joint_binding,
+                "gap_errors_to_box": int(joint["errors"]) - target_errors,
+                "seg_box_entered": float(joint["d_seg"]) <= target_d_seg,
+            },
+            "curve:ws1_seglex96": {
+                "candidate_id": ws["candidate_id"],
+                "archive_bytes": int(ws["archive_bytes"]),
+                "errors": int(ws["errors"]),
+                "d_seg": float(ws["d_seg"]),
+                "d_pose": float(ws["d_pose"]),
+                "advisory_objective": float(ws["advisory_objective"]),
+                "binding_bucket": ws1_binding,
+                "gap_errors_to_box": int(ws["errors"]) - target_errors,
+                "seg_box_entered": float(ws["d_seg"]) <= target_d_seg,
+            },
+            "curve:e_line_export": {
+                "candidate_id": e4_row["candidate_id"],
+                "archive_bytes": e4_row["archive_bytes"],
+                "within_200k": e4_row["archive_bytes"] <= byte_budget,
+                "distortion_identity": e4_row["distortion_identity"],
+            },
+        },
+        "residual_routing": {
+            "v19c_menu1_joint_binding_bucket": joint_binding,
+            "ws1_seglex96_binding_bucket": ws1_binding,
+            "mc1_post_reassert_binding_bucket": mc_binding,
+            "mc1_admitted": False,
+            "next_measurement": (
+                "Fisher-margin ranked corrected-inner-Jacobian actuator on each "
+                "base curve, preserving curve-local custody"
+            ),
+        },
+        "box": {
+            "archive_bytes_max": byte_budget,
+            "target_errors": target_errors,
+            "d_seg_max": target_d_seg,
+            "d_pose_max": target_d_pose,
+            "pose_stream_required": bool(box["pose_stream_required"]),
+            "any_seg_curve_entered": any_seg_curve_entered,
+            "any_joint_curve_entered": any_joint_curve_entered,
+            "r6_candidate": any_joint_curve_entered,
+        },
+        "verdict": "MENU1_POSTCHARTER_JOINED_BOX_NOT_REACHED",
+        "verdict_scope": (
+            "FORMULATION: measured V19C/MENU1 joint and WS1 seg-lexicographic "
+            "base curves plus MC1 static reassert and E4 Brotli Q11 E-line coder; "
+            "families and paradigm remain open"
+        ),
+        "pointer": pointer,
+        "pointer_moved": False,
+        "evidence_axis": EVIDENCE_AXIS,
+        "research_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "main_landing_review_required": True,
+    }
+
+
 __all__ = [
     "CAMERA_HW",
     "EVIDENCE_AXIS",
@@ -731,6 +1128,7 @@ __all__ = [
     "LOCAL_STATS_SCHEMA",
     "MASK_SCHEMA",
     "MENU_SCHEMA",
+    "POSTCHARTER_SCHEMA",
     "RATE_DUAL",
     "ROW_SCHEMA",
     "SEG_HW",
@@ -741,6 +1139,7 @@ __all__ = [
     "apply_temporal_affine",
     "cluster_id",
     "compile_menu_rows",
+    "compile_postcharter_addendum",
     "decode_local_statistics",
     "decode_scalar_affine",
     "decode_target_masks",

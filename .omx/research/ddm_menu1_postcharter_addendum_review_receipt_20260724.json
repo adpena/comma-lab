@@ -1,0 +1,61 @@
+{
+  "schema": "ddm_menu1_postcharter_addendum_review.v1",
+  "review_completed_utc": "2026-07-24T05:25:14Z",
+  "lane_id": "lane_ddm_menu1_realized_flip_menu_20260723",
+  "delegation_checkpoint_key": "codex_delegate:ddm_menu1_realized_flip_menu_compiler:20260724T051016Z",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_menu1_realized_flip_menu_compiler_20260724T051016Z.wrapped.prompt.txt",
+    "bytes": 9364,
+    "sha256": "0e71e21fb7e7cbba80eb4a52d56556b9a3cda70025ae1e8ab0dfa5ea0668f595"
+  },
+  "source_hashes": {
+    "typed_receipt": "5e19977a6458aa9c496e4fd4b0613969780e82fa928206d3f97142c741f04d43",
+    "compiler_source": "b1216785556b72b56814bfefebc1f296faaec0af964a2d6430af1e37c739508c",
+    "runner_source": "be2d83c40eb2a8768131082a7ad62debf7c70fb87e09a5866a0a4b29c869f35a",
+    "typed_config": "04abaa28bb3f250b641654c6755122d0c521955d8a0f5c86502ea16882925a4d"
+  },
+  "round_1_findings_fixed_before_clean_counter": [
+    "normalized exact pointer identity across nested and string/object receipt encodings",
+    "derived box gates from receipt facts instead of emitting hard-coded false values",
+    "added MC1 transition-law and byte-partition conservation checks",
+    "added explicit WS1 and E4 byte partitions",
+    "required lowercase hexadecimal SHA-256 fields",
+    "required exactly three named RD1 aggregate priors and zero actionable typed duals",
+    "fixed import ordering and replaced non-equivalent endpoint batch-digest comparison with exact metric-field checks"
+  ],
+  "passes": [
+    {
+      "pass": 1,
+      "verdict": "CLEAN",
+      "checks": [
+        "full new runner, tests, and triality artifacts read",
+        "ruff clean",
+        "py_compile clean",
+        "focused pytest: 12 passed",
+        "git diff --check clean"
+      ]
+    },
+    {
+      "pass": 2,
+      "verdict": "CLEAN",
+      "checks": [
+        "independent same-path deterministic replay",
+        "all five consumed receipt hashes reverified",
+        "MC1, WS1, RD1, and E4 arithmetic independently rederived",
+        "focused compiler pytest: 8 passed"
+      ]
+    },
+    {
+      "pass": 3,
+      "verdict": "CLEAN",
+      "checks": [
+        "related lambda-continuation plus compiler suites: 23 passed",
+        "ruff clean",
+        "py_compile clean",
+        "triality artifacts present",
+        "git diff --check clean"
+      ]
+    }
+  ],
+  "verdict": "THREE_CONSECUTIVE_CLEAN_PASSES; MAIN_FULL_DIFF_REVIEW_REQUIRED"
+}

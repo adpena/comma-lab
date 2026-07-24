@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import copy
+import json
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -15,6 +19,7 @@ from tac.optimization.ddm_realized_flip_menu import (
     apply_temporal_affine,
     cluster_id,
     compile_menu_rows,
+    compile_postcharter_addendum,
     decode_local_statistics,
     decode_target_masks,
     encode_local_statistics,
@@ -159,3 +164,89 @@ def test_transition_and_telescoping_nonadditivity() -> None:
         "strict_joint_improvement": False,
     }
     assert advisory_objective(errors=0, sites=1, d_pose=0.0, bytes_=0) == 0.0
+
+
+def test_postcharter_addendum_preserves_curve_and_rate_domains() -> None:
+    root = Path(".omx/research")
+    inputs = {
+        "menu1": root
+        / "ddm_menu1_realized_flip_menu_20260723T214943Z"
+        / "ddm_menu1_realized_flip_menu_receipt.json",
+        "mc1": root
+        / "ddm_mc1_hood_static_reassert_20260724T003346Z"
+        / "ddm_mc1_hood_static_reassert_receipt.json",
+        "ws1": root
+        / "ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z"
+        / "ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+        "rd1": root
+        / "ddm_rd1_lambda_continuation_frontier_20260724T011239Z"
+        / "ddm_rd1_lambda_continuation_frontier_receipt_v5.json",
+        "e4": root
+        / "ddm_e4_brotli_declared_dep_20260724"
+        / "ddm_e4_brotli_rate_recovery_receipt.json",
+    }
+    receipts = {
+        key: json.loads(path.read_text(encoding="utf-8"))
+        for key, path in inputs.items()
+    }
+    compiled = compile_postcharter_addendum(
+        **receipts,
+        input_sha256=dict.fromkeys(receipts, "a" * 64),
+    )
+    rows = {row["row_id"]: row for row in compiled["menu_rows"]}
+    mc1 = rows["mc1_hood_static_reassert_static_stored_frame1"]
+    assert mc1["admitted"] is False
+    assert mc1["delta_advisory_objective"] > 0.0
+    assert rows["ws1_seglex96_wseg_base"]["base_curve_id"] == (
+        "curve:ws1_seglex96"
+    )
+    assert rows["ws1_seglex96_wseg_base"]["d_seg"] == pytest.approx(
+        0.024124510023328993
+    )
+    e4 = rows["e4_brotli_q11_e_line_rate"]
+    assert e4["base_curve_id"] == "curve:e_line_export"
+    assert e4["delta_counted_bytes"] == -95_100
+    assert e4["section_delta_bytes"]["base/chart.ddb"] == 644
+    assert e4["cross_curve_composition_forbidden"] is True
+    assert compiled["waterfill_priors"]["rd1_typed_cell_count"] == 162
+    assert compiled["waterfill_priors"]["rd1_actionable_typed_cell_count"] == 0
+    assert len(compiled["waterfill_priors"]["aggregate_rows"]) == 3
+    assert compiled["base_curves"]["curve:v19c_menu1_joint"][
+        "binding_bucket"
+    ] == "MyCar"
+    assert compiled["base_curves"]["curve:ws1_seglex96"]["binding_bucket"] == (
+        "Road"
+    )
+    assert compiled["box"]["r6_candidate"] is False
+
+    wrong_parent = copy.deepcopy(receipts)
+    wrong_parent["mc1"]["pool_winner"]["parent_candidate_id"] = "wrong"
+    with pytest.raises(RealizedFlipMenuError, match="telescoping custody"):
+        compile_postcharter_addendum(
+            **wrong_parent,
+            input_sha256=dict.fromkeys(receipts, "a" * 64),
+        )
+
+    actionable_dual = copy.deepcopy(receipts)
+    actionable_dual["rd1"]["duals"][0]["actionable_for_train_decision"] = True
+    with pytest.raises(RealizedFlipMenuError, match="actionability"):
+        compile_postcharter_addendum(
+            **actionable_dual,
+            input_sha256=dict.fromkeys(receipts, "a" * 64),
+        )
+
+    coder_not_identical = copy.deepcopy(receipts)
+    coder_not_identical["e4"]["section_consumption"][
+        "raw_identity_across_coders"
+    ] = False
+    with pytest.raises(RealizedFlipMenuError, match="lossless rate custody"):
+        compile_postcharter_addendum(
+            **coder_not_identical,
+            input_sha256=dict.fromkeys(receipts, "a" * 64),
+        )
+
+    with pytest.raises(RealizedFlipMenuError, match="input hash custody"):
+        compile_postcharter_addendum(
+            **receipts,
+            input_sha256=dict.fromkeys(receipts, "z" * 64),
+        )
