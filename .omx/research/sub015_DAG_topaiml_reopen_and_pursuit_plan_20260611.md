@@ -23203,3 +23203,23 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
 - **Authority:** `.omx/research/codex_findings_ddm_ws2_warm_start_custody_producer_20260724_codex.md`;
   evidence `[macOS-CPU frozen-scorer advisory]`; pointer 0.1910828242 [contest-CPU] UNMOVED;
   `main_review_required=true`.
+
+## FEED-603-ws2-MAIN-review (2026-07-24 — MAIN addendum to the arm's FEED-603-ws2-custody: verified, landed, two cruxes routed)
+- **MAIN verification on the landed artifacts:** 10 commits landed (9 clean + DAG union-merge);
+  refusal receipt durable (REFUSE_INCOMPLETE_FOUR_STEP_WINDOW, R*=4.1215446777965665 bound);
+  pose-parity deltas re-checked within the preregistered 1e-7 (W_seg −4.10e-8, W_joint −2.66e-8);
+  W_joint endpoint deltas re-derived: Δd_seg −3.0356e-4, Δd_pose −0.24231 over 4 steps — **the
+  first real multi-step realized JOINT descent in the j-chain** (one admitted move −0.0569 joint,
+  −51,429 residual errors, REALIZED_STAGE_DESCENT_CONTINUE). The warm starts are now REAL states:
+  J5 lift byte-identical, fresh batch32 d_seg EXACTLY equal to sealed endpoints (endpoint≠state
+  category error CURED); governor honored during sister memory pressure (no bypass).
+- **Routing (both blockers INSTANCE-scoped):** (1) ws3 fired — complete W_seg's 4-step window
+  with a REFORMED OPENING (its step-1 d_seg regression is one proposal's failure, cured per the
+  recalled #518/v16/j4 opening laws: quarter-quantum caps / seg-lexicographic proposal filter /
+  freeze-then-release) + fill W_joint's pose-gate points at steps 2,3 (bounded re-runs; the
+  j7-fixed launcher emits exact verdicts every stage-exit) → falsifier IDENTIFIABLE → arbitrate →
+  reseal → re-smoke → READY_TO_FIRE (fire stays with MAIN). (2) e5 queued — the E4-WS1 exporter
+  adapter (the arm correctly refused to call J5-grammar archives E4-equivalent: the E4 typed
+  config is literal-bound to sealed V15 byte identities; a typed generalization + parse-back +
+  exact remeasure is OWED before any WS1-derived candidate rides the E4 packet path to R6).
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
