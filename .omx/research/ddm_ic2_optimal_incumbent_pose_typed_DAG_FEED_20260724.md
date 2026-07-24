@@ -59,4 +59,3 @@ terminate as scoped controls. No inferred edge is added.
   `YUV6-only`, and `xi+YUV6` under the same W_seg archive, coder, batch32
   scorer, and exact receiver. Component measurements may rank acquisition but
   cannot decide admission.
-

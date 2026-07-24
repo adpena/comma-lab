@@ -66,4 +66,3 @@ q_\xi \xrightarrow{\Phi} (x_0,x_1),\qquad
 and every output effect has one serialized owner. E2's pre-export
 `nested_pose6` lacks this \(\Phi\), so its packet edge is absent rather than
 zero-effect.
-
