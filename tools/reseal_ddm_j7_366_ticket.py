@@ -23,6 +23,8 @@ from tac.optimization.direct_description_entropy_priced_member import (  # noqa:
 )
 from tac.optimization.direct_description_joint_descent import (  # noqa: E402
     J7_PROGRAM_SHA256,
+    J7_W_JOINT_PROGRAM_SHA256,
+    J7_W_SEG_PROGRAM_SHA256,
     DirectDescriptionJointDescentTypedConfigV1,
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError  # noqa: E402
@@ -33,9 +35,13 @@ PROGRAM_ID = "ddm_j7_366_pose_gate_history_reseal_n600_seed0"
 VERDICT_BATCH = 32
 WARM_START_RECEIPT = (
     REPO
-    / ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/"
-    "ddm_ws1_seglex96_filtered_warmstart_receipt.json"
+    / ".omx/research/ddm_ws2_warm_start_custody_producer_receipt_20260724.json"
 )
+PROGRAM_SHA_BY_WARM_START = {
+    "inherited_v15_control": J7_PROGRAM_SHA256,
+    "W_seg": J7_W_SEG_PROGRAM_SHA256,
+    "W_joint": J7_W_JOINT_PROGRAM_SHA256,
+}
 
 
 def _sha256_file(path: Path) -> str:
@@ -69,7 +75,7 @@ def ws1_launchable_archive(candidate_id: str) -> dict[str, Any]:
     """Return exact archive custody or refuse endpoint-only WS1 evidence."""
 
     receipt = json.loads(WARM_START_RECEIPT.read_bytes())
-    row = receipt["warm_start_candidates"][candidate_id]
+    row = receipt["archive_custody"][candidate_id]
     required = ("archive_path", "archive_sha256", "archive_bytes")
     missing = [field for field in required if field not in row]
     if missing:
@@ -119,9 +125,10 @@ def reseal(
     if selected_warm_start != "inherited_v15_control":
         semantic["warm_start"] = ws1_launchable_archive(selected_warm_start)
     semantic_sha = hashlib.sha256(rfc8785_canonicalize(semantic)).hexdigest()
-    if semantic_sha != J7_PROGRAM_SHA256:
+    expected_semantic_sha = PROGRAM_SHA_BY_WARM_START[selected_warm_start]
+    if semantic_sha != expected_semantic_sha:
         raise DirectDescriptionError(
-            f"J7 semantic hash differs: {semantic_sha} != {J7_PROGRAM_SHA256}"
+            f"J7 semantic hash differs: {semantic_sha} != {expected_semantic_sha}"
         )
     ticket["authority"].update(
         {
@@ -179,6 +186,11 @@ def reseal(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ticket", type=Path, required=True)
+    parser.add_argument(
+        "--base-ticket",
+        type=Path,
+        help="Initialize an absent candidate ticket from this sealed J7 ticket.",
+    )
     parser.add_argument("--authority", type=Path, required=True)
     parser.add_argument("--memory-receipt", type=Path)
     parser.add_argument(
@@ -188,8 +200,20 @@ def main() -> int:
     )
     args = parser.parse_args()
     try:
+        ticket_path = args.ticket.resolve()
+        if not ticket_path.exists():
+            if args.base_ticket is None:
+                raise DirectDescriptionError(
+                    "absent candidate ticket requires --base-ticket"
+                )
+            base_ticket = args.base_ticket.resolve()
+            if not base_ticket.is_file() or base_ticket.is_symlink():
+                raise DirectDescriptionError(
+                    "J7 base ticket is unavailable"
+                )
+            _atomic_json(ticket_path, json.loads(base_ticket.read_bytes()))
         reseal(
-            ticket_path=args.ticket.resolve(),
+            ticket_path=ticket_path,
             authority_path=args.authority.resolve(),
             memory_receipt=(
                 None if args.memory_receipt is None else args.memory_receipt.resolve()

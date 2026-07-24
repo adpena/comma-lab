@@ -77,6 +77,15 @@ J3_PROGRAM_SHA256: Final = "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab29
 J5_PROGRAM_SHA256: Final = "13e194a8a354d53489f0ff68a5042237e69b4b6841a6b7959a15873fffa7b6e8"
 J6A_PROGRAM_SHA256: Final = "3ba05e4d8fd2f85475173f0a9e17e668198507350d353a4257aaf196692b98c2"
 J7_PROGRAM_SHA256: Final = "bb30eade311ed15e7541bdda4f5d5edbd72b28933a0dd2066be8b967a20aadf2"
+J7_W_SEG_PROGRAM_SHA256: Final = "de285d70b7ac1c823e70f4b2c5e2f5f728e5ff9e65e03c4e2c9583c486dda0a1"
+J7_W_JOINT_PROGRAM_SHA256: Final = "81ae90f3d1bfec508e23cbebe37e94f965b46e5d82903d2ae9d077eb365d7ce4"
+J7_PROGRAM_SHA256S: Final = frozenset(
+    {
+        J7_PROGRAM_SHA256,
+        J7_W_SEG_PROGRAM_SHA256,
+        J7_W_JOINT_PROGRAM_SHA256,
+    }
+)
 # Resealed after editing the semantic ticket; updated by the deterministic hash
 # seal step in this landing.
 EXPECTED_PROGRAM_SHA256: Final = "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b"
@@ -88,6 +97,8 @@ SUPPORTED_PROGRAM_SHA256: Final = frozenset(
         J5_PROGRAM_SHA256,
         J6A_PROGRAM_SHA256,
         J7_PROGRAM_SHA256,
+        J7_W_SEG_PROGRAM_SHA256,
+        J7_W_JOINT_PROGRAM_SHA256,
     }
 )
 EXPECTED_ARCHIVE_SHA256: Final = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
@@ -888,16 +899,57 @@ class DirectDescriptionJointDescentTypedConfigV1:
         execution_custody = ticket.get("execution_custody")
         if int(semantic["num_pairs"]) != 600 or int(semantic["seed"]) != 0:
             raise DirectDescriptionError("joint-descent ticket must remain n600/seed0")
-        if warm["sha256"] != EXPECTED_ARCHIVE_SHA256 or int(warm["bytes"]) != EXPECTED_ARCHIVE_BYTES:
+        if semantic_hash in {
+            J7_W_SEG_PROGRAM_SHA256,
+            J7_W_JOINT_PROGRAM_SHA256,
+        }:
+            if warm.get("kind") != "receiver_closed_ws1_archive":
+                raise DirectDescriptionError(
+                    "J7 WS1 warm start lacks its receiver-closed kind"
+                )
+            warm_path = Path(str(warm["path"]))
+            if (
+                not warm_path.is_absolute()
+                or not warm_path.is_file()
+                or warm_path.is_symlink()
+            ):
+                raise DirectDescriptionError(
+                    "J7 WS1 warm-start archive is unavailable"
+                )
+            warm_archive = warm_path.read_bytes()
+            if (
+                len(warm_archive) != int(warm["bytes"])
+                or _sha256(warm_archive) != warm["sha256"]
+            ):
+                raise DirectDescriptionError(
+                    "J7 WS1 warm-start archive custody differs"
+                )
+            parsed_warm = parse_ws1_warm_start_archive(warm_archive)
+            expected_candidate = (
+                "W_seg"
+                if semantic_hash == J7_W_SEG_PROGRAM_SHA256
+                else "W_joint"
+            )
+            if (
+                parsed_warm.candidate != expected_candidate
+                or parsed_warm.exact_reemit() != warm_archive
+            ):
+                raise DirectDescriptionError(
+                    "J7 WS1 warm-start receiver identity differs"
+                )
+        elif (
+            warm["sha256"] != EXPECTED_ARCHIVE_SHA256
+            or int(warm["bytes"]) != EXPECTED_ARCHIVE_BYTES
+        ):
             raise DirectDescriptionError("joint-descent warm-start identity drifted")
         env = compute.get("environment", {})
         required_kernels = " ".join(str(value) for value in compute.get("required_kernels", ())).lower()
         verdict_batch = int(semantic.get("telemetry", {}).get("verdict_batch", 16))
         if verdict_batch not in {16, 32}:
             raise DirectDescriptionError("joint-descent verdict batch is not a sealed supported geometry")
-        if semantic_hash == J7_PROGRAM_SHA256 and verdict_batch != 32:
+        if semantic_hash in J7_PROGRAM_SHA256S and verdict_batch != 32:
             raise DirectDescriptionError("J7 exact n600 scorer verdicts require batch32")
-        if semantic_hash in {J6A_PROGRAM_SHA256, J7_PROGRAM_SHA256}:
+        if semantic_hash == J6A_PROGRAM_SHA256 or semantic_hash in J7_PROGRAM_SHA256S:
             if worst_geometry_payload is None or not isinstance(execution_custody, Mapping):
                 raise DirectDescriptionError("J6A ticket lacks worst-geometry or execution custody")
             _validate_execution_custody(execution_custody)
