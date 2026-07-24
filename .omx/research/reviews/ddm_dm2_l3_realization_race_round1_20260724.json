@@ -1,0 +1,107 @@
+{
+  "schema": "ddm_dm2_l3_realization_race_round1_review.v1",
+  "utc": "2026-07-24T14:20:06Z",
+  "lane_id": "lane_ddm_dm2_l3_realization_race_25_rows_20260724",
+  "reviewer": "codex",
+  "review_round": 1,
+  "disposition": "PASS_AFTER_FINDINGS_FIXED_MAIN_REVIEW_REQUIRED",
+  "research_only": true,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "findings_fixed": [
+    {
+      "severity": "blocking",
+      "finding": "The independently exact selected row writes did not telescope: pair-level union failed exact semantic records for pairs 55, 60, and 90.",
+      "fix": "Preserve the failed round-0 receipt, freshly remeasure every pair, and use the full solved target plane only for failed pairs as an explicitly labeled constructive upper bound.",
+      "regression_surface": "aggregate pair_rows initial_union_semantic_records_exact, fallback_pair_ids, and final semantic_records_exact"
+    },
+    {
+      "severity": "major",
+      "finding": "The aggregate ratio could be mistaken for a minimum-preimage result.",
+      "fix": "Scope every ratio to the finite local/global fixed-quantum menu and label the aggregate CONSTRUCTIVE_UPPER_BOUND_WITH_FULL_TARGET_FALLBACK.",
+      "regression_surface": "receipt ratio bound_status, equation domain_of_validity, findings verdict ladder"
+    },
+    {
+      "severity": "major",
+      "finding": "Five cheapest screened exact candidates are Pose-harmful.",
+      "fix": "Retain exact Pose first-six MSE delta, price it in collateral, refuse pose-safe wording, and route those rows to a pose-null/SE3 next measurement.",
+      "regression_surface": "per-row pose.pose_nonharm, collateral.pose_score_delta, findings first-rung table"
+    }
+  ],
+  "checks": [
+    {
+      "check": "authority_input_scorer_and_implementation_custody",
+      "result": "PASS",
+      "evidence": "authority plus nine data/scorer/module inputs independently rehashed; final receipt source hashes equal current producer bytes"
+    },
+    {
+      "check": "independent_exact_semantic_realization",
+      "result": "PASS",
+      "evidence": "25/25 selected L3 camera RGB candidates reproduce exact DM1 winner and pairwise-margin record through real R, uint8, and frozen SegNet"
+    },
+    {
+      "check": "pair_level_non_telescope_remeasurement",
+      "result": "PASS_UPPER_BOUND",
+      "evidence": "15/15 pair records final-exact; initial union conflicts only at 55, 60, 90; all three named full-target fallbacks"
+    },
+    {
+      "check": "rgb_record_and_real_coder_parseback",
+      "result": "PASS",
+      "evidence": "all row and joint sparse records canonical round-trip; zlib9/lzma9 containers parse back with content SHA and deterministic re-encode"
+    },
+    {
+      "check": "pose_and_collateral_accounting",
+      "result": "PASS_WITH_FIVE_HARMFUL_ROWS_NAMED",
+      "evidence": "20/25 selected rows Pose-nonharm; exact harmful deltas priced; joint collateral -0.2857199805 receives no fictitious byte credit"
+    },
+    {
+      "check": "semantic_realization_exchange",
+      "result": "PASS",
+      "evidence": "1,569 semantic bytes -> 3,960,549 joint RGB bytes = 2524.250478x; equation residual 0; registry line 840 closes receipt SHA"
+    },
+    {
+      "check": "score_archive_and_dispatch_firewall",
+      "result": "PASS",
+      "evidence": "no training, descent, paid dispatch, archive emission, evaluate.py invocation, frontier mutation, or score claim"
+    },
+    {
+      "check": "global_lane_registry_validation",
+      "result": "OUT_OF_SCOPE_PREEXISTING_DEBT_NOT_COUNTED_AS_CLEAN_PASS",
+      "evidence": "repository-wide validator reports 110 older missing-evidence paths; targeted new lane shape and L0 pre-review state passed before gate marks"
+    }
+  ],
+  "clean_passes": [
+    {
+      "pass": 1,
+      "basis": "ruff, py_compile, 10 focused tests, staged diff hygiene, and source-to-receipt SHA comparison",
+      "result": "CLEAN"
+    },
+    {
+      "pass": 2,
+      "basis": "52 DM2/DM1/full-kernel/trust-region/menu regression tests plus blind receipt, checkpoint, ratio, fallback, pointer, and registry re-derivation",
+      "result": "CLEAN"
+    },
+    {
+      "pass": 3,
+      "basis": "77 equation/registry/receiver tests plus 15-record randomized codec roundtrip, corruption refusal, ten custody SHA closures, targeted lane check, and dispatch-import AST audit",
+      "result": "CLEAN"
+    }
+  ],
+  "review_tracker": {
+    "python_files": 5,
+    "entities": 43,
+    "minimum_consecutive_clean_marks": 3,
+    "maximum_consecutive_clean_marks": 3
+  },
+  "required_main_review_focus": [
+    "full solved-target fallback is an honest constructive upper bound, not a minimum",
+    "accepted prior row-checkpoint config and implementation SHA pair is limited to row measurement before the joint-only fix",
+    "five Pose-harmful rows remain admissible only as priced observations with pose-null next measurements",
+    "SKELETON versus FIBER ratio interpretation remains instance-scoped and confounded",
+    "canonical-equation registry line 840 and DAG FEED preserve score_claim=false and pointer unchanged"
+  ],
+  "verdict_scope": "round-1 structural and evidence review only; no contest score, minimum-preimage, family, paradigm, or promotion verdict",
+  "receipt_sha256": "8897241b7fc0ded7d4d6d1100c4d23ea162111050754e36c8ad8b3e57e294229",
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED"
+}

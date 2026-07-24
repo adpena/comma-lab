@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""Run the bounded DDM DM2 25-row L3 realization measurement."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "src"))
+sys.path.insert(0, str(REPO))
+
+from tac.optimization.ddm_dm2_l3_realization_race import materialize  # noqa: E402
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    args = parser.parse_args()
+    receipt = materialize(args.config, args.output_dir)
+    print(
+        json.dumps(
+            {
+                "schema": receipt["schema"],
+                "row_count": receipt["row_count"],
+                "joint_semantics_exact": receipt["aggregate"][
+                    "semantic_records_joint_exact_after_composition"
+                ],
+                "receipt": str(
+                    args.output_dir / "ddm_dm2_l3_realization_race_receipt.json"
+                ),
+                "score_claim": receipt["score_claim"],
+                "pointer": receipt["pointer"],
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
