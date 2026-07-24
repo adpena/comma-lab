@@ -23946,3 +23946,22 @@ measured-dead family; PA1's 146→65-but-no-further is a fresh instance of that 
 vehicle. IC2's numbers quantify the #366 warm-start stakes fed to j8f. Modal
 PREPARED_NOT_DISPATCHED stays HELD (dominated state; local frozen-upstream harness row 1014s
 already provides the calibration). Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-ms2r-r2-box-control-rate-dead-at-C1-coordinate (2026-07-24, reviewed_committed c437a532)
+Tolerance-capped solve r2 [macOS-CPU frozen-scorer advisory, receiver-closed, parse-back exact ×2]:
+exact DP over the binary q4/q8 per-pair family lands EXACTLY at the cap — 136,839/136,839 errors,
+d_seg 0.001159998576 (IN-BOX) · d_pose 0.0166331545 (pose term 0.408 — the describe line CARRIES
+pose; q1 exact control d_pose 1.02e-4) · 291,205,400B → S_adv 194.4256 (rate term 193.90). The 7.6×
+error headroom bought only −118.3MB off the 409.5MB exact control (−29%): the C1 predictor-record
+COORDINATE stays RATE-DEAD by 3 orders. DECISIVE coder signal: RAW won 50/50 vs Brotli-Q11 /
+order-1 ANS / zstd19-dict on these records — the coordinate is INCOMPRESSIBLE; cheap description
+requires a DIFFERENT COORDINATE (typed grammar/lattice), never a better coder. verdict_scope:
+INSTANCE (naive-uniform-quantum q4/q8 UPPER BOUND, labeled). HEADLINE_BLOCKED on exactly:
+TYPED_SUBPROBLEM_ALTERNATION_NOT_ACTIVE · TYPED_BLOCK_ATLAS_NOT_ACTIVE ·
+PER_DIMENSION_EFFECTIVE_QUANTA_NOT_ACTIVE. All 162 RD1 duals stay NULL (aggregate binary edge
+correctly ruled non-transferable). BLOCKER CHAIN → ev1 (live) produces the candidate byte-homes +
+histograms → ms2r-r3 (queued) runs the typed per-dimension Fisher/G4 waterfill via
+dynamic_quantum_calibration_v1. Composition note: the exact quotient-plane control is offered as a
+receiver-closed input to incumbent_v1 — fresh composed row owed, not claimed. 4 adversarial
+self-fixes incl. per-stream atomic checkpoints + fail-closed container admission. Pointer
+0.1910828242 [contest-CPU] UNMOVED.
