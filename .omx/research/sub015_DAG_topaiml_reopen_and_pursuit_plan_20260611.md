@@ -23569,3 +23569,28 @@ demand-set smallness), 2 CARGO-CULTED ((d)-proved-minimal, fixed-stage schedule)
 #688 charter updated w/ revisions; OP-GC1-4 fired as arm dm3; dm2 stays pending-input. Cherry-pick
 2746161bb5 clean. verdict_scope: composition-level adjudication; settles no representation
 quality. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-dm2-MAIN-review (2026-07-24, MAIN custody of ddm_dm2_l3_realization_race_25_rows rc=0 —
+the first semantic→realized exchange rate on the demand set):
+ARITHMETIC VERIFIED by MAIN (all exact): joint realized 3,960,549 B / 1,569 B semantic =
+2524.250478× (CONSTRUCTIVE UPPER BOUND — pairs 55/60/90 fell back to full solved targets after
+MEASURED non-telescoping union conflicts; round-0 failure receipt PRESERVED, a429194e…) · rate
+delta +2.6371670 · #613 tangent context 25.63× · SKELETON/FIBER ratio-of-sums 4.623184×
+(confounded by support size/pair identity/global selections — honestly scoped, not causal).
+Tests 10/10 + ruff re-run clean by MAIN; registry union-merged (842 rows). THE DECOMPOSED HEADLINE
+(never the bare composite): all 25 rows realized EXACTLY through camera-RGB→real R→uint8→frozen
+SegNet (25/25 SUCCESS, parse-back exact, checkpointed, seeded/deterministic/4-thread) — realization
+of the demand set is FEASIBLE; but 5 global-fallback rows (global_all_q255/q2 on pairs 523/446/38/
+55/16) carry 2,151,681 B = 70.6% of independent cost, i.e. the 2524× tail is FIVE ROWS whose
+bounded LOCAL candidate menu failed, not a uniform wall. 20/25 rows pose-NONHARM (several strongly
+pose-BENEFICIAL, e.g. −189.5 MSE — collateral credited at 0 B, no byte credit taken); 5 pose-
+harmful rows flagged with pose-null/SE(3) next measurement. Row 8 realized at 292 B (1.85×) and
+row 12 at 105 B (0.71× — CHEAPER realized than semantic!) prove the cheap end exists. Round-1
+adversarial catch (arm's own): independent exact writes DID NOT TELESCOPE — the non-telescoping
+law bit at composition and was handled honestly (remeasure-all + labeled fallback). STRATEGIC
+READ (feeds gc1 Q1 empirically): per-row explicit RGB realization of SKELETON content is the
+wrong channel at this menu (rate delta 2.64 vs the whole 0.15 budget) — exactly the amortized-
+generator argument for family (d); the named cures are row-targeted (corrected-J/shearlet hard
+admission ×5 global rows · pose-null/SE(3) ×5 · composed-pair remeasure). verdict_scope:
+MEASURED/INSTANCE (bounded menu, advisory axis); not a minimum-preimage certificate; no family
+kill. Cherry-pick bf5c0ba680 + union-merge clean. Pointer 0.1910828242 [contest-CPU] UNMOVED.
