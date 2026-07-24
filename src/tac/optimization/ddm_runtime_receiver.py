@@ -35,6 +35,7 @@ E2_SCHEMA = "ddm_e2_runtime_archive.v1"
 E3_SCHEMA = "ddm_e3_runtime_archive.v1"
 E4_SCHEMA = "ddm_e4_runtime_archive.v1"
 E4_WS1_SCHEMA = "ddm_e4_ws1_runtime_archive.v1"
+IC1_SCHEMA = "ddm_ic1_runtime_archive.v1"
 RECEIVER_GRAMMAR_ADMISSION_SCHEMA = "ddm_receiver_grammar_admission.v1"
 RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
 TYPED_STREAM_SCHEMA = "ddm_typed_stream_tag.v1"
@@ -501,6 +502,9 @@ def _validate_ws1_manifest(
 ) -> dict[str, Any]:
     """Validate the explicit WS1/J5 grammar admission route."""
 
+    if not isinstance(manifest, dict):
+        raise ReceiverError("WS1 manifest is not an object")
+    is_ic1 = manifest.get("schema") == IC1_SCHEMA
     expected_keys = {
         "dependencies",
         "false_authority",
@@ -511,8 +515,19 @@ def _validate_ws1_manifest(
         "sections",
         "state",
     }
-    if not isinstance(manifest, dict) or set(manifest) != expected_keys or manifest.get("schema") != E4_WS1_SCHEMA:
+    if is_ic1:
+        expected_keys.add("amplitude_transform")
+    if set(manifest) != expected_keys or manifest.get("schema") not in {E4_WS1_SCHEMA, IC1_SCHEMA}:
         raise ReceiverError("WS1 manifest keys differ from the sealed schema")
+    if is_ic1 and manifest["amplitude_transform"] != {
+        "application_frame": 0,
+        "composition_order": "W_joint_then_PA1_frame0",
+        "payload_bytes": 0,
+        "rate_class": "FREE",
+        "target_derivation": ("frozen_posenet_first_stem_conv_and_bn_only_video_independent"),
+        "transform_id": PA1_TRANSFORM_ID,
+    }:
+        raise ReceiverError("IC1 amplitude composition contract changed")
     if manifest["false_authority"] != {
         "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
         "research_only": True,
@@ -536,7 +551,7 @@ def _validate_ws1_manifest(
             "name",
             "receiver_effective_dofs",
         }
-        or state["batch_pairs"] != 32
+        or state["batch_pairs"] != (16 if is_ic1 else 32)
         or not isinstance(state["name"], str)
         or not state["name"]
         or state["receiver_effective_dofs"] != 368
@@ -1293,6 +1308,7 @@ def _inflate_ws1(
 ) -> dict[str, Any]:
     members = _read_exact_ws1_members(archive_dir)
     manifest_payload = members["manifest.json"]
+    manifest_sha256 = _sha256(manifest_payload)
     manifest = _validate_ws1_manifest(
         _duplicate_refusing_json(manifest_payload, label="manifest.json"),
         members,
@@ -1307,7 +1323,7 @@ def _inflate_ws1(
     )
     checkpoint_root.mkdir(parents=True, exist_ok=True)
     expected_bytes = int(manifest["output"]["bytes"])
-    required_free_bytes = expected_bytes * 2 + SAFETY_BYTES
+    required_free_bytes = expected_bytes * (3 if manifest["schema"] == IC1_SCHEMA else 2) + SAFETY_BYTES
     free_bytes = shutil.disk_usage(checkpoint_root).free
     if free_bytes < required_free_bytes:
         raise ReceiverError(f"storage preflight failed: {free_bytes} < {required_free_bytes}")
@@ -1328,13 +1344,16 @@ def _inflate_ws1(
     source_receiver = receive_ws1_warm_start_archive(state_archive)
 
     batch_pairs = int(manifest["state"]["batch_pairs"])
+    amplitude_enabled = manifest["schema"] == IC1_SCHEMA
     stage_rows: list[dict[str, Any]] = []
     stage_paths: list[Path] = []
+    moment_rows: list[dict[str, Any]] = []
     render_seconds = 0.0
     for start in range(0, 600, batch_pairs):
         stop = min(start + batch_pairs, 600)
-        stage_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.raw"
-        state_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.json"
+        stage_prefix = "base_pairs" if amplitude_enabled else "pairs"
+        stage_path = checkpoint_root / f"{stage_prefix}_{start:04d}_{stop:04d}.raw"
+        state_path = checkpoint_root / f"{stage_prefix}_{start:04d}_{stop:04d}.json"
         expected_stage_bytes = (stop - start) * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
         preserved = _load_preserved_stage(
             stage_path=stage_path,
@@ -1374,6 +1393,62 @@ def _inflate_ws1(
             row = preserved
         stage_rows.append(row)
         stage_paths.append(stage_path)
+        if amplitude_enabled:
+            moment_rows.append(
+                _load_or_measure_pose_moments(
+                    stage_path=stage_path,
+                    state_path=(checkpoint_root / f"base_pairs_{start:04d}_{stop:04d}.moments.json"),
+                    stage_row=row,
+                    manifest_sha256=manifest_sha256,
+                    start=start,
+                    stop=stop,
+                )
+            )
+    amplitude_receipt: dict[str, Any] | None = None
+    if amplitude_enabled:
+        gain, bias, amplitude_receipt = _load_or_write_pa1_affine(
+            path=checkpoint_root / "pa1_affine.json",
+            manifest_sha256=manifest_sha256,
+            moments=_merge_pose_moments(moment_rows),
+        )
+        base_paths = stage_paths
+        stage_rows = []
+        stage_paths = []
+        for index, start in enumerate(range(0, 600, batch_pairs)):
+            stop = min(start + batch_pairs, 600)
+            stage_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.raw"
+            state_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.json"
+            expected_stage_bytes = (stop - start) * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
+            row = _load_preserved_stage(
+                stage_path=stage_path,
+                state_path=state_path,
+                manifest_sha256=manifest_sha256,
+                start=start,
+                stop=stop,
+                expected_bytes=expected_stage_bytes,
+            )
+            if row is None:
+                stage_started = time.monotonic()
+                corrected = _apply_pa1_frame0_affine(
+                    _load_stage_tensor(
+                        stage_path=base_paths[index],
+                        start=start,
+                        stop=stop,
+                    ),
+                    gain,
+                    bias,
+                )
+                render_seconds += time.monotonic() - stage_started
+                row = _write_or_adopt_rendered_stage(
+                    stage_path=stage_path,
+                    state_path=state_path,
+                    rendered=corrected,
+                    manifest_sha256=manifest_sha256,
+                    start=start,
+                    stop=stop,
+                )
+            stage_rows.append(row)
+            stage_paths.append(stage_path)
     final_bytes, final_sha256 = _assemble_final(
         final_path=final_path,
         stage_rows=stage_rows,
@@ -1425,6 +1500,9 @@ def _inflate_ws1(
         },
         "total_seconds": format(time.monotonic() - started, ".6f"),
     }
+    if amplitude_enabled:
+        receipt["amplitude_transform"] = amplitude_receipt
+        receipt["resume"]["base_stage_count"] = len(moment_rows)
     _atomic_json(checkpoint_root / "inflate_receipt.json", receipt)
     return receipt
 

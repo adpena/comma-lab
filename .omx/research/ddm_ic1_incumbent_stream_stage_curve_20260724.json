@@ -1,0 +1,131 @@
+{
+  "schema": "ddm_ic1_incumbent_stream_stage_curve.v1",
+  "date_utc": "2026-07-24",
+  "lane_id": "lane_ddm_ic1_incumbent_compose_and_buy_row_20260724",
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "research_only": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "same_parent": {
+    "candidate": "W_joint",
+    "source_archive_bytes": 138801,
+    "source_archive_sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e",
+    "stream_parseback": [
+      {
+        "name": "nested_preuint8_archive",
+        "offset": 0,
+        "bytes": 137827,
+        "sha256": "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9",
+        "receiver_consumer": "receive_preuint8_q8_archive"
+      },
+      {
+        "name": "warm_start_payload",
+        "offset": 137827,
+        "bytes": 974,
+        "sha256": "47056b15511cf3643958f239bdd5b3125d94464d9d57f0b66ec6d5a7af2bf4ee",
+        "receiver_consumer": "signed_distance_geometry+apply_local_statistics"
+      }
+    ],
+    "parseback_source_byte_identical": true,
+    "construction_provenance": "[naive-menu upper bound]",
+    "construction_scope": "The exact W_joint endpoint stands. Its generic local-statistics/hard-placement amplitude menu is not scorer-recursive and cannot establish an exhaustive paint ceiling or a transferable stream price.",
+    "scorer_derived_replacement": "Corrected inner-Jacobian rows with exact resize-footprint and stride-2 stem-lattice write support, Fisher-margin ranking, shearlet residual support, and an explicit Pose-null or Pose-priced field."
+  },
+  "stages": [
+    {
+      "stage_index": 0,
+      "stage_id": "W_joint_brotli_q11_parent",
+      "operation": "identity control",
+      "serialized_stream_delta_bytes": 0,
+      "packed_archive_bytes": 131294,
+      "packed_archive_sha256": "81ad65aa27fe5f89b3e1450c7007a0848cc3e3992832500f9d14295761b9164f",
+      "raw_sha256": "9682164f0fc0b6aa0ea28d6f62cc4a712cb28fc0d4d8c9307eeac9a8815fb43b",
+      "d_seg": 0.07051923116048177,
+      "seg_errors": 8318787,
+      "seg_sites": 117964800,
+      "d_pose": 36.618184751411334,
+      "seg_term": 7.051923116048177,
+      "pose_term": 19.135878540430625,
+      "rate_term": 0.08742328539122236,
+      "advisory_objective": 26.27522494187002,
+      "batch32_receipt_path": ".omx/research/ddm_e5_e4_ws1_exporter_adapter_20260724/W_joint/ddm_e4_ws1_batch32_remeasure_receipt.json",
+      "batch32_receipt_sha256": "e6f1038dc269792e939c138bf4e9f5f393fcd730b804a48b1d097e9154a424a5",
+      "export_receipt_path": ".omx/research/ddm_e5_e4_ws1_exporter_adapter_20260724/W_joint/brotli/ddm_e4_ws1_runtime_export_receipt.json",
+      "export_receipt_sha256": "17a29ba0fe78ec7329d8b315934b5de3c2258326eafa3b1392cecb35a8bb36c9"
+    },
+    {
+      "stage_index": 1,
+      "stage_id": "W_joint_then_PA1_frame0",
+      "operation": "ddm_pa1_scorer_only_bn_inverse_frame0_receiver_v1",
+      "construction_provenance": "scorer-derived from frozen PoseNet first stem convolution and BN moments; placed only on evaluator-factorized Seg-free frame 0",
+      "write_support": "frame0 exactly; no generic disk radius or spatial exception menu",
+      "serialized_stream_delta_bytes": 0,
+      "packed_archive_delta_bytes": 288,
+      "packed_archive_bytes": 131582,
+      "packed_archive_sha256": "aba831de718f7bc5fd264b9334a29ef8a9388052a629941e50eea1b854fe49d9",
+      "composition_binding_sha256": "c260e7cd1f0ecc09e9fa70f32c20eee0f2b1eac8467c1f31a77486db9f18d27a",
+      "composition_binding_note": "The exporter proof helper carries this composition binding in a legacy internal field named manifest_sha256; it is not the outer archive manifest hash.",
+      "raw_sha256": "e69be18f393e08872374023ce2ea5e5bea84987943f80dbe1da1d715310f4938",
+      "d_seg": 0.07051923116048177,
+      "seg_errors": 8318787,
+      "seg_sites": 117964800,
+      "d_pose": 27.298487616378203,
+      "seg_term": 7.051923116048177,
+      "pose_term": 16.522253967415644,
+      "rate_term": 0.08761505276972155,
+      "advisory_objective": 23.66179213623354,
+      "batch32_receipt_path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/ddm_ic1_batch32_remeasure_receipt.json",
+      "batch32_receipt_sha256": "5cc3ca6bf614bdde72cac2fcdbe6fe71eec63dba12f1ac07fd7b0ed0d67a8aa0",
+      "export_receipt_path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/ddm_ic1_runtime_export_receipt.json",
+      "export_receipt_sha256": "a4dd73c7306a3af166f3d1ffa3f39429de52f8f6077c4a1bcb4a408fe90e1256"
+    }
+  ],
+  "sequential_delta_stage_0_to_1": {
+    "packed_archive_bytes": 288,
+    "serialized_payload_bytes": 0,
+    "d_seg": 0.0,
+    "seg_errors": 0,
+    "d_pose": -9.319697135033131,
+    "seg_term": 0.0,
+    "pose_term": -2.613624573014981,
+    "rate_term": 0.0001917673784991858,
+    "advisory_objective": -2.6134328056364815,
+    "measured_objective_improvement_per_added_packed_byte": 0.00907441946401556,
+    "rate_coefficient_per_byte": 6.658589531221714e-07,
+    "frame_position_control": {
+      "path": ".omx/research/ddm_ic1_incumbent_frame_position_control_20260724.json",
+      "frame0_changed_channel_values": 1830376393,
+      "frame1_changed_channel_values": 0,
+      "frame1_byte_identical": true
+    }
+  },
+  "joint_lower_convex_envelope": {
+    "ordered_points": [
+      {
+        "packed_archive_bytes": 131294,
+        "advisory_objective": 26.27522494187002,
+        "stage_id": "W_joint_brotli_q11_parent"
+      },
+      {
+        "packed_archive_bytes": 131582,
+        "advisory_objective": 23.66179213623354,
+        "stage_id": "W_joint_then_PA1_frame0"
+      }
+    ],
+    "nondominated_stage_ids": [
+      "W_joint_brotli_q11_parent",
+      "W_joint_then_PA1_frame0"
+    ],
+    "measured_secant_delta_objective_per_byte": -0.00907441946401556,
+    "kkt_price": null,
+    "price_status": "NULL_PENDING_A2_FIVE_ITEM_PULL_LIST",
+    "scope": "A measured two-point local secant is not a transferable KKT dual. W_joint construction remains a naive-menu bound, and scorer-recursive paint/support/exception composition controls are absent."
+  },
+  "a2_resolution_status": {
+    "A2-06": "PARTIAL_MEASUREMENT_LANDED__PRICE_REMAINS_SUSPENDED",
+    "A2-15": "SUSPENDED__PA1_IS_SCORER_DERIVED_BUT_W_JOINT_PAINT_IS_NOT",
+    "A2-17": "SUSPENDED__NO_SCORER_RECURSIVE_PAINT_STREAM_ORDERING",
+    "per_stream_prices": null
+  }
+}

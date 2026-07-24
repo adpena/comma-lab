@@ -1,0 +1,155 @@
+{
+  "schema": "ddm_incumbent_scoreboard.v1",
+  "append_policy": "append rows; never overwrite historical rows",
+  "rows": [
+    {
+      "row_id": "incumbent_v0_20260724",
+      "date_utc": "2026-07-24",
+      "candidate": "W_joint_then_PA1_frame0",
+      "archive": {
+        "path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/packet/archive.zip.receipt-bytes",
+        "bytes": 131582,
+        "sha256": "aba831de718f7bc5fd264b9334a29ef8a9388052a629941e50eea1b854fe49d9"
+      },
+      "exact_local_batch32": {
+        "axis": "[macOS-CPU frozen-scorer advisory]",
+        "d_seg": 0.07051923116048177,
+        "errors": 8318787,
+        "sites": 117964800,
+        "d_pose": 27.298487616378203,
+        "advisory_objective": 23.66179213623354,
+        "decomposition": {
+          "seg_term": 7.051923116048177,
+          "pose_term": 16.522253967415644,
+          "rate_term": 0.08761505276972155
+        },
+        "per_class": {
+          "Lane": {
+            "errors": 369103,
+            "sites": 690639,
+            "d_seg": 0.5344369489704462
+          },
+          "Movable": {
+            "errors": 960428,
+            "sites": 1460325,
+            "d_seg": 0.6576809956687724
+          },
+          "MyCar": {
+            "errors": 4072489,
+            "sites": 29993509,
+            "d_seg": 0.13577901138543008
+          },
+          "Road": {
+            "errors": 2689055,
+            "sites": 27407046,
+            "d_seg": 0.09811546271714215
+          },
+          "Undrivable": {
+            "errors": 227712,
+            "sites": 58413281,
+            "d_seg": 0.0038982915546209433
+          }
+        },
+        "receipt_path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/ddm_ic1_batch32_remeasure_receipt.json",
+        "receipt_sha256": "5cc3ca6bf614bdde72cac2fcdbe6fe71eec63dba12f1ac07fd7b0ed0d67a8aa0"
+      },
+      "locked_upstream_harness": {
+        "axis": "[macOS-CPU upstream frozen-harness advisory]",
+        "status": "PASS",
+        "d_seg_rounded": "0.07051922",
+        "d_pose_rounded": "27.29848671",
+        "score_rounded": "23.66",
+        "wallclock_seconds": "1554.008926",
+        "receipt_path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/ddm_ic1_upstream_harness_receipt.json",
+        "receipt_sha256": "1d0dca0666d55dbf51e9a1bb0c2e3afa52ebb1e91a71db927716d92d95366440"
+      },
+      "exact_axis": {
+        "axis": "[contest-CPU]",
+        "score": null,
+        "d_seg": null,
+        "d_pose": null,
+        "status": "NOT_BOUGHT__PREPARED_NOT_DISPATCHED"
+      },
+      "piece_manifest": [
+        {
+          "piece": "c1 composed-candidate specification",
+          "source_path": ".omx/research/ddm_c1_composed_candidate_spec_603_613_20260723.md",
+          "source_sha256": "7490f80647afd252983631104f4a68418d0369292aaa4a69c33ae8bd0f930838",
+          "disposition": "CONSULTED_NOT_PRICED",
+          "reason": "The named byte split is a reservation identity, not measured waterfilled prices."
+        },
+        {
+          "piece": "v14/v15 receiver state and v19b/v19c corrections",
+          "source_path": ".omx/research/ddm_v19c_correction_saturation_20260723T063500Z/ddm_v19c_correction_saturation_receipt.json",
+          "source_sha256": "506fb1dfed849beb06358d3a30d624fa8cbdad3c6e0da6cf1bf1ec14960472ae",
+          "disposition": "INCLUDED_TRANSITIVELY_IN_W_JOINT_NESTED_ARCHIVE",
+          "reason": "V19C supersedes V19B in the selected exact W_joint state; no historical delta was added."
+        },
+        {
+          "piece": "W_joint Menu1 warm-start payload",
+          "source_path": ".omx/research/ddm_e5_e4_ws1_exporter_adapter_20260724/W_joint/brotli/ddm_e4_ws1_runtime_export_receipt.json",
+          "source_sha256": "17a29ba0fe78ec7329d8b315934b5de3c2258326eafa3b1392cecb35a8bb36c9",
+          "disposition": "INCLUDED_AS_EXACT_PARENT",
+          "construction_provenance": "[naive-menu upper bound]",
+          "reason": "Best measured joint objective among the receiver-closed W_seg/W_joint E5 endpoints, but its generic amplitude/local-statistics menu is not an exhaustive scorer-recursive family."
+        },
+        {
+          "piece": "MC1 hood static reassert",
+          "source_path": ".omx/research/ddm_mc1_hood_static_reassert_20260724T003346Z/ddm_mc1_hood_static_reassert_receipt.json",
+          "source_sha256": "458043413339551fe785e605d54751c46fe0d8b24c7c4ee59a67426872e320e8",
+          "disposition": "EXCLUDED_MEASURED_CONFLICT",
+          "reason": "Best static-stored arm worsened joint advisory objective by 4.850055382139988 on its measured parent."
+        },
+        {
+          "piece": "E2 pose stream",
+          "source_path": ".omx/research/ddm_e2_pose_stream_and_doctrine_export_20260723/ddm_e2_runtime_export_receipt.json",
+          "source_sha256": "64927cdf9d43fab2dfb3a79c9d137bfc31d4eb195571e9642b96b9aced812279",
+          "disposition": "EXCLUDED_NO_ADMITTED_W_JOINT_COMPOSITION",
+          "reason": "Its receiver-closed 343466-byte endpoint is not an additive pool and no admitted same-parent typed compose route with W_joint exists."
+        },
+        {
+          "piece": "PA1 scorer-only frame-0 transform",
+          "source_path": ".omx/research/ddm_pa1_posenet_amplitude_twin_20260723T221923Z/ddm_pa1_posenet_amplitude_twin_receipt.json",
+          "source_sha256": "9f15be392a86ae470664ac87646f1fc2f77afc94f3f2d871cd7ade2d27292037",
+          "disposition": "INCLUDED_AND_FRESHLY_REMEASURED",
+          "construction_provenance": "frozen PoseNet stem/BN derived; evaluator-factorized Seg-free frame-0 placement",
+          "reason": "Zero serialized payload; fresh W_joint composition preserves d_seg exactly and reduces d_pose by 9.319697135033131."
+        },
+        {
+          "piece": "E3 receiver composition pattern",
+          "source_path": ".omx/research/ddm_e3_inflate_compose_and_depclose_20260723/ddm_e3_runtime_export_receipt.json",
+          "source_sha256": "44d487e0382bc3b1a905624bcee2368051e61520938d8ba0d391e4d568761846",
+          "disposition": "CONSUMED_AS_PRECEDENT_NOT_AS_PAYLOAD",
+          "reason": "IC1 uses a distinct typed route; E3 bytes were not pooled."
+        },
+        {
+          "piece": "E4 Brotli-Q11 plus E5 typed WS1 admission",
+          "source_path": ".omx/research/ddm_e5_e4_ws1_exporter_adapter_20260724/W_joint/brotli/ddm_e4_ws1_runtime_export_receipt.json",
+          "source_sha256": "17a29ba0fe78ec7329d8b315934b5de3c2258326eafa3b1392cecb35a8bb36c9",
+          "disposition": "INCLUDED_AS_PACKER_AND_TYPED_PARENT_CONTRACT",
+          "reason": "Brotli-Q11 selected; strict legacy E5 schema remains un-widened."
+        },
+        {
+          "piece": "DM2 cheap-end realized rows",
+          "source_path": ".omx/research/ddm_dm2_l3_realization_race_25_rows_20260724T133300Z/ddm_dm2_l3_realization_race_receipt.json",
+          "source_sha256": "8897241b7fc0ded7d4d6d1100c4d23ea162111050754e36c8ad8b3e57e294229",
+          "disposition": "EXCLUDED_NO_NET_POSITIVE_COMPOSABLE_AGGREGATE",
+          "reason": "Fresh aggregate joint objective delta is +2.350835831188035 and no typed independent-row composition into W_joint exists; the one negative independent row is not additive authority."
+        },
+        {
+          "piece": "#636 runtime exporter",
+          "source_path": ".omx/research/ddm_e1_runtime_exporter_BUILD_SPEC_636_20260723_codex.md",
+          "source_sha256": "20e9e4fbf3afe1a31afbd6b410555b78f6589cc7a84ffe3c1d9e480380baced3",
+          "disposition": "EXTENDED_BY_SEPARATE_STRICT_IC1_ROUTE",
+          "reason": "IC1 adds an explicit typed schema and receiver path without loosening legacy E1/E5 literals."
+        }
+      ],
+      "stage_curve_path": ".omx/research/ddm_ic1_incumbent_stream_stage_curve_20260724.json",
+      "stream_prices": null,
+      "stream_price_status": "NULL_PENDING_A2_FIVE_ITEM_PULL_LIST",
+      "pointer": "0.1910828242 [contest-CPU]",
+      "pointer_moved": false,
+      "main_review_required": true
+    }
+  ]
+}

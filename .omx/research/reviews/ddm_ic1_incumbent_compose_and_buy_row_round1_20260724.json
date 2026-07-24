@@ -1,0 +1,153 @@
+{
+  "schema": "ddm_ic1_incumbent_compose_and_buy_row_round1.v1",
+  "date_utc": "2026-07-24",
+  "lane_id": "lane_ddm_ic1_incumbent_compose_and_buy_row_20260724",
+  "delegation_checkpoint_key": "codex_delegate:ddm_ic1_incumbent_compose_and_buy_row:20260724T143642Z",
+  "authority_sha256": "7e5a422c0a3297a5ec0185fc20ce3cf355a09076ce2ce1ac89e866152ef455d6",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "research_only": true,
+  "score_claim": false,
+  "reviewed_code": [
+    {
+      "path": "src/tac/optimization/ddm_runtime_exporter.py",
+      "sha256": "0bfe483ea83d40bdce4c727a38fbfdc4c57ec94d36776d848a5e7c7210921ed5",
+      "review_tracker_entities": 47
+    },
+    {
+      "path": "src/tac/optimization/ddm_runtime_receiver.py",
+      "sha256": "c8007fb6de36575adcc107b64a34633fe7350fe65befa2941247753da533056c",
+      "review_tracker_entities": 35
+    },
+    {
+      "path": "src/tac/optimization/tests/test_ddm_runtime_exporter.py",
+      "sha256": "e63ff4747f162e8520ce9c364c3b2976020869ebf2df147a5f0171a13602c392",
+      "review_tracker_entities": 22
+    },
+    {
+      "path": "tools/rehearse_ddm_runtime_upstream.py",
+      "sha256": "67582cc4f61b19b8b6de561fd7ac60b477b67f27328d7f54f3cd4fa5fb085674",
+      "review_tracker_entities": 7
+    },
+    {
+      "path": "tools/remeasure_ddm_e4_ws1_packet.py",
+      "sha256": "de9061c60d3c4af45cee3f638229c302076f498b068c468a38ecc03c32754ca4",
+      "review_tracker_entities": 10
+    }
+  ],
+  "reviewed_artifacts": [
+    {
+      "path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/packet/archive.zip.receipt-bytes",
+      "bytes": 131582,
+      "sha256": "aba831de718f7bc5fd264b9334a29ef8a9388052a629941e50eea1b854fe49d9"
+    },
+    {
+      "path": ".omx/research/ddm_ic1_incumbent_stream_stage_curve_20260724.json",
+      "sha256": "acdc16f44811b963dca930aa0e03df693b3ebde0888076a99534a57503ebad8e"
+    },
+    {
+      "path": ".omx/research/ddm_ic1_incumbent_scoreboard_20260724.json",
+      "sha256": "57df787bbea2e04962f6ef3048f7654687118624d0ecd915defee8ae363b4a2d"
+    },
+    {
+      "path": ".omx/research/ddm_ic1_incumbent_frame_position_control_20260724.json",
+      "sha256": "a94f7d0ccadfd66e991e7b00f364456938daffeeaadb12b8e5f3a0bda0e28ce2"
+    },
+    {
+      "path": ".omx/research/ddm_ic1_incumbent_modal_contest_cpu_bundle_20260724.json",
+      "sha256": "1f92373f4cb050e90154b7a4f60ffa03a4a86462e6197f246bdd29d730e6f82b"
+    }
+  ],
+  "round_1_findings_fixed": [
+    "The exact W_joint endpoint is labeled [naive-menu upper bound]; only the PA1 operation is called scorer-derived, and the required corrected-inner-Jacobian replacement is named.",
+    "The measured two-point same-parent secant is not promoted to a KKT price; A2-06, A2-15, and A2-17 remain suspended and all per-stream prices are NULL.",
+    "Equal Seg counts are backed by a decoded-byte frame-position control: frame 0 changes and frame 1 is byte-identical.",
+    "The legacy internal manifest_sha256 helper field is disclosed as a composition binding rather than an outer ZIP-manifest hash.",
+    "The Modal row is sealed as PREPARED_NOT_DISPATCHED with no provider start, no live claim, no exact-axis score, and mandatory MAIN review."
+  ],
+  "clean_passes": [
+    {
+      "pass": 1,
+      "result": "CLEAN",
+      "checks": {
+        "ruff": "PASS",
+        "py_compile": "PASS",
+        "json_artifacts_parsed": 11,
+        "git_diff_check": "PASS",
+        "focused_tests": {
+          "passed": 22,
+          "failed": 0,
+          "seconds": 88.53
+        },
+        "review_tracker": "135 entities marked reviewed"
+      }
+    },
+    {
+      "pass": 2,
+      "result": "CLEAN",
+      "checks": {
+        "independent_custody_rederivation": "PASS",
+        "packet_hashes_rederived": 3,
+        "zip_member_order_and_schema": "PASS",
+        "objective_and_per_class_arithmetic": "PASS",
+        "same_parent_stage_delta": "PASS",
+        "frame1_byte_identity": "PASS",
+        "kkt_and_stream_prices": "NULL",
+        "exact_axis_score": "NULL",
+        "dispatch": false,
+        "focused_tests": {
+          "passed": 22,
+          "failed": 0,
+          "seconds": 89.52
+        },
+        "review_tracker": "135 entities marked reviewed"
+      }
+    },
+    {
+      "pass": 3,
+      "result": "CLEAN",
+      "checks": {
+        "ruff": "PASS",
+        "py_compile": "PASS",
+        "json_artifacts_parsed": 11,
+        "git_diff_check": "PASS",
+        "uv_lock_unmodified": true,
+        "focused_tests": {
+          "passed": 22,
+          "failed": 0,
+          "seconds": 90.86
+        },
+        "review_tracker": "135 entities marked reviewed as ic1_clean_pass_3"
+      }
+    }
+  ],
+  "overall_result": "THREE_CONSECUTIVE_CLEAN_PASSES_INSTANCE_SCOPED",
+  "lane_registry": {
+    "level": 2,
+    "gates_true": [
+      "impl_complete",
+      "real_archive_empirical",
+      "strict_preflight",
+      "three_clean_review",
+      "memory_entry",
+      "deploy_runbook"
+    ],
+    "gates_intentionally_false": [
+      "contest_cpu",
+      "contest_cuda"
+    ],
+    "target_entry_consistent": true,
+    "global_validate": "RC2_WITH_110_PREEXISTING_MISSING_EVIDENCE_PATHS_OUTSIDE_THIS_LANE"
+  },
+  "verdict": "INCUMBENT_V0_RECEIVER_CLOSED_ADVISORY_MEASURED__CONTEST_CPU_BUY_PREPARED_NOT_DISPATCHED",
+  "verdict_scope": "INSTANCE x exact W_joint parent x scorer-derived PA1 frame-0 composition x exact packet SHA; no family closure, transferable KKT price, contest score, dispatch, promotion, or pointer mutation.",
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "pointer_moved": false,
+  "main_review_required": true,
+  "main_review_focus": [
+    "Re-hash the archive, inflate runtime, three primary receipts, and all piece-manifest sources after integration.",
+    "Verify the distinct IC1 schema and receiver path do not widen legacy E1/E5 contracts.",
+    "Preserve W_joint as [naive-menu upper bound], PA1 as scorer-derived, and every stream/KKT price as NULL.",
+    "Recompute the same-parent 288-byte stage delta and rerun this clean-pass protocol after any substantive merge edit.",
+    "Only MAIN may authorize and run the sealed Modal command; the wrapper must own the atomic claim and call-id custody."
+  ]
+}

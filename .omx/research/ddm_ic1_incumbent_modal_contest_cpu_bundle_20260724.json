@@ -1,0 +1,131 @@
+{
+  "schema": "ddm_ic1_modal_contest_cpu_exact_eval_bundle.v1",
+  "date_utc": "2026-07-24",
+  "status": "PREPARED_NOT_DISPATCHED",
+  "execution_allowed_in_delegated_lane": false,
+  "provider_started": false,
+  "dispatch_claim_written": false,
+  "research_only": true,
+  "score_claim": false,
+  "main_review_required": true,
+  "axis": "[contest-CPU]",
+  "archive": {
+    "path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/packet/archive.zip.receipt-bytes",
+    "bytes": 131582,
+    "sha256": "aba831de718f7bc5fd264b9334a29ef8a9388052a629941e50eea1b854fe49d9"
+  },
+  "runtime": {
+    "submission_dir": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/packet",
+    "inflate_sh": {
+      "path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/packet/inflate.sh",
+      "bytes": 416,
+      "sha256": "a1bcb0ec50ace10352cd91290c3e6d4f79127dceb8471c2fc137daf6c31f723f"
+    },
+    "inflate_py": {
+      "path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/packet/inflate.py",
+      "bytes": 4478945,
+      "sha256": "d67b169ac50a080ed6117b2a554684c99b803292f63fea3d1c2728e75a155dbd"
+    },
+    "source_bundle_sha256": "121941bbdf60bb6c3e2934243e8929df29f9cca449cd562fc084da62ec2a3137",
+    "modal_uploaded_contest_cpu_runtime_tree_sha256": "0e7a7d1a760bd8d8f1236cd971197d3695b4c6b315d4af93bb074bf749fe9e7d",
+    "modal_uploaded_runtime_content_tree_sha256": "3282a5c1cac3d4921a65f02227bd7d437a1fe0b2cda56863b45d5fa49c1a73b2",
+    "hash_method": "experiments.contest_auth_eval._runtime_dependency_manifest projected through tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest for /tmp/modal_auth_eval_cpu/submission_dir",
+    "local_hash_scan_seconds": 454.58191387495026
+  },
+  "preflight_receipts": {
+    "runtime_export": {
+      "path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/ddm_ic1_runtime_export_receipt.json",
+      "sha256": "a4dd73c7306a3af166f3d1ffa3f39429de52f8f6077c4a1bcb4a408fe90e1256",
+      "compiler_determinism_x2": true,
+      "parseback_source_byte_identical": true,
+      "receiver_byte_home_bijection": true
+    },
+    "locked_local_upstream_harness": {
+      "path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/ddm_ic1_upstream_harness_receipt.json",
+      "sha256": "1d0dca0666d55dbf51e9a1bb0c2e3afa52ebb1e91a71db927716d92d95366440",
+      "status": "PASS",
+      "axis": "[macOS-CPU upstream frozen-harness advisory]"
+    },
+    "exact_batch32_frozen_scorer": {
+      "path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/ddm_ic1_batch32_remeasure_receipt.json",
+      "sha256": "5cc3ca6bf614bdde72cac2fcdbe6fe71eec63dba12f1ac07fd7b0ed0d67a8aa0",
+      "status": "PASS",
+      "axis": "[macOS-CPU frozen-scorer advisory]",
+      "scorer_threads": 4
+    }
+  },
+  "claim_plan": {
+    "lane_id": "lane_ddm_ic1_incumbent_compose_and_buy_row_20260724_exact_eval_cpu",
+    "platform": "modal",
+    "instance_job_id": "ddm_ic1_incumbent_compose_and_buy_row_20260724_cpu_buy",
+    "agent": "codex:gpt-5.6-sol",
+    "status": "eval",
+    "dry_run_preflight_status": "PASS",
+    "dry_run_wrote_claim": false,
+    "dry_run_command": [
+      "python3",
+      "tools/claim_lane_dispatch.py",
+      "claim",
+      "--lane-id",
+      "lane_ddm_ic1_incumbent_compose_and_buy_row_20260724_exact_eval_cpu",
+      "--platform",
+      "modal",
+      "--instance-job-id",
+      "ddm_ic1_incumbent_compose_and_buy_row_20260724_cpu_buy",
+      "--agent",
+      "codex:gpt-5.6-sol",
+      "--status",
+      "eval",
+      "--notes",
+      "MAIN-authorized contest-CPU exact eval; archive aba831de718f7bc5fd264b9334a29ef8a9388052a629941e50eea1b854fe49d9; main_review_required=true",
+      "--dry-run"
+    ],
+    "actual_claim_owner": "experiments/modal_auth_eval_cpu.py calls claim_modal_auth_eval_dispatch before detached spawn; do not pre-write a duplicate claim",
+    "single_flight_required": true,
+    "dual_ledger_reconcile_required": true
+  },
+  "main_one_command_after_review": [
+    ".venv/bin/modal",
+    "run",
+    "--detach",
+    "experiments/modal_auth_eval_cpu.py",
+    "--archive",
+    ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/packet/archive.zip.receipt-bytes",
+    "--expected-archive-sha256",
+    "aba831de718f7bc5fd264b9334a29ef8a9388052a629941e50eea1b854fe49d9",
+    "--inflate-sh",
+    "inflate.sh",
+    "--output-dir",
+    ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/modal_exact_eval_results/contest_cpu",
+    "--detach",
+    "--provider-detach-ack",
+    "--pair-group-id",
+    "ddm_ic1_incumbent_compose_and_buy_row_20260724",
+    "--lane-id",
+    "lane_ddm_ic1_incumbent_compose_and_buy_row_20260724_exact_eval_cpu",
+    "--instance-job-id",
+    "ddm_ic1_incumbent_compose_and_buy_row_20260724_cpu_buy",
+    "--claim-agent",
+    "codex:gpt-5.6-sol",
+    "--claim-notes",
+    "MAIN-authorized contest-CPU exact eval only; archive and runtime hashes sealed",
+    "--submission-dir",
+    ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/packet",
+    "--expected-runtime-tree-sha256",
+    "0e7a7d1a760bd8d8f1236cd971197d3695b4c6b315d4af93bb074bf749fe9e7d"
+  ],
+  "harvest_plan": {
+    "tool": "tools/recover_modal_auth_eval.py",
+    "required_artifacts": [
+      "contest_auth_eval.json",
+      "provenance.json",
+      "modal_auth_eval_spawn.json",
+      "modal_call_id.txt",
+      "modal_auth_eval_recover_summary.json"
+    ],
+    "scoreboard_update": "Append exact [contest-CPU] S only after archive SHA, runtime tree, hardware axis, and score_claim_valid custody all pass.",
+    "exact_axis_score": null
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

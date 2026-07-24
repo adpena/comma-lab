@@ -1,0 +1,45 @@
+{
+  "schema": "ddm_ic1_incumbent_directive_consumption.v1",
+  "date_utc": "2026-07-24",
+  "directives": [
+    {
+      "authority": "delegated wrapped prompt",
+      "sha256": "7e5a422c0a3297a5ec0185fc20ce3cf355a09076ce2ce1ac89e866152ef455d6",
+      "disposition": "PASS",
+      "evidence": "Read all 6963 bytes; composed and freshly remeasured one receiver-closed incumbent; no training, descent, provider action, or pointer mutation."
+    },
+    {
+      "authority": "operator recursive-scorer construction directive 2026-07-24T14:45:16Z",
+      "disposition": "PASS",
+      "evidence": "W_joint is explicitly [naive-menu upper bound]; PA1 is traced to frozen PoseNet stem/BN and Seg-free frame0; corrected-inner-J plus exact resize-footprint/stem-lattice support is named as replacement."
+    },
+    {
+      "authority": "MAIN-reviewed A2 provenance audit 2026-07-24T15:25:40Z",
+      "main_commit_seen": "5fc2bb655f255c8c0ebcef014a13407acee8100f",
+      "memo_sha256": "d21440b214dcad535a5f232c04094447c98d6bbfa39c57f55e87473c411b4c89",
+      "disposition": "PASS_PARTIAL_RESOLUTION",
+      "evidence": "Landed actual parse-back bytes, same-parent W_joint then PA1 exact-R stages, and a two-point lower envelope. Reservation values are not called waterfilled; all per-stream/KKT prices remain NULL because the five-item pull list is incomplete."
+    },
+    {
+      "authority": "non-additive-pools law",
+      "disposition": "PASS",
+      "evidence": "No historical delta was summed. The final raw surface was decoded, locked-harness evaluated, and independently scored batch32."
+    },
+    {
+      "authority": "SSD-first, resumability, and checkpoint preservation",
+      "disposition": "PASS",
+      "evidence": "3.66GB raw output and all 38 base plus 38 composed stage checkpoints live under /Volumes/VertigoDataTier/pact/evidence; no proof bytes were deleted."
+    },
+    {
+      "authority": "stage Modal contest-CPU row; do not dispatch",
+      "disposition": "PASS_PREPARED_NOT_DISPATCHED",
+      "evidence": "Archive and Modal-uploaded CPU runtime hashes plus a canonical wrapper/claim plan are sealed; no provider started and no live claim was written."
+    },
+    {
+      "authority": "pointer and evidence-axis separation",
+      "disposition": "PASS",
+      "evidence": "All local numbers are macOS-CPU advisory; exact contest-CPU cells are null; pointer remains 0.1910828242 [contest-CPU]."
+    }
+  ],
+  "main_review_required": true
+}

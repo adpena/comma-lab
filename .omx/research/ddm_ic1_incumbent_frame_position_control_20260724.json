@@ -1,0 +1,51 @@
+{
+  "schema": "ddm_ic1_incumbent_frame_position_control.v1",
+  "date_utc": "2026-07-24",
+  "axis": "[macOS-CPU decoded-byte control]",
+  "research_only": true,
+  "score_claim": false,
+  "parent": {
+    "candidate": "W_joint",
+    "raw_path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e5_e4_ws1_exporter_adapter_20260724/W_joint/brotli/submission/inflated/0.raw",
+    "raw_bytes": 3662409600,
+    "raw_sha256": "9682164f0fc0b6aa0ea28d6f62cc4a712cb28fc0d4d8c9307eeac9a8815fb43b",
+    "frame0_sha256": "fa55b2d9ac269e2a8e5f63dffd7ddb8bdfdedd73404f4ba4e65a50312c81997f",
+    "frame1_sha256": "0b574f6fa77b39618815483d2651a1602a8538142201fb5972d6d177b43f9a4b"
+  },
+  "child": {
+    "candidate": "W_joint_then_PA1_frame0",
+    "raw_path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ic1_incumbent_compose_and_buy_row_20260724/submission/inflated/0.raw",
+    "raw_bytes": 3662409600,
+    "raw_sha256": "e69be18f393e08872374023ce2ea5e5bea84987943f80dbe1da1d715310f4938",
+    "frame0_sha256": "0e03301921d327bf7e1618e24887c1bcdd356fd44fcc6df5897e02508e891bac",
+    "frame1_sha256": "0b574f6fa77b39618815483d2651a1602a8538142201fb5972d6d177b43f9a4b"
+  },
+  "geometry": {
+    "pairs": 600,
+    "frames_per_pair": 2,
+    "frame_bytes": 3052008,
+    "camera_shape": [
+      874,
+      1164,
+      3
+    ]
+  },
+  "changed_channel_values": {
+    "frame0": 1830376393,
+    "frame1": 0
+  },
+  "control": {
+    "frame0_changed": true,
+    "frame1_byte_identical": true,
+    "seg_frame_identity": "PASS",
+    "elapsed_seconds": 159.45041008316912
+  },
+  "method": "Sequentially read both 3.66GB raw surfaces as 600 two-frame records; SHA-256 each frame position independently and count unequal uint8 channel values with NumPy vectorized comparison.",
+  "storage": {
+    "new_bulk_created": false,
+    "source_bytes_deleted": false,
+    "evidence_tier": "/Volumes/VertigoDataTier/pact/evidence"
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

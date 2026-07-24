@@ -86676,6 +86676,54 @@
         }
       },
       "notes": "Delegated local-only n600 tolerance homotopy; [macOS-CPU frozen-scorer advisory], score_claim=false, MAIN landing review required."
+    },
+    {
+      "id": "lane_ddm_ic1_incumbent_compose_and_buy_row_20260724",
+      "name": "DDM IC1 incumbent compose and buy row",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_runtime_exporter.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/ddm_ic1_batch32_remeasure_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/optimization/tests/test_ddm_runtime_exporter.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/reviews/ddm_ic1_incumbent_compose_and_buy_row_round1_20260724.json"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_ic1_incumbent_compose_and_buy_row_20260724_codex.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ic1_incumbent_modal_contest_cpu_bundle_20260724.json"
+        }
+      },
+      "notes": "Receiver-closed W_joint then PA1 advisory incumbent; exact-axis cells NULL; no dispatch; main_review_required.",
+      "lane_class": "measurement_apparatus",
+      "research_only": true,
+      "reactivation_criteria": [
+        "MAIN review and authorization for contest-CPU eval",
+        "scorer-recursive W_joint replacement",
+        "A2 five-item KKT closure"
+      ]
     }
   ],
   "level_rules": {

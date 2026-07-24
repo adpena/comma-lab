@@ -41,7 +41,9 @@ from tools.measure_ddm_menu1_realized_flip_menu import (  # noqa: E402
 )
 
 SCHEMA = "ddm_e4_ws1_packet_batch32_remeasure.v1"
+IC1_SCHEMA = "ddm_ic1_packet_batch32_remeasure.v1"
 CONFIG_SCHEMA = "DDME4WS1PacketRemeasureConfigV1"
+IC1_CONFIG_SCHEMA = "DDMIC1PacketRemeasureConfigV1"
 EVIDENCE_AXIS = "[macOS-CPU frozen-scorer advisory]"
 CAMERA_SHAPE = (600, 2, 874, 1164, 3)
 
@@ -75,6 +77,35 @@ class DDME4WS1PacketRemeasureConfigV1(BaseModel):
     research_only: Literal[True] = True
     score_claim: Literal[False] = False
     pointer: Literal["0.1910828242 [contest-CPU]"] = "0.1910828242 [contest-CPU]"
+
+
+class DDMIC1PacketRemeasureConfigV1(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    schema_: Literal["DDMIC1PacketRemeasureConfigV1"] = Field(
+        default=IC1_CONFIG_SCHEMA,
+        alias="schema",
+        serialization_alias="schema",
+    )
+    candidate: Literal["IC1_W_joint_then_PA1"] = "IC1_W_joint_then_PA1"
+    parent_candidate: Literal["W_joint"] = "W_joint"
+    export_receipt_path: str
+    export_receipt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    ws2_config_path: str
+    ws2_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    ws2_receipt_path: str
+    ws2_receipt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    decoded_raw_path: str
+    decoded_raw_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    checkpoint_root: str
+    scorer_batch_size: Literal[32] = 32
+    scorer_threads: Literal[4] = 4
+    research_only: Literal[True] = True
+    score_claim: Literal[False] = False
+    pointer: Literal["0.1910828242 [contest-CPU]"] = "0.1910828242 [contest-CPU]"
+
+
+PacketRemeasureConfig = DDME4WS1PacketRemeasureConfigV1 | DDMIC1PacketRemeasureConfigV1
 
 
 def _resolve(value: str) -> Path:
@@ -168,14 +199,18 @@ def remeasure(
     receipt_path: Path,
 ) -> dict[str, Any]:
     config_payload = config_path.read_bytes()
-    config = DDME4WS1PacketRemeasureConfigV1.model_validate_json(
-        config_payload,
-        strict=True,
-    )
-    if (
-        rfc8785_canonicalize(config.model_dump(mode="json", by_alias=True)) + b"\n"
-        != config_payload
-    ):
+    config_value = json.loads(config_payload)
+    if config_value.get("schema") == IC1_CONFIG_SCHEMA:
+        config: PacketRemeasureConfig = DDMIC1PacketRemeasureConfigV1.model_validate(
+            config_value,
+            strict=True,
+        )
+    else:
+        config = DDME4WS1PacketRemeasureConfigV1.model_validate(
+            config_value,
+            strict=True,
+        )
+    if rfc8785_canonicalize(config.model_dump(mode="json", by_alias=True)) + b"\n" != config_payload:
         raise RemeasureError("remeasure config must be canonical JSON")
     export = _bound_json(
         config.export_receipt_path,
@@ -192,14 +227,18 @@ def remeasure(
     if hashlib.sha256(ws2_config_payload).hexdigest() != config.ws2_config_sha256:
         raise RemeasureError("WS2 config SHA-256 differs")
     ws2_config = CustodyConfig.model_validate_json(ws2_config_payload)
-    expected = ws2_value["fresh_batch32_endpoints"][config.candidate]
+    is_ic1 = isinstance(config, DDMIC1PacketRemeasureConfigV1)
+    parent_candidate = config.parent_candidate if is_ic1 else config.candidate
+    expected = ws2_value["fresh_batch32_endpoints"][parent_candidate]
     if (
-        float(expected["d_seg"]) != config.expected_d_seg
-        or float(expected["d_pose"]) != config.expected_d_pose
-        or export["source"]["sha256"] != expected["archive_sha256"]
+        export["source"]["sha256"] != expected["archive_sha256"]
         or export["source"]["bytes"] != expected["archive_bytes"]
     ):
         raise RemeasureError("sealed endpoint and packet source custody differ")
+    if not is_ic1 and (
+        float(expected["d_seg"]) != config.expected_d_seg or float(expected["d_pose"]) != config.expected_d_pose
+    ):
+        raise RemeasureError("sealed endpoint metrics differ")
 
     raw_path = Path(config.decoded_raw_path)
     raw_bytes, raw_sha256 = _sha256_file(raw_path)
@@ -258,9 +297,7 @@ def remeasure(
         target_pose = np.asarray(poses[start:stop], dtype=np.float64)
         per_class = {
             class_name: {
-                "errors": int(
-                    np.count_nonzero((cells != target) & (target == class_id))
-                ),
+                "errors": int(np.count_nonzero((cells != target) & (target == class_id))),
                 "sites": int(np.count_nonzero(target == class_id)),
             }
             for class_id, class_name in enumerate(CLASS_ORDER)
@@ -274,9 +311,7 @@ def remeasure(
             "pair_range": [start, stop],
             "per_class": per_class,
             "pose_coordinates": int(pose6.size),
-            "pose_squared_error_sum": float(
-                np.square(pose6 - target_pose).sum(dtype=np.float64)
-            ),
+            "pose_squared_error_sum": float(np.square(pose6 - target_pose).sum(dtype=np.float64)),
             "schema": "ddm_e4_ws1_packet_batch32_row.v1",
             "score_claim": False,
             "sites": int(cells.size),
@@ -293,7 +328,7 @@ def remeasure(
     pose_coordinates = sum(int(row["pose_coordinates"]) for row in rows)
     d_seg = errors / sites
     d_pose = pose_sse / pose_coordinates
-    if d_seg != config.expected_d_seg or d_pose != config.expected_d_pose:
+    if not is_ic1 and (d_seg != config.expected_d_seg or d_pose != config.expected_d_pose):
         raise RemeasureError(
             f"decoded packet did not reproduce the exact sealed batch-32 endpoint: {(d_seg, d_pose)!r}"
         )
@@ -335,15 +370,22 @@ def remeasure(
         "pointer": config.pointer,
         "pointer_moved": False,
         "research_only": True,
-        "schema": SCHEMA,
+        "schema": IC1_SCHEMA if is_ic1 else SCHEMA,
         "score_claim": False,
         "scorer_batch_size": 32,
         "scorer_custody": scorer_custody,
         "scorer_threads": 4,
         "stage_count": len(rows),
-        "verdict": "EXACT_SEALED_BATCH32_ENDPOINT_REPRODUCED_FROM_DECODED_PACKET",
+        "verdict": (
+            "IC1_COMPOSED_ENDPOINT_EXACT_BATCH32_MEASURED"
+            if is_ic1
+            else "EXACT_SEALED_BATCH32_ENDPOINT_REPRODUCED_FROM_DECODED_PACKET"
+        ),
         "verdict_scope": (
-            "INSTANCE: typed E4/WS1 packet decoded on macOS CPU with frozen "
+            "INSTANCE: typed IC1 W_joint then PA1 packet decoded on macOS CPU "
+            "with frozen scorers; no contest eval, promotion, or frontier mutation."
+            if is_ic1
+            else "INSTANCE: typed E4/WS1 packet decoded on macOS CPU with frozen "
             "scorers; no contest eval, promotion, or frontier mutation."
         ),
     }
