@@ -23539,3 +23539,33 @@ launch/dispatch/eval/promotion. Full triality:
 `ddm_gc1_schmidhuber_symposium_DAG_FEED_20260724.md` +
 `ddm_gc1_schmidhuber_symposium_canonical_equations_20260724.md`.
 Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-gc1-MAIN-review (2026-07-24, MAIN custody of ddm_gc1_schmidhuber_symposium rc=0 — the
+operator-convened T3, SCHMIDHUBER LEAD, override verbatim recorded in frontmatter):
+Verdict **PROCEED_WITH_REVISIONS, build-only** — full apparatus honored (27 seats incl. all 14
+inner + 13 topical; 6-of-6 sextet; 3 self-reflection rounds; 5 verbatim dissents preserved incl.
+Contrarian's "category error" + Tao's "prospective ordering ≠ Kolmogorov-minimality theorem" +
+Wyner's side-info charge rule + Nielsen's no-scalar-blend + Assumption-Adversary's dm2-pending
+guard; council anchor appended to the canonical posterior by MAIN after review). THE FOUR ANSWERS:
+Q1 — (d) is the rational FIRST SEARCH FAMILY, NOT a proved minimum ("(d) is the true minimal
+program" demoted to PROVISIONAL-PENDING-VERIFICATION); the two-part-code boundary is CONTENT
+ORIGIN not filename — every architecture/basis/topology/branch selector chosen after inspecting
+THIS video is CHARGED even when each branch's implementation is generic (sharpens rule-118; kills
+the free-code-as-payload channel). Q2 — the fit engine is right AFTER reseal; compression progress
+(g_L = Δcounted-bytes/work) enters as a SECOND acquisition coordinate in a (g_S,g_L) Pareto set
+with stable-ID tie-break — NEVER a scalar blend, NEVER admission authority (exact receiver-closed
+ΔS<0 remains sole admission); changes the CONTENT of sched1 delta items 2/6/9 only (typed two-axis
+policy · event marks persist S/bytes/work/g_S/g_L/rollback-reason · hashes bind the policy), other
+7 items unchanged, all constants stay NULL until derived. Q3 — UNDECIDED with the discriminator
+named: DDM-CONNECTION-1 exact conditional-codelength probe (same-bucket consecutive solved
+supports; static coder vs history-program+residual with ALL selector/state charged; leave-one-
+pair-out; delta_B_connection>0 held-out = program structure absorbing residue; no-saving =
+INSTANCE-scoped surprisal, not family kill). Q4 — 5 revisions: #688 aimed at (d)-fitting ·
+charge-boundary audit in the DC1 compiler BEFORE any fit · two-axis telemetry into the engine ·
+dm2+CONNECTION-1 ingested before cheap-to-realize/temporally-compressible claims · first fit
+PREREGISTERED execution-disabled (OP-GC1-5). Assumption-Adversary table: 2 HARD-EARNED (objective,
+demand-set smallness), 2 CARGO-CULTED ((d)-proved-minimal, fixed-stage schedule), 2 UNCLEAR
+(compression-progress value, dm2 fill). Op-routables OP-GC1-1..5 with configs. MAIN executes:
+#688 charter updated w/ revisions; OP-GC1-4 fired as arm dm3; dm2 stays pending-input. Cherry-pick
+2746161bb5 clean. verdict_scope: composition-level adjudication; settles no representation
+quality. Pointer 0.1910828242 [contest-CPU] UNMOVED.
