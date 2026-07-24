@@ -1,0 +1,113 @@
+{
+  "schema": "ddm_dm3_connection1_conditional_codelength_round1_review.v1",
+  "utc": "2026-07-24T14:31:38Z",
+  "lane_id": "lane_ddm_dm3_connection1_conditional_codelength_20260724",
+  "reviewer": "codex",
+  "review_round": 1,
+  "disposition": "PASS_AFTER_FINDINGS_FIXED_MAIN_REVIEW_REQUIRED",
+  "research_only": true,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "findings_fixed": [
+    {
+      "severity": "major",
+      "finding": "The first real materialization emitted NumPy matrix-product runtime warnings in affine sufficient-statistic accumulation.",
+      "fix": "Replace floating matrix products with exact int64 sufficient-statistic sums, reject the first self-generated receipt, and rerun the SHA-bound probe under Python -W error.",
+      "regression_surface": "clean real materialization and focused affine-fit tests"
+    },
+    {
+      "severity": "major",
+      "finding": "Leave-one-pair-out could be overread as an all-fold estimate even though the registered protocol prices one deterministic lower-median transition per bucket.",
+      "fix": "Encode the holdout policy, fit exclusion, and explicit no-all-fold verdict scope in every row, aggregate receipt, equation domain, DAG stop hook, and findings memo.",
+      "regression_surface": "receipt scope fields and canonical-equation false-authority test"
+    },
+    {
+      "severity": "major",
+      "finding": "The +1188 B aggregate could conceal that motion-conditioned programs are unsupported and static boundary is aggregate-negative.",
+      "fix": "Report selected-family shares and exact type x stratum x support-size decomposition; scope the verdict to identity persistence at this semantic formulation.",
+      "regression_surface": "receipt decomposition, exact 36-row ledger, and blind accounting rederivation"
+    }
+  ],
+  "checks": [
+    {
+      "check": "authority_file_hash_and_size",
+      "result": "PASS",
+      "evidence": "6365 bytes; sha256 3285c2f23b3eb515cf5bbc86288d1f689c35981af78418ea8eb7de543f3fc834"
+    },
+    {
+      "check": "input_and_implementation_custody",
+      "result": "PASS",
+      "evidence": "PF2 index/receipt, solved-plane receipt/chunks, source config, DM1 receipt, GC1 council, frozen scorer weights/modules, runtime, and seven implementation files are SHA-bound"
+    },
+    {
+      "check": "population_and_fit_exclusion",
+      "result": "PASS",
+      "evidence": "37 represented buckets, 36 eligible, 8602 consecutive transitions; every priced pair has gap one and is excluded from its fit"
+    },
+    {
+      "check": "charge_boundary",
+      "result": "PASS_MAIN_SEMANTIC_REVIEW_REQUIRED",
+      "evidence": "15 B framing plus 1 B selector, 0/4/24 B state, and full exact residual container charged; external PF2 support retained as cell context"
+    },
+    {
+      "check": "static_and_history_parseback",
+      "result": "PASS",
+      "evidence": "all static coder containers and every available identity, xi-advected, and affine-tracked history candidate parse back exactly and canonically"
+    },
+    {
+      "check": "accounting_and_decomposition",
+      "result": "PASS",
+      "evidence": "7049 - (624 + 5237) = +1188 B; 32 positive, 4 nonpositive; exact type x stratum x support-size decomposition rederived"
+    },
+    {
+      "check": "winning_family_claim_hygiene",
+      "result": "PASS",
+      "evidence": "identity selected 34/36 and owns all positive savings; xi selected zero; both affine selections negative; static-boundary aggregate -242 B"
+    },
+    {
+      "check": "dm1_null_crosswalk",
+      "result": "PASS_SCOPED",
+      "evidence": "25/25 DM1 rows crosswalk to measured bucket-family heldout cells; no claim that the original nonconsecutive DM1 pair was measured"
+    },
+    {
+      "check": "score_and_archive_firewall",
+      "result": "PASS",
+      "evidence": "no training, dispatch, archive, evaluate.py, PoseNet verdict, or box arithmetic; score_claim=false; pointer unchanged"
+    },
+    {
+      "check": "tests_and_static_checks",
+      "result": "PASS",
+      "evidence": "12 focused pytest tests; ruff clean; strict JSON parse; git diff --check clean"
+    }
+  ],
+  "clean_passes": [
+    {
+      "pass": 1,
+      "basis": "post-fix structural review, 12 focused tests, ruff, strict JSON, and diff hygiene",
+      "result": "CLEAN"
+    },
+    {
+      "pass": 2,
+      "basis": "full SHA-bound materializer rerun under -W error reproduced byte-identical receipt 2c175366...346b and manifest 0a956002...b47",
+      "result": "CLEAN"
+    },
+    {
+      "pass": 3,
+      "basis": "blind receipt/canonical-equation/decomposition/DM1-crosswalk rederivation plus 63 deterministic exact codec roundtrips",
+      "result": "CLEAN"
+    }
+  ],
+  "required_main_review_focus": [
+    "one lower-median held-out transition per bucket versus the owed all-fold estimate",
+    "external PF2 support accounting for cell FIBER records",
+    "15 B fixed frame plus selector/state/full-residual Wyner and two-part-code charge boundary",
+    "ordinal support-correspondence basis used by xi and affine fit",
+    "identity-persistence conclusion and negative static-boundary slice",
+    "semantic-byte firewall against archive, score, promotion, or pointer claims",
+    "canonical-equation registry append and lane-state mutations"
+  ],
+  "verdict_scope": "round-1 structural and semantic conditional-byte review only; no all-fold stability, receiver efficacy, archive, score, or promotion verdict",
+  "receipt_sha256": "2c175366da196b8f79e2d3de1ad0a8c1844e78a1d2cab25921eaa15bec46346b",
+  "pointer": "0.1910828242 [contest-CPU]"
+}
