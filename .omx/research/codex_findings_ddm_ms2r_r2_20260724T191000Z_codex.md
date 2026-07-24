@@ -1,8 +1,8 @@
 # Codex findings — DDM MS2R tolerance-capped solve R2
 
-UTC: 2026-07-24T19:10:00Z  
-Lane: `lane_ddm_ms2r_tolerance_capped_r2_20260724`  
-Evidence axis: `[macOS-CPU frozen-scorer advisory]`  
+UTC: 2026-07-24T19:10:00Z
+Lane: `lane_ddm_ms2r_tolerance_capped_r2_20260724`
+Evidence axis: `[macOS-CPU frozen-scorer advisory]`
 Authority: `research_only=true`, `score_claim=false`, `promotion_eligible=false`
 
 ## Verdict

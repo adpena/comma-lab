@@ -1,7 +1,7 @@
 # DDM MS2R R2 executable readiness DAG feed
 
-Lane: `lane_ddm_ms2r_tolerance_capped_r2_20260724`  
-Status: measured finite-family control; full recursive construction blocked  
+Lane: `lane_ddm_ms2r_tolerance_capped_r2_20260724`
+Status: measured finite-family control; full recursive construction blocked
 Authority: `[macOS-CPU frozen-scorer advisory]`, `research_only=true`, `score_claim=false`
 
 ```text
