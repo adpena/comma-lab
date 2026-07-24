@@ -44,6 +44,6 @@
 6. Probe disambiguator: retain both original and `.bounded_clamp` geometry IDs
    as distinct callable formulations.
 
-Verdict scope: `INSTANCE_EXTENDED_GRAMMAR_RG1`.  
-Evidence axis: `[macOS-CPU frozen-scorer advisory]`.  
+Verdict scope: `INSTANCE_EXTENDED_GRAMMAR_RG1`.
+Evidence axis: `[macOS-CPU frozen-scorer advisory]`.
 `score_claim=false`; `main_landing_review_required=true`.

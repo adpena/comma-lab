@@ -1,7 +1,7 @@
 # Codex session summary — DDM RG1 receiver grammar extension
 
-Date: 2026-07-24  
-Lane: `lane_ddm_rg1_receiver_grammar_extension_20260724`  
+Date: 2026-07-24
+Lane: `lane_ddm_rg1_receiver_grammar_extension_20260724`
 `score_claim=false`; `main_landing_review_required=true`
 
 ## Landed

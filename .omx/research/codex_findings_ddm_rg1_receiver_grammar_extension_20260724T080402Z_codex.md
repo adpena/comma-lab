@@ -1,9 +1,9 @@
 # Codex findings — DDM RG1 receiver grammar extension
 
-Date: 2026-07-24  
-Lane: `lane_ddm_rg1_receiver_grammar_extension_20260724`  
-Verdict scope: `INSTANCE_EXTENDED_GRAMMAR_RG1`  
-Evidence axis: `[macOS-CPU frozen-scorer advisory]`  
+Date: 2026-07-24
+Lane: `lane_ddm_rg1_receiver_grammar_extension_20260724`
+Verdict scope: `INSTANCE_EXTENDED_GRAMMAR_RG1`
+Evidence axis: `[macOS-CPU frozen-scorer advisory]`
 `score_claim=false`; `research_only=true`; `main_landing_review_required=true`
 
 ## Verdict
