@@ -59,4 +59,3 @@ promotion, minimum-preimage, family closure, or frontier authority.
    A2-13 closure claim.
 
 Pointer: `0.1910828242 [contest-CPU] UNMOVED`.
-
