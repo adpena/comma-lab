@@ -23335,3 +23335,18 @@ Directive 6 (state + derive the objective explicitly; free to adopt a more optim
 law objective_is_min_S_over_solution_set_not_box_or_point registered + MEMORY.md indexed.
 verdict_scope: campaign-level objective re-scope; no measured row invalidated (achieved points
 stand as upper bounds per FEED-603-economics-rescope). Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-score-quotient-functional-family (2026-07-24, MAIN — operator: "representing the thing
+itself similar to how the PR95 family HNeRV did? except only that which the score cares about.
+not human visual fidelity"): the FOURTH description family enters the is1 comparison — compact
+parametric function OF the score-quotient (weights+latents = the counted description; the PR95
+94%-of-archive-is-weights LESSON, lineage banned), content = ŷ plane/partition + pose stats ONLY
+(nullity/gauge/frame_0/texture excluded by construction). Reconciliation: this is the FOUNDING
+witness thesis, reopened because its sidelining comparisons are formulation-scoped (suboptimal-
+channel prices + scene-regeneration framings that the 159× confound killed — a score-quotient
+function never regenerates the scene). Under the solution-set objective it IS min-S over a
+parametric description family (coder-in-the-loss; knee = output). Existing instances: #559
+ŷ-native / C2-M1 arc (standing-GO (a)) + #366 consumer as the fitting engine + warm starts as
+inits + the 25-row residue as video-derived latent content (class-birth placement law). Routed:
+is1 Directive 7 → price (d) vs (a)/(b)/(c) same currency; if (d) wins, training = the family
+search, not a post-solve fallback. Pointer 0.1910828242 [contest-CPU] UNMOVED.
