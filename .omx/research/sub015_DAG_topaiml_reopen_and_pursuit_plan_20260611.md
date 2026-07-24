@@ -22985,3 +22985,29 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   registry rows (consistent: no new law, a measured application). Evidence
   `[macOS-CPU upstream frozen-harness advisory]`, score_claim=false.
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-ms5-custody (2026-07-24, MAIN custody of ddm_ms5_pf2_bucket_assignment rc=0 — membership RECOVERED, causal join HONESTLY REFUSED, crux converted from archaeology to MEASUREMENT)
+- **PAIR MEMBERSHIP RECOVERED EXACTLY:** the SHA-bound re-walk of pf2's construction lineage
+  reproduced all 1,200 typed keys and conserved the exact 4,011,236 raw G4/V12 flip events, with
+  per-bucket boolean-set equality (not just mass conservation — the round-1 adversarial review
+  upgraded the check). MAIN re-verified from the landed table: 1,200 rows, 4,011,236 events, 37
+  occupied. No orphaned pairs.
+- **NEGATIVE (verdict_scope: INSTANCE — current PF2 construction lineage as landed):** actuator +
+  signed-direction identity is NOT recoverable — pf2 predates the J2 receiver-DOF lift and stores NO
+  foreign key to any actuator/secant; all 1,200 rows emit
+  `ASSIGNMENT_UNRECOVERABLE_PF2_CONSTRUCTION_HAS_NO_ACTUATOR_DIRECTION_FOREIGN_KEY` (MAIN verified
+  token on all 1,200). No join invented from spatial overlap or class labels (NO-FAKE held). The
+  vocabularies EXIST (374 stable actuator IDs = 368 J2 lifted DOFs + 6 G2G addresses; exact G2F
+  ±ONE_QUANTUM sign convention) — they simply were never bound.
+- **DECOMPOSITION (the headline decomposed):** typed-key space is SPARSE — 37/1,200 buckets carry
+  ALL events; 1,163 are zero-event rows held as explicit measurement debt, not asserted zero
+  geometry. Every source pair appears in 10-31 occupied buckets. The bundle problem just shrank ~32×.
+- **MS4 producers correctly NOT rerun:** harness audit reports assigned 0/1,200 → coverage below
+  even the G3 top24 block; fabricating seg/composite-R/dual rows would be cost without authority.
+- **CRUX CONVERTED (first rung → ms6):** the lost foreign key cannot be recovered — it must be
+  MEASURED as a causal receiver-support relation: per stable actuator × G2F sign, apply one receiver
+  quantum, round-trip through the ACTUAL receiver/R surface, record which pf2 raw events it
+  perturbs. 374 actuators × 2 signs = 748 bounded probes; locality of the lifted DOFs + the
+  37-occupied-bucket scoping makes this tractable. equations: ddm_pf2_bucket_assignment_join_eligibility_v1
+  registered by the arm (2 event rows, parse-verified).
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
