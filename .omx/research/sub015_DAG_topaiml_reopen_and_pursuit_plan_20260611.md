@@ -24094,3 +24094,21 @@ counted actuation) IS the typed actuator stream template; pc1 built the pose-sid
 home + Φ + 320 coordinates). NO respawn (anti-duplication): j8f owns the crux; r3-rerun re-queued
 GATED ON j8f landing. verdict_scope: the r3 attempt is INSTANCE-blocked, solve family fully open.
 Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-gc2-oracle-21of21-RECOVERED + lambda-subset-overfit finding (2026-07-24, merge 29e2a5ebbd repaired after bad-merge recovery)
+RECOVERY NOTE: the first gc2 merge attempt half-committed under a conflicted index (the serializer
+FEED commit absorbed MERGE_HEAD); recovered by hard-reset to af41bb01f0, clean re-merge, 3-way
+conflict resolved (of1 freshness tests KEPT + gc2's 21/0 coverage test name — 49/49 oracle tests
+green). gc2 CONTENT (as previously verified): ALL 7 TYPED-GAPs closed, oracle live 21/21 WRAPPED,
+per-row mutation tests (SHA-drift fails closed), 3 honest NULLs preserved (camera preimage ·
+receiver closure · joint null/gauge intersection), 2 adversarial corrections (R anisotropy <0.056%
+⇒ 3.2× deficit is REPRESENTATION-side not R; "52%" disambiguated: gauge norm-fraction 0.52356 =
+energy 0.27412 vs ker(A) output ENERGY 0.52425).
+NEW MEASURED FINDING surfaced by the recovery's full-suite run: the factorized-λ backtest quality
+COLLAPSED on ev1's full N600 join — Spearman ρ 0.9027→0.7477, NDCG@4 0.9269→0.1956 (organ report,
+600 pair/3,000 site rows vs the historical 8/40 subset). verdict_scope: INSTANCE (factorized-λ
+model form on the full join). CONSEQUENCE: the organ's λ ranking is WEAK-ADVISORY until re-fit on
+the full join; duty-ranking consumers must not treat λ order as strong signal; the 8-pair backtest
+numbers are retired as subset optimism (test updated to pin the honest values). Routed: organ
+re-fit rides the co2 schema at the next organ touch; ranking stays [advisory-heuristic] per the
+oracle's authority_scope discipline. Pointer 0.1910828242 [contest-CPU] UNMOVED.
