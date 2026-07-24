@@ -24129,3 +24129,22 @@ dual-consistency AWAITING_J8F/duals (typed, not faked) · Kalman lag-1 innovatio
 Wallace-MML interval refusal wired · Rudin FallingRuleList REUSED (GOSDT/SLIM reasoned-excluded).
 verdict_scope: INSTANCE/backtest. One state digest feeds all consumers. Side-finding for ra1:
 unrelated MS2R immutable-stage mismatch documented. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-ra1-deep-era-soundness-and-reactivation (2026-07-24, reviewed_committed 37aa9a45d5)
+Three-layer sweep (blocker-join × deep-era × age-indexed soundness), 48 task rows + 29 deep-era rows
+graded, all verified-once against the canonical ledger. HEADLINES: (1) ONE shared crux confirmed
+across every gated reactivation: the J8F counted application stream — 22 rows re-open the moment it
+lands (the post-j8f wave is now PRE-COMPILED). (2) EIGHT load-bearing old conclusions VOIDED as
+UNSOUND-METHOD at modern standards, each with its resolving rung: #141 label-noise ceiling (proxy
+ambiguity promoted to irreducibility; PT1 already recovered 85.65% of "irreducible" placement
+errors) · 77×/2.71× seg-pose ratios (operating-point-local, never timeless — M34 per-state duals
+replace) · params^−0.71 (two-point Family-A fit, not a wall) · #155 quotient-codec NO-GO (component
+REDs on dead carriers cannot kill the paradigm DDM now instantiates) · #158 no-cheap-pose family
+claim (PC1's 40B stream falsifies the breadth) · survival 16%/0.0067 family wall (PT1 passed the
+mechanism bar) · learned-postfilter proxy close · S_floor 0.11797 achievability (additivity-naive;
+stays only as loose rate-only bound → recompute via RD1 post-J8F). (3) 30 pending tasks SUPERSEDED
+with named replacement evidence (old-vehicle runs, dead watches, duplicate solvers) — ledger debt
+cleared. (4) 5 REACTIVATE-NOW routed as canonical tasks: #227→PC1 binding · #408→J8F event
+telemetry · #611→scorer-recursive proposal producer · #213→free-interpreter recovery suite ·
+#573→DDM generator description. verdict_scope: grades are per-row, translation column preserves
+measurements where vehicles died. Pointer 0.1910828242 [contest-CPU] UNMOVED.
