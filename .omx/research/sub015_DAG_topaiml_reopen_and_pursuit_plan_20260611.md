@@ -22869,3 +22869,35 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   receiver-closed candidate for the highest-mass solve-menu cluster with same-candidate frozen SegNet + exact pose
   quadratic + parse-back + counted-byte custody (consumers: menu1 #656, ms3).
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-j5-review-and-j7-firegate (2026-07-24 tick — the owed #366 MAIN review executed; fire correctly HELD)
+- **j5 3-surface adversarial review (fire-checklist item 1, owed since the gaps audit): ALL CLEAN.**
+  (1) *Proposal mask* — typed v19 eight-pair active set + whole-lifecycle scorer-grid bounds; the corrected
+  Q8 proposal compiles BYTE-IDENTICALLY to the measured v19 archive `d4eb1450…` (equals the smoke's
+  candidate SHA — independent cross-check); the earlier polygon-escape defect correctly INSTANCE-scoped.
+  (2) *Camera-Q8 acceptance/rollback* — acceptance authority `strict_joint_delta_lt_zero` on REALIZED exact
+  archive bytes through frozen CPU scorers (EMA-lag guard satisfied BY CONSTRUCTION — no shadow-weight
+  verdict in the acceptance path); reference = last-ADMITTED verdict (anti-ratchet); rejected proposals →
+  rollback checkpoint from last-admitted state with a 4-array (`theta/ema/first_moment/second_moment`)
+  parse-back equality assert; typed blockers on no-descent-after-shrink-ladder.
+  (3) *C1 bucket attribution* — `_c1_bucket_delta` fails closed on missing per-class custody; canonical
+  partition (role=Lane+Movable / residual=Road+Undrivable+MyCar); dual deltas vs-last-admitted AND
+  vs-stage00-baseline. **Provisional finding REFUTED on deeper read:** `residual_bucket_admission_required`
+  is NOT inert under pure_priced policy — `warm_start_component_safe` gates `reform_active`
+  (launcher:1009), i.e. residual-bucket descent is the warm-start PHASE-EXIT criterion while joint ΔS<0
+  is the per-move acceptance authority. Two-level design, coherent.
+- **Fire HELD — freshness-at-consumption caught a stale seal.** All three j5 custody SHAs drifted
+  (launcher 361f35e4… vs sealed 59a22ad9…; consumer 76c66ceb… vs b69b4a2d…; ticket 6b9367bd… vs
+  2ae7da90…). Supersession chain: j6 (prefire adversarial review) → **j6a (contract hardening) =
+  `BLOCKED_POSE_FINISH_CONDITIONING_HISTORY_INSUFFICIENT`** (2 of 5 required exact pose-gate verdict
+  points; ready_to_fire=false; cumulative fire gate now vs immutable stage00; worst-geometry memory
+  admission requires final source hashes) → ws1 then modified the ticket again (Seglex96 warm starts +
+  preregistered falsifier). j5's READY_TO_FIRE is a superseded authority; the j5 smoke row itself
+  (realized joint ΔS −0.002843840398518996, −5B, Road −1780/Movable −1284/MyCar −830/Lane −30/
+  Undrivable +597) remains valid MEASURED signal `[macOS-CPU frozen-scorer advisory]`.
+- **j7 FIRED** (`ddm_j7_366_pose_gate_history_and_reseal`, 20260724T040102Z, #672): produce the 3 missing
+  exact pose-gate verdict points (bounded governed runs; governor ADMIT precedent 13.46 GiB vs 116) +
+  execute ws1's falsifier EXACTLY as preregistered (R*=4.1215446777965665) to arbitrate W_seg vs W_joint +
+  RESEAL against current ticket/consumer/launcher + bounded re-smoke. Campaign fire remains with MAIN
+  under standing GO (b) once j7's readiness receipt lands + review.
+- **Fleet:** e4 + ms3 + j7 = 3/4. **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
