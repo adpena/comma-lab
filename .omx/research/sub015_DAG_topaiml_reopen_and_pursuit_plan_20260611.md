@@ -23096,3 +23096,33 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   bridge (secants+QP+typed bridge, blockers 1-5) stays a NAMED build item for the solve line, not
   a prerequisite for the base-dependence question.
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-ms6-custody (2026-07-24, MAIN custody of ddm_ms6 partial rc=0 — the causal foreign key is now EXECUTABLE and MEASURING; first real joins landed)
+- **VERDICT (62ba3ab844 → main b8f97ceb0e; 2 tests + arm's 25 pass; MAIN re-derived all coverage
+  counts from the committed receipt):** CAUSAL_ACTUATOR_DIRECTION_JOIN_PARTIAL (verdict_scope:
+  INSTANCE — V19C endpoint, one-quantum sweep). Coverage 110/748 probes = 49 MEASURED + 61
+  INFEASIBLE (explicit, never zeros) + 0 measured-empty; exact joins 31/1,200 buckets; the other
+  1,169 stay fail-closed. MS4 correctly HELD (coverage below the G3 hard blocks); Pose component
+  untouched (COMPLETE from ms4).
+- **THE MACHINERY IS REAL (finding 1+2):** exact pf2 raw-event addresses reconstructed → one named
+  signed receiver quantum applied → camera uint8 realized → SegNet's own preprocessing as the
+  composite-R support detector → batch32 frozen SegNet ONLY on support-overlap pairs. Per-probe
+  immutable SSD checkpoints (v2 schema binds SegNet/upstream/base-archive SHAs + seed + thread +
+  batch geometry per probe; v1 dir preserved-not-consumed for lacking scorer custody). First
+  measured causal join: j2.island.track0.center_x −quantum → 35 support pairs, 10,398 changed
+  camera values, 545 exact PF2 events across 15 buckets (+sign: 493 events/13 buckets — sign
+  ASYMMETRY is real signal). No label/spatial-prior joins anywhere.
+- **NEW INSTANCE-scoped infeasibility decomposition (finding 3):** 60/61 infeasible rows are
+  GRAMMAR-infeasible on this V19C base — 24 Lane DOFs ×2 signs (the carrier holds NO counted Lane
+  program member; adding the derived seed would perturb more than the named coordinate) + 6 G2CS1
+  addresses ×2 (V13 grammar forbids mixing worldsheet vocabulary with post-solve correction
+  symbols); 1 is geometry-infeasible (track1.center_x +quantum: derived Movable polygon escapes
+  scorer geometry — direction-specific). Closing the 60 requires a RECEIVER-GRAMMAR EXTENSION
+  (joint representation of Lane + G2CS1 coordinates around the same SHA-bound base) — a named
+  build item, NOT reinterpretable as zeros. This is also independent design signal for the
+  #613 crux: Lane is not an isolatable one-quantum coordinate in the current carrier grammar.
+- **NEXT (ms6b fired):** resume the SSD checkpoint sweep for the remaining 638 receiver-effective
+  island/template probes with the SAME landed tool + custody schema; MS4 rerun stays held until G3
+  hard-block coverage is proven through the ms3 loader gate. equations:
+  ddm_receiver_support_foreign_key_20260724 registered by the arm (canonical_equations module landed).
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
