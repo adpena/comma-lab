@@ -22830,3 +22830,42 @@ warning) vs keep+schema-version-bump. First rungs: (a) e4's overhead row + strip
 (c) ms2/sn1 emit receipts against the now-landed schema (inboxed earlier — cite, no parallel enum).
 Triality: equations leg = the registered correspondence law; DSL N/A (schema/apparatus);
 tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on VertigoDataTier.
+
+## FEED-603-ms2-custody (2026-07-24, MAIN custody of ddm_ms2_typed_quotient_solve rc=0)
+- **What landed:** the STRICT TYPED QUOTIENT-SOLVE APPARATUS — ms1's 5 contractual typings executed as fail-closed code
+  (`src/tac/optimization/ddm_typed_quotient_solve.py` + measure tool + 32 tests, commit 1ae282ea6f): refuses identity
+  geometry; zero-damping exact second order; bounded exact metric sieve; generalized metric SVD/LS; 10-pair coverage
+  validation; per-dim effective quanta; exact marginal pricing with semantic parse-back; `TypedBlock.pose_serving`
+  rejects pose-FIBER inside seg-only blocks (consumes ws1's 8-move FIBER prior). 5 equations REGISTERED
+  (`ddm_ms2_{visible_quotient_gauge_zero,scorer_metric_second_order_action,typed_block_dual_exchange,effective_quantum_admission,skeleton_fiber_coder_race}_v1`).
+- **Verdict:** `BLOCKED_NO_ADMISSIBLE_METRIC_ACTIVE_N600_CANDIDATE` — verdict_scope: INSTANCE × landed-custody-preflight.
+  BUILT-NOT-MEASURED is the honest state; the fail-closed headline refused to emit a solve row without full metric custody.
+- **THE CONVERGENT BLOCKER (the session's structural finding):** THREE independent arms now terminate at the SAME
+  un-owned prerequisite — the **bucket-complete metric-custody bundle**: (a) rank-4/margin-Fisher block Gram + λ over
+  pf2's landed 1,200-row atlas (AT1X gap: full-n600 pose row-Grams exist but only CONTRACTED seg row energy);
+  (b) n600 batch32 ≤6-dim PoseNet quadratic in active-tube form (V16 evidence = 8 pairs batch16, KKT not all converged);
+  (c) exact composite-R Hessian/adjoint readback + realized secants; (d) Euclid-vs-Fisher cosine + rel-norm diagnostics.
+  Blocked consumers: ms2 rerun · pf2r adjudication · rd1's 162 NULL dual cells · train-decision SOLVE column.
+  Per tick rule 3 the respawn = a custody-bundle PRODUCER arm (**ms3**), not another solver.
+- **Custody mechanics:** registry union-merged 813→827 (ms2 rows appear as multiple event rows per equation —
+  latest-row-wins); `test_ddm_runtime_exporter.py` 3-way merged preserving BOTH ts1 typed-tag tests and ms2 additions
+  (14 pass); ms2's 32 tests pass on main. 2 pre-existing `test_ddm_runtime_sensitivity.py` failures
+  (`ReceiverError: frame identity mismatch`) PRE-DATE ts1 (e2/e3-era receiver hardening) → routed to #670 hygiene.
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED — apparatus, not a score row.
+
+## FEED-603-sn1-fivetype-custody (2026-07-24, MAIN custody of the sn1 five-type addendum arm rc=0)
+- **What landed:** DERIVED five-type amendment closure over the ALREADY-SETTLED SN1 n600 telemetry/asymmetry evidence
+  (no rerun; SHA-bound consumption with hard drift-refusal; addendum SHA `949935045f...8b17`, commit 46fe47a4b9→main):
+  16 typed rows spanning all 5 StreamTypes (3 SKELETON / 5 FIBER / 2 CONNECTION / 5 RESIDUAL / 1 GAUGE) × 5 layer homes,
+  each citing its evaluate.py recursion level; seg rows priced in margin-Fisher/rank-4 geometry, pose rows in the exact
+  ≤6-dim output quadratic; NO verdict-bearing Euclidean row (metric-first law honored).
+- **MAIN schema validation (the owed review-notes item):** representation types match ts1's `StreamType` EXACTLY.
+  layer_home uses sn1's recursion-derived ladder under its OWN schema tag `ddm_sn1_five_type_stream_tag.v1`:
+  L1_PROGRAM/L5_VERDICT ≡ ts1 L1_program/L5_verdict; L3_SCORER_FEATURE→L4_scorer_feature; L2_RECEIVER_R→L3_raster
+  (adjacent); **L4_SCORER_DECISION = a finer head-decision stratum ts1's 5-level ladder does not distinguish** —
+  recorded as an enum-refinement candidate for #669(c) layer-assignment audit, NOT force-mapped. Artifact left
+  SHA-bound (no mutation). All rows research_only=true / score_claim=false.
+- **First rung (named):** the typing does not authorize execution — next measurement = a separately claimed
+  receiver-closed candidate for the highest-mass solve-menu cluster with same-candidate frozen SegNet + exact pose
+  quadratic + parse-back + counted-byte custody (consumers: menu1 #656, ms3).
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
