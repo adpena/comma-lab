@@ -87064,6 +87064,48 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_ddm_gc2_oracle_gap_closure_20260724",
+      "name": "DDM GC2 scorer-value oracle seven-gap closure",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_gc2_oracle_gap_closure_20260724_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Seven SHA-bound oracle producers; 21/21 fresh coverage; camera-preimage, receiver-closure, and joint null-gauge intersection remain fail-closed; MAIN landing review required.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -87073,5 +87115,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T21:04:12Z"
+  "updated_at": "2026-07-24T21:50:29Z"
 }
