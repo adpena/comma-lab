@@ -1,0 +1,514 @@
+{
+  "schema": "ddm_cc1_coolchic_c3_lesson_harvest.v1",
+  "created_at_utc": "2026-07-24T23:18:00Z",
+  "lane_id": "lane_ddm_cc1_coolchic_c3_lesson_harvest_20260724",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "pointer_delta": "NONE",
+  "main_landing_review_required": true,
+  "verdict": "LESSONS_HARVESTED; NO_EXTERNAL_VEHICLE_ADOPTED; FOUR_DDM_RACES_ROUTED_PENDING_J8F_COUNTED_APPLICATION_STREAM",
+  "verdict_scope": "primary-paper and pinned-OSS mechanism harvest plus historical Pact Cool-Chic/C3 instance/formulation re-scope; no fresh scorer run, archive, or promotion claim",
+  "epistemic_labels": {
+    "MEASURED_EXTERNAL": "Measured by the cited paper or official release on its own image/video fidelity axis; never transferred as Pact score evidence.",
+    "MEASURED_LOCAL_ADVISORY": "Measured in historical Pact artifacts on the stated local advisory axis.",
+    "DERIVED": "Re-derived from measured or source-inspected premises without a new run.",
+    "ROUTED_PENDING": "A named consumer and arbitration gate exist, but no same-object composition has been measured.",
+    "N_A": "The source mechanism is a vehicle-specific means or optimizes a non-authority metric; it is not adopted into DDM.",
+    "GAP": "The evidence or typed stream required to decide does not exist.",
+    "CONFLICT": "The lesson conflicts with contest authority or another binding invariant unless a narrower exact A/B resolves it."
+  },
+  "source_manifest": {
+    "retrieved_at_utc": "2026-07-24T23:16:00Z",
+    "pdfs": [
+      {
+        "id": "cool_chic_v1",
+        "url": "https://arxiv.org/abs/2212.05458",
+        "sha256": "57f9639f76ced6cd3aa5e1d7ce19af3ab0931314e9816b60869795a14df7b99d"
+      },
+      {
+        "id": "cool_chic_v2_low_complexity",
+        "url": "https://arxiv.org/abs/2307.12706",
+        "sha256": "8d51909434e0bea1153d3029bd6df3d13fcb0fafa0ce8793a050a6e0632f1da0"
+      },
+      {
+        "id": "cool_chic_video",
+        "url": "https://arxiv.org/abs/2402.03179",
+        "sha256": "c4dae774780da076c2b870a67885e5792c2be097b367e33f4941fe16cd57fcbe"
+      },
+      {
+        "id": "cool_chic_reduced_complexity",
+        "url": "https://arxiv.org/abs/2403.11651",
+        "sha256": "ae6f5c29dcd8088f7ee39f359e7d6486bfd899027a35151d78a936ed9f4e35b0"
+      },
+      {
+        "id": "c3_cvpr2024",
+        "url": "https://openaccess.thecvf.com/content/CVPR2024/papers/Kim_C3_High-Performance_and_Low-Complexity_Neural_Compression_From_a_Single_Image_or_CVPR_2024_paper.pdf",
+        "sha256": "89626409a7749b4db0763f795210a9f072f563063a90cdf3065e8d57655f1842"
+      },
+      {
+        "id": "c3_cvpr2024_supplement",
+        "url": "https://openaccess.thecvf.com/content/CVPR2024/supplemental/Kim_C3_High-Performance_and_CVPR_2024_supplemental.pdf",
+        "sha256": "b7e52297d643b4e7914cee52a4adfa0115af86de06c4aa3c698b344c2b172fe4"
+      },
+      {
+        "id": "cool_chic_v4_improved_video_encoding",
+        "url": "https://arxiv.org/abs/2501.16976",
+        "sha256": "a58c14a2ce0a3bf98761849d442bffeede2c2ec63d0cf83db9cd9ff3ef527838"
+      },
+      {
+        "id": "cool_chic_v4_subpixel_motion",
+        "url": "https://arxiv.org/abs/2507.21926",
+        "sha256": "3a88c4385174d97403178dbb8efda3dfeff3ac93edf0782bf2a08940190ff315"
+      },
+      {
+        "id": "cool_chic_v4_wasserstein_common_randomness",
+        "url": "https://arxiv.org/abs/2412.00505",
+        "sha256": "c536a0fb9ee51bfbbb83007d28632df962cbc9cc28d06ae072b1bc5d9c4a605f"
+      },
+      {
+        "id": "cool_chic_v5",
+        "url": "https://arxiv.org/abs/2605.02726",
+        "sha256": "844941ee6d0926ca68e4028e6dfe21fb32b49474b0478c3737be45871a44dc0c"
+      },
+      {
+        "id": "coin",
+        "url": "https://arxiv.org/abs/2103.03123",
+        "sha256": "35ee023ddcc0810df5aaaa2dbab8ab4f8dbf1e42b6d4efb9bb5fd69d7bf1a99b"
+      },
+      {
+        "id": "coin_plus_plus",
+        "url": "https://arxiv.org/abs/2201.12904",
+        "sha256": "6e42a1ab85725ebbde9dd390cfe03c0026b321696a6c202189dfca36809296ce"
+      },
+      {
+        "id": "functa",
+        "url": "https://arxiv.org/abs/2201.12204",
+        "sha256": "73371dc88d72854633ee00a802e34876921644a05146f592ea4b93a6d77f3dab"
+      }
+    ],
+    "repositories": [
+      {
+        "id": "orange_cool_chic",
+        "url": "https://github.com/Orange-OpenSource/Cool-Chic",
+        "head": "a6fe38a414dd098b39c41636bd6e423626402f7e",
+        "tags": {
+          "v1.0.0": "d8770445c21fd33047c874566adae435bae2a8e3",
+          "v2.0.0": "e6240cab9b0095dbd1600cf8ba10ec9c5eb2a9db",
+          "v3.0.0": "ed5906d62260482301c6735d92f5046404d22096",
+          "v3.1.0": "4ca7ae5504c2063130df08d077bf049cb00dff43",
+          "v3.2.0": "8f1c08844f5087ca312126b54bd5f4d1d87912c8",
+          "v3.3.0": "2b9c13fafa7683b6f1072d4de60b7ecd790d2b41",
+          "v3.4.0": "c284e184c30d0cd5b72738d615e1ef8475f11278",
+          "v3.4.1": "9198208b45f3ec83a1844d0d8a778bf2ca2261e4",
+          "v4.0.0": "e1250e72ab13abe33b738f2c833fbae114ccd28d",
+          "v4.1.0": "d0f7ac1cd11d2b669dbeae4c5c1347ee80fb55fb",
+          "v4.2.0": "a2298497584d812b7d748035481dbca52110f827",
+          "v4.2.1": "6430296334cba242d99e6e158ba3e300e984a43c",
+          "v5.0.0": "a2f9f84f9e1ab31cacc0a882fdba0cd900add4d6",
+          "v5.0.1": "8c01639f9dc3be872f1df6f0e74e62c15336b492"
+        }
+      },
+      {
+        "id": "deepmind_c3",
+        "url": "https://github.com/google-deepmind/c3_neural_compression",
+        "head": "e63e7519641db3d431cff623127fb2dcb825069f"
+      },
+      {
+        "id": "coin",
+        "url": "https://github.com/EmilienDupont/coin",
+        "head": "a21e50746a9f46ac74e165cc77a68ebf5037c48a"
+      },
+      {
+        "id": "coin_plus_plus",
+        "url": "https://github.com/EmilienDupont/coinpp",
+        "head": "55cd43107fed6e20081567765d91197bf6fb5bca"
+      },
+      {
+        "id": "functa",
+        "url": "https://github.com/google-deepmind/functa",
+        "head": "667f3a0c4ad59d5585db2c0807de60934bf1f398"
+      }
+    ]
+  },
+  "lesson_table": [
+    {
+      "source": "Cool-Chic v1.0",
+      "mechanism": "Per-instance hierarchical latent grids, bicubic upsampling, a tiny synthesis MLP, and a causal Laplace ARM; the differentiable objective prices latent entropy but network bytes are selected after training.",
+      "measured_effect": "MEASURED_EXTERNAL: the paper establishes competitive image RD with a very small decoder; historical Pact measured a steep d_seg-per-byte descent but later found the continuous ARM estimate undercounted exact bytes by 2.57x to 2.85x.",
+      "our_surface": "#366 counted description coordinates; J8F counted-application stream; r3 physical-stream gate",
+      "verdict": "ADAPT"
+    },
+    {
+      "source": "Cool-Chic v2.0",
+      "mechanism": "Learned separable upsampling, residual convolutional synthesis, and late epsilon-STE quantization preparation.",
+      "measured_effect": "MEASURED_EXTERNAL: official paper reports about 14% average rate reduction on its image axis; the release remains a PSNR vehicle result, not DDM evidence.",
+      "our_surface": "#532 realization gate and #366 exact-R realized acceptance",
+      "verdict": "ADOPT-RACE"
+    },
+    {
+      "source": "Cool-Chic v3.0",
+      "mechanism": "Imports C3 soft-round/noise quantization and training refinements into the Cool-Chic implementation.",
+      "measured_effect": "MEASURED_EXTERNAL release claim: 15-20% rate improvement over v2; no Pact scorer composition.",
+      "our_surface": "#366 quantization curriculum candidate",
+      "verdict": "ADOPT-RACE"
+    },
+    {
+      "source": "Cool-Chic v3.1",
+      "mechanism": "Explicit motion and residual modules; dense flow, alpha masking, beta blending, and a tiny per-instance decoder.",
+      "measured_effect": "MEASURED_EXTERNAL: disabling alpha prediction was +85.7% BD-rate and disabling beta was +10.8% on the paper axis; network share reaches about 50% at the lowest plotted rate while latents dominate as rate rises.",
+      "our_surface": "DDM seg/pose/engine budget split and counted pose stream",
+      "verdict": "ADAPT"
+    },
+    {
+      "source": "Cool-Chic v3.2-v3.3",
+      "mechanism": "Receiver implementation and CPU optimization; C3-style quantization schedule in production code; progressively faster decoding.",
+      "measured_effect": "MEASURED_EXTERNAL release claims: about 100 ms at 512x768 in v3.2 and about 720p per 100 ms in v3.3; source inspection confirms T 0.3 to 0.2 and Kumaraswamy a 2 to 1.",
+      "our_surface": "J8F receiver-closed Step-4 timing and parse-back gate",
+      "verdict": "ADAPT"
+    },
+    {
+      "source": "Cool-Chic v3.4-v3.4.1",
+      "mechanism": "Stage-specific separable symmetric latent upsampling filters and reduced ARM work; compile-assisted encoding.",
+      "measured_effect": "MEASURED_EXTERNAL release claim: 1-5% rate reduction and about 30% ARM complexity reduction; v3.4.1 reports up to 3x encoding speedup.",
+      "our_surface": "r3 per-stream representation race; receiver operator precision",
+      "verdict": "ADAPT"
+    },
+    {
+      "source": "Cool-Chic v4.0",
+      "mechanism": "Two explicit per-frame modules, one for motion and one for residual, with RAFT-guided motion pretraining followed by one joint video RD objective that reallocates bits across frames.",
+      "measured_effect": "MEASURED_EXTERNAL: the paper's ablation shows motion pretraining and joint allocation both matter; neural-network rate was still omitted from the descent.",
+      "our_surface": "DDM pose/seg/engine split; organ global water level; #366 joint objective",
+      "verdict": "ADAPT"
+    },
+    {
+      "source": "Cool-Chic v4.1",
+      "mechanism": "Eight-tap sinc interpolation, 4x4 block-shared motion, and 64 finite fractional positions replace pixelwise infinite-precision bilinear motion.",
+      "measured_effect": "MEASURED_EXTERNAL: -10.5% BD-rate versus the v4.0 warp at 214 versus 391 motion MAC/pixel; 64 fractional positions cost only +0.06% BD-rate versus infinite precision.",
+      "our_surface": "Girod precision column; #149 subpixel placement; #532 effective-quantum calibration",
+      "verdict": "ADAPT"
+    },
+    {
+      "source": "Cool-Chic v4.2-v4.2.1",
+      "mechanism": "Wasserstein perceptual distortion and decoder-side fixed-seed common randomness.",
+      "measured_effect": "MEASURED_EXTERNAL: human-rating and perceptual-axis gains; fixed-seed common randomness costs no image-specific payload in that codec.",
+      "our_surface": "DDM zero-byte family only under frozen-scorer exact admission",
+      "verdict": "N-A"
+    },
+    {
+      "source": "Cool-Chic v5.0-v5.0.1 and post-tag HEAD",
+      "mechanism": "All-previous-grid inter-feature context via tiny linear IFCEs, hyperlatents used only for entropy decoding, stabilizer branches, Gaussian noise plus soft-round continuation, SOAP for tiny networks, hard-round finish, and post-training RD selection of quantized network parameters.",
+      "measured_effect": "MEASURED_EXTERNAL: no IFCE +3.8%, no SOAP +2.8%, C3 quantization proxy +2.7%, no hyperlatent +0.5%, no stabilizer +0.4% on CLIC20; official release reports about 10x fewer iterations. Source also states network rate remains omitted from training and post-tag HEAD fixes an IFCE integerization bug.",
+      "our_surface": "g4 free-context versus counted tiny-arm versus Bellard race; #366 continuation; J8F parse-back guard; global budget split",
+      "verdict": "ADOPT-RACE"
+    },
+    {
+      "source": "C3 image",
+      "mechanism": "Per-instance latent, synthesis, and entropy models; integrated Laplace bin mass; C3 soft-round plus Kumaraswamy noise continuation; hard-forward/soft-backward finish and adaptive learning-rate restarts.",
+      "measured_effect": "MEASURED_EXTERNAL: removing soft-round costs +22.18% Kodak and +24.87% CLIC BD-rate; removing Kumaraswamy costs +3.90% and +8.06%; effects are source-axis only. Source code confirms exact bin-mass coding and full latent plus model accounting.",
+      "our_surface": "#366 differentiable rate and quantization continuation; #532 survival gate",
+      "verdict": "ADOPT-RACE"
+    },
+    {
+      "source": "C3 video",
+      "mechanism": "3D grids and patches with 65-value causal spatiotemporal context; learned previous-frame masks for the top grids.",
+      "measured_effect": "MEASURED_EXTERNAL: temporal conditioning improves paper-axis compression; the supplement reports MAC shares, not motion/temporal bit shares.",
+      "our_surface": "g4 temporal-class context and DDM typed stream budget split",
+      "verdict": "ADAPT"
+    },
+    {
+      "source": "COIN",
+      "mechanism": "A per-instance SIREN maps coordinates to RGB; its weights are the representation.",
+      "measured_effect": "MEASURED_EXTERNAL paper axis; source inspection shows a dtype-based parameter estimate and Torch state-dict serialization, not a contest-ready packed entropy codec; 8-bit post-quantization degrades quality.",
+      "our_surface": "No DDM vehicle adoption; only the principle that globally acting weights need explicit precision and byte custody.",
+      "verdict": "N-A"
+    },
+    {
+      "source": "COIN++",
+      "mechanism": "A receiver-shared meta-learned SIREN plus low-dimensional, shift-only per-instance modulations; a linear map lifts modulations into hidden-layer shifts.",
+      "measured_effect": "MEASURED_EXTERNAL: about 300x faster encoding and about 4x compression on its paper axes; 5-6 modulation bits are preferred and entropy modeling saves 8-15%. Source computes expected entropy but saves tensors rather than a contest range-coded stream.",
+      "our_surface": "Free generic receiver plus counted tiny modulation analogy; DDM typed parameter lift",
+      "verdict": "ADAPT"
+    },
+    {
+      "source": "functa",
+      "mechanism": "Meta-learned shift modulations form a compact per-instance functional representation for downstream tasks.",
+      "measured_effect": "MEASURED_EXTERNAL: three-step adaptation; source reports that longer adaptation can improve reconstruction while degrading latent smoothness/downstream utility, and an AR transformer is disadvantaged by ambiguous modulation ordering.",
+      "our_surface": "Schmidhuber ordering and typed parameter-lift discipline; not a codec",
+      "verdict": "N-A"
+    }
+  ],
+  "historical_rescope": [
+    {
+      "historical_rows": "#91-#96 cluster",
+      "original_surface": "n48, eight-pair, pre-DDM score-aware Cool-Chic carrier and capacity/curriculum sweeps",
+      "retained_evidence": "MEASURED_LOCAL_ADVISORY: 3,082 estimated charged bytes, including 2,040 latent and 1,042 weight bytes with 521 synthesis parameters, reached exact local d_seg 0.0084 at epoch 120 and was still descending.",
+      "superseded_language": "Any family-level basis or capacity limit; any projection that it would necessarily reach the contest basin.",
+      "current_scope": "INSTANCE: that carrier, subset, resolution, curriculum, and advisory axis.",
+      "current_route": "No rerun. Retain the mechanism that local multiresolution coordinates can be byte-efficient; route only entropy, quantization, context, and budget lessons into DDM."
+    },
+    {
+      "historical_rows": "#97",
+      "original_surface": "CCV1 byte-close and NumPy receiver",
+      "retained_evidence": "MEASURED_LOCAL_ADVISORY: exact archives were 2.57x to 2.85x the continuous ARM estimate; parse-back and frozen-scorer roundtrip were measured.",
+      "superseded_language": "The 2.7x factor as a universal Cool-Chic/C3 law.",
+      "current_scope": "FORMULATION: the CCV1 header, empirical tables, quantizer, model packing, and n48 artifacts.",
+      "current_route": "Permanent law: differentiable rate is ranking-only until calibrated against exact packed bytes on the same typed stream."
+    },
+    {
+      "historical_rows": "#98-#99 cluster",
+      "original_surface": "Hinge/CE matched-byte A/B, latent-heavy capacity isolation, and weight-tied recurrence",
+      "retained_evidence": "MEASURED_LOCAL_ADVISORY: hinge improved d_seg about 29% at 1,029 bytes and about 10% at 2,762 bytes; the tested richer and tied variants did not escape their local basin.",
+      "superseded_language": "The representation family is exhausted or recurrence cannot help.",
+      "current_scope": "INSTANCE or FORMULATION per row: exact old loss, coordinates, byte estimate, and subset.",
+      "current_route": "Keep margin-aware proposal ordering as an ADAPT lesson; do not carry an old vehicle negative into #366."
+    },
+    {
+      "historical_rows": "#115",
+      "original_surface": "More-epoch/more-capacity Cool-Chic d_seg/pose re-validation",
+      "retained_evidence": "TRACKED but deprioritized; the evidence memo explicitly says under-powered, still descending, and NOT a basis limit.",
+      "superseded_language": "Treating deprioritization as a negative result or completed basis verdict.",
+      "current_scope": "OPEN historical task with no current vehicle authority.",
+      "current_route": "Do not rerun under this lessons-only charter. Close the epistemic error by preserving OPEN/UNDER-POWERED and reusing only lessons."
+    },
+    {
+      "historical_rows": "C3 deferred export",
+      "original_surface": "C3 as a non-FP4A renderer vehicle without a complete archive/export path",
+      "retained_evidence": "Export-first and receiver-closed byte custody are binding; the old vehicle was correctly non-promotable.",
+      "superseded_language": "C3 mechanisms are unusable because that vehicle lacked export.",
+      "current_scope": "FORMULATION: the old renderer/export pairing.",
+      "current_route": "No C3 vehicle. Route its entropy, continuation, and hard-finish mechanisms into the DDM counted stream after J8F lands."
+    }
+  ],
+  "scorer_derived_synergies": [
+    {
+      "id": "RATE_INSIDE_DESCENT",
+      "source_lesson": "Cool-Chic/C3 optimize a differentiable integrated entropy proxy beside distortion, while exact packed bytes remain the final authority.",
+      "ddm_binding": "Add per-typed-stream differentiable rate to #366 proposal ranking and to J8F counted application; never optimize EV1 accounting homes as though they were physical streams.",
+      "equation": "S_tilde(z)=100*dseg_tilde(z)+sqrt(10*dpose_tilde(z))+lambda_B*B_tilde_stream(z), lambda_B=25/37545489",
+      "arbitration": "Exact same-object parse-back bytes and realized frozen-scorer S must agree with the predicted ordering; otherwise reject and recalibrate.",
+      "status": "ROUTED_PENDING",
+      "blocker": "J8F typed descriptor-to-counted-application stream has not landed; r3 correctly reports zero composable typed actuator streams."
+    },
+    {
+      "id": "QUANTIZATION_GATE_CURE",
+      "source_lesson": "C3 and Cool-Chic v5 show that the quantization continuation schedule is a first-order design variable; v5's decreasing Gaussian-noise schedule beats the C3 schedule by 2.7% on its CLIC20 axis.",
+      "ddm_binding": "Race exact Q8/post-int8 control against C3 soft-round/Kumaraswamy and v5 soft-round/decreasing-Gaussian proposals inside #366, with hard-forward finish and realized rollback.",
+      "equation": "q_t(z)=s_T^-1(s_T(z)+n_sigma); admit only if S(A(round(q_t(z))))<S(A(z))",
+      "arbitration": "Same coordinates, proposal count, bytes, seed, and exact n600 receiver/R/uint8 scorer verdict. The dr1 post-int8 win is INSTANCE-only; #532 Delta=62.74 forbids proxy-only admission.",
+      "status": "ROUTED_PENDING",
+      "blocker": "No J8F counted application stream or Step-4 same-object re-smoke exists."
+    },
+    {
+      "id": "COUNTED_TINY_ARM_VS_FREE_CONTEXT",
+      "source_lesson": "Cool-Chic v5 conditions on all already decoded grids through counted tiny linear IFCEs; C3 uses causal spatiotemporal context; the DDM roster also contains g4 free decoder-derived context and optional Bellard online learning.",
+      "ddm_binding": "For each signed located typed stream, race raw/no context, counted tiny ARM/IFCE, g4 free predictor context, CM/CTW, and Bellard under identical semantic bytes.",
+      "equation": "DeltaS_ctx=lambda_B*(B_stream,c+B_model,c-B_stream,raw), with decoded semantics held bit-identical",
+      "arbitration": "Smallest complete ZIP home with exact parse-back wins; model parameters, switch headers, and context foreign keys are counted once. Free context earns zero payload only when wholly decoder-derived.",
+      "status": "ROUTED_PENDING",
+      "blocker": "r3 has no signed located stream or free-predictor foreign key; its coder race is correctly NOT_RUN."
+    },
+    {
+      "id": "BUDGET_SPLIT",
+      "source_lesson": "Cool-Chic/C3 separate latent, synthesis, entropy, motion, and residual costs; model overhead can dominate at low rates, and v4 joint video optimization reallocates rate across frames.",
+      "ddm_binding": "Use one organ water level across DDM skeleton/connection/fiber/gauge/residual homes, pose stream, #366 engine parameters, and coder/context model; preserve raw and coded byte columns.",
+      "equation": "min Sum_i D_i(b_i) subject to Sum_i (b_i+h_i)<=B; active streams satisfy -dD_i/db_i=lambda_B after exact realization",
+      "arbitration": "Per-section exact packed bytes plus same-object telescoping distortion. C3 supplement MAC shares are never relabeled bit shares; unknown temporal/motion bit share remains GAP.",
+      "status": "ROUTED_PENDING",
+      "blocker": "r3 lacks physical stream sections and per-dimension actuator secants; global allocation cannot act on accounting-only homes."
+    }
+  ],
+  "synergy_matrix": {
+    "legend": [
+      "MEASURED-COMPOSED",
+      "ROUTED-PENDING",
+      "CONFLICT",
+      "GAP"
+    ],
+    "columns": [
+      "SCHMIDHUBER_ORDERING",
+      "WALLACE_MML_QUANTA",
+      "CM_CTW",
+      "FRI_FLOOR",
+      "GIROD_PRECISION",
+      "DISPERSION",
+      "MB_TREE",
+      "TRELLIS_RD",
+      "CONVEX_HULLS",
+      "PVQ",
+      "EMBEDDED_CODING",
+      "CONDITIONAL_CODING",
+      "COOL_CHIC",
+      "C3_COINPP"
+    ],
+    "rows": [
+      {
+        "surface": "#366_ENGINE",
+        "cells": {
+          "SCHMIDHUBER_ORDERING": {"status": "ROUTED-PENDING", "arbitration": "proposal order must beat same-budget control on exact realized S"},
+          "WALLACE_MML_QUANTA": {"status": "ROUTED-PENDING", "arbitration": "learned quantum must survive uint8 and pay full description length"},
+          "CM_CTW": {"status": "GAP", "arbitration": "engine parameters have no emitted physical stream race"},
+          "FRI_FLOOR": {"status": "GAP", "arbitration": "no finite event stream or floor bits"},
+          "GIROD_PRECISION": {"status": "MEASURED-COMPOSED", "arbitration": "J5 exact Q8 x+1 proposal improved same n600 object and saved five bytes"},
+          "DISPERSION": {"status": "GAP", "arbitration": "no finite-block stream length model"},
+          "MB_TREE": {"status": "ROUTED-PENDING", "arbitration": "global organ water level must beat fixed stage weights"},
+          "TRELLIS_RD": {"status": "ROUTED-PENDING", "arbitration": "sequence of realized moves must beat greedy exact control"},
+          "CONVEX_HULLS": {"status": "ROUTED-PENDING", "arbitration": "lower envelope only over same-object proposal curves"},
+          "PVQ": {"status": "GAP", "arbitration": "no typed vector block or gain-shape coder"},
+          "EMBEDDED_CODING": {"status": "GAP", "arbitration": "no truncatable counted application stream"},
+          "CONDITIONAL_CODING": {"status": "ROUTED-PENDING", "arbitration": "condition only on causal receiver state with foreign keys"},
+          "COOL_CHIC": {"status": "ROUTED-PENDING", "arbitration": "v5 versus C3 continuation A/B after J8F Step-4"},
+          "C3_COINPP": {"status": "ROUTED-PENDING", "arbitration": "tiny modulation/soft-round ideas require counted typed lift and exact finish"}
+        }
+      },
+      {
+        "surface": "COUNTED_APPLICATION_STREAM",
+        "cells": {
+          "SCHMIDHUBER_ORDERING": {"status": "ROUTED-PENDING", "arbitration": "serialize typed causal order then compare bytes"},
+          "WALLACE_MML_QUANTA": {"status": "ROUTED-PENDING", "arbitration": "header plus model bytes must enter message length"},
+          "CM_CTW": {"status": "ROUTED-PENDING", "arbitration": "race CM/CTW only after signed located bytes exist"},
+          "FRI_FLOOR": {"status": "ROUTED-PENDING", "arbitration": "event floor from actual located event count"},
+          "GIROD_PRECISION": {"status": "ROUTED-PENDING", "arbitration": "finite effective quanta from measured actuator secants"},
+          "DISPERSION": {"status": "ROUTED-PENDING", "arbitration": "short-stream penalty from exact length and alphabet"},
+          "MB_TREE": {"status": "ROUTED-PENDING", "arbitration": "price upstream application by downstream dependent debt"},
+          "TRELLIS_RD": {"status": "ROUTED-PENDING", "arbitration": "select serialized action path by exact cumulative S"},
+          "CONVEX_HULLS": {"status": "ROUTED-PENDING", "arbitration": "lower envelope across representation/coder pairs"},
+          "PVQ": {"status": "ROUTED-PENDING", "arbitration": "only for typed vector blocks with exact gain/shape parse-back"},
+          "EMBEDDED_CODING": {"status": "ROUTED-PENDING", "arbitration": "prefix truncation must preserve valid receiver semantics"},
+          "CONDITIONAL_CODING": {"status": "ROUTED-PENDING", "arbitration": "context must be causal and single-owner"},
+          "COOL_CHIC": {"status": "ROUTED-PENDING", "arbitration": "tiny ARM versus free IFCE-equivalent context on same stream"},
+          "C3_COINPP": {"status": "ROUTED-PENDING", "arbitration": "range-coded physical bytes, not expected entropy or tensor save"}
+        }
+      },
+      {
+        "surface": "R3_WATERFILL",
+        "cells": {
+          "SCHMIDHUBER_ORDERING": {"status": "ROUTED-PENDING", "arbitration": "order admitted physical streams by measured marginal S"},
+          "WALLACE_MML_QUANTA": {"status": "GAP", "arbitration": "162 accounting cells have zero finite per-dimension duals"},
+          "CM_CTW": {"status": "GAP", "arbitration": "race refused: no admissible stream"},
+          "FRI_FLOOR": {"status": "GAP", "arbitration": "fri_event_floor_bits is null"},
+          "GIROD_PRECISION": {"status": "GAP", "arbitration": "output histograms do not supply actuator gain times deadzone"},
+          "DISPERSION": {"status": "GAP", "arbitration": "stream length and dispersion absent"},
+          "MB_TREE": {"status": "ROUTED-PENDING", "arbitration": "global allowance across dependent blocks after actuator edges"},
+          "TRELLIS_RD": {"status": "ROUTED-PENDING", "arbitration": "mixed receiver path needed before dynamic program"},
+          "CONVEX_HULLS": {"status": "ROUTED-PENDING", "arbitration": "same-object family curves and switch headers required"},
+          "PVQ": {"status": "GAP", "arbitration": "no typed vector stream"},
+          "EMBEDDED_CODING": {"status": "GAP", "arbitration": "no valid truncatable stream"},
+          "CONDITIONAL_CODING": {"status": "GAP", "arbitration": "missing predictor foreign keys"},
+          "COOL_CHIC": {"status": "ROUTED-PENDING", "arbitration": "latent/model split transfers only after physical stream exists"},
+          "C3_COINPP": {"status": "ROUTED-PENDING", "arbitration": "modulation versus direct typed code on exact mixed receiver"}
+        }
+      },
+      {
+        "surface": "POSE_STREAM",
+        "cells": {
+          "SCHMIDHUBER_ORDERING": {"status": "ROUTED-PENDING", "arbitration": "causal pose before dependent frame coefficients"},
+          "WALLACE_MML_QUANTA": {"status": "ROUTED-PENDING", "arbitration": "pose precision pays home plus model bits"},
+          "CM_CTW": {"status": "ROUTED-PENDING", "arbitration": "same pose sequence under raw, delta, CM, and CTW"},
+          "FRI_FLOOR": {"status": "ROUTED-PENDING", "arbitration": "event floor from actual xi-event count"},
+          "GIROD_PRECISION": {"status": "ROUTED-PENDING", "arbitration": "finite pose precision by exact YUV6 tube"},
+          "DISPERSION": {"status": "ROUTED-PENDING", "arbitration": "short 600-pair stream finite-block penalty"},
+          "MB_TREE": {"status": "ROUTED-PENDING", "arbitration": "reference-frame pose spend priced by dependent pairs"},
+          "TRELLIS_RD": {"status": "ROUTED-PENDING", "arbitration": "pose event sequence by exact tube cost"},
+          "CONVEX_HULLS": {"status": "ROUTED-PENDING", "arbitration": "lower envelope over delta/model/precision variants"},
+          "PVQ": {"status": "ROUTED-PENDING", "arbitration": "Pose6 gain-shape only if exact tube improves"},
+          "EMBEDDED_CODING": {"status": "ROUTED-PENDING", "arbitration": "coarse-to-fine pose prefix with parse-back"},
+          "CONDITIONAL_CODING": {"status": "MEASURED-COMPOSED", "arbitration": "PC1 owns a 40-byte home plus Phi and 320 receiver coordinates; broader score composition remains pending"},
+          "COOL_CHIC": {"status": "ROUTED-PENDING", "arbitration": "motion/residual budget split, not its optical-flow vehicle"},
+          "C3_COINPP": {"status": "ROUTED-PENDING", "arbitration": "tiny modulation analogy only through typed pose lift"}
+        }
+      },
+      {
+        "surface": "ZERO_BYTE_FAMILY",
+        "cells": {
+          "SCHMIDHUBER_ORDERING": {"status": "ROUTED-PENDING", "arbitration": "apply free operators before counted residuals"},
+          "WALLACE_MML_QUANTA": {"status": "CONFLICT", "arbitration": "video-derived seed/model is not zero-message unless generic and fixed"},
+          "CM_CTW": {"status": "ROUTED-PENDING", "arbitration": "free g4 predictor context may feed a counted coder"},
+          "FRI_FLOOR": {"status": "GAP", "arbitration": "no actual free event process floor"},
+          "GIROD_PRECISION": {"status": "ROUTED-PENDING", "arbitration": "free interpolation still needs exact finite precision"},
+          "DISPERSION": {"status": "GAP", "arbitration": "zero payload does not erase finite model/seed description"},
+          "MB_TREE": {"status": "ROUTED-PENDING", "arbitration": "free dependent prediction must be applied before spending"},
+          "TRELLIS_RD": {"status": "GAP", "arbitration": "no free action trellis measured"},
+          "CONVEX_HULLS": {"status": "ROUTED-PENDING", "arbitration": "zero-byte rows compete by exact distortion only"},
+          "PVQ": {"status": "GAP", "arbitration": "no free vector codebook authority"},
+          "EMBEDDED_CODING": {"status": "GAP", "arbitration": "no counted prefix"},
+          "CONDITIONAL_CODING": {"status": "MEASURED-COMPOSED", "arbitration": "twelve-row three-base zero-byte admission ledger is instance-scoped"},
+          "COOL_CHIC": {"status": "CONFLICT", "arbitration": "v4.2 perceptual common randomness is non-authority unless exact frozen scorers improve"},
+          "C3_COINPP": {"status": "CONFLICT", "arbitration": "COIN++ shared base is counted here unless generic rule-118 code, never assumed free"}
+        }
+      },
+      {
+        "surface": "DDM_ORGAN",
+        "cells": {
+          "SCHMIDHUBER_ORDERING": {"status": "ROUTED-PENDING", "arbitration": "dependency frontier then freeing-before-spending then Gauss-Southwell"},
+          "WALLACE_MML_QUANTA": {"status": "ROUTED-PENDING", "arbitration": "description length includes all model and header homes"},
+          "CM_CTW": {"status": "ROUTED-PENDING", "arbitration": "coder roster retained; winner by exact bytes"},
+          "FRI_FLOOR": {"status": "ROUTED-PENDING", "arbitration": "block allocation cannot cross typed event floor"},
+          "GIROD_PRECISION": {"status": "ROUTED-PENDING", "arbitration": "effective quantum is a measured curve, never a constant"},
+          "DISPERSION": {"status": "ROUTED-PENDING", "arbitration": "price short-stream overhead before dispatch"},
+          "MB_TREE": {"status": "ROUTED-PENDING", "arbitration": "global cross-stream water level with dependent-frame value"},
+          "TRELLIS_RD": {"status": "ROUTED-PENDING", "arbitration": "organ schedules exact path only after typed actions exist"},
+          "CONVEX_HULLS": {"status": "ROUTED-PENDING", "arbitration": "select lower convex envelope under non-additive-pools law"},
+          "PVQ": {"status": "GAP", "arbitration": "no admitted PVQ actuator family"},
+          "EMBEDDED_CODING": {"status": "ROUTED-PENDING", "arbitration": "coarse-to-fine prefixes need receiver closure"},
+          "CONDITIONAL_CODING": {"status": "ROUTED-PENDING", "arbitration": "context/coder choice becomes a typed duty"},
+          "COOL_CHIC": {"status": "ROUTED-PENDING", "arbitration": "latent/model/context budget shares feed the global water level"},
+          "C3_COINPP": {"status": "ROUTED-PENDING", "arbitration": "tiny counted parameterizations compete after authority filtering"}
+        }
+      }
+    ]
+  },
+  "probe_decision": {
+    "new_probe_run": false,
+    "cost_usd": 0,
+    "reason": "A local proxy A/B would not change the decision because J8F has not emitted the physical counted stream and r3 has no per-dimension actuator secants. Running source-domain quantization or coder proxies would create precisely the non-composable evidence this task is meant to prevent.",
+    "first_decision_changing_probe": "After MAIN-reviewed J8F Step-4: one bounded n600 same-object A/B across post-int8 Q8, C3 continuation, and Cool-Chic-v5 continuation, followed by the raw/tiny-ARM/g4/CM/CTW/Bellard coder race on the emitted typed stream."
+  },
+  "directive_consumption": [
+    {
+      "utc": "2026-07-24T23:09:25Z",
+      "source": "fleet broadcast from ddm_ra1_blocker_dissolution_reactivation",
+      "status": "CONSUMED",
+      "application": "J8F counted application is the shared exact-row blocker; no WHEN-J8F Step-4 task, external vehicle, or duplicate stream lane is spawned. Cool-Chic/C3 lessons feed J8F/r3 and wait."
+    }
+  ],
+  "triality": {
+    "dsl": {
+      "schema": "DDMCC1LessonRaceDSL.v1",
+      "default_actuation": "NONE",
+      "allowed_dispositions": ["ADOPT-RACE", "ADAPT", "N-A"],
+      "allowed_matrix_statuses": ["MEASURED-COMPOSED", "ROUTED-PENDING", "CONFLICT", "GAP"],
+      "required_stream_fields": ["stream_id", "typed_owner", "decoder_consumer", "causal_context_foreign_keys", "raw_bytes", "model_bytes", "header_bytes", "coded_bytes", "parseback_sha256", "receiver_output_sha256", "axis", "verdict_scope"],
+      "required_quantization_arms": ["POST_INT8_Q8_CONTROL", "C3_SOFTROUND_KUMAR", "COOL_CHIC_V5_SOFTROUND_GAUSSIAN"],
+      "required_context_arms": ["RAW", "COUNTED_TINY_ARM_IFCE", "G4_FREE_DECODER_CONTEXT", "MAHONEY_CONTEXT_MIXING", "WILLEMS_CTW", "BELLARD_ONLINE_LEARNED_OPTIONAL"],
+      "activation_gate": "MAIN_REVIEWED_J8F_COUNTED_APPLICATION_PLUS_STEP4"
+    },
+    "equations": [
+      "S=100*d_seg+sqrt(10*d_pose)+25*B/37545489",
+      "S_tilde(z)=100*dseg_tilde(z)+sqrt(10*dpose_tilde(z))+lambda_B*B_tilde_stream(z)",
+      "q_t(z)=s_T^-1(s_T(z)+n_sigma); authority is hard parse-back after round/uint8/R",
+      "DeltaS_ctx=lambda_B*(B_stream,c+B_model,c-B_stream,raw) with bit-identical semantics",
+      "min Sum_i D_i(b_i) subject to Sum_i(b_i+h_i)<=B and non-additive same-pool ownership"
+    ],
+    "dag": ".omx/research/ddm_cc1_coolchic_c3_lesson_harvest_DAG_FEED_20260724.md"
+  },
+  "stores_consulted": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "docs/operating_manual_craft_handoff.md",
+    ".omx/research/PROGRAM.md",
+    ".omx/research/cool_chic_param_at_dseg_basin_design_20260611.md",
+    ".omx/research/cool_chic_fullstack_synergy_20260612T153802Z.md",
+    ".omx/research/cool_chic_ar_prior_training_feasibility_20260612T164116Z.md",
+    ".omx/research/track_a_completeness_ledger_20260612.md",
+    ".omx/research/SPEC_ddm_j1_366_joint_descent_finisher_20260723.md",
+    ".omx/research/codex_findings_ddm_j5_366_realized_acceptance_warmstart_20260723_codex.md",
+    ".omx/research/ddm_366_dimension_completeness_contract_20260724.md",
+    ".omx/research/codex_findings_ddm_ms2r_r3_typed_fisher_g4_waterfill_20260724T211804Z_codex.md",
+    ".omx/research/ddm_ms2r_r3_typed_fisher_g4_waterfill_20260724T211804Z/DAG_FEED.md",
+    ".omx/research/ddm_c1_composed_candidate_spec_603_613_20260723.md",
+    ".omx/state/lane_registry.json",
+    ".omx/state/subagent_progress.jsonl",
+    "primary papers and pinned OSS listed in source_manifest"
+  ]
+}
