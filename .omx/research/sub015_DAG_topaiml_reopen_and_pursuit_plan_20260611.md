@@ -24176,3 +24176,22 @@ Historical re-scope: #91-#96 cluster preserved as INSTANCE (n48 old-carrier, d_s
 ~3,082B STILL DESCENDING at ep120 — mechanism preserved, basis-limit wording retired); #115 stays
 OPEN/UNDER-POWERED. verdict_scope: primary-paper+pinned-OSS harvest + instance re-scopes; zero
 fresh scorer runs. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-co4-organ-round4 (2026-07-24, reviewed_committed 038f126ffc)
+Costate organ round-4. (1) PRECISION DEFECT CLOSED: all 1,200 MS4D rows joined to PF2 assignment;
+15 DIRECT + 585 PROPAGATED + 0 UNRANKED pair rows; propagated intervals widened by measured design
+effect 1+CV(contribution)^2 (all >1, so every propagated interval is honestly WIDER than nominal);
+admission gate PASSED (concatenated out-of-fold NDCG@4 = 1.0 >= 0.75) — duty-ranking upgrade
+eligible. (2) ROAD-LOCAL RACE FAILED ITS OWN PREREGISTERED GATE: best frozen candidate
+g3_stratum_experts held-out Road NDCG@4 0.17965 < 0.60 (Spearman 0.6927; global NDCG@4 0.8134) →
+sealed CO3 OOF predictions RETAINED as authority. verdict_scope: FORMULATION — restricted to the
+two preregistered frozen ridge forms; the Road-local family remains OPEN (reformulation candidate
+once J8F realized telemetry gives a Road-conditional target richer than the frozen atlas).
+(3) MS2R immutable-stage mismatch DIAGNOSED: stored stage-01 oracle admission (WRAPPED=14/GAP=7)
+superseded by GC2 coverage (21/0); all 72 structural diffs are input supersession, not corruption
+— #694/#701 rerun must use a NEW stage/config identity, immutable stage preserved. (4) Typed
+blocks all converge on J8F again: #611 counted operator · bandit duty allocation (DESIGN_ONLY) ·
+Bellman residual · M34 per-state duals. (5) Unsound-method audit clean across 14 consumed CO2/CO3
+files (no 77x/2.71x/params^-0.71/label-noise-ceiling priors). Innovations lag-1 corr 0.0668 =
+NO_LARGE_LAG_ONE_COLOR (scoped diagnostic). Organ stays _dev / advisory / actuation=NONE. 27+58
+tests green on merged main. Pointer 0.1910828242 [contest-CPU] UNMOVED.
