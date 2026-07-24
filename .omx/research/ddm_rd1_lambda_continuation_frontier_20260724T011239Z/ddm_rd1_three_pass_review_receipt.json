@@ -1,0 +1,119 @@
+{
+  "schema": "ddm_rd1_three_pass_review_receipt.v1",
+  "run_id": "ddm_rd1_lambda_continuation_frontier_20260724T011239Z",
+  "review_completed_utc": "2026-07-24T02:00:57Z",
+  "reviewer": "codex",
+  "lane_id": "lane_ddm_rd1_lambda_continuation_frontier_20260724",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_full_diff_review_required": true,
+  "lane_maturity": {
+    "level": 2,
+    "marked_gates": [
+      "impl_complete",
+      "real_archive_empirical",
+      "strict_preflight",
+      "three_clean_review"
+    ],
+    "unmarked_authority_gates": [
+      "contest_cuda",
+      "contest_cpu",
+      "memory_entry",
+      "deploy_runbook"
+    ],
+    "local_lane_consistency": "PASS",
+    "global_validate_status": "PREEXISTING_REPOSITORY_DEBT",
+    "global_validate_error_count": 110,
+    "global_validate_scope": "historical lanes with missing evidence paths; no error names this RD1 lane"
+  },
+  "authority_receipt": {
+    "path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt_v2.json",
+    "sha256": "cdfa9a400d9633ea7f8f698dee6d55c65ac478ddcfed3ec01e6d2e6cefe6bbae"
+  },
+  "typed_frontier": {
+    "path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/typed_R_D_frontier_rows.json",
+    "sha256": "7266153f1984e220e69fa8fe04ed674a070cfffe3f176524e7c2985d212c2b1c"
+  },
+  "knee_custody_bundle": {
+    "path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/knee_statistics_hard_analytic_composed_frame1.full-description.zip",
+    "sha256": "0cd45580e778a53f31e52ff5b713b2ee541e62731acba747049b56b3fb76ce83",
+    "bundle_is_custody_container_not_counted_archive": true
+  },
+  "superseded_round0": {
+    "path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt.json",
+    "sha256": "57f697db8f27c4f662728ca09e4718da49dda602f2ed5011b254c0fa97b13278",
+    "status": "INVALID_SUPERSEDED_HISTORICAL_PROVENANCE_ONLY",
+    "reasons": [
+      "persisted volatile exact SSD free-space observation",
+      "predated separate typed S_composed frontier supplement"
+    ]
+  },
+  "source_hashes": {
+    "src/tac/optimization/ddm_lambda_continuation_frontier.py": "0cff5bfd614d3300b83773b3589c91703ab20393d8e867d40bd73f1576169938",
+    "src/tac/canonical_equations/ddm_lambda_continuation_frontier_20260724.py": "1320e4c2325ceb02fd46129adf73de8a8ca8cb169392b9a9d9b7274998d7330a",
+    "tools/measure_ddm_rd1_lambda_continuation_frontier.py": "cb54ec2576e4dc0f324c1a2c0cff2860ef0c5589b4b4defa044deb7a3514a3d4",
+    "tests/test_ddm_lambda_continuation_frontier.py": "460f2c9133a1dba8b9d7963c217573883ab68e5dc8f889d36eda6795f8f7fd26"
+  },
+  "passes": [
+    {
+      "pass": 1,
+      "method": "source lint, focused tests, and canonical stable-v2 registry resolution",
+      "commands": [
+        "/Users/adpena/.local/bin/ruff check src/tac/optimization/ddm_lambda_continuation_frontier.py src/tac/canonical_equations/ddm_lambda_continuation_frontier_20260724.py tools/measure_ddm_rd1_lambda_continuation_frontier.py tests/test_ddm_lambda_continuation_frontier.py",
+        "/Users/adpena/Projects/pact/.venv/bin/python -m pytest -q tests/test_ddm_lambda_continuation_frontier.py",
+        "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python canonical registry lookup"
+      ],
+      "result": "PASS",
+      "focused_tests_passed": 7,
+      "canonical_source_artifact": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt_v2.json",
+      "finite_domain_rank_mismatch_count": 0
+    },
+    {
+      "pass": 2,
+      "method": "independent standard-library recomputation without trusting receipt summary fields",
+      "checks": [
+        "110 unique candidate ids",
+        "D=100*d_seg+sqrt(10*d_pose) for every point",
+        "skeleton plus fiber equals exact counted bytes",
+        "own-stored-problem and no-donor authority firewalls",
+        "pairwise Pareto nondominance",
+        "independent monotone-chain lower hull",
+        "three adjacent crossover duals",
+        "ten full-domain lambda ranks",
+        "typed S_composed arithmetic",
+        "knee ZIP hash and logical-byte custody"
+      ],
+      "result": "PASS",
+      "candidate_count": 110,
+      "nondominated_count": 7,
+      "supported_hull_candidate_ids": [
+        "v19c_admit_0005",
+        "scalar_gain_bias_12b_frame1",
+        "statistics_hard_analytic_composed_frame1",
+        "c1_exact_solved_n600"
+      ],
+      "lambda_crossover_bytes_per_D": [
+        25.565115087888007,
+        59.452361128556376,
+        15660952.118260449
+      ],
+      "lambda_rows": 10
+    },
+    {
+      "pass": 3,
+      "method": "immutable end-to-end resume, compile, registry regressions, and diff hygiene",
+      "commands": [
+        "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python tools/measure_ddm_rd1_lambda_continuation_frontier.py --config .omx/research/configs/ddm_rd1_lambda_continuation_frontier_20260724.json",
+        "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python -m py_compile src/tac/optimization/ddm_lambda_continuation_frontier.py src/tac/canonical_equations/ddm_lambda_continuation_frontier_20260724.py tools/measure_ddm_rd1_lambda_continuation_frontier.py",
+        "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python -m pytest -q tests/test_ddm_lambda_continuation_frontier.py src/tac/canonical_equations/tests/test_canonical_equations_registry.py",
+        "git diff --check"
+      ],
+      "result": "PASS",
+      "tests_passed": 36,
+      "resumed_receipt_sha256": "cdfa9a400d9633ea7f8f698dee6d55c65ac478ddcfed3ec01e6d2e6cefe6bbae",
+      "resumed_typed_frontier_sha256": "7266153f1984e220e69fa8fe04ed674a070cfffe3f176524e7c2985d212c2b1c"
+    }
+  ],
+  "verdict": "THREE_CLEAN_PASSES; STABLE_RESTRICTED_FRONTIER; MAIN_REVIEW_REQUIRED"
+}

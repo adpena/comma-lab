@@ -85402,6 +85402,49 @@
       },
       "notes": "Delegated isolated-worktree successor to #547/#549/#602; research-only local frozen-scorer advisory; pointer unchanged; MAIN landing review required.",
       "research_only": true
+    },
+    {
+      "id": "lane_ddm_rd1_lambda_continuation_frontier_20260724",
+      "name": "DDM RD1 lambda continuation frontier",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_lambda_continuation_frontier.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt_v2.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "tests/test_ddm_lambda_continuation_frontier.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_three_pass_review_receipt.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Pool tag solve_frontier; competes with solver_member_selection and is never additive. Local-only macOS-CPU frozen-scorer advisory; no paid dispatch, training, candidate, score claim, pointer mutation, or promotion; MAIN landing review required.",
+      "lane_class": "substrate_engineering",
+      "research_only": true
     }
   ],
   "level_rules": {
