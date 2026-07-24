@@ -23278,3 +23278,27 @@ solution-description. Anchors: v14 per-stage instrument (1700× Movable projecti
 Routed: is1 Directive 4 (stage-decompose the 159×, attribute per named stage, price cures in the
 true-price table; only solution-description-irreducible residue is a training candidate). Pointer
 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-rg3-MAIN-review (2026-07-24, MAIN custody of ddm_rg3_residual_family_productions rc=0):
+VERIFIED by re-derivation from the SHA-bound summary (3d4c4fb635…): 372-required invariant HOLDS
+(1200 PF2 rows, 9892 membership incidences, identical digest 995f72c1…), joined 336→347 = 11 of
+RG2's 36 residual blocks CLOSED, fully-joined hard pairs 7→9 of 24, probe custody 994/994
+(870 preserved + 124 new: 68 argmax-perturbation / 30 no-occupied-overlap / 26 empty-raster, all
+distinct candidate SHAs). Family-decomposed closure (never headline-only): class-birth 0/10 ·
+finer-boundary 3/9 · Fisher-cell 8/17. RG3RF member additive around the sealed base, byte-identical
+inactive (7990fce7…). All 25 residual rows carry ONE exact measured blocker class:
+NO_TARGET_BUCKET_EVENT_CHANGED_BY_ANY_COUNTED_RG3_MAGNITUDE_OR_SIGN, with per-row derived next
+families (10 worldsheet-event-indexed typed interface arcs · 6 curvelet/shearlet boundary arcs ·
+9 Fisher-margin site-local per-stratum). Round-1 catches preserved: receipt-schema key defects
+fixed via typed helpers + regression tests (no measurement bytes lost) + canonical-equation
+subband-geometry mismatch corrected to match the executable receiver. verdict_scope:
+INSTANCE_EXTENDED_GRAMMAR_RG3. MS4 correctly REFUSED (25 blocks missing).
+**MAIN LADDER DECISION (binding, per the operator forest directive + FEED-603-economics-rescope):
+the rg ladder STOPS here — NO RG4.** Cumulative: 106→25 closed (76% of the original gap; 93.3% of
+the 372 obligations joined). The bundle is declared PARTIAL-25 with an explicit missing-cell
+policy: the 25 rows stay machine-readable NULL cells, never imputed. The MS4-partial producer
+rerun (closed-blocks-only, hours of local n600 compute) is QUEUED, GATED ON is1's verdict — the
+economics re-scope labeled the bundle's pricing consumers upper-bound-channel artifacts, and is1
+may reshape which metric/pricing the campaign actually needs before we spend the measurement.
+Cherry-pick 229a140c41+2190f8d024+9aab0d7cfa clean; 27 touched-surface tests green + ruff clean on
+main. Pointer 0.1910828242 [contest-CPU] UNMOVED; all rows [macOS-CPU frozen-scorer advisory].
