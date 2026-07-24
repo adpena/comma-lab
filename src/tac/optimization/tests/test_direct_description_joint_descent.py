@@ -8,6 +8,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tac.optimization.direct_description_entropy_priced_member import (
+    rfc8785_canonicalize,
+)
 from tac.optimization.direct_description_g1_worldsheet import (
     encode_g1_movable_worldsheet,
     encode_lifted_g1_movable_worldsheet,
@@ -17,7 +20,7 @@ from tac.optimization.direct_description_joint_descent import (
     EXPECTED_PROGRAM_SHA256,
     J3_PROGRAM_SHA256,
     J5_PROGRAM_SHA256,
-    J6A_PROGRAM_SHA256,
+    J7_PROGRAM_SHA256,
     LEGACY_PROGRAM_SHA256,
     AdamStateV1,
     DirectDescriptionJointDescentTypedConfigV1,
@@ -112,12 +115,13 @@ def test_historical_j3_ticket_remains_typed_and_hash_compatible() -> None:
     assert schedule.warm_start_reform is None
 
 
-def test_j5_resealed_ticket_uses_cap_free_realized_acceptance_and_q8_staging() -> None:
+def test_current_j7_resealed_ticket_uses_cap_free_realized_acceptance_and_q8_staging() -> None:
     config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(J5_TICKET)
     schedule = config.full_run_schedule
-    assert config.dsl_compile_hash == J6A_PROGRAM_SHA256
+    assert config.dsl_compile_hash == J7_PROGRAM_SHA256
     assert config.dsl_compile_hash != J5_PROGRAM_SHA256
-    assert config.typed_config_hash() == "35c929d0031ef3ae3225afdfeb09997619bb70016f27527ea4ce1e7bed31ff47"
+    assert config.typed_config_hash() == "d8a8bb4f7f9ccb73f34a030cca976871bfd986b7fcc095d4f9354aa1144d0c8c"
+    assert config.verdict_batch == 32
     assert schedule is not None
     reform = schedule.warm_start_reform
     assert reform is not None
@@ -137,6 +141,18 @@ def test_j5_resealed_ticket_uses_cap_free_realized_acceptance_and_q8_staging() -
     assert config.execution_custody["banked_r1_comparator"]["binding_target"] is False
     assert config.execution_custody["banked_r1_comparator"]["promotion_eligible"] is False
     assert config.worst_geometry_memory_contract.expected_total_secants == 52
+
+
+def test_j7_ticket_uses_exact_n600_batch32_when_resealed() -> None:
+    ticket = json.loads(J5_TICKET.read_bytes())
+    semantic = ticket["semantic_program"]
+    semantic["program_id"] = "ddm_j7_366_pose_gate_history_reseal_n600_seed0"
+    semantic["telemetry"]["verdict_batch"] = 32
+    semantic["value_provenance"]["verdict_batch"] = (
+        "P0 J7 authority: exact n600 frozen CPU scorer verdicts use batch32"
+    )
+    digest = hashlib.sha256(rfc8785_canonicalize(semantic)).hexdigest()
+    assert digest == J7_PROGRAM_SHA256
 
 
 @pytest.mark.parametrize(
@@ -416,6 +432,7 @@ def test_launcher_has_j5_pure_price_shrink_bucket_and_fire_gates() -> None:
     assert "residual_bucket_descended" in source
     assert "BLOCKED_REALIZED_NO_PURE_PRICED_DESCENT_AFTER_SHRINK_LADDER" in source
     assert 'final_run_verdict = "READY_TO_FIRE_UNDER_STANDING_GO"' in source
+    assert "if bounded_stop and warm_start_component_safe:" not in source
 
 
 def test_pose_finish_engage_is_typed_rolling_slope_latched_and_checkpoint_roundtrippable() -> None:

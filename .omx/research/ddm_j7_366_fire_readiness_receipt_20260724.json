@@ -1,0 +1,164 @@
+{
+  "schema": "ddm_j7_366_fire_readiness_receipt.v1",
+  "utc": "2026-07-24T05:10:00Z",
+  "lane_id": "lane_ddm_j7_366_pose_gate_history_and_reseal_20260724",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j7_366_pose_gate_history_and_reseal_20260724T040102Z.wrapped.prompt.txt",
+    "sha256": "8dac31beda848b94b8bd42f43ffd7008cd024fcf916c0a14149307f68085907e",
+    "bytes": 7497,
+    "checkpoint_key": "codex_delegate:ddm_j7_366_pose_gate_history_and_reseal:20260724T040102Z"
+  },
+  "ticket": {
+    "path": ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json",
+    "file_sha256": "b3e5fe8adcc1ff6f4cc5fa3e4ac124e20cf6ed862810f0361b117dab5dd0e41f",
+    "semantic_program_sha256": "bb30eade311ed15e7541bdda4f5d5edbd72b28933a0dd2066be8b967a20aadf2",
+    "typed_config_hash": "d8a8bb4f7f9ccb73f34a030cca976871bfd986b7fcc095d4f9354aa1144d0c8c",
+    "source_commit": "7bdc9dbb9e304b6a2a8edb6d1979dda0bb4567bf",
+    "verdict_batch": 32
+  },
+  "source_custody": {
+    "consumer": {
+      "path": "src/tac/optimization/direct_description_joint_descent.py",
+      "sha256": "72343c913ff242563571dc65ed9a43c0a414a83fcef3f69f4cc42308edf82575"
+    },
+    "launcher": {
+      "path": "tools/launch_ddm_joint_descent.py",
+      "sha256": "4207705ed6e67ef236e9eb72a6165a88d7648f65e1684409d88f42f8feca4e17"
+    }
+  },
+  "repaired_bug_classes": [
+    {
+      "id": "typed_batch32_verdict_custody",
+      "finding": "The consumer hardcoded verdict batch 16 and could not honor the J7 batch32 authority.",
+      "repair": "verdict_batch is parsed from the typed semantic program, restricted to 16 or 32, and J7 requires 32.",
+      "regression": "test_j7_program_hash_requires_batch32"
+    },
+    {
+      "id": "bounded_stop_exact_verdict_suppression",
+      "finding": "A component-safe bounded stop reset verdict_due to false after stage-exit-on-stop set it true, suppressing the missing exact history rows.",
+      "repair": "A bounded stage-exit-on-stop always owes an exact realized verdict.",
+      "regression": "test_bounded_stage_exit_does_not_suppress_exact_verdict_after_component_safe_admission"
+    },
+    {
+      "id": "endpoint_only_warm_start_promotion",
+      "finding": "The WS1 rows report endpoint metrics and bytes but not receiver-closed archive paths/hashes or live optimizer states.",
+      "repair": "The deterministic resealer refuses W_seg and W_joint unless archive_path, archive_sha256, and archive_bytes exist and re-hash exactly.",
+      "regression": "test_ws1_endpoint_rows_cannot_be_promoted_to_launchable_starts"
+    }
+  ],
+  "warm_start_slope_falsifier": {
+    "canonical_equation_id": "ddm_ws1_warm_start_slope_falsifier_v1",
+    "callable": "tac.optimization.ddm_warm_start_slope_falsifier:critical_pose_to_seg_slope_ratio",
+    "critical_ratio": 4.1215446777965665,
+    "required_steps_per_start": 4,
+    "measured_steps_per_start": 0,
+    "W_seg": {
+      "d_seg": 0.024124510023328993,
+      "d_pose": 146.3649324958955,
+      "archive_bytes": 138031,
+      "missing_custody": [
+        "archive_path",
+        "archive_sha256"
+      ],
+      "launchable": false
+    },
+    "W_joint": {
+      "d_seg": 0.07051923116048177,
+      "d_pose": 36.6181847780574,
+      "archive_bytes": 138801,
+      "missing_custody": [
+        "archive_path",
+        "archive_sha256"
+      ],
+      "launchable": false
+    },
+    "selected_start": null,
+    "verdict": "UNDECIDABLE_FAIL_CLOSED_NO_LAUNCHABLE_WS1_START",
+    "verdict_scope": "CURRENT WS1 ENDPOINT RECORDS ONLY; THE WARM-START FAMILY IS NOT REJECTED"
+  },
+  "worst_geometry_memory": {
+    "receipt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j7_366_pose_gate_history_reseal_memory_20260724T043000Z/worst_geometry_memory_preflight.json",
+    "receipt_sha256": "273d2d1911f1d2534e09d1554c0e94040baba126fa77569d94776bea7e28de67",
+    "pair_start": 498,
+    "island_secants": 28,
+    "lane_secants": 24,
+    "total_secants": 52,
+    "basis_gib": 4.72976016998291,
+    "maximum_measured_peak_rss_gib": 17.770950317382812,
+    "projected_peak_gib": 22.325140380859374,
+    "operator_ceiling_gib": 116.0,
+    "verdict": "SAFE_WORST_GEOMETRY_WITHIN_116_GIB_CEILING",
+    "campaign_launched": false
+  },
+  "governed_dry_run": {
+    "receipt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j7_366_pose_gate_history_reseal_final_dryrun_20260724T051000Z/governed_dry_run.json",
+    "receipt_sha256": "3525b8b3ce9d9d992a87c170fc9e7fafeb8dbae2d2f860f0cb55651fc3515273",
+    "verdict": "DRY_RUN_GREEN_MAIN_REVIEW_AND_OPERATOR_GO_STILL_REQUIRED",
+    "execution_allowed": false
+  },
+  "bounded_control_history": {
+    "purpose": "complete the inherited-V15 pose gate only; not a substitute W_seg/W_joint selection",
+    "run_dir": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j7_366_pose_gate_history_batch32_20260724T043100Z",
+    "full_run_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j7_366_pose_gate_history_batch32_20260724T043100Z/full_run_receipt.json",
+      "sha256": "a1c5333de84eb3a52c5b8dad173858458505ac89dedda8bfb5dcb5ab7c5877e6"
+    },
+    "final_checkpoint": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j7_366_pose_gate_history_batch32_20260724T043100Z/checkpoints/01_residual_bucket_realized_acceptance_blocked_global000004.npz",
+      "sha256": "1f00c76b9cebcc84d037bddbf9c6830477e633eed642383bbd75c0c3c457829b"
+    },
+    "batch_size": 32,
+    "exact_verdict_steps": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "exact_d_seg": [
+      0.027470296223958333,
+      0.02744209289550781,
+      0.02744209289550781,
+      0.02744209289550781,
+      0.027461522420247395
+    ],
+    "exact_d_pose": [
+      163.06132728121813,
+      163.0611643144218,
+      163.0611643144218,
+      163.0611643144218,
+      163.0610768919435
+    ],
+    "latest_relative_slope": 0.00008063256697554839,
+    "latest_relative_slope_stderr": 0.00012070409497686895,
+    "pose_finish_classification": "DSEG_STILL_TRENDING",
+    "pose_finish_engaged": false,
+    "final_archive_sha256": "b9d9f5674b3343caae815d9399fc99baf9ccdd915d53650ad4972128283c0997",
+    "final_archive_bytes": 133936,
+    "final_stage_decision": "BLOCKED_REALIZED_DSEG_REGRESSION",
+    "score_claim": false
+  },
+  "triality": {
+    "dsl": ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json",
+    "dag_feed": ".omx/research/ddm_j7_366_pose_gate_history_reseal_DAG_FEED_20260724.md",
+    "canonical_equation_id": "ddm_ws1_warm_start_slope_falsifier_v1",
+    "canonical_decision_output": ".omx/research/ddm_train_decision_table_j7_resolution_20260724.json",
+    "canonical_probe_outcome_id": "ddm_j7_ws1_launchability_and_pose_gate_20260724"
+  },
+  "review": {
+    "round1_findings": ".omx/research/codex_findings_ddm_j7_pose_gate_history_and_reseal_20260724_codex.md",
+    "three_clean_passes": ".omx/research/ddm_j7_366_three_clean_review_receipt_20260724.json"
+  },
+  "verdict": "BLOCKED_NO_LAUNCHABLE_WS1_START_AND_REALIZED_DSEG_REGRESSION",
+  "verdict_scope": "J7 BOUNDED MACOS ADVISORY CONTROL AND CURRENT WS1 START-CUSTODY INSTANCE ONLY",
+  "ready_to_fire": false,
+  "execution_allowed": false,
+  "campaign_launched": false,
+  "paid_dispatch": false,
+  "contest_eval": false,
+  "research_only": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

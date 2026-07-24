@@ -1,0 +1,76 @@
+{
+  "schema": "ddm_j7_366_three_clean_review_receipt.v1",
+  "utc": "2026-07-24T05:18:00Z",
+  "lane_id": "lane_ddm_j7_366_pose_gate_history_and_reseal_20260724",
+  "reviewer": "codex-ddm-j7",
+  "source_custody": {
+    "consumer_sha256": "72343c913ff242563571dc65ed9a43c0a414a83fcef3f69f4cc42308edf82575",
+    "launcher_sha256": "4207705ed6e67ef236e9eb72a6165a88d7648f65e1684409d88f42f8feca4e17",
+    "resealer_sha256": "faa470ad00d3ad7efa8f9d91312e9af05883102d603f3f402ffceeeed32ad3b8",
+    "ticket_sha256": "b3e5fe8adcc1ff6f4cc5fa3e4ac124e20cf6ed862810f0361b117dab5dd0e41f",
+    "semantic_program_sha256": "bb30eade311ed15e7541bdda4f5d5edbd72b28933a0dd2066be8b967a20aadf2",
+    "typed_config_hash": "d8a8bb4f7f9ccb73f34a030cca976871bfd986b7fcc095d4f9354aa1144d0c8c"
+  },
+  "reviewed_python_files": [
+    "src/tac/optimization/direct_description_joint_descent.py",
+    "src/tac/optimization/tests/test_direct_description_joint_descent.py",
+    "tools/launch_ddm_joint_descent.py",
+    "tools/reseal_ddm_j7_366_ticket.py",
+    "tools/tests/test_reseal_ddm_j7_366_ticket.py"
+  ],
+  "passes": [
+    {
+      "id": "ddm_j7_pass1_static_and_schema",
+      "verdict": "CLEAN",
+      "checks": [
+        "ruff",
+        "py_compile",
+        "ticket JSON",
+        "fire-readiness JSON",
+        "decision-table JSON",
+        "git diff --check"
+      ]
+    },
+    {
+      "id": "ddm_j7_pass2_behavioral_49",
+      "verdict": "CLEAN",
+      "command": "PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python -m pytest --timeout=180 -q src/tac/optimization/tests/test_direct_description_joint_descent.py tools/tests/test_launch_ddm_joint_descent_j5.py src/tac/optimization/tests/test_pure_priced_realized_objective.py src/tac/optimization/tests/test_ddm_warm_start_slope_falsifier.py tools/tests/test_reseal_ddm_j7_366_ticket.py",
+      "result": "49 passed in 74.58s"
+    },
+    {
+      "id": "ddm_j7_pass3_adversarial_receipts_and_gate_tests",
+      "verdict": "CLEAN",
+      "result": "31 independent custody/hash/history/launchability/boundary assertions passed; 5 gate-focused tests passed with 29 deselected"
+    }
+  ],
+  "review_tracker": {
+    "entities": 132,
+    "passes": 3,
+    "marked_reviewed_rows": 396,
+    "entities_with_mark_count_not_equal_to_three": 0,
+    "file_entity_counts": {
+      "src/tac/optimization/direct_description_joint_descent.py": 65,
+      "src/tac/optimization/tests/test_direct_description_joint_descent.py": 24,
+      "tools/launch_ddm_joint_descent.py": 35,
+      "tools/reseal_ddm_j7_366_ticket.py": 6,
+      "tools/tests/test_reseal_ddm_j7_366_ticket.py": 2
+    }
+  },
+  "round1_findings_repaired_before_clean_passes": [
+    "typed verdict batch was hardcoded to 16 instead of J7 batch32",
+    "component-safe bounded stop suppressed the exact post-step verdict",
+    "endpoint-only WS1 rows could be mistaken for launchable warm starts",
+    "ticket source_commit remained stale after reseal",
+    "current-ticket regression still expected J6A hashes"
+  ],
+  "worst_geometry_memory_receipt_sha256": "273d2d1911f1d2534e09d1554c0e94040baba126fa77569d94776bea7e28de67",
+  "governed_dry_run_receipt_sha256": "3525b8b3ce9d9d992a87c170fc9e7fafeb8dbae2d2f860f0cb55651fc3515273",
+  "bounded_n600_receipt_sha256": "a1c5333de84eb3a52c5b8dad173858458505ac89dedda8bfb5dcb5ab7c5877e6",
+  "final_checkpoint_sha256": "1f00c76b9cebcc84d037bddbf9c6830477e633eed642383bbd75c0c3c457829b",
+  "verdict": "THREE_CLEAN_REVIEW_PASSES_COMPLETE",
+  "main_landing_review_required": true,
+  "execution_allowed": false,
+  "campaign_launched": false,
+  "score_claim": false,
+  "pointer_moved": false
+}

@@ -1,0 +1,87 @@
+{
+  "schema": "ddm_train_decision_table_j7_resolution.v1",
+  "table_id": "ddm_j7_pose_gate_and_ws1_launchability_resolution_20260724",
+  "lane_id": "lane_ddm_j7_366_pose_gate_history_and_reseal_20260724",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "score_claim": false,
+  "rows": [
+    {
+      "row_id": "warm_start_launchability:W_seg",
+      "candidate_id": "temporal_affine_16knot_frame1_seglex96_hood_masked",
+      "endpoint_d_seg": 0.024124510023328993,
+      "endpoint_d_pose": 146.3649324958955,
+      "reported_archive_bytes": 138031,
+      "required_custody": [
+        "archive_path",
+        "archive_sha256",
+        "archive_bytes"
+      ],
+      "missing_custody": [
+        "archive_path",
+        "archive_sha256"
+      ],
+      "status": "REFUSE_ENDPOINT_ONLY_NOT_A_RECEIVER_CLOSED_ARCHIVE_OR_LIVE_OPTIMIZER_STATE"
+    },
+    {
+      "row_id": "warm_start_launchability:W_joint",
+      "candidate_id": "statistics_hard_analytic_composed_frame1",
+      "endpoint_d_seg": 0.07051923116048177,
+      "endpoint_d_pose": 36.6181847780574,
+      "reported_archive_bytes": 138801,
+      "required_custody": [
+        "archive_path",
+        "archive_sha256",
+        "archive_bytes"
+      ],
+      "missing_custody": [
+        "archive_path",
+        "archive_sha256"
+      ],
+      "status": "REFUSE_ENDPOINT_ONLY_NOT_A_RECEIVER_CLOSED_ARCHIVE_OR_LIVE_OPTIMIZER_STATE"
+    },
+    {
+      "row_id": "decision:J7_bounded_slope_falsifier",
+      "candidate_id": "W_seg_vs_W_joint",
+      "canonical_equation_id": "ddm_ws1_warm_start_slope_falsifier_v1",
+      "critical_ratio": 4.1215446777965665,
+      "required_window_steps_per_start": 4,
+      "measured_window_steps_per_start": 0,
+      "selected_start": null,
+      "status": "UNDECIDABLE_FAIL_CLOSED_NO_LAUNCHABLE_WS1_START"
+    },
+    {
+      "row_id": "control:J7_inherited_v15_pose_history",
+      "candidate_id": "receiver_closed_v15_composed_carrier_archive",
+      "archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+      "archive_bytes": 133941,
+      "exact_n600_d_seg": [
+        0.027470296223958333,
+        0.02744209289550781,
+        0.02744209289550781,
+        0.02744209289550781,
+        0.027461522420247395
+      ],
+      "pose_gate_classification": "DSEG_STILL_TRENDING",
+      "latest_relative_slope": 0.00008063256697554839,
+      "latest_relative_slope_stderr": 0.00012070409497686895,
+      "final_stage_decision": "BLOCKED_REALIZED_DSEG_REGRESSION",
+      "status": "CONTROL_HISTORY_COMPLETE_NOT_A_WS1_SELECTION"
+    }
+  ],
+  "source_receipts": [
+    {
+      "path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+      "sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j7_366_pose_gate_history_batch32_20260724T043100Z/full_run_receipt.json",
+      "sha256": "a1c5333de84eb3a52c5b8dad173858458505ac89dedda8bfb5dcb5ab7c5877e6"
+    }
+  ],
+  "verdict": "NO_LAUNCHABLE_WS1_START_AND_CONTROL_POSE_GATE_BLOCKED",
+  "verdict_scope": "WS1 START CUSTODY AND J7 INHERITED-V15 BOUNDED CONTROL ONLY",
+  "main_landing_review_required": true,
+  "research_only": true
+}

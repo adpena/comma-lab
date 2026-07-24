@@ -72,6 +72,7 @@ LEGACY_PROGRAM_SHA256: Final = "68a8aa97b25a6be2f8f08e36fcf4957fe032233e43b1050b
 J3_PROGRAM_SHA256: Final = "df8db01f60d582b0a716ae62af3422997fcc12c014364939ab2935a2c403b824"
 J5_PROGRAM_SHA256: Final = "13e194a8a354d53489f0ff68a5042237e69b4b6841a6b7959a15873fffa7b6e8"
 J6A_PROGRAM_SHA256: Final = "3ba05e4d8fd2f85475173f0a9e17e668198507350d353a4257aaf196692b98c2"
+J7_PROGRAM_SHA256: Final = "bb30eade311ed15e7541bdda4f5d5edbd72b28933a0dd2066be8b967a20aadf2"
 # Resealed after editing the semantic ticket; updated by the deterministic hash
 # seal step in this landing.
 EXPECTED_PROGRAM_SHA256: Final = "9c3575aa58a5264bd0897afaaf22a62807336c037c42a8943e89ee69c84efd5b"
@@ -82,6 +83,7 @@ SUPPORTED_PROGRAM_SHA256: Final = frozenset(
         EXPECTED_PROGRAM_SHA256,
         J5_PROGRAM_SHA256,
         J6A_PROGRAM_SHA256,
+        J7_PROGRAM_SHA256,
     }
 )
 EXPECTED_ARCHIVE_SHA256: Final = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
@@ -886,7 +888,12 @@ class DirectDescriptionJointDescentTypedConfigV1:
             raise DirectDescriptionError("joint-descent warm-start identity drifted")
         env = compute.get("environment", {})
         required_kernels = " ".join(str(value) for value in compute.get("required_kernels", ())).lower()
-        if semantic_hash == J6A_PROGRAM_SHA256:
+        verdict_batch = int(semantic.get("telemetry", {}).get("verdict_batch", 16))
+        if verdict_batch not in {16, 32}:
+            raise DirectDescriptionError("joint-descent verdict batch is not a sealed supported geometry")
+        if semantic_hash == J7_PROGRAM_SHA256 and verdict_batch != 32:
+            raise DirectDescriptionError("J7 exact n600 scorer verdicts require batch32")
+        if semantic_hash in {J6A_PROGRAM_SHA256, J7_PROGRAM_SHA256}:
             if worst_geometry_payload is None or not isinstance(execution_custody, Mapping):
                 raise DirectDescriptionError("J6A ticket lacks worst-geometry or execution custody")
             _validate_execution_custody(execution_custody)
@@ -903,7 +910,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
             upstream_root=str(Path(ticket["authority"]["delegation_prompt_path"]).parents[3] / "upstream"),
             num_pairs=600,
             seed=0,
-            verdict_batch=16,
+            verdict_batch=verdict_batch,
             ema_decay=float(semantic["joint_objective"]["ema_decay"]),
             grad_clip=float(stability["grad_clip"]),
             memory_ceiling_gib=116.0,

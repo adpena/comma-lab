@@ -1,38 +1,39 @@
 {
-  "schema": "ddm_joint_descent_witness_program_ticket.v1",
   "authority": {
-    "delegation_prompt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j6a_366_prefire_contract_hardening_20260723T071826Z.wrapped.prompt.txt",
-    "delegation_prompt_sha256": "a0024abeba9ea82be3f45366996490f59a157972070f96eba098348acd3e6ae4",
-    "delegation_prompt_bytes": 7591,
-    "source_commit": "1119a9383b",
+    "delegation_prompt_bytes": 7497,
+    "delegation_prompt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j7_366_pose_gate_history_and_reseal_20260724T040102Z.wrapped.prompt.txt",
+    "delegation_prompt_sha256": "8dac31beda848b94b8bd42f43ffd7008cd024fcf916c0a14149307f68085907e",
     "pointer": "0.1910828242 [contest-CPU]",
-    "pointer_moved": false
+    "pointer_moved": false,
+    "source_commit": "7bdc9dbb9e304b6a2a8edb6d1979dda0bb4567bf"
   },
   "compile_custody": {
-    "typed_schema": "DirectDescriptionJointDescentTypedConfigV1",
-    "hash_scope": "RFC8785 canonical bytes of semantic_program",
-    "hash_algorithm": "sha256",
-    "semantic_program_sha256": "3ba05e4d8fd2f85475173f0a9e17e668198507350d353a4257aaf196692b98c2",
-    "typed_config_hash": "35c929d0031ef3ae3225afdfeb09997619bb70016f27527ea4ce1e7bed31ff47",
+    "claim": "HASH_SEALED_EXECUTABLE_TYPED_J7_POSE_HISTORY_RESEAL",
     "existing_compiler_accepts_schema": true,
     "existing_governed_launcher_accepts_named_config": true,
-    "claim": "HASH_SEALED_EXECUTABLE_TYPED_J6A_PREFIRE_CONTRACT"
+    "hash_algorithm": "sha256",
+    "hash_scope": "RFC8785 canonical bytes of semantic_program",
+    "semantic_program_sha256": "bb30eade311ed15e7541bdda4f5d5edbd72b28933a0dd2066be8b967a20aadf2",
+    "typed_config_hash": "d8a8bb4f7f9ccb73f34a030cca976871bfd986b7fcc095d4f9354aa1144d0c8c",
+    "typed_schema": "DirectDescriptionJointDescentTypedConfigV1"
   },
   "execution_custody": {
-    "source_files": {
-      "consumer": {
-        "path": "src/tac/optimization/direct_description_joint_descent.py",
-        "sha256": "76c66ceb6ad554898ae2b02db3230d669f104b97e617dd08881c9357154c9f51"
-      },
-      "launcher": {
-        "path": "tools/launch_ddm_joint_descent.py",
-        "sha256": "361f35e485fa624f75f665f05040b894d633d325f62edcc340cce1e5cc7eb051"
-      }
+    "banked_r1_comparator": {
+      "authority": "comparator_and_fallback_harvest_signal_only",
+      "binding_target": false,
+      "d_pose": 0.00161,
+      "payload_bytes": 7200,
+      "promotion_eligible": false,
+      "score_contribution": 0.127
     },
     "j5_producer_artifacts": {
       "baseline_verdict": {
         "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/verdicts/stage00_baseline_n600.json",
         "sha256": "5b19b564da1fb528af2c0d944da36bf1d357e28503be5988cb14ad59c4a6a261"
+      },
+      "checkpoint": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000001.npz",
+        "sha256": "1399292164682955bd9937d204692521542687f69223ddc9cc1e669ae05a944e"
       },
       "proposal_verdict": {
         "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
@@ -41,71 +42,39 @@
       "runtime_memory_receipt": {
         "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/full_run_memory_preflight.json",
         "sha256": "4af05223624359fc305c82e30ee4a008da43d609251830d6e1a70724804ceec7"
+      }
+    },
+    "source_files": {
+      "consumer": {
+        "path": "src/tac/optimization/direct_description_joint_descent.py",
+        "sha256": "72343c913ff242563571dc65ed9a43c0a414a83fcef3f69f4cc42308edf82575"
       },
-      "checkpoint": {
-        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000001.npz",
-        "sha256": "1399292164682955bd9937d204692521542687f69223ddc9cc1e669ae05a944e"
+      "launcher": {
+        "path": "tools/launch_ddm_joint_descent.py",
+        "sha256": "4207705ed6e67ef236e9eb72a6165a88d7648f65e1684409d88f42f8feca4e17"
       }
     },
     "worst_geometry_memory_receipt": {
-      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j6a_366_prefire_contract_hardening_finalsource_20260723T083200Z/worst_geometry_memory_preflight.json",
-      "sha256": "45a0e5d23fc04822c75036fefc78efcfc1503b75bb41838eb4617b6bf4b6a661"
-    },
-    "banked_r1_comparator": {
-      "d_pose": 0.00161,
-      "score_contribution": 0.127,
-      "payload_bytes": 7200,
-      "authority": "comparator_and_fallback_harvest_signal_only",
-      "binding_target": false,
-      "promotion_eligible": false
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j7_366_pose_gate_history_reseal_memory_20260724T043000Z/worst_geometry_memory_preflight.json",
+      "sha256": "273d2d1911f1d2534e09d1554c0e94040baba126fa77569d94776bea7e28de67"
     }
   },
+  "schema": "ddm_joint_descent_witness_program_ticket.v1",
   "semantic_program": {
-    "schema": "DirectDescriptionJointDescentTypedConfigV1",
-    "program_id": "ddm_j6a_366_prefire_contract_hardening_n600_seed0",
-    "seed": 0,
-    "deterministic_algorithms": true,
-    "num_pairs": 600,
-    "target_cache": {
-      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
-      "bytes": 5078017610,
-      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
-    },
-    "warm_start": {
-      "kind": "receiver_closed_v15_composed_carrier_archive",
-      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
-      "bytes": 133941,
-      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
-      "receipt_path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_scorer_solved_templates_n600_receipt.json",
-      "optimizer_state_loadable": false,
-      "optimizer_state_contract": "fresh Adam moments retain the beta2-derived rewarmup; every accepted or rolled-back exact receiver state persists through ResumeRegistry"
-    },
-    "receiver_effective_surface": {
-      "parameter_count": 368,
-      "island_worldsheet_track_translation_count": 326,
-      "lane_periodic_wire_coordinate_count": 24,
-      "shared_template_channel_count": 18,
-      "opening_selective_unfreeze": [
-        "island_worldsheet.center_x and center_y coherent candidates",
-        "shared_template_dof local Q8 candidate"
-      ],
-      "opening_held_group": "lane_program",
-      "selection_authority": "exact n600 C1 residual-bucket effect, not parameter-group name"
-    },
-    "joint_objective": {
-      "formula": "100*d_seg_R + sqrt(10*d_pose_YUV6_R) + 25*archive_bytes/37545489",
-      "roundtrip": "proposal -> camera Q8 -> final uint8 -> evaluator R -> frozen scorers",
-      "ema_decay": 0.997,
-      "stability": {
-        "preset": "amber",
-        "grad_clip": 0.5,
-        "pose_grad_coeff_max": 25,
-        "grad_normalize": true,
-        "per_group_grad_clip": true
-      }
+    "checkpoint_contract": {
+      "all_stage_files_preserved": true,
+      "atomic_write": "temporary file plus fsync plus os.replace",
+      "distinct_stage_encoded_names": true,
+      "ema_shadow_saved": true,
+      "every_stage_end": true,
+      "exact_rejection_rollback_saved": true,
+      "periodic_intra_stage": true,
+      "resume_from_disk": true
     },
     "compute_contract": {
       "baseline": {
+        "authority": "speed path only; exact chunked frozen CPU-torch replay is macOS advisory and score_claim=false",
+        "chunked_verdicts": true,
         "device": "MLX_GPU",
         "environment": {
           "TAC_MLX_CUSTOM_GROUPED_BACKWARD": "1"
@@ -113,59 +82,94 @@
         "required_kernels": [
           "custom grouped backward measured active",
           "fused differentiable-R bit-identical to NumPy-fp32"
-        ],
-        "chunked_verdicts": true,
-        "authority": "speed path only; exact chunked frozen CPU-torch replay is macOS advisory and score_claim=false"
+        ]
       },
-      "memory_ceiling_gib": 116.0,
+      "historical_j5_geometry_limit": "8 island secants at pair447; not admission authority for stage3",
       "historical_j5_measured_stage1_peak_rss_gib": 10.47418212890625,
       "historical_j5_projected_peak_gib": 13.5690185546875,
-      "historical_j5_geometry_limit": "8 island secants at pair447; not admission authority for stage3"
+      "memory_ceiling_gib": 116.0
     },
-    "worst_geometry_memory_preflight": {
-      "schema": "ddm_joint_descent_worst_geometry_memory_contract.v1",
-      "selected_pair_start": 498,
-      "train_batch": 4,
-      "active_groups": [
-        "island_worldsheet",
-        "lane_program",
-        "shared_template_dof"
-      ],
-      "expected_island_secants": 28,
-      "expected_lane_secants": 24,
-      "expected_total_secants": 52,
-      "derived_basis_gib": 4.72976016998291
+    "deterministic_algorithms": true,
+    "execution_boundary": {
+      "bounded_n600_smoke_only": true,
+      "main_review_required": true,
+      "research_only": true,
+      "score_claim": false,
+      "standing_go_applies_only_after_main_review_and_READY_TO_FIRE_UNDER_STANDING_GO": true,
+      "this_branch_campaign_launch_authorized": false
     },
     "full_run_schedule": {
-      "train_batch": 4,
-      "learning_rate_quantum_fraction": 0.25,
       "checkpoint_interval_steps": 37,
+      "derived_steps_per_n600_exposure": 150,
+      "derived_total_steps": 450,
+      "derived_wall_clock_hours_high": 13.79371420691443,
+      "derived_wall_clock_hours_low": 13.31387624311125,
+      "learning_rate_quantum_fraction": 0.25,
+      "measured_seconds_per_step": 104.09510249993764,
+      "measured_seconds_per_step_high": 104.09510249993764,
+      "measured_seconds_per_step_low": 100.87168033304624,
       "plateau_verdicts": 2,
+      "pose_finish_engage": {
+        "detector": "rolling_relative_slope_plateau",
+        "ema_span": 3,
+        "fallback_policy": "emit_banked_r1_comparator_harvest_signal_non_promoting",
+        "flat_relative_slope_band": 0.0003,
+        "hysteresis": 3,
+        "metric": "exact_n600_d_seg_realized_through_R",
+        "minimum_strict_seg_admissions": 1,
+        "schema": "ddm_pose_finish_exact_verdict_plateau.v1",
+        "settle_window": 3
+      },
+      "stage_transition_rule": "opening proposals shrink on exact joint-score ascent and roll back exactly; fire readiness uses cumulative stage00 component and residual safety; only an exact stage target advances; target-unmet limits and plateaus stop non-promoting",
+      "stages": [
+        {
+          "active_groups": [
+            "island_worldsheet",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "stage_id": "01_residual_bucket_realized_acceptance",
+          "target_d_pose": null,
+          "target_d_seg": 0.020602722168,
+          "verdict_interval_steps": 50
+        },
+        {
+          "active_groups": [
+            "lane_program",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "stage_id": "02_lane_production_joint_descent",
+          "target_d_pose": null,
+          "target_d_seg": 0.013735148112,
+          "verdict_interval_steps": 50
+        },
+        {
+          "active_groups": [
+            "island_worldsheet",
+            "lane_program",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "stage_id": "03_pose_coupled_finish",
+          "target_d_pose": 163.06116431842463,
+          "target_d_seg": 0.006867574056,
+          "verdict_interval_steps": 50
+        }
+      ],
+      "train_batch": 4,
       "warm_start_pair": 447,
-      "warm_start_steps": 4,
       "warm_start_reform": {
         "adam_beta2": 0.999,
-        "lr_rewarmup_c": 2.0,
-        "lr_rewarmup_steps": 2000,
-        "lr_rewarmup_floor": 0.1,
-        "lr_rewarmup_shape": "linear",
-        "maximum_continuous_update_quantum_fraction": null,
+        "component_fire_gate": "cumulative_vs_stage00_dseg_flat_or_down_pose_not_worse_any_component_and_residual_descend",
+        "first_realized_admission": "exact_n600_joint_delta_s_lt_zero_else_shrink_and_exact_rollback",
         "frozen_groups_until_first_admission": [],
         "group_release_condition": "first_component_safe_n600_residual_admission",
-        "first_realized_admission": "exact_n600_joint_delta_s_lt_zero_else_shrink_and_exact_rollback",
-        "realized_acceptance_policy": "pure_priced_exact_n600",
-        "proposal_staging": "camera_874x1164_q8_pre_final_uint8",
-        "proposal_q8_denominator": 256,
-        "proposal_multipliers": [
-          32.0,
-          16.0,
-          8.0,
-          4.0,
-          2.0,
-          1.0,
-          0.5,
-          0.25
-        ],
+        "lr_rewarmup_c": 2.0,
+        "lr_rewarmup_floor": 0.1,
+        "lr_rewarmup_shape": "linear",
+        "lr_rewarmup_steps": 2000,
+        "maximum_continuous_update_quantum_fraction": null,
         "opening_active_groups": [
           "island_worldsheet",
           "shared_template_dof"
@@ -186,150 +190,145 @@
           501,
           346
         ],
-        "residual_bucket_admission_required": true,
-        "component_fire_gate": "cumulative_vs_stage00_dseg_flat_or_down_pose_not_worse_any_component_and_residual_descend"
+        "proposal_multipliers": [
+          32.0,
+          16.0,
+          8.0,
+          4.0,
+          2.0,
+          1.0,
+          0.5,
+          0.25
+        ],
+        "proposal_q8_denominator": 256,
+        "proposal_staging": "camera_874x1164_q8_pre_final_uint8",
+        "realized_acceptance_policy": "pure_priced_exact_n600",
+        "residual_bucket_admission_required": true
       },
-      "pose_finish_engage": {
-        "schema": "ddm_pose_finish_exact_verdict_plateau.v1",
-        "detector": "rolling_relative_slope_plateau",
-        "metric": "exact_n600_d_seg_realized_through_R",
-        "ema_span": 3,
-        "settle_window": 3,
-        "hysteresis": 3,
-        "flat_relative_slope_band": 0.0003,
-        "minimum_strict_seg_admissions": 1,
-        "fallback_policy": "emit_banked_r1_comparator_harvest_signal_non_promoting"
-      },
-      "measured_seconds_per_step": 104.09510249993764,
-      "measured_seconds_per_step_low": 100.87168033304624,
-      "measured_seconds_per_step_high": 104.09510249993764,
-      "derived_steps_per_n600_exposure": 150,
-      "derived_total_steps": 450,
-      "derived_wall_clock_hours_low": 13.31387624311125,
-      "derived_wall_clock_hours_high": 13.79371420691443,
-      "stage_transition_rule": "opening proposals shrink on exact joint-score ascent and roll back exactly; fire readiness uses cumulative stage00 component and residual safety; only an exact stage target advances; target-unmet limits and plateaus stop non-promoting",
-      "stages": [
-        {
-          "stage_id": "01_residual_bucket_realized_acceptance",
-          "active_groups": [
-            "island_worldsheet",
-            "shared_template_dof"
-          ],
-          "maximum_steps": 150,
-          "verdict_interval_steps": 50,
-          "target_d_seg": 0.020602722168,
-          "target_d_pose": null
-        },
-        {
-          "stage_id": "02_lane_production_joint_descent",
-          "active_groups": [
-            "lane_program",
-            "shared_template_dof"
-          ],
-          "maximum_steps": 150,
-          "verdict_interval_steps": 50,
-          "target_d_seg": 0.013735148112,
-          "target_d_pose": null
-        },
-        {
-          "stage_id": "03_pose_coupled_finish",
-          "active_groups": [
-            "island_worldsheet",
-            "lane_program",
-            "shared_template_dof"
-          ],
-          "maximum_steps": 150,
-          "verdict_interval_steps": 50,
-          "target_d_seg": 0.006867574056,
-          "target_d_pose": 163.06116431842463
-        }
-      ]
+      "warm_start_steps": 4
     },
-    "value_provenance": {
-      "beta2_ramp": "PRESERVED J4 LawRef adam_v_variance_warmup_length_v1: ceil(2/(1-0.999)) = 2000",
-      "cap_removed": "MEASURED V19: strict realized joint delta-S admitted coherent moves that fixed collateral and quarter-quantum rules rejected",
-      "proposal_ladder": "DERIVED shrink ladder: first multiplier 32 maps the ramp-floor 0.025 base step to 0.8 receiver quantum; halve on exact ascent",
-      "camera_q8": "MEASURED V19: three of three pre-final-uint8 camera-Q8 variants were exact joint-score admissible",
-      "opening_groups": "C1-GUIDED: Lane remains held while coherent worldsheet and shared-template candidates are ranked by exact residual-bucket effect; no blanket template freeze",
-      "bucket_partition": "MEASURED/DERIVED C1: Lane+Movable role ceiling 726416; Road+Undrivable+MyCar minus integer target allowance yields 2377273 baseline residual debt",
-      "coherent_x_plus_1": "MEASURED V19 grammar-native eight-pair advisory on pair ids 447,53,416,296,547,278,501,346: both d_seg and d_pose descended with exact archive-byte pricing; J5 remeasures the exact lifecycle-feasible candidate through n600"
-      ,
-      "pose_finish_engage": "DERIVED #383 sibling: exact n600 d_seg uses the same EMA3, window3, hysteresis3, and 3e-4 rolling-relative-slope band; latch is run-owned and checkpointed",
-      "same_vehicle_pose_floor": "MEASURED J5 exact proposal d_pose=163.06116431842463; governed non-regression floor for final target; banked R1 0.001610 is comparator-only",
-      "worst_geometry": "DERIVED static lifecycle enumeration: pair498 has 28 island plus 24 Lane realized secants; memory-only bootstrap must measure this exact all-groups window",
-      "governed_stop": "DERIVED control invariant: only exact target-met advances; maximum-step and plateau exits below target are non-promoting stops"
+    "joint_objective": {
+      "ema_decay": 0.997,
+      "formula": "100*d_seg_R + sqrt(10*d_pose_YUV6_R) + 25*archive_bytes/37545489",
+      "roundtrip": "proposal -> camera Q8 -> final uint8 -> evaluator R -> frozen scorers",
+      "stability": {
+        "grad_clip": 0.5,
+        "grad_normalize": true,
+        "per_group_grad_clip": true,
+        "pose_grad_coeff_max": 25,
+        "preset": "amber"
+      }
     },
-    "checkpoint_contract": {
-      "resume_from_disk": true,
-      "atomic_write": "temporary file plus fsync plus os.replace",
-      "periodic_intra_stage": true,
-      "every_stage_end": true,
-      "all_stage_files_preserved": true,
-      "distinct_stage_encoded_names": true,
-      "ema_shadow_saved": true,
-      "exact_rejection_rollback_saved": true
+    "num_pairs": 600,
+    "program_id": "ddm_j7_366_pose_gate_history_reseal_n600_seed0",
+    "receiver_effective_surface": {
+      "island_worldsheet_track_translation_count": 326,
+      "lane_periodic_wire_coordinate_count": 24,
+      "opening_held_group": "lane_program",
+      "opening_selective_unfreeze": [
+        "island_worldsheet.center_x and center_y coherent candidates",
+        "shared_template_dof local Q8 candidate"
+      ],
+      "parameter_count": 368,
+      "selection_authority": "exact n600 C1 residual-bucket effect, not parameter-group name",
+      "shared_template_channel_count": 18
+    },
+    "schema": "DirectDescriptionJointDescentTypedConfigV1",
+    "seed": 0,
+    "target_cache": {
+      "bytes": 5078017610,
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
     },
     "telemetry": {
+      "chunked_n600_verdict": true,
       "every_exact_move": [
         "pure-priced Seg/Pose/rate/joint deltas",
         "C1 role-bucket delta",
         "C1 residual-bucket per-move and cumulative delta",
         "candidate id, shrink multiplier, Q8 staging, realized DOFs",
-        "component fire gate and exact archive identity"
-        ,
+        "component fire gate and exact archive identity",
         "pose-finish exact-verdict rolling-slope state and monotone engage latch",
         "governed stage-exit decision and exact final-target gate"
       ],
-      "chunked_n600_verdict": true,
-      "verdict_batch": 16,
       "pointer_promotion_from_advisory_forbidden": true,
-      "score_claim": false
-    },
-    "execution_boundary": {
-      "research_only": true,
       "score_claim": false,
-      "this_branch_campaign_launch_authorized": false,
-      "bounded_n600_smoke_only": true,
-      "main_review_required": true,
-      "standing_go_applies_only_after_main_review_and_READY_TO_FIRE_UNDER_STANDING_GO": true
+      "verdict_batch": 32
+    },
+    "value_provenance": {
+      "beta2_ramp": "PRESERVED J4 LawRef adam_v_variance_warmup_length_v1: ceil(2/(1-0.999)) = 2000",
+      "bucket_partition": "MEASURED/DERIVED C1: Lane+Movable role ceiling 726416; Road+Undrivable+MyCar minus integer target allowance yields 2377273 baseline residual debt",
+      "camera_q8": "MEASURED V19: three of three pre-final-uint8 camera-Q8 variants were exact joint-score admissible",
+      "cap_removed": "MEASURED V19: strict realized joint delta-S admitted coherent moves that fixed collateral and quarter-quantum rules rejected",
+      "coherent_x_plus_1": "MEASURED V19 grammar-native eight-pair advisory on pair ids 447,53,416,296,547,278,501,346: both d_seg and d_pose descended with exact archive-byte pricing; J5 remeasures the exact lifecycle-feasible candidate through n600",
+      "governed_stop": "DERIVED control invariant: only exact target-met advances; maximum-step and plateau exits below target are non-promoting stops",
+      "opening_groups": "C1-GUIDED: Lane remains held while coherent worldsheet and shared-template candidates are ranked by exact residual-bucket effect; no blanket template freeze",
+      "pose_finish_engage": "DERIVED #383 sibling: exact n600 d_seg uses the same EMA3, window3, hysteresis3, and 3e-4 rolling-relative-slope band; latch is run-owned and checkpointed",
+      "proposal_ladder": "DERIVED shrink ladder: first multiplier 32 maps the ramp-floor 0.025 base step to 0.8 receiver quantum; halve on exact ascent",
+      "same_vehicle_pose_floor": "MEASURED J5 exact proposal d_pose=163.06116431842463; governed non-regression floor for final target; banked R1 0.001610 is comparator-only",
+      "verdict_batch": "P0 J7 authority: exact n600 frozen CPU scorer verdicts use batch32",
+      "worst_geometry": "DERIVED static lifecycle enumeration: pair498 has 28 island plus 24 Lane realized secants; memory-only bootstrap must measure this exact all-groups window"
+    },
+    "warm_start": {
+      "bytes": 133941,
+      "kind": "receiver_closed_v15_composed_carrier_archive",
+      "optimizer_state_contract": "fresh Adam moments retain the beta2-derived rewarmup; every accepted or rolled-back exact receiver state persists through ResumeRegistry",
+      "optimizer_state_loadable": false,
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+      "receipt_path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_scorer_solved_templates_n600_receipt.json",
+      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
+    },
+    "worst_geometry_memory_preflight": {
+      "active_groups": [
+        "island_worldsheet",
+        "lane_program",
+        "shared_template_dof"
+      ],
+      "derived_basis_gib": 4.72976016998291,
+      "expected_island_secants": 28,
+      "expected_lane_secants": 24,
+      "expected_total_secants": 52,
+      "schema": "ddm_joint_descent_worst_geometry_memory_contract.v1",
+      "selected_pair_start": 498,
+      "train_batch": 4
     }
   },
   "warm_start_candidates": {
+    "W_joint": {
+      "archive_bytes": 138801,
+      "candidate_id": "statistics_hard_analytic_composed_frame1",
+      "d_pose": 36.6181847780574,
+      "d_seg": 0.07051923116048177,
+      "mycar_errors": 4072489
+    },
+    "W_seg": {
+      "archive_bytes": 138031,
+      "candidate_id": "temporal_affine_16knot_frame1_seglex96_hood_masked",
+      "d_pose": 146.3649324958955,
+      "d_seg": 0.024124510023328993,
+      "mycar_errors": 37619
+    },
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "main_landing_review_required": true,
+    "pointer_moved": false,
     "schema": "DDMWS1WarmStartCandidatesV1",
-    "status": "MEASURED_ADVISORY_CANDIDATES_WITH_PREREGISTERED_SLOPE_FALSIFIER",
+    "score_claim": false,
+    "slope_falsifier": {
+      "critical_ratio": 4.1215446777965665,
+      "execution_allowed": false,
+      "path": ".omx/research/configs/ddm_ws1_j5_slope_falsifier_20260724.json",
+      "sha256": "d504f55519f2490a8ae2b29c653c7d4c4cf4824d534972ae1dbf8146fe9c1b28",
+      "training_launched": false
+    },
     "source_receipt": {
-      "path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
       "bytes": 46615,
+      "path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
       "sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0"
     },
+    "status": "MEASURED_ADVISORY_CANDIDATES_WITH_PREREGISTERED_SLOPE_FALSIFIER",
     "train_decision_table": {
       "path": ".omx/research/ddm_train_decision_table_warm_start_rows_20260724.json",
       "sha256": "810983f971ad0590e99fb0d3a8a3e9413eafc1d3a2eaf674c75ff84cc073feb8"
-    },
-    "slope_falsifier": {
-      "path": ".omx/research/configs/ddm_ws1_j5_slope_falsifier_20260724.json",
-      "sha256": "d504f55519f2490a8ae2b29c653c7d4c4cf4824d534972ae1dbf8146fe9c1b28",
-      "critical_ratio": 4.1215446777965665,
-      "execution_allowed": false,
-      "training_launched": false
-    },
-    "W_seg": {
-      "candidate_id": "temporal_affine_16knot_frame1_seglex96_hood_masked",
-      "d_seg": 0.024124510023328993,
-      "d_pose": 146.3649324958955,
-      "archive_bytes": 138031,
-      "mycar_errors": 37619
-    },
-    "W_joint": {
-      "candidate_id": "statistics_hard_analytic_composed_frame1",
-      "d_seg": 0.07051923116048177,
-      "d_pose": 36.6181847780574,
-      "archive_bytes": 138801,
-      "mycar_errors": 4072489
-    },
-    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
-    "score_claim": false,
-    "pointer_moved": false,
-    "main_landing_review_required": true
+    }
   }
 }

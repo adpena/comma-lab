@@ -1781,8 +1781,6 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             verdict_due = stage_step % int(stage["verdict_interval_steps"]) == 0
             if bounded_stop and args.stage_exit_on_stop:
                 verdict_due = True
-            if bounded_stop and warm_start_component_safe:
-                verdict_due = False
             verdict: dict[str, Any] | None = None
             live_archive, live_realized_theta = compile_parameterized_archive(
                 lift, state.theta, include_lane_programs=include_lanes
