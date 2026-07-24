@@ -23350,3 +23350,18 @@ parametric description family (coder-in-the-loss; knee = output). Existing insta
 inits + the 25-row residue as video-derived latent content (class-birth placement law). Routed:
 is1 Directive 7 → price (d) vs (a)/(b)/(c) same currency; if (d) wins, training = the family
 search, not a post-solve fallback. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-366-schedule-gate (2026-07-24, MAIN — operator: "Before launching 366 ... comprehensive
+analysis and sweep of all of the optimization research ... and schedule research ... not cargo
+culted pr95"): NEW BINDING PRE-LAUNCH GATE on the #366 campaign. The fire condition is now the
+CONJUNCTION: ws3 arbitrated READY_TO_FIRE × is1 objective/family verdict × sched1
+SCHEDULE_VERIFIED_DERIVED. Rationale (recall): the derived-schedule corpus EXISTS (#302 PR95
+audit · #430 coherent-whole · #318 DE laws · #315 event triggers · #344 NCDE detector · #518
+warm-start geometry · poison taxonomy: stage-skeletons=cargo-cult→event-continuation ·
+v9-event-driven memory) but the j-chain ticket descends from the sealed v15/J5 lineage and its
+schedule was NEVER verified element-by-element against that corpus — the config-orphan pattern
+at the campaign-schedule surface. sched1 charter written (fires on first free slot; fleet at
+cap 4/4): sweep → derived spec (DSL-compiled) → per-element diff {derived · inherited-unverified
+· contradicts} vs the live ticket → SCHEDULE_VERIFIED_DERIVED or RESEAL_REQUIRED with exact
+delta. px1's update-RMS/Muon-quality findings fold in when landed. Pointer 0.1910828242
+[contest-CPU] UNMOVED.
