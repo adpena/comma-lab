@@ -23711,3 +23711,25 @@ directives → ic1 (5-item pull list; prices NULL until bound) + dm4 (named reso
 resize-footprint+stem-lattice). verdict_scope: per-row tokens in the a2 ledger (INSTANCE/FORMULATION
 preserved; no family kill anywhere). Consistency: coherent-view correction — the box-widening and c1
 waterfill claims I cited to the operator 07-24 are now formally RE-SCOPED/SUSPENDED; steering updated.
+
+### FEED-603-dm4-MAIN-review (2026-07-24, MAIN)
+dm4 scorer-recursive realization cures LANDED rc=0 (3 commits cherry-picked → main, registry
+union-merged 844 rows, 5 tests + ruff green; pointer 0.1910828242 [contest-CPU] UNMOVED; advisory,
+score_claim=false). FIRST MEASURED VALUE OF THE SCORER-DERIVATION DISCIPLINE: support rebuilt from
+exact resize adjoint + ERF r50~85px + stride-2 stem lattice (NOT disk radii, per operator directive
+consumed pre-measurement) → 25-row joint realized 3,960,549→3,241,321B (−719,228B), realized/semantic
+2524.25×→2065.85× (−18.16%) at UNCHANGED 1,569B semantic + exact L4 admission per row + after joint
+composition. Verified: ratio arithmetic ✓; 4-global-row sum 2,029,452B ✓ = 62.6% of remaining joint
+(rows 1/6/15/24, pairs 523/446/38/16 — retained as [naive-menu upper bound] controls, named cure =
+receiver-closed low-rank color/normal factor per row). Pose: rows 5/23 CURED (Δpose<0 exact);
+10/11/12 priced-not-cured (next: spatially factorized ξ6 secant); row 19 localized 122,229→401B but
+pair-55 composition still needs full solved-target fallback → FORMULATION OPEN: cross-row scorer-
+recursive factorization on pair 55 = highest-value successor. Conflicts: pairs 90+60 CLEARED (60 via
+1.0×r50 ERF/stem repair), 55 remains. A2 resolutions honest: A2-02 RESOLVED_AS_RESCOPED (pricing
+curve landed; family wording stays forbidden); A2-13 PRICING_REQUIREMENT_RESOLVED_CLOSURE_STILL_
+SUSPENDED (4 naive controls + pair-55 fallback remain — correct). verdict_scope: MEASURED/INSTANCE
+throughout; channel remains rate-positive (+1.95 S advisory) = pricing economics, NOT a candidate
+path. Registry: ddm_dm2_semantic_to_realized_rgb_exchange_v1 append row 843. FLEET DISCIPLINE: dm4's
+slot left EMPTY (coherence contract) — its named rungs (4-row low-rank factor · pair-55 cross-row
+factorization · ξ6 secant) QUEUED, re-ranked after ic1 stage curves + ms2r tolerance results land
+(ms2r may re-rank the whole L3-diff channel if cheap in-box members exist).
