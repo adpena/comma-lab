@@ -1,0 +1,63 @@
+{
+  "schema": "ddm_is1_three_clean_review.v2",
+  "lane_id": "lane_ddm_is1_full_inverse_solve_to_the_end_20260724",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "main_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "review_generation": 3,
+  "prior_generation_disposition": "INVALIDATED_BY_DIRECTIVES_2_THROUGH_7_AND_NEW_EXACT_RESIDUAL_MEASUREMENT",
+  "passes": [
+    {
+      "pass": 1,
+      "name": "IMPLEMENTATION_RECEIPT_AND_RESUME_REDERIVATION",
+      "result": "CLEAN",
+      "checks": [
+        "ruff passed for the module, CLI, and focused tests",
+        "py_compile passed for the module, CLI, and focused tests",
+        "focused oracle-diff and reused-loader suites passed 20 tests",
+        "current config, module, and tool hashes equal receipt implementation custody",
+        "50 ordered 12-pair checkpoints cover n600 without gaps",
+        "container accounting re-derived as 12 prefix bytes plus 497662168 record bytes equals 497662180",
+        "all 50 stages attest exact delta parse-back and real-R uint8 identity",
+        "resume accepted all checkpoints and normalized scientific hashes match at 2b72204310413c1e8b0cef1ea94229b56635f1251b4c9d876b5054316cab54a3"
+      ]
+    },
+    {
+      "pass": 2,
+      "name": "INDEPENDENT_ARITHMETIC_SOURCE_AND_DEMAND_REDERIVATION",
+      "result": "CLEAN",
+      "checks": [
+        "exact decimal multiplication re-derived 17927 solve errors",
+        "2845843 divided by 17927 re-derived the 158.746192893401 endpoint ratio",
+        "strict S below 0.15 fixed-distortion tangent re-derived B at most 154522",
+        "154522-byte pass and 154524-byte fail sides were independently checked",
+        "RG3 source bytes from immutable commit 4a1728d9ae hash to 3d4c4fb635ec37668cbf6037cefca63fe7c08a9ad950e6724ae023deb0473fd2",
+        "the local 25-row set equals the RG3 missing-block set exactly",
+        "candidate re-homing counts re-derived as 16 SKELETON at L3_raster and 9 FIBER at L4_scorer_feature",
+        "all seven directive byte hashes were recomputed and match the consumption ledger"
+      ]
+    },
+    {
+      "pass": 3,
+      "name": "ADVERSARIAL_OBJECTIVE_AUTHORITY_AND_SCOPE_REDERIVATION",
+      "result": "CLEAN",
+      "checks": [
+        "the objective holds evaluator source custody fixed and jointly minimizes exact S over legal decoded solution and counted description",
+        "path d is prospective rank 1, b rank 2 and mandatory testbed, a rank 3 deterministic comparator, and c is a method rather than a standalone representation",
+        "the 497662180-byte row is scoped only to exact reversible RESIDUAL at L3_raster before re-homing",
+        "all inherited economics remain upper-bound proposal-search-channel only",
+        "training necessity remains unproven while training as an entropy-penalized optimizer for path d remains a distinct open role",
+        "the prior compact-function result is consumed only as a representation lesson and no old-lineage vehicle is reused",
+        "no candidate archive, contest evaluation, paid dispatch, GPU run, training launch, promotion, or pointer movement is claimed",
+        "all owned JSON evidence carries research_only true and score_claim false",
+        "both inboxes contain no post-launch amendment and all seven directives are consumed",
+        "git diff check and landing-file trailing-whitespace checks passed"
+      ]
+    }
+  ],
+  "all_clean": true,
+  "review_disposition": "REQUIRE_INDEPENDENT_MAIN_LANDING_REVIEW"
+}

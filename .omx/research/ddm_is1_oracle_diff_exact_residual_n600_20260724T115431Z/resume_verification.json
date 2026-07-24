@@ -1,0 +1,27 @@
+{
+  "schema": "ddm_is1_oracle_diff_resume_verification.v1",
+  "run_id": "ddm_is1_oracle_diff_exact_residual_n600_20260724",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "research_only": true,
+  "score_claim": false,
+  "resume_replay": true,
+  "stage_count_before": 50,
+  "stage_count_after": 50,
+  "all_stage_checkpoints_accepted_under_implementation_custody": true,
+  "scientific_field_differences": [],
+  "runtime_field_differences": [
+    {
+      "json_pointer": "/storage_preflight/observations/0/free_bytes",
+      "before": 524275638272,
+      "after": 524259921920,
+      "disposition": "RUNTIME_OBSERVATION_EXCLUDED_FROM_SCIENTIFIC_EQUALITY"
+    }
+  ],
+  "receipt_sha256_before_resume": "ffb2b6e7391e075e11ee8c220591f81eefcaa4a6430014b35daaeccab281dcde",
+  "receipt_sha256_after_resume": "a03c7e07bc273f6813db7dc54d480e4f0f7931eb14c3e712fb892b27761bc863",
+  "normalized_scientific_sha256_before": "2b72204310413c1e8b0cef1ea94229b56635f1251b4c9d876b5054316cab54a3",
+  "normalized_scientific_sha256_after": "2b72204310413c1e8b0cef1ea94229b56635f1251b4c9d876b5054316cab54a3",
+  "normalization_rule": "replace each storage_preflight.observations[*].free_bytes value with RUNTIME_OBSERVATION_EXCLUDED_FROM_SCIENTIFIC_EQUALITY, then canonical JSON sort_keys with compact separators",
+  "verdict": "SCIENTIFIC_RESUME_IDENTITY_PASS_RUNTIME_FREE_BYTES_EXPECTED_DYNAMIC",
+  "main_landing_review_required": true
+}

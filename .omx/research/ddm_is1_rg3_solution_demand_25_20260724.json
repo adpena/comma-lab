@@ -1,0 +1,255 @@
+{
+  "schema": "ddm_is1_rg3_solution_demand.v1",
+  "lane_id": "lane_ddm_is1_full_inverse_solve_to_the_end_20260724",
+  "source_commit": "4a1728d9ae",
+  "source_summary_path": ".omx/research/ddm_rg3_residual_family_productions_20260724T110418Z/ddm_rg3_receiver_support_summary.json",
+  "source_summary_sha256": "3d4c4fb635ec37668cbf6037cefca63fe7c08a9ad950e6724ae023deb0473fd2",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "interpretation": "SOLUTION_DESCRIPTION_NOT_PROBLEM_REACHABILITY",
+  "row_count": 25,
+  "source_closure_gradient": {
+    "class_birth": "0/10",
+    "finer_boundary": "3/9",
+    "fisher_cell": "8/17"
+  },
+  "assignment_law": {
+    "boundary": "The solved object contains the exact placement of a class interface. Candidate home SKELETON/L3_raster; CONNECTION re-homing remains testable when a deterministic temporal relation exists.",
+    "cell": "The solved object contains the score-visible within-cell class or margin choice on existing support. Candidate home FIBER/L4_scorer_feature; the RG3 actuator was historically tagged SKELETON, so #669c must adjudicate the re-homing.",
+    "authority": "These are derived candidate homes from solution semantics, not measured byte homes. Exact prices stay null until a receiver-closed per-row solved-value generator and real coder exist."
+  },
+  "rows": [
+    {
+      "pair_id": 523,
+      "bucket_id": "lane_movable__cell__static_in_image",
+      "oracle_content": "score-visible Lane/Movable within-cell class or margin choice on existing static support",
+      "candidate_stream_type": "FIBER",
+      "candidate_layer_home": "L4_scorer_feature",
+      "source_rg3_family": "Fisher cell",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 523,
+      "bucket_id": "lane_undrivable__boundary__static_in_image",
+      "oracle_content": "exact static Lane/Undrivable interface placement",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "class birth",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 523,
+      "bucket_id": "lane_undrivable__cell__static_in_image",
+      "oracle_content": "score-visible Lane/Undrivable within-cell class or margin choice on existing static support",
+      "candidate_stream_type": "FIBER",
+      "candidate_layer_home": "L4_scorer_feature",
+      "source_rg3_family": "Fisher cell",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 54,
+      "bucket_id": "road_mycar__cell__static_in_image",
+      "oracle_content": "score-visible Road/MyCar within-cell class or margin choice on existing static support",
+      "candidate_stream_type": "FIBER",
+      "candidate_layer_home": "L4_scorer_feature",
+      "source_rg3_family": "Fisher cell",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 90,
+      "bucket_id": "lane_mycar__boundary__static_in_image",
+      "oracle_content": "exact static Lane/MyCar interface placement",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "finer boundary",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 90,
+      "bucket_id": "undrivable_movable__boundary__transient",
+      "oracle_content": "exact transient Undrivable/Movable interface placement in the solved pair",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "finer boundary",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 446,
+      "bucket_id": "lane_undrivable__boundary__static_in_image",
+      "oracle_content": "exact static Lane/Undrivable interface placement",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "class birth",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 446,
+      "bucket_id": "lane_undrivable__cell__static_in_image",
+      "oracle_content": "score-visible Lane/Undrivable within-cell class or margin choice on existing static support",
+      "candidate_stream_type": "FIBER",
+      "candidate_layer_home": "L4_scorer_feature",
+      "source_rg3_family": "Fisher cell",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 0,
+      "bucket_id": "road_undrivable__boundary__transient",
+      "oracle_content": "exact transient Road/Undrivable interface placement in the solved pair",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "class birth",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 14,
+      "bucket_id": "lane_undrivable__cell__static_in_image",
+      "oracle_content": "score-visible Lane/Undrivable within-cell class or margin choice on existing static support",
+      "candidate_stream_type": "FIBER",
+      "candidate_layer_home": "L4_scorer_feature",
+      "source_rg3_family": "Fisher cell",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 327,
+      "bucket_id": "road_mycar__cell__static_in_image",
+      "oracle_content": "score-visible Road/MyCar within-cell class or margin choice on existing static support",
+      "candidate_stream_type": "FIBER",
+      "candidate_layer_home": "L4_scorer_feature",
+      "source_rg3_family": "Fisher cell",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 60,
+      "bucket_id": "lane_movable__boundary__static_in_image",
+      "oracle_content": "exact static Lane/Movable interface placement",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "class birth",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 60,
+      "bucket_id": "road_mycar__cell__static_in_image",
+      "oracle_content": "score-visible Road/MyCar within-cell class or margin choice on existing static support",
+      "candidate_stream_type": "FIBER",
+      "candidate_layer_home": "L4_scorer_feature",
+      "source_rg3_family": "Fisher cell",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 323,
+      "bucket_id": "lane_mycar__boundary__static_in_image",
+      "oracle_content": "exact static Lane/MyCar interface placement",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "finer boundary",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 323,
+      "bucket_id": "undrivable_movable__boundary__transient",
+      "oracle_content": "exact transient Undrivable/Movable interface placement in the solved pair",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "finer boundary",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 38,
+      "bucket_id": "lane_mycar__boundary__static_in_image",
+      "oracle_content": "exact static Lane/MyCar interface placement",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "class birth",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 42,
+      "bucket_id": "lane_movable__boundary__static_in_image",
+      "oracle_content": "exact static Lane/Movable interface placement",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "class birth",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 4,
+      "bucket_id": "lane_undrivable__boundary__static_in_image",
+      "oracle_content": "exact static Lane/Undrivable interface placement",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "class birth",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 55,
+      "bucket_id": "lane_undrivable__boundary__static_in_image",
+      "oracle_content": "exact static Lane/Undrivable interface placement",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "class birth",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 55,
+      "bucket_id": "road_undrivable__boundary__transient",
+      "oracle_content": "exact transient Road/Undrivable interface placement in the solved pair",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "class birth",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 56,
+      "bucket_id": "lane_movable__boundary__static_in_image",
+      "oracle_content": "exact static Lane/Movable interface placement",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "finer boundary",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 56,
+      "bucket_id": "lane_movable__cell__static_in_image",
+      "oracle_content": "score-visible Lane/Movable within-cell class or margin choice on existing static support",
+      "candidate_stream_type": "FIBER",
+      "candidate_layer_home": "L4_scorer_feature",
+      "source_rg3_family": "Fisher cell",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 56,
+      "bucket_id": "lane_mycar__boundary__static_in_image",
+      "oracle_content": "exact static Lane/MyCar interface placement",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "finer boundary",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 16,
+      "bucket_id": "road_mycar__cell__static_in_image",
+      "oracle_content": "score-visible Road/MyCar within-cell class or margin choice on existing static support",
+      "candidate_stream_type": "FIBER",
+      "candidate_layer_home": "L4_scorer_feature",
+      "source_rg3_family": "Fisher cell",
+      "exact_counted_bytes": null
+    },
+    {
+      "pair_id": 16,
+      "bucket_id": "undrivable_movable__boundary__transient",
+      "oracle_content": "exact transient Undrivable/Movable interface placement in the solved pair",
+      "candidate_stream_type": "SKELETON",
+      "candidate_layer_home": "L3_raster",
+      "source_rg3_family": "class birth",
+      "exact_counted_bytes": null
+    }
+  ],
+  "price_status": "ALL_25_NULL_NO_PER_ROW_RECEIVER_CLOSED_SOLVED_VALUE_GENERATOR_OR_REAL_CODER",
+  "next_measurement": "Materialize solved-value interface/FIBER descriptors for these exact rows, run #669c re-homing, then real-code and parse back each row before any byte claim.",
+  "training_necessity": "UNPROVEN; the rows prove counted content demand, not that a learned representation is required.",
+  "main_landing_review_required": true
+}

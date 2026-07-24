@@ -1,0 +1,108 @@
+{
+  "schema": "ddm_is1_directive_consumption.v2",
+  "lane_id": "lane_ddm_is1_full_inverse_solve_to_the_end_20260724",
+  "delegation_checkpoint_key": "codex_delegate:ddm_is1_full_inverse_solve_to_the_end:20260724T112531Z",
+  "launch_utc": "2026-07-24T11:25:31Z",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "main_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_is1_full_inverse_solve_to_the_end_20260724T112531Z.wrapped.prompt.txt",
+    "bytes": 8112,
+    "sha256_expected": "64740beb925c59d85dc9049531041469b5dc81036fa0bb4f0718a9809a813e3b",
+    "sha256_recomputed": "64740beb925c59d85dc9049531041469b5dc81036fa0bb4f0718a9809a813e3b",
+    "consumed_completely": true
+  },
+  "amendments": [
+    {
+      "path": ".omx/research/ddm_is1_directive_fivetype_layerstack_20260724.md",
+      "bytes": 2205,
+      "sha256_recomputed": "646de874043180a8e3d3228340edc0539778add9dfaf13af99cacdbf78c069e3",
+      "consumed_completely": true,
+      "effect": "BIND_FIVE_TYPE_X_LAYER_STACK_AND_ADD_669C_REHOMING_AUDIT"
+    },
+    {
+      "path": ".omx/research/ddm_is1_directive_upstream_solve_as_oracle_20260724.md",
+      "bytes": 2626,
+      "sha256_recomputed": "b443720b3c14ebd13e5a17b72aa3d529edec4914f312820d870768ba1dc47351",
+      "consumed_completely": true,
+      "effect": "COMPARE_DESCRIBE_ORACLE_DIFF_AND_366_WITH_SOLVE_AS_DENSE_SUPERVISION"
+    },
+    {
+      "path": ".omx/research/ddm_is1_directive3_economics_upper_bounds_20260724.md",
+      "bytes": 913,
+      "sha256_recomputed": "de65d7adc552c2fb30dad274fe4da9ede465321a102bca8f5dee083fb55ef625",
+      "consumed_completely": true,
+      "effect": "DOWNGRADE_ALL_INHERITED_PRICES_TO_PROPOSAL_SEARCH_UPPER_BOUNDS_AND_REQUIRE_ORACLE_DIFF_TRUE_PRICE_TABLE"
+    },
+    {
+      "path": ".omx/research/ddm_is1_directive4_159x_pipeline_confound_20260724.md",
+      "bytes": 2323,
+      "sha256_recomputed": "793d53dde4c7b73b1e2fb91a48343377e354cb4d9aba7732993c7a079b7d5e42",
+      "consumed_completely": true,
+      "effect": "EXONERATE_UINT8_QUANTIZATION_AND_LOCALIZE_DESCRIBED_BASE_LOSS_TO_DESCRIPTION_TO_RGB_REGENERATION"
+    },
+    {
+      "path": ".omx/research/ddm_is1_directive5_unclosed_residue_is_the_demand_20260724.md",
+      "bytes": 2295,
+      "sha256_recomputed": "048166c6bd7749ad2be77912c6dd3edec177b23d239967182d1e25e84faf247d",
+      "consumed_completely": true,
+      "effect": "REPLACE_RG2_36_CELL_BLOCKER_WITH_RG3_25_ROW_EMPIRICAL_DEMAND_SET_AND_REGISTER_CLASS_INTERFACE_PLACEMENT_LAW"
+    },
+    {
+      "path": ".omx/research/ddm_is1_directive6_solution_set_objective_20260724.md",
+      "bytes": 1708,
+      "sha256_recomputed": "c34a68f1afde74050ea2305f2b437aa05b21b6cdbd8648c274caea8d55d327c6",
+      "consumed_completely": true,
+      "effect": "OPTIMIZE_MIN_S_JOINTLY_OVER_WHICH_SOLUTION_AND_HOW_DESCRIBED_WITH_DISTORTION_AS_OUTPUT"
+    },
+    {
+      "path": ".omx/research/ddm_is1_directive7_score_quotient_functional_family_20260724.md",
+      "bytes": 2633,
+      "sha256_recomputed": "7a9cc45f0d4f60487fb12afcc8c59c46436d908907cf28a8422999bec614ca0e",
+      "consumed_completely": true,
+      "effect": "ADD_SCORE_QUOTIENT_FUNCTIONAL_FAMILY_AND_ALLOW_366_AS_ITS_FITTING_ENGINE_NOT_OLD_LINEAGE"
+    }
+  ],
+  "live_inbox": {
+    "per_arm_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_inbox/ddm_is1_full_inverse_solve_to_the_end.jsonl",
+    "broadcast_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_inbox/_broadcast.jsonl",
+    "cursor_after_utc": "2026-07-24T11:25:31Z",
+    "post_launch_directives_consumed": []
+  },
+  "gated_actions": {
+    "paid_dispatch": false,
+    "exact_eval": false,
+    "frontier_mutation": false,
+    "training_launch": false,
+    "local_scorer_invocation_by_this_lane": false
+  },
+  "decision": {
+    "training_necessary_residual": "EMPTY_ON_CURRENT_EVIDENCE",
+    "training_family_verdict": "OPEN",
+    "fivetype_layerstack_source": "tac.optimization.ddm_min_description_contract.StreamType+LayerHome+TypedStreamTag",
+    "layer_rehoming_audit_669c_status": "QUEUED_NEVER_RUN",
+    "metric_active_ms2_status": "NEVER_RUN",
+    "rg3_exact_pair_bucket_demand_count": 25,
+    "rg3_number_status": "MEASURED_FROM_GIT_OBJECT_4A1728D9AE_AND_SHA_REVALIDATED_SUMMARY",
+    "rg3_class_birth_closed_over_entered": "0/10",
+    "rg3_finer_boundary_closed_over_entered": "3/9",
+    "rg3_fisher_cell_closed_over_entered": "8/17",
+    "strict_sub_0_15_byte_bound_at_ms1_diagnostic_distortions": 154522,
+    "byte_bound_status": "DERIVED",
+    "described_base_gap_is_required_correction_workload": false,
+    "description_to_rgb_regeneration_confound": "CONFIRMED_FORMULATION",
+    "quantization_binding": false,
+    "exact_l3_residual_container_bytes": 497662180,
+    "exact_l3_residual_price_status": "MEASURED_TRUE_PRICE_UPPER_BOUND_BEFORE_REHOMING_RATE_DEAD_FORMULATION",
+    "exact_l3_residual_score_rate_term": 331.3728181832976,
+    "rg3_solution_demand_ledger": ".omx/research/ddm_is1_rg3_solution_demand_25_20260724.json",
+    "rg3_per_row_real_coded_prices": "ALL_NULL_PENDING_SOLVED_VALUE_GENERATOR_AND_669C",
+    "optimization_objective": "MIN_EXACT_S_OVER_WHICH_SCORE_QUOTIENT_SOLUTION_AND_HOW_DESCRIBED",
+    "ranked_primary_path": "SCORE_QUOTIENT_FUNCTIONAL_REPRESENTATION_SEEDED_BY_SOLVE_ORACLE_AND_25_ROW_DEMAND",
+    "campaign_366_role": "FITTING_ENGINE_INSIDE_FUNCTIONAL_FAMILY_OR_POST_DETERMINISTIC_RESIDUAL_FINISHER_NOT_STANDALONE_REPRESENTATION",
+    "pointer_moved": false
+  }
+}
