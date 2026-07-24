@@ -23465,3 +23465,29 @@ were reached INDEPENDENTLY and compose — the event-continuation consumer is th
 engine the re-aimed #366 ((d)-family fitter per FEED-603-is1) needs; build it FOR that target, not
 the old standalone closer. Fire gate stays MAIN-owned 3-way; ready_to_fire=false on all three legs
 today. Cherry-pick c753130b94 clean (docs+receipts only). Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-dm1-MAIN-review (2026-07-24, MAIN custody of ddm_dm1_25_row_solved_value_pricing rc=0 —
+is1's named next measurement, all NULL price cells now filled or honestly re-scoped):
+ARITHMETIC VERIFIED by MAIN: 25-row table sums exactly 4,124 B (per-row best-coder independent);
+9 FIBER + 16 SKELETON matches is1's split; joint LZMA-9 single-container = 1,569 B (shared-context
+saving 2,555 B = description redundancy, FIREWALLED from box/archive arithmetic per non-additive-
+pools). Tests 9/9 + ruff re-run clean by MAIN. THE HEADLINE (decomposed): the 25-row demand set —
+the ENTIRE residual counted-content demand of the current vocabulary — is semantically TINY
+(~1.6 KB jointly coded, exact parse-back 25/25, receipt sha 4c2fe779…de28). The open cost is NOT
+information, it is REALIZATION: every row's receiver-closed archive price stays honestly NULL
+because the contest receiver emits RGB, not SegNet features — an L3 RGB preimage reproducing each
+exact L4 record pose-safely is OWED. This lands squarely on the realization-crux thesis
+(realization_is_quantization_gated law). #669c RE-HOMING ADJUDICATED: boundary rows = SKELETON/L4
+(CORRECTING is1's L3 candidate under the deepest-surviving rule — L3 is the realization SURFACE,
+not the information home; placement coords + solved choice counted), cell rows = FIBER/L4 confirmed
+(only the within-support choice counted, support referenced by SHA — preserves the SKELETON/FIBER
+asymmetry). CONNECTION honestly NULL: zero same-bucket Δpair=1 comparators exist in the 25 rows
+(MEASURED-NEGATIVE at INSTANCE scope, NOT family-absence); named next measurement = register one
+same-bucket consecutive-pair solved support. Directive-disposition table PASS on all 14 binding
+rows incl. solved-object-not-reachability + no-RG4 + sealed-contract-reuse. verdict_scope: MEASURED
+= exact bytes+parseback for these 25 semantic records, frozen-SegNet local axis ONLY; excludes
+receiver-closed RGB, pose survival, evaluate.py, archive bytes. Consumers: dc1 (25-row latent slots
+in the (d) contract — prices now real), rd1 NULL duals, #688 engine. Named successor measurement =
+the L3 REALIZATION race on these 25 rows (semantic 1,569 B vs realized bytes+collateral = the first
+semantic-vs-realized price RATIO on the demand set). Cherry-picks 9371bebf72+f484bf7a35+7324626756
+clean. Pointer 0.1910828242 [contest-CPU] UNMOVED.
