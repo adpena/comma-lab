@@ -1,9 +1,9 @@
 # DDM RD1 λ-continuation frontier — Codex findings
 
-**Lane:** `lane_ddm_rd1_lambda_continuation_frontier_20260724`  
-**Evidence axis:** `[macOS-CPU frozen-scorer advisory]`  
-**Authority:** `research_only=true`, `score_claim=false`, `promotion_eligible=false`  
-**Pointer:** `0.1910828242 [contest-CPU]` **UNCHANGED**  
+**Lane:** `lane_ddm_rd1_lambda_continuation_frontier_20260724`
+**Evidence axis:** `[macOS-CPU frozen-scorer advisory]`
+**Authority:** `research_only=true`, `score_claim=false`, `promotion_eligible=false`
+**Pointer:** `0.1910828242 [contest-CPU]` **UNCHANGED**
 **MAIN landing review:** **REQUIRED — review the complete base..branch diff**
 
 ## Outcome first

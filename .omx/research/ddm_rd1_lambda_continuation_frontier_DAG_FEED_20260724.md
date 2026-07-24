@@ -1,9 +1,9 @@
 # DDM RD1 λ-continuation frontier — DAG feed
 
-**Lane:** `lane_ddm_rd1_lambda_continuation_frontier_20260724`  
-**Equation:** `ddm_restricted_realized_lambda_continuation_v1`  
-**Axis:** `[macOS-CPU frozen-scorer advisory]`  
-**Authority:** `research_only=true`, `score_claim=false`, pointer unchanged  
+**Lane:** `lane_ddm_rd1_lambda_continuation_frontier_20260724`
+**Equation:** `ddm_restricted_realized_lambda_continuation_v1`
+**Axis:** `[macOS-CPU frozen-scorer advisory]`
+**Authority:** `research_only=true`, `score_claim=false`, pointer unchanged
 **Landing:** isolated branch; MAIN full-diff review required
 
 ## Executed trajectory
