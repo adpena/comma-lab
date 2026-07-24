@@ -23620,3 +23620,29 @@ WS1-derived candidate can now ride E4 export to R6 with real custody; pose axis 
 (harness d_pose 146.4/36.6 — these are warm STARTS, pose finish is the re-aimed #366's job).
 verdict_scope: instance-positive ×2 + FORMULATION-scoped fallback negative. Cherry-pick 0718ff76af
 clean. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-dm3-MAIN-review (2026-07-24, MAIN custody of ddm_dm3_connection1_conditional_codelength
+rc=0 — council OP-GC1-4, the Q3 discriminator, executed exactly as spec'd):
+ARITHMETIC VERIFIED by MAIN (exact): delta_B_connection = 7,049 − (624 + 5,237) = **+1,188 B**
+held-out across 36 eligible same-bucket families (of 37; lane_mycar__cell__transient honestly
+NULL — no consecutive pair); slice decomposition sums exactly (+657 static-cell +39 ξ-proxy
++242 transient-boundary +492 transient-cell −242 static-boundary = 1,188). Tests 9/9 + 3/3
+equation tests + ruff re-run clean; registry union-merged. THE ANSWER TO COUNCIL Q3 (decomposed,
+never bare): CONNECTION structure IS REAL at this formulation — 32/36 buckets positive — but it
+is PERSISTENCE, not motion: identity program wins 34/36 selections and 100% of positive selected-
+family bytes; ξ-advection wins 0/36; both affine selections NEGATIVE. The residue is partly
+missing generic program structure (the +1,188 B is absorbable for a charged 624 B of program+
+state — a 17% cut of the demand set's static price at zero video-content cost beyond the
+selector), concentrated in CELL and TRANSIENT rows; STATIC-BOUNDARY is the one negative slice
+(−242 B; the 4 nonpositive rows all static-boundary incl. both affine picks) — interface
+PLACEMENT resists history-coding, consistent with the class-birth law and dm2's SKELETON-dearer
+finding: three independent instruments now converge on "interfaces are the irreducible video
+content; interiors/transients compress via persistence." ξ-advection 0/36 is FORMULATION-scoped
+(translation-only proxy on semantic records; not an se(3) family kill). Charge discipline honored:
+15B frame + 1B selector + 0/4/24B state + full exact residual, all parse-back exact; per-row next
+measurement = the full held-out fold sweep. Consumers: dc1 CONNECTION stream (identity-persistence
+production is now an admissible typed coordinate with measured +EV), #688 engine grammar, gc1 Q3
+answered-in-part (persistence yes, motion unproven). Per the fleet-cap≠quota discipline: NO
+respawn — dm3's slot stays empty; the finding rides dc1/#688 as data; ic1 (the incumbent) is the
+live priority. Cherry-pick 1e74e389 + union-merge clean. Pointer 0.1910828242 [contest-CPU]
+UNMOVED.
