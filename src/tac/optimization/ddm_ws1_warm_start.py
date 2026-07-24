@@ -21,12 +21,6 @@ from typing import Any, Final, Literal
 
 import numpy as np
 
-from tac.optimization.ddm_continuous_paint_ceiling import (
-    render_analytic_coverage_blend,
-    render_hard_camera_placement,
-    resample_fields_at_pixel_centres,
-    signed_distance_fields,
-)
 from tac.optimization.ddm_hood_static_reassert import (
     expand_support_to_camera,
     reassert_frame1,
@@ -167,6 +161,15 @@ def _geometry_statistics_camera(
     statistics_payload: bytes,
 ) -> np.ndarray:
     """Replay MENU1's hard-interior/analytic-boundary statistics receiver."""
+
+    # W_joint alone owns the SciPy-backed continuous-paint path.  W_seg/IC2
+    # decode must not import it or declare SciPy as a runtime dependency.
+    from tac.optimization.ddm_continuous_paint_ceiling import (
+        render_analytic_coverage_blend,
+        render_hard_camera_placement,
+        resample_fields_at_pixel_centres,
+        signed_distance_fields,
+    )
 
     fields = signed_distance_fields(semantic)
     camera_fields = resample_fields_at_pixel_centres(fields)

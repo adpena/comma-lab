@@ -1,0 +1,49 @@
+{
+  "schema": "ddm_ic2_optimal_incumbent_pose_typed.directive_consumption.v1",
+  "date_utc": "2026-07-24",
+  "delegation_checkpoint_key": "codex_delegate:ddm_ic2_optimal_incumbent_pose_typed:20260724T172235Z",
+  "authority_sha256": "329c7f815e8d2f802bdf15613155357c18f77d424cc60011855eebe15570f9bb",
+  "operator_directives": [
+    {
+      "directive": "never launch the weaker but launchable state; pursue the most optimal straight up from the beginning",
+      "application": "Started from exact W_seg, prohibited W_joint fallback, and refused to promote the measured weaker interaction."
+    },
+    {
+      "directive": "getting closer and closer to the optimal",
+      "application": "Used exact conditional replay and incumbent comparison; recorded the missing compact pose inverse as the next concrete blocker."
+    },
+    {
+      "directive": "frames should carry photometric YUV structure after decoupling, with five types and a full layer stack",
+      "application": "Kept PA1 in frame0's pose home, preserved frame1 Seg, and refused to mislabel pre-export Pose6 state as a receiver-owned pose stream."
+    },
+    {
+      "directive": "remember video dimensions versus score dimensions from recursive upstream analysis",
+      "application": "Admitted only scorer-derived PA1 coordinates and exact Seg/Pose/rate measurements; no camera-fidelity objective or generic spatial menu was introduced."
+    }
+  ],
+  "inbox_directives": [
+    {
+      "utc": "2026-07-24T17:25:59Z",
+      "status": "SUPERSEDED",
+      "application": "A pure NumPy polygon rasterizer was implemented and verified, then reverted when the later operator directive allowed cv2."
+    },
+    {
+      "utc": "2026-07-24T17:26:45Z",
+      "status": "CONSUMED_AS_APPLICABLE",
+      "application": "No new fixed-quantum Q8 correction was introduced; PA1 uses exact moment-derived continuous affine parameters and realized replay."
+    },
+    {
+      "utc": "2026-07-24T17:37:51Z",
+      "status": "CONSUMED",
+      "application": "Declared pinned opencv-python-headless bootstrap, kept scipy lazy/absent at decode, and audited the bundled import closure."
+    },
+    {
+      "utc": "2026-07-24T17:39:13Z",
+      "status": "CONSUMED",
+      "application": "Applied runtime/determinism/rule-118 constraints without an invented dependency-count cap."
+    }
+  ],
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_review_required": true
+}

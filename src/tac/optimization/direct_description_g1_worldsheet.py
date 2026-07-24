@@ -21,7 +21,6 @@ from typing import Final
 import brotli
 import cv2
 import numpy as np
-from scipy.optimize import linear_sum_assignment
 
 from tac.optimization.direct_description_minimizer import DirectDescriptionError
 
@@ -275,6 +274,10 @@ def _decode_envelope(payload: bytes) -> list[tuple[str, bytes]]:
 
 
 def _extract_tracks(labels: np.ndarray) -> _PolygonTrackCorpus:
+    # SciPy is encoder-only; the admitted receiver needs NumPy, OpenCV, and
+    # Brotli but must not pull the optimization stack into its import closure.
+    from scipy.optimize import linear_sum_assignment
+
     if labels.ndim != 3 or labels.shape[1:] != (HEIGHT, WIDTH) or not 1 <= labels.shape[0] <= 600:
         raise DirectDescriptionError("G1 Movable source window must be [1,600]x384x512")
     per_frame: list[list[np.ndarray]] = []

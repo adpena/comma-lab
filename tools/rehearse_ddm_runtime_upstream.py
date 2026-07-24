@@ -45,6 +45,10 @@ class DDME1UpstreamHarnessConfigV1(BaseModel):
         "DDME4UpstreamHarnessConfigV1",
         "DDME4WS1UpstreamHarnessConfigV1",
         "DDMIC1UpstreamHarnessConfigV1",
+        "DDMIC2UpstreamHarnessConfigV1",
+        "DDMIC2UpstreamHarnessRecheckConfigV1",
+        "DDMIC2UpstreamHarnessCleanPassConfigV1",
+        "DDMIC2UpstreamHarnessFinalConfigV1",
     ] = Field(alias="schema")
     run_id: Literal[
         "ddm_e1_upstream_harness_20260723",
@@ -55,6 +59,10 @@ class DDME1UpstreamHarnessConfigV1(BaseModel):
         "ddm_e5_e4_ws1_brotli_upstream_harness_20260724",
         "ddm_e5_e4_ws1_lzma1_fallback_upstream_harness_20260724",
         "ddm_ic1_incumbent_brotli_upstream_harness_20260724",
+        "ddm_ic2_optimal_incumbent_brotli_upstream_harness_20260724",
+        "ddm_ic2_optimal_incumbent_brotli_upstream_harness_recheck_20260724",
+        "ddm_ic2_optimal_incumbent_brotli_upstream_harness_clean_pass_20260724",
+        "ddm_ic2_optimal_incumbent_brotli_upstream_harness_final_20260724",
     ]
     export_config_path: StrictStr
     upstream_root: StrictStr
@@ -140,6 +148,17 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
         "ddm_e5_e4_ws1_lzma1_fallback_upstream_harness_20260724",
     }
     is_ic1 = config.run_id == "ddm_ic1_incumbent_brotli_upstream_harness_20260724"
+    is_ic2 = config.run_id in {
+        "ddm_ic2_optimal_incumbent_brotli_upstream_harness_20260724",
+        "ddm_ic2_optimal_incumbent_brotli_upstream_harness_recheck_20260724",
+        "ddm_ic2_optimal_incumbent_brotli_upstream_harness_clean_pass_20260724",
+        "ddm_ic2_optimal_incumbent_brotli_upstream_harness_final_20260724",
+    }
+    is_ic2_recheck = config.run_id == "ddm_ic2_optimal_incumbent_brotli_upstream_harness_recheck_20260724"
+    is_ic2_clean_pass = (
+        config.run_id == "ddm_ic2_optimal_incumbent_brotli_upstream_harness_clean_pass_20260724"
+    )
+    is_ic2_final = config.run_id == "ddm_ic2_optimal_incumbent_brotli_upstream_harness_final_20260724"
     packet = (REPO_ROOT / export_config.output_directory).resolve()
     output_root = packet.parent
     export_receipt_payload = (
@@ -147,6 +166,8 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
         / (
             "ddm_e4_runtime_export_receipt.json"
             if is_e4
+            else "ddm_ic2_runtime_export_receipt.json"
+            if is_ic2
             else "ddm_ic1_runtime_export_receipt.json"
             if is_ic1
             else "ddm_e4_ws1_runtime_export_receipt.json"
@@ -229,7 +250,15 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
             stderr=(exc.stderr.decode("utf-8", "replace") if isinstance(exc.stderr, bytes) else exc.stderr or ""),
         )
     wallclock = time.monotonic() - started
-    log_root = submission.parent / "logs"
+    log_root = (
+        submission.parent
+        / "logs"
+        / ("final" if is_ic2_final else "clean_pass" if is_ic2_clean_pass else "recheck")
+        if is_ic2_recheck
+        or is_ic2_clean_pass
+        or is_ic2_final
+        else submission.parent / "logs"
+    )
     stdout_path = _publish_or_verify(log_root / "evaluate.stdout.txt", completed.stdout.encode("utf-8"))
     stderr_path = _publish_or_verify(log_root / "evaluate.stderr.txt", completed.stderr.encode("utf-8"))
     report_path = submission / "report.txt"
@@ -286,6 +315,14 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
         "schema": (
             "ddm_e4_upstream_harness_receipt.v1"
             if is_e4
+            else "ddm_ic2_upstream_harness_final_receipt.v1"
+            if is_ic2_final
+            else "ddm_ic2_upstream_harness_clean_pass_receipt.v1"
+            if is_ic2_clean_pass
+            else "ddm_ic2_upstream_harness_recheck_receipt.v1"
+            if is_ic2_recheck
+            else "ddm_ic2_upstream_harness_receipt.v1"
+            if is_ic2
             else "ddm_ic1_upstream_harness_receipt.v1"
             if is_ic1
             else "ddm_e4_ws1_upstream_harness_receipt.v1"
@@ -333,6 +370,14 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
                 else "ddm_e4_lzma1_fallback_upstream_harness_receipt.json"
             )
             if is_e4
+            else "ddm_ic2_upstream_harness_final_receipt.json"
+            if is_ic2_final
+            else "ddm_ic2_upstream_harness_clean_pass_receipt.json"
+            if is_ic2_clean_pass
+            else "ddm_ic2_upstream_harness_recheck_receipt.json"
+            if is_ic2_recheck
+            else "ddm_ic2_upstream_harness_receipt.json"
+            if is_ic2
             else "ddm_ic1_upstream_harness_receipt.json"
             if is_ic1
             else "ddm_e4_ws1_upstream_harness_receipt.json"

@@ -1,0 +1,90 @@
+{
+  "schema": "ddm_ic2_optimal_incumbent_pose_typed.round1_adversarial_review.v1",
+  "date_utc": "2026-07-24",
+  "lane_id": "lane_ddm_ic2_optimal_incumbent_20260724",
+  "reviewer": "codex:gpt-5.6-sol",
+  "round": 1,
+  "scope": [
+    "typed IC2 exporter and receiver",
+    "W_seg plus PA1 composition",
+    "runtime dependency closure",
+    "batch32 n600 measurement custody",
+    "scoreboard and Modal staging posture"
+  ],
+  "findings": [
+    {
+      "severity": "blocking_promotion",
+      "classification": "SCIENTIFIC_INTERACTION",
+      "finding": "The exact IC2 endpoint is worse than incumbent v0 by 4.339947116702302 advisory score units.",
+      "disposition": "FIXED_BY_NONPROMOTION_AND_TYPED_NEGATIVE_ROW"
+    },
+    {
+      "severity": "blocking_requested_composition",
+      "classification": "MISSING_EXECUTABLE_CARRIER",
+      "finding": "E2 nested Pose6 is consumed before export and #601/#605 are scoped controls; no compact code-to-photometry pose inverse can be composed into W_seg.",
+      "disposition": "OPEN_WITH_EXACT_UNLOCK; NO_W_JOINT_FALLBACK"
+    },
+    {
+      "severity": "high",
+      "classification": "RUNTIME_DEPENDENCY",
+      "finding": "The inherited WS1 import closure loaded cv2 at decode and scipy/pydantic authoring surfaces transitively.",
+      "disposition": "FIXED: PINNED_CV2_BOOTSTRAP; SCIPY_LAZY; PYDANTIC_RUNTIME_COMPAT; CLEAN_IMPORT_PASS"
+    },
+    {
+      "severity": "medium",
+      "classification": "EVALUATOR_ENVIRONMENT",
+      "finding": "Successive bare-venv upstream attempts exposed missing scorer-only packages.",
+      "disposition": "IMMUTABLE_FAILURE_RECEIPTS_PRESERVED; NOT_A_SCIENTIFIC_NEGATIVE"
+    },
+    {
+      "severity": "none",
+      "classification": "LEGACY_COMPATIBILITY",
+      "finding": "IC1 and E4 schema literals are not widened by IC2.",
+      "disposition": "PASS_WITH_REGRESSION_TEST"
+    }
+  ],
+  "three_clean_passes": [
+    {
+      "pass": 1,
+      "ruff": "PASS",
+      "pycompile": "PASS",
+      "diff_check": "PASS",
+      "pytest": "23 passed",
+      "pytest_seconds": 115.13
+    },
+    {
+      "pass": 2,
+      "ruff": "PASS",
+      "pycompile": "PASS",
+      "diff_check": "PASS",
+      "pytest": "23 passed",
+      "pytest_seconds": 119.46
+    },
+    {
+      "pass": 3,
+      "ruff": "PASS",
+      "pycompile": "PASS",
+      "diff_check": "PASS",
+      "pytest": "23 passed",
+      "pytest_seconds": 113.51
+    }
+  ],
+  "measurement_receipt": {
+    "path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/ddm_ic2_packet_batch32_remeasure_receipt.json",
+    "sha256": "9638f3ad4920afb3d0cf563c8ced2d61ee02157785bd525ee001acbde600f10d"
+  },
+  "locked_upstream_harness": {
+    "path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/ddm_ic2_upstream_harness_final_receipt.json",
+    "sha256": "c71582f287ca6337c2d097850f642e39c9841bb22513802b4a9465873a45044e",
+    "status": "PASS",
+    "wallclock_seconds": 1014.041449
+  },
+  "review_verdict": "CLEAN_FOR_SCOPED_NON_INCUMBENT_LANDING",
+  "promotion_eligible": false,
+  "execution_allowed": false,
+  "score_claim": false,
+  "research_only": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_review_required": true
+}

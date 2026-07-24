@@ -86765,6 +86765,48 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_ddm_ic2_optimal_incumbent_20260724",
+      "name": "DDM IC2 optimal incumbent pose-typed composition",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_runtime_exporter.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/ddm_ic2_packet_batch32_remeasure_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/ddm_ic2_runtime_import_closure_receipt.json"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/reviews/ddm_ic2_optimal_incumbent_pose_typed_round1_20260724_codex.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ic2_optimal_incumbent_modal_contest_cpu_bundle_20260724.json"
+        }
+      },
+      "notes": "",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -86774,5 +86816,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T15:08:14Z"
+  "updated_at": "2026-07-24T18:59:21Z"
 }
