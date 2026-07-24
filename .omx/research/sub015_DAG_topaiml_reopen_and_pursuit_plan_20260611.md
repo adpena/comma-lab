@@ -23763,8 +23763,9 @@ ms2r tolerance-capped solve LANDED rc=0 as a FAIL-CLOSED REFUSAL + successor con
 cherry-picked, registry union-merged 845 rows, 6 tests + ruff green; pointer 0.1910828242
 [contest-CPU] UNMOVED). VERDICT: BLOCKED_MS3_BUNDLE_PARTIAL_PF2_BUCKET_INPUT_ASSIGNMENT_ABSENT,
 scope INSTANCE(SHA-custodied MS4 bundle) × FORMULATION(metric-active waterfill preflight) — NOT a
-lattice/coder/family negative. THREE MAIN-OWNED FACTS: (1) MY CHARTERING PREMISE FALSIFIED — rg3
-never delivered BUNDLE-COMPLETE; its landed verdict was PARTIAL_INSTANCE_RG3_11_OF_36_CLOSED with 25
+lattice/coder/family negative. THREE MAIN-OWNED FACTS: (1) MY CHARTERING PREMISE FALSIFIED (verdict_scope: instance — MAIN's
+chartering claim 'rg3 delivered BUNDLE-COMPLETE', a custody/process error, not a measurement family) —
+rg3 never delivered BUNDLE-COMPLETE; its landed verdict was PARTIAL_INSTANCE_RG3_11_OF_36_CLOSED with 25
 terminal rows (blocker class NO_TARGET_BUCKET_EVENT_CHANGED_BY_ANY_COUNTED_RG3_MAGNITUDE_OR_SIGN,
 producer_rerun_eligible=false) — I consumed the PLANNED outcome as ACHIEVED (same plausible-summary
 class as the warnings failure; owned). Pose block COMPLETE n600/batch32; Seg/composite-R/duals
