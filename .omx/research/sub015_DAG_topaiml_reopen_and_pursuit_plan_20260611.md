@@ -23784,3 +23784,26 @@ scorer-intrinsic properties computable DIRECTLY per bucket from the frozen score
 COORDINATES (which is itself a MEASURED fact from rg1+rg2+rg3 probes, not missing data). One arm:
 ms4d direct-metric completion → loader admits genuinely-complete bundle → the registered waterfill
 contract RUNS. verdict_scope tokens preserved per the memo.
+
+### FEED-603-ic1-MAIN-review-and-STANDING-GO-FIRING (2026-07-24, MAIN)
+ic1 THE FOREST MOVE LANDED rc=0 (cherry-pick 337acfd → main clean; 22 tests ×3 in-arm + 1 focused on
+main; pointer 0.1910828242 [contest-CPU] UNMOVED until harvest). INCUMBENT_v0 = W_joint + scorer-
+derived PA1 frame-0 transform: archive 131,582B SHA aba831de…9d9 (MAIN independently re-hashed ✓);
+advisory batch32 d_seg 0.0705192312 · d_pose 27.2984876164 · S 23.6617921 (MAIN recomputed ✓); locked
+upstream evaluate.sh harness PASSED (1,554s) printing the SAME numbers — full local exact protocol
+custody. PA1 bought Δd_pose −9.32 at ZERO frame-1 byte changes. EXCLUSIONS VERIFIED HONEST: E2
+endpoint = S 43.41 advisory (d_pose 162.58 — compact pose closure BLOCKED at the photometric wall,
+consistent w/ the only-joint-descent-crosses law; MAIN's earlier ~3 estimate for E2 was WRONG,
+corrected); MC1 +4.85 worse on this parent; DM2 aggregate +2.35; W_seg dominated on joint. So 23.66
+IS the honest composable-today floor — the 16.52 pose contribution is exactly #366's target (descent
+~rate-free per the operator's law). STANDING-GO (c) FIRING (reported immediately per protocol):
+Modal contest-CPU exact eval FIRED on the sealed bundle — archive sha aba831de718f7bc5fd264b9334a2
+9ef8a9388052a629941e50eea1b854fe49d9, runtime tree sha 0e7a7d1a760bd8d8…e9e7d, preflight receipts
+(compiler determinism ×2 · parse-back byte-identical · receiver byte-home bijection), atomic lane
+claim lane_ddm_ic1_incumbent_compose_and_buy_row_20260724_exact_eval_cpu inside the wrapper
+(claim_modal_auth_eval_dispatch), single-flight verified (only expired 07-19 phantom rows — hygiene
+debt noted), est cost ≪$5 of the untouched $20 envelope (#381), harvest via
+tools/recover_modal_auth_eval.py. ROLE: CALIBRATION row (advisory↔contest-CPU gap for the whole DDM
+line, measured for the first time) + the frozen OOPS incumbent reference — NOT a pointer move (known
+≥23 vs 0.19108; expectations pre-corrected to operator). verdict_scope: composition INSTANCE;
+exclusions = finite measured conflicts, no family closed.
