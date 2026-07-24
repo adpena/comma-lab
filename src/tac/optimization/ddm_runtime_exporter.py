@@ -8,6 +8,7 @@ import ast
 import hashlib
 import io
 import json
+import lzma
 import os
 import re
 import shutil
@@ -16,13 +17,14 @@ import zipfile
 from pathlib import Path
 from typing import Any, Literal
 
-import brotli
 import numpy as np
+import torch
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, model_validator
 
 from tac.canonical_equations.ddm_runtime_export_identity_20260723 import (
     semantic_paint_jacobian_summary,
 )
+from tac.optimization import ddm_runtime_receiver as runtime
 from tac.optimization.direct_description_carrier_compose import (
     CLASS_ORDER,
     REALIZATION_PAINT_ORDER,
@@ -41,11 +43,14 @@ from tac.optimization.direct_description_measurement_ladder import (
 
 SCHEMA = "ddm_e1_runtime_archive.v1"
 E2_SCHEMA = "ddm_e2_runtime_archive.v1"
+E3_SCHEMA = "ddm_e3_runtime_archive.v1"
 RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
 CONFIG_SCHEMA = "DDME1RuntimeExporterConfigV1"
 E2_CONFIG_SCHEMA = "DDME2RuntimeExporterConfigV1"
+E3_CONFIG_SCHEMA = "DDME3RuntimeExporterConfigV1"
 RESULT_SCHEMA = "ddm_e1_runtime_export_receipt.v1"
 E2_RESULT_SCHEMA = "ddm_e2_runtime_export_receipt.v1"
+E3_RESULT_SCHEMA = "ddm_e3_runtime_export_receipt.v1"
 SOURCE_BYTES = 133_941
 SOURCE_SHA256 = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
 STATE_BYTES = 134_211
@@ -99,9 +104,7 @@ REFINEMENT_CONTRACT = {
     "apparatus_validity_stamps_required": True,
     "best_so_far_checkpoint": True,
     "block_order": ["L", "D2", "D1", "D4", "D6", "D5"],
-    "block_order_policy": (
-        "dependency_topological_then_coarse_to_fine_then_largest_marginal_first"
-    ),
+    "block_order_policy": ("dependency_topological_then_coarse_to_fine_then_largest_marginal_first"),
     "curve_authority": "verification_receipt",
     "cycle_index": 0,
     "fixed_budget": True,
@@ -139,25 +142,19 @@ class DDME1RuntimeExporterConfigV1(BaseModel):
     schema_: Literal[
         "DDME1RuntimeExporterConfigV1",
         "DDME2RuntimeExporterConfigV1",
-    ] = Field(
-        default=CONFIG_SCHEMA, alias="schema", serialization_alias="schema"
-    )
+        "DDME3RuntimeExporterConfigV1",
+    ] = Field(default=CONFIG_SCHEMA, alias="schema", serialization_alias="schema")
     run_id: Literal[
         "ddm_e1_runtime_exporter_n600_20260723",
         "ddm_e2_pose_stream_and_doctrine_export_20260723",
-    ] = (
-        "ddm_e1_runtime_exporter_n600_20260723"
-    )
+        "ddm_e3_inflate_compose_and_depclose_20260723",
+    ] = "ddm_e1_runtime_exporter_n600_20260723"
     source_archive_path: StrictStr
     source_archive_bytes: Literal[133941] = SOURCE_BYTES
-    source_archive_sha256: Literal[
-        "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
-    ] = SOURCE_SHA256
+    source_archive_sha256: Literal["759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"] = SOURCE_SHA256
     state_name: Literal["v15_j2_lane_seed_theta0"] = STATE_NAME
     state_archive_bytes: Literal[134211] = STATE_BYTES
-    state_archive_sha256: Literal[
-        "3d5ab9786cc3d3eedd9a5fd1d878aea8186fbcf450ffcb781862db63ac2ca0cd"
-    ] = STATE_SHA256
+    state_archive_sha256: Literal["3d5ab9786cc3d3eedd9a5fd1d878aea8186fbcf450ffcb781862db63ac2ca0cd"] = STATE_SHA256
     output_directory: StrictStr
     proof_root: StrictStr
     batch_pairs: Literal[16] = 16
@@ -169,11 +166,11 @@ class DDME1RuntimeExporterConfigV1(BaseModel):
 
     @model_validator(mode="after")
     def _valid(self) -> DDME1RuntimeExporterConfigV1:
-        expected_schema = (
-            E2_CONFIG_SCHEMA
-            if self.run_id == "ddm_e2_pose_stream_and_doctrine_export_20260723"
-            else CONFIG_SCHEMA
-        )
+        expected_schema = {
+            "ddm_e1_runtime_exporter_n600_20260723": CONFIG_SCHEMA,
+            "ddm_e2_pose_stream_and_doctrine_export_20260723": E2_CONFIG_SCHEMA,
+            "ddm_e3_inflate_compose_and_depclose_20260723": E3_CONFIG_SCHEMA,
+        }[self.run_id]
         if self.schema_ != expected_schema:
             raise ValueError("run_id and exporter config schema disagree")
         if Path(self.source_archive_path).is_absolute():
@@ -190,9 +187,7 @@ class DDME1RuntimeExporterConfigV1(BaseModel):
         return self
 
     def typed_config_hash(self) -> str:
-        return _sha256(
-            rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True))
-        )
+        return _sha256(rfc8785_canonicalize(self.model_dump(mode="json", by_alias=True)))
 
     def compile_argv(self, config_path: str) -> tuple[str, ...]:
         return (
@@ -259,12 +254,16 @@ def _frame_blob(raw: bytes, *, kind: int, dimensions: tuple[int, ...] = ()) -> b
         product *= dimension
     if kind == 1 and product != len(raw):
         raise ExporterError("uint8 blob dimensions disagree with raw length")
-    coded = brotli.compress(raw, quality=11)
+    coded = lzma.compress(
+        raw,
+        format=lzma.FORMAT_RAW,
+        filters=runtime.LZMA_FILTERS,
+    )
     return (
         BLOB_HEADER.pack(
             BLOB_MAGIC,
             1,
-            1,
+            2,
             kind,
             len(dimensions),
             len(raw),
@@ -279,12 +278,18 @@ def _frame_blob(raw: bytes, *, kind: int, dimensions: tuple[int, ...] = ()) -> b
 def _ordered_redundancy_matrix(
     raw_streams: dict[str, bytes],
 ) -> list[dict[str, Any]]:
-    """Measure bytes(B)-bytes(B|A decoded) with one fixed Brotli-Q11 coder."""
+    """Measure bytes(B)-bytes(B|A decoded) with one fixed raw-LZMA1 coder."""
 
     if tuple(raw_streams) != EXPECTED_MEMBERS[1:]:
         raise ExporterError("redundancy streams are incomplete or reordered")
     standalone = {
-        name: len(brotli.compress(payload, quality=11))
+        name: len(
+            lzma.compress(
+                payload,
+                format=lzma.FORMAT_RAW,
+                filters=runtime.LZMA_FILTERS,
+            )
+        )
         for name, payload in raw_streams.items()
     }
     rows: list[dict[str, Any]] = []
@@ -295,9 +300,10 @@ def _ordered_redundancy_matrix(
                 continue
             conditioned = (
                 len(
-                    brotli.compress(
+                    lzma.compress(
                         conditioner_payload + stream_payload,
-                        quality=11,
+                        format=lzma.FORMAT_RAW,
+                        filters=runtime.LZMA_FILTERS,
                     )
                 )
                 - conditioner_bytes
@@ -321,8 +327,7 @@ def _validate_rate_doctrine_manifest(value: Any) -> None:
     if (
         not isinstance(value, dict)
         or value.get("schema") != RATE_DOCTRINE_SCHEMA
-        or [row.get("member") for row in value.get("streams", [])]
-        != list(EXPECTED_MEMBERS[1:])
+        or [row.get("member") for row in value.get("streams", [])] != list(EXPECTED_MEMBERS[1:])
     ):
         raise ExporterError("four-clause stream audit is missing or reordered")
     triple_keys = {
@@ -335,30 +340,17 @@ def _validate_rate_doctrine_manifest(value: Any) -> None:
         if (
             not isinstance(triple, dict)
             or set(triple) != triple_keys
-            or any(
-                not isinstance(triple[key], dict) or not triple[key]
-                for key in triple_keys
-            )
+            or any(not isinstance(triple[key], dict) or not triple[key] for key in triple_keys)
             or row.get("first_rung") is not True
             or not isinstance(row.get("non_redundancy"), dict)
             or not row["non_redundancy"]
         ):
             raise ExporterError(f"incomplete stream audit: {row.get('member')}")
-    expected = {
-        (left, right)
-        for left in EXPECTED_MEMBERS[1:]
-        for right in EXPECTED_MEMBERS[1:]
-        if left != right
-    }
+    expected = {(left, right) for left in EXPECTED_MEMBERS[1:] for right in EXPECTED_MEMBERS[1:] if left != right}
     matrix = value.get("ordered_redundancy_matrix")
     if (
         not isinstance(matrix, list)
-        or {
-            (row.get("conditioner"), row.get("stream"))
-            for row in matrix
-            if isinstance(row, dict)
-        }
-        != expected
+        or {(row.get("conditioner"), row.get("stream")) for row in matrix if isinstance(row, dict)} != expected
     ):
         raise ExporterError("ordered redundancy matrix is incomplete")
 
@@ -387,29 +379,23 @@ def _rate_doctrine_manifest(
                         "SegNet:frame1",
                     ],
                     "frame0_seg_facts": 0,
-                    "instrument": (
-                        "DDMRuntimePerturbationV1 counted-to-output and "
-                        "output-to-single-owner checks"
-                    ),
+                    "instrument": ("DDMRuntimePerturbationV1 counted-to-output and output-to-single-owner checks"),
                     "status": "PARTIAL_STREAM_LEVEL_COORDINATE_FIELD_OWED",
                 },
                 "sensitivity_priced_tolerance": {
                     "current_quantization": "exact int16 chart coordinates",
-                    "metric": (
-                        "Fisher-margin plus realized inner-Jacobian deltaS/byte"
-                    ),
+                    "metric": ("Fisher-margin plus realized inner-Jacobian deltaS/byte"),
                     "score_byte_dual": "25/37545489",
                     "status": "BLOCKED_UNMEASURED_PER_COORDINATE_TOLERANCE",
                 },
                 "three_layer_decomposition": {
                     "coder": {
                         "coded_bytes": len(chart_member),
-                        "codec": "Brotli-Q11",
+                        "codec": "stdlib raw LZMA1 dict=1MiB lc=3 lp=0 pb=2",
                         "raw_bytes": len(chart_raw),
                     },
                     "descriptive_form": (
-                        "two-frame 12x16 RGB chart: anchors + axial gradients "
-                        "+ conditioned residuals"
+                        "two-frame 12x16 RGB chart: anchors + axial gradients + conditioned residuals"
                     ),
                     "inherently_compact_dofs": {
                         "count": len(chart_raw) // 2,
@@ -444,28 +430,21 @@ def _rate_doctrine_manifest(
                 },
                 "sensitivity_priced_tolerance": {
                     "current_quantization": "exact categorical code per scorer cell",
-                    "metric": (
-                        "rank4 flip-distance x Fisher margin x realized "
-                        "inner-Jacobian"
-                    ),
+                    "metric": ("rank4 flip-distance x Fisher margin x realized inner-Jacobian"),
                     "score_byte_dual": "25/37545489",
                     "status": "BLOCKED_UNMEASURED_BOUNDARY_TOLERANCE_FIELD",
                 },
                 "three_layer_decomposition": {
                     "coder": {
                         "coded_bytes": len(semantic_member),
-                        "codec": "Brotli-Q11",
+                        "codec": "stdlib raw LZMA1 dict=1MiB lc=3 lp=0 pb=2",
                         "raw_bytes": len(semantic_raw),
                     },
-                    "descriptive_form": (
-                        "one frame1-only categorical semantic plane reused at "
-                        "camera resolution"
-                    ),
+                    "descriptive_form": ("one frame1-only categorical semantic plane reused at camera resolution"),
                     "inherently_compact_dofs": {
                         "count": len(semantic_raw),
                         "gauge_quotient": (
-                            "frame0 semantic plane eliminated; region/boundary "
-                            "grammar factorization still owed"
+                            "frame0 semantic plane eliminated; region/boundary grammar factorization still owed"
                         ),
                         "storage_dtype": "uint8",
                     },
@@ -489,9 +468,7 @@ def _rate_doctrine_manifest(
         },
     ]
     result = {
-        "candidate_admissible": all(
-            bool(row["candidate_admissible"]) for row in rows
-        )
+        "candidate_admissible": all(bool(row["candidate_admissible"]) for row in rows)
         and all(int(row["redundancy_bytes"]) <= 0 for row in matrix),
         "correction_policy": {
             "counted_correction_streams": [],
@@ -516,8 +493,7 @@ def _rate_doctrine_manifest(
         ],
         "streams": rows,
         "verdict_scope": (
-            "E2 exported stream formulations only. Adverse audit rows block "
-            "candidate admission, not the DDM family."
+            "E2 exported stream formulations only. Adverse audit rows block candidate admission, not the DDM family."
         ),
     }
     _validate_rate_doctrine_manifest(result)
@@ -534,9 +510,7 @@ def _pose_contract(receiver: Any) -> dict[str, Any]:
         "exact_lattice_control": {
             "archive_bytes": 409_526_925,
             "d_pose_n64": "0.000060022091887905524",
-            "receipt": (
-                ".omx/research/mdl_polytope_member_solve_receipt_20260721.json"
-            ),
+            "receipt": (".omx/research/mdl_polytope_member_solve_receipt_20260721.json"),
             "role": "high_byte_receiver_closed_control_not_pose_member",
         },
         "nested_pose6": {
@@ -559,16 +533,26 @@ def _pose_contract(receiver: Any) -> dict[str, Any]:
     }
 
 
-def _block_versions(*, chart_sha256: str, semantic_sha256: str) -> list[dict[str, Any]]:
+def _block_versions(
+    *,
+    chart_sha256: str,
+    semantic_sha256: str,
+    amplitude_enabled: bool = False,
+) -> list[dict[str, Any]]:
     member_inputs = [
         {"member": "base/chart.ddb", "sha256": chart_sha256},
         {"member": "semantic/composed.dds", "sha256": semantic_sha256},
     ]
     active_rows = {
         "L": ("ddm_L_composed_semantic.v1", member_inputs),
-        "D4": ("ddm_D4_brotli_q11_measure.v1", member_inputs),
+        "D4": ("ddm_D4_lzma1_raw_d1m_measure.v1", member_inputs),
         "D6": ("ddm_D6_camera_realization.v1", member_inputs),
     }
+    if amplitude_enabled:
+        active_rows["D1"] = (
+            "ddm_D1_pa1_scorer_stat_affine_free.v1",
+            member_inputs,
+        )
     rows = []
     for block in REFINEMENT_CONTRACT["block_order"]:
         if block in active_rows:
@@ -663,10 +647,7 @@ def _zip_home_ledger(archive: bytes) -> list[dict[str, Any]]:
         payload_end = payload_start + info.compress_size
         if (
             archive[
-                info.header_offset
-                + ZIP_LOCAL_HEADER.size : info.header_offset
-                + ZIP_LOCAL_HEADER.size
-                + name_bytes
+                info.header_offset + ZIP_LOCAL_HEADER.size : info.header_offset + ZIP_LOCAL_HEADER.size + name_bytes
             ].decode("ascii")
             != info.filename
             or info.compress_size != info.file_size
@@ -720,8 +701,11 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
             imports.add(node.module or "")
     allowed_roots = {
         "__future__",
+        "collections.abc",
         "hashlib",
         "json",
+        "lzma",
+        "math",
         "os",
         "pathlib",
         "shutil",
@@ -729,7 +713,6 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
         "sys",
         "time",
         "typing",
-        "brotli",
         "torch",
         "torch.nn.functional",
     }
@@ -749,11 +732,10 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
     long_hex_literals = sorted(set(re.findall(r"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])", text)))
     if unexpected or forbidden_tokens or long_hex_literals:
         raise ExporterError(
-            "runtime cleanliness failed: "
-            f"imports={unexpected}, tokens={forbidden_tokens}, hex={long_hex_literals}"
+            f"runtime cleanliness failed: imports={unexpected}, tokens={forbidden_tokens}, hex={long_hex_literals}"
         )
     return {
-        "allowed_dependency_roots": ["torch", "brotli"],
+        "allowed_dependency_roots": ["torch"],
         "forbidden_tokens": forbidden_tokens,
         "imports": sorted(imports),
         "long_hex_literals": long_hex_literals,
@@ -764,9 +746,7 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
 
 def _compile_seed_state(source_archive: bytes) -> tuple[bytes, Any, dict[str, Any]]:
     members, _ = parse_carrier_compose_archive(source_archive)
-    source_receiver = receive_carrier_compose_archive(
-        source_archive, verify_member_effects=False
-    )
+    source_receiver = receive_carrier_compose_archive(source_archive, verify_member_effects=False)
     lane_seeds = derive_lane_program_seeds(source_receiver)
     lane_records = tuple(row.counted_record() for row in lane_seeds)
     state_archive, _ = compile_carrier_compose_archive(
@@ -782,22 +762,22 @@ def _compile_seed_state(source_archive: bytes) -> tuple[bytes, Any, dict[str, An
         raise ExporterError("J2 seed-state archive differs from its sealed identity")
     g1 = lift_g1_movable_worldsheet(members[WORLDSHEET_G1_MEMBER])
     template_count = (
-        0
-        if source_receiver.scorer_solved_templates is None
-        else len(source_receiver.scorer_solved_templates.templates)
+        0 if source_receiver.scorer_solved_templates is None else len(source_receiver.scorer_solved_templates.templates)
     )
     dof_count = 2 * len(g1.tracks) + 4 * len(lane_seeds) + 3 * template_count
     if dof_count != EXPECTED_DOF_COUNT:
         raise ExporterError(f"receiver-effective DOF count drifted: {dof_count}")
-    receiver = receive_carrier_compose_archive(
-        state_archive, verify_member_effects=False
+    receiver = receive_carrier_compose_archive(state_archive, verify_member_effects=False)
+    return (
+        state_archive,
+        receiver,
+        {
+            "island_translation_dofs": 2 * len(g1.tracks),
+            "lane_program_dofs": 4 * len(lane_seeds),
+            "shared_template_dofs": 3 * template_count,
+            "total": dof_count,
+        },
     )
-    return state_archive, receiver, {
-        "island_translation_dofs": 2 * len(g1.tracks),
-        "lane_program_dofs": 4 * len(lane_seeds),
-        "shared_template_dofs": 3 * template_count,
-        "total": dof_count,
-    }
 
 
 def _validate_templates(receiver: Any) -> None:
@@ -809,14 +789,9 @@ def _validate_templates(receiver: Any) -> None:
         raise ExporterError("template state lacks the counted realization profile")
     for template in bank.templates:
         colour = bytes(int(value) for value in profile.colour_for(template.role))
-        if (
-            template.patch_height != 1
-            or template.patch_width != 1
-            or template.rgb_u8 != colour
-        ):
+        if template.patch_height != 1 or template.patch_width != 1 or template.rgb_u8 != colour:
             raise ExporterError(
-                "current exporter materialization requires each shared template "
-                "to equal its one-cell role colour"
+                "current exporter materialization requires each shared template to equal its one-cell role colour"
             )
 
 
@@ -828,7 +803,8 @@ def _compose_semantic_state(
         "both_frames",
         "frame1_only_seg_free_frame0",
     ] = "both_frames",
-) -> tuple[np.ndarray, int, str]:
+    amplitude_enabled: bool = False,
+) -> tuple[np.ndarray, int, str, dict[str, Any] | None]:
     if receiver.realization_profile is None:
         raise ExporterError("seed state lacks a counted realization profile")
     _validate_templates(receiver)
@@ -842,8 +818,20 @@ def _compose_semantic_state(
         "Movable",
     ):
         raise ExporterError("source role layer order drifted")
-    digest = hashlib.sha256()
-    total = 0
+
+    def render_source_batch(indexes: tuple[int, ...]) -> np.ndarray:
+        camera = receiver.render_camera_pairs(indexes)
+        if semantic_frame_policy == "frame1_only_seg_free_frame0":
+            from tac.through_r.resolution_chain import render_grid_to_camera_uint8
+
+            base_grid = receiver.predictor.baseline.render_pairs(indexes)
+            for local in range(len(indexes)):
+                camera[local, 0] = render_grid_to_camera_uint8(base_grid[local, 0])
+        return np.ascontiguousarray(camera)
+
+    base_digest = hashlib.sha256()
+    base_total = 0
+    moment_rows: list[dict[str, Any]] = []
     for start in range(0, 600, batch_pairs):
         stop = min(start + batch_pairs, 600)
         indexes = tuple(range(start, stop))
@@ -851,9 +839,7 @@ def _compose_semantic_state(
         for code, role in enumerate(REALIZATION_PAINT_ORDER, start=1):
             layer = layer_by_role[role]
             for local, pair_id in enumerate(indexes):
-                mask = receiver._mask_for_layer(
-                    layer, pair_id, replace_g1_movable=True
-                )
+                mask = receiver._mask_for_layer(layer, pair_id, replace_g1_movable=True)
                 labels[pair_id, mask] = code
                 semantic_cells[local, mask] = ROLE_CLASS_IDS[role]
         if receiver.realization_static_rule_codes is not None:
@@ -864,30 +850,51 @@ def _compose_semantic_state(
                 admitted = (rules >= 0) & (semantic_cells[local] == source)
                 for target_id, class_role in enumerate(CLASS_ORDER):
                     target_mask = admitted & (target == target_id)
-                    role = (
-                        "UndrivableBoundary"
-                        if class_role == "Undrivable"
-                        else class_role
-                    )
-                    labels[pair_id, target_mask] = (
-                        REALIZATION_PAINT_ORDER.index(role) + 1
-                    )
-        camera = receiver.render_camera_pairs(indexes)
-        if semantic_frame_policy == "frame1_only_seg_free_frame0":
-            from tac.through_r.resolution_chain import render_grid_to_camera_uint8
-
-            base_grid = receiver.predictor.baseline.render_pairs(indexes)
-            for local in range(stop - start):
-                camera[local, 0] = render_grid_to_camera_uint8(
-                    base_grid[local, 0]
-                )
-        payload = np.ascontiguousarray(camera).tobytes(order="C")
-        digest.update(payload)
-        total += len(payload)
+                    role = "UndrivableBoundary" if class_role == "Undrivable" else class_role
+                    labels[pair_id, target_mask] = REALIZATION_PAINT_ORDER.index(role) + 1
+        camera = render_source_batch(indexes)
+        payload = camera.tobytes(order="C")
+        base_digest.update(payload)
+        base_total += len(payload)
+        if amplitude_enabled:
+            moment_rows.append(runtime._pose_moment_row(torch.from_numpy(camera)))
     expected = 600 * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
-    if total != expected:
+    if base_total != expected:
         raise ExporterError("source receiver raw byte count differs from geometry")
-    return labels, total, digest.hexdigest()
+    if not amplitude_enabled:
+        return labels, base_total, base_digest.hexdigest(), None
+
+    moments = runtime._merge_pose_moments(moment_rows)
+    gain, bias = runtime._derive_pa1_affine(moments)
+    composed_digest = hashlib.sha256()
+    composed_total = 0
+    for start in range(0, 600, batch_pairs):
+        stop = min(start + batch_pairs, 600)
+        indexes = tuple(range(start, stop))
+        corrected = runtime._apply_pa1_frame0_affine(
+            torch.from_numpy(render_source_batch(indexes)),
+            gain,
+            bias,
+        )
+        payload = corrected.numpy().tobytes(order="C")
+        composed_digest.update(payload)
+        composed_total += len(payload)
+    if composed_total != expected:
+        raise ExporterError("PA1-composed raw byte count differs from geometry")
+    amplitude = {
+        "base_output": {
+            "bytes": base_total,
+            "sha256": base_digest.hexdigest(),
+        },
+        "bias_f32": bias.tolist(),
+        "gain_f32": gain.tolist(),
+        "moments": moments,
+        "payload_bytes": 0,
+        "rate_class": "FREE",
+        "target_derivation": ("frozen_posenet_first_stem_conv_and_bn_only_video_independent"),
+        "transform_id": runtime.PA1_TRANSFORM_ID,
+    }
+    return labels, composed_total, composed_digest.hexdigest(), amplitude
 
 
 def _chart_payload(receiver: Any) -> tuple[bytes, dict[str, Any]]:
@@ -934,24 +941,24 @@ def export_runtime(
     *,
     config_path: Path,
 ) -> tuple[dict[str, Any], Path]:
+    torch.set_num_threads(4)
+    try:
+        torch.set_num_interop_threads(1)
+    except RuntimeError:
+        pass
+    torch.use_deterministic_algorithms(True)
     is_e2 = config.run_id == "ddm_e2_pose_stream_and_doctrine_export_20260723"
-    archive_schema = E2_SCHEMA if is_e2 else SCHEMA
-    semantic_frame_policy = (
-        "frame1_only_seg_free_frame0" if is_e2 else "both_frames"
-    )
-    source_path = _require_repo_path(
-        config.source_archive_path, label="source_archive_path"
-    )
-    output_dir = _require_repo_path(
-        config.output_directory, label="output_directory"
-    )
+    is_e3 = config.run_id == "ddm_e3_inflate_compose_and_depclose_20260723"
+    is_pose_stream = is_e2 or is_e3
+    archive_schema = E3_SCHEMA if is_e3 else E2_SCHEMA if is_e2 else SCHEMA
+    semantic_frame_policy = "frame1_only_seg_free_frame0" if is_pose_stream else "both_frames"
+    source_path = _require_repo_path(config.source_archive_path, label="source_archive_path")
+    output_dir = _require_repo_path(config.output_directory, label="output_directory")
     proof_root = Path(config.proof_root)
     proof_root.mkdir(parents=True, exist_ok=True)
     free_bytes = shutil.disk_usage(proof_root).free
     if free_bytes < config.minimum_free_bytes:
-        raise ExporterError(
-            f"storage preflight failed: {free_bytes} < {config.minimum_free_bytes}"
-        )
+        raise ExporterError(f"storage preflight failed: {free_bytes} < {config.minimum_free_bytes}")
     source_archive = source_path.read_bytes()
     if (len(source_archive), _sha256(source_archive)) != (
         config.source_archive_bytes,
@@ -960,10 +967,11 @@ def export_runtime(
         raise ExporterError("sealed v15 source archive custody mismatch")
 
     state_archive, receiver, dofs = _compile_seed_state(source_archive)
-    labels, raw_bytes, raw_sha256 = _compose_semantic_state(
+    labels, raw_bytes, raw_sha256, amplitude_transform = _compose_semantic_state(
         receiver,
         batch_pairs=config.batch_pairs,
         semantic_frame_policy=semantic_frame_policy,
+        amplitude_enabled=is_e3,
     )
     chart_raw, chart_layout = _chart_payload(receiver)
     chart_member = _frame_blob(chart_raw, kind=0)
@@ -1012,10 +1020,12 @@ def export_runtime(
             "state_sha256": _sha256(state_archive),
         },
         "block_versions": _block_versions(
-            chart_sha256=chart_sha256, semantic_sha256=semantic_sha256
+            chart_sha256=chart_sha256,
+            semantic_sha256=semantic_sha256,
+            amplitude_enabled=is_e3,
         ),
         "chart": chart_layout,
-        "dependencies": ["torch", "brotli"],
+        "dependencies": ["torch"],
         "false_authority": {
             "evidence_axis": EVIDENCE_AXIS,
             "research_only": True,
@@ -1046,7 +1056,7 @@ def export_runtime(
             "receiver_effective_dofs": dofs,
         },
     }
-    if is_e2:
+    if is_pose_stream:
         manifest.update(
             {
                 "pose_contract": _pose_contract(receiver),
@@ -1072,12 +1082,12 @@ def export_runtime(
     homes = _zip_home_ledger(archive)
     if sum(int(row["home_bytes"]) for row in homes) != len(archive):
         raise ExporterError("runtime archive byte homes are not bijective")
-    runtime = RUNTIME_SOURCE.read_bytes()
-    cleanliness = _runtime_cleanliness(runtime)
+    runtime_payload = RUNTIME_SOURCE.read_bytes()
+    cleanliness = _runtime_cleanliness(runtime_payload)
     script = _inflate_sh()
 
     archive_path = _publish_or_verify(output_dir / "archive.zip", archive)
-    runtime_path = _publish_or_verify(output_dir / "inflate.py", runtime, executable=True)
+    runtime_path = _publish_or_verify(output_dir / "inflate.py", runtime_payload, executable=True)
     script_path = _publish_or_verify(output_dir / "inflate.sh", script, executable=True)
     result = {
         "archive": {
@@ -1103,7 +1113,9 @@ def export_runtime(
             "bytes": raw_bytes,
             "sha256": raw_sha256,
             "status": (
-                "E2_FRAME1_ONLY_SOURCE_MEASURED_PACKAGED_RECEIVER_PENDING"
+                "E3_PA1_COMPOSED_SOURCE_MEASURED_PACKAGED_RECEIVER_PENDING"
+                if is_e3
+                else "E2_FRAME1_ONLY_SOURCE_MEASURED_PACKAGED_RECEIVER_PENDING"
                 if is_e2
                 else "SOURCE_RECEIVER_MEASURED_PACKAGED_RECEIVER_PENDING"
             ),
@@ -1113,11 +1125,11 @@ def export_runtime(
         "research_only": True,
         "runtime": {
             "cleanliness": cleanliness,
-            "dependencies": ["torch", "brotli"],
+            "dependencies": ["torch"],
             "inflate_py": {
-                "bytes": len(runtime),
+                "bytes": len(runtime_payload),
                 "path": str(runtime_path.relative_to(REPO_ROOT)),
-                "sha256": _sha256(runtime),
+                "sha256": _sha256(runtime_payload),
             },
             "inflate_sh": {
                 "bytes": len(script),
@@ -1125,7 +1137,7 @@ def export_runtime(
                 "sha256": _sha256(script),
             },
         },
-        "schema": E2_RESULT_SCHEMA if is_e2 else RESULT_SCHEMA,
+        "schema": (E3_RESULT_SCHEMA if is_e3 else E2_RESULT_SCHEMA if is_e2 else RESULT_SCHEMA),
         "score_claim": False,
         "seed": config.seed,
         "source": {
@@ -1145,17 +1157,32 @@ def export_runtime(
         },
         "typed_config_sha256": config.typed_config_hash(),
     }
-    if is_e2:
+    result["rate_partition"] = {
+        "COUNTED": {
+            "archive_bytes": len(archive),
+            "archive_sha256": _sha256(archive),
+        },
+        "FREE": {
+            "bytes": 0,
+            "objects": [runtime.PA1_TRANSFORM_ID] if is_e3 else [],
+        },
+        "NULL": {"blocks": ["D2", "D5"], "bytes": 0},
+    }
+    if is_pose_stream:
         result.update(
             {
                 "pose_contract": manifest["pose_contract"],
                 "rate_doctrine": manifest["rate_doctrine"],
             }
         )
+    if is_e3:
+        result["amplitude_transform"] = amplitude_transform
     receipt_path = _publish_or_verify(
         output_dir.parent
         / (
-            "ddm_e2_runtime_export_receipt.json"
+            "ddm_e3_runtime_export_receipt.json"
+            if is_e3
+            else "ddm_e2_runtime_export_receipt.json"
             if is_e2
             else "ddm_e1_runtime_export_receipt.json"
         ),

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Run the actual frozen upstream harness on an exported DDM E1/E2 packet."""
+"""Run the actual frozen upstream harness on an exported DDM E1/E2/E3 packet."""
 
 from __future__ import annotations
 
@@ -41,10 +41,12 @@ class DDME1UpstreamHarnessConfigV1(BaseModel):
     schema_: Literal[
         "DDME1UpstreamHarnessConfigV1",
         "DDME2UpstreamHarnessConfigV1",
+        "DDME3UpstreamHarnessConfigV1",
     ] = Field(alias="schema")
     run_id: Literal[
         "ddm_e1_upstream_harness_20260723",
         "ddm_e2_upstream_harness_20260723",
+        "ddm_e3_upstream_harness_20260723",
     ]
     export_config_path: StrictStr
     upstream_root: StrictStr
@@ -120,12 +122,15 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
     export_config_path.relative_to(REPO_ROOT)
     export_config = load_config(export_config_path)
     is_e2 = config.run_id == "ddm_e2_upstream_harness_20260723"
+    is_e3 = config.run_id == "ddm_e3_upstream_harness_20260723"
     packet = (REPO_ROOT / export_config.output_directory).resolve()
     output_root = packet.parent
     export_receipt_payload = (
         output_root
         / (
-            "ddm_e2_runtime_export_receipt.json"
+            "ddm_e3_runtime_export_receipt.json"
+            if is_e3
+            else "ddm_e2_runtime_export_receipt.json"
             if is_e2
             else "ddm_e1_runtime_export_receipt.json"
         )
@@ -160,9 +165,7 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
     for name in ("archive.zip", "inflate.py", "inflate.sh"):
         source = packet / name
         payload = source.read_bytes()
-        _publish_or_verify(
-            submission / name, payload, executable=name.endswith((".py", ".sh"))
-        )
+        _publish_or_verify(submission / name, payload, executable=name.endswith((".py", ".sh")))
         packet_identity[name] = {
             "bytes": len(payload),
             "sha256": _sha256_file(source)[1],
@@ -182,11 +185,7 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
     ]
     environment = dict(os.environ)
     environment["PYTHON"] = str(python_executable)
-    environment["PATH"] = (
-        str(python_executable.parent)
-        + os.pathsep
-        + environment.get("PATH", "")
-    )
+    environment["PATH"] = str(python_executable.parent) + os.pathsep + environment.get("PATH", "")
     timeout_hit = False
     try:
         completed = subprocess.run(
@@ -203,25 +202,13 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
         completed = subprocess.CompletedProcess(
             argv,
             124,
-            stdout=(
-                exc.stdout.decode("utf-8", "replace")
-                if isinstance(exc.stdout, bytes)
-                else exc.stdout or ""
-            ),
-            stderr=(
-                exc.stderr.decode("utf-8", "replace")
-                if isinstance(exc.stderr, bytes)
-                else exc.stderr or ""
-            ),
+            stdout=(exc.stdout.decode("utf-8", "replace") if isinstance(exc.stdout, bytes) else exc.stdout or ""),
+            stderr=(exc.stderr.decode("utf-8", "replace") if isinstance(exc.stderr, bytes) else exc.stderr or ""),
         )
     wallclock = time.monotonic() - started
     log_root = submission.parent / "logs"
-    stdout_path = _publish_or_verify(
-        log_root / "evaluate.stdout.txt", completed.stdout.encode("utf-8")
-    )
-    stderr_path = _publish_or_verify(
-        log_root / "evaluate.stderr.txt", completed.stderr.encode("utf-8")
-    )
+    stdout_path = _publish_or_verify(log_root / "evaluate.stdout.txt", completed.stdout.encode("utf-8"))
+    stderr_path = _publish_or_verify(log_root / "evaluate.stderr.txt", completed.stderr.encode("utf-8"))
     report_path = submission / "report.txt"
     report = report_path.read_text(encoding="utf-8") if report_path.is_file() else ""
     parse_error = None
@@ -264,9 +251,7 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
         "failure_reasons": failure_reasons,
         "interface": {
             "archive_path": str(submission / "archive.zip"),
-            "inflate_argv_contract": (
-                "inflate.sh <archive_dir> <inflated_dir> <video_names_file>"
-            ),
+            "inflate_argv_contract": ("inflate.sh <archive_dir> <inflated_dir> <video_names_file>"),
             "report_path": str(report_path),
             "video_names_path": str(upstream_files["video_names"]),
         },
@@ -275,7 +260,9 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
         "raw": {"bytes": raw_identity[0], "sha256": raw_identity[1]},
         "research_only": True,
         "schema": (
-            "ddm_e2_upstream_harness_receipt.v1"
+            "ddm_e3_upstream_harness_receipt.v1"
+            if is_e3
+            else "ddm_e2_upstream_harness_receipt.v1"
             if is_e2
             else "ddm_e1_upstream_harness_receipt.v1"
         ),
@@ -310,16 +297,16 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
     receipt_path = _publish_or_verify(
         output_root
         / (
-            "ddm_e2_upstream_harness_receipt.json"
+            "ddm_e3_upstream_harness_receipt.json"
+            if is_e3
+            else "ddm_e2_upstream_harness_receipt.json"
             if is_e2
             else "ddm_e1_upstream_harness_receipt.json"
         ),
         rfc8785_canonicalize(result) + b"\n",
     )
     if failure_reasons:
-        raise HarnessError(
-            f"upstream harness failed: {failure_reasons}; receipt={receipt_path}"
-        )
+        raise HarnessError(f"upstream harness failed: {failure_reasons}; receipt={receipt_path}")
     return result, receipt_path
 
 

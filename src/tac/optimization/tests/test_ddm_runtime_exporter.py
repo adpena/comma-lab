@@ -14,27 +14,21 @@ from tools import rehearse_ddm_runtime_upstream as harness
 def test_blob_frame_roundtrip_and_terminal_tamper_refusal() -> None:
     raw = bytes(range(251)) * 7
     framed = exporter._frame_blob(raw, kind=1, dimensions=(7, 251))
-    decoded, shape = receiver._parse_blob(
-        framed, expected_kind=1, label="synthetic"
-    )
+    decoded, shape = receiver._parse_blob(framed, expected_kind=1, label="synthetic")
     assert decoded == raw
     assert shape == (7, 251)
 
     tampered = bytearray(framed)
     tampered[-1] ^= 1
     with pytest.raises(receiver.ReceiverError):
-        receiver._parse_blob(
-            bytes(tampered), expected_kind=1, label="synthetic"
-        )
+        receiver._parse_blob(bytes(tampered), expected_kind=1, label="synthetic")
 
 
 def test_deterministic_zip_has_bijective_byte_homes() -> None:
     members = {
         "manifest.json": b"{}",
         "base/chart.ddb": exporter._frame_blob(b"chart", kind=0),
-        "semantic/composed.dds": exporter._frame_blob(
-            b"\0" * 8, kind=1, dimensions=(2, 2, 2)
-        ),
+        "semantic/composed.dds": exporter._frame_blob(b"\0" * 8, kind=1, dimensions=(2, 2, 2)),
     }
     first = exporter._deterministic_zip(members)
     second = exporter._deterministic_zip(members)
@@ -47,8 +41,9 @@ def test_runtime_cleanliness_allows_only_generic_dependencies() -> None:
     runtime = exporter.RUNTIME_SOURCE.read_bytes()
     row = exporter._runtime_cleanliness(runtime)
     assert row["status"] == "PASS"
-    assert row["allowed_dependency_roots"] == ["torch", "brotli"]
+    assert row["allowed_dependency_roots"] == ["torch"]
     assert row["runtime_sha256"] == hashlib.sha256(runtime).hexdigest()
+    assert b"import brotli" not in runtime
     assert b"torch.cuda.is_available" not in runtime
 
 
@@ -61,10 +56,7 @@ def test_typed_extension_slots_and_joint_cycle_are_explicit_and_inactive() -> No
         "D6",
     ]
     assert all(row["active_member"] is None for row in exporter.EXTENSION_SLOTS)
-    assert all(
-        row["rate_custody"] == "independent_member_bytes_sha256"
-        for row in exporter.EXTENSION_SLOTS
-    )
+    assert all(row["rate_custody"] == "independent_member_bytes_sha256" for row in exporter.EXTENSION_SLOTS)
     assert list(exporter.EXTENSION_SLOTS) == receiver.EXPECTED_EXTENSION_SLOTS
     assert exporter.REFINEMENT_CONTRACT == receiver.EXPECTED_REFINEMENT
     assert exporter.REFINEMENT_CONTRACT["block_order"] == [
@@ -86,16 +78,22 @@ def test_block_version_stamps_are_verified_at_consumption_time() -> None:
     }
     rows = exporter._block_versions(
         chart_sha256=hashlib.sha256(members["base/chart.ddb"]).hexdigest(),
-        semantic_sha256=hashlib.sha256(
-            members["semantic/composed.dds"]
-        ).hexdigest(),
+        semantic_sha256=hashlib.sha256(members["semantic/composed.dds"]).hexdigest(),
     )
-    receiver._validate_block_versions(rows, members)
+    receiver._validate_block_versions(rows, members, amplitude_enabled=False)
     rows[0]["input_members"][0]["sha256"] = "0" * 64
     with pytest.raises(receiver.ReceiverError, match="stale"):
-        receiver._validate_block_versions(rows, members)
+        receiver._validate_block_versions(rows, members, amplitude_enabled=False)
     with pytest.raises(receiver.ReceiverError, match="order"):
-        receiver._validate_block_versions(["malformed"], members)
+        receiver._validate_block_versions(["malformed"], members, amplitude_enabled=False)
+    amplitude_rows = exporter._block_versions(
+        chart_sha256=hashlib.sha256(members["base/chart.ddb"]).hexdigest(),
+        semantic_sha256=hashlib.sha256(members["semantic/composed.dds"]).hexdigest(),
+        amplitude_enabled=True,
+    )
+    receiver._validate_block_versions(amplitude_rows, members, amplitude_enabled=True)
+    assert amplitude_rows[2]["status"] == "active"
+    assert amplitude_rows[2]["version"] == "ddm_D1_pa1_scorer_stat_affine_free.v1"
 
 
 def test_upstream_harness_pass_requires_archive_raw_exit_and_budget() -> None:
@@ -105,17 +103,20 @@ def test_upstream_harness_pass_requires_archive_raw_exit_and_budget() -> None:
         "d_seg": "0.1",
         "score_rounded": "4.0",
     }
-    assert harness._failure_reasons(
-        timeout_hit=False,
-        returncode=0,
-        parse_error=None,
-        parsed=parsed,
-        expected_archive_bytes=10,
-        raw_identity=(20, "a" * 64),
-        expected_raw=(20, "a" * 64),
-        wallclock=100.0,
-        timeout_seconds=1800,
-    ) == []
+    assert (
+        harness._failure_reasons(
+            timeout_hit=False,
+            returncode=0,
+            parse_error=None,
+            parsed=parsed,
+            expected_archive_bytes=10,
+            raw_identity=(20, "a" * 64),
+            expected_raw=(20, "a" * 64),
+            wallclock=100.0,
+            timeout_seconds=1800,
+        )
+        == []
+    )
     assert harness._failure_reasons(
         timeout_hit=True,
         returncode=124,
@@ -150,12 +151,10 @@ def test_manifest_nested_state_and_section_types_fail_closed() -> None:
         },
         "block_versions": exporter._block_versions(
             chart_sha256=hashlib.sha256(members["base/chart.ddb"]).hexdigest(),
-            semantic_sha256=hashlib.sha256(
-                members["semantic/composed.dds"]
-            ).hexdigest(),
+            semantic_sha256=hashlib.sha256(members["semantic/composed.dds"]).hexdigest(),
         ),
         "chart": {},
-        "dependencies": ["torch", "brotli"],
+        "dependencies": ["torch"],
         "extension_slots": [dict(row) for row in exporter.EXTENSION_SLOTS],
         "false_authority": {
             "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
@@ -208,9 +207,7 @@ def test_manifest_nested_state_and_section_types_fail_closed() -> None:
 def test_preserved_stage_is_write_once_and_adoptable(tmp_path) -> None:
     stage = tmp_path / "stage.raw"
     state = tmp_path / "stage.json"
-    payload = receiver.torch.tensor(
-        list(b"receiver-stage"), dtype=receiver.torch.uint8
-    )
+    payload = receiver.torch.tensor(list(b"receiver-stage"), dtype=receiver.torch.uint8)
     first = receiver._write_or_adopt_rendered_stage(
         stage_path=stage,
         state_path=state,
@@ -264,13 +261,8 @@ def test_four_clause_audit_requires_every_stream_and_ordered_pair() -> None:
             dimensions=(8, 8, 8),
         ),
     )
-    assert [row["member"] for row in audit["streams"]] == list(
-        exporter.EXPECTED_MEMBERS[1:]
-    )
-    assert {
-        (row["conditioner"], row["stream"])
-        for row in audit["ordered_redundancy_matrix"]
-    } == {
+    assert [row["member"] for row in audit["streams"]] == list(exporter.EXPECTED_MEMBERS[1:])
+    assert {(row["conditioner"], row["stream"]) for row in audit["ordered_redundancy_matrix"]} == {
         ("base/chart.ddb", "semantic/composed.dds"),
         ("semantic/composed.dds", "base/chart.ddb"),
     }
@@ -310,3 +302,108 @@ def test_e2_frame0_is_structurally_seg_free() -> None:
     )
     assert torch.count_nonzero(rendered[0, 0]) == 0
     assert torch.all(rendered[0, 1] == palette[1])
+
+
+def test_pa1_decode_derived_affine_reproduces_sealed_arm() -> None:
+    count = 29_491_200
+    normalized_mean = [
+        -1.6709670965020407,
+        -1.6709704808928285,
+        -1.6709386120242815,
+        -1.6709420435556934,
+        -0.005337133002923984,
+        0.06640471001495353,
+        -1.5689619462840858,
+        -1.5678262510292515,
+        -1.5689084015928298,
+        -1.5677425069496225,
+        0.0052695566267342495,
+        0.044995676322040636,
+    ]
+    normalized_variance = [
+        0.0859960231028586,
+        0.08601678941486642,
+        0.08599954319058083,
+        0.08602016523027242,
+        0.0021268988694989914,
+        0.0026202825121244976,
+        0.18712484740348634,
+        0.18701954331976434,
+        0.1870017317225781,
+        0.18691449772988256,
+        0.006838288122042584,
+        0.01726789117444064,
+    ]
+    raw_mean = [value * 63.75 + 127.5 for value in normalized_mean]
+    raw_variance = [value * 63.75**2 for value in normalized_variance]
+    moments = {
+        "count": count,
+        "sum": [value * count for value in raw_mean],
+        "sum_sq": [(raw_variance[index] + raw_mean[index] ** 2) * count for index in range(12)],
+    }
+    gain, bias = receiver._derive_pa1_affine(moments)
+    assert gain.tolist() == pytest.approx(
+        [
+            0.03410050645470619,
+            4.403048038482666,
+            2.40238618850708,
+            3.587740182876587,
+            4.5472588539123535,
+            0.4650801122188568,
+            0.023117149248719215,
+            0.02312365546822548,
+            0.023124758154153824,
+            0.023130152374505997,
+            2.1682441234588623,
+            0.07609924674034119,
+        ],
+        abs=2e-6,
+    )
+    assert bias.tolist() == pytest.approx(
+        [
+            80.24357604980469,
+            -11.028668403625488,
+            31.031280517578125,
+            5.6558756828308105,
+            -446.63177490234375,
+            62.7425422668457,
+            80.5193099975586,
+            80.5704574584961,
+            80.86619567871094,
+            80.27690124511719,
+            -145.78759765625,
+            114.24369812011719,
+        ],
+        abs=2e-4,
+    )
+
+
+def test_pa1_frame0_realizer_cannot_change_frame1() -> None:
+    generator = torch.Generator().manual_seed(7)
+    camera = torch.randint(
+        0,
+        256,
+        (1, 2, 874, 1164, 3),
+        dtype=torch.uint8,
+        generator=generator,
+    )
+    gain = torch.tensor(
+        [
+            0.9,
+            1.1,
+            0.8,
+            1.2,
+            0.7,
+            1.3,
+            0.9,
+            1.1,
+            0.8,
+            1.2,
+            0.7,
+            1.3,
+        ],
+        dtype=torch.float32,
+    )
+    bias = torch.arange(12, dtype=torch.float32) - 6.0
+    corrected = receiver._apply_pa1_frame0_affine(camera, gain, bias)
+    assert torch.equal(corrected[:, 1], camera[:, 1])
