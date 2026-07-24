@@ -19,4 +19,3 @@ Current per-arm inbox cursor: `2026-07-24T15:37:46Z`. Fleet broadcast cursor:
 No newer per-arm or fleet row was present at the artifact checkpoint. No
 training, paid dispatch, exact contest evaluation, scorer invocation, coder
 invocation, or frontier mutation occurred.
-

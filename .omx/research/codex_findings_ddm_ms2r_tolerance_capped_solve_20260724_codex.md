@@ -103,4 +103,3 @@ Primary receipt:
 No old-lineage carrier or generic spatial menu was used. No scorer, receiver,
 R operator, coder race, training, paid dispatch, exact contest evaluation, or
 frontier mutation ran.
-

@@ -1,9 +1,9 @@
 # FEED-603-ms2r — tolerance-capped solve preflight
 
-Date: 2026-07-24  
-Lane: `lane_ddm_ms2r_tolerance_capped_solve_20260724`  
-Evidence axis: `[macOS-CPU frozen-scorer advisory]`  
-`score_claim=false`; pointer `0.1910828242 [contest-CPU]` UNMOVED.  
+Date: 2026-07-24
+Lane: `lane_ddm_ms2r_tolerance_capped_solve_20260724`
+Evidence axis: `[macOS-CPU frozen-scorer advisory]`
+`score_claim=false`; pointer `0.1910828242 [contest-CPU]` UNMOVED.
 MAIN landing review is required.
 
 ## Outcome first
@@ -119,4 +119,3 @@ channel-suboptimality price remain NULL because there is no MS2R rung.
 Downstream `c1/ic1` composition and the train-decision SOLVE column remain
 blocked. Exact reactivation is: close the 25 RG3 assignment obligations, rerun
 MS4 to a loader-accepted `BUNDLE-COMPLETE`, then resume from the same MS3 gate.
-
