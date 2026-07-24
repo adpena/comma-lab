@@ -14,6 +14,8 @@ from tac.optimization.ddm_rg1_receiver_grammar import (
     decode_lane_program_coordinates,
     encode_lane_program_coordinates,
     parse_rg1_receiver_grammar,
+    project_polygon_center,
+    receive_rg1_receiver_grammar,
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError
 from tac.optimization.predictor_upgrade_xi_chart import LaneCoefficientDelta
@@ -79,3 +81,26 @@ def test_joint_streams_are_separate_and_typed() -> None:
     assert "production/lane_program_coordinates.rg1lp" in members
     assert "correction/lane_chart_symbols.g2cs2" in members
     assert members["base/v13_v19c_carrier.zip"] == carrier
+
+
+def test_joint_streams_change_receiver_without_mutating_base() -> None:
+    carrier = _v19c_carrier()
+    base = receive_rg1_receiver_grammar(carrier)
+    archive = compile_rg1_receiver_grammar(
+        carrier,
+        lane_coordinates=(LaneProgramCoordinateV1(0, "width_bias_q8", 1),),
+        corrections=(LaneCoefficientDelta(0, 4, 3, 0.008202752098441124),),
+    )
+    receiver = receive_rg1_receiver_grammar(archive)
+    assert receiver.custody["composition_order_enforced"] is True
+    assert receiver.custody["sealed_v13_v19c_mutated"] is False
+    assert (base.render_camera_pairs((0,)) != receiver.render_camera_pairs((0,))).any()
+
+
+def test_polygon_center_projection_is_explicit_bounded_and_fail_closed() -> None:
+    relative = (-4, -1, 3)
+    assert project_polygon_center(-20, relative, 16) == 4
+    assert project_polygon_center(20, relative, 16) == 12
+    assert project_polygon_center(8, relative, 16) == 8
+    with pytest.raises(DirectDescriptionError, match="cannot fit"):
+        project_polygon_center(0, (-8, 8), 16)

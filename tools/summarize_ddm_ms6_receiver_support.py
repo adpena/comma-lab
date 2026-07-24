@@ -2,10 +2,13 @@
 # SPDX-License-Identifier: MIT
 """Summarize the SHA-bound DDM MS6 receiver-support sweep.
 
-This is a read-only consumer of the landed v2 probe checkpoints and the MS5
-assignment-table schema.  It does not infer joins: G3 coverage is proven only
-when every PF2 bucket containing a preregistered hard pair has a measured
-assignment whose exact joined pair IDs contain that pair.
+This is a read-only consumer of one or more landed v2 checkpoint roots and the
+MS5 assignment-table schema.  When an additive grammar supersedes selected
+probes, the assignment table's exact checkpoint SHA chooses the authoritative
+revision without deleting the prior infeasibility evidence.  It does not infer
+joins: G3 coverage is proven only when every PF2 bucket containing a
+preregistered hard pair has a measured assignment whose exact joined pair IDs
+contain that pair.
 """
 
 from __future__ import annotations
@@ -139,38 +142,64 @@ def _distribution(values: Sequence[float]) -> dict[str, Any]:
     }
 
 
-def _load_checkpoints(root: Path) -> tuple[dict[tuple[str, str], dict[str, Any]], dict[str, Any]]:
-    if not root.is_dir():
-        raise SummaryError(f"checkpoint root is absent: {root}")
-    result: dict[tuple[str, str], dict[str, Any]] = {}
-    digest_rows: list[str] = []
+def _load_checkpoints(
+    roots: Sequence[Path],
+    *,
+    expected_checkpoint_sha256: Mapping[tuple[str, str], str],
+) -> tuple[dict[tuple[str, str], dict[str, Any]], dict[str, Any]]:
+    candidates: dict[tuple[str, str], dict[str, dict[str, Any]]] = {}
     status_counts: Counter[str] = Counter()
-    for path in sorted(root.glob("*.json")):
-        row = _read_object(path)
-        if (
-            row.get("schema") != CHECKPOINT_SCHEMA
-            or row.get("base_archive_sha256") != EXPECTED_BASE_SHA256
-            or row.get("threads") != 4
-            or row.get("seed") != 1234
-            or row.get("deterministic_algorithms") is not True
-            or row.get("score_claim") is not False
-        ):
-            raise SummaryError(f"checkpoint custody differs: {path}")
-        key = (str(row["receiver_actuator_id"]), str(row["direction_id"]))
-        if key in result or key[1] not in DIRECTIONS:
-            raise SummaryError(f"duplicate or malformed checkpoint key: {key}")
-        artifact = row.get("event_artifact")
-        if artifact is not None:
-            artifact_path = Path(str(artifact["path"]))
-            if _sha256(artifact_path) != artifact["sha256"]:
-                raise SummaryError(f"event artifact SHA differs: {artifact_path}")
-        checkpoint_sha = _sha256(path)
-        result[key] = {**row, "_checkpoint_path": str(path), "_checkpoint_sha256": checkpoint_sha}
-        digest_rows.append(checkpoint_sha)
+    for root in roots:
+        if not root.is_dir():
+            raise SummaryError(f"checkpoint root is absent: {root}")
+        for path in sorted(root.glob("*.json")):
+            row = _read_object(path)
+            if (
+                row.get("schema") != CHECKPOINT_SCHEMA
+                or row.get("base_archive_sha256") != EXPECTED_BASE_SHA256
+                or row.get("threads") != 4
+                or row.get("seed") != 1234
+                or row.get("deterministic_algorithms") is not True
+                or row.get("score_claim") is not False
+            ):
+                raise SummaryError(f"checkpoint custody differs: {path}")
+            key = (str(row["receiver_actuator_id"]), str(row["direction_id"]))
+            if key[1] not in DIRECTIONS:
+                raise SummaryError(f"malformed checkpoint key: {key}")
+            artifact = row.get("event_artifact")
+            if artifact is not None:
+                artifact_path = Path(str(artifact["path"]))
+                if _sha256(artifact_path) != artifact["sha256"]:
+                    raise SummaryError(f"event artifact SHA differs: {artifact_path}")
+            checkpoint_sha = _sha256(path)
+            by_sha = candidates.setdefault(key, {})
+            if checkpoint_sha in by_sha:
+                raise SummaryError(f"duplicate checkpoint bytes for key: {key}")
+            by_sha[checkpoint_sha] = {
+                **row,
+                "_checkpoint_path": str(path),
+                "_checkpoint_sha256": checkpoint_sha,
+            }
+
+    result: dict[tuple[str, str], dict[str, Any]] = {}
+    for key, expected_sha in expected_checkpoint_sha256.items():
+        row = candidates.get(key, {}).get(expected_sha)
+        if row is None:
+            raise SummaryError(f"assignment-bound checkpoint is absent: {key} {expected_sha}")
+        result[key] = row
         status_counts[str(row["status"])] += 1
+    unexpected = set(candidates) - set(expected_checkpoint_sha256)
+    if unexpected:
+        raise SummaryError(f"checkpoint roots contain unbound keys: {sorted(unexpected)}")
+    digest_rows = [
+        str(result[key]["_checkpoint_sha256"])
+        for key in sorted(result)
+    ]
+    superseded_count = sum(len(rows) - 1 for rows in candidates.values())
     return result, {
         "completed_probe_count": len(result),
-        "required_probe_count": 748,
+        "required_probe_count": len(expected_checkpoint_sha256),
+        "superseded_checkpoint_count": superseded_count,
         "status_counts": dict(sorted(status_counts.items())),
         "checkpoint_digest_chain_sha256": hashlib.sha256(
             "".join(digest_rows).encode("ascii")
@@ -221,6 +250,61 @@ def _g3_coverage(
     }
 
 
+def _candidate_coordinate_families(atlas_key: Mapping[str, Any]) -> list[str]:
+    class_pair = str(atlas_key["class_pair"])
+    temporal = str(atlas_key["g4_temporal_class"])
+    stratum = str(atlas_key["class_stratum"])
+    families = []
+    if "Lane" in class_pair:
+        families.append("LANE_PROGRAM_BAND_COORDINATE")
+    if "Movable" in class_pair:
+        families.append("BOUNDED_G1_POLYGON_COORDINATE")
+    if temporal == "TRANSIENT":
+        families.append("PAIR_LOCAL_POST_SOLVE_CORRECTION")
+    if stratum == "boundary":
+        families.append("EVENT_LOCAL_SKELETON_BOUNDARY_PRODUCTION")
+    else:
+        families.append("PER_STRATUM_SKELETON_AMPLITUDE_FIELD")
+    return families
+
+
+def _coordinate_derivation(
+    table_rows: Sequence[Mapping[str, Any]],
+    coverage: Mapping[str, Any],
+) -> dict[str, Any]:
+    by_bucket = {str(row["bucket_id"]): row for row in table_rows}
+    residue = []
+    for missing in coverage["missing_blocks"]:
+        bucket_id = str(missing["bucket_id"])
+        row = by_bucket[bucket_id]
+        atlas_key = row["atlas_key"]
+        residue.append(
+            {
+                "pair_id": int(missing["pair_id"]),
+                "bucket_id": bucket_id,
+                "typed_key": dict(atlas_key),
+                "candidate_coordinate_families": _candidate_coordinate_families(atlas_key),
+                "reason": "NO_MEASURED_RG1_PROBE_JOIN_AT_EXACT_PAIR_BUCKET",
+            }
+        )
+    return {
+        "derivation_rule": (
+            "Lane class keys require counted Lane-band productions; Movable keys "
+            "require bounded G1 polygon coordinates; transient keys require pair-local "
+            "post-solve corrections; remaining boundary/cell keys require event-local "
+            "or per-stratum SKELETON production coordinates."
+        ),
+        "new_rg1_coordinate_counts": {
+            "lane_program": 24,
+            "pair_local_post_solve_correction": 6,
+            "bounded_geometry_alternative": 10,
+        },
+        "residual_missing_block_count": len(residue),
+        "residual": residue,
+        "verdict_scope": "INSTANCE_EXTENDED_GRAMMAR_RG1",
+    }
+
+
 def _assigned_bucket_summary(row: Mapping[str, Any]) -> dict[str, Any]:
     assignments = row.get("measured_probe_assignments")
     if not isinstance(assignments, list) or not assignments:
@@ -244,7 +328,7 @@ def _assigned_bucket_summary(row: Mapping[str, Any]) -> dict[str, Any]:
 
 def build_summary(
     *,
-    checkpoint_root: Path,
+    checkpoint_roots: Sequence[Path],
     assignment_table_path: Path,
     g3_path: Path,
 ) -> dict[str, Any]:
@@ -260,11 +344,14 @@ def build_summary(
     if not isinstance(top24, list) or len(top24) != 24:
         raise SummaryError("G3 top24 registry is malformed")
 
-    checkpoints, sweep = _load_checkpoints(checkpoint_root)
     table_probe_sha = {
         (str(row["receiver_actuator_id"]), str(row["direction_id"])): str(row["checkpoint_sha256"])
         for row in table["probe_results"]
     }
+    checkpoints, sweep = _load_checkpoints(
+        checkpoint_roots,
+        expected_checkpoint_sha256=table_probe_sha,
+    )
     checkpoint_sha = {key: str(row["_checkpoint_sha256"]) for key, row in checkpoints.items()}
     if table_probe_sha != checkpoint_sha:
         raise SummaryError("assignment table does not bind the complete current checkpoint set")
@@ -313,10 +400,11 @@ def build_summary(
         if assignments:
             assigned_bucket_rows.append(_assigned_bucket_summary(row))
 
+    g3_coverage = _g3_coverage(table_rows, top24)
     summary: dict[str, Any] = {
         "schema": SCHEMA,
         "input_custody": {
-            "checkpoint_root": str(checkpoint_root.resolve()),
+            "checkpoint_roots": [str(root.resolve()) for root in checkpoint_roots],
             "checkpoint_digest_chain_sha256": sweep["checkpoint_digest_chain_sha256"],
             "assignment_table": {
                 "path": str(assignment_table_path.resolve()),
@@ -346,7 +434,8 @@ def build_summary(
                 for metric, values in sorted(asymmetry_values.items())
             },
         },
-        "g3_top24_coverage": _g3_coverage(table_rows, top24),
+        "g3_top24_coverage": g3_coverage,
+        "receiver_coordinate_derivation": _coordinate_derivation(table_rows, g3_coverage),
         "producer_rerun_eligible": False,
         "producer_rerun_reason": "set after the G3 coverage proof below",
         "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
@@ -355,7 +444,11 @@ def build_summary(
         "pointer_moved": False,
         "research_only": True,
         "main_landing_review_required": True,
-        "verdict_scope": "INSTANCE_V19C_ENDPOINT_ONE_QUANTUM_SWEEP",
+        "verdict_scope": (
+            "INSTANCE_V19C_RG1_ENDPOINT_ONE_QUANTUM_SWEEP"
+            if len(checkpoints) > 748
+            else "INSTANCE_V19C_ENDPOINT_ONE_QUANTUM_SWEEP"
+        ),
     }
     eligible = bool(summary["g3_top24_coverage"]["coverage_proven"])
     summary["producer_rerun_eligible"] = eligible
@@ -370,7 +463,13 @@ def build_summary(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoint-root", type=Path, default=DEFAULT_CHECKPOINTS)
+    parser.add_argument(
+        "--checkpoint-root",
+        type=Path,
+        action="append",
+        dest="checkpoint_roots",
+        help="Repeat for split checkpoint custody; assignment-table SHA bindings select rows.",
+    )
     parser.add_argument("--assignment-table", type=Path, default=DEFAULT_TABLE)
     parser.add_argument("--g3", type=Path, default=DEFAULT_G3)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
@@ -380,7 +479,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     summary = build_summary(
-        checkpoint_root=args.checkpoint_root,
+        checkpoint_roots=args.checkpoint_roots or [DEFAULT_CHECKPOINTS],
         assignment_table_path=args.assignment_table,
         g3_path=args.g3,
     )

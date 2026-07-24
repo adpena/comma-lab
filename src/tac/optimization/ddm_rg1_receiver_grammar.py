@@ -175,6 +175,30 @@ def _programs(rows: Sequence[LaneProgramCoordinateV1]) -> tuple[LanePeriodicProg
     )
 
 
+def project_polygon_center(
+    center: int,
+    relative_coordinates: Sequence[int],
+    extent: int,
+) -> int:
+    """Project a polygon center onto the exact integer interval that keeps it in-grid."""
+
+    if (
+        isinstance(center, bool)
+        or not isinstance(center, int)
+        or isinstance(extent, bool)
+        or not isinstance(extent, int)
+        or extent <= 0
+        or not relative_coordinates
+        or any(isinstance(value, bool) or not isinstance(value, int) for value in relative_coordinates)
+    ):
+        raise DirectDescriptionError("RG1 polygon projection requires integer geometry")
+    lower = -min(relative_coordinates)
+    upper = extent - 1 - max(relative_coordinates)
+    if lower > upper:
+        raise DirectDescriptionError("RG1 polygon cannot fit inside the scorer extent")
+    return min(max(center, lower), upper)
+
+
 def _typed_tag(stream_type: StreamType, layer: LayerHome, counted_bytes: int) -> dict[str, Any]:
     return TypedStreamTag(
         type=stream_type,
@@ -398,5 +422,6 @@ __all__ = [
     "decode_lane_program_coordinates",
     "encode_lane_program_coordinates",
     "parse_rg1_receiver_grammar",
+    "project_polygon_center",
     "receive_rg1_receiver_grammar",
 ]

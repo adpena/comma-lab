@@ -1,12 +1,19 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
+import json
+from pathlib import Path
+
 import pytest
 
 from tools.summarize_ddm_ms6_receiver_support import (
+    EXPECTED_BASE_SHA256,
     _assigned_bucket_summary,
+    _candidate_coordinate_families,
     _distribution,
     _g3_coverage,
+    _load_checkpoints,
     _signed_asymmetry,
 )
 
@@ -68,6 +75,21 @@ def test_g3_coverage_ignores_buckets_without_hard_pair_membership() -> None:
     assert value["missing_block_count"] == 0
 
 
+def test_candidate_coordinate_families_are_derived_from_typed_key() -> None:
+    assert _candidate_coordinate_families(
+        {
+            "class_pair": "Lane--Movable",
+            "class_stratum": "boundary",
+            "g4_temporal_class": "TRANSIENT",
+        }
+    ) == [
+        "LANE_PROGRAM_BAND_COORDINATE",
+        "BOUNDED_G1_POLYGON_COORDINATE",
+        "PAIR_LOCAL_POST_SOLVE_CORRECTION",
+        "EVENT_LOCAL_SKELETON_BOUNDARY_PRODUCTION",
+    ]
+
+
 def test_assigned_bucket_summary_labels_probe_event_incidence() -> None:
     value = _assigned_bucket_summary(
         {
@@ -84,3 +106,42 @@ def test_assigned_bucket_summary_labels_probe_event_incidence() -> None:
     )
     assert value["probe_event_incidence_count"] == 12
     assert "not unique-event cardinality" in value["probe_event_incidence_semantics"]
+
+
+def test_load_checkpoints_selects_assignment_bound_revision_across_roots(
+    tmp_path: Path,
+) -> None:
+    roots = [tmp_path / "old", tmp_path / "new"]
+    for root in roots:
+        root.mkdir()
+    key = ("j2.lane.line0.width_bias_q8", "POSITIVE_ONE_QUANTUM")
+    expected_sha = ""
+    for index, (root, status) in enumerate(
+        zip(roots, ("MEASURED_ARGMAX_INVARIANT", "MEASURED_ARGMAX_PERTURBATION"), strict=True)
+    ):
+        row = {
+            "schema": "ddm_ms6_receiver_support_probe_checkpoint.v2",
+            "base_archive_sha256": EXPECTED_BASE_SHA256,
+            "threads": 4,
+            "seed": 1234,
+            "deterministic_algorithms": True,
+            "score_claim": False,
+            "receiver_actuator_id": key[0],
+            "direction_id": key[1],
+            "event_artifact": None,
+            "status": status,
+            "revision": index,
+        }
+        path = root / "probe.json"
+        path.write_text(json.dumps(row, sort_keys=True) + "\n", encoding="utf-8")
+        if index == 1:
+            expected_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+
+    rows, custody = _load_checkpoints(
+        roots,
+        expected_checkpoint_sha256={key: expected_sha},
+    )
+
+    assert rows[key]["status"] == "MEASURED_ARGMAX_PERTURBATION"
+    assert custody["completed_probe_count"] == 1
+    assert custody["superseded_checkpoint_count"] == 1

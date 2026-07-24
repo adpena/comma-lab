@@ -51,6 +51,12 @@ from tac.optimization.ddm_pf2_bucket_assignment import (  # noqa: E402
     reconstruct_bucket_event_ids,
     validate_assignment_table,
 )
+from tac.optimization.ddm_rg1_receiver_grammar import (  # noqa: E402
+    LaneProgramCoordinateV1,
+    compile_rg1_receiver_grammar,
+    project_polygon_center,
+    receive_rg1_receiver_grammar,
+)
 from tac.optimization.ddm_runtime_sensitivity import (  # noqa: E402
     composite_r_support_mask,
     forward_seg_argmax,
@@ -67,6 +73,7 @@ from tac.optimization.direct_description_g1_worldsheet import (  # noqa: E402
     lift_g1_movable_worldsheet,
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError  # noqa: E402
+from tac.optimization.predictor_upgrade_xi_chart import LaneCoefficientDelta  # noqa: E402
 from tac.scorer import load_default_scorers  # noqa: E402
 from tools.assign_ddm_ms5_pf2_buckets import (  # noqa: E402
     _xi_event_ids,
@@ -80,6 +87,7 @@ from tools.measure_ddm_v19c_correction_saturation import (  # noqa: E402
 )
 
 RUN_ID: Final = "ddm_ms6_receiver_support_measurement_20260724T052034Z"
+RG1_RUN_ID: Final = "ddm_rg1_receiver_grammar_extension_20260724T080402Z"
 LANE_ID: Final = "lane_ddm_ms6_receiver_support_measurement_20260724"
 RECEIPT_SCHEMA: Final = "ddm_ms6_receiver_support_measurement_receipt.v1"
 CHECKPOINT_SCHEMA: Final = "ddm_ms6_receiver_support_probe_checkpoint.v2"
@@ -115,6 +123,17 @@ DEFAULT_BASE = REPO / (
 DEFAULT_UPSTREAM = Path("/Users/adpena/Projects/pact/upstream")
 DEFAULT_BULK = Path("/Volumes/VertigoDataTier/pact") / RUN_ID
 DEFAULT_RECEIPTS = REPO / ".omx/research" / RUN_ID
+DEFAULT_PRIOR_CHECKPOINTS = DEFAULT_BULK / "probe_checkpoints_v2"
+
+G2G_RECEIPT_SHA256: Final = "fa49a2ca71cb2960b1e497d425f05c4a496cc7634c45b2e193e3977dfa0667da"
+G2CS1_QUANTA: Final = {
+    "g2g.g2cs1.pair000.line04.coefficient03": 0.008202752098441124,
+    "g2g.g2cs1.pair022.line04.coefficient03": 0.008202752098441124,
+    "g2g.g2cs1.pair030.line04.coefficient03": 0.03801910579204559,
+    "g2g.g2cs1.pair034.line04.coefficient03": 0.009356264024972916,
+    "g2g.g2cs1.pair037.line04.coefficient03": 0.009072740562260151,
+    "g2g.g2cs1.pair046.line03.coefficient03": 0.007532086689025164,
+}
 
 
 class MS6MeasurementError(RuntimeError):
@@ -354,7 +373,7 @@ def _fast_receiver(archive: bytes) -> preuint8.PreUint8Q8ReceiverV1:
     coupled_archive = pre_members[preuint8.BASE_MEMBER]
     coupled_members, _ = coupled.parse_coupled_margin_archive(coupled_archive)
     carrier = coupled_members[coupled.BASE_MEMBER]
-    carrier_receiver = receive_carrier_compose_archive(
+    carrier_receiver = receive_rg1_receiver_grammar(
         carrier,
         verify_member_effects=False,
     )
@@ -380,6 +399,14 @@ def _fast_receiver(archive: bytes) -> preuint8.PreUint8Q8ReceiverV1:
 
 _ISLAND = re.compile(r"^j2\.island\.track(\d+)\.center_([xy])$")
 _TEMPLATE = re.compile(r"^j2\.template\.row(\d+)\.rgb_([rgb])$")
+_LANE = re.compile(
+    r"^j2\.lane\.line(\d+)\."
+    r"(dash_phase_origin_q8|dash_phase_xi_gain_q8|width_bias_q8|width_slope_q12)$"
+)
+_G2CS1 = re.compile(
+    r"^g2g\.g2cs1\.pair(\d+)\.line(\d+)\.coefficient(\d+)$"
+)
+_BOUNDED_SUFFIX: Final = ".bounded_clamp"
 
 
 def _compile_probe(
@@ -394,8 +421,12 @@ def _compile_probe(
     if templates is None:
         raise MS6MeasurementError("V19C template bank disappeared")
     pair_ids: tuple[int, ...]
-    island = _ISLAND.fullmatch(actuator_id)
+    bounded = actuator_id.endswith(_BOUNDED_SUFFIX)
+    base_actuator_id = actuator_id.removesuffix(_BOUNDED_SUFFIX)
+    island = _ISLAND.fullmatch(base_actuator_id)
     template = _TEMPLATE.fullmatch(actuator_id)
+    lane = _LANE.fullmatch(actuator_id)
+    g2cs1 = _G2CS1.fullmatch(actuator_id)
     if island:
         object_id = int(island.group(1))
         axis = island.group(2)
@@ -413,7 +444,37 @@ def _compile_probe(
             else knot
             for index, knot in enumerate(g1.knots)
         )
-        if any(not 0 <= knot.center_x < WIDTH or not 0 <= knot.center_y < HEIGHT for knot in knots):
+        if bounded:
+            templates_by_ref = {
+                value.template_ref: value for value in g1.templates
+            }
+            knots = tuple(
+                replace(
+                    knot,
+                    center_x=project_polygon_center(
+                        knot.center_x,
+                        tuple(
+                            point[0]
+                            for point in templates_by_ref[
+                                knot.template_ref
+                            ].relative_vertices_xy
+                        ),
+                        WIDTH,
+                    ),
+                    center_y=project_polygon_center(
+                        knot.center_y,
+                        tuple(
+                            point[1]
+                            for point in templates_by_ref[
+                                knot.template_ref
+                            ].relative_vertices_xy
+                        ),
+                        HEIGHT,
+                    ),
+                )
+                for knot in knots
+            )
+        elif any(not 0 <= knot.center_x < WIDTH or not 0 <= knot.center_y < HEIGHT for knot in knots):
             return None, tuple(range(track.birth_pair, track.death_pair_exclusive)), "ONE_QUANTUM_ESCAPES_SCORER_GRID"
         g1 = replace(g1, knots=knots)
         pair_ids = tuple(range(track.birth_pair, track.death_pair_exclusive))
@@ -429,10 +490,34 @@ def _compile_probe(
         rows[row_index] = replace(source, rgb_u8=np.asarray(rgb, dtype=np.uint8).tobytes())
         templates = replace(templates, templates=tuple(rows))
         pair_ids = tuple(range(PAIR_COUNT))
-    elif actuator_id.startswith("j2.lane."):
-        return None, (), "V19C_BASE_HAS_NO_COUNTED_LANE_PROGRAM_STATE_FOR_ISOLATED_J2_QUANTUM"
-    elif actuator_id.startswith("g2g.g2cs1."):
-        return None, (), "V13_WORLDSHEET_GRAMMAR_FORBIDS_MIXED_G2CS1_CORRECTION_VOCABULARY"
+    elif lane:
+        coordinate = LaneProgramCoordinateV1(
+            line_index=int(lane.group(1)),
+            field=lane.group(2),
+            signed_quanta=sign,
+        )
+        carrier = compile_rg1_receiver_grammar(
+            context.base_carrier,
+            lane_coordinates=(coordinate,),
+        )
+        coupled_archive = _compile_coupled_margin_fast(carrier, context.coupled_program)
+        return _compile_preuint8_fast(coupled_archive, context.preuint8_program), tuple(range(PAIR_COUNT)), None
+    elif g2cs1:
+        magnitude = G2CS1_QUANTA.get(actuator_id)
+        if magnitude is None:
+            return None, (), "G2CS1_ACTUATOR_LACKS_SHA_BOUND_QUANTUM"
+        correction = LaneCoefficientDelta(
+            pair_index=int(g2cs1.group(1)),
+            line_index=int(g2cs1.group(2)),
+            coefficient_index=int(g2cs1.group(3)),
+            coefficient_delta=sign * magnitude,
+        )
+        carrier = compile_rg1_receiver_grammar(
+            context.base_carrier,
+            corrections=(correction,),
+        )
+        coupled_archive = _compile_coupled_margin_fast(carrier, context.coupled_program)
+        return _compile_preuint8_fast(coupled_archive, context.preuint8_program), (correction.pair_index,), None
     else:
         return None, (), "ACTUATOR_ID_HAS_NO_V19C_RECEIVER_COMPILER"
 
@@ -739,6 +824,27 @@ def run(args: argparse.Namespace) -> Path:
     modules_custody = _verify(args.upstream / "modules.py", EXPECTED_MODULES_SHA256, "upstream modules")
     base_table = _read_json(args.assignment_table)
     validate_assignment_table(base_table, expected_pf2_sha256=EXPECTED_PF2_SHA256)
+    if args.rg1_retry_from is not None:
+        base_table = json.loads(json.dumps(base_table))
+        vocabulary = base_table["foreign_key_vocabulary"]["receiver_actuator_stable_ids"]
+        prior_infeasible = []
+        for path in sorted(args.rg1_retry_from.glob("*.json")):
+            prior = _read_json(path)
+            if prior.get("status") == "INFEASIBLE_RECEIVER_QUANTUM":
+                prior_infeasible.append(prior)
+        geometry_ids = sorted(
+            {
+                str(row["receiver_actuator_id"])
+                for row in prior_infeasible
+                if str(row.get("infeasible_reason", "")).startswith("DirectDescriptionError: G1 Movable polygon")
+            }
+        )
+        vocabulary.extend(f"{value}{_BOUNDED_SUFFIX}" for value in geometry_ids)
+        vocabulary[:] = sorted(set(vocabulary))
+        payload = dict(base_table)
+        payload.pop("table_content_sha256", None)
+        base_table["table_content_sha256"] = canonical_sha256(payload)
+        validate_assignment_table(base_table, expected_pf2_sha256=EXPECTED_PF2_SHA256)
     event_index, event_receipt = _load_pf2_event_index(
         pf2_path=args.pf2,
         bulk=args.bulk_output,
@@ -761,13 +867,26 @@ def run(args: argparse.Namespace) -> Path:
 
     vocabulary = list(base_table["foreign_key_vocabulary"]["receiver_actuator_stable_ids"])
     directions = list(base_table["foreign_key_vocabulary"]["direction_ids"])
-    probes = [(actuator, direction) for actuator in vocabulary for direction in directions]
-    if len(probes) != 748:
-        raise MS6MeasurementError(f"stable probe vocabulary differs: {len(probes)}")
+    if args.rg1_retry_from is None:
+        probes = [(actuator, direction) for actuator in vocabulary for direction in directions]
+        if len(probes) != 748:
+            raise MS6MeasurementError(f"stable probe vocabulary differs: {len(probes)}")
+    else:
+        retry_ids = {
+            str(row["receiver_actuator_id"])
+            for row in prior_infeasible
+            if str(row["receiver_actuator_id"]).startswith(("j2.lane.", "g2g.g2cs1."))
+        }
+        retry_ids.update(f"{value}{_BOUNDED_SUFFIX}" for value in geometry_ids)
+        probes = [(actuator, direction) for actuator in sorted(retry_ids) for direction in directions]
+        if len(probes) != 80:
+            raise MS6MeasurementError(f"RG1 retry vocabulary differs: {len(probes)}")
     selected = probes[args.probe_start :]
     if args.probe_limit is not None:
         selected = selected[: args.probe_limit]
-    checkpoint_root = args.bulk_output / "probe_checkpoints_v2"
+    checkpoint_root = args.bulk_output / (
+        "probe_checkpoints_rg1_v2" if args.rg1_retry_from is not None else "probe_checkpoints_v2"
+    )
     checkpoints = []
     for actuator_id, direction_id in selected:
         checkpoints.append(
@@ -784,6 +903,19 @@ def run(args: argparse.Namespace) -> Path:
             )
         )
     all_checkpoints = sorted(checkpoint_root.glob("*.json"))
+    if args.rg1_retry_from is not None:
+        replaced = {
+            (actuator, direction)
+            for actuator, direction in probes
+            if not actuator.endswith(_BOUNDED_SUFFIX)
+        }
+        prior_paths = []
+        for path in sorted(args.rg1_retry_from.glob("*.json")):
+            value = _read_json(path)
+            identity = (str(value["receiver_actuator_id"]), str(value["direction_id"]))
+            if identity not in replaced:
+                prior_paths.append(path)
+        all_checkpoints = prior_paths + all_checkpoints
     probe_results = [_probe_result(path) for path in all_checkpoints]
     measured_table = build_measured_assignment_table(
         base_table=base_table,
@@ -803,8 +935,12 @@ def run(args: argparse.Namespace) -> Path:
     receipt: dict[str, Any] = {
         "schema": ASSIGNMENT_RECEIPT_SCHEMA,
         "measurement_schema": RECEIPT_SCHEMA,
-        "run_id": RUN_ID,
-        "lane_id": LANE_ID,
+        "run_id": RG1_RUN_ID if args.rg1_retry_from is not None else RUN_ID,
+        "lane_id": (
+            "lane_ddm_rg1_receiver_grammar_extension_20260724"
+            if args.rg1_retry_from is not None
+            else LANE_ID
+        ),
         "input_hash_lineage": {
             "ms5_assignment_table": table_custody,
             "ms5_assignment_receipt": ms5_custody,
@@ -820,7 +956,7 @@ def run(args: argparse.Namespace) -> Path:
             "schema": measured_table["schema"],
         },
         "probe_sweep": {
-            "required_probe_count": 748,
+            "required_probe_count": len(vocabulary) * len(directions),
             "completed_probe_count": len(probe_results),
             "status_counts": statuses,
             "checkpoint_schema": CHECKPOINT_SCHEMA,
@@ -836,6 +972,8 @@ def run(args: argparse.Namespace) -> Path:
             "wallclock_seconds_max": max(checkpoint_seconds, default=0.0),
             "resumable_per_actuator": True,
             "all_checkpoints_preserved": True,
+            "rg1_retry_only": args.rg1_retry_from is not None,
+            "prior_infeasible_evidence_preserved": args.rg1_retry_from is not None,
         },
         "coverage": measured_table["coverage"],
         "producer_rerun": {
@@ -848,7 +986,11 @@ def run(args: argparse.Namespace) -> Path:
         },
         "storage_preflight": storage,
         "verdict": measured_table["verdict"],
-        "verdict_scope": "INSTANCE_V19C_ENDPOINT_ONE_QUANTUM_SWEEP",
+        "verdict_scope": (
+            "INSTANCE_EXTENDED_GRAMMAR_RG1"
+            if args.rg1_retry_from is not None
+            else "INSTANCE_V19C_ENDPOINT_ONE_QUANTUM_SWEEP"
+        ),
         "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
         "score_claim": False,
         "pointer": "0.1910828242 [contest-CPU]",
@@ -856,6 +998,21 @@ def run(args: argparse.Namespace) -> Path:
         "research_only": True,
         "main_landing_review_required": True,
     }
+    if args.rg1_retry_from is not None:
+        receipt["rg1_extension"] = {
+            "schema": "ddm_rg1_receiver_grammar_extension_measurement.v1",
+            "g2g_quantum_receipt_sha256": G2G_RECEIPT_SHA256,
+            "new_probe_count": len(probes),
+            "bounded_geometry_probe_ids": [
+                f"{value}{_BOUNDED_SUFFIX}" for value in geometry_ids
+            ],
+            "original_infeasible_rows_preserved": len(prior_infeasible),
+            "grammar_verdict_scope": "INSTANCE_EXTENDED_GRAMMAR_RG1",
+            "checkpoint_run_id_policy": (
+                f"{RUN_ID} retained inside v2 probe rows for exact backward-compatible "
+                "resume; this receipt owns the RG1 run identity"
+            ),
+        }
     receipt["receipt_content_sha256"] = canonical_sha256(receipt)
     receipt_path = args.receipt_output / "ddm_ms6_receiver_support_measurement_receipt.json"
     _publish(receipt_path, canonical_bytes(receipt))
@@ -873,6 +1030,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--receipt-output", type=Path, default=DEFAULT_RECEIPTS)
     parser.add_argument("--probe-start", type=int, default=0)
     parser.add_argument("--probe-limit", type=int)
+    parser.add_argument(
+        "--rg1-retry-from",
+        type=Path,
+        help="Preserved v2 checkpoint root; rerun only formerly infeasible RG1 coordinates.",
+    )
     args = parser.parse_args()
     if args.probe_start < 0 or (args.probe_limit is not None and args.probe_limit <= 0):
         parser.error("--probe-start must be nonnegative and --probe-limit positive")
