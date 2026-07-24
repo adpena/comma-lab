@@ -581,6 +581,36 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
 
+    # METRIC-NAMING ADVISORY (operator 2026-07-24 ×2 "Euclidean is not the only metric
+    # we have" + "start at more optimal in our laddering"; recurrence probe 2026-07-24
+    # "Did you already forget the more optimal over Euclidean?"): a charter whose work is
+    # pricing-shaped (solve/price/rank/trust region/waterfill/proposal) but which never
+    # NAMES the metric per surface defaults to identity-Euclidean naive — the ms1 receipt
+    # (0/1,200 CVP wins in identity metric) is the empirical anchor. Warn-only per the
+    # fmtools never-blocking doctrine: pure read/survey charters legitimately lack metric
+    # clauses. Memory: metric_first_charters_never_euclidean_naive_20260724.
+    _prompt_text = prompt_file.read_text(encoding="utf-8")
+    _pricing_shaped = re.search(
+        r"\b(solve|solver|pric(?:e|ing)|rank(?:ing)?|trust[- ]region|waterfill|"
+        r"proposal|warm[- ]start|coder race|frontier)\b",
+        _prompt_text, re.IGNORECASE,
+    )
+    _metric_named = re.search(
+        r"margin[- ]Fisher|Fisher|pose quadratic|(?:≤6|<=\s*6)[- ]dim.{0,40}quadratic|"
+        r"optimal_metric|scorer metric|rank[- ]4 (?:head|hyperplane)|Bregman|"
+        r"contest units|score[- ]native",
+        _prompt_text, re.IGNORECASE,
+    )
+    if _pricing_shaped and not _metric_named:
+        print(
+            "[codex_delegate] METRIC-NAMING ADVISORY: prompt is pricing-shaped "
+            f"(matched {_pricing_shaped.group(0)!r}) but NAMES no metric per surface — "
+            "identity-Euclidean-naive spawn risk (seg=margin-Fisher/rank-4 · pose=exact "
+            "≤6-dim quadratic · rate=real-coder contest units · Euclid=labeled "
+            "control ONLY; memory: metric_first_charters_never_euclidean_naive_20260724).",
+            file=sys.stderr,
+        )
+
     # Give the arm a watched inbox + prepend the poll-and-consume contract so it stays
     # amendable mid-run. The wrapped prompt is what the launcher feeds codex; the original
     # prompt_file is preserved untouched (and recorded in the ledger for provenance).
