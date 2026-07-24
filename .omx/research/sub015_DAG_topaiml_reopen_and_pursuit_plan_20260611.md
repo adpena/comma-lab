@@ -22957,3 +22957,31 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   telemetry excised from immutable resume identity; stage-scoped bundle receipts instead of mutating
   one immutable path). 17 arm tests + 9 producer tests + 5 loader regressions pass on main.
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-e4-custody (2026-07-24, MAIN custody of ddm_e4_brotli_declared_dep rc=0 — the E-line rate recovery LANDED, reconciled merge)
+- **RATE RECOVERED, MEASURED byte-closed:** Brotli 1.2.0 Q11 as declared runtime dep #2 (["torch","brotli"])
+  → selected E4 archive **344,203 B** (sha d1a1a426a7…) vs E3's 439,303 B = **−95,100 B = −0.0633231864419185 S**
+  on the rate term (MAIN re-derived exactly: 25·95100/37,545,489). Coder-only like-for-like A/B −95,584 B;
+  the semantic stream owns ALL net recovery (−96,172 B); Brotli is 644 B WORSE on the chart section
+  (per-section coder choice signal, not a defect). Prior −95,837 B projection corrected by +737 B
+  (typed-tag custody 484 B + coder-manifest 253 B). No distortion trade: **both runtime arms decode to
+  byte-identical raw output** (MAIN verified from receipts: raw sha 4c553508b0… on BOTH; emitted
+  inflate.py/sh byte-identical across arms).
+- **Fail-closed dual-runtime contract:** ImportError-only fallback to the exact E3 raw-LZMA1 path (MAIN
+  source-verified the module-level trigger in the merged exporter); post-import Brotli errors PROPAGATE.
+  Dual locked evaluate.sh replays PASS/PASS (evaluate.py sha 7da71a84…, <1800s each); #417
+  counted-section consumption proof (terminal-byte flip → section refused, both sections). Typed-stream
+  decision: KEEP_AND_VERSION_BUMP_E4_MANIFEST (canonical TypedStreamTag, chart=FIBER/L2, semantic=
+  SKELETON/L1, 484 B kept for fail-closed byte-home custody).
+- **Reconciled merge, not blind cherry-pick (the arm's own warning honored):** e4's base predated the
+  ts1/ms2/ms3/ms4 landings; 13 conflict hunks across 4 DDM surfaces resolved by keeping main's canonical
+  f349c6eca3 headline-contract additions (Sequence import, `_typed_stream_tag`, strict_typed_stream_tags
+  gate, ruff formatting) + e4's Brotli code (non-conflicting) + import-union in the test file.
+  31 tests pass on main (exporter+custody+producers), ruff clean.
+- **Open debt honestly restated:** this composed E-line candidate's distortion is still d_seg 0.02861482 /
+  d_pose 147.49 (advisory 41.5) — the E-line carries the RATE chain; distortion closure remains with the
+  #366 joint-descent (j7 live) + correction stack. equations: cited existing
+  real_coder_archive_bytes_contest_units_v1 + ddm_runtime_export_identity_receiver_closed_v1 — no new
+  registry rows (consistent: no new law, a measured application). Evidence
+  `[macOS-CPU upstream frozen-harness advisory]`, score_claim=false.
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
