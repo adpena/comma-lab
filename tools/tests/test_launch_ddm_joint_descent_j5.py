@@ -13,6 +13,7 @@ from tools.launch_ddm_joint_descent import (
     _c1_bucket_delta,
     _opening_exact_admitted,
     _seg_lexicographic_attempt_key,
+    _write_structural_proposal_rejection,
 )
 
 REPO = Path(__file__).resolve().parents[2]
@@ -143,3 +144,22 @@ def test_seg_lexicographic_order_keeps_rung_primary_and_seg_safe_first() -> None
         )
     )
     assert [attempt["candidate_index"] for attempt in attempts] == [2, 0, 1]
+
+
+def test_structural_proposal_rejection_is_immutable_and_keeps_exact_authority_false(
+    tmp_path: Path,
+) -> None:
+    row = _write_structural_proposal_rejection(
+        out_dir=tmp_path,
+        candidate_id="worldsheet_joint_active_y_-1",
+        global_step=1,
+        multiplier=32.0,
+        multiplier_index=0,
+        proposal_staging="camera_q8",
+        reason="G1 Movable polygon escaped scorer geometry",
+    )
+
+    assert row["verdict"] == "REJECT_AND_SHRINK"
+    assert row["exact_replay_executed"] is False
+    assert row["score_claim"] is False
+    assert "INSTANCE proposal geometry only" in row["verdict_scope"]

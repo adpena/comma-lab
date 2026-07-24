@@ -1011,6 +1011,40 @@ def _write_immutable_json(
     return payload
 
 
+def _write_structural_proposal_rejection(
+    *,
+    out_dir: Path,
+    candidate_id: str,
+    global_step: int,
+    multiplier: float,
+    multiplier_index: int,
+    proposal_staging: str,
+    reason: str,
+) -> dict[str, Any]:
+    """Persist a receiver-invalid proposal and keep smaller rungs live."""
+
+    slug = candidate_id.replace("+", "plus").replace("-", "minus")
+    relpath = Path("verdicts") / (
+        f"warm_start_proposal_step{global_step:06d}_{slug}_"
+        f"shrink{multiplier_index:02d}_structural_reject.json"
+    )
+    return _write_immutable_json(
+        out_dir / relpath,
+        {
+            "schema": "ddm_joint_descent_structural_proposal_rejection.v1",
+            "candidate_id": candidate_id,
+            "exact_replay_executed": False,
+            "global_step": global_step,
+            "proposal_multiplier": multiplier,
+            "proposal_staging": proposal_staging,
+            "reason": reason,
+            "score_claim": False,
+            "verdict": "REJECT_AND_SHRINK",
+            "verdict_scope": "INSTANCE proposal geometry only; later ladder rungs remain live",
+        },
+    )
+
+
 def _worst_geometry_memory_bootstrap_locked(
     args: argparse.Namespace,
     config: DirectDescriptionJointDescentTypedConfigV1,
@@ -1568,11 +1602,24 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 multiplier_index = int(attempt["multiplier_index"])
                 realized_changed = bool(attempt["realized_changed"])
                 if reform_active and realized_changed:
-                    candidate_archive, _ = compile_parameterized_archive(
-                        lift,
-                        candidate.theta,
-                        include_lane_programs=include_lanes,
-                    )
+                    slug = candidate_id.replace("+", "plus").replace("-", "minus")
+                    try:
+                        candidate_archive, _ = compile_parameterized_archive(
+                            lift,
+                            candidate.theta,
+                            include_lane_programs=include_lanes,
+                        )
+                    except DirectDescriptionError as exc:
+                        _write_structural_proposal_rejection(
+                            out_dir=out_dir,
+                            candidate_id=candidate_id,
+                            global_step=candidate.step,
+                            multiplier=multiplier,
+                            multiplier_index=multiplier_index,
+                            proposal_staging=reform["proposal_staging"],
+                            reason=str(exc),
+                        )
+                        continue
                     if cpu_scorers is None:
                         cpu_scorers = _load_cpu_frozen_scorers(config.upstream_root)
                     realized_verdict = _chunked_n600_verdict(
@@ -1638,7 +1685,6 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                             strict_seg_admission=(float(realized_verdict["d_seg"]) < float(baseline_verdict["d_seg"])),
                             config=pose_finish_config,
                         )
-                    slug = candidate_id.replace("+", "plus").replace("-", "minus")
                     proposal_receipt_relpath = Path("verdicts") / (
                         f"warm_start_proposal_step{candidate.step:06d}_{slug}_shrink{multiplier_index:02d}_n600.json"
                     )
