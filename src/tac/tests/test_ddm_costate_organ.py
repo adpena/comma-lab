@@ -120,6 +120,14 @@ def test_current_live_fleet_pair_site_lambda_and_duties() -> None:
     assert report["live"]["reach"]["road_described_fraction"] == pytest.approx(0.7053524530023775)
     assert report["live"]["box"]["inside_c1_byte_box"] is True
     assert len(report["lambda"]["primitive_rows"]) >= 8
+    oracle_row = report["source_custody"]["scorer_value_oracle_rate_row"]
+    assert oracle_row["row"] == "rate (archive bytes only)"
+    assert oracle_row["freshness"] == "FRESH"
+    assert oracle_row["lineage"][0]["fresh"] is True
+    assert report["live"]["fleet"]["scorer_value_oracle_coverage"] == {
+        "WRAPPED": 14,
+        "TYPED-GAP": 7,
+    }
 
     if report["source_custody"]["g3_full_atlas"]["status"] == "VERIFIED":
         assert len(report["lambda"]["pair_rows"]) == 8
