@@ -11,6 +11,7 @@ from tac.canonical_equations.ddm_pa1_posenet_amplitude_twin_laws_20260723 import
     JOINT_SCORER_DSEG,
     amplitude_gap_is_small,
     joint_score_delta,
+    receiver_survives,
     target_rate_partition,
 )
 from tools.measure_ddm_pa1_posenet_amplitude_twin import (
@@ -147,4 +148,37 @@ def test_falsifier_and_rate_partition_are_explicit() -> None:
             target_uses_video_derived_fact=False,
         )
         == "NULL"
+    )
+
+
+def test_receiver_survival_requires_batches_frame1_and_free_payload() -> None:
+    rows = [f"{index:064x}" for index in range(38)]
+    frame1 = "f" * 64
+    assert receiver_survives(
+        source_batch_sha256=rows,
+        packaged_batch_sha256=list(rows),
+        source_frame1_sha256=frame1,
+        packaged_frame1_sha256=frame1,
+        amplitude_payload_bytes=0,
+    )
+    assert not receiver_survives(
+        source_batch_sha256=rows,
+        packaged_batch_sha256=[*rows[:-1], "e" * 64],
+        source_frame1_sha256=frame1,
+        packaged_frame1_sha256=frame1,
+        amplitude_payload_bytes=0,
+    )
+    assert not receiver_survives(
+        source_batch_sha256=rows,
+        packaged_batch_sha256=list(rows),
+        source_frame1_sha256=frame1,
+        packaged_frame1_sha256="e" * 64,
+        amplitude_payload_bytes=0,
+    )
+    assert not receiver_survives(
+        source_batch_sha256=rows,
+        packaged_batch_sha256=list(rows),
+        source_frame1_sha256=frame1,
+        packaged_frame1_sha256=frame1,
+        amplitude_payload_bytes=1,
     )
