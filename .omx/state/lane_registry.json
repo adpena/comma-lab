@@ -85445,6 +85445,47 @@
       "notes": "Pool tag solve_frontier; competes with solver_member_selection and is never additive. Local-only macOS-CPU frozen-scorer advisory; no paid dispatch, training, candidate, score claim, pointer mutation, or promotion; MAIN landing review required.",
       "lane_class": "substrate_engineering",
       "research_only": true
+    },
+    {
+      "id": "lane_ddm_ws1_seg_lexicographic_warmstart_20260724",
+      "name": "DDM WS1 seg-lexicographic warm-start comparison",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Delegated local n600 receiver-plus-R frozen-scorer advisory comparison only; no training, paid dispatch, exact eval, or frontier mutation; MAIN independent landing review required."
     }
   ],
   "level_rules": {

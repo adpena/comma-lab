@@ -1,0 +1,24 @@
+{
+  "schema": "ddm_ws1_directive_consumption.v1",
+  "lane_id": "lane_ddm_ws1_seg_lexicographic_warmstart_20260724",
+  "rows": [
+    {
+      "directive_utc": "2026-07-24T02:27:12Z",
+      "sender": "main-fable",
+      "priority": "P0-operator",
+      "status": "CONSUMED",
+      "application": "W_seg/W_joint endpoint ranking remains exact realized contest-unit task geometry. J5 slope authority is margin-Fisher/rank-4 hyperplane Seg plus exact low-rank Pose quadratic; parameter Euclidean is a labeled control with cosine and relative-norm readback."
+    },
+    {
+      "directive_utc": "2026-07-24T02:28:21Z",
+      "sender": "main-fable",
+      "priority": "P0-operator",
+      "status": "CONSUMED",
+      "application": "J5 smoke spec starts from the most-optimal measured scorer geometry; any measured quadratic block uses exact composite-R adjoint, Hessian preconditioning, and SPD normal-coordinate momentum from step 1. Simpler first-order geometry is control-only."
+    }
+  ],
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "score_claim": false,
+  "research_only": true
+}

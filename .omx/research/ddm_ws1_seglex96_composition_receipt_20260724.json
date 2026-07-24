@@ -1,0 +1,47 @@
+{
+  "schema": "ddm_ws1_seglex96_composition_receipt.v1",
+  "output": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ws1_seg_lexicographic_warmstart_20260724T012924Z/01_composition/v19c_seg_lex_filtered_n600.zip.receipt-bytes",
+    "bytes": 137827,
+    "sha256": "4fbba057b10c64d85f73ea2da3287f5fbd3f794c71ef0762fe0e0e50a224ea2d"
+  },
+  "source": {
+    "v19c_config_path": ".omx/research/configs/ddm_v19c_correction_saturation_20260723.json",
+    "v19c_config_sha256": "327aacac25ceacf2b03ddb688a7703db54b9f7064cb7d69e855508669b0c0ed2",
+    "decision_directory": ".omx/research/ddm_v19c_correction_saturation_20260723T063500Z/stage_checkpoints/02_n600_decisions",
+    "decision_chain_sha256": "0c44973cc7471c87f1848598758e3ffcc8e1dc6b52d91732dd647b08ba9610e5"
+  },
+  "composition": {
+    "v19b_settled_prefix_move_count": 10,
+    "v19c_joint_accepted_move_count": 104,
+    "v19c_strict_seg_move_count": 96,
+    "v19c_non_strict_rejected_move_count": 8,
+    "acceptance": "joint source decision accepted AND measured incremental seg_term < 0; Pose ignored",
+    "compiler": "tools.measure_ddm_v19c_correction_saturation:_initial_state,_apply_proposal,_compile_state",
+    "source_replay_complete": true,
+    "parse_back_required": true
+  },
+  "reproduction": {
+    "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+    "pythonpath": "src:.",
+    "algorithm": [
+      "load SHA-bound DDMV19CCorrectionSaturationConfigV1",
+      "bind V19B/V19/V19C sources with _bound_v19b",
+      "initialize the settled V19B state",
+      "replay accepted V19C decisions only when incremental seg_term < 0",
+      "compile n600 with the exact nested V19B carrier",
+      "publish immutably to the SSD output path"
+    ],
+    "deterministic": true
+  },
+  "artifact_hygiene": {
+    "tier": "/Volumes/VertigoDataTier/pact",
+    "delete_allowed": false,
+    "reason": "candidate receiver is the exact reproducibility surface"
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "score_claim": false,
+  "research_only": true
+}

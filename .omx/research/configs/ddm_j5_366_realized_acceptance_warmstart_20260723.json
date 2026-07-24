@@ -293,5 +293,43 @@
       "main_review_required": true,
       "standing_go_applies_only_after_main_review_and_READY_TO_FIRE_UNDER_STANDING_GO": true
     }
+  },
+  "warm_start_candidates": {
+    "schema": "DDMWS1WarmStartCandidatesV1",
+    "status": "MEASURED_ADVISORY_CANDIDATES_WITH_PREREGISTERED_SLOPE_FALSIFIER",
+    "source_receipt": {
+      "path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+      "bytes": 46615,
+      "sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0"
+    },
+    "train_decision_table": {
+      "path": ".omx/research/ddm_train_decision_table_warm_start_rows_20260724.json",
+      "sha256": "810983f971ad0590e99fb0d3a8a3e9413eafc1d3a2eaf674c75ff84cc073feb8"
+    },
+    "slope_falsifier": {
+      "path": ".omx/research/configs/ddm_ws1_j5_slope_falsifier_20260724.json",
+      "sha256": "d504f55519f2490a8ae2b29c653c7d4c4cf4824d534972ae1dbf8146fe9c1b28",
+      "critical_ratio": 4.1215446777965665,
+      "execution_allowed": false,
+      "training_launched": false
+    },
+    "W_seg": {
+      "candidate_id": "temporal_affine_16knot_frame1_seglex96_hood_masked",
+      "d_seg": 0.024124510023328993,
+      "d_pose": 146.3649324958955,
+      "archive_bytes": 138031,
+      "mycar_errors": 37619
+    },
+    "W_joint": {
+      "candidate_id": "statistics_hard_analytic_composed_frame1",
+      "d_seg": 0.07051923116048177,
+      "d_pose": 36.6181847780574,
+      "archive_bytes": 138801,
+      "mycar_errors": 4072489
+    },
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "score_claim": false,
+    "pointer_moved": false,
+    "main_landing_review_required": true
   }
 }

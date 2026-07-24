@@ -1,0 +1,57 @@
+{
+  "schema": "ddm_train_decision_table_warm_start_rows.v1",
+  "table_id": "ddm_ws1_two_warm_start_candidates_20260724",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "score_claim": false,
+  "rows": [
+    {
+      "row_id": "warm_start:W_seg",
+      "candidate_id": "temporal_affine_16knot_frame1_seglex96_hood_masked",
+      "d_seg": 0.024124510023328993,
+      "d_pose": 146.3649324958955,
+      "archive_bytes": 138031,
+      "advisory_objective": 40.76203032495305,
+      "per_class_errors": {
+        "Lane": 299944,
+        "Movable": 352093,
+        "MyCar": 37619,
+        "Road": 1870275,
+        "Undrivable": 285912
+      },
+      "role": "best measured hood-safe Seg-lexicographic start",
+      "status": "MEASURED_ADVISORY_CANDIDATE"
+    },
+    {
+      "row_id": "warm_start:W_joint",
+      "candidate_id": "statistics_hard_analytic_composed_frame1",
+      "d_seg": 0.07051923116048177,
+      "d_pose": 36.6181847780574,
+      "archive_bytes": 138801,
+      "advisory_objective": 26.28022355199344,
+      "per_class_errors": {
+        "Lane": 369103,
+        "Movable": 960428,
+        "MyCar": 4072489,
+        "Road": 2689055,
+        "Undrivable": 227712
+      },
+      "role": "current best joint-S MENU1 start",
+      "status": "MEASURED_ADVISORY_CANDIDATE"
+    },
+    {
+      "row_id": "decision:J5_bounded_slope_falsifier",
+      "candidate_id": "W_seg_vs_W_joint",
+      "critical_ratio": 4.1215446777965665,
+      "slope_spec_path": ".omx/research/configs/ddm_ws1_j5_slope_falsifier_20260724.json",
+      "status": "PREREGISTERED_SPEC_ONLY_NO_LAUNCH"
+    }
+  ],
+  "source_receipt": {
+    "path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+    "sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0"
+  },
+  "main_landing_review_required": true,
+  "research_only": true
+}

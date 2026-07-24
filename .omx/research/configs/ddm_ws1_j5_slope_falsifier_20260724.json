@@ -1,0 +1,117 @@
+{
+  "schema": "DDMWS1J5SlopeFalsifierSpecV1",
+  "spec_id": "ddm_ws1_j5_slope_falsifier_20260724",
+  "source_receipt": {
+    "path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+    "bytes": 46615,
+    "sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0"
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "execution": {
+    "execution_allowed": false,
+    "training_allowed": false,
+    "paid_dispatch_allowed": false,
+    "exact_eval_allowed": false,
+    "frontier_mutation_allowed": false,
+    "launch_argv": null,
+    "status": "PREREGISTERED_SPEC_ONLY_NO_LAUNCH"
+  },
+  "window": {
+    "steps_per_start": 4,
+    "measure_at_steps": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "required_metrics": [
+      "d_seg_realized_through_R",
+      "d_pose_official_YUV6_realized_through_R",
+      "seg_term_100xdseg",
+      "pose_term_sqrt_10xdpose",
+      "archive_bytes",
+      "margin_fisher_seg_slope",
+      "rank4_head_hyperplane_flip_distance",
+      "exact_posenet_low_rank_quadratic_slope",
+      "parameter_euclidean_control_slope",
+      "fisher_vs_euclidean_cosine",
+      "fisher_vs_euclidean_relative_norm"
+    ],
+    "optimizer_state_policy": "fresh Adam moments with the existing beta2-derived J5 rewarmup, identical across starts; measured quadratic blocks use Hessian-preconditioned SPD normal-coordinate momentum from step 1",
+    "accepted_state_policy": "every step checkpointed distinctly; no overwrite; exact rollback on failed realized acceptance"
+  },
+  "metric_geometry": {
+    "primary_seg": "measured margin-Fisher surrogate in rank-4 SegNet head class-pair hyperplane coordinates; flip distance=abs(margin)/norm(delta_w)",
+    "primary_pose": "exact low-rank <=6-dimensional PoseNet quadratic through official YUV6 and composite R",
+    "distribution_steps": "Bregman geometry per policy_bindings.optimal_metric and Catalog 504",
+    "second_order": "exact composite-R adjoint plus measured Hessian-preconditioned TerminalSolve/SPD normal coordinates from step 1 wherever a quadratic block exists",
+    "ladder_order": "most-optimal measured scorer geometry first; simpler geometries only as labeled controls",
+    "euclidean_identity_l2": "CONTROL_ONLY_NON_AUTHORITY",
+    "dual_metric_readback_required": true,
+    "sign_flip_policy": "report Fisher-vs-Euclidean cosine and relative norm; relative norm is decisive and a sign flip forbids Euclidean adjudication"
+  },
+  "starts": {
+    "W_seg": {
+      "candidate_id": "temporal_affine_16knot_frame1_seglex96_hood_masked",
+      "d_seg": 0.024124510023328993,
+      "d_pose": 146.3649324958955,
+      "archive_bytes": 138031,
+      "mycar_errors": 37619,
+      "hood_support": "decoder_derived_per_frame_semantic_owned",
+      "score_claim": false
+    },
+    "W_joint": {
+      "candidate_id": "statistics_hard_analytic_composed_frame1",
+      "d_seg": 0.07051923116048177,
+      "d_pose": 36.6181847780574,
+      "archive_bytes": 138801,
+      "mycar_errors": 4072489,
+      "score_claim": false
+    }
+  },
+  "derived_gap": {
+    "seg_advantage_score_units": 4.639472113715278,
+    "pose_debt_score_units": 19.12179159806879,
+    "critical_pose_progress_to_seg_advantage_erosion_ratio": 4.1215446777965665,
+    "derivation": "R_star=(sqrt(10*dpose_Wseg)-sqrt(10*dpose_Wjoint))/(100*(dseg_Wjoint-dseg_Wseg))",
+    "callable": "tac.optimization.ddm_warm_start_slope_falsifier:critical_pose_to_seg_slope_ratio"
+  },
+  "decision": {
+    "callable": "tac.optimization.ddm_warm_start_slope_falsifier:evaluate_bounded_slope_window",
+    "pose_progress_per_step": "-delta(pose_term)/delta(step)",
+    "seg_advantage_erosion_per_step": "max(0,delta(seg_term)/delta(step))",
+    "ratio": "pose_progress_per_step/max(seg_advantage_erosion_per_step,1e-15)",
+    "adopt_W_seg_when": "ratio>=R_star AND pose_progress_per_step>0 AND delta(seg_term)<=0",
+    "keep_W_joint_when": [
+      "pose_progress_per_step<=0",
+      "delta(seg_term)>0",
+      "ratio<R_star"
+    ],
+    "predicted_repayment_check": "pose_debt/pose_progress_per_step <= seg_advantage/seg_advantage_erosion_per_step"
+  },
+  "output_contract": {
+    "one_result_per_start": true,
+    "result_schema": "DDMWS1J5SlopeWindowResultV1",
+    "required_custody": [
+      "source candidate receipt path and SHA-256",
+      "exact start archive bytes and SHA-256",
+      "seed and complete optimizer config",
+      "per-step checkpoint paths and SHA-256",
+      "per-step realized-through-R Seg and Pose terms",
+      "per-step margin-Fisher and exact Pose-quadratic slopes",
+      "Euclidean control slope, Fisher-vs-Euclidean cosine, and relative norm",
+      "Hessian/SPD normal-coordinate state where a measured quadratic block exists",
+      "hardware axis",
+      "verdict and exact blocker"
+    ],
+    "promotion_eligible": false,
+    "main_landing_review_required": true
+  },
+  "canonical_equation_id": "ddm_ws1_warm_start_slope_falsifier_v1",
+  "metric_directive_consumption": ".omx/research/ddm_ws1_metric_directive_consumption_20260724.json",
+  "research_only": true
+}
