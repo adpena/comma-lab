@@ -1,0 +1,59 @@
+{
+  "schema": "DDMPA2ZeroByteDecodeFamilyConfigV1",
+  "run_id": "ddm_pa2_zero_byte_decode_family_20260724T194836Z",
+  "lane_id": "lane_ddm_pa2_zero_byte_decode_family_20260724",
+  "scorer_config_path": ".omx/research/configs/ddm_v14_realization_fidelity_n600_20260722.json",
+  "scorer_config_sha256": "9c7d52d927c4086c24ab1892e1841f109d1531810f46f3f3bbaecce8ae74b5c6",
+  "ms2r_receipt_path": ".omx/research/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/receipt.json",
+  "ms2r_receipt_sha256": "03cd9aabc1275c49c983631dd547e7497f8fe95804a9bfd7a24c5d61e9a81d25",
+  "bases": [
+    {
+      "base_id": "IC1_W_joint_PA1",
+      "kind": "raw",
+      "archive_path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ic1_incumbent_compose_and_buy_row_20260724/submission/archive.zip",
+      "archive_sha256": "aba831de718f7bc5fd264b9334a29ef8a9388052a629941e50eea1b854fe49d9",
+      "archive_bytes": 131582,
+      "custody_receipt_path": ".omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/ddm_ic1_batch32_remeasure_receipt.json",
+      "custody_receipt_sha256": "5cc3ca6bf614bdde72cac2fcdbe6fe71eec63dba12f1ac07fd7b0ed0d67a8aa0",
+      "decoded_raw_path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ic1_incumbent_compose_and_buy_row_20260724/submission/inflated/0.raw",
+      "decoded_raw_sha256": "e69be18f393e08872374023ce2ea5e5bea84987943f80dbe1da1d715310f4938",
+      "c1_root": null
+    },
+    {
+      "base_id": "IC2_W_seg_PA1",
+      "kind": "raw",
+      "archive_path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ic2_optimal_incumbent_pose_typed_20260724/submission/archive.zip",
+      "archive_sha256": "be1989fe16a2983b291c85c5e58f3e2db74edd3123a5ed19add11c7e9800f97e",
+      "archive_bytes": 131154,
+      "custody_receipt_path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/ddm_ic2_packet_batch32_remeasure_receipt.json",
+      "custody_receipt_sha256": "9638f3ad4920afb3d0cf563c8ced2d61ee02157785bd525ee001acbde600f10d",
+      "decoded_raw_path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ic2_optimal_incumbent_pose_typed_20260724/submission/inflated/0.raw",
+      "decoded_raw_sha256": "56e2b32a25805d06487a5309ab7bf6435a9ad6a596deda311c28d8caf4b797d7",
+      "c1_root": null
+    },
+    {
+      "base_id": "MS2R_q4_q8",
+      "kind": "ms2r",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/stage_checkpoints/04_candidate/archive.zip",
+      "archive_sha256": "e3d0581ff4a3f475057e77e530374dad444b640a049b058cd66b37563534773e",
+      "archive_bytes": 291205400,
+      "custody_receipt_path": ".omx/research/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/receipt.json",
+      "custody_receipt_sha256": "03cd9aabc1275c49c983631dd547e7497f8fe95804a9bfd7a24c5d61e9a81d25",
+      "decoded_raw_path": null,
+      "decoded_raw_sha256": null,
+      "c1_root": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719"
+    }
+  ],
+  "bulk_root": "/Volumes/VertigoDataTier/pact/ddm_pa2_zero_byte_decode_family_20260724T194836Z",
+  "receipt_root": ".omx/research/ddm_pa2_zero_byte_decode_family_20260724T194836Z",
+  "pair_count": 600,
+  "scorer_batch_size": 32,
+  "scorer_threads": 4,
+  "seed": 1234,
+  "minimum_free_bytes": 12000000000,
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "main_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]"
+}

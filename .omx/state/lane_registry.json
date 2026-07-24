@@ -87105,6 +87105,48 @@
         }
       },
       "notes": "Local n600 receiver-closed V19 600/600; RD1 162 exclusive G4-class-prior amortized homes plus 162 Brotli-Q11-verified uint8 histograms. Pricing remains ms2r-owned; contest CPU/CUDA unmeasured; MAIN review required."
+    },
+    {
+      "id": "lane_ddm_pa2_zero_byte_decode_family_20260724",
+      "name": "DDM PA2 zero-byte decode family",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_pa2_zero_byte_decode_family.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_pa2_zero_byte_decode_family_20260724T194836Z/receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "tests/test_measure_ddm_pa2_zero_byte_decode_family.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_pa2_zero_byte_decode_family_three_clean_review_20260724.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
     }
   ],
   "level_rules": {

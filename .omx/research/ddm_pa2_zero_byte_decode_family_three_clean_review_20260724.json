@@ -1,0 +1,64 @@
+{
+  "schema": "ddm_pa2_zero_byte_decode_family_three_clean_review.v1",
+  "lane_id": "lane_ddm_pa2_zero_byte_decode_family_20260724",
+  "reset_source": {
+    "path": ".omx/research/ddm_pa2_zero_byte_decode_family_round1_review_20260724.json"
+  },
+  "source_hashes": {
+    "src/tac/optimization/ddm_pa2_zero_byte_decode_family.py": "e8aa3b6ed0df60cddd4b0c53256b0b74cf06d715d0a8db56694a75850bd302d8",
+    "tools/measure_ddm_pa2_zero_byte_decode_family.py": "89fa07584ccd16c82d7e0c0ad2a8717e7442e6a211f0d1ba6c44a0fe4421f61e",
+    "tests/test_ddm_pa2_zero_byte_decode_family.py": "213a11be433c9fde99ab50b4615e79f52a161635e66d54ffe997e82453d20f6b",
+    "tests/test_measure_ddm_pa2_zero_byte_decode_family.py": "2b230504c8457993479d845d98faacb919029e822cdc8e662956a2327d28e803",
+    "src/tac/canonical_equations/ddm_pa2_zero_byte_decode_family_20260724.py": "acc8b283b48447d38d9470ef32bc4eab4916739c701ea6adbc58c409977c8e39",
+    "src/tac/canonical_equations/tests/test_ddm_pa2_zero_byte_decode_family_20260724.py": "60f24c0f638dbcbbb50cb00348dc9dacf5cc79271adaffbd33d1aea2d2148e35",
+    "src/tac/boundary_math/power_diagram_witness.py": "93896c78dc197f0f67f9488ec9304fd23720000c171e19f234d3f8fde6eb59e0"
+  },
+  "passes": [
+    {
+      "pass": 1,
+      "status": "CLEAN",
+      "independent_focus": "implementation, fail-closed rule-118 boundary, geometry, immutable stages, and regressions",
+      "evidence": [
+        "Ruff: all checks passed",
+        "pytest: 63 passed, 0 failed, 0 skipped",
+        "git diff --check: passed",
+        "review_tracker clean_pass_1 recorded on all tracked Python entities"
+      ]
+    },
+    {
+      "pass": 2,
+      "status": "CLEAN",
+      "independent_focus": "primary archive custody, n600 batch32 conditionals, non-telescoping greedy logic, and false-authority labels",
+      "evidence": [
+        "IC1 base_result SHA-256 9e3011d9f55bc106f0835e72e4dc86dd99580e0d7245047b699e51f8633cce4a",
+        "IC2 base_result SHA-256 81f8db4ca78ddfd62d357da057c88cbd54158aefca08d0ecf25bd25906357c8c",
+        "MS2R base_result SHA-256 8c2d06f44eb51f7ce014f5864d649109f5223a086eb6231f7bc40cdaa5425b73",
+        "aggregate receipt SHA-256 e28bcdd7131d58bccfa9539dedfdfaf0351c761d5e7e59c471b46fb0425dff75",
+        "all three #401 n600 scorer-input identity proofs exact",
+        "all three exact archives byte-identical before/after",
+        "review_tracker clean_pass_2 recorded on all tracked Python entities"
+      ]
+    },
+    {
+      "pass": 3,
+      "status": "CLEAN",
+      "independent_focus": "deterministic aggregate replay, canonical equation registration, typed blockers, and MAIN handoff",
+      "evidence": [
+        "two --aggregate-only invocations produced byte-identical stdout",
+        "aggregate receipt remained SHA-256 e28bcdd7131d58bccfa9539dedfdfaf0351c761d5e7e59c471b46fb0425dff75",
+        "canonical registry contains ddm_pa2_zero_byte_conditional_greedy_v1",
+        "gauge and rank-4 RGB pullbacks remain typed blockers; no per-pair table entered free code",
+        "review_tracker clean_pass_3 recorded on all tracked Python entities",
+        "MAIN landing review remains required"
+      ]
+    }
+  ],
+  "clean_pass_count": 3,
+  "all_clean": true,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "verdict": "IC2_FRAME1_XIHAT_ADMITTED_AT_ZERO_BYTES; IC1_AND_MS2R_RETAIN_SEALED_BASES",
+  "main_landing_review_required": true
+}

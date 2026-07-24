@@ -815,7 +815,18 @@ def open_stored_npy_memmap(npz_path: str | Path, key: str = "lstars") -> np.memm
         handle.seek(npy_start)
         try:
             version = np.lib.format.read_magic(handle)
-            shape, fortran_order, dtype = np.lib.format._read_array_header(handle, version)
+            # NumPy 2.4 removed the private ``format._read_array_header``
+            # symbol.  Stored numeric cache members are emitted as the public
+            # NPY v1/v2 formats, so dispatch through the stable readers and
+            # fail closed on an unregistered future format.
+            if version == (1, 0):
+                shape, fortran_order, dtype = np.lib.format.read_array_header_1_0(handle)
+            elif version == (2, 0):
+                shape, fortran_order, dtype = np.lib.format.read_array_header_2_0(handle)
+            else:
+                raise PowerDiagramWitnessError(
+                    f"unsupported embedded NPY header version {version!r}"
+                )
         except (EOFError, ValueError) as exc:
             raise PowerDiagramWitnessError("invalid embedded NPY header") from exc
         data_offset = handle.tell()
