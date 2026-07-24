@@ -22775,3 +22775,22 @@ via inbox). First rungs: (a) pf2r on ms2-land; (b) Road–Undrivable bucket ente
 priority order ahead of further MyCar work; (c) F1's −2,353 B recode joins the composed-candidate
 coder stack as a free rate control. Triality: equations leg registered; DSL N/A (measurement arm);
 tasks — blocker queued under #669 umbrella + this feed.
+
+## FEED-603-metric-naming-backstop (2026-07-24, MAIN — operator recurrence-probe "Did you already forget the more optimal over Euclidean?")
+Audit answer: NOT forgotten — the law fired all session (pf2 F2 fail-closed save · rd1 v4/v5
+identity-geometry refusals · ws1 Fisher-authoritative receipts · ts1/sn1/ms2 charters name metrics;
+sn1 measures the rank-4 hyperplane flip distances directly). Honest gap: e4's charter carried a
+generic "metric law binds" clause instead of NAMING the metric per surface (low-risk — pure
+rate-side coder swap with bit-identity guards, and it did name "contest units" — but per-surface
+naming is what the law demands). Fixes, two-landing-lite: (1) e4 corrected mid-flight via
+high-priority inbox (rate = real-coder contest units; any distortion trade → margin-Fisher/
+pose-quadratic or STOP); (2) STRUCTURAL BACKSTOP eb92cadee7 — `tools/codex_delegate.py` warn-only
+METRIC-NAMING ADVISORY at dispatch (recency-advisory pattern): pricing-shaped charter tokens
+(solve/price/rank/trust-region/waterfill/warm-start/coder-race/frontier) with NO named metric
+surface (margin-Fisher/pose-quadratic/optimal_metric/rank-4/Bregman/contest-units/score-native)
+prints the naive-spawn warning citing memory `metric_first_charters_never_euclidean_naive_20260724`
+(that memory extended with the enforcement note same commit). Verified: 4 live charters pass ·
+naive fixture warns · survey fixture silent. Advisory is warn-only per the fmtools never-blocking
+doctrine; the charter-composition re-grep remains the primary duty. Triality: DAG=this feed;
+DSL N/A (dispatch apparatus, not a trainer lever); equations N/A (no measured law — apparatus
+guard); memory leg = the extended metric-first file. Pointer 0.1910828242 [contest-CPU] UNMOVED.
