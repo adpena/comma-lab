@@ -1,0 +1,65 @@
+{
+  "schema": "ddm_ms2r_tolerance_capped_solve_three_clean_review.v1",
+  "lane_id": "lane_ddm_ms2r_tolerance_capped_solve_20260724",
+  "reset_source": {
+    "path": ".omx/research/ddm_ms2r_tolerance_capped_solve_round1_review_20260724.json",
+    "sha256": "39827e0758ddb7540611a6821d3a57e08f5d5abe2178261a05f0fb12510e596e"
+  },
+  "source_hashes": {
+    "tools/preflight_ddm_ms2r_tolerance_capped_solve.py": "dbeb6a173edfc5e5cd24845909151f415622b1e5a6f7bbecd34226cf77173067",
+    "src/tac/canonical_equations/ddm_ms2r_tolerance_capped_solve_20260724.py": "41af17069722dd7473b30b033e0091dd7ad361c9d2b7564f2d2e6e00cff3364e",
+    "tools/tests/test_preflight_ddm_ms2r_tolerance_capped_solve.py": "e444075c92395c1b8899f87993955186b1a76a39b444b62fe1b695921ff8eb1b",
+    "src/tac/canonical_equations/tests/test_ddm_ms2r_tolerance_capped_solve_20260724.py": "9fd2dde773a84c40f428f3bb65c691784eff7bca216415027975e2c426cb8e15"
+  },
+  "passes": [
+    {
+      "pass": 1,
+      "status": "CLEAN",
+      "independent_focus": "implementation, adjacent loader/MS2 regression, compilation and whitespace",
+      "evidence": [
+        "Ruff: all checks passed",
+        "pytest: 19 passed",
+        "py_compile: passed",
+        "git diff --check: passed",
+        "review_tracker: four changed Python files at 100% reviewed"
+      ]
+    },
+    {
+      "pass": 2,
+      "status": "CLEAN",
+      "independent_focus": "primary-artifact SHA re-derivation, strict-loader refusal and semantic JSON invariants",
+      "evidence": [
+        "MS4 manifest SHA revalidated: 7d6fd6c4a5d708b219e50f2afac67b5a60bc7d11240d52cf446b703c101fffc5",
+        "RD1 dual source SHA revalidated: c92bb7d4c863bae53f87a228cbbe79938966ff4b645e6c631be07e4bd574e2a0",
+        "RD1 frontier SHA revalidated: 96058098a7fabd568d725005c1d5c301bb862f2780616ce04cb4c379ee28e824",
+        "RG3 summary SHA revalidated: 3d4c4fb635ec37668cbf6037cefca63fe7c08a9ad950e6724ae023deb0473fd2",
+        "require_complete refusal exact",
+        "receipt invariants: 0 rungs, 0 measured duals, 162 NULL, 25 blockers, 17,927 exact errors",
+        "pytest: 6 passed",
+        "Ruff and git diff --check: passed"
+      ]
+    },
+    {
+      "pass": 3,
+      "status": "CLEAN",
+      "independent_focus": "two deterministic blocker resumptions and registry non-mutation",
+      "evidence": [
+        "both invocations exited 2 as designed",
+        "stdout byte-identical",
+        "receipt SHA identical twice: a253f844bd0a79ca548335e5abaddcdbbf3c831ff781bf6e566aecee54c93b72",
+        "dual SHA identical twice: 102afd24b6497d525963c763aae8294ebac8fb62f91b6dc09254539e24d106c3",
+        "canonical equation registry SHA unchanged by non-registering replay",
+        "pytest: 6 passed",
+        "Ruff and git diff --check: passed"
+      ]
+    }
+  ],
+  "clean_pass_count": 3,
+  "all_clean": true,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "verdict": "BLOCKED_MS3_BUNDLE_PARTIAL_PF2_BUCKET_INPUT_ASSIGNMENT_ABSENT",
+  "main_landing_review_required": true
+}
