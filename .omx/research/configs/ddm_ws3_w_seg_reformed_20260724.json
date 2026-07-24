@@ -5,7 +5,7 @@
     "delegation_prompt_sha256": "b36872d5ce619dc741cf619542878dd87ff244defb94a03eeb16a68fe1bbd6c7",
     "pointer": "0.1910828242 [contest-CPU]",
     "pointer_moved": false,
-    "source_commit": "ca2d4d947de8414ec359acbee1a021d44bfd8ab3"
+    "source_commit": "7db5ab52bd6e4f01144a6061f6675af78066e2f1"
   },
   "compile_custody": {
     "claim": "HASH_SEALED_EXECUTABLE_TYPED_J7_POSE_HISTORY_RESEAL",
@@ -51,12 +51,12 @@
       },
       "launcher": {
         "path": "tools/launch_ddm_joint_descent.py",
-        "sha256": "bac4c69c77ca958e5a612fb116b7781c42b2062cc64b5330a1c1758605c96ae5"
+        "sha256": "fbcd0f1cc6e7c61e6a5db87ab0094c4a756ac30105e8bac1a1f8c321941da93c"
       }
     },
     "worst_geometry_memory_receipt": {
-      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_seg_reformed_memory_20260724T105700Z/worst_geometry_memory_preflight.json",
-      "sha256": "5ad725cb84d5378f81b1cd9b7e272cbe928998a9c0c1f85577fc21ee7c83dddb"
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_seg_reformed_memory_abort_shrink_20260724T115300Z/worst_geometry_memory_preflight.json",
+      "sha256": "dab4be10bc1fcb30e50500d611f4132e23dd1ff0a0f9f874a4e991c16af32463"
     }
   },
   "schema": "ddm_joint_descent_witness_program_ticket.v1",
