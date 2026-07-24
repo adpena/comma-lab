@@ -87105,6 +87105,47 @@
         }
       },
       "notes": "Local n600 receiver-closed V19 600/600; RD1 162 exclusive G4-class-prior amortized homes plus 162 Brotli-Q11-verified uint8 histograms. Pricing remains ms2r-owned; contest CPU/CUDA unmeasured; MAIN review required."
+    },
+    {
+      "id": "ddm_ms2r_r3_typed_fisher_g4_waterfill",
+      "name": "DDM MS2R R3 typed Fisher G4 waterfill",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Delegated Codex implementation lane; advisory n600-only typed Fisher/G4 rate-distortion solve consuming current scorer-oracle evidence; MAIN landing review required."
     }
   ],
   "level_rules": {
@@ -87114,5 +87155,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T21:04:12Z"
+  "updated_at": "2026-07-24T21:22:44Z"
 }
