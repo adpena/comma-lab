@@ -1,0 +1,48 @@
+{
+  "schema": "DDMWS2WarmStartCustodyProducerConfigV1",
+  "run_id": "ddm_ws2_warm_start_custody_producer_20260724T053455Z",
+  "authority_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_ws2_warm_start_custody_producer_20260724T053455Z.wrapped.prompt.txt",
+  "authority_sha256": "07dbdd765c8010176e89420b4e4603facc31a83257dee027e8edd97817f30429",
+  "authority_bytes": 8479,
+  "menu1_config_path": ".omx/research/configs/ddm_menu1_realized_flip_menu_20260723.json",
+  "menu1_config_sha256": "b9fed2b1537b92a2b02d0525cb4d9175d0704e7c4d0c0efd383c6dd818fdb2c7",
+  "ws1_receipt_path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+  "ws1_receipt_sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0",
+  "checkpoint_root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws2_warm_start_custody_producer_20260724T053455Z",
+  "seed": 210,
+  "pair_count": 600,
+  "scorer_batch_size": 32,
+  "scorer_threads": 4,
+  "candidates": {
+    "W_seg": {
+      "base_archive_path": "/Volumes/VertigoDataTier/pact/ddm_ws1_seg_lexicographic_warmstart_20260724T012924Z/01_composition/v19c_seg_lex_filtered_n600.zip.receipt-bytes",
+      "base_archive_sha256": "4fbba057b10c64d85f73ea2da3287f5fbd3f794c71ef0762fe0e0e50a224ea2d",
+      "base_archive_bytes": 137827,
+      "payload_path": "/Volumes/VertigoDataTier/pact/ddm_menu1_realized_flip_menu_20260723T214943Z_audit_ext_v2/01c_temporal_affine_payload.bin",
+      "payload_sha256": "dbbcbc85892d736694598a34f2f698d4f58f25497e58cac83951c1c8de373fcb",
+      "payload_bytes": 204,
+      "expected_archive_bytes": 138031,
+      "expected_archive_sha256": "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9",
+      "expected_d_seg": 0.024124510023328993,
+      "expected_d_pose": 146.3649324958955
+    },
+    "W_joint": {
+      "base_archive_path": ".omx/research/ddm_v19c_correction_saturation_20260723T063500Z/ddm_v19c_final_n600.zip.receipt-bytes",
+      "base_archive_sha256": "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9",
+      "base_archive_bytes": 137827,
+      "payload_path": "/Volumes/VertigoDataTier/pact/ddm_menu1_realized_flip_menu_20260723T214943Z_audit_ext_v2/01_local_statistics_payload.bin",
+      "payload_sha256": "47056b15511cf3643958f239bdd5b3125d94464d9d57f0b66ec6d5a7af2bf4ee",
+      "payload_bytes": 974,
+      "expected_archive_bytes": 138801,
+      "expected_archive_sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e",
+      "expected_d_seg": 0.07051923116048177,
+      "expected_d_pose": 36.6181847780574
+    }
+  },
+  "execution_allowed": true,
+  "paid_dispatch_allowed": false,
+  "exact_contest_eval_allowed": false,
+  "frontier_mutation_allowed": false,
+  "research_only": true,
+  "score_claim": false
+}
