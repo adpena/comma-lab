@@ -23826,3 +23826,21 @@ REFIRE r2 ACCEPTED: call_id fc-01KYAGCAT9FF0445XJ6QZFMRZ2, claim rows spawning�
 contest-CPU. HARVEST OWED next tick: tools/recover_modal_auth_eval.py --output-dir .omx/research/
 ddm_ic1_…/modal_exact_eval_results/contest_cpu → terminal rows BOTH ledgers same-turn + the
 advisory↔contest-CPU gap decomposition vs S_adv 23.6617921.
+
+### FEED-603-ic1-modal-r2-fail-and-two-flag-fix (2026-07-24, MAIN)
+r2 (call fc-01KYAGCAT9FF0445XJ6QZFMRZ2) FAILED IN-CONTAINER at contest_auth_eval.py:2338 after 3.4s —
+no eval ran, honest non-result (adjudication_required, validation_errors=['contest_auth_eval.json was
+not produced']; terminal claim row written). ROOT CAUSE (structural, verdict_scope: formulation — the
+single-flag custody design): TWO verifiers consume ONE --expected-runtime-tree-sha256 with DIFFERENT
+definitions: (a) wrapper-level gate hashes the UPLOADED submission-dir tree (projection value
+675d0623…, double-confirmed local+Modal); (b) contest_auth_eval's in-container _runtime_dependency_
+manifest walks the container's partial repo mounts + dependency roots (value 1976cdb2…) — definitions
+drifted post-e4 (brotli became runtime dep #2, changing the dep-root walk). One value cannot satisfy
+both: r1 failed gate (a), r2 failed gate (b) — the pair of refusals IS the proof. FIX (c873fb8bd4,
+review ×2, ruff+ast green): --inner-expected-runtime-tree-sha256 threaded through the full chain
+(entrypoint → positional call_args slot → remote fn → inner runner → forwarding site); each verifier
+now binds its own defined quantity; unset ⇒ legacy single-flag behavior (backward compatible). No
+gate weakened — both remain fail-closed with pinned expectations. r3 REFIRED with wrapper=675d0623 +
+inner=1976cdb2 (the in-container value measured by the authoritative computation itself in r2 on
+identical bytes; relevant local sources unchanged since). Cost so far: ~$0 (both refusals pre-eval).
+OWED second surface: projection↔in-container manifest reconcile + regression test (the drift class).
