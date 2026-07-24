@@ -24159,3 +24159,20 @@ based; and row D25's actual treatment of #141 is the INVERSE of the flagged clas
 ceiling as UNSOUND-METHOD, REACTIVATES with resolving rung — exactly what the
 relative-not-absolute law demands). # MAGNITUDE_DISMISSAL_OK: detector matched a citation string
 in a source list, not a dismissal; verdict-position scan clean.
+
+### FEED-603-cc1-coolchic-harvest (2026-07-24, reviewed_committed 6d80e8eb1e)
+Full-lineage harvest (Cool-Chic v1→v5.0.1 pinned HEAD · C3 image+video · COIN/COIN++/functa;
+primary papers + pinned OSS; MEASURED_EXTERNAL labels never contest scores). LESSONS-ONLY upheld:
+no external vehicle adopted. FOUR DDM races routed, ALL gated on J8F (joining the pre-compiled
+post-j8f wave): (1) differentiable stream-rate INSIDE #366 proposal descent; (2) quantization-
+CONTINUATION race vs exact Q8 control — with the CORRECTION that "C3's schedule" is not timeless
+(Cool-Chic v5's decreasing Gaussian-noise/soft-round proxy measures 2.7% BETTER than original C3
+→ the race includes v5's variant; external anchors: no-soft-round +22.2% Kodak, no-Kumaraswamy
++3.9%); (3) per-stream context race raw ↔ counted-tiny-ARM/IFCE (v5: no-IFCE +3.8%) ↔ g4-free ↔
+CM/CTW ↔ Bellard — context params/hyperlatents/switch-headers NEVER free by assertion; (4) ONE
+organ water level across latents/description/pose/context/model bytes (v3.1 ablations α-off
++85.7%/β-off +10.8% and v4's model-rate-omitted-from-descent = the budget-split cautions).
+Historical re-scope: #91-#96 cluster preserved as INSTANCE (n48 old-carrier, d_seg 0.0084 @
+~3,082B STILL DESCENDING at ep120 — mechanism preserved, basis-limit wording retired); #115 stays
+OPEN/UNDER-POWERED. verdict_scope: primary-paper+pinned-OSS harvest + instance re-scopes; zero
+fresh scorer runs. Pointer 0.1910828242 [contest-CPU] UNMOVED.
