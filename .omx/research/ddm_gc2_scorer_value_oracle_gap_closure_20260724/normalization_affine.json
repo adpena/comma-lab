@@ -1,0 +1,109 @@
+{
+  "schema": "ddm_scorer_normalization_affine.v1",
+  "authority_label": "SOURCE_BOUND_DERIVED",
+  "authority_scope": "Frozen upstream PoseNet input normalization and the eight scalar AllNorm inference affines only. No score or promotion claim.",
+  "input_affine": {
+    "channel_count": 12,
+    "channel_order": "[frame0 Y00,Y10,Y01,Y11,U,V, frame1 Y00,Y10,Y01,Y11,U,V]",
+    "formula": "(x - mean) / std",
+    "mean_each": 127.5,
+    "std_each": 63.75,
+    "equivalent_slope": 0.01568627450980392,
+    "equivalent_intercept": -2.0
+  },
+  "allnorm_contract": {
+    "formula": "gamma * (x - running_mean) / sqrt(running_variance + epsilon) + beta",
+    "epsilon": 0.001,
+    "momentum": 0.01,
+    "affine": true,
+    "feature_axis_contract": "AllNorm reshapes every activation to (-1,1), so each instance has one learned scalar gamma/beta and one scalar running mean/variance.",
+    "instances": [
+      {
+        "key": "hydra.resblock.block_a.1.bn",
+        "gamma": 1.0158826112747192,
+        "beta": 0.05779248848557472,
+        "running_mean": -3.3356902599334717,
+        "running_variance": 15.910005569458008,
+        "effective_slope": 0.2546799246780088,
+        "effective_intercept": 0.907325832634599
+      },
+      {
+        "key": "hydra.resblock.block_a.4.bn",
+        "gamma": 0.779994547367096,
+        "beta": -0.1742221564054489,
+        "running_mean": -6.905441761016846,
+        "running_variance": 1482.961181640625,
+        "effective_slope": 0.0202547332873605,
+        "effective_intercept": -0.03435427530465168
+      },
+      {
+        "key": "hydra.resblock.block_b.2.bn",
+        "gamma": 0.9665219783782959,
+        "beta": 0.10408158600330353,
+        "running_mean": -4.373877048492432,
+        "running_variance": 12.410150527954102,
+        "effective_slope": 0.27435047263031503,
+        "effective_intercept": 1.3040568214840895
+      },
+      {
+        "key": "hydra.resblock.block_b.5.bn",
+        "gamma": 0.7264885902404785,
+        "beta": -0.28399938344955444,
+        "running_mean": -3.2012484073638916,
+        "running_variance": 832.1755981445312,
+        "effective_slope": 0.025183787641964855,
+        "effective_intercept": -0.20337982336932398
+      },
+      {
+        "key": "summarizer.2.block_a.1.bn",
+        "gamma": 0.9975234270095825,
+        "beta": -0.11040475964546204,
+        "running_mean": -0.8476879000663757,
+        "running_variance": 0.5886434316635132,
+        "effective_slope": 1.2990574904481607,
+        "effective_intercept": 0.9907905564980353
+      },
+      {
+        "key": "summarizer.2.block_a.4.bn",
+        "gamma": 0.8014019727706909,
+        "beta": -0.15439733862876892,
+        "running_mean": -6.1853346824646,
+        "running_variance": 199.52206420898438,
+        "effective_slope": 0.05673536513360354,
+        "effective_intercept": 0.19652988305440183
+      },
+      {
+        "key": "summarizer.2.block_b.2.bn",
+        "gamma": 1.1674151420593262,
+        "beta": -0.021285660564899445,
+        "running_mean": -3.4534757137298584,
+        "running_variance": 2.7283074855804443,
+        "effective_slope": 0.7066414179718197,
+        "effective_intercept": 2.4190833147164095
+      },
+      {
+        "key": "summarizer.2.block_b.5.bn",
+        "gamma": 0.8043577671051025,
+        "beta": -0.1359742134809494,
+        "running_mean": -6.565128326416016,
+        "running_variance": 1204.4222412109375,
+        "effective_slope": 0.023177132106337903,
+        "effective_intercept": 0.016186633035455672
+      }
+    ]
+  },
+  "source_receipts": [
+    {
+      "path": "upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "bytes": 8322,
+      "lines": "20-39,64-77"
+    },
+    {
+      "path": "upstream/models/posenet.safetensors",
+      "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+      "bytes": 55835560,
+      "role": "exact learned AllNorm gamma, beta, running_mean, and running_var values"
+    }
+  ]
+}

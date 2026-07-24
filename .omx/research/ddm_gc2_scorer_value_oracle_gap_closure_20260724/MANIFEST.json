@@ -1,0 +1,95 @@
+{
+  "schema": "ddm_gc2_scorer_value_oracle_gap_manifest.v1",
+  "captured_at_utc": "2026-07-24T21:45:59Z",
+  "lane_id": "lane_ddm_gc2_oracle_gap_closure_20260724",
+  "branch": "codexwt/ddm_gc2_oracle_gap_closure_20260724T211328Z",
+  "implementation_commit": "e77f30900dab7cb4b0aefe0235cdc1ec257fc309",
+  "delegated_authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_gc2_oracle_gap_closure_20260724T211328Z.wrapped.prompt.txt",
+    "sha256": "968907388681226bce96ffdb143d4ff7e084d32c3095a4c9a5e42e229669e740",
+    "bytes": 6680
+  },
+  "coverage": {
+    "contract_rows": 21,
+    "wrapped_fresh": 21,
+    "typed_gaps": 0,
+    "stale_advisory": 0
+  },
+  "verification": {
+    "pytest": {
+      "passed": 75,
+      "failed": 0,
+      "command": "PYTHONPATH=src .venv/bin/python -m pytest -q src/tac/tests/test_scorer_value_oracle.py src/tac/tests/test_ddm_costate_organ.py src/tac/tests/test_ddm_campaign_costate.py"
+    },
+    "ruff": "clean",
+    "git_diff_check": "clean",
+    "global_lane_maturity_validate": {
+      "status": "BLOCKED_PREEXISTING",
+      "missing_evidence_path_errors": 110,
+      "gc2_lane_named_in_errors": false
+    },
+    "python_review_passes": [
+      "source-math-custody",
+      "tests-fail-closed"
+    ]
+  },
+  "artifacts": [
+    {
+      "row": "gain (normalization affine)",
+      "path": ".omx/research/ddm_gc2_scorer_value_oracle_gap_closure_20260724/normalization_affine.json",
+      "schema": "ddm_scorer_normalization_affine.v1",
+      "sha256": "84b8feca30a90a50ed89c1bee1366f6b657c52b5d201fb6039f4cde9a6ea0562",
+      "bytes": 3999
+    },
+    {
+      "row": "frequency / R passband",
+      "path": ".omx/research/ddm_gc2_scorer_value_oracle_gap_closure_20260724/frequency_r_passband.json",
+      "schema": "ddm_composite_r_frequency_passband.v1",
+      "sha256": "8383e733fef57b4011aec4518ccbda91b4a352d7d029bd3f88c459f27fa3701d",
+      "bytes": 3990
+    },
+    {
+      "row": "YUV6 luma phases",
+      "path": ".omx/research/ddm_gc2_scorer_value_oracle_gap_closure_20260724/yuv6_luma_phases.json",
+      "schema": "ddm_yuv6_luma_phase_law.v1",
+      "sha256": "f5982e364781488d3bfba383b7a418e678f8ee7f131b91c68c82143e44172634",
+      "bytes": 1598
+    },
+    {
+      "row": "chroma pose-null",
+      "path": ".omx/research/ddm_gc2_scorer_value_oracle_gap_closure_20260724/chroma_pose_null.json",
+      "schema": "ddm_chroma_pose_null_intersection.v1",
+      "sha256": "e01a73cceb814ff4d6b10a69a097ba821b45653d664e90cba7add4c1c44a1c61",
+      "bytes": 3641
+    },
+    {
+      "row": "null/gauge energy",
+      "path": ".omx/research/ddm_gc2_scorer_value_oracle_gap_closure_20260724/null_gauge_energy.json",
+      "schema": "ddm_null_gauge_composite_custody.v1",
+      "sha256": "4d1cadec4cf8597225d3f5d4a421cee42bf9e114f86498ecc01ce39b112b601d",
+      "bytes": 2567
+    },
+    {
+      "row": "pose dims 7-12",
+      "path": ".omx/research/ddm_gc2_scorer_value_oracle_gap_closure_20260724/pose_dims_exclusion.json",
+      "schema": "ddm_pose_objective_dimension_exclusion.v1",
+      "sha256": "794fded67d7fad97f8ec374a2fe245e4c7603f6b396a5f62129fac83ee4150bb",
+      "bytes": 938
+    },
+    {
+      "row": "score axes + weights",
+      "path": ".omx/research/ddm_gc2_scorer_value_oracle_gap_closure_20260724/score_functional.json",
+      "schema": "ddm_contest_score_functional.v1",
+      "sha256": "847037306135d8b88c3552d2c46e61407ef6918ef78126f4b58ede7573fb5569",
+      "bytes": 1801
+    }
+  ],
+  "false_authority_guards": {
+    "chroma_camera_preimage_certified_fraction": null,
+    "chroma_receiver_closed_fraction": null,
+    "measured_joint_intersection_energy": null,
+    "score_claim": false,
+    "pointer_delta": 0
+  },
+  "main_landing_review_required": true
+}

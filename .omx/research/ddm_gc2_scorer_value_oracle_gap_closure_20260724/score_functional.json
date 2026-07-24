@@ -1,0 +1,49 @@
+{
+  "schema": "ddm_contest_score_functional.v1",
+  "authority_label": "SOURCE_BOUND_EXACT_FORMULA",
+  "authority_scope": "Exact structural score functional and canonical helper binding. Only upstream/evaluate.py on exact archive bytes and the required contest hardware axes can issue an authoritative score.",
+  "formula": "100 * d_seg + sqrt(10 * d_pose) + 25 * archive_bytes / uncompressed_size",
+  "axes": {
+    "segmentation": {
+      "weight": 100.0,
+      "definition": "last-frame SegNet argmax disagreement averaged over samples"
+    },
+    "pose": {
+      "weight_inside_square_root": 10.0,
+      "definition": "PoseNet first-six-output MSE averaged over samples"
+    },
+    "rate": {
+      "weight": 25.0,
+      "numerator": "exact submission_dir/archive.zip bytes",
+      "denominator": "sum of uncompressed input-file bytes",
+      "canonical_video_set_denominator_bytes": 37545489
+    }
+  },
+  "canonical_helper": {
+    "path": "src/tac/contest_score.py",
+    "callable": "compute_contest_score",
+    "formula_lines": "90-108,163-190",
+    "status": "non-authoritative exact arithmetic helper; upstream evaluator remains verdict authority"
+  },
+  "source_receipts": [
+    {
+      "path": "upstream/evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+      "bytes": 6005,
+      "lines": "63-65,89-104"
+    },
+    {
+      "path": "src/tac/contest_score.py",
+      "sha256": "372c407e6e2f62532f12a0a6aaab99fa675f2ada2a11348e0187bd5f278e196f",
+      "bytes": 10212,
+      "lines": "90-108,163-190"
+    },
+    {
+      "path": "upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "bytes": 8322,
+      "lines": "82-84,107-113",
+      "role": "component distortion definitions"
+    }
+  ]
+}

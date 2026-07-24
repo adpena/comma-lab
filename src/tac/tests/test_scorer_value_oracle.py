@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
 
@@ -33,6 +34,57 @@ TEST_SCHEMA = "test.scorer.value.v1"
 POSE_METRIC_DATA = Path(
     "/Volumes/VertigoDataTier/pact/ddm_ms4_metric_producers_and_measurement_"
     "20260724T042005Z/pose_metric_n600_batch32.json"
+)
+GC2_ROWS = (
+    (
+        DimensionRow.GAIN_NORMALIZATION_AFFINE,
+        "normalization_affine",
+        "ddm_scorer_normalization_affine.v1",
+        ("input_affine", "mean_each"),
+        127.5,
+    ),
+    (
+        DimensionRow.FREQUENCY_R_PASSBAND,
+        "r_frequency_passband",
+        "ddm_composite_r_frequency_passband.v1",
+        ("tangent_normal_anisotropy", "axis_ratio_vertical_over_horizontal_at_nyquist"),
+        1.0005539392634217,
+    ),
+    (
+        DimensionRow.YUV6_LUMA_PHASES,
+        "yuv6_luma_phases",
+        "ddm_yuv6_luma_phase_law.v1",
+        ("input", "concatenated_pose_input_channels"),
+        12,
+    ),
+    (
+        DimensionRow.CHROMA_POSE_NULL,
+        "chroma_pose_null",
+        "ddm_chroma_pose_null_intersection.v1",
+        ("exact_kernel", "real_dimension"),
+        6,
+    ),
+    (
+        DimensionRow.NULL_GAUGE_ENERGY,
+        "null_gauge_energy",
+        "ddm_null_gauge_composite_custody.v1",
+        ("intersection_accounting", "measured_joint_intersection_energy"),
+        None,
+    ),
+    (
+        DimensionRow.POSE_DIMS_7_12,
+        "pose_excluded_dimensions",
+        "ddm_pose_objective_dimension_exclusion.v1",
+        ("pose_head", "excluded_one_based_dimensions"),
+        [7, 8, 9, 10, 11, 12],
+    ),
+    (
+        DimensionRow.SCORE_AXES_WEIGHTS,
+        "score_functional",
+        "ddm_contest_score_functional.v1",
+        ("axes", "rate", "canonical_video_set_denominator_bytes"),
+        37_545_489,
+    ),
 )
 
 
@@ -449,10 +501,81 @@ def test_external_binding_rejects_boolean_byte_count() -> None:
         )
 
 
-def test_default_coverage_shape_is_14_wrapped_7_typed_gaps() -> None:
+def test_default_coverage_shape_is_21_wrapped_zero_typed_gaps() -> None:
     report = ScorerValueOracle(REPO).coverage_report(verify=False)
-    assert report["counts"] == {"WRAPPED": 14, "TYPED-GAP": 7}
+    assert report["counts"] == {"WRAPPED": 21, "TYPED-GAP": 0}
     assert report["row_count"] == 21
+    assert DEFAULT_GAPS == ()
+
+
+@pytest.mark.parametrize(
+    ("row", "accessor", "schema", "selector", "expected"),
+    GC2_ROWS,
+)
+def test_gc2_gap_closure_row_is_fresh_and_content_typed(
+    row: DimensionRow,
+    accessor: str,
+    schema: str,
+    selector: tuple[str, ...],
+    expected: object,
+) -> None:
+    result = getattr(ScorerValueOracle(REPO), accessor)()
+    value = result.require_value()
+    assert result.row is row
+    assert result.lineage[0].fresh is True
+    assert value["schema"] == schema
+    selected = value
+    for key in selector:
+        selected = selected[key]
+    assert selected == expected
+
+
+@pytest.mark.parametrize(("row", "_accessor", "_schema", "_selector", "_expected"), GC2_ROWS)
+def test_gc2_gap_closure_row_hash_drift_fails_closed(
+    tmp_path: Path,
+    row: DimensionRow,
+    _accessor: str,
+    _schema: str,
+    _selector: tuple[str, ...],
+    _expected: object,
+) -> None:
+    binding = next(item for item in DEFAULT_BINDINGS if item.row is row)
+    source = REPO / binding.path
+    stale = tmp_path / source.name
+    stale.write_bytes(source.read_bytes() + b" ")
+    oracle = ScorerValueOracle(
+        tmp_path,
+        bindings=(replace(binding, path=str(stale)),),
+        gaps=_gaps_except(row),
+    )
+    with pytest.raises(StaleProducerError, match="stale producer artifact"):
+        oracle.read(row)
+
+
+def test_gc2_chroma_null_keeps_camera_preimage_authority_fail_closed() -> None:
+    value = ScorerValueOracle(REPO).chroma_pose_null().require_value()
+    readback = value["uint8_readback"]
+    assert readback["bounded_uint8_feasible_fraction"] == pytest.approx(
+        0.7505900065104166
+    )
+    assert readback["bit_exact_yuv6_fraction_among_feasible"] == pytest.approx(
+        0.2672232311459265
+    )
+    assert readback["camera_preimage_certified_fraction"] is None
+    assert readback["receiver_closed_fraction"] is None
+
+
+def test_gc2_null_gauge_does_not_conflate_two_52_percent_measurements() -> None:
+    value = ScorerValueOracle(REPO).null_gauge_energy().require_value()
+    assert value["head_gauge"]["gauge_fraction_of_norm"] == pytest.approx(
+        0.5235602011487402
+    )
+    assert value["head_gauge"]["gauge_fraction_of_energy"] == pytest.approx(
+        0.27411528422690934
+    )
+    assert value["render_resize_null"]["blind_output_raw_energy_in_ker_a_mean"] == (
+        pytest.approx(0.5242467615738868)
+    )
 
 
 def test_default_pf2_bucket_assignment_is_fresh() -> None:

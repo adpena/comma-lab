@@ -87188,6 +87188,48 @@
         }
       },
       "notes": "Oracle-bound R3 admission implementation complete; honest wall is NO_COMPOSABLE_TYPED_ACTUATOR_STREAM, no R3 candidate/E4/score, R2 batch16 control unchanged; MAIN landing review required."
+    },
+    {
+      "id": "lane_ddm_gc2_oracle_gap_closure_20260724",
+      "name": "DDM GC2 scorer-value oracle seven-gap closure",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_gc2_oracle_gap_closure_20260724_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Seven SHA-bound oracle producers; 21/21 fresh coverage; camera-preimage, receiver-closure, and joint null-gauge intersection remain fail-closed; MAIN landing review required.",
+      "research_only": true
     }
   ],
   "level_rules": {

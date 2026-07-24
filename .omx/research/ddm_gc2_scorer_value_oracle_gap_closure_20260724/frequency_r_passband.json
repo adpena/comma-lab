@@ -1,0 +1,58 @@
+{
+  "schema": "ddm_composite_r_frequency_passband.v1",
+  "authority_label": "DERIVED_WITH_MEASURED_ANCHOR",
+  "authority_scope": "Exact unclamped linear composite R geometry under the STE-identity convention. The sampled gains are deterministic matrix evaluations, not a shift-invariant approximation and not a score claim. Saturation, uint8 amplitude feasibility, and the frozen SegNet Jacobian are outside this passband.",
+  "operator": {
+    "witness_grid_hw": [384, 512],
+    "camera_grid_hw": [874, 1164],
+    "vertical": "D_v = B_bilinear(874->384, align_corners=False) @ C_bicubic(384->874, align_corners=False, A=-0.75)",
+    "horizontal": "D_h = B_bilinear(1164->512, align_corners=False) @ C_bicubic(512->1164, align_corners=False, A=-0.75)",
+    "two_dimensional": "R_linear(X) = D_v @ X @ transpose(D_h)",
+    "separable_mode_gain": "G(f_v,f_h)=||D_v e(f_v)||_2/||e(f_v)||_2 * ||D_h e(f_h)||_2/||e(f_h)||_2"
+  },
+  "sampled_cycles_per_input_pixel": [0.0, 0.0625, 0.125, 0.1875, 0.25, 0.3125, 0.375, 0.4375, 0.5],
+  "vertical_l2_mode_gain": [1.0, 0.999153274697501, 0.994482683314941, 0.981289911900418, 0.956301247366134, 0.921342708146329, 0.884158111446326, 0.855610502319609, 0.844908783131828],
+  "horizontal_l2_mode_gain": [1.0, 0.9991525472612, 0.994472041856512, 0.981243084525913, 0.95617970675472, 0.921113199973057, 0.883812605785791, 0.855175992496531, 0.844441014098475],
+  "equal_axis_diagonal_l2_mode_gain": [1.0, 0.9983065395183781, 0.9889852246671522, 0.9628839399673271, 0.9143958462757225, 0.8486609301725073, 0.7814300844040215, 0.7316975605116265, 0.7134756296485497],
+  "tangent_normal_anisotropy": {
+    "law": "For a local unit tangent t=(t_v,t_h) and normal n=(-t_h,t_v), evaluate G(f*t_v,f*t_h) and G(-f*t_h,f*t_v). Anisotropy is orientation- and frequency-dependent through the exact separable factors.",
+    "axis_ratio_vertical_over_horizontal_at_nyquist": 1.0005539392634217,
+    "interpretation": "The pure R-chain x/y anisotropy is below 0.056 percent at the sampled Nyquist endpoint. It cannot explain the separate 3.2x lane-dash along-tangent representation deficit."
+  },
+  "measured_along_tangent_anchor": {
+    "authority_label": "MEASURED_ADVISORY",
+    "basis_limit_cycles_per_unit": 8.0,
+    "lane_dash_cycles_per_unit": 25.0,
+    "deficit_ratio": 3.125,
+    "rounded_description": "3.2x along-tangent deficit",
+    "scope": "Representation/basis support deficit on the cited lane-dash probe, not R-chain attenuation or an admission verdict.",
+    "followup": "The later frequency-ladder probe did not confirm a simple raise-frequency cure and favored a comb-like interpretation; the family remains formulation-scoped."
+  },
+  "uint8_role": "uint8 clipping/rounding changes realizable amplitude and is deliberately excluded from this linear frequency response; it must be checked by a separate lattice readback.",
+  "source_receipts": [
+    {
+      "path": "src/tac/boundary_math/sr_rchain_gain.py",
+      "sha256": "04441bd1892e23943227b89871093a916520ade49ccee6cd09e00d92b5db48fe",
+      "bytes": 7330,
+      "role": "exact bicubic-up and bilinear-down matrices"
+    },
+    {
+      "path": ".omx/research/null_compiler_full_kernel_20260720T163500Z.json",
+      "sha256": "76af5e7f8d155363a6668b4ee7bca576ea448472ea0cd1e7f938577bb4adfd74",
+      "bytes": 7444,
+      "role": "#580 exact separable resize geometry and uint8/nullity custody"
+    },
+    {
+      "path": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/lane_dash_residual_root_is_along_tangent_freq_deficit_R_allpass_20260703.md",
+      "sha256": "c0e11e1e1c7c5d23f241a2b8de711266ec159a029a84f7cd24145a02ccff6cb8",
+      "bytes": 10830,
+      "role": "measured 3.2x representation-deficit anchor"
+    },
+    {
+      "path": ".omx/research/freq_along_ladder_probe_verdict_20260707.md",
+      "sha256": "323d4f062e36ae892564cdfa3f618621d40467af3d9af80a4e414eb0cdc74442",
+      "bytes": 3813,
+      "role": "follow-up formulation-scope correction"
+    }
+  ]
+}

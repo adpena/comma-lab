@@ -1,0 +1,38 @@
+{
+  "schema": "ddm_yuv6_luma_phase_law.v1",
+  "authority_label": "SOURCE_BOUND_EXACT",
+  "authority_scope": "Frozen PoseNet preprocessing through RGB-to-YUV6, before the learned network. Clamp-active derivatives are piecewise rather than globally linear. No PoseNet-output or score claim.",
+  "input": {
+    "pose_frame_count": 2,
+    "rgb_resize": "bilinear to 384x512 with align_corners default False",
+    "per_frame_output_shape": [6, 192, 256],
+    "concatenated_pose_input_channels": 12
+  },
+  "rgb_to_yuv": {
+    "Y": "clamp(0.299 R + 0.587 G + 0.114 B, 0, 255)",
+    "U": "clamp((B - Y) / 1.772 + 128, 0, 255)",
+    "V": "clamp((R - Y) / 1.402 + 128, 0, 255)"
+  },
+  "channel_order": [
+    {"index": 0, "name": "Y00", "rows_mod_2": 0, "cols_mod_2": 0, "kernel": "phase pick"},
+    {"index": 1, "name": "Y10", "rows_mod_2": 1, "cols_mod_2": 0, "kernel": "phase pick"},
+    {"index": 2, "name": "Y01", "rows_mod_2": 0, "cols_mod_2": 1, "kernel": "phase pick"},
+    {"index": 3, "name": "Y11", "rows_mod_2": 1, "cols_mod_2": 1, "kernel": "phase pick"},
+    {"index": 4, "name": "U_sub", "kernel": "2x2 box [1/4,1/4;1/4,1/4]"},
+    {"index": 5, "name": "V_sub", "kernel": "2x2 box [1/4,1/4;1/4,1/4]"}
+  ],
+  "source_receipts": [
+    {
+      "path": "upstream/frame_utils.py",
+      "sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+      "bytes": 9345,
+      "lines": "50-78"
+    },
+    {
+      "path": "upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "bytes": 8322,
+      "lines": "70-77"
+    }
+  ]
+}

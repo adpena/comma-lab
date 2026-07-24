@@ -1,0 +1,22 @@
+{
+  "schema": "ddm_pose_objective_dimension_exclusion.v1",
+  "authority_label": "SOURCE_BOUND_EXACT",
+  "authority_scope": "Frozen upstream PoseNet output and distortion slicing only. This artifact does not assign semantics to the excluded outputs or claim they are network-null.",
+  "pose_head": {
+    "head_name": "pose",
+    "output_dimension": 12,
+    "scored_slice_python": ": h.out // 2",
+    "scored_one_based_dimensions": [1, 2, 3, 4, 5, 6],
+    "excluded_one_based_dimensions": [7, 8, 9, 10, 11, 12],
+    "distortion": "mean squared error over the first six outputs only",
+    "exclusion_meaning": "Dimensions 7-12 exist in the frozen output tensor but do not enter PoseNet distortion or the contest score."
+  },
+  "source_receipts": [
+    {
+      "path": "upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "bytes": 8322,
+      "lines": "10,26,82-84,101"
+    }
+  ]
+}

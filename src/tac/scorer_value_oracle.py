@@ -354,6 +354,14 @@ _PF2 = (
     ".omx/research/ddm_ms5_pf2_bucket_assignment_20260724T044736Z/"
     "pf2_bucket_assignment_table.json"
 )
+_GC2 = ".omx/research/ddm_gc2_scorer_value_oracle_gap_closure_20260724"
+_NORMALIZATION = f"{_GC2}/normalization_affine.json"
+_FREQUENCY = f"{_GC2}/frequency_r_passband.json"
+_YUV6 = f"{_GC2}/yuv6_luma_phases.json"
+_CHROMA_NULL = f"{_GC2}/chroma_pose_null.json"
+_NULL_GAUGE = f"{_GC2}/null_gauge_energy.json"
+_POSE_EXCLUSION = f"{_GC2}/pose_dims_exclusion.json"
+_SCORE = f"{_GC2}/score_functional.json"
 
 _TARGET_ID = (
     "eab2ef2478fb07f6a3242781887442c3fc49e9c34e10bd73a93f25d9a0262f0a",
@@ -399,6 +407,41 @@ _PF2_ID = (
     "20fa2b2ce2bd96b91c64d4e1342109dd7dab399d4769cd372dbf67fbcdf97d8d",
     1_426_698,
     "ddm_ms5_pf2_bucket_assignment_table.v1",
+)
+_NORMALIZATION_ID = (
+    "84b8feca30a90a50ed89c1bee1366f6b657c52b5d201fb6039f4cde9a6ea0562",
+    3_999,
+    "ddm_scorer_normalization_affine.v1",
+)
+_FREQUENCY_ID = (
+    "8383e733fef57b4011aec4518ccbda91b4a352d7d029bd3f88c459f27fa3701d",
+    3_990,
+    "ddm_composite_r_frequency_passband.v1",
+)
+_YUV6_ID = (
+    "f5982e364781488d3bfba383b7a418e678f8ee7f131b91c68c82143e44172634",
+    1_598,
+    "ddm_yuv6_luma_phase_law.v1",
+)
+_CHROMA_NULL_ID = (
+    "e01a73cceb814ff4d6b10a69a097ba821b45653d664e90cba7add4c1c44a1c61",
+    3_641,
+    "ddm_chroma_pose_null_intersection.v1",
+)
+_NULL_GAUGE_ID = (
+    "4d1cadec4cf8597225d3f5d4a421cee42bf9e114f86498ecc01ce39b112b601d",
+    2_567,
+    "ddm_null_gauge_composite_custody.v1",
+)
+_POSE_EXCLUSION_ID = (
+    "794fded67d7fad97f8ec374a2fe245e4c7603f6b396a5f62129fac83ee4150bb",
+    938,
+    "ddm_pose_objective_dimension_exclusion.v1",
+)
+_SCORE_ID = (
+    "847037306135d8b88c3552d2c46e61407ef6918ef78126f4b58ede7573fb5569",
+    1_801,
+    "ddm_contest_score_functional.v1",
 )
 
 
@@ -560,6 +603,46 @@ DEFAULT_BINDINGS: Final[tuple[RowBinding, ...]] = (
         ("rows",),
     ),
     _binding(
+        DimensionRow.GAIN_NORMALIZATION_AFFINE,
+        "GC2 source-bound PoseNet normalization and AllNorm affines",
+        _NORMALIZATION,
+        _NORMALIZATION_ID,
+        _HASH_UNTIL_SCORER,
+        "pose_input_and_allnorm_inference_affines",
+        "provides source- and model-SHA-bound input mean/std plus the eight scalar "
+        "AllNorm inference affines; no score authority",
+    ),
+    _binding(
+        DimensionRow.FREQUENCY_R_PASSBAND,
+        "GC2 exact separable composite-R passband",
+        _FREQUENCY,
+        _FREQUENCY_ID,
+        _HASH_UNTIL_RECEIVER,
+        "composite_r_frequency_mode_gain",
+        "provides exact unclamped linear R-chain mode gains and a separately scoped "
+        "measured 3.2x representation-deficit anchor",
+    ),
+    _binding(
+        DimensionRow.YUV6_LUMA_PHASES,
+        "GC2 source-bound YUV6 phase law",
+        _YUV6,
+        _YUV6_ID,
+        _HASH_UNTIL_SCORER,
+        "yuv6_four_luma_phases_two_chroma_boxes",
+        "provides the exact source-bound four phase picks and two 2x2 chroma boxes; "
+        "clamp-active derivatives remain piecewise",
+    ),
+    _binding(
+        DimensionRow.CHROMA_POSE_NULL,
+        "GC2 chroma Pose-null intersection and scoped uint8 readback",
+        _CHROMA_NULL,
+        _CHROMA_NULL_ID,
+        _HASH_UNTIL_RECEIVER,
+        "seg_visible_pose_preprocess_null_subspace",
+        "provides the exact six-dimensional clamp-inactive scorer-grid kernel and a "
+        "scoped uint8 readback; camera-preimage authority remains explicitly null",
+    ),
+    _binding(
         DimensionRow.MARGIN_FISHER_SURROGATE,
         "MS4D margin-Fisher custody",
         _MS4D,
@@ -572,6 +655,26 @@ DEFAULT_BINDINGS: Final[tuple[RowBinding, ...]] = (
         ms4d_component=ComponentId.SEG_METRIC,
     ),
     _binding(
+        DimensionRow.NULL_GAUGE_ENERGY,
+        "GC2 composite #580 resize-null and #519 gauge custody",
+        _NULL_GAUGE,
+        _NULL_GAUGE_ID,
+        _HASH_UNTIL_RECEIVER,
+        "separately_custodied_resize_null_and_head_gauge_measurements",
+        "provides #580 ker(A) plus #519 gauge/render measurements and refuses an "
+        "unmeasured cross-space intersection",
+    ),
+    _binding(
+        DimensionRow.POSE_DIMS_7_12,
+        "GC2 source-bound Pose output exclusion",
+        _POSE_EXCLUSION,
+        _POSE_EXCLUSION_ID,
+        _HASH_UNTIL_SCORER,
+        "pose_output_scored_and_excluded_dimensions",
+        "provides the exact structural exclusion of Pose outputs 7-12 from distortion; "
+        "it does not call those outputs network-null",
+    ),
+    _binding(
         DimensionRow.RATE_ARCHIVE_BYTES_ONLY,
         "MS5/MS6/RG3 PF2 assignment table",
         _PF2,
@@ -581,56 +684,19 @@ DEFAULT_BINDINGS: Final[tuple[RowBinding, ...]] = (
         "provides the 1,200-way admission-state assignment table; exact archive-byte "
         "pricing remains the caller's realized-rate responsibility",
     ),
+    _binding(
+        DimensionRow.SCORE_AXES_WEIGHTS,
+        "GC2 source-bound contest score functional",
+        _SCORE,
+        _SCORE_ID,
+        _HASH_UNTIL_SCORER,
+        "contest_score_axes_weights_and_canonical_helper_binding",
+        "provides the upstream-source-bound formula and canonical helper linkage; only "
+        "upstream evaluate on exact bytes and contest axes is score authority",
+    ),
 )
 
-DEFAULT_GAPS: Final[tuple[TypedGap, ...]] = (
-    TypedGap(
-        DimensionRow.FREQUENCY_R_PASSBAND,
-        "machine-readable measured R passband and along-tangent deficit artifact",
-        "#580 seals spatial support/nullity but does not contain the frequency response "
-        "or 3.2x along-tangent deficit",
-        "seal the already-measured passband curve as a source-SHA-bound artifact",
-    ),
-    TypedGap(
-        DimensionRow.YUV6_LUMA_PHASES,
-        "machine-readable four-luma-phase scorer-target artifact",
-        "the pose metric contains six-output targets and tubes, not the four named YUV6 "
-        "luma phase channels",
-        "seal the existing differentiable YUV6 phase law and source SHA as a producer artifact",
-    ),
-    TypedGap(
-        DimensionRow.CHROMA_POSE_NULL,
-        "machine-readable joint Seg/Pose chroma-null projector artifact",
-        "#580 proves resize nullity only and cannot stand in for the Pose-null intersection",
-        "land the existing joint-null projector receipt with Seg/Pose lineage",
-    ),
-    TypedGap(
-        DimensionRow.NULL_GAUGE_ENERGY,
-        "machine-readable joint null/gauge energy artifact",
-        "#580 supplies ker(A), but no single sealed artifact carries both ker(A) and the "
-        "52 percent head-gauge energy",
-        "land a composite custody receipt over the existing null projector and gauge measurement",
-    ),
-    TypedGap(
-        DimensionRow.POSE_DIMS_7_12,
-        "machine-readable frozen scorer objective-dimension receipt",
-        "MS4D intentionally contains the scored first six PoseNet outputs and does not "
-        "encode the structural exclusion of outputs 7-12",
-        "land an upstream-source-SHA-bound PoseNet objective-dimension receipt",
-    ),
-    TypedGap(
-        DimensionRow.GAIN_NORMALIZATION_AFFINE,
-        "machine-readable frozen normalization-affine receipt",
-        "the 127.5/63.75 affine is source-inspected but has no dedicated sealed value artifact",
-        "land a source-SHA-bound normalization-affine receipt; do not copy constants into this facade",
-    ),
-    TypedGap(
-        DimensionRow.SCORE_AXES_WEIGHTS,
-        "machine-readable upstream evaluate.py score-functional receipt",
-        "the score formula is documented but the isolated worktree has no sealed evaluate.py value artifact",
-        "land an upstream-evaluate-SHA-bound score-functional receipt; do not duplicate the formula here",
-    ),
-)
+DEFAULT_GAPS: Final[tuple[TypedGap, ...]] = ()
 
 
 class ScorerValueOracle:
@@ -1070,6 +1136,27 @@ class ScorerValueOracle:
 
     def bucket_assignments(self) -> OracleRow:
         return self.read(DimensionRow.RATE_ARCHIVE_BYTES_ONLY)
+
+    def normalization_affine(self) -> OracleRow:
+        return self.read(DimensionRow.GAIN_NORMALIZATION_AFFINE)
+
+    def r_frequency_passband(self) -> OracleRow:
+        return self.read(DimensionRow.FREQUENCY_R_PASSBAND)
+
+    def yuv6_luma_phases(self) -> OracleRow:
+        return self.read(DimensionRow.YUV6_LUMA_PHASES)
+
+    def chroma_pose_null(self) -> OracleRow:
+        return self.read(DimensionRow.CHROMA_POSE_NULL)
+
+    def null_gauge_energy(self) -> OracleRow:
+        return self.read(DimensionRow.NULL_GAUGE_ENERGY)
+
+    def pose_excluded_dimensions(self) -> OracleRow:
+        return self.read(DimensionRow.POSE_DIMS_7_12)
+
+    def score_functional(self) -> OracleRow:
+        return self.read(DimensionRow.SCORE_AXES_WEIGHTS)
 
 
 __all__ = [

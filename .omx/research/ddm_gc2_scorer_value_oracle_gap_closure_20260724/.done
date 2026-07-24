@@ -1,0 +1,12 @@
+schema=ddm_gc2_scorer_value_oracle_gap_closure.done.v1
+completed_at_utc=2026-07-24T21:45:59Z
+lane_id=lane_ddm_gc2_oracle_gap_closure_20260724
+implementation_commit=e77f30900dab7cb4b0aefe0235cdc1ec257fc309
+coverage=21_WRAPPED_0_TYPED_GAP_0_STALE
+pytest=75_passed_0_failed
+ruff=clean
+git_diff_check=clean
+global_lane_validate=blocked_by_110_preexisting_missing_evidence_paths
+pointer_delta=0
+score_claim=false
+main_landing_review_required=true
