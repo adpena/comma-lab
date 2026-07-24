@@ -41,6 +41,7 @@ from tac.ddm_costate_law import (
     gauss_southwell_validity_score,
 )
 from tac.optimization.scorer_analytic_atlas import build_ddm_lambda_bundle
+from tac.scorer_value_oracle import ScorerValueOracle
 
 SCHEMA = "ddm_live_costate_organ.v1"
 CHECKPOINT_SCHEMA = "ddm_live_costate_checkpoint.v1"
@@ -649,7 +650,13 @@ def build_live_ddm_costate(
     g4 = sources["g4"]["payload"]
     v19 = sources["v19"]["payload"]
     v19b = sources["v19b"]["payload"]
+    scorer_value_oracle = ScorerValueOracle(repo_root)
+    oracle_rate_row = scorer_value_oracle.bucket_assignments()
     hashes = {name: row["sha256"] for name, row in sources.items() if row["available"]}
+    oracle_rate_sha = oracle_rate_row.lineage[0].observed_sha256
+    if oracle_rate_sha is None:  # pragma: no cover - fail-closed read guarantees this
+        raise ValueError("scorer-value oracle returned fresh rate data without SHA")
+    hashes["scorer_value_oracle:rate"] = oracle_rate_sha
     hashes["dv1_summary"] = str(dv1_custody["sha256"])
     if g3_bulk.get("sha256"):
         hashes["g3_full_atlas"] = str(g3_bulk["sha256"])
@@ -764,6 +771,9 @@ def build_live_ddm_costate(
                 "v19b_accepted_moves": v19b["accepted_move_count"],
                 "v19b_final_archive_bytes": n600["measurement"]["archive_bytes"],
                 "v19b_joint_delta": n600["joint_delta_vs_v15_control"]["joint_delta"],
+                "scorer_value_oracle_coverage": scorer_value_oracle.coverage_report(
+                    verify=False
+                )["counts"],
             },
         },
         "sources": {name: _source_public(row) for name, row in sources.items()},
@@ -771,6 +781,9 @@ def build_live_ddm_costate(
             "dv1_summary": dv1_custody,
             "g3_full_atlas": g3_bulk,
             "input_hashes": dict(sorted(hashes.items())),
+            "scorer_value_oracle_rate_row": oracle_rate_row.to_dict(
+                include_value=False
+            ),
             "selection_rule": "latest run-id timestamp per schema-registered producer family",
             "quarantined_20260717_run_consulted": False,
         },
