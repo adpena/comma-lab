@@ -1,0 +1,77 @@
+{
+  "authority_sha256": "3e6c1651cc5267d4168f7b718386575b97c40a4149e3e37c8c9bea711436290c",
+  "clean_passes": [
+    {
+      "checks": {
+        "active_candidate_disk_radius_references": 0,
+        "diff_check": "CLEAN",
+        "false_authority_contract": "CLEAN",
+        "focused_and_adjacent_tests": {
+          "passed": 176,
+          "failed": 0
+        },
+        "fourier_disguise": false,
+        "receipt_parseback": "CLEAN"
+      },
+      "pass": 1,
+      "result": "CLEAN",
+      "scope": "candidate-authority leakage, exact custody, false-authority gates, diff hygiene, DM1/DM2/resize/lattice/genuine-frame regressions"
+    },
+    {
+      "checks": {
+        "checkpoint_count": 10,
+        "checkpoint_config_sha_match": true,
+        "checkpoint_implementation_sha_match": true,
+        "exchange_residual": 0.0,
+        "inherited_exclusion": {
+          "dm4_caused": false,
+          "head_registry_count": 0,
+          "test": "test_live_registry_surfaces_curvelet_shearlet_and_metric_equations_once",
+          "working_registry_count": 0,
+          "why": "windowed_curvelet_parabolic_capacity_v1 is absent in HEAD and working registry; DM4 adds one unrelated anchor_appended row"
+        },
+        "registry_posterior_kernel_tests": {
+          "passed": 67,
+          "failed": 0
+        },
+        "selected_noncontrol_support_stem_derived": true
+      },
+      "pass": 2,
+      "result": "CLEAN",
+      "scope": "blind checkpoint/config/implementation re-derivation, exchange arithmetic, append-only registry ancestry, exact selected-support audit"
+    },
+    {
+      "checks": {
+        "bound_input_sha_closures": 17,
+        "compileall": "CLEAN",
+        "deterministic_resume": {
+          "joint_semantics_exact": true,
+          "receipt_byte_identical": true,
+          "receipt_sha256": "9644ef24c8037485a6350193d9368f65f463ae102db70c3d1412a550362bf5bb",
+          "targeted_checkpoint_hashes_unchanged": true
+        },
+        "json_artifacts_parsed": 13,
+        "output_bytes": 774525,
+        "paid_dispatch": false,
+        "training_or_descent": false
+      },
+      "pass": 3,
+      "result": "CLEAN",
+      "scope": "resumability, all input hashes, artifact parseability, bounded disk footprint, launch-boundary and authority review"
+    }
+  ],
+  "delegation_checkpoint_key": "codex_delegate:ddm_dm4_targeted_realization_cures:20260724T142722Z",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "findings_path": ".omx/research/codex_findings_ddm_dm4_targeted_realization_cures_20260724_codex.md",
+  "lane_id": "lane_ddm_dm4_targeted_realization_cures_20260724",
+  "main_review_required": true,
+  "overall_result": "THREE_CLEAN_PASSES_INSTANCE_SCOPED",
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "pointer_moved": false,
+  "receipt_path": ".omx/research/ddm_dm4_targeted_realization_cures_20260724T142722Z/ddm_dm4_targeted_realization_cures_receipt.json",
+  "receipt_sha256": "9644ef24c8037485a6350193d9368f65f463ae102db70c3d1412a550362bf5bb",
+  "research_only": true,
+  "schema": "ddm_dm4_targeted_realization_cures_review.v1",
+  "score_claim": false,
+  "verdict_scope": "INSTANCE x SHA-bound DM1 25-row demand set x fixed scorer-recursive DM4 candidate menu; no minimum, family, paradigm, score, or promotion verdict"
+}

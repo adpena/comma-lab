@@ -1,0 +1,43 @@
+{
+  "consumed": [
+    {
+      "application": "Exact coder bytes and the measured contest rate dual price every candidate; no blanket-fix or inferred-positive-EV admission.",
+      "directive_sha256_canonical_json": "9bcf44b625cbe0908a1196564681c382243a09c3564f9d1fe83e209c5a25254c",
+      "source": "fleet broadcast",
+      "status": "CONSUMED",
+      "utc": "2026-07-19T19:42:07Z"
+    },
+    {
+      "application": "Fisher-margin aiming, corrected inner-Jacobian secants, genuine curvelet/shearlet frames, and pose xi6 factorization govern the fixed candidate family; Fourier is excluded.",
+      "directive_sha256_canonical_json": "746b4485652df8f16fe9652c3d7655a9c383e0ae3b12e48b6658f16c8b6aea15",
+      "source": "fleet broadcast",
+      "status": "CONSUMED",
+      "utc": "2026-07-19T19:48:01Z"
+    },
+    {
+      "application": "Superseded the initial scaffold before measurement. Active write support is exact shared-resize Fisher-adjoint energy ranked inside the registered ERF-r50 footprint on stride-2 SegNet stem blocks. Genuine #502 frame envelopes intersect that support. Historical DM2 disks/global writes are controls labeled [naive-menu upper bound] with the scorer-derived replacement named. Composition repair uses ERF/stem rectangles, never disks.",
+      "delivery": [
+        "per-arm inbox",
+        "fleet broadcast duplicate"
+      ],
+      "directive_sha256_canonical_json": "d8f9587ca046ed32a8f5c76467371bf579c58b3ea79fcbd514509a8a6b18af0c",
+      "source": "operator",
+      "status": "CONSUMED",
+      "utc": "2026-07-24T14:45:16Z"
+    }
+  ],
+  "cursor_utc": "2026-07-24T14:45:16Z",
+  "delegation_checkpoint_key": "codex_delegate:ddm_dm4_targeted_realization_cures:20260724T142722Z",
+  "duplicate_delivery_deduplicated_by": [
+    "utc",
+    "directive_sha256_canonical_json"
+  ],
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "lane_id": "lane_ddm_dm4_targeted_realization_cures_20260724",
+  "main_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "pointer_moved": false,
+  "research_only": true,
+  "schema": "ddm_dm4_directive_consumption.v1",
+  "score_claim": false
+}

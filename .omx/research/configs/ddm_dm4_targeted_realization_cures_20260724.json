@@ -1,0 +1,111 @@
+{
+  "adjoint_quantum_ladder": [
+    16,
+    64,
+    255
+  ],
+  "archive_emitted": false,
+  "authority_file": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_dm4_targeted_realization_cures_20260724T142722Z.wrapped.prompt.txt",
+  "authority_sha256": "3e6c1651cc5267d4168f7b718386575b97c40a4149e3e37c8c9bea711436290c",
+  "compact_shearlet_source_path": "src/tac/boundary_math/compact_shearlet_frame.py",
+  "compact_shearlet_source_sha256": "1cfdeecd2eeb28406ef9be0e526a04e1af061e3d1a65d762589426f6253d543e",
+  "conflict_repair_erf_multipliers": [
+    1.0,
+    2.0
+  ],
+  "dm2_config_path": ".omx/research/configs/ddm_dm2_l3_realization_race_25_rows_20260724.json",
+  "dm2_config_sha256": "d682f7adc2cf633ef80acc1791e32c07e95e2970c2ae1a23316956622e7aef8a",
+  "dm2_receipt_path": ".omx/research/ddm_dm2_l3_realization_race_25_rows_20260724T133300Z/ddm_dm2_l3_realization_race_receipt.json",
+  "dm2_receipt_sha256": "8897241b7fc0ded7d4d6d1100c4d23ea162111050754e36c8ad8b3e57e294229",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "execution_allowed": false,
+  "fixed_quantum_ladder": [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128,
+    255
+  ],
+  "frame_families": [
+    "literal_polar_curvelet",
+    "compact_shearlet"
+  ],
+  "frame_preselect_atoms": 2,
+  "frame_threshold_fractions": [
+    0.125
+  ],
+  "frame_union_sizes": [
+    1,
+    2,
+    4
+  ],
+  "genuine_frame_proof_path": ".omx/research/genuine_curvelet_shearlet_structural_proof_v2_polar_frequency_wedge_20260714.json",
+  "genuine_frame_proof_sha256": "677a2252c43c1272ec0e2e83d65ce1b82d23b8ddb089d73a111a5f0b26d46d25",
+  "genuine_frame_receiver_path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_receipt_v4_polar_frequency_wedge_deploy_int8_batch32_20260714.json",
+  "genuine_frame_receiver_sha256": "031a1569c600bf5d1a3551a4da668db67bb80380d0678f964ca5476e0b293c33",
+  "global_tail_rows": [
+    1,
+    6,
+    15,
+    19,
+    24
+  ],
+  "lane_id": "lane_ddm_dm4_targeted_realization_cures_20260724",
+  "literal_curvelet_source_path": "src/tac/boundary_math/localized_basis_frames.py",
+  "literal_curvelet_source_sha256": "85d8621a9c7308827f5dc76073f371912f486136ad2f56319344fb1ed55dcd3d",
+  "main_review_required": true,
+  "pf2_event_index_path": "/Volumes/VertigoDataTier/pact/ddm_ms6_receiver_support_measurement_20260724T052034Z/pf2_occupied_event_index.npz",
+  "pf2_event_index_sha256": "dd164a75d4c09dc9bad6bdad549477533d13ba56a8f5f777c91fc4bbddf3d1d1",
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "pointer_moved": false,
+  "pose_harm_rows": [
+    5,
+    10,
+    11,
+    12,
+    23
+  ],
+  "posenet_weights_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+  "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+  "promotion_eligible": false,
+  "research_only": true,
+  "row_count": 25,
+  "run_id": "ddm_dm4_targeted_realization_cures_20260724T142722Z",
+  "schema": "ddm_dm4_targeted_realization_cures_config.v1",
+  "score_claim": false,
+  "seed": 1234,
+  "segnet_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+  "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+  "source_commit": "3a9f2ff452746995ebe7b55479a683f592400027",
+  "scorer_recursive_support": {
+    "at1_findings_path": ".omx/research/codex_findings_ddm_at1_scorer_analytic_atlas_20260723_codex.md",
+    "at1_findings_sha256": "ccd71f1366a2171771485a7176c530c12d2eaa151628ac33ca4660665a160836",
+    "at1_receipt_path": ".omx/research/ddm_at1_scorer_analytic_atlas_20260723T194312Z/atlas_receipt.json",
+    "at1_receipt_sha256": "8d089315fa6d7a7655471a99f7a96962354ddcbd67d40c2322b20718c9c77a0d",
+    "energy_fractions": [
+      0.5,
+      0.9
+    ],
+    "erf_r50_pixels": 85.0,
+    "erf_r50_provenance": "MEASURED registered median rounded from 45 boundary probes across 3 real frames",
+    "exact_factorization_path": ".omx/research/frozen_scorer_exact_factorization_20260715.md",
+    "exact_factorization_sha256": "7a28b68d75a0231e0927b4cc8e464c3d2079beb317af2be118f3b69f04223999",
+    "fr1_corrected_jacobian_config_path": ".omx/research/configs/ddm_fr1_fisher_actuator_base_curves_20260724.json",
+    "fr1_corrected_jacobian_config_sha256": "f0294e5cf862e8ed02e9ba2d711fab13054428dbf28607ad15fa457d6a7c7b42",
+    "operator_directive_utc": "2026-07-24T14:45:16Z",
+    "recursive_factorization_path": ".omx/research/segnet_recursive_fractal_factorization_20260715.md",
+    "recursive_factorization_sha256": "5a5bdd1693ac876dccbfb44f02e1f8755e18a78889c2dcebec3a137f2e01f744",
+    "sn1_findings_path": ".omx/research/codex_findings_ddm_sn1_segnet_telemetry_asymmetry_20260723_codex.md",
+    "sn1_findings_sha256": "93e75d5651fe89b6f29ff449a61cbfab2469ffbd5c6cd3d598f1043e4358e3cb",
+    "sn1_receipt_path": ".omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/ddm_sn1_segnet_telemetry_asymmetry_receipt.json",
+    "sn1_receipt_sha256": "1f727c00f91a2425f8d40660b93594515c8038c42b802226ff11348791190eb4",
+    "stem_stride": 2,
+    "write_support_rule": "exact resize adjoint Fisher energy ranked within measured ERF on stride-2 stem blocks; never disk radii"
+  },
+  "torch_threads": 4,
+  "upstream_dir": "/Users/adpena/Projects/pact/upstream"
+}
