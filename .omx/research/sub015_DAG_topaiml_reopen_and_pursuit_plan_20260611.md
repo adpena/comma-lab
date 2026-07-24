@@ -23897,3 +23897,34 @@ SUCCESSORS LIVE: **j8f** (the counted-application operator + ONE bounded Step-4 
 **ms2r r2** (the operator's tolerance-capped solve, genuinely unblocked: BUNDLE-COMPLETE + PF3
 template + waterfill callable + dynamic quanta; 7.633× headroom; rd1 162-dual backfill). Fleet 3/4
 (ic2 incumbent_v1 still building). Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-descent-formulation-contingency-map (2026-07-24, MAIN — operator "alternative formulations we might descend against depending on how this goes")
+Pre-registered BEFORE the #366 campaign fires, keyed to the plateau-residual TYPE the j8e event
+engine emits (consumed by the plateau handler + costate organ; no arm spawns until a measured
+plateau names its type). Current formulation: (d)-family gradient descent on the 706-param grammar
+lift, realized-acceptance, W-state warm start.
+- **TYPE grammar-expressible residual** → F1 EXTEND THE LIFT (same formulation, more DOF): rg1/rg2/
+  rg3 production machinery exists (Lane 24-DOF, G2CS1 joint grammar, skeleton amplitudes, event-local
+  + class-birth codebooks); memory headroom 16.93→116 GiB affords 10-50× DOF where the typed residual
+  demands. Cheapest fork, INSIDE the family.
+- **TYPE paint/texture-bucket residual** → F2 TEMPLATE/PAINT DESCENT (v15-family DOF): make island
+  templates + row-band paint + prototype colors TRAINABLE — the measured 0.0284 paint ceiling is a
+  FIXED-paint ceiling (pt1); continuous paint DOF is a different formulation, pt1 findings seed it.
+- **TYPE good-direction-slow-convergence** → F3 SOLVE-STEP ALTERNATION (v17/v19 family): iterative
+  realized trust-region SOLVE steps (bundle-Hessian preconditioned, per the dynamic-not-arbitrary
+  Newton directive) instead of first-order descent — same objective, second-order moves; v17's
+  same-budget solve-vs-descent comparison is the arbitration instrument.
+- **TYPE description-cost-bound residual** → F4 PLANE-DESCENT × RE-DESCRIBE alternation: descend the
+  512×384 scorer plane directly (exact cheap gradients, no render) then re-close the description
+  (ms2r rate-inside-objective machinery) — priced alternation, guards against leaving the
+  describable manifold.
+- **TYPE grammar-unreachable buckets** → F5 DIRECT COUNTED FIELD (dm2/dm4 corrected-J/shearlet):
+  guaranteed reach by construction at MEASURED realization prices (~2,066× semantic after cures) —
+  the expensive last resort, only where typed mass pays (the ms7 R0 discipline).
+- **TYPE ill-conditioning across scorer depth** → F6 FEATURE-SPACE RELAY (#659 rs1, queued):
+  multiple-shooting descent on intermediate scorer-layer targets — descend where gradients are
+  best-conditioned (#669c deepest-layer logic applied to descent).
+- **TYPE seg/pose coupling pathology** → F7 LEXICOGRAPHIC/ALTERNATING per-axis descent (W_seg
+  opening built; ws1/ws3 R* slope falsifier = the trigger instrument).
+- **NOT an alternative:** the old full witness trunk (train-least doctrine + measured cost class);
+  reconsidered only as v8/v9 per-class carriers if ALL low-dim formulations plateau far above box.
