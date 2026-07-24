@@ -24003,3 +24003,27 @@ MEASURED decomposition of the two carries:
   regenerate frames without pose constraints. Waterfill consequence: allocate ≤~5KB to pose in any
   composed candidate; the seg description is where ~97% of the rate war is fought. Routed → pc1
   design target + c1 waterfill.
+
+### FEED-603-schmidhuber-n600-seg-design-ordering (2026-07-24, operator "Why is seg so big, and how would Schmidhuber design and represent it across n600")
+WHY SEG IS BIG (measured decomposition): seg is a codim-1 boundary object scored at per-pixel argmax
+exactness over 1200 frames; the BULK is cheap (structured partition → ~140KB at d_seg ~0.024) and the
+COST is the TAIL: 0.024→0.00116 is dominated by low-persistence, weakly-structured boundary detail —
+lane dashes (birth-death), Movable island births, boundary flicker at the GT floor 0.005318, the
+label-noise-like residual (#141) — whose per-error description price explodes (v19c corrections
+asymptote 0.0248; r2: 7.6× error headroom bought only −29% bytes; the C1 tail coordinate is
+RAW-incompressible 50/50). Pose by contrast is 6 smooth scalars/pair (≤7.2KB ceiling).
+SCHMIDHUBER n600 DESIGN (history-compression ordering, binds r3/pc1/ev1 charters as a DESIGN LAW —
+note this IS the architecture we converged to; the law adds the ORDERING):
+1. INDEX BY ARCLENGTH, NOT FRAME — the 600 pairs are ONE DRIVE: store the roadway ONCE as a BEV/
+   arclength program (the g4 static-in-BEV mass; #609 measures the collapse), replay through ξ (free).
+2. NEVER STORE WHAT THE PREDICTOR PREDICTS — decoder runs the world model (ξ-advected transport of
+   the previous partition, free in inflate.py); archive stores only INNOVATIONS (events: births,
+   deaths, dash-phase changes, boundary corrections). Chunker-hierarchy: higher levels code only what
+   lower levels fail to predict (map → per-frame innovation → residue).
+3. NEVER STORE WHAT THE TOLERANCE ABSORBS — the flicker/label-noise tail earns NO compression
+   progress (irreducible noise): spend the 136,839-error box budget exactly THERE via the typed
+   waterfill (r3), store nothing for it.
+4. COMPRESSION-PROGRESS TELEMETRY — bytes-of-innovation per level per clip segment as standing rows
+   (organ SENSE currency).
+Counted remainder = MAP + ξ-CURVE + EVENT STREAM; everything else (predictor, transport, renderer,
+context models) free in inflate.py per the operator's standing reminder.
