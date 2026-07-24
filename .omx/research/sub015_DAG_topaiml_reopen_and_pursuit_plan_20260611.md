@@ -23319,3 +23319,19 @@ delta, priced with real coders; class-birth law to canonical_equations note; any
 path or training-necessity claim must reconcile with these rows). verdict_scope of the demand
 identification: INSTANCE(extended grammar rg1+rg2+rg3) for reach; the DEMAND itself is
 measurement-grounded. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-solution-set-objective (2026-07-24, MAIN — operator: "solution, not problem, and maybe
+even there's a more optimal objective we should be pursuing"): TWO-LEVEL re-scope. (1)
+Solution-description DISSOLVES reachability — the rg-ladder's central concept (a counted
+coordinate must CAUSE a scorer event) is a problem-space artifact; describing the solved object
+means WRITING its values, so the 25-row testbed (Directive 5) is re-phrased: what does the
+solution CONTAIN there + cheapest way to say it. (2) THE OBJECTIVE IS CHALLENGED: the #613 box is
+derived arithmetic, not the objective; the exact solve is 7.6× over-precise vs the allowance
+(17,931 vs 136,839 errors) and over-precision is wasted bytes; the true objective is min S over
+descriptions with WHICH-member-of-the-solution-set as a free variable (tolerance-region
+min-description at λ*, jointly which-solution × how-described — #602/ms1 were this shape,
+incomplete not wrong; distortion level = OUTPUT knee, not input constraint). Routed: is1
+Directive 6 (state + derive the objective explicitly; free to adopt a more optimal one); memory
+law objective_is_min_S_over_solution_set_not_box_or_point registered + MEMORY.md indexed.
+verdict_scope: campaign-level objective re-scope; no measured row invalidated (achieved points
+stand as upper bounds per FEED-603-economics-rescope). Pointer 0.1910828242 [contest-CPU] UNMOVED.
