@@ -611,6 +611,64 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
 
+    # SCORER-DERIVATION GATE — BLOCKING (operator 2026-07-24 ×2: "Many implementations
+    # were probably naive and not optimized against recursive analysis of upstream
+    # evaluate.py" + "How can we prevent that from happening permanently?"). Empirical
+    # anchor: dm2's generic disk/global candidate menu produced a 2,524x naive-menu
+    # upper bound and dm3's translation-only xi proxy produced an uninterpretable 0/36 —
+    # both spawned THROUGH the warn-only advisory above, which the dispatcher habituated
+    # to (four consecutive ignored warnings on 2026-07-24). Warnings do not survive
+    # habituation; only refusal does. Rule: a charter that CONSTRUCTS candidates/
+    # proposals/menus/programs/writes MUST contain a "SCORER-DERIVATION" section naming,
+    # per constructed family, the in-tree recursive-evaluate.py surface it derives from
+    # (segnet fractal factorization rank-4 head · frozen-scorer exact factorization ·
+    # at1 analytic atlas · sn1 telemetry · #580 resize-kernel adjoint/null projector ·
+    # #583 corrected inner-Jacobian bank · ERF/stem lattice) or an explicit
+    # "[naive-baseline]" label with the scorer-derived replacement named. Pure read/
+    # survey/review charters do not match the construction shape and pass untouched.
+    # Waiver: TAC_SCORER_DERIVATION_WAIVED=<non-placeholder rationale> (logged loudly).
+    _construction_shaped = re.search(
+        r"\b(candidate (?:menu|famil\w*|construction)|construct(?:ing)? (?:candidates|"
+        r"proposals|writes|programs)|proposal (?:source|ladder|famil\w*)|"
+        r"minimal (?:RGB )?write|realiz(?:e|ation) (?:race|cure)|history program|"
+        r"preimage solve|emit(?:ter)? architecture|compose .{0,40}archive|"
+        r"paint(?:ed)? (?:color|order)|exception (?:stream|aiming))",
+        _prompt_text, re.IGNORECASE,
+    )
+    _scorer_derivation_named = re.search(
+        r"SCORER-DERIVATION|scorer[- ]recursi(?:on|ve)|derived? from the (?:resize[- ]"
+        r"kernel|rank[- ]4|stem lattice|ERF|corrected inner[- ]Jacobian|frozen[- ]scorer "
+        r"factorization|analytic atlas)|\[naive-baseline\]",
+        _prompt_text, re.IGNORECASE,
+    )
+    if _construction_shaped and not _scorer_derivation_named:
+        _waiver = os.environ.get("TAC_SCORER_DERIVATION_WAIVED", "").strip()
+        if _waiver and _waiver.lower() not in {"<rationale>", "<reason>", "1", "true", "yes"}:
+            print(
+                "[codex_delegate] SCORER-DERIVATION GATE WAIVED: "
+                f"rationale={_waiver!r} (construction-shaped charter spawned without a "
+                "scorer-derivation section under explicit waiver).",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                "[codex_delegate] SCORER-DERIVATION GATE — REFUSED (rc=15): prompt is "
+                f"construction-shaped (matched {_construction_shaped.group(0)!r}) but "
+                "contains NO 'SCORER-DERIVATION' section. Every constructed candidate/"
+                "proposal/menu/program family must name the in-tree recursive-"
+                "evaluate.py surface it derives from (rank-4 head hyperplanes · frozen-"
+                "scorer factorization · at1 atlas · sn1 telemetry · #580 resize-kernel "
+                "adjoint · #583 corrected inner-Jacobian bank · ERF/stem lattice) or "
+                "carry an explicit [naive-baseline] label with the scorer-derived "
+                "replacement named. Fix the charter, or set "
+                "TAC_SCORER_DERIVATION_WAIVED=<real rationale> (placeholders rejected). "
+                "Operator law 2026-07-24: spawns 'not optimized against recursive "
+                "analysis of upstream evaluate.py' are FORBIDDEN; empirical anchors: "
+                "dm2 2,524x naive-menu bound, dm3 xi 0/36 naive-program bound.",
+                file=sys.stderr,
+            )
+            return 15
+
     # Give the arm a watched inbox + prepend the poll-and-consume contract so it stays
     # amendable mid-run. The wrapped prompt is what the launcher feeds codex; the original
     # prompt_file is preserved untouched (and recorded in the ledger for provenance).
