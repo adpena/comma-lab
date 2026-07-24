@@ -23874,3 +23874,26 @@ for cv2. ic2's dep-closure directive superseded accordingly: keep cv2.fillPoly a
 named) stays out of the decode import closure via lazy import; clean-venv smoke now verifies the
 cv2 SELF-INSTALL bootstrap from a bare venv (the r5 lesson: prove the bootstrap, never assume host
 site-packages). This removes the byte-identity-rasterizer risk from the incumbent_v1 export path.
+
+### FEED-603-ms7-j8e-double-landing (2026-07-24, MAIN review)
+TWO landings verified + merged. **ms7** (d6a8c230): PF3 five edges CLOSED on the control coordinate;
+FIRST real coder race ran — Brotli-Q11 129,797B BEAT constriction + zstd (both exact, larger) on that
+payload [answers the operator's constriction question: raced, lost THIS race, stays a race candidate
+per payload]; the 25 residual buckets: R0 mass table complete, 0/25 pay the cheapest guaranteed-reach
+price → 25/25 UNREACHABLE-AND-IGNORED = the OPTIMAL verdict (no reach built for mass that doesn't
+pay); dynamic_quantum_calibration_v1 REGISTERED (per-coordinate k* from adjoint gain + uint8
+deadzone; measured k*=1 on control; fixed ladders superseded — constants-are-poison honored).
+verdict_scope: INSTANCE(MS4D terminal rows × G3 mass × DM4 prices). PF3 control row itself
+non-admissible (+1 seg err, −0.00115 pose SSE) — plumbing proof, not a candidate. **j8e** (a2b031d2):
+the #366 engine BUILT — DDMEventContinuationV1 event-driven schedule (fixed stages gone), 44 tests
+×3, memory preflight 16.93 GiB (vs old 73.4 GiB projection — the re-aimed (d)-family engine is
+4.3× lighter), checkpoint parse-back exact, 3 operator directives consumed with table. HONEST
+non-READY: BLOCKED_DM4_SCORER_RECURSIVE_PROPOSAL_LACKS_J5_COUNTED_APPLICATION_OPERATOR — six valid
+scorer-recursive proposal rows exist but descriptor provenance ≠ counted J5 actuation (the #417
+counted-but-inert lesson applied PROSPECTIVELY — the round-1 adversarial pass caught it before a
+fake READY_TO_FIRE). verdict_scope: INSTANCE(DM4-receipt→J5-adapter path); formulation+family open.
+SUCCESSORS LIVE: **j8f** (the counted-application operator + ONE bounded Step-4 n600 re-smoke;
+ΔS<0 realized ⇒ READY_TO_FIRE_UNDER_STANDING_GO — the last rung before the #366 campaign) +
+**ms2r r2** (the operator's tolerance-capped solve, genuinely unblocked: BUNDLE-COMPLETE + PF3
+template + waterfill callable + dynamic quanta; 7.633× headroom; rd1 162-dual backfill). Fleet 3/4
+(ic2 incumbent_v1 still building). Pointer 0.1910828242 [contest-CPU] UNMOVED.
