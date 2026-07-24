@@ -1392,6 +1392,7 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
                 for row in campaign_duty["rows"]
             ],
             "state_digest": campaign_duty["state_digest"],
+            "lambda_ranker": campaign_duty["lambda_ranker"],
             "activation_nag": campaign_duty["activation_nag"],
             **report["duties"],
             "legacy_duties": report["duties"],

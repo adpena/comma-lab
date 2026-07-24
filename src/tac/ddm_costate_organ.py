@@ -855,6 +855,9 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
     campaign_digest = campaign_consumer_view(campaign, "digest")
     campaign_nag = campaign_digest["activation_nag"]
     campaign_evidence = campaign_digest["campaign_evidence"]
+    lambda_ranker = campaign_digest["lambda_ranker"]
+    lambda_model = lambda_ranker["selected_model"]
+    lambda_metrics = lambda_model["metrics"]
     plateau = campaign_digest["plateau_route"]
     campaign_next = campaign_nag.get("next_duty") or {}
     lines = [
@@ -868,7 +871,10 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
             "DDM-lambda: "
             f"pair/site={len(report['lambda']['pair_rows'])}/"
             f"{len(report['lambda']['site_rows'])} "
-            f"factorized-backtest rho={backtest['spearman_rho']:.3f} "
+            f"heldout={lambda_model['candidate_id']} "
+            f"rho={lambda_metrics['spearman_rho']:.3f} "
+            f"NDCG@4={lambda_metrics['ndcg_at_4']:.3f}; "
+            f"legacy-control rho={backtest['spearman_rho']:.3f} "
             f"NDCG@4={backtest['ndcg_at_4']:.3f}; "
             "shared candidate bytes=MEASURED_EXACT_GLOBAL_HOME"
         ),

@@ -103,6 +103,13 @@ SOURCES: tuple[CampaignSource, ...] = (
         "until V19/RD1 endpoint bytes, receiver, scorer, G4, or metric custody changes",
     ),
     CampaignSource(
+        "co3_lambda_ranker",
+        ".omx/research/ddm_co3_lambda_refit_full_join_20260724/"
+        "ddm_co3_lambda_refit_full_join_receipt.json",
+        "ddm_lambda_ranker_n600_refit.v1",
+        "until G3, EV1, MS4D, G4, J8F, scorer-oracle, or fold-contract custody changes",
+    ),
+    CampaignSource(
         "j8e_event_contract",
         ".omx/research/ddm_j8e_688_compile_receipt_20260724.json",
         "ddm_witness_program_compile.v1",
@@ -841,6 +848,142 @@ def _blocker(
     }
 
 
+def _lambda_ranker_state(
+    payload: Mapping[str, Any],
+    source: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Validate and compact the N600 held-out ranker receipt for consumers."""
+
+    for key, expected in (
+        ("research_only", True),
+        ("execution_allowed", False),
+        ("actuation", "NONE"),
+        ("score_claim", False),
+        ("promotion_eligible", False),
+        ("main_landing_review_required", True),
+    ):
+        if payload.get(key) != expected:
+            raise ValueError(f"co3_lambda_ranker: authority firewall drift at {key}")
+    content = dict(payload)
+    content_sha = content.pop("content_sha256", None)
+    if not isinstance(content_sha, str) or _canonical_sha(content) != content_sha:
+        raise ValueError("co3_lambda_ranker: content_sha256 mismatch")
+
+    population = payload.get("population") or {}
+    if (
+        population.get("required_pairs") != 600
+        or population.get("joined_pairs") != 600
+        or population.get("heldout_unit") != "source_pair_id"
+    ):
+        raise ValueError("co3_lambda_ranker: exact N600 pair-held-out contract drift")
+    selected = payload.get("selected_model") or {}
+    metrics = selected.get("metrics") or {}
+    if metrics.get("heldout_only") is not True or metrics.get("n_pairs") != 600:
+        raise ValueError("co3_lambda_ranker: selected metrics are not held-out N600")
+    admission = payload.get("admission_gate") or {}
+    if (
+        admission.get("metric") != "concatenated_pair_out_of_fold_ndcg_at_4"
+        or float(admission.get("threshold", math.nan)) != 0.75
+        or float(admission.get("observed", math.nan))
+        != float(metrics.get("ndcg_at_4", math.nan))
+        or bool(admission.get("passed"))
+        != (float(metrics.get("ndcg_at_4", math.nan)) >= 0.75)
+        or bool(admission.get("duty_ranking_upgrade_eligible"))
+        != bool(admission.get("passed"))
+    ):
+        raise ValueError("co3_lambda_ranker: preregistered admission contract drift")
+
+    checks = {
+        str(row["check_id"]): dict(row)
+        for row in payload.get("self_checks") or []
+    }
+    precision = checks.get("wallace_mml_pair_precision") or {}
+    precision_value = precision.get("value") or {}
+    pair_intervals = int(precision_value.get("pair_intervals", 0))
+    if int(precision_value.get("required", 600)) != 600:
+        raise ValueError("co3_lambda_ranker: Wallace/MML required-pair count drift")
+    pair_rankings = list(payload.get("pair_rankings") or [])
+    if len(pair_rankings) != 600:
+        raise ValueError("co3_lambda_ranker: pair-ranking cardinality drift")
+    if any(
+        row.get("score_claim") is not False or row.get("actuation") != "NONE"
+        for row in pair_rankings
+    ):
+        raise ValueError("co3_lambda_ranker: pair-row authority firewall drift")
+    blocker_ids = list(payload.get("blocker_ids") or [])
+    if (
+        payload.get("j8f_blocker_preserved") is not True
+        or "BLOCKED_J8F_REALIZED_VERDICT_TELEMETRY" not in blocker_ids
+    ):
+        raise ValueError("co3_lambda_ranker: J8F blocker was not preserved")
+    g4_counts: dict[str, int] = {}
+    g4_statuses: set[str] = set()
+    for row in pair_rankings:
+        label = str(row.get("g4_temporal_class"))
+        g4_counts[label] = g4_counts.get(label, 0) + 1
+        g4_statuses.add(str(row.get("g4_pair_class_status")))
+    race = [
+        {
+            "candidate_id": row.get("candidate_id"),
+            "status": row.get("status"),
+            "learned_form_tag": row.get("learned_form_tag"),
+            "metrics": row.get("metrics"),
+        }
+        for row in payload.get("model_race") or []
+    ]
+    top_pairs = sorted(
+        pair_rankings,
+        key=lambda row: (-float(row["prediction"]), int(row["pair_id"])),
+    )[:8]
+    oracle_counts = {
+        name: dict((payload.get("source_lineage") or {})[name]["surface_counts"])
+        for name in (
+            "margin_fisher_oracle",
+            "pose_tube_oracle",
+            "stationarity_oracle",
+        )
+    }
+    return {
+        "schema": payload["schema"],
+        "status": "HELDOUT_ADMITTED" if admission["passed"] else "HELDOUT_REJECTED",
+        "verdict_scope": payload.get("verdict_scope"),
+        "source": dict(source),
+        "content_sha256": content_sha,
+        "population": dict(population),
+        "selected_model": dict(selected),
+        "admission_gate": dict(admission),
+        "model_race": race,
+        "ranking_error_slices": list(payload.get("ranking_error_slices") or []),
+        "innovations": dict(payload.get("innovations") or {}),
+        "pair_precision": {
+            "status": precision.get("status"),
+            "pair_intervals": pair_intervals,
+            "required_pairs": 600,
+            "complete": pair_intervals == 600,
+            "unranked_precision_owed": 600 - pair_intervals,
+            "pair_duty_ranking_status": (
+                "ADVISORY_RANK_ELIGIBLE"
+                if admission["passed"] and pair_intervals == 600
+                else "BLOCKED_INCOMPLETE_FISHER_PRECISION"
+            ),
+        },
+        "top_heldout_diagnostics_nonactionable": top_pairs,
+        "g4_pair_class_surface": {
+            "counts": g4_counts,
+            "statuses": sorted(g4_statuses),
+            "pairwise_class_separability_claimed": False,
+        },
+        "oracle_surface_counts": oracle_counts,
+        "self_checks": list(checks.values()),
+        "rudin_explanation": dict(payload.get("rudin_explanation") or {}),
+        "bandit_allocation": dict(payload.get("bandit_allocation") or {}),
+        "blocker_ids": blocker_ids,
+        "j8f_blocker_preserved": True,
+        "actuation": "NONE",
+        "score_claim": False,
+    }
+
+
 def campaign_consumer_view(state: Mapping[str, Any], consumer: str) -> dict[str, Any]:
     """Return a named view and prove it came from this exact state digest."""
 
@@ -869,6 +1012,10 @@ def build_campaign_costate(
     rd1 = payloads["rd1_lambda_frontier"]
     ms7 = payloads["ms7_receiver_edges"]
     evidence_join = payloads["ev1_campaign_evidence_join"]
+    lambda_ranker = _lambda_ranker_state(
+        payloads["co3_lambda_ranker"],
+        sources["co3_lambda_ranker"],
+    )
     evidence_counts = validate_campaign_evidence_join(evidence_join)
     exact_pair_rows = evidence_counts["exact_pair_rows"]
     required_pair_rows = evidence_counts["required_pair_rows"]
@@ -969,6 +1116,39 @@ def build_campaign_costate(
             for row in blockers
             if row["blocker_id"] != "BLOCKED_J8F_REALIZED_VERDICT_TELEMETRY"
         ]
+    ranker_admitted = bool(lambda_ranker["admission_gate"]["passed"])
+    precision_owed = int(lambda_ranker["pair_precision"]["unranked_precision_owed"])
+    if not ranker_admitted:
+        blockers.append(
+            _blocker(
+                "BLOCKED_CO3_HELDOUT_NDCG_ADMISSION",
+                scope=lambda_ranker["verdict_scope"],
+                evidence={
+                    "ndcg_at_4": lambda_ranker["admission_gate"]["observed"],
+                    "threshold": lambda_ranker["admission_gate"]["threshold"],
+                },
+                required_evidence=("heldout_ndcg_at_4_gte_0.75",),
+            )
+        )
+    if precision_owed:
+        blockers.append(
+            _blocker(
+                f"BLOCKED_PAIR_LEVEL_MS4D_FISHER_PRECISION_{precision_owed}",
+                scope=(
+                    "pair-order confidence only; held-out aggregate ranker admission "
+                    "remains measured"
+                ),
+                evidence={
+                    "pair_intervals": lambda_ranker["pair_precision"][
+                        "pair_intervals"
+                    ],
+                    "required_pairs": 600,
+                },
+                required_evidence=(
+                    "positive_direct_pair_indexed_MS4D_Fisher_for_every_N600_pair",
+                ),
+            )
+        )
     core = {
         "schema": SCHEMA,
         "available": True,
@@ -1011,6 +1191,7 @@ def build_campaign_costate(
             "ms7_pf3_status": (
                 "MEASURED_PRICED_CONTROL_NONADMISSIBLE_R0_AND_ERROR_CAP"
             ),
+            "lambda_ranker": lambda_ranker,
         },
         "dynamic_policy": {
             "schema": DYNAMIC_POLICY_SCHEMA,
@@ -1057,6 +1238,18 @@ def build_campaign_costate(
                     "actuation": "NONE",
                 }
             )
+        if ranker_admitted and precision_owed:
+            duty_queue.append(
+                {
+                    "duty": "CO3_LAMBDA_RANKER_FISHER_PRECISION_CLOSURE",
+                    "reason": (
+                        f"held-out NDCG@4={lambda_ranker['admission_gate']['observed']:.6g} "
+                        "admits the ranker, but "
+                        f"{precision_owed}/600 pair-level Fisher intervals remain owed"
+                    ),
+                    "actuation": "NONE",
+                }
+            )
         if actionable_dimension_prices < typed_dimension_rows:
             duty_queue.append(
                 {
@@ -1077,6 +1270,8 @@ def build_campaign_costate(
         "standing_sense_rows": len(sense_rows),
         "unmeasured_sense_rows": waiting_rows,
         "blocker_ids": [row["blocker_id"] for row in blockers],
+        "lambda_ranker_admission": lambda_ranker["admission_gate"],
+        "lambda_ranker_pair_precision": lambda_ranker["pair_precision"],
         "next_duty": duty_queue[0] if duty_queue else None,
         "actuation": "NONE",
     }
@@ -1101,6 +1296,7 @@ def build_campaign_costate(
                 "bucket_exchange_rate_status"
             ],
         },
+        "lambda_ranker": lambda_ranker,
         "blockers": blockers,
         "activation_nag": activation_nag,
         "actuation": "NONE",
@@ -1123,6 +1319,7 @@ def build_campaign_costate(
                 "bucket_exchange_rate_status"
             ],
         },
+        "lambda_ranker": lambda_ranker,
         "activation_nag": activation_nag,
         "actuation": "NONE",
     }
@@ -1132,11 +1329,13 @@ def build_campaign_costate(
         "duty_queue": {
             "ok": True,
             "rows": duty_queue,
+            "lambda_ranker": lambda_ranker,
             "activation_nag": activation_nag,
             "actuation": "NONE",
         },
         "activation_nag": {
             "ok": True,
+            "lambda_ranker": lambda_ranker,
             **activation_nag,
         },
     }

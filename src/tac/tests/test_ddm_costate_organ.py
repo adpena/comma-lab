@@ -139,6 +139,15 @@ def test_current_live_fleet_pair_site_lambda_and_duties() -> None:
         backtest = report["lambda"]["backtest"]
         assert backtest["spearman_rho"] == pytest.approx(0.7476669456024575)
         assert backtest["ndcg_at_4"] == pytest.approx(0.19557065696692438)
+        selected = report["campaign"]["metric_state"]["lambda_ranker"][
+            "selected_model"
+        ]
+        assert selected["candidate_id"] == "factorized_ms4d_interactions"
+        assert selected["metrics"]["heldout_only"] is True
+        assert selected["metrics"]["ndcg_at_4"] == pytest.approx(1.0)
+        assert selected["metrics"]["spearman_rho"] == pytest.approx(
+            0.8607149751465011
+        )
 
     duties = report["duties"]
     assert duties["legacy_authority_snapshot_rows_retained"] == 115
