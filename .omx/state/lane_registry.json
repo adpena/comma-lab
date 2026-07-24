@@ -87324,11 +87324,11 @@
       "id": "lane_ddm_co4_road_local_and_precision_20260724",
       "name": "DDM CO4 Road-local ranking and propagated precision",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_co4_road_local_and_precision_20260724/ddm_co4_road_local_and_precision_receipt.json"
         },
         "real_archive_empirical": {
           "status": false,
@@ -87359,7 +87359,7 @@
           "evidence": ""
         }
       },
-      "notes": "Isolated local/advisory N600 extension of CO2/CO3; execution_allowed=false; actuation=NONE; score_claim=false; MAIN review required.",
+      "notes": "Local advisory CO4 complete: Road ridge race failed gate and retained sealed CO3; precision 15 direct + 585 propagated + 0 unranked; MAIN review required.",
       "research_only": true
     }
   ],
@@ -87370,5 +87370,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T23:24:51Z"
+  "updated_at": "2026-07-24T23:54:15Z"
 }

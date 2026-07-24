@@ -83,8 +83,7 @@ SOURCES: tuple[CampaignSource, ...] = (
     ),
     CampaignSource(
         "ms7_receiver_edges",
-        ".omx/research/ddm_ms7_receiver_edges_and_25bucket_reach_20260724T172249Z/"
-        "ddm_ms7_receiver_edges_receipt.json",
+        ".omx/research/ddm_ms7_receiver_edges_and_25bucket_reach_20260724T172249Z/ddm_ms7_receiver_edges_receipt.json",
         "ddm_ms7_receiver_edges_receipt.v1",
         "one receiver-object/coder mutation; instance-scoped PF3 control",
     ),
@@ -97,17 +96,15 @@ SOURCES: tuple[CampaignSource, ...] = (
     ),
     CampaignSource(
         "ev1_campaign_evidence_join",
-        ".omx/research/ddm_ev1_campaign_evidence_joins_20260724T191623Z/"
-        "ddm_ev1_campaign_evidence_join_receipt.json",
+        ".omx/research/ddm_ev1_campaign_evidence_joins_20260724T191623Z/ddm_ev1_campaign_evidence_join_receipt.json",
         EVIDENCE_JOIN_SCHEMA,
         "until V19/RD1 endpoint bytes, receiver, scorer, G4, or metric custody changes",
     ),
     CampaignSource(
-        "co3_lambda_ranker",
-        ".omx/research/ddm_co3_lambda_refit_full_join_20260724/"
-        "ddm_co3_lambda_refit_full_join_receipt.json",
+        "co4_lambda_ranker",
+        ".omx/research/ddm_co4_road_local_and_precision_20260724/ddm_co4_road_local_and_precision_receipt.json",
         "ddm_lambda_ranker_n600_refit.v1",
-        "until G3, EV1, MS4D, G4, J8F, scorer-oracle, or fold-contract custody changes",
+        "until G3, EV1, MS4D, PF2 assignment, G4, J8F, scorer-oracle, or fold-contract custody changes",
     ),
     CampaignSource(
         "j8e_event_contract",
@@ -130,8 +127,7 @@ SOURCES: tuple[CampaignSource, ...] = (
     ),
     CampaignSource(
         "v16_validity_failure",
-        ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/"
-        "ddm_v16_coupled_joint_solve_receipt.json",
+        ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/ddm_v16_coupled_joint_solve_receipt.json",
         "ddm_v16_coupled_joint_solve_receipt.v1",
         "closed instance only; family remains open",
     ),
@@ -232,9 +228,7 @@ def load_campaign_sources(
         if spec.schema is not None:
             payload = _load_json(path)
             if payload.get("schema") != spec.schema:
-                raise ValueError(
-                    f"{spec.name}: schema drift {payload.get('schema')!r} != {spec.schema!r}"
-                )
+                raise ValueError(f"{spec.name}: schema drift {payload.get('schema')!r} != {spec.schema!r}")
             if payload.get("score_claim") is not False:
                 raise ValueError(f"{spec.name}: missing score_claim=false authority firewall")
         public[spec.name] = {
@@ -306,19 +300,14 @@ def validate_realized_verdict(
     residual_required = ("residual_type", "metric_id", "value", "units")
     residual_missing = [name for name in residual_required if name not in plateau_residual]
     if residual_missing:
-        raise ValueError(
-            "plateau_residual misses " + ",".join(residual_missing)
-        )
+        raise ValueError("plateau_residual misses " + ",".join(residual_missing))
     normalized_residual = {
         "residual_type": str(plateau_residual["residual_type"]),
         "metric_id": str(plateau_residual["metric_id"]),
         "value": _finite(plateau_residual["value"], "plateau_residual.value"),
         "units": str(plateau_residual["units"]),
     }
-    if not all(
-        normalized_residual[name]
-        for name in ("residual_type", "metric_id", "units")
-    ):
+    if not all(normalized_residual[name] for name in ("residual_type", "metric_id", "units")):
         raise ValueError("plateau_residual string identities must be nonempty")
     before = _finite(telemetry["S_before"], "S_before")
     after = _finite(telemetry["S_after"], "S_after")
@@ -328,10 +317,7 @@ def validate_realized_verdict(
     band_high = _finite(telemetry["evaluator_band_high"], "evaluator_band_high")
     if band_low > band_high:
         raise ValueError("evaluator band is reversed")
-    dimensions = {
-        name: _finite(telemetry[name], name)
-        for name, _, _ in CLASS_E_DIMENSIONS
-    }
+    dimensions = {name: _finite(telemetry[name], name) for name, _, _ in CLASS_E_DIMENSIONS}
     candidate_bands: list[dict[str, Any]] = []
     for row in telemetry.get("candidate_evaluator_bands") or []:
         if not isinstance(row, Mapping):
@@ -382,9 +368,7 @@ def validate_realized_verdict(
         "plateau_type": str(telemetry["plateau_type"]).upper(),
         "plateau_residual": normalized_residual,
         "pose_gate_state": str(telemetry["pose_gate_state"]),
-        "noise_sample_delta_S": _finite(
-            telemetry["noise_sample_delta_S"], "noise_sample_delta_S"
-        ),
+        "noise_sample_delta_S": _finite(telemetry["noise_sample_delta_S"], "noise_sample_delta_S"),
         "noise_regime_id": noise_regime_id,
         "evaluator_band": [band_low, band_high],
         "dimensions": dimensions,
@@ -399,9 +383,7 @@ def validate_realized_verdict(
         "execution_allowed": False,
     }
     if "alarm_familywise_alpha" in telemetry:
-        alpha = _finite(
-            telemetry["alarm_familywise_alpha"], "alarm_familywise_alpha"
-        )
+        alpha = _finite(telemetry["alarm_familywise_alpha"], "alarm_familywise_alpha")
         if not 0.0 < alpha < 1.0:
             raise ValueError("alarm_familywise_alpha must be in (0,1)")
         out["alarm_familywise_alpha"] = alpha
@@ -411,13 +393,7 @@ def validate_realized_verdict(
 def discover_j8f_verdicts(repo_root: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Read the newest future J8F verdict stream, if it exists."""
 
-    matches = sorted(
-        {
-            path
-            for pattern in J8F_GLOBS
-            for path in repo_root.glob(pattern)
-        }
-    )
+    matches = sorted({path for pattern in J8F_GLOBS for path in repo_root.glob(pattern)})
     if not matches:
         return [], {
             "available": False,
@@ -509,11 +485,7 @@ def derive_top_k_from_evaluator_bands(
         center = _finite(row.get("delta_S"), "delta_S")
         normalized.append((str(row.get("candidate_id")), center, low, high))
     best = min(normalized, key=lambda item: (item[1], item[0]))
-    kept = sorted(
-        item[0]
-        for item in normalized
-        if item[2] <= best[3] and item[3] >= best[2]
-    )
+    kept = sorted(item[0] for item in normalized if item[2] <= best[3] and item[3] >= best[2])
     return {
         "status": "DERIVED_FROM_EVALUATOR_BAND_OVERLAP",
         "top_k": len(kept),
@@ -538,9 +510,7 @@ def route_plateau(
                 "schema": DECISION_SCHEMA,
                 "status": "PRE_REGISTERED_FORK_SELECTED_ADVISORY",
                 **row,
-                "trigger_evidence": (
-                    dict(trigger_evidence) if trigger_evidence is not None else None
-                ),
+                "trigger_evidence": (dict(trigger_evidence) if trigger_evidence is not None else None),
                 "law_ref": "FEED-603-descent-formulation-contingency-map",
                 "actuation": "NONE",
                 "main_landing_review_required": True,
@@ -555,9 +525,7 @@ def route_plateau(
         "plateau_type": normalized or None,
         "fork_id": None,
         "formulation": None,
-        "trigger_evidence": (
-            dict(trigger_evidence) if trigger_evidence is not None else None
-        ),
+        "trigger_evidence": (dict(trigger_evidence) if trigger_evidence is not None else None),
         "law_ref": "FEED-603-descent-formulation-contingency-map",
         "actuation": "NONE",
         "main_landing_review_required": True,
@@ -578,7 +546,9 @@ def _standing_sense_rows(verdicts: Sequence[Mapping[str, Any]]) -> list[dict[str
                 "value": (last["dimensions"][name] if last else None),
                 "status": "MEASURED_J8F_REALIZED" if last else "AWAITING_J8F_MEASUREMENT",
                 "verdict_id": last["verdict_id"] if last else None,
-                "staleness_lineage": last["source"] if last else {
+                "staleness_lineage": last["source"]
+                if last
+                else {
                     "status": "NO_J8F_SOURCE_ROW",
                     "authority": DIMENSION_CONTRACT,
                 },
@@ -594,16 +564,11 @@ def _rd1_metric_rows(
     source: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    edges = {
-        int(row["dual_index"]): row
-        for row in evidence_join["rd1_evidence"]["edge_summaries"]
-    }
+    edges = {int(row["dual_index"]): row for row in evidence_join["rd1_evidence"]["edge_summaries"]}
     for raw in rd1.get("aggregate_scalarization_controls") or []:
         dual = int(raw["dual_index"])
         edge = edges[dual]
-        delta_bytes = _exact_int(
-            edge["delta_counted_bytes"], "ev1_delta_counted_bytes"
-        )
+        delta_bytes = _exact_int(edge["delta_counted_bytes"], "ev1_delta_counted_bytes")
         delta_d = _finite(edge["joint_delta_D"], "ev1_joint_delta_D")
         marginal_reduction = -delta_d / delta_bytes
         rows.append(
@@ -612,21 +577,15 @@ def _rd1_metric_rows(
                 "row_id": f"rd1_aggregate_dual_{dual}",
                 "scope": "RESTRICTED_MEASURED_N600_DESCRIPTION_POOL",
                 "constraint_group": raw["constraint_group"],
-                "epistemic_status": (
-                    "DERIVED_FROM_EV1_FRESH_RECEIVER_CLOSED_N600_ENDPOINTS"
-                ),
+                "epistemic_status": ("DERIVED_FROM_EV1_FRESH_RECEIVER_CLOSED_N600_ENDPOINTS"),
                 "lambda_distortion_reduction_per_byte": marginal_reduction,
-                "lambda_score_per_byte": (
-                    RATE_BREAK_EVEN_SCORE_PER_BYTE - marginal_reduction
-                ),
+                "lambda_score_per_byte": (RATE_BREAK_EVEN_SCORE_PER_BYTE - marginal_reduction),
                 "rate_break_even_score_per_byte": RATE_BREAK_EVEN_SCORE_PER_BYTE,
                 "left_candidate_id": edge["before_endpoint"],
                 "right_candidate_id": edge["after_endpoint"],
                 "delta_counted_bytes": delta_bytes,
                 "delta_D_realized": delta_d,
-                "status": (
-                    "DERIVED_FROM_EV1_FRESH_N600_ENDPOINTS_NONADDITIVE_CONTROL"
-                ),
+                "status": ("DERIVED_FROM_EV1_FRESH_N600_ENDPOINTS_NONADDITIVE_CONTROL"),
                 "source": dict(source),
                 "score_claim": False,
             }
@@ -644,10 +603,7 @@ def _rd1_bucket_rows(
 ) -> list[dict[str, Any]]:
     """Expose every typed RD1 dimension dual without manufacturing a price."""
 
-    evidence_by_key = {
-        evidence_bucket_key(row): row
-        for row in evidence_join["rd1_evidence"]["bucket_rows"]
-    }
+    evidence_by_key = {evidence_bucket_key(row): row for row in evidence_join["rd1_evidence"]["bucket_rows"]}
     rows: list[dict[str, Any]] = []
     for raw in rd1.get("duals") or []:
         key = (
@@ -687,9 +643,7 @@ def _rd1_bucket_rows(
                     evidence["delta_D_dimension"],
                     "ev1_delta_D_dimension",
                 ),
-                "delta_counted_bytes_dimension": int(
-                    evidence["delta_counted_bytes_dimension"]
-                ),
+                "delta_counted_bytes_dimension": int(evidence["delta_counted_bytes_dimension"]),
                 "byte_home_scope": evidence["scope"],
                 "byte_home_k": _finite(evidence["k"], "ev1_byte_home_k"),
                 "byte_home_k_numerator": int(evidence["k_numerator"]),
@@ -699,31 +653,18 @@ def _rd1_bucket_rows(
                     "ev1_amortized_bytes_per_frame",
                 ),
                 "byte_home_ranges": list(evidence["byte_home_ranges"]),
-                "receiver_uint8_abs_step_histogram": list(
-                    evidence["receiver_uint8_abs_step_histogram"]
-                ),
-                "receiver_changed_channel_values": int(
-                    evidence["receiver_changed_channel_values"]
-                ),
-                "receiver_uint8_abs_step_sum": int(
-                    evidence["receiver_uint8_abs_step_sum"]
-                ),
-                "evidence_status": (
-                    "MEASURED_RECEIVER_CLOSED_AMORTIZED_HOME_AND_HISTOGRAM"
-                ),
+                "receiver_uint8_abs_step_histogram": list(evidence["receiver_uint8_abs_step_histogram"]),
+                "receiver_changed_channel_values": int(evidence["receiver_changed_channel_values"]),
+                "receiver_uint8_abs_step_sum": int(evidence["receiver_uint8_abs_step_sum"]),
+                "evidence_status": ("MEASURED_RECEIVER_CLOSED_AMORTIZED_HOME_AND_HISTOGRAM"),
                 "pricing_owner": evidence["pricing_owner"],
                 "lambda_bytes_per_D": bytes_per_d,
                 "lambda_distortion_reduction_per_byte": reduction_per_byte,
                 "lambda_score_per_byte": score_per_byte,
                 "actionable_for_train_decision": actionable,
-                "status": (
-                    "EVIDENCE_MEASURED_PRICING_SOLVE_PENDING_MS2R"
-                    if not actionable
-                    else str(raw["status"])
-                ),
+                "status": ("EVIDENCE_MEASURED_PRICING_SOLVE_PENDING_MS2R" if not actionable else str(raw["status"])),
                 "verdict_scope": (
-                    "restricted n600 description-level continuation; null prices are "
-                    "not family negatives"
+                    "restricted n600 description-level continuation; null prices are not family negatives"
                 ),
                 "sources": {
                     "rd1_dimension_dual": dict(rd1_source),
@@ -740,37 +681,20 @@ def _scoped_trust_regions(
     payloads: Mapping[str, Mapping[str, Any]],
     sources: Mapping[str, Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
-    raw_rows = (
-        payloads["v17_realized_curve"]
-        .get("validity_radius", {})
-        .get("raw_rows", [])
-    )
+    raw_rows = payloads["v17_realized_curve"].get("validity_radius", {}).get("raw_rows", [])
     boundary = sorted(
-        (
-            row
-            for row in raw_rows
-            if row.get("basis") == "boundary_normal_2x2"
-        ),
+        (row for row in raw_rows if row.get("basis") == "boundary_normal_2x2"),
         key=lambda row: int(row["lattice_quanta"]),
     )
     valid_prefix: list[int] = []
     for row in boundary:
         rho = row.get("rho")
-        if (
-            rho is None
-            or _finite(row["realized_reduction"], "realized_reduction") <= 0.0
-            or _finite(rho, "rho") <= 0.0
-        ):
+        if rho is None or _finite(row["realized_reduction"], "realized_reduction") <= 0.0 or _finite(rho, "rho") <= 0.0:
             break
         valid_prefix.append(int(row["lattice_quanta"]))
     radius = max(valid_prefix) if valid_prefix else None
     ms7 = payloads["ms7_receiver_edges"]
-    pf3_radius = (
-        ms7.get("pf3", {})
-        .get("dynamic_quantum_calibration", {})
-        .get("calibration", {})
-        .get("validity_radius")
-    )
+    pf3_radius = ms7.get("pf3", {}).get("dynamic_quantum_calibration", {}).get("calibration", {}).get("validity_radius")
     g2f_source = dict(sources["g2f_amplitude_curve"])
     g2f_matches = g2f_source["sha256"] == G2F_SOURCE_SHA256
     return [
@@ -778,11 +702,7 @@ def _scoped_trust_regions(
             "scope": "G2F_BIDIRECTIONAL_PIXEL_AMPLITUDE_CURVE",
             "value": 1.0 if g2f_matches else None,
             "units": "native_pixel_amplitude",
-            "status": (
-                "MEASURED_FORMULATION_SCOPED_KNEE"
-                if g2f_matches
-                else "SOURCE_CHANGED_REDERIVE_KNEE"
-            ),
+            "status": ("MEASURED_FORMULATION_SCOPED_KNEE" if g2f_matches else "SOURCE_CHANGED_REDERIVE_KNEE"),
             "law_ref": "g2f_bidirectional_amplitude_ladder_measured_knee_v1",
             "provenance_rung": "MEASURED",
             "source": g2f_source,
@@ -797,9 +717,7 @@ def _scoped_trust_regions(
             "law_ref": "ddm_v16_coupled_joint_solve_instance_validity_v1",
             "provenance_rung": "MEASURED_NEGATIVE_FORMULATION_SCOPED",
             "source": dict(sources["v16_validity_failure"]),
-            "verdict_scope": (
-                "one V16 coupled solve instance; does not close the validity-radius family"
-            ),
+            "verdict_scope": ("one V16 coupled solve instance; does not close the validity-radius family"),
             "not_universal": True,
         },
         {
@@ -863,11 +781,11 @@ def _lambda_ranker_state(
         ("main_landing_review_required", True),
     ):
         if payload.get(key) != expected:
-            raise ValueError(f"co3_lambda_ranker: authority firewall drift at {key}")
+            raise ValueError(f"co4_lambda_ranker: authority firewall drift at {key}")
     content = dict(payload)
     content_sha = content.pop("content_sha256", None)
     if not isinstance(content_sha, str) or _canonical_sha(content) != content_sha:
-        raise ValueError("co3_lambda_ranker: content_sha256 mismatch")
+        raise ValueError("co4_lambda_ranker: content_sha256 mismatch")
 
     population = payload.get("population") or {}
     if (
@@ -875,47 +793,76 @@ def _lambda_ranker_state(
         or population.get("joined_pairs") != 600
         or population.get("heldout_unit") != "source_pair_id"
     ):
-        raise ValueError("co3_lambda_ranker: exact N600 pair-held-out contract drift")
+        raise ValueError("co4_lambda_ranker: exact N600 pair-held-out contract drift")
     selected = payload.get("selected_model") or {}
     metrics = selected.get("metrics") or {}
     if metrics.get("heldout_only") is not True or metrics.get("n_pairs") != 600:
-        raise ValueError("co3_lambda_ranker: selected metrics are not held-out N600")
+        raise ValueError("co4_lambda_ranker: selected metrics are not held-out N600")
     admission = payload.get("admission_gate") or {}
     if (
         admission.get("metric") != "concatenated_pair_out_of_fold_ndcg_at_4"
         or float(admission.get("threshold", math.nan)) != 0.75
-        or float(admission.get("observed", math.nan))
-        != float(metrics.get("ndcg_at_4", math.nan))
-        or bool(admission.get("passed"))
-        != (float(metrics.get("ndcg_at_4", math.nan)) >= 0.75)
-        or bool(admission.get("duty_ranking_upgrade_eligible"))
-        != bool(admission.get("passed"))
+        or float(admission.get("observed", math.nan)) != float(metrics.get("ndcg_at_4", math.nan))
+        or bool(admission.get("passed")) != (float(metrics.get("ndcg_at_4", math.nan)) >= 0.75)
+        or bool(admission.get("duty_ranking_upgrade_eligible")) != bool(admission.get("passed"))
     ):
-        raise ValueError("co3_lambda_ranker: preregistered admission contract drift")
+        raise ValueError("co4_lambda_ranker: preregistered admission contract drift")
 
-    checks = {
-        str(row["check_id"]): dict(row)
-        for row in payload.get("self_checks") or []
-    }
+    road_gate = payload.get("road_local_gate") or {}
+    if (
+        float(road_gate.get("road_threshold_ndcg_at_4", math.nan)) != 0.60
+        or float(road_gate.get("global_threshold_ndcg_at_4", math.nan)) != 0.75
+        or (road_gate.get("road_observed") or {}).get("heldout_only") is not True
+        or (road_gate.get("road_observed") or {}).get("n_pairs") != 288
+        or road_gate.get("evaluation_slice_is_router_forbidden") is not True
+    ):
+        raise ValueError("co4_lambda_ranker: Road-local gate contract drift")
+
+    checks = {str(row["check_id"]): dict(row) for row in payload.get("self_checks") or []}
     precision = checks.get("wallace_mml_pair_precision") or {}
     precision_value = precision.get("value") or {}
     pair_intervals = int(precision_value.get("pair_intervals", 0))
     if int(precision_value.get("required", 600)) != 600:
-        raise ValueError("co3_lambda_ranker: Wallace/MML required-pair count drift")
+        raise ValueError("co4_lambda_ranker: Wallace/MML required-pair count drift")
     pair_rankings = list(payload.get("pair_rankings") or [])
     if len(pair_rankings) != 600:
-        raise ValueError("co3_lambda_ranker: pair-ranking cardinality drift")
-    if any(
-        row.get("score_claim") is not False or row.get("actuation") != "NONE"
-        for row in pair_rankings
-    ):
-        raise ValueError("co3_lambda_ranker: pair-row authority firewall drift")
-    blocker_ids = list(payload.get("blocker_ids") or [])
+        raise ValueError("co4_lambda_ranker: pair-ranking cardinality drift")
+    if any(row.get("score_claim") is not False or row.get("actuation") != "NONE" for row in pair_rankings):
+        raise ValueError("co4_lambda_ranker: pair-row authority firewall drift")
+    direct_count = sum(row.get("precision_class") == "DIRECT" for row in pair_rankings)
+    propagated_count = sum(row.get("precision_class") == "PROPAGATED" for row in pair_rankings)
+    unranked_count = sum(row.get("precision_class") == "UNRANKED" for row in pair_rankings)
     if (
-        payload.get("j8f_blocker_preserved") is not True
-        or "BLOCKED_J8F_REALIZED_VERDICT_TELEMETRY" not in blocker_ids
+        direct_count != int(precision_value.get("direct", -1))
+        or propagated_count != int(precision_value.get("propagated", -1))
+        or unranked_count != int(precision_value.get("unranked", -1))
+        or direct_count + propagated_count + unranked_count != 600
     ):
-        raise ValueError("co3_lambda_ranker: J8F blocker was not preserved")
+        raise ValueError("co4_lambda_ranker: precision-class counts drift")
+    for row in pair_rankings:
+        if row.get("precision_class") == "PROPAGATED" and not (
+            float(row["precision_design_effect"]) > 1.0
+            and float(row["fisher_standard_error"]) > float(row["nominal_fisher_standard_error"])
+        ):
+            raise ValueError("co4_lambda_ranker: propagated interval lacks assumption penalty")
+        if row.get("pair_order_class") not in {
+            "LEADER",
+            "ORDERED",
+            "TIED",
+            "UNRANKED",
+        }:
+            raise ValueError("co4_lambda_ranker: pair-order class drift")
+    decide_rows = list(payload.get("decide_rows") or [])
+    if not decide_rows or any(
+        not isinstance(row.get("rudin_explanation"), dict)
+        or row.get("actuation") != "NONE"
+        or row.get("score_claim") is not False
+        for row in decide_rows
+    ):
+        raise ValueError("co4_lambda_ranker: DECIDE explanation/firewall drift")
+    blocker_ids = list(payload.get("blocker_ids") or [])
+    if payload.get("j8f_blocker_preserved") is not True or "BLOCKED_J8F_REALIZED_VERDICT_TELEMETRY" not in blocker_ids:
+        raise ValueError("co4_lambda_ranker: J8F blocker was not preserved")
     g4_counts: dict[str, int] = {}
     g4_statuses: set[str] = set()
     for row in pair_rankings:
@@ -939,6 +886,7 @@ def _lambda_ranker_state(
         name: dict((payload.get("source_lineage") or {})[name]["surface_counts"])
         for name in (
             "margin_fisher_oracle",
+            "pf2_bucket_assignment_oracle",
             "pose_tube_oracle",
             "stationarity_oracle",
         )
@@ -952,12 +900,17 @@ def _lambda_ranker_state(
         "population": dict(population),
         "selected_model": dict(selected),
         "admission_gate": dict(admission),
+        "road_local_gate": dict(road_gate),
+        "historical_comparison": dict(payload.get("historical_comparison") or {}),
         "model_race": race,
         "ranking_error_slices": list(payload.get("ranking_error_slices") or []),
         "innovations": dict(payload.get("innovations") or {}),
         "pair_precision": {
             "status": precision.get("status"),
             "pair_intervals": pair_intervals,
+            "direct": direct_count,
+            "propagated": propagated_count,
+            "unranked": unranked_count,
             "required_pairs": 600,
             "complete": pair_intervals == 600,
             "unranked_precision_owed": 600 - pair_intervals,
@@ -975,6 +928,7 @@ def _lambda_ranker_state(
         },
         "oracle_surface_counts": oracle_counts,
         "self_checks": list(checks.values()),
+        "decide_rows": decide_rows,
         "rudin_explanation": dict(payload.get("rudin_explanation") or {}),
         "bandit_allocation": dict(payload.get("bandit_allocation") or {}),
         "blocker_ids": blocker_ids,
@@ -1013,17 +967,14 @@ def build_campaign_costate(
     ms7 = payloads["ms7_receiver_edges"]
     evidence_join = payloads["ev1_campaign_evidence_join"]
     lambda_ranker = _lambda_ranker_state(
-        payloads["co3_lambda_ranker"],
-        sources["co3_lambda_ranker"],
+        payloads["co4_lambda_ranker"],
+        sources["co4_lambda_ranker"],
     )
     evidence_counts = validate_campaign_evidence_join(evidence_join)
     exact_pair_rows = evidence_counts["exact_pair_rows"]
     required_pair_rows = evidence_counts["required_pair_rows"]
     typed_dimension_rows = len(rd1.get("duals") or [])
-    actionable_dimension_prices = sum(
-        bool(row.get("actionable_for_train_decision"))
-        for row in rd1.get("duals") or []
-    )
+    actionable_dimension_prices = sum(bool(row.get("actionable_for_train_decision")) for row in rd1.get("duals") or [])
     metric_rows = _rd1_metric_rows(
         rd1,
         evidence_join,
@@ -1049,17 +1000,11 @@ def build_campaign_costate(
     trust = _scoped_trust_regions(payloads, sources)
 
     latest_noise_regime = latest.get("noise_regime_id") if latest else None
-    noise_rows = [
-        row
-        for row in realized
-        if row.get("noise_regime_id") == latest_noise_regime
-    ]
+    noise_rows = [row for row in realized if row.get("noise_regime_id") == latest_noise_regime]
     noise_policy = (
         derive_noise_alarm(
             [row["noise_sample_delta_S"] for row in noise_rows],
-            familywise_alpha=_finite(
-                latest["alarm_familywise_alpha"], "alarm_familywise_alpha"
-            ),
+            familywise_alpha=_finite(latest["alarm_familywise_alpha"], "alarm_familywise_alpha"),
         )
         if latest and "alarm_familywise_alpha" in latest
         else {
@@ -1080,17 +1025,13 @@ def build_campaign_costate(
             "source_lineage": latest.get("source") if latest else None,
         }
     )
-    candidate_bands = list(
-        latest.get("candidate_evaluator_bands") or []
-    ) if latest else []
+    candidate_bands = list(latest.get("candidate_evaluator_bands") or []) if latest else []
     top_k = derive_top_k_from_evaluator_bands(candidate_bands)
     top_k.update(
         {
             "law_ref": "ddm_campaign_evaluator_band_overlap_top_k_v1",
             "provenance_rung": (
-                "DERIVED_FROM_MEASURED"
-                if top_k["top_k"] is not None
-                else "BLOCKED_MISSING_MEASUREMENT"
+                "DERIVED_FROM_MEASURED" if top_k["top_k"] is not None else "BLOCKED_MISSING_MEASUREMENT"
             ),
             "source_lineage": latest.get("source") if latest else None,
         }
@@ -1111,17 +1052,13 @@ def build_campaign_costate(
         ),
     ]
     if realized:
-        blockers = [
-            row
-            for row in blockers
-            if row["blocker_id"] != "BLOCKED_J8F_REALIZED_VERDICT_TELEMETRY"
-        ]
+        blockers = [row for row in blockers if row["blocker_id"] != "BLOCKED_J8F_REALIZED_VERDICT_TELEMETRY"]
     ranker_admitted = bool(lambda_ranker["admission_gate"]["passed"])
     precision_owed = int(lambda_ranker["pair_precision"]["unranked_precision_owed"])
     if not ranker_admitted:
         blockers.append(
             _blocker(
-                "BLOCKED_CO3_HELDOUT_NDCG_ADMISSION",
+                "BLOCKED_CO4_HELDOUT_NDCG_ADMISSION",
                 scope=lambda_ranker["verdict_scope"],
                 evidence={
                     "ndcg_at_4": lambda_ranker["admission_gate"]["observed"],
@@ -1134,18 +1071,13 @@ def build_campaign_costate(
         blockers.append(
             _blocker(
                 f"BLOCKED_PAIR_LEVEL_MS4D_FISHER_PRECISION_{precision_owed}",
-                scope=(
-                    "pair-order confidence only; held-out aggregate ranker admission "
-                    "remains measured"
-                ),
+                scope=("pair-order confidence only; held-out aggregate ranker admission remains measured"),
                 evidence={
-                    "pair_intervals": lambda_ranker["pair_precision"][
-                        "pair_intervals"
-                    ],
+                    "pair_intervals": lambda_ranker["pair_precision"]["pair_intervals"],
                     "required_pairs": 600,
                 },
                 required_evidence=(
-                    "positive_direct_pair_indexed_MS4D_Fisher_for_every_N600_pair",
+                    "positive_direct_or_validated_PF2_support_propagated_MS4D_Fisher_for_every_N600_pair",
                 ),
             )
         )
@@ -1164,9 +1096,7 @@ def build_campaign_costate(
         "source_lineage": {
             "sources": sources,
             "j8f_verdict_stream": j8f_source,
-            "lineage_digest": _canonical_sha(
-                {name: row["sha256"] for name, row in sources.items()}
-            ),
+            "lineage_digest": _canonical_sha({name: row["sha256"] for name, row in sources.items()}),
         },
         "metric_state": {
             "scorer_metric": EVIDENCE_METRIC_ID,
@@ -1177,9 +1107,7 @@ def build_campaign_costate(
                 f"{typed_dimension_rows}; PRICING_PENDING_MS2R_"
                 f"{actionable_dimension_prices}_OF_{typed_dimension_rows}_ACTIONABLE"
             ),
-            "v19_receiver_closed_join_status": (
-                f"MEASURED_{exact_pair_rows}_OF_{required_pair_rows}"
-            ),
+            "v19_receiver_closed_join_status": (f"MEASURED_{exact_pair_rows}_OF_{required_pair_rows}"),
             "rd1_dimension_evidence_status": (
                 f"MEASURED_{measured_dimension_homes}_AMORTIZED_HOMES_"
                 f"({measured_shared_homes}_SHARED,{measured_per_frame_homes}_PER_FRAME)_AND_"
@@ -1188,9 +1116,7 @@ def build_campaign_costate(
             "ms4d_terminal_status": "UNREACHABLE_BY_COUNTED_COORDINATES",
             "ms4d_terminal_buckets": int(ms7["r0"]["row_count"]),
             "ms7_mass_paying_buckets": int(ms7["r0"]["mass_paying_row_count"]),
-            "ms7_pf3_status": (
-                "MEASURED_PRICED_CONTROL_NONADMISSIBLE_R0_AND_ERROR_CAP"
-            ),
+            "ms7_pf3_status": ("MEASURED_PRICED_CONTROL_NONADMISSIBLE_R0_AND_ERROR_CAP"),
             "lambda_ranker": lambda_ranker,
         },
         "dynamic_policy": {
@@ -1213,6 +1139,7 @@ def build_campaign_costate(
         "decide": {
             "plateau_route": decision,
             "pre_registered_forks": list(PLATEAU_FORKS),
+            "lambda_ranker_decide_rows": lambda_ranker["decide_rows"],
         },
         "blockers": blockers,
     }
@@ -1241,7 +1168,7 @@ def build_campaign_costate(
         if ranker_admitted and precision_owed:
             duty_queue.append(
                 {
-                    "duty": "CO3_LAMBDA_RANKER_FISHER_PRECISION_CLOSURE",
+                    "duty": "CO4_LAMBDA_RANKER_FISHER_PRECISION_CLOSURE",
                     "reason": (
                         f"held-out NDCG@4={lambda_ranker['admission_gate']['observed']:.6g} "
                         "admits the ranker, but "
@@ -1286,15 +1213,9 @@ def build_campaign_costate(
         "metric_rows": metric_rows,
         "bucket_rows": bucket_rows,
         "campaign_evidence": {
-            "v19_receiver_closed_join_status": core["metric_state"][
-                "v19_receiver_closed_join_status"
-            ],
-            "rd1_dimension_evidence_status": core["metric_state"][
-                "rd1_dimension_evidence_status"
-            ],
-            "bucket_exchange_rate_status": core["metric_state"][
-                "bucket_exchange_rate_status"
-            ],
+            "v19_receiver_closed_join_status": core["metric_state"]["v19_receiver_closed_join_status"],
+            "rd1_dimension_evidence_status": core["metric_state"]["rd1_dimension_evidence_status"],
+            "bucket_exchange_rate_status": core["metric_state"]["bucket_exchange_rate_status"],
         },
         "lambda_ranker": lambda_ranker,
         "blockers": blockers,
@@ -1309,15 +1230,9 @@ def build_campaign_costate(
         "plateau_route": decision,
         "duty_queue": duty_queue,
         "campaign_evidence": {
-            "v19_receiver_closed_join_status": core["metric_state"][
-                "v19_receiver_closed_join_status"
-            ],
-            "rd1_dimension_evidence_status": core["metric_state"][
-                "rd1_dimension_evidence_status"
-            ],
-            "bucket_exchange_rate_status": core["metric_state"][
-                "bucket_exchange_rate_status"
-            ],
+            "v19_receiver_closed_join_status": core["metric_state"]["v19_receiver_closed_join_status"],
+            "rd1_dimension_evidence_status": core["metric_state"]["rd1_dimension_evidence_status"],
+            "bucket_exchange_rate_status": core["metric_state"]["bucket_exchange_rate_status"],
         },
         "lambda_ranker": lambda_ranker,
         "activation_nag": activation_nag,

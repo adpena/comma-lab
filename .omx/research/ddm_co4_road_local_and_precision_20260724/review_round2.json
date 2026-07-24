@@ -1,0 +1,31 @@
+{
+  "schema": "ddm_co4_review_pass.v1",
+  "pass_id": "co4_round2",
+  "reviewer": "codex_co4_consumer_firewall",
+  "reviewed_at_utc": "2026-07-24T23:51:00Z",
+  "status": "CLEAN",
+  "files": [
+    "src/tac/ddm_lambda_ranker.py",
+    "src/tac/ddm_campaign_costate.py",
+    "src/tac/tests/test_ddm_lambda_ranker.py",
+    "src/tac/tests/test_ddm_campaign_costate.py"
+  ],
+  "focus": [
+    "receipt and campaign determinism",
+    "propagated interval widening",
+    "overlap-to-TIED semantics",
+    "Rudin explanation on every CO4 DECIDE row",
+    "authority and no-actuation firewalls",
+    "single digest across four consumers"
+  ],
+  "verification": {
+    "pytest": "47 passed",
+    "ruff": "clean",
+    "format": "clean",
+    "diff_check": "clean",
+    "minimum_review_events_per_python_entity": 2
+  },
+  "score_claim": false,
+  "actuation": "NONE"
+}
+

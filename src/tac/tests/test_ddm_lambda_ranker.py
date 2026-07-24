@@ -9,7 +9,9 @@ import pytest
 
 from tac.ddm_lambda_ranker import (
     ADMISSION_NDCG_AT_4,
+    CO3_RECEIPT_PATH,
     PAIR_COUNT,
+    ROAD_ADMISSION_NDCG_AT_4,
     SCHEMA,
     _fold_id,
     build_n600_lambda_ranker_receipt,
@@ -59,14 +61,30 @@ def test_full_n600_receipt_is_pair_held_out_advisory_and_deterministic() -> None
     selected = first["selected_model"]
     assert selected["metrics"]["heldout_only"] is True
     assert selected["metrics"]["n_pairs"] == PAIR_COUNT
-    assert first["admission_gate"]["passed"] == (
-        selected["metrics"]["ndcg_at_4"] >= ADMISSION_NDCG_AT_4
-    )
+    assert first["admission_gate"]["passed"] == (selected["metrics"]["ndcg_at_4"] >= ADMISSION_NDCG_AT_4)
     assert all(
         candidate["metrics"]["heldout_only"] is True
         for candidate in first["model_race"]
         if candidate["metrics"] is not None
     )
+    road = first["road_local_gate"]
+    assert road["road_observed"]["n_pairs"] == 288
+    assert road["road_threshold_ndcg_at_4"] == ROAD_ADMISSION_NDCG_AT_4
+    assert road["evaluation_slice_is_router_forbidden"] is True
+    assert road["candidate_id"] == "g3_stratum_experts"
+    assert road["road_observed"]["ndcg_at_4"] == pytest.approx(0.1796465097835245)
+    assert road["global_observed"]["ndcg_at_4"] == pytest.approx(0.8133546756293046)
+    assert road["passed"] is False
+    assert first["selected_model"]["candidate_id"] == ("factorized_ms4d_interactions")
+    assert first["selected_model"]["prediction_source"] == ("SEALED_CO3_PAIR_HELD_OUT_RECEIPT")
+    co3 = json.loads((REPO / CO3_RECEIPT_PATH).read_text())
+    assert {int(row["pair_id"]): float(row["prediction"]) for row in first["pair_rankings"]} == {
+        int(row["pair_id"]): float(row["prediction"]) for row in co3["pair_rankings"]
+    }
+    assert {row["candidate_id"] for row in first["model_race"] if row.get("road_slice_metrics")} == {
+        "global_road_conditional",
+        "g3_stratum_experts",
+    }
 
 
 def test_oracle_surfaces_and_requested_error_slices_are_explicit() -> None:
@@ -79,6 +97,11 @@ def test_oracle_surfaces_and_requested_error_slices_are_explicit() -> None:
         "direct_pair_ids": 15,
     }
     assert lineage["pose_tube_oracle"]["surface_counts"]["pair_rows"] == 600
+    assert lineage["pf2_bucket_assignment_oracle"]["surface_counts"] == {
+        "bucket_rows": 1200,
+        "nonempty_buckets": 37,
+        "pair_ids_with_positive_support": 600,
+    }
     assert lineage["stationarity_oracle"]["surface_counts"]["strata"] == 5
     assert {row["dimension"] for row in receipt["ranking_error_slices"]} == {
         "stratum",
@@ -87,34 +110,57 @@ def test_oracle_surfaces_and_requested_error_slices_are_explicit() -> None:
         "pair_hardness_decile",
     }
     assert receipt["innovations"]["status"] == "MEASURED_HELDOUT_INNOVATIONS"
-    assert receipt["rudin_explanation"]["status"] == (
-        "REUSED_CANONICAL_FALLING_RULE_LIST"
-    )
+    assert receipt["rudin_explanation"]["status"] == ("REUSED_CANONICAL_FALLING_RULE_LIST")
 
 
-def test_precision_refuses_fake_pair_order_and_self_checks_preserve_nulls() -> None:
+def test_precision_propagates_with_penalty_and_self_checks_preserve_nulls() -> None:
     receipt = build_n600_lambda_ranker_receipt(REPO)
-    precision = next(
-        row
-        for row in receipt["self_checks"]
-        if row["check_id"] == "wallace_mml_pair_precision"
-    )
-    assert precision["status"] == "PARTIAL_TYPED"
-    assert precision["value"] == {"pair_intervals": 15, "required": 600}
-    assert sum(
-        row["pair_order_status"] == "UNRANKED_PRECISION_OWED"
-        for row in receipt["pair_rankings"]
-    ) == 585
+    precision = next(row for row in receipt["self_checks"] if row["check_id"] == "wallace_mml_pair_precision")
+    assert precision["status"] == "COMPLETE"
+    assert precision["value"] == {
+        "pair_intervals": 600,
+        "direct": 15,
+        "propagated": 585,
+        "unranked": 0,
+        "required": 600,
+    }
+    direct = [row for row in receipt["pair_rankings"] if row["precision_class"] == "DIRECT"]
+    propagated = [row for row in receipt["pair_rankings"] if row["precision_class"] == "PROPAGATED"]
+    assert len(direct) == 15
+    assert len(propagated) == 585
+    assert all(row["fisher_standard_error"] > row["nominal_fisher_standard_error"] for row in propagated)
+    assert all(row["precision_design_effect"] > 1.0 for row in propagated)
+    assert all("NO_UNMEASURED_CROSS_BUCKET_COVARIANCE" in row["precision_assumptions"] for row in propagated)
+    assert {row["pair_order_class"] for row in receipt["pair_rankings"]} <= {
+        "LEADER",
+        "ORDERED",
+        "TIED",
+    }
+    assert any(row["pair_order_class"] == "TIED" for row in receipt["pair_rankings"])
     checks = {row["check_id"]: row for row in receipt["self_checks"]}
     assert checks["pontryagin_bellman_adjacent_lambda_residual"]["value"] is None
-    assert checks["rd1_organ_dual_consistency"]["value"] is None
-    assert checks["rd1_organ_dual_consistency"]["status"] == (
-        "AWAITING_NON_NULL_MATCHED_RD1_DUALS"
-    )
-    assert receipt["source_lineage"]["rd1_dual_authority"][
-        "typed_dual_rows"
-    ] == 162
-    assert receipt["source_lineage"]["rd1_dual_authority"][
-        "actionable_dual_rows"
-    ] == 0
+    assert checks["pontryagin_bellman_adjacent_lambda_residual"]["status"] == ("AWAITING_J8F")
+    assert checks["m34_per_state_dual_consistency"]["value"] is None
+    assert checks["m34_per_state_dual_consistency"]["status"] == ("AWAITING_J8F_M34_PER_STATE_DUALS")
+    assert receipt["source_lineage"]["rd1_dual_authority"]["typed_dual_rows"] == 162
+    assert receipt["source_lineage"]["rd1_dual_authority"]["actionable_dual_rows"] == 0
     assert checks["compression_progress_per_effort"]["value"] is None
+    assert checks["unsound_scaling_and_label_noise_claim_audit"]["status"] == (
+        "CLEAN_NO_UNSOUND_CLAIMS_IN_CO2_CO3_INPUT_SCOPE"
+    )
+
+
+def test_every_typed_decide_row_has_rudin_explanation_and_no_actuation() -> None:
+    receipt = build_n600_lambda_ranker_receipt(REPO)
+    rows = {row["decide_id"]: row for row in receipt["decide_rows"]}
+    assert rows["catalog_611_scorer_recursive_construction"]["status"] == (
+        "BLOCKED_TYPED_COUNTED_SCORER_RECURSIVE_APPLICATION_OPERATOR_OWED"
+    )
+    assert rows["ms2r_immutable_stage_input_mismatch"]["status"] == (
+        "DIAGNOSED_ORACLE_INPUT_SUPERSESSION_NEW_STAGE_NAMESPACE_REQUIRED"
+    )
+    assert rows["pontryagin_bellman_residual"]["status"] == "AWAITING_J8F"
+    assert rows["m34_per_state_dual_replacement"]["status"] == ("AWAITING_J8F_M34_PER_STATE_DUALS")
+    assert all(row["actuation"] == "NONE" for row in rows.values())
+    assert all(row["score_claim"] is False for row in rows.values())
+    assert all(row["rudin_explanation"]["status"] == "REUSED_CANONICAL_FALLING_RULE_LIST" for row in rows.values())
