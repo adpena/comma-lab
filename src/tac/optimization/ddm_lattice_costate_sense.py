@@ -92,6 +92,7 @@ class LatticeSensePair:
     degeneracy: Mapping[str, Any]
     residual: Mapping[str, Any]
     basis: Mapping[str, Any]
+    dimension_typing: Mapping[str, Any]
     tie_break: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -136,6 +137,7 @@ class LatticeSensePair:
             "degeneracy": dict(self.degeneracy),
             "residual": dict(self.residual),
             "basis": dict(self.basis),
+            "dimension_typing": dict(self.dimension_typing),
             "tie_break": self.tie_break,
         }
 
@@ -239,20 +241,19 @@ def build_lattice_sense_pair(
     if duals is None:
         shadow_prices: dict[str, Any] = {
             "available": False,
-            "reason": "bounded integer projection does not expose KKT multipliers; no margin proxy imputed",
+            "scope": "per_typed_dimension_bucket",
+            "pooling": "FORBIDDEN",
+            "reason": (
+                "bounded integer projection does not expose KKT multipliers; "
+                "no pooled lambda or margin proxy imputed"
+            ),
             "values": None,
         }
     else:
-        dual_values = np.asarray(duals, dtype=np.float64)
-        if dual_values.shape != target.shape or not np.isfinite(dual_values).all():
-            raise LatticeSenseError("duals must be finite and match scorer geometry")
-        shadow_prices = {
-            "available": True,
-            "minimum": float(dual_values.min()),
-            "maximum": float(dual_values.max()),
-            "mean": float(dual_values.mean()),
-            "sha256": _sha256_array(dual_values),
-        }
+        raise LatticeSenseError(
+            "pooled dual arrays are forbidden; emit duals per "
+            "(stratum x scorer-visibility x g4 temporal class) bucket"
+        )
     if local_facet_dimensions is None:
         degeneracy: dict[str, Any] = {
             "available": False,
@@ -300,7 +301,36 @@ def build_lattice_sense_pair(
             "signed_l1": int(np.abs(signed.astype(np.int32)).sum()),
             "signed_l2": float(np.linalg.norm(signed.astype(np.float64).ravel())),
         },
-        basis=basis,
+        basis={
+            "metric": "identity_euclidean_diagnostic_only",
+            "headline_eligible": False,
+            "successor_metric": (
+                "seg_rank4_head_x_margin_fisher_plus_pose_low_rank_quadratic"
+            ),
+            **basis,
+        },
+        dimension_typing={
+            "status": "BLOCKED_TYPED_ATLAS_NOT_BOUND",
+            "required_bucket_axes": [
+                "stratum",
+                "scorer_visibility",
+                "g4_temporal_class",
+            ],
+            "available_axes": ["stratum"],
+            "missing_axes": ["scorer_visibility", "g4_temporal_class"],
+            "scorer_visibility_values": [
+                "ker(A)-invisible",
+                "seg-visible",
+                "pose-visible",
+            ],
+            "effective_quantum": (
+                "BLOCKED; requires uint8-step x per-dimension scorer sensitivity"
+            ),
+            "reconciliation": (
+                "consume ddm_pf2_dimension_conditioned_two_type typed atlas "
+                "when its custodied checkpoint lands"
+            ),
+        },
         tie_break="minimum_real_coder_bytes_then_member_sha256",
     )
 

@@ -17,10 +17,15 @@ deterministic receiver expansion
           |      Seg argmax cell + active Pose6 tube
           |
           v
-gauge-fixed uint8 lattice member selection
-  +--> pin invisible coordinate toward expansion
-  +--> integer closest-vector repair
-  +--> real conditional coder on solve-mandated exceptions
+recursive typed inverse solve
+  +--> decision variables: range(A)/quotient only
+  |      ker(A) gauge dims -> preimage compiler + #401 free fill
+  +--> scorer-metric reduction
+  |      Seg rank-4/margin-Fisher + low-rank Pose quadratic
+  +--> alternate argmax cell x within-cell lattice x real-coder pricing
+  +--> blocks: stratum x scorer-visibility x g4 temporal class
+  +--> per-dimension quantum: uint8 step x scorer sensitivity
+  +--> conditional coder on solve-mandated exceptions
           |
           v
 realized uint8 -> R -> frozen SegNet/PoseNet acceptance
@@ -34,8 +39,9 @@ HEADLINE FIREWALL
 The executable firewall is
 `tac.optimization.ddm_min_description_contract.build_minimum_description_headline`.
 It withholds the decision triple when stored-problem bytes/SHA, own-lineage
-custody, receiver expansion, active Pose tube, exception bytes/SHA, or realized
-acceptance is absent. Donor-conditioned rows are structurally inadmissible.
+custody, receiver expansion, active Pose tube, exception bytes/SHA, realized
+acceptance, or any of the five recursive solve typings is absent.
+Donor-conditioned rows are structurally inadmissible.
 
 ## Measured v1 diagnostic path
 
@@ -68,13 +74,18 @@ batch-32 native CPU-Torch Seg/Pose equality oracle
                               |
                               v
 typed pair SENSE + factor candidates
+  +--> stratum available
+  +--> visibility/g4 class blocked pending typed atlas
+  +--> pooled dual arrays forbidden
 ```
 
 This path measures whether the tested local closest-vector formulation reduces
 conditional residual code for the unchanged exact-solve member. It does not
 bind the own-lineage stored problem, does not emit a tolerance-ladder knee, and
 does not close a receiver archive. Its result therefore remains diagnostic
-even after full n600 completion.
+even after full n600 completion. Its ker(A)-coordinate identity-Euclidean
+search is preserved as historical evidence but is retired from the successor
+decision space by the recursive-dimensionality directive.
 
 ## Predecessor preservation
 
@@ -112,7 +123,7 @@ banned and supplies no bytes, expansion, or pattern to MS1.
 pair active Fisher margins + class/stratum counts
   + local facet dimensions
   + real conditional rate
-  + honest unavailable duals
+  + honest unavailable per-typed-bucket duals
               |
               v
 standardized SVD factor candidates
@@ -150,8 +161,11 @@ a measured per-stratum SKELETON-versus-FIBER race.
 
 ```text
 bind own-lineage stored problem + deterministic expansion
-  -> activate #549-style joint Seg-cell/Pose-tube solve
-  -> measure tolerance knees
+  -> drop ker(A) gauge coordinates; solve the visible quotient
+  -> reduce in Seg-rank4/margin-Fisher + low-rank-Pose metric
+  -> alternate cell x within-cell x real-coder typed subproblems
+  -> bind stratum x scorer-visibility x g4-temporal blocks
+  -> measure per-dimension effective-quantum tolerance knees
   -> emit stored-problem + exception byte totals
   -> realized batch-32 acceptance
   -> only then consider receiver closure and paired contest CPU/CUDA replay

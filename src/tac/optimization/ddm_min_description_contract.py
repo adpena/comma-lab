@@ -13,6 +13,7 @@ import math
 from typing import Any
 
 HEADLINE_SCHEMA = "ddm_min_description_headline.v1"
+SOLVE_TYPING_SCHEMA = "ddm_recursive_solve_typing.v1"
 
 
 class MinimumDescriptionContractError(ValueError):
@@ -52,6 +53,68 @@ def _distortion(value: float, field: str) -> float:
     return result
 
 
+def build_recursive_solve_typing_contract(
+    *,
+    quotient_coordinates_only: bool,
+    scorer_metric_active: bool,
+    alternating_typed_subproblems: bool,
+    typed_blocks_active: bool,
+    per_dimension_quanta_active: bool,
+) -> dict[str, Any]:
+    """Declare the five non-interchangeable dimensions of the inverse solve."""
+
+    declarations = {
+        "quotient_coordinates_only": quotient_coordinates_only,
+        "scorer_metric_active": scorer_metric_active,
+        "alternating_typed_subproblems": alternating_typed_subproblems,
+        "typed_blocks_active": typed_blocks_active,
+        "per_dimension_quanta_active": per_dimension_quanta_active,
+    }
+    if any(not isinstance(value, bool) for value in declarations.values()):
+        raise MinimumDescriptionContractError(
+            "recursive solve-typing declarations must be exact booleans"
+        )
+    blockers = [
+        blocker
+        for field, blocker in (
+            ("quotient_coordinates_only", "GAUGE_COORDINATES_NOT_DROPPED"),
+            ("scorer_metric_active", "SCORER_METRIC_NOT_ACTIVE"),
+            (
+                "alternating_typed_subproblems",
+                "TYPED_SUBPROBLEM_ALTERNATION_NOT_ACTIVE",
+            ),
+            ("typed_blocks_active", "TYPED_BLOCK_ATLAS_NOT_ACTIVE"),
+            (
+                "per_dimension_quanta_active",
+                "PER_DIMENSION_EFFECTIVE_QUANTA_NOT_ACTIVE",
+            ),
+        )
+        if not declarations[field]
+    ]
+    return {
+        "schema": SOLVE_TYPING_SCHEMA,
+        "headline_ready": not blockers,
+        "declarations": declarations,
+        "required_geometry": {
+            "variables": (
+                "range(A)/quotient coordinates only; ker(A) is gauge and is "
+                "realized by the preimage compiler plus deterministic free fill"
+            ),
+            "metric": (
+                "Seg rank-4 head plus margin-Fisher blocks and a <=6-dimensional "
+                "Pose quadratic"
+            ),
+            "subproblems": (
+                "alternate argmax-cell selection, within-cell continuous lattice "
+                "solve, and real-coder pricing"
+            ),
+            "blocks": "stratum x scorer-visibility x g4 temporal class",
+            "quanta": "uint8 step x per-dimension scorer sensitivity",
+        },
+        "blockers": blockers,
+    }
+
+
 def build_minimum_description_headline(
     *,
     stored_problem_bytes: int | None,
@@ -65,6 +128,11 @@ def build_minimum_description_headline(
     expansion_receiver_closed: bool,
     pose_tube_active: bool,
     realized_uint8_r_frozen_scorers: bool,
+    quotient_coordinates_only: bool,
+    scorer_metric_active: bool,
+    alternating_typed_subproblems: bool,
+    typed_blocks_active: bool,
+    per_dimension_quanta_active: bool,
 ) -> dict[str, Any]:
     """Build the only row eligible to headline minimum-description progress.
 
@@ -79,6 +147,13 @@ def build_minimum_description_headline(
     exceptions_sha = _optional_sha256(exception_sha256, "exception_sha256")
     d_seg = _distortion(realized_d_seg, "realized_d_seg")
     d_pose = _distortion(realized_d_pose, "realized_d_pose")
+    solve_typing = build_recursive_solve_typing_contract(
+        quotient_coordinates_only=quotient_coordinates_only,
+        scorer_metric_active=scorer_metric_active,
+        alternating_typed_subproblems=alternating_typed_subproblems,
+        typed_blocks_active=typed_blocks_active,
+        per_dimension_quanta_active=per_dimension_quanta_active,
+    )
     declarations = (
         stored_problem_own_lineage,
         donor_conditioned,
@@ -106,6 +181,7 @@ def build_minimum_description_headline(
         blockers.append("POSE_TUBE_NOT_ACTIVE_IN_SOLVE")
     if not realized_uint8_r_frozen_scorers:
         blockers.append("REALIZED_UINT8_R_FROZEN_SCORER_ACCEPTANCE_MISSING")
+    blockers.extend(solve_typing["blockers"])
 
     eligible = not blockers
     total_bytes = (
@@ -144,6 +220,7 @@ def build_minimum_description_headline(
             "pose_tube_active": pose_tube_active,
             "realized_uint8_r_frozen_scorers": realized_uint8_r_frozen_scorers,
         },
+        "recursive_solve_typing": solve_typing,
         "donor_conditioned": donor_conditioned,
         "decision_triple": {
             "total_counted_bytes": total_bytes,
@@ -162,6 +239,8 @@ def build_minimum_description_headline(
 
 __all__ = [
     "HEADLINE_SCHEMA",
+    "SOLVE_TYPING_SCHEMA",
     "MinimumDescriptionContractError",
     "build_minimum_description_headline",
+    "build_recursive_solve_typing_contract",
 ]

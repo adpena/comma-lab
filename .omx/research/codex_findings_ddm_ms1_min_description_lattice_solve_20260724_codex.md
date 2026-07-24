@@ -38,14 +38,20 @@ The campaign quantity is
 
 The v1 run has no counted own-lineage stored problem, no SHA-bound
 receiver-decodable exception stream, no receiver-closed deterministic expansion,
-and no Pose tube active inside member selection. The executable headline
-contract therefore emits these exact blockers:
+and no Pose tube active inside member selection. It also predates the required
+recursive dimensional typing. The executable headline contract therefore emits
+these exact blockers:
 
 1. `OWN_LINEAGE_STORED_PROBLEM_NOT_PROVEN`
 2. `STORED_PROBLEM_BYTE_CUSTODY_MISSING`
 3. `SOLVE_EXCEPTION_BYTE_CUSTODY_MISSING`
 4. `STORED_PROBLEM_EXPANSION_NOT_RECEIVER_CLOSED`
 5. `POSE_TUBE_NOT_ACTIVE_IN_SOLVE`
+6. `GAUGE_COORDINATES_NOT_DROPPED`
+7. `SCORER_METRIC_NOT_ACTIVE`
+8. `TYPED_SUBPROBLEM_ALTERNATION_NOT_ACTIVE`
+9. `TYPED_BLOCK_ATLAS_NOT_ACTIVE`
+10. `PER_DIMENSION_EFFECTIVE_QUANTA_NOT_ACTIVE`
 
 The final batch-32 frozen CPU-Torch oracle is still useful diagnostic evidence:
 all `600/600` Seg argmax pairs and all `600/600` Pose6 outputs are identical to
@@ -69,8 +75,10 @@ supplies no MS1 bytes, expansion, or pattern.
   retired path cost `2.6080500420648605 s/pair` locally, or roughly 26 minutes
   over n600, while adding no information.
 - Typed SENSE rows expose Fisher winner-rival active sets per class and stratum,
-  exact rate, local facet degeneracy, and honest unavailable duals. The run
-  produced 600 SHA-bound rows.
+  exact rate, local facet degeneracy, and honest unavailable duals. Pooled dual
+  arrays now fail closed. The successor bucket key is
+  `(stratum x scorer-visibility x g4 temporal class)`; the historical 600 rows
+  carry only the stratum axis and explicitly await the custodied PF2 atlas.
 - Six numerical SVD factors clear the measured one-byte coder floor. Zero are
   distilled: the required per-stratum coder races were not measured. A strict
   winner routes `SKELETON` to pf1/g1 token coders or `FIBER` to
@@ -78,7 +86,25 @@ supplies no MS1 bytes, expansion, or pattern.
   remain blocked.
 - `build_minimum_description_headline` is a fail-closed campaign firewall. It
   refuses incomplete bytes/SHA, donor conditioning, missing own-lineage
-  expansion closure, inactive Pose tubes, or unrealized scorer acceptance.
+  expansion closure, inactive Pose tubes, unrealized scorer acceptance, or any
+  of the five missing recursive solve typings.
+
+## Recursive-dimensionality directive consumption
+
+The 2026-07-24T02:04:16Z directive was applied forward after n600; the completed
+measurement was not restarted.
+
+| Typing | Status | Measured v1 disposition and successor contract |
+|---|---|---|
+| Variable: solve range(A)/quotient; drop ker(A) gauge dimensions | **ADOPTED** | V1 searched saturated ker(A) coordinates and won `0/1,200` races under each conditional form. That historical diagnostic remains preserved but is refused as a headline successor. The successor solves the approximately 19.3% visible quotient and realizes with the preimage compiler plus #401 deterministic free fill. |
+| Metric: Seg rank-4/margin-Fisher plus low-rank Pose quadratic | **ADOPTED** | V1 used an identity-Euclidean pseudoinverse and won `0/1,200`; SENSE margins were diagnostic, not its Gram matrix. The successor basis reduction and trust regions use scorer geometry. |
+| Constraint: alternate cell selection, within-cell solve, coder pricing | **ADOPTED** | V1 performed one local projection followed by coder and post-hoc scorer checks. The successor alternation is required by the headline firewall. |
+| Block: stratum x visibility x g4 temporal class | **ALREADY** (stratum only), **ADOPTED** (complete key) | V1 measured cell/edge/saddle counts. Scorer visibility and g4 temporal class are absent, so current rows are typed blocked and will reconcile against the sister PF2 atlas when its custodied checkpoint lands. |
+| Quantum: uint8 step x per-dimension scorer sensitivity | **ADOPTED** | V1 used one scalar `1e-6` active-margin tolerance and therefore has no per-dimension knee authority. The successor admits steps only against typed effective quanta. |
+
+Adoption here is formulation and fail-closed contract authority, not a claim
+that the successor solver has run. All five declarations are `false` in the
+n600 receipt, so its decision triple remains withheld.
 
 The lane's three-clean gate is registered and its evidence path exists. The
 repository-wide `lane_maturity.py validate` remains non-clean with exactly 110
@@ -102,8 +128,9 @@ because zero proposals won. Source bytes were never copied, moved, or deleted.
 ## Triality
 
 - **Equations:** `ddm_ms1_min_description_lattice_solve_canonical_equations_20260724.md`
-  owns the campaign total, gauge condition, saturated integer kernel, joint
-  constraints, factor arbitration, and headline admission law.
+  owns the campaign total, quotient-only decision space, scorer metric, typed
+  alternation/blocks/quanta, historical saturated integer-kernel diagnostic,
+  factor arbitration, and headline admission law.
 - **DAG:** `ddm_ms1_min_description_lattice_solve_DAG_FEED_20260724.md` owns the
   own-lineage stored-problem to deterministic-expansion to joint-solve to
   headline graph, with the v1 diagnostic branch kept separate.
@@ -117,15 +144,17 @@ because zero proposals won. Source bytes were never copied, moved, or deleted.
   `codex_delegate:ddm_ms1_min_description_lattice_solve:20260723T233549Z`.
 - `CLAUDE.md`, `AGENTS.md`, top-ten Claude memory, current canonical frontier,
   lane registry, subagent-progress ownership, predecessor #547/#549/#602
-  artifacts, and operator inbox through `2026-07-24T01:06:43Z`.
+  artifacts, and operator inbox through `2026-07-24T02:04:16Z`.
 - SHA-pinned raw witness, n600 targets, 600 stage receipts, frozen upstream
   scorer code/weights, SENSE rows, and factorization receipt.
 
 ## Next exact rung
 
 Bind a counted own-lineage stored problem to a deterministic receiver expansion,
-activate both the Seg cell and Pose tube in the integer solve, sweep the
-tolerance knees, and emit a SHA-bound receiver-decodable exception stream.
+solve only its visible quotient in the Seg/Pose scorer metric, alternate cell,
+within-cell, and coder subproblems over fully typed blocks, sweep
+per-dimension effective-quantum knees, and emit a SHA-bound receiver-decodable
+exception stream.
 Before any lattice-family negative, test a bounded exact sieve or
 branch-and-bound. Before any factor becomes vocabulary, run the measured
 per-stratum SKELETON-versus-FIBER coder race.

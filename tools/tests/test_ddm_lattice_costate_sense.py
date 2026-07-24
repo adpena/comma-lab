@@ -41,6 +41,9 @@ def test_pair_row_exposes_active_sets_rate_and_honest_missing_duals() -> None:
     assert row["active_set"]["active_constraint_count"] > 0
     assert set(row["active_set"]["per_stratum"]) == {"cell", "edge", "saddle"}
     assert row["shadow_prices"]["available"] is False
+    assert row["shadow_prices"]["pooling"] == "FORBIDDEN"
+    assert row["dimension_typing"]["status"] == "BLOCKED_TYPED_ATLAS_NOT_BOUND"
+    assert row["basis"]["metric"] == "identity_euclidean_diagnostic_only"
     assert row["degeneracy"]["histogram"] == {"0": 1, "1": 1, "2": 1, "3": 1}
     assert row["score_claim"] is False
 
@@ -66,6 +69,23 @@ def test_pair_row_accepts_precomputed_basis_distribution() -> None:
     ).to_dict()
     assert row["basis"]["count"] == 12
     assert row["basis"]["norm_p95"] == 3.0
+
+
+def test_pair_row_refuses_pooled_duals() -> None:
+    selected = np.full((2, 8, 12, 3), 100, dtype=np.uint8)
+    with pytest.raises(LatticeSenseError, match="pooled dual"):
+        build_lattice_sense_pair(
+            pair_id=1,
+            selected=selected,
+            origin=np.zeros_like(selected),
+            labels=np.zeros((4, 6), dtype=np.uint8),
+            winner_rival_margins=np.ones((4, 6), dtype=np.float64),
+            canonical_member_bytes=100,
+            selected_residual_bytes=90,
+            active_tolerance=0.1,
+            basis_norms=(1.0, 2.0, 3.0),
+            duals=np.zeros((4, 6), dtype=np.float64),
+        )
 
 
 def test_factorization_is_deterministic_and_noise_floor_gated() -> None:
