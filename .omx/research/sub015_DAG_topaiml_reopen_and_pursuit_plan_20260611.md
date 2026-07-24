@@ -24062,3 +24062,19 @@ after-Martin-Löf-test) × coder roster (RAW/Brotli/ANS/zstd/CM/CTW + Bellard ca
 switch headers × FRI floor × Girod ξ-precision curve × Polyanskiy dispersion guard × Wallace-MML
 quanta × Schmidhuber ordering law × oracle-facade consumption. Target: beat 291,205,400B at the
 136,839-error cap + un-null the 162 duals. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-pa2-zero-byte-family-first-admission (2026-07-24, reviewed_committed 5dd5f07fce)
+pa2 [macOS-CPU frozen-scorer advisory, n600, receiver-closed, archive SHA IDENTICAL = zero counted
+delta PROVEN]: the decoder-side ξ̂ self-estimation frame-mix (Schmidhuber/Bellard free-lunch member:
+ξ̂ from decoded luma-gradient centroid, integer displacement, deterministic half blend — ALL generic
+decode code) is ADMITTED on IC2: ΔS −2.7573427565 (28.0017→25.2444) at ZERO bytes. Decomposition:
+a TYPED TRADE — seg +0.0475 d_seg (−4.75 S paid) for pose −32.65 d_pose (65.03→32.39, +7.51 S
+earned); the blend writes REAL temporal correlation into the pair at the cost of some seg content.
+BASE-CONDITIONED, not universal: same member REJECTS on IC1 (+22.6) and MS2R (+8.6) — zero-byte
+members obey greedy-under-joint-remeasure like counted ones. SECOND confirmation of the
+describe-line-carries-pose law: MS2R's plane needs NO pose help — PA1 on MS2R HARMS pose
+0.0166→6.65 (INSTANCE REJECTED, not PA1-dead; moment-shifting damages an already-solved pose).
+Typed blockers preserved: gauge-orbit pullback absent · rank-4 tone assignment unfrozen · #401
+zero-direct-saving absent a stored camera section. 12-row three-base conditional table = the
+zero-byte stack's admission ledger for c1 composition. verdict_scope: INSTANCE per row. Pointer
+0.1910828242 [contest-CPU] UNMOVED.
