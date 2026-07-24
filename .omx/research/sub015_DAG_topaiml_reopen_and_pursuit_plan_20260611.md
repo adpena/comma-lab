@@ -23418,3 +23418,14 @@ All inherited RD1/DR2B/C1/MENU1/V19C exchange rates downgraded [upper-bound, pro
 Cherry-pick 5bbfde2b25 clean; tests 4/4 + ruff clean re-run by MAIN. verdict_scope: the rate-dead row
 is FORMULATION-scoped; family ranking PROSPECTIVE; training verdict OPEN at family level. Pointer
 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-px1-erratum (2026-07-24, MAIN, operator query prompted re-verification against pinned
+muon.py bf77c4fb): the FEED-603-px1 parenthetical "(momentum 0.95/Nesterov/5-step-quintic vs
+0.9/no-Nesterov/16-step-PolarExpress)" misreads as Nesterov-ON in the released code. CORRECT
+(re-fetched from the pinned commit): code defaults = momentum 0.95 · nesterov FALSE · wd 0.01 ·
+5-step quintic · extra_scale_factor 1.0 (RMS correction OFF); paper recipe = momentum 0.9 ·
+no Nesterov · wd 0.1 · 16-step PolarExpress · ε 1e-7 · ~0.2 RMS correction. Nesterov AGREES
+(off in both); the divergent axes are momentum, wd (10×), NS iteration/family, and RMS scale
+(~5×). The divergence is SILENT — no note in repo or paper; the docstring's optional 0.2 mention
+cites arXiv 2502.16982 (Moonlight/Kimi), not their own recipe. Lesson unchanged and sharpened:
+paper-title identity ≠ config identity; read paper AND code at a pinned commit (sched1 mandate).
