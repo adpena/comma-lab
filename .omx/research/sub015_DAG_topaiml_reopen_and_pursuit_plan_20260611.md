@@ -22904,3 +22904,27 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   RESEAL against current ticket/consumer/launcher + bounded re-smoke. Campaign fire remains with MAIN
   under standing GO (b) once j7's readiness receipt lands + review.
 - **Fleet:** e4 + ms3 + j7 = 3/4. **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-ms3-custody (2026-07-24, MAIN custody of ddm_ms3_metric_custody_bundle rc=0 — honest PARTIAL)
+- **What landed (commit 00f90488e6→main):** the metric-custody-bundle APPARATUS at fail-closed strictness —
+  typed loader `src/tac/optimization/ddm_metric_custody_bundle.py` (COMPLETE-schema validators; hard
+  refusal on drift; Euclidean can never be primary Seg geometry; Pose rows REQUIRE explicit
+  `NON_CONVERGED_*` states, never interpolation) + completeness gate wired into
+  `build_minimum_description_headline` (metric authority SUPPRESSED while PARTIAL) + 4 SHA-bound PARTIAL
+  component receipts + read-only materializer + equation `ddm_metric_custody_bundle_completion_v1`
+  (structural conjunction only). 22 tests pass on main; contract suite regression clean.
+- **Verdict:** `PARTIAL_MISSING_FOUR_EXACT_MEASUREMENT_SURFACES` — verdict_scope: INSTANCE × current
+  landed producer/custody state (not formulation/family/paradigm).
+- **THE SHARPENED CRUX (finding 7 — the arm REFUSED to fake it):** NO runnable existing producer emits
+  ANY of the four sealed scientific schemas: (a) seg full-n600 rank-4/margin-Fisher row-Gram + λ over the
+  1,200 pf2 buckets (AT1X = contracted energy, not a row-Gram); (b) pose all-600 canonical-batch32 exact
+  Pose6 quadratic + active-tube (V16 = 8 pairs batch16, KKT not all converged); (c) composite-R
+  all-bucket exact Hessian/adjoint + equal-amplitude ± receiver-realized secants (G2F = n64 control, not
+  promotable); (d) matched Fisher-vs-Euclid signed-cosine + rel-norm rows (Euclid-only evidence cannot
+  fill it). Invoking the frozen scorer alone would NOT materialize these — the PRODUCERS must be built,
+  then the authorized four-thread n600 batch32 measurement run. pf2 (SHA 85084f7b…f73, 1,200 rows) + g3
+  hard-pair registry (SHA 0c9ce6d0…) CONFIRMED byte-exact reusable inputs.
+- **Blocked-consumer chain unchanged:** ms2 rerun · pf2r adjudication · rd1's 162 NULL dual cells ·
+  train-decision SOLVE column — all now wait on ms4 (producer build + measurement), the one-level-deeper
+  named crux. Finding 8 (110 historical lane-validator evidence rows) was already routed to #670.
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED — apparatus, not a score row.
