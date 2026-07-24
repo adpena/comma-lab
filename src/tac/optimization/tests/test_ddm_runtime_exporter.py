@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import zipfile
 
 import pytest
 import torch
@@ -36,6 +38,36 @@ def test_deterministic_zip_has_bijective_byte_homes() -> None:
     homes = exporter._zip_home_ledger(first)
     assert first == second
     assert sum(int(row["home_bytes"]) for row in homes) == len(first)
+
+
+def test_public_exact_runtime_marginal_price_includes_container_and_parseback() -> None:
+    control = {
+        "manifest.json": b"{}",
+        "base/chart.ddb": exporter._frame_blob(b"chart", kind=0),
+        "semantic/composed.dds": exporter._frame_blob(
+            b"\0" * 8,
+            kind=1,
+            dimensions=(2, 2, 2),
+        ),
+    }
+    candidate = dict(control)
+    candidate["base/chart.ddb"] = exporter._frame_blob(b"chart!", kind=0)
+
+    def parseback(archive: bytes) -> bool:
+        with zipfile.ZipFile(io.BytesIO(archive), "r") as handle:
+            return tuple(handle.namelist()) == exporter.EXPECTED_MEMBERS
+
+    row = exporter.price_exact_runtime_marginal(
+        control,
+        candidate,
+        parseback=parseback,
+    )
+    assert row.parseback_verified is True
+    assert row.delta_archive_bytes == (row.candidate.archive_bytes - row.control.archive_bytes)
+    assert row.control.archive_bytes == (row.control.member_payload_bytes + row.control.container_bytes)
+    assert sum(int(home["home_bytes"]) for home in row.candidate.byte_home_ledger) == (row.candidate.archive_bytes)
+    with pytest.raises(exporter.ExporterError, match="parse-back"):
+        exporter.price_exact_runtime_packet(control, parseback=lambda _archive: False)
 
 
 def test_runtime_cleanliness_allows_only_generic_dependencies() -> None:

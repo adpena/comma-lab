@@ -1,0 +1,49 @@
+{
+  "schema": "ddm_ms2_typed_quotient_solve_round1_review.v1",
+  "lane_id": "lane_ddm_ms2_typed_quotient_solve_20260724",
+  "performed": true,
+  "reviewer": "codex",
+  "round": 1,
+  "found_and_fixed": [
+    {
+      "issue": "measurement tool resolved the main editable install instead of the isolated worktree",
+      "fix": "prepend this worktree's src and repository roots before tac imports"
+    },
+    {
+      "issue": "V16 audit assumed a nonexistent receipt-level mathematical_authority key",
+      "fix": "read the custodied Gauss-Newton authority from the V16 equations reduction row"
+    },
+    {
+      "issue": "initial MS2 code defined a parallel representation enum",
+      "fix": "removed it after the 03:02 MAIN directive; validate canonical wire values through ddm_min_description_contract when available and define no TypedStreamTag fork"
+    },
+    {
+      "issue": "test normalized the quoted MS1 saved fraction and target multiple instead of preserving stored receipt values",
+      "fix": "pin exact predecessor receipt fields"
+    },
+    {
+      "issue": "initial typed-atlas reconciliation compared every stratum block with the whole class-pair mass",
+      "fix": "sum measured masses over all stratum x visibility x temporal blocks and reconcile each of the ten pair totals"
+    },
+    {
+      "issue": "bounded sieve omitted the one-half factor used by the registered quadratic action",
+      "fix": "use one-half delta-transpose-H-delta so distortion and exact byte prices share the canonical action"
+    },
+    {
+      "issue": "strict identity guard would reject a legitimately measured isotropic composite-R Hessian",
+      "fix": "reject identity scorer Gram or identity combined geometry while allowing a SHA-bound isotropic measured Hessian added to a non-Euclidean Gram"
+    }
+  ],
+  "remaining_scope_limit": [
+    "PF2 is MAIN-landed at b8c81edec2 but absent from this isolated base; merge composition and local rehash are owed",
+    "rank4/Fisher Gram and exact composite-R adjoint/Hessian are not custodied",
+    "realized inner-Jacobian secants and receiver-QP closure are absent",
+    "n600 batch32 Pose quadratic tube is absent",
+    "WS1 source memo and canonical StreamType/TypedStreamTag landing are absent from this isolated base",
+    "no admissible n600 candidate exists, so no scorer run or dual row is authorized"
+  ],
+  "verdict": "ROUND1_FIXED_IMPLEMENTATION_AND_CUSTODY_ERRORS; INSTANCE_REMAINS_BLOCKED",
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

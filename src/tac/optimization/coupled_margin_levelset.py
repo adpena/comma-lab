@@ -169,8 +169,8 @@ def gauss_newton_hessian(
             raise CoupledMarginSolveError("row weights must be finite nonnegative per-row values")
         weighted = np.sqrt(w)[:, None] * m
     lam = float(damping)
-    if not math.isfinite(lam) or lam <= 0.0:
-        raise CoupledMarginSolveError("damping must be finite and positive")
+    if not math.isfinite(lam) or lam < 0.0:
+        raise CoupledMarginSolveError("damping must be finite and nonnegative")
     h = 0.5 * (g + g.T) + weighted.T @ weighted + lam * np.eye(n)
     eigen_min = float(np.linalg.eigvalsh(h).min())
     if eigen_min <= 0.0:

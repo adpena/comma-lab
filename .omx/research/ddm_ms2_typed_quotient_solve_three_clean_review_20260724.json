@@ -1,0 +1,59 @@
+{
+  "schema": "ddm_ms2_typed_quotient_solve_three_clean_review.v1",
+  "lane_id": "lane_ddm_ms2_typed_quotient_solve_20260724",
+  "completed_at_utc": "2026-07-24T03:24:04Z",
+  "reviewer": "codex",
+  "round1_receipt": ".omx/research/ddm_ms2_typed_quotient_solve_round1_review_20260724.json",
+  "identical_content_set_sha256": "82f8b3808dac75b4054f06345e17ab271b6dd1c900567d369c1f87f0bd8a0c47",
+  "reviewed_content_sha256": {
+    "src/tac/optimization/coupled_margin_levelset.py": "dd94e60d9a8c491f3d572ffbd525678d0de3b35aa45054ac6aee3c5c4e14a806",
+    "src/tac/optimization/ddm_runtime_exporter.py": "e566e83f71348944039e0fb67834968e280b93d17f688040010a0bbcb0c4775c",
+    "src/tac/optimization/tests/test_ddm_runtime_exporter.py": "87a59123ee86bda8ed366a54af5ed3e1f8b8f135f9f38562f90f5b1503b7ec83",
+    "src/tac/optimization/ddm_typed_quotient_solve.py": "fa7af7ecb8252eadba0cea2a54e7b6dd50bc2d2a9f987af6f561af40723fc38c",
+    "src/tac/optimization/tests/test_ddm_typed_quotient_solve.py": "a978bf5faadc6ce725fdd0e6ab3286647fb87d057d59ec237f38863d691da730",
+    "src/tac/canonical_equations/ddm_ms2_typed_quotient_solve_20260724.py": "3c8f3b60f068fd5c69ff1fa7683882ca5552c35f9fdaed84500643b5635fefac",
+    "src/tac/canonical_equations/tests/test_ddm_ms2_typed_quotient_solve_20260724.py": "b0267b780ab84c4f1bf5e34d4c0fdb2d40aa788876cb0b5728edd4a575554f2a",
+    "tools/measure_ddm_ms2_typed_quotient_solve.py": "2bbf02ecbf4d46fc3648ca3927a60f3ad1b2d423c904d16ff4ace23d1eda3090",
+    "tools/tests/test_measure_ddm_ms2_typed_quotient_solve.py": "0966246fa9e03159d6c860cf9b6a8e153c333615789b4b6296deb9f9625ab2f6",
+    ".omx/research/ddm_ms2_typed_quotient_solve_20260724_receipt.json": "04060edf9834b661f12a9794e50ceadf7dd4ab114baf55a15555537abc71e419",
+    ".omx/research/ddm_ms2_typed_quotient_solve_pre_pf2_20260724T031200Z_receipt.json": "9b17c5108e4b8d5a517ecb66276fc0e78162e54b53a9f4d819a48286989b98b6",
+    ".omx/research/ddm_ms2_typed_quotient_solve_DAG_FEED_20260724.md": "a8824ea495b773c0bd8edf7ad5f9b8f7af30c78c31fd3975234b47dfdbc28646",
+    ".omx/research/ddm_ms2_typed_quotient_solve_canonical_equations_20260724.md": "64203deb37a0e4b614effcaee722c067be834da97bdd88629b92882d8f23e3f9",
+    ".omx/research/ddm_ms2_typed_quotient_solve_directive_consumption_20260724.md": "1d893a83003a24f3757aef49685b1386b3bfd8d1e3365c226e9d5eb20ffa4686",
+    ".omx/research/codex_findings_ddm_ms2_typed_quotient_solve_20260724_codex.md": "e0b5302e0ff72261d81b7795430716117f294fe8a392a2506e0cf0529924f410",
+    ".omx/state/canonical_equations_registry.jsonl": "e2f9683db5f46e80b9b7a732b3e24d93f427c4c3a59932758faee600e40ea603"
+  },
+  "passes": [
+    {
+      "pass_id": "ddm_ms2_clean_1",
+      "content_set_sha256": "82f8b3808dac75b4054f06345e17ab271b6dd1c900567d369c1f87f0bd8a0c47",
+      "ruff": "PASS",
+      "pytest": "75 passed",
+      "json_and_diff_checks": "PASS",
+      "review_tracker": "all 9 changed Python files marked reviewed",
+      "issues": []
+    },
+    {
+      "pass_id": "ddm_ms2_clean_2",
+      "content_set_sha256": "82f8b3808dac75b4054f06345e17ab271b6dd1c900567d369c1f87f0bd8a0c47",
+      "ruff": "PASS",
+      "pytest": "75 passed",
+      "json_and_diff_checks": "PASS",
+      "review_tracker": "all 9 changed Python files marked reviewed",
+      "issues": []
+    },
+    {
+      "pass_id": "ddm_ms2_clean_3",
+      "content_set_sha256": "82f8b3808dac75b4054f06345e17ab271b6dd1c900567d369c1f87f0bd8a0c47",
+      "ruff": "PASS",
+      "pytest": "75 passed",
+      "json_and_diff_checks": "PASS",
+      "review_tracker": "all 9 changed Python files marked reviewed",
+      "issues": []
+    }
+  ],
+  "verdict": "THREE_IDENTICAL_CLEAN_PASSES",
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

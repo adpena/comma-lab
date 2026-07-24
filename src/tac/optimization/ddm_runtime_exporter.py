@@ -14,6 +14,8 @@ import re
 import shutil
 import struct
 import zipfile
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -137,6 +139,27 @@ RUNTIME_SOURCE = Path(__file__).with_name("ddm_runtime_receiver.py")
 
 class ExporterError(ValueError):
     """The export contract or source custody failed closed."""
+
+
+@dataclass(frozen=True, slots=True)
+class ExactRuntimePacketPrice:
+    """Full stored-ZIP price after a caller-supplied exact parse-back."""
+
+    archive_bytes: int
+    archive_sha256: str
+    member_payload_bytes: int
+    container_bytes: int
+    byte_home_ledger: tuple[dict[str, Any], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ExactRuntimeMarginalPrice:
+    """Candidate minus control bytes under identical deterministic framing."""
+
+    control: ExactRuntimePacketPrice
+    candidate: ExactRuntimePacketPrice
+    delta_archive_bytes: int
+    parseback_verified: Literal[True] = True
 
 
 class DDME1RuntimeExporterConfigV1(BaseModel):
@@ -693,6 +716,59 @@ def _zip_home_ledger(archive: bytes) -> list[dict[str, Any]]:
     if sum(int(row["home_bytes"]) for row in rows) != len(archive):
         raise ExporterError("runtime ZIP byte homes are not bijective")
     return rows
+
+
+def price_exact_runtime_packet(
+    members: Mapping[str, bytes],
+    *,
+    parseback: Callable[[bytes], bool],
+) -> ExactRuntimePacketPrice:
+    """Price one complete E3 packet, including framing and ZIP container bytes.
+
+    ``members`` must already contain the final framed payloads and a manifest
+    whose hashes match them.  ``parseback`` is the public semantic gate: the
+    caller must invoke the actual receiver/parser and return exact ``True``.
+    Raw LZMA/member byte counts alone are intentionally not exposed as an
+    admissible price.
+    """
+
+    if tuple(members) != EXPECTED_MEMBERS:
+        raise ExporterError("runtime packet members are incomplete or reordered")
+    normalized: dict[str, bytes] = {}
+    for name in EXPECTED_MEMBERS:
+        payload = members[name]
+        if not isinstance(payload, bytes):
+            raise ExporterError(f"runtime member {name!r} must be exact bytes")
+        normalized[name] = payload
+    archive = _deterministic_zip(normalized)
+    homes = tuple(_zip_home_ledger(archive))
+    if parseback(archive) is not True:
+        raise ExporterError("runtime packet parse-back did not return exact True")
+    member_payload_bytes = sum(len(normalized[name]) for name in EXPECTED_MEMBERS)
+    return ExactRuntimePacketPrice(
+        archive_bytes=len(archive),
+        archive_sha256=_sha256(archive),
+        member_payload_bytes=member_payload_bytes,
+        container_bytes=len(archive) - member_payload_bytes,
+        byte_home_ledger=homes,
+    )
+
+
+def price_exact_runtime_marginal(
+    control_members: Mapping[str, bytes],
+    candidate_members: Mapping[str, bytes],
+    *,
+    parseback: Callable[[bytes], bool],
+) -> ExactRuntimeMarginalPrice:
+    """Return exact candidate-minus-control E3 bytes after both parse-backs."""
+
+    control = price_exact_runtime_packet(control_members, parseback=parseback)
+    candidate = price_exact_runtime_packet(candidate_members, parseback=parseback)
+    return ExactRuntimeMarginalPrice(
+        control=control,
+        candidate=candidate,
+        delta_archive_bytes=candidate.archive_bytes - control.archive_bytes,
+    )
 
 
 def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:

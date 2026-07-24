@@ -1,0 +1,834 @@
+{
+  "actuation": {
+    "exact_eval": false,
+    "frontier_mutation": false,
+    "local_n600_scorer_run": false,
+    "paid_dispatch": false,
+    "training_launch": false
+  },
+  "alternating_dictionary": {
+    "method_available": "tac.optimization.ddm_typed_quotient_solve:generalized_metric_dictionary_update",
+    "n600_basis_updates": 0,
+    "plain_svd_authority": "FORBIDDEN_CONTROL_ONLY",
+    "status": "NOT_RUN_NO_MEASURED_SCORER_GEOMETRY",
+    "tolerance_homotopy_completed": false
+  },
+  "authority": {
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "execution_allowed": false,
+    "main_landing_review_required": true,
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "research_only": true,
+    "score_claim": false,
+    "torch_threads_required": 4
+  },
+  "blockers": [
+    "PF2_MAIN_LANDED_ATLAS_REQUIRES_MERGE_COMPOSITION",
+    "MEASURED_SCORER_GRAM_NOT_CUSTODIED",
+    "EXACT_COMPOSITE_R_HESSIAN_NOT_CUSTODIED",
+    "REALIZED_INNER_JACOBIAN_SECANTS_NOT_CUSTODIED",
+    "N600_BATCH32_POSE_QUADRATIC_TUBE_NOT_CUSTODIED",
+    "PER_DIMENSION_SCORER_QUANTA_NOT_CUSTODIED",
+    "N600_METRIC_ACTIVE_ALTERNATION_NOT_RUN",
+    "G3_HARD_BLOCK_BOUNDED_EXACT_SIEVE_NOT_RUN",
+    "N600_GENERALIZED_DICTIONARY_ALTERNATION_NOT_RUN",
+    "N600_TYPED_CANDIDATE_NOT_MATERIALIZED"
+  ],
+  "bounded_exact_hard_block_sieve": {
+    "g3_hard_pair_registry": ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/hard_pair_registry.json",
+    "lattice_family_negative_authorized": false,
+    "method_available": "tac.optimization.ddm_typed_quotient_solve:bounded_exact_metric_sieve",
+    "representative_blocks_run": 0,
+    "search_complete": false,
+    "status": "NOT_RUN_NO_MEASURED_SCORER_GEOMETRY_OR_LANDED_TYPED_BLOCK"
+  },
+  "campaign_headline": {
+    "blockers": [
+      "OWN_LINEAGE_STORED_PROBLEM_NOT_PROVEN",
+      "STORED_PROBLEM_BYTE_CUSTODY_MISSING",
+      "SOLVE_EXCEPTION_BYTE_CUSTODY_MISSING",
+      "STORED_PROBLEM_EXPANSION_NOT_RECEIVER_CLOSED",
+      "POSE_TUBE_NOT_ACTIVE_IN_SOLVE",
+      "GAUGE_COORDINATES_NOT_DROPPED",
+      "SCORER_METRIC_NOT_ACTIVE",
+      "TYPED_SUBPROBLEM_ALTERNATION_NOT_ACTIVE",
+      "TYPED_BLOCK_ATLAS_NOT_ACTIVE",
+      "PER_DIMENSION_EFFECTIVE_QUANTA_NOT_ACTIVE"
+    ],
+    "campaign": "inverse_solve_minimum_description_witness",
+    "decision_triple": {
+      "realized_d_pose": null,
+      "realized_d_seg": null,
+      "total_counted_bytes": null
+    },
+    "diagnostic_distortions": {
+      "realized_d_pose": 0.00010184327939026322,
+      "realized_d_seg": 0.0001519690619574653
+    },
+    "donor_conditioned": false,
+    "headline_eligible": false,
+    "joint_constraints": {
+      "pose_tube_active": false,
+      "realized_uint8_r_frozen_scorers": true
+    },
+    "promotion_eligible": false,
+    "recursive_solve_typing": {
+      "blockers": [
+        "GAUGE_COORDINATES_NOT_DROPPED",
+        "SCORER_METRIC_NOT_ACTIVE",
+        "TYPED_SUBPROBLEM_ALTERNATION_NOT_ACTIVE",
+        "TYPED_BLOCK_ATLAS_NOT_ACTIVE",
+        "PER_DIMENSION_EFFECTIVE_QUANTA_NOT_ACTIVE"
+      ],
+      "declarations": {
+        "alternating_typed_subproblems": false,
+        "per_dimension_quanta_active": false,
+        "quotient_coordinates_only": false,
+        "scorer_metric_active": false,
+        "typed_blocks_active": false
+      },
+      "headline_ready": false,
+      "required_geometry": {
+        "blocks": "stratum x scorer-visibility x g4 temporal class",
+        "metric": "Seg rank-4 head plus margin-Fisher blocks and a <=6-dimensional Pose quadratic",
+        "quanta": "uint8 step x per-dimension scorer sensitivity",
+        "subproblems": "alternate argmax-cell selection, within-cell continuous lattice solve, and real-coder pricing",
+        "variables": "range(A)/quotient coordinates only; ker(A) is gauge and is realized by the preimage compiler plus deterministic free fill"
+      },
+      "schema": "ddm_recursive_solve_typing.v1"
+    },
+    "schema": "ddm_min_description_headline.v1",
+    "score_claim": false,
+    "solve_mandated_exceptions": {
+      "bytes": 731622325,
+      "conditional_coding_role": "quoted MS1 diagnostic previous-frame conditioning only; not an MS2 counted own-lineage exception stream",
+      "sha256": null
+    },
+    "status": "HEADLINE_BLOCKED",
+    "stored_problem": {
+      "bytes": null,
+      "own_lineage": false,
+      "receiver_expansion_closed": false,
+      "sha256": null
+    }
+  },
+  "canonical_equations": {
+    "callable_module": "tac.canonical_equations.ddm_ms2_typed_quotient_solve_20260724",
+    "equation_ids": [
+      "ddm_ms2_visible_quotient_gauge_zero_v1",
+      "ddm_ms2_scorer_metric_second_order_action_v1",
+      "ddm_ms2_typed_block_dual_exchange_v1",
+      "ddm_ms2_effective_quantum_admission_v1",
+      "ddm_ms2_skeleton_fiber_coder_race_v1"
+    ],
+    "historical_registration_receipt": {
+      "path": ".omx/research/ddm_ms2_typed_quotient_solve_pre_pf2_20260724T031200Z_receipt.json",
+      "sha256": "9b17c5108e4b8d5a517ecb66276fc0e78162e54b53a9f4d819a48286989b98b6"
+    },
+    "registration_contract": "registered exactly once against the preserved pre-PF2 receipt; later PF2 landing custody is linked by locked append-only domain_refined events; live latest-event state verified"
+  },
+  "directive_consumption": [
+    {
+      "durable_effect": "MS2 five typings, local-only authority, receipt and review contract",
+      "source": "authority_file",
+      "source_sha256": "bfda63623b2c87141fb05b5a59f5c27d4411c8d0260fd85e024436a82d08eba8",
+      "status": "CONSUMED"
+    },
+    {
+      "durable_effect": "scorer-native/R/real-coder and no-fake firewall",
+      "source": "ddm_scorer_native_doctrine_and_synthesis_20260723 points 1-9b",
+      "status": "CONSUMED"
+    },
+    {
+      "durable_effect": "predecessor facts and exact headline helper inputs",
+      "source": ".omx/research/ddm_ms1_min_description_lattice_solve_20260724_receipt.json",
+      "source_sha256": "1b7063a44574b0839ede08c807f348ad417be0492ac32d68634b124b9c2b1e97",
+      "status": "CONSUMED_QUOTED_NOT_RERUN"
+    },
+    {
+      "durable_effect": "nonidentity measured scorer metric binds KKT/CVP/trust/ranking/generalized dictionary; Euclidean control never verdict-bearing",
+      "source": "inbox:2026-07-24T02:27:12Z",
+      "status": "CONSUMED_P0"
+    },
+    {
+      "durable_effect": "exact composite-R second order, scorer hyperplane coordinates, and most-optimal-first ladder enforced",
+      "source": "inbox:2026-07-24T02:28:21Z",
+      "status": "CONSUMED_P0"
+    },
+    {
+      "durable_effect": "WS1 8/104 pose-serving moves are FIBER priced in Pose-visible coordinates; stream fields cite ddm_min_description_contract and no parallel enum is defined",
+      "source": "inbox:2026-07-24T03:02:01Z",
+      "status": "CONSUMED_AS_TYPED_PRIOR_SOURCE_CUSTODY_OWED"
+    },
+    {
+      "durable_effect": "PF2 commit b8c81edec2 supplies the 1,200-row typed atlas; PF2R is a second named consumer; metric adjudication remains blocked on MS2 scorer-geometry custody",
+      "source": "inbox:2026-07-24T03:13:37Z",
+      "status": "CONSUMED_MAIN_LANDING_CITATION"
+    },
+    {
+      "durable_effect": "typed atlas must be reused rather than rebuilt; current isolated-base declaration remains false until composition",
+      "source": "PF2 MAIN landing",
+      "source_sha256": "85084f7bd3a03dbd1b9f04fe6a9b84df4948a6caf64620beef42da8924345f73",
+      "status": "CITED_FOR_MAIN_COMPOSITION_NOT_LOCALLY_REHASHED"
+    },
+    {
+      "durable_effect": "per-block dual rows remain null and SOLVE feed stays blocked",
+      "source": "RD1 dual feed",
+      "status": "NOT_PRESENT_NOT_IMPUTED"
+    }
+  ],
+  "dual_policy": {
+    "fisher_margin_as_dual_forbidden": true,
+    "imputation_forbidden": true,
+    "per_block_rows_required_for_solve_feed": true,
+    "pooled_lambda_forbidden": true,
+    "status": "UNAVAILABLE_NO_INSTANTIATED_METRIC_ACTIVE_BLOCKS"
+  },
+  "first_rung_measurements": [
+    "At MAIN merge, compose PF2 commit b8c81edec2, rehash its receipt, and validate all 1,200 typed rows without rebuilding the atlas.",
+    "Materialize SHA-bound scorer-native Gram plus exact composite-R adjoint/Hessian over visible quotient coordinates.",
+    "Measure candidate-arrangement realized inner-Jacobian secants and close the receiver QP.",
+    "Build the n600 batch32 <=6D Pose quadratic and keep its tube active inside each alternating cycle.",
+    "Run bounded exact sieve on preregistered G3 hard blocks before any lattice-family negative.",
+    "Run per-block generalized metric dictionary updates along the tolerance homotopy.",
+    "Emit exact unpooled block dual/exchange rows and only then rerun the headline firewall."
+  ],
+  "five_typings": {
+    "alternating_typed_subproblems": {
+      "completed_cycles": 0,
+      "declaration": false,
+      "pose_tube_active_each_iteration": false,
+      "real_e3_packet_price_api": "tac.optimization.ddm_runtime_exporter:price_exact_runtime_marginal",
+      "required_order": [
+        "ARGMAX_CELL_SELECTION",
+        "WITHIN_CELL_CONTINUOUS_LATTICE",
+        "REAL_CODER_PRICE"
+      ]
+    },
+    "per_dimension_quanta_active": {
+      "apparatus": "STRICT_EFFECTIVE_QUANTUM_TYPE_IMPLEMENTED",
+      "declaration": false,
+      "law": "effective_quantum = uint8_step * measured_scorer_sensitivity",
+      "tolerance_knees_swept": false
+    },
+    "quotient_coordinates_only": {
+      "apparatus": "STRICT_VISIBLE_QUOTIENT_AND_GAUGE_ZERO_LAW_IMPLEMENTED",
+      "declaration": false,
+      "free_fill": "tac.through_r.blind_coordinate",
+      "n600_realization": "NOT_RUN",
+      "preimage": "tac.optimization.uint8_lattice_feasibility.minimum_norm_real_preimage",
+      "projector": "separable_resize_full_kernel_direct_sum_v1",
+      "visible_fraction": 0.1932576847767109,
+      "visible_fraction_epistemic_status": "DERIVED_FROM_EXACT_580_NULLITY"
+    },
+    "scorer_metric_active": {
+      "apparatus": "STRICT_NONIDENTITY_GATE_IMPLEMENTED",
+      "coordinate_system": "seg_rank4_winner_rival_hyperplanes_plus_pose6",
+      "declaration": false,
+      "geometry_ladder": [
+        "MEASURED_SCORER_SECOND_ORDER",
+        "SIMPLER_FORMS_CONTROL_ONLY",
+        "IDENTITY_EUCLIDEAN_CONTROL"
+      ],
+      "identity_euclidean": "CONTROL_ONLY_NOT_EXECUTED",
+      "required": "rank4 winner-rival hyperplanes + margin-Fisher + <=6D Pose quadratic + exact composite-R Hessian/adjoint + realized inner Jacobian"
+    },
+    "typed_blocks_active": {
+      "canonical_contract_module": "tac.optimization.ddm_min_description_contract",
+      "canonical_types_expected": [
+        "StreamType",
+        "TypedStreamTag"
+      ],
+      "class_count_required": 5,
+      "class_pair_count_required": 10,
+      "declaration": false,
+      "key": [
+        "stratum",
+        "scorer_visibility",
+        "g4_temporal_class"
+      ],
+      "locally_composed_class_pair_coverage": 0,
+      "parallel_enum_defined": false,
+      "pf2_reconciliation": "MAIN_LANDED_COMMIT_B8C81EDEC2_NOT_PRESENT_IN_ISOLATED_BASE",
+      "physical_bev_amortization_active": false,
+      "quoted_pf2_class_pair_coverage": 10
+    }
+  },
+  "frame_custody": {
+    "frame_0_byte_identical_claim": null,
+    "frame_0_sha256": null,
+    "ms2_candidate_exists": false,
+    "pose_tube_claim": false,
+    "reason": "NO_ADMISSIBLE_CANDIDATE_MATERIALIZED"
+  },
+  "input_custody": {
+    "dr2b_scope": {
+      "use": "INPUT_PRICE_ROWS_ONLY_NOT_FULL_PER_VISIBLE_DIMENSION_QUANTA",
+      "verdict": "MEASURED_E2_SPARSE_COSTATE_ROWS; BLOCKED_SDWL1_LADDER_MODE_RERACE_DR1_RECORD_PRUNING_AND_XI_DIRECTION",
+      "verdict_scope": "E2 coordinate instances and the explicit SDWL1/E2/DR1 formulation bridges named in each negative. No family or paradigm verdict, score claim, promotion, or pointer move."
+    },
+    "g4_scope": {
+      "bev_blocker": "no independently observed pixel homography/liveCalibration custody; xi fraction is a target-cache metric-Pose6 G1 translation-only proxy whose transport side-information is not free",
+      "classes": [
+        "STATIC_IN_IMAGE",
+        "STATIC_IN_XI_PROXY",
+        "TRANSIENT"
+      ],
+      "physical_bev_fraction": null,
+      "rule": "STATIC_IN_XI_PROXY_MUST_NOT_BE_LAUNDERED_AS_PHYSICAL_BEV",
+      "static_in_image_fraction": 0.9880630309460725
+    },
+    "landed": {
+      "at1x_metric_atlas_receipt": {
+        "bytes": 7382,
+        "path": ".omx/research/ddm_at1x_atlas_materialize_20260723/atlas_receipt.json",
+        "schema": "ddm_at1x_atlas_materialize_tracked_receipt.v1",
+        "sha256": "5ad26805b04d6158cdd06e238502203d7eb893aca43dc10619c832436d11d73e"
+      },
+      "dr2b_tolerance_rows": {
+        "bytes": 53101,
+        "path": ".omx/research/ddm_dr2b_tolerance_ladder_and_costate_rows_n600_20260723_v4/receipt.json",
+        "schema": "ddm_dr2b_tolerance_ladder_and_costate_rows.v1",
+        "sha256": "9dedcc03d38942c4291a51505b754890a79ab48bfa53c1ac8daef61fe5a8c8c8"
+      },
+      "g3_hard_pair_atlas": {
+        "bytes": 17091,
+        "path": ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_receipt.json",
+        "schema": "ddm_g3_score_atlas_receipt.v1",
+        "sha256": "6c4157092a7bdf7ba44b458cd470725cc470d84a8fc77ed7d3dedb59160734f5"
+      },
+      "g4_stationarity": {
+        "bytes": 16547,
+        "path": ".omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z/ddm_g4_spatial_stationarity_receipt.json",
+        "schema": "ddm_g4_spatial_stationarity_receipt.v1",
+        "sha256": "bea555b95aeaa11f4209df5333010c41c5495dd789def2a4f7a2a91973f3408c"
+      },
+      "inner_jacobian_status": {
+        "bytes": 2766,
+        "path": ".omx/research/realization_g2d_predict_base_projection_blocker_20260721.json",
+        "schema": "realization_g2d_rank4_projection_compatibility_compact.v1",
+        "sha256": "158825f4e759dbeed9cb64c23019ef36e9e617eb1b37400cea0840aae480471e"
+      },
+      "ms1": {
+        "bytes": 8800,
+        "path": ".omx/research/ddm_ms1_min_description_lattice_solve_20260724_receipt.json",
+        "schema": "ddm_ms1_min_description_lattice_solve_repo_receipt.v1",
+        "sha256": "1b7063a44574b0839ede08c807f348ad417be0492ac32d68634b124b9c2b1e97"
+      },
+      "v16_equations": {
+        "bytes": 2277,
+        "path": ".omx/research/ddm_v16_coupled_joint_solve_equations_20260723.json",
+        "schema": "ddm_v16_coupled_joint_solve_equations.v1",
+        "sha256": "f555d02f209242507b6eb74859efe4f1f280208929272bf9bcaedbd33e776b4c"
+      },
+      "v16_pose_tube_receipt": {
+        "bytes": 85049,
+        "path": ".omx/research/ddm_v16_coupled_joint_solve_lane_fix_20260723T013500Z/ddm_v16_coupled_joint_solve_receipt.json",
+        "schema": "ddm_v16_coupled_joint_solve_receipt.v1",
+        "sha256": "7b2d2c18f7790294bbfbbd875a6c4696e570a49826c8317109ca8a988c27f79d"
+      },
+      "v16_receipt": {
+        "bytes": 84164,
+        "path": ".omx/research/ddm_v16_coupled_joint_solve_20260723T002500Z/ddm_v16_coupled_joint_solve_receipt.json",
+        "schema": "ddm_v16_coupled_joint_solve_receipt.v1",
+        "sha256": "170adb825d4d709eebf929daf47e87c4de6736c15f7047572d16315b518ce0e4"
+      }
+    },
+    "pf2_main_landing_handoff": {
+      "class_pair_count": 10,
+      "invalidated_identity_metric_receipt_sha256": "e48468898a64935168ae863d55efd4e38e0cb27ea18278998a1901bc858229fd",
+      "largest_pair_bucket": {
+        "class_pair": "Road-Undrivable",
+        "event_mass": 1280501
+      },
+      "main_commit_short": "b8c81edec2",
+      "main_landed": true,
+      "measured_event_mass": 4011236,
+      "metric_rerun_blocker_id": "PF2_METRIC_ACTIVE_THREE_FORMULATION_ADJUDICATION_INCOMPLETE",
+      "pf2r_requires_from_ms2": [
+        "bucket-complete rank4 winner/rival margin-Fisher field with lambda",
+        "pairwise PoseNet6 quadratic for the F2 hood basis",
+        "exact composite-R readback",
+        "Euclid-vs-Fisher cosine and relative-norm diagnostics"
+      ],
+      "receipt_bytes": 1696256,
+      "receipt_sha256": "85084f7bd3a03dbd1b9f04fe6a9b84df4948a6caf64620beef42da8924345f73",
+      "reported_bucket_count": 1200,
+      "safe_use": "CITE_TYPED_ATLAS_FOR_MAIN_COMPOSITION; DO_NOT_TREAT_AS_METRIC_ACTIVE_ADJUDICATION",
+      "schema": "ddm_pf2_dimension_conditioned_two_type_measurement.v1",
+      "self_declared_verdict": "PF2_METRIC_ACTIVE_THREE_FORMULATION_ADJUDICATION_INCOMPLETE_F1_EXACT_CONTROL_SURVIVES_F3_NEGATIVE_F2_OWED",
+      "status": "MAIN_LANDED_CITED_NOT_LOCALLY_REHASHED"
+    },
+    "scorer_geometry_audit": {
+      "at1x_pose6_vjp_gram": "FULL_N600_TWO_6X6_ROW_GRAMS_PER_PAIR_BUT_PAIR_LOCAL_BATCH1",
+      "at1x_seg_metric": "ONE_CONTRACTED_ROW_ENERGY_PER_DEPTH_NOT_PER_BLOCK_RANK4_FISHER_GRAM",
+      "dual_metric_readback": "NOT_AVAILABLE_FOR_MS2_BLOCKS",
+      "exact_composite_r_hessian": "ABSENT",
+      "inner_jacobian_record_sha256": "53cca3a5e06fc98b3f6170aa340b2fab740d281e7f8bc602b4330b9fb345fd46",
+      "qp_receiver_closure": "ABSENT",
+      "realized_backbone_secants": "ABSENT",
+      "seg_metric_gram": "ABSENT",
+      "seg_rank4_head": "EXACT_HEAD_GEOMETRY_EXISTS",
+      "seg_source_vjp": "MEASURED_REAL_N600_SOURCE_ARRANGEMENT_ONLY",
+      "v16_all_kkt_attempts_converged": false,
+      "v16_gauss_newton_authority": "MODELED_LOCAL_CURVATURE",
+      "v16_pose_tube": "EIGHT_PAIRS_BATCH16_THREADS4_96_LINEAR_BOX_ROWS_ONLY; FIRST_ORDER_AND_GN_MAX_ITERATIONS_RESIDUAL_NOT_CLEAN"
+    }
+  },
+  "lane_id": "lane_ddm_ms2_typed_quotient_solve_20260724",
+  "main_landing_review_required": true,
+  "measurement": {
+    "finished_at_utc": "2026-07-24T03:18:00Z",
+    "frozen_scorer_invoked": false,
+    "measured_pair_count": 0,
+    "r_operator_invoked": false,
+    "reason": [
+      "PF2_MAIN_LANDED_ATLAS_REQUIRES_MERGE_COMPOSITION",
+      "MEASURED_SCORER_GRAM_NOT_CUSTODIED",
+      "EXACT_COMPOSITE_R_HESSIAN_NOT_CUSTODIED",
+      "REALIZED_INNER_JACOBIAN_SECANTS_NOT_CUSTODIED",
+      "N600_BATCH32_POSE_QUADRATIC_TUBE_NOT_CUSTODIED",
+      "PER_DIMENSION_SCORER_QUANTA_NOT_CUSTODIED",
+      "N600_METRIC_ACTIVE_ALTERNATION_NOT_RUN",
+      "G3_HARD_BLOCK_BOUNDED_EXACT_SIEVE_NOT_RUN",
+      "N600_GENERALIZED_DICTIONARY_ALTERNATION_NOT_RUN",
+      "N600_TYPED_CANDIDATE_NOT_MATERIALIZED"
+    ],
+    "receiver_invoked": false,
+    "required_pair_count": 600,
+    "status": "NOT_RUN_FAIL_CLOSED_BEFORE_CANDIDATE",
+    "torch_invoked": false,
+    "torch_threads_required": 4
+  },
+  "named_downstream_consumers": [
+    {
+      "consumer": "train-decision-table SOLVE column",
+      "status": "BLOCKED_CUSTODY_NO_DUAL_ROWS"
+    },
+    {
+      "blocker_id": "PF2_METRIC_ACTIVE_THREE_FORMULATION_ADJUDICATION_INCOMPLETE",
+      "consumer": "pf2r metric-active three-formulation rerun",
+      "status": "BLOCKED_MISSING_MS2_METRIC_CUSTODY_ROWS"
+    }
+  ],
+  "per_block_dual_exchange_rows": [],
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "predecessor_receipt": {
+    "bytes": 8800,
+    "path": ".omx/research/ddm_ms1_min_description_lattice_solve_20260724_receipt.json",
+    "schema": "ddm_ms1_min_description_lattice_solve_repo_receipt.v1",
+    "sha256": "1b7063a44574b0839ede08c807f348ad417be0492ac32d68634b124b9c2b1e97"
+  },
+  "promotion_eligible": false,
+  "representation_rows": [
+    {
+      "byte_partition": "COUNTED_REAL_CODER",
+      "derivation": "discrete quotient/event topology/reuse",
+      "evaluate_recursion_level": "L0_SCORE_DISCRETE_QUOTIENT_X_CONTINUOUS_QUADRATIC",
+      "measurement_status": "BLOCKED_PENDING_LANDED_PF2_PER_STRATUM_RACE",
+      "stream_type_contract_module": "tac.optimization.ddm_min_description_contract",
+      "type": "SKELETON"
+    },
+    {
+      "byte_partition": {
+        "exceptions": "COUNTED",
+        "operator_code": "FREE_RULE118",
+        "parameters": "COUNTED"
+      },
+      "derivation": "xi/se3/homography/g4 temporal transport",
+      "evaluate_recursion_level": "L2_PAIR_INDEPENDENCE_X_TEMPORAL_EVENT_FLOW",
+      "measurement_status": "G4_XI_PROXY_ONLY_NO_PHYSICAL_BEV_CUSTODY",
+      "physical_bev_claim": false,
+      "stream_type_contract_module": "tac.optimization.ddm_min_description_contract",
+      "type": "CONNECTION"
+    },
+    {
+      "byte_partition": "COUNTED_NATIVE_ANALOG_CODER",
+      "derivation": "margin-priced continuous scorer/Pose6 coordinates",
+      "evaluate_recursion_level": "L1_ARGMAX_CELL_MARGIN_FIBER_POSE6",
+      "measurement_status": "BLOCKED_PENDING_LANDED_PF2_PER_STRATUM_RACE",
+      "stream_type_contract_module": "tac.optimization.ddm_min_description_contract",
+      "type": "FIBER"
+    },
+    {
+      "byte_partition": "ZERO_BYTES_BY_CONSTRUCTION",
+      "counted_bytes": 0,
+      "derivation": "R-null/scorer-invisible coordinates dropped before solve",
+      "evaluate_recursion_level": "L1_ARGMAX_CELL_MARGIN_FIBER_POSE6",
+      "measurement_status": "STRICT_CODE_LAW_IMPLEMENTED_NO_N600_CANDIDATE",
+      "stream_type_contract_module": "tac.optimization.ddm_min_description_contract",
+      "type": "GAUGE"
+    },
+    {
+      "byte_partition": "COUNTED_EXACT_RUNTIME_PACKET",
+      "derivation": "exceptions left after typed skeleton/connection/fiber generation",
+      "evaluate_recursion_level": "L2_PAIR_INDEPENDENCE_X_TEMPORAL_EVENT_FLOW",
+      "measurement_status": "BLOCKED_NO_ADMISSIBLE_N600_CANDIDATE",
+      "stream_type_contract_module": "tac.optimization.ddm_min_description_contract",
+      "type": "RESIDUAL"
+    }
+  ],
+  "resumability": {
+    "complete_block_stages": 0,
+    "per_block_atomic_checkpoint_contract": {
+      "path_template": "/Volumes/VertigoDataTier/pact/ddm_ms2_typed_quotient_solve/blocks/{block_id}/stage_{stage_index:04d}.json",
+      "preserve_all_stages": true,
+      "resume_key": [
+        "block_id",
+        "stage_index",
+        "geometry_receipt_sha256",
+        "pf2_atlas_receipt_sha256",
+        "typed_config_sha256"
+      ],
+      "write": "temporary_plus_fsync_plus_os_replace"
+    },
+    "run_started": false,
+    "stage_loss_bound": "NO_RUN; future run at most one intra-block stage"
+  },
+  "run_id": "ddm_ms2_typed_quotient_solve_20260724T022221Z",
+  "schema": "ddm_ms2_typed_quotient_solve_repo_receipt.v1",
+  "schema_authority_note": {
+    "landed_predecessor_reality": "MS1 repo receipt and executable headline/typing helpers are v1",
+    "prompt_phrase": "extend the ms1 v2 schema",
+    "resolution": "additive MS2 repo_receipt.v1 SHA-binds the landed MS1 v1 receipt and reuses build_minimum_description_headline unchanged"
+  },
+  "score_claim": false,
+  "settled_ms1_facts_quoted_not_rerun": {
+    "best_conditional_coder": {
+      "bytes": 731622325,
+      "fraction_saved": 0.01744088062351428,
+      "target_archive_bytes": 154524,
+      "times_target_archive": 4734.684094380161
+    },
+    "identity_euclidean_full_kernel_cvp_control": {
+      "authority": "INSTANCE_SCOPED_NAIVE_CONTROL_REQUIRES_METRIC_ACTIVE_RERUN",
+      "gauge_fraction_percent": 80.67423152232891,
+      "proposal_count": 1200,
+      "proposal_wins": 0
+    },
+    "unchanged_member_oracle": {
+      "argmax_identical_pairs": 600,
+      "batch_geometry": 32,
+      "d_pose": 0.00010184327939026322,
+      "d_seg": 0.0001519690619574653,
+      "pair_count": 600,
+      "pose6_bit_identical_pairs": 600,
+      "status": "QUOTED_MS1_DIAGNOSTIC_NOT_NEW_MS2_MEASUREMENT"
+    }
+  },
+  "skeleton_fiber_distillation": {
+    "distilled_factors": 0,
+    "historical_ms1_numerical_factors": 6,
+    "measured_per_stratum_race_consumed": false,
+    "status": "BLOCKED_METRIC_GEOMETRY_AND_LOCAL_PF2_COMPOSITION"
+  },
+  "storage_preflight": {
+    "bulk_materialized_this_run": false,
+    "cleanup_action": "NONE_NO_BULK_CREATED",
+    "selected_tier_for_future_bulk": "/Volumes/VertigoDataTier/pact",
+    "status": "PREFLIGHT_ONLY_BLOCKED_BEFORE_LARGE_ARTIFACT",
+    "waterfall": [
+      {
+        "exists": true,
+        "free_bytes": 552124338176,
+        "path": "/Volumes/VertigoDataTier/pact"
+      },
+      {
+        "exists": false,
+        "free_bytes": null,
+        "path": "/Volumes/APDataStore/pact"
+      }
+    ]
+  },
+  "train_decision_table_feed": {
+    "column": "SOLVE",
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "pooling": "FORBIDDEN",
+    "status": "BLOCKED_CUSTODY_NO_DUAL_ROWS"
+  },
+  "triality": {
+    "consumed_by": "train-decision-table SOLVE column after MAIN review",
+    "dag": ".omx/research/ddm_ms2_typed_quotient_solve_DAG_FEED_20260724.md",
+    "dsl": [
+      "src/tac/optimization/ddm_typed_quotient_solve.py",
+      "src/tac/optimization/ddm_runtime_exporter.py"
+    ],
+    "equations": [
+      "ddm_ms2_visible_quotient_gauge_zero_v1",
+      "ddm_ms2_scorer_metric_second_order_action_v1",
+      "ddm_ms2_typed_block_dual_exchange_v1",
+      "ddm_ms2_effective_quantum_admission_v1",
+      "ddm_ms2_skeleton_fiber_coder_race_v1"
+    ]
+  },
+  "unavailable_pair_slots": [
+    {
+      "availability": "UNAVAILABLE",
+      "block_instantiated": false,
+      "block_key": {
+        "class_pair": [
+          0,
+          1
+        ],
+        "g4_temporal_class": null,
+        "scorer_visibility": null,
+        "stratum": null
+      },
+      "exact_delta_bytes": null,
+      "kkt_dual": null,
+      "measured_flip_mass": null,
+      "pooling": "FORBIDDEN",
+      "reason": "PF2_MAIN_ATLAS_NOT_LOCALLY_COMPOSED_AND_METRIC_ACTIVE_SOLVE_NOT_RUN",
+      "score_gain_per_byte": null,
+      "slot_id": "class_pair_0_1",
+      "units": {
+        "exact_delta_bytes": "bytes",
+        "kkt_dual": "score_units_per_constraint",
+        "score_gain_per_byte": "score_units_per_byte"
+      }
+    },
+    {
+      "availability": "UNAVAILABLE",
+      "block_instantiated": false,
+      "block_key": {
+        "class_pair": [
+          0,
+          2
+        ],
+        "g4_temporal_class": null,
+        "scorer_visibility": null,
+        "stratum": null
+      },
+      "exact_delta_bytes": null,
+      "kkt_dual": null,
+      "measured_flip_mass": null,
+      "pooling": "FORBIDDEN",
+      "reason": "PF2_MAIN_ATLAS_NOT_LOCALLY_COMPOSED_AND_METRIC_ACTIVE_SOLVE_NOT_RUN",
+      "score_gain_per_byte": null,
+      "slot_id": "class_pair_0_2",
+      "units": {
+        "exact_delta_bytes": "bytes",
+        "kkt_dual": "score_units_per_constraint",
+        "score_gain_per_byte": "score_units_per_byte"
+      }
+    },
+    {
+      "availability": "UNAVAILABLE",
+      "block_instantiated": false,
+      "block_key": {
+        "class_pair": [
+          0,
+          3
+        ],
+        "g4_temporal_class": null,
+        "scorer_visibility": null,
+        "stratum": null
+      },
+      "exact_delta_bytes": null,
+      "kkt_dual": null,
+      "measured_flip_mass": null,
+      "pooling": "FORBIDDEN",
+      "reason": "PF2_MAIN_ATLAS_NOT_LOCALLY_COMPOSED_AND_METRIC_ACTIVE_SOLVE_NOT_RUN",
+      "score_gain_per_byte": null,
+      "slot_id": "class_pair_0_3",
+      "units": {
+        "exact_delta_bytes": "bytes",
+        "kkt_dual": "score_units_per_constraint",
+        "score_gain_per_byte": "score_units_per_byte"
+      }
+    },
+    {
+      "availability": "UNAVAILABLE",
+      "block_instantiated": false,
+      "block_key": {
+        "class_pair": [
+          0,
+          4
+        ],
+        "g4_temporal_class": null,
+        "scorer_visibility": null,
+        "stratum": null
+      },
+      "exact_delta_bytes": null,
+      "kkt_dual": null,
+      "measured_flip_mass": null,
+      "pooling": "FORBIDDEN",
+      "reason": "PF2_MAIN_ATLAS_NOT_LOCALLY_COMPOSED_AND_METRIC_ACTIVE_SOLVE_NOT_RUN",
+      "score_gain_per_byte": null,
+      "slot_id": "class_pair_0_4",
+      "units": {
+        "exact_delta_bytes": "bytes",
+        "kkt_dual": "score_units_per_constraint",
+        "score_gain_per_byte": "score_units_per_byte"
+      }
+    },
+    {
+      "availability": "UNAVAILABLE",
+      "block_instantiated": false,
+      "block_key": {
+        "class_pair": [
+          1,
+          2
+        ],
+        "g4_temporal_class": null,
+        "scorer_visibility": null,
+        "stratum": null
+      },
+      "exact_delta_bytes": null,
+      "kkt_dual": null,
+      "measured_flip_mass": null,
+      "pooling": "FORBIDDEN",
+      "reason": "PF2_MAIN_ATLAS_NOT_LOCALLY_COMPOSED_AND_METRIC_ACTIVE_SOLVE_NOT_RUN",
+      "score_gain_per_byte": null,
+      "slot_id": "class_pair_1_2",
+      "units": {
+        "exact_delta_bytes": "bytes",
+        "kkt_dual": "score_units_per_constraint",
+        "score_gain_per_byte": "score_units_per_byte"
+      }
+    },
+    {
+      "availability": "UNAVAILABLE",
+      "block_instantiated": false,
+      "block_key": {
+        "class_pair": [
+          1,
+          3
+        ],
+        "g4_temporal_class": null,
+        "scorer_visibility": null,
+        "stratum": null
+      },
+      "exact_delta_bytes": null,
+      "kkt_dual": null,
+      "measured_flip_mass": null,
+      "pooling": "FORBIDDEN",
+      "reason": "PF2_MAIN_ATLAS_NOT_LOCALLY_COMPOSED_AND_METRIC_ACTIVE_SOLVE_NOT_RUN",
+      "score_gain_per_byte": null,
+      "slot_id": "class_pair_1_3",
+      "units": {
+        "exact_delta_bytes": "bytes",
+        "kkt_dual": "score_units_per_constraint",
+        "score_gain_per_byte": "score_units_per_byte"
+      }
+    },
+    {
+      "availability": "UNAVAILABLE",
+      "block_instantiated": false,
+      "block_key": {
+        "class_pair": [
+          1,
+          4
+        ],
+        "g4_temporal_class": null,
+        "scorer_visibility": null,
+        "stratum": null
+      },
+      "exact_delta_bytes": null,
+      "kkt_dual": null,
+      "measured_flip_mass": null,
+      "pooling": "FORBIDDEN",
+      "reason": "PF2_MAIN_ATLAS_NOT_LOCALLY_COMPOSED_AND_METRIC_ACTIVE_SOLVE_NOT_RUN",
+      "score_gain_per_byte": null,
+      "slot_id": "class_pair_1_4",
+      "units": {
+        "exact_delta_bytes": "bytes",
+        "kkt_dual": "score_units_per_constraint",
+        "score_gain_per_byte": "score_units_per_byte"
+      }
+    },
+    {
+      "availability": "UNAVAILABLE",
+      "block_instantiated": false,
+      "block_key": {
+        "class_pair": [
+          2,
+          3
+        ],
+        "g4_temporal_class": null,
+        "scorer_visibility": null,
+        "stratum": null
+      },
+      "exact_delta_bytes": null,
+      "kkt_dual": null,
+      "measured_flip_mass": null,
+      "pooling": "FORBIDDEN",
+      "reason": "PF2_MAIN_ATLAS_NOT_LOCALLY_COMPOSED_AND_METRIC_ACTIVE_SOLVE_NOT_RUN",
+      "score_gain_per_byte": null,
+      "slot_id": "class_pair_2_3",
+      "units": {
+        "exact_delta_bytes": "bytes",
+        "kkt_dual": "score_units_per_constraint",
+        "score_gain_per_byte": "score_units_per_byte"
+      }
+    },
+    {
+      "availability": "UNAVAILABLE",
+      "block_instantiated": false,
+      "block_key": {
+        "class_pair": [
+          2,
+          4
+        ],
+        "g4_temporal_class": null,
+        "scorer_visibility": null,
+        "stratum": null
+      },
+      "exact_delta_bytes": null,
+      "kkt_dual": null,
+      "measured_flip_mass": null,
+      "pooling": "FORBIDDEN",
+      "reason": "PF2_MAIN_ATLAS_NOT_LOCALLY_COMPOSED_AND_METRIC_ACTIVE_SOLVE_NOT_RUN",
+      "score_gain_per_byte": null,
+      "slot_id": "class_pair_2_4",
+      "units": {
+        "exact_delta_bytes": "bytes",
+        "kkt_dual": "score_units_per_constraint",
+        "score_gain_per_byte": "score_units_per_byte"
+      }
+    },
+    {
+      "availability": "UNAVAILABLE",
+      "block_instantiated": false,
+      "block_key": {
+        "class_pair": [
+          3,
+          4
+        ],
+        "g4_temporal_class": null,
+        "scorer_visibility": null,
+        "stratum": null
+      },
+      "exact_delta_bytes": null,
+      "kkt_dual": null,
+      "measured_flip_mass": null,
+      "pooling": "FORBIDDEN",
+      "reason": "PF2_MAIN_ATLAS_NOT_LOCALLY_COMPOSED_AND_METRIC_ACTIVE_SOLVE_NOT_RUN",
+      "score_gain_per_byte": null,
+      "slot_id": "class_pair_3_4",
+      "units": {
+        "exact_delta_bytes": "bytes",
+        "kkt_dual": "score_units_per_constraint",
+        "score_gain_per_byte": "score_units_per_byte"
+      }
+    }
+  ],
+  "verdict": "BLOCKED_NO_ADMISSIBLE_METRIC_ACTIVE_N600_CANDIDATE",
+  "verdict_scope": "INSTANCE x current landed-custody preflight. This is not a quotient, lattice, typed-block, dictionary, stored-problem, receiver, family, or paradigm negative.",
+  "ws1_pose_serving_fiber_prior": {
+    "joint_accepted_moves": 104,
+    "main_composition_review_required": true,
+    "pose_serving_fiber_reclassified": 8,
+    "receiver_sha256_prefix": "4fbba057b10c",
+    "rule": "pose-serving content is FIBER with POSE_VISIBLE or SEG_POSE_VISIBLE pricing against the exact <=6D Pose quadratic",
+    "seg_lexicographic_retained": 96,
+    "source": ".omx/research/codex_findings_ddm_ws1_seg_lexicographic_warmstart_20260724_codex.md",
+    "source_status": "INBOX_HANDOFF_ONLY_NOT_PRESENT_IN_ISOLATED_BASE",
+    "strict_validator": "tac.optimization.ddm_typed_quotient_solve.TypedBlock.pose_serving",
+    "used_as_measured_block_row": false
+  }
+}
