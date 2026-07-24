@@ -1,0 +1,21 @@
+{
+  "schema": "DDMMC1HoodStaticReassertConfigV1",
+  "run_id": "ddm_mc1_hood_static_reassert_20260724T003346Z",
+  "seed": 210,
+  "pair_count": 600,
+  "scorer_batch_size": 16,
+  "scorer_threads": 4,
+  "menu1_config_path": ".omx/research/configs/ddm_menu1_realized_flip_menu_20260723.json",
+  "menu1_config_sha256": "b9fed2b1537b92a2b02d0525cb4d9175d0704e7c4d0c0efd383c6dd818fdb2c7",
+  "menu1_receipt_path": ".omx/research/ddm_menu1_realized_flip_menu_20260723T214943Z/ddm_menu1_realized_flip_menu_receipt.json",
+  "menu1_receipt_sha256": "2fc12eb505aa7de140b5e785e5fb528c349fd72b423a1821f23b70ea21d6f29d",
+  "checkpoint_root": "/Volumes/VertigoDataTier/pact/ddm_mc1_hood_static_reassert_20260724T003346Z",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "execution_allowed": true,
+  "paid_dispatch_allowed": false,
+  "exact_eval_allowed": false,
+  "frontier_mutation_allowed": false,
+  "training_allowed": false,
+  "research_only": true,
+  "score_claim": false
+}

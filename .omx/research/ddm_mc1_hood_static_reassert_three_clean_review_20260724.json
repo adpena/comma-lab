@@ -1,0 +1,76 @@
+{
+  "schema": "ddm_mc1_hood_static_reassert_three_clean_review.v1",
+  "lane_id": "lane_ddm_mc1_hood_static_reassert_20260724",
+  "delegation_checkpoint_key": "codex_delegate:ddm_mc1_hood_static_reassert:20260724T003346Z",
+  "clean_pass_count": 3,
+  "counter_reset_events": [
+    {
+      "finding": "MENU1 measured-row wrapper did not expose advisory_objective at top level",
+      "fix": "rederive parent action from typed d_seg, d_pose, and archive bytes",
+      "measurement_loss": false
+    },
+    {
+      "finding": "FREE byte-count field was descriptive text rather than an integer",
+      "fix": "use numeric COUNTED/FREE/NULL and separate FREE_source",
+      "invalidated_receipt_sha256": "710b954617659ed61b98f1ff5e8d6df06bda54222b8c3215c148ca67763d7ed1",
+      "invalidated_receipt_preserved_on_ssd": true
+    }
+  ],
+  "passes": [
+    {
+      "pass": 1,
+      "status": "CLEAN",
+      "axis": "custody, arithmetic, batch completeness, registry latest-event binding",
+      "evidence": {
+        "candidate_count": 3,
+        "batch_count": 114,
+        "pair_candidate_count": 1800,
+        "transition_conservation": true,
+        "per_class_sum_conservation": true,
+        "joint_objective_rederived": true,
+        "typed_byte_partitions": true,
+        "latest_registry_receipt_sha256": "458043413339551fe785e605d54751c46fe0d8b24c7c4ee59a67426872e320e8"
+      }
+    },
+    {
+      "pass": 2,
+      "status": "CLEAN",
+      "axis": "assumption challenge, authority firewall, class-index independence, parse-back",
+      "assumption_challenge": "Unconditional base-byte restoration is only one instance, not the optimal static-field family; the verdict and queue preserve Pose-stat-preserving formulations.",
+      "evidence": {
+        "focused_tests_passed": 12,
+        "hardcoded_hood_class_comparisons": 0,
+        "synthetic_relabel_test": true,
+        "stored_support_parseback": true,
+        "decoder_support_new_counted_bytes": 0,
+        "decoder_support_requires_scorer_at_decode": false,
+        "frame0_and_base_control_guards": true
+      }
+    },
+    {
+      "pass": 3,
+      "status": "CLEAN",
+      "axis": "end-to-end checkpoint replay and parent MENU1 seam",
+      "evidence": {
+        "receipt_replay_byte_identical": true,
+        "receipt_sha256": "458043413339551fe785e605d54751c46fe0d8b24c7c4ee59a67426872e320e8",
+        "focused_and_parent_tests_passed": 21,
+        "ruff": "PASS",
+        "py_compile": "PASS",
+        "git_diff_check": "PASS"
+      }
+    }
+  ],
+  "reviewed_source_sha256": {
+    "src/tac/optimization/ddm_hood_static_reassert.py": "475fb1cf0dacdc51becc797f35cec371a6af2783e35e37263015931ac994caad",
+    "src/tac/optimization/tests/test_ddm_hood_static_reassert.py": "dfb91fbe31ca5a359da62d31a8c440adb4e225c2bd1b249ed17d1ac95481a41e",
+    "tools/measure_ddm_mc1_hood_static_reassert.py": "e5942d6b0d4f250452a0180a1b3c388d78883d3d9b4fae13f19c26d90fed034e",
+    "tools/tests/test_measure_ddm_mc1_hood_static_reassert.py": "3942777b7e521017ddbc16b053accf635d1e5704908451e8f3e345c7ca6fac18",
+    "src/tac/canonical_equations/ddm_mc1_hood_static_reassert_20260724.py": "d653f054480388e4e96a9daeb2e4fd60bc8b2dc4437f29f919b07fe7599b78f8",
+    "src/tac/canonical_equations/tests/test_ddm_mc1_hood_static_reassert_20260724.py": "1336f54be14b160a3d705b427fc0b19eb91ed4c1439460ed187d1f42f7cef6af"
+  },
+  "verdict": "THREE_CONSECUTIVE_CLEAN_PASSES_AFTER_FINAL_FIX",
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}
