@@ -22794,3 +22794,39 @@ naive fixture warns · survey fixture silent. Advisory is warn-only per the fmto
 doctrine; the charter-composition re-grep remains the primary duty. Triality: DAG=this feed;
 DSL N/A (dispatch apparatus, not a trainer lever); equations N/A (no measured law — apparatus
 guard); memory leg = the extended metric-first file. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-ts1-custody (2026-07-24) — ts1 LANDED: the five-type schema is now STRUCTURAL; the g1 type-mispricing hypothesis honestly REFUTED (0 bytes); MAIN measured the flagged tag-overhead question
+
+**Arm:** ddm_ts1_typed_stream_schema_g1_reprice_20260724T030136Z (sol/xhigh). Landed f349c6eca3
+(registry → 813 rows; 46/46 focused tests + arm's 121 pass). Disposition: reviewed_committed.
+Pointer 0.1910828242 [contest-CPU] UNMOVED; score_claim=false.
+
+**Delivered (units 1+3):** `TypedStreamTag`/`StreamType`/`LayerHome` in
+`ddm_min_description_contract` (single SoT; GAUGE=0-byte + JSON round-trip invariants;
+`build_minimum_description_headline` withholds authority on missing type custody — warn-first,
+`strict_typed_stream_tags` flip later per the two-landing law). Consumers wired: #636 exporter
+section tags · receiver fail-closed tag validation · rd1 dual-cube `stream_type: null` with the
+exact byte-home blocker (NO type inferred from visibility alone) · dr2b rungs (exact-R-null=GAUGE/0B
+unpriced; scorer-visible=FIBER = the only priced rungs). g2↔five-type correspondence REGISTERED as
+callable law `ddm_g2_five_type_correspondence_v1` (EmpiricalAnchor = the g2 n600 aggregate ledger;
+grants NO carrier admission — receipt still blocked on receiver Δd_seg).
+
+**PREMISE CORRECTION (negatives=signal, INSTANCE scope):** my hypothesis that g1's grammar was
+type-mispriced (CONNECTION operators counted) is REFUTED on the 3 selected n600 knees — mispricing
+= **0 bytes** (276,790 B before = after; Movable 29,810 · Lane 27,692 · Boundary 219,288; real
+coders brotli-q11/raw-LZMA1/zlib-9). g1 already priced generic receiver code FREE and per-clip
+params COUNTED. verdict_scope: INSTANCE (3 knees) — explicitly NOT a negative on a future
+ξ-predictable CONNECTION or receiver-null GAUGE formulation (neither appears as positive-byte
+payload in the g1 receipt). Consequence: the remaining G1 rate attack is CODER-level (e4 LIVE:
+brotli recovery) + VOCABULARY-level (dv1/v18 primitives), not type-boundary.
+
+**MAIN review answered the flagged version-bump question BY MEASUREMENT:** the typed_stream_tags
+ride INSIDE archive.zip (`manifest.json` is a counted zip member) — ~486 B raw / ~210 B deflated
+(≤0.0003 S) — and the new receiver refuses tag-absent legacy manifests. Decision routed to e4
+(LIVE on this exact exporter surface): include a tag-overhead row in its per-section byte table +
+measured A/B of contest-profile STRIP (tags → build-side receipt; receiver legacy-accept w/
+warning) vs keep+schema-version-bump. First rungs: (a) e4's overhead row + strip decision;
+(b) strict_typed_stream_tags flip when live-count-0 (fold into #670 warn-purgatory sweep);
+(c) ms2/sn1 emit receipts against the now-landed schema (inboxed earlier — cite, no parallel enum).
+Triality: equations leg = the registered correspondence law; DSL N/A (schema/apparatus);
+tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on VertigoDataTier.
