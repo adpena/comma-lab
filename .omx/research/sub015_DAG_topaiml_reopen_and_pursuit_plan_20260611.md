@@ -22882,10 +22882,13 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   parse-back equality assert; typed blockers on no-descent-after-shrink-ladder.
   (3) *C1 bucket attribution* — `_c1_bucket_delta` fails closed on missing per-class custody; canonical
   partition (role=Lane+Movable / residual=Road+Undrivable+MyCar); dual deltas vs-last-admitted AND
-  vs-stage00-baseline. **Provisional finding REFUTED on deeper read:** `residual_bucket_admission_required`
-  is NOT inert under pure_priced policy — `warm_start_component_safe` gates `reform_active`
-  (launcher:1009), i.e. residual-bucket descent is the warm-start PHASE-EXIT criterion while joint ΔS<0
-  is the per-move acceptance authority. Two-level design, coherent.
+  vs-stage00-baseline. **Provisional finding REFUTED on deeper read** (verdict_scope: instance — the
+  refuted object is MY provisional review reading of the flag semantics, overturned by direct source
+  inspection at launcher:1009; no measurement, formulation, or family is touched):
+  `residual_bucket_admission_required` is NOT inert under pure_priced policy —
+  `warm_start_component_safe` gates `reform_active` (launcher:1009), i.e. residual-bucket descent is the
+  warm-start PHASE-EXIT criterion while joint ΔS<0 is the per-move acceptance authority. Two-level
+  design, coherent.
 - **Fire HELD — freshness-at-consumption caught a stale seal.** All three j5 custody SHAs drifted
   (launcher 361f35e4… vs sealed 59a22ad9…; consumer 76c66ceb… vs b69b4a2d…; ticket 6b9367bd… vs
   2ae7da90…). Supersession chain: j6 (prefire adversarial review) → **j6a (contract hardening) =
