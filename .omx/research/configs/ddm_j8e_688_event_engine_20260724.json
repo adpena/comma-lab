@@ -1,0 +1,801 @@
+{
+  "authority": {
+    "delegation_prompt_bytes": 8211,
+    "delegation_prompt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j8e_688_engine_build_20260724T154342Z.wrapped.prompt.txt",
+    "delegation_prompt_sha256": "b65bc8e2e38a61618ba85d253f6c1ab44ea7b3ab2ff7ae3d0991960980959cc0",
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "source_commit": "396202272822ff515366e3759e77aa74be262367"
+  },
+  "compile_custody": {
+    "claim": "HASH_SEALED_TYPED_J8E_EVENT_CONTINUATION_EXECUTION_DISABLED",
+    "hash_algorithm": "sha256",
+    "hash_scope": "RFC8785 canonical bytes of semantic_program",
+    "semantic_program_sha256": "9a6edc76aa9c1c8618f4b3915afedf6921258490ac3fb4cf94ad94aeab533b3e",
+    "typed_schema": "DirectDescriptionJointDescentTypedConfigV1",
+    "typed_target": "DDMWitnessProgramV1"
+  },
+  "execution_custody": {
+    "banked_r1_comparator": {
+      "authority": "comparator_and_fallback_harvest_signal_only",
+      "binding_target": false,
+      "d_pose": 0.00161,
+      "payload_bytes": 7200,
+      "promotion_eligible": false,
+      "score_contribution": 0.127
+    },
+    "dm4_receipt": {
+      "bytes": 472112,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_j8e_688_engine_build_20260724T154342Z/.omx/research/ddm_dm4_targeted_realization_cures_20260724T142722Z/ddm_dm4_targeted_realization_cures_receipt.json",
+      "sha256": "9644ef24c8037485a6350193d9368f65f463ae102db70c3d1412a550362bf5bb"
+    },
+    "event_engine_sources": {
+      "dm4_adapter": {
+        "bytes": 9045,
+        "path": "src/tac/optimization/ddm_dm4_j5_adapter.py",
+        "sha256": "d4ab1cc76ff3283e87d376fb13e2c4faf1d45f10002206750389f4588afafd3b"
+      },
+      "dm4_constructor": {
+        "bytes": 87292,
+        "path": "src/tac/optimization/ddm_dm4_targeted_realization_cures.py",
+        "sha256": "275bd2945a1b626154aa1df69b3010ec5ce94625671b80ba61a5641fbdbe9125"
+      },
+      "event_engine": {
+        "bytes": 37790,
+        "path": "src/tac/optimization/ddm_event_continuation.py",
+        "sha256": "8b66adce42ae338869dd0ba459599cfcded019af913c34168044c8e48c9c4b7d"
+      },
+      "witness_program": {
+        "bytes": 12178,
+        "path": "src/tac/optimization/ddm_witness_program.py",
+        "sha256": "5c1f8384f1078d39d22c0f45df0e4bae0c91f5da86be3d487db4da199cde3858"
+      }
+    },
+    "j5_producer_artifacts": {
+      "baseline_verdict": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/verdicts/stage00_baseline_n600.json",
+        "sha256": "5b19b564da1fb528af2c0d944da36bf1d357e28503be5988cb14ad59c4a6a261"
+      },
+      "checkpoint": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000001.npz",
+        "sha256": "1399292164682955bd9937d204692521542687f69223ddc9cc1e669ae05a944e"
+      },
+      "proposal_verdict": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
+        "sha256": "335d15db69dc25b0de80258e10e472f6e9ff282cd7d0325eca989bf92bade1f2"
+      },
+      "runtime_memory_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/full_run_memory_preflight.json",
+        "sha256": "4af05223624359fc305c82e30ee4a008da43d609251830d6e1a70724804ceec7"
+      }
+    },
+    "source_files": {
+      "consumer": {
+        "bytes": 109919,
+        "path": "src/tac/optimization/direct_description_joint_descent.py",
+        "sha256": "064f167ff959156d7c0eb497e46eac27992f1b795ac70e1f239ee61783b2fadc"
+      },
+      "launcher": {
+        "bytes": 108594,
+        "path": "tools/launch_ddm_joint_descent.py",
+        "sha256": "1e6ecd18c6971eba0193bad387e3a09ea450cb9714e8e04ea2d7b5282063e6d4"
+      }
+    },
+    "step4_checkpoint": {
+      "bytes": 26581,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000004.npz",
+      "sha256": "f6e88a743e188eb84f75f3a500acd04ef9ea685c86a1ee774709148c9cc65e41"
+    },
+    "step4_exact_verdict": {
+      "bytes": 2992,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/verdicts/01_residual_bucket_realized_acceptance_step000004_n600.json",
+      "sha256": "c6e95d3b88f083bc77a24bef4d58be618874b8b5cc38d6db26c5800a933f00e4"
+    },
+    "step4_full_run_receipt": {
+      "bytes": 15715,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/full_run_receipt.json",
+      "sha256": "dca72cdc8c15a46be1a1d2e053bf813a79491d99c2793e57ec247f698be87e62"
+    },
+    "worst_geometry_memory_receipt": {
+      "bytes": 9762,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j8e_688_fresh_memory_preflight_final2_20260724T173000Z/worst_geometry_memory_preflight.json",
+      "sha256": "78e61d360d8aa192d756876c65b4d1a456794167bdf4c9d01432eed750258232"
+    }
+  },
+  "schema": "ddm_joint_descent_witness_program_ticket.v1",
+  "semantic_program": {
+    "checkpoint_contract": {
+      "all_stage_files_preserved": true,
+      "atomic_write": "temporary file plus fsync plus os.replace",
+      "distinct_stage_encoded_names": true,
+      "ema_shadow_saved": true,
+      "every_stage_end": true,
+      "exact_rejection_rollback_saved": true,
+      "periodic_intra_stage": true,
+      "resume_from_disk": true
+    },
+    "compute_contract": {
+      "baseline": {
+        "authority": "speed path only; exact chunked frozen CPU-torch replay is macOS advisory and score_claim=false",
+        "chunked_verdicts": true,
+        "device": "MLX_GPU",
+        "environment": {
+          "TAC_MLX_CUSTOM_GROUPED_BACKWARD": "1"
+        },
+        "required_kernels": [
+          "custom grouped backward measured active",
+          "fused differentiable-R bit-identical to NumPy-fp32"
+        ]
+      },
+      "historical_j5_geometry_limit": "8 island secants at pair447; not admission authority for stage3",
+      "historical_j5_measured_stage1_peak_rss_gib": 10.47418212890625,
+      "historical_j5_projected_peak_gib": 13.5690185546875,
+      "memory_ceiling_gib": 116.0
+    },
+    "ddm_witness_program": {
+      "beta2": 0.999,
+      "ema_decay": 0.997,
+      "event_continuation": {
+        "box_tolerance_policy": {
+          "descent_box_role": "milestone_not_stop",
+          "descent_continuation": "exact_receiver_realized_delta_S_lt_zero",
+          "describe_solve_box_role": "tolerance_stop",
+          "global_fallback_declared": true,
+          "ms2r_role": "proposal_ordering_prior_until_describe_solve"
+        },
+        "budget_caps": {
+          "checkpoint_recovery_loss_verdicts": 1,
+          "maximum_counted_bytes": 200000,
+          "maximum_receiver_verdicts": 450,
+          "maximum_wall_seconds": 49657.37114489195,
+          "role": "safety_and_resource_caps_only_never_primary_handoff"
+        },
+        "exact_acceptance_metric": "100*d_seg_R+sqrt(10*d_pose_YUV6_R)+25*archive_bytes/37545489",
+        "execution_allowed": false,
+        "graph_id": "ddm_j8e_688_scorer_recursive_event_continuation",
+        "initial_node_id": "resume_boundary_recondition",
+        "nodes": [
+          {
+            "active_group_policy": "scorer_recursive_costate_pareto_nondominance_stable_id",
+            "blocker": null,
+            "checkpoint_events": [
+              "first_component_safe_n600_residual_admission",
+              "economic_or_dynamics_stop"
+            ],
+            "entry_events": [
+              "ws3_receiver_closed_start_bound"
+            ],
+            "execution_enabled": true,
+            "exit_events": [
+              "first_component_safe_n600_residual_admission",
+              "economic_or_dynamics_stop"
+            ],
+            "kind": "continuation",
+            "next_by_event": {
+              "economic_or_dynamics_stop": "STOP",
+              "first_component_safe_n600_residual_admission": "costate_ranked_joint_continuation"
+            },
+            "node_id": "resume_boundary_recondition"
+          },
+          {
+            "active_group_policy": "scorer_recursive_costate_pareto_nondominance_stable_id",
+            "blocker": null,
+            "checkpoint_events": [
+              "exact_n600_d_seg_pose_finish_latch",
+              "ncde_solve_basin",
+              "box_milestone_crossed",
+              "exact_joint_delta_nonnegative_rollback",
+              "economic_or_dynamics_stop"
+            ],
+            "entry_events": [
+              "first_component_safe_n600_residual_admission"
+            ],
+            "execution_enabled": true,
+            "exit_events": [
+              "exact_n600_d_seg_pose_finish_latch",
+              "ncde_solve_basin",
+              "box_milestone_crossed",
+              "exact_joint_delta_nonnegative_rollback",
+              "economic_or_dynamics_stop"
+            ],
+            "kind": "continuation",
+            "next_by_event": {
+              "box_milestone_crossed": "costate_ranked_joint_continuation",
+              "economic_or_dynamics_stop": "STOP",
+              "exact_joint_delta_nonnegative_rollback": "costate_ranked_joint_continuation",
+              "exact_n600_d_seg_pose_finish_latch": "pose_protected_finish",
+              "ncde_solve_basin": "terminal_solve"
+            },
+            "node_id": "costate_ranked_joint_continuation"
+          },
+          {
+            "active_group_policy": "scorer_recursive_costate_pareto_with_pose_trust_region",
+            "blocker": null,
+            "checkpoint_events": [
+              "ncde_solve_basin",
+              "box_milestone_crossed",
+              "exact_joint_delta_nonnegative_rollback",
+              "economic_or_dynamics_stop"
+            ],
+            "entry_events": [
+              "exact_n600_d_seg_pose_finish_latch"
+            ],
+            "execution_enabled": true,
+            "exit_events": [
+              "ncde_solve_basin",
+              "box_milestone_crossed",
+              "exact_joint_delta_nonnegative_rollback",
+              "economic_or_dynamics_stop"
+            ],
+            "kind": "continuation",
+            "next_by_event": {
+              "box_milestone_crossed": "pose_protected_finish",
+              "economic_or_dynamics_stop": "STOP",
+              "exact_joint_delta_nonnegative_rollback": "pose_protected_finish",
+              "ncde_solve_basin": "terminal_solve"
+            },
+            "node_id": "pose_protected_finish"
+          },
+          {
+            "active_group_policy": "ms2_metric_active_quotient_blocks",
+            "blocker": "DDM_MS2_NO_ADMISSIBLE_METRIC_ACTIVE_N600_CANDIDATE",
+            "checkpoint_events": [
+              "exact_solve_accepted",
+              "solve_rollback_governed_stop"
+            ],
+            "entry_events": [
+              "ncde_solve_basin"
+            ],
+            "execution_enabled": false,
+            "exit_events": [
+              "exact_solve_accepted",
+              "solve_rollback_governed_stop"
+            ],
+            "kind": "solve_interleave",
+            "next_by_event": {
+              "exact_solve_accepted": "pose_protected_finish",
+              "solve_rollback_governed_stop": "STOP"
+            },
+            "node_id": "terminal_solve"
+          }
+        ],
+        "primary_clock": "accepted_receiver_states_and_causal_events",
+        "proposal_metric_selector": "scorer_recursive_rank4_fisher_corrected_J",
+        "schema": "DDMEventContinuationV1",
+        "telemetry_fields": [
+          "Q1",
+          "Q2",
+          "Q3",
+          "Q4",
+          "Q5",
+          "Q6",
+          "Q7",
+          "lever_engage",
+          "term_inert",
+          "liveness",
+          "S_before",
+          "S_after",
+          "counted_bytes_before",
+          "counted_bytes_after",
+          "measured_work",
+          "g_S",
+          "g_L",
+          "delta_S_per_wall_clock_hour",
+          "delta_bytes_per_step",
+          "box_milestone_crossed",
+          "rollback_reason"
+        ],
+        "terminal_hooks": {
+          "fork_head_solve": {
+            "blocker": "DDM_MATCHED_UPDATE_RMS_RECEIPT_MISSING",
+            "event": "ws3_receiver_closed_start_bound",
+            "execution_enabled": false
+          },
+          "head_offset_solver": {
+            "blocker": "DDM_HEAD_OFFSET_RECEIVER_CUSTODY_MISSING",
+            "event": "ncde_solve_basin",
+            "execution_enabled": false
+          },
+          "mc_finisher": {
+            "blocker": "PREREGISTRATION_ONLY",
+            "event": "post_descent",
+            "execution_enabled": false
+          },
+          "ms2_terminal_solve": {
+            "blocker": "DDM_MS2_NO_ADMISSIBLE_METRIC_ACTIVE_N600_CANDIDATE",
+            "event": "ncde_solve_basin",
+            "execution_enabled": false
+          }
+        },
+        "visibility_policy": {
+          "blind_coordinates": "excluded",
+          "fine_chroma": "seg-only",
+          "frame_0": "pose-only(frame_0)",
+          "resize_null": "gauge_fixed_out",
+          "shared_visible": "joint"
+        }
+      },
+      "execution_allowed": false,
+      "inference_shadow": "ema",
+      "metric_selector": {
+        "acceptance_metric": "100*d_seg_R+sqrt(10*d_pose_YUV6_R)+25*archive_bytes/37545489",
+        "authority_roundtrip": "camera_Q8->uint8->R->frozen_SegNet_PoseNet->exact_archive_bytes",
+        "proposal_metric": "scorer_recursive_rank4_fisher_corrected_J",
+        "selector_id": "dm4_corrected_j_rank4_fisher_receiver_exact_acceptance"
+      },
+      "op_gc1_5_execution_enabled": false,
+      "program_id": "ddm_j8e_688_event_continuation_n600_seed0",
+      "schema": "DDMWitnessProgramV1",
+      "solve_hooks": [
+        {
+          "blocker": "DDM_MATCHED_UPDATE_RMS_RECEIPT_MISSING",
+          "event": "ws3_receiver_closed_start_bound",
+          "execution_enabled": false,
+          "hook_id": "fork_head_solve",
+          "implementation": "matched_update_rms_fork_head_solve",
+          "required_receipts": [
+            "matched_update_rms",
+            "exact_receiver_parseback"
+          ]
+        },
+        {
+          "blocker": "DDM_HEAD_OFFSET_RECEIVER_CUSTODY_MISSING",
+          "event": "ncde_solve_basin",
+          "execution_enabled": false,
+          "hook_id": "head_offset_solver",
+          "implementation": "low_dimensional_head_offset_solver",
+          "required_receipts": [
+            "head_offset_receiver_custody",
+            "exact_joint_delta"
+          ]
+        },
+        {
+          "blocker": "DDM_MS2_NO_ADMISSIBLE_METRIC_ACTIVE_N600_CANDIDATE",
+          "event": "ncde_solve_basin",
+          "execution_enabled": false,
+          "hook_id": "ms2_terminal_solve",
+          "implementation": "metric_active_ms2_terminal_solve",
+          "required_receipts": [
+            "metric_active_candidate",
+            "exact_joint_delta"
+          ]
+        },
+        {
+          "blocker": "PREREGISTRATION_ONLY",
+          "event": "post_descent",
+          "execution_enabled": false,
+          "hook_id": "mc_finisher",
+          "implementation": "op_gc1_5_preregistered_mc_finisher",
+          "required_receipts": [
+            "op_gc1_5_main_review",
+            "exact_joint_delta"
+          ]
+        }
+      ],
+      "source_bindings": {
+        "consumer": "064f167ff959156d7c0eb497e46eac27992f1b795ac70e1f239ee61783b2fadc",
+        "dm4_adapter": "d4ab1cc76ff3283e87d376fb13e2c4faf1d45f10002206750389f4588afafd3b",
+        "dm4_constructor": "275bd2945a1b626154aa1df69b3010ec5ce94625671b80ba61a5641fbdbe9125",
+        "event_engine": "8b66adce42ae338869dd0ba459599cfcded019af913c34168044c8e48c9c4b7d",
+        "launcher": "1e6ecd18c6971eba0193bad387e3a09ea450cb9714e8e04ea2d7b5282063e6d4"
+      },
+      "ticket_path": ".omx/research/configs/ddm_j8e_688_event_engine_20260724.json"
+    },
+    "deterministic_algorithms": true,
+    "execution_boundary": {
+      "bounded_n600_smoke_only": true,
+      "event_engine_execution_allowed": false,
+      "main_review_required": true,
+      "research_only": true,
+      "score_claim": false,
+      "this_branch_campaign_launch_authorized": false
+    },
+    "full_run_schedule": {
+      "event_graph": {
+        "box_tolerance_policy": {
+          "descent_box_role": "milestone_not_stop",
+          "descent_continuation": "exact_receiver_realized_delta_S_lt_zero",
+          "describe_solve_box_role": "tolerance_stop",
+          "global_fallback_declared": true,
+          "ms2r_role": "proposal_ordering_prior_until_describe_solve"
+        },
+        "budget_caps": {
+          "checkpoint_recovery_loss_verdicts": 1,
+          "maximum_counted_bytes": 200000,
+          "maximum_receiver_verdicts": 450,
+          "maximum_wall_seconds": 49657.37114489195,
+          "role": "safety_and_resource_caps_only_never_primary_handoff"
+        },
+        "exact_acceptance_metric": "100*d_seg_R+sqrt(10*d_pose_YUV6_R)+25*archive_bytes/37545489",
+        "execution_allowed": false,
+        "graph_id": "ddm_j8e_688_scorer_recursive_event_continuation",
+        "initial_node_id": "resume_boundary_recondition",
+        "nodes": [
+          {
+            "active_group_policy": "scorer_recursive_costate_pareto_nondominance_stable_id",
+            "blocker": null,
+            "checkpoint_events": [
+              "first_component_safe_n600_residual_admission",
+              "economic_or_dynamics_stop"
+            ],
+            "entry_events": [
+              "ws3_receiver_closed_start_bound"
+            ],
+            "execution_enabled": true,
+            "exit_events": [
+              "first_component_safe_n600_residual_admission",
+              "economic_or_dynamics_stop"
+            ],
+            "kind": "continuation",
+            "next_by_event": {
+              "economic_or_dynamics_stop": "STOP",
+              "first_component_safe_n600_residual_admission": "costate_ranked_joint_continuation"
+            },
+            "node_id": "resume_boundary_recondition"
+          },
+          {
+            "active_group_policy": "scorer_recursive_costate_pareto_nondominance_stable_id",
+            "blocker": null,
+            "checkpoint_events": [
+              "exact_n600_d_seg_pose_finish_latch",
+              "ncde_solve_basin",
+              "box_milestone_crossed",
+              "exact_joint_delta_nonnegative_rollback",
+              "economic_or_dynamics_stop"
+            ],
+            "entry_events": [
+              "first_component_safe_n600_residual_admission"
+            ],
+            "execution_enabled": true,
+            "exit_events": [
+              "exact_n600_d_seg_pose_finish_latch",
+              "ncde_solve_basin",
+              "box_milestone_crossed",
+              "exact_joint_delta_nonnegative_rollback",
+              "economic_or_dynamics_stop"
+            ],
+            "kind": "continuation",
+            "next_by_event": {
+              "box_milestone_crossed": "costate_ranked_joint_continuation",
+              "economic_or_dynamics_stop": "STOP",
+              "exact_joint_delta_nonnegative_rollback": "costate_ranked_joint_continuation",
+              "exact_n600_d_seg_pose_finish_latch": "pose_protected_finish",
+              "ncde_solve_basin": "terminal_solve"
+            },
+            "node_id": "costate_ranked_joint_continuation"
+          },
+          {
+            "active_group_policy": "scorer_recursive_costate_pareto_with_pose_trust_region",
+            "blocker": null,
+            "checkpoint_events": [
+              "ncde_solve_basin",
+              "box_milestone_crossed",
+              "exact_joint_delta_nonnegative_rollback",
+              "economic_or_dynamics_stop"
+            ],
+            "entry_events": [
+              "exact_n600_d_seg_pose_finish_latch"
+            ],
+            "execution_enabled": true,
+            "exit_events": [
+              "ncde_solve_basin",
+              "box_milestone_crossed",
+              "exact_joint_delta_nonnegative_rollback",
+              "economic_or_dynamics_stop"
+            ],
+            "kind": "continuation",
+            "next_by_event": {
+              "box_milestone_crossed": "pose_protected_finish",
+              "economic_or_dynamics_stop": "STOP",
+              "exact_joint_delta_nonnegative_rollback": "pose_protected_finish",
+              "ncde_solve_basin": "terminal_solve"
+            },
+            "node_id": "pose_protected_finish"
+          },
+          {
+            "active_group_policy": "ms2_metric_active_quotient_blocks",
+            "blocker": "DDM_MS2_NO_ADMISSIBLE_METRIC_ACTIVE_N600_CANDIDATE",
+            "checkpoint_events": [
+              "exact_solve_accepted",
+              "solve_rollback_governed_stop"
+            ],
+            "entry_events": [
+              "ncde_solve_basin"
+            ],
+            "execution_enabled": false,
+            "exit_events": [
+              "exact_solve_accepted",
+              "solve_rollback_governed_stop"
+            ],
+            "kind": "solve_interleave",
+            "next_by_event": {
+              "exact_solve_accepted": "pose_protected_finish",
+              "solve_rollback_governed_stop": "STOP"
+            },
+            "node_id": "terminal_solve"
+          }
+        ],
+        "primary_clock": "accepted_receiver_states_and_causal_events",
+        "proposal_metric_selector": "scorer_recursive_rank4_fisher_corrected_J",
+        "schema": "DDMEventContinuationV1",
+        "telemetry_fields": [
+          "Q1",
+          "Q2",
+          "Q3",
+          "Q4",
+          "Q5",
+          "Q6",
+          "Q7",
+          "lever_engage",
+          "term_inert",
+          "liveness",
+          "S_before",
+          "S_after",
+          "counted_bytes_before",
+          "counted_bytes_after",
+          "measured_work",
+          "g_S",
+          "g_L",
+          "delta_S_per_wall_clock_hour",
+          "delta_bytes_per_step",
+          "box_milestone_crossed",
+          "rollback_reason"
+        ],
+        "terminal_hooks": {
+          "fork_head_solve": {
+            "blocker": "DDM_MATCHED_UPDATE_RMS_RECEIPT_MISSING",
+            "event": "ws3_receiver_closed_start_bound",
+            "execution_enabled": false
+          },
+          "head_offset_solver": {
+            "blocker": "DDM_HEAD_OFFSET_RECEIVER_CUSTODY_MISSING",
+            "event": "ncde_solve_basin",
+            "execution_enabled": false
+          },
+          "mc_finisher": {
+            "blocker": "PREREGISTRATION_ONLY",
+            "event": "post_descent",
+            "execution_enabled": false
+          },
+          "ms2_terminal_solve": {
+            "blocker": "DDM_MS2_NO_ADMISSIBLE_METRIC_ACTIVE_N600_CANDIDATE",
+            "event": "ncde_solve_basin",
+            "execution_enabled": false
+          }
+        },
+        "visibility_policy": {
+          "blind_coordinates": "excluded",
+          "fine_chroma": "seg-only",
+          "frame_0": "pose-only(frame_0)",
+          "resize_null": "gauge_fixed_out",
+          "shared_visible": "joint"
+        }
+      },
+      "learning_rate_quantum_fraction": 0.25,
+      "measured_seconds_per_step": 104.09510249993764,
+      "measured_seconds_per_step_high": 104.09510249993764,
+      "measured_seconds_per_step_low": 100.87168033304624,
+      "pose_finish_engage": {
+        "detector": "rolling_relative_slope_plateau",
+        "ema_span": 3,
+        "fallback_policy": "emit_banked_r1_comparator_harvest_signal_non_promoting",
+        "flat_relative_slope_band": 0.0003,
+        "hysteresis": 3,
+        "metric": "exact_n600_d_seg_realized_through_R",
+        "minimum_strict_seg_admissions": 1,
+        "schema": "ddm_pose_finish_exact_verdict_plateau.v1",
+        "settle_window": 3
+      },
+      "train_batch": 4,
+      "warm_start_reform": {
+        "adam_beta2": 0.999,
+        "component_fire_gate": "cumulative_vs_stage00_dseg_flat_or_down_pose_not_worse_any_component_and_residual_descend",
+        "first_realized_admission": "exact_n600_joint_delta_s_lt_zero_else_shrink_and_exact_rollback",
+        "frozen_groups_until_first_admission": [],
+        "group_release_condition": "first_component_safe_n600_residual_admission",
+        "lr_rewarmup_c": 2.0,
+        "lr_rewarmup_floor": 0.1,
+        "lr_rewarmup_shape": "linear",
+        "lr_rewarmup_steps": 2000,
+        "maximum_continuous_update_quantum_fraction": null,
+        "opening_active_groups": [
+          "island_worldsheet",
+          "shared_template_dof"
+        ],
+        "opening_candidate_ids": [
+          "worldsheet_joint_active_x_+1",
+          "worldsheet_joint_active_x_-1",
+          "worldsheet_joint_active_y_-1",
+          "local_exact_gradient"
+        ],
+        "opening_candidate_pair_ids": [
+          447,
+          53,
+          416,
+          296,
+          547,
+          278,
+          501,
+          346
+        ],
+        "proposal_multipliers": [
+          32.0,
+          16.0,
+          8.0,
+          4.0,
+          2.0,
+          1.0,
+          0.5,
+          0.25
+        ],
+        "proposal_q8_denominator": 256,
+        "proposal_staging": "camera_874x1164_q8_pre_final_uint8",
+        "realized_acceptance_policy": "pure_priced_exact_n600",
+        "residual_bucket_admission_required": true
+      }
+    },
+    "gc_items_2_6_9": {
+      "item_2": {
+        "ordering": "Pareto(g_S,g_L), nondominated first, exact-admissible next, stable proposal_id tie",
+        "scalar_blend_forbidden": true
+      },
+      "item_6": {
+        "charge_audit": "exact two-part description plus state-transition charge",
+        "rate_break_even_threshold": 150181956.0
+      },
+      "item_9": {
+        "arm_id": "ddm_gc1_op5_d_first_v14_falsifier_v1",
+        "execution_enabled": false,
+        "preregistered": true
+      }
+    },
+    "joint_objective": {
+      "ema_decay": 0.997,
+      "formula": "100*d_seg_R + sqrt(10*d_pose_YUV6_R) + 25*archive_bytes/37545489",
+      "roundtrip": "proposal -> camera Q8 -> final uint8 -> evaluator R -> frozen scorers",
+      "stability": {
+        "grad_clip": 0.5,
+        "grad_normalize": true,
+        "per_group_grad_clip": true,
+        "pose_grad_coeff_max": 25,
+        "preset": "amber"
+      }
+    },
+    "num_pairs": 600,
+    "program_id": "ddm_j8e_688_event_continuation_n600_seed0",
+    "proposal_sources": {
+      "dm4_scorer_recursive": {
+        "adapter": "tac.optimization.ddm_dm4_j5_adapter.adapt_dm4_proposals",
+        "application_authority": "fail_closed_until_counted_J5_application_operator_exists",
+        "bytes": 472112,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_j8e_688_engine_build_20260724T154342Z/.omx/research/ddm_dm4_targeted_realization_cures_20260724T142722Z/ddm_dm4_targeted_realization_cures_receipt.json",
+        "proposal_types": [
+          "seg-only",
+          "pose-only(frame_0)",
+          "joint"
+        ],
+        "sha256": "9644ef24c8037485a6350193d9368f65f463ae102db70c3d1412a550362bf5bb"
+      }
+    },
+    "receiver_effective_surface": {
+      "island_worldsheet_track_translation_count": 326,
+      "lane_periodic_wire_coordinate_count": 24,
+      "opening_held_group": "lane_program",
+      "opening_selective_unfreeze": [
+        "island_worldsheet.center_x and center_y coherent candidates",
+        "shared_template_dof local Q8 candidate"
+      ],
+      "parameter_count": 368,
+      "selection_authority": "exact n600 C1 residual-bucket effect, not parameter-group name",
+      "shared_template_channel_count": 18
+    },
+    "schema": "DirectDescriptionJointDescentTypedConfigV1",
+    "seed": 0,
+    "target_cache": {
+      "bytes": 5078017610,
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "telemetry": {
+      "chunked_n600_verdict": true,
+      "every_exact_move": [
+        "pure-priced Seg/Pose/rate/joint deltas",
+        "C1 role-bucket delta",
+        "C1 residual-bucket per-move and cumulative delta",
+        "candidate id, shrink multiplier, Q8 staging, realized DOFs",
+        "component fire gate and exact archive identity",
+        "pose-finish exact-verdict rolling-slope state and monotone engage latch",
+        "governed stage-exit decision and exact final-target gate"
+      ],
+      "pointer_promotion_from_advisory_forbidden": true,
+      "score_claim": false,
+      "verdict_batch": 32
+    },
+    "value_provenance": {
+      "beta2_ramp": "PRESERVED J4 LawRef adam_v_variance_warmup_length_v1: ceil(2/(1-0.999)) = 2000",
+      "box_milestone": "OPERATOR DIRECTIVE 2026-07-24T15:50:30: milestone only; exact joint Delta-S descent continues until economics/dynamics/resource cap",
+      "bucket_partition": "MEASURED/DERIVED C1: Lane+Movable role ceiling 726416; Road+Undrivable+MyCar minus integer target allowance yields 2377273 baseline residual debt",
+      "camera_q8": "MEASURED V19: three of three pre-final-uint8 camera-Q8 variants were exact joint-score admissible",
+      "cap_removed": "MEASURED V19: strict realized joint delta-S admitted coherent moves that fixed collateral and quarter-quantum rules rejected",
+      "coherent_x_plus_1": "MEASURED V19 grammar-native eight-pair advisory on pair ids 447,53,416,296,547,278,501,346: both d_seg and d_pose descended with exact archive-byte pricing; J5 remeasures the exact lifecycle-feasible candidate through n600",
+      "dm4_proposal_metric": "MEASURED/DERIVED DM4 corrected-J rank-4 Fisher rows with exact resize adjoint and scorer-recursive ERF support; application remains blocked",
+      "ema_decay_j8e": "DERIVED by LawRef ema_decay_run_geometry_v1 and required to resolve exactly 0.997 without fallback",
+      "event_budgets": "DERIVED safety caps from the resealed J7 450-verdict and measured 13.79371420691443-hour upper geometry; never stages or a descent stop",
+      "governed_stop": "DERIVED control invariant: only exact target-met advances; maximum-step and plateau exits below target are non-promoting stops",
+      "opening_groups": "C1-GUIDED: Lane remains held while coherent worldsheet and shared-template candidates are ranked by exact residual-bucket effect; no blanket template freeze",
+      "pose_finish_engage": "DERIVED #383 sibling: exact n600 d_seg uses the same EMA3, window3, hysteresis3, and 3e-4 rolling-relative-slope band; latch is run-owned and checkpointed",
+      "proposal_ladder": "DERIVED shrink ladder: first multiplier 32 maps the ramp-floor 0.025 base step to 0.8 receiver quantum; halve on exact ascent",
+      "same_vehicle_pose_floor": "MEASURED J5 exact proposal d_pose=163.06116431842463; governed non-regression floor for final target; banked R1 0.001610 is comparator-only",
+      "verdict_batch": "P0 J7 authority: exact n600 frozen CPU scorer verdicts use batch32",
+      "worst_geometry": "DERIVED static lifecycle enumeration: pair498 has 28 island plus 24 Lane realized secants; memory-only bootstrap must measure this exact all-groups window"
+    },
+    "warm_start": {
+      "bytes": 138801,
+      "kind": "receiver_closed_ws1_archive",
+      "optimizer_state_loadable": false,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws2_warm_start_custody_producer_20260724T053455Z/01_archives/W_joint.zip.receipt-bytes",
+      "receipt_path": ".omx/research/ddm_ws2_warm_start_custody_producer_receipt_20260724.json",
+      "resume_checkpoint": {
+        "archive_sha256_at_checkpoint": "9601e777010b1dc45ed0841e118fcf34c58452324f8730fe9958a3440502e3a4",
+        "authority": "optimizer_resume_state_plus_exact_realized_archive_identity",
+        "bytes": 26581,
+        "global_step": 4,
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000004.npz",
+        "sha256": "f6e88a743e188eb84f75f3a500acd04ef9ea685c86a1ee774709148c9cc65e41"
+      },
+      "sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e"
+    },
+    "worst_geometry_memory_preflight": {
+      "active_groups": [
+        "island_worldsheet",
+        "lane_program",
+        "shared_template_dof"
+      ],
+      "derived_basis_gib": 4.72976016998291,
+      "expected_island_secants": 28,
+      "expected_lane_secants": 24,
+      "expected_total_secants": 52,
+      "schema": "ddm_joint_descent_worst_geometry_memory_contract.v1",
+      "selected_pair_start": 498,
+      "train_batch": 4
+    }
+  },
+  "warm_start_candidates": {
+    "W_joint": {
+      "archive_bytes": 138801,
+      "candidate_id": "statistics_hard_analytic_composed_frame1",
+      "d_pose": 36.6181847780574,
+      "d_seg": 0.07051923116048177,
+      "mycar_errors": 4072489
+    },
+    "W_seg": {
+      "archive_bytes": 138031,
+      "candidate_id": "temporal_affine_16knot_frame1_seglex96_hood_masked",
+      "d_pose": 146.3649324958955,
+      "d_seg": 0.024124510023328993,
+      "mycar_errors": 37619
+    },
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "main_landing_review_required": true,
+    "pointer_moved": false,
+    "schema": "DDMWS1WarmStartCandidatesV1",
+    "score_claim": false,
+    "slope_falsifier": {
+      "critical_ratio": 4.1215446777965665,
+      "execution_allowed": false,
+      "path": ".omx/research/configs/ddm_ws1_j5_slope_falsifier_20260724.json",
+      "sha256": "d504f55519f2490a8ae2b29c653c7d4c4cf4824d534972ae1dbf8146fe9c1b28",
+      "training_launched": false
+    },
+    "source_receipt": {
+      "bytes": 46615,
+      "path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+      "sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0"
+    },
+    "status": "MEASURED_ADVISORY_CANDIDATES_WITH_PREREGISTERED_SLOPE_FALSIFIER",
+    "train_decision_table": {
+      "path": ".omx/research/ddm_train_decision_table_warm_start_rows_20260724.json",
+      "sha256": "810983f971ad0590e99fb0d3a8a3e9413eafc1d3a2eaf674c75ff84cc073feb8"
+    }
+  }
+}

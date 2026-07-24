@@ -705,16 +705,17 @@ class FullRunScheduleV1:
 
     train_batch: int
     learning_rate_quantum_fraction: float
-    checkpoint_interval_steps: int
-    plateau_verdicts: int
-    warm_start_pair: int
-    warm_start_steps: int
+    checkpoint_interval_steps: int | None
+    plateau_verdicts: int | None
+    warm_start_pair: int | None
+    warm_start_steps: int | None
     measured_seconds_per_step: float
     measured_seconds_per_step_low: float
     measured_seconds_per_step_high: float
     warm_start_reform: WarmStartReformV1 | None
     pose_finish_engage: PoseFinishEngageConfigV1 | None
     stages: tuple[FullRunStageV1, ...]
+    event_continuation: Any | None = None
 
     @classmethod
     def from_semantic_program(cls, semantic: Mapping[str, Any]) -> FullRunScheduleV1 | None:
@@ -723,6 +724,74 @@ class FullRunScheduleV1:
             return None
         if not isinstance(payload, Mapping):
             raise DirectDescriptionError("full-run schedule must be a mapping")
+        event_payload = payload.get("event_graph")
+        if event_payload is not None:
+            from tac.optimization.ddm_event_continuation import (
+                DDMEventContinuationError,
+                DDMEventContinuationV1,
+            )
+
+            if not isinstance(event_payload, Mapping):
+                raise DirectDescriptionError("DDM event graph must be a mapping")
+            ambiguous_legacy_keys = {
+                "stages",
+                "checkpoint_interval_steps",
+                "plateau_verdicts",
+                "warm_start_pair",
+                "warm_start_steps",
+                "derived_steps_per_n600_exposure",
+                "derived_total_steps",
+                "stage_transition_rule",
+            }
+            present_legacy_keys = ambiguous_legacy_keys & set(payload)
+            if present_legacy_keys:
+                raise DirectDescriptionError(
+                    "event continuation contains ambiguous legacy schedule keys: "
+                    + ",".join(sorted(present_legacy_keys))
+                )
+            try:
+                continuation = DDMEventContinuationV1.from_payload(event_payload)
+            except DDMEventContinuationError as exc:
+                raise DirectDescriptionError(f"DDM event graph is invalid: {exc}") from exc
+            result = cls(
+                train_batch=int(payload["train_batch"]),
+                learning_rate_quantum_fraction=float(payload["learning_rate_quantum_fraction"]),
+                checkpoint_interval_steps=None,
+                plateau_verdicts=None,
+                warm_start_pair=None,
+                warm_start_steps=None,
+                measured_seconds_per_step=float(payload["measured_seconds_per_step"]),
+                measured_seconds_per_step_low=float(payload["measured_seconds_per_step_low"]),
+                measured_seconds_per_step_high=float(payload["measured_seconds_per_step_high"]),
+                warm_start_reform=(
+                    None
+                    if payload.get("warm_start_reform") is None
+                    else WarmStartReformV1.from_payload(payload["warm_start_reform"])
+                ),
+                pose_finish_engage=(
+                    None
+                    if payload.get("pose_finish_engage") is None
+                    else PoseFinishEngageConfigV1.from_payload(payload["pose_finish_engage"])
+                ),
+                stages=(),
+                event_continuation=continuation,
+            )
+            if not 1 <= result.train_batch <= 600:
+                raise DirectDescriptionError("event-continuation train batch is outside n600")
+            if not 0.0 < result.learning_rate_quantum_fraction <= 0.25:
+                raise DirectDescriptionError(
+                    "event-continuation learning rate exceeds the realized uint8 quarter-quantum bound"
+                )
+            timings = (
+                result.measured_seconds_per_step_low,
+                result.measured_seconds_per_step,
+                result.measured_seconds_per_step_high,
+            )
+            if not all(math.isfinite(value) and value > 0.0 for value in timings) or not (
+                timings[0] <= timings[1] <= timings[2]
+            ):
+                raise DirectDescriptionError("event-continuation measured timing band is invalid")
+            return result
         stages_raw = payload.get("stages")
         if not isinstance(stages_raw, list) or not stages_raw:
             raise DirectDescriptionError("full-run schedule requires nonempty stages")
@@ -758,6 +827,7 @@ class FullRunScheduleV1:
                 else PoseFinishEngageConfigV1.from_payload(payload["pose_finish_engage"])
             ),
             stages=stages,
+            event_continuation=None,
         )
         if not 1 <= result.train_batch <= 600:
             raise DirectDescriptionError("full-run train batch is outside n600")
@@ -901,8 +971,69 @@ class DirectDescriptionJointDescentTypedConfigV1:
             raise DirectDescriptionError("joint-descent ticket lacks a semantic program")
         semantic_hash = _sha256(rfc8785_canonicalize(semantic))
         sealed = ticket.get("compile_custody", {}).get("semantic_program_sha256")
-        if semantic_hash != sealed or semantic_hash not in SUPPORTED_PROGRAM_SHA256:
+        schedule_payload = semantic.get("full_run_schedule")
+        event_payload = (
+            schedule_payload.get("event_graph")
+            if isinstance(schedule_payload, Mapping)
+            else None
+        )
+        event_program = (
+            isinstance(event_payload, Mapping)
+            and event_payload.get("schema") == "DDMEventContinuationV1"
+        )
+        if semantic_hash != sealed or (
+            semantic_hash not in SUPPORTED_PROGRAM_SHA256 and not event_program
+        ):
             raise DirectDescriptionError(f"joint-descent DSL hash mismatch: computed={semantic_hash} sealed={sealed}")
+        if event_program:
+            compile_target = ticket.get("compile_custody", {}).get("typed_target")
+            if compile_target != "DDMWitnessProgramV1":
+                raise DirectDescriptionError("event continuation lacks DDMWitnessProgramV1 compile custody")
+            if event_payload.get("execution_allowed") is not False:
+                raise DirectDescriptionError("unreviewed DDM event continuation must be execution-disabled")
+            witness_program = semantic.get("ddm_witness_program")
+            if not isinstance(witness_program, Mapping) or (
+                witness_program.get("schema") != "DDMWitnessProgramV1"
+            ):
+                raise DirectDescriptionError(
+                    "event continuation lacks its embedded typed WitnessProgram"
+                )
+            if witness_program.get("program_id") != semantic.get("program_id") or (
+                witness_program.get("event_continuation") != event_payload
+            ):
+                raise DirectDescriptionError(
+                    "event continuation and embedded WitnessProgram custody differ"
+                )
+            if (
+                witness_program.get("execution_allowed") is not False
+                or witness_program.get("op_gc1_5_execution_enabled") is not False
+                or witness_program.get("inference_shadow") != "ema"
+                or witness_program.get("ema_decay") != 0.997
+                or witness_program.get("beta2") != 0.999
+            ):
+                raise DirectDescriptionError(
+                    "event WitnessProgram optimizer or execution contract differs"
+                )
+            source_bindings = witness_program.get("source_bindings")
+            if not isinstance(source_bindings, Mapping) or set(source_bindings) != {
+                "launcher",
+                "consumer",
+                "event_engine",
+                "dm4_adapter",
+                "dm4_constructor",
+            }:
+                raise DirectDescriptionError(
+                    "event WitnessProgram source-binding set differs"
+                )
+            if any(
+                not isinstance(digest, str)
+                or len(digest) != 64
+                or any(char not in "0123456789abcdef" for char in digest)
+                for digest in source_bindings.values()
+            ):
+                raise DirectDescriptionError(
+                    "event WitnessProgram source binding lacks canonical SHA-256"
+                )
         warm = semantic["warm_start"]
         cache = semantic["target_cache"]
         stability = semantic["joint_objective"]["stability"]
@@ -911,7 +1042,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
         execution_custody = ticket.get("execution_custody")
         if int(semantic["num_pairs"]) != 600 or int(semantic["seed"]) != 0:
             raise DirectDescriptionError("joint-descent ticket must remain n600/seed0")
-        if semantic_hash in {
+        if event_program or semantic_hash in {
             J7_W_SEG_PROGRAM_SHA256,
             J7_W_JOINT_PROGRAM_SHA256,
             WS3_W_SEG_PROGRAM_SHA256,
@@ -926,7 +1057,9 @@ class DirectDescriptionJointDescentTypedConfigV1:
                 raise DirectDescriptionError("J7 WS1 warm-start archive custody differs")
             parsed_warm = parse_ws1_warm_start_archive(warm_archive)
             expected_candidate = (
-                "W_seg" if semantic_hash in {J7_W_SEG_PROGRAM_SHA256, WS3_W_SEG_PROGRAM_SHA256} else "W_joint"
+                "W_seg"
+                if semantic_hash in {J7_W_SEG_PROGRAM_SHA256, WS3_W_SEG_PROGRAM_SHA256}
+                else "W_joint"
             )
             if parsed_warm.candidate != expected_candidate or parsed_warm.exact_reemit() != warm_archive:
                 raise DirectDescriptionError("J7 WS1 warm-start receiver identity differs")
@@ -937,7 +1070,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
         verdict_batch = int(semantic.get("telemetry", {}).get("verdict_batch", 16))
         if verdict_batch not in {16, 32}:
             raise DirectDescriptionError("joint-descent verdict batch is not a sealed supported geometry")
-        if semantic_hash in J7_PROGRAM_SHA256S and verdict_batch != 32:
+        if (semantic_hash in J7_PROGRAM_SHA256S or event_program) and verdict_batch != 32:
             raise DirectDescriptionError("J7 exact n600 scorer verdicts require batch32")
         if semantic_hash == J6A_PROGRAM_SHA256 or semantic_hash in J7_PROGRAM_SHA256S:
             if worst_geometry_payload is None or not isinstance(execution_custody, Mapping):
@@ -994,25 +1127,34 @@ class DirectDescriptionJointDescentTypedConfigV1:
             schedule_payload: dict[str, Any] = {
                 "train_batch": self.full_run_schedule.train_batch,
                 "learning_rate_quantum_fraction": self.full_run_schedule.learning_rate_quantum_fraction,
-                "checkpoint_interval_steps": self.full_run_schedule.checkpoint_interval_steps,
-                "plateau_verdicts": self.full_run_schedule.plateau_verdicts,
-                "warm_start_pair": self.full_run_schedule.warm_start_pair,
-                "warm_start_steps": self.full_run_schedule.warm_start_steps,
                 "measured_seconds_per_step": self.full_run_schedule.measured_seconds_per_step,
                 "measured_seconds_per_step_low": self.full_run_schedule.measured_seconds_per_step_low,
                 "measured_seconds_per_step_high": self.full_run_schedule.measured_seconds_per_step_high,
-                "stages": [
-                    {
-                        "stage_id": stage.stage_id,
-                        "active_groups": list(stage.active_groups),
-                        "maximum_steps": stage.maximum_steps,
-                        "verdict_interval_steps": stage.verdict_interval_steps,
-                        "target_d_seg": stage.target_d_seg,
-                        "target_d_pose": stage.target_d_pose,
-                    }
-                    for stage in self.full_run_schedule.stages
-                ],
             }
+            if self.full_run_schedule.event_continuation is not None:
+                schedule_payload["event_graph"] = (
+                    self.full_run_schedule.event_continuation.to_payload()
+                )
+            else:
+                schedule_payload.update(
+                    {
+                        "checkpoint_interval_steps": self.full_run_schedule.checkpoint_interval_steps,
+                        "plateau_verdicts": self.full_run_schedule.plateau_verdicts,
+                        "warm_start_pair": self.full_run_schedule.warm_start_pair,
+                        "warm_start_steps": self.full_run_schedule.warm_start_steps,
+                        "stages": [
+                            {
+                                "stage_id": stage.stage_id,
+                                "active_groups": list(stage.active_groups),
+                                "maximum_steps": stage.maximum_steps,
+                                "verdict_interval_steps": stage.verdict_interval_steps,
+                                "target_d_seg": stage.target_d_seg,
+                                "target_d_pose": stage.target_d_pose,
+                            }
+                            for stage in self.full_run_schedule.stages
+                        ],
+                    }
+                )
             if self.full_run_schedule.warm_start_reform is not None:
                 reform = self.full_run_schedule.warm_start_reform
                 reform_payload: dict[str, Any] = {
@@ -1058,6 +1200,52 @@ class DirectDescriptionJointDescentTypedConfigV1:
 
     def typed_config_hash(self) -> str:
         return _sha256(rfc8785_canonicalize(self.identity_payload()))
+
+    def dm4_j5_proposal_source(
+        self,
+        *,
+        base_archive: bytes,
+        enabled: bool,
+    ) -> tuple[bytes, tuple[Any, ...], dict[str, Any]]:
+        """Load the hash-bound scorer-recursive DM4 source through the J5 consumer."""
+
+        proposal_sources = self.semantic_program.get("proposal_sources")
+        if not isinstance(proposal_sources, Mapping):
+            raise DirectDescriptionError("J5 consumer lacks typed proposal sources")
+        binding = proposal_sources.get("dm4_scorer_recursive")
+        if not isinstance(binding, Mapping):
+            raise DirectDescriptionError("J5 consumer lacks its DM4 proposal source")
+        if binding.get("adapter") != (
+            "tac.optimization.ddm_dm4_j5_adapter.adapt_dm4_proposals"
+        ):
+            raise DirectDescriptionError("J5 consumer DM4 adapter identity differs")
+        if binding.get("application_authority") != (
+            "fail_closed_until_counted_J5_application_operator_exists"
+        ):
+            raise DirectDescriptionError("J5 consumer DM4 application authority differs")
+        path_value = binding.get("path")
+        digest = binding.get("sha256")
+        if not isinstance(path_value, str) or not path_value:
+            raise DirectDescriptionError("J5 consumer DM4 receipt path is absent")
+        if not isinstance(digest, str) or len(digest) != 64:
+            raise DirectDescriptionError("J5 consumer DM4 receipt SHA-256 is absent")
+        receipt_path = Path(path_value)
+        if not receipt_path.is_absolute():
+            receipt_path = Path(self.ticket_path).resolve().parents[3] / receipt_path
+        from tac.optimization.ddm_dm4_j5_adapter import (
+            DM4J5AdapterError,
+            adapt_dm4_proposals,
+        )
+
+        try:
+            return adapt_dm4_proposals(
+                receipt_path=receipt_path,
+                receipt_sha256=digest,
+                base_archive=base_archive,
+                enabled=enabled,
+            )
+        except DM4J5AdapterError as exc:
+            raise DirectDescriptionError(f"J5 consumer DM4 proposal source refused: {exc}") from exc
 
 
 @dataclass(frozen=True, slots=True)

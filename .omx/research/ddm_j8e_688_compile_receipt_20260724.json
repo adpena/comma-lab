@@ -1,0 +1,219 @@
+{
+  "argv": [
+    "python3",
+    "tools/launch_ddm_joint_descent.py",
+    "--ticket",
+    ".omx/research/configs/ddm_j8e_688_event_engine_20260724.json",
+    "--out-dir",
+    "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j8e_688_event_engine_main_review_required",
+    "--dry-run",
+    "--resume-from",
+    "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000004.npz"
+  ],
+  "argv_sha256": "adfa736218aceabb745739bf8846e1b5f797535d4f1f1f86dbe3efee5403415a",
+  "causal_event_marks": {
+    "resume_semantics": "append_only_deduplicated",
+    "row_kind": "event_mark",
+    "schema": "pact.causal_manifest.v1",
+    "stable_event_id": "sha256(canonical_event_identity)"
+  },
+  "constants": {
+    "adam_beta2": 0.999,
+    "beta2_rewarmup_receiver_verdicts": 2000,
+    "ema_decay": 0.997,
+    "inference_shadow": "ema"
+  },
+  "consumer_typed_config_hash": "e9fbe7fd5fec63642db7da719dc6bb24709ffec6aaf48ce8f97b6a6ea221c483",
+  "event_graph_semantic_hash": "aa92c2750f86b44e3bc4ca66e5743b074134b9a3de41a7d227f9ab652aec6689",
+  "execution_allowed": false,
+  "lawrefs": {
+    "adam_beta2_rewarmup": {
+      "equation_id": "adam_v_variance_warmup_length_v1",
+      "fallback_used": false,
+      "inputs": [
+        {
+          "config_tags": {},
+          "kind": "literal",
+          "name": "beta2",
+          "provenance": "DDM selected beta2 fixed within a continuation segment",
+          "sha256": null,
+          "source": "literal",
+          "staleness_days": null,
+          "value": 0.999
+        },
+        {
+          "config_tags": {},
+          "kind": "literal",
+          "name": "steps_per_epoch",
+          "provenance": "DDM continuation clock: one receiver-verdict update per accepted-state epoch",
+          "sha256": null,
+          "source": "literal",
+          "staleness_days": null,
+          "value": 1
+        },
+        {
+          "config_tags": {},
+          "kind": "literal",
+          "name": "c",
+          "provenance": "RAdam variance-rectification two-memory-window guard",
+          "sha256": null,
+          "source": "literal",
+          "staleness_days": null,
+          "value": 2.0
+        }
+      ],
+      "ladder_class": "derived_at_config",
+      "resolved_at": "2026-07-24T17:56:44Z",
+      "value": 2000,
+      "warnings": []
+    },
+    "ema_decay": {
+      "equation_id": "ema_decay_run_geometry_v1",
+      "fallback_used": false,
+      "inputs": [
+        {
+          "config_tags": {},
+          "kind": "literal",
+          "name": "mode",
+          "provenance": "mode code 2 = decay_from_warmup_fraction",
+          "sha256": null,
+          "source": "literal",
+          "staleness_days": null,
+          "value": 2
+        },
+        {
+          "config_tags": {},
+          "kind": "literal",
+          "name": "updates_per_run",
+          "provenance": "explicit receiver-verdict safety cap; resource cap only",
+          "sha256": null,
+          "source": "literal",
+          "staleness_days": null,
+          "value": 450
+        },
+        {
+          "config_tags": {},
+          "kind": "literal",
+          "name": "warmup_fraction",
+          "provenance": "operator-directed 0.997 shadow geometry expressed as 2/((1-d)*U)",
+          "sha256": null,
+          "source": "literal",
+          "staleness_days": null,
+          "value": 1.48148148148148
+        }
+      ],
+      "ladder_class": "derived_at_config",
+      "resolved_at": "2026-07-24T17:56:44Z",
+      "value": 0.997,
+      "warnings": []
+    }
+  },
+  "main_review_required": true,
+  "metric_selector": {
+    "acceptance_metric": "100*d_seg_R+sqrt(10*d_pose_YUV6_R)+25*archive_bytes/37545489",
+    "authority_roundtrip": "camera_Q8->uint8->R->frozen_SegNet_PoseNet->exact_archive_bytes",
+    "proposal_metric": "scorer_recursive_rank4_fisher_corrected_J",
+    "selector_id": "dm4_corrected_j_rank4_fisher_receiver_exact_acceptance"
+  },
+  "op_gc1_5": {
+    "arm_id": "ddm_gc1_op5_d_first_v14_falsifier_v1",
+    "execution_enabled": false,
+    "preregistered": true
+  },
+  "pointer_moved": false,
+  "program_id": "ddm_j8e_688_event_continuation_n600_seed0",
+  "program_semantic_hash": "562497c7e7df9fe2297494bb38f0decdec254ab5d429b7c6216fb450371dec0a",
+  "real_argv": [
+    "python3",
+    "tools/launch_ddm_joint_descent.py",
+    "--ticket",
+    ".omx/research/configs/ddm_j8e_688_event_engine_20260724.json",
+    "--out-dir",
+    "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j8e_688_event_engine_main_review_required",
+    "--dry-run",
+    "--resume-from",
+    "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000004.npz"
+  ],
+  "schema": "ddm_witness_program_compile.v1",
+  "score_claim": false,
+  "semantic_program_sha256": "9a6edc76aa9c1c8618f4b3915afedf6921258490ac3fb4cf94ad94aeab533b3e",
+  "solve_hooks": [
+    {
+      "blocker": "DDM_MATCHED_UPDATE_RMS_RECEIPT_MISSING",
+      "event": "ws3_receiver_closed_start_bound",
+      "execution_enabled": false,
+      "hook_id": "fork_head_solve",
+      "implementation": "matched_update_rms_fork_head_solve",
+      "required_receipts": [
+        "matched_update_rms",
+        "exact_receiver_parseback"
+      ]
+    },
+    {
+      "blocker": "DDM_HEAD_OFFSET_RECEIVER_CUSTODY_MISSING",
+      "event": "ncde_solve_basin",
+      "execution_enabled": false,
+      "hook_id": "head_offset_solver",
+      "implementation": "low_dimensional_head_offset_solver",
+      "required_receipts": [
+        "head_offset_receiver_custody",
+        "exact_joint_delta"
+      ]
+    },
+    {
+      "blocker": "DDM_MS2_NO_ADMISSIBLE_METRIC_ACTIVE_N600_CANDIDATE",
+      "event": "ncde_solve_basin",
+      "execution_enabled": false,
+      "hook_id": "ms2_terminal_solve",
+      "implementation": "metric_active_ms2_terminal_solve",
+      "required_receipts": [
+        "metric_active_candidate",
+        "exact_joint_delta"
+      ]
+    },
+    {
+      "blocker": "PREREGISTRATION_ONLY",
+      "event": "post_descent",
+      "execution_enabled": false,
+      "hook_id": "mc_finisher",
+      "implementation": "op_gc1_5_preregistered_mc_finisher",
+      "required_receipts": [
+        "op_gc1_5_main_review",
+        "exact_joint_delta"
+      ]
+    }
+  ],
+  "source_bindings": {
+    "consumer": {
+      "bytes": 109919,
+      "path": "src/tac/optimization/direct_description_joint_descent.py",
+      "sha256": "064f167ff959156d7c0eb497e46eac27992f1b795ac70e1f239ee61783b2fadc"
+    },
+    "dm4_adapter": {
+      "bytes": 9045,
+      "path": "src/tac/optimization/ddm_dm4_j5_adapter.py",
+      "sha256": "d4ab1cc76ff3283e87d376fb13e2c4faf1d45f10002206750389f4588afafd3b"
+    },
+    "dm4_constructor": {
+      "bytes": 87292,
+      "path": "src/tac/optimization/ddm_dm4_targeted_realization_cures.py",
+      "sha256": "275bd2945a1b626154aa1df69b3010ec5ce94625671b80ba61a5641fbdbe9125"
+    },
+    "event_engine": {
+      "bytes": 37790,
+      "path": "src/tac/optimization/ddm_event_continuation.py",
+      "sha256": "8b66adce42ae338869dd0ba459599cfcded019af913c34168044c8e48c9c4b7d"
+    },
+    "launcher": {
+      "bytes": 108594,
+      "path": "tools/launch_ddm_joint_descent.py",
+      "sha256": "1e6ecd18c6971eba0193bad387e3a09ea450cb9714e8e04ea2d7b5282063e6d4"
+    }
+  },
+  "ticket": {
+    "bytes": 34306,
+    "path": ".omx/research/configs/ddm_j8e_688_event_engine_20260724.json",
+    "sha256": "91a25df1f0c82fc1b09f283e6261aae69a25cf911be1d250a2480528b5af531b"
+  },
+  "typed_config_hash": "aea184ceeab0e8454a2524903a085c3702f8cc065164244875f7b5fbdcf160a0"
+}
