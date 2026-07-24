@@ -39,15 +39,21 @@ def _load_receipt(path: Path, label: str) -> dict[str, Any]:
     if not path.is_file() or path.is_symlink():
         raise DirectDescriptionError(f"{label} receipt is unavailable: {path}")
     row = json.loads(path.read_bytes())
-    if (
-        row.get("schema") != "ddm_joint_descent_full_run_receipt.v1"
-        or row.get("bounded_verification") is not True
-        or int(row.get("global_step", -1)) != 4
-        or row.get("baseline_verdict") is None
-        or row.get("final_stage_verdict") is None
-        or row.get("score_claim") is not False
-    ):
-        raise DirectDescriptionError(f"{label} bounded receipt custody differs")
+    if row.get("schema") != "ddm_joint_descent_full_run_receipt.v1":
+        raise DirectDescriptionError(f"{label} full-run receipt schema differs")
+    if row.get("bounded_verification") is not True:
+        raise DirectDescriptionError(f"{label} is not a bounded verification")
+    step = int(row.get("global_step", -1))
+    if step != 4:
+        decision = row.get("latest_realized_stage_decision", row.get("verdict"))
+        raise DirectDescriptionError(
+            f"{label} stopped at global_step={step}, not the preregistered "
+            f"four-step endpoint; terminal_decision={decision}"
+        )
+    if row.get("baseline_verdict") is None or row.get("final_stage_verdict") is None:
+        raise DirectDescriptionError(f"{label} endpoint verdict custody is incomplete")
+    if row.get("score_claim") is not False:
+        raise DirectDescriptionError(f"{label} score_claim custody differs")
     return row
 
 
@@ -176,6 +182,44 @@ def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+def _refusal_payload(
+    *,
+    reason: str,
+    producer_path: Path,
+    w_seg_path: Path,
+    w_joint_path: Path,
+) -> dict[str, Any]:
+    def _input(path: Path) -> dict[str, Any]:
+        row: dict[str, Any] = {"path": str(path), "available": path.is_file()}
+        if path.is_file() and not path.is_symlink():
+            row["sha256"] = _sha(path)
+        return row
+
+    return {
+        "schema": SCHEMA,
+        "verdict": "REFUSE_INCOMPLETE_FOUR_STEP_WINDOW",
+        "reason": reason,
+        "required_global_step": 4,
+        "critical_ratio": EXPECTED_R_STAR,
+        "equation_id": "ddm_ws1_warm_start_slope_falsifier_v1",
+        "inputs": {
+            "producer_receipt": _input(producer_path),
+            "W_seg_full_run_receipt": _input(w_seg_path),
+            "W_joint_full_run_receipt": _input(w_joint_path),
+        },
+        "verdict_scope": (
+            "bounded warm-start slope arbitration only; no formulation, family, "
+            "promotion, or score verdict"
+        ),
+        "evidence_axis": EVIDENCE_AXIS,
+        "pointer": POINTER,
+        "pointer_moved": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "main_review_required": True,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--producer-receipt", type=Path, required=True)
@@ -191,12 +235,14 @@ def main() -> int:
         )
         _atomic_json(args.output.resolve(), result)
     except (DirectDescriptionError, KeyError, ValueError) as exc:
-        print(
-            json.dumps(
-                {"verdict": "REFUSE", "reason": str(exc), "score_claim": False}
-            ),
-            file=sys.stderr,
+        result = _refusal_payload(
+            reason=str(exc),
+            producer_path=args.producer_receipt.resolve(),
+            w_seg_path=args.w_seg_receipt.resolve(),
+            w_joint_path=args.w_joint_receipt.resolve(),
         )
+        _atomic_json(args.output.resolve(), result)
+        print(json.dumps(result, sort_keys=True), file=sys.stderr)
         return 4
     print(json.dumps(result, sort_keys=True))
     return 0
