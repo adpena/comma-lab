@@ -1,0 +1,98 @@
+{
+  "schema": "ddm_sched1_derived_schedule_three_clean_review.v1",
+  "lane_id": "lane_ddm_sched1_derived_schedule_synthesis_20260724",
+  "delegation_checkpoint_key": "codex_delegate:ddm_sched1_derived_schedule_synthesis:20260724T122629Z",
+  "research_only": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_review_required": true,
+  "reviewed_artifacts": [
+    {
+      "path": ".omx/research/codex_findings_ddm_sched1_derived_schedule_synthesis_20260724_codex.md",
+      "bytes": 21268,
+      "sha256": "f383e3a30d8f51ded655aa1fd1b4f8e397f825d6ed861d3293f2490bbb384369"
+    },
+    {
+      "path": ".omx/research/configs/ddm_sched1_derived_schedule_reseal_input_20260724.json",
+      "bytes": 13906,
+      "sha256": "65f06475a949cbd1607f6f221d81b453ef89bf12c9d95a63dabfafee38dbe429"
+    }
+  ],
+  "round1_independent_adversarial_review": {
+    "method": "Re-open authored artifacts from disk; compare against current J7 ticket, typed parser, launcher, TerminalSolve, MS2 findings, and canonical laws without trusting memo conclusions.",
+    "checks": [
+      {
+        "check": "machine contract is non-executable and fail-closed",
+        "result": "PASS",
+        "evidence": "verdict=RESEAL_REQUIRED; execution_allowed=false; score_claim=false; argv=[]; semantic and typed hashes withheld; ready_to_fire=false"
+      },
+      {
+        "check": "current DDM parser refuses the reseal input",
+        "result": "PASS",
+        "evidence": "DirectDescriptionJointDescentTypedConfigV1.from_ticket raised DirectDescriptionError: joint-descent ticket schema is not canonical"
+      },
+      {
+        "check": "current implementation really is fixed-stage clipped Adam",
+        "result": "PASS",
+        "evidence": "FullRunScheduleV1 requires stages with maximum_steps/verdict_interval divisibility; launcher stage loop calls clipped_adam_step"
+      },
+      {
+        "check": "TerminalSolve is not falsely described as executable",
+        "result": "PASS",
+        "evidence": "TerminalSolve.flags returns {}; support_gaps names terminal_solve; MS2 verdict blocks an admissible metric-active n600 candidate"
+      },
+      {
+        "check": "all differential rows use exactly one allowed classification vocabulary",
+        "result": "PASS",
+        "evidence": "12 SAME-and-derived; 7 INHERITED-PR95-unverified; 16 CONTRADICTS-derived-law"
+      },
+      {
+        "check": "WS3 and IS1 are not falsely composed",
+        "result": "PASS",
+        "evidence": "isolated tree has WS1/WS2 but no WS3 final receipt; IS1 has directives but no final verdict; all three fire inputs remain false"
+      }
+    ],
+    "environment_note": "The first dynamic import under system python failed because scipy was absent. The repository main venv has scipy 1.17.1 and produced the expected typed-parser refusal. This was an environment-selection issue, not a schedule-artifact defect.",
+    "result": "CLEAN_EXPECTED_RESEAL_REFUSAL"
+  },
+  "three_clean_passes": [
+    {
+      "pass": 1,
+      "name": "structural_and_vocabulary",
+      "checks": [
+        "jq parsed reseal JSON",
+        "all required non-authority booleans and withheld hashes asserted",
+        "classification vocabulary counted and no alternative disposition used",
+        "memo contains exact RESEAL_REQUIRED verdict and MAIN review requirement"
+      ],
+      "result": "CLEAN"
+    },
+    {
+      "pass": 2,
+      "name": "fresh_rederivation_and_compiler_refusal",
+      "checks": [
+        "re-read current J7 schedule leaves",
+        "re-read FullRunScheduleV1 and launcher stage loop",
+        "re-read Schedule/Curriculum/WitnessProgram and TerminalSolve support-gap semantics",
+        "ran current typed parser against reseal input in canonical venv and observed expected fail-closed refusal",
+        "reconciled #430 selector gap and MS2 terminal-solve blocker"
+      ],
+      "result": "CLEAN"
+    },
+    {
+      "pass": 3,
+      "name": "custody_pointer_and_authority",
+      "checks": [
+        "rehash memo and reseal input",
+        "verify source-custody table hashes and last-touch commits",
+        "verify pointer literal remains 0.1910828242 [contest-CPU]",
+        "verify no score, launch, paid dispatch, semantic hash, typed hash, or argv claim",
+        "recheck per-arm and broadcast inboxes before checkpoint"
+      ],
+      "result": "CLEAN"
+    }
+  ],
+  "verdict": "THREE_CLEAN_PASSES_RESEAL_REQUIRED",
+  "ready_to_fire": false
+}

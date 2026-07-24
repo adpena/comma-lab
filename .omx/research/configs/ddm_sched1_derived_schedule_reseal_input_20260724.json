@@ -1,0 +1,301 @@
+{
+  "schema": "ddm_event_continuation_reseal_input.v1",
+  "program_id": "ddm_sched1_derived_schedule_synthesis_20260724",
+  "lane_id": "lane_ddm_sched1_derived_schedule_synthesis_20260724",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "execution_allowed": false,
+  "paid_dispatch_allowed": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_review_required": true,
+  "verdict": "RESEAL_REQUIRED",
+  "verdict_scope": "schedule formulation and current compiler/consumer support; no optimizer-family, DDM-family, score, or promotion verdict",
+  "source_ticket": {
+    "path": ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json",
+    "sha256": "b3e5fe8adcc1ff6f4cc5fa3e4ac124e20cf6ed862810f0361b117dab5dd0e41f",
+    "commit": "26c2077892e028686b0486d64064c8b5fff7ea11"
+  },
+  "compile_contract": {
+    "required_type": "DDMEventContinuationV1",
+    "required_path": "Schedule/Curriculum -> WitnessProgram.compile_trainer_argv_with_constants -> DDM typed consumer",
+    "current_ddm_type": "DirectDescriptionJointDescentTypedConfigV1",
+    "current_ddm_type_status": "FIXED_STAGE_ONLY",
+    "current_witness_program_status": "LEVELSET_TRAINER_ONLY",
+    "never_invent_flags": true,
+    "argv": [],
+    "constants_manifest": {},
+    "semantic_hash_status": "WITHHELD_UNTIL_TYPED_COMPILE",
+    "typed_hash_status": "WITHHELD_UNTIL_TYPED_COMPILE",
+    "support_gaps": [
+      "DDM event-continuation stage graph and deterministic event replay",
+      "DDM optimizer assignment by typed parameter group",
+      "DDM metric-stage selector with n600 receiver-through-R custody",
+      "DDM EMA LawRef resolution from event-run geometry",
+      "DDM causal event-mark manifest with resume-safe stable identities",
+      "DDM terminal-solve handoff and rollback consumer"
+    ],
+    "fail_closed_reason": "The current DDM parser requires a nonempty fixed stages array and the launcher iterates maximum_steps with clipped_adam_step. WitnessProgram targets the levelset trainer and TerminalSolve compiles to no argv. Hashing an invented executable schedule would be false authority."
+  },
+  "fire_composition": {
+    "owner": "MAIN",
+    "logical_gate": "ws3.ready AND is1.verdict_admissible AND sched1.verdict == SCHEDULE_VERIFIED_DERIVED",
+    "ws3": {
+      "required": true,
+      "status_in_this_worktree": "MISSING",
+      "required_receipt": "MAIN-reviewed WS3 READY receipt with a receiver-closed archive and explicit optimizer-state boundary"
+    },
+    "is1": {
+      "required": true,
+      "status_in_this_worktree": "DIRECTIVES_ONLY_NO_FINAL_VERDICT",
+      "required_receipt": "MAIN-reviewed IS1 final verdict and exact configuration consequences"
+    },
+    "sched1": {
+      "required": true,
+      "status": "RESEAL_REQUIRED"
+    },
+    "ready_to_fire": false
+  },
+  "required_semantic_delta": {
+    "remove_as_actuators": [
+      "/semantic_program/full_run_schedule/derived_steps_per_n600_exposure",
+      "/semantic_program/full_run_schedule/derived_total_steps",
+      "/semantic_program/full_run_schedule/derived_wall_clock_hours_low",
+      "/semantic_program/full_run_schedule/derived_wall_clock_hours_high",
+      "/semantic_program/full_run_schedule/plateau_verdicts",
+      "/semantic_program/full_run_schedule/stages",
+      "/semantic_program/full_run_schedule/warm_start_steps"
+    ],
+    "retain_as_measurement_only": [
+      "/semantic_program/full_run_schedule/measured_seconds_per_step",
+      "/semantic_program/full_run_schedule/measured_seconds_per_step_low",
+      "/semantic_program/full_run_schedule/measured_seconds_per_step_high"
+    ],
+    "replace_with": {
+      "schedule": {
+        "schema": "DDMEventContinuationV1",
+        "primary_clock": "accepted_receiver_states_and_emitted_events",
+        "fixed_stage_count": null,
+        "fixed_stage_targets": [],
+        "continuation_segments": [
+          {
+            "segment_id": "resume_boundary_recondition",
+            "entry_event": "ws3_receiver_closed_start_bound",
+            "active_groups": "selected_by_measured_reverse_waterfill_not_by_fixed_stage_order",
+            "proposal_optimizer": "clipped_adam_proposal_generator",
+            "acceptance_optimizer": "exact_receiver_realized_discrete_search",
+            "exit_event": "first_component_safe_n600_residual_admission",
+            "checkpoint_events": [
+              "entry",
+              "every_exact_acceptance",
+              "every_exact_rollback",
+              "exit"
+            ]
+          },
+          {
+            "segment_id": "costate_ranked_joint_continuation",
+            "entry_event": "first_component_safe_n600_residual_admission",
+            "active_groups": "argmax_measured_positive_marginal_delta_S_per_byte_across_all_eligible_groups",
+            "proposal_optimizer": "clipped_adam_proposal_generator",
+            "acceptance_optimizer": "exact_receiver_realized_discrete_search",
+            "exit_event": "no_positive_exact_marginal_or_ncde_hit_solve",
+            "checkpoint_events": [
+              "every_active_set_change",
+              "every_exact_acceptance",
+              "every_exact_rollback",
+              "pose_finish_latch",
+              "exit"
+            ]
+          },
+          {
+            "segment_id": "pose_protected_finish",
+            "entry_event": "exact_n600_d_seg_pose_finish_latch",
+            "active_groups": "costate_ranked_with_pose_trust_region_active",
+            "proposal_optimizer": "clipped_adam_proposal_generator",
+            "acceptance_optimizer": "exact_receiver_realized_discrete_search",
+            "exit_event": "no_positive_exact_marginal_or_terminal_solve_admissible",
+            "checkpoint_events": [
+              "entry",
+              "every_exact_acceptance",
+              "every_exact_rollback",
+              "exit"
+            ]
+          },
+          {
+            "segment_id": "terminal_solve_or_governed_stop",
+            "entry_event": "ncde_basin_and_topology_stable_and_no_transition_pending",
+            "active_groups": "typed_quotient_blocks_with_complete_metric_custody",
+            "proposal_optimizer": "ddm_ms2_typed_quotient_solve",
+            "acceptance_optimizer": "exact_receiver_realized_discrete_search",
+            "exit_event": "exact_joint_improvement_accepted_or_governed_stop",
+            "checkpoint_events": [
+              "pre_solve",
+              "accepted_solve",
+              "rolled_back_solve",
+              "governed_stop"
+            ],
+            "status": "DEFAULT_OFF_BLOCKED_NO_ADMISSIBLE_METRIC_ACTIVE_N600_CANDIDATE"
+          }
+        ],
+        "hard_caps": {
+          "status": "REQUIRED_BUT_UNRESOLVED",
+          "role": "safety_and_resource_caps_only_never_primary_handoff",
+          "required_inputs": [
+            "explicit operator walltime or cost budget",
+            "fresh measured seconds-per-step distribution",
+            "checkpoint recovery-loss budget"
+          ]
+        },
+        "governed_stop": {
+          "lawref": "witness_measured_reverse_waterfill_v1",
+          "condition": "no receiver-closed proposal has positive measured score benefit after exact rate pricing, or all remaining candidate marginals are below rate break-even",
+          "rate_break_even": "25/37545489 score units per counted byte",
+          "fixed_d_seg_target": null,
+          "fixed_d_pose_target": null
+        }
+      },
+      "warm_start": {
+        "binding": "WS3_READY_RECEIPT",
+        "archive": null,
+        "archive_sha256": null,
+        "optimizer_state_boundary": "explicitly_loaded_or_explicitly_fresh_never_implicit",
+        "resume_positioning": "reanchor schedule events to resume state and geometry before baseline v0",
+        "lawrefs": [
+          "warm_start_schedule_reconstruction_v1",
+          "adam_v_variance_warmup_length_v1",
+          "rewarmup_beta2_memory_window_v1"
+        ],
+        "status": "BLOCKED_PENDING_WS3_MAIN_REVIEW"
+      },
+      "optimizer_policy": {
+        "assignment": [
+          {
+            "surface": "heterogeneous scalar_vector_DDM_grammar_coordinates",
+            "optimizer": "clipped_adam_proposal_generator",
+            "admission": "exact_n600_receiver_realized_discrete_search",
+            "status": "INCUMBENT_ONLY_PENDING_MATCHED_UPDATE_RMS_ALTERNATIVE"
+          },
+          {
+            "surface": "eligible_matrix_update_groups",
+            "optimizer": "Muon_or_manifold_candidate",
+            "status": "NOT_APPLICABLE_TO_CURRENT_368_COORDINATE_SURFACE_NO_UPDATE_MATRIX_CUSTODY"
+          },
+          {
+            "surface": "terminal_metric_active_quotient_blocks",
+            "optimizer": "ddm_ms2_typed_quotient_solve",
+            "status": "DEFAULT_OFF_BLOCKED_CUSTODY"
+          }
+        ],
+        "comparison_contract": "pact.optimizer_update_scale_receipt.v1",
+        "required_before_optimizer_change": [
+          "actual parameter-group metric",
+          "matched realized update RMS",
+          "same copied state and held gradient/proposal sequence",
+          "reset before governed A/B",
+          "exact receiver-through-R acceptance and protected facets",
+          "split-resume parity"
+        ],
+        "soap": "DEFAULT_OFF_NO_DIRECT_TRANSFER",
+        "spd_momentum": "DEFAULT_OFF_SPEC_ONLY",
+        "manifold_muon": "DEFAULT_OFF_NOT_FIREABLE",
+        "generic_sign_or_optstep": "NO_DUPLICATE_ALGORITHM_WHILE_GEOMETRY_SPECIFIC_ROUTE_EXISTS"
+      },
+      "beta2_reconditioning": {
+        "beta2": null,
+        "beta2_status": "UNRESOLVED_DDM_OPTIMUM",
+        "within_segment_policy": "fixed_beta2_no_per_step_beta2_anneal_without_LawRef",
+        "on_state_boundary": "reset_or_load_moments_explicitly_then_rederive_rewarmup",
+        "lr_rewarmup_lawref": {
+          "equation_id": "adam_v_variance_warmup_length_v1",
+          "inputs": {
+            "beta2": "InputRef.config:/optimizer_policy/selected_beta2",
+            "c": "InputRef.config:/optimizer_policy/selected_variance_tolerance"
+          }
+        },
+        "sister_bound": "rewarmup_beta2_memory_window_v1",
+        "full_lr_guard": "never reach full learning rate before the resolved variance-memory window; an earlier governed stop is legal",
+        "profile_shape": null,
+        "profile_floor": null,
+        "status": "BLOCKED_MISSING_DDM_BETA2_AND_PROFILE_SELECTION_RECEIPT"
+      },
+      "ema_policy": {
+        "lawref": {
+          "equation_id": "ema_decay_run_geometry_v1",
+          "inputs": {
+            "mode": "InputRef.config:/ema_policy/mode",
+            "updates_per_run": "InputRef.derived:/schedule/hard_caps/resolved_update_cap",
+            "target_seed_fraction_or_warmup_fraction": "InputRef.config:/ema_policy/pinned_quantity"
+          }
+        },
+        "selected_decay": null,
+        "status": "BLOCKED_UNTIL_EVENT_RUN_GEOMETRY_AND_PINNED_QUANTITY_RESOLVE",
+        "forbidden_fallback": 0.997
+      },
+      "metric_policy": {
+        "authority_metric": "100*d_seg_R + sqrt(10*d_pose_YUV6_R) + 25*archive_bytes/37545489",
+        "authority_roundtrip": "proposal -> camera Q8 -> final uint8 -> evaluator R -> frozen scorers",
+        "proposal_metric_structure": [
+          {
+            "event_region": "birth_or_missing_component",
+            "candidate_metric": "global_through_R_CE_or_euclidean_geometry",
+            "status": "DERIVED_UNMEASURED_SELECTOR_DEFAULT_OFF"
+          },
+          {
+            "event_region": "formed_boundary",
+            "candidate_metric": "centered_Fisher_pullback_or_annulus_metric",
+            "status": "DERIVED_UNMEASURED_SELECTOR_DEFAULT_OFF"
+          },
+          {
+            "event_region": "winner_rival_repair",
+            "candidate_metric": "winner_rival_pullback_with_pose_trust_region",
+            "status": "DERIVED_UNMEASURED_SELECTOR_DEFAULT_OFF"
+          },
+          {
+            "event_region": "terminal_basin",
+            "candidate_metric": "finite_applied_step_flip_preservation_then_metric_active_terminal_solve",
+            "status": "BLOCKED_METRIC_CUSTODY"
+          }
+        ],
+        "selector_gate": "full_n600_receiver_through_R_metric_selector_receipt",
+        "fallback": "authority_metric_for_acceptance_and_incumbent_proposal_metric_only",
+        "status": "BLOCKED_NO_SELECTOR_CONSUMER"
+      },
+      "pose_finish": {
+        "schema": "ddm_pose_finish_exact_verdict_plateau.v1",
+        "metric": "exact_n600_d_seg_realized_through_R",
+        "source": ".omx/research/ddm_j7_366_fire_readiness_receipt_20260724.json",
+        "status": "PRESERVE_CURRENT_DERIVED_LATCH"
+      },
+      "causal_manifest": {
+        "schema": "pact.causal_manifest.v1",
+        "required_row_kind": "event_mark",
+        "stable_event_id": "sha256_of_canonical_event_identity",
+        "resume_semantics": "append_only_deduplicated",
+        "status": "BLOCKED_DDM_CONSUMER_NOT_BUILT"
+      },
+      "checkpoint_policy": {
+        "atomic_write": true,
+        "all_event_boundaries_preserved": true,
+        "every_exact_acceptance_preserved": true,
+        "every_exact_rollback_preserved": true,
+        "resume_from_disk": true,
+        "ema_shadow_saved": true,
+        "periodic_interval_steps": null,
+        "periodic_interval_status": "BLOCKED_MISSING_EXPLICIT_RECOVERY_LOSS_BUDGET"
+      }
+    }
+  },
+  "named_blockers": [
+    "DDM_EVENT_CONTINUATION_TYPED_CONSUMER_MISSING",
+    "DDM_WITNESSPROGRAM_COMPILER_TARGET_MISSING",
+    "WS3_READY_RECEIPT_MISSING_FROM_ISOLATED_WORKTREE",
+    "IS1_FINAL_VERDICT_MISSING_FROM_ISOLATED_WORKTREE",
+    "DDM_BETA2_OPTIMUM_AND_REWARMUP_PROFILE_UNRESOLVED",
+    "DDM_EMA_RUN_GEOMETRY_AND_PINNED_QUANTITY_UNRESOLVED",
+    "DDM_METRIC_STAGE_SELECTOR_AND_CONSUMER_MISSING",
+    "DDM_MS2_NO_ADMISSIBLE_METRIC_ACTIVE_N600_CANDIDATE",
+    "DDM_CAUSAL_EVENT_MARK_CONSUMER_MISSING",
+    "DDM_CHECKPOINT_INTERVAL_RECOVERY_BUDGET_UNRESOLVED"
+  ]
+}
