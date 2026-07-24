@@ -4,9 +4,10 @@
 This top-level module is the successor to the witness-training-era costate
 digest.  Keeping the live implementation outside ``tac.witness_control`` means
 its import path does not execute the legacy package initializer.  Its SENSE
-surface is the latest schema-checked DDM receipt fleet: dv1, g3, g4, and the
-v19-family, with e1 and dv2 registered as pending producers.  Every decision
-row carries the exact input hashes that make it valid.
+surface is the latest schema-checked DDM receipt fleet: dv1, g3, g4, the
+v19-family, and optional solver-member telemetry, with e1 and dv2 registered
+as pending producers.  Every decision row carries the exact input hashes that
+make it valid.
 
 Authority firewall:
 
@@ -110,6 +111,13 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         "sdwl1.n600_measurement_receipt.v1",
         False,
         "content-hash valid until SDWL1 inventory, grammar, or source custody changes",
+    ),
+    SourceSpec(
+        "ms1",
+        "ddm_ms1_min_description_lattice_solve_*/receipt.json",
+        "ddm_min_description_lattice_solve_receipt.v1",
+        False,
+        "content-hash valid until the exact member, conditioning expansion, coder, or frozen scorer custody changes",
     ),
 )
 

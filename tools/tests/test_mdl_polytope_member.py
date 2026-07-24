@@ -9,6 +9,10 @@ from tac.optimization.mdl_polytope_member import (
     MdlPolytopeMemberSolver,
     fit_proxy,
     lawref_manifest,
+    modular_uint8_residual,
+    reconstruct_modular_uint8,
+    residual_zlib9_bytes,
+    saturated_integer_kernel_basis,
     zlib9_bytes,
 )
 from tac.optimization.resize_full_kernel import FullResizeKernel
@@ -106,3 +110,56 @@ def test_lawref_manifest_covers_all_numeric_defaults() -> None:
         "admission_threshold_delta_s_per_byte",
     }
     assert all(row["law_id"].endswith("_v1") for row in rows)
+
+
+def test_saturated_integer_kernel_basis_is_exact_and_primitive() -> None:
+    coefficients = np.asarray((103416, 181256, 182280, 319480), dtype=np.int64)
+    basis = saturated_integer_kernel_basis(coefficients)
+    assert basis.shape == (3, 4)
+    assert np.array_equal(basis @ coefficients, np.zeros(3, dtype=np.int64))
+    gram = basis.astype(object) @ basis.astype(object).T
+    determinant = (
+        gram[0, 0] * (gram[1, 1] * gram[2, 2] - gram[1, 2] * gram[2, 1])
+        - gram[0, 1] * (gram[1, 0] * gram[2, 2] - gram[1, 2] * gram[2, 0])
+        + gram[0, 2] * (gram[1, 0] * gram[2, 1] - gram[1, 1] * gram[2, 0])
+    )
+    primitive = coefficients // np.gcd.reduce(coefficients)
+    assert determinant == sum(int(value) ** 2 for value in primitive)
+
+
+def test_basis_summary_and_local_facet_dimensions_are_exact(
+    solver: MdlPolytopeMemberSolver,
+) -> None:
+    summary = solver.basis_norm_summary()
+    assert summary["count"] == 3 * solver.kernel.scorer_h * solver.kernel.scorer_w
+    assert 0 < summary["norm_min"] <= summary["norm_p50"]
+    assert summary["norm_p50"] <= summary["norm_p95"] <= summary["norm_max"]
+    interior = np.full(
+        (solver.kernel.camera_h, solver.kernel.camera_w, 3),
+        128,
+        dtype=np.uint8,
+    )
+    dimensions = solver.local_facet_dimensions(interior)
+    assert dimensions.shape == (solver.kernel.scorer_h, solver.kernel.scorer_w, 3)
+    assert np.all(dimensions == 3)
+    lookup = solver._facet_dimension_lookup_cache
+    assert lookup is not None
+    second = solver.local_facet_dimensions(interior)
+    assert solver._facet_dimension_lookup_cache is lookup
+    np.testing.assert_array_equal(second, dimensions)
+
+
+def test_modular_residual_is_bijective_and_origin_solve_is_coder_safe(
+    solver: MdlPolytopeMemberSolver,
+) -> None:
+    canonical = _canonical(solver)
+    origin = _canonical(solver, seed=5678)
+    residual = modular_uint8_residual(canonical, origin)
+    assert np.array_equal(reconstruct_modular_uint8(origin, residual), canonical)
+    result = solver.solve_against_origin(canonical, origin=origin)
+    assert result.selected_residual_bytes <= residual_zlib9_bytes(canonical, origin)
+    assert result.exact_numerators_equal
+    expected, denominator = solver.kernel.operator.apply_numerators(canonical)
+    actual, actual_denominator = solver.kernel.operator.apply_numerators(result.selected)
+    assert actual_denominator == denominator
+    assert np.array_equal(actual, expected)

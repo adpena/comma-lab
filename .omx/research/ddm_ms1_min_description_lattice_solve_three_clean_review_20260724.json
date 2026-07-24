@@ -1,0 +1,97 @@
+{
+  "schema": "ddm_ms1_min_description_lattice_solve_three_clean_review.v1",
+  "lane_id": "lane_ddm_ms1_min_description_lattice_solve_20260723",
+  "run_id": "ddm_ms1_min_description_lattice_solve_20260723T233549Z",
+  "reviewed_artifact": {
+    "path": ".omx/research/ddm_ms1_min_description_lattice_solve_20260724_receipt.json",
+    "sha256": "02574e7fa97bb9e442e23ab5612abf24008da828342215b8b1804e487d017624"
+  },
+  "authority": {
+    "axis": "[macOS-CPU frozen-scorer advisory]",
+    "research_only": true,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer_moved": false,
+    "main_landing_review_required": true
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "angle": "custody_and_independent_recomputation",
+      "verdict": "CLEAN",
+      "findings_count": 0,
+      "evidence": {
+        "stage_files": "600/600 contiguous pair_0000.json through pair_0599.json",
+        "config_sha256": "4f7dcf23a981d4fc0f16dcd35d59db36df414028d90b49c8d3afac20c3ded124",
+        "historical_receipt_sha256": "546a7fddb0225edb15b2254ab73e362758b7b0f244e4ff39cb7bfef25f779098",
+        "sense_pair_rows_sha256": "276dde04cc0d6f4f4df1bfb1c7544f997800da189d49e789d00f87e699073803",
+        "factorization_sha256": "1c798be26b6e8aeb4b259d9e56beedd0cd99f5e5d6b5c2c6ba59f1a0ee03b450",
+        "previous_frame_stage_sums": {
+          "canonical_member_bytes": 744297219,
+          "canonical_conditional_bytes": 731362522,
+          "proposed_conditional_bytes": 1063499710,
+          "proposal_wins": 0,
+          "changed_pairs": 0
+        },
+        "pose_xi_stage_sums": {
+          "canonical_member_bytes": 744297219,
+          "canonical_conditional_bytes": 757236164,
+          "proposed_conditional_bytes": 1238557814,
+          "proposal_wins": 0,
+          "changed_pairs": 0
+        }
+      }
+    },
+    {
+      "round": 2,
+      "angle": "implementation_math_and_regression",
+      "verdict": "CLEAN",
+      "findings_count": 0,
+      "evidence": {
+        "pytest": "30 passed in 0.94s",
+        "pytest_files": [
+          "tools/tests/test_mdl_polytope_member.py",
+          "tools/tests/test_ddm_lattice_costate_sense.py",
+          "tools/tests/test_ddm_min_description_contract.py",
+          "src/tac/tests/test_ddm_costate_organ.py"
+        ],
+        "ruff": "All checks passed",
+        "py_compile": "passed",
+        "git_diff_check": "passed",
+        "kernel_source_sha256": "2c200aa7279d868515f37cc9dcbfd656d17b8d88f75fe88967c3c08b71dae05b",
+        "sense_source_sha256": "931f9354445349c91352cb23289d470aea4dab132c431b7874d678b9b6de0596",
+        "headline_source_sha256": "139602006ddd250ab91b0b5baa464f030c234e308056cc6e6af0032e9a8ee443"
+      }
+    },
+    {
+      "round": 3,
+      "angle": "authority_scope_and_distillation_firewalls",
+      "verdict": "CLEAN",
+      "findings_count": 0,
+      "evidence": {
+        "fresh_sense_pair_count": 600,
+        "fresh_matrix_sha256": "3492d53e22a9b0bfa0ab1a1fed8999afbfc75babbac69932dce81fb097d9c373",
+        "numerical_factors_above_real_coder_floor": 6,
+        "distilled_factor_count": 0,
+        "distillation_status": "BLOCKED_NO_PER_STRATUM_CODER_RACE",
+        "incomplete_campaign_status": "HEADLINE_BLOCKED",
+        "donor_campaign_status": "INADMISSIBLE_DONOR_CONDITIONING",
+        "decision_triple_withheld": true,
+        "score_claim": false,
+        "pointer_moved": false
+      }
+    }
+  ],
+  "seal": {
+    "status": "THREE_CONSECUTIVE_INDEPENDENT_CLEAN_PASSES",
+    "clean_round_count": 3,
+    "landing_authority": "MAIN_REVIEW_REQUIRED",
+    "does_not_authorize": [
+      "contest score claim",
+      "pointer movement",
+      "promotion",
+      "dispatch",
+      "global lattice or family negative"
+    ]
+  }
+}
