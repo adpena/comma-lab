@@ -23928,3 +23928,21 @@ lift, realized-acceptance, W-state warm start.
   opening built; ws1/ws3 R* slope falsifier = the trigger instrument).
 - **NOT an alternative:** the old full witness trunk (train-least doctrine + measured cost class);
   reconsidered only as v8/v9 per-class carriers if ALL low-dim formulations plateau far above box.
+
+### FEED-603-ic2-non-incumbent (2026-07-24, ic2 reviewed_committed 7f77cc60e0)
+IC2 W_seg→PA1(frame_0): receiver-closed, parse-back exact, n600 batch-32, clean-venv self-bootstrap
+PROVEN (445s byte-identical decode; Brotli+cv2 declared-dep bootstrap = the r5 class CURED with
+receipts). MEASURED NON-INCUMBENT [macOS-CPU frozen-scorer advisory]: d_seg 0.0241245100 ·
+d_pose 65.0349871 · 131,154B · S_adv 28.0017 vs v0 23.6618 (Δ +4.3399). Decomposition: W_seg's seg
+advantage −4.64 S is dominated by the pose deficit +8.98 S (pose term 25.50 vs 16.52) — PA1 cut the
+W_seg-parent pose endpoint 146.365→65.035 (−81.33, measured CONDITIONAL, non-telescoping) but a
+zero-byte affine cannot reach the tube. verdict_scope:
+INSTANCE:W_SEG_PLUS_ZERO_BYTE_PA1_FRAME0_MEASURED_NON_INCUMBENT. Named blocker:
+COMPACT_CODE_TO_PHOTOMETRY_POSE_INVERSE_WITH_W_SEG_PARENT_ABSENT (E2 nested_pose6 = ABSENT not
+inert: 3,600B consumed by worldsheet pre-export, no packet owner Φ; #601/#605 scoped controls, not
+n600 additive carriers). ROUTING (derivation-guarded, no respawn): the unlock is JOINT DESCENT
+(#366) per the measured photometric-wall law — post-hoc pose carriers on seg-shaped frames are the
+measured-dead family; PA1's 146→65-but-no-further is a fresh instance of that same wall on the DDM
+vehicle. IC2's numbers quantify the #366 warm-start stakes fed to j8f. Modal
+PREPARED_NOT_DISPATCHED stays HELD (dominated state; local frozen-upstream harness row 1014s
+already provides the calibration). Pointer 0.1910828242 [contest-CPU] UNMOVED.
