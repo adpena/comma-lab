@@ -1,0 +1,99 @@
+{
+  "schema": "ddm_ms4_metric_producers_triality_dag.v1",
+  "feed_id": "FEED-673-ddm-ms4-metric-producers",
+  "lane_id": "lane_ddm_ms4_metric_producers_and_measurement_20260724",
+  "nodes": [
+    {
+      "id": "pf2_sha_bound",
+      "status": "VERIFIED",
+      "sha256": "85084f7bd3a03dbd1b9f04fe6a9b84df4948a6caf64620beef42da8924345f73"
+    },
+    {
+      "id": "g3_sha_bound",
+      "status": "VERIFIED",
+      "sha256": "0c9ce6d0ce2b2c0830400f096438355242527d40f682fc1b201f67d8d951a4e4"
+    },
+    {
+      "id": "pf2_assignment_audit",
+      "status": "BLOCKED",
+      "detail": "0/1200 rows identify pair_ids plus receiver actuator plus direction"
+    },
+    {
+      "id": "pose_top24_top64_control24_full_n600",
+      "status": "MEASURED_COMPLETE",
+      "detail": "23 immutable block checkpoints; final ordered pair IDs 0..599 at batch32"
+    },
+    {
+      "id": "seg_metric",
+      "status": "PARTIAL",
+      "blocker": "PF2_BUCKET_INPUT_ASSIGNMENT_ABSENT"
+    },
+    {
+      "id": "composite_r_second_order",
+      "status": "PARTIAL",
+      "blocker": "PF2_BUCKET_INPUT_ASSIGNMENT_ABSENT"
+    },
+    {
+      "id": "dual_metric_diagnostics",
+      "status": "PARTIAL",
+      "blocker": "PF2_BUCKET_INPUT_ASSIGNMENT_ABSENT"
+    },
+    {
+      "id": "strict_bundle_loader",
+      "status": "PASS_PARTIAL",
+      "detail": "Pose COMPLETE; bundle and all headline flags remain inactive"
+    },
+    {
+      "id": "downstream_consumers",
+      "status": "BLOCKED",
+      "detail": "ms2 rerun, pf2r, and rd1 duals are not fireable"
+    }
+  ],
+  "edges": [
+    [
+      "pf2_sha_bound",
+      "pf2_assignment_audit"
+    ],
+    [
+      "g3_sha_bound",
+      "pose_top24_top64_control24_full_n600"
+    ],
+    [
+      "pf2_assignment_audit",
+      "seg_metric"
+    ],
+    [
+      "pf2_assignment_audit",
+      "composite_r_second_order"
+    ],
+    [
+      "pf2_assignment_audit",
+      "dual_metric_diagnostics"
+    ],
+    [
+      "pose_top24_top64_control24_full_n600",
+      "strict_bundle_loader"
+    ],
+    [
+      "seg_metric",
+      "strict_bundle_loader"
+    ],
+    [
+      "composite_r_second_order",
+      "strict_bundle_loader"
+    ],
+    [
+      "dual_metric_diagnostics",
+      "strict_bundle_loader"
+    ],
+    [
+      "strict_bundle_loader",
+      "downstream_consumers"
+    ]
+  ],
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "score_claim": false,
+  "research_only": true,
+  "main_landing_review_required": true
+}

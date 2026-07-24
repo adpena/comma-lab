@@ -1,0 +1,63 @@
+{
+  "schema": "ddm_ms4_three_clean_review.v1",
+  "run_id": "ddm_ms4_metric_producers_and_measurement_20260724T042005Z",
+  "reviewed_at_utc": "2026-07-24T04:39:03Z",
+  "status": "THREE_CLEAN_PASSES",
+  "round1_adversarial_review": {
+    "performed": true,
+    "fixed": [
+      "governed admission now checks the canonical TAC_GOVERNED_ADMISSION marker",
+      "volatile storage telemetry no longer participates in immutable resume identity",
+      "successive method-order rungs materialize stage-scoped immutable bundle receipts",
+      "all four pure producers validate their exact scientific row shapes while three measurements fail closed before an unidentified PF2 bucket claim"
+    ],
+    "remaining_blocker": "PF2_BUCKET_INPUT_ASSIGNMENT_ABSENT"
+  },
+  "passes": [
+    {
+      "pass": 1,
+      "status": "CLEAN",
+      "checks": [
+        "ruff",
+        "py_compile",
+        "17 focused producer/custody/equation tests",
+        "git diff --check"
+      ]
+    },
+    {
+      "pass": 2,
+      "status": "CLEAN",
+      "checks": [
+        "21 research JSON artifacts parse",
+        "strict loader accepts Pose COMPLETE and bundle PARTIAL",
+        "six required canonical equations query through registry callable",
+        "17 focused tests"
+      ]
+    },
+    {
+      "pass": 3,
+      "status": "CLEAN",
+      "checks": [
+        "23 immutable stage blocks preserve exact batch32 geometry",
+        "600 ordered Pose rows preserve fixed artifact SHA-256",
+        "all 600 Pose rows converged with rank6 and positive tube",
+        "ruff",
+        "py_compile",
+        "git diff --check"
+      ]
+    }
+  ],
+  "resume_replay": {
+    "status": "PASS",
+    "launcher": "tools/safe_run.py",
+    "elapsed_seconds": 3.714,
+    "peak_rss_mib": 436,
+    "result": "all immutable blocks reused without drift"
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "research_only": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

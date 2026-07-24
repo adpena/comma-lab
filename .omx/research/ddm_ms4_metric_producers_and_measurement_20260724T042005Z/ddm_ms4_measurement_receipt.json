@@ -1,0 +1,162 @@
+{
+  "schema": "ddm_ms4_metric_producers_and_measurement_receipt.v1",
+  "run_id": "ddm_ms4_metric_producers_and_measurement_20260724T042005Z",
+  "lane_id": "lane_ddm_ms4_metric_producers_and_measurement_20260724",
+  "delegation_checkpoint_key": "codex_delegate:ddm_ms4_metric_producers_and_measurement:20260724T042005Z",
+  "status": "PARTIAL",
+  "verdict": "POSE_COMPLETE_SEG_COMPOSITE_R_DUAL_BLOCKED_ON_PF2_BUCKET_INPUT_ASSIGNMENT",
+  "verdict_scope": "INSTANCE: current SHA-pinned PF2 atlas; not a FORMULATION, FAMILY, or PARADIGM negative",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "research_only": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "input_custody": {
+    "pf2": {
+      "sha256": "85084f7bd3a03dbd1b9f04fe6a9b84df4948a6caf64620beef42da8924345f73",
+      "assigned_bucket_count": 0,
+      "bucket_count": 1200
+    },
+    "g3": {
+      "sha256": "0c9ce6d0ce2b2c0830400f096438355242527d40f682fc1b201f67d8d951a4e4",
+      "schedule": [
+        "top24",
+        "top64",
+        "stratified_control24",
+        "full_n600"
+      ]
+    },
+    "gt_cache": {
+      "bytes": 5078017610,
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "posenet_weights": {
+      "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+    },
+    "upstream_modules": {
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    }
+  },
+  "component_measurements": [
+    {
+      "component": "SEG_METRIC",
+      "status": "PARTIAL",
+      "execution_status": "NOT_RUN_FAIL_CLOSED_PRECONDITION",
+      "sample_count": 0,
+      "wall_clock_seconds": null,
+      "peak_rss_bytes": null,
+      "blocker": "PF2_BUCKET_INPUT_ASSIGNMENT_ABSENT"
+    },
+    {
+      "component": "POSE_METRIC",
+      "status": "COMPLETE",
+      "execution_status": "MEASURED",
+      "sample_count": 600,
+      "scorer_batch_size": 32,
+      "threads": 4,
+      "stage_block_counts": {
+        "top24": 1,
+        "top64": 2,
+        "stratified_control24": 1,
+        "full_n600": 19
+      },
+      "stage_primary_row_counts": {
+        "top24": 24,
+        "top64": 64,
+        "stratified_control24": 24,
+        "full_n600": 600
+      },
+      "wall_clock_seconds_scorer_blocks_all_stages": 54.47018370660953,
+      "peak_rss_bytes": 6829178880,
+      "converged_count": 600,
+      "non_converged_count": 0,
+      "registered_center_max_abs_delta_min": 3.725290298461914e-08,
+      "registered_center_max_abs_delta_max": 1.9073486328125e-05,
+      "registered_center_max_abs_delta_mean": 3.608719756205877e-06,
+      "data_artifact": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ms4_metric_producers_and_measurement_20260724T042005Z/pose_metric_n600_batch32.json",
+        "bytes": 577705,
+        "sha256": "5e06cc78711a6ca6984c907600a25816cdecc6239903f782d85bcf9473a8f1bc"
+      }
+    },
+    {
+      "component": "COMPOSITE_R_SECOND_ORDER",
+      "status": "PARTIAL",
+      "execution_status": "NOT_RUN_FAIL_CLOSED_PRECONDITION",
+      "sample_count": 0,
+      "wall_clock_seconds": null,
+      "peak_rss_bytes": null,
+      "blocker": "PF2_BUCKET_INPUT_ASSIGNMENT_ABSENT"
+    },
+    {
+      "component": "DUAL_METRIC_DIAGNOSTICS",
+      "status": "PARTIAL",
+      "execution_status": "NOT_RUN_FAIL_CLOSED_PRECONDITION",
+      "sample_count": 0,
+      "wall_clock_seconds": null,
+      "peak_rss_bytes": null,
+      "blocker": "PF2_BUCKET_INPUT_ASSIGNMENT_ABSENT",
+      "euclidean_role": "LABELED_CONTROL_ONLY"
+    }
+  ],
+  "stage_receipts": [
+    {
+      "stage": "top24",
+      "sha256": "39abd9996c08a8122b41add5c3bc1deb77b66a0a8fe1444e784a35fa5d641547"
+    },
+    {
+      "stage": "top64",
+      "sha256": "20c6d57ec95ca95ca55fe7af59a5b10fd64f3ba343262d22d6466f839e8395fd"
+    },
+    {
+      "stage": "stratified_control24",
+      "sha256": "af3330b705a084fe1d5a0872f95a8bbb0d63f72f5291e71fafc83dd5131aec79"
+    },
+    {
+      "stage": "full_n600",
+      "sha256": "9a316f0a82ecb6549c08c2e9de06e8cd43c4782911b15edba77523e1c853517d"
+    }
+  ],
+  "strict_loader": {
+    "callable": "tac.optimization.ddm_metric_custody_bundle:load_metric_custody_bundle",
+    "bundle_path": ".omx/research/ddm_ms4_metric_producers_and_measurement_20260724T042005Z/full_n600/BUNDLE-PARTIAL.json",
+    "bundle_sha256": "7d6fd6c4a5d708b219e50f2afac67b5a60bc7d11240d52cf446b703c101fffc5",
+    "bundle_complete": false,
+    "pose_component_complete": true,
+    "scorer_metric_active": false,
+    "pose_tube_active": false
+  },
+  "consumers": {
+    "ms2_typed_quotient_solve": "BLOCKED",
+    "pf2r_metric_active_three_formulation": "BLOCKED",
+    "rd1_dimension_duals": "BLOCKED"
+  },
+  "first_rungs": [
+    {
+      "rung": "PF2_ASSIGNMENT_SCHEMA",
+      "status": "NEXT",
+      "required_fields_per_bucket": [
+        "pair_ids_0_through_599",
+        "receiver_actuator_id",
+        "direction_id"
+      ],
+      "reason": "This is the missing identification edge shared by three components."
+    },
+    {
+      "rung": "SEG_TOP24_THEN_FULL",
+      "status": "BLOCKED_ON_PF2_ASSIGNMENT",
+      "metric": "MARGIN_FISHER_RANK4"
+    },
+    {
+      "rung": "COMPOSITE_R_PAIRED_SECANTS",
+      "status": "BLOCKED_ON_PF2_ASSIGNMENT",
+      "metric": "EXACT_FULL_KERNEL_PLUS_RECEIVER_REALIZED"
+    },
+    {
+      "rung": "DUAL_MATCHED_READBACK",
+      "status": "BLOCKED_ON_PF2_ASSIGNMENT",
+      "metric": "FISHER_VS_EUCLIDEAN_CONTROL_ONLY"
+    }
+  ]
+}

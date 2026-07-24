@@ -1,0 +1,33 @@
+{
+  "schema": "ddm_ms4_directive_consumption.v1",
+  "lane_id": "lane_ddm_ms4_metric_producers_and_measurement_20260724",
+  "rows": [
+    {
+      "directive_utc": "2026-07-19T19:42:07Z",
+      "sender": "operator",
+      "status": "CONSUMED",
+      "application": "No bucket metric was synthesized without measured EV/input custody; pointer and score authority remain unchanged."
+    },
+    {
+      "directive_utc": "2026-07-19T19:48:01Z",
+      "sender": "operator",
+      "status": "CONSUMED",
+      "application": "Fisher/margin is primary, exact inner-Jacobian paired secants are required, and Euclidean remains LABELED_CONTROL_ONLY."
+    },
+    {
+      "directive_utc": "2026-07-21T13:15:53Z",
+      "sender": "r5_witness_anchor_waterfill",
+      "status": "CONSULTED_ACKNOWLEDGEMENT",
+      "application": "Confirmed the earlier two operator directives were already propagated; no later conflicting instruction appeared."
+    }
+  ],
+  "inbox_cursor": {
+    "per_arm_last_consumed_utc": null,
+    "broadcast_last_consumed_utc": "2026-07-21T13:15:53Z",
+    "new_directives_during_run": 0
+  },
+  "score_claim": false,
+  "research_only": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

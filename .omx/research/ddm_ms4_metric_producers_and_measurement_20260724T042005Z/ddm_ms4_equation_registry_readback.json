@@ -1,0 +1,46 @@
+{
+  "schema": "ddm_ms4_equation_registry_readback.v1",
+  "registry_callable": "tac.canonical_equations:query_equations",
+  "equations": [
+    {
+      "equation_id": "ddm_metric_custody_bundle_completion_v1",
+      "python_callable": "tac.canonical_equations.ddm_metric_custody_bundle_20260724:metric_custody_bundle_completion_law",
+      "application": "The conjunction evaluates false because only one of four components is complete."
+    },
+    {
+      "equation_id": "frozen_scorer_fisher_curvature_margin_colocation_v1",
+      "python_callable": "tools.colocation_fisher_stress_anisotropy_test",
+      "application": "Required primary Seg geometry after the missing PF2 assignment edge lands."
+    },
+    {
+      "equation_id": "segnet_head_rank4_linear_flipdist_v1",
+      "python_callable": "tac.canonical_equations.segnet_head_rank4_flipdist_20260715:head_flip_distance_feature_space",
+      "application": "Required four-dimensional Seg head hyperplane geometry."
+    },
+    {
+      "equation_id": "separable_resize_full_kernel_direct_sum_v1",
+      "python_callable": "tac.canonical_equations.resize_full_kernel_structure_20260720:full_resize_kernel_direct_sum",
+      "application": "Required exact composite-R kernel law; not executable per bucket without an actuator assignment."
+    },
+    {
+      "equation_id": "flip_margin_step_law_v1",
+      "python_callable": "tac.through_r.flip_inverse:build_targeted_perturbation",
+      "application": "Requires paired receiver-realized secants instead of a naive first-order acceptance claim."
+    },
+    {
+      "equation_id": "instant_projected_input_adjoint_v1",
+      "python_callable": "tac.boundary_math.instant_projected_adjoint:pointwise_input_adjoint_numpy",
+      "application": "Required adjoint readback after identical bucket/input custody exists."
+    }
+  ],
+  "pose_exact_equation": {
+    "surface": "EXACT_POSENET_OUTPUT_MSE_QUADRATIC",
+    "law": "For delta in R^6, ||(I/sqrt(6))^T delta||_2^2 = mean(delta_i^2).",
+    "rank": 6,
+    "tube_radius": 0.05,
+    "tube_radius_status": "DERIVED_FROM_SEALED_CONTEST_BUDGET"
+  },
+  "score_claim": false,
+  "research_only": true,
+  "main_landing_review_required": true
+}
