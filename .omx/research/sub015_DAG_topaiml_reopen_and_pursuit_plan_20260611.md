@@ -23733,3 +23733,27 @@ path. Registry: ddm_dm2_semantic_to_realized_rgb_exchange_v1 append row 843. FLE
 slot left EMPTY (coherence contract) — its named rungs (4-row low-rank factor · pair-55 cross-row
 factorization · ξ6 secant) QUEUED, re-ranked after ic1 stage curves + ms2r tolerance results land
 (ms2r may re-rank the whole L3-diff channel if cheap in-box members exist).
+
+### FEED-603-ws3-MAIN-review (2026-07-24, MAIN)
+ws3 window-completion + arbitration LANDED rc=0 (11 commits 917eae6..82bd725065 cherry-picked clean →
+main; 13 focused tests + ruff green post-pick; 48×3 clean passes in-arm; pointer 0.1910828242
+[contest-CPU] UNMOVED; advisory). THE #366 WARM START IS ARBITRATED: registered falsifier
+(R*=4.1215446777965665) returns KEEP_WJOINT reason=SEG_REGRESSION — W_seg's only pure-priced descent
+proposal (x+) removed priced debt but added 2,907 exact Seg errors (component gate reject; predicted
+pose repayment 6,611 steps vs Seg-advantage exhaustion 1,883 steps); W_seg stop scoped FORMULATION
+(reformed seg-lexicographic opening under campaign acceptance). W_joint exact history [0,1,2,3,4]
+with per-step archives + preserved checkpoints (step 2 = measured receiver-identical plateau, honest);
+best step y− reproduced ΔS=−0.05689051 exact (Seg −0.02103 · Pose −0.03586 · rate +0.000002);
+resealed ticket + governed dry-run green (projected peak 21.35 GiB, fresh memory receipts, source-hash
+drift correctly forced re-preflight). TERMINAL STATUS = BLOCKED_NEEDS_SCORER_RECURSIVE_PROPOSAL_
+CONSTRUCTION: the arm consumed the 14:45 scorer-recursion broadcast and correctly refused fire-ready —
+the campaign's proposal generator is still a generic coordinate/menu family ([naive-menu upper bound];
+exact negative action = measurement evidence, not fire authority). THE ONE REMAINING #366 BLOCKER is
+therefore NAMED + CURABLE WITH BUILT PARTS: wire scorer-recursive proposal construction (dm4's landed
+support constructor: Fisher-margin objective → exact resize adjoint → stem-pool → ERF prefix →
+#502 envelopes / ξ6 secant) into the j5 consumer. Per the gate-chain-smell law (j1..j7+ws1..ws3 = 10
+gate arms, run never fired) this does NOT respawn as j8 — it consolidates into #688 (the re-aimed
+engine build: DDMEventContinuationV1 + DDM WitnessProgram + gc1 revisions + sched1 10-item delta +
+THIS proposal-constructor wire-in), which was explicitly gated on ws3 landing and now FIRES.
+verdict_scope: arbitration INSTANCE; W_seg stop FORMULATION; no family closure. Launcher hardened
+(structural G1 rejection + regression test) — landed.
