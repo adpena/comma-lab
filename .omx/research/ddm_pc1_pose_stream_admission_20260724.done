@@ -1,0 +1,7 @@
+ADMISSION_AND_APPARATUS_SEALED
+research_only=true
+score_claim=false
+pointer_moved=false
+main_landing_review_required=true
+seal=.omx/research/ddm_pc1_pose_stream_admission_seal_20260724.json
+next=#366 smooth-knot descent against exact parent-derived solved-plane YUV6
