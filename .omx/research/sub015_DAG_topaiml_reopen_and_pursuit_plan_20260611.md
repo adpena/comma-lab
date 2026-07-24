@@ -23965,3 +23965,23 @@ dynamic_quantum_calibration_v1. Composition note: the exact quotient-plane contr
 receiver-closed input to incumbent_v1 — fresh composed row owed, not claimed. 4 adversarial
 self-fixes incl. per-stream atomic checkpoints + fail-closed container admission. Pointer
 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-representation-doctrine-solutions-not-problems (2026-07-24, operator verbatim "we're seeking to represent solutions, not problems, or whatever is most compact and or compressible, which may be different things potentially")
+Operator confirmation + doctrinal refinement on the ms2r r2 result:
+(1) CONFIRMED: the distortion constraints on the solver WORKED — exact cap equality 136,839/136,839
+is the constraint machinery functioning; rate is the only open axis (consistent with the standing
+seg+pose-solved law).
+(2) DOCTRINE REFINED — this NUANCES #597's "store the PROBLEM not the solution": storing the
+problem+solver is ONE CANDIDATE family, not the doctrine. The objective is
+argmin_{representation families} coded_bytes(family) at box distortion, raced over BOTH:
+  • SOLUTION-DIRECT codes (carry the thing itself in the smallest basis — the meet-it-where-it-is
+    doctrine; the solved plane/partition coded in typed coordinates), AND
+  • PROBLEM+SOLVER codes (seed/constraints stored, decoder re-solves — free interpreter).
+Whichever emits fewer REAL-CODER bytes wins; never assumed, always raced.
+(3) COMPACT ≠ COMPRESSIBLE (operator): small-DOF (706 params, possibly high-entropy) and
+high-redundancy (large but low-entropy fields) are DIFFERENT properties; the objective is minimum
+CODED bytes = the composition. Measured anchors: C1 predictor records = neither (RAW won 50/50);
+the 706-param lift = compact, compressibility unmeasured; grammar streams = both by design.
+CONSEQUENCE for ms2r-r3 (#701): the typed-coordinate choice must RACE solution-direct vs
+problem-seed representations per stratum with real coders — the coordinate that codes shortest
+wins per bucket, mixed families allowed (single-owner rule preserved).
