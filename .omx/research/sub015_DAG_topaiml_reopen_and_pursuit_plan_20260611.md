@@ -24112,3 +24112,20 @@ the full join; duty-ranking consumers must not treat λ order as strong signal; 
 numbers are retired as subset optimism (test updated to pin the honest values). Routed: organ
 re-fit rides the co2 schema at the next organ touch; ranking stays [advisory-heuristic] per the
 oracle's authority_scope discipline. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-co3-organ-lambda-CURED (2026-07-24, reviewed_committed df962af894)
+Costate organ round-3 [macOS-CPU frozen-scorer advisory, held-out folds over exact pairs 0..599]:
+the λ-ranking collapse is CURED at the global level — MS4D-INTERACTION model wins the preregistered
+model-form race: held-out NDCG@4 1.0000 / Spearman 0.8607 vs the collapsed factorized control
+0.1956/0.7477 (bar ≥0.75 MET; prior control RETAINED as history, not overwritten). Race table
+honest: G4 regime-conditional tied NDCG (1.0) but lower ρ; nested mixture 0.918; learned-form
+trigger NOT met (no family negative). Duty ordering upgraded from weak-advisory. THREE honest
+boundaries: (1) Road-stratum LOCAL ranking failure (NDCG@4 0.0 within Road despite global 1.0 —
+288 pairs; the named next organ defect); (2) pair ACTUATION still gated — only 15/600 pairs have
+direct MS4D Fisher precision, 585 emitted UNRANKED_PRECISION_OWED (never fake-ranked; the MML
+tied-interval refusal working); (3) global top-4 = pairs 452/75/313/446 with first false positive
+at rank 5 (backtest, not prospective). PANTHEON SELF-CHECKS LIVE: Bellman residual + organ↔RD1
+dual-consistency AWAITING_J8F/duals (typed, not faked) · Kalman lag-1 innovations WHITE (0.0668) ·
+Wallace-MML interval refusal wired · Rudin FallingRuleList REUSED (GOSDT/SLIM reasoned-excluded).
+verdict_scope: INSTANCE/backtest. One state digest feeds all consumers. Side-finding for ra1:
+unrelated MS2R immutable-stage mismatch documented. Pointer 0.1910828242 [contest-CPU] UNMOVED.
