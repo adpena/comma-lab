@@ -87110,11 +87110,11 @@
       "id": "ddm_ms2r_r3_typed_fisher_g4_waterfill",
       "name": "DDM MS2R R3 typed Fisher G4 waterfill",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_ms2r_r3_typed_fisher_g4_waterfill_20260724T211804Z/receipt.json"
         },
         "real_archive_empirical": {
           "status": false,
@@ -87145,7 +87145,7 @@
           "evidence": ""
         }
       },
-      "notes": "Delegated Codex implementation lane; advisory n600-only typed Fisher/G4 rate-distortion solve consuming current scorer-oracle evidence; MAIN landing review required."
+      "notes": "Oracle-bound R3 admission implementation complete; honest wall is NO_COMPOSABLE_TYPED_ACTUATOR_STREAM, no R3 candidate/E4/score, R2 batch16 control unchanged; MAIN landing review required."
     }
   ],
   "level_rules": {
@@ -87155,5 +87155,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T21:22:44Z"
+  "updated_at": "2026-07-24T21:48:00Z"
 }

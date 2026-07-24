@@ -1,0 +1,25 @@
+{
+  "schema": "codex_review_pass.v1",
+  "round": 1,
+  "reviewed_at_utc": "2026-07-24T21:43:51Z",
+  "reviewer": "codex-structural",
+  "status": "CLEAN_AFTER_FIXES",
+  "files": {
+    "src/tac/scorer_value_oracle.py": "839f292b299df27d0fa1709b7fbc8dd40e6f9ea4c820218106d02ad88808cf46",
+    "src/tac/optimization/ddm_ms2r_r3_typed_fisher_g4_waterfill.py": "5f56eb807fca4088e99f6a2b2cc8a779f62901fafac5f5a93edc7318b48a9fda",
+    "src/tac/tests/test_scorer_value_oracle.py": "7c70140e1d25d5c9dc5e66dd89a7d6f64225437662c9e5b5f3f150fa2c2d2f1a",
+    "src/tac/tests/test_ddm_ms2r_r3_typed_fisher_g4_waterfill.py": "898598f5fdf0cc8c64e54c7f59d0b0a46a24614cc1ec9c4dd623f2a60bff80e3"
+  },
+  "findings_fixed": [
+    "external producer bindings now reject boolean byte counts",
+    "diagnostic slope inputs now reject non-finite distortion, amortization, and k values",
+    "typed config schema alias no longer emits a Pydantic field-shadow warning"
+  ],
+  "verification": {
+    "focused_tests": "39 passed",
+    "ruff": "clean",
+    "diff_check": "clean"
+  },
+  "score_claim": false,
+  "main_landing_review_required": true
+}

@@ -1,0 +1,31 @@
+{
+  "schema": "codex_review_pass.v1",
+  "round": 2,
+  "reviewed_at_utc": "2026-07-24T21:43:51Z",
+  "reviewer": "codex-adversarial",
+  "status": "CLEAN",
+  "files": {
+    "src/tac/scorer_value_oracle.py": "839f292b299df27d0fa1709b7fbc8dd40e6f9ea4c820218106d02ad88808cf46",
+    "src/tac/optimization/ddm_ms2r_r3_typed_fisher_g4_waterfill.py": "5f56eb807fca4088e99f6a2b2cc8a779f62901fafac5f5a93edc7318b48a9fda",
+    "src/tac/tests/test_scorer_value_oracle.py": "7c70140e1d25d5c9dc5e66dd89a7d6f64225437662c9e5b5f3f150fa2c2d2f1a",
+    "src/tac/tests/test_ddm_ms2r_r3_typed_fisher_g4_waterfill.py": "898598f5fdf0cc8c64e54c7f59d0b0a46a24614cc1ec9c4dd623f2a60bff80e3"
+  },
+  "adversarial_rederivation": {
+    "typed_keys": "162 exact and unique",
+    "beneficial_accounting_slopes": 29,
+    "receiver_movement_histograms": 38,
+    "actionable_dimension_duals": 0,
+    "pf2_missing_actuator_foreign_keys": 1200,
+    "ms4d_inapplicable_actuator_secants": 1200,
+    "canonical_receipt": true,
+    "deterministic_receipt_replays": 3
+  },
+  "verification": {
+    "focused_tests": "41 passed",
+    "compileall": "clean",
+    "ruff": "clean",
+    "diff_check": "clean"
+  },
+  "score_claim": false,
+  "main_landing_review_required": true
+}
