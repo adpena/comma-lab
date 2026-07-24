@@ -1,0 +1,42 @@
+{
+  "bounded_compatibility_smoke": {
+    "attempted": true,
+    "delta_S": null,
+    "delta_S_per_wall_clock_hour": null,
+    "delta_bytes_per_step": null,
+    "dm4_scorer_recursive_proposals_exposed": 6,
+    "exact_candidate_archive_materialized": false,
+    "frozen_n600_scorer_replay_executed": false,
+    "proposal_manifest_sha256": "850cee54d038da3d2ea4123589f3ae9037316c01d7ae9ff2f7c9b8b486054311",
+    "reason": "BLOCKED_DM4_SCORER_RECURSIVE_PROPOSAL_LACKS_J5_COUNTED_APPLICATION_OPERATOR"
+  },
+  "box_milestone_policy": "box is a checkpointed milestone for descent and a tolerance stop only for describe/solve; descent stop remains economic/dynamics/resource-budget based",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "fire_or_dispatch_performed": false,
+  "main_review_required": true,
+  "named_cure": "Land one typed counted J5 application operator for a DM4 proposal, preserve its payload/parse-back bytes, then run exactly one frozen n600 scorer replay from this Step-4 checkpoint and require measured joint Delta-S < 0 including the realized coder-byte delta.",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "readiness_verdict": "BLOCKED_DM4_SCORER_RECURSIVE_PROPOSAL_LACKS_J5_COUNTED_APPLICATION_OPERATOR",
+  "ready_to_fire_under_standing_go": false,
+  "schema": "ddm_j8e_688_step4_resmoke_readiness.v1",
+  "score_claim": false,
+  "starting_state": {
+    "advisory_action": 26.186452519033523,
+    "archive_bytes": 138804,
+    "archive_sha256": "9601e777010b1dc45ed0841e118fcf34c58452324f8730fe9958a3440502e3a4",
+    "checkpoint": {
+      "bytes": 26581,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000004.npz",
+      "sha256": "f6e88a743e188eb84f75f3a500acd04ef9ea685c86a1ee774709148c9cc65e41"
+    },
+    "d_pose": 36.37587755493872,
+    "d_seg": 0.0702156745062934,
+    "exact_verdict": {
+      "bytes": 2992,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/verdicts/01_residual_bucket_realized_acceptance_step000004_n600.json",
+      "sha256": "c6e95d3b88f083bc77a24bef4d58be618874b8b5cc38d6db26c5800a933f00e4"
+    },
+    "global_step": 4
+  }
+}

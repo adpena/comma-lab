@@ -1,0 +1,65 @@
+{
+  "adversarial_round_1": {
+    "defects_found": [
+      "DM4 pose-parent probes were omitted from the initial adapter iteration",
+      "event schedules could initially carry ignored legacy stage keys",
+      "event JSON booleans and numerics were initially coercive",
+      "the governed dry-run initially retained the inherited WS2 memory-receipt pointer"
+    ],
+    "disposition": "FIXED_AND_REGRESSION_COVERED",
+    "remaining_blocker": "BLOCKED_DM4_SCORER_RECURSIVE_PROPOSAL_LACKS_J5_COUNTED_APPLICATION_OPERATOR"
+  },
+  "clean_passes": [
+    {
+      "duration_seconds": 76.62,
+      "pass_id": "ddm_j8e_688_frozen_clean_1",
+      "passed": 44
+    },
+    {
+      "duration_seconds": 75.78,
+      "pass_id": "ddm_j8e_688_frozen_clean_2",
+      "passed": 44
+    },
+    {
+      "duration_seconds": 76.83,
+      "pass_id": "ddm_j8e_688_frozen_clean_3",
+      "passed": 44
+    }
+  ],
+  "files": {
+    "src/tac/optimization/ddm_dm4_j5_adapter.py": "d4ab1cc76ff3283e87d376fb13e2c4faf1d45f10002206750389f4588afafd3b",
+    "src/tac/optimization/ddm_event_continuation.py": "8b66adce42ae338869dd0ba459599cfcded019af913c34168044c8e48c9c4b7d",
+    "src/tac/optimization/ddm_witness_program.py": "5c1f8384f1078d39d22c0f45df0e4bae0c91f5da86be3d487db4da199cde3858",
+    "src/tac/optimization/direct_description_joint_descent.py": "064f167ff959156d7c0eb497e46eac27992f1b795ac70e1f239ee61783b2fadc",
+    "src/tac/optimization/tests/test_ddm_dm4_j5_adapter.py": "54acb26672d572ac235c4b63a56ecc61da1170bf91652d46c614160e1c474d37",
+    "src/tac/optimization/tests/test_ddm_event_continuation.py": "325a8c32012e255bc271873eabbafdc0fae19aed32b5c7564603436a3bc878f3",
+    "tools/build_ddm_j8e_event_engine.py": "3b37ec4628f0d025ccc72e795097fa56727d2c27b0946f26948436c20b34b6cf",
+    "tools/launch_ddm_joint_descent.py": "1e6ecd18c6971eba0193bad387e3a09ea450cb9714e8e04ea2d7b5282063e6d4"
+  },
+  "frozen_artifacts": {
+    "adapter_receipt_sha256": "7b10f7f629e919238ff75abeb4f12930c6e7f1b4d0b9994583b2933fb7e702e8",
+    "compile_receipt_sha256": "50c50ce571675b1f06e29198b282c33280a96d7c43eb6ec8c87c2b714b5a2a89",
+    "external_fresh_memory_receipt_sha256": "78e61d360d8aa192d756876c65b4d1a456794167bdf4c9d01432eed750258232",
+    "external_governed_dry_run_sha256": "bae2fe7a2ed14b76abbef120ae53f9e9f25ec46491b7173cb0b95cae4c6254c4",
+    "fresh_memory_custody_sha256": "62bcb885d352e7e77e63a2d3828c3fc8c3084fe347c0714a0e43cf5609ee32f5",
+    "resmoke_readiness_sha256": "e3a0a90f62eaf383c06062bfb03729cd8605244b786eea20dee17f444b30ac7d",
+    "ticket_sha256": "91a25df1f0c82fc1b09f283e6261aae69a25cf911be1d250a2480528b5af531b"
+  },
+  "governed_dry_run": "DRY_RUN_GREEN_MAIN_REVIEW_AND_OPERATOR_GO_STILL_REQUIRED",
+  "lint": "ruff_all_checks_passed",
+  "main_review_required": true,
+  "pointer_moved": false,
+  "py_compile": "passed",
+  "review_tracker": {
+    "passes": [
+      "ddm_j8e_688_frozen_clean_1",
+      "ddm_j8e_688_frozen_clean_2",
+      "ddm_j8e_688_frozen_clean_3"
+    ],
+    "reviewer": "codex_ddm_j8e_688",
+    "touched_python_files_marked": 8
+  },
+  "schema": "ddm_j8e_688_three_clean_review.v1",
+  "score_claim": false,
+  "test_command": "PYTHONPATH=src .venv/bin/python -m pytest -q src/tac/optimization/tests/test_direct_description_joint_descent.py src/tac/optimization/tests/test_ddm_event_continuation.py src/tac/optimization/tests/test_ddm_dm4_j5_adapter.py"
+}

@@ -904,6 +904,14 @@ def _sealed_schedule(config: DirectDescriptionJointDescentTypedConfigV1, args: a
     schedule = config.full_run_schedule
     if schedule is None:
         return _measurement_schedule(args)
+    if schedule.event_continuation is not None:
+        if not schedule.event_continuation.execution_allowed:
+            raise DirectDescriptionError(
+                "REFUSE_EVENT_CONTINUATION_EXECUTION_DISABLED_PENDING_MAIN_REVIEW"
+            )
+        raise DirectDescriptionError(
+            "REFUSE_EVENT_CONTINUATION_CAMPAIGN_ACTUATION_REQUIRES_MAIN_REVIEWED_RUNTIME_BINDING"
+        )
     reform = schedule.warm_start_reform
     return {
         "train_batch": schedule.train_batch,
@@ -2175,6 +2183,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(args.ticket)
+        event_schedule = (
+            None
+            if config.full_run_schedule is None
+            else config.full_run_schedule.event_continuation
+        )
+        if event_schedule is not None and (args.bounded_smoke or args.full_run):
+            raise DirectDescriptionError(
+                "REFUSE_EVENT_CONTINUATION_EXECUTION_DISABLED_PENDING_MAIN_REVIEW"
+            )
         if args.worst_geometry_memory_bootstrap:
             if (
                 args.bootstrap_measurement
