@@ -24047,3 +24047,18 @@ FORMULATION OPEN, membership_claim=false (no descent ran). Pre-registered optima
 → (3) waterfill counted coords to break-even → (4) n600 → contest axes only on advisory-negative.
 CONSUMER: j8f/#366 — the pose finish now has an ADMITTED 320-coordinate parameter map with somewhere
 to descend to. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-ev1-evidence-complete-r3-fired (2026-07-24, ev1 reviewed_committed dae20670e5 → r3 LIVE)
+ev1 [macOS-CPU frozen-scorer advisory]: V19 600/600 exact receiver-closed joins (candidate delta =
+1,588B, ONE global home, no invented per-pair share) · RD1 162/162 exclusive byte homes + exact
+uint8 histograms (108 shared-k G4-class-prior / 54 per-frame; no false shared_clip) · Brotli-Q11
+14,730B parse-back verified · sole metric exact_composite_R_rank4_margin_fisher_plus_pose6_quadratic
+(Euclidean-naive REFUSED) · organ blockers 2/3 closed (J8F telemetry remains) · staleness law
+applied live (MENU1 camera-hash drift → mixed custody REFUSED, fresh rescoring). Pricing 0/162
+handed to r3 by hash-bound inbox note. GATE MET → ddm_ms2r_r3_typed_fisher_g4_waterfill FIRED
+(21:18Z): the convergence arm — r2's 3 blocked components activated × per-bucket 4-family
+representation race (innovation / shared-codebook-via-NCD / solution-direct / tolerance-absorbed-
+after-Martin-Löf-test) × coder roster (RAW/Brotli/ANS/zstd/CM/CTW + Bellard candidate) × Grünwald
+switch headers × FRI floor × Girod ξ-precision curve × Polyanskiy dispersion guard × Wallace-MML
+quanta × Schmidhuber ordering law × oracle-facade consumption. Target: beat 291,205,400B at the
+136,839-error cap + un-null the 162 duals. Pointer 0.1910828242 [contest-CPU] UNMOVED.
