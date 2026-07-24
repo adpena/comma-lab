@@ -87319,6 +87319,47 @@
         "MAIN reviews ranked join and same-turn task-ledger routings",
         "no launch or score authority in this arm"
       ]
+    },
+    {
+      "id": "lane_ddm_cc1_coolchic_c3_lesson_harvest_20260724",
+      "name": "DDM Cool-Chic/C3 lessons-only harvest and pantheon synergy matrix",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; lessons-only source harvest; Cool-Chic/C3/COIN/functa are NEVER vehicles; live line remains DDM vocabulary; no launches; verdict_scope historical rows only; MAIN landing review required."
     }
   ],
   "level_rules": {

@@ -1,0 +1,14 @@
+schema=ddm_cc1_lesson_harvest_done.v1
+utc=2026-07-24T23:18:00Z
+lane_id=lane_ddm_cc1_coolchic_c3_lesson_harvest_20260724
+status=SEALED_RESEARCH_ONLY
+verdict=LESSONS_HARVESTED_NO_EXTERNAL_VEHICLE_ADOPTED
+typed_lesson_table=.omx/research/ddm_cc1_coolchic_c3_lesson_harvest_20260724.json
+findings=.omx/research/codex_findings_ddm_cc1_coolchic_c3_lesson_harvest_20260724_codex.md
+dag_feed=.omx/research/ddm_cc1_coolchic_c3_lesson_harvest_DAG_FEED_20260724.md
+triality=dsl,dag,equations
+pointer_delta=NONE
+score_claim=false
+execution_allowed=false
+main_landing_review_required=true
+activation_gate=MAIN_REVIEWED_J8F_COUNTED_APPLICATION_PLUS_STEP4
