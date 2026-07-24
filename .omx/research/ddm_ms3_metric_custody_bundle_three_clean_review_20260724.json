@@ -1,0 +1,46 @@
+{
+  "schema": "ddm_ms3_metric_custody_bundle_three_clean_review.v1",
+  "research_only": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "round1_receipt": ".omx/research/ddm_ms3_metric_custody_bundle_round1_review_20260724.json",
+  "passes": [
+    {
+      "pass": 1,
+      "result": "CLEAN",
+      "checks": [
+        "47 DDM and canonical-equation tests after final formatting",
+        "ruff check on six changed Python surfaces",
+        "git diff --check"
+      ],
+      "result_detail": "47 passed; ruff lint/format clean; diff clean"
+    },
+    {
+      "pass": 2,
+      "result": "CLEAN",
+      "checks": [
+        "py_compile changed source modules",
+        "rerun immutable PARTIAL materializer",
+        "load PARTIAL and verify both headline flags false",
+        "registry lookup and callable import"
+      ],
+      "result_detail": "12 exact blockers; registered equation callable resolved"
+    },
+    {
+      "pass": 3,
+      "result": "CLEAN",
+      "checks": [
+        "PYTHONHASHSEED=7 deterministic rematerialization",
+        "8 focused bundle/equation tests",
+        "aggregate receipt digest byte identity",
+        "ruff format --check on five new Python surfaces"
+      ],
+      "result_detail": "8 passed; aggregate JSON digest 09338b91f11012612405dffcd8ea09339ea8b1f980522f2facde9253c1e28707 unchanged"
+    }
+  ],
+  "disposition": "THREE_CLEAN_PASSES_PARTIAL_BUNDLE",
+  "scientific_completion": false,
+  "verdict_scope": "apparatus is clean; four exact measurement components remain INSTANCE-scoped missing",
+  "main_landing_review_required": true
+}

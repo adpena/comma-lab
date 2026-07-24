@@ -1,0 +1,46 @@
+{
+  "schema": "ddm_ms3_metric_custody_bundle_round1_review.v1",
+  "reviewer": "codex_self_adversarial_round1",
+  "research_only": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "disposition": "PASS_AFTER_FIXES",
+  "findings": [
+    {
+      "id": "R1-1",
+      "severity": "HIGH",
+      "finding": "A PARTIAL bundle suppressed scorer_metric_active but did not suppress the separately declared Pose tube.",
+      "fix": "Headline admission now intersects pose_tube_active with the bundle's Pose completion flag and emits POSE_TUBE_NOT_ACTIVE_IN_SOLVE."
+    },
+    {
+      "id": "R1-2",
+      "severity": "HIGH",
+      "finding": "A manifest could omit component blockers while still remaining syntactically PARTIAL.",
+      "fix": "The loader now requires the manifest blocker list to exactly preserve the ordered union of all component blockers."
+    },
+    {
+      "id": "R1-3",
+      "severity": "HIGH",
+      "finding": "The manifest named G3 hard-tail-first order, but COMPLETE data artifacts did not independently bind that registry and measurement schedule.",
+      "fix": "Every COMPLETE data header and component lineage must now bind the exact G3 SHA and top24-top64-control24-full_n600 schedule."
+    }
+  ],
+  "remaining_blockers": [
+    "FULL_N600_SEG_RANK4_ROW_GRAMS_NOT_CUSTODIED",
+    "PF2_1200_BUCKET_MARGIN_FISHER_LAMBDA_RANGES_NOT_CUSTODIED",
+    "AT1X_SEG_IS_CONTRACTED_ENERGY_NOT_FULL_ROW_GRAM",
+    "N600_BATCH32_POSE_OUTPUT_QUADRATICS_NOT_CUSTODIED",
+    "POSE_TUBE_CONVERGENCE_FLAGS_NOT_CUSTODIED_FOR_600_PAIRS",
+    "V16_CONTROL_IS_EIGHT_PAIR_BATCH16_AND_NOT_ALL_CONVERGED",
+    "N600_COMPOSITE_R_HESSIAN_ADJOINT_NOT_CUSTODIED",
+    "PF2_BUCKET_COMPLETE_REALIZED_PAIRED_SECANTS_NOT_CUSTODIED",
+    "G2F_REALIZED_SECANT_CONTROL_IS_N64_NOT_N600",
+    "PF2_BUCKET_COMPLETE_FISHER_EUCLIDEAN_COSINE_NOT_CUSTODIED",
+    "PF2_BUCKET_COMPLETE_FISHER_EUCLIDEAN_REL_NORM_NOT_CUSTODIED",
+    "EUCLIDEAN_CONTROL_EXISTS_WITHOUT_MATCHED_FISHER_READBACK"
+  ],
+  "verdict_scope": "INSTANCE current landed producer and custody state only; no FORMULATION, FAMILY, or PARADIGM negative",
+  "main_landing_review_required": true
+}

@@ -13,6 +13,7 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 HEADLINE_SCHEMA = "ddm_min_description_headline.v1"
@@ -259,6 +260,8 @@ def build_minimum_description_headline(
     typed_stream_tags: Sequence[TypedStreamTag | Mapping[str, Any]] | None = None,
     untagged_stream_waiver: str | None = None,
     strict_typed_stream_tags: bool = False,
+    metric_custody_bundle_path: str | Path | None = None,
+    metric_custody_repository_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build the only row eligible to headline minimum-description progress.
 
@@ -273,9 +276,50 @@ def build_minimum_description_headline(
     exceptions_sha = _optional_sha256(exception_sha256, "exception_sha256")
     d_seg = _distortion(realized_d_seg, "realized_d_seg")
     d_pose = _distortion(realized_d_pose, "realized_d_pose")
+    metric_bundle: dict[str, Any] | None = None
+    metric_bundle_complete = True
+    metric_pose_tube_complete = True
+    if metric_custody_bundle_path is not None:
+        if metric_custody_repository_root is None:
+            raise MinimumDescriptionContractError(
+                "metric_custody_repository_root is required with a bundle path"
+            )
+        try:
+            from tac.optimization.ddm_metric_custody_bundle import (
+                load_metric_custody_bundle,
+            )
+
+            loaded_bundle = load_metric_custody_bundle(
+                metric_custody_bundle_path,
+                repository_root=metric_custody_repository_root,
+            )
+        except (OSError, ValueError) as exc:
+            raise MinimumDescriptionContractError(
+                "metric custody bundle failed freshness or schema validation"
+            ) from exc
+        metric_bundle_complete = loaded_bundle.complete
+        metric_pose_tube_complete = loaded_bundle.headline_flags()[
+            "pose_tube_active"
+        ]
+        metric_bundle = {
+            "path": str(loaded_bundle.path),
+            "bundle_id": loaded_bundle.bundle_id,
+            "status": loaded_bundle.status.value,
+            "complete": loaded_bundle.complete,
+            "blockers": list(loaded_bundle.blockers),
+        }
+    elif metric_custody_repository_root is not None:
+        raise MinimumDescriptionContractError(
+            "metric_custody_repository_root cannot be supplied without a bundle path"
+        )
+
+    effective_scorer_metric_active = (
+        scorer_metric_active and metric_bundle_complete
+    )
+    effective_pose_tube_active = pose_tube_active and metric_pose_tube_complete
     solve_typing = build_recursive_solve_typing_contract(
         quotient_coordinates_only=quotient_coordinates_only,
-        scorer_metric_active=scorer_metric_active,
+        scorer_metric_active=effective_scorer_metric_active,
         alternating_typed_subproblems=alternating_typed_subproblems,
         typed_blocks_active=typed_blocks_active,
         per_dimension_quanta_active=per_dimension_quanta_active,
@@ -327,11 +371,13 @@ def build_minimum_description_headline(
         blockers.append("SOLVE_EXCEPTION_BYTE_CUSTODY_MISSING")
     if not expansion_receiver_closed:
         blockers.append("STORED_PROBLEM_EXPANSION_NOT_RECEIVER_CLOSED")
-    if not pose_tube_active:
+    if not effective_pose_tube_active:
         blockers.append("POSE_TUBE_NOT_ACTIVE_IN_SOLVE")
     if not realized_uint8_r_frozen_scorers:
         blockers.append("REALIZED_UINT8_R_FROZEN_SCORER_ACCEPTANCE_MISSING")
     blockers.extend(solve_typing["blockers"])
+    if metric_bundle is not None and not metric_bundle_complete:
+        blockers.append("METRIC_CUSTODY_BUNDLE_INCOMPLETE")
     if tags is None:
         blockers.append("TYPED_STREAM_TAG_CUSTODY_MISSING_WARN_ONLY")
         if untagged_stream_waiver is not None:
@@ -384,10 +430,11 @@ def build_minimum_description_headline(
             ),
         },
         "joint_constraints": {
-            "pose_tube_active": pose_tube_active,
+            "pose_tube_active": effective_pose_tube_active,
             "realized_uint8_r_frozen_scorers": realized_uint8_r_frozen_scorers,
         },
         "recursive_solve_typing": solve_typing,
+        "metric_custody_bundle": metric_bundle,
         "typed_stream_custody": {
             "schema": TYPED_STREAM_SCHEMA,
             "mode": (
