@@ -4,7 +4,7 @@
   "run_id": "ddm_ms1_min_description_lattice_solve_20260723T233549Z",
   "reviewed_artifact": {
     "path": ".omx/research/ddm_ms1_min_description_lattice_solve_20260724_receipt.json",
-    "sha256": "02574e7fa97bb9e442e23ab5612abf24008da828342215b8b1804e487d017624"
+    "sha256": "1b7063a44574b0839ede08c807f348ad417be0492ac32d68634b124b9c2b1e97"
   },
   "authority": {
     "axis": "[macOS-CPU frozen-scorer advisory]",
@@ -48,7 +48,7 @@
       "verdict": "CLEAN",
       "findings_count": 0,
       "evidence": {
-        "pytest": "30 passed in 0.94s",
+        "pytest": "32 passed in 0.95s",
         "pytest_files": [
           "tools/tests/test_mdl_polytope_member.py",
           "tools/tests/test_ddm_lattice_costate_sense.py",
@@ -59,8 +59,8 @@
         "py_compile": "passed",
         "git_diff_check": "passed",
         "kernel_source_sha256": "2c200aa7279d868515f37cc9dcbfd656d17b8d88f75fe88967c3c08b71dae05b",
-        "sense_source_sha256": "931f9354445349c91352cb23289d470aea4dab132c431b7874d678b9b6de0596",
-        "headline_source_sha256": "139602006ddd250ab91b0b5baa464f030c234e308056cc6e6af0032e9a8ee443"
+        "sense_source_sha256": "7a6342852b49c52a9167fd8e358391cdc838b91a3425d6aab06d6fe11a09c04f",
+        "headline_source_sha256": "6575341a138ae7788680de6bd7e1c1bac66d6805d883035c44d4ddd1634762d6"
       }
     },
     {
@@ -76,6 +76,17 @@
         "distillation_status": "BLOCKED_NO_PER_STRATUM_CODER_RACE",
         "incomplete_campaign_status": "HEADLINE_BLOCKED",
         "donor_campaign_status": "INADMISSIBLE_DONOR_CONDITIONING",
+        "pooled_dual_status": "FORBIDDEN",
+        "recursive_solve_typing": {
+          "directive_utc": "2026-07-24T02:04:16Z",
+          "applied_forward_without_rerunning_n600": true,
+          "quotient_coordinates_only": false,
+          "scorer_metric_active": false,
+          "alternating_typed_subproblems": false,
+          "typed_blocks_active": false,
+          "per_dimension_quanta_active": false,
+          "exact_blocker_count": 5
+        },
         "decision_triple_withheld": true,
         "score_claim": false,
         "pointer_moved": false

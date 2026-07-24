@@ -31,32 +31,57 @@ inadmissible rather than merely non-promotable.
 `m7` supplies only the existence observation that enough conditioning permits
 a zero-training joint solve. Its donor spine is not an MS1 expansion or prior.
 
-## 2. Gauge-fixed lattice
+## 2. Recursive typed solve space
 
-Let `A` be the integer-numerator form of the pinned resize, `K=ker(A)`, and
-`Q=I-P_K` the visible/range projector. For a feasible camera witness `x` and
-deterministic expansion `b=E(p)`, the continuous gauge condition is
-
-```text
-P_K(x-b) = 0,
-x-b = Q(x-b).
-```
-
-Uint8 projection generally prevents exact satisfaction. The integer problem is
-therefore a closest-vector problem:
+Let `A` be the integer-numerator form of the pinned resize,
+`K=ker(A)`, and `y=A x` the quotient/range coordinate. The measured #580
+nullity is `80.6742%`, leaving approximately `19.3%` visible raw dimensions.
+The successor decision vector is `y`, not `(y,z)` with `z in K`:
 
 ```text
-minimize   CoderBytes(x-b)
-subject to x in Z^n intersect [0,255]^n
-           x in C_seg
-           x in T_pose
-           x minimizes ||P_K(x-b)|| under the preceding constraints.
+y_hat = argmin_y L_typed(y)
+x_hat = PreimageCompiler(y_hat; deterministic #401 free fill).
 ```
 
-The last line is a gauge tie-break, not free payload. After integer projection,
-the implementation must measure residual gauge leakage and recheck the real
-scorer constraints. Catalog #532 forbids inferring realized acceptance from a
-continuous range projection.
+`z` is gauge and receives neither an optimization coordinate nor byte credit.
+A gauge-fixed penalty is insufficient because it still makes the invisible
+coordinates search variables.
+
+The metric is block typed:
+
+```text
+G_solve = G_seg_rank4_margin_Fisher (+) G_pose_low_rank,
+rank(G_pose_low_rank) <= 6.
+```
+
+Basis reduction, trust regions, and closest-vector distances use `G_solve`,
+not the identity Gram matrix. The optimization alternates three
+non-interchangeable subproblems:
+
+```text
+argmax-cell selection
+  -> within-cell continuous/integer lattice solve
+  -> real-coder pricing
+  -> repeat to a typed stopping rule.
+```
+
+Blocks are keyed by
+
+```text
+(stratum, scorer_visibility, g4_temporal_class),
+scorer_visibility in {ker(A)-invisible, seg-visible, pose-visible}.
+```
+
+Static-in-BEV temporal blocks solve once and amortize across their measured
+reuse count. For dimension `i`, the effective quantum is
+
+```text
+q_eff,i = 1 uint8 step * scorer_sensitivity_i.
+```
+
+Tolerance and trust-region steps are per dimension in this metric. A scalar
+tolerance cannot distinguish sub-quantum free dimensions from multi-quantum
+Lane dimensions.
 
 ## 3. Exact local kernel used by the v1 diagnostic
 
@@ -87,7 +112,9 @@ x_hat = argmin_{x in (x0 + K_Z) intersect [0,255]^n} ||x-b||_2,
 
 then admits `x_hat` only if the real modular-residual zlib code is strictly
 smaller. It is a saturated local-CVP proposal, not the full minimum-description
-cell/tube optimum.
+cell/tube optimum. It searches identity-Euclidean ker(A) coordinates and is now
+retired from the successor decision space; its `0/1,200` wins per conditional
+form are preserved only as formulation-scoped historical evidence.
 
 ## 4. Conditional coder diagnostic
 
@@ -150,7 +177,8 @@ d_facet(z) = 3 - rank(B[I(z),:]).
 
 This is not an integer-neighbour reach count. The bounded projection exposes
 no KKT multipliers, so v1 shadow prices are typed unavailable; Fisher margins
-are never relabeled as duals.
+are never relabeled as duals. A pooled lambda is forbidden. Future duals are
+keyed per `(stratum x scorer-visibility x g4 temporal class)` bucket.
 
 The geometry-only facet lookup has `24,576 x 16` entries. It is now cached once
 per solver instance. Recomputing it for each of 600 pairs was measured at
@@ -202,7 +230,12 @@ and not donor_conditioned
 and receiver_closed(E(p))
 and pose_tube_active
 and realized_uint8_R_frozen_scorers
-and sha_bound(p,e).
+and sha_bound(p,e)
+and quotient_coordinates_only
+and scorer_metric_active
+and alternating_typed_subproblems
+and typed_blocks_active
+and per_dimension_quanta_active.
 ```
 
 Only then:
@@ -216,8 +249,9 @@ diagnostic distortions remain available.
 
 ## 9. Triality and directive consumption
 
-- **Equations:** this note owns campaign total, gauge, local lattice, joint
-  constraints, factor arbitration, and headline admission.
+- **Equations:** this note owns campaign total, quotient-only variables,
+  scorer metric, typed alternation/blocks/quanta, historical local lattice,
+  factor arbitration, and headline admission.
 - **DAG:** the adjacent FEED owns the source-to-expansion-to-solve-to-headline
   graph and the measured-v1 diagnostic branch.
 - **DSL:** N/A with rationale. MS1 adds no trainer, curriculum, submission, or
@@ -231,3 +265,4 @@ diagnostic distortions remain available.
 | No donor spine and terminology correction | Donor conditioning is inadmissible; new authority artifacts use stored problem, deterministic expansion, and conditional exceptions. |
 | SKELETON x FIBER stratification | Distillation requires a measured per-stratum coder race and has no default role. |
 | n600, resumability, findings as first rungs | All 600 v1 stages are atomic; the v1 result stays formulation-scoped and the missing headline edge is explicit. |
+| Recursive solve dimensionality, 2026-07-24T02:04:16Z | ADOPTED forward: quotient variables only, scorer-metric Gram geometry, typed subproblem alternation, stratum x visibility x g4 blocks, and per-dimension effective quanta. The completed v1 run was not restarted; all five declarations remain false in its receipt and therefore add exact headline blockers. |

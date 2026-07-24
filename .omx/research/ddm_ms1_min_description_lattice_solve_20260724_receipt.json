@@ -128,6 +128,31 @@
       "pose_tube_active": false,
       "realized_uint8_r_frozen_scorers": true
     },
+    "recursive_solve_typing": {
+      "schema": "ddm_recursive_solve_typing.v1",
+      "headline_ready": false,
+      "declarations": {
+        "quotient_coordinates_only": false,
+        "scorer_metric_active": false,
+        "alternating_typed_subproblems": false,
+        "typed_blocks_active": false,
+        "per_dimension_quanta_active": false
+      },
+      "required_geometry": {
+        "variables": "range(A)/quotient coordinates only; ker(A) is gauge and is realized by the preimage compiler plus deterministic free fill",
+        "metric": "Seg rank-4 head plus margin-Fisher blocks and a <=6-dimensional Pose quadratic",
+        "subproblems": "alternate argmax-cell selection, within-cell continuous lattice solve, and real-coder pricing",
+        "blocks": "stratum x scorer-visibility x g4 temporal class",
+        "quanta": "uint8 step x per-dimension scorer sensitivity"
+      },
+      "blockers": [
+        "GAUGE_COORDINATES_NOT_DROPPED",
+        "SCORER_METRIC_NOT_ACTIVE",
+        "TYPED_SUBPROBLEM_ALTERNATION_NOT_ACTIVE",
+        "TYPED_BLOCK_ATLAS_NOT_ACTIVE",
+        "PER_DIMENSION_EFFECTIVE_QUANTA_NOT_ACTIVE"
+      ]
+    },
     "donor_conditioned": false,
     "decision_triple": {
       "total_counted_bytes": null,
@@ -143,7 +168,12 @@
       "STORED_PROBLEM_BYTE_CUSTODY_MISSING",
       "SOLVE_EXCEPTION_BYTE_CUSTODY_MISSING",
       "STORED_PROBLEM_EXPANSION_NOT_RECEIVER_CLOSED",
-      "POSE_TUBE_NOT_ACTIVE_IN_SOLVE"
+      "POSE_TUBE_NOT_ACTIVE_IN_SOLVE",
+      "GAUGE_COORDINATES_NOT_DROPPED",
+      "SCORER_METRIC_NOT_ACTIVE",
+      "TYPED_SUBPROBLEM_ALTERNATION_NOT_ACTIVE",
+      "TYPED_BLOCK_ATLAS_NOT_ACTIVE",
+      "PER_DIMENSION_EFFECTIVE_QUANTA_NOT_ACTIVE"
     ],
     "score_claim": false,
     "promotion_eligible": false
@@ -154,6 +184,9 @@
     "Bind an exact counted own-lineage stored problem and deterministic receiver expansion.",
     "Make Seg-cell and Pose-tube tolerances active in the integer solve and measure the tolerance knees.",
     "Emit and SHA-bind the receiver-decodable conditional exception stream.",
+    "Drop ker(A) gauge coordinates from the decision vector; solve in range(A)/quotient coordinates and realize with the preimage compiler plus deterministic free fill.",
+    "Reduce and price moves in the Seg rank-4 plus margin-Fisher and low-rank Pose scorer metric.",
+    "Alternate argmax-cell selection, within-cell continuous lattice solve, and real-coder pricing over stratum x scorer-visibility x g4 temporal blocks with per-dimension effective quanta.",
     "Test a bounded exact lattice sieve or branch-and-bound before any broader lattice-family verdict.",
     "Measure per-stratum SKELETON-versus-FIBER coder races before distilling any numerical factor."
   ]

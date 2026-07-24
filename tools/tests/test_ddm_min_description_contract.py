@@ -25,6 +25,11 @@ def _row(**updates: object) -> dict:
         "expansion_receiver_closed": True,
         "pose_tube_active": True,
         "realized_uint8_r_frozen_scorers": True,
+        "quotient_coordinates_only": True,
+        "scorer_metric_active": True,
+        "alternating_typed_subproblems": True,
+        "typed_blocks_active": True,
+        "per_dimension_quanta_active": True,
     }
     values.update(updates)
     return build_minimum_description_headline(**values)  # type: ignore[arg-type]
@@ -63,6 +68,24 @@ def test_missing_problem_and_pose_custody_yield_exact_blockers() -> None:
     assert row["diagnostic_distortions"]["realized_d_seg"] == 0.001
 
 
+def test_flat_untyped_solve_withholds_headline_with_five_exact_blockers() -> None:
+    row = _row(
+        quotient_coordinates_only=False,
+        scorer_metric_active=False,
+        alternating_typed_subproblems=False,
+        typed_blocks_active=False,
+        per_dimension_quanta_active=False,
+    )
+    assert row["recursive_solve_typing"]["blockers"] == [
+        "GAUGE_COORDINATES_NOT_DROPPED",
+        "SCORER_METRIC_NOT_ACTIVE",
+        "TYPED_SUBPROBLEM_ALTERNATION_NOT_ACTIVE",
+        "TYPED_BLOCK_ATLAS_NOT_ACTIVE",
+        "PER_DIMENSION_EFFECTIVE_QUANTA_NOT_ACTIVE",
+    ]
+    assert row["decision_triple"]["total_counted_bytes"] is None
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [
@@ -97,6 +120,11 @@ def test_n600_repo_receipt_rebuilds_the_fail_closed_campaign_headline() -> None:
         expansion_receiver_closed=False,
         pose_tube_active=False,
         realized_uint8_r_frozen_scorers=True,
+        quotient_coordinates_only=False,
+        scorer_metric_active=False,
+        alternating_typed_subproblems=False,
+        typed_blocks_active=False,
+        per_dimension_quanta_active=False,
     )
     # The receipt gives the diagnostic exception a more specific historical
     # role while preserving every authority-bearing contract field.
