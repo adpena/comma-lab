@@ -11,6 +11,8 @@ from tac.optimization.direct_description_minimizer import DirectDescriptionError
 from tools.launch_ddm_joint_descent import (
     _assert_worst_geometry_receipt,
     _c1_bucket_delta,
+    _opening_exact_admitted,
+    _seg_lexicographic_attempt_key,
 )
 
 REPO = Path(__file__).resolve().parents[2]
@@ -88,3 +90,56 @@ def test_worst_geometry_receipt_must_bind_all_52_stage3_secants() -> None:
     geometry["total_secants"] = 8
     with pytest.raises(DirectDescriptionError, match="sealed worst geometry"):
         _assert_worst_geometry_receipt(geometry, contract)
+
+
+@pytest.mark.parametrize(
+    ("priced", "component", "residual", "expected"),
+    [
+        (True, True, True, True),
+        (False, True, True, False),
+        (True, False, True, False),
+        (True, True, False, False),
+    ],
+)
+def test_campaign_opening_requires_joint_component_and_residual_gates(
+    priced: bool,
+    component: bool,
+    residual: bool,
+    expected: bool,
+) -> None:
+    assert (
+        _opening_exact_admitted(
+            policy="campaign_component_safe_exact_n600",
+            pure_priced_accepted=priced,
+            component_safe=component,
+            cumulative_fire_green=residual,
+        )
+        is expected
+    )
+
+
+def test_seg_lexicographic_order_keeps_rung_primary_and_seg_safe_first() -> None:
+    attempts = [
+        {
+            "multiplier_index": 0,
+            "candidate_index": 0,
+            "metrics": {"seg_ce_margin": 1.01},
+        },
+        {
+            "multiplier_index": 1,
+            "candidate_index": 1,
+            "metrics": {"seg_ce_margin": 0.80},
+        },
+        {
+            "multiplier_index": 0,
+            "candidate_index": 2,
+            "metrics": {"seg_ce_margin": 0.99},
+        },
+    ]
+    attempts.sort(
+        key=lambda attempt: _seg_lexicographic_attempt_key(
+            attempt,
+            reference_seg_proxy=1.0,
+        )
+    )
+    assert [attempt["candidate_index"] for attempt in attempts] == [2, 0, 1]

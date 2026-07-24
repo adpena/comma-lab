@@ -79,11 +79,13 @@ J6A_PROGRAM_SHA256: Final = "3ba05e4d8fd2f85475173f0a9e17e668198507350d353a4257a
 J7_PROGRAM_SHA256: Final = "bb30eade311ed15e7541bdda4f5d5edbd72b28933a0dd2066be8b967a20aadf2"
 J7_W_SEG_PROGRAM_SHA256: Final = "de285d70b7ac1c823e70f4b2c5e2f5f728e5ff9e65e03c4e2c9583c486dda0a1"
 J7_W_JOINT_PROGRAM_SHA256: Final = "81ae90f3d1bfec508e23cbebe37e94f965b46e5d82903d2ae9d077eb365d7ce4"
+WS3_W_SEG_PROGRAM_SHA256: Final = "a90004c7d75571a2f97c7f6f87770b25cfda7ea46e76ce2e1e9d230e454ce838"
 J7_PROGRAM_SHA256S: Final = frozenset(
     {
         J7_PROGRAM_SHA256,
         J7_W_SEG_PROGRAM_SHA256,
         J7_W_JOINT_PROGRAM_SHA256,
+        WS3_W_SEG_PROGRAM_SHA256,
     }
 )
 # Resealed after editing the semantic ticket; updated by the deterministic hash
@@ -99,6 +101,7 @@ SUPPORTED_PROGRAM_SHA256: Final = frozenset(
         J7_PROGRAM_SHA256,
         J7_W_SEG_PROGRAM_SHA256,
         J7_W_JOINT_PROGRAM_SHA256,
+        WS3_W_SEG_PROGRAM_SHA256,
     }
 )
 EXPECTED_ARCHIVE_SHA256: Final = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
@@ -225,10 +228,7 @@ def exact_final_target_gate(
         or d_pose < 0.0
         or not math.isfinite(float(target_d_seg))
         or float(target_d_seg) < 0.0
-        or (
-            target_d_pose is not None
-            and (not math.isfinite(float(target_d_pose)) or float(target_d_pose) < 0.0)
-        )
+        or (target_d_pose is not None and (not math.isfinite(float(target_d_pose)) or float(target_d_pose) < 0.0))
     ):
         return False, "REFUSE_SCHEDULE_COMPLETE_FINAL_VERDICT_INVALID"
     if d_seg > float(target_d_seg) or (target_d_pose is not None and d_pose > float(target_d_pose)):
@@ -352,9 +352,7 @@ class PoseFinishEngageStateV1:
         steps = (*self.exact_verdict_steps, step)
         values = (*self.exact_d_seg, value)
         strict_steps = (
-            (*self.strict_seg_admission_steps, step)
-            if strict_seg_admission
-            else self.strict_seg_admission_steps
+            (*self.strict_seg_admission_steps, step) if strict_seg_admission else self.strict_seg_admission_steps
         )
         strict = len(strict_steps)
         if self.engaged_global_step is not None:
@@ -469,9 +467,7 @@ def _classify_pose_finish_engage(
         if offset == 0:
             latest_slope = relative_slope
             latest_stderr = relative_stderr
-        flat_windows.append(
-            abs(relative_slope) <= config.flat_relative_slope_band and relative_slope <= 0.0
-        )
+        flat_windows.append(abs(relative_slope) <= config.flat_relative_slope_band and relative_slope <= 0.0)
     if latest_stderr is None or latest_stderr > config.flat_relative_slope_band:
         return "DEGENERATE_EXACT_DSEG_HISTORY", latest_slope, latest_stderr
     if all(flat_windows):
@@ -548,6 +544,7 @@ class WarmStartReformV1:
     proposal_staging: str
     proposal_q8_denominator: int
     proposal_multipliers: tuple[float, ...]
+    proposal_ordering: str
     opening_active_groups: tuple[str, ...]
     opening_candidate_ids: tuple[str, ...]
     opening_candidate_pair_ids: tuple[int, ...]
@@ -583,6 +580,7 @@ class WarmStartReformV1:
             proposal_staging=str(payload.get("proposal_staging", "continuous_receiver_wire")),
             proposal_q8_denominator=int(payload.get("proposal_q8_denominator", 1)),
             proposal_multipliers=tuple(float(value) for value in payload.get("proposal_multipliers", (1.0, 0.5, 0.25))),
+            proposal_ordering=str(payload.get("proposal_ordering", "candidate_then_shrink")),
             opening_active_groups=tuple(str(value) for value in payload.get("opening_active_groups", ())),
             opening_candidate_ids=tuple(str(value) for value in payload.get("opening_candidate_ids", ())),
             opening_candidate_pair_ids=tuple(int(value) for value in payload.get("opening_candidate_pair_ids", ())),
@@ -630,6 +628,7 @@ class WarmStartReformV1:
         if result.realized_acceptance_policy not in {
             "component_safe_exact_n600",
             "pure_priced_exact_n600",
+            "campaign_component_safe_exact_n600",
         }:
             raise DirectDescriptionError("warm-start realized acceptance policy is invalid")
         if result.proposal_staging not in {
@@ -646,6 +645,11 @@ class WarmStartReformV1:
             or tuple(sorted(result.proposal_multipliers, reverse=True)) != result.proposal_multipliers
         ):
             raise DirectDescriptionError("warm-start proposal shrink ladder is invalid")
+        if result.proposal_ordering not in {
+            "candidate_then_shrink",
+            "seg_lexicographic_proxy_then_exact_component_gate",
+        }:
+            raise DirectDescriptionError("warm-start proposal ordering is invalid")
         if set(result.opening_active_groups) - allowed_groups:
             raise DirectDescriptionError("warm-start opening active groups are invalid")
         known_candidates = {
@@ -661,9 +665,12 @@ class WarmStartReformV1:
             pair_id < 0 or pair_id >= 600 for pair_id in result.opening_candidate_pair_ids
         ):
             raise DirectDescriptionError("warm-start opening candidate pair ids are invalid")
-        if result.realized_acceptance_policy == "pure_priced_exact_n600":
+        if result.realized_acceptance_policy in {
+            "pure_priced_exact_n600",
+            "campaign_component_safe_exact_n600",
+        }:
             if result.maximum_continuous_update_quantum_fraction is not None:
-                raise DirectDescriptionError("pure-priced warm start must drop the quarter-quantum cap")
+                raise DirectDescriptionError("receiver-realized warm start must drop the continuous cap")
             if (
                 result.first_realized_admission != "exact_n600_joint_delta_s_lt_zero_else_shrink_and_exact_rollback"
                 or result.group_release_condition != "first_component_safe_n600_residual_admission"
@@ -672,7 +679,12 @@ class WarmStartReformV1:
                 or not result.opening_candidate_pair_ids
                 or not result.residual_bucket_admission_required
             ):
-                raise DirectDescriptionError("pure-priced warm-start opening contract is incomplete")
+                raise DirectDescriptionError("receiver-realized warm-start opening contract is incomplete")
+        if (
+            result.realized_acceptance_policy == "campaign_component_safe_exact_n600"
+            and result.proposal_ordering != "seg_lexicographic_proxy_then_exact_component_gate"
+        ):
+            raise DirectDescriptionError("campaign-safe warm start requires seg-lexicographic proposal ordering")
         if result.component_fire_gate not in {
             "dseg_flat_or_down_pose_not_worse_and_any_component_descends",
             "cumulative_vs_stage00_dseg_flat_or_down_pose_not_worse_any_component_and_residual_descend",
@@ -902,45 +914,23 @@ class DirectDescriptionJointDescentTypedConfigV1:
         if semantic_hash in {
             J7_W_SEG_PROGRAM_SHA256,
             J7_W_JOINT_PROGRAM_SHA256,
+            WS3_W_SEG_PROGRAM_SHA256,
         }:
             if warm.get("kind") != "receiver_closed_ws1_archive":
-                raise DirectDescriptionError(
-                    "J7 WS1 warm start lacks its receiver-closed kind"
-                )
+                raise DirectDescriptionError("J7 WS1 warm start lacks its receiver-closed kind")
             warm_path = Path(str(warm["path"]))
-            if (
-                not warm_path.is_absolute()
-                or not warm_path.is_file()
-                or warm_path.is_symlink()
-            ):
-                raise DirectDescriptionError(
-                    "J7 WS1 warm-start archive is unavailable"
-                )
+            if not warm_path.is_absolute() or not warm_path.is_file() or warm_path.is_symlink():
+                raise DirectDescriptionError("J7 WS1 warm-start archive is unavailable")
             warm_archive = warm_path.read_bytes()
-            if (
-                len(warm_archive) != int(warm["bytes"])
-                or _sha256(warm_archive) != warm["sha256"]
-            ):
-                raise DirectDescriptionError(
-                    "J7 WS1 warm-start archive custody differs"
-                )
+            if len(warm_archive) != int(warm["bytes"]) or _sha256(warm_archive) != warm["sha256"]:
+                raise DirectDescriptionError("J7 WS1 warm-start archive custody differs")
             parsed_warm = parse_ws1_warm_start_archive(warm_archive)
             expected_candidate = (
-                "W_seg"
-                if semantic_hash == J7_W_SEG_PROGRAM_SHA256
-                else "W_joint"
+                "W_seg" if semantic_hash in {J7_W_SEG_PROGRAM_SHA256, WS3_W_SEG_PROGRAM_SHA256} else "W_joint"
             )
-            if (
-                parsed_warm.candidate != expected_candidate
-                or parsed_warm.exact_reemit() != warm_archive
-            ):
-                raise DirectDescriptionError(
-                    "J7 WS1 warm-start receiver identity differs"
-                )
-        elif (
-            warm["sha256"] != EXPECTED_ARCHIVE_SHA256
-            or int(warm["bytes"]) != EXPECTED_ARCHIVE_BYTES
-        ):
+            if parsed_warm.candidate != expected_candidate or parsed_warm.exact_reemit() != warm_archive:
+                raise DirectDescriptionError("J7 WS1 warm-start receiver identity differs")
+        elif warm["sha256"] != EXPECTED_ARCHIVE_SHA256 or int(warm["bytes"]) != EXPECTED_ARCHIVE_BYTES:
             raise DirectDescriptionError("joint-descent warm-start identity drifted")
         env = compute.get("environment", {})
         required_kernels = " ".join(str(value) for value in compute.get("required_kernels", ())).lower()
@@ -1041,7 +1031,10 @@ class DirectDescriptionJointDescentTypedConfigV1:
                 # Preserve the canonical typed hashes of historical J4 tickets.
                 # J5 fields are additive and enter identity only for the new
                 # pure-priced policy.
-                if reform.realized_acceptance_policy == "pure_priced_exact_n600":
+                if reform.realized_acceptance_policy in {
+                    "pure_priced_exact_n600",
+                    "campaign_component_safe_exact_n600",
+                }:
                     reform_payload.update(
                         {
                             "realized_acceptance_policy": reform.realized_acceptance_policy,
@@ -1055,6 +1048,8 @@ class DirectDescriptionJointDescentTypedConfigV1:
                             "component_fire_gate": reform.component_fire_gate,
                         }
                     )
+                    if reform.proposal_ordering != "candidate_then_shrink":
+                        reform_payload["proposal_ordering"] = reform.proposal_ordering
                 schedule_payload["warm_start_reform"] = reform_payload
             if self.full_run_schedule.pose_finish_engage is not None:
                 schedule_payload["pose_finish_engage"] = self.full_run_schedule.pose_finish_engage.to_payload()
@@ -1155,18 +1150,10 @@ class JointDescriptionParameterLiftV1:
 
     @property
     def carrier_archive(self) -> bytes:
-        return (
-            self.source_archive
-            if self.ws1_adapter is None
-            else self.ws1_adapter.carrier_archive
-        )
+        return self.source_archive if self.ws1_adapter is None else self.ws1_adapter.carrier_archive
 
     def rewrap_carrier(self, archive: bytes) -> bytes:
-        return (
-            archive
-            if self.ws1_adapter is None
-            else self.ws1_adapter.rewrap_carrier(archive)
-        )
+        return archive if self.ws1_adapter is None else self.ws1_adapter.rewrap_carrier(archive)
 
     def exact_reemit(self) -> bytes:
         members, _ = parse_carrier_compose_archive(self.carrier_archive)
@@ -1239,8 +1226,7 @@ def lift_v15_archive(archive: bytes) -> JointDescriptionParameterLiftV1:
             ws1_adapter = parse_ws1_warm_start_archive(archive)
         except DirectDescriptionError as exc:
             raise DirectDescriptionError(
-                "joint-descent parameter lift requires the sealed V15 archive "
-                "or a receiver-closed WS1 archive"
+                "joint-descent parameter lift requires the sealed V15 archive or a receiver-closed WS1 archive"
             ) from exc
         carrier_archive = ws1_adapter.carrier_archive
     members, _ = parse_carrier_compose_archive(carrier_archive)

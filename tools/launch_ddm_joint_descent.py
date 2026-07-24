@@ -83,12 +83,8 @@ from tac.optimization.pure_priced_realized_objective import (  # noqa: E402
 DEFAULT_TICKET = REPO / ".omx/research/configs/ddm_j5_366_realized_acceptance_warmstart_20260723.json"
 POINTER_DSEG = 0.027470296224
 WS1_BASELINE_DSEG_BY_ARCHIVE_SHA256 = {
-    "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9": (
-        0.024124510023328993
-    ),
-    "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e": (
-        0.07051923116048177
-    ),
+    "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9": (0.024124510023328993),
+    "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e": (0.07051923116048177),
 }
 STATIC_BOOTSTRAP_BOUND_GIB = 16.0
 # DERIVED: historical static one-pair bootstrap bound plus ceil(stage3
@@ -841,6 +837,40 @@ def _c1_bucket_delta(
     }
 
 
+def _opening_exact_admitted(
+    *,
+    policy: str,
+    pure_priced_accepted: bool,
+    component_safe: bool,
+    cumulative_fire_green: bool,
+) -> bool:
+    """Apply the typed opening policy without weakening campaign acceptance."""
+
+    if policy == "pure_priced_exact_n600":
+        return pure_priced_accepted
+    if policy == "campaign_component_safe_exact_n600":
+        return pure_priced_accepted and component_safe and cumulative_fire_green
+    if policy == "component_safe_exact_n600":
+        return component_safe
+    raise DirectDescriptionError(f"unknown warm-start acceptance policy: {policy}")
+
+
+def _seg_lexicographic_attempt_key(
+    attempt: dict[str, Any],
+    *,
+    reference_seg_proxy: float,
+) -> tuple[int, int, float, int]:
+    """Rank within each rung; exact n600 receiver replay remains the gate."""
+
+    seg_delta = float(attempt["metrics"]["seg_ce_margin"]) - reference_seg_proxy
+    return (
+        int(attempt["multiplier_index"]),
+        0 if seg_delta <= 0.0 else 1,
+        seg_delta,
+        int(attempt["candidate_index"]),
+    )
+
+
 def _measurement_schedule(args: argparse.Namespace) -> dict[str, Any]:
     """Bounded pre-seal schedule; unavailable outside explicit measurement mode."""
 
@@ -900,6 +930,7 @@ def _sealed_schedule(config: DirectDescriptionJointDescentTypedConfigV1, args: a
                 "proposal_staging": reform.proposal_staging,
                 "proposal_q8_denominator": reform.proposal_q8_denominator,
                 "proposal_multipliers": reform.proposal_multipliers,
+                "proposal_ordering": reform.proposal_ordering,
                 "opening_active_groups": reform.opening_active_groups,
                 "opening_candidate_ids": reform.opening_candidate_ids,
                 "opening_candidate_pair_ids": reform.opening_candidate_pair_ids,
@@ -1213,9 +1244,8 @@ def _resume_proof(
         config=pose_config,
     )
     expected_checkpoint = memory.get("checkpoint", {})
-    if (
-        _sha256_file(Path(args.resume_from)) != expected_checkpoint.get("sha256")
-        or state.step != int(cursor.get("global_step", -1))
+    if _sha256_file(Path(args.resume_from)) != expected_checkpoint.get("sha256") or state.step != int(
+        cursor.get("global_step", -1)
     ):
         raise DirectDescriptionError("resume proof checkpoint custody differs")
     receipt = {
@@ -1330,11 +1360,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             if (
                 baseline_verdict.get("schema") != "ddm_joint_descent_chunked_stage_verdict.v1"
                 or int(baseline_verdict.get("num_pairs", 0)) != 600
-                or abs(
-                    float(baseline_verdict.get("d_seg", -1.0))
-                    - expected_baseline_dseg
-                )
-                > 5.0e-10
+                or abs(float(baseline_verdict.get("d_seg", -1.0)) - expected_baseline_dseg) > 5.0e-10
             ):
                 raise DirectDescriptionError("existing full-run baseline verdict custody differs")
         if baseline_verdict is None:
@@ -1347,24 +1373,14 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 posenet=cpu_scorers[1],
                 batch_size=config.verdict_batch,
             )
-            if (
-                abs(
-                    float(baseline_verdict["d_seg"])
-                    - expected_baseline_dseg
-                )
-                > 5.0e-10
-            ):
+            if abs(float(baseline_verdict["d_seg"]) - expected_baseline_dseg) > 5.0e-10:
                 raise DirectDescriptionError(
                     "REFUSE_FULL_RUN_BASELINE_DSEG_CUSTODY_DRIFT: "
                     f"{baseline_verdict['d_seg']} != {expected_baseline_dseg}"
                 )
             _write_immutable_json(baseline_path, baseline_verdict)
 
-        pose_finish_config = (
-            None
-            if config.full_run_schedule is None
-            else config.full_run_schedule.pose_finish_engage
-        )
+        pose_finish_config = None if config.full_run_schedule is None else config.full_run_schedule.pose_finish_engage
         pose_finish_state: PoseFinishEngageStateV1 | None = None
         if pose_finish_config is not None:
             if restored_pose_finish_payload is not None:
@@ -1397,11 +1413,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
         warm_start_admitted = any(row.get("warm_start_realized_admitted") is True for row in verdict_history)
         warm_start_seg_admitted = any(row.get("warm_start_seg_admitted") is True for row in verdict_history)
         latest_warm_start_admission = next(
-            (
-                row
-                for row in reversed(verdict_history)
-                if row.get("warm_start_realized_admitted") is True
-            ),
+            (row for row in reversed(verdict_history) if row.get("warm_start_realized_admitted") is True),
             None,
         )
         warm_start_component_safe = bool(
@@ -1430,13 +1442,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             else:
                 frozen_groups = set(reform["frozen_groups_until_first_admission"]) if reform_active else set()
                 active_groups = tuple(group for group in stage["active_groups"] if group not in frozen_groups)
-            pose_objective_weight = (
-                1.0
-                if pose_finish_state is None
-                else 1.0
-                if pose_finish_state.engaged
-                else 0.0
-            )
+            pose_objective_weight = 1.0 if pose_finish_state is None else 1.0 if pose_finish_state.engaged else 0.0
             rewarmup_factor = (
                 linear_rewarmup_factor(
                     completed_steps=state.step,
@@ -1487,7 +1493,8 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             multipliers = (
                 tuple(float(value) for value in reform["proposal_multipliers"]) if reform_active else (1.0, 0.5, 0.25)
             )
-            for candidate_id in candidate_ids:
+            proposal_attempts: list[dict[str, Any]] = []
+            for candidate_index, candidate_id in enumerate(candidate_ids):
                 proposal_gradient = opening_candidate_gradient(
                     lift,
                     candidate_id,
@@ -1525,173 +1532,185 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                     )
                     candidate_realized = realize_parameter_theta(lift, candidate.theta)
                     realized_changed = not np.array_equal(candidate_realized, current_realized)
-                    if not realized_changed and candidate_objective >= loss:
+                    if reform_active and not realized_changed:
                         continue
-                    if reform_active and realized_changed:
-                        candidate_archive, _ = compile_parameterized_archive(
-                            lift,
-                            candidate.theta,
-                            include_lane_programs=include_lanes,
-                        )
-                        if cpu_scorers is None:
-                            cpu_scorers = _load_cpu_frozen_scorers(config.upstream_root)
-                        realized_verdict = _chunked_n600_verdict(
-                            archive=candidate_archive,
-                            labels=labels,
-                            poses=poses,
-                            segnet=cpu_scorers[0],
-                            posenet=cpu_scorers[1],
-                            batch_size=config.verdict_batch,
-                        )
-                        reference_verdict = next(
-                            (
-                                row
-                                for row in reversed(verdict_history)
-                                if row.get("warm_start_realized_admitted") is True
-                            ),
-                            baseline_verdict,
-                        )
-                        component_decision = classify_realized_stage_verdict(
-                            reference_d_seg=float(reference_verdict["d_seg"]),
-                            reference_d_pose=float(reference_verdict["d_pose"]),
-                            candidate_d_seg=float(realized_verdict["d_seg"]),
-                            candidate_d_pose=float(realized_verdict["d_pose"]),
-                            target_d_seg=float(stage["target_d_seg"]),
-                            target_d_pose=stage["target_d_pose"],
-                        )
-                        pure_delta = pure_priced_realized_delta(
-                            RealizedObjectiveState(
-                                float(reference_verdict["d_seg"]),
-                                float(reference_verdict["d_pose"]),
-                                int(reference_verdict["archive_bytes"]),
-                            ),
-                            RealizedObjectiveState(
-                                float(realized_verdict["d_seg"]),
-                                float(realized_verdict["d_pose"]),
-                                int(realized_verdict["archive_bytes"]),
-                            ),
-                        )
-                        bucket_delta = _c1_bucket_delta(reference_verdict, realized_verdict)
-                        cumulative_bucket_delta = _c1_bucket_delta(baseline_verdict, realized_verdict)
-                        component_safe = component_decision in {
-                            "REALIZED_STAGE_TARGET_MET",
-                            "REALIZED_STAGE_DESCENT_CONTINUE",
-                            "REALIZED_STAGE_SEG_FLAT_POSE_DESCENT_CONTINUE",
+                    if not reform_active and not realized_changed and candidate_objective >= loss:
+                        continue
+                    proposal_attempts.append(
+                        {
+                            "candidate": candidate,
+                            "candidate_id": candidate_id,
+                            "candidate_index": candidate_index,
+                            "candidate_objective": candidate_objective,
+                            "candidate_realized": candidate_realized,
+                            "learning_rate": learning_rate,
+                            "metrics": metrics,
+                            "multiplier": multiplier,
+                            "multiplier_index": multiplier_index,
+                            "realized_changed": realized_changed,
                         }
-                        cumulative_fire_green, cumulative_fire_decision = classify_cumulative_fire_gate(
-                            baseline_d_seg=float(baseline_verdict["d_seg"]),
-                            baseline_d_pose=float(baseline_verdict["d_pose"]),
-                            candidate_d_seg=float(realized_verdict["d_seg"]),
-                            candidate_d_pose=float(realized_verdict["d_pose"]),
-                            cumulative_residual_delta_errors=int(
-                                cumulative_bucket_delta["residual_trunk_owned_delta_errors"]
-                            ),
-                            residual_descent_required=bool(reform["residual_bucket_admission_required"]),
-                        )
-                        exact_admitted = (
-                            pure_delta.accepted
-                            if reform["realized_acceptance_policy"] == "pure_priced_exact_n600"
-                            else component_safe
-                        )
-                        candidate_pose_finish_state = pose_finish_state
-                        if exact_admitted and pose_finish_state is not None:
-                            candidate_pose_finish_state = pose_finish_state.observe(
-                                global_step=candidate.step,
-                                d_seg=float(realized_verdict["d_seg"]),
-                                strict_seg_admission=(
-                                    float(realized_verdict["d_seg"]) < float(baseline_verdict["d_seg"])
-                                ),
-                                config=pose_finish_config,
-                            )
-                        slug = candidate_id.replace("+", "plus").replace("-", "minus")
-                        proposal_receipt_relpath = Path("verdicts") / (
-                            f"warm_start_proposal_step{candidate.step:06d}_{slug}_"
-                            f"shrink{multiplier_index:02d}_n600.json"
-                        )
-                        realized_verdict.update(
-                            {
-                                "stage_id": stage["stage_id"],
-                                "stage_step": stage_step + 1,
-                                "global_step": candidate.step,
-                                "proposal_source": candidate_id,
-                                "proposal_multiplier": multiplier,
-                                "proposal_staging": reform["proposal_staging"],
-                                "reference_d_seg": float(reference_verdict["d_seg"]),
-                                "reference_d_pose": float(reference_verdict["d_pose"]),
-                                "reference_archive_bytes": int(reference_verdict["archive_bytes"]),
-                                "component_gate_decision": component_decision,
-                                "pure_priced_delta": {
-                                    "seg_term": pure_delta.seg_term,
-                                    "pose_term": pure_delta.pose_term,
-                                    "rate_term": pure_delta.rate_term,
-                                    "joint_delta": pure_delta.joint_delta,
-                                    "accepted": pure_delta.accepted,
-                                    "acceptance_authority": "strict_joint_delta_lt_zero",
-                                },
-                                "c1_bucket_delta_vs_last_admitted": bucket_delta,
-                                "c1_bucket_delta_cumulative_vs_baseline": cumulative_bucket_delta,
-                                "cumulative_fire_gate_decision": cumulative_fire_decision,
-                                "warm_start_realized_admitted": exact_admitted,
-                                "warm_start_seg_admitted": exact_admitted
-                                and float(realized_verdict["d_seg"]) < float(baseline_verdict["d_seg"]),
-                                "warm_start_component_safe_residual_admitted": (
-                                    exact_admitted and cumulative_fire_green
-                                ),
-                                "pose_finish_engage_state": (
-                                    None
-                                    if candidate_pose_finish_state is None
-                                    else candidate_pose_finish_state.to_payload()
-                                ),
-                                "parameter_shadow": "live_opening_candidate",
-                                "realized_parameter_count": int(np.count_nonzero(candidate_realized)),
-                                "realized_changed_parameter_count": int(
-                                    np.count_nonzero(candidate_realized != current_realized)
-                                ),
-                                "decision_basis": (
-                                    "PAINT_UINT8_R_FROZEN_SCORERS_EXACT_ARCHIVE_BYTES_PURE_PRICED"
-                                    if reform["realized_acceptance_policy"] == "pure_priced_exact_n600"
-                                    else "FIRST_INTEGER_REALIZATION_EXACT_N600_ABORT_ROLLBACK"
-                                ),
-                                "model_predicted_plateau_used": False,
-                                "proposal_receipt_relpath": str(proposal_receipt_relpath),
-                            }
-                        )
-                        realized_verdict = _write_immutable_json(
-                            out_dir / proposal_receipt_relpath,
-                            realized_verdict,
-                            volatile_fields=("elapsed_seconds",),
-                        )
-                        latest_stage_decision = component_decision
-                        if not exact_admitted:
-                            rejected_realized_verdict = realized_verdict
-                            if reform["realized_acceptance_policy"] == "component_safe_exact_n600":
-                                break
-                            continue
-                        verdict_history.append(realized_verdict)
-                        pose_finish_state = candidate_pose_finish_state
-                        warm_start_admitted = True
-                        warm_start_seg_admitted = warm_start_seg_admitted or realized_verdict["warm_start_seg_admitted"]
-                        warm_start_component_safe = bool(
-                            realized_verdict["warm_start_component_safe_residual_admitted"]
-                        )
-                    accepted = (
-                        candidate,
-                        metrics,
-                        learning_rate,
-                        realized_changed,
-                        candidate_id,
-                        multiplier,
                     )
-                    break
-                if (
-                    accepted is None
-                    and rejected_realized_verdict is not None
-                    and reform_active
-                    and reform["realized_acceptance_policy"] == "component_safe_exact_n600"
-                ):
-                    break
-                if accepted is not None:
-                    break
+            if reform_active and reform["proposal_ordering"] == ("seg_lexicographic_proxy_then_exact_component_gate"):
+                initial_seg_proxy = float(initial["seg_ce_margin"])
+                proposal_attempts.sort(
+                    key=lambda attempt: _seg_lexicographic_attempt_key(
+                        attempt,
+                        reference_seg_proxy=initial_seg_proxy,
+                    )
+                )
+            for attempt in proposal_attempts:
+                candidate = attempt["candidate"]
+                candidate_id = str(attempt["candidate_id"])
+                candidate_realized = attempt["candidate_realized"]
+                learning_rate = float(attempt["learning_rate"])
+                metrics = attempt["metrics"]
+                multiplier = float(attempt["multiplier"])
+                multiplier_index = int(attempt["multiplier_index"])
+                realized_changed = bool(attempt["realized_changed"])
+                if reform_active and realized_changed:
+                    candidate_archive, _ = compile_parameterized_archive(
+                        lift,
+                        candidate.theta,
+                        include_lane_programs=include_lanes,
+                    )
+                    if cpu_scorers is None:
+                        cpu_scorers = _load_cpu_frozen_scorers(config.upstream_root)
+                    realized_verdict = _chunked_n600_verdict(
+                        archive=candidate_archive,
+                        labels=labels,
+                        poses=poses,
+                        segnet=cpu_scorers[0],
+                        posenet=cpu_scorers[1],
+                        batch_size=config.verdict_batch,
+                    )
+                    reference_verdict = next(
+                        (row for row in reversed(verdict_history) if row.get("warm_start_realized_admitted") is True),
+                        baseline_verdict,
+                    )
+                    component_decision = classify_realized_stage_verdict(
+                        reference_d_seg=float(reference_verdict["d_seg"]),
+                        reference_d_pose=float(reference_verdict["d_pose"]),
+                        candidate_d_seg=float(realized_verdict["d_seg"]),
+                        candidate_d_pose=float(realized_verdict["d_pose"]),
+                        target_d_seg=float(stage["target_d_seg"]),
+                        target_d_pose=stage["target_d_pose"],
+                    )
+                    pure_delta = pure_priced_realized_delta(
+                        RealizedObjectiveState(
+                            float(reference_verdict["d_seg"]),
+                            float(reference_verdict["d_pose"]),
+                            int(reference_verdict["archive_bytes"]),
+                        ),
+                        RealizedObjectiveState(
+                            float(realized_verdict["d_seg"]),
+                            float(realized_verdict["d_pose"]),
+                            int(realized_verdict["archive_bytes"]),
+                        ),
+                    )
+                    bucket_delta = _c1_bucket_delta(reference_verdict, realized_verdict)
+                    cumulative_bucket_delta = _c1_bucket_delta(baseline_verdict, realized_verdict)
+                    component_safe = component_decision in {
+                        "REALIZED_STAGE_TARGET_MET",
+                        "REALIZED_STAGE_DESCENT_CONTINUE",
+                        "REALIZED_STAGE_SEG_FLAT_POSE_DESCENT_CONTINUE",
+                    }
+                    cumulative_fire_green, cumulative_fire_decision = classify_cumulative_fire_gate(
+                        baseline_d_seg=float(baseline_verdict["d_seg"]),
+                        baseline_d_pose=float(baseline_verdict["d_pose"]),
+                        candidate_d_seg=float(realized_verdict["d_seg"]),
+                        candidate_d_pose=float(realized_verdict["d_pose"]),
+                        cumulative_residual_delta_errors=int(
+                            cumulative_bucket_delta["residual_trunk_owned_delta_errors"]
+                        ),
+                        residual_descent_required=bool(reform["residual_bucket_admission_required"]),
+                    )
+                    exact_admitted = _opening_exact_admitted(
+                        policy=reform["realized_acceptance_policy"],
+                        pure_priced_accepted=pure_delta.accepted,
+                        component_safe=component_safe,
+                        cumulative_fire_green=cumulative_fire_green,
+                    )
+                    candidate_pose_finish_state = pose_finish_state
+                    if exact_admitted and pose_finish_state is not None:
+                        candidate_pose_finish_state = pose_finish_state.observe(
+                            global_step=candidate.step,
+                            d_seg=float(realized_verdict["d_seg"]),
+                            strict_seg_admission=(float(realized_verdict["d_seg"]) < float(baseline_verdict["d_seg"])),
+                            config=pose_finish_config,
+                        )
+                    slug = candidate_id.replace("+", "plus").replace("-", "minus")
+                    proposal_receipt_relpath = Path("verdicts") / (
+                        f"warm_start_proposal_step{candidate.step:06d}_{slug}_shrink{multiplier_index:02d}_n600.json"
+                    )
+                    realized_verdict.update(
+                        {
+                            "stage_id": stage["stage_id"],
+                            "stage_step": stage_step + 1,
+                            "global_step": candidate.step,
+                            "proposal_source": candidate_id,
+                            "proposal_multiplier": multiplier,
+                            "proposal_staging": reform["proposal_staging"],
+                            "reference_d_seg": float(reference_verdict["d_seg"]),
+                            "reference_d_pose": float(reference_verdict["d_pose"]),
+                            "reference_archive_bytes": int(reference_verdict["archive_bytes"]),
+                            "component_gate_decision": component_decision,
+                            "pure_priced_delta": {
+                                "seg_term": pure_delta.seg_term,
+                                "pose_term": pure_delta.pose_term,
+                                "rate_term": pure_delta.rate_term,
+                                "joint_delta": pure_delta.joint_delta,
+                                "accepted": pure_delta.accepted,
+                                "acceptance_authority": "strict_joint_delta_lt_zero",
+                            },
+                            "c1_bucket_delta_vs_last_admitted": bucket_delta,
+                            "c1_bucket_delta_cumulative_vs_baseline": cumulative_bucket_delta,
+                            "cumulative_fire_gate_decision": cumulative_fire_decision,
+                            "warm_start_realized_admitted": exact_admitted,
+                            "warm_start_seg_admitted": exact_admitted
+                            and float(realized_verdict["d_seg"]) < float(baseline_verdict["d_seg"]),
+                            "warm_start_component_safe_residual_admitted": (exact_admitted and cumulative_fire_green),
+                            "pose_finish_engage_state": (
+                                None
+                                if candidate_pose_finish_state is None
+                                else candidate_pose_finish_state.to_payload()
+                            ),
+                            "parameter_shadow": "live_opening_candidate",
+                            "realized_parameter_count": int(np.count_nonzero(candidate_realized)),
+                            "realized_changed_parameter_count": int(
+                                np.count_nonzero(candidate_realized != current_realized)
+                            ),
+                            "decision_basis": (
+                                "PAINT_UINT8_R_FROZEN_SCORERS_EXACT_ARCHIVE_BYTES_PURE_PRICED"
+                                if reform["realized_acceptance_policy"] == "pure_priced_exact_n600"
+                                else "FIRST_INTEGER_REALIZATION_EXACT_N600_ABORT_ROLLBACK"
+                            ),
+                            "model_predicted_plateau_used": False,
+                            "proposal_receipt_relpath": str(proposal_receipt_relpath),
+                        }
+                    )
+                    realized_verdict = _write_immutable_json(
+                        out_dir / proposal_receipt_relpath,
+                        realized_verdict,
+                        volatile_fields=("elapsed_seconds",),
+                    )
+                    latest_stage_decision = component_decision
+                    if not exact_admitted:
+                        rejected_realized_verdict = realized_verdict
+                        continue
+                    verdict_history.append(realized_verdict)
+                    pose_finish_state = candidate_pose_finish_state
+                    warm_start_admitted = True
+                    warm_start_seg_admitted = warm_start_seg_admitted or realized_verdict["warm_start_seg_admitted"]
+                    warm_start_component_safe = bool(realized_verdict["warm_start_component_safe_residual_admitted"])
+                accepted = (
+                    candidate,
+                    metrics,
+                    learning_rate,
+                    realized_changed,
+                    candidate_id,
+                    multiplier,
+                )
+                break
             if rejected_realized_verdict is not None and accepted is None:
                 campaign_blocker = "BLOCKED_REALIZED_NO_PURE_PRICED_DESCENT_AFTER_SHRINK_LADDER"
                 rollback_event = {
@@ -1713,9 +1732,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                     "global_step": state.step,
                     "verdict_history": verdict_history,
                     "baseline_verdict": baseline_verdict,
-                    "pose_finish_engage_state": (
-                        None if pose_finish_state is None else pose_finish_state.to_payload()
-                    ),
+                    "pose_finish_engage_state": (None if pose_finish_state is None else pose_finish_state.to_payload()),
                     "stage_end_reason": campaign_blocker,
                     "campaign_blocker": campaign_blocker,
                 }
@@ -1779,9 +1796,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 "learning_rate_uint8_quantum_fraction": learning_rate,
                 "lr_rewarmup_factor": rewarmup_factor,
                 "pose_objective_weight": pose_objective_weight,
-                "pose_finish_engage_state": (
-                    None if pose_finish_state is None else pose_finish_state.to_payload()
-                ),
+                "pose_finish_engage_state": (None if pose_finish_state is None else pose_finish_state.to_payload()),
                 "maximum_continuous_update_quantum_fraction": (
                     reform["maximum_continuous_update_quantum_fraction"] if reform_active else None
                 ),
@@ -1863,12 +1878,8 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 verdict["reference_d_pose"] = float(previous_verdict["d_pose"])
                 verdict["realized_stage_decision"] = latest_stage_decision
                 target_met = latest_stage_decision == "REALIZED_STAGE_TARGET_MET"
-                if (
-                    pose_finish_state is not None
-                    and (
-                        not pose_finish_state.exact_verdict_steps
-                        or state.step > pose_finish_state.exact_verdict_steps[-1]
-                    )
+                if pose_finish_state is not None and (
+                    not pose_finish_state.exact_verdict_steps or state.step > pose_finish_state.exact_verdict_steps[-1]
                 ):
                     pose_finish_state = pose_finish_state.observe(
                         global_step=state.step,
@@ -1895,8 +1906,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             recent = [
                 row
                 for row in verdict_history
-                if row.get("stage_id") == stage["stage_id"]
-                and row.get("realized_stage_decision") is not None
+                if row.get("stage_id") == stage["stage_id"] and row.get("realized_stage_decision") is not None
             ]
             plateau = len(recent) >= int(schedule["plateau_verdicts"]) and all(
                 float(after["d_seg"]) >= float(before["d_seg"]) and float(after["d_pose"]) >= float(before["d_pose"])
@@ -1921,9 +1931,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 "global_step": state.step,
                 "verdict_history": verdict_history,
                 "baseline_verdict": baseline_verdict,
-                "pose_finish_engage_state": (
-                    None if pose_finish_state is None else pose_finish_state.to_payload()
-                ),
+                "pose_finish_engage_state": (None if pose_finish_state is None else pose_finish_state.to_payload()),
                 "stage_end_reason": campaign_blocker or stage_exit_decision,
                 "campaign_blocker": campaign_blocker,
             }
@@ -2074,13 +2082,9 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
         "warm_start_realized_admitted": warm_start_admitted,
         "warm_start_seg_admitted": warm_start_seg_admitted,
         "warm_start_component_safe_residual_admitted": warm_start_component_safe,
-        "pose_finish_engage_state": (
-            None if pose_finish_state is None else pose_finish_state.to_payload()
-        ),
+        "pose_finish_engage_state": (None if pose_finish_state is None else pose_finish_state.to_payload()),
         "pose_finish_engaged": pose_finish_engaged,
-        "banked_r1_fallback_harvest_signal": (
-            pose_finish_state is not None and not pose_finish_state.engaged
-        ),
+        "banked_r1_fallback_harvest_signal": (pose_finish_state is not None and not pose_finish_state.engaged),
         "banked_r1_fallback_is_comparator_only": config.execution_custody is not None,
         "final_target_gate": {
             "evaluated": stage_index >= len(schedule["stages"]),

@@ -25,23 +25,61 @@ from tac.optimization.direct_description_joint_descent import (  # noqa: E402
     J7_PROGRAM_SHA256,
     J7_W_JOINT_PROGRAM_SHA256,
     J7_W_SEG_PROGRAM_SHA256,
+    WS3_W_SEG_PROGRAM_SHA256,
     DirectDescriptionJointDescentTypedConfigV1,
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError  # noqa: E402
 
 AUTHORITY_SHA256 = "8dac31beda848b94b8bd42f43ffd7008cd024fcf916c0a14149307f68085907e"
 AUTHORITY_BYTES = 7497
+WS3_AUTHORITY_SHA256 = "b36872d5ce619dc741cf619542878dd87ff244defb94a03eeb16a68fe1bbd6c7"
+WS3_AUTHORITY_BYTES = 7441
+AUTHORITY_CUSTODY = {
+    AUTHORITY_SHA256: AUTHORITY_BYTES,
+    WS3_AUTHORITY_SHA256: WS3_AUTHORITY_BYTES,
+}
 PROGRAM_ID = "ddm_j7_366_pose_gate_history_reseal_n600_seed0"
+WS3_W_SEG_PROGRAM_ID = "ddm_ws3_w_seg_window_completion_reformed_n600_seed0"
 VERDICT_BATCH = 32
-WARM_START_RECEIPT = (
-    REPO
-    / ".omx/research/ddm_ws2_warm_start_custody_producer_receipt_20260724.json"
-)
+WARM_START_RECEIPT = REPO / ".omx/research/ddm_ws2_warm_start_custody_producer_receipt_20260724.json"
 PROGRAM_SHA_BY_WARM_START = {
     "inherited_v15_control": J7_PROGRAM_SHA256,
     "W_seg": J7_W_SEG_PROGRAM_SHA256,
     "W_joint": J7_W_JOINT_PROGRAM_SHA256,
 }
+
+
+def _apply_profile(
+    semantic: dict[str, Any],
+    *,
+    profile: str,
+    selected_warm_start: str,
+) -> None:
+    if profile == "j7_custody_refresh":
+        semantic["program_id"] = PROGRAM_ID
+        return
+    if profile != "ws3_w_seg_reformed_opening" or selected_warm_start != "W_seg":
+        raise DirectDescriptionError("WS3 reformed opening profile is valid only for W_seg")
+    semantic["program_id"] = WS3_W_SEG_PROGRAM_ID
+    reform = semantic["full_run_schedule"]["warm_start_reform"]
+    reform["realized_acceptance_policy"] = "campaign_component_safe_exact_n600"
+    reform["proposal_ordering"] = "seg_lexicographic_proxy_then_exact_component_gate"
+    semantic["full_run_schedule"]["stage_transition_rule"] = (
+        "quarter-quantum base proposal source; seg-lexicographic local ranking; "
+        "each receiver-visible proposal is admitted only when exact n600 priced "
+        "joint delta is negative, components are safe, and the cumulative "
+        "residual fire gate is green; otherwise continue the finite shrink "
+        "ladder and preserve exact rollback"
+    )
+    semantic["value_provenance"]["ws3_reformed_opening"] = (
+        "RECALLED #518 resume-warmup plus v16 validity-radius plus J4 freeze-then-release; W_seg instance cure only"
+    )
+
+
+def _expected_program_sha(profile: str, selected_warm_start: str) -> str:
+    if profile == "ws3_w_seg_reformed_opening":
+        return WS3_W_SEG_PROGRAM_SHA256
+    return PROGRAM_SHA_BY_WARM_START[selected_warm_start]
 
 
 def _sha256_file(path: Path) -> str:
@@ -87,15 +125,11 @@ def ws1_launchable_archive(candidate_id: str) -> dict[str, Any]:
         )
     path = Path(row["archive_path"])
     if not path.is_file() or path.is_symlink():
-        raise DirectDescriptionError(
-            f"WS1_START_ARCHIVE_UNAVAILABLE: {candidate_id}: {path}"
-        )
+        raise DirectDescriptionError(f"WS1_START_ARCHIVE_UNAVAILABLE: {candidate_id}: {path}")
     actual_bytes = path.stat().st_size
     actual_sha = _sha256_file(path)
     if actual_bytes != int(row["archive_bytes"]) or actual_sha != row["archive_sha256"]:
-        raise DirectDescriptionError(
-            f"WS1_START_ARCHIVE_CUSTODY_DIFFERS: {candidate_id}"
-        )
+        raise DirectDescriptionError(f"WS1_START_ARCHIVE_CUSTODY_DIFFERS: {candidate_id}")
     return {
         "kind": "receiver_closed_ws1_archive",
         "path": str(path),
@@ -112,29 +146,31 @@ def reseal(
     authority_path: Path,
     memory_receipt: Path | None,
     selected_warm_start: str,
+    profile: str = "j7_custody_refresh",
 ) -> dict[str, Any]:
-    if _sha256_file(authority_path) != AUTHORITY_SHA256 or authority_path.stat().st_size != AUTHORITY_BYTES:
+    authority_sha = _sha256_file(authority_path)
+    if authority_sha not in AUTHORITY_CUSTODY or authority_path.stat().st_size != AUTHORITY_CUSTODY[authority_sha]:
         raise DirectDescriptionError("J7 delegated authority custody differs")
     ticket = json.loads(ticket_path.read_bytes())
     semantic = ticket["semantic_program"]
-    semantic["program_id"] = PROGRAM_ID
-    semantic["telemetry"]["verdict_batch"] = VERDICT_BATCH
-    semantic["value_provenance"]["verdict_batch"] = (
-        "P0 J7 authority: exact n600 frozen CPU scorer verdicts use batch32"
+    _apply_profile(
+        semantic,
+        profile=profile,
+        selected_warm_start=selected_warm_start,
     )
+    semantic["telemetry"]["verdict_batch"] = VERDICT_BATCH
+    semantic["value_provenance"]["verdict_batch"] = "P0 J7 authority: exact n600 frozen CPU scorer verdicts use batch32"
     if selected_warm_start != "inherited_v15_control":
         semantic["warm_start"] = ws1_launchable_archive(selected_warm_start)
     semantic_sha = hashlib.sha256(rfc8785_canonicalize(semantic)).hexdigest()
-    expected_semantic_sha = PROGRAM_SHA_BY_WARM_START[selected_warm_start]
+    expected_semantic_sha = _expected_program_sha(profile, selected_warm_start)
     if semantic_sha != expected_semantic_sha:
-        raise DirectDescriptionError(
-            f"J7 semantic hash differs: {semantic_sha} != {expected_semantic_sha}"
-        )
+        raise DirectDescriptionError(f"J7 semantic hash differs: {semantic_sha} != {expected_semantic_sha}")
     ticket["authority"].update(
         {
             "delegation_prompt_path": str(authority_path),
-            "delegation_prompt_sha256": AUTHORITY_SHA256,
-            "delegation_prompt_bytes": AUTHORITY_BYTES,
+            "delegation_prompt_sha256": authority_sha,
+            "delegation_prompt_bytes": AUTHORITY_CUSTODY[authority_sha],
             "source_commit": _source_commit(),
         }
     )
@@ -157,9 +193,7 @@ def reseal(
     else:
         if not memory_receipt.is_file() or memory_receipt.is_symlink():
             raise DirectDescriptionError("J7 memory receipt is unavailable")
-        memory.update(
-            {"path": str(memory_receipt), "sha256": _sha256_file(memory_receipt)}
-        )
+        memory.update({"path": str(memory_receipt), "sha256": _sha256_file(memory_receipt)})
     _atomic_json(ticket_path, ticket)
     config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(ticket_path)
     ticket = json.loads(ticket_path.read_bytes())
@@ -174,6 +208,7 @@ def reseal(
         "semantic_program_sha256": semantic_sha,
         "typed_config_hash": config.typed_config_hash(),
         "selected_warm_start": selected_warm_start,
+        "profile": profile,
         "verdict_batch": config.verdict_batch,
         "memory_receipt_sealed": memory_receipt is not None,
         "source_files": sources,
@@ -198,27 +233,27 @@ def main() -> int:
         choices=("inherited_v15_control", "W_seg", "W_joint"),
         required=True,
     )
+    parser.add_argument(
+        "--profile",
+        choices=("j7_custody_refresh", "ws3_w_seg_reformed_opening"),
+        default="j7_custody_refresh",
+    )
     args = parser.parse_args()
     try:
         ticket_path = args.ticket.resolve()
         if not ticket_path.exists():
             if args.base_ticket is None:
-                raise DirectDescriptionError(
-                    "absent candidate ticket requires --base-ticket"
-                )
+                raise DirectDescriptionError("absent candidate ticket requires --base-ticket")
             base_ticket = args.base_ticket.resolve()
             if not base_ticket.is_file() or base_ticket.is_symlink():
-                raise DirectDescriptionError(
-                    "J7 base ticket is unavailable"
-                )
+                raise DirectDescriptionError("J7 base ticket is unavailable")
             _atomic_json(ticket_path, json.loads(base_ticket.read_bytes()))
         reseal(
             ticket_path=ticket_path,
             authority_path=args.authority.resolve(),
-            memory_receipt=(
-                None if args.memory_receipt is None else args.memory_receipt.resolve()
-            ),
+            memory_receipt=(None if args.memory_receipt is None else args.memory_receipt.resolve()),
             selected_warm_start=args.selected_warm_start,
+            profile=args.profile,
         )
     except DirectDescriptionError as exc:
         print(json.dumps({"verdict": "REFUSE", "reason": str(exc)}), file=sys.stderr)

@@ -86594,6 +86594,47 @@
       "notes": "",
       "research_only": true,
       "lane_class": "research"
+    },
+    {
+      "id": "lane_ddm_ws3_window_completion_and_arbitration_20260724",
+      "name": "DDM WS3 window completion and arbitration",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; bounded governed exact n600 advisory windows; source authority b36872d5ce619dc741cf619542878dd87ff244defb94a03eeb16a68fe1bbd6c7; main_review_required=true; firing stays with MAIN"
     }
   ],
   "level_rules": {
