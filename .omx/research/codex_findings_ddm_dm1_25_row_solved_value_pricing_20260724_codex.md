@@ -1,9 +1,9 @@
 # Codex findings — DDM DM1 25-row solved-value pricing
 
-`lane_id=lane_ddm_dm1_25_row_solved_value_pricing_20260724`  
+`lane_id=lane_ddm_dm1_25_row_solved_value_pricing_20260724`
 `research_only=true` · `score_claim=false` · `promotion_eligible=false` ·
-`main_review_required=true`  
-`evidence_axis=[macOS-CPU frozen-scorer advisory]`  
+`main_review_required=true`
+`evidence_axis=[macOS-CPU frozen-scorer advisory]`
 `0.1910828242 [contest-CPU] UNMOVED`
 
 ## One-line verdict
