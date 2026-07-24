@@ -21,10 +21,12 @@ from tac.ddm_campaign_costate import (  # noqa: E402
     PLATEAU_FORKS,
     SENSE_ROW_SCHEMA,
     VERDICT_SCHEMA,
+    _lambda_ranker_state,
     build_campaign_costate,
     campaign_consumer_view,
     derive_noise_alarm,
     derive_top_k_from_evaluator_bands,
+    load_campaign_sources,
     route_plateau,
     validate_realized_verdict,
 )
@@ -144,6 +146,33 @@ def test_current_campaign_is_one_hash_lineaged_advisory_truth() -> None:
         "MEASURED_162_AMORTIZED_HOMES_(108_SHARED,54_PER_FRAME)_AND_"
         "162_UINT8_HISTOGRAMS"
     )
+    ranker = state["metric_state"]["lambda_ranker"]
+    assert ranker["selected_model"]["candidate_id"] == (
+        "factorized_ms4d_interactions"
+    )
+    assert ranker["selected_model"]["metrics"]["heldout_only"] is True
+    assert ranker["selected_model"]["metrics"]["ndcg_at_4"] == pytest.approx(1.0)
+    assert ranker["selected_model"]["metrics"]["spearman_rho"] == pytest.approx(
+        0.8607149751465011
+    )
+    assert ranker["admission_gate"]["duty_ranking_upgrade_eligible"] is True
+    assert ranker["pair_precision"]["unranked_precision_owed"] == 585
+    assert ranker["pair_precision"]["pair_duty_ranking_status"] == (
+        "BLOCKED_INCOMPLETE_FISHER_PRECISION"
+    )
+    assert all(
+        row["actuation"] == "NONE"
+        for row in ranker["top_heldout_diagnostics_nonactionable"]
+    )
+    assert all(view["lambda_ranker"] == ranker for view in views)
+
+
+def test_lambda_ranker_receipt_tamper_fails_before_consumer_views() -> None:
+    sources, payloads = load_campaign_sources(REPO)
+    tampered = json.loads(json.dumps(payloads["co3_lambda_ranker"]))
+    tampered["selected_model"]["metrics"]["ndcg_at_4"] = 0.0
+    with pytest.raises(ValueError, match="content_sha256 mismatch"):
+        _lambda_ranker_state(tampered, sources["co3_lambda_ranker"])
 
 
 def test_all_366_class_e_rows_stand_even_before_j8f() -> None:
@@ -158,6 +187,9 @@ def test_all_366_class_e_rows_stand_even_before_j8f() -> None:
     assert all(row["value"] is None for row in rows)
     assert state["consumers"]["activation_nag"]["unmeasured_sense_rows"] == 9
     assert "BLOCKED_J8F_REALIZED_VERDICT_TELEMETRY" in {
+        row["blocker_id"] for row in state["blockers"]
+    }
+    assert "BLOCKED_PAIR_LEVEL_MS4D_FISHER_PRECISION_585" in {
         row["blocker_id"] for row in state["blockers"]
     }
 
@@ -224,6 +256,15 @@ def test_v19_gap_is_closed_by_exact_receiver_rows_and_shared_rate_home() -> None
             "EV1 measured 162/162 exclusive homes (108 shared across frames) "
             "and receiver histograms; "
             "ms2r owns the 0/162 priced solve"
+        ),
+        "actuation": "NONE",
+        "rank": 3,
+    }
+    assert state["consumers"]["duty_queue"]["rows"][1] == {
+        "duty": "CO3_LAMBDA_RANKER_FISHER_PRECISION_CLOSURE",
+        "reason": (
+            "held-out NDCG@4=1 admits the ranker, but "
+            "585/600 pair-level Fisher intervals remain owed"
         ),
         "actuation": "NONE",
         "rank": 2,
@@ -350,6 +391,13 @@ def test_organ_digest_dashboard_and_digest_tool_share_campaign_digest() -> None:
     assert data["ddm_campaign"]["state_digest"] == state_digest
     assert data["ddm_campaign_activation_nag"]["state_digest"] == state_digest
     assert data["duty_to_measure"]["state_digest"] == state_digest
+    assert dashboard["lambda_ranker"] == data["ddm_campaign"]["lambda_ranker"]
+    assert data["ddm_campaign_activation_nag"]["lambda_ranker_admission"][
+        "passed"
+    ] is True
+    assert data["duty_to_measure"]["lambda_ranker"]["pair_precision"][
+        "unranked_precision_owed"
+    ] == 585
     assert any(line.startswith("DDM-campaign:") for line in lines)
 
 
