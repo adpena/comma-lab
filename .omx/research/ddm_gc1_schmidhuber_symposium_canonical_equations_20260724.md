@@ -131,3 +131,12 @@ Empirical verification status:
   `feedback_grand_council_ddm_capstone_composition_schmidhuber_lead_20260724.md`.
 - Pointer:
   `0.1910828242 [contest-CPU] UNMOVED`.
+
+STORES CONSULTED: (appended by MAIN at custody per the recall-before-decide hook; mirrors the
+council memo's own §STORES CONSULTED for this same deliberation) — CLAUDE.md/AGENTS.md/operating
+manual · canonical DAG (FEED-603 rows incl. is1/sched1/dm1/dc1 MAIN-review + 159x/economics/
+objective) · the five SHA-bound input findings memos (is1, sched1, dm1, dc1, px1) · canonical
+equations registry (curriculum/rewarmup/EMA/reverse-waterfill LawRefs) · council posterior +
+canonical roster helper · lane registry + subagent checkpoints · task ledger (#688/#689 metadata)
+· dm2 charter (pending input, not guessed) · both directive inboxes. Memories: proactive-recall
+of the already-settled table entries cited inline; no store claimed beyond those actually read.
