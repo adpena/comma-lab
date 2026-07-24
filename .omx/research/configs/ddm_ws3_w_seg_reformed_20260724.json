@@ -1,0 +1,335 @@
+{
+  "authority": {
+    "delegation_prompt_bytes": 7441,
+    "delegation_prompt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_ws3_window_completion_and_arbitration_20260724T103845Z.wrapped.prompt.txt",
+    "delegation_prompt_sha256": "b36872d5ce619dc741cf619542878dd87ff244defb94a03eeb16a68fe1bbd6c7",
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "source_commit": "3235d2fb0391fbadbe10390ddc88acfda5eb57a5"
+  },
+  "compile_custody": {
+    "claim": "HASH_SEALED_EXECUTABLE_TYPED_J7_POSE_HISTORY_RESEAL",
+    "existing_compiler_accepts_schema": true,
+    "existing_governed_launcher_accepts_named_config": true,
+    "hash_algorithm": "sha256",
+    "hash_scope": "RFC8785 canonical bytes of semantic_program",
+    "semantic_program_sha256": "a90004c7d75571a2f97c7f6f87770b25cfda7ea46e76ce2e1e9d230e454ce838",
+    "typed_config_hash": "602608dd1611fbebc74c8d301e5057e330b1fb39fb4c1088565bcfdf121e3b57",
+    "typed_schema": "DirectDescriptionJointDescentTypedConfigV1"
+  },
+  "execution_custody": {
+    "banked_r1_comparator": {
+      "authority": "comparator_and_fallback_harvest_signal_only",
+      "binding_target": false,
+      "d_pose": 0.00161,
+      "payload_bytes": 7200,
+      "promotion_eligible": false,
+      "score_contribution": 0.127
+    },
+    "j5_producer_artifacts": {
+      "baseline_verdict": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/verdicts/stage00_baseline_n600.json",
+        "sha256": "5b19b564da1fb528af2c0d944da36bf1d357e28503be5988cb14ad59c4a6a261"
+      },
+      "checkpoint": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000001.npz",
+        "sha256": "1399292164682955bd9937d204692521542687f69223ddc9cc1e669ae05a944e"
+      },
+      "proposal_verdict": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
+        "sha256": "335d15db69dc25b0de80258e10e472f6e9ff282cd7d0325eca989bf92bade1f2"
+      },
+      "runtime_memory_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/full_run_memory_preflight.json",
+        "sha256": "4af05223624359fc305c82e30ee4a008da43d609251830d6e1a70724804ceec7"
+      }
+    },
+    "source_files": {
+      "consumer": {
+        "path": "src/tac/optimization/direct_description_joint_descent.py",
+        "sha256": "06c4520dc66251937d9dc4dd2cac09828c79e4ec54f4e85126a8b836f371db6f"
+      },
+      "launcher": {
+        "path": "tools/launch_ddm_joint_descent.py",
+        "sha256": "6f1d1726ab6bb787fdfefff1516e411f7e0af9214792e7b658f127f413adfd61"
+      }
+    },
+    "worst_geometry_memory_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_seg_reformed_memory_20260724T105700Z/worst_geometry_memory_preflight.json",
+      "sha256": "5ad725cb84d5378f81b1cd9b7e272cbe928998a9c0c1f85577fc21ee7c83dddb"
+    }
+  },
+  "schema": "ddm_joint_descent_witness_program_ticket.v1",
+  "semantic_program": {
+    "checkpoint_contract": {
+      "all_stage_files_preserved": true,
+      "atomic_write": "temporary file plus fsync plus os.replace",
+      "distinct_stage_encoded_names": true,
+      "ema_shadow_saved": true,
+      "every_stage_end": true,
+      "exact_rejection_rollback_saved": true,
+      "periodic_intra_stage": true,
+      "resume_from_disk": true
+    },
+    "compute_contract": {
+      "baseline": {
+        "authority": "speed path only; exact chunked frozen CPU-torch replay is macOS advisory and score_claim=false",
+        "chunked_verdicts": true,
+        "device": "MLX_GPU",
+        "environment": {
+          "TAC_MLX_CUSTOM_GROUPED_BACKWARD": "1"
+        },
+        "required_kernels": [
+          "custom grouped backward measured active",
+          "fused differentiable-R bit-identical to NumPy-fp32"
+        ]
+      },
+      "historical_j5_geometry_limit": "8 island secants at pair447; not admission authority for stage3",
+      "historical_j5_measured_stage1_peak_rss_gib": 10.47418212890625,
+      "historical_j5_projected_peak_gib": 13.5690185546875,
+      "memory_ceiling_gib": 116.0
+    },
+    "deterministic_algorithms": true,
+    "execution_boundary": {
+      "bounded_n600_smoke_only": true,
+      "main_review_required": true,
+      "research_only": true,
+      "score_claim": false,
+      "standing_go_applies_only_after_main_review_and_READY_TO_FIRE_UNDER_STANDING_GO": true,
+      "this_branch_campaign_launch_authorized": false
+    },
+    "full_run_schedule": {
+      "checkpoint_interval_steps": 37,
+      "derived_steps_per_n600_exposure": 150,
+      "derived_total_steps": 450,
+      "derived_wall_clock_hours_high": 13.79371420691443,
+      "derived_wall_clock_hours_low": 13.31387624311125,
+      "learning_rate_quantum_fraction": 0.25,
+      "measured_seconds_per_step": 104.09510249993764,
+      "measured_seconds_per_step_high": 104.09510249993764,
+      "measured_seconds_per_step_low": 100.87168033304624,
+      "plateau_verdicts": 2,
+      "pose_finish_engage": {
+        "detector": "rolling_relative_slope_plateau",
+        "ema_span": 3,
+        "fallback_policy": "emit_banked_r1_comparator_harvest_signal_non_promoting",
+        "flat_relative_slope_band": 0.0003,
+        "hysteresis": 3,
+        "metric": "exact_n600_d_seg_realized_through_R",
+        "minimum_strict_seg_admissions": 1,
+        "schema": "ddm_pose_finish_exact_verdict_plateau.v1",
+        "settle_window": 3
+      },
+      "stage_transition_rule": "quarter-quantum base proposal source; seg-lexicographic local ranking; each receiver-visible proposal is admitted only when exact n600 priced joint delta is negative, components are safe, and the cumulative residual fire gate is green; otherwise continue the finite shrink ladder and preserve exact rollback",
+      "stages": [
+        {
+          "active_groups": [
+            "island_worldsheet",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "stage_id": "01_residual_bucket_realized_acceptance",
+          "target_d_pose": null,
+          "target_d_seg": 0.020602722168,
+          "verdict_interval_steps": 50
+        },
+        {
+          "active_groups": [
+            "lane_program",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "stage_id": "02_lane_production_joint_descent",
+          "target_d_pose": null,
+          "target_d_seg": 0.013735148112,
+          "verdict_interval_steps": 50
+        },
+        {
+          "active_groups": [
+            "island_worldsheet",
+            "lane_program",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "stage_id": "03_pose_coupled_finish",
+          "target_d_pose": 163.06116431842463,
+          "target_d_seg": 0.006867574056,
+          "verdict_interval_steps": 50
+        }
+      ],
+      "train_batch": 4,
+      "warm_start_pair": 447,
+      "warm_start_reform": {
+        "adam_beta2": 0.999,
+        "component_fire_gate": "cumulative_vs_stage00_dseg_flat_or_down_pose_not_worse_any_component_and_residual_descend",
+        "first_realized_admission": "exact_n600_joint_delta_s_lt_zero_else_shrink_and_exact_rollback",
+        "frozen_groups_until_first_admission": [],
+        "group_release_condition": "first_component_safe_n600_residual_admission",
+        "lr_rewarmup_c": 2.0,
+        "lr_rewarmup_floor": 0.1,
+        "lr_rewarmup_shape": "linear",
+        "lr_rewarmup_steps": 2000,
+        "maximum_continuous_update_quantum_fraction": null,
+        "opening_active_groups": [
+          "island_worldsheet",
+          "shared_template_dof"
+        ],
+        "opening_candidate_ids": [
+          "worldsheet_joint_active_x_+1",
+          "worldsheet_joint_active_x_-1",
+          "worldsheet_joint_active_y_-1",
+          "local_exact_gradient"
+        ],
+        "opening_candidate_pair_ids": [
+          447,
+          53,
+          416,
+          296,
+          547,
+          278,
+          501,
+          346
+        ],
+        "proposal_multipliers": [
+          32.0,
+          16.0,
+          8.0,
+          4.0,
+          2.0,
+          1.0,
+          0.5,
+          0.25
+        ],
+        "proposal_ordering": "seg_lexicographic_proxy_then_exact_component_gate",
+        "proposal_q8_denominator": 256,
+        "proposal_staging": "camera_874x1164_q8_pre_final_uint8",
+        "realized_acceptance_policy": "campaign_component_safe_exact_n600",
+        "residual_bucket_admission_required": true
+      },
+      "warm_start_steps": 4
+    },
+    "joint_objective": {
+      "ema_decay": 0.997,
+      "formula": "100*d_seg_R + sqrt(10*d_pose_YUV6_R) + 25*archive_bytes/37545489",
+      "roundtrip": "proposal -> camera Q8 -> final uint8 -> evaluator R -> frozen scorers",
+      "stability": {
+        "grad_clip": 0.5,
+        "grad_normalize": true,
+        "per_group_grad_clip": true,
+        "pose_grad_coeff_max": 25,
+        "preset": "amber"
+      }
+    },
+    "num_pairs": 600,
+    "program_id": "ddm_ws3_w_seg_window_completion_reformed_n600_seed0",
+    "receiver_effective_surface": {
+      "island_worldsheet_track_translation_count": 326,
+      "lane_periodic_wire_coordinate_count": 24,
+      "opening_held_group": "lane_program",
+      "opening_selective_unfreeze": [
+        "island_worldsheet.center_x and center_y coherent candidates",
+        "shared_template_dof local Q8 candidate"
+      ],
+      "parameter_count": 368,
+      "selection_authority": "exact n600 C1 residual-bucket effect, not parameter-group name",
+      "shared_template_channel_count": 18
+    },
+    "schema": "DirectDescriptionJointDescentTypedConfigV1",
+    "seed": 0,
+    "target_cache": {
+      "bytes": 5078017610,
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "telemetry": {
+      "chunked_n600_verdict": true,
+      "every_exact_move": [
+        "pure-priced Seg/Pose/rate/joint deltas",
+        "C1 role-bucket delta",
+        "C1 residual-bucket per-move and cumulative delta",
+        "candidate id, shrink multiplier, Q8 staging, realized DOFs",
+        "component fire gate and exact archive identity",
+        "pose-finish exact-verdict rolling-slope state and monotone engage latch",
+        "governed stage-exit decision and exact final-target gate"
+      ],
+      "pointer_promotion_from_advisory_forbidden": true,
+      "score_claim": false,
+      "verdict_batch": 32
+    },
+    "value_provenance": {
+      "beta2_ramp": "PRESERVED J4 LawRef adam_v_variance_warmup_length_v1: ceil(2/(1-0.999)) = 2000",
+      "bucket_partition": "MEASURED/DERIVED C1: Lane+Movable role ceiling 726416; Road+Undrivable+MyCar minus integer target allowance yields 2377273 baseline residual debt",
+      "camera_q8": "MEASURED V19: three of three pre-final-uint8 camera-Q8 variants were exact joint-score admissible",
+      "cap_removed": "MEASURED V19: strict realized joint delta-S admitted coherent moves that fixed collateral and quarter-quantum rules rejected",
+      "coherent_x_plus_1": "MEASURED V19 grammar-native eight-pair advisory on pair ids 447,53,416,296,547,278,501,346: both d_seg and d_pose descended with exact archive-byte pricing; J5 remeasures the exact lifecycle-feasible candidate through n600",
+      "governed_stop": "DERIVED control invariant: only exact target-met advances; maximum-step and plateau exits below target are non-promoting stops",
+      "opening_groups": "C1-GUIDED: Lane remains held while coherent worldsheet and shared-template candidates are ranked by exact residual-bucket effect; no blanket template freeze",
+      "pose_finish_engage": "DERIVED #383 sibling: exact n600 d_seg uses the same EMA3, window3, hysteresis3, and 3e-4 rolling-relative-slope band; latch is run-owned and checkpointed",
+      "proposal_ladder": "DERIVED shrink ladder: first multiplier 32 maps the ramp-floor 0.025 base step to 0.8 receiver quantum; halve on exact ascent",
+      "same_vehicle_pose_floor": "MEASURED J5 exact proposal d_pose=163.06116431842463; governed non-regression floor for final target; banked R1 0.001610 is comparator-only",
+      "verdict_batch": "P0 J7 authority: exact n600 frozen CPU scorer verdicts use batch32",
+      "worst_geometry": "DERIVED static lifecycle enumeration: pair498 has 28 island plus 24 Lane realized secants; memory-only bootstrap must measure this exact all-groups window",
+      "ws3_reformed_opening": "RECALLED #518 resume-warmup plus v16 validity-radius plus J4 freeze-then-release; W_seg instance cure only"
+    },
+    "warm_start": {
+      "bytes": 138031,
+      "kind": "receiver_closed_ws1_archive",
+      "optimizer_state_loadable": false,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws2_warm_start_custody_producer_20260724T053455Z/01_archives/W_seg.zip.receipt-bytes",
+      "receipt_path": ".omx/research/ddm_ws2_warm_start_custody_producer_receipt_20260724.json",
+      "sha256": "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9"
+    },
+    "worst_geometry_memory_preflight": {
+      "active_groups": [
+        "island_worldsheet",
+        "lane_program",
+        "shared_template_dof"
+      ],
+      "derived_basis_gib": 4.72976016998291,
+      "expected_island_secants": 28,
+      "expected_lane_secants": 24,
+      "expected_total_secants": 52,
+      "schema": "ddm_joint_descent_worst_geometry_memory_contract.v1",
+      "selected_pair_start": 498,
+      "train_batch": 4
+    }
+  },
+  "warm_start_candidates": {
+    "W_joint": {
+      "archive_bytes": 138801,
+      "candidate_id": "statistics_hard_analytic_composed_frame1",
+      "d_pose": 36.6181847780574,
+      "d_seg": 0.07051923116048177,
+      "mycar_errors": 4072489
+    },
+    "W_seg": {
+      "archive_bytes": 138031,
+      "candidate_id": "temporal_affine_16knot_frame1_seglex96_hood_masked",
+      "d_pose": 146.3649324958955,
+      "d_seg": 0.024124510023328993,
+      "mycar_errors": 37619
+    },
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "main_landing_review_required": true,
+    "pointer_moved": false,
+    "schema": "DDMWS1WarmStartCandidatesV1",
+    "score_claim": false,
+    "slope_falsifier": {
+      "critical_ratio": 4.1215446777965665,
+      "execution_allowed": false,
+      "path": ".omx/research/configs/ddm_ws1_j5_slope_falsifier_20260724.json",
+      "sha256": "d504f55519f2490a8ae2b29c653c7d4c4cf4824d534972ae1dbf8146fe9c1b28",
+      "training_launched": false
+    },
+    "source_receipt": {
+      "bytes": 46615,
+      "path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+      "sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0"
+    },
+    "status": "MEASURED_ADVISORY_CANDIDATES_WITH_PREREGISTERED_SLOPE_FALSIFIER",
+    "train_decision_table": {
+      "path": ".omx/research/ddm_train_decision_table_warm_start_rows_20260724.json",
+      "sha256": "810983f971ad0590e99fb0d3a8a3e9413eafc1d3a2eaf674c75ff84cc073feb8"
+    }
+  }
+}
