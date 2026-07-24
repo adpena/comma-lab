@@ -23223,3 +23223,27 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   config is literal-bound to sealed V15 byte identities; a typed generalization + parse-back +
   exact remeasure is OWED before any WS1-derived candidate rides the E4 packet path to R6).
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-rg2-MAIN-review (2026-07-24, MAIN custody of ddm_rg2_skeleton_amplitude_productions rc=0):
+VERIFIED by re-derivation from the SHA-bound summary (content 9fe683f58a…): G3 top24 sum required=372
+IDENTICAL per-pair to RG1 (the round-1 obligation-shrinkage bug fix HOLDS — the iterative table builder
+now preserves pf2_membership_pair_ids across generations, 2-gen regression test), missing 64→36 = 28
+blocks CLOSED, fully-joined pairs 1→7. Probe custody: 870/870 authoritative signed rows (768 RG1 + 102
+new RG2), new split 75 argmax-perturbation / 13 no-occupied-overlap / 14 empty-raster, 0 infeasible
+quanta. RG2 = version-bumped outer grammar member production/skeleton_amplitude_coordinates.rg2sa
+(SKELETON/L3_raster — honest layer: acts at camera raster AFTER RG1 chart correction, before exact R),
+sorted-unique ≤64 coords, ±1 quanta only, byte-identical inactive. Honest-relabel receipt: an initial
+102-row set mislabeled L1_program was SUPERSEDED and fully remeasured (not relabeled) since the manifest
+participates in every candidate hash. 13/64 rows UNREACHABLE_NO_SHA_BOUND_RECEIVER_CLASS_PAIR_SUPPORT —
+RG2 refuses to invent bands. verdict_scope: INSTANCE_EXTENDED_GRAMMAR_RG2 (grammar-instance negative on
+36 rows; NOT family/paradigm). MS4 correctly REFUSED (producer_rerun_eligible=false). Residue routing
+(findings-as-first-rungs): 36 rows demand exactly three derived families — 10
+EVENT_LOCAL_SKELETON_CLASS_BIRTH_PRODUCTION (zero receiver class-pair support → new vocabulary) + 9
+FINER_EVENT_LOCAL_SKELETON_AMPLITUDE_CODEBOOK + 17 FISHER_MARGIN_PER_STRATUM_SKELETON_AMPLITUDE_CODEBOOK
+→ rg3 arm FIRED at this crux (one arm, all three families, same byte-identity/no-blanket-choice bar; bar
+= all 36 closed ⇒ MS4-ELIGIBLE ⇒ producer rerun ⇒ BUNDLE-COMPLETE ⇒ ms2-rerun/pf2r/rd1-162-duals).
+canonical_equations note: arm registered its RG2 law rows in
+src/tac/canonical_equations/ddm_rg2_skeleton_amplitude_productions_20260724.py (28 tests green on main
+post-pick; ruff clean). Cherry-pick 6d714a58f2 CLEAN (overlap with main since base c05453ad: only lane
+registry/audit appends). Pointer 0.1910828242 [contest-CPU] UNMOVED; all rows [macOS-CPU frozen-scorer
+advisory], score_claim=false.
