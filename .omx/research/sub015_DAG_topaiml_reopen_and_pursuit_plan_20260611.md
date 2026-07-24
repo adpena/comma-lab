@@ -23011,3 +23011,36 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   37-occupied-bucket scoping makes this tractable. equations: ddm_pf2_bucket_assignment_join_eligibility_v1
   registered by the arm (2 event rows, parse-verified).
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-j7-custody (2026-07-24, MAIN custody of ddm_j7_366_pose_gate_history_and_reseal rc=0 — pose-gate history COMPLETE, fire correctly HELD, the 2/5-history mystery SOLVED)
+- **VERDICT (both commits landed in order, e1c3667f8c+7300db1497 → main, 34 tests pass):**
+  BLOCKED_NO_LAUNCHABLE_WS1_START_AND_REALIZED_DSEG_REGRESSION — j7 completed its contract and the
+  apparatus correctly refuses to fire #366. Three independent blockers, each measured:
+  (1) pose-gate history now 5/5 exact n600 batch32 receiver-closed points but the latch reads
+  DSEG_STILL_TRENDING (rel slope 8.06e-5 ± stderr 1.21e-4 — not non-positive-flat); (2) the step-4
+  realized move REGRESSED d_seg (0.02744209 → 0.02746152) → BLOCKED_REALIZED_DSEG_REGRESSION;
+  (3) NEITHER ws1 warm-start candidate is launchable — endpoint rows carry metrics+byte counts but NO
+  archive_path/archive_sha256 and no live optimizer state → the preregistered falsifier is
+  UNDECIDABLE_FAIL_CLOSED_NO_LAUNCHABLE_WS1_START (verdict_scope: INSTANCE — current ws1
+  start-custody as landed; the falsifier design itself is intact, R*=4.1215446777965665 re-derived
+  by the registered callable, MAIN grep-verified in the registry).
+- **THE 2/5-HISTORY MYSTERY SOLVED (round-1 repair #2, the load-bearing bug):** the launcher marked a
+  bounded --stage-exit-on-stop verdict due, then RESET verdict_due=False whenever the prior admission
+  was component-safe — exact verdicts were being suppressed precisely on the healthy path. MAIN
+  verified the fix is the 2-line removal at the launcher. This is WHY j6a saw 2/5. Four more real
+  repairs: batch custody 16→32 typed+DSL-read; endpoint≠state category error (resealer now refuses
+  metric-only starts); stale source-commit in ticket (resealer derives real base HEAD); stale test
+  expectation. All five are apparatus hardening that survives this arm.
+- **DECOMPOSED CONTROL READBACK (the V15 inherited start is WEAK):** 5 bounded steps moved d_seg only
+  0.0274703→0.0274421 (one strict Seg admission, −5B) then two no-descent steps then the regression.
+  Compare ws1's W_seg composed state d_seg 0.024124510 @138,031B — BETTER than this control by 0.0033
+  — but unlaunchable for lack of custody. The #366 campaign should not fire from the weak V15 start
+  when a better start exists un-materialized.
+- **CRUX → ws2 respawn:** materialize BOTH ws1 candidates (W_seg / W_joint) as receiver-closed
+  archives with exact path/SHA/bytes + parse-back custody (or preserved live optimizer state
+  J5-compatible) → the preregistered 4-step falsifier windows become runnable → arbitrated warm
+  start → reseal → READY_TO_FIRE. menu1's composed curve (live) may supply an even better start;
+  ws2's producer path is the same either way. equations: ddm_ws1_warm_start_slope_falsifier_v1
+  (existing, replayed); j7 resolution encoded in ddm_train_decision_table_j7_resolution_20260724.json
+  so planners cannot treat endpoint-only rows as executable states.
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
