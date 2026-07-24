@@ -23247,3 +23247,19 @@ src/tac/canonical_equations/ddm_rg2_skeleton_amplitude_productions_20260724.py (
 post-pick; ruff clean). Cherry-pick 6d714a58f2 CLEAN (overlap with main since base c05453ad: only lane
 registry/audit appends). Pointer 0.1910828242 [contest-CPU] UNMOVED; all rows [macOS-CPU frozen-scorer
 advisory], score_claim=false.
+
+FEED-603-economics-rescope (2026-07-24, MAIN — operator: "Our economics of how much distortion
+costs how many bytes is based on an inherently inefficient and suboptimal approach"):
+CAMPAIGN-LEVEL RE-SCOPE of every distortion↔bytes exchange-rate artifact. rd1 per-bucket duals ·
+dr2b tolerance rungs · c1 waterfilled 200,000B budget · menu1 per-flip prices · v19c
+bytes/realized-net-flip (asymptote 0.0248) were ALL measured through the proposal-search /
+fixed-vocabulary describe channel → they are ACHIEVED POINTS = UPPER BOUNDS on price, never the
+economics. verdict_scope on every consuming verdict: FORMULATION (that channel), incl. "corrections
+= free finisher not closer" and the c1/box waterfill arithmetic. Costate organ λ/duty ranking
+consumes the same tables → its pricing carries the [upper-bound] label until re-priced. TRUE-price
+producer = the oracle-diff path (Δ = solved_archive − cheap_base, typed via
+ddm_g2_five_type_correspondence_v1, re-homed five-type × L1–L5, real coders, n600) — first
+producer = is1 Directive-2 comparison (a) describe-cheaper vs (b) upstream+oracle-diff vs (c) #366
+descent. No existing kill/finisher verdict may be cited against a correction/solve family on these
+prices. Memory: distortion_byte_economics_are_upper_bounds_from_suboptimal_channel_20260724.
+Pointer 0.1910828242 [contest-CPU] UNMOVED.
