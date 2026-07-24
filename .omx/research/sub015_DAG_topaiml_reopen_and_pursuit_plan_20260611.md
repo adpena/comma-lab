@@ -23844,3 +23844,24 @@ gate weakened — both remain fail-closed with pinned expectations. r3 REFIRED w
 inner=1976cdb2 (the in-container value measured by the authoritative computation itself in r2 on
 identical bytes; relevant local sources unchanged since). Cost so far: ~$0 (both refusals pre-eval).
 OWED second surface: projection↔in-container manifest reconcile + regression test (the drift class).
+
+### FEED-603-ic1-r5-depclosure-and-v0-close (2026-07-24, MAIN)
+r5 (fc-01KYAJ2J2A3H0E6NA7AGTTYNX1): ALL custody gates passed (two-flag runtime trees + .ddj5
+member whitelist) — the dispatch protocol chain is PROVEN through gate 5. Inflate STARTED and
+failed 8.3s in: bundled WS1 receiver → tac/optimization/direct_description_g1_worldsheet.py has
+MODULE-LEVEL cv2+scipy imports; cv2.fillPoly is DECODE-side (line ~460). Contest container has
+neither (declared deps: torch+brotli, lesson-4 ≤2 cap). verdict_scope: INSTANCE(incumbent_v0
+receiver bundle) — a dependency-closure defect, not a formulation/paradigm negative. CONFOUND
+NOTE: the e5 "locked-env" smoke passed ×2 locally because the host env leaks cv2/scipy — the
+clean-environment lesson (L9) held only at the true remote boundary; the local locked env is NOT
+dependency-minimal (second-surface debt: build the smoke venv WITHOUT host site-packages).
+DECISION per never-weaker-state doctrine (operator 07-24): NO r6 for v0 — repair effort on the
+weaker state stops; v0 chain CLOSED (terminal claim rows r2/r3/r5 all written; total spend ≈$0.02,
+5 custody gates + protocol proven = the value extracted). The dep-closure requirement routed as a
+BINDING inbox directive to the LIVE ic2 arm (incumbent_v1, W_seg-optimal + pose-typed carriers):
+numpy fillPoly replacement byte-identity-verified on actual payload polygons + lazy encode-side
+imports + full import-closure audit + genuinely-clean smoke venv. ms4d merged (BUNDLE-COMPLETE,
+25 UNREACHABLE rows direct-measured post-R; PF3 receiver-edge blocker honest, 0 fabricated rungs;
+endpoint replays: exact-plane C1 409,526,925B → S=272.73 [RATE-DEAD quantified] · RD1 knee
+S=26.28); ms7 arm live (R0 mass-check → amplitude ladder → T-residual → direct-pixel reach for
+the 25 + bind the 5 PF3 edges → first real coder race). Pointer 0.1910828242 UNMOVED.
