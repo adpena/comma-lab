@@ -227,7 +227,7 @@ class RG3ResidualCoordinateV1:
         return (
             f"rg3.{family_slug}.pair{self.pair_index:03d}.class{self.class_a}_{self.class_b}."
             f"{self.stratum}.{self.temporal_class.lower()}.band{self.row_band:02d}."
-            f"fine{self.fine_band:02d}.q{self.signed_quanta:+d}"
+            f"fine{self.fine_band:02d}.mag{abs(self.signed_quanta)}"
         )
 
 

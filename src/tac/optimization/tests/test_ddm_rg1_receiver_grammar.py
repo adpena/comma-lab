@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -275,6 +276,8 @@ def test_rg3_packet_is_sorted_unique_crc_bound_and_roundtrips() -> None:
     )
     payload = encode_rg3_residual_coordinates(rows)
     assert decode_rg3_residual_coordinates(payload) == rows
+    assert rows[0].actuator_id == replace(rows[0], signed_quanta=2).actuator_id
+    assert rows[0].actuator_id != replace(rows[0], signed_quanta=-1).actuator_id
     with pytest.raises(DirectDescriptionError, match="sorted, unique"):
         encode_rg3_residual_coordinates((rows[0], rows[0]))
     mutated = bytearray(payload)

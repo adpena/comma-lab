@@ -41,6 +41,7 @@ CHECKPOINT_SCHEMA: Final = "ddm_ms6_receiver_support_probe_checkpoint.v2"
 TABLE_SCHEMA: Final = "ddm_ms5_pf2_bucket_assignment_table.v1"
 G3_SCHEMA: Final = "ddm_g3_hard_pair_registry.v1"
 RG2_ASSIGNMENT_SCHEMA: Final = "ddm_rg2_skeleton_amplitude_assignment.v1"
+RG3_ASSIGNMENT_SCHEMA: Final = "ddm_rg3_residual_family_assignment.v1"
 EXPECTED_BASE_SHA256: Final = "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9"
 EXPECTED_PF2_SHA256: Final = "85084f7bd3a03dbd1b9f04fe6a9b84df4948a6caf64620beef42da8924345f73"
 EXPECTED_G3_SHA256: Final = "0c9ce6d0ce2b2c0830400f096438355242527d40f682fc1b201f67d8d951a4e4"
@@ -274,6 +275,7 @@ def _coordinate_derivation(
     coverage: Mapping[str, Any],
     *,
     rg2_assignment: Mapping[str, Any] | None,
+    rg3_assignment: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     by_bucket = {str(row["bucket_id"]): row for row in table_rows}
     rg2_by_key = (
@@ -284,6 +286,14 @@ def _coordinate_derivation(
         if rg2_assignment is not None
         else {}
     )
+    rg3_by_key = (
+        {
+            (int(row["pair_id"]), str(row["bucket_id"])): row
+            for row in rg3_assignment["rows"]
+        }
+        if rg3_assignment is not None
+        else {}
+    )
     residue = []
     for missing in coverage["missing_blocks"]:
         bucket_id = str(missing["bucket_id"])
@@ -291,12 +301,16 @@ def _coordinate_derivation(
         row = by_bucket[bucket_id]
         atlas_key = row["atlas_key"]
         rg2_row = rg2_by_key.get((pair_id, bucket_id))
+        rg3_row = rg3_by_key.get((pair_id, bucket_id))
         unreachable = (
             rg2_row is not None
             and rg2_row["causal_join_status"]
             == "UNREACHABLE_NO_SHA_BOUND_RECEIVER_CLASS_PAIR_SUPPORT"
         )
-        if unreachable:
+        if rg3_assignment is not None:
+            next_families = []
+            reason = "RG3_MEASURED_RESIDUAL_DID_NOT_CAUSALLY_JOIN_EXACT_PAIR_BUCKET"
+        elif unreachable:
             next_families = ["EVENT_LOCAL_SKELETON_CLASS_BIRTH_PRODUCTION"]
             reason = "RG2_ADDRESS_UNREACHABLE_ZERO_SHA_BOUND_CLASS_PAIR_SUPPORT"
         elif rg2_assignment is not None:
@@ -324,9 +338,27 @@ def _coordinate_derivation(
                     if rg2_row is not None
                     else {}
                 ),
+                **(
+                    {
+                        "rg3_family": rg3_row["family"],
+                        "rg3_receiver_actuator_ids": rg3_row[
+                            "receiver_actuator_ids"
+                        ],
+                    }
+                    if rg3_row is not None
+                    else {}
+                ),
             }
         )
-    if rg2_assignment is not None:
+    if rg3_assignment is not None:
+        derivation_rule = (
+            "RG3 is the authorized terminal residual-family pass. Any exact "
+            "pair-bucket block still missing after both signs of every counted "
+            "RG3 magnitude is reported as a scoped blocker; no RG4 family is inferred."
+        )
+        coordinate_counts = {}
+        verdict_scope = "INSTANCE_EXTENDED_GRAMMAR_RG3"
+    elif rg2_assignment is not None:
         derivation_rule = (
             "RG2 amplitude rows that remain unjoined after both signed one-quantum "
             "measurements require a finer event-local or Fisher-margin per-stratum "
@@ -364,6 +396,9 @@ def _coordinate_derivation(
         "next_coordinate_family_counts": coordinate_counts,
         "residual_missing_block_count": len(residue),
         "residual": residue,
+        "next_authorized_family_status": (
+            "NO_RG4_AUTHORIZED" if rg3_assignment is not None and residue else "NOT_APPLICABLE"
+        ),
         "verdict_scope": verdict_scope,
     }
 
@@ -395,6 +430,7 @@ def build_summary(
     assignment_table_path: Path,
     g3_path: Path,
     rg2_assignment_path: Path | None = None,
+    rg3_assignment_path: Path | None = None,
 ) -> dict[str, Any]:
     table = _read_object(assignment_table_path)
     if table.get("schema") != TABLE_SCHEMA:
@@ -415,6 +451,14 @@ def build_summary(
         and rg2_assignment.get("schema") != RG2_ASSIGNMENT_SCHEMA
     ):
         raise SummaryError("RG2 assignment schema differs")
+    rg3_assignment = (
+        _read_object(rg3_assignment_path) if rg3_assignment_path is not None else None
+    )
+    if (
+        rg3_assignment is not None
+        and rg3_assignment.get("schema") != RG3_ASSIGNMENT_SCHEMA
+    ):
+        raise SummaryError("RG3 assignment schema differs")
 
     table_probe_sha = {
         (str(row["receiver_actuator_id"]), str(row["direction_id"])): str(row["checkpoint_sha256"])
@@ -498,6 +542,17 @@ def build_summary(
                 if rg2_assignment_path is not None and rg2_assignment is not None
                 else {}
             ),
+            **(
+                {
+                    "rg3_assignment": {
+                        "path": str(rg3_assignment_path.resolve()),
+                        "sha256": _sha256(rg3_assignment_path),
+                        "content_sha256": rg3_assignment["assignment_content_sha256"],
+                    }
+                }
+                if rg3_assignment_path is not None and rg3_assignment is not None
+                else {}
+            ),
             "base_archive_sha256": EXPECTED_BASE_SHA256,
             "pf2_receipt_sha256": EXPECTED_PF2_SHA256,
         },
@@ -522,6 +577,7 @@ def build_summary(
             table_rows,
             g3_coverage,
             rg2_assignment=rg2_assignment,
+            rg3_assignment=rg3_assignment,
         ),
         "producer_rerun_eligible": False,
         "producer_rerun_reason": "set after the G3 coverage proof below",
@@ -532,7 +588,9 @@ def build_summary(
         "research_only": True,
         "main_landing_review_required": True,
         "verdict_scope": (
-            "INSTANCE_V19C_RG2_SKELETON_AMPLITUDE_ONE_QUANTUM_SWEEP"
+            "INSTANCE_V19C_RG3_RESIDUAL_FAMILY_SIGNED_MAGNITUDE_SWEEP"
+            if rg3_assignment is not None
+            else "INSTANCE_V19C_RG2_SKELETON_AMPLITUDE_ONE_QUANTUM_SWEEP"
             if rg2_assignment is not None
             else "INSTANCE_V19C_RG1_ENDPOINT_ONE_QUANTUM_SWEEP"
             if len(checkpoints) > 748
@@ -562,6 +620,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--assignment-table", type=Path, default=DEFAULT_TABLE)
     parser.add_argument("--g3", type=Path, default=DEFAULT_G3)
     parser.add_argument("--rg2-assignment", type=Path)
+    parser.add_argument("--rg3-assignment", type=Path)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     return parser.parse_args()
 
@@ -573,6 +632,7 @@ def main() -> int:
         assignment_table_path=args.assignment_table,
         g3_path=args.g3,
         rg2_assignment_path=args.rg2_assignment,
+        rg3_assignment_path=args.rg3_assignment,
     )
     _publish(args.output, summary)
     print(args.output)

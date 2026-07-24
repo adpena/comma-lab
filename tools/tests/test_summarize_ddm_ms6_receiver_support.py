@@ -156,6 +156,40 @@ def test_rg2_coordinate_derivation_separates_unreachable_birth_from_finer_amplit
     ]
 
 
+def test_rg3_coordinate_derivation_reports_terminal_blocker_without_rg4() -> None:
+    rows = [
+        {
+            "bucket_id": "cell",
+            "atlas_key": {"class_stratum": "cell"},
+        }
+    ]
+    coverage = {"missing_blocks": [{"pair_id": 2, "bucket_id": "cell"}]}
+    rg3_assignment = {
+        "rows": [
+            {
+                "pair_id": 2,
+                "bucket_id": "cell",
+                "family": "FISHER_MARGIN_PER_STRATUM_SKELETON_AMPLITUDE_CODEBOOK",
+                "receiver_actuator_ids": [
+                    "rg3.fisher_stratum.pair002.class0_1.cell.transient.band03.fine02.mag1",
+                    "rg3.fisher_stratum.pair002.class0_1.cell.transient.band03.fine02.mag2",
+                ],
+            }
+        ]
+    }
+
+    value = _coordinate_derivation(
+        rows,
+        coverage,
+        rg2_assignment=None,
+        rg3_assignment=rg3_assignment,
+    )
+
+    assert value["verdict_scope"] == "INSTANCE_EXTENDED_GRAMMAR_RG3"
+    assert value["residual"][0]["candidate_coordinate_families"] == []
+    assert value["next_authorized_family_status"] == "NO_RG4_AUTHORIZED"
+
+
 def test_load_checkpoints_selects_assignment_bound_revision_across_roots(
     tmp_path: Path,
 ) -> None:

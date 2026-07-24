@@ -53,9 +53,11 @@ from tac.optimization.ddm_pf2_bucket_assignment import (  # noqa: E402
 )
 from tac.optimization.ddm_rg1_receiver_grammar import (  # noqa: E402
     LaneProgramCoordinateV1,
+    RG3ResidualCoordinateV1,
     SkeletonAmplitudeCoordinateV1,
     compile_rg1_receiver_grammar,
     compile_rg2_receiver_grammar,
+    compile_rg3_receiver_grammar,
     project_polygon_center,
     receive_rg1_receiver_grammar,
 )
@@ -91,6 +93,7 @@ from tools.measure_ddm_v19c_correction_saturation import (  # noqa: E402
 RUN_ID: Final = "ddm_ms6_receiver_support_measurement_20260724T052034Z"
 RG1_RUN_ID: Final = "ddm_rg1_receiver_grammar_extension_20260724T080402Z"
 RG2_RUN_ID: Final = "ddm_rg2_skeleton_amplitude_productions_20260724T094305Z"
+RG3_RUN_ID: Final = "ddm_rg3_residual_family_productions_20260724T110418Z"
 LANE_ID: Final = "lane_ddm_ms6_receiver_support_measurement_20260724"
 RECEIPT_SCHEMA: Final = "ddm_ms6_receiver_support_measurement_receipt.v1"
 CHECKPOINT_SCHEMA: Final = "ddm_ms6_receiver_support_probe_checkpoint.v2"
@@ -132,9 +135,22 @@ DEFAULT_RG2_PRIOR_ROOTS = (
     Path("/Volumes/VertigoDataTier/pact") / RUN_ID / "probe_checkpoints_v2",
     DEFAULT_RG2_CACHE / "probe_checkpoints_rg1_v2",
 )
+DEFAULT_RG3_ASSIGNMENT = REPO / (
+    ".omx/research/ddm_rg3_residual_family_productions_20260724T110418Z/"
+    "ddm_rg3_residual_family_assignment.json"
+)
+DEFAULT_RG3_BULK = Path("/Volumes/VertigoDataTier/pact") / RG3_RUN_ID
+DEFAULT_RG3_RECEIPTS = REPO / ".omx/research" / RG3_RUN_ID
+DEFAULT_RG3_PRIOR_ROOTS = (
+    *DEFAULT_RG2_PRIOR_ROOTS,
+    DEFAULT_RG2_BULK / "probe_checkpoints_rg2_l3_v2",
+)
 EXPECTED_RG1_TABLE_SHA256: Final = "2274c8e654262b90ef35a604280c6c8a4e07a7403480b568d1c3ac8ea8141170"
 EXPECTED_RG1_RECEIPT_SHA256: Final = "26e77a9cacda11d65fd2cff48f272f1dcbf9bdb79a760a97bc5da6b950101d2f"
 EXPECTED_RG2_ASSIGNMENT_SCHEMA: Final = "ddm_rg2_skeleton_amplitude_assignment.v1"
+EXPECTED_RG2_TABLE_SHA256: Final = "49a4d52d839bcb7815639b7ffa7e66e8c8a6196f675ec66f1a50d2211a96a4ec"
+EXPECTED_RG2_RECEIPT_SHA256: Final = "5e37185406b0dc93199693a8371e58d7467f18cfc2ee42db9fda43fae4e28335"
+EXPECTED_RG3_ASSIGNMENT_SCHEMA: Final = "ddm_rg3_residual_family_assignment.v1"
 
 G2G_RECEIPT_SHA256: Final = "fa49a2ca71cb2960b1e497d425f05c4a496cc7634c45b2e193e3977dfa0667da"
 G2CS1_QUANTA: Final = {
@@ -411,6 +427,11 @@ _RG2_SKELETON = re.compile(
     r"^rg2\.skeleton\.pair(\d{3})\.class([0-4])_([0-4])\."
     r"(boundary|cell)\.(static_in_image|transient)\.band(\d{2})$"
 )
+_RG3_RESIDUAL = re.compile(
+    r"^rg3\.(class_birth|finer_event|fisher_stratum)\.pair(\d{3})\."
+    r"class([0-4])_([0-4])\.(boundary|cell)\."
+    r"(static_in_image|transient)\.band(\d{2})\.fine(\d{2})\.mag([12])$"
+)
 _BOUNDED_SUFFIX: Final = ".bounded_clamp"
 
 
@@ -433,6 +454,7 @@ def _compile_probe(
     lane = _LANE.fullmatch(actuator_id)
     g2cs1 = _G2CS1.fullmatch(actuator_id)
     rg2_skeleton = _RG2_SKELETON.fullmatch(actuator_id)
+    rg3_residual = _RG3_RESIDUAL.fullmatch(actuator_id)
     if island:
         object_id = int(island.group(1))
         axis = island.group(2)
@@ -527,6 +549,44 @@ def _compile_probe(
         carrier = compile_rg2_receiver_grammar(
             context.base_carrier,
             skeleton_amplitudes=(coordinate,),
+        )
+        coupled_archive = _compile_coupled_margin_fast(
+            carrier,
+            context.coupled_program,
+        )
+        return (
+            _compile_preuint8_fast(coupled_archive, context.preuint8_program),
+            (pair_index,),
+            None,
+        )
+    elif rg3_residual:
+        family = {
+            "class_birth": "EVENT_LOCAL_SKELETON_CLASS_BIRTH_PRODUCTION",
+            "finer_event": "FINER_EVENT_LOCAL_SKELETON_AMPLITUDE_CODEBOOK",
+            "fisher_stratum": "FISHER_MARGIN_PER_STRATUM_SKELETON_AMPLITUDE_CODEBOOK",
+        }[rg3_residual.group(1)]
+        expected_stratum = (
+            "cell"
+            if family
+            == "FISHER_MARGIN_PER_STRATUM_SKELETON_AMPLITUDE_CODEBOOK"
+            else "boundary"
+        )
+        if rg3_residual.group(5) != expected_stratum:
+            return None, (), "RG3_ACTUATOR_STRATUM_DIFFERS_FROM_FAMILY"
+        pair_index = int(rg3_residual.group(2))
+        coordinate = RG3ResidualCoordinateV1(
+            pair_index=pair_index,
+            class_a=int(rg3_residual.group(3)),
+            class_b=int(rg3_residual.group(4)),
+            family=family,
+            temporal_class=rg3_residual.group(6).upper(),
+            row_band=int(rg3_residual.group(7)),
+            fine_band=int(rg3_residual.group(8)),
+            signed_quanta=sign * int(rg3_residual.group(9)),
+        )
+        carrier = compile_rg3_receiver_grammar(
+            context.base_carrier,
+            rg3_residuals=(coordinate,),
         )
         coupled_archive = _compile_coupled_margin_fast(
             carrier,
@@ -855,21 +915,82 @@ def _load_rg2_assignment(path: Path) -> tuple[dict[str, Any], list[str]]:
     return value, sorted(actuator_ids)
 
 
+def _load_rg3_assignment(path: Path) -> tuple[dict[str, Any], list[str]]:
+    value = _read_json(path)
+    payload = dict(value)
+    claimed = payload.pop("assignment_content_sha256", None)
+    rows = value.get("rows")
+    if (
+        value.get("schema") != EXPECTED_RG3_ASSIGNMENT_SCHEMA
+        or claimed != canonical_sha256(payload)
+        or not isinstance(rows, list)
+        or len(rows) != 36
+        or value.get("row_count") != 36
+        or value.get("actuator_count") != 62
+        or value.get("new_signed_probe_count") != 124
+        or value.get("score_claim") is not False
+    ):
+        raise MS6MeasurementError("RG3 assignment custody differs")
+    if any(not isinstance(row, Mapping) for row in rows):
+        raise MS6MeasurementError("RG3 assignment rows are malformed")
+    actuator_ids = [
+        actuator_id
+        for row in rows
+        for actuator_id in row.get("receiver_actuator_ids", ())
+    ]
+    if (
+        any(
+            not isinstance(value, str) or _RG3_RESIDUAL.fullmatch(value) is None
+            for value in actuator_ids
+        )
+        or len(set(actuator_ids)) != len(actuator_ids)
+        or len(actuator_ids) != 62
+    ):
+        raise MS6MeasurementError("RG3 assignment actuator vocabulary differs")
+    return value, sorted(actuator_ids)
+
+
 def run(args: argparse.Namespace) -> Path:
     storage = _storage_preflight(args.bulk_output)
     args.bulk_output.mkdir(parents=True, exist_ok=True)
     args.receipt_output.mkdir(parents=True, exist_ok=True)
     _torch_setup()
     rg2_mode = args.rg2_assignment is not None
+    rg3_mode = args.rg3_assignment is not None
+    extension_mode = rg2_mode or rg3_mode
     table_custody = _verify(
         args.assignment_table,
-        EXPECTED_RG1_TABLE_SHA256 if rg2_mode else EXPECTED_TABLE_SHA256,
-        "RG1 merged assignment table" if rg2_mode else "MS5 assignment table",
+        (
+            EXPECTED_RG2_TABLE_SHA256
+            if rg3_mode
+            else EXPECTED_RG1_TABLE_SHA256
+            if rg2_mode
+            else EXPECTED_TABLE_SHA256
+        ),
+        (
+            "RG2 merged assignment table"
+            if rg3_mode
+            else "RG1 merged assignment table"
+            if rg2_mode
+            else "MS5 assignment table"
+        ),
     )
     ms5_custody = _verify(
         args.ms5_receipt,
-        EXPECTED_RG1_RECEIPT_SHA256 if rg2_mode else EXPECTED_MS5_RECEIPT_SHA256,
-        "RG1 measurement receipt" if rg2_mode else "MS5 assignment receipt",
+        (
+            EXPECTED_RG2_RECEIPT_SHA256
+            if rg3_mode
+            else EXPECTED_RG1_RECEIPT_SHA256
+            if rg2_mode
+            else EXPECTED_MS5_RECEIPT_SHA256
+        ),
+        (
+            "RG2 measurement receipt"
+            if rg3_mode
+            else "RG1 measurement receipt"
+            if rg2_mode
+            else "MS5 assignment receipt"
+        ),
     )
     base_custody = _verify(args.base_archive, EXPECTED_BASE_SHA256, "V19C base archive")
     segnet_custody = _verify(
@@ -882,11 +1003,23 @@ def run(args: argparse.Namespace) -> Path:
     validate_assignment_table(base_table, expected_pf2_sha256=EXPECTED_PF2_SHA256)
     rg2_assignment = None
     rg2_ids: list[str] = []
+    rg3_assignment = None
+    rg3_ids: list[str] = []
     if rg2_mode:
         rg2_assignment, rg2_ids = _load_rg2_assignment(args.rg2_assignment)
         base_table = json.loads(json.dumps(base_table))
         vocabulary = base_table["foreign_key_vocabulary"]["receiver_actuator_stable_ids"]
         vocabulary.extend(rg2_ids)
+        vocabulary[:] = sorted(set(vocabulary))
+        payload = dict(base_table)
+        payload.pop("table_content_sha256", None)
+        base_table["table_content_sha256"] = canonical_sha256(payload)
+        validate_assignment_table(base_table, expected_pf2_sha256=EXPECTED_PF2_SHA256)
+    elif rg3_mode:
+        rg3_assignment, rg3_ids = _load_rg3_assignment(args.rg3_assignment)
+        base_table = json.loads(json.dumps(base_table))
+        vocabulary = base_table["foreign_key_vocabulary"]["receiver_actuator_stable_ids"]
+        vocabulary.extend(rg3_ids)
         vocabulary[:] = sorted(set(vocabulary))
         payload = dict(base_table)
         payload.pop("table_content_sha256", None)
@@ -939,6 +1072,10 @@ def run(args: argparse.Namespace) -> Path:
         probes = [(actuator, direction) for actuator in rg2_ids for direction in directions]
         if len(probes) != 2 * len(rg2_ids):
             raise MS6MeasurementError(f"RG2 probe vocabulary differs: {len(probes)}")
+    elif rg3_mode:
+        probes = [(actuator, direction) for actuator in rg3_ids for direction in directions]
+        if len(probes) != 124:
+            raise MS6MeasurementError(f"RG3 probe vocabulary differs: {len(probes)}")
     elif args.rg1_retry_from is None:
         probes = [(actuator, direction) for actuator in vocabulary for direction in directions]
         if len(probes) != 748:
@@ -957,7 +1094,9 @@ def run(args: argparse.Namespace) -> Path:
     if args.probe_limit is not None:
         selected = selected[: args.probe_limit]
     checkpoint_root = args.bulk_output / (
-        "probe_checkpoints_rg2_l3_v2"
+        "probe_checkpoints_rg3_residual_v2"
+        if rg3_mode
+        else "probe_checkpoints_rg2_l3_v2"
         if rg2_mode
         else "probe_checkpoints_rg1_v2"
         if args.rg1_retry_from is not None
@@ -976,11 +1115,11 @@ def run(args: argparse.Namespace) -> Path:
                 segnet=segnet,
                 scorer_custody=scorer_custody,
                 checkpoint_root=checkpoint_root,
-                checkpoint_run_id=RG2_RUN_ID if rg2_mode else RUN_ID,
+                checkpoint_run_id=RG3_RUN_ID if rg3_mode else RG2_RUN_ID if rg2_mode else RUN_ID,
             )
         )
     all_checkpoints = sorted(checkpoint_root.glob("*.json"))
-    if rg2_mode:
+    if extension_mode:
         prior_by_identity: dict[tuple[str, str], Path] = {}
         for root in args.prior_checkpoint_roots:
             for path in sorted(root.glob("*.json")):
@@ -993,10 +1132,12 @@ def run(args: argparse.Namespace) -> Path:
                 # 30 old actuator identities, so the later root is authoritative.
                 prior_by_identity[identity] = path
         prior_paths = [prior_by_identity[key] for key in sorted(prior_by_identity)]
-        if len(prior_paths) != 768:
+        expected_prior_count = 870 if rg3_mode else 768
+        if len(prior_paths) != expected_prior_count:
             raise MS6MeasurementError(
-                "RG2 requires the exact 768-row RG1 merged producer table after "
-                f"newer checkpoints supersede repeated identities; observed {len(prior_paths)}"
+                f"{'RG3' if rg3_mode else 'RG2'} requires the exact "
+                f"{expected_prior_count}-row prior merged producer table after newer "
+                f"checkpoints supersede repeated identities; observed {len(prior_paths)}"
             )
         all_checkpoints = prior_paths + all_checkpoints
     elif args.rg1_retry_from is not None:
@@ -1024,9 +1165,19 @@ def run(args: argparse.Namespace) -> Path:
     receipt: dict[str, Any] = {
         "schema": ASSIGNMENT_RECEIPT_SCHEMA,
         "measurement_schema": RECEIPT_SCHEMA,
-        "run_id": RG2_RUN_ID if rg2_mode else RG1_RUN_ID if args.rg1_retry_from is not None else RUN_ID,
+        "run_id": (
+            RG3_RUN_ID
+            if rg3_mode
+            else RG2_RUN_ID
+            if rg2_mode
+            else RG1_RUN_ID
+            if args.rg1_retry_from is not None
+            else RUN_ID
+        ),
         "lane_id": (
-            "lane_ddm_rg2_skeleton_amplitude_productions_20260724"
+            "lane_ddm_rg3_residual_family_productions_20260724"
+            if rg3_mode
+            else "lane_ddm_rg2_skeleton_amplitude_productions_20260724"
             if rg2_mode
             else "lane_ddm_rg1_receiver_grammar_extension_20260724"
             if args.rg1_retry_from is not None
@@ -1047,6 +1198,17 @@ def run(args: argparse.Namespace) -> Path:
                     }
                 }
                 if rg2_mode and rg2_assignment is not None
+                else {}
+            ),
+            **(
+                {
+                    "rg3_assignment": {
+                        "path": str(args.rg3_assignment.resolve()),
+                        "sha256": _sha256_file(args.rg3_assignment),
+                        "content_sha256": rg3_assignment["assignment_content_sha256"],
+                    }
+                }
+                if rg3_mode and rg3_assignment is not None
                 else {}
             ),
         },
@@ -1074,7 +1236,10 @@ def run(args: argparse.Namespace) -> Path:
             "all_checkpoints_preserved": True,
             "rg1_retry_only": args.rg1_retry_from is not None and not rg2_mode,
             "rg2_new_coordinates_only": rg2_mode,
-            "prior_infeasible_evidence_preserved": args.rg1_retry_from is not None or rg2_mode,
+            "rg3_new_coordinates_only": rg3_mode,
+            "prior_infeasible_evidence_preserved": (
+                args.rg1_retry_from is not None or extension_mode
+            ),
         },
         "coverage": measured_table["coverage"],
         "producer_rerun": {
@@ -1088,7 +1253,9 @@ def run(args: argparse.Namespace) -> Path:
         "storage_preflight": storage,
         "verdict": measured_table["verdict"],
         "verdict_scope": (
-            "INSTANCE_EXTENDED_GRAMMAR_RG2"
+            "INSTANCE_EXTENDED_GRAMMAR_RG3"
+            if rg3_mode
+            else "INSTANCE_EXTENDED_GRAMMAR_RG2"
             if rg2_mode
             else "INSTANCE_EXTENDED_GRAMMAR_RG1"
             if args.rg1_retry_from is not None
@@ -1101,7 +1268,39 @@ def run(args: argparse.Namespace) -> Path:
         "research_only": True,
         "main_landing_review_required": True,
     }
-    if rg2_mode:
+    if rg3_mode:
+        rg3_rows = [_read_json(path) for path in sorted(checkpoint_root.glob("*.json"))]
+        candidate_shas = {
+            str(row["candidate_archive"]["sha256"])
+            for row in rg3_rows
+            if row.get("candidate_archive") is not None
+        }
+        receipt["rg3_extension"] = {
+            "schema": "ddm_rg3_residual_family_measurement.v1",
+            "residual_row_count": 36,
+            "family_counts": rg3_assignment["family_counts"],
+            "new_coordinate_count": len(rg3_ids),
+            "new_signed_probe_count": len(probes),
+            "all_compiled_as_single_coordinate_packets": len(rg3_rows) == len(probes),
+            "unique_candidate_archive_sha256_count": len(candidate_shas),
+            "inactive_extension_identity": {
+                "proven": compile_rg3_receiver_grammar(context.base_carrier)
+                == context.base_carrier,
+                "nested_carrier_sha256": hashlib.sha256(context.base_carrier).hexdigest(),
+                "outer_v19c_base_sha256": EXPECTED_BASE_SHA256,
+            },
+            "grammar_verdict_scope": "INSTANCE_EXTENDED_GRAMMAR_RG3",
+            "fisher_margin_selection": {
+                "assignment_input_sha256": rg3_assignment["fisher_margin_input"]["sha256"],
+                "metric": rg3_assignment["fisher_margin_input"]["selection_metric"],
+                "margin_field_shipped": False,
+                "receiver_uses_counted_fine_band_symbol_only": True,
+            },
+            "score_units_per_byte_status": "MEASURED_BY_EXACT_BUCKET_COVERAGE_NOT_SCORE",
+            "typed_stream_layer": "SKELETON/L3_raster",
+            "no_fourier_basis": True,
+        }
+    elif rg2_mode:
         rg2_rows = [_read_json(path) for path in sorted(checkpoint_root.glob("*.json"))]
         candidate_shas = {
             str(row["candidate_archive"]["sha256"]) for row in rg2_rows if row.get("candidate_archive") is not None
@@ -1196,6 +1395,11 @@ def parse_args() -> argparse.Namespace:
         help="Run only the 64 assignment-bound RG2 coordinates in both signs.",
     )
     parser.add_argument(
+        "--rg3-assignment",
+        type=Path,
+        help="Run only the 62 assignment-bound RG3 coordinates in both signs.",
+    )
+    parser.add_argument(
         "--prior-checkpoint-root",
         type=Path,
         action="append",
@@ -1208,9 +1412,35 @@ def parse_args() -> argparse.Namespace:
         help="Reuse SHA-validated PF2 event-index and baseline-cell caches.",
     )
     args = parser.parse_args()
-    if args.rg1_retry_from is not None and args.rg2_assignment is not None:
-        parser.error("--rg1-retry-from and --rg2-assignment are mutually exclusive")
-    if args.rg2_assignment is not None:
+    selected_extensions = sum(
+        value is not None
+        for value in (args.rg1_retry_from, args.rg2_assignment, args.rg3_assignment)
+    )
+    if selected_extensions > 1:
+        parser.error(
+            "--rg1-retry-from, --rg2-assignment, and --rg3-assignment are mutually exclusive"
+        )
+    if args.rg3_assignment is not None:
+        args.prior_checkpoint_roots = args.prior_checkpoint_roots or list(
+            DEFAULT_RG3_PRIOR_ROOTS
+        )
+        if args.bulk_output == DEFAULT_BULK:
+            args.bulk_output = DEFAULT_RG3_BULK
+        if args.receipt_output == DEFAULT_RECEIPTS:
+            args.receipt_output = DEFAULT_RG3_RECEIPTS
+        if args.assignment_table == DEFAULT_TABLE:
+            args.assignment_table = REPO / (
+                ".omx/research/ddm_rg2_skeleton_amplitude_productions_20260724T094305Z/"
+                "pf2_bucket_assignment_table.json"
+            )
+        if args.ms5_receipt == DEFAULT_MS5_RECEIPT:
+            args.ms5_receipt = REPO / (
+                ".omx/research/ddm_rg2_skeleton_amplitude_productions_20260724T094305Z/"
+                "ddm_ms6_receiver_support_measurement_receipt.json"
+            )
+        if args.cache_root is None:
+            args.cache_root = DEFAULT_RG2_CACHE
+    elif args.rg2_assignment is not None:
         args.prior_checkpoint_roots = args.prior_checkpoint_roots or list(DEFAULT_RG2_PRIOR_ROOTS)
         if args.bulk_output == DEFAULT_BULK:
             args.bulk_output = DEFAULT_RG2_BULK
