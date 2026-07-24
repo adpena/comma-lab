@@ -1,0 +1,42 @@
+{
+  "schema": "ddm_ms7_receiver_edges_three_clean_review.v1",
+  "captured_at_utc": "2026-07-24T18:08:20Z",
+  "lane_id": "lane_ddm_ms7_receiver_edges_20260724",
+  "run_id": "ddm_ms7_receiver_edges_and_25bucket_reach_20260724T172249Z",
+  "main_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "passes": [
+    {
+      "pass": 1,
+      "method": "Focused implementation review: Ruff, py_compile, and new custody tests.",
+      "result": "PASS",
+      "evidence": "All checks passed; 10 pytest tests passed."
+    },
+    {
+      "pass": 2,
+      "method": "Cross-surface review: RG1/RG3 receiver grammar, arithmetic coders, registered waterfill, MS7 tests, JSON parse, registry uniqueness, and git diff check.",
+      "result": "PASS",
+      "evidence": "45 pytest tests passed, 1 skipped; JSON and diff checks passed; exactly one dynamic_quantum_calibration_v1 registry row."
+    },
+    {
+      "pass": 3,
+      "method": "Independent artifact re-derivation and exact parse-back of every stored available coder frame, followed by immutable R0 rematerialization and lint/diff checks.",
+      "result": "PASS",
+      "evidence": "25 unique R0 identities re-derived below rate break-even; 7 available coder frames decoded to the same SHA-bound receiver object; all checks passed."
+    }
+  ],
+  "reviewed_sha256": {
+    "receipt": "5a9108f745316693d466336b16be8778037bf610833e46b3073a25252b610fe4",
+    "r0_table": "bfdc19a56206dfc920a9d0b25f38b1d59b73b18aaa5fb864ab354b4d00e310f6",
+    "dag_feed": "f63aeba0ac69773c579240bddd838ed31ba2164139eac03ab44f4377e1bb289d",
+    "core": "afc67a862a7e2c44a246296037e2d071ca168ac50d1c84f3120168608bbe2935",
+    "canonical_equation": "f9b56fa5f1e617f6fcaf7e185ed109a5e65180d1a254ddb7918bf5fa64b3d7ca",
+    "runner": "fcd2cbe8bb2f46eda55fc8d39db6d279af2aa87a91479f07b9619ae0af641561",
+    "core_tests": "fb6a3f01bb8e475f8bf4777a8da1f8b718c3391ef30c7413d8e2ad4adcd6358a",
+    "runner_tests": "7b1e3871e14c78627694b8d1110fe750dbe0a66b498f1d8e037f5b633c4982fe"
+  },
+  "verdict": "THREE_CLEAN_PASSES_COMPLETE_PENDING_MAIN_LANDING_REVIEW",
+  "score_claim": false,
+  "research_only": true
+}

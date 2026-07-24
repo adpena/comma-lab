@@ -1,0 +1,162 @@
+{
+  "schema": "ddm_ms7_receiver_edges_DAG_FEED.v1",
+  "run_id": "ddm_ms7_receiver_edges_and_25bucket_reach_20260724T172249Z",
+  "lane_id": "lane_ddm_ms7_receiver_edges_20260724",
+  "authority_sha256": "7545a6c6e9f1c5a072051b6b02eb256be7cfc9c08adbe1f6f55cd9b8e4772d3f",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "main_review_required": true,
+  "triality": {
+    "dsl": ".omx/research/configs/ddm_ms7_receiver_edges_20260724.json",
+    "dag": ".omx/research/ddm_ms7_receiver_edges_and_25bucket_reach_20260724T172249Z/ddm_ms7_receiver_edges_DAG_FEED.json",
+    "equations": [
+      "dynamic_quantum_calibration_v1",
+      "ddm_tolerance_capped_min_score_waterfill_v1"
+    ]
+  },
+  "nodes": [
+    {
+      "id": "MS4D_25_DIRECT_BLOCKS",
+      "kind": "measured_input",
+      "status": "SHA_BOUND_COMPLETE",
+      "artifact": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/seg_metric_direct_n600.json"
+    },
+    {
+      "id": "G3_PAIR_SCORE_MASS",
+      "kind": "measured_input",
+      "status": "SHA_BOUND_600_ROWS",
+      "artifact": "/Volumes/VertigoDataTier/pact/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_n600.jsonl"
+    },
+    {
+      "id": "DM4_GUARANTEED_REACH_PRICES",
+      "kind": "measured_input",
+      "status": "SHA_BOUND_25_ROWS",
+      "artifact": ".omx/research/ddm_dm4_targeted_realization_cures_20260724T142722Z/ddm_dm4_targeted_realization_cures_receipt.json"
+    },
+    {
+      "id": "R0_EXACT_REACH_TABLE",
+      "kind": "derived_gate",
+      "status": "COMPLETE_25_OF_25_UNREACHABLE_AND_IGNORED",
+      "artifact": ".omx/research/ddm_ms7_receiver_edges_and_25bucket_reach_20260724T172249Z/r0_25_bucket_reach_table.json"
+    },
+    {
+      "id": "R1_DYNAMIC_COORDINATE_EXECUTION",
+      "kind": "execution_gate",
+      "status": "NOT_RUN_EMPTY_R0_MASS_PAYING_SUBSET",
+      "null_policy": "Unmeasured R1 prices remain NULL."
+    },
+    {
+      "id": "PF3_PAIR523_PRICING_CONTROL",
+      "kind": "measured_control",
+      "status": "FIVE_EDGES_BOUND_NONADMITTED",
+      "artifact": ".omx/research/ddm_ms7_receiver_edges_and_25bucket_reach_20260724T172249Z/ddm_ms7_receiver_edges_receipt.json",
+      "scope": "One scorer-recursive class-birth coordinate; diagnostic pricing control only, not an R0 admission."
+    },
+    {
+      "id": "FIRST_REAL_SAME_OBJECT_CODER_RACE",
+      "kind": "measured_control",
+      "status": "COMPLETE_BROTLI_Q11_WINS",
+      "winner_counted_bytes": 129797,
+      "all_available_parseback_exact": true
+    },
+    {
+      "id": "DYNAMIC_QUANTUM_CALIBRATION",
+      "kind": "canonical_equation",
+      "status": "REGISTERED_WITH_ONE_REALIZED_ANCHOR",
+      "equation_id": "dynamic_quantum_calibration_v1"
+    },
+    {
+      "id": "FRONTIER_POINTER",
+      "kind": "governed_output",
+      "status": "UNCHANGED",
+      "value": "0.1910828242 [contest-CPU]"
+    }
+  ],
+  "edges": [
+    {
+      "from": "MS4D_25_DIRECT_BLOCKS",
+      "to": "R0_EXACT_REACH_TABLE",
+      "relation": "supplies exact pair-bucket identity, support count, and composite-R gain"
+    },
+    {
+      "from": "G3_PAIR_SCORE_MASS",
+      "to": "R0_EXACT_REACH_TABLE",
+      "relation": "supplies pair flip population and distortion-score mass"
+    },
+    {
+      "from": "DM4_GUARANTEED_REACH_PRICES",
+      "to": "R0_EXACT_REACH_TABLE",
+      "relation": "supplies the only measured guaranteed-reach byte price"
+    },
+    {
+      "from": "R0_EXACT_REACH_TABLE",
+      "to": "R1_DYNAMIC_COORDINATE_EXECUTION",
+      "relation": "authorizes execution only for mass-paying rows; the subset is empty"
+    },
+    {
+      "from": "MS4D_25_DIRECT_BLOCKS",
+      "to": "DYNAMIC_QUANTUM_CALIBRATION",
+      "relation": "supplies pair523 post-R rank-4 composite gain g_i"
+    },
+    {
+      "from": "DYNAMIC_QUANTUM_CALIBRATION",
+      "to": "PF3_PAIR523_PRICING_CONTROL",
+      "relation": "selects k*=1 inside the class-birth measured validity radius"
+    },
+    {
+      "from": "PF3_PAIR523_PRICING_CONTROL",
+      "to": "FIRST_REAL_SAME_OBJECT_CODER_RACE",
+      "relation": "supplies one exact receiver object and its typed L3 SKELETON payload owner"
+    },
+    {
+      "from": "FIRST_REAL_SAME_OBJECT_CODER_RACE",
+      "to": "FRONTIER_POINTER",
+      "relation": "registered waterfill rejects the control outside the Seg error cap; no pointer mutation"
+    }
+  ],
+  "unified_solver_hooks": {
+    "sensitivity_map": "R0 stores pair-bucket flip-weighted S leverage; PF3 stores exact composite-R gain and realized delta.",
+    "pareto_constraint": "A terminal row is executable only when its derived leverage pays 25*measured_reach_bytes/37545489.",
+    "bit_allocator": "The registered tolerance-capped waterfill consumes the winning exact coded byte count; the control is nonadmissible.",
+    "cathedral_autopilot": "All 25 R0 rows stop before construction; no launch or dispatch is authorized.",
+    "continual_learning": "dynamic_quantum_calibration_v1 is registered with the pair523 predicted-vs-realized anchor.",
+    "probe_disambiguator": "Dynamic per-coordinate calibration supersedes the fixed amplitude ladder; R2 and R3 remain unexecuted because R0 is empty."
+  },
+  "directive_consumption": [
+    {
+      "utc": "2026-07-24T14:45:16Z",
+      "status": "CONSUMED",
+      "application": "The PF3 control is an existing MS6 receiver-derived RG3 class-birth coordinate, uses the MS4D post-R rank-4 gain, and contains no generic disk or Euclidean aiming menu."
+    },
+    {
+      "utc": "2026-07-24T17:26:45Z",
+      "status": "CONSUMED",
+      "application": "Replaced the fixed R1 ladder with dynamic_quantum_calibration_v1; k*=1 was predicted and verified through uint8/R. Unmeasured R1 and R2 prices remain NULL."
+    },
+    {
+      "utc": "2026-07-24T17:39:13Z",
+      "status": "CONSUMED",
+      "application": "No artificial external-dependency cap was applied; deterministic decode and counted payload remained binding."
+    },
+    {
+      "utc": "2026-07-24T17:42:58Z",
+      "status": "CONSUMED",
+      "application": "Constriction with a counted adaptive context model and zstd with counted trained-dictionary bytes were raced against the same exact receiver object. The absent G4 spatial payload home remains NULL."
+    }
+  ],
+  "blockers": [
+    {
+      "id": "R0_EMPTY",
+      "scope": "CURRENT_MEASURED_GUARANTEED_REACH_MENU",
+      "effect": "No terminal row authorizes R1, R2, or R3 execution."
+    },
+    {
+      "id": "G4_SPATIAL_CONTEXT_HOME_ABSENT",
+      "scope": "FLAT_FULL_RECEIVER_ARCHIVE_OBJECT",
+      "effect": "The G4 free decoder-derived spatial-context price stays NULL; it was not imputed from a generic byte context."
+    }
+  ]
+}
