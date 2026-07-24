@@ -86510,6 +86510,47 @@
         "receiver-closed RGB and Pose proof",
         "exact archive CPU and CUDA replay"
       ]
+    },
+    {
+      "id": "lane_ddm_a2_strategy_verdict_provenance_20260724",
+      "name": "DDM A2 strategy verdict provenance audit",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Read-only audit; research_only=true; $0; no launches; pointer unmoved; MAIN review required."
     }
   ],
   "level_rules": {
@@ -86519,5 +86560,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T13:35:09Z"
+  "updated_at": "2026-07-24T15:08:14Z"
 }

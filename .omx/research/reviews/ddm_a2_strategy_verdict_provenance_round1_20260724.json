@@ -1,0 +1,34 @@
+{
+  "schema": "ddm_a2_strategy_verdict_provenance_round1.v1",
+  "date_utc": "2026-07-24",
+  "lane_id": "lane_ddm_a2_strategy_verdict_provenance_20260724",
+  "reviewed_artifacts": [
+    ".omx/research/codex_findings_ddm_a2_strategy_verdict_provenance_20260724T151509Z_codex.md",
+    ".omx/research/ddm_a2_strategy_verdict_provenance_DAG_FEED_20260724.md",
+    ".omx/research/ddm_a2_strategy_verdict_provenance_canonical_equations_20260724.md"
+  ],
+  "round_1_findings_fixed": [
+    "plane-family closure class corrected from exact-object to naive construction while preserving the narrow exact formulation",
+    "PT1 mixed-provenance headline decomposed so the full fixed-palette candidate is not called derivation-clean",
+    "material receipt values labeled MEASURED and arithmetic-only budget values labeled DERIVED"
+  ],
+  "clean_passes": [
+    {
+      "pass": 1,
+      "focus": "all asserted receipt SHA-256 and byte counts, JSON parse, git diff whitespace",
+      "result": "CLEAN"
+    },
+    {
+      "pass": 2,
+      "focus": "A2-01 through A2-19 coverage, exactly one allowed class and status per row, naive negative/price scope tokens",
+      "result": "CLEAN"
+    },
+    {
+      "pass": 3,
+      "focus": "triality, directive consumption, SUSPEND routing, pointer immobility, MAIN review and research-only bounds",
+      "result": "CLEAN"
+    }
+  ],
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "main_review_required": true
+}
