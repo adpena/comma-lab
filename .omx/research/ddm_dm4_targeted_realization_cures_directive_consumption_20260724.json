@@ -24,9 +24,17 @@
       "source": "operator",
       "status": "CONSUMED",
       "utc": "2026-07-24T14:45:16Z"
+    },
+    {
+      "application": "Published the same-parent scorer-recursive per-column pricing curve as the named resolver. A2-02 is resolved only as a re-scoped naive-menu provenance item; family wording remains forbidden. A2-13's missing pricing requirement is resolved, but column-generation closure remains suspended because rows 1/6/15/24 retain naive global controls and pair 55 retains a full-target composition fallback.",
+      "directive_sha256_canonical_json": "2109effd3ac326b50125425276adae85716a5fa28b5f43768888596af05ab1fb",
+      "resolution_memo": ".omx/research/codex_findings_ddm_dm4_a2_provenance_resolution_20260724T152540Z_codex.md",
+      "source": "MAIN per-arm inbox",
+      "status": "CONSUMED",
+      "utc": "2026-07-24T15:25:40Z"
     }
   ],
-  "cursor_utc": "2026-07-24T14:45:16Z",
+  "cursor_utc": "2026-07-24T15:25:40Z",
   "delegation_checkpoint_key": "codex_delegate:ddm_dm4_targeted_realization_cures:20260724T142722Z",
   "duplicate_delivery_deduplicated_by": [
     "utc",

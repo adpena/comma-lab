@@ -173,10 +173,13 @@ negative.
 | 2026-07-19T19:42:07Z | CONSUMED | exact coder bytes and measured rate dual; no blanket admission |
 | 2026-07-19T19:48:01Z | CONSUMED | Fisher-margin/corrected-J/curvelet-shearlet/xi6 construction; no Fourier |
 | 2026-07-24T14:45:16Z | CONSUMED | support rebuilt from exact resize adjoint, ERF, and stem lattice before measurement; old disk/global results labeled naive controls |
+| 2026-07-24T15:25:40Z | CONSUMED | same-parent scorer-recursive price curve resolves A2-02 only as re-scoped and resolves A2-13 pricing custody while keeping closure suspended |
 
 The last directive arrived in both per-arm and broadcast inboxes with identical
 UTC/content hash and was deduplicated. The earlier checkpoint claiming an
-empty inbox is explicitly superseded by corrective checkpoint step 4.
+empty inbox is explicitly superseded by corrective checkpoint step 4. The
+later MAIN-only A2 directive is closed in
+`codex_findings_ddm_dm4_a2_provenance_resolution_20260724T152540Z_codex.md`.
 
 ## STORES CONSULTED
 
