@@ -1,0 +1,382 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Summarize the SHA-bound DDM MS6 receiver-support sweep.
+
+This is a read-only consumer of the landed v2 probe checkpoints and the MS5
+assignment-table schema.  It does not infer joins: G3 coverage is proven only
+when every PF2 bucket containing a preregistered hard pair has a measured
+assignment whose exact joined pair IDs contain that pair.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import os
+import statistics
+import sys
+from collections import Counter
+from collections.abc import Mapping, Sequence
+from pathlib import Path
+from typing import Any, Final
+
+REPO = Path(__file__).resolve().parents[1]
+for _path in (REPO / "src", REPO):
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
+
+from tac.optimization.ddm_pf2_bucket_assignment import (  # noqa: E402
+    canonical_bytes,
+    canonical_sha256,
+    validate_assignment_table,
+)
+
+SCHEMA: Final = "ddm_ms6_receiver_support_resume_summary.v1"
+CHECKPOINT_SCHEMA: Final = "ddm_ms6_receiver_support_probe_checkpoint.v2"
+TABLE_SCHEMA: Final = "ddm_ms5_pf2_bucket_assignment_table.v1"
+G3_SCHEMA: Final = "ddm_g3_hard_pair_registry.v1"
+EXPECTED_BASE_SHA256: Final = "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9"
+EXPECTED_PF2_SHA256: Final = "85084f7bd3a03dbd1b9f04fe6a9b84df4948a6caf64620beef42da8924345f73"
+EXPECTED_G3_SHA256: Final = "0c9ce6d0ce2b2c0830400f096438355242527d40f682fc1b201f67d8d951a4e4"
+DIRECTIONS: Final = ("NEGATIVE_ONE_QUANTUM", "POSITIVE_ONE_QUANTUM")
+DEFAULT_CHECKPOINTS = (
+    Path("/Volumes/VertigoDataTier/pact")
+    / "ddm_ms6_receiver_support_measurement_20260724T052034Z"
+    / "probe_checkpoints_v2"
+)
+DEFAULT_TABLE = REPO / (
+    ".omx/research/ddm_ms6_receiver_support_measurement_20260724T052034Z/"
+    "pf2_bucket_assignment_table.json"
+)
+DEFAULT_G3 = REPO / (
+    ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/"
+    "hard_pair_registry.json"
+)
+DEFAULT_OUTPUT = REPO / (
+    ".omx/research/ddm_ms6_receiver_support_measurement_20260724T052034Z/"
+    "ddm_ms6_receiver_support_resume_summary.json"
+)
+
+
+class SummaryError(RuntimeError):
+    """The summary inputs do not satisfy the landed custody contract."""
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(8 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _read_object(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise SummaryError(f"expected JSON object: {path}")
+    return value
+
+
+def _publish(path: Path, value: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    payload = canonical_bytes(value)
+    with temporary.open("xb") as handle:
+        handle.write(payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def _probe_metrics(row: Mapping[str, Any]) -> dict[str, int]:
+    raster = row.get("raster_support")
+    scorer = row.get("scorer")
+    hits = row.get("bucket_hits")
+    if not isinstance(raster, Mapping) or not isinstance(scorer, Mapping) or not isinstance(hits, list):
+        raise SummaryError("checkpoint support/scorer/bucket fields are malformed")
+    return {
+        "raster_pair_count": int(raster.get("pair_count", 0)),
+        "camera_value_count": int(raster.get("camera_value_count", 0)),
+        "composite_r_cell_count": int(raster.get("composite_r_cell_count", 0)),
+        "scorer_pair_count": int(scorer.get("forward_pair_count", 0)),
+        "bucket_hit_count": len(hits),
+        "perturbed_event_count": sum(int(hit["event_count"]) for hit in hits),
+    }
+
+
+def _signed_asymmetry(negative: int, positive: int) -> float:
+    denominator = negative + positive
+    return 0.0 if denominator == 0 else (positive - negative) / denominator
+
+
+def _distribution(values: Sequence[float]) -> dict[str, Any]:
+    if not values:
+        return {"count": 0}
+    ordered = sorted(float(value) for value in values)
+
+    def quantile(fraction: float) -> float:
+        position = fraction * (len(ordered) - 1)
+        lower = math.floor(position)
+        upper = math.ceil(position)
+        if lower == upper:
+            return ordered[lower]
+        weight = position - lower
+        return ordered[lower] * (1.0 - weight) + ordered[upper] * weight
+
+    return {
+        "count": len(ordered),
+        "minimum": ordered[0],
+        "p25": quantile(0.25),
+        "median": statistics.median(ordered),
+        "p75": quantile(0.75),
+        "maximum": ordered[-1],
+        "mean": statistics.fmean(ordered),
+        "negative_dominant_count": sum(value < 0.0 for value in ordered),
+        "exact_tie_count": sum(value == 0.0 for value in ordered),
+        "positive_dominant_count": sum(value > 0.0 for value in ordered),
+    }
+
+
+def _load_checkpoints(root: Path) -> tuple[dict[tuple[str, str], dict[str, Any]], dict[str, Any]]:
+    if not root.is_dir():
+        raise SummaryError(f"checkpoint root is absent: {root}")
+    result: dict[tuple[str, str], dict[str, Any]] = {}
+    digest_rows: list[str] = []
+    status_counts: Counter[str] = Counter()
+    for path in sorted(root.glob("*.json")):
+        row = _read_object(path)
+        if (
+            row.get("schema") != CHECKPOINT_SCHEMA
+            or row.get("base_archive_sha256") != EXPECTED_BASE_SHA256
+            or row.get("threads") != 4
+            or row.get("seed") != 1234
+            or row.get("deterministic_algorithms") is not True
+            or row.get("score_claim") is not False
+        ):
+            raise SummaryError(f"checkpoint custody differs: {path}")
+        key = (str(row["receiver_actuator_id"]), str(row["direction_id"]))
+        if key in result or key[1] not in DIRECTIONS:
+            raise SummaryError(f"duplicate or malformed checkpoint key: {key}")
+        artifact = row.get("event_artifact")
+        if artifact is not None:
+            artifact_path = Path(str(artifact["path"]))
+            if _sha256(artifact_path) != artifact["sha256"]:
+                raise SummaryError(f"event artifact SHA differs: {artifact_path}")
+        checkpoint_sha = _sha256(path)
+        result[key] = {**row, "_checkpoint_path": str(path), "_checkpoint_sha256": checkpoint_sha}
+        digest_rows.append(checkpoint_sha)
+        status_counts[str(row["status"])] += 1
+    return result, {
+        "completed_probe_count": len(result),
+        "required_probe_count": 748,
+        "status_counts": dict(sorted(status_counts.items())),
+        "checkpoint_digest_chain_sha256": hashlib.sha256(
+            "".join(digest_rows).encode("ascii")
+        ).hexdigest(),
+    }
+
+
+def _g3_coverage(
+    table_rows: Sequence[Mapping[str, Any]],
+    top24: Sequence[int],
+) -> dict[str, Any]:
+    pair_rows = []
+    missing_blocks = []
+    for pair_id in top24:
+        required = sorted(
+            str(row["bucket_id"])
+            for row in table_rows
+            if pair_id in row["pf2_membership_pair_ids"]
+        )
+        joined = sorted(
+            str(row["bucket_id"])
+            for row in table_rows
+            if pair_id in row["pf2_membership_pair_ids"] and pair_id in row["pair_ids"]
+        )
+        missing = sorted(set(required) - set(joined))
+        pair_rows.append(
+            {
+                "pair_id": pair_id,
+                "required_bucket_count": len(required),
+                "joined_bucket_count": len(joined),
+                "missing_bucket_ids": missing,
+            }
+        )
+        missing_blocks.extend(
+            {"pair_id": pair_id, "bucket_id": bucket_id} for bucket_id in missing
+        )
+    return {
+        "definition": (
+            "A G3 hard block is joined only when the exact hard pair belongs to "
+            "the PF2 bucket and also appears in that bucket row's measured joined pair_ids."
+        ),
+        "top24_pair_count": len(top24),
+        "fully_joined_pair_count": sum(not row["missing_bucket_ids"] for row in pair_rows),
+        "missing_block_count": len(missing_blocks),
+        "coverage_proven": not missing_blocks,
+        "pairs": pair_rows,
+        "missing_blocks": missing_blocks,
+    }
+
+
+def build_summary(
+    *,
+    checkpoint_root: Path,
+    assignment_table_path: Path,
+    g3_path: Path,
+) -> dict[str, Any]:
+    table = _read_object(assignment_table_path)
+    if table.get("schema") != TABLE_SCHEMA:
+        raise SummaryError("assignment-table schema differs")
+    validate_assignment_table(table, expected_pf2_sha256=EXPECTED_PF2_SHA256)
+    g3_sha = _sha256(g3_path)
+    g3 = _read_object(g3_path)
+    if g3_sha != EXPECTED_G3_SHA256 or g3.get("schema") != G3_SCHEMA:
+        raise SummaryError("G3 registry custody differs")
+    top24 = g3.get("top24")
+    if not isinstance(top24, list) or len(top24) != 24:
+        raise SummaryError("G3 top24 registry is malformed")
+
+    checkpoints, sweep = _load_checkpoints(checkpoint_root)
+    table_probe_sha = {
+        (str(row["receiver_actuator_id"]), str(row["direction_id"])): str(row["checkpoint_sha256"])
+        for row in table["probe_results"]
+    }
+    checkpoint_sha = {key: str(row["_checkpoint_sha256"]) for key, row in checkpoints.items()}
+    if table_probe_sha != checkpoint_sha:
+        raise SummaryError("assignment table does not bind the complete current checkpoint set")
+
+    actuator_ids = list(table["foreign_key_vocabulary"]["receiver_actuator_stable_ids"])
+    actuator_rows = []
+    asymmetry_values: dict[str, list[float]] = {}
+    status_pair_counts: Counter[str] = Counter()
+    for actuator_id in actuator_ids:
+        directions = {
+            direction: checkpoints.get((actuator_id, direction))
+            for direction in DIRECTIONS
+        }
+        metrics = {
+            direction: (_probe_metrics(row) if row is not None else None)
+            for direction, row in directions.items()
+        }
+        statuses = {
+            direction: (str(row["status"]) if row is not None else "NOT_MEASURED")
+            for direction, row in directions.items()
+        }
+        status_pair_counts[f"{statuses[DIRECTIONS[0]]}|{statuses[DIRECTIONS[1]]}"] += 1
+        paired_measured = all(status.startswith("MEASURED_") for status in statuses.values())
+        signed = {}
+        if paired_measured:
+            negative = metrics[DIRECTIONS[0]]
+            positive = metrics[DIRECTIONS[1]]
+            assert negative is not None and positive is not None
+            for metric in negative:
+                value = _signed_asymmetry(negative[metric], positive[metric])
+                signed[metric] = value
+                asymmetry_values.setdefault(metric, []).append(value)
+        actuator_rows.append(
+            {
+                "receiver_actuator_id": actuator_id,
+                "statuses": statuses,
+                "support_by_direction": metrics,
+                "signed_asymmetry_positive_minus_negative_over_sum": signed,
+            }
+        )
+
+    table_rows = table["rows"]
+    assigned_bucket_rows = []
+    for row in table_rows:
+        assignments = row["measured_probe_assignments"]
+        if assignments:
+            assigned_bucket_rows.append(
+                {
+                    "bucket_id": row["bucket_id"],
+                    "assignment_status": row["assignment_status"],
+                    "assignment_row_count": len(assignments),
+                    "unique_actuator_count": len(row["receiver_actuator_ids"]),
+                    "direction_count": len(row["direction_ids"]),
+                    "joined_pair_count": len(row["pair_ids"]),
+                    "perturbed_event_count": int(row["perturbed_event_count"]),
+                }
+            )
+
+    summary: dict[str, Any] = {
+        "schema": SCHEMA,
+        "input_custody": {
+            "checkpoint_root": str(checkpoint_root.resolve()),
+            "checkpoint_digest_chain_sha256": sweep["checkpoint_digest_chain_sha256"],
+            "assignment_table": {
+                "path": str(assignment_table_path.resolve()),
+                "sha256": _sha256(assignment_table_path),
+                "content_sha256": table["table_content_sha256"],
+            },
+            "g3_registry": {
+                "path": str(g3_path.resolve()),
+                "sha256": g3_sha,
+            },
+            "base_archive_sha256": EXPECTED_BASE_SHA256,
+            "pf2_receipt_sha256": EXPECTED_PF2_SHA256,
+        },
+        "probe_sweep": sweep,
+        "assignment_coverage": table["coverage"],
+        "per_actuator_support": actuator_rows,
+        "per_bucket_join_counts": {
+            "assigned_bucket_count": len(assigned_bucket_rows),
+            "unassigned_bucket_count": len(table_rows) - len(assigned_bucket_rows),
+            "assigned_buckets": assigned_bucket_rows,
+        },
+        "sign_asymmetry": {
+            "definition": "(positive_support - negative_support) / (positive_support + negative_support)",
+            "paired_status_counts": dict(sorted(status_pair_counts.items())),
+            "metric_distributions": {
+                metric: _distribution(values)
+                for metric, values in sorted(asymmetry_values.items())
+            },
+        },
+        "g3_top24_coverage": _g3_coverage(table_rows, top24),
+        "producer_rerun_eligible": False,
+        "producer_rerun_reason": "set after the G3 coverage proof below",
+        "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+        "score_claim": False,
+        "pointer": "0.1910828242 [contest-CPU]",
+        "pointer_moved": False,
+        "research_only": True,
+        "main_landing_review_required": True,
+        "verdict_scope": "INSTANCE_V19C_ENDPOINT_ONE_QUANTUM_SWEEP",
+    }
+    eligible = bool(summary["g3_top24_coverage"]["coverage_proven"])
+    summary["producer_rerun_eligible"] = eligible
+    summary["producer_rerun_reason"] = (
+        "G3 top24 exact pair-by-bucket assignment coverage proven."
+        if eligible
+        else "MS4 held: exact G3 top24 pair-by-bucket assignment blocks remain missing."
+    )
+    summary["summary_content_sha256"] = canonical_sha256(summary)
+    return summary
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--checkpoint-root", type=Path, default=DEFAULT_CHECKPOINTS)
+    parser.add_argument("--assignment-table", type=Path, default=DEFAULT_TABLE)
+    parser.add_argument("--g3", type=Path, default=DEFAULT_G3)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    summary = build_summary(
+        checkpoint_root=args.checkpoint_root,
+        assignment_table_path=args.assignment_table,
+        g3_path=args.g3,
+    )
+    _publish(args.output, summary)
+    print(args.output)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
