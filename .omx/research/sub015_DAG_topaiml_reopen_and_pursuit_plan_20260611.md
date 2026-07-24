@@ -24027,3 +24027,23 @@ note this IS the architecture we converged to; the law adds the ORDERING):
    (organ SENSE currency).
 Counted remainder = MAP + ξ-CURVE + EVENT STREAM; everything else (predictor, transport, renderer,
 context models) free in inflate.py per the operator's standing reminder.
+
+### FEED-603-pc1-pose-stream-ADMITTED (2026-07-24, reviewed_committed 1e2e7f8c3b)
+The IC2 blocker COMPACT_CODE_TO_PHOTOMETRY_POSE_INVERSE_WITH_W_SEG_PARENT is now CLOSED AT THE
+ADMISSION LAYER: typed counted pose stream q_ξ with receiver owner Φ — 40-byte zero-home packet ·
+32-knot smooth twist curve · 4 luma-phase residual controls · 320 stable #366 descent coordinates ·
++734B exact composition on either W parent · byte-identical inactive · #417 single-owner ·
+receiver-effectiveness PROVEN (nonzero packet flips 410,468 composite-R cells) · parse-back exact ·
+resume replay. Compositions materialized: W_seg+PC1 138,765B (123d1988…) · W_joint+PC1 139,535B
+(25e4d7b5…). DESCRIBE-LINE DIRECTIVE CONSUMED MID-FLIGHT: first-pass 5,014B/600-row design retained
+only as [naive-coordinate-artifact upper bound] (ΔS +2.156/+16.639 ≈ identical to the 40B design —
+proving the extra 4,974B bought nothing); replacement stores NO invented pose solution, exposes the
+exact parent-derived solved-plane YUV6 target at zero target bytes. HONEST INSTANCE NEGATIVE
+[macOS-CPU frozen-scorer advisory, n600 batch32]: zero-home NO-DESCENT instance ΔS +2.1700709 (W_seg)
+/ +16.6523456 (W_joint) — verified by recomputation; init values move pose AWAY (146.4→163.0) as the
+photometric-wall fence predicted; verdict_scope: INSTANCE:ZERO_HOME_NO_DESCENT — smooth-ξ-stream
+FORMULATION OPEN, membership_claim=false (no descent ran). Pre-registered optimal-form queue:
+(1) descend 32 ξ-knots vs solved-plane YUV6 target + ms4d quadratic → (2) open phases on ξ-saturation
+→ (3) waterfill counted coords to break-even → (4) n600 → contest axes only on advisory-negative.
+CONSUMER: j8f/#366 — the pose finish now has an ADMITTED 320-coordinate parameter map with somewhere
+to descend to. Pointer 0.1910828242 [contest-CPU] UNMOVED.
