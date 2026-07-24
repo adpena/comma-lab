@@ -23,13 +23,13 @@ from tac.optimization.ddm_lambda_continuation_frontier import (
 from tac.provenance.builders import build_provenance_for_research_sidecar
 
 REPO = Path(__file__).resolve().parents[3]
-UTC = "2026-07-24T01:55:00Z"
+UTC = "2026-07-24T02:36:00Z"
 EQUATION_ID = "ddm_restricted_realized_lambda_continuation_v1"
 RECEIPT = (
     ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/"
-    "ddm_rd1_lambda_continuation_frontier_receipt_v2.json"
+    "ddm_rd1_lambda_continuation_frontier_receipt_v5.json"
 )
-RECEIPT_SHA256 = "cdfa9a400d9633ea7f8f698dee6d55c65ac478ddcfed3ec01e6d2e6cefe6bbae"
+RECEIPT_SHA256 = "7449b4fedcbae41baf535018602435f9e36e6f09dd0dcd4d5f8ad4d022cbbce2"
 
 
 def restricted_realized_lambda_argmin(
@@ -98,7 +98,7 @@ register_evaluator(
 def _receipt(path: Path | None = None) -> tuple[dict[str, Any], str]:
     source = path or REPO / RECEIPT
     payload = json.loads(source.read_text(encoding="utf-8"))
-    if payload.get("schema") != "ddm_rd1_lambda_continuation_frontier_receipt.v1":
+    if payload.get("schema") != "ddm_rd1_lambda_continuation_frontier_receipt.v4":
         raise ValueError("RD1 receipt schema differs")
     if (
         payload.get("evidence_axis") != EVIDENCE_AXIS
@@ -139,9 +139,13 @@ def build_ddm_restricted_realized_lambda_continuation_v1(
             "lambda_count": len(payload["continuation"]),
             "lambda_ladder": payload["lambda_ladder"],
             "typed_config_sha256": payload["typed_config_sha256"],
+            "typed_dimension_config_sha256": payload["typed_dimension_config_sha256"],
             "pair_count": 600,
             "threads": 4,
             "donor_conditioned": False,
+            "lambda_points_reused_without_restart": payload[
+                "lambda_points_reused_without_restart"
+            ],
         },
         predicted_output={
             "law": "x*(lambda)=argmin_x R_counted(x)+lambda*(100*d_seg(x)+sqrt(10*d_pose(x)))",
@@ -151,7 +155,30 @@ def build_ddm_restricted_realized_lambda_continuation_v1(
         empirical_output={
             "selected_candidate_ids": [row["selected_candidate_id"] for row in payload["continuation"]],
             "supported_hull_candidate_ids": [row["candidate_id"] for row in payload["supported_hull"]],
-            "duals": payload["duals"],
+            "aggregate_scalarization_controls": payload[
+                "aggregate_scalarization_controls"
+            ],
+            "dimension_dual_axes": payload["dimension_dual_axes"],
+            "dimension_dual_edge_summaries": payload[
+                "dimension_dual_edge_summaries"
+            ],
+            "dimension_dual_bucket_count": len(payload["duals"]),
+            "dimension_dual_actionable_bucket_count": sum(
+                row["actionable_for_train_decision"] is True
+                for row in payload["duals"]
+            ),
+            "effective_quantum_priced_bucket_count": payload[
+                "effective_quantum_tolerance"
+            ]["priced_bucket_count"],
+            "train_decision_SOLVE_table": payload[
+                "train_decision_SOLVE_table"
+            ],
+            "metric_active_continuation_geometry": payload[
+                "metric_active_continuation_geometry"
+            ],
+            "second_order_metric_geometry_addendum": payload[
+                "second_order_metric_geometry_addendum"
+            ],
             "knee_candidate_id": payload["knee"]["candidate_id"],
             "R6_CANDIDATE": payload["knee"]["R6_CANDIDATE"],
             "verdict": payload["verdict"],
@@ -162,7 +189,9 @@ def build_ddm_restricted_realized_lambda_continuation_v1(
         measurement_method=(
             "fresh four-thread frozen CPU scorer replay of the exact C1 receiver "
             "output; immutable reaggregation of Menu1 n600 batches; SHA/ZIP-byte-home "
-            "verification of 104 V19C accepted archives; adjacent finite-hull continuation"
+            "verification of 104 V19C accepted archives; adjacent finite-hull "
+            "continuation; postsolve dimension typing reused every completed lambda "
+            "point and failed closed on missing G4/rate-home and uint8-quantum custody"
         ),
         provenance=provenance,
         empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
@@ -198,12 +227,40 @@ def build_ddm_restricted_realized_lambda_continuation_v1(
             "donor_conditioned": False,
             "neighbor_only_corrector": True,
             "full_rank_finite_domain_check": True,
+            "dual_axes": payload["dimension_dual_axes"],
+            "aggregate_lambda_policy": (
+                "diagnostic scalarization control only; not a train-decision price"
+            ),
+            "typed_train_decision_prices_actionable": False,
+            "uniform_tolerance_allowed": False,
+            "discrete_neighbor_geometry": "ordered graph; no state-space norm",
+            "continuous_metric_geometry_actionable": False,
+            "continuous_metric_geometry_required": [
+                "margin-Fisher plus rank-4 SegNet head",
+                "exact low-rank PoseNet output quadratic",
+                "Bregman divergence binding",
+                "Euclidean-control versus Fisher dual-metric readback",
+            ],
+            "identity_L2_policy": "labeled control only",
+            "quadratic_region_policy": "second-order from step one",
+            "scorer_coordinate_policy": (
+                "rank-4 class-pair hyperplanes and feature channels"
+            ),
+            "geometry_ladder_policy": (
+                "best measured geometry first; simpler forms labeled controls"
+            ),
             "excluded": [
                 "global uint8-lattice optimality",
                 "contest score or frontier mutation",
                 "Menu1 contest archive closure",
                 "cross-axis equality inference",
                 "additive combination with solver_member_selection",
+                "pooled lambda as a per-dimension exchange rate",
+                "uniform serialized-coordinate tolerance",
+                "identity-L2 continuous continuation verdict",
+                "first-order-naive solve where quadratic structure is measured",
+                "parameter-coordinate proposal ranking",
+                "simple-first geometry ladder",
             ],
             "verdict_scope": payload["verdict_scope"],
             "score_claim": False,
@@ -221,7 +278,7 @@ def build_ddm_restricted_realized_lambda_continuation_v1(
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "tools.measure_ddm_rd1_lambda_continuation_frontier",
-            "DDM train-decision SOLVE column",
+            "DDM train-decision SOLVE column (blocked until typed custody closes)",
         ),
         canonical_producers=(
             "tools/measure_ddm_rd1_lambda_continuation_frontier.py",
@@ -252,8 +309,10 @@ def populate_ddm_restricted_realized_lambda_continuation_v1(
         subagent_id=subagent_id,
         notes=(
             "RD1 restricted n600 lambda continuation; four-thread local advisory; "
-            "stable v2 receipt excludes volatile exact free-space observations; "
-            "V19C current unsupported; knee outside R6; pointer unmoved; MAIN review required"
+            "v5 reuses stable lambda points, types dual buckets, and records "
+            "metric-active second-order scorer-coordinate geometry; prices and "
+            "continuous moves fail closed on missing custody; simpler geometry "
+            "is control-only; pointer unmoved; MAIN review required"
         ),
     )
     return equation

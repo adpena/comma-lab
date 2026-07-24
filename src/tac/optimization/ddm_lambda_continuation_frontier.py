@@ -37,6 +37,9 @@ RECEIVER_CLOSURES = frozenset(
         "measurement_harness_receiver_closed",
     }
 )
+SEMANTIC_STRATA = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
+SCORER_VISIBILITIES = ("ker(A)-invisible", "seg-visible", "pose-visible")
+G4_TEMPORAL_CLASSES = ("STATIC_IN_IMAGE", "STATIC_IN_XI_PROXY", "TRANSIENT")
 
 
 class LambdaContinuationError(ValueError):
@@ -488,6 +491,353 @@ def discrete_dual_rows(
     return tuple(rows)
 
 
+def effective_quantum_D(
+    *,
+    uint8_step: float,
+    scorer_sensitivity_D_per_uint8_step: float,
+) -> float:
+    """Return the distortion quantum for one typed receiver dimension.
+
+    The units are explicit so a serialized-coordinate step cannot silently
+    substitute for a realized uint8 receiver step.
+    """
+
+    step = float(uint8_step)
+    sensitivity = float(scorer_sensitivity_D_per_uint8_step)
+    if (
+        not math.isfinite(step)
+        or not math.isfinite(sensitivity)
+        or step <= 0.0
+        or sensitivity < 0.0
+    ):
+        raise LambdaContinuationError("effective-quantum inputs must be finite with step > 0")
+    return step * sensitivity
+
+
+def typed_dimension_dual_report(
+    hull: Sequence[MeasuredDescription],
+) -> dict[str, Any]:
+    """Type every adjacent dual by stratum, scorer visibility, and G4 class.
+
+    Existing endpoints identify aggregate and (when error counts are present)
+    per-stratum distortion contributions.  They do not identify how a shared
+    byte increment or candidate delta partitions across G4 temporal classes.
+    The returned cube therefore keeps those cells explicit and blocked.  The
+    pooled secant survives only as a non-additive diagnostic control.
+    """
+
+    if len(hull) < 2:
+        raise LambdaContinuationError("typed dimension duals require two or more hull states")
+    component_evidence: list[dict[str, Any]] = []
+    bucket_rows: list[dict[str, Any]] = []
+    edge_summaries: list[dict[str, Any]] = []
+    for edge_index, (left, right) in enumerate(pairwise(hull), start=1):
+        delta_bytes = right.counted_bytes - left.counted_bytes
+        if delta_bytes <= 0:
+            raise LambdaContinuationError("typed dual edges require increasing counted bytes")
+        edge_components: list[dict[str, Any]] = []
+        if left.per_class is not None and right.per_class is not None:
+            if set(left.per_class) != set(SEMANTIC_STRATA) or set(right.per_class) != set(
+                SEMANTIC_STRATA
+            ):
+                raise LambdaContinuationError("per-class dual custody must cover the canonical five strata")
+            left_sites = {name: int(left.per_class[name]["sites"]) for name in SEMANTIC_STRATA}
+            right_sites = {name: int(right.per_class[name]["sites"]) for name in SEMANTIC_STRATA}
+            if left_sites != right_sites or any(value <= 0 for value in left_sites.values()):
+                raise LambdaContinuationError("per-class site custody differs across a dual edge")
+            total_sites = sum(left_sites.values())
+            for stratum in SEMANTIC_STRATA:
+                left_errors = int(left.per_class[stratum]["errors"])
+                right_errors = int(right.per_class[stratum]["errors"])
+                delta_errors = right_errors - left_errors
+                delta_global_d_seg = delta_errors / total_sites
+                edge_components.append(
+                    {
+                        "stratum": stratum,
+                        "scorer_visibility": "seg-visible",
+                        "g4_temporal_class": "UNRESOLVED_G4_MIXTURE",
+                        "delta_errors": delta_errors,
+                        "sites_in_stratum": left_sites[stratum],
+                        "global_seg_sites": total_sites,
+                        "delta_d_seg_global_contribution": delta_global_d_seg,
+                        "delta_D_dimension": 100.0 * delta_global_d_seg,
+                        "epistemic_status": "MEASURED_ENDPOINT_ERRORS_DERIVED_GLOBAL_CONTRIBUTION",
+                    }
+                )
+        else:
+            edge_components.append(
+                {
+                    "stratum": "ALL_SEMANTIC_STRATA_UNRESOLVED",
+                    "scorer_visibility": "seg-visible",
+                    "g4_temporal_class": "UNRESOLVED_G4_MIXTURE",
+                    "delta_errors": None,
+                    "sites_in_stratum": None,
+                    "global_seg_sites": None,
+                    "delta_d_seg_global_contribution": right.d_seg - left.d_seg,
+                    "delta_D_dimension": 100.0 * (right.d_seg - left.d_seg),
+                    "epistemic_status": "MEASURED_AGGREGATE_SEG_ENDPOINT_STRATUM_SPLIT_ABSENT",
+                }
+            )
+        pose_delta_D = math.sqrt(10.0 * right.d_pose) - math.sqrt(10.0 * left.d_pose)
+        edge_components.append(
+            {
+                "stratum": "POSE6_GLOBAL",
+                "scorer_visibility": "pose-visible",
+                "g4_temporal_class": "UNRESOLVED_G4_MIXTURE",
+                "delta_d_pose": right.d_pose - left.d_pose,
+                "delta_D_dimension": pose_delta_D,
+                "epistemic_status": "DERIVED_FROM_TWO_MEASURED_POSE_ENDPOINTS",
+            }
+        )
+        for component in edge_components:
+            delta_dimension = float(component["delta_D_dimension"])
+            component["dual_index"] = edge_index
+            component["left_candidate_id"] = left.candidate_id
+            component["right_candidate_id"] = right.candidate_id
+            component["shared_edge_delta_counted_bytes"] = delta_bytes
+            component["shared_cost_nonadditive"] = True
+            component["conditional_lambda_bytes_per_D_dimension"] = (
+                delta_bytes / -delta_dimension if delta_dimension < 0.0 else None
+            )
+            component["binding_direction"] = (
+                "improves"
+                if delta_dimension < 0.0
+                else "worsens"
+                if delta_dimension > 0.0
+                else "flat"
+            )
+            component["actionable_for_train_decision"] = False
+            component["blocker"] = "G4_TEMPORAL_CLASS_AND_SHARED_BYTE_HOME_UNRESOLVED"
+            component["score_claim"] = False
+            component_evidence.append(component)
+        component_sum = sum(float(row["delta_D_dimension"]) for row in edge_components)
+        aggregate_delta = right.distortion - left.distortion
+        if not math.isclose(component_sum, aggregate_delta, rel_tol=0.0, abs_tol=1e-12):
+            raise LambdaContinuationError("dimension contributions do not reconstruct aggregate delta D")
+        for stratum in (*SEMANTIC_STRATA, "POSE6_GLOBAL"):
+            for scorer_visibility in SCORER_VISIBILITIES:
+                for temporal_class in G4_TEMPORAL_CLASSES:
+                    if scorer_visibility == "ker(A)-invisible":
+                        status = "STRUCTURAL_ZERO_SCORER_EFFECT_NO_TYPED_RATE_HOME"
+                        delta_D: float | None = 0.0
+                    elif stratum == "POSE6_GLOBAL" and scorer_visibility == "pose-visible":
+                        status = "BLOCKED_G4_TO_POSE6_JOINT_ASSIGNMENT_ABSENT"
+                        delta_D = None
+                    elif stratum in SEMANTIC_STRATA and scorer_visibility == "seg-visible":
+                        status = "BLOCKED_CANDIDATE_DELTA_TO_G4_JOINT_ASSIGNMENT_ABSENT"
+                        delta_D = None
+                    else:
+                        status = "NOT_APPLICABLE_TYPED_VISIBILITY_COMBINATION"
+                        delta_D = None
+                    bucket_rows.append(
+                        {
+                            "dual_index": edge_index,
+                            "left_candidate_id": left.candidate_id,
+                            "right_candidate_id": right.candidate_id,
+                            "stratum": stratum,
+                            "scorer_visibility": scorer_visibility,
+                            "g4_temporal_class": temporal_class,
+                            "delta_D_dimension": delta_D,
+                            "delta_counted_bytes_dimension": None,
+                            "lambda_bytes_per_D_dimension": None,
+                            "effective_quantum_D": (
+                                0.0 if scorer_visibility == "ker(A)-invisible" else None
+                            ),
+                            "status": status,
+                            "actionable_for_train_decision": False,
+                            "score_claim": False,
+                        }
+                    )
+        edge_summaries.append(
+            {
+                "dual_index": edge_index,
+                "left_candidate_id": left.candidate_id,
+                "right_candidate_id": right.candidate_id,
+                "aggregate_delta_D": aggregate_delta,
+                "component_delta_D_sum": component_sum,
+                "additivity_residual_D": component_sum - aggregate_delta,
+                "aggregate_lambda_control": crossover_lambda(left, right),
+                "aggregate_lambda_actionable_for_train_decision": False,
+                "typed_bucket_count": len((*SEMANTIC_STRATA, "POSE6_GLOBAL"))
+                * len(SCORER_VISIBILITIES)
+                * len(G4_TEMPORAL_CLASSES),
+                "typed_actionable_bucket_count": 0,
+                "SOLVE": "BLOCKED_TYPED_G4_AND_DIMENSION_RATE_HOME_CUSTODY",
+            }
+        )
+    return {
+        "schema": "ddm_rd1_typed_dimension_duals.v1",
+        "axes": {
+            "stratum": [*SEMANTIC_STRATA, "POSE6_GLOBAL"],
+            "scorer_visibility": list(SCORER_VISIBILITIES),
+            "g4_temporal_class": list(G4_TEMPORAL_CLASSES),
+        },
+        "aggregate_scalarization_policy": (
+            "diagnostic control only; never a train-decision price and never "
+            "summed with shared-cost component conditionals"
+        ),
+        "component_evidence": component_evidence,
+        "bucket_rows": bucket_rows,
+        "edge_summaries": edge_summaries,
+        "actionable_bucket_count": 0,
+        "blocker": (
+            "existing n600 endpoints lack joint candidate-delta x G4-class x "
+            "dimension-rate-home custody"
+        ),
+        "score_claim": False,
+    }
+
+
+def metric_active_continuation_geometry_report(
+    continuation: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Classify the geometry used by a completed discrete continuation.
+
+    A previous candidate identifier is a graph-topology warm-start token, not a
+    vector-space displacement. Continuous proposal geometry remains blocked
+    until its scorer-metric tensors and cross-metric readback are custodied.
+    """
+
+    if not continuation:
+        raise LambdaContinuationError("metric geometry requires continuation rows")
+    for row in continuation:
+        if (
+            row.get("neighbor_only") is not True
+            or row.get("restricted_global_rank_verified") is not True
+            or not isinstance(row.get("warm_start_from"), str)
+            or not isinstance(row.get("corrector_path"), list)
+        ):
+            raise LambdaContinuationError("continuation geometry custody differs")
+    return {
+        "schema": "ddm_rd1_metric_active_continuation_geometry.v1",
+        "completed_discrete_solve": {
+            "selection_geometry": "ORDERED_FINITE_NEIGHBOR_GRAPH",
+            "selection_units": "counted_bytes_plus_lambda_times_realized_contest_D",
+            "warm_start_token": "previous_candidate_identifier_only",
+            "state_space_distance_used": False,
+            "trust_region_used": False,
+            "step_direction_used": False,
+            "identity_L2_used": False,
+            "full_rank_finite_domain_verification": True,
+            "status": "VALID_NO_CONTINUOUS_GEOMETRY_INVOKED",
+        },
+        "continuous_proposal_geometry_contract": {
+            "seg": {
+                "metric": "margin-Fisher surrogate plus rank-4 head hyperplane geometry",
+                "law_ids": [
+                    "frozen_scorer_fisher_curvature_margin_colocation_v1",
+                    "segnet_head_rank4_linear_flipdist_v1",
+                ],
+                "identity_L2_allowed": "LABELED_CONTROL_ONLY",
+            },
+            "pose": {
+                "metric": "exact low-rank <=6-dimensional PoseNet output quadratic",
+                "parameter_L2_allowed": False,
+            },
+            "distribution": {
+                "metric": "Bregman divergence",
+                "binding": "policy_bindings.optimal_metric",
+                "identity_L2_allowed": "LABELED_CONTROL_ONLY",
+            },
+            "composite_readback": {
+                "law": "dual-metric Euclidean-versus-Fisher readback",
+                "required_fields": [
+                    "euclidean_control",
+                    "fisher_or_pose_quadratic",
+                    "cross_metric_cosine",
+                    "relative_norm",
+                ],
+                "single_metric_verdict_allowed": False,
+            },
+            "applies_to": [
+                "predictor_corrector_step_direction",
+                "trust_radius",
+                "warm_start_distance",
+                "per_bucket_move_proposal_ranking",
+            ],
+            "actionable": False,
+            "blocker": (
+                "RD1 endpoint receipts lack per-candidate margin-Fisher pullbacks, "
+                "Pose quadratic tensors, Bregman binding receipts, and dual-metric "
+                "readbacks for proposed continuous moves"
+            ),
+        },
+        "aggregate_dual_units_unchanged": True,
+        "lambda_points_reused_without_restart": True,
+        "score_claim": False,
+    }
+
+
+def second_order_metric_geometry_addendum_report(
+    metric_geometry: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Extend the metric contract with order, coordinate, and ladder custody."""
+
+    discrete = metric_geometry.get("completed_discrete_solve")
+    continuous = metric_geometry.get("continuous_proposal_geometry_contract")
+    if (
+        not isinstance(discrete, Mapping)
+        or discrete.get("status") != "VALID_NO_CONTINUOUS_GEOMETRY_INVOKED"
+        or not isinstance(continuous, Mapping)
+        or continuous.get("actionable") is not False
+    ):
+        raise LambdaContinuationError("base metric geometry custody differs")
+    return {
+        "schema": "ddm_rd1_second_order_metric_geometry_addendum.v1",
+        "completed_discrete_solve": {
+            "continuous_approximation_order_used": None,
+            "gradient_first_order_naive_used": False,
+            "hessian_used": False,
+            "reason": (
+                "exact finite graph enumeration and full-domain rank require "
+                "neither a gradient nor a local quadratic approximation"
+            ),
+            "status": "VALID_NO_LOCAL_CONTINUOUS_MODEL_INVOKED",
+        },
+        "future_continuous_move_contract": {
+            "second_order_from_step_one_when_quadratic_measured": True,
+            "second_order_inventory": [
+                {
+                    "catalog": 391,
+                    "surface": "exact composite-R adjoint",
+                },
+                {
+                    "catalog": 423,
+                    "surface": "Hessian-preconditioned TerminalSolve",
+                },
+                {
+                    "catalog": 552,
+                    "surface": "SPD normal-coordinate momentum",
+                },
+            ],
+            "coordinate_system": {
+                "seg": (
+                    "rank-4 scorer-head class-pair hyperplanes and feature "
+                    "channels"
+                ),
+                "flip_distance": "abs(margin)/norm(delta_w_class_pair)",
+                "pose": "exact <=6-dimensional PoseNet output chart",
+                "parameter_coordinates_allowed": False,
+            },
+            "ladder_order": [
+                "most-optimal measured second-order scorer geometry",
+                "measured metric-active simpler geometry",
+                "identity-L2 or first-order naive labeled controls",
+            ],
+            "simpler_geometry_is_control_only": True,
+            "actionable": False,
+            "blocker": (
+                "RD1 endpoints do not retain an exact composite-R adjoint, "
+                "per-bucket Hessian/SPD normal chart, scorer-channel proposal "
+                "coordinates, or an optimal-first measured geometry ladder"
+            ),
+        },
+        "aggregate_dual_units_unchanged": True,
+        "lambda_points_reused_without_restart": True,
+        "score_claim": False,
+    }
+
+
 def normalized_knee(
     hull: Sequence[MeasuredDescription],
 ) -> MeasuredDescription:
@@ -528,6 +878,9 @@ def publish_immutable_json(path: Path, value: Any) -> None:
 
 __all__ = [
     "EVIDENCE_AXIS",
+    "G4_TEMPORAL_CLASSES",
+    "SCORER_VISIBILITIES",
+    "SEMANTIC_STRATA",
     "CodedStream",
     "LambdaContinuationError",
     "MeasuredDescription",
@@ -535,11 +888,15 @@ __all__ = [
     "continuation_rows",
     "crossover_lambda",
     "discrete_dual_rows",
+    "effective_quantum_D",
     "geometric_curvature_ladder",
     "lower_supported_hull",
+    "metric_active_continuation_geometry_report",
     "normalized_knee",
     "pareto_nondominated",
     "publish_immutable_json",
     "realized_distortion",
+    "second_order_metric_geometry_addendum_report",
     "sha256_bytes",
+    "typed_dimension_dual_report",
 ]

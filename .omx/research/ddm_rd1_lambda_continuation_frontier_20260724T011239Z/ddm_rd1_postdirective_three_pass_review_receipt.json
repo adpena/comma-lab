@@ -1,0 +1,107 @@
+{
+  "schema": "ddm_rd1_postdirective_three_pass_review_receipt.v1",
+  "run_id": "ddm_rd1_lambda_continuation_frontier_20260724T011239Z",
+  "review_completed_utc": "2026-07-24T02:34:00Z",
+  "reviewer": "codex",
+  "lane_id": "lane_ddm_rd1_lambda_continuation_frontier_20260724",
+  "directives_consumed_utc": [
+    "2026-07-24T02:04:16Z",
+    "2026-07-24T02:27:12Z",
+    "2026-07-24T02:28:21Z"
+  ],
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_full_diff_review_required": true,
+  "lambda_points_reused_without_restart": true,
+  "source_continuation_sha256": "0a053b77c6f1ff396a787ccfa49f5c166600e600fe362fda934ad4b8f1da656b",
+  "authority_receipt": {
+    "path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt_v5.json",
+    "sha256": "7449b4fedcbae41baf535018602435f9e36e6f09dd0dcd4d5f8ad4d022cbbce2"
+  },
+  "dimension_supplement": {
+    "path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/typed_dimension_duals_effective_quantum.json",
+    "sha256": "c92bb7d4c863bae53f87a228cbbe79938966ff4b645e6c631be07e4bd574e2a0"
+  },
+  "typed_frontier": {
+    "path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/typed_R_D_frontier_rows_v5.json",
+    "sha256": "96058098a7fabd568d725005c1d5c301bb862f2780616ce04cb4c379ee28e824"
+  },
+  "metric_geometry_supplement": {
+    "path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/metric_active_continuation_geometry.json",
+    "sha256": "8cfd85fe1ce90e4c59557caab2ba1912c949deb58b0f2c6064d2648b5b4ce6f6"
+  },
+  "second_order_geometry_supplement": {
+    "path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/metric_active_second_order_geometry.json",
+    "sha256": "2eb5b5e9aca12fc4c936bc1a915f0c65201b47f42a3766e547bf08d79e2d6292"
+  },
+  "source_hashes": {
+    "src/tac/optimization/ddm_lambda_continuation_frontier.py": "a963c5a7224d8258905cf8702595195f182709a0f9209e8ca61a9964c40a38c2",
+    "src/tac/canonical_equations/ddm_lambda_continuation_frontier_20260724.py": "c518d15eee669fd1c2e7261971d74f386dd3335afc37473de66e4e6161223b40",
+    "tools/measure_ddm_rd1_lambda_continuation_frontier.py": "200bf2214ef59dbea1b6d1036f6459fabfa8eaee2877f015b9b0d2d0c07660a0",
+    "tests/test_ddm_lambda_continuation_frontier.py": "1a53bf56f760f79e0a6df6384de2874b23dbc96523c0156d7ae757030a29570f",
+    ".omx/research/configs/ddm_rd1_dimension_duals_20260724.json": "24a92839a9b1fd04e934ee0d738304ef9953d5de3a513067db8ede9b0532bd43"
+  },
+  "passes": [
+    {
+      "pass": 1,
+      "method": "source lint, focused plus canonical registry tests, and v5 registry resolution",
+      "commands": [
+        ".venv/bin/ruff check src/tac/optimization/ddm_lambda_continuation_frontier.py src/tac/canonical_equations/ddm_lambda_continuation_frontier_20260724.py tools/measure_ddm_rd1_lambda_continuation_frontier.py tests/test_ddm_lambda_continuation_frontier.py",
+        "PYTHONPATH=src .venv/bin/pytest -q tests/test_ddm_lambda_continuation_frontier.py src/tac/canonical_equations/tests/test_canonical_equations_registry.py",
+        "PYTHONPATH=src .venv/bin/python canonical registry lookup"
+      ],
+      "result": "PASS",
+      "tests_passed": 40,
+      "canonical_source_artifact": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt_v5.json"
+    },
+    {
+      "pass": 2,
+      "method": "independent receipt audit of continuation preservation, typed cube coverage, additivity, tolerance authority, metric-first geometry, and directive custody",
+      "checks": [
+        "v2 and v3 continuation arrays are byte-canonically identical",
+        "source continuation hash equals the pre-registered value",
+        "three edges times six strata times three scorer visibilities times three G4 classes equals 162 unique rows",
+        "every typed train-decision lambda is null and non-actionable",
+        "semantic plus nonlinear Pose component deltas reconstruct each aggregate edge within 3.6e-15 D",
+        "all per-dimension effective quanta remain unpriced",
+        "uniform tolerance is false",
+        "both directive-consumption rows are present",
+        "discrete warm starts are graph identifiers and use no state-space norm",
+        "continuous Fisher/Pose/Bregman geometry is blocked without tensor custody",
+        "identity L2 is labeled control-only",
+        "measured quadratic regions require second-order geometry from step one",
+        "proposal coordinates are rank-4 scorer hyperplanes and channels",
+        "geometry ladder is best-measured first and simpler forms are controls",
+        "score claim, pointer movement, and paid execution authority remain false"
+      ],
+      "result": "PASS",
+      "typed_dual_bucket_count": 162,
+      "unique_typed_dual_bucket_count": 162,
+      "actionable_typed_dual_bucket_count": 0,
+      "max_abs_additivity_residual_D": 3.552713678800501e-15,
+      "priced_tolerance_bucket_count": 0,
+      "continuous_metric_geometry_actionable": false,
+      "second_order_geometry_actionable": false
+    },
+    {
+      "pass": 3,
+      "method": "two immutable v5 postsolve resumptions, fresh tests, review-tracker passes, and diff hygiene",
+      "commands": [
+        "PYTHONPATH=src .venv/bin/python tools/measure_ddm_rd1_lambda_continuation_frontier.py --refine-dimensions-only --dimension-config .omx/research/configs/ddm_rd1_dimension_duals_20260724.json",
+        "PYTHONPATH=src .venv/bin/python tools/measure_ddm_rd1_lambda_continuation_frontier.py --refine-dimensions-only --dimension-config .omx/research/configs/ddm_rd1_dimension_duals_20260724.json",
+        ".venv/bin/python tools/review_tracker.py diff-scan --since HEAD",
+        ".venv/bin/python tools/review_tracker.py mark-file each modified Python implementation for postdirective passes 1, 2, and 3",
+        "git diff --check"
+      ],
+      "result": "PASS",
+      "resumed_receipt_sha256": "7449b4fedcbae41baf535018602435f9e36e6f09dd0dcd4d5f8ad4d022cbbce2",
+      "resumed_dimension_supplement_sha256": "c92bb7d4c863bae53f87a228cbbe79938966ff4b645e6c631be07e4bd574e2a0",
+      "resumed_metric_geometry_supplement_sha256": "8cfd85fe1ce90e4c59557caab2ba1912c949deb58b0f2c6064d2648b5b4ce6f6",
+      "resumed_second_order_geometry_supplement_sha256": "2eb5b5e9aca12fc4c936bc1a915f0c65201b47f42a3766e547bf08d79e2d6292",
+      "resumed_typed_frontier_sha256": "96058098a7fabd568d725005c1d5c301bb862f2780616ce04cb4c379ee28e824"
+    }
+  ],
+  "verdict": "THREE_CLEAN_POSTDIRECTIVE_PASSES; TYPED_DUALS_COMPLETE; DISCRETE_GRAPH_VALID; TRAIN_PRICES_AND_CONTINUOUS_SECOND_ORDER_SCORER_GEOMETRY_BLOCKED; MAIN_REVIEW_REQUIRED"
+}

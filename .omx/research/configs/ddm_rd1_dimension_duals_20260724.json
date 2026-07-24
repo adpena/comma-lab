@@ -1,0 +1,20 @@
+{
+  "schema": "DDMRD1DimensionDualConfigV1",
+  "run_id": "ddm_rd1_dimension_duals_20260724T020416Z",
+  "lane_id": "lane_ddm_rd1_lambda_continuation_frontier_20260724",
+  "execution_allowed": false,
+  "research_only": true,
+  "score_claim": false,
+  "pair_count": 600,
+  "source_pooled_receipt_path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt_v2.json",
+  "source_pooled_receipt_sha256": "cdfa9a400d9633ea7f8f698dee6d55c65ac478ddcfed3ec01e6d2e6cefe6bbae",
+  "source_continuation_sha256": "0a053b77c6f1ff396a787ccfa49f5c166600e600fe362fda934ad4b8f1da656b",
+  "dr2b_receipt_path": ".omx/research/ddm_dr2b_tolerance_ladder_and_costate_rows_n600_20260723_v4/receipt.json",
+  "dr2b_receipt_sha256": "9dedcc03d38942c4291a51505b754890a79ab48bfa53c1ac8daef61fe5a8c8c8",
+  "g4_receipt_path": ".omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z/ddm_g4_spatial_stationarity_receipt.json",
+  "g4_receipt_sha256": "bea555b95aeaa11f4209df5333010c41c5495dd789def2a4f7a2a91973f3408c",
+  "output_root": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

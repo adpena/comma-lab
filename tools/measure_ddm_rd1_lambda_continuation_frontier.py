@@ -7,6 +7,11 @@ C1 receiver output through the pinned CPU scorers at four Torch threads,
 reaggregates all preserved Menu1 n600 checkpoints, rehashes every V19C n600
 candidate archive, and then solves the resulting finite measured domain.
 
+The ``--refine-dimensions-only`` mode never replays a scorer or restarts a
+lambda point. It types the completed adjacent duals by stratum, scorer
+visibility, and G4 temporal class, then fails closed wherever the existing
+endpoints lack a joint byte home or effective-quantum measurement.
+
 No contest evaluator, provider dispatch, training, or frontier mutation is
 reachable from this program.
 """
@@ -39,6 +44,7 @@ if str(SRC) not in sys.path:
 from tac.boundary_math.power_diagram_witness import open_stored_npy_memmap  # noqa: E402
 from tac.optimization.ddm_lambda_continuation_frontier import (  # noqa: E402
     EVIDENCE_AXIS,
+    G4_TEMPORAL_CLASSES,
     CodedStream,
     MeasuredDescription,
     canonical_json_bytes,
@@ -46,17 +52,21 @@ from tac.optimization.ddm_lambda_continuation_frontier import (  # noqa: E402
     discrete_dual_rows,
     geometric_curvature_ladder,
     lower_supported_hull,
+    metric_active_continuation_geometry_report,
     normalized_knee,
     pareto_nondominated,
     publish_immutable_json,
     realized_distortion,
+    second_order_metric_geometry_addendum_report,
     sha256_bytes,
+    typed_dimension_dual_report,
 )
 
 CAMERA_HW = (874, 1164)
 SEG_HW = (384, 512)
 CLASS_NAMES = {0: "Road", 1: "Lane", 2: "Undrivable", 3: "Movable", 4: "MyCar"}
 DEFAULT_CONFIG = REPO / ".omx/research/configs/ddm_rd1_lambda_continuation_frontier_20260724.json"
+DEFAULT_DIMENSION_CONFIG = REPO / ".omx/research/configs/ddm_rd1_dimension_duals_20260724.json"
 
 
 class RD1MeasurementError(RuntimeError):
@@ -93,6 +103,39 @@ def _bound_json(path_value: str, expected_sha256: str, label: str) -> dict[str, 
     if observed != expected_sha256:
         raise RD1MeasurementError(f"{label} SHA-256 differs: expected {expected_sha256}, observed {observed}")
     return _read_json(path)
+
+
+def _description_from_receipt(row: Mapping[str, Any]) -> MeasuredDescription:
+    return MeasuredDescription(
+        candidate_id=str(row["candidate_id"]),
+        counted_bytes=int(row["counted_bytes"]),
+        d_seg=float(row["d_seg"]),
+        d_pose=float(row["d_pose"]),
+        coded_streams=tuple(
+            CodedStream(
+                stream_id=str(stream["stream_id"]),
+                stratum=str(stream["stratum"]),
+                factor_kind=str(stream["factor_kind"]),
+                custody_role=str(stream["custody_role"]),
+                counted_bytes=int(stream["counted_bytes"]),
+                sha256=str(stream["sha256"]),
+                codec=str(stream["codec"]),
+                source_path=str(stream["source_path"]),
+            )
+            for stream in row["coded_streams"]
+        ),
+        source_artifact=str(row["source_artifact"]),
+        source_sha256=str(row["source_sha256"]),
+        receiver_closure=str(row["receiver_closure"]),
+        pool_id=str(row["pool_id"]),
+        pair_count=int(row["pair_count"]),
+        evidence_axis=str(row["evidence_axis"]),
+        score_claim=bool(row["score_claim"]),
+        own_stored_problem=bool(row["own_stored_problem"]),
+        donor_conditioned=bool(row["donor_conditioned"]),
+        per_class=row.get("per_class"),
+        metadata=row.get("metadata"),
+    )
 
 
 def _file_hash_checkpoint(
@@ -933,6 +976,513 @@ def _train_decision_solve_table(
     return result
 
 
+def _effective_quantum_tolerance_report(
+    receipt: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Expose measured coordinate sensitivities without inventing uint8 quanta."""
+
+    component_evidence: list[dict[str, Any]] = []
+    bucket_rows: list[dict[str, Any]] = []
+    for source in receipt["g2_costate_rows"]["rows"]:
+        perturbation = source["perturbation"]
+        rebase = source["n600_rebase"]
+        serialized_steps = abs(int(perturbation["delta"]))
+        if serialized_steps <= 0:
+            raise RD1MeasurementError("DR2b serialized perturbation step must be nonzero")
+        margin = source.get("fisher_margin")
+        stratum = (
+            CLASS_NAMES[int(margin["top1_class"])]
+            if margin is not None
+            else "GLOBAL_CHART"
+        )
+        visibility_terms = []
+        if float(rebase["seg_term"]) != 0.0:
+            visibility_terms.append(("seg-visible", float(rebase["seg_term"])))
+        if float(rebase["pose_term"]) != 0.0:
+            visibility_terms.append(("pose-visible", float(rebase["pose_term"])))
+        if not visibility_terms:
+            visibility_terms.append(("ker(A)-invisible", 0.0))
+        for scorer_visibility, delta_D in visibility_terms:
+            component = {
+                "probe_id": source["probe_id"],
+                "stratum": stratum,
+                "scorer_visibility": scorer_visibility,
+                "g4_temporal_class": "UNRESOLVED_G4_MIXTURE",
+                "serialized_stream": perturbation["stream"],
+                "serialized_coordinate_step_count": serialized_steps,
+                "measured_delta_D_component": delta_D,
+                "measured_abs_D_per_serialized_coordinate_step": (
+                    abs(delta_D) / serialized_steps
+                ),
+                "receiver_changed_camera_values": source["receiver_bijection"][
+                    "changed_camera_values"
+                ],
+                "receiver_uint8_abs_step_sum": None,
+                "scorer_sensitivity_D_per_uint8_step": None,
+                "effective_quantum_D": None,
+                "status": "BLOCKED_UINT8_ABS_STEP_HISTOGRAM_AND_G4_JOINT_ASSIGNMENT_ABSENT",
+                "serialized_step_is_not_uint8_step": True,
+                "actionable_for_tolerance_price": False,
+                "score_claim": False,
+            }
+            component_evidence.append(component)
+            for temporal_class in G4_TEMPORAL_CLASSES:
+                bucket_rows.append(
+                    {
+                        **component,
+                        "g4_temporal_class": temporal_class,
+                        "measured_delta_D_component": None,
+                        "measured_abs_D_per_serialized_coordinate_step": None,
+                        "status": (
+                            "BLOCKED_PER_DIMENSION_UINT8_EFFECTIVE_QUANTUM_AND_"
+                            "CANDIDATE_DELTA_TO_G4_ASSIGNMENT_ABSENT"
+                        ),
+                    }
+                )
+    return {
+        "schema": "ddm_rd1_effective_quantum_tolerance.v1",
+        "law": (
+            "q_eff[d] = one_realized_uint8_step[d] * "
+            "abs(dD/d_uint8[d]); tolerance prices are expressed in q_eff[d], "
+            "never in a uniform serialized-coordinate tolerance"
+        ),
+        "uniform_tolerance_allowed": False,
+        "component_evidence": component_evidence,
+        "bucket_rows": bucket_rows,
+        "priced_bucket_count": 0,
+        "blocker": (
+            "DR2b retained changed-value counts but not the per-dimension "
+            "receiver uint8 absolute-step histogram; G4 joint assignment is also absent"
+        ),
+        "operator_corollary": (
+            "sub-quantum low-sensitivity dimensions may be free while a nominally "
+            "equal Lane tolerance may span multiple effective quanta; this receipt "
+            "does not classify either case without the missing histogram"
+        ),
+        "score_claim": False,
+    }
+
+
+def refine_dimensions(config_path: Path) -> dict[str, Any]:
+    """Type the completed frontier duals without rerunning any λ point."""
+
+    config = _read_json(config_path)
+    if (
+        config.get("schema") != "DDMRD1DimensionDualConfigV1"
+        or config.get("execution_allowed") is not False
+        or config.get("research_only") is not True
+        or config.get("score_claim") is not False
+        or config.get("pair_count") != 600
+        or config.get("pointer_moved") is not False
+    ):
+        raise RD1MeasurementError("dimension-refinement authority contract differs")
+    config_sha256 = _canonical_hash(config)
+    source = _bound_json(
+        str(config["source_pooled_receipt_path"]),
+        str(config["source_pooled_receipt_sha256"]),
+        "source pooled RD1 receipt",
+    )
+    if (
+        source.get("schema") != "ddm_rd1_lambda_continuation_frontier_receipt.v1"
+        or source.get("score_claim") is not False
+        or source.get("pointer_moved") is not False
+    ):
+        raise RD1MeasurementError("source pooled RD1 receipt authority differs")
+    continuation_sha256 = _canonical_hash(source["continuation"])
+    if continuation_sha256 != config["source_continuation_sha256"]:
+        raise RD1MeasurementError("source continuation changed; λ restart is forbidden")
+    dr2b = _bound_json(
+        str(config["dr2b_receipt_path"]),
+        str(config["dr2b_receipt_sha256"]),
+        "DR2b effective-quantum source",
+    )
+    g4 = _bound_json(
+        str(config["g4_receipt_path"]),
+        str(config["g4_receipt_sha256"]),
+        "G4 temporal-class source",
+    )
+    observed_g4_classes = set(
+        g4["summary"]["stationarity_decomposition"]["all"]["classes"]
+    )
+    if observed_g4_classes != set(G4_TEMPORAL_CLASSES):
+        raise RD1MeasurementError("G4 temporal-class vocabulary differs")
+
+    hull = tuple(_description_from_receipt(row) for row in source["supported_hull"])
+    dimension_duals = typed_dimension_dual_report(hull)
+    tolerance_report = _effective_quantum_tolerance_report(dr2b)
+    output_root = _repo_path(str(config["output_root"]))
+    output_root.mkdir(parents=True, exist_ok=True)
+    supplement_path = output_root / "typed_dimension_duals_effective_quantum.json"
+    supplement = {
+        "schema": "ddm_rd1_dimension_duals_effective_quantum.v1",
+        "typed_config_path": str(config_path.relative_to(REPO)),
+        "typed_config_sha256": config_sha256,
+        "source_pooled_receipt_path": config["source_pooled_receipt_path"],
+        "source_pooled_receipt_sha256": config["source_pooled_receipt_sha256"],
+        "source_continuation_sha256": continuation_sha256,
+        "lambda_points_reused_without_restart": True,
+        "dimension_duals": dimension_duals,
+        "effective_quantum_tolerance": tolerance_report,
+        "g4_source": {
+            "path": config["g4_receipt_path"],
+            "sha256": config["g4_receipt_sha256"],
+            "classes": list(G4_TEMPORAL_CLASSES),
+            "transfer_status": (
+                "VOCABULARY_ONLY; G4 aggregate fractions are not assigned to RD1 "
+                "candidate deltas"
+            ),
+        },
+        "directive_consumed": {
+            "utc": "2026-07-24T02:04:16Z",
+            "application": (
+                "pooled lambda retained as diagnostic only; complete "
+                "stratum x scorer-visibility x G4 cube emitted; effective "
+                "quantum pricing fails closed without per-dimension uint8 custody"
+            ),
+        },
+        "evidence_axis": EVIDENCE_AXIS,
+        "execution_allowed": False,
+        "research_only": True,
+        "score_claim": False,
+        "pointer": config["pointer"],
+        "pointer_moved": False,
+        "main_landing_review_required": True,
+        "verdict": (
+            "POSTSOLVE_DIMENSION_TYPING_COMPLETE; TRAIN_DECISION_PRICES_BLOCKED_"
+            "PENDING_JOINT_G4_RATE_HOME_AND_UINT8_EFFECTIVE_QUANTA"
+        ),
+    }
+    publish_immutable_json(supplement_path, supplement)
+    supplement_sha256 = _sha256_file(supplement_path)
+
+    refined = json.loads(json.dumps(source))
+    aggregate_controls = refined.pop("duals")
+    historical_solve_table = refined.pop("train_decision_SOLVE_table")
+    refined["schema"] = "ddm_rd1_lambda_continuation_frontier_receipt.v2"
+    refined["typed_dimension_config_path"] = str(config_path.relative_to(REPO))
+    refined["typed_dimension_config_sha256"] = config_sha256
+    refined["source_pooled_receipt_path"] = config["source_pooled_receipt_path"]
+    refined["source_pooled_receipt_sha256"] = config["source_pooled_receipt_sha256"]
+    refined["source_continuation_sha256"] = continuation_sha256
+    refined["lambda_points_reused_without_restart"] = True
+    refined["pooled_dual_status"] = (
+        "VALID_SCALARIZATION_CONTROL_SUPERSEDED_FOR_TRAIN_DECISION_PRICING"
+    )
+    refined["aggregate_scalarization_controls"] = aggregate_controls
+    refined["historical_pooled_train_decision_table"] = {
+        "status": "SUPERSEDED_NONACTIONABLE",
+        "rows": historical_solve_table,
+    }
+    refined["duals"] = dimension_duals["bucket_rows"]
+    refined["dimension_dual_axes"] = dimension_duals["axes"]
+    refined["dimension_dual_component_evidence"] = dimension_duals[
+        "component_evidence"
+    ]
+    refined["dimension_dual_edge_summaries"] = dimension_duals["edge_summaries"]
+    refined["effective_quantum_tolerance"] = tolerance_report
+    refined["dimension_supplement"] = {
+        "path": str(supplement_path.relative_to(REPO)),
+        "sha256": supplement_sha256,
+    }
+    refined["train_decision_SOLVE_table"] = [
+        {
+            "bucket": (
+                f"edge_{row['dual_index']}:"
+                f"{row['left_candidate_id']}->{row['right_candidate_id']}"
+            ),
+            "SOLVE": row["SOLVE"],
+            "lambda_bytes_per_D_dimension": None,
+            "aggregate_lambda_control": row["aggregate_lambda_control"],
+            "scope": (
+                "train-decision price blocked; aggregate secant is diagnostic only"
+            ),
+        }
+        for row in dimension_duals["edge_summaries"]
+    ] + [
+        {
+            "bucket": "PER_DIMENSION_EFFECTIVE_QUANTUM",
+            "SOLVE": "BLOCKED_UINT8_ABS_STEP_HISTOGRAM_AND_G4_JOINT_ASSIGNMENT",
+            "lambda_bytes_per_D_dimension": None,
+            "aggregate_lambda_control": None,
+            "scope": tolerance_report["blocker"],
+        }
+    ]
+    refined["directives_consumed"].append(supplement["directive_consumed"])
+    refined["verdict"] = (
+        f"{source['verdict']}; DIMENSION_TYPED_POSTSOLVE; "
+        "TRAIN_DECISION_PRICES_BLOCKED_WITHOUT_JOINT_CUSTODY"
+    )
+    refined["verdict_scope"] = (
+        f"{source['verdict_scope']}; pooled lambda remains a scalarization "
+        "control only, not a per-dimension exchange rate"
+    )
+    receipt_path = output_root / "ddm_rd1_lambda_continuation_frontier_receipt_v3.json"
+    publish_immutable_json(receipt_path, refined)
+    receipt_sha256 = _sha256_file(receipt_path)
+
+    typed_frontier_path = output_root / "typed_R_D_frontier_rows_v3.json"
+    typed_frontier = {
+        "schema": "ddm_rd1_typed_rate_distortion_rows.v2",
+        "source_receipt_path": str(receipt_path.relative_to(REPO)),
+        "source_receipt_sha256": receipt_sha256,
+        "source_continuation_sha256": continuation_sha256,
+        "lambda_points_reused_without_restart": True,
+        "dimension_supplement": refined["dimension_supplement"],
+        "objective": refined["objective"]["formula"],
+        "rows": [
+            {
+                "lambda_index": row["lambda_index"],
+                "lambda": row["lambda"],
+                "candidate_id": row["selected_candidate_id"],
+                "counted_bytes": row["counted_bytes"],
+                "d_seg": row["d_seg"],
+                "d_pose": row["d_pose"],
+                "D_realized": row["D_realized"],
+                "rate_term_25R": 25.0 * row["counted_bytes"] / 37_545_489,
+                "S_composed": (
+                    row["D_realized"]
+                    + 25.0 * row["counted_bytes"] / 37_545_489
+                ),
+                "skeleton_bytes": row["skeleton_bytes"],
+                "fiber_bytes": row["fiber_bytes"],
+                "receiver_closure": row["receiver_closure"],
+                "pair_count": row["pair_count"],
+                "evidence_axis": EVIDENCE_AXIS,
+                "score_claim": False,
+            }
+            for row in refined["continuation"]
+        ],
+        "interpretation": (
+            "The λ continuation is byte-identical to the completed source solve. "
+            "Per-dimension train pricing is carried by the supplement and fails "
+            "closed where joint G4/rate-home or uint8-quantum custody is absent."
+        ),
+        "pointer": config["pointer"],
+        "pointer_moved": False,
+    }
+    publish_immutable_json(typed_frontier_path, typed_frontier)
+
+    metric_geometry = metric_active_continuation_geometry_report(
+        refined["continuation"]
+    )
+    metric_supplement_path = (
+        output_root / "metric_active_continuation_geometry.json"
+    )
+    metric_supplement = {
+        **metric_geometry,
+        "source_dimension_receipt_path": str(receipt_path.relative_to(REPO)),
+        "source_dimension_receipt_sha256": receipt_sha256,
+        "source_continuation_sha256": continuation_sha256,
+        "directive_consumed": {
+            "utc": "2026-07-24T02:27:12Z",
+            "application": (
+                "discrete neighbor traversal classified as graph topology with "
+                "no state-space norm; continuous direction, trust, distance, "
+                "and proposal ranking require measured Fisher/Pose/Bregman "
+                "geometry; identity L2 is control-only"
+            ),
+        },
+        "evidence_axis": EVIDENCE_AXIS,
+        "research_only": True,
+        "pointer": config["pointer"],
+        "pointer_moved": False,
+        "main_landing_review_required": True,
+    }
+    publish_immutable_json(metric_supplement_path, metric_supplement)
+    metric_supplement_sha256 = _sha256_file(metric_supplement_path)
+
+    metric_refined = json.loads(json.dumps(refined))
+    metric_refined["schema"] = (
+        "ddm_rd1_lambda_continuation_frontier_receipt.v3"
+    )
+    metric_refined["source_dimension_receipt_path"] = str(
+        receipt_path.relative_to(REPO)
+    )
+    metric_refined["source_dimension_receipt_sha256"] = receipt_sha256
+    metric_refined["metric_active_continuation_geometry"] = metric_geometry
+    metric_refined["metric_geometry_supplement"] = {
+        "path": str(metric_supplement_path.relative_to(REPO)),
+        "sha256": metric_supplement_sha256,
+    }
+    metric_refined["directives_consumed"].append(
+        metric_supplement["directive_consumed"]
+    )
+    metric_refined["verdict"] = (
+        f"{refined['verdict']}; DISCRETE_GRAPH_GEOMETRY_VALID; "
+        "CONTINUOUS_METRIC_ACTIVE_PROPOSALS_BLOCKED_PENDING_TENSOR_CUSTODY"
+    )
+    metric_refined["verdict_scope"] = (
+        f"{refined['verdict_scope']}; no identity-L2 continuation verdict "
+        "or continuous geometry is claimed"
+    )
+    metric_receipt_path = (
+        output_root / "ddm_rd1_lambda_continuation_frontier_receipt_v4.json"
+    )
+    publish_immutable_json(metric_receipt_path, metric_refined)
+    metric_receipt_sha256 = _sha256_file(metric_receipt_path)
+
+    metric_typed_frontier = json.loads(json.dumps(typed_frontier))
+    metric_typed_frontier["schema"] = (
+        "ddm_rd1_typed_rate_distortion_rows.v3"
+    )
+    metric_typed_frontier["source_receipt_path"] = str(
+        metric_receipt_path.relative_to(REPO)
+    )
+    metric_typed_frontier["source_receipt_sha256"] = metric_receipt_sha256
+    metric_typed_frontier["metric_geometry_supplement"] = metric_refined[
+        "metric_geometry_supplement"
+    ]
+    metric_typed_frontier["interpretation"] = (
+        f"{typed_frontier['interpretation']} Discrete neighbor traversal is "
+        "topological; continuous moves remain blocked until measured "
+        "Fisher/Pose/Bregman and dual-metric readback custody exists."
+    )
+    metric_typed_frontier_path = (
+        output_root / "typed_R_D_frontier_rows_v4.json"
+    )
+    publish_immutable_json(
+        metric_typed_frontier_path,
+        metric_typed_frontier,
+    )
+
+    second_order_geometry = second_order_metric_geometry_addendum_report(
+        metric_geometry
+    )
+    second_order_supplement_path = (
+        output_root / "metric_active_second_order_geometry.json"
+    )
+    second_order_supplement = {
+        **second_order_geometry,
+        "source_metric_receipt_path": str(
+            metric_receipt_path.relative_to(REPO)
+        ),
+        "source_metric_receipt_sha256": metric_receipt_sha256,
+        "source_continuation_sha256": continuation_sha256,
+        "directive_consumed": {
+            "utc": "2026-07-24T02:28:21Z",
+            "application": (
+                "quadratic regions require second-order geometry from step one; "
+                "moves use rank-4 scorer class-pair coordinates; geometry "
+                "ladders begin with the best measured form and descend only "
+                "to labeled controls"
+            ),
+        },
+        "evidence_axis": EVIDENCE_AXIS,
+        "research_only": True,
+        "pointer": config["pointer"],
+        "pointer_moved": False,
+        "main_landing_review_required": True,
+    }
+    publish_immutable_json(
+        second_order_supplement_path,
+        second_order_supplement,
+    )
+    second_order_supplement_sha256 = _sha256_file(
+        second_order_supplement_path
+    )
+
+    second_order_refined = json.loads(json.dumps(metric_refined))
+    second_order_refined["schema"] = (
+        "ddm_rd1_lambda_continuation_frontier_receipt.v4"
+    )
+    second_order_refined["source_metric_receipt_path"] = str(
+        metric_receipt_path.relative_to(REPO)
+    )
+    second_order_refined[
+        "source_metric_receipt_sha256"
+    ] = metric_receipt_sha256
+    second_order_refined[
+        "second_order_metric_geometry_addendum"
+    ] = second_order_geometry
+    second_order_refined["second_order_geometry_supplement"] = {
+        "path": str(second_order_supplement_path.relative_to(REPO)),
+        "sha256": second_order_supplement_sha256,
+    }
+    second_order_refined["directives_consumed"].append(
+        second_order_supplement["directive_consumed"]
+    )
+    second_order_refined["verdict"] = (
+        f"{metric_refined['verdict']}; SECOND_ORDER_SCORER_COORDINATE_"
+        "OPTIMAL_FIRST_LADDER_REQUIRED"
+    )
+    second_order_refined["verdict_scope"] = (
+        f"{metric_refined['verdict_scope']}; no first-order-naive, "
+        "parameter-coordinate, or simple-first geometry ladder is admitted"
+    )
+    second_order_receipt_path = (
+        output_root / "ddm_rd1_lambda_continuation_frontier_receipt_v5.json"
+    )
+    publish_immutable_json(
+        second_order_receipt_path,
+        second_order_refined,
+    )
+    second_order_receipt_sha256 = _sha256_file(
+        second_order_receipt_path
+    )
+
+    second_order_typed_frontier = json.loads(
+        json.dumps(metric_typed_frontier)
+    )
+    second_order_typed_frontier["schema"] = (
+        "ddm_rd1_typed_rate_distortion_rows.v4"
+    )
+    second_order_typed_frontier["source_receipt_path"] = str(
+        second_order_receipt_path.relative_to(REPO)
+    )
+    second_order_typed_frontier[
+        "source_receipt_sha256"
+    ] = second_order_receipt_sha256
+    second_order_typed_frontier[
+        "second_order_geometry_supplement"
+    ] = second_order_refined["second_order_geometry_supplement"]
+    second_order_typed_frontier["interpretation"] = (
+        f"{metric_typed_frontier['interpretation']} Any future continuous "
+        "ladder starts second-order in scorer coordinates when measured; "
+        "simpler or identity geometry is control-only."
+    )
+    second_order_typed_frontier_path = (
+        output_root / "typed_R_D_frontier_rows_v5.json"
+    )
+    publish_immutable_json(
+        second_order_typed_frontier_path,
+        second_order_typed_frontier,
+    )
+    return {
+        "receipt_path": str(second_order_receipt_path),
+        "receipt_sha256": second_order_receipt_sha256,
+        "typed_frontier_path": str(second_order_typed_frontier_path),
+        "typed_frontier_sha256": _sha256_file(
+            second_order_typed_frontier_path
+        ),
+        "source_metric_receipt_path": str(metric_receipt_path),
+        "source_metric_receipt_sha256": metric_receipt_sha256,
+        "source_dimension_receipt_path": str(receipt_path),
+        "source_dimension_receipt_sha256": receipt_sha256,
+        "dimension_supplement_path": str(supplement_path),
+        "dimension_supplement_sha256": supplement_sha256,
+        "metric_geometry_supplement_path": str(metric_supplement_path),
+        "metric_geometry_supplement_sha256": metric_supplement_sha256,
+        "second_order_geometry_supplement_path": str(
+            second_order_supplement_path
+        ),
+        "second_order_geometry_supplement_sha256": (
+            second_order_supplement_sha256
+        ),
+        "source_continuation_sha256": continuation_sha256,
+        "lambda_points_reused_without_restart": True,
+        "typed_dual_bucket_count": len(dimension_duals["bucket_rows"]),
+        "actionable_dual_bucket_count": dimension_duals["actionable_bucket_count"],
+        "priced_tolerance_bucket_count": tolerance_report["priced_bucket_count"],
+        "continuous_metric_geometry_actionable": metric_geometry[
+            "continuous_proposal_geometry_contract"
+        ]["actionable"],
+        "second_order_geometry_actionable": second_order_geometry[
+            "future_continuous_move_contract"
+        ]["actionable"],
+        "verdict": second_order_refined["verdict"],
+    }
+
+
 def _git_sha() -> str:
     return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
 
@@ -1314,12 +1864,18 @@ def run(config_path: Path) -> dict[str, Any]:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--dimension-config", type=Path, default=DEFAULT_DIMENSION_CONFIG)
+    parser.add_argument("--refine-dimensions-only", action="store_true")
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    result = run(args.config.resolve())
+    result = (
+        refine_dimensions(args.dimension_config.resolve())
+        if args.refine_dimensions_only
+        else run(args.config.resolve())
+    )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
