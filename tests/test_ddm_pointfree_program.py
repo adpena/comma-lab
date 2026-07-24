@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import zlib
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -18,12 +19,15 @@ from tac.optimization.ddm_pointfree_program import (
     PointFreeProgramError,
     apply_template,
     channel_affine,
+    code_compiled_flat,
+    code_compiled_program,
     code_real_payload,
     compile_dv2_sentence,
     compile_g1_worldsheet,
     compile_v15_template_bank,
     compose_pointfree,
     decode_real_payload,
+    decode_two_typed_payload,
     execute_program,
     learn_shared_literals,
     rate_row,
@@ -156,3 +160,77 @@ def test_rate_row_rejects_a_source_other_than_compile_time_replay(g1_payload: by
     compiled = compile_g1_worldsheet(g1_payload, Formulation.STRUCTURAL)
     with pytest.raises(PointFreeProgramError, match="compile-time exact replay"):
         rate_row(compiled, g1_payload + b"\x00")
+
+
+def test_two_typed_counting_is_bound_to_executable_program(g1_payload: bytes) -> None:
+    compiled = compile_g1_worldsheet(g1_payload, Formulation.STRUCTURAL)
+    forged = replace(
+        compiled,
+        program_skeleton_wire=compiled.program_skeleton_wire + b"\x00",
+    )
+    with pytest.raises(
+        PointFreeProgramError,
+        match="differs from executable program",
+    ):
+        code_compiled_program(forged)
+
+
+def test_structural_program_uses_exact_two_typed_skeleton_fiber_split(
+    g1_payload: bytes,
+    template_payload: bytes,
+    dv2_payload: bytes,
+) -> None:
+    rows = (
+        (compile_g1_worldsheet(g1_payload, Formulation.STRUCTURAL), g1_payload),
+        (
+            compile_v15_template_bank(template_payload, Formulation.STRUCTURAL),
+            template_payload,
+        ),
+        (compile_dv2_sentence(dv2_payload, Formulation.STRUCTURAL), dv2_payload),
+    )
+    for compiled, source in rows:
+        assert compiled.discrete_skeleton_scope_eligible is True
+        assert execute_program(compiled.program) == source
+        measured = rate_row(compiled, source)
+        assert measured["two_typed_split_status"] == "MEASURED_EXACT"
+        assert (
+            measured["program_skeleton_counted_bytes"]
+            + measured["program_fiber_counted_bytes"]
+            == measured["program_counted_bytes"]
+        )
+        assert (
+            measured["flat_skeleton_counted_bytes"]
+            + measured["flat_fiber_counted_bytes"]
+            == measured["flat_counted_bytes"]
+        )
+        program_coded = code_compiled_program(compiled)
+        skeleton, slots = decode_two_typed_payload(program_coded.payload)
+        assert skeleton == compiled.program_skeleton_wire
+        assert slots == compiled.program_fiber_slots
+        assert code_compiled_flat(compiled, source).framed_bytes == measured[
+            "flat_counted_bytes"
+        ]
+
+
+def test_template_reuse_references_opaque_rgb_fiber_without_tokenizing(
+    template_payload: bytes,
+) -> None:
+    compiled = compile_v15_template_bank(template_payload, Formulation.STRUCTURAL)
+    row = rate_row(compiled, template_payload)
+    assert row["program_fiber_slot_count"] == 1
+    assert row["flat_fiber_slot_count"] == 3
+    assert row["program_fiber_counted_bytes"] == 3
+    assert row["flat_fiber_counted_bytes"] == 9
+    assert row["delta_fiber_bytes"] == -6
+
+
+@pytest.mark.parametrize("formulation", [Formulation.LITERAL, Formulation.SHARED_LIBRARY])
+def test_opaque_controls_cannot_close_discrete_skeleton_scope(
+    dv2_payload: bytes,
+    formulation: Formulation,
+) -> None:
+    compiled = compile_dv2_sentence(dv2_payload, formulation)
+    row = rate_row(compiled, dv2_payload)
+    assert row["discrete_skeleton_scope_eligible"] is False
+    assert row["two_typed_split_status"] == "OPAQUE_CONTROL_NOT_ROUTABLE"
+    assert row["delta_skeleton_bytes"] is None

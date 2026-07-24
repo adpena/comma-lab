@@ -76,6 +76,8 @@ from tac.optimization.direct_description_g1_worldsheet import decode_g1_movable_
 
 PROGRAM_MAGIC: Final = b"PF1"
 CODED_MAGIC: Final = b"RC1"
+TWO_TYPED_CODED_MAGIC: Final = b"RT2"
+TYPED_FIBER_MAGIC: Final = b"TF2"
 FLAT_BUNDLE_MAGIC: Final = b"FL1"
 MAX_PROGRAM_BYTES: Final = 128 << 20
 MAX_SECTIONS: Final = 64
@@ -131,6 +133,16 @@ class BasisPrimitive(StrEnum):
     CHANNEL_AFFINE = "channel_affine"
     ARITHMETIC_DECODE = "arithmetic_decode"
     CANONICAL_REEMIT = "canonical_reemit"
+    TYPED_FIBER_REF = "typed_fiber_ref"
+
+
+class FiberKind(IntEnum):
+    """Opaque analog-fiber homes referenced by the discrete PF1 skeleton."""
+
+    G1_CENTROID_NATIVE_CODED = 1
+    G1_SHAPE_NATIVE_CODED = 2
+    V15_RGB_U8_LITERAL = 3
+    DV2_ARITHMETIC_NUMERIC = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -201,23 +213,35 @@ MEASURED_BASIS: Final = (
             "src/tac/optimization/ddm_dv2_sdwl1.py",
         ),
     ),
+    BasisSpec(
+        BasisPrimitive.TYPED_FIBER_REF,
+        "discrete_skeleton_reference_to_opaque_native_coded_fiber",
+        (
+            "src/tac/optimization/direct_description_g1_worldsheet.py",
+            "src/tac/optimization/direct_description_carrier_compose.py",
+            "src/tac/optimization/ddm_dv2_sdwl1.py",
+        ),
+    ),
 )
 
 RECIPE_TRACES: Final = {
     Recipe.G1_WORLDSHEET: (
         BasisPrimitive.EVENT_SCAN,
         BasisPrimitive.EVENT_FOLD,
+        BasisPrimitive.TYPED_FIBER_REF,
         BasisPrimitive.CANONICAL_REEMIT,
     ),
     Recipe.V15_TEMPLATE_BANK: (
         BasisPrimitive.STRATUM_MASK,
         BasisPrimitive.TEMPLATE_APPLY,
         BasisPrimitive.CHANNEL_AFFINE,
+        BasisPrimitive.TYPED_FIBER_REF,
         BasisPrimitive.CANONICAL_REEMIT,
     ),
     Recipe.DV2_SENTENCE: (
         BasisPrimitive.ARITHMETIC_DECODE,
         BasisPrimitive.EVENT_SCAN,
+        BasisPrimitive.TYPED_FIBER_REF,
         BasisPrimitive.CANONICAL_REEMIT,
     ),
     Recipe.BUNDLE: (BasisPrimitive.COMPOSE, BasisPrimitive.CANONICAL_REEMIT),
@@ -238,6 +262,20 @@ class SharedLiteralLibrary:
 
 
 @dataclass(frozen=True, slots=True)
+class TypedFiberSlot:
+    """One opaque native-coded fiber referenced by a discrete skeleton."""
+
+    kind: FiberKind
+    payload: bytes
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.kind, FiberKind):
+            raise PointFreeProgramError("typed fiber kind is invalid")
+        if not isinstance(self.payload, bytes) or not self.payload:
+            raise PointFreeProgramError("typed fiber payload must be nonempty immutable bytes")
+
+
+@dataclass(frozen=True, slots=True)
 class CompiledProgram:
     """One canonical counted PF1 program string."""
 
@@ -248,6 +286,11 @@ class CompiledProgram:
     source_sha256: str
     video_derived_library_bytes: int
     operator_trace: tuple[BasisPrimitive, ...]
+    discrete_skeleton_scope_eligible: bool = False
+    program_skeleton_wire: bytes = b""
+    flat_skeleton_wire: bytes = b""
+    program_fiber_slots: tuple[TypedFiberSlot, ...] = ()
+    flat_fiber_slots: tuple[TypedFiberSlot, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -299,6 +342,94 @@ def _take(data: bytes, offset: int, size: int, label: str) -> tuple[bytes, int]:
     if size < 0 or size > len(data) - offset:
         raise PointFreeProgramError(f"PF1 {label} is truncated")
     return data[offset : offset + size], offset + size
+
+
+def _frame_typed_skeleton(core: bytes, slots: Sequence[TypedFiberSlot]) -> bytes:
+    """Frame a skeleton manifest without exposing fiber payload bytes to its coder."""
+
+    body = bytearray(TYPED_FIBER_MAGIC)
+    _put_uleb(body, len(slots))
+    for slot in slots:
+        body.append(int(slot.kind))
+        _put_uleb(body, len(slot.payload))
+    _put_uleb(body, len(core))
+    body.extend(core)
+    return bytes(body)
+
+
+def _frame_typed_body(core: bytes, slots: Sequence[TypedFiberSlot]) -> bytes:
+    """Frame an executable body with opaque fibers in a separate typed table."""
+
+    body = bytearray(TYPED_FIBER_MAGIC)
+    _put_uleb(body, len(slots))
+    for slot in slots:
+        body.append(int(slot.kind))
+        _put_uleb(body, len(slot.payload))
+        body.extend(slot.payload)
+    _put_uleb(body, len(core))
+    body.extend(core)
+    return bytes(body)
+
+
+def _parse_typed_skeleton(
+    wire: bytes,
+) -> tuple[tuple[tuple[FiberKind, int], ...], bytes]:
+    if not wire.startswith(TYPED_FIBER_MAGIC):
+        raise PointFreeProgramError("typed skeleton magic is invalid")
+    count, offset = _get_uleb(wire, len(TYPED_FIBER_MAGIC))
+    if count > MAX_SECTIONS:
+        raise PointFreeProgramError("typed skeleton fiber count exceeds the bounded maximum")
+    manifest: list[tuple[FiberKind, int]] = []
+    for _index in range(count):
+        raw, offset = _take(wire, offset, 1, "typed skeleton fiber kind")
+        try:
+            kind = FiberKind(raw[0])
+        except ValueError as exc:
+            raise PointFreeProgramError("typed skeleton fiber kind is unknown") from exc
+        size, offset = _get_uleb(wire, offset)
+        if size <= 0:
+            raise PointFreeProgramError("typed skeleton fiber size must be positive")
+        manifest.append((kind, size))
+    core_size, offset = _get_uleb(wire, offset)
+    core, offset = _take(wire, offset, core_size, "typed skeleton core")
+    if offset != len(wire):
+        raise PointFreeProgramError("typed skeleton has trailing bytes")
+    return tuple(manifest), core
+
+
+def _parse_typed_body(body: bytes) -> tuple[tuple[TypedFiberSlot, ...], bytes]:
+    if not body.startswith(TYPED_FIBER_MAGIC):
+        raise PointFreeProgramError("typed fiber body magic is invalid")
+    count, offset = _get_uleb(body, len(TYPED_FIBER_MAGIC))
+    if count > MAX_SECTIONS:
+        raise PointFreeProgramError("typed fiber count exceeds the bounded maximum")
+    slots: list[TypedFiberSlot] = []
+    for _index in range(count):
+        raw, offset = _take(body, offset, 1, "typed fiber kind")
+        try:
+            kind = FiberKind(raw[0])
+        except ValueError as exc:
+            raise PointFreeProgramError("typed fiber kind is unknown") from exc
+        size, offset = _get_uleb(body, offset)
+        payload, offset = _take(body, offset, size, "typed fiber payload")
+        slots.append(TypedFiberSlot(kind, payload))
+    core_size, offset = _get_uleb(body, offset)
+    core, offset = _take(body, offset, core_size, "typed fiber core")
+    if offset != len(body):
+        raise PointFreeProgramError("typed fiber body has trailing bytes")
+    if _frame_typed_body(core, slots) != body:
+        raise PointFreeProgramError("typed fiber body is not canonical")
+    return tuple(slots), core
+
+
+def _typed_slots_match_manifest(
+    skeleton_wire: bytes,
+    slots: Sequence[TypedFiberSlot],
+) -> None:
+    manifest, _core = _parse_typed_skeleton(skeleton_wire)
+    observed = tuple((slot.kind, len(slot.payload)) for slot in slots)
+    if manifest != observed:
+        raise PointFreeProgramError("typed fiber slots differ from the skeleton manifest")
 
 
 def _wrap_program(recipe: Recipe, formulation: Formulation, body: bytes) -> bytes:
@@ -484,18 +615,46 @@ def _parse_g1_coded_sections(payload: bytes) -> tuple[bytes, ...]:
     return tuple(sections)
 
 
-def _g1_structural_body(payload: bytes) -> tuple[bytes, int]:
+def _g1_structural_body(
+    payload: bytes,
+) -> tuple[bytes, bytes, bytes, tuple[TypedFiberSlot, ...], int]:
     sections = _parse_g1_coded_sections(payload)
-    body = bytearray()
-    for section in sections:
-        _production, codec, _raw_size, coded_size = _G1_SECTION_HEADER.unpack_from(section)
+    event = sections[0]
+    _event_production, event_codec, _event_raw_size, event_coded_size = (
+        _G1_SECTION_HEADER.unpack_from(event)
+    )
+    event_coded = event[_G1_SECTION_HEADER.size :]
+    if len(event_coded) != event_coded_size:
+        raise PointFreeProgramError("G1 EVENT coded section length differs")
+
+    fiber_kinds = (
+        FiberKind.G1_CENTROID_NATIVE_CODED,
+        FiberKind.G1_SHAPE_NATIVE_CODED,
+    )
+    slots: list[TypedFiberSlot] = []
+    core = bytearray((event_codec,))
+    _put_uleb(core, len(event_coded))
+    core.extend(event_coded)
+    flat_core = bytearray(_G1_ENVELOPE_HEADER)
+    flat_core.extend(event)
+    for reference, (section, kind) in enumerate(
+        zip(sections[1:], fiber_kinds, strict=True)
+    ):
+        production, codec, raw_size, coded_size = _G1_SECTION_HEADER.unpack_from(section)
         coded = section[_G1_SECTION_HEADER.size :]
         if len(coded) != coded_size:
-            raise PointFreeProgramError("G1 coded section length differs")
-        body.append(codec)
-        _put_uleb(body, len(coded))
-        body.extend(coded)
-    return bytes(body), sum(len(section) - _G1_SECTION_HEADER.size for section in sections)
+            raise PointFreeProgramError("G1 fiber coded section length differs")
+        slots.append(TypedFiberSlot(kind, coded))
+        core.append(codec)
+        _put_uleb(core, reference)
+        flat_core.extend(_G1_SECTION_HEADER.pack(production, codec, raw_size, coded_size))
+        _put_uleb(flat_core, reference)
+    program_skeleton = _frame_typed_skeleton(bytes(core), slots)
+    flat_skeleton = _frame_typed_skeleton(bytes(flat_core), slots)
+    body = _frame_typed_body(bytes(core), slots)
+    return body, program_skeleton, flat_skeleton, tuple(slots), sum(
+        len(slot.payload) for slot in slots
+    )
 
 
 def compile_g1_worldsheet(payload: bytes, formulation: Formulation) -> CompiledProgram:
@@ -506,6 +665,7 @@ def compile_g1_worldsheet(payload: bytes, formulation: Formulation) -> CompiledP
     library_bytes = 0
     if formulation is Formulation.LITERAL:
         body = source
+        scope_fields: dict[str, Any] = {}
     elif formulation is Formulation.SHARED_LIBRARY:
         sections = _parse_g1_coded_sections(source)
         encoded = bytearray()
@@ -515,8 +675,18 @@ def compile_g1_worldsheet(payload: bytes, formulation: Formulation) -> CompiledP
             encoded.extend(section)
         body = bytes(encoded)
         library_bytes = sum(len(section) for section in sections)
+        scope_fields = {}
     elif formulation is Formulation.STRUCTURAL:
-        body, library_bytes = _g1_structural_body(source)
+        body, program_skeleton, flat_skeleton, slots, library_bytes = (
+            _g1_structural_body(source)
+        )
+        scope_fields = {
+            "discrete_skeleton_scope_eligible": True,
+            "program_skeleton_wire": program_skeleton,
+            "flat_skeleton_wire": flat_skeleton,
+            "program_fiber_slots": slots,
+            "flat_fiber_slots": slots,
+        }
     else:  # pragma: no cover - IntEnum exhaustiveness
         raise PointFreeProgramError("unsupported G1 formulation")
     program = _wrap_program(Recipe.G1_WORLDSHEET, formulation, body)
@@ -530,6 +700,7 @@ def compile_g1_worldsheet(payload: bytes, formulation: Formulation) -> CompiledP
         source_sha256=hashlib.sha256(source).hexdigest(),
         video_derived_library_bytes=library_bytes,
         operator_trace=RECIPE_TRACES[Recipe.G1_WORLDSHEET],
+        **scope_fields,
     )
 
 
@@ -549,6 +720,12 @@ def _execute_g1(formulation: Formulation, body: bytes) -> bytes:
             raise PointFreeProgramError("G1 shared-library body has trailing bytes")
         source = _G1_ENVELOPE_HEADER + b"".join(sections)
     elif formulation is Formulation.STRUCTURAL:
+        slots, core = _parse_typed_body(body)
+        if tuple(slot.kind for slot in slots) != (
+            FiberKind.G1_CENTROID_NATIVE_CODED,
+            FiberKind.G1_SHAPE_NATIVE_CODED,
+        ):
+            raise PointFreeProgramError("G1 structural fiber kinds/order differ")
         offset = 0
         sections = []
         production_ids = (
@@ -556,13 +733,19 @@ def _execute_g1(formulation: Formulation, body: bytes) -> bytes:
             G1_PRODUCTION_IDS["CENTROID"],
             G1_PRODUCTION_IDS["SHAPE"],
         )
-        for production_id in production_ids:
-            codec_raw, offset = _take(body, offset, 1, "G1 codec")
+        for production_index, production_id in enumerate(production_ids):
+            codec_raw, offset = _take(core, offset, 1, "G1 codec")
             codec_id = codec_raw[0]
             if codec_id not in G1_CODEC_NAMES:
                 raise PointFreeProgramError("G1 structural program names an unknown codec")
-            size, offset = _get_uleb(body, offset)
-            coded, offset = _take(body, offset, size, "G1 structural coded payload")
+            if production_index == 0:
+                size, offset = _get_uleb(core, offset)
+                coded, offset = _take(core, offset, size, "G1 EVENT skeleton payload")
+            else:
+                reference, offset = _get_uleb(core, offset)
+                if reference != production_index - 1:
+                    raise PointFreeProgramError("G1 structural fiber reference is noncanonical")
+                coded = slots[reference].payload
             try:
                 raw = _decompress_g1(G1_CODEC_NAMES[codec_id], coded)
             except (brotli.error, lzma.LZMAError, zlib.error) as exc:
@@ -576,7 +759,7 @@ def _execute_g1(formulation: Formulation, body: bytes) -> bytes:
                 )
                 + coded
             )
-        if offset != len(body):
+        if offset != len(core):
             raise PointFreeProgramError("G1 structural body has trailing bytes")
         source = _G1_ENVELOPE_HEADER + b"".join(sections)
     else:  # pragma: no cover
@@ -615,16 +798,20 @@ def _v15_library_body(bank: ScorerSolvedTemplateBankV1) -> tuple[bytes, int]:
     return bytes(body), sum(len(entry) for entry in entries)
 
 
-def _v15_structural_body(bank: ScorerSolvedTemplateBankV1) -> tuple[bytes, int]:
+def _v15_structural_body(
+    bank: ScorerSolvedTemplateBankV1,
+) -> tuple[bytes, bytes, bytes, tuple[TypedFiberSlot, ...], tuple[TypedFiberSlot, ...], int]:
     grouped: dict[tuple[str, str, int, int, bytes], list[tuple[int, int]]] = {}
     for row in bank.templates:
         key = (row.role, row.application, row.patch_height, row.patch_width, row.rgb_u8)
         grouped.setdefault(key, []).append((row.scorer_row_start, row.scorer_row_stop))
-    body = bytearray()
-    _put_uleb(body, len(grouped))
-    library_bytes = 0
-    for (role, application, patch_height, patch_width, rgb), bands in grouped.items():
-        body.extend(
+    core = bytearray()
+    _put_uleb(core, len(grouped))
+    program_slots: list[TypedFiberSlot] = []
+    for reference, ((role, application, patch_height, patch_width, rgb), bands) in enumerate(
+        grouped.items()
+    ):
+        core.extend(
             bytes(
                 (
                     _V15_ROLE_TO_WIRE[role],
@@ -634,13 +821,42 @@ def _v15_structural_body(bank: ScorerSolvedTemplateBankV1) -> tuple[bytes, int]:
                 )
             )
         )
-        _put_uleb(body, len(rgb))
-        body.extend(rgb)
-        _put_uleb(body, len(bands))
+        program_slots.append(TypedFiberSlot(FiberKind.V15_RGB_U8_LITERAL, rgb))
+        _put_uleb(core, reference)
+        _put_uleb(core, len(bands))
         for start, stop in bands:
-            body.extend(struct.pack(">HH", start, stop))
-        library_bytes += len(rgb)
-    return bytes(body), library_bytes
+            core.extend(struct.pack(">HH", start, stop))
+
+    flat_slots = tuple(
+        TypedFiberSlot(FiberKind.V15_RGB_U8_LITERAL, row.rgb_u8)
+        for row in bank.templates
+    )
+    flat_core = bytearray()
+    _put_uleb(flat_core, len(bank.templates))
+    for reference, row in enumerate(bank.templates):
+        flat_core.extend(
+            _V15_LIBRARY_ROW.pack(
+                _V15_ROLE_TO_WIRE[row.role],
+                _V15_APPLICATION_TO_WIRE[row.application],
+                row.scorer_row_start,
+                row.scorer_row_stop,
+                row.patch_height,
+                row.patch_width,
+                reference,
+            )
+        )
+    program_slot_tuple = tuple(program_slots)
+    program_skeleton = _frame_typed_skeleton(bytes(core), program_slot_tuple)
+    flat_skeleton = _frame_typed_skeleton(bytes(flat_core), flat_slots)
+    body = _frame_typed_body(bytes(core), program_slot_tuple)
+    return (
+        body,
+        program_skeleton,
+        flat_skeleton,
+        program_slot_tuple,
+        flat_slots,
+        sum(len(slot.payload) for slot in program_slot_tuple),
+    )
 
 
 def compile_v15_template_bank(payload: bytes, formulation: Formulation) -> CompiledProgram:
@@ -653,10 +869,26 @@ def compile_v15_template_bank(payload: bytes, formulation: Formulation) -> Compi
     library_bytes = 0
     if formulation is Formulation.LITERAL:
         body = source
+        scope_fields: dict[str, Any] = {}
     elif formulation is Formulation.SHARED_LIBRARY:
         body, library_bytes = _v15_library_body(bank)
+        scope_fields = {}
     elif formulation is Formulation.STRUCTURAL:
-        body, library_bytes = _v15_structural_body(bank)
+        (
+            body,
+            program_skeleton,
+            flat_skeleton,
+            program_slots,
+            flat_slots,
+            library_bytes,
+        ) = _v15_structural_body(bank)
+        scope_fields = {
+            "discrete_skeleton_scope_eligible": True,
+            "program_skeleton_wire": program_skeleton,
+            "flat_skeleton_wire": flat_skeleton,
+            "program_fiber_slots": program_slots,
+            "flat_fiber_slots": flat_slots,
+        }
     else:  # pragma: no cover
         raise PointFreeProgramError("unsupported V15 formulation")
     program = _wrap_program(Recipe.V15_TEMPLATE_BANK, formulation, body)
@@ -670,6 +902,7 @@ def compile_v15_template_bank(payload: bytes, formulation: Formulation) -> Compi
         source_sha256=hashlib.sha256(source).hexdigest(),
         video_derived_library_bytes=library_bytes,
         operator_trace=RECIPE_TRACES[Recipe.V15_TEMPLATE_BANK],
+        **scope_fields,
     )
 
 
@@ -710,22 +943,27 @@ def _execute_v15_library(body: bytes) -> bytes:
 
 
 def _execute_v15_structural(body: bytes) -> bytes:
-    group_count, offset = _get_uleb(body, 0)
+    slots, core = _parse_typed_body(body)
+    if any(slot.kind is not FiberKind.V15_RGB_U8_LITERAL for slot in slots):
+        raise PointFreeProgramError("V15 structural fiber kind differs")
+    group_count, offset = _get_uleb(core, 0)
     if not 1 <= group_count <= 64:
         raise PointFreeProgramError("V15 structural group count is invalid")
     rows: list[RowBandScorerTemplateV1] = []
     for _group in range(group_count):
-        raw, offset = _take(body, offset, 4, "V15 structural group header")
+        raw, offset = _take(core, offset, 4, "V15 structural group header")
         role, application, height, width = raw
         if role not in _V15_WIRE_TO_ROLE or application not in _V15_WIRE_TO_APPLICATION:
             raise PointFreeProgramError("V15 structural role/application is unknown")
-        rgb_size, offset = _get_uleb(body, offset)
-        rgb, offset = _take(body, offset, rgb_size, "V15 structural RGB literal")
-        band_count, offset = _get_uleb(body, offset)
+        reference, offset = _get_uleb(core, offset)
+        if reference >= len(slots):
+            raise PointFreeProgramError("V15 structural fiber reference is out of range")
+        rgb = slots[reference].payload
+        band_count, offset = _get_uleb(core, offset)
         if not 1 <= band_count <= 64:
             raise PointFreeProgramError("V15 structural band count is invalid")
         for _band in range(band_count):
-            band, offset = _take(body, offset, 4, "V15 structural row band")
+            band, offset = _take(core, offset, 4, "V15 structural row band")
             start, stop = struct.unpack(">HH", band)
             rows.append(
                 RowBandScorerTemplateV1(
@@ -738,7 +976,7 @@ def _execute_v15_structural(body: bytes) -> bytes:
                     rgb,
                 )
             )
-    if offset != len(body):
+    if offset != len(core):
         raise PointFreeProgramError("V15 structural body has trailing bytes")
     return encode_scorer_solved_template_bank(ScorerSolvedTemplateBankV1(tuple(rows)))
 
@@ -795,7 +1033,7 @@ def _encode_dv2_structural(
     inventory: FactInventory,
     options: SentenceOptions,
     sections: Sequence[tuple[bytes, bytes]],
-) -> tuple[bytes, int]:
+) -> tuple[bytes, bytes, bytes, tuple[TypedFiberSlot, ...], int]:
     expected = _expected_section_tags(options)
     by_tag = dict(sections)
     numeric_tags = expected[2 + int(options.repeated_provenance) :]
@@ -807,25 +1045,44 @@ def _encode_dv2_structural(
         for tag in numeric_tags
         if tag not in {b"FIDX", b"EVNT"}
     ]
-    body = bytearray()
-    _put_uleb(body, inventory.pair_count)
-    _put_uleb(body, inventory.source_height)
-    _put_uleb(body, inventory.source_width)
-    body.extend(
+    core = bytearray()
+    _put_uleb(core, inventory.pair_count)
+    _put_uleb(core, inventory.source_height)
+    _put_uleb(core, inventory.source_width)
+    core.extend(
         (
             _LAYOUT_TO_WIRE[options.layout],
             _TEMPORAL_TO_WIRE[options.temporal_mode],
             _counterfactual_bits(options),
         )
     )
-    _put_uleb(body, len(numeric_tags))
-    library_bytes = 0
-    for tag in numeric_tags:
+    _put_uleb(core, len(numeric_tags))
+    slots: list[TypedFiberSlot] = []
+    for reference, tag in enumerate(numeric_tags):
         payload = by_tag[tag]
-        _put_uleb(body, len(payload))
-        body.extend(payload)
-        library_bytes += len(payload)
-    return bytes(body), library_bytes
+        core.extend(tag)
+        _put_uleb(core, reference)
+        slots.append(TypedFiberSlot(FiberKind.DV2_ARITHMETIC_NUMERIC, payload))
+
+    flat_core = bytearray()
+    _put_uleb(flat_core, len(sections))
+    numeric_index = {tag: index for index, tag in enumerate(numeric_tags)}
+    for tag, payload in sections:
+        flat_core.extend(tag)
+        if tag in numeric_index:
+            flat_core.append(1)
+            _put_uleb(flat_core, numeric_index[tag])
+        else:
+            flat_core.append(0)
+            _put_uleb(flat_core, len(payload))
+            flat_core.extend(payload)
+    slot_tuple = tuple(slots)
+    program_skeleton = _frame_typed_skeleton(bytes(core), slot_tuple)
+    flat_skeleton = _frame_typed_skeleton(bytes(flat_core), slot_tuple)
+    body = _frame_typed_body(bytes(core), slot_tuple)
+    return body, program_skeleton, flat_skeleton, slot_tuple, sum(
+        len(slot.payload) for slot in slot_tuple
+    )
 
 
 def compile_dv2_sentence(outer_payload: bytes, formulation: Formulation) -> CompiledProgram:
@@ -840,10 +1097,21 @@ def compile_dv2_sentence(outer_payload: bytes, formulation: Formulation) -> Comp
     library_bytes = 0
     if formulation is Formulation.LITERAL:
         body = source
+        scope_fields: dict[str, Any] = {}
     elif formulation is Formulation.SHARED_LIBRARY:
         body, library_bytes = _encode_dv2_library(sections)
+        scope_fields = {}
     elif formulation is Formulation.STRUCTURAL:
-        body, library_bytes = _encode_dv2_structural(inventory, options, sections)
+        body, program_skeleton, flat_skeleton, slots, library_bytes = (
+            _encode_dv2_structural(inventory, options, sections)
+        )
+        scope_fields = {
+            "discrete_skeleton_scope_eligible": True,
+            "program_skeleton_wire": program_skeleton,
+            "flat_skeleton_wire": flat_skeleton,
+            "program_fiber_slots": slots,
+            "flat_fiber_slots": slots,
+        }
     else:  # pragma: no cover
         raise PointFreeProgramError("unsupported DV2 formulation")
     program = _wrap_program(Recipe.DV2_SENTENCE, formulation, body)
@@ -861,6 +1129,7 @@ def compile_dv2_sentence(outer_payload: bytes, formulation: Formulation) -> Comp
         source_sha256=hashlib.sha256(source).hexdigest(),
         video_derived_library_bytes=library_bytes,
         operator_trace=RECIPE_TRACES[Recipe.DV2_SENTENCE],
+        **scope_fields,
     )
 
 
@@ -886,12 +1155,15 @@ def _execute_dv2_library(body: bytes) -> bytes:
 
 
 def _execute_dv2_structural(body: bytes) -> bytes:
-    pair_count, offset = _get_uleb(body, 0)
-    source_height, offset = _get_uleb(body, offset)
-    source_width, offset = _get_uleb(body, offset)
-    options_raw, offset = _take(body, offset, 3, "DV2 structural options")
+    slots, core = _parse_typed_body(body)
+    if any(slot.kind is not FiberKind.DV2_ARITHMETIC_NUMERIC for slot in slots):
+        raise PointFreeProgramError("DV2 structural fiber kind differs")
+    pair_count, offset = _get_uleb(core, 0)
+    source_height, offset = _get_uleb(core, offset)
+    source_width, offset = _get_uleb(core, offset)
+    options_raw, offset = _take(core, offset, 3, "DV2 structural options")
     options = _options_from_wire(*options_raw)
-    count, offset = _get_uleb(body, offset)
+    count, offset = _get_uleb(core, offset)
     expected = _expected_section_tags(options)
     numeric_tags = [
         tag
@@ -901,11 +1173,15 @@ def _execute_dv2_structural(body: bytes) -> bytes:
     if count != len(numeric_tags):
         raise PointFreeProgramError("DV2 structural numeric-section count differs from its recipe")
     payloads: dict[bytes, bytes] = {}
-    for tag in numeric_tags:
-        size, offset = _get_uleb(body, offset)
-        payload, offset = _take(body, offset, size, f"DV2 {tag!r} payload")
-        payloads[tag] = payload
-    if offset != len(body):
+    for expected_tag in numeric_tags:
+        tag, offset = _take(core, offset, 4, "DV2 structural fiber tag")
+        if tag != expected_tag:
+            raise PointFreeProgramError("DV2 structural fiber tag/order differs")
+        reference, offset = _get_uleb(core, offset)
+        if reference >= len(slots):
+            raise PointFreeProgramError("DV2 structural fiber reference is out of range")
+        payloads[tag] = slots[reference].payload
+    if offset != len(core):
         raise PointFreeProgramError("DV2 structural body has trailing bytes")
     encoded = _reassemble_numeric(payloads, options, pair_count)
     tensor = _temporal_decode(encoded, options.temporal_mode)
@@ -979,6 +1255,30 @@ def compile_bundle(
         ):
             raise PointFreeProgramError("PF1 bundle source replay differs from a child compile receipt")
     flat = frame_flat_sources(sources)
+    scope_fields: dict[str, Any] = {}
+    if formulation is Formulation.STRUCTURAL:
+        if any(not row.discrete_skeleton_scope_eligible for row in rows):
+            raise PointFreeProgramError("structural bundle child lacks discrete-skeleton custody")
+        program_slots = tuple(slot for row in rows for slot in row.program_fiber_slots)
+        flat_slots = tuple(slot for row in rows for slot in row.flat_fiber_slots)
+        program_core = bytearray()
+        flat_core = bytearray(FLAT_BUNDLE_MAGIC)
+        _put_uleb(program_core, len(rows))
+        _put_uleb(flat_core, len(rows))
+        for row in rows:
+            _put_uleb(program_core, len(row.program_skeleton_wire))
+            program_core.extend(row.program_skeleton_wire)
+            _put_uleb(flat_core, len(row.flat_skeleton_wire))
+            flat_core.extend(row.flat_skeleton_wire)
+        scope_fields = {
+            "discrete_skeleton_scope_eligible": True,
+            "program_skeleton_wire": _frame_typed_skeleton(
+                bytes(program_core), program_slots
+            ),
+            "flat_skeleton_wire": _frame_typed_skeleton(bytes(flat_core), flat_slots),
+            "program_fiber_slots": program_slots,
+            "flat_fiber_slots": flat_slots,
+        }
     return CompiledProgram(
         recipe=Recipe.BUNDLE,
         formulation=formulation,
@@ -987,6 +1287,7 @@ def compile_bundle(
         source_sha256=hashlib.sha256(flat).hexdigest(),
         video_derived_library_bytes=sum(row.video_derived_library_bytes for row in rows),
         operator_trace=RECIPE_TRACES[Recipe.BUNDLE],
+        **scope_fields,
     )
 
 
@@ -1121,6 +1422,102 @@ def code_real_payload_unchecked(raw: bytes) -> bytes:
     return CODED_MAGIC + bytes([codec_id]) + _uleb(len(raw)) + coded
 
 
+def code_two_typed_payload(
+    skeleton_wire: bytes,
+    slots: Sequence[TypedFiberSlot],
+) -> CodedPayload:
+    """Code a discrete skeleton while preserving native opaque fiber payloads."""
+
+    slot_tuple = tuple(slots)
+    _typed_slots_match_manifest(skeleton_wire, slot_tuple)
+    skeleton_coded = code_real_payload(skeleton_wire)
+    framed = bytearray(TWO_TYPED_CODED_MAGIC)
+    _put_uleb(framed, len(skeleton_coded.payload))
+    framed.extend(skeleton_coded.payload)
+    for slot in slot_tuple:
+        framed.extend(slot.payload)
+    payload = bytes(framed)
+    decoded_skeleton, decoded_slots = decode_two_typed_payload(payload)
+    if decoded_skeleton != skeleton_wire or decoded_slots != slot_tuple:
+        raise PointFreeProgramError("two-typed payload failed strict parse-back")
+    return CodedPayload(
+        codec=f"two_typed:{skeleton_coded.codec}+native_fibers",
+        raw_bytes=len(skeleton_wire) + sum(len(slot.payload) for slot in slot_tuple),
+        coded_payload_bytes=skeleton_coded.coded_payload_bytes
+        + sum(len(slot.payload) for slot in slot_tuple),
+        framed_bytes=len(payload),
+        framed_sha256=hashlib.sha256(payload).hexdigest(),
+        payload=payload,
+    )
+
+
+def decode_two_typed_payload(payload: bytes) -> tuple[bytes, tuple[TypedFiberSlot, ...]]:
+    """Decode one canonical RT2 skeleton/native-fiber frame."""
+
+    if not isinstance(payload, bytes) or not payload.startswith(TWO_TYPED_CODED_MAGIC):
+        raise PointFreeProgramError("two-typed coded magic is invalid")
+    skeleton_size, offset = _get_uleb(payload, len(TWO_TYPED_CODED_MAGIC))
+    skeleton_payload, offset = _take(
+        payload, offset, skeleton_size, "two-typed coded skeleton"
+    )
+    skeleton_wire = decode_real_payload(skeleton_payload)
+    manifest, _core = _parse_typed_skeleton(skeleton_wire)
+    slots: list[TypedFiberSlot] = []
+    for kind, size in manifest:
+        fiber, offset = _take(payload, offset, size, "two-typed native fiber")
+        slots.append(TypedFiberSlot(kind, fiber))
+    if offset != len(payload):
+        raise PointFreeProgramError("two-typed coded payload has trailing bytes")
+    return skeleton_wire, tuple(slots)
+
+
+def code_compiled_program(compiled: CompiledProgram) -> CodedPayload:
+    """Return the counted program artifact on its declared scope."""
+
+    if compiled.discrete_skeleton_scope_eligible:
+        recipe, formulation, body = _unwrap_program(compiled.program)
+        slots, core = _parse_typed_body(body)
+        if (
+            recipe is not compiled.recipe
+            or formulation is not Formulation.STRUCTURAL
+            or slots != compiled.program_fiber_slots
+            or _frame_typed_skeleton(core, slots) != compiled.program_skeleton_wire
+        ):
+            raise PointFreeProgramError(
+                "counted two-typed skeleton differs from executable program"
+            )
+        return code_two_typed_payload(
+            compiled.program_skeleton_wire,
+            compiled.program_fiber_slots,
+        )
+    return code_real_payload(compiled.program)
+
+
+def code_compiled_flat(compiled: CompiledProgram, source: bytes) -> CodedPayload:
+    """Return the scope-matched identical-content flat control artifact."""
+
+    source = bytes(source)
+    if (
+        compiled.source_bytes != len(source)
+        or compiled.source_sha256 != hashlib.sha256(source).hexdigest()
+    ):
+        raise PointFreeProgramError("flat control differs from compile-time exact replay")
+    if compiled.discrete_skeleton_scope_eligible:
+        return code_two_typed_payload(
+            compiled.flat_skeleton_wire,
+            compiled.flat_fiber_slots,
+        )
+    return code_real_payload(source)
+
+
+def _two_typed_split(coded: CodedPayload, slots: Sequence[TypedFiberSlot]) -> tuple[int, int]:
+    fiber_bytes = sum(len(slot.payload) for slot in slots)
+    skeleton_bytes = coded.framed_bytes - fiber_bytes
+    if skeleton_bytes <= 0:
+        raise PointFreeProgramError("two-typed skeleton accounting is nonpositive")
+    return skeleton_bytes, fiber_bytes
+
+
 def rate_row(compiled: CompiledProgram, source: bytes) -> dict[str, Any]:
     """Measure program-vs-flat bytes on the identical source semantics."""
 
@@ -1128,9 +1525,11 @@ def rate_row(compiled: CompiledProgram, source: bytes) -> dict[str, Any]:
     source_sha256 = hashlib.sha256(source).hexdigest()
     if compiled.source_bytes != len(source) or compiled.source_sha256 != source_sha256:
         raise PointFreeProgramError("rate comparison differs from compile-time exact replay")
-    program_coded = code_real_payload(compiled.program)
-    flat_coded = code_real_payload(source)
-    return {
+    if execute_program(compiled.program) != source:
+        raise PointFreeProgramError("rate comparison lost exact public program replay")
+    program_coded = code_compiled_program(compiled)
+    flat_coded = code_compiled_flat(compiled, source)
+    row: dict[str, Any] = {
         "recipe": compiled.recipe.name,
         "formulation": compiled.formulation.name,
         "source_bytes": len(source),
@@ -1147,7 +1546,45 @@ def rate_row(compiled: CompiledProgram, source: bytes) -> dict[str, Any]:
         "video_derived_library_bytes_inside_program": compiled.video_derived_library_bytes,
         "semantic_parseback_exact": True,
         "score_claim": False,
+        "discrete_skeleton_scope_eligible": compiled.discrete_skeleton_scope_eligible,
     }
+    if compiled.discrete_skeleton_scope_eligible:
+        program_skeleton, program_fiber = _two_typed_split(
+            program_coded, compiled.program_fiber_slots
+        )
+        flat_skeleton, flat_fiber = _two_typed_split(
+            flat_coded, compiled.flat_fiber_slots
+        )
+        row.update(
+            {
+                "two_typed_split_status": "MEASURED_EXACT",
+                "program_skeleton_counted_bytes": program_skeleton,
+                "program_fiber_counted_bytes": program_fiber,
+                "flat_skeleton_counted_bytes": flat_skeleton,
+                "flat_fiber_counted_bytes": flat_fiber,
+                "delta_skeleton_bytes": program_skeleton - flat_skeleton,
+                "delta_fiber_bytes": program_fiber - flat_fiber,
+                "program_fiber_slot_count": len(compiled.program_fiber_slots),
+                "flat_fiber_slot_count": len(compiled.flat_fiber_slots),
+                "fiber_policy": "opaque_native_coded_not_tokenized",
+            }
+        )
+    else:
+        row.update(
+            {
+                "two_typed_split_status": "OPAQUE_CONTROL_NOT_ROUTABLE",
+                "program_skeleton_counted_bytes": None,
+                "program_fiber_counted_bytes": None,
+                "flat_skeleton_counted_bytes": None,
+                "flat_fiber_counted_bytes": None,
+                "delta_skeleton_bytes": None,
+                "delta_fiber_bytes": None,
+                "program_fiber_slot_count": None,
+                "flat_fiber_slot_count": None,
+                "fiber_policy": "legacy_control_only_no_skeleton_verdict",
+            }
+        )
+    return row
 
 
 def bundle_rate_row(compiled: CompiledProgram, sources: Sequence[bytes]) -> dict[str, Any]:
@@ -1158,9 +1595,11 @@ def bundle_rate_row(compiled: CompiledProgram, sources: Sequence[bytes]) -> dict
     flat_sha256 = hashlib.sha256(flat).hexdigest()
     if compiled.source_bytes != len(flat) or compiled.source_sha256 != flat_sha256:
         raise PointFreeProgramError("bundle rate comparison differs from compile-time exact replay")
-    program_coded = code_real_payload(compiled.program)
-    flat_coded = code_real_payload(flat)
-    return {
+    if execute_program(compiled.program) != source_tuple:
+        raise PointFreeProgramError("bundle rate comparison lost exact public program replay")
+    program_coded = code_compiled_program(compiled)
+    flat_coded = code_compiled_flat(compiled, flat)
+    row: dict[str, Any] = {
         "recipe": compiled.recipe.name,
         "formulation": compiled.formulation.name,
         "source_component_count": len(source_tuple),
@@ -1178,7 +1617,45 @@ def bundle_rate_row(compiled: CompiledProgram, sources: Sequence[bytes]) -> dict
         "video_derived_library_bytes_inside_program": compiled.video_derived_library_bytes,
         "semantic_parseback_exact": True,
         "score_claim": False,
+        "discrete_skeleton_scope_eligible": compiled.discrete_skeleton_scope_eligible,
     }
+    if compiled.discrete_skeleton_scope_eligible:
+        program_skeleton, program_fiber = _two_typed_split(
+            program_coded, compiled.program_fiber_slots
+        )
+        flat_skeleton, flat_fiber = _two_typed_split(
+            flat_coded, compiled.flat_fiber_slots
+        )
+        row.update(
+            {
+                "two_typed_split_status": "MEASURED_EXACT",
+                "program_skeleton_counted_bytes": program_skeleton,
+                "program_fiber_counted_bytes": program_fiber,
+                "flat_skeleton_counted_bytes": flat_skeleton,
+                "flat_fiber_counted_bytes": flat_fiber,
+                "delta_skeleton_bytes": program_skeleton - flat_skeleton,
+                "delta_fiber_bytes": program_fiber - flat_fiber,
+                "program_fiber_slot_count": len(compiled.program_fiber_slots),
+                "flat_fiber_slot_count": len(compiled.flat_fiber_slots),
+                "fiber_policy": "opaque_native_coded_not_tokenized",
+            }
+        )
+    else:
+        row.update(
+            {
+                "two_typed_split_status": "OPAQUE_CONTROL_NOT_ROUTABLE",
+                "program_skeleton_counted_bytes": None,
+                "program_fiber_counted_bytes": None,
+                "flat_skeleton_counted_bytes": None,
+                "flat_fiber_counted_bytes": None,
+                "delta_skeleton_bytes": None,
+                "delta_fiber_bytes": None,
+                "program_fiber_slot_count": None,
+                "flat_fiber_slot_count": None,
+                "fiber_policy": "legacy_control_only_no_skeleton_verdict",
+            }
+        )
+    return row
 
 
 def basis_manifest() -> tuple[dict[str, Any], ...]:
@@ -1200,21 +1677,27 @@ __all__ = [
     "BasisPrimitive",
     "CodedPayload",
     "CompiledProgram",
+    "FiberKind",
     "Formulation",
     "PointFreeProgramError",
     "Recipe",
     "SharedLiteralLibrary",
+    "TypedFiberSlot",
     "apply_template",
     "basis_manifest",
     "bundle_rate_row",
     "channel_affine",
+    "code_compiled_flat",
+    "code_compiled_program",
     "code_real_payload",
+    "code_two_typed_payload",
     "compile_bundle",
     "compile_dv2_sentence",
     "compile_g1_worldsheet",
     "compile_v15_template_bank",
     "compose_pointfree",
     "decode_real_payload",
+    "decode_two_typed_payload",
     "evaluate_g1_worldsheet",
     "evaluate_lane_programs",
     "execute_program",

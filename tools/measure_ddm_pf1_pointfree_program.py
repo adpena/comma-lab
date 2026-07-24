@@ -29,7 +29,8 @@ for import_root in (SRC_ROOT, REPO_ROOT):
 from tac.optimization.ddm_pointfree_program import (  # noqa: E402
     Formulation,
     bundle_rate_row,
-    code_real_payload,
+    code_compiled_flat,
+    code_compiled_program,
     compile_bundle,
     compile_dv2_sentence,
     compile_g1_worldsheet,
@@ -69,8 +70,8 @@ from tools.measure_ddm_v14_realization_fidelity import (  # noqa: E402
 )
 from tools.run_ddm_v9_carrier_compose import open_stored_npy_memmap  # noqa: E402
 
-RESULT_SCHEMA: Final = "ddm_pf1_pointfree_program_description_receipt.v1"
-RATE_SCHEMA: Final = "ddm_pf1_pointfree_program_rate_matrix.v1"
+RESULT_SCHEMA: Final = "ddm_pf1_pointfree_program_description_receipt.v2"
+RATE_SCHEMA: Final = "ddm_pf1_pointfree_program_rate_matrix.v2"
 LANE_ID: Final = "lane_ddm_pf1_pointfree_program_description_20260723"
 
 
@@ -201,8 +202,7 @@ def _rate_evidence(
     compiled: dict[tuple[str, Formulation], Any] = {}
     source_by_name = {name: value[0] for name, value in inputs.items()}
     component_rows: list[dict[str, Any]] = []
-    flat_cache: dict[str, tuple[Any, float]] = {}
-    programs_root = root / "programs"
+    programs_root = root / "programs_scope_corrected"
 
     for name, (source, compiler) in inputs.items():
         for formulation in Formulation:
@@ -210,13 +210,11 @@ def _rate_evidence(
             compiled[name, formulation] = program
             if execute_program(program.program) != source:
                 raise DirectDescriptionError(f"PF1 {name} public exact replay failed")
-            source_digest = _sha256(source)
-            if source_digest not in flat_cache:
-                started = time.perf_counter()
-                flat_cache[source_digest] = (code_real_payload(source), time.perf_counter() - started)
-            flat_coded, flat_seconds = flat_cache[source_digest]
             started = time.perf_counter()
-            program_coded = code_real_payload(program.program)
+            flat_coded = code_compiled_flat(program, source)
+            flat_seconds = time.perf_counter() - started
+            started = time.perf_counter()
+            program_coded = code_compiled_program(program)
             program_seconds = time.perf_counter() - started
             row = rate_row(program, source)
             if (
@@ -238,11 +236,11 @@ def _rate_evidence(
                         program.program,
                     ),
                     "program_coded_artifact": _artifact_row(
-                        programs_root / f"{name}.{formulation.name.lower()}.rc1",
+                        programs_root / f"{name}.{formulation.name.lower()}.counted",
                         program_coded.payload,
                     ),
                     "flat_coded_artifact": _artifact_row(
-                        programs_root / f"{name}.flat.rc1",
+                        programs_root / f"{name}.{formulation.name.lower()}.flat.counted",
                         flat_coded.payload,
                     ),
                 }
@@ -257,18 +255,16 @@ def _rate_evidence(
     for name, child_names in bundle_specs.items():
         sources = tuple(source_by_name[child_name] for child_name in child_names)
         flat = frame_flat_sources(sources)
-        flat_digest = _sha256(flat)
         for formulation in Formulation:
             children = tuple(compiled[child_name, formulation] for child_name in child_names)
             started = time.perf_counter()
             bundle = compile_bundle(children, formulation, source_replays=sources)
             compile_seconds = time.perf_counter() - started
-            if flat_digest not in flat_cache:
-                started = time.perf_counter()
-                flat_cache[flat_digest] = (code_real_payload(flat), time.perf_counter() - started)
-            flat_coded, flat_seconds = flat_cache[flat_digest]
             started = time.perf_counter()
-            program_coded = code_real_payload(bundle.program)
+            flat_coded = code_compiled_flat(bundle, flat)
+            flat_seconds = time.perf_counter() - started
+            started = time.perf_counter()
+            program_coded = code_compiled_program(bundle)
             program_seconds = time.perf_counter() - started
             row = bundle_rate_row(bundle, sources)
             row.update(
@@ -286,11 +282,11 @@ def _rate_evidence(
                         bundle.program,
                     ),
                     "program_coded_artifact": _artifact_row(
-                        programs_root / f"{name}.{formulation.name.lower()}.rc1",
+                        programs_root / f"{name}.{formulation.name.lower()}.counted",
                         program_coded.payload,
                     ),
                     "flat_coded_artifact": _artifact_row(
-                        programs_root / f"{name}.flat.rc1",
+                        programs_root / f"{name}.{formulation.name.lower()}.flat.counted",
                         flat_coded.payload,
                     ),
                 }
@@ -309,14 +305,22 @@ def _rate_evidence(
             for row in (*component_rows, *bundle_rows)
             if row["description"] == description
         ]
+        scope_eligible = [
+            row for row in rows if row["discrete_skeleton_scope_eligible"]
+        ]
         formulation_falsifier[description] = {
             "delta_program_minus_flat_by_formulation": {
                 row["formulation"]: row["delta_program_minus_flat_bytes"] for row in rows
             },
-            "formulation_closed": all(
-                row["delta_program_minus_flat_bytes"] >= 0 for row in rows
+            "scope_eligible_formulations": [
+                row["formulation"] for row in scope_eligible
+            ],
+            "formulation_closed": len(scope_eligible) >= 3
+            and all(row["delta_program_minus_flat_bytes"] >= 0 for row in scope_eligible),
+            "closure_rule": (
+                "discrete-skeleton rung closes only after >=3 scope-eligible two-typed "
+                "formulations are nonnegative; opaque fiber controls never close it"
             ),
-            "closure_rule": "program >= flat under all three distinct preregistered formulations",
         }
     return {
         "schema": RATE_SCHEMA,
@@ -329,9 +333,17 @@ def _rate_evidence(
         "formulation_falsifier": formulation_falsifier,
         "counting_boundary": {
             "generic_interpreter": "FREE_rule118",
-            "program_strings": "COUNTED",
-            "video_derived_library_entries": "COUNTED_inside_program",
+            "discrete_skeleton_program": "COUNTED_real_coder",
+            "opaque_typed_fibers": "COUNTED_native_analog_coder_not_tokenized",
             "generic_recipe_and_basis_implementation": "FREE_rule118",
+        },
+        "scope_correction": {
+            "directive_utc": "2026-07-24T01:06:43Z",
+            "scope": "DISCRETE_SKELETON_ONLY",
+            "two_typed_representation": True,
+            "continuous_fibers_are_opaque_slots": True,
+            "scope_eligible_formulation": "STRUCTURAL",
+            "opaque_controls": ["LITERAL", "SHARED_LIBRARY"],
         },
         "semantic_parseback_exact_all_rows": True,
         "score_claim": False,
@@ -343,8 +355,12 @@ def _rebuild_archive_from_structural_programs(
     root: Path,
 ) -> tuple[bytes, Any, Any]:
     members, _homes = parse_carrier_compose_archive(source_archive)
-    g1_program = _read_regular_file_once(root / "programs/g1_worldsheet.structural.pf1")
-    template_program = _read_regular_file_once(root / "programs/v15_template_bank.structural.pf1")
+    g1_program = _read_regular_file_once(
+        root / "programs_scope_corrected/g1_worldsheet.structural.pf1"
+    )
+    template_program = _read_regular_file_once(
+        root / "programs_scope_corrected/v15_template_bank.structural.pf1"
+    )
     g1 = execute_program(g1_program)
     template = execute_program(template_program)
     if not isinstance(g1, bytes) or not isinstance(template, bytes):
@@ -394,7 +410,10 @@ def run(
 ) -> Path:
     storage = _storage_preflight(root.resolve())
     root.mkdir(parents=True, exist_ok=True)
-    receipt_path = root / "ddm_pf1_pointfree_program_description_n600_receipt.json"
+    receipt_path = (
+        root
+        / "ddm_pf1_pointfree_program_description_n600_scope_corrected_receipt.json"
+    )
     if receipt_path.exists():
         existing = json.loads(_read_regular_file_once(receipt_path))
         if existing.get("typed_config_sha256") != config.typed_config_hash():
@@ -427,7 +446,7 @@ def run(
         "frozen n600 target cache",
     )
 
-    rate_path = root / "stage_checkpoints/00_rate_matrix.json"
+    rate_path = root / "stage_checkpoints/30_two_typed_rate_matrix.json"
     if not rate_path.exists():
         rate = _rate_evidence(
             root=root,
@@ -451,12 +470,12 @@ def run(
     if archive_sha256 != config.source_archive_sha256:
         raise DirectDescriptionError("PF1 rebuilt archive SHA-256 differs")
     paired_receiver = _ExactPairedReceiver(source_receiver, program_receiver, archive_sha256)
-    archive_checkpoint = root / "stage_checkpoints/10_receiver_closed_archive.json"
+    archive_checkpoint = root / "stage_checkpoints/40_two_typed_receiver_closed_archive.json"
     if not archive_checkpoint.exists():
         _write_checkpoint(
             archive_checkpoint,
             {
-                "schema": "ddm_pf1_receiver_closed_archive.v1",
+                "schema": "ddm_pf1_two_typed_receiver_closed_archive.v2",
                 "typed_config_sha256": config.typed_config_hash(),
                 "source_archive_bytes": len(source_archive),
                 "source_archive_sha256": _sha256(source_archive),
@@ -546,14 +565,20 @@ def run(
         "composed_structural_rows": composed,
         "receiver_measurement": measurement,
         "falsifier": {
-            "rule": "program >= flat across all three distinct formulations closes that formulation",
+            "rule": (
+                "only scope-eligible two-typed discrete-skeleton formulations count; "
+                ">=3 nonnegative formulations are required for closure"
+            ),
             "all_descriptions_closed": all_falsified,
             "verdict": (
                 "FORMULATION_CLOSED"
                 if all_falsified
-                else "POSITIVE_FIRST_RUNG_STRUCTURAL_REUSE_SURVIVES"
+                else "POSITIVE_DISCRETE_SKELETON_RUNG_SURVIVES_FIBERS_OPEN"
             ),
-            "verdict_scope": "PF1 exact existing-description compiler plus bounded exact antiunification",
+            "verdict_scope": (
+                "PF1 discrete event/template skeleton plus opaque native-coded typed fibers; "
+                "continuous-fiber coding families open"
+            ),
         },
         "constraint_algebra_fusion": {
             "secondary": True,
@@ -565,10 +590,13 @@ def run(
         "route": {
             "pool_key": "program_description",
             "substitutive_against": ["g1", "dv2"],
-            "menu1_c1": "admit structural PF1 only where exact rate delta is negative",
+            "menu1_c1": (
+                "admit STRUCTURAL PF1 only where the exact two-typed total delta is "
+                "negative; never route opaque controls"
+            ),
             "successor_rung": (
-                "compile the next settled DDM description without widening the measured basis; "
-                "re-measure identical-content flat control"
+                "add two more discrete-skeleton formulations with opaque typed fiber "
+                "references; re-measure identical-content two-typed flat controls"
             ),
             "frontier_mutation_authorized": False,
         },
@@ -583,8 +611,9 @@ def run(
             "reason": "no rebuildable bulk or scratch is materialized",
         },
         "resume": {
-            "rate_matrix_checkpoint_preserved": True,
-            "receiver_archive_checkpoint_preserved": True,
+            "legacy_rate_matrix_checkpoint_preserved": True,
+            "two_typed_rate_matrix_checkpoint_preserved": True,
+            "two_typed_receiver_archive_checkpoint_preserved": True,
             "per_scorer_batch_checkpoints_preserved": True,
             "batch_size": config.scorer_batch_size,
             "completed_receipt_is_immutable": True,
@@ -605,6 +634,17 @@ def run(
             str(Path(config.upstream_root) / "frame_utils.py"),
             str(Path(config.upstream_root) / "evaluate.py"),
         ],
+        "scope_correction": {
+            "directive_utc": "2026-07-24T01:06:43Z",
+            "scope": "DISCRETE_SKELETON_ONLY",
+            "necessary_not_sufficient": True,
+            "continuous_fibers_not_tokenized": True,
+            "typed_fiber_policy": "opaque native-coded slots referenced by skeleton",
+            "legacy_receipt_preserved_but_superseded_for_scope_claims": (
+                ".omx/research/ddm_pf1_pointfree_program_description_n600_"
+                "20260723T235900Z/ddm_pf1_pointfree_program_description_n600_receipt.json"
+            ),
+        },
         "pointer": f"{POINTER_SCORE_TEXT} [contest-CPU]",
         "pointer_moved": False,
         "evidence_axis": EVIDENCE_AXIS,
