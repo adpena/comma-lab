@@ -999,6 +999,31 @@ def run(args: argparse.Namespace) -> Path:
         "main_landing_review_required": True,
     }
     if args.rg1_retry_from is not None:
+        rg1_rows = [_read_json(path) for path in sorted(checkpoint_root.glob("*.json"))]
+        lane_rows = [
+            row for row in rg1_rows if str(row["receiver_actuator_id"]).startswith("j2.lane.")
+        ]
+        lane_candidate_shas = {
+            str(row["candidate_archive"]["sha256"])
+            for row in lane_rows
+            if row.get("candidate_archive") is not None
+        }
+        original_infeasible_counts = {
+            "lane": sum(
+                str(row["receiver_actuator_id"]).startswith("j2.lane.")
+                for row in prior_infeasible
+            ),
+            "g2cs1": sum(
+                str(row["receiver_actuator_id"]).startswith("g2g.g2cs1.")
+                for row in prior_infeasible
+            ),
+            "geometry_escape": sum(
+                not str(row["receiver_actuator_id"]).startswith(
+                    ("j2.lane.", "g2g.g2cs1.")
+                )
+                for row in prior_infeasible
+            ),
+        }
         receipt["rg1_extension"] = {
             "schema": "ddm_rg1_receiver_grammar_extension_measurement.v1",
             "g2g_quantum_receipt_sha256": G2G_RECEIPT_SHA256,
@@ -1007,11 +1032,30 @@ def run(args: argparse.Namespace) -> Path:
                 f"{value}{_BOUNDED_SUFFIX}" for value in geometry_ids
             ],
             "original_infeasible_rows_preserved": len(prior_infeasible),
+            "original_infeasible_counts": original_infeasible_counts,
             "grammar_verdict_scope": "INSTANCE_EXTENDED_GRAMMAR_RG1",
             "checkpoint_run_id_policy": (
                 f"{RUN_ID} retained inside v2 probe rows for exact backward-compatible "
                 "resume; this receipt owns the RG1 run identity"
             ),
+            "inactive_extension_identity": {
+                "proven": compile_rg1_receiver_grammar(context.base_carrier)
+                == context.base_carrier,
+                "nested_carrier_sha256": hashlib.sha256(context.base_carrier).hexdigest(),
+                "outer_v19c_base_sha256": EXPECTED_BASE_SHA256,
+            },
+            "lane_coordinate_isolation": {
+                "coordinate_count": len(
+                    {str(row["receiver_actuator_id"]) for row in lane_rows}
+                ),
+                "signed_probe_count": len(lane_rows),
+                "unique_candidate_archive_sha256_count": len(lane_candidate_shas),
+                "all_compiled_as_single_coordinate_packets": len(lane_rows) == 48,
+                "all_receiver_feasible": all(
+                    row["status"] != "INFEASIBLE_RECEIVER_QUANTUM"
+                    for row in lane_rows
+                ),
+            },
         }
     receipt["receipt_content_sha256"] = canonical_sha256(receipt)
     receipt_path = args.receipt_output / "ddm_ms6_receiver_support_measurement_receipt.json"

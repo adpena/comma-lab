@@ -1,0 +1,49 @@
+{
+  "authority": {
+    "bytes": 8013,
+    "consumed_completely": true,
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_rg1_receiver_grammar_extension_20260724T080402Z.wrapped.prompt.txt",
+    "sha256": "f3edabf7dd2d7e64a091f678d23394f478211915f3ddd3e23d7104f3cf71a5d0"
+  },
+  "delegation_checkpoint_key": "codex_delegate:ddm_rg1_receiver_grammar_extension:20260724T080402Z",
+  "directive_outcomes": [
+    {
+      "directive": "add 24 counted isolated Lane coordinates with inactive byte identity",
+      "outcome": "complete_24_coordinates_48_signed_receiver_perturbations"
+    },
+    {
+      "directive": "version-bump joint typed worldsheet and post-solve grammar without mutating V13",
+      "outcome": "complete_rg1_outer_grammar_separate_skeleton_and_residual_streams"
+    },
+    {
+      "directive": "add explicit bounded alternatives for ten geometry escapes",
+      "outcome": "complete_10_alternative_ids_20_signed_rows_original_failures_preserved"
+    },
+    {
+      "directive": "derive receiver-effective coordinate families from missing typed blocks",
+      "outcome": "complete_machine_readable_64_row_residue_and_family_derivation"
+    },
+    {
+      "directive": "rerun only newly admissible probes and rebuild MS5-schema assignment",
+      "outcome": "complete_80_new_and_768_merged_assignment_bound_rows"
+    },
+    {
+      "directive": "run MS4 only if all G3 blocks close",
+      "outcome": "not_invoked_64_exact_blocks_remain"
+    }
+  ],
+  "inbox": {
+    "arm_directives_consumed": [],
+    "broadcast_directives_consumed": [
+      "2026-07-19T19:42:07Z surgical EV-ranked reverse-waterfill",
+      "2026-07-19T19:48:01Z Fisher-margin and corrected inner-Jacobian basis/factorization"
+    ],
+    "latest_broadcast_examined_utc": "2026-07-21T13:15:53Z",
+    "notes": "No later per-arm amendment arrived. Broadcast constraints govern future payload admission; this support-only build made no admission or score claim."
+  },
+  "main_landing_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "schema": "ddm_rg1_receiver_grammar_extension_directive_consumption.v1",
+  "score_claim": false
+}

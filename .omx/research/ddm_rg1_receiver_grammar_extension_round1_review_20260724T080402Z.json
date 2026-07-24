@@ -1,0 +1,43 @@
+{
+  "clean_passes": [
+    {
+      "evidence": "ruff and py_compile passed; 16 focused tests passed in 39.08s; git diff --check passed",
+      "name": "post_fix_code_and_regression",
+      "status": "CLEAN"
+    },
+    {
+      "evidence": "two regenerations produced identical summary file SHA-256 1960687be407b89eb3ccf97f5a5abad1ef62eb939600d164285c94059fc893da; receipt/table/summary canonical content hashes and assignment-table validation passed",
+      "name": "determinism_and_content_custody",
+      "status": "CLEAN"
+    },
+    {
+      "evidence": "independent scan proved 748 old plus 80 new unique checkpoints, exact 48/12/10 old infeasibility decomposition, 78/2 new status split, 768 table SHA bindings, 64 exact G3 missing blocks, only pair 21 complete, and no MS4 diff or invocation",
+      "name": "independent_adversarial_rederivation",
+      "status": "CLEAN"
+    }
+  ],
+  "findings": [
+    {
+      "disposition": "FIXED_BEFORE_FINAL_RECEIPT",
+      "finding": "Draft receipt counted ten original geometry-escape rows as twenty by multiplying unique actuator IDs by both directions.",
+      "fix": "Count exact preserved infeasible checkpoint rows by family; final decomposition is Lane 48, G2CS1 12, geometry 10.",
+      "severity": "MEDIUM"
+    },
+    {
+      "disposition": "FIXED_WITH_REGRESSION_TEST",
+      "finding": "The old one-root summary consumer could not preserve superseded checkpoint evidence while selecting replacement SHA bindings.",
+      "fix": "Accept multiple roots, select the exact assignment-bound revision, report 60 superseded rows, and test revision selection.",
+      "severity": "HIGH"
+    },
+    {
+      "disposition": "FAIL_CLOSED_INSTANCE_SCOPED",
+      "finding": "RG1 closes 42 of 106 G3 blocks but leaves 64 exact pair/bucket blocks.",
+      "fix": "Keep MS4 ineligible and emit typed residual coordinate-family derivation; do not generalize beyond INSTANCE_EXTENDED_GRAMMAR_RG1.",
+      "severity": "GATE"
+    }
+  ],
+  "main_landing_review_required": true,
+  "review_round": 1,
+  "schema": "ddm_rg1_receiver_grammar_extension_round1_review.v1",
+  "score_claim": false
+}
