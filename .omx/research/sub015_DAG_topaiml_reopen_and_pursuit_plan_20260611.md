@@ -22928,3 +22928,32 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   train-decision SOLVE column — all now wait on ms4 (producer build + measurement), the one-level-deeper
   named crux. Finding 8 (110 historical lane-validator evidence rows) was already routed to #670.
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED — apparatus, not a score row.
+
+## FEED-603-ms4-custody (2026-07-24, MAIN custody of ddm_ms4_metric_producers_and_measurement rc=0 — POSE COMPLETE, crux collapsed to ONE edge)
+- **POSE METRIC CUSTODY IS COMPLETE (the first real component of the bundle):** governed n600 batch32
+  measurement, ordered pair IDs 0..599, 600/600 analytic quadratics converged, staged P0
+  (top24→top64→stratified-control24→full-n600, 23 immutable scorer blocks, top24 checkpoint reused
+  unchanged in the full run), positive 0.05 contest-budget tubes, bulk on VertigoDataTier. The
+  `I/√6` rank-6 factors are VERIFIED-BY-DERIVATION exact (d_pose = MSE over 6 outputs ⇒ output-space
+  Hessian exactly isotropic); the measured content = per-pair batch32 CENTERS + tubes.
+  **Batch-geometry drift MEASURED, not assumed:** batch32 vs cached batch16 centers differ max
+  1.9073486328125e-05 (mean of per-pair maxima 3.61e-06) — small but NONZERO, so the batch16 lineage
+  correctly demoted to control-only. Strict loader accepts Pose as COMPLETE.
+- **CRITICAL finding (verdict_scope: INSTANCE — current pf2 atlas as landed):** the pf2 atlas is
+  SEMANTIC-ONLY — all 1,200 rows preserve the typed keys but 0/1,200 identify `pair_ids`,
+  `receiver_actuator_id`, `direction_id`. A semantic bucket is not a scorer input; duplicating a
+  pair-level tensor over all keys would be a FALSE per-bucket measurement — the arm refused (NO-FAKE
+  held). Seg / composite-R / dual-diagnostics producers therefore blocked on
+  `PF2_BUCKET_INPUT_ASSIGNMENT_ABSENT`; bundle honestly `BUNDLE-PARTIAL`
+  (`scorer_metric_active=false`, `pose_tube_active=false` — note the tube flag stays false until the
+  BUNDLE completes, by the loader's conjunction design). ms2-rerun / pf2r / rd1-duals not yet fireable.
+- **THE ONE REMAINING EDGE (first rung, named exactly):** a SHA-bound 1:1 measurement-assignment
+  schema mapping each of the 1,200 pf2 keys → (pair IDs 0..599, receiver actuator, perturbation
+  direction). NOT another metric approximation. This single artifact unlocks hard-tail-first Seg,
+  composite-R, and matched dual producers against the ALREADY-LANDED ms3 loader + ms4 measurement
+  harness. → **ms5 respawn** (`ddm_ms5_pf2_bucket_assignment`).
+- **Apparatus honesty receipts:** round-1 review found+fixed 3 custody bugs BEFORE the full run
+  (nonexistent governor attestation var → canonical `TAC_GOVERNED_ADMISSION`; volatile free-space
+  telemetry excised from immutable resume identity; stage-scoped bundle receipts instead of mutating
+  one immutable path). 17 arm tests + 9 producer tests + 5 loader regressions pass on main.
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
