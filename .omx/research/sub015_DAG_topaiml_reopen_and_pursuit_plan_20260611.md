@@ -22739,3 +22739,39 @@ GAUGE/RESIDUAL) × L1–L5 layer-stack typology. Routed same-turn:
   coder; typing doesn't change the verdict) · g3/at1 (already scorer-native currency; type column
   joins from ts1's schema later) · v19c asymptote (stale-base issue dominates; routed via menu1
   step C). Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-pf2-custody (2026-07-24) — pf2 LANDED: the 1,200-row typed atlas is COMPLETE; the metric-first law scored its first fail-closed save; Road–Undrivable, not MyCar, is the largest pair bucket
+
+**Arm:** ddm_pf2_dimension_conditioned_two_type_20260724T020205Z (sol/xhigh). Landed on main
+b8c81edec2 (registry union-merged → 811 rows; 14/14 tests pass). Disposition: reviewed_committed.
+All rows [macOS-CPU frozen-scorer advisory]; score_claim=false; pointer 0.1910828242 [contest-CPU]
+UNMOVED. 38 n600 scorer batch checkpoints + superseded receipt generations preserved losslessly on
+VertigoDataTier (certify-or-block honored).
+
+**Typed atlas COMPLETE:** 1,200 rows closing all 10 class pairs × cell/boundary strata × 4
+visibility classes × 3 temporal classes × 5 representation types. Exact event mass 4,011,236.
+**Decomposed-headline finding: Road–Undrivable is the LARGEST pair bucket at 1,280,501 flips — not
+MyCar.** (The mc1-era 4.07M MyCar mass was W_joint repaint damage, a different quantity; the
+worked-example-anchoring law would have had us aim at the hood again.) Consumers: ms2 typed blocks
+(inboxed — cite, do not rebuild), rd1 dual-cube byte-home custody, menu1 bucket attribution.
+
+**Three formulations, three honest dispositions (equation
+`ddm_pf2_metric_eligible_five_type_formulation_adjudication_v1` rederives all three):**
+- **F1 ACCEPTED as identical-content rate control:** exact semantic parse-back, −2,353 counted bytes.
+- **F3 REJECTED, verdict_scope FORMULATION:** +31,877 event bytes + 1,482 connection-fiber bytes =
+  +33,359 total in the matched-content instance. Not a family negative.
+- **F2 HELD — the metric-first law's FIRST fail-closed save:** the identity-Euclidean hood
+  projection measured d_seg 0.05482 / d_pose 36.935 / +140 B with a NEGATIVE control readback
+  (ΔS −1.487) — and the arm still refused it as verdict-ineligible (`IDENTITY_EUCLIDEAN_CONTROL`
+  can never bear a verdict or waterfill weight, even when it looks good). Substituting repo metric
+  primitives without measured F2 custody was correctly identified as the fake it would be.
+
+**Named blocker (routed, not inferred):** `PF2_METRIC_ACTIVE_THREE_FORMULATION_ADJUDICATION_
+INCOMPLETE` — needs (a) bucket-complete rank-4 winner/rival margin-Fisher field + λ, (b) pairwise
+PoseNet-6 quadratic for the F2 hood basis, (c) exact composite-R readback, (d) dual-metric
+cosine/rel-norm diagnostics. **pf2r metric-active rerun QUEUED gated on ms2 landing** (ms2 is
+building exactly these surfaces; anti-duplication — its blocks now carry a named second consumer
+via inbox). First rungs: (a) pf2r on ms2-land; (b) Road–Undrivable bucket enters the menu1/c1
+priority order ahead of further MyCar work; (c) F1's −2,353 B recode joins the composed-candidate
+coder stack as a free rate control. Triality: equations leg registered; DSL N/A (measurement arm);
+tasks — blocker queued under #669 umbrella + this feed.
