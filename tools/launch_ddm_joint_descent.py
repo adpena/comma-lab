@@ -43,8 +43,8 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     load_mlx_distortion_scorer_adapter_from_upstream,
     temporary_mlx_device,
 )
-from tac.optimization.direct_description_carrier_compose import (  # noqa: E402
-    receive_carrier_compose_archive,
+from tac.optimization.ddm_ws1_warm_start import (  # noqa: E402
+    receive_joint_descent_archive,
 )
 from tac.optimization.direct_description_joint_descent import (  # noqa: E402
     BASELINE_DSEG,
@@ -431,11 +431,11 @@ def _bounded_smoke_locked(args: argparse.Namespace, config: DirectDescriptionJoi
         stage00 = lift.exact_reemit()
         if stage00 != archive:
             raise DirectDescriptionError("stage00 exact archive reemit differs")
-        receiver = receive_carrier_compose_archive(archive)
+        receiver = receive_joint_descent_archive(archive)
         replay_pairs = (0, args.pair_id, 599)
         if not np.array_equal(
             receiver.render_camera_pairs(replay_pairs),
-            receive_carrier_compose_archive(stage00).render_camera_pairs(replay_pairs),
+            receive_joint_descent_archive(stage00).render_camera_pairs(replay_pairs),
         ):
             raise DirectDescriptionError("stage00 camera replay differs")
 
@@ -686,7 +686,7 @@ def _chunked_n600_verdict(
 
     if labels.shape != (600, 384, 512) or poses.shape != (600, 6):
         raise DirectDescriptionError("chunked full-run verdict requires exact n600 target geometry")
-    receiver = receive_carrier_compose_archive(archive)
+    receiver = receive_joint_descent_archive(archive)
     errors = 0
     sites = 0
     pose_squared_error = 0.0

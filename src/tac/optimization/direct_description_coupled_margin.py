@@ -164,11 +164,19 @@ def decode_coupled_margin_program(payload: bytes) -> CoupledMarginProgramV1:
     return program
 
 
-def compile_coupled_margin_archive(base_archive: bytes, program: CoupledMarginProgramV1) -> bytes:
+def compile_coupled_margin_archive(
+    base_archive: bytes,
+    program: CoupledMarginProgramV1,
+    *,
+    verify_base_member_effects: bool = True,
+) -> bytes:
     """Wrap exact v15 bytes and one counted program in a deterministic ZIP."""
 
     base = bytes(base_archive)
-    receiver = receive_carrier_compose_archive(base)
+    receiver = receive_carrier_compose_archive(
+        base,
+        verify_member_effects=verify_base_member_effects,
+    )
     _validate_program_against_receiver(program, receiver)
     encoded = encode_coupled_margin_program(program)
     manifest = {
@@ -313,9 +321,16 @@ class CoupledMarginReceiverV1:
         return np.ascontiguousarray(output)
 
 
-def receive_coupled_margin_archive(archive: bytes) -> CoupledMarginReceiverV1:
+def receive_coupled_margin_archive(
+    archive: bytes,
+    *,
+    verify_base_member_effects: bool = True,
+) -> CoupledMarginReceiverV1:
     members, homes = parse_coupled_margin_archive(archive)
-    base = receive_carrier_compose_archive(members[BASE_MEMBER])
+    base = receive_carrier_compose_archive(
+        members[BASE_MEMBER],
+        verify_member_effects=verify_base_member_effects,
+    )
     program = decode_coupled_margin_program(members[PROGRAM_MEMBER])
     _validate_program_against_receiver(program, base)
     custody = {

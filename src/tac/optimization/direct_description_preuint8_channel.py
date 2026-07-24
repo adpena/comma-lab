@@ -178,9 +178,17 @@ def decode_preuint8_q8_program(payload: bytes) -> PreUint8Q8ProgramV1:
     return result
 
 
-def compile_preuint8_q8_archive(base_archive: bytes, program: PreUint8Q8ProgramV1) -> bytes:
+def compile_preuint8_q8_archive(
+    base_archive: bytes,
+    program: PreUint8Q8ProgramV1,
+    *,
+    verify_base_member_effects: bool = True,
+) -> bytes:
     base = bytes(base_archive)
-    receiver = receive_coupled_margin_archive(base)
+    receiver = receive_coupled_margin_archive(
+        base,
+        verify_base_member_effects=verify_base_member_effects,
+    )
     _validate_program(program, receiver)
     encoded = encode_preuint8_q8_program(program)
     manifest = {
@@ -507,9 +515,16 @@ def _validate_program(program: PreUint8Q8ProgramV1, receiver: CoupledMarginRecei
         raise DirectDescriptionError("preuint8 sparse correction is outside the base receiver")
 
 
-def receive_preuint8_q8_archive(archive: bytes) -> PreUint8Q8ReceiverV1:
+def receive_preuint8_q8_archive(
+    archive: bytes,
+    *,
+    verify_base_member_effects: bool = True,
+) -> PreUint8Q8ReceiverV1:
     members, _homes = parse_preuint8_q8_archive(archive)
-    base = receive_coupled_margin_archive(members[BASE_MEMBER])
+    base = receive_coupled_margin_archive(
+        members[BASE_MEMBER],
+        verify_base_member_effects=verify_base_member_effects,
+    )
     program = decode_preuint8_q8_program(members[PROGRAM_MEMBER])
     _validate_program(program, base)
     custody = {

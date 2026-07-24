@@ -31,6 +31,11 @@ import numpy as np
 from tac.canonical_equations.adam_v_variance_warmup_20260717 import (
     adam_v_variance_warmup_epochs,
 )
+from tac.optimization.ddm_ws1_warm_start import (
+    WS1WarmStartArchiveV1,
+    parse_ws1_warm_start_archive,
+    receive_joint_descent_archive,
+)
 from tac.optimization.direct_description_carrier_compose import (
     LANE_PROGRAM_MEMBER,
     REALIZATION_STATIC_RULE_MEMBER,
@@ -40,7 +45,6 @@ from tac.optimization.direct_description_carrier_compose import (
     RowBandScorerTemplateV1,
     compile_carrier_compose_archive,
     parse_carrier_compose_archive,
-    receive_carrier_compose_archive,
 )
 from tac.optimization.direct_description_entropy_priced_member import rfc8785_canonicalize
 from tac.optimization.direct_description_g1_worldsheet import (
@@ -1095,12 +1099,28 @@ class JointDescriptionParameterLiftV1:
     template_rows: tuple[RowBandScorerTemplateV1, ...]
     parameter_names: tuple[str, ...]
     template_parameter_start: int
+    ws1_adapter: WS1WarmStartArchiveV1 | None
+
+    @property
+    def carrier_archive(self) -> bytes:
+        return (
+            self.source_archive
+            if self.ws1_adapter is None
+            else self.ws1_adapter.carrier_archive
+        )
+
+    def rewrap_carrier(self, archive: bytes) -> bytes:
+        return (
+            archive
+            if self.ws1_adapter is None
+            else self.ws1_adapter.rewrap_carrier(archive)
+        )
 
     def exact_reemit(self) -> bytes:
-        members, _ = parse_carrier_compose_archive(self.source_archive)
-        receiver = receive_carrier_compose_archive(self.source_archive)
+        members, _ = parse_carrier_compose_archive(self.carrier_archive)
+        receiver = receive_joint_descent_archive(self.carrier_archive)
         payload = encode_lifted_g1_movable_worldsheet(self.g1)
-        archive, _ = compile_carrier_compose_archive(
+        carrier_archive, _ = compile_carrier_compose_archive(
             members["predictor.zip"],
             worldsheet_g1_payload=payload,
             realization_profile=receiver.realization_profile,
@@ -1108,6 +1128,7 @@ class JointDescriptionParameterLiftV1:
             realization_static_rule_id=receiver.realization_static_rule_id,
             scorer_solved_templates=receiver.scorer_solved_templates,
         )
+        archive = self.rewrap_carrier(carrier_archive)
         if archive != self.source_archive:
             raise DirectDescriptionError("joint-descent stage-00 archive recompile is not byte-identical")
         return archive
@@ -1115,10 +1136,10 @@ class JointDescriptionParameterLiftV1:
     def lane_seed_archive(self) -> bytes:
         """Emit every Lane seed atomically before any Lane coordinate trains."""
 
-        members, _ = parse_carrier_compose_archive(self.source_archive)
-        receiver = receive_carrier_compose_archive(self.source_archive)
+        members, _ = parse_carrier_compose_archive(self.carrier_archive)
+        receiver = receive_joint_descent_archive(self.carrier_archive)
         records = tuple(row.counted_record() for row in self.lane_seeds)
-        archive, _ = compile_carrier_compose_archive(
+        carrier_archive, _ = compile_carrier_compose_archive(
             members["predictor.zip"],
             worldsheet_g1_payload=encode_lifted_g1_movable_worldsheet(self.g1),
             lane_programs=records,
@@ -1127,10 +1148,10 @@ class JointDescriptionParameterLiftV1:
             realization_static_rule_id=receiver.realization_static_rule_id,
             scorer_solved_templates=receiver.scorer_solved_templates,
         )
-        parsed, _ = parse_carrier_compose_archive(archive)
+        parsed, _ = parse_carrier_compose_archive(carrier_archive)
         if LANE_PROGRAM_MEMBER not in parsed:
             raise DirectDescriptionError("counted Lane seed lacks a receiver-consumed archive home")
-        return archive
+        return self.rewrap_carrier(carrier_archive)
 
     def inventory(self) -> dict[str, Any]:
         lane_archive = self.lane_seed_archive()
@@ -1158,10 +1179,20 @@ class JointDescriptionParameterLiftV1:
 
 
 def lift_v15_archive(archive: bytes) -> JointDescriptionParameterLiftV1:
-    if len(archive) != EXPECTED_ARCHIVE_BYTES or _sha256(archive) != EXPECTED_ARCHIVE_SHA256:
-        raise DirectDescriptionError("joint-descent parameter lift requires the sealed V15 archive")
-    members, _ = parse_carrier_compose_archive(archive)
-    receiver = receive_carrier_compose_archive(archive)
+    ws1_adapter: WS1WarmStartArchiveV1 | None = None
+    if len(archive) == EXPECTED_ARCHIVE_BYTES and _sha256(archive) == EXPECTED_ARCHIVE_SHA256:
+        carrier_archive = archive
+    else:
+        try:
+            ws1_adapter = parse_ws1_warm_start_archive(archive)
+        except DirectDescriptionError as exc:
+            raise DirectDescriptionError(
+                "joint-descent parameter lift requires the sealed V15 archive "
+                "or a receiver-closed WS1 archive"
+            ) from exc
+        carrier_archive = ws1_adapter.carrier_archive
+    members, _ = parse_carrier_compose_archive(carrier_archive)
+    receiver = receive_joint_descent_archive(carrier_archive)
     g1 = lift_g1_movable_worldsheet(members[WORLDSHEET_G1_MEMBER])
     if receiver.scorer_solved_templates is None:
         raise DirectDescriptionError("joint-descent V15 warm start lacks its counted template bank")
@@ -1192,6 +1223,7 @@ def lift_v15_archive(archive: bytes) -> JointDescriptionParameterLiftV1:
         template_rows=template_rows,
         parameter_names=tuple(names),
         template_parameter_start=template_start,
+        ws1_adapter=ws1_adapter,
     )
     result.exact_reemit()
     return result
@@ -1207,8 +1239,8 @@ def _compile_lift_variant(
 ) -> bytes:
     """Compile one receiver-consumed parameter mutation from the sealed base."""
 
-    members, _ = parse_carrier_compose_archive(lift.source_archive)
-    receiver = receive_carrier_compose_archive(lift.source_archive)
+    members, _ = parse_carrier_compose_archive(lift.carrier_archive)
+    receiver = receive_joint_descent_archive(lift.carrier_archive)
     bank = receiver.scorer_solved_templates
     if bank is None:
         raise DirectDescriptionError("joint-descent variant lacks the inherited template bank")
@@ -1223,8 +1255,11 @@ def _compile_lift_variant(
         realization_static_rule_id=receiver.realization_static_rule_id,
         scorer_solved_templates=bank,
     )
-    receive_carrier_compose_archive(archive, verify_member_effects=verify_member_effects)
-    return archive
+    receive_joint_descent_archive(
+        archive,
+        verify_member_effects=verify_member_effects,
+    )
+    return lift.rewrap_carrier(archive)
 
 
 def parameter_group_indices(lift: JointDescriptionParameterLiftV1) -> dict[str, tuple[int, ...]]:
@@ -1334,7 +1369,10 @@ def realized_training_state(
 
     indexes = tuple(int(value) for value in pair_ids)
     archive, realized = compile_parameterized_archive(lift, theta, include_lane_programs=include_lane_programs)
-    receiver = receive_carrier_compose_archive(archive, verify_member_effects=False)
+    receiver = receive_joint_descent_archive(
+        archive,
+        verify_member_effects=False,
+    )
     camera = receiver.render_camera_pairs(indexes).astype(np.float32)
     template_rows = receiver.scorer_solved_templates
     if template_rows is None:
@@ -1368,7 +1406,7 @@ def realized_training_state(
                 probe_archive, _ = compile_parameterized_archive(
                     lift, probe, include_lane_programs=include_lane_programs
                 )
-                probe_camera = receive_carrier_compose_archive(
+                probe_camera = receive_joint_descent_archive(
                     probe_archive, verify_member_effects=False
                 ).render_camera_pairs(indexes)
             except DirectDescriptionError as exc:
@@ -1395,7 +1433,7 @@ def verify_trainable_group_ownership(lift: JointDescriptionParameterLiftV1) -> d
     camera output is compared with stage 00.
     """
 
-    base_receiver = receive_carrier_compose_archive(lift.source_archive)
+    base_receiver = receive_joint_descent_archive(lift.source_archive)
     rows: dict[str, Any] = {}
 
     # Island: translate one explicit lifecycle track by one scorer-grid pixel.
@@ -1415,7 +1453,7 @@ def verify_trainable_group_ownership(lift: JointDescriptionParameterLiftV1) -> d
     island_delta = int(
         np.count_nonzero(
             base_receiver.render_camera_pairs((island_pair,))
-            != receive_carrier_compose_archive(island_archive).render_camera_pairs((island_pair,))
+            != receive_joint_descent_archive(island_archive).render_camera_pairs((island_pair,))
         )
     )
     rows["island_worldsheet"] = {
@@ -1444,7 +1482,7 @@ def verify_trainable_group_ownership(lift: JointDescriptionParameterLiftV1) -> d
     lane_delta = int(
         np.count_nonzero(
             base_receiver.render_camera_pairs(candidate_pairs)
-            != receive_carrier_compose_archive(lane_archive).render_camera_pairs(candidate_pairs)
+            != receive_joint_descent_archive(lane_archive).render_camera_pairs(candidate_pairs)
         )
     )
     rows["lane_program"] = {
@@ -1483,7 +1521,7 @@ def verify_trainable_group_ownership(lift: JointDescriptionParameterLiftV1) -> d
     template_delta = int(
         np.count_nonzero(
             base_receiver.render_camera_pairs((template_pair,))
-            != receive_carrier_compose_archive(template_archive).render_camera_pairs((template_pair,))
+            != receive_joint_descent_archive(template_archive).render_camera_pairs((template_pair,))
         )
     )
     rows["shared_template"] = {
@@ -1518,7 +1556,7 @@ def template_camera_state(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Return exact V15 camera pairs and disjoint template masks for an MLX step."""
 
-    receiver = receive_carrier_compose_archive(lift.source_archive)
+    receiver = receive_joint_descent_archive(lift.source_archive)
     indexes = tuple(int(value) for value in pair_ids)
     camera = receiver.render_camera_pairs(indexes).astype(np.float32)
     masks = np.stack(
