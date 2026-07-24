@@ -23184,3 +23184,22 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   campaign's Lane levers gain a legal one-quantum actuation surface (still owing measured
   score-units-per-byte before any admission; no coordinate admitted on support alone).
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+## FEED-603-ws2-custody (2026-07-24, Codex branch — WS1 starts materialized; four-step arbitration honestly REFUSED)
+- **START CUSTODY CLOSED on the J5 receiver path:** W_seg = 138,031 B / sha `264a09ab…a9`,
+  fresh batch32 n600 d_seg 0.024124510023328993 / d_pose 146.36493245487773; W_joint =
+  138,801 B / sha `5aa45850…3e`, d_seg 0.07051923116048177 / d_pose 36.618184751411334.
+  Both parse/re-emit and 368-DOF J5 lift/recompile are byte-identical; score_claim=false.
+- **BOUNDED LIVE OUTCOME:** W_seg stopped at step 1 on `BLOCKED_REALIZED_DSEG_REGRESSION`
+  (+2,907 global errors), so its preregistered four-step window is incomplete. W_joint completed
+  step 4 with live receiver descent to d_seg 0.0702156745062934 / d_pose 36.37587755493872, but
+  its three exact points are insufficient for the pose-finish history gate.
+- **ARBITRATION:** registered `ddm_ws1_warm_start_slope_falsifier_v1` re-derived
+  R*=4.1215446777965665; durable verdict `REFUSE_INCOMPLETE_FOUR_STEP_WINDOW`. No winning start,
+  final reseal, re-smoke, promotion, dispatch, or score claim.
+- **NEXT EDGES:** (1) obtain a component-safe four-step W_seg window under a separately reviewed
+  bounded formulation; (2) extend/measure the pose-finish exact history; (3) generalize the E4
+  Brotli-Q11/ImportError-only-LZMA1 exporter from its literal V15 identities to typed receiver-closed
+  WS1 states. Until all three close, #366 fire remains HELD.
+- **Authority:** `.omx/research/codex_findings_ddm_ws2_warm_start_custody_producer_20260724_codex.md`;
+  evidence `[macOS-CPU frozen-scorer advisory]`; pointer 0.1910828242 [contest-CPU] UNMOVED;
+  `main_review_required=true`.
