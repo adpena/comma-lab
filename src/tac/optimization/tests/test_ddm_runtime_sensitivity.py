@@ -4,12 +4,15 @@ from __future__ import annotations
 import numpy as np
 import pytest
 import torch
+import torch.nn.functional as F
 
 from tac.optimization.ddm_runtime_sensitivity import (
     DDMRuntimeDecodedStateV1,
     DDMRuntimePerturbationV1,
     DDMRuntimeRealizedPerturbationV1,
     RuntimeSensitivityError,
+    composite_r_support_mask,
+    forward_seg_argmax,
     realize_perturbation,
     score_realized_perturbation,
     stage_argmax_transition_counts,
@@ -212,3 +215,46 @@ def test_stage_argmax_transition_counts_fail_closed(
             target=value,
             owner_mask=owner,
         )
+
+
+class _ExactRSeg:
+    def preprocess_input(self, tensor: torch.Tensor) -> torch.Tensor:
+        return F.interpolate(
+            tensor[:, -1],
+            size=(384, 512),
+            mode="bilinear",
+        )
+
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        logits = torch.zeros(
+            (tensor.shape[0], 5, 384, 512),
+            dtype=torch.float32,
+        )
+        logits[:, 1] = tensor[:, 0]
+        return logits
+
+
+def test_composite_r_support_precedes_canonical_batch32_argmax() -> None:
+    baseline = np.zeros((1, 2, 874, 1164, 3), dtype=np.uint8)
+    perturbed = baseline.copy()
+    perturbed[0, 1, 400:410, 500:510, 0] = 255
+    segnet = _ExactRSeg()
+    support = composite_r_support_mask(
+        segnet=segnet,
+        baseline_camera=baseline,
+        perturbed_camera=perturbed,
+    )
+    assert support.shape == (1, 384, 512)
+    assert support.dtype == np.bool_
+    assert np.count_nonzero(support) > 0
+    assert not np.any(
+        composite_r_support_mask(
+            segnet=segnet,
+            baseline_camera=baseline,
+            perturbed_camera=baseline,
+        )
+    )
+    cells = forward_seg_argmax(segnet=segnet, camera=perturbed)
+    assert cells.shape == (1, 384, 512)
+    assert cells.dtype == np.uint8
+    assert np.count_nonzero(cells == 1) > 0

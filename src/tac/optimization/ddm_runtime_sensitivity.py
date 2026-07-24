@@ -27,6 +27,7 @@ PERTURBATION_SCHEMA = "DDMRuntimePerturbationV1"
 SENSITIVITY_SCHEMA = "ddm_runtime_receiver_sensitivity.v1"
 STAGE_TRANSITION_SCHEMA = "ddm_stream_argmax_stage_transition.v1"
 SCORE_BYTE_DUAL = 25.0 / 37_545_489.0
+CANONICAL_SEG_BATCH_SIZE = 32
 
 
 class RuntimeSensitivityError(ValueError):
@@ -502,6 +503,98 @@ def _forward(
         pose = output["pose"] if isinstance(output, dict) else output
         pose6 = pose[:, :6].cpu().numpy().astype(np.float64)
     return np.ascontiguousarray(cells), np.ascontiguousarray(pose6)
+
+
+def composite_r_support_mask(
+    *,
+    segnet: Any,
+    baseline_camera: np.ndarray,
+    perturbed_camera: np.ndarray,
+) -> np.ndarray:
+    """Measure exact pre-SegNet composite-R support without a scorer forward.
+
+    ``SegNet.preprocess_input`` is the evaluator-owned last-frame bilinear
+    resize.  Comparing its realized tensors is therefore cheaper and stricter
+    than projecting camera pixels with a hand-authored spatial prior.
+    """
+
+    before = np.asarray(baseline_camera)
+    after = np.asarray(perturbed_camera)
+    expected_tail = (2, runtime.CAMERA_H, runtime.CAMERA_W, 3)
+    if (
+        before.dtype != np.uint8
+        or after.dtype != np.uint8
+        or before.shape != after.shape
+        or before.ndim != 5
+        or before.shape[1:] != expected_tail
+    ):
+        raise RuntimeSensitivityError("composite-R support camera geometry differs")
+
+    def preprocess(value: np.ndarray) -> torch.Tensor:
+        tensor = (
+            torch.from_numpy(np.ascontiguousarray(value))
+            .permute(0, 1, 4, 2, 3)
+            .contiguous()
+            .float()
+        )
+        with torch.inference_mode():
+            realized = segnet.preprocess_input(tensor)
+        if (
+            not isinstance(realized, torch.Tensor)
+            or realized.ndim != 4
+            or realized.shape[0] != len(value)
+            or realized.shape[1] != 3
+            or tuple(realized.shape[2:]) != (runtime.PAIR_H, runtime.PAIR_W)
+        ):
+            raise RuntimeSensitivityError("SegNet composite-R output geometry differs")
+        return realized
+
+    realized_before = preprocess(before)
+    realized_after = preprocess(after)
+    return np.ascontiguousarray(
+        torch.any(realized_before != realized_after, dim=1).cpu().numpy(),
+        dtype=np.bool_,
+    )
+
+
+def forward_seg_argmax(
+    *,
+    segnet: Any,
+    camera: np.ndarray,
+    batch_size: int = CANONICAL_SEG_BATCH_SIZE,
+) -> np.ndarray:
+    """Run canonical batch-32 frozen SegNet argmax on realized camera pairs."""
+
+    value = np.asarray(camera)
+    if (
+        value.dtype != np.uint8
+        or value.ndim != 5
+        or value.shape[1:] != (2, runtime.CAMERA_H, runtime.CAMERA_W, 3)
+        or batch_size != CANONICAL_SEG_BATCH_SIZE
+    ):
+        raise RuntimeSensitivityError("SegNet argmax input or batch geometry differs")
+    rows: list[np.ndarray] = []
+    for start in range(0, len(value), batch_size):
+        tensor = (
+            torch.from_numpy(np.ascontiguousarray(value[start : start + batch_size]))
+            .permute(0, 1, 4, 2, 3)
+            .contiguous()
+            .float()
+        )
+        with torch.inference_mode():
+            logits = segnet(segnet.preprocess_input(tensor))
+        if (
+            not isinstance(logits, torch.Tensor)
+            or logits.ndim != 4
+            or logits.shape[0] != len(tensor)
+            or logits.shape[1] != 5
+            or tuple(logits.shape[2:]) != (runtime.PAIR_H, runtime.PAIR_W)
+        ):
+            raise RuntimeSensitivityError("SegNet logits geometry differs")
+        rows.append(logits.argmax(dim=1).cpu().numpy().astype(np.uint8))
+    if not rows:
+        return np.empty((0, runtime.PAIR_H, runtime.PAIR_W), dtype=np.uint8)
+    return np.ascontiguousarray(np.concatenate(rows, axis=0))
 
 
 def _distortions(

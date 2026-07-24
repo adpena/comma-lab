@@ -30,6 +30,8 @@ from tac.optimization.ddm_min_description_contract import (
 ASSIGNMENT_TABLE_SCHEMA: Final = "ddm_ms5_pf2_bucket_assignment_table.v1"
 ASSIGNMENT_ROW_SCHEMA: Final = "ddm_ms5_pf2_bucket_assignment_row.v1"
 ASSIGNMENT_RECEIPT_SCHEMA: Final = "ddm_ms5_pf2_bucket_assignment_receipt.v1"
+PROBE_RESULT_SCHEMA: Final = "ddm_ms6_receiver_support_probe.v1"
+MEASURED_PROBE_ASSIGNMENT_SCHEMA: Final = "ddm_ms6_measured_probe_assignment.v1"
 PF2_ATLAS_SCHEMA: Final = "ddm_pf2_dimension_conditioned_atlas.v1"
 PF2_BUCKET_SCHEMA: Final = "ddm_pf2_typed_split_atlas_bucket.v2"
 PF2_BUCKET_COUNT: Final = 1_200
@@ -46,6 +48,16 @@ ATLAS_KEY_FIELDS: Final = (
 )
 RECOVERED_STATUS: Final = "RECOVERED_COMPLETE"
 UNRECOVERABLE_STATUS: Final = "ASSIGNMENT_UNRECOVERABLE_PF2_CONSTRUCTION_HAS_NO_ACTUATOR_DIRECTION_FOREIGN_KEY"
+MEASURED_EMPTY_STATUS: Final = "ASSIGNMENT_UNRECOVERABLE_MEASURED_NO_PF2_ARGMAX_EVENT_PERTURBATION"
+PARTIAL_MEASUREMENT_STATUS: Final = "ASSIGNMENT_UNRECOVERABLE_MEASUREMENT_SWEEP_PARTIAL"
+DIRECTION_IDS: Final = ("NEGATIVE_ONE_QUANTUM", "POSITIVE_ONE_QUANTUM")
+PROBE_STATUSES: Final = (
+    "MEASURED_ARGMAX_PERTURBATION",
+    "MEASURED_EMPTY_RASTER_SUPPORT",
+    "MEASURED_EMPTY_NO_OCCUPIED_BUCKET_OVERLAP",
+    "MEASURED_EMPTY_ARGMAX_INVARIANT",
+    "INFEASIBLE_RECEIVER_QUANTUM",
+)
 
 
 class PF2BucketAssignmentError(ValueError):
@@ -179,6 +191,313 @@ def _bucket_event_mask(
     except KeyError as exc:
         raise PF2BucketAssignmentError("PF2 temporal class is malformed") from exc
     return pair_mask & stratum_mask & temporal_mask
+
+
+def reconstruct_bucket_event_ids(
+    *,
+    pf2_receipt: Mapping[str, Any],
+    predicted: np.ndarray,
+    target: np.ndarray,
+    transition_counts: np.ndarray,
+    xi_event_ids: Sequence[int],
+) -> dict[str, np.ndarray]:
+    """Return the exact global raw-event IDs owned by every occupied PF2 bucket.
+
+    Event IDs use PF2/G4's canonical row-major ``pair * H * W + y * W + x``
+    address.  Empty buckets are retained as empty uint32 arrays.  This is the
+    only admissible surface for the MS6 causal intersection; class labels,
+    nearby pixels, and pair co-membership are not substitutes.
+    """
+
+    atlas = pf2_receipt.get("typed_split_atlas")
+    rows = atlas.get("rows") if isinstance(atlas, Mapping) else None
+    if (
+        not isinstance(atlas, Mapping)
+        or atlas.get("schema") != PF2_ATLAS_SCHEMA
+        or not isinstance(rows, list)
+        or len(rows) != PF2_BUCKET_COUNT
+    ):
+        raise PF2BucketAssignmentError("PF2 receipt does not carry the sealed 1,200-row atlas")
+    flip, temporal_masks = reconstruct_temporal_masks(
+        predicted=predicted,
+        target=target,
+        transition_counts=transition_counts,
+        xi_event_ids=xi_event_ids,
+    )
+    boundary = np.stack([boundary_mask(item) for item in target], axis=0)
+    result: dict[str, np.ndarray] = {}
+    total = 0
+    for row in rows:
+        if not isinstance(row, Mapping) or not isinstance(row.get("bucket_id"), str):
+            raise PF2BucketAssignmentError("PF2 bucket row is malformed")
+        bucket_id = str(row["bucket_id"])
+        if bucket_id in result:
+            raise PF2BucketAssignmentError("PF2 bucket IDs are duplicated")
+        expected = int(row.get("content_event_count", -1))
+        if expected == 0:
+            result[bucket_id] = np.empty(0, dtype=np.uint32)
+            continue
+        mask = _bucket_event_mask(
+            row,
+            predicted=predicted,
+            target=target,
+            temporal_masks=temporal_masks,
+            boundary=boundary,
+        )
+        event_ids = np.flatnonzero(mask.reshape(-1)).astype(np.uint32)
+        if len(event_ids) != expected:
+            raise PF2BucketAssignmentError(f"PF2 bucket {bucket_id} event mass differs")
+        result[bucket_id] = event_ids
+        total += len(event_ids)
+    if total != int(atlas.get("measured_seg_skeleton_event_total", -1)):
+        raise PF2BucketAssignmentError("PF2 reconstructed event-index mass differs")
+    return result
+
+
+def intersect_argmax_delta_with_pf2_events(
+    *,
+    pair_ids: Sequence[int],
+    baseline_cells: np.ndarray,
+    perturbed_cells: np.ndarray,
+    bucket_event_ids: Mapping[str, np.ndarray],
+) -> dict[str, dict[str, Any]]:
+    """Measure exact PF2 raw events changed by one receiver probe.
+
+    The returned event IDs are exact, not spatial-prior assignments.  Callers
+    may serialize them compactly, but the SHA is always over canonical little
+    endian uint32 bytes.
+    """
+
+    pairs = tuple(int(value) for value in pair_ids)
+    before = np.asarray(baseline_cells)
+    after = np.asarray(perturbed_cells)
+    if (
+        not pairs
+        or len(set(pairs)) != len(pairs)
+        or any(not 0 <= value < PAIR_COUNT for value in pairs)
+        or before.shape != (len(pairs), HEIGHT, WIDTH)
+        or after.shape != before.shape
+        or before.dtype != np.uint8
+        or after.dtype != np.uint8
+    ):
+        raise PF2BucketAssignmentError("probe argmax geometry or pair custody differs")
+    changed = before != after
+    local_by_pair = {pair_id: index for index, pair_id in enumerate(pairs)}
+    result: dict[str, dict[str, Any]] = {}
+    plane = HEIGHT * WIDTH
+    for bucket_id, raw_ids in bucket_event_ids.items():
+        ids = np.asarray(raw_ids)
+        if (
+            ids.ndim != 1
+            or not np.issubdtype(ids.dtype, np.unsignedinteger)
+            or np.any(ids.astype(np.uint64) >= PAIR_COUNT * plane)
+            or not np.array_equal(ids, np.unique(ids))
+        ):
+            raise PF2BucketAssignmentError("PF2 bucket event IDs must be unsigned vectors")
+        hits: list[np.ndarray] = []
+        hit_pairs: list[int] = []
+        if ids.size:
+            event_pairs = ids.astype(np.uint64) // plane
+            for pair_id in sorted({int(value) for value in event_pairs}):
+                local = local_by_pair.get(pair_id)
+                if local is None:
+                    continue
+                selected = ids[event_pairs == pair_id]
+                offsets = selected.astype(np.uint64) % plane
+                rows, cols = np.divmod(offsets, WIDTH)
+                keep = changed[local, rows.astype(np.intp), cols.astype(np.intp)]
+                if np.any(keep):
+                    hits.append(selected[keep].astype(np.uint32, copy=False))
+                    hit_pairs.append(pair_id)
+        if hits:
+            event_ids = np.sort(np.concatenate(hits).astype("<u4", copy=False))
+            payload = event_ids.tobytes(order="C")
+            result[str(bucket_id)] = {
+                "pair_ids": hit_pairs,
+                "event_count": int(event_ids.size),
+                "event_ids": event_ids,
+                "event_ids_sha256": hashlib.sha256(payload).hexdigest(),
+            }
+    return result
+
+
+def build_measured_assignment_table(
+    *,
+    base_table: Mapping[str, Any],
+    expected_pf2_sha256: str,
+    probe_results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Merge causal MS6 probe results into the exact MS5 table schema.
+
+    A row becomes ``RECOVERED_COMPLETE`` only after an actual scorer argmax
+    change intersects one of its exact PF2 raw events.  Measured-empty and
+    infeasible probes remain first-class top-level custody and never create a
+    bucket join.
+    """
+
+    validate_assignment_table(base_table, expected_pf2_sha256=expected_pf2_sha256)
+    vocabulary = base_table.get("foreign_key_vocabulary")
+    if not isinstance(vocabulary, Mapping):
+        raise PF2BucketAssignmentError("assignment table lacks its foreign-key vocabulary")
+    actuators = tuple(str(value) for value in vocabulary.get("receiver_actuator_stable_ids", ()))
+    directions = tuple(str(value) for value in vocabulary.get("direction_ids", ()))
+    if not actuators or len(set(actuators)) != len(actuators) or directions != DIRECTION_IDS:
+        raise PF2BucketAssignmentError("assignment foreign-key vocabulary differs")
+
+    seen: set[tuple[str, str]] = set()
+    normalized: list[dict[str, Any]] = []
+    by_bucket: dict[str, list[dict[str, Any]]] = {}
+    known_bucket_ids = {str(row["bucket_id"]) for row in base_table["rows"]}
+    for raw in probe_results:
+        if raw.get("schema") != PROBE_RESULT_SCHEMA:
+            raise PF2BucketAssignmentError("MS6 probe result schema differs")
+        actuator = raw.get("receiver_actuator_id")
+        direction = raw.get("direction_id")
+        status = raw.get("status")
+        checkpoint_sha = raw.get("checkpoint_sha256")
+        key = (str(actuator), str(direction))
+        if actuator not in actuators or direction not in directions or key in seen:
+            raise PF2BucketAssignmentError("MS6 probe identity is unknown or duplicated")
+        if status not in PROBE_STATUSES:
+            raise PF2BucketAssignmentError("MS6 probe status differs")
+        if (
+            not isinstance(checkpoint_sha, str)
+            or len(checkpoint_sha) != 64
+            or any(value not in "0123456789abcdef" for value in checkpoint_sha)
+        ):
+            raise PF2BucketAssignmentError("MS6 probe checkpoint SHA differs")
+        seen.add(key)
+        hits = raw.get("bucket_hits", [])
+        if not isinstance(hits, list):
+            raise PF2BucketAssignmentError("MS6 probe bucket hits must be a list")
+        hit_rows: list[dict[str, Any]] = []
+        for hit in hits:
+            if not isinstance(hit, Mapping):
+                raise PF2BucketAssignmentError("MS6 bucket hit is malformed")
+            bucket_id = hit.get("bucket_id")
+            pair_ids = hit.get("pair_ids")
+            event_count = hit.get("event_count")
+            event_sha = hit.get("event_ids_sha256")
+            if (
+                not isinstance(bucket_id, str)
+                or bucket_id not in known_bucket_ids
+                or not isinstance(pair_ids, list)
+                or pair_ids != sorted(set(pair_ids))
+                or any(isinstance(value, bool) or not isinstance(value, int) or not 0 <= value < PAIR_COUNT for value in pair_ids)
+                or isinstance(event_count, bool)
+                or not isinstance(event_count, int)
+                or event_count <= 0
+                or not isinstance(event_sha, str)
+                or len(event_sha) != 64
+            ):
+                raise PF2BucketAssignmentError("MS6 bucket hit custody differs")
+            assignment = {
+                "schema": MEASURED_PROBE_ASSIGNMENT_SCHEMA,
+                "receiver_actuator_id": actuator,
+                "direction_id": direction,
+                "pair_ids": pair_ids,
+                "perturbed_event_count": event_count,
+                "perturbed_event_ids_sha256": event_sha,
+            }
+            by_bucket.setdefault(bucket_id, []).append(assignment)
+            hit_rows.append(dict(hit))
+        if status == "MEASURED_ARGMAX_PERTURBATION" and not hit_rows:
+            raise PF2BucketAssignmentError("measured perturbation probe has no exact bucket hits")
+        if status != "MEASURED_ARGMAX_PERTURBATION" and hit_rows:
+            raise PF2BucketAssignmentError("measured-empty/infeasible probe carries bucket hits")
+        normalized.append(
+            {
+                "schema": PROBE_RESULT_SCHEMA,
+                "receiver_actuator_id": actuator,
+                "direction_id": direction,
+                "status": status,
+                "bucket_hit_count": len(hit_rows),
+                "perturbed_event_count": sum(int(row["event_count"]) for row in hit_rows),
+                "checkpoint_sha256": checkpoint_sha,
+            }
+        )
+
+    rows: list[dict[str, Any]] = []
+    for source in base_table["rows"]:
+        row = dict(source)
+        bucket_id = str(row["bucket_id"])
+        assignments = sorted(
+            by_bucket.get(bucket_id, []),
+            key=lambda value: (value["receiver_actuator_id"], value["direction_id"]),
+        )
+        row["pf2_membership_pair_ids"] = list(source["pair_ids"])
+        row["measured_probe_assignments"] = assignments
+        if assignments:
+            row["assignment_status"] = RECOVERED_STATUS
+            row["receiver_actuator_ids"] = sorted(
+                {str(value["receiver_actuator_id"]) for value in assignments}
+            )
+            row["direction_ids"] = sorted(
+                {str(value["direction_id"]) for value in assignments}
+            )
+            row["pair_ids"] = sorted(
+                {int(pair_id) for value in assignments for pair_id in value["pair_ids"]}
+            )
+            # Counts live on each probe assignment.  Summing them at bucket
+            # level would count a raw PF2 event twice when both secant
+            # directions perturb it, falsely presenting probe-event incidence
+            # as a unique-event cardinality.
+            row.pop("perturbed_event_count", None)
+            row.pop("unrecoverable_reason", None)
+            row.pop("forbidden_join", None)
+        else:
+            row["pair_ids"] = []
+            row["receiver_actuator_ids"] = []
+            row["direction_ids"] = []
+            row["perturbed_event_count"] = 0
+            row["assignment_status"] = (
+                MEASURED_EMPTY_STATUS
+                if len(seen) == len(actuators) * len(directions)
+                else PARTIAL_MEASUREMENT_STATUS
+            )
+            row["unrecoverable_reason"] = (
+                "No completed one-quantum receiver probe changed an argmax at "
+                "this bucket's exact PF2 raw-event coordinates."
+            )
+        rows.append(row)
+    recovered = sum(row["assignment_status"] == RECOVERED_STATUS for row in rows)
+    infeasible = sum(row["status"] == "INFEASIBLE_RECEIVER_QUANTUM" for row in normalized)
+    measured = len(normalized) - infeasible
+    table = {
+        key: value
+        for key, value in base_table.items()
+        if key not in {"rows", "coverage", "verdict", "verdict_scope", "table_content_sha256"}
+    }
+    table["rows"] = rows
+    table["coverage"] = {
+        **dict(base_table.get("coverage", {})),
+        "fully_assigned_bucket_count": recovered,
+        "unrecoverable_bucket_count": PF2_BUCKET_COUNT - recovered,
+        "measured_probe_count": measured,
+        "infeasible_probe_count": infeasible,
+        "completed_probe_count": len(normalized),
+        "required_probe_count": len(actuators) * len(directions),
+        "measured_empty_probe_count": sum(
+            row["status"].startswith("MEASURED_EMPTY_") for row in normalized
+        ),
+        "multi_actuator_bucket_count": sum(
+            len(row["receiver_actuator_ids"]) > 1 for row in rows
+        ),
+    }
+    table["foreign_key_vocabulary"] = {
+        **dict(vocabulary),
+        "exact_join_row_count": recovered,
+    }
+    table["probe_results"] = normalized
+    table["verdict"] = (
+        "CAUSAL_ACTUATOR_DIRECTION_JOIN_MEASURED_COMPLETE"
+        if len(seen) == len(actuators) * len(directions) and not infeasible
+        else "CAUSAL_ACTUATOR_DIRECTION_JOIN_PARTIAL"
+    )
+    table["verdict_scope"] = "INSTANCE_V19C_ENDPOINT_ONE_QUANTUM_SWEEP"
+    table["table_content_sha256"] = canonical_sha256(table)
+    validate_assignment_table(table, expected_pf2_sha256=expected_pf2_sha256)
+    return table
 
 
 def build_assignment_table(
@@ -365,10 +684,77 @@ def validate_assignment_table(
         TypedStreamTag.from_dict(row.get("typed_stream_tag"))
         status = row.get("assignment_status")
         if status == RECOVERED_STATUS:
-            if not row.get("receiver_actuator_ids") or not row.get("direction_ids"):
+            actuator_ids = row.get("receiver_actuator_ids")
+            direction_ids = row.get("direction_ids")
+            assignments = row.get("measured_probe_assignments")
+            if not actuator_ids or not direction_ids:
                 raise PF2BucketAssignmentError("complete assignment lacks actuator/direction IDs")
+            if (
+                not isinstance(actuator_ids, list)
+                or actuator_ids != sorted(set(actuator_ids))
+                or any(not isinstance(value, str) or not value for value in actuator_ids)
+                or not isinstance(direction_ids, list)
+                or direction_ids != sorted(set(direction_ids))
+                or any(value not in DIRECTION_IDS for value in direction_ids)
+            ):
+                raise PF2BucketAssignmentError("complete assignment foreign-key custody differs")
+            # Legacy v1 producer fixtures predate MS6 and carry only the three
+            # aggregate fields.  Once MS6 custody is present it is mandatory
+            # and re-derived strictly; omission remains accepted solely for
+            # backward-compatible loading of those already-landed fixtures.
+            if assignments is None:
+                continue
+            if not isinstance(assignments, list) or not assignments:
+                raise PF2BucketAssignmentError("complete assignment lacks measured probe rows")
+            derived_actuators: set[str] = set()
+            derived_directions: set[str] = set()
+            derived_pairs: set[int] = set()
+            for assignment in assignments:
+                if (
+                    not isinstance(assignment, Mapping)
+                    or assignment.get("schema") != MEASURED_PROBE_ASSIGNMENT_SCHEMA
+                    or not isinstance(assignment.get("receiver_actuator_id"), str)
+                    or assignment.get("direction_id") not in DIRECTION_IDS
+                    or not isinstance(assignment.get("pair_ids"), list)
+                    or assignment["pair_ids"] != sorted(set(assignment["pair_ids"]))
+                    or not assignment["pair_ids"]
+                    or any(
+                        isinstance(pair_id, bool)
+                        or not isinstance(pair_id, int)
+                        or not 0 <= pair_id < PAIR_COUNT
+                        for pair_id in assignment["pair_ids"]
+                    )
+                    or isinstance(assignment.get("perturbed_event_count"), bool)
+                    or not isinstance(assignment.get("perturbed_event_count"), int)
+                    or assignment["perturbed_event_count"] <= 0
+                    or not isinstance(assignment.get("perturbed_event_ids_sha256"), str)
+                    or len(assignment["perturbed_event_ids_sha256"]) != 64
+                ):
+                    raise PF2BucketAssignmentError("complete measured-probe assignment differs")
+                derived_actuators.add(str(assignment["receiver_actuator_id"]))
+                derived_directions.add(str(assignment["direction_id"]))
+                derived_pairs.update(int(value) for value in assignment["pair_ids"])
+            if (
+                actuator_ids != sorted(derived_actuators)
+                or direction_ids != sorted(derived_directions)
+                or pair_ids != sorted(derived_pairs)
+            ):
+                raise PF2BucketAssignmentError("complete assignment aggregates differ")
         elif not isinstance(status, str) or not status.startswith("ASSIGNMENT_UNRECOVERABLE_"):
             raise PF2BucketAssignmentError("assignment status is neither complete nor fail-closed")
+        if "pf2_membership_pair_ids" in row:
+            membership = row["pf2_membership_pair_ids"]
+            if (
+                not isinstance(membership, list)
+                or membership != sorted(set(membership))
+                or any(
+                    isinstance(pair_id, bool)
+                    or not isinstance(pair_id, int)
+                    or not 0 <= pair_id < PAIR_COUNT
+                    for pair_id in membership
+                )
+            ):
+                raise PF2BucketAssignmentError("PF2 membership pair IDs differ")
 
 
 __all__ = [
@@ -376,12 +762,20 @@ __all__ = [
     "ASSIGNMENT_ROW_SCHEMA",
     "ASSIGNMENT_TABLE_SCHEMA",
     "ATLAS_KEY_FIELDS",
+    "DIRECTION_IDS",
+    "MEASURED_EMPTY_STATUS",
+    "MEASURED_PROBE_ASSIGNMENT_SCHEMA",
+    "PARTIAL_MEASUREMENT_STATUS",
+    "PROBE_RESULT_SCHEMA",
     "RECOVERED_STATUS",
     "UNRECOVERABLE_STATUS",
     "PF2BucketAssignmentError",
     "build_assignment_table",
+    "build_measured_assignment_table",
     "canonical_bytes",
     "canonical_sha256",
+    "intersect_argmax_delta_with_pf2_events",
+    "reconstruct_bucket_event_ids",
     "reconstruct_temporal_masks",
     "validate_assignment_table",
 ]
