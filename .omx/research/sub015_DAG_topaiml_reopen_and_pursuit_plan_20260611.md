@@ -23156,3 +23156,31 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   G3 blocks must close before MS4 becomes eligible. This unifies two independently-derived demands:
   the bundle chain's coverage gap AND #613's "Lane not isolatable" design signal.
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-rg1-custody (2026-07-24, MAIN custody of ddm_rg1 rc=0 — the receiver grammar EXTENDED and WORKING: Lane + G2CS1 are now real isolated coordinates; G3 gap 106→64; one build family remains)
+- **VERDICT (4 commits 1c22668b0e..d49065b844 cherry-picked in order; 9 tests pass; MAIN re-derived:
+  Σmissing across 24 G3 rows = 64 EXACT; probe ledger 768 = 748 − 60 grammar-resolved + 80 new,
+  758 measured (incl. 17 empty) + 10 geometry-infeasible = 768 CLOSES):** RG1 is a version-bumped
+  ADDITIVE outer grammar (sealed base → Lane production → post-solve correction → inherited
+  raster/R), byte-identical when inactive (empty streams emit no wrapper, P₀=C₀=I). All 24 Lane
+  DOFs (4 per line × 6 lines: dash_phase_origin/xi_gain/width_bias/width_slope) are TRUE isolated
+  counted coordinates — 48/48 signed probes perturbative, 48 unique candidate archive SHAs, zero
+  infeasible. G2CS1: the V13 vocabulary firewall lifted TYPED (separate correction stream, never
+  V13 mutation) — 12/12 perturbative. Bounded geometry alternatives: 18/20 perturbative, 2
+  explicit empty-raster, originals preserved under their own IDs, never silently substituted.
+  verdict_scope: INSTANCE_EXTENDED_GRAMMAR_RG1.
+- **HONEST PARTIAL (both coverage facts):** G3 missing {pair,bucket} blocks 106→64 (real partial
+  closure; still only pair 21 complete) while globally-FULLY-assigned buckets stay 34 — pair-level
+  joins improved without completing new buckets across all member pairs. producer_rerun_eligible=
+  false; MS4 correctly NOT invoked. Residual reason typed:
+  NO_MEASURED_RG1_PROBE_JOIN_AT_EXACT_PAIR_BUCKET, INSTANCE-scoped to this extended grammar.
+- **THE RESIDUAL DERIVES ITS OWN NEXT FAMILY (from bucket typed keys, not convenience):** Lane
+  keys → counted Lane-BAND productions; Movable keys → bounded G1 polygon coordinates; transient
+  keys → pair-local post-solve corrections (all three EXIST in RG1 but don't join every exact hard
+  pair); the UN-BUILT family = **event-local / per-stratum SKELETON amplitude productions** → rg2.
+- **Honesty receipt:** round-1 caught a draft-receipt bookkeeping error (10 geometry rows counted
+  as 20 by multiplying unique actuators × directions) — fixed to count exact preserved rows;
+  3 post-fix clean passes. #613 significance: Lane is NOW an isolatable coordinate — the box
+  campaign's Lane levers gain a legal one-quantum actuation surface (still owing measured
+  score-units-per-byte before any admission; no coordinate admitted on support alone).
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
