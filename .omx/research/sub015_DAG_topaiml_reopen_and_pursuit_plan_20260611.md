@@ -24148,3 +24148,14 @@ cleared. (4) 5 REACTIVATE-NOW routed as canonical tasks: #227→PC1 binding · #
 telemetry · #611→scorer-recursive proposal producer · #213→free-interpreter recovery suite ·
 #573→DDM generator description. verdict_scope: grades are per-row, translation column preserves
 measurements where vehicles died. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-ra1-magnitude-detector-adjudication (2026-07-24) [magnitude-ok]
+Stop-hook magnitude-dismissal detector fired on ra1 memo line 188 — ADJUDICATED LEXICAL FALSE
+POSITIVE, consciously consumed per the warnings-are-blocking law: the flagged passage is the
+STORES CONSULTED corpus enumeration (the string "#141 label-noise memo" cites a SOURCE READ, not
+a verdict). Verified by grep: ZERO of the memo's 114 classification rows use magnitude language
+(weak/negligible/small-ΔS) as justification — vocabulary is entirely method/blocker/supersession-
+based; and row D25's actual treatment of #141 is the INVERSE of the flagged class (voids the old
+ceiling as UNSOUND-METHOD, REACTIVATES with resolving rung — exactly what the
+relative-not-absolute law demands). # MAGNITUDE_DISMISSAL_OK: detector matched a citation string
+in a source list, not a dismissal; verdict-position scan clean.
