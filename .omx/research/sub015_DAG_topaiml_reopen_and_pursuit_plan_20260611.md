@@ -23436,3 +23436,32 @@ silent divergence between the arXiv 2607.20548 recipe and the library's Muon con
 (momentum 0.9→0.95 · wd 0.1→0.01 · 16-step PolarExpress→5-step quintic · ~0.2 RMS correction→off),
 verified at HEAD before filing; no prior issue covered it. Operator-attributed, constructive-docs
 framing, PR offer included. X amplification deferred pending maintainer response (operator's call).
+
+FEED-603-sched1-MAIN-review (2026-07-24, MAIN custody of ddm_sched1_derived_schedule_synthesis rc=0 —
+the #366 pre-launch schedule gate, operator "not cargo culted PR95"):
+Verdict **RESEAL_REQUIRED** — the sealed J7 ticket is NOT a derived schedule: fixed 3×150-step
+clipped-Adam program with fixed d_seg targets/verdict cadence/bare EMA 0.997, CONTRADICTING the
+event-continuation law; not repairable by value changes. MAIN verified the load-bearing compiler
+claim verbatim (direct_description_joint_descent.py:716 nonempty-stages refuse + :774 step/verdict
+multiple) — the current typed compiler HONESTLY REFUSES the event-graph reseal input (13,906B, sha
+65f06475a9…, execution_allowed=false, hashes deliberately withheld: no fake compile). Element-wise
+differential over EVERY ticket element with single dispositions: SAME-and-derived (checkpoint/rollback
+contract · n600 exact chunked authority · admission controller · Q8 proposal ladder · pose latch ·
+batch4 memory receipt) vs CONTRADICTS-derived-law (all fixed step counts/targets/cadences · fixed
+group order · ema 0.997 bare · V15 warm start w/ optimizer_state_loadable=false · missing metric
+selector/NCDE-TerminalSolve branch/causal event marks/hashed #405 receipt · fixed-stage parser) vs
+INHERITED-PR95-unverified (ckpt-interval 37 · lr-quantum 0.25 · β₂ 0.999 · rewarmup floor/shape ·
+amber clip constants — each left NULL/fail-closed, never silently transferred). The derived optimum =
+EVENT GRAPH: resume-boundary recondition (β₂-memory + variance-warmup laws) → costate-ranked joint
+continuation (marginal-per-byte group selection, exact-receiver admission only) → pose-protected
+finish (latch retained, clock removed) → terminal-solve-or-governed-stop (MS2-custody-gated,
+default-off). Stage count becomes an OUTPUT. Corpus sweep consumed #302/#430/#318/#344/#315/#341/
+#518/#405/#474/#312/#475/px1 with honest N/A-WHYs (no eikonal ε transfer; no levelset flags into DDM;
+grokking≠schedule clock). px1's contract adopted, zero constants. 10-item minimum landing delta named
+(DDMEventContinuationV1 + DDM WitnessProgram target + WS3/IS1 binding + β₂/EMA LawRef resolution +
+metric selector + event marks + MS2-gated solve + budget-derived caps + real argv/hashes + fresh
+3-pass). CONVERGENCE NOTE (MAIN): sched1's RESEAL_REQUIRED and is1's #366_standalone_NOT_AUTHORIZED
+were reached INDEPENDENTLY and compose — the event-continuation consumer is the generic descent
+engine the re-aimed #366 ((d)-family fitter per FEED-603-is1) needs; build it FOR that target, not
+the old standalone closer. Fire gate stays MAIN-owned 3-way; ready_to_fire=false on all three legs
+today. Cherry-pick c753130b94 clean (docs+receipts only). Pointer 0.1910828242 [contest-CPU] UNMOVED.
