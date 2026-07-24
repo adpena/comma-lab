@@ -19,6 +19,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+try:
+    import brotli
+except ImportError:  # E4's only authorized coder-fallback trigger.
+    brotli = None  # type: ignore[assignment]
+
 import numpy as np
 import torch
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, model_validator
@@ -51,13 +56,16 @@ from tac.optimization.direct_description_measurement_ladder import (
 SCHEMA = "ddm_e1_runtime_archive.v1"
 E2_SCHEMA = "ddm_e2_runtime_archive.v1"
 E3_SCHEMA = "ddm_e3_runtime_archive.v1"
+E4_SCHEMA = "ddm_e4_runtime_archive.v1"
 RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
 CONFIG_SCHEMA = "DDME1RuntimeExporterConfigV1"
 E2_CONFIG_SCHEMA = "DDME2RuntimeExporterConfigV1"
 E3_CONFIG_SCHEMA = "DDME3RuntimeExporterConfigV1"
+E4_CONFIG_SCHEMA = "DDME4RuntimeExporterConfigV1"
 RESULT_SCHEMA = "ddm_e1_runtime_export_receipt.v1"
 E2_RESULT_SCHEMA = "ddm_e2_runtime_export_receipt.v1"
 E3_RESULT_SCHEMA = "ddm_e3_runtime_export_receipt.v1"
+E4_RESULT_SCHEMA = "ddm_e4_runtime_export_receipt.v1"
 SOURCE_BYTES = 133_941
 SOURCE_SHA256 = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
 STATE_BYTES = 134_211
@@ -124,6 +132,9 @@ REFINEMENT_CONTRACT = {
 LANGUAGE_VERSION = "ddm_composed_language.v1"
 BLOB_MAGIC = b"DDE1B"
 BLOB_HEADER = struct.Struct(">5sBBBBQQ32s")
+BROTLI_Q11_CODER = "brotli_q11"
+E3_LZMA1_CODER = "lzma1_raw_d1m_lc3_lp0_pb2"
+CODER_IDS = {BROTLI_Q11_CODER: 1, E3_LZMA1_CODER: 2}
 ZIP_LOCAL_HEADER = struct.Struct("<4s5H3I2H")
 ZIP_EOCD = struct.Struct("<4s4H2IH")
 PAIR_H = 384
@@ -171,11 +182,13 @@ class DDME1RuntimeExporterConfigV1(BaseModel):
         "DDME1RuntimeExporterConfigV1",
         "DDME2RuntimeExporterConfigV1",
         "DDME3RuntimeExporterConfigV1",
+        "DDME4RuntimeExporterConfigV1",
     ] = Field(default=CONFIG_SCHEMA, alias="schema", serialization_alias="schema")
     run_id: Literal[
         "ddm_e1_runtime_exporter_n600_20260723",
         "ddm_e2_pose_stream_and_doctrine_export_20260723",
         "ddm_e3_inflate_compose_and_depclose_20260723",
+        "ddm_e4_brotli_declared_dep_20260724",
     ] = "ddm_e1_runtime_exporter_n600_20260723"
     source_archive_path: StrictStr
     source_archive_bytes: Literal[133941] = SOURCE_BYTES
@@ -198,6 +211,7 @@ class DDME1RuntimeExporterConfigV1(BaseModel):
             "ddm_e1_runtime_exporter_n600_20260723": CONFIG_SCHEMA,
             "ddm_e2_pose_stream_and_doctrine_export_20260723": E2_CONFIG_SCHEMA,
             "ddm_e3_inflate_compose_and_depclose_20260723": E3_CONFIG_SCHEMA,
+            "ddm_e4_brotli_declared_dep_20260724": E4_CONFIG_SCHEMA,
         }[self.run_id]
         if self.schema_ != expected_schema:
             raise ValueError("run_id and exporter config schema disagree")
@@ -270,7 +284,40 @@ def _publish_or_verify(path: Path, payload: bytes, *, executable: bool = False) 
     return path
 
 
-def _frame_blob(raw: bytes, *, kind: int, dimensions: tuple[int, ...] = ()) -> bytes:
+def _e4_coder() -> Literal["brotli_q11", "lzma1_raw_d1m_lc3_lp0_pb2"]:
+    """Select E4's primary coder, falling back only after import failure."""
+
+    return BROTLI_Q11_CODER if brotli is not None else E3_LZMA1_CODER
+
+
+def _compress_blob(
+    raw: bytes,
+    *,
+    coder: Literal["brotli_q11", "lzma1_raw_d1m_lc3_lp0_pb2"],
+) -> bytes:
+    if coder == BROTLI_Q11_CODER:
+        if brotli is None:
+            raise ExporterError("Brotli coder selected after its import failed")
+        return brotli.compress(raw, quality=11)
+    if coder == E3_LZMA1_CODER:
+        return lzma.compress(
+            raw,
+            format=lzma.FORMAT_RAW,
+            filters=runtime.LZMA_FILTERS,
+        )
+    raise ExporterError(f"unknown blob coder: {coder}")
+
+
+def _frame_blob(
+    raw: bytes,
+    *,
+    kind: int,
+    dimensions: tuple[int, ...] = (),
+    coder: Literal[
+        "brotli_q11",
+        "lzma1_raw_d1m_lc3_lp0_pb2",
+    ] = E3_LZMA1_CODER,
+) -> bytes:
     if kind not in (0, 1) or len(dimensions) > 8:
         raise ExporterError("blob framing kind/rank is invalid")
     if kind == 0 and dimensions:
@@ -282,16 +329,12 @@ def _frame_blob(raw: bytes, *, kind: int, dimensions: tuple[int, ...] = ()) -> b
         product *= dimension
     if kind == 1 and product != len(raw):
         raise ExporterError("uint8 blob dimensions disagree with raw length")
-    coded = lzma.compress(
-        raw,
-        format=lzma.FORMAT_RAW,
-        filters=runtime.LZMA_FILTERS,
-    )
+    coded = _compress_blob(raw, coder=coder)
     return (
         BLOB_HEADER.pack(
             BLOB_MAGIC,
             1,
-            2,
+            CODER_IDS[coder],
             kind,
             len(dimensions),
             len(raw),
@@ -305,21 +348,17 @@ def _frame_blob(raw: bytes, *, kind: int, dimensions: tuple[int, ...] = ()) -> b
 
 def _ordered_redundancy_matrix(
     raw_streams: dict[str, bytes],
+    *,
+    coder: Literal[
+        "brotli_q11",
+        "lzma1_raw_d1m_lc3_lp0_pb2",
+    ] = E3_LZMA1_CODER,
 ) -> list[dict[str, Any]]:
-    """Measure bytes(B)-bytes(B|A decoded) with one fixed raw-LZMA1 coder."""
+    """Measure bytes(B)-bytes(B|A decoded) with the selected real coder."""
 
     if tuple(raw_streams) != EXPECTED_MEMBERS[1:]:
         raise ExporterError("redundancy streams are incomplete or reordered")
-    standalone = {
-        name: len(
-            lzma.compress(
-                payload,
-                format=lzma.FORMAT_RAW,
-                filters=runtime.LZMA_FILTERS,
-            )
-        )
-        for name, payload in raw_streams.items()
-    }
+    standalone = {name: len(_compress_blob(payload, coder=coder)) for name, payload in raw_streams.items()}
     rows: list[dict[str, Any]] = []
     for conditioner, conditioner_payload in raw_streams.items():
         conditioner_bytes = standalone[conditioner]
@@ -328,10 +367,9 @@ def _ordered_redundancy_matrix(
                 continue
             conditioned = (
                 len(
-                    lzma.compress(
+                    _compress_blob(
                         conditioner_payload + stream_payload,
-                        format=lzma.FORMAT_RAW,
-                        filters=runtime.LZMA_FILTERS,
+                        coder=coder,
                     )
                 )
                 - conditioner_bytes
@@ -389,6 +427,10 @@ def _rate_doctrine_manifest(
     chart_member: bytes,
     semantic_raw: bytes,
     semantic_member: bytes,
+    coder: Literal[
+        "brotli_q11",
+        "lzma1_raw_d1m_lc3_lp0_pb2",
+    ] = E3_LZMA1_CODER,
 ) -> dict[str, Any]:
     """Build the complete four-clause audit without promoting an adverse row."""
 
@@ -396,8 +438,10 @@ def _rate_doctrine_manifest(
         {
             "base/chart.ddb": chart_raw,
             "semantic/composed.dds": semantic_raw,
-        }
+        },
+        coder=coder,
     )
+    codec_label = "Brotli-Q11" if coder == BROTLI_Q11_CODER else "stdlib raw LZMA1 dict=1MiB lc=3 lp=0 pb=2"
     rows = [
         {
             "audit_triple": {
@@ -419,7 +463,7 @@ def _rate_doctrine_manifest(
                 "three_layer_decomposition": {
                     "coder": {
                         "coded_bytes": len(chart_member),
-                        "codec": "stdlib raw LZMA1 dict=1MiB lc=3 lp=0 pb=2",
+                        "codec": codec_label,
                         "raw_bytes": len(chart_raw),
                     },
                     "descriptive_form": (
@@ -465,7 +509,7 @@ def _rate_doctrine_manifest(
                 "three_layer_decomposition": {
                     "coder": {
                         "coded_bytes": len(semantic_member),
-                        "codec": "stdlib raw LZMA1 dict=1MiB lc=3 lp=0 pb=2",
+                        "codec": codec_label,
                         "raw_bytes": len(semantic_raw),
                     },
                     "descriptive_form": ("one frame1-only categorical semantic plane reused at camera resolution"),
@@ -566,6 +610,10 @@ def _block_versions(
     chart_sha256: str,
     semantic_sha256: str,
     amplitude_enabled: bool = False,
+    coder: Literal[
+        "brotli_q11",
+        "lzma1_raw_d1m_lc3_lp0_pb2",
+    ] = E3_LZMA1_CODER,
 ) -> list[dict[str, Any]]:
     member_inputs = [
         {"member": "base/chart.ddb", "sha256": chart_sha256},
@@ -573,7 +621,10 @@ def _block_versions(
     ]
     active_rows = {
         "L": ("ddm_L_composed_semantic.v1", member_inputs),
-        "D4": ("ddm_D4_lzma1_raw_d1m_measure.v1", member_inputs),
+        "D4": (
+            "ddm_D4_brotli_q11_measure.v1" if coder == BROTLI_Q11_CODER else "ddm_D4_lzma1_raw_d1m_measure.v1",
+            member_inputs,
+        ),
         "D6": ("ddm_D6_camera_realization.v1", member_inputs),
     }
     if amplitude_enabled:
@@ -794,6 +845,7 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
         "sys",
         "time",
         "typing",
+        "brotli",
         "torch",
         "torch.nn.functional",
     }
@@ -816,7 +868,7 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
             f"runtime cleanliness failed: imports={unexpected}, tokens={forbidden_tokens}, hex={long_hex_literals}"
         )
     return {
-        "allowed_dependency_roots": ["torch"],
+        "allowed_dependency_roots": ["torch", "brotli"],
         "forbidden_tokens": forbidden_tokens,
         "imports": sorted(imports),
         "long_hex_literals": long_hex_literals,
@@ -1013,6 +1065,8 @@ if [ "$#" -ne 3 ]; then
   exit 2
 fi
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The archive manifest is the runtime-tree dependency declaration authority.
+# PYTHON selects the locked environment provisioned from that declaration.
 exec "${PYTHON:-python3}" "$HERE/inflate.py" "$1" "$2" "$3"
 """
 
@@ -1030,8 +1084,11 @@ def export_runtime(
     torch.use_deterministic_algorithms(True)
     is_e2 = config.run_id == "ddm_e2_pose_stream_and_doctrine_export_20260723"
     is_e3 = config.run_id == "ddm_e3_inflate_compose_and_depclose_20260723"
-    is_pose_stream = is_e2 or is_e3
-    archive_schema = E3_SCHEMA if is_e3 else E2_SCHEMA if is_e2 else SCHEMA
+    is_e4 = config.run_id == "ddm_e4_brotli_declared_dep_20260724"
+    is_pose_stream = is_e2 or is_e3 or is_e4
+    archive_schema = E4_SCHEMA if is_e4 else E3_SCHEMA if is_e3 else E2_SCHEMA if is_e2 else SCHEMA
+    coder = _e4_coder() if is_e4 else E3_LZMA1_CODER
+    dependencies = ["torch", "brotli"] if coder == BROTLI_Q11_CODER else ["torch"]
     semantic_frame_policy = "frame1_only_seg_free_frame0" if is_pose_stream else "both_frames"
     source_path = _require_repo_path(config.source_archive_path, label="source_archive_path")
     output_dir = _require_repo_path(config.output_directory, label="output_directory")
@@ -1052,15 +1109,16 @@ def export_runtime(
         receiver,
         batch_pairs=config.batch_pairs,
         semantic_frame_policy=semantic_frame_policy,
-        amplitude_enabled=is_e3,
+        amplitude_enabled=is_e3 or is_e4,
     )
     chart_raw, chart_layout = _chart_payload(receiver)
-    chart_member = _frame_blob(chart_raw, kind=0)
+    chart_member = _frame_blob(chart_raw, kind=0, coder=coder)
     semantic_raw = labels.tobytes(order="C")
     semantic_member = _frame_blob(
         semantic_raw,
         kind=1,
         dimensions=tuple(labels.shape),
+        coder=coder,
     )
     profile = receiver.realization_profile
     assert profile is not None
@@ -1121,10 +1179,11 @@ def export_runtime(
         "block_versions": _block_versions(
             chart_sha256=chart_sha256,
             semantic_sha256=semantic_sha256,
-            amplitude_enabled=is_e3,
+            amplitude_enabled=is_e3 or is_e4,
+            coder=coder,
         ),
         "chart": chart_layout,
-        "dependencies": ["torch"],
+        "dependencies": dependencies,
         "false_authority": {
             "evidence_axis": EVIDENCE_AXIS,
             "research_only": True,
@@ -1164,6 +1223,7 @@ def export_runtime(
                     chart_member=chart_member,
                     semantic_raw=semantic_raw,
                     semantic_member=semantic_member,
+                    coder=coder,
                 ),
                 "semantic_frame_policy": semantic_frame_policy,
             }
@@ -1212,7 +1272,9 @@ def export_runtime(
             "bytes": raw_bytes,
             "sha256": raw_sha256,
             "status": (
-                "E3_PA1_COMPOSED_SOURCE_MEASURED_PACKAGED_RECEIVER_PENDING"
+                "E4_PA1_COMPOSED_SOURCE_MEASURED_PACKAGED_RECEIVER_PENDING"
+                if is_e4
+                else "E3_PA1_COMPOSED_SOURCE_MEASURED_PACKAGED_RECEIVER_PENDING"
                 if is_e3
                 else "E2_FRAME1_ONLY_SOURCE_MEASURED_PACKAGED_RECEIVER_PENDING"
                 if is_e2
@@ -1224,7 +1286,13 @@ def export_runtime(
         "research_only": True,
         "runtime": {
             "cleanliness": cleanliness,
-            "dependencies": ["torch"],
+            "coder": {
+                "codec_id": CODER_IDS[coder],
+                "fallback_trigger": ("ImportError" if coder == E3_LZMA1_CODER and is_e4 else None),
+                "primary": BROTLI_Q11_CODER,
+                "selected": coder,
+            },
+            "dependencies": dependencies,
             "inflate_py": {
                 "bytes": len(runtime_payload),
                 "path": str(runtime_path.relative_to(REPO_ROOT)),
@@ -1236,7 +1304,9 @@ def export_runtime(
                 "sha256": _sha256(script),
             },
         },
-        "schema": (E3_RESULT_SCHEMA if is_e3 else E2_RESULT_SCHEMA if is_e2 else RESULT_SCHEMA),
+        "schema": (
+            E4_RESULT_SCHEMA if is_e4 else E3_RESULT_SCHEMA if is_e3 else E2_RESULT_SCHEMA if is_e2 else RESULT_SCHEMA
+        ),
         "score_claim": False,
         "seed": config.seed,
         "source": {
@@ -1263,7 +1333,7 @@ def export_runtime(
         },
         "FREE": {
             "bytes": 0,
-            "objects": [runtime.PA1_TRANSFORM_ID] if is_e3 else [],
+            "objects": [runtime.PA1_TRANSFORM_ID] if is_e3 or is_e4 else [],
         },
         "NULL": {"blocks": ["D2", "D5"], "bytes": 0},
     }
@@ -1274,12 +1344,14 @@ def export_runtime(
                 "rate_doctrine": manifest["rate_doctrine"],
             }
         )
-    if is_e3:
+    if is_e3 or is_e4:
         result["amplitude_transform"] = amplitude_transform
     receipt_path = _publish_or_verify(
         output_dir.parent
         / (
-            "ddm_e3_runtime_export_receipt.json"
+            "ddm_e4_runtime_export_receipt.json"
+            if is_e4
+            else "ddm_e3_runtime_export_receipt.json"
             if is_e3
             else "ddm_e2_runtime_export_receipt.json"
             if is_e2

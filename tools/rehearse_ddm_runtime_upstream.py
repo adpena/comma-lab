@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Run the actual frozen upstream harness on an exported DDM E1/E2/E3 packet."""
+"""Run the actual frozen upstream harness on an exported DDM E1/E2/E3/E4 packet."""
 
 from __future__ import annotations
 
@@ -42,11 +42,14 @@ class DDME1UpstreamHarnessConfigV1(BaseModel):
         "DDME1UpstreamHarnessConfigV1",
         "DDME2UpstreamHarnessConfigV1",
         "DDME3UpstreamHarnessConfigV1",
+        "DDME4UpstreamHarnessConfigV1",
     ] = Field(alias="schema")
     run_id: Literal[
         "ddm_e1_upstream_harness_20260723",
         "ddm_e2_upstream_harness_20260723",
         "ddm_e3_upstream_harness_20260723",
+        "ddm_e4_brotli_upstream_harness_20260724",
+        "ddm_e4_lzma1_fallback_upstream_harness_20260724",
     ]
     export_config_path: StrictStr
     upstream_root: StrictStr
@@ -123,12 +126,18 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
     export_config = load_config(export_config_path)
     is_e2 = config.run_id == "ddm_e2_upstream_harness_20260723"
     is_e3 = config.run_id == "ddm_e3_upstream_harness_20260723"
+    is_e4 = config.run_id in {
+        "ddm_e4_brotli_upstream_harness_20260724",
+        "ddm_e4_lzma1_fallback_upstream_harness_20260724",
+    }
     packet = (REPO_ROOT / export_config.output_directory).resolve()
     output_root = packet.parent
     export_receipt_payload = (
         output_root
         / (
-            "ddm_e3_runtime_export_receipt.json"
+            "ddm_e4_runtime_export_receipt.json"
+            if is_e4
+            else "ddm_e3_runtime_export_receipt.json"
             if is_e3
             else "ddm_e2_runtime_export_receipt.json"
             if is_e2
@@ -259,8 +268,11 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
         "parsed_report": parsed,
         "raw": {"bytes": raw_identity[0], "sha256": raw_identity[1]},
         "research_only": True,
+        "runtime_coder": export_receipt["runtime"].get("coder"),
         "schema": (
-            "ddm_e3_upstream_harness_receipt.v1"
+            "ddm_e4_upstream_harness_receipt.v1"
+            if is_e4
+            else "ddm_e3_upstream_harness_receipt.v1"
             if is_e3
             else "ddm_e2_upstream_harness_receipt.v1"
             if is_e2
@@ -297,7 +309,13 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
     receipt_path = _publish_or_verify(
         output_root
         / (
-            "ddm_e3_upstream_harness_receipt.json"
+            (
+                "ddm_e4_brotli_upstream_harness_receipt.json"
+                if config.run_id == "ddm_e4_brotli_upstream_harness_20260724"
+                else "ddm_e4_lzma1_fallback_upstream_harness_receipt.json"
+            )
+            if is_e4
+            else "ddm_e3_upstream_harness_receipt.json"
             if is_e3
             else "ddm_e2_upstream_harness_receipt.json"
             if is_e2

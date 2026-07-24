@@ -4,6 +4,8 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import lzma
+import struct
 import zipfile
 
 import pytest
@@ -25,6 +27,92 @@ def test_blob_frame_roundtrip_and_terminal_tamper_refusal() -> None:
     tampered[-1] ^= 1
     with pytest.raises(receiver.ReceiverError):
         receiver._parse_blob(bytes(tampered), expected_kind=1, label="synthetic")
+
+
+def test_e4_missing_brotli_uses_exact_e3_lzma1_bytes(monkeypatch) -> None:
+    raw = bytes(range(251)) * 11
+    monkeypatch.setattr(exporter, "brotli", None)
+    assert exporter._e4_coder() == exporter.E3_LZMA1_CODER
+    framed = exporter._frame_blob(
+        raw,
+        kind=1,
+        dimensions=(11, 251),
+        coder=exporter._e4_coder(),
+    )
+    coded = lzma.compress(
+        raw,
+        format=lzma.FORMAT_RAW,
+        filters=receiver.LZMA_FILTERS,
+    )
+    expected = (
+        exporter.BLOB_HEADER.pack(
+            exporter.BLOB_MAGIC,
+            1,
+            2,
+            1,
+            2,
+            len(raw),
+            len(coded),
+            hashlib.sha256(raw).digest(),
+        )
+        + struct.pack(">2I", 11, 251)
+        + coded
+    )
+    assert framed == expected
+    assert hashlib.sha256(framed).hexdigest() == ("7ed8d0bcfcb1833c15291d72cd2266dc81e168db1ebd8a3559490739d26be7e0")
+
+    monkeypatch.setattr(receiver, "brotli", None)
+    decoded, shape = receiver._parse_blob(
+        framed,
+        expected_kind=1,
+        label="e4-fallback",
+    )
+    assert decoded == raw
+    assert shape == (11, 251)
+
+
+def test_e4_does_not_mask_brotli_coder_failure(monkeypatch) -> None:
+    class BrokenBrotli:
+        @staticmethod
+        def compress(raw: bytes, *, quality: int) -> bytes:
+            raise RuntimeError(f"brotli failure at q{quality} for {len(raw)} bytes")
+
+    monkeypatch.setattr(exporter, "brotli", BrokenBrotli())
+    assert exporter._e4_coder() == exporter.BROTLI_Q11_CODER
+    with pytest.raises(RuntimeError, match="brotli failure"):
+        exporter._frame_blob(
+            b"must-not-fallback",
+            kind=0,
+            coder=exporter._e4_coder(),
+        )
+
+
+def test_e4_brotli_frame_is_consumed_and_terminal_tamper_refused() -> None:
+    if exporter.brotli is None or receiver.brotli is None:
+        pytest.skip("Brotli-present arm requires the declared dependency")
+    raw = bytes(range(251)) * 13
+    framed = exporter._frame_blob(
+        raw,
+        kind=1,
+        dimensions=(13, 251),
+        coder=exporter.BROTLI_Q11_CODER,
+    )
+    decoded, shape = receiver._parse_blob(
+        framed,
+        expected_kind=1,
+        label="e4-brotli-consumption",
+    )
+    assert decoded == raw
+    assert shape == (13, 251)
+
+    tampered = bytearray(framed)
+    tampered[-1] ^= 1
+    with pytest.raises(receiver.ReceiverError):
+        receiver._parse_blob(
+            bytes(tampered),
+            expected_kind=1,
+            label="e4-brotli-consumption-tampered",
+        )
 
 
 def test_deterministic_zip_has_bijective_byte_homes() -> None:
@@ -74,9 +162,9 @@ def test_runtime_cleanliness_allows_only_generic_dependencies() -> None:
     runtime = exporter.RUNTIME_SOURCE.read_bytes()
     row = exporter._runtime_cleanliness(runtime)
     assert row["status"] == "PASS"
-    assert row["allowed_dependency_roots"] == ["torch"]
+    assert row["allowed_dependency_roots"] == ["torch", "brotli"]
     assert row["runtime_sha256"] == hashlib.sha256(runtime).hexdigest()
-    assert b"import brotli" not in runtime
+    assert b"import brotli" in runtime
     assert b"torch.cuda.is_available" not in runtime
 
 
@@ -172,8 +260,12 @@ def test_upstream_harness_pass_requires_archive_raw_exit_and_budget() -> None:
 def test_manifest_nested_state_and_section_types_fail_closed() -> None:
     members = {
         "manifest.json": b"not-self-hashed",
-        "base/chart.ddb": b"chart",
-        "semantic/composed.dds": b"semantic",
+        "base/chart.ddb": exporter._frame_blob(b"chart", kind=0),
+        "semantic/composed.dds": exporter._frame_blob(
+            b"\0" * 8,
+            kind=1,
+            dimensions=(2, 2, 2),
+        ),
     }
     manifest = {
         "archive": {

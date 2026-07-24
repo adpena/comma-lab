@@ -470,9 +470,7 @@ def _validate_manifest(manifest: Any, members: dict[str, bytes]) -> dict[str, An
             or tag["counted_bytes"] != row["bytes"]
             or (tag["type"] == "GAUGE" and tag["counted_bytes"] != 0)
         ):
-            raise ReceiverError(
-                f"manifest typed-stream custody mismatch: {row['member']}"
-            )
+            raise ReceiverError(f"manifest typed-stream custody mismatch: {row['member']}")
     return manifest
 
 

@@ -148,9 +148,7 @@ def _optional_bytes(value: int | None, field: str) -> int | None:
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise MinimumDescriptionContractError(
-            f"{field} must be a nonnegative exact integer or null"
-        )
+        raise MinimumDescriptionContractError(f"{field} must be a nonnegative exact integer or null")
     return value
 
 
@@ -162,18 +160,14 @@ def _optional_sha256(value: str | None, field: str) -> str | None:
         or len(value) != 64
         or any(character not in "0123456789abcdef" for character in value)
     ):
-        raise MinimumDescriptionContractError(
-            f"{field} must be a lowercase SHA-256 or null"
-        )
+        raise MinimumDescriptionContractError(f"{field} must be a lowercase SHA-256 or null")
     return value
 
 
 def _distortion(value: float, field: str) -> float:
     result = float(value)
     if not math.isfinite(result) or result < 0:
-        raise MinimumDescriptionContractError(
-            f"{field} must be finite and nonnegative"
-        )
+        raise MinimumDescriptionContractError(f"{field} must be finite and nonnegative")
     return result
 
 
@@ -195,9 +189,7 @@ def build_recursive_solve_typing_contract(
         "per_dimension_quanta_active": per_dimension_quanta_active,
     }
     if any(not isinstance(value, bool) for value in declarations.values()):
-        raise MinimumDescriptionContractError(
-            "recursive solve-typing declarations must be exact booleans"
-        )
+        raise MinimumDescriptionContractError("recursive solve-typing declarations must be exact booleans")
     blockers = [
         blocker
         for field, blocker in (
@@ -224,13 +216,9 @@ def build_recursive_solve_typing_contract(
                 "range(A)/quotient coordinates only; ker(A) is gauge and is "
                 "realized by the preimage compiler plus deterministic free fill"
             ),
-            "metric": (
-                "Seg rank-4 head plus margin-Fisher blocks and a <=6-dimensional "
-                "Pose quadratic"
-            ),
+            "metric": ("Seg rank-4 head plus margin-Fisher blocks and a <=6-dimensional Pose quadratic"),
             "subproblems": (
-                "alternate argmax-cell selection, within-cell continuous lattice "
-                "solve, and real-coder pricing"
+                "alternate argmax-cell selection, within-cell continuous lattice solve, and real-coder pricing"
             ),
             "blocks": "stratum x scorer-visibility x g4 temporal class",
             "quanta": "uint8 step x per-dimension scorer sensitivity",
@@ -398,9 +386,7 @@ def build_minimum_description_headline(
 
     eligible = not blockers
     total_bytes = (
-        int(problem_bytes + exceptions)
-        if eligible and problem_bytes is not None and exceptions is not None
-        else None
+        int(problem_bytes + exceptions) if eligible and problem_bytes is not None and exceptions is not None else None
     )
     return {
         "schema": HEADLINE_SCHEMA,
@@ -408,11 +394,7 @@ def build_minimum_description_headline(
         "status": (
             "HEADLINE_ELIGIBLE"
             if eligible
-            else (
-                "INADMISSIBLE_DONOR_CONDITIONING"
-                if donor_conditioned
-                else "HEADLINE_BLOCKED"
-            )
+            else ("INADMISSIBLE_DONOR_CONDITIONING" if donor_conditioned else "HEADLINE_BLOCKED")
         ),
         "headline_eligible": eligible,
         "stored_problem": {
@@ -425,8 +407,7 @@ def build_minimum_description_headline(
             "bytes": exceptions,
             "sha256": exceptions_sha,
             "conditional_coding_role": (
-                "exceptions conditioned only on deterministic expansion of the "
-                "counted own-lineage stored problem"
+                "exceptions conditioned only on deterministic expansion of the counted own-lineage stored problem"
             ),
         },
         "joint_constraints": {
