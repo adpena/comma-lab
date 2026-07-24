@@ -23757,3 +23757,29 @@ engine build: DDMEventContinuationV1 + DDM WitnessProgram + gc1 revisions + sche
 THIS proposal-constructor wire-in), which was explicitly gated on ws3 landing and now FIRES.
 verdict_scope: arbitration INSTANCE; W_seg stop FORMULATION; no family closure. Launcher hardened
 (structural G1 rejection + regression test) — landed.
+
+### FEED-603-ms2r-MAIN-review (2026-07-24, MAIN)
+ms2r tolerance-capped solve LANDED rc=0 as a FAIL-CLOSED REFUSAL + successor contract (2 commits
+cherry-picked, registry union-merged 845 rows, 6 tests + ruff green; pointer 0.1910828242
+[contest-CPU] UNMOVED). VERDICT: BLOCKED_MS3_BUNDLE_PARTIAL_PF2_BUCKET_INPUT_ASSIGNMENT_ABSENT,
+scope INSTANCE(SHA-custodied MS4 bundle) × FORMULATION(metric-active waterfill preflight) — NOT a
+lattice/coder/family negative. THREE MAIN-OWNED FACTS: (1) MY CHARTERING PREMISE FALSIFIED — rg3
+never delivered BUNDLE-COMPLETE; its landed verdict was PARTIAL_INSTANCE_RG3_11_OF_36_CLOSED with 25
+terminal rows (blocker class NO_TARGET_BUCKET_EVENT_CHANGED_BY_ANY_COUNTED_RG3_MAGNITUDE_OR_SIGN,
+producer_rerun_eligible=false) — I consumed the PLANNED outcome as ACHIEVED (same plausible-summary
+class as the warnings failure; owned). Pose block COMPLETE n600/batch32; Seg/composite-R/duals
+PARTIAL. (2) ARITHMETIC CORRECTION: exact C1 = 17,927 errors (0.0001519690619574653 × 117,964,800),
+not the rounded 17,931; box allowance = 7.633123× (doctrine memory corrected). (3) ZERO rungs
+materialized, 162/162 RD1 duals honestly NULL — a value-filled row would be imputation. WHAT LANDED:
+registered callable ddm_tolerance_capped_min_score_waterfill_v1 = the full operator contract as
+executable law (waterfill 136,839 over stratum×visibility×G4 · uniform rungs demoted to controls ·
+raw-compact + best-coded columns after full coder/context race · 4-part visibility partition
+both-blind-GAUGE/fine-chroma-Seg-only/frame_0-Pose-only/joint · #532 uint8 revalidation for every
+null move) — fires the moment the loader admits a complete bundle. RESPAWN (coherence contract, NOT
+an rg4 ladder rung): the 25 rows' blocker class says no counted COORDINATE actuates those buckets —
+but the METRIC does not require an actuator: the rank-4 row-Gram / composite-R Hessian are
+scorer-intrinsic properties computable DIRECTLY per bucket from the frozen scorer at the reference
+(bypassing the pf2 actuator foreign key), with actuation honestly typed UNREACHABLE_BY_COUNTED_
+COORDINATES (which is itself a MEASURED fact from rg1+rg2+rg3 probes, not missing data). One arm:
+ms4d direct-metric completion → loader admits genuinely-complete bundle → the registered waterfill
+contract RUNS. verdict_scope tokens preserved per the memo.
