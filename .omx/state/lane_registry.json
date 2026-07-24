@@ -85152,11 +85152,11 @@
       "id": "lane_ddm_menu1_realized_flip_menu_20260723",
       "name": "DDM Menu1 Realized-Flip Menu Compiler",
       "phase": 6.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_menu1_realized_flip_menu_20260723T214943Z/ddm_menu1_realized_flip_menu_receipt.json"
         },
         "real_archive_empirical": {
           "status": false,
@@ -85171,12 +85171,12 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/measure_ddm_menu1_realized_flip_menu.py"
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_menu1_realized_flip_menu_review_receipt_20260723.json"
         },
         "memory_entry": {
           "status": false,
@@ -85187,7 +85187,13 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "Local advisory compiler and exact frozen-scorer overlay measurement; candidates are not emitted archives. MAIN landing review required.",
+      "lane_class": "research_only",
+      "research_only": true,
+      "reactivation_criteria": [
+        "MAIN approves first Fisher-margin corrected-inner-Jacobian actuator",
+        "receiver-surviving AT1X or PA1 bridge lands"
+      ]
     }
   ],
   "level_rules": {
@@ -85197,5 +85203,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-23T21:52:42Z"
+  "updated_at": "2026-07-24T00:10:00Z"
 }

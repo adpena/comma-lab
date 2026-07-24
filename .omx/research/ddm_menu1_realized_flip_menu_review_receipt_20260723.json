@@ -1,0 +1,71 @@
+{
+  "schema": "ddm_menu1_realized_flip_menu_review.v1",
+  "reviewed_at_utc": "2026-07-24T00:09:27Z",
+  "lane_id": "lane_ddm_menu1_realized_flip_menu_20260723",
+  "delegation_checkpoint_key": "codex_delegate:ddm_menu1_realized_flip_menu_compiler:20260723T214943Z",
+  "base_commit": "141eb3a57f88abfd9e26745ec18cb7a5d1d3d182",
+  "passes": [
+    {
+      "pass": 1,
+      "scope": "focused static, compile, and unit review",
+      "status": "CLEAN_AFTER_FIX",
+      "evidence": {
+        "ruff": "PASS",
+        "py_compile": "PASS",
+        "focused_pytest": "9 passed"
+      }
+    },
+    {
+      "pass": 2,
+      "scope": "exact local advisory replay and independent artifact re-derivation",
+      "status": "CLEAN_AFTER_FIX",
+      "evidence": {
+        "consecutive_receipt_sha256": "2fc12eb505aa7de140b5e785e5fb528c349fd72b423a1821f23b70ea21d6f29d",
+        "consecutive_menu_sha256": "e1d446376e4b29e54b061d6579bb2a56cbc5357f33dc8cdd371672f627b441f1",
+        "compiled_rows_unique": 15894,
+        "compiled_clusters_unique": 2649,
+        "objective_rederived": true,
+        "transition_conservation": true,
+        "byte_partition_conservation": true,
+        "targeted_dual_gate_rejection": true,
+        "pointer_unchanged": true
+      }
+    },
+    {
+      "pass": 3,
+      "scope": "related DDM regression and repository review bookkeeping",
+      "status": "CLEAN",
+      "evidence": {
+        "related_pytest": "34 passed",
+        "review_tracker_entities_marked": 64,
+        "review_tracker_policy_check": "NO_POLICY_FILE_PRESENT",
+        "target_lane_consistent": true,
+        "global_lane_validation": "110 PRE_EXISTING_UNRELATED_MISSING_PATH_ERRORS"
+      }
+    }
+  ],
+  "bug_extinction": {
+    "bug": "volatile live free-space byte count made an otherwise deterministic immutable receipt differ on replay",
+    "fix": "execute the fail-closed storage check on every run but persist only its stable required lower bound and observation policy",
+    "regression_test": "test_storage_preflight_receipt_excludes_volatile_free_bytes",
+    "invalid_receipt_preserved_path": "/Volumes/VertigoDataTier/pact/ddm_menu1_realized_flip_menu_20260723T214943Z_audit_ext_v2/invalid_review_pass2_receipt_b36411d8eba421f2f925adff9c5ab53fda87dfad88ad462683820d2e32a6a94b.json",
+    "invalid_receipt_sha256": "b36411d8eba421f2f925adff9c5ab53fda87dfad88ad462683820d2e32a6a94b"
+  },
+  "artifact_custody_fix": {
+    "trigger": "serializer refused gitignored compiled JSONL gzip",
+    "menu_path": "/Volumes/VertigoDataTier/pact/ddm_menu1_realized_flip_menu_20260723T214943Z_audit_ext_v2/compiled_realized_flip_menu.jsonl.gz",
+    "menu_bytes": 440953,
+    "menu_sha256": "e1d446376e4b29e54b061d6579bb2a56cbc5357f33dc8cdd371672f627b441f1",
+    "superseded_receipt_path": "/Volumes/VertigoDataTier/pact/ddm_menu1_realized_flip_menu_20260723T214943Z_audit_ext_v2/superseded_local_menu_path_receipt_a1656bce7109c545619b077fcce6d34f2677804b4b6aec61d02cb9b9ff6664e6.json",
+    "superseded_receipt_sha256": "a1656bce7109c545619b077fcce6d34f2677804b4b6aec61d02cb9b9ff6664e6"
+  },
+  "authority": {
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "research_only": true,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "main_landing_review_required": true,
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false
+  }
+}
