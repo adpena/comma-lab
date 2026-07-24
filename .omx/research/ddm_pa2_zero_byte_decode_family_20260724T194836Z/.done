@@ -1,0 +1,11 @@
+{
+  "schema": "ddm_pa2_zero_byte_decode_family_done.v1",
+  "lane_id": "lane_ddm_pa2_zero_byte_decode_family_20260724",
+  "status": "COMPLETED_AWAITING_MAIN_LANDING_REVIEW",
+  "verdict": "IC2_FRAME1_XIHAT_ADMITTED_AT_ZERO_BYTES; IC1_AND_MS2R_RETAIN_SEALED_BASES",
+  "aggregate_receipt_sha256": "e28bcdd7131d58bccfa9539dedfdfaf0351c761d5e7e59c471b46fb0425dff75",
+  "clean_pass_count": 3,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}
