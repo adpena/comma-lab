@@ -22715,3 +22715,27 @@ governed-launch window; spec + R* banked); (b) both warm-start rows are rd1-fron
 re-run of the continuation instrument adds them to the measured R(D) picture; (c) W_seg's seg-only
 re-rank rejecting 8-of-104 joint moves is a per-move type signal for ms2's typed blocks. Triality:
 equations leg registered; DSL N/A (measurement + spec, no trainer lever); tasks #668 completed.
+
+## FEED-603-fivetype-application-sweep (2026-07-24, MAIN — operator "anything else that should be rerun with five types and full layer stack?")
+Systematic sweep of every live/recent surface against the five-type (SKELETON/CONNECTION/FIBER/
+GAUGE/RESIDUAL) × L1–L5 layer-stack typology. Routed same-turn:
+- **FIRED (ts1 arm, sol/xhigh, slot freed by ws1):** (1) WIRE the typology as a typed schema —
+  StreamType + layer_home + TypedStreamTag EXTENDING ddm_min_description_contract (single SoT, no
+  parallel enum), consumers = #636 exporter section manifest (per-type #417 custody) + rd1 dual-cube
+  type column + dr2b rungs; (2) RERUN g1 grammar pricing under the type split — g1 priced ALL
+  induced vocabulary as COUNTED, but CONNECTION operators (ξ-advection/homography/static-BEV) are
+  FREE receiver code with params-only counted and GAUGE is 0-byte via #580 → measured before/after
+  counted-bytes per stratum (the direct rate question); (3) REGISTER the g2↔five-type correspondence
+  law (invisible=GAUGE · ξ-predictable=CONNECTION · chart-expressible=SKELETON+FIBER ·
+  irreducible=RESIDUAL) so the standing g2 instrument auto-types.
+- **QUEUED (#669 extended d/e/f):** menu1×g4 recurrence RETYPE (recurring "corrections" are
+  mispriced RESIDUAL → SKELETON/CONNECTION, amortize ×k, re-home before the c1 waterfill) ·
+  dr2b ladder re-emit with type column (folds into #669a) · costate duty rows typed (SENSE ranks
+  duties by debt TYPE).
+- **AMENDED:** sn1 charter (#654, pending) now binds the typology + TypedStreamTag compatibility
+  before fire; ms2 inbox carries ws1's per-move type signal (8-of-104 joint moves rejected by
+  seg-only ranking = pose-serving FIBER misfiled in a seg stream → typed-block prior).
+- **NOT-RERUN (recorded, with reasons):** ms1 flat-coder negative (typed structure lives ABOVE the
+  coder; typing doesn't change the verdict) · g3/at1 (already scorer-native currency; type column
+  joins from ts1's schema later) · v19c asymptote (stale-base issue dominates; routed via menu1
+  step C). Pointer 0.1910828242 [contest-CPU] UNMOVED.
