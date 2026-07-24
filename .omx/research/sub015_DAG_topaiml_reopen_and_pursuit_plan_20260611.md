@@ -23491,3 +23491,29 @@ in the (d) contract — prices now real), rd1 NULL duals, #688 engine. Named suc
 the L3 REALIZATION race on these 25 rows (semantic 1,569 B vs realized bytes+collateral = the first
 semantic-vs-realized price RATIO on the demand set). Cherry-picks 9371bebf72+f484bf7a35+7324626756
 clean. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-dc1-MAIN-review (2026-07-24, MAIN custody of ddm_dc1_score_quotient_functional_contract rc=0):
+Verdict **BINDING_INCOMPLETE_FIT_OWED** — exactly right: the family-(d) contract is now EXECUTABLE
+(typed packet + receiver + rate-in-objective + capacity interface + fit request) without pretending
+a fit happened. MAIN verified: tests 9/9 + ruff clean re-run; rate stop-threshold re-derived exact
+(25/37,545,489 = 6.658590e-7 S/byte); registry cherry-pick conflict union-merged (append-only,
+841 rows parse clean — stale-base class, dc1 branched pre-dm1). WHAT LANDED: (1) coder-in-the-
+objective delegating the scalar to compute_contest_score (never hand-rolled) with B_counted =
+named-base + framing + Bθ + Bz + B25 + Bε from ACTUAL compiled bytes (3-coder race per section,
+shortest wins); (2) receiver contract requiring an explicit camera-preimage realizer through the
+REAL contest_faithful_R + uint8 with EXACT plane equality (n≥24 hard-tail-first proof ran on a
+constant-plane fixture — honestly labeled CONTRACT proof, not video result; the yhat-native
+preimage runtime debt NOT relabeled as closed); (3) dm1 placements pass-through with external
+decoder/SHA custody (no double-pricing, no re-homing — DM1 stays price owner); (4) exceptions
+hard-restricted to AT_RISK_FLIP_ANNULUS (Fisher/margin directive; no unbounded RGB repaint path);
+(5) capacity DERIVED not picked: 4 (rank-4 head) + NULL (lane orbit — refuses bare ~8, demands a
+realized-through-R Jacobian rank CERTIFICATE) + 6 (pose ξ) + 25 (demand rows) → total honestly
+NULL until the certificate exists; (6) v14 falsifier binding (d_seg ≤0.027470296224 AND bytes
+≤133,247 AND receiver_closed) with no permissive default → current mandatory INCOMPLETE:
+FIT_RESULT_RECEIVER_CLOSED_V14_OR_BETTER; (7) fit-request interface INTERFACE_ONLY_NOT_EXECUTABLE
+composing with sched1's absent DDMEventContinuationV1 — 4 support gaps named (engine · dm1 wiring ·
+receiver-closed fit · lane-orbit certificate). verdict_scope: FORMULATION-level contract binding;
+no representation-quality claim; stored pose targets ≠ measured d_pose (explicitly firewalled).
+Consumers: #688 engine descends objective(contract_state); dm2's realized prices feed the exception
+stream; the lane-orbit certificate + dm1-wiring = the named $0 gap-closure measurements. Pointer
+0.1910828242 [contest-CPU] UNMOVED.
