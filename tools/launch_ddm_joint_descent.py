@@ -1712,7 +1712,14 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 )
                 break
             if rejected_realized_verdict is not None and accepted is None:
-                campaign_blocker = "BLOCKED_REALIZED_NO_PURE_PRICED_DESCENT_AFTER_SHRINK_LADDER"
+                if reform["realized_acceptance_policy"] == "campaign_component_safe_exact_n600":
+                    campaign_blocker = (
+                        "BLOCKED_REALIZED_NO_CAMPAIGN_SAFE_DESCENT_AFTER_PROPOSAL_LADDER"
+                    )
+                else:
+                    campaign_blocker = (
+                        "BLOCKED_REALIZED_NO_PURE_PRICED_DESCENT_AFTER_SHRINK_LADDER"
+                    )
                 rollback_event = {
                     "schema": "ddm_joint_descent_warm_start_rollback.v1",
                     "event": "warm_start_rejected_proposal_rollback",
