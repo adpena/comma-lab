@@ -23388,3 +23388,33 @@ claim). Layer-wise distributed optimizer = N/A-WHY (single-device MLX). Routed: 
 the measurement contract + the audit-gate precondition; shadow-receipt spec rides sched1's
 deliverable (default-off telemetry per the off-is-a-tracked-queue rule). Cherry-pick 9a15f7d16e
 clean (research-only). Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-is1-MAIN-review (2026-07-24, MAIN custody of ddm_is1_full_inverse_solve_to_the_end rc=0 — THE
+flagship check, all 7 directives consumed with SHA custody):
+ARITHMETIC INDEPENDENTLY REPRODUCED by MAIN (Decimal re-derivation, all exact): errors 17,927 (arm
+CORRECTED my directive's 17,931 — d_seg 0.0001519690619574653 × 117,964,800 = 17,927.000) · 159× =
+158.7461929 (2,845,843/17,927) · raw-residual rate 331.3728 · byte bound at exact-solve distortion
+154,522.51 (S@154,522=0.14999966, S@200,000=0.18028) · pose contrib 0.0319129. NEW EXACT n600 ROW
+(first true-price row, deterministic/resumable, 50/50 parse-back + real-R identity, resume replay
+hash-identical modulo runtime free_bytes sentinel): the exact solved−predictor L3 raster residual
+costs 497,662,180 B under real LZMA — verdict FORMULATION:EXACT_REVERSIBLE_L3_RASTER_RESIDUAL_RATE_DEAD
+(prices ONLY RESIDUAL×L3_raster pre-re-homing; kills nothing else). OBJECTIVE (Directive 6 resolved):
+min over (f,z) of exact S with WHICH-solution AND its description jointly free; distortion knee is an
+OUTPUT; #613 box demoted to representation gate. FOUR-FAMILY RANKING (prospective, one-currency,
+no fake numbers — every unmeasured cell NULL): (d) score-quotient functional FIRST (fit compact
+function to scorer plane/at-risk margins + ≤6-dim pose stats, real coder IN the objective; the
+83,838B compact-generator row consumed as LESSON only per old-lineage ban) > (b) solve-as-oracle
+description (mandatory supervision; raw residual rate-dead but identifies the content (d)/(a) must
+compress) > (a) MS2 typed quotient (0 metric-active rows yet) > (c) #366 = METHOD not family.
+25-ROW DEMAND SET re-homed (ddm_is1_rg3_solution_demand_25_20260724.json): 16 SKELETON×L3 interface
+placements + 9 FIBER×L4 within-cell choices, all prices honestly NULL — next measurement is
+MATERIALIZE the 25 solved values + #669c + per-row real coding; NO RG4. TRAINING VERDICT:
+training_necessary_residual=EMPTY_ON_CURRENT_EVIDENCE; training admissible as the entropy-penalized
+FITTER inside (d); **#366_standalone_full_closer=NOT_AUTHORIZED** — the j-chain ticket as spec'd does
+NOT fire; #366 re-aims as (d)'s fitting engine or post-exhaustion finisher. 159× CONFOUND localized:
+quantization exonerated (solve passes the same uint8/R gate); loss lives in describe→RGB-regeneration;
+v14/PT1/WS2 endpoints must NOT be multiplied into a fake causal factorization (non-telescoping law).
+All inherited RD1/DR2B/C1/MENU1/V19C exchange rates downgraded [upper-bound, proposal-search-channel].
+Cherry-pick 5bbfde2b25 clean; tests 4/4 + ruff clean re-run by MAIN. verdict_scope: the rate-dead row
+is FORMULATION-scoped; family ranking PROSPECTIVE; training verdict OPEN at family level. Pointer
+0.1910828242 [contest-CPU] UNMOVED.
