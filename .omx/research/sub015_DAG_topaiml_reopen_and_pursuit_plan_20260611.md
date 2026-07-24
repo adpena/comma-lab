@@ -22632,3 +22632,54 @@ Pointer 0.1910828242 [contest-CPU] UNMOVED.
 - **Signal extracted:** (1) flat/conditional generic coding of the exact member is RATE-DEAD at 3 orders over the box — confirms the description must be GENERATED (describe-line/pf-family), never coded raw; (2) prev-frame conditioning's 1.74% vs pf1's skeleton −2,340B at 205KB scale: temporal redundancy in the raw member is nearly exhausted by zlib already — typed/temporal structure must be exploited ABOVE the coder, in the representation; (3) 24,576×16 facet-lookup cache retired a 2.6 s/pair dead path (~26 min/n600 saved) — instrument improvement carried forward; (4) six SVD factors clear the 1-byte floor but ZERO distilled — per-stratum SKELETON-vs-FIBER coder races (pf2's atlas) are the distillation gate.
 - **Custody:** commits `a35cd0de28`+`72e49cd924` (cherry-picked per manifest), 23 tests pass on main; immutable v1 receipt sha `546a7fdd…`; SENSE rows 1,170,365 B sha `276dde04…` on VertigoDataTier; costate organ gains advisory ms1 SourceSpec (content-hash freshness horizon). Disposition: reviewed_committed → consumed-by train-decision-table SOLVE column + #663 ms2 inputs + rd1 duals cross-check. Pointer 0.1910828242 [contest-CPU] UNMOVED (means).
 - **First rung (named next measurement):** ms2 typed-quotient solve — drop ker(A), solve the ~19.3% visible quotient in the Seg rank-4 + margin-Fisher / low-rank-pose metric, alternate cell/within-cell/coder subproblems over (stratum × visibility × g4-temporal) blocks with per-dimension quanta; bounded exact sieve BEFORE any lattice-family negative.
+
+## FEED-603-rd1-custody (2026-07-24) — rd1 LANDED: the first MEASURED restricted R(D) frontier by λ-continuation; knee OUTSIDE the box; the 3-order EMPTY GAP quantified; 162 typed dual cells all custody-blocked (named, not inferred)
+
+**Arm:** ddm_rd1_lambda_continuation_frontier_20260724T011239Z (#667; sol/ultra). Landed on main
+ffff5bf75b + 3bf857cd2b + 7a7ab7d4bd (registry union-merged 805 rows; 11 tests pass). Disposition:
+reviewed_committed. Verdict (verbatim head): `MEASURED_RESTRICTED_N600_LAMBDA_FRONTIER;
+V19C_CURRENT_UNSUPPORTED; KNEE_OUTSIDE_R6_BOX; ... SECOND_ORDER_SCORER_COORDINATE_OPTIMAL_FIRST_
+LADDER_REQUIRED`. verdict_scope: RESTRICTED-DOMAIN MEASUREMENT (110-point domain: 104 V19C
+archive-closed + 5 Menu1 harness rows + 1 fresh exact C1 row) — a frontier over what EXISTS, not
+over the design space; V19C family remains OPEN (scalarization-scoped only). All numbers
+[macOS-CPU frozen-scorer advisory]; pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+**The measured λ-frontier (7 Pareto-nondominated, 4 λ-supported):**
+| member | bytes | D (contest-weighted distortion) | closure |
+|---|---|---|---|
+| v19c_admit_0005 | 137,823 | 42.9947 | archive-closed |
+| scalar_gain_bias_12b_frame1 | 137,839 | 42.3688 | archive-closed |
+| statistics_hard_analytic_composed_frame1 (KNEE) | 138,801 | 26.1878 | harness-closed, FAILS R6 box |
+| c1_exact_solved_n600 | 409,526,925 | 0.0471098 | exact solve, 2,652× over box |
+Crossover duals: 25.565 / 59.452 / **15,660,952** bytes-per-unit-D. The third dual IS the campaign:
+between the 138.8KB knee and the 409MB exact solve there is NOTHING measured — a 3-order-of-magnitude
+EMPTY territory in (bytes, D). Everything the describe/realization lines build must land points
+INSIDE that gap; rd1 makes the emptiness a MEASURED fact, not a suspicion.
+
+**162 typed dual cells (3 hull edges × 6 strata × 3 visibilities × 3 G4 classes): ALL NULL —
+custody-blocked, not inferred.** Pooled λ retained as non-additive diagnostic only (per the
+non-additive-pools law); uniform serialized-coordinate tolerance FORBIDDEN. The two NAMED blockers:
+1. **candidate-delta × G4 × dimension byte-home custody** — which archive bytes house which typed
+   dimension's delta (→ ms2 typed blocks + pf2 atlas reconciliation consume this).
+2. **DR2b per-dimension receiver uint8 absolute-step histogram** — the q_eff price list per dim
+   (→ dr2b successor rung).
+Until both land, the train-decision SOLVE column has STRUCTURE (rd1's frontier + duals schema) but
+honest NULL prices in the typed cells.
+
+**Metric-first consumption PROVEN mid-flight:** receipts v3 (dimension-typing) / v4 (metric-first:
+continuation geometry re-derived in margin-Fisher + exact ≤6-dim pose quadratic; identity/continuous
+geometry fail-closed REFUSED) / v5 (second-order/scorer-coordinate/optimal-first ladder, sha
+7449b4fe…) — the three P0 inbox directives each consumed as fail-closed contracts; v1 receipt
+INVALID/SUPERSEDED (volatile SSD free-space bytes persisted — staleness-confound class). Fresh exact
+C1 anchor re-measured: d_seg 0.0001519690619574653 = 17,927/117,964,800 flips; d_pose
+0.00010184312078531729; local-vs-contest-CPU drift 9.06e-9/3.12e-9 recorded as
+MEASURED_AXIS_OR_BATCH_GEOMETRY_DRIFT (axes NOT equated). Registered evaluator:
+`ddm_restricted_realized_lambda_continuation_v1` (2 rows, latest-row-wins).
+
+**First rungs (findings-are-first-rungs):** (a) byte-home custody measurement → ms2/pf2 (LIVE);
+(b) DR2b uint8 step histogram → next dr2b rung; (c) any new in-gap point (ms2 typed solve, #666 e4
+brotli recovery, #366 descent output) gets a FREE frontier re-run — rd1's continuation instrument
+is standing (tools/measure_ddm_rd1_lambda_continuation_frontier.py). Triality: equations leg =
+registry rows (this feed); DSL leg N/A (no trainer lever — measurement instrument); tasks leg =
+#667 completed, blockers routed into #663 (ms2) + #657-successor (dr2b) + #669(a) gauge-ladder
+cross-check.
