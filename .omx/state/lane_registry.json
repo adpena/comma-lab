@@ -86290,6 +86290,48 @@
         }
       },
       "notes": "Local-only SHA-bound solved-value materialization and real-coder pricing; score_claim=false; MAIN review required."
+    },
+    {
+      "id": "lane_ddm_dc1_score_quotient_functional_contract_20260724",
+      "name": "DDM DC1 score quotient functional contract",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_dc1_score_quotient_functional_contract_20260724_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_dc1_score_quotient_functional_three_clean_review_20260724.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only family-(d) typed packet/receiver/objective contract complete; fit remains INCOMPLETE; score_claim=false; no execution; MAIN review required.",
+      "research_only": true
     }
   ],
   "level_rules": {

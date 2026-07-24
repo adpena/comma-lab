@@ -1,0 +1,56 @@
+{
+  "schema": "pact.three_clean_review.v1",
+  "lane_id": "lane_ddm_dc1_score_quotient_functional_contract_20260724",
+  "reviewed_at_utc": "2026-07-24T13:23:00Z",
+  "reviewer": "codex",
+  "round0_findings_fixed": [
+    "packet framing bytes were not fully assigned to typed sections",
+    "DM1 decoded-value SHA-256 was stored but not validated",
+    "Torch CPU thread count was reported but not actively pinned",
+    "lane-orbit capacity accepted a bare integer rather than a typed realized-through-R certificate"
+  ],
+  "clean_passes": [
+    {
+      "pass": 1,
+      "review_tracker_pass": "round1_schema_rate_custody_clean",
+      "focus": "strict schema, byte typing, real coder rate custody, DM1 ownership boundary",
+      "issues": []
+    },
+    {
+      "pass": 2,
+      "review_tracker_pass": "round2_seeded_parseback_edge_cases_clean",
+      "focus": "50 seeded packet/parser/coder/corruption property trials and receiver refusal paths",
+      "issues": []
+    },
+    {
+      "pass": 3,
+      "review_tracker_pass": "round3_blind_derivation_upstream_parity_clean",
+      "focus": "blind contest-functional derivation, upstream helper parity, RG1 compatibility, NULL capacity discipline",
+      "issues": []
+    }
+  ],
+  "assumption_challenge": {
+    "shared_assumption": "the minimal separable rank-one primitive or a named-base delta is the optimal representation",
+    "disposition": "OPEN_NOT_ASSUMED",
+    "reason": "the primitive is only an executable receiver fixture; exact-S future fitting must arbitrate richer and base-free families without weakening byte or receiver custody"
+  },
+  "verification": {
+    "focused": "9 passed in 1.04s",
+    "related_final": "55 passed in 40.19s",
+    "seeded_property_trials": 50,
+    "ruff": "clean",
+    "py_compile": "clean",
+    "git_diff_check": "clean",
+    "torch_cpu_threads": 4
+  },
+  "reviewed_source_sha256": {
+    "src/tac/optimization/ddm_score_quotient_functional_contract.py": "3da681103def103d2a49c3e1fce8da3404e83b59978e44037ae262c79ce41786",
+    "src/tac/optimization/tests/test_ddm_score_quotient_functional_contract.py": "db1ad878e53f6552a9032d568fd256390a22c0bac803d263cbdc058f9e922aa6",
+    "src/tac/canonical_equations/ddm_score_quotient_functional_20260724.py": "1c71f4676a30248bbbcf46c9b40cddf291e19682ed12befe722f752ec3dad0c7",
+    "src/tac/canonical_equations/tests/test_ddm_score_quotient_functional_20260724.py": "e00114f4ef3470764d5b591fc732c454983cf93de8c0eb42dd72a6ea2329461f"
+  },
+  "score_claim": false,
+  "promotion_eligible": false,
+  "main_review_required": true,
+  "frontier_pointer": "0.1910828242 [contest-CPU] UNMOVED"
+}
