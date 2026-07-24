@@ -1,0 +1,107 @@
+{
+  "schema_version": "ddm_pf2_three_clean_review_v1",
+  "generated_at": "2026-07-24T03:07:43Z",
+  "lane_id": "lane_ddm_pf2_dimension_conditioned_two_type_20260724",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_authorized": false,
+  "main_landing_review_required": true,
+  "pointer": {
+    "score": 0.1910828242,
+    "axis": "contest-CPU",
+    "changed": false
+  },
+  "final_receipt": {
+    "path": ".omx/research/ddm_pf2_dimension_conditioned_two_type_20260724T020205Z/ddm_pf2_dimension_conditioned_two_type_receipt.json",
+    "sha256": "85084f7bd3a03dbd1b9f04fe6a9b84df4948a6caf64620beef42da8924345f73"
+  },
+  "reviewed_files": [
+    {
+      "path": "src/tac/canonical_equations/ddm_pf2_dimension_conditioned_five_type_20260724.py",
+      "entities": 4,
+      "pf2_review_passes_per_entity": 3
+    },
+    {
+      "path": "src/tac/canonical_equations/tests/test_ddm_pf2_dimension_conditioned_five_type_20260724.py",
+      "entities": 3,
+      "pf2_review_passes_per_entity": 3
+    },
+    {
+      "path": "src/tac/optimization/ddm_dimension_conditioned_two_type.py",
+      "entities": 19,
+      "pf2_review_passes_per_entity": 3
+    },
+    {
+      "path": "src/tac/optimization/tests/test_ddm_dimension_conditioned_two_type.py",
+      "entities": 7,
+      "pf2_review_passes_per_entity": 3
+    },
+    {
+      "path": "tools/measure_ddm_pf2_dimension_conditioned_two_type.py",
+      "entities": 26,
+      "pf2_review_passes_per_entity": 3
+    },
+    {
+      "path": "tools/tests/test_measure_ddm_pf2_dimension_conditioned_two_type.py",
+      "entities": 6,
+      "pf2_review_passes_per_entity": 3
+    }
+  ],
+  "review_passes": [
+    {
+      "pass": "PF2_R1_STATIC_TESTS",
+      "reviewer": "codex_r1",
+      "scope": "static implementation, focused and adjacent regression tests, Ruff, compileall, and whitespace integrity",
+      "result": "PASS",
+      "evidence": {
+        "pytest": "44 passed",
+        "ruff": "PASS",
+        "compileall": "PASS",
+        "git_diff_check": "PASS"
+      }
+    },
+    {
+      "pass": "PF2_R2_REAGGREGATE_PARSEBACK",
+      "reviewer": "codex_r2",
+      "scope": "independent aggregation of all 38 n600 checkpoints plus exact event-codec parse-back",
+      "result": "PASS",
+      "evidence": {
+        "scorer_batches": 38,
+        "errors": 6467090,
+        "sites": 117964800,
+        "frame0_byte_identical": true,
+        "event_count": 4011236,
+        "f3_total_delta_bytes": 33359,
+        "all_split_routes_held": true
+      }
+    },
+    {
+      "pass": "PF2_R3_POLICY_CUSTODY",
+      "reviewer": "codex_r3",
+      "scope": "metric-eligibility policy, full atlas coverage, canonical registry anchor, invalidated-generation custody, and final regression rerun",
+      "result": "PASS",
+      "evidence": {
+        "directives_consumed": 4,
+        "atlas_buckets": 1200,
+        "class_pairs": 10,
+        "representation_types": 5,
+        "identity_control_verdict_eligible": false,
+        "invalidated_generations_preserved": 2,
+        "pytest": "44 passed",
+        "git_diff_check": "PASS"
+      }
+    }
+  ],
+  "review_tracker": {
+    "entities": 65,
+    "passes_per_entity_min": 3,
+    "passes_per_entity_max": 3,
+    "consecutive_pf2_passes": true
+  },
+  "global_lane_validator": {
+    "result": "PRE_EXISTING_GLOBAL_FAILURE_OUTSIDE_THIS_LANE",
+    "unrelated_historical_errors": 110,
+    "scope_note": "The repository-wide validator reports missing evidence on older lanes. No reported error targets this newly registered L0 lane; this receipt does not claim a clean repository-wide validation."
+  },
+  "landing_requirement": "MAIN must re-review the full diff, exact blocker scope, canonical registry append, held-route semantics, and receipt custody before landing."
+}
