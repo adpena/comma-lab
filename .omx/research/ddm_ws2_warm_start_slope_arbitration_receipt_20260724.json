@@ -1,0 +1,32 @@
+{
+  "critical_ratio": 4.1215446777965665,
+  "equation_id": "ddm_ws1_warm_start_slope_falsifier_v1",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "inputs": {
+    "W_joint_full_run_receipt": {
+      "available": true,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws2_w_joint_j7_four_step_v2_20260724T092100Z/full_run_receipt.json",
+      "sha256": "02ffc33ab07ae0d77ce120d3ad0ecd7ba37612736463fd5b1f74adcd57ca3c94"
+    },
+    "W_seg_full_run_receipt": {
+      "available": true,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws2_w_seg_j7_four_step_v2_20260724T085500Z/full_run_receipt.json",
+      "sha256": "0a7cfbc940c1abb08da8aaba84b5c0eafef3fedb0eaef069b75bc3fa45bacacb"
+    },
+    "producer_receipt": {
+      "available": true,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_ws2_warm_start_custody_producer_20260724T053455Z/.omx/research/ddm_ws2_warm_start_custody_producer_receipt_20260724.json",
+      "sha256": "05581b02cc6ce789b6219302ebd888f1665ab4c3882038ce29e9be18f6174ea1"
+    }
+  },
+  "main_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "reason": "W_seg stopped at global_step=1, not the preregistered four-step endpoint; terminal_decision=BLOCKED_REALIZED_DSEG_REGRESSION",
+  "required_global_step": 4,
+  "schema": "ddm_ws2_warm_start_slope_arbitration.v1",
+  "score_claim": false,
+  "verdict": "REFUSE_INCOMPLETE_FOUR_STEP_WINDOW",
+  "verdict_scope": "bounded warm-start slope arbitration only; no formulation, family, promotion, or score verdict"
+}
