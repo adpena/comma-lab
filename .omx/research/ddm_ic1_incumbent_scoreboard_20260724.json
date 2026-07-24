@@ -150,6 +150,125 @@
       "pointer": "0.1910828242 [contest-CPU]",
       "pointer_moved": false,
       "main_review_required": true
+    },
+    {
+      "row_id": "ic2_candidate_under_test_20260724",
+      "date_utc": "2026-07-24",
+      "candidate": "W_seg_then_PA1_frame0",
+      "disposition": "MEASURED_NON_INCUMBENT__COMPACT_POSE_CARRIER_ABSENT",
+      "archive": {
+        "path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/packet/archive.zip.receipt-bytes",
+        "bytes": 131154,
+        "sha256": "be1989fe16a2983b291c85c5e58f3e2db74edd3123a5ed19add11c7e9800f97e"
+      },
+      "exact_local_batch32": {
+        "axis": "[macOS-CPU frozen-scorer advisory]",
+        "d_seg": 0.024124510023328993,
+        "errors": 2845843,
+        "sites": 117964800,
+        "d_pose": 65.03498712932134,
+        "advisory_objective": 28.00173925293584,
+        "decomposition": {
+          "seg_term": 2.412451002332899,
+          "pose_term": 25.501958185465156,
+          "rate_term": 0.08733006513778527
+        },
+        "per_class": {
+          "Lane": {
+            "errors": 299944,
+            "sites": 690639,
+            "d_seg": 0.4342992504043357
+          },
+          "Movable": {
+            "errors": 352093,
+            "sites": 1460325,
+            "d_seg": 0.2411059182031397
+          },
+          "MyCar": {
+            "errors": 37619,
+            "sites": 29993509,
+            "d_seg": 0.0012542380419710145
+          },
+          "Road": {
+            "errors": 1870275,
+            "sites": 27407046,
+            "d_seg": 0.06824066336809885
+          },
+          "Undrivable": {
+            "errors": 285912,
+            "sites": 58413281,
+            "d_seg": 0.004894640313047986
+          }
+        },
+        "receipt_path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/ddm_ic2_packet_batch32_remeasure_receipt.json",
+        "receipt_sha256": "9638f3ad4920afb3d0cf563c8ced2d61ee02157785bd525ee001acbde600f10d"
+      },
+      "comparison": {
+        "control_row_id": "incumbent_v0_20260724",
+        "delta_d_seg": -0.046394721137152775,
+        "delta_d_pose": 37.73649951294313,
+        "delta_archive_bytes": -428,
+        "delta_advisory_objective": 4.339947116702302,
+        "incumbent_changed": false
+      },
+      "piece_manifest": [
+        {
+          "piece": "W_seg typed WS1 parent",
+          "source_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws2_warm_start_custody_producer_20260724T053455Z/01_archives/W_seg.zip.receipt-bytes",
+          "source_bytes": 138031,
+          "source_sha256": "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9",
+          "disposition": "INCLUDED_AS_EXACT_PARENT"
+        },
+        {
+          "piece": "PA1 scorer-only frame-0 affine",
+          "source_path": ".omx/research/ddm_pa1_posenet_amplitude_twin_20260723T221923Z/ddm_pa1_posenet_amplitude_twin_receipt.json",
+          "source_sha256": "9f15be392a86ae470664ac87646f1fc2f77afc94f3f2d871cd7ade2d27292037",
+          "counted_bytes": 0,
+          "disposition": "INCLUDED_AND_EXACTLY_REMEASURED",
+          "construction_provenance": "frozen PoseNet stem and BN moments; evaluator-factorized Seg-free frame-0 placement"
+        },
+        {
+          "piece": "E2 nested Pose6",
+          "source_path": ".omx/research/ddm_e2_pose_stream_and_doctrine_export_receipt.json",
+          "source_sha256": "720ef23a4d2cfea6f60eae4593bd5558c132b81bf59e9daac901b477af374c90",
+          "disposition": "ABSENT_NOT_INERT",
+          "reason": "The 3600-byte nested pose6 state is consumed before export; no compact code-to-photometry inverse owns a packet member."
+        },
+        {
+          "piece": "#601 planar and #605 Screw6 transport controls",
+          "source_path": ".omx/research/ddm_a1_naive_verdict_audit_20260723_codex.md",
+          "source_sha256": "e5f6b93b9f2b04c860cc4a07d46ba1c53fc31a4d1967cc21421db7f2fa5d07ab",
+          "disposition": "EXCLUDED_SCOPED_CONTROLS",
+          "reason": "#601 is a one-depth planar formulation; #605 is an n16 single-ground-depth q4 instance, neither a full-n600 composable pose carrier."
+        },
+        {
+          "piece": "W_joint fallback",
+          "disposition": "FORBIDDEN_WEAKER_FALLBACK",
+          "reason": "The delegated contract required W_seg plus typed pose carriers and prohibited substituting the already measured W_joint endpoint."
+        }
+      ],
+      "locked_upstream_harness": {
+        "axis": "[macOS-CPU upstream frozen-harness advisory]",
+        "status": "PASS",
+        "d_seg_rounded": "0.02412450",
+        "d_pose_rounded": "65.03498077",
+        "score_rounded": "28.00",
+        "wallclock_seconds": "1014.041449",
+        "receipt_path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/ddm_ic2_upstream_harness_final_receipt.json",
+        "receipt_sha256": "c71582f287ca6337c2d097850f642e39c9841bb22513802b4a9465873a45044e",
+        "score_claim": false
+      },
+      "exact_axis": {
+        "axis": "[contest-CPU]",
+        "score": null,
+        "d_seg": null,
+        "d_pose": null,
+        "status": "NOT_BOUGHT__NON_INCUMBENT_PREPARED_NOT_DISPATCHED"
+      },
+      "verdict_scope": "INSTANCE: W_seg plus the zero-byte PA1 frame-0 affine. The result closes neither compact xi/pose carriers nor the direct-description family.",
+      "pointer": "0.1910828242 [contest-CPU]",
+      "pointer_moved": false,
+      "main_review_required": true
     }
   ]
 }

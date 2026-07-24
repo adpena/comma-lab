@@ -62,6 +62,7 @@ E3_SCHEMA = "ddm_e3_runtime_archive.v1"
 E4_SCHEMA = "ddm_e4_runtime_archive.v1"
 E4_WS1_SCHEMA = "ddm_e4_ws1_runtime_archive.v1"
 IC1_SCHEMA = "ddm_ic1_runtime_archive.v1"
+IC2_SCHEMA = "ddm_ic2_runtime_archive.v1"
 RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
 CONFIG_SCHEMA = "DDME1RuntimeExporterConfigV1"
 E2_CONFIG_SCHEMA = "DDME2RuntimeExporterConfigV1"
@@ -69,12 +70,14 @@ E3_CONFIG_SCHEMA = "DDME3RuntimeExporterConfigV1"
 E4_CONFIG_SCHEMA = "DDME4RuntimeExporterConfigV1"
 E4_WS1_CONFIG_SCHEMA = "DDME4WS1RuntimeExporterConfigV1"
 IC1_CONFIG_SCHEMA = "DDMIC1RuntimeExporterConfigV1"
+IC2_CONFIG_SCHEMA = "DDMIC2RuntimeExporterConfigV1"
 RESULT_SCHEMA = "ddm_e1_runtime_export_receipt.v1"
 E2_RESULT_SCHEMA = "ddm_e2_runtime_export_receipt.v1"
 E3_RESULT_SCHEMA = "ddm_e3_runtime_export_receipt.v1"
 E4_RESULT_SCHEMA = "ddm_e4_runtime_export_receipt.v1"
 E4_WS1_RESULT_SCHEMA = "ddm_e4_ws1_runtime_export_receipt.v1"
 IC1_RESULT_SCHEMA = "ddm_ic1_runtime_export_receipt.v1"
+IC2_RESULT_SCHEMA = "ddm_ic2_runtime_export_receipt.v1"
 SOURCE_BYTES = 133_941
 SOURCE_SHA256 = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
 STATE_BYTES = 134_211
@@ -342,7 +345,29 @@ class DDMIC1RuntimeExporterConfigV1(DDME4WS1RuntimeExporterConfigV1):
     batch_pairs: Literal[16] = 16
 
 
-RuntimeExporterConfig = DDME1RuntimeExporterConfigV1 | DDME4WS1RuntimeExporterConfigV1 | DDMIC1RuntimeExporterConfigV1
+class DDMIC2RuntimeExporterConfigV1(DDME4WS1RuntimeExporterConfigV1):
+    """Typed W_seg -> PA1 incumbent composition without a W_joint fallback."""
+
+    schema_: Literal["DDMIC2RuntimeExporterConfigV1"] = Field(
+        default=IC2_CONFIG_SCHEMA,
+        alias="schema",
+        serialization_alias="schema",
+    )
+    run_id: Literal["ddm_ic2_optimal_incumbent_pose_typed_20260724"] = (
+        "ddm_ic2_optimal_incumbent_pose_typed_20260724"
+    )
+    candidate: Literal["W_seg"] = "W_seg"
+    composition_order: Literal["W_seg_then_PA1_frame0"] = "W_seg_then_PA1_frame0"
+    amplitude_transform: Literal["ddm_pa1_scorer_only_bn_inverse_frame0_receiver_v1"] = runtime.PA1_TRANSFORM_ID
+    batch_pairs: Literal[16] = 16
+
+
+RuntimeExporterConfig = (
+    DDME1RuntimeExporterConfigV1
+    | DDME4WS1RuntimeExporterConfigV1
+    | DDMIC1RuntimeExporterConfigV1
+    | DDMIC2RuntimeExporterConfigV1
+)
 
 
 def _sha256(payload: bytes) -> str:
@@ -1204,6 +1229,64 @@ def _chart_payload(receiver: Any) -> tuple[bytes, dict[str, Any]]:
 
 
 _WS1_SOURCE_BUNDLE_CACHE: bytes | None = None
+_RUNTIME_PYDANTIC_COMPAT = b'''"""Runtime-only Pydantic compatibility for receiver modules.
+
+The bundled receiver executes dataclass decoders, not repository authoring
+configs.  When Pydantic is unavailable, these inert definitions let the
+authoring-only config class bodies load without adding an undeclared runtime
+dependency.  Normal repository imports continue to use real Pydantic.
+"""
+try:
+    from pydantic import (
+        BaseModel,
+        ConfigDict,
+        Field,
+        StrictBool,
+        StrictInt,
+        StrictStr,
+        ValidationError,
+        field_validator,
+        model_validator,
+    )
+except ImportError:
+    class BaseModel:
+        def __init__(self, **values):
+            for name in getattr(type(self), "__annotations__", {}):
+                if hasattr(type(self), name):
+                    setattr(self, name, getattr(type(self), name))
+            for name, value in values.items():
+                setattr(self, name, value)
+
+        def model_dump(self, **_values):
+            return {
+                name: getattr(self, name)
+                for name in getattr(type(self), "__annotations__", {})
+                if hasattr(self, name)
+            }
+
+        @classmethod
+        def model_validate(cls, values, **_options):
+            return cls(**values)
+
+    class ValidationError(Exception):
+        pass
+
+    StrictBool = bool
+    StrictInt = int
+    StrictStr = str
+
+    def ConfigDict(**values):
+        return values
+
+    def Field(default=None, *, default_factory=None, **_values):
+        return default_factory() if default_factory is not None else default
+
+    def _identity_decorator(*_args, **_kwargs):
+        return lambda value: value
+
+    field_validator = _identity_decorator
+    model_validator = _identity_decorator
+'''
 
 
 def _local_module_path(module_name: str) -> Path | None:
@@ -1279,13 +1362,25 @@ def _ws1_runtime_source_bundle() -> bytes:
                 info,
                 b"# Deliberately empty runtime namespace package.\\n",
             )
+        compat_info = zipfile.ZipInfo(
+            "tac/runtime_pydantic_compat.py",
+            date_time=(1980, 1, 1, 0, 0, 0),
+        )
+        compat_info.compress_type = zipfile.ZIP_DEFLATED
+        compat_info.external_attr = 0o100644 << 16
+        compat_info.create_system = 3
+        archive.writestr(compat_info, _RUNTIME_PYDANTIC_COMPAT)
         for path in sorted(paths, key=lambda row: row.relative_to(REPO_ROOT / "src").as_posix()):
             name = path.relative_to(REPO_ROOT / "src").as_posix()
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             info.create_system = 3
-            archive.writestr(info, path.read_bytes())
+            source = path.read_bytes().replace(
+                b"from pydantic import",
+                b"from tac.runtime_pydantic_compat import",
+            )
+            archive.writestr(info, source)
     _WS1_SOURCE_BUNDLE_CACHE = buffer.getvalue()
     return _WS1_SOURCE_BUNDLE_CACHE
 
@@ -1593,8 +1688,31 @@ def _measure_ws1_pa1_output_identity(
     )
 
 
-def _inflate_sh() -> bytes:
-    return b"""#!/usr/bin/env bash
+def _inflate_sh(*, bootstrap_opencv: bool = False) -> bytes:
+    bootstrap = (
+        b"""# IC2 declares and bootstraps its two non-Torch runtime wheels.
+if ! "$PYBIN" - <<'PY'
+import brotli
+import cv2
+if cv2.__version__ != "4.11.0":
+    raise ImportError(f"unexpected OpenCV runtime: {cv2.__version__}")
+PY
+then
+  "$PYBIN" -m pip install --disable-pip-version-check --no-input --no-cache-dir \
+    "Brotli==1.2.0" "opencv-python-headless==4.11.0.86"
+fi
+"$PYBIN" - <<'PY'
+import brotli
+import cv2
+if cv2.__version__ != "4.11.0":
+    raise ImportError(f"IC2 OpenCV bootstrap failed: {cv2.__version__}")
+PY
+"""
+        if bootstrap_opencv
+        else b""
+    )
+    return (
+        b"""#!/usr/bin/env bash
 set -euo pipefail
 if [ "$#" -ne 3 ]; then
   echo "Usage: inflate.sh <archive_dir> <output_dir> <video_names_file>" >&2
@@ -1603,12 +1721,16 @@ fi
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # The archive manifest is the runtime-tree dependency declaration authority.
 # PYTHON selects the locked environment provisioned from that declaration.
-exec "${PYTHON:-python3}" "$HERE/inflate.py" "$1" "$2" "$3"
+PYBIN="${PYTHON:-python3}"
 """
+        + bootstrap
+        + b"""exec "$PYBIN" "$HERE/inflate.py" "$1" "$2" "$3"
+"""
+    )
 
 
 def export_ws1_runtime(
-    config: DDME4WS1RuntimeExporterConfigV1 | DDMIC1RuntimeExporterConfigV1,
+    config: DDME4WS1RuntimeExporterConfigV1 | DDMIC1RuntimeExporterConfigV1 | DDMIC2RuntimeExporterConfigV1,
     *,
     config_path: Path,
 ) -> tuple[dict[str, Any], Path]:
@@ -1621,6 +1743,8 @@ def export_ws1_runtime(
         pass
     torch.use_deterministic_algorithms(True)
     is_ic1 = isinstance(config, DDMIC1RuntimeExporterConfigV1)
+    is_ic2 = isinstance(config, DDMIC2RuntimeExporterConfigV1)
+    amplitude_enabled = is_ic1 or is_ic2
     coder = _ws1_e4_coder()
     source_path = _require_ws1_source_path(config.source_archive_path)
     output_dir = _require_repo_path(
@@ -1643,7 +1767,7 @@ def export_ws1_runtime(
         config,
     )
     amplitude: dict[str, Any] | None = None
-    if is_ic1:
+    if amplitude_enabled:
         (
             output_bytes,
             output_sha256,
@@ -1666,7 +1790,11 @@ def export_ws1_runtime(
             checkpoint_root=(proof_root / "output_identity" / config.source_archive_sha256),
             state_sha256=config.source_archive_sha256,
         )
-    dependencies = ["numpy", "scipy", "torch", "brotli"]
+    dependencies = (
+        ["numpy", "torch", "brotli", "cv2"]
+        if is_ic2
+        else ["numpy", "scipy", "torch", "brotli"]
+    )
     state_member = _frame_blob(source_archive, kind=0, coder=coder)
     state_member_sha256 = _sha256(state_member)
     manifest: dict[str, Any] = {
@@ -1688,7 +1816,7 @@ def export_ws1_runtime(
             "bytes": output_bytes,
             "sha256": output_sha256,
         },
-        "schema": IC1_SCHEMA if is_ic1 else E4_WS1_SCHEMA,
+        "schema": IC2_SCHEMA if is_ic2 else IC1_SCHEMA if is_ic1 else E4_WS1_SCHEMA,
         "sections": [
             {
                 "bytes": len(state_member),
@@ -1709,7 +1837,7 @@ def export_ws1_runtime(
             "receiver_effective_dofs": dofs["total"],
         },
     }
-    if is_ic1:
+    if amplitude_enabled:
         manifest["amplitude_transform"] = {
             "application_frame": 0,
             "composition_order": config.composition_order,
@@ -1753,7 +1881,7 @@ def export_ws1_runtime(
 
     runtime_payload = _ws1_runtime_payload()
     cleanliness = _runtime_cleanliness(runtime_payload)
-    script = _inflate_sh()
+    script = _inflate_sh(bootstrap_opencv=is_ic2)
     archive_path = _publish_or_verify(output_dir / "archive.zip", archive)
     runtime_path = _publish_or_verify(
         output_dir / "inflate.py",
@@ -1771,12 +1899,14 @@ def export_ws1_runtime(
         "resume": output_identity_resume,
         "sha256": output_sha256,
         "status": (
-            "IC1_W_JOINT_THEN_PA1_SOURCE_EXACT_MEASURED_PACKAGED_RECEIVER_PENDING"
+            "IC2_W_SEG_THEN_PA1_SOURCE_EXACT_MEASURED_PACKAGED_RECEIVER_PENDING"
+            if is_ic2
+            else "IC1_W_JOINT_THEN_PA1_SOURCE_EXACT_MEASURED_PACKAGED_RECEIVER_PENDING"
             if is_ic1
             else "WS1_SOURCE_RECEIVER_EXACT_MEASURED_PACKAGED_RECEIVER_PENDING"
         ),
     }
-    if is_ic1:
+    if amplitude_enabled:
         output_identity["amplitude_transform"] = amplitude
     result = {
         "archive": {
@@ -1837,7 +1967,13 @@ def export_ws1_runtime(
                 "sha256": _sha256(_ws1_runtime_source_bundle()),
             },
         },
-        "schema": IC1_RESULT_SCHEMA if is_ic1 else E4_WS1_RESULT_SCHEMA,
+        "schema": (
+            IC2_RESULT_SCHEMA
+            if is_ic2
+            else IC1_RESULT_SCHEMA
+            if is_ic1
+            else E4_WS1_RESULT_SCHEMA
+        ),
         "score_claim": False,
         "seed": config.seed,
         "source": {
@@ -1859,7 +1995,13 @@ def export_ws1_runtime(
     }
     receipt_path = _publish_or_verify(
         output_dir.parent
-        / ("ddm_ic1_runtime_export_receipt.json" if is_ic1 else "ddm_e4_ws1_runtime_export_receipt.json"),
+        / (
+            "ddm_ic2_runtime_export_receipt.json"
+            if is_ic2
+            else "ddm_ic1_runtime_export_receipt.json"
+            if is_ic1
+            else "ddm_e4_ws1_runtime_export_receipt.json"
+        ),
         rfc8785_canonicalize(result) + b"\n",
     )
     return result, receipt_path
@@ -2161,6 +2303,8 @@ def load_config(path: Path) -> RuntimeExporterConfig:
     canonical = rfc8785_canonicalize(value) + b"\n"
     if payload != canonical:
         raise ExporterError("exporter config must be canonical JSON plus one newline")
+    if value.get("schema") == IC2_CONFIG_SCHEMA:
+        return DDMIC2RuntimeExporterConfigV1.model_validate(value, strict=True)
     if value.get("schema") == IC1_CONFIG_SCHEMA:
         return DDMIC1RuntimeExporterConfigV1.model_validate(value, strict=True)
     if value.get("schema") == E4_WS1_CONFIG_SCHEMA:
@@ -2180,7 +2324,11 @@ def main(argv: list[str] | None = None) -> int:
     config = load_config(config_path)
     if isinstance(
         config,
-        (DDME4WS1RuntimeExporterConfigV1, DDMIC1RuntimeExporterConfigV1),
+        (
+            DDME4WS1RuntimeExporterConfigV1,
+            DDMIC1RuntimeExporterConfigV1,
+            DDMIC2RuntimeExporterConfigV1,
+        ),
     ):
         result, receipt_path = export_ws1_runtime(
             config,
@@ -2206,6 +2354,7 @@ __all__ = [
     "DDME4WS1GrammarStreamConfigV1",
     "DDME4WS1RuntimeExporterConfigV1",
     "DDMIC1RuntimeExporterConfigV1",
+    "DDMIC2RuntimeExporterConfigV1",
     "ExporterError",
     "export_runtime",
     "export_ws1_runtime",

@@ -36,6 +36,7 @@ E3_SCHEMA = "ddm_e3_runtime_archive.v1"
 E4_SCHEMA = "ddm_e4_runtime_archive.v1"
 E4_WS1_SCHEMA = "ddm_e4_ws1_runtime_archive.v1"
 IC1_SCHEMA = "ddm_ic1_runtime_archive.v1"
+IC2_SCHEMA = "ddm_ic2_runtime_archive.v1"
 RECEIVER_GRAMMAR_ADMISSION_SCHEMA = "ddm_receiver_grammar_admission.v1"
 RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
 TYPED_STREAM_SCHEMA = "ddm_typed_stream_tag.v1"
@@ -505,6 +506,8 @@ def _validate_ws1_manifest(
     if not isinstance(manifest, dict):
         raise ReceiverError("WS1 manifest is not an object")
     is_ic1 = manifest.get("schema") == IC1_SCHEMA
+    is_ic2 = manifest.get("schema") == IC2_SCHEMA
+    amplitude_enabled = is_ic1 or is_ic2
     expected_keys = {
         "dependencies",
         "false_authority",
@@ -515,9 +518,13 @@ def _validate_ws1_manifest(
         "sections",
         "state",
     }
-    if is_ic1:
+    if amplitude_enabled:
         expected_keys.add("amplitude_transform")
-    if set(manifest) != expected_keys or manifest.get("schema") not in {E4_WS1_SCHEMA, IC1_SCHEMA}:
+    if set(manifest) != expected_keys or manifest.get("schema") not in {
+        E4_WS1_SCHEMA,
+        IC1_SCHEMA,
+        IC2_SCHEMA,
+    }:
         raise ReceiverError("WS1 manifest keys differ from the sealed schema")
     if is_ic1 and manifest["amplitude_transform"] != {
         "application_frame": 0,
@@ -528,6 +535,15 @@ def _validate_ws1_manifest(
         "transform_id": PA1_TRANSFORM_ID,
     }:
         raise ReceiverError("IC1 amplitude composition contract changed")
+    if is_ic2 and manifest["amplitude_transform"] != {
+        "application_frame": 0,
+        "composition_order": "W_seg_then_PA1_frame0",
+        "payload_bytes": 0,
+        "rate_class": "FREE",
+        "target_derivation": ("frozen_posenet_first_stem_conv_and_bn_only_video_independent"),
+        "transform_id": PA1_TRANSFORM_ID,
+    }:
+        raise ReceiverError("IC2 amplitude composition contract changed")
     if manifest["false_authority"] != {
         "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
         "research_only": True,
@@ -551,7 +567,7 @@ def _validate_ws1_manifest(
             "name",
             "receiver_effective_dofs",
         }
-        or state["batch_pairs"] != (16 if is_ic1 else 32)
+        or state["batch_pairs"] != (16 if amplitude_enabled else 32)
         or not isinstance(state["name"], str)
         or not state["name"]
         or state["receiver_effective_dofs"] != 368
@@ -562,7 +578,11 @@ def _validate_ws1_manifest(
         raise ReceiverError("WS1 state frame is truncated")
     codec = BLOB_HEADER.unpack_from(framed)[2]
     if codec == 1:
-        expected_dependencies = ["numpy", "scipy", "torch", "brotli"]
+        expected_dependencies = (
+            ["numpy", "torch", "brotli", "cv2"]
+            if is_ic2
+            else ["numpy", "scipy", "torch", "brotli"]
+        )
     elif codec == 2:
         expected_dependencies = ["numpy", "scipy", "torch"]
     else:
@@ -1323,7 +1343,10 @@ def _inflate_ws1(
     )
     checkpoint_root.mkdir(parents=True, exist_ok=True)
     expected_bytes = int(manifest["output"]["bytes"])
-    required_free_bytes = expected_bytes * (3 if manifest["schema"] == IC1_SCHEMA else 2) + SAFETY_BYTES
+    required_free_bytes = (
+        expected_bytes * (3 if manifest["schema"] in {IC1_SCHEMA, IC2_SCHEMA} else 2)
+        + SAFETY_BYTES
+    )
     free_bytes = shutil.disk_usage(checkpoint_root).free
     if free_bytes < required_free_bytes:
         raise ReceiverError(f"storage preflight failed: {free_bytes} < {required_free_bytes}")
@@ -1344,7 +1367,7 @@ def _inflate_ws1(
     source_receiver = receive_ws1_warm_start_archive(state_archive)
 
     batch_pairs = int(manifest["state"]["batch_pairs"])
-    amplitude_enabled = manifest["schema"] == IC1_SCHEMA
+    amplitude_enabled = manifest["schema"] in {IC1_SCHEMA, IC2_SCHEMA}
     stage_rows: list[dict[str, Any]] = []
     stage_paths: list[Path] = []
     moment_rows: list[dict[str, Any]] = []

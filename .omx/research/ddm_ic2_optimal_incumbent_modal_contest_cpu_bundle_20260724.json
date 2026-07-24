@@ -1,0 +1,131 @@
+{
+  "schema": "ddm_ic2_modal_contest_cpu_exact_eval_bundle.v1",
+  "date_utc": "2026-07-24",
+  "status": "PREPARED_NOT_DISPATCHED",
+  "dispatch_recommendation": "DO_NOT_FIRE_KNOWN_NON_INCUMBENT_EXCEPT_BY_MAIN_CALIBRATION_DECISION",
+  "execution_allowed_in_delegated_lane": false,
+  "provider_started": false,
+  "dispatch_claim_written": false,
+  "research_only": true,
+  "score_claim": false,
+  "main_review_required": true,
+  "axis": "[contest-CPU]",
+  "archive": {
+    "path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/packet/archive.zip.receipt-bytes",
+    "bytes": 131154,
+    "sha256": "be1989fe16a2983b291c85c5e58f3e2db74edd3123a5ed19add11c7e9800f97e"
+  },
+  "runtime": {
+    "submission_dir": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/packet",
+    "inflate_sh": {
+      "path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/packet/inflate.sh",
+      "bytes": 944,
+      "sha256": "049887a6caf0ab1160069deda13d4ff94d52513efad3cba7925ed9d975e355b8"
+    },
+    "inflate_py": {
+      "path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/packet/inflate.py",
+      "bytes": 4481028,
+      "sha256": "58e0fa7b5c33f152e3236dde0ab7918357a271ae0e25ec505f2ccae6f1713f87"
+    },
+    "source_bundle_sha256": "0fb0dcde72e3b69d879aa1c884927e2d837350244fd494748d96b47e24541f8d",
+    "modal_uploaded_contest_cpu_runtime_tree_sha256": "019b03f4790c43cf2a8a9e1676bea26798e760a60075651b404295de46703a3a",
+    "inner_contest_auth_eval_runtime_tree_sha256": "701bb0e0beaafeea13f2d3eff0c563224b884413973029e398ae4f7a6bdc5829",
+    "runtime_content_tree_sha256": "3520e864bacbe9aa39332be42014d38684afb692ee69ae5bf464d1adb88ecbd4",
+    "runtime_file_count": 2,
+    "prior_inner_hash_prefix_1976cdb2_reused": false,
+    "hash_method": "experiments.contest_auth_eval._runtime_dependency_manifest plus tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest at /tmp/modal_auth_eval_cpu/submission_dir"
+  },
+  "preflight_receipts": {
+    "runtime_export": {
+      "path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/ddm_ic2_runtime_export_receipt.json",
+      "sha256": "97b88cef99cda2232253a5a0bb14f31992f098e3c5b70bf7fb76c30a7a7eb6d3",
+      "compiler_determinism_x2": true,
+      "parseback_source_byte_identical": true,
+      "receiver_byte_home_bijection": true
+    },
+    "runtime_import_closure": {
+      "path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/ddm_ic2_runtime_import_closure_receipt.json",
+      "status": "PASS",
+      "scipy_loaded": false,
+      "pydantic_loaded": false
+    },
+    "locked_local_upstream_harness": {
+      "path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/ddm_ic2_upstream_harness_final_receipt.json",
+      "sha256": "c71582f287ca6337c2d097850f642e39c9841bb22513802b4a9465873a45044e",
+      "status": "PASS",
+      "axis": "[macOS-CPU upstream frozen-harness advisory]",
+      "wallclock_seconds": "1014.041449"
+    },
+    "exact_batch32_frozen_scorer": {
+      "path": ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/ddm_ic2_packet_batch32_remeasure_receipt.json",
+      "sha256": "9638f3ad4920afb3d0cf563c8ced2d61ee02157785bd525ee001acbde600f10d",
+      "status": "PASS",
+      "axis": "[macOS-CPU frozen-scorer advisory]",
+      "scorer_threads": 4
+    }
+  },
+  "claim_plan": {
+    "lane_id": "lane_ddm_ic2_optimal_incumbent_pose_typed_20260724_exact_eval_cpu",
+    "platform": "modal",
+    "instance_job_id": "ddm_ic2_optimal_incumbent_pose_typed_20260724_cpu_calibration",
+    "agent": "codex:gpt-5.6-sol",
+    "status": "eval",
+    "dry_run_preflight_status": "PASS",
+    "dry_run_wrote_claim": false,
+    "dry_run_utc": "2026-07-24T18:39:14Z",
+    "actual_claim_owner": "experiments/modal_auth_eval_cpu.py claims immediately before detached spawn; do not pre-write a duplicate claim",
+    "single_flight_required": true,
+    "dual_ledger_reconcile_required": true
+  },
+  "main_calibration_command_after_review": [
+    ".venv/bin/modal",
+    "run",
+    "--detach",
+    "experiments/modal_auth_eval_cpu.py",
+    "--archive",
+    ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/packet/archive.zip.receipt-bytes",
+    "--expected-archive-sha256",
+    "be1989fe16a2983b291c85c5e58f3e2db74edd3123a5ed19add11c7e9800f97e",
+    "--inflate-sh",
+    "inflate.sh",
+    "--output-dir",
+    ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/modal_exact_eval_results/contest_cpu",
+    "--detach",
+    "--provider-detach-ack",
+    "--pair-group-id",
+    "ddm_ic2_optimal_incumbent_pose_typed_20260724",
+    "--lane-id",
+    "lane_ddm_ic2_optimal_incumbent_pose_typed_20260724_exact_eval_cpu",
+    "--instance-job-id",
+    "ddm_ic2_optimal_incumbent_pose_typed_20260724_cpu_calibration",
+    "--claim-agent",
+    "codex:gpt-5.6-sol",
+    "--claim-notes",
+    "MAIN-authorized calibration only; candidate is a measured non-incumbent; archive and both runtime hashes sealed",
+    "--submission-dir",
+    ".omx/research/ddm_ic2_optimal_incumbent_pose_typed_20260724/packet",
+    "--expected-runtime-tree-sha256",
+    "019b03f4790c43cf2a8a9e1676bea26798e760a60075651b404295de46703a3a",
+    "--inner-expected-runtime-tree-sha256",
+    "701bb0e0beaafeea13f2d3eff0c563224b884413973029e398ae4f7a6bdc5829"
+  ],
+  "harvest_plan": {
+    "tool": "tools/recover_modal_auth_eval.py",
+    "required_artifacts": [
+      "contest_auth_eval.json",
+      "provenance.json",
+      "modal_auth_eval_spawn.json",
+      "modal_call_id.txt",
+      "modal_auth_eval_recover_summary.json"
+    ],
+    "scoreboard_update": "Append a contest-CPU calibration only after archive SHA, wrapper and inner runtime trees, hardware axis, and score_claim_valid custody pass; never replace incumbent v0 without an actual lower score.",
+    "exact_axis_score": null
+  },
+  "local_verdict": {
+    "candidate_status": "MEASURED_NON_INCUMBENT__COMPACT_POSE_CARRIER_ABSENT",
+    "advisory_objective": 28.00173925293584,
+    "incumbent_v0_advisory_objective": 23.66179213623354
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false
+}

@@ -19,6 +19,7 @@ from tools import rehearse_ddm_runtime_upstream as harness
 REPO = Path(__file__).resolve().parents[4]
 W_SEG_CONFIG = REPO / ".omx/research/configs/ddm_e5_e4_ws1_wseg_brotli_20260724.json"
 IC1_CONFIG = REPO / ".omx/research/configs/ddm_ic1_incumbent_compose_and_buy_row_20260724.json"
+IC2_CONFIG = REPO / ".omx/research/configs/ddm_ic2_optimal_incumbent_pose_typed_20260724.json"
 
 
 def test_blob_frame_roundtrip_and_terminal_tamper_refusal() -> None:
@@ -325,6 +326,95 @@ def test_ic1_is_a_separate_w_joint_then_pa1_typed_route() -> None:
     wrong_order["amplitude_transform"]["composition_order"] = "PA1_then_W_joint"
     with pytest.raises(receiver.ReceiverError, match="composition contract"):
         receiver._validate_ws1_manifest(wrong_order, members)
+
+
+def test_ic2_is_a_separate_w_seg_then_pa1_declared_cv2_route() -> None:
+    legacy = exporter.load_config(W_SEG_CONFIG)
+    config = exporter.load_config(IC2_CONFIG)
+    assert isinstance(legacy, exporter.DDME4WS1RuntimeExporterConfigV1)
+    assert not isinstance(legacy, exporter.DDMIC2RuntimeExporterConfigV1)
+    assert isinstance(config, exporter.DDMIC2RuntimeExporterConfigV1)
+    assert config.candidate == "W_seg"
+    assert config.composition_order == "W_seg_then_PA1_frame0"
+    assert config.batch_pairs == 16
+
+    source = Path(config.source_archive_path).read_bytes()
+    _received, admission, _dofs = exporter._ws1_grammar_state(source, config)
+    framed = exporter._frame_blob(
+        source,
+        kind=0,
+        coder=exporter.BROTLI_Q11_CODER,
+    )
+    members = {"manifest.json": b"", "state/ws1.ddj5": framed}
+    manifest = {
+        "amplitude_transform": {
+            "application_frame": 0,
+            "composition_order": "W_seg_then_PA1_frame0",
+            "payload_bytes": 0,
+            "rate_class": "FREE",
+            "target_derivation": ("frozen_posenet_first_stem_conv_and_bn_only_video_independent"),
+            "transform_id": receiver.PA1_TRANSFORM_ID,
+        },
+        "dependencies": ["numpy", "torch", "brotli", "cv2"],
+        "false_authority": {
+            "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+            "research_only": True,
+            "score_claim": False,
+        },
+        "geometry": {
+            "camera_hw": [874, 1164],
+            "channels": 3,
+            "frames_per_pair": 2,
+            "pair_count": 600,
+            "scorer_hw": [384, 512],
+        },
+        "grammar_admission": admission.to_dict(),
+        "output": {
+            "bytes": 600 * 2 * 874 * 1164 * 3,
+            "sha256": "a" * 64,
+        },
+        "schema": exporter.IC2_SCHEMA,
+        "sections": [
+            {
+                "bytes": len(framed),
+                "member": "state/ws1.ddj5",
+                "sha256": hashlib.sha256(framed).hexdigest(),
+                "typed_stream_tag": {
+                    "schema": "ddm_typed_stream_tag.v1",
+                    "type": "SKELETON",
+                    "layer_home": "L1_program",
+                    "evaluate_py_recursion_level_cited": (
+                        "L1_program -> L3_raster -> L4_scorer_feature -> L5_verdict"
+                    ),
+                    "counted_bytes": len(framed),
+                    "free_receiver_code": True,
+                },
+            }
+        ],
+        "state": {
+            "batch_pairs": 16,
+            "name": config.state_name,
+            "receiver_effective_dofs": 368,
+        },
+    }
+    members["manifest.json"] = json.dumps(
+        manifest,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    assert receiver._validate_ws1_manifest(manifest, members) is manifest
+
+    wrong_dependencies = json.loads(json.dumps(manifest))
+    wrong_dependencies["dependencies"] = ["numpy", "scipy", "torch", "brotli"]
+    with pytest.raises(receiver.ReceiverError, match="dependency contract"):
+        receiver._validate_ws1_manifest(wrong_dependencies, members)
+    widened_legacy = {**manifest, "schema": exporter.E4_WS1_SCHEMA}
+    with pytest.raises(receiver.ReceiverError, match="sealed schema"):
+        receiver._validate_ws1_manifest(widened_legacy, members)
+    script = exporter._inflate_sh(bootstrap_opencv=True)
+    assert b"opencv-python-headless==4.11.0.86" in script
+    assert b"Brotli==1.2.0" in script
+    assert b"opencv-python-headless" not in exporter._inflate_sh()
 
 
 def test_ws1_runtime_payload_contains_only_a_sealed_generic_source_bundle() -> None:
