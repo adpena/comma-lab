@@ -23689,3 +23689,25 @@ would have REFUSED (the gate catches exactly the flagged class). Genuine-waiver 
 verified by code review only (live test would spawn). verdict_scope: apparatus/process (no score
 claim). Pointer 0.1910828242 [contest-CPU] UNMOVED (means, not end). Sister: FEED-603-scorer-
 recursion-directive (the broadcast this gate makes structural).
+
+### FEED-603-a2-MAIN-review (2026-07-24, MAIN)
+a2 strategy-verdict provenance audit LANDED rc=0 (cherry-pick 86f9bdfcf5 → main; 3-clean-pass receipt;
+19-row ledger; read-only, pointer 0.1910828242 [contest-CPU] UNMOVED). MAIN verified: integer
+accounting exact (134,211 homes + 65,789 reservations; 25/37,545,489); v19c d_pose 163.06 consistent
+with pre-pose-stream state (√(10·163)≈40.4 = e2 debt). THE OPERATOR'S DOUBT ADJUDICATED BY EVIDENCE
+CLASS: exact/solve/NULL spine STANDS (A2-05/07/11/12/19 + m6 13-of-22,645B); achieved points STAND-AS-
+BOUNDS (v19c point, dr2b 2-of-5 rows, PT1 placement, Menu1 rows, RD1 hull-as-restricted-bound).
+RE-SCOPED ×3: A2-02 fork-resolution "corrections=free finisher" → [naive-mixed-coordinate-menu upper
+bound], FAMILY WORDING FORBIDDEN pending dm4 same-parent scorer-recursive pricing; A2-08 plane-family
+RATE-DEAD → surviving token FORMULATION:EXACT_REVERSIBLE_L3_RASTER_RESIDUAL_RATE_DEAD only (rehomed/
+layer/generative/quotient representations NOT closed; #669c + dc1 resolve); A2-09 216→264KB box
+widening → conditional counterfactual, unowned first-rung = same-archive preimage-policy A/B.
+SUSPENDED ×4 (pulled from c1/ic1 composition inputs until resolved): A2-04 family-(d) "top/ready"
+(pending dc1 FIT_RESULT_RECEIVER_CLOSED_V14_OR_BETTER on real video); A2-06 c1 "waterfilled" prices =
+reservation identities, thresholds 28.1677/59.4318 err/B are break-even÷reserved-bytes NOT marginals
+(pending ic1 exact stream stage curves); A2-13 v18 closure (pending dm4 column pricing); A2-15/17
+PT1-ceiling/Menu1-ordering (pending ic1 scorer-derived composition). ROUTED same-turn: binding inbox
+directives → ic1 (5-item pull list; prices NULL until bound) + dm4 (named resolver; support from
+resize-footprint+stem-lattice). verdict_scope: per-row tokens in the a2 ledger (INSTANCE/FORMULATION
+preserved; no family kill anywhere). Consistency: coherent-view correction — the box-widening and c1
+waterfill claims I cited to the operator 07-24 are now formally RE-SCOPED/SUSPENDED; steering updated.
