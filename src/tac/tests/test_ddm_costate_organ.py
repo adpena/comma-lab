@@ -130,11 +130,15 @@ def test_current_live_fleet_pair_site_lambda_and_duties() -> None:
     }
 
     if report["source_custody"]["g3_full_atlas"]["status"] == "VERIFIED":
-        assert len(report["lambda"]["pair_rows"]) == 8
-        assert len(report["lambda"]["site_rows"]) == 40
+        # ev1 N600_EXACT_COMPLETE join (2026-07-24): 600 pair rows / 3,000 site
+        # rows replaced the historical 8/40 subset. Backtest quality DROPPED on
+        # the full join (rho 0.903->0.748, ndcg 0.927->0.196) - the old values
+        # were 8-pair-subset optimism; routed as FEED-603 subset-overfit signal.
+        assert len(report["lambda"]["pair_rows"]) == 600
+        assert len(report["lambda"]["site_rows"]) == 3000
         backtest = report["lambda"]["backtest"]
-        assert backtest["spearman_rho"] == pytest.approx(0.9027075674773932)
-        assert backtest["ndcg_at_4"] == pytest.approx(0.9268617843989323)
+        assert backtest["spearman_rho"] == pytest.approx(0.7476669456024575)
+        assert backtest["ndcg_at_4"] == pytest.approx(0.19557065696692438)
 
     duties = report["duties"]
     assert duties["legacy_authority_snapshot_rows_retained"] == 115
