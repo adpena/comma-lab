@@ -1,0 +1,51 @@
+{
+  "schema": "ddm_null_gauge_composite_custody.v1",
+  "authority_label": "COMPOSITE_MEASURED_ADVISORY",
+  "authority_scope": "#580 exact resize kernel geometry plus #519 macOS-CPU advisory n32 gauge/null measurements. No contest-axis, score, or promotion claim. Cross-space intersection energy was not measured and is explicitly null.",
+  "resize_kernel": {
+    "camera_domain_dimension_per_channel": 1017336,
+    "kernel_dimension_per_channel": 820728,
+    "kernel_dimension_fraction": 0.8067423152232891,
+    "uint8_basis_feasible_lower_bound_fraction": 0.3419313918039405
+  },
+  "head_gauge": {
+    "parameter": "head.out_sdf.weight",
+    "gauge_fraction_of_norm": 0.5235602011487402,
+    "gauge_fraction_of_energy": 0.27411528422690934,
+    "terminology_correction": "The approximately 52 percent head-gauge number is a fraction of L2 norm, not energy. Its squared-energy fraction is approximately 27.4 percent."
+  },
+  "render_resize_null": {
+    "blind_output_raw_energy_in_ker_a_mean": 0.5242467615738868,
+    "blind_output_raw_energy_in_ker_a_min": 0.5234515570949776,
+    "blind_output_raw_energy_in_ker_a_max": 0.525811075144586,
+    "projector_max_residual": 1.654926196081874e-15,
+    "terminology_correction": "This separate approximately 52 percent quantity is rendered output energy in ker(A), not head-gauge energy."
+  },
+  "intersection_accounting": {
+    "head_gauge_space": "parameter/logit gauge",
+    "resize_null_space": "camera RGB image kernel of A",
+    "measured_joint_intersection_dimension": null,
+    "measured_joint_intersection_energy": null,
+    "safe_composition": "Treat the two quotients as separately custodied factors. Do not multiply, add, or call either 52 percent number a measured joint intersection."
+  },
+  "source_receipts": [
+    {
+      "path": ".omx/research/null_compiler_full_kernel_20260720T163500Z.json",
+      "sha256": "76af5e7f8d155363a6668b4ee7bca576ea448472ea0cd1e7f938577bb4adfd74",
+      "bytes": 7444,
+      "role": "#580 exact resize kernel/nullity and bounded-uint8 lower bound"
+    },
+    {
+      "path": "reports/null_subspace_rate_measure_519_n32.json",
+      "sha256": "6f40a7eec405d2c05dfd366a852c1e989558364136307d20945d3485eed4e87c",
+      "bytes": 5900,
+      "role": "#519 measured gauge-norm and rendered ker(A)-energy receipt"
+    },
+    {
+      "path": ".omx/research/null_subspace_rate_measure_20260717.md",
+      "sha256": "10de8280ab8df3ed4a28e8a46c81bdcb3b248d9c3050c831bc3a27fef6185060",
+      "bytes": 10802,
+      "role": "#519 verdict scope and measurement interpretation"
+    }
+  ]
+}

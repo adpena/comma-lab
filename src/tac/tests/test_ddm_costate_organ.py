@@ -125,8 +125,8 @@ def test_current_live_fleet_pair_site_lambda_and_duties() -> None:
     assert oracle_row["freshness"] == "FRESH"
     assert oracle_row["lineage"][0]["fresh"] is True
     assert report["live"]["fleet"]["scorer_value_oracle_coverage"] == {
-        "WRAPPED": 14,
-        "TYPED-GAP": 7,
+        "WRAPPED": 21,
+        "TYPED-GAP": 0,
     }
 
     if report["source_custody"]["g3_full_atlas"]["status"] == "VERIFIED":

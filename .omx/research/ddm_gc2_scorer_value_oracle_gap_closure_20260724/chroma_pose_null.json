@@ -1,0 +1,59 @@
+{
+  "schema": "ddm_chroma_pose_null_intersection.v1",
+  "authority_label": "EXACT_LINEAR_KERNEL_PLUS_SCOPED_MEASURED_READBACK",
+  "authority_scope": "The six-dimensional kernel is exact for one clamp-inactive 2x2 block at the post-resize PoseNet RGB read surface. Seg-visible means nonzero RGB reaches SegNet input, not that SegNet argmax changes. The measured uint8 fraction is scorer-grid-fixture only; camera-grid preimage and receiver-closed realization remain fail-closed.",
+  "exact_kernel": {
+    "domain": "four RGB perturbations delta_p in one 2x2 scorer-grid block",
+    "constraints": [
+      "for every phase pixel p: 299 delta_R[p] + 587 delta_G[p] + 114 delta_B[p] = 0",
+      "sum_p delta_R[p] = 0",
+      "sum_p delta_B[p] = 0"
+    ],
+    "equivalent_pose_constraints": "delta Y00=delta Y10=delta Y01=delta Y11=0 and boxmean(delta U)=boxmean(delta V)=0",
+    "real_dimension": 6,
+    "parameterization": "Choose four (u_p,v_p) chroma coordinates with sum_p u_p=sum_p v_p=0. Map each to RGB by delta_R=1.402 v, delta_B=1.772 u, delta_G=-(0.299*1.402 v + 0.114*1.772 u)/0.587.",
+    "phase_zero_sum_basis": ["e0-e3", "e1-e3", "e2-e3"],
+    "integer_primitive_rgb": [-15, 9, -7],
+    "integer_primitive_certificate": "299*(-15) + 587*9 + 114*(-7) = 0; put +primitive on one phase and -primitive on another phase.",
+    "seg_visibility": "SegNet consumes the second-frame post-resize RGB tensor directly, so every nonzero kernel element is visible on its RGB input surface."
+  },
+  "uint8_readback": {
+    "authority_label": "MEASURED_MACOS_CPU_ADVISORY_FIXTURE",
+    "source_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n6.npz",
+    "source_cache_sha256": "e3f5ce8e79374ed0b9a3f007167dd7488862b51420f0b25b7bcec7ee6865f63e",
+    "frame_count": 12,
+    "procedure": "Bilinear-resize the 12 n6 camera frames to 384x512 using the source-bound align_corners=False matrix; round to a uint8 scorer-grid fixture; in each 2x2 block select the first directed phase pair for which +/-[-15,9,-7] stays in [0,255]; read back the float32 YUV6 law.",
+    "block_count": 589824,
+    "bounded_uint8_feasible_blocks": 442716,
+    "bounded_uint8_feasible_fraction": 0.7505900065104166,
+    "bit_exact_yuv6_blocks_among_feasible": 118304,
+    "bit_exact_yuv6_fraction_among_feasible": 0.2672232311459265,
+    "max_abs_yuv6_le_1e_minus_5_blocks_among_feasible": 349810,
+    "max_abs_yuv6_le_1e_minus_5_fraction_among_feasible": 0.7901453753647937,
+    "maximum_observed_abs_yuv6_drift": 0.000030517578125,
+    "camera_preimage_certified_fraction": null,
+    "receiver_closed_fraction": null,
+    "admission_rule": "j8f, pa2, and F2 may consume the exact real kernel. They must use bit_exact_yuv6_fraction_among_feasible for this scoped scorer-grid uint8 fixture and must refuse camera-level zero-Pose-cost authority while camera_preimage_certified_fraction is null."
+  },
+  "consumers": ["j8f", "pa2", "F2"],
+  "source_receipts": [
+    {
+      "path": "upstream/frame_utils.py",
+      "sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+      "bytes": 9345,
+      "lines": "50-78"
+    },
+    {
+      "path": "upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "bytes": 8322,
+      "lines": "70-77,107-113"
+    },
+    {
+      "path": ".omx/research/null_compiler_full_kernel_20260720T163500Z.json",
+      "sha256": "76af5e7f8d155363a6668b4ee7bca576ea448472ea0cd1e7f938577bb4adfd74",
+      "bytes": 7444,
+      "role": "#580 resize geometry and the requirement to separate real nullity from bounded uint8 realization"
+    }
+  ]
+}
