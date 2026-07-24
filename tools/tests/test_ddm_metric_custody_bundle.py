@@ -16,10 +16,12 @@ from tac.optimization.ddm_metric_custody_bundle import (
     ArtifactCustody,
     ComponentId,
     MetricCustodyError,
+    _validate_direct_blocks,
     artifact_custody,
     load_component_receipt,
     load_metric_custody_bundle,
 )
+from tac.optimization.ddm_metric_producers import direct_scorer_intrinsic_pair_block
 from tac.optimization.ddm_min_description_contract import (
     LayerHome,
     StreamType,
@@ -34,6 +36,10 @@ PF2 = (
 )
 G3 = REPO / ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/hard_pair_registry.json"
 PARTIAL = REPO / ".omx/research/ddm_ms3_metric_custody_bundle_20260724T035249Z/BUNDLE-PARTIAL.json"
+RG3_DIRECT = (
+    REPO / ".omx/research/ddm_rg3_residual_family_productions_20260724T110418Z/"
+    "ddm_rg3_receiver_support_summary.json"
+)
 
 
 def _write(path: Path, value: object) -> None:
@@ -435,4 +441,37 @@ def test_seg_primary_euclidean_is_refused(
             atlas_sha256=str(atlas_ref["sha256"]),
             hard_pair_registry_sha256=str(g3_ref["sha256"]),
             atlas_rows=atlas_rows,
+        )
+
+
+def test_direct_block_validator_refuses_actuation_reclassification() -> None:
+    rg3 = json.loads(RG3_DIRECT.read_text(encoding="utf-8"))
+    residual = rg3["receiver_coordinate_derivation"]["residual"]
+    expected_counts: dict[str, list[int]] = {}
+    blocks = []
+    for source in residual:
+        pair_id = int(source["pair_id"])
+        bucket_id = str(source["bucket_id"])
+        counts = expected_counts.setdefault(bucket_id, [0] * 600)
+        counts[pair_id] = 1
+        blocks.append(
+            direct_scorer_intrinsic_pair_block(
+                pair_id=pair_id,
+                bucket_id=bucket_id,
+                head_pair_normal=[1.0, -0.5, 0.25, 0.125],
+                margins=[0.2],
+                probe_custody=source["rg3_probe_blocker"],
+            )
+        )
+    _validate_direct_blocks(
+        blocks,
+        residual=residual,
+        expected_counts=expected_counts,
+    )
+    blocks[0]["actuation_status"] = "REACHABLE"
+    with pytest.raises(MetricCustodyError, match="identity/custody differs"):
+        _validate_direct_blocks(
+            blocks,
+            residual=residual,
+            expected_counts=expected_counts,
         )

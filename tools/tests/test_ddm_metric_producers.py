@@ -6,9 +6,13 @@ import numpy as np
 import pytest
 
 from tac.optimization.ddm_metric_producers import (
+    DIRECT_ACTUATION_STATUS,
+    DIRECT_METRIC_MODE,
     MetricProducerError,
     audit_pf2_bucket_assignments,
     composite_r_second_order_row,
+    direct_scorer_intrinsic_bucket_rows,
+    direct_scorer_intrinsic_pair_block,
     dual_metric_diagnostic_row,
     non_converged_pose_row,
     padded_batch32,
@@ -220,3 +224,76 @@ def test_dual_producer_retains_sign_and_control_only_label() -> None:
     assert row["fisher_euclidean_cosine"] == -1.0
     assert row["fisher_to_euclidean_rel_norm"] == 1.0
     assert row["euclidean_role"] == "LABELED_CONTROL_ONLY"
+
+
+def test_direct_scorer_intrinsic_mode_measures_support_and_keeps_exact_empty_null() -> None:
+    atlas_row = {
+        "bucket_id": "road_lane__cell__static_in_image",
+        "class_pair": "Road--Lane",
+        "class_stratum": "cell",
+        "visibility": "seg-visible",
+        "g4_temporal_class": "STATIC_IN_IMAGE",
+        "representation_type": "SKELETON",
+    }
+    margins: list[list[float]] = [[] for _ in range(600)]
+    margins[7] = [-0.5, 0.25]
+    seg, composite, dual = direct_scorer_intrinsic_bucket_rows(
+        atlas_row,
+        head_pair_normal=[1.0, -2.0, 0.5, 0.25],
+        pair_margins=margins,
+    )
+    assert seg["metric_mode"] == DIRECT_METRIC_MODE
+    assert seg["event_count"] == 2
+    assert seg["pair_support_counts"][7] == 2
+    assert np.array_equal(seg["margin_fisher_gram"], composite["model_hessian"])
+    assert composite["secant_status"] == "NOT_APPLICABLE_DIRECT_SCORER_INTRINSIC_NO_ACTUATOR"
+    assert dual["diagnostic_status"] == "MEASURED_NONDEGENERATE"
+
+    empty_seg, empty_composite, empty_dual = direct_scorer_intrinsic_bucket_rows(
+        {**atlas_row, "bucket_id": "road_lane__cell__static_in_xi_proxy__both__residual"},
+        head_pair_normal=[1.0, -2.0, 0.5, 0.25],
+        pair_margins=[[] for _ in range(600)],
+    )
+    assert empty_seg["support_status"] == "EXACT_EMPTY_PF2_ATLAS_AND_EVENT_INDEX_ABSENCE"
+    assert np.count_nonzero(empty_seg["margin_fisher_gram"]) == 0
+    assert np.count_nonzero(empty_composite["adjoint_readback"]) == 0
+    assert empty_dual["diagnostic_status"] == "EXACT_EMPTY_SUPPORT_NULL"
+    assert empty_dual["fisher_euclidean_cosine"] is None
+    assert empty_dual["fisher_to_euclidean_rel_norm"] is None
+
+
+def test_direct_pair_block_requires_full_rg3_probe_custody() -> None:
+    custody = {
+        "classification": "NO_TARGET_BUCKET_EVENT_CHANGED_BY_ANY_COUNTED_RG3_MAGNITUDE_OR_SIGN",
+        "probe_count": 2,
+        "probes": [
+            {
+                "checkpoint_sha256": "a" * 64,
+                "target_bucket_hit": False,
+                "target_pair_joined": False,
+            },
+            {
+                "checkpoint_sha256": "b" * 64,
+                "target_bucket_hit": False,
+                "target_pair_joined": False,
+            },
+        ],
+    }
+    row = direct_scorer_intrinsic_pair_block(
+        pair_id=523,
+        bucket_id="lane_movable__cell__static_in_image",
+        head_pair_normal=[1.0, 0.0, -0.5, 0.25],
+        margins=[-0.2, 0.4],
+        probe_custody=custody,
+    )
+    assert row["actuation_status"] == DIRECT_ACTUATION_STATUS
+    assert row["support_count"] == 2
+    assert row["probe_custody"] == custody
+    with pytest.raises(MetricProducerError, match="full RG3 probe custody"):
+        direct_scorer_intrinsic_pair_block(
+            pair_id=523,
+            bucket_id="lane_movable__cell__static_in_image",
+            head_pair_normal=[1.0, 0.0, -0.5, 0.25],
+            margins=[-0.2, 0.4],
+            probe_custody={},
+        )

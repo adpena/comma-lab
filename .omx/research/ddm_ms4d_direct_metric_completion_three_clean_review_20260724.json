@@ -1,0 +1,81 @@
+{
+  "schema": "ddm_ms4d_direct_metric_completion_three_clean_review.v1",
+  "captured_at_utc": "2026-07-24T17:11:34Z",
+  "lane_id": "lane_ddm_ms4d_direct_metric_completion_20260724",
+  "round1_review": ".omx/research/ddm_ms4d_direct_metric_completion_round1_review_20260724.json",
+  "clean_pass_count": 3,
+  "counter_reset_after_last_finding": true,
+  "passes": [
+    {
+      "pass": 1,
+      "result": "CLEAN",
+      "pytest": "33 passed in 1.08s",
+      "ruff": "All checks passed",
+      "diff_check": "PASS",
+      "receipt_assertions": "PASS",
+      "review_tracker_pass": "ddm-ms4d-clean-final-1"
+    },
+    {
+      "pass": 2,
+      "result": "CLEAN",
+      "pytest": "33 passed in 1.06s",
+      "ruff": "All checks passed",
+      "diff_check": "PASS",
+      "receipt_assertions": "PASS",
+      "review_tracker_pass": "ddm-ms4d-clean-final-2"
+    },
+    {
+      "pass": 3,
+      "result": "CLEAN",
+      "pytest": "33 passed in 1.08s",
+      "ruff": "All checks passed",
+      "diff_check": "PASS",
+      "receipt_assertions": "PASS",
+      "review_tracker_pass": "ddm-ms4d-clean-final-3"
+    }
+  ],
+  "pytest_scope": [
+    "tools/tests/test_ddm_metric_producers.py",
+    "tools/tests/test_ddm_metric_custody_bundle.py",
+    "tools/tests/test_ddm_ms4d_direct_completion.py",
+    "tools/tests/test_ddm_ms4d_waterfill_admission.py",
+    "src/tac/canonical_equations/tests/test_ddm_metric_custody_bundle_20260724.py",
+    "src/tac/canonical_equations/tests/test_ddm_ms2r_tolerance_capped_solve_20260724.py"
+  ],
+  "review_axes": {
+    "call_sites_and_schema_compatibility": "CLEAN",
+    "resume_and_checkpoint_identity": "CLEAN",
+    "edge_cases_and_null_preservation": "CLEAN",
+    "comments_match_code": "CLEAN",
+    "authority_and_score_claim": "CLEAN",
+    "assumption_challenge": {
+      "shared_assumption": "Strict metric completeness would be sufficient to construct a tolerance-waterfill rung.",
+      "violation_result": "The assumption is false: receiver-object construction, realized uint8 quantum, candidate delta, dimension rate home, and coder ownership remain absent.",
+      "disposition": "Executable post-admission refusal added; no fake rung, coder result, byte dual, knee, or score."
+    }
+  },
+  "post_edit_sha256": {
+    "src/tac/optimization/ddm_metric_producers.py": "8e9db3efdae0cfaec0813017ed155b748acf726d5166d8ffbe996153a7d1545c",
+    "src/tac/optimization/ddm_metric_custody_bundle.py": "3b5e4856535105226c2f41576c17b3d620cf82f0dc8f8c6813d2f14fb7d53fd9",
+    "src/tac/optimization/ddm_ms4d_direct_completion.py": "14a324198ba6376444f624cbbf79000f89f43c9de2934a86610d9d5b0d5a4dfe",
+    "src/tac/optimization/ddm_ms4d_waterfill_admission.py": "79e86af317ca0a1f37c0db1b2d09061bff29045b83ecdb8b688709197c18b3fd",
+    "tools/complete_ddm_ms4d_direct_metric.py": "125c66aa630dc6370476948269f37fa84b179df590fc8d4d1f90734878cc7d57",
+    "tools/run_ddm_ms4d_waterfill.py": "b1c47921f5e7455e42c8b3499cefb978b4c6b0b280af1dfeff7597dfb4bc4d4c",
+    "tools/tests/test_ddm_metric_producers.py": "8fb50164c5df31829c64d9cd6c4250f499a3afb739fdd57518f90be91791897a",
+    "tools/tests/test_ddm_metric_custody_bundle.py": "738acb23c308685ab545103aad28590d6e42457424c68f09176dd0e47acfc9eb",
+    "tools/tests/test_ddm_ms4d_direct_completion.py": "2a46720685e3c6b5b19c955d65b46c441e6f6b66b51a259b426ae13249b10e9f",
+    "tools/tests/test_ddm_ms4d_waterfill_admission.py": "c7efe14afb9b6165fdec1db521f9601e66b7eb0f11f697d937cd3497c2a9b2a7"
+  },
+  "artifact_sha256": {
+    "BUNDLE-COMPLETE.json": "d670eff3dd01d61a24bdebedf045fa8cde2528953660dc6d1e64ba9c2fa94e25",
+    "receipt.json": "3406122cc3199ef4ff8463bf148a320a8609dab4f05fdadaed2ebfe7efbda3f3",
+    "waterfill_post_admission_receipt.json": "90b2431e25186ff888a02e4fedd62cd5200dc2335484bb051e7906b3e72e9e6b",
+    "rd1_dual_backfill_post_admission.json": "c918c96bb242573821a44d81118281fe64fe802bc1ce613aeec11c0fece0e714"
+  },
+  "verdict": "CLEAN_FOR_ISOLATED_COMMIT_PENDING_MAIN_LANDING_REVIEW",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}
