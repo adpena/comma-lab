@@ -1,0 +1,50 @@
+{
+  "schema": "ddm_ms4d_direct_metric_completion_round1_review.v1",
+  "captured_at_utc": "2026-07-24T16:58:20Z",
+  "lane_id": "lane_ddm_ms4d_direct_metric_completion_20260724",
+  "round": 1,
+  "disposition": "CORRECTIONS_REQUIRED_AND_APPLIED",
+  "findings": [
+    {
+      "finding": "A complete scorer-metric bundle could be misread as a counted-coordinate or waterfill-ready bundle.",
+      "severity": "P0_NO_FAKE",
+      "correction": "Added a post-require_complete admission gate that requires receiver_object_builder, realized_uint8_quantum, candidate_delta, dimension_rate_home, and coder_payload_owner on a single occupied row; otherwise it emits the scoped PF3 blocker and zero rungs."
+    },
+    {
+      "finding": "Floating-point cosine readback could exceed the mathematical interval by rounding.",
+      "severity": "P1_SCHEMA_RANGE",
+      "correction": "Clamped only the derived cosine scalar to [-1,1]; source vectors and measured norms remain unchanged."
+    },
+    {
+      "finding": "A raw/best-coded equality replay on an existing endpoint could be mistaken for a new coder race.",
+      "severity": "P0_FALSE_MEASUREMENT",
+      "correction": "Typed both endpoint rows as settled control replays, coder_race_performed=false, and admitted only exact receiver-closure statuses."
+    },
+    {
+      "finding": "Complete metric-bundle context was initially labeled as 162 measured RD1 cells despite the absence of any same-object rung delta.",
+      "severity": "P0_FALSE_MEASUREMENT",
+      "correction": "Separated 162/162 cells with complete metric context from 0/162 measured rung deltas and 0/162 measured byte duals; all 162 prices remain explicitly NULL."
+    },
+    {
+      "finding": "Direct composite-R wording could imply synthetic receiver-coordinate secants.",
+      "severity": "P0_FORMULATION_SCOPE",
+      "correction": "Scoped the coordinate domain to POST_R_PENULTIMATE_HEAD_QUOTIENT, required exact solved-plane R roundtrip, and typed secants NOT_APPLICABLE_DIRECT_SCORER_INTRINSIC_NO_ACTUATOR."
+    },
+    {
+      "finding": "Initial 2 GiB and 3 GiB local memory caps were below actual deterministic scorer RSS.",
+      "severity": "P1_EXECUTION_CUSTODY",
+      "correction": "Both attempts failed closed with checkpoints preserved; the resumable 4 GiB run completed at 3,563 MiB peak RSS."
+    },
+    {
+      "finding": "Two generated direct-custody fields and the first checkpoint identity captured the transient isolated-worktree prefix.",
+      "severity": "P0_RESUMABILITY",
+      "correction": "Repository artifacts now serialize repository-relative paths; legacy checkpoint resume normalizes only an absolute path ending in the exact repository-relative config path while requiring every SHA and other identity field to match."
+    }
+  ],
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "research_only": true,
+  "main_landing_review_required": true
+}
