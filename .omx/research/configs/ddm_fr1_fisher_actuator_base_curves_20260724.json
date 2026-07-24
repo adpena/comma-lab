@@ -1,0 +1,66 @@
+{
+  "schema": "DDMFR1FisherActuatorBaseCurvesConfigV1",
+  "run_id": "ddm_fr1_fisher_actuator_base_curves_20260724T053824Z",
+  "lane_id": "lane_ddm_fr1_fisher_actuator_base_curves_20260724",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "ordering": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/r1b5_row_closer_20260720/fisher_ev/fisher_ev_ordering_38077.jsonl.br",
+    "bytes": 2225887,
+    "sha256": "765457d424eaf1de7e05ed8703853175ef415bd3f19fb00137a74a29de52ae00",
+    "candidate_count": 38077
+  },
+  "fisher_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/r1b5_row_closer_20260720/fisher_ev/receipt.json",
+    "bytes": 14001,
+    "sha256": "0d2b1a103f4830bc70ec9dbe10a3c18a710e980f968a2c0d424d4f7bb2cbce97"
+  },
+  "band_manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/band_manifest.json",
+    "bytes": 3352,
+    "sha256": "2fd10841dc0cb344454e4af55bd8d27e5e1d819a97df3fc03307604dfffcc367"
+  },
+  "runtime_sensitivity": {
+    "path": "src/tac/optimization/ddm_runtime_sensitivity.py",
+    "bytes": 21770,
+    "sha256": "0b8cbe97bda43b99e44ca1def3faeff868c66f66b9b73d47e4c3c88b8527ca41"
+  },
+  "v19c": {
+    "menu_config": {
+      "path": ".omx/research/configs/ddm_menu1_realized_flip_menu_20260723.json",
+      "bytes": 3319,
+      "sha256": "b9fed2b1537b92a2b02d0525cb4d9175d0704e7c4d0c0efd383c6dd818fdb2c7"
+    },
+    "receipt": {
+      "path": ".omx/research/ddm_menu1_realized_flip_menu_20260723T214943Z/ddm_menu1_realized_flip_menu_receipt.json",
+      "bytes": 23416,
+      "sha256": "2fc12eb505aa7de140b5e785e5fb528c349fd72b423a1821f23b70ea21d6f29d"
+    },
+    "archive": {
+      "path": ".omx/research/ddm_v19c_correction_saturation_20260723T063500Z/ddm_v19c_final_n600.zip.receipt-bytes",
+      "bytes": 137827,
+      "sha256": "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9"
+    },
+    "candidate_id": "v19c_base",
+    "expected_row": {
+      "archive_bytes": 137827,
+      "errors": 2923991,
+      "d_seg": 0.024786978827582466,
+      "d_pose": 163.06121002915629
+    }
+  },
+  "ws1": {
+    "receipt": {
+      "path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+      "bytes": 46615,
+      "sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0"
+    },
+    "expected_row": {
+      "archive_bytes": 138031,
+      "errors": 2845843,
+      "d_seg": 0.024124510023328993,
+      "d_pose": 146.3649324958955
+    }
+  },
+  "ws2_receipt_glob": ".omx/research/**/ddm_ws2*receipt*.json"
+}

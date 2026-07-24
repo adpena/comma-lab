@@ -1,0 +1,37 @@
+{
+  "schema": "ddm_fr1_fisher_actuator_base_curves.directive_consumption.v1",
+  "lane_id": "lane_ddm_fr1_fisher_actuator_base_curves_20260724",
+  "consumed": [
+    {
+      "utc": "2026-07-19T19:42:07Z",
+      "from": "operator",
+      "priority": "high",
+      "application": "Preserved the 38,077-row measured Fisher ordering, surgical highest-EV-first identity, exact byte-marginal requirement, and rate-break-even stop. No blanket repair or numeric byte delta was invented."
+    },
+    {
+      "utc": "2026-07-19T19:48:01Z",
+      "from": "operator",
+      "priority": "high",
+      "application": "Refused naive first-order substitution because corrected first-order plus secant plus QP custody is absent; used Fisher/margin, no Fourier basis, and left pose xi factorization open."
+    },
+    {
+      "utc": "2026-07-24T05:38:24Z",
+      "from": "delegated_authority_file",
+      "priority": "binding",
+      "application": "Revalidated the exact V19C and WS1 parents, checked for WS2, preserved endpoint-not-state and independent-base rules, emitted triality artifacts, and stopped before heavy scoring when the requested actuator proved non-executable."
+    }
+  ],
+  "per_arm_inbox": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_inbox/ddm_fr1_fisher_actuator_base_curves.jsonl",
+    "last_consumed_utc": null,
+    "new_directive_count": 0
+  },
+  "broadcast_inbox": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_inbox/_broadcast.jsonl",
+    "last_applicable_directive_utc": "2026-07-19T19:48:01Z",
+    "later_rows": "2026-07-21 acknowledgements only; not new directives"
+  },
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "score_claim": false,
+  "main_review_required": true
+}

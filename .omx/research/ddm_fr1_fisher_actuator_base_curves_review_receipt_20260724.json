@@ -1,0 +1,92 @@
+{
+  "schema": "pact.ddm_fr1_fisher_actuator_base_curves.review_receipt.v1",
+  "created_at": "2026-07-24T05:59:04Z",
+  "axis": "macOS-CPU advisory",
+  "base_commit": "1aa41ce991af0f26480b6c44aa25acb06c5c42e6",
+  "verdict": "PASS_FAIL_CLOSED_BLOCKER_LANDING_NO_MEASUREMENT",
+  "review_round_1": [
+    {
+      "id": "R1-F1",
+      "severity": "HIGH",
+      "finding": "The bound-record required-key predicate accepted a record when any one required key was present.",
+      "disposition": "FIXED",
+      "verification": "The predicate now requires the complete expected key set; a missing-binding-key regression test passes."
+    },
+    {
+      "id": "R1-F2",
+      "severity": "HIGH",
+      "finding": "WS2 launchability did not verify the bound archive bytes and SHA-256 and did not reject score-claim receipts.",
+      "disposition": "FIXED",
+      "verification": "WS2 launchability now requires execution_allowed=true, score_claim=false, and a byte/hash-valid archive; valid and drifted-archive tests pass."
+    },
+    {
+      "id": "R1-F3",
+      "severity": "HIGH",
+      "finding": "The first-order n600 VJP requirement was not independently enforced.",
+      "disposition": "FIXED",
+      "verification": "The corrected-actuator gate now independently requires first_order_vjp=MEASURED_REAL_N600; a readiness-without-runtime-bridge test remains fail-closed."
+    },
+    {
+      "id": "R1-F4",
+      "severity": "BASELINE_DEBT",
+      "finding": "Canonical lane-maturity validation reports 110 pre-existing missing-evidence errors.",
+      "disposition": "NOT_INTRODUCED_NOT_REPAIRED",
+      "verification": "The new lane's evidence paths are separately bound and checked; unrelated historical lane rows remain outside this delegated scope."
+    }
+  ],
+  "three_clean_passes": [
+    {
+      "pass": 1,
+      "pytest": "16 passed in 0.61s",
+      "py_compile": "PASS",
+      "ruff_check": "PASS",
+      "ruff_format_check": "PASS",
+      "json_parse": "PASS",
+      "git_diff_check": "PASS"
+    },
+    {
+      "pass": 2,
+      "pytest": "16 passed in 0.59s",
+      "py_compile": "PASS",
+      "ruff_check": "PASS",
+      "ruff_format_check": "PASS",
+      "json_parse": "PASS",
+      "git_diff_check": "PASS"
+    },
+    {
+      "pass": 3,
+      "pytest": "16 passed in 0.60s",
+      "py_compile": "PASS",
+      "ruff_check": "PASS",
+      "ruff_format_check": "PASS",
+      "json_parse": "PASS",
+      "git_diff_check": "PASS"
+    }
+  ],
+  "review_tracker": {
+    "reviewer": "codex-ddm-fr1",
+    "passes": [
+      "ddm-fr1-clean-pass-1",
+      "ddm-fr1-clean-pass-2",
+      "ddm-fr1-clean-pass-3"
+    ],
+    "files": [
+      "src/tac/optimization/ddm_fr1_fisher_preflight.py",
+      "tools/preflight_ddm_fr1_fisher_actuator_base_curves.py",
+      "tools/tests/test_preflight_ddm_fr1_fisher_actuator_base_curves.py"
+    ]
+  },
+  "content_sha256": {
+    "preflight_module": "7bb215425883f831af258b55dcbaffaf293c45da58dc84b7691f83dd555120e6",
+    "preflight_cli": "fd5d3f1c2d2555e0e4af92826369efc538e56b47b443bc487883497b20001dc9",
+    "preflight_tests": "90746303a3c5cb89309ea4e2fcc95710ffac64f922eee35484aad59ca8b363c6",
+    "config": "f0294e5cf862e8ed02e9ba2d711fab13054428dbf28607ad15fa457d6a7c7b42",
+    "preflight_receipt": "877b3d9f2c02f8e3b5924dc93f1d8ef31d34751f576ae9bf8aa85da8eeb0774f"
+  },
+  "required_main_landing_review": [
+    "Re-run the strict preflight against the current MAIN checkout and the bound SSD evidence.",
+    "Confirm no WS2 receipt became launchable after this isolated-worktree snapshot.",
+    "Confirm all per-base deltas remain NOT_MEASURED and the frontier pointer remains unchanged.",
+    "Review and explicitly accept the custody-only blocker before cherry-picking."
+  ]
+}
