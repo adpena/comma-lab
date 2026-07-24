@@ -1,0 +1,49 @@
+{
+  "schema": "ddm_sn1_five_type_three_clean_review.v1",
+  "lane_id": "ddm_sn1_segnet_telemetry_asymmetry",
+  "pre_clean_defect": {
+    "status": "FIXED_BEFORE_COUNTER",
+    "finding": "The first builder draft derived expected artifact hashes from live files and therefore could have accepted drift.",
+    "fix": "Pin both historical receipt SHA-256 values and derive artifact expectations only from those already-pinned receipts."
+  },
+  "passes": [
+    {
+      "pass": 1,
+      "status": "CLEAN",
+      "focus": "schema validation, canonical type reuse, metric-first fields, and focused SN1 regression suite",
+      "evidence": "38 passed; Ruff clean; every tracked source entity marked reviewed"
+    },
+    {
+      "pass": 2,
+      "status": "CLEAN",
+      "focus": "freshness-at-consumption, all-five-type and L1-L5 closure, first-rung and verdict-scope completeness, forbidden-surface audit",
+      "evidence": "16 unique rows; every source receipt and artifact SHA rehashed exactly; no upstream or pointer diff"
+    },
+    {
+      "pass": 3,
+      "status": "CLEAN",
+      "focus": "blind deterministic rebuild and focused contract tests",
+      "evidence": "two rebuilds byte-identical at SHA-256 949935045f113da7b814149bd24b8112c86f3a3e8b8caac558b3909eb1da8b17; 6 passed; Ruff and format clean"
+    }
+  ],
+  "review_tracker": {
+    "src/tac/analysis/ddm_sn1_five_type_addendum.py": "10/10 reviewed",
+    "src/tac/analysis/tests/test_ddm_sn1_five_type_addendum.py": "4/4 reviewed",
+    "tools/build_ddm_sn1_five_type_addendum.py": "5/5 reviewed",
+    "tests/test_build_ddm_sn1_five_type_addendum.py": "outside review-tracker source roots; pytest and Ruff covered"
+  },
+  "post_edit_sha256": {
+    "src/tac/analysis/ddm_sn1_five_type_addendum.py": "79ec7f27a2a73e748eba8bd053d09cc56b7cb46c78dd0aa5cb17314a4c2ef29d",
+    "src/tac/analysis/tests/test_ddm_sn1_five_type_addendum.py": "93d72823733a50768a0e93d75c3bb58c598624ae2796755ce5e1ba83ac01b8e1",
+    "tools/build_ddm_sn1_five_type_addendum.py": "cd945d7437cea9df51951ed8088841e28a8b032539f6bba32fe22091568c76a0",
+    "tests/test_build_ddm_sn1_five_type_addendum.py": "bb5054064ee64cfb3954c14a320b6670fec9b05e0db40acd1f81052ebdfb5f12",
+    ".omx/research/ddm_sn1_five_type_derivation_20260724.md": "a3657329b1ee38a5262b22f341caca90042033c3f2955358cced38548b998a72",
+    ".omx/research/codex_findings_ddm_sn1_five_type_addendum_20260724_codex.md": "77f17d6f1c0900b5a047066b017139963b878d7a410114270c46db21e5f48433",
+    ".omx/research/ddm_sn1_five_type_derivation_addendum_20260724.json": "949935045f113da7b814149bd24b8112c86f3a3e8b8caac558b3909eb1da8b17"
+  },
+  "upstream_changed": false,
+  "pointer_moved": false,
+  "research_only": true,
+  "score_claim": false,
+  "main_landing_review_required": true
+}
