@@ -1,0 +1,58 @@
+{
+  "schema": "codex_three_clean_review_passes.v1",
+  "utc": "2026-07-24T19:26:00Z",
+  "lane_id": "lane_ddm_ms2r_tolerance_capped_r2_20260724",
+  "prior_round": ".omx/research/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/review_round1.json",
+  "clean_pass_count": 3,
+  "passes": [
+    {
+      "pass": 1,
+      "kind": "STATIC_AND_FOCUSED_TESTS",
+      "status": "CLEAN",
+      "evidence": [
+        "3 focused pytest tests passed",
+        "ruff passed",
+        "py_compile passed",
+        "all durable JSON parsed with jq",
+        "git diff --check passed"
+      ]
+    },
+    {
+      "pass": 2,
+      "kind": "INDEPENDENT_ARTIFACT_INVARIANT_REDERIVATION",
+      "status": "CLEAN",
+      "evidence": [
+        "receipt SHA-256 03cd9aabc1275c49c983631dd547e7497f8fe95804a9bfd7a24c5d61e9a81d25",
+        "archive 291205400 bytes SHA-256 e3d0581ff4a3f475057e77e530374dad444b640a049b058cd66b37563534773e and unzip test passed",
+        "exact cap equality 136839 of 136839 independently asserted",
+        "208 q4 plus 392 q8 selections independently counted",
+        "d_seg and joint S formula independently re-derived",
+        "50 of 50 RAW coder wins; zero unavailable rows; zero parse-back failures",
+        "0 measured and 162 NULL RD1 cells independently asserted",
+        "headline refusal and authority booleans independently asserted"
+      ]
+    },
+    {
+      "pass": 3,
+      "kind": "FULL_CHECKPOINT_RESUME_DETERMINISM_REPLAY",
+      "status": "CLEAN",
+      "evidence": [
+        "runner resumed twice from immutable stage checkpoints",
+        "stdout was byte-identical; SHA-256 5be2d629ee016653a18b636e3764cfd8a21413774c88658541a9828a3dff1242",
+        "receipt remained byte-identical at SHA-256 03cd9aabc1275c49c983631dd547e7497f8fe95804a9bfd7a24c5d61e9a81d25",
+        "archive remained byte-identical at SHA-256 e3d0581ff4a3f475057e77e530374dad444b640a049b058cd66b37563534773e",
+        "coder race remained byte-identical at SHA-256 08e2aba9da00b853d43ff831651240913cb7a7833cd8f41ec90037108781f40a"
+      ]
+    }
+  ],
+  "remaining_findings": [],
+  "remaining_scoped_blockers": [
+    "TYPED_SUBPROBLEM_ALTERNATION_NOT_ACTIVE",
+    "TYPED_BLOCK_ATLAS_NOT_ACTIVE",
+    "PER_DIMENSION_EFFECTIVE_QUANTA_NOT_ACTIVE",
+    "RD1_162_CELL_DUALS_UNMEASURED",
+    "IC2_FRESH_COMPOSED_EXACT_ROW_OWED"
+  ],
+  "verdict": "THREE_FRESH_CLEAN_PASSES_COMPLETE_FOR_THE_SCOPED_FINITE_CONTROL",
+  "main_landing_review_required": true
+}

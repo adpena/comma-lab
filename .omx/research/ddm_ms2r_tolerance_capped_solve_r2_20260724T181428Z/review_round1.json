@@ -1,0 +1,54 @@
+{
+  "schema": "codex_adversarial_review_round.v1",
+  "round": 1,
+  "utc": "2026-07-24T19:10:00Z",
+  "lane_id": "lane_ddm_ms2r_tolerance_capped_r2_20260724",
+  "reset_clean_pass_count": true,
+  "clean_pass_count_after_round": 0,
+  "findings": [
+    {
+      "severity": "HIGH",
+      "bug_class": "FINITE_CONTROL_OVERCLAIMED_AS_FULL_WATERFILL",
+      "disposition": "FIXED",
+      "fix": "Finite-family labels, successor equation, score_claim=false, and fail-closed headline blockers are present on every durable verdict surface."
+    },
+    {
+      "severity": "HIGH",
+      "bug_class": "CODER_STAGE_NOT_RESUMABLE_PER_STREAM",
+      "disposition": "FIXED_AND_REMEASURED",
+      "fix": "Stopped only the coder stage, added atomic per-stream checkpoints, resumed, and completed all 50 streams."
+    },
+    {
+      "severity": "HIGH",
+      "bug_class": "UNMATERIALIZED_CONTAINER_BYTE_SUBTRACTION",
+      "disposition": "FIXED",
+      "fix": "Isolated coder rows remain diagnostic; only the complete receiver-closed production archive is admitted."
+    },
+    {
+      "severity": "HIGH",
+      "bug_class": "RD1_CELL_DUAL_IMPUTATION",
+      "disposition": "FIXED",
+      "fix": "All 162 cells remain NULL; the aggregate binary edge is explicitly non-transferable."
+    },
+    {
+      "severity": "MEDIUM",
+      "bug_class": "HOST_DEPENDENT_ARTIFACT_PATH",
+      "disposition": "FIXED",
+      "fix": "Durable repo paths are normalized and SSD custody remains explicit."
+    },
+    {
+      "severity": "MEDIUM",
+      "bug_class": "NONDETERMINISTIC_RECEIPT_TIMESTAMP",
+      "disposition": "FIXED_AND_REPLAYED",
+      "fix": "Timestamp sealed in typed config; two checkpoint-resume replays produced receipt SHA-256 03cd9aabc1275c49c983631dd547e7497f8fe95804a9bfd7a24c5d61e9a81d25."
+    }
+  ],
+  "remaining_blockers": [
+    "TYPED_SUBPROBLEM_ALTERNATION_NOT_ACTIVE",
+    "TYPED_BLOCK_ATLAS_NOT_ACTIVE",
+    "PER_DIMENSION_EFFECTIVE_QUANTA_NOT_ACTIVE",
+    "RD1_162_CELL_DUALS_UNMEASURED",
+    "IC2_FRESH_COMPOSED_EXACT_ROW_OWED"
+  ],
+  "verdict": "RESET_TO_ZERO_THEN_RUN_THREE_FRESH_CLEAN_PASSES"
+}

@@ -86854,6 +86854,47 @@
         }
       },
       "notes": "research_only=true; event engine and strict source-bound launcher integration built; BLOCKED_DM4_SCORER_RECURSIVE_PROPOSAL_LACKS_J5_COUNTED_APPLICATION_OPERATOR; execution_allowed=false until counted application operator, exact Step4 replay with measured delta-S<0, MAIN review, and operator GO; pointer unchanged"
+    },
+    {
+      "id": "lane_ddm_ms2r_tolerance_capped_r2_20260724",
+      "name": "DDM MS2R tolerance-capped exact solve R2",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_ms2r_tolerance_capped_solve_r2.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/three_clean_passes.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; measured receiver-closed binary q4/q8 control knee inside cap; full Fisher/G4 waterfill and RD1 162 cell duals blocked; headline ineligible; execution_allowed=false; pointer unchanged; MAIN landing review required"
     }
   ],
   "level_rules": {
@@ -86863,5 +86904,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T18:08:50Z"
+  "updated_at": "2026-07-24T19:31:56Z"
 }
