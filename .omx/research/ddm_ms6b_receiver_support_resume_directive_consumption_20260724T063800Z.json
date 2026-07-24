@@ -1,0 +1,47 @@
+{
+  "authority": {
+    "bytes": 5971,
+    "consumed_completely": true,
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_ms6b_receiver_support_resume_20260724T063800Z.wrapped.prompt.txt",
+    "sha256": "e1149f5b9d785bfe34668809a7aac3b6acd12f0f1309c810c2152cd1188f044e"
+  },
+  "delegation_checkpoint_key": "codex_delegate:ddm_ms6b_receiver_support_resume:20260724T063800Z",
+  "directive_outcomes": [
+    {
+      "directive": "resume SSD v2 checkpoint sweep with four Torch threads and governed admission",
+      "outcome": "complete_748_of_748"
+    },
+    {
+      "directive": "preserve infeasible and measured-empty rows explicitly",
+      "outcome": "preserved_70_infeasible_and_15_measured_empty"
+    },
+    {
+      "directive": "emit loader-schema assignment and support/join/asymmetry/G3 reports",
+      "outcome": "emitted_and_sha_bound"
+    },
+    {
+      "directive": "invoke MS4 only if exact G3 top24 coverage is proven",
+      "outcome": "not_invoked_because_106_blocks_missing"
+    },
+    {
+      "directive": "do not remeasure Pose or mutate the contest pointer",
+      "outcome": "pose_complete_pointer_unmoved"
+    },
+    {
+      "directive": "triality, findings, round1 review, three clean passes, MAIN review",
+      "outcome": "landed_with_main_review_required"
+    }
+  ],
+  "inbox": {
+    "arm_directives_consumed": [],
+    "broadcast_directives_consumed": [],
+    "latest_broadcast_examined_utc": "2026-07-21T13:15:53Z",
+    "notes": "The arm inbox was empty. Broadcast rows predated this delegation and did not amend it."
+  },
+  "main_landing_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "schema": "ddm_ms6b_receiver_support_directive_consumption.v1",
+  "score_claim": false
+}
+

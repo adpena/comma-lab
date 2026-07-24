@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from tools.summarize_ddm_ms6_receiver_support import (
+    _assigned_bucket_summary,
     _distribution,
     _g3_coverage,
     _signed_asymmetry,
@@ -65,3 +66,21 @@ def test_g3_coverage_ignores_buckets_without_hard_pair_membership() -> None:
     value = _g3_coverage(rows, [7])
     assert value["coverage_proven"] is True
     assert value["missing_block_count"] == 0
+
+
+def test_assigned_bucket_summary_labels_probe_event_incidence() -> None:
+    value = _assigned_bucket_summary(
+        {
+            "bucket_id": "a",
+            "assignment_status": "RECOVERED_COMPLETE",
+            "receiver_actuator_ids": ["x", "y"],
+            "direction_ids": ["NEGATIVE_ONE_QUANTUM", "POSITIVE_ONE_QUANTUM"],
+            "pair_ids": [1, 2],
+            "measured_probe_assignments": [
+                {"perturbed_event_count": 5},
+                {"perturbed_event_count": 7},
+            ],
+        }
+    )
+    assert value["probe_event_incidence_count"] == 12
+    assert "not unique-event cardinality" in value["probe_event_incidence_semantics"]

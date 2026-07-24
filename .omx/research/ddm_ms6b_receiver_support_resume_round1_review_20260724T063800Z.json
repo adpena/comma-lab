@@ -1,0 +1,43 @@
+{
+  "clean_passes": [
+    {
+      "evidence": "ruff and py_compile passed; 21 focused tests passed; git diff --check passed",
+      "name": "post_fix_code_and_regression",
+      "status": "CLEAN"
+    },
+    {
+      "evidence": "two regenerations produced file SHA 6963b79e075530739ed7a956e3ae0892ca5c16ab3c7d3df968c10a2f89e87ffa; summary, receipt, table, and G3 custody assertions passed",
+      "name": "determinism_and_content_custody",
+      "status": "CLEAN"
+    },
+    {
+      "evidence": "independent scan found 748 unique SHA-bound checkpoints, exact status decomposition, 70 explicit infeasibilities, exact 748-row table join, exact 106-block G3 missing set, and no MS4 invocation or diff",
+      "name": "independent_adversarial_rederivation",
+      "status": "CLEAN"
+    }
+  ],
+  "findings": [
+    {
+      "disposition": "FIXED_WITH_REGRESSION_TEST",
+      "finding": "The summary initially read a nonexistent bucket-level perturbed_event_count from recovered assignment rows.",
+      "fix": "Sum assignment-level perturbed_event_count as explicitly labeled probe_event_incidence_count; never present it as unique-event cardinality.",
+      "severity": "HIGH"
+    },
+    {
+      "disposition": "REPORTED_INSTANCE_SCOPED",
+      "finding": "The completed sweep found ten geometry-infeasible signed rows, not only the one known at delegation.",
+      "fix": "Preserve every row as INFEASIBLE_RECEIVER_QUANTUM and do not generalize beyond the V19C endpoint formulation.",
+      "severity": "MEDIUM"
+    },
+    {
+      "disposition": "FAIL_CLOSED",
+      "finding": "Only one of 24 G3 hard pairs has complete pair-by-bucket coverage; 106 exact blocks remain missing.",
+      "fix": "Keep producer_rerun_eligible=false and do not invoke MS4.",
+      "severity": "GATE"
+    }
+  ],
+  "main_landing_review_required": true,
+  "review_round": 1,
+  "schema": "ddm_ms6b_receiver_support_round1_review.v1",
+  "score_claim": false
+}

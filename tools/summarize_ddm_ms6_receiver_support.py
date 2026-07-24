@@ -221,6 +221,27 @@ def _g3_coverage(
     }
 
 
+def _assigned_bucket_summary(row: Mapping[str, Any]) -> dict[str, Any]:
+    assignments = row.get("measured_probe_assignments")
+    if not isinstance(assignments, list) or not assignments:
+        raise SummaryError("assigned bucket summary requires measured probe assignments")
+    return {
+        "bucket_id": row["bucket_id"],
+        "assignment_status": row["assignment_status"],
+        "assignment_row_count": len(assignments),
+        "unique_actuator_count": len(row["receiver_actuator_ids"]),
+        "direction_count": len(row["direction_ids"]),
+        "joined_pair_count": len(row["pair_ids"]),
+        "probe_event_incidence_count": sum(
+            int(assignment["perturbed_event_count"]) for assignment in assignments
+        ),
+        "probe_event_incidence_semantics": (
+            "Sum over actuator-direction assignment rows; the same raw PF2 event "
+            "may occur in multiple signed probes, so this is not unique-event cardinality."
+        ),
+    }
+
+
 def build_summary(
     *,
     checkpoint_root: Path,
@@ -290,17 +311,7 @@ def build_summary(
     for row in table_rows:
         assignments = row["measured_probe_assignments"]
         if assignments:
-            assigned_bucket_rows.append(
-                {
-                    "bucket_id": row["bucket_id"],
-                    "assignment_status": row["assignment_status"],
-                    "assignment_row_count": len(assignments),
-                    "unique_actuator_count": len(row["receiver_actuator_ids"]),
-                    "direction_count": len(row["direction_ids"]),
-                    "joined_pair_count": len(row["pair_ids"]),
-                    "perturbed_event_count": int(row["perturbed_event_count"]),
-                }
-            )
+            assigned_bucket_rows.append(_assigned_bucket_summary(row))
 
     summary: dict[str, Any] = {
         "schema": SCHEMA,
