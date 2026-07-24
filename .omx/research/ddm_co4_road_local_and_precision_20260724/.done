@@ -1,0 +1,9 @@
+status=COMPLETE_LOCAL_ADVISORY_MAIN_REVIEW_REQUIRED
+receipt_content_sha256=f9e8b0e4e4f7d025a05f26470942d03b8418fb98871581baa42f3d3297b74693
+road_gate=FAILED_RETAIN_SEALED_CO3
+precision=DIRECT_15_PROPAGATED_585_UNRANKED_0
+tests=47_PASSED
+review_passes_per_python_entity=2
+actuation=NONE
+score_claim=false
+

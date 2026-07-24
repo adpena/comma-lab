@@ -87360,6 +87360,48 @@
         }
       },
       "notes": "research_only=true; lessons-only source harvest; Cool-Chic/C3/COIN/functa are NEVER vehicles; live line remains DDM vocabulary; no launches; verdict_scope historical rows only; MAIN landing review required."
+    },
+    {
+      "id": "lane_ddm_co4_road_local_and_precision_20260724",
+      "name": "DDM CO4 Road-local ranking and propagated precision",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_co4_road_local_and_precision_20260724/ddm_co4_road_local_and_precision_receipt.json"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local advisory CO4 complete: Road ridge race failed gate and retained sealed CO3; precision 15 direct + 585 propagated + 0 unranked; MAIN review required.",
+      "research_only": true
     }
   ],
   "level_rules": {

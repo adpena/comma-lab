@@ -1,0 +1,24 @@
+{
+  "schema": "ddm_co4_review_pass.v1",
+  "pass_id": "co4_round1",
+  "reviewer": "codex_co4_math_custody",
+  "reviewed_at_utc": "2026-07-24T23:49:00Z",
+  "status": "CLEAN_AFTER_FIX",
+  "files": [
+    "src/tac/ddm_lambda_ranker.py",
+    "src/tac/ddm_campaign_costate.py",
+    "src/tac/tests/test_ddm_lambda_ranker.py",
+    "src/tac/tests/test_ddm_campaign_costate.py"
+  ],
+  "finding_fixed": "CO3 fallback initially recomputed the historical model; corrected to consume the exact sealed CO3 OOF prediction vector and validate all 600 targets.",
+  "focus": [
+    "PF2/MS4D event-mass conservation and exact pair membership",
+    "positive-semidefinite Fisher custody",
+    "target-free expert routing",
+    "direct-over-propagated precision precedence",
+    "Road-gate history preservation"
+  ],
+  "score_claim": false,
+  "actuation": "NONE"
+}
+
