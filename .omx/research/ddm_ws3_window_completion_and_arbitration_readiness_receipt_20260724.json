@@ -1,0 +1,110 @@
+{
+  "arbitration": {
+    "critical_ratio": 4.1215446777965665,
+    "decision": "KEEP_WJOINT",
+    "equation_id": "ddm_ws1_warm_start_slope_falsifier_v1",
+    "path": ".omx/research/ddm_ws3_warm_start_slope_arbitration_receipt_20260724.json",
+    "selected_warm_start": "W_joint",
+    "sha256": "10e1c335a8e3d2b529d0554e03ef60bbaaf7b2391f3c1aa73ef6de86aa01c072",
+    "verdict_scope": "W_seg reformed-opening FORMULATION versus this exact W_joint INSTANCE; no family, paradigm, promotion, or score verdict"
+  },
+  "blocking_directive": {
+    "consumed": true,
+    "directive_utc": "2026-07-24T14:45:16Z",
+    "effect": "generic coordinate/menu proposal evidence is a [naive-menu upper bound] and cannot authorize firing",
+    "required_replacement": [
+      "derive candidates from the exact rank-4 SegNet head and margin flip geometry",
+      "use the exact shared Seg/Pose resize factorization and separable resize-kernel adjoint/null projector",
+      "use the corrected inner-Jacobian bank",
+      "derive write support from the resize footprint, ERF, and stride-2 stem lattice"
+    ],
+    "source": "operator broadcast"
+  },
+  "dry_run": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_selected_w_joint_dryrun_20260724T145000Z/governed_dry_run.json",
+    "projected_peak_gib": 21.350140380859376,
+    "sha256": "3ed05b96a0e3d76d7468b816b9e2c44337eb301db7d6e0736deab79ee9196052",
+    "verdict": "DRY_RUN_GREEN_MAIN_REVIEW_AND_OPERATOR_GO_STILL_REQUIRED"
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "execution_allowed_by_this_receipt": false,
+  "firing_authority": "MAIN",
+  "fresh_re_smoke": {
+    "bounded_exit_code": 4,
+    "bounded_exit_classification": "BLOCKED_POSE_FINISH_CONDITIONING_HISTORY_INSUFFICIENT",
+    "checkpoint": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_selected_w_joint_resmoke_20260724T145100Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000001.npz",
+      "sha256": "b25c66700692300bb204aefa23409965088f41c2765ae3b5ec35213eef2afd8a"
+    },
+    "component_gate_decision": "REALIZED_STAGE_DESCENT_CONTINUE",
+    "cumulative_fire_gate_decision": "CUMULATIVE_COMPONENT_AND_RESIDUAL_FIRE_GATE_GREEN_VS_STAGE00",
+    "exact_negative_proposal": {
+      "archive_bytes": 138804,
+      "archive_sha256": "4487754bf1517946eb7b604817f99c5623ec0320aad3287edc67b436bae793f5",
+      "d_pose": 36.48107420610205,
+      "d_seg": 0.07030889723036024,
+      "joint_delta": -0.05689051019463004,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_selected_w_joint_resmoke_20260724T145100Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_y_minus1_shrink00_n600.json",
+      "pose_term": -0.03585911475933656,
+      "proposal_source": "worldsheet_joint_active_y_-1",
+      "rate_term": 1.997576859366514e-06,
+      "seg_term": -0.021033393012152846,
+      "sha256": "91b97531f1ad42b09e4fb7b881abc65702a5899955968a65e7f505c1ebbfed56",
+      "strict_joint_delta_lt_zero": true,
+      "warm_start_component_safe_residual_admitted": true,
+      "warm_start_realized_admitted": true
+    },
+    "full_run_receipt": {
+      "global_step": 1,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_selected_w_joint_resmoke_20260724T145100Z/full_run_receipt.json",
+      "sha256": "2fd346a6897a21ffb493674c7632c25200ffb31697d0d3b3d220c041e1e9a2fd",
+      "warm_start_component_safe_residual_admitted": true,
+      "warm_start_realized_admitted": true
+    },
+    "label": "[naive-menu upper bound]",
+    "memory_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_selected_w_joint_resmoke_20260724T145100Z/full_run_memory_preflight.json",
+      "sha256": "003630bf125bdc5373674c238e574c72121888c2111231e08c246385b1ee372a"
+    },
+    "realized_joint_delta_s_lt_zero_proved": true
+  },
+  "main_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "resealed_ticket": {
+    "path": ".omx/research/configs/ddm_ws3_w_joint_history_fill_20260724.json",
+    "sha256": "239a09bc2689c44c783fd6c882ac7fc282f8f42fb7e87d3582f6b63b61677c93",
+    "typed_config_hash": "346975b25fce972766ef89ebce437ba87cc2e11e37f709683682246116dbcf93"
+  },
+  "schema": "ddm_ws3_window_completion_and_arbitration_readiness.v1",
+  "score_claim": false,
+  "terminal_blockers": [
+    "BLOCKED_NEEDS_SCORER_RECURSIVE_PROPOSAL_CONSTRUCTION"
+  ],
+  "verdict": "BLOCKED_NEEDS_SCORER_RECURSIVE_PROPOSAL_CONSTRUCTION",
+  "verdict_scope": "selected W_joint INSTANCE under the generic proposal construction; exact re-smoke is an upper bound, not a family, paradigm, promotion, or score verdict",
+  "w_joint_exact_history": {
+    "exact_steps": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/full_run_receipt.json",
+    "sha256": "dca72cdc8c15a46be1a1d2e053bf813a79491d99c2793e57ec247f698be87e62"
+  },
+  "w_seg_formulation_stop": {
+    "accepted_steps": [
+      0
+    ],
+    "exact_terminal_proposal_steps": [
+      0,
+      1
+    ],
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_seg_reformed_four_step_abort_shrink_20260724T122200Z/full_run_receipt.json",
+    "sha256": "e367f60c8d8a64ba8b5aa8710bbe0f8115f37be8664eb2520f7d6081c09d0ab3",
+    "scope": "reformed seg-lexicographic opening FORMULATION under campaign acceptance"
+  }
+}
