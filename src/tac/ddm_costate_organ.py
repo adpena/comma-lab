@@ -89,6 +89,13 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         "one downstream joint-stack mutation; remeasure before reuse",
     ),
     SourceSpec(
+        "ev1",
+        "ddm_ev1_campaign_evidence_joins_*/ddm_ev1_campaign_evidence_join_receipt.json",
+        "ddm_ev1_campaign_evidence_join_receipt.v1",
+        True,
+        "until V19/RD1 endpoint bytes, receiver, scorer, G4, or metric custody changes",
+    ),
+    SourceSpec(
         "v19b",
         "ddm_v19b_joint_remeasure_stack_*/ddm_v19b_joint_remeasure_stack_receipt.json",
         "ddm_v19b_joint_remeasure_stack_receipt.v1",
@@ -647,7 +654,7 @@ def build_live_ddm_costate(
     dv1, dv1_custody = _dv1_summary(repo_root, sources["dv1"])
     g3_atlas, g3_bulk = _g3_atlas(sources["g3"])
     g4 = sources["g4"]["payload"]
-    v19 = sources["v19"]["payload"]
+    ev1 = sources["ev1"]["payload"]
     v19b = sources["v19b"]["payload"]
     hashes = {name: row["sha256"] for name, row in sources.items() if row["available"]}
     hashes["dv1_summary"] = str(dv1_custody["sha256"])
@@ -655,17 +662,13 @@ def build_live_ddm_costate(
         hashes["g3_full_atlas"] = str(g3_bulk["sha256"])
     lambda_bundle = build_ddm_lambda_bundle(
         atlas=g3_atlas,
-        v19=v19,
+        evidence_join=ev1,
         source_hashes=hashes,
     )
     pairs = list(lambda_bundle["pair_rows"])
     sites = list(lambda_bundle["site_rows"])
     campaign = build_campaign_costate(
         repo_root=repo_root,
-        exact_pair_rows=len(pairs),
-        required_pair_rows=(
-            len(pairs) + int(lambda_bundle["missing_exact_pair_lambda_count"])
-        ),
     )
     for name, row in campaign["source_lineage"]["sources"].items():
         hashes[f"campaign:{name}"] = str(row["sha256"])
@@ -720,7 +723,7 @@ def build_live_ddm_costate(
             0,
             {
                 "producer": "pair_site_lambda",
-                "reason": "no g3/v19 pair join available",
+                "reason": "no exact g3/EV1 pair join available",
                 "command": "python3 tools/ddm_costate_organ.py --json",
             },
         )
@@ -792,8 +795,9 @@ def build_live_ddm_costate(
             "block_rows": blocks,
             "backtest": backtest,
             "shared_rate_custody": (
-                "v19 per-pair byte allocation is null; global candidate bytes are not multiplied "
-                "across pairs. g3 baseline allocated bytes price pair lambda."
+                "EV1 measures one exact V19 global candidate-delta home; per-pair byte "
+                "allocation remains null and is never multiplied across pairs. G3 "
+                "baseline allocated bytes price pair lambda."
             ),
         },
         "scheduler": scheduler,
@@ -837,6 +841,7 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
     campaign = report["campaign"]
     campaign_digest = campaign_consumer_view(campaign, "digest")
     campaign_nag = campaign_digest["activation_nag"]
+    campaign_evidence = campaign_digest["campaign_evidence"]
     plateau = campaign_digest["plateau_route"]
     campaign_next = campaign_nag.get("next_duty") or {}
     lines = [
@@ -851,7 +856,8 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
             f"pair/site={len(report['lambda']['pair_rows'])}/"
             f"{len(report['lambda']['site_rows'])} "
             f"factorized-backtest rho={backtest['spearman_rho']:.3f} "
-            f"NDCG@4={backtest['ndcg_at_4']:.3f}; shared candidate bytes=OWED_NOT_INVENTED"
+            f"NDCG@4={backtest['ndcg_at_4']:.3f}; "
+            "shared candidate bytes=MEASURED_EXACT_GLOBAL_HOME"
         ),
         (
             f"DDM-next: {next_block['block_id']} rank={next_block['rank']} "
@@ -881,6 +887,12 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
                 f"{campaign_nag['standing_sense_rows']} "
                 f"blockers={len(campaign_nag['blocker_ids'])} "
                 f"next={campaign_next.get('duty') or 'NONE'}"
+            ),
+            (
+                "DDM-campaign-evidence: "
+                f"V19={campaign_evidence['v19_receiver_closed_join_status']} "
+                f"RD1={campaign_evidence['rd1_dimension_evidence_status']} "
+                f"pricing={campaign_evidence['bucket_exchange_rate_status']}"
             ),
         )
     )

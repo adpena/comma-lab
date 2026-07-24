@@ -35,6 +35,7 @@ from typing import Any, Literal
 
 import numpy as np
 
+from tac.ddm_campaign_evidence_join import validate_campaign_evidence_join
 from tac.ddm_costate_law import ddm_joint_costate, realized_pair_distortion_delta
 
 SCHEMA = "ddm_scorer_analytic_atlas.v2"
@@ -1139,14 +1140,14 @@ def _ndcg(predicted: Sequence[float], relevance: Sequence[float], k: int) -> flo
 def build_ddm_lambda_bundle(
     *,
     atlas: Mapping[int, Mapping[str, Any]],
-    v19: Mapping[str, Any],
+    evidence_join: Mapping[str, Any],
     source_hashes: Mapping[str, str],
 ) -> dict[str, Any]:
     """Produce the only live DDM pair/site lambda rows from exact joined factors.
 
-    The g3 atlas must be complete for all 600 pairs even though the extant v19
-    exact receiver replay covers eight selected pairs.  Missing v19 rows remain
-    explicit, counted, and inert; they are not filled from the legacy organ.
+    Both G3 and the receiver-closed EV1 pair join must cover all 600 pairs.
+    V19's 1,588 candidate bytes retain one exact global rate home: no pair row
+    receives a fabricated share.
     """
 
     expected = set(range(PAIR_COUNT))
@@ -1157,13 +1158,17 @@ def build_ddm_lambda_bundle(
         raise AnalyticAtlasError(
             f"lambda producer requires exact n600 g3 atlas; missing={missing} extra={extra}"
         )
-    for required in ("g3", "v19", "g3_full_atlas"):
+    for required in ("g3", "ev1", "g3_full_atlas"):
         if not _is_sha256(str(source_hashes.get(required, ""))):
             raise AnalyticAtlasError(f"lambda producer lacks fresh {required} hash")
+    evidence_counts = validate_campaign_evidence_join(evidence_join)
+    if evidence_counts["missing_pair_rows"] != 0:
+        raise AnalyticAtlasError("lambda producer requires exact n600 EV1 pair join")
 
     pairs: list[dict[str, Any]] = []
     sites: list[dict[str, Any]] = []
-    measured_rows = list(v19["pair_recursion_ledger"]["rows"])
+    measured_rows = list(evidence_join["v19_pair_join"]["rows"])
+    shared_rate_home = evidence_join["v19_pair_join"]["shared_rate_home"]
     for measured in measured_rows:
         pair_id = int(measured["source_pair_id"])
         g3 = atlas[pair_id]
@@ -1200,7 +1205,13 @@ def build_ddm_lambda_bundle(
                 "uint8_realizability": realizability,
                 "allocated_baseline_bytes": allocated,
                 "candidate_shared_bytes": measured.get("per_pair_byte_allocation"),
-                "candidate_shared_byte_status": "OWED_NOT_INVENTED",
+                "candidate_shared_byte_status": (
+                    "MEASURED_EXACT_GLOBAL_ARCHIVE_DELTA_HOME"
+                ),
+                "candidate_shared_rate_home_ref": shared_rate_home["home_id"],
+                "candidate_shared_global_delta_bytes": int(
+                    shared_rate_home["delta_counted_bytes"]
+                ),
                 "byte_price": byte_price,
                 "realized_distortion_delta_s": delta_s,
                 "dual_tolerance_d2": d2,
@@ -1244,7 +1255,7 @@ def build_ddm_lambda_bundle(
                     "errors_after": int(row["errors_after"]),
                     "allocation_status": (
                         "G3_CLASS_FLIP_SHARE_DERIVED; "
-                        "V19_SHARED_BYTES_UNALLOCATED"
+                        "V19_GLOBAL_RATE_HOME_MEASURED_NOT_PER_PAIR_ALLOCATED"
                     ),
                     "first_rung": True,
                 }
@@ -1270,11 +1281,11 @@ def build_ddm_lambda_bundle(
         "ndcg_at_4": _ndcg(predicted, realized, 4),
         "positive_realized_pairs": sum(value > 0.0 for value in realized),
         "verdict": (
-            "FACTORIZED_ADJOINT_VALID_ON_THIS_EIGHT_PAIR_BACKTEST"
+            "FACTORIZED_ADJOINT_VALID_ON_THIS_N600_BACKTEST"
             if spearman is not None and spearman >= 0.5
             else "FACTORIZED_ADJOINT_INVALID_OR_UNIDENTIFIABLE"
         ),
-        "verdict_scope": "INSTANCE:V19_EIGHT_PAIR_EXACT_RECEIVER_REPLAY_X_G3_ATLAS",
+        "verdict_scope": "INSTANCE:V19_N600_EXACT_RECEIVER_REPLAY_X_G3_ATLAS",
         "first_rung": True,
     }
     payload = {
@@ -1282,7 +1293,7 @@ def build_ddm_lambda_bundle(
         "site_rows": sites,
         "backtest": backtest,
         "n600_g3_input_complete": True,
-        "v19_exact_pair_count": len(pairs),
+        "ev1_exact_pair_count": len(pairs),
         "missing_exact_pair_lambda_count": len(missing_pair_ids),
     }
     return {
@@ -1290,11 +1301,7 @@ def build_ddm_lambda_bundle(
         "producer": (
             "tac.optimization.scorer_analytic_atlas.build_ddm_lambda_bundle"
         ),
-        "status": (
-            "PARTIAL_EXACT_V19_BACKTEST"
-            if missing_pair_ids
-            else "N600_EXACT_COMPLETE"
-        ),
+        "status": "N600_EXACT_COMPLETE",
         "pair_count_required": PAIR_COUNT,
         "n600_g3_input_complete": True,
         "pair_rows": pairs,

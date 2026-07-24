@@ -302,10 +302,10 @@ def test_lambda_producer_requires_complete_g3_before_v19_join() -> None:
     with pytest.raises(AnalyticAtlasError, match="exact n600"):
         build_ddm_lambda_bundle(
             atlas={},
-            v19={"pair_recursion_ledger": {"rows": []}},
+            evidence_join={},
             source_hashes={
                 "g3": "a" * 64,
-                "v19": "b" * 64,
+                "ev1": "b" * 64,
                 "g3_full_atlas": "c" * 64,
             },
         )
@@ -320,7 +320,8 @@ def test_live_organ_consumes_atlas_lambda_bundle_only() -> None:
     assert report["lambda"]["producer_schema"] == "ddm_scorer_analytic_lambda_bundle.v1"
     assert report["lambda"]["unconsumed_missing_pairs_counted_inert"] is True
     if report["source_custody"]["g3_full_atlas"]["status"] == "VERIFIED":
-        assert report["lambda"]["missing_exact_pair_lambda_count"] == 592
+        assert report["lambda"]["missing_exact_pair_lambda_count"] == 0
+        assert len(report["lambda"]["pair_rows"]) == 600
         assert all(row["first_rung"] is True for row in report["lambda"]["pair_rows"])
 
 

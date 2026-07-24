@@ -28,6 +28,7 @@ from tac.ddm_campaign_costate import (  # noqa: E402
     route_plateau,
     validate_realized_verdict,
 )
+from tac.ddm_campaign_evidence_join import METRIC_ID  # noqa: E402
 from tac.ddm_costate_law import RATE_BREAK_EVEN_SCORE_PER_BYTE  # noqa: E402
 from tac.ddm_costate_organ import build_live_ddm_costate  # noqa: E402
 from tac.witness_dsl.lever_registry import campaign_activation_nag  # noqa: E402
@@ -114,8 +115,6 @@ def _validated(raw: dict) -> dict:
 def _campaign(*, verdicts: list[dict] | None = None) -> dict:
     return build_campaign_costate(
         repo_root=REPO,
-        exact_pair_rows=8,
-        required_pair_rows=600,
         verdicts=verdicts,
     )
 
@@ -138,6 +137,13 @@ def test_current_campaign_is_one_hash_lineaged_advisory_truth() -> None:
     ]
     assert {view["state_digest"] for view in views} == {state["state_digest"]}
     assert campaign_activation_nag(state)["state_digest"] == state["state_digest"]
+    assert views[0]["campaign_evidence"]["v19_receiver_closed_join_status"] == (
+        "MEASURED_600_OF_600"
+    )
+    assert views[1]["campaign_evidence"]["rd1_dimension_evidence_status"] == (
+        "MEASURED_162_AMORTIZED_HOMES_(108_SHARED,54_PER_FRAME)_AND_"
+        "162_UINT8_HISTOGRAMS"
+    )
 
 
 def test_all_366_class_e_rows_stand_even_before_j8f() -> None:
@@ -159,50 +165,69 @@ def test_all_366_class_e_rows_stand_even_before_j8f() -> None:
 def test_metric_rows_are_scoped_and_bucket_prices_remain_blocked() -> None:
     state = _campaign()
     metric = state["metric_state"]
+    assert metric["scorer_metric"] == METRIC_ID
     rows = metric["aggregate_scalarization_controls"]
     assert len(rows) == 3
     assert all(row["schema"] == METRIC_ROW_SCHEMA for row in rows)
-    assert metric["bucket_exchange_rate_status"] == "BLOCKED_0_OF_162_ACTIONABLE"
+    assert metric["bucket_exchange_rate_status"] == (
+        "EVIDENCE_MEASURED_162_OF_162; "
+        "PRICING_PENDING_MS2R_0_OF_162_ACTIONABLE"
+    )
+    assert metric["v19_receiver_closed_join_status"] == "MEASURED_600_OF_600"
+    assert metric["rd1_dimension_evidence_status"] == (
+        "MEASURED_162_AMORTIZED_HOMES_(108_SHARED,54_PER_FRAME)_AND_"
+        "162_UINT8_HISTOGRAMS"
+    )
     bucket_rows = metric["bucket_exchange_rates"]
     assert len(bucket_rows) == 162
     assert all(row["schema"] == METRIC_ROW_SCHEMA for row in bucket_rows)
     assert all(row["lambda_score_per_byte"] is None for row in bucket_rows)
     assert all(row["actionable_for_train_decision"] is False for row in bucket_rows)
     assert all(
-        row["status"] == "DERIVED_FROM_TWO_MEASURED_N600_ENDPOINTS_NONADDITIVE_CONTROL"
+        row["evidence_status"]
+        == "MEASURED_RECEIVER_CLOSED_AMORTIZED_HOME_AND_HISTOGRAM"
+        for row in bucket_rows
+    )
+    assert sum(row["byte_home_scope"] != "per_frame" for row in bucket_rows) == 108
+    assert sum(row["byte_home_scope"] == "per_frame" for row in bucket_rows) == 54
+    assert all(row["byte_home_k"] >= 1.0 for row in bucket_rows)
+    assert all(row["amortized_bytes_per_frame"] >= 0.0 for row in bucket_rows)
+    assert all(len(row["receiver_uint8_abs_step_histogram"]) == 256 for row in bucket_rows)
+    assert all(
+        row["status"]
+        == "DERIVED_FROM_EV1_FRESH_N600_ENDPOINTS_NONADDITIVE_CONTROL"
         for row in rows
     )
     assert rows[0]["lambda_score_per_byte"] == pytest.approx(
         RATE_BREAK_EVEN_SCORE_PER_BYTE
         - rows[0]["lambda_distortion_reduction_per_byte"]
     )
-    blocker = next(
-        row
-        for row in state["blockers"]
-        if row["blocker_id"] == "BLOCKED_RD1_CANDIDATE_DELTA_G4_DIMENSION_BYTE_HOME"
-    )
-    assert blocker["evidence"]["typed_dimension_rows"] == 162
-    assert blocker["evidence"]["actionable_dimension_prices"] == 0
+    assert "BLOCKED_RD1_CANDIDATE_DELTA_G4_DIMENSION_BYTE_HOME" not in {
+        row["blocker_id"] for row in state["blockers"]
+    }
     assert all(row["schema"] == BLOCKER_SCHEMA for row in state["blockers"])
     assert state["decide"]["plateau_route"]["schema"] == DECISION_SCHEMA
     assert state["dynamic_policy"]["schema"] == DYNAMIC_POLICY_SCHEMA
 
 
-def test_v19_gap_is_exact_typed_blocker_not_optimistic_lambda() -> None:
+def test_v19_gap_is_closed_by_exact_receiver_rows_and_shared_rate_home() -> None:
     state = _campaign()
-    blocker = next(
-        row
+    assert not any(
+        row["blocker_id"].startswith("BLOCKED_RECEIVER_CLOSED_V19_EVIDENCE_JOIN_")
         for row in state["blockers"]
-        if row["blocker_id"] == "BLOCKED_RECEIVER_CLOSED_V19_EVIDENCE_JOIN_592"
     )
-    assert blocker["evidence"] == {
-        "exact_pair_rows": 8,
-        "required_pair_rows": 600,
-        "missing_pair_rows": 592,
+    evidence = state["source_lineage"]["sources"]["ev1_campaign_evidence_join"]
+    assert evidence["status"] == "CONTENT_HASH_VERIFIED"
+    assert state["consumers"]["duty_queue"]["rows"][-1] == {
+        "duty": "MS2R_TOLERANCE_CAPPED_DIMENSION_PRICING",
+        "reason": (
+            "EV1 measured 162/162 exclusive homes (108 shared across frames) "
+            "and receiver histograms; "
+            "ms2r owns the 0/162 priced solve"
+        ),
+        "actuation": "NONE",
+        "rank": 2,
     }
-    assert "candidate_rate_allocation_or_explicit_shared_rate_home" in blocker[
-        "required_evidence"
-    ]
 
 
 @pytest.mark.parametrize(
@@ -346,6 +371,9 @@ def test_dashboard_snapshot_exposes_global_campaign_without_mutation() -> None:
         view = dashboard_server._read_ddm_campaign()
     assert view["ok"] is True
     assert view["actuation"] == "NONE"
+    assert view["campaign_evidence"]["v19_receiver_closed_join_status"] == (
+        "MEASURED_600_OF_600"
+    )
     json.dumps(view, sort_keys=True, allow_nan=False)
 
 

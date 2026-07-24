@@ -27,6 +27,18 @@ from pathlib import Path
 from statistics import NormalDist, fmean, stdev
 from typing import Any
 
+from tac.ddm_campaign_evidence_join import (
+    METRIC_ID as EVIDENCE_METRIC_ID,
+)
+from tac.ddm_campaign_evidence_join import (
+    SCHEMA as EVIDENCE_JOIN_SCHEMA,
+)
+from tac.ddm_campaign_evidence_join import (
+    bucket_key as evidence_bucket_key,
+)
+from tac.ddm_campaign_evidence_join import (
+    validate_campaign_evidence_join,
+)
 from tac.ddm_costate_law import RATE_BREAK_EVEN_SCORE_PER_BYTE
 from tac.optimization.ddm_event_continuation import EVENT_MARK_SCHEMA
 
@@ -82,6 +94,13 @@ SOURCES: tuple[CampaignSource, ...] = (
         "ddm_rd1_lambda_continuation_frontier_receipt_v5.json",
         "ddm_rd1_lambda_continuation_frontier_receipt.v4",
         "until candidate domain, scorer custody, or counted archive bytes change",
+    ),
+    CampaignSource(
+        "ev1_campaign_evidence_join",
+        ".omx/research/ddm_ev1_campaign_evidence_joins_20260724T191623Z/"
+        "ddm_ev1_campaign_evidence_join_receipt.json",
+        EVIDENCE_JOIN_SCHEMA,
+        "until V19/RD1 endpoint bytes, receiver, scorer, G4, or metric custody changes",
     ),
     CampaignSource(
         "j8e_event_contract",
@@ -562,29 +581,45 @@ def _standing_sense_rows(verdicts: Sequence[Mapping[str, Any]]) -> list[dict[str
     return rows
 
 
-def _rd1_metric_rows(rd1: Mapping[str, Any], source: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _rd1_metric_rows(
+    rd1: Mapping[str, Any],
+    evidence_join: Mapping[str, Any],
+    source: Mapping[str, Any],
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    edges = {
+        int(row["dual_index"]): row
+        for row in evidence_join["rd1_evidence"]["edge_summaries"]
+    }
     for raw in rd1.get("aggregate_scalarization_controls") or []:
-        marginal_reduction = _finite(
-            raw["marginal_D_reduction_per_byte"], "marginal_D_reduction_per_byte"
+        dual = int(raw["dual_index"])
+        edge = edges[dual]
+        delta_bytes = _exact_int(
+            edge["delta_counted_bytes"], "ev1_delta_counted_bytes"
         )
+        delta_d = _finite(edge["joint_delta_D"], "ev1_joint_delta_D")
+        marginal_reduction = -delta_d / delta_bytes
         rows.append(
             {
                 "schema": METRIC_ROW_SCHEMA,
-                "row_id": f"rd1_aggregate_dual_{int(raw['dual_index'])}",
+                "row_id": f"rd1_aggregate_dual_{dual}",
                 "scope": "RESTRICTED_MEASURED_N600_DESCRIPTION_POOL",
                 "constraint_group": raw["constraint_group"],
-                "epistemic_status": raw["epistemic_status"],
+                "epistemic_status": (
+                    "DERIVED_FROM_EV1_FRESH_RECEIVER_CLOSED_N600_ENDPOINTS"
+                ),
                 "lambda_distortion_reduction_per_byte": marginal_reduction,
                 "lambda_score_per_byte": (
                     RATE_BREAK_EVEN_SCORE_PER_BYTE - marginal_reduction
                 ),
                 "rate_break_even_score_per_byte": RATE_BREAK_EVEN_SCORE_PER_BYTE,
-                "left_candidate_id": raw["left_candidate_id"],
-                "right_candidate_id": raw["right_candidate_id"],
-                "delta_counted_bytes": int(raw["delta_counted_bytes"]),
-                "delta_D_realized": _finite(raw["delta_D_realized"], "delta_D_realized"),
-                "status": "DERIVED_FROM_TWO_MEASURED_N600_ENDPOINTS_NONADDITIVE_CONTROL",
+                "left_candidate_id": edge["before_endpoint"],
+                "right_candidate_id": edge["after_endpoint"],
+                "delta_counted_bytes": delta_bytes,
+                "delta_D_realized": delta_d,
+                "status": (
+                    "DERIVED_FROM_EV1_FRESH_N600_ENDPOINTS_NONADDITIVE_CONTROL"
+                ),
                 "source": dict(source),
                 "score_claim": False,
             }
@@ -594,14 +629,29 @@ def _rd1_metric_rows(rd1: Mapping[str, Any], source: Mapping[str, Any]) -> list[
 
 def _rd1_bucket_rows(
     rd1: Mapping[str, Any],
+    evidence_join: Mapping[str, Any],
     *,
     rd1_source: Mapping[str, Any],
+    evidence_source: Mapping[str, Any],
     ms4d_source: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     """Expose every typed RD1 dimension dual without manufacturing a price."""
 
+    evidence_by_key = {
+        evidence_bucket_key(row): row
+        for row in evidence_join["rd1_evidence"]["bucket_rows"]
+    }
     rows: list[dict[str, Any]] = []
     for raw in rd1.get("duals") or []:
+        key = (
+            int(raw["dual_index"]),
+            str(raw["stratum"]),
+            str(raw["scorer_visibility"]),
+            str(raw["g4_temporal_class"]),
+        )
+        evidence = evidence_by_key.get(key)
+        if evidence is None:
+            raise ValueError(f"EV1 evidence join misses RD1 typed key {key!r}")
         bytes_per_d = raw.get("lambda_bytes_per_D_dimension")
         actionable = bool(raw.get("actionable_for_train_decision"))
         if actionable and bytes_per_d is not None:
@@ -626,21 +676,51 @@ def _rd1_bucket_rows(
                 "stratum": raw["stratum"],
                 "g4_temporal_class": raw["g4_temporal_class"],
                 "scorer_visibility": raw["scorer_visibility"],
-                "delta_D_dimension": raw.get("delta_D_dimension"),
-                "delta_counted_bytes_dimension": raw.get(
-                    "delta_counted_bytes_dimension"
+                "delta_D_dimension": _finite(
+                    evidence["delta_D_dimension"],
+                    "ev1_delta_D_dimension",
                 ),
+                "delta_counted_bytes_dimension": int(
+                    evidence["delta_counted_bytes_dimension"]
+                ),
+                "byte_home_scope": evidence["scope"],
+                "byte_home_k": _finite(evidence["k"], "ev1_byte_home_k"),
+                "byte_home_k_numerator": int(evidence["k_numerator"]),
+                "byte_home_k_denominator": int(evidence["k_denominator"]),
+                "amortized_bytes_per_frame": _finite(
+                    evidence["amortized_bytes_per_frame"],
+                    "ev1_amortized_bytes_per_frame",
+                ),
+                "byte_home_ranges": list(evidence["byte_home_ranges"]),
+                "receiver_uint8_abs_step_histogram": list(
+                    evidence["receiver_uint8_abs_step_histogram"]
+                ),
+                "receiver_changed_channel_values": int(
+                    evidence["receiver_changed_channel_values"]
+                ),
+                "receiver_uint8_abs_step_sum": int(
+                    evidence["receiver_uint8_abs_step_sum"]
+                ),
+                "evidence_status": (
+                    "MEASURED_RECEIVER_CLOSED_AMORTIZED_HOME_AND_HISTOGRAM"
+                ),
+                "pricing_owner": evidence["pricing_owner"],
                 "lambda_bytes_per_D": bytes_per_d,
                 "lambda_distortion_reduction_per_byte": reduction_per_byte,
                 "lambda_score_per_byte": score_per_byte,
                 "actionable_for_train_decision": actionable,
-                "status": str(raw["status"]),
+                "status": (
+                    "EVIDENCE_MEASURED_PRICING_SOLVE_PENDING_MS2R"
+                    if not actionable
+                    else str(raw["status"])
+                ),
                 "verdict_scope": (
                     "restricted n600 description-level continuation; null prices are "
                     "not family negatives"
                 ),
                 "sources": {
                     "rd1_dimension_dual": dict(rd1_source),
+                    "ev1_receiver_evidence": dict(evidence_source),
                     "ms4d_metric_custody": dict(ms4d_source),
                 },
                 "score_claim": False,
@@ -775,8 +855,6 @@ def campaign_consumer_view(state: Mapping[str, Any], consumer: str) -> dict[str,
 def build_campaign_costate(
     *,
     repo_root: Path,
-    exact_pair_rows: int,
-    required_pair_rows: int,
     verdicts: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Compose one hash-lineaged campaign state for every read-only consumer."""
@@ -790,22 +868,31 @@ def build_campaign_costate(
 
     rd1 = payloads["rd1_lambda_frontier"]
     ms7 = payloads["ms7_receiver_edges"]
-    exact_pair_rows = int(exact_pair_rows)
-    required_pair_rows = int(required_pair_rows)
-    if exact_pair_rows < 0 or required_pair_rows <= 0 or exact_pair_rows > required_pair_rows:
-        raise ValueError("invalid live V19 pair-join counts")
-    missing_pair_rows = required_pair_rows - exact_pair_rows
+    evidence_join = payloads["ev1_campaign_evidence_join"]
+    evidence_counts = validate_campaign_evidence_join(evidence_join)
+    exact_pair_rows = evidence_counts["exact_pair_rows"]
+    required_pair_rows = evidence_counts["required_pair_rows"]
     typed_dimension_rows = len(rd1.get("duals") or [])
     actionable_dimension_prices = sum(
         bool(row.get("actionable_for_train_decision"))
         for row in rd1.get("duals") or []
     )
-    metric_rows = _rd1_metric_rows(rd1, sources["rd1_lambda_frontier"])
+    metric_rows = _rd1_metric_rows(
+        rd1,
+        evidence_join,
+        sources["ev1_campaign_evidence_join"],
+    )
     bucket_rows = _rd1_bucket_rows(
         rd1,
+        evidence_join,
         rd1_source=sources["rd1_lambda_frontier"],
+        evidence_source=sources["ev1_campaign_evidence_join"],
         ms4d_source=sources["ms4d_metric_bundle"],
     )
+    measured_dimension_homes = evidence_counts["dimension_byte_homes"]
+    measured_shared_homes = evidence_counts["shared_across_frame_byte_homes"]
+    measured_per_frame_homes = evidence_counts["per_frame_byte_homes"]
+    measured_receiver_histograms = evidence_counts["receiver_uint8_histograms"]
     sense_rows = _standing_sense_rows(realized)
     latest = realized[-1] if realized else None
     decision = route_plateau(
@@ -864,39 +951,6 @@ def build_campaign_costate(
 
     blockers = [
         _blocker(
-            f"BLOCKED_RECEIVER_CLOSED_V19_EVIDENCE_JOIN_{missing_pair_rows}",
-            scope=(
-                f"CURRENT G3xV19 LIVE ORGAN JOIN; {exact_pair_rows}/"
-                f"{required_pair_rows} exact pair rows only; "
-                "no family negative"
-            ),
-            evidence={
-                "exact_pair_rows": exact_pair_rows,
-                "required_pair_rows": required_pair_rows,
-                "missing_pair_rows": missing_pair_rows,
-            },
-            required_evidence=(
-                "receiver_closed_v19_pair_outcome_for_each_missing_pair",
-                "candidate_rate_allocation_or_explicit_shared_rate_home",
-            ),
-        ),
-        _blocker(
-            "BLOCKED_RD1_CANDIDATE_DELTA_G4_DIMENSION_BYTE_HOME",
-            scope=(
-                "RD1 restricted n600 description domain; pooled scalarization controls "
-                "remain valid but non-actionable for train-decision pricing"
-            ),
-            evidence={
-                "typed_dimension_rows": typed_dimension_rows,
-                "actionable_dimension_prices": actionable_dimension_prices,
-                "pooled_dual_status": rd1.get("pooled_dual_status"),
-            },
-            required_evidence=(
-                "candidate_delta_x_g4_x_dimension_counted_byte_home",
-                "receiver_closed_uint8_histogram",
-            ),
-        ),
-        _blocker(
             "BLOCKED_J8F_REALIZED_VERDICT_TELEMETRY",
             scope="campaign SENSE; no inference from J8E compile or historical proxies",
             evidence={
@@ -915,19 +969,6 @@ def build_campaign_costate(
             for row in blockers
             if row["blocker_id"] != "BLOCKED_J8F_REALIZED_VERDICT_TELEMETRY"
         ]
-    if missing_pair_rows == 0:
-        blockers = [
-            row
-            for row in blockers
-            if not row["blocker_id"].startswith("BLOCKED_RECEIVER_CLOSED_V19_EVIDENCE_JOIN_")
-        ]
-    if actionable_dimension_prices == typed_dimension_rows:
-        blockers = [
-            row
-            for row in blockers
-            if row["blocker_id"] != "BLOCKED_RD1_CANDIDATE_DELTA_G4_DIMENSION_BYTE_HOME"
-        ]
-
     core = {
         "schema": SCHEMA,
         "available": True,
@@ -948,12 +989,21 @@ def build_campaign_costate(
             ),
         },
         "metric_state": {
-            "scorer_metric": "exact_composite_R_rank4_Fisher_plus_pose6_quadratic",
+            "scorer_metric": EVIDENCE_METRIC_ID,
             "aggregate_scalarization_controls": metric_rows,
             "bucket_exchange_rates": bucket_rows,
             "bucket_exchange_rate_status": (
-                f"BLOCKED_{actionable_dimension_prices}_OF_"
-                f"{typed_dimension_rows}_ACTIONABLE"
+                f"EVIDENCE_MEASURED_{measured_dimension_homes}_OF_"
+                f"{typed_dimension_rows}; PRICING_PENDING_MS2R_"
+                f"{actionable_dimension_prices}_OF_{typed_dimension_rows}_ACTIONABLE"
+            ),
+            "v19_receiver_closed_join_status": (
+                f"MEASURED_{exact_pair_rows}_OF_{required_pair_rows}"
+            ),
+            "rd1_dimension_evidence_status": (
+                f"MEASURED_{measured_dimension_homes}_AMORTIZED_HOMES_"
+                f"({measured_shared_homes}_SHARED,{measured_per_frame_homes}_PER_FRAME)_AND_"
+                f"{measured_receiver_histograms}_UINT8_HISTOGRAMS"
             ),
             "ms4d_terminal_status": "UNREACHABLE_BY_COUNTED_COORDINATES",
             "ms4d_terminal_buckets": int(ms7["r0"]["row_count"]),
@@ -1007,24 +1057,15 @@ def build_campaign_costate(
                     "actuation": "NONE",
                 }
             )
-        if missing_pair_rows:
-            duty_queue.append(
-                {
-                    "duty": "V19_RECEIVER_CLOSED_JOIN",
-                    "reason": (
-                        f"{missing_pair_rows}/{required_pair_rows} exact receiver-closed "
-                        "pair joins remain owed"
-                    ),
-                    "actuation": "NONE",
-                }
-            )
         if actionable_dimension_prices < typed_dimension_rows:
             duty_queue.append(
                 {
-                    "duty": "RD1_DIMENSION_RATE_HOME",
+                    "duty": "MS2R_TOLERANCE_CAPPED_DIMENSION_PRICING",
                     "reason": (
-                        f"{actionable_dimension_prices}/{typed_dimension_rows} typed dimension "
-                        "rows have candidate-delta x G4 byte homes"
+                        f"EV1 measured {measured_dimension_homes}/{typed_dimension_rows} "
+                        f"exclusive homes ({measured_shared_homes} shared across frames) "
+                        "and receiver histograms; ms2r owns the "
+                        f"{actionable_dimension_prices}/{typed_dimension_rows} priced solve"
                     ),
                     "actuation": "NONE",
                 }
@@ -1049,6 +1090,17 @@ def build_campaign_costate(
         "sense_rows": sense_rows,
         "metric_rows": metric_rows,
         "bucket_rows": bucket_rows,
+        "campaign_evidence": {
+            "v19_receiver_closed_join_status": core["metric_state"][
+                "v19_receiver_closed_join_status"
+            ],
+            "rd1_dimension_evidence_status": core["metric_state"][
+                "rd1_dimension_evidence_status"
+            ],
+            "bucket_exchange_rate_status": core["metric_state"][
+                "bucket_exchange_rate_status"
+            ],
+        },
         "blockers": blockers,
         "activation_nag": activation_nag,
         "actuation": "NONE",
@@ -1060,6 +1112,17 @@ def build_campaign_costate(
         "verdict_count": len(realized),
         "plateau_route": decision,
         "duty_queue": duty_queue,
+        "campaign_evidence": {
+            "v19_receiver_closed_join_status": core["metric_state"][
+                "v19_receiver_closed_join_status"
+            ],
+            "rd1_dimension_evidence_status": core["metric_state"][
+                "rd1_dimension_evidence_status"
+            ],
+            "bucket_exchange_rate_status": core["metric_state"][
+                "bucket_exchange_rate_status"
+            ],
+        },
         "activation_nag": activation_nag,
         "actuation": "NONE",
     }

@@ -86937,6 +86937,47 @@
         }
       },
       "notes": "Advisory campaign SENSE/DECIDE implemented; 104 selected tests clean; J8F telemetry, V19 592 joins, and RD1 0/162 prices remain exact blockers; MAIN review required."
+    },
+    {
+      "id": "ddm_ev1_campaign_evidence_joins",
+      "name": "DDM EV1 campaign evidence joins",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/ddm_campaign_evidence_join.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ev1_campaign_evidence_joins_20260724T191623Z/ddm_ev1_campaign_evidence_join_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_ddm_campaign_evidence_join.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local n600 receiver-closed V19 600/600; RD1 162 exclusive G4-class-prior amortized homes plus 162 Brotli-Q11-verified uint8 histograms. Pricing remains ms2r-owned; contest CPU/CUDA unmeasured; MAIN review required."
     }
   ],
   "level_rules": {
@@ -86946,5 +86987,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T18:08:50Z"
+  "updated_at": "2026-07-24T21:08:15Z"
 }
