@@ -23670,3 +23670,22 @@ surface (segnet fractal factorization · frozen-scorer factorization · at1 atla
 bound] + a named scorer-derived replacement. verdict_scope: re-scope/sharpening only — no prior
 verdict overturned (both affected arms had honestly scoped their own bounds). Pointer 0.1910828242
 [contest-CPU] UNMOVED.
+
+### FEED-603-warnings-blocking-law (2026-07-24, MAIN)
+Operator: "warnings exist for a reason you fucking dumbass." ROOT CAUSE (honest): the METRIC-NAMING
+ADVISORY fired CORRECTLY on 4 consecutive naive spawns (incl. dm2 generic-menu → 2,524× naive bound,
+dm3 translation-only ξ → 0/36); the warn-only design was legitimate (fmtools never-blocking, real
+false positives on survey charters); the failure was the CONSUMER habituating to yellow text. TWO
+LANDINGS: (1) behavioral law — every apparatus warning is a BLOCKING checkpoint for MAIN's decision
+process; warn-only = the tool's rc, never my license; 2nd identical warning ⇒ mandatory
+stop-and-fix-default (memory apparatus_warnings_are_blocking_checkpoints_for_my_decisions_20260724 +
+MEMORY.md line). (2) structural — BLOCKING SCORER-DERIVATION GATE in tools/codex_delegate.py rc=15
+(commit ff5f011dad): construction-shaped charter must name its recursive-evaluate.py derivation
+surface (rank-4 head · frozen-scorer factorization · at1 · sn1 · #580 adjoint · #583 corrected-J ·
+ERF/stem lattice) or carry [naive-baseline]; TAC_SCORER_DERIVATION_WAIVED substantive-rationale
+waiver, placeholders rejected. VERIFIED: live refuse rc=15 zero side effects · pass-regex on
+derivation-bearing charter · placeholder-waiver rejected rc=15 · RETRO-CHECK: dm2 + dm4 charters
+would have REFUSED (the gate catches exactly the flagged class). Genuine-waiver pass-through
+verified by code review only (live test would spawn). verdict_scope: apparatus/process (no score
+claim). Pointer 0.1910828242 [contest-CPU] UNMOVED (means, not end). Sister: FEED-603-scorer-
+recursion-directive (the broadcast this gate makes structural).
