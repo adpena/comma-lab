@@ -950,6 +950,54 @@ def _load_rg3_assignment(path: Path) -> tuple[dict[str, Any], list[str]]:
     return value, sorted(actuator_ids)
 
 
+def _rg3_fisher_margin_receipt(assignment: Mapping[str, Any]) -> dict[str, Any]:
+    custody = assignment.get("input_custody")
+    margin_sha = (
+        custody.get("fisher_margin_sha256")
+        if isinstance(custody, Mapping)
+        else None
+    )
+    if not isinstance(margin_sha, str) or re.fullmatch(r"[0-9a-f]{64}", margin_sha) is None:
+        raise MS6MeasurementError("RG3 Fisher-margin assignment custody is malformed")
+    return {
+        "assignment_input_sha256": margin_sha,
+        "metric": "categorical_fisher_trace_half_sech2_top1_top2_margin",
+        "margin_field_shipped": False,
+        "receiver_uses_counted_fine_band_symbol_only": True,
+    }
+
+
+def _pf2_membership_invariant(table: Mapping[str, Any]) -> dict[str, Any]:
+    rows = table.get("rows")
+    if not isinstance(rows, list) or len(rows) != 1200:
+        raise MS6MeasurementError("PF2 membership invariant requires exactly 1200 rows")
+    payload = []
+    incidence_count = 0
+    for row in rows:
+        if not isinstance(row, Mapping):
+            raise MS6MeasurementError("PF2 membership invariant row is malformed")
+        membership = row.get("pf2_membership_pair_ids")
+        if (
+            not isinstance(row.get("bucket_id"), str)
+            or not isinstance(membership, list)
+            or any(isinstance(value, bool) or not isinstance(value, int) for value in membership)
+            or membership != sorted(set(membership))
+        ):
+            raise MS6MeasurementError("PF2 membership invariant row is malformed")
+        incidence_count += len(membership)
+        payload.append(
+            {
+                "bucket_id": row["bucket_id"],
+                "pf2_membership_pair_ids": membership,
+            }
+        )
+    return {
+        "row_count": len(payload),
+        "pair_bucket_incidence_count": incidence_count,
+        "content_sha256": canonical_sha256({"rows": payload}),
+    }
+
+
 def run(args: argparse.Namespace) -> Path:
     storage = _storage_preflight(args.bulk_output)
     args.bulk_output.mkdir(parents=True, exist_ok=True)
@@ -1155,6 +1203,12 @@ def run(args: argparse.Namespace) -> Path:
         expected_pf2_sha256=EXPECTED_PF2_SHA256,
         probe_results=probe_results,
     )
+    input_membership_invariant = _pf2_membership_invariant(base_table)
+    output_membership_invariant = _pf2_membership_invariant(measured_table)
+    if input_membership_invariant != output_membership_invariant:
+        raise MS6MeasurementError(
+            "iterative measurement changed sealed PF2 membership obligations"
+        )
     table_path = args.receipt_output / "pf2_bucket_assignment_table.json"
     table_payload = canonical_bytes(measured_table)
     _publish(table_path, table_payload)
@@ -1242,6 +1296,12 @@ def run(args: argparse.Namespace) -> Path:
             ),
         },
         "coverage": measured_table["coverage"],
+        "iterative_assignment_invariant": {
+            "charter_name": "372-required invariant",
+            "preserved": True,
+            "input": input_membership_invariant,
+            "output": output_membership_invariant,
+        },
         "producer_rerun": {
             "eligible": False,
             "ms4_harness_invoked": False,
@@ -1290,12 +1350,7 @@ def run(args: argparse.Namespace) -> Path:
                 "outer_v19c_base_sha256": EXPECTED_BASE_SHA256,
             },
             "grammar_verdict_scope": "INSTANCE_EXTENDED_GRAMMAR_RG3",
-            "fisher_margin_selection": {
-                "assignment_input_sha256": rg3_assignment["fisher_margin_input"]["sha256"],
-                "metric": rg3_assignment["fisher_margin_input"]["selection_metric"],
-                "margin_field_shipped": False,
-                "receiver_uses_counted_fine_band_symbol_only": True,
-            },
+            "fisher_margin_selection": _rg3_fisher_margin_receipt(rg3_assignment),
             "score_units_per_byte_status": "MEASURED_BY_EXACT_BUCKET_COVERAGE_NOT_SCORE",
             "typed_stream_layer": "SKELETON/L3_raster",
             "no_fourier_basis": True,

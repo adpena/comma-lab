@@ -276,6 +276,7 @@ def _coordinate_derivation(
     *,
     rg2_assignment: Mapping[str, Any] | None,
     rg3_assignment: Mapping[str, Any] | None = None,
+    checkpoints: Mapping[tuple[str, str], Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     by_bucket = {str(row["bucket_id"]): row for row in table_rows}
     rg2_by_key = (
@@ -323,8 +324,7 @@ def _coordinate_derivation(
         else:
             next_families = _candidate_coordinate_families(atlas_key)
             reason = "NO_MEASURED_RG1_PROBE_JOIN_AT_EXACT_PAIR_BUCKET"
-        residue.append(
-            {
+        residual_row = {
                 "pair_id": pair_id,
                 "bucket_id": bucket_id,
                 "typed_key": dict(atlas_key),
@@ -340,7 +340,7 @@ def _coordinate_derivation(
                 ),
                 **(
                     {
-                        "rg3_family": rg3_row["family"],
+                        "rg3_family": rg3_row["selected_coordinate_family"],
                         "rg3_receiver_actuator_ids": rg3_row[
                             "receiver_actuator_ids"
                         ],
@@ -349,7 +349,73 @@ def _coordinate_derivation(
                     else {}
                 ),
             }
-        )
+        if rg3_row is not None and checkpoints is not None:
+            probe_evidence = []
+            exact_join_seen = False
+            target_bucket_seen = False
+            for actuator_id in rg3_row["receiver_actuator_ids"]:
+                for direction_id in DIRECTIONS:
+                    probe = checkpoints.get((str(actuator_id), direction_id))
+                    if probe is None:
+                        raise SummaryError(
+                            f"RG3 assignment-bound checkpoint is absent: "
+                            f"{actuator_id} {direction_id}"
+                        )
+                    target_hits = [
+                        hit
+                        for hit in probe["bucket_hits"]
+                        if str(hit["bucket_id"]) == bucket_id
+                    ]
+                    target_bucket_seen = target_bucket_seen or bool(target_hits)
+                    joined = any(pair_id in hit["pair_ids"] for hit in target_hits)
+                    exact_join_seen = exact_join_seen or joined
+                    probe_evidence.append(
+                        {
+                            "receiver_actuator_id": actuator_id,
+                            "direction_id": direction_id,
+                            "status": probe["status"],
+                            "target_bucket_hit": bool(target_hits),
+                            "target_pair_joined": joined,
+                            "target_bucket_event_count": sum(
+                                int(hit["event_count"]) for hit in target_hits
+                            ),
+                            "checkpoint_sha256": probe["_checkpoint_sha256"],
+                        }
+                    )
+            if exact_join_seen:
+                raise SummaryError(
+                    f"RG3 residual unexpectedly contains an exact joined row: "
+                    f"{pair_id} {bucket_id}"
+                )
+            statuses = Counter(str(row["status"]) for row in probe_evidence)
+            if set(statuses) == {"MEASURED_EMPTY_RASTER_SUPPORT"}:
+                blocker = "NO_RECEIVER_RASTER_SUPPORT_IN_ANY_COUNTED_RG3_MAGNITUDE_OR_SIGN"
+            elif not target_bucket_seen:
+                blocker = "NO_TARGET_BUCKET_EVENT_CHANGED_BY_ANY_COUNTED_RG3_MAGNITUDE_OR_SIGN"
+            else:
+                blocker = "TARGET_BUCKET_CHANGED_BUT_REQUIRED_PAIR_NEVER_JOINED"
+            derived_next_family = {
+                "EVENT_LOCAL_SKELETON_CLASS_BIRTH_PRODUCTION": (
+                    "WORLDSHEET_EVENT_INDEXED_TYPED_INTERFACE_ARC"
+                ),
+                "FINER_EVENT_LOCAL_SKELETON_AMPLITUDE_CODEBOOK": (
+                    "CURVELET_OR_SHEARLET_BOUNDARY_ARC_CODEBOOK"
+                ),
+                "FISHER_MARGIN_PER_STRATUM_SKELETON_AMPLITUDE_CODEBOOK": (
+                    "FISHER_MARGIN_SITE_LOCAL_PER_STRATUM_CODEBOOK"
+                ),
+            }[rg3_row["selected_coordinate_family"]]
+            residual_row["rg3_probe_blocker"] = {
+                "classification": blocker,
+                "status_counts": dict(sorted(statuses.items())),
+                "probe_count": len(probe_evidence),
+                "probes": probe_evidence,
+                "derived_next_coordinate_family": derived_next_family,
+                "next_coordinate_family_status": (
+                    "ADVISORY_DERIVATION_ONLY; NO_RG4_AUTHORIZED"
+                ),
+            }
+        residue.append(residual_row)
     if rg3_assignment is not None:
         derivation_rule = (
             "RG3 is the authorized terminal residual-family pass. Any exact "
@@ -578,6 +644,7 @@ def build_summary(
             g3_coverage,
             rg2_assignment=rg2_assignment,
             rg3_assignment=rg3_assignment,
+            checkpoints=checkpoints,
         ),
         "producer_rerun_eligible": False,
         "producer_rerun_reason": "set after the G3 coverage proof below",

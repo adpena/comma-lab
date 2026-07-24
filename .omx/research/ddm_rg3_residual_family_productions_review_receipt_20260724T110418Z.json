@@ -1,0 +1,43 @@
+{
+  "author_self_review_is_not_main_landing_review": true,
+  "clean_pass_count": 3,
+  "main_landing_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "post_fix_passes": [
+    {
+      "command_class": "focused grammar, assignment, iterative-membership, canonical-equation, and summary pytest suites",
+      "result": "38 passed in 48.39s",
+      "status": "CLEAN"
+    },
+    {
+      "command_class": "Ruff, py_compile, and independent canonical-hash/count/invariant assertions",
+      "evidence": "assignment 36 rows/62 magnitudes/124 new probes; merged 994 probes; membership 1200 rows/9892 incidences; summary 25 residuals",
+      "result": "All checks passed; PASS2_CUSTODY_CLEAN 3d4c4fb635ec37668cbf6037cefca63fe7c08a9ad950e6724ae023deb0473fd2",
+      "status": "CLEAN"
+    },
+    {
+      "command_class": "blind in-memory assignment and summary regeneration plus inactive byte identity and canonical-registry lookup",
+      "result": "PASS3_RERIVATION_CLEAN 7db3b19f270cdf2b7356fba0bf6466c561e81b6beb4628deee6231bc53ae2e9c; git diff --check clean",
+      "status": "CLEAN"
+    }
+  ],
+  "round1_defects_fixed_before_clean_passes": [
+    {
+      "defect": "measurement receipt read nonexistent fisher_margin_input instead of sealed input_custody.fisher_margin_sha256",
+      "protection": "_rg3_fisher_margin_receipt plus regression assertion"
+    },
+    {
+      "defect": "summary read assignment row family instead of selected_coordinate_family",
+      "protection": "terminal-blocker summary regression test"
+    },
+    {
+      "defect": "canonical equation described 4-row fine bands while executable receiver uses 16-row fine bands",
+      "protection": "canonical callable and address-selection tests now match executable constants"
+    }
+  ],
+  "schema": "ddm_rg3_residual_family_review_receipt.v1",
+  "score_claim": false,
+  "verdict": "THREE_POST_FIX_CLEAN_PASSES; MAIN_REVIEW_STILL_REQUIRED",
+  "verdict_scope": "INSTANCE_EXTENDED_GRAMMAR_RG3"
+}

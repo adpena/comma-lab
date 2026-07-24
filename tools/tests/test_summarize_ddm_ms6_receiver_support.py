@@ -169,7 +169,9 @@ def test_rg3_coordinate_derivation_reports_terminal_blocker_without_rg4() -> Non
             {
                 "pair_id": 2,
                 "bucket_id": "cell",
-                "family": "FISHER_MARGIN_PER_STRATUM_SKELETON_AMPLITUDE_CODEBOOK",
+                "selected_coordinate_family": (
+                    "FISHER_MARGIN_PER_STRATUM_SKELETON_AMPLITUDE_CODEBOOK"
+                ),
                 "receiver_actuator_ids": [
                     "rg3.fisher_stratum.pair002.class0_1.cell.transient.band03.fine02.mag1",
                     "rg3.fisher_stratum.pair002.class0_1.cell.transient.band03.fine02.mag2",
@@ -177,17 +179,54 @@ def test_rg3_coordinate_derivation_reports_terminal_blocker_without_rg4() -> Non
             }
         ]
     }
+    checkpoints = {
+        (actuator_id, direction): {
+            "status": "MEASURED_ARGMAX_PERTURBATION",
+            "bucket_hits": [
+                {
+                    "bucket_id": "cell",
+                    "pair_ids": [7],
+                    "event_count": 2,
+                }
+            ],
+            "_checkpoint_sha256": str(index) * 64,
+        }
+        for index, (actuator_id, direction) in enumerate(
+            (
+                (actuator_id, direction)
+                for actuator_id in rg3_assignment["rows"][0][
+                    "receiver_actuator_ids"
+                ]
+                for direction in (
+                    "NEGATIVE_ONE_QUANTUM",
+                    "POSITIVE_ONE_QUANTUM",
+                )
+            ),
+            start=1,
+        )
+    }
 
     value = _coordinate_derivation(
         rows,
         coverage,
         rg2_assignment=None,
         rg3_assignment=rg3_assignment,
+        checkpoints=checkpoints,
     )
 
     assert value["verdict_scope"] == "INSTANCE_EXTENDED_GRAMMAR_RG3"
     assert value["residual"][0]["candidate_coordinate_families"] == []
     assert value["next_authorized_family_status"] == "NO_RG4_AUTHORIZED"
+    assert value["residual"][0]["rg3_probe_blocker"]["classification"] == (
+        "TARGET_BUCKET_CHANGED_BUT_REQUIRED_PAIR_NEVER_JOINED"
+    )
+    assert value["residual"][0]["rg3_probe_blocker"]["probe_count"] == 4
+    assert value["residual"][0]["rg3_probe_blocker"][
+        "derived_next_coordinate_family"
+    ] == "FISHER_MARGIN_SITE_LOCAL_PER_STRATUM_CODEBOOK"
+    assert "NO_RG4_AUTHORIZED" in value["residual"][0]["rg3_probe_blocker"][
+        "next_coordinate_family_status"
+    ]
 
 
 def test_load_checkpoints_selects_assignment_bound_revision_across_roots(

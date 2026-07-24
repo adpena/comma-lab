@@ -14,7 +14,11 @@ from tools.build_ddm_rg3_residual_family_assignments import (
     RG3AssignmentError,
     build_assignment,
 )
-from tools.measure_ddm_ms6_receiver_support import _load_rg3_assignment
+from tools.measure_ddm_ms6_receiver_support import (
+    _load_rg3_assignment,
+    _pf2_membership_invariant,
+    _rg3_fisher_margin_receipt,
+)
 
 
 def test_real_rg2_residue_builds_exact_rg3_assignment() -> None:
@@ -57,3 +61,24 @@ def test_measurement_loader_accepts_only_the_sealed_rg3_vocabulary() -> None:
     assert value["row_count"] == 36
     assert len(actuator_ids) == 62
     assert len(set(actuator_ids)) == 62
+    fisher = _rg3_fisher_margin_receipt(value)
+    assert fisher["assignment_input_sha256"] == value["input_custody"][
+        "fisher_margin_sha256"
+    ]
+    assert fisher["margin_field_shipped"] is False
+
+
+def test_membership_invariant_is_independent_of_measured_joined_pairs() -> None:
+    rows = [
+        {
+            "bucket_id": f"bucket_{index:04d}",
+            "pf2_membership_pair_ids": [1, 7] if index == 0 else [],
+            "pair_ids": [1] if index == 0 else [],
+        }
+        for index in range(1200)
+    ]
+    first = _pf2_membership_invariant({"rows": rows})
+    rows[0]["pair_ids"] = []
+    second = _pf2_membership_invariant({"rows": rows})
+    assert first == second
+    assert first["pair_bucket_incidence_count"] == 2

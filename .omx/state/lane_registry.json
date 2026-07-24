@@ -86083,15 +86083,15 @@
       "id": "lane_ddm_rg3_residual_family_productions_20260724",
       "name": "DDM RG3 residual family productions",
       "phase": 0.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_rg3_residual_family_productions_20260724T110418Z_codex.md"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_rg3_residual_family_productions_20260724T110418Z/ddm_rg3_receiver_support_summary.json"
         },
         "contest_cuda": {
           "status": false,
@@ -86106,8 +86106,8 @@
           "evidence": ""
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_rg3_residual_family_productions_review_receipt_20260724T110418Z.json"
         },
         "memory_entry": {
           "status": false,
@@ -86118,7 +86118,12 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "MAIN explicitly authorizes a successor family for the 25 exact residual rows",
+        "same SHA-bound base and 372-required membership invariant remain mandatory"
+      ]
     }
   ],
   "level_rules": {
@@ -86128,5 +86133,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T11:05:47Z"
+  "updated_at": "2026-07-24T11:47:48Z"
 }

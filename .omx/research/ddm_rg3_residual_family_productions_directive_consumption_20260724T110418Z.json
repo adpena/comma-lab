@@ -1,0 +1,60 @@
+{
+  "main_landing_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "rows": [
+    {
+      "directive": "delegated authority file is the complete task authority",
+      "evidence": "bytes=7789; sha256=b32f020c6311187e8742d5e5581acbe9c862ae0b181cf7b71c56520dcb8a6c25",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "extend the same SHA-bound RG1/RG2 carrier with versioned RG3 and exact inactive identity",
+      "evidence": "DDRG3/RG3RF packet is additive; empty compile returns nested carrier sha256 7990fce786aac1f24bcb977882348867ca2d9cbc4d95d0337dd1167e593f46c6",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "build exactly 10 class-birth, 9 finer event-local, and 17 Fisher-margin per-stratum residual rows",
+      "evidence": "36 assignment rows; 62 counted magnitude coordinates; family counts 10/9/17; assignment file sha256 40d4150eb3c1bee1197b4023a1e2986e498f429d85677e992a8464ac7acab82e",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "strict counted typed packet with sorted unique addresses, CRC, parse-back identity, and no scorer or label payload",
+      "evidence": "RG3RF v1 packet plus DDRG3 v3 manifest; TypedStreamTag SKELETON/L3_raster; Fisher source used offline only; focused packet/receiver tests pass",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "run only new signed probes with four Torch threads, SSD-first resumable checkpoints, preserving all 870 prior rows",
+      "evidence": "124 new checkpoints plus 870 prior authoritative rows equals 994; all 124 candidate archive SHAs unique; SSD checkpoint root preserved; threads=4",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "preserve the 372-required iterative assignment invariant",
+      "evidence": "1200 PF2 rows and 9892 pair-bucket memberships preserved byte-semantically; input and output membership content sha256 both 995f72c1591f6595f84c42e2165467f1e49e4f53910725624381a5119d5c4cbd",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "close all 36 if possible; otherwise name exact blockers and derived next family without iterating RG4",
+      "evidence": "11/36 closed; 25 exact pair-bucket blockers retained with four-or-two checkpoint receipts each; advisory next-family derivations recorded; NO_RG4_AUTHORIZED; MS4 refused",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "Fisher-margin metric, reverse-waterfill admission, and no Fourier residual basis",
+      "evidence": "Fisher trace 0.5*sech^2(m/2) selects cell subbands; no margin field ships; no Fourier basis; score-units-per-byte remains downstream owed",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "no paid dispatch, exact eval, training, or frontier mutation",
+      "evidence": "local macOS CPU frozen-scorer advisory only; score_claim=false; producer rerun ineligible; pointer unchanged",
+      "status": "CONSUMED"
+    },
+    {
+      "directive": "triality, findings-as-first-rungs, own round-1, three clean passes, and MAIN landing review",
+      "evidence": "DAG FEED, registered canonical equation, this directive table, findings memo, and review receipt are branch artifacts; main_landing_review_required=true",
+      "status": "CONSUMED"
+    }
+  ],
+  "schema": "ddm_rg3_residual_family_directive_consumption.v1",
+  "score_claim": false,
+  "verdict_scope": "INSTANCE_EXTENDED_GRAMMAR_RG3"
+}
