@@ -2,11 +2,11 @@
   "adjudication_required": true,
   "app": "comma-auth-eval-cpu",
   "axis": "contest_cpu",
-  "call_id": "fc-01KYAGCAT9FF0445XJ6QZFMRZ2",
+  "call_id": "fc-01KYAHBDB47Q9EFVR5HKGASWY6",
   "claim_agent": "claude:main-fable",
   "claim_platform": "modal",
-  "dispatched_at_utc": "2026-07-24T16:47:17Z",
-  "instance_job_id": "ddm_ic1_incumbent_compose_and_buy_row_20260724_cpu_buy_r2",
+  "dispatched_at_utc": "2026-07-24T17:04:15Z",
+  "instance_job_id": "ddm_ic1_incumbent_compose_and_buy_row_20260724_cpu_buy_r3",
   "lane_id": "lane_ddm_ic1_incumbent_compose_and_buy_row_20260724_exact_eval_cpu",
   "local_request": {
     "adjudication_required": true,
@@ -48,7 +48,7 @@
     "scorer_input_cache_tensors_requested": false,
     "single_axis_waiver_reason": null,
     "single_axis_waiver_used": false,
-    "source_repo_commit": "339494834bb63187387bdf785372a48cc4017694",
+    "source_repo_commit": "c873fb8bd4427fe3d02f51f0fcef18608bad99d1",
     "submission_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_ic1_incumbent_compose_and_buy_row_20260724/packet",
     "submission_dir_zip_sha256": "e58a5297982539f575f07ff30582313cd95b5e378e848d33b32fd20b8134c7cd",
     "tool": "experiments/modal_auth_eval_cpu.py"
