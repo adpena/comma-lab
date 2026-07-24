@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-07-24T16:47:24Z",
+  "tool": "experiments/contest_auth_eval.py",
+  "archive_path": "/tmp/modal_auth_eval_cpu/archive.zip",
+  "archive_sha256": "aba831de718f7bc5fd264b9334a29ef8a9388052a629941e50eea1b854fe49d9",
+  "archive_size_bytes": 131582,
+  "inflate_script": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.sh",
+  "inflate_script_sha256": "a1bcb0ec50ace10352cd91290c3e6d4f79127dceb8471c2fc137daf6c31f723f",
+  "inflate_runtime_manifest": {
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "runtime_root": "/tmp/modal_auth_eval_cpu/submission_dir",
+    "runtime_file_count": 2,
+    "runtime_tree_sha256": "1976cdb2ae31b134c695a04bd1231ecb3a22ff8bd32adf9f541bc1c401562fae",
+    "runtime_content_tree_sha256": "3ff619d474bf27a002c9a84a603526b4f7018364eba0fd1b2dcb742d6f56e8d5",
+    "files": [
+      {
+        "relative_path": "inflate.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.py",
+        "bytes": 4478945,
+        "sha256": "d67b169ac50a080ed6117b2a554684c99b803292f63fea3d1c2728e75a155dbd"
+      },
+      {
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.sh",
+        "bytes": 416,
+        "sha256": "a1bcb0ec50ace10352cd91290c3e6d4f79127dceb8471c2fc137daf6c31f723f"
+      }
+    ],
+    "external_dependency_roots": [],
+    "repo_local_tac_import_manifest": {
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "discovery": "static_ast_recursive_import_closure",
+      "runtime_root_name": "submission_dir",
+      "tac_root_relative_path": "src/tac",
+      "root_import_modules": [
+        "tac.optimization.ddm_ws1_warm_start"
+      ],
+      "unresolved_modules": [
+        "tac.optimization.ddm_ws1_warm_start"
+      ],
+      "parse_errors": [],
+      "module_count": 1,
+      "file_count": 0,
+      "files": []
+    },
+    "upstream_evaluate_py": {
+      "relative_path": "evaluate.py",
+      "bytes": 6005,
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "upstream_dir": "/workspace/pact/upstream",
+  "device": "cpu",
+  "platform_system": "Linux",
+  "platform_machine": "x86_64",
+  "platform_processor": "",
+  "inflate_timeout_seconds": 1800,
+  "evaluate_timeout_seconds": 5400,
+  "video_names_file": "/workspace/pact/upstream/public_test_video_names.txt",
+  "sys_argv": [
+    "/workspace/pact/experiments/contest_auth_eval.py",
+    "--archive",
+    "/tmp/modal_auth_eval_cpu/archive.zip",
+    "--inflate-sh",
+    "/tmp/modal_auth_eval_cpu/submission_dir/inflate.sh",
+    "--upstream-dir",
+    "/workspace/pact/upstream",
+    "--video-names-file",
+    "/workspace/pact/upstream/public_test_video_names.txt",
+    "--device",
+    "cpu",
+    "--keep-work-dir",
+    "--work-dir",
+    "/root/modal_auth_eval_cpu_work/eval_work",
+    "--inflate-timeout",
+    "1800",
+    "--evaluate-timeout",
+    "5400",
+    "--expected-runtime-tree-sha256",
+    "675d0623c25364ddda45288149c0f208bc0cf0b11c60326fd1bae87d1c4b396a"
+  ],
+  "effective_inflate_python": "/usr/local/bin/python",
+  "modal_auth_eval_advisory_only": false,
+  "env_vars": {
+    "PYTHONPATH": "/root:/workspace/pact/src:/workspace/pact/upstream:/workspace/pact",
+    "CUDA_VISIBLE_DEVICES": "",
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+    "PYTHONHASHSEED": "0",
+    "PYTORCH_CUDA_ALLOC_CONF": null,
+    "LD_LIBRARY_PATH": null,
+    "CONFIG_ENV_PATH": null,
+    "PYTHON_INFLATE": null,
+    "LANE_MM_SIGMA": null,
+    "INFLATE_BROTLI_SPEC": null,
+    "INFLATE_AV_SPEC": null,
+    "INFLATE_TORCH_SPEC": null,
+    "INFLATE_TORCHVISION_SPEC": null,
+    "INFLATE_NUMPY_SPEC": null,
+    "MODAL_AUTH_EVAL_ADVISORY_ONLY": null,
+    "UV_BIN": "/usr/local/bin/uv",
+    "UV_PROJECT_ENVIRONMENT": "/tmp/modal_auth_eval_cpu/uv_project_env",
+    "PYTHON": "/usr/local/bin/python"
+  },
+  "gpu_model": "<error:FileNotFoundError(2, 'No such file or directory')>",
+  "gpu_driver": "<error:FileNotFoundError(2, 'No such file or directory')>",
+  "gpu_t4_match": false,
+  "torch_version": "2.5.1+cpu",
+  "cuda_version": null,
+  "cuda_available": false,
+  "mps_available": false,
+  "ffmpeg_version": "ffmpeg version 5.1.8-0+deb12u1 Copyright (c) 2000-2025 the FFmpeg developers",
+  "libsvtav1_version": "configuration: --prefix=/usr --extra-version=0+deb12u1 --toolchain=hardened --libdir=/usr/lib/x86_64-linux-gnu --incdir=/usr/include/x86_64-linux-gnu --arch=amd64 --enable-gpl --disable-stripping --enable-gnutls --enable-ladspa --enable-libaom --enable-libass --enable-libbluray --enable-libbs2b --enable-libcaca --enable-libcdio --enable-libcodec2 --enable-libdav1d --enable-libflite --enable-libfontconfig --enable-libfreetype --enable-libfribidi --enable-libglslang --enable-libgme --enable-libgsm --enable-libjack --enable-libmp3lame --enable-libmysofa --enable-libopenjpeg --enable-libopenmpt --enable-libopus --enable-libpulse --enable-librabbitmq --enable-librist --enable-librubberband --enable-libshine --enable-libsnappy --enable-libsoxr --enable-libspeex --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtheora --enable-libtwolame --enable-libvidstab --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx265 --enable-libxml2 --enable-libxvid --enable-libzimg --enable-libzmq --enable-libzvbi --enable-lv2 --enable-omx --enable-openal --enable-opencl --enable-opengl --enable-sdl2 --disable-sndio --enable-libjxl --enable-pocketsphinx --enable-librsvg --enable-libmfx --enable-libdc1394 --enable-libdrm --enable-libiec61883 --enable-chromaprint --enable-frei0r --enable-libx264 --enable-libplacebo --enable-librav1e --enable-shared",
+  "pact_commit": "339494834bb63187387bdf785372a48cc4017694",
+  "pact_commit_source": "PACT_SOURCE_COMMIT"
+}
