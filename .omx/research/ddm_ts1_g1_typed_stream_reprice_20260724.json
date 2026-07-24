@@ -1,0 +1,276 @@
+{
+  "schema": "ddm_ts1_g1_typed_stream_reprice.v1",
+  "date_utc": "2026-07-24",
+  "axis": "[macOS-CPU frozen-scorer advisory]",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "candidate_archive": false,
+  "pointer": "0.1910828242 [contest-CPU] UNCHANGED",
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "pair_count": 600,
+  "source_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_g1_grammar_induction_20260722T182036Z_semantic_v4/ddm_g1_grammar_induction_n600_receipt.json",
+    "sha256": "aeeb916f973523d5ffa3389ee8d744901fe9477cc149af7e756726e2ead907f6"
+  },
+  "coder_contract": {
+    "real_coders": [
+      "brotli_q11",
+      "lzma1_raw_1m",
+      "zlib9"
+    ],
+    "selection": "minimum actual coded bytes independently per production",
+    "framing": "5-byte envelope header plus 10 counted bytes per production",
+    "entropy_estimates_used": false
+  },
+  "premise_check": {
+    "claim_checked": "G1 counted generic vocabulary and receiver operator code",
+    "verdict": "FALSIFIED_BY_SOURCE_AND_RECEIPT",
+    "evidence": "The harness already prices only video-derived production payloads, production framing, and the envelope header. Generic production decoder and vocabulary implementation code is absent from counted_bytes.",
+    "consequence": "No current selected-knee byte may be subtracted merely by relabeling generic receiver code as CONNECTION."
+  },
+  "per_stratum_vocabulary_grammar_table": [
+    {
+      "stratum": "Movable",
+      "candidate": "movable_track_shape_abs_eps1p0",
+      "production": "generic EVENT/CENTROID/SHAPE receiver operators",
+      "winner": "FREE_RECEIVER_CODE",
+      "type": "CONNECTION",
+      "layer_home": "L1_program",
+      "evaluate_py_recursion_level_cited": "L1_program generic operator -> L2_chart parameters -> L3_raster",
+      "before_counted_bytes": 0,
+      "after_counted_bytes": 0,
+      "free_receiver_code": true,
+      "byte_home": "receiver source code; no video-derived payload"
+    },
+    {
+      "stratum": "Movable",
+      "candidate": "movable_track_shape_abs_eps1p0",
+      "production": "EVENT",
+      "winner": "lzma1_raw_1m",
+      "type": "SKELETON",
+      "layer_home": "L1_program",
+      "evaluate_py_recursion_level_cited": "L1_program birth/persist/death topology -> L3_raster",
+      "before_counted_bytes": 419,
+      "after_counted_bytes": 419,
+      "free_receiver_code": true,
+      "byte_home": "video-derived event payload plus 10-byte production frame"
+    },
+    {
+      "stratum": "Movable",
+      "candidate": "movable_track_shape_abs_eps1p0",
+      "production": "CENTROID",
+      "winner": "brotli_q11",
+      "type": "FIBER",
+      "layer_home": "L2_chart",
+      "evaluate_py_recursion_level_cited": "L2_chart per-clip centroid coordinates -> L3_raster",
+      "before_counted_bytes": 2354,
+      "after_counted_bytes": 2354,
+      "free_receiver_code": true,
+      "byte_home": "video-derived per-clip parameters plus 10-byte production frame"
+    },
+    {
+      "stratum": "Movable",
+      "candidate": "movable_track_shape_abs_eps1p0",
+      "production": "SHAPE",
+      "winner": "brotli_q11",
+      "type": "FIBER",
+      "layer_home": "L2_chart",
+      "evaluate_py_recursion_level_cited": "L2_chart per-instance contour fiber -> L3_raster",
+      "before_counted_bytes": 27032,
+      "after_counted_bytes": 27032,
+      "free_receiver_code": true,
+      "byte_home": "video-derived shape parameters plus 10-byte production frame"
+    },
+    {
+      "stratum": "Movable",
+      "candidate": "movable_track_shape_abs_eps1p0",
+      "production": "envelope_header",
+      "winner": "RAW_FRAMING",
+      "type": "SKELETON",
+      "layer_home": "L1_program",
+      "evaluate_py_recursion_level_cited": "L1_program production inventory framing",
+      "before_counted_bytes": 5,
+      "after_counted_bytes": 5,
+      "free_receiver_code": true,
+      "byte_home": "counted payload envelope"
+    },
+    {
+      "stratum": "Lane",
+      "candidate": "lane_slots_delta_dash_tolx2p0",
+      "production": "generic slot/dash receiver operators",
+      "winner": "FREE_RECEIVER_CODE",
+      "type": "CONNECTION",
+      "layer_home": "L1_program",
+      "evaluate_py_recursion_level_cited": "L1_program generic operator -> L2_chart parameters -> L3_raster",
+      "before_counted_bytes": 0,
+      "after_counted_bytes": 0,
+      "free_receiver_code": true,
+      "byte_home": "receiver source code; no video-derived payload"
+    },
+    {
+      "stratum": "Lane",
+      "candidate": "lane_slots_delta_dash_tolx2p0",
+      "production": "EVENT",
+      "winner": "lzma1_raw_1m",
+      "type": "SKELETON",
+      "layer_home": "L1_program",
+      "evaluate_py_recursion_level_cited": "L1_program slot activity topology -> L3_raster",
+      "before_counted_bytes": 198,
+      "after_counted_bytes": 198,
+      "free_receiver_code": true,
+      "byte_home": "video-derived event payload plus 10-byte production frame"
+    },
+    {
+      "stratum": "Lane",
+      "candidate": "lane_slots_delta_dash_tolx2p0",
+      "production": "LANE_CENTER",
+      "winner": "brotli_q11",
+      "type": "FIBER",
+      "layer_home": "L2_chart",
+      "evaluate_py_recursion_level_cited": "L2_chart per-clip lane center parameters -> L3_raster",
+      "before_counted_bytes": 12367,
+      "after_counted_bytes": 12367,
+      "free_receiver_code": true,
+      "byte_home": "video-derived per-clip parameters plus 10-byte production frame"
+    },
+    {
+      "stratum": "Lane",
+      "candidate": "lane_slots_delta_dash_tolx2p0",
+      "production": "LANE_WIDTH",
+      "winner": "brotli_q11",
+      "type": "FIBER",
+      "layer_home": "L2_chart",
+      "evaluate_py_recursion_level_cited": "L2_chart per-clip lane width parameters -> L3_raster",
+      "before_counted_bytes": 5632,
+      "after_counted_bytes": 5632,
+      "free_receiver_code": true,
+      "byte_home": "video-derived per-clip parameters plus 10-byte production frame"
+    },
+    {
+      "stratum": "Lane",
+      "candidate": "lane_slots_delta_dash_tolx2p0",
+      "production": "LANE_DASH",
+      "winner": "brotli_q11",
+      "type": "FIBER",
+      "layer_home": "L2_chart",
+      "evaluate_py_recursion_level_cited": "L2_chart per-clip dash phase parameters -> L3_raster",
+      "before_counted_bytes": 6314,
+      "after_counted_bytes": 6314,
+      "free_receiver_code": true,
+      "byte_home": "video-derived per-clip parameters plus 10-byte production frame"
+    },
+    {
+      "stratum": "Lane",
+      "candidate": "lane_slots_delta_dash_tolx2p0",
+      "production": "LANE_RANGE",
+      "winner": "brotli_q11",
+      "type": "FIBER",
+      "layer_home": "L2_chart",
+      "evaluate_py_recursion_level_cited": "L2_chart per-clip lane support parameters -> L3_raster",
+      "before_counted_bytes": 3176,
+      "after_counted_bytes": 3176,
+      "free_receiver_code": true,
+      "byte_home": "video-derived per-clip parameters plus 10-byte production frame"
+    },
+    {
+      "stratum": "Lane",
+      "candidate": "lane_slots_delta_dash_tolx2p0",
+      "production": "envelope_header",
+      "winner": "RAW_FRAMING",
+      "type": "SKELETON",
+      "layer_home": "L1_program",
+      "evaluate_py_recursion_level_cited": "L1_program production inventory framing",
+      "before_counted_bytes": 5,
+      "after_counted_bytes": 5,
+      "free_receiver_code": true,
+      "byte_home": "counted payload envelope"
+    },
+    {
+      "stratum": "Boundary",
+      "candidate": "boundary_arc_eps2p0",
+      "production": "generic ARC receiver operators",
+      "winner": "FREE_RECEIVER_CODE",
+      "type": "CONNECTION",
+      "layer_home": "L1_program",
+      "evaluate_py_recursion_level_cited": "L1_program generic operator -> L2_chart parameters -> L3_raster",
+      "before_counted_bytes": 0,
+      "after_counted_bytes": 0,
+      "free_receiver_code": true,
+      "byte_home": "receiver source code; no video-derived payload"
+    },
+    {
+      "stratum": "Boundary",
+      "candidate": "boundary_arc_eps2p0",
+      "production": "ARC_EVENT",
+      "winner": "brotli_q11",
+      "type": "SKELETON",
+      "layer_home": "L1_program",
+      "evaluate_py_recursion_level_cited": "L1_program arc inventory topology -> L3_raster",
+      "before_counted_bytes": 448,
+      "after_counted_bytes": 448,
+      "free_receiver_code": true,
+      "byte_home": "video-derived event payload plus 10-byte production frame"
+    },
+    {
+      "stratum": "Boundary",
+      "candidate": "boundary_arc_eps2p0",
+      "production": "ARC_VERTEX",
+      "winner": "brotli_q11",
+      "type": "FIBER",
+      "layer_home": "L2_chart",
+      "evaluate_py_recursion_level_cited": "L2_chart per-clip arc vertices -> L3_raster",
+      "before_counted_bytes": 218835,
+      "after_counted_bytes": 218835,
+      "free_receiver_code": true,
+      "byte_home": "video-derived per-clip parameters plus 10-byte production frame"
+    },
+    {
+      "stratum": "Boundary",
+      "candidate": "boundary_arc_eps2p0",
+      "production": "envelope_header",
+      "winner": "RAW_FRAMING",
+      "type": "SKELETON",
+      "layer_home": "L1_program",
+      "evaluate_py_recursion_level_cited": "L1_program production inventory framing",
+      "before_counted_bytes": 5,
+      "after_counted_bytes": 5,
+      "free_receiver_code": true,
+      "byte_home": "counted payload envelope"
+    }
+  ],
+  "per_stratum_totals": [
+    {
+      "stratum": "Movable",
+      "candidate": "movable_track_shape_abs_eps1p0",
+      "before_counted_bytes": 29810,
+      "after_counted_bytes": 29810,
+      "mispriced_bytes": 0
+    },
+    {
+      "stratum": "Lane",
+      "candidate": "lane_slots_delta_dash_tolx2p0",
+      "before_counted_bytes": 27692,
+      "after_counted_bytes": 27692,
+      "mispriced_bytes": 0
+    },
+    {
+      "stratum": "Boundary",
+      "candidate": "boundary_arc_eps2p0",
+      "before_counted_bytes": 219288,
+      "after_counted_bytes": 219288,
+      "mispriced_bytes": 0
+    }
+  ],
+  "answer": {
+    "measured_selected_knee_mispriced_bytes": 0,
+    "measured_selected_knee_before_counted_bytes": 276790,
+    "measured_selected_knee_after_counted_bytes": 276790,
+    "connection_operator_code_bytes": 0,
+    "gauge_bytes": 0,
+    "why": "Generic receiver operators were already free. Every positive byte in the selected G1 production receipts is video-derived payload or framing. Per-clip parameters remain counted.",
+    "open_measurement": "G1 contains no measured xi-predictable CONNECTION payload and no exact-R-null GAUGE payload. A future connection formulation must separate free operator code from counted per-clip parameters before repricing."
+  },
+  "verdict_scope": "INSTANCE: arithmetic retyping of the three selected G1 n600 knees against their preserved real-coder production receipts; not a new coder run, not receiver-visible RGB, not through-R, not Pose, not a candidate archive, and not a contest score."
+}

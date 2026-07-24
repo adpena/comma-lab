@@ -608,6 +608,10 @@ def typed_dimension_dual_report(
             )
             component["actionable_for_train_decision"] = False
             component["blocker"] = "G4_TEMPORAL_CLASS_AND_SHARED_BYTE_HOME_UNRESOLVED"
+            component["stream_type"] = None
+            component["stream_type_status"] = (
+                "NULL_UNTIL_CANDIDATE_DELTA_BYTE_HOME_CUSTODY"
+            )
             component["score_claim"] = False
             component_evidence.append(component)
         component_sum = sum(float(row["delta_D_dimension"]) for row in edge_components)
@@ -637,6 +641,10 @@ def typed_dimension_dual_report(
                             "stratum": stratum,
                             "scorer_visibility": scorer_visibility,
                             "g4_temporal_class": temporal_class,
+                            "stream_type": None,
+                            "stream_type_status": (
+                                "NULL_UNTIL_DIMENSION_BYTE_HOME_CUSTODY"
+                            ),
                             "delta_D_dimension": delta_D,
                             "delta_counted_bytes_dimension": None,
                             "lambda_bytes_per_D_dimension": None,
@@ -671,6 +679,7 @@ def typed_dimension_dual_report(
             "stratum": [*SEMANTIC_STRATA, "POSE6_GLOBAL"],
             "scorer_visibility": list(SCORER_VISIBILITIES),
             "g4_temporal_class": list(G4_TEMPORAL_CLASSES),
+            "stream_type": None,
         },
         "aggregate_scalarization_policy": (
             "diagnostic control only; never a train-decision price and never "

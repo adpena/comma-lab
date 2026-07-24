@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 
 import pytest
 import torch
@@ -179,6 +180,24 @@ def test_manifest_nested_state_and_section_types_fail_closed() -> None:
                 "bytes": len(members[name]),
                 "member": name,
                 "sha256": hashlib.sha256(members[name]).hexdigest(),
+                "typed_stream_tag": {
+                    "schema": "ddm_typed_stream_tag.v1",
+                    "type": (
+                        "FIBER"
+                        if name == "base/chart.ddb"
+                        else "SKELETON"
+                    ),
+                    "layer_home": (
+                        "L2_chart"
+                        if name == "base/chart.ddb"
+                        else "L1_program"
+                    ),
+                    "evaluate_py_recursion_level_cited": (
+                        "L2_chart -> L3_raster -> L5_verdict"
+                    ),
+                    "counted_bytes": len(members[name]),
+                    "free_receiver_code": True,
+                },
             }
             for name in exporter.EXPECTED_MEMBERS[1:]
         ],
@@ -201,6 +220,14 @@ def test_manifest_nested_state_and_section_types_fail_closed() -> None:
     malformed = dict(manifest)
     malformed["state"] = {**manifest["state"], "untracked": True}
     with pytest.raises(receiver.ReceiverError, match="state changed"):
+        receiver._validate_manifest(malformed, members)
+    malformed = json.loads(json.dumps(manifest))
+    malformed["sections"][0]["typed_stream_tag"]["counted_bytes"] += 1
+    with pytest.raises(receiver.ReceiverError, match="typed-stream custody"):
+        receiver._validate_manifest(malformed, members)
+    malformed = json.loads(json.dumps(manifest))
+    del malformed["sections"][1]["typed_stream_tag"]
+    with pytest.raises(receiver.ReceiverError, match="section keys"):
         receiver._validate_manifest(malformed, members)
 
 

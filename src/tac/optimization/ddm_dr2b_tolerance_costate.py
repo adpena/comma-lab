@@ -25,6 +25,11 @@ from tac.canonical_equations.ddm_dr2_description_layer_laws_20260723 import (
     SDWL1_EXACT_DESCRIPTION_BYTES,
     STRICT_SUB015_CAP_BYTES_POSE_HELD,
 )
+from tac.optimization.ddm_min_description_contract import (
+    LayerHome,
+    StreamType,
+    TypedStreamTag,
+)
 from tac.optimization.ddm_runtime_sensitivity import SCORE_BYTE_DUAL
 
 SCHEMA = "ddm_dr2b_tolerance_costate.v1"
@@ -152,6 +157,16 @@ def frequency_band_admission(
             "status": "ADMITTED_EXACT_R_NULL_TRUNCATION",
             "description_bytes": 0,
             "distortion_delta": 0.0,
+            "typed_stream_tag": TypedStreamTag(
+                type=StreamType.GAUGE,
+                layer_home=LayerHome.L3_RASTER,
+                evaluate_py_recursion_level_cited=(
+                    "L3_raster exact ker(R) -> zero L4_scorer_feature effect"
+                ),
+                counted_bytes=0,
+                free_receiver_code=True,
+            ).to_dict(),
+            "rate_price_admitted": False,
             "first_rung": True,
         }
     if emitted_description_bytes == 0:
@@ -170,6 +185,16 @@ def frequency_band_admission(
         "description_bytes": emitted_description_bytes,
         "flip_distance": float(flip_distance),
         "delta_d_pose": float(delta_d_pose),
+        "typed_stream_tag": TypedStreamTag(
+            type=StreamType.FIBER,
+            layer_home=LayerHome.L3_RASTER,
+            evaluate_py_recursion_level_cited=(
+                "L3_raster -> measured L4_scorer_feature -> L5_verdict"
+            ),
+            counted_bytes=emitted_description_bytes,
+            free_receiver_code=True,
+        ).to_dict(),
+        "rate_price_admitted": True,
         "first_rung": True,
     }
 

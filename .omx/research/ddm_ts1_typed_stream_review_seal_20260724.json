@@ -1,0 +1,60 @@
+{
+  "schema": "ddm_ts1_recursive_review_seal.v1",
+  "date_utc": "2026-07-24",
+  "bundle_id": "63cf2e10ee7fa92d",
+  "scope_content_sha256": "d51e76df28702f0a55bc0099944075586f672bc96883c053b9669bba17d6d755",
+  "source_ledger": {
+    "path": ".omx/state/recursive_review_rounds.jsonl",
+    "sha256_at_seal": "1553c2e609867ea31b58879bb1450f1b73aea0312d6296b177dd36fe5674c2f6"
+  },
+  "finding_round": {
+    "round": 2,
+    "review_id": "643f534ba629",
+    "finding_id": "TS1-R2-REGISTRY-BUILDER-DRIFT",
+    "severity": "MEDIUM",
+    "counter_after": 0,
+    "fix": "Appended a corrected canonical registry event from the finalized SHA-reading builder and verified exact builder-to-registry payload equality."
+  },
+  "prior_seal_invalidated": {
+    "reason": "Pre-commit trailing-whitespace cleanup changed two scoped Markdown artifacts.",
+    "old_scope_content_sha256": "2129e1bb3aa83ec92dbfe81c7fff32a2085a79057c47b7b4266381741b749968",
+    "content_freshness_counter_reset_to": 0
+  },
+  "consecutive_clean_rounds": [
+    {
+      "round": 6,
+      "review_id": "26612dc960c5",
+      "rotation": "Z_fresh_eyes",
+      "counter_after": 1
+    },
+    {
+      "round": 7,
+      "review_id": "c06df61b4675",
+      "rotation": "Y_engineering_red",
+      "counter_after": 2
+    },
+    {
+      "round": 8,
+      "review_id": "9f04fba8c06d",
+      "rotation": "X_theoretical_floor",
+      "counter_after": 3
+    }
+  ],
+  "seal": {
+    "counter": 3,
+    "content_matches_latest": true,
+    "unresolved_critical_count": 0,
+    "status": "SEALED_FOR_MAIN_REVIEW"
+  },
+  "validation": {
+    "largest_final_test_pass": "121 passed",
+    "ruff": "PASS",
+    "compileall": "PASS",
+    "git_diff_check": "PASS",
+    "g2_builder_registry_exact_parity": "PASS",
+    "g1_selected_knee_mispriced_bytes": 0,
+    "score_claim": false,
+    "pointer_moved": false
+  },
+  "main_landing_review_required": true
+}

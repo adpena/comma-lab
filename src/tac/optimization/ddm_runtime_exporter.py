@@ -25,6 +25,11 @@ from tac.canonical_equations.ddm_runtime_export_identity_20260723 import (
     semantic_paint_jacobian_summary,
 )
 from tac.optimization import ddm_runtime_receiver as runtime
+from tac.optimization.ddm_min_description_contract import (
+    LayerHome,
+    StreamType,
+    TypedStreamTag,
+)
 from tac.optimization.direct_description_carrier_compose import (
     CLASS_ORDER,
     REALIZATION_PAINT_ORDER,
@@ -1005,11 +1010,29 @@ def export_runtime(
             "bytes": len(chart_member),
             "member": "base/chart.ddb",
             "sha256": chart_sha256,
+            "typed_stream_tag": TypedStreamTag(
+                type=StreamType.FIBER,
+                layer_home=LayerHome.L2_CHART,
+                evaluate_py_recursion_level_cited=(
+                    "L2_chart -> L3_raster -> L4_scorer_feature -> L5_verdict"
+                ),
+                counted_bytes=len(chart_member),
+                free_receiver_code=True,
+            ).to_dict(),
         },
         {
             "bytes": len(semantic_member),
             "member": "semantic/composed.dds",
             "sha256": semantic_sha256,
+            "typed_stream_tag": TypedStreamTag(
+                type=StreamType.SKELETON,
+                layer_home=LayerHome.L1_PROGRAM,
+                evaluate_py_recursion_level_cited=(
+                    "L1_program -> L3_raster -> L4_scorer_feature -> L5_verdict"
+                ),
+                counted_bytes=len(semantic_member),
+                free_receiver_code=True,
+            ).to_dict(),
         },
     ]
     manifest: dict[str, Any] = {

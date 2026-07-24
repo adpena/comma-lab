@@ -10,14 +10,137 @@ scorers.  Donor-conditioned rows are structurally inadmissible.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 
 HEADLINE_SCHEMA = "ddm_min_description_headline.v1"
 SOLVE_TYPING_SCHEMA = "ddm_recursive_solve_typing.v1"
+TYPED_STREAM_SCHEMA = "ddm_typed_stream_tag.v1"
 
 
 class MinimumDescriptionContractError(ValueError):
     """A malformed byte, lineage, or realized-acceptance declaration."""
+
+
+class StreamType(StrEnum):
+    """Disjoint description-stream roles induced by scorer recursion."""
+
+    SKELETON = "SKELETON"
+    CONNECTION = "CONNECTION"
+    FIBER = "FIBER"
+    GAUGE = "GAUGE"
+    RESIDUAL = "RESIDUAL"
+
+
+class LayerHome(StrEnum):
+    """Earliest recursion layer that owns one stream's counted information."""
+
+    L1_PROGRAM = "L1_program"
+    L2_CHART = "L2_chart"
+    L3_RASTER = "L3_raster"
+    L4_SCORER_FEATURE = "L4_scorer_feature"
+    L5_VERDICT = "L5_verdict"
+
+
+@dataclass(frozen=True)
+class TypedStreamTag:
+    """One byte-home declaration for a description or archive section.
+
+    ``free_receiver_code`` says the generic decoder/operator implementation is
+    free.  It does not make video-derived parameters free: those remain in
+    ``counted_bytes``.  Exact receiver-null GAUGE coordinates are the only type
+    required to carry zero counted bytes.
+    """
+
+    type: StreamType
+    layer_home: LayerHome
+    evaluate_py_recursion_level_cited: str
+    counted_bytes: int
+    free_receiver_code: bool
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.type, StreamType):
+            raise MinimumDescriptionContractError("typed stream type must be StreamType")
+        if not isinstance(self.layer_home, LayerHome):
+            raise MinimumDescriptionContractError("layer_home must be LayerHome")
+        citation = self.evaluate_py_recursion_level_cited
+        if not isinstance(citation, str) or not citation.strip():
+            raise MinimumDescriptionContractError(
+                "evaluate.py recursion citation must be a nonempty string"
+            )
+        if (
+            isinstance(self.counted_bytes, bool)
+            or not isinstance(self.counted_bytes, int)
+            or self.counted_bytes < 0
+        ):
+            raise MinimumDescriptionContractError(
+                "typed stream counted_bytes must be a nonnegative exact integer"
+            )
+        if not isinstance(self.free_receiver_code, bool):
+            raise MinimumDescriptionContractError(
+                "free_receiver_code must be an exact boolean"
+            )
+        if self.type is StreamType.GAUGE and self.counted_bytes != 0:
+            raise MinimumDescriptionContractError(
+                "GAUGE streams must carry zero counted bytes"
+            )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema": TYPED_STREAM_SCHEMA,
+            "type": self.type.value,
+            "layer_home": self.layer_home.value,
+            "evaluate_py_recursion_level_cited": (
+                self.evaluate_py_recursion_level_cited
+            ),
+            "counted_bytes": self.counted_bytes,
+            "free_receiver_code": self.free_receiver_code,
+        }
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> TypedStreamTag:
+        expected = {
+            "schema",
+            "type",
+            "layer_home",
+            "evaluate_py_recursion_level_cited",
+            "counted_bytes",
+            "free_receiver_code",
+        }
+        if not isinstance(value, Mapping) or set(value) != expected:
+            raise MinimumDescriptionContractError(
+                "typed stream tag keys differ from the sealed schema"
+            )
+        if value["schema"] != TYPED_STREAM_SCHEMA:
+            raise MinimumDescriptionContractError("typed stream tag schema differs")
+        try:
+            stream_type = StreamType(value["type"])
+            layer_home = LayerHome(value["layer_home"])
+        except (TypeError, ValueError) as exc:
+            raise MinimumDescriptionContractError(
+                "typed stream type or layer_home is outside the sealed vocabulary"
+            ) from exc
+        return cls(
+            type=stream_type,
+            layer_home=layer_home,
+            evaluate_py_recursion_level_cited=value[
+                "evaluate_py_recursion_level_cited"
+            ],
+            counted_bytes=value["counted_bytes"],
+            free_receiver_code=value["free_receiver_code"],
+        )
+
+
+def _typed_stream_tag(value: TypedStreamTag | Mapping[str, Any]) -> TypedStreamTag:
+    if isinstance(value, TypedStreamTag):
+        return value
+    if isinstance(value, Mapping):
+        return TypedStreamTag.from_dict(value)
+    raise MinimumDescriptionContractError(
+        "typed stream tags must be TypedStreamTag instances or sealed mappings"
+    )
 
 
 def _optional_bytes(value: int | None, field: str) -> int | None:
@@ -133,6 +256,9 @@ def build_minimum_description_headline(
     alternating_typed_subproblems: bool,
     typed_blocks_active: bool,
     per_dimension_quanta_active: bool,
+    typed_stream_tags: Sequence[TypedStreamTag | Mapping[str, Any]] | None = None,
+    untagged_stream_waiver: str | None = None,
+    strict_typed_stream_tags: bool = False,
 ) -> dict[str, Any]:
     """Build the only row eligible to headline minimum-description progress.
 
@@ -165,6 +291,30 @@ def build_minimum_description_headline(
         raise MinimumDescriptionContractError(
             "lineage and acceptance declarations must be exact booleans"
         )
+    if not isinstance(strict_typed_stream_tags, bool):
+        raise MinimumDescriptionContractError(
+            "strict_typed_stream_tags must be an exact boolean"
+        )
+    if untagged_stream_waiver is not None and (
+        not isinstance(untagged_stream_waiver, str)
+        or len(untagged_stream_waiver.strip()) < 16
+    ):
+        raise MinimumDescriptionContractError(
+            "untagged_stream_waiver must be null or a substantive rationale"
+        )
+    tags = (
+        None
+        if typed_stream_tags is None
+        else tuple(_typed_stream_tag(value) for value in typed_stream_tags)
+    )
+    if tags is not None and not tags:
+        raise MinimumDescriptionContractError(
+            "typed_stream_tags must be null or a nonempty sequence"
+        )
+    if strict_typed_stream_tags and tags is None:
+        raise MinimumDescriptionContractError(
+            "strict typed-stream custody refuses an untagged headline"
+        )
 
     blockers: list[str] = []
     if donor_conditioned:
@@ -182,6 +332,23 @@ def build_minimum_description_headline(
     if not realized_uint8_r_frozen_scorers:
         blockers.append("REALIZED_UINT8_R_FROZEN_SCORER_ACCEPTANCE_MISSING")
     blockers.extend(solve_typing["blockers"])
+    if tags is None:
+        blockers.append("TYPED_STREAM_TAG_CUSTODY_MISSING_WARN_ONLY")
+        if untagged_stream_waiver is not None:
+            blockers.append("UNTAGGED_STREAM_WAIVER_NONAUTHORIZING")
+
+    expected_typed_bytes = (
+        None
+        if problem_bytes is None or exceptions is None
+        else problem_bytes + exceptions
+    )
+    typed_bytes = None if tags is None else sum(tag.counted_bytes for tag in tags)
+    if (
+        tags is not None
+        and expected_typed_bytes is not None
+        and typed_bytes != expected_typed_bytes
+    ):
+        blockers.append("TYPED_STREAM_COUNTED_BYTES_DO_NOT_RECONCILE")
 
     eligible = not blockers
     total_bytes = (
@@ -221,6 +388,28 @@ def build_minimum_description_headline(
             "realized_uint8_r_frozen_scorers": realized_uint8_r_frozen_scorers,
         },
         "recursive_solve_typing": solve_typing,
+        "typed_stream_custody": {
+            "schema": TYPED_STREAM_SCHEMA,
+            "mode": (
+                "STRICT"
+                if strict_typed_stream_tags
+                else (
+                    "WARN_ONLY_WITH_HEADLINE_WITHHELD"
+                    if tags is None
+                    else "WARN_PHASE_TAGGED"
+                )
+            ),
+            "tags": None if tags is None else [tag.to_dict() for tag in tags],
+            "typed_counted_bytes": typed_bytes,
+            "expected_counted_bytes": expected_typed_bytes,
+            "reconciled": (
+                tags is not None
+                and expected_typed_bytes is not None
+                and typed_bytes == expected_typed_bytes
+            ),
+            "waiver": untagged_stream_waiver,
+            "waiver_authorizes_headline": False,
+        },
         "donor_conditioned": donor_conditioned,
         "decision_triple": {
             "total_counted_bytes": total_bytes,
@@ -240,7 +429,11 @@ def build_minimum_description_headline(
 __all__ = [
     "HEADLINE_SCHEMA",
     "SOLVE_TYPING_SCHEMA",
+    "TYPED_STREAM_SCHEMA",
+    "LayerHome",
     "MinimumDescriptionContractError",
+    "StreamType",
+    "TypedStreamTag",
     "build_minimum_description_headline",
     "build_recursive_solve_typing_contract",
 ]

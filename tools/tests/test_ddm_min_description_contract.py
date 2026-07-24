@@ -7,7 +7,10 @@ import pytest
 
 from tac.optimization.ddm_min_description_contract import (
     HEADLINE_SCHEMA,
+    LayerHome,
     MinimumDescriptionContractError,
+    StreamType,
+    TypedStreamTag,
     build_minimum_description_headline,
 )
 
@@ -30,6 +33,15 @@ def _row(**updates: object) -> dict:
         "alternating_typed_subproblems": True,
         "typed_blocks_active": True,
         "per_dimension_quanta_active": True,
+        "typed_stream_tags": (
+            TypedStreamTag(
+                type=StreamType.FIBER,
+                layer_home=LayerHome.L2_CHART,
+                evaluate_py_recursion_level_cited="L2_chart -> L5_verdict",
+                counted_bytes=120,
+                free_receiver_code=True,
+            ),
+        ),
     }
     values.update(updates)
     return build_minimum_description_headline(**values)  # type: ignore[arg-type]
@@ -126,14 +138,14 @@ def test_n600_repo_receipt_rebuilds_the_fail_closed_campaign_headline() -> None:
         typed_blocks_active=False,
         per_dimension_quanta_active=False,
     )
-    # The receipt gives the diagnostic exception a more specific historical
-    # role while preserving every authority-bearing contract field.
     actual = receipt["campaign_headline"]
-    assert actual["solve_mandated_exceptions"]["conditional_coding_role"] != (
-        expected["solve_mandated_exceptions"]["conditional_coding_role"]
+    assert actual["headline_eligible"] is False
+    assert expected["headline_eligible"] is False
+    assert (
+        "TYPED_STREAM_TAG_CUSTODY_MISSING_WARN_ONLY"
+        in expected["blockers"]
     )
-    actual = json.loads(json.dumps(actual))
-    actual["solve_mandated_exceptions"]["conditional_coding_role"] = (
-        expected["solve_mandated_exceptions"]["conditional_coding_role"]
+    assert "typed_stream_custody" not in actual
+    assert expected["typed_stream_custody"]["mode"] == (
+        "WARN_ONLY_WITH_HEADLINE_WITHHELD"
     )
-    assert actual == expected

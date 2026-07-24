@@ -28,6 +28,15 @@ SCHEMA = "ddm_e1_runtime_archive.v1"
 E2_SCHEMA = "ddm_e2_runtime_archive.v1"
 E3_SCHEMA = "ddm_e3_runtime_archive.v1"
 RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
+TYPED_STREAM_SCHEMA = "ddm_typed_stream_tag.v1"
+STREAM_TYPES = {"SKELETON", "CONNECTION", "FIBER", "GAUGE", "RESIDUAL"}
+LAYER_HOMES = {
+    "L1_program",
+    "L2_chart",
+    "L3_raster",
+    "L4_scorer_feature",
+    "L5_verdict",
+}
 BLOB_MAGIC = b"DDE1B"
 BLOB_HEADER = struct.Struct(">5sBBBBQQ32s")
 LZMA_FILTERS = [
@@ -401,11 +410,38 @@ def _validate_manifest(manifest: Any, members: dict[str, bytes]) -> dict[str, An
     ):
         raise ReceiverError("manifest section order mismatch")
     for row in sections:
-        if set(row) != {"bytes", "member", "sha256"}:
+        if set(row) != {"bytes", "member", "sha256", "typed_stream_tag"}:
             raise ReceiverError("manifest section keys differ")
         payload = members[row["member"]]
         if row["bytes"] != len(payload) or row["sha256"] != _sha256(payload):
             raise ReceiverError(f"manifest section custody mismatch: {row['member']}")
+        tag = row["typed_stream_tag"]
+        if (
+            not isinstance(tag, dict)
+            or set(tag)
+            != {
+                "schema",
+                "type",
+                "layer_home",
+                "evaluate_py_recursion_level_cited",
+                "counted_bytes",
+                "free_receiver_code",
+            }
+            or tag["schema"] != TYPED_STREAM_SCHEMA
+            or tag["type"] not in STREAM_TYPES
+            or tag["layer_home"] not in LAYER_HOMES
+            or not isinstance(tag["evaluate_py_recursion_level_cited"], str)
+            or not tag["evaluate_py_recursion_level_cited"].strip()
+            or isinstance(tag["counted_bytes"], bool)
+            or not isinstance(tag["counted_bytes"], int)
+            or tag["counted_bytes"] < 0
+            or type(tag["free_receiver_code"]) is not bool
+            or tag["counted_bytes"] != row["bytes"]
+            or (tag["type"] == "GAUGE" and tag["counted_bytes"] != 0)
+        ):
+            raise ReceiverError(
+                f"manifest typed-stream custody mismatch: {row['member']}"
+            )
     return manifest
 
 
