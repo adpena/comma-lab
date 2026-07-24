@@ -1,0 +1,21 @@
+{
+  "schema": "DDMMS2RR3TypedFisherG4WaterfillConfigV1",
+  "run_id": "ddm_ms2r_r3_typed_fisher_g4_waterfill_20260724T211804Z",
+  "output_receipt_path": ".omx/research/ddm_ms2r_r3_typed_fisher_g4_waterfill_20260724T211804Z/receipt.json",
+  "r2_receipt_path": ".omx/research/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/receipt.json",
+  "r2_receipt_sha256": "03cd9aabc1275c49c983631dd547e7497f8fe95804a9bfd7a24c5d61e9a81d25",
+  "r2_receipt_bytes": 92594,
+  "ev1_receipt_path": ".omx/research/ddm_ev1_campaign_evidence_joins_20260724T191623Z/ddm_ev1_campaign_evidence_join_receipt.json",
+  "ev1_receipt_sha256": "28af280a6c40216616eb4cbd90b283b68822d3c5f9a604efbed2a638b46d9c0a",
+  "ev1_receipt_bytes": 668997,
+  "pair_count": 600,
+  "scorer_batch_size": 32,
+  "allowed_errors": 136839,
+  "metric_id": "exact_composite_R_rank4_margin_fisher_plus_pose6_quadratic",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "receipt_timestamp_utc": "2026-07-24T21:35:33Z",
+  "main_landing_review_required": true
+}

@@ -20,6 +20,7 @@ from tac.scorer_value_oracle import (
     FreshnessStatus,
     OracleError,
     PayloadKind,
+    ProducerBinding,
     RowBinding,
     ScorerValueOracle,
     StaleProducerError,
@@ -383,6 +384,69 @@ def test_admission_accessors_are_thin_fresh_reads(tmp_path: Path) -> None:
     oracle, _ = _one_row_oracle(tmp_path)
     assert oracle.bucket_assignments().row is DimensionRow.RATE_ARCHIVE_BYTES_ONLY
     assert oracle.bucket_assignments().lineage[0].fresh is True
+
+
+def test_external_json_producer_uses_fail_closed_freshness(tmp_path: Path) -> None:
+    path = tmp_path / "campaign.json"
+    digest, byte_count = _write_json(
+        path,
+        {"schema": "campaign.fixture.v1", "payload": {"rows": 162}},
+    )
+    binding = ProducerBinding(
+        producer_id="campaign_fixture",
+        producer="campaign fixture",
+        path=str(path),
+        sha256=digest,
+        bytes=byte_count,
+        schema="campaign.fixture.v1",
+        validity_horizon="fixture hash",
+        authority_scope="fixture only",
+        selector=("payload",),
+    )
+    oracle = ScorerValueOracle(tmp_path)
+    result = oracle.read_json_producer(binding)
+    assert result.require_value() == {"rows": 162}
+    assert result.lineage[0].fresh is True
+
+    path.write_text('{"schema":"campaign.fixture.v1","payload":{"rows":161}}\n')
+    with pytest.raises(StaleProducerError, match="stale producer artifact"):
+        oracle.require_json_producer(binding)
+    advisory = oracle.read_json_producer(
+        binding,
+        freshness_mode=FreshnessMode.STALE_ADVISORY,
+    )
+    assert advisory.freshness is FreshnessStatus.STALE_ADVISORY
+    assert advisory.value is None
+
+
+def test_nested_artifact_reference_is_rehashed(tmp_path: Path) -> None:
+    artifact = tmp_path / "candidate.bin"
+    artifact.write_bytes(b"receiver-closed")
+    reference = {
+        "path": str(artifact),
+        "bytes": artifact.stat().st_size,
+        "sha256": sha256(artifact.read_bytes()).hexdigest(),
+    }
+    oracle = ScorerValueOracle(tmp_path)
+    lineage = oracle.require_artifact(reference, role="candidate fixture")
+    assert lineage.fresh is True
+    artifact.write_bytes(b"drift")
+    with pytest.raises(StaleProducerError, match="stale artifact"):
+        oracle.require_artifact(reference, role="candidate fixture")
+
+
+def test_external_binding_rejects_boolean_byte_count() -> None:
+    with pytest.raises(ValueError, match="byte count must be positive"):
+        ProducerBinding(
+            producer_id="bad_bytes",
+            producer="bad bytes fixture",
+            path="fixture.json",
+            sha256="0" * 64,
+            bytes=True,
+            schema="fixture.v1",
+            validity_horizon="fixture",
+            authority_scope="fixture",
+        )
 
 
 def test_default_coverage_shape_is_14_wrapped_7_typed_gaps() -> None:

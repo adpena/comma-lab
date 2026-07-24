@@ -34,6 +34,7 @@ from tac.repo_io import sha256_file
 
 SCHEMA: Final = "ddm_scorer_value_oracle.v1"
 COVERAGE_SCHEMA: Final = "ddm_scorer_value_oracle_coverage.v1"
+PRODUCER_VALUE_SCHEMA: Final = "ddm_scorer_value_oracle_producer_value.v1"
 CONTRACT_PATH: Final = ".omx/research/ddm_366_dimension_completeness_contract_20260724.md"
 
 
@@ -181,6 +182,76 @@ class RowBinding:
             raise ValueError(
                 f"{self.row.value}: MS4D payloads require exactly one component selector"
             )
+
+
+@dataclass(frozen=True, slots=True)
+class ProducerBinding:
+    """One non-DDM-366 JSON producer admitted through the same freshness gate."""
+
+    producer_id: str
+    producer: str
+    path: str
+    sha256: str
+    bytes: int
+    schema: str
+    validity_horizon: str
+    authority_scope: str
+    selector: tuple[str | int, ...] = ()
+
+    def __post_init__(self) -> None:
+        if (
+            not self.producer_id
+            or not self.producer
+            or not self.path
+            or not self.schema
+            or not self.validity_horizon
+            or not self.authority_scope
+        ):
+            raise ValueError("external producer binding metadata must be nonempty")
+        if not isinstance(self.sha256, str) or len(self.sha256) != 64:
+            raise ValueError(f"{self.producer_id}: producer SHA-256 must have 64 hex characters")
+        try:
+            bytes.fromhex(self.sha256)
+        except ValueError as exc:
+            raise ValueError(f"{self.producer_id}: producer SHA-256 must be hexadecimal") from exc
+        if isinstance(self.bytes, bool) or not isinstance(self.bytes, int) or self.bytes < 1:
+            raise ValueError(f"{self.producer_id}: producer byte count must be positive")
+
+
+@dataclass(frozen=True, slots=True)
+class ProducerValue:
+    """Freshness-tagged value from a sealed producer outside the row contract."""
+
+    producer_id: str
+    producer: str
+    value: Any
+    lineage: tuple[ProducerLineage, ...]
+    freshness: FreshnessStatus
+    freshness_tag: str
+    validity_horizon: str
+    authority_scope: str
+
+    def require_value(self) -> Any:
+        if self.freshness is not FreshnessStatus.FRESH:
+            raise StaleProducerError(
+                f"{self.producer_id}: value is not fresh ({self.freshness.value})"
+            )
+        return self.value
+
+    def to_dict(self, *, include_value: bool = True) -> dict[str, Any]:
+        out = {
+            "schema": PRODUCER_VALUE_SCHEMA,
+            "producer_id": self.producer_id,
+            "producer": self.producer,
+            "lineage": [item.to_dict() for item in self.lineage],
+            "freshness": self.freshness.value,
+            "freshness_tag": self.freshness_tag,
+            "validity_horizon": self.validity_horizon,
+            "authority_scope": self.authority_scope,
+        }
+        if include_value:
+            out["value"] = self.value
+        return out
 
 
 @dataclass(frozen=True, slots=True)
@@ -617,6 +688,27 @@ class ScorerValueOracle:
             ),
         ), path if path.is_file() else None
 
+    def _producer_lineage(
+        self,
+        binding: ProducerBinding,
+    ) -> tuple[ProducerLineage, Path | None]:
+        path = self._resolve(binding.path)
+        observed_bytes: int | None = None
+        observed_sha: str | None = None
+        if path.is_file():
+            observed_bytes = path.stat().st_size
+            observed_sha = sha256_file(path)
+        return (
+            ProducerLineage(
+                path=binding.path,
+                role=binding.producer,
+                expected_sha256=binding.sha256,
+                expected_bytes=binding.bytes,
+                observed_sha256=observed_sha,
+                observed_bytes=observed_bytes,
+            ),
+        ), path if path.is_file() else None
+
     def _gap_row(self, row: DimensionRow) -> OracleRow:
         gap = self._gaps[row]
         return OracleRow(
@@ -757,6 +849,130 @@ class ScorerValueOracle:
 
         return self.read(row).require_value()
 
+    def read_json_producer(
+        self,
+        binding: ProducerBinding,
+        *,
+        freshness_mode: FreshnessMode | str = FreshnessMode.FAIL_CLOSED,
+    ) -> ProducerValue:
+        """Read a sealed JSON producer not represented by a DDM-366 row.
+
+        Callers must supply the expected content identity.  This keeps campaign
+        receipts and nested typed configs on the same fail-closed path as the
+        row registry without pretending they are additional dimension rows.
+        """
+
+        try:
+            mode = FreshnessMode(freshness_mode)
+        except (TypeError, ValueError) as exc:
+            raise OracleError(f"unknown freshness mode: {freshness_mode!r}") from exc
+        lineage, path = self._producer_lineage(binding)
+        if path is None or not all(item.fresh for item in lineage):
+            detail = ",".join(
+                f"{item.path}:expected={item.expected_sha256}/{item.expected_bytes}"
+                f":observed={item.observed_sha256}/{item.observed_bytes}"
+                for item in lineage
+            )
+            if mode is FreshnessMode.FAIL_CLOSED:
+                raise StaleProducerError(
+                    f"{binding.producer_id}: stale producer artifact: {detail}"
+                )
+            return ProducerValue(
+                producer_id=binding.producer_id,
+                producer=binding.producer,
+                value=None,
+                lineage=lineage,
+                freshness=FreshnessStatus.STALE_ADVISORY,
+                freshness_tag="[stale-advisory]",
+                validity_horizon=binding.validity_horizon,
+                authority_scope=binding.authority_scope,
+            )
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if not _is_mapping(payload) or payload.get("schema") != binding.schema:
+                raise StaleProducerError(
+                    f"{binding.producer_id}: producer schema drift "
+                    f"{payload.get('schema') if _is_mapping(payload) else type(payload).__name__}"
+                )
+            value = _select(payload, binding.selector)
+        except (
+            OracleError,
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+        ) as exc:
+            if mode is FreshnessMode.STALE_ADVISORY:
+                return ProducerValue(
+                    producer_id=binding.producer_id,
+                    producer=binding.producer,
+                    value=None,
+                    lineage=lineage,
+                    freshness=FreshnessStatus.STALE_ADVISORY,
+                    freshness_tag="[stale-advisory]",
+                    validity_horizon=binding.validity_horizon,
+                    authority_scope=binding.authority_scope,
+                )
+            if isinstance(exc, StaleProducerError):
+                raise
+            raise StaleProducerError(
+                f"{binding.producer_id}: producer validation failed: {exc}"
+            ) from exc
+        return ProducerValue(
+            producer_id=binding.producer_id,
+            producer=binding.producer,
+            value=value,
+            lineage=lineage,
+            freshness=FreshnessStatus.FRESH,
+            freshness_tag="[fresh]",
+            validity_horizon=binding.validity_horizon,
+            authority_scope=binding.authority_scope,
+        )
+
+    def require_json_producer(self, binding: ProducerBinding) -> Any:
+        """Return one fresh external producer value or fail closed."""
+
+        return self.read_json_producer(binding).require_value()
+
+    def require_artifact(
+        self,
+        reference: Mapping[str, Any],
+        *,
+        role: str,
+    ) -> ProducerLineage:
+        """Rehash one nested artifact reference before a caller trusts it."""
+
+        raw_path = reference.get("path")
+        expected_sha = reference.get("sha256")
+        expected_bytes = reference.get("bytes")
+        if (
+            not isinstance(raw_path, str)
+            or not isinstance(expected_sha, str)
+            or isinstance(expected_bytes, bool)
+            or not isinstance(expected_bytes, int)
+            or expected_bytes < 1
+            or not role
+        ):
+            raise OracleError("artifact reference requires path, SHA-256, bytes, and role")
+        binding = ProducerBinding(
+            producer_id=f"artifact:{role}",
+            producer=role,
+            path=raw_path,
+            sha256=expected_sha,
+            bytes=expected_bytes,
+            schema="opaque_artifact",
+            validity_horizon="content-hash valid until a replacement artifact lands",
+            authority_scope="exact artifact bytes only",
+        )
+        lineage, path = self._producer_lineage(binding)
+        if path is None or not all(item.fresh for item in lineage):
+            item = lineage[0]
+            raise StaleProducerError(
+                f"{binding.producer_id}: stale artifact: expected="
+                f"{item.expected_sha256}/{item.expected_bytes}:observed="
+                f"{item.observed_sha256}/{item.observed_bytes}"
+            )
+        return lineage[0]
+
     def coverage_report(self, *, verify: bool = True) -> dict[str, Any]:
         """Report all contract rows as ``WRAPPED`` or ``TYPED-GAP``."""
 
@@ -861,6 +1077,7 @@ __all__ = [
     "COVERAGE_SCHEMA",
     "DEFAULT_BINDINGS",
     "DEFAULT_GAPS",
+    "PRODUCER_VALUE_SCHEMA",
     "SCHEMA",
     "CoverageStatus",
     "DimensionRow",
@@ -869,7 +1086,9 @@ __all__ = [
     "OracleError",
     "OracleRow",
     "PayloadKind",
+    "ProducerBinding",
     "ProducerLineage",
+    "ProducerValue",
     "RowBinding",
     "ScorerValueOracle",
     "StaleProducerError",
