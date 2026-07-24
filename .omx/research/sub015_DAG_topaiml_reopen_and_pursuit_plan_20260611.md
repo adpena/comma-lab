@@ -23365,3 +23365,26 @@ cap 4/4): sweep → derived spec (DSL-compiled) → per-element diff {derived ·
 · contradicts} vs the live ticket → SCHEDULE_VERIFIED_DERIVED or RESEAL_REQUIRED with exact
 delta. px1's update-RMS/Muon-quality findings fold in when landed. Pointer 0.1910828242
 [contest-CPU] UNMOVED.
+
+FEED-603-px1-MAIN-review (2026-07-24, MAIN custody of ddm_px1_soap_muon_beyond_crosswalk rc=0):
+Verdict ADOPT-MEASUREMENT-CONTRACT / DO-NOT-ADOPT-OPTIMIZER-CONSTANTS — verified: full 32-page PDF
+(sha f4ffc0bf…) + NVIDIA Emerging-Optimizers repo at pinned commit bf77c4fb read; every claim
+tagged MEASURED-by-authors/DERIVED/CODE-TEST with a row-by-row regime-transfer ledger (their 8B-72B
+params / 25-100M-token batches vs our ~1e5-3e5-param n600 MLX witness → MECHANISM-ONLY transfers,
+NUMBERS BLOCKED). Two adopted mechanisms, zero adopted constants: (1) UPDATE-RMS MATCHING at the
+actual parameter-group boundary = the missing optimizer-A/B fairness contract (upgrades every
+optimizer comparison incl. the #366 engine choice + is1 family-(d) search + #556 pre-gate);
+(2) Muon NS-orthogonalization quality must be measured on ACTUAL update matrices vs an exact-polar
+reference (E_gram/E_polar receipts) — never inferred from iteration name/synthetic tests. Decision:
+KEEP the five-step incumbent Muon UNCHANGED; any step-count/coefficient change now requires the
+actual-update audit gate + matched-wall-clock matched-RMS full-facet A/B. Honest blockers recorded:
+NO_UPDATE_MATRIX_CUSTODY (no local update-matrix artifacts → shadow-receipt build is the $0
+default-off retrofit, spec'd not built) + MLX_IMPLEMENTATION_CUSTODY_BLOCKED (worktree env).
+Delicious anti-cargo-cult receipt: the paper's OWN released code defaults CONTRADICT the paper
+recipe (momentum 0.95/Nesterov/5-step-quintic vs 0.9/no-Nesterov/16-step-PolarExpress) — evidence
+against config-cargo-culting from ANY source, folded into sched1's mandate. SOAP spike mechanism
+= stale-preconditioner class, DISTINCT from our #304/#321 measured confounds (no fix-transfer
+claim). Layer-wise distributed optimizer = N/A-WHY (single-device MLX). Routed: sched1 consumes
+the measurement contract + the audit-gate precondition; shadow-receipt spec rides sched1's
+deliverable (default-off telemetry per the off-is-a-tracked-queue rule). Cherry-pick 9a15f7d16e
+clean (research-only). Pointer 0.1910828242 [contest-CPU] UNMOVED.
