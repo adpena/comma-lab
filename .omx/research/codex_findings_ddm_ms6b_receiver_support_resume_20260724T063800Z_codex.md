@@ -1,9 +1,9 @@
 # Codex findings — DDM MS6b receiver-support resume
 
-Date: 2026-07-24  
-Lane: `lane_ddm_ms6b_receiver_support_resume_20260724`  
-Verdict scope: `INSTANCE_V19C_ENDPOINT_ONE_QUANTUM_SWEEP`  
-Evidence axis: `[macOS-CPU frozen-scorer advisory]`  
+Date: 2026-07-24
+Lane: `lane_ddm_ms6b_receiver_support_resume_20260724`
+Verdict scope: `INSTANCE_V19C_ENDPOINT_ONE_QUANTUM_SWEEP`
+Evidence axis: `[macOS-CPU frozen-scorer advisory]`
 `score_claim=false`; `research_only=true`; `main_landing_review_required=true`
 
 ## Verdict
@@ -161,4 +161,3 @@ false unique-event count. The helper now sums explicitly labeled per-assignment
 probe incidence and has a regression test. The clean-pass counter was reset;
 the three post-fix passes and commands are recorded in the round-1 review
 receipt. MAIN must review the branch diff and these custody claims before merge.
-

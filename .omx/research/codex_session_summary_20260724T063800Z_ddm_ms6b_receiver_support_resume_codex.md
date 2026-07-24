@@ -9,4 +9,3 @@
 - Next action belongs in a separately claimed receiver grammar/geometry
   extension lane.
 - MAIN landing review is required before merge.
-

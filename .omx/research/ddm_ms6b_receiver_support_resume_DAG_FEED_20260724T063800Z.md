@@ -40,4 +40,3 @@ are the sensitivity-map/probe-disambiguation inputs for a future separately
 claimed receiver-extension lane. Pareto, bit allocation, autopilot actuation,
 and posterior promotion remain fail-closed until G3 coverage and real MS4
 artifacts exist.
-

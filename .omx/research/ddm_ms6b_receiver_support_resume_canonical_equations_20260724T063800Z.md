@@ -57,4 +57,3 @@ C_{24} =
 Measured result: \(C_{24}=\mathrm{false}\), with 106 false pair/bucket clauses;
 only pair 21 has all of its required clauses true. Therefore the MS4 transition
 predicate is false.
-
