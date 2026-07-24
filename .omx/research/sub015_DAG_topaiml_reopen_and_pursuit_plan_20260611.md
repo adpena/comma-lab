@@ -23646,3 +23646,27 @@ answered-in-part (persistence yes, motion unproven). Per the fleet-cap≠quota d
 respawn — dm3's slot stays empty; the finding rides dc1/#688 as data; ic1 (the incumbent) is the
 live priority. Cherry-pick 1e74e389 + union-merge clean. Pointer 0.1910828242 [contest-CPU]
 UNMOVED.
+
+FEED-603-scorer-recursion-directive (2026-07-24, operator verbatim "Many implementations were
+probably naive and not optimized against recursive analysis of upstream evaluate.py"):
+CONFIRMED against today's wave, surface by surface: (1) dm2's candidate menu (local disks
+r1-r128 × q-levels + global_all writes) = GENERIC SPATIAL MENU, not derived from the resize-kernel
+footprint / stride-2 stem lattice / rank-4 head hyperplanes / ERF structure — its 2524.25× is
+hereby SHARPENED from "constructive upper bound" to **[naive-menu upper bound]**; the arm's own
+next-measurement column (corrected-J/shearlet hard admission) already named the scorer-recursive
+replacement, which dm4 is executing NOW with an inbox amendment: derive WRITE SUPPORT from the
+kernel footprint + stem lattice, not disk radii. (2) dm3's ξ leg = translation-only proxy on
+semantic records → its ξ 0/36 is **[naive-program-scoped]** — NOT evidence against se(3)/motion
+CONNECTION; identity-persistence (+1,188B) stands (identity is trivially non-naive). (3) dm1's
+semantic RECORDS are scorer-native (argmax symbols + exact pairwise margins) — not naive; its
+generic coders bound prices only. (4) v14's paint colors were SOLVED from the frozen head —
+scorer-recursive, not naive. (5) dc1's separable rank-one basis = explicitly-labeled toy fixture;
+the REAL fit basis must be scorer-derived (contract already requires derivation; ic1/dm4 inbox
+directive now binds it). STRUCTURAL FIX (not another audit arm — the respawn-reflex lesson holds):
+the directive is now in the BROADCAST inbox (all current + future arms poll it) + per-arm rows for
+dm4/ic1: candidate/proposal/program construction MUST be traceable to a named scorer-recursion
+surface (segnet fractal factorization · frozen-scorer factorization · at1 atlas · sn1 telemetry ·
+#580 kernel adjoint · #583 J-bank · ERF/stem lattice) or its results carry [naive-menu upper
+bound] + a named scorer-derived replacement. verdict_scope: re-scope/sharpening only — no prior
+verdict overturned (both affected arms had honestly scoped their own bounds). Pointer 0.1910828242
+[contest-CPU] UNMOVED.
