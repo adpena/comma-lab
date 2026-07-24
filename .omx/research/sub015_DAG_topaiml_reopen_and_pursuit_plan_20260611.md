@@ -24078,3 +24078,19 @@ Typed blockers preserved: gauge-orbit pullback absent · rank-4 tone assignment 
 zero-direct-saving absent a stored camera section. 12-row three-base conditional table = the
 zero-byte stack's admission ledger for c1 composition. verdict_scope: INSTANCE per row. Pointer
 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-r3-blocked-names-the-stream-crux (2026-07-24, reviewed_committed 6c25741b6a)
+r3 fail-closed in 33 min with the crux NAMED: BLOCKED_NO_COMPOSABLE_TYPED_ACTUATOR_STREAM. The
+decisive clarification: ev1's 162 byte homes are ACCOUNTING assignments (which bucket owns which
+bytes) — NOT physical typed actuator streams; the rg1/rg2/rg3 grammar coordinates exist as
+receiver-effective PROBE coordinates but no serialized, counted, receiver-consumed PAYLOAD FORMAT
+connects them into a stream the waterfill can size. All four representation-family telemetry rows
+honestly NULL (NO_ADMISSIBLE_TYPED_STREAM_BYTES_TO_ATTRIBUTE ×162 buckets ×4 families). Custody
+discipline exemplary: 29 diagnostic slopes NOT promoted into the 162 duals; batch32 custody not
+inferred from batch16 R2; nulls stay null. The 3 components (alternation/atlas/quanta) remain
+not-active pending the stream. CONVERGENCE: this is the SAME missing object as j8f's deliverable
+seen from the solve side — j8f's DM4→J5 counted-application operator (descriptor provenance →
+counted actuation) IS the typed actuator stream template; pc1 built the pose-side instance (40B
+home + Φ + 320 coordinates). NO respawn (anti-duplication): j8f owns the crux; r3-rerun re-queued
+GATED ON j8f landing. verdict_scope: the r3 attempt is INSTANCE-blocked, solve family fully open.
+Pointer 0.1910828242 [contest-CPU] UNMOVED.
