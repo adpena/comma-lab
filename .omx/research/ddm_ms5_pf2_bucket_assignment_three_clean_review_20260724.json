@@ -1,0 +1,54 @@
+{
+  "schema": "ddm_ms5_pf2_bucket_assignment_three_clean_review.v1",
+  "lane_id": "lane_ddm_ms5_pf2_bucket_assignment_20260724",
+  "reviewed_source_sha256": {
+    "src/tac/optimization/ddm_pf2_bucket_assignment.py": "8ddf020c34348dc00128681ce634e25810f65fd8ed8e861837b1dbd6bf3cca44",
+    "src/tac/optimization/ddm_metric_producers.py": "c149e29c89771e371b1029726551401ce340a1cc189ef65cfa7fa9a7f4e15f80",
+    "tools/assign_ddm_ms5_pf2_buckets.py": "8715515f91a98a1813e70f6901f07fa79210d8d323526c63c24bcd68ea80a99c",
+    "tools/produce_ddm_ms4_metric_custody.py": "fa1d79310fb53124e638c99fb6fa82e45a6b1098ee0b1edd1dd6f8f7d307c25a",
+    "src/tac/canonical_equations/ddm_pf2_bucket_assignment_20260724.py": "3c25dbb473bc6ad381ad93d6d601cec75e7e239ec0b437a8f694bde225f19040"
+  },
+  "reviewed_test_sha256": {
+    "src/tac/optimization/tests/test_ddm_pf2_bucket_assignment.py": "b6effb99d50911408775746e27daaa3c8ba884be306f3fc19143ecd398d4e2d0",
+    "tools/tests/test_ddm_metric_producers.py": "06cc71195c2712e244eb711a7659bac850a71a993fd6bbf4296f6efbc287dcba",
+    "src/tac/canonical_equations/tests/test_ddm_pf2_bucket_assignment_20260724.py": "5a995ded77991ca3e31a048a395a90db19b2d1bdd88207652cd6de1c76b64ac7"
+  },
+  "artifact_custody": {
+    "receipt_file_sha256": "3d0b9fcc738a1092bad495b0dbce2b022451e1442814a7cc274da41e43d455d6",
+    "table_file_sha256": "20fa2b2ce2bd96b91c64d4e1342109dd7dab399d4769cd372dbf67fbcdf97d8d",
+    "bucket_membership_set_equality": "1200/1200",
+    "event_mass_conservation": "4011236/4011236",
+    "complete_foreign_key_assignments": "0/1200"
+  },
+  "passes": [
+    {
+      "pass": 1,
+      "focus": "final static analysis, formatting, typed schema, atlas identity, and relevant regression suite",
+      "result": "CLEAN",
+      "evidence": "Ruff check and format check PASS; 30 pytest PASS; git diff --check PASS"
+    },
+    {
+      "pass": 2,
+      "focus": "adversarial receipt/table mutation refusal and actual MS4 loader/audit integration",
+      "result": "CLEAN",
+      "evidence": "actual receipt loader PASS; complete-row-without-foreign-keys mutation REFUSED; 22 pytest PASS"
+    },
+    {
+      "pass": 3,
+      "focus": "fresh content-hash rederivation, canonical callable, compile, and final regression replay",
+      "result": "CLEAN",
+      "evidence": "receipt/table content hashes PASS; 1200/1200 set closure; 4011236/4011236 mass; 30 pytest PASS; Ruff PASS; py_compile PASS"
+    }
+  ],
+  "round1_fixes_before_clean_passes": [
+    "added assignment-filter boolean-set equality instead of relying on mass alone",
+    "bound exact PF2 and J2 implementation source hashes",
+    "made the assignment table path repository-relative for MAIN portability",
+    "required six-field atlas-key identity in the MS4 audit"
+  ],
+  "verdict": "THREE_CLEAN_PASSES",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

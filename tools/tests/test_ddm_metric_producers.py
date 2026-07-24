@@ -16,6 +16,17 @@ from tac.optimization.ddm_metric_producers import (
     seg_margin_fisher_row,
     validate_hard_pair_schedule,
 )
+from tac.optimization.ddm_min_description_contract import (
+    LayerHome,
+    StreamType,
+    TypedStreamTag,
+)
+from tac.optimization.ddm_pf2_bucket_assignment import (
+    ASSIGNMENT_ROW_SCHEMA,
+    ASSIGNMENT_TABLE_SCHEMA,
+    RECOVERED_STATUS,
+    canonical_sha256,
+)
 
 
 def _pf2_rows(*, assigned: bool) -> dict:
@@ -26,7 +37,15 @@ def _pf2_rows(*, assigned: bool) -> dict:
         "direction_id": "direction-A",
     }
     for index in range(1200):
-        row = {"bucket_id": f"bucket-{index:04d}"}
+        row = {
+            "bucket_id": f"bucket-{index:04d}",
+            "class_pair": "Road--Lane",
+            "class_ids": [0, 1],
+            "class_stratum": "cell",
+            "visibility": "seg-visible",
+            "g4_temporal_class": "STATIC_IN_IMAGE",
+            "representation_type": "SKELETON",
+        }
         if assigned:
             row["measurement_assignment"] = assignment
         rows.append(row)
@@ -47,6 +66,56 @@ def test_pf2_assignment_requires_full_pair_and_direction_custody() -> None:
     value["typed_split_atlas"]["rows"][17]["measurement_assignment"]["pair_ids"] = [0]
     audit = audit_pf2_bucket_assignments(value)
     assert audit.assigned_count == 0  # shared test mapping was invalidated everywhere
+
+
+def test_pf2_first_class_assignment_table_preserves_partial_fail_closed_rows() -> None:
+    pf2 = _pf2_rows(assigned=False)
+    tag = TypedStreamTag(
+        type=StreamType.SKELETON,
+        layer_home=LayerHome.L1_PROGRAM,
+        evaluate_py_recursion_level_cited="L1_program assignment -> L4_scorer_feature",
+        counted_bytes=0,
+        free_receiver_code=True,
+    ).to_dict()
+    rows = []
+    for index in range(1200):
+        complete = index == 7
+        rows.append(
+            {
+                "schema": ASSIGNMENT_ROW_SCHEMA,
+                "bucket_id": f"bucket-{index:04d}",
+                "atlas_key": {
+                    "class_pair": "Road--Lane",
+                    "class_ids": [0, 1],
+                    "class_stratum": "cell",
+                    "visibility": "seg-visible",
+                    "g4_temporal_class": "STATIC_IN_IMAGE",
+                    "representation_type": "SKELETON",
+                },
+                "pair_ids": [3, 9] if complete else [],
+                "assignment_status": (RECOVERED_STATUS if complete else "ASSIGNMENT_UNRECOVERABLE_NO_FOREIGN_KEY"),
+                "receiver_actuator_ids": ["j2.island.track1.center_x"] if complete else [],
+                "direction_ids": ["POSITIVE_ONE_QUANTUM"] if complete else [],
+                "typed_stream_tag": tag,
+            }
+        )
+    table = {
+        "schema": ASSIGNMENT_TABLE_SCHEMA,
+        "pf2_receipt_sha256": "a" * 64,
+        "rows": rows,
+    }
+    table["table_content_sha256"] = canonical_sha256(table)
+    audit = audit_pf2_bucket_assignments(pf2, table)
+    assert audit.assigned_count == 1
+    assert audit.unassigned_bucket_ids[0] == "bucket-0000"
+    assert "bucket-0007" not in audit.unassigned_bucket_ids
+
+    table["rows"][7]["atlas_key"]["class_pair"] = "Road--Movable"
+    table["table_content_sha256"] = canonical_sha256(
+        {key: value for key, value in table.items() if key != "table_content_sha256"}
+    )
+    with pytest.raises(MetricProducerError, match="atlas key differs"):
+        audit_pf2_bucket_assignments(pf2, table)
 
 
 def test_pose_factor_is_exact_mean_squared_quadratic() -> None:

@@ -68,6 +68,11 @@ from tac.optimization.ddm_min_description_contract import (  # noqa: E402
     LayerHome,
     StreamType,
 )
+from tac.optimization.ddm_pf2_bucket_assignment import (  # noqa: E402
+    ASSIGNMENT_RECEIPT_SCHEMA,
+    canonical_sha256,
+    validate_assignment_table,
+)
 from tac.repo_io import sha256_file  # noqa: E402
 from tac.scorer import load_default_scorers  # noqa: E402
 
@@ -81,8 +86,7 @@ MIN_FREE_BYTES: Final = 2 * 1024**3
 STAGES: Final = tuple(HARD_PAIR_ORDER)
 
 DEFAULT_PF2 = (
-    REPO
-    / ".omx/research/ddm_pf2_dimension_conditioned_two_type_20260724T020205Z/"
+    REPO / ".omx/research/ddm_pf2_dimension_conditioned_two_type_20260724T020205Z/"
     "ddm_pf2_dimension_conditioned_two_type_receipt.json"
 )
 DEFAULT_G3 = REPO / ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/hard_pair_registry.json"
@@ -109,6 +113,44 @@ def _verify(path: Path, expected: str, label: str) -> dict[str, Any]:
     if observed != expected:
         raise MS4ProducerError(f"{label} SHA-256 differs: {observed}")
     return {"path": str(resolved), "bytes": resolved.stat().st_size, "sha256": observed}
+
+
+def _load_assignment_receipt(
+    path: Path,
+    expected_sha256: str,
+) -> tuple[Mapping[str, Any], dict[str, Any]]:
+    """Load the MS5 table through both file and embedded content hashes."""
+
+    receipt_custody = _verify(path, expected_sha256, "PF2 assignment receipt")
+    receipt = _read_json(path)
+    if receipt.get("schema") != ASSIGNMENT_RECEIPT_SCHEMA:
+        raise MS4ProducerError("PF2 assignment receipt schema differs")
+    payload = dict(receipt)
+    claimed_receipt_sha = payload.pop("receipt_content_sha256", None)
+    if claimed_receipt_sha != canonical_sha256(payload):
+        raise MS4ProducerError("PF2 assignment receipt content SHA differs")
+    table_binding = receipt.get("assignment_table")
+    if not isinstance(table_binding, Mapping):
+        raise MS4ProducerError("PF2 assignment receipt lacks its table binding")
+    table_path = Path(str(table_binding.get("path")))
+    if not table_path.is_absolute():
+        table_path = REPO / table_path
+    table_custody = _verify(
+        table_path,
+        str(table_binding.get("file_sha256")),
+        "PF2 assignment table",
+    )
+    table = _read_json(table_path)
+    try:
+        validate_assignment_table(table, expected_pf2_sha256=EXPECTED_PF2_SHA256)
+    except ValueError as exc:
+        raise MS4ProducerError("PF2 assignment table failed strict validation") from exc
+    if table.get("table_content_sha256") != table_binding.get("content_sha256"):
+        raise MS4ProducerError("PF2 assignment table content binding differs")
+    return table, {
+        "receipt": receipt_custody,
+        "table": table_custody,
+    }
 
 
 def _custody(path: Path, *, role: str, content_schema: str) -> ArtifactCustody:
@@ -316,9 +358,9 @@ def _blocker_artifact(
         "pf2_bucket_count": audit.bucket_count,
         "assigned_bucket_count": audit.assigned_count,
         "unassigned_bucket_count": len(audit.unassigned_bucket_ids),
-        "unassigned_bucket_ids_sha256": __import__("hashlib").sha256(
-            ("\n".join(audit.unassigned_bucket_ids) + "\n").encode("utf-8")
-        ).hexdigest(),
+        "unassigned_bucket_ids_sha256": __import__("hashlib")
+        .sha256(("\n".join(audit.unassigned_bucket_ids) + "\n").encode("utf-8"))
+        .hexdigest(),
         "input_custody": dict(custody),
         "forbidden_inference": (
             "Do not duplicate one pair-level tensor across the 1,200 PF2 keys and "
@@ -539,12 +581,16 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--through-stage", choices=STAGES, default="top24")
     parser.add_argument("--pf2", type=Path, default=DEFAULT_PF2)
+    parser.add_argument("--pf2-assignment-receipt", type=Path)
+    parser.add_argument("--pf2-assignment-receipt-sha256")
     parser.add_argument("--g3", type=Path, default=DEFAULT_G3)
     parser.add_argument("--gt-cache", type=Path, default=DEFAULT_GT)
     parser.add_argument("--upstream", type=Path, default=DEFAULT_UPSTREAM)
     parser.add_argument("--bulk-output", type=Path, default=DEFAULT_BULK)
     parser.add_argument("--receipt-output", type=Path, default=DEFAULT_RECEIPTS)
     args = parser.parse_args()
+    if (args.pf2_assignment_receipt is None) != (args.pf2_assignment_receipt_sha256 is None):
+        parser.error("--pf2-assignment-receipt and --pf2-assignment-receipt-sha256 must be supplied together")
 
     storage = _storage_preflight(args.bulk_output)
     args.bulk_output.mkdir(parents=True, exist_ok=True)
@@ -561,6 +607,13 @@ def main() -> int:
         ),
         "upstream_modules": _verify(args.upstream / "modules.py", EXPECTED_MODULES_SHA256, "upstream modules"),
     }
+    assignment_table = None
+    if args.pf2_assignment_receipt is not None:
+        assignment_table, assignment_custody = _load_assignment_receipt(
+            args.pf2_assignment_receipt,
+            args.pf2_assignment_receipt_sha256,
+        )
+        source_custody["pf2_assignment"] = assignment_custody
     execution_contract = {
         "schema": "ddm_ms4_execution_contract.v1",
         "run_id": RUN_ID,
@@ -579,7 +632,7 @@ def main() -> int:
     publish_immutable_json(args.bulk_output / f"execution_contract_{args.through_stage}.json", execution_contract)
     pf2 = _read_json(args.pf2)
     g3 = _read_json(args.g3)
-    audit = audit_pf2_bucket_assignments(pf2)
+    audit = audit_pf2_bucket_assignments(pf2, assignment_table)
     schedule = validate_hard_pair_schedule(g3)
 
     gt_f0 = open_stored_npy_memmap(args.gt_cache, "gt_f0")

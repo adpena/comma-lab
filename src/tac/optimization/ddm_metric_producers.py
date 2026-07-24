@@ -28,14 +28,18 @@ from tac.optimization.ddm_min_description_contract import (
     StreamType,
     TypedStreamTag,
 )
+from tac.optimization.ddm_pf2_bucket_assignment import (
+    ATLAS_KEY_FIELDS,
+    RECOVERED_STATUS,
+    validate_assignment_table,
+)
 
 PRODUCER_SCHEMA: Final = "ddm_ms4_metric_producer_receipt.v1"
 BLOCKER_SCHEMA: Final = "ddm_ms4_metric_producer_blocker.v1"
 POSE_BLOCK_SCHEMA: Final = "ddm_ms4_pose_batch32_checkpoint.v1"
 POSE_TUBE_RADIUS: Final = 0.05
 POSE_TUBE_SOURCE: Final = (
-    "DDMV16CoupledJointSolveConfigV1.pose_trust_radius; "
-    "tools/measure_ddm_v16_coupled_joint_solve.py"
+    "DDMV16CoupledJointSolveConfigV1.pose_trust_radius; tools/measure_ddm_v16_coupled_joint_solve.py"
 )
 
 
@@ -66,7 +70,10 @@ def metric_tag(stream_type: StreamType, layer_home: LayerHome) -> dict[str, Any]
     ).to_dict()
 
 
-def audit_pf2_bucket_assignments(pf2: Mapping[str, Any]) -> PF2AssignmentAudit:
+def audit_pf2_bucket_assignments(
+    pf2: Mapping[str, Any],
+    assignment_table: Mapping[str, Any] | None = None,
+) -> PF2AssignmentAudit:
     """Audit explicit bucket-to-input mappings without inferring missing data.
 
     The accepted mapping is intentionally narrow.  Each row must contain a
@@ -79,6 +86,38 @@ def audit_pf2_bucket_assignments(pf2: Mapping[str, Any]) -> PF2AssignmentAudit:
     rows = atlas.get("rows") if isinstance(atlas, Mapping) else None
     if not isinstance(rows, list) or len(rows) != PF2_BUCKET_COUNT:
         raise MetricProducerError("PF2 atlas does not contain exactly 1,200 rows")
+    if assignment_table is not None:
+        expected_pf2_sha256 = assignment_table.get("pf2_receipt_sha256")
+        if not isinstance(expected_pf2_sha256, str):
+            raise MetricProducerError("PF2 assignment table lacks its atlas SHA binding")
+        try:
+            validate_assignment_table(
+                assignment_table,
+                expected_pf2_sha256=expected_pf2_sha256,
+            )
+        except ValueError as exc:
+            raise MetricProducerError("PF2 assignment table failed strict validation") from exc
+        assignment_rows = assignment_table["rows"]
+        assignment_by_id = {str(row["bucket_id"]): row for row in assignment_rows}
+        atlas_ids = {str(row["bucket_id"]) for row in rows if isinstance(row, Mapping)}
+        if set(assignment_by_id) != atlas_ids:
+            raise MetricProducerError("PF2 assignment bucket identity differs from the atlas")
+        for atlas_row in rows:
+            bucket_id = str(atlas_row["bucket_id"])
+            expected_key = {field: atlas_row[field] for field in ATLAS_KEY_FIELDS}
+            if assignment_by_id[bucket_id].get("atlas_key") != expected_key:
+                raise MetricProducerError(f"PF2 assignment atlas key differs for bucket {bucket_id}")
+        assigned_ids = {
+            bucket_id for bucket_id, row in assignment_by_id.items() if row.get("assignment_status") == RECOVERED_STATUS
+        }
+        return PF2AssignmentAudit(
+            bucket_count=len(rows),
+            assigned_count=len(assigned_ids),
+            unassigned_bucket_ids=tuple(
+                str(row["bucket_id"]) for row in rows if str(row["bucket_id"]) not in assigned_ids
+            ),
+        )
+
     assigned = 0
     unassigned: list[str] = []
     for row in rows:
