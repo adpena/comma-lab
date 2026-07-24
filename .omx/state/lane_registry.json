@@ -86765,6 +86765,54 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_ddm_ms7_receiver_edges_20260724",
+      "name": "DDM ms7 receiver edges and 25-bucket reach",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_ms7_receiver_edges.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ms7_receiver_edges_and_25bucket_reach_20260724T172249Z/ddm_ms7_receiver_edges_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "tools/tests/test_run_ddm_ms7_receiver_edges.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ms7_receiver_edges_three_clean_review_20260724.json"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_ms7_receiver_edges_and_25bucket_reach_20260724_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "R0 0/25 mass-paying; PF3 pair523 pricing control complete; Brotli wins; no score or pointer movement; main_review_required.",
+      "lane_class": "measurement_apparatus",
+      "research_only": true,
+      "reactivation_criteria": [
+        "a terminal row gains a measured cheaper R1 or R2 price that pays its S leverage",
+        "a parsed grammar stream exposes a genuine decoder-derived G4 context home",
+        "MAIN authorizes contest-axis replay"
+      ]
     }
   ],
   "level_rules": {
@@ -86774,5 +86822,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T15:08:14Z"
+  "updated_at": "2026-07-24T18:08:50Z"
 }
