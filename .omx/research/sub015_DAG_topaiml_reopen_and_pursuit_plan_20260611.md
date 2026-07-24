@@ -23126,3 +23126,33 @@ tasks — ts1 unit of the 07-24 sweep complete; evidence preserved losslessly on
   hard-block coverage is proven through the ms3 loader gate. equations:
   ddm_receiver_support_foreign_key_20260724 registered by the arm (canonical_equations module landed).
 - **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-ms6b-custody (2026-07-24, MAIN custody of ddm_ms6b rc=0 — SWEEP COMPLETE 748/748; the bundle path now runs THROUGH the receiver-grammar extension)
+- **VERDICT (4 commits a001b729f0..efe37042b5 cherry-picked in order; 5 tests pass; MAIN re-derived
+  ALL arithmetic: 663+1+14+70=748, 48+12+10=70, Σmissing=106 with per-row required−joined=missing
+  consistent across all 24 G3 pairs; summary artifact re-verified 748/34/106 with the 106-block
+  list machine-readable):** sweep COMPLETE, assignment PARTIAL — 34/1,200 buckets causally
+  assigned (33 multi-actuator); G3 top-24 coverage FAILS CLOSED (only pair 21 complete: 10/10);
+  MS4 correctly NOT invoked; Pose COMPLETE untouched. verdict_scope:
+  INSTANCE — V19C endpoint, one-quantum formulation.
+- **STRUCTURAL CONCLUSION (the headline decomposed):** the current receiver grammar's 374
+  actuators reach only ~3% of pf2 bucket space. Infeasibility grew under measurement: 70 rows =
+  48 Lane grammar + 12 G2CS1 grammar + **10 island center_x geometry** (ms6 knew 1; the completed
+  sweep measured 9 MORE instance-scoped geometry failures — polygon escapes are systematic on this
+  base, not a one-off). Plus 15 measured-empty rows (1 argmax-invariant, 14 empty raster support
+  on template RGB directions) — explicit, never coerced.
+- **SIGN-ASYMMETRY LAW CANDIDATE (334 dual-direction coordinates, INSTANCE-scoped):** signed
+  quantization changes support INTENSITY per coordinate (camera-value/cell/event asymmetries up to
+  ±7% on track0) but set-size REACH is overwhelmingly symmetric — raster-pair dominance 0/332/2,
+  scorer-pair 4/324/6. Practical consequence: direction choice prices intensity, not coverage.
+- **HONESTY RECEIPT:** round-1 review caught a HIGH summary-consumer error — a bucket-level
+  perturbed_event_count would have implied a FALSE unique-event cardinality; the helper now sums
+  explicitly-labeled per-assignment incidence (`probe_event_incidence_count`, deliberately not
+  unique-event) with a regression test; clean-pass counter reset and 3 post-fix passes recorded.
+- **CRUX → rg1 respawn (ms6b's required-next-action verbatim):** a separately-claimed BUILD lane
+  for the receiver grammar/geometry extension — make Lane + G2CS1 (+ alternative receiver-effective
+  coordinates) isolatable one-quantum coordinates around the SAME SHA-bound base; preserve the
+  60 grammar + 10 geometry rows as instance evidence; re-run ONLY newly-admissible probes; ALL 106
+  G3 blocks must close before MS4 becomes eligible. This unifies two independently-derived demands:
+  the bundle chain's coverage gap AND #613's "Lane not isolatable" design signal.
+- **Pointer:** 0.1910828242 [contest-CPU] UNMOVED.
