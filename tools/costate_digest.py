@@ -1355,6 +1355,13 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
         lines.extend(ddm_lines)
         run_dir = None
         report = data["ddm_costate_organ"]
+        from tac.ddm_campaign_costate import campaign_consumer_view
+
+        campaign_digest = campaign_consumer_view(report["campaign"], "digest")
+        campaign_duty = campaign_consumer_view(report["campaign"], "duty_queue")
+        campaign_nag = campaign_consumer_view(report["campaign"], "activation_nag")
+        data["ddm_campaign"] = campaign_digest
+        data["ddm_campaign_activation_nag"] = campaign_nag
         data["live_run"] = {
             "alive": False,
             "status": "DOMINATED_BY_LIVE_DDM_RECEIPT_FLEET",
@@ -1379,12 +1386,15 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
             "ranked_top": [
                 {
                     "lever": row["duty"],
-                    "activation_state": "live-ddm-duty",
+                    "activation_state": "live-ddm-campaign-duty",
                     "why": row["reason"],
                 }
-                for row in report["duties"]["live_ranked"]
+                for row in campaign_duty["rows"]
             ],
+            "state_digest": campaign_duty["state_digest"],
+            "activation_nag": campaign_duty["activation_nag"],
             **report["duties"],
+            "legacy_duties": report["duties"],
         }
         data["factorized_sense"] = report["lambda"]["backtest"]
     else:

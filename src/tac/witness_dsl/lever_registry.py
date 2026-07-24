@@ -39,8 +39,10 @@ from __future__ import annotations
 
 import ast
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from tac.witness_dsl import curriculum_dsl as _cd
 from tac.witness_dsl.curriculum_dsl import BASELINE, real_trainer_flags
@@ -357,12 +359,26 @@ def emit_stub_lever(flag: str) -> str:
     )
 
 
+def campaign_activation_nag(campaign_state: Mapping[str, Any]) -> dict[str, Any]:
+    """Expose the canonical DDM campaign nag without rebuilding its truth.
+
+    ``activation_ledger`` imports this registry, so the adapter accepts the
+    already-composed campaign state and uses the campaign module's digest guard;
+    it never imports the activation ledger or performs a second derivation.
+    """
+
+    from tac.ddm_campaign_costate import campaign_consumer_view
+
+    return campaign_consumer_view(campaign_state, "activation_nag")
+
+
 __all__ = [
     "BASELINE",
     "CanonicalMetricDescriptor",
     "Completeness",
     "LeverCompositionError",
     "MetricResolutionError",
+    "campaign_activation_nag",
     "canonical_metric_ids",
     "completeness",
     "dsl_emitted_flags",

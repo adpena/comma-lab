@@ -562,6 +562,73 @@ def _read_costate(run_dir: str | None) -> dict | None:
         return None
 
 
+_DDM_CAMPAIGN_CACHE: dict[str, object] = {}
+
+
+def _ddm_campaign_source_signature() -> tuple[tuple[str, int, int], ...]:
+    """Cheap mtime/size gate for the immutable receipt inputs."""
+
+    from tac.ddm_campaign_costate import J8F_GLOBS, SOURCES
+    from tac.ddm_costate_organ import SOURCE_SPECS
+
+    paths = [_REPO_ROOT / spec.path for spec in SOURCES]
+    research = _REPO_ROOT / ".omx" / "research"
+    paths.extend(
+        path
+        for spec in SOURCE_SPECS
+        for path in sorted(research.glob(spec.glob))[-1:]
+    )
+    paths.extend(
+        path
+        for pattern in J8F_GLOBS
+        for path in sorted(_REPO_ROOT.glob(pattern))[-1:]
+    )
+    return tuple(
+        sorted(
+            (
+                str(path),
+                path.stat().st_size if path.is_file() else -1,
+                path.stat().st_mtime_ns if path.is_file() else -1,
+            )
+            for path in paths
+        )
+    )
+
+
+def _read_ddm_campaign() -> dict | None:
+    """Read the campaign dashboard view from the canonical campaign composer.
+
+    The cache key is the campaign lineage digest, obtained from the same
+    schema/hash-validated state used by ``tools/costate_digest.py``.  This
+    remains advisory and has no launcher/provider imports.
+    """
+
+    try:
+        from tac.ddm_campaign_costate import campaign_consumer_view
+        from tac.ddm_costate_organ import build_live_ddm_costate
+
+        signature = _ddm_campaign_source_signature()
+        if _DDM_CAMPAIGN_CACHE.get("signature") == signature:
+            cached = _DDM_CAMPAIGN_CACHE.get("view")
+            return dict(cached) if isinstance(cached, dict) else None
+        organ = build_live_ddm_costate(repo_root=_REPO_ROOT)
+        if not organ.get("available"):
+            return None
+        state = organ["campaign"]
+        view = campaign_consumer_view(state, "dashboard")
+        _DDM_CAMPAIGN_CACHE.clear()
+        _DDM_CAMPAIGN_CACHE.update(
+            {
+                "signature": signature,
+                "digest": str(state["state_digest"]),
+                "view": dict(view),
+            }
+        )
+        return view
+    except Exception:
+        return None
+
+
 def _read_identity_header(run_dir) -> dict:
     """The RUN-IDENTITY header the launcher stamps into the run dir's config record
     (launch.sh ``# tac-run-purpose:`` / ``# tac-config-family:`` comment lines,
@@ -1461,6 +1528,9 @@ class LiveState:
         # costate controller SENSE/DECIDE panel source (run_dir/costate_shadow.jsonl;
         # read-only, advisory). None -> the panel is absent (conditional rendering).
         self.costate: dict | None = None
+        # Global DDM campaign view. It is built from the same state digest as the
+        # digest/duty/nag consumers and remains visible without a witness run.
+        self.ddm_campaign: dict | None = None
         # schema-driven introspection payload (#352): schedule classification + controller
         # + LawRef constants + planned curves + liveness + mem + fired events. None -> the
         # new LIVE panels are absent (conditional; pre-v6 run dirs degrade gracefully).
@@ -1879,6 +1949,10 @@ class LiveState:
             self.costate = _read_costate(self.watched_dir)
         except Exception:
             self.costate = None
+        try:
+            self.ddm_campaign = _read_ddm_campaign()
+        except Exception:
+            self.ddm_campaign = None
 
         # SCHEMA-DRIVEN INTROSPECTION (#352, operator 2026-07-08): the schedule/curriculum
         # classification (event/derived/fixed) + costate controller + LawRef constants +
@@ -2582,6 +2656,7 @@ class LiveState:
             "pointer_info": ptr,
             "pose_blind": self.pose_blind,      # w_pose==0 in the run's own config
             "costate": self.costate,            # SENSE/DECIDE panel (None -> absent)
+            "ddm_campaign": self.ddm_campaign,  # shared DDM campaign state (advisory)
             "introspect": self.introspect,      # #352 schema-driven schedule/controller/telemetry
             "introspect_ok": bool(self.introspect and self.introspect.get("ok")),
             "run_identity": self.run_identity,  # header row (None -> row absent)
@@ -5829,10 +5904,11 @@ function renderCostate(){
   const I=META.introspect||{};
   const C=(I.controller&&I.controller.ok)?I.controller:null;
   const legacy=(!C&&META.costate&&META.costate.ok)?META.costate:null;
+  const campaign=(META.ddm_campaign&&META.ddm_campaign.ok)?META.ddm_campaign:null;
   const L=I.liveness||null;
-  if(!C&&!legacy&&!L){box.classList.add("hide");return;}
+  if(!C&&!legacy&&!campaign&&!L){box.classList.add("hide");return;}
   box.classList.remove("hide");
-  const src=C||legacy||{};
+  const src=C||legacy||campaign||{};
   // ── header summary line ──
   const bits=[];
   // classification: the introspect controller ships a RAW diagnostic dict-repr here
@@ -5860,6 +5936,12 @@ function renderCostate(){
   }
   if(src.epoch!=null)bits.push("row ep"+src.epoch+(src.age_s!=null?" &middot; "+fmtAge(src.age_s)+" old":""));
   if(src.n_verdicts!=null)bits.push("<b>"+src.n_verdicts+"</b> verdicts sensed");
+  if(campaign){
+    bits.push("DDM campaign <b>"+escHtml(campaign.status||"?")+"</b>");
+    bits.push("<b>"+campaign.verdict_count+"</b> realized verdicts");
+    const pr=campaign.plateau_route||{};
+    bits.push("plateau "+escHtml(pr.status||"?")+(pr.fork_id?" &rarr; "+escHtml(pr.fork_id):""));
+  }
   let h="<div class='csline'>"+(bits.join(" &middot; ")||"no shadow rows yet")+"</div>";
   // ── two-column grid: λ costate traces  |  DECIDE (duty queue + axis EV) ──
   if(C){
@@ -5898,6 +5980,18 @@ function renderCostate(){
       cells.push("<div class='cscell'><div class='csk'>DECIDE &middot; duty queue</div><div class='csline'>"+
         dec.join("<br>")+"</div></div>");
     if(cells.length)h+="<div class='csgrid'>"+cells.join("")+"</div>";
+  }
+  if(campaign){
+    const nag=campaign.activation_nag||{}, sensed=campaign.sense_rows||[];
+    const measured=sensed.filter(r=>r.value!=null).length;
+    const next=(nag.next_duty||{}).duty||"none";
+    h+="<div class='csgrid'><div class='cscell'><div class='csk'>DDM #366 SENSE</div>"+
+      "<div class='csline'>measured <b>"+measured+"/"+sensed.length+"</b> standing rows"+
+      " &middot; blockers <b>"+(campaign.blockers||[]).length+"</b>"+
+      " &middot; state <b>"+escHtml(String(campaign.state_digest||"").slice(0,12))+"</b></div></div>"+
+      "<div class='cscell'><div class='csk'>DDM campaign DECIDE</div><div class='csline'>"+
+      "next owed <b>"+escHtml(next)+"</b> &middot; activation nag "+
+      "<b>"+escHtml(nag.status||"?")+"</b> &middot; actuation <b>NONE</b></div></div></div>";
   }
   // ── liveness strip (confound-immune: a frozen run must LOOK frozen) ──
   if(L){
