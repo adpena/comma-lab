@@ -22572,3 +22572,25 @@ Pointer 0.1910828242 [contest-CPU] UNMOVED.
 **OPERATOR H-pose-easy (explicitly labeled hypothesis, "may be flawed/incomplete/wrong"):** pre-training composition may SPEND pose to buy seg — pose trains down monotone-easy, seg plateaus. Measured FOR: R1 witness d_pose 12.94→0.0009 monotone · pa1/pt1x pose=low-dim statistics · seg plateau history (0.505/0.026/0.0248/0.0284). Measured CAUTION: j3 smoke = realized d_seg REGRESSION during pose descent on THIS vehicle (j4/j5 cured); witness numbers non-transferable (ancestor law). **Status: WORKING HYPOTHESIS with pre-registered falsifier, NOT law.** Consequence: mc1's measured instance stands, but its CONSUMPTION flips — the hood reassert enters the seg-lexicographic warm-start candidate.
 **ws1 FIRED** (`ddm_ws1_seg_lexicographic_warmstart_20260724T012924Z`, task #668, fleet 4/4: ms1·pf1·rd1·ws1): compose W_seg (seg-lexicographic: base + hood reassert + seg-only re-ranked corrections, re-MEASURED composed never summed) vs W_joint (control) end-to-end; per-class decomposition for the train-decision table; typed slope-falsifier spec for j5's bounded smoke (pose-slope/seg-slope ≥ R* → W_seg, pose stall or seg regression → W_joint). Joint-S gates remain the criterion for FINAL candidates; the hypothesis governs only pre-training state prep pending the falsifier.
 Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-pf1-custody (2026-07-24, MAIN custody of ddm_pf1 point-free program description — the SKELETON coder, two-type law realized)
+- **Verdict `POSITIVE_DISCRETE_SKELETON_RUNG_SURVIVES_FIBERS_OPEN`** (verdict_scope: formulation —
+  STRUCTURAL is the only scope-eligible formulation measured; family closure needs ≥3 eligible
+  formulations, 1 measured; LITERAL/SHARED_LIBRARY = opaque physical controls, non-routable).
+- **The two-type law held mid-flight** (MAIN correction consumed): skeleton tokens = discrete
+  topology/reuse/repetition ONLY; centroids/amplitudes/coeffs/knots/ξ = OPAQUE typed fiber slots,
+  coded+counted by their native coders, never tokenized. First arm to execute the law end-to-end.
+- **MEASURED (n600, exact re-derivation zero-residual, verified by MAIN from receipt sha afe14bf6…):**
+  program-vs-identical-content-flat, real coders both sides — composed stratum **−2,340B total**
+  (skeleton 568 vs 2,896 = −2,328; fiber −12), composed typed −2,353B, DV2 stratum sentence −2,299B,
+  DV2 typed −2,283B, G1 worldsheet −30B, V15 bank −26B. Interpreter = FREE_rule118; skeleton =
+  COUNTED_real_coder. Pool `program_description`, SUBSTITUTIVE vs G1/DV2 (never additive).
+- Custody: archive 133,941B sha 759e2833… byte-identical to source (d_seg 0.027470296 identity
+  reconfirmed); 38/38 scorer batches sealed; constraint-algebra solver A/B = NO_VERDICT_NOT_MEASURED
+  (honest boundary). Equation `ddm_pf1_two_typed_discrete_skeleton_rate_delta_v1` REGISTERED IN-ARM
+  (callable verified by MAIN: `evaluate_two_typed_program_vs_flat_bytes`) — drop-class #3 CURED 2nd
+  consecutive arm. Merge 04366432f3; disposition reviewed_committed.
+- **ROUTE → train-decision table DESCRIBE column:** the program-skeleton coder is the cheapest
+  measured DESCRIBE mechanism for grammar/sentence streams (−2.3KB on the DV2 sentence layer at zero
+  distortion change — pure rate). First rung: 2 more scope-eligible formulations (event-topology
+  factoring · cross-stream shared-library over ≥2 fiber-typed streams) to close/keep-open the family.
