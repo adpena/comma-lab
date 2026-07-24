@@ -15,13 +15,21 @@ from tac.optimization.ddm_rg1_receiver_grammar import (
     LANE_FIELDS,
     LaneProgramCoordinateV1,
     RG2ReceiverV1,
+    RG3ReceiverV1,
+    RG3ResidualCoordinateV1,
     SkeletonAmplitudeCoordinateV1,
     compile_rg1_receiver_grammar,
     compile_rg2_receiver_grammar,
+    compile_rg3_receiver_grammar,
     decode_lane_program_coordinates,
+    decode_rg3_residual_coordinates,
     decode_skeleton_amplitude_coordinates,
+    derive_rg3_class_birth_address,
+    derive_rg3_finer_event_local_band,
+    derive_rg3_fisher_margin_band,
     derive_skeleton_amplitude_row_band,
     encode_lane_program_coordinates,
+    encode_rg3_residual_coordinates,
     encode_skeleton_amplitude_coordinates,
     parse_rg1_receiver_grammar,
     project_polygon_center,
@@ -134,6 +142,11 @@ def test_inactive_rg2_is_same_carrier_byte_identical() -> None:
     assert compile_rg2_receiver_grammar(carrier) == carrier
 
 
+def test_inactive_rg3_is_same_carrier_byte_identical() -> None:
+    carrier = _v19c_carrier()
+    assert compile_rg3_receiver_grammar(carrier) == carrier
+
+
 def test_rg2_skeleton_packet_is_typed_unique_crc_bound_and_roundtrips() -> None:
     rows = (
         SkeletonAmplitudeCoordinateV1(
@@ -235,6 +248,141 @@ def test_rg2_rejects_row_band_not_derived_from_bound_base() -> None:
     )
     with pytest.raises(DirectDescriptionError, match="row-band/base binding"):
         receiver.render_camera_pairs((54,))
+
+
+def test_rg3_packet_is_sorted_unique_crc_bound_and_roundtrips() -> None:
+    rows = (
+        RG3ResidualCoordinateV1(
+            14,
+            0,
+            4,
+            "FINER_EVENT_LOCAL_SKELETON_AMPLITUDE_CODEBOOK",
+            "TRANSIENT",
+            2,
+            1,
+            -2,
+        ),
+        RG3ResidualCoordinateV1(
+            54,
+            0,
+            4,
+            "FISHER_MARGIN_PER_STRATUM_SKELETON_AMPLITUDE_CODEBOOK",
+            "STATIC_IN_IMAGE",
+            3,
+            2,
+            1,
+        ),
+    )
+    payload = encode_rg3_residual_coordinates(rows)
+    assert decode_rg3_residual_coordinates(payload) == rows
+    with pytest.raises(DirectDescriptionError, match="sorted, unique"):
+        encode_rg3_residual_coordinates((rows[0], rows[0]))
+    mutated = bytearray(payload)
+    mutated[-1] ^= 1
+    with pytest.raises(DirectDescriptionError, match="CRC"):
+        decode_rg3_residual_coordinates(bytes(mutated))
+    with pytest.raises(DirectDescriptionError, match="exactly one"):
+        RG3ResidualCoordinateV1(
+            14,
+            0,
+            4,
+            "EVENT_LOCAL_SKELETON_CLASS_BIRTH_PRODUCTION",
+            "TRANSIENT",
+            2,
+            1,
+            2,
+        )
+
+
+def test_rg3_receiver_geometry_and_fisher_derivations_are_surgical() -> None:
+    base = _FakeCarrier()
+    base._masks["Road"] = np.pad(
+        np.ones((32, 80), dtype=bool),
+        ((144, 208), (200, 232)),
+    )
+    base._masks["MyCar"] = np.pad(
+        np.ones((32, 80), dtype=bool),
+        ((144, 208), (280, 152)),
+    )
+    row_band = derive_skeleton_amplitude_row_band(
+        base,
+        pair_index=54,
+        class_a=0,
+        class_b=4,
+        family="EVENT_LOCAL_BOUNDARY",
+    )
+    fine = derive_rg3_finer_event_local_band(
+        base,
+        pair_index=54,
+        class_a=0,
+        class_b=4,
+        row_band=row_band,
+    )
+    assert row_band == 2
+    assert fine == 1
+    margins = np.full((384, 512), 20.0, dtype=np.float32)
+    margins[160:176, 200:360] = 0.0
+    assert (
+        derive_rg3_fisher_margin_band(
+            base,
+            pair_index=54,
+            class_a=0,
+            class_b=4,
+            row_band=2,
+            margin_map=margins,
+        )
+        == 2
+    )
+    with pytest.raises(DirectDescriptionError, match="finite nonnegative"):
+        derive_rg3_fisher_margin_band(
+            base,
+            pair_index=54,
+            class_a=0,
+            class_b=4,
+            row_band=2,
+            margin_map=np.full((384, 512), -1.0, dtype=np.float32),
+        )
+
+
+def test_rg3_class_birth_is_receiver_derived_counted_and_effective(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base = _FakeCarrier()
+    row_band, fine_band = derive_rg3_class_birth_address(base, pair_index=54)
+    coordinate = RG3ResidualCoordinateV1(
+        54,
+        1,
+        2,
+        "EVENT_LOCAL_SKELETON_CLASS_BIRTH_PRODUCTION",
+        "STATIC_IN_IMAGE",
+        row_band,
+        fine_band,
+        1,
+    )
+    monkeypatch.setattr(rg1, "receive_carrier_compose_archive", lambda *_args, **_kwargs: None)
+    archive = compile_rg3_receiver_grammar(
+        b"sealed-sha-bound-carrier",
+        rg3_residuals=(coordinate,),
+    )
+    members = parse_rg1_receiver_grammar(archive)
+    assert members["base/v13_v19c_carrier.zip"] == b"sealed-sha-bound-carrier"
+    assert "production/residual_family_coordinates.rg3rf" in members
+    manifest = json.loads(members["manifest.json"])
+    rg3_manifest = manifest["rg3_residual_family_productions"]
+    assert rg3_manifest["typed_stream_tag"]["layer_home"] == "L3_raster"
+    assert "no scorer label" in rg3_manifest["fisher_source_policy"]
+    receiver = RG3ReceiverV1(
+        archive=archive,
+        base=base,
+        residuals=(coordinate,),
+        custody={"rg3_residual_typed_stream": "SKELETON/L3_raster"},
+    )
+    baseline = base.render_camera_pairs((54,))
+    realized = receiver.render_camera_pairs((54,))
+    assert (baseline != realized).any()
+    changed_colours = np.unique(realized.reshape(-1, 3), axis=0)
+    assert [80, 80, 80] in changed_colours.tolist()
+    assert [20, 20, 20] in changed_colours.tolist()
 
 
 def test_joint_streams_are_separate_and_typed() -> None:
