@@ -22594,3 +22594,32 @@ Pointer 0.1910828242 [contest-CPU] UNMOVED.
   measured DESCRIBE mechanism for grammar/sentence streams (−2.3KB on the DV2 sentence layer at zero
   distortion change — pure rate). First rung: 2 more scope-eligible formulations (event-topology
   factoring · cross-stream shared-library over ≥2 fiber-typed streams) to close/keep-open the family.
+
+## FEED-603-typed-dimensionality (2026-07-24, operator ×3: dimension-conditioned two-type · derive-from-evaluate.py · nuanced solver/lattice dimensionality)
+- **Operator directives (verbatim):** "Skeleton fiber decoupling seems like obvious mirror of different
+  video and scorer and other dimensions, seems like could be more optimal and nuanced" + "And like
+  that should have fallen out of recursive analysis and inversion of evaluate.py" + "The inverse
+  solvers and lattice likely need more nuanced dimensionality."
+- **The derivation law (encoded as memory
+  `representation_typology_derives_from_recursive_scorer_inversion_20260724.md`):** representation
+  typologies must be DERIVED from recursive inversion of evaluate.py (level 0: S's type signature =
+  discrete quotient × continuous quadratic IS skeleton×fiber; level 1: argmax⇒cell-membership skeleton
+  + margin-priced fibers + per-class hyperplane strata; PoseNet global stats⇒global-support fibers;
+  R nullspace 80.6742%⇒invisible fiber class; level 2: pair-independence vs one trajectory⇒temporal
+  event/flow typing). Metaphors = mnemonics only, never generators. mc1's hood collision (seg-SKELETON
+  × pose-FIBER, 45.4M YUV6 coords) = the measured existence proof that ONE global split is suboptimal.
+- **Solver corollary (routed to ms1+rd1 inboxes same-turn; #663 description updated):** the solve
+  space is NOT flat uint8 ℤ^N — (1) ker(A) coords are gauge not variables (solve in the ~19.3%
+  quotient); (2) CVP Gram = scorer metric (Lane hyperplane norms 3.75–4.01; pose low-rank ≤6-dim) —
+  reduced-basis vectors ARE the cheapest realized moves v19 found empirically one at a time;
+  (3) constraints typed: polyhedral seg cells × ellipsoidal pose tube × real-coder rate — alternate
+  typed subproblems, no single global relaxation; (4) blocks by stratum × visibility × g4 temporal
+  class (static-in-BEV solved once, ×k amortized); (5) per-dimension quantum = uint8-step ×
+  sensitivity (the "minimal writes die at uint8" realization law is the low-sensitivity corollary);
+  trust regions per-dim in the scorer metric. rd1's duals must be emitted per typed bucket, never
+  pooled — pooled λ hides the exchange-rate structure the train-decision table consumes.
+- **Arm fired:** ddm_pf2_dimension_conditioned_two_type (sol/xhigh, fleet 4/4 at cap) — derivation-law
+  section binding; formulation 2 = pose-stat-preserving hood projection (mc1's first rung, unified);
+  formulation 3 = event-skeleton × ξ-fiber temporal coding; per-bucket rate-raced typed split atlas →
+  train-decision table DESCRIBE column. pf-family closure adjudicated at 3 eligible formulations.
+- pointer 0.1910828242 [contest-CPU] UNMOVED (means/design).
