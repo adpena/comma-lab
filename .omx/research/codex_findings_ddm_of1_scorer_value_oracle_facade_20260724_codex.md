@@ -1,8 +1,8 @@
 # Codex findings — DDM OF1 scorer-value oracle facade
 
-Date: 2026-07-24  
-Lane: `ddm_of1_scorer_value_oracle_facade`  
-Authority: delegated facade-only task; no producer rebuild and no remeasurement  
+Date: 2026-07-24
+Lane: `ddm_of1_scorer_value_oracle_facade`
+Authority: delegated facade-only task; no producer rebuild and no remeasurement
 Verdict: **BUILT_AND_LOCALLY_VERIFIED; MAIN LANDING REVIEW REQUIRED**
 
 ## Outcome
