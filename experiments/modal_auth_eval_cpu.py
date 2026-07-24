@@ -503,6 +503,7 @@ def _run_auth_eval_inner(
     inflate_timeout: int,
     evaluate_timeout: int,
     expected_runtime_tree_sha256: str = "",
+    inner_expected_runtime_tree_sha256: str = "",
     scorer_input_cache_hashes: bool = False,
     scorer_input_cache_hash_batch_pairs: int = 8,
     scorer_input_cache_tensors: bool = False,
@@ -724,8 +725,11 @@ def _run_auth_eval_inner(
         "--evaluate-timeout",
         str(int(evaluate_timeout)),
     ]
-    if expected_runtime_tree_sha256:
-        cmd.extend(["--expected-runtime-tree-sha256", expected_runtime_tree_sha256])
+    inner_expectation = (
+        inner_expected_runtime_tree_sha256 or expected_runtime_tree_sha256
+    )
+    if inner_expectation:
+        cmd.extend(["--expected-runtime-tree-sha256", inner_expectation])
     if scorer_input_cache_hashes:
         cmd.extend(
             [
@@ -948,6 +952,7 @@ def _run_auth_eval_cpu_fail_closed(
     inflate_timeout: int,
     evaluate_timeout: int,
     expected_runtime_tree_sha256: str = "",
+    inner_expected_runtime_tree_sha256: str = "",
     scorer_input_cache_hashes: bool = False,
     scorer_input_cache_hash_batch_pairs: int = 8,
     scorer_input_cache_tensors: bool = False,
@@ -968,6 +973,7 @@ def _run_auth_eval_cpu_fail_closed(
             inflate_timeout=inflate_timeout,
             evaluate_timeout=evaluate_timeout,
             expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+            inner_expected_runtime_tree_sha256=inner_expected_runtime_tree_sha256,
             scorer_input_cache_hashes=scorer_input_cache_hashes,
             scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
             scorer_input_cache_tensors=scorer_input_cache_tensors,
@@ -1014,6 +1020,7 @@ def run_auth_eval_cpu(
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 5400,
     expected_runtime_tree_sha256: str = "",
+    inner_expected_runtime_tree_sha256: str = "",
     scorer_input_cache_hashes: bool = False,
     scorer_input_cache_hash_batch_pairs: int = 8,
     scorer_input_cache_tensors: bool = False,
@@ -1035,6 +1042,7 @@ def run_auth_eval_cpu(
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
         expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+        inner_expected_runtime_tree_sha256=inner_expected_runtime_tree_sha256,
         scorer_input_cache_hashes=scorer_input_cache_hashes,
         scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
         scorer_input_cache_tensors=scorer_input_cache_tensors,
@@ -1055,6 +1063,7 @@ def main(
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 5400,
     expected_runtime_tree_sha256: str = "",
+    inner_expected_runtime_tree_sha256: str = "",
     scorer_input_cache_hashes: bool = False,
     scorer_input_cache_hash_batch_pairs: int = 8,
     scorer_input_cache_tensors: bool = False,
@@ -1218,6 +1227,7 @@ def main(
         int(inflate_timeout),
         int(evaluate_timeout),
         expected_runtime_tree_sha256,
+        inner_expected_runtime_tree_sha256,
         bool(scorer_input_cache_hashes),
         int(scorer_input_cache_hash_batch_pairs),
         bool(scorer_input_cache_tensors),
