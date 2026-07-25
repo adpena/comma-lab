@@ -49,6 +49,8 @@ METRIC_ROW_SCHEMA = "ddm_campaign_metric_sense_row.v1"
 DECISION_SCHEMA = "ddm_campaign_plateau_decision.v1"
 DYNAMIC_POLICY_SCHEMA = "ddm_campaign_dynamic_policy.v1"
 BLOCKER_SCHEMA = "ddm_campaign_blocker.v1"
+ENHANCEMENT_SCHEMA = "ddm_costate_organ_enhancement.v1"
+ENHANCEMENT_BACKTEST_SCHEMA = "ddm_costate_organ_enhancement_backtest.v1"
 MATURITY = "_dev"
 EVIDENCE_AXIS = "[macOS-CPU frozen-scorer advisory]"
 G2F_SOURCE_SHA256 = "92d860ab35bba158e7fd817edf632d3e3e7fc90b05669402d537c26a6e09a88e"
@@ -99,6 +101,12 @@ SOURCES: tuple[CampaignSource, ...] = (
         ".omx/research/ddm_ev1_campaign_evidence_joins_20260724T191623Z/ddm_ev1_campaign_evidence_join_receipt.json",
         EVIDENCE_JOIN_SCHEMA,
         "until V19/RD1 endpoint bytes, receiver, scorer, G4, or metric custody changes",
+    ),
+    CampaignSource(
+        "ct1_campaign_telemetry",
+        ".omx/research/ddm_ct1_campaign_telemetry_encode_20260725T111500Z/r6_rehearsal_receipt.json",
+        "ddm_r6_campaign_rehearsal_receipt.v1",
+        "content-hash and source-tree valid until the stopped campaign artifacts change",
     ),
     CampaignSource(
         "co4_lambda_ranker",
@@ -938,6 +946,345 @@ def _lambda_ranker_state(
     }
 
 
+def _campaign_tree_fingerprint(root: Path) -> dict[str, Any]:
+    """Recompute CT1's RFC-8785-compatible small-tree custody summary.
+
+    CT1 serialized only strings and integers in this tree manifest, so the
+    repository's canonical JSON helper is byte-equivalent to its RFC-8785
+    encoder.  Symlinks and special files are refused because neither can be
+    covered by the settled receipt.
+    """
+
+    if not root.is_dir():
+        raise FileNotFoundError(f"CT1 source campaign is absent: {root}")
+    rows: list[dict[str, Any]] = []
+    for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
+        if path.is_symlink():
+            raise ValueError(f"CT1 source campaign contains a symlink: {path}")
+        if not path.is_file():
+            if path.is_dir():
+                continue
+            raise ValueError(f"CT1 source campaign contains a special file: {path}")
+        stat = path.stat()
+        rows.append(
+            {
+                "path": path.relative_to(root).as_posix(),
+                "bytes": stat.st_size,
+                "mtime_ns": str(stat.st_mtime_ns),
+                "sha256": _sha256(path),
+            }
+        )
+    return {
+        "file_count": len(rows),
+        "bytes": sum(int(row["bytes"]) for row in rows),
+        "tree_sha256": _canonical_sha({"files": rows}),
+    }
+
+
+def _ct1_telemetry_rows(
+    payload: Mapping[str, Any],
+) -> tuple[dict[str, dict[str, Any]], Mapping[str, Any]]:
+    """Validate CT1's six authority-separated campaign observability rows."""
+
+    for key, expected in (
+        ("research_only", True),
+        ("execution_allowed", False),
+        ("actuation", "NONE"),
+        ("score_claim", False),
+        ("main_landing_review_required", True),
+    ):
+        if payload.get(key) != expected:
+            raise ValueError(f"ct1_campaign_telemetry: authority firewall drift at {key}")
+    observability = payload.get("observability_digest")
+    if not isinstance(observability, Mapping):
+        raise ValueError("ct1_campaign_telemetry: observability_digest is absent")
+    for key, expected in (
+        ("schema", "ddm_campaign_run_observability.v1"),
+        ("available", True),
+        ("actuation", "NONE"),
+        ("execution_allowed", False),
+        ("score_claim", False),
+        ("main_landing_review_required", True),
+    ):
+        if observability.get(key) != expected:
+            raise ValueError(f"ct1_campaign_telemetry: observability drift at {key}")
+    raw_rows = observability.get("rows")
+    if not isinstance(raw_rows, list):
+        raise ValueError("ct1_campaign_telemetry: rows are absent")
+    rows: dict[str, dict[str, Any]] = {}
+    for raw in raw_rows:
+        if not isinstance(raw, Mapping):
+            raise ValueError("ct1_campaign_telemetry: row is not a mapping")
+        row = dict(raw)
+        row_id = row.get("row_id")
+        if (
+            not isinstance(row_id, str)
+            or not row_id
+            or row.get("schema") != "ddm_campaign_observability_row.v1"
+            or row.get("score_claim") is not False
+        ):
+            raise ValueError("ct1_campaign_telemetry: row identity/firewall drift")
+        if row_id in rows:
+            raise ValueError(f"ct1_campaign_telemetry: duplicate row {row_id}")
+        rows[row_id] = row
+    required = {
+        "latest_exact_n600_verdict",
+        "accepted_steps_and_cadence",
+        "cumulative_batch_local_trace",
+        "pose_finish_engagement_watch",
+        "geometry_cure_events",
+        "schedule_endpoint_eta",
+    }
+    if set(rows) != required:
+        raise ValueError(
+            "ct1_campaign_telemetry: exact settled row set drift: " + ",".join(sorted(set(rows) ^ required))
+        )
+    cadence = rows["accepted_steps_and_cadence"]
+    measured_seconds = _finite(
+        cadence.get("measured_seconds_per_step"),
+        "ct1 measured_seconds_per_step",
+    )
+    if cadence.get("epistemic_status") != "MEASURED" or measured_seconds <= 0.0:
+        raise ValueError("ct1_campaign_telemetry: measured cadence is invalid")
+    local = rows["cumulative_batch_local_trace"]
+    if local.get("epistemic_status") != "ADVISORY_BATCH_LOCAL" or local.get("not_n600_verdict") is not True:
+        raise ValueError("ct1_campaign_telemetry: batch-local authority wall drift")
+    exact = rows["latest_exact_n600_verdict"]
+    if exact.get("epistemic_status") != "MEASURED":
+        raise ValueError("ct1_campaign_telemetry: latest n600 row is not measured")
+    return rows, observability
+
+
+def _ct1_consumption_freshness(
+    payload: Mapping[str, Any],
+    source: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Verify CT1 receipt and source-tree lineage at the consumption boundary."""
+
+    campaign = payload.get("source_campaign")
+    observability = payload.get("observability_digest")
+    if not isinstance(campaign, Mapping) or not isinstance(observability, Mapping):
+        raise ValueError("ct1_campaign_telemetry: source campaign custody is absent")
+    path_raw = campaign.get("path")
+    expected = campaign.get("after")
+    before = campaign.get("before")
+    if (
+        not isinstance(path_raw, str)
+        or not path_raw
+        or not isinstance(expected, Mapping)
+        or not isinstance(before, Mapping)
+    ):
+        raise ValueError("ct1_campaign_telemetry: source tree identity is incomplete")
+    expected_summary = {
+        "file_count": _exact_int(expected.get("file_count"), "ct1 expected file_count"),
+        "bytes": _exact_int(expected.get("bytes"), "ct1 expected bytes"),
+        "tree_sha256": str(expected.get("tree_sha256")),
+    }
+    static_custody_ok = (
+        campaign.get("bit_identical_before_after") is True
+        and campaign.get("mutated_by_rehearsal") is False
+        and dict(before) == dict(expected)
+        and observability.get("run_dir") == path_raw
+        and (observability.get("discovery") or {}).get("run_name_hardcoded") is False
+    )
+    observed: dict[str, Any] | None = None
+    stale_reason: str | None = None
+    try:
+        observed = _campaign_tree_fingerprint(Path(path_raw))
+        if observed != expected_summary:
+            stale_reason = "SOURCE_TREE_CONTENT_HASH_OR_IDENTITY_CHANGED"
+    except (FileNotFoundError, OSError, ValueError) as exc:
+        stale_reason = f"{type(exc).__name__}: {exc}"
+    if not static_custody_ok and stale_reason is None:
+        stale_reason = "CT1_REHEARSAL_OR_DISCOVERY_CUSTODY_DRIFT"
+    fresh = stale_reason is None
+    return {
+        "status": (
+            "FRESH_CONTENT_HASH_VERIFIED_AT_CONSUMPTION"
+            if fresh
+            else "[stale-advisory] HELD_SOURCE_CUSTODY_NOT_CURRENT"
+        ),
+        "fresh": fresh,
+        "tag": "[fresh]" if fresh else "[stale-advisory]",
+        "reason": stale_reason,
+        "receipt": {
+            "path": source["path"],
+            "sha256": source["sha256"],
+            "status": source["status"],
+        },
+        "source_tree": {
+            "path": path_raw,
+            "expected": expected_summary,
+            "observed": observed,
+        },
+        "freshness_horizon": source["freshness_horizon"],
+    }
+
+
+def _co5_enhancement_state(
+    *,
+    ct1_payload: Mapping[str, Any],
+    ct1_source: Mapping[str, Any],
+    evidence_join: Mapping[str, Any],
+    evidence_source: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Backtest the four CO4 designs against CT1 x EV1 before activation."""
+
+    rows, _observability = _ct1_telemetry_rows(ct1_payload)
+    freshness = _ct1_consumption_freshness(ct1_payload, ct1_source)
+    ev1_counts = validate_campaign_evidence_join(evidence_join)
+    ev1_context = {
+        "source": dict(evidence_source),
+        "exact_pair_rows": ev1_counts["exact_pair_rows"],
+        "required_pair_rows": ev1_counts["required_pair_rows"],
+        "dimension_byte_homes": ev1_counts["dimension_byte_homes"],
+        "shared_across_frame_byte_homes": ev1_counts["shared_across_frame_byte_homes"],
+        "join_kind": "CROSS_SECTIONAL_N600_ENDPOINT_EVIDENCE_NOT_ORDERED_CAMPAIGN_TRANSITIONS",
+    }
+    cadence = rows["accepted_steps_and_cadence"]
+    local = rows["cumulative_batch_local_trace"]
+    pose_watch = rows["pose_finish_engagement_watch"]
+    exact = rows["latest_exact_n600_verdict"]
+    common = {
+        "ct1_freshness": freshness,
+        "ev1_evidence_join": ev1_context,
+    }
+    specs = (
+        {
+            "enhancement_id": "pontryagin_bellman_transition_residual",
+            "layer": "SENSE",
+            "spec": (
+                "Compute lambda_t-(dL_t/dx_t+J_t^T lambda_(t+1)) only from "
+                "ordered adjacent campaign costates and realized transitions."
+            ),
+            "telemetry_row_ids": [
+                "latest_exact_n600_verdict",
+                "accepted_steps_and_cadence",
+            ],
+            "required_evidence": [
+                "ordered_adjacent_campaign_costates",
+                "realized_transition_jacobian_terms",
+            ],
+            "backtest_reason": (
+                "CT1 has one surfaced exact n600 endpoint plus cadence; its "
+                f"pose watch cites {pose_watch['observed_exact_verdict_count']} exact verdicts "
+                "but carries no adjacent costates or transition Jacobians. EV1's 600 pair "
+                "endpoints are cross-sectional and cannot be ordered into a Bellman trajectory."
+            ),
+        },
+        {
+            "enhancement_id": "m34_per_state_dual_consistency",
+            "layer": "SENSE",
+            "spec": (
+                "Compare organ and M34 duals only at the same campaign state, "
+                "dimension, units, and measured uncertainty band."
+            ),
+            "telemetry_row_ids": ["latest_exact_n600_verdict"],
+            "required_evidence": [
+                "ct1_per_state_m34_dual",
+                "same_state_organ_dual",
+                "measured_dual_uncertainty_band",
+            ],
+            "backtest_reason": (
+                "CT1 emits no per-state M34 or organ dual. EV1 closes 162 dimension "
+                "byte homes but does not create the missing state-indexed dual or uncertainty."
+            ),
+        },
+        {
+            "enhancement_id": "compression_progress_per_effort",
+            "layer": "SENSE",
+            "spec": (
+                "Measure receiver-realized campaign delta_S per wall-clock hour; "
+                "never promote a batch-local d_seg/d_pose trace to exact n600 progress."
+            ),
+            "telemetry_row_ids": [
+                "accepted_steps_and_cadence",
+                "cumulative_batch_local_trace",
+                "latest_exact_n600_verdict",
+            ],
+            "required_evidence": [
+                "two_or_more_exact_n600_campaign_S_endpoints",
+                "matching_wall_clock_interval",
+                "counted_archive_byte_identity",
+            ],
+            "backtest_reason": (
+                f"CT1 measures {cadence['measured_seconds_per_step']:.12g} s/step, but its "
+                "only cumulative objective trace is explicitly ADVISORY_BATCH_LOCAL and "
+                f"not n600={local['not_n600_verdict']!s}. The surfaced exact row is step "
+                f"{exact['global_step']} only. EV1 cannot supply the missing temporal endpoint."
+            ),
+        },
+        {
+            "enhancement_id": "regret_bounded_duty_allocation",
+            "layer": "DECIDE",
+            "spec": (
+                "Rank advisory duties by measured compression progress per effort "
+                "plus an exploration bonus backed by fired-duty history."
+            ),
+            "telemetry_row_ids": [
+                "accepted_steps_and_cadence",
+                "geometry_cure_events",
+            ],
+            "required_evidence": [
+                "active_compression_progress_per_effort",
+                "typed_fired_duty_history",
+                "preregistered_exploration_confidence",
+            ],
+            "backtest_reason": (
+                "Compression progress per effort failed its authority backtest. CT1's "
+                "12 geometry-cure receipts are an event count, not typed fired-duty "
+                "identity/outcome history, and EV1 has no wall-clock allocation history."
+            ),
+        },
+    )
+    enhancement_rows: list[dict[str, Any]] = []
+    for spec in specs:
+        reason = spec["backtest_reason"]
+        if not freshness["fresh"]:
+            reason = f"{freshness['tag']} CT1 input is not current at consumption: {freshness['reason']}; {reason}"
+        enhancement_rows.append(
+            {
+                "schema": ENHANCEMENT_SCHEMA,
+                "enhancement_id": spec["enhancement_id"],
+                "layer": spec["layer"],
+                "spec_recalled_from": ("CO4 self-check/DECIDE/bandit rows; CT1 authority separation"),
+                "spec": spec["spec"],
+                "telemetry_row_ids": spec["telemetry_row_ids"],
+                "input_hash_lineage": common,
+                "backtest": {
+                    "schema": ENHANCEMENT_BACKTEST_SCHEMA,
+                    "status": "FAILED_CLOSED_MISSING_MATCHED_AUTHORITY",
+                    "passed": False,
+                    "reason": reason,
+                    "required_evidence": spec["required_evidence"],
+                    "verdict_scope": (
+                        "CT1 stopped-v5 telemetry x EV1 N600 campaign evidence join; enhancement design remains open"
+                    ),
+                },
+                "active": False,
+                "status": "DESIGNED_NOT_ACTIVE",
+                "actuation": "NONE",
+                "score_claim": False,
+                "main_landing_review_required": True,
+            }
+        )
+    active_count = sum(row["active"] for row in enhancement_rows)
+    return {
+        "schema": "ddm_costate_organ_enhancement_activation.v1",
+        "status": ("ACTIVE_ADVISORY" if active_count else "PREMISE_FALSIFIED_CT1_DELTA_S_PER_HOUR_GATE_NOT_SATISFIED"),
+        "charter_claimed_gate": "CT1_CAMPAIGN_DELTA_S_PER_WALL_CLOCK_HOUR",
+        "gate_satisfied": False,
+        "source_freshness": freshness,
+        "active_count": active_count,
+        "held_count": len(enhancement_rows) - active_count,
+        "total_count": len(enhancement_rows),
+        "rows": enhancement_rows,
+        "actuation": "NONE",
+        "score_claim": False,
+        "main_landing_review_required": True,
+    }
+
+
 def campaign_consumer_view(state: Mapping[str, Any], consumer: str) -> dict[str, Any]:
     """Return a named view and prove it came from this exact state digest."""
 
@@ -971,6 +1318,12 @@ def build_campaign_costate(
         sources["co4_lambda_ranker"],
     )
     evidence_counts = validate_campaign_evidence_join(evidence_join)
+    enhancement_state = _co5_enhancement_state(
+        ct1_payload=payloads["ct1_campaign_telemetry"],
+        ct1_source=sources["ct1_campaign_telemetry"],
+        evidence_join=evidence_join,
+        evidence_source=sources["ev1_campaign_evidence_join"],
+    )
     exact_pair_rows = evidence_counts["exact_pair_rows"]
     required_pair_rows = evidence_counts["required_pair_rows"]
     typed_dimension_rows = len(rd1.get("duals") or [])
@@ -1081,6 +1434,20 @@ def build_campaign_costate(
                 ),
             )
         )
+    for row in enhancement_state["rows"]:
+        if not row["active"]:
+            blockers.append(
+                _blocker(
+                    f"BLOCKED_CO5_{row['enhancement_id'].upper()}",
+                    scope=row["backtest"]["verdict_scope"],
+                    evidence={
+                        "backtest_status": row["backtest"]["status"],
+                        "reason": row["backtest"]["reason"],
+                        "ct1_freshness": enhancement_state["source_freshness"]["status"],
+                    },
+                    required_evidence=row["backtest"]["required_evidence"],
+                )
+            )
     core = {
         "schema": SCHEMA,
         "available": True,
@@ -1133,6 +1500,7 @@ def build_campaign_costate(
         "sense": {
             "contract": DIMENSION_CONTRACT,
             "standing_rows": sense_rows,
+            "enhancement_rows": [row for row in enhancement_state["rows"] if row["layer"] == "SENSE"],
             "verdict_count": len(realized),
             "latest_verdict": latest,
         },
@@ -1140,7 +1508,9 @@ def build_campaign_costate(
             "plateau_route": decision,
             "pre_registered_forks": list(PLATEAU_FORKS),
             "lambda_ranker_decide_rows": lambda_ranker["decide_rows"],
+            "enhancement_rows": [row for row in enhancement_state["rows"] if row["layer"] == "DECIDE"],
         },
+        "enhancement_activation": enhancement_state,
         "blockers": blockers,
     }
     state_digest = _canonical_sha(core)
@@ -1199,6 +1569,7 @@ def build_campaign_costate(
         "blocker_ids": [row["blocker_id"] for row in blockers],
         "lambda_ranker_admission": lambda_ranker["admission_gate"],
         "lambda_ranker_pair_precision": lambda_ranker["pair_precision"],
+        "enhancement_activation": enhancement_state,
         "next_duty": duty_queue[0] if duty_queue else None,
         "actuation": "NONE",
     }
@@ -1218,6 +1589,7 @@ def build_campaign_costate(
             "bucket_exchange_rate_status": core["metric_state"]["bucket_exchange_rate_status"],
         },
         "lambda_ranker": lambda_ranker,
+        "enhancement_activation": enhancement_state,
         "blockers": blockers,
         "activation_nag": activation_nag,
         "actuation": "NONE",
@@ -1235,6 +1607,7 @@ def build_campaign_costate(
             "bucket_exchange_rate_status": core["metric_state"]["bucket_exchange_rate_status"],
         },
         "lambda_ranker": lambda_ranker,
+        "enhancement_activation": enhancement_state,
         "activation_nag": activation_nag,
         "actuation": "NONE",
     }
@@ -1245,12 +1618,14 @@ def build_campaign_costate(
             "ok": True,
             "rows": duty_queue,
             "lambda_ranker": lambda_ranker,
+            "enhancement_activation": enhancement_state,
             "activation_nag": activation_nag,
             "actuation": "NONE",
         },
         "activation_nag": {
             "ok": True,
             "lambda_ranker": lambda_ranker,
+            "enhancement_activation": enhancement_state,
             **activation_nag,
         },
     }
@@ -1268,6 +1643,8 @@ __all__ = [
     "CLASS_E_DIMENSIONS",
     "DECISION_SCHEMA",
     "DYNAMIC_POLICY_SCHEMA",
+    "ENHANCEMENT_BACKTEST_SCHEMA",
+    "ENHANCEMENT_SCHEMA",
     "J8F_GLOBS",
     "METRIC_ROW_SCHEMA",
     "PLATEAU_FORKS",

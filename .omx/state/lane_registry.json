@@ -88546,6 +88546,48 @@
         }
       },
       "notes": "research_only=true; $0 no-launch n600-real reuse-only falsifier; excludes 25 RG3-obstructed top24 blocks; verdict_scope=INSTANCE/PRECONDITION; MAIN review required"
+    },
+    {
+      "id": "lane_ddm_co5_organ_telemetry_activation_20260725",
+      "name": "DDM co5 organ telemetry activation",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_co5_organ_telemetry_activation_20260725T195432Z/ddm_co5_organ_telemetry_activation_receipt.json"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_ddm_campaign_costate.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_co5_organ_telemetry_activation_20260725T195432Z/ddm_co5_organ_telemetry_activation_receipt.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #708; advisory-only $0 local activation audit; actuation NONE; MAIN review required",
+      "research_only": true
     }
   ],
   "level_rules": {
