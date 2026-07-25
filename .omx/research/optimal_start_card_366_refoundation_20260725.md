@@ -202,3 +202,29 @@ exact n600 verdict intervals MUST preserve target-error-conditioned per-flip cus
 (pair,y,x,winner,rival,margin,d2 before/after + gross beneficial/harmful flips + realized
 step seconds + context-coded residual bits) — ONE trace then identifies the LIVE decay law AND
 E7's optimal stop D*. G2 closes on that receipt, not before.
+
+## 12. THE TWO COMPOSED VEHICLES (operator 2026-07-25 — "live descent and richer description
+## families... built out extensively, but are not optimal or composed optimally; incorporate
+## and integrate all pantheon and synergy")
+db1 §11 proved the box closes ONLY via (a) LIVE DESCENT or (b) RICHER DESCRIPTION FAMILIES.
+Both exist as large built inventories; NEITHER is at optimal composed form. sy1's deliverable
+is UPGRADED: beyond the 9 slots, emit TWO COMPOSED VEHICLE SPECS, each integrating every
+applicable pantheon row + frozen-space binding:
+- VEHICLE A — OPTIMAL-FORM LIVE-DESCENT ENGINE: compose the full engine inventory (j-chain
+  consumer + E1-E6 acceleration + E8 solved-plane target + E9 pose projection + E10 quotient
+  DOF + R1/R2 quantization gate + R4-SPRT ladder + R11/R12 custody + B1-B7 optimizer/dynamics
+  rows + relevant C-rows) into ONE engine spec from the §7-selected start (W_seg-class) —
+  the thing j10's G5 reseal actually compiles. Its named resolving measurement = j10's
+  10-interval instrumented trace (§11d).
+- VEHICLE B — OPTIMAL-FORM RICHER-DESCRIPTION FAMILY: compose the full describe inventory
+  (dv1 primitives + dv2 grammar sentences + rg1-rg3 productions + worldsheet events + v13-v15
+  templates + pf1 point-free programs + g1 induction) with the pantheon's description rows
+  (R7 NML benchmark + pattern-theory priors · R15/C7 FRI event sampling · C2 lane-language ·
+  C3 REM budget proof · C6 grid anchoring · R6 syndrome transmit · R5 mixed-context) into ONE
+  description-family spec whose JOB is the mass the fixed atlas lacks (db1's 192,020-px
+  shortfall): richer families do not CORRECT pixels, they RE-DESCRIBE the partition so support
+  exists where the box needs it. Named resolving measurement = ALREADY-OWED describe-line
+  measurements only (no new arms pre-refoundation).
+- THE SEAM (E7 dual-currency, binding): Vehicle A descends to D*; Vehicle B carries the
+  residual — the composed candidate = A-to-D* + B-residual + pose leg (pc2 fork) + E5-closed
+  bytes, and its 100%-success composition must beat 0.1910828242 or G5 REFUSES.
