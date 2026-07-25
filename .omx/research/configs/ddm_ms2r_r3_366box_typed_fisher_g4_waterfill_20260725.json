@@ -1,0 +1,132 @@
+{
+  "schema": "DDMMS2RR3366BoxTypedFisherG4WaterfillConfigV1",
+  "run_id": "ddm_ms2r_r3_366box_typed_fisher_g4_waterfill_20260725T162107Z",
+  "lane_id": "ddm_ms2r_r3_366box_typed_fisher_g4_waterfill",
+  "output_root": ".omx/research/ddm_ms2r_r3_366box_typed_fisher_g4_waterfill_20260725T162107Z",
+  "receipt_timestamp_utc": "2026-07-25T16:38:00Z",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_ms2r_r3_366box_typed_fisher_g4_waterfill_20260725T162107Z.wrapped.prompt.txt",
+    "sha256": "7af0b832661166a217acae4398756eee9a255d42481051dc623e4a53b2fd015d",
+    "bytes": 10157,
+    "schema": "delegated_authority.prompt.v1",
+    "role": "delegated_task_authority"
+  },
+  "inputs": {
+    "bundle": {
+      "path": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/BUNDLE-COMPLETE.json",
+      "sha256": "d670eff3dd01d61a24bdebedf045fa8cde2528953660dc6d1e64ba9c2fa94e25",
+      "bytes": 2799,
+      "schema": "ddm_metric_custody_bundle.v1",
+      "role": "complete_metric_capability_bundle"
+    },
+    "ms4d_waterfill": {
+      "path": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/waterfill_post_admission_receipt.json",
+      "sha256": "90b2431e25186ff888a02e4fedd62cd5200dc2335484bb051e7906b3e72e9e6b",
+      "bytes": 8494,
+      "schema": "ddm_ms4d_waterfill_post_admission.v1",
+      "role": "post_admission_materialization_gate"
+    },
+    "pose_metric": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ms4_metric_producers_and_measurement_20260724T042005Z/pose_metric_n600_batch32.json",
+      "sha256": "5e06cc78711a6ca6984c907600a25816cdecc6239903f782d85bcf9473a8f1bc",
+      "bytes": 577705,
+      "schema": "ddm_pose_metric_custody.v1",
+      "role": "exact_pose_metric_context"
+    },
+    "pc1": {
+      "path": ".omx/research/ddm_pc1_pose_stream_admission_receipt_20260724.json",
+      "sha256": "df456b0a77504d55322e0230a47be5ba5289773556f00da9a9c419d51d8d9950",
+      "bytes": 10680,
+      "schema": "ddm_pc1_pose_stream_admission.v1",
+      "role": "pose_stream_admission"
+    },
+    "rg3": {
+      "path": ".omx/research/ddm_rg3_residual_family_productions_20260724T110418Z/ddm_rg3_receiver_support_summary.json",
+      "sha256": "3d4c4fb635ec37668cbf6037cefca63fe7c08a9ad950e6724ae023deb0473fd2",
+      "bytes": 481708,
+      "schema": "ddm_ms6_receiver_support_resume_summary.v1",
+      "role": "terminal_receiver_causal_support"
+    },
+    "ev2": {
+      "path": ".omx/research/ddm_ev2_per_pair_allocation_20260725T041933Z/receipt.json",
+      "sha256": "1d76934d9b52d61ac7eca4b4f95d6eb76a31e8c7b354e2913fab3dca991d3fcc",
+      "bytes": 12827,
+      "schema": "ddm_ev2_per_pair_allocation_receipt.v1",
+      "role": "same_object_rate_home_falsifier"
+    },
+    "ev2_backfill": {
+      "path": ".omx/research/ddm_ev2_per_pair_allocation_20260725T041933Z/rd1_dual_backfill_post_admission.json",
+      "sha256": "c918c96bb242573821a44d81118281fe64fe802bc1ce613aeec11c0fece0e714",
+      "bytes": 102976,
+      "schema": "ddm_ms4d_rd1_dual_backfill.v1",
+      "role": "canonical_162_cell_rd1_surface"
+    },
+    "prior_r3_admission": {
+      "path": ".omx/research/ddm_ms2r_r3_typed_fisher_g4_waterfill_20260724T211804Z/receipt.json",
+      "sha256": "d5c8fd053a562ed5fcbd116529bb1a288f12e23c818251e9bd3522462c7a0ff9",
+      "bytes": 490589,
+      "schema": "ddm_ms2r_r3_typed_fisher_g4_waterfill_receipt.v1",
+      "role": "settled_prior_typed_admission"
+    },
+    "r3": {
+      "path": ".omx/research/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/receipt.json",
+      "sha256": "087ee26d6e34501b308b1cf5db80be16a54f9cbe4a6734793b3cbf53d42c0aa7",
+      "bytes": 345742,
+      "schema": "ddm_ms2r_r3_box_tolerance_solve_receipt.v1",
+      "role": "finite_q4_q8_receiver_closed_control"
+    },
+    "r3_backfill": {
+      "path": ".omx/research/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/rd1_162_dual_backfill.json",
+      "sha256": "5d546e53a740384c26125015b5cb0944d7ee8ec921ba563189367ff3e07ffb2a",
+      "bytes": 124988,
+      "schema": "ddm_ms2r_r3_rd1_162_dual_backfill.v1",
+      "role": "finite_control_rd1_readback"
+    },
+    "r3_config": {
+      "path": ".omx/research/configs/ddm_ms2r_r3_box_tolerance_solve_20260725.json",
+      "sha256": "d56247af7e2c0c1ec4cdd605ad5d9d2a821576813b08ad37319654bb3a780546",
+      "bytes": 2921,
+      "schema": "DDMMS2RR3BoxToleranceSolveConfigV1",
+      "role": "finite_control_typed_config"
+    },
+    "ms2": {
+      "path": ".omx/research/ddm_ms2_typed_quotient_solve_20260724_receipt.json",
+      "sha256": "04060edf9834b661f12a9794e50ceadf7dd4ab114baf55a15555537abc71e419",
+      "bytes": 32848,
+      "schema": "ddm_ms2_typed_quotient_solve_repo_receipt.v1",
+      "role": "typed_quotient_solve_baseline"
+    },
+    "dm1": {
+      "path": ".omx/research/ddm_dm1_25_row_solved_value_pricing_20260724T123443Z/ddm_dm1_25_row_solved_value_pricing_receipt.json",
+      "sha256": "4c2fe77927e300e341d5ce9ce00ae8a37c58dbebbde8e5860fe514958990de28",
+      "bytes": 77687,
+      "schema": "ddm_dm1_solved_value_pricing.v1",
+      "role": "semantic_stream_real_coder_control"
+    },
+    "dm2": {
+      "path": ".omx/research/ddm_dm2_l3_realization_race_25_rows_20260724T133300Z/ddm_dm2_l3_realization_race_receipt.json",
+      "sha256": "8897241b7fc0ded7d4d6d1100c4d23ea162111050754e36c8ad8b3e57e294229",
+      "bytes": 217224,
+      "schema": "ddm_dm2_l3_realization_race.v1",
+      "role": "realized_receiver_coder_control"
+    },
+    "e4": {
+      "path": ".omx/research/ddm_e4_brotli_declared_dep_20260724/ddm_e4_brotli_rate_recovery_receipt.json",
+      "sha256": "1e381753adee710ef4032e407f867c7e486c4064f14584a047122cdeb715566e",
+      "bytes": 8684,
+      "schema": "ddm_e4_brotli_rate_recovery_receipt.v1",
+      "role": "declared_dependency_coder_control"
+    }
+  },
+  "pair_count": 600,
+  "scored_pixels": 117964800,
+  "allowed_errors": 136839,
+  "seed": 1234,
+  "research_only": true,
+  "local_read_only": true,
+  "external_execution_allowed": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}
