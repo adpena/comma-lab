@@ -34,6 +34,12 @@
         {
           "blockers": [
             {
+              "code": "J8F_APPLICATION_TO_CUMULATIVE_ARCHIVE_EDGE_ABSENT",
+              "detail": "The source preserves individual application archives and cumulative projected states as different objects (11/12 SHA mismatches; 1/12 byte-count mismatches), but does not bind each cumulative state to its exact predecessor. Ordered prefix JSON identity is not an archive transition chain.",
+              "owed_field": "per-step from_state/archive -> to_state/archive foreign keys",
+              "source_key": "application[*].projected_application.archive_sha256 + checkpoint[*].projected_state.archive_sha256"
+            },
+            {
               "code": "J8F_FINAL_CHANGED_UINT8_IDENTITY_ABSENT",
               "detail": "The twelve ordered per-step sparse identities are preserved, but their incidence sum/hash is not the unique final base-to-candidate uint8 diff required by v1.",
               "owed_field": "changed_uint8_count,changed_uint8_sha256",
@@ -50,6 +56,12 @@
               "detail": "Only the final twelve-action composition has an n600 scorer transition, so the individually identity-complete applications cannot be emitted as measured rows.",
               "owed_field": "action_effect.old/new d_seg,d_pose,bytes per applied codeword",
               "source_key": "application[*].projected_application"
+            },
+            {
+              "code": "J8F_REFERENCE_ARCHIVE_BYTES_ABSENT",
+              "detail": "The n600 reference verdict and its archive foreign key are preserved, but the referenced base archive bytes are not present in the J8F custody bundle.",
+              "owed_field": "file-backed reference archive bytes",
+              "source_key": "step4.reference.archive_sha256"
             }
           ],
           "source_id": "ddm_j8f_counted_application_20260724T181414Z",
@@ -76,7 +88,7 @@
               "source_key": "five_pf3_edges.realized_uint8_quantum.changed_channel_values"
             }
           ],
-          "source_id": "/Volumes/VertigoDataTier/pact/ddm_pf3_finite_price_materialization_20260725T193409Z/stage_checkpoints/02_candidates/001.json",
+          "source_id": "ddm_pf3_finite_price_materialization_20260725T193409Z",
           "source_kind": "PF3"
         },
         {
@@ -104,14 +116,26 @@
               "detail": "Name one typed stream/layer home with coder owner and before/after bytes; whole-archive byte deltas alone do not identify the PC1 home.",
               "owed_field": "stream_home",
               "source_key": "pc1_adapter.step16.archive_bytes"
+            },
+            {
+              "code": "J12_MAIN_RESEAL_REVIEW_REQUIRED",
+              "detail": "The producer explicitly leaves the merged-main SHA reseal and MAIN review outstanding.",
+              "owed_field": "merged-main reseal and review",
+              "source_key": "reseal_state"
+            },
+            {
+              "code": "J12_PC1_NUMERICAL_WARNING_UNRESOLVED",
+              "detail": "Observed divide-by-zero, overflow, and invalid-value warnings remain unsuppressed.",
+              "owed_field": "fail-closed sanitize-or-reject disposition",
+              "source_key": "pc1_receiver_numerical_warning"
             }
           ],
-          "source_id": "/Users/adpena/Projects/pact/.omx/research/ddm_j12_366_receiver_coordinate_custody_receipt_20260725.json",
+          "source_id": "ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z",
           "source_kind": "J12"
         }
       ],
-      "declared_content_sha256": "3a94d33f298632e6b15662170c6a1382697b8a24420c3a4ab8000b164afba333",
-      "file_sha256": "df3546e0da9ed3c8e2143fefb1ca3376fdafd21e5ad7177c5e71fb050fafe671",
+      "declared_content_sha256": "d2b456a478a1a93a46d8368529ce89bbc300e9bac438f7c903b8e3f8b10170a4",
+      "file_sha256": "1067a8d579e086458754714ab46a6eb0354ede4cb2347d9154bcca5389e51836",
       "path": ".omx/research/applied_action_adapter_manifest_20260725.json",
       "receipt_count": 0,
       "reconciliation": {
@@ -159,7 +183,7 @@
     }
   },
   "opportunity_pools": [],
-  "plan_content_sha256": "331fc6a2ee1d18eaaad926068d96ba2709a509cf143632ee587c26dcfc69b6cc",
+  "plan_content_sha256": "88b33d422b86a7fa8d0e3f3df04b20a9f346eb1ae2331d285b43c18d118f2a36",
   "pointer_moved": false,
   "policy": {
     "coder_alternatives_same_home_mutually_exclusive": true,

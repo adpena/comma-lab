@@ -1,0 +1,13 @@
+{
+  "blockers": [
+    "ValueError:seven-home allocation plan is object/grammar-incompatible with the WTNV2 linker"
+  ],
+  "input_manifest_sha256": "bf117807eee9f3875f0050a3af0c8620d8abee684c921cbc8c2d7f427ec33289",
+  "input_receipt_ids": [],
+  "promotion_eligible": false,
+  "receipt": null,
+  "research_only": true,
+  "schema": "tac.v2_packet_link_attempt.v1",
+  "score_claim": false,
+  "status": "BLOCKED"
+}

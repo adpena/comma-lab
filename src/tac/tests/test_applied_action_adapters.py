@@ -90,6 +90,7 @@ def test_j8f_binds_all_sources_and_preserves_honest_debt(real_inputs: dict[str, 
 
     assert result.ok is False
     assert [blocker.code for blocker in result.blockers] == [
+        "J8F_APPLICATION_TO_CUMULATIVE_ARCHIVE_EDGE_ABSENT",
         "J8F_FINAL_CHANGED_UINT8_IDENTITY_ABSENT",
         "J8F_SINGLE_LAWFUL_BYTE_HOME_ABSENT",
         "J8F_PER_STEP_SCORE_TRANSITIONS_ABSENT",
@@ -97,6 +98,8 @@ def test_j8f_binds_all_sources_and_preserves_honest_debt(real_inputs: dict[str, 
     ]
     assert dict(result.source_counts) == {
         "application_count": 12,
+        "application_state_byte_mismatch_count": 1,
+        "application_state_sha_mismatch_count": 11,
         "checkpoint_artifact_count": 12,
     }
     assert sum("application_step_" in artifact.path for artifact in result.source_artifacts) == 12

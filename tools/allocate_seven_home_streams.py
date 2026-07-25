@@ -43,20 +43,28 @@ def _repo_path(path: Path) -> Path:
     return resolved
 
 
-def _load_mapping(path: Path) -> Mapping[str, Any]:
+def _decode_mapping(payload_bytes: bytes, *, path: Path) -> Mapping[str, Any]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        value = json.loads(payload_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise SevenHomeAllocationError(f"cannot load JSON {path}: {exc}") from exc
     if not isinstance(value, Mapping):
         raise SevenHomeAllocationError(f"JSON root must be an object: {path}")
     return value
 
 
-def _input_identity(path: Path) -> dict[str, Any]:
+def _load_mapping_snapshot(path: Path) -> tuple[Mapping[str, Any], bytes]:
+    try:
+        payload_bytes = path.read_bytes()
+    except OSError as exc:
+        raise SevenHomeAllocationError(f"cannot load JSON {path}: {exc}") from exc
+    return _decode_mapping(payload_bytes, path=path), payload_bytes
+
+
+def _input_identity(path: Path, payload_bytes: bytes) -> dict[str, Any]:
     return {
         "path": path.relative_to(REPO).as_posix(),
-        "file_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "file_sha256": hashlib.sha256(payload_bytes).hexdigest(),
     }
 
 
@@ -146,10 +154,10 @@ def build_from_paths(
     resolved_pointer = _repo_path(pointer_path)
     resolved_cc3 = _repo_path(cc3_path)
     resolved_e5a = _repo_path(e5a_path)
-    ev2 = _load_mapping(resolved_ev2)
-    pointer = _load_mapping(resolved_pointer)
-    cc3 = _load_mapping(resolved_cc3)
-    e5a = _load_mapping(resolved_e5a)
+    ev2, ev2_bytes = _load_mapping_snapshot(resolved_ev2)
+    pointer, pointer_bytes = _load_mapping_snapshot(resolved_pointer)
+    cc3, cc3_bytes = _load_mapping_snapshot(resolved_cc3)
+    e5a, e5a_bytes = _load_mapping_snapshot(resolved_e5a)
     if cc3.get("schema") != "ddm_cc3_mixed_coder_receiver_integration_mirror.v1":
         raise SevenHomeAllocationError("CC3 receipt schema differs")
     if e5a.get("schema") != "ddm_e5a_midcampaign_runtime_export_receipt.v1":
@@ -158,7 +166,7 @@ def build_from_paths(
     sources: list[dict[str, Any]] = []
     for path in receipt_manifest_paths:
         resolved = _repo_path(path)
-        manifest = _load_mapping(resolved)
+        manifest, manifest_bytes = _load_mapping_snapshot(resolved)
         parsed = envelopes_from_manifest(manifest)
         envelopes.extend(parsed)
         blocked_results = []
@@ -174,7 +182,7 @@ def build_from_paths(
             ]
         sources.append(
             {
-                **_input_identity(resolved),
+                **_input_identity(resolved, manifest_bytes),
                 "schema": manifest.get("schema"),
                 "declared_content_sha256": manifest.get("content_sha256"),
                 "receipt_count": len(parsed),
@@ -184,10 +192,10 @@ def build_from_paths(
         )
     plan = build_allocation_plan(ev2=ev2, pointer=pointer, envelopes=envelopes)
     plan["input_artifacts"] = {
-        "ev2": _input_identity(resolved_ev2),
-        "pointer": _input_identity(resolved_pointer),
-        "cc3": _input_identity(resolved_cc3),
-        "e5a": _input_identity(resolved_e5a),
+        "ev2": _input_identity(resolved_ev2, ev2_bytes),
+        "pointer": _input_identity(resolved_pointer, pointer_bytes),
+        "cc3": _input_identity(resolved_cc3, cc3_bytes),
+        "e5a": _input_identity(resolved_e5a, e5a_bytes),
     }
     cc3_source = cc3.get("source_archive")
     cc3_candidate = cc3.get("archive")

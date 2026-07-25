@@ -72,7 +72,12 @@ _RESULT_KEYS = frozenset(
     }
 )
 _EXPECTED_SOURCE_COUNTS: Mapping[str, Mapping[str, int]] = {
-    "J8F": {"application_count": 12, "checkpoint_artifact_count": 12},
+    "J8F": {
+        "application_count": 12,
+        "checkpoint_artifact_count": 12,
+        "application_state_sha_mismatch_count": 11,
+        "application_state_byte_mismatch_count": 1,
+    },
     "PF3": {
         "candidate_artifact_count": 16,
         "coordinate_family_count": 3,
@@ -447,6 +452,8 @@ def adapt_j8f_checkpoints(
         raise AppliedActionAdapterError(f"J8F checkpoint sequence differs: {observed_steps} != {expected_steps}")
     prior_prefix_hashes: tuple[str, ...] = ()
     final_applications: list[Mapping[str, Any]] = []
+    application_state_sha_mismatch_count = 0
+    application_state_byte_mismatch_count = 0
     for ordinal, checkpoint in enumerate(ordered):
         if checkpoint.get("schema") != J8F_CHECKPOINT_SCHEMA:
             raise AppliedActionAdapterError("J8F checkpoint schema differs")
@@ -478,14 +485,22 @@ def adapt_j8f_checkpoints(
         if projected_state.get("parseback_exact") is not True:
             raise AppliedActionAdapterError("J8F cumulative projected state parseback differs")
 
-        _require_sha256(projected.get("archive_sha256"), "J8F projected archive SHA")
+        application_archive_sha = _require_sha256(
+            projected.get("archive_sha256"), "J8F projected archive SHA"
+        )
         candidate_archive_sha = _require_sha256(
             projected_state.get("archive_sha256"), "J8F projected state archive SHA"
         )
         candidate_archive_bytes = _require_int(
             projected_state.get("archive_bytes"), "J8F projected state archive bytes", positive=True
         )
-        _require_int(projected.get("archive_bytes"), "J8F application archive bytes", positive=True)
+        application_archive_bytes = _require_int(
+            projected.get("archive_bytes"), "J8F application archive bytes", positive=True
+        )
+        if application_archive_sha != candidate_archive_sha:
+            application_state_sha_mismatch_count += 1
+        if application_archive_bytes != candidate_archive_bytes:
+            application_state_byte_mismatch_count += 1
         _require_signed_int(projected.get("archive_byte_delta"), "J8F archive_byte_delta")
 
         _require_int(projected.get("coordinate_index"), "J8F coordinate_index")
@@ -580,6 +595,21 @@ def adapt_j8f_checkpoints(
         raise AppliedActionAdapterError("J8F projected composite is not measured downhill")
     blockers = (
         AdapterBlocker(
+            code="J8F_APPLICATION_TO_CUMULATIVE_ARCHIVE_EDGE_ABSENT",
+            source_key=(
+                "application[*].projected_application.archive_sha256 + "
+                "checkpoint[*].projected_state.archive_sha256"
+            ),
+            owed_field="per-step from_state/archive -> to_state/archive foreign keys",
+            detail=(
+                "The source preserves individual application archives and cumulative projected "
+                f"states as different objects ({application_state_sha_mismatch_count}/12 SHA "
+                f"mismatches; {application_state_byte_mismatch_count}/12 byte-count mismatches), "
+                "but does not bind each cumulative state to its exact predecessor. Ordered prefix "
+                "JSON identity is not an archive transition chain."
+            ),
+        ),
+        AdapterBlocker(
             code="J8F_FINAL_CHANGED_UINT8_IDENTITY_ABSENT",
             source_key="application[*].projected_application.delta_sha256_int64_indices_int16_values",
             owed_field="changed_uint8_count,changed_uint8_sha256",
@@ -623,7 +653,18 @@ def adapt_j8f_checkpoints(
             source_schema=J8F_SMOKE_SCHEMA,
             source_id=run_id,
             source_artifacts=artifacts,
-            source_counts=(("application_count", 12), ("checkpoint_artifact_count", 12)),
+            source_counts=(
+                ("application_count", 12),
+                (
+                    "application_state_byte_mismatch_count",
+                    application_state_byte_mismatch_count,
+                ),
+                (
+                    "application_state_sha_mismatch_count",
+                    application_state_sha_mismatch_count,
+                ),
+                ("checkpoint_artifact_count", 12),
+            ),
             blockers=blockers,
         ),
     )

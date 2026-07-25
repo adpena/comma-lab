@@ -1,0 +1,482 @@
+{
+  "admission": {
+    "s0_s1_ground_truth_spine": true,
+    "s2_complete_partition_pose_description": false,
+    "s2_finite_cell_event_seed": true,
+    "s2_lane_true_mask_curve_measured": true,
+    "s3_integer_realization_composed": false,
+    "s4_receiver_closed_archive": false,
+    "score_or_pointer_authority": false
+  },
+  "authority_axis": "[macOS-CPU advisory]",
+  "borrowed_substrate_accounting": {
+    "borrowed_candidate_archives": [],
+    "borrowed_candidate_payloads": [],
+    "candidate_submission_eligible": false,
+    "inherited_bytes_in_candidate": 0,
+    "lineage_submission_eligible": true,
+    "note": "all candidate-bearing rows are source-derived/our-solve; r1b7 is law-only and every inherited archive/payload byte is excluded"
+  },
+  "captured_at_utc": "2026-07-25T23:18:07.114248+00:00",
+  "competitive_target": {
+    "axis": "official_leaderboard",
+    "custody": "external target only; no local archive authority implied",
+    "evidence_grade": "[official-leaderboard display]",
+    "pointer_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "pointer_sha256": "c41d4307de16f04a42e943b3ab31bc97e8860300ba58e03109ad3e7caf66619a",
+    "score": 0.172,
+    "score_precision": "official_display",
+    "snapshot_at_utc": "2026-07-25T22:07:26.374243+00:00",
+    "source": "upstream_official_leaderboard",
+    "source_kind": "external_public_leaderboard_target"
+  },
+  "consumed_artifacts": [
+    {
+      "bytes": 1194,
+      "consumed_as": "S1 canonical support-fill exactness; no receiver/archive bytes consumed",
+      "content_lineage": "our support-fill solve on the exact-plane receiver; law-only consumption",
+      "path": "reports/tie_aware_preimage_ab_receipt_n600_fidelity.json",
+      "sha256": "02be4f4fcfc4f71fe313132944c04b45cc46e0c965a743c1eca53be71c63e724"
+    },
+    {
+      "bytes": 4825,
+      "consumed_as": "S1 source-target exact direct row",
+      "content_lineage": "source-video-derived our-solve",
+      "path": ".omx/research/m2_live_target_selection_20260720T1548Z.json",
+      "sha256": "513d2fe54166b8b82904e671bc8beedca11e0b98ab68f09e860507ef82b2e574"
+    },
+    {
+      "bytes": 4509,
+      "consumed_as": "S2 coherent lane-chart rate",
+      "content_lineage": "source-video-derived our-solve",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/joint_planes_direct_strike_20260721T032257Z/lane_tracking_n600_current.json",
+      "sha256": "c37d02b224c38667d62ea242c1f1de0e75f665a93678c8e698f7dc2aa47a4d30"
+    },
+    {
+      "bytes": 8191630,
+      "consumed_as": "S2 transport and cell-code priors",
+      "content_lineage": "source-video-derived our-measurement",
+      "path": ".omx/research/g1_worldsheet_g3_cellcode_measurements_20260720T210000Z.json",
+      "sha256": "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089"
+    },
+    {
+      "bytes": 6142,
+      "consumed_as": "S2 n600 AA-SDF fidelity curve",
+      "content_lineage": "source-video-derived our-measurement",
+      "path": "reports/aa_sdf_observation_render_verify_n600_20260701.json",
+      "sha256": "40eb2c583ed5599461ed27aa676ed6c5ccbaf6c5af71bc85d1723f194ae93d76"
+    },
+    {
+      "bytes": 611903,
+      "consumed_as": "S3 fixed-magnitude/no-sub-step lesson only; all archive/payload bytes excluded",
+      "content_lineage": "mixed inherited-base experiment; law-only consumption",
+      "path": ".omx/research/r1b7_uint8_survival_carrier_20260720T224624Z.json",
+      "sha256": "61f3d03930ac765b3ad5a287cbff29a3073c800eb5a5f2b98b8a701bc086d03c"
+    },
+    {
+      "bytes": 12972,
+      "consumed_as": "S2 counted G3 site and cell-identity seed with exact parse-back",
+      "content_lineage": "source-video-derived our finite coder",
+      "path": ".omx/research/s2_compose_full_partition_20260721T041640Z.json",
+      "sha256": "dd67fbe8d5aa67ea80e3d2dc689281547a5a7dd3a42c12d5c426214f68f3b023"
+    },
+    {
+      "bytes": 39836,
+      "consumed_as": "S2 exact counted packet bytes",
+      "content_lineage": "source-video-derived our finite coder",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/s2_compose_20260721/partition_seed/s2_partition_event_seed.bin",
+      "sha256": "df4c0534537a9919681509a0b44a392d7d4b46c812d7570c534e6b823adae7fc"
+    },
+    {
+      "bytes": 5980,
+      "consumed_as": "S2 finite Lane chart bytes versus true-mask fidelity curve",
+      "content_lineage": "source-video-derived our Lane-chart measurement",
+      "path": ".omx/research/s2_lane_true_mask_curve_20260721T042500Z.json",
+      "sha256": "273d7ef28b9312973831403c57552274a8fef57f53a1eb4517c1e3551d76ef94"
+    },
+    {
+      "bytes": 16989,
+      "consumed_as": "S2 genuine directional-frame implementation custody",
+      "content_lineage": "our structural law proof; no candidate bytes consumed",
+      "path": ".omx/research/genuine_curvelet_shearlet_structural_proof_v2_polar_frequency_wedge_20260714.json",
+      "sha256": "677a2252c43c1272ec0e2e83d65ce1b82d23b8ddb089d73a111a5f0b26d46d25"
+    }
+  ],
+  "lane_id": "lane_codex_original_taskspace_inverse_codec_20260725",
+  "pointer_delta": 0.0,
+  "promotion_eligible": false,
+  "runtime": {
+    "auditor_sha256": "a04afeb5d2c11fb719c95daae527697a2ca73edde06f84d0bc41ec23d90b5861",
+    "git_head": "eeb304d447b43cba3a5581a83c422b1b0bcf7f18",
+    "host": "Primary.local",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "schema": "task_space_levelset_constructive_spine_receipt.v1",
+  "score_claim": false,
+  "source_custody": {
+    "cache_binding": {
+      "fresh_full_cache_rebuild_this_pass": false,
+      "g1g3_sha_match": true,
+      "lane_path_match": true,
+      "m2_sha_match": true,
+      "scope": "existing canonical cache re-hashed and cross-bound; build log does not itself pin source/module hashes"
+    },
+    "frozen_upstream": [
+      {
+        "bytes": 8322,
+        "consumed_as": "S0 frozen preprocessing/model definitions",
+        "content_lineage": "upstream-frozen-scorer-code",
+        "path": "upstream/modules.py",
+        "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+      },
+      {
+        "bytes": 38502892,
+        "consumed_as": "S0 SegNet authority",
+        "content_lineage": "upstream-frozen-scorer-weights",
+        "path": "upstream/models/segnet.safetensors",
+        "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+      },
+      {
+        "bytes": 55835560,
+        "consumed_as": "S0 PoseNet authority",
+        "content_lineage": "upstream-frozen-scorer-weights",
+        "path": "upstream/models/posenet.safetensors",
+        "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+      }
+    ],
+    "target_cache": {
+      "bytes": 5078017610,
+      "consumed_as": "S0 n600 target custody",
+      "content_lineage": "source-video-derived our-build",
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "video": {
+      "bytes": 37545489,
+      "consumed_as": "S0 sole video input",
+      "content_lineage": "source-video-derived",
+      "path": "upstream/videos/0.mkv",
+      "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    }
+  },
+  "stages": {
+    "S0_true_targets": {
+      "note": "existing canonical cache re-hashed and cross-bound; build log does not itself pin source/module hashes",
+      "only_semantic_inputs": [
+        "upstream/videos/0.mkv",
+        "upstream/modules.py",
+        "frozen scorer weights"
+      ],
+      "pair_count": 600,
+      "status": "VERIFIED_EXISTING_N600_SOURCE_DERIVATION"
+    },
+    "S1_canonical_support_fill_and_exact_direct_row": {
+      "canonical_support_fill": {
+        "fp32_nonzero_values": 0,
+        "fp32_total_values": 117964800,
+        "max_abs": 0.0,
+        "target": "rounded uint8 scorer plane Y",
+        "warning": "the receipt verdict prose contradicts its exact numeric fields; numeric fields were re-derived and used"
+      },
+      "source_target_direct_realization": {
+        "archive_bytes": 1717172741,
+        "d_pose": 0.0,
+        "d_seg": 0.0,
+        "scope": "official macOS-CPU advisory row; direct per-camera realization, not a compact descriptor",
+        "score_claim": false
+      },
+      "status": "MEASURED_TWO_DISTINCT_EXACTNESS_ROWS"
+    },
+    "S2_task_space_level_set_witness": {
+      "aa_sdf_renderer": {
+        "equation_id": "aa_sdf_observation_footprint_render_dseg_v1",
+        "n600_grid384_d_seg": 0.0008598581949869792,
+        "rust_oracle_parity": {
+          "command": [
+            "cargo",
+            "test",
+            "-p",
+            "tac-levelset-inflate",
+            "--",
+            "--nocapture"
+          ],
+          "required_tests": [
+            "lane_coverage_parity",
+            "lane_coverage_negative_control_bit_flip_breaks_parity",
+            "range_decode_parity",
+            "xi_column_delta_parity"
+          ],
+          "returncode": 0,
+          "scope": "real n96 lane coefficients for AA-SDF golden parity; decoder primitive proof, not an n600 full-partition receiver proof",
+          "sha256": {
+            "golden_band_fixture": "bad904237972c4f1cff2eef8646be1b310a086b7e4d27c6fb61208ce36aa30a4",
+            "golden_manifest": "feb14ff8fa43b1092cc94c70d419eee3f496e31bd97cdf05d7e0e04967e0bbe7",
+            "golden_parity_test": "a929806bcaacc337f82b5ead65f0b3d51ae9a9d653033f55357a6d69e68d62c0",
+            "rust_lane_coverage": "dde94e7aba118bc65fc45dcf9e326925a9d2c0ba41a8a2896da9cc49a6c5901d"
+          },
+          "status": "PASS"
+        }
+      },
+      "curvelet_residual_chart": {
+        "equation_id": "shearlet_nterm_upper_bounds_task_rate_v1",
+        "scope": "use only where polynomial/ground charts leave measured residual; no Fourier candidate basis",
+        "status": "REQUIRED_NOT_COMPOSED"
+      },
+      "division_of_labor": {
+        "realization": "S3 must jointly preserve chart and values on the uint8 lattice",
+        "shape": "level-set charts describe the five-class partition; lane polynomial is the lane SDF zero-set",
+        "values": "inverse preimage pins scorer-bearing values inside the selected cells"
+      },
+      "lane_chart": {
+        "band_recall_mean": 0.5474557765871068,
+        "coherent_slot_brotli_bytes": 41303,
+        "fidelity_scope": "lossless to fitted lane parameters, not lossless to the Lane argmax mask",
+        "fitted_lines": 2967,
+        "rate_term": 0.027501972340805043,
+        "true_mask_curve": {
+          "residual_status": "BLOCKED_TARGET_BOUNDARY_INVERSE_CUSTODY",
+          "rows": [
+            {
+              "codec_metadata": {
+                "K": 6,
+                "n_births": 1,
+                "n_deaths": 0,
+                "pack_mode": "coherent_slot",
+                "smooth": "none"
+              },
+              "decoder_dash_gate": true,
+              "finite_brotli_bytes": 41303,
+              "mask_fidelity": {
+                "f1": 0.573396816336062,
+                "fn": 314956,
+                "fp": 244055,
+                "macro_pair_f1_mean": 0.581196696284192,
+                "macro_pair_f1_p10": 0.451609328257214,
+                "macro_pair_f1_p90": 0.6993791841238128,
+                "precision": 0.606196489484266,
+                "recall": 0.5439643576456007,
+                "tn": 117030106,
+                "tp": 375683
+              },
+              "per_stratum": {
+                "lane_boundary": {
+                  "false_positive_rate_if_negative": null,
+                  "pixels": 518278,
+                  "predicted_positive": 271471,
+                  "recall_if_positive": 0.5237941799574746,
+                  "true_positive": 271471,
+                  "truth_positive": 518278
+                },
+                "lane_interior": {
+                  "false_positive_rate_if_negative": null,
+                  "pixels": 172361,
+                  "predicted_positive": 104212,
+                  "recall_if_positive": 0.6046147330312541,
+                  "true_positive": 104212,
+                  "truth_positive": 172361
+                },
+                "lower_half": {
+                  "false_positive_rate_if_negative": 0.0036223946249131856,
+                  "pixels": 58982400,
+                  "predicted_positive": 563263,
+                  "recall_if_positive": 0.5465563215249123,
+                  "true_positive": 351938,
+                  "truth_positive": 643919
+                },
+                "other_negative": {
+                  "false_positive_rate_if_negative": 0.0009211378377952825,
+                  "pixels": 89867115,
+                  "predicted_positive": 82780,
+                  "recall_if_positive": null,
+                  "true_positive": 0,
+                  "truth_positive": 0
+                },
+                "road_negative": {
+                  "false_positive_rate_if_negative": 0.0058844357031399884,
+                  "pixels": 27407046,
+                  "predicted_positive": 161275,
+                  "recall_if_positive": null,
+                  "true_positive": 0,
+                  "truth_positive": 0
+                },
+                "upper_half": {
+                  "false_positive_rate_if_negative": 0.0005553511896358878,
+                  "pixels": 58982400,
+                  "predicted_positive": 56475,
+                  "recall_if_positive": 0.5082405821917808,
+                  "true_positive": 23745,
+                  "truth_positive": 46720
+                }
+              },
+              "rate_term": 0.027501972340805043,
+              "variant": "coherent_slot_none_dash"
+            },
+            {
+              "codec_metadata": {
+                "K": 6,
+                "n_births": 1,
+                "n_deaths": 0,
+                "pack_mode": "coherent_slot",
+                "smooth": "none"
+              },
+              "decoder_dash_gate": false,
+              "finite_brotli_bytes": 41298,
+              "mask_fidelity": {
+                "f1": 0.5586749801103452,
+                "fn": 130269,
+                "fp": 755059,
+                "macro_pair_f1_mean": 0.570781852377235,
+                "macro_pair_f1_p10": 0.4684744428793373,
+                "macro_pair_f1_p90": 0.6751042204160318,
+                "precision": 0.42599790638643364,
+                "recall": 0.8113790272486784,
+                "tn": 116519102,
+                "tp": 560370
+              },
+              "per_stratum": {
+                "lane_boundary": {
+                  "false_positive_rate_if_negative": null,
+                  "pixels": 518278,
+                  "predicted_positive": 393323,
+                  "recall_if_positive": 0.7589035228197994,
+                  "true_positive": 393323,
+                  "truth_positive": 518278
+                },
+                "lane_interior": {
+                  "false_positive_rate_if_negative": null,
+                  "pixels": 172361,
+                  "predicted_positive": 167047,
+                  "recall_if_positive": 0.9691693596579273,
+                  "true_positive": 167047,
+                  "truth_positive": 172361
+                },
+                "lower_half": {
+                  "false_positive_rate_if_negative": 0.011643841052357877,
+                  "pixels": 58982400,
+                  "predicted_positive": 1203596,
+                  "recall_if_positive": 0.8142514819410516,
+                  "true_positive": 524312,
+                  "truth_positive": 643919
+                },
+                "other_negative": {
+                  "false_positive_rate_if_negative": 0.0027191481555850546,
+                  "pixels": 89867115,
+                  "predicted_positive": 244362,
+                  "recall_if_positive": null,
+                  "true_positive": 0,
+                  "truth_positive": 0
+                },
+                "road_negative": {
+                  "false_positive_rate_if_negative": 0.01863378490334201,
+                  "pixels": 27407046,
+                  "predicted_positive": 510697,
+                  "recall_if_positive": null,
+                  "true_positive": 0,
+                  "truth_positive": 0
+                },
+                "upper_half": {
+                  "false_positive_rate_if_negative": 0.0012857236906403727,
+                  "pixels": 58982400,
+                  "predicted_positive": 111833,
+                  "recall_if_positive": 0.7717893835616438,
+                  "true_positive": 36058,
+                  "truth_positive": 46720
+                }
+              },
+              "rate_term": 0.027498643046039436,
+              "variant": "coherent_slot_none_continuous"
+            }
+          ],
+          "scope": "real n600 coherent-slot polynomial Lane chart after finite LBND2 decode, true-mask fidelity only; not through-R, not a score, and not gap-1 closure because the genuine curvelet/shearlet residual inverse is not composed.",
+          "status": "MEASURED_POLYNOMIAL_CONTROL_GENUINE_RESIDUAL_OPEN"
+        }
+      },
+      "missing_closure": [
+        "baseline five-class chart/predictor composed with the measured finite cell-event seed",
+        "counted pose/xi stream bound to the same n600 partition row",
+        "curvelet residual chart composed where polynomial/ground charts fail",
+        "one parse-back that combines charts, cell events, values, range(A), and generic blind fill",
+        "n600 through-R hard-oracle fidelity for that combined descriptor"
+      ],
+      "morse_smale_cell_prior": {
+        "best_prior": "spatial_temporal_laplace",
+        "equation_id": "argmax_cell_identity_ideal_bytes_v1",
+        "fidelity_scope": "ideal conditional cell-identity floor, not a receiver-closed stream",
+        "finite_seed": {
+          "event_count": 17926,
+          "packet_bytes": 39836,
+          "packet_sha256": "df4c0534537a9919681509a0b44a392d7d4b46c812d7570c534e6b823adae7fc",
+          "scope": "real n600 measured G3 event sites and target/baseline cell identities; all finite site/header/coder/CRC bytes counted and exact on parse-back. This is not a full partition, xi, plane-realization, archive, d_seg, or d_pose receiver row because the baseline partition predictor remains external.",
+          "self_detection_method": "spatial_static_signature_v1",
+          "semantic_class_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "sites_headers_coder_crc_counted": true,
+          "status": "MEASURED_FINITE_PARSEBACK_COMPLETE",
+          "stored_plane_value_bytes": 0
+        },
+        "flip_count": 17926,
+        "ideal_bytes": 2724.873306413088,
+        "not_counted": [
+          "site locations",
+          "headers",
+          "finite coder overhead"
+        ]
+      },
+      "precision_waterfill": {
+        "equation_ids": [
+          "frozen_scorer_fisher_curvature_margin_colocation_v1",
+          "fisher_curvature_equals_categorical_fisher_trace_caustic_v1",
+          "segnet_head_rank4_linear_flipdist_v1",
+          "witness_measured_reverse_waterfill_v1"
+        ],
+        "status": "REGISTERED_LAWS_NOT_EXECUTED_AS_A_COMPLETE_S2_BIT_ALLOCATOR_IN_THIS_ROW"
+      },
+      "range_and_blind_geometry": {
+        "blind_coordinates_per_frame": 230904,
+        "blind_fraction": 0.22696926089315625,
+        "full_linear_nullity_fraction": 0.8067423152232891,
+        "implemented_integer_exact_null_mask_fraction": 0.22696926089315625,
+        "scope": "generic fill is free only for a camera-resolution payload; direct saving is zero for a pure generator"
+      },
+      "status": "PARTIAL_MEASURED_NOT_PARTITION_POSE_COMPLETE",
+      "worldsheet_transport": {
+        "cross_pair_event_gt4_fraction": 0.08249694465142526,
+        "cross_pair_median_px": 0.2798490886048264,
+        "equation_id": "worldsheet_transport_residual_event_rate_v1",
+        "formulation_caveat": "single global ground-plane-homography realization using exact within-pair poses and nearest-target-pair proxy cross poses; not the worldsheet object/family",
+        "within_pair_event_gt4_fraction": 0.08397657410483839,
+        "within_pair_median_px": 0.27921226653790376
+      }
+    },
+    "S3_integer_aware_realization": {
+      "fixed_magnitude_lesson": {
+        "candidate_bytes_consumed": false,
+        "new_hard_crossings": 0,
+        "receipt_verdict": "MEASURED_N16_FIXED_NONPOSITIVE_INTEGER_PREFIX_NO_NEW_CROSSING",
+        "scope": "exact sealed R1b4 n16 receiver; 498 exact-feasible Fisher-ordered Road-Lane sites for fixed magnitude; post-run-adjudicated bounded top-8 integer prefix with zero wrong-to-target crossings; seed1234 batch16 hard macOS CPU Torch only. Not n600, not contest CPU/CUDA, not a marginal-prefix waterfill, and not curvelet/shearlet/boundary/full-kernel family authority."
+      },
+      "gate": "no sub-step writes; admit only fixed-magnitude integer writes through a fresh hard oracle",
+      "lattice_components": [
+        "tac.optimization.uint8_lattice_feasibility",
+        "tac.optimization.tie_aware_preimage"
+      ],
+      "status": "COMPONENTS_PRESENT_NOT_COMPOSED_WITH_S2"
+    },
+    "S4_strict_archive_n600_receiver": {
+      "archive_bytes": null,
+      "d_pose": null,
+      "per_class_d_seg": null,
+      "pointer_moved": false,
+      "score": null,
+      "status": "NOT_BUILT_FOR_THIS_FROM_SCRATCH_COMPOSITION"
+    }
+  },
+  "verdict": "PARTIAL_CONSTRUCTIVE_SPINE_MEASURED_S2_AND_S3_NOT_COMPOSED_S4_ABSENT",
+  "verdict_scope": "current from-scratch source-only composition; component gaps do not close the task-space level-set witness family"
+}

@@ -236,19 +236,36 @@ def _tiny_inr_params(rng, in_feat, hidden, n_hidden, mod, n_classes=5):
 
 
 def _tiny_inr_cfg(H, W, hidden, n_hidden, mod, bank, n_classes=5):
-    return dict(
-        n_hidden=n_hidden, hidden_dim=hidden, mod_dim=mod, n_classes=n_classes,
-        activation="hosc", hosc_beta=4.0, hosc_omega=1.0, softmax_temp=0.1, wire_w0=20.0, wire_s0=10.0,
-        chroma=True, render_h=H, render_w=W, bank_n_scales=bank["n_scales"], bank_n_orient0=bank["n_orient0"],
-        bank_f0=bank["f0"], bank_base=bank["base"], bank_n_iso=bank["n_iso"], max_bank_freq=None,
-        learn_classes=[1, 3], dilate=1)
+    return {
+        "n_hidden": n_hidden,
+        "hidden_dim": hidden,
+        "mod_dim": mod,
+        "n_classes": n_classes,
+        "activation": "hosc",
+        "hosc_beta": 4.0,
+        "hosc_omega": 1.0,
+        "softmax_temp": 0.1,
+        "wire_w0": 20.0,
+        "wire_s0": 10.0,
+        "chroma": True,
+        "render_h": H,
+        "render_w": W,
+        "bank_n_scales": bank["n_scales"],
+        "bank_n_orient0": bank["n_orient0"],
+        "bank_f0": bank["f0"],
+        "bank_base": bank["base"],
+        "bank_n_iso": bank["n_iso"],
+        "max_bank_freq": None,
+        "learn_classes": [1, 3],
+        "dilate": 1,
+    }
 
 
 def test_residual_blob_build_parse_roundtrip():
     from tac.boundary_math.lever_b_levelset_generator import CurveletBankConfig, curvelet_directional_B
     from tac.v2_compose.archive_grammar import build_residual_blob, parse_residual_blob
 
-    bank = dict(n_scales=2, n_orient0=3, f0=2.0, base=2.0, n_iso=2)
+    bank = {"n_scales": 2, "n_orient0": 3, "f0": 2.0, "base": 2.0, "n_iso": 2}
     in_feat = 2 * curvelet_directional_B(CurveletBankConfig(**bank)).shape[1]
     rng = np.random.RandomState(3)
     params = _tiny_inr_params(rng, in_feat, hidden=6, n_hidden=2, mod=4)
@@ -264,7 +281,32 @@ def test_residual_blob_build_parse_roundtrip():
     assert rb.manifest["learn_classes"] == [1, 3] and rb.manifest["dilate"] == 1
 
 
-def _build_tiny_v2_packet(tmp_path, *, with_residual: bool, dilate: int = 1):
+def test_residual_blob_refuses_counted_parameter_the_receiver_does_not_consume():
+    from tac.boundary_math.lever_b_levelset_generator import CurveletBankConfig, curvelet_directional_B
+    from tac.v2_compose.archive_grammar import build_residual_blob
+
+    bank = {"n_scales": 2, "n_orient0": 3, "f0": 2.0, "base": 2.0, "n_iso": 2}
+    in_features = 2 * curvelet_directional_B(CurveletBankConfig(**bank)).shape[1]
+    params = _tiny_inr_params(
+        np.random.RandomState(4),
+        in_features,
+        hidden=6,
+        n_hidden=2,
+        mod=4,
+    )
+    params["totally_unused.video_payload"] = np.zeros((17,), dtype=np.float32)
+
+    with pytest.raises(ValueError, match="receiver-consumed set"):
+        build_residual_blob(params, _tiny_inr_cfg(24, 32, 6, 2, 4, bank))
+
+
+def _build_tiny_v2_packet(
+    tmp_path,
+    *,
+    with_residual: bool,
+    dilate: int = 1,
+    warp_codes: list[int] | None = None,
+):
     """Assemble a tiny v2 archive (store + [residual] + pose) + return (packet_dir, oracle inputs)."""
     from tac.boundary_math.lever_b_levelset_generator import CurveletBankConfig, curvelet_directional_B
     from tac.v2_compose.archive_grammar import (
@@ -279,7 +321,7 @@ def _build_tiny_v2_packet(tmp_path, *, with_residual: bool, dilate: int = 1):
     rng = np.random.RandomState(11)
     H, W, n_pairs, n_classes = 24, 32, 3, 5
     reach_kstar = 2
-    bank = dict(n_scales=2, n_orient0=3, f0=2.0, base=2.0, n_iso=2)
+    bank = {"n_scales": 2, "n_orient0": 3, "f0": 2.0, "base": 2.0, "n_iso": 2}
     keyframes = list(range(0, n_pairs, reach_kstar))
     kf_lstars = rng.randint(0, n_classes, (len(keyframes), H, W)).astype(np.int64)
     palette = (rng.rand(n_classes, 3) * 255).astype(np.float32)
@@ -287,7 +329,8 @@ def _build_tiny_v2_packet(tmp_path, *, with_residual: bool, dilate: int = 1):
     # PHYSICAL per-class warp-regime codes (A3.2): Road=ground(0), Lane=ground(0), Undriv=rotonly(2),
     # Movable=ground(0), MyCar=identity(1). The inflate's _composite_warped CONSUMES these and is then
     # bit-identical to the proven composite_warped_labels router (which the oracle uses).
-    warp_codes = [0, 0, 2, 0, 1]
+    if warp_codes is None:
+        warp_codes = [0, 0, 2, 0, 1]
     store_blob = build_store_blob(keyframes, kf_lstars, palette, calib, warp_codes, reach_kstar, n_pairs, n_classes=n_classes)
     sb = parse_store_blob(store_blob)
 
@@ -333,10 +376,19 @@ def test_byte_accounting_residual_present_and_floor(tmp_path):
 # INFLATE PARITY (the NO-FAKE faithfulness anchor) -- subprocess inflate vs numpy oracle.
 # ===========================================================================
 @pytest.mark.skipif(not _HAS_TORCH, reason="torch (bicubic R) unavailable")
-def test_inflate_residual_compose_bit_exact_parity(tmp_path):
+@pytest.mark.parametrize(
+    "warp_codes",
+    ([0, 0, 2, 0, 1], [1, 1, 1, 1, 1], [3, 0, 2, 1, 3]),
+)
+def test_inflate_residual_compose_bit_exact_parity(tmp_path, warp_codes):
     from tac.v2_compose.archive_grammar import residual_inflate_reference
 
-    pkt, sb, rb, poses_f16, n_pairs, _blobs = _build_tiny_v2_packet(tmp_path, with_residual=True, dilate=1)
+    pkt, sb, rb, poses_f16, n_pairs, _blobs = _build_tiny_v2_packet(
+        tmp_path,
+        with_residual=True,
+        dilate=1,
+        warp_codes=warp_codes,
+    )
     dst = pkt / "0.raw"
     r = subprocess.run([sys.executable, str(pkt / "inflate.py"), str(pkt / "0.bin"), str(dst)],
                        capture_output=True, text=True)
@@ -539,15 +591,26 @@ def test_surgical_lever_reweights_composed_loss():
 # ===========================================================================
 # trainer residual-mode fail-closed config guards (fast: import + main(argv), pre-run_train).
 # ===========================================================================
+def _admit_invalid_config_validation(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reach argument guards without authorizing or starting a heavy run."""
+
+    monkeypatch.setattr(
+        "tac.admission_guard.assert_governed_admission",
+        lambda _label: True,
+    )
+
+
 @pytest.mark.skipif(not _HAS_MLX, reason="mlx not available (trainer import)")
-def test_residual_mode_requires_npz():
+def test_residual_mode_requires_npz(monkeypatch: pytest.MonkeyPatch):
+    _admit_invalid_config_validation(monkeypatch)
     lst = _load_levelset_trainer()
     with pytest.raises(ValueError, match="requires --residual-target-npz"):
         lst.main(["--out-dir", str(REPO / "experiments" / "results" / "_nope"), "--residual-mode"])
 
 
 @pytest.mark.skipif(not _HAS_MLX, reason="mlx not available (trainer import)")
-def test_residual_mode_incompatible_with_structured_init():
+def test_residual_mode_incompatible_with_structured_init(monkeypatch: pytest.MonkeyPatch):
+    _admit_invalid_config_validation(monkeypatch)
     lst = _load_levelset_trainer()
     with pytest.raises(ValueError, match="incompatible with --structured-init"):
         lst.main(["--out-dir", str(REPO / "experiments" / "results" / "_nope"),
@@ -555,7 +618,8 @@ def test_residual_mode_incompatible_with_structured_init():
 
 
 @pytest.mark.skipif(not _HAS_MLX, reason="mlx not available (trainer import)")
-def test_residual_npz_without_mode_fails():
+def test_residual_npz_without_mode_fails(monkeypatch: pytest.MonkeyPatch):
+    _admit_invalid_config_validation(monkeypatch)
     lst = _load_levelset_trainer()
     with pytest.raises(ValueError, match="--residual-mode is OFF"):
         lst.main(["--out-dir", str(REPO / "experiments" / "results" / "_nope"),
@@ -563,7 +627,8 @@ def test_residual_npz_without_mode_fails():
 
 
 @pytest.mark.skipif(not _HAS_MLX, reason="mlx not available (trainer import)")
-def test_residual_mode_incompatible_with_freeze_decoder():
+def test_residual_mode_incompatible_with_freeze_decoder(monkeypatch: pytest.MonkeyPatch):
+    _admit_invalid_config_validation(monkeypatch)
     lst = _load_levelset_trainer()
     with pytest.raises(ValueError, match="incompatible with --freeze-decoder-fit-codes"):
         lst.main(["--out-dir", str(REPO / "experiments" / "results" / "_nope"),

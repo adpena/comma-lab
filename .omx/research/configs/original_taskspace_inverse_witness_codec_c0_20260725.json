@@ -1,0 +1,92 @@
+{
+  "schema": "tac.coupled_witness_scaffold_spec.v1",
+  "source_video": {
+    "path": "upstream/videos/0.mkv",
+    "artifact_schema": "contest-source-video.mkv.v1"
+  },
+  "evaluator_artifacts": [
+    {
+      "path": "upstream/evaluate.py",
+      "artifact_schema": "frozen-evaluator-entrypoint.py.v1"
+    },
+    {
+      "path": "upstream/evaluate.sh",
+      "artifact_schema": "frozen-evaluator-launcher.sh.v1"
+    },
+    {
+      "path": "upstream/frame_utils.py",
+      "artifact_schema": "frozen-evaluator-frame-geometry.py.v1"
+    },
+    {
+      "path": "upstream/modules.py",
+      "artifact_schema": "frozen-evaluator-model-code.py.v1"
+    },
+    {
+      "path": "upstream/models/posenet.safetensors",
+      "artifact_schema": "frozen-posenet-weights.safetensors.v1"
+    },
+    {
+      "path": "upstream/models/segnet.safetensors",
+      "artifact_schema": "frozen-segnet-weights.safetensors.v1"
+    },
+    {
+      "path": "upstream/public_test_video_names.txt",
+      "artifact_schema": "frozen-evaluator-video-order.txt.v1"
+    },
+    {
+      "path": "upstream/pyproject.toml",
+      "artifact_schema": "frozen-evaluator-runtime-project.toml.v1"
+    },
+    {
+      "path": "upstream/uv.lock",
+      "artifact_schema": "frozen-evaluator-runtime-lock.v1"
+    }
+  ],
+  "receiver_artifacts": [
+    {
+      "path": "src/tac/witness_dsl/coupled_witness_state.py",
+      "artifact_schema": "original-coupled-witness-state-code.v1"
+    },
+    {
+      "path": "src/tac/witness_dsl/v10_production_receiver.py",
+      "artifact_schema": "original-v10-production-receiver-code.v1"
+    },
+    {
+      "path": "src/tac/codec/v10_predictor_residual.py",
+      "artifact_schema": "original-v10-predictor-residual-code.v1"
+    },
+    {
+      "path": "src/tac/codec/v10_jxl_plane_codec.py",
+      "artifact_schema": "original-v10-jxl-plane-codec-code.v1"
+    },
+    {
+      "path": "src/tac/optimization/uint8_lattice_feasibility.py",
+      "artifact_schema": "original-uint8-lattice-feasibility-code.v1"
+    }
+  ],
+  "pair_count": 600,
+  "pair_order_id": "canonical-contiguous-n600.v1",
+  "scorer_geometry": {
+    "height": 384,
+    "width": 512
+  },
+  "generation": {
+    "seed": 0,
+    "rng_id": "numpy-pcg64-derived.v1"
+  },
+  "compile": {
+    "container_id": "original-taskspace-inverse-witness-codec.v0-unimplemented",
+    "receiver_contract_id": "contest-native-874x1164-to-two-plane-384x512.v0-unimplemented",
+    "r_chain_id": "upstream-native-bilinear-resize-uint8-torch-f32.v1",
+    "tie_policy_id": "upstream-native-torch-f32-argmax-first-index.v1",
+    "camera_geometry": {
+      "height": 874,
+      "width": 1164
+    },
+    "decoder_seed": 0,
+    "decoder_payload_policy": "counted-source-derived-statistics-only-no-scorer-no-gt-table"
+  },
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false
+}

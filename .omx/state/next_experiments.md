@@ -1,34 +1,55 @@
-# Next Experiments - 2026-07-25 effective-frontier rebaseline
+# Next Experiments - 2026-07-25 original evaluator-equivalence codec campaign
 
 ## Immediate governed queue
 
-1. **Signal-conserving codec linker:** the fail-closed
-   `tac.applied_action_receipt.v1` contract is landed. Make J8F, MS7/PF3, J12,
-   and future DDM producers emit it under stable semantic action IDs, joining a
-   concrete codeword/operator/base/receiver/byte home to `tac.action_effect.v1`.
-   Then link complete receipts into a hardened packet shell, harvesting
-   `v2_compose` framing/inflate/accounting only. Preserve incomplete effects
-   with a named missing edge instead of dropping or zero-filling them.
-2. **Seven-home rate waterfill:** consume EV2's lawful stream partition and
-   measure whole-stream byte/distortion deltas, beginning with the existing CC3
-   lossless row. Do not manufacture 162 cellwise byte owners for a jointly coded
-   object. Keep the remaining 52 PF3 scalar probes as a parallel bounded control.
-3. **Joint openings:** route identity-compatible J8F/J12/PF3 effects through the
-   existing order-sensitive commutator ledger and exact-price a bounded top-K of
-   ordered composites. Single-action improvements are not assumed additive.
-4. **Receiver/export hardening:** fail closed or prove exact-equivalent
-   sanitization for J12's nonfinite PC1 warp, add the J12 resealer profile, and
-   ensure compose charges every external counted payload.
-5. **Three-vehicle candidate portfolio:** continue live residual descent, byte-
-   close one v8/v9 support-renewing carrier (MyCar control first), and run only a
-   resumable bounded nonlinear frame-0 Pose descent smoke. Compile compatible
-   winners into one archive; exact contest-CPU and CUDA remain separate axes.
-6. **Dynamic target:** refresh the canonical pointer before spend and after each
-   exact result. Only a custody-complete score below the then-current
-   `effective_frontier` moves the competitive pointer.
+1. **C0B — first complete object:** extend the landed C0A identity scaffold into
+   one coarse, deterministic, receiver-closed n600 vertical codec. It must carry
+   all five classes, explicit coupled `Y0/Y1`, native `874x1164` uint8 frames, a
+   finite grammar, a real coder, archive/inflate/parse-back hashes, per-class and
+   per-pair debt, and same-object `d_seg`, `d_pose`, bytes, and coupled score on a
+   clearly labelled local axis. Populated streams require verified payload and
+   provenance loaders plus parent-state-bound construction receipts; asserted
+   hashes are not custody. A poor complete object is more useful than a polished
+   component with no archive edge.
+2. **V9 and V10 alternate on that object:** refine V9 level sets, Morse-Smale
+   topology, worldsheet/xi, per-class carriers, merge-diff-correct, and AA-SDF
+   while V10 performs two-plane uint8 preimage realization, palette/gauge
+   reconciliation, and R10 prosody/feature-relay inversion. Recompile and score
+   after every atomic bundle; do not finish one half before exercising the other.
+3. **Pose is conditional, not independent:** solve amplitude-structured,
+   xi-advected frame-0 state conditioned on the realized last frame. Use frozen
+   PoseNet feature relay or multiple shooting where analytic inversion ends.
+   Do not extend the failed additive low-rank frame-0 family by reflex.
+4. **Make the 25 IS1 demand rows interface tests:** rematerialize all 16 SKELETON
+   and 9 FIBER obligations through the original receiver and real coder. Historical
+   actuator bytes and null prices are not inherited.
+5. **Price syntax from byte one:** race split and joint physical entropy modes,
+   but preserve seven logical provenance/mutation roles. Admit costate-ranked,
+   order-aware factor10 bundles only by exact final `delta S` after global
+   recompression; a useful bundle may contain an uphill intermediate prefix.
+6. **Train only typed necessity:** derive, solve, or code by default. Training may
+   fit a declared compact function with scorer and coder in loop, deterministic
+   resumable stage checkpoints, and explicit byte ownership. Additional quotient
+   `T` is terminal and must beat matched-byte analytic/dictionary controls.
+7. **Branch authority early:** any complete n600 archive may enter the governed
+   exact CPU/CUDA path; later C5/C6 polish is not a prerequisite. Bank a verified
+   score below the refreshed competitive pointer, then continue until an exact
+   archive is strictly below the mission target `0.15`.
+8. **Retire false composition paths:** EV2 seven-home allocation, WTNV2 linking,
+   J8F/J12/PF3 actions, and public PRs remain guard, mechanism, and falsifier
+   evidence only unless rebuilt as native same-state transitions. No public
+   archive, code, weights, checkpoint, latent, click, selector, token, or sidecar
+   may become candidate lineage.
 
-Competitive target is the official leaderboard best `0.172` (PR #130), not
-the local `0.1910828242` baseline or the banned `0.1880443980` bank. Refresh
+Small n24-or-less fixtures are parser, unit, and mutation tests only. They may
+not choose a scientific branch or support a score verdict. The canonical
+machine-readable campaign DAG is
+`.omx/research/original_taskspace_inverse_witness_codec_20260725/roadmap.json`.
+
+Competitive target is always the dynamically refreshed canonical
+`effective_frontier`; its dated snapshot here is the official-leaderboard
+`0.172`, not the local `0.1910828242` baseline or the banned `0.1880443980`
+bank. Refresh
 with `tools/refresh_canonical_frontier.py`; the default path now fetches the
 official ranked table.
 

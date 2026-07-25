@@ -819,7 +819,7 @@ def test_mixed_authority_axes_are_not_compared() -> None:
     assert "MIXED_AUTHORITY_AXES_REFUSED" in plan["interaction_or_commutator_blockers"]
 
 
-def test_dynamic_target_comparison_is_null_for_advisory_axis_and_bool_for_contest() -> None:
+def test_dynamic_target_comparison_requires_exact_eval_custody_foreign_key() -> None:
     advisory = ReceiptEnvelope(
         _receipt(
             receipt_id="axis-advisory",
@@ -846,8 +846,12 @@ def test_dynamic_target_comparison_is_null_for_advisory_axis_and_bool_for_contes
 
     assert advisory_plan["exact_score_transition"]["beats_dynamic_target"] is None
     assert advisory_plan["exact_score_transition"]["dynamic_target_comparison_eligible"] is False
-    assert isinstance(contest_plan["exact_score_transition"]["beats_dynamic_target"], bool)
-    assert contest_plan["exact_score_transition"]["dynamic_target_comparison_eligible"] is True
+    assert contest_plan["exact_score_transition"]["beats_dynamic_target"] is None
+    assert contest_plan["exact_score_transition"]["dynamic_target_comparison_eligible"] is False
+    assert (
+        contest_plan["exact_score_transition"]["dynamic_target_comparison_blocker"]
+        == "EXACT_EVAL_CUSTODY_FOREIGN_KEY_ABSENT"
+    )
 
     incompatible_pointer = _pointer()
     incompatible_pointer["effective_frontier"]["source_kind"] = "local_advisory_snapshot"
@@ -913,53 +917,27 @@ def test_receipt_manifest_self_hash_count_and_false_authority_are_strict() -> No
         envelopes_from_manifest(false_authority)
 
 
-def test_adapter_manifest_result_shape_count_and_false_authority_are_strict() -> None:
-    blocker = {
-        "code": "OWED",
-        "source_key": "fixture.source",
-        "owed_field": "fixture.field",
-        "detail": "fixture detail",
-    }
-    blocked_result = {
-        "schema": "tac.applied_action_adapter_result.v1",
-        "source_kind": "PF3",
-        "source_schema": "fixture.v1",
-        "source_id": "fixture-id",
-        "ok": False,
-        "receipt": None,
-        "blockers": [blocker],
-        "research_only": True,
-        "promotion_eligible": False,
-        "score_claim": False,
-    }
-    valid = _content_hashed(
-        {
-            "schema": "tac.applied_action_adapter_manifest.v1",
-            "receipt_count": 0,
-            "blocked_source_count": 1,
-            "results": [blocked_result],
-            "research_only": True,
-            "promotion_eligible": False,
-            "score_claim": False,
-        }
-    )
+def test_adapter_manifest_canonical_custody_and_semantic_counts_are_strict() -> None:
+    valid = json.loads(ADAPTER_PATH.read_text())
     assert envelopes_from_manifest(valid) == ()
 
-    wrong_type = _content_hashed({**valid, "receipt_count": "0"})
-    with pytest.raises(SevenHomeAllocationError, match="exact integer"):
-        envelopes_from_manifest(wrong_type)
+    missing_artifacts = copy.deepcopy(valid)
+    missing_artifacts["results"][0].pop("source_artifacts")
+    missing_artifacts = _content_hashed(missing_artifacts)
+    with pytest.raises(SevenHomeAllocationError, match="keys/schema differ"):
+        envelopes_from_manifest(missing_artifacts)
 
-    wrong_row_authority = copy.deepcopy(valid)
-    wrong_row_authority["results"][0]["score_claim"] = True
-    wrong_row_authority = _content_hashed(wrong_row_authority)
-    with pytest.raises(SevenHomeAllocationError, match="score_claim"):
-        envelopes_from_manifest(wrong_row_authority)
+    tampered_digest = copy.deepcopy(valid)
+    tampered_digest["results"][0]["source_artifacts"][0]["sha256"] = "f" * 64
+    tampered_digest = _content_hashed(tampered_digest)
+    with pytest.raises(SevenHomeAllocationError, match="artifact digest differs"):
+        envelopes_from_manifest(tampered_digest)
 
-    invalid_shape = copy.deepcopy(valid)
-    invalid_shape["results"][0]["receipt"] = {"schema": "smuggled"}
-    invalid_shape = _content_hashed(invalid_shape)
-    with pytest.raises(SevenHomeAllocationError, match="blockers and no receipt"):
-        envelopes_from_manifest(invalid_shape)
+    tampered_counts = copy.deepcopy(valid)
+    tampered_counts["results"][0]["source_counts"]["application_count"] -= 1
+    tampered_counts = _content_hashed(tampered_counts)
+    with pytest.raises(SevenHomeAllocationError, match="semantic counts differ"):
+        envelopes_from_manifest(tampered_counts)
 
 
 def test_cli_records_strict_adapter_manifest_reconciliation() -> None:

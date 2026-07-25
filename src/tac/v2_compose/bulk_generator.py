@@ -43,36 +43,36 @@ for _p in (_REPO, _REPO / "src", _REPO / "upstream"):
 
 # Proven warp path (faithful-by-construction; do NOT reimplement — see LAYERING NOTE).
 from tools.measure_pose_warp_dseg import (  # noqa: E402
-    CLASS_NAMES,
     NATIVE_H,
     NATIVE_W,
-    intrinsics_at,
     _target_grid,
+    intrinsics_at,
 )
 from tools.measure_screw_reach_through_R import (  # noqa: E402
     BULK_IDX,
     R1_BULK_REF,
-    SCREW_REGIME,
     composite_warped_labels,
+    stratified_predictions,
 )
 from tools.measure_segnet_fooling_ladder import _gauss_blur, _resize_bilinear  # noqa: E402
 
 __all__ = [
-    "BulkConfig",
-    "BulkResult",
-    "select_keyframes",
-    "nearest_keyframe",
-    "compute_class_mean_palette",
-    "render_partition",
-    "bicubic_up_to_camera",
-    "bulk_argmax_through_R",
-    "generate_bulk_argmax_stack",
-    "generate_bulk_render_and_labels",
-    "segnet_selfcheck",
-    "verify_k0_faithfulness",
-    "load_calibration_from_reach",
     "SEG_H",
     "SEG_W",
+    "BulkConfig",
+    "BulkResult",
+    "bicubic_up_to_camera",
+    "bulk_argmax_through_R",
+    "composite_warped_labels_by_codes",
+    "compute_class_mean_palette",
+    "generate_bulk_argmax_stack",
+    "generate_bulk_render_and_labels",
+    "load_calibration_from_reach",
+    "nearest_keyframe",
+    "render_partition",
+    "segnet_selfcheck",
+    "select_keyframes",
+    "verify_k0_faithfulness",
 ]
 
 SEG_H, SEG_W = 384, 512
@@ -111,6 +111,62 @@ class BulkResult:
     segnet_selfcheck_max_px: int        # max gt_f1->argmax disagreement vs cached lstars (must be 0)
     k0_bulk_mean: float                 # the k=0 render-through-R bulk d_seg floor for THIS cache
     k0_within_r1_ref: bool              # INFORMATIONAL: |k0_bulk - 0.0185| < tol (exact on n96 only)
+
+
+def composite_warped_labels_by_codes(
+    source: np.ndarray,
+    poses: np.ndarray,
+    anchor: int,
+    offset: int,
+    intrinsics: np.ndarray,
+    inverse_intrinsics: np.ndarray,
+    params: tuple[float, float, float],
+    grid: np.ndarray,
+    warp_type_codes: list[int],
+) -> np.ndarray:
+    """Route one partition with the per-class regimes stored in WTNV2.
+
+    ``0`` is ground, ``1`` identity, ``2`` rotation-only, and ``3`` a learned
+    class whose bulk value deliberately reaches the ground fallback before the
+    residual override.  The generated receiver mirrors this routing exactly.
+    """
+
+    source_array = np.asarray(source)
+    codes = [int(code) for code in warp_type_codes]
+    if source_array.ndim != 2:
+        raise ValueError("source partition must be a two-dimensional label map")
+    if not codes or any(code not in (0, 1, 2, 3) for code in codes):
+        raise ValueError("warp_type_codes contain an unknown regime")
+    if source_array.size and (
+        int(source_array.min()) < 0 or int(source_array.max()) >= len(codes)
+    ):
+        raise ValueError("source partition class lies outside warp_type_codes")
+
+    predictions = stratified_predictions(
+        source_array,
+        poses,
+        anchor,
+        offset,
+        intrinsics,
+        inverse_intrinsics,
+        params,
+        grid,
+    )
+    ground = predictions["ground"]
+    rotation = predictions["rotonly"]
+    identity = predictions["identity"]
+    ground_classes = [index for index, code in enumerate(codes) if code == 0]
+    rotation_classes = [index for index, code in enumerate(codes) if code == 2]
+    identity_classes = [index for index, code in enumerate(codes) if code == 1]
+    return np.where(
+        np.isin(ground, ground_classes),
+        ground,
+        np.where(
+            np.isin(rotation, rotation_classes),
+            rotation,
+            np.where(np.isin(identity, identity_classes), identity, ground),
+        ),
+    )
 
 
 def select_keyframes(n_pairs: int, reach_kstar: int) -> list[int]:
@@ -221,7 +277,7 @@ def generate_bulk_argmax_stack(
     lstars = np.asarray(lstars, dtype=np.int64)
     poses = np.asarray(poses, dtype=np.float64)
     P = int(lstars.shape[0])
-    if P != config.n_pairs:
+    if config.n_pairs != P:
         # allow a smaller cache than the configured clip (advisory subsets); use the cache size.
         config = BulkConfig(config.s_t, config.s_r, config.pitch, config.reach_kstar, P)
 
@@ -303,7 +359,7 @@ def generate_bulk_render_and_labels(
     poses = np.asarray(poses, dtype=np.float64)
     palette = np.asarray(palette, dtype=np.float64)
     P = int(lstars.shape[0])
-    if P != config.n_pairs:
+    if config.n_pairs != P:
         config = BulkConfig(config.s_t, config.s_r, config.pitch, config.reach_kstar, P)
     keyframes = select_keyframes(P, config.reach_kstar)
     K = intrinsics_at(SEG_W, SEG_H)

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -167,6 +168,21 @@ def _fixture(tmp_path: Path) -> dict:
             "verdict_scope": "polynomial control only",
         },
     )
+    frontier_pointer = _write_json(
+        tmp_path / "frontier.json",
+        {
+            "effective_frontier": {
+                "score": 0.172,
+                "axis": "official_leaderboard",
+                "custody": "external target only; no local archive authority implied",
+                "evidence_grade": "[official-leaderboard display]",
+                "score_precision": "official_display",
+                "source": "upstream_official_leaderboard",
+                "source_kind": "external_public_leaderboard_target",
+                "snapshot_at_utc": "2026-07-25T00:00:00+00:00",
+            }
+        },
+    )
     return {
         "source_video": tmp_path / "0.mkv",
         "upstream_root": upstream,
@@ -181,6 +197,7 @@ def _fixture(tmp_path: Path) -> dict:
         "s2_lane_curve_receipt_path": lane_curve,
         "rust_parity": {"status": "PASS", "scope": "test fixture"},
         "lane_id": "test_lane",
+        "frontier_pointer_path": frontier_pointer,
     }
 
 
@@ -199,6 +216,8 @@ def test_build_receipt_keeps_partial_components_out_of_s4(tmp_path: Path) -> Non
     lane_curve = receipt["stages"]["S2_task_space_level_set_witness"]["lane_chart"]["true_mask_curve"]
     assert lane_curve["status"] == "MEASURED_POLYNOMIAL_CONTROL_GENUINE_RESIDUAL_OPEN"
     assert receipt["admission"]["score_or_pointer_authority"] is False
+    assert receipt["competitive_target"]["score"] == 0.172
+    assert receipt["pointer_delta"] == 0.0
 
 
 def test_build_receipt_rejects_cross_cache_g1g3(tmp_path: Path) -> None:
@@ -245,3 +264,45 @@ def test_build_receipt_rejects_genuine_proof_drift(tmp_path: Path) -> None:
     )
     with pytest.raises(audit.SpineAuditError, match="structural proof SHA mismatch"):
         audit.build_receipt(**kwargs)
+
+
+def test_consumed_receipt_identity_uses_same_snapshot_as_parsed_fields(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    kwargs = _fixture(tmp_path)
+    tie_path = kwargs["tie_receipt_path"]
+    original_bytes = tie_path.read_bytes()
+    original_loader = audit.load_json_snapshot
+    mutated = False
+
+    def load_then_mutate(path: Path):
+        nonlocal mutated
+        payload, payload_bytes = original_loader(path)
+        if path == tie_path and not mutated:
+            mutated = True
+            tie_path.write_text(
+                json.dumps(
+                    {
+                        "score_claim": False,
+                        "input_fidelity": {
+                            "n_pairs": 1,
+                            "all_fp32_exact": False,
+                            "total_nonzero_values": 99,
+                            "max_abs_over_pairs": 99.0,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+        return payload, payload_bytes
+
+    monkeypatch.setattr(audit, "load_json_snapshot", load_then_mutate)
+    receipt = audit.build_receipt(**kwargs)
+    tie_artifact = next(
+        row for row in receipt["consumed_artifacts"] if row["path"].endswith("tie.json")
+    )
+
+    assert tie_artifact["sha256"] == hashlib.sha256(original_bytes).hexdigest()
+    assert tie_artifact["bytes"] == len(original_bytes)
+    assert tie_artifact["sha256"] != hashlib.sha256(tie_path.read_bytes()).hexdigest()

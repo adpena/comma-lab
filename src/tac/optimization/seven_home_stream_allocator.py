@@ -21,6 +21,11 @@ from dataclasses import dataclass
 from itertools import pairwise
 from typing import Any, Final
 
+from tac.analysis.applied_action_adapters import (
+    ADAPTER_MANIFEST_SCHEMA,
+    AppliedActionAdapterError,
+    validate_adapter_manifest,
+)
 from tac.analysis.applied_action_receipt import (
     ApplicationStatus,
     AppliedActionReceipt,
@@ -31,7 +36,6 @@ from tac.score_geometry import CONTEST_REFERENCE_BYTES, contest_score
 
 ALLOCATION_PLAN_SCHEMA: Final = "tac.seven_home_allocation_plan.v1"
 RECEIPT_MANIFEST_SCHEMA: Final = "tac.seven_home_receipt_manifest.v1"
-ADAPTER_MANIFEST_SCHEMA: Final = "tac.applied_action_adapter_manifest.v1"
 EV2_PARTITION_SCHEMA: Final = "ddm_ev2_coarse_stream_partition.v1"
 EV2_HOME_SCHEMA: Final = "ddm_ev2_coarse_stream_home.v1"
 REFERENCE_BYTES: Final = CONTEST_REFERENCE_BYTES
@@ -54,7 +58,6 @@ EV2_HOME_KEYS: Final = frozenset(
         "unallocated_reason",
     }
 )
-ADAPTER_RESULT_SCHEMA: Final = "tac.applied_action_adapter_result.v1"
 CONTEST_AUTHORITY_AXES: Final = frozenset(
     {"contest_cpu", "contest_cuda", "contest-CPU", "contest-CUDA", "[contest-CPU]", "[contest-CUDA]"}
 )
@@ -394,59 +397,17 @@ def _validate_manifest_content_sha256(manifest: Mapping[str, Any], name: str) ->
 
 
 def _validate_adapter_manifest(manifest: Mapping[str, Any]) -> list[Mapping[str, Any]]:
-    _validate_false_authority(manifest, "adapter manifest")
-    _validate_manifest_content_sha256(manifest, "adapter manifest")
+    # The adapter producer owns this schema.  Reusing its canonical validator
+    # is essential: a locally forked subset previously ignored source artifact
+    # identities, custody digests, and semantic source counts while still
+    # accepting a re-hashed manifest as allocation input.
+    try:
+        validate_adapter_manifest(manifest)
+    except AppliedActionAdapterError as exc:
+        raise SevenHomeAllocationError(f"adapter manifest failed canonical validation: {exc}") from exc
     results = manifest.get("results")
-    if not isinstance(results, list):
-        raise SevenHomeAllocationError("adapter manifest results must be an array")
-    receipt_count = _nonnegative_int(
-        manifest.get("receipt_count"), "adapter manifest receipt_count"
-    )
-    blocked_count = _nonnegative_int(
-        manifest.get("blocked_source_count"), "adapter manifest blocked_source_count"
-    )
-    observed_receipts = 0
-    observed_blocked = 0
-    normalized: list[Mapping[str, Any]] = []
-    for row in results:
-        if not isinstance(row, Mapping):
-            raise SevenHomeAllocationError("adapter result must be an object")
-        if row.get("schema") != ADAPTER_RESULT_SCHEMA:
-            raise SevenHomeAllocationError("adapter result schema differs")
-        _validate_false_authority(row, "adapter result")
-        _text(row.get("source_kind"), "adapter result source_kind")
-        _text(row.get("source_schema"), "adapter result source_schema")
-        _text(row.get("source_id"), "adapter result source_id")
-        ok = row.get("ok")
-        if not isinstance(ok, bool):
-            raise SevenHomeAllocationError("adapter result ok must be boolean")
-        receipt = row.get("receipt")
-        blockers = row.get("blockers")
-        if not isinstance(blockers, list):
-            raise SevenHomeAllocationError("adapter result blockers must be an array")
-        if ok:
-            observed_receipts += 1
-            if not isinstance(receipt, Mapping) or blockers:
-                raise SevenHomeAllocationError(
-                    "successful adapter result must carry one receipt and no blockers"
-                )
-        else:
-            observed_blocked += 1
-            if receipt is not None or not blockers:
-                raise SevenHomeAllocationError(
-                    "blocked adapter result must carry blockers and no receipt"
-                )
-            for blocker in blockers:
-                if not isinstance(blocker, Mapping):
-                    raise SevenHomeAllocationError("adapter blocker must be an object")
-                for field in ("code", "source_key", "owed_field", "detail"):
-                    _text(blocker.get(field), f"adapter blocker {field}")
-        normalized.append(row)
-    if receipt_count != observed_receipts or blocked_count != observed_blocked:
-        raise SevenHomeAllocationError("adapter manifest result counts do not reconcile")
-    if receipt_count + blocked_count != len(results):
-        raise SevenHomeAllocationError("adapter manifest total count does not reconcile")
-    return normalized
+    # The canonical validator proved this exact field is a list of mappings.
+    return list(results)
 
 
 def _validate_receipt_manifest(manifest: Mapping[str, Any]) -> list[Mapping[str, Any]]:
@@ -863,15 +824,14 @@ def build_allocation_plan(
             "before": before,
             "after": after,
             "delta_score_total": after["score"] - before["score"],
-            "beats_dynamic_target": (
-                after["score"] < target["score"]
-                if _contest_compatible_axis(receipt.authority_axis)
-                and target["contest_compatible"]
-                else None
-            ),
-            "dynamic_target_comparison_eligible": (
-                _contest_compatible_axis(receipt.authority_axis)
-                and target["contest_compatible"]
+            # AppliedActionReceipt binds an exact transition to archive hashes,
+            # but it does not yet carry a foreign key to a custody-validated
+            # exact-eval artifact.  An axis-shaped string is not score
+            # authority, so frontier comparison must stay fail closed.
+            "beats_dynamic_target": None,
+            "dynamic_target_comparison_eligible": False,
+            "dynamic_target_comparison_blocker": (
+                "EXACT_EVAL_CUSTODY_FOREIGN_KEY_ABSENT"
             ),
             "authority_axis": receipt.authority_axis,
         }

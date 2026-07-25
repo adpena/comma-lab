@@ -1,0 +1,318 @@
+{
+  "schema": "original_taskspace_inverse_witness_codec_roadmap.v2",
+  "lane_id": "lane_codex_original_taskspace_inverse_codec_20260725",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "architecture_status": "PROPOSED_ARCHITECTURE_SYNTHESIZED_NOT_YET_N600_RECEIVER_CLOSED",
+  "targets": {
+    "competitive_pointer": {
+      "source": ".omx/state/canonical_frontier_pointer.json#effective_frontier",
+      "selection": "refresh_before_every_admission_or_dispatch",
+      "snapshot_score": 0.172,
+      "snapshot_axis": "official_leaderboard",
+      "snapshot_custody": "external target only; no local archive authority implied",
+      "success_rule": "a custody-complete score below the refreshed pointer is a frontier milestone"
+    },
+    "mission": {
+      "score_strictly_below": 0.15,
+      "success_rule": "continue after the first frontier break until an authoritative exact archive is below 0.15"
+    }
+  },
+  "objective": {
+    "denominator_bytes": 37545489,
+    "equation": "S(A)=100*d_seg(D(A))+sqrt(10*d_pose(D(A)))+25*len(A)/37545489",
+    "conditional_integer_byte_ceiling": "ceil((37545489/25)*(target-100*d_seg-sqrt(10*d_pose)))-1",
+    "pose_marginal": "dS/dd_pose=5/sqrt(10*d_pose)",
+    "fixed_component_thresholds": false,
+    "proposal_rule": "smooth costates and proxies may rank proposals",
+    "admission_rule": "accept an atomic same-object bundle only after exact serialization, decode, and joint nonlinear delta-S measurement; individual micro-prefixes need not each be downhill"
+  },
+  "originality_boundary": {
+    "allowed_inputs": [
+      "frozen upstream evaluator code, weights, runtime, and source video",
+      "source-derived caches built by this project",
+      "this project's original measurements, equations, code, state, and bitstreams",
+      "mechanism lessons and falsifiers abstracted from public PRs"
+    ],
+    "forbidden_candidate_lineage": [
+      "public PR archive bytes",
+      "public PR code, weights, checkpoints, latents, clicks, selectors, tokens, or sidecars",
+      "public score deltas transplanted across archive identities"
+    ],
+    "public_frontier_role": "external target and mechanism/falsifier prior only"
+  },
+  "codec_thesis": {
+    "working_name": "task_space_inverse_witness_codec",
+    "encoder": "offline compiler specialized to the frozen evaluator information space",
+    "bitstream": "candidate sufficient statistic minimized under the exact coupled objective; global minimality is unproven",
+    "decoder": "deterministic portable generator with no scorer weights and no ground-truth table",
+    "same_object_lifecycle": [
+      "SourceTruth",
+      "ObligationIR",
+      "RealizedPair(Y0,Y1)",
+      "ArchiveArtifact",
+      "DecodeReceipt",
+      "ScoreReceipt(axis)"
+    ],
+    "identity_rule": "every edge binds exact parent and child content hashes; archive sections and receipts are compiler outputs, never substitutes for scientific state"
+  },
+  "two_plane_evaluator_model": {
+    "camera_frames": "F0,F1 in uint8 874x1164 RGB",
+    "spatial_operator": "the same frozen torch-f32 bilinear resize maps each camera frame to 384x512",
+    "planes": [
+      "Y0=R(F0)",
+      "Y1=R(F1)"
+    ],
+    "segnet_obligation": "SegNet consumes RGB Y1 only",
+    "posenet_obligation": "PoseNet consumes the coupled YUV6 transform of both Y0 and Y1",
+    "non_decomposition_rule": "Y0 and Y1 are temporally distinct but jointly optimized; independent Seg and Pose target images are invalid"
+  },
+  "v9_predictive_syntax": [
+    "per-class heterogeneous carriers rather than one class-naive field",
+    "level sets, Morse-Smale cells, topology births/deaths/splits/merges",
+    "worldsheet and xi transport with sparse events",
+    "Road/Undrivable bulk boundary, Lane chart/phase, Movable islands, and MyCar closure",
+    "merge-diff-correct reconciliation and receiver-visible AA-SDF rasterization",
+    "finite topology and chart grammar priced from the first complete candidate"
+  ],
+  "v10_realization_compiler": {
+    "discrete_geometry": [
+      "winner-cell and safe-margin obligation selection",
+      "bounded uint8/native-f32/tie-aware preimage solve",
+      "camera-to-Y0/Y1 realization under the actual contest geometry",
+      "palette, gauge, and nullspace reconciliation before any terminal residual",
+      "conditional frame0 and xi solve after the realized last frame is fixed"
+    ],
+    "r10_prosody_and_feature_relay": [
+      "amplitude, frequency, phase, contrast, channel-energy, and texture controls",
+      "PoseNet feature-relay or multiple-shooting constraints through frozen nonlinear blocks",
+      "explicit handling of batch-norm, squeeze/excitation, and other nonlocal feature couplings",
+      "amplitude-structured xi-advected photometry for Pose rather than a low-rank additive frame0 patch"
+    ],
+    "factor10_role": "joint Seg/Pose/rate closure, ordered commutators, real coder effects, and atomic bundle admission",
+    "legacy_receiver_warning": "the current V10 structural receiver is launch_ready=false and its placeholder XOR/digest/cyclic handlers are not production physics"
+  },
+  "logical_stream_roles": [
+    {
+      "id": "topology_worldsheet",
+      "content": "cell identities, topology events, and transport lineage"
+    },
+    {
+      "id": "bulk_boundary",
+      "content": "joint Road/Undrivable bulk and boundary chart"
+    },
+    {
+      "id": "lane_chart",
+      "content": "Lane center, width, dash phase, and sparse events"
+    },
+    {
+      "id": "movable_mycar",
+      "content": "Movable island events and MyCar closure"
+    },
+    {
+      "id": "cell_value_preimage",
+      "content": "Y1 winner/margin obligations plus Y0/Y1 uint8 preimage and palette/gauge state"
+    },
+    {
+      "id": "pose_transport_frame0",
+      "content": "xi, frame0, prosody, and frozen-feature-relay Pose controls"
+    },
+    {
+      "id": "irreducible_quotient",
+      "content": "only debt unreachable by the declared analytic and inverse routes"
+    }
+  ],
+  "physical_coding_rule": "logical roles have distinct provenance and mutation ownership, but may share a joint physical entropy section when exact joint coding wins",
+  "scientific_stream_custody_rule": "a populated stream is trusted only when a verified loader derives its content and provenance addresses from the exact payload snapshots and emits a parent-state-bound construction receipt; a deserialized or caller-attested ContentAddress alone is not source custody",
+  "current_evidence": {
+    "spine_receipt": ".omx/research/original_taskspace_inverse_witness_codec_20260725/spine_refresh.json",
+    "c0_scaffold_receipt": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0_identity_scaffold/scaffold_receipt.json",
+    "source_only_lineage": true,
+    "borrowed_candidate_bytes": 0,
+    "s0_s1_feasibility_spine": true,
+    "s2_finite_event_seed": {
+      "bytes": 39836,
+      "events": 17926,
+      "scope": "component only"
+    },
+    "lane_chart": {
+      "bytes": 41303,
+      "approximate_f1": 0.57,
+      "scope": "component only"
+    },
+    "aa_sdf_n600": {
+      "d_seg": 0.0008598581949869792,
+      "scope": "renderer primitive, not a full witness"
+    },
+    "v9_n256_error_mass": {
+      "source_scope": "measured historical V9 carrier bridge; not a candidate parent",
+      "total_errors": 2021783,
+      "by_class": {
+        "Road": 957226,
+        "Movable": 802005,
+        "Lane": 134317,
+        "Undrivable": 114090,
+        "MyCar": 14145
+      },
+      "interpretation": "Road plus Movable contribute about 87 percent of current error mass; Lane and Movable have the worst conditional failure rates"
+    },
+    "receiver_closed_n600_archive": false,
+    "pointer_delta": 0.0
+  },
+  "acceptance_suite": {
+    "source": ".omx/research/ddm_is1_rg3_solution_demand_25_20260724.json",
+    "role": "reuse the exact source-derived obligations as interface tests, not the historical archive or actuator",
+    "row_count": 25,
+    "skeleton_rows": 16,
+    "fiber_rows": 9,
+    "price_status": "unpriced until the original receiver and real coder materialize each row"
+  },
+  "first_decision_quality_artifact": {
+    "name": "coarse_complete_n600_two_plane_vertical_slice",
+    "requirements": [
+      "all 600 pairs and all five semantic classes are internal to the same source-derived state",
+      "explicit Y0 and Y1 obligations and contest-native 874x1164 uint8 realization",
+      "finite grammar and real coder charged from the first archive",
+      "deterministic archive, inflate entrypoint, decoded-output hashes, and parse-back receipt",
+      "same-object d_seg, d_pose, archive bytes, and exact coupled score on a clearly labelled local axis",
+      "per-class and per-pair debt plus 25-row interface acceptance readout"
+    ],
+    "quality_policy": "it may be poor but must be complete; its measured debt chooses the next refinement",
+    "subset_policy": "n24 or smaller fixtures are parser, unit, and mutation tests only and cannot choose a scientific branch or support a score verdict"
+  },
+  "build_dag": [
+    {
+      "id": "C0A",
+      "name": "metadata identity scaffold",
+      "depends_on": [],
+      "deliverable": "canonical frozen-space, empty scientific-state, compile-policy, and codec-object JSON envelopes",
+      "gate": "source/evaluator/receiver bytes are content-addressed and JSON roundtrips are exact; no archive, decode, or score is implied",
+      "status": "LANDED"
+    },
+    {
+      "id": "C0B",
+      "name": "coarse complete n600 vertical codec",
+      "depends_on": [
+        "C0A"
+      ],
+      "deliverable": "first_decision_quality_artifact",
+      "gate": "one n600 source-derived state compiles through V9 obligations, Y0/Y1 realization, real coding, archive, decode, and labelled score receipts with no external class",
+      "status": "NEXT"
+    },
+    {
+      "id": "C1",
+      "name": "V9 geometry and topology refinement",
+      "depends_on": [
+        "C0B"
+      ],
+      "deliverable": "lower-description all-class obligations and event grammar on the same object",
+      "gate": "n600 receiver-visible per-class debt and real byte cost improve as an atomic bundle",
+      "status": "OPEN_PARALLEL"
+    },
+    {
+      "id": "C2",
+      "name": "V10 R10 prosody and feature-relay inverse",
+      "depends_on": [
+        "C0B"
+      ],
+      "deliverable": "two-plane feature-relay/multiple-shooting solver with uint8 and tie closure",
+      "gate": "same-object n600 Seg/Pose/rate improves after exact decode",
+      "status": "OPEN_PARALLEL"
+    },
+    {
+      "id": "C3",
+      "name": "conditional frame0 Pose and xi",
+      "depends_on": [
+        "C0B"
+      ],
+      "deliverable": "amplitude-structured xi-advected frame0 carrier conditional on realized Y1",
+      "gate": "official six-output Pose debt falls without hidden Seg or byte transfer",
+      "status": "OPEN_PARALLEL"
+    },
+    {
+      "id": "C4",
+      "name": "native finite grammar and coder race",
+      "depends_on": [
+        "C0B"
+      ],
+      "deliverable": "joint and split physical coder modes, headers, checksums, parse-back, and mutation proofs",
+      "gate": "every logical role is priced, while joint physical coding remains legal and globally recompressed",
+      "status": "OPEN_PARALLEL"
+    },
+    {
+      "id": "C5",
+      "name": "factor10 atomic bundle compiler",
+      "depends_on": [
+        "C1",
+        "C2",
+        "C3",
+        "C4"
+      ],
+      "deliverable": "costate-ranked, order-aware proposals and exact joint accept/rollback",
+      "gate": "no cross-object deltas, no additive marginal assumption, and exact final bundle delta-S is negative",
+      "status": "OPEN"
+    },
+    {
+      "id": "C6",
+      "name": "terminal quotient competition",
+      "depends_on": [
+        "C5"
+      ],
+      "deliverable": "matched-byte analytic basis, dictionary, and optional learned-T candidates",
+      "gate": "T is admitted only for measured unreachable debt and passes no-relearning, deletion, quantization, parse-back, and resumability controls",
+      "status": "CONDITIONAL"
+    },
+    {
+      "id": "C7",
+      "name": "authority branch",
+      "depends_on": [
+        "C0B"
+      ],
+      "deliverable": "the exact same complete n600 archive evaluated separately on governed contest CPU and CUDA surfaces",
+      "gate": "may branch from any complete candidate; bank a custody-complete pointer break as a milestone and continue toward C8",
+      "status": "BLOCKED_NO_COMPLETE_N600_ARCHIVE"
+    },
+    {
+      "id": "C8",
+      "name": "mission completion",
+      "depends_on": [
+        "C7"
+      ],
+      "deliverable": "authoritative exact archive with S<0.15",
+      "gate": "strict mission threshold, not merely one pointer break",
+      "status": "OPEN"
+    }
+  ],
+  "training_policy": {
+    "default": "derive_solve_or_code",
+    "compact_function_fit": "training is allowed when it is the cheapest numerical method for fitting a declared compact typed function under scorer-and-coder-in-loop measurement; its variables, bytes, and resume state remain explicit",
+    "extra_residual_T": "only terminal, only for measured unreachable quotient debt, and never allowed to relearn V9 geometry, V10 realization, palette/gauge, or Pose transport",
+    "required_controls": [
+      "resumable per-stage checkpoints with EMA and deterministic seeds",
+      "matched-byte nonlearned competitor",
+      "T-off byte-identical control when T exists",
+      "parameter and gradient ownership guard",
+      "post-quantization parse-back and exact same-object score",
+      "delete-each-field necessity audit"
+    ]
+  },
+  "autonomous_scheduler": {
+    "unit_of_work": "content-addressed state transition or atomic same-object bundle",
+    "priority": "expected negative exact delta-S per wall-clock, conditioned on uncertainty, blocker depth, and information gain",
+    "feedback_loop": "V9 proposal -> V10 Y0/Y1 realization and R10 feature relay -> real coder -> decode and score -> costate debt back to V9/V10 -> atomic accept or rollback",
+    "stop_conditions": [
+      "authoritative S<0.15 mission achieved",
+      "same formulation sealed exhausted with a scoped negative",
+      "governor refusal or missing authority",
+      "irreversible or paid action requires operator authority"
+    ],
+    "non_stop_milestone": "a first score below the refreshed competitive pointer is banked but does not end the campaign"
+  },
+  "historical_mechanism_status": {
+    "EV2_seven_home_allocator": "guard and logical-ownership lesson only; no native archive edge yet",
+    "WTNV2_linker": "guard and packet-custody lesson only; object grammar is incompatible with EV2",
+    "V9_and_V10": "co-designed halves of the new original codec",
+    "public_PRs": "mechanism lessons only; never candidate parents"
+  }
+}

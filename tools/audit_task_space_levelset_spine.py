@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import platform
 import subprocess
@@ -25,6 +26,7 @@ SCHEMA = "task_space_levelset_constructive_spine_receipt.v1"
 AXIS = "[macOS-CPU advisory]"
 RATE_DENOMINATOR = 37_545_489
 REPO = Path(__file__).resolve().parents[1]
+DEFAULT_FRONTIER_POINTER = REPO / ".omx" / "state" / "canonical_frontier_pointer.json"
 
 
 class SpineAuditError(RuntimeError):
@@ -39,14 +41,56 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def load_json(path: Path) -> dict[str, Any]:
+def decode_json(payload_bytes: bytes, *, path: Path) -> dict[str, Any]:
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        payload = json.loads(payload_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise SpineAuditError(f"cannot load JSON receipt {path}: {exc}") from exc
     if not isinstance(payload, dict):
         raise SpineAuditError(f"receipt root must be an object: {path}")
     return payload
+
+
+def load_json_snapshot(path: Path) -> tuple[dict[str, Any], bytes]:
+    try:
+        payload_bytes = path.read_bytes()
+    except OSError as exc:
+        raise SpineAuditError(f"cannot load JSON receipt {path}: {exc}") from exc
+    return decode_json(payload_bytes, path=path), payload_bytes
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    return load_json_snapshot(path)[0]
+
+
+def load_effective_frontier(path: Path) -> dict[str, Any]:
+    """Load the dynamic competitive target without implying archive custody."""
+
+    pointer, pointer_bytes = load_json_snapshot(path)
+    effective = pointer.get("effective_frontier")
+    require(isinstance(effective, dict), "canonical pointer lacks effective_frontier")
+    try:
+        score = float(effective["score"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise SpineAuditError("canonical pointer effective_frontier.score is invalid") from exc
+    require(math.isfinite(score) and score > 0.0, "canonical effective frontier must be finite and positive")
+    for field in ("axis", "custody", "evidence_grade", "source", "source_kind"):
+        require(
+            isinstance(effective.get(field), str) and bool(effective[field].strip()),
+            f"canonical effective frontier lacks {field}",
+        )
+    return {
+        "score": score,
+        "axis": effective["axis"],
+        "custody": effective["custody"],
+        "evidence_grade": effective["evidence_grade"],
+        "score_precision": effective.get("score_precision"),
+        "source": effective["source"],
+        "source_kind": effective["source_kind"],
+        "snapshot_at_utc": effective.get("snapshot_at_utc"),
+        "pointer_path": str(path),
+        "pointer_sha256": hashlib.sha256(pointer_bytes).hexdigest(),
+    }
 
 
 def require(condition: bool, message: str) -> None:
@@ -117,16 +161,42 @@ def run_rust_parity(runtime_rs: Path) -> dict[str, Any]:
     }
 
 
-def _artifact(path: Path, lineage: str, use: str) -> dict[str, Any]:
+def _durable_path(path: Path) -> str:
     resolved = path.resolve()
     try:
-        durable_path = str(resolved.relative_to(REPO))
+        return str(resolved.relative_to(REPO))
     except ValueError:
-        durable_path = str(resolved)
+        return str(resolved)
+
+
+def _identity_from_bytes(path: Path, payload_bytes: bytes) -> dict[str, Any]:
     return {
-        "path": durable_path,
-        "bytes": path.stat().st_size,
-        "sha256": sha256_file(path),
+        "path": _durable_path(path),
+        "bytes": len(payload_bytes),
+        "sha256": hashlib.sha256(payload_bytes).hexdigest(),
+    }
+
+
+def _snapshot_file_identity(path: Path) -> dict[str, Any]:
+    digest = hashlib.sha256()
+    byte_count = 0
+    try:
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(8 << 20), b""):
+                digest.update(chunk)
+                byte_count += len(chunk)
+    except OSError as exc:
+        raise SpineAuditError(f"cannot snapshot artifact {path}: {exc}") from exc
+    return {
+        "path": _durable_path(path),
+        "bytes": byte_count,
+        "sha256": digest.hexdigest(),
+    }
+
+
+def _artifact(identity: dict[str, Any], lineage: str, use: str) -> dict[str, Any]:
+    return {
+        **identity,
         "content_lineage": lineage,
         "consumed_as": use,
     }
@@ -164,6 +234,7 @@ def build_receipt(
     r1b7_receipt_path: Path,
     rust_parity: dict[str, Any],
     lane_id: str,
+    frontier_pointer_path: Path = DEFAULT_FRONTIER_POINTER,
     s2_partition_seed_receipt_path: Path | None = None,
     s2_lane_curve_receipt_path: Path | None = None,
 ) -> dict[str, Any]:
@@ -176,6 +247,7 @@ def build_receipt(
         g1g3_receipt_path,
         aa_receipt_path,
         r1b7_receipt_path,
+        frontier_pointer_path,
     ]
     if s2_partition_seed_receipt_path is not None:
         required_files.append(s2_partition_seed_receipt_path)
@@ -188,23 +260,45 @@ def build_receipt(
     for path in required_files:
         require(path.is_file(), f"required input missing: {path}")
 
-    cache_sha = sha256_file(gt_cache)
-    tie = load_json(tie_receipt_path)
-    m2 = load_json(m2_receipt_path)
-    lane = load_json(lane_receipt_path)
-    g1g3 = load_json(g1g3_receipt_path)
-    aa = load_json(aa_receipt_path)
-    r1b7 = load_json(r1b7_receipt_path)
-    finite_seed = (
-        None
-        if s2_partition_seed_receipt_path is None
-        else load_json(s2_partition_seed_receipt_path)
-    )
-    lane_curve = (
-        None
-        if s2_lane_curve_receipt_path is None
-        else load_json(s2_lane_curve_receipt_path)
-    )
+    source_video_identity = _snapshot_file_identity(source_video)
+    gt_cache_identity = _snapshot_file_identity(gt_cache)
+    modules_identity = _snapshot_file_identity(modules)
+    segnet_identity = _snapshot_file_identity(segnet)
+    posenet_identity = _snapshot_file_identity(posenet)
+    cache_sha = gt_cache_identity["sha256"]
+    tie, tie_bytes = load_json_snapshot(tie_receipt_path)
+    m2, m2_bytes = load_json_snapshot(m2_receipt_path)
+    lane, lane_bytes_snapshot = load_json_snapshot(lane_receipt_path)
+    g1g3, g1g3_bytes = load_json_snapshot(g1g3_receipt_path)
+    aa, aa_bytes = load_json_snapshot(aa_receipt_path)
+    r1b7, r1b7_bytes = load_json_snapshot(r1b7_receipt_path)
+    tie_identity = _identity_from_bytes(tie_receipt_path, tie_bytes)
+    m2_identity = _identity_from_bytes(m2_receipt_path, m2_bytes)
+    lane_identity = _identity_from_bytes(lane_receipt_path, lane_bytes_snapshot)
+    g1g3_identity = _identity_from_bytes(g1g3_receipt_path, g1g3_bytes)
+    aa_identity = _identity_from_bytes(aa_receipt_path, aa_bytes)
+    r1b7_identity = _identity_from_bytes(r1b7_receipt_path, r1b7_bytes)
+    effective_frontier = load_effective_frontier(frontier_pointer_path)
+    if s2_partition_seed_receipt_path is None:
+        finite_seed = None
+        finite_seed_identity = None
+    else:
+        finite_seed, finite_seed_bytes = load_json_snapshot(
+            s2_partition_seed_receipt_path
+        )
+        finite_seed_identity = _identity_from_bytes(
+            s2_partition_seed_receipt_path,
+            finite_seed_bytes,
+        )
+    if s2_lane_curve_receipt_path is None:
+        lane_curve = None
+        lane_curve_identity = None
+    else:
+        lane_curve, lane_curve_bytes = load_json_snapshot(s2_lane_curve_receipt_path)
+        lane_curve_identity = _identity_from_bytes(
+            s2_lane_curve_receipt_path,
+            lane_curve_bytes,
+        )
 
     require(tie.get("score_claim") is False, "tie-aware receipt crossed score firewall")
     fidelity = tie.get("input_fidelity", {})
@@ -294,17 +388,18 @@ def build_receipt(
         )
         finite_packet_path = Path(finite_seed["finite_packet"]["path"])
         require(finite_packet_path.is_file(), "S2 finite packet bytes are not in custody")
+        finite_packet_identity = _snapshot_file_identity(finite_packet_path)
         require(
-            finite_packet_path.stat().st_size == finite_seed["finite_packet"]["packet_bytes"],
+            finite_packet_identity["bytes"] == finite_seed["finite_packet"]["packet_bytes"],
             "S2 finite packet byte count mismatch",
         )
         require(
-            sha256_file(finite_packet_path)
-            == finite_seed["finite_packet"]["packet_sha256"],
+            finite_packet_identity["sha256"] == finite_seed["finite_packet"]["packet_sha256"],
             "S2 finite packet SHA mismatch",
         )
     else:
         finite_packet_path = None
+        finite_packet_identity = None
     if lane_curve is not None:
         require(lane_curve.get("schema") == "s2_lane_true_mask_curve.v1", "S2 Lane curve schema drift")
         require(lane_curve.get("score_claim") is False, "S2 Lane curve crossed score firewall")
@@ -336,23 +431,46 @@ def build_receipt(
         if not genuine_proof_path.is_absolute():
             genuine_proof_path = REPO / genuine_proof_path
         require(genuine_proof_path.is_file(), "genuine frame structural proof is absent")
+        genuine_proof_identity = _snapshot_file_identity(genuine_proof_path)
         require(
-            sha256_file(genuine_proof_path)
+            genuine_proof_identity["sha256"]
             == lane_curve["curvelet_shearlet_residual"][
                 "genuine_structural_proof_sha256"
             ],
             "genuine frame structural proof SHA mismatch",
         )
+    else:
+        genuine_proof_identity = None
     require(rust_parity.get("status") == "PASS", "Rust parity attestation is not PASS")
 
     source_custody = {
-        "video": _artifact(source_video, "source-video-derived", "S0 sole video input"),
+        "video": _artifact(
+            source_video_identity,
+            "source-video-derived",
+            "S0 sole video input",
+        ),
         "frozen_upstream": [
-            _artifact(modules, "upstream-frozen-scorer-code", "S0 frozen preprocessing/model definitions"),
-            _artifact(segnet, "upstream-frozen-scorer-weights", "S0 SegNet authority"),
-            _artifact(posenet, "upstream-frozen-scorer-weights", "S0 PoseNet authority"),
+            _artifact(
+                modules_identity,
+                "upstream-frozen-scorer-code",
+                "S0 frozen preprocessing/model definitions",
+            ),
+            _artifact(
+                segnet_identity,
+                "upstream-frozen-scorer-weights",
+                "S0 SegNet authority",
+            ),
+            _artifact(
+                posenet_identity,
+                "upstream-frozen-scorer-weights",
+                "S0 PoseNet authority",
+            ),
         ],
-        "target_cache": _artifact(gt_cache, "source-video-derived our-build", "S0 n600 target custody"),
+        "target_cache": _artifact(
+            gt_cache_identity,
+            "source-video-derived our-build",
+            "S0 n600 target custody",
+        ),
         "cache_binding": {
             "m2_sha_match": True,
             "g1g3_sha_match": True,
@@ -364,43 +482,64 @@ def build_receipt(
 
     consumed = [
         _artifact(
-            tie_receipt_path,
+            tie_identity,
             "our support-fill solve on the exact-plane receiver; law-only consumption",
             "S1 canonical support-fill exactness; no receiver/archive bytes consumed",
         ),
-        _artifact(m2_receipt_path, "source-video-derived our-solve", "S1 source-target exact direct row"),
-        _artifact(lane_receipt_path, "source-video-derived our-solve", "S2 coherent lane-chart rate"),
-        _artifact(g1g3_receipt_path, "source-video-derived our-measurement", "S2 transport and cell-code priors"),
-        _artifact(aa_receipt_path, "source-video-derived our-measurement", "S2 n600 AA-SDF fidelity curve"),
+        _artifact(m2_identity, "source-video-derived our-solve", "S1 source-target exact direct row"),
+        _artifact(lane_identity, "source-video-derived our-solve", "S2 coherent lane-chart rate"),
         _artifact(
-            r1b7_receipt_path,
+            g1g3_identity,
+            "source-video-derived our-measurement",
+            "S2 transport and cell-code priors",
+        ),
+        _artifact(
+            aa_identity,
+            "source-video-derived our-measurement",
+            "S2 n600 AA-SDF fidelity curve",
+        ),
+        _artifact(
+            r1b7_identity,
             "mixed inherited-base experiment; law-only consumption",
             "S3 fixed-magnitude/no-sub-step lesson only; all archive/payload bytes excluded",
         ),
     ]
     if finite_seed is not None and s2_partition_seed_receipt_path is not None:
+        if finite_seed_identity is None:  # pragma: no cover - guarded above
+            raise SpineAuditError("S2 finite seed receipt identity was not resolved")
         consumed.append(
             _artifact(
-                s2_partition_seed_receipt_path,
+                finite_seed_identity,
                 "source-video-derived our finite coder",
                 "S2 counted G3 site and cell-identity seed with exact parse-back",
             )
         )
-        if finite_packet_path is None:  # pragma: no cover - guarded above
+        if finite_packet_path is None or finite_packet_identity is None:  # pragma: no cover
             raise SpineAuditError("S2 finite packet custody was not resolved")
         consumed.append(
             _artifact(
-                finite_packet_path,
+                finite_packet_identity,
                 "source-video-derived our finite coder",
                 "S2 exact counted packet bytes",
             )
         )
     if lane_curve is not None and s2_lane_curve_receipt_path is not None:
+        if lane_curve_identity is None:  # pragma: no cover - guarded above
+            raise SpineAuditError("S2 Lane curve receipt identity was not resolved")
         consumed.append(
             _artifact(
-                s2_lane_curve_receipt_path,
+                lane_curve_identity,
                 "source-video-derived our Lane-chart measurement",
                 "S2 finite Lane chart bytes versus true-mask fidelity curve",
+            )
+        )
+        if genuine_proof_identity is None:  # pragma: no cover - guarded above
+            raise SpineAuditError("S2 genuine structural proof identity was not resolved")
+        consumed.append(
+            _artifact(
+                genuine_proof_identity,
+                "our structural law proof; no candidate bytes consumed",
+                "S2 genuine directional-frame implementation custody",
             )
         )
 
@@ -557,7 +696,8 @@ def build_receipt(
         "authority_axis": AXIS,
         "score_claim": False,
         "promotion_eligible": False,
-        "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+        "competitive_target": effective_frontier,
+        "pointer_delta": 0.0,
         "verdict": "PARTIAL_CONSTRUCTIVE_SPINE_MEASURED_S2_AND_S3_NOT_COMPOSED_S4_ABSENT",
         "verdict_scope": "current from-scratch source-only composition; component gaps do not close the task-space level-set witness family",
         "source_custody": source_custody,
@@ -605,6 +745,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--s2-lane-curve-receipt", type=Path)
     parser.add_argument("--runtime-rs", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--frontier-pointer",
+        type=Path,
+        default=DEFAULT_FRONTIER_POINTER,
+        help="canonical dynamic competitive pointer (never a candidate/archive parent)",
+    )
     parser.add_argument("--lane-id", default="joint_planes_direct_strike")
     return parser.parse_args()
 
@@ -634,6 +780,7 @@ def main() -> int:
         ),
         rust_parity=rust,
         lane_id=args.lane_id,
+        frontier_pointer_path=args.frontier_pointer.resolve(),
     )
     atomic_json(args.output.resolve(), receipt)
     print(json.dumps(receipt, indent=2, sort_keys=True, allow_nan=False))
