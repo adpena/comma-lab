@@ -24416,3 +24416,28 @@ exact blockers (pose tube inactive · typed alternation · typed block atlas · 
 Also noted: J8F/campaign endpoint currently lacks composable C1 foreign keys (composition debt,
 not a campaign defect). Route: ev2 producer arm at the named edge (3+ consumers: #701 waterfill
 · rd1 162 duals · headline builder). Pointer 0.1910828242 [contest-CPU] UNMOVED — means.
+
+### FEED-603-366-CAMPAIGN-DOWN-STEP8 (2026-07-25T04:43Z — attempt-4 died at ~78 min, step 8)
+The #366 campaign (pid 17428) EXITED on `REFUSE: G1 Movable polygon escaped scorer geometry`.
+WHAT WORKED FIRST (7 accepted steps, telemetry-custodied): warm-start window executed per seal —
+step 1 evaluated 3 full-n600 proposals, correctly BLOCKED x−1 (seg regression) + x+1 (pose
+regression), ACCEPTED y−1 (d_seg 0.0705192→0.0703089, −2.1e-4 realized); main loop entered at
+step 2, advanced to step 7 with proposal_source=local_exact_gradient. THEN step 8's
+gradient-driven Movable worldsheet polygon proposal escaped legal scorer-plane geometry and the
+guard KILLED THE PROCESS. THREE NAMED DEFECTS (verdict_scope: ENGINE-FORMULATION, not a descent
+negative — descent was WORKING, −2.1e-4 on the accepted step): (D1) **fatal-guard-instead-of-
+reject**: an illegal-geometry proposal is a REJECTABLE proposal (shrink + next source), not a
+custody violation — the rg1 geometry-escape CURE (projection to legal geometry) exists for
+probes but was never wired into the J8E engine's proposal path; realized-acceptance handles
+ascent but not constructive infeasibility. (D2) **checkpoint cadence too sparse**: ckpt-every-37
++ death at step 8 = ALL 7 accepted steps LOST (telemetry only, no state) — violates the intent
+of the per-stage-checkpoint P0; campaign state is KB-scale, ckpt-every-accepted-step is nearly
+free. (D3) **schedule mis-derivation**: MEASURED cadence = ~7.3 min/full-n600-proposal
+(warm window) + ~5.2 min/step (main loop) → honest 450-step wall-clock ≈ 39h vs the sealed
+13.3–13.8h derivation (~3× off; the seal's s/step came from a smoke that did not exercise the
+full verdict path). COST: ~78 min compute; W_joint intact on disk; zero custody loss (all
+verdicts + telemetry durable). ROUTE: j9 repair arm — wire rg1 projection cure + in-loop reject
+into the engine proposal path · ckpt-every-accepted-step · reseal with measured-cadence-derived
+schedule · deterministic replay of steps 1-7 if seeds admit, else W_joint restart · bounded
+re-smoke THROUGH the fatal step-8 region → READY_TO_FIRE under standing GO.
+Pointer 0.1910828242 [contest-CPU] UNMOVED.
