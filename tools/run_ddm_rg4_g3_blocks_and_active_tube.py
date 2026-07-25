@@ -1286,36 +1286,48 @@ def run(config_path: Path) -> dict[str, Any]:
     disk = shutil.disk_usage(output_root)
     if disk.free < MIN_STORAGE_BYTES:
         raise RunnerError("REFUSE_RG4_STORAGE: SSD free bytes below 20 GiB")
-    preflight = {
-        "schema": "ddm_rg4_g3_blocks_and_active_tube_preflight.v1",
-        "run_id": config["run_id"],
-        "lane_id": config["lane_id"],
-        "typed_config": config_custody,
-        "storage": {
-            "output_root": str(output_root),
-            "free_bytes": disk.free,
-            "required_free_bytes": MIN_STORAGE_BYTES,
-            "cleanup": (
-                "camera tensors are chunk-local and released; immutable stage "
-                "checkpoints, verdict chunks, receipts, and final archives persist"
-            ),
-        },
-        "memory": _memory_receipt("PREFLIGHT"),
-        "governor": {
-            "paid_dispatch": False,
-            "training": False,
-            "pair_count": 600,
-            "verdict_batch": 32,
-            "candidate_count": 2,
-            "candidate_evaluations_each": 384,
-        },
-        "admission": True,
-        "score_claim": False,
-        "promotion_eligible": False,
-        "pointer_moved": False,
-        "main_landing_review_required": True,
-    }
-    _write_json(output_root / "00_preflight_receipt.json", preflight)
+    preflight_path = output_root / "00_preflight_receipt.json"
+    if preflight_path.exists():
+        preflight = _read_json(preflight_path)
+        if (
+            preflight.get("schema") != "ddm_rg4_g3_blocks_and_active_tube_preflight.v1"
+            or preflight.get("run_id") != config["run_id"]
+            or preflight.get("typed_config", {}).get("sha256") != config_custody["sha256"]
+            or preflight.get("admission") is not True
+        ):
+            raise RunnerError("preserved RG4 preflight identity differs")
+        _memory_receipt("RESUME")
+    else:
+        preflight = {
+            "schema": "ddm_rg4_g3_blocks_and_active_tube_preflight.v1",
+            "run_id": config["run_id"],
+            "lane_id": config["lane_id"],
+            "typed_config": config_custody,
+            "storage": {
+                "output_root": str(output_root),
+                "free_bytes": disk.free,
+                "required_free_bytes": MIN_STORAGE_BYTES,
+                "cleanup": (
+                    "camera tensors are chunk-local and released; immutable stage "
+                    "checkpoints, verdict chunks, receipts, and final archives persist"
+                ),
+            },
+            "memory": _memory_receipt("PREFLIGHT"),
+            "governor": {
+                "paid_dispatch": False,
+                "training": False,
+                "pair_count": 600,
+                "verdict_batch": 32,
+                "candidate_count": 2,
+                "candidate_evaluations_each": 384,
+            },
+            "admission": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "pointer_moved": False,
+            "main_landing_review_required": True,
+        }
+        _write_json(preflight_path, preflight)
     coverage = _rg3_harvest(config, config_custody, research_root)
     _configure_torch(config)
     target_path = _resolve(config["artifacts"]["target_cache"]["path"])
@@ -1351,7 +1363,7 @@ def run(config_path: Path) -> dict[str, Any]:
         ("c1_composed_line_current", "w_joint"),
         ("ws2_w_seg_138031", "w_seg"),
     ):
-        candidates[candidate_id] = _run_candidate(
+        candidate_receipt = _run_candidate(
             candidate_id=candidate_id,
             binding_name=binding_name,
             config=config,
@@ -1364,6 +1376,11 @@ def run(config_path: Path) -> dict[str, Any]:
             tube_radius=tube_radius,
             parameter_map=parameter_map,
             scorers=(segnet, posenet),
+        )
+        candidates[candidate_id] = candidate_receipt
+        _write_json(
+            research_root / f"{candidate_id}_active_tube_receipt.json",
+            candidate_receipt,
         )
     final = {
         "schema": "ddm_rg4_g3_blocks_and_active_tube_run_receipt.v1",
