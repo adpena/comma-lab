@@ -42,3 +42,32 @@ Dissent preserved verbatim in the memo (Contrarian: the asymmetry compares diffe
 classes — ms2r_r3 is exactly the pricing measurement; Dupont: keep the descent finisher warm).
 
 Pointer 0.1910828242 [contest-CPU] UNMOVED — routing of means; the R6 row is the end.
+
+## §2 amendment (2026-07-25, per-landing pantheon review of ms2r_r3, merged 4c2edc6629)
+
+STORES CONSULTED: ms2r_r3 findings + strict-join module (8 tests) · PC1 admission receipt (descent_was_run=false CONFIRMED vs main) · ms4d waterfill_post_admission (launched=false CONFIRMED) · j11 refusal receipt · council D1-D4 · card §22.
+
+1. **Convergent crux, now NAMED across both lines:** two independent arms (j11 → descent line;
+   ms2r_r3 → solve line) found the SAME hole class — custody complete in SCORER-OUTPUT
+   coordinates, MISSING in ACTUATION coordinates (receiver-coordinate Jacobians · candidate-local
+   active pose tube · same-object typed byte homes · 25 unproven RG3 top24 blocks). The typed
+   waterfill (#701) is lawfully BLOCKED, not negative: PRECONDITION/APPARATUS scope, formulation
+   falsifier NOT reached. Fired `ddm_rg4_g3_blocks_and_active_tube` (20260725T165958Z) at
+   reopening steps 1-2 — the shared producer BOTH lines consume (j12 keeps step-2's descent-line
+   twin). Steps 3-5 fire on rg4's landing.
+2. **Two-line map update:** the solve line's compact-description evidence (m6/m7 relaxed-path
+   177,169B member) is UNAFFECTED; the two new SHA-bound controls are raw-realization endpoints
+   (exact C1 409.5MB → S 272.734 advisory; BOX q4/q8 291.2MB → S 194.426 advisory, both
+   re-derived) — the ~2,000× compact-vs-raw span IS the description game, now measured at both
+   ends. D1 unchanged.
+3. **D3 contingency (comparator delay):** the solve-line priced ΔS/hour table does NOT yet
+   exist (rungs preregistered DERIVED_NOT_MEASURED, knee null, 162 duals preserved null). If j12
+   reaches READY before rg4→waterfill lands, the fire decision uses j12's own measured opening
+   ΔS/hour against the m6/m7 relaxed-path + rd1 partial prices, typed per §22, and the campaign
+   remains interruptible at stage checkpoints when the full comparator lands.
+4. **Units-discrepancy fact (routed):** task #683 "ALL 36 closed" = coordinate-residue ROWS;
+   the RG3 terminal receipt's 25 missing = exact top24 MEASUREMENT blocks — different units,
+   receipt authoritative. No prior verdict retracted; the ledger wording was coarser than the
+   receipt.
+
+Pointer 0.1910828242 [contest-CPU] UNMOVED.
