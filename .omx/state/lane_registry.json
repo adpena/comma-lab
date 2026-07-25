@@ -87787,11 +87787,11 @@
       "id": "lane_ddm_ct1_campaign_telemetry_encode_20260725",
       "name": "DDM CT1 campaign telemetry encode",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "branch d36fb492aa; 43 focused passes; two review passes; MAIN review required"
         },
         "real_archive_empirical": {
           "status": false,
@@ -87832,5 +87832,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-25T11:09:03Z"
+  "updated_at": "2026-07-25T11:43:07Z"
 }
