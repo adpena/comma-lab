@@ -78,3 +78,24 @@ lattice solve (d_seg 1.52e-4, 17,927 errors, seg SOLVED) and rd1's λ-continuati
   through the REAL receiver, not an assumed transfer; if realization stays rate-dead at the
   knee too, that is the decisive FORMULATION fact and the training-state start stands, with
   the describe-line owning the gap. Sequenced AFTER e5a (uses its adapter); fleet-gated.
+
+## 7. OPERATOR ORDERING (2026-07-25, BINDING — supersedes §6's phrasing and the ws3 default):
+## "start from whatever starting point we have or can reach that has the LOWEST SegNet given
+## that its rate is within the window we know it needs to be for frontier score lowering"
+THE SELECTION LAW (lexicographic):
+1. FILTER: rate in the frontier-lowering window — bytes B such that a composing triple below
+   the pointer exists at an achievable pose-class: seg+rate budget = 0.191083 − pose_class;
+   at pose 0.0172-class → d_seg_max(B) = (0.173931 − 25·B/37,545,489)/100. A state is
+   in-window iff its (B, d_seg) sits under that line or descent from it plausibly gets there.
+2. SELECT: among in-window reachable states, MINIMIZE measured n600 d_seg. Period.
+3. Descent-dynamics objections (e.g. ws3's SEG_REGRESSION from W_seg under pose engagement)
+   are ENGINE problems solved by design — freeze/staging, pose-leg choice from pc2's fork,
+   component-safe admission — NEVER a reason to discard a lower-seg in-window state and
+   re-earn 3× seg by training.
+CURRENT RANKING under this law (measured states): W_seg 0.024124510 @138,031B (best in-window
+seg today) > CC3-composed 0.024732 @136,116B > W_joint-step-50 ~0.07-class @138,813B (retained
+only as engine-dynamics fallback). PRESUMPTIVE START = W_seg-class, displaced only if ks1
+realizes a solve-derived member with LOWER d_seg at in-window bytes. ws3's KEEP_WJOINT verdict
+is hereby re-scoped: it answered "which start descends best under the OLD pose-coupled
+engine" — the card's question is "which start is closest to the goal with rate in-window,"
+and the engine is redesigned around it (G1/G3), not the reverse.

@@ -24620,3 +24620,15 @@ burn). ks1 QUEUED gated-on-e5a (G3.5 knee-member realization + full-set arbitrat
 PAUSED: campaign fire · new measurement families · Modal spend (calibration row deferred to
 the re-founded candidate). pointer 0.1910828242 [contest-CPU] UNMOVED (frontier-protecting
 re-foundation).
+
+## FEED-603-CARD-SELECTION-LAW (2026-07-25, MAIN — operator ordering)
+SIGNAL: operator BINDING ordering verbatim "start from whatever starting point we have or can
+reach that has the lowest SegNet given that its rate is within the window we know it needs to
+be for frontier score lowering." Encoded as card §7 LEXICOGRAPHIC SELECTION LAW: (1) filter
+rate-in-window (d_seg_max(B) = (0.173931 − 25·B/37,545,489)/100 at pointer-class pose),
+(2) minimize measured n600 d_seg, (3) descent-dynamics objections are ENGINE-design problems,
+never state-selection vetoes. CONSEQUENCE: presumptive start flips W_joint-step-50 → W_seg
+0.024124510 @138,031B (best measured in-window seg; 3× better than W_joint); ws3's KEEP_WJOINT
+re-scoped as an OLD-engine dynamics answer, not a state-quality answer; ks1 (G3.5) can displace
+W_seg only with a realized solve-derived member at LOWER d_seg in-window bytes. j10's reseal +
+the G5 S-composition check consume this law. pointer 0.1910828242 [contest-CPU] UNMOVED.
