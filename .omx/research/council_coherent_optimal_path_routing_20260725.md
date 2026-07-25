@@ -159,6 +159,25 @@ STORES CONSULTED: pf3 findings (codex_findings_ddm_pf3_…_20260725T201605Z) + .
 
 Pointer 0.1910828242 [contest-CPU] UNMOVED — pf3 is advisory (macOS-CPU frozen-scorer), PRECONDITION/INSTANCE scope; the R6 row is the end.
 
+## §7 amendment (2026-07-25 — parallel-session harvest reconciled · fable eureka hunt routed · fork option (c) STRUCK · competitive target recalibrated)
+
+STORES CONSULTED: mr1/co5 .last.txt + gate ledger rows (self-recorded by the parallel MAIN session, "by cli", commits aa83f79b21/93656c8839) · mr1 chain diffs (e12f832466 rg4 · 02dee7099f j12 · ec14320cb9 ms2rp · d912bdee81 handoff · three independent-approver review memos) · 316e427459 CLAUDE.md diff ("operator correction 2026-07-25") · pointer tests 49/49 PASS · effective_frontier read from the live pointer · fable memo a381cd5166 (`.omx/research/fable_eureka_hunt_tier_breakthrough_20260725.md`) · borrowed_incumbent_rate_polish_permanently_dead + no_old_lineage bans.
+
+1. **The §3/§4/§5 merge debt is PAID — by the PARALLEL MAIN session, verified here.** mr1's serial chain (rg4 `cb34bbb0f1`-lineage → j12 w/ PC1 fail-closed sanitization → ms2rp) is ON MAIN via harvest `aa83f79b21`, with the three independent-approver credential memos + 30 tests (warnings-as-errors) + `MERGE-WORTHY AFTER FIXES`. co5 harvested via `93656c8839`: HONEST HOLD — 0/4 organ enhancements active (ct1 telemetry not authority-grade ΔS/hour; the named reactivation gate). Dispositions were recorded by that session (gate `pending_review=0`, no drift). MAIN-this-session re-verified: pointer/leaderboard suites 49/49 PASS on merged main.
+
+2. **Competitive target RECALIBRATED (`316e427459`, operator correction 2026-07-25, parallel session):** `effective_frontier = min(ours, official leaderboard best)` = **0.172, PR #130 rank-1 `[official-leaderboard display]`** — external target only, no custody/progress implied, custody-specific local anchors kept separate. Consequence for the two-line map: **T_1 (sub-0.19) is no longer competitive**; the #613 box arithmetic already targets ~0.15 < 0.172, so the box REMAINS the right aim; the m6 0.0151-S rate-gap framing vs OUR 0.19108 is unchanged as local arithmetic. Our submittable pointer stays 0.1910828242 [contest-CPU].
+
+3. **Fable eureka hunt ROUTED (memo a381cd5166; coverage: 407 equations · 363+75 levers · 1,218 FEED tags · 6,689 memos · 2,007 memory files):**
+   - **A1 seven-home stream waterfill** (ev2's own successor-(a), unowned; cc3's −3,422B = first finite row) → arm **wf7 LIVE**. Pool note: wf7 (stream-granularity) and pf3b (coordinate-granularity) COMPETE in the describe-line pool — prices never added.
+   - **A4 per-class carrier byte-close** (db1 fixed-atlas-short 192,020px + polished carriers at NO_VERDICT; Lane=53% of enemy) → arm **cb1 LIVE** through the proven e5a/E4 adapter.
+   - **A2 R2 Laughlin-quanta UNBLOCK** (fable VERIFIED the ev1 receipt carries all 162 per-dim uint8 step histograms — sy1's withhold is STALE) → MAIN adjudication paragraph queued (task #723).
+   - **A3 frame-0 pose by DESCENT** [CONJECTURE, PR130 23KB/2.33e-5 [contest-CUDA external] existence proof] — p1's negative is FORMULATION-scoped (linearized shared-basis only); compose p1 packet × pc2 accept-loop (16/16, ΔS −0.2475) × frame_0-seg-free. Queued behind the pc2/pc1 pose line; hedges the PC1-decay unknown.
+   - **A7 ADVERSARIAL REJECTION → fork option (c) STRUCK:** the m7 "relaxed-path-direct" 177,169B member traced to the **PR110-lineage archive (b4689726→cb6cf0ba) = the operator-banned surface**. §4's custody caution is RESOLVED as STRIKE. The strategic fork reduces to: **(a-family) the pricing chain (pf3b + wf7)** vs **(b) rg5 coordinate families** (still tree-vortex-guarded) vs **the descent line** (j-chain, #710-held).
+
+4. **Fleet: pf3b + wf7 + cb1 (3/4).** Wider fable strata (missing apparatus incl. the J8F-operator extension as highest fan-in build; paradigm bets incl. solve-in-description-coordinates; 10-year arcs) live in the memo §4-§6 for the operator's read — not auto-actuated.
+
+Pointer 0.1910828242 [contest-CPU] UNMOVED · effective competitive target 0.172 [official-leaderboard display, external-only] — the R6 row is the end.
+
 ## §6 operator correction (2026-07-25, effective competitive frontier)
 
 STORES CONSULTED: live official comma.ai ranked video-compression table · PR130
