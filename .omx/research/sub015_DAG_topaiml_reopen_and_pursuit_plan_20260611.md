@@ -24287,3 +24287,24 @@ merged (94b14f603b), 13/13 tests green. verdict_scope: INSTANCE (12-step bounded
 Step-4 state). Unblocks: #366 FIRE gate · #701 ms2r/r3 rerun · ra1 22-row reactivation wave ·
 cc1 4 races · #611 · organ Bellman/dual validators · co4 Road-local reform · bandit duty
 allocation. Pointer 0.1910828242 [contest-CPU] UNMOVED (advisory row, never a score).
+
+### FEED-603-366-CAMPAIGN-FIRED (2026-07-25T03:26Z, operator standing GO (b) + standing-go-on-all)
+THE #366 JOINT-DESCENT FINISHING CAMPAIGN IS RUNNING — pending since 2026-07-08, fired by MAIN
+after j8f's READY_TO_FIRE + independent review. Config: W_joint warm start (ws3 arbitration),
+450 steps / checkpoint-every-37 (P0 resumable) / derived 13.31-13.79h wall-clock / verdict
+batch32; ticket aa8db341… (typed_config_hash 346975b25fce9727… UNCHANGED through 3 custody
+reseals — semantics never drifted); consumer 064f167f… (#688 J8E event-continuation engine),
+launcher 1e6ecd18…; run dir ddm_366_campaign_wjoint_20260725T032557Z (VertigoDataTier), pid
+17428, detached + persistent Monitor. FIRE CHAIN CUSTODY RECORD (all REFUSEs honored, zero
+bypasses): (1) wrong-receipt REFUSE → sealed worst-geometry path; (2) consumer-SHA-drift REFUSE
+→ canonical reseal w/ sealed J7 authority file (8dac31be…); (3) receipt-embedded-custody REFUSE
+→ REGENERATED worst-geometry receipt via --worst-geometry-memory-bootstrap on the LIVE consumer
+(pair-498 all-groups window; admission=true; projected peak 21.32 GiB vs 116 ceiling) → final
+reseal → attempt 4 PASSED ALL GATES (first log line = MLX custom-kernel banner; RSS 2.9GiB
+climbing, 148% CPU). The three-REFUSE cascade traced the full custody chain in dependency order
+(which evidence → which code the ticket binds → which code produced the evidence) — the #506
+sealed-ticket system working as designed. PARALLEL FLEET (operator "standing go on all"): 4
+arms live — ms2r_r3 box-tolerance solve (#701, new stage namespace) · cc2 coder races (cc1
+races 2+3) · lp1 layer pricing (#669 b+c) · rs1 feature-relay solve (#659). Pointer
+0.1910828242 [contest-CPU] UNMOVED — campaign endpoint must ride E-chain export → R6 dual-axis
+exact eval to move it.
