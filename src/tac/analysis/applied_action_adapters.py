@@ -39,6 +39,47 @@ PF3_CHECKPOINT_SCHEMA = "ddm_pf3_coordinate_measurement_checkpoint.v1"
 J12_RECEIPT_SCHEMA = "ddm_j12_366_receiver_coordinate_custody_compact_receipt.v1"
 
 PF3_PHYSICAL_EDGE = "V19C_BASE_TO_ONE_EXACT_RG3_COORDINATE"
+LOCAL_ADVISORY_AXIS = "[macOS-CPU frozen-scorer advisory]"
+_MANIFEST_KEYS = frozenset(
+    {
+        "schema",
+        "results",
+        "receipt_count",
+        "blocked_source_count",
+        "source_artifact_count",
+        "research_only",
+        "promotion_eligible",
+        "score_claim",
+        "content_sha256",
+    }
+)
+_RESULT_KEYS = frozenset(
+    {
+        "schema",
+        "source_kind",
+        "source_schema",
+        "source_id",
+        "ok",
+        "receipt",
+        "blockers",
+        "source_artifacts",
+        "source_artifact_count",
+        "source_artifact_digest_sha256",
+        "source_counts",
+        "research_only",
+        "promotion_eligible",
+        "score_claim",
+    }
+)
+_EXPECTED_SOURCE_COUNTS: Mapping[str, Mapping[str, int]] = {
+    "J8F": {"application_count": 12, "checkpoint_artifact_count": 12},
+    "PF3": {
+        "candidate_artifact_count": 16,
+        "coordinate_family_count": 3,
+        "uphill_edge_count": 16,
+    },
+    "J12": {"composite_count": 8, "sealed_proposal_count": 4, "single_count": 16},
+}
 
 
 class AppliedActionAdapterError(ValueError):
@@ -90,6 +131,139 @@ def _canonical_sha256(value: Any) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def canonical_json_sha256(value: Any) -> str:
+    """Return the deterministic semantic hash used to bind parsed JSON."""
+
+    return _canonical_sha256(value)
+
+
+def _close(left: float, right: float, *, tolerance: float = 1e-12) -> bool:
+    return math.isclose(left, right, rel_tol=0.0, abs_tol=tolerance)
+
+
+def _require_finite(value: Any, name: str, *, nonnegative: bool = True) -> float:
+    if isinstance(value, bool):
+        raise AppliedActionAdapterError(f"{name} must be finite")
+    try:
+        result = float(value)
+    except (TypeError, ValueError) as exc:
+        raise AppliedActionAdapterError(f"{name} must be finite") from exc
+    if not math.isfinite(result) or (nonnegative and result < 0.0):
+        raise AppliedActionAdapterError(f"{name} must be finite and non-negative")
+    return result
+
+
+@dataclass(frozen=True)
+class SourceArtifactIdentity:
+    """One file identity verified against the exact bytes consumed."""
+
+    path: str
+    bytes: int
+    sha256: str
+    role: str
+    json_content_sha256: str | None = None
+
+    def __post_init__(self) -> None:
+        _require_text(self.path, "artifact path")
+        _require_int(self.bytes, "artifact bytes")
+        _require_sha256(self.sha256, "artifact sha256")
+        _require_text(self.role, "artifact role")
+        if self.json_content_sha256 is not None:
+            _require_sha256(self.json_content_sha256, "artifact json_content_sha256")
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "path": self.path,
+            "bytes": self.bytes,
+            "sha256": self.sha256,
+            "role": self.role,
+            "json_content_sha256": self.json_content_sha256,
+        }
+
+
+def verify_source_artifact(
+    path: str | Path,
+    *,
+    role: str,
+    expected_bytes: int | None = None,
+    expected_sha256: str | None = None,
+    display_path: str | None = None,
+) -> SourceArtifactIdentity:
+    """Hash one regular, non-symlink file and optionally enforce declared custody."""
+
+    source = Path(path)
+    if source.is_symlink() or not source.is_file():
+        raise AppliedActionAdapterError(f"source artifact is not a regular file: {source}")
+    digest = hashlib.sha256()
+    size = 0
+    with source.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            size += len(chunk)
+            digest.update(chunk)
+    actual_sha = digest.hexdigest()
+    if expected_bytes is not None and size != expected_bytes:
+        raise AppliedActionAdapterError(f"source artifact byte count differs: {source}")
+    if expected_sha256 is not None and actual_sha != _require_sha256(expected_sha256, f"expected sha256 for {source}"):
+        raise AppliedActionAdapterError(f"source artifact SHA-256 differs: {source}")
+    return SourceArtifactIdentity(
+        path=display_path or str(source),
+        bytes=size,
+        sha256=actual_sha,
+        role=role,
+    )
+
+
+def load_json_artifact(
+    path: str | Path,
+    *,
+    role: str,
+    expected_bytes: int | None = None,
+    expected_sha256: str | None = None,
+    display_path: str | None = None,
+) -> tuple[Mapping[str, Any], SourceArtifactIdentity]:
+    """Load JSON from the exact bytes whose identity is returned alongside it."""
+
+    source = Path(path)
+    if source.is_symlink() or not source.is_file():
+        raise AppliedActionAdapterError(f"source artifact is not a regular file: {source}")
+    try:
+        raw = source.read_bytes()
+        payload = json.loads(raw)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise AppliedActionAdapterError(f"invalid JSON artifact: {source}") from exc
+    actual_sha = hashlib.sha256(raw).hexdigest()
+    if expected_bytes is not None and len(raw) != expected_bytes:
+        raise AppliedActionAdapterError(f"source artifact byte count differs: {source}")
+    if expected_sha256 is not None and actual_sha != _require_sha256(expected_sha256, f"expected sha256 for {source}"):
+        raise AppliedActionAdapterError(f"source artifact SHA-256 differs: {source}")
+    mapping = _require_mapping(payload, str(source))
+    return mapping, SourceArtifactIdentity(
+        path=display_path or str(source),
+        bytes=len(raw),
+        sha256=actual_sha,
+        role=role,
+        json_content_sha256=_canonical_sha256(mapping),
+    )
+
+
+def _bind_json_payload(payload: Mapping[str, Any], artifact: SourceArtifactIdentity, name: str) -> None:
+    if artifact.json_content_sha256 is None:
+        raise AppliedActionAdapterError(f"{name} artifact lacks JSON content identity")
+    if _canonical_sha256(payload) != artifact.json_content_sha256:
+        raise AppliedActionAdapterError(f"{name} payload differs from bound artifact")
+
+
+def _normalize_artifacts(
+    artifacts: Sequence[SourceArtifactIdentity],
+) -> tuple[SourceArtifactIdentity, ...]:
+    ordered = tuple(sorted(artifacts, key=lambda item: (item.path, item.role)))
+    if not ordered:
+        raise AppliedActionAdapterError("adaptation result requires source artifacts")
+    if len({item.path for item in ordered}) != len(ordered):
+        raise AppliedActionAdapterError("source artifact paths must be unique")
+    return ordered
+
+
 @dataclass(frozen=True)
 class AdapterBlocker:
     """One exact missing or contradictory source obligation."""
@@ -124,6 +298,8 @@ class AdaptationResult:
     source_kind: str
     source_schema: str
     source_id: str
+    source_artifacts: tuple[SourceArtifactIdentity, ...]
+    source_counts: tuple[tuple[str, int], ...]
     receipt: AppliedActionReceipt | None = None
     blockers: tuple[AdapterBlocker, ...] = ()
 
@@ -135,17 +311,26 @@ class AdaptationResult:
         ):
             _require_text(value, name)
         if (self.receipt is None) == (not self.blockers):
-            raise AppliedActionAdapterError(
-                "adaptation result must carry exactly one of receipt or blockers"
-            )
+            raise AppliedActionAdapterError("adaptation result must carry exactly one of receipt or blockers")
         if self.receipt is not None and self.receipt.schema != APPLIED_ACTION_RECEIPT_SCHEMA:
             raise AppliedActionAdapterError("adapter emitted a foreign receipt schema")
+        normalized = _normalize_artifacts(self.source_artifacts)
+        if normalized != self.source_artifacts:
+            raise AppliedActionAdapterError("source artifacts must use canonical path order")
+        if tuple(sorted(self.source_counts)) != self.source_counts:
+            raise AppliedActionAdapterError("source counts must use canonical key order")
+        if len({key for key, _ in self.source_counts}) != len(self.source_counts):
+            raise AppliedActionAdapterError("source count keys must be unique")
+        for key, value in self.source_counts:
+            _require_text(key, "source count key")
+            _require_int(value, f"source_counts.{key}")
 
     @property
     def ok(self) -> bool:
         return self.receipt is not None
 
     def as_dict(self) -> dict[str, Any]:
+        artifacts = [artifact.as_dict() for artifact in self.source_artifacts]
         return {
             "schema": ADAPTER_RESULT_SCHEMA,
             "source_kind": self.source_kind,
@@ -154,6 +339,10 @@ class AdaptationResult:
             "ok": self.ok,
             "receipt": self.receipt.as_dict() if self.receipt is not None else None,
             "blockers": [blocker.as_dict() for blocker in self.blockers],
+            "source_artifacts": artifacts,
+            "source_artifact_count": len(artifacts),
+            "source_artifact_digest_sha256": _canonical_sha256(artifacts),
+            "source_counts": dict(self.source_counts),
             "research_only": True,
             "promotion_eligible": False,
             "score_claim": False,
@@ -168,6 +357,31 @@ def _j8f_operator_sha(config: Mapping[str, Any]) -> str:
     return _require_sha256(operator.get("sha256"), "J8F operator_source.sha256")
 
 
+def _verify_declared_artifacts(
+    declarations: Mapping[str, Any], artifacts: Sequence[SourceArtifactIdentity], name: str
+) -> None:
+    available = {artifact.path: artifact for artifact in artifacts}
+    for key, raw in declarations.items():
+        row = _require_mapping(raw, f"{name}.{key}")
+        path = _require_text(row.get("path"), f"{name}.{key}.path")
+        artifact = available.get(path)
+        if artifact is None:
+            raise AppliedActionAdapterError(f"{name}.{key} bytes were not custody-verified")
+        if artifact.bytes != _require_int(row.get("bytes"), f"{name}.{key}.bytes") or (
+            artifact.sha256 != _require_sha256(row.get("sha256"), f"{name}.{key}.sha256")
+        ):
+            raise AppliedActionAdapterError(f"{name}.{key} custody differs")
+
+
+def _has_custody(
+    artifacts: Sequence[SourceArtifactIdentity], *, sha256: str, bytes_count: int, path: str | None = None
+) -> bool:
+    return any(
+        artifact.sha256 == sha256 and artifact.bytes == bytes_count and (path is None or artifact.path == path)
+        for artifact in artifacts
+    )
+
+
 def _j8f_source_state(smoke: Mapping[str, Any]) -> tuple[str, int]:
     step4 = _require_mapping(smoke.get("step4"), "J8F step4")
     return (
@@ -180,6 +394,11 @@ def adapt_j8f_checkpoints(
     smoke: Mapping[str, Any],
     checkpoints: Sequence[Mapping[str, Any]],
     config: Mapping[str, Any],
+    *,
+    smoke_artifact: SourceArtifactIdentity,
+    checkpoint_artifacts: Sequence[SourceArtifactIdentity],
+    config_artifact: SourceArtifactIdentity,
+    custody_artifacts: Sequence[SourceArtifactIdentity],
 ) -> tuple[AdaptationResult, ...]:
     """Validate J8F's ordered composition and expose its exact relocation debt.
 
@@ -194,13 +413,23 @@ def adapt_j8f_checkpoints(
 
     smoke = _require_mapping(smoke, "J8F smoke")
     config = _require_mapping(config, "J8F config")
+    _bind_json_payload(smoke, smoke_artifact, "J8F smoke")
+    _bind_json_payload(config, config_artifact, "J8F config")
+    if len(checkpoints) != len(checkpoint_artifacts):
+        raise AppliedActionAdapterError("J8F checkpoint artifact count differs")
+    for index, (checkpoint, artifact) in enumerate(zip(checkpoints, checkpoint_artifacts, strict=True)):
+        _bind_json_payload(checkpoint, artifact, f"J8F checkpoint {index}")
     if smoke.get("schema") != J8F_SMOKE_SCHEMA:
         raise AppliedActionAdapterError("J8F smoke schema differs")
     if smoke.get("research_only") is not True or smoke.get("score_claim") is not False:
         raise AppliedActionAdapterError("J8F false-authority contract differs")
     run_id = _require_text(smoke.get("run_id"), "J8F run_id")
-    _require_text(smoke.get("evidence_axis"), "J8F evidence_axis")
+    evidence_axis = _require_text(smoke.get("evidence_axis"), "J8F evidence_axis")
+    if evidence_axis != LOCAL_ADVISORY_AXIS:
+        raise AppliedActionAdapterError("J8F evidence axis differs")
     _j8f_operator_sha(config)
+    config_bindings = _require_mapping(config.get("source_bindings"), "J8F source_bindings")
+    _verify_declared_artifacts(config_bindings, custody_artifacts, "J8F source binding")
     prior_archive_sha, base_archive_bytes = _j8f_source_state(smoke)
     prior_archive_bytes = base_archive_bytes
 
@@ -215,9 +444,9 @@ def adapt_j8f_checkpoints(
     expected_steps = list(range(len(ordered)))
     observed_steps = [int(row["step_index"]) for row in ordered]
     if observed_steps != expected_steps:
-        raise AppliedActionAdapterError(
-            f"J8F checkpoint sequence differs: {observed_steps} != {expected_steps}"
-        )
+        raise AppliedActionAdapterError(f"J8F checkpoint sequence differs: {observed_steps} != {expected_steps}")
+    prior_prefix_hashes: tuple[str, ...] = ()
+    final_applications: list[Mapping[str, Any]] = []
     for ordinal, checkpoint in enumerate(ordered):
         if checkpoint.get("schema") != J8F_CHECKPOINT_SCHEMA:
             raise AppliedActionAdapterError("J8F checkpoint schema differs")
@@ -225,23 +454,29 @@ def adapt_j8f_checkpoints(
             raise AppliedActionAdapterError("J8F checkpoint score_claim differs")
         applications = checkpoint.get("application_receipts")
         if not isinstance(applications, list) or len(applications) != ordinal + 1:
-            raise AppliedActionAdapterError(
-                "J8F checkpoint must preserve the complete cumulative application prefix"
-            )
-        if [row.get("step_index") for row in applications if isinstance(row, Mapping)] != list(
-            range(ordinal + 1)
-        ):
+            raise AppliedActionAdapterError("J8F checkpoint must preserve the complete cumulative application prefix")
+        if [row.get("step_index") for row in applications if isinstance(row, Mapping)] != list(range(ordinal + 1)):
             raise AppliedActionAdapterError("J8F cumulative application prefix differs")
+        application_rows = tuple(
+            _require_mapping(row, f"J8F application prefix {index}") for index, row in enumerate(applications)
+        )
+        prefix_hashes = tuple(_canonical_sha256(row) for row in application_rows)
+        if prefix_hashes[:-1] != prior_prefix_hashes:
+            raise AppliedActionAdapterError("J8F cumulative application content prefix differs")
+        prior_prefix_hashes = prefix_hashes
+        final_applications = list(application_rows)
         application = _require_mapping(applications[-1], "J8F application")
         if application.get("schema") != J8F_APPLICATION_SCHEMA:
             raise AppliedActionAdapterError("J8F application schema differs")
-        projected = _require_mapping(
-            application.get("projected_application"), "J8F projected_application"
-        )
+        if application.get("evidence_axis") != evidence_axis:
+            raise AppliedActionAdapterError("J8F application evidence axis differs")
+        projected = _require_mapping(application.get("projected_application"), "J8F projected_application")
         proposal = _require_mapping(application.get("proposal"), "J8F proposal")
         support = _require_mapping(proposal.get("support_footprint"), "J8F support_footprint")
         trust = _require_mapping(application.get("trust_region"), "J8F trust_region")
         projected_state = _require_mapping(checkpoint.get("projected_state"), "J8F projected_state")
+        if projected_state.get("parseback_exact") is not True:
+            raise AppliedActionAdapterError("J8F cumulative projected state parseback differs")
 
         _require_sha256(projected.get("archive_sha256"), "J8F projected archive SHA")
         candidate_archive_sha = _require_sha256(
@@ -259,16 +494,12 @@ def adapt_j8f_checkpoints(
         direction = projected.get("direction")
         if direction not in {-1, 1}:
             raise AppliedActionAdapterError("J8F direction must be -1 or 1")
-        _require_int(
-            projected.get("changed_channel_values"), "J8F changed_channel_values", positive=True
-        )
+        _require_int(projected.get("changed_channel_values"), "J8F changed_channel_values", positive=True)
         _require_sha256(
             projected.get("delta_sha256_int64_indices_int16_values"),
             "J8F changed uint8 sparse identity",
         )
-        _require_sha256(
-            support.get("stem_block_indices_sha256_uint32le"), "J8F support SHA"
-        )
+        _require_sha256(support.get("stem_block_indices_sha256_uint32le"), "J8F support SHA")
         _require_text(proposal.get("proposal_id"), "J8F proposal_id")
         _require_text(
             _require_mapping(proposal.get("aimed_cell"), "J8F aimed_cell").get("bucket_id"),
@@ -280,37 +511,71 @@ def adapt_j8f_checkpoints(
 
         prior_archive_sha = candidate_archive_sha
         prior_archive_bytes = candidate_archive_bytes
-        _require_sha256(
-            projected_state.get("theta_sha256_float32le"), "J8F projected theta SHA"
-        )
+        _require_sha256(projected_state.get("theta_sha256_float32le"), "J8F projected theta SHA")
 
-    final_arm = _require_mapping(
-        smoke.get("range_gauge_projected_arm"), "J8F range_gauge_projected_arm"
-    )
+    final_arm = _require_mapping(smoke.get("range_gauge_projected_arm"), "J8F range_gauge_projected_arm")
     final_archive = _require_mapping(final_arm.get("archive"), "J8F final archive")
     final_verdict = _require_mapping(final_arm.get("verdict"), "J8F final verdict")
     step4 = _require_mapping(smoke.get("step4"), "J8F step4")
     reference = _require_mapping(step4.get("reference"), "J8F step4.reference")
+    horizon = _require_mapping(smoke.get("application"), "J8F application horizon")
+    stage_receipts = horizon.get("stage_receipts")
+    if horizon.get("horizon") != 12 or not isinstance(stage_receipts, list):
+        raise AppliedActionAdapterError("J8F application horizon shape differs")
+    if tuple(_canonical_sha256(row) for row in stage_receipts) != tuple(
+        _canonical_sha256(row) for row in final_applications
+    ):
+        raise AppliedActionAdapterError("J8F final horizon does not bind the checkpoint prefix")
     final_archive_sha = _require_sha256(final_archive.get("sha256"), "J8F final archive SHA")
     if final_archive_sha != prior_archive_sha:
         raise AppliedActionAdapterError("J8F final archive is not the last projected checkpoint")
-    final_archive_bytes = _require_int(
-        final_archive.get("bytes"), "J8F final archive bytes", positive=True
-    )
+    final_archive_bytes = _require_int(final_archive.get("bytes"), "J8F final archive bytes", positive=True)
     if final_archive_bytes != prior_archive_bytes:
         raise AppliedActionAdapterError("J8F final archive bytes differ from checkpoint chain")
     if final_archive.get("parseback_exact") is not True:
         raise AppliedActionAdapterError("J8F final archive parseback is not exact")
+    if not _has_custody(
+        custody_artifacts,
+        sha256=final_archive_sha,
+        bytes_count=final_archive_bytes,
+        path=_require_text(final_archive.get("path"), "J8F final archive path"),
+    ):
+        raise AppliedActionAdapterError("J8F final archive bytes were not custody-verified")
 
-    old_d_seg = float(reference["d_seg"])
-    old_d_pose = float(reference["d_pose"])
-    new_d_seg = float(final_verdict["d_seg"])
-    new_d_pose = float(final_verdict["d_pose"])
-    if not all(math.isfinite(value) for value in (old_d_seg, old_d_pose, new_d_seg, new_d_pose)):
-        raise AppliedActionAdapterError("J8F final scorer transition is not finite")
+    for label, verdict, expected_sha, expected_bytes in (
+        ("reference", reference, _j8f_source_state(smoke)[0], base_archive_bytes),
+        ("candidate", final_verdict, final_archive_sha, final_archive_bytes),
+    ):
+        if verdict.get("num_pairs") != 600:
+            raise AppliedActionAdapterError(f"J8F {label} verdict is not n600")
+        if verdict.get("evidence_axis") != evidence_axis:
+            raise AppliedActionAdapterError(f"J8F {label} verdict evidence axis differs")
+        if verdict.get("archive_sha256") != expected_sha or verdict.get("archive_bytes") != expected_bytes:
+            raise AppliedActionAdapterError(f"J8F {label} scorer-to-archive foreign key differs")
+        if verdict.get("score_claim") is not False or verdict.get("promotion_eligible") is not False:
+            raise AppliedActionAdapterError(f"J8F {label} false-authority contract differs")
+
+    old_d_seg = _require_finite(reference.get("d_seg"), "J8F reference d_seg")
+    old_d_pose = _require_finite(reference.get("d_pose"), "J8F reference d_pose")
+    new_d_seg = _require_finite(final_verdict.get("d_seg"), "J8F candidate d_seg")
+    new_d_pose = _require_finite(final_verdict.get("d_pose"), "J8F candidate d_pose")
     delta_score = contest_score(new_d_seg, new_d_pose, final_archive_bytes) - contest_score(
         old_d_seg, old_d_pose, base_archive_bytes
     )
+    source_delta = _require_mapping(final_arm.get("delta_vs_step4"), "J8F delta_vs_step4")
+    seg_term = 100.0 * (new_d_seg - old_d_seg)
+    pose_term = math.sqrt(10.0 * new_d_pose) - math.sqrt(10.0 * old_d_pose)
+    rate_term = 25.0 * (final_archive_bytes - base_archive_bytes) / 37_545_489
+    for key, expected in (
+        ("seg_term", seg_term),
+        ("pose_term", pose_term),
+        ("rate_term", rate_term),
+        ("joint_delta", delta_score),
+    ):
+        if not _close(_require_finite(source_delta.get(key), f"J8F {key}", nonnegative=False), expected):
+            raise AppliedActionAdapterError(f"J8F nonlinear {key} does not reconcile")
+    if source_delta.get("acceptance_authority") != "strict_exact_n600_joint_delta_lt_zero":
+        raise AppliedActionAdapterError("J8F acceptance authority differs")
     if delta_score >= 0.0:
         raise AppliedActionAdapterError("J8F projected composite is not measured downhill")
     blockers = (
@@ -341,24 +606,38 @@ def adapt_j8f_checkpoints(
                 "individually identity-complete applications cannot be emitted as measured rows."
             ),
         ),
+        AdapterBlocker(
+            code="J8F_REFERENCE_ARCHIVE_BYTES_ABSENT",
+            source_key="step4.reference.archive_sha256",
+            owed_field="file-backed reference archive bytes",
+            detail=(
+                "The n600 reference verdict and its archive foreign key are preserved, but the "
+                "referenced base archive bytes are not present in the J8F custody bundle."
+            ),
+        ),
     )
+    artifacts = _normalize_artifacts((smoke_artifact, config_artifact, *checkpoint_artifacts, *custody_artifacts))
     return (
         AdaptationResult(
             source_kind="J8F",
             source_schema=J8F_SMOKE_SCHEMA,
             source_id=run_id,
+            source_artifacts=artifacts,
+            source_counts=(("application_count", 12), ("checkpoint_artifact_count", 12)),
             blockers=blockers,
         ),
     )
 
 
-def adapt_pf3_checkpoint(
+def adapt_pf3_checkpoints(
     receipt: Mapping[str, Any],
-    checkpoint: Mapping[str, Any],
+    checkpoints: Sequence[Mapping[str, Any]],
     *,
-    source_id: str,
+    receipt_artifact: SourceArtifactIdentity,
+    checkpoint_artifacts: Sequence[SourceArtifactIdentity],
+    custody_artifacts: Sequence[SourceArtifactIdentity],
 ) -> AdaptationResult:
-    """Return a PF3 receipt only when its physical edge has complete identity.
+    """Validate all PF3 measured edges and expose their shared producer debt.
 
     Current PF3 checkpoints intentionally stop short: they preserve the count
     of changed uint8 channel values, but not the sparse change-set hash or the
@@ -368,34 +647,118 @@ def adapt_pf3_checkpoint(
     """
 
     receipt = _require_mapping(receipt, "PF3 receipt")
-    checkpoint = _require_mapping(checkpoint, "PF3 checkpoint")
+    _bind_json_payload(receipt, receipt_artifact, "PF3 receipt")
     if receipt.get("schema") != PF3_RECEIPT_SCHEMA:
         raise AppliedActionAdapterError("PF3 receipt schema differs")
-    if checkpoint.get("schema") != PF3_CHECKPOINT_SCHEMA:
-        raise AppliedActionAdapterError("PF3 checkpoint schema differs")
-    if checkpoint.get("research_only") is not True or checkpoint.get("score_claim") is not False:
-        raise AppliedActionAdapterError("PF3 false-authority contract differs")
-    edges = _require_mapping(checkpoint.get("five_pf3_edges"), "PF3 five_pf3_edges")
-    rate_home = _require_mapping(edges.get("dimension_rate_home"), "PF3 dimension_rate_home")
-    if rate_home.get("physical_edge") != PF3_PHYSICAL_EDGE:
-        raise AppliedActionAdapterError("PF3 physical edge is not V19C_BASE -> one RG3 coordinate")
-    _require_sha256(
-        _require_mapping(
-            _require_mapping(edges.get("receiver_object_builder"), "PF3 receiver builder").get(
-                "candidate_archive"
-            ),
+    inventory = _require_mapping(receipt.get("inventory"), "PF3 inventory")
+    custody = _require_mapping(inventory.get("candidate_checkpoint_custody"), "PF3 checkpoint custody")
+    declared = custody.get("artifacts")
+    if custody.get("count") != 16 or inventory.get("materialized_coordinate_count") != 16:
+        raise AppliedActionAdapterError("PF3 inventory does not declare exactly 16 artifacts")
+    if not isinstance(declared, list) or len(declared) != 16:
+        raise AppliedActionAdapterError("PF3 checkpoint artifact inventory differs")
+    if len(checkpoints) != 16 or len(checkpoint_artifacts) != 16:
+        raise AppliedActionAdapterError("PF3 adapter must cover all 16 artifacts")
+    declared_hashes: list[str] = []
+    for index, (row, artifact) in enumerate(zip(declared, checkpoint_artifacts, strict=True)):
+        row = _require_mapping(row, f"PF3 declared artifact {index}")
+        if (
+            artifact.path != str(row.get("path"))
+            or artifact.bytes != row.get("bytes")
+            or artifact.sha256 != row.get("sha256")
+        ):
+            raise AppliedActionAdapterError("PF3 checkpoint artifact custody differs")
+        declared_hashes.append(_require_sha256(row.get("sha256"), "PF3 artifact sha256"))
+        _bind_json_payload(checkpoints[index], artifact, f"PF3 checkpoint {index}")
+    digest = hashlib.sha256("".join(declared_hashes).encode()).hexdigest()
+    if custody.get("digest_chain_sha256") != digest:
+        raise AppliedActionAdapterError("PF3 16-artifact digest chain differs")
+
+    base_archive = _require_mapping(
+        _require_mapping(receipt.get("source_custody"), "PF3 source_custody").get("base_archive"),
+        "PF3 base archive",
+    )
+    base_sha = _require_sha256(base_archive.get("sha256"), "PF3 base archive SHA")
+    if not _has_custody(
+        custody_artifacts,
+        sha256=base_sha,
+        bytes_count=_require_int(base_archive.get("bytes"), "PF3 base archive bytes", positive=True),
+        path=_require_text(base_archive.get("path"), "PF3 base archive path"),
+    ):
+        raise AppliedActionAdapterError("PF3 base archive bytes were not custody-verified")
+
+    candidate_ids: set[str] = set()
+    families: set[str] = set()
+    joint_deltas: list[float] = []
+    for index, checkpoint in enumerate(checkpoints):
+        checkpoint = _require_mapping(checkpoint, f"PF3 checkpoint {index}")
+        if checkpoint.get("schema") != PF3_CHECKPOINT_SCHEMA:
+            raise AppliedActionAdapterError("PF3 checkpoint schema differs")
+        if checkpoint.get("research_only") is not True or checkpoint.get("score_claim") is not False:
+            raise AppliedActionAdapterError("PF3 false-authority contract differs")
+        if checkpoint.get("evidence_axis") != LOCAL_ADVISORY_AXIS:
+            raise AppliedActionAdapterError("PF3 evidence axis differs")
+        candidate_id = _require_text(checkpoint.get("candidate_id"), "PF3 candidate_id")
+        coordinate_id = _require_text(checkpoint.get("coordinate_id"), "PF3 coordinate_id")
+        if candidate_id in candidate_ids:
+            raise AppliedActionAdapterError("PF3 candidate identities must be unique")
+        candidate_ids.add(candidate_id)
+        parts = coordinate_id.split(".")
+        if len(parts) < 2 or parts[0] != "rg3":
+            raise AppliedActionAdapterError("PF3 coordinate family differs")
+        families.add(parts[1])
+        edges = _require_mapping(checkpoint.get("five_pf3_edges"), "PF3 five_pf3_edges")
+        rate_home = _require_mapping(edges.get("dimension_rate_home"), "PF3 dimension_rate_home")
+        if rate_home.get("physical_edge") != PF3_PHYSICAL_EDGE:
+            raise AppliedActionAdapterError("PF3 physical edge is not V19C_BASE -> one RG3 coordinate")
+        geometry = _require_mapping(
+            _require_mapping(edges.get("candidate_delta"), "PF3 candidate delta").get("batch_geometry"),
+            "PF3 batch geometry",
+        )
+        if geometry.get("authority") != "MATCHES_V19C_N600_BATCH16_ENDPOINT_GEOMETRY":
+            raise AppliedActionAdapterError("PF3 n600 endpoint geometry differs")
+        scorer = _require_mapping(checkpoint.get("scorer_custody"), "PF3 scorer custody")
+        if scorer.get("evidence_axis") != LOCAL_ADVISORY_AXIS or scorer.get("score_claim") is not False:
+            raise AppliedActionAdapterError("PF3 scorer authority differs")
+        delta = _require_mapping(edges.get("candidate_delta"), "PF3 candidate delta")
+        old_pose = _require_finite(delta.get("base_global_d_pose"), "PF3 base d_pose")
+        new_pose = _require_finite(delta.get("candidate_global_d_pose"), "PF3 candidate d_pose")
+        error_delta = _require_signed_int(delta.get("delta_global_errors"), "PF3 error delta")
+        seg_term = 100.0 * error_delta / (600 * 384 * 512)
+        pose_term = math.sqrt(10.0 * new_pose) - math.sqrt(10.0 * old_pose)
+        joint = _require_finite(delta.get("delta_D_joint"), "PF3 joint delta", nonnegative=False)
+        if not _close(_require_finite(delta.get("delta_D_seg"), "PF3 seg delta", nonnegative=False), seg_term):
+            raise AppliedActionAdapterError("PF3 nonlinear seg delta differs")
+        if not _close(_require_finite(delta.get("delta_D_pose"), "PF3 pose delta", nonnegative=False), pose_term):
+            raise AppliedActionAdapterError("PF3 nonlinear pose delta differs")
+        if not _close(joint, seg_term + pose_term):
+            raise AppliedActionAdapterError("PF3 nonlinear joint delta differs")
+        joint_deltas.append(joint)
+        candidate_archive = _require_mapping(
+            _require_mapping(edges.get("receiver_object_builder"), "PF3 receiver builder").get("candidate_archive"),
             "PF3 candidate archive",
-        ).get("sha256"),
-        "PF3 candidate archive SHA",
-    )
-    _require_sha256(
-        _require_mapping(receipt.get("source_custody"), "PF3 source_custody")
-        .get("base_archive", {})
-        .get("sha256"),
-        "PF3 base archive SHA",
-    )
-    realized = _require_mapping(edges.get("realized_uint8_quantum"), "PF3 realized_uint8_quantum")
-    _require_int(realized.get("changed_channel_values"), "PF3 changed_channel_values", positive=True)
+        )
+        if not _has_custody(
+            custody_artifacts,
+            sha256=_require_sha256(candidate_archive.get("sha256"), "PF3 candidate archive SHA"),
+            bytes_count=_require_int(candidate_archive.get("bytes"), "PF3 candidate archive bytes", positive=True),
+            path=_require_text(candidate_archive.get("path"), "PF3 candidate archive path"),
+        ):
+            raise AppliedActionAdapterError("PF3 candidate archive bytes were not custody-verified")
+        realized = _require_mapping(edges.get("realized_uint8_quantum"), "PF3 realized uint8")
+        _require_int(realized.get("changed_channel_values"), "PF3 changed values", positive=True)
+    extrema = _require_mapping(inventory.get("measurement_extrema"), "PF3 extrema")
+    if (
+        not all(value > 0.0 for value in joint_deltas)
+        or extrema.get("all_measured_coordinate_edges_worsen_joint_D") is not True
+    ):
+        raise AppliedActionAdapterError("PF3 measured family is not uniformly uphill")
+    if not _close(min(joint_deltas), float(extrema.get("delta_D_joint_min"))) or not _close(
+        max(joint_deltas), float(extrema.get("delta_D_joint_max"))
+    ):
+        raise AppliedActionAdapterError("PF3 family extrema differ")
+    if families != {"class_birth", "finer_event", "fisher_stratum"}:
+        raise AppliedActionAdapterError("PF3 coordinate-family inventory differs")
     blockers = (
         AdapterBlocker(
             code="PF3_APPLICATION_OPERATOR_VERSION_ABSENT",
@@ -425,29 +788,134 @@ def adapt_pf3_checkpoint(
             ),
         ),
     )
+    artifacts = _normalize_artifacts((receipt_artifact, *checkpoint_artifacts, *custody_artifacts))
     return AdaptationResult(
         source_kind="PF3",
         source_schema=PF3_CHECKPOINT_SCHEMA,
-        source_id=source_id,
+        source_id=_require_text(checkpoints[0].get("run_id"), "PF3 run_id"),
+        source_artifacts=artifacts,
+        source_counts=(
+            ("candidate_artifact_count", 16),
+            ("coordinate_family_count", len(families)),
+            ("uphill_edge_count", len(joint_deltas)),
+        ),
         blockers=blockers,
     )
 
 
-def adapt_j12_receipt(receipt: Mapping[str, Any], *, source_id: str) -> AdaptationResult:
+def adapt_j12_receipt(
+    receipt: Mapping[str, Any],
+    pricing_receipt: Mapping[str, Any],
+    *,
+    receipt_artifact: SourceArtifactIdentity,
+    pricing_artifact: SourceArtifactIdentity,
+    custody_artifacts: Sequence[SourceArtifactIdentity],
+) -> AdaptationResult:
     """Expose the exact J12 custody fields still owed by its producer."""
 
     receipt = _require_mapping(receipt, "J12 receipt")
+    pricing_receipt = _require_mapping(pricing_receipt, "J12 pricing receipt")
+    _bind_json_payload(receipt, receipt_artifact, "J12 receipt")
+    _bind_json_payload(pricing_receipt, pricing_artifact, "J12 pricing receipt")
     if receipt.get("schema") != J12_RECEIPT_SCHEMA:
         raise AppliedActionAdapterError("J12 receipt schema differs")
     if receipt.get("research_only") is not True or receipt.get("score_claim") is not False:
         raise AppliedActionAdapterError("J12 false-authority contract differs")
     source = _require_mapping(receipt.get("source"), "J12 source")
+    geometry = _require_mapping(receipt.get("measurement_geometry"), "J12 geometry")
+    if geometry.get("pair_count") != 600 or receipt.get("evidence_axis") != LOCAL_ADVISORY_AXIS:
+        raise AppliedActionAdapterError("J12 measurement is not n600 on its declared axis")
     step16 = _require_mapping(
         _require_mapping(receipt.get("pc1_adapter"), "J12 pc1_adapter").get("step16"),
         "J12 pc1 step16",
     )
-    _require_sha256(source.get("archive_sha256"), "J12 source archive SHA")
-    _require_sha256(step16.get("archive_sha256"), "J12 step16 archive SHA")
+    source_sha = _require_sha256(source.get("archive_sha256"), "J12 source archive SHA")
+    step16_sha = _require_sha256(step16.get("archive_sha256"), "J12 step16 archive SHA")
+    source_bytes = _require_int(source.get("archive_bytes"), "J12 source bytes", positive=True)
+    _require_int(step16.get("archive_bytes"), "J12 step16 bytes", positive=True)
+    pc1 = _require_mapping(receipt.get("pc1_adapter"), "J12 pc1 adapter")
+    if (
+        pc1.get("active_zero_archive_sha256") != source_sha
+        or pc1.get("active_zero_archive_bytes") != source_bytes
+        or pc1.get("active_zero_byte_identical") is not True
+    ):
+        raise AppliedActionAdapterError("J12 active-zero source identity differs")
+    if pricing_receipt.get("schema") != "ddm_j12_decomposition_pricing.v1":
+        raise AppliedActionAdapterError("J12 pricing schema differs")
+    if any(
+        pricing_receipt.get(key) is not expected
+        for key, expected in (
+            ("research_only", True),
+            ("score_claim", False),
+            ("promotion_eligible", False),
+        )
+    ):
+        raise AppliedActionAdapterError("J12 pricing false-authority contract differs")
+    counts = _require_mapping(pricing_receipt.get("counts"), "J12 pricing counts")
+    if counts.get("singles_total") != 16 or counts.get("composites_total") != 8:
+        raise AppliedActionAdapterError("J12 pricing family counts differ")
+    pricing_pc1 = _require_mapping(pricing_receipt.get("pc1_adapter"), "J12 pricing pc1")
+    if (
+        pricing_pc1.get("active_zero_archive_sha256") != source_sha
+        or pricing_pc1.get("active_zero_archive_bytes") != source_bytes
+        or pricing_pc1.get("archive_byte_identity") is not True
+    ):
+        raise AppliedActionAdapterError("J12 pricing active-zero identity differs")
+    rows = pricing_pc1.get("local_pose_descent_remeasurement")
+    if not isinstance(rows, list) or [row.get("accepted_step") for row in rows] != [0, 8, 16]:
+        raise AppliedActionAdapterError("J12 local remeasurement sequence differs")
+    for row, name in zip(rows, ("source", "step8", "step16"), strict=True):
+        compact = source if name == "source" else _require_mapping(pc1.get(name), f"J12 {name}")
+        if any(row.get(key) != compact.get(key) for key in ("archive_bytes", "archive_sha256", "d_seg", "d_pose")):
+            raise AppliedActionAdapterError(f"J12 compact {name} foreign keys differ from pricing")
+        old_d_seg = _require_finite(source.get("d_seg"), "J12 source d_seg")
+        old_d_pose = _require_finite(source.get("d_pose"), "J12 source d_pose")
+        new_d_seg = _require_finite(row.get("d_seg"), f"J12 {name} d_seg")
+        new_d_pose = _require_finite(row.get("d_pose"), f"J12 {name} d_pose")
+        new_bytes = _require_int(row.get("archive_bytes"), f"J12 {name} bytes", positive=True)
+        expected_delta = contest_score(new_d_seg, new_d_pose, new_bytes) - contest_score(
+            old_d_seg, old_d_pose, source_bytes
+        )
+        priced = _require_mapping(row.get("pure_priced_from_rehomed_step0"), f"J12 {name} priced delta")
+        if not _close(
+            _require_finite(priced.get("joint_delta"), f"J12 {name} joint delta", nonnegative=False),
+            expected_delta,
+        ):
+            raise AppliedActionAdapterError(f"J12 {name} nonlinear joint delta differs")
+        if name != "source" and not _close(
+            _require_finite(compact.get("joint_delta"), f"J12 compact {name} delta", nonnegative=False),
+            expected_delta,
+        ):
+            raise AppliedActionAdapterError(f"J12 compact {name} delta differs")
+    step8_sha = _require_sha256(
+        _require_mapping(pc1.get("step8"), "J12 step8").get("archive_sha256"),
+        "J12 step8 archive SHA",
+    )
+    endpoints = (
+        (source_sha, source_bytes),
+        (
+            step8_sha,
+            _require_int(
+                _require_mapping(pc1.get("step8"), "J12 step8").get("archive_bytes"),
+                "J12 step8 archive bytes",
+                positive=True,
+            ),
+        ),
+        (
+            step16_sha,
+            _require_int(step16.get("archive_bytes"), "J12 step16 archive bytes", positive=True),
+        ),
+    )
+    if not all(_has_custody(custody_artifacts, sha256=sha, bytes_count=size) for sha, size in endpoints):
+        raise AppliedActionAdapterError("J12 endpoint archive bytes were not custody-verified")
+    reseal = _require_mapping(receipt.get("reseal_state"), "J12 reseal state")
+    if reseal.get("status") != "PREPARED_REVIEW_REQUIRED":
+        raise AppliedActionAdapterError("J12 reseal blocker differs")
+    warning = _require_mapping(receipt.get("pc1_receiver_numerical_warning"), "J12 warning")
+    if warning.get("observed") is not True or warning.get("suppressed") is not False:
+        raise AppliedActionAdapterError("J12 numerical warning custody differs")
+    if set(warning.get("classes", ())) != {"divide_by_zero", "overflow", "invalid_value"}:
+        raise AppliedActionAdapterError("J12 numerical warning classes differ")
     blockers = (
         AdapterBlocker(
             code="J12_APPLICATION_OPERATOR_VERSION_ABSENT",
@@ -476,11 +944,30 @@ def adapt_j12_receipt(receipt: Mapping[str, Any], *, source_id: str) -> Adaptati
                 "whole-archive byte deltas alone do not identify the PC1 home."
             ),
         ),
+        AdapterBlocker(
+            code="J12_MAIN_RESEAL_REVIEW_REQUIRED",
+            source_key="reseal_state",
+            owed_field="merged-main reseal and review",
+            detail="The producer explicitly leaves the merged-main SHA reseal and MAIN review outstanding.",
+        ),
+        AdapterBlocker(
+            code="J12_PC1_NUMERICAL_WARNING_UNRESOLVED",
+            source_key="pc1_receiver_numerical_warning",
+            owed_field="fail-closed sanitize-or-reject disposition",
+            detail="Observed divide-by-zero, overflow, and invalid-value warnings remain unsuppressed.",
+        ),
     )
+    artifacts = _normalize_artifacts((receipt_artifact, pricing_artifact, *custody_artifacts))
     return AdaptationResult(
         source_kind="J12",
         source_schema=J12_RECEIPT_SCHEMA,
-        source_id=source_id,
+        source_id=_require_text(receipt.get("run_id"), "J12 run_id"),
+        source_artifacts=artifacts,
+        source_counts=(
+            ("composite_count", 8),
+            ("sealed_proposal_count", 4),
+            ("single_count", 16),
+        ),
         blockers=blockers,
     )
 
@@ -498,12 +985,115 @@ def build_adapter_manifest(results: Sequence[AdaptationResult]) -> dict[str, Any
         "results": rows,
         "receipt_count": sum(result.ok for result in results),
         "blocked_source_count": sum(not result.ok for result in results),
+        "source_artifact_count": sum(len(result.source_artifacts) for result in results),
         "research_only": True,
         "promotion_eligible": False,
         "score_claim": False,
     }
     payload["content_sha256"] = _canonical_sha256(payload)
+    validate_adapter_manifest(payload)
     return payload
+
+
+def validate_adapter_manifest(manifest: Mapping[str, Any]) -> None:
+    """Strictly validate counts, custody digests, authority, and self-hash."""
+
+    manifest = _require_mapping(manifest, "adapter manifest")
+    if set(manifest) != _MANIFEST_KEYS or manifest.get("schema") != ADAPTER_MANIFEST_SCHEMA:
+        raise AppliedActionAdapterError("adapter manifest keys/schema differ")
+    if any(
+        manifest.get(key) is not expected
+        for key, expected in (
+            ("research_only", True),
+            ("promotion_eligible", False),
+            ("score_claim", False),
+        )
+    ):
+        raise AppliedActionAdapterError("adapter manifest false-authority contract differs")
+    declared_hash = _require_sha256(manifest.get("content_sha256"), "manifest content_sha256")
+    unhashed = dict(manifest)
+    unhashed.pop("content_sha256")
+    if _canonical_sha256(unhashed) != declared_hash:
+        raise AppliedActionAdapterError("adapter manifest content hash differs")
+    rows = manifest.get("results")
+    if not isinstance(rows, list):
+        raise AppliedActionAdapterError("adapter manifest results must be an array")
+    receipts = blocked = artifact_total = 0
+    source_kinds: set[str] = set()
+    for index, row in enumerate(rows):
+        row = _require_mapping(row, f"adapter result {index}")
+        if set(row) != _RESULT_KEYS or row.get("schema") != ADAPTER_RESULT_SCHEMA:
+            raise AppliedActionAdapterError("adapter result keys/schema differ")
+        for key in ("source_kind", "source_schema", "source_id"):
+            _require_text(row.get(key), f"adapter result {key}")
+        source_kind = str(row["source_kind"])
+        if source_kind in source_kinds or source_kind not in _EXPECTED_SOURCE_COUNTS:
+            raise AppliedActionAdapterError("adapter source kind inventory differs")
+        source_kinds.add(source_kind)
+        if any(
+            row.get(key) is not expected
+            for key, expected in (
+                ("research_only", True),
+                ("promotion_eligible", False),
+                ("score_claim", False),
+            )
+        ):
+            raise AppliedActionAdapterError("adapter result false-authority contract differs")
+        ok = row.get("ok")
+        blockers = row.get("blockers")
+        receipt = row.get("receipt")
+        if not isinstance(blockers, list) or type(ok) is not bool:
+            raise AppliedActionAdapterError("adapter result outcome shape differs")
+        if ok is True:
+            if blockers or not isinstance(receipt, Mapping):
+                raise AppliedActionAdapterError("successful adapter result differs")
+            AppliedActionReceipt.from_dict(receipt)
+            receipts += 1
+        else:
+            if not blockers or receipt is not None:
+                raise AppliedActionAdapterError("blocked adapter result differs")
+            for blocker in blockers:
+                blocker = _require_mapping(blocker, "adapter blocker")
+                if set(blocker) != {"code", "source_key", "owed_field", "detail"}:
+                    raise AppliedActionAdapterError("adapter blocker keys differ")
+                for key in blocker:
+                    _require_text(blocker[key], f"adapter blocker {key}")
+            blocked += 1
+        artifacts = row.get("source_artifacts")
+        if not isinstance(artifacts, list) or not artifacts:
+            raise AppliedActionAdapterError("adapter source artifacts differ")
+        if row.get("source_artifact_count") != len(artifacts):
+            raise AppliedActionAdapterError("adapter source artifact count differs")
+        if row.get("source_artifact_digest_sha256") != _canonical_sha256(artifacts):
+            raise AppliedActionAdapterError("adapter source artifact digest differs")
+        paths: set[str] = set()
+        identities: list[SourceArtifactIdentity] = []
+        for artifact in artifacts:
+            artifact = _require_mapping(artifact, "source artifact")
+            if set(artifact) != {"path", "bytes", "sha256", "role", "json_content_sha256"}:
+                raise AppliedActionAdapterError("source artifact keys differ")
+            identity = SourceArtifactIdentity(**artifact)
+            if identity.path in paths:
+                raise AppliedActionAdapterError("source artifact path duplicated")
+            paths.add(identity.path)
+            identities.append(identity)
+        if identities != sorted(identities, key=lambda item: (item.path, item.role)):
+            raise AppliedActionAdapterError("source artifacts are not canonically ordered")
+        artifact_total += len(artifacts)
+        counts = row.get("source_counts")
+        if not isinstance(counts, Mapping) or not counts:
+            raise AppliedActionAdapterError("adapter source counts differ")
+        for key, value in counts.items():
+            _require_text(key, "source count key")
+            _require_int(value, f"source_counts.{key}")
+        if dict(counts) != dict(_EXPECTED_SOURCE_COUNTS[source_kind]):
+            raise AppliedActionAdapterError("adapter source semantic counts differ")
+    if manifest.get("receipt_count") != receipts or manifest.get("blocked_source_count") != blocked:
+        raise AppliedActionAdapterError("adapter manifest result counts differ")
+    if manifest.get("source_artifact_count") != artifact_total:
+        raise AppliedActionAdapterError("adapter manifest artifact count differs")
+    if source_kinds != set(_EXPECTED_SOURCE_COUNTS):
+        raise AppliedActionAdapterError("adapter source kind inventory differs")
 
 
 def load_json(path: str | Path) -> Mapping[str, Any]:
@@ -520,9 +1110,14 @@ __all__ = [
     "AdaptationResult",
     "AdapterBlocker",
     "AppliedActionAdapterError",
+    "SourceArtifactIdentity",
     "adapt_j8f_checkpoints",
     "adapt_j12_receipt",
-    "adapt_pf3_checkpoint",
+    "adapt_pf3_checkpoints",
     "build_adapter_manifest",
+    "canonical_json_sha256",
     "load_json",
+    "load_json_artifact",
+    "validate_adapter_manifest",
+    "verify_source_artifact",
 ]
