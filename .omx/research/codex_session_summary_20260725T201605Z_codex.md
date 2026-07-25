@@ -1,0 +1,3 @@
+# Codex session summary — 2026-07-25 PF3
+
+Landed a resumable local-CPU PF3 materializer over the existing RG3 alphabet. Measured 16 exact same-object coordinates, materialized 29/37 occupied MS4D buckets, preserved 0/162 RD1 actionable prices because every selected edge worsened joint distortion and RD1 lacks the exact PF3 application-edge identity, and held the stretch. Also found and fail-closed a cross-process ZSTD trained-dictionary reproducibility defect. See `codex_findings_ddm_pf3_finite_price_materialization_20260725T201605Z_codex.md`. MAIN review is required before merge or downstream use.

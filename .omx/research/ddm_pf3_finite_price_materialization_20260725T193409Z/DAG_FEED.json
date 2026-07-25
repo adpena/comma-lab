@@ -1,0 +1,106 @@
+{
+  "schema": "ddm_pf3_finite_price_materialization_DAG_FEED.v1",
+  "run_id": "ddm_pf3_finite_price_materialization_20260725T193409Z",
+  "lane_id": "ddm_pf3_finite_price_materialization",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "main_landing_review_required": true,
+  "competitive_frontier": "official leaderboard displayed 0.172; main owns canonical effective-frontier repair",
+  "local_cpu_baseline": "0.1910828242 [contest-CPU]",
+  "nodes": [
+    {
+      "id": "rg3_sealed_support",
+      "status": "MEASURED_REUSED",
+      "output": "124 signed existing RG3 probes; 68 event-hitting support checkpoints"
+    },
+    {
+      "id": "pf3_bounded_selection",
+      "depends_on": ["rg3_sealed_support"],
+      "status": "DERIVED_COMPLETE",
+      "output": "16 coordinates = top-five controls union weighted top-mass set cover union exact coordinate-owner hits"
+    },
+    {
+      "id": "deterministic_receiver_builder",
+      "depends_on": ["pf3_bounded_selection"],
+      "status": "MEASURED_COMPLETE",
+      "output": "16 of 16 source candidate archive SHA-256 identities reproduced"
+    },
+    {
+      "id": "real_uint8",
+      "depends_on": ["deterministic_receiver_builder"],
+      "status": "MEASURED_COMPLETE",
+      "output": "16 of 16 coordinates crossed the uint8 deadzone on one exact pair"
+    },
+    {
+      "id": "same_object_joint_delta",
+      "depends_on": ["real_uint8"],
+      "status": "MEASURED_COMPLETE_NONACTIONABLE",
+      "output": "all 16 increased errors and worsened joint distortion; delta_D_joint range [8.080492443064536e-07, 0.0034408734331484604]"
+    },
+    {
+      "id": "dimension_rate_home",
+      "depends_on": ["deterministic_receiver_builder"],
+      "status": "MEASURED_COMPLETE",
+      "output": "E4_BROTLI_Q11 exact parse-back marginal rate range [772, 939] bytes"
+    },
+    {
+      "id": "ms4d_bucket_materialization",
+      "depends_on": ["same_object_joint_delta", "dimension_rate_home"],
+      "status": "PARTIAL_MEASURED",
+      "output": "29 of 37 occupied buckets have all five PF3 edges; 8 retain typed bind or causal-join blockers"
+    },
+    {
+      "id": "conditional_coordinate_secant",
+      "depends_on": ["same_object_joint_delta", "dimension_rate_home"],
+      "status": "BLOCKED_ZERO_FINITE",
+      "output": "0 finite conditional coordinate secants because no selected physical edge improves joint D"
+    },
+    {
+      "id": "rd1_162_cell_backfill",
+      "depends_on": ["conditional_coordinate_secant"],
+      "status": "FAIL_CLOSED_COMPLETE",
+      "output": "0 of 162 actionable prices; all nulls preserved",
+      "blocker": "PF3_COORDINATE_TO_RD1_EXISTING_DUAL_EDGE_APPLICATION_OPERATOR_ABSENT"
+    },
+    {
+      "id": "stretch_partial_box_member",
+      "depends_on": ["rd1_162_cell_backfill"],
+      "status": "HELD_NOT_RUN",
+      "output": "25 RG4 exclusions retained; no honest price exists for allocation or byte-close"
+    }
+  ],
+  "artifacts": {
+    "typed_config": {
+      "path": ".omx/research/configs/ddm_pf3_finite_price_materialization_20260725.json",
+      "sha256": "ed65f2876d329e8925b386406104f5d623e7c97f0dc9ba0a03db8900ba82524f"
+    },
+    "receipt": {
+      "path": ".omx/research/ddm_pf3_finite_price_materialization_20260725T193409Z/receipt.json",
+      "sha256": "1e3273842d9c299d6c199f6d0c1b6b9c6108e4ec5a86813377f63b0ce4ad5d64"
+    },
+    "materialized_buckets": {
+      "path": ".omx/research/ddm_pf3_finite_price_materialization_20260725T193409Z/materialized_occupied_buckets.json",
+      "sha256": "6f850f8097638c2f17a98ed7655d44453d05b704637501b75bfe8b56eb581462"
+    },
+    "conditional_coordinate_prices": {
+      "path": ".omx/research/ddm_pf3_finite_price_materialization_20260725T193409Z/conditional_coordinate_prices.json",
+      "sha256": "6f848207d18d465c77e467de8c9bfd6fe7dce1e2bfdd4e49712cb68666e491e7"
+    },
+    "rd1_backfill": {
+      "path": ".omx/research/ddm_pf3_finite_price_materialization_20260725T193409Z/rd1_dual_backfill_pf3.json",
+      "sha256": "058e1c0f35ecbdbda8594415a2ffc0e96bcd5b8ee61b8ee907922a55199ad3e9"
+    }
+  },
+  "triality": {
+    "dsl": ".omx/research/configs/ddm_pf3_finite_price_materialization_20260725.json",
+    "dag": ".omx/research/ddm_pf3_finite_price_materialization_20260725T193409Z/DAG_FEED.json",
+    "equations": [
+      "cgauge_master_action_v1",
+      "ddm_restricted_realized_lambda_continuation_v1"
+    ],
+    "equation_registration": "NO_NEW_PRICE_LAW; missing object is a typed counted application operator, not an unregistered equation"
+  },
+  "verdict": "29_OF_37_OCCUPIED_BUCKETS_FIVE_EDGE_MATERIALIZED; 0_FINITE_CONDITIONAL_COORDINATE_SECANTS; 0_OF_162_ACTIONABLE_RD1_PRICES",
+  "verdict_scope": "PRECONDITION/INSTANCE; existing RG3 coordinates at the V19C local n600 endpoint; not a family or paradigm negative"
+}
