@@ -24759,3 +24759,14 @@ RESTRICTED to P1/P2/P3 receipts (card §20); conversion doctrine graded verdict_
 CARGO-CULTED/ASSUMED until an original exact contest-CPU row lands (the resolving measurement = P3).
 P1 arm ddm_p1 LIVE (frame_0 pose-quotient carrier, preregistered exact test, Contrarian veto active);
 P2 = j11-dependent; P3 = G5+R6 chain. Fleet ks1·j11·p1. Pointer UNMOVED.
+
+## FEED-603-ks1 (2026-07-25, isolated Codex landing — MAIN review required)
+SIGNAL: G3.5 local GREEN. RD1 knee custody bundle `0cd45580…6ce83` reconstructs exactly to
+the settled W_joint initial state `5aa45850…433e`; existing E5A emits a deterministic
+receiver-closed 130,093B packet `3e116929…4240`. Fresh n600/batch32
+`[macOS-CPU frozen-scorer advisory]`: d_seg 0.07051923116048177, d_pose
+36.618184751411334, S 26.274425245267324. The knee is 777B smaller than W_seg's E5 packet
+but has +0.046394721137152775 d_seg, so §7 yields **PRESUMPTIVE START CONFIRMED W_seg**.
+Nearest-reach BOX control excluded under the authorized guard: exact receiver-closed archive
+291,205,400B, no plausible ≤200KB existing-stream route (INSTANCE scope; family open).
+No resealer invoked. Research-only; pointer 0.1910828242 [contest-CPU] UNMOVED.

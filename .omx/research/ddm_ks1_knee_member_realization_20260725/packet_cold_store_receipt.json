@@ -1,0 +1,33 @@
+{
+  "schema": "ddm_ks1_knee_member_packet_cold_store_receipt.v1",
+  "written_at_utc": "2026-07-25T14:27:06Z",
+  "status": "PASS_COPY_BYTE_IDENTICAL",
+  "research_only": true,
+  "score_claim": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "packet": {
+    "original_path": ".omx/research/ddm_ks1_knee_member_realization_20260725/packet/archive.zip",
+    "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_ks1_knee_member_realization_20260725/e5a_packet/archive.zip",
+    "bytes": 130093,
+    "sha256": "3e116929e132f7a52d54e64a807b617a146629cab4fb0425b1ea83c948e44240",
+    "copy_verified_byte_identical": true
+  },
+  "source_state": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ks1_knee_member_realization_20260725/e5a_adapter/rd1_knee_W_joint.zip.receipt-bytes",
+    "bytes": 138801,
+    "sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e"
+  },
+  "reproduction": {
+    "adapter_config": ".omx/research/configs/ddm_ks1_knee_member_adapter_20260725.json",
+    "export_config": ".omx/research/configs/ddm_ks1_knee_member_e5a_export_20260725.json",
+    "export_receipt": ".omx/research/ddm_ks1_knee_member_realization_20260725/ddm_e5a_midcampaign_runtime_export_receipt.json",
+    "export_receipt_sha256": "06b3c05dde80140f18d364ffd4c13e418654cb724c1896d72ab0b79168cbe919",
+    "adapter_receipt_sha256": "da5d420f23f038306988b969f53f633c39e50723750179a92530343ceafe4053"
+  },
+  "cleanup": {
+    "certify_or_block": "no source, packet, decoded witness, or scorer checkpoint bytes deleted",
+    "local_packet_is_gitignored_rebuildable_output": true,
+    "cold_store_packet_preserved": true
+  }
+}

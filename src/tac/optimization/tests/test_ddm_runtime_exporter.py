@@ -16,6 +16,8 @@ from tac.optimization import ddm_runtime_exporter as exporter
 from tac.optimization import ddm_runtime_receiver as receiver
 from tac.optimization.ddm_e5a_midcampaign_adapter import (
     DDME5AMidcampaignCheckpointAdapterConfigV1,
+    DDME5ASolveMemberAdapterConfigV1,
+    compile_solve_member_bundle,
 )
 from tools import rehearse_ddm_runtime_upstream as harness
 
@@ -27,6 +29,12 @@ E5A_STEP50_STATE = Path(
     "/Volumes/VertigoDataTier/pact/experiments/results/"
     "ddm_ws4_pose_null_projected_seg_start_20260725T112500Z/01_archives/"
     "W_joint_step50_live.zip.receipt-bytes"
+)
+KS1_ADAPTER_CONFIG = (
+    REPO / ".omx/research/configs/ddm_ks1_knee_member_adapter_20260725.json"
+)
+KS1_EXPORT_CONFIG = (
+    REPO / ".omx/research/configs/ddm_ks1_knee_member_e5a_export_20260725.json"
 )
 
 
@@ -50,6 +58,26 @@ def test_e5a_adapter_config_refuses_non_ssd_checkpoint_custody() -> None:
                 "/Volumes/VertigoDataTier/pact/e5a/receipt.json"
             ),
         )
+
+
+def test_e5a_solve_member_adapter_reconstructs_rd1_knee_exactly() -> None:
+    config = DDME5ASolveMemberAdapterConfigV1.model_validate_json(
+        KS1_ADAPTER_CONFIG.read_bytes(),
+        strict=True,
+    )
+    state, proof = compile_solve_member_bundle(config)
+    assert len(state) == 138801
+    assert hashlib.sha256(state).hexdigest() == (
+        "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e"
+    )
+    assert proof["candidate_id"] == "statistics_hard_analytic_composed_frame1"
+
+
+def test_e5a_solve_member_export_config_uses_existing_e5a_route() -> None:
+    config = exporter.load_config(KS1_EXPORT_CONFIG)
+    assert isinstance(config, exporter.DDME5AMidcampaignRuntimeExporterConfigV1)
+    assert config.run_id == "ddm_ks1_knee_member_realization_20260725"
+    assert config.candidate == "W_joint"
 
 
 def test_blob_frame_roundtrip_and_terminal_tamper_refusal() -> None:
