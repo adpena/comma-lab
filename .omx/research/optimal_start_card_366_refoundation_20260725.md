@@ -245,3 +245,28 @@ NOT exhaustive — sy1's mechanical sweep supersedes it): #396/#400 MC-finisher 
 #425 phase carrier · costate organ (co1-co5) as Vehicle-A SENSE layer · #448 FreSh + #269 +
 #518 warm-start laws · #401 blind-fill + #580 full projector exploitation in Vehicle B ·
 rs1 relay solve (#659). Memory: composition-requires-mechanical-inventory-sweep.
+
+## 13a. EVIDENCE RE-GRADE + TELEMETRY CORPUS (operator 2026-07-25 — "fully leverage all
+## measured signal... with a grain of salt: may predate latest understanding, may bear on one
+## implementation, not the current one or the information space as a whole")
+Clause (5) of the COMPOSITION PROTOCOL: every measurement/equation/telemetry row a composition
+consumes carries an explicit VALIDITY TAG (recalls L18 ancestor-law + staleness-confound +
+verdict-scope + the a2 provenance audit — apply, don't reinvent):
+- FROZEN-SPACE FACT: property of the scorers/video themselves — transfers across ALL vehicles.
+  (rank-4 head geometry · 80.67% resize nullity · N(δ) margin mass · canonical class order ·
+  blind coordinates · evaluate.py structure · BEV staticity of the scene.)
+- VEHICLE-SCOPED: measured ON one implementation — the NUMBER does not transfer, the LESSON
+  may. (v19c asymptote 0.0244 = that proposal channel · banked-R1 0.00161 = that vehicle ·
+  attempt-5 −2.1e-4/step = that engine+start · PR-era constants = banned-lineage.)
+- STALE/PRE-UNDERSTANDING: interpreted before a later law landed (e.g. pre-§7 selection-law
+  arbitrations, pre-E7 binary reachability verdicts, pre-quantization-gate realization reads)
+  — RE-DERIVE before consuming; citing the old interpretation is the staleness confound.
+Consuming a VEHICLE-SCOPED number as if FROZEN-SPACE, or a STALE verdict as current, is the
+same fake class as surrogate-as-authority. 407 canonical equations get this tag AT CONSUMPTION
+(not a bulk re-audit — freshness at consumption per the staleness law).
+TELEMETRY CORPUS (under-leveraged, now in the mechanical sweep): past long-run telemetry
+(#205 · c2 campaign · v9c2 · attempt-5 · bounded windows) = measured memory envelopes,
+step-time distributions, term-domination/spike/EMA histories, verdict cadences — Vehicle A's
+engine constants come FROM this corpus (mostly FROZEN-APPARATUS facts: machine+scorer costs)
+rather than re-guessed; each row still tagged, since telemetry measured under a dead config
+(e.g. loop-end-only saves, uniform cycling) describes THAT config's dynamics.
