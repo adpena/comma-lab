@@ -410,3 +410,27 @@ step-50 archive (sha 2a2c0367…). Acceptance rule untouched. §18 coherence tes
 channel + ms3/ms4 + #580 + pc2 + sy1 S2 (all existing, zero new families); row-path position = G1 completion → post-merge
 reseal (idempotent resealer landed) → worst-geometry receipt → G5 → FIRE (with MAIN). After j11 realizes ΔS<0: reseal
 against merged-main consumer/launcher SHAs per j10's post-merge contract.
+
+## §20 THE gc4-RESTRICTED PROGRAM: P1·P2·P3 — three receipts, synthesis refused otherwise (2026-07-25, merged 20679b28f0)
+
+STORES CONSULTED: gc4 council memo (roster/votes/dissent reviewed; PR130 S recomposed by MAIN to 0.172141 —
+CONSISTENT) · card §18/§19 · pc1/pc2 receipts · frozen-scorer factorization · ms3/ms4 bundle.
+
+Full-pantheon verdict PROCEED_WITH_REVISIONS. PR130 (0.172142 [contest-CUDA external]) = a verified JOINT
+existence proof (seg 2.966e-4 × pose 2.331e-5 × 191,052B coexist) — refutes any inaccessible-joint-target
+doctrine; NOT adoption authority; quarantine holds (no code/weights/bases/constants/score transfer).
+**The conversion doctrine ("our deeper understanding converts to lower S") is graded CARGO-CULTED /
+ASSUMED_AWAITING_VERIFICATION** — the resolving measurement is an ORIGINAL exact contest-CPU archive below
+the pointer. The next program is RESTRICTED to three receipts; more synthesis is refused unless it changes
+or typed-blocks one:
+- **P1** — original frame_0 pose-quotient carrier + exact matched control (Contrarian veto until the
+  preregistered exact test passes). ARM LIVE: ddm_p1 (derived-rank solve against the ms3/ms4 quadratic on
+  OUR frame_0-seg-free fact; PASS bars preregistered: d_pose ≤5e-5, Δd_seg=0 verified, ≤30KB). This is the
+  missing pose leg of the composing triple (PC1 = 163-class; triple needs 2.94e-5-class).
+- **P2** — the owed j10 ten-interval same-parent exact trace → live support renewal · decay · class
+  collateral · packed-byte marginal · conditional residual price · D*. RIDES ON j11 (LIVE): the trace
+  needs a descending window, which j11's opening cure produces. Closes G2 (db1's named closure input).
+- **P3** — one original single-SHA G5 archive via the S7 discriminator + M1-M9 sheet → exact contest-CPU
+  FIRST, CUDA separately. = the existing G5 reseal + R6 chain; fires when G1(j11)+G3.5(ks1) clear.
+§18 coherence verified: zero new families; every receipt consumes existing landed machinery; fleet 3/4
+(ks1·j11·p1) maps 1:1 onto the program. Pointer 0.1910828242 [contest-CPU] UNMOVED — all of this is means.

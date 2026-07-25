@@ -24752,3 +24752,10 @@ camera Q8) misaligned with contest gradient from BOTH starts → cure = proposal
 via ms3/ms4 pose quadratic + #580 projector), NOT a new start. KEEP_WJOINT-STEP-50 stands (ws3+ws4 concur). Reopener
 arm j11 chartered (singles + composed pairs w/ PC1 pose coords, acceptance rule UNCHANGED, ws4-preserved archive
 2a2c0367 source). Card §19. Pointer 0.1910828242 [contest-CPU] UNMOVED — all of this is means.
+
+FEED-603-gc4-route (2026-07-25, MAIN): gc4 MERGED 20679b28f0 — full-pantheon PR130 adjudication
+PROCEED_WITH_REVISIONS. PR130 recomposed-CONSISTENT by MAIN (0.172141 vs claimed 0.172142). Program
+RESTRICTED to P1/P2/P3 receipts (card §20); conversion doctrine graded verdict_scope: assumption —
+CARGO-CULTED/ASSUMED until an original exact contest-CPU row lands (the resolving measurement = P3).
+P1 arm ddm_p1 LIVE (frame_0 pose-quotient carrier, preregistered exact test, Contrarian veto active);
+P2 = j11-dependent; P3 = G5+R6 chain. Fleet ks1·j11·p1. Pointer UNMOVED.
