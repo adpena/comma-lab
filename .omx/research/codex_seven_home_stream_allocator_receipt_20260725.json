@@ -1,0 +1,368 @@
+{
+  "applied_action_receipt_count": 0,
+  "dynamic_target": {
+    "axis": "official_leaderboard",
+    "custody": "external target only; no local archive authority implied",
+    "evidence_grade": "[official-leaderboard display]",
+    "score": 0.172,
+    "source": "upstream_official_leaderboard",
+    "source_kind": "external_public_leaderboard_target"
+  },
+  "exact_score_transition": null,
+  "input_artifacts": {
+    "cc3": {
+      "file_sha256": "1aed9bba14ab2e6c37a5a87ec7dba43506a6f94d18c4b5b444026f693675a44f",
+      "path": ".omx/research/ddm_cc3_mixed_coder_receiver_receipt_20260725.json"
+    },
+    "e5a": {
+      "file_sha256": "8da121be9bf3180e4dc0b1252cf2c2e6c0c2d57afbeae213680bd1d613d9b9ce",
+      "path": ".omx/research/ddm_e5a_midcampaign_e5_adapter_20260725/ddm_e5a_midcampaign_runtime_export_receipt.json"
+    },
+    "ev2": {
+      "file_sha256": "db9e5153d18f2f8c149080f57b608d9c74245d400a0c39fee0570dec467d7056",
+      "path": ".omx/research/ddm_ev2_per_pair_allocation_20260725T041933Z/allocation_table.json"
+    },
+    "pointer": {
+      "file_sha256": "21908c8f363c5483e73bf90b1ed983ff83d22cfb563f2c3d4cc316719add5083",
+      "path": ".omx/state/canonical_frontier_pointer.json"
+    }
+  },
+  "input_receipt_manifests": [
+    {
+      "blocked_results": [
+        {
+          "blockers": [
+            {
+              "code": "J8F_FINAL_CHANGED_UINT8_IDENTITY_ABSENT",
+              "detail": "The twelve ordered per-step sparse identities are preserved, but their incidence sum/hash is not the unique final base-to-candidate uint8 diff required by v1.",
+              "owed_field": "changed_uint8_count,changed_uint8_sha256",
+              "source_key": "application[*].projected_application.delta_sha256_int64_indices_int16_values"
+            },
+            {
+              "code": "J8F_SINGLE_LAWFUL_BYTE_HOME_ABSENT",
+              "detail": "The source preserves whole-archive bytes but no typed stream/layer/coder-owner foreign key; J5 coordinate sequence is not an EV2 seven-home allocation.",
+              "owed_field": "stream_home",
+              "source_key": "range_gauge_projected_arm.archive.bytes"
+            },
+            {
+              "code": "J8F_PER_STEP_SCORE_TRANSITIONS_ABSENT",
+              "detail": "Only the final twelve-action composition has an n600 scorer transition, so the individually identity-complete applications cannot be emitted as measured rows.",
+              "owed_field": "action_effect.old/new d_seg,d_pose,bytes per applied codeword",
+              "source_key": "application[*].projected_application"
+            }
+          ],
+          "source_id": "ddm_j8f_counted_application_20260724T181414Z",
+          "source_kind": "J8F"
+        },
+        {
+          "blockers": [
+            {
+              "code": "PF3_APPLICATION_OPERATOR_VERSION_ABSENT",
+              "detail": "Pipeline symbols and a source-coordinate checkpoint hash do not bind the exact application implementation bytes that built the candidate.",
+              "owed_field": "application_operator_version",
+              "source_key": "five_pf3_edges.receiver_object_builder.pipeline"
+            },
+            {
+              "code": "PF3_RECEIVER_SHA256_ABSENT",
+              "detail": "The archive and frozen scorer modules are SHA-bound, but the complete builder/parse-back/R receiver chain has no single implementation identity.",
+              "owed_field": "receiver_sha256",
+              "source_key": "five_pf3_edges.receiver_object_builder"
+            },
+            {
+              "code": "PF3_CHANGED_UINT8_SHA256_ABSENT",
+              "detail": "Producer must preserve the exact sparse uint8 index/value identity for this V19C_BASE -> one RG3 coordinate edge; candidate archive SHA is not a substitute.",
+              "owed_field": "changed_uint8_sha256",
+              "source_key": "five_pf3_edges.realized_uint8_quantum.changed_channel_values"
+            }
+          ],
+          "source_id": "/Volumes/VertigoDataTier/pact/ddm_pf3_finite_price_materialization_20260725T193409Z/stage_checkpoints/02_candidates/001.json",
+          "source_kind": "PF3"
+        },
+        {
+          "blockers": [
+            {
+              "code": "J12_APPLICATION_OPERATOR_VERSION_ABSENT",
+              "detail": "Bind the exact PC1 apply/parse/receive implementation source SHA-256.",
+              "owed_field": "application_operator_version",
+              "source_key": "pc1_adapter.receiver_equation"
+            },
+            {
+              "code": "J12_RECEIVER_SHA256_ABSENT",
+              "detail": "Bind the exact receiver/R implementation identity, not only its prose chain.",
+              "owed_field": "receiver_sha256",
+              "source_key": "measurement_geometry.receiver_chain"
+            },
+            {
+              "code": "J12_CHANGED_UINT8_IDENTITY_ABSENT",
+              "detail": "Preserve the final source->step16 sparse uint8 change count and identity.",
+              "owed_field": "changed_uint8_count,changed_uint8_sha256",
+              "source_key": "pc1_adapter.step16"
+            },
+            {
+              "code": "J12_SINGLE_LAWFUL_BYTE_HOME_ABSENT",
+              "detail": "Name one typed stream/layer home with coder owner and before/after bytes; whole-archive byte deltas alone do not identify the PC1 home.",
+              "owed_field": "stream_home",
+              "source_key": "pc1_adapter.step16.archive_bytes"
+            }
+          ],
+          "source_id": "/Users/adpena/Projects/pact/.omx/research/ddm_j12_366_receiver_coordinate_custody_receipt_20260725.json",
+          "source_kind": "J12"
+        }
+      ],
+      "declared_content_sha256": "3a94d33f298632e6b15662170c6a1382697b8a24420c3a4ab8000b164afba333",
+      "file_sha256": "df3546e0da9ed3c8e2143fefb1ca3376fdafd21e5ad7177c5e71fb050fafe671",
+      "path": ".omx/research/applied_action_adapter_manifest_20260725.json",
+      "receipt_count": 0,
+      "schema": "tac.applied_action_adapter_manifest.v1"
+    }
+  ],
+  "interaction_or_commutator_blockers": [
+    "NO_VALID_APPLIED_ACTION_RECEIPT_ROWS_AVAILABLE"
+  ],
+  "legacy_real_evidence": {
+    "cc3": {
+      "allocation_authority": false,
+      "blocker": "NO_SEVEN_HOME_APPLIED_ACTION_RECEIPT_FOREIGN_KEYS",
+      "candidate_archive": {
+        "bytes": 136116,
+        "sha256": "ba18024211ff2e1de189d1a094b157c63aac86b21dca2dbce331e4385e49aebe"
+      },
+      "measured_delta_bytes": -3422,
+      "schema": "ddm_cc3_mixed_coder_receiver_integration_mirror.v1",
+      "source_archive": {
+        "bytes": 139538,
+        "sha256": "08d03f75f818b22c9a9a6aad33c6f879001743f80b66d71fe1fc9b3a094567a2"
+      }
+    },
+    "disposition": "MEASURED_LEGACY_RATE_AND_RECEIVER_EVIDENCE; NOT_SELECTABLE_WITHOUT_IDENTITY_COMPLETE_APPLIED_ACTION_RECEIPTS",
+    "e5a": {
+      "allocation_authority": false,
+      "archive": {
+        "bytes": 130101,
+        "sha256": "fb69964da2649c310b7694416ff9863e13f54594af215cd771dcd50f5898a85d"
+      },
+      "blocker": "E5A_COMPONENTS_ARE_NOT_EV2_HOME_APPLIED_ACTION_RECEIPTS",
+      "la1_component_count": 7,
+      "packed_minus_unpacked_bytes": -8712,
+      "receiver_closed": true,
+      "schema": "ddm_e5a_midcampaign_runtime_export_receipt.v1"
+    }
+  },
+  "opportunity_pools": [],
+  "plan_content_sha256": "b8bfeec9adfe276d57ce8fbc9f7a029027ede09cd608d8b2d723189b8b3490bd",
+  "pointer_moved": false,
+  "policy": {
+    "coder_alternatives_same_home_mutually_exclusive": true,
+    "cross_base_price_transfer_used": false,
+    "cross_edge_price_transfer_used": false,
+    "exactly_one_owner_per_home": true,
+    "independent_component_thresholds_used": false,
+    "linearized_pose_used": false,
+    "pf3_coordinate_and_wf7_stream_pools_additive": false
+  },
+  "promotion_eligible": false,
+  "receipt_manifest_count": 1,
+  "rejected": [],
+  "research_only": true,
+  "schema": "tac.seven_home_allocation_plan.v1",
+  "score_claim": false,
+  "selected_home_owners": [
+    {
+      "bytes_after": 3345,
+      "bytes_before": 3345,
+      "coder_id": "EV2_EXISTING_OWNER",
+      "delta_bytes": 0,
+      "home_id": "manifest",
+      "owner": "exact v15 outer ZIP unique home",
+      "physical_edge_id": null,
+      "receipt_id": null,
+      "selection": "BASELINE_OWNER"
+    },
+    {
+      "bytes_after": 100099,
+      "bytes_before": 100099,
+      "coder_id": "EV2_EXISTING_OWNER",
+      "delta_bytes": 0,
+      "home_id": "v15_predictor_zip_outer_home",
+      "owner": "exact v15 outer ZIP unique home",
+      "physical_edge_id": null,
+      "receipt_id": null,
+      "selection": "BASELINE_OWNER"
+    },
+    {
+      "bytes_after": 29878,
+      "bytes_before": 29878,
+      "coder_id": "EV2_EXISTING_OWNER",
+      "delta_bytes": 0,
+      "home_id": "g1_movable_worldsheet_outer_home",
+      "owner": "exact v15 outer ZIP unique home",
+      "physical_edge_id": null,
+      "receipt_id": null,
+      "selection": "BASELINE_OWNER"
+    },
+    {
+      "bytes_after": 85,
+      "bytes_before": 85,
+      "coder_id": "EV2_EXISTING_OWNER",
+      "delta_bytes": 0,
+      "home_id": "receiver_realization_profile",
+      "owner": "exact v15 outer ZIP unique home",
+      "physical_edge_id": null,
+      "receipt_id": null,
+      "selection": "BASELINE_OWNER"
+    },
+    {
+      "bytes_after": 151,
+      "bytes_before": 151,
+      "coder_id": "EV2_EXISTING_OWNER",
+      "delta_bytes": 0,
+      "home_id": "solved_template_outer_home",
+      "owner": "exact v15 outer ZIP unique home",
+      "physical_edge_id": null,
+      "receipt_id": null,
+      "selection": "BASELINE_OWNER"
+    },
+    {
+      "bytes_after": 383,
+      "bytes_before": 383,
+      "coder_id": "EV2_EXISTING_OWNER",
+      "delta_bytes": 0,
+      "home_id": "central_directory_and_eocd",
+      "owner": "exact v15 outer ZIP unique home",
+      "physical_edge_id": null,
+      "receipt_id": null,
+      "selection": "BASELINE_OWNER"
+    },
+    {
+      "bytes_after": 270,
+      "bytes_before": 270,
+      "coder_id": "EV2_EXISTING_OWNER",
+      "delta_bytes": 0,
+      "home_id": "lane_program_seed",
+      "owner": "LP1 measured receiver-owning delta outside v15 control ZIP",
+      "physical_edge_id": null,
+      "receipt_id": null,
+      "selection": "BASELINE_OWNER"
+    }
+  ],
+  "selected_identity": null,
+  "seven_home_derivation": {
+    "authority": "EV2_EXACT_CONSTRUCTION_LINEAGE",
+    "counted_bytes": 134211,
+    "home_count": 7,
+    "rows": [
+      {
+        "archive_member": "manifest.json",
+        "byte_range": [
+          0,
+          3345
+        ],
+        "counted_bytes": 3345,
+        "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
+        "home_id": "manifest",
+        "source_home": "exact v15 outer ZIP unique home",
+        "typed_home": {
+          "layer_home": "L1_program",
+          "type": "PROGRAM"
+        }
+      },
+      {
+        "archive_member": "predictor.zip",
+        "byte_range": [
+          3345,
+          103444
+        ],
+        "counted_bytes": 100099,
+        "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
+        "home_id": "v15_predictor_zip_outer_home",
+        "source_home": "exact v15 outer ZIP unique home",
+        "typed_home": {
+          "layer_home": "L2_chart_grammar",
+          "type": "CONTEXT"
+        }
+      },
+      {
+        "archive_member": "predict/movable_polygon_worldsheet.g1s",
+        "byte_range": [
+          103444,
+          133322
+        ],
+        "counted_bytes": 29878,
+        "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
+        "home_id": "g1_movable_worldsheet_outer_home",
+        "source_home": "exact v15 outer ZIP unique home",
+        "typed_home": {
+          "layer_home": "L2_chart_grammar",
+          "type": "CONTEXT"
+        }
+      },
+      {
+        "archive_member": "render/receiver_realization.ddrp",
+        "byte_range": [
+          133322,
+          133407
+        ],
+        "counted_bytes": 85,
+        "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
+        "home_id": "receiver_realization_profile",
+        "source_home": "exact v15 outer ZIP unique home",
+        "typed_home": {
+          "layer_home": "L1_program",
+          "type": "PROGRAM"
+        }
+      },
+      {
+        "archive_member": "render/scorer_solved_templates.ddst",
+        "byte_range": [
+          133407,
+          133558
+        ],
+        "counted_bytes": 151,
+        "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
+        "home_id": "solved_template_outer_home",
+        "source_home": "exact v15 outer ZIP unique home",
+        "typed_home": {
+          "layer_home": "L4_scorer_feature",
+          "type": "FIBER"
+        }
+      },
+      {
+        "archive_member": "__central_directory_and_eocd__",
+        "byte_range": [
+          133558,
+          133941
+        ],
+        "counted_bytes": 383,
+        "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
+        "home_id": "central_directory_and_eocd",
+        "source_home": "exact v15 outer ZIP unique home",
+        "typed_home": {
+          "layer_home": "L1_program",
+          "type": "PROGRAM"
+        }
+      },
+      {
+        "archive_member": null,
+        "byte_range": null,
+        "counted_bytes": 270,
+        "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
+        "home_id": "lane_program_seed",
+        "source_home": "LP1 measured receiver-owning delta outside v15 control ZIP",
+        "typed_home": {
+          "layer_home": "L2_chart_grammar",
+          "type": "CONTEXT"
+        }
+      }
+    ]
+  },
+  "status": "BLOCKED_NO_VALID_APPLIED_TRANSITION",
+  "unpriced_homes": [
+    "manifest",
+    "v15_predictor_zip_outer_home",
+    "g1_movable_worldsheet_outer_home",
+    "receiver_realization_profile",
+    "solved_template_outer_home",
+    "central_directory_and_eocd",
+    "lane_program_seed"
+  ]
+}
