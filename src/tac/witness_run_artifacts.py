@@ -44,6 +44,14 @@ from pathlib import Path
 # and the drifted ``levelset_v752_baseline_*`` are both siblings under this family.
 RUN_DIR_GLOB = "levelset_*"
 
+# Governed DDM campaigns use a typed Python launcher rather than a generated
+# ``launch.sh``.  These markers are deliberately name-agnostic: a campaign
+# directory is identified by its custody artifacts, never by a transient
+# ``ddm_*`` prefix.
+DDM_RUN_IDENTITY_JSON = "run_identity.json"
+DDM_LAUNCH_MANIFEST_JSON = "launch_manifest.json"
+DDM_FULL_RUN_RECEIPT_JSON = "full_run_receipt.json"
+
 # ---- trainer-written artifacts (the run's PRODUCED outputs) -------------------
 BEST_JSON = "levelset_best.json"                       # tiny best-checkpoint pointer
 RESUME_NPZ = "levelset_resume_state.npz"               # crash-resume state sidecar
@@ -127,7 +135,15 @@ def is_run_dir(path: Path | str) -> bool:
         return False
     if p.match(RUN_DIR_GLOB):
         return True
-    return (p / "launch.sh").is_file() and (p / "run.log").is_file()
+    witness_markers = (p / "launch.sh").is_file() and (p / "run.log").is_file()
+    ddm_campaign_markers = (
+        (p / "run.log").is_file()
+        and (p / DDM_RUN_IDENTITY_JSON).is_file()
+        and (p / DDM_LAUNCH_MANIFEST_JSON).is_file()
+        and (p / "checkpoints").is_dir()
+        and (p / "telemetry").is_dir()
+    )
+    return witness_markers or ddm_campaign_markers
 
 
 def signal_paths(run_dir: Path | str) -> list[Path]:
