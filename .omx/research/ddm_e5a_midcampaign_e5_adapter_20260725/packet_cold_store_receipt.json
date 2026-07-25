@@ -1,0 +1,39 @@
+{
+  "schema": "ddm_e5a_packet_cold_store_receipt.v1",
+  "written_at_utc": "2026-07-25T13:37:59Z",
+  "original_path": ".omx/research/ddm_e5a_midcampaign_e5_adapter_20260725/packet/archive.zip",
+  "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_ct1_campaign_telemetry_encode_20260725/e5a_runtime/candidate_packet/archive.zip",
+  "bytes": 130101,
+  "sha256": "fb69964da2649c310b7694416ff9863e13f54594af215cd771dcd50f5898a85d",
+  "copy_status": "PASS_BIT_IDENTICAL",
+  "source_archive": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ct1_campaign_telemetry_encode_20260725/e5a_adapter/W_joint_step50_live.receiver_closed.zip.receipt-bytes",
+    "bytes": 138813,
+    "sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241"
+  },
+  "reproduction": {
+    "tool": "tools/ddm_r6_rehearsal.py",
+    "export_config_path": ".omx/research/configs/ddm_e5a_midcampaign_runtime_export_20260725.json",
+    "export_receipt_path": ".omx/research/ddm_e5a_midcampaign_e5_adapter_20260725/ddm_e5a_midcampaign_runtime_export_receipt.json",
+    "export_receipt_sha256": "8da121be9bf3180e4dc0b1252cf2c2e6c0c2d57afbeae213680bd1d613d9b9ce",
+    "compiler_determinism_x2": true
+  },
+  "repository_disposition": {
+    "archive_is_gitignored": true,
+    "archive_bytes_committed": false,
+    "inflater_and_machine_readable_receipts_committed": true,
+    "reason": "Exact candidate bytes are preserved on the SSD custody tier and are deterministically rebuildable; repository policy rejects gitignored archives."
+  },
+  "false_authority": {
+    "research_only": true,
+    "score_claim": false,
+    "execution_allowed": false,
+    "pointer_moved": false,
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]"
+  },
+  "cleanup": {
+    "source_deleted": false,
+    "cold_store_copy_preserved": true,
+    "certify_or_block": "PASS"
+  }
+}

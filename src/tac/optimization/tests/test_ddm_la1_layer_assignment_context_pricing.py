@@ -11,7 +11,10 @@ from tac.optimization.ddm_la1_layer_assignment_context_pricing import (
     _decode_explicit,
     _encode_explicit,
     _extract_streams,
+    decode_la1_frame,
+    encode_la1_frame,
     materialize,
+    race_payload,
     race_stream,
 )
 
@@ -43,6 +46,18 @@ def test_context_race_uses_uniform_framing_and_scoped_winner() -> None:
     assert {arm["ownership"] for arm in row["arms"]} == {"RESIDUAL", "CONTEXT"}
     assert all(arm["header_bytes"] == 46 for arm in row["arms"])
     assert row["verdict_scope"].startswith("INSTANCE:")
+
+
+def test_generic_la1_race_exposes_canonical_selected_frame() -> None:
+    raw = bytes(range(251)) * 31
+    row = race_payload("e5a_wrapper_program", raw, current_home_bytes=len(raw))
+    frame = encode_la1_frame(raw, row["selected_codec"])
+    assert len(frame) == row["selected_framed_bytes"]
+    assert decode_la1_frame(frame, row["selected_codec"]) == raw
+    assert encode_la1_frame(
+        decode_la1_frame(frame, row["selected_codec"]),
+        row["selected_codec"],
+    ) == frame
 
 
 def test_extract_exact_c1_homes_and_separate_lane_payload() -> None:

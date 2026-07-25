@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Read-only R6 rehearsal and copied-checkpoint resume audit for DDM campaigns.
+"""Read-only R6 rehearsal and copied-checkpoint E5 export audit for DDM campaigns.
 
 The source campaign directory is sacred.  This tool first snapshots it to the
 governed SSD proof tier, then performs all inspection and the launcher
-``--resume-proof`` against that copy.  It never invokes an n600 scorer.
+``--resume-proof`` against that copy.  The E5A path materializes the copied
+checkpoint's live resume-state shadow and invokes only the existing E5 compiler.
 """
 
 from __future__ import annotations
@@ -32,7 +33,22 @@ from costate_digest import (  # noqa: E402
     discover_latest_ddm_campaign_run,
     read_ddm_campaign_observability,
 )
+from remeasure_ddm_e4_ws1_packet import (  # noqa: E402
+    DDME5APacketRemeasureConfigV1,
+)
+from remeasure_ddm_e4_ws1_packet import (  # noqa: E402
+    remeasure as remeasure_e5a_packet,
+)
 
+from tac.optimization.ddm_e5a_midcampaign_adapter import (  # noqa: E402
+    DDME5AMidcampaignCheckpointAdapterConfigV1,
+    materialize_midcampaign_checkpoint,
+)
+from tac.optimization.ddm_runtime_exporter import (  # noqa: E402
+    DDME5AMidcampaignRuntimeExporterConfigV1,
+    derive_ws1_grammar_stream_manifest,
+    export_ws1_runtime,
+)
 from tac.optimization.direct_description_measurement_ladder import (  # noqa: E402
     rfc8785_canonicalize,
 )
@@ -95,6 +111,58 @@ def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
         handle.flush()
         os.fsync(handle.fileno())
     os.replace(tmp, path)
+
+
+def _materialize_decoded_raw(
+    *,
+    stage_root: Path,
+    destination: Path,
+    expected_bytes: int,
+    expected_sha256: str,
+) -> dict[str, Any]:
+    """Concatenate preserved E5 output stages without rerendering them."""
+
+    stages = sorted(stage_root.glob("pairs_*.raw"))
+    if len(stages) != 19:
+        raise RehearsalError("E5 output identity lacks 19 preserved raw stages")
+    expected_names = [
+        f"pairs_{start:04d}_{min(start + 32, 600):04d}.raw"
+        for start in range(0, 600, 32)
+    ]
+    if [path.name for path in stages] != expected_names:
+        raise RehearsalError("E5 output stage order differs")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if not destination.exists():
+        temporary = destination.with_name(f".{destination.name}.{os.getpid()}.tmp")
+        with temporary.open("xb") as output:
+            for stage in stages:
+                state_path = stage.with_suffix(".json")
+                state = json.loads(state_path.read_bytes())
+                if (
+                    state.get("bytes") != stage.stat().st_size
+                    or state.get("sha256") != _sha256_file(stage)
+                ):
+                    raise RehearsalError(
+                        f"preserved E5 output stage custody differs: {stage.name}"
+                    )
+                with stage.open("rb") as source:
+                    while chunk := source.read(8 * 1024 * 1024):
+                        output.write(chunk)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, destination)
+    observed = (destination.stat().st_size, _sha256_file(destination))
+    if observed != (expected_bytes, expected_sha256):
+        raise RehearsalError(
+            f"concatenated E5 output identity differs: {observed!r}"
+        )
+    return {
+        "bytes": observed[0],
+        "path": str(destination),
+        "sha256": observed[1],
+        "source_stage_count": len(stages),
+        "status": "PASS_CONCATENATED_FROM_PRESERVED_STAGES",
+    }
 
 
 def _ticket_from_launch_manifest(run_dir: Path) -> Path:
@@ -264,19 +332,104 @@ def rehearse(
         proof_root / "sealed_admission_memory_receipt_copy.json",
     )
 
-    # E5 accepts a receiver-closed WS1 archive plus exactly two typed grammar
-    # streams.  The campaign checkpoint contains optimizer/cursor state and only
-    # an archive identity, not the realized archive bytes themselves.  Crossing
-    # that boundary would fabricate a state, so R6 refuses before export.
     realized_archive = metadata.get("realized_archive") or {}
-    checkpoint_has_realized_archive_bytes = any(
-        name in metadata["_npz_members"]
-        for name in ("archive", "archive_bytes", "realized_archive")
+    if (
+        not isinstance(realized_archive, dict)
+        or realized_archive.get("parameter_shadow") != "live_resume_state"
+        or not isinstance(realized_archive.get("lane_programs_materialized"), bool)
+        or not isinstance(realized_archive.get("bytes"), int)
+        or not isinstance(realized_archive.get("sha256"), str)
+    ):
+        raise RehearsalError(
+            "checkpoint lacks a typed live-resume realized-archive identity"
+        )
+    adapter_root = proof_root / "e5a_adapter"
+    adapter_config = DDME5AMidcampaignCheckpointAdapterConfigV1(
+        ticket_path=str(ticket),
+        ticket_sha256=_sha256_file(ticket),
+        checkpoint_path=str(checkpoint),
+        checkpoint_bytes=checkpoint.stat().st_size,
+        checkpoint_sha256=_sha256_file(checkpoint),
+        expected_stage_id=str(metadata["stage_id"]),
+        expected_global_step=int(metadata["step"]),
+        expected_lane_programs_materialized=bool(
+            realized_archive["lane_programs_materialized"]
+        ),
+        expected_state_bytes=int(realized_archive["bytes"]),
+        expected_state_sha256=str(realized_archive["sha256"]),
+        output_state_path=str(
+            adapter_root / "W_joint_step50_live.receiver_closed.zip.receipt-bytes"
+        ),
+        output_receipt_path=str(adapter_root / "receipt.json"),
     )
-    exporter_blocker = (
-        "R6_BLOCKED_E5_MIDCAMP_CHECKPOINT_ADAPTER_ABSENT"
-        if not checkpoint_has_realized_archive_bytes
-        else None
+    adapter = materialize_midcampaign_checkpoint(adapter_config)
+    state_path = Path(str(adapter["state"]["path"]))
+    state_payload = state_path.read_bytes()
+    stream_manifest = derive_ws1_grammar_stream_manifest(state_payload)
+    adapter_receipt_path = Path(adapter_config.output_receipt_path)
+    exporter_config_path = (
+        REPO
+        / ".omx/research/configs/ddm_e5a_midcampaign_runtime_export_20260725.json"
+    )
+    exporter_config = DDME5AMidcampaignRuntimeExporterConfigV1(
+        source_archive_path=str(state_path),
+        source_archive_bytes=len(state_payload),
+        source_archive_sha256=hashlib.sha256(state_payload).hexdigest(),
+        stream_manifest=list(stream_manifest),
+        state_name=(
+            f"W_joint:campaign_global_step_{int(metadata['step']):06d}_live_resume_state"
+        ),
+        output_directory=(
+            ".omx/research/ddm_e5a_midcampaign_e5_adapter_20260725/packet"
+        ),
+        proof_root=str(proof_root / "e5a_runtime"),
+        minimum_free_bytes=8 * 1024 * 1024 * 1024,
+        adapter_receipt_path=str(adapter_receipt_path),
+        adapter_receipt_sha256=_sha256_file(adapter_receipt_path),
+    )
+    _atomic_json(
+        exporter_config_path,
+        exporter_config.model_dump(mode="json", by_alias=True),
+    )
+    export_result, export_receipt_path = export_ws1_runtime(
+        exporter_config,
+        config_path=exporter_config_path,
+    )
+    decoded_raw = _materialize_decoded_raw(
+        stage_root=Path(
+            str(export_result["output_identity"]["resume"]["checkpoint_root"])
+        ),
+        destination=proof_root / "e5a_n600" / "decoded_step50_live.raw",
+        expected_bytes=int(export_result["output_identity"]["bytes"]),
+        expected_sha256=str(export_result["output_identity"]["sha256"]),
+    )
+    menu1_config_path = (
+        REPO / ".omx/research/configs/ddm_menu1_realized_flip_menu_20260723.json"
+    )
+    remeasure_config_path = (
+        REPO / ".omx/research/configs/ddm_e5a_packet_remeasure_20260725.json"
+    )
+    remeasure_config = DDME5APacketRemeasureConfigV1(
+        export_receipt_path=str(export_receipt_path.relative_to(REPO)),
+        export_receipt_sha256=_sha256_file(export_receipt_path),
+        menu1_config_path=str(menu1_config_path.relative_to(REPO)),
+        menu1_config_sha256=_sha256_file(menu1_config_path),
+        decoded_raw_path=decoded_raw["path"],
+        decoded_raw_sha256=decoded_raw["sha256"],
+        checkpoint_root=str(proof_root / "e5a_n600" / "scorer_rows"),
+    )
+    _atomic_json(
+        remeasure_config_path,
+        remeasure_config.model_dump(mode="json", by_alias=True),
+    )
+    remeasure_receipt_path = (
+        REPO
+        / ".omx/research/ddm_e5a_midcampaign_e5_adapter_20260725/"
+        "ddm_e5a_packet_batch32_remeasure.json"
+    )
+    n600 = remeasure_e5a_packet(
+        remeasure_config_path,
+        remeasure_receipt_path,
     )
     resume_proof = _run_resume_proof(
         python_executable=python_executable,
@@ -300,11 +453,15 @@ def rehearse(
     result = {
         "schema": SCHEMA,
         "status": (
-            "BLOCKED_TYPED_EXPORTER_ADAPTER_WITH_RESUME_PROOF_GREEN"
-            if exporter_blocker
-            and resume_proof["status"] == "PASS_FRESH_PROCESS_COPIED_CHECKPOINT"
+            "PASS_E5A_MIDCAMP_CHECKPOINT_TO_PACKET"
+            if resume_proof["status"] == "PASS_FRESH_PROCESS_COPIED_CHECKPOINT"
             and source_unchanged
             and copy_unchanged
+            and export_result["grammar_admission"][
+                "packet_parseback_source_byte_identical"
+            ]
+            and n600["verdict"]
+            == "E5A_STEP50_LIVE_ENDPOINT_EXACT_BATCH32_MEASURED"
             else "FAIL_REHEARSAL_INVARIANT"
         ),
         "source_campaign": {
@@ -348,35 +505,39 @@ def rehearse(
                 },
                 {
                     "step": "adapt_checkpoint_to_e5_ws1_archive_input",
-                    "status": exporter_blocker,
+                    "status": "PASS_RECEIVER_CLOSED_BYTE_IDENTICAL",
                 },
                 {
                     "step": "e5_export_archive_bytes",
-                    "status": "NOT_RUN_UPSTREAM_TYPED_BLOCKER",
+                    "status": "PASS",
+                    "archive_bytes": export_result["archive"]["bytes"],
+                    "archive_sha256": export_result["archive"]["sha256"],
                 },
                 {
                     "step": "archive_parse_back",
-                    "status": "NOT_RUN_UPSTREAM_TYPED_BLOCKER",
+                    "status": "PASS_SOURCE_BYTE_IDENTICAL",
                 },
                 {
-                    "step": "ic1_ic2_local_exact",
-                    "status": "NOT_RUN_UPSTREAM_TYPED_BLOCKER",
-                    "d_seg": None,
-                    "d_pose": None,
-                    "archive_bytes": None,
+                    "step": "e5a_local_exact_n600",
+                    "status": n600["verdict"],
+                    "d_seg": n600["endpoint"]["d_seg"],
+                    "d_pose": n600["endpoint"]["d_pose"],
+                    "archive_bytes": export_result["archive"]["bytes"],
                 },
             ],
             "exporter_adapter": {
-                "verdict": exporter_blocker,
+                "verdict": "PASS_TYPED_MIDCAMP_CHECKPOINT_ADAPTER",
                 "accepted_input_contract": (
                     "receiver_closed_ws1_archive_bytes_plus_exactly_two_typed_streams"
                 ),
                 "observed_input_contract": (
                     "ddm_joint_descent_stage_checkpoint_npz_optimizer_cursor_and_archive_identity"
                 ),
-                "checkpoint_has_realized_archive_bytes": (
-                    checkpoint_has_realized_archive_bytes
-                ),
+                "adapter_receipt": adapter,
+                "export_receipt_path": str(export_receipt_path),
+                "export_receipt_sha256": _sha256_file(export_receipt_path),
+                "n600_receipt_path": str(remeasure_receipt_path),
+                "n600_receipt_sha256": _sha256_file(remeasure_receipt_path),
                 "verdict_scope": (
                     "E5 mid-campaign checkpoint adapter only; high first-cut bytes "
                     "remain an optimization-ladder measurement, not a family rejection"
@@ -386,7 +547,7 @@ def rehearse(
         "observability_digest": observability,
         "actuation": "NONE",
         "campaign_launched": False,
-        "n600_scorer_invoked": False,
+        "n600_scorer_invoked": True,
         "execution_allowed": False,
         "research_only": True,
         "score_claim": False,
@@ -412,7 +573,7 @@ def main(argv: list[str] | None = None) -> int:
         python_executable=args.python_executable,
     )
     print(json.dumps(result, sort_keys=True))
-    return 0 if result["status"].startswith("BLOCKED_TYPED_") else 4
+    return 0 if result["status"].startswith("PASS_") else 4
 
 
 if __name__ == "__main__":
