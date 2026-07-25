@@ -1,11 +1,11 @@
 # Codex findings — DDM LA1 layer assignment and context pricing
 
-Date: 2026-07-25 UTC  
-Lane: `lane_ddm_la1_layer_assignment_context_pricing_20260725`  
-Authority: delegated #669(b+c), research-only, MAIN-review-required  
-Evidence axis: `[macOS-CPU local lossless-byte advisory]`  
-Pointer: `0.1910828242 [contest-CPU]` UNMOVED  
-Score claim: false  
+Date: 2026-07-25 UTC
+Lane: `lane_ddm_la1_layer_assignment_context_pricing_20260725`
+Authority: delegated #669(b+c), research-only, MAIN-review-required
+Evidence axis: `[macOS-CPU local lossless-byte advisory]`
+Pointer: `0.1910828242 [contest-CPU]` UNMOVED
+Score claim: false
 Promotion eligible: false
 
 ## Verdict
