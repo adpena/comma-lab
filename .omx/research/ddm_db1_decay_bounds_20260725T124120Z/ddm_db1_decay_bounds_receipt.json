@@ -1,0 +1,796 @@
+{
+  "delegation_checkpoint_key": "codex_delegate:ddm_db1_decay_bounds:20260725T121605Z",
+  "descent_opening_history": {
+    "authority": "[naive-menu upper bound]; current broadcast forbids using generic proposal construction as scorer-recursive firing authority",
+    "bytes": 15715,
+    "exact_d_seg": [
+      0.07051923116048177,
+      0.07030889723036024,
+      0.07030889723036024,
+      0.0702156745062934,
+      0.0702156745062934
+    ],
+    "exact_steps": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "first_step_improvement": 0.00021033393012152846,
+    "first_step_net_corrected_errors": 24812,
+    "interval_count": 4,
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/full_run_receipt.json",
+    "sha256": "dca72cdc8c15a46be1a1d2e053bf813a79491d99c2793e57ec247f698be87e62",
+    "strict_improvement_interval_count": 2
+  },
+  "equation_disposition": {
+    "equation_id": "ddm_sn1_margin_mass_duplicate_budget_bounds_v1",
+    "reason": "The duplicate-budget N(delta) inequality is an exact measured combinatorial law in the fixed-atlas domain. V19C decay fits remain receipt-local models and must not be registered as transferable laws.",
+    "register": true
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory artifacts; no new scorer invocation]",
+  "execution_allowed": false,
+  "gate_g2": {
+    "card_e7_disposition": "DO_NOT_REFUSE_FROM_DESCENT_ANALOGUE_ALONE. Optimal stop D* cannot be identified because neither marginal step transport/cost nor H(flip-field|free context) is present in the current atlas custody.",
+    "cheapest_resolving_measurement": "Augment the already-owed bounded J10 re-smoke, not a new arm: for 10 accepted exact n600 verdict intervals from the card-selected start, persist target-error-conditioned (pair,y,x,winner,rival,margin,d2) before/after rows, gross beneficial/harmful flips, realized step seconds, and context-coded residual bits. This one same-parent trace identifies decay transport and E7's marginal step-vs-byte D*.",
+    "fire_authority": "MAIN_ONLY_AFTER_REVIEW_AND_ALL_CARD_GATES",
+    "verdict": "INDETERMINATE",
+    "verdict_scope": "FORMULATION: current hash-bound V19C accepted proposal-order curve plus fixed SN1/AT1 predicted-boundary atlas. V19C-instance in-horizon target reach is excluded; live scorer-recursive descent, boundary replenishment, E7 residual coding, solve-derived knee states, and broader description families remain open."
+  },
+  "lane_id": "ddm_db1_decay_bounds",
+  "main_landing_review_required": true,
+  "paid_dispatch": false,
+  "pointer_moved": false,
+  "reconciliation": {
+    "fit_result": "Both fitted V19C families remain above 0.023-class at the 450-admission horizon; the AICc-selected exponential asymptote is about 0.0244.",
+    "margin_result": "The fixed SN1 boundary support is too small to carry W_seg-class to the card target even under an all-beneficial oracle, but this is not a live descent lower bound because boundary support can be replenished.",
+    "v19c_analogue_reaches_target_in_horizon": false,
+    "v19c_horizon_d_seg": 0.02440941332752599,
+    "v19c_selected_asymptote": 0.024409333510632285,
+    "v19c_selected_model": "exponential",
+    "why_not_transfer": "V19C is an accepted finite proposal-order process. SN1 is a fixed predicted-boundary atlas without target-error coordinates. Neither identifies the transport kernel or replenishment law of the scorer-recursive #366 engine."
+  },
+  "research_only": true,
+  "run_id": "ddm_db1_decay_bounds_20260725",
+  "runtime": {
+    "numpy": "1.26.4",
+    "pid": 54254,
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+  },
+  "schema": "ddm_db1_decay_bounds.v1",
+  "score_claim": false,
+  "sn1_at1_margin_mass": {
+    "at1_custody": {
+      "atlas_canonical_payload_sha256": "046b6a9f80e510d627881682d9a3e4a3f5aa2ca4657bd4620bcf19257e4d2cad",
+      "atlas_file_sha256": "a9e444cd7652061368d6daa8cf85e4c793c1b57da385890799ce7de19fd311e4",
+      "atlas_path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/gaze_contraction_atlas.json",
+      "counts": {
+        "closed_forms": 438,
+        "gaze_pairs": 600,
+        "jacobian_contraction_rows": 600
+      },
+      "evidence_axis": "[macOS-CPU locked-env upstream frozen-harness advisory]",
+      "manifest_path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/atlas_manifest.json",
+      "manifest_sha256": "251cc1e4268fb909a9f9a3ac2af845614c98aab15948f90d33d43a8c1542a1d9"
+    },
+    "distance_quantiles": {
+      "0.0": 0.0,
+      "0.001": 0.00023442569128218348,
+      "0.01": 0.002415955863705208,
+      "0.1": 0.024333805343869364,
+      "0.5": 0.13088633662767651,
+      "0.9": 0.291056700517056,
+      "0.99": 0.43067273523981575,
+      "1.0": 1.1035617133659652
+    },
+    "incidence_to_unique_ratio": 1.0070569597183017,
+    "law": "max(0,I(delta)-(I(infinity)-B)) <= N(delta) <= min(I(delta),B)",
+    "law_scope": "MEASURED fixed SN1 predicted-boundary atlas only; N(delta) counts unique predicted-boundary pixels within AT1 head-space d2, not error-conditioned correctable pixels and not a live-descent replenishment process",
+    "missing_for_e7_optimal_stop": [
+      "pixel coordinates and target-error membership for each SN1 margin incidence",
+      "realized per-step head-space transport and gross beneficial/harmful flip flow",
+      "conditional residual flip-field entropy H(F|free decoder context) versus D",
+      "same-parent marginal step seconds and marginal counted bytes"
+    ],
+    "n_delta": [
+      {
+        "delta_d2": 0.0,
+        "global_site_fraction_lower": 0.0,
+        "global_site_fraction_upper": 8.477105034722222e-09,
+        "ordered_incidence_count": 1,
+        "unique_pixel_count_lower": 0,
+        "unique_pixel_count_upper": 1
+      },
+      {
+        "delta_d2": 1e-06,
+        "global_site_fraction_lower": 0.0,
+        "global_site_fraction_upper": 1.0172526041666667e-07,
+        "ordered_incidence_count": 12,
+        "unique_pixel_count_lower": 0,
+        "unique_pixel_count_upper": 12
+      },
+      {
+        "delta_d2": 2e-06,
+        "global_site_fraction_lower": 0.0,
+        "global_site_fraction_upper": 1.7801920572916667e-07,
+        "ordered_incidence_count": 21,
+        "unique_pixel_count_lower": 0,
+        "unique_pixel_count_upper": 21
+      },
+      {
+        "delta_d2": 5e-06,
+        "global_site_fraction_lower": 0.0,
+        "global_site_fraction_upper": 5.086263020833333e-07,
+        "ordered_incidence_count": 60,
+        "unique_pixel_count_lower": 0,
+        "unique_pixel_count_upper": 60
+      },
+      {
+        "delta_d2": 1e-05,
+        "global_site_fraction_lower": 0.0,
+        "global_site_fraction_upper": 9.070502387152778e-07,
+        "ordered_incidence_count": 107,
+        "unique_pixel_count_lower": 0,
+        "unique_pixel_count_upper": 107
+      },
+      {
+        "delta_d2": 2e-05,
+        "global_site_fraction_lower": 0.0,
+        "global_site_fraction_upper": 1.7717149522569444e-06,
+        "ordered_incidence_count": 209,
+        "unique_pixel_count_lower": 0,
+        "unique_pixel_count_upper": 209
+      },
+      {
+        "delta_d2": 5e-05,
+        "global_site_fraction_lower": 0.0,
+        "global_site_fraction_upper": 4.636976453993055e-06,
+        "ordered_incidence_count": 547,
+        "unique_pixel_count_lower": 0,
+        "unique_pixel_count_upper": 547
+      },
+      {
+        "delta_d2": 0.0001,
+        "global_site_fraction_lower": 0.0,
+        "global_site_fraction_upper": 9.214613172743056e-06,
+        "ordered_incidence_count": 1087,
+        "unique_pixel_count_lower": 0,
+        "unique_pixel_count_upper": 1087
+      },
+      {
+        "delta_d2": 0.0002,
+        "global_site_fraction_lower": 0.0,
+        "global_site_fraction_upper": 1.8590291341145832e-05,
+        "ordered_incidence_count": 2193,
+        "unique_pixel_count_lower": 0,
+        "unique_pixel_count_upper": 2193
+      },
+      {
+        "delta_d2": 0.0005,
+        "global_site_fraction_lower": 0.0,
+        "global_site_fraction_upper": 4.5496622721354164e-05,
+        "ordered_incidence_count": 5367,
+        "unique_pixel_count_lower": 0,
+        "unique_pixel_count_upper": 5367
+      },
+      {
+        "delta_d2": 0.001,
+        "global_site_fraction_lower": 0.0,
+        "global_site_fraction_upper": 9.018792046440973e-05,
+        "ordered_incidence_count": 10639,
+        "unique_pixel_count_lower": 0,
+        "unique_pixel_count_upper": 10639
+      },
+      {
+        "delta_d2": 0.002,
+        "global_site_fraction_lower": 2.6770697699652778e-05,
+        "global_site_fraction_upper": 0.00017940097384982638,
+        "ordered_incidence_count": 21163,
+        "unique_pixel_count_lower": 3158,
+        "unique_pixel_count_upper": 21163
+      },
+      {
+        "delta_d2": 0.005,
+        "global_site_fraction_lower": 0.0002973429361979167,
+        "global_site_fraction_upper": 0.0004499732123480903,
+        "ordered_incidence_count": 53081,
+        "unique_pixel_count_lower": 35076,
+        "unique_pixel_count_upper": 53081
+      },
+      {
+        "delta_d2": 0.01,
+        "global_site_fraction_lower": 0.0007452816433376736,
+        "global_site_fraction_upper": 0.0008979119194878472,
+        "ordered_incidence_count": 105922,
+        "unique_pixel_count_lower": 87917,
+        "unique_pixel_count_upper": 105922
+      },
+      {
+        "delta_d2": 0.02,
+        "global_site_fraction_lower": 0.0016395399305555555,
+        "global_site_fraction_upper": 0.0017921702067057292,
+        "ordered_incidence_count": 211413,
+        "unique_pixel_count_lower": 193408,
+        "unique_pixel_count_upper": 211413
+      },
+      {
+        "delta_d2": 0.05,
+        "global_site_fraction_lower": 0.004246936374240452,
+        "global_site_fraction_upper": 0.004399566650390625,
+        "ordered_incidence_count": 518994,
+        "unique_pixel_count_lower": 500989,
+        "unique_pixel_count_upper": 518994
+      },
+      {
+        "delta_d2": 0.1,
+        "global_site_fraction_lower": 0.008369861178927952,
+        "global_site_fraction_upper": 0.008522491455078125,
+        "ordered_incidence_count": 1005354,
+        "unique_pixel_count_lower": 987349,
+        "unique_pixel_count_upper": 1005354
+      },
+      {
+        "delta_d2": 0.2,
+        "global_site_fraction_lower": 0.015406502617730035,
+        "global_site_fraction_upper": 0.015559132893880208,
+        "ordered_incidence_count": 1835430,
+        "unique_pixel_count_lower": 1817425,
+        "unique_pixel_count_upper": 1835430
+      },
+      {
+        "delta_d2": 0.5,
+        "global_site_fraction_lower": 0.021556082831488715,
+        "global_site_fraction_upper": 0.02162833319769965,
+        "ordered_incidence_count": 2560864,
+        "unique_pixel_count_lower": 2542859,
+        "unique_pixel_count_upper": 2551382
+      },
+      {
+        "delta_d2": 1.0,
+        "global_site_fraction_lower": 0.021628299289279514,
+        "global_site_fraction_upper": 0.02162833319769965,
+        "ordered_incidence_count": 2569383,
+        "unique_pixel_count_lower": 2551378,
+        "unique_pixel_count_upper": 2551382
+      }
+    ],
+    "opening_anchor": {
+      "delta_d_seg": 0.00021033393012152846,
+      "effective_d2_interval_if_every_net_correction_came_from_fixed_boundary_atlas": {
+        "duplicate_budget_sufficient_delta_upper_bound": 0.004021713440807205,
+        "necessary_delta_lower_bound": 0.0023304735479752776,
+        "status": "BOUNDED_FROM_MARGIN_ORDER_STATISTICS"
+      },
+      "label": "[naive-menu upper bound]",
+      "net_corrected_errors": 24812,
+      "non_identifiability": "net error reduction does not identify realized head displacement, corrected pixel membership, beneficial/gross flip counts, or replenished boundary mass"
+    },
+    "operating_point_bounds": [
+      {
+        "d_seg": 0.07051923116048177,
+        "errors": 8318787,
+        "fixed_initial_boundary_oracle_floor_d_seg": 0.04889089796278212,
+        "fixed_initial_boundary_oracle_floor_errors": 5767405,
+        "fixed_initial_boundary_terminal_d_seg_band": [
+          0.04889089796278212,
+          0.07051923116048177
+        ],
+        "opening_calibrated_fixed_atlas_one_step_beneficial_rate_bound": {
+          "conditioning": "assumes the first opening net-error delta corresponds to a fixed AT1 d2 radius no larger than the duplicate-budget sufficient endpoint; zero is the honest lower bound because target-error membership is absent",
+          "delta_d_seg_lower": 0.0,
+          "delta_d_seg_upper": 0.0003629642062717014
+        },
+        "operating_point": "W_joint_exact",
+        "target_rows": [
+          {
+            "correction_debt_errors": 8216346,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": null,
+              "necessary_delta_lower_bound": null,
+              "status": "EXCEEDS_COMPLETE_FIXED_BOUNDARY_SUPPORT"
+            },
+            "target": "card_130789B",
+            "target_d_seg": 0.0008684,
+            "target_errors": 102441
+          },
+          {
+            "correction_debt_errors": 8211439,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": null,
+              "necessary_delta_lower_bound": null,
+              "status": "EXCEEDS_COMPLETE_FIXED_BOUNDARY_SUPPORT"
+            },
+            "target": "card_128254B_prospective",
+            "target_d_seg": 0.00091,
+            "target_errors": 107348
+          },
+          {
+            "correction_debt_errors": 8264806,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": null,
+              "necessary_delta_lower_bound": null,
+              "status": "EXCEEDS_COMPLETE_FIXED_BOUNDARY_SUPPORT"
+            },
+            "target": "sub_0_15_stretch",
+            "target_d_seg": 0.0004576,
+            "target_errors": 53981
+          }
+        ]
+      },
+      {
+        "d_seg": 0.024124510023328993,
+        "errors": 2845843,
+        "fixed_initial_boundary_oracle_floor_d_seg": 0.00249617682562934,
+        "fixed_initial_boundary_oracle_floor_errors": 294461,
+        "fixed_initial_boundary_terminal_d_seg_band": [
+          0.00249617682562934,
+          0.024124510023328993
+        ],
+        "opening_calibrated_fixed_atlas_one_step_beneficial_rate_bound": {
+          "conditioning": "assumes the first opening net-error delta corresponds to a fixed AT1 d2 radius no larger than the duplicate-budget sufficient endpoint; zero is the honest lower bound because target-error membership is absent",
+          "delta_d_seg_lower": 0.0,
+          "delta_d_seg_upper": 0.0003629642062717014
+        },
+        "operating_point": "W_seg_class_card",
+        "target_rows": [
+          {
+            "correction_debt_errors": 2743402,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": null,
+              "necessary_delta_lower_bound": null,
+              "status": "EXCEEDS_COMPLETE_FIXED_BOUNDARY_SUPPORT"
+            },
+            "target": "card_130789B",
+            "target_d_seg": 0.0008684,
+            "target_errors": 102441
+          },
+          {
+            "correction_debt_errors": 2738495,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": null,
+              "necessary_delta_lower_bound": null,
+              "status": "EXCEEDS_COMPLETE_FIXED_BOUNDARY_SUPPORT"
+            },
+            "target": "card_128254B_prospective",
+            "target_d_seg": 0.00091,
+            "target_errors": 107348
+          },
+          {
+            "correction_debt_errors": 2791862,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": null,
+              "necessary_delta_lower_bound": null,
+              "status": "EXCEEDS_COMPLETE_FIXED_BOUNDARY_SUPPORT"
+            },
+            "target": "sub_0_15_stretch",
+            "target_d_seg": 0.0004576,
+            "target_errors": 53981
+          }
+        ]
+      },
+      {
+        "d_seg": 0.024786978827582466,
+        "errors": 2923991,
+        "fixed_initial_boundary_oracle_floor_d_seg": 0.0031586456298828124,
+        "fixed_initial_boundary_oracle_floor_errors": 372609,
+        "fixed_initial_boundary_terminal_d_seg_band": [
+          0.0031586456298828124,
+          0.024786978827582466
+        ],
+        "opening_calibrated_fixed_atlas_one_step_beneficial_rate_bound": {
+          "conditioning": "assumes the first opening net-error delta corresponds to a fixed AT1 d2 radius no larger than the duplicate-budget sufficient endpoint; zero is the honest lower bound because target-error membership is absent",
+          "delta_d_seg_lower": 0.0,
+          "delta_d_seg_upper": 0.0003629642062717014
+        },
+        "operating_point": "V19C_terminal",
+        "target_rows": [
+          {
+            "correction_debt_errors": 2821550,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": null,
+              "necessary_delta_lower_bound": null,
+              "status": "EXCEEDS_COMPLETE_FIXED_BOUNDARY_SUPPORT"
+            },
+            "target": "card_130789B",
+            "target_d_seg": 0.0008684,
+            "target_errors": 102441
+          },
+          {
+            "correction_debt_errors": 2816643,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": null,
+              "necessary_delta_lower_bound": null,
+              "status": "EXCEEDS_COMPLETE_FIXED_BOUNDARY_SUPPORT"
+            },
+            "target": "card_128254B_prospective",
+            "target_d_seg": 0.00091,
+            "target_errors": 107348
+          },
+          {
+            "correction_debt_errors": 2870010,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": null,
+              "necessary_delta_lower_bound": null,
+              "status": "EXCEEDS_COMPLETE_FIXED_BOUNDARY_SUPPORT"
+            },
+            "target": "sub_0_15_stretch",
+            "target_d_seg": 0.0004576,
+            "target_errors": 53981
+          }
+        ]
+      },
+      {
+        "d_seg": 0.0008684,
+        "errors": 102441,
+        "fixed_initial_boundary_oracle_floor_d_seg": 0.0,
+        "fixed_initial_boundary_oracle_floor_errors": 0,
+        "fixed_initial_boundary_terminal_d_seg_band": [
+          0.0,
+          0.0008684
+        ],
+        "opening_calibrated_fixed_atlas_one_step_beneficial_rate_bound": {
+          "conditioning": "assumes the first opening net-error delta corresponds to a fixed AT1 d2 radius no larger than the duplicate-budget sufficient endpoint; zero is the honest lower bound because target-error membership is absent",
+          "delta_d_seg_lower": 0.0,
+          "delta_d_seg_upper": 0.0003629642062717014
+        },
+        "operating_point": "card_130789B_target",
+        "target_rows": [
+          {
+            "correction_debt_errors": 0,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": 0.0,
+              "necessary_delta_lower_bound": 0.0,
+              "status": "NO_ADDITIONAL_UNIQUE_MASS_REQUIRED"
+            },
+            "target": "card_130789B",
+            "target_d_seg": 0.0008684,
+            "target_errors": 102441
+          },
+          {
+            "correction_debt_errors": 0,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": 0.0,
+              "necessary_delta_lower_bound": 0.0,
+              "status": "NO_ADDITIONAL_UNIQUE_MASS_REQUIRED"
+            },
+            "target": "card_128254B_prospective",
+            "target_d_seg": 0.00091,
+            "target_errors": 107348
+          },
+          {
+            "correction_debt_errors": 48460,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": 0.006267521752636336,
+              "necessary_delta_lower_bound": 0.0045592847221675005,
+              "status": "BOUNDED_FROM_MARGIN_ORDER_STATISTICS"
+            },
+            "target": "sub_0_15_stretch",
+            "target_d_seg": 0.0004576,
+            "target_errors": 53981
+          }
+        ]
+      },
+      {
+        "d_seg": 0.00091,
+        "errors": 107348,
+        "fixed_initial_boundary_oracle_floor_d_seg": 0.0,
+        "fixed_initial_boundary_oracle_floor_errors": 0,
+        "fixed_initial_boundary_terminal_d_seg_band": [
+          0.0,
+          0.00091
+        ],
+        "opening_calibrated_fixed_atlas_one_step_beneficial_rate_bound": {
+          "conditioning": "assumes the first opening net-error delta corresponds to a fixed AT1 d2 radius no larger than the duplicate-budget sufficient endpoint; zero is the honest lower bound because target-error membership is absent",
+          "delta_d_seg_lower": 0.0,
+          "delta_d_seg_upper": 0.0003629642062717014
+        },
+        "operating_point": "card_128254B_prospective_target",
+        "target_rows": [
+          {
+            "correction_debt_errors": 4907,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": 0.002156281863870484,
+              "necessary_delta_lower_bound": 0.0004570350862123654,
+              "status": "BOUNDED_FROM_MARGIN_ORDER_STATISTICS"
+            },
+            "target": "card_130789B",
+            "target_d_seg": 0.0008684,
+            "target_errors": 102441
+          },
+          {
+            "correction_debt_errors": 0,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": 0.0,
+              "necessary_delta_lower_bound": 0.0,
+              "status": "NO_ADDITIONAL_UNIQUE_MASS_REQUIRED"
+            },
+            "target": "card_128254B_prospective",
+            "target_d_seg": 0.00091,
+            "target_errors": 107348
+          },
+          {
+            "correction_debt_errors": 53367,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": 0.00673284811938399,
+              "necessary_delta_lower_bound": 0.005026504662014746,
+              "status": "BOUNDED_FROM_MARGIN_ORDER_STATISTICS"
+            },
+            "target": "sub_0_15_stretch",
+            "target_d_seg": 0.0004576,
+            "target_errors": 53981
+          }
+        ]
+      },
+      {
+        "d_seg": 0.0004576,
+        "errors": 53981,
+        "fixed_initial_boundary_oracle_floor_d_seg": 0.0,
+        "fixed_initial_boundary_oracle_floor_errors": 0,
+        "fixed_initial_boundary_terminal_d_seg_band": [
+          0.0,
+          0.0004576
+        ],
+        "opening_calibrated_fixed_atlas_one_step_beneficial_rate_bound": {
+          "conditioning": "assumes the first opening net-error delta corresponds to a fixed AT1 d2 radius no larger than the duplicate-budget sufficient endpoint; zero is the honest lower bound because target-error membership is absent",
+          "delta_d_seg_lower": 0.0,
+          "delta_d_seg_upper": 0.0003629642062717014
+        },
+        "operating_point": "sub_0_15_stretch_target",
+        "target_rows": [
+          {
+            "correction_debt_errors": 0,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": 0.0,
+              "necessary_delta_lower_bound": 0.0,
+              "status": "NO_ADDITIONAL_UNIQUE_MASS_REQUIRED"
+            },
+            "target": "card_130789B",
+            "target_d_seg": 0.0008684,
+            "target_errors": 102441
+          },
+          {
+            "correction_debt_errors": 0,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": 0.0,
+              "necessary_delta_lower_bound": 0.0,
+              "status": "NO_ADDITIONAL_UNIQUE_MASS_REQUIRED"
+            },
+            "target": "card_128254B_prospective",
+            "target_d_seg": 0.00091,
+            "target_errors": 107348
+          },
+          {
+            "correction_debt_errors": 0,
+            "required_delta": {
+              "duplicate_budget_sufficient_delta_upper_bound": 0.0,
+              "necessary_delta_lower_bound": 0.0,
+              "status": "NO_ADDITIONAL_UNIQUE_MASS_REQUIRED"
+            },
+            "target": "sub_0_15_stretch",
+            "target_d_seg": 0.0004576,
+            "target_errors": 53981
+          }
+        ]
+      }
+    ],
+    "sn1_custody": {
+      "all_shards_sha256_verified": true,
+      "coordinate_array_count": 0,
+      "distance_law": "d2=positive_winner_rival_margin/||w_winner-w_rival||_2",
+      "margin_array_count": 12000,
+      "receipt": {
+        "bytes": 62166,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_db1_decay_bounds_20260725T121605Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/ddm_sn1_segnet_telemetry_asymmetry_receipt.json",
+        "sha256": "1f727c00f91a2425f8d40660b93594515c8038c42b802226ff11348791190eb4"
+      },
+      "shard_count": 38,
+      "shard_manifest_digest_sha256": "5949a3058f07ed2fa7629828a7a81d3a500c352edee95dc0d571a6f88f608748",
+      "telemetry": {
+        "bytes": 3762510,
+        "frame_count": 600,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_db1_decay_bounds_20260725T121605Z/.omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/segnet_internal_telemetry_n600.jsonl",
+        "sha256": "e8d26acd3b312e8213d04c48313b755de05e17268cc594e1d5b94927c443116b"
+      }
+    },
+    "total_duplicate_incidences": 18005,
+    "total_ordered_boundary_incidences": 2569387,
+    "total_unique_boundary_pixels": 2551382
+  },
+  "v19c_decay_fit": {
+    "admission_count": 104,
+    "delta_aicc_power_minus_exponential": 66.46237274307578,
+    "first_d_seg": 0.026594382392,
+    "fits": {
+      "exponential": {
+        "aic": -1864.9806348647567,
+        "aicc": -1864.7406348647567,
+        "amplitude": 0.0019886056212116004,
+        "asymptote": 0.024409333510632285,
+        "ci": {
+          "asymptote_ci95": [
+            0.02357781544773641,
+            0.024699346249252123
+          ],
+          "block_length": 8,
+          "conditional_on": "observed finite V19C proposal ordering; excludes unseen proposal families, descent transport, and selection-process uncertainty",
+          "exponent_ci95": [
+            0.008940662360884652,
+            0.027188931648112948
+          ],
+          "finite_target_log10_admissions_ci95_conditional": [
+            null,
+            null
+          ],
+          "horizon_d_seg_ci95": [
+            0.023592654228475493,
+            0.024699346959360657
+          ],
+          "method": "circular_moving_block_residual_bootstrap",
+          "replicates": 1000,
+          "seed": 603367,
+          "target_unreachable_fraction": 1.0
+        },
+        "equation": "d_seg(n)=c+a*exp(-k*n)",
+        "parameter": 0.018272940569699626,
+        "parameter_name": "k",
+        "predicted_d_seg_at_horizon": 0.02440941332752599,
+        "rmse": 0.00012401609454295876,
+        "rss": 1.5995191373915606e-06,
+        "target_projection": {
+          "additional_admissions": null,
+          "log10_total_admissions": null,
+          "status": "ASYMPTOTE_AT_OR_ABOVE_TARGET",
+          "total_admissions": null
+        }
+      },
+      "power": {
+        "aic": -1798.518262121681,
+        "aicc": -1798.2782621216809,
+        "amplitude": 0.027128812834114963,
+        "asymptote": 0.0,
+        "ci": {
+          "asymptote_ci95": [
+            0.0,
+            0.023495792650881572
+          ],
+          "block_length": 8,
+          "conditional_on": "observed finite V19C proposal ordering; excludes unseen proposal families, descent transport, and selection-process uncertainty",
+          "exponent_ci95": [
+            0.01699813847897027,
+            0.21654283277519318
+          ],
+          "finite_target_log10_admissions_ci95_conditional": [
+            66.29838049783598,
+            89.94365602730667
+          ],
+          "horizon_d_seg_ci95": [
+            0.02385028443526721,
+            0.024504128442435328
+          ],
+          "method": "circular_moving_block_residual_bootstrap",
+          "replicates": 1000,
+          "seed": 603366,
+          "target_unreachable_fraction": 0.525
+        },
+        "equation": "d_seg(n)=c+a*n^(-p)",
+        "parameter": 0.019125489741202362,
+        "parameter_name": "p",
+        "predicted_d_seg_at_horizon": 0.024041403717790014,
+        "rmse": 0.00017070586539905876,
+        "rss": 3.0306112180907224e-06,
+        "target_projection": {
+          "additional_admissions": 1.4217423761421263e+78,
+          "log10_total_admissions": 78.15282090809826,
+          "status": "FINITE_MODEL_EXTRAPOLATION",
+          "total_admissions": 1.4217423761421263e+78
+        }
+      }
+    },
+    "horizon_additional_admissions": 450,
+    "horizon_total_admission": 554,
+    "scope": "FORMULATION: V19C finite accepted proposal-order curve only; this is not a live-descent law and does not close scorer-recursive or solve-derived families",
+    "selected_by_aicc": "exponential",
+    "source": {
+      "bytes": 2851885,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_db1_decay_bounds_20260725T121605Z/.omx/research/ddm_v19c_correction_saturation_20260723T063500Z/stage_checkpoints/02_n600_saturation_curve.json",
+      "sha256": "b23873f45ed001e9e02a54e0e5dc071b3374293d9fd081ff98a4037f76c8b979"
+    },
+    "tail_window_sensitivity": [
+      {
+        "aicc": -1274.6329160431205,
+        "asymptote": 0.02405655122376637,
+        "family": "power",
+        "first_admission": 35,
+        "parameter": 0.8449706724445027,
+        "predicted_d_seg_at_horizon": 0.024212530119243018,
+        "target_projection": {
+          "additional_admissions": null,
+          "log10_total_admissions": null,
+          "status": "ASYMPTOTE_AT_OR_ABOVE_TARGET",
+          "total_admissions": null
+        },
+        "window_admissions": 70
+      },
+      {
+        "aicc": -1281.0848379087035,
+        "asymptote": 0.024607734474435313,
+        "family": "exponential",
+        "first_admission": 35,
+        "parameter": 0.03293207028490196,
+        "predicted_d_seg_at_horizon": 0.02460773451433477,
+        "target_projection": {
+          "additional_admissions": null,
+          "log10_total_admissions": null,
+          "status": "ASYMPTOTE_AT_OR_ABOVE_TARGET",
+          "total_admissions": null
+        },
+        "window_admissions": 70
+      },
+      {
+        "aicc": -1026.3053386175698,
+        "asymptote": 0.024786978828,
+        "family": "power",
+        "first_admission": 53,
+        "parameter": 9.027174080598769,
+        "predicted_d_seg_at_horizon": 0.024786978828394975,
+        "target_projection": {
+          "additional_admissions": null,
+          "log10_total_admissions": null,
+          "status": "ASYMPTOTE_AT_OR_ABOVE_TARGET",
+          "total_admissions": null
+        },
+        "window_admissions": 52
+      },
+      {
+        "aicc": -1024.657529890037,
+        "asymptote": 0.024786978828,
+        "family": "exponential",
+        "first_admission": 53,
+        "parameter": 0.15694463274877032,
+        "predicted_d_seg_at_horizon": 0.024786978828,
+        "target_projection": {
+          "additional_admissions": null,
+          "log10_total_admissions": null,
+          "status": "ASYMPTOTE_AT_OR_ABOVE_TARGET",
+          "total_admissions": null
+        },
+        "window_admissions": 52
+      },
+      {
+        "aicc": -792.4558607697066,
+        "asymptote": 0.024772100357261066,
+        "family": "power",
+        "first_admission": 70,
+        "parameter": 6.668653699205857,
+        "predicted_d_seg_at_horizon": 0.024772100477766172,
+        "target_projection": {
+          "additional_admissions": null,
+          "log10_total_admissions": null,
+          "status": "ASYMPTOTE_AT_OR_ABOVE_TARGET",
+          "total_admissions": null
+        },
+        "window_admissions": 35
+      },
+      {
+        "aicc": -793.9505892304925,
+        "asymptote": 0.02477686985531592,
+        "family": "exponential",
+        "first_admission": 70,
+        "parameter": 0.09520922233689294,
+        "predicted_d_seg_at_horizon": 0.02477686985531592,
+        "target_projection": {
+          "additional_admissions": null,
+          "log10_total_admissions": null,
+          "status": "ASYMPTOTE_AT_OR_ABOVE_TARGET",
+          "total_admissions": null
+        },
+        "window_admissions": 35
+      }
+    ],
+    "target_d_seg": 0.0008684,
+    "terminal_d_seg": 0.024786978828,
+    "terminal_errors": 2923991
+  },
+  "written_at_utc": "2026-07-25T12:41:20Z"
+}
