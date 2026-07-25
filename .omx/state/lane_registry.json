@@ -87402,6 +87402,47 @@
       },
       "notes": "Local advisory CO4 complete: Road ridge race failed gate and retained sealed CO3; precision 15 direct + 585 propagated + 0 unranked; MAIN review required.",
       "research_only": true
+    },
+    {
+      "id": "lane_ddm_j8f_counted_application_20260724",
+      "name": "DDM J8F DM4 to J5 counted application operator",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_dm4_j5_counted_application.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j8f_counted_application_20260724T181414Z/ddm_j8f_counted_application_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j8f_counted_application_20260724T181414Z/preflight/fresh_memory_storage_preflight.563748abc2c86298bcef11bef32b8e468377aa574e2a4dd82fff12de4b423377.json"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_j8f_counted_application_20260725T023547Z_codex.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; READY_TO_FIRE_DDM_EVENT_CONTINUATION on [macOS-CPU frozen-scorer advisory] exact n600 projected delta=-0.052757084057141856; score_claim=false; pointer unchanged; FIRE remains MAIN after independent landing review"
     }
   ],
   "level_rules": {

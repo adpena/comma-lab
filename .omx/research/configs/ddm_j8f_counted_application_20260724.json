@@ -1,0 +1,96 @@
+{
+  "schema": "ddm_dm4_j5_counted_application_config.v1",
+  "lane_id": "lane_ddm_j8f_counted_application_20260724",
+  "run_id": "ddm_j8f_counted_application_20260724T181414Z",
+  "output_root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j8f_counted_application_20260724T181414Z",
+  "research_only": true,
+  "execution_allowed": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "main_landing_review_required": true,
+  "torch_threads": 4,
+  "smoke_horizon": 12,
+  "horizon_derivation": "J5_NCDE_REENTRY_TIME_CUSTODY_ABSENT_USING_CANONICAL_WINDOW_12",
+  "validity_policy": "J5_BUCKET_VALIDITY_RADIUS_CURVE_ABSENT_NO_SHRINK_GROW_TRANSFER",
+  "range_gauge_policy": "fp64_P_range(A)_then_nearest_unused_integer_J5_secant_with_stable_coordinate_tie_break",
+  "source_bindings": {
+    "authority": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j8f_counted_application_operator_20260724T181414Z.wrapped.prompt.txt",
+      "bytes": 6713,
+      "sha256": "8b86a8f6e2016b10ab70053e5d5ee5444f9e3bfb5001a169bbd5a6cbe8803d9d"
+    },
+    "j8e_ticket": {
+      "path": ".omx/research/configs/ddm_j8e_688_event_engine_20260724.json",
+      "bytes": 34306,
+      "sha256": "91a25df1f0c82fc1b09f283e6261aae69a25cf911be1d250a2480528b5af531b"
+    },
+    "dm4_config": {
+      "path": ".omx/research/configs/ddm_dm4_targeted_realization_cures_20260724.json",
+      "bytes": 5272,
+      "sha256": "60b681b3a016c3b8c6b94c159fa5437b5e1982ff2a9eb6421140679c5fed5633"
+    },
+    "dm4_receipt": {
+      "path": ".omx/research/ddm_dm4_targeted_realization_cures_20260724T142722Z/ddm_dm4_targeted_realization_cures_receipt.json",
+      "bytes": 472112,
+      "sha256": "9644ef24c8037485a6350193d9368f65f463ae102db70c3d1412a550362bf5bb"
+    },
+    "ms4d_direct_metric": {
+      "path": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/seg_metric_direct_n600.json",
+      "bytes": 1361320,
+      "sha256": "bb8daeebb4cf745136049757aaffce38a32a3cb900b5a657e4fe9c12cb7ba53f"
+    },
+    "step4_ticket": {
+      "path": ".omx/research/configs/ddm_ws3_w_joint_history_fill_20260724.json",
+      "bytes": 15086,
+      "sha256": "239a09bc2689c44c783fd6c882ac7fc282f8f42fb7e87d3582f6b63b61677c93"
+    },
+    "step4_checkpoint": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000004.npz",
+      "bytes": 26581,
+      "sha256": "f6e88a743e188eb84f75f3a500acd04ef9ea685c86a1ee774709148c9cc65e41"
+    },
+    "step4_verdict": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/verdicts/01_residual_bucket_realized_acceptance_step000004_n600.json",
+      "bytes": 2992,
+      "sha256": "c6e95d3b88f083bc77a24bef4d58be618874b8b5cc38d6db26c5800a933f00e4"
+    },
+    "v17_validity_law": {
+      "path": "src/tac/canonical_equations/ddm_v17_validity_radius_law_20260723.py",
+      "bytes": 7685,
+      "sha256": "1dd0e308e7cd6f2700921389a70eb00db5ea07ea65f451babe7f035a4f0fc5e3"
+    },
+    "v17_validity_receipt": {
+      "path": ".omx/research/ddm_a1_bounded_collateral_realized_n64_20260723T031500Z/ddm_a1_bounded_collateral_realized_receipt.json",
+      "bytes": 124491,
+      "sha256": "7cad1d17c5697b578234db282e6191ba3f2789b188051473874638392e18f53a"
+    },
+    "ncde_observer": {
+      "path": "src/tac/witness_control/ncde_trajectory.py",
+      "bytes": 26473,
+      "sha256": "01ceb6a898ff8575df31933b44da943dbed8b50069860be04ee5466dd2a1fe06"
+    },
+    "ncde_event_wiring": {
+      "path": "src/tac/witness_control/event_wirings.py",
+      "bytes": 36187,
+      "sha256": "6a30076a227e72501cc3ce1d5ceeb104f43f1a87d5e5d59fbdf16b0ee5cdc1f5"
+    },
+    "range_a_projector": {
+      "path": "src/tac/boundary_math/range_a_projection.py",
+      "bytes": 12594,
+      "sha256": "a97fed1347d17dfc6cf7821ef8f51f9cb988a2e74992ed8242be6b21068698dc"
+    },
+    "operator_source": {
+      "path": "src/tac/optimization/ddm_dm4_j5_counted_application.py",
+      "bytes": 37943,
+      "sha256": "145ac8b9d9d938c0b252576d34ad6f28129ae341c72c63eae0e5354905e9ef63"
+    },
+    "runner_source": {
+      "path": "tools/run_ddm_j8f_counted_application.py",
+      "bytes": 55987,
+      "sha256": "ab1999260917ee70c0930e52d700c723b717f7090988e695468bed031cc479ca"
+    }
+  }
+}
