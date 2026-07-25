@@ -24308,3 +24308,24 @@ arms live — ms2r_r3 box-tolerance solve (#701, new stage namespace) · cc2 cod
 races 2+3) · lp1 layer pricing (#669 b+c) · rs1 feature-relay solve (#659). Pointer
 0.1910828242 [contest-CPU] UNMOVED — campaign endpoint must ride E-chain export → R6 dual-axis
 exact eval to move it.
+
+### FEED-603-lp1-layer-pricing (2026-07-25, arm ddm_lp1_layer_pricing rc=0, MERGED fa99b312ac)
+#669(b+c) COMPLETE. Verdict: `CORRECTED_C1_MEASURED_ALLOCATION_IS_SEEDED_CONTROL_ONLY;
+G4_FREE_CONTEXT_GAIN_IS_FUTURE_STREAM_SCOPED; ALL_25_L3_EXCEPTIONS_HOLD_ZERO_AT_MS7_R0`.
+[macOS-CPU frozen-scorer advisory · score_claim=false] (1) **C1 BUDGET CORRECTION (binding on
+all downstream waterfills):** the composed candidate's "200,000B budget" was a planning
+EQUALITY, never a measurement — corrected measured allocation = **134,211 exact bytes**
+(fixed subtotal 133,941 + lane seed 270); the four reserve rows (65,789B) are UNALLOCATED
+HEADROOM, not an admissible reserve. cc2 races + ms2r solve + any R6 candidate must waterfill
+against 134,211 measured / 65,789 open — never the 200K equality. (2) **Same-object context
+FIREWALL (NO-FAKE):** G4's +89,161B decoder-derived-context gain is measured on its OWN future
+innovation stream; applying it to c1/MS7 objects = fake accounting. G4 boundary-distance-proxy
+context LOSES on its own stream (−192,417B) → DROP (verdict_scope: INSTANCE — not a negative on
+decoder-derived context generally). DM1 25-row semantic container context KEEPS (+2,555B).
+(3) All 13 C1 rows re-homed on the L1→L4 layer ladder; 5-type vocabulary SEALED (historical
+SKELETON → RESIDUAL mapping, provenance preserved). (4) 25 stream×stratum costate rows all
+`SENSE_HOLD_ZERO_R0` — the DM4 corrected-J/resize-adjoint/ERF/stem-lattice menu is nonpaying
+for this SHA-bound 25-row instance (INSTANCE scope; reopen on dynamic reach-curve or new
+same-object context price). Receipt 6bd6a5ba…; 8+36+29 tests; 2 review passes. Consumers:
+cc2 (byte race denominators) · ms2r_r3 (rate-inside-objective budget) · costate organ SENSE
+(25 rows) · #636/#682 export budget. Pointer 0.1910828242 [contest-CPU] UNMOVED — means.
