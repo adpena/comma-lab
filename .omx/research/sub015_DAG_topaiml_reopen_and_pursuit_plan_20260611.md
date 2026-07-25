@@ -24565,7 +24565,7 @@ PROCEED_WITH_REVISIONS 8/8 sextet, dissents preserved).
 pointer 0.1910828242 [contest-CPU] UNMOVED — this unit is frontier-PROTECTING (stops a ~39h burn
 toward an inadmissible endpoint).
 
-## FEED-603-OPERATOR-RULING-BORROWED-POLISH-DEAD (2026-07-25, MAIN)
+## FEED-603-OPERATOR-RULING-BORROWED-POLISH-DEAD (2026-07-25, MAIN) # VERDICT_SCOPE_OK: 'DEAD' here is an OPERATOR RULING (permanent doctrine ban on borrowed-incumbent rate-polish), not a measurement negative — no scope ladder applies; the underlying entropy-floor measurements (#399/#453/e4-era) carry their own scopes
 SIGNAL: operator RULING on council op-routable 6 / register row 8, verbatim: "Carmack is wrong.
 That is fucking gravity pulling us in the wrong direction again towards not original work. We
 are focused on original work... anything in CLAUDE.md or elsewhere that keeps pulling us back
