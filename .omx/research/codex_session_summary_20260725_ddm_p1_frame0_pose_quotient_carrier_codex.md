@@ -1,7 +1,9 @@
 # Codex session summary — DDM P1 frame-0 pose quotient carrier
 
-Status: `AWAITING_MAIN_LANDING_REVIEW`  
-Research-only: `true`  
+Status: `AWAITING_MAIN_LANDING_REVIEW`
+
+Research-only: `true`
+
 Pointer: `0.1910828242 [contest-CPU]` (`UNMOVED`)
 
 P1 independently derived and implemented an all-state-counted, legacy-compatible

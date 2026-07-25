@@ -1,9 +1,11 @@
 # FEED-603-p1 — frame-0 PoseNet quotient carrier
 
-UTC preregistration: `2026-07-25T14:33:03Z`  
+UTC preregistration: `2026-07-25T14:33:03Z`
+
 State: `MEASURED_FORMULATION_BLOCKED`
 
-Research-only: `true`  
+Research-only: `true`
+
 MAIN landing review required: `true`
 
 ## Executable DAG

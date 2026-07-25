@@ -6,9 +6,12 @@ Status at preregistration: `PREREGISTERED_NOT_MEASURED`
 
 Final status: `P1_SHARED_LOW_RANK_FRAME0_ACTUATOR_FORMULATION_BLOCKED`
 
-Research-only: `true`  
-Score claim: `false`  
-Promotion eligible: `false`  
+Research-only: `true`
+
+Score claim: `false`
+
+Promotion eligible: `false`
+
 MAIN landing review required: `true`
 
 ## Authority and boundaries
