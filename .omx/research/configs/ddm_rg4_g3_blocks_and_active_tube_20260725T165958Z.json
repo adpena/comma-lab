@@ -1,0 +1,137 @@
+{
+  "schema": "ddm_rg4_g3_blocks_and_active_tube_config.v1",
+  "run_id": "ddm_rg4_g3_blocks_and_active_tube_20260725T165958Z",
+  "lane_id": "ddm_rg4_g3_blocks_and_active_tube",
+  "output_root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_rg4_g3_blocks_and_active_tube_20260725T165958Z",
+  "research_root": ".omx/research/ddm_rg4_g3_blocks_and_active_tube_20260725T165958Z",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_rg4_g3_blocks_and_active_tube_20260725T165958Z.wrapped.prompt.txt",
+    "bytes": 9198,
+    "sha256": "2369f7f82d6d7d7f025855fbd292e3a89bc37efb6708e6099e5bd9499b0ea76a",
+    "schema": "delegated_authority.prompt.v1",
+    "role": "delegated_task_authority"
+  },
+  "artifacts": {
+    "authority": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_rg4_g3_blocks_and_active_tube_20260725T165958Z.wrapped.prompt.txt",
+      "bytes": 9198,
+      "sha256": "2369f7f82d6d7d7f025855fbd292e3a89bc37efb6708e6099e5bd9499b0ea76a",
+      "schema": "delegated_authority.prompt.v1",
+      "role": "delegated_task_authority"
+    },
+    "g3_registry": {
+      "path": ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/hard_pair_registry.json",
+      "bytes": 5857,
+      "sha256": "0c9ce6d0ce2b2c0830400f096438355242527d40f682fc1b201f67d8d951a4e4",
+      "schema": "ddm_g3_hard_pair_registry.v1",
+      "role": "terminal_g3_pair_registry"
+    },
+    "ms2r_config": {
+      "path": ".omx/research/configs/ddm_ms2r_r3_366box_typed_fisher_g4_waterfill_20260725.json",
+      "bytes": 6119,
+      "sha256": "0aa68f84bea881af4f7d5b7c85fe66477ccf90f643a7461a5c06e2144a39a9ca",
+      "schema": "DDMMS2RR3366BoxTypedFisherG4WaterfillConfigV1",
+      "role": "strict_join_replay_config"
+    },
+    "pc1_admission": {
+      "path": ".omx/research/ddm_pc1_pose_stream_admission_receipt_20260724.json",
+      "bytes": 10680,
+      "sha256": "df456b0a77504d55322e0230a47be5ba5289773556f00da9a9c419d51d8d9950",
+      "schema": "ddm_pc1_pose_stream_admission.v1",
+      "role": "pc1_parameter_map"
+    },
+    "pose_metric": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ms4_metric_producers_and_measurement_20260724T042005Z/pose_metric_n600_batch32.json",
+      "bytes": 577705,
+      "sha256": "5e06cc78711a6ca6984c907600a25816cdecc6239903f782d85bcf9473a8f1bc",
+      "schema": "ddm_pose_metric_custody.v1",
+      "role": "exact_pose6_active_tube_metric"
+    },
+    "rg2_assignment": {
+      "path": ".omx/research/ddm_rg2_skeleton_amplitude_productions_20260724T094305Z/ddm_rg2_skeleton_amplitude_assignment.json",
+      "bytes": 64994,
+      "sha256": "d90391cc5983cd851472db9c9759b25bfbfbb8378d293d57a48536255ef1d764",
+      "schema": "ddm_rg2_skeleton_amplitude_assignment.v1",
+      "role": "production_rg2_alphabet"
+    },
+    "rg3_assignment": {
+      "path": ".omx/research/ddm_rg3_residual_family_productions_20260724T110418Z/ddm_rg3_residual_family_assignment.json",
+      "bytes": 39327,
+      "sha256": "40d4150eb3c1bee1197b4023a1e2986e498f429d85677e992a8464ac7acab82e",
+      "schema": "ddm_rg3_residual_family_assignment.v1",
+      "role": "production_rg3_alphabet"
+    },
+    "rg3_summary": {
+      "path": ".omx/research/ddm_rg3_residual_family_productions_20260724T110418Z/ddm_rg3_receiver_support_summary.json",
+      "bytes": 481708,
+      "sha256": "3d4c4fb635ec37668cbf6037cefca63fe7c08a9ad950e6724ae023deb0473fd2",
+      "schema": "ddm_ms6_receiver_support_resume_summary.v1",
+      "role": "terminal_rg3_receiver_support"
+    },
+    "rg3_table": {
+      "path": ".omx/research/ddm_rg3_residual_family_productions_20260724T110418Z/pf2_bucket_assignment_table.json",
+      "bytes": 6035137,
+      "sha256": "57d3954bc4661f5da48aae943433a7c5f611639b2d5a24854a01d658fd52aebd",
+      "schema": "ddm_ms5_pf2_bucket_assignment_table.v1",
+      "role": "ms5_loader_assignment_table"
+    },
+    "target_cache": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "bytes": 5078017610,
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "schema": "stored_npz_gt_n600.v1",
+      "role": "exact_n600_seg_and_pose_targets"
+    },
+    "menu1_config": {
+      "path": ".omx/research/configs/ddm_menu1_realized_flip_menu_20260723.json",
+      "bytes": 3319,
+      "sha256": "b9fed2b1537b92a2b02d0525cb4d9175d0704e7c4d0c0efd383c6dd818fdb2c7",
+      "schema": "ddm_menu1_realized_flip_menu_config.v1",
+      "role": "frozen_scorer_custody"
+    },
+    "inner_jacobian_status": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/records/inner_jacobian_secant_qp.json",
+      "bytes": 317,
+      "sha256": "53cca3a5e06fc98b3f6170aa340b2fab740d281e7f8bc602b4330b9fb345fd46",
+      "schema": "m1_band_inner_jacobian_secant_qp_status.v1",
+      "role": "corrected_inner_jacobian_bank_status"
+    },
+    "w_joint": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws4_pose_null_projected_seg_start_20260725T112500Z/01_archives/W_joint_step50_live.zip.receipt-bytes",
+      "bytes": 138813,
+      "sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+      "schema": "ddm_ws1_warm_start_composition.v1",
+      "role": "c1_composed_line_current_state"
+    },
+    "w_seg": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws2_warm_start_custody_producer_20260724T053455Z/01_archives/W_seg.zip.receipt-bytes",
+      "bytes": 138031,
+      "sha256": "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9",
+      "schema": "ddm_ws1_warm_start_composition.v1",
+      "role": "ws2_w_seg_exact_candidate"
+    }
+  },
+  "checkpoint_roots": [
+    "/Volumes/VertigoDataTier/pact/ddm_ms6_receiver_support_measurement_20260724T052034Z/probe_checkpoints_v2",
+    "/Volumes/VertigoDataTier/pact/ddm_rg1_receiver_grammar_extension_20260724T080402Z/probe_checkpoints_rg1_v2",
+    "/Volumes/VertigoDataTier/pact/ddm_rg2_skeleton_amplitude_productions_20260724T094305Z/probe_checkpoints_rg2_l3_v2",
+    "/Volumes/VertigoDataTier/pact/ddm_rg3_residual_family_productions_20260724T110418Z/probe_checkpoints_rg3_residual_v2"
+  ],
+  "pair_count": 600,
+  "verdict_batch": 32,
+  "local_batch": 4,
+  "knot_count": 32,
+  "one_quantum_q": 256,
+  "maximum_accepted_steps": 8,
+  "maximum_candidate_evaluations": 384,
+  "seed": 0,
+  "torch_threads": 4,
+  "own_python": "/Volumes/VertigoDataTier/pact/.venvs/ddm_ic1_incumbent_compose_and_buy_row_20260724T143642Z/bin/python",
+  "upstream_root": "/Users/adpena/Projects/pact/upstream",
+  "research_only": true,
+  "paid_dispatch": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "ddm_rg4_g3_blocks_and_active_tube_three_clean_review.v1",
+  "lane_id": "ddm_rg4_g3_blocks_and_active_tube",
+  "reviewed_python_files": [
+    "src/tac/optimization/ddm_rg4_g3_blocks_and_active_tube.py",
+    "src/tac/optimization/tests/test_ddm_rg4_g3_blocks_and_active_tube.py",
+    "tools/run_ddm_rg4_g3_blocks_and_active_tube.py"
+  ],
+  "passes": [
+    {
+      "pass": 1,
+      "focus": "typed schemas, source-local zero identity, archive parse-back, and unit tests",
+      "status": "CLEAN_AFTER_FIXES"
+    },
+    {
+      "pass": 2,
+      "focus": "actual W_joint/W_seg receiver support, RG3 strict-join replay, chunk sums, memory custody, and final hashes",
+      "status": "CLEAN_AFTER_FIXES"
+    },
+    {
+      "pass": 3,
+      "focus": "fresh complete-run resume, immutable preflight reuse, false-authority labels, and pointer immobility",
+      "status": "CLEAN"
+    }
+  ],
+  "focused_tests": {
+    "suite": [
+      "src/tac/optimization/tests/test_ddm_rg4_g3_blocks_and_active_tube.py",
+      "tools/tests/test_ddm_pc1_pose_stream.py",
+      "src/tac/tests/test_build_qp1_pose_active_subspace_candidates.py"
+    ],
+    "passed": 15,
+    "failed": 0,
+    "warnings": 3,
+    "warning_scope": "pre-existing PC1 warp NumPy RuntimeWarning in existing test surface; no test failure"
+  },
+  "ruff_check": "PASS",
+  "ruff_format_check": "PASS",
+  "py_compile": "PASS",
+  "git_diff_check": "PASS",
+  "fresh_complete_resume": "PASS",
+  "review_tracker_all_owned_entities_reviewed": true,
+  "lane_maturity_owned_evidence_paths_exist": true,
+  "global_lane_validation_external_debt": {
+    "missing_legacy_evidence_paths": 110,
+    "scope": "PREEXISTING_OUTSIDE_THIS_LANE"
+  },
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}
