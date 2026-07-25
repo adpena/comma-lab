@@ -24465,3 +24465,24 @@ exactly the lawful join. ev2's registered preflight correctly admitted BUNDLE-CO
 refused PF3 without actuation. NO respawn (the coarser partition IS the finding; both routes
 served: descent = j9 repair, describe-rate = cc3). 33 tests, 3 clean passes, deterministic
 rerun. Pointer 0.1910828242 [contest-CPU] UNMOVED — means.
+
+### FEED-603-cc3-receiver-closed-rate-gain (2026-07-25, arm ddm_cc3 rc=0, MERGED 06845c4582)
+Verdict: `RECEIVER_CLOSED_LOSSLESS_RATE_GAIN_MEASURED; CC2_REUSED_SCORE_PREMISE_FALSIFIED_INSTANCE`.
+(1) **The cc2 −3,422B is now DERIVED→MEASURED at archive level**: 139,538→136,116B real counted
+archive (1 G4 context frame + 7 Bellard-KT-mixing frames; other 19 leaves byte-identical);
+integration overhead ZERO (falsifier bar 50%); **losslessness proven at the SCORER surface** —
+mixed vs raw full-receiver outputs are byte-identical (3,662,409,600B, SHA 5094e277…) ⇒ exactly
+zero distortion delta by construction; locked-env inflate 489.7s (30-min budget clear); 135/135
+parse-backs; cc2's coder frames rebuilt FRESH and reproduced the settled table (replay-core SHA
+b392dab3…). Rate costate −0.0022785693. R6 consumers INHERIT −3,422B via this exact recursive
+transform (nested-ZIP member identity + W_joint trailing suffix preserved; e3/e4/e5 launcher
+path); other stream shapes must remeasure. lp1 coordinated budget: 130,789B (DERIVED, arithmetic
+MAIN-verified). (2) **INSTANCE falsification**: fresh n600 batch32 of the FULL WS1+PC1
+composition = d_seg 0.024731920 / d_pose 163.0492343 — NOT the parent-only endpoint
+(0.070216/36.376) cc2 reused under IDENTITY_ACTIVE_ALL_QUANTIZED_COORDINATES_ZERO. Active-zero
+PC1 assembly does NOT inherit parent scores; every consumer must score the COMPOSED object.
+(Notable decomposition: the composition line is seg-BETTER / pose-far-WORSE than the campaign's
+W_joint state — different state families, do not conflate.) Scope honesty: does not weaken the
+byte-identity losslessness; does not close the PC1 family. Consumers: R6 export chain ·
+lp1/c1 budgets · costate rows · the composed-object-scoring custody rule. Pointer 0.1910828242
+[contest-CPU] UNMOVED — means.
