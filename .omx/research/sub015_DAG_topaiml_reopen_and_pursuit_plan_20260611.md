@@ -24532,3 +24532,35 @@ STOP, redirect to proposal-quality crux. equations-leg note: ema_decay_run_geome
 this run as a third anchor candidate (negative-anchor: legacy-0.997-on-450-step-geometry
 produces degenerate-shadow verdicts). Sister consumer: ct1 SENSE arm (LIVE) dual-emit rows.
 pointer 0.1910828242 [contest-CPU] UNMOVED (apparatus/means).
+
+## FEED-603-COUNCIL-SCOREBOARD-AUDIT (2026-07-25, Fable T3 council e6730f38ae, MAIN spot-checked)
+SIGNAL (THE blind spot, arithmetic VERIFIED in exact contest units vs evaluate.py:92 +
+cross-checked to the attempt-5 receipt's advisory_action): **the live #366/c1 composed plan does
+NOT compose below the pointer even at 100% success of its sealed targets.** Decomposed:
+pointer 0.1910828242 = seg 0.055972 (5.5972e-4) + pose 0.017152 (2.9418e-5) + rate 0.117970
+(177,169B). Plan success-case (stage-3 d_seg 0.006868 + banked-R1 pose 0.127 + 130,789B) =
+S 0.9007, deficit +0.71. KILLER SUB-FACT: pose 0.1269 + rate 0.0871 = 0.2140 > pointer AT ZERO
+d_seg — the banked-R1 pose plan-of-record is INADMISSIBLE at any seg. Box (0.00116) + ancestor-
+class pose @plan bytes = 0.2202 > pointer; box composes only at B ≤ 87,002. COMPOSING TRIPLES
+(the standing target card): beat pointer @130,789B → d_seg ≤ 8.684e-4 (102,445 errors) AND
+d_pose ≤ 2.94e-5-class; sub-0.15 → d_seg ≤ 4.576e-4 at those bytes. Corollary: corrections
+arithmetically dead as closers (405.5 vs required ~0.024 B/error = 16,700× gap; confirms v19c).
+verdict_scope: FORMULATION (the c1+366 composition-of-record; describe/descent FAMILIES intact —
+the required triples are now EXPLICIT, not impossible).
+CLASS: target-drift (sealed stage targets 8× looser than the composing need that was derivable
+all along) × silent-ownership gap (every receipt score_claim=false → nobody owned the SUM).
+ROUTING (same-turn): (1) #366 FIRE GATE AMENDED — NO attempt-6 fire until the reseal's targets
+are re-derived to the composing triple (d_seg ≤8.684e-4-class trajectory + pose leg re-scoped);
+j10's READY_TO_FIRE is NECESSARY not SUFFICIENT; MAIN holds fire. (2) POSE LEG: PC1 solved-plane
+descent smoke = named next (banked-R1 0.127 demoted to comparator-only — matches its sealed
+authority field). (3) Carmack dissent VERIFY: the "−1,627B incumbent rate-polish" claimed as a
+ready REAL pointer-move row — verify byte-closed artifact exists; if yes it is a standing-GO
+Modal candidate (#381 envelope). (4) S-COMPOSITION GATE: new warn-only seal-gate "no heavy
+launch whose 100%-success composition ≥ pointer" — two-landing on next apparatus unit.
+(5) pan1 (running) inherits this as axis-A ground truth to extend, not re-derive. Consumers:
+j10 reseal · ws4 arbitration context · co5/#319 · #344 detector fix (blind spot 5: 45-min W_seg
+10-step probe + v19c tail-fit for decay). Memo:
+feedback_grand_council_blind_spot_hunt_frontier_lowering_20260725.md (anchor emitted,
+PROCEED_WITH_REVISIONS 8/8 sextet, dissents preserved).
+pointer 0.1910828242 [contest-CPU] UNMOVED — this unit is frontier-PROTECTING (stops a ~39h burn
+toward an inadmissible endpoint).
