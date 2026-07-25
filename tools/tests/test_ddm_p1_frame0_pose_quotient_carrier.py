@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
 
 from tac.canonical_equations.ddm_p1_frame0_pose_quotient_carrier_20260725 import (
     DELEGATED_TARGET_D_POSE,
@@ -33,6 +34,7 @@ from tac.optimization.ddm_p1_frame0_pose_quotient_carrier import (
 )
 from tools.run_ddm_p1_frame0_pose_quotient_carrier import (
     P1ConfigV1,
+    _differentiable_pose_preprocess,
     _linear_coefficients,
     _quantize_basis,
 )
@@ -229,3 +231,16 @@ def test_linear_coefficient_solve_consumes_receiver_scaled_basis() -> None:
         ridge=1.0e-12,
     )
     assert coefficients.tolist() == [[256]]
+
+
+def test_encoder_pose_preprocess_preserves_gradient_path() -> None:
+    camera = torch.zeros(
+        (1, 2, 3, CAMERA_H, CAMERA_W),
+        dtype=torch.float32,
+        requires_grad=True,
+    )
+    preprocessed = _differentiable_pose_preprocess(camera)
+    assert tuple(preprocessed.shape) == (1, 12, 192, 256)
+    preprocessed.sum().backward()
+    assert camera.grad is not None
+    assert torch.count_nonzero(camera.grad).item() > 0

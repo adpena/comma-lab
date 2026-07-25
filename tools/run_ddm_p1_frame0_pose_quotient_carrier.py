@@ -352,8 +352,61 @@ def _load_scorers(
     }
 
 
-def _pose_tensor(posenet: Any, camera: Any) -> Any:
-    output = posenet(posenet.preprocess_input(camera))
+def _differentiable_pose_preprocess(camera: Any) -> Any:
+    """Operation-identical replica of frozen ``PoseNet.preprocess_input``.
+
+    The upstream ``rgb_to_yuv6`` helper carries ``@torch.no_grad()`` for
+    contest evaluation.  P1 needs its derivative only on the encoder side, so
+    this replica preserves the exact arithmetic while leaving upstream bytes
+    and exact-verdict calls untouched.
+    """
+
+    import torch
+
+    if camera.ndim != 5 or camera.shape[1:3] != (2, 3):
+        raise P1RunnerError("differentiable PoseNet camera geometry differs")
+    batch = camera.shape[0]
+    rgb = camera.reshape(batch * 2, 3, CAMERA_H, CAMERA_W)
+    rgb = torch.nn.functional.interpolate(rgb, size=(384, 512), mode="bilinear")
+    red = rgb[:, 0]
+    green = rgb[:, 1]
+    blue = rgb[:, 2]
+    y_plane = torch.clamp(red * 0.299 + green * 0.587 + blue * 0.114, 0.0, 255.0)
+    u_plane = torch.clamp((blue - y_plane) / 1.772 + 128.0, 0.0, 255.0)
+    v_plane = torch.clamp((red - y_plane) / 1.402 + 128.0, 0.0, 255.0)
+    u_sub = (
+        u_plane[:, 0::2, 0::2]
+        + u_plane[:, 1::2, 0::2]
+        + u_plane[:, 0::2, 1::2]
+        + u_plane[:, 1::2, 1::2]
+    ) * 0.25
+    v_sub = (
+        v_plane[:, 0::2, 0::2]
+        + v_plane[:, 1::2, 0::2]
+        + v_plane[:, 0::2, 1::2]
+        + v_plane[:, 1::2, 1::2]
+    ) * 0.25
+    yuv6 = torch.stack(
+        (
+            y_plane[:, 0::2, 0::2],
+            y_plane[:, 1::2, 0::2],
+            y_plane[:, 0::2, 1::2],
+            y_plane[:, 1::2, 1::2],
+            u_sub,
+            v_sub,
+        ),
+        dim=1,
+    )
+    return yuv6.reshape(batch, 12, 192, 256)
+
+
+def _pose_tensor(posenet: Any, camera: Any, *, differentiable: bool = False) -> Any:
+    preprocessed = (
+        _differentiable_pose_preprocess(camera)
+        if differentiable
+        else posenet.preprocess_input(camera)
+    )
+    output = posenet(preprocessed)
     pose = output["pose"] if isinstance(output, dict) else output
     return pose[:, :6]
 
@@ -489,7 +542,7 @@ def _derive_batch(
         ),
         dim=1,
     )
-    pose = _pose_tensor(posenet, camera)
+    pose = _pose_tensor(posenet, camera, differentiable=True)
     gradients = []
     for axis in range(6):
         gradient = torch.autograd.grad(
@@ -713,7 +766,7 @@ def _gauss_newton_batch(
         realized = torch.clamp(torch.round(continuous), 0.0, 255.0)
         frame0_ste = continuous + (realized - continuous).detach()
         camera = torch.stack((frame0_ste, parent_tensor[:, 1]), dim=1)
-        pose = _pose_tensor(posenet, camera)
+        pose = _pose_tensor(posenet, camera, differentiable=True)
         gradients = []
         for axis in range(6):
             gradient = torch.autograd.grad(
