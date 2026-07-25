@@ -1,8 +1,8 @@
 # Codex findings — DDM CT1 campaign telemetry and anticipation encoding
 
-UTC: 2026-07-25T11:32:13Z  
-Lane: `lane_ddm_ct1_campaign_telemetry_encode_20260725`  
-Status: `BUILT_AND_LOCALLY_VERIFIED_MAIN_REVIEW_REQUIRED`  
+UTC: 2026-07-25T11:32:13Z
+Lane: `lane_ddm_ct1_campaign_telemetry_encode_20260725`
+Status: `BUILT_AND_LOCALLY_VERIFIED_MAIN_REVIEW_REQUIRED`
 Research only: `true`
 
 ## Verdict
