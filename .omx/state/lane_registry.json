@@ -87663,15 +87663,15 @@
       "id": "lane_ddm_j9_geometry_escape_cure_and_refire_20260725",
       "name": "DDM J9 geometry escape cure and refire",
       "phase": 0.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "commit 3e8ab50020 D1-D3 minimal repair; 49 focused tests and two clean review passes"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j9_366_forced_geometry_resmoke_20260725T0534Z/full_run_receipt.json"
         },
         "contest_cuda": {
           "status": false,
@@ -87708,5 +87708,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-25T04:44:06Z"
+  "updated_at": "2026-07-25T06:17:10Z"
 }
