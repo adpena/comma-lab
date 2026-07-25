@@ -1,0 +1,92 @@
+{
+  "schema": "ddm_ws4_pose_null_projected_start_config.v1",
+  "run_id": "ddm_ws4_pose_null_projected_seg_start_20260725T112500Z",
+  "lane_id": "lane_ddm_ws4_pose_null_projected_seg_start_20260725",
+  "delegation_checkpoint_key": "codex_delegate:ddm_ws4_pose_null_projected_seg_start:20260725T111436Z",
+  "bindings": {
+    "authority": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_ws4_pose_null_projected_seg_start_20260725T111436Z.wrapped.prompt.txt",
+      "sha256": "361088ec2541e04ca10be79a559d5c7bb70989c7066f85be577142ecec0b3b53",
+      "bytes": 9324
+    },
+    "ws2_receipt": {
+      "path": ".omx/research/ddm_ws2_warm_start_custody_producer_receipt_20260724.json",
+      "sha256": "05581b02cc6ce789b6219302ebd888f1665ab4c3882038ce29e9be18f6174ea1",
+      "bytes": 9598
+    },
+    "ws1_receipt": {
+      "path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+      "sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0",
+      "bytes": 46615
+    },
+    "dm2_receipt": {
+      "path": ".omx/research/ddm_dm2_l3_realization_race_25_rows_20260724T133300Z/ddm_dm2_l3_realization_race_receipt.json",
+      "sha256": "8897241b7fc0ded7d4d6d1100c4d23ea162111050754e36c8ad8b3e57e294229",
+      "bytes": 217224
+    },
+    "dm4_receipt": {
+      "path": ".omx/research/ddm_dm4_targeted_realization_cures_20260724T142722Z/ddm_dm4_targeted_realization_cures_receipt.json",
+      "sha256": "9644ef24c8037485a6350193d9368f65f463ae102db70c3d1412a550362bf5bb",
+      "bytes": 472112
+    },
+    "ws3_arbitration": {
+      "path": ".omx/research/ddm_ws3_warm_start_slope_arbitration_receipt_20260724.json",
+      "sha256": "10e1c335a8e3d2b529d0554e03ef60bbaaf7b2391f3c1aa73ef6de86aa01c072",
+      "bytes": 3129
+    },
+    "cc3_receipt": {
+      "path": ".omx/research/ddm_cc3_mixed_coder_receiver_receipt_20260725.json",
+      "sha256": "1aed9bba14ab2e6c37a5a87ec7dba43506a6f94d18c4b5b444026f693675a44f",
+      "bytes": 4907
+    },
+    "j9_ticket": {
+      "path": ".omx/research/configs/ddm_j9_366_geometry_escape_cure_20260725.json",
+      "sha256": "b4446573eeff9d3beacedb970275fccef0cb574fdf4c28f18a357d453ecd2370",
+      "bytes": 20464
+    },
+    "wseg_archive": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws2_warm_start_custody_producer_20260724T053455Z/01_archives/W_seg.zip.receipt-bytes",
+      "sha256": "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9",
+      "bytes": 138031
+    },
+    "ws3_wseg_full_run": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_seg_reformed_four_step_abort_shrink_20260724T122200Z/full_run_receipt.json",
+      "sha256": "e367f60c8d8a64ba8b5aa8710bbe0f8115f37be8664eb2520f7d6081c09d0ab3",
+      "bytes": 12739
+    },
+    "ws3_wseg_terminal_proposal": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_seg_reformed_four_step_abort_shrink_20260724T122200Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
+      "sha256": "266c6d34fbc0d7e5785f3976e4e1c0e01ae03d9ea1d5dab6dc04c4b947c64dea",
+      "bytes": 4239
+    },
+    "wjoint_step50_checkpoint": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_v5_cured_20260725T062259Z/checkpoints/01_residual_bucket_realized_acceptance_accepted_global000050.npz",
+      "sha256": "043c2a8b3c89688510cc0ff002f37a375a974205a5f8760d93133c47b7cec7c1",
+      "bytes": 19723
+    },
+    "wjoint_full_run": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_v5_cured_20260725T062259Z/full_run_receipt.json",
+      "sha256": "01bbe8f27d83bf16b0dc3bc5a17d8650f9b4a521f4bb4747023b84846bd0cb97",
+      "bytes": 16937
+    },
+    "wjoint_ema_step50_verdict": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_v5_cured_20260725T062259Z/verdicts/01_residual_bucket_realized_acceptance_step000050_n600.json",
+      "sha256": "3610fb624dc4d807b44d28bab5f867e5e5ad1f05104aa984663ab286977e6951",
+      "bytes": 2857
+    }
+  },
+  "outputs": {
+    "ssd_root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws4_pose_null_projected_seg_start_20260725T112500Z",
+    "receipt": ".omx/research/ddm_ws4_pose_null_projected_seg_start_receipt_20260725.json",
+    "arbitration_receipt": ".omx/research/ddm_ws4_warm_start_slope_arbitration_receipt_20260725.json"
+  },
+  "critical_ratio": 4.1215446777965665,
+  "num_pairs": 600,
+  "score_claim": false,
+  "research_only": true,
+  "execution_allowed": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_review_required": true
+}
