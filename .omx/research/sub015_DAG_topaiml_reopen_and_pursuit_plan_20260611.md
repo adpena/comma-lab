@@ -24584,3 +24584,21 @@ not forwarded); the competitive bar = beat the pointer WITH ORIGINAL WORK; 0.188
 PR128 0.187946 remain harvest-signal-only numbers, never targets. Councils/registers must not
 weigh, rank, or surface the option again — strike citing the memory.
 pointer 0.1910828242 [contest-CPU] UNMOVED (apparatus/doctrine).
+## FEED-603-ws4-pose-null-seg-start-formulation-stop (2026-07-25, Codex branch — MAIN review required)
+WS4 reconstructed the sealed WS2 W_seg composition before projection and found **zero lawfully
+joinable pose-punished components**. The separable 204B temporal suffix is pose-BENEFICIAL
+(`delta_d_pose=-16.6962875101`); the 96 strict V19C + 10 settled-prefix moves have no per-move
+PoseNet custody; DM2's harm rows `[5,10,11,12,23]` belong to a separate 25-row G3 instance and
+carry no W_seg decision-path/SHA/correction-ID foreign key. DM4 cured only `[5,23]`; `[10,11,12]`
+remain priced-not-cured, so pair/bucket analogy cannot authorize overlay. CC3's exact composed
+endpoint is already inside the sealed pose target (`163.0492343 <= 163.0611643`).
+`W_seg_perp` therefore materialized as receiver/J5-byte-identical W_seg: **138031B**, SHA
+`264a09ab…81a9`, settled n600 `d_seg=0.0241245100`, `d_pose=146.3649325` reused only by exact
+byte identity. The exact step-50 LIVE W_joint resume state also materialized: **138813B**, SHA
+`2a2c0367…6241`, 119 realized coordinates; the adjacent EMA verdict is NOT relabeled as live
+evidence and J10 retains reseal authority. Unchanged WS3 fail-fast terminates identity W_seg_perp
+at exact proposal 1 on `SEG_REGRESSION` despite `delta S<0`; R*=4.1215446778 keeps W_joint.
+Disposition: `POST_HOC_PROJECTION_FORMULATION_LOSS_KEEP_WJOINT_STEP50_LIVE` (FORMULATION × this
+SHA-bound composition, not a family negative). Durable receipt, WS3-schema arbitration, compiler,
+tests, dedicated DAG/equations, findings, and done marker landed on the branch. Pointer
+0.1910828242 [contest-CPU] UNMOVED — means; `score_claim=false`; MAIN full-diff review required.
