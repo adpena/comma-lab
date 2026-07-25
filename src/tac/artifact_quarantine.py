@@ -77,6 +77,27 @@ DEFAULT_QUARANTINED: tuple[dict, ...] = (
      "what": "M1/C2 byte-close evidence dir", "reason": "old M1/C2 bytes — harvest-signal-only"},
     {"id": "m1_c2_glue_rebuild_20260719", "kind": "path_token",
      "what": "M1/C2 glue-rebuild evidence dir", "reason": "old M1/C2 bytes — harvest-signal-only"},
+    # --- 2026-07-25 OPERATOR RULING (memory: borrowed-incumbent-rate-polish-permanently-dead):
+    # "Carmack is wrong. That is gravity pulling us toward not original work... stop ever
+    # looking at it or thinking about it ever again." Rate-polish on the borrowed incumbent
+    # is PERMANENTLY DEAD (measured entropy floor; the polish era already happened). These
+    # tokens make any charter that anchors on it refuse at spawn. NO waiver reopens the
+    # WORK — the waiver form only permits citing its NUMBERS as historical signal. ---
+    {"id": "incumbent rate-polish", "kind": "token_ci",
+     "what": "rate-polish lane on the borrowed pointer/incumbent archive",
+     "reason": "operator 2026-07-25 PERMANENT ban — entropy floor; original work only"},
+    {"id": "click-polish", "kind": "token_ci",
+     "what": "the #399 click-polish machinery aimed at borrowed-lineage payloads",
+     "reason": "operator 2026-07-25 PERMANENT ban — polish era closed; numbers citable only"},
+    {"id": "click_polish", "kind": "token_ci",
+     "what": "the #399 click-polish machinery aimed at borrowed-lineage payloads",
+     "reason": "operator 2026-07-25 PERMANENT ban — polish era closed; numbers citable only"},
+    {"id": "jrd last-safe", "kind": "token_ci",
+     "what": "the #453 JRD last-safe-plane polish on the frontier archive",
+     "reason": "operator 2026-07-25 PERMANENT ban — same borrowed-vehicle polish class"},
+    {"id": "ad02b012", "kind": "archive_sha_prefix",
+     "what": "the pointer/incumbent archive (177,169 B, PR101/PR110-recode lineage)",
+     "reason": "operator 2026-07-25 — reference/harvest-signal-only; NEVER a polish target"},
 )
 _WAIVER_RE = re.compile(
     r"QUARANTINE-WAIVER:\s*HARVEST-SIGNAL-ONLY\s*[—-]\s*(\S.{9,})", re.IGNORECASE

@@ -24564,3 +24564,23 @@ feedback_grand_council_blind_spot_hunt_frontier_lowering_20260725.md (anchor emi
 PROCEED_WITH_REVISIONS 8/8 sextet, dissents preserved).
 pointer 0.1910828242 [contest-CPU] UNMOVED — this unit is frontier-PROTECTING (stops a ~39h burn
 toward an inadmissible endpoint).
+
+## FEED-603-OPERATOR-RULING-BORROWED-POLISH-DEAD (2026-07-25, MAIN)
+SIGNAL: operator RULING on council op-routable 6 / register row 8, verbatim: "Carmack is wrong.
+That is fucking gravity pulling us in the wrong direction again towards not original work. We
+are focused on original work... anything in CLAUDE.md or elsewhere that keeps pulling us back
+to wanting to do rate polish on something we've already spent a lot of time polishing that we
+know is at entropy floor — stop fucking ever looking at it or thinking about it ever again."
+RULING ENCODED (two-landing, same turn): (1) memory
+borrowed_incumbent_rate_polish_permanently_dead_20260725 + MEMORY.md index (PERMANENT ban:
+borrowed-incumbent/click-polish/JRD-plane rate work = archive-gravity toward non-original work;
+the borrowed archive is at its measured entropy floor — #399/#453/e4-era polish already
+happened; those defensive-bank precedents are HISTORICAL, superseded); (2) STRUCTURAL gate:
+tac.artifact_quarantine DEFAULT tokens extended ("incumbent rate-polish"/"click-polish"/
+"click_polish"/"jrd last-safe" token_ci + ad02b012 archive_sha_prefix) — any charter anchoring
+on the dead lane refuses at spawn, verified firing (3 hits) + clean on original-work charters
+(0 hits), 51 quarantine tests green. Register row 8 + op-routable 6 CLOSED-BY-RULING (struck,
+not forwarded); the competitive bar = beat the pointer WITH ORIGINAL WORK; 0.18804 bank +
+PR128 0.187946 remain harvest-signal-only numbers, never targets. Councils/registers must not
+weigh, rank, or surface the option again — strike citing the memory.
+pointer 0.1910828242 [contest-CPU] UNMOVED (apparatus/doctrine).
