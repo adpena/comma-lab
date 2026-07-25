@@ -24329,3 +24329,23 @@ for this SHA-bound 25-row instance (INSTANCE scope; reopen on dynamic reach-curv
 same-object context price). Receipt 6bd6a5ba…; 8+36+29 tests; 2 review passes. Consumers:
 cc2 (byte race denominators) · ms2r_r3 (rate-inside-objective budget) · costate organ SENSE
 (25 rows) · #636/#682 export budget. Pointer 0.1910828242 [contest-CPU] UNMOVED — means.
+
+### FEED-603-rs1-relay-solve-blocked (2026-07-25, arm ddm_rs1_feature_relay_solve rc=0, MERGED 6e2b1fc243)
+#659 verdict: `BLOCKED_INTERNAL_STATION_DYNAMICS_NOT_CUSTODIED` — verdict_scope: FORMULATION ×
+current SHA-bound custody (NOT a feature-relay/multiple-shooting family negative; no solve was
+run, nothing measured, pointer untouched). LANDED fail-closed infrastructure: typed 2/3-station
+Fisher-metric multiple-shooting solver (independent station vars, exact linear continuity KKT,
+fp64 min-norm; no damping/LR/Euclidean-station poison) + one-shot composed control + strict
+end-only admission (n600 · exact parse-back · realized-through-R/uint8 · frozen scorers ·
+integer bytes · realized joint ΔS<0) + equal-budget validity-radius comparator
+(contiguous-accepted-prefix radius) + SHA/byte-bound execution gate auditing 8 sources before
+any G3 work. THE 8 MISSING EDGES (the named blocker, producer-owed): historical #484 raw
+receipts (absent from all storage tiers) · G3-top24→block2/block3 station-target join ·
+block2 + block3 categorical margin-Fisher Grams (+Euclid controls) · range(A)→block2,
+block2→block3, block3→rank-4-head measured Jacobians · per-candidate continuity secants.
+Premise audit confirmed: #484/AT1x/SN1/MS4D measured aggregates + endpoints ONLY — no producer
+ever custodied internal station dynamics (AT1x receipt explicitly:
+unmeasured_internal_layers_claimed=false). NO RESPAWN (fleet-cap-not-quota + coherence
+DISTANCE test): solve route is live via ms2r at box tolerance; descent route is the RUNNING
+#366 campaign; a station-dynamics producer arm does not shorten distance to the next exact row
+today. #659 → held-with-named-blocker. Pointer 0.1910828242 [contest-CPU] UNMOVED — means.
