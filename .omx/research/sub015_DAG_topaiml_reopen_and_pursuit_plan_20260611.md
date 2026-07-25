@@ -24742,3 +24742,13 @@ gate. NO READY_TO_FIRE; MAIN must review/merge, reseal against merged-main SHAs,
 matching memory custody, and keep FIRE blocked until the reopener passes. Quarantine:
 HARVEST-SIGNAL-ONLY banked R1 `0.127` comparator only; no R1 bytes/weights loaded.
 Pointer `0.1910828242 [contest-CPU]` UNMOVED; score_claim=false.
+
+FEED-603-j10-G1 (2026-07-25, MAIN): j10 MERGED 58d4c24e9e — G1 engine cures COMPLETE (derived EMA 46/49 LawRef ·
+live-vs-live verdicts · degeneracy grace · idempotent reseal 19d130e2 · 105 tests · 16.94 GiB SAFE · resume GREEN);
+attempt-5 phantom regression EXONERATED as apparatus failure (live 0.069743 < both shadow refs — MAIN re-derived).
+Opening blocker verdict_scope: instance — materialized-step50-source × sealed-proposal-set (closest move seg −0.005057 /
+pose +0.014995 / joint +0.009940). CONVERGENCE with FEED-603-ws4: same coordinate family (worldsheet_joint_active_x @
+camera Q8) misaligned with contest gradient from BOTH starts → cure = proposal DECOMPOSITION (pose-null/seg-null split
+via ms3/ms4 pose quadratic + #580 projector), NOT a new start. KEEP_WJOINT-STEP-50 stands (ws3+ws4 concur). Reopener
+arm j11 chartered (singles + composed pairs w/ PC1 pose coords, acceptance rule UNCHANGED, ws4-preserved archive
+2a2c0367 source). Card §19. Pointer 0.1910828242 [contest-CPU] UNMOVED — all of this is means.

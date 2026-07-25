@@ -369,3 +369,44 @@ G3.5 ks1 NOW UNBLOCKED (adapter exists) · G4 **GREEN** · G5/G6 pending reseal.
 - Applied now: fleet = card gates only (j10·gc4·ks1 — all three consume existing signal and
   sit on the row path). gc4's Q4 work-plan rows are ADOPTED only through this test at MAIN
   review; anything failing it is named-dropped with reason, never silently built anyway.
+
+## §19 G1 RESOLVED: ENGINE-CURES-GREEN / OPENING-BLOCKED(INSTANCE) → j11 composed-opening cure (2026-07-25, j10 merged 58d4c24e9e + ws4 merged 93ae3dcd78)
+
+STORES CONSULTED: j10 findings memo (both halves, arithmetic re-derived by MAIN: seg_term −0.005056593153212 /
+pose_term +0.014995431539376 / joint +0.009940170104070 reproduced to 1e-12) · ws4 findings memo (full) · ws3/ws2
+receipts · pc2 §15 · sy1 S2 mechanism sheet · ms3/ms4 pose-quadratic custody bundle · #580 projector · card §7/§15/§17.
+
+**G1 verdict — the ENGINE is cured; the OPENING is the one remaining blocker, INSTANCE-scoped:**
+- ALL attempt-5 cures LANDED + proven on main: derived EMA decay 46/49 via `ema_decay_run_geometry_v1` (3/(1−d)=49<50) ·
+  live-vs-live stage decisions (EMA export-only; cross-shadow refuses) · degeneracy grace (VERDICT_NOT_YET_INFORMATIVE) ·
+  custody joins · idempotent reseal (byte-identical ticket SHA 19d130e2d767…) · 105 tests · memory 16.94 GiB MEASURED SAFE ·
+  fresh-process resume GREEN.
+- **Attempt-5 EXONERATED**: the step-50 "phantom regression" was a shadow-inconsistent APPARATUS failure — materialized
+  live d_seg 0.069742770… is BELOW both phantom references (EMA-verdict 0.070519, step-1 ref 0.070309). The live state
+  was descending the whole time. verdict_scope: instance — apparatus (EMA-verdict shadow), cured by C1/C2/C3.
+- Blocker (j10): BLOCKED_REALIZED_NO_PURE_PRICED_DESCENT_AFTER_SHRINK_LADDER — all 4 receiver-distinct opening proposals
+  fail the UNCHANGED pure-priced exact n600 rule from the materialized step-50 source. verdict_scope: instance —
+  materialized-step50-source × sealed-opening-proposal-set. Proposal-quality family OPEN.
+
+**The two-receipt convergence (j10 × ws4) — ONE named crux:** the sealed proposal set's dominant coordinate family
+(`worldsheet_joint_active_x` at camera_874x1164_q8) trades seg↔pose along an exchange line MISALIGNED with the contest
+gradient from BOTH starts: from W_seg it is pose-beneficial/seg-collateral (joint ΔS −0.00043 but SEG_REGRESSION at
+ratio 1.174 << R*=4.1215446777965665); from W_joint-step-50 it is seg-beneficial (−0.00506!) but pose-costly (+0.0150).
+The cure is NOT another start — it is proposal DECOMPOSITION into pose-null and seg-null components. ws4 names the
+exact precondition: "per-correction PoseNet custody" — which the ms3/ms4 ≤6-dim PoseNet quadratic (active-tube form,
+n600 batch32, per-pair custody) PROVIDES. j10 landed the typed extension point (`dm4_j5_proposal_source`).
+
+**Start arbitration state:** KEEP_WJOINT-STEP-50 stands (ws3 + ws4 concur; W_seg⊥ post-hoc projection = FORMULATION-dead,
+lawful projection set EMPTY — no DM4 foreign key). §7's presumptive-W_seg is superseded by these two measured falsifier
+receipts unless ks1's knee member displaces both. New measured facts: W_seg full pose is 146.365 (the 204-byte temporal
+suffix is pose-beneficial −16.696), and CC3's composed endpoint 163.049 already sits INSIDE the sealed stage-3 pose
+target 163.061.
+
+**Reopener = j11 (tick rule 3, ONE reformulated arm at the named crux):** typed opening-proposal decomposition — split
+each sealed opening proposal through the ms3/ms4 pose quadratic + #580 projector into (pose-null seg component,
+seg-null pose component); realize each through receiver/uint8; price singles AND composed pairs (pose-null-seg +
+PC1-pose per pc2's ratio-14.02 descending coordinates) under the UNCHANGED pure-priced exact rule from the ws4-preserved
+step-50 archive (sha 2a2c0367…). Acceptance rule untouched. §18 coherence test PASSES: consumes j10 blocker + ws4
+channel + ms3/ms4 + #580 + pc2 + sy1 S2 (all existing, zero new families); row-path position = G1 completion → post-merge
+reseal (idempotent resealer landed) → worst-geometry receipt → G5 → FIRE (with MAIN). After j11 realizes ΔS<0: reseal
+against merged-main consumer/launcher SHAs per j10's post-merge contract.
