@@ -57,6 +57,13 @@ _EXPLICIT_CODECS: Final = {
     "RAW_LZMA1": 2,
 }
 _EXPLICIT_IDS: Final = {value: key for key, value in _EXPLICIT_CODECS.items()}
+LA1_CODECS: Final = (
+    "RAW_EXPLICIT",
+    "BROTLI_Q11",
+    "RAW_LZMA1",
+    "G4_FREE_DECODER_CONTEXT",
+    "BELLARD_KT_MIXER",
+)
 _LZMA_FILTERS: Final = [
     {
         "id": lzma.FILTER_LZMA1,
@@ -344,20 +351,50 @@ def _decode_explicit(frame: bytes) -> bytes:
     return raw
 
 
-def race_stream(
+def encode_la1_frame(raw: bytes, codec: str) -> bytes:
+    """Encode one payload with a named LA1 race arm."""
+
+    if not raw:
+        raise LA1PricingError("LA1 payload is empty")
+    if codec in _EXPLICIT_CODECS:
+        return _encode_explicit(raw, codec)
+    if codec == "G4_FREE_DECODER_CONTEXT":
+        return encode_g4_decoder_context(raw)
+    if codec == "BELLARD_KT_MIXER":
+        return encode_bellard_class_mixing(raw)
+    raise LA1PricingError(f"unknown LA1 codec {codec}")
+
+
+def decode_la1_frame(frame: bytes, codec: str) -> bytes:
+    """Decode and canonically re-encode one named LA1 frame."""
+
+    if codec in _EXPLICIT_CODECS:
+        raw = _decode_explicit(frame)
+    elif codec == "G4_FREE_DECODER_CONTEXT":
+        raw = decode_g4_decoder_context(frame)
+    elif codec == "BELLARD_KT_MIXER":
+        raw = decode_bellard_class_mixing(frame)
+    else:
+        raise LA1PricingError(f"unknown LA1 codec {codec}")
+    if encode_la1_frame(raw, codec) != frame:
+        raise LA1PricingError(f"{codec} frame is not canonical")
+    return raw
+
+
+def race_payload(
     stream: str,
     raw: bytes,
     *,
     current_home_bytes: int,
 ) -> dict[str, Any]:
-    """Run the exact explicit-versus-context race on one stream payload."""
+    """Run the exact LA1 coder race on an arbitrary whole-stream payload."""
 
-    if stream not in _POLICIES or not raw:
+    if not stream or not raw or current_home_bytes < 0:
         raise LA1PricingError("race stream identity/payload is invalid")
     arms: list[dict[str, Any]] = []
     for codec in _EXPLICIT_CODECS:
-        frame = _encode_explicit(raw, codec)
-        if _decode_explicit(frame) != raw or _encode_explicit(raw, codec) != frame:
+        frame = encode_la1_frame(raw, codec)
+        if decode_la1_frame(frame, codec) != raw:
             raise LA1PricingError(f"{stream} {codec} parse-back differs")
         arms.append(
             {
@@ -373,20 +410,12 @@ def race_stream(
             }
         )
     context_arms = (
-        (
-            "G4_FREE_DECODER_CONTEXT",
-            encode_g4_decoder_context,
-            decode_g4_decoder_context,
-        ),
-        (
-            "BELLARD_KT_MIXER",
-            encode_bellard_class_mixing,
-            decode_bellard_class_mixing,
-        ),
+        "G4_FREE_DECODER_CONTEXT",
+        "BELLARD_KT_MIXER",
     )
-    for codec, encoder, decoder in context_arms:
-        frame = encoder(raw)
-        if decoder(frame) != raw or encoder(raw) != frame:
+    for codec in context_arms:
+        frame = encode_la1_frame(raw, codec)
+        if decode_la1_frame(frame, codec) != raw:
             raise LA1PricingError(f"{stream} {codec} parse-back differs")
         arms.append(
             {
@@ -430,6 +459,19 @@ def race_stream(
             "coder-family closure, or distortion inference"
         ),
     }
+
+
+def race_stream(
+    stream: str,
+    raw: bytes,
+    *,
+    current_home_bytes: int,
+) -> dict[str, Any]:
+    """Run the exact explicit-versus-context race on one governed LA1 home."""
+
+    if stream not in _POLICIES:
+        raise LA1PricingError("race stream identity/payload is invalid")
+    return race_payload(stream, raw, current_home_bytes=current_home_bytes)
 
 
 def _extract_streams(base_archive: bytes, lane_payload: bytes) -> dict[str, bytes]:
@@ -744,12 +786,16 @@ def materialize(config_path: Path, output_dir: Path) -> dict[str, Any]:
 __all__ = [
     "ASSIGNMENT_SCHEMA",
     "CONFIG_SCHEMA",
+    "LA1_CODECS",
     "LANE_ID",
     "RACE_SCHEMA",
     "SCHEMA",
     "LA1PricingError",
     "build_receipt",
     "canonical_json_bytes",
+    "decode_la1_frame",
+    "encode_la1_frame",
     "materialize",
+    "race_payload",
     "race_stream",
 ]

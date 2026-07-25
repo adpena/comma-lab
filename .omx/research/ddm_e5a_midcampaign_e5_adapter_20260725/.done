@@ -1,0 +1,24 @@
+{
+  "schema": "ddm_e5a_midcampaign_e5_adapter_done.v1",
+  "utc": "2026-07-25T13:22:47Z",
+  "lane_id": "lane_ddm_e5a_midcampaign_e5_adapter_20260725",
+  "status": "DONE_RESEARCH_ONLY_MAIN_REVIEW_REQUIRED",
+  "verdict": "PASS_E5A_MIDCAMP_CHECKPOINT_TO_PACKET",
+  "g4_status": "PASS_LOCAL_RESEARCH_ONLY_MAIN_REVIEW_REQUIRED",
+  "packet": {
+    "bytes": 130101,
+    "sha256": "fb69964da2649c310b7694416ff9863e13f54594af215cd771dcd50f5898a85d",
+    "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_ct1_campaign_telemetry_encode_20260725/e5a_runtime/candidate_packet/archive.zip",
+    "cold_store_receipt_path": ".omx/research/ddm_e5a_midcampaign_e5_adapter_20260725/packet_cold_store_receipt.json"
+  },
+  "n600": {
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "d_seg": 0.06974277072482639,
+    "d_pose": 35.499820809591
+  },
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

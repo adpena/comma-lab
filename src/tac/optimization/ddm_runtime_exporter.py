@@ -33,6 +33,12 @@ from tac.canonical_equations.ddm_runtime_export_identity_20260723 import (
     semantic_paint_jacobian_summary,
 )
 from tac.optimization import ddm_runtime_receiver as runtime
+from tac.optimization.ddm_la1_layer_assignment_context_pricing import (
+    LA1_CODECS,
+    decode_la1_frame,
+    encode_la1_frame,
+    race_payload,
+)
 from tac.optimization.ddm_min_description_contract import (
     LayerHome,
     ReceiverGrammarAdmission,
@@ -42,9 +48,12 @@ from tac.optimization.ddm_min_description_contract import (
 )
 from tac.optimization.direct_description_carrier_compose import (
     CLASS_ORDER,
+    LANE_PROGRAM_MEMBER,
     REALIZATION_PAINT_ORDER,
+    REALIZATION_PROFILE_MEMBER,
     REALIZATION_STATIC_RULE_MEMBER,
     ROLE_CLASS_IDS,
+    SCORER_SOLVED_TEMPLATE_MEMBER,
     WORLDSHEET_G1_MEMBER,
     compile_carrier_compose_archive,
     parse_carrier_compose_archive,
@@ -61,6 +70,7 @@ E2_SCHEMA = "ddm_e2_runtime_archive.v1"
 E3_SCHEMA = "ddm_e3_runtime_archive.v1"
 E4_SCHEMA = "ddm_e4_runtime_archive.v1"
 E4_WS1_SCHEMA = "ddm_e4_ws1_runtime_archive.v1"
+E5A_SCHEMA = "ddm_e5a_midcampaign_runtime_archive.v1"
 IC1_SCHEMA = "ddm_ic1_runtime_archive.v1"
 IC2_SCHEMA = "ddm_ic2_runtime_archive.v1"
 RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
@@ -69,6 +79,7 @@ E2_CONFIG_SCHEMA = "DDME2RuntimeExporterConfigV1"
 E3_CONFIG_SCHEMA = "DDME3RuntimeExporterConfigV1"
 E4_CONFIG_SCHEMA = "DDME4RuntimeExporterConfigV1"
 E4_WS1_CONFIG_SCHEMA = "DDME4WS1RuntimeExporterConfigV1"
+E5A_CONFIG_SCHEMA = "DDME5AMidcampaignRuntimeExporterConfigV1"
 IC1_CONFIG_SCHEMA = "DDMIC1RuntimeExporterConfigV1"
 IC2_CONFIG_SCHEMA = "DDMIC2RuntimeExporterConfigV1"
 RESULT_SCHEMA = "ddm_e1_runtime_export_receipt.v1"
@@ -76,6 +87,7 @@ E2_RESULT_SCHEMA = "ddm_e2_runtime_export_receipt.v1"
 E3_RESULT_SCHEMA = "ddm_e3_runtime_export_receipt.v1"
 E4_RESULT_SCHEMA = "ddm_e4_runtime_export_receipt.v1"
 E4_WS1_RESULT_SCHEMA = "ddm_e4_ws1_runtime_export_receipt.v1"
+E5A_RESULT_SCHEMA = "ddm_e5a_midcampaign_runtime_export_receipt.v1"
 IC1_RESULT_SCHEMA = "ddm_ic1_runtime_export_receipt.v1"
 IC2_RESULT_SCHEMA = "ddm_ic2_runtime_export_receipt.v1"
 SOURCE_BYTES = 133_941
@@ -144,6 +156,20 @@ REFINEMENT_CONTRACT = {
 }
 LANGUAGE_VERSION = "ddm_composed_language.v1"
 WS1_GRAMMAR_VERSION = "ddm_ws1_receiver_closed_warm_start.v1"
+E5A_BUNDLE_MAGIC = b"E5AL1"
+E5A_BUNDLE_PREFIX = struct.Struct(">5sBBB")
+E5A_BUNDLE_ENTRY = struct.Struct(">BBI")
+E5A_CODEC_IDS = {name: index for index, name in enumerate(LA1_CODECS)}
+E5A_COMPONENTS = (
+    "predictor_archive",
+    "worldsheet_g1_payload",
+    "realization_profile_payload",
+    "scorer_solved_templates_payload",
+    "lane_programs_payload",
+    "coupled_margin_program",
+    "preuint8_q8_program",
+    "warm_start_payload",
+)
 BLOB_MAGIC = b"DDE1B"
 BLOB_HEADER = struct.Struct(">5sBBBBQQ32s")
 BROTLI_Q11_CODER = "brotli_q11"
@@ -330,6 +356,36 @@ class DDME4WS1RuntimeExporterConfigV1(BaseModel):
         )
 
 
+class DDME5AMidcampaignRuntimeExporterConfigV1(DDME4WS1RuntimeExporterConfigV1):
+    """Typed E5 admission for one adapter-materialized campaign state."""
+
+    schema_: Literal["DDME5AMidcampaignRuntimeExporterConfigV1"] = Field(
+        default=E5A_CONFIG_SCHEMA,
+        alias="schema",
+        serialization_alias="schema",
+    )
+    run_id: Literal["ddm_e5a_midcampaign_e5_adapter_20260725"] = (
+        "ddm_e5a_midcampaign_e5_adapter_20260725"
+    )
+    candidate: Literal["W_joint"] = "W_joint"
+    adapter_receipt_path: StrictStr
+    adapter_receipt_sha256: StrictStr = Field(pattern=r"^[0-9a-f]{64}$")
+    la1_prior_prospective_bytes: Literal[128254] = 128254
+    packet_framing: Literal["la1_selected_semantic_components_v1"] = (
+        "la1_selected_semantic_components_v1"
+    )
+
+    @model_validator(mode="after")
+    def _valid_e5a(self) -> DDME5AMidcampaignRuntimeExporterConfigV1:
+        path = Path(self.adapter_receipt_path)
+        if not path.is_absolute() or not (
+            self.adapter_receipt_path.startswith("/Volumes/VertigoDataTier/pact/")
+            or self.adapter_receipt_path.startswith("/Volumes/APDataStore/pact/")
+        ):
+            raise ValueError("adapter_receipt_path must use governed SSD custody")
+        return self
+
+
 class DDMIC1RuntimeExporterConfigV1(DDME4WS1RuntimeExporterConfigV1):
     """Typed W_joint -> PA1 composition without widening the E5 route."""
 
@@ -365,6 +421,7 @@ class DDMIC2RuntimeExporterConfigV1(DDME4WS1RuntimeExporterConfigV1):
 RuntimeExporterConfig = (
     DDME1RuntimeExporterConfigV1
     | DDME4WS1RuntimeExporterConfigV1
+    | DDME5AMidcampaignRuntimeExporterConfigV1
     | DDMIC1RuntimeExporterConfigV1
     | DDMIC2RuntimeExporterConfigV1
 )
@@ -1010,7 +1067,11 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
         "struct",
         "sys",
         "tac.optimization.ddm_cc3_mixed_coder_receiver",
+        "tac.optimization.ddm_la1_layer_assignment_context_pricing",
         "tac.optimization.ddm_pc1_pose_stream",
+        "tac.optimization.direct_description_carrier_compose",
+        "tac.optimization.direct_description_coupled_margin",
+        "tac.optimization.direct_description_preuint8_channel",
         "time",
         "tac.optimization.ddm_ws1_warm_start",
         "typing",
@@ -1041,7 +1102,14 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
         "allowed_dependency_roots": [
             "torch",
             "brotli",
-            *(["embedded:tac.optimization.ddm_ws1_warm_start"] if bundle_active else []),
+            *(
+                [
+                    "embedded:tac.optimization.ddm_la1_layer_assignment_context_pricing",
+                    "embedded:tac.optimization.ddm_ws1_warm_start",
+                ]
+                if bundle_active
+                else []
+            ),
         ],
         "forbidden_tokens": forbidden_tokens,
         "imports": sorted(imports),
@@ -1309,6 +1377,7 @@ def _ws1_runtime_source_bundle() -> bytes:
         return _WS1_SOURCE_BUNDLE_CACHE
     queue = [
         "tac.optimization.ddm_cc3_mixed_coder_receiver",
+        "tac.optimization.ddm_la1_layer_assignment_context_pricing",
         "tac.optimization.ddm_ws1_warm_start",
     ]
     visited: set[str] = set()
@@ -1408,6 +1477,39 @@ def cc3_runtime_payload() -> bytes:
     return payload
 
 
+def derive_ws1_grammar_stream_manifest(
+    source_archive: bytes,
+) -> tuple[DDME4WS1GrammarStreamConfigV1, ...]:
+    """Derive E5's two exact contiguous grammar streams from receiver parse-back."""
+
+    from tac.optimization.ddm_ws1_warm_start import parse_ws1_warm_start_archive
+
+    parsed = parse_ws1_warm_start_archive(source_archive)
+    if parsed.exact_reemit() != source_archive:
+        raise ExporterError("WS1 source parse/re-emit changed archive bytes")
+    payload_consumer = (
+        "apply_temporal_affine+reassert_frame1"
+        if parsed.candidate == "W_seg"
+        else "signed_distance_geometry+apply_local_statistics"
+    )
+    return (
+        DDME4WS1GrammarStreamConfigV1(
+            name="nested_preuint8_archive",
+            offset=0,
+            bytes=len(parsed.base_archive),
+            sha256=_sha256(parsed.base_archive),
+            receiver_consumer="receive_preuint8_q8_archive",
+        ),
+        DDME4WS1GrammarStreamConfigV1(
+            name="warm_start_payload",
+            offset=len(parsed.base_archive),
+            bytes=len(parsed.payload),
+            sha256=_sha256(parsed.payload),
+            receiver_consumer=payload_consumer,
+        ),
+    )
+
+
 def _ws1_grammar_state(
     source_archive: bytes,
     config: DDME4WS1RuntimeExporterConfigV1,
@@ -1424,26 +1526,9 @@ def _ws1_grammar_state(
         raise ExporterError("WS1 source parse/re-emit changed archive bytes")
     if parsed.candidate != config.candidate:
         raise ExporterError("WS1 parsed candidate differs from typed config")
-    payload_consumer = (
-        "apply_temporal_affine+reassert_frame1"
-        if config.candidate == "W_seg"
-        else "signed_distance_geometry+apply_local_statistics"
-    )
-    derived_streams = (
-        ReceiverGrammarStream(
-            name="nested_preuint8_archive",
-            offset=0,
-            bytes=len(parsed.base_archive),
-            sha256=_sha256(parsed.base_archive),
-            receiver_consumer="receive_preuint8_q8_archive",
-        ),
-        ReceiverGrammarStream(
-            name="warm_start_payload",
-            offset=len(parsed.base_archive),
-            bytes=len(parsed.payload),
-            sha256=_sha256(parsed.payload),
-            receiver_consumer=payload_consumer,
-        ),
+    derived_streams = tuple(
+        ReceiverGrammarStream.from_dict(row.model_dump(mode="json"))
+        for row in derive_ws1_grammar_stream_manifest(source_archive)
     )
     configured = ReceiverGrammarAdmission(
         grammar_version=config.grammar_version,
@@ -1749,8 +1834,140 @@ def cc3_inflate_sh() -> bytes:
     return _inflate_sh()
 
 
+def _e5a_semantic_components(source_archive: bytes) -> dict[str, bytes]:
+    """Extract only irreducible video-derived WS1 semantics for LA1 pricing."""
+
+    from tac.optimization.ddm_ws1_warm_start import parse_ws1_warm_start_archive
+    from tac.optimization.direct_description_coupled_margin import (
+        BASE_MEMBER as COUPLED_BASE_MEMBER,
+    )
+    from tac.optimization.direct_description_coupled_margin import (
+        PROGRAM_MEMBER as COUPLED_PROGRAM_MEMBER,
+    )
+    from tac.optimization.direct_description_coupled_margin import parse_coupled_margin_archive
+    from tac.optimization.direct_description_preuint8_channel import (
+        BASE_MEMBER as PREUINT8_BASE_MEMBER,
+    )
+    from tac.optimization.direct_description_preuint8_channel import (
+        PROGRAM_MEMBER as PREUINT8_PROGRAM_MEMBER,
+    )
+    from tac.optimization.direct_description_preuint8_channel import parse_preuint8_q8_archive
+
+    parsed = parse_ws1_warm_start_archive(source_archive)
+    preuint8_members, _ = parse_preuint8_q8_archive(parsed.base_archive)
+    coupled_members, _ = parse_coupled_margin_archive(
+        preuint8_members[PREUINT8_BASE_MEMBER]
+    )
+    carrier_members, _ = parse_carrier_compose_archive(
+        coupled_members[COUPLED_BASE_MEMBER]
+    )
+    unsupported = set(carrier_members) - {
+        "manifest.json",
+        "predictor.zip",
+        WORLDSHEET_G1_MEMBER,
+        REALIZATION_PROFILE_MEMBER,
+        SCORER_SOLVED_TEMPLATE_MEMBER,
+        LANE_PROGRAM_MEMBER,
+    }
+    if unsupported or REALIZATION_STATIC_RULE_MEMBER in carrier_members:
+        raise ExporterError(
+            "E5A semantic adapter encountered an unregistered carrier component: "
+            + ",".join(sorted(unsupported | ({REALIZATION_STATIC_RULE_MEMBER} & set(carrier_members))))
+        )
+    components = {
+        "predictor_archive": carrier_members["predictor.zip"],
+        "worldsheet_g1_payload": carrier_members.get(WORLDSHEET_G1_MEMBER, b""),
+        "realization_profile_payload": carrier_members.get(REALIZATION_PROFILE_MEMBER, b""),
+        "scorer_solved_templates_payload": carrier_members.get(SCORER_SOLVED_TEMPLATE_MEMBER, b""),
+        "lane_programs_payload": carrier_members.get(LANE_PROGRAM_MEMBER, b""),
+        "coupled_margin_program": coupled_members[COUPLED_PROGRAM_MEMBER],
+        "preuint8_q8_program": preuint8_members[PREUINT8_PROGRAM_MEMBER],
+        "warm_start_payload": parsed.payload,
+    }
+    if any(not components[name] for name in E5A_COMPONENTS if name != "lane_programs_payload"):
+        raise ExporterError("E5A required semantic component is empty")
+    return components
+
+
+def _compile_e5a_la1_bundle(
+    source_archive: bytes,
+) -> tuple[bytes, list[dict[str, Any]]]:
+    """LA1-race each semantic stream and emit one compact canonical bundle."""
+
+    components = _e5a_semantic_components(source_archive)
+    rows: list[dict[str, Any]] = []
+    encoded: list[tuple[int, int, bytes]] = []
+    for component_id, name in enumerate(E5A_COMPONENTS):
+        raw = components[name]
+        if not raw:
+            continue
+        race = race_payload(name, raw, current_home_bytes=len(raw))
+        codec = str(race["selected_codec"])
+        frame = encode_la1_frame(raw, codec)
+        if decode_la1_frame(frame, codec) != raw:
+            raise ExporterError(f"E5A LA1 frame parse-back differs: {name}")
+        encoded.append((component_id, E5A_CODEC_IDS[codec], frame))
+        rows.append(
+            {
+                "component": name,
+                "raw_bytes": len(raw),
+                "raw_sha256": _sha256(raw),
+                "selected_codec": codec,
+                "selected_framed_bytes": len(frame),
+                "selected_frame_sha256": _sha256(frame),
+                "parseback_exact": True,
+            }
+        )
+    prefix = E5A_BUNDLE_PREFIX.pack(
+        E5A_BUNDLE_MAGIC,
+        1,
+        len(encoded),
+        0,
+    )
+    bundle = prefix + b"".join(
+        E5A_BUNDLE_ENTRY.pack(component_id, codec_id, len(frame)) + frame
+        for component_id, codec_id, frame in encoded
+    )
+    reconstructed, _ = runtime._reconstruct_e5a_la1_bundle(bundle)
+    if reconstructed != source_archive:
+        raise ExporterError("E5A LA1 bundle receiver changed materialized state bytes")
+    return bundle, rows
+
+
+def _validate_e5a_adapter_receipt(
+    config: DDME5AMidcampaignRuntimeExporterConfigV1,
+) -> dict[str, Any]:
+    path = Path(config.adapter_receipt_path)
+    payload = path.read_bytes()
+    if _sha256(payload) != config.adapter_receipt_sha256:
+        raise ExporterError("E5A adapter receipt custody mismatch")
+    try:
+        receipt = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise ExporterError("E5A adapter receipt is malformed") from exc
+    state = receipt.get("state")
+    if (
+        receipt.get("status") != "PASS"
+        or not isinstance(state, dict)
+        or (state.get("bytes"), state.get("sha256"), state.get("path"))
+        != (
+            config.source_archive_bytes,
+            config.source_archive_sha256,
+            config.source_archive_path,
+        )
+        or receipt.get("proof", {}).get("consumer_roundtrip_byte_identical") is not True
+    ):
+        raise ExporterError("E5A adapter receipt does not admit the configured state")
+    return receipt
+
+
 def export_ws1_runtime(
-    config: DDME4WS1RuntimeExporterConfigV1 | DDMIC1RuntimeExporterConfigV1 | DDMIC2RuntimeExporterConfigV1,
+    config: (
+        DDME4WS1RuntimeExporterConfigV1
+        | DDME5AMidcampaignRuntimeExporterConfigV1
+        | DDMIC1RuntimeExporterConfigV1
+        | DDMIC2RuntimeExporterConfigV1
+    ),
     *,
     config_path: Path,
 ) -> tuple[dict[str, Any], Path]:
@@ -1764,6 +1981,7 @@ def export_ws1_runtime(
     torch.use_deterministic_algorithms(True)
     is_ic1 = isinstance(config, DDMIC1RuntimeExporterConfigV1)
     is_ic2 = isinstance(config, DDMIC2RuntimeExporterConfigV1)
+    is_e5a = isinstance(config, DDME5AMidcampaignRuntimeExporterConfigV1)
     amplitude_enabled = is_ic1 or is_ic2
     coder = _ws1_e4_coder()
     source_path = _require_ws1_source_path(config.source_archive_path)
@@ -1782,6 +2000,7 @@ def export_ws1_runtime(
         config.source_archive_sha256,
     ):
         raise ExporterError("typed WS1 source archive custody mismatch")
+    adapter_receipt = _validate_e5a_adapter_receipt(config) if is_e5a else None
     receiver, grammar_admission, dofs = _ws1_grammar_state(
         source_archive,
         config,
@@ -1815,7 +2034,11 @@ def export_ws1_runtime(
         if is_ic2
         else ["numpy", "scipy", "torch", "brotli"]
     )
-    state_member = _frame_blob(source_archive, kind=0, coder=coder)
+    la1_rows: list[dict[str, Any]] = []
+    if is_e5a:
+        state_member, la1_rows = _compile_e5a_la1_bundle(source_archive)
+    else:
+        state_member = _frame_blob(source_archive, kind=0, coder=coder)
     state_member_sha256 = _sha256(state_member)
     manifest: dict[str, Any] = {
         "dependencies": dependencies,
@@ -1836,7 +2059,15 @@ def export_ws1_runtime(
             "bytes": output_bytes,
             "sha256": output_sha256,
         },
-        "schema": IC2_SCHEMA if is_ic2 else IC1_SCHEMA if is_ic1 else E4_WS1_SCHEMA,
+        "schema": (
+            IC2_SCHEMA
+            if is_ic2
+            else IC1_SCHEMA
+            if is_ic1
+            else E5A_SCHEMA
+            if is_e5a
+            else E4_WS1_SCHEMA
+        ),
         "sections": [
             {
                 "bytes": len(state_member),
@@ -1857,6 +2088,15 @@ def export_ws1_runtime(
             "receiver_effective_dofs": dofs["total"],
         },
     }
+    if is_e5a:
+        manifest["la1_framing"] = {
+            "bundle_bytes": len(state_member),
+            "bundle_sha256": state_member_sha256,
+            "component_count": len(la1_rows),
+            "prior_prospective_bytes": config.la1_prior_prospective_bytes,
+            "schema": "ddm_e5a_la1_semantic_bundle.v1",
+            "selection": "minimum_exact_framed_bytes_then_codec_name",
+        }
     if amplitude_enabled:
         manifest["amplitude_transform"] = {
             "application_frame": 0,
@@ -1992,6 +2232,8 @@ def export_ws1_runtime(
             if is_ic2
             else IC1_RESULT_SCHEMA
             if is_ic1
+            else E5A_RESULT_SCHEMA
+            if is_e5a
             else E4_WS1_RESULT_SCHEMA
         ),
         "score_claim": False,
@@ -2013,6 +2255,31 @@ def export_ws1_runtime(
         },
         "typed_config_sha256": config.typed_config_hash(),
     }
+    if is_e5a:
+        assert adapter_receipt is not None
+        selected_frame_bytes = sum(row["selected_framed_bytes"] for row in la1_rows)
+        result["adapter"] = {
+            "receipt_path": config.adapter_receipt_path,
+            "receipt_sha256": config.adapter_receipt_sha256,
+            "checkpoint_to_state_consumer_roundtrip": adapter_receipt["proof"][
+                "consumer_roundtrip_byte_identical"
+            ],
+        }
+        result["la1_framing"] = {
+            "bundle_bytes": len(state_member),
+            "bundle_overhead_bytes": len(state_member) - selected_frame_bytes,
+            "components": la1_rows,
+            "prior_prospective_bytes": config.la1_prior_prospective_bytes,
+            "rebase_delta_bundle_vs_prior": (
+                len(state_member) - config.la1_prior_prospective_bytes
+            ),
+            "selected_frame_bytes": selected_frame_bytes,
+            "complete_packet_bytes": len(archive),
+            "complete_packet_minus_prior_prospective": (
+                len(archive) - config.la1_prior_prospective_bytes
+            ),
+            "receiver_closed": True,
+        }
     receipt_path = _publish_or_verify(
         output_dir.parent
         / (
@@ -2020,6 +2287,8 @@ def export_ws1_runtime(
             if is_ic2
             else "ddm_ic1_runtime_export_receipt.json"
             if is_ic1
+            else "ddm_e5a_midcampaign_runtime_export_receipt.json"
+            if is_e5a
             else "ddm_e4_ws1_runtime_export_receipt.json"
         ),
         rfc8785_canonicalize(result) + b"\n",
@@ -2327,6 +2596,8 @@ def load_config(path: Path) -> RuntimeExporterConfig:
         return DDMIC2RuntimeExporterConfigV1.model_validate(value, strict=True)
     if value.get("schema") == IC1_CONFIG_SCHEMA:
         return DDMIC1RuntimeExporterConfigV1.model_validate(value, strict=True)
+    if value.get("schema") == E5A_CONFIG_SCHEMA:
+        return DDME5AMidcampaignRuntimeExporterConfigV1.model_validate(value, strict=True)
     if value.get("schema") == E4_WS1_CONFIG_SCHEMA:
         return DDME4WS1RuntimeExporterConfigV1.model_validate(value, strict=True)
     return DDME1RuntimeExporterConfigV1.model_validate(value, strict=True)
@@ -2346,6 +2617,7 @@ def main(argv: list[str] | None = None) -> int:
         config,
         (
             DDME4WS1RuntimeExporterConfigV1,
+            DDME5AMidcampaignRuntimeExporterConfigV1,
             DDMIC1RuntimeExporterConfigV1,
             DDMIC2RuntimeExporterConfigV1,
         ),
@@ -2373,9 +2645,11 @@ __all__ = [
     "DDME1RuntimeExporterConfigV1",
     "DDME4WS1GrammarStreamConfigV1",
     "DDME4WS1RuntimeExporterConfigV1",
+    "DDME5AMidcampaignRuntimeExporterConfigV1",
     "DDMIC1RuntimeExporterConfigV1",
     "DDMIC2RuntimeExporterConfigV1",
     "ExporterError",
+    "derive_ws1_grammar_stream_manifest",
     "export_runtime",
     "export_ws1_runtime",
     "load_config",

@@ -14,12 +14,42 @@ import torch
 
 from tac.optimization import ddm_runtime_exporter as exporter
 from tac.optimization import ddm_runtime_receiver as receiver
+from tac.optimization.ddm_e5a_midcampaign_adapter import (
+    DDME5AMidcampaignCheckpointAdapterConfigV1,
+)
 from tools import rehearse_ddm_runtime_upstream as harness
 
 REPO = Path(__file__).resolve().parents[4]
 W_SEG_CONFIG = REPO / ".omx/research/configs/ddm_e5_e4_ws1_wseg_brotli_20260724.json"
 IC1_CONFIG = REPO / ".omx/research/configs/ddm_ic1_incumbent_compose_and_buy_row_20260724.json"
 IC2_CONFIG = REPO / ".omx/research/configs/ddm_ic2_optimal_incumbent_pose_typed_20260724.json"
+E5A_STEP50_STATE = Path(
+    "/Volumes/VertigoDataTier/pact/experiments/results/"
+    "ddm_ws4_pose_null_projected_seg_start_20260725T112500Z/01_archives/"
+    "W_joint_step50_live.zip.receipt-bytes"
+)
+
+
+def test_e5a_adapter_config_refuses_non_ssd_checkpoint_custody() -> None:
+    with pytest.raises(ValueError, match="governed SSD"):
+        DDME5AMidcampaignCheckpointAdapterConfigV1(
+            ticket_path=".omx/research/configs/ticket.json",
+            ticket_sha256="a" * 64,
+            checkpoint_path="/tmp/checkpoint.npz",
+            checkpoint_bytes=1,
+            checkpoint_sha256="b" * 64,
+            expected_stage_id="stage",
+            expected_global_step=50,
+            expected_lane_programs_materialized=False,
+            expected_state_bytes=1,
+            expected_state_sha256="c" * 64,
+            output_state_path=(
+                "/Volumes/VertigoDataTier/pact/e5a/state.receipt-bytes"
+            ),
+            output_receipt_path=(
+                "/Volumes/VertigoDataTier/pact/e5a/receipt.json"
+            ),
+        )
 
 
 def test_blob_frame_roundtrip_and_terminal_tamper_refusal() -> None:
@@ -239,6 +269,23 @@ def test_ws1_packet_reconstructs_source_and_refuses_stream_or_coder_tamper() -> 
             expected_kind=0,
             label="state/ws1.ddj5",
         )
+
+
+def test_e5a_la1_bundle_reconstructs_step50_state_and_refuses_tamper() -> None:
+    if not E5A_STEP50_STATE.is_file():
+        pytest.skip("WS4 step-50 receiver state is absent")
+    source = E5A_STEP50_STATE.read_bytes()
+    bundle, rows = exporter._compile_e5a_la1_bundle(source)
+    reconstructed, consumed = receiver._reconstruct_e5a_la1_bundle(bundle)
+    assert reconstructed == source
+    assert len(bundle) == 128001
+    assert sum(row["selected_framed_bytes"] for row in rows) == 127951
+    assert len(rows) == len(consumed) == 7
+
+    tampered = bytearray(bundle)
+    tampered[-1] ^= 1
+    with pytest.raises(receiver.ReceiverError):
+        receiver._reconstruct_e5a_la1_bundle(bytes(tampered))
 
 
 def test_ic1_is_a_separate_w_joint_then_pa1_typed_route() -> None:

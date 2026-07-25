@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
+import psutil
 import torch
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -43,9 +44,11 @@ from tools.measure_ddm_menu1_realized_flip_menu import (  # noqa: E402
 SCHEMA = "ddm_e4_ws1_packet_batch32_remeasure.v1"
 IC1_SCHEMA = "ddm_ic1_packet_batch32_remeasure.v1"
 IC2_SCHEMA = "ddm_ic2_packet_batch32_remeasure.v1"
+E5A_SCHEMA = "ddm_e5a_packet_batch32_remeasure.v1"
 CONFIG_SCHEMA = "DDME4WS1PacketRemeasureConfigV1"
 IC1_CONFIG_SCHEMA = "DDMIC1PacketRemeasureConfigV1"
 IC2_CONFIG_SCHEMA = "DDMIC2PacketRemeasureConfigV1"
+E5A_CONFIG_SCHEMA = "DDME5APacketRemeasureConfigV1"
 EVIDENCE_AXIS = "[macOS-CPU frozen-scorer advisory]"
 CAMERA_SHAPE = (600, 2, 874, 1164, 3)
 
@@ -133,10 +136,37 @@ class DDMIC2PacketRemeasureConfigV1(BaseModel):
     pointer: Literal["0.1910828242 [contest-CPU]"] = "0.1910828242 [contest-CPU]"
 
 
+class DDME5APacketRemeasureConfigV1(BaseModel):
+    """Exact advisory scorer custody for an adapter-materialized E5A packet."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    schema_: Literal["DDME5APacketRemeasureConfigV1"] = Field(
+        default=E5A_CONFIG_SCHEMA,
+        alias="schema",
+        serialization_alias="schema",
+    )
+    candidate: Literal["E5A_W_joint_step50_live"] = "E5A_W_joint_step50_live"
+    export_receipt_path: str
+    export_receipt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    menu1_config_path: str
+    menu1_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    decoded_raw_path: str
+    decoded_raw_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    checkpoint_root: str
+    minimum_available_memory_bytes: Literal[21474836480] = 20 * 1024**3
+    scorer_batch_size: Literal[32] = 32
+    scorer_threads: Literal[4] = 4
+    research_only: Literal[True] = True
+    score_claim: Literal[False] = False
+    pointer: Literal["0.1910828242 [contest-CPU]"] = "0.1910828242 [contest-CPU]"
+
+
 PacketRemeasureConfig = (
     DDME4WS1PacketRemeasureConfigV1
     | DDMIC1PacketRemeasureConfigV1
     | DDMIC2PacketRemeasureConfigV1
+    | DDME5APacketRemeasureConfigV1
 )
 
 
@@ -242,6 +272,11 @@ def remeasure(
             config_value,
             strict=True,
         )
+    elif config_value.get("schema") == E5A_CONFIG_SCHEMA:
+        config = DDME5APacketRemeasureConfigV1.model_validate(
+            config_value,
+            strict=True,
+        )
     else:
         config = DDME4WS1PacketRemeasureConfigV1.model_validate(
             config_value,
@@ -254,27 +289,53 @@ def remeasure(
         config.export_receipt_sha256,
         "export receipt",
     )
-    ws2_value = _bound_json(
-        config.ws2_receipt_path,
-        config.ws2_receipt_sha256,
-        "WS2 receipt",
-    )
-    ws2_config_path = _resolve(config.ws2_config_path)
-    ws2_config_payload = ws2_config_path.read_bytes()
-    if hashlib.sha256(ws2_config_payload).hexdigest() != config.ws2_config_sha256:
-        raise RemeasureError("WS2 config SHA-256 differs")
-    ws2_config = CustodyConfig.model_validate_json(ws2_config_payload)
+    is_e5a = isinstance(config, DDME5APacketRemeasureConfigV1)
+    available_memory_bytes: int | None = None
+    if is_e5a:
+        menu1_config_path = _resolve(config.menu1_config_path)
+        menu1_config_payload = menu1_config_path.read_bytes()
+        if (
+            hashlib.sha256(menu1_config_payload).hexdigest()
+            != config.menu1_config_sha256
+        ):
+            raise RemeasureError("MENU1 config SHA-256 differs")
+        available_memory_bytes = psutil.virtual_memory().available
+        if available_memory_bytes < config.minimum_available_memory_bytes:
+            raise RemeasureError(
+                "R6_BLOCKED_E5A_N600_MEMORY_PREFLIGHT: "
+                f"{available_memory_bytes} < {config.minimum_available_memory_bytes}"
+            )
+        ws2_value = None
+        ws2_config = None
+    else:
+        ws2_value = _bound_json(
+            config.ws2_receipt_path,
+            config.ws2_receipt_sha256,
+            "WS2 receipt",
+        )
+        ws2_config_path = _resolve(config.ws2_config_path)
+        ws2_config_payload = ws2_config_path.read_bytes()
+        if (
+            hashlib.sha256(ws2_config_payload).hexdigest()
+            != config.ws2_config_sha256
+        ):
+            raise RemeasureError("WS2 config SHA-256 differs")
+        ws2_config = CustodyConfig.model_validate_json(ws2_config_payload)
     is_ic1 = isinstance(config, DDMIC1PacketRemeasureConfigV1)
     is_ic2 = isinstance(config, DDMIC2PacketRemeasureConfigV1)
     is_composed = is_ic1 or is_ic2
     parent_candidate = config.parent_candidate if is_composed else config.candidate
-    expected = ws2_value["fresh_batch32_endpoints"][parent_candidate]
-    if (
+    expected = (
+        None
+        if is_e5a
+        else ws2_value["fresh_batch32_endpoints"][parent_candidate]
+    )
+    if expected is not None and (
         export["source"]["sha256"] != expected["archive_sha256"]
         or export["source"]["bytes"] != expected["archive_bytes"]
     ):
         raise RemeasureError("sealed endpoint and packet source custody differ")
-    if not is_composed and (
+    if not is_composed and not is_e5a and (
         float(expected["d_seg"]) != config.expected_d_seg or float(expected["d_pose"]) != config.expected_d_pose
     ):
         raise RemeasureError("sealed endpoint metrics differ")
@@ -289,7 +350,9 @@ def remeasure(
     ):
         raise RemeasureError("decoded raw identity differs from export receipt")
 
-    menu_config, _ = _config_and_inputs(_resolve(ws2_config.menu1_config_path))
+    menu_config, _ = _config_and_inputs(
+        menu1_config_path if is_e5a else _resolve(ws2_config.menu1_config_path)
+    )
     with np.load(
         Path(menu_config.target_cache_path),
         allow_pickle=False,
@@ -367,7 +430,9 @@ def remeasure(
     pose_coordinates = sum(int(row["pose_coordinates"]) for row in rows)
     d_seg = errors / sites
     d_pose = pose_sse / pose_coordinates
-    if not is_composed and (d_seg != config.expected_d_seg or d_pose != config.expected_d_pose):
+    if not is_composed and not is_e5a and (
+        d_seg != config.expected_d_seg or d_pose != config.expected_d_pose
+    ):
         raise RemeasureError(
             f"decoded packet did not reproduce the exact sealed batch-32 endpoint: {(d_seg, d_pose)!r}"
         )
@@ -409,7 +474,15 @@ def remeasure(
         "pointer": config.pointer,
         "pointer_moved": False,
         "research_only": True,
-        "schema": IC2_SCHEMA if is_ic2 else IC1_SCHEMA if is_ic1 else SCHEMA,
+        "schema": (
+            IC2_SCHEMA
+            if is_ic2
+            else IC1_SCHEMA
+            if is_ic1
+            else E5A_SCHEMA
+            if is_e5a
+            else SCHEMA
+        ),
         "score_claim": False,
         "scorer_batch_size": 32,
         "scorer_custody": scorer_custody,
@@ -420,6 +493,8 @@ def remeasure(
             if is_ic2
             else "IC1_COMPOSED_ENDPOINT_EXACT_BATCH32_MEASURED"
             if is_ic1
+            else "E5A_STEP50_LIVE_ENDPOINT_EXACT_BATCH32_MEASURED"
+            if is_e5a
             else "EXACT_SEALED_BATCH32_ENDPOINT_REPRODUCED_FROM_DECODED_PACKET"
         ),
         "verdict_scope": (
@@ -430,10 +505,21 @@ def remeasure(
             "INSTANCE: typed IC1 W_joint then PA1 packet decoded on macOS CPU "
             "with frozen scorers; no contest eval, promotion, or frontier mutation."
             if is_ic1
+            else
+            "INSTANCE: E5A materialized W_joint step-50 live-resume packet "
+            "decoded on macOS CPU with frozen scorers; no contest eval, "
+            "promotion, or frontier mutation."
+            if is_e5a
             else "INSTANCE: typed E4/WS1 packet decoded on macOS CPU with frozen "
             "scorers; no contest eval, promotion, or frontier mutation."
         ),
     }
+    if is_e5a:
+        result["memory_preflight"] = {
+            "available_bytes": available_memory_bytes,
+            "minimum_bytes": config.minimum_available_memory_bytes,
+            "status": "PASS",
+        }
     _publish(receipt_path, result)
     return result
 

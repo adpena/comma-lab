@@ -1,0 +1,20 @@
+{
+  "schema": "ddm_e5a_embedded_runtime_parseback_smoke.v1",
+  "status": "PASS_EMBEDDED_RUNTIME_PARSEBACK",
+  "packet_path": "/Volumes/VertigoDataTier/pact/ddm_ct1_campaign_telemetry_encode_20260725/e5a_runtime/candidate_packet/archive.zip",
+  "tested_generation_path": ".omx/research/ddm_e5a_midcampaign_e5_adapter_20260725/packet/archive.zip",
+  "cold_store_copy_bit_identical": true,
+  "packet_sha256": "fb69964da2649c310b7694416ff9863e13f54594af215cd771dcd50f5898a85d",
+  "inflate_py_bytes": 4689344,
+  "inflate_py_sha256": "f2d9a2185802cf8fbf4a38b5292be5f9eb7295cacc409cb5e731e54c6358d03a",
+  "source_bundle_sha256": "28079dda9cc4dced0f6851fce0aee2046de931e2e202ac6116cf980de62a40fd",
+  "reconstructed_state_bytes": 138813,
+  "reconstructed_state_sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+  "consumed_stream_count": 9,
+  "scratch": {
+    "kind": "context_managed_ssd_temporary_directory",
+    "cleanup": "automatic_on_success"
+  },
+  "research_only": true,
+  "score_claim": false
+}

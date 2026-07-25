@@ -35,6 +35,7 @@ E2_SCHEMA = "ddm_e2_runtime_archive.v1"
 E3_SCHEMA = "ddm_e3_runtime_archive.v1"
 E4_SCHEMA = "ddm_e4_runtime_archive.v1"
 E4_WS1_SCHEMA = "ddm_e4_ws1_runtime_archive.v1"
+E5A_SCHEMA = "ddm_e5a_midcampaign_runtime_archive.v1"
 IC1_SCHEMA = "ddm_ic1_runtime_archive.v1"
 IC2_SCHEMA = "ddm_ic2_runtime_archive.v1"
 RECEIVER_GRAMMAR_ADMISSION_SCHEMA = "ddm_receiver_grammar_admission.v1"
@@ -50,6 +51,26 @@ LAYER_HOMES = {
 }
 BLOB_MAGIC = b"DDE1B"
 BLOB_HEADER = struct.Struct(">5sBBBBQQ32s")
+E5A_BUNDLE_MAGIC = b"E5AL1"
+E5A_BUNDLE_PREFIX = struct.Struct(">5sBBB")
+E5A_BUNDLE_ENTRY = struct.Struct(">BBI")
+E5A_CODECS = (
+    "RAW_EXPLICIT",
+    "BROTLI_Q11",
+    "RAW_LZMA1",
+    "G4_FREE_DECODER_CONTEXT",
+    "BELLARD_KT_MIXER",
+)
+E5A_COMPONENTS = (
+    "predictor_archive",
+    "worldsheet_g1_payload",
+    "realization_profile_payload",
+    "scorer_solved_templates_payload",
+    "lane_programs_payload",
+    "coupled_margin_program",
+    "preuint8_q8_program",
+    "warm_start_payload",
+)
 LZMA_FILTERS = [
     {
         "id": lzma.FILTER_LZMA1,
@@ -538,6 +559,7 @@ def _validate_ws1_manifest(
         raise ReceiverError("WS1 manifest is not an object")
     is_ic1 = manifest.get("schema") == IC1_SCHEMA
     is_ic2 = manifest.get("schema") == IC2_SCHEMA
+    is_e5a = manifest.get("schema") == E5A_SCHEMA
     amplitude_enabled = is_ic1 or is_ic2
     expected_keys = {
         "dependencies",
@@ -551,8 +573,11 @@ def _validate_ws1_manifest(
     }
     if amplitude_enabled:
         expected_keys.add("amplitude_transform")
+    if is_e5a:
+        expected_keys.add("la1_framing")
     if set(manifest) != expected_keys or manifest.get("schema") not in {
         E4_WS1_SCHEMA,
+        E5A_SCHEMA,
         IC1_SCHEMA,
         IC2_SCHEMA,
     }:
@@ -605,16 +630,46 @@ def _validate_ws1_manifest(
     ):
         raise ReceiverError("WS1 receiver-effective state changed")
     framed = members["state/ws1.ddj5"]
-    if len(framed) < BLOB_HEADER.size:
+    if is_e5a:
+        if len(framed) < E5A_BUNDLE_PREFIX.size:
+            raise ReceiverError("E5A LA1 bundle is truncated")
+        magic, version, component_count, reserved = E5A_BUNDLE_PREFIX.unpack_from(framed)
+        la1 = manifest["la1_framing"]
+        if (
+            magic != E5A_BUNDLE_MAGIC
+            or version != 1
+            or reserved != 0
+            or not isinstance(la1, dict)
+            or set(la1)
+            != {
+                "bundle_bytes",
+                "bundle_sha256",
+                "component_count",
+                "prior_prospective_bytes",
+                "schema",
+                "selection",
+            }
+            or la1
+            != {
+                "bundle_bytes": len(framed),
+                "bundle_sha256": _sha256(framed),
+                "component_count": component_count,
+                "prior_prospective_bytes": 128254,
+                "schema": "ddm_e5a_la1_semantic_bundle.v1",
+                "selection": "minimum_exact_framed_bytes_then_codec_name",
+            }
+        ):
+            raise ReceiverError("E5A LA1 framing contract changed")
+        expected_dependencies = ["numpy", "scipy", "torch", "brotli"]
+    elif len(framed) < BLOB_HEADER.size:
         raise ReceiverError("WS1 state frame is truncated")
-    codec = BLOB_HEADER.unpack_from(framed)[2]
-    if codec == 1:
+    elif BLOB_HEADER.unpack_from(framed)[2] == 1:
         expected_dependencies = (
             ["numpy", "torch", "brotli", "cv2"]
             if is_ic2
             else ["numpy", "scipy", "torch", "brotli"]
         )
-    elif codec == 2:
+    elif BLOB_HEADER.unpack_from(framed)[2] == 2:
         expected_dependencies = ["numpy", "scipy", "torch"]
     else:
         raise ReceiverError("WS1 packet coder contract changed")
@@ -665,19 +720,129 @@ def _validate_ws1_manifest(
     return manifest
 
 
+def _reconstruct_e5a_la1_bundle(
+    bundle: bytes,
+) -> tuple[bytes, tuple[dict[str, Any], ...]]:
+    """Decode LA1 frames and rebuild every generic WS1 wrapper canonically."""
+
+    from tac.optimization.ddm_la1_layer_assignment_context_pricing import (
+        decode_la1_frame,
+    )
+    from tac.optimization.ddm_ws1_warm_start import compile_ws1_warm_start_archive
+    from tac.optimization.direct_description_carrier_compose import (
+        _decode_lane_programs,
+        _decode_realization_profile,
+        compile_carrier_compose_archive,
+        decode_scorer_solved_template_bank,
+    )
+    from tac.optimization.direct_description_coupled_margin import (
+        compile_coupled_margin_archive,
+        decode_coupled_margin_program,
+    )
+    from tac.optimization.direct_description_preuint8_channel import (
+        compile_preuint8_q8_archive,
+        decode_preuint8_q8_program,
+    )
+
+    value = bytes(bundle)
+    if len(value) < E5A_BUNDLE_PREFIX.size:
+        raise ReceiverError("E5A LA1 bundle is truncated")
+    magic, version, component_count, reserved = E5A_BUNDLE_PREFIX.unpack_from(value)
+    if magic != E5A_BUNDLE_MAGIC or version != 1 or reserved != 0:
+        raise ReceiverError("E5A LA1 bundle prefix differs")
+    cursor = E5A_BUNDLE_PREFIX.size
+    components: dict[str, bytes] = {}
+    consumed: list[dict[str, Any]] = []
+    previous_component = -1
+    for _ in range(component_count):
+        if cursor + E5A_BUNDLE_ENTRY.size > len(value):
+            raise ReceiverError("E5A LA1 bundle entry is truncated")
+        component_id, codec_id, frame_bytes = E5A_BUNDLE_ENTRY.unpack_from(value, cursor)
+        cursor += E5A_BUNDLE_ENTRY.size
+        if (
+            component_id <= previous_component
+            or component_id >= len(E5A_COMPONENTS)
+            or codec_id >= len(E5A_CODECS)
+            or frame_bytes <= 0
+            or cursor + frame_bytes > len(value)
+        ):
+            raise ReceiverError("E5A LA1 bundle entry header differs")
+        frame = value[cursor : cursor + frame_bytes]
+        cursor += frame_bytes
+        name = E5A_COMPONENTS[component_id]
+        codec = E5A_CODECS[codec_id]
+        try:
+            raw = decode_la1_frame(frame, codec)
+        except ValueError as exc:
+            raise ReceiverError(f"E5A LA1 frame decode failed: {name}") from exc
+        components[name] = raw
+        consumed.append(
+            {
+                "bytes": len(frame),
+                "component": name,
+                "codec": codec,
+                "frame_sha256": _sha256(frame),
+                "raw_bytes": len(raw),
+                "raw_sha256": _sha256(raw),
+            }
+        )
+        previous_component = component_id
+    if cursor != len(value):
+        raise ReceiverError("E5A LA1 bundle has trailing bytes")
+    required = set(E5A_COMPONENTS) - {"lane_programs_payload"}
+    observed = set(components)
+    if observed != required and observed != set(E5A_COMPONENTS):
+        raise ReceiverError("E5A LA1 semantic component set differs")
+
+    profile = _decode_realization_profile(components["realization_profile_payload"])
+    templates = decode_scorer_solved_template_bank(
+        components["scorer_solved_templates_payload"]
+    )
+    lanes = _decode_lane_programs(components.get("lane_programs_payload", b""))
+    carrier, _ = compile_carrier_compose_archive(
+        components["predictor_archive"],
+        worldsheet_g1_payload=components["worldsheet_g1_payload"],
+        lane_programs=lanes,
+        realization_profile=profile,
+        scorer_solved_templates=templates,
+    )
+    coupled = compile_coupled_margin_archive(
+        carrier,
+        decode_coupled_margin_program(components["coupled_margin_program"]),
+        verify_base_member_effects=False,
+    )
+    preuint8 = compile_preuint8_q8_archive(
+        coupled,
+        decode_preuint8_q8_program(components["preuint8_q8_program"]),
+        verify_base_member_effects=False,
+    )
+    archive = compile_ws1_warm_start_archive(
+        preuint8,
+        candidate="W_joint",
+        payload=components["warm_start_payload"],
+    )
+    return archive, tuple(consumed)
+
+
 def _reconstruct_ws1_state(
     manifest: Mapping[str, Any],
     members: dict[str, bytes],
 ) -> tuple[bytes, tuple[dict[str, Any], ...]]:
     """Decode and reassemble every admitted grammar stream byte-for-byte."""
 
-    archive, dimensions = _parse_blob(
-        members["state/ws1.ddj5"],
-        expected_kind=0,
-        label="state/ws1.ddj5",
-    )
-    if dimensions:
-        raise ReceiverError("WS1 state blob must be an opaque rank-zero container")
+    if manifest["schema"] == E5A_SCHEMA:
+        archive, la1_consumed = _reconstruct_e5a_la1_bundle(
+            members["state/ws1.ddj5"]
+        )
+    else:
+        archive, dimensions = _parse_blob(
+            members["state/ws1.ddj5"],
+            expected_kind=0,
+            label="state/ws1.ddj5",
+        )
+        if dimensions:
+            raise ReceiverError("WS1 state blob must be an opaque rank-zero container")
+        la1_consumed = ()
     admission = manifest["grammar_admission"]
     expected_keys = {
         "archive_bytes",
@@ -740,7 +905,7 @@ def _reconstruct_ws1_state(
         cursor = stop
     if cursor != len(archive):
         raise ReceiverError("WS1 grammar streams do not cover every archive byte")
-    return archive, tuple(consumed)
+    return archive, (*la1_consumed, *consumed)
 
 
 def _validate_rate_doctrine(value: Any, members: dict[str, bytes]) -> None:
@@ -1364,6 +1529,15 @@ def _inflate_ws1(
         _duplicate_refusing_json(manifest_payload, label="manifest.json"),
         members,
     )
+    source_bundle: dict[str, Any] | None = None
+    if manifest["schema"] == E5A_SCHEMA:
+        bootstrap_root = (
+            output_dir.parent
+            / ".ddm_runtime_checkpoints"
+            / f"e5a_manifest_{manifest_sha256}"
+        )
+        bootstrap_root.mkdir(parents=True, exist_ok=True)
+        source_bundle = _install_ws1_source_bundle(bootstrap_root)
     state_archive, consumed_streams = _reconstruct_ws1_state(manifest, members)
     state_sha256 = _sha256(state_archive)
     checkpoint_root = (
@@ -1381,7 +1555,8 @@ def _inflate_ws1(
     free_bytes = shutil.disk_usage(checkpoint_root).free
     if free_bytes < required_free_bytes:
         raise ReceiverError(f"storage preflight failed: {free_bytes} < {required_free_bytes}")
-    source_bundle = _install_ws1_source_bundle(checkpoint_root)
+    if source_bundle is None:
+        source_bundle = _install_ws1_source_bundle(checkpoint_root)
     try:
         from tac.optimization.ddm_ws1_warm_start import (
             parse_ws1_warm_start_archive,

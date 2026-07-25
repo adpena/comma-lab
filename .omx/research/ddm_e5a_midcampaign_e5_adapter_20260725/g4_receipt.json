@@ -1,0 +1,62 @@
+{
+  "schema": "ddm_e5a_g4_receipt.v1",
+  "gate": "G4",
+  "status": "PASS_LOCAL_RESEARCH_ONLY_MAIN_REVIEW_REQUIRED",
+  "checkpoint": {
+    "bytes": 19723,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ct1_campaign_telemetry_encode_20260725/source_run_copy/checkpoints/01_residual_bucket_realized_acceptance_accepted_global000050.npz",
+    "sha256": "043c2a8b3c89688510cc0ff002f37a375a974205a5f8760d93133c47b7cec7c1",
+    "global_step": 50,
+    "parameter_shadow": "live_resume_state"
+  },
+  "materialized_state": {
+    "bytes": 138813,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ct1_campaign_telemetry_encode_20260725/e5a_adapter/W_joint_step50_live.receiver_closed.zip.receipt-bytes",
+    "sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+    "checkpoint_identity_match": true,
+    "consumer_roundtrip_byte_identical": true
+  },
+  "la1_rebase": {
+    "prior_prospective_bytes": 128254,
+    "selected_frame_bytes": 127951,
+    "canonical_bundle_bytes": 128001,
+    "complete_receiver_closed_packet_bytes": 130101,
+    "bundle_minus_prior_bytes": -253,
+    "complete_packet_minus_prior_bytes": 1847,
+    "complete_packet_minus_cc3_130789_bytes": -688,
+    "complete_packet_minus_e5_w_joint_131294_bytes": -1193,
+    "disposition": "REBASED_NOT_CONFIRMED_AS_COMPLETE_PACKET"
+  },
+  "packet": {
+    "bytes": 130101,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ct1_campaign_telemetry_encode_20260725/e5a_runtime/candidate_packet/archive.zip",
+    "generation_path": ".omx/research/ddm_e5a_midcampaign_e5_adapter_20260725/packet/archive.zip",
+    "cold_store_receipt_path": ".omx/research/ddm_e5a_midcampaign_e5_adapter_20260725/packet_cold_store_receipt.json",
+    "sha256": "fb69964da2649c310b7694416ff9863e13f54594af215cd771dcd50f5898a85d",
+    "compiler_determinism_x2": true,
+    "parseback_source_byte_identical": true,
+    "embedded_runtime_parseback_green": true
+  },
+  "n600": {
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "batch_size": 32,
+    "threads": 4,
+    "d_seg": 0.06974277072482639,
+    "d_pose": 35.499820809591,
+    "advisory_objective_at_packed_bytes": 25.902302117302376,
+    "receipt_path": ".omx/research/ddm_e5a_midcampaign_e5_adapter_20260725/ddm_e5a_packet_batch32_remeasure.json",
+    "receipt_sha256": "2c4277b040157c359974a1de5d7cc07752c29d1b45aafd68ecc942e8ef12cacb"
+  },
+  "r6": {
+    "status": "PASS_E5A_MIDCAMP_CHECKPOINT_TO_PACKET",
+    "receipt_path": ".omx/research/ddm_e5a_midcampaign_e5_adapter_20260725/r6_rehearsal_receipt.json",
+    "receipt_sha256": "f6a2b06ce120ae445d113f8fa1ff6d533574d7f12f377d40073507ff5a29cfe2",
+    "fresh_process_resume_proof_green": true,
+    "source_campaign_bit_identical_before_after": true
+  },
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}
