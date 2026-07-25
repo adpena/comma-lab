@@ -65,3 +65,58 @@ NAMED live surface of the optimal-start card:
 DISCIPLINE: every row lands via the round-3 council review → surviving rows become G5 reseal
 inputs or named residuals; none is adopted by citation (constants-are-poison; races/probes
 required where marked).
+
+## ORDER 1b — ROSTER EXTENSION (operator 2026-07-25: "experts in optimization and training
+## dynamics and deep learning and robotics")
+- OPTIMIZATION: Nesterov · Polyak · Nocedal-Wright · Bertsekas · Nemirovski(mirror descent) ·
+  Beck-Teboulle · Conn-Gould-Toint(trust regions) · Moré · Powell(DFO: NEWUOA/BOBYQA) ·
+  Audet-Dennis(MADS) · Hansen(CMA-ES) · Lasserre
+- TRAINING DYNAMICS: Jacot(NTK) · Greg Yang(muP/tensor programs) · Saxe · Chizat-Bach(lazy vs
+  feature) · Cohen(edge-of-stability) · Papyan(spectra) · Martens-Grosse(K-FAC) ·
+  Nakkiran · Belkin
+- DEEP LEARNING (beyond seated): He(init) · Ba · Loshchilov-Hutter(AdamW/SGDR) ·
+  Smith(1cycle/super-convergence) · Kaplan/Hoffmann(scaling laws) · Frankle(lottery tickets) ·
+  Han(deep compression)
+- ROBOTICS (new domain — the problem IS ego-motion): Thrun · Durrant-Whyte · Dellaert(factor
+  graphs/GTSAM) · Kaess(iSAM) · Barfoot(Lie-group state estimation) · Forster(on-manifold
+  preintegration) · Mourikis(MSCKF/VIO) · Scaramuzza(visual odometry) · Murray-Li-Sastry ·
+  Park-Lynch · Todorov · Tedrake(trajectory optimization/collocation) · LaValle
+
+## ORDER 2b — the extension's second-order rows (each with a LIVE consumer; adjudication owed
+## to the round-3 council body before any adoption)
+B1. Powell/Audet → the realized-acceptance campaign IS derivative-free optimization — DFO
+    trust-region convergence theory (poll/search steps, sufficient-decrease rules) gives the
+    engine's acceptance loop a proven convergence frame. Consumer: j10 engine + v16/v17
+    validity-radius law (Conn-Gould-Toint radius-update laws replace ad-hoc shrink factors).
+B2. Hansen → CMA-ES covariance adaptation of the PROPOSAL distribution within each source —
+    E5's bandit picks sources, CMA adapts proposal geometry inside one. Consumer: §8-E5.
+B3. Nemirovski → mirror descent IN the measured Fisher/quadratic metric = the principled
+    unification of §9-E10 (quotient coords) + R12 (metric declaration). Consumer: G5 engine.
+B4. Martens-Grosse → K-FAC-style natural-gradient preconditioning from the ALREADY-MEASURED
+    metric custody (ms3/ms4 rank-4/quadratic) — the Fisher is not just an audit metric, it is
+    the preconditioner we already paid to measure. Consumer: j10 fitting engine.
+B5. Cohen(EoS) → step size vs 2/λmax of the MEASURED composite-R Hessian readbacks — a derived
+    LR law from custody we hold, replacing schedule guesswork. Consumer: R11/engine schedule.
+B6. Greg Yang(muP) → when E4 staging unfreezes DOF groups, muP transfer laws say how LR/scale
+    must move with DOF count — kills per-stage LR re-tuning. Consumer: E4 + stage boundaries.
+B7. Hoffmann(Chinchilla-style) → allocate the wall-clock budget between MORE-STEPS vs MORE-DOF
+    from OUR OWN measured decay curve (db1's fit is the scaling law's exponent). Consumer:
+    E7 optimal-stop D* + E6 budget slicing.
+B8. Han/Frankle → deep-compression triad (prune→quantize→entropy-code) + lottery-ticket sparse
+    DOF selection applied to the COUNTED campaign coordinates — which coordinates deserve to
+    exist at all. Consumer: E11 + R2 matched quanta (composes).
+B9. Dellaert/Kaess → ξ(t) as a FACTOR GRAPH (smoothness + measurement factors, sparse
+    information matrix) — the strict generalization of R13's RTS smoothing; knots = the
+    graph's sparse solution. Consumer: pose fork (b) stream design.
+B10. Barfoot/Forster → code ξ increments ON-MANIFOLD (SE(3) preintegration with drift terms);
+    uncertainty/quantization on the group, not in coordinates — composes tac.lie + R3's
+    precision ladder. Consumer: pose stream quantization.
+B11. Scaramuzza → FREE DECODER-SIDE VISUAL ODOMETRY: inflate.py runs a generic VO algorithm on
+    the DECODED frames (rule-118 FREE generic code) → predicts the pose-relevant motion → the
+    counted pose stream codes only the VO-residual. Wyner side-info realized with robotics
+    machinery — potentially the largest pose-rate row. Consumer: pose fork (b) + E7-transmit
+    analog for pose. PROSPECTIVE-NEEDS-MEASUREMENT ($0: run any classical VO on decoded pairs,
+    correlate with the 6 PoseNet dims through the measured quadratic).
+B12. Tedrake → ξ(t) as direct-collocation knots (trajectory-optimization parameterization) —
+    the minimal-knot description under dynamics constraints; races R13/B9 on the same bytes.
+DISCIPLINE unchanged: council adjudication → G5 reseal inputs or named residuals; G1-G4 undelayed.
