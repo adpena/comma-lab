@@ -1,0 +1,118 @@
+{
+  "schema": "ddm_costate_organ_enhancement_activation_receipt.v1",
+  "run_id": "ddm_co5_organ_telemetry_activation_20260725T195432Z",
+  "written_at_utc": "2026-07-25T19:54:32Z",
+  "task_id": 708,
+  "lane_id": "lane_ddm_co5_organ_telemetry_activation_20260725",
+  "base_git_sha": "8a7220238cd6bcf3b140a20424bcef962788bdac",
+  "maturity": "_dev",
+  "research_only": true,
+  "execution_allowed": false,
+  "campaign_launched": false,
+  "actuation": "NONE",
+  "promotion_eligible": false,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "status": "PREMISE_FALSIFIED_CT1_DELTA_S_PER_HOUR_GATE_NOT_SATISFIED",
+  "charter_claimed_gate": "CT1_CAMPAIGN_DELTA_S_PER_WALL_CLOCK_HOUR",
+  "gate_satisfied": false,
+  "active_count": 0,
+  "held_count": 4,
+  "total_count": 4,
+  "campaign_state_digest": "b787237d6f0469d2ed5cbb44fbab0b92e4ddb7db62f9d9754d10192da4a3187a",
+  "source_lineage": {
+    "co4_findings": {
+      "path": ".omx/research/codex_findings_ddm_co4_road_local_and_precision_20260724_codex.md",
+      "sha256": "eb8179ab02a8fe039297131839e49a56ed7cb3a8ca0972e1dbf3550b7825f191"
+    },
+    "co4_receipt": {
+      "path": ".omx/research/ddm_co4_road_local_and_precision_20260724/ddm_co4_road_local_and_precision_receipt.json",
+      "sha256": "11cd3a972ae7f11ec05332e01d5713e18bac3777edbd357b368a55d561608429",
+      "content_sha256": "f9e8b0e4e4f7d025a05f26470942d03b8418fb98871581baa42f3d3297b74693"
+    },
+    "ct1_findings": {
+      "path": ".omx/research/codex_findings_ddm_ct1_campaign_telemetry_encode_20260725T113213Z_codex.md",
+      "sha256": "dca0cfbe25efd3daa6b10db39309d98a4fae28030688bebc7564cc408bd5c381"
+    },
+    "ct1_receipt": {
+      "path": ".omx/research/ddm_ct1_campaign_telemetry_encode_20260725T111500Z/r6_rehearsal_receipt.json",
+      "sha256": "24ca878e6da328f062ee9dbc0e3d52aafbb1b89f48a14581c5545164a74cfad6"
+    },
+    "ct1_source_tree": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_v5_cured_20260725T062259Z",
+      "expected_tree_sha256": "18526644423949012b29dc1e043c744ee93e5739338b0e98d97f3f1462d8467c",
+      "observed_tree_sha256_at_consumption": "18526644423949012b29dc1e043c744ee93e5739338b0e98d97f3f1462d8467c",
+      "file_count": 126,
+      "bytes": 1075654,
+      "freshness": "FRESH_CONTENT_HASH_VERIFIED_AT_CONSUMPTION",
+      "tag": "[fresh]"
+    },
+    "ev1_receipt": {
+      "path": ".omx/research/ddm_ev1_campaign_evidence_joins_20260724T191623Z/ddm_ev1_campaign_evidence_join_receipt.json",
+      "sha256": "28af280a6c40216616eb4cbd90b283b68822d3c5f9a604efbed2a638b46d9c0a",
+      "exact_pair_rows": 600,
+      "required_pair_rows": 600,
+      "join_kind": "CROSS_SECTIONAL_N600_ENDPOINT_EVIDENCE_NOT_ORDERED_CAMPAIGN_TRANSITIONS"
+    }
+  },
+  "enhancements": [
+    {
+      "enhancement_id": "pontryagin_bellman_transition_residual",
+      "layer": "SENSE",
+      "backtest": "FAILED_CLOSED_MISSING_MATCHED_AUTHORITY",
+      "status": "DESIGNED_NOT_ACTIVE",
+      "active": false,
+      "reason": "CT1 has no ordered adjacent costates or realized transition-Jacobian terms; EV1 pair rows are cross-sectional."
+    },
+    {
+      "enhancement_id": "m34_per_state_dual_consistency",
+      "layer": "SENSE",
+      "backtest": "FAILED_CLOSED_MISSING_MATCHED_AUTHORITY",
+      "status": "DESIGNED_NOT_ACTIVE",
+      "active": false,
+      "reason": "Neither CT1 nor EV1 has same-state organ/M34 duals with matched units and measured uncertainty."
+    },
+    {
+      "enhancement_id": "compression_progress_per_effort",
+      "layer": "SENSE",
+      "backtest": "FAILED_CLOSED_MISSING_MATCHED_AUTHORITY",
+      "status": "DESIGNED_NOT_ACTIVE",
+      "active": false,
+      "reason": "CT1 cadence is measured, but its cumulative objective trace is ADVISORY_BATCH_LOCAL and not N600; only one exact endpoint is surfaced."
+    },
+    {
+      "enhancement_id": "regret_bounded_duty_allocation",
+      "layer": "DECIDE",
+      "backtest": "FAILED_CLOSED_MISSING_MATCHED_AUTHORITY",
+      "status": "DESIGNED_NOT_ACTIVE",
+      "active": false,
+      "reason": "Progress per effort is inactive and CT1 geometry-cure counts are not typed fired-duty outcome history."
+    }
+  ],
+  "implementation": {
+    "src/tac/ddm_campaign_costate.py": "42269df413127161de8ae7f14e1c80aed5e6499b08c3bf47a7f34db56077c72f",
+    "src/tac/ddm_costate_organ.py": "edb4f90527240b7164aba472a3042f1dfa71915a8dfd3b6c5121732860f7ea2c",
+    "src/tac/tests/test_ddm_campaign_costate.py": "96d4145e539ce61dae60c1540939b64589b9707e0f2de9fa04aa67be63c34dff"
+  },
+  "verification": {
+    "clean_review_passes": 3,
+    "review_pass_ids": [
+      "ddm-co5-portable-clean-1",
+      "ddm-co5-portable-clean-2",
+      "ddm-co5-portable-clean-3"
+    ],
+    "each_pass": [
+      "ruff_check_passed",
+      "py_compile_passed",
+      "pytest_33_passed",
+      "exact_human_digest_smoke_passed",
+      "git_diff_check_passed"
+    ],
+    "stale_source_test": "PASSED_FAIL_CLOSED_WITH_STALE_ADVISORY_TAG",
+    "authority_wall_test": "PASSED_REFUSES_BATCH_LOCAL_TRACE_PROMOTION"
+  },
+  "equation_disposition": "NO_NEW_LAW_VALIDATED",
+  "dag_feed": "FEED-708-co5",
+  "content_sha256": "43d933d2be441e010a87da69468eca48206af147f355d1d92bc879dedb35d680"
+}

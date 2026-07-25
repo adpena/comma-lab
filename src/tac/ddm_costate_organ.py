@@ -858,6 +858,7 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
     lambda_ranker = campaign_digest["lambda_ranker"]
     lambda_model = lambda_ranker["selected_model"]
     lambda_metrics = lambda_model["metrics"]
+    enhancements = campaign_digest["enhancement_activation"]
     plateau = campaign_digest["plateau_route"]
     campaign_next = campaign_nag.get("next_duty") or {}
     lines = [
@@ -912,6 +913,12 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
                 f"V19={campaign_evidence['v19_receiver_closed_join_status']} "
                 f"RD1={campaign_evidence['rd1_dimension_evidence_status']} "
                 f"pricing={campaign_evidence['bucket_exchange_rate_status']}"
+            ),
+            (
+                f"DDM-CO5: active={enhancements['active_count']}/"
+                f"{enhancements['total_count']} held={enhancements['held_count']} "
+                f"freshness={enhancements['source_freshness']['tag']} "
+                f"gate={enhancements['status']} actuation=NONE"
             ),
         )
     )

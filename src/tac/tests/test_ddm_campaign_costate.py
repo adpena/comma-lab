@@ -17,10 +17,13 @@ from tac.ddm_campaign_costate import (  # noqa: E402
     CLASS_E_DIMENSIONS,
     DECISION_SCHEMA,
     DYNAMIC_POLICY_SCHEMA,
+    ENHANCEMENT_BACKTEST_SCHEMA,
+    ENHANCEMENT_SCHEMA,
     METRIC_ROW_SCHEMA,
     PLATEAU_FORKS,
     SENSE_ROW_SCHEMA,
     VERDICT_SCHEMA,
+    _co5_enhancement_state,
     _lambda_ranker_state,
     build_campaign_costate,
     campaign_consumer_view,
@@ -121,6 +124,21 @@ def _campaign(*, verdicts: list[dict] | None = None) -> dict:
     )
 
 
+def _patch_ct1_fresh(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Model a host with the settled CT1 tree mounted, without requiring that SSD in CI."""
+
+    _sources, payloads = load_campaign_sources(REPO)
+    expected = payloads["ct1_campaign_telemetry"]["source_campaign"]["after"]
+    monkeypatch.setattr(
+        "tac.ddm_campaign_costate._campaign_tree_fingerprint",
+        lambda _root: {
+            "file_count": expected["file_count"],
+            "bytes": expected["bytes"],
+            "tree_sha256": expected["tree_sha256"],
+        },
+    )
+
+
 def test_current_campaign_is_one_hash_lineaged_advisory_truth() -> None:
     state = _campaign()
     assert state["maturity"] == "_dev"
@@ -173,6 +191,74 @@ def test_all_366_class_e_rows_stand_even_before_j8f() -> None:
     assert "BLOCKED_J8F_REALIZED_VERDICT_TELEMETRY" in {row["blocker_id"] for row in state["blockers"]}
     assert "BLOCKED_PAIR_LEVEL_MS4D_FISHER_PRECISION_585" not in {row["blocker_id"] for row in state["blockers"]}
     assert len(state["decide"]["lambda_ranker_decide_rows"]) == 5
+
+
+def test_co5_enhancements_consume_fresh_ct1_and_fail_closed_before_activation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_ct1_fresh(monkeypatch)
+    state = _campaign()
+    activation = state["enhancement_activation"]
+    assert activation["status"] == ("PREMISE_FALSIFIED_CT1_DELTA_S_PER_HOUR_GATE_NOT_SATISFIED")
+    assert activation["gate_satisfied"] is False
+    assert activation["source_freshness"]["status"] == ("FRESH_CONTENT_HASH_VERIFIED_AT_CONSUMPTION")
+    assert activation["source_freshness"]["tag"] == "[fresh]"
+    assert activation["active_count"] == 0
+    assert activation["held_count"] == 4
+    assert activation["total_count"] == 4
+    assert len(state["sense"]["enhancement_rows"]) == 3
+    assert len(state["decide"]["enhancement_rows"]) == 1
+
+    rows = {row["enhancement_id"]: row for row in activation["rows"]}
+    assert set(rows) == {
+        "pontryagin_bellman_transition_residual",
+        "m34_per_state_dual_consistency",
+        "compression_progress_per_effort",
+        "regret_bounded_duty_allocation",
+    }
+    assert all(row["schema"] == ENHANCEMENT_SCHEMA for row in rows.values())
+    assert all(row["backtest"]["schema"] == ENHANCEMENT_BACKTEST_SCHEMA for row in rows.values())
+    assert all(row["status"] == "DESIGNED_NOT_ACTIVE" for row in rows.values())
+    assert all(row["active"] is False for row in rows.values())
+    assert all(row["actuation"] == "NONE" for row in rows.values())
+    assert all(row["score_claim"] is False for row in rows.values())
+    assert all(row["backtest"]["status"] == "FAILED_CLOSED_MISSING_MATCHED_AUTHORITY" for row in rows.values())
+    assert "ADVISORY_BATCH_LOCAL" in rows["compression_progress_per_effort"]["backtest"]["reason"]
+    assert "cross-sectional" in rows["pontryagin_bellman_transition_residual"]["backtest"]["reason"]
+    assert len([blocker for blocker in state["blockers"] if blocker["blocker_id"].startswith("BLOCKED_CO5_")]) == 4
+
+
+def test_co5_stale_ct1_source_is_tagged_and_cannot_activate() -> None:
+    sources, payloads = load_campaign_sources(REPO)
+    stale = json.loads(json.dumps(payloads["ct1_campaign_telemetry"]))
+    stale["source_campaign"]["before"]["tree_sha256"] = "0" * 64
+    stale["source_campaign"]["after"]["tree_sha256"] = "0" * 64
+    activation = _co5_enhancement_state(
+        ct1_payload=stale,
+        ct1_source=sources["ct1_campaign_telemetry"],
+        evidence_join=payloads["ev1_campaign_evidence_join"],
+        evidence_source=sources["ev1_campaign_evidence_join"],
+    )
+    assert activation["source_freshness"]["fresh"] is False
+    assert activation["source_freshness"]["tag"] == "[stale-advisory]"
+    assert activation["active_count"] == 0
+    assert all("[stale-advisory]" in row["backtest"]["reason"] for row in activation["rows"])
+
+
+def test_co5_refuses_batch_local_trace_without_explicit_authority_label() -> None:
+    sources, payloads = load_campaign_sources(REPO)
+    broken = json.loads(json.dumps(payloads["ct1_campaign_telemetry"]))
+    local = next(
+        row for row in broken["observability_digest"]["rows"] if row["row_id"] == "cumulative_batch_local_trace"
+    )
+    local["not_n600_verdict"] = False
+    with pytest.raises(ValueError, match="batch-local authority wall drift"):
+        _co5_enhancement_state(
+            ct1_payload=broken,
+            ct1_source=sources["ct1_campaign_telemetry"],
+            evidence_join=payloads["ev1_campaign_evidence_join"],
+            evidence_source=sources["ev1_campaign_evidence_join"],
+        )
 
 
 def test_metric_rows_are_scoped_and_bucket_prices_remain_blocked() -> None:
@@ -328,7 +414,10 @@ def test_realized_verdict_populates_sense_and_routes_plateau() -> None:
     assert state["dynamic_policy"]["top_k"]["top_k"] == 1
 
 
-def test_organ_digest_dashboard_and_digest_tool_share_campaign_digest() -> None:
+def test_organ_digest_dashboard_and_digest_tool_share_campaign_digest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_ct1_fresh(monkeypatch)
     organ = build_live_ddm_costate(repo_root=REPO)
     state_digest = organ["campaign"]["state_digest"]
 
@@ -346,6 +435,8 @@ def test_organ_digest_dashboard_and_digest_tool_share_campaign_digest() -> None:
     assert data["ddm_campaign_activation_nag"]["lambda_ranker_admission"]["passed"] is True
     assert data["duty_to_measure"]["lambda_ranker"]["pair_precision"]["unranked_precision_owed"] == 0
     assert any(line.startswith("DDM-campaign:") for line in lines)
+    assert any(line.startswith("DDM-CO5: active=0/4 held=4 freshness=[fresh]") for line in lines)
+    assert data["ddm_campaign"]["enhancement_activation"] == (organ["campaign"]["enhancement_activation"])
 
 
 def test_no_launcher_provider_or_subprocess_in_campaign_module() -> None:
