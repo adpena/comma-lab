@@ -99,3 +99,26 @@ realizes a solve-derived member with LOWER d_seg at in-window bytes. ws3's KEEP_
 is hereby re-scoped: it answered "which start descends best under the OLD pose-coupled
 engine" — the card's question is "which start is closest to the goal with rate in-window,"
 and the engine is redesigned around it (G1/G3), not the reverse.
+
+## 8. ENGINE ACCELERATION (Schmidhuber composition, operator-prompted 2026-07-25) — reseal/G5
+## inputs; each row DERIVED from a landed measured producer, no new constants, no new arms
+E1 PROGRESS-WEIGHTED PAIR SCHEDULING (compression-progress): sample pairs ∝ trailing realized
+   ΔS, starve at-floor pairs. Producer: g3 score atlas heavy-tail + SHA-pinned hard-pair
+   registry. Replaces uniform n600 cycling.
+E2 SOLVE-INTERLEAVE (never descend what a solve gives — gc1 ruling): TerminalSolve #423 +
+   #342 solve inventory at stage boundaries; descent fits ONLY the residual outside solve
+   reach (typed via menu1/c1 buckets).
+E3 SPEED-PRIOR PROPOSAL LADDER (biggest wall-clock lever): hard-pair-subset prefilter →
+   full-n600 exact confirm for survivors ONLY. Producer: g3 measured subset→full validity r.
+   Acceptance rule UNCHANGED (realized joint ΔS<0 on the exact verdict) — the ladder gates
+   which proposals EARN an exact measurement, never what counts as accepted. Kills the
+   ~437s/proposal tax ~10-20×.
+E4 PER-CLASS FREEZE/STAGE (history compression): freeze DOF of converged/static strata
+   (hood #139, BEV-static road per g4); gradient budget concentrates on binding classes.
+E5 PROPOSAL-SOURCE BANDIT (curiosity): allocate proposal budget across sources by trailing
+   realized ΔS/second. Producer: #319 outcome-credit + co4 bandit DESIGN (built-waiting);
+   input telemetry = ct1's rows. Advisory-ranked, engine-consumed at stage boundaries.
+E6 OOPS BUDGET SLICING: campaign runs in budgeted slices w/ continuation decision per slice
+   (keep-all checkpoints make this free); budget doubles only on measured-progress branches.
+Each lands as DSL-typed engine config in the G5 reseal; anything unbuildable-by-reseal-time is
+recorded as a named residual, never silently dropped.
