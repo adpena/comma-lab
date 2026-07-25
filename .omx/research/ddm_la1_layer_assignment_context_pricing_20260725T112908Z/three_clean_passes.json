@@ -1,0 +1,62 @@
+{
+  "schema": "codex_three_clean_review_passes.v1",
+  "utc": "2026-07-25T11:55:00Z",
+  "lane_id": "lane_ddm_la1_layer_assignment_context_pricing_20260725",
+  "preseal_findings": [
+    {
+      "severity": "medium",
+      "finding": "materialize accepted an operator-facing output directory outside the durable repository surface",
+      "disposition": "FIXED_FAIL_CLOSED",
+      "fix": "resolve output_dir and reject paths outside REPO; regression test added"
+    }
+  ],
+  "clean_pass_count": 3,
+  "passes": [
+    {
+      "pass": 1,
+      "kind": "STATIC_AND_ADJACENT_REGRESSION",
+      "status": "CLEAN",
+      "evidence": [
+        "29 adjacent tests passed, including 7 focused LA1 tests",
+        "ruff check passed",
+        "ruff format --check passed",
+        "py_compile passed",
+        "git diff --check passed"
+      ]
+    },
+    {
+      "pass": 2,
+      "kind": "INDEPENDENT_ACCOUNTING_AND_AUTHORITY_REDERIVATION",
+      "status": "CLEAN",
+      "evidence": [
+        "seven source homes independently sum to 134211 bytes",
+        "seven selected real-coder frames independently sum to 128254 bytes",
+        "row deltas independently sum to -5957 bytes",
+        "CONTEXT-winning source accounting mass independently sums to 355 bytes",
+        "355/134211 independently reproduces 0.002645088703608497",
+        "overlapping-alternative coordination independently reproduces -2535 bytes versus 130789",
+        "current accounting remains 130789 and prospective_only is true",
+        "score_claim and pointer_moved remain false"
+      ]
+    },
+    {
+      "pass": 3,
+      "kind": "DETERMINISTIC_EXACT_MATERIALIZER_REPLAY",
+      "status": "CLEAN",
+      "evidence": [
+        "materializer reran against all six SHA-bound upstream sources",
+        "receipt remained byte-identical",
+        "receipt SHA-256 7975d6fd63b86654bde84b0e922de58bd3f9ebb93f94ac6996b8614b0d38cca5",
+        "verdict, 0.264509 percent context mass, 128254-byte LA1 total, and -2535-byte prospective delta reproduced"
+      ]
+    }
+  ],
+  "remaining_findings": [],
+  "remaining_scoped_blockers": [
+    "E5_RECEIVER_CLOSED_SELECTED_FRAME_INTEGRATION_PENDING",
+    "EXACT_RECEIVER_OUTPUT_IDENTITY_PENDING",
+    "PAYLOAD_CONSUMPTION_BIJECTION_PENDING"
+  ],
+  "verdict": "THREE_FRESH_CLEAN_PASSES_COMPLETE_FOR_RESEARCH_ONLY_LA1_ACCOUNTING",
+  "main_landing_review_required": true
+}

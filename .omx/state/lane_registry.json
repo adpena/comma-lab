@@ -87823,6 +87823,49 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_ddm_la1_layer_assignment_context_pricing_20260725",
+      "name": "DDM LA1 layer assignment context pricing",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_la1_layer_assignment_context_pricing.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_la1_layer_assignment_context_pricing_20260725T112908Z/receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/optimization/tests/test_ddm_la1_layer_assignment_context_pricing.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/ddm_la1_layer_assignment_context_pricing_20260725T112908Z/three_clean_passes.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only #669(b+c) real-coder pricing of EV2 seven-home C1 partition; MAIN review required.",
+      "research_only": true,
+      "lane_class": "research_only"
     }
   ],
   "level_rules": {

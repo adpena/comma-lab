@@ -1,0 +1,17 @@
+{
+  "schema": "ddm_la1_layer_assignment_context_pricing_done.v1",
+  "run_id": "ddm_la1_layer_assignment_context_pricing_20260725T112908Z",
+  "status": "DONE_RESEARCH_ONLY_MAIN_REVIEW_REQUIRED",
+  "receipt": {
+    "path": ".omx/research/ddm_la1_layer_assignment_context_pricing_20260725T112908Z/receipt.json",
+    "bytes": 37044,
+    "sha256": "7975d6fd63b86654bde84b0e922de58bd3f9ebb93f94ac6996b8614b0d38cca5"
+  },
+  "context_falsifier_fired": true,
+  "la1_alternative_bytes": 128254,
+  "net_composed_delta_vs_130789_bytes": -2535,
+  "prospective_only": true,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true
+}

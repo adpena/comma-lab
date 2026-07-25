@@ -1,0 +1,60 @@
+{
+  "schema": "ddm_la1_layer_assignment_context_pricing_config.v1",
+  "run_id": "ddm_la1_layer_assignment_context_pricing_20260725T112908Z",
+  "lane_id": "lane_ddm_la1_layer_assignment_context_pricing_20260725",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "context_falsifier_fraction": 0.01,
+  "lp1_accounting_bytes": 134211,
+  "post_cc3_coordinated_bytes": 130789,
+  "seeded_archive_bytes": 134211,
+  "seeded_archive_sha256": "3d5ab9786cc3d3eedd9a5fd1d878aea8186fbcf450ffcb781862db63ac2ca0cd",
+  "sources": [
+    {
+      "id": "c1_archive",
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+      "bytes": 133941,
+      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+      "schema": null
+    },
+    {
+      "id": "lp1",
+      "path": ".omx/research/ddm_lp1_layer_pricing_20260725T031654Z/ddm_lp1_layer_pricing_receipt.json",
+      "bytes": 43747,
+      "sha256": "6bd6a5baaa8f5995e93ef594e880beac77e9aa2b2083e661598c84feaba13fd5",
+      "schema": "ddm_lp1_layer_pricing.v1"
+    },
+    {
+      "id": "ev2",
+      "path": ".omx/research/ddm_ev2_per_pair_allocation_20260725T041933Z/receipt.json",
+      "bytes": 12827,
+      "sha256": "1d76934d9b52d61ac7eca4b4f95d6eb76a31e8c7b354e2913fab3dca991d3fcc",
+      "schema": "ddm_ev2_per_pair_allocation_receipt.v1"
+    },
+    {
+      "id": "cc3",
+      "path": ".omx/research/ddm_cc3_mixed_coder_receiver_receipt_20260725.json",
+      "bytes": 4907,
+      "sha256": "1aed9bba14ab2e6c37a5a87ec7dba43506a6f94d18c4b5b444026f693675a44f",
+      "schema": "ddm_cc3_mixed_coder_receiver_integration_mirror.v1"
+    },
+    {
+      "id": "g4",
+      "path": ".omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z/ddm_g4_spatial_stationarity_receipt.json",
+      "bytes": 16547,
+      "sha256": "bea555b95aeaa11f4209df5333010c41c5495dd789def2a4f7a2a91973f3408c",
+      "schema": "ddm_g4_spatial_stationarity_receipt.v1"
+    },
+    {
+      "id": "ga1",
+      "path": ".omx/research/ddm_ga1_gauge_tolerance_ladder_20260725T035215Z/receipt.json",
+      "bytes": 10156,
+      "sha256": "885119e5316508d72a52f9f04716fb08d3855fcbcb72bae5cf14f3946a398f5c",
+      "schema": "ddm_ga1_gauge_tolerance_ladder_receipt.v1"
+    }
+  ]
+}
