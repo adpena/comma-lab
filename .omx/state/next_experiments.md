@@ -1,3 +1,25 @@
+# Next Experiments - 2026-07-25 effective-frontier rebaseline
+
+## Immediate governed queue
+
+1. **PF3 finite-price materialization:** produce at least one deterministic,
+   receiver-closed same-object action with realized uint8 quantum, byte home,
+   coder owner, and finite RD1 price; otherwise land the exact typed blocker.
+2. **MR1 apparatus closure:** independently review and merge the already-built
+   receiver/obstruction prerequisites; no self-approval or hot-file absorption.
+3. **CO5 telemetry:** wire candidate-block costate telemetry only where it
+   directly feeds PF3/P1-P3 selection; research-only signals remain non-authority.
+4. **One-SHA composition:** after the priced member exists, compile the original
+   P1 pose + P2 live-law + G4/SY1 custody into one archive and run exact
+   contest-CPU first, CUDA separately. Only a score below the current
+   `effective_frontier` moves the competitive pointer.
+
+Competitive target is the official leaderboard best `0.172` (PR #130), not
+the local `0.1910828242` baseline or the banned `0.1880443980` bank. Refresh
+with `tools/refresh_canonical_frontier.py`; the default path now fetches the
+official ranked table.
+
+<!-- prior queue (2026-06-07) preserved below as history -->
 # Next Experiments - 2026-06-07
 
 <!--
@@ -96,10 +118,10 @@ June 6/7 HiNeRV/SNeRV ledgers, and the current dispatch ledger.
 ## Active Anchor
 
 - Canonical scanner-derived best CPU anchor:
-  `0.19108282419209976`
+  `0.1880443979880752`
   `[contest-CPU; Linux x86_64 1:1]`, archive
-  `ad02b0124cbb3405c23d3480ac16f12b4e48cbf6f75878dd77a5e621bebd079c`,
-  lane `lane_clickpolish_pr110_frontier_20260710`.
+  `196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5`,
+  lane `lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712`.
   Refresh from `reports/latest.md` and
   `.omx/state/canonical_frontier_pointer.json`; this file is a mirror, not a
   frontier source of truth.

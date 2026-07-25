@@ -1,3 +1,21 @@
+# Current Focus - 2026-07-25 (effective frontier correction + DDM closure)
+
+> **Competitive score to beat: `0.172`, official leaderboard PR #130.** The
+> canonical pointer now selects the minimum of current official leaderboard
+> best and custody-specific local exact anchors. The scanner's `0.1880443980`
+> row is a banned/non-submission defensive bank; `0.1910828242` remains the
+> current original/submittable local baseline. Neither is the global frontier.
+> PR130's rounded official components reconstruct to `0.1721412975
+> [contest-CUDA]`; no contest-CPU equivalence is inferred.
+>
+> **Active critical path:** PF3 finite-price materialization on the original
+> DDM describe line, with MR1 independent review/merge and CO5 organ telemetry
+> as bounded accelerants. PF3 must yield a receiver-closed same-object priced
+> member or a typed blocker. A local exact row below the original baseline but
+> above `0.172` is useful local progress, not an effective-pointer move. No
+> further synthesis branch precedes the P1/P2/P3 one-SHA closure receipts.
+
+<!-- prior focus (2026-06-10, CAPSTONE viability) preserved below as history -->
 # Current Focus - 2026-06-10 (CAPSTONE viability daemon LIVE — first ORIGINAL basis)
 
 > **Pointer: 0.19109982 [contest-CPU] `b46897267` — UNMOVED.** The mission is the capstone (our own
@@ -76,10 +94,10 @@ operator queue when they conflict with this section.
 ## Frontier
 
 - Canonical scanner-derived best CPU anchor:
-  `0.19108282419209976`
+  `0.1880443979880752`
   `[contest-CPU; Linux x86_64 1:1]`, archive
-  `ad02b0124cbb3405c23d3480ac16f12b4e48cbf6f75878dd77a5e621bebd079c`,
-  lane `lane_clickpolish_pr110_frontier_20260710`.
+  `196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5`,
+  lane `lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712`.
   Refresh from `reports/latest.md` and
   `.omx/state/canonical_frontier_pointer.json`; this file is a mirror, not a
   frontier source of truth.

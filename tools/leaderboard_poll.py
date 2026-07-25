@@ -34,6 +34,7 @@ detected on either score hash or frontier identity hash. The identity hash
 covers rank, rounded score, PR identity/link, name, and entry count so a fixed
 rounded score can still alert when the row owner changes.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -59,6 +60,9 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO)
 
+from tac.canonical_frontier_pointer import (  # noqa: E402
+    refresh_canonical_frontier_from_upstream_leaderboard,
+)
 from tac.repo_io import json_line, read_json, write_json  # noqa: E402
 
 STATE_DIR = REPO / ".omx" / "state"
@@ -106,8 +110,7 @@ def _gh_fetch_readme(repo: str = UPSTREAM_REPO) -> str:
     )
     if proc.returncode != 0:
         raise RuntimeError(
-            f"`gh api repos/{repo}/readme` failed rc={proc.returncode}: "
-            f"{(proc.stderr or '').strip()[:500]}"
+            f"`gh api repos/{repo}/readme` failed rc={proc.returncode}: {(proc.stderr or '').strip()[:500]}"
         )
     payload = json.loads(proc.stdout)
     if "content" not in payload:
@@ -133,9 +136,7 @@ def extract_leaderboard_block(readme: str) -> str:
     start_idx = readme.find(TABLE_START)
     end_idx = readme.find(TABLE_END)
     if start_idx < 0 or end_idx < 0 or end_idx <= start_idx:
-        raise ValueError(
-            f"leaderboard markers missing: TABLE-START={start_idx} TABLE-END={end_idx}"
-        )
+        raise ValueError(f"leaderboard markers missing: TABLE-START={start_idx} TABLE-END={end_idx}")
     # include both markers so the block is itself self-delimiting
     return readme[start_idx : end_idx + len(TABLE_END)]
 
@@ -148,18 +149,13 @@ def extract_official_video_table(html: str) -> str:
     table_start = html.find("<table", container_idx)
     table_end = html.find("</table>", table_start)
     if table_start < 0 or table_end < 0:
-        raise ValueError(
-            f"official video leaderboard table missing: table_start={table_start} "
-            f"table_end={table_end}"
-        )
+        raise ValueError(f"official video leaderboard table missing: table_start={table_start} table_end={table_end}")
     return html[table_start : table_end + len("</table>")]
 
 
 _ROW_PATTERN = re.compile(r"<tr>(.*?)</tr>", re.DOTALL)
 _CELL_PATTERN = re.compile(r"<td>\s*(.*?)\s*</td>", re.DOTALL)
-_PR_HREF_PATTERN = re.compile(
-    r'href="https://github\.com/[^/]+/[^/]+/pull/(\d+)"', re.IGNORECASE
-)
+_PR_HREF_PATTERN = re.compile(r'href="https://github\.com/[^/]+/[^/]+/pull/(\d+)"', re.IGNORECASE)
 _NUMERIC_PATTERN = re.compile(r"^-?\d+(\.\d+)?$")
 
 
@@ -188,17 +184,9 @@ def parse_leaderboard_entries(block: str) -> list[LeaderboardEntry]:
         name = re.sub(r"\s+", " ", _strip_html(cells[2])).strip()
         pr_match = _PR_HREF_PATTERN.search(cells[3])
         pr_number = int(pr_match.group(1)) if pr_match else None
-        pr_url = (
-            f"https://github.com/{UPSTREAM_REPO}/pull/{pr_number}"
-            if pr_number is not None
-            else None
-        )
+        pr_url = f"https://github.com/{UPSTREAM_REPO}/pull/{pr_number}" if pr_number is not None else None
         rank += 1
-        entries.append(
-            LeaderboardEntry(
-                rank=rank, score=score, name=name, pr_url=pr_url, pr_number=pr_number
-            )
-        )
+        entries.append(LeaderboardEntry(rank=rank, score=score, name=name, pr_url=pr_url, pr_number=pr_number))
     return entries
 
 
@@ -264,9 +252,7 @@ def _legacy_top_identity(rows: list[dict]) -> list[dict]:
     ]
 
 
-def leaderboard_change_reasons(
-    prev: LeaderboardState | None, curr: LeaderboardState
-) -> list[str]:
+def leaderboard_change_reasons(prev: LeaderboardState | None, curr: LeaderboardState) -> list[str]:
     """Return hash surfaces that changed between two polls."""
 
     if prev is None:
@@ -296,8 +282,7 @@ def save_state(state: LeaderboardState, path: Path = STATE_PATH) -> None:
     write_json(path, asdict(state))
 
 
-def append_change(prev: LeaderboardState | None, curr: LeaderboardState,
-                  jsonl_path: Path = CHANGES_JSONL_PATH) -> None:
+def append_change(prev: LeaderboardState | None, curr: LeaderboardState, jsonl_path: Path = CHANGES_JSONL_PATH) -> None:
     jsonl_path.parent.mkdir(parents=True, exist_ok=True)
     record = {
         "detected_utc": curr.captured_utc,
@@ -322,6 +307,7 @@ def touch_race_flag(path: Path = RACE_FLAG_PATH) -> None:
     path.touch(exist_ok=True)
     now = time.time()
     import os
+
     os.utime(path, (now, now))
 
 
@@ -357,12 +343,47 @@ def build_state_from_official_html(html: str) -> LeaderboardState:
     )
 
 
+def sync_canonical_effective_frontier(
+    state: LeaderboardState,
+    *,
+    repo_root: Path = REPO,
+) -> None:
+    """Feed a successful official poll into the canonical score-to-beat pointer.
+
+    The poller already paid the network cost and parsed the ranked surface, so
+    inject that exact snapshot instead of fetching again.  GitHub README mirror
+    polls never overwrite official authority.
+    """
+
+    if state.source != "official" or not state.top_3:
+        return
+    entries = [dict(row) for row in state.top_3]
+    snapshot = {
+        "source": "official_leaderboard",
+        "url": state.source_url or OFFICIAL_LEADERBOARD_URL,
+        "fetched_at_utc": state.captured_utc,
+        "fetch_status": "ok",
+        "entries": entries,
+        "best_entry": min(entries, key=lambda row: float(row["score"])),
+        "entry_count": state.n_entries,
+        "score_precision": "official_display",
+    }
+
+    def _already_fetched(*, timeout_sec: int = 30) -> dict:
+        del timeout_sec
+        return snapshot
+
+    refresh_canonical_frontier_from_upstream_leaderboard(
+        repo_root=repo_root,
+        write=True,
+        fetcher=_already_fetched,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cron", action="store_true",
-                        help="silent on no-change, suitable for cron")
-    parser.add_argument("--initialize-baseline", action="store_true",
-                        help="capture state without alerting (first run)")
+    parser.add_argument("--cron", action="store_true", help="silent on no-change, suitable for cron")
+    parser.add_argument("--initialize-baseline", action="store_true", help="capture state without alerting (first run)")
     parser.add_argument("--state-path", type=Path, default=STATE_PATH)
     parser.add_argument("--race-flag-path", type=Path, default=RACE_FLAG_PATH)
     parser.add_argument("--changes-jsonl-path", type=Path, default=CHANGES_JSONL_PATH)
@@ -372,8 +393,9 @@ def main(argv: list[str] | None = None) -> int:
         default="official",
         help="leaderboard source to poll; official comma.ai page is the source of truth",
     )
-    parser.add_argument("--repo", default=UPSTREAM_REPO,
-                        help=f"upstream repo for --source github-readme (default: {UPSTREAM_REPO})")
+    parser.add_argument(
+        "--repo", default=UPSTREAM_REPO, help=f"upstream repo for --source github-readme (default: {UPSTREAM_REPO})"
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -388,6 +410,15 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         print(f"FATAL: leaderboard extraction failed: {exc}", file=sys.stderr)
         return 3
+
+    if args.source == "official":
+        try:
+            sync_canonical_effective_frontier(curr)
+        except Exception as exc:
+            print(
+                f"WARNING: canonical effective-frontier sync failed: {exc}",
+                file=sys.stderr,
+            )
 
     prev = load_state(args.state_path)
 
@@ -424,11 +455,12 @@ def main(argv: list[str] | None = None) -> int:
     if not args.cron:
         print(f"[leaderboard-poll] CHANGE DETECTED @ {curr.captured_utc}")
         print(f"[leaderboard-poll]   reasons   : {', '.join(change_reasons)}")
-        print(f"[leaderboard-poll]   prev_hash : "
-              f"{(prev.score_column_hash[:16] + '…') if prev else '<none>'}")
+        print(f"[leaderboard-poll]   prev_hash : {(prev.score_column_hash[:16] + '…') if prev else '<none>'}")
         print(f"[leaderboard-poll]   curr_hash : {curr.score_column_hash[:16]}…")
-        print(f"[leaderboard-poll]   prev_identity : "
-              f"{(prev.frontier_identity_hash[:16] + '…') if prev and prev.frontier_identity_hash else '<none>'}")
+        print(
+            f"[leaderboard-poll]   prev_identity : "
+            f"{(prev.frontier_identity_hash[:16] + '…') if prev and prev.frontier_identity_hash else '<none>'}"
+        )
         print(f"[leaderboard-poll]   curr_identity : {curr.frontier_identity_hash[:16]}…")
         print("[leaderboard-poll]   top-3 now :")
         for e in curr.top_3:

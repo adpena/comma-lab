@@ -14,9 +14,12 @@
 
 > # 🎯 THE GOAL — SUB-0.15 EXACT SCORE — NON-NEGOTIABLE, HIGHEST EMPHASIS 🎯
 > **The mission, second only to NO FAKE. The goal is to LOWER THE EXACT CONTEST SCORE below 0.15.**
-> Success has EXACTLY ONE definition: the canonical frontier pointer
-> (`.omx/state/canonical_frontier_pointer.json`) records a lower exact-eval `archive.zip` score from
-> `upstream/evaluate.py` (600-sample, contest-CPU AND/OR contest-CUDA on 1:1 hardware). Ladder:
+> The canonical frontier pointer's `effective_frontier` is ALWAYS the minimum of our qualifying exact
+> scores and the current official upstream leaderboard best. Success has EXACTLY ONE definition: an
+> `archive.zip` under our custody scores below that pre-evaluation competitive target (or below THE
+> target) through `upstream/evaluate.py` (600-sample, contest-CPU AND/OR contest-CUDA on 1:1 hardware)
+> and becomes `effective_frontier`. Refreshing to a better external row moves the target but is NOT our
+> progress. Custody-specific local anchors stay separate from the competitive score-to-beat. Ladder:
 > **T_3 = sub-0.15 (THE target, the default aim) · T_1 = sub-0.19 (floor of acceptable).** Above T_1 = failing.
 > **What is NOT goal progress (the failure mode this extincts):** tools, harnesses, solvers, codecs,
 > runtimes, Rust crates; floor derivations, research/design memos, paper inventions; located cruxes,
@@ -1833,6 +1836,16 @@ ledgers must land back on `main` after explicit review.
 `tools/refresh_canonical_frontier.py` or auto on dispatch completion per
 Catalog #343).
 
+**Effective-pointer semantics (operator correction 2026-07-25):**
+`effective_frontier.score = min(our_local_frontier_contest_cpu.score,
+our_local_frontier_contest_cuda.score,
+upstream_leaderboard_snapshot.best_entry.score)`. Competitive routing and
+score-to-beat claims MUST consume `effective_frontier`; archive-local delta,
+promotion, and submission checks MUST consume the matching custody-specific
+local anchor. The upstream source is the ranked official table at
+`https://comma.ai/leaderboard`, not a recent-PR listing. An external row never
+implies local archive custody, replay authority, ownership, or our progress.
+
 **FORBIDDEN**: hardcoded score literals in CLAUDE.md / MEMORY.md / memory
 files for our local frontier or current public leaderboard. The pointer
 file is the SoT; hardcoding causes drift that produces misleading operator
@@ -1855,11 +1868,12 @@ strict gate.
 **Operator-facing access**:
 
 ```bash
-# Print current frontier in human-readable form.
+# Print current frontier in human-readable form; the default refresh includes
+# the official public leaderboard.
 .venv/bin/python tools/refresh_canonical_frontier.py
 
-# Opt in to upstream public leaderboard fetch (~30s network call).
-.venv/bin/python tools/refresh_canonical_frontier.py --update-upstream
+# Explicit offline/local-only refresh preserves the cached upstream snapshot.
+.venv/bin/python tools/refresh_canonical_frontier.py --no-update-upstream
 
 # Strict mode: exit rc=1 if pointer is stale (>24h).
 .venv/bin/python tools/refresh_canonical_frontier.py --strict

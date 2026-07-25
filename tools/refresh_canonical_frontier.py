@@ -11,8 +11,11 @@ Examples::
     # Default: refresh from local canonical state and print human summary.
     .venv/bin/python tools/refresh_canonical_frontier.py
 
-    # Opt in to upstream leaderboard fetch (network call).
-    .venv/bin/python tools/refresh_canonical_frontier.py --update-upstream
+    # Default refresh includes the official upstream leaderboard.
+    .venv/bin/python tools/refresh_canonical_frontier.py
+
+    # Offline/local-only refresh when explicitly needed.
+    .venv/bin/python tools/refresh_canonical_frontier.py --no-update-upstream
 
     # Strict mode: exit rc=1 if pointer is stale (>24h since last refresh).
     .venv/bin/python tools/refresh_canonical_frontier.py --strict
@@ -36,13 +39,11 @@ import sys
 from pathlib import Path
 
 from tac.canonical_frontier_pointer import (
-    CANONICAL_FRONTIER_POINTER_PATH,
     CanonicalFrontierPointer,
     load_canonical_frontier_pointer_lenient,
     refresh_canonical_frontier_from_local_state,
     refresh_canonical_frontier_from_upstream_leaderboard,
 )
-
 
 REPO_ROOT_DEFAULT = Path(__file__).resolve().parent.parent
 
@@ -52,13 +53,29 @@ def _render_pointer_summary(pointer: CanonicalFrontierPointer) -> str:
     lines.append("=" * 72)
     lines.append("CANONICAL FRONTIER POINTER (single source of truth)")
     lines.append("=" * 72)
-    lines.append(f"Pointer file: .omx/state/canonical_frontier_pointer.json")
+    lines.append("Pointer file: .omx/state/canonical_frontier_pointer.json")
     lines.append(f"Schema:       {pointer.schema_version}")
     lines.append(f"Refreshed at: {pointer.last_refreshed_utc}")
     lines.append(f"Auto-update:  {pointer.auto_update_on_dispatch_completion}")
     lines.append("")
     lines.append("-" * 72)
-    lines.append("OUR LOCAL FRONTIER (qualifying 1:1 contest hardware)")
+    lines.append("EFFECTIVE FRONTIER (COMPETITIVE SCORE TO BEAT)")
+    lines.append("-" * 72)
+    effective = pointer.effective_frontier
+    if not isinstance(effective, dict):
+        lines.append("  <not populated; run with --update-upstream>")
+    else:
+        lines.append(f"  score   = {float(effective['score']):.10f}")
+        lines.append(f"  source  = {effective.get('source', '<unknown>')}")
+        lines.append(f"  axis    = {effective.get('axis', '<unknown>')}")
+        if effective.get("submission_name"):
+            lines.append(f"  entry   = {effective.get('submission_name')}")
+        if effective.get("pr_number") is not None:
+            lines.append(f"  PR      = #{effective.get('pr_number')}")
+        lines.append(f"  custody = {effective.get('custody', '<unknown>')}")
+    lines.append("")
+    lines.append("-" * 72)
+    lines.append("OUR LOCAL ANCHORS (custody-specific; not necessarily score to beat)")
     lines.append("-" * 72)
     for axis_label, anchor in (
         ("contest-CPU (GHA Linux x86_64)", pointer.our_local_frontier_contest_cpu),
@@ -95,22 +112,22 @@ def _render_pointer_summary(pointer: CanonicalFrontierPointer) -> str:
     elif isinstance(snapshot, dict):
         status = snapshot.get("fetch_status", "unknown")
         fetched = snapshot.get("fetched_at_utc", "<unknown>")
-        pulls = snapshot.get("pulls", [])
+        entries = snapshot.get("entries", [])
         lines.append(f"  fetch_status: {status}")
         lines.append(f"  fetched_at:   {fetched}")
-        lines.append(f"  pulls_count:  {len(pulls) if isinstance(pulls, list) else 0}")
+        lines.append(f"  entries:      {len(entries) if isinstance(entries, list) else 0}")
         if status != "ok":
             err = snapshot.get("fetch_error", "<unknown>")
             lines.append(f"  fetch_error:  {err}")
-        if isinstance(pulls, list) and pulls:
-            lines.append("  most-recent 5 PRs:")
-            for entry in pulls[:5]:
+        if isinstance(entries, list) and entries:
+            lines.append("  top 5 ranked entries:")
+            for entry in entries[:5]:
                 if not isinstance(entry, dict):
                     continue
-                num = entry.get("number")
-                title = (entry.get("title") or "")[:60]
-                state = entry.get("state")
-                lines.append(f"    PR #{num} ({state}): {title}")
+                num = entry.get("pr_number")
+                name = (entry.get("name") or "")[:60]
+                score = entry.get("score")
+                lines.append(f"    #{entry.get('rank')}  {score}  {name}  PR #{num}")
     lines.append("")
     return "\n".join(lines)
 
@@ -140,8 +157,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--update-upstream",
         action="store_true",
-        default=False,
-        help="(opt-in) Fetch upstream public leaderboard snapshot (~30s network call).",
+        default=True,
+        help="(default True) Fetch the official upstream leaderboard.",
+    )
+    parser.add_argument(
+        "--no-update-upstream",
+        dest="update_upstream",
+        action="store_false",
+        help="Skip network refresh and preserve the cached upstream snapshot.",
     )
     parser.add_argument(
         "--timeout-sec",

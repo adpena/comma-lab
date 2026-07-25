@@ -142,3 +142,32 @@ STORES CONSULTED: ms2rp findings + `.last.txt` + frontmatter (verdict `BLOCKED_N
 5. **Disposition:** ms2rp `closed` — findings verified by re-derivation (frontmatter + `.last.txt` + mechanism grep agree) + routed here. Merge-to-main is a tracked apparatus-owed follow-on: the same review-gate independent-approver credential as j12/rg4, PLUS the prerequisite RG4 commit `cb34bbb0f1` must be MAIN-reviewed before merging (the arm consumes its evidence, unmerged). Artifacts durable in worktree branch (`8dda479ade` + `b7f7557110`) + SSD; SHA-pinned receipt. NOT a silent grave: the owed merge + the PF3 reopening step + the reframed fork are recorded here.
 
 Pointer 0.1910828242 [contest-CPU] UNMOVED — ms2rp is advisory (macOS-CPU frozen-scorer), PRECONDITION/INSTANCE scope, ZERO member materialized; the R6 row is the end.
+
+## §6 operator correction (2026-07-25, effective competitive frontier)
+
+STORES CONSULTED: live official comma.ai ranked video-compression table · PR130
+official T4 evaluator comment/components · canonical pointer implementation and
+live state · GC4 PR130 adjudication/FEED-603 · §§1-5 above · operator correction
+that the score to beat is the best of ours or upstream.
+
+1. **Prior pointer language was wrong.** `0.1910828242` is an original/local
+   contest-CPU baseline and `0.1880443980` is a banned PR128 non-submission bank;
+   neither is the competitive frontier. The official ranked leader is PR130 at
+   displayed `0.172`; its rounded official T4 components reconstruct to
+   `0.1721412975`. No contest-CPU equivalence is inferred.
+2. **Canonical rule:** `effective_frontier = min(qualifying local exact CPU,
+   qualifying local exact CUDA, official leaderboard best)`. Competitive
+   routing consumes `effective_frontier`; archive-local deltas and promotion
+   consume the matching custody-specific local anchor. External target status
+   grants no bytes, code, ownership, replay, or adoption authority.
+3. **Route remains PF3 -> P1/P2/P3 one-SHA closure, with a stricter finish
+   line.** PF3 is still the shortest unresolved producer for a materializable
+   original describe-line member. MR1 and CO5 remain bounded accelerants. A new
+   exact original score below the local baseline but above the effective
+   frontier is local progress only; it does not move the competitive pointer.
+4. **Historical §§1-5 are not rewritten.** Their `0.1910828242` references are
+   retained as contemporaneous local-baseline statements and superseded for
+   competitive routing by this amendment.
+
+Effective frontier `0.172 [official leaderboard display]`; our archive has not
+beaten it; pointer refresh is target correction, not goal progress.

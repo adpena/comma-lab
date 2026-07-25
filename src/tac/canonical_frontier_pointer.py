@@ -45,7 +45,9 @@ sister discipline.
 from __future__ import annotations
 
 import fcntl
+import html
 import json
+import math
 import os
 import re
 import socket
@@ -53,26 +55,28 @@ import sys
 import urllib.error
 import urllib.request
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 __all__ = [
-    "AnchorRecord",
-    "CanonicalFrontierPointer",
-    "CANONICAL_FRONTIER_POINTER_PATH",
     "CANONICAL_FRONTIER_POINTER_LOCK_PATH",
+    "CANONICAL_FRONTIER_POINTER_PATH",
     "POINTER_SCHEMA_VERSION",
     "POINTER_STALE_SECONDS",
     "UPSTREAM_LEADERBOARD_TIMEOUT_DEFAULT",
+    "AnchorRecord",
+    "CanonicalFrontierPointer",
     "FrontierPointerCorruptError",
-    "load_canonical_frontier_pointer_strict",
+    "auto_refresh_canonical_frontier_after_dispatch_outcome",
+    "effective_frontier_score",
     "load_canonical_frontier_pointer_lenient",
-    "write_canonical_frontier_pointer_locked",
+    "load_canonical_frontier_pointer_strict",
     "refresh_canonical_frontier_from_local_state",
     "refresh_canonical_frontier_from_upstream_leaderboard",
-    "auto_refresh_canonical_frontier_after_dispatch_outcome",
+    "write_canonical_frontier_pointer_locked",
 ]
 
 
@@ -94,7 +98,7 @@ class FrontierPointerCorruptError(RuntimeError):
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 @dataclass(frozen=True)
@@ -131,7 +135,7 @@ class AnchorRecord:
         }
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "AnchorRecord":
+    def from_dict(cls, data: Mapping[str, Any]) -> AnchorRecord:
         return cls(
             score=float(data["score"]),
             axis=str(data["axis"]),
@@ -165,6 +169,11 @@ class CanonicalFrontierPointer:
     auto_update_on_dispatch_completion: bool
     pointer_refresh_command: str
     refresh_provenance: dict[str, Any]
+    # The competitive target is the minimum of our qualifying exact anchors
+    # and the current official public-leaderboard best.  Keep the custody-
+    # specific records above intact: an upstream score is a target, not local
+    # archive authority.
+    effective_frontier: dict[str, Any] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -179,47 +188,42 @@ class CanonicalFrontierPointer:
                 if self.our_local_frontier_contest_cuda is not None
                 else None
             ),
-            "submitted_pr_number_for_current_frontier": (
-                self.submitted_pr_number_for_current_frontier
-            ),
+            "submitted_pr_number_for_current_frontier": (self.submitted_pr_number_for_current_frontier),
             "upstream_leaderboard_snapshot": self.upstream_leaderboard_snapshot,
             "upstream_leaderboard_snapshot_at_utc": self.upstream_leaderboard_snapshot_at_utc,
             "last_refreshed_utc": str(self.last_refreshed_utc),
-            "auto_update_on_dispatch_completion": bool(
-                self.auto_update_on_dispatch_completion
-            ),
+            "auto_update_on_dispatch_completion": bool(self.auto_update_on_dispatch_completion),
             "pointer_refresh_command": str(self.pointer_refresh_command),
             "refresh_provenance": dict(self.refresh_provenance),
+            "effective_frontier": (
+                dict(self.effective_frontier) if isinstance(self.effective_frontier, Mapping) else None
+            ),
         }
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "CanonicalFrontierPointer":
+    def from_dict(cls, data: Mapping[str, Any]) -> CanonicalFrontierPointer:
         cpu_raw = data.get("our_local_frontier_contest_cpu")
         cuda_raw = data.get("our_local_frontier_contest_cuda")
         return cls(
             schema_version=str(data.get("schema_version") or ""),
-            our_local_frontier_contest_cpu=(
-                AnchorRecord.from_dict(cpu_raw) if isinstance(cpu_raw, Mapping) else None
-            ),
+            our_local_frontier_contest_cpu=(AnchorRecord.from_dict(cpu_raw) if isinstance(cpu_raw, Mapping) else None),
             our_local_frontier_contest_cuda=(
                 AnchorRecord.from_dict(cuda_raw) if isinstance(cuda_raw, Mapping) else None
             ),
-            submitted_pr_number_for_current_frontier=(
-                data.get("submitted_pr_number_for_current_frontier")
-            ),
+            submitted_pr_number_for_current_frontier=(data.get("submitted_pr_number_for_current_frontier")),
             upstream_leaderboard_snapshot=data.get("upstream_leaderboard_snapshot"),
-            upstream_leaderboard_snapshot_at_utc=data.get(
-                "upstream_leaderboard_snapshot_at_utc"
-            ),
+            upstream_leaderboard_snapshot_at_utc=data.get("upstream_leaderboard_snapshot_at_utc"),
             last_refreshed_utc=str(data.get("last_refreshed_utc") or ""),
-            auto_update_on_dispatch_completion=bool(
-                data.get("auto_update_on_dispatch_completion", True)
-            ),
+            auto_update_on_dispatch_completion=bool(data.get("auto_update_on_dispatch_completion", True)),
             pointer_refresh_command=str(
-                data.get("pointer_refresh_command")
-                or ".venv/bin/python tools/refresh_canonical_frontier.py"
+                data.get("pointer_refresh_command") or ".venv/bin/python tools/refresh_canonical_frontier.py"
             ),
             refresh_provenance=dict(data.get("refresh_provenance") or {}),
+            effective_frontier=(
+                dict(data.get("effective_frontier") or {})
+                if isinstance(data.get("effective_frontier"), Mapping)
+                else None
+            ),
         )
 
     def is_stale(self, *, now_utc_iso: str | None = None) -> bool:
@@ -230,15 +234,33 @@ class CanonicalFrontierPointer:
         except (TypeError, ValueError):
             return True
         if last.tzinfo is None:
-            last = last.replace(tzinfo=timezone.utc)
+            last = last.replace(tzinfo=UTC)
         now_str = now_utc_iso or _now_iso()
         try:
             now = datetime.fromisoformat(now_str.replace("Z", "+00:00"))
         except (TypeError, ValueError):
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
         if now.tzinfo is None:
-            now = now.replace(tzinfo=timezone.utc)
+            now = now.replace(tzinfo=UTC)
         return (now - last).total_seconds() > POINTER_STALE_SECONDS
+
+
+def effective_frontier_score(pointer: CanonicalFrontierPointer) -> float | None:
+    """Return the score to beat, never a custody-specific local substitute.
+
+    ``our_local_frontier_*`` remains the right surface for byte-local deltas
+    and archive promotion.  Competitive routing must consume this accessor so
+    a better official leaderboard row cannot be hidden by a weaker local row.
+    """
+
+    row = pointer.effective_frontier
+    if not isinstance(row, Mapping):
+        return None
+    try:
+        score = float(row["score"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    return score if math.isfinite(score) and score > 0 else None
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -246,17 +268,13 @@ class CanonicalFrontierPointer:
 # ─────────────────────────────────────────────────────────────────────────
 
 
-def _resolve_pointer_path(
-    *, repo_root: Path | str, path: Path | None = None
-) -> Path:
+def _resolve_pointer_path(*, repo_root: Path | str, path: Path | None = None) -> Path:
     if path is not None:
         return Path(path)
     return Path(repo_root) / CANONICAL_FRONTIER_POINTER_PATH
 
 
-def _resolve_lock_path(
-    *, repo_root: Path | str, lock_path: Path | None = None
-) -> Path:
+def _resolve_lock_path(*, repo_root: Path | str, lock_path: Path | None = None) -> Path:
     if lock_path is not None:
         return Path(lock_path)
     return Path(repo_root) / CANONICAL_FRONTIER_POINTER_LOCK_PATH
@@ -330,9 +348,7 @@ def load_canonical_frontier_pointer_strict(
     except json.JSONDecodeError as exc:
         raise FrontierPointerCorruptError(f"json parse failure: {exc}") from exc
     if not isinstance(data, dict):
-        raise FrontierPointerCorruptError(
-            f"pointer root must be object, got {type(data).__name__}"
-        )
+        raise FrontierPointerCorruptError(f"pointer root must be object, got {type(data).__name__}")
     return CanonicalFrontierPointer.from_dict(data)
 
 
@@ -372,11 +388,7 @@ def _anchor_from_serialized(serialized: Mapping[str, Any]) -> AnchorRecord | Non
     if not isinstance(extra, Mapping):
         extra = {}
     lane_id = extra.get("lane_id") if isinstance(extra, Mapping) else None
-    measured_at = (
-        extra.get("measured_at_utc")
-        or extra.get("dispatched_at_utc")
-        or extra.get("promoted_at_utc")
-    )
+    measured_at = extra.get("measured_at_utc") or extra.get("dispatched_at_utc") or extra.get("promoted_at_utc")
     evidence_grade = extra.get("evidence_grade")
     if not evidence_grade:
         # Derive canonical axis label per CLAUDE.md "Apples-to-apples evidence discipline".
@@ -469,6 +481,110 @@ def _gate_axis_anchor(
     return prior, refusal
 
 
+def _best_public_entry(snapshot: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """Return the best ranked public row, including a cached row on fetch failure."""
+
+    if not isinstance(snapshot, Mapping):
+        return None
+    best = snapshot.get("best_entry")
+    if isinstance(best, Mapping):
+        try:
+            score = float(best["score"])
+        except (KeyError, TypeError, ValueError):
+            score = math.nan
+        if math.isfinite(score) and score > 0:
+            return dict(best)
+    entries = snapshot.get("entries")
+    if isinstance(entries, list):
+        ranked: list[dict[str, Any]] = []
+        for entry in entries:
+            if not isinstance(entry, Mapping):
+                continue
+            try:
+                score = float(entry["score"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if math.isfinite(score) and score > 0:
+                ranked.append({**dict(entry), "score": score})
+        if ranked:
+            return min(ranked, key=lambda row: float(row["score"]))
+    cached = snapshot.get("cached_snapshot")
+    return _best_public_entry(cached if isinstance(cached, Mapping) else None)
+
+
+def _build_effective_frontier(
+    *,
+    cpu_anchor: AnchorRecord | None,
+    cuda_anchor: AnchorRecord | None,
+    upstream_snapshot: Mapping[str, Any] | None,
+    upstream_snapshot_at_utc: str | None,
+) -> dict[str, Any] | None:
+    """Select ``min(our exact anchors, current official leaderboard best)``.
+
+    This is the sole competitive score-to-beat pointer.  It deliberately does
+    not overwrite the local anchor records because an external leaderboard row
+    does not grant archive custody, replay authority, or submission ownership.
+    """
+
+    candidates: list[dict[str, Any]] = []
+    for source_key, anchor in (
+        ("our_local_frontier_contest_cpu", cpu_anchor),
+        ("our_local_frontier_contest_cuda", cuda_anchor),
+    ):
+        if anchor is None or not math.isfinite(anchor.score) or anchor.score <= 0:
+            continue
+        candidates.append(
+            {
+                "score": float(anchor.score),
+                "source": source_key,
+                "source_kind": "owned_or_banked_local_exact_anchor",
+                "axis": anchor.axis,
+                "archive_sha256": anchor.archive_sha256,
+                "lane_id": anchor.lane_id,
+                "hardware_substrate": anchor.hardware_substrate,
+                "measured_at_utc": anchor.measured_at_utc,
+                "evidence_grade": anchor.evidence_grade,
+                "custody": "local_anchor_record; inspect lane policy before submission",
+            }
+        )
+
+    public = _best_public_entry(upstream_snapshot)
+    if public is not None:
+        candidates.append(
+            {
+                "score": float(public["score"]),
+                "source": "upstream_official_leaderboard",
+                "source_kind": "external_public_leaderboard_target",
+                "axis": "official_leaderboard",
+                "leaderboard_rank": public.get("rank"),
+                "submission_name": public.get("name"),
+                "pr_number": public.get("pr_number"),
+                "pr_url": public.get("pr_url"),
+                "snapshot_at_utc": upstream_snapshot_at_utc,
+                "evidence_grade": "[official-leaderboard display]",
+                "score_precision": "official_display",
+                "custody": "external target only; no local archive authority implied",
+            }
+        )
+    if not candidates:
+        return None
+
+    # At equal score prefer our exact row because it has stronger local custody;
+    # the competitive threshold is unchanged either way.
+    winner = min(
+        candidates,
+        key=lambda row: (
+            float(row["score"]),
+            0 if str(row["source"]).startswith("our_local_") else 1,
+        ),
+    )
+    winner["selection_rule"] = (
+        "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)"
+    )
+    winner["role"] = "competitive_score_to_beat"
+    return winner
+
+
 def refresh_canonical_frontier_from_local_state(
     *,
     repo_root: Path | str = ".",
@@ -505,7 +621,7 @@ def refresh_canonical_frontier_from_local_state(
 
     # Preserve upstream snapshot from prior pointer if not refreshing upstream.
     prior = pre_existing_pointer
-    if prior is None and write:
+    if prior is None:
         prior = load_canonical_frontier_pointer_lenient(repo_root=repo_root_path)
 
     # Checkpoint-maturity gate (fail-closed; tac.checkpoint_maturity): a
@@ -555,6 +671,12 @@ def refresh_canonical_frontier_from_local_state(
             "scan_stats": payload.get("scan_stats"),
             "checkpoint_maturity_refusals": maturity_refusals,
         },
+        effective_frontier=_build_effective_frontier(
+            cpu_anchor=cpu_anchor,
+            cuda_anchor=cuda_anchor,
+            upstream_snapshot=(upstream_snapshot if isinstance(upstream_snapshot, Mapping) else None),
+            upstream_snapshot_at_utc=upstream_snapshot_at,
+        ),
     )
 
     if write:
@@ -567,90 +689,113 @@ def refresh_canonical_frontier_from_local_state(
 # ─────────────────────────────────────────────────────────────────────────
 
 
-# Comma.ai contest leaderboard upstream surface. The comma video compression
-# challenge tracks PRs at
-# https://github.com/commaai/comma_video_compression_challenge (the pinned
-# upstream snapshot cloned at ``workspace/upstream/comma_video_compression_challenge``
-# and referenced throughout ``upstream/README.md``); the public leaderboard
-# surface is the merged-PR list with eval scores in PR bodies / comments. We
-# fetch the GitHub Pulls API and extract any PR title/body that carries a
-# recognisable score literal, with graceful degradation on network failure
-# per CLAUDE.md "Public frontier watch and intake" non-negotiable.
-#
-# NOTE (fixed 2026-07-10, Catalog task #418): this previously pointed at
-# ``commaai/commavq`` — a DIFFERENT comma.ai repo (the GPT-token-prediction
-# video-sequence-modeling dataset/challenge consumed by ``tac.lossless.*``),
-# not the video-compression contest this pointer tracks. The watcher was
-# silently blind to every real contest PR (PR95/PR100/PR101/.../PR112/PR128)
-# while returning cosmetically-plausible-looking PR rows from the wrong repo.
-UPSTREAM_LEADERBOARD_GITHUB_API = (
-    "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls"
-    "?state=all&sort=updated&direction=desc&per_page=30"
+# The official ranked table is score authority for the public target.  A
+# recent-PR listing is not a leaderboard: that older implementation could be
+# network-fresh while omitting every score, which left routing at 0.191 after
+# PR130 moved the official frontier to 0.172.
+UPSTREAM_LEADERBOARD_OFFICIAL_URL = "https://comma.ai/leaderboard"
+_OFFICIAL_VIDEO_TABLE_ID = "video_compression_challenge_table"
+_LEADERBOARD_ROW_RE = re.compile(r"<tr(?:\s[^>]*)?>(.*?)</tr>", re.DOTALL | re.IGNORECASE)
+_LEADERBOARD_CELL_RE = re.compile(r"<td(?:\s[^>]*)?>\s*(.*?)\s*</td>", re.DOTALL | re.IGNORECASE)
+_LEADERBOARD_PR_RE = re.compile(
+    r'href=["\'](https://github\.com/commaai/comma_video_compression_challenge/pull/(\d+))["\']',
+    re.IGNORECASE,
 )
 
 
-def _fetch_upstream_leaderboard_snapshot_via_github(
+def _strip_leaderboard_html(value: str) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", "", value)).strip()
+
+
+def _parse_official_leaderboard_entries(page_html: str) -> list[dict[str, Any]]:
+    """Parse the ranked video-compression rows from comma.ai's official page."""
+
+    container_idx = page_html.find(f'id="{_OFFICIAL_VIDEO_TABLE_ID}"')
+    if container_idx < 0:
+        container_idx = page_html.find(f"id='{_OFFICIAL_VIDEO_TABLE_ID}'")
+    if container_idx < 0:
+        raise ValueError(f"official video leaderboard container missing: {_OFFICIAL_VIDEO_TABLE_ID}")
+    table_start = page_html.find("<table", container_idx)
+    table_end = page_html.find("</table>", table_start)
+    if table_start < 0 or table_end < 0:
+        raise ValueError("official video leaderboard table missing")
+    table = page_html[table_start : table_end + len("</table>")]
+
+    entries: list[dict[str, Any]] = []
+    for row_html in _LEADERBOARD_ROW_RE.findall(table):
+        cells = _LEADERBOARD_CELL_RE.findall(row_html)
+        if len(cells) < 4:
+            continue
+        score_text = re.sub(r"\s+", "", _strip_leaderboard_html(cells[1]))
+        try:
+            score = float(score_text)
+        except ValueError:
+            continue
+        if not math.isfinite(score) or score <= 0:
+            continue
+        pr_match = _LEADERBOARD_PR_RE.search(cells[3])
+        entries.append(
+            {
+                "rank": len(entries) + 1,
+                "score": score,
+                "name": re.sub(r"\s+", " ", _strip_leaderboard_html(cells[2])),
+                "pr_url": pr_match.group(1) if pr_match else None,
+                "pr_number": int(pr_match.group(2)) if pr_match else None,
+            }
+        )
+    if not entries:
+        raise ValueError("parsed zero official leaderboard entries")
+    return entries
+
+
+def _fetch_upstream_leaderboard_snapshot_via_official(
     *, timeout_sec: int = UPSTREAM_LEADERBOARD_TIMEOUT_DEFAULT
 ) -> dict[str, Any]:
-    """Fetch the comma.ai contest leaderboard snapshot via GitHub Pulls API.
+    """Fetch the ranked comma.ai video-compression leaderboard.
 
     Returns a dict with ``fetch_status`` ("ok" | "network_failure" |
-    "parse_failure") + ``fetched_at_utc`` + ``pulls`` (list of PR records
-    with title/number/state/score-hints). Graceful degradation: any failure
-    returns a dict with ``fetch_status != "ok"`` and ``pulls = []`` so the
+    "parse_failure") + ``fetched_at_utc`` + ranked ``entries``. Graceful
+    degradation returns ``fetch_status != "ok"`` and ``entries = []`` so the
     pointer model can carry the cached snapshot from the prior refresh and
     record the failure.
     """
 
     snapshot: dict[str, Any] = {
-        "source": "github_pulls_api",
-        "url": UPSTREAM_LEADERBOARD_GITHUB_API,
+        "source": "official_leaderboard",
+        "url": UPSTREAM_LEADERBOARD_OFFICIAL_URL,
         "fetched_at_utc": _now_iso(),
         "fetch_status": "ok",
-        "pulls": [],
+        "entries": [],
     }
     req = urllib.request.Request(
-        UPSTREAM_LEADERBOARD_GITHUB_API,
+        UPSTREAM_LEADERBOARD_OFFICIAL_URL,
         headers={
-            "Accept": "application/vnd.github+json",
             "User-Agent": "pact-frontier-pointer-refresher/v1",
         },
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
-            raw = resp.read().decode("utf-8", errors="replace")
+            page_html = resp.read().decode("utf-8", errors="replace")
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as exc:
         snapshot["fetch_status"] = "network_failure"
         snapshot["fetch_error"] = str(exc)
         return snapshot
     try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
+        entries = _parse_official_leaderboard_entries(page_html)
+    except ValueError as exc:
         snapshot["fetch_status"] = "parse_failure"
         snapshot["fetch_error"] = str(exc)
         return snapshot
-    if not isinstance(data, list):
-        snapshot["fetch_status"] = "parse_failure"
-        snapshot["fetch_error"] = "github pulls api returned non-list payload"
-        return snapshot
-
-    pulls: list[dict[str, Any]] = []
-    for entry in data:
-        if not isinstance(entry, dict):
-            continue
-        pulls.append({
-            "number": entry.get("number"),
-            "title": entry.get("title"),
-            "state": entry.get("state"),
-            "merged_at": entry.get("merged_at"),
-            "updated_at": entry.get("updated_at"),
-            "html_url": entry.get("html_url"),
-            "user_login": (entry.get("user") or {}).get("login")
-            if isinstance(entry.get("user"), dict)
-            else None,
-        })
-    snapshot["pulls"] = pulls
+    snapshot["entries"] = entries
+    snapshot["best_entry"] = min(entries, key=lambda row: float(row["score"]))
+    snapshot["entry_count"] = len(entries)
+    snapshot["score_precision"] = "official_display"
     return snapshot
+
+
+# Backward-compatible private alias for test/automation imports.  Its semantics
+# are now the official ranked leaderboard, not GitHub recent-PR metadata.
+_fetch_upstream_leaderboard_snapshot_via_github = _fetch_upstream_leaderboard_snapshot_via_official
 
 
 def refresh_canonical_frontier_from_upstream_leaderboard(
@@ -669,10 +814,10 @@ def refresh_canonical_frontier_from_upstream_leaderboard(
 
     Pass ``fetcher`` (callable with signature ``(timeout_sec=int) ->
     dict``) to inject a custom fetcher for tests; defaults to
-    ``_fetch_upstream_leaderboard_snapshot_via_github``.
+    ``_fetch_upstream_leaderboard_snapshot_via_official``.
     """
 
-    fetch_callable = fetcher or _fetch_upstream_leaderboard_snapshot_via_github
+    fetch_callable = fetcher or _fetch_upstream_leaderboard_snapshot_via_official
     snapshot = fetch_callable(timeout_sec=timeout_sec)
 
     # Start from local-state refresh (without writing) so we preserve the
@@ -686,10 +831,11 @@ def refresh_canonical_frontier_from_upstream_leaderboard(
     )
 
     # Always update the snapshot timestamp; on network failure, preserve
-    # prior pulls payload but record the failure.
+    # prior ranked payload but record the failure.
     fetch_status = snapshot.get("fetch_status")
     if fetch_status == "ok":
         new_snapshot = snapshot
+        effective_snapshot_at = snapshot.get("fetched_at_utc")
     else:
         # Preserve prior cached snapshot but record the failure window.
         new_snapshot = {
@@ -702,8 +848,9 @@ def refresh_canonical_frontier_from_upstream_leaderboard(
                 pointer.upstream_leaderboard_snapshot if pointer.upstream_leaderboard_snapshot else None
             ),
             "cached_snapshot_at_utc": pointer.upstream_leaderboard_snapshot_at_utc,
-            "pulls": [],
+            "entries": [],
         }
+        effective_snapshot_at = pointer.upstream_leaderboard_snapshot_at_utc
 
     refreshed = CanonicalFrontierPointer(
         schema_version=pointer.schema_version,
@@ -723,10 +870,14 @@ def refresh_canonical_frontier_from_upstream_leaderboard(
             "upstream_fetch_status": fetch_status,
             "upstream_fetch_error": snapshot.get("fetch_error"),
             "scan_stats": pointer.refresh_provenance.get("scan_stats"),
-            "checkpoint_maturity_refusals": pointer.refresh_provenance.get(
-                "checkpoint_maturity_refusals", []
-            ),
+            "checkpoint_maturity_refusals": pointer.refresh_provenance.get("checkpoint_maturity_refusals", []),
         },
+        effective_frontier=_build_effective_frontier(
+            cpu_anchor=pointer.our_local_frontier_contest_cpu,
+            cuda_anchor=pointer.our_local_frontier_contest_cuda,
+            upstream_snapshot=new_snapshot,
+            upstream_snapshot_at_utc=effective_snapshot_at,
+        ),
     )
 
     if write:
@@ -783,12 +934,22 @@ def auto_refresh_canonical_frontier_after_dispatch_outcome(
         return None
 
     try:
-        refreshed = refresh_canonical_frontier_from_local_state(
-            repo_root=repo_root_path,
-            write=True,
-            pre_existing_pointer=prior,
-        )
-    except Exception:  # noqa: BLE001 — never raise from dispatch outcome path
+        # Once an upstream snapshot exists, every dispatch harvest refreshes
+        # the official ranked target as well as local anchors.  Brand-new test
+        # repos and offline bootstrap paths remain local-only until their first
+        # explicit upstream refresh.
+        if prior is not None and prior.upstream_leaderboard_snapshot is not None:
+            refreshed = refresh_canonical_frontier_from_upstream_leaderboard(
+                repo_root=repo_root_path,
+                write=True,
+            )
+        else:
+            refreshed = refresh_canonical_frontier_from_local_state(
+                repo_root=repo_root_path,
+                write=True,
+                pre_existing_pointer=prior,
+            )
+    except Exception:
         # Per CLAUDE.md "Subagent coherence-by-default" maximum-signal-preservation:
         # ledger write has already succeeded; pointer refresh failure is a
         # downstream observability concern and must not propagate.
@@ -813,7 +974,7 @@ def auto_refresh_canonical_frontier_after_dispatch_outcome(
         )
 
         auto_schedule_mlx_per_pair_extraction_for_frontier(repo_root=repo_root_path)
-    except Exception:  # noqa: BLE001 — fail-quiet; observability-only downstream
+    except Exception:
         pass
 
     return refreshed

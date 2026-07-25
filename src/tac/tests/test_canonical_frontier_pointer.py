@@ -10,25 +10,25 @@ DX auto-update wire-in, sister Catalog #131 + #138 discipline.
 from __future__ import annotations
 
 import json
+from datetime import UTC
 from pathlib import Path
-from typing import Any
 
 import pytest
 
 from tac.canonical_frontier_pointer import (
+    POINTER_SCHEMA_VERSION,
     AnchorRecord,
-    CANONICAL_FRONTIER_POINTER_PATH,
     CanonicalFrontierPointer,
     FrontierPointerCorruptError,
-    POINTER_SCHEMA_VERSION,
+    _parse_official_leaderboard_entries,
     auto_refresh_canonical_frontier_after_dispatch_outcome,
+    effective_frontier_score,
     load_canonical_frontier_pointer_lenient,
     load_canonical_frontier_pointer_strict,
     refresh_canonical_frontier_from_local_state,
     refresh_canonical_frontier_from_upstream_leaderboard,
     write_canonical_frontier_pointer_locked,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────
 # Schema + dataclass tests
@@ -84,12 +84,17 @@ def test_canonical_frontier_pointer_dataclass_round_trip() -> None:
         auto_update_on_dispatch_completion=True,
         pointer_refresh_command="tools/refresh_canonical_frontier.py",
         refresh_provenance={"refresh_kind": "local_state"},
+        effective_frontier={
+            "score": 0.172,
+            "source": "upstream_official_leaderboard",
+        },
     )
     restored = CanonicalFrontierPointer.from_dict(pointer.as_dict())
     assert restored.schema_version == pointer.schema_version
     assert restored.our_local_frontier_contest_cpu is not None
     assert restored.our_local_frontier_contest_cpu.score == anchor.score
     assert restored.our_local_frontier_contest_cuda is None
+    assert effective_frontier_score(restored) == pytest.approx(0.172)
 
 
 def test_is_stale_detects_old_pointer() -> None:
@@ -113,7 +118,7 @@ def test_is_stale_detects_old_pointer() -> None:
 def test_is_stale_returns_false_for_fresh_pointer() -> None:
     """is_stale returns False for pointers <24h old."""
 
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     pointer = CanonicalFrontierPointer(
         schema_version=POINTER_SCHEMA_VERSION,
@@ -122,7 +127,7 @@ def test_is_stale_returns_false_for_fresh_pointer() -> None:
         submitted_pr_number_for_current_frontier=None,
         upstream_leaderboard_snapshot=None,
         upstream_leaderboard_snapshot_at_utc=None,
-        last_refreshed_utc=datetime.now(timezone.utc).isoformat(),
+        last_refreshed_utc=datetime.now(UTC).isoformat(),
         auto_update_on_dispatch_completion=True,
         pointer_refresh_command="x",
         refresh_provenance={},
@@ -289,24 +294,45 @@ def test_refresh_from_local_state_writes_pointer(tmp_path: Path) -> None:
 
 
 def test_refresh_from_real_repo_finds_canonical_anchors() -> None:
-    """Refresh against real repo discovers the 2026-05-15 anchors."""
+    """Refresh against real repo agrees with the live canonical scanner."""
 
     # Use a temp pointer path so we don't clobber the live repo state.
     # The refresher writes to the canonical path; for live-repo test we
     # just call write=False to avoid mutating the committed pointer.
-    pointer = refresh_canonical_frontier_from_local_state(
-        repo_root=REPO_ROOT, write=False
-    )
+    pointer = refresh_canonical_frontier_from_local_state(repo_root=REPO_ROOT, write=False)
     cpu = pointer.our_local_frontier_contest_cpu
     cuda = pointer.our_local_frontier_contest_cuda
     assert cpu is not None, "expected contest-CPU anchor in real repo"
     assert cuda is not None, "expected contest-CUDA anchor in real repo"
-    # Canonical anchors per Catalog #316.
-    assert cpu.score == pytest.approx(0.1920513169, rel=1e-6)
-    assert cpu.archive_sha256.startswith("6bae0201fb08")
+    from tac.frontier_scan import build_frontier_scan_payload
+
+    best = build_frontier_scan_payload(REPO_ROOT)["best_per_axis"]
+    assert cpu.score == pytest.approx(best["contest_cpu"]["score"])
+    assert cpu.archive_sha256 == best["contest_cpu"]["archive_sha256"]
     assert cpu.hardware_substrate == "linux_x86_64_cpu"
-    assert cuda.score == pytest.approx(0.20533002902, rel=1e-6)
-    assert cuda.archive_sha256.startswith("9cb989cef519")
+    assert cuda.score == pytest.approx(best["contest_cuda"]["score"])
+    assert cuda.archive_sha256 == best["contest_cuda"]["archive_sha256"]
+
+
+def test_parse_official_leaderboard_entries_extracts_ranked_scores() -> None:
+    """The canonical pointer parses ranked scores, not scoreless recent PRs."""
+
+    page = """
+    <div id="video_compression_challenge_table"><table><tbody>
+      <tr><td></td><td>0.172</td><td>semantic-pose-HPAC_CPR1</td>
+        <td><a href="https://github.com/commaai/comma_video_compression_challenge/pull/130">PR</a></td></tr>
+      <tr><td></td><td>0.187</td><td>rhnerv_latent_polish</td>
+        <td><a href="https://github.com/commaai/comma_video_compression_challenge/pull/128">PR</a></td></tr>
+    </tbody></table></div>
+    """
+    entries = _parse_official_leaderboard_entries(page)
+    assert entries[0] == {
+        "rank": 1,
+        "score": 0.172,
+        "name": "semantic-pose-HPAC_CPR1",
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/130",
+        "pr_number": 130,
+    }
 
 
 def test_refresh_preserves_pr_number_across_calls(tmp_path: Path) -> None:
@@ -325,11 +351,37 @@ def test_refresh_preserves_pr_number_across_calls(tmp_path: Path) -> None:
 def test_refresh_no_write_does_not_persist(tmp_path: Path) -> None:
     """When write=False, no pointer file is created."""
 
-    pointer = refresh_canonical_frontier_from_local_state(
-        repo_root=tmp_path, write=False
-    )
+    pointer = refresh_canonical_frontier_from_local_state(repo_root=tmp_path, write=False)
     assert pointer is not None
     assert not (tmp_path / ".omx" / "state" / "canonical_frontier_pointer.json").is_file()
+
+
+def test_local_preview_preserves_cached_public_target(tmp_path: Path) -> None:
+    """A write=False preview must not silently fall back to the weaker local-only target."""
+
+    pointer = _make_minimal_pointer()
+    pointer = CanonicalFrontierPointer(
+        **{
+            **pointer.__dict__,
+            "upstream_leaderboard_snapshot": {
+                "fetch_status": "ok",
+                "best_entry": {"rank": 1, "score": 0.172, "name": "leader"},
+            },
+            "upstream_leaderboard_snapshot_at_utc": "2026-07-25T00:00:00Z",
+            "effective_frontier": {
+                "score": 0.172,
+                "source": "upstream_official_leaderboard",
+            },
+        }
+    )
+    write_canonical_frontier_pointer_locked(pointer, repo_root=tmp_path)
+    preview = refresh_canonical_frontier_from_local_state(
+        repo_root=tmp_path,
+        write=False,
+    )
+    assert effective_frontier_score(preview) == pytest.approx(0.172)
+    assert preview.effective_frontier is not None
+    assert preview.effective_frontier["snapshot_at_utc"] == "2026-07-25T00:00:00Z"
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -342,21 +394,37 @@ def test_refresh_upstream_with_ok_snapshot(tmp_path: Path) -> None:
 
     def fake_fetcher(*, timeout_sec: int = 30) -> dict:
         return {
-            "source": "test",
+            "source": "official_leaderboard",
             "url": "test://leaderboard",
             "fetched_at_utc": "2026-05-19T00:00:00+00:00",
             "fetch_status": "ok",
-            "pulls": [{"number": 101, "title": "PR101 GOLD", "state": "closed"}],
+            "entries": [
+                {
+                    "rank": 1,
+                    "score": 0.172,
+                    "name": "public leader",
+                    "pr_number": 130,
+                    "pr_url": "https://example.test/130",
+                }
+            ],
+            "best_entry": {
+                "rank": 1,
+                "score": 0.172,
+                "name": "public leader",
+                "pr_number": 130,
+                "pr_url": "https://example.test/130",
+            },
         }
 
-    pointer = refresh_canonical_frontier_from_upstream_leaderboard(
-        repo_root=tmp_path, fetcher=fake_fetcher
-    )
+    pointer = refresh_canonical_frontier_from_upstream_leaderboard(repo_root=tmp_path, fetcher=fake_fetcher)
     snap = pointer.upstream_leaderboard_snapshot
     assert isinstance(snap, dict)
     assert snap.get("fetch_status") == "ok"
-    assert isinstance(snap.get("pulls"), list)
-    assert len(snap.get("pulls")) == 1
+    assert isinstance(snap.get("entries"), list)
+    assert len(snap.get("entries")) == 1
+    assert effective_frontier_score(pointer) == pytest.approx(0.172)
+    assert pointer.effective_frontier is not None
+    assert pointer.effective_frontier["source"] == "upstream_official_leaderboard"
 
 
 def test_refresh_upstream_graceful_network_failure(tmp_path: Path) -> None:
@@ -369,12 +437,10 @@ def test_refresh_upstream_graceful_network_failure(tmp_path: Path) -> None:
             "fetched_at_utc": "2026-05-19T00:00:00+00:00",
             "fetch_status": "network_failure",
             "fetch_error": "connection refused",
-            "pulls": [],
+            "entries": [],
         }
 
-    pointer = refresh_canonical_frontier_from_upstream_leaderboard(
-        repo_root=tmp_path, fetcher=failing_fetcher
-    )
+    pointer = refresh_canonical_frontier_from_upstream_leaderboard(repo_root=tmp_path, fetcher=failing_fetcher)
     snap = pointer.upstream_leaderboard_snapshot
     assert isinstance(snap, dict)
     assert snap.get("fetch_status") == "network_failure"
@@ -386,32 +452,36 @@ def test_refresh_upstream_preserves_cached_snapshot_on_failure(tmp_path: Path) -
 
     def ok_fetcher(*, timeout_sec: int = 30) -> dict:
         return {
-            "source": "test", "url": "x", "fetched_at_utc": "2026-05-19T00:00:00Z",
+            "source": "test",
+            "url": "x",
+            "fetched_at_utc": "2026-05-19T00:00:00Z",
             "fetch_status": "ok",
-            "pulls": [{"number": 100, "title": "first", "state": "closed"}],
+            "entries": [{"rank": 1, "score": 0.180, "name": "first"}],
+            "best_entry": {"rank": 1, "score": 0.180, "name": "first"},
         }
 
     def failing_fetcher(*, timeout_sec: int = 30) -> dict:
         return {
-            "source": "test", "url": "x", "fetched_at_utc": "2026-05-19T01:00:00Z",
+            "source": "test",
+            "url": "x",
+            "fetched_at_utc": "2026-05-19T01:00:00Z",
             "fetch_status": "network_failure",
             "fetch_error": "timeout",
-            "pulls": [],
+            "entries": [],
         }
 
     # First populate with OK fetch.
-    refresh_canonical_frontier_from_upstream_leaderboard(
-        repo_root=tmp_path, fetcher=ok_fetcher
-    )
+    refresh_canonical_frontier_from_upstream_leaderboard(repo_root=tmp_path, fetcher=ok_fetcher)
     # Then trigger failure: should preserve cached.
-    pointer = refresh_canonical_frontier_from_upstream_leaderboard(
-        repo_root=tmp_path, fetcher=failing_fetcher
-    )
+    pointer = refresh_canonical_frontier_from_upstream_leaderboard(repo_root=tmp_path, fetcher=failing_fetcher)
     snap = pointer.upstream_leaderboard_snapshot
     assert snap.get("fetch_status") == "network_failure"
     cached = snap.get("cached_snapshot")
     assert cached is not None
-    assert cached.get("pulls")[0]["number"] == 100
+    assert cached.get("entries")[0]["score"] == pytest.approx(0.180)
+    assert effective_frontier_score(pointer) == pytest.approx(0.180)
+    assert pointer.effective_frontier is not None
+    assert pointer.effective_frontier["snapshot_at_utc"] == "2026-05-19T00:00:00Z"
 
 
 # ─────────────────────────────────────────────────────────────────────────

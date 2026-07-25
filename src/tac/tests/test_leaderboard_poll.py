@@ -14,6 +14,7 @@ the upstream challenge README captured 2026-05-05. The test exercises:
 
 Per CLAUDE.md: every test added must actually pass.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -138,8 +139,11 @@ def test_score_column_hash_ignores_cosmetic_edits(lp, fixture_readme):
     # Mutate names only — score column unchanged
     mutated = [
         lp.LeaderboardEntry(
-            rank=e.rank, score=e.score, name=e.name + " (edited)",
-            pr_url=e.pr_url, pr_number=e.pr_number,
+            rank=e.rank,
+            score=e.score,
+            name=e.name + " (edited)",
+            pr_url=e.pr_url,
+            pr_number=e.pr_number,
         )
         for e in entries
     ]
@@ -178,8 +182,11 @@ def test_score_column_hash_changes_when_score_changes(lp, fixture_readme):
     mutated = list(entries)
     first = mutated[0]
     mutated[0] = lp.LeaderboardEntry(
-        rank=first.rank, score=first.score - 0.001, name=first.name,
-        pr_url=first.pr_url, pr_number=first.pr_number,
+        rank=first.rank,
+        score=first.score - 0.001,
+        name=first.name,
+        pr_url=first.pr_url,
+        pr_number=first.pr_number,
     )
     h_mut = lp.hash_score_column(mutated)
     assert h_mut != h_orig
@@ -202,6 +209,30 @@ def test_build_state_from_readme_roundtrip(lp, fixture_readme, tmp_path):
     assert loaded.frontier_identity_hash == state.frontier_identity_hash
     assert loaded.n_entries == state.n_entries
     assert loaded.top_3 == state.top_3
+
+
+def test_official_poll_syncs_canonical_effective_frontier(lp, tmp_path):
+    state = lp.LeaderboardState(
+        score_column_hash="a" * 64,
+        captured_utc="2026-07-25T00:00:00Z",
+        n_entries=64,
+        top_3=[
+            {
+                "rank": 1,
+                "score": 0.172,
+                "name": "semantic-pose-HPAC_CPR1",
+                "pr_url": "https://example.test/130",
+                "pr_number": 130,
+            }
+        ],
+        frontier_identity_hash="b" * 64,
+        source="official",
+        source_url=lp.OFFICIAL_LEADERBOARD_URL,
+    )
+    lp.sync_canonical_effective_frontier(state, repo_root=tmp_path)
+    pointer = json.loads((tmp_path / ".omx/state/canonical_frontier_pointer.json").read_text())
+    assert pointer["effective_frontier"]["score"] == pytest.approx(0.172)
+    assert pointer["effective_frontier"]["source"] == "upstream_official_leaderboard"
 
 
 def test_load_state_returns_none_when_missing(lp, tmp_path):
@@ -248,8 +279,11 @@ def test_append_change_writes_jsonl(lp, fixture_readme, tmp_path):
     block = lp.extract_leaderboard_block(fixture_readme)
     entries = lp.parse_leaderboard_entries(block)
     entries[0] = lp.LeaderboardEntry(
-        rank=entries[0].rank, score=0.150, name="new_leader",
-        pr_url=entries[0].pr_url, pr_number=entries[0].pr_number,
+        rank=entries[0].rank,
+        score=0.150,
+        name="new_leader",
+        pr_url=entries[0].pr_url,
+        pr_number=entries[0].pr_number,
     )
     s_next = lp.LeaderboardState(
         score_column_hash=lp.hash_score_column(entries),

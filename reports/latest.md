@@ -54,11 +54,24 @@ last_refreshed_note: |
 > contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
 > macOS-CPU advisory / MPS rows are excluded.
 
-### Current best - last rechecked 2026-07-10T20:35:20Z
+### Effective competitive frontier - official leaderboard rechecked 2026-07-25T19:50:35Z
+
+| Role | Score | Source | Entry | Custody |
+|---|---:|---|---|---|
+| **Score to beat** | **0.172** | official comma.ai leaderboard | `semantic-pose-HPAC_CPR1` / PR #130 | external target only |
+
+The official T4 row reports `d_seg=0.00029660`, `d_pose=0.00002331`, and
+`191,052` bytes; reconstructing from those rounded components gives
+`0.1721412975`. The leaderboard display `0.172` is the canonical competitive
+pointer because it is the actual ranked surface. This row does not imply local
+archive custody or our progress. The scanner-derived table below is retained
+for custody-specific local comparisons and must not be called the score to beat.
+
+### Current best - last rechecked 2026-07-25T19:52:29Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
-| **`[contest-CPU Linux x86_64]`** | **0.1910828242** | `ad02b0124cbb` | linux_x86_64_cpu | `lane_clickpolish_pr110_frontier_20260710` |
+| **`[contest-CPU Linux x86_64]`** | **0.1880443980** | `196acd18e4ca` | linux_x86_64_cpu | `lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712` |
 | **`[contest-CUDA T4]`** | **0.2053300290** | `9cb989cef519` | linux_x86_64_t4 | `lane_pr106_format0d_latent_score_table_20260516_contest_cuda` |
 
 ### 2026-05-22 MLX portable-local-substrate refresh
