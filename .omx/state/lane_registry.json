@@ -88078,6 +88078,48 @@
         }
       },
       "notes": "Typed campaign checkpoint to receiver-closed E5 packet adapter; research-only local verification; MAIN review required."
+    },
+    {
+      "id": "lane_ddm_gc4_full_pantheon_pr130_adjudication_20260725",
+      "name": "DDM GC4 Full Pantheon PR130 Adjudication",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Operator-convened research-only T3 adjudication; no launches, spend, live-config edits, or score promotion.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -88087,5 +88129,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-25T13:10:23Z"
+  "updated_at": "2026-07-25T13:54:28Z"
 }
