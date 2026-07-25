@@ -1,0 +1,71 @@
+{
+  "schema": "ddm_ga1_gauge_tolerance_ladder_reviews.v1",
+  "lane_id": "ddm_ga1_gauge_tolerance_ladder",
+  "research_only": true,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "pre_clean_review_findings": [
+    {
+      "finding": "The first draft rejected a temporary SHA-drift regression config before reaching the intended source-hash gate.",
+      "fix": "External configs now retain explicit absolute-path custody while the production output path remains repository-confined.",
+      "regression_added": true,
+      "clean_pass_counter_reset_after_fix": true
+    },
+    {
+      "finding": "The materializer did not explicitly refuse an output_receipt path resolving outside the repository.",
+      "fix": "Resolve output_receipt and fail before directory creation unless it is repository-local.",
+      "regression_added": true,
+      "clean_pass_counter_reset_after_fix": true
+    }
+  ],
+  "reviewed_python_files": [
+    {
+      "path": "src/tac/optimization/ddm_ga1_gauge_tolerance_ladder.py",
+      "sha256": "3a0ffe55d19c439d9099b25f3ac90adbbecdd7a727461b1b5b307c3813e4803c"
+    },
+    {
+      "path": "tools/build_ddm_ga1_gauge_tolerance_ladder.py",
+      "sha256": "ebffd82c7360c60f528a0bde8ad7d143becbf433ba9b8ee5bbc780c393c10fc2"
+    },
+    {
+      "path": "tests/test_ddm_ga1_gauge_tolerance_ladder.py",
+      "sha256": "96eabb30aa3638e22b3216478f929d55b4cf603a13f21a17f6cc61e36d61c203"
+    }
+  ],
+  "clean_passes": [
+    {
+      "pass": 1,
+      "reviewer": "codex-ddm-ga1",
+      "status": "CLEAN",
+      "independent_focus": "input custody, typed-home accounting, non-additive class rows, and endpoint arithmetic",
+      "checks": [
+        "Ruff exact three-file surface",
+        "py_compile implementation and materializer",
+        "4 focused tests passed",
+        "all eight inputs independently rehashed and byte-checked",
+        "151/134211 upper-bound arithmetic independently asserted",
+        "review_tracker clean_pass_1 marks on the implementation and materializer"
+      ],
+      "receipt_sha256": "885119e5316508d72a52f9f04716fb08d3855fcbcb72bae5cf14f3946a398f5c"
+    },
+    {
+      "pass": 2,
+      "reviewer": "codex-ddm-ga1",
+      "status": "CLEAN",
+      "independent_focus": "fail-closed curve admission, dynamic class identity, deterministic materialization, and false-authority labels",
+      "checks": [
+        "Ruff exact three-file surface",
+        "4 focused tests passed under a distinct PYTHONHASHSEED",
+        "receipt byte-identical under a second distinct PYTHONHASHSEED",
+        "no numeric scorer class indices in implementation or materializer",
+        "git diff --check",
+        "review_tracker clean_pass_2 marks on the implementation and materializer"
+      ],
+      "receipt_sha256": "885119e5316508d72a52f9f04716fb08d3855fcbcb72bae5cf14f3946a398f5c"
+    }
+  ],
+  "clean_pass_count": 2,
+  "all_clean": true,
+  "verdict": "TWO_CLEAN_PASSES_COMPLETE_MAIN_LANDING_REVIEW_REQUIRED"
+}
