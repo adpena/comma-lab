@@ -162,3 +162,26 @@ E11 RATE INSIDE ACCEPTANCE (Ballé): Δbytes through the real coder (calibrated 
    inflate stream entropy and bill export.
 Same discipline as §8: each lands as DSL-typed engine config in the G5 reseal or is recorded
 as a named residual; E7's entropy measurement H(flips|context) is a $0 add to db1's scope.
+
+## 10. ROUND-3 NEW-MINDS COUNCIL (2026-07-25, commit 878e7b2320 — canonical:
+## feedback_round3_new_minds_council_20260725.md, anchor round3_new_minds_council_20260725)
+16 adjudicated rows R1-R16 (memo is canonical; NOT duplicated here). BINDING deltas to this card:
+- §8a AMENDED (R4/Wald): prefilter promote/reject = SPRT closed-form boundary at chosen (α,β)
+  — replaces "permissive threshold"; (α,β) set by R10's $0 attempt-5 counterfactual replay.
+- §9-E11 HARDENED (R9): proxy-to-packed calibration is a measured multiplicative BAND
+  (#97 precedent 2.57-2.85×), never a point estimate; + terminal RDOQ pass post-D*.
+- NAMED GAP FILLED (R1+R2): the card had NO row for the quantization/realization gate inside
+  the engine (minimal-writes-die-at-uint8, measured). R1 quantization-continuation race
+  (Q8 control · C3 soft-round+Kumaraswamy · v5 soft-round+Gaussian; exact realized S sole
+  admission) + R2 Laughlin histogram-matched per-dim quanta (producer: rd1's 162 histograms)
+  attack it from the descent side and the lattice side. Reseal-input rows.
+- E7 SHARPENED (R5+R6+R8): context-MIXED H(flips|context) in db1's scope · syndrome-coded
+  transmit realization ($0 race on the v19c 104-admission set) · Martin-Löf absolute-stop
+  battery as the complement to the marginal-cost D*.
+- G1/G5 engine adds: R11 update-RMS shadow custody in the j10 re-smoke + R12 metric-declaration
+  audit (Euclidean-default = reseal-blocking) + R3 analytic pose-precision ladder (first
+  derived pose byte budget; composes with E9 + both pc2 forks) + R13 RTS-ξ knots (fork b).
+- R16 COIN++ split: COMPLIANCE-CONTESTED — rule-118 adjudication memo REQUIRED before any
+  design work; pretrained weights charged until adjudicated. R14/R15 honor PAN1-4 sequencing.
+- SEQUENCING (Contrarian, BINDING): no row delays G1-G4; the G5 reseal CONSUMES survivors,
+  it does not wait for them. Honest no-new-row seats recorded in the memo.

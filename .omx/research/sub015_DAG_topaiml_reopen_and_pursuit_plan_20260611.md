@@ -24632,3 +24632,16 @@ never state-selection vetoes. CONSEQUENCE: presumptive start flips W_joint-step-
 re-scoped as an OLD-engine dynamics answer, not a state-quality answer; ks1 (G3.5) can displace
 W_seg only with a realized solve-derived member at LOWER d_seg in-window bytes. j10's reseal +
 the G5 S-composition check consume this law. pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-ROUND3-COUNCIL (2026-07-25, MAIN — operator "remember + reconsult the new minds")
+SIGNAL: lost chat-only pantheon arc RECONSTRUCTED durably (pantheon_all_time_roster_and_
+second_order_nominations_20260725.md, f99d58691e) then adjudicated by the ROUND-3 NEW-MINDS
+COUNCIL (one body: 13 scattered 07-22→24 seats + 10 second-order nominations; verdict
+PROCEED_WITH_REVISIONS, 878e7b2320, anchor emitted). 16 rows → card §10: §8a→SPRT (Wald) ·
+E11→calibration BAND (Ladune/Rissanen) · quantization-gate gap FILLED (R1 continuation race +
+R2 Laughlin matched quanta vs the measured uint8 wall) · E7 sharpened (CM-mixed entropy +
+syndrome transmit + Martin-Löf absolute stop) · analytic pose ladder R3 + RTS-ξ R13 · engine
+custody R11/R12 · R16 COIN++ COMPLIANCE-CONTESTED (rule-118 memo required first). verdict_scope
+tokens per-row in the canonical memo (bits-back N/A FORMULATION-scoped under deterministic
+decode; #574-differencing negative FORMULATION-scoped vs R13 smoothing). Sequencing binding:
+G1-G4 undelayed; G5 reseal consumes survivors. pointer 0.1910828242 [contest-CPU] UNMOVED.
