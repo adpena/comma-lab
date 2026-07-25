@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import importlib.util
 import json
 import math
 import sys
@@ -59,6 +60,40 @@ _SHADOW_STALE_S = 2 * 3600.0
 _NCDE_CACHE: dict[str, tuple[tuple, str | None, dict | None]] = {}
 # section_verdict_trend cache: same run.log-signature keying as _NCDE_CACHE.
 _VERDICT_TREND_CACHE: dict[str, tuple[tuple, str | None, dict | None]] = {}
+_DDM_CAMPAIGN_RESULTS_ROOTS: tuple[Path, ...] = (
+    Path("/Volumes/VertigoDataTier/pact/experiments/results"),
+    Path("/Volumes/APDataStore/pact/experiments/results"),
+    _REPO / "experiments" / "results",
+)
+_DDM_CAMPAIGN_OBSERVABILITY_SCHEMA = "ddm_campaign_run_observability.v1"
+_DDM_CAMPAIGN_ROW_SCHEMA = "ddm_campaign_observability_row.v1"
+
+
+def _ddm_pose_watch_deriver():
+    """Load the leaf law without importing the heavyweight equation registry.
+
+    The session-start digest must stay dependency-light.  Importing the
+    ``tac.canonical_equations`` package registers the full equation fleet and
+    initializes optional scientific dependencies, so load this exact source
+    module directly while retaining one implementation of the law.
+    """
+
+    path = (
+        _REPO
+        / "src"
+        / "tac"
+        / "canonical_equations"
+        / "ddm_pose_finish_engagement_watch_20260725.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "_costate_ddm_pose_finish_engagement_watch_20260725",
+        path,
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load canonical DDM pose-watch law: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.derive_pose_finish_engagement_watch
 
 
 def _fmt_age(seconds: float | None) -> str:
@@ -134,6 +169,354 @@ def section_live_ddm() -> tuple[list[str], dict | None]:
         return digest_lines(report), report
     except Exception as exc:
         return [f"DDM-LIVE unavailable ({type(exc).__name__}: {exc})"], {
+            "available": False,
+            "status": "FAIL_OPEN",
+            "reason": f"{type(exc).__name__}: {exc}",
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+
+
+def discover_latest_ddm_campaign_run(
+    results_roots: tuple[Path, ...] | list[Path] | None = None,
+) -> Path | None:
+    """Find the latest structurally governed DDM campaign by directory mtime.
+
+    The roots are stable storage tiers; the run name is never encoded here.
+    Every candidate must first pass the canonical witness-run predicate and
+    then the typed DDM run-identity schema check.
+    """
+
+    from tac import witness_run_artifacts as wra
+
+    candidates: list[Path] = []
+    for root in results_roots or _DDM_CAMPAIGN_RESULTS_ROOTS:
+        if not root.is_dir():
+            continue
+        try:
+            children = root.iterdir()
+        except OSError:
+            continue
+        for child in children:
+            if not wra.is_run_dir(child):
+                continue
+            identity = _last_jsonl_row(child / wra.DDM_RUN_IDENTITY_JSON)
+            if identity is None:
+                try:
+                    identity = json.loads(
+                        (child / wra.DDM_RUN_IDENTITY_JSON).read_text(encoding="utf-8")
+                    )
+                except Exception:
+                    continue
+            if (
+                isinstance(identity, dict)
+                and identity.get("schema") == "ddm_joint_descent_run_identity.v1"
+            ):
+                candidates.append(child)
+    return max(candidates, key=lambda path: path.stat().st_mtime_ns) if candidates else None
+
+
+def _json_object(path: Path) -> dict:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path}: expected a JSON object")
+    return payload
+
+
+def _campaign_schedule(run_dir: Path, receipt: dict) -> tuple[dict, dict]:
+    """Load the sealed schedule from the final receipt or the launch ticket."""
+
+    receipt_schedule = receipt.get("schedule")
+    if isinstance(receipt_schedule, dict) and all(
+        key in receipt_schedule
+        for key in ("measured_seconds_per_step", "pose_finish_engage", "stages")
+    ):
+        return receipt_schedule, {
+            "status": "FINAL_RECEIPT_COMPLETE_SCHEDULE",
+            "final_receipt_path": str(run_dir / "full_run_receipt.json"),
+        }
+    launch = _json_object(run_dir / "launch_manifest.json")
+    argv = launch.get("argv")
+    if not isinstance(argv, list) or "--ticket" not in argv:
+        raise ValueError("DDM launch manifest lacks typed ticket argv")
+    ticket_index = argv.index("--ticket") + 1
+    if ticket_index >= len(argv):
+        raise ValueError("DDM launch manifest has an empty typed ticket argv")
+    ticket = Path(str(argv[ticket_index]))
+    if ticket.is_absolute():
+        ticket_path = ticket
+    else:
+        ticket_path = (_REPO / ticket).resolve()
+        ticket_path.relative_to(_REPO)
+    typed = _json_object(ticket_path)
+    ticket_schedule = (typed.get("semantic_program") or {}).get("full_run_schedule")
+    if not isinstance(ticket_schedule, dict):
+        raise ValueError("DDM typed ticket lacks full_run_schedule")
+    ticket_comparator = (typed.get("execution_custody") or {}).get(
+        "banked_r1_comparator"
+    )
+    if not isinstance(ticket_comparator, dict):
+        raise ValueError("DDM typed ticket lacks banked R1 comparator custody")
+    if receipt_schedule is not None and not isinstance(receipt_schedule, dict):
+        raise ValueError("DDM final receipt schedule is not a mapping")
+    # The final receipt intentionally carries only the runtime-consumed subset;
+    # retain sealed projection/cadence fields from the ticket and overlay the
+    # measured runtime copy where present.
+    schedule = {**ticket_schedule, **(receipt_schedule or {})}
+    return schedule, {
+        "status": (
+            "HASH_SEALED_TYPED_TICKET_PLUS_FINAL_RECEIPT"
+            if receipt_schedule
+            else "HASH_SEALED_TYPED_TICKET"
+        ),
+        "ticket_path": str(ticket_path),
+        "banked_r1_comparator": ticket_comparator,
+        "final_receipt_path": (
+            str(run_dir / "full_run_receipt.json") if receipt_schedule else None
+        ),
+    }
+
+
+def read_ddm_campaign_observability(run_dir: Path) -> dict:
+    """Read one DDM run without writing it or invoking a scorer."""
+
+    telemetry_paths = sorted((run_dir / "telemetry").glob("step*.json"))
+    telemetry = [
+        row
+        for row in (_json_object(path) for path in telemetry_paths)
+        if row.get("schema") == "ddm_joint_descent_full_run_step.v1"
+    ]
+    verdict_candidates: list[tuple[int, int, Path, dict]] = []
+    for path in (run_dir / "verdicts").glob("*.json"):
+        row = _json_object(path)
+        if (
+            row.get("schema") == "ddm_joint_descent_chunked_stage_verdict.v1"
+            and row.get("num_pairs") == 600
+            and isinstance(row.get("d_seg"), (int, float))
+            and isinstance(row.get("d_pose"), (int, float))
+        ):
+            verdict_candidates.append(
+                (int(row.get("global_step", 0)), path.stat().st_mtime_ns, path, row)
+            )
+    if not verdict_candidates:
+        raise ValueError("DDM campaign has no exact n600 verdict")
+    latest_step, _mtime, latest_verdict_path, latest_verdict = max(
+        verdict_candidates,
+        key=lambda item: (item[0], item[1]),
+    )
+    receipt_path = run_dir / "full_run_receipt.json"
+    receipt = _json_object(receipt_path) if receipt_path.is_file() else {}
+    schedule, schedule_source = _campaign_schedule(run_dir, receipt)
+    stage_rows = schedule.get("stages") or []
+    if not isinstance(stage_rows, list) or not stage_rows:
+        raise ValueError("DDM schedule has no stages")
+    total_steps = sum(int(stage["maximum_steps"]) for stage in stage_rows)
+    verdict_interval = int(stage_rows[0]["verdict_interval_steps"])
+    expected_seconds = float(schedule["measured_seconds_per_step"])
+
+    step_seconds = [float(row["seconds"]) for row in telemetry]
+    measured_cadence = sum(step_seconds) / len(step_seconds) if step_seconds else None
+    accepted_checkpoints = sorted((run_dir / "checkpoints").glob("*_accepted_global*.npz"))
+    geometry_events = sorted((run_dir / "telemetry").glob("geometry_*_cured.json"))
+    local_dseg_delta = sum(
+        float(row["final"]["d_seg"]) - float(row["initial"]["d_seg"])
+        for row in telemetry
+    )
+    local_dpose_delta = sum(
+        float(row["final"]["d_pose"]) - float(row["initial"]["d_pose"])
+        for row in telemetry
+    )
+    pose_state = latest_verdict.get("pose_finish_engage_state")
+    if not isinstance(pose_state, dict):
+        pose_state = receipt.get("pose_finish_engage_state")
+    if not isinstance(pose_state, dict):
+        pose_state = {}
+    exact_verdict_steps = pose_state.get("exact_verdict_steps") or []
+    pose_gate = schedule.get("pose_finish_engage")
+    if not isinstance(pose_gate, dict):
+        raise ValueError("DDM schedule lacks typed pose-finish engage gate")
+    comparator = receipt.get("banked_r1_comparator") or schedule_source.get(
+        "banked_r1_comparator"
+    )
+    if not isinstance(comparator, dict) or not isinstance(
+        comparator.get("score_contribution"), (int, float)
+    ):
+        raise ValueError("DDM campaign lacks banked R1 comparator score custody")
+    fallback_contribution = float(comparator["score_contribution"])
+
+    pose_watch = _ddm_pose_watch_deriver()(
+        verdict_interval_steps=verdict_interval,
+        ema_span=int(pose_gate["ema_span"]),
+        hysteresis=int(pose_gate["hysteresis"]),
+        settle_window=int(pose_gate["settle_window"]),
+        observed_exact_verdicts=len(exact_verdict_steps),
+        fallback_score_contribution=fallback_contribution,
+    )
+    remaining_steps = max(0, total_steps - latest_step)
+    eta_seconds = (
+        remaining_steps * measured_cadence
+        if measured_cadence is not None
+        else None
+    )
+    campaign_blocker = receipt.get("campaign_blocker")
+    run_status = (
+        "STOPPED_WITH_TYPED_BLOCKER"
+        if campaign_blocker
+        else "FINAL_RECEIPT_COMPLETE"
+        if receipt
+        else "RECEIPT_PENDING_NO_PROCESS_LIVENESS_CLAIM"
+    )
+    rows = [
+        {
+            "schema": _DDM_CAMPAIGN_ROW_SCHEMA,
+            "row_id": "latest_exact_n600_verdict",
+            "epistemic_status": "MEASURED",
+            "evidence_axis": latest_verdict.get("evidence_axis"),
+            "global_step": latest_step,
+            "d_seg": float(latest_verdict["d_seg"]),
+            "d_pose": float(latest_verdict["d_pose"]),
+            "source_path": str(latest_verdict_path),
+            "score_claim": False,
+        },
+        {
+            "schema": _DDM_CAMPAIGN_ROW_SCHEMA,
+            "row_id": "accepted_steps_and_cadence",
+            "epistemic_status": "MEASURED",
+            "accepted_step_count": len(accepted_checkpoints),
+            "latest_accepted_checkpoint": (
+                str(accepted_checkpoints[-1]) if accepted_checkpoints else None
+            ),
+            "telemetry_step_count": len(telemetry),
+            "measured_seconds_per_step": measured_cadence,
+            "sealed_seconds_per_step": expected_seconds,
+            "measured_minus_sealed_seconds": (
+                measured_cadence - expected_seconds
+                if measured_cadence is not None
+                else None
+            ),
+            "score_claim": False,
+        },
+        {
+            "schema": _DDM_CAMPAIGN_ROW_SCHEMA,
+            "row_id": "cumulative_batch_local_trace",
+            "epistemic_status": "ADVISORY_BATCH_LOCAL",
+            "not_n600_verdict": True,
+            "delta_d_seg_sum_final_minus_initial": local_dseg_delta,
+            "delta_d_pose_sum_final_minus_initial": local_dpose_delta,
+            "telemetry_step_count": len(telemetry),
+            "score_claim": False,
+        },
+        {
+            "schema": _DDM_CAMPAIGN_ROW_SCHEMA,
+            "row_id": "pose_finish_engagement_watch",
+            "epistemic_status": "DERIVED_FROM_SEALED_GATE_CONSTANTS",
+            "observed_classification": pose_state.get("classification"),
+            "observed_exact_verdict_count": len(exact_verdict_steps),
+            "observed_exact_verdict_steps": list(exact_verdict_steps),
+            "watch": pose_watch,
+            "score_claim": False,
+        },
+        {
+            "schema": _DDM_CAMPAIGN_ROW_SCHEMA,
+            "row_id": "geometry_cure_events",
+            "epistemic_status": "MEASURED",
+            "event_count": len(geometry_events),
+            "source_glob": "telemetry/geometry_*_cured.json",
+            "score_claim": False,
+        },
+        {
+            "schema": _DDM_CAMPAIGN_ROW_SCHEMA,
+            "row_id": "schedule_endpoint_eta",
+            "epistemic_status": "DERIVED_FROM_MEASURED_CADENCE_AND_SEALED_SCHEDULE",
+            "current_global_step": latest_step,
+            "sealed_total_steps": total_steps,
+            "remaining_steps": remaining_steps,
+            "measured_cadence_seconds_per_step": measured_cadence,
+            "eta_seconds": eta_seconds,
+            "eta_hours": eta_seconds / 3600.0 if eta_seconds is not None else None,
+            "counterfactual_after_governed_stop": bool(campaign_blocker),
+            "score_claim": False,
+        },
+    ]
+    return {
+        "schema": _DDM_CAMPAIGN_OBSERVABILITY_SCHEMA,
+        "available": True,
+        "status": run_status,
+        "campaign_blocker": campaign_blocker,
+        "run_dir": str(run_dir),
+        "discovery": {
+            "law": "filter with tac.witness_run_artifacts.is_run_dir; select max directory mtime_ns",
+            "run_name_hardcoded": False,
+            "selected_directory_mtime_ns": str(run_dir.stat().st_mtime_ns),
+        },
+        "schedule_source": schedule_source,
+        "rows": rows,
+        "actuation": "NONE",
+        "execution_allowed": False,
+        "score_claim": False,
+        "main_landing_review_required": True,
+    }
+
+
+def section_ddm_campaign_run(
+    results_roots: tuple[Path, ...] | list[Path] | None = None,
+) -> tuple[list[str], dict]:
+    """Typed DDM campaign observability for digest and machine consumers."""
+
+    try:
+        run_dir = discover_latest_ddm_campaign_run(results_roots)
+        if run_dir is None:
+            return ["DDM-run: unavailable (no canonical campaign run dir)"], {
+                "schema": _DDM_CAMPAIGN_OBSERVABILITY_SCHEMA,
+                "available": False,
+                "status": "NO_CANONICAL_CAMPAIGN_RUN",
+                "actuation": "NONE",
+                "score_claim": False,
+            }
+        report = read_ddm_campaign_observability(run_dir)
+        by_id = {row["row_id"]: row for row in report["rows"]}
+        verdict = by_id["latest_exact_n600_verdict"]
+        cadence = by_id["accepted_steps_and_cadence"]
+        local = by_id["cumulative_batch_local_trace"]
+        pose = by_id["pose_finish_engagement_watch"]
+        eta = by_id["schedule_endpoint_eta"]
+        measured_cadence = cadence["measured_seconds_per_step"]
+        eta_hours = eta["eta_hours"]
+        measured_cadence_text = (
+            f"{measured_cadence:.3f}" if measured_cadence is not None else "pending"
+        )
+        eta_hours_text = f"{eta_hours:.2f}" if eta_hours is not None else "pending"
+        lines = [
+            (
+                f"DDM-run: {report['status']} step {verdict['global_step']} "
+                f"d_seg {verdict['d_seg']:.9f} d_pose {verdict['d_pose']:.9f} "
+                "[macOS-CPU advisory exact n600]"
+            ),
+            (
+                f"DDM-cadence: {cadence['accepted_step_count']} accepted | "
+                f"{measured_cadence_text}s/step measured vs "
+                f"{cadence['sealed_seconds_per_step']:.3f}s sealed | "
+                f"{eta_hours_text}h counterfactual endpoint ETA"
+            ),
+            (
+                f"DDM-batch-local: sum delta d_seg {local['delta_d_seg_sum_final_minus_initial']:+.9f} "
+                f"over {local['telemetry_step_count']} steps "
+                "[ADVISORY_BATCH_LOCAL; NOT n600]"
+            ),
+            (
+                f"DDM-pose-watch: {pose['observed_classification']} "
+                f"{pose['observed_exact_verdict_count']} exact verdicts; "
+                f"conditional window verdict "
+                f"{pose['watch']['candidate_engagement_verdict_index_one_based']}-"
+                f"{pose['watch']['settled_engagement_verdict_index_one_based']} "
+                f"(step {pose['watch']['candidate_engagement_global_step']}-"
+                f"{pose['watch']['settled_engagement_global_step']})"
+            ),
+        ]
+        return lines, report
+    except Exception as exc:
+        return [f"DDM-run: unavailable ({type(exc).__name__}: {exc})"], {
+            "schema": _DDM_CAMPAIGN_OBSERVABILITY_SCHEMA,
             "available": False,
             "status": "FAIL_OPEN",
             "reason": f"{type(exc).__name__}: {exc}",
@@ -1349,10 +1732,17 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
         isinstance(data["ddm_costate_organ"], dict)
         and data["ddm_costate_organ"].get("available")
     )
+    # Campaign-run observability is an independent read-only source.  Surface
+    # it whether the broader DDM receipt fleet is complete or fail-open, so a
+    # stopped campaign remains visible and is never mistaken for a live run.
+    lines.extend(ddm_lines)
+    campaign_run_lines, data["ddm_campaign_run_observability"] = (
+        section_ddm_campaign_run()
+    )
+    lines.extend(campaign_run_lines)
     if ddm_live:
         # The live DDM campaign is primary.  Do not even inspect the quarantined
         # witness run; compatibility keys remain explicit dominated markers.
-        lines.extend(ddm_lines)
         run_dir = None
         report = data["ddm_costate_organ"]
         from tac.ddm_campaign_costate import campaign_consumer_view

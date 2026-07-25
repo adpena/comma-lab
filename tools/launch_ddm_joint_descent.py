@@ -247,7 +247,13 @@ def _memory_projection(measured_peak_gib: float) -> float:
     return max(measured_peak_gib * 1.2 + 1.0, measured_peak_gib + 2.0)
 
 
-def _load_memory_receipt(path: Path, config: DirectDescriptionJointDescentTypedConfigV1) -> dict[str, Any]:
+def _load_memory_receipt(
+    path: Path,
+    config: DirectDescriptionJointDescentTypedConfigV1,
+    *,
+    allow_bit_identical_custody_copy: bool = False,
+    verify_current_execution_custody: bool = True,
+) -> dict[str, Any]:
     if not path.is_file() or path.is_symlink():
         raise DirectDescriptionError(f"REFUSE_MEASURED_MEMORY_RECEIPT_UNAVAILABLE: {path}")
     row = json.loads(path.read_bytes())
@@ -263,11 +269,15 @@ def _load_memory_receipt(path: Path, config: DirectDescriptionJointDescentTypedC
         expected_memory = config.execution_custody["worst_geometry_memory_receipt"]
         if expected_memory.get("sha256") is None:
             raise DirectDescriptionError("worst-geometry memory receipt SHA-256 is not sealed")
-        if path.resolve() != (REPO / expected_memory["path"]).resolve():
+        if (
+            not allow_bit_identical_custody_copy
+            and path.resolve() != (REPO / expected_memory["path"]).resolve()
+        ):
             raise DirectDescriptionError("memory receipt path differs from the sealed worst-geometry receipt")
         if _sha256_file(path) != expected_memory["sha256"]:
             raise DirectDescriptionError("memory receipt SHA-256 differs from the sealed worst-geometry receipt")
-        _verify_execution_custody(config)
+        if verify_current_execution_custody:
+            _verify_execution_custody(config)
         contract = config.worst_geometry_memory_contract
         if contract is None:
             raise DirectDescriptionError("memory receipt lacks a typed worst-geometry contract")
@@ -1312,41 +1322,113 @@ def _resume_proof(
     if args.resume_from is None or args.memory_receipt is None:
         raise DirectDescriptionError("resume proof requires --resume-from and --memory-receipt")
     storage = _storage_receipt(Path(args.out_dir))
-    memory = _load_memory_receipt(Path(args.memory_receipt), config)
+    memory = _load_memory_receipt(
+        Path(args.memory_receipt),
+        config,
+        allow_bit_identical_custody_copy=True,
+        # This mode only parses a historical checkpoint.  The sealed launch-time
+        # source hashes are still checked below, while the current reader source
+        # is explicitly MAIN-review-pending and cannot authorize execution.
+        verify_current_execution_custody=False,
+    )
     governor = _governor(float(memory["projected_peak_gib"]))
-    state, metadata = load_stage_checkpoint(Path(args.resume_from), config=config)
+    checkpoint_path = Path(args.resume_from)
+    checkpoint_sha256 = _sha256_file(checkpoint_path)
+    state, metadata = load_stage_checkpoint(checkpoint_path, config=config)
+    reloaded_state, reloaded_metadata = load_stage_checkpoint(
+        checkpoint_path,
+        config=config,
+    )
+    optimizer_fields = ("theta", "ema", "first_moment", "second_moment")
+    optimizer_arrays_bit_identical = all(
+        np.array_equal(getattr(state, field), getattr(reloaded_state, field))
+        for field in optimizer_fields
+    )
+    if (
+        not optimizer_arrays_bit_identical
+        or state.step != reloaded_state.step
+        or metadata != reloaded_metadata
+    ):
+        raise DirectDescriptionError(
+            "resume proof repeated checkpoint loads are not bit-identical"
+        )
     cursor = metadata.get("run_cursor", {})
     pose_config = config.full_run_schedule.pose_finish_engage
     if pose_config is None:
         raise DirectDescriptionError("resume proof lacks typed pose-finish engage config")
+    rng = metadata.get("rng")
+    if rng != {"kind": "deterministic_no_sampling", "state": config.seed}:
+        raise DirectDescriptionError("resume proof RNG state differs from sealed deterministic state")
     pose_state = PoseFinishEngageStateV1.from_payload(
         cursor.get("pose_finish_engage_state", {}),
         config=pose_config,
     )
     expected_checkpoint = memory.get("checkpoint", {})
-    if _sha256_file(Path(args.resume_from)) != expected_checkpoint.get("sha256") or state.step != int(
-        cursor.get("global_step", -1)
-    ):
-        raise DirectDescriptionError("resume proof checkpoint custody differs")
+    if state.step != int(cursor.get("global_step", -1)):
+        raise DirectDescriptionError("resume proof checkpoint cursor differs from optimizer step")
+    optimizer_array_sha256 = {
+        field: hashlib.sha256(
+            np.ascontiguousarray(getattr(state, field)).tobytes(order="C")
+        ).hexdigest()
+        for field in optimizer_fields
+    }
     receipt = {
         "schema": "ddm_joint_descent_process_boundary_resume_proof.v1",
         **_base_receipt(config),
         "process_pid": os.getpid(),
         "checkpoint": {
-            "path": str(Path(args.resume_from)),
-            "sha256": expected_checkpoint["sha256"],
+            "path": str(checkpoint_path),
+            "sha256": checkpoint_sha256,
             "global_step": state.step,
-            "optimizer_arrays_bit_close_loadable": True,
+            "optimizer_arrays_bit_identical_across_reloads": (
+                optimizer_arrays_bit_identical
+            ),
+            "optimizer_array_sha256": optimizer_array_sha256,
+            "memory_bootstrap_checkpoint_sha256": expected_checkpoint.get("sha256"),
+            "matches_memory_bootstrap_checkpoint": (
+                checkpoint_sha256 == expected_checkpoint.get("sha256")
+            ),
+            "checkpoint_role": (
+                "memory_bootstrap"
+                if checkpoint_sha256 == expected_checkpoint.get("sha256")
+                else "campaign_progress_checkpoint"
+            ),
+        },
+        "rng": {
+            **rng,
+            "bit_identical_across_reloads": metadata["rng"] == reloaded_metadata["rng"],
         },
         "pose_finish_engage_state": pose_state.to_payload(),
+        "resume_field_invariant": {
+            "observability_severity_if_missing": "WARN_ONLY_NO_RESUME_AUTHORITY",
+            "proof_severity_if_missing": "FAIL_CLOSED",
+            "required_fields": [
+                "theta",
+                "ema",
+                "first_moment",
+                "second_moment",
+                "rng",
+                "run_cursor.pose_finish_engage_state",
+            ],
+            "missing_fields": [],
+            "status": "PASS_ALL_REQUIRED_FIELDS_PRESENT",
+        },
         "memory_receipt": {
             "path": str(Path(args.memory_receipt)),
             "sha256": _sha256_file(Path(args.memory_receipt)),
             "worst_geometry_total_secants": memory["memory_geometry"]["total_secants"],
+            "role": "memory_and_governor_custody_not_progress_checkpoint_identity",
         },
         "storage": storage,
         "governor": governor,
-        "execution_custody_verified": _verify_execution_custody(config),
+        "execution_custody_verified": {
+            "status": (
+                "HISTORIC_LAUNCH_CUSTODY_VERIFIED_FROM_SEALED_MEMORY_RECEIPT;"
+                "CURRENT_RESUME_READER_MAIN_REVIEW_REQUIRED"
+            ),
+            "current_execution_source_reuse_authorized": False,
+            "main_landing_review_required": True,
+        },
         "campaign_launched": False,
         "execution_allowed_by_this_receipt": False,
         "score_claim": False,
