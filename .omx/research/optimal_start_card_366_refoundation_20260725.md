@@ -185,3 +185,20 @@ as a named residual; E7's entropy measurement H(flips|context) is a $0 add to db
   design work; pretrained weights charged until adjudicated. R14/R15 honor PAN1-4 sequencing.
 - SEQUENCING (Contrarian, BINDING): no row delays G1-G4; the G5 reseal CONSUMES survivors,
   it does not wait for them. Honest no-new-row seats recorded in the memo.
+
+## 11. GATE G2 STATUS (db1 landed 2026-07-25, ccde1a9b63 — canonical:
+## codex_findings_ddm_db1_decay_bounds_20260725T124600Z_codex.md)
+G2 = INDETERMINATE (honest, E7-amended non-refusal). MEASURED: (a) V19C proposal-order curve —
+exponential decisively preferred (ΔAICc +66.5), asymptote 0.02441 CI[0.02358,0.02470]; target
+8.684e-4 UNREACHABLE for THAT FORMULATION (verdict_scope: FORMULATION — V19C accepted-proposal
+order + fixed SN1/AT1 atlas; NOT live scorer-recursive descent). (b) N(δ) margin-mass intervals
+landed (2,551,382 unique boundary px; duplicate budget exactly 18,005). (c) DECISIVE STRUCTURAL
+FACT: the FIXED initial boundary atlas, even all-beneficial ORACLE, leaves 294,461 errors at
+W_seg-class vs the 102,441 box allowance — SHORT by 192,020 px BEFORE collateral ⇒ fixed-support
+corrections CANNOT close the box; only live descent (margin transport/boundary replenishment)
+or richer description families can. Reconciles v19c: its 0.0248 stop is proposal/support-
+limited, not near-flip exhaustion. (d) BINDING j10 ADDITION (§3): the re-smoke's 10 accepted
+exact n600 verdict intervals MUST preserve target-error-conditioned per-flip custody
+(pair,y,x,winner,rival,margin,d2 before/after + gross beneficial/harmful flips + realized
+step seconds + context-coded residual bits) — ONE trace then identifies the LIVE decay law AND
+E7's optimal stop D*. G2 closes on that receipt, not before.

@@ -24645,3 +24645,19 @@ custody R11/R12 · R16 COIN++ COMPLIANCE-CONTESTED (rule-118 memo required first
 tokens per-row in the canonical memo (bits-back N/A FORMULATION-scoped under deterministic
 decode; #574-differencing negative FORMULATION-scoped vs R13 smoothing). Sequencing binding:
 G1-G4 undelayed; G5 reseal consumes survivors. pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-DB1-G2 + INDUSTRY-PANTHEON (2026-07-25, MAIN)
+SIGNAL 1 (db1 landed ccde1a9b63, dispositioned): G2 INDETERMINATE — V19C exponential asymptote
+0.02441 (FORMULATION-scoped: proposal-order+fixed-atlas, NOT live descent) · N(δ) intervals
+landed · DECISIVE: fixed initial atlas ORACLE leaves 294,461 errors at W_seg-class vs 102,441
+box allowance (SHORT 192,020px) ⇒ fixed-support corrections cannot close the box; live
+margin-transport/replenishment or richer describe families required. Resolving measurement
+routed as BINDING j10 addition: 10-interval instrumented re-smoke (per-flip margin/d2 custody +
+context-coded residual bits) ⇒ live decay law + E7 D* from one trace. Card §11.
+SIGNAL 2 (operator ×3): pantheon ORDER-1c/2c — AV industry (Tesla lane-language · Mobileye REM
+~10KB/km existence proof · data engine=E1) + robotics/drones/warehouse (minimum-snap ξ ·
+D'Andrea structure-the-environment · event cameras=worldsheet events) + Netflix per-title
+(Katsavounidis Dynamic Optimizer = rd1's industrial twin; VMAF↔frozen-scorer identity). THE
+IDENTITY ROW recorded: domain-specific contest-specific codec standard — "fusion of robotics
+and Netflix"; frozen-policy single-video overfit IS the design point. Adjudication owed to the
+council body; G1-G4 undelayed. pointer 0.1910828242 [contest-CPU] UNMOVED.

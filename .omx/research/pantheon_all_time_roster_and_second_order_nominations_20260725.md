@@ -120,3 +120,49 @@ B11. Scaramuzza → FREE DECODER-SIDE VISUAL ODOMETRY: inflate.py runs a generic
 B12. Tedrake → ξ(t) as direct-collocation knots (trajectory-optimization parameterization) —
     the minimal-knot description under dynamics constraints; races R13/B9 on the same bytes.
 DISCIPLINE unchanged: council adjudication → G5 reseal inputs or named residuals; G1-G4 undelayed.
+
+## ORDER 1c — INDUSTRY EXTENSION (operator 2026-07-25 ×3: "self-driving including industry" +
+## "robotics and drones and autonomous warehousing" + "fusion of robotics and Netflix")
+- SELF-DRIVING INDUSTRY: Karpathy/Elluswamy(Tesla data-engine + lane-language) ·
+  Shashua(Mobileye REM) · Urmson/Dolgov(Waymo) · Kendall(Wayve GAIA) · Hotz(comma, seated)
+- ROBOTICS/DRONES: Vijay Kumar + Mellinger(minimum-snap) · D'Andrea(Kiva + drone control) ·
+  Scaramuzza(VO/event cameras, seated) · Barfoot/Dellaert/Forster (seated 1b)
+- AUTONOMOUS WAREHOUSING: D'Andrea(Kiva Systems) · Amazon-Robotics/AutoStore practice
+- STREAMING/PER-TITLE (the Netflix half of the operator's fusion): Katsavounidis(Dynamic
+  Optimizer, per-shot encoding) · Li/Aaron(VMAF) · x264-psy lineage
+
+## THE IDENTITY ROW (operator framing 2026-07-25, BINDING orientation): we are designing a
+## DOMAIN-SPECIFIC, CONTEST-SPECIFIC CODEC STANDARD — "a fusion of robotics and Netflix."
+The problem class is EXACTLY Netflix per-title encoding: ONE content item · a FROZEN LEARNED
+metric (VMAF ↔ frozen SegNet/PoseNet) · unlimited offline encode compute · capped cheap decode
+(30-min budget) · metric-targeted optimization is THE objective (what Netflix must guard
+against as VMAF-gaming is, here, the contest's stated goal). The robotics half: the content is
+ego-motion state (ξ, BEV structure), so the description language is robotics machinery (screws,
+factor graphs, minimum-snap, grid anchoring). MPEG/JPEG standards discipline we already run:
+reference oracle + conformance/golden vectors + deterministic packet compiler + profiles
+(= receiver versions). Frozen-policy overfit-to-one-video is not a bug of the design — it IS
+the design point.
+
+## ORDER 2c — industry second-order rows (adjudication owed to the council body; G1-G4 undelayed)
+C1. Katsavounidis → per-shot DYNAMIC OPTIMIZER: per-segment RD curves → convex hull → global
+    allocation against the frozen metric — the industrial twin of rd1/ms2r waterfill; adopt
+    the convex-hull-per-stratum selection discipline exactly. Consumer: rd1 knee + E7 D*.
+C2. Elluswamy → Tesla LANE-LANGUAGE: autoregressive lane-graph token grammar IN PRODUCTION —
+    industry proof lane geometry compresses to a tiny token sequence. Consumer: dv2 grammar/
+    lane-program coder.
+C3. Shashua → Mobileye REM: ~10KB/km crowdsourced sparse road geometry — EXISTENCE PROOF for
+    the describe-line's Road+Lane budget class. Consumer: describe-line budget sanity row.
+C4. Karpathy → DATA ENGINE/shadow mode: production hard-example mining loop = §8-E1's
+    industrial validation; campaign-as-data-engine framing. Consumer: E1.
+C5. Mellinger-Kumar → MINIMUM-SNAP piecewise-polynomial trajectories (few knots, derivative
+    continuity) — the drone industry's ξ(t) description; races R13 RTS knots + B12 collocation
+    on the SAME bytes. Consumer: pose stream description race.
+C6. D'Andrea → STRUCTURE THE ENVIRONMENT, not the algorithm (Kiva: fiducials+grid beat smarter
+    perception): anchor the description in the KNOWN scene structure (BEV grid, road plane,
+    static hood) — validates g4 grid-anchored describe-line; change the problem, not the model.
+    Consumer: describe-line anchoring + E4 freeze strata.
+C7. Scaramuzza → EVENT CAMERAS: sense/code only CHANGES — the industrial twin of worldsheet
+    birth/death event coding; composes with R15 FRI sampling. Consumer: event-stream coder.
+C8. Kendall → Wayve GAIA world model: generative predict stage — fork-(b)'s industrial analog,
+    WITH the rule-118 caution (learned world-model weights are COUNTED; our predict stage must
+    stay derived/deterministic or tiny). Consumer: pc2 fork (b) design guard.
