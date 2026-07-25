@@ -479,3 +479,49 @@ STORES CONSULTED: ks1 findings (all arithmetic re-derived by MAIN to 1e-12) · w
   that admit from W_seg → start at 0.0241 (the operator's 30k-ft steer realized); else W_joint-step-50 stands.
 - **Gate scoreboard**: G3 ✅ (pc2) · G4 ✅ (e5a) · G3.5 ✅ (ks1) · G2 → rides j11's ten-interval trace (=gc4 P2) ·
   G1 = j11 LIVE (opening decomposition). Then G5 reseal sheet → FIRE with MAIN. Fleet: j11 · p1 (2/4).
+
+## §22 — SIGNAL-SUPPRESSION AUDIT (operator question 2026-07-25 "arbitrary or fragile or not nuanced rules hiding signal") + j11 landing headline
+
+**The named class: verdict rules measured PACE, reported DIRECTION** (memory
+`verdict_rules_measured_pace_reported_direction_20260725.md`). Verified suppressed signal:
+
+1. **ws3/ws4's seg-lexicographic component gate rejected a NET-S-IMPROVING move.** W_seg opening
+   proposal x+: realized joint ΔS = −0.000427776 (17% net-profitable in exact contest units) →
+   recorded SEG_REGRESSION terminal at ratio 1.1736 << R*=4.1215446777965665. Break-even term
+   ratio = 1.0 exactly; the bar demanded 4.12× break-even → ALL moves in ratio (1, 4.12) were
+   structurally invisible. R* fits neither raw-unit (383–808, operating-point-dependent) nor
+   term-unit (1.0) exchange rates — it was a PACE bar (budget feasibility) misread as a
+   DIRECTION verdict. **RE-GRADE: "KEEP_WJOINT (ws3+ws4 concur)" in §19 is downgraded from
+   settled-arbitration to PROFILE-CONDITIONED** — true under the seg-lexicographic window
+   profile at pose≈163; W_seg's opening ADMITS under the campaign's own pure-priced rule.
+   §21's transfer of the start decision to j11's pure-priced rows stands and is now the cure,
+   not just a tiebreak.
+2. **ws4's terminal-on-first-rejection window semantics** discarded 3–5 remaining preregistered
+   steps of measurement after one ambiguous event (direction ✓ / pace ✗). Binding: windows run
+   their FULL budget recording classifications; the decision rule applies to the complete
+   record; a component-gate event may not terminate data collection.
+3. **j11 landing (rc=0, BLOCKED_J11_PROPOSAL_DECOMPOSITION_CUSTODY_PRECONDITION, scope
+   PRECONDITION_APPARATUS_NOT_FORMULATION — merge+disposition next tick):** the decomposition
+   is not lawfully materializable yet — MS4's bundle is metric-complete in SCORER-OUTPUT
+   coordinates but lacks receiver-coordinate Jacobians + proposal foreign keys (4 named
+   blockers); 0/8 singles + 0/4 composites priced, all fields typed null (no synthesized
+   zeros), reseal NOT run — the apparatus behaving CORRECTLY, the counter-example to item 1.
+   Its finding 4 is suppressed-signal instance #2: **PC1's pc2 ratio 14.023 is NOT
+   transferable** — the active-zero home (139,547B, d_seg 0.02491527, d_pose 163.045) is a
+   W_seg-family state, not the W_joint-step-50 source (+734B, Δd_seg −0.04483, Δd_pose
+   +127.545). G3's ✅ is hereby scoped: pose-descent PROVEN at the PC1 home; the ratio does
+   not transfer to other sources. j11's exact 4-step reopener (SHA-bound receiver-coordinate
+   J_pose + rank-4-inner J_seg per proposal · byte-identical PC1 active-zero adapter ·
+   project→integer-realize→parse-back→exact-price 8+4 · only-then smoke+reseal) is the
+   successor charter.
+4. **Binding rules going forward (this card + all window/falsifier/arbitration profiles):**
+   (a) S-primacy — a gate verdict contradicting sign(realized joint ΔS) emits a typed
+   `objective_gate_contradiction` row and cannot terminate/reject alone; (b) measurement ≠
+   decision; (c) thresholds DERIVED at the operating point from S's exact marginals
+   (dS/dd_pose = 5/√(10·d_pose)), registered as a canonical-equation law — never a fixed R*
+   across states with different pose operating points; (d) verdicts are typed
+   (verdict · profile · operating point · base-state SHA · scope), never one bit; (e) the
+   over-constraint class (v15/v17/j3/ws3 = 4 instances) must be extinguished on EVERY surface:
+   acceptance, arbitration, window, falsifier, sealed-menu.
+
+Pointer 0.1910828242 [contest-CPU] UNMOVED — this section is measurement-integrity, not a score claim.
