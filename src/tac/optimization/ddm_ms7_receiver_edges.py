@@ -38,16 +38,25 @@ from tac.canonical_equations.ddm_ms2r_tolerance_capped_solve_20260724 import (
 )
 from tac.optimization.arith_selfcomp_rate_coders import (
     RateCoderError,
+    byte_context_frame_accounting,
+    decode_bellard_class_mixing,
     decode_brotli_q11,
+    decode_g4_decoder_context,
     decode_spatial_context_arithmetic,
     decode_spatial_context_constriction,
+    decode_willems_ctw,
+    encode_bellard_class_mixing,
     encode_brotli_q11,
+    encode_g4_decoder_context,
     encode_spatial_context_arithmetic,
     encode_spatial_context_constriction,
+    encode_willems_ctw,
+    spatial_context_frame_accounting,
 )
 
 R0_SCHEMA: Final = "ddm_ms7_r0_25_bucket_reach_table.v1"
 CODER_RACE_SCHEMA: Final = "ddm_ms7_same_object_coder_race.v1"
+COUNTED_STREAM_RACE_SCHEMA: Final = "ddm_cc2_counted_stream_context_coder_race.v1"
 POINTER: Final = "0.1910828242 [contest-CPU]"
 EXPECTED_ROWS: Final = 25
 EXPECTED_ATLAS_ROWS: Final = 600
@@ -270,8 +279,6 @@ def build_r0_reach_table(
 
 
 def _linear_signed_array(raw: bytes) -> np.ndarray:
-    if not raw:
-        raise MS7ReceiverEdgesError("coder race requires a nonempty receiver object")
     return np.frombuffer(raw, dtype=np.uint8).view(np.int8).reshape(1, 1, len(raw), 1)
 
 
@@ -623,13 +630,132 @@ def race_same_receiver_object(raw: bytes) -> tuple[dict[str, Any], dict[str, byt
     )
 
 
+def race_counted_stream_contexts(raw: bytes) -> tuple[dict[str, Any], dict[str, bytes]]:
+    """Race the exact CC2 five-arm menu on one counted stream.
+
+    Every non-raw arm is a complete self-delimiting frame.  The tiny ARM/IFCE
+    row counts its video-derived static model table.  G4, CTW, and the
+    Bellard-class Bayesian mixer carry zero model bytes because their complete
+    state is deterministically reconstructed from the already-decoded prefix.
+    """
+
+    raw = bytes(raw)
+    rows: list[dict[str, Any]] = [
+        {
+            "codec": "RAW_CURRENT",
+            "available": True,
+            "framed_bytes": len(raw),
+            "header_bytes": 0,
+            "model_parameter_bytes": 0,
+            "coded_payload_bytes": len(raw),
+            "frame_sha256": sha256_bytes(raw),
+            "parseback_exact": True,
+            "implementation": "identity counted stream bytes",
+            "decoder_model_authority": "NONE",
+        }
+    ]
+    frames = {"RAW_CURRENT": raw}
+
+    arm = encode_spatial_context_arithmetic(_linear_signed_array(raw))
+    if decode_spatial_context_arithmetic(arm).reshape(-1).view(np.uint8).tobytes() != raw:
+        raise MS7ReceiverEdgesError("counted tiny ARM/IFCE parse-back differs")
+    arm_accounting = spatial_context_frame_accounting(arm)
+    rows.append(
+        {
+            "codec": "COUNTED_TINY_ARM_IFCE",
+            "available": True,
+            **arm_accounting,
+            "frame_sha256": sha256_bytes(arm),
+            "parseback_exact": True,
+            "implementation": ("repository range coder; counted static left/up signed-byte sign-magnitude model"),
+            "decoder_model_authority": "VIDEO_DERIVED_MODEL_TABLE_FULLY_COUNTED",
+        }
+    )
+    frames["COUNTED_TINY_ARM_IFCE"] = arm
+
+    decoder_derived = (
+        (
+            "G4_FREE_DECODER_CONTEXT",
+            encode_g4_decoder_context,
+            decode_g4_decoder_context,
+            "causal previous-byte/bit-prefix adaptive arithmetic model",
+        ),
+        (
+            "WILLEMS_CTW",
+            encode_willems_ctw,
+            decode_willems_ctw,
+            "binary depth-8 Willems context-tree weighting with KT estimators",
+        ),
+        (
+            "BELLARD_CLASS_MIXING",
+            encode_bellard_class_mixing,
+            decode_bellard_class_mixing,
+            "online Bayesian mixture of four decoder-derived KT experts",
+        ),
+    )
+    for codec, encoder, decoder, implementation in decoder_derived:
+        frame = encoder(raw)
+        if decoder(frame) != raw:
+            raise MS7ReceiverEdgesError(f"{codec} parse-back differs")
+        # A second complete materialization guards deterministic decode-time
+        # model evolution and prevents accidental hidden mutable state.
+        if encoder(raw) != frame:
+            raise MS7ReceiverEdgesError(f"{codec} encoder is nondeterministic")
+        rows.append(
+            {
+                "codec": codec,
+                "available": True,
+                **byte_context_frame_accounting(frame),
+                "frame_sha256": sha256_bytes(frame),
+                "parseback_exact": True,
+                "implementation": implementation,
+                "decoder_model_authority": (
+                    "GENERIC_STATE_DERIVED_ONLY_FROM_ALREADY_DECODED_PREFIX_ZERO_COUNTED_PARAMETERS"
+                ),
+            }
+        )
+        frames[codec] = frame
+
+    if [row["codec"] for row in rows] != [
+        "RAW_CURRENT",
+        "COUNTED_TINY_ARM_IFCE",
+        "G4_FREE_DECODER_CONTEXT",
+        "WILLEMS_CTW",
+        "BELLARD_CLASS_MIXING",
+    ]:
+        raise MS7ReceiverEdgesError("CC2 coder menu differs from the pre-registered five arms")
+    winner = min(rows, key=lambda row: (int(row["framed_bytes"]), str(row["codec"])))
+    return (
+        {
+            "schema": COUNTED_STREAM_RACE_SCHEMA,
+            "same_object_raw_bytes": len(raw),
+            "same_object_raw_sha256": sha256_bytes(raw),
+            "rows": rows,
+            "winner": {
+                "codec": winner["codec"],
+                "framed_bytes": winner["framed_bytes"],
+                "frame_sha256": winner["frame_sha256"],
+                "parseback_exact": True,
+            },
+            "negative_verdict_scope": (
+                "ONE_ALREADY_COUNTED_STREAM_INSTANCE_ONLY; A LOSING ARM DOES NOT KILL "
+                "THE CODER FAMILY OR A DIFFERENT STREAM GEOMETRY"
+            ),
+            "score_claim": False,
+        },
+        frames,
+    )
+
+
 __all__ = [
     "CODER_RACE_SCHEMA",
+    "COUNTED_STREAM_RACE_SCHEMA",
     "POINTER",
     "R0_SCHEMA",
     "MS7ReceiverEdgesError",
     "build_r0_reach_table",
     "decode_coded_receiver_object",
+    "race_counted_stream_contexts",
     "race_same_receiver_object",
     "read_bound_atlas",
     "read_bound_json",

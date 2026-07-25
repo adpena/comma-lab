@@ -64,6 +64,31 @@ def test_repository_frames_reject_truncation_and_every_trailer(
         decode(payload + b"x")
 
 
+@pytest.mark.parametrize(
+    ("encode", "decode"),
+    [
+        (coders.encode_g4_decoder_context, coders.decode_g4_decoder_context),
+        (coders.encode_willems_ctw, coders.decode_willems_ctw),
+        (coders.encode_bellard_class_mixing, coders.decode_bellard_class_mixing),
+    ],
+)
+@pytest.mark.parametrize("raw", [b"", b"abracadabra" * 10, bytes(range(256))])
+def test_decoder_derived_context_coders_are_exact_deterministic_and_strict(
+    encode,
+    decode,
+    raw: bytes,
+) -> None:
+    frame = encode(raw)
+    assert encode(raw) == frame
+    assert decode(frame) == raw
+    accounting = coders.byte_context_frame_accounting(frame)
+    assert accounting["model_parameter_bytes"] == 0
+    assert accounting["framed_bytes"] == accounting["header_bytes"] + accounting["coded_payload_bytes"]
+    for corrupted in (frame[:-1], frame + b"x"):
+        with pytest.raises(coders.RateCoderError):
+            decode(corrupted)
+
+
 def test_raw_and_lzma_reject_truncation_and_trailer(spatial_i8: np.ndarray) -> None:
     raw_frame = coders.serialize_signed_array(spatial_i8)
     for corrupted in (raw_frame[:-1], raw_frame + b"x"):

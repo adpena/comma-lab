@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 import lzma
+import math
 import shutil
 import struct
 import subprocess
@@ -59,6 +60,14 @@ _MODE_IID: Final = 0
 _MODE_SPATIAL: Final = 1
 _MAX_RANK: Final = 8
 _SPATIAL_CONTEXTS: Final = 3 * 3 * 4 * 4
+_BYTE_CONTEXT_MAGIC: Final = b"DCC3"
+_BYTE_CONTEXT_VERSION: Final = 1
+_BYTE_CONTEXT_PREFIX: Final = struct.Struct("<4sBBQ32s")
+_G4_CODEC: Final = 1
+_CTW_CODEC: Final = 2
+_BELLARD_MIX_CODEC: Final = 3
+_BINARY_TOTAL: Final = 1 << 15
+_CTW_DEPTH: Final = 8
 
 
 @dataclass(frozen=True)
@@ -558,6 +567,366 @@ def decode_spatial_context_arithmetic(data: bytes | bytearray | memoryview) -> n
 
 
 decode_context_arithmetic = decode_spatial_context_arithmetic
+
+
+def spatial_context_frame_accounting(data: bytes | bytearray | memoryview) -> dict[str, int]:
+    """Return counted header/model/stream bytes for the repository ARM frame."""
+
+    _, _, _, _, model, stream, header_bytes = _parse_array_frame(data, _SPATIAL_REPO_CODEC)
+    return {
+        "header_bytes": header_bytes,
+        "model_parameter_bytes": len(model),
+        "coded_payload_bytes": len(stream),
+        "framed_bytes": header_bytes + len(model) + len(stream),
+    }
+
+
+def _binary_cumulative(probability_one: float) -> list[int]:
+    if not math.isfinite(probability_one):
+        raise RateCoderError("adaptive binary probability is nonfinite")
+    one = min(_BINARY_TOTAL - 1, max(1, round(probability_one * _BINARY_TOTAL)))
+    return [0, _BINARY_TOTAL - one, _BINARY_TOTAL]
+
+
+def _encode_binary(encoder: RangeEncoder, symbol: int, probability_one: float) -> None:
+    cumulative = _binary_cumulative(probability_one)
+    encoder.encode(symbol=symbol, cumulative=cumulative, total=_BINARY_TOTAL)
+
+
+def _decode_binary(decoder: RangeDecoder, probability_one: float) -> int:
+    cumulative = _binary_cumulative(probability_one)
+    target = decoder.target(_BINARY_TOTAL)
+    symbol = int(target >= cumulative[1])
+    decoder.update(
+        low_count=cumulative[symbol],
+        high_count=cumulative[symbol + 1],
+        total=_BINARY_TOTAL,
+    )
+    return symbol
+
+
+def _byte_context_frame(codec: int, raw: bytes, stream: bytes) -> bytes:
+    return (
+        _BYTE_CONTEXT_PREFIX.pack(
+            _BYTE_CONTEXT_MAGIC,
+            _BYTE_CONTEXT_VERSION,
+            codec,
+            len(raw),
+            hashlib.sha256(raw).digest(),
+        )
+        + stream
+    )
+
+
+def _parse_byte_context_frame(
+    data: bytes | bytearray | memoryview,
+    *,
+    expected_codec: int,
+) -> tuple[int, bytes, bytes]:
+    frame = _as_bytes(data)
+    if len(frame) <= _BYTE_CONTEXT_PREFIX.size:
+        raise RateCoderError("byte-context frame is truncated")
+    magic, version, codec, raw_length, digest = _BYTE_CONTEXT_PREFIX.unpack_from(frame)
+    if magic != _BYTE_CONTEXT_MAGIC or version != _BYTE_CONTEXT_VERSION or codec != expected_codec:
+        raise RateCoderError("byte-context frame header differs")
+    return int(raw_length), bytes(digest), frame[_BYTE_CONTEXT_PREFIX.size :]
+
+
+def byte_context_frame_accounting(data: bytes | bytearray | memoryview) -> dict[str, int]:
+    """Return counted header and arithmetic stream sizes for a context frame."""
+
+    frame = _as_bytes(data)
+    if len(frame) <= _BYTE_CONTEXT_PREFIX.size:
+        raise RateCoderError("byte-context frame is truncated")
+    return {
+        "header_bytes": _BYTE_CONTEXT_PREFIX.size,
+        "model_parameter_bytes": 0,
+        "coded_payload_bytes": len(frame) - _BYTE_CONTEXT_PREFIX.size,
+        "framed_bytes": len(frame),
+    }
+
+
+class _G4DecoderContext:
+    """Causal byte/bit-prefix counts derived only from decoded content."""
+
+    def __init__(self) -> None:
+        self.counts: dict[tuple[int, int, int], list[int]] = {}
+        self.previous_byte = 256
+
+    def probability_one(self, bit_position: int, byte_prefix: int) -> float:
+        zero, one = self.counts.get((self.previous_byte, bit_position, byte_prefix), (1, 1))
+        return one / (zero + one)
+
+    def update(self, bit_position: int, byte_prefix: int, bit: int) -> None:
+        key = (self.previous_byte, bit_position, byte_prefix)
+        row = self.counts.setdefault(key, [1, 1])
+        row[bit] += 1
+        if row[0] + row[1] > _BINARY_TOTAL:
+            row[:] = [max(1, (value + 1) // 2) for value in row]
+
+
+def _encode_g4_stream(raw: bytes) -> bytes:
+    model = _G4DecoderContext()
+    encoder = RangeEncoder()
+    for byte in raw:
+        prefix = 0
+        for bit_position in range(8):
+            bit = (byte >> (7 - bit_position)) & 1
+            _encode_binary(encoder, bit, model.probability_one(bit_position, prefix))
+            model.update(bit_position, prefix, bit)
+            prefix = (prefix << 1) | bit
+        model.previous_byte = byte
+    return encoder.finish()
+
+
+def encode_g4_decoder_context(data: bytes | bytearray | memoryview) -> bytes:
+    """Encode with a zero-counted-parameter model derived from decoded prefix."""
+
+    raw = _as_bytes(data)
+    return _byte_context_frame(_G4_CODEC, raw, _encode_g4_stream(raw))
+
+
+def _decode_g4_frame(frame: bytes) -> bytes:
+    raw_length, digest, stream = _parse_byte_context_frame(frame, expected_codec=_G4_CODEC)
+    model = _G4DecoderContext()
+    decoder = RangeDecoder(stream)
+    restored = bytearray()
+    try:
+        for _ in range(raw_length):
+            prefix = 0
+            for bit_position in range(8):
+                bit = _decode_binary(decoder, model.probability_one(bit_position, prefix))
+                model.update(bit_position, prefix, bit)
+                prefix = (prefix << 1) | bit
+            restored.append(prefix)
+            model.previous_byte = prefix
+    except (IndexError, ValueError) as exc:
+        raise RateCoderError("invalid G4 decoder-context stream") from exc
+    raw = bytes(restored)
+    if hashlib.sha256(raw).digest() != digest or encode_g4_decoder_context(raw) != frame:
+        raise RateCoderError("G4 frame is noncanonical or parse-back differs")
+    return raw
+
+
+def decode_g4_decoder_context(data: bytes | bytearray | memoryview) -> bytes:
+    return _decode_g4_frame(_as_bytes(data))
+
+
+@dataclass
+class _CTWNode:
+    zero: int = 0
+    one: int = 0
+    log_kt: float = 0.0
+    log_weighted: float = 0.0
+
+
+def _log_half_sum(left: float, right: float) -> float:
+    maximum = max(left, right)
+    return maximum + math.log(0.5 * math.exp(left - maximum) + 0.5 * math.exp(right - maximum))
+
+
+class _WillemsCTW:
+    """Binary depth-8 context-tree weighting with KT node estimators."""
+
+    def __init__(self, depth: int = _CTW_DEPTH) -> None:
+        self.depth = depth
+        self.history: list[int] = []
+        self.nodes: dict[tuple[int, ...], _CTWNode] = {(): _CTWNode()}
+
+    def _path(self) -> list[tuple[int, ...]]:
+        context = tuple(reversed(self.history[-self.depth :]))
+        keys = [context[:length] for length in range(len(context) + 1)]
+        for key in keys:
+            self.nodes.setdefault(key, _CTWNode())
+        return keys
+
+    def _candidate_log_weighted(self, bit: int, keys: list[tuple[int, ...]]) -> float:
+        child_candidate = 0.0
+        for key in reversed(keys):
+            node = self.nodes[key]
+            count = node.one if bit else node.zero
+            candidate_kt = node.log_kt + math.log((count + 0.5) / (node.zero + node.one + 1.0))
+            if len(key) == self.depth:
+                candidate_weighted = candidate_kt
+            else:
+                selected_child = (*key, keys[len(key) + 1][-1]) if len(key) + 1 < len(keys) else None
+                child_sum = 0.0
+                for child_bit in (0, 1):
+                    child_key = (*key, child_bit)
+                    if child_key == selected_child:
+                        child_sum += child_candidate
+                    else:
+                        child_sum += self.nodes.get(child_key, _CTWNode()).log_weighted
+                candidate_weighted = _log_half_sum(candidate_kt, child_sum)
+            child_candidate = candidate_weighted
+        return child_candidate
+
+    def probability_one(self) -> float:
+        keys = self._path()
+        zero = self._candidate_log_weighted(0, keys)
+        one = self._candidate_log_weighted(1, keys)
+        maximum = max(zero, one)
+        zero_p = math.exp(zero - maximum)
+        one_p = math.exp(one - maximum)
+        return one_p / (zero_p + one_p)
+
+    def update(self, bit: int) -> None:
+        keys = self._path()
+        for key in keys:
+            node = self.nodes[key]
+            count = node.one if bit else node.zero
+            node.log_kt += math.log((count + 0.5) / (node.zero + node.one + 1.0))
+            if bit:
+                node.one += 1
+            else:
+                node.zero += 1
+        for key in reversed(keys):
+            node = self.nodes[key]
+            if len(key) == self.depth:
+                node.log_weighted = node.log_kt
+            else:
+                children = sum(self.nodes.get((*key, child_bit), _CTWNode()).log_weighted for child_bit in (0, 1))
+                node.log_weighted = _log_half_sum(node.log_kt, children)
+        self.history.append(bit)
+
+
+def _iter_bits(raw: bytes) -> Any:
+    for byte in raw:
+        for bit_position in range(8):
+            yield (byte >> (7 - bit_position)) & 1
+
+
+def _encode_ctw_stream(raw: bytes) -> bytes:
+    model = _WillemsCTW()
+    encoder = RangeEncoder()
+    for bit in _iter_bits(raw):
+        _encode_binary(encoder, bit, model.probability_one())
+        model.update(bit)
+    return encoder.finish()
+
+
+def encode_willems_ctw(data: bytes | bytearray | memoryview) -> bytes:
+    raw = _as_bytes(data)
+    return _byte_context_frame(_CTW_CODEC, raw, _encode_ctw_stream(raw))
+
+
+def decode_willems_ctw(data: bytes | bytearray | memoryview) -> bytes:
+    frame = _as_bytes(data)
+    raw_length, digest, stream = _parse_byte_context_frame(frame, expected_codec=_CTW_CODEC)
+    model = _WillemsCTW()
+    decoder = RangeDecoder(stream)
+    restored = bytearray()
+    byte = 0
+    try:
+        for index in range(raw_length * 8):
+            bit = _decode_binary(decoder, model.probability_one())
+            model.update(bit)
+            byte = (byte << 1) | bit
+            if index % 8 == 7:
+                restored.append(byte)
+                byte = 0
+    except (IndexError, ValueError) as exc:
+        raise RateCoderError("invalid Willems CTW stream") from exc
+    raw = bytes(restored)
+    if hashlib.sha256(raw).digest() != digest or encode_willems_ctw(raw) != frame:
+        raise RateCoderError("Willems CTW frame is noncanonical or parse-back differs")
+    return raw
+
+
+class _BellardBayesMix:
+    """Online Bayesian mixture of four decoder-derived KT experts."""
+
+    def __init__(self) -> None:
+        self.global_counts = [1, 1]
+        self.position_counts = [[1, 1] for _ in range(8)]
+        self.order1_counts: dict[tuple[int, int, int], list[int]] = {}
+        self.run_counts: dict[tuple[int, int, int], list[int]] = {}
+        self.log_weights = [math.log(0.25)] * 4
+        self.previous_byte = 256
+        self.last_bit = 0
+        self.run_length = 0
+
+    @staticmethod
+    def _kt(row: list[int]) -> float:
+        return row[1] / (row[0] + row[1])
+
+    def probabilities(self, bit_position: int, prefix: int) -> list[float]:
+        order1 = self.order1_counts.get((self.previous_byte, bit_position, prefix), [1, 1])
+        run = self.run_counts.get((self.last_bit, min(self.run_length, 7), bit_position), [1, 1])
+        return [
+            self._kt(self.global_counts),
+            self._kt(self.position_counts[bit_position]),
+            self._kt(order1),
+            self._kt(run),
+        ]
+
+    def probability_one(self, bit_position: int, prefix: int) -> tuple[float, list[float]]:
+        probabilities = self.probabilities(bit_position, prefix)
+        maximum = max(self.log_weights)
+        weights = [math.exp(value - maximum) for value in self.log_weights]
+        normalizer = sum(weights)
+        probability = sum(weight * p for weight, p in zip(weights, probabilities, strict=True)) / normalizer
+        return probability, probabilities
+
+    def update(self, bit_position: int, prefix: int, bit: int, probabilities: list[float]) -> None:
+        for index, probability in enumerate(probabilities):
+            likelihood = probability if bit else 1.0 - probability
+            self.log_weights[index] += math.log(likelihood)
+        normalizer = max(self.log_weights)
+        self.log_weights = [value - normalizer for value in self.log_weights]
+        order1 = self.order1_counts.setdefault((self.previous_byte, bit_position, prefix), [1, 1])
+        run = self.run_counts.setdefault((self.last_bit, min(self.run_length, 7), bit_position), [1, 1])
+        for row in (self.global_counts, self.position_counts[bit_position], order1, run):
+            row[bit] += 1
+        if bit == self.last_bit:
+            self.run_length += 1
+        else:
+            self.last_bit = bit
+            self.run_length = 1
+
+
+def _encode_bellard_mix_stream(raw: bytes) -> bytes:
+    model = _BellardBayesMix()
+    encoder = RangeEncoder()
+    for byte in raw:
+        prefix = 0
+        for bit_position in range(8):
+            bit = (byte >> (7 - bit_position)) & 1
+            probability, experts = model.probability_one(bit_position, prefix)
+            _encode_binary(encoder, bit, probability)
+            model.update(bit_position, prefix, bit, experts)
+            prefix = (prefix << 1) | bit
+        model.previous_byte = byte
+    return encoder.finish()
+
+
+def encode_bellard_class_mixing(data: bytes | bytearray | memoryview) -> bytes:
+    raw = _as_bytes(data)
+    return _byte_context_frame(_BELLARD_MIX_CODEC, raw, _encode_bellard_mix_stream(raw))
+
+
+def decode_bellard_class_mixing(data: bytes | bytearray | memoryview) -> bytes:
+    frame = _as_bytes(data)
+    raw_length, digest, stream = _parse_byte_context_frame(frame, expected_codec=_BELLARD_MIX_CODEC)
+    model = _BellardBayesMix()
+    decoder = RangeDecoder(stream)
+    restored = bytearray()
+    try:
+        for _ in range(raw_length):
+            prefix = 0
+            for bit_position in range(8):
+                probability, experts = model.probability_one(bit_position, prefix)
+                bit = _decode_binary(decoder, probability)
+                model.update(bit_position, prefix, bit, experts)
+                prefix = (prefix << 1) | bit
+            restored.append(prefix)
+            model.previous_byte = prefix
+    except (IndexError, ValueError) as exc:
+        raise RateCoderError("invalid Bellard-class mixing stream") from exc
+    raw = bytes(restored)
+    if hashlib.sha256(raw).digest() != digest or encode_bellard_class_mixing(raw) != frame:
+        raise RateCoderError("Bellard-class frame is noncanonical or parse-back differs")
+    return raw
 
 
 def _constriction_module() -> Any | None:
@@ -1078,21 +1447,28 @@ __all__ = [
     "CodecMeasurement",
     "RateCoderError",
     "authority_labels",
+    "byte_context_frame_accounting",
+    "decode_bellard_class_mixing",
     "decode_brotli_q11",
     "decode_context_arithmetic",
+    "decode_g4_decoder_context",
     "decode_iid_arithmetic",
     "decode_lzma",
     "decode_spatial_context_arithmetic",
     "decode_spatial_context_constriction",
+    "decode_willems_ctw",
     "decode_zigzag_rle_arithmetic",
     "decode_zstd_19",
     "deserialize_signed_array",
+    "encode_bellard_class_mixing",
     "encode_brotli_q11",
     "encode_context_arithmetic",
+    "encode_g4_decoder_context",
     "encode_iid_arithmetic",
     "encode_lzma",
     "encode_spatial_context_arithmetic",
     "encode_spatial_context_constriction",
+    "encode_willems_ctw",
     "encode_zigzag_rle_arithmetic",
     "encode_zstd_19",
     "measure_block_fp",
@@ -1101,4 +1477,5 @@ __all__ = [
     "measure_int8_coder_comparison",
     "measure_signed_array_ladder",
     "serialize_signed_array",
+    "spatial_context_frame_accounting",
 ]
