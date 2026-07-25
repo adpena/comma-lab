@@ -4,6 +4,8 @@ UTC preregistration: `2026-07-25T14:33:03Z`
 
 Status at preregistration: `PREREGISTERED_NOT_MEASURED`
 
+Final status: `P1_SHARED_LOW_RANK_FRAME0_ACTUATOR_FORMULATION_BLOCKED`
+
 Research-only: `true`  
 Score claim: `false`  
 Promotion eligible: `false`  
@@ -157,4 +159,113 @@ renderers, larger/shared nonlinear generators, or the optimal family.
 
 ## Measurement result
 
-`NOT_RUN_AT_PREREGISTRATION`.
+Exact local measurement completed after the preregistration above.
+
+Evidence axis: `[macOS-CPU frozen-scorer advisory]`
+
+Pair count / batch geometry: `n600 / batch32`
+
+Delegated pass: `false`
+
+GC4 strict veto cleared: `false`
+
+Pointer moved: `false`
+
+The measured actuator spectrum did not contain a rank at the preregistered
+linearized target:
+
+| rank | covariance eigenvalue | predicted `D_lin(r)` |
+|---:|---:|---:|
+| 1 | 4,866,776.639072087 | 16.20747111074233 |
+| 2 | 857,056.6548165884 | 12.810019232551447 |
+| 3 | 744,941.1329114469 | 9.857003656593685 |
+| 4 | 513,242.86787965405 | 7.822461440923049 |
+| 5 | 296,081.68169274926 | 6.6487662599665285 |
+| 6 | 274,428.6331218263 | 5.560905766976562 |
+
+The parent distortion was `35.49982400273336`; the derived law selected no
+rank. Per the frozen falsifier, all six exact receiver-realized ranks were
+nevertheless measured:
+
+| rank | treatment `d_pose` | carrier bytes | archive bytes | carrier SHA-256 |
+|---:|---:|---:|---:|---|
+| 1 | 19.89493129583306 | 3,520 | 134,991 | `9f7e65d8ccd19e0cb7c4976af4c4fa74bebef6bfff1a58679e323924cf42d7f5` |
+| 2 | 23.666537871896537 | 7,025 | 138,496 | `57ee2589529241b4ed64bc3bce6a1b0be51b96ecbe6aa7f445712cfac3dd7e10` |
+| 3 | 23.492813182500594 | 10,530 | 142,002 | `3d21a046ce8c217b5ea091a23ea8ca12475a490fb32d45a18eefda36a9b9d1b3` |
+| 4 | 26.054884825627166 | 14,035 | 145,507 | `b8ca1fb39c78b31ea3cf563b156b4386f0e3d72ae03f73ed0930c616809c16f2` |
+| 5 | 27.36323513050055 | 17,540 | 149,013 | `e899f4bbdf5ad1eaf6fa1f0121de6ff2fc5b9c962bc91c054d8cc1bb42417d6c` |
+| 6 | 48.14744629668481 | 21,045 | 152,518 | `38cd2e6327d01b90f732e1d2cb7c08536ac2c9838ae44932668d3b395c574545` |
+
+The exact rank-6 seeded matched control measured
+`d_pose=20.31820279520745` at the same `21,045` carrier bytes and `152,518`
+archive bytes. Its carrier SHA-256 is
+`33c25bb5a455c25c429889c14cae41c119ca770d46416a0574a0645a3c7d5ebe`.
+Treatment and control used four Gauss-Newton iterations each.
+
+## Preregistered decision-test disposition
+
+- `d_pose(treatment) <= 5e-5`: **FAIL**; best measured treatment row is rank 1
+  at `19.89493129583306`.
+- `d_seg(treatment)-d_seg(control) = 0`: **PASS**, measured `0.0`.
+- `carrier_bytes <= 30,000`: **PASS** for all six treatment rows.
+- exact matched-control fence: **PASS**. Treatment and control have the same
+  rank, precision, solver call budget, packet bytes, and archive bytes.
+- parse-back byte identity: **PASS** for every treatment and control packet.
+- frame-1 identity: **PASS** with shared batch digest-chain SHA-256
+  `6da41ce656285d4a88baea9725c2513bcfca653da0d000a20a09ee996b2f5722`.
+- Seg-cell identity: **PASS** with shared digest-chain SHA-256
+  `d9610fcff842f3d50015d49908020321598f8f3fecaac86d6c3e98fe2346bdcf`.
+
+The all-video-state-counted treatment basis SHA-256 is
+`bd6a2c6b599f4106bae402454831cad5b1834f4ea64d6d395de6841a3df47dcf`;
+the independently seeded control basis SHA-256 is
+`22189a2f7fc515117bd52b18ee658abc83c5f18898ef60399c018f6009313efa`.
+The unquantized derived basis SHA-256 is
+`3fa757386c918f6772429c7e600582b2eaaaa9199450974631ed0884743971cc`.
+
+## Named obstruction and verdict scope
+
+Named obstruction:
+`SHARED_BASIS_TARGET_ACTUATOR_SPECTRAL_TAIL_PLUS_EXACT_UINT8_TRUST_REGION_CROSSING`.
+
+The measured six-dimensional target-directed actuator covariance has a large
+tail: even the preregistered linearized rank-6 law predicts `d_pose=5.5609`,
+more than five orders of magnitude above the bar. Exact realization then
+becomes non-monotone with rank, and the fixed four-step rank-6 solve crosses the
+uint8 receiver trust region (`48.1474` treatment versus `20.3182` matched
+control). Thus this shared PCA chart does not retain enough pair-specific
+target-actuator geometry, and its unconstrained local coefficient update is not
+receiver-stable.
+
+This is only a
+`FORMULATION: shared low-rank, quantized, parent-additive frame-0 actuator basis
+with per-pair coefficients; frame 1 is an exact parent-byte identity`.
+It does not close nonlinear, pair-conditioned, higher-rank, or
+scorer-solved frame-0 quotient generators.
+
+## Measurement custody
+
+- Full immutable SSD receipt: 21,139 bytes, SHA-256
+  `d08bc13fc1cb3962f99560631700f495e059b286c3c364bdf0dcb3f392e68e55`.
+- Typed SSD reach curve: 2,257 bytes, SHA-256
+  `2bfc82077bada5d60726fea1d98afd071224f79be11c51f6cb31192f7e0e1010`.
+- Spectrum receipt / 600-row spectrum SHA-256:
+  `eb7761a5fd77cf77e827353b0d31f7ef8209aeb141f479864d82b3f08e49c466`
+  / `94ba3b2ae6ae71ab3a8cafe4c36eb60c4afee38deda9c7f5d5166eb1ee1c4f13`.
+- Solved-packet receipt SHA-256:
+  `e43f8be31b34c01020d614ce3f1f1afe8750f54e5f34e59fca94bad424dffd99`.
+- SSD root:
+  `/Volumes/VertigoDataTier/pact/ddm_p1_frame0_pose_quotient_carrier_20260725T141713Z`.
+- Derivation RAM admission: `91,979,186,176 >= 21,474,836,480` bytes.
+  Every exact replay row has its own passing psutil admission receipt.
+- Storage admission: `424,198,135,808 >= 21,474,836,480` free bytes.
+- All derivation batches, solver batches, packets, archive receipt-bytes, and
+  exact replay batches are stage-checkpointed and preserved; no parent bytes
+  were deleted.
+
+Canonical compact receipt:
+`.omx/research/ddm_p1_frame0_pose_quotient_carrier_receipt_20260725.json`.
+Typed reach curve:
+`.omx/research/ddm_p1_frame0_pose_quotient_carrier_reach_curve_20260725.jsonl`.
+The receiver/packet subtype and generic runner are durable, but the failed
+contrarian test forbids composition or adoption.

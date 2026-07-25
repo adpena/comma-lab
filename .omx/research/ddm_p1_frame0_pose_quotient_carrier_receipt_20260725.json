@@ -1,0 +1,153 @@
+{
+  "schema": "ddm_p1_frame0_pose_quotient_carrier_compact_receipt.v1",
+  "run_id": "ddm_p1_frame0_pose_quotient_carrier_20260725T141713Z",
+  "lane_id": "lane_ddm_p1_frame0_pose_quotient_carrier_20260725",
+  "verdict": "P1_SHARED_LOW_RANK_FRAME0_ACTUATOR_FORMULATION_BLOCKED",
+  "verdict_scope": "FORMULATION: shared low-rank, quantized, parent-additive frame-0 actuator basis with per-pair coefficients; frame 1 is an exact parent-byte identity; macOS-CPU frozen-scorer rows are advisory and cannot promote the family",
+  "named_obstruction": "SHARED_BASIS_TARGET_ACTUATOR_SPECTRAL_TAIL_PLUS_EXACT_UINT8_TRUST_REGION_CROSSING",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "delegated_pass": false,
+  "gc4_strict_veto_cleared": false,
+  "main_review_required": true,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "pair_count": 600,
+  "batch_size": 32,
+  "rank_law": {
+    "equation_id": "ddm_p1_frame0_pose_quotient_rank_law_v1",
+    "law": "D_lin(r)=D0*sum_{j>r}(lambda_j)/sum_j(lambda_j)",
+    "baseline_d_pose": 35.49982400273336,
+    "target_d_pose": 0.00005,
+    "selected_rank": null,
+    "status": "NO_RANK_REACHES_LINEARIZED_TARGET",
+    "top_six_eigenvalues": [
+      4866776.639072087,
+      857056.6548165884,
+      744941.1329114469,
+      513242.86787965405,
+      296081.68169274926,
+      274428.6331218263
+    ],
+    "predicted_d_pose": [
+      16.20747111074233,
+      12.810019232551447,
+      9.857003656593685,
+      7.822461440923049,
+      6.6487662599665285,
+      5.560905766976562
+    ]
+  },
+  "reach_curve": [
+    {
+      "rank": 1,
+      "d_pose": 19.89493129583306,
+      "carrier_bytes": 3520,
+      "archive_bytes": 134991,
+      "carrier_sha256": "9f7e65d8ccd19e0cb7c4976af4c4fa74bebef6bfff1a58679e323924cf42d7f5",
+      "archive_sha256": "e63727e7f743f3ad9b46f5a953b6ee879f61ea0e2f4aaba0eb896e1a488c1661"
+    },
+    {
+      "rank": 2,
+      "d_pose": 23.666537871896537,
+      "carrier_bytes": 7025,
+      "archive_bytes": 138496,
+      "carrier_sha256": "57ee2589529241b4ed64bc3bce6a1b0be51b96ecbe6aa7f445712cfac3dd7e10",
+      "archive_sha256": "f4ae7f29ad0a1b1b907ae2722792206b63a7e60de508d67b44a8f7e5c3417a59"
+    },
+    {
+      "rank": 3,
+      "d_pose": 23.492813182500594,
+      "carrier_bytes": 10530,
+      "archive_bytes": 142002,
+      "carrier_sha256": "3d21a046ce8c217b5ea091a23ea8ca12475a490fb32d45a18eefda36a9b9d1b3",
+      "archive_sha256": "1f345e141db6cc241a3c1d9107974c280594a3895dea603d37463958d66ef4cd"
+    },
+    {
+      "rank": 4,
+      "d_pose": 26.054884825627166,
+      "carrier_bytes": 14035,
+      "archive_bytes": 145507,
+      "carrier_sha256": "b8ca1fb39c78b31ea3cf563b156b4386f0e3d72ae03f73ed0930c616809c16f2",
+      "archive_sha256": "79706baf528598bede95985386d9006288c4c3aa2f9c343a2fb1d674ca104b34"
+    },
+    {
+      "rank": 5,
+      "d_pose": 27.36323513050055,
+      "carrier_bytes": 17540,
+      "archive_bytes": 149013,
+      "carrier_sha256": "e899f4bbdf5ad1eaf6fa1f0121de6ff2fc5b9c962bc91c054d8cc1bb42417d6c",
+      "archive_sha256": "e602b81d9f85c1759a635128c7e6e0a4b60bbe1471eed9bd59a3fb2545a6b5cd"
+    },
+    {
+      "rank": 6,
+      "d_pose": 48.14744629668481,
+      "carrier_bytes": 21045,
+      "archive_bytes": 152518,
+      "carrier_sha256": "38cd2e6327d01b90f732e1d2cb7c08536ac2c9838ae44932668d3b395c574545",
+      "archive_sha256": "d8a0008a60c080a1867db83346fc8ab4092a9b53bea9ccb2820486f5970294e2"
+    }
+  ],
+  "matched_control": {
+    "rank": 6,
+    "d_pose": 20.31820279520745,
+    "carrier_bytes": 21045,
+    "archive_bytes": 152518,
+    "carrier_sha256": "33c25bb5a455c25c429889c14cae41c119ca770d46416a0574a0645a3c7d5ebe",
+    "archive_sha256": "11c8628ee2e1aa6767387ae625c568d14f62f00d8ce67abcc722c986c566b17e",
+    "same_rank": true,
+    "same_precision": true,
+    "same_solver_call_budget": true,
+    "same_packet_bytes": true,
+    "same_archive_bytes": true
+  },
+  "exact_invariants": {
+    "d_seg_delta": 0.0,
+    "frame1_batch_digest_chain_sha256": "6da41ce656285d4a88baea9725c2513bcfca653da0d000a20a09ee996b2f5722",
+    "seg_cells_batch_digest_chain_sha256": "d9610fcff842f3d50015d49908020321598f8f3fecaac86d6c3e98fe2346bdcf",
+    "all_packet_parseback_byte_identical": true
+  },
+  "basis_custody": {
+    "unquantized_treatment_basis_sha256": "3fa757386c918f6772429c7e600582b2eaaaa9199450974631ed0884743971cc",
+    "counted_treatment_basis_sha256": "bd6a2c6b599f4106bae402454831cad5b1834f4ea64d6d395de6841a3df47dcf",
+    "counted_control_basis_sha256": "22189a2f7fc515117bd52b18ee658abc83c5f18898ef60399c018f6009313efa",
+    "control_seed": 20260725,
+    "term_exponent": -8
+  },
+  "source_receipts": {
+    "ssd_root": "/Volumes/VertigoDataTier/pact/ddm_p1_frame0_pose_quotient_carrier_20260725T141713Z",
+    "full_receipt": {
+      "bytes": 21139,
+      "sha256": "d08bc13fc1cb3962f99560631700f495e059b286c3c364bdf0dcb3f392e68e55"
+    },
+    "reach_curve": {
+      "bytes": 2257,
+      "sha256": "2bfc82077bada5d60726fea1d98afd071224f79be11c51f6cb31192f7e0e1010"
+    },
+    "actuator_spectrum_receipt_sha256": "eb7761a5fd77cf77e827353b0d31f7ef8209aeb141f479864d82b3f08e49c466",
+    "actuator_spectrum_rows_sha256": "94ba3b2ae6ae71ab3a8cafe4c36eb60c4afee38deda9c7f5d5166eb1ee1c4f13",
+    "solved_packets_receipt_sha256": "e43f8be31b34c01020d614ce3f1f1afe8750f54e5f34e59fca94bad424dffd99"
+  },
+  "preflights": {
+    "required_available_memory_bytes": 21474836480,
+    "derivation_available_memory_bytes": 91979186176,
+    "required_free_storage_bytes": 21474836480,
+    "available_free_storage_bytes": 424198135808
+  },
+  "scorer_custody": {
+    "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+    "posenet_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "device": "cpu",
+    "threads": 4,
+    "deterministic_algorithms": true
+  },
+  "resume": {
+    "all_stage_receipts_preserved": true,
+    "derivation_batch_checkpoints_preserved": true,
+    "solver_batch_checkpoints_preserved": true,
+    "exact_n600_batch_checkpoints_preserved": true
+  }
+}
