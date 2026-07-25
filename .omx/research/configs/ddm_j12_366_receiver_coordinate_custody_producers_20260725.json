@@ -1,0 +1,130 @@
+{
+  "schema": "ddm_j12_receiver_coordinate_custody_config.v1",
+  "run_id": "ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z",
+  "lane_id": "lane_ddm_j12_366_receiver_coordinate_custody_producers_20260725",
+  "delegation_checkpoint_key": "codex_delegate:ddm_j12_366_receiver_coordinate_custody_producers:20260725T150405Z",
+  "output_root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z",
+  "upstream_root": "/Users/adpena/Projects/pact/upstream",
+  "pair_count": 600,
+  "verdict_batch": 32,
+  "torch_threads": 4,
+  "seed": 0,
+  "minimum_free_memory_gib": 20,
+  "minimum_free_storage_gib": 20,
+  "proposal_coordinate_domain": "one boundary-feasible scalar amplitude alpha in [0,1] per exact sealed J10 proposal vector",
+  "secant_scheme": "forward_realized_source_alpha0_to_sealed_proposal_alpha1",
+  "secant_quantum": 1,
+  "proposal_ids": [
+    "worldsheet_joint_active_x_+1",
+    "worldsheet_joint_active_x_-1",
+    "worldsheet_joint_active_y_-1",
+    "local_exact_gradient"
+  ],
+  "pc1_accepted_steps": [
+    8,
+    16
+  ],
+  "source_baselines": {
+    "W_joint_step50_live": {
+      "archive_bytes": 138813,
+      "archive_sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+      "d_seg": 0.06974277072482639,
+      "d_pose": 35.49982080959101
+    },
+    "W_seg": {
+      "archive_bytes": 138031,
+      "archive_sha256": "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9",
+      "d_seg": 0.024124510023328993,
+      "d_pose": 146.36493245487773
+    }
+  },
+  "source_artifacts": {
+    "authority": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z.wrapped.prompt.txt",
+      "bytes": 9208,
+      "sha256": "fc5e7e1d5ac00cefb4b1079464f226b431cdfd2b75c79c2212adf380d0802bcf"
+    },
+    "j10_ticket": {
+      "path": ".omx/research/configs/ddm_j10_366_ema_verdict_shadow_cure_20260725.json",
+      "bytes": 28291,
+      "sha256": "19d130e2d767383876ef2483faa1e51fb5d1153ba61ab45068e8b3c5638bc40e"
+    },
+    "j10_full_run_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/full_run_receipt.json",
+      "bytes": 12901,
+      "sha256": "6ad4d1653eee81cd56d8fb3a2e4f7155d35f648ff4b39d988ee861387cdabd9d"
+    },
+    "j10_proposal_x_plus": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
+      "bytes": 4227,
+      "sha256": "1ff8e8ad95ed1f09625a4173eadb3106676770c10098e96e770fd154c4ebdbc5"
+    },
+    "j10_proposal_x_minus": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_minus1_shrink00_n600.json",
+      "bytes": 4229,
+      "sha256": "aec2e0edaa4b0628f9023b4f87a33b33e6151dd72c7d15ecc32a6779d290a680"
+    },
+    "j10_proposal_y_minus": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_y_minus1_shrink00_n600.json",
+      "bytes": 4234,
+      "sha256": "cd385642ae97e44c0f46867caed05c49fb8d622c3b665447f33bc2be4d61a52e"
+    },
+    "j10_proposal_local": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_local_exact_gradient_shrink00_n600.json",
+      "bytes": 4210,
+      "sha256": "95d10a5d479771fe50bd94447c0ec101400dfc11a5b23a2e185e58104627e660"
+    },
+    "w_joint_step50": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws4_pose_null_projected_seg_start_20260725T112500Z/01_archives/W_joint_step50_live.zip.receipt-bytes",
+      "bytes": 138813,
+      "sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241"
+    },
+    "w_seg": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws2_warm_start_custody_producer_20260724T053455Z/01_archives/W_seg.zip.receipt-bytes",
+      "bytes": 138031,
+      "sha256": "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9"
+    },
+    "target_cache": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "bytes": 5078017610,
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "menu1_config": {
+      "path": ".omx/research/configs/ddm_menu1_realized_flip_menu_20260723.json",
+      "bytes": 3319,
+      "sha256": "b9fed2b1537b92a2b02d0525cb4d9175d0704e7c4d0c0efd383c6dd818fdb2c7"
+    },
+    "pc2_config": {
+      "path": ".omx/research/configs/ddm_pc2_pose_descent_smoke_20260725T121448Z.json",
+      "bytes": 2454,
+      "sha256": "8757076715444e100fb814bbafa27d04f4e9bfb479d6d185e92f2491f684bafc"
+    },
+    "pc2_accepted_008": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_pc2_pose_descent_smoke_20260725T121448Z/checkpoints/accepted_008.json",
+      "bytes": 10359,
+      "sha256": "d89db84fcafbd822c029c49979b661bcdf59277a91b3bd05805a1a7ee31a0384"
+    },
+    "pc2_accepted_016": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_pc2_pose_descent_smoke_20260725T121448Z/checkpoints/accepted_016.json",
+      "bytes": 19684,
+      "sha256": "3bf7894477c1809e5ef77625f3c38c073214544834b47726364795b075d9f15a"
+    },
+    "w_seg_raw_x_plus_verdict": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_seg_reformed_four_step_abort_shrink_20260724T122200Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
+      "bytes": 4239,
+      "sha256": "266c6d34fbc0d7e5785f3976e4e1c0e01ae03d9ea1d5dab6dc04c4b947c64dea"
+    }
+  },
+  "acceptance_rule": "pure_priced_realized_delta.joint_delta_lt_zero",
+  "pose_derivative_weight": "5/sqrt(10*d_pose)",
+  "break_even_ratio": 1,
+  "conditional_smoke_steps": 8,
+  "paid_dispatch": false,
+  "contest_eval": false,
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_review_required": true
+}

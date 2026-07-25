@@ -15,12 +15,16 @@ acceptance rule.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import math
+import zipfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
+
+import numpy as np
 
 from tac.optimization.ddm_metric_custody_bundle import (
     ComponentId,
@@ -50,6 +54,12 @@ POSE_ACTUATOR_BLOCKER: Final = "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_F
 SEG_ACTUATOR_BLOCKER: Final = "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT"
 RANGE_A_BLOCKER: Final = "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR"
 PC1_REBASE_BLOCKER: Final = "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+PC1_REHOMED_SCHEMA: Final = "ddm_pc1_source_preserving_adapter.v1"
+PC1_REHOMED_MANIFEST_MEMBER: Final = "manifest/pc1_source_preserving.json"
+PC1_REHOMED_PACKET_MEMBER: Final = "pose/pc1.ddp"
+PC1_REHOMED_PARENT_MEMBER: Final = "parent/source.zip"
+RANK_CERTIFICATE_SCHEMA: Final = "ddm_j12_receiver_coordinate_rank_certificate.v1"
+OBJECTIVE_GATE_CONTRADICTION_SCHEMA: Final = "objective_gate_contradiction.v1"
 
 
 class J11ProposalDecompositionError(ValueError):
@@ -68,6 +78,311 @@ def _read_json_bytes(payload: bytes, *, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise J11ProposalDecompositionError(f"{label} must be a JSON object")
     return value
+
+
+def _canonical_json_bytes(value: Mapping[str, Any]) -> bytes:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode()
+
+
+def _pc1_packet_has_zero_receiver_effect(packet: Any) -> bool:
+    return bool(
+        not packet.active
+        or (np.count_nonzero(np.asarray(packet.q_xi)) == 0 and np.count_nonzero(np.asarray(packet.q_luma_phase)) == 0)
+    )
+
+
+def build_source_preserving_pc1_adapter_archive(
+    *,
+    parent_archive: bytes,
+    parent_sha256: str,
+    packet: Any,
+) -> bytes:
+    """Count PC1 differentially while preserving the exact parent at its zero home.
+
+    The active-zero (and inactive) receiver effect has no counted sidecar at all:
+    its archive is the exact parent byte string.  Nonzero packets use a
+    deterministic nested archive whose manifest binds the differential receiver
+    equation.  This makes the zero-home archive identity test literal rather
+    than score-equivalent.
+    """
+
+    from tac.optimization.ddm_pc1_pose_stream import serialize_pc1_packet
+
+    if not isinstance(parent_archive, bytes) or _sha256(parent_archive) != parent_sha256:
+        raise J11ProposalDecompositionError("PC1 adapter parent SHA-256 custody differs")
+    if _pc1_packet_has_zero_receiver_effect(packet):
+        return parent_archive
+    packet_bytes = serialize_pc1_packet(packet)
+    manifest = {
+        "active": bool(packet.active),
+        "equation_id": "parent_plus_pc1_packet_minus_pc1_active_zero",
+        "owner": "ddm.pc1.pose_stream.source_preserving_adapter",
+        "packet_member": PC1_REHOMED_PACKET_MEMBER,
+        "packet_sha256": _sha256(packet_bytes),
+        "parent_member": PC1_REHOMED_PARENT_MEMBER,
+        "parent_sha256": parent_sha256,
+        "schema": PC1_REHOMED_SCHEMA,
+        "zero_home_archive_identity": True,
+    }
+    members = (
+        (PC1_REHOMED_MANIFEST_MEMBER, _canonical_json_bytes(manifest)),
+        (PC1_REHOMED_PACKET_MEMBER, packet_bytes),
+        (PC1_REHOMED_PARENT_MEMBER, parent_archive),
+    )
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_STORED, strict_timestamps=True) as archive:
+        for member_name, member_bytes in members:
+            info = zipfile.ZipInfo(member_name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_STORED
+            info.external_attr = 0o100644 << 16
+            info.create_system = 3
+            archive.writestr(info, member_bytes)
+    return buffer.getvalue()
+
+
+def parse_source_preserving_pc1_adapter_archive(
+    payload: bytes,
+    *,
+    expected_parent_archive: bytes,
+    expected_parent_sha256: str,
+    zero_home_packet: Any,
+) -> tuple[bytes, Any, dict[str, Any]]:
+    """Parse and byte-reemit either the exact zero home or a nonzero adapter."""
+
+    from tac.optimization.ddm_pc1_pose_stream import make_zero_active_packet, parse_pc1_packet
+
+    if _sha256(expected_parent_archive) != expected_parent_sha256:
+        raise J11ProposalDecompositionError("expected PC1 adapter parent custody differs")
+    if payload == expected_parent_archive:
+        packet = make_zero_active_packet(zero_home_packet)
+        return (
+            expected_parent_archive,
+            packet,
+            {
+                "schema": PC1_REHOMED_SCHEMA,
+                "equation_id": "identity_at_active_zero",
+                "parent_sha256": expected_parent_sha256,
+                "zero_home_archive_identity": True,
+            },
+        )
+    try:
+        with zipfile.ZipFile(io.BytesIO(payload), "r") as archive:
+            if archive.namelist() != [
+                PC1_REHOMED_MANIFEST_MEMBER,
+                PC1_REHOMED_PACKET_MEMBER,
+                PC1_REHOMED_PARENT_MEMBER,
+            ]:
+                raise J11ProposalDecompositionError("PC1 adapter member order/schema differs")
+            manifest = _read_json_bytes(
+                archive.read(PC1_REHOMED_MANIFEST_MEMBER),
+                label="PC1 source-preserving manifest",
+            )
+            packet_bytes = archive.read(PC1_REHOMED_PACKET_MEMBER)
+            parent_bytes = archive.read(PC1_REHOMED_PARENT_MEMBER)
+    except (zipfile.BadZipFile, KeyError) as exc:
+        raise J11ProposalDecompositionError("PC1 source-preserving archive is invalid") from exc
+    expected_manifest = {
+        "active": True,
+        "equation_id": "parent_plus_pc1_packet_minus_pc1_active_zero",
+        "owner": "ddm.pc1.pose_stream.source_preserving_adapter",
+        "packet_member": PC1_REHOMED_PACKET_MEMBER,
+        "packet_sha256": _sha256(packet_bytes),
+        "parent_member": PC1_REHOMED_PARENT_MEMBER,
+        "parent_sha256": expected_parent_sha256,
+        "schema": PC1_REHOMED_SCHEMA,
+        "zero_home_archive_identity": True,
+    }
+    if manifest != expected_manifest or parent_bytes != expected_parent_archive:
+        raise J11ProposalDecompositionError("PC1 adapter manifest/parent custody differs")
+    packet = parse_pc1_packet(packet_bytes)
+    if _pc1_packet_has_zero_receiver_effect(packet):
+        raise J11ProposalDecompositionError("zero-effect PC1 packet must canonicalize to the raw parent")
+    rebuilt = build_source_preserving_pc1_adapter_archive(
+        parent_archive=parent_bytes,
+        parent_sha256=expected_parent_sha256,
+        packet=packet,
+    )
+    if rebuilt != payload:
+        raise J11ProposalDecompositionError("PC1 adapter is not canonical on parse-back")
+    return parent_bytes, packet, manifest
+
+
+def receive_source_preserving_pc1_camera_pairs(
+    *,
+    parent_camera: np.ndarray,
+    packet: Any,
+    pair_ids: Sequence[int],
+    movable_masks: np.ndarray | None = None,
+    torch_module: Any | None = None,
+) -> np.ndarray:
+    """Apply only PC1's integer receiver delta relative to its active-zero home."""
+
+    from tac.optimization.ddm_pc1_pose_stream import (
+        make_inactive_packet,
+        make_zero_active_packet,
+        receive_pc1_camera_pairs,
+    )
+
+    parent = np.asarray(parent_camera)
+    if _pc1_packet_has_zero_receiver_effect(packet):
+        # The canonical inactive receiver validates geometry and returns a
+        # contiguous byte-exact parent.
+        return receive_pc1_camera_pairs(
+            parent_camera=parent,
+            packet=make_inactive_packet(packet),
+            pair_ids=pair_ids,
+            movable_masks=movable_masks,
+            torch_module=torch_module,
+        )
+    rendered = receive_pc1_camera_pairs(
+        parent_camera=parent,
+        packet=packet,
+        pair_ids=pair_ids,
+        movable_masks=movable_masks,
+        torch_module=torch_module,
+    )
+    zero_home = receive_pc1_camera_pairs(
+        parent_camera=parent,
+        packet=make_zero_active_packet(packet),
+        pair_ids=pair_ids,
+        movable_masks=movable_masks,
+        torch_module=torch_module,
+    )
+    differential = rendered.astype(np.int16) - zero_home.astype(np.int16)
+    return np.ascontiguousarray(np.clip(parent.astype(np.int16) + differential, 0, 255).astype(np.uint8))
+
+
+def null_projector_from_full_column_rank_sketch(
+    sketch_matrix: np.ndarray,
+    *,
+    coordinate_ids: Sequence[str],
+    sketch_id: str,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Certify ``ker(J)={0}`` from a full-column-rank linear sketch ``LJ``.
+
+    A deficient sketch is not itself authority for ``ker(J)`` and therefore
+    fails closed instead of manufacturing a projector from the sketch.
+    """
+
+    matrix = np.asarray(sketch_matrix, dtype=np.float64)
+    coordinate_tuple = tuple(coordinate_ids)
+    if (
+        matrix.ndim != 2
+        or matrix.shape[1] != len(coordinate_tuple)
+        or not coordinate_tuple
+        or len(set(coordinate_tuple)) != len(coordinate_tuple)
+        or not sketch_id
+        or not np.all(np.isfinite(matrix))
+    ):
+        raise J11ProposalDecompositionError("receiver-coordinate rank sketch custody differs")
+    singular_values = np.linalg.svd(matrix, compute_uv=False)
+    tolerance = (
+        np.finfo(np.float64).eps * max(matrix.shape) * float(singular_values[0] if len(singular_values) else 0.0)
+    )
+    rank = int(np.count_nonzero(singular_values > tolerance))
+    certificate = {
+        "schema": RANK_CERTIFICATE_SCHEMA,
+        "sketch_id": sketch_id,
+        "sketch_shape": list(matrix.shape),
+        "coordinate_ids": list(coordinate_tuple),
+        "coordinate_count": len(coordinate_tuple),
+        "sketch_sha256": _sha256(np.ascontiguousarray(matrix, dtype="<f8").tobytes()),
+        "singular_values": singular_values.tolist(),
+        "rank_tolerance": tolerance,
+        "certified_rank": rank,
+        "full_column_rank": rank == len(coordinate_tuple),
+        "logical_implication": "rank(LJ)=n_implies_rank(J)=n_and_kernel(J)={0}",
+    }
+    if rank != len(coordinate_tuple):
+        raise J11ProposalDecompositionError(
+            "rank-deficient sketch cannot authorize a receiver-coordinate null projector"
+        )
+    return np.zeros((len(coordinate_tuple), len(coordinate_tuple)), dtype=np.float64), certificate
+
+
+def null_projector_from_receiver_gram(
+    gram_matrix: np.ndarray,
+    *,
+    coordinate_ids: Sequence[str],
+    jacobian_id: str,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Derive ``I-J^+J`` from a fully accumulated receiver ``J.T @ J``.
+
+    Unlike a low-dimensional sketch, a complete Gram matrix also authorizes a
+    nontrivial kernel.  The eigentolerance is recorded in the certificate and
+    the returned projector is checked for symmetry and idempotence.
+    """
+
+    gram = np.asarray(gram_matrix, dtype=np.float64)
+    coordinate_tuple = tuple(coordinate_ids)
+    count = len(coordinate_tuple)
+    if (
+        gram.shape != (count, count)
+        or not coordinate_tuple
+        or len(set(coordinate_tuple)) != count
+        or not jacobian_id
+        or not np.all(np.isfinite(gram))
+        or not np.allclose(gram, gram.T, rtol=0.0, atol=1.0e-12)
+    ):
+        raise J11ProposalDecompositionError("receiver Gram custody differs")
+    eigenvalues, eigenvectors = np.linalg.eigh(0.5 * (gram + gram.T))
+    maximum = float(max(np.max(np.abs(eigenvalues)), 0.0))
+    tolerance = np.finfo(np.float64).eps * max(count, 1) * maximum
+    if np.min(eigenvalues) < -max(tolerance, 1.0e-12):
+        raise J11ProposalDecompositionError("receiver Gram is not positive semidefinite")
+    null_columns = eigenvectors[:, eigenvalues <= tolerance]
+    projector = null_columns @ null_columns.T
+    projector = np.ascontiguousarray(0.5 * (projector + projector.T), dtype=np.float64)
+    if not np.allclose(projector @ projector, projector, rtol=0.0, atol=1.0e-10):
+        raise J11ProposalDecompositionError("receiver null projector is not idempotent")
+    rank = int(np.count_nonzero(eigenvalues > tolerance))
+    certificate = {
+        "schema": RANK_CERTIFICATE_SCHEMA,
+        "jacobian_id": jacobian_id,
+        "coordinate_ids": list(coordinate_tuple),
+        "coordinate_count": count,
+        "gram_sha256": _sha256(np.ascontiguousarray(gram, dtype="<f8").tobytes()),
+        "gram_matrix": gram.tolist(),
+        "eigenvalues": eigenvalues.tolist(),
+        "rank_tolerance": tolerance,
+        "certified_rank": rank,
+        "nullity": count - rank,
+        "projector": projector.tolist(),
+        "projector_derivation": "eigenspace_of_fully_accumulated_J_transpose_J",
+    }
+    return projector, certificate
+
+
+def objective_gate_contradiction(
+    *,
+    candidate_id: str,
+    pure_priced_joint_delta: float,
+    auxiliary_gate_id: str,
+    auxiliary_gate_admitted: bool,
+) -> dict[str, Any] | None:
+    """Type an auxiliary/pure-objective disagreement without changing authority."""
+
+    if not candidate_id or not auxiliary_gate_id or not math.isfinite(pure_priced_joint_delta):
+        raise J11ProposalDecompositionError("objective-gate contradiction inputs differ")
+    pure_admitted = pure_priced_joint_delta < 0.0
+    if pure_admitted == auxiliary_gate_admitted:
+        return None
+    return {
+        "schema": OBJECTIVE_GATE_CONTRADICTION_SCHEMA,
+        "candidate_id": candidate_id,
+        "authoritative_gate": "pure_priced_realized_delta.joint_delta_lt_zero",
+        "pure_priced_joint_delta": pure_priced_joint_delta,
+        "pure_priced_admitted": pure_admitted,
+        "auxiliary_gate_id": auxiliary_gate_id,
+        "auxiliary_gate_admitted": auxiliary_gate_admitted,
+        "authority_effect": "NONE_AUXILIARY_GATE_CANNOT_OVERRIDE_REALIZED_JOINT_DELTA",
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -617,9 +932,12 @@ def build_refusal_receipt(
 
 __all__ = [
     "CONFIG_SCHEMA",
+    "OBJECTIVE_GATE_CONTRADICTION_SCHEMA",
     "PC1_REBASE_BLOCKER",
+    "PC1_REHOMED_SCHEMA",
     "POSE_ACTUATOR_BLOCKER",
     "RANGE_A_BLOCKER",
+    "RANK_CERTIFICATE_SCHEMA",
     "RECEIPT_SCHEMA",
     "SEALED_OPENING_PROPOSALS",
     "SEG_ACTUATOR_BLOCKER",
@@ -628,5 +946,11 @@ __all__ = [
     "J11ProposalDecompositionError",
     "blocked_component_tables",
     "build_refusal_receipt",
+    "build_source_preserving_pc1_adapter_archive",
     "derive_authority_blockers",
+    "null_projector_from_full_column_rank_sketch",
+    "null_projector_from_receiver_gram",
+    "objective_gate_contradiction",
+    "parse_source_preserving_pc1_adapter_archive",
+    "receive_source_preserving_pc1_camera_pairs",
 ]

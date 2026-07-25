@@ -1,0 +1,189 @@
+{
+  "schema": "ddm_j12_366_receiver_coordinate_custody_compact_receipt.v1",
+  "utc": "2026-07-25T18:13:50Z",
+  "run_id": "ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z",
+  "lane_id": "lane_ddm_j12_366_receiver_coordinate_custody_producers_20260725",
+  "delegation_checkpoint_key": "codex_delegate:ddm_j12_366_receiver_coordinate_custody_producers:20260725T150405Z",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z.wrapped.prompt.txt",
+    "bytes": 9208,
+    "sha256": "fc5e7e1d5ac00cefb4b1079464f226b431cdfd2b75c79c2212adf380d0802bcf"
+  },
+  "typed_config_hash": "a0b205350aabac9f2bea0eb81d4339403232c6928c52fb1d9d252b3d7c1aa711",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "measurement_geometry": {
+    "pair_count": 600,
+    "batch_size": 32,
+    "receiver_chain": "sealed proposal amplitude -> exact archive compile/parseback -> receiver camera874x1164 uint8 -> scorer bilinear R512x384 -> SegNet rank4 winner-rival inner / PoseNet output6",
+    "secant_scheme": "forward_realized_source_alpha0_to_sealed_proposal_alpha1",
+    "central_secant_disposition": "REFUSED_RG1_BOUNDARY_ASYMMETRY",
+    "refused_attempt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z_REFUSED_CENTRAL_RG1_ASYMMETRY",
+    "available_memory_bytes_preflight": 91173486592,
+    "minimum_required_memory_bytes": 21474836480
+  },
+  "source": {
+    "archive_bytes": 138813,
+    "archive_sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+    "d_seg": 0.06974277072482639,
+    "d_pose": 35.49982080959101
+  },
+  "jacobian_custody": {
+    "index_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z/02_jacobians/index.json",
+    "index_sha256": "803b11013a540288179ee387274c854e5a8858dc995757e59aa1478b56071dd5",
+    "measured_jacobian_count": 8,
+    "proposals": [
+      {
+        "proposal_id": "local_exact_gradient",
+        "proposal_archive_sha256": "010ae7df873db9d8210de12d6d59e6293a6d0fed8b31e1b99aa6afbd86ee94fe",
+        "pose_j_sha256": "c0ce19656cc2ee08acee77f2662861f623b6a01baf14e615bcccc8cdeeab86a7",
+        "pose_gram": 132.3679583206048,
+        "pose_rank": 1,
+        "pose_nullity": 0,
+        "seg_rank4_inner_j_sha256": "540c33e0c630f1dc23a7a4d701061ff2c307bcc8101a3ff0abaec8bc641f7afb",
+        "seg_rank4_inner_gram": 450801.6832600525,
+        "seg_rank": 1,
+        "seg_nullity": 0
+      },
+      {
+        "proposal_id": "worldsheet_joint_active_x_+1",
+        "proposal_archive_sha256": "679b096bc701e096aee0aae032aec23eab2e4a155e03c8b244ded8144ba45d46",
+        "pose_j_sha256": "79de09bb15cc70b5ca72a19d0f01b1e3cd65447a62d1a2774c767a4b1c592751",
+        "pose_gram": 59.01277788759191,
+        "pose_rank": 1,
+        "pose_nullity": 0,
+        "seg_rank4_inner_j_sha256": "cc92a7c91706d1ec97a594ddf5b45ee7e11c6d2c8ecca803bdbedb4cef3df908",
+        "seg_rank4_inner_gram": 126039.39267437292,
+        "seg_rank": 1,
+        "seg_nullity": 0
+      },
+      {
+        "proposal_id": "worldsheet_joint_active_x_-1",
+        "proposal_archive_sha256": "e4103eecdbe19ea6a9aa7f55f6baeadc6158b954cac46a6ee27c122d995e9c5f",
+        "pose_j_sha256": "44cca2f1d569469cc0bca52a3cb0be62fa3ef50e939ec61d0aea1bf9ed565015",
+        "pose_gram": 178.13413920850263,
+        "pose_rank": 1,
+        "pose_nullity": 0,
+        "seg_rank4_inner_j_sha256": "997a84d7fed06cd625f5920c554af872cbce2d084ed773b45e74ae217c50dbd4",
+        "seg_rank4_inner_gram": 771651.5078735556,
+        "seg_rank": 1,
+        "seg_nullity": 0
+      },
+      {
+        "proposal_id": "worldsheet_joint_active_y_-1",
+        "proposal_archive_sha256": "1e539c624271c33167fa82c13d71d080590be7265e020c4e0ea6817e7bc14ff2",
+        "pose_j_sha256": "5a90f980015a1ce00c7f1f4e7c4a13d6dfdaad7241344bd97c6d76420e0cf66b",
+        "pose_gram": 204.03566571388268,
+        "pose_rank": 1,
+        "pose_nullity": 0,
+        "seg_rank4_inner_j_sha256": "cb302bcb88d38d1dbc9c1bd0bd84b7a8090c422329192d6a51d830841fc2a827",
+        "seg_rank4_inner_gram": 1216349.2417902579,
+        "seg_rank": 1,
+        "seg_nullity": 0
+      }
+    ],
+    "common_shapes": {
+      "pose": [600, 6, 1],
+      "seg_rank4_inner": [600, 4, 384, 512, 1]
+    },
+    "interpretation": "Each sealed proposal is a one-dimensional boundary ray. Both measured Jacobians have rank one and nullity zero on every ray, so both exact null projectors are the zero operator."
+  },
+  "pc1_adapter": {
+    "receiver_equation": "parent_plus_pc1_packet_minus_pc1_active_zero",
+    "active_zero_archive_bytes": 138813,
+    "active_zero_archive_sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+    "active_zero_byte_identical": true,
+    "old_non_preserving_ratio_transferred": false,
+    "step8": {
+      "archive_bytes": 139693,
+      "archive_sha256": "be6663320b5f7b1cd73b61bb4fb03ecac7aa40566bbfd9fd08ebba150e72ffec",
+      "d_seg": 0.06472418891059027,
+      "d_pose": 31.7612616254476,
+      "joint_delta": -1.5209788653637777
+    },
+    "step16": {
+      "archive_bytes": 139701,
+      "archive_sha256": "9d1e599fe9d48bb2030e11e742be9ac8b2c5a2d3430df4a476f8b83006a91fba",
+      "d_seg": 0.0627319590250651,
+      "d_pose": 28.15912801903941,
+      "joint_delta": -2.761204260556886
+    }
+  },
+  "pricing": {
+    "receipt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z/04_decomposition_pricing/receipt.json",
+    "receipt_sha256": "e73090c4d145edba8a9c5ac67b1833706183f47699bd42873f0398484fcd8def",
+    "acceptance_rule": "strict_realized_joint_delta_s_lt_zero",
+    "fixed_R_star_used": false,
+    "break_even_ratio": 1.0,
+    "singles_total": 16,
+    "composites_total": 8,
+    "single_result": "ALL_ACTIVE_ZERO_JOINT_DELTA_0",
+    "bases": {
+      "W_joint_step50_live": {
+        "pose_derivative_weight": 0.2653731159689291,
+        "accepted_composite_count": 4,
+        "unique_composite_archive_sha256": "9d1e599fe9d48bb2030e11e742be9ac8b2c5a2d3430df4a476f8b83006a91fba",
+        "joint_delta": -2.761204260556886
+      },
+      "W_seg": {
+        "base_archive_sha256": "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9",
+        "base_archive_bytes": 138031,
+        "base_d_seg": 0.024124510023328993,
+        "base_d_pose": 146.36493245487773,
+        "pose_derivative_weight": 0.13069274688421467,
+        "accepted_composite_count": 4,
+        "unique_composite_archive_sha256": "b8013857fae78b129799cb620a56df7f9aaed4937b52c97cea4c3c77cb555f97",
+        "unique_composite_archive_bytes": 138919,
+        "composite_d_seg": 0.024523688422309026,
+        "composite_d_pose": 120.03465558155271,
+        "joint_delta": -3.5711431248357903
+      }
+    },
+    "objective_gate_contradictions": []
+  },
+  "conditional_smoke": {
+    "receipt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z/05_conditional_smoke/receipt.json",
+    "receipt_sha256": "695c7943ee7253023defd5b3fede49262496b5f4ecfa8f7d009738b83a8b39d3",
+    "bounded_steps": 4,
+    "all_step_checkpoints_preserved": true,
+    "engine_or_acceptance_gate_weakened": false,
+    "pose_finish_gate_weakened": false,
+    "live": {
+      "parent_archive_sha256": "815547e57d3e64a5a534f3627f91be191cb4736aa96170b21df9fe93fd1d55f7",
+      "merged_archive_sha256": "d48f9ac7cfab5ed5721290ff4470cdf920f7f4f5c5d2247c8c5b5edabd664f61",
+      "joint_delta_vs_initial_merged": 0.12759259096760986,
+      "accepted_vs_initial_merged": false
+    },
+    "ema": {
+      "parent_archive_sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+      "merged_archive_sha256": "9d1e599fe9d48bb2030e11e742be9ac8b2c5a2d3430df4a476f8b83006a91fba",
+      "joint_delta_vs_initial_merged": 0.0,
+      "byte_identical_replay": true
+    },
+    "interpretation": "The four-step live parent regressed the already-negative PC1 composite; the short-horizon EMA stayed exactly at the initial negative composite. Smoke completion does not add a stronger candidate."
+  },
+  "full_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z/ddm_j12_receiver_coordinate_custody_receipt_v2.json",
+    "sha256": "0135dca6ad1bdd4691041e66161b4ccfed71d2cce3258d86b23a0345e2591c6d"
+  },
+  "verdict": "MEASURED_J12_REHOMED_PC1_NEGATIVE_CONDITIONAL_SMOKE_COMPLETE",
+  "verdict_scope": "MEASURED local macOS-CPU frozen-scorer advisory for the four sealed one-dimensional J10 proposal rays, the byte-identical PC1 rehome, two named bases, and four J10-engine smoke steps. Not contest score or promotion authority.",
+  "reseal_state": {
+    "status": "PREPARED_REVIEW_REQUIRED",
+    "reason": "The canonical resealer has no J12 profile or current delegated-authority hash. A merged-main SHA reseal and regenerated worst-geometry receipt must be performed by MAIN after branch review.",
+    "fire_authority": "MAIN_ONLY_AFTER_LANDING_REVIEW"
+  },
+  "pc1_receiver_numerical_warning": {
+    "observed": true,
+    "classes": ["divide_by_zero", "overflow", "invalid_value"],
+    "surface": "ddm_pc1_pose_stream._warp_scorer_frame matmul",
+    "realized_uint8_chunks_completed": true,
+    "suppressed": false,
+    "follow_up": "MAIN should review whether the receiver should explicitly sanitize or fail closed before any promotion-grade use."
+  },
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_review_required": true
+}

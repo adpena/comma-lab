@@ -88256,6 +88256,48 @@
         }
       },
       "notes": "research_only=true; local exact-n600 advisory proposal-source decomposition only; unchanged pure-priced acceptance; no paid dispatch or campaign FIRE; MAIN review required"
+    },
+    {
+      "id": "lane_ddm_j12_366_receiver_coordinate_custody_producers_20260725",
+      "name": "DDM J12 #366 receiver-coordinate custody producers",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_j11_opening_proposal_decomposition.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_j12_366_receiver_coordinate_custody_receipt_20260725.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/configs/ddm_j12_366_receiver_coordinate_custody_producers_20260725.json"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_j12_366_receiver_coordinate_custody_producers_20260725T182402Z_codex.md"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_session_summary_20260725T182402Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "local exact-n600 advisory receiver-coordinate custody, source-preserving PC1 adapter, unchanged S-primary acceptance; no paid dispatch; MAIN review required",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -88265,5 +88307,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-25T13:10:23Z"
+  "updated_at": "2026-07-25T18:26:27Z"
 }
