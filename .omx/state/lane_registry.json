@@ -87741,6 +87741,47 @@
         }
       },
       "notes": "Receiver-close only the eight cc2 negative-delta leaves; local advisory, score_claim=false, promotion_eligible=false, no dispatch, MAIN review required."
+    },
+    {
+      "id": "lane_ddm_j9_geometry_escape_cure_and_refire_20260725",
+      "name": "DDM J9 geometry escape cure and refire",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "commit 3e8ab50020 D1-D3 minimal repair; 49 focused tests and two clean review passes"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j9_366_forced_geometry_resmoke_20260725T0534Z/full_run_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {

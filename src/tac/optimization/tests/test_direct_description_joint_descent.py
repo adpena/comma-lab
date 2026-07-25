@@ -39,6 +39,7 @@ from tac.optimization.direct_description_joint_descent import (
     load_stage_checkpoint,
     opening_candidate_gradient,
     parameter_group_indices,
+    project_adam_state_geometry,
     save_stage_checkpoint,
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError
@@ -238,6 +239,59 @@ def test_adam_resume_continuation_matches_uninterrupted_bits() -> None:
         assert np.array_equal(getattr(uninterrupted, field), getattr(continued, field))
 
 
+def test_every_accepted_step_checkpoint_kill_resume_is_bitfaithful(tmp_path: Path) -> None:
+    config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(TICKET)
+    gradient = np.asarray((0.2, -0.1, 0.05, -0.02, 0.3), dtype=np.float32)
+    accepted = clipped_adam_step(
+        initial_adam_state(5),
+        gradient,
+        learning_rate=0.01,
+        grad_clip=0.5,
+        ema_decay=0.997,
+    )
+    checkpoint = tmp_path / "stage01_accepted_global000001.npz"
+    cursor = {
+        "stage_index": 0,
+        "stage_step": 1,
+        "global_step": accepted.step,
+        "stage_end_reason": "CONTINUE",
+    }
+    save_stage_checkpoint(
+        checkpoint,
+        accepted,
+        stage_id="stage01",
+        config=config,
+        telemetry=({"event": "full_run_step", "global_step": accepted.step},),
+        run_cursor=cursor,
+        realized_archive={
+            "bytes": 123,
+            "sha256": "0" * 64,
+            "checkpoint_reason": "every_accepted_step",
+        },
+    )
+
+    resumed, metadata = load_stage_checkpoint(checkpoint, config=config)
+    uninterrupted = clipped_adam_step(
+        accepted,
+        gradient,
+        learning_rate=0.01,
+        grad_clip=0.5,
+        ema_decay=0.997,
+    )
+    continued = clipped_adam_step(
+        resumed,
+        gradient,
+        learning_rate=0.01,
+        grad_clip=0.5,
+        ema_decay=0.997,
+    )
+
+    assert metadata["run_cursor"] == cursor
+    assert metadata["realized_archive"]["checkpoint_reason"] == "every_accepted_step"
+    for field in ("theta", "ema", "first_moment", "second_moment"):
+        assert np.array_equal(getattr(uninterrupted, field), getattr(continued, field))
+
+
 def test_receiver_effective_surface_excludes_unencoded_j2_names() -> None:
     config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(TICKET)
     archive = (REPO / config.source_archive_path).read_bytes()
@@ -260,6 +314,37 @@ def test_receiver_effective_surface_excludes_unencoded_j2_names() -> None:
     lane_materialized, _ = compile_parameterized_archive(lift, zero, include_lane_programs=True)
     assert lane_materialized != archive
     assert len(lane_materialized) > len(archive)
+
+
+def test_geometry_escape_uses_rg1_projection_before_archive_construction() -> None:
+    config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(J5_TICKET)
+    archive = (REPO / config.source_archive_path).read_bytes()
+    lift = lift_v15_archive(archive)
+    state = initial_adam_state(len(lift.parameter_names))
+    theta = state.theta.copy()
+    theta[0] = np.float32(8192.0)
+    escaped = AdamStateV1(
+        step=1,
+        theta=theta,
+        ema=state.ema,
+        first_moment=state.first_moment,
+        second_moment=state.second_moment,
+    )
+
+    cured, events = project_adam_state_geometry(lift, escaped)
+    candidate_archive, realized = compile_parameterized_archive(
+        lift,
+        cured.theta,
+        include_lane_programs=False,
+    )
+
+    assert len(events) == 1
+    assert events[0]["event"] == "proposal_infeasible_geometry"
+    assert events[0]["status"] == "cured"
+    assert events[0]["projection"] == "rg1.project_polygon_center"
+    assert events[0]["requested_translation_xy"][0] == 8192
+    assert events[0]["projected_translation_xy"][0] == int(realized[0])
+    assert candidate_archive
 
 
 def test_full_run_schedule_refuses_more_than_quarter_uint8_quantum() -> None:
@@ -420,6 +505,9 @@ def test_launcher_has_first_integer_n600_abort_and_release_gates() -> None:
     assert "warm_start_realized_admitted" in source
     assert "warm_start_rejected_proposal_rollback" in source
     assert "warm-start rollback checkpoint immediate parse-back differs" in source
+    assert "_accepted_global{state.step:06d}.npz" in source
+    assert '"checkpoint_reason": "every_accepted_step"' in source
+    assert "accepted-step checkpoint cursor parse-back differs" in source
 
 
 def test_launcher_has_j5_pure_price_shrink_bucket_and_fire_gates() -> None:

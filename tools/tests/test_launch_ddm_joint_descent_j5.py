@@ -13,6 +13,7 @@ from tools.launch_ddm_joint_descent import (
     _c1_bucket_delta,
     _opening_exact_admitted,
     _seg_lexicographic_attempt_key,
+    _write_proposal_geometry_event,
     _write_structural_proposal_rejection,
 )
 
@@ -163,3 +164,38 @@ def test_structural_proposal_rejection_is_immutable_and_keeps_exact_authority_fa
     assert row["exact_replay_executed"] is False
     assert row["score_claim"] is False
     assert "INSTANCE proposal geometry only" in row["verdict_scope"]
+
+
+@pytest.mark.parametrize("status", ("cured", "rejected"))
+def test_geometry_event_is_typed_immutable_and_non_authoritative(
+    tmp_path: Path,
+    status: str,
+) -> None:
+    row = _write_proposal_geometry_event(
+        out_dir=tmp_path,
+        event={
+            "schema": "ddm_joint_descent_geometry_projection_event.v1",
+            "event": "proposal_infeasible_geometry",
+            "status": status,
+            "track_index": 7,
+            "track_object_id": 91,
+            "parameter_indices": [14, 15],
+            "parameter_names": ["island.track91.center_x", "island.track91.center_y"],
+            "requested_translation_xy": [8192, 0],
+            "projected_translation_xy": ([4, 0] if status == "cured" else None),
+            "scorer_extent_wh": [512, 384],
+            "projection": "rg1.project_polygon_center",
+            "reason": "fixture",
+            "verdict_scope": "INSTANCE proposal geometry only",
+            "score_claim": False,
+        },
+        candidate_id="local_exact_gradient",
+        global_step=8,
+        multiplier=1.0,
+        multiplier_index=0,
+        proposal_staging="continuous_uint8",
+    )
+
+    assert row["event"] == "proposal_infeasible_geometry"
+    assert row["status"] == status
+    assert row["score_claim"] is False
