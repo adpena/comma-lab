@@ -24392,3 +24392,27 @@ charters). NO RESPAWN (DISTANCE test: gauge lever dominated for this composition
 route already served by ms2r on the SOLUTION side, where the tolerance actually lives).
 Landed: fail-closed compiler + SHA/byte/schema-pinned config + typed receipt 885119e5….
 Pointer 0.1910828242 [contest-CPU] UNMOVED — means.
+
+### FEED-603-ms2r-r3-box-member (2026-07-25, arm ddm_ms2r_r3_box_tolerance_solve rc=0, MERGED 0cb21365ea)
+Disposition: `MEASURED_BATCH32_RECEIVER_CLOSED_Q4_Q8_CHEAPEST_FINITE_FAMILY_BOX_MEMBER;
+FULL_TYPED_162_CELL_WATERFILL_BLOCKED` [macOS-CPU advisory · score_claim=false]. THE HEADLINE
+(decomposed, MAIN-verified to all digits): **first receiver-closed archive achieving box
+distortion** — exact q4/q8 family member at 136,839/136,839 errors (208 q4 + 392 q8 pairs),
+d_seg 0.001159998575846354 (AT the box target) + d_pose 0.01663 — **but 291,205,400 RAW bytes**
+(seg 0.116 + pose 0.408 + rate 193.90 = 194.4256). RAW_COMPACT won ALL 50 real-coder stream
+races (the q4/q8 predictor-record family is incompressible by the coder stack). Measured family
+exchange rate: **405.50 B/corrected-error vs 1.27 B/err breakeven = 319× off**; 2,126× rate cut
+needed to reach ~137KB. verdict_scope: INSTANCE × q4/q8-FAMILY — the THIRD consecutive
+rate-dead realized-plane family (plane storage → relaxed-receiver → q4/q8), each independently
+corroborating the v10 DESCRIPTION PIVOT: solution existence at box distortion is now PROVEN
+receiver-closed; the crux is and remains DESCRIPTION. Custody: q1 exact = 17,927 (SHA-bound,
+canonical; 17,931 was rounded arithmetic — retired). Per-stratum error split at the member:
+Road 55,727 / MyCar 25,972 / Undrivable 24,375 / Lane 20,193 / Movable 10,572. Landed: 600
+local edge lambdas + 5-stratum diagnostics + 29 EV1 accounting slopes + the registered
+waterfill callable (successor contract, fail-closed). TYPED WATERFILL (#701) BLOCKED on ONE
+NAMED EDGE: `EV1 v19_pair_join.shared_rate_home.per_pair_allocation = null` — no lawful
+C1-record → stratum×visibility×G4 foreign key; all 162 λ null; headline builder refuses on 4
+exact blockers (pose tube inactive · typed alternation · typed block atlas · per-dim quanta).
+Also noted: J8F/campaign endpoint currently lacks composable C1 foreign keys (composition debt,
+not a campaign defect). Route: ev2 producer arm at the named edge (3+ consumers: #701 waterfill
+· rd1 162 duals · headline builder). Pointer 0.1910828242 [contest-CPU] UNMOVED — means.
