@@ -874,6 +874,7 @@ class ActionEffect:
     region_ids: tuple[str, ...] = ()
     payload_sections: tuple[str, ...] = ()
     trained_groups: tuple[str, ...] = ()
+    composed_action_ids: tuple[str, ...] = ()
     old_d_seg: float | None = None
     new_d_seg: float | None = None
     old_d_pose: float | None = None
@@ -897,6 +898,8 @@ class ActionEffect:
     inflate_survived: bool | None = None
     restore_state_pass: bool | None = None
     artifact_ref: str | None = None
+    base_archive_sha256: str | None = None
+    base_payload_sha256: str | None = None
     archive_sha256: str | None = None
     payload_sha256: str | None = None
     base_state_sha256: str | None = None
@@ -1041,9 +1044,18 @@ class ActionEffect:
             raise ValueError("payload_sections must be a tuple")
         if not isinstance(self.trained_groups, tuple):
             raise ValueError("trained_groups must be a tuple")
+        if not isinstance(self.composed_action_ids, tuple):
+            raise ValueError("composed_action_ids must be a tuple")
+        if self.composed_action_ids and (
+            len(self.composed_action_ids) < 2
+            or any(not isinstance(value, str) or not value.strip() for value in self.composed_action_ids)
+        ):
+            raise ValueError("composed_action_ids must carry at least two non-empty action IDs")
         if not isinstance(self.blockers, tuple):
             raise ValueError("blockers must be a tuple")
         for name, value in (
+            ("base_archive_sha256", self.base_archive_sha256),
+            ("base_payload_sha256", self.base_payload_sha256),
             ("archive_sha256", self.archive_sha256),
             ("payload_sha256", self.payload_sha256),
             ("base_state_sha256", self.base_state_sha256),
@@ -1075,6 +1087,7 @@ class ActionEffect:
         region_ids: Sequence[str] = (),
         payload_sections: Sequence[str] = (),
         trained_groups: Sequence[str] = (),
+        composed_action_ids: Sequence[str] = (),
         old_d_seg: float | None = None,
         new_d_seg: float | None = None,
         old_d_pose: float | None = None,
@@ -1094,6 +1107,8 @@ class ActionEffect:
         inflate_survived: bool | None = None,
         restore_state_pass: bool | None = None,
         artifact_ref: str | None = None,
+        base_archive_sha256: str | None = None,
+        base_payload_sha256: str | None = None,
         archive_sha256: str | None = None,
         payload_sha256: str | None = None,
         base_state_sha256: str | None = None,
@@ -1170,6 +1185,7 @@ class ActionEffect:
             region_ids=_v1_str_tuple(region_ids),
             payload_sections=_v1_str_tuple(payload_sections),
             trained_groups=_v1_str_tuple(trained_groups),
+            composed_action_ids=_v1_str_tuple(composed_action_ids),
             old_d_seg=old_d_seg,
             new_d_seg=new_d_seg,
             old_d_pose=old_d_pose,
@@ -1203,6 +1219,12 @@ class ActionEffect:
             inflate_survived=inflate_survived,
             restore_state_pass=restore_state_pass,
             artifact_ref=None if artifact_ref is None else str(artifact_ref),
+            base_archive_sha256=(
+                None if base_archive_sha256 is None else str(base_archive_sha256)
+            ),
+            base_payload_sha256=(
+                None if base_payload_sha256 is None else str(base_payload_sha256)
+            ),
             archive_sha256=None if archive_sha256 is None else str(archive_sha256),
             payload_sha256=None if payload_sha256 is None else str(payload_sha256),
             base_state_sha256=None if base_state_sha256 is None else str(base_state_sha256),
@@ -2008,6 +2030,10 @@ class ActionEffect:
             _v1_first_text(candidate_archive, "sha256")
             or _v1_first_text(row, "candidate_archive_sha256", "archive_sha256")
         )
+        source_sha = (
+            _v1_first_text(source_archive, "sha256")
+            or _v1_first_text(row, "source_archive_sha256", "base_archive_sha256")
+        )
         action_id = (
             _v1_first_text(row, "action_id", "candidate_id", "observation_id")
             or f"{target_kind}:{candidate_sha[:12] if candidate_sha else 'candidate'}"
@@ -2074,7 +2100,8 @@ class ActionEffect:
             inflate_survived=inflate_survived,
             restore_state_pass=_v1_first_bool(row, "restore_state_pass", "restore_state_passed"),
             artifact_ref=_v1_first_text(row, "artifact_ref", "manifest_path"),
-            archive_sha256=_v1_first_text(candidate_archive, "sha256") or _v1_first_text(row, "candidate_archive_sha256"),
+            base_archive_sha256=source_sha,
+            archive_sha256=candidate_sha,
             payload_sha256=_v1_first_text(row, "payload_sha256"),
             evaluator_hash=_v1_first_text(auth, "evaluator_hash", "runtime_content_sha256"),
             dependency_hash=_v1_first_text(auth, "dependency_hash", "runtime_tree_sha256"),
@@ -2094,6 +2121,7 @@ class ActionEffect:
         payload["region_ids"] = list(self.region_ids)
         payload["payload_sections"] = list(self.payload_sections)
         payload["trained_groups"] = list(self.trained_groups)
+        payload["composed_action_ids"] = list(self.composed_action_ids)
         payload["blockers"] = list(self.blockers)
         payload["receiver_surface"] = self.receiver_surface.as_dict()
         payload["old_archive_bytes"] = self.old_bytes
@@ -2133,6 +2161,7 @@ class ActionEffect:
             region_ids=_v1_str_tuple(payload.get("region_ids") or ()),
             payload_sections=_v1_str_tuple(payload.get("payload_sections") or ()),
             trained_groups=_v1_str_tuple(payload.get("trained_groups") or ()),
+            composed_action_ids=_v1_str_tuple(payload.get("composed_action_ids") or ()),
             old_d_seg=_v1_first_float(payload, "old_d_seg"),
             new_d_seg=_v1_first_float(payload, "new_d_seg"),
             old_d_pose=_v1_first_float(payload, "old_d_pose"),
@@ -2160,6 +2189,16 @@ class ActionEffect:
             inflate_survived=_v1_bool_or_none(payload.get("inflate_survived")),
             restore_state_pass=_v1_first_bool(payload, "restore_state_pass", "restore_state_passed"),
             artifact_ref=None if payload.get("artifact_ref") is None else str(payload["artifact_ref"]),
+            base_archive_sha256=(
+                None
+                if payload.get("base_archive_sha256") is None
+                else str(payload["base_archive_sha256"])
+            ),
+            base_payload_sha256=(
+                None
+                if payload.get("base_payload_sha256") is None
+                else str(payload["base_payload_sha256"])
+            ),
             archive_sha256=None if payload.get("archive_sha256") is None else str(payload["archive_sha256"]),
             payload_sha256=None if payload.get("payload_sha256") is None else str(payload["payload_sha256"]),
             base_state_sha256=(

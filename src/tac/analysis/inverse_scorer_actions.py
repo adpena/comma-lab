@@ -1664,6 +1664,11 @@ def _build_candidate(
             "producer": "inverse_scorer_actions",
             "consumer": "inverse_evaluate_candidate_queue",
             "promotion_eligible": False,
+            "composed_action_ids": (
+                list(dependencies)
+                if candidate_kind == "composite"
+                else []
+            ),
             **support_identity,
         }
     )

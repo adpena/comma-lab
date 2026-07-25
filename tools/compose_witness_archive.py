@@ -19,11 +19,12 @@ PHASE-A (CPU / $0 / no GPU / no launch):
 PHASE-B (CPU / $0):
   7. Step 6: assemble the 4-section archive.zip (store + residual + pose + manifest) + MLX-free
      inflate.py; run inflate (DETERMINISTIC FLOOR: empty residual) -> realized d_seg through R
-     (advisory) -> compute_contest_score -> emit the STAGED dual CPU/CUDA upstream/evaluate.py command
+     (advisory) -> audit exact coupled score surface -> emit the STAGED dual CPU/CUDA eval command
 
-means != ends (NO-FAKE): this is composition PLUMBING. The pointer (0.19110) moves ONLY when the
-residual-INR run lands + the 4-section archive byte-closes + exact-evals below 0.19110. Every number
-emitted is ``[advisory] NON-PROMOTABLE``. NO GPU, NO training launch, NO touching the live n600 run.
+means != ends (NO-FAKE): this is composition PLUMBING. The competitive target is read from the
+canonical frontier pointer; it moves only when the residual-INR run lands + the 4-section archive
+byte-closes + exact CPU/CUDA eval beats that target. Every number emitted is
+``[advisory] NON-PROMOTABLE``. NO GPU, NO training launch, NO touching the live n600 run.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ import argparse
 import json
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -43,10 +44,11 @@ for _p in (_REPO, _REPO / "src", _REPO / "upstream"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-from tac.contest_score import compute_contest_score, rate_term  # noqa: E402
 from tac.contest_compliance import compute_upstream_snapshot_sha256  # noqa: E402
-from tac.v2_compose import bulk_generator as bg  # noqa: E402
+from tac.contest_score import rate_term  # noqa: E402
+from tac.score_geometry import score_sublevel_audit  # noqa: E402
 from tac.v2_compose import archive_grammar as ag  # noqa: E402
+from tac.v2_compose import bulk_generator as bg  # noqa: E402
 from tac.v2_compose import launch_command as lc  # noqa: E402
 from tac.v2_compose import pose_sidecar as ps  # noqa: E402
 from tac.v2_compose import residual_target as rt  # noqa: E402
@@ -64,26 +66,92 @@ from tac.v2_compose.store_learn_split import (  # noqa: E402
     load_reach_kstar,
     load_warp_recoverability_from_grok,
 )
+
 # SCREW_REGIME is the single source of truth for the per-class PHYSICAL warp regime (A3.1: one
 # derivation shared by phase_a + phase_b; A3.2: the inflate CONSUMES the stored codes).
 from tools.measure_screw_reach_through_R import SCREW_REGIME  # noqa: E402
 
-_D_POSE_SIDECAR = 3.4e-5  # the d_pose the stored sidecar TARGETS (FEED-lj; advisory BUDGET, not yet
-#                           validated for THIS composed pipeline -- see the OPEN-axis honesty in B3).
+_D_POSE_SIDECAR = 3.4e-5  # Legacy stored-sidecar planning assumption only; never an admission gate.
 _DEF_CACHE = "experiments/results/mlx_fleet_gt_cache/gt_n96.npz"
 _DEF_GROK = "experiments/results/grok_pose_warp_dseg_20260629T181000Z/results.json"
 _DEF_REACH = "experiments/results/screw_reach/reach_n96.json"
 _RESIDUAL_BUNDLE_NAME = "residual_bundle.npz"  # the --residual-target-npz the trainer consumes
-_FRONTIER_S = 0.19110
+_DEFAULT_FRONTIER_POINTER = ".omx/state/canonical_frontier_pointer.json"
 
 
 def _utc() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _resolve(p: str) -> Path:
     pp = Path(p)
     return pp if pp.is_absolute() else (_REPO / pp)
+
+
+def load_effective_frontier_target(pointer_path: str | Path) -> dict[str, Any]:
+    """Load the competitive target from the canonical pointer, fail closed."""
+    path = _resolve(str(pointer_path))
+    try:
+        pointer = json.loads(path.read_text(encoding="utf-8"))
+        effective = pointer["effective_frontier"]
+        score = float(effective["score"])
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+        raise ValueError(
+            f"canonical frontier pointer lacks a usable effective score: {path}"
+        ) from exc
+    if score < 0.0:
+        raise ValueError(f"canonical effective frontier score is negative: {score}")
+    return {
+        "score": score,
+        "axis": effective.get("axis"),
+        "custody": effective.get("custody"),
+        "evidence_grade": effective.get("evidence_grade"),
+        "score_precision": effective.get("score_precision"),
+        "source": effective.get("source"),
+        "pointer_path": str(path),
+    }
+
+
+def _frontier_target_for_args(args: argparse.Namespace) -> dict[str, Any]:
+    return load_effective_frontier_target(
+        getattr(args, "frontier_pointer", _DEFAULT_FRONTIER_POINTER)
+    )
+
+
+def coupled_score_surface_payload(
+    *,
+    target_score: float,
+    d_seg: float,
+    d_pose: float,
+    archive_zip_bytes: int,
+    external_counted_bytes: int = 0,
+) -> dict[str, Any]:
+    """Return the exact coupled audit with every counted byte charged."""
+    honest_total_bytes = archive_zip_bytes + external_counted_bytes
+    audit = score_sublevel_audit(
+        target_score=target_score,
+        d_seg=d_seg,
+        d_pose=d_pose,
+        archive_bytes=honest_total_bytes,
+    )
+    return {
+        "target_score": audit.target_score,
+        "score": audit.score,
+        "signed_target_slack": audit.signed_target_slack,
+        "inside_strict_sublevel": audit.inside_strict_sublevel,
+        "seg_term": audit.seg_term,
+        "pose_term": audit.pose_term,
+        "rate_term": audit.rate_term,
+        "archive_bytes_charged": honest_total_bytes,
+        "archive_zip_bytes": archive_zip_bytes,
+        "external_counted_bytes": external_counted_bytes,
+        "conditional_d_seg_boundary": audit.boundary_d_seg_given_pose_and_bytes,
+        "conditional_d_pose_boundary": audit.boundary_d_pose_given_seg_and_bytes,
+        "conditional_archive_byte_boundary": (
+            audit.boundary_archive_bytes_given_distortions
+        ),
+        "admission_rule": "exact coupled score only; component coordinates are conditional",
+    }
 
 
 def _git_head() -> str | None:
@@ -105,7 +173,7 @@ def _provenance() -> dict[str, Any]:
     raises): the upstream sha uses the canonical ``tac.contest_compliance`` helper."""
     try:
         upstream_sha = compute_upstream_snapshot_sha256(_REPO)
-    except Exception:  # noqa: BLE001 (provenance must never block the pipeline)
+    except Exception:
         upstream_sha = None
     return {
         "git_head": _git_head(),
@@ -188,6 +256,8 @@ def keyframe_payload_accounting(args: argparse.Namespace) -> dict[str, Any]:
 
 def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
     """PHASE-A: plan + deterministic bulk + residual target + pose sidecar + launch command."""
+    frontier_target = _frontier_target_for_args(args)
+    target_score = float(frontier_target["score"])
     cache = _resolve(args.gt_cache)
     print(f"[phase-A] loading GT cache {cache} ...", file=sys.stderr)
     z = np.load(cache, allow_pickle=False)
@@ -248,7 +318,7 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
     # store scales by (600/n_pairs) keyframes. Report both the measured-subset + the projected-600.
     proj_kf_full = plan.keyframe_count
     measured_kf = len(bulk.keyframes)
-    store_bytes_proj600 = int(round(store_bytes * (proj_kf_full / max(measured_kf, 1))))
+    store_bytes_proj600 = round(store_bytes * (proj_kf_full / max(measured_kf, 1)))
 
     # --- byte budget arithmetic ---
     # EXPLICIT real-luma pose-carrier keyframe line item (rule-118 COUNTED; the accounting gap the
@@ -257,8 +327,13 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
     kf_bytes = int(kf["keyframe_blob_bytes"])
     known_store_excl_kf = store_bytes_proj600 + pose_bytes
     known_store = known_store_excl_kf + kf_bytes  # HONEST total: partition store + pose sidecar + keyframes
-    break_even_dseg = float((_FRONTIER_S - (10.0 * _D_POSE_SIDECAR) ** 0.5 - rate_term(known_store)) / 100.0)
-    sub015_dseg = float((0.15 - (10.0 * _D_POSE_SIDECAR) ** 0.5 - rate_term(known_store)) / 100.0)
+    conditional_surface = score_sublevel_audit(
+        target_score=target_score,
+        d_seg=0.0,
+        d_pose=_D_POSE_SIDECAR,
+        archive_bytes=known_store,
+    )
+    break_even_dseg = conditional_surface.boundary_d_seg_given_pose_and_bytes
     print(f"[phase-A] keyframe payload (real-luma pose carrier): {kf_bytes} B "
           f"({kf['source']}; rate +{kf['keyframe_blob_rate']:.5f}) -> honest known-store "
           f"{known_store} B (rate {rate_term(known_store):.5f})", file=sys.stderr)
@@ -278,9 +353,10 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         "residual_inr_bytes": None,  # OPEN — the GPU run
         "free_generated_bytes": 0,
         "deterministic_bulk_dseg_floor": residual.bulk_dseg,
-        "break_even_d_seg_at_known_store": break_even_dseg,
-        "sub015_d_seg_at_known_store": sub015_dseg,
-        "d_pose_assumption": _D_POSE_SIDECAR,
+        "conditional_d_seg_boundary_at_known_store_and_pose_assumption": break_even_dseg,
+        "coupled_target_score": target_score,
+        "coupled_target_custody": frontier_target,
+        "d_pose_planning_assumption": _D_POSE_SIDECAR,
         "d_pose_assumption_note": (
             "BUDGET assumption (the stored-screw/twist TARGET), NOT yet validated for THIS composed "
             "pipeline. d_pose is an OPEN axis until measured on the composed witness (B3)."
@@ -305,12 +381,18 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
           f"-> {bundle_path} ({bundle_bytes} B training artifact)", file=sys.stderr)
 
     # --- Step 4c (NEW, the B2 GEOMETRY gate): does the composition mask COVER the residual the
-    # INR must close? Gate the GPU GO on unreachable_dseg < the sub-0.15 d_seg budget. ---
+    # INR must close? Gate only on the CONDITIONAL d_seg coordinate of the live score surface. ---
+    if break_even_dseg is None:
+        raise ValueError(
+            "known store plus pose assumption already exceeds the coupled target before Seg; "
+            "no non-negative d_seg boundary exists"
+        )
     coverage = measure_composition_coverage(
-        residual.residual_mask, bundle.composition_mask, dseg_budget=sub015_dseg)
+        residual.residual_mask, bundle.composition_mask, dseg_budget=break_even_dseg)
     cov_summary = coverage.to_summary()
     print(f"[phase-A] COVERAGE GATE: coverage={coverage.coverage:.4f} "
-          f"unreachable_dseg={coverage.unreachable_dseg:.5f} (budget sub015={sub015_dseg:.5f}) "
+          f"unreachable_dseg={coverage.unreachable_dseg:.5f} "
+          f"(conditional target boundary={break_even_dseg:.5f}) "
           f"-> GATE {'PASS' if coverage.passes_gate else 'FLAG (NO-GO: geometry ceiling)'}",
           file=sys.stderr)
     if not coverage.passes_gate:
@@ -345,7 +427,8 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
         "score_claim": False,
         "promotable": False,
-        "frontier_pointer": "UNMOVED 0.19110",
+        "frontier_target": frontier_target,
+        "pointer_moved": False,
         "gt_cache": str(cache),
         "n_pairs_cache": n_pairs,
         "n_pairs_clip": args.n_pairs_clip,
@@ -370,7 +453,8 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         "open_axes": {
             "d_seg": (
                 f"OPEN: can the SMALL residual INR close d_seg from the {residual.bulk_dseg:.4f} "
-                f"deterministic floor to ~{break_even_dseg:.5f} (beat 0.19110)? Bounded BELOW by the "
+                f"deterministic floor to ~{break_even_dseg:.5f} (conditional coordinate for target "
+                f"{target_score:g})? Bounded BELOW by the "
                 f"coverage gate's unreachable_dseg={coverage.unreachable_dseg:.5f}. Settled by the GPU "
                 "residual run + byte-closed exact eval."
             ),
@@ -392,7 +476,7 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         "means_not_ends": (
             "PHASE-A built the composition + the residual BUNDLE + emitted the residual-ONLY command "
             "(a MEANS). The pointer moves only when that run lands + the 4-section archive byte-closes "
-            "+ evaluate.py (CPU+CUDA) < 0.19110."
+            f"+ evaluate.py (CPU+CUDA) < current canonical target {target_score:g}."
         ),
     }
     return report
@@ -468,6 +552,8 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
     With ``--residual-inr-weights`` it byte-closes the REAL v2 row (store + residual INR + pose);
     without it, the DETERMINISTIC FLOOR (empty residual). (B1: the residual-INR section + inflate
     compose hook are now wired -- no SystemExit.)"""
+    frontier_target = _frontier_target_for_args(args)
+    target_score = float(frontier_target["score"])
     cache = _resolve(args.gt_cache)
     z = np.load(cache, allow_pickle=False)
     lstars = np.asarray(z["lstars"], dtype=np.int64)
@@ -593,15 +679,23 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
     is_floor = not residual_blob
     s_budget = None
     s_budget_note = None
+    coupled_score_surface = None
     if d_seg is not None:
         # Use the MEASURED composed d_pose when available (B3 -- the honest pipeline value); else the
         # stored-target BUDGET, clearly labeled as an assumption (NO-FAKE #8).
         d_pose_for_s = d_pose_measured if d_pose_measured is not None else _D_POSE_SIDECAR
-        s_budget = compute_contest_score(d_seg, d_pose_for_s, zip_bytes)
+        coupled_score_surface = coupled_score_surface_payload(
+            target_score=target_score,
+            d_seg=d_seg,
+            d_pose=d_pose_for_s,
+            archive_zip_bytes=zip_bytes,
+            external_counted_bytes=kf_bytes,
+        )
+        s_budget = float(coupled_score_surface["score"])
         s_budget_note = (
             "S = realized d_seg + " + ("MEASURED composed d_pose" if d_pose_measured is not None
             else "stored-target d_pose BUDGET 3.4e-5 (NOT measured for this composition)")
-            + " + real rate. " + (
+            + " + honest counted rate (archive.zip plus any external keyframe payload). " + (
                 "DETERMINISTIC FLOOR row (empty residual; f0==f1 so PoseNet sees ~no motion -> "
                 "d_pose high). Confirms FACT 2; NOT the v2 row." if is_floor else
                 "v2 row (store + residual INR + pose).")
@@ -622,7 +716,8 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         "authority": "[advisory] NON-PROMOTABLE",
         "score_claim": False,
         "promotable": False,
-        "frontier_pointer": "UNMOVED 0.19110",
+        "frontier_target": frontier_target,
+        "pointer_moved": False,
         "archive_zip": str(zip_path),
         "warp_type_codes": warp_codes,
         "residual_inr": residual_info,
@@ -630,6 +725,7 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         "realized": realized,
         "s_budget_advisory": s_budget,
         "s_budget_note": s_budget_note,
+        "coupled_score_surface": coupled_score_surface,
         "d_pose_axis": (
             "OPEN: d_pose of the composed witness is validated through PoseNet on the inflated pairs "
             "(advisory) "
@@ -643,7 +739,7 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
             "PHASE-B byte-closed the "
             + ("v2 row (store + residual INR + pose)." if residual_blob else "DETERMINISTIC FLOOR.")
             + " The pointer moves only when the FULL 4-section archive byte-closes + evaluate.py "
-            "(CPU+CUDA) < 0.19110."
+            f"(CPU+CUDA) < current canonical target {target_score:g}."
         ),
     }
 
@@ -653,9 +749,8 @@ def _load_posenet_cpu():
     from tac.boundary_math.seg_core import _ensure_upstream_on_path
 
     _ensure_upstream_on_path()
-    from safetensors.torch import load_file  # noqa: E402
-
-    from modules import PoseNet  # type: ignore  # upstream  # noqa: E402
+    from modules import PoseNet  # type: ignore  # upstream
+    from safetensors.torch import load_file
 
     ckpt = _REPO / "upstream" / "models" / "posenet.safetensors"
     if not ckpt.exists():
@@ -737,7 +832,7 @@ def _inflate_and_realize(
                 "d_pose; the residual INR (which differs f0/f1 in the override region) closes it. "
                 "Advisory CPU; authority is upstream/evaluate.py."
             )
-        except Exception as exc:  # noqa: BLE001 (advisory; never block the byte-close)
+        except Exception as exc:
             out["d_pose_error"] = f"{type(exc).__name__}: {exc}"
     return out
 
@@ -748,6 +843,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--gt-cache", default=_DEF_CACHE, help="GT npz (lstars, gt_f1, gt_poses)")
     ap.add_argument("--grok-results", default=_DEF_GROK, help="measure_pose_warp_dseg results.json")
     ap.add_argument("--reach-json", default=_DEF_REACH, help="measure_screw_reach_through_R reach.json")
+    ap.add_argument(
+        "--frontier-pointer",
+        default=_DEFAULT_FRONTIER_POINTER,
+        help="canonical pointer supplying the effective competitive target",
+    )
     ap.add_argument("--n-pairs-clip", type=int, default=600, help="full clip pair count (for byte projection)")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--residual-epochs", type=int, default=1500)

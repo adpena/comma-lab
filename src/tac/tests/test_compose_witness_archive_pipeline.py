@@ -20,10 +20,9 @@ byte-closed upstream/evaluate.py row from the (HELD) residual-INR GPU run. [macO
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
-import zlib
-import struct
 from pathlib import Path
 
 import numpy as np
@@ -93,7 +92,7 @@ def test_residual_blob_from_weights_npz_roundtrip(tmp_path):
     from tac.v2_compose.archive_grammar import parse_residual_blob
 
     tool = _load_compose_tool()
-    bank = dict(n_scales=2, n_orient0=3, f0=2.0, base=2.0, n_iso=2)
+    bank = {"n_scales": 2, "n_orient0": 3, "f0": 2.0, "base": 2.0, "n_iso": 2}
     p = tmp_path / "levelset_witness_ema_BEST.npz"
     params = _synth_ema_npz(p, H=24, W=32, hidden=6, n_hidden=2, mod=4, bank=bank)
     blob, cfg = tool.residual_blob_from_weights_npz(p, learn_classes=(1, 3), dilate=2, mask_mode="boundary_annulus")
@@ -163,6 +162,51 @@ def test_warp_codes_are_physical_regime():
     assert tool._warp_codes_for_clip() == screw_regime_warp_codes(SCREW_REGIME) == [0, 0, 2, 0, 1]
 
 
+def test_effective_target_is_loaded_from_canonical_pointer(tmp_path):
+    """The codec compiler must not retain a stale hardcoded frontier score."""
+    tool = _load_compose_tool()
+    pointer = tmp_path / "canonical_frontier_pointer.json"
+    pointer.write_text(
+        json.dumps(
+            {
+                "effective_frontier": {
+                    "score": 0.172,
+                    "axis": "official_leaderboard",
+                    "custody": "external target only",
+                    "evidence_grade": "[official-leaderboard display]",
+                    "score_precision": "official_display",
+                    "source": "upstream_official_leaderboard",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    target = tool.load_effective_frontier_target(pointer)
+
+    assert target["score"] == 0.172
+    assert target["axis"] == "official_leaderboard"
+    assert target["custody"] == "external target only"
+
+
+def test_coupled_surface_charges_external_keyframe_payload() -> None:
+    """Phase-B planning score uses ZIP plus every external counted byte."""
+    tool = _load_compose_tool()
+
+    audit = tool.coupled_score_surface_payload(
+        target_score=0.172,
+        d_seg=0.0002,
+        d_pose=0.00002331,
+        archive_zip_bytes=167_125,
+        external_counted_bytes=32_875,
+    )
+
+    assert audit["archive_bytes_charged"] == 200_000
+    assert audit["external_counted_bytes"] == 32_875
+    assert audit["inside_strict_sublevel"] is True
+    assert audit["admission_rule"].startswith("exact coupled score")
+
+
 def _build_store_and_pose(tmp_path, *, H, W, n_pairs, reach_kstar, n_classes=5):
     from tac.v2_compose.archive_grammar import build_store_blob
     from tac.v2_compose.pose_sidecar import build_pose_sidecar_from_cache_poses
@@ -198,7 +242,7 @@ def test_phase_b_residual_archive_inflate_equals_oracle_end_to_end(tmp_path):
 
     tool = _load_compose_tool()
     H, W, n_pairs, reach_kstar = 24, 32, 3, 2
-    bank = dict(n_scales=2, n_orient0=3, f0=2.0, base=2.0, n_iso=2)
+    bank = {"n_scales": 2, "n_orient0": 3, "f0": 2.0, "base": 2.0, "n_iso": 2}
     store_blob, pose_blob, poses_f16 = _build_store_and_pose(
         tmp_path, H=H, W=W, n_pairs=n_pairs, reach_kstar=reach_kstar)
 
@@ -237,7 +281,11 @@ def test_phase_b_residual_archive_inflate_equals_oracle_end_to_end(tmp_path):
 def _kf_args(**kw):
     from types import SimpleNamespace
 
-    base = dict(keyframe_payload_bytes=0, keyframe_payload_path=None, keyframe_count=None)
+    base = {
+        "keyframe_payload_bytes": 0,
+        "keyframe_payload_path": None,
+        "keyframe_count": None,
+    }
     base.update(kw)
     return SimpleNamespace(**base)
 

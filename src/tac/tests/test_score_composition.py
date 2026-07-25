@@ -14,10 +14,11 @@ Coverage:
 from __future__ import annotations
 
 import math
+from dataclasses import FrozenInstanceError
 
 import pytest
 
-from tac.cathedral.consumer_contract import AxisDecomposition, HookNumber
+from tac.cathedral.consumer_contract import AxisDecomposition
 from tac.provenance import (
     build_provenance_for_predicted,
     provenance_to_dict,
@@ -27,12 +28,11 @@ from tac.score_composition import (
     CANONICAL_RATE_DENOM_BYTES,
     CANONICAL_RATE_MULTIPLIER,
     CANONICAL_SEG_MULTIPLIER,
-    ComposedScoreDelta,
+    audit_axis_decomposition_against_target,
     compose_scalar_delta,
     compose_score_from_axes,
     load_baseline_pose_from_canonical_frontier_pointer,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -74,7 +74,7 @@ class TestAxisDecompositionContract:
     def test_frozen_dataclass(self) -> None:
         """AxisDecomposition is frozen; field mutation raises."""
         d = _basic_decomposition()
-        with pytest.raises(Exception):  # FrozenInstanceError or AttributeError
+        with pytest.raises(FrozenInstanceError):
             d.predicted_d_seg_delta = 0.5  # type: ignore[misc]
 
     def test_required_fields_present(self) -> None:
@@ -365,6 +365,65 @@ class TestComposeScalarDelta:
         assert scalar == pytest.approx(25.0 * -200 / 37_545_489)
 
 
+class TestCoupledTargetAdmission:
+    """The total score surface, not independent axes, controls admission."""
+
+    def test_admits_rate_gain_that_overpays_seg_regression(self) -> None:
+        decomposition = _basic_decomposition(
+            d_seg_delta=0.00004039,
+            d_pose_delta=0.0,
+            archive_bytes_delta=-10_000,
+        )
+
+        audit = audit_axis_decomposition_against_target(
+            decomposition,
+            target_score=0.172,
+            current_d_seg=0.00055961,
+            current_d_pose=0.00002942,
+            current_archive_bytes=177_169,
+        )
+
+        assert audit.seg_term_delta > 0.0
+        assert audit.rate_term_delta < 0.0
+        assert audit.improves_score is True
+        assert audit.jointly_coupled_transition is True
+
+    def test_rejects_seg_gain_when_byte_cost_makes_total_worse(self) -> None:
+        decomposition = _basic_decomposition(
+            d_seg_delta=-0.00005961,
+            d_pose_delta=0.0,
+            archive_bytes_delta=10_000,
+        )
+
+        audit = audit_axis_decomposition_against_target(
+            decomposition,
+            target_score=0.172,
+            current_d_seg=0.00055961,
+            current_d_pose=0.00002942,
+            current_archive_bytes=177_169,
+        )
+
+        assert audit.seg_term_delta < 0.0
+        assert audit.rate_term_delta > 0.0
+        assert audit.improves_score is False
+
+    def test_refuses_unphysical_after_state_instead_of_clamping(self) -> None:
+        decomposition = _basic_decomposition(
+            d_seg_delta=0.0,
+            d_pose_delta=-1.0,
+            archive_bytes_delta=0,
+        )
+
+        with pytest.raises(ValueError, match="refuses instead of clamping"):
+            audit_axis_decomposition_against_target(
+                decomposition,
+                target_score=0.172,
+                current_d_seg=0.00055961,
+                current_d_pose=0.00002942,
+                current_archive_bytes=177_169,
+            )
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # ComposedScoreDelta + Provenance propagation tests
 # ─────────────────────────────────────────────────────────────────────────
@@ -432,7 +491,7 @@ class TestComposedScoreDeltaContract:
         result = compose_score_from_axes(
             d, current_archive_bytes=337_944, current_d_pose=3.4e-5
         )
-        with pytest.raises(Exception):
+        with pytest.raises(FrozenInstanceError):
             result.total_delta = 99.0  # type: ignore[misc]
 
 
@@ -482,8 +541,8 @@ class TestCathedralAutopilotBackwardCompat:
         if str(tools_root) not in sys.path:
             sys.path.insert(0, str(tools_root))
         from cathedral_autopilot_autonomous_loop import (
-            _compose_per_axis_decomposition_if_present,
             CandidateRow,
+            _compose_per_axis_decomposition_if_present,
         )
 
         contribution = {
@@ -513,8 +572,8 @@ class TestCathedralAutopilotBackwardCompat:
         if str(tools_root) not in sys.path:
             sys.path.insert(0, str(tools_root))
         from cathedral_autopilot_autonomous_loop import (
-            _compose_per_axis_decomposition_if_present,
             CandidateRow,
+            _compose_per_axis_decomposition_if_present,
         )
 
         decomp = _basic_decomposition()
@@ -549,8 +608,8 @@ class TestCathedralAutopilotBackwardCompat:
         if str(tools_root) not in sys.path:
             sys.path.insert(0, str(tools_root))
         from cathedral_autopilot_autonomous_loop import (
-            _compose_per_axis_decomposition_if_present,
             CandidateRow,
+            _compose_per_axis_decomposition_if_present,
         )
 
         # NaN in per-axis emission → AxisDecomposition rejects at construction
@@ -582,8 +641,8 @@ class TestCathedralAutopilotBackwardCompat:
         if str(tools_root) not in sys.path:
             sys.path.insert(0, str(tools_root))
         from cathedral_autopilot_autonomous_loop import (
-            _compose_per_axis_decomposition_if_present,
             CandidateRow,
+            _compose_per_axis_decomposition_if_present,
         )
 
         contribution = {

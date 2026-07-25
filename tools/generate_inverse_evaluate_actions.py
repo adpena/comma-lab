@@ -114,12 +114,19 @@ def _find_hinerv_four_arm_sources(payload: Mapping[str, Any]) -> list[Mapping[st
 
     def walk(value: Any) -> None:
         if isinstance(value, Mapping):
-            if (
-                isinstance(value.get("four_arm_ablation"), Mapping)
-                or str(value.get("schema") or "") == "hi_nerv_target_region_birth_four_arm_ablation.v1"
-            ):
+            has_wrapped_ablation = isinstance(value.get("four_arm_ablation"), Mapping)
+            is_direct_ablation = (
+                str(value.get("schema") or "")
+                == "hi_nerv_target_region_birth_four_arm_ablation.v1"
+            )
+            if has_wrapped_ablation or is_direct_ablation:
                 out.append(value)
-            for child in value.values():
+            for key, child in value.items():
+                # A wrapped receipt and its nested four_arm_ablation describe
+                # the same four rows. Ingesting both minted duplicate composite
+                # identities and made the commutator ledger ambiguous.
+                if has_wrapped_ablation and key == "four_arm_ablation":
+                    continue
                 walk(child)
         elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
             for child in value:

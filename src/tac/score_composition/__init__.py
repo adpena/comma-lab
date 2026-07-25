@@ -100,20 +100,30 @@ Cross-references
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from tac.cathedral.consumer_contract import AxisDecomposition
+from tac.score_geometry import (
+    CONTEST_REFERENCE_BYTES,
+    POSE_COEFFICIENT_INSIDE_SQRT,
+    RATE_COEFFICIENT,
+    SEG_COEFFICIENT,
+    ScoreTransitionAudit,
+    score_transition_audit,
+)
 
 __all__ = [
-    "CANONICAL_SEG_MULTIPLIER",
     "CANONICAL_POSE_SQRT_INNER",
-    "CANONICAL_RATE_MULTIPLIER",
     "CANONICAL_RATE_DENOM_BYTES",
+    "CANONICAL_RATE_MULTIPLIER",
+    "CANONICAL_SEG_MULTIPLIER",
     "ComposedScoreDelta",
-    "compose_score_from_axes",
+    "audit_axis_decomposition_against_target",
     "compose_scalar_delta",
+    "compose_score_from_axes",
     "load_baseline_pose_from_canonical_frontier_pointer",
 ]
 
@@ -125,7 +135,7 @@ __all__ = [
 # canonical equations registry pins ``contest_score_formula_v1`` as the
 # canonical equation reference; consumers of this module should cite
 # that equation_id when emitting per-axis Provenance.
-CANONICAL_SEG_MULTIPLIER: float = 100.0
+CANONICAL_SEG_MULTIPLIER: float = SEG_COEFFICIENT
 """Coefficient on ``d_seg`` in the contest score formula.
 
 Per ``experiments/contest_auth_eval.py`` + canonical equation
@@ -133,7 +143,7 @@ Per ``experiments/contest_auth_eval.py`` + canonical equation
 25 * archive_bytes / 37545489``.
 """
 
-CANONICAL_POSE_SQRT_INNER: float = 10.0
+CANONICAL_POSE_SQRT_INNER: float = POSE_COEFFICIENT_INSIDE_SQRT
 """Constant inside ``sqrt(10 * d_pose)`` in the contest score formula.
 
 The pose contribution is ``sqrt(CANONICAL_POSE_SQRT_INNER * d_pose)``;
@@ -141,10 +151,10 @@ its marginal sensitivity is ``5 / sqrt(10 * d_pose)`` per CLAUDE.md
 "SegNet vs PoseNet importance" (operating-point dependent).
 """
 
-CANONICAL_RATE_MULTIPLIER: float = 25.0
+CANONICAL_RATE_MULTIPLIER: float = RATE_COEFFICIENT
 """Coefficient on ``archive_bytes / 37545489`` in the rate term."""
 
-CANONICAL_RATE_DENOM_BYTES: int = 37_545_489
+CANONICAL_RATE_DENOM_BYTES: int = CONTEST_REFERENCE_BYTES
 """Reference denominator for the rate term.
 
 Per ``src/tac/archive_byte_profile.py::CONTEST_ORIGINAL_BYTES`` +
@@ -251,6 +261,52 @@ class ComposedScoreDelta:
                 str(k): float(v) for k, v in self.per_axis_residual.items()
             },
         }
+
+
+def audit_axis_decomposition_against_target(
+    decomposition: AxisDecomposition,
+    *,
+    target_score: float,
+    current_d_seg: float,
+    current_d_pose: float,
+    current_archive_bytes: int,
+) -> ScoreTransitionAudit:
+    """Audit a cathedral axis proposal by exact finite joint score change.
+
+    This is the admission counterpart to :func:`compose_score_from_axes`.
+    Component deltas remain useful diagnostics, but no component is an
+    independent pass/fail gate.  Unlike the legacy prediction composer, this
+    function refuses an unphysical after-state instead of clamping it, because
+    admission must not manufacture a realizable candidate.
+    """
+    if not isinstance(decomposition, AxisDecomposition):
+        raise TypeError(
+            "audit_axis_decomposition_against_target: decomposition must be an "
+            f"AxisDecomposition, got {type(decomposition).__name__}"
+        )
+    if not isinstance(current_archive_bytes, int) or isinstance(
+        current_archive_bytes, bool
+    ):
+        raise TypeError("current_archive_bytes must be int")
+    after_d_seg = float(current_d_seg) + decomposition.predicted_d_seg_delta
+    after_d_pose = float(current_d_pose) + decomposition.predicted_d_pose_delta
+    after_archive_bytes = (
+        current_archive_bytes + decomposition.predicted_archive_bytes_delta
+    )
+    if after_d_seg < 0.0 or after_d_pose < 0.0 or after_archive_bytes < 0:
+        raise ValueError(
+            "axis decomposition produces a negative after-state; exact admission "
+            "refuses instead of clamping"
+        )
+    return score_transition_audit(
+        target_score=target_score,
+        before_d_seg=float(current_d_seg),
+        before_d_pose=float(current_d_pose),
+        before_archive_bytes=current_archive_bytes,
+        after_d_seg=after_d_seg,
+        after_d_pose=after_d_pose,
+        after_archive_bytes=after_archive_bytes,
+    )
 
 
 def compose_score_from_axes(

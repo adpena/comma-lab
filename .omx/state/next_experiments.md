@@ -2,16 +2,29 @@
 
 ## Immediate governed queue
 
-1. **PF3 finite-price materialization:** produce at least one deterministic,
-   receiver-closed same-object action with realized uint8 quantum, byte home,
-   coder owner, and finite RD1 price; otherwise land the exact typed blocker.
-2. **MR1 apparatus closure:** independently review and merge the already-built
-   receiver/obstruction prerequisites; no self-approval or hot-file absorption.
-3. **CO5 telemetry:** wire candidate-block costate telemetry only where it
-   directly feeds PF3/P1-P3 selection; research-only signals remain non-authority.
-4. **One-SHA composition:** after the priced member exists, compile the original
-   P1 pose + P2 live-law + G4/SY1 custody into one archive and run exact
-   contest-CPU first, CUDA separately. Only a score below the current
+1. **Signal-conserving codec linker:** the fail-closed
+   `tac.applied_action_receipt.v1` contract is landed. Make J8F, MS7/PF3, J12,
+   and future DDM producers emit it under stable semantic action IDs, joining a
+   concrete codeword/operator/base/receiver/byte home to `tac.action_effect.v1`.
+   Then link complete receipts into a hardened packet shell, harvesting
+   `v2_compose` framing/inflate/accounting only. Preserve incomplete effects
+   with a named missing edge instead of dropping or zero-filling them.
+2. **Seven-home rate waterfill:** consume EV2's lawful stream partition and
+   measure whole-stream byte/distortion deltas, beginning with the existing CC3
+   lossless row. Do not manufacture 162 cellwise byte owners for a jointly coded
+   object. Keep the remaining 52 PF3 scalar probes as a parallel bounded control.
+3. **Joint openings:** route identity-compatible J8F/J12/PF3 effects through the
+   existing order-sensitive commutator ledger and exact-price a bounded top-K of
+   ordered composites. Single-action improvements are not assumed additive.
+4. **Receiver/export hardening:** fail closed or prove exact-equivalent
+   sanitization for J12's nonfinite PC1 warp, add the J12 resealer profile, and
+   ensure compose charges every external counted payload.
+5. **Three-vehicle candidate portfolio:** continue live residual descent, byte-
+   close one v8/v9 support-renewing carrier (MyCar control first), and run only a
+   resumable bounded nonlinear frame-0 Pose descent smoke. Compile compatible
+   winners into one archive; exact contest-CPU and CUDA remain separate axes.
+6. **Dynamic target:** refresh the canonical pointer before spend and after each
+   exact result. Only a custody-complete score below the then-current
    `effective_frontier` moves the competitive pointer.
 
 Competitive target is the official leaderboard best `0.172` (PR #130), not

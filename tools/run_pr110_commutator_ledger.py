@@ -92,10 +92,14 @@ def _apply_menu_ilp_baseline_gate(ledger: dict, baseline_validation: dict) -> di
     ledger["menu_ilp_blockers"] = blockers
     ledger["macro_action_promotion_blockers"] = blockers
     for row in ledger["rows"]:
+        identity_bound = row.get("identity_status") == "bound"
+        row_blockers = list(blockers)
+        if not identity_bound:
+            row_blockers.append("commutator_base_identity_unbound")
         row["menu_ilp_allowed"] = menu_ilp_allowed
-        row["macro_action_promotion_allowed"] = menu_ilp_allowed
+        row["macro_action_promotion_allowed"] = menu_ilp_allowed and identity_bound
         row["menu_ilp_blockers"] = blockers
-        row["macro_action_promotion_blockers"] = blockers
+        row["macro_action_promotion_blockers"] = row_blockers
     for row in ledger["macro_action_candidates"]:
         row["menu_ilp_allowed"] = menu_ilp_allowed
         row["macro_action_promotion_allowed"] = menu_ilp_allowed
@@ -224,10 +228,44 @@ def main(argv: Sequence[str] | None = None) -> int:
             "Menu ILP / macro promotion remains blocked when omitted or invalid."
         ),
     )
+    parser.add_argument(
+        "--composite-materializer-command-template",
+        default=None,
+        help=(
+            "Optional REAL composite-application command template carried onto "
+            "needs-measurement rows. It must contain {first_action_id}, "
+            "{second_action_id}, {base_archive_sha256}, and {output_receipt}. "
+            "A ledger rerun is explicitly rejected because it applies no action."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.eps < 0.0:
         parser.error("--eps must be non-negative")
+
+    materializer_template = args.composite_materializer_command_template
+    if materializer_template is not None:
+        required_placeholders = (
+            "{first_action_id}",
+            "{second_action_id}",
+            "{base_archive_sha256}",
+            "{output_receipt}",
+        )
+        missing = [
+            placeholder
+            for placeholder in required_placeholders
+            if placeholder not in materializer_template
+        ]
+        if missing:
+            parser.error(
+                "--composite-materializer-command-template missing placeholders: "
+                + ", ".join(missing)
+            )
+        if "run_pr110_commutator_ledger.py" in materializer_template:
+            parser.error(
+                "--composite-materializer-command-template must apply both actions; "
+                "rerunning the commutator ledger is not a materializer"
+            )
 
     singles = _read_effects(args.action_effects)
     out_dir = args.output if args.output is not None else _default_output_dir()
@@ -235,22 +273,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     pair_effects_path = args.pair_effects if args.pair_effects is not None else default_pair_effects
     pairs = _read_effects(pair_effects_path) if pair_effects_path.exists() else []
 
-    first_measurement_command_parts = [
-        "uv run python tools/run_pr110_commutator_ledger.py",
-        f"--action-effects {args.action_effects.as_posix()}",
-        f"--pair-effects {pair_effects_path.as_posix()}",
-        f"--output {out_dir.as_posix()}",
-    ]
-    if args.baseline_reproduction is not None:
-        first_measurement_command_parts.append(f"--baseline-reproduction {args.baseline_reproduction.as_posix()}")
-    first_measurement_command = " ".join(first_measurement_command_parts)
     ledger = build_commutator_ledger(
         singles,
         pairs,
         eps=args.eps,
         macro_action_limit=max(args.top_k, 0),
         conflict_pair_limit=max(args.top_k, 0),
-        first_measurement_command=first_measurement_command,
+        first_measurement_command=materializer_template,
     )
     baseline_validation = load_and_validate_pr110_k16_baseline_reproduction(args.baseline_reproduction)
     _apply_menu_ilp_baseline_gate(ledger, baseline_validation)

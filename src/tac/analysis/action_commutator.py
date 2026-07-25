@@ -122,12 +122,13 @@ def _resolve_measurement_identity(
     effect_b: ActionEffect,
     effect_ab: ActionEffect,
 ) -> tuple[str | None, str | None, str | None]:
-    """Return shared archive/payload identities, or raise on custody mismatch.
+    """Return shared BASE archive/payload identities, or raise on mismatch.
 
-    Older synthetic analysis rows may omit archive/payload hashes entirely.  But
-    once a measured commutator row carries an identity field on any of the three
-    effects, all three rows must carry the same value for that field; otherwise
-    the subtraction mixes different base payloads.
+    ``archive_sha256`` and ``payload_sha256`` identify each action's OUTPUT and
+    are therefore expected to differ.  Composition comparability is governed by
+    the explicit ``base_*`` fields (or ``base_state_sha256`` for batch-local
+    actions).  Older synthetic analysis rows may omit base hashes entirely, but
+    once any row carries one, all three must carry the same value.
     """
 
     scopes = tuple(str(e.normalization_scope).strip() for e in (effect_a, effect_b, effect_ab))
@@ -155,8 +156,8 @@ def _resolve_measurement_identity(
         return present[0]
 
     return (
-        shared_optional_hash("archive_sha256"),
-        shared_optional_hash("payload_sha256"),
+        shared_optional_hash("base_archive_sha256"),
+        shared_optional_hash("base_payload_sha256"),
         shared_optional_hash("base_state_sha256"),
     )
 
@@ -229,7 +230,9 @@ def commutator_value(
     * ``basis`` — ``total`` or ``nonrate`` (the consistent unit used).
     * ``authority`` — the single shared authority (the deltas' measurement
       surface).
-    * ``macro_action_recommended`` — ``classification == synergistic``.
+    * ``macro_action_recommended`` — synergistic AND bound to an explicit
+      common base identity.  Legacy rows may still support planning arithmetic,
+      but can never silently become promotion candidates.
     * the canonical false-authority markers (this is a planning row).
 
     Raises :class:`ActionCommutatorError` on authority mismatch (authority is a
@@ -251,6 +254,18 @@ def commutator_value(
     triple = _resolve_triple(effect_a, effect_b, effect_ab)
     comm = triple.delta_ab - triple.delta_a - triple.delta_b
     classification = _classify(comm, eps)
+    identity_status = (
+        "bound"
+        if any(
+            value is not None
+            for value in (
+                base_archive_sha256,
+                base_payload_sha256,
+                base_state_sha256,
+            )
+        )
+        else "legacy_unbound"
+    )
     row: dict[str, Any] = {
         "schema": ACTION_COMMUTATOR_SCHEMA,
         "first_action_id": _effect_action_id(effect_a),
@@ -266,10 +281,16 @@ def commutator_value(
         "first_archive_sha256": effect_a.archive_sha256,
         "second_archive_sha256": effect_b.archive_sha256,
         "composed_archive_sha256": effect_ab.archive_sha256,
+        "first_base_archive_sha256": effect_a.base_archive_sha256,
+        "second_base_archive_sha256": effect_b.base_archive_sha256,
+        "composed_base_archive_sha256": effect_ab.base_archive_sha256,
         "base_archive_sha256": base_archive_sha256,
         "first_payload_sha256": effect_a.payload_sha256,
         "second_payload_sha256": effect_b.payload_sha256,
         "composed_payload_sha256": effect_ab.payload_sha256,
+        "first_base_payload_sha256": effect_a.base_payload_sha256,
+        "second_base_payload_sha256": effect_b.base_payload_sha256,
+        "composed_base_payload_sha256": effect_ab.base_payload_sha256,
         "base_payload_sha256": base_payload_sha256,
         "first_base_state_sha256": effect_a.base_state_sha256,
         "second_base_state_sha256": effect_b.base_state_sha256,
@@ -283,14 +304,19 @@ def commutator_value(
         "interaction_or_commutator": comm,
         "synergy_score_units": -comm,
         "classification": classification,
+        "identity_status": identity_status,
         "eps": float(eps),
-        "macro_action_recommended": classification == CLASSIFICATION_SYNERGISTIC,
+        "macro_action_recommended": (
+            classification == CLASSIFICATION_SYNERGISTIC
+            and identity_status == "bound"
+        ),
         "policy": {
             "composition_value_is_measured_against_replayed_composition": True,
             "negative_commutator_means_superadditive_score_improvement": True,
             "basis_is_consistent_across_all_three_rows": True,
             "authority_must_match_across_all_three_rows": True,
             "ordered_composition_identity_fields_carried": True,
+            "base_identity_required_for_macro_action": True,
         },
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
@@ -319,26 +345,21 @@ def _composite_match(
 ) -> bool:
     """Decide whether a measured composite row is the ``(first, second)`` pair.
 
-    Match is by the composite's ``action_id`` carrying BOTH single ids as
-    substrings in order, OR an explicit convention id ``"<first>+<second>"`` /
-    ``"<first>__then__<second>"``.  We never guess across order: a composite that
-    only mentions the ids in the opposite order does not match.
+    Match is by the typed ``composed_action_ids`` tuple, or by an exact legacy
+    convention id ``"<first>+<second>"`` / ``"<first>__then__<second>"``.
+    Arbitrary substring matching is forbidden because action IDs may contain
+    each other and silently bind the wrong parents.
     """
 
+    if composite.composed_action_ids:
+        return composite.composed_action_ids == (str(first_id), str(second_id))
     composed_id = str(composite.action_id)
     explicit = {
         f"{first_id}+{second_id}",
         f"{first_id}__then__{second_id}",
         f"{first_id}__{second_id}",
     }
-    if composed_id in explicit:
-        return True
-    # Ordered substring containment (first appears before second).
-    i = composed_id.find(str(first_id))
-    if i < 0:
-        return False
-    j = composed_id.find(str(second_id), i + len(str(first_id)))
-    return j >= 0
+    return composed_id in explicit
 
 
 def _shared_hash_or_none(first_hash: str | None, second_hash: str | None) -> str | None:
@@ -358,20 +379,31 @@ def _ordered_identity_blockers(first: ActionEffect, second: ActionEffect) -> lis
     if first.normalization_scope != second.normalization_scope:
         blockers.append("action_effect_normalization_scope_mismatch")
     shared_base_state = _shared_hash_or_none(first.base_state_sha256, second.base_state_sha256)
-    if shared_base_state is not None and first.archive_sha256 is None and second.archive_sha256 is None:
-        return blockers
-    if first.archive_sha256 is None or second.archive_sha256 is None:
-        blockers.append("action_effect_base_archive_hash_missing")
-    elif first.archive_sha256 != second.archive_sha256:
+    if first.base_archive_sha256 is None or second.base_archive_sha256 is None:
+        if first.normalization_scope == "full_video_exact":
+            blockers.append("action_effect_base_archive_hash_missing")
+    elif first.base_archive_sha256 != second.base_archive_sha256:
         blockers.append("action_effect_base_archive_hash_mismatch")
-    if first.payload_sha256 is None or second.payload_sha256 is None:
-        blockers.append("action_effect_base_payload_hash_missing")
-    elif first.payload_sha256 != second.payload_sha256:
+    if (
+        first.base_payload_sha256 is not None
+        or second.base_payload_sha256 is not None
+    ) and (
+        first.base_payload_sha256 is None
+        or second.base_payload_sha256 is None
+        or first.base_payload_sha256 != second.base_payload_sha256
+    ):
         blockers.append("action_effect_base_payload_hash_mismatch")
     if first.base_state_sha256 is None or second.base_state_sha256 is None:
-        blockers.append("action_effect_base_state_hash_missing")
+        if first.base_archive_sha256 is None or second.base_archive_sha256 is None:
+            blockers.append("action_effect_base_state_hash_missing")
     elif first.base_state_sha256 != second.base_state_sha256:
         blockers.append("action_effect_base_state_hash_mismatch")
+    if shared_base_state is not None and first.normalization_scope != "full_video_exact":
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != "action_effect_base_archive_hash_missing"
+        ]
     return blockers
 
 
@@ -385,6 +417,32 @@ def _dedupe_blockers(blockers: Sequence[str]) -> list[str]:
     return out
 
 
+def _ordered_identity_status(first: ActionEffect, second: ActionEffect) -> str:
+    """Classify whether an ordered pair is bound to one reusable base."""
+
+    blockers = _ordered_identity_blockers(first, second)
+    if any("mismatch" in blocker for blocker in blockers):
+        return "incompatible"
+    if _shared_hash_or_none(first.base_archive_sha256, second.base_archive_sha256):
+        return "bound"
+    if _shared_hash_or_none(first.base_state_sha256, second.base_state_sha256):
+        return "bound"
+    return "legacy_unbound"
+
+
+def _measurement_command_blockers(command: str | None) -> list[str]:
+    """Reject commands that observe the ledger without applying codewords."""
+
+    if command is None:
+        return ["composite_materializer_command_missing"]
+    normalized = str(command).strip()
+    if not normalized:
+        return ["composite_materializer_command_missing"]
+    if "run_pr110_commutator_ledger.py" in normalized:
+        return ["ledger_rerun_is_not_a_composite_materializer"]
+    return []
+
+
 def _needs_measurement_row(
     first: ActionEffect,
     second: ActionEffect,
@@ -392,7 +450,7 @@ def _needs_measurement_row(
     reason: str,
     first_measurement_command: str | None,
     measurement_command_blockers: Sequence[str] = (),
-    use_default_measurement_command: bool = True,
+    use_default_measurement_command: bool = False,
 ) -> dict[str, Any]:
     """Emit a typed needs-measurement row (NO fabricated comm value).
 
@@ -414,20 +472,20 @@ def _needs_measurement_row(
     additive_score_improvement_total = _score_improvement(additive_delta_total)
     additive_score_improvement_nonrate = _score_improvement(additive_delta_nonrate)
     command = first_measurement_command
-    if command is None and use_default_measurement_command:
-        command = (
-            "uv run python tools/run_pr110_commutator_ledger.py "
-            "--action-effects <single_action_effects.jsonl> "
-            "--pair-effects <composite_action_effects.jsonl> "
-            "--output <commutator_output_dir>"
+    command_blockers = [str(blocker) for blocker in measurement_command_blockers]
+    command_blockers.extend(_measurement_command_blockers(command))
+    if use_default_measurement_command:
+        command_blockers.append(
+            "legacy_default_ledger_rerun_removed_not_an_application_operator"
         )
+    identity_status = _ordered_identity_status(first, second)
     blockers = (
         ["composite_action_effect_row_missing"]
         if reason == "no_measured_composite_for_ordered_pair"
         else ["measured_composite_incompatible"]
     )
     blockers.extend(_ordered_identity_blockers(first, second))
-    blockers.extend(str(blocker) for blocker in measurement_command_blockers)
+    blockers.extend(command_blockers)
     return {
         "schema": ACTION_COMMUTATOR_NEEDS_MEASUREMENT_SCHEMA,
         "first_action_id": first.action_id,
@@ -440,12 +498,23 @@ def _needs_measurement_row(
         "first_normalization_scope": first.normalization_scope,
         "second_normalization_scope": second.normalization_scope,
         "normalization_scope_compatible": first.normalization_scope == second.normalization_scope,
+        "identity_status": identity_status,
         "first_archive_sha256": first.archive_sha256,
         "second_archive_sha256": second.archive_sha256,
-        "base_archive_hash": _shared_hash_or_none(first.archive_sha256, second.archive_sha256),
+        "first_base_archive_sha256": first.base_archive_sha256,
+        "second_base_archive_sha256": second.base_archive_sha256,
+        "base_archive_hash": _shared_hash_or_none(
+            first.base_archive_sha256,
+            second.base_archive_sha256,
+        ),
         "first_payload_sha256": first.payload_sha256,
         "second_payload_sha256": second.payload_sha256,
-        "base_payload_hash": _shared_hash_or_none(first.payload_sha256, second.payload_sha256),
+        "first_base_payload_sha256": first.base_payload_sha256,
+        "second_base_payload_sha256": second.base_payload_sha256,
+        "base_payload_hash": _shared_hash_or_none(
+            first.base_payload_sha256,
+            second.base_payload_sha256,
+        ),
         "first_base_state_sha256": first.base_state_sha256,
         "second_base_state_sha256": second.base_state_sha256,
         "base_state_hash": _shared_hash_or_none(first.base_state_sha256, second.base_state_sha256),
@@ -467,7 +536,7 @@ def _needs_measurement_row(
         "region_ids": sorted(set(first.region_ids) | set(second.region_ids)),
         "comm": None,
         "classification": None,
-        "measurement_command_available": command is not None and not measurement_command_blockers,
+        "measurement_command_available": command is not None and not command_blockers,
         "first_measurement_command": command,
         "measurement_command_blockers": _dedupe_blockers(blockers),
         **PROXY_FALSE_AUTHORITY_FIELDS,
@@ -483,7 +552,7 @@ def build_commutator_ledger(
     conflict_pair_limit: int = 16,
     first_measurement_command: str | None = None,
     measurement_command_blockers: Sequence[str] = (),
-    use_default_measurement_command: bool = True,
+    use_default_measurement_command: bool = False,
 ) -> dict[str, Any]:
     """Build the pairwise commutator ledger over ActionEffect rows.
 
@@ -586,6 +655,8 @@ def build_commutator_ledger(
             "composition_is_order_sensitive": True,
             "measurement_queue_carries_first_command": True,
             "measurement_queue_ranked_by_expected_additive_score_authority_and_byte_cost": True,
+            "measurement_requires_real_composite_materializer": True,
+            "candidate_output_hash_is_not_base_identity": True,
         },
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
@@ -695,10 +766,18 @@ def _find_composite(
     first_id: str,
     second_id: str,
 ) -> ActionEffect | None:
-    for composite in pairs:
-        if _composite_match(composite, first_id, second_id):
-            return composite
-    return None
+    matches = [
+        composite
+        for composite in pairs
+        if _composite_match(composite, first_id, second_id)
+    ]
+    if len(matches) > 1:
+        raise ActionCommutatorError(
+            "duplicate measured composites for ordered pair "
+            f"({first_id!r}, {second_id!r}): "
+            f"{[effect.action_id for effect in matches]!r}"
+        )
+    return matches[0] if matches else None
 
 
 def _ordered_pair_count(singles: Sequence[ActionEffect]) -> int:

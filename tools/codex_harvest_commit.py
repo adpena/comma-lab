@@ -78,8 +78,13 @@ def _manifest_files(label: str, stamp: str) -> tuple[list[str], dict]:
     return [str(f) for f in files], d
 
 
-def harvest(label: str, stamp: str, explicit_files: list[str] | None,
-            code_reviewed: bool) -> int:
+def harvest(
+    label: str,
+    stamp: str,
+    explicit_files: list[str] | None,
+    code_reviewed: bool,
+    consumed_by: str | None,
+) -> int:
     manifest_files, manifest = _manifest_files(label, stamp)
     declared = list(explicit_files) if explicit_files else manifest_files
     if not declared:
@@ -100,6 +105,14 @@ def harvest(label: str, stamp: str, explicit_files: list[str] | None,
 
     safe = [f for f in present if Path(f).suffix not in _CODE_SUFFIXES]
     code = [f for f in present if Path(f).suffix in _CODE_SUFFIXES]
+    will_disposition = not code or code_reviewed
+    if will_disposition and not consumed_by:
+        print(
+            "REFUSED: this harvest would create a terminal reviewed_committed "
+            "disposition, so --consumed-by must name the task, DAG FEED, spec, "
+            "memo, lever, or commit that consumes the findings."
+        )
+        return 2
 
     committed_any = False
     # 1) commit safe artifacts directly (no code review needed for .md/.json/research/DAG)
@@ -133,12 +146,34 @@ def harvest(label: str, stamp: str, explicit_files: list[str] | None,
     if committed_any and not (code and not code_reviewed):
         head = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],
                               capture_output=True, text=True).stdout.strip()
-        subprocess.run([str(VENV_PY), str(LANDING_GATE), "disposition",
-                        "--label", label, "--stamp", stamp,
-                        "--status", "reviewed_committed", "--commit", head or "HEAD",
-                        "--reason", f"harvested main-side: {len(safe)} safe + "
-                        f"{len(code)} code file(s) reviewed+committed (sandbox-stranded diff "
-                        f"landed via codex_harvest_commit)"], cwd=REPO)
+        disposition = subprocess.run(
+            [
+                str(VENV_PY),
+                str(LANDING_GATE),
+                "disposition",
+                "--label",
+                label,
+                "--stamp",
+                stamp,
+                "--status",
+                "reviewed_committed",
+                "--commit",
+                head or "HEAD",
+                "--reason",
+                f"harvested main-side: {len(safe)} safe + {len(code)} code file(s) "
+                "reviewed+committed (sandbox-stranded diff landed via "
+                "codex_harvest_commit)",
+                "--consumed-by",
+                consumed_by,
+            ],
+            cwd=REPO,
+        )
+        if disposition.returncode != 0:
+            print(
+                f"REFUSED: {label} committed at {head}, but the required landing "
+                "disposition failed; inspect codex_landing_review_gate output."
+            )
+            return disposition.returncode
         print(f"[ok] {label} harvested + dispositioned reviewed_committed @ {head}")
     return 0
 
@@ -154,7 +189,14 @@ def _serializer_commit(label: str, stamp: str, files: list[str], message: str) -
     return r.returncode
 
 
-def merge_worktree(label: str, stamp: str, branch: str, worktree: str, reviewed: bool) -> int:
+def merge_worktree(
+    label: str,
+    stamp: str,
+    branch: str,
+    worktree: str,
+    reviewed: bool,
+    consumed_by: str | None,
+) -> int:
     """Isolated-worktree harvest: MAIN reviews the arm's branch diff and MERGES it to main (the single
     coherent, Courant-serialized integration point). No trample (disjoint domain); review at the merge
     boundary preserves the non-negotiable follow-up. --reviewed asserts MAIN reviewed the branch diff."""
@@ -165,11 +207,14 @@ def merge_worktree(label: str, stamp: str, branch: str, worktree: str, reviewed:
     def _run(a, cwd=REPO):
         return subprocess.run([str(x) for x in a], cwd=str(cwd), capture_output=True, text=True)
 
-    # 1) commit any leftover uncommitted edits in the arm's OWN isolated worktree (its branch; safe)
+    # 1) Refuse leftover edits. MAIN cannot honestly assert it reviewed a branch
+    # while silently sweeping additional worktree bytes into an unreviewed commit.
     if wt.is_dir() and _run(["git", "-C", wt, "status", "--short"]).stdout.strip():
-        _run(["git", "-C", wt, "add", "-A"])
-        _run(["git", "-C", wt, "commit", "--no-verify", "-m",
-              f"harvest[{label}] leftover uncommitted worktree edits"])
+        print(
+            f"REFUSED: isolated worktree {wt} has uncommitted edits. The arm must "
+            "serialize them first so MAIN reviews an immutable branch diff."
+        )
+        return 2
     # 2) branch changes vs main
     names = _run(["git", "-C", REPO, "diff", "--name-only", f"main...{branch}"]).stdout.split()
     if not names:
@@ -182,6 +227,12 @@ def merge_worktree(label: str, stamp: str, branch: str, worktree: str, reviewed:
         print(_run(["git", "-C", REPO, "diff", "--stat", f"main...{branch}"]).stdout.strip()[:1500])
         print(f"\n  → review `git diff main...{branch}`, then re-run with --reviewed to merge to main.")
         return 1
+    if not consumed_by:
+        print(
+            "REFUSED: --reviewed merge requires --consumed-by naming the task, "
+            "DAG FEED, spec, memo, lever, or commit that consumes the findings."
+        )
+        return 2
     # 3) reviewed → merge under the serializer lock (serialized ref update = Courant<=1)
     with open(merge_lock, "a") as lk:  # BARE_WRITE_OK: lockfile descriptor only; immediately flocked below
         fcntl.flock(lk, fcntl.LOCK_EX)
@@ -196,13 +247,40 @@ def merge_worktree(label: str, stamp: str, branch: str, worktree: str, reviewed:
               f"Clean/resolve main first, then re-run.")
         return 2
     # 4) cleanup + disposition
-    _run(["git", "-C", REPO, "worktree", "remove", str(wt), "--force"])
-    _run(["git", "-C", REPO, "branch", "-D", branch])
+    remove = _run(["git", "-C", REPO, "worktree", "remove", str(wt)])
+    if remove.returncode != 0:
+        print(f"WARN: merged {branch}, but clean worktree removal failed: {remove.stderr.strip()}")
+    delete = _run(["git", "-C", REPO, "branch", "-d", branch])
+    if delete.returncode != 0:
+        print(f"WARN: merged {branch}, but safe branch deletion failed: {delete.stderr.strip()}")
     head = _run(["git", "-C", REPO, "rev-parse", "--short", "HEAD"]).stdout.strip()
-    subprocess.run([str(VENV_PY), str(LANDING_GATE), "disposition", "--label", label, "--stamp", stamp,
-                    "--status", "reviewed_committed", "--commit", head or "HEAD",
-                    "--reason", f"worktree-isolated arm: reviewed branch {branch} + merged to main "
-                    f"({len(names)} files); worktree removed"], cwd=REPO)
+    disposition = subprocess.run(
+        [
+            str(VENV_PY),
+            str(LANDING_GATE),
+            "disposition",
+            "--label",
+            label,
+            "--stamp",
+            stamp,
+            "--status",
+            "reviewed_committed",
+            "--commit",
+            head or "HEAD",
+            "--reason",
+            f"worktree-isolated arm: reviewed branch {branch} + merged to main "
+            f"({len(names)} files); clean worktree removal attempted",
+            "--consumed-by",
+            consumed_by,
+        ],
+        cwd=REPO,
+    )
+    if disposition.returncode != 0:
+        print(
+            f"REFUSED: {label} merged at {head}, but its required landing "
+            "disposition failed; inspect codex_landing_review_gate output."
+        )
+        return disposition.returncode
     print(f"[ok] {label} merged + dispositioned reviewed_committed @ {head}")
     return 0
 
@@ -217,12 +295,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--merge-worktree", help="ISOLATED mode: path to the arm's git worktree to merge")
     ap.add_argument("--branch", help="the arm's branch (codexwt/<label>_<stamp>) to merge to main")
     ap.add_argument("--reviewed", action="store_true", help="assert MAIN reviewed the branch diff → merge")
+    ap.add_argument(
+        "--consumed-by",
+        help=(
+            "required for a terminal reviewed_committed disposition: task/DAG-FEED/"
+            "spec/memo/lever/commit that consumes the landing"
+        ),
+    )
     args = ap.parse_args(argv)
     if args.merge_worktree:
         if not args.branch:
             ap.error("--merge-worktree requires --branch")
-        return merge_worktree(args.label, args.stamp, args.branch, args.merge_worktree, args.reviewed)
-    return harvest(args.label, args.stamp, args.files, args.code_reviewed)
+        return merge_worktree(
+            args.label,
+            args.stamp,
+            args.branch,
+            args.merge_worktree,
+            args.reviewed,
+            args.consumed_by,
+        )
+    return harvest(args.label, args.stamp, args.files, args.code_reviewed, args.consumed_by)
 
 
 if __name__ == "__main__":

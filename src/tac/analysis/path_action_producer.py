@@ -348,6 +348,8 @@ def build_path_action_candidates_from_arrays(
         new_d_pose=float(old_d_pose),
         old_bytes=int(base_archive_bytes),
         new_bytes=int(base_archive_bytes) + payload_bytes,
+        base_archive_sha256=base_archive_sha256,
+        base_state_sha256=base_scorer_state_hash,
         receiver_surface={
             "uint8_changed_pixels": 0,
             "seg_argmax_changed_pixels": 0,
@@ -475,6 +477,8 @@ def build_pose_temporal_path_candidates_from_arrays(
         new_d_pose=new_d_pose,
         old_bytes=old_bytes,
         new_bytes=old_bytes + payload_bytes,
+        base_archive_sha256=base_archive_sha256,
+        base_state_sha256=base_scorer_state_hash,
         receiver_surface={
             "pose_output_l2_delta": float(np.linalg.norm(values)),
             "pose_temporal_path_active_pairs": int(pairs.size),
@@ -560,6 +564,8 @@ def build_selector_temporal_path_candidates_from_rows(
         new_d_pose=new_d_pose,
         old_bytes=old_bytes,
         new_bytes=old_bytes + payload_bytes,
+        base_archive_sha256=base_archive_sha256,
+        base_state_sha256=base_scorer_state_hash,
         receiver_surface={
             "selector_temporal_path_pairs": int(sequence.size),
             "selector_unique_modes": int(np.unique(sequence).size),

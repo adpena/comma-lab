@@ -625,6 +625,9 @@ def test_v1_inverse_candidate_metadata_roundtrips() -> None:
         new_d_pose=0.00035,
         old_bytes=178_258,
         new_bytes=178_258,
+        composed_action_ids=("seg-action", "pose-action"),
+        base_archive_sha256="a" * 64,
+        base_payload_sha256="b" * 64,
     )
 
     payload = eff.as_dict()
@@ -637,6 +640,9 @@ def test_v1_inverse_candidate_metadata_roundtrips() -> None:
     assert roundtrip.frame_index == 0
     assert roundtrip.frame_incidence == "pose_only"
     assert roundtrip.candidate_status == "generated"
+    assert roundtrip.composed_action_ids == ("seg-action", "pose-action")
+    assert roundtrip.base_archive_sha256 == "a" * 64
+    assert roundtrip.base_payload_sha256 == "b" * 64
 
 
 @pytest.mark.parametrize(
@@ -1093,6 +1099,7 @@ def test_v1_from_frontier_rate_materializer_prices_current_final_rate_saving() -
     assert eff.new_bytes == 178493
     assert eff.delta_score_total == pytest.approx(25.0 * -37 / CONTEST_REFERENCE_BYTES, abs=1e-15)
     assert eff.value_per_byte == pytest.approx(25.0 / CONTEST_REFERENCE_BYTES, abs=1e-18)
+    assert eff.base_archive_sha256 == "1" * 64
     assert eff.parseback_survived is True
     assert eff.inflate_survived is True
     assert eff.archive_sha256 == "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
@@ -1160,6 +1167,8 @@ def test_frontier_rate_materializer_cli_emits_valid_action_effect(tmp_path: Path
     assert row["delta_score_total"] == pytest.approx(25.0 * -37 / CONTEST_REFERENCE_BYTES, abs=1e-15)
     assert row["value_per_byte"] == pytest.approx(25.0 / CONTEST_REFERENCE_BYTES, abs=1e-18)
     assert row["artifact_ref"] == manifest_path.resolve(strict=False).as_posix()
+    assert row["base_archive_sha256"] == "1" * 64
+    assert row["archive_sha256"] == "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
     assert row["inflate_survived"] is True
     assert row["restore_state_pass"] is True
     assert "score_claim" not in row

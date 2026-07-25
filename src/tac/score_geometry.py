@@ -20,6 +20,8 @@ The canonical differentiable formula and operating-point marginals live in
 for inverse curves and Pareto slack calculations used by planning tools:
 
   * ``contest_score(d_seg, d_pose, B)`` — exact contest objective
+  * ``score_sublevel_audit(...)`` — exact coupled target-surface membership
+  * ``score_transition_audit(...)`` — exact multi-axis transition admission
   * ``score_gradient(d_seg, d_pose, B)`` — partial derivatives
   * ``importance_flip_threshold()`` — where SegNet vs PoseNet marginals cross
   * ``marginal_value_per_byte(...)`` — bytes-of-information cost per axis
@@ -66,6 +68,83 @@ class ScoreDecomposition:
         if s == 0.0:
             return (0.0, 0.0, 0.0)
         return (self.seg_term / s, self.pose_term / s, self.rate_term / s)
+
+
+@dataclass(frozen=True)
+class ScoreSublevelAudit:
+    """Membership audit for one point on the coupled contest-score surface.
+
+    Independent component thresholds are not the contest objective.  The
+    feasible set for a target ``S*`` is the sublevel set
+
+    ``100*d_seg + sqrt(10*d_pose) + 25*B/N < S*``.
+
+    The three ``boundary_*`` fields are conditional coordinates of that same
+    surface: each is valid only while the other two coordinates are held at
+    this operating point.  They are therefore planning geometry, not three
+    independent admission gates.
+    """
+
+    target_score: float
+    d_seg: float
+    d_pose: float
+    archive_bytes: int
+    score: float
+    seg_term: float
+    pose_term: float
+    rate_term: float
+    signed_target_slack: float
+    inside_strict_sublevel: bool
+    on_target_boundary: bool
+    boundary_d_seg_given_pose_and_bytes: float | None
+    boundary_d_pose_given_seg_and_bytes: float | None
+    boundary_archive_bytes_given_distortions: int | None
+    seg_marginal: float
+    pose_marginal: float
+    byte_marginal: float
+    evidence_grade: str = "[derived; exact coupled contest-score sublevel]"
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    rank_or_kill_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+
+
+@dataclass(frozen=True)
+class ScoreTransitionAudit:
+    """Exact admission audit for a jointly changing Seg/Pose/rate proposal.
+
+    ``exact_score_delta`` is authoritative for planning because the pose term
+    is nonlinear.  ``linearized_score_delta_at_before`` is diagnostic only;
+    the difference is reported explicitly as ``nonlinear_remainder``.
+    """
+
+    target_score: float
+    before_d_seg: float
+    before_d_pose: float
+    before_archive_bytes: int
+    after_d_seg: float
+    after_d_pose: float
+    after_archive_bytes: int
+    before_score: float
+    after_score: float
+    seg_term_delta: float
+    pose_term_delta: float
+    rate_term_delta: float
+    exact_score_delta: float
+    exact_score_improvement: float
+    linearized_score_delta_at_before: float | None
+    nonlinear_remainder: float | None
+    changed_axes: tuple[Literal["seg", "pose", "bytes"], ...]
+    jointly_coupled_transition: bool
+    improves_score: bool
+    crosses_into_strict_sublevel: bool
+    remains_inside_strict_sublevel: bool
+    after_signed_target_slack: float
+    evidence_grade: str = "[derived; exact coupled contest-score transition]"
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    rank_or_kill_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
 
 
 @dataclass(frozen=True)
@@ -856,6 +935,185 @@ def equal_score_curve_archive_bytes(
     if rate_term_required < 0.0:
         return None
     return int(rate_term_required * reference_bytes / RATE_COEFFICIENT)
+
+
+def score_sublevel_audit(
+    *,
+    target_score: float,
+    d_seg: float,
+    d_pose: float,
+    archive_bytes: int,
+    reference_bytes: int = CONTEST_REFERENCE_BYTES,
+    boundary_tolerance: float = 1e-12,
+) -> ScoreSublevelAudit:
+    """Audit one full candidate triple against the exact target sublevel.
+
+    This is the canonical replacement for independent statements such as
+    "Seg must be below X, Pose below Y, and bytes below Z."  Each returned
+    boundary coordinate is conditioned on the other two supplied coordinates;
+    only the jointly recomputed score decides membership.
+    """
+    if target_score < 0.0:
+        raise ValueError("target_score must be non-negative")
+    if d_seg < 0.0 or d_pose < 0.0 or archive_bytes < 0:
+        raise ValueError("score-sublevel inputs must be non-negative")
+    if reference_bytes <= 0:
+        raise ValueError("reference_bytes must be positive")
+    if boundary_tolerance < 0.0:
+        raise ValueError("boundary_tolerance must be non-negative")
+
+    decomp = score_decomposition(
+        d_seg=d_seg,
+        d_pose=d_pose,
+        archive_bytes=archive_bytes,
+        reference_bytes=reference_bytes,
+    )
+    gradient = score_gradient(
+        d_seg=d_seg,
+        d_pose=d_pose,
+        reference_bytes=reference_bytes,
+    )
+    score = decomp.total
+    residual_for_seg = target_score - decomp.pose_term - decomp.rate_term
+    boundary_d_seg = (
+        residual_for_seg / SEG_COEFFICIENT
+        if residual_for_seg >= 0.0
+        else None
+    )
+    return ScoreSublevelAudit(
+        target_score=target_score,
+        d_seg=d_seg,
+        d_pose=d_pose,
+        archive_bytes=archive_bytes,
+        score=score,
+        seg_term=decomp.seg_term,
+        pose_term=decomp.pose_term,
+        rate_term=decomp.rate_term,
+        signed_target_slack=target_score - score,
+        inside_strict_sublevel=score < target_score,
+        on_target_boundary=math.isclose(
+            score,
+            target_score,
+            rel_tol=boundary_tolerance,
+            abs_tol=boundary_tolerance,
+        ),
+        boundary_d_seg_given_pose_and_bytes=boundary_d_seg,
+        boundary_d_pose_given_seg_and_bytes=equal_score_curve_d_pose(
+            target_score,
+            d_seg,
+            archive_bytes,
+            reference_bytes=reference_bytes,
+        ),
+        boundary_archive_bytes_given_distortions=equal_score_curve_archive_bytes(
+            target_score,
+            d_seg,
+            d_pose,
+            reference_bytes=reference_bytes,
+        ),
+        seg_marginal=gradient.d_seg,
+        pose_marginal=gradient.d_pose,
+        byte_marginal=gradient.d_bytes,
+    )
+
+
+def score_transition_audit(
+    *,
+    target_score: float,
+    before_d_seg: float,
+    before_d_pose: float,
+    before_archive_bytes: int,
+    after_d_seg: float,
+    after_d_pose: float,
+    after_archive_bytes: int,
+    reference_bytes: int = CONTEST_REFERENCE_BYTES,
+) -> ScoreTransitionAudit:
+    """Admit or reject a proposal using its exact joint finite score change.
+
+    A proposal may worsen one or two components and still be useful if the
+    complete after-state has lower score.  Conversely, an axis-local win is
+    rejected when the other terms make the exact total worse.
+    """
+    before = score_sublevel_audit(
+        target_score=target_score,
+        d_seg=before_d_seg,
+        d_pose=before_d_pose,
+        archive_bytes=before_archive_bytes,
+        reference_bytes=reference_bytes,
+    )
+    after = score_sublevel_audit(
+        target_score=target_score,
+        d_seg=after_d_seg,
+        d_pose=after_d_pose,
+        archive_bytes=after_archive_bytes,
+        reference_bytes=reference_bytes,
+    )
+    seg_delta = after.seg_term - before.seg_term
+    pose_delta = after.pose_term - before.pose_term
+    rate_delta = after.rate_term - before.rate_term
+    exact_delta = after.score - before.score
+    changed_axes: list[Literal["seg", "pose", "bytes"]] = []
+    if after_d_seg != before_d_seg:
+        changed_axes.append("seg")
+    if after_d_pose != before_d_pose:
+        changed_axes.append("pose")
+    if after_archive_bytes != before_archive_bytes:
+        changed_axes.append("bytes")
+
+    if before_d_pose > 0.0:
+        gradient = score_gradient(
+            d_seg=before_d_seg,
+            d_pose=before_d_pose,
+            reference_bytes=reference_bytes,
+        )
+        linearized_delta: float | None = (
+            gradient.d_seg * (after_d_seg - before_d_seg)
+            + gradient.d_pose * (after_d_pose - before_d_pose)
+            + gradient.d_bytes * (after_archive_bytes - before_archive_bytes)
+        )
+    elif after_d_pose == before_d_pose:
+        linearized_delta = (
+            SEG_COEFFICIENT * (after_d_seg - before_d_seg)
+            + RATE_COEFFICIENT
+            * (after_archive_bytes - before_archive_bytes)
+            / reference_bytes
+        )
+    else:
+        linearized_delta = None
+
+    return ScoreTransitionAudit(
+        target_score=target_score,
+        before_d_seg=before_d_seg,
+        before_d_pose=before_d_pose,
+        before_archive_bytes=before_archive_bytes,
+        after_d_seg=after_d_seg,
+        after_d_pose=after_d_pose,
+        after_archive_bytes=after_archive_bytes,
+        before_score=before.score,
+        after_score=after.score,
+        seg_term_delta=seg_delta,
+        pose_term_delta=pose_delta,
+        rate_term_delta=rate_delta,
+        exact_score_delta=exact_delta,
+        exact_score_improvement=max(0.0, -exact_delta),
+        linearized_score_delta_at_before=linearized_delta,
+        nonlinear_remainder=(
+            exact_delta - linearized_delta
+            if linearized_delta is not None
+            else None
+        ),
+        changed_axes=tuple(changed_axes),
+        jointly_coupled_transition=len(changed_axes) >= 2,
+        improves_score=exact_delta < 0.0,
+        crosses_into_strict_sublevel=(
+            not before.inside_strict_sublevel
+            and after.inside_strict_sublevel
+        ),
+        remains_inside_strict_sublevel=(
+            before.inside_strict_sublevel
+            and after.inside_strict_sublevel
+        ),
+        after_signed_target_slack=after.signed_target_slack,
+    )
 
 
 def target_byte_budget_for_score(

@@ -54,6 +54,8 @@ from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIEL
 
 # ── fixture builders (SYNTHETIC; no empirical authority) ────────────────────
 
+_BASE_STATE_SHA = "e" * 64
+
 
 def _seg_effect(
     action_id: str,
@@ -63,9 +65,12 @@ def _seg_effect(
     old_d_seg: float = 0.10,
     new_d_seg: float = 0.10,
     bytes_: int = 1000,
+    base_archive_sha256: str | None = None,
+    base_payload_sha256: str | None = None,
     archive_sha256: str | None = None,
     payload_sha256: str | None = None,
-    base_state_sha256: str | None = None,
+    base_state_sha256: str | None = _BASE_STATE_SHA,
+    composed_action_ids: tuple[str, ...] = (),
 ) -> ActionEffect:
     """A byte-priced (total-basis) effect that moves ONLY d_seg.
 
@@ -86,9 +91,12 @@ def _seg_effect(
         new_d_pose=0.10,
         old_bytes=bytes_,
         new_bytes=bytes_,
+        base_archive_sha256=base_archive_sha256,
+        base_payload_sha256=base_payload_sha256,
         archive_sha256=archive_sha256,
         payload_sha256=payload_sha256,
         base_state_sha256=base_state_sha256,
+        composed_action_ids=composed_action_ids,
     )
 
 
@@ -106,6 +114,7 @@ def _nonrate_only_effect(action_id: str, *, old_d_seg: float, new_d_seg: float) 
         new_d_pose=0.10,
         old_bytes=None,
         new_bytes=None,
+        base_state_sha256=_BASE_STATE_SHA,
     )
 
 
@@ -220,12 +229,14 @@ def test_basis_uses_total_when_all_three_byte_priced():
         action_id="A", family="hinerv", authority="fakequant_mlx", producer="fixture",
         old_d_seg=0.10, new_d_seg=0.10, old_d_pose=0.10, new_d_pose=0.10,
         old_bytes=1000, new_bytes=2000,  # +1000 bytes -> positive rate delta
+        base_state_sha256=_BASE_STATE_SHA,
     )
     b = _seg_effect("B", new_d_seg=0.10)  # all-zero delta
     ab = ActionEffect.build(
         action_id="A__then__B", family="hinerv", authority="fakequant_mlx", producer="fixture",
         old_d_seg=0.10, new_d_seg=0.10, old_d_pose=0.10, new_d_pose=0.10,
         old_bytes=1000, new_bytes=2000,
+        base_state_sha256=_BASE_STATE_SHA,
     )
     row = commutator_value(a, b, ab)
     assert row["basis"] == BASIS_TOTAL
@@ -299,22 +310,22 @@ def test_measured_commutator_rejects_mismatched_base_hashes():
         "A",
         new_d_seg=0.08,
         authority="contest_cpu",
-        archive_sha256="a" * 64,
-        payload_sha256="b" * 64,
+        base_archive_sha256="a" * 64,
+        base_payload_sha256="b" * 64,
     )
     b = _seg_effect(
         "B",
         new_d_seg=0.09,
         authority="contest_cpu",
-        archive_sha256="a" * 64,
-        payload_sha256="b" * 64,
+        base_archive_sha256="a" * 64,
+        base_payload_sha256="b" * 64,
     )
     ab = _seg_effect(
         "A__then__B",
         new_d_seg=0.05,
         authority="contest_cpu",
-        archive_sha256="c" * 64,
-        payload_sha256="b" * 64,
+        base_archive_sha256="c" * 64,
+        base_payload_sha256="b" * 64,
     )
 
     with pytest.raises(ActionCommutatorError, match="archive_sha256 mismatch"):
@@ -326,17 +337,22 @@ def test_measured_commutator_rejects_partially_missing_base_hashes():
         "A",
         new_d_seg=0.08,
         authority="contest_cpu",
-        archive_sha256="a" * 64,
-        payload_sha256="b" * 64,
+        base_archive_sha256="a" * 64,
+        base_payload_sha256="b" * 64,
     )
     b = _seg_effect(
         "B",
         new_d_seg=0.09,
         authority="contest_cpu",
-        archive_sha256="a" * 64,
-        payload_sha256="b" * 64,
+        base_archive_sha256="a" * 64,
+        base_payload_sha256="b" * 64,
     )
-    ab = _seg_effect("A__then__B", new_d_seg=0.05, authority="contest_cpu")
+    ab = _seg_effect(
+        "A__then__B",
+        new_d_seg=0.05,
+        authority="contest_cpu",
+        base_state_sha256=None,
+    )
 
     with pytest.raises(ActionCommutatorError, match="archive_sha256 missing"):
         commutator_value(a, b, ab)
@@ -349,27 +365,66 @@ def test_measured_commutator_carries_shared_base_hashes_when_present():
         "A",
         new_d_seg=0.08,
         authority="contest_cpu",
-        archive_sha256=archive_hash,
-        payload_sha256=payload_hash,
+        base_archive_sha256=archive_hash,
+        base_payload_sha256=payload_hash,
     )
     b = _seg_effect(
         "B",
         new_d_seg=0.09,
         authority="contest_cpu",
-        archive_sha256=archive_hash,
-        payload_sha256=payload_hash,
+        base_archive_sha256=archive_hash,
+        base_payload_sha256=payload_hash,
     )
     ab = _seg_effect(
         "A__then__B",
         new_d_seg=0.05,
         authority="contest_cpu",
-        archive_sha256=archive_hash,
-        payload_sha256=payload_hash,
+        base_archive_sha256=archive_hash,
+        base_payload_sha256=payload_hash,
     )
 
     row = commutator_value(a, b, ab)
     assert row["base_archive_sha256"] == archive_hash
     assert row["base_payload_sha256"] == payload_hash
+
+
+def test_measured_commutator_allows_distinct_candidate_hashes_on_same_base():
+    base_hash = "a" * 64
+    a = _seg_effect(
+        "A",
+        new_d_seg=0.08,
+        base_archive_sha256=base_hash,
+        archive_sha256="1" * 64,
+    )
+    b = _seg_effect(
+        "B",
+        new_d_seg=0.09,
+        base_archive_sha256=base_hash,
+        archive_sha256="2" * 64,
+    )
+    ab = _seg_effect(
+        "A__then__B",
+        new_d_seg=0.05,
+        base_archive_sha256=base_hash,
+        archive_sha256="3" * 64,
+    )
+
+    row = commutator_value(a, b, ab)
+    assert row["identity_status"] == "bound"
+    assert row["base_archive_sha256"] == base_hash
+    assert row["first_archive_sha256"] != row["second_archive_sha256"]
+    assert row["macro_action_recommended"] is True
+
+
+def test_legacy_unbound_commutator_keeps_planning_math_but_cannot_recommend_macro():
+    a = _seg_effect("A", new_d_seg=0.08, base_state_sha256=None, archive_sha256="1" * 64)
+    b = _seg_effect("B", new_d_seg=0.09, base_state_sha256=None, archive_sha256="2" * 64)
+    ab = _seg_effect("A__then__B", new_d_seg=0.05, base_state_sha256=None, archive_sha256="3" * 64)
+
+    row = commutator_value(a, b, ab)
+    assert row["classification"] == CLASSIFICATION_SYNERGISTIC
+    assert row["identity_status"] == "legacy_unbound"
+    assert row["macro_action_recommended"] is False
 
 
 # ── 5. false-authority markers present (planning row, never a score claim) ───
@@ -411,12 +466,12 @@ def test_ledger_emits_measured_row_and_queue_for_missing_reverse_pair():
     assert q["additive_delta_score_total"] == pytest.approx(a.delta_score_total + b.delta_score_total)
     assert q["additive_delta_bytes"] == 0
     assert q["byte_cost"] == 0
-    assert q["first_measurement_command"].startswith("uv run python tools/run_pr110_commutator_ledger.py")
+    assert q["first_measurement_command"] is None
+    assert q["measurement_command_available"] is False
+    assert q["identity_status"] == "bound"
     assert q["measurement_command_blockers"] == [
         "composite_action_effect_row_missing",
-        "action_effect_base_archive_hash_missing",
-        "action_effect_base_payload_hash_missing",
-        "action_effect_base_state_hash_missing",
+        "composite_materializer_command_missing",
     ]
 
 
@@ -436,6 +491,44 @@ def test_ledger_matches_measured_composites_by_order_not_unordered_pair():
     assert queued["first_action_id"] == "A"
     assert queued["second_action_id"] == "B"
     assert queued["proposed_composite_action_id"] == "A__then__B"
+
+
+def test_ledger_uses_typed_composite_parents_without_action_id_substrings():
+    a = _seg_effect("A", new_d_seg=0.08)
+    aa = _seg_effect("AA", new_d_seg=0.085)
+    b = _seg_effect("B", new_d_seg=0.09)
+    composite = _seg_effect(
+        "opaque-composite-receipt-17",
+        new_d_seg=0.05,
+        composed_action_ids=("A", "B"),
+    )
+
+    ledger = build_commutator_ledger([a, aa, b], [composite])
+    assert ledger["measured_commutator_count"] == 1
+    assert ledger["rows"][0]["first_action_id"] == "A"
+    assert ledger["rows"][0]["second_action_id"] == "B"
+    assert not any(
+        row["first_action_id"] == "AA" and row["second_action_id"] == "B"
+        for row in ledger["rows"]
+    )
+
+
+def test_ledger_fails_closed_on_duplicate_measured_composites():
+    a = _seg_effect("A", new_d_seg=0.08)
+    b = _seg_effect("B", new_d_seg=0.09)
+    first = _seg_effect(
+        "receipt-1",
+        new_d_seg=0.05,
+        composed_action_ids=("A", "B"),
+    )
+    duplicate = _seg_effect(
+        "receipt-2",
+        new_d_seg=0.051,
+        composed_action_ids=("A", "B"),
+    )
+
+    with pytest.raises(ActionCommutatorError, match="duplicate measured composites"):
+        build_commutator_ledger([a, b], [first, duplicate])
 
 
 def test_ledger_queue_when_no_pair_effects_at_all():
@@ -497,8 +590,8 @@ def test_measurement_queue_blocks_normalization_scope_mismatch() -> None:
 
 
 def test_measurement_queue_carries_base_identity_and_blocks_when_missing():
-    a = _seg_effect("A", new_d_seg=0.08, authority="contest_cpu")
-    b = _seg_effect("B", new_d_seg=0.09, authority="contest_cpu")
+    a = _seg_effect("A", new_d_seg=0.08, authority="contest_cpu", base_state_sha256=None)
+    b = _seg_effect("B", new_d_seg=0.09, authority="contest_cpu", base_state_sha256=None)
     ledger = build_commutator_ledger([a, b], [])
 
     row = ledger["measurement_queue"][0]
@@ -510,8 +603,9 @@ def test_measurement_queue_carries_base_identity_and_blocks_when_missing():
     assert row["base_archive_hash"] is None
     assert row["base_payload_hash"] is None
     assert "action_effect_base_archive_hash_missing" in row["measurement_command_blockers"]
-    assert "action_effect_base_payload_hash_missing" in row["measurement_command_blockers"]
     assert "action_effect_base_state_hash_missing" in row["measurement_command_blockers"]
+    assert "composite_materializer_command_missing" in row["measurement_command_blockers"]
+    assert row["identity_status"] == "legacy_unbound"
 
 
 def test_measurement_queue_exposes_shared_base_hashes_when_present():
@@ -521,15 +615,17 @@ def test_measurement_queue_exposes_shared_base_hashes_when_present():
         "A",
         new_d_seg=0.08,
         authority="contest_cpu",
-        archive_sha256=archive_hash,
-        payload_sha256=payload_hash,
+        base_archive_sha256=archive_hash,
+        base_payload_sha256=payload_hash,
+        base_state_sha256=None,
     )
     b = _seg_effect(
         "B",
         new_d_seg=0.09,
         authority="contest_cpu",
-        archive_sha256=archive_hash,
-        payload_sha256=payload_hash,
+        base_archive_sha256=archive_hash,
+        base_payload_sha256=payload_hash,
+        base_state_sha256=None,
     )
     ledger = build_commutator_ledger([a, b], [])
 
@@ -537,8 +633,7 @@ def test_measurement_queue_exposes_shared_base_hashes_when_present():
     assert row["base_archive_hash"] == archive_hash
     assert row["base_payload_hash"] == payload_hash
     assert "action_effect_base_archive_hash_missing" not in row["measurement_command_blockers"]
-    assert "action_effect_base_payload_hash_missing" not in row["measurement_command_blockers"]
-    assert "action_effect_base_state_hash_missing" in row["measurement_command_blockers"]
+    assert "action_effect_base_state_hash_missing" not in row["measurement_command_blockers"]
     assert "action_effect_base_archive_hash_mismatch" not in row["measurement_command_blockers"]
     assert "action_effect_base_payload_hash_mismatch" not in row["measurement_command_blockers"]
 
@@ -561,15 +656,15 @@ def test_measurement_queue_blocks_when_base_hashes_differ():
         "A",
         new_d_seg=0.08,
         authority="contest_cpu",
-        archive_sha256="a" * 64,
-        payload_sha256="b" * 64,
+        base_archive_sha256="a" * 64,
+        base_payload_sha256="b" * 64,
     )
     b = _seg_effect(
         "B",
         new_d_seg=0.09,
         authority="contest_cpu",
-        archive_sha256="c" * 64,
-        payload_sha256="d" * 64,
+        base_archive_sha256="c" * 64,
+        base_payload_sha256="d" * 64,
     )
     ledger = build_commutator_ledger([a, b], [])
 
@@ -778,12 +873,11 @@ def test_cli_smoke_no_pair_effects_all_queued(tmp_path: Path):
     assert summary["measured_commutator_count"] == 0
     assert summary["needs_measurement_count"] == 2
     assert summary["menu_ilp_allowed"] is False
-    assert summary["measurement_queue"][0]["first_measurement_command"] == (
-        "uv run python tools/run_pr110_commutator_ledger.py "
-        f"--action-effects {singles_path.as_posix()} "
-        f"--pair-effects {(out_dir / 'pr110_composite_action_effects.jsonl').as_posix()} "
-        f"--output {out_dir.as_posix()}"
-    )
+    assert summary["measurement_queue"][0]["first_measurement_command"] is None
+    assert summary["measurement_queue"][0]["measurement_command_available"] is False
+    assert "composite_materializer_command_missing" in summary["measurement_queue"][0][
+        "measurement_command_blockers"
+    ]
     assert summary["measurement_queue"][0]["additive_delta_score_total"] == pytest.approx(
         a.delta_score_total + b.delta_score_total
     )
@@ -911,9 +1005,76 @@ def test_cli_valid_k16_baseline_unblocks_menu_ilp(tmp_path: Path):
     assert summary["macro_action_promotion_allowed"] is True
     assert summary["menu_ilp_blockers"] == []
     assert all(row["menu_ilp_allowed"] is True for row in summary["measurement_queue"])
-    assert f"--baseline-reproduction {baseline_path.as_posix()}" in summary["measurement_queue"][0][
-        "first_measurement_command"
+    assert summary["measurement_queue"][0]["first_measurement_command"] is None
+
+
+def test_cli_carries_explicit_real_composite_materializer_template(tmp_path: Path):
+    singles_path = tmp_path / "singles.jsonl"
+    out_dir = tmp_path / "out_materializer"
+    _write_effect_jsonl(
+        [_seg_effect("A", new_d_seg=0.08), _seg_effect("B", new_d_seg=0.09)],
+        singles_path,
+    )
+    template = (
+        "python tools/materialize_pair.py "
+        "--first {first_action_id} --second {second_action_id} "
+        "--base-sha {base_archive_sha256} --receipt {output_receipt}"
+    )
+    repo_root = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "run_pr110_commutator_ledger.py"),
+            "--action-effects",
+            str(singles_path),
+            "--output",
+            str(out_dir),
+            "--composite-materializer-command-template",
+            template,
+        ],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads((out_dir / "commutator_summary.json").read_text())
+    assert summary["measurement_queue"][0]["first_measurement_command"] == template
+    assert summary["measurement_queue"][0]["measurement_command_available"] is True
+    assert "composite_materializer_command_missing" not in summary["measurement_queue"][0][
+        "measurement_command_blockers"
     ]
+
+
+def test_cli_rejects_ledger_rerun_as_composite_materializer(tmp_path: Path):
+    singles_path = tmp_path / "singles.jsonl"
+    _write_effect_jsonl(
+        [_seg_effect("A", new_d_seg=0.08), _seg_effect("B", new_d_seg=0.09)],
+        singles_path,
+    )
+    repo_root = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "run_pr110_commutator_ledger.py"),
+            "--action-effects",
+            str(singles_path),
+            "--output",
+            str(tmp_path / "out_rejected"),
+            "--composite-materializer-command-template",
+            (
+                "python tools/run_pr110_commutator_ledger.py "
+                "{first_action_id} {second_action_id} "
+                "{base_archive_sha256} {output_receipt}"
+            ),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=False,
+    )
+    assert proc.returncode != 0
+    assert "not a materializer" in proc.stderr
 
 
 def test_cli_invalid_k16_baseline_keeps_exact_blockers(tmp_path: Path):

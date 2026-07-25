@@ -1,0 +1,88 @@
+{
+  "schema": "coupled_score_surface_manifest.v1",
+  "lane_id": "lane_contest_native_codec_gestalt_20260725",
+  "research_only": true,
+  "score_claim": false,
+  "points": [
+    {
+      "id": "local_0191_component_snapshot",
+      "d_seg": 0.00055961,
+      "d_pose": 0.00002942,
+      "archive_bytes": 177169,
+      "evidence_axis": "[contest-CPU component snapshot]",
+      "custody": "historical local component triple; score recomputed by exact formula; not the effective frontier"
+    },
+    {
+      "id": "official_pr130_rounded_display_components",
+      "d_seg": 0.0002966,
+      "d_pose": 0.00002331,
+      "archive_bytes": 191052,
+      "evidence_axis": "[official-leaderboard rounded component display]",
+      "custody": "external rounded components only; exact upstream score is not reconstructible from displayed precision"
+    },
+    {
+      "id": "derived_rate_heavy_feasible_mix",
+      "d_seg": 0.0002,
+      "d_pose": 0.00002331,
+      "archive_bytes": 200000,
+      "evidence_axis": "[derived planning point]",
+      "custody": "algebraic point only; no archive or evaluator claim"
+    },
+    {
+      "id": "derived_seg_heavy_feasible_mix",
+      "d_seg": 0.0007,
+      "d_pose": 0.00002331,
+      "archive_bytes": 130101,
+      "evidence_axis": "[derived planning point]",
+      "custody": "algebraic point only; no archive or evaluator claim"
+    },
+    {
+      "id": "derived_zero_seg_public_pose_mix",
+      "d_seg": 0.0,
+      "d_pose": 0.00002331,
+      "archive_bytes": 235000,
+      "evidence_axis": "[derived planning point]",
+      "custody": "algebraic point only; no archive or evaluator claim"
+    },
+    {
+      "id": "derived_old_130kb_box_ceiling",
+      "d_seg": 0.00116,
+      "d_pose": 0.00161,
+      "archive_bytes": 130101,
+      "evidence_axis": "[derived historical-box audit]",
+      "custody": "historical fixed component ceilings combined only to test their joint score consequence"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "derived_accept_seg_regression_when_rate_gain_overpays",
+      "evidence_axis": "[derived planning transition]",
+      "custody": "algebraic disambiguator; no archive claim",
+      "before": {
+        "d_seg": 0.00055961,
+        "d_pose": 0.00002942,
+        "archive_bytes": 177169
+      },
+      "after": {
+        "d_seg": 0.0006,
+        "d_pose": 0.00002942,
+        "archive_bytes": 167169
+      }
+    },
+    {
+      "id": "derived_reject_seg_improvement_when_rate_cost_overwhelms",
+      "evidence_axis": "[derived planning transition]",
+      "custody": "algebraic disambiguator; no archive claim",
+      "before": {
+        "d_seg": 0.00055961,
+        "d_pose": 0.00002942,
+        "archive_bytes": 177169
+      },
+      "after": {
+        "d_seg": 0.0005,
+        "d_pose": 0.00002942,
+        "archive_bytes": 187169
+      }
+    }
+  ]
+}

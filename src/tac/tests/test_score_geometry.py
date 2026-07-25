@@ -14,6 +14,8 @@ from tac.score_geometry import (
     PoseByteTradeoff,
     RateOnlyDeltaAudit,
     ReceiverEquivalenceFloorAudit,
+    ScoreSublevelAudit,
+    ScoreTransitionAudit,
     audit_rate_only_delta_claim,
     contest_score,
     equal_score_curve_archive_bytes,
@@ -33,6 +35,8 @@ from tac.score_geometry import (
     score_decomposition,
     score_gradient,
     score_saving_from_byte_savings,
+    score_sublevel_audit,
+    score_transition_audit,
     target_byte_budget_for_score,
 )
 
@@ -323,6 +327,121 @@ def test_target_byte_budget_rejects_infeasible_distortion_floors() -> None:
     assert budget.max_archive_bytes is None
     assert budget.required_savings_bytes is None
     assert budget.blocker == "distortion_floors_exceed_target_before_rate"
+
+
+def test_score_sublevel_audit_replaces_independent_component_gates() -> None:
+    """Different triples can satisfy the same 0.172 score sublevel."""
+    rate_heavy = score_sublevel_audit(
+        target_score=0.172,
+        d_seg=0.0002,
+        d_pose=0.00002331,
+        archive_bytes=200_000,
+    )
+    seg_heavy = score_sublevel_audit(
+        target_score=0.172,
+        d_seg=0.0007,
+        d_pose=0.00002331,
+        archive_bytes=130_101,
+    )
+
+    assert isinstance(rate_heavy, ScoreSublevelAudit)
+    assert rate_heavy.inside_strict_sublevel is True
+    assert seg_heavy.inside_strict_sublevel is True
+    assert rate_heavy.archive_bytes > seg_heavy.archive_bytes
+    assert rate_heavy.d_seg < seg_heavy.d_seg
+    assert rate_heavy.signed_target_slack > 0.0
+    assert seg_heavy.signed_target_slack > 0.0
+    assert rate_heavy.score_claim is False
+    assert rate_heavy.promotion_eligible is False
+
+
+def test_score_sublevel_conditional_boundaries_round_trip() -> None:
+    audit = score_sublevel_audit(
+        target_score=0.172,
+        d_seg=0.0003,
+        d_pose=0.0001,
+        archive_bytes=177_169,
+    )
+
+    assert audit.inside_strict_sublevel is False
+    assert audit.boundary_d_seg_given_pose_and_bytes is not None
+    assert audit.boundary_d_pose_given_seg_and_bytes is not None
+    assert audit.boundary_archive_bytes_given_distortions is not None
+    assert contest_score(
+        audit.boundary_d_seg_given_pose_and_bytes,
+        audit.d_pose,
+        audit.archive_bytes,
+    ) == pytest.approx(audit.target_score)
+    assert contest_score(
+        audit.d_seg,
+        audit.boundary_d_pose_given_seg_and_bytes,
+        audit.archive_bytes,
+    ) == pytest.approx(audit.target_score)
+    assert (
+        contest_score(
+            audit.d_seg,
+            audit.d_pose,
+            audit.boundary_archive_bytes_given_distortions,
+        )
+        <= audit.target_score
+    )
+
+
+def test_score_transition_accepts_tradeoff_that_worsens_seg_but_wins_total() -> None:
+    audit = score_transition_audit(
+        target_score=0.172,
+        before_d_seg=0.00055961,
+        before_d_pose=0.00002942,
+        before_archive_bytes=177_169,
+        after_d_seg=0.0006,
+        after_d_pose=0.00002942,
+        after_archive_bytes=167_169,
+    )
+
+    assert isinstance(audit, ScoreTransitionAudit)
+    assert audit.seg_term_delta > 0.0
+    assert audit.rate_term_delta < 0.0
+    assert audit.exact_score_delta == pytest.approx(
+        audit.seg_term_delta + audit.pose_term_delta + audit.rate_term_delta
+    )
+    assert audit.improves_score is True
+    assert audit.jointly_coupled_transition is True
+    assert audit.changed_axes == ("seg", "bytes")
+
+
+def test_score_transition_rejects_axis_local_win_when_joint_total_worsens() -> None:
+    audit = score_transition_audit(
+        target_score=0.172,
+        before_d_seg=0.00055961,
+        before_d_pose=0.00002942,
+        before_archive_bytes=177_169,
+        after_d_seg=0.0005,
+        after_d_pose=0.00002942,
+        after_archive_bytes=187_169,
+    )
+
+    assert audit.seg_term_delta < 0.0
+    assert audit.rate_term_delta > 0.0
+    assert audit.exact_score_delta > 0.0
+    assert audit.improves_score is False
+    assert audit.exact_score_improvement == 0.0
+
+
+def test_score_transition_reports_pose_nonlinearity() -> None:
+    audit = score_transition_audit(
+        target_score=0.172,
+        before_d_seg=0.0003,
+        before_d_pose=0.00004,
+        before_archive_bytes=180_000,
+        after_d_seg=0.0003,
+        after_d_pose=0.00002,
+        after_archive_bytes=180_000,
+    )
+
+    assert audit.linearized_score_delta_at_before is not None
+    assert audit.nonlinear_remainder is not None
+    assert not math.isclose(audit.nonlinear_remainder, 0.0, abs_tol=1e-15)
+    assert audit.exact_score_delta < 0.0
 
 
 def test_rate_only_delta_audit_bounds_l5_pose_stream_claim() -> None:

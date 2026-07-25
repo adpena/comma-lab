@@ -8,12 +8,20 @@
 > PR130's rounded official components reconstruct to `0.1721412975
 > [contest-CUDA]`; no contest-CPU equivalence is inferred.
 >
-> **Active critical path:** PF3 finite-price materialization on the original
-> DDM describe line, with MR1 independent review/merge and CO5 organ telemetry
-> as bounded accelerants. PF3 must yield a receiver-closed same-object priced
-> member or a typed blocker. A local exact row below the original baseline but
-> above `0.172` is useful local progress, not an effective-pointer move. No
-> further synthesis branch precedes the P1/P2/P3 one-SHA closure receipts.
+> **Active critical path:** preserve candidate identity and exact coupled score
+> from the existing DDM/J12 receiver actions through
+> `tac.applied_action_receipt.v1`, `tac.action_effect.v1`, measured ordered
+> commutators, lawful stream byte homes, and a hardened one-SHA packet compiler.
+> Harvest `v2_compose` framing/inflate/accounting without making its stale n96
+> scientific semantics canonical. PF3 has materialized 29/37 occupied buckets;
+> its 16 measured scalar directions are adverse and 52 bounded probes remain,
+> so it is a control arm rather than the whole program. In parallel, price the
+> current archive at EV2's lawful seven stream homes, harden the J12 nonfinite
+> warp/reseal edge, byte-close one v8/v9 support-renewing carrier, and reopen
+> frame-0 Pose only as nonlinear real-PoseNet descent. Exact joint `delta_S`,
+> not independent Seg/Pose/rate caps, is the admission authority. A local exact
+> row below the original baseline but above `0.172` is useful progress, not an
+> effective-pointer move.
 
 <!-- prior focus (2026-06-10, CAPSTONE viability) preserved below as history -->
 # Current Focus - 2026-06-10 (CAPSTONE viability daemon LIVE — first ORIGINAL basis)
