@@ -88298,6 +88298,48 @@
       },
       "notes": "Research-only delegated P1; independently derived PC1-compatible frame0-only carrier and exact matched control; public/banned lineage quarantine; MAIN review required.",
       "research_only": true
+    },
+    {
+      "id": "ddm_ms2r_r3_366box_typed_fisher_g4_waterfill",
+      "name": "DDM MS2R R3 366-box typed Fisher G4 waterfill",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only Task #701 cross-chain typed waterfill execution; local advisory only; no paid dispatch, training, score claim, promotion, or pointer movement; MAIN review required.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -88307,5 +88349,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-25T13:10:23Z"
+  "updated_at": "2026-07-25T16:32:47Z"
 }
