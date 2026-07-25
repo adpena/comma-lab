@@ -1,0 +1,151 @@
+{
+  "schema": "ddm_pan1_scoreboard_receipt.v1",
+  "date_utc": "2026-07-25",
+  "lane_id": "ddm_pan1_comprehensive_pantheon_blindspot",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "main_review_required": true,
+  "formula": {
+    "source": "upstream/evaluate.py:63,92",
+    "expression": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "uncompressed_bytes": 37545489,
+    "seg_sites": 117964800,
+    "errors_to_fraction": "d_seg = integer_argmax_errors / 117964800",
+    "pose_definition": "mean squared error over 600 pairs x first 6 PoseNet outputs"
+  },
+  "pointer": {
+    "axis": "[contest-CPU]",
+    "archive_bytes": 177169,
+    "archive_sha256": "ad02b0124cbb3405c23d3480ac16f12b4e48cbf6f75878dd77a5e621bebd079c",
+    "d_seg": 0.00055961,
+    "d_pose": 0.00002942,
+    "seg_term": 0.055961,
+    "pose_term": 0.0171522593,
+    "rate_term": 0.1179695649,
+    "score": 0.19108282419209976,
+    "source": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:14123-14131"
+  },
+  "candidate_basis": {
+    "candidate": "C1 post-CC3 coordinated budget",
+    "archive_bytes": 130789,
+    "archive_bytes_authority": ".omx/research/ddm_cc3_mixed_coder_receiver_receipt_20260725.json",
+    "pose_finish_d_pose": 0.00161,
+    "pose_finish_authority": ".omx/research/configs/ddm_j9_366_geometry_escape_cure_20260725.json",
+    "rate_term": 0.08708702661989567,
+    "pose_term": 0.1268857754044952,
+    "pose_plus_rate_floor": 0.21397280202439088,
+    "verdict": "CANNOT_BEAT_POINTER_EVEN_AT_DSEG_ZERO"
+  },
+  "hypothetical_stage_target_rows": [
+    {
+      "row_id": "j9_stage1_target_at_c1_post_cc3_bytes_and_pose_finish",
+      "d_seg": 0.020602722168,
+      "continuous_errors": 2430396.000003686,
+      "integer_error_identity": 2430396,
+      "d_pose": 0.00161,
+      "archive_bytes": 130789,
+      "seg_term": 2.0602722168,
+      "pose_term": 0.1268857754044952,
+      "rate_term": 0.08708702661989567,
+      "derived_score": 2.274245018824391,
+      "margin_vs_pointer": -2.0831621946322914
+    },
+    {
+      "row_id": "j9_stage2_target_at_c1_post_cc3_bytes_and_pose_finish",
+      "d_seg": 0.013735148112,
+      "continuous_errors": 1620264.0000024578,
+      "integer_error_identity": 1620264,
+      "d_pose": 0.00161,
+      "archive_bytes": 130789,
+      "seg_term": 1.3735148112,
+      "pose_term": 0.1268857754044952,
+      "rate_term": 0.08708702661989567,
+      "derived_score": 1.587487613224391,
+      "margin_vs_pointer": -1.396404789032291
+    },
+    {
+      "row_id": "j9_stage3_target_at_c1_post_cc3_bytes_and_pose_finish",
+      "d_seg": 0.006867574056,
+      "continuous_errors": 810132.0000012289,
+      "integer_error_identity": 810132,
+      "d_pose": 0.00161,
+      "archive_bytes": 130789,
+      "seg_term": 0.6867574056,
+      "pose_term": 0.1268857754044952,
+      "rate_term": 0.08708702661989567,
+      "derived_score": 0.9007302076243908,
+      "margin_vs_pointer": -0.7096473834322911
+    },
+    {
+      "row_id": "task613_box_at_c1_post_cc3_bytes_and_pose_finish",
+      "d_seg": 0.00116,
+      "continuous_errors": 136839.168,
+      "integer_error_ceiling": 136839,
+      "d_pose": 0.00161,
+      "archive_bytes": 130789,
+      "seg_term": 0.116,
+      "pose_term": 0.1268857754044952,
+      "rate_term": 0.08708702661989567,
+      "derived_score": 0.32997280202439083,
+      "margin_vs_pointer": -0.13888997783229107
+    },
+    {
+      "row_id": "task613_hard_byte_ceiling",
+      "d_seg": 0.00116,
+      "d_pose": 0.00161,
+      "archive_bytes": 200000,
+      "derived_score": 0.3760575660289295,
+      "margin_vs_pointer": -0.18497474183682976
+    }
+  ],
+  "pose_unit_audit": {
+    "source": "tools/launch_ddm_joint_descent.py:709-741",
+    "per_batch_accumulation": "pose_squared_error += sum(d_pose_rows)*6",
+    "finalization": "d_pose = pose_squared_error/(600*6)",
+    "contest_definition": "mean squared error over the same 600x6 outputs",
+    "conversion_factor": 1.0,
+    "axis_caveat": "macOS-CPU frozen-scorer values are advisory evidence, but they are not a different pose unit",
+    "observed_advisory_d_pose": 163.06116431842463,
+    "declared_finish_d_pose": 0.00161,
+    "required_raw_d_pose_reduction_factor": 101280.22628473579,
+    "verdict": "NO_UNIT_CONVERSION_EXISTS_TO_TURN_163_INTO_0_00161"
+  },
+  "sub_0_15_feasibility": {
+    "at_130789_bytes_and_d_pose_0_00161": {
+      "maximum_d_seg": -0.0006397280202439088,
+      "verdict": "IMPOSSIBLE"
+    },
+    "at_130789_bytes_and_pointer_d_pose_0_00002942": {
+      "maximum_d_seg": 0.00045760714053706534,
+      "maximum_continuous_errors": 53981.5348120268,
+      "integer_error_max": 53981,
+      "verdict": "FEASIBLE_TRIPLE_IF_ALL_THREE_TERMS_ARE_MET"
+    },
+    "at_130789_bytes_and_zero_pose": {
+      "maximum_d_seg": 0.0006291297338010432,
+      "maximum_continuous_errors": 74215.16322189331,
+      "integer_error_max": 74215
+    },
+    "at_d_seg_zero_and_d_pose_0_00161": {
+      "maximum_archive_bytes": 34713.394611762196,
+      "integer_archive_bytes_max": 34713
+    },
+    "task613_distortion_corner": {
+      "d_seg": 0.00116,
+      "d_pose": 0.00161,
+      "distortion_only_score": 0.24288577540449519,
+      "verdict": "IMPOSSIBLE_BEFORE_RATE"
+    }
+  },
+  "pointer_beat_feasibility_at_130789_bytes": {
+    "with_d_pose_0_00161_maximum_d_seg": -0.00022889977832291102,
+    "with_pointer_d_pose_maximum_d_seg": 0.000868435382458063,
+    "with_zero_pose_maximum_d_seg": 0.001039957975722041,
+    "verdict": "POSE_FINISH_FALLBACK_PRECLUDES_POINTER_BEAT"
+  },
+  "verdict": "LIVE_PLAN_SUCCESS_CRITERION_DOES_NOT_BEAT_POINTER",
+  "verdict_scope": "DERIVED arithmetic on SHA-custodied targets and bytes; hypothetical target rows are not measured archives, not contest scores, and not promotion evidence",
+  "pointer_moved": false
+}

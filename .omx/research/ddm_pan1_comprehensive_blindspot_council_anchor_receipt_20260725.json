@@ -1,0 +1,138 @@
+{
+  "canonical_helper": "tac.council_continual_learning.append_council_anchor",
+  "canonical_operational_path": ".omx/state/council_deliberation_posterior.jsonl",
+  "deliberation_id": "ddm_pan1_comprehensive_pantheon_blindspot_20260725",
+  "emission_status": "APPENDED_AND_STRICT_RELOADED_IN_ISOLATED_WORKTREE",
+  "strict_reload_matching_records": 1,
+  "local_operational_jsonl_sha256_after_emit": "9c5597e25b64a6554b99c22ca395961d2889897d4a9e9e6cfa5b1666d04e6421",
+  "local_operational_jsonl_bytes_after_emit": 5034,
+  "git_custody_note": "Operational JSONL is gitignored. This tracked payload lets MAIN independently review and append after merge.",
+  "payload": {
+    "deliberation_id": "ddm_pan1_comprehensive_pantheon_blindspot_20260725",
+    "topic": "Comprehensive blind-spot hunt across DESCRIBE box and DESCENT #366",
+    "council_tier": "T3",
+    "council_attendees": [
+      "Shannon",
+      "Dykstra",
+      "Rudin",
+      "Daubechies",
+      "Yousfi",
+      "Fridrich",
+      "Contrarian",
+      "Assumption-Adversary",
+      "Schmidhuber",
+      "Hotz",
+      "Carmack",
+      "MacKay",
+      "Balle",
+      "Selfcomp",
+      "Quantizr",
+      "PR95Author",
+      "Hinton",
+      "van-den-Oord",
+      "Mallat",
+      "Filler",
+      "Boyd",
+      "Tao",
+      "Karpathy",
+      "Hassabis",
+      "Atick",
+      "Redlich",
+      "Rao",
+      "Ballard",
+      "Tishby",
+      "Zaslavsky",
+      "Wyner",
+      "Time-Traveler"
+    ],
+    "council_quorum_met": true,
+    "council_verdict": "PROCEED_WITH_REVISIONS",
+    "council_predicted_mission_contribution": "frontier_preserving_then_frontier_breaking",
+    "council_dissent": [
+      {
+        "member": "Contrarian",
+        "verbatim": "A box whose distortion-only score is 0.242886 is not a frontier target. Stop calling #613 or the 0.00161 pose fallback a success case; exact S must be the gate."
+      },
+      {
+        "member": "Assumption-Adversary",
+        "verbatim": "The 163-to-0.00161 gap is not a unit conversion. Both values are mean MSE over the same 600 by 6 outputs. The campaign asks descent to erase five orders of raw pose error without a measured pose curve."
+      },
+      {
+        "member": "MacKay",
+        "verbatim": "At 130789 bytes and d_pose 0.00161, rate plus pose already costs 0.213973. No Seg allocation can make that code beat 0.191083."
+      },
+      {
+        "member": "Wyner",
+        "verbatim": "A generic decoder may be free; a video-selected topology, grammar, dictionary, branch, or conditioning field is side information and must be counted."
+      },
+      {
+        "member": "Schmidhuber",
+        "verbatim": "Do not spend 450 gradient steps rediscovering a description that the event-continuation fitter can solve. Race solve against descent on exact score per wall-hour."
+      }
+    ],
+    "council_assumption_adversary_verdict": [
+      {
+        "assumption": "The #613 box plus R1 pose fallback is a frontier-beating success criterion.",
+        "classification": "CARGO-CULTED",
+        "empirical_verification_status": "VERIFIED_VIA_SOURCE_INSPECTION",
+        "evidence_artifact": ".omx/research/ddm_pan1_scoreboard_receipt_20260725.json",
+        "rationale": "Exact formula gives distortion-only 0.242886 before rate."
+      },
+      {
+        "assumption": "The DDM advisory d_pose around 163 converts to contest d_pose around 0.00161.",
+        "classification": "CARGO-CULTED",
+        "empirical_verification_status": "VERIFIED_VIA_SOURCE_INSPECTION",
+        "evidence_artifact": "tools/launch_ddm_joint_descent.py",
+        "rationale": "Both metrics are mean MSE over 600x6 outputs."
+      },
+      {
+        "assumption": "The first clean d_seg step predicts a 450-step campaign.",
+        "classification": "UNCLEAR",
+        "empirical_verification_status": "ASSUMED_AWAITING_VERIFICATION",
+        "rationale": "One point does not identify decay and step 50 was EMA-confounded."
+      },
+      {
+        "assumption": "The 100099-byte predictor is structurally near-minimal.",
+        "classification": "CARGO-CULTED",
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "evidence_artifact": ".omx/research/ddm_lp1_layer_pricing_20260725T031654Z/ddm_lp1_layer_pricing_receipt.json",
+        "rationale": "Current home is measured; replacement representations are untested."
+      },
+      {
+        "assumption": "PC1 admission proves pose efficacy.",
+        "classification": "CARGO-CULTED",
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "evidence_artifact": ".omx/research/ddm_pc1_pose_stream_admission_receipt_20260724.json",
+        "rationale": "No descent or tube-membership measurement was run."
+      },
+      {
+        "assumption": "Exact score and exact archive custody are binding.",
+        "classification": "HARD-EARNED",
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "evidence_artifact": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+        "rationale": "Pointer exact report closes Seg, Pose, and rate on one archive."
+      }
+    ],
+    "council_decisions_recorded": [
+      "PAN1-1 replace box-as-success with exact same-byte pointer-beat gate",
+      "PAN1-2 add pose-unit identity and reduction-ratio guard to j10",
+      "PAN1-3 consume a clean live step-50 n600 row before forecasting",
+      "PAN1-4 race structural replacements for the 100099-byte stream after la1",
+      "PAN1-5 recommend one MAIN-authorized #381 exact calibration row",
+      "PAN1-6 complete same-SHA R6 and Modal custody after ct1",
+      "PAN1-7 arbitrate #366 versus family-(d) fitter on exact S per wall-hour",
+      "PAN1-8 harvest 0.188044 signal without composing old-lineage bytes"
+    ],
+    "related_deliberation_ids": [
+      "ddm_gc1_schmidhuber_symposium_20260724"
+    ],
+    "event_type": "dispatched",
+    "parent_id_or_session": "codex_delegate:ddm_pan1_comprehensive_pantheon_blindspot:20260725T112123Z",
+    "memory_path": ".omx/research/feedback_pantheon_comprehensive_blindspot_pan1_20260725.md",
+    "notes": "Operator-frontier-override; read-only adjudication; pointer unchanged; MAIN review required.",
+    "predicted_mission_contribution": "frontier_breaking",
+    "override_invoked": true,
+    "override_rationale": "operator-frontier-override comprehensive Pantheon dispatch",
+    "schema": "council_deliberation_posterior_v1"
+  }
+}
