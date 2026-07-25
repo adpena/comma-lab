@@ -24504,3 +24504,31 @@ d957c817… (admission true). MAIN review: D1 catch verified TYPED (not blanket)
 persistent Monitor (startup gates · geometry-cure events · checkpoints · death). Chain to
 pointer: campaign endpoint → e4/e5 export (inherits cc3's −3,422B) → R6 dual-axis exact eval.
 Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-366-ATTEMPT5-DOWN-STEP50-EMA-SHADOW (2026-07-25, MAIN)
+SIGNAL: attempt 5 (ticket 4cf2d2e8, pid 67636) governed-stopped at step 50/450 (4h42m):
+campaign_blocker BLOCKED_REALIZED_DSEG_REGRESSION. VERIFIED MECHANISM (receipt written
+11:06:12Z + verdict/baseline bit-compare): scheduled verdict scored the EMA shadow at legacy
+decay 0.997 → 13.9% blended → uint8-lattice quantization leaves realized_parameter_count=3 of
+368 → EMA archive d_seg BIT-IDENTICAL to baseline (0.07051923116048177; sha differs) → compared
+against the step-1 LIVE reference (0.07030889, live_opening_candidate) → phantom +0.0002
+regression → fatal. LIVE theta WAS descending (step-50 batch d_seg 0.0689→0.0664). ZERO work
+lost: 52 keep-all checkpoints (D2 cure paid). verdict_scope: INSTANCE (verdict-policy defect;
+acceptance rule + geometry cure + engine UNIMPLICATED — D1 prevention held 50/50 steps, zero
+escapes). CLASS: EMA-shadow-lag confound (#85 sister) × constants-are-poison (0.997 legacy
+fallback where ema_decay_run_geometry_v1 LawRef was OWED — p0_ema_calibration consumed on the
+live line at last) × L3 apparatus-validity precondition (no-realized-signal metric grounded a
+BLOCK) × shadow-inconsistent reference (live-vs-EMA apples-to-oranges).
+DIAGNOSTIC POSITIVES banked: measured step_seconds median ~264s (seal 312s conservative);
+memory receipt MEASURED_ACTUAL_FULL_RUN 21.28 GiB projected vs 116 ceiling; kernels
+bit-identical parity green; pose gate correctly INSUFFICIENT (3 verdict points [0,1,50]).
+RESPONSE: j10 arm LIVE (ddm_j10_366_ema_verdict_shadow_cure) — C1 LawRef-derived decay via
+DSL-compile · C2 shadow-consistent DUAL verdict emission (ema+live rows; like-vs-like
+decisions) · C3 quantization-degenerate verdict guard (VERDICT_NOT_YET_INFORMATIVE→CONTINUE,
+never BLOCK) · resume from materialized step-50 LIVE state (ws2 custody pattern) → reseal →
+re-smoke → READY_TO_FIRE (attempt 6, fire stays MAIN). Honesty falsifier pre-registered: if
+live n600 at step-50 genuinely ≥ baseline through the real archive path, regression is REAL →
+STOP, redirect to proposal-quality crux. equations-leg note: ema_decay_run_geometry_v1 gains
+this run as a third anchor candidate (negative-anchor: legacy-0.997-on-450-step-geometry
+produces degenerate-shadow verdicts). Sister consumer: ct1 SENSE arm (LIVE) dual-emit rows.
+pointer 0.1910828242 [contest-CPU] UNMOVED (apparatus/means).
