@@ -24441,3 +24441,27 @@ into the engine proposal path · ckpt-every-accepted-step · reseal with measure
 schedule · deterministic replay of steps 1-7 if seeds admit, else W_joint restart · bounded
 re-smoke THROUGH the fatal step-8 region → READY_TO_FIRE under standing GO.
 Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-ev2-allocation-misposed (2026-07-25, arm ddm_ev2_per_pair_allocation_producer rc=0, MERGED d146ce94c7)
+Verdict: `FORMULATION_MISPOSED_FOR_CURRENT_C1_COMPOSITION` — the pre-registered falsifier fired
+at MAXIMUM: **0 / 134,211 C1 bytes (0.0%) are lawfully pair×cell separable; 100% typed
+UNALLOCATED** (vs the 30% bar). STRUCTURAL PROOF, not a measurement gap: exact construction
+lineage shows predictor.zip (11 coded members, 100,099B) + the G1S1 worldsheet (3 globally-coded
+productions, 29,878B) each span ALL 600 pairs — jointly-coded streams expose NO exclusive
+final-byte owners; a receiver-effect probe cannot manufacture one. The COARSEST LAWFUL PARTITION
+is 7 stream homes (manifest 3,345 · v15-zip 100,099 · g1-worldsheet 29,878 · receiver-profile 85
+· solved-template 151 · ZIP-CD/EOCD 383 = 133,941 exactly + lane seed 270 = 134,211;
+MAIN-verified: sums + ranges tile exactly). verdict_scope: FORMULATION (fine-grained per-cell
+rate-homes on jointly-coded archives) — NOT a negative on waterfilling, Fisher geometry, the
+scorer partition, or the representation family. **THE STRUCTURAL LAW THIS SEALS: rate lives at
+the STREAM level (7 homes); distortion lives at the CELL level (162); on a jointly-coded object
+they join ONLY through measured whole-stream deltas** — per-cell λ over final bytes cannot
+exist; rd1's 162 duals are lawfully null, the headline builder's per-dim quanta likewise.
+CONSEQUENCES: #701 typed Fisher/G4 waterfill CLOSED-AS-MISPOSED for this composition (reopener:
+a pay-for-separability composition — pair-separable coding whose joint-coding-gain loss is the
+measurable price of per-cell allocation); rd1 λ-continuation (semantic/pre-coder side, where
+allocation exists) remains the lawful solve instrument; cc2/cc3's whole-stream coder deltas are
+exactly the lawful join. ev2's registered preflight correctly admitted BUNDLE-COMPLETE then
+refused PF3 without actuation. NO respawn (the coarser partition IS the finding; both routes
+served: descent = j9 repair, describe-rate = cc3). 33 tests, 3 clean passes, deterministic
+rerun. Pointer 0.1910828242 [contest-CPU] UNMOVED — means.
