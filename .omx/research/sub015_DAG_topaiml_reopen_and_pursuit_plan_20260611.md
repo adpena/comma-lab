@@ -24371,3 +24371,24 @@ cc3 successor: admit ONLY the 8 negative-delta leaves into receiver integration 
 preserved, generic decoder in free interpreter code, exact mixed archive reconstruct + parse-back)
 — an R6-export rate lever. Verification: 49 tests + 57 deterministic round-trips + 114
 malformed rejections; byte-identical resume replay. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-ga1-gauge-dominated (2026-07-25, arm ddm_ga1_gauge_tolerance_ladder rc=0, MERGED 44ba1270b1)
+#669(a) verdict: `CURVE_BLOCKED_SOURCE_CUSTODY; CURRENT_C1_GAUGE_LEVER_DOMINATED_BY_TYPED_MASS_
+UPPER_BOUND` — the pre-registered falsifier fired BY UPPER BOUND without needing the curve:
+only **151 / 134,211 counted bytes (0.112509%)** are typed FIBER in lp1's sealed 5-type
+vocabulary (the solved-template outer home; the other FIBER rows are the 25 zero-allocation
+costate holds) — even total conversion at zero distortion cost sits far below the 5% bar.
+verdict_scope: **INSTANCE** (current C1 composition + typed-home-preserving formulation).
+MAIN-verified against sealed sources: dr2b receipt status BLOCKED_SDWL1 (no lawful rung grid
+exists — the arm correctly refused to invent one) + lp1 receipt confirms 151B allocated FIBER.
+NAMED GAP (the real reopener): #580's 80.6742% structural nullity is RENDER-SPACE energy, not
+counted-byte homes — the stream→projector CROSSWALK connecting the two ontologies was never
+built; without it structural nullity cannot be transferred to counted bytes. Other reopeners:
+C1 retyping · non-home-preserving gauge formulations. **TWO MAIN CHARTER ERRORS caught by the
+arm's fail-closed audit** (recorded per warnings-are-blocking): (1) charter cited dr2b rungs
+without verifying the sealed receipt contains them — recall-without-verification; (2) stale
+error endpoint 17,931 (fresh RD1 per-class sum = 17,927; 17,927 supersedes in all future
+charters). NO RESPAWN (DISTANCE test: gauge lever dominated for this composition; describe
+route already served by ms2r on the SOLUTION side, where the tolerance actually lives).
+Landed: fail-closed compiler + SHA/byte/schema-pinned config + typed receipt 885119e5….
+Pointer 0.1910828242 [contest-CPU] UNMOVED — means.
