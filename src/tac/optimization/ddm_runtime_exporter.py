@@ -1003,11 +1003,14 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
         "json",
         "lzma",
         "math",
+        "numpy",
         "os",
         "pathlib",
         "shutil",
         "struct",
         "sys",
+        "tac.optimization.ddm_cc3_mixed_coder_receiver",
+        "tac.optimization.ddm_pc1_pose_stream",
         "time",
         "tac.optimization.ddm_ws1_warm_start",
         "typing",
@@ -1304,7 +1307,10 @@ def _ws1_runtime_source_bundle() -> bytes:
     global _WS1_SOURCE_BUNDLE_CACHE
     if _WS1_SOURCE_BUNDLE_CACHE is not None:
         return _WS1_SOURCE_BUNDLE_CACHE
-    queue = ["tac.optimization.ddm_ws1_warm_start"]
+    queue = [
+        "tac.optimization.ddm_cc3_mixed_coder_receiver",
+        "tac.optimization.ddm_ws1_warm_start",
+    ]
     visited: set[str] = set()
     modules: dict[str, Path] = {}
     while queue:
@@ -1392,6 +1398,14 @@ def _ws1_runtime_payload() -> bytes:
         raise ExporterError("WS1 runtime source-bundle marker changed")
     encoded = base64.b85encode(_ws1_runtime_source_bundle())
     return source.replace(marker, b"WS1_SOURCE_BUNDLE_B85 = " + repr(encoded).encode("ascii"))
+
+
+def cc3_runtime_payload() -> bytes:
+    """Return the canonical E3/E4/E5 runtime with the CC3 receiver bridge."""
+
+    payload = _ws1_runtime_payload()
+    _runtime_cleanliness(payload)
+    return payload
 
 
 def _ws1_grammar_state(
@@ -1727,6 +1741,12 @@ PYBIN="${PYTHON:-python3}"
         + b"""exec "$PYBIN" "$HERE/inflate.py" "$1" "$2" "$3"
 """
     )
+
+
+def cc3_inflate_sh() -> bytes:
+    """Reuse the declared E3/E4/E5 locked-environment launcher for CC3."""
+
+    return _inflate_sh()
 
 
 def export_ws1_runtime(
