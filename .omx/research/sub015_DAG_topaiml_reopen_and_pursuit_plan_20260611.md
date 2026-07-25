@@ -24602,3 +24602,21 @@ Disposition: `POST_HOC_PROJECTION_FORMULATION_LOSS_KEEP_WJOINT_STEP50_LIVE` (FOR
 SHA-bound composition, not a family negative). Durable receipt, WS3-schema arbitration, compiler,
 tests, dedicated DAG/equations, findings, and done marker landed on the branch. Pointer
 0.1910828242 [contest-CPU] UNMOVED — means; `score_claim=false`; MAIN full-diff review required.
+
+## FEED-603-REFOUNDATION-PAUSE (2026-07-25, MAIN — operator "pause and fix... start from most optimal place possible" + 30k-ft steer "as converged as possible SegNet + as close to knee rate as possible")
+SIGNAL: FULL PAUSE on campaign firing. New BINDING pre-launch contract:
+.omx/research/optimal_start_card_366_refoundation_20260725.md — success gate = exact composed
+S < 0.1910828242 from ORIGINAL work (composing triple d_seg ≤8.684e-4 @≤130,789B + 2.94e-5-class
+pose; ~9.1e-4 @128,254B if E5-closed); six gates G1-G6 ALL green before any fire; fire stays
+MAIN. OPERATOR STEER folded as §6/G3.5: warm-start arbitration was WRONG-CLASS (training states
+only) — solve-derived states (rd1 knee member ~216KB-class · exact-solve lineage 1.52e-4/17,927
+errors) must be REALIZED receiver-closed and entered into the arbitration; start from the most-
+converged admissible seg state near the knee, never re-earn solved seg by descent.
+ARMS (4/4): j10 (G1 engine cures, running) · pc2 FIRED (G3: the never-run PC1 pose-descent
+smoke — descent_was_run=false was the plan's biggest unknown) · e5a FIRED (G4: E5 mid-campaign
+adapter, the 3-consumer rate edge; closes la1's 128,254B or re-bases it) · db1 FIRED (G2: $0
+decay bounds — v19c 104-admission tail fit + N(δ) margin-mass, the MacKay bound BEFORE any
+burn). ks1 QUEUED gated-on-e5a (G3.5 knee-member realization + full-set arbitration).
+PAUSED: campaign fire · new measurement families · Modal spend (calibration row deferred to
+the re-founded candidate). pointer 0.1910828242 [contest-CPU] UNMOVED (frontier-protecting
+re-foundation).
