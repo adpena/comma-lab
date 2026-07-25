@@ -24227,3 +24227,21 @@ loop IF event exits ever under-determine a stage stop (post-J8F, no build now). 
 serial-selection row N/A-WEAK (no learned recurrence in the counted path). Memo:
 papers_checked_arxiv_2607_20594_looped_transformers_20260724.md. verdict_scope:
 external-benchmark harvest, zero contest measurements. Pointer 0.1910828242 UNMOVED.
+
+### FEED-603-px4-ripo-isometric-clip (2026-07-24, Fable inline harvest, $0)
+Operator drop alphaXiv 2607.10169 (RIPO — Riemannian isometric policy optimization), harvested
+inline. [MEASURED_EXTERNAL, lessons-only; no RL enters the counted path.] The harvestable
+object is the GEOMETRIC CLIP LAW: a flat Euclidean threshold on a Fisher-metric manifold is a
+defect class (over-conservative on RARE mass, over-aggressive on FREQUENT mass — their d_geom
+∝ p·(r−1)² derivation); the cure is radius ∝ 1/sqrt(local metric weight), which also
+homoscedasticizes sampling variance. Routed: (1) ADOPT-AS-CANDIDATE (post-J8F, RACE-gated per
+constants-are-poison): metric-scaled per-bucket trust radii for the #366 fitting engine's
+realized-acceptance — radius ∝ 1/sqrt(ms4 margin-Fisher Gram diagonal); the ms3/ms4 custody
+bundle (BUNDLE-COMPLETE) is the ready producer; A/B vs flat radius in the engine smoke. SCOPE
+CUT recorded: quarter-quantum caps are OUT of scope (uint8 lattice-realizability constraint,
+not a metric threshold). (2) CORROBORATION: flat-threshold rare-mass starvation = the external
+math behind our measured Lane-erasure/rare-class-protection findings (#208, per-class lambda) —
+per-class scaling is geometrically required, not heuristic. (3) Homoscedasticity = second
+independent argument for metric radii (verdict-noise equalization, #385 noise-floor column).
+Memo: papers_checked_arxiv_2607_10169_ripo_20260724.md. verdict_scope: external-benchmark
+harvest, zero contest measurements. Pointer 0.1910828242 UNMOVED.
