@@ -1,11 +1,11 @@
 # Codex findings — DDM CO5 costate-organ telemetry activation
 
-UTC: 2026-07-25T19:54:32Z  
-Task: `#708`  
-Lane: `lane_ddm_co5_organ_telemetry_activation_20260725`  
-Status: `BUILT_FAIL_CLOSED_MAIN_REVIEW_REQUIRED`  
-Maturity: `_dev`  
-Research only: `true`  
+UTC: 2026-07-25T19:54:32Z
+Task: `#708`
+Lane: `lane_ddm_co5_organ_telemetry_activation_20260725`
+Status: `BUILT_FAIL_CLOSED_MAIN_REVIEW_REQUIRED`
+Maturity: `_dev`
+Research only: `true`
 Actuation: `NONE`
 
 ## Verdict

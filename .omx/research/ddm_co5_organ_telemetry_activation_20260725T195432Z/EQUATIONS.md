@@ -1,6 +1,6 @@
 # DDM CO5 equation disposition
 
-UTC: 2026-07-25T19:54:32Z  
+UTC: 2026-07-25T19:54:32Z
 Status: `NO_NEW_LAW_VALIDATED`
 
 The four recalled designs remain mathematically well-formed, but CT1 × EV1
@@ -54,4 +54,3 @@ does not supply the matched authority needed to validate any of them:
 No canonical-equations registry row or empirical anchor is appended. A failed
 backtest is scoped to the stopped-v5 CT1 telemetry joined with EV1; the four
 design families remain open.
-

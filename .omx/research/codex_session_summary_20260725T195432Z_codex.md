@@ -23,4 +23,3 @@ dispatch, scorer call, actuation, score claim, or pointer edit.
 MAIN must review the complete branch diff before merge. Future activation
 requires the exact per-enhancement evidence named in the receipt; freshness
 alone is not the missing delta-S/hour gate.
-

@@ -1,9 +1,9 @@
 # FEED-708-co5 — DDM costate-organ enhancement activation
 
-UTC: 2026-07-25T19:54:32Z  
-Maturity: `_dev`  
-Research only: `true`  
-Actuation: `NONE`  
+UTC: 2026-07-25T19:54:32Z
+Maturity: `_dev`
+Research only: `true`
+Actuation: `NONE`
 MAIN landing review required: `true`
 
 ```text
@@ -43,4 +43,3 @@ evidence.
 Therefore the durable feed is `0/4 active, 4/4 held`, not a synthetic
 activation. Any future source-tree mismatch becomes `[stale-advisory]` at the
 same consumption boundary and keeps every row inactive.
-
