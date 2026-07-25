@@ -323,6 +323,8 @@ def _load_scorers(
         if digest != SCORER_HASHES[name]:
             raise P1RunnerError(f"frozen {name} SHA-256 differs")
         custody[name] = {"path": str(path), "bytes": byte_count, "sha256": digest}
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
     spec = importlib.util.spec_from_file_location("ddm_p1_frozen_modules", paths["modules"])
     if spec is None or spec.loader is None:
         raise P1RunnerError("cannot import frozen scorer modules")
