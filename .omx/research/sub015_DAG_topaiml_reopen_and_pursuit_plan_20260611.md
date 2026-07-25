@@ -24211,3 +24211,19 @@ target — amends the FEED-603-co4 candidate, same J8F gate, no new arm. (2) Tra
 J8F-gated context-model race ever admits a learned model. (4) The +40% pooling price
 corroborates the g3 flip/margin currency law. verdict_scope: external-benchmark harvest, zero
 contest measurements. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-px3-looped-transformers (2026-07-24, Fable inline harvest, $0)
+Operator drop arXiv 2607.20594 (weight-tied looped transformers — Zhang/Hu/Peng/Xie), harvested
+inline. [MEASURED_EXTERNAL, lessons-only.] Two STRONG corroborations of sealed doctrine:
+(1) "mechanisms transfer through WARM-STARTING but cannot be imposed via input SCHEDULING" —
+external confirmation of the j4→j5 lesson (schedule reform alone failed; warm-start STATE +
+realized acceptance cured) + the #518/ws-chain arbitration doctrine: mechanism lives in state,
+schedule is continuation of state, never a substitute. (2) Optimization deadlock reversible by
+CURRICULUM not capacity (their S5 120x120 case) — independent instance of our measured
+capacity-pays-only-after-basis-match / curriculum=continuation laws (#318/#344). One
+CONDITIONAL telemetry shape recorded: their convergence-time scaling tau(n,i) + halting rule
+T*=ceil(n/v-hat) is the shape of a Class-E per-stage stop-criterion row for the #366 campaign
+loop IF event exits ever under-determine a stage stop (post-J8F, no build now). Weight-tying/
+serial-selection row N/A-WEAK (no learned recurrence in the counted path). Memo:
+papers_checked_arxiv_2607_20594_looped_transformers_20260724.md. verdict_scope:
+external-benchmark harvest, zero contest measurements. Pointer 0.1910828242 UNMOVED.
