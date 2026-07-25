@@ -228,3 +228,20 @@ applicable pantheon row + frozen-space binding:
 - THE SEAM (E7 dual-currency, binding): Vehicle A descends to D*; Vehicle B carries the
   residual — the composed candidate = A-to-D* + B-residual + pose leg (pc2 fork) + E5-closed
   bytes, and its 100%-success composition must beat 0.1910828242 or G5 REFUSES.
+
+## 13. THE COMPOSITION PROTOCOL (operator correction 2026-07-25 — "vibes-based... stuff
+## missing every time" — BINDING on sy1, the G5 reseal, and every future composition)
+MEASURED MISS this protocol extincts: §8-§12 composed ~46 rows from 5 recent docs while the
+durable inventory holds 363 mapped + 75 unmapped levers · 407 canonical equations · 846 DAG
+FEEDs (<6% drawn). Protocol: (1) MECHANICAL ENUMERATION FIRST — lever_registry.completeness()
++ canonical-equations query + task ledger pending/in_progress + DAG FEED sweep + graph-memory
+recall + memories grep, queries RECORDED; (2) COVERAGE DIFF — every enumerated item IN /
+DROPPED-with-reason / DEFERRED-named (LandingDiffManifest applied to compositions; silent
+omission = the defect); (3) ADVERSARIAL SECOND PASS with fresh what's-missing queries;
+(4) INVENTORY CITATION WITH COUNTS in the artifact. FIRST-PASS GAP LIST (evidence + sy1 input;
+NOT exhaustive — sy1's mechanical sweep supersedes it): #396/#400 MC-finisher terminal band ·
+#342 full solve inventory · #503/SPEC_v8 per-class carriers (recall-don't-rederive memory) ·
+#559/#560 ŷ-native integer-plane line · menu1 flip-menu compiler · #535 flicker sidecar +
+#425 phase carrier · costate organ (co1-co5) as Vehicle-A SENSE layer · #448 FreSh + #269 +
+#518 warm-start laws · #401 blind-fill + #580 full projector exploitation in Vehicle B ·
+rs1 relay solve (#659). Memory: composition-requires-mechanical-inventory-sweep.
