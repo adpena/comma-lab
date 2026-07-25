@@ -460,3 +460,22 @@ gate because its exact real-coded receiver-closed archive is 291,205,400B, not p
 
 **PRESUMPTIVE START CONFIRMED W_seg.** No resealer invoked because no displacement occurred.
 Pointer `0.1910828242 [contest-CPU]` UNMOVED; result is research-only and awaits MAIN review.
+
+## §21 G3.5 GREEN: knee EXCLUDED, W_seg = §7 static presumptive; start decision transfers to j11's pure-priced rows (2026-07-25, ks1 merged 8aed01f7af)
+
+STORES CONSULTED: ks1 findings (all arithmetic re-derived by MAIN to 1e-12) · ws2/ws3/ws4 receipts · §7/§19 · e5a packet chain.
+
+- **RD1 knee = W_joint initial state** (exact reconstruction; d_seg identity 0.070519231 verified) — NOT a novel start. At
+  closed-packet bytes it saves 777B vs W_seg while adding 0.046395 d_seg → DOMINATED 8,967× in S units. Knee arm CLOSED.
+- **BOX honestly excluded**: the finite q4/q8 nearest-reach object's exact receiver-closed archive is 291,205,400 bytes —
+  no plausible ≤200KB existing-stream path (real-coder race). verdict_scope: instance — this stream family's realization.
+- **Closed-packet triple** (E5A exports, [macOS-CPU frozen-scorer advisory]): W_seg 0.024124510 @130,870B ·
+  W_joint-step50 0.069743 @130,101B · knee 0.070519 @130,093B. None terminally in-box (d_seg_max(130,870B)=0.000868) —
+  reachability-by-descent remains the operative §7 clause, i.e. G1's debt.
+- **The start decision, cleanly framed**: §7 static selection = W_seg (CONFIRMED). Dynamic descent arbitration = KEEP_WJOINT
+  (ws3/ws4) — but ws4's receipt shows W_seg's first proposal was JOINT-NEGATIVE (−0.00043) under pure pricing, blocked only
+  by the window's seg-lexicographic COMPONENT gate, which is arbitration semantics, not the campaign acceptance rule.
+  **Resolution owner: j11.** At reseal, MAIN arbitrates on j11's realized pure-priced rows: decomposed/composed proposals
+  that admit from W_seg → start at 0.0241 (the operator's 30k-ft steer realized); else W_joint-step-50 stands.
+- **Gate scoreboard**: G3 ✅ (pc2) · G4 ✅ (e5a) · G3.5 ✅ (ks1) · G2 → rides j11's ten-interval trace (=gc4 P2) ·
+  G1 = j11 LIVE (opening decomposition). Then G5 reseal sheet → FIRE with MAIN. Fleet: j11 · p1 (2/4).

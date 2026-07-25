@@ -24770,3 +24770,10 @@ but has +0.046394721137152775 d_seg, so §7 yields **PRESUMPTIVE START CONFIRMED
 Nearest-reach BOX control excluded under the authorized guard: exact receiver-closed archive
 291,205,400B, no plausible ≤200KB existing-stream route (INSTANCE scope; family open).
 No resealer invoked. Research-only; pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-603-ks1-route (2026-07-25, MAIN): ks1 MERGED 8aed01f7af — G3.5 GREEN. Knee=W_joint-initial identity PROVEN
+(d_seg 0.070519231 exact); knee DOMINATED 8,967x (777B saved vs +0.046395 d_seg) under §7 lexicographic law — MAIN
+re-derived all rows to 1e-12; BOX excluded (291,205,400B exact archive; verdict_scope: instance — q4/q8 stream-family
+realization). W_seg = §7 STATIC presumptive (0.024124510 @130,870B closed-packet). Start resolution transferred to
+j11's pure-priced realized rows (ws4 measured W_seg x+ at joint −0.00043 blocked only by window component gate).
+Card §21 gate scoreboard: G3/G4/G3.5 GREEN; G1+G2 on j11; pose leg on p1. Pointer 0.1910828242 [contest-CPU] UNMOVED.
