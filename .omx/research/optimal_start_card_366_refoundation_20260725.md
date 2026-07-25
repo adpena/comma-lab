@@ -291,3 +291,26 @@ rather than re-guessed; each row still tagged, since telemetry measured under a 
   on the support-renewed residual after live descent, never a closer · every stop verdict
   FORMULATION-scoped (Tao) · R16 stays compliance-contested · exact packed bytes inside
   acceptance · metric named on every projection/step.
+
+## 15. GATE G3 GREEN — POSE FORK RESOLVED (pc2 landed 2026-07-25, merged 58fbb10512 —
+## canonical: codex_findings_ddm_pc2_pose_descent_smoke_20260725T130832Z_codex.md)
+THE #1 UNKNOWN IS MEASURED: **PC1 DESCENDS.** Fork (a) selected — pose leg = PC1-DESCENT STAGE.
+- MEASURED (exact n600, receiver-closed, [macOS-CPU advisory], MAIN re-derived the arithmetic):
+  d_pose 163.0453 → 160.9000 over 16 accepted steps · Δd_seg +0.000190 (collateral) ·
+  Δbytes +23 · joint ΔS = −0.24750 (NET NEGATIVE) · pose/seg ratio 14.023 > R* 4.1215,
+  cleared in BOTH independent half-windows (11.88, 16.86). XOR score-law verified
+  (score_domain_loss only, static w_pose=1 — no #528 double-composition). Parent = ws4
+  W_joint-step-50 (SHA 2a2c0367…6241). 17 immutable checkpoints; 16/16 accepted.
+- The photometric wall does NOT bind PC1-descent at this operating point (verdict_scope:
+  instance — this smoke window/parent; the wall law's post-hoc/stored scope is unchanged).
+- PER-CLASS COLLATERAL WATCH (holistic-facets law, binding on the campaign): the tiny
+  composite seg regression hides Lane +0.01078 + Road +0.00186 harm OFFSET by Movable
+  −0.02262 gain — the pose stage is admissible only with per-class watch rows; no composite
+  may erase this.
+- HONEST HORIZON: 1,216 total accepted steps to 2.94e-5-class is DERIVED (constant-slope),
+  not a convergence law — the pose decay curve is unknown, the exact sister of db1's seg
+  question. The campaign's pose stage measures its own decay via the instrumented-trace
+  custody (§11d schema extends to pose rows). E9 (tube projection) + M4 (knot interface) +
+  R3 (precision ladder) remain the composition levers that can shorten or replace the tail.
+GATE LADDER NOW: G1 j10 RUNNING · G2 INDETERMINATE→closes on j10 trace · G3 **GREEN (fork a)** ·
+G3.5 ks1 queued-on-e5a · G4 e5a RUNNING · G5/G6 pending reseal.

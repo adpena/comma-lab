@@ -24696,3 +24696,13 @@ unexploited (card §12). RESPONSE: ledger `.omx/research/public_pr129_132_intake
 (ranked lessons w/ §13a validity tags); pointer public-side refreshed (snapshot 2026-07-25,
 PRs 129-132 present, all closed-unmerged). Local frontier fields untouched — pointer
 0.1910828242 [contest-CPU] UNMOVED (means/harvest).
+
+## FEED-603-PC2-G3-GREEN (2026-07-25, MAIN)
+SIGNAL: pc2 merged (58fbb10512, dispositioned) — the never-run #1 crux MEASURED: PC1 pose
+DESCENDS under joint pricing. d_pose 163.0453→160.9000 / 16 accepted steps, joint ΔS −0.2475,
+ratio 14.02 > R* 4.1215 both half-windows [exact n600, macOS-CPU advisory, MAIN re-derived].
+Card G3 GREEN, fork (a) PC1_DESCENT_STAGE selected; ξ-advection fork (b) not needed at this
+rung (stays a named alternative). Per-class collateral watch binding (Lane +0.0108/Road
++0.0019 vs Movable −0.0226 — composite hides it). 1,216-step horizon DERIVED-not-measured
+(pose decay unknown — sister of db1's seg question; campaign pose stage self-measures via the
+instrumented trace). Card §15. pointer 0.1910828242 [contest-CPU] UNMOVED.
