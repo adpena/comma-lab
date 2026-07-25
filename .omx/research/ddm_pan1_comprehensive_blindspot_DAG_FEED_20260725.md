@@ -1,8 +1,8 @@
 # FEED-603-pan1 — comprehensive Pantheon blind-spot routing
 
-Date: 2026-07-25  
-Lane: `ddm_pan1_comprehensive_pantheon_blindspot`  
-Mode: `research_only=true`, `execution_allowed=false`, `score_claim=false`  
+Date: 2026-07-25
+Lane: `ddm_pan1_comprehensive_pantheon_blindspot`
+Mode: `research_only=true`, `execution_allowed=false`, `score_claim=false`
 Pointer: `0.19108282419209976 [contest-CPU] UNMOVED`
 
 ## Verdict
