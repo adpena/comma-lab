@@ -137,3 +137,28 @@ recorded as a named residual, never silently dropped.
   hardness as the tail drains; frozen subsets = the staleness confound class). Per-proposal
   subset validity vs full n600 is TRACKED as a standing telemetry row; if measured validity
   degrades below the g3-calibrated band, the ladder widens the subset before trusting it.
+
+## 9. PANTHEON ROUND-2 (operator-prompted 2026-07-25) — E7-E11; E7 AMENDS gate G2
+E7 DUAL-CURRENCY SEG DEBT (Shannon/MacKay): seg debt payable in STEPS (descent) or BYTES
+   (context-coded residual). True transmit price = H(flip-field | free decoder context) — NOT
+   the 405.5 B/error greedy-channel upper bound (economics-are-upper-bounds law; this is OUR
+   original residual, not incumbent polish). Producers: g4 free context model · sn1/at1 margin
+   atlases · rd1 dual/exchange-rate table. **G2 AMENDMENT**: db1's bound does NOT refuse when
+   descent alone misses 8.7e-4 — it computes optimal-stop D* where marginal step cost =
+   marginal byte cost; success composition = descent-to-D* + context-coded residual, jointly
+   < pointer within the byte window.
+E8 SOLVED-PLANE DISTILLATION TARGET (Hinton): regress toward the known-feasible exact solved
+   plane (1.52e-4 custody) — dense gradient, no argmax-flip plateau; scorer-exact realized
+   acceptance stays the only gate. The teacher is the solution we computed, not the GT.
+E9 POSE AS PROJECTION (Dykstra/Boyd): alternate seg-descent with CLOSED-FORM projection onto
+   the pose tube via the measured ≤6-dim PoseNet quadratic (ms3/ms4 custody) — replaces w_pose
+   weight-tuning; structurally deletes the pose-coupled seg-regression class that sank the
+   W_seg start under the old engine. Composes with either pc2 fork.
+E10 QUOTIENT-COORDINATE DOF (Tishby/#580): AUDIT the j2 parameter lift — DOF must live in
+   range(A)/quotient coordinates (80.67% measured nullity); otherwise most gradient energy +
+   counted bytes are scorer-invisible. Re-home if not. ($0 audit, reseal-blocking row.)
+E11 RATE INSIDE ACCEPTANCE (Ballé): Δbytes through the real coder (calibrated per-step proxy +
+   periodic exact re-code) inside the realized ΔS acceptance — descent must not silently
+   inflate stream entropy and bill export.
+Same discipline as §8: each lands as DSL-typed engine config in the G5 reseal or is recorded
+as a named residual; E7's entropy measurement H(flips|context) is a $0 add to db1's scope.
