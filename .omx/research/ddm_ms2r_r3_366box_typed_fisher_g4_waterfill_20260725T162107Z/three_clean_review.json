@@ -1,0 +1,67 @@
+{
+  "schema": "ddm_task701_typed_waterfill_three_clean_review.v1",
+  "lane_id": "ddm_ms2r_r3_366box_typed_fisher_g4_waterfill",
+  "reviewed_at_utc": "2026-07-25T16:51:00Z",
+  "review_scope": "local implementation and SHA-bound cross-chain admission only",
+  "independent_main_review_complete": false,
+  "main_landing_review_required": true,
+  "defects_found_before_clean_sequence": [
+    {
+      "defect": "Exact volatile free-RAM bytes made an immutable resume checkpoint differ.",
+      "disposition": "Fixed by persisting only the measured threshold relation; added an above-threshold determinism regression.",
+      "review_tracker_action": "marked_needs_fix before the three consecutive clean marks"
+    }
+  ],
+  "clean_passes": [
+    {
+      "pass": "clean1-static-contract",
+      "checks": [
+        "py_compile on helper, runner, and tests",
+        "ruff on helper, runner, and tests",
+        "focused Task 701 regression suite",
+        "git diff --check"
+      ],
+      "result": "CLEAN",
+      "tests_passed": 8
+    },
+    {
+      "pass": "clean2-resume-drift",
+      "checks": [
+        "runner repeated twice against immutable outputs",
+        "false RG3 closure mutation refused",
+        "fake active Pose tube mutation refused",
+        "different above-threshold RAM observations produce identical checkpoint bytes",
+        "committed artifacts canonical and cross-bound"
+      ],
+      "result": "CLEAN",
+      "tests_passed": 4,
+      "tests_deselected": 4
+    },
+    {
+      "pass": "clean3-cross-chain",
+      "checks": [
+        "independent jq re-derivation from MS4D, PC1, RG3, EV2, prior R3 admission, current R3, and Task 701 RD1 artifacts",
+        "Task 701 suite",
+        "current R3 BOX suite",
+        "prior typed-admission suite excluding its live rebuild test",
+        "git diff --check"
+      ],
+      "result": "CLEAN",
+      "tests_passed": 20,
+      "tests_deselected": 1
+    }
+  ],
+  "adjacent_observation": {
+    "scope": "not a Task 701 defect and not counted as a clean-pass result",
+    "detail": "The prior admission's live-rebuild test was attempted once and refused because its immutable stage differs under the current repository surface. Task 701 consumes the exact sealed prior receipt by SHA and does not rebuild or modify that settled landing.",
+    "bytes_modified": false
+  },
+  "reviewed_code": {
+    "src/tac/optimization/ddm_ms2r_r3_366box_typed_fisher_g4_waterfill.py": "17657bcad67a436a57ee734b4696f447486b528aecdaa25dd6e9195f96c8d618",
+    "tools/run_ddm_ms2r_r3_366box_typed_fisher_g4_waterfill.py": "d8207bc07a67da3c56903b5aa61895d3e6bd783a20fe43ea65570c25c798e8d9",
+    "tests/test_ddm_ms2r_r3_366box_typed_fisher_g4_waterfill.py": "9c3f4ed2a3d76184f4d8cda5d88b887efff164d2d7b8531250b3f492b22ceae3"
+  },
+  "verdict": "THREE_CONSECUTIVE_LOCAL_CLEAN_PASSES; MAIN_REVIEW_STILL_REQUIRED",
+  "score_claim": false,
+  "pointer_moved": false
+}
