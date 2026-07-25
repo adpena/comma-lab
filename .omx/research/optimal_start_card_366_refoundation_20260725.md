@@ -50,6 +50,8 @@ G2 db1 decay bounds: v19c 104-admission tail-exponent fit + margin-mass N(δ) fr
    atlases → predicted terminal d_seg band; REFUSE if band excludes 8.7e-4-class within
    a resumable horizon (then the describe-line fork owns the debt — reformulate, not burn).
 G3 pc2 pose verdict: PC1 descent measured → pose leg selected on evidence (fork a/b above).
+G3.5 ks1 knee-member realization: solve-derived candidates enter only through receiver-closed
+   E5A bytes + fresh n600; W_seg is displaced only by a lower-seg in-window realized state.
 G4 e5a adapter: checkpoint → receiver-closed state → E5 packet → parse-back proven; la1's
    128,254B either CONFIRMED-closed or honestly re-based.
 G5 Reseal against THIS card (composing-triple targets + pose leg + closed byte basis) +
@@ -66,7 +68,7 @@ reviews/dispositions continue. This card is the convergence point.
 The warm-start candidate set was WRONG-CLASS: ws2/ws3/ws4 arbitrated only TRAINING states
 (0.0705 / 0.0241) while the most-converged seg states sit unrealized on the shelf — the exact
 lattice solve (d_seg 1.52e-4, 17,927 errors, seg SOLVED) and rd1's λ-continuation R(D) KNEE
-(measured with real coders, knee custody landed, ~216KB class). BINDING CHANGE:
+(measured with real coders, knee custody landed; KS1 later closed it at 130,093B). BINDING CHANGE:
 - NEW GATE G3.5 (ks1): realize the rd1 KNEE MEMBER (and the nearest-reach box-tolerance
   member) as RECEIVER-CLOSED states with REAL bytes via the e5a adapter path → n600 score →
   ENTER THEM into the warm-start arbitration against W_joint-step-50. The start is chosen from
@@ -92,8 +94,9 @@ THE SELECTION LAW (lexicographic):
    are ENGINE problems solved by design — freeze/staging, pose-leg choice from pc2's fork,
    component-safe admission — NEVER a reason to discard a lower-seg in-window state and
    re-earn 3× seg by training.
-CURRENT RANKING under this law (measured states): W_seg 0.024124510 @138,031B (best in-window
-seg today) > CC3-composed 0.024732 @136,116B > W_joint-step-50 ~0.07-class @138,813B (retained
+CURRENT RANKING under this law (measured states; E5/E5A packet bytes where available):
+W_seg 0.024124510 @130,870B (best presumptively reachable seg today) > CC3-composed
+0.024732 @136,116B > W_joint-step-50 0.069742771 @130,101B (retained
 only as engine-dynamics fallback). PRESUMPTIVE START = W_seg-class, displaced only if ks1
 realizes a solve-derived member with LOWER d_seg at in-window bytes. ws3's KEEP_WJOINT verdict
 is hereby re-scoped: it answered "which start descends best under the OLD pose-coupled
@@ -313,7 +316,7 @@ THE #1 UNKNOWN IS MEASURED: **PC1 DESCENDS.** Fork (a) selected — pose leg = P
   custody (§11d schema extends to pose rows). E9 (tube projection) + M4 (knot interface) +
   R3 (precision ladder) remain the composition levers that can shorten or replace the tail.
 GATE LADDER NOW: G1 j10 RUNNING · G2 INDETERMINATE→closes on j10 trace · G3 **GREEN (fork a)** ·
-G3.5 ks1 queued-on-e5a · G4 e5a RUNNING · G5/G6 pending reseal.
+G3.5 **GREEN (W_seg confirmed)** · G4 **GREEN** · G5/G6 pending reseal.
 
 ## 16. PUBLIC-INTAKE FACTS FOLDED (PR86/129-132 intake landed 978eb9d9e0 — canonical:
 ## public_pr129_132_intake_20260725.md; HARVEST-SIGNAL-ONLY, §13a tags; axes per
@@ -348,4 +351,26 @@ proof. R6_BLOCKED_E5_MIDCAMP_CHECKPOINT_ADAPTER_ABSENT DISSOLVED. la1's 128,254B
 RE-BASED: not a closed packet; completeness costs +1,847B (bundle itself −253B). BYTE BASIS
 UPDATE for §1: B=130,101 closed ⇒ d_seg ≤ 8.730e-4 (≤102,986 errors) at pointer-class pose;
 sub-0.15 stretch 4.622e-4. GATES: G1 j10 RUNNING · G2 closes on j10 trace · G3 GREEN ·
-G3.5 ks1 NOW UNBLOCKED (adapter exists) · G4 **GREEN** · G5/G6 pending reseal.
+G3.5 **GREEN (W_seg confirmed)** · G4 **GREEN** · G5/G6 pending reseal.
+
+## 18. GATE G3.5 GREEN (ks1 local landing; MAIN review required)
+RD1 knee custody bundle `0cd45580…6ce83` reconstructs EXACTLY to the settled W_joint initial
+state `5aa45850…433e`; no novel solve state was hidden behind the custody wrapper. Existing
+E5A (not a parallel exporter) emits a deterministic, receiver-closed **130,093B** packet
+`3e116929…4240`. Fresh n600/batch32 `[macOS-CPU frozen-scorer advisory]` measures d_seg
+`0.07051923116048177`, d_pose `36.618184751411334`, S `26.274425245267324`.
+
+| candidate | closed B | measured n600 d_seg | measured d_pose | d_seg_max(B) | endpoint under line |
+|---|---:|---:|---:|---:|---|
+| W_seg | 130,870 | 0.024124510023328993 | 146.36493245487773 | 0.0008679003880490144 | no |
+| W_joint-step50 | 130,101 | 0.06974277072482639 | 35.499820809591 | 0.0008730208433985238 | no |
+| RD1 knee / W_joint initial | 130,093 | 0.07051923116048177 | 36.618184751411334 | 0.0008730741121147737 | no |
+
+Literal terminal-line closure remains unmeasured; §7's reachable-by-descent clause still makes
+W_seg the presumptive start. The knee saves only 777B versus W_seg while adding
+0.046394721137152775 d_seg. The nearest-reach finite q4/q8 BOX member is excluded from this
+gate because its exact real-coded receiver-closed archive is 291,205,400B, not plausibly
+≤200KB through existing streams (INSTANCE scope; broader solve family open).
+
+**PRESUMPTIVE START CONFIRMED W_seg.** No resealer invoked because no displacement occurred.
+Pointer `0.1910828242 [contest-CPU]` UNMOVED; result is research-only and awaits MAIN review.

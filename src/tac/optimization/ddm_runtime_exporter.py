@@ -357,14 +357,17 @@ class DDME4WS1RuntimeExporterConfigV1(BaseModel):
 
 
 class DDME5AMidcampaignRuntimeExporterConfigV1(DDME4WS1RuntimeExporterConfigV1):
-    """Typed E5 admission for one adapter-materialized campaign state."""
+    """Typed E5A admission for one adapter-materialized W_joint state."""
 
     schema_: Literal["DDME5AMidcampaignRuntimeExporterConfigV1"] = Field(
         default=E5A_CONFIG_SCHEMA,
         alias="schema",
         serialization_alias="schema",
     )
-    run_id: Literal["ddm_e5a_midcampaign_e5_adapter_20260725"] = (
+    run_id: Literal[
+        "ddm_e5a_midcampaign_e5_adapter_20260725",
+        "ddm_ks1_knee_member_realization_20260725",
+    ] = (
         "ddm_e5a_midcampaign_e5_adapter_20260725"
     )
     candidate: Literal["W_joint"] = "W_joint"

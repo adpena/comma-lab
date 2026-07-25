@@ -1,0 +1,20 @@
+{
+  "schema": "ddm_ks1_knee_member_realization_done.v1",
+  "completed_at_utc": "2026-07-25T14:27:06Z",
+  "status": "COMPLETE_LOCAL_RESEARCH_ONLY_MAIN_LANDING_REVIEW_REQUIRED",
+  "lane_id": "lane_ddm_ks1_knee_member_realization_20260725",
+  "lane_maturity": "L2",
+  "feed_id": "FEED-603-ks1",
+  "verdict": "PRESUMPTIVE START CONFIRMED W_seg",
+  "receipt_path": ".omx/research/ddm_ks1_knee_member_realization_20260725/receipt.json",
+  "receipt_sha256": "7387d76eafae653a0b9ff3626995ce2fe72fa54b1cd8a8a3e05da89cd4fbfb45",
+  "packet_bytes": 130093,
+  "packet_sha256": "3e116929e132f7a52d54e64a807b617a146629cab4fb0425b1ea83c948e44240",
+  "fresh_n600_receipt_sha256": "80cd5f3c29aa95d7827184f8adbf522ea92e2f577aa56241a87133aff4f8246e",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "research_only": true,
+  "score_claim": false,
+  "main_landing_review_required": true,
+  "registry_validation_note": "This lane is internally L2; repository-wide lane validation still reports 110 pre-existing missing-evidence-path errors outside this lane."
+}

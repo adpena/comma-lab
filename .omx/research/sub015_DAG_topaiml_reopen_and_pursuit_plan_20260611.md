@@ -24713,3 +24713,14 @@ SIGNAL: e5a merged (1fe24eb674, dispositioned) — G4 GREEN. Checkpoint→packet
 dir untouched. la1 128,254B re-based (+1,847B completeness). Composing triple at REAL closed
 bytes: d_seg ≤8.730e-4 @130,101B. ks1 (G3.5 knee-member realization) UNBLOCKED. Card §17.
 pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-ks1 (2026-07-25, isolated Codex landing — MAIN review required)
+SIGNAL: G3.5 local GREEN. RD1 knee custody bundle `0cd45580…6ce83` reconstructs exactly to
+the settled W_joint initial state `5aa45850…433e`; existing E5A emits a deterministic
+receiver-closed 130,093B packet `3e116929…4240`. Fresh n600/batch32
+`[macOS-CPU frozen-scorer advisory]`: d_seg 0.07051923116048177, d_pose
+36.618184751411334, S 26.274425245267324. The knee is 777B smaller than W_seg's E5 packet
+but has +0.046394721137152775 d_seg, so §7 yields **PRESUMPTIVE START CONFIRMED W_seg**.
+Nearest-reach BOX control excluded under the authorized guard: exact receiver-closed archive
+291,205,400B, no plausible ≤200KB existing-stream route (INSTANCE scope; family open).
+No resealer invoked. Research-only; pointer 0.1910828242 [contest-CPU] UNMOVED.

@@ -88078,6 +88078,60 @@
         }
       },
       "notes": "Typed campaign checkpoint to receiver-closed E5 packet adapter; research-only local verification; MAIN review required."
+    },
+    {
+      "id": "lane_ddm_ks1_knee_member_realization_20260725",
+      "name": "DDM KS1 solve-derived knee member realization",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_e5a_midcampaign_adapter.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ks1_knee_member_realization_20260725/receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/optimization/tests/test_ddm_runtime_exporter.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_ks1_knee_member_realization_20260725T142706Z_codex.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "G3.5 local receiver-closed RD1 knee realization; W_seg presumptive start confirmed; MAIN landing review required; no score/promotion authority.",
+      "research_only": true,
+      "lane_class": "research_only_receiver_closed_realization",
+      "design_evidence": {
+        "archive_grammar": "ddm_ws1_receiver_closed_warm_start.v1 via existing E5A exporter",
+        "parser_section_manifest": ".omx/research/ddm_ks1_knee_member_realization_20260725/ddm_e5a_midcampaign_runtime_export_receipt.json",
+        "runtime_dep_closure": [
+          "numpy",
+          "scipy",
+          "torch",
+          "brotli"
+        ],
+        "export_format": "E5A LA1-selected semantic packet; archive.zip + inflate.py + inflate.sh"
+      }
     }
   ],
   "level_rules": {
@@ -88087,5 +88141,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-25T13:10:23Z"
+  "updated_at": "2026-07-25T14:37:30Z"
 }

@@ -1,0 +1,162 @@
+{
+  "schema": "ddm_ks1_knee_member_realization_receipt.v1",
+  "written_at_utc": "2026-07-25T14:27:06Z",
+  "lane_id": "lane_ddm_ks1_knee_member_realization_20260725",
+  "feed_id": "FEED-603-ks1",
+  "authority": {
+    "research_only": true,
+    "score_claim": false,
+    "execution_allowed": false,
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "main_landing_review_required": true
+  },
+  "recall_sweep": {
+    "recorded_query": "RD1 knee custody MS2R box E5A adapter DM2 DM4 realization quantization gated",
+    "graph_memory_seeds": [
+      "feed:603-rd1-custody",
+      "research:ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/DAG_FEED.md",
+      "research:codex_findings_ddm_dm4_a2_provenance_resolution_20260724T152540Z_codex.md",
+      "research:codex_findings_ddm_ms2r_r2_20260724T191000Z_codex.md"
+    ],
+    "lever_registry": {
+      "trainer_total": 438,
+      "dsl_referenced": 372,
+      "mapped": 363,
+      "unmapped": 75,
+      "stale": 3,
+      "coverage_frac": 0.828767
+    },
+    "canonical_equation_counts": {
+      "rate": 166,
+      "seg": 138,
+      "pose": 107,
+      "archive": 53
+    },
+    "dag_feed_count_before_landing": 658,
+    "canonical_task_event_count": 172,
+    "council_topic_matches": {
+      "ddm": 0,
+      "knee": 0,
+      "realization": 0
+    },
+    "active_blocking_probe_count": 9,
+    "coverage_disposition": "Task-bounded G3.5 realization consumed the named RD1, MS2R BOX, E5A, DM2, DM4, selection-law, and quantization-gate surfaces. No unrelated lever/equation/feed is silently promoted into this research-only adapter landing."
+  },
+  "candidate_admission": {
+    "rd1_knee": {
+      "status": "ADMITTED_AND_REALIZED",
+      "source_bundle": {
+        "path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/knee_statistics_hard_analytic_composed_frame1.full-description.zip",
+        "bytes": 140790,
+        "sha256": "0cd45580e778a53f31e52ff5b713b2ee541e62731acba747049b56b3fb76ce83"
+      },
+      "identity_finding": "The RD1 knee composition is exactly the existing W_joint initial state: nested preuint8 archive plus the 974-byte local-statistics payload.",
+      "state": {
+        "bytes": 138801,
+        "sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e"
+      },
+      "packet": {
+        "bytes": 130093,
+        "sha256": "3e116929e132f7a52d54e64a807b617a146629cab4fb0425b1ea83c948e44240",
+        "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_ks1_knee_member_realization_20260725/e5a_packet/archive.zip",
+        "receiver_closed": true,
+        "compiler_determinism_x2": true,
+        "parseback_source_byte_identical": true,
+        "semantic_streams_consumed": 7
+      },
+      "adapter_receipt": {
+        "path": ".omx/research/ddm_ks1_knee_member_realization_20260725/adapter_receipt.json",
+        "ssd_sha256": "da5d420f23f038306988b969f53f633c39e50723750179a92530343ceafe4053"
+      },
+      "export_receipt": {
+        "path": ".omx/research/ddm_ks1_knee_member_realization_20260725/ddm_e5a_midcampaign_runtime_export_receipt.json",
+        "sha256": "06b3c05dde80140f18d364ffd4c13e418654cb724c1896d72ab0b79168cbe919"
+      }
+    },
+    "nearest_reach_box": {
+      "status": "EXCLUDED_BY_AUTHORIZED_PLAUSIBILITY_GUARD",
+      "reason": "The only receiver-closed nearest-reach BOX member is 291205400 bytes, not plausibly <=200000 bytes through the existing real-coder streams. The measured 50/50 race retained RAW_COMPACT, so no E5A materialization was attempted.",
+      "archive": {
+        "bytes": 291205400,
+        "sha256": "e3d0581ff4a3f475057e77e530374dad444b640a049b058cd66b37563534773e"
+      },
+      "d_seg": 0.001159998575846354,
+      "d_pose": 0.01663315390825408,
+      "source_receipt": {
+        "path": ".omx/research/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/receipt.json",
+        "sha256": "087ee26d6e34501b308b1cf5db80be16a54f9cbe4a6734793b3cbf53d42c0aa7"
+      },
+      "verdict_scope": "INSTANCE: the landed finite q4/q8 receiver-closed BOX family; the broader solve-derived family remains open."
+    }
+  },
+  "fresh_measurement": {
+    "candidate": "E5A_RD1_knee_W_joint",
+    "receipt": {
+      "path": ".omx/research/ddm_ks1_knee_member_realization_20260725/ddm_ks1_knee_member_batch32_remeasure.json",
+      "sha256": "80cd5f3c29aa95d7827184f8adbf522ea92e2f577aa56241a87133aff4f8246e"
+    },
+    "n": 600,
+    "batch_size": 32,
+    "threads": 4,
+    "memory_preflight": {
+      "available_bytes": 94865604608,
+      "minimum_bytes": 21474836480,
+      "status": "PASS"
+    },
+    "d_seg": 0.07051923116048177,
+    "seg_errors": 8318787,
+    "seg_sites": 117964800,
+    "d_pose": 36.618184751411334,
+    "objective_at_packet_bytes": 26.274425245267324
+  },
+  "selection_law": {
+    "formula": "d_seg_max(B)=(0.173931-25*B/37545489)/100",
+    "literal_measured_endpoint_note": "None of the three measured endpoints is already below the terminal line; the card admits a start when descent from it is plausibly able to reach the line. W_seg retains the card's presumptive reachability; exact closure remains G1/G2/G5 debt.",
+    "rows": [
+      {
+        "candidate": "W_seg",
+        "packet_bytes": 130870,
+        "packet_sha256": "1e45eb33e5c6f4ba926d846ab03a877da5c142b6cd1d6387fefb49774d9c3368",
+        "d_seg": 0.024124510023328993,
+        "d_pose": 146.36493245487773,
+        "d_seg_max_at_bytes": 0.0008679003880490144,
+        "measured_endpoint_under_line": false,
+        "reachability": "PRESUMPTIVE_CARD_REACHABILITY; exact closure remains unmeasured",
+        "objective": 40.75726210362902,
+        "measurement_receipt_sha256": "dafdc32588f9150b73de6077360817ea665f22ec6c5608af9b1689ae6da45fba"
+      },
+      {
+        "candidate": "W_joint_step50",
+        "packet_bytes": 130101,
+        "packet_sha256": "fb69964da2649c310b7694416ff9863e13f54594af215cd771dcd50f5898a85d",
+        "d_seg": 0.06974277072482639,
+        "d_pose": 35.499820809591,
+        "d_seg_max_at_bytes": 0.0008730208433985238,
+        "measured_endpoint_under_line": false,
+        "reachability": "MEASURED_DESCENT_STATE; target-window closure indeterminate",
+        "objective": 25.902302117302376,
+        "measurement_receipt_sha256": "2c4277b040157c359974a1de5d7cc07752c29d1b45aafd68ecc942e8ef12cacb"
+      },
+      {
+        "candidate": "RD1_knee_W_joint_initial",
+        "packet_bytes": 130093,
+        "packet_sha256": "3e116929e132f7a52d54e64a807b617a146629cab4fb0425b1ea83c948e44240",
+        "d_seg": 0.07051923116048177,
+        "d_pose": 36.618184751411334,
+        "d_seg_max_at_bytes": 0.0008730741121147737,
+        "measured_endpoint_under_line": false,
+        "reachability": "MEASURED_ANCESTOR_OF_STEP50; target-window closure indeterminate",
+        "objective": 26.274425245267324,
+        "measurement_receipt_sha256": "80cd5f3c29aa95d7827184f8adbf522ea92e2f577aa56241a87133aff4f8246e"
+      }
+    ],
+    "measured_d_seg_delta_knee_minus_w_seg": 0.046394721137152775,
+    "packet_byte_delta_knee_minus_w_seg": -777,
+    "verdict": "PRESUMPTIVE START CONFIRMED W_seg",
+    "reason": "The realized RD1 knee has 0.046394721137152775 worse measured n600 d_seg than W_seg for only 777 fewer packet bytes. It therefore cannot displace W_seg under the card's lexicographic law.",
+    "resealer": "NOT_INVOKED_NO_DISPLACEMENT"
+  },
+  "status": "G3.5_GREEN_LOCAL_RESEARCH_ONLY_MAIN_REVIEW_REQUIRED"
+}

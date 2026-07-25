@@ -146,7 +146,10 @@ class DDME5APacketRemeasureConfigV1(BaseModel):
         alias="schema",
         serialization_alias="schema",
     )
-    candidate: Literal["E5A_W_joint_step50_live"] = "E5A_W_joint_step50_live"
+    candidate: Literal[
+        "E5A_W_joint_step50_live",
+        "E5A_RD1_knee_W_joint",
+    ] = "E5A_W_joint_step50_live"
     export_receipt_path: str
     export_receipt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     menu1_config_path: str
@@ -493,7 +496,11 @@ def remeasure(
             if is_ic2
             else "IC1_COMPOSED_ENDPOINT_EXACT_BATCH32_MEASURED"
             if is_ic1
-            else "E5A_STEP50_LIVE_ENDPOINT_EXACT_BATCH32_MEASURED"
+            else (
+                "E5A_RD1_KNEE_ENDPOINT_EXACT_BATCH32_MEASURED"
+                if config.candidate == "E5A_RD1_knee_W_joint"
+                else "E5A_STEP50_LIVE_ENDPOINT_EXACT_BATCH32_MEASURED"
+            )
             if is_e5a
             else "EXACT_SEALED_BATCH32_ENDPOINT_REPRODUCED_FROM_DECODED_PACKET"
         ),
@@ -506,9 +513,13 @@ def remeasure(
             "with frozen scorers; no contest eval, promotion, or frontier mutation."
             if is_ic1
             else
-            "INSTANCE: E5A materialized W_joint step-50 live-resume packet "
-            "decoded on macOS CPU with frozen scorers; no contest eval, "
-            "promotion, or frontier mutation."
+            (
+                "INSTANCE: E5A materialized RD1 knee W_joint packet "
+                if config.candidate == "E5A_RD1_knee_W_joint"
+                else "INSTANCE: E5A materialized W_joint step-50 live-resume packet "
+            )
+            + "decoded on macOS CPU with frozen scorers; no contest eval, "
+            + "promotion, or frontier mutation."
             if is_e5a
             else "INSTANCE: typed E4/WS1 packet decoded on macOS CPU with frozen "
             "scorers; no contest eval, promotion, or frontier mutation."
