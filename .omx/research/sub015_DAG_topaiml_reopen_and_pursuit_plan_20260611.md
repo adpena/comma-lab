@@ -24661,3 +24661,14 @@ D'Andrea structure-the-environment · event cameras=worldsheet events) + Netflix
 IDENTITY ROW recorded: domain-specific contest-specific codec standard — "fusion of robotics
 and Netflix"; frozen-policy single-video overfit IS the design point. Adjudication owed to the
 council body; G1-G4 undelayed. pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-SY1-FOLD (2026-07-25, MAIN)
+SIGNAL: sy1 merged (5bfc77b4f3) — 46 pantheon rows → NINE composed mechanisms M1-M9 + one-page
+G5 reseal sheet (card §14); complete coverage ledger; five existing discriminators cover all
+slots (no new arms). ADVERSARIAL CATCHES verified by MAIN: (1) R2's producer FALSIFIED at
+INSTANCE scope — rd1 custody holds dual rows, the per-dim uint8 absolute-step histogram is
+recorded MISSING in rd1's own memo; my §10 citation was the vibes-composition class §13 now
+extincts, corrected append-only in card §14; Laughlin family OPEN pending histogram custody.
+(2) S3 transmit leg = FINISHER not closer (db1 SHORT law preserved). (3) R5×R6 compose as
+layers; four ξ parameterizations = one interface. j10's G5 reseal consumes the SHEET.
+pointer 0.1910828242 [contest-CPU] UNMOVED.

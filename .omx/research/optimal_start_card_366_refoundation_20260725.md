@@ -270,3 +270,24 @@ step-time distributions, term-domination/spike/EMA histories, verdict cadences �
 engine constants come FROM this corpus (mostly FROZEN-APPARATUS facts: machine+scorer costs)
 rather than re-guessed; each row still tagged, since telemetry measured under a dead config
 (e.g. loop-end-only saves, uniform cycling) describes THAT config's dynamics.
+
+## 14. SYNERGY MATRIX FOLDED (sy1 landed 2026-07-25, merged 5bfc77b4f3 — canonical:
+## feedback_sy1_pantheon_synergy_matrix_20260725.md; verdict PROCEED_WITH_NINE_SLOT_COMPOSED_RESEAL_INPUTS)
+- THE G5 INPUT IS NOW THE ONE-PAGE RESEAL SHEET (nine mechanisms M1-M9, one per slot, typed
+  config surfaces engine.policy.*_v1 … export.*_v1) — NOT the raw ~46-row lists. Complete
+  row-coverage ledger disposes every E/R/ORDER-2/B/C/PAN1 row; coverage manifest verified.
+- CORRECTION (honest, append-only — my §10/ORDER-2-row-9 producer claim was WRONG): rd1's 162
+  objects are typed DUAL rows; the per-dimension receiver uint8 absolute-step histogram is
+  EXPLICITLY RECORDED AS MISSING in rd1's own findings. R2 (Laughlin matched quanta) is
+  WITHHELD at INSTANCE scope pending real histogram custody — the Laughlin FAMILY stays open;
+  my "162 uint8 histograms exist" citation was a vibes-composition defect the §13 mechanical
+  sweep caught. (verdict_scope: instance — the R2 producer citation, not the quantization family.)
+- CONFLICTS DISSOLVED AS LAYERS: R5 context-mixing (probabilities) + R6 syndrome (channel
+  framing) COMPOSE — one transmit mechanism, not a race; the four ξ(t) parameterizations are
+  one knot INTERFACE (M4) racing internally on the same bytes.
+- FIVE EXISTING DISCRIMINATORS COVER ALL NINE SLOTS (no new arms): j10 trace → S1/S3/S8 ·
+  pc2 → S4 · e5a/ks1 → S5/S6/S9 · stored G3/V19C replay → S2 · RG inventory audit → S7.
+- HARD CHECKS preserved in the sheet: fixed-atlas closure FORBIDDEN (db1 §11) · S3 = FINISHER
+  on the support-renewed residual after live descent, never a closer · every stop verdict
+  FORMULATION-scoped (Tao) · R16 stays compliance-contested · exact packed bytes inside
+  acceptance · metric named on every projection/step.
