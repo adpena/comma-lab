@@ -1,0 +1,8 @@
+{
+  "dsl_compile_hash": "96ca852b61168cf86a6e6d9166a27aa73d955a00b5d06ed940210d79f92f34d7",
+  "schema": "ddm_joint_descent_run_identity.v1",
+  "seed": 0,
+  "source_archive_sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e",
+  "target_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+  "typed_config_hash": "4cf2d2e8348ab01684535e145a58aff9b27f76241303441dec5a221170f313d2"
+}

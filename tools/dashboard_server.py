@@ -59,6 +59,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -86,6 +87,14 @@ try:
 except Exception:
     _wra = None  # resolved_glob's contract-derived discovery falls back to the base glob
     _COSTATE_JSONL = "costate_shadow.jsonl"
+
+# ── #366 DDM joint-descent CAMPAIGN reader (canonical run-dir contract, read-only,
+# mtime-gated incremental). Powers the CAMPAIGN tab (/api/campaign). Fail-open:
+# a broken tac install must never kill the daemon; the tab then reports the reason.
+try:
+    from tac.ddm_campaign_run_reader import CampaignRunReader as _CampaignRunReader
+except Exception:  # load-bearing daemon; degrade to a visible reason, never crash
+    _CampaignRunReader = None
 
 # ── canonical DSL schedule read-back (operator 2026-07-07: observability consumers
 # DERIVE the stage map from the run's own config via the DSL — never hand-fed
@@ -2856,6 +2865,39 @@ def create_app(cfg: Config) -> Starlette:
             return JSONResponse({"ok": False, "reason": f"triality error: {exc}"}, status_code=200)
         return JSONResponse(data, headers={"Cache-Control": "no-store"})
 
+    # ── CAMPAIGN tab (#366 joint-descent) — filesystem-poll snapshot, server-cached.
+    # One reader instance per app: incremental (parses only new/changed telemetry/
+    # verdict files); a short min-interval cache absorbs multi-client polling.
+    _campaign_reader = _CampaignRunReader() if _CampaignRunReader is not None else None
+    _campaign_cache: dict = {"ts": 0.0, "snap": None}
+    _campaign_lock = threading.Lock()  # reader caches are not thread-safe; serialize
+    _CAMPAIGN_MIN_INTERVAL_S = 4.0
+
+    def _campaign_snapshot_sync() -> dict:
+        if _campaign_reader is None:
+            return {"ok": False, "reason": "tac.ddm_campaign_run_reader unavailable"}
+        with _campaign_lock:
+            now = time.time()
+            if (_campaign_cache["snap"] is not None
+                    and now - _campaign_cache["ts"] < _CAMPAIGN_MIN_INTERVAL_S):
+                return _campaign_cache["snap"]
+            snap = _campaign_reader.snapshot(now=now)
+            _campaign_cache["ts"] = now
+            _campaign_cache["snap"] = snap
+            return snap
+
+    async def api_campaign(request):
+        qk, ck = _req_keys(request)
+        if gate_decision(dict(request.headers), qk, ck, _effective_access_key(cfg)) == "deny":
+            return JSONResponse({"error": "access key required"}, status_code=401)
+        try:
+            data = await asyncio.get_event_loop().run_in_executor(
+                None, _campaign_snapshot_sync)
+        except Exception as exc:  # telemetry must never crash the live server
+            return JSONResponse({"ok": False, "reason": f"campaign error: {exc}"},
+                                status_code=200)
+        return JSONResponse(data, headers={"Cache-Control": "no-store"})
+
     async def healthz(request):
         # ungated, reveals nothing sensitive (used by the supervisor + tunnel health +
         # tools/dashboard_ctl.py for its status one-liner + auto-reload staleness check).
@@ -2915,6 +2957,7 @@ def create_app(cfg: Config) -> Starlette:
         Route("/api/oracle", api_oracle),
         Route("/api/whyhow", api_whyhow),
         Route("/api/triality", api_triality),
+        Route("/api/campaign", api_campaign),
         Route("/healthz", healthz),
         WebSocketRoute("/ws", ws_endpoint),
     ]
@@ -3119,6 +3162,37 @@ body:not(.meta-lab) #meta-lab{display:none}
 #meta-lab .lab-cta:hover{background:rgba(90,176,255,.09)}
 #meta-lab .lab-foot{font-family:var(--lab-mono);font-size:10px;color:var(--faint);
   margin-top:44px;padding-top:14px;border-top:1px solid var(--grid);line-height:1.9}
+
+/* CAMPAIGN tab (#366 joint-descent) — dense, honest, mono-numeric */
+.cmp .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;
+padding:12px 14px 10px;margin:0 0 14px}
+.cmp .ph{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+color:var(--muted);margin:0 0 8px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline}
+.cmp .cmp-tag{font-size:9.5px;font-weight:600;letter-spacing:.6px;padding:2px 7px;border-radius:2px;text-transform:none}
+.cmp .cmp-tag.exact{background:#16263a;color:#7fc0ff}
+.cmp .cmp-tag.adv{background:#3a3413;color:#e6cf7a}
+.cmp canvas{width:100%;display:block}
+.cmp .cmp-runline{font-family:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospace;
+font-size:11px;color:var(--muted);word-break:break-all;margin:0 0 8px}
+.cmp .cmp-kv{display:flex;flex-wrap:wrap;gap:4px 22px;align-items:baseline;
+font-family:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospace;font-size:11px;
+line-height:1.85;border-bottom:1px solid var(--grid);padding:0 1px 9px;margin:0 0 14px}
+.cmp .cf{display:inline-flex;gap:8px;align-items:baseline;white-space:nowrap;max-width:100%}
+.cmp .ck{color:var(--faint);letter-spacing:.9px;font-size:9px;text-transform:uppercase;flex:0 0 auto}
+.cmp .cv{color:var(--fg2);font-variant-numeric:tabular-nums;white-space:normal;min-width:0}
+.cmp .cv b{color:var(--fg);font-weight:600}
+.cmp .cv .ok{color:var(--good)} .cmp .cv .bad{color:var(--bad)} .cmp .cv .warm{color:#e6cf7a}
+.cmp .duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:720px){.cmp .duo{grid-template-columns:1fr}}
+.cmp .footnote{font-size:10px;color:var(--faint2);margin-top:7px;line-height:1.55}
+.cmp .clsrow{display:flex;align-items:center;gap:10px;margin:5px 0;font-size:11px;
+font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.cmp .clsname{flex:0 0 84px;color:var(--fg2)}
+.cmp .clsbarwrap{flex:1;height:12px;background:var(--panel2);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+.cmp .clsbar{height:100%;background:var(--acc);opacity:.75}
+.cmp .clsval{flex:0 0 92px;text-align:right;color:var(--fg);font-variant-numeric:tabular-nums}
+.cmp .gatebox{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.9;color:var(--fg2)}
+.cmp .gatebox b{color:var(--fg)}
 
 /* tabs */
 .tabs{display:flex;gap:4px;margin:16px 0 18px;border-bottom:1px solid var(--grid);
@@ -4083,6 +4157,7 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
 <div class="runid hide" id="runid" aria-label="run identity">&nbsp;</div>
 <div class="tabs">
   <div class="tab on" data-tab="live">LIVE</div>
+  <div class="tab" data-tab="campaign">CAMPAIGN</div>
   <div class="tab" data-tab="oracle">ORACLE</div>
   <div class="tab" data-tab="flow">WITNESS</div>
   <div class="tab" data-tab="witness">RESIDUAL</div>
@@ -4180,6 +4255,58 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
       codec);
       <a href="https://github.com/commaai/comma_video_compression_challenge" target="_blank" rel="noopener">comma.ai video compression challenge</a>.</li>
     </ul>
+  </div>
+</section>
+
+<section id="tab-campaign" class="cmp hide">
+  <div class="cmp-runline" id="cmp_runline">campaign: loading&hellip;</div>
+  <div class="cmp-kv" id="cmp_status"></div>
+
+  <div class="panel">
+    <div class="ph">Exact n600 verdict trace &mdash; d_seg vs global_step
+      <span class="cmp-tag exact">EXACT n600 &middot; [macOS-CPU frozen-scorer advisory]</span>
+      <span class="cmp-tag">&#9679; ema &nbsp;&#9675; live (parameter_shadow)</span></div>
+    <canvas id="cmp_vseg" height="220" aria-label="exact n600 d_seg verdict trace with stage targets"></canvas>
+    <div class="footnote" id="cmp_vseg_foot"></div>
+  </div>
+
+  <div class="panel">
+    <div class="ph">Exact n600 verdict trace &mdash; d_pose vs global_step
+      <span class="cmp-tag exact">EXACT n600</span></div>
+    <canvas id="cmp_vpose" height="170" aria-label="exact n600 d_pose verdict trace"></canvas>
+  </div>
+
+  <div class="panel">
+    <div class="ph">Per-step descent strip &mdash; batch-local d_seg initial&rarr;final
+      <span class="cmp-tag adv">ADVISORY_BATCH_LOCAL &mdash; the step&rsquo;s own 4-pair batch, never n600</span></div>
+    <canvas id="cmp_steps" height="190" aria-label="per-step batch-local d_seg descent strip"></canvas>
+    <div class="footnote">Each tick spans the step&rsquo;s initial&rarr;final batch-local d_seg
+      (green = descended, red = rose); the line threads the finals. Do not compare levels
+      against the n600 trace above &mdash; different pair sets per step.</div>
+  </div>
+
+  <div class="duo">
+    <div class="panel">
+      <div class="ph">gradient_norm per step <span class="cmp-tag adv">advisory</span></div>
+      <canvas id="cmp_gnorm" height="150" aria-label="gradient norm per step"></canvas>
+    </div>
+    <div class="panel">
+      <div class="ph">seconds / step vs sealed budget</div>
+      <canvas id="cmp_secs" height="150" aria-label="seconds per step vs the sealed 312 s/step budget"></canvas>
+      <div class="footnote" id="cmp_secs_foot"></div>
+    </div>
+  </div>
+
+  <div class="duo">
+    <div class="panel">
+      <div class="ph">Pose-finish engage gate <span class="cmp-tag exact">from exact verdicts</span></div>
+      <div class="gatebox" id="cmp_gate">&mdash;</div>
+    </div>
+    <div class="panel">
+      <div class="ph">Per-class d_seg &mdash; latest exact verdict <span class="cmp-tag exact">EXACT n600</span></div>
+      <div id="cmp_cls">&mdash;</div>
+      <div class="footnote" id="cmp_cls_foot"></div>
+    </div>
   </div>
 </section>
 
@@ -5050,6 +5177,7 @@ function activateTab(t){
   const which=t.dataset.tab;
   document.querySelectorAll("section[id^='tab-']").forEach(s=>{s.classList.toggle("hide",s.id!=="tab-"+which);});
   if(which==="live") scheduleDraw();
+  if(which==="campaign") activateCampaign(); else campaignActive=false;
   if(which==="witness") renderWitness();
   if(which==="flow"&&window.__flowActivate){try{window.__flowActivate();}catch(e){console.error("dash: __flowActivate failed",e);}}
   if(which==="oracle") activateOracle();
@@ -6789,6 +6917,200 @@ function setupInteractions(){
     hoverEpoch=null;hideTip();scheduleDraw();
   });
 }
+// ---------- CAMPAIGN tab (#366 DDM joint-descent) ----------
+// Polls /api/campaign (server-side fs snapshot, cached) every poll interval while
+// the tab is active. All charts honest-axis (y from 0, targets included in range).
+var campaignActive=false, campaignTimer=null, campaignData=null;
+function activateCampaign(){
+  campaignActive=true;
+  campaignFetch();
+  if(!campaignTimer)campaignTimer=setInterval(function(){
+    if(campaignActive&&!document.hidden)campaignFetch();
+  },Math.max(5000,(BOOT.poll||5)*1000));
+}
+function campaignFetch(){
+  fetch("/api/campaign",{cache:"no-store"}).then(r=>r.json()).then(d=>{
+    campaignData=d; renderCampaign();
+  }).catch(e=>{
+    const rl=$("cmp_runline");
+    if(rl)rl.textContent="campaign: fetch failed — "+e;
+  });
+}
+function cmpFmt(v,n){return (v==null||!isFinite(v))?"—":sig(v,n==null?4:n);}
+function cmpCanvas(id){
+  const c=$(id); if(!c)return null;
+  const dpr=window.devicePixelRatio||1, w=c.clientWidth||600, h=parseInt(c.getAttribute("height"),10)||160;
+  c.width=Math.round(w*dpr); c.height=Math.round(h*dpr); c.style.height=h+"px";
+  const g=c.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0);
+  return {c:c,g:g,w:w,h:h};
+}
+// generic honest line chart: series=[{pts:[{x,y,open}],color,line,mark}], hlines=[{y,color,label,dash}]
+function cmpChart(id,series,hlines,opts){
+  const cv=cmpCanvas(id); if(!cv)return;
+  const g=cv.g, W=cv.w, H=cv.h; opts=opts||{};
+  g.clearRect(0,0,W,H);
+  const padL=54,padR=10,padT=8,padB=20;
+  let xs=[],ys=[];
+  series.forEach(s=>s.pts.forEach(p=>{if(p.x!=null&&isFinite(p.x))xs.push(p.x);
+    if(p.y!=null&&isFinite(p.y)){ys.push(p.y);} if(p.y0!=null&&isFinite(p.y0))ys.push(p.y0);}));
+  (hlines||[]).forEach(l=>{if(l.y!=null&&isFinite(l.y))ys.push(l.y);});
+  if(!xs.length||!ys.length){g.fillStyle="#5c6573";g.font="11px ui-monospace,Menlo,monospace";
+    g.fillText(opts.empty||"no data yet",padL,H/2);return;}
+  let x0=Math.min.apply(null,xs),x1=Math.max.apply(null,xs);
+  if(x0===x1){x0-=1;x1+=1;}
+  let y1=Math.max.apply(null,ys)*1.06, y0=0;   // honest floor at 0 — never truncated
+  if(y1<=y0)y1=y0+1;
+  const X=x=>padL+(x-x0)/(x1-x0)*(W-padL-padR);
+  const Y=y=>H-padB-(y-y0)/(y1-y0)*(H-padT-padB);
+  // grid + ticks
+  g.font="10px ui-monospace,Menlo,monospace";
+  yTicks(y0,y1,4).forEach(t=>{const y=Y(t);
+    g.strokeStyle="#2a2f39";g.lineWidth=1;g.beginPath();g.moveTo(padL,y);g.lineTo(W-padR,y);g.stroke();
+    g.fillStyle="#818996";g.textAlign="right";g.fillText(fmtTick(t),padL-6,y+3);});
+  yTicks(x0,x1,Math.min(8,Math.max(2,Math.round(W/110)))).forEach(t=>{const x=X(t);
+    g.fillStyle="#818996";g.textAlign="center";g.fillText(String(Math.round(t)),x,H-6);});
+  // reference hlines (stage targets / sealed budget)
+  (hlines||[]).forEach(l=>{const y=Y(l.y);
+    g.strokeStyle=l.color||"#46d369";g.lineWidth=1;
+    g.setLineDash(l.dash||[5,4]);g.beginPath();g.moveTo(padL,y);g.lineTo(W-padR,y);g.stroke();g.setLineDash([]);
+    if(l.label){g.fillStyle=l.color||"#46d369";g.textAlign="left";
+      g.fillText(l.label,padL+4,Math.max(padT+9,y-4));}});
+  // series
+  series.forEach(s=>{
+    if(s.bars){ // vertical initial->final ticks (descent strip)
+      s.pts.forEach(p=>{if(p.y==null||p.y0==null)return;
+        g.strokeStyle=(p.y<=p.y0)?"#46d369":"#ff6b6b";g.lineWidth=2;
+        g.beginPath();g.moveTo(X(p.x),Y(p.y0));g.lineTo(X(p.x),Y(p.y));g.stroke();});
+    }
+    if(s.line!==false){
+      g.strokeStyle=s.color;g.lineWidth=1.6;g.beginPath();let started=false;
+      s.pts.forEach(p=>{if(p.y==null||!isFinite(p.y))return;
+        if(!started){g.moveTo(X(p.x),Y(p.y));started=true;}else g.lineTo(X(p.x),Y(p.y));});
+      if(started)g.stroke();
+    }
+    if(s.mark!==false){
+      s.pts.forEach(p=>{if(p.y==null||!isFinite(p.y))return;
+        g.beginPath();g.arc(X(p.x),Y(p.y),3.2,0,Math.PI*2);
+        if(p.open){g.strokeStyle=s.color;g.lineWidth=1.5;g.fillStyle="#13151a";g.fill();g.stroke();}
+        else{g.fillStyle=s.color;g.fill();}});
+    }
+  });
+  function yTicks(lo,hi,n){let st=niceNum((hi-lo)/Math.max(1,n),true);if(!(st>0))st=1;
+    const out=[];for(let v=Math.ceil(lo/st)*st;v<=hi+st*1e-9;v+=st)if(v>=lo-st*1e-9)out.push(v);
+    return out.length?out:[lo,hi];}
+  function fmtTick(v){if(Math.abs(v)>=1000)return Math.round(v).toLocaleString("en-US");
+    if(Math.abs(v)>=1||v===0)return String(+v.toFixed(2));return String(+v.toPrecision(3));}
+}
+function renderCampaign(){
+  const d=campaignData; if(!d)return;
+  const rl=$("cmp_runline");
+  if(!d.ok){if(rl)rl.textContent="campaign: "+(d.reason||"unavailable");return;}
+  const st=d.status||{}, ck=d.checkpoints||{}, cad=d.cadence||{}, rc=d.receipt||{};
+  if(rl)rl.textContent="campaign run: "+d.run_name+"  ·  "+d.run_dir;
+  // status strip
+  const alive=st.pid_alive?"<span class='ok'>ALIVE</span>":"<span class='bad'>DEAD</span>";
+  const ended=st.ended?" <span class='warm'>(run ENDED — receipt written)</span>":"";
+  const fresh=t=>t==null?"—":fmtAge(t);
+  const secsVs=(cad.measured_median_s!=null)
+    ? sig(cad.measured_median_s,4)+"s median vs sealed "+sig(cad.sealed_step_seconds,4)+"s"
+    : "— vs sealed "+sig(cad.sealed_step_seconds,4)+"s";
+  const kv=[
+    ["launcher pid",(st.pid==null?"—":st.pid)+" "+alive+ended],
+    ["stage","<b>"+(st.stage_index==null?"—":st.stage_index)+"</b> ("+escHtml(st.stage_id||"—")+") step <b>"+(st.stage_step==null?"—":st.stage_step)+"</b> · global <b>"+(st.global_step==null?"—":st.global_step)+"</b>"],
+    ["telemetry age",fresh(st.last_telemetry_age_s)],
+    ["verdict age",fresh(st.last_verdict_age_s)],
+    ["run.log age",fresh(st.run_log_age_s)],
+    ["accepted ckpts","<b>"+(ck.count==null?"—":ck.count)+"</b>"+(ck.latest_age_s!=null?" · latest "+fresh(ck.latest_age_s)+" ago":"")],
+    ["cadence",secsVs],
+  ];
+  if(rc.present){kv.push(["receipt","<b>"+escHtml(rc.verdict||"—")+"</b> · pointer "+escHtml(rc.pointer||"—")+(rc.pointer_moved?"":" (UNMOVED)")]);}
+  const sEl=$("cmp_status");
+  if(sEl)sEl.innerHTML=kv.map(p=>"<span class='cf'><span class='ck'>"+p[0]+"</span><span class='cv'>"+p[1]+"</span></span>").join("");
+  // exact verdict traces (stage verdicts + baseline; warm-start proposals excluded from
+  // the trace). The stage00 baseline row carries no global_step — it IS step 0.
+  const verd=(d.verdicts||[])
+    .filter(v=>v.kind!=="warm_start_proposal")
+    .map(v=>(v.global_step==null&&v.kind==="baseline")?Object.assign({},v,{global_step:0}):v)
+    .filter(v=>v.global_step!=null)
+    .sort((a,b)=>a.global_step-b.global_step);
+  const stages=((d.schedule||{}).stages)||[];
+  const tgtLines=stages.filter(s=>s.target_d_seg!=null).map((s,i)=>({
+    y:s.target_d_seg,color:"#46d369",dash:[5,4],
+    label:"stage-"+(i+1)+" target "+sig(s.target_d_seg,4)}));
+  cmpChart("cmp_vseg",[{color:"#5ab0ff",
+    pts:verd.map(v=>({x:v.global_step,y:v.d_seg,open:v.parameter_shadow==="live"}))}],
+    tgtLines,{empty:"no exact verdicts yet"});
+  const vf=$("cmp_vseg_foot");
+  if(vf){const lastV=verd[verd.length-1];
+    vf.textContent=lastV?("latest: step "+lastV.global_step+" d_seg "+cmpFmt(lastV.d_seg,6)
+      +" (shadow="+(lastV.parameter_shadow||"?")+", decision="+(lastV.realized_stage_decision||"—")
+      +", ref "+cmpFmt(lastV.reference_d_seg,6)+")"):"";}
+  const tgtPose=stages.filter(s=>s.target_d_pose!=null).map(s=>({
+    y:s.target_d_pose,color:"#ffb454",dash:[5,4],label:"stage-3 d_pose target "+sig(s.target_d_pose,6)}));
+  cmpChart("cmp_vpose",[{color:"#ffb454",
+    pts:verd.map(v=>({x:v.global_step,y:v.d_pose,open:v.parameter_shadow==="live"}))}],
+    tgtPose,{empty:"no exact verdicts yet"});
+  // batch-local descent strip
+  const steps=d.steps||[];
+  cmpChart("cmp_steps",[
+    {bars:true,line:false,mark:false,color:"#46d369",
+     pts:steps.map(s=>({x:s.global_step,y:s.d_seg_final,y0:s.d_seg_initial}))},
+    {color:"#aeb7c6",mark:false,
+     pts:steps.map(s=>({x:s.global_step,y:s.d_seg_final}))}],
+    [],{empty:"no step telemetry yet"});
+  cmpChart("cmp_gnorm",[{color:"#c08cff",mark:false,
+    pts:steps.map(s=>({x:s.global_step,y:s.gradient_norm}))}],[],
+    {empty:"no step telemetry yet"});
+  cmpChart("cmp_secs",[{color:"#7fc0ff",mark:false,
+    pts:steps.map(s=>({x:s.global_step,y:s.seconds}))}],
+    [{y:cad.sealed_step_seconds,color:"#e6cf7a",label:"sealed "+sig(cad.sealed_step_seconds,4)+" s/step"}],
+    {empty:"no step telemetry yet"});
+  const sf=$("cmp_secs_foot");
+  if(sf)sf.textContent=(cad.measured_n?("measured n="+cad.measured_n+" · median "+cmpFmt(cad.measured_median_s,4)
+    +"s · mean "+cmpFmt(cad.measured_mean_s,4)+"s · last "+cmpFmt(cad.measured_last_s,4)+"s"):"")
+    +"  ·  sealed source: "+(cad.sealed_source||"");
+  // pose-finish engage gate
+  const lastVerd=verd[verd.length-1]||{}, eng=lastVerd.engage||{};
+  const pfe=((d.schedule||{}).pose_finish_engage)||{};
+  const gEl=$("cmp_gate");
+  if(gEl){
+    const nVerd=(eng.exact_verdict_steps||[]).length;
+    const settle=pfe.settle_window, hyst=pfe.hysteresis;
+    const windowNote=(settle!=null&&hyst!=null)
+      ? "detector: "+escHtml(pfe.detector||"plateau")+" needs settle_window="+settle+" + hysteresis="+hyst
+        +" exact verdicts → earliest engagement ~verdict "+(settle+hyst-1)+"–"+(settle+hyst)
+      : "";
+    gEl.innerHTML=
+      "state <b>"+escHtml(eng.classification||"—")+"</b><br>"+
+      "engaged_global_step <b>"+(eng.engaged_global_step==null?"not engaged":eng.engaged_global_step)+"</b>"+
+      " · exact verdicts <b>"+nVerd+"</b> @ steps ["+(eng.exact_verdict_steps||[]).join(", ")+"]<br>"+
+      "exact d_seg history: "+((eng.exact_d_seg||[]).map(v=>sig(v,5)).join(" → ")||"—")+"<br>"+
+      "relative slope <b>"+(eng.latest_relative_slope==null?"—":sig(eng.latest_relative_slope,4))+"</b>"+
+      " · strict seg admissions <b>"+(eng.strict_seg_admissions==null?"—":eng.strict_seg_admissions)+"</b><br>"+
+      "<span style='color:var(--faint2)'>"+windowNote+"</span>";
+  }
+  // per-class bars — latest exact verdict
+  const cEl=$("cmp_cls");
+  if(cEl){
+    const pc=lastVerd.per_class||{};
+    const order=(d.class_order||[]).filter(k=>pc[k]);
+    if(!order.length){cEl.textContent="no exact verdict yet";}
+    else{
+      const mx=Math.max.apply(null,order.map(k=>pc[k].d_seg||0))||1;
+      cEl.innerHTML=order.map(k=>{
+        const v=pc[k].d_seg||0, w=Math.max(1,Math.round(v/mx*100));
+        return "<div class='clsrow'><span class='clsname'>"+k+"</span>"+
+          "<span class='clsbarwrap'><span class='clsbar' style='width:"+w+"%'></span></span>"+
+          "<span class='clsval'>"+sig(v,5)+"</span></div>";}).join("");
+      const cfEl=$("cmp_cls_foot");
+      if(cfEl)cfEl.textContent="from "+(lastVerd.file||"latest verdict")+" · step "
+        +lastVerd.global_step+" · shadow="+(lastVerd.parameter_shadow||"?")
+        +" · linear scale, common max "+sig(mx,5);
+    }
+  }
+}
+window.addEventListener("resize",function(){if(campaignActive)renderCampaign();});
+
 setupInteractions();
 window.addEventListener("resize",scheduleDraw);
 window.addEventListener("orientationchange",scheduleDraw);

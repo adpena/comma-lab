@@ -1,0 +1,548 @@
+{
+  "admission_memory_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j9_366_fresh_memory_bootstrap_20260725T0505Z/worst_geometry_memory_preflight.json",
+    "sha256": "d957c817a997db3a77b50b20950e9c6d0d5cfc36435bed24fd4ab0e8c4e6017c"
+  },
+  "banked_r1_comparator": {
+    "authority": "comparator_and_fallback_harvest_signal_only",
+    "binding_target": false,
+    "d_pose": 0.00161,
+    "payload_bytes": 7200,
+    "promotion_eligible": false,
+    "score_contribution": 0.127
+  },
+  "banked_r1_fallback_harvest_signal": true,
+  "banked_r1_fallback_is_comparator_only": true,
+  "baseline_verdict": {
+    "advisory_action": 26.28022354503111,
+    "archive_bytes": 138801,
+    "archive_sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e",
+    "batch_size": 32,
+    "c1_debt_buckets": {
+      "partition_check": {
+        "global_errors": 8318787,
+        "role_plus_residual_errors": 8318787
+      },
+      "residual_trunk_owned": {
+        "baseline_errors_above_target_allowance": 2377273,
+        "errors": 6989256,
+        "errors_above_target_allowance": 6852417,
+        "integer_target_error_allowance": 136839,
+        "target_classes": [
+          "Road",
+          "Undrivable",
+          "MyCar"
+        ]
+      },
+      "role_correction_owned": {
+        "baseline_ceiling_errors": 726416,
+        "errors": 1329531,
+        "target_classes": [
+          "Lane",
+          "Movable"
+        ]
+      }
+    },
+    "d_pose": 36.618184751411334,
+    "d_seg": 0.07051923116048177,
+    "elapsed_seconds": 395.16067558317445,
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "maximum_rgb_chunks_resident": 1,
+    "num_pairs": 600,
+    "per_class": {
+      "Lane": {
+        "class_id": 1,
+        "d_seg": 0.5344369489704462,
+        "errors": 369103,
+        "sites": 690639
+      },
+      "Movable": {
+        "class_id": 3,
+        "d_seg": 0.6576809956687724,
+        "errors": 960428,
+        "sites": 1460325
+      },
+      "MyCar": {
+        "class_id": 4,
+        "d_seg": 0.13577901138543008,
+        "errors": 4072489,
+        "sites": 29993509
+      },
+      "Road": {
+        "class_id": 0,
+        "d_seg": 0.09811546271714215,
+        "errors": 2689055,
+        "sites": 27407046
+      },
+      "Undrivable": {
+        "class_id": 2,
+        "d_seg": 0.0038982915546209433,
+        "errors": 227712,
+        "sites": 58413281
+      }
+    },
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "schema": "ddm_joint_descent_chunked_stage_verdict.v1",
+    "score_claim": false
+  },
+  "bounded_verification": false,
+  "campaign_blocker": "BLOCKED_REALIZED_DSEG_REGRESSION",
+  "deterministic_algorithms": true,
+  "dsl_compile_hash": "96ca852b61168cf86a6e6d9166a27aa73d955a00b5d06ed940210d79f92f34d7",
+  "elapsed_seconds": 16954.76429375005,
+  "ema_decay": 0.997,
+  "execution_allowed_by_this_receipt": false,
+  "final_stage_verdict": {
+    "advisory_action": 26.281403943795066,
+    "archive_bytes": 138801,
+    "archive_sha256": "03f3cad552953c5945f0c0c0525ff199a66a1bb49a0e2e52167e56741578234d",
+    "batch_size": 32,
+    "c1_debt_buckets": {
+      "partition_check": {
+        "global_errors": 8318787,
+        "role_plus_residual_errors": 8318787
+      },
+      "residual_trunk_owned": {
+        "baseline_errors_above_target_allowance": 2377273,
+        "errors": 6989256,
+        "errors_above_target_allowance": 6852417,
+        "integer_target_error_allowance": 136839,
+        "target_classes": [
+          "Road",
+          "Undrivable",
+          "MyCar"
+        ]
+      },
+      "role_correction_owned": {
+        "baseline_ceiling_errors": 726416,
+        "errors": 1329531,
+        "target_classes": [
+          "Lane",
+          "Movable"
+        ]
+      }
+    },
+    "d_pose": 36.622702484220724,
+    "d_seg": 0.07051923116048177,
+    "decision_basis": "REALIZED_THROUGH_ARCHIVE_PARSEBACK_PAINT_UINT8_R_FROZEN_SCORERS",
+    "elapsed_seconds": 399.549063625047,
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "global_step": 50,
+    "maximum_rgb_chunks_resident": 1,
+    "model_predicted_plateau_used": false,
+    "num_pairs": 600,
+    "parameter_shadow": "ema",
+    "per_class": {
+      "Lane": {
+        "class_id": 1,
+        "d_seg": 0.5344369489704462,
+        "errors": 369103,
+        "sites": 690639
+      },
+      "Movable": {
+        "class_id": 3,
+        "d_seg": 0.6576809956687724,
+        "errors": 960428,
+        "sites": 1460325
+      },
+      "MyCar": {
+        "class_id": 4,
+        "d_seg": 0.13577901138543008,
+        "errors": 4072489,
+        "sites": 29993509
+      },
+      "Road": {
+        "class_id": 0,
+        "d_seg": 0.09811546271714215,
+        "errors": 2689055,
+        "sites": 27407046
+      },
+      "Undrivable": {
+        "class_id": 2,
+        "d_seg": 0.0038982915546209433,
+        "errors": 227712,
+        "sites": 58413281
+      }
+    },
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "pose_finish_engage_state": {
+      "classification": "INSUFFICIENT_EXACT_VERDICTS",
+      "engaged_global_step": null,
+      "exact_d_seg": [
+        0.07051923116048177,
+        0.07030889723036024,
+        0.07051923116048177
+      ],
+      "exact_verdict_steps": [
+        0,
+        1,
+        50
+      ],
+      "latest_relative_slope": null,
+      "latest_relative_slope_stderr": null,
+      "schema": "ddm_pose_finish_exact_verdict_plateau_state.v1",
+      "strict_seg_admission_steps": [
+        1
+      ],
+      "strict_seg_admissions": 1
+    },
+    "promotion_eligible": false,
+    "realized_parameter_count": 3,
+    "realized_stage_decision": "BLOCKED_REALIZED_DSEG_REGRESSION",
+    "reference_d_pose": 36.48107420610205,
+    "reference_d_seg": 0.07030889723036024,
+    "schema": "ddm_joint_descent_chunked_stage_verdict.v1",
+    "score_claim": false,
+    "stage_id": "01_residual_bucket_realized_acceptance",
+    "stage_step": 50,
+    "target_d_pose": null,
+    "target_d_seg": 0.020602722168
+  },
+  "final_target_gate": {
+    "decision": "FINAL_TARGET_GATE_NOT_REACHED",
+    "evaluated": false,
+    "green": false
+  },
+  "git_sha": "8c197dc07209cc7d65c3e0486f4542fc99a49e94",
+  "global_step": 50,
+  "governor": {
+    "active_jobs": [
+      {
+        "current_rss_gib": 0.05,
+        "governed_descendant": false,
+        "label": "memory_blackbox",
+        "own_group_leader": true,
+        "paused": false,
+        "pgid": 19895,
+        "pid": 19895,
+        "priority": 0,
+        "projected_peak_gib": 0.05,
+        "throttle_eligible": false
+      }
+    ],
+    "ceiling": {
+      "adaptive_ceiling_gib": 116.0,
+      "baseline_gib": 38.442,
+      "floor_decomposition": {
+        "abs_min_gib": 2.0,
+        "cap_gib": 64.0,
+        "clamped": false,
+        "cp_headroom_gib": 6.4,
+        "floor_gib": 25.621,
+        "measured_cp_rss_gib": 38.442,
+        "measured_leg_gib": 25.621,
+        "mode": "derived",
+        "override_gib": null,
+        "raw_floor_gib": 25.621,
+        "static_leg_gib": 10.24,
+        "total_gib": 128.0,
+        "winning_leg": "sole_workload_burst_reserve"
+      },
+      "safety_margin_gib": 12.0,
+      "total_gib": 128.0,
+      "tracked_current_gib": 0.046,
+      "training_budget_gib": 77.558,
+      "used_gib": 38.488
+    },
+    "decision": {
+      "active_growth_headroom_gib": 0.0,
+      "adaptive_ceiling_gib": 116.0,
+      "admit": true,
+      "decision": "ADMIT",
+      "headroom_after_gib": 56.23,
+      "projected_new_gib": 21.282,
+      "projected_system_used_gib": 59.77,
+      "reason": "projected system-used 59.8 GiB <= adaptive ceiling 116.0 GiB (headroom 56.2 GiB); budget 77.6 GiB, baseline 38.4 GiB",
+      "system_used_gib": 38.488
+    },
+    "snapshot": {
+      "anonymous_gib": 31.038,
+      "available_gib": 84.819,
+      "available_primary_gib": 84.819,
+      "available_reclaimable_gib": 89.512,
+      "closure_gib": 1.324,
+      "closure_ok": true,
+      "compressor_gib": 1.66,
+      "cross_validated": true,
+      "discrepancy_gib": 0.004,
+      "fail_safe": false,
+      "file_backed_gib": 41.092,
+      "free_gib": 47.481,
+      "load1": 3.569,
+      "load15": 3.789,
+      "load5": 3.393,
+      "pressure_level": 1,
+      "purgeable_gib": 0.94,
+      "reclaimable_ok": true,
+      "swap_used_gib": 8.017,
+      "total_gib": 128.0,
+      "used_committed_gib": 38.488,
+      "used_gib": 43.181,
+      "validation_notes": [],
+      "wired_gib": 5.406
+    }
+  },
+  "grad_clip": 0.5,
+  "hardware_axis": "[macOS-CPU frozen-scorer advisory]",
+  "j2_named_parameter_count_superseded": 706,
+  "j2_overcount_reason": "aspect/rotation lift metadata and BEV/range seed fields lack current receiver wire coordinates",
+  "kernels": {
+    "custom_grouped_backward_active": true,
+    "custom_grouped_backward_reason": "env_set_and_metal_backend_available",
+    "fused_r_numpy_fp32_parity": {
+      "device": "Device(gpu, 0)",
+      "forward_bit_identical": true,
+      "forward_max_abs_delta": 0.0,
+      "fwd_atol": 0.0,
+      "grad_atol": 0.0,
+      "grad_bit_identical": true,
+      "grad_max_abs_delta": 0.0,
+      "grad_via_custom_fn_max_abs_delta": 0.0,
+      "grad_within_tol": true
+    },
+    "mlx_default_device": "Device(gpu, 0)"
+  },
+  "latest_realized_stage_decision": "BLOCKED_REALIZED_DSEG_REGRESSION",
+  "memory_admission": true,
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "pose_finish_engage_state": {
+    "classification": "INSUFFICIENT_EXACT_VERDICTS",
+    "engaged_global_step": null,
+    "exact_d_seg": [
+      0.07051923116048177,
+      0.07030889723036024,
+      0.07051923116048177
+    ],
+    "exact_verdict_steps": [
+      0,
+      1,
+      50
+    ],
+    "latest_relative_slope": null,
+    "latest_relative_slope_stderr": null,
+    "schema": "ddm_pose_finish_exact_verdict_plateau_state.v1",
+    "strict_seg_admission_steps": [
+      1
+    ],
+    "strict_seg_admissions": 1
+  },
+  "pose_finish_engaged": false,
+  "projection_source": "MEASURED_ACTUAL_FULL_RUN_RECEIPT",
+  "projection_used_for_governor_gib": 21.282061767578124,
+  "receiver_effective_parameter_count": 368,
+  "receiver_effective_parameter_groups": {
+    "island_worldsheet": 326,
+    "lane_program": 24,
+    "shared_template_dof": 18
+  },
+  "research_only": true,
+  "runtime_memory_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_v5_cured_20260725T062259Z/full_run_memory_preflight.json",
+    "sha256": "cd8a68d0d9a8aff3404666c686bdbd57cbaef372c11b53cfd01f1f43cc1a5cff"
+  },
+  "schedule": {
+    "checkpoint_interval_steps": 37,
+    "learning_rate": 0.25,
+    "plateau_verdicts": 2,
+    "pose_finish_engage": {
+      "detector": "rolling_relative_slope_plateau",
+      "ema_span": 3,
+      "fallback_policy": "emit_banked_r1_comparator_harvest_signal_non_promoting",
+      "flat_relative_slope_band": 0.0003,
+      "hysteresis": 3,
+      "metric": "exact_n600_d_seg_realized_through_R",
+      "minimum_strict_seg_admissions": 1,
+      "schema": "ddm_pose_finish_exact_verdict_plateau.v1",
+      "settle_window": 3
+    },
+    "provenance": "HASH_SEALED_FULL_RUN_SCHEDULE",
+    "stages": [
+      {
+        "active_groups": [
+          "island_worldsheet",
+          "shared_template_dof"
+        ],
+        "maximum_steps": 150,
+        "stage_id": "01_residual_bucket_realized_acceptance",
+        "target_d_pose": null,
+        "target_d_seg": 0.020602722168,
+        "verdict_interval_steps": 50
+      },
+      {
+        "active_groups": [
+          "lane_program",
+          "shared_template_dof"
+        ],
+        "maximum_steps": 150,
+        "stage_id": "02_lane_production_joint_descent",
+        "target_d_pose": null,
+        "target_d_seg": 0.013735148112,
+        "verdict_interval_steps": 50
+      },
+      {
+        "active_groups": [
+          "island_worldsheet",
+          "lane_program",
+          "shared_template_dof"
+        ],
+        "maximum_steps": 150,
+        "stage_id": "03_pose_coupled_finish",
+        "target_d_pose": 163.06116431842463,
+        "target_d_seg": 0.006867574056,
+        "verdict_interval_steps": 50
+      }
+    ],
+    "train_batch": 4,
+    "warm_start_pair": 447,
+    "warm_start_reform": {
+      "adam_beta2": 0.999,
+      "component_fire_gate": "cumulative_vs_stage00_dseg_flat_or_down_pose_not_worse_any_component_and_residual_descend",
+      "first_realized_admission": "exact_n600_joint_delta_s_lt_zero_else_shrink_and_exact_rollback",
+      "frozen_groups_until_first_admission": [],
+      "group_release_condition": "first_component_safe_n600_residual_admission",
+      "lr_rewarmup_c": 2.0,
+      "lr_rewarmup_floor": 0.1,
+      "lr_rewarmup_shape": "linear",
+      "lr_rewarmup_steps": 2000,
+      "maximum_continuous_update_quantum_fraction": null,
+      "opening_active_groups": [
+        "island_worldsheet",
+        "shared_template_dof"
+      ],
+      "opening_candidate_ids": [
+        "worldsheet_joint_active_x_+1",
+        "worldsheet_joint_active_x_-1",
+        "worldsheet_joint_active_y_-1",
+        "local_exact_gradient"
+      ],
+      "opening_candidate_pair_ids": [
+        447,
+        53,
+        416,
+        296,
+        547,
+        278,
+        501,
+        346
+      ],
+      "pose_objective_engage_condition": null,
+      "proposal_multipliers": [
+        32.0,
+        16.0,
+        8.0,
+        4.0,
+        2.0,
+        1.0,
+        0.5,
+        0.25
+      ],
+      "proposal_ordering": "candidate_then_shrink",
+      "proposal_q8_denominator": 256,
+      "proposal_staging": "camera_874x1164_q8_pre_final_uint8",
+      "realized_acceptance_policy": "pure_priced_exact_n600",
+      "residual_bucket_admission_required": true
+    },
+    "warm_start_steps": 4
+  },
+  "schema": "ddm_joint_descent_full_run_receipt.v1",
+  "score_claim": false,
+  "seed": 0,
+  "source_archive": {
+    "bytes": 138801,
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws2_warm_start_custody_producer_20260724T053455Z/01_archives/W_joint.zip.receipt-bytes",
+    "sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e"
+  },
+  "source_custody": {
+    "consumer": {
+      "path": "src/tac/optimization/direct_description_joint_descent.py",
+      "sha256": "015add65e37ef420cbfc5632f960fc72b9614ccb7ab2afc54afd0cd1f141766f"
+    },
+    "g1_lift": {
+      "path": "src/tac/optimization/direct_description_g1_worldsheet.py",
+      "sha256": "abd4982b2cbec0be99aa22dae470e3ea8f33c0e0b0e02a7e8c2ba0739500dd9d"
+    },
+    "launcher": {
+      "path": "tools/launch_ddm_joint_descent.py",
+      "sha256": "34d967aaf8e3a5f1b0e5ffa3cd9d9850c318f4af5daf7a40722f4a6ff0112e76"
+    }
+  },
+  "stage_index": 0,
+  "stage_step": 50,
+  "step_seconds": [
+    1543.3903938340954,
+    266.9521660420578,
+    267.02024600002915,
+    266.56212383299135,
+    264.35216016694903,
+    323.50814091716893,
+    323.19074925011955,
+    323.07260675006546,
+    264.0065871658735,
+    263.9315347908996,
+    205.7627906249836,
+    205.7149428750854,
+    264.12707374989986,
+    147.6591521659866,
+    265.9551264171023,
+    147.13911879179068,
+    147.0962104590144,
+    147.2498502500821,
+    264.0635783330072,
+    205.53360354201868,
+    206.155893165851,
+    264.02762200008146,
+    381.1223508750554,
+    322.6067745410837,
+    322.74388733296655,
+    206.0764584580902,
+    322.70790879195556,
+    381.72622912493534,
+    381.35402804100886,
+    263.6700503749307,
+    264.1739871671889,
+    381.43246812489815,
+    380.90002258401364,
+    205.80320225004107,
+    380.84061237517744,
+    733.1147249999922,
+    440.70708208414726,
+    322.40680629201233,
+    264.01501566683874,
+    263.79421066702344,
+    264.4010698751081,
+    263.9008503749501,
+    381.7123405840248,
+    264.2143310829997,
+    205.71149670821615,
+    322.6515475001652,
+    205.49568562489003,
+    147.23988508316688,
+    147.70155312516727,
+    147.05009958310984
+  ],
+  "storage": {
+    "cleanup": "no_large_scratch_created; immutable small checkpoints and receipts preserved",
+    "free_bytes": 431547777024,
+    "minimum_free_bytes": 2147483648,
+    "out_dir": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_v5_cured_20260725T062259Z",
+    "tier": "/Volumes/VertigoDataTier/pact"
+  },
+  "target_cache": {
+    "bytes": 5078017610,
+    "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "telemetry_rows": 50,
+  "typed_config_hash": "4cf2d2e8348ab01684535e145a58aff9b27f76241303441dec5a221170f313d2",
+  "verdict": "BLOCKED_REALIZED_DSEG_REGRESSION",
+  "verdict_scope": "bounded executable-consumer smoke; no formulation, family, or score verdict",
+  "warm_start_component_safe_residual_admitted": true,
+  "warm_start_realized_admitted": true,
+  "warm_start_seg_admitted": true,
+  "written_at_utc": "2026-07-25T11:06:12.231433+00:00"
+}

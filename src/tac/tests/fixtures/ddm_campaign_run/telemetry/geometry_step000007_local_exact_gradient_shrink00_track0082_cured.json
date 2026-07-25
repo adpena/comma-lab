@@ -1,0 +1,36 @@
+{
+  "candidate_id": "local_exact_gradient",
+  "event": "proposal_infeasible_geometry",
+  "global_step": 7,
+  "parameter_indices": [
+    164,
+    165
+  ],
+  "parameter_names": [
+    "island.track82.center_x",
+    "island.track82.center_y"
+  ],
+  "projected_translation_xy": [
+    0,
+    -1
+  ],
+  "projection": "rg1.project_polygon_center",
+  "proposal_multiplier": 1.0,
+  "proposal_multiplier_index": 0,
+  "proposal_staging": null,
+  "reason": "projected_shared_track_translation_into_legal_scorer_plane",
+  "requested_translation_xy": [
+    -1,
+    -1
+  ],
+  "schema": "ddm_joint_descent_geometry_projection_event.v1",
+  "score_claim": false,
+  "scorer_extent_wh": [
+    512,
+    384
+  ],
+  "status": "cured",
+  "track_index": 82,
+  "track_object_id": 82,
+  "verdict_scope": "INSTANCE proposal geometry only"
+}

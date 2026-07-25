@@ -1,0 +1,25 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/launch_ddm_joint_descent.py",
+    "--ticket",
+    ".omx/research/configs/ddm_j9_366_geometry_escape_cure_20260725.json",
+    "--memory-receipt",
+    "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j9_366_fresh_memory_bootstrap_20260725T0505Z/worst_geometry_memory_preflight.json",
+    "--out-dir",
+    "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_v5_cured_20260725T062259Z",
+    "--full-run"
+  ],
+  "authority": "operator standing GO 2026-07-20 (b) sealed DSL-hashed tickets; j9 READY_TO_FIRE b78fe8c0b1",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "subprocess.Popen(start_new_session=True)",
+  "dry_run": false,
+  "generated_utc": "2026-07-25T06:22:59Z",
+  "git_sha": "87c1cf28ff06a81a1abd00082f38bc86b29d70cc",
+  "log_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_v5_cured_20260725T062259Z/run.log",
+  "output_dir": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_v5_cured_20260725T062259Z",
+  "pid": 67636,
+  "pid_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_v5_cured_20260725T062259Z/run.pid",
+  "purpose": "366 campaign attempt-5: j9-cured engine (geometry cure + ckpt-every-accepted-step + honest 39.4h schedule), ticket 4cf2d2e8",
+  "schema": "detached_local_process_launch.v1"
+}

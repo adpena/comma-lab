@@ -1,0 +1,74 @@
+{
+  "advisory_action": 26.28022354503111,
+  "archive_bytes": 138801,
+  "archive_sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e",
+  "batch_size": 32,
+  "c1_debt_buckets": {
+    "partition_check": {
+      "global_errors": 8318787,
+      "role_plus_residual_errors": 8318787
+    },
+    "residual_trunk_owned": {
+      "baseline_errors_above_target_allowance": 2377273,
+      "errors": 6989256,
+      "errors_above_target_allowance": 6852417,
+      "integer_target_error_allowance": 136839,
+      "target_classes": [
+        "Road",
+        "Undrivable",
+        "MyCar"
+      ]
+    },
+    "role_correction_owned": {
+      "baseline_ceiling_errors": 726416,
+      "errors": 1329531,
+      "target_classes": [
+        "Lane",
+        "Movable"
+      ]
+    }
+  },
+  "d_pose": 36.618184751411334,
+  "d_seg": 0.07051923116048177,
+  "elapsed_seconds": 395.16067558317445,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "maximum_rgb_chunks_resident": 1,
+  "num_pairs": 600,
+  "per_class": {
+    "Lane": {
+      "class_id": 1,
+      "d_seg": 0.5344369489704462,
+      "errors": 369103,
+      "sites": 690639
+    },
+    "Movable": {
+      "class_id": 3,
+      "d_seg": 0.6576809956687724,
+      "errors": 960428,
+      "sites": 1460325
+    },
+    "MyCar": {
+      "class_id": 4,
+      "d_seg": 0.13577901138543008,
+      "errors": 4072489,
+      "sites": 29993509
+    },
+    "Road": {
+      "class_id": 0,
+      "d_seg": 0.09811546271714215,
+      "errors": 2689055,
+      "sites": 27407046
+    },
+    "Undrivable": {
+      "class_id": 2,
+      "d_seg": 0.0038982915546209433,
+      "errors": 227712,
+      "sites": 58413281
+    }
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "schema": "ddm_joint_descent_chunked_stage_verdict.v1",
+  "score_claim": false
+}

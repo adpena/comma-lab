@@ -1,0 +1,133 @@
+{
+  "advisory_action": 26.440840297109066,
+  "archive_bytes": 138799,
+  "archive_sha256": "349fba9d7bb129c65b7a7cb27b57447b5a28e621147ce5acd1bd3bff4d3d261b",
+  "batch_size": 32,
+  "c1_bucket_delta_cumulative_vs_baseline": {
+    "global_delta_errors": 61131,
+    "residual_bucket_descended": false,
+    "residual_trunk_debt_delta_errors": 38443,
+    "residual_trunk_owned_delta_errors": 38443,
+    "role_correction_owned_delta_errors": 22688,
+    "sign_convention": "candidate_minus_reference; negative removes errors"
+  },
+  "c1_bucket_delta_vs_last_admitted": {
+    "global_delta_errors": 61131,
+    "residual_bucket_descended": false,
+    "residual_trunk_debt_delta_errors": 38443,
+    "residual_trunk_owned_delta_errors": 38443,
+    "role_correction_owned_delta_errors": 22688,
+    "sign_convention": "candidate_minus_reference; negative removes errors"
+  },
+  "c1_debt_buckets": {
+    "partition_check": {
+      "global_errors": 8379918,
+      "role_plus_residual_errors": 8379918
+    },
+    "residual_trunk_owned": {
+      "baseline_errors_above_target_allowance": 2377273,
+      "errors": 7027699,
+      "errors_above_target_allowance": 6890860,
+      "integer_target_error_allowance": 136839,
+      "target_classes": [
+        "Road",
+        "Undrivable",
+        "MyCar"
+      ]
+    },
+    "role_correction_owned": {
+      "baseline_ceiling_errors": 726416,
+      "errors": 1352219,
+      "target_classes": [
+        "Lane",
+        "Movable"
+      ]
+    }
+  },
+  "component_gate_decision": "BLOCKED_REALIZED_DSEG_REGRESSION",
+  "cumulative_fire_gate_decision": "BLOCKED_CUMULATIVE_DSEG_REGRESSION_VS_STAGE00",
+  "d_pose": 37.03575248405298,
+  "d_seg": 0.07103744506835938,
+  "decision_basis": "PAINT_UINT8_R_FROZEN_SCORERS_EXACT_ARCHIVE_BYTES_PURE_PRICED",
+  "elapsed_seconds": 396.6678355841432,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "global_step": 1,
+  "maximum_rgb_chunks_resident": 1,
+  "model_predicted_plateau_used": false,
+  "num_pairs": 600,
+  "parameter_shadow": "live_opening_candidate",
+  "per_class": {
+    "Lane": {
+      "class_id": 1,
+      "d_seg": 0.5345223771029438,
+      "errors": 369162,
+      "sites": 690639
+    },
+    "Movable": {
+      "class_id": 3,
+      "d_seg": 0.6731768613151182,
+      "errors": 983057,
+      "sites": 1460325
+    },
+    "MyCar": {
+      "class_id": 4,
+      "d_seg": 0.13685211023491783,
+      "errors": 4104675,
+      "sites": 29993509
+    },
+    "Road": {
+      "class_id": 0,
+      "d_seg": 0.09822069113176225,
+      "errors": 2691939,
+      "sites": 27407046
+    },
+    "Undrivable": {
+      "class_id": 2,
+      "d_seg": 0.0039560352721840775,
+      "errors": 231085,
+      "sites": 58413281
+    }
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "pose_finish_engage_state": {
+    "classification": "WAITING_FOR_STRICT_SEG_ADMISSION",
+    "engaged_global_step": null,
+    "exact_d_seg": [
+      0.07051923116048177
+    ],
+    "exact_verdict_steps": [
+      0
+    ],
+    "latest_relative_slope": null,
+    "latest_relative_slope_stderr": null,
+    "schema": "ddm_pose_finish_exact_verdict_plateau_state.v1",
+    "strict_seg_admission_steps": [],
+    "strict_seg_admissions": 0
+  },
+  "promotion_eligible": false,
+  "proposal_multiplier": 32.0,
+  "proposal_receipt_relpath": "verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_minus1_shrink00_n600.json",
+  "proposal_source": "worldsheet_joint_active_x_-1",
+  "proposal_staging": "camera_874x1164_q8_pre_final_uint8",
+  "pure_priced_delta": {
+    "acceptance_authority": "strict_joint_delta_lt_zero",
+    "accepted": false,
+    "joint_delta": 0.16061675207795353,
+    "pose_term": 0.1087966930080988,
+    "rate_term": -1.3317179062443428e-06,
+    "seg_term": 0.05182139078776099
+  },
+  "realized_changed_parameter_count": 21,
+  "realized_parameter_count": 21,
+  "reference_archive_bytes": 138801,
+  "reference_d_pose": 36.618184751411334,
+  "reference_d_seg": 0.07051923116048177,
+  "schema": "ddm_joint_descent_chunked_stage_verdict.v1",
+  "score_claim": false,
+  "stage_id": "01_residual_bucket_realized_acceptance",
+  "stage_step": 1,
+  "warm_start_component_safe_residual_admitted": false,
+  "warm_start_realized_admitted": false,
+  "warm_start_seg_admitted": false
+}

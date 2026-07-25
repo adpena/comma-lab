@@ -1,0 +1,68 @@
+{
+  "active_groups": [
+    "island_worldsheet",
+    "shared_template_dof"
+  ],
+  "active_receiver_effective_coordinates": 344,
+  "current_parseback_archive_sha256": "da168e2ebf962d37ff22f1c3cb96d022de4dab79f62ccde5d32cc8886e98900f",
+  "event": "full_run_step",
+  "final": {
+    "d_pose": 15.288575172424316,
+    "d_seg": 0.06640625,
+    "joint_objective_no_rate": 31.890356063842773,
+    "seg_ce_margin": 0.1952565759420395
+  },
+  "first_order_plateau_prediction_used": false,
+  "frozen_groups": [],
+  "global_step": 50,
+  "gradient_norm": 0.6680812601521519,
+  "initial": {
+    "d_pose": 15.46299934387207,
+    "d_seg": 0.0688985213637352,
+    "joint_objective_no_rate": 32.28645706176758,
+    "seg_ce_margin": 0.19851425290107727
+  },
+  "learning_rate_uint8_quantum_fraction": 0.25,
+  "loss_before": 19.851425170898438,
+  "lr_rewarmup_factor": 1.0,
+  "maximum_continuous_update_quantum_fraction": null,
+  "pair_ids": [
+    192,
+    193,
+    194,
+    195
+  ],
+  "pose_finish_engage_state": {
+    "classification": "INSUFFICIENT_EXACT_VERDICTS",
+    "engaged_global_step": null,
+    "exact_d_seg": [
+      0.07051923116048177,
+      0.07030889723036024
+    ],
+    "exact_verdict_steps": [
+      0,
+      1
+    ],
+    "latest_relative_slope": null,
+    "latest_relative_slope_stderr": null,
+    "schema": "ddm_pose_finish_exact_verdict_plateau_state.v1",
+    "strict_seg_admission_steps": [
+      1
+    ],
+    "strict_seg_admissions": 1
+  },
+  "pose_objective_weight": 0.0,
+  "proposal_multiplier": 1.0,
+  "proposal_q8_denominator": null,
+  "proposal_source": "local_exact_gradient",
+  "proposal_staging": null,
+  "realized_boundary_crossed": true,
+  "realized_secant_coordinates_in_window": 4,
+  "schema": "ddm_joint_descent_full_run_step.v1",
+  "score_claim": false,
+  "seconds": 147.05009958310984,
+  "source_archive_sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e",
+  "stage_id": "01_residual_bucket_realized_acceptance",
+  "stage_index": 0,
+  "stage_step": 50
+}

@@ -1,0 +1,107 @@
+{
+  "advisory_action": 26.281403943795066,
+  "archive_bytes": 138801,
+  "archive_sha256": "03f3cad552953c5945f0c0c0525ff199a66a1bb49a0e2e52167e56741578234d",
+  "batch_size": 32,
+  "c1_debt_buckets": {
+    "partition_check": {
+      "global_errors": 8318787,
+      "role_plus_residual_errors": 8318787
+    },
+    "residual_trunk_owned": {
+      "baseline_errors_above_target_allowance": 2377273,
+      "errors": 6989256,
+      "errors_above_target_allowance": 6852417,
+      "integer_target_error_allowance": 136839,
+      "target_classes": [
+        "Road",
+        "Undrivable",
+        "MyCar"
+      ]
+    },
+    "role_correction_owned": {
+      "baseline_ceiling_errors": 726416,
+      "errors": 1329531,
+      "target_classes": [
+        "Lane",
+        "Movable"
+      ]
+    }
+  },
+  "d_pose": 36.622702484220724,
+  "d_seg": 0.07051923116048177,
+  "decision_basis": "REALIZED_THROUGH_ARCHIVE_PARSEBACK_PAINT_UINT8_R_FROZEN_SCORERS",
+  "elapsed_seconds": 399.549063625047,
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "global_step": 50,
+  "maximum_rgb_chunks_resident": 1,
+  "model_predicted_plateau_used": false,
+  "num_pairs": 600,
+  "parameter_shadow": "ema",
+  "per_class": {
+    "Lane": {
+      "class_id": 1,
+      "d_seg": 0.5344369489704462,
+      "errors": 369103,
+      "sites": 690639
+    },
+    "Movable": {
+      "class_id": 3,
+      "d_seg": 0.6576809956687724,
+      "errors": 960428,
+      "sites": 1460325
+    },
+    "MyCar": {
+      "class_id": 4,
+      "d_seg": 0.13577901138543008,
+      "errors": 4072489,
+      "sites": 29993509
+    },
+    "Road": {
+      "class_id": 0,
+      "d_seg": 0.09811546271714215,
+      "errors": 2689055,
+      "sites": 27407046
+    },
+    "Undrivable": {
+      "class_id": 2,
+      "d_seg": 0.0038982915546209433,
+      "errors": 227712,
+      "sites": 58413281
+    }
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "pose_finish_engage_state": {
+    "classification": "INSUFFICIENT_EXACT_VERDICTS",
+    "engaged_global_step": null,
+    "exact_d_seg": [
+      0.07051923116048177,
+      0.07030889723036024,
+      0.07051923116048177
+    ],
+    "exact_verdict_steps": [
+      0,
+      1,
+      50
+    ],
+    "latest_relative_slope": null,
+    "latest_relative_slope_stderr": null,
+    "schema": "ddm_pose_finish_exact_verdict_plateau_state.v1",
+    "strict_seg_admission_steps": [
+      1
+    ],
+    "strict_seg_admissions": 1
+  },
+  "promotion_eligible": false,
+  "realized_parameter_count": 3,
+  "realized_stage_decision": "BLOCKED_REALIZED_DSEG_REGRESSION",
+  "reference_d_pose": 36.48107420610205,
+  "reference_d_seg": 0.07030889723036024,
+  "schema": "ddm_joint_descent_chunked_stage_verdict.v1",
+  "score_claim": false,
+  "stage_id": "01_residual_bucket_realized_acceptance",
+  "stage_step": 50,
+  "target_d_pose": null,
+  "target_d_seg": 0.020602722168
+}
