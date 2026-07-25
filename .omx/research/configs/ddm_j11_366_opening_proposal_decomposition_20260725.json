@@ -1,0 +1,78 @@
+{
+  "schema": "ddm_j11_opening_proposal_decomposition_config.v1",
+  "lane_id": "lane_ddm_j11_366_opening_proposal_decomposition_20260725",
+  "run_id": "ddm_j11_366_opening_proposal_decomposition_20260725T141324Z",
+  "output_path": ".omx/research/ddm_j11_366_opening_proposal_decomposition_refusal_20260725.json",
+  "source_artifacts": {
+    "authority": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j11_366_opening_proposal_decomposition_20260725T141324Z.wrapped.prompt.txt",
+      "bytes": 9645,
+      "sha256": "36ec3ede75ac1bf2d9f6565d4e05ba7e4d2202efdc1174895e644586b88d7ec5"
+    },
+    "j10_ticket": {
+      "path": ".omx/research/configs/ddm_j10_366_ema_verdict_shadow_cure_20260725.json",
+      "bytes": 28291,
+      "sha256": "19d130e2d767383876ef2483faa1e51fb5d1153ba61ab45068e8b3c5638bc40e"
+    },
+    "j10_full_run_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/full_run_receipt.json",
+      "bytes": 12901,
+      "sha256": "6ad4d1653eee81cd56d8fb3a2e4f7155d35f648ff4b39d988ee861387cdabd9d"
+    },
+    "metric_bundle": {
+      "path": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/BUNDLE-COMPLETE.json",
+      "bytes": 2799,
+      "sha256": "d670eff3dd01d61a24bdebedf045fa8cde2528953660dc6d1e64ba9c2fa94e25"
+    },
+    "pc2_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_pc2_pose_descent_smoke_20260725T121448Z/ddm_pc2_pose_descent_smoke_receipt.json",
+      "bytes": 26844,
+      "sha256": "82713bc2bc1e128a0cd12ada95101bd85bd6d47f40a8ea6e85d8f503a088b234"
+    },
+    "range_a_projector": {
+      "path": "src/tac/boundary_math/range_a_projection.py",
+      "bytes": 12594,
+      "sha256": "a97fed1347d17dfc6cf7821ef8f51f9cb988a2e74992ed8242be6b21068698dc"
+    },
+    "source_archive": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws4_pose_null_projected_seg_start_20260725T112500Z/01_archives/W_joint_step50_live.zip.receipt-bytes",
+      "bytes": 138813,
+      "sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241"
+    },
+    "proposal_worldsheet_joint_active_x_+1": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
+      "bytes": 4227,
+      "sha256": "1ff8e8ad95ed1f09625a4173eadb3106676770c10098e96e770fd154c4ebdbc5"
+    },
+    "proposal_worldsheet_joint_active_x_-1": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_minus1_shrink00_n600.json",
+      "bytes": 4229,
+      "sha256": "aec2e0edaa4b0628f9023b4f87a33b33e6151dd72c7d15ecc32a6779d290a680"
+    },
+    "proposal_worldsheet_joint_active_y_-1": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_y_minus1_shrink00_n600.json",
+      "bytes": 4234,
+      "sha256": "cd385642ae97e44c0f46867caed05c49fb8d622c3b665447f33bc2be4d61a52e"
+    },
+    "proposal_local_exact_gradient": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_local_exact_gradient_shrink00_n600.json",
+      "bytes": 4210,
+      "sha256": "95d10a5d479771fe50bd94447c0ec101400dfc11a5b23a2e185e58104627e660"
+    }
+  },
+  "pair_count": 600,
+  "verdict_batch": 32,
+  "source_baseline": {
+    "archive_bytes": 138813,
+    "archive_sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+    "d_seg": 0.06974277072482639,
+    "d_pose": 35.49982080959101
+  },
+  "acceptance_rule": "strict_realized_joint_delta_s_lt_zero",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_review_required": true
+}

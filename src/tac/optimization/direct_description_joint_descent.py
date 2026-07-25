@@ -1583,6 +1583,33 @@ class DirectDescriptionJointDescentTypedConfigV1:
         except DM4J5AdapterError as exc:
             raise DirectDescriptionError(f"J5 consumer DM4 proposal source refused: {exc}") from exc
 
+    def j11_opening_proposal_decomposition_source(
+        self,
+        *,
+        audit_config_path: Path,
+    ) -> dict[str, Any]:
+        """Audit the J11 component source without changing J10 admission semantics.
+
+        The returned receipt may contain zero proposals.  In particular, a
+        COMPLETE scorer-output metric bundle is not silently promoted into a
+        receiver-coordinate null-space projector.
+        """
+
+        from tac.optimization.ddm_j11_opening_proposal_decomposition import (
+            J11ProposalDecompositionError,
+            build_refusal_receipt,
+        )
+
+        try:
+            return build_refusal_receipt(
+                typed_descent=self,
+                audit_config_path=audit_config_path,
+            )
+        except J11ProposalDecompositionError as exc:
+            raise DirectDescriptionError(
+                f"J11 opening proposal decomposition source refused: {exc}"
+            ) from exc
+
 
 @dataclass(frozen=True, slots=True)
 class LaneProgramSeedV1:
