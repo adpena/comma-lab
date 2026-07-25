@@ -87700,6 +87700,47 @@
       },
       "notes": "Isolated delegated build; macOS-CPU frozen-scorer advisory only; score_claim=false; promotion_eligible=false; MAIN review required before landing.",
       "research_only": true
+    },
+    {
+      "id": "lane_ddm_cc3_mixed_coder_receiver_integration_20260725",
+      "name": "DDM CC3 mixed-coder receiver integration",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_cc3_mixed_coder_receiver.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_cc3_mixed_coder_receiver_receipt_20260725.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/optimization/tests/test_ddm_cc3_mixed_coder_receiver.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Receiver-close only the eight cc2 negative-delta leaves; local advisory, score_claim=false, promotion_eligible=false, no dispatch, MAIN review required."
     }
   ],
   "level_rules": {

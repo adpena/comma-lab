@@ -61,6 +61,7 @@ LZMA_FILTERS = [
 ]
 EXPECTED_MEMBERS = ("manifest.json", "base/chart.ddb", "semantic/composed.dds")
 EXPECTED_WS1_MEMBERS = ("manifest.json", "state/ws1.ddj5")
+EXPECTED_CC3_MEMBERS = ("manifest/pc1.json", "pose/pc1.ddp", "parent/ws1.zip")
 EXPECTED_EXTENSION_SLOTS = [
     {
         "active_member": None,
@@ -246,6 +247,36 @@ def _read_exact_ws1_members(archive_dir: Path) -> dict[str, bytes]:
         path = archive_dir / name
         if path.is_symlink() or not path.is_file():
             raise ReceiverError(f"WS1 packet member is not one regular file: {name}")
+        result[name] = path.read_bytes()
+    return result
+
+
+def _read_exact_cc3_members(archive_dir: Path) -> dict[str, bytes]:
+    expected_directories = {
+        PurePosixPath(name).parent.as_posix()
+        for name in EXPECTED_CC3_MEMBERS
+        if PurePosixPath(name).parent != PurePosixPath(".")
+    }
+    observed_files: list[str] = []
+    for path in archive_dir.rglob("*"):
+        relative = path.relative_to(archive_dir).as_posix()
+        if path.is_symlink():
+            raise ReceiverError(f"CC3 extracted archive contains a symlink: {relative}")
+        if path.is_dir():
+            if relative not in expected_directories:
+                raise ReceiverError(f"CC3 extracted archive contains an extra directory: {relative}")
+            continue
+        if not path.is_file():
+            raise ReceiverError(f"CC3 extracted archive contains a non-regular entry: {relative}")
+        observed_files.append(relative)
+    observed = tuple(sorted(observed_files))
+    if observed != tuple(sorted(EXPECTED_CC3_MEMBERS)):
+        raise ReceiverError(f"CC3 extracted archive members differ: {observed!r} != {EXPECTED_CC3_MEMBERS!r}")
+    result: dict[str, bytes] = {}
+    for name in EXPECTED_CC3_MEMBERS:
+        path = archive_dir / name
+        if path.is_symlink() or not path.is_file():
+            raise ReceiverError(f"CC3 archive member is not one regular file: {name}")
         result[name] = path.read_bytes()
     return result
 
@@ -1530,6 +1561,204 @@ def _inflate_ws1(
     return receipt
 
 
+def _preserved_stage_sequence_identity(
+    rows: list[dict[str, Any]],
+    paths: list[Path],
+) -> tuple[int, str]:
+    digest = hashlib.sha256()
+    total = 0
+    for row, path in zip(rows, paths, strict=True):
+        if _sha256_file(path) != (row["bytes"], row["sha256"]):
+            raise ReceiverError("CC3 preserved stage changed before final assembly")
+        with path.open("rb") as handle:
+            while chunk := handle.read(8 * 1024 * 1024):
+                digest.update(chunk)
+                total += len(chunk)
+    return total, digest.hexdigest()
+
+
+def _inflate_cc3(
+    *,
+    archive_dir: Path,
+    output_dir: Path,
+    final_path: Path,
+    relative: PurePosixPath,
+    started: float,
+) -> dict[str, Any]:
+    """Restore eight counted DCC3 leaves, then run the real WS1+PC1 receiver."""
+
+    members = _read_exact_cc3_members(archive_dir)
+    member_binding = _sha256(
+        b"".join(name.encode("ascii") + b"\0" + hashlib.sha256(members[name]).digest() for name in EXPECTED_CC3_MEMBERS)
+    )
+    checkpoint_root = (
+        output_dir.parent
+        / ".ddm_runtime_checkpoints"
+        / f"cc3_{member_binding}"
+        / relative.with_suffix("").as_posix().replace("/", "__")
+    )
+    checkpoint_root.mkdir(parents=True, exist_ok=True)
+    source_bundle = _install_ws1_source_bundle(checkpoint_root)
+    try:
+        import numpy as np
+
+        from tac.optimization.ddm_cc3_mixed_coder_receiver import restore_extracted_composition
+        from tac.optimization.ddm_pc1_pose_stream import receive_pc1_camera_pairs
+        from tac.optimization.ddm_ws1_warm_start import (
+            parse_ws1_warm_start_archive,
+            receive_ws1_warm_start_archive,
+        )
+    except ImportError as exc:
+        raise ReceiverError("bundled CC3/WS1 receiver import failed") from exc
+    try:
+        source_archive, parent_archive, packet, restoration = restore_extracted_composition(members)
+    except ValueError as exc:
+        raise ReceiverError("CC3 exact recursive restoration failed") from exc
+    if (
+        restoration["decoded_frame_count"] != 8
+        or restoration["physical_leaf_count"] != 27
+        or restoration["codec_counts"]
+        != {
+            "G4_FREE_DECODER_CONTEXT": 1,
+            "BELLARD_CLASS_MIXING": 7,
+        }
+    ):
+        raise ReceiverError("CC3 selected frame census differs")
+    parsed = parse_ws1_warm_start_archive(parent_archive)
+    if parsed.exact_reemit() != parent_archive or parsed.candidate != "W_joint":
+        raise ReceiverError("CC3 parent is not one exact W_joint receiver state")
+    source_receiver = receive_ws1_warm_start_archive(parent_archive)
+    try:
+        movable_layer = next(layer for layer in source_receiver.layers if layer.role == "Movable")
+    except StopIteration as exc:
+        raise ReceiverError("CC3 W_joint receiver lacks its Movable layer") from exc
+
+    expected_bytes = 600 * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
+    required_free_bytes = expected_bytes * 2 + SAFETY_BYTES
+    free_bytes = shutil.disk_usage(checkpoint_root).free
+    if free_bytes < required_free_bytes:
+        raise ReceiverError(f"storage preflight failed: {free_bytes} < {required_free_bytes}")
+    source_sha256 = _sha256(source_archive)
+    stage_rows: list[dict[str, Any]] = []
+    stage_paths: list[Path] = []
+    render_seconds = 0.0
+    batch_pairs = 32
+    for start in range(0, 600, batch_pairs):
+        stop = min(start + batch_pairs, 600)
+        stage_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.raw"
+        state_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.json"
+        expected_stage_bytes = (stop - start) * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
+        row = _load_preserved_stage(
+            stage_path=stage_path,
+            state_path=state_path,
+            manifest_sha256=source_sha256,
+            start=start,
+            stop=stop,
+            expected_bytes=expected_stage_bytes,
+        )
+        if row is None:
+            stage_started = time.monotonic()
+            pair_ids = tuple(range(start, stop))
+            parent_camera = source_receiver.render_camera_pairs(pair_ids)
+            movable_masks = np.stack(
+                [
+                    source_receiver._mask_for_layer(
+                        movable_layer,
+                        pair_id,
+                        replace_g1_movable=True,
+                    )
+                    for pair_id in pair_ids
+                ],
+                axis=0,
+            ).astype(np.bool_)
+            camera = receive_pc1_camera_pairs(
+                parent_camera=parent_camera,
+                packet=packet,
+                pair_ids=pair_ids,
+                movable_masks=movable_masks,
+                torch_module=torch,
+            )
+            rendered = torch.from_numpy(camera)
+            if (
+                rendered.dtype != torch.uint8
+                or tuple(rendered.shape)
+                != (
+                    stop - start,
+                    FRAMES_PER_PAIR,
+                    CAMERA_H,
+                    CAMERA_W,
+                    CHANNELS,
+                )
+                or not rendered.is_contiguous()
+            ):
+                raise ReceiverError("CC3 composition receiver rendered noncanonical camera bytes")
+            render_seconds += time.monotonic() - stage_started
+            row = _write_or_adopt_rendered_stage(
+                stage_path=stage_path,
+                state_path=state_path,
+                rendered=rendered,
+                manifest_sha256=source_sha256,
+                start=start,
+                stop=stop,
+            )
+        stage_rows.append(row)
+        stage_paths.append(stage_path)
+    stage_bytes, stage_sha256 = _preserved_stage_sequence_identity(stage_rows, stage_paths)
+    if stage_bytes != expected_bytes:
+        raise ReceiverError("CC3 stage byte total differs from output geometry")
+    final_bytes, final_sha256 = _assemble_final(
+        final_path=final_path,
+        stage_rows=stage_rows,
+        stage_paths=stage_paths,
+        expected_bytes=expected_bytes,
+        expected_sha256=stage_sha256,
+    )
+    receipt = {
+        "composition": {
+            "active": packet.active,
+            "parent_archive_bytes": len(parent_archive),
+            "parent_archive_sha256": _sha256(parent_archive),
+            "source_archive_bytes": len(source_archive),
+            "source_archive_sha256": source_sha256,
+        },
+        "dependencies": ["numpy", "scipy", "torch", "brotli"],
+        "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+        "final": {
+            "bytes": final_bytes,
+            "path": str(final_path),
+            "sha256": final_sha256,
+        },
+        "fixed_torch_threads": 4,
+        "member_consumption": [
+            {
+                "bytes": len(members[name]),
+                "member": name,
+                "sha256": _sha256(members[name]),
+            }
+            for name in EXPECTED_CC3_MEMBERS
+        ],
+        "pair_count": 600,
+        "render_seconds": format(render_seconds, ".6f"),
+        "research_only": True,
+        "restoration": restoration,
+        "resume": {
+            "all_stage_checkpoints_preserved": True,
+            "checkpoint_root": str(checkpoint_root),
+            "stage_count": len(stage_rows),
+        },
+        "runtime_source_bundle": source_bundle,
+        "schema": "ddm_cc3_mixed_coder_runtime_inflate_receipt.v1",
+        "score_claim": False,
+        "staleness": {
+            "consumption_time_input_hashes_verified": True,
+            "policy": "fail_closed_on_frame_hash_final_byte_nested_member_or_source_manifest_mismatch",
+        },
+        "total_seconds": format(time.monotonic() - started, ".6f"),
+    }
+    _atomic_json(checkpoint_root / "inflate_receipt.json", receipt)
+    return receipt
+
+
 def inflate(archive_dir: Path, output_dir: Path, video_names_file: Path) -> dict[str, Any]:
     started = time.monotonic()
     # PA1 was measured with this fixed thread count. PyTorch's bilinear CPU
@@ -1549,6 +1778,15 @@ def inflate(archive_dir: Path, output_dir: Path, video_names_file: Path) -> dict
     output_dir.mkdir(parents=True, exist_ok=True)
     final_path = output_dir.joinpath(*relative.parts)
     final_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if (archive_dir / "manifest/pc1.json").is_file():
+        return _inflate_cc3(
+            archive_dir=archive_dir,
+            output_dir=output_dir,
+            final_path=final_path,
+            relative=relative,
+            started=started,
+        )
 
     if (archive_dir / "state/ws1.ddj5").is_file():
         return _inflate_ws1(
