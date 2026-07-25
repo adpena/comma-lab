@@ -349,3 +349,23 @@ RE-BASED: not a closed packet; completeness costs +1,847B (bundle itself −253B
 UPDATE for §1: B=130,101 closed ⇒ d_seg ≤ 8.730e-4 (≤102,986 errors) at pointer-class pose;
 sub-0.15 stretch 4.622e-4. GATES: G1 j10 RUNNING · G2 closes on j10 trace · G3 GREEN ·
 G3.5 ks1 NOW UNBLOCKED (adapter exists) · G4 **GREEN** · G5/G6 pending reseal.
+
+## 18. NO-OVERCORRECTION CLAUSE (operator 2026-07-25 — "tweak, refactor, extend, enhance,
+## simplify, distill, even create new — but don't orphan signal or build more and more
+## without a coherent view to frontier score lowering") — BINDING both directions
+- Direction 1 — the closure-cadence reckoning does NOT devalue the built inventory. The
+  measured assets (atlases, factorization, solves, custody bundles, the nine-mechanism sheet,
+  the two vehicles) ARE the payload the rows carry; orphaning them to "ship faster" is the
+  same signal-paid-but-not-consumed poison with the opposite sign. Rows WITHOUT the inventory
+  = PR129's fate (polish at the entropy floor); inventory WITHOUT rows = our last two weeks.
+  The target is inventory THROUGH rows.
+- Direction 2 — every new work item passes the COHERENCE TEST (this is the standing coherence
+  contract + §13 protocol applied to BUILDS, not a new law): (a) names the existing signal it
+  CONSUMES or EXTENDS (a "none" answer is a red flag, not a pass); (b) names its position on
+  the path to the NEXT EXACT ROW (which gate / vehicle / M-slot); (c) MODIFY-BEFORE-NEW —
+  tweak/refactor/extend/simplify/distill an existing surface before creating a parallel one
+  (anti-duplicate-SoT at the build layer). Simplification and distillation COUNT as advancing
+  work when they shorten the path to a row.
+- Applied now: fleet = card gates only (j10·gc4·ks1 — all three consume existing signal and
+  sit on the row path). gc4's Q4 work-plan rows are ADOPTED only through this test at MAIN
+  review; anything failing it is named-dropped with reason, never silently built anyway.
