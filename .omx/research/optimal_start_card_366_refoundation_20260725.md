@@ -525,3 +525,33 @@ STORES CONSULTED: ks1 findings (all arithmetic re-derived by MAIN to 1e-12) · w
    acceptance, arbitration, window, falsifier, sealed-menu.
 
 Pointer 0.1910828242 [contest-CPU] UNMOVED — this section is measurement-integrity, not a score claim.
+
+## §23 — gc4 P1 verdict (2026-07-25, arm ddm_p1 merged fe58af4c34): frame-0 pose-quotient FORMULATION negative; pose leg PRICED; PC1-joint-descent confirmed as THE pose path
+
+1. **Verdict (verified by MAIN re-derivation):** `P1_SHARED_LOW_RANK_FRAME0_ACTUATOR_FORMULATION_BLOCKED`,
+   scope FORMULATION — shared low-rank, quantized, parent-additive 24×32×3 frame-0 actuator basis with
+   per-pair int16 coefficients, exact G4 parent (SHA 2a2c0367…, realized state), frozen batch32 scorer,
+   `[macOS-CPU frozen-scorer advisory]` n600. Delegated bar d_pose ≤5e-5 **FAIL** (best rank-1
+   **19.89493129583306** vs parent 35.49982400273336); gc4 strict veto (≤2.94e-5) NOT cleared →
+   **Contrarian veto on P1 stays ACTIVE.** d_seg identity PASS (frame-1 byte identity, digest-chain
+   verified); carrier ≤30,000B PASS at every rank (packet = 15+3505r bytes exactly).
+2. **The typed reach curve (per §22 rule d — conditioned, base-state-bound):** rank→(d_pose, carrier B):
+   1→(19.895, 3,520) · 2→(23.667, 7,025) · 3→(23.493, 10,530) · 4→(26.055, 14,035) · 5→(27.363, 17,540) ·
+   6→(48.147, 21,045). Rank-6 matched Rademacher control **20.318** at identical bytes — treatment WORSE
+   than random at rank 6 = the uint8 trust-region crossing; and control ≪ parent proves the solve
+   machinery is LIVE (positive control), so the negative is real, not apparatus. Linearized rank law
+   verified: full-spectrum total T≈8.955e6 reproduces all six D_lin rows; even D_lin(6)=5.561 sits ~5
+   orders above the bar → the shared-basis spectral tail is structural, not a tuning miss.
+3. **Named obstruction:** `SHARED_BASIS_TARGET_ACTUATOR_SPECTRAL_TAIL_PLUS_EXACT_UINT8_TRUST_REGION_CROSSING`.
+   Does NOT close: nonlinear, pair-conditioned, higher-rank, or scorer-solved frame-0 quotient
+   generators (PR130's 2.331e-5 @ ~23KB existence proof stays HARVEST-SIGNAL-ONLY: the gap is
+   composition, not physics — per the never-weaker-state memory).
+4. **Routing consequences:** (a) G5/P3 composition — the pose leg is now PRICED from the cheap frame-0
+   side (~3.5KB/rank buys d_pose ~20-27, nowhere near the tube) → frame-0 post-hoc carriers cannot
+   close pose in-box; (b) per the p1 charter's critical-path clause, **PC1-joint-descent remains THE
+   pose path** — carried live by j12 (G1 reopener); (c) NO respawn fired — the charter pre-decided the
+   on-FAIL route and a new frame-0 arm does not shorten distance to the next exact row (fleet 1/4: j12).
+   Receipts: compact receipt + reach-curve JSONL in `.omx/research/ddm_p1_frame0_pose_quotient_carrier_*`;
+   full SSD custody at `/Volumes/VertigoDataTier/pact/ddm_p1_frame0_pose_quotient_carrier_20260725T141713Z`.
+
+Pointer 0.1910828242 [contest-CPU] UNMOVED — this section prices a leg; it is not a score claim.
