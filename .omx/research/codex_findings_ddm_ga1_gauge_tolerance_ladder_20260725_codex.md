@@ -1,12 +1,12 @@
 # Codex findings — DDM GA1 fiber-to-gauge tolerance ladder
 
-UTC: 2026-07-25T04:05:00Z  
-Lane: `ddm_ga1_gauge_tolerance_ladder`  
+UTC: 2026-07-25T04:05:00Z
+Lane: `ddm_ga1_gauge_tolerance_ladder`
 Delegation checkpoint:
-`codex_delegate:ddm_ga1_gauge_tolerance_ladder:20260725T035215Z`  
-Evidence axis: `[macOS-CPU frozen-scorer advisory]`  
+`codex_delegate:ddm_ga1_gauge_tolerance_ladder:20260725T035215Z`
+Evidence axis: `[macOS-CPU frozen-scorer advisory]`
 `research_only=true` · `execution_allowed=false` · `score_claim=false` ·
-`promotion_eligible=false` · `main_landing_review_required=true`  
+`promotion_eligible=false` · `main_landing_review_required=true`
 Pointer: `0.1910828242 [contest-CPU]` — **UNMOVED**
 
 ## Verdict
