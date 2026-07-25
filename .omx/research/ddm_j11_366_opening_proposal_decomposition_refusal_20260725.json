@@ -1,0 +1,436 @@
+{
+  "authority_blockers": [
+    "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+    "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+    "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+    "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+  ],
+  "bounded_smoke": {
+    "campaign_launched": false,
+    "live_ema_dual_verdict_rows": 0,
+    "n600_scorer_invoked": false,
+    "ran": false,
+    "reason": "NO_LAWFUL_RECEIVER_REALIZABLE_COMPONENT_OR_COMPOSITE_PROPOSAL"
+  },
+  "candidate_counts": {
+    "materialized_composed_pairs": 0,
+    "materialized_single_components": 0,
+    "required_composed_pairs": 4,
+    "required_single_components": 8,
+    "sealed_originals": 4
+  },
+  "component_pricing_table": [
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "component_id": "worldsheet_joint_active_x_+1::pose_null_seg",
+      "component_kind": "pose-null_seg",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "worldsheet_joint_active_x_+1"
+    },
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "component_id": "worldsheet_joint_active_x_+1::seg_null_pose",
+      "component_kind": "seg-null_pose",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "worldsheet_joint_active_x_+1"
+    },
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "component_id": "worldsheet_joint_active_x_-1::pose_null_seg",
+      "component_kind": "pose-null_seg",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "worldsheet_joint_active_x_-1"
+    },
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "component_id": "worldsheet_joint_active_x_-1::seg_null_pose",
+      "component_kind": "seg-null_pose",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "worldsheet_joint_active_x_-1"
+    },
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "component_id": "worldsheet_joint_active_y_-1::pose_null_seg",
+      "component_kind": "pose-null_seg",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "worldsheet_joint_active_y_-1"
+    },
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "component_id": "worldsheet_joint_active_y_-1::seg_null_pose",
+      "component_kind": "seg-null_pose",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "worldsheet_joint_active_y_-1"
+    },
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "component_id": "local_exact_gradient::pose_null_seg",
+      "component_kind": "pose-null_seg",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "local_exact_gradient"
+    },
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "component_id": "local_exact_gradient::seg_null_pose",
+      "component_kind": "seg-null_pose",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "local_exact_gradient"
+    }
+  ],
+  "composed_pair_pricing_table": [
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "composite_id": "worldsheet_joint_active_x_+1::pose_null_seg+pc1_pose_coordinate",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "worldsheet_joint_active_x_+1"
+    },
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "composite_id": "worldsheet_joint_active_x_-1::pose_null_seg+pc1_pose_coordinate",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "worldsheet_joint_active_x_-1"
+    },
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "composite_id": "worldsheet_joint_active_y_-1::pose_null_seg+pc1_pose_coordinate",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "worldsheet_joint_active_y_-1"
+    },
+    {
+      "archive_bytes": null,
+      "blockers": [
+        "POSE_RECEIVER_COORDINATE_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "SEG_RANK4_RECEIVER_COORDINATE_INNER_JACOBIAN_AND_PROPOSAL_FOREIGN_KEY_ABSENT",
+        "RANGE_A_PROJECTOR_IS_RESIZE_GAUGE_CANONICALIZER_NOT_SEG_NULL_PROJECTOR",
+        "PC1_ACTIVE_ZERO_HOME_IS_NOT_SOURCE_PRESERVING_AT_WJOINT_STEP50"
+      ],
+      "composite_id": "local_exact_gradient::pose_null_seg+pc1_pose_coordinate",
+      "d_pose": null,
+      "d_seg": null,
+      "joint_delta": null,
+      "materialized": false,
+      "n600_evidence": false,
+      "receiver_parseback_exact": null,
+      "source_proposal_id": "local_exact_gradient"
+    }
+  ],
+  "lane_id": "lane_ddm_j11_366_opening_proposal_decomposition_20260725",
+  "main_review_required": true,
+  "metric_bundle": {
+    "bundle_id": "ddm_ms4d_direct_metric_completion_20260724T155932Z",
+    "loader_required_complete": true,
+    "pose_coordinate_domain": "POSENET_OUTPUT_6_ONLY",
+    "pose_metric_surface": "EXACT_POSENET_OUTPUT_MSE_QUADRATIC",
+    "pose_receiver_coordinate_jacobian_present": false,
+    "seg_coordinate_domain": "POST_R_PENULTIMATE_HEAD_QUOTIENT",
+    "seg_metric_mode": "DIRECT_SCORER_INTRINSIC_NO_ACTUATOR_INPUT",
+    "seg_receiver_coordinate_inner_jacobian_present": false,
+    "status": "COMPLETE"
+  },
+  "named_residual_obstruction": "receiver-coordinate scorer Jacobians and proposal foreign keys are absent; PC1 active-zero composition is not source-preserving",
+  "next_reformulation": "measure SHA-bound per-proposal J_pose and rank4-inner-J on exact J5 receiver secants, land a source-preserving PC1 zero-home adapter, then project, integer-realize, parse back, and exact-n600 price all singles and composites",
+  "original_sealed_proposals": [
+    {
+      "accepted": false,
+      "archive_bytes": 138815,
+      "archive_sha256": "679b096bc701e096aee0aae032aec23eab2e4a155e03c8b244ded8144ba45d46",
+      "d_pose": 35.55635026903992,
+      "d_seg": 0.06969220479329427,
+      "epistemic_status": "MEASURED_EXACT_N600_BATCH32_RECOMPUTED_UNCHANGED_RULE",
+      "joint_delta": 0.00994017010407013,
+      "pose_term": 0.014995431539375659,
+      "proposal_id": "worldsheet_joint_active_x_+1",
+      "rate_term": 1.3317179062443428e-06,
+      "seg_term": -0.005056593153211775
+    },
+    {
+      "accepted": false,
+      "archive_bytes": 138809,
+      "archive_sha256": "e4103eecdbe19ea6a9aa7f55f6baeadc6158b954cac46a6ee27c122d995e9c5f",
+      "d_pose": 36.000787594894206,
+      "d_seg": 0.07033764309353299,
+      "epistemic_status": "MEASURED_EXACT_N600_BATCH32_RECOMPUTED_UNCHANGED_RULE",
+      "joint_delta": 0.1919619536286387,
+      "pose_term": 0.13247738019379085,
+      "proposal_id": "worldsheet_joint_active_x_-1",
+      "rate_term": -2.6634358124886856e-06,
+      "seg_term": 0.05948723687066032
+    },
+    {
+      "accepted": false,
+      "archive_bytes": 138804,
+      "archive_sha256": "1e539c624271c33167fa82c13d71d080590be7265e020c4e0ea6817e7bc14ff2",
+      "d_pose": 35.61925856781073,
+      "d_seg": 0.06986434936523438,
+      "epistemic_status": "MEASURED_EXACT_N600_BATCH32_RECOMPUTED_UNCHANGED_RULE",
+      "joint_delta": 0.04382082650052955,
+      "pose_term": 0.03166895519030888,
+      "proposal_id": "worldsheet_joint_active_y_-1",
+      "rate_term": -5.9927305780995425e-06,
+      "seg_term": 0.012157864040798771
+    },
+    {
+      "accepted": false,
+      "archive_bytes": 138810,
+      "archive_sha256": "010ae7df873db9d8210de12d6d59e6293a6d0fed8b31e1b99aa6afbd86ee94fe",
+      "d_pose": 35.55364773997821,
+      "d_seg": 0.07025318569607204,
+      "epistemic_status": "MEASURED_EXACT_N600_BATCH32_RECOMPUTED_UNCHANGED_RULE",
+      "joint_delta": 0.06531830924357995,
+      "pose_term": 0.014278809695873917,
+      "proposal_id": "local_exact_gradient",
+      "rate_term": -1.997576859366514e-06,
+      "seg_term": 0.051041497124565405
+    }
+  ],
+  "pc1_composition_rebase": {
+    "active_zero_archive_bytes": 139547,
+    "active_zero_d_pose": 163.04531226928225,
+    "active_zero_d_seg": 0.02491527133517795,
+    "delta_archive_bytes": 734,
+    "delta_d_pose": 127.54549145969125,
+    "delta_d_seg": -0.04482749938964844,
+    "epistemic_status": "DERIVED_FROM_TWO_EXACT_N600_MEASURED_RECEIPTS",
+    "measured_ratio_in_non_preserving_active_home": 14.023295441931698,
+    "ratio_transfer_authorized": false,
+    "source_archive_bytes": 138813,
+    "source_d_pose": 35.49982080959101,
+    "source_d_seg": 0.06974277072482639,
+    "source_preserving": false
+  },
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "range_a_projector": {
+    "invariant": "A(PX)=A(X)",
+    "projector": "P_range(A)",
+    "removes": "ker(A)_resize_invisible_energy",
+    "seg_null_authority": false
+  },
+  "reseal_state": {
+    "fire_authority": "MAIN_ONLY_AFTER_FUTURE_ADMITTED_STEP_AND_RESEAL",
+    "ready_to_fire_under_standing_go": false,
+    "reason": "NO_ADMITTED_OPENING_STEP; READY/FIRE reseal would be false authority",
+    "tools/reseal_ddm_j7_366_ticket.py": "NOT_RUN"
+  },
+  "research_only": true,
+  "run_id": "ddm_j11_366_opening_proposal_decomposition_20260725T141324Z",
+  "schema": "ddm_j11_opening_proposal_decomposition_refusal.v1",
+  "score_claim": false,
+  "source_baseline": {
+    "archive_bytes": 138813,
+    "archive_sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+    "d_pose": 35.49982080959101,
+    "d_seg": 0.06974277072482639,
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]"
+  },
+  "source_bindings": {
+    "authority": {
+      "bytes": 9645,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j11_366_opening_proposal_decomposition_20260725T141324Z.wrapped.prompt.txt",
+      "resolved_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j11_366_opening_proposal_decomposition_20260725T141324Z.wrapped.prompt.txt",
+      "sha256": "36ec3ede75ac1bf2d9f6565d4e05ba7e4d2202efdc1174895e644586b88d7ec5",
+      "validated": true
+    },
+    "j10_full_run_receipt": {
+      "bytes": 12901,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/full_run_receipt.json",
+      "resolved_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/full_run_receipt.json",
+      "sha256": "6ad4d1653eee81cd56d8fb3a2e4f7155d35f648ff4b39d988ee861387cdabd9d",
+      "validated": true
+    },
+    "j10_ticket": {
+      "bytes": 28291,
+      "path": ".omx/research/configs/ddm_j10_366_ema_verdict_shadow_cure_20260725.json",
+      "resolved_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_j11_366_opening_proposal_decomposition_20260725T141324Z/.omx/research/configs/ddm_j10_366_ema_verdict_shadow_cure_20260725.json",
+      "sha256": "19d130e2d767383876ef2483faa1e51fb5d1153ba61ab45068e8b3c5638bc40e",
+      "validated": true
+    },
+    "metric_bundle": {
+      "bytes": 2799,
+      "path": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/BUNDLE-COMPLETE.json",
+      "resolved_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_j11_366_opening_proposal_decomposition_20260725T141324Z/.omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/BUNDLE-COMPLETE.json",
+      "sha256": "d670eff3dd01d61a24bdebedf045fa8cde2528953660dc6d1e64ba9c2fa94e25",
+      "validated": true
+    },
+    "pc2_receipt": {
+      "bytes": 26844,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_pc2_pose_descent_smoke_20260725T121448Z/ddm_pc2_pose_descent_smoke_receipt.json",
+      "resolved_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_pc2_pose_descent_smoke_20260725T121448Z/ddm_pc2_pose_descent_smoke_receipt.json",
+      "sha256": "82713bc2bc1e128a0cd12ada95101bd85bd6d47f40a8ea6e85d8f503a088b234",
+      "validated": true
+    },
+    "proposal_local_exact_gradient": {
+      "bytes": 4210,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_local_exact_gradient_shrink00_n600.json",
+      "resolved_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_local_exact_gradient_shrink00_n600.json",
+      "sha256": "95d10a5d479771fe50bd94447c0ec101400dfc11a5b23a2e185e58104627e660",
+      "validated": true
+    },
+    "proposal_worldsheet_joint_active_x_+1": {
+      "bytes": 4227,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
+      "resolved_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
+      "sha256": "1ff8e8ad95ed1f09625a4173eadb3106676770c10098e96e770fd154c4ebdbc5",
+      "validated": true
+    },
+    "proposal_worldsheet_joint_active_x_-1": {
+      "bytes": 4229,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_minus1_shrink00_n600.json",
+      "resolved_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_minus1_shrink00_n600.json",
+      "sha256": "aec2e0edaa4b0628f9023b4f87a33b33e6151dd72c7d15ecc32a6779d290a680",
+      "validated": true
+    },
+    "proposal_worldsheet_joint_active_y_-1": {
+      "bytes": 4234,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_y_minus1_shrink00_n600.json",
+      "resolved_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_y_minus1_shrink00_n600.json",
+      "sha256": "cd385642ae97e44c0f46867caed05c49fb8d622c3b665447f33bc2be4d61a52e",
+      "validated": true
+    },
+    "range_a_projector": {
+      "bytes": 12594,
+      "path": "src/tac/boundary_math/range_a_projection.py",
+      "resolved_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_j11_366_opening_proposal_decomposition_20260725T141324Z/src/tac/boundary_math/range_a_projection.py",
+      "sha256": "a97fed1347d17dfc6cf7821ef8f51f9cb988a2e74992ed8242be6b21068698dc",
+      "validated": true
+    },
+    "source_archive": {
+      "bytes": 138813,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws4_pose_null_projected_seg_start_20260725T112500Z/01_archives/W_joint_step50_live.zip.receipt-bytes",
+      "resolved_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws4_pose_null_projected_seg_start_20260725T112500Z/01_archives/W_joint_step50_live.zip.receipt-bytes",
+      "sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+      "validated": true
+    }
+  },
+  "typed_descent_config_hash": "478aaf0db82463104e0e848f95f69361a72950c70dd76cc2d2574ec8e3267a64",
+  "unchanged_acceptance_rule": {
+    "admit_iff": "realized_joint_delta_s_lt_zero",
+    "component_gate_added": false,
+    "function": "tac.optimization.pure_priced_realized_objective.pure_priced_realized_delta",
+    "reweighted": false
+  },
+  "verdict": "BLOCKED_J11_PROPOSAL_DECOMPOSITION_CUSTODY_PRECONDITION",
+  "verdict_scope": "PRECONDITION/APPARATUS: the sealed J10 proposal decomposition is not materializable from the named bundle/projector/PC2 inputs. This is not a FORMULATION negative on a correctly joined decomposition."
+}

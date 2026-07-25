@@ -1,0 +1,42 @@
+{
+  "schema": "ddm_j11_366_opening_proposal_decomposition_done.v1",
+  "utc": "2026-07-25T14:42:49Z",
+  "status": "AWAITING_MAIN_LANDING_REVIEW",
+  "verdict": "BLOCKED_J11_PROPOSAL_DECOMPOSITION_CUSTODY_PRECONDITION",
+  "verdict_scope": "PRECONDITION/APPARATUS: missing source-bound receiver-coordinate Jacobians/proposal joins and source-preserving PC1 zero home; not a formulation negative",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "execution_allowed": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "ready_to_fire_under_standing_go": false,
+  "main_review_required": true,
+  "delegation_checkpoint_key": "codex_delegate:ddm_j11_366_opening_proposal_decomposition:20260725T141324Z",
+  "candidate_counts": {
+    "required_single_components": 8,
+    "materialized_single_components": 0,
+    "required_composed_pairs": 4,
+    "materialized_composed_pairs": 0
+  },
+  "verification": {
+    "ruff": "PASS",
+    "format": "PASS",
+    "json_parse": "PASS",
+    "git_diff_check": "PASS",
+    "focused_clean_passes": [
+      "74 passed in 93.90s",
+      "74 passed in 92.98s",
+      "74 passed in 92.92s"
+    ],
+    "review_tracker": "108 entities at 3/3 consecutive clean passes",
+    "scorer_invoked": false,
+    "campaign_launched": false,
+    "resealer": "NOT_RUN_NO_ADMITTED_OPENING_STEP"
+  },
+  "receipt": ".omx/research/ddm_j11_366_opening_proposal_decomposition_refusal_20260725.json",
+  "receipt_sha256": "25f092d3499283a77dfcda274015af6826d1f3ce38ac91c26d4a01afa12ad7f4",
+  "findings": ".omx/research/codex_findings_ddm_j11_366_opening_proposal_decomposition_20260725T144249Z_codex.md",
+  "premise_falsification": ".omx/research/codex_premise_falsification_ddm_j11_opening_proposal_decomposition_20260725T144249Z_codex.md",
+  "dag_feed": ".omx/research/FEED-603-j11_20260725T144249Z.md",
+  "equations": ".omx/research/ddm_j11_opening_proposal_decomposition_canonical_equations_20260725.md"
+}
