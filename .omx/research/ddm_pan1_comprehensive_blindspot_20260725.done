@@ -1,0 +1,10 @@
+{
+  "schema": "codex_research_arm_done.v1",
+  "label": "ddm_pan1_comprehensive_pantheon_blindspot",
+  "date_utc": "2026-07-25",
+  "verdict": "VETO_CURRENT_FRONTIER_SUCCESS_CRITERION_PROCEED_WITH_RESCOPED_EXACT_SCORE_GATE",
+  "findings": ".omx/research/codex_findings_ddm_pan1_comprehensive_blindspot_20260725T113500Z_codex.md",
+  "feed": ".omx/research/ddm_pan1_comprehensive_blindspot_DAG_FEED_20260725.md",
+  "main_review_required": true,
+  "pointer_moved": false
+}

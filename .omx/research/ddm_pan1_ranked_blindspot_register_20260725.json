@@ -1,0 +1,254 @@
+{
+  "schema": "ddm_pan1_ranked_blindspot_register.v1",
+  "date_utc": "2026-07-25",
+  "lane_id": "ddm_pan1_comprehensive_pantheon_blindspot",
+  "ranking_law": "rank = probability * blast_radius * silence",
+  "ranking_units": "dimensionless adjudicative priors in [0,1], DERIVED for action ordering and not empirical frequencies",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "main_review_required": true,
+  "rows": [
+    {
+      "rank": 1,
+      "blindspot_id": "PAN1-B01",
+      "blindspot": "#613 box and the R1 pose fallback were treated as a frontier success criterion, but their distortion-only score is 0.242886 and cannot beat 0.191083 or reach sub-0.15 at any byte count",
+      "axis": "A,D",
+      "evidence": [
+        ".omx/research/ddm_pan1_scoreboard_receipt_20260725.json",
+        ".omx/research/ddm_c1_composed_candidate_ledger_603_613_20260723.json",
+        ".omx/research/configs/ddm_j9_366_geometry_escape_cure_20260725.json"
+      ],
+      "probability": 1.0,
+      "blast_radius": 1.0,
+      "silence": 1.0,
+      "rank_score": 1.0,
+      "cheapest_resolving_measurement": "No new measurement is needed for the contradiction. Amend the success gate to exact S<0.19108282419209976 on one archive; retain #613 only as an intermediate feasibility box.",
+      "route": "MAIN fire review for #366 plus Task #613 criterion correction",
+      "pantheon_attribution": ["Shannon", "MacKay", "Contrarian", "Assumption-Adversary"],
+      "verdict_scope": "ARITHMETIC x declared targets; no claim about the best attainable pose family",
+      "status": "VETO"
+    },
+    {
+      "rank": 2,
+      "blindspot_id": "PAN1-B02",
+      "blindspot": "The campaign's d_pose around 163 and target 0.00161 are the same 600x6 MSE unit; the apparent vehicle-to-contest conversion is identity, leaving a 101280x raw-pose gap",
+      "axis": "A,D",
+      "evidence": [
+        "tools/launch_ddm_joint_descent.py:709-741",
+        ".omx/research/ddm_pc1_pose_stream_admission_receipt_20260724.json",
+        ".omx/research/ddm_pan1_scoreboard_receipt_20260725.json"
+      ],
+      "probability": 1.0,
+      "blast_radius": 1.0,
+      "silence": 0.98,
+      "rank_score": 0.98,
+      "cheapest_resolving_measurement": "Add a fail-closed ticket compiler assertion that target and baseline pose both name mean_mse_600x6 and print their reduction ratio; require a measured pose descent curve before any finish forecast.",
+      "route": "j10 ticket reseal consumer plus #366",
+      "pantheon_attribution": ["Rao", "Redlich", "Filler", "Assumption-Adversary"],
+      "verdict_scope": "UNIT AND CONTRACT BUG; macOS-to-contest axis drift remains separately unmeasured",
+      "status": "VETO"
+    },
+    {
+      "rank": 3,
+      "blindspot_id": "PAN1-B03",
+      "blindspot": "The only clean full-n600 descent point is step 1; constant-rate extrapolation already misses stage 1, and no decay law is identified from one point",
+      "axis": "B",
+      "evidence": [
+        ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:24504-24531",
+        ".omx/research/configs/ddm_j9_366_geometry_escape_cure_20260725.json",
+        ".omx/research/ddm_ws3_warm_start_slope_arbitration_receipt_20260724.json"
+      ],
+      "probability": 0.95,
+      "blast_radius": 0.95,
+      "silence": 0.95,
+      "rank_score": 0.857375,
+      "cheapest_resolving_measurement": "After j10 fixes shadow consistency, measure live n600 d_seg at preserved step 50 and fit constant, exponential, and reciprocal envelopes; do not fit from batch-local telemetry.",
+      "route": "j10 existing arm; ct1 consumes dual verdicts",
+      "pantheon_attribution": ["Dykstra", "Hotz", "Carmack", "Boyd"],
+      "verdict_scope": "CAMPAIGN INSTANCE; descent family remains open",
+      "status": "BLOCKS_FORECAST"
+    },
+    {
+      "rank": 4,
+      "blindspot_id": "PAN1-B04",
+      "blindspot": "The 100099-byte v15 predictor occupies 76.5% of the 130789-byte plan, yet current work prices coders and homes rather than replacing the representation",
+      "axis": "C,H",
+      "evidence": [
+        ".omx/research/ddm_lp1_layer_pricing_20260725T031654Z/ddm_lp1_layer_pricing_receipt.json",
+        ".omx/research/ddm_cc3_mixed_coder_receiver_receipt_20260725.json",
+        ".omx/research/papers_checked_pan1_minimum_description_video_20260725.md"
+      ],
+      "probability": 0.9,
+      "blast_radius": 0.95,
+      "silence": 0.9,
+      "rank_score": 0.7695,
+      "cheapest_resolving_measurement": "Produce three same-object byte-only prototypes: decoder-distilled predictor, xi-conditioned regeneration, and grammar/octree context; charge every content-selected parameter and compare exact member bytes.",
+      "route": "la1 follow-on charter after its b/c tables; no duplicate coder race",
+      "pantheon_attribution": ["Balle", "MacKay", "Selfcomp", "van den Oord"],
+      "verdict_scope": "CURRENT C1 INSTANCE; no claim that a named replacement will win",
+      "status": "NEW_CHARTER_SHAPE"
+    },
+    {
+      "rank": 5,
+      "blindspot_id": "PAN1-B05",
+      "blindspot": "All strategy-driving DDM distortion rows are macOS-CPU advisory and there is no same-byte contest-CPU calibration since the borrowed 2026-07-12 bank",
+      "axis": "E",
+      "evidence": [
+        ".omx/research/ddm_ic1_incumbent_scoreboard_20260724.json",
+        ".omx/research/ddm_pc1_pose_stream_admission_receipt_20260724.json",
+        ".omx/state/canonical_frontier_pointer.json"
+      ],
+      "probability": 0.95,
+      "blast_radius": 0.9,
+      "silence": 0.88,
+      "rank_score": 0.7524,
+      "cheapest_resolving_measurement": "One single-flight <=$20 #381 exact contest-CPU row on the exact receiver-closed C1/CC3 candidate bytes, preserving archive SHA and advisory replay.",
+      "route": "Task #381 calibration row; MAIN dispatch authority only",
+      "pantheon_attribution": ["Quantizr", "PR95-author", "Time-Traveler"],
+      "verdict_scope": "EVIDENCE CLASS; recommendation only, no spend authorized",
+      "status": "OVERDUE"
+    },
+    {
+      "rank": 6,
+      "blindspot_id": "PAN1-B06",
+      "blindspot": "The endpoint-to-R6 chain has component receipts but no same-byte end-to-end proof through E5, inflate, locked upstream evaluate, and Modal custody",
+      "axis": "F",
+      "evidence": [
+        ".omx/research/ddm_e5_e4_ws1_exporter_adapter_20260724/ddm_e5_e4_ws1_adapter_receipt.json",
+        ".omx/research/ddm_e4_brotli_declared_dep_20260724/brotli/ddm_e4_runtime_export_receipt.json",
+        "/Users/adpena/Projects/pact/.omx/tmp/codex_prompts/ddm_ct1_campaign_telemetry_encode.md"
+      ],
+      "probability": 0.9,
+      "blast_radius": 0.9,
+      "silence": 0.85,
+      "rank_score": 0.6885,
+      "cheapest_resolving_measurement": "Let ct1 rehearse checkpoint-to-local-exact. Then require a dry manifest proving the exact archive SHA is the object handed to #381/Modal; CPU and CUDA remain separate rows.",
+      "route": "ct1 existing arm plus R6/Task #381 handoff",
+      "pantheon_attribution": ["Carmack", "Karpathy", "Hassabis"],
+      "verdict_scope": "CHAIN CUSTODY; does not duplicate ct1 implementation",
+      "status": "PARTIALLY_OWNED"
+    },
+    {
+      "rank": 7,
+      "blindspot_id": "PAN1-B07",
+      "blindspot": "PC1 proves a 40-byte trainable home and nonzero support, not pose efficacy; no descent was run, its initialized composition remains at d_pose about 163, and #574's tested xi-delta formulation is negative",
+      "axis": "D",
+      "evidence": [
+        ".omx/research/ddm_pc1_pose_stream_admission_receipt_20260724.json",
+        ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:20877-20902",
+        ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:23992"
+      ],
+      "probability": 0.9,
+      "blast_radius": 0.92,
+      "silence": 0.8,
+      "rank_score": 0.6624,
+      "cheapest_resolving_measurement": "Run the bounded PC1 active-tube descent already implied by its contract and report d_pose contribution per counted byte; compare against #140's measured 0.0493 contribution floor.",
+      "route": "#366 pose-finisher/PC1 existing consumer; not a new standalone lane",
+      "pantheon_attribution": ["Atick", "Rao", "Ballard", "Hinton"],
+      "verdict_scope": "PC1 INSTANCE AND #574 FORMULATION; pose family remains open",
+      "status": "EFFICACY_NULL"
+    },
+    {
+      "rank": 8,
+      "blindspot_id": "PAN1-B08",
+      "blindspot": "The 450x4-pair schedule is only three pair-exposures over n600 and may be inferior to the family-(d) event-continuation fitting engine that solves description structure before residual descent",
+      "axis": "B,G",
+      "evidence": [
+        ".omx/research/codex_findings_ddm_gc1_schmidhuber_symposium_20260724_codex.md",
+        ".omx/research/codex_findings_ddm_is1_full_inverse_solve_to_the_end_20260724_codex.md",
+        ".omx/research/configs/ddm_j9_366_geometry_escape_cure_20260725.json"
+      ],
+      "probability": 0.78,
+      "blast_radius": 0.9,
+      "silence": 0.88,
+      "rank_score": 0.61776,
+      "cheapest_resolving_measurement": "Use one common exact parent and compare first 50 accepted #366 steps against 50 event-continuation proposals on exact S gain per wall-hour and per emitted byte.",
+      "route": "#688/DC1 fitter contract with #366 as a method, per GC1",
+      "pantheon_attribution": ["Schmidhuber", "Tao", "Zaslavsky"],
+      "verdict_scope": "SCHEDULE/ACQUISITION FORMULATION; no family winner declared",
+      "status": "ARBITRATION_OWED"
+    },
+    {
+      "rank": 9,
+      "blindspot_id": "PAN1-B09",
+      "blindspot": "The FREE/NULL/COUNTED partition is explicit in doctrine but not yet audited for each C1 stream's content-selected decoder decisions; rule-118 can otherwise become a hide-data-in-code channel",
+      "axis": "C,G",
+      "evidence": [
+        ".omx/research/ddm_lp1_layer_pricing_20260725T031654Z/ddm_lp1_layer_pricing_receipt.json",
+        ".omx/research/codex_findings_ddm_gc1_schmidhuber_symposium_20260724_codex.md"
+      ],
+      "probability": 0.7,
+      "blast_radius": 0.95,
+      "silence": 0.9,
+      "rank_score": 0.5985,
+      "cheapest_resolving_measurement": "Extend la1's layer table with origin, reconstructibility, content-selection bits, counted bytes, and an adversarial fresh-video substitution test for every stream.",
+      "route": "la1 follow-on plus DC1 two-part charge compiler",
+      "pantheon_attribution": ["Wyner", "Filler", "Selfcomp", "Assumption-Adversary"],
+      "verdict_scope": "COMPLIANCE RISK; no current archive accused of smuggling",
+      "status": "STRICT_AUDIT_OWED"
+    },
+    {
+      "rank": 10,
+      "blindspot_id": "PAN1-B10",
+      "blindspot": "The exact 0.188044 bank is treated as quarantine signal but has not been decomposed into same-byte component deltas that could redirect current DDM priorities",
+      "axis": "E,G",
+      "evidence": [
+        ".omx/state/canonical_frontier_pointer.json",
+        ".omx/research/jrd_pr128_archive_20260713.md"
+      ],
+      "probability": 0.85,
+      "blast_radius": 0.75,
+      "silence": 0.9,
+      "rank_score": 0.57375,
+      "cheapest_resolving_measurement": "Read-only decompose its exact report and archive manifest into Seg/Pose/rate deltas versus 0.191083; transfer only lessons, never bytes or weights.",
+      "route": "new signal-harvest memo under quarantine waiver; no substrate reactivation",
+      "pantheon_attribution": ["Time-Traveler", "PR95-author", "Contrarian"],
+      "verdict_scope": "OLD-LINEAGE SIGNAL ONLY",
+      "status": "UNHARVESTED_SIGNAL"
+    },
+    {
+      "rank": 11,
+      "blindspot_id": "PAN1-B11",
+      "blindspot": "The response atlas is strong on measured coordinate families but has not systematically priced blind coordinates, scorer-recursive adversarial cells, or the full 30-minute generic decode budget",
+      "axis": "G,H",
+      "evidence": [
+        ".omx/research/codex_findings_ddm_a2_strategy_verdict_provenance_20260724T151509Z_codex.md",
+        ".omx/research/ddm_g3_score_atlas_n600_20260722T204000Z/ddm_g3_score_atlas_receipt.json"
+      ],
+      "probability": 0.62,
+      "blast_radius": 0.9,
+      "silence": 0.95,
+      "rank_score": 0.5301,
+      "cheapest_resolving_measurement": "Generate a zero-byte/few-byte atlas row over generic procedural receiver families and blind-coordinate perturbations, with exact parse-back and strict no-scorer-at-decode checks.",
+      "route": "Task #401 plus DC1 scorer-recursive column generator",
+      "pantheon_attribution": ["Fridrich", "Yousfi", "Mallat", "Daubechies"],
+      "verdict_scope": "SEARCH COVERAGE; no exploit claim",
+      "status": "ATLAS_GAP"
+    },
+    {
+      "rank": 12,
+      "blindspot_id": "PAN1-B12",
+      "blindspot": "Apparatus work is protecting custody but can consume the wall-clock window before a decisive exact row; current campaign has many advisory receipts and zero new DDM contest-axis rows",
+      "axis": "E,F,G",
+      "evidence": [
+        ".omx/research/ddm_ic1_incumbent_scoreboard_20260724.json",
+        ".omx/research/ddm_a2_strategy_verdict_provenance_DAG_FEED_20260724.md",
+        ".omx/research/ddm_co2_campaign_evidence_join_DAG_FEED_20260724T203708Z.md"
+      ],
+      "probability": 0.9,
+      "blast_radius": 0.65,
+      "silence": 0.82,
+      "rank_score": 0.4797,
+      "cheapest_resolving_measurement": "Install a campaign SENSE row for days since last exact same-lineage score, apparatus-hours per exact row, and next exact-row owner; ct1 is the existing consumer.",
+      "route": "ct1 Class-E telemetry plus #404",
+      "pantheon_attribution": ["Karpathy", "Hassabis", "Hotz"],
+      "verdict_scope": "APPARATUS VELOCITY; no gate bypass authorized",
+      "status": "TELEMETRY_GAP"
+    }
+  ],
+  "council_verdict": "VETO_CURRENT_FRONTIER_SUCCESS_CRITERION_PROCEED_WITH_RESCOPED_EXACT_SCORE_GATE",
+  "pointer": "0.19108282419209976 [contest-CPU]",
+  "pointer_moved": false
+}
