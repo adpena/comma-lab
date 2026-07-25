@@ -11,6 +11,7 @@ from tac.optimization.ddm_ms7_receiver_edges import (
     MS7ReceiverEdgesError,
     build_r0_reach_table,
     decode_coded_receiver_object,
+    race_counted_stream_contexts,
     race_same_receiver_object,
 )
 
@@ -125,3 +126,23 @@ def test_same_object_coder_race_is_real_and_exact() -> None:
     g4 = next(row for row in race["rows"] if row["codec"] == "G4_FREE_DECODER_DERIVED_SPATIAL_CONTEXT")
     assert g4["available"] is False
     assert g4["framed_bytes"] is None
+
+
+def test_counted_stream_race_has_exact_five_arms_and_charges_models() -> None:
+    raw = b"decoder-derived-context-" * 64
+    race, frames = race_counted_stream_contexts(raw)
+    assert list(frames) == [
+        "RAW_CURRENT",
+        "COUNTED_TINY_ARM_IFCE",
+        "G4_FREE_DECODER_CONTEXT",
+        "WILLEMS_CTW",
+        "BELLARD_CLASS_MIXING",
+    ]
+    assert [row["codec"] for row in race["rows"]] == list(frames)
+    assert all(row["parseback_exact"] for row in race["rows"])
+    by_codec = {row["codec"]: row for row in race["rows"]}
+    assert by_codec["COUNTED_TINY_ARM_IFCE"]["model_parameter_bytes"] > 0
+    for codec in ("G4_FREE_DECODER_CONTEXT", "WILLEMS_CTW", "BELLARD_CLASS_MIXING"):
+        assert by_codec[codec]["model_parameter_bytes"] == 0
+        assert by_codec[codec]["header_bytes"] > 0
+    assert race["winner"]["framed_bytes"] <= len(raw)

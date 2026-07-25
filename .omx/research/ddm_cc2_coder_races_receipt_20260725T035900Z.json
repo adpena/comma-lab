@@ -1,0 +1,138 @@
+{
+  "schema": "ddm_cc2_coder_races_repository_receipt.v1",
+  "utc": "2026-07-25T03:59:00Z",
+  "lane_id": "ddm_cc2_coder_races",
+  "authority": {
+    "delegation_checkpoint_key": "codex_delegate:ddm_cc2_coder_races:20260725T030606Z",
+    "authority_file": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_cc2_coder_races_20260725T030606Z.wrapped.prompt.txt",
+    "authority_file_bytes": 6088,
+    "authority_file_sha256": "90e9890588d045da35eecb042b30ae59bfaa40ab8bd92b8b56876a65bab363f4"
+  },
+  "typed_config": {
+    "path": ".omx/research/configs/ddm_cc2_coder_races_20260725.json",
+    "sha256": "550f5ab1ad7cc25f3f3f6ff8fdb787c167def543a95d4f7aa4d269dc59cb712a"
+  },
+  "post_edit_source_sha256": {
+    "src/tac/optimization/arith_selfcomp_rate_coders.py": "f00a3fa4ab9152d92d9c8517ab0d80eb53441f69136075f0382e3f91ee0231a1",
+    "src/tac/optimization/ddm_ms7_receiver_edges.py": "8f295d151b33a7e4e183eac4b3303e6fe6039a0b76686890157e506231da7527",
+    "src/tac/optimization/ddm_cc2_coder_races.py": "7a5a5e54929f9a9e30866c75153f3f8312c5acf2dc43329dad70d2b3e0fcefe0",
+    "tools/run_ddm_cc2_coder_races.py": "42b063bb39f801ec4532336646c5c4366cda84996e5eb91fa7e92ce404786379",
+    "src/tac/tests/test_arith_selfcomp_rate_coders.py": "6eeff715dc7054a1fdec3f98e6010971e6c314cb9126e932bd2252ec2a5f0a3d",
+    "tools/tests/test_ddm_ms7_receiver_edges.py": "bde82fa05945f665f683c69d96fdee11f7192fe34bcfef974e354be7938e5999",
+    "tools/tests/test_ddm_cc2_coder_races.py": "498f984cc74c74ad9f6290d28d587479348dd04dd0a013f5d118587792a21ca1"
+  },
+  "external_full_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_cc2_coder_races_20260725T030606Z/ddm_cc2_coder_races_receipt.json",
+    "bytes": 87834,
+    "sha256": "f9432959d9c8711276379ef681f5b6985157f49bdd4b2f4a401bfb35ce737ec1",
+    "resume_replay_byte_identical": true
+  },
+  "race2": {
+    "schema": "ddm_cc2_quantization_race.v1",
+    "evidence_axis": "[macOS-CPU advisory]",
+    "reference_arm": "CAMERA_Q8_EXACT",
+    "composition_bytes_each": 139538,
+    "rows": [
+      {
+        "arm_id": "CAMERA_Q8_EXACT",
+        "parent_archive_sha256": "9601e777010b1dc45ed0841e118fcf34c58452324f8730fe9958a3440502e3a4",
+        "composition_archive_sha256": "08d03f75f818b22c9a9a6aad33c6f879001743f80b66d71fe1fc9b3a094567a2",
+        "d_seg": 0.0702156745062934,
+        "d_pose": 36.37587755493872,
+        "advisory_action": 26.186941259505115,
+        "delta_bytes": 0,
+        "delta_dseg": 0.0,
+        "delta_dpose": 0.0,
+        "delta_advisory_action": 0.0,
+        "authority_label": "MEASURED_EXACT_J8F_N600_VERDICT_REUSED_BY_IDENTICAL_PARENT_SHA"
+      },
+      {
+        "arm_id": "C3_ORIGINAL_TERMINAL_PROXY",
+        "parent_archive_sha256": "ad363f00a8470fc642cb8de48b7ffa8c5ac9a00b35cceb7745b2ea0b1a5fe77e",
+        "composition_archive_sha256": "d74af6296091f60019c1aaf42d22d7f19d733aee784fc29c2ff93af9951b86f9",
+        "d_seg": 0.0702156745062934,
+        "d_pose": 36.37600106210136,
+        "advisory_action": 26.18697363787952,
+        "delta_bytes": 0,
+        "delta_dseg": 0.0,
+        "delta_dpose": 0.00012350716264108996,
+        "delta_advisory_action": 0.00003237837440650537,
+        "authority_label": "MEASURED_FRESH_N600_TERMINAL_SINGLE_PASS_PROXY_NOT_RETRAINING"
+      },
+      {
+        "arm_id": "COOL_CHIC_V5_TERMINAL_PROXY",
+        "parent_archive_sha256": "d7b73dfd1513125bb0b4b2b9eced186fb1421adc2c0435c2952157b65df7befb",
+        "composition_archive_sha256": "db920458e59ed5c810e4bfa75a02874a0570da5d039f531a6220868192024695",
+        "d_seg": 0.0702132076687283,
+        "d_pose": 36.369476781438415,
+        "advisory_action": 26.1850164873684,
+        "delta_bytes": 0,
+        "delta_dseg": -0.0000024668375651071273,
+        "delta_dpose": -0.006400773500303103,
+        "delta_advisory_action": -0.001924772136713493,
+        "authority_label": "MEASURED_FRESH_N600_TERMINAL_SINGLE_PASS_PROXY_NOT_RETRAINING"
+      }
+    ],
+    "winner": "COOL_CHIC_V5_TERMINAL_PROXY",
+    "negative_verdict_scope": "ONE_SEEDED_TERMINAL_SINGLE_PASS_PROXY_ON_ONE_LANDED_J8F_THETA; NO RETRAINING OR FAMILY VERDICT"
+  },
+  "race3": {
+    "schema": "ddm_cc2_per_counted_stream_coder_race.v1",
+    "composition_archive_bytes": 139538,
+    "counted_leaf_stream_count": 27,
+    "recursive_fixed_zip_overhead_bytes": 5292,
+    "current_leaf_bytes": 134246,
+    "selected_leaf_bytes": 130824,
+    "selected_total_archive_estimate_bytes": 136116,
+    "selected_total_delta_bytes": -3422,
+    "selected_total_delta_dseg": 0.0,
+    "selected_total_delta_dpose": 0.0,
+    "selected_total_delta_advisory_action": -0.0022785693375840703,
+    "winner_counts": {
+      "RAW_CURRENT": 19,
+      "G4_FREE_DECODER_CONTEXT": 1,
+      "BELLARD_CLASS_MIXING": 7,
+      "COUNTED_TINY_ARM_IFCE": 0,
+      "WILLEMS_CTW": 0
+    },
+    "v15_g1": {
+      "current_bytes": 29819,
+      "selected_codec": "RAW_CURRENT",
+      "delta_bytes": 0
+    },
+    "pose_40b_home": {
+      "current_bytes": 40,
+      "selected_codec": "RAW_CURRENT",
+      "delta_bytes": 0
+    },
+    "largest_state_stream_saving": {
+      "member_suffix": "render/preuint8_q8_program.ddq8",
+      "current_bytes": 1233,
+      "selected_codec": "G4_FREE_DECODER_CONTEXT",
+      "selected_framed_bytes": 649,
+      "delta_bytes": -584
+    },
+    "receiver_status": "PRICE_TABLE_ONLY_NEW_CONTEXT_FRAMES_PARSE_BACK_EXACT_BUT_COMPOSITION_INFLATE_INTERPRETER_NOT_LANDED",
+    "authority_label": "MEASURED_PER_FRAME_BYTES_AND_PARSEBACK; DERIVED_MIXED_ARCHIVE_ESTIMATE"
+  },
+  "verification": {
+    "focused_tests": "49 passed, 1 optional-dependency skip",
+    "randomized_coder_audit": "57 exact deterministic round-trips; 114 malformed-frame rejections",
+    "ruff_check": "clean",
+    "ruff_format_check": "clean after formatting",
+    "resumable_replay": "1.0 seconds; final receipt SHA-256 unchanged",
+    "all_stage_checkpoints_preserved": true,
+    "independent_review_passes_per_python_file": 2,
+    "review_passes": [
+      "cc2_correctness_parseback_20260725T040300Z",
+      "cc2_math_provenance_resume_20260725T040700Z"
+    ]
+  },
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "verdict": "ADVISORY_RACES_COMPLETE_V5_PROXY_WINS_RACE2_RACE3_RECEIVER_INTEGRATION_OWED"
+}

@@ -1,0 +1,53 @@
+{
+  "schema": "ddm_cc2_coder_races_config.v1",
+  "run_id": "ddm_cc2_coder_races_20260725T030606Z",
+  "seed": 0,
+  "batch_size": 32,
+  "minimum_free_bytes": 1073741824,
+  "source_archive": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws2_warm_start_custody_producer_20260724T053455Z/01_archives/W_joint.zip.receipt-bytes",
+    "bytes": 138801,
+    "sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e"
+  },
+  "j8f_checkpoint": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000004.npz",
+    "bytes": 26581,
+    "sha256": "f6e88a743e188eb84f75f3a500acd04ef9ea685c86a1ee774709148c9cc65e41"
+  },
+  "j8f_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j8f_counted_application_20260724T181414Z/ddm_j8f_counted_application_receipt.json",
+    "bytes": 138748,
+    "sha256": "aa1a51dd34017d26b685966779b17139d780328f7cfcc294da94f78c1cc500f3"
+  },
+  "pose_packet": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_pc1_pose_stream_admission_20260724T191805Z_curve32/pose/pc1.ddp",
+    "bytes": 40,
+    "sha256": "05a98facbd7f467f39c279c2e89e44a449cc9f11bbbdd4e0df031e2d4b222e9e"
+  },
+  "target_cache": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "bytes": 5078017610,
+    "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "upstream_root": "/Users/adpena/Projects/pact/upstream",
+  "q8_parent_sha256": "9601e777010b1dc45ed0841e118fcf34c58452324f8730fe9958a3440502e3a4",
+  "output_root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_cc2_coder_races_20260725T030606Z",
+  "source_harvest": {
+    "c3_configs_uvg": {
+      "path": "/Volumes/VertigoDataTier/pact/source_harvest/ddm_cc1_coolchic_c3_20260724/c3_neural_compression/configs/uvg.py",
+      "sha256": "76ec0aee20bd25416cb4e3b7e19ee06413715ece93b4b29fd924bbb1f1075cd8"
+    },
+    "c3_latents": {
+      "path": "/Volumes/VertigoDataTier/pact/source_harvest/ddm_cc1_coolchic_c3_20260724/c3_neural_compression/model/latents.py",
+      "sha256": "642430488a75cfc514fafedff8ef1cdb0929effdf6a387eb0a14e5c27dabda3e"
+    },
+    "coolchic_presets": {
+      "path": "/Volumes/VertigoDataTier/pact/source_harvest/ddm_cc1_coolchic_c3_20260724/Cool-Chic/coolchic/training/presets.py",
+      "sha256": "bd8eba5c2ade1194c4a74a4717574ece63c7c914335f4fa41f7b15e3361dec34"
+    },
+    "coolchic_quantizer": {
+      "path": "/Volumes/VertigoDataTier/pact/source_harvest/ddm_cc1_coolchic_c3_20260724/Cool-Chic/coolchic/component/core/quantizer.py",
+      "sha256": "0ae82568ab1eea853f754e6e6cad4b889ddcadeb562acffd5299c0987a4726c8"
+    }
+  }
+}
