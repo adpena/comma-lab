@@ -71,3 +71,38 @@ STORES CONSULTED: ms2r_r3 findings + strict-join module (8 tests) · PC1 admissi
    receipt.
 
 Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## §3 amendment (2026-07-25, per-landing pantheon review of j12 — DONE rc=0)
+
+STORES CONSULTED: j12 findings + receipt (71b4ce59… / full 0135dca6…) · j12 module + tool (4 .py, 2-pass MAIN review) · j11 refusal receipt 25f092d3 · ms2r_r3 strict-join · council D1-D4 (D2 residual-finisher · D3 fire rule) · card §22 · verdict_rules_measured_pace_reported_direction.
+
+1. **The convergent crux is now MEASURED for the DESCENT line (D2 residual-finisher).**
+   j11 PROVED the descent-line custody hole conceptually (no receiver-coordinate Jacobians);
+   j12 MEASURED it: on the four sealed 1-D proposal rays `W(α)=W0+α·δ_p`, each Pose6 + rank-4
+   Seg inner-Jacobian is **rank-1** → both null projectors are exactly **[0]** → all 16 singles
+   are active-zero (ΔS=0). **The G1 opening is NOT a free null-space-decomposition win** on the
+   current sealed proposal set. The ONLY real opening is the source-preserving PC1 pose-quotient
+   carrier, a JOINT descent (pays d_pose down via the carrier, not a free move).
+
+2. **Two-line map placement (S-arithmetic RE-DERIVED from receipt, not quoted):** the PC1 rehome
+   opens **ΔS −2.761204 from W_joint** (MAIN re-derived to −2.76068 via S=100·d_seg+√(10·d_pose)+
+   25·B/37.545M: 25.90759→23.14691 across steps 0→16; d_pose 35.5→28.2, d_seg 0.0697→0.0627,
+   +888 B) / **−3.571143 from W_seg** — a genuine coarse-regime DESCENT opening, but it lands
+   d_pose at 28.2 (still ~8 S of pose distance to the exchange-rate-cheap regime; the ~14-point
+   pose core p1 measured floors storage-shaped carriers) and barely moves d_seg. The **4-step
+   live J10 continuation REGRESSED +0.127593** (EMA byte-identical 0.0) → **continuation past the
+   PC1 opening is NOT established**; live co-optimization from W_joint+PC1 is adverse.
+
+3. **Coherence verdict (unchanged D1):** the DESCRIBE line (rg4 → box-tolerance waterfill) stays
+   the critical path — the descent line has a real −2.76 S opening but no established continuation
+   and no reseal (no J12 resealer profile; PC1 warp div-by-zero unsanitized). j12 sharpens the D2
+   residual-finisher scope; it does NOT reopen D1.
+
+4. **Disposition:** `held_entangled` — MERGE-TO-MAIN deferred on the review gate's independent-
+   approver credential for 8 j11 critical entities (PC1 build/parse/receive + null-projector fns +
+   objective_gate_contradiction; codex authored, MAIN 2-pass reviewed CLEAN — a genuine 3rd-party
+   approver is owed, not self-manufactured). Artifacts durable in worktree branch 0fc6659e2e + SSD.
+   OWED before READY/FIRE: J12 merged-main/worst-geometry reseal + PC1 warp sanitization review.
+
+Pointer 0.1910828242 [contest-CPU] UNMOVED — j12 is advisory (macOS-CPU frozen-scorer), PRECONDITION
+scope; the R6 row is the end.
