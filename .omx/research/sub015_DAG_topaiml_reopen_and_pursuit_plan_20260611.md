@@ -24264,3 +24264,26 @@ EmpiricalAnchor = their admission test; MEMORY.md hooks/detail split = their 35x
 economics; organ non-parametric/advisory at n~1 = their tiny-n regime result. Memo:
 papers_checked_arxiv_2605_28742_core_20260724.md. verdict_scope: external-benchmark harvest,
 zero contest measurements. Pointer 0.1910828242 UNMOVED.
+
+### FEED-603-j8f-counted-application-READY (2026-07-25, reviewed_committed 64b1f5cd9d)
+THE CONVERGENCE RUNG LANDED. DM4→J5 counted application operator: typed proposal descriptors →
+exact integer J5 receiver coordinates; exact ±1 receiver-secant inventories (SHA-bound); MS4d
+minimum-norm −pinv(H)g ordering (NO hand-tuned LR/damping); #580 range/gauge projection →
+nearest unused exact secant; 12-step one-quantum no-reuse smoke, atomic per-stage checkpoints;
+completed-receipt loader revalidates without recomputation. MEASURED (n600 exact frozen-scorer,
+[macOS-CPU advisory], score_claim=false, arithmetic independently re-derived by MAIN):
+projected arm joint ΔS = −0.052757084 vs Step-4 — DECOMPOSED per the law: seg +0.004706 /
+pose −0.057464 / rate 0.0 (equal bytes 138,804). vs raw arm: −0.059259. THE MECHANISM FINDING:
+the RAW (unprojected) arm ASCENDS (+0.006501) — the #580 range/gauge projector is LOAD-BEARING;
+measured per-step null/gauge energy waste in raw proposals 52.3–69.4% (12 rows). Both
+preregistered gates PASS (projected<0 AND projected≤raw). Honest scope: the smoke proves the
+COUNTED APPLICATION MECHANISM descends the joint objective; seg itself did not descend in 12
+steps (pose-dominated delta); two sealed conservative gaps preserved
+(J5_BUCKET_VALIDITY_RADIUS_CURVE_ABSENT · J5_NCDE_REENTRY_TIME_CUSTODY_ABSENT → canonical
+window 12, no learned trust-radius transfer authorized FROM THIS SMOKE — the campaign's
+authority is the sealed j-chain ticket, not smoke extrapolation). Ticket:
+fire_authority=MAIN_ONLY_AFTER_REVIEW, execution_allowed=false — review DONE, both commits
+merged (94b14f603b), 13/13 tests green. verdict_scope: INSTANCE (12-step bounded smoke on the
+Step-4 state). Unblocks: #366 FIRE gate · #701 ms2r/r3 rerun · ra1 22-row reactivation wave ·
+cc1 4 races · #611 · organ Bellman/dual validators · co4 Road-local reform · bandit duty
+allocation. Pointer 0.1910828242 [contest-CPU] UNMOVED (advisory row, never a score).
