@@ -1,0 +1,79 @@
+{
+  "schema": "ddm_lp1_layer_pricing_reviews.v1",
+  "lane_id": "lane_ddm_lp1_layer_pricing_669bc_20260725",
+  "research_only": true,
+  "score_claim": false,
+  "pointer_moved": false,
+  "main_review_required": true,
+  "pre_clean_review_finding": {
+    "finding": "canonical equation helper accepted truthy non-booleans for same_object and non-finite joint_score_delta values",
+    "fix": "require an exact boolean, finite numeric delta, and nonempty string stream_id",
+    "regression_added": true,
+    "clean_pass_counter_reset_after_fix": true
+  },
+  "reviewed_python_files": [
+    {
+      "path": "src/tac/optimization/ddm_lp1_layer_pricing.py",
+      "sha256": "813ab277475da132817190b9141ca7639e602797c84e44cc1500b8e81e36292a"
+    },
+    {
+      "path": "tools/build_ddm_lp1_layer_pricing.py",
+      "sha256": "ca28e8ef18258057de961279a42cd59079c3beb47025b28c6bee97f7d729f9b1"
+    },
+    {
+      "path": "src/tac/canonical_equations/ddm_lp1_layer_pricing_20260725.py",
+      "sha256": "83d2bdf8d6b919620454a16f798de99e57624ab3335f736de6d831c3b39a919d"
+    },
+    {
+      "path": "src/tac/optimization/tests/test_ddm_lp1_layer_pricing.py",
+      "sha256": "55b93d2bb2da65d8cdace5adb9c38fbfa1050bc3fb0814f907cb404e145a2889"
+    },
+    {
+      "path": "src/tac/canonical_equations/tests/test_ddm_lp1_layer_pricing_20260725.py",
+      "sha256": "149e55cea1d1434ed877d998e2c5140964382acf780a975b8ebcc2bbba2a33bc"
+    }
+  ],
+  "clean_passes": [
+    {
+      "pass": 1,
+      "reviewer": "codex-ddm-lp1",
+      "status": "CLEAN",
+      "focused_tests": {
+        "passed": 8,
+        "failed": 0
+      },
+      "checks": [
+        "ruff exact five-file surface",
+        "py_compile exact five-file surface",
+        "deterministic idempotent receipt rematerialization",
+        "git diff --check",
+        "independent C1, context, type, and costate arithmetic assertions",
+        "review_tracker clean-pass-1 marks on all five Python files"
+      ],
+      "receipt_sha256": "6bd6a5baaa8f5995e93ef594e880beac77e9aa2b2083e661598c84feaba13fd5"
+    },
+    {
+      "pass": 2,
+      "reviewer": "codex-ddm-lp1",
+      "status": "CLEAN",
+      "adjacent_tests": {
+        "passed": 36,
+        "failed": 0,
+        "warning_count": 1,
+        "warning_scope": "pre-existing Pydantic schema-field shadow warning in tools/run_ddm_ms7_receiver_edges.py"
+      },
+      "canonical_registry_tests": {
+        "passed": 29,
+        "failed": 0
+      },
+      "checks": [
+        "ruff exact five-file surface",
+        "py_compile exact five-file surface",
+        "git diff --check",
+        "authority, source-custody, registry, and CC2 firewall assertions",
+        "review_tracker clean-pass-2 marks on all five Python files"
+      ]
+    }
+  ],
+  "verdict": "TWO_CLEAN_PASSES_COMPLETE_MAIN_LANDING_REVIEW_REQUIRED"
+}
