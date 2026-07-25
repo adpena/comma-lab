@@ -1,0 +1,128 @@
+{
+  "schema": "ddm_ms2rp_partial_coverage_box_fit_receipt.v1",
+  "run_id": "ddm_ms2rp_partial_coverage_box_fit_20260725T185945Z",
+  "lane_id": "ddm_ms2rp_partial_coverage_box_fit",
+  "content_sha256": "2f07b20bff1f09af415263a173b3c816a3a9f019f84f6be82855df16242fc53e",
+  "content_sha256_scope": "canonical JSON with content_sha256 omitted",
+  "verdict": "BLOCKED_NO_MATERIALIZABLE_PARTIAL_MEMBER; BOX_FALSIFIER_NOT_REACHED",
+  "verdict_scope": "PRECONDITION/INSTANCE: current SHA-bound RG4 partial-coverage evidence joined to current MS3/MS4D/PF2/EV2/MS2R-R3 apparatus; not a negative on the describe line, typed waterfilling, any representation family, or the paradigm",
+  "authority": {
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "research_only": true,
+    "main_landing_review_required": true
+  },
+  "question_disposition": {
+    "in_box_partial": null,
+    "out_of_box_partial": null,
+    "reason": "There is no receiver-closed partial member to classify. Running frozen scorers without a materialized candidate would only remeasure an ancestor/control and would violate NO-FAKE.",
+    "describe_line_status": "OPEN_PRECONDITION_NOT_REACHED"
+  },
+  "premise_falsification": {
+    "delegated_premise": "The full solve refused because 25 buckets were unpriced; excluding those 25 leaves a priced allocation domain.",
+    "measured_artifact_facts": {
+      "rg4_missing_pair_bucket_blocks": 25,
+      "rg4_partial_coverage_proven": true,
+      "rg4_assignment_bucket_count": 1200,
+      "rg4_event_incidence_join_count": 34,
+      "rg4_unrecoverable_event_incidence_bucket_count": 1166,
+      "rg4_rows_with_receiver_object_builder": 0,
+      "rg4_rows_with_realized_uint8_quantum": 0,
+      "rg4_rows_with_candidate_delta": 0,
+      "rg4_rows_with_dimension_rate_home": 0,
+      "rg4_rows_with_coder_payload_owner": 0,
+      "ms4d_occupied_metric_bucket_count": 37,
+      "ms4d_fully_materialized_occupied_bucket_count": 0,
+      "rd1_cell_count": 162,
+      "rd1_finite_price_count": 0,
+      "ms2r_r3_measured_task_rung_count": 0
+    },
+    "disposition": "The 25 rows are missing G3 pair/bucket causal-support blocks, not the complete set of null rate prices. Excluding them establishes a coverage subset but creates neither a priced waterfill domain nor a composable candidate object."
+  },
+  "catalog_613_box": {
+    "seg_error_count_max": 136839,
+    "d_seg_max": 0.00116,
+    "d_pose_max": 0.00161,
+    "archive_bytes_max": 200000,
+    "decode_timeout_seconds": 1800
+  },
+  "excluded_block_residual": {
+    "typed_excluded_block_count": 25,
+    "d_seg_contribution": null,
+    "seg_error_count": null,
+    "box_deficit": null,
+    "status": "NOT_COMPUTABLE_NO_CANDIDATE_LOCAL_ERROR_OWNERSHIP",
+    "reason": "RG4 proves that no counted production quantum changes the target-bucket event for each excluded pair/bucket. It does not assign candidate-local Seg errors to those blocks. PF2 event incidence is not an additive Seg-error decomposition, so converting event counts into d_seg would be a proxy fake."
+  },
+  "settled_controls_not_partial_members": [
+    {
+      "candidate": "EXACT_C1_CONTROL",
+      "epistemic_status": "MEASURED_SETTLED_ENDPOINT_REPLAYED_NOT_A_NEW_RUNG",
+      "d_seg": 0.0001519690619574653,
+      "d_pose": 0.00010184312078531729,
+      "archive_bytes": 409526925,
+      "box_comparison": {
+        "seg_inside": true,
+        "pose_inside": true,
+        "bytes_inside": false,
+        "seg_error_headroom": 118912,
+        "byte_excess": 409326925
+      }
+    },
+    {
+      "candidate": "FINITE_C1_Q4_Q8_CONTROL",
+      "epistemic_status": "MEASURED_SETTLED_ENDPOINT_REPLAYED_NOT_A_NEW_RUNG",
+      "d_seg": 0.001159998575846354,
+      "d_pose": 0.01663315390825408,
+      "archive_bytes": 291205400,
+      "box_comparison": {
+        "seg_inside": true,
+        "pose_inside": false,
+        "bytes_inside": false,
+        "pose_excess": 0.01502315390825408,
+        "byte_excess": 291005400
+      }
+    }
+  ],
+  "execution": {
+    "homotopy_launched": false,
+    "candidate_materialized": false,
+    "receiver_invoked": false,
+    "r_operator_invoked": false,
+    "frozen_scorer_invoked": false,
+    "real_coder_invoked": false,
+    "n600_scorer_pass_count": 0,
+    "training": false,
+    "paid_dispatch": false,
+    "external_execution": false,
+    "cost_usd": 0,
+    "refusal_stage": "STRICT_PRE_MATERIALIZATION"
+  },
+  "exact_reopening_chain": [
+    "Bind at least one scorer-recursive coordinate to a deterministic receiver object builder and realized uint8 quantum.",
+    "Measure candidate-local deltas and assign parse-back-stable same-object dimension rate homes plus coder payload owners.",
+    "Activate typed alternation and measure finite RD1 prices on the same receiver object.",
+    "Then exclude the 25 RG4 obstructions at zero allocation, materialize the partial member, and run the requested n600 byte-close once."
+  ],
+  "input_custody": {
+    "typed_config": {
+      "path": ".omx/research/configs/ddm_ms2rp_partial_coverage_box_fit_20260725.json",
+      "sha256": "6d65e22a8773330a97cf7523dcd37d9be8ebcc213bdf27b85398bc060496bf21"
+    },
+    "rg4_dependency": {
+      "source_commit": "cb34bbb0f1",
+      "main_status": "UNMERGED_MAIN_REVIEW_REQUIRED",
+      "coverage_receipt_sha256": "81a9deee33e1ac1647b2483a863d7b9a03216b624c3b849ab50d6f03ff02ac1b",
+      "assignment_table_sha256": "57d3954bc4661f5da48aae943433a7c5f611639b2d5a24854a01d658fd52aebd"
+    },
+    "ms2r_r3_strict_receipt_sha256": "a64d065319c23922e1f91d4dd35e8025a23eee66822f3ba7ff1eaccc2b49be26",
+    "ms4d_materialization_gate_sha256": "90b2431e25186ff888a02e4fedd62cd5200dc2335484bb051e7906b3e72e9e6b",
+    "rd1_backfill_sha256": "c918c96bb242573821a44d81118281fe64fe802bc1ce613aeec11c0fece0e714",
+    "catalog_613_box_sha256": "14fdf1570b43df65ac949fe157e68ea328ff584f7df1331acf25cca8f900d936"
+  },
+  "canonical_equations_disposition": "NO_NEW_RATE_OR_REACH_LAW. Reuses the existing #613 box, receiver-realized objective, and PF3 materialization conjunction. No registry append is warranted before a same-object rung exists.",
+  "pointer_delta": "NONE"
+}

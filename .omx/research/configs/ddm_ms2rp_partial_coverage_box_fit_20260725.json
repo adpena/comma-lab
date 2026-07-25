@@ -1,0 +1,70 @@
+{
+  "schema": "DDMMS2RPPartialCoverageBoxFitConfigV1",
+  "run_id": "ddm_ms2rp_partial_coverage_box_fit_20260725T185945Z",
+  "lane_id": "ddm_ms2rp_partial_coverage_box_fit",
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_ms2rp_partial_coverage_box_fit_20260725T185945Z.wrapped.prompt.txt",
+    "bytes": 8192,
+    "sha256": "738c22cbe0fa9cde47d80edce6540c28fff8f209462652a4a4aa8014a3de9059"
+  },
+  "box": {
+    "catalog_task": 613,
+    "seg_error_count_max": 136839,
+    "d_seg_max": 0.00116,
+    "d_pose_max": 0.00161,
+    "archive_bytes_max": 200000,
+    "decode_timeout_seconds": 1800
+  },
+  "requested_subset": {
+    "top24_pair_count": 24,
+    "typed_excluded_pair_bucket_block_count": 25,
+    "excluded_allocation": 0,
+    "allocation_domain": "PROVEN_NONEXCLUDED_COVERAGE_ONLY"
+  },
+  "input_custody": {
+    "ms2r_r3_strict_receipt": {
+      "path": ".omx/research/ddm_ms2r_r3_366box_typed_fisher_g4_waterfill_20260725T162107Z/receipt.json",
+      "sha256": "a64d065319c23922e1f91d4dd35e8025a23eee66822f3ba7ff1eaccc2b49be26"
+    },
+    "ms2r_r3_priced_rungs": {
+      "path": ".omx/research/ddm_ms2r_r3_366box_typed_fisher_g4_waterfill_20260725T162107Z/priced_rung_table.json",
+      "sha256": "f6e6ecc237bf8f07704b05226f200efda78946fee8c2404464106b66a15402e7"
+    },
+    "ms4d_materialization_gate": {
+      "path": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/waterfill_post_admission_receipt.json",
+      "sha256": "90b2431e25186ff888a02e4fedd62cd5200dc2335484bb051e7906b3e72e9e6b"
+    },
+    "ms3_loader_bundle": {
+      "path": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/BUNDLE-COMPLETE.json",
+      "sha256": "d670eff3dd01d61a24bdebedf045fa8cde2528953660dc6d1e64ba9c2fa94e25"
+    },
+    "pf2_assignment": {
+      "path": ".omx/research/ddm_ms5_pf2_bucket_assignment_20260724T044736Z/pf2_bucket_assignment_table.json",
+      "sha256": "20fa2b2ce2bd96b91c64d4e1342109dd7dab399d4769cd372dbf67fbcdf97d8d"
+    },
+    "catalog_613_box": {
+      "path": ".omx/research/ddm_c1_composed_candidate_ledger_603_613_20260723.json",
+      "sha256": "14fdf1570b43df65ac949fe157e68ea328ff584f7df1331acf25cca8f900d936"
+    },
+    "rg4_coverage": {
+      "source_commit": "cb34bbb0f1",
+      "path": ".omx/research/ddm_rg4_g3_blocks_and_active_tube_20260725T165958Z/rg3_25_block_coverage_receipt.json",
+      "sha256": "81a9deee33e1ac1647b2483a863d7b9a03216b624c3b849ab50d6f03ff02ac1b"
+    },
+    "rg4_assignment": {
+      "source_commit": "cb34bbb0f1",
+      "path": ".omx/research/ddm_rg4_g3_blocks_and_active_tube_20260725T165958Z/ms5_loader_assignment_table.json",
+      "sha256": "57d3954bc4661f5da48aae943433a7c5f611639b2d5a24854a01d658fd52aebd"
+    }
+  },
+  "execution_boundary": {
+    "research_only": true,
+    "local_measurement_allowed": true,
+    "external_execution_allowed": false,
+    "training_allowed": false,
+    "paid_dispatch_allowed": false,
+    "score_claim": false,
+    "main_landing_review_required": true,
+    "fail_closed_without_materializable_candidate": true
+  }
+}

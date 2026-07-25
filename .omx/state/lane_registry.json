@@ -88345,7 +88345,7 @@
       "id": "ddm_ms2rp_partial_coverage_box_fit",
       "name": "DDM ms2rp partial-coverage box-fit falsifier",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
           "status": false,
@@ -88364,12 +88364,12 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_ms2rp_partial_coverage_box_fit_20260725T185945Z/receipt.json"
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_ms2rp_partial_coverage_box_fit_20260725T185945Z/three_clean_review.json"
         },
         "memory_entry": {
           "status": false,
@@ -88390,5 +88390,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-25T19:02:53Z"
+  "updated_at": "2026-07-25T19:15:50Z"
 }
