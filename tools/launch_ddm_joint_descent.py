@@ -55,6 +55,7 @@ from tac.optimization.direct_description_joint_descent import (  # noqa: E402
     DirectDescriptionJointDescentMLXModule,
     DirectDescriptionJointDescentTypedConfigV1,
     PoseFinishEngageStateV1,
+    ProposalGeometryInfeasibleError,
     classify_cumulative_fire_gate,
     classify_governed_stage_exit,
     classify_memory_preflight,
@@ -68,6 +69,7 @@ from tac.optimization.direct_description_joint_descent import (  # noqa: E402
     load_stage_checkpoint,
     opening_candidate_gradient,
     parameter_group_indices,
+    project_adam_state_geometry,
     realize_parameter_theta,
     realized_training_state,
     save_stage_checkpoint,
@@ -1053,6 +1055,42 @@ def _write_structural_proposal_rejection(
     )
 
 
+def _write_proposal_geometry_event(
+    *,
+    out_dir: Path,
+    event: dict[str, Any],
+    candidate_id: str,
+    global_step: int,
+    multiplier: float,
+    multiplier_index: int,
+    proposal_staging: str | None,
+) -> dict[str, Any]:
+    """Persist one typed cure/rejection without conflating it with score authority."""
+
+    if (
+        event.get("event") != "proposal_infeasible_geometry"
+        or event.get("status") not in {"cured", "rejected"}
+    ):
+        raise DirectDescriptionError("proposal geometry telemetry event is invalid")
+    slug = candidate_id.replace("+", "plus").replace("-", "minus")
+    track_index = int(event["track_index"])
+    relpath = Path("telemetry") / (
+        f"geometry_step{global_step:06d}_{slug}_shrink{multiplier_index:02d}_"
+        f"track{track_index:04d}_{event['status']}.json"
+    )
+    return _write_immutable_json(
+        out_dir / relpath,
+        {
+            **event,
+            "candidate_id": candidate_id,
+            "global_step": global_step,
+            "proposal_multiplier": multiplier,
+            "proposal_multiplier_index": multiplier_index,
+            "proposal_staging": proposal_staging,
+        },
+    )
+
+
 def _worst_geometry_memory_bootstrap_locked(
     args: argparse.Namespace,
     config: DirectDescriptionJointDescentTypedConfigV1,
@@ -1462,6 +1500,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             latest_warm_start_admission is not None
             and latest_warm_start_admission.get("warm_start_component_safe_residual_admitted") is True
         )
+        geometry_escape_injected = False
         while stage_index < len(schedule["stages"]):
             stage = schedule["stages"][stage_index]
             if stop_global is not None and state.step >= stop_global:
@@ -1560,6 +1599,54 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                         ),
                         theta_lattice_denominator=(int(reform["proposal_q8_denominator"]) if reform_active else None),
                     )
+                    if args.force_geometry_escape_once and not geometry_escape_injected:
+                        forced_theta = candidate.theta.copy()
+                        forced_index = next(
+                            index
+                            for index in groups["island_worldsheet"]
+                            if index in active
+                        )
+                        forced_theta[forced_index] = np.float32(8192.0)
+                        candidate = AdamStateV1(
+                            step=candidate.step,
+                            theta=forced_theta,
+                            ema=candidate.ema,
+                            first_moment=candidate.first_moment,
+                            second_moment=candidate.second_moment,
+                        )
+                        geometry_escape_injected = True
+                    try:
+                        candidate, geometry_events = project_adam_state_geometry(lift, candidate)
+                    except ProposalGeometryInfeasibleError as exc:
+                        _write_proposal_geometry_event(
+                            out_dir=out_dir,
+                            event=exc.event,
+                            candidate_id=candidate_id,
+                            global_step=candidate.step,
+                            multiplier=multiplier,
+                            multiplier_index=multiplier_index,
+                            proposal_staging=(reform["proposal_staging"] if reform_active else None),
+                        )
+                        _write_structural_proposal_rejection(
+                            out_dir=out_dir,
+                            candidate_id=candidate_id,
+                            global_step=candidate.step,
+                            multiplier=multiplier,
+                            multiplier_index=multiplier_index,
+                            proposal_staging=(reform["proposal_staging"] if reform_active else "continuous_uint8"),
+                            reason=str(exc),
+                        )
+                        continue
+                    for geometry_event in geometry_events:
+                        _write_proposal_geometry_event(
+                            out_dir=out_dir,
+                            event=geometry_event,
+                            candidate_id=candidate_id,
+                            global_step=candidate.step,
+                            multiplier=multiplier,
+                            multiplier_index=multiplier_index,
+                            proposal_staging=(reform["proposal_staging"] if reform_active else None),
+                        )
                     candidate_local = candidate.theta - (state.theta - local_theta)
                     metrics = model.measure_components(
                         candidate_local,
@@ -1617,7 +1704,16 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                             candidate.theta,
                             include_lane_programs=include_lanes,
                         )
-                    except DirectDescriptionError as exc:
+                    except ProposalGeometryInfeasibleError as exc:
+                        _write_proposal_geometry_event(
+                            out_dir=out_dir,
+                            event=exc.event,
+                            candidate_id=candidate_id,
+                            global_step=candidate.step,
+                            multiplier=multiplier,
+                            multiplier_index=multiplier_index,
+                            proposal_staging=reform["proposal_staging"],
+                        )
                         _write_structural_proposal_rejection(
                             out_dir=out_dir,
                             candidate_id=candidate_id,
@@ -1989,6 +2085,38 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 "stage_end_reason": campaign_blocker or stage_exit_decision,
                 "campaign_blocker": campaign_blocker,
             }
+            accepted_checkpoint = (
+                out_dir
+                / "checkpoints"
+                / f"{stage['stage_id']}_accepted_global{state.step:06d}.npz"
+            )
+            save_stage_checkpoint(
+                accepted_checkpoint,
+                state,
+                stage_id=stage["stage_id"],
+                config=config,
+                telemetry=(row,),
+                run_cursor=cursor,
+                realized_archive={
+                    "bytes": len(live_archive),
+                    "sha256": hashlib.sha256(live_archive).hexdigest(),
+                    "lane_programs_materialized": include_lanes,
+                    "parameter_shadow": "live_resume_state",
+                    "realized_parameter_count": int(np.count_nonzero(live_realized_theta)),
+                    "checkpoint_reason": "every_accepted_step",
+                },
+            )
+            loaded_accepted, loaded_accepted_metadata = load_stage_checkpoint(
+                accepted_checkpoint,
+                config=config,
+            )
+            if state.step != loaded_accepted.step or any(
+                not np.array_equal(getattr(state, field), getattr(loaded_accepted, field))
+                for field in ("theta", "ema", "first_moment", "second_moment")
+            ):
+                raise DirectDescriptionError("accepted-step checkpoint immediate parse-back differs")
+            if loaded_accepted_metadata["run_cursor"] != cursor:
+                raise DirectDescriptionError("accepted-step checkpoint cursor parse-back differs")
             if periodic or stage_end or bounded_stop or campaign_blocker or args.simulate_kill_after_checkpoint:
                 boundary = "blocked" if campaign_blocker else "stage_end" if stage_end else "intra"
                 checkpoint = out_dir / "checkpoints" / f"{stage['stage_id']}_{boundary}_global{state.step:06d}.npz"
@@ -2178,6 +2306,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--verify-group-ownership", action="store_true")
     parser.add_argument("--simulate-kill-after-checkpoint", action="store_true")
     parser.add_argument("--stage-exit-on-stop", action="store_true")
+    parser.add_argument("--force-geometry-escape-once", action="store_true")
     parser.add_argument("--measure-full-config-window", action="store_true")
     parser.add_argument("--measurement-train-batch", type=int, choices=(1, 2, 4), default=1)
     args = parser.parse_args(argv)
@@ -2200,6 +2329,7 @@ def main(argv: list[str] | None = None) -> int:
                 or args.simulate_kill_after_checkpoint
                 or args.max_steps is not None
                 or args.stage_exit_on_stop
+                or args.force_geometry_escape_once
                 or args.measure_full_config_window
                 or args.measurement_train_batch != 1
                 or args.verify_group_ownership
@@ -2214,6 +2344,7 @@ def main(argv: list[str] | None = None) -> int:
                 or args.simulate_kill_after_checkpoint
                 or args.max_steps is not None
                 or args.stage_exit_on_stop
+                or args.force_geometry_escape_once
                 or args.measure_full_config_window
                 or args.measurement_train_batch != 1
                 or args.verify_group_ownership
@@ -2230,6 +2361,7 @@ def main(argv: list[str] | None = None) -> int:
                 or args.simulate_kill_after_checkpoint
                 or args.max_steps is not None
                 or args.stage_exit_on_stop
+                or args.force_geometry_escape_once
                 or args.measure_full_config_window
                 or args.measurement_train_batch != 1
             ):
@@ -2241,6 +2373,12 @@ def main(argv: list[str] | None = None) -> int:
                 raise DirectDescriptionError("bounded-smoke-only flags cannot alter --full-run")
             if args.max_steps is not None and args.max_steps <= 0:
                 raise DirectDescriptionError("--max-steps must be positive")
+            if args.force_geometry_escape_once and (
+                args.max_steps != 1 or args.resume_from is not None
+            ):
+                raise DirectDescriptionError(
+                    "--force-geometry-escape-once is restricted to a fresh one-step bounded full-run smoke"
+                )
             if args.measure_full_config_window and config.full_run_schedule is not None:
                 raise DirectDescriptionError("pre-seal measurement mode is forbidden for a resealed schedule")
             if not args.measure_full_config_window and args.measurement_train_batch != 1:
@@ -2249,6 +2387,7 @@ def main(argv: list[str] | None = None) -> int:
         if (
             args.max_steps is not None
             or args.stage_exit_on_stop
+            or args.force_geometry_escape_once
             or args.measure_full_config_window
             or args.measurement_train_batch != 1
         ):

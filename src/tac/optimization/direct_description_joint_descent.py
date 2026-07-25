@@ -31,6 +31,7 @@ import numpy as np
 from tac.canonical_equations.adam_v_variance_warmup_20260717 import (
     adam_v_variance_warmup_epochs,
 )
+from tac.optimization.ddm_rg1_receiver_grammar import project_polygon_center
 from tac.optimization.ddm_ws1_warm_start import (
     WS1WarmStartArchiveV1,
     parse_ws1_warm_start_archive,
@@ -79,12 +80,14 @@ J6A_PROGRAM_SHA256: Final = "3ba05e4d8fd2f85475173f0a9e17e668198507350d353a4257a
 J7_PROGRAM_SHA256: Final = "bb30eade311ed15e7541bdda4f5d5edbd72b28933a0dd2066be8b967a20aadf2"
 J7_W_SEG_PROGRAM_SHA256: Final = "de285d70b7ac1c823e70f4b2c5e2f5f728e5ff9e65e03c4e2c9583c486dda0a1"
 J7_W_JOINT_PROGRAM_SHA256: Final = "81ae90f3d1bfec508e23cbebe37e94f965b46e5d82903d2ae9d077eb365d7ce4"
+J9_W_JOINT_PROGRAM_SHA256: Final = "96ca852b61168cf86a6e6d9166a27aa73d955a00b5d06ed940210d79f92f34d7"
 WS3_W_SEG_PROGRAM_SHA256: Final = "a90004c7d75571a2f97c7f6f87770b25cfda7ea46e76ce2e1e9d230e454ce838"
 J7_PROGRAM_SHA256S: Final = frozenset(
     {
         J7_PROGRAM_SHA256,
         J7_W_SEG_PROGRAM_SHA256,
         J7_W_JOINT_PROGRAM_SHA256,
+        J9_W_JOINT_PROGRAM_SHA256,
         WS3_W_SEG_PROGRAM_SHA256,
     }
 )
@@ -101,6 +104,7 @@ SUPPORTED_PROGRAM_SHA256: Final = frozenset(
         J7_PROGRAM_SHA256,
         J7_W_SEG_PROGRAM_SHA256,
         J7_W_JOINT_PROGRAM_SHA256,
+        J9_W_JOINT_PROGRAM_SHA256,
         WS3_W_SEG_PROGRAM_SHA256,
     }
 )
@@ -109,6 +113,16 @@ EXPECTED_ARCHIVE_BYTES: Final = 133_941
 POINTER: Final = "0.1910828242 [contest-CPU]"
 EVIDENCE_AXIS: Final = "[macOS-CPU frozen-scorer advisory]"
 BASELINE_DSEG: Final = 0.027470296224
+SCORER_WIDTH: Final = 512
+SCORER_HEIGHT: Final = 384
+
+
+class ProposalGeometryInfeasibleError(DirectDescriptionError):
+    """A proposal-only geometry failure that may be rejected without hiding custody faults."""
+
+    def __init__(self, event: Mapping[str, Any]) -> None:
+        self.event = dict(event)
+        super().__init__(str(self.event["reason"]))
 
 
 def classify_realized_stage_verdict(
@@ -1045,6 +1059,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
         if event_program or semantic_hash in {
             J7_W_SEG_PROGRAM_SHA256,
             J7_W_JOINT_PROGRAM_SHA256,
+            J9_W_JOINT_PROGRAM_SHA256,
             WS3_W_SEG_PROGRAM_SHA256,
         }:
             if warm.get("kind") != "receiver_closed_ws1_archive":
@@ -1509,7 +1524,78 @@ def parameter_group_indices(lift: JointDescriptionParameterLiftV1) -> dict[str, 
     return groups
 
 
-def realize_parameter_theta(lift: JointDescriptionParameterLiftV1, theta: np.ndarray) -> np.ndarray:
+def _project_realized_island_geometry(
+    lift: JointDescriptionParameterLiftV1,
+    realized: np.ndarray,
+) -> tuple[np.ndarray, tuple[dict[str, Any], ...]]:
+    """Apply the landed RG1 projection to each shared G1 track translation."""
+
+    projected = np.asarray(realized, dtype=np.float64).copy()
+    templates = {row.template_ref: row for row in lift.g1.templates}
+    events: list[dict[str, Any]] = []
+    for track_index, track in enumerate(lift.g1.tracks):
+        x_index = 2 * track_index
+        y_index = x_index + 1
+        requested = (int(projected[x_index]), int(projected[y_index]))
+        relative_x: list[int] = []
+        relative_y: list[int] = []
+        for knot_index in track.knot_indices:
+            knot = lift.g1.knots[knot_index]
+            vertices = templates[knot.template_ref].relative_vertices_xy
+            relative_x.extend(knot.center_x + int(vertex[0]) for vertex in vertices)
+            relative_y.extend(knot.center_y + int(vertex[1]) for vertex in vertices)
+        try:
+            cured = (
+                project_polygon_center(requested[0], relative_x, SCORER_WIDTH),
+                project_polygon_center(requested[1], relative_y, SCORER_HEIGHT),
+            )
+        except DirectDescriptionError as exc:
+            event = {
+                "schema": "ddm_joint_descent_geometry_projection_event.v1",
+                "event": "proposal_infeasible_geometry",
+                "status": "rejected",
+                "track_index": track_index,
+                "track_object_id": track.object_id,
+                "parameter_indices": [x_index, y_index],
+                "parameter_names": [lift.parameter_names[x_index], lift.parameter_names[y_index]],
+                "requested_translation_xy": list(requested),
+                "projected_translation_xy": None,
+                "scorer_extent_wh": [SCORER_WIDTH, SCORER_HEIGHT],
+                "projection": "rg1.project_polygon_center",
+                "reason": str(exc),
+                "verdict_scope": "INSTANCE proposal geometry only",
+                "score_claim": False,
+            }
+            raise ProposalGeometryInfeasibleError(event) from exc
+        if cured != requested:
+            projected[x_index], projected[y_index] = cured
+            events.append(
+                {
+                    "schema": "ddm_joint_descent_geometry_projection_event.v1",
+                    "event": "proposal_infeasible_geometry",
+                    "status": "cured",
+                    "track_index": track_index,
+                    "track_object_id": track.object_id,
+                    "parameter_indices": [x_index, y_index],
+                    "parameter_names": [lift.parameter_names[x_index], lift.parameter_names[y_index]],
+                    "requested_translation_xy": list(requested),
+                    "projected_translation_xy": list(cured),
+                    "scorer_extent_wh": [SCORER_WIDTH, SCORER_HEIGHT],
+                    "projection": "rg1.project_polygon_center",
+                    "reason": "projected_shared_track_translation_into_legal_scorer_plane",
+                    "verdict_scope": "INSTANCE proposal geometry only",
+                    "score_claim": False,
+                }
+            )
+    return np.ascontiguousarray(projected, dtype=np.float32), tuple(events)
+
+
+def realize_parameter_theta(
+    lift: JointDescriptionParameterLiftV1,
+    theta: np.ndarray,
+    *,
+    geometry_events: list[dict[str, Any]] | None = None,
+) -> np.ndarray:
     """Quantize optimizer coordinates into exact receiver wire quanta."""
 
     value = np.asarray(theta, dtype=np.float32)
@@ -1517,12 +1603,41 @@ def realize_parameter_theta(lift: JointDescriptionParameterLiftV1, theta: np.nda
         raise DirectDescriptionError("joint-descent parameter theta is invalid")
     realized = np.rint(value.astype(np.float64))
     groups = parameter_group_indices(lift)
-    island = np.asarray(groups["island_worldsheet"], dtype=np.int64)
     lane = np.asarray(groups["lane_program"], dtype=np.int64)
-    if np.any(np.abs(realized[island]) > 4096):
-        raise DirectDescriptionError("joint-descent island translation exceeds the guarded scorer grid")
     realized[lane] = np.clip(realized[lane], -32768, 32767)
-    return np.ascontiguousarray(realized, dtype=np.float32)
+    projected, events = _project_realized_island_geometry(lift, realized)
+    if geometry_events is not None:
+        geometry_events.extend(events)
+    return projected
+
+
+def project_adam_state_geometry(
+    lift: JointDescriptionParameterLiftV1,
+    state: AdamStateV1,
+) -> tuple[AdamStateV1, tuple[dict[str, Any], ...]]:
+    """Project proposal weights into legal G1 geometry before proxy or exact scoring."""
+
+    events: list[dict[str, Any]] = []
+    projected_theta = realize_parameter_theta(lift, state.theta, geometry_events=events)
+    projected_ema = realize_parameter_theta(lift, state.ema)
+    theta = np.asarray(state.theta, dtype=np.float32).copy()
+    ema = np.asarray(state.ema, dtype=np.float32).copy()
+    for event in events:
+        indices = np.asarray(event["parameter_indices"], dtype=np.int64)
+        theta[indices] = projected_theta[indices]
+    ema_realized = np.rint(np.asarray(state.ema, dtype=np.float64)).astype(np.float32)
+    changed_ema = np.flatnonzero(projected_ema != ema_realized)
+    ema[changed_ema] = projected_ema[changed_ema]
+    return (
+        AdamStateV1(
+            step=state.step,
+            theta=np.ascontiguousarray(theta),
+            ema=np.ascontiguousarray(ema),
+            first_moment=state.first_moment,
+            second_moment=state.second_moment,
+        ),
+        tuple(events),
+    )
 
 
 def compile_parameterized_archive(
@@ -1530,10 +1645,11 @@ def compile_parameterized_archive(
     theta: np.ndarray,
     *,
     include_lane_programs: bool,
+    geometry_events: list[dict[str, Any]] | None = None,
 ) -> tuple[bytes, np.ndarray]:
     """Compile quantized low-dimensional state into one receiver-closed archive."""
 
-    realized = realize_parameter_theta(lift, theta)
+    realized = realize_parameter_theta(lift, theta, geometry_events=geometry_events)
     cursor = 0
     knots = list(lift.g1.knots)
     for track in lift.g1.tracks:
@@ -2364,6 +2480,7 @@ def classify_memory_preflight(projected_peak_gib: float, *, ceiling_gib: float =
 __all__ = [
     "J5_PROGRAM_SHA256",
     "J6A_PROGRAM_SHA256",
+    "J9_W_JOINT_PROGRAM_SHA256",
     "AdamStateV1",
     "DirectDescriptionJointDescentMLXModule",
     "DirectDescriptionJointDescentTypedConfigV1",
@@ -2374,6 +2491,7 @@ __all__ = [
     "LaneProgramSeedV1",
     "PoseFinishEngageConfigV1",
     "PoseFinishEngageStateV1",
+    "ProposalGeometryInfeasibleError",
     "WarmStartReformV1",
     "WorstGeometryMemoryContractV1",
     "classify_cumulative_fire_gate",
@@ -2390,6 +2508,7 @@ __all__ = [
     "load_stage_checkpoint",
     "opening_candidate_gradient",
     "parameter_group_indices",
+    "project_adam_state_geometry",
     "realize_parameter_theta",
     "realized_training_state",
     "save_stage_checkpoint",
