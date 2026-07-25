@@ -171,6 +171,7 @@ def main() -> int:
     }
     arbitration = build_arbitration_receipt(
         ws3_arbitration=json_inputs["ws3_arbitration"],
+        terminal_proposal=json_inputs["ws3_wseg_terminal_proposal"],
         wseg_perp_custody=wseg_perp,
         wjoint_step50_custody=wjoint,
         inputs=arbitration_inputs,

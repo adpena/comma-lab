@@ -48,6 +48,11 @@ short-circuits at exact steps `[0,1]`, accepted steps `[0]`; manufacturing
 later accepted states would violate the unchanged harness and preregistered
 fail-fast rule.
 
+The named residual coupling channel is
+`worldsheet_joint_active_x_+1` at
+`camera_874x1164_q8_pre_final_uint8`: its pose-beneficial receiver-visible
+translation crosses SegNet argmax cells after uint8 realization.
+
 At `R*=4.1215446777965665`, the registered decision remains
 `KEEP_WJOINT` with observed W_seg ratio `1.1735894458608507`.
 

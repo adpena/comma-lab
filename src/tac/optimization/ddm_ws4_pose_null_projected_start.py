@@ -269,6 +269,7 @@ def classify_projection_components(
 def build_arbitration_receipt(
     *,
     ws3_arbitration: Mapping[str, Any],
+    terminal_proposal: Mapping[str, Any],
     wseg_perp_custody: Mapping[str, Any],
     wjoint_step50_custody: Mapping[str, Any],
     inputs: Mapping[str, Any],
@@ -291,6 +292,16 @@ def build_arbitration_receipt(
         or wseg_perp_custody.get("bytes") != WSEG_N600["archive_bytes"]
     ):
         raise WS4PoseNullError("W_seg_perp is not byte-identical to settled W_seg")
+    if (
+        terminal_proposal.get("proposal_source") != "worldsheet_joint_active_x_+1"
+        or terminal_proposal.get("proposal_staging")
+        != "camera_874x1164_q8_pre_final_uint8"
+        or terminal_proposal.get("component_gate_decision")
+        != "BLOCKED_REALIZED_DSEG_REGRESSION"
+        or float(terminal_proposal.get("d_seg", 0.0))
+        <= float(terminal_proposal.get("reference_d_seg", 0.0))
+    ):
+        raise WS4PoseNullError("WS3 terminal residual-coupling channel differs")
 
     return {
         "schema": ARBITRATION_SCHEMA,
@@ -299,6 +310,18 @@ def build_arbitration_receipt(
         "evidence_axis": EVIDENCE_AXIS,
         "inputs": dict(inputs),
         "registered_slope_verdict": dict(registered),
+        "residual_coupling_channel": {
+            "proposal_source": terminal_proposal["proposal_source"],
+            "proposal_staging": terminal_proposal["proposal_staging"],
+            "receiver_visible_effect": "SEG_ARGMAX_REGRESSION_AFTER_UINT8_REALIZATION",
+            "component_gate_decision": terminal_proposal["component_gate_decision"],
+            "candidate_d_seg": terminal_proposal["d_seg"],
+            "reference_d_seg": terminal_proposal["reference_d_seg"],
+            "candidate_d_pose": terminal_proposal["d_pose"],
+            "reference_d_pose": terminal_proposal["reference_d_pose"],
+            "candidate_archive_sha256": terminal_proposal["archive_sha256"],
+            "candidate_archive_bytes": terminal_proposal["archive_bytes"],
+        },
         "window_deltas": {
             "W_seg_perp_terminal_proposal": dict(ws3_arbitration["window_deltas"]["W_seg_terminal_proposal"]),
             "W_joint_preserved_reference": dict(ws3_arbitration["window_deltas"]["W_joint"]),

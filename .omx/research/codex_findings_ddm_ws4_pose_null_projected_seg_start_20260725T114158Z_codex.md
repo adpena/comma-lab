@@ -75,6 +75,12 @@ unchanged, the exact WS3 terminal proposal is the governing result:
 - Pose-term progress `0.0028920699387597892`;
 - decision `SEG_REGRESSION`.
 
+The residual coupling channel is explicitly
+`worldsheet_joint_active_x_+1` at
+`camera_874x1164_q8_pre_final_uint8`: a pose-beneficial worldsheet x
+translation survives receiver/uint8 realization but crosses SegNet argmax
+cells (`d_seg 0.024124510023328993 -> 0.02414915296766493`).
+
 The requested 4–6 accepted-step arm cannot lawfully continue after that
 preregistered terminal component-gate rejection. Replaying identical bytes to
 manufacture later proposals would change the harness semantics. At
@@ -109,9 +115,9 @@ Three post-fix clean focused passes covered WS4, DM4 targeted cures, the DM4
 J5 adapter/application, the registered warm-start slope law, and the direct
 joint-descent receiver/checkpoint surface:
 
-1. `62 passed in 95.74s`;
-2. `62 passed in 97.95s`;
-3. `62 passed in 92.93s`.
+1. `62 passed in 92.19s`;
+2. `62 passed in 92.78s`;
+3. `62 passed in 93.37s`.
 
 Ruff, JSON parsing, and `git diff --check` were clean. Materialization passed
 exact archive hash/byte validation for both starts. The repository-wide lane

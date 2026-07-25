@@ -79,11 +79,26 @@ def test_ws3_schema_fail_fast_receipt_preserves_registered_decision() -> None:
     }
     result = build_arbitration_receipt(
         ws3_arbitration=source,
+        terminal_proposal={
+            "proposal_source": "worldsheet_joint_active_x_+1",
+            "proposal_staging": "camera_874x1164_q8_pre_final_uint8",
+            "component_gate_decision": "BLOCKED_REALIZED_DSEG_REGRESSION",
+            "d_seg": 0.02414915296766493,
+            "reference_d_seg": 0.024124510023328993,
+            "d_pose": 146.3428045197368,
+            "reference_d_pose": 146.36493245487776,
+            "archive_sha256": "4454fe341511b99c0a9d18ebb1eaa4e6136cc32460fa4e7174e82a3267640db6",
+            "archive_bytes": 138028,
+        },
         wseg_perp_custody=wseg,
         wjoint_step50_custody=wjoint,
         inputs={},
     )
     assert result["critical_ratio"] == CRITICAL_RATIO
     assert result["registered_slope_verdict"]["reason"] == "SEG_REGRESSION"
+    assert (
+        result["residual_coupling_channel"]["proposal_source"]
+        == "worldsheet_joint_active_x_+1"
+    )
     assert result["selected_warm_start"] == "W_joint_step50_live"
     assert result["execution_allowed"] is False
