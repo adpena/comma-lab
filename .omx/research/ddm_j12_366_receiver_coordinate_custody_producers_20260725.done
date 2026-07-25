@@ -1,0 +1,75 @@
+{
+  "schema": "ddm_j12_366_receiver_coordinate_custody_producers_done.v1",
+  "utc": "2026-07-25T18:24:02Z",
+  "status": "AWAITING_MAIN_LANDING_REVIEW_AND_RESEAL",
+  "verdict": "MEASURED_J12_REHOMED_PC1_NEGATIVE_CONDITIONAL_SMOKE_COMPLETE",
+  "verdict_scope": "MEASURED local macOS-CPU frozen-scorer advisory for four sealed scalar J10 rays, source-preserving PC1 rehome, two bases, and four J10-engine smoke steps; not contest score or promotion authority",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "execution_allowed": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "ready_to_fire_under_standing_go": false,
+  "fire_authority": "MAIN_ONLY_AFTER_LANDING_REVIEW_AND_RESEAL",
+  "main_review_required": true,
+  "delegation_checkpoint_key": "codex_delegate:ddm_j12_366_receiver_coordinate_custody_producers:20260725T150405Z",
+  "candidate_counts": {
+    "bases": 2,
+    "required_single_components_total": 16,
+    "materialized_and_exact_priced_single_components_total": 16,
+    "negative_single_components_total": 0,
+    "required_composites_total": 8,
+    "materialized_and_exact_priced_composites_total": 8,
+    "negative_composite_rows_total": 8,
+    "unique_negative_composite_endpoints": 2
+  },
+  "jacobian_custody": {
+    "pair_count": 600,
+    "batch_size": 32,
+    "measured_jacobians": 8,
+    "all_rank_one": true,
+    "all_nullity_zero": true,
+    "index_sha256": "803b11013a540288179ee387274c854e5a8858dc995757e59aa1478b56071dd5"
+  },
+  "pc1_adapter": {
+    "active_zero_archive_bytes": 138813,
+    "active_zero_archive_sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+    "active_zero_byte_identical": true,
+    "w_joint_step16_joint_delta": -2.761204260556886,
+    "w_seg_step16_joint_delta": -3.5711431248357903
+  },
+  "conditional_smoke": {
+    "ran": true,
+    "bounded_steps": 4,
+    "all_checkpoints_preserved": true,
+    "live_joint_delta_vs_initial_merged": 0.12759259096760986,
+    "ema_joint_delta_vs_initial_merged": 0.0,
+    "receipt_sha256": "695c7943ee7253023defd5b3fede49262496b5f4ecfa8f7d009738b83a8b39d3"
+  },
+  "resealer": {
+    "status": "PREPARED_REVIEW_REQUIRED",
+    "reason": "canonical resealer has no J12 profile/current authority; MAIN must reseal merged-main SHAs and regenerate worst-geometry receipt"
+  },
+  "verification": {
+    "ruff": "PASS",
+    "format": "PASS",
+    "python_compile": "PASS",
+    "json_parse": "PASS",
+    "git_diff_check": "PASS",
+    "focused_clean_passes": [
+      "51 passed in 95.00s",
+      "51 passed in 96.55s",
+      "51 passed in 95.90s"
+    ],
+    "review_tracker": "89 entities at j12-clean-3",
+    "landing_review_gate_status": "NO_PENDING_IN_ISOLATED_WORKTREE_MAIN_TERMINAL_DISPOSITION_REQUIRED"
+  },
+  "compact_receipt": ".omx/research/ddm_j12_366_receiver_coordinate_custody_receipt_20260725.json",
+  "compact_receipt_sha256": "71b4ce5932be07483892e4c6627106da34ce2d142a9c83f05ba526c9cf913b64",
+  "full_receipt": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z/ddm_j12_receiver_coordinate_custody_receipt_v2.json",
+  "full_receipt_sha256": "0135dca6ad1bdd4691041e66161b4ccfed71d2cce3258d86b23a0345e2591c6d",
+  "findings": ".omx/research/codex_findings_ddm_j12_366_receiver_coordinate_custody_producers_20260725T182402Z_codex.md",
+  "dag_feed": ".omx/research/FEED-603-j12_20260725T182402Z.md",
+  "equations": ".omx/research/ddm_j12_receiver_coordinate_custody_canonical_equations_20260725.md",
+  "session_summary": ".omx/research/codex_session_summary_20260725T182402Z_codex.md"
+}

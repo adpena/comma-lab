@@ -521,24 +521,52 @@ def _warp_scorer_frame(
     functional = torch.nn.functional
     if tuple(frame.shape) != (1, 3, PAIR_H, PAIR_W):
         raise PC1PoseStreamError("scorer frame has wrong tensor geometry")
-    rotation, translation = _se3_exp(np.asarray(xi, dtype=np.float64))
+    xi_value = np.asarray(xi, dtype=np.float64)
+    depth_value = np.asarray(depth, dtype=np.float64)
+    if (
+        xi_value.shape != (POSE_DIMS,)
+        or depth_value.shape != (PAIR_H, PAIR_W)
+        or not np.all(np.isfinite(xi_value))
+        or not np.all(np.isfinite(depth_value))
+        or np.any(depth_value <= 0.0)
+        or not bool(torch.isfinite(frame).all())
+    ):
+        raise PC1PoseStreamError("warp inputs must be finite with positive depth")
+    try:
+        with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+            rotation, translation = _se3_exp(xi_value)
+    except (ArithmeticError, ValueError) as exc:
+        raise PC1PoseStreamError("SE(3) warp transform is nonfinite") from exc
+    if not np.all(np.isfinite(rotation)) or not np.all(np.isfinite(translation)):
+        raise PC1PoseStreamError("SE(3) warp transform is nonfinite")
     focal_x = 910.0 * PAIR_W / CAMERA_W
     focal_y = 910.0 * PAIR_H / CAMERA_H
     center_x = (PAIR_W - 1.0) / 2.0
     center_y = (PAIR_H - 1.0) / 2.0
     columns = np.arange(PAIR_W, dtype=np.float64)[None, :]
     rows = np.arange(PAIR_H, dtype=np.float64)[:, None]
-    z = np.asarray(depth, dtype=np.float64)
+    z = depth_value
     x = (columns - center_x) / focal_x * z
     y = (rows - center_y) / focal_y * z
     points = np.stack((x, y, z), axis=0).reshape(3, -1)
-    source = rotation.T @ (points - translation[:, None])
+    # NumPy/Accelerate emits spurious divide/overflow/invalid warnings for this
+    # finite 3xN matmul on some macOS builds. Preserve the exact matmul while
+    # making its real authority boundary explicit: warnings are locally
+    # contained and every result must still pass a finiteness check.
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        source = rotation.T @ (points - translation[:, None])
+    if not np.all(np.isfinite(source)):
+        raise PC1PoseStreamError("inverse-projected warp coordinates are nonfinite")
     source_z = np.maximum(source[2], 1e-4)
-    source_x = focal_x * source[0] / source_z + center_x
-    source_y = focal_y * source[1] / source_z + center_y
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        source_x = focal_x * source[0] / source_z + center_x
+        source_y = focal_y * source[1] / source_z + center_y
     grid_x = 2.0 * source_x.reshape(PAIR_H, PAIR_W) / (PAIR_W - 1.0) - 1.0
     grid_y = 2.0 * source_y.reshape(PAIR_H, PAIR_W) / (PAIR_H - 1.0) - 1.0
-    grid_np = np.stack((grid_x, grid_y), axis=-1).astype(np.float32)[None, ...]
+    grid_f64 = np.stack((grid_x, grid_y), axis=-1)
+    if not np.all(np.isfinite(grid_f64)) or np.max(np.abs(grid_f64)) > np.finfo(np.float32).max:
+        raise PC1PoseStreamError("warp sampling grid is nonfinite or outside float32")
+    grid_np = grid_f64.astype(np.float32)[None, ...]
     grid = torch.from_numpy(np.ascontiguousarray(grid_np)).to(frame.device)
     return functional.grid_sample(
         frame,
