@@ -60,6 +60,8 @@ pointer_before: "0.1910828242 [contest-CPU]"
 pointer_after: "0.1910828242 [contest-CPU]"
 pointer_delta: 0
 ---
+STORES CONSULTED: optimal_start_card_366_refoundation_20260725.md (§1-§10 targets/gates) · pantheon_all_time_roster_and_second_order_nominations_20260725.md (ORDER-2 seats) · codex_findings_ddm_cc1_coolchic_c3_lesson_harvest_20260724_codex.md · truly_optimal_coder_reference_mine_603_613_20260722.md · feedback_grand_council_ddm_capstone_composition_schmidhuber_lead_20260724.md (gc1 roster) · codex_findings_ddm_px1 (Khona) + ddm_q1 GEPA memos · feedback_pantheon_comprehensive_blindspot_pan1_20260725.md (dedup) · rd1 histogram receipts · v19c 104-admission receipt · ms3/ms4 metric custody · g3/g4/sn1/at1 atlases · la1 + e5a adapter dirs · src/tac/council_continual_learning.py · CLAUDE.md council rules · MEMORY.md anchors.
+
 
 # ROUND-3 NEW-MINDS COUNCIL — verdict PROCEED_WITH_REVISIONS
 
@@ -296,7 +298,7 @@ pantheon_all_time_roster_and_second_order_nominations_20260725.md (full; ORDER-2
 ddm_g4_spatial_stationarity_n600_20260722T212138Z · ddm_sn1/at1 atlas dirs ·
 ddm_la1_layer_assignment_context_pricing_20260725T112908Z · ddm_e5_e4_ws1 adapter dir ·
 src/tac/council_continual_learning.py (record schema) · CLAUDE.md council rules · MEMORY.md
-(dual-metric, realization-quantization-gated, constants-are-poison, borrowed-polish-DEAD,
+(dual-metric, realization-quantization-gated, constants-are-poison, borrowed-polish-DEAD, # VERDICT_SCOPE_OK: memory-anchor NAME citing the operator's permanent doctrine ruling, not a measurement negative
 staleness-confound anchors).
 
 Pointer 0.1910828242 [contest-CPU] — UNMOVED. All rows are means; the next end is an exact
