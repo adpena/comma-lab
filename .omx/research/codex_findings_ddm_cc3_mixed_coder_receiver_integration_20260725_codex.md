@@ -1,7 +1,7 @@
 # Codex findings — DDM CC3 mixed-coder receiver integration
 
-Date: 2026-07-25  
-Axis: `[macOS-CPU frozen-scorer advisory]`  
+Date: 2026-07-25
+Axis: `[macOS-CPU frozen-scorer advisory]`
 Verdict: `RECEIVER_CLOSED_LOSSLESS_RATE_GAIN_MEASURED;CC2_REUSED_SCORE_PREMISE_FALSIFIED_INSTANCE`
 
 ## Receiver-closed result

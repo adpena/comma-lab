@@ -1,6 +1,6 @@
 # DDM CC3 mixed-coder receiver equations
 
-Date: 2026-07-25  
+Date: 2026-07-25
 Evidence: `[macOS-CPU frozen-scorer advisory]`, `score_claim=false`
 
 ## Exact recursive replacement

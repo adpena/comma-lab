@@ -1,7 +1,7 @@
 # DAG FEED — DDM CC3 mixed-coder receiver integration
 
-Date: 2026-07-25  
-Lane: `lane_ddm_cc3_mixed_coder_receiver_integration_20260725`  
+Date: 2026-07-25
+Lane: `lane_ddm_cc3_mixed_coder_receiver_integration_20260725`
 Status: `MEASURED_ADVISORY_MAIN_REVIEW_REQUIRED`
 
 ## Inputs
