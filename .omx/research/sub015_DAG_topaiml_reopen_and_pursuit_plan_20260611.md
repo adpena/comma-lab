@@ -24671,3 +24671,28 @@ extincts, corrected append-only in card §14; Laughlin family OPEN pending histo
 (2) S3 transmit leg = FINISHER not closer (db1 SHORT law preserved). (3) R5×R6 compose as
 layers; four ξ parameterizations = one interface. j10's G5 reseal consumes the SHEET.
 pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-PR-INTAKE (2026-07-25, Fable intake subagent)
+SIGNAL: PRs #129-#132 intaken (detached clones, HARVEST-SIGNAL-ONLY per no-old-lineage +
+borrowed-polish bans) + charter-extension deep-intake of merged root PR #86. VERIFIED bot rows:
+PR129 qlp_exactgrid seg 5.6051e-4 / pose 2.902e-5 / 176,337B → 0.190502 [contest-CPU] (frozen
+PR95/101 latent polish on the shipping fp16-min/scale lattice, boundary sigmoid(−margin/τ) loss —
+confirms polish entropy floor + our quantization-gated realization law; banned-lineage vehicle).
+PR130 semantic-pose-HPAC_CPR1 seg 2.9660e-4 / pose 2.331e-5 / 191,052B → **0.172142
+[contest-CUDA] = NEW PUBLIC BEST** (PR86-lineage, NOT HNeRV: 5-class token stream 40.3KB under
+integer-lattice HPAC AR prior + 74KB models renders frame_1; standalone neutral-gray low-rank
+frame_0 pose carrier 23KB → pose 2.33e-5). PR131 Cool-Chic pilot UNSCORED (verdict_scope:
+instance) + rhnerv_latent_polish self-claim 0.188533 [external, unverified]. PR132 = PR130
+byte-identical code, −24B renderer FT [external, unverified]. PR86 root VERIFIED 0.273635
+[contest-CUDA]: answer-as-entropy reframe · adversarial pixel descent seg 0.00 + pose <1e-9 in
+2h/T4 (FROZEN-SPACE zero-distortion existence at unconstrained rate) · RF-7 boundary-placement
+derivation (FROZEN-SPACE candidate, verify before consuming) · HPAC 94-group-step decode ·
+diff-factorization 3.5× WORSE than direct conditional (temporal-grammar caution) · 20× PyAV/DALI
+GT gap (their instance of our custody law). DIAGNOSTIC: pose fork (b) "pose-legible by
+construction" now has an EXTERNAL EXISTENCE PROOF (2.33e-5-class at ~23KB gray carrier, card §2
+POSE / G3); Vehicle B rate benchmark = ~114KB-for-the-exact-partition under a generic AR prior —
+our describe-vocabulary must beat it via scene structure (BEV staticity/ξ) their lineage leaves
+unexploited (card §12). RESPONSE: ledger `.omx/research/public_pr129_132_intake_20260725.md`
+(ranked lessons w/ §13a validity tags); pointer public-side refreshed (snapshot 2026-07-25,
+PRs 129-132 present, all closed-unmerged). Local frontier fields untouched — pointer
+0.1910828242 [contest-CPU] UNMOVED (means/harvest).
