@@ -1,0 +1,49 @@
+{
+  "schema": "ddm_p1_frame0_pose_quotient_carrier_done.v1",
+  "status": "AWAITING_MAIN_LANDING_REVIEW",
+  "verdict": "P1_SHARED_LOW_RANK_FRAME0_ACTUATOR_FORMULATION_BLOCKED",
+  "verdict_scope": "FORMULATION: shared low-rank, quantized, parent-additive frame-0 actuator basis with per-pair coefficients; frame 1 is an exact parent-byte identity; nonlinear, pair-conditioned, higher-rank, and scorer-solved quotient generators remain open",
+  "named_obstruction": "SHARED_BASIS_TARGET_ACTUATOR_SPECTRAL_TAIL_PLUS_EXACT_UINT8_TRUST_REGION_CROSSING",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "execution_allowed": false,
+  "delegated_pass": false,
+  "gc4_strict_veto_cleared": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_review_required": true,
+  "delegation_checkpoint_key": "codex_delegate:ddm_p1_frame0_pose_quotient_carrier:20260725T141713Z",
+  "branch": "codexwt/ddm_p1_frame0_pose_quotient_carrier_20260725T141713Z",
+  "base_commit": "20679b28f048dda8ea896692269a03640211dc8a",
+  "delivery_commits": [
+    "4c50becf12",
+    "27a3558607",
+    "cf1b55e973",
+    "e500890c70",
+    "0f96b9fe06",
+    "4bdb772db8"
+  ],
+  "verification": {
+    "focused_tests": "21 passed, 3 pre-existing legacy-PC1 runtime warnings",
+    "ruff": "PASS",
+    "json_parse": "PASS",
+    "typed_jsonl_rows": 6,
+    "ssd_reach_curve_byte_identity": "PASS",
+    "git_diff_check": "PASS",
+    "n600_batch_size": 32,
+    "psutil_20_gib_gate": "PASS_FOR_EVERY_EXACT_SCORER_ROW",
+    "packet_parseback_byte_identity": "PASS_ALL_TREATMENT_AND_CONTROL_ROWS",
+    "matched_control_fence": "PASS"
+  },
+  "receipt": ".omx/research/ddm_p1_frame0_pose_quotient_carrier_receipt_20260725.json",
+  "reach_curve": ".omx/research/ddm_p1_frame0_pose_quotient_carrier_reach_curve_20260725.jsonl",
+  "findings": ".omx/research/codex_findings_ddm_p1_frame0_pose_quotient_carrier_20260725T143303Z_codex.md",
+  "dag_feed": ".omx/research/ddm_p1_frame0_pose_quotient_carrier_DAG_FEED_20260725.md",
+  "session_summary": ".omx/research/codex_session_summary_20260725_ddm_p1_frame0_pose_quotient_carrier_codex.md",
+  "main_review": {
+    "self_disposition_written": false,
+    "required_action": "MAIN must independently review BASE..HEAD, merge or reject, generate or verify the landing manifest, and only then record the terminal codex_landing_review_gate.py disposition.",
+    "consumer": ".omx/research/ddm_p1_frame0_pose_quotient_carrier_DAG_FEED_20260725.md"
+  }
+}
