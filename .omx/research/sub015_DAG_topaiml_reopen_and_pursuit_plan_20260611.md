@@ -24245,3 +24245,22 @@ per-class scaling is geometrically required, not heuristic. (3) Homoscedasticity
 independent argument for metric radii (verdict-noise equalization, #385 noise-floor column).
 Memo: papers_checked_arxiv_2607_10169_ripo_20260724.md. verdict_scope: external-benchmark
 harvest, zero contest measurements. Pointer 0.1910828242 UNMOVED.
+
+### FEED-603-px5-core-contrastive-reflection (2026-07-24, Fable inline harvest, $0)
+Operator drop alphaXiv 2605.28742 (CORE — contrastive reflection, Goodman/Fan lab), harvested
+inline. [MEASURED_EXTERNAL, lessons-only; target = APPARATUS + organ, not witness math.]
+External result: non-parametric tiny-n improvement via (failed-trace x matched-successful-trace
+→ compact insight) + utility-tracked insight memory with credit assignment + admission testing;
+beats GRPO/GEPA/MemRL/episodic-RAG at 5-100 samples, 35x fewer context tokens than episodic
+traces. Routed: (1) DESIGN INPUT for the pending #319 campaign_outcome_credit build — CORE's
+utility-update/credit-assignment is a concrete external template for outcome-credit over the
+organ's duty/insight rows, same tiny-n regime as the organ's n=1 starvation (#499/#434);
+consult this memo when #319 fires (post-J8F telemetry, backtest-gated unchanged). (2) NAMED
+APPARATUS GAP, recorded NOT built (fails DISTANCE today): landing-time CONTRASTIVE rows — we
+extract failure-vs-success contrast only in periodic audits (a1/a2), not structurally at
+disposition when a sibling formulation passes a gate a predecessor failed; queue into the
+#346/#569 knowledge-apparatus line at a quiet boundary. (3) CORROBORATIONS: equations-leg
+EmpiricalAnchor = their admission test; MEMORY.md hooks/detail split = their 35x compact-insight
+economics; organ non-parametric/advisory at n~1 = their tiny-n regime result. Memo:
+papers_checked_arxiv_2605_28742_core_20260724.md. verdict_scope: external-benchmark harvest,
+zero contest measurements. Pointer 0.1910828242 UNMOVED.
