@@ -314,3 +314,28 @@ THE #1 UNKNOWN IS MEASURED: **PC1 DESCENDS.** Fork (a) selected — pose leg = P
   R3 (precision ladder) remain the composition levers that can shorten or replace the tail.
 GATE LADDER NOW: G1 j10 RUNNING · G2 INDETERMINATE→closes on j10 trace · G3 **GREEN (fork a)** ·
 G3.5 ks1 queued-on-e5a · G4 e5a RUNNING · G5/G6 pending reseal.
+
+## 16. PUBLIC-INTAKE FACTS FOLDED (PR86/129-132 intake landed 978eb9d9e0 — canonical:
+## public_pr129_132_intake_20260725.md; HARVEST-SIGNAL-ONLY, §13a tags; axes per
+## apples-to-apples law: PR130's 0.1721 is [contest-CUDA]; our pointer is [contest-CPU])
+- POSE EXISTENCE PROOF (→ §2 POSE, complements G3): PR130 ships a ~23KB standalone
+  NEUTRAL-GRAY low-rank frame_0 (127.5 + 64·einsum(600×12 coeffs, 12×24×32 basis)) →
+  d_pose 2.33e-5-class. It exploits OUR measured frozen-space fact (frame_0 is seg-free;
+  SegNet reads the last frame) — pose-legible-by-construction on a seg-invisible canvas.
+  FROZEN-SPACE: that (23KB, 2.33e-5) is REACHABLE. VEHICLE-SCOPED: their carrier design.
+  Composition consequence: the pose leg now has TWO measured mechanisms — pc2's PC1-descent
+  (fork a, ratio 14.02) AND a stored low-rank gray-frame_0 family (qpose lineage ↔ our
+  #601/#605/R3/M4 machinery) — the M4 knot-interface race decides on bytes, not doctrine.
+- COMPOSED-CANDIDATE AMBITION (→ §1 context, gate UNCHANGED): public best-of-PRs moved
+  0.1879 → 0.1721 [contest-CUDA]. Our G5 gate stays "beat OUR 0.1910828242 [contest-CPU]
+  with ORIGINAL work"; the ambition line for the composed candidate is 0.172-class.
+- VEHICLE B RATE BENCHMARK (→ §12): ~114KB buys the EXACT partition under a GENERIC
+  masked-conv AR prior (40.3KB tokens + 74KB models, 94 seq steps/frame trick). Our
+  describe family must beat generic-AR via the scene structure their lineage ignores
+  (BEV staticity, ξ-advection, worldsheet events). WARNING from their measured failure:
+  raw label-diff temporal factorization was 3.5× WORSE bpp — temporal structure must ride
+  ξ/geometry, not raw class-diffs.
+- Vehicle A confirmations: two independent public validations of the quantization-gated
+  realization law (exact-grid STE; exact-gated lattice clicks) → R1/R2 rows corroborated
+  (lessons; ΔS numbers vehicle-scoped). RF-7 boundary-placement claim = FROZEN-SPACE
+  *candidate* only — verify on our apparatus before consuming.
