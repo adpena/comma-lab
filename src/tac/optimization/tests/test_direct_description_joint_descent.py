@@ -26,12 +26,15 @@ from tac.optimization.direct_description_joint_descent import (
     DirectDescriptionJointDescentTypedConfigV1,
     FullRunScheduleV1,
     PoseFinishEngageStateV1,
+    VerdictShadowPolicyV1,
     classify_cumulative_fire_gate,
     classify_governed_stage_exit,
     classify_memory_preflight,
     classify_realized_stage_verdict,
+    classify_shadow_consistent_stage_verdict,
     clipped_adam_step,
     compile_parameterized_archive,
+    count_consecutive_scheduled_degenerate_verdicts,
     exact_final_target_gate,
     initial_adam_state,
     lift_v15_archive,
@@ -149,9 +152,7 @@ def test_j7_ticket_uses_exact_n600_batch32_when_resealed() -> None:
     semantic = ticket["semantic_program"]
     semantic["program_id"] = "ddm_j7_366_pose_gate_history_reseal_n600_seed0"
     semantic["telemetry"]["verdict_batch"] = 32
-    semantic["value_provenance"]["verdict_batch"] = (
-        "P0 J7 authority: exact n600 frozen CPU scorer verdicts use batch32"
-    )
+    semantic["value_provenance"]["verdict_batch"] = "P0 J7 authority: exact n600 frozen CPU scorer verdicts use batch32"
     digest = hashlib.sha256(rfc8785_canonicalize(semantic)).hexdigest()
     assert digest == J7_PROGRAM_SHA256
 
@@ -416,6 +417,167 @@ def test_realized_stage_decision_is_fail_closed(
     )
 
 
+def test_attempt5_phantom_block_is_refused_then_live_same_shadow_descends() -> None:
+    policy = VerdictShadowPolicyV1.from_payload(
+        {
+            "schema": "ddm_dual_shadow_verdict_policy.v1",
+            "decision_shadow": "live",
+            "export_shadow": "ema",
+            "emit_dual_rows": True,
+            "same_shadow_reference_required": True,
+            "minimum_realized_parameter_count_delta": 1,
+            "maximum_consecutive_degenerate_verdicts": 1,
+        }
+    )
+    live_step1 = {
+        "d_seg": 0.07030889723036024,
+        "d_pose": 36.48107420610205,
+        "archive_sha256": "44" * 32,
+        "realized_parameter_count": 22,
+        "parameter_shadow": "live_opening_candidate",
+    }
+    lagged_ema_step50 = {
+        "d_seg": 0.07051923116048177,
+        "d_pose": 36.622702484220724,
+        "archive_sha256": "03" * 32,
+        "realized_parameter_count": 3,
+        "parameter_shadow": "ema",
+    }
+    # Reproduce attempt 5's phantom component result, then prove the J10
+    # apparatus refuses to treat that cross-shadow comparison as a verdict.
+    assert (
+        classify_realized_stage_verdict(
+            reference_d_seg=live_step1["d_seg"],
+            reference_d_pose=live_step1["d_pose"],
+            candidate_d_seg=lagged_ema_step50["d_seg"],
+            candidate_d_pose=lagged_ema_step50["d_pose"],
+            target_d_seg=0.020602722168,
+            target_d_pose=None,
+        )
+        == "BLOCKED_REALIZED_DSEG_REGRESSION"
+    )
+    decision, apparatus = classify_shadow_consistent_stage_verdict(
+        reference=live_step1,
+        candidate=lagged_ema_step50,
+        policy=policy,
+        consecutive_degenerate_verdicts=0,
+        target_d_seg=0.020602722168,
+        target_d_pose=None,
+    )
+    assert decision == "REFUSE_REALIZED_STAGE_VERDICT_SHADOW_MISMATCH"
+    assert apparatus["reference_parameter_shadow"] == "live"
+    assert apparatus["candidate_parameter_shadow"] == "ema"
+
+    live_step50 = {
+        "d_seg": 0.069,
+        "d_pose": 36.4,
+        "archive_sha256": "2a" * 32,
+        "realized_parameter_count": 119,
+        "parameter_shadow": "live",
+    }
+    decision, apparatus = classify_shadow_consistent_stage_verdict(
+        reference=live_step1,
+        candidate=live_step50,
+        policy=policy,
+        consecutive_degenerate_verdicts=0,
+        target_d_seg=0.020602722168,
+        target_d_pose=None,
+    )
+    assert decision == "REALIZED_STAGE_DESCENT_CONTINUE"
+    assert apparatus["informative"] is True
+
+
+def test_j10_degenerate_verdict_gets_one_grace_then_blocks() -> None:
+    policy = VerdictShadowPolicyV1.from_payload(
+        {
+            "schema": "ddm_dual_shadow_verdict_policy.v1",
+            "decision_shadow": "live",
+            "export_shadow": "ema",
+            "emit_dual_rows": True,
+            "same_shadow_reference_required": True,
+            "minimum_realized_parameter_count_delta": 1,
+            "maximum_consecutive_degenerate_verdicts": 1,
+        }
+    )
+    reference = {
+        "d_seg": 0.07,
+        "d_pose": 36.5,
+        "archive_sha256": "ab" * 32,
+        "realized_parameter_count": 12,
+        "parameter_shadow": "live",
+    }
+    candidate = dict(reference)
+    first, _ = classify_shadow_consistent_stage_verdict(
+        reference=reference,
+        candidate=candidate,
+        policy=policy,
+        consecutive_degenerate_verdicts=0,
+        target_d_seg=0.02,
+        target_d_pose=None,
+    )
+    second, _ = classify_shadow_consistent_stage_verdict(
+        reference=reference,
+        candidate=candidate,
+        policy=policy,
+        consecutive_degenerate_verdicts=1,
+        target_d_seg=0.02,
+        target_d_pose=None,
+    )
+    assert first == "VERDICT_NOT_YET_INFORMATIVE"
+    assert second == "BLOCKED_VERDICT_STILL_NOT_INFORMATIVE_NEXT_SCHEDULED_VERDICT"
+    assert (
+        classify_governed_stage_exit(
+            target_met=False,
+            stage_limit=False,
+            plateau=False,
+            component_decision=first,
+        )
+        == "CONTINUE_EXACT_TARGET_UNMET"
+    )
+    assert (
+        classify_governed_stage_exit(
+            target_met=False,
+            stage_limit=False,
+            plateau=False,
+            component_decision=second,
+        )
+        == second
+    )
+
+
+def test_j10_bounded_smoke_degeneracy_does_not_consume_scheduled_grace() -> None:
+    assert (
+        count_consecutive_scheduled_degenerate_verdicts(
+            [
+                {
+                    "scheduled_stage_verdict": True,
+                    "realized_stage_decision": "REALIZED_STAGE_DESCENT_CONTINUE",
+                },
+                {
+                    "scheduled_stage_verdict": False,
+                    "realized_stage_decision": "VERDICT_NOT_YET_INFORMATIVE",
+                },
+            ]
+        )
+        == 0
+    )
+    assert (
+        count_consecutive_scheduled_degenerate_verdicts(
+            [
+                {
+                    "scheduled_stage_verdict": True,
+                    "realized_stage_decision": "VERDICT_NOT_YET_INFORMATIVE",
+                },
+                {
+                    "scheduled_stage_verdict": False,
+                    "realized_stage_decision": "VERDICT_NOT_YET_INFORMATIVE",
+                },
+            ]
+        )
+        == 1
+    )
+
+
 def test_beta2_rewarmup_and_quarter_quantum_cap_remove_fresh_adam_jump() -> None:
     assert linear_rewarmup_factor(completed_steps=0, rewarmup_steps=2000, floor=0.1) == 0.1
     assert linear_rewarmup_factor(completed_steps=1000, rewarmup_steps=2000, floor=0.1) == 0.55
@@ -593,24 +755,33 @@ def test_cumulative_fire_gate_catches_locally_safe_second_move() -> None:
 
 
 def test_target_unmet_limits_and_plateaus_are_nonpromoting_stops() -> None:
-    assert classify_governed_stage_exit(
-        target_met=False,
-        stage_limit=True,
-        plateau=False,
-        component_decision="REALIZED_STAGE_DESCENT_CONTINUE",
-    ) == "STOPPED_BELOW_TARGET_MAXIMUM_STEPS"
-    assert classify_governed_stage_exit(
-        target_met=False,
-        stage_limit=False,
-        plateau=True,
-        component_decision="BLOCKED_REALIZED_NO_COMPONENT_DESCENT",
-    ) == "STOPPED_BELOW_TARGET_PLATEAU"
-    assert classify_governed_stage_exit(
-        target_met=True,
-        stage_limit=True,
-        plateau=True,
-        component_decision="REALIZED_STAGE_TARGET_MET",
-    ) == "ADVANCE_EXACT_TARGET_MET"
+    assert (
+        classify_governed_stage_exit(
+            target_met=False,
+            stage_limit=True,
+            plateau=False,
+            component_decision="REALIZED_STAGE_DESCENT_CONTINUE",
+        )
+        == "STOPPED_BELOW_TARGET_MAXIMUM_STEPS"
+    )
+    assert (
+        classify_governed_stage_exit(
+            target_met=False,
+            stage_limit=False,
+            plateau=True,
+            component_decision="BLOCKED_REALIZED_NO_COMPONENT_DESCENT",
+        )
+        == "STOPPED_BELOW_TARGET_PLATEAU"
+    )
+    assert (
+        classify_governed_stage_exit(
+            target_met=True,
+            stage_limit=True,
+            plateau=True,
+            component_decision="REALIZED_STAGE_TARGET_MET",
+        )
+        == "ADVANCE_EXACT_TARGET_MET"
+    )
 
 
 def test_schedule_complete_requires_exact_final_target_verdict() -> None:

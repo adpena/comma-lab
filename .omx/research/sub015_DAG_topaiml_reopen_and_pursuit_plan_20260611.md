@@ -24713,3 +24713,32 @@ SIGNAL: e5a merged (1fe24eb674, dispositioned) — G4 GREEN. Checkpoint→packet
 dir untouched. la1 128,254B re-based (+1,847B completeness). Composing triple at REAL closed
 bytes: d_seg ≤8.730e-4 @130,101B. ks1 (G3.5 knee-member realization) UNBLOCKED. Card §17.
 pointer 0.1910828242 [contest-CPU] UNMOVED.
+### FEED-603-j10-EMA-SHADOW-CURED-BUT-OPENING-BLOCKED (2026-07-25T13:54Z, Codex arm — MAIN review required)
+Attempt-5's step-50 `BLOCKED_REALIZED_DSEG_REGRESSION` was an apparatus defect and is CURED in
+the branch: typed live-vs-live stage decisions; separate EMA export/promotion rows; cross-shadow
+REFUSE; first scheduled quantization-degenerate verdict
+`VERDICT_NOT_YET_INFORMATIVE` with escalation only at the next scheduled verdict; LawRef-derived
+EMA `d=46/49=0.9387755102040817` (`3/(1-d)=49<50`, no fallback); receiver-closed materialization
+of the preserved step-50 LIVE theta. MEASURED materialized source: 138,813B,
+SHA `2a2c0367…`, d_seg `0.06974277072482639`, d_pose `35.49982080959101`; this live d_seg is
+below the attempt-5 EMA verdict `0.07051923116048177`, confirming the old cross-shadow block was
+phantom. Final ticket is double-reseal byte-stable (SHA `19d130e2…`, semantic `7faa5759…`,
+typed `478aaf0d…`). Fresh exact worst-geometry preflight: 16.940 GiB measured / 21.328 GiB
+projected vs 116 GiB ceiling, SAFE; fresh-process checkpoint restore GREEN; no campaign launch.
+
+THE REQUIRED BOUNDED SMOKE DID **NOT** PASS: all four receiver-distinct opening proposals from
+the materialized source had exact pure-priced joint delta_S > 0. Closest x+1:
+d_seg `0.06969220479329427` (seg DESCENDS), d_pose `35.55635026903992`,
+delta_S `+0.00994017010407013` = seg `−0.005056593153211775` + pose
+`+0.014995431539375659` + rate `+0.0000013317179062443428`. Overall receipt
+`6ad4d165…`: `BLOCKED_REALIZED_NO_PURE_PRICED_DESCENT_AFTER_SHRINK_LADDER`,
+global_step 0, no live/EMA dual row, no accepted-step checkpoint, campaign_launched=false.
+**verdict_scope: INSTANCE(MATERIALIZED_STEP50_SOURCE × SEALED_OPENING_PROPOSAL_SET)** — NOT a
+formulation/family/scorer/receiver/EMA-policy negative. The prompt falsifier
+`BLOCKED_REALIZED_DSEG_REGRESSION_CONFIRMED_LIVE` did NOT fire because the closest live proposal
+descends d_seg; the unchanged joint acceptance fails on pose. Reopener: typed proposal-quality
+cure achieving exact delta_S<0 without weakening acceptance, then repeat the bounded dual-shadow
+gate. NO READY_TO_FIRE; MAIN must review/merge, reseal against merged-main SHAs, regenerate
+matching memory custody, and keep FIRE blocked until the reopener passes. Quarantine:
+HARVEST-SIGNAL-ONLY banked R1 `0.127` comparator only; no R1 bytes/weights loaded.
+Pointer `0.1910828242 [contest-CPU]` UNMOVED; score_claim=false.

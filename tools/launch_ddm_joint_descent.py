@@ -60,8 +60,11 @@ from tac.optimization.direct_description_joint_descent import (  # noqa: E402
     classify_governed_stage_exit,
     classify_memory_preflight,
     classify_realized_stage_verdict,
+    classify_shadow_consistent_stage_verdict,
+    classify_verdict_informativeness,
     clipped_adam_step,
     compile_parameterized_archive,
+    count_consecutive_scheduled_degenerate_verdicts,
     exact_final_target_gate,
     initial_adam_state,
     lift_v15_archive,
@@ -110,6 +113,8 @@ def _expected_full_run_baseline_dseg(
 ) -> float:
     """Return the SHA-sealed receiver baseline for the selected warm start."""
 
+    if config.source_baseline_d_seg is not None:
+        return float(config.source_baseline_d_seg)
     return WS1_BASELINE_DSEG_BY_ARCHIVE_SHA256.get(
         config.source_archive_sha256,
         BASELINE_DSEG,
@@ -849,6 +854,56 @@ def _c1_bucket_delta(
     }
 
 
+def _materialized_archive_verdict(
+    args: argparse.Namespace,
+    config: DirectDescriptionJointDescentTypedConfigV1,
+) -> int:
+    """Measure one receiver-closed warm-start candidate with the unchanged n600 scorer."""
+
+    if args.materialized_archive is None:
+        raise DirectDescriptionError("materialized archive verdict requires --materialized-archive")
+    out_dir = Path(args.out_dir)
+    storage = _storage_receipt(out_dir)
+    archive_path = Path(args.materialized_archive)
+    if not archive_path.is_file() or archive_path.is_symlink():
+        raise DirectDescriptionError("materialized archive verdict input is not a regular file")
+    archive = archive_path.read_bytes()
+    receiver = receive_joint_descent_archive(archive)
+    if getattr(receiver, "archive", archive) != archive:
+        raise DirectDescriptionError("materialized archive receiver parse-back differs")
+    cache_path = _resolve_input(config.target_cache_path, allow_authority_cache=True)
+    _verify_regular(
+        cache_path,
+        expected_bytes=config.target_cache_bytes,
+        expected_sha256=config.target_cache_sha256,
+    )
+    labels = open_stored_npy_memmap(cache_path, "lstars")
+    poses = open_stored_npy_memmap(cache_path, "gt_poses")
+    segnet, posenet = _load_cpu_frozen_scorers(config.upstream_root)
+    verdict = _chunked_n600_verdict(
+        archive=archive,
+        labels=labels,
+        poses=poses,
+        segnet=segnet,
+        posenet=posenet,
+        batch_size=config.verdict_batch,
+    )
+    verdict.update(
+        {
+            "schema": "ddm_materialized_warm_start_n600_verdict.v1",
+            "archive_path": str(archive_path),
+            "receiver_parseback_identity": True,
+            "parameter_shadow": "live_materialized_step50",
+            "decision_authority": "BASELINE_CUSTODY_ONLY",
+            "scorer_implementation": "_chunked_n600_verdict_unchanged",
+            "storage": storage,
+        }
+    )
+    _atomic_json(out_dir / "materialized_archive_n600.json", verdict)
+    print(json.dumps(verdict, sort_keys=True))
+    return 0
+
+
 def _opening_exact_admitted(
     *,
     policy: str,
@@ -918,9 +973,7 @@ def _sealed_schedule(config: DirectDescriptionJointDescentTypedConfigV1, args: a
         return _measurement_schedule(args)
     if schedule.event_continuation is not None:
         if not schedule.event_continuation.execution_allowed:
-            raise DirectDescriptionError(
-                "REFUSE_EVENT_CONTINUATION_EXECUTION_DISABLED_PENDING_MAIN_REVIEW"
-            )
+            raise DirectDescriptionError("REFUSE_EVENT_CONTINUATION_EXECUTION_DISABLED_PENDING_MAIN_REVIEW")
         raise DirectDescriptionError(
             "REFUSE_EVENT_CONTINUATION_CAMPAIGN_ACTUATION_REQUIRES_MAIN_REVIEWED_RUNTIME_BINDING"
         )
@@ -960,6 +1013,9 @@ def _sealed_schedule(config: DirectDescriptionJointDescentTypedConfigV1, args: a
         ),
         "pose_finish_engage": (
             None if schedule.pose_finish_engage is None else schedule.pose_finish_engage.to_payload()
+        ),
+        "verdict_shadow_policy": (
+            None if schedule.verdict_shadow_policy is None else schedule.verdict_shadow_policy.to_payload()
         ),
         "stages": [
             {
@@ -1045,8 +1101,7 @@ def _write_structural_proposal_rejection(
 
     slug = candidate_id.replace("+", "plus").replace("-", "minus")
     relpath = Path("verdicts") / (
-        f"warm_start_proposal_step{global_step:06d}_{slug}_"
-        f"shrink{multiplier_index:02d}_structural_reject.json"
+        f"warm_start_proposal_step{global_step:06d}_{slug}_shrink{multiplier_index:02d}_structural_reject.json"
     )
     return _write_immutable_json(
         out_dir / relpath,
@@ -1077,10 +1132,7 @@ def _write_proposal_geometry_event(
 ) -> dict[str, Any]:
     """Persist one typed cure/rejection without conflating it with score authority."""
 
-    if (
-        event.get("event") != "proposal_infeasible_geometry"
-        or event.get("status") not in {"cured", "rejected"}
-    ):
+    if event.get("event") != "proposal_infeasible_geometry" or event.get("status") not in {"cured", "rejected"}:
         raise DirectDescriptionError("proposal geometry telemetry event is invalid")
     slug = candidate_id.replace("+", "plus").replace("-", "minus")
     track_index = int(event["track_index"])
@@ -1499,6 +1551,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             stage_index = 0
             stage_step = 0
             verdict_history: list[dict[str, Any]] = []
+            ema_export_history: list[dict[str, Any]] = []
             baseline_verdict = None
             restored_pose_finish_payload = None
         else:
@@ -1507,6 +1560,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             stage_index = int(cursor.get("stage_index", 0))
             stage_step = int(cursor.get("stage_step", 0))
             verdict_history = list(cursor.get("verdict_history", ()))
+            ema_export_history = list(cursor.get("ema_export_history", ()))
             baseline_verdict = cursor.get("baseline_verdict")
             restored_pose_finish_payload = cursor.get("pose_finish_engage_state")
             if state.theta.size != model.parameter_count:
@@ -1515,6 +1569,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             raise DirectDescriptionError("full-run resume cursor is already complete")
 
         cpu_scorers: tuple[Any, Any] | None = None
+        shadow_policy = config.full_run_schedule.verdict_shadow_policy
         expected_baseline_dseg = _expected_full_run_baseline_dseg(config)
         baseline_path = out_dir / "verdicts" / "stage00_baseline_n600.json"
         if baseline_verdict is None and baseline_path.is_file():
@@ -1523,6 +1578,13 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 baseline_verdict.get("schema") != "ddm_joint_descent_chunked_stage_verdict.v1"
                 or int(baseline_verdict.get("num_pairs", 0)) != 600
                 or abs(float(baseline_verdict.get("d_seg", -1.0)) - expected_baseline_dseg) > 5.0e-10
+                or (
+                    shadow_policy is not None
+                    and (
+                        baseline_verdict.get("parameter_shadow") != "live"
+                        or int(baseline_verdict.get("realized_parameter_count", -1)) != 0
+                    )
+                )
             ):
                 raise DirectDescriptionError("existing full-run baseline verdict custody differs")
         if baseline_verdict is None:
@@ -1540,7 +1602,15 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                     "REFUSE_FULL_RUN_BASELINE_DSEG_CUSTODY_DRIFT: "
                     f"{baseline_verdict['d_seg']} != {expected_baseline_dseg}"
                 )
-            _write_immutable_json(baseline_path, baseline_verdict)
+            if shadow_policy is not None:
+                baseline_verdict.update(
+                    {
+                        "parameter_shadow": shadow_policy.decision_shadow,
+                        "realized_parameter_count": 0,
+                        "shadow_anchor": "fresh_materialized_source_live_and_ema_zero_state",
+                    }
+                )
+            baseline_verdict = _write_immutable_json(baseline_path, baseline_verdict)
 
         pose_finish_config = None if config.full_run_schedule is None else config.full_run_schedule.pose_finish_engage
         pose_finish_state: PoseFinishEngageStateV1 | None = None
@@ -1683,11 +1753,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                     )
                     if args.force_geometry_escape_once and not geometry_escape_injected:
                         forced_theta = candidate.theta.copy()
-                        forced_index = next(
-                            index
-                            for index in groups["island_worldsheet"]
-                            if index in active
-                        )
+                        forced_index = next(index for index in groups["island_worldsheet"] if index in active)
                         forced_theta[forced_index] = np.float32(8192.0)
                         candidate = AdamStateV1(
                             step=candidate.step,
@@ -1906,7 +1972,9 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                                 if candidate_pose_finish_state is None
                                 else candidate_pose_finish_state.to_payload()
                             ),
-                            "parameter_shadow": "live_opening_candidate",
+                            "parameter_shadow": (
+                                shadow_policy.decision_shadow if shadow_policy is not None else "live_opening_candidate"
+                            ),
                             "realized_parameter_count": int(np.count_nonzero(candidate_realized)),
                             "realized_changed_parameter_count": int(
                                 np.count_nonzero(candidate_realized != current_realized)
@@ -1963,6 +2031,7 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                     "stage_step": stage_step,
                     "global_step": state.step,
                     "verdict_history": verdict_history,
+                    "ema_export_history": ema_export_history,
                     "baseline_verdict": baseline_verdict,
                     "pose_finish_engage_state": (None if pose_finish_state is None else pose_finish_state.to_payload()),
                     "stage_end_reason": campaign_blocker,
@@ -2065,53 +2134,162 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             )
             if verdict_due:
                 scheduled_stage_verdict = stage_step % int(stage["verdict_interval_steps"]) == 0
-                verdict_shadow = "ema" if scheduled_stage_verdict else "live_bounded_smoke_only"
-                verdict_theta = state.ema if scheduled_stage_verdict else state.theta
-                verdict_archive, verdict_realized_theta = compile_parameterized_archive(
-                    lift, verdict_theta, include_lane_programs=include_lanes
-                )
                 if cpu_scorers is None:
                     cpu_scorers = _load_cpu_frozen_scorers(config.upstream_root)
-                verdict = _chunked_n600_verdict(
-                    archive=verdict_archive,
-                    labels=labels,
-                    poses=poses,
-                    segnet=cpu_scorers[0],
-                    posenet=cpu_scorers[1],
-                    batch_size=config.verdict_batch,
-                )
-                verdict.update(
-                    {
-                        "stage_id": stage["stage_id"],
-                        "stage_step": stage_step,
-                        "global_step": state.step,
-                        "target_d_seg": stage["target_d_seg"],
-                        "target_d_pose": stage["target_d_pose"],
-                        "realized_parameter_count": int(np.count_nonzero(verdict_realized_theta)),
-                        "parameter_shadow": verdict_shadow,
-                        "decision_basis": "REALIZED_THROUGH_ARCHIVE_PARSEBACK_PAINT_UINT8_R_FROZEN_SCORERS",
-                        "model_predicted_plateau_used": False,
-                    }
-                )
+                if shadow_policy is None:
+                    verdict_shadow = "ema" if scheduled_stage_verdict else "live_bounded_smoke_only"
+                    verdict_theta = state.ema if scheduled_stage_verdict else state.theta
+                    verdict_archive, verdict_realized_theta = compile_parameterized_archive(
+                        lift, verdict_theta, include_lane_programs=include_lanes
+                    )
+                    verdict = _chunked_n600_verdict(
+                        archive=verdict_archive,
+                        labels=labels,
+                        poses=poses,
+                        segnet=cpu_scorers[0],
+                        posenet=cpu_scorers[1],
+                        batch_size=config.verdict_batch,
+                    )
+                    verdict.update(
+                        {
+                            "stage_id": stage["stage_id"],
+                            "stage_step": stage_step,
+                            "global_step": state.step,
+                            "target_d_seg": stage["target_d_seg"],
+                            "target_d_pose": stage["target_d_pose"],
+                            "realized_parameter_count": int(np.count_nonzero(verdict_realized_theta)),
+                            "parameter_shadow": verdict_shadow,
+                            "decision_basis": "REALIZED_THROUGH_ARCHIVE_PARSEBACK_PAINT_UINT8_R_FROZEN_SCORERS",
+                            "model_predicted_plateau_used": False,
+                        }
+                    )
+                else:
+                    verdict = _chunked_n600_verdict(
+                        archive=live_archive,
+                        labels=labels,
+                        poses=poses,
+                        segnet=cpu_scorers[0],
+                        posenet=cpu_scorers[1],
+                        batch_size=config.verdict_batch,
+                    )
+                    verdict.update(
+                        {
+                            "stage_id": stage["stage_id"],
+                            "stage_step": stage_step,
+                            "global_step": state.step,
+                            "target_d_seg": stage["target_d_seg"],
+                            "target_d_pose": stage["target_d_pose"],
+                            "realized_parameter_count": int(np.count_nonzero(live_realized_theta)),
+                            "parameter_shadow": shadow_policy.decision_shadow,
+                            "decision_basis": (
+                                "LIVE_VS_LIVE_REALIZED_THROUGH_ARCHIVE_PARSEBACK_PAINT_UINT8_R_FROZEN_SCORERS"
+                            ),
+                            "model_predicted_plateau_used": False,
+                            "scheduled_stage_verdict": scheduled_stage_verdict,
+                        }
+                    )
+                    ema_archive, ema_realized_theta = compile_parameterized_archive(
+                        lift,
+                        state.ema,
+                        include_lane_programs=include_lanes,
+                    )
+                    if ema_archive == live_archive:
+                        ema_export = dict(verdict)
+                    else:
+                        ema_export = _chunked_n600_verdict(
+                            archive=ema_archive,
+                            labels=labels,
+                            poses=poses,
+                            segnet=cpu_scorers[0],
+                            posenet=cpu_scorers[1],
+                            batch_size=config.verdict_batch,
+                        )
+                    ema_export.update(
+                        {
+                            "stage_id": stage["stage_id"],
+                            "stage_step": stage_step,
+                            "global_step": state.step,
+                            "target_d_seg": stage["target_d_seg"],
+                            "target_d_pose": stage["target_d_pose"],
+                            "realized_parameter_count": int(np.count_nonzero(ema_realized_theta)),
+                            "parameter_shadow": shadow_policy.export_shadow,
+                            "decision_authority": "EXPORT_AND_PROMOTION_ONLY_NOT_STAGE_CONTROL",
+                            "decision_basis": (
+                                "EMA_EXPORT_REALIZED_THROUGH_ARCHIVE_PARSEBACK_PAINT_UINT8_R_FROZEN_SCORERS"
+                            ),
+                            "model_predicted_plateau_used": False,
+                            "scheduled_stage_verdict": scheduled_stage_verdict,
+                        }
+                    )
+                    ema_reference = (
+                        ema_export_history[-1]
+                        if ema_export_history
+                        else {
+                            **baseline_verdict,
+                            "parameter_shadow": shadow_policy.export_shadow,
+                            "realized_parameter_count": 0,
+                        }
+                    )
+                    ema_informative, ema_reason = classify_verdict_informativeness(
+                        reference=ema_reference,
+                        candidate=ema_export,
+                        minimum_realized_parameter_count_delta=(shadow_policy.minimum_realized_parameter_count_delta),
+                    )
+                    ema_export.update(
+                        {
+                            "reference_d_seg": float(ema_reference["d_seg"]),
+                            "reference_d_pose": float(ema_reference["d_pose"]),
+                            "reference_parameter_shadow": shadow_policy.export_shadow,
+                            "export_informative": ema_informative,
+                            "export_informativeness_decision": (
+                                "EMA_EXPORT_INFORMATIVE" if ema_informative else "VERDICT_NOT_YET_INFORMATIVE"
+                            ),
+                            "export_informativeness_reason": ema_reason,
+                        }
+                    )
+                    ema_export = _write_immutable_json(
+                        out_dir / "verdicts" / f"{stage['stage_id']}_step{state.step:06d}_ema_export_n600.json",
+                        ema_export,
+                        volatile_fields=("elapsed_seconds",),
+                    )
+                    ema_export_history.append(ema_export)
             target_met = False
             if verdict is not None:
                 previous_verdict = verdict_history[-1] if verdict_history else baseline_verdict
                 if previous_verdict is None:
                     raise DirectDescriptionError("REFUSE_REALIZED_STAGE_VERDICT_LACKS_REFERENCE")
-                latest_stage_decision = classify_realized_stage_verdict(
-                    reference_d_seg=float(previous_verdict["d_seg"]),
-                    reference_d_pose=float(previous_verdict["d_pose"]),
-                    candidate_d_seg=float(verdict["d_seg"]),
-                    candidate_d_pose=float(verdict["d_pose"]),
-                    target_d_seg=float(stage["target_d_seg"]),
-                    target_d_pose=stage["target_d_pose"],
-                )
+                if shadow_policy is None:
+                    latest_stage_decision = classify_realized_stage_verdict(
+                        reference_d_seg=float(previous_verdict["d_seg"]),
+                        reference_d_pose=float(previous_verdict["d_pose"]),
+                        candidate_d_seg=float(verdict["d_seg"]),
+                        candidate_d_pose=float(verdict["d_pose"]),
+                        target_d_seg=float(stage["target_d_seg"]),
+                        target_d_pose=stage["target_d_pose"],
+                    )
+                else:
+                    consecutive_degenerate = count_consecutive_scheduled_degenerate_verdicts(verdict_history)
+                    latest_stage_decision, apparatus = classify_shadow_consistent_stage_verdict(
+                        reference=previous_verdict,
+                        candidate=verdict,
+                        policy=shadow_policy,
+                        consecutive_degenerate_verdicts=consecutive_degenerate,
+                        target_d_seg=float(stage["target_d_seg"]),
+                        target_d_pose=stage["target_d_pose"],
+                    )
+                    verdict["verdict_apparatus"] = apparatus
                 verdict["reference_d_seg"] = float(previous_verdict["d_seg"])
                 verdict["reference_d_pose"] = float(previous_verdict["d_pose"])
+                verdict["reference_parameter_shadow"] = previous_verdict.get("parameter_shadow")
                 verdict["realized_stage_decision"] = latest_stage_decision
                 target_met = latest_stage_decision == "REALIZED_STAGE_TARGET_MET"
-                if pose_finish_state is not None and (
-                    not pose_finish_state.exact_verdict_steps or state.step > pose_finish_state.exact_verdict_steps[-1]
+                if (
+                    pose_finish_state is not None
+                    and latest_stage_decision != "VERDICT_NOT_YET_INFORMATIVE"
+                    and (
+                        not pose_finish_state.exact_verdict_steps
+                        or state.step > pose_finish_state.exact_verdict_steps[-1]
+                    )
                 ):
                     pose_finish_state = pose_finish_state.observe(
                         global_step=state.step,
@@ -2129,8 +2307,9 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 verdict["pose_finish_engage_state"] = (
                     None if pose_finish_state is None else pose_finish_state.to_payload()
                 )
+                verdict_suffix = "live_decision_n600" if shadow_policy is not None else "n600"
                 verdict = _write_immutable_json(
-                    out_dir / "verdicts" / f"{stage['stage_id']}_step{state.step:06d}_n600.json",
+                    out_dir / "verdicts" / f"{stage['stage_id']}_step{state.step:06d}_{verdict_suffix}.json",
                     verdict,
                     volatile_fields=("elapsed_seconds",),
                 )
@@ -2138,7 +2317,10 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
             recent = [
                 row
                 for row in verdict_history
-                if row.get("stage_id") == stage["stage_id"] and row.get("realized_stage_decision") is not None
+                if (
+                    row.get("stage_id") == stage["stage_id"]
+                    and row.get("realized_stage_decision") not in {None, "VERDICT_NOT_YET_INFORMATIVE"}
+                )
             ]
             plateau = len(recent) >= int(schedule["plateau_verdicts"]) and all(
                 float(after["d_seg"]) >= float(before["d_seg"]) and float(after["d_pose"]) >= float(before["d_pose"])
@@ -2162,16 +2344,13 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
                 "stage_step": 0 if stage_end else stage_step,
                 "global_step": state.step,
                 "verdict_history": verdict_history,
+                "ema_export_history": ema_export_history,
                 "baseline_verdict": baseline_verdict,
                 "pose_finish_engage_state": (None if pose_finish_state is None else pose_finish_state.to_payload()),
                 "stage_end_reason": campaign_blocker or stage_exit_decision,
                 "campaign_blocker": campaign_blocker,
             }
-            accepted_checkpoint = (
-                out_dir
-                / "checkpoints"
-                / f"{stage['stage_id']}_accepted_global{state.step:06d}.npz"
-            )
+            accepted_checkpoint = out_dir / "checkpoints" / f"{stage['stage_id']}_accepted_global{state.step:06d}.npz"
             save_stage_checkpoint(
                 accepted_checkpoint,
                 state,
@@ -2336,6 +2515,8 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
         "stage_step": stage_step,
         "baseline_verdict": baseline_verdict,
         "final_stage_verdict": final_verdict,
+        "final_ema_export_verdict": (ema_export_history[-1] if ema_export_history else None),
+        "ema_export_verdict_count": len(ema_export_history),
         "telemetry_rows": len(run_telemetry),
         "memory_admission": admission,
         "bounded_verification": args.max_steps is not None,
@@ -2380,8 +2561,10 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--full-run", action="store_true")
     mode.add_argument("--worst-geometry-memory-bootstrap", action="store_true")
     mode.add_argument("--resume-proof", action="store_true")
+    mode.add_argument("--materialized-archive-verdict", action="store_true")
     parser.add_argument("--bootstrap-measurement", action="store_true")
     parser.add_argument("--resume-from", type=Path)
+    parser.add_argument("--materialized-archive", type=Path)
     parser.add_argument("--stop-after-step", type=int, choices=(1, 2), default=1)
     parser.add_argument("--max-steps", type=int)
     parser.add_argument("--pair-id", type=int, choices=range(600), default=447)
@@ -2394,15 +2577,29 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         config = DirectDescriptionJointDescentTypedConfigV1.from_ticket(args.ticket)
-        event_schedule = (
-            None
-            if config.full_run_schedule is None
-            else config.full_run_schedule.event_continuation
-        )
+        event_schedule = None if config.full_run_schedule is None else config.full_run_schedule.event_continuation
         if event_schedule is not None and (args.bounded_smoke or args.full_run):
-            raise DirectDescriptionError(
-                "REFUSE_EVENT_CONTINUATION_EXECUTION_DISABLED_PENDING_MAIN_REVIEW"
-            )
+            raise DirectDescriptionError("REFUSE_EVENT_CONTINUATION_EXECUTION_DISABLED_PENDING_MAIN_REVIEW")
+        if args.materialized_archive_verdict:
+            if (
+                args.materialized_archive is None
+                or args.bootstrap_measurement
+                or args.resume_from is not None
+                or args.memory_receipt is not None
+                or args.simulate_kill_after_checkpoint
+                or args.max_steps is not None
+                or args.stage_exit_on_stop
+                or args.force_geometry_escape_once
+                or args.measure_full_config_window
+                or args.measurement_train_batch != 1
+                or args.verify_group_ownership
+                or args.pair_id != 447
+                or args.stop_after_step != 1
+            ):
+                raise DirectDescriptionError("materialized archive verdict accepts only --materialized-archive")
+            return _materialized_archive_verdict(args, config)
+        if args.materialized_archive is not None:
+            raise DirectDescriptionError("--materialized-archive is restricted to --materialized-archive-verdict")
         if args.worst_geometry_memory_bootstrap:
             if (
                 args.bootstrap_measurement
@@ -2455,9 +2652,7 @@ def main(argv: list[str] | None = None) -> int:
                 raise DirectDescriptionError("bounded-smoke-only flags cannot alter --full-run")
             if args.max_steps is not None and args.max_steps <= 0:
                 raise DirectDescriptionError("--max-steps must be positive")
-            if args.force_geometry_escape_once and (
-                args.max_steps != 1 or args.resume_from is not None
-            ):
+            if args.force_geometry_escape_once and (args.max_steps != 1 or args.resume_from is not None):
                 raise DirectDescriptionError(
                     "--force-geometry-escape-once is restricted to a fresh one-step bounded full-run smoke"
                 )

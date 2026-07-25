@@ -1,0 +1,621 @@
+{
+  "authority": {
+    "delegation_prompt_bytes": 10078,
+    "delegation_prompt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_j10_366_ema_verdict_shadow_cure_20260725T110859Z.wrapped.prompt.txt",
+    "delegation_prompt_sha256": "dc0d7bf469056f66249abe58579c4cd09219051d91096a1384d2062adc4bc9a1",
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "source_commit": "3c0be0fa2aeb7674d185ebdd2c32297013a6dd37"
+  },
+  "compile_custody": {
+    "claim": "HASH_SEALED_EXECUTABLE_TYPED_J10_DUAL_SHADOW_RESEAL",
+    "existing_compiler_accepts_schema": true,
+    "existing_governed_launcher_accepts_named_config": true,
+    "hash_algorithm": "sha256",
+    "hash_scope": "RFC8785 canonical bytes of semantic_program",
+    "semantic_program_sha256": "7faa57594ef63b6e5b61f522b1bc50249f953b87eecfed254059ff1234e2ec18",
+    "typed_config_hash": "478aaf0db82463104e0e848f95f69361a72950c70dd76cc2d2574ec8e3267a64",
+    "typed_schema": "DirectDescriptionJointDescentTypedConfigV1"
+  },
+  "execution_custody": {
+    "banked_r1_comparator": {
+      "authority": "comparator_and_fallback_harvest_signal_only",
+      "binding_target": false,
+      "d_pose": 0.00161,
+      "payload_bytes": 7200,
+      "promotion_eligible": false,
+      "score_contribution": 0.127
+    },
+    "j5_producer_artifacts": {
+      "baseline_verdict": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/verdicts/stage00_baseline_n600.json",
+        "sha256": "5b19b564da1fb528af2c0d944da36bf1d357e28503be5988cb14ad59c4a6a261"
+      },
+      "checkpoint": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000001.npz",
+        "sha256": "1399292164682955bd9937d204692521542687f69223ddc9cc1e669ae05a944e"
+      },
+      "proposal_verdict": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/verdicts/warm_start_proposal_step000001_worldsheet_joint_active_x_plus1_shrink00_n600.json",
+        "sha256": "335d15db69dc25b0de80258e10e472f6e9ff282cd7d0325eca989bf92bade1f2"
+      },
+      "runtime_memory_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j5_366_realized_acceptance_warmstart_13e194a8_20260723T062000Z/full_run_memory_preflight.json",
+        "sha256": "4af05223624359fc305c82e30ee4a008da43d609251830d6e1a70724804ceec7"
+      }
+    },
+    "source_files": {
+      "consumer": {
+        "path": "src/tac/optimization/direct_description_joint_descent.py",
+        "sha256": "f6f3c7b3a11f40ff4d82ab336ea5047f6bbcc48965288111ea38b36644d69d1e"
+      },
+      "launcher": {
+        "path": "tools/launch_ddm_joint_descent.py",
+        "sha256": "5f0831d4faf368d822fea4c0dfddc3f6a012f5b5caf406cb2f6a0741c4f438ae"
+      }
+    },
+    "worst_geometry_memory_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_fresh_memory_bootstrap_20260725T1237Z/worst_geometry_memory_preflight.json",
+      "sha256": "50f3f541c6d0c30bc7168064a21f526d357b2004a8d0cb1166c004c49677a312"
+    }
+  },
+  "schema": "ddm_joint_descent_witness_program_ticket.v1",
+  "semantic_program": {
+    "checkpoint_contract": {
+      "all_stage_files_preserved": true,
+      "atomic_write": "temporary file plus fsync plus os.replace",
+      "distinct_stage_encoded_names": true,
+      "ema_shadow_saved": true,
+      "every_stage_end": true,
+      "exact_rejection_rollback_saved": true,
+      "periodic_intra_stage": true,
+      "resume_from_disk": true
+    },
+    "compute_contract": {
+      "baseline": {
+        "authority": "speed path only; exact chunked frozen CPU-torch replay is macOS advisory and score_claim=false",
+        "chunked_verdicts": true,
+        "device": "MLX_GPU",
+        "environment": {
+          "TAC_MLX_CUSTOM_GROUPED_BACKWARD": "1"
+        },
+        "required_kernels": [
+          "custom grouped backward measured active",
+          "fused differentiable-R bit-identical to NumPy-fp32"
+        ]
+      },
+      "historical_j5_geometry_limit": "8 island secants at pair447; not admission authority for stage3",
+      "historical_j5_measured_stage1_peak_rss_gib": 10.47418212890625,
+      "historical_j5_projected_peak_gib": 13.5690185546875,
+      "memory_ceiling_gib": 116.0
+    },
+    "deterministic_algorithms": true,
+    "execution_boundary": {
+      "bounded_n600_smoke_only": true,
+      "main_review_required": true,
+      "research_only": true,
+      "score_claim": false,
+      "standing_go_applies_only_after_main_review_and_READY_TO_FIRE_UNDER_STANDING_GO": true,
+      "this_branch_campaign_launch_authorized": false
+    },
+    "full_run_schedule": {
+      "accepted_step_checkpoint_policy": "atomic_keep_all_full_resume_after_every_accepted_step;periodic_37_and_stage_boundaries_preserved_additively",
+      "checkpoint_interval_steps": 37,
+      "derived_remaining_wall_clock_hours": 29.352665240798768,
+      "derived_remaining_wall_clock_hours_high": 81.45719166666579,
+      "derived_remaining_wall_clock_hours_low": 16.338899953678872,
+      "derived_steps_per_n600_exposure": 150,
+      "derived_total_steps": 400,
+      "derived_wall_clock_hours": 39.363878897499916,
+      "derived_wall_clock_hours_high": 41.580677948663556,
+      "derived_wall_clock_hours_low": 34.370380288006274,
+      "geometry_infeasibility_policy": "rg1_project_polygon_center_then_cured_or_rejected;sha_and_parseback_custody_failures_remain_process_fatal",
+      "learning_rate_quantum_fraction": 0.25,
+      "measured_full_n600_proposal_seconds": 436.65467699989676,
+      "measured_full_n600_proposal_seconds_high": 452.71083845803514,
+      "measured_full_n600_proposal_seconds_low": 410.85283304192126,
+      "measured_main_loop_step_seconds": [
+        272.22402341710404,
+        273.1033891250845,
+        272.74639812507667,
+        272.4739739999641,
+        329.62735133292153,
+        329.45078045804985
+      ],
+      "measured_main_loop_step_seconds_attempt5_excluding_opening": [
+        266.9521660420578,
+        267.02024600002915,
+        266.56212383299135,
+        264.35216016694903,
+        323.50814091716893,
+        323.19074925011955,
+        323.07260675006546,
+        264.0065871658735,
+        263.9315347908996,
+        205.7627906249836,
+        205.7149428750854,
+        264.12707374989986,
+        147.6591521659866,
+        265.9551264171023,
+        147.13911879179068,
+        147.0962104590144,
+        147.2498502500821,
+        264.0635783330072,
+        205.53360354201868,
+        206.155893165851,
+        264.02762200008146,
+        381.1223508750554,
+        322.6067745410837,
+        322.74388733296655,
+        206.0764584580902,
+        322.70790879195556,
+        381.72622912493534,
+        381.35402804100886,
+        263.6700503749307,
+        264.1739871671889,
+        381.43246812489815,
+        380.90002258401364,
+        205.80320225004107,
+        380.84061237517744,
+        733.1147249999922,
+        440.70708208414726,
+        322.40680629201233,
+        264.01501566683874,
+        263.79421066702344,
+        264.4010698751081,
+        263.9008503749501,
+        381.7123405840248,
+        264.2143310829997,
+        205.71149670821615,
+        322.6515475001652,
+        205.49568562489003,
+        147.23988508316688,
+        147.70155312516727,
+        147.05009958310984
+      ],
+      "measured_seconds_per_step": 264.1739871671889,
+      "measured_seconds_per_step_high": 733.1147249999922,
+      "measured_seconds_per_step_low": 147.05009958310984,
+      "plateau_verdicts": 2,
+      "pose_finish_engage": {
+        "detector": "rolling_relative_slope_plateau",
+        "ema_span": 3,
+        "fallback_policy": "emit_banked_r1_comparator_harvest_signal_non_promoting",
+        "flat_relative_slope_band": 0.0003,
+        "hysteresis": 3,
+        "metric": "exact_n600_d_seg_realized_through_R",
+        "minimum_strict_seg_admissions": 1,
+        "schema": "ddm_pose_finish_exact_verdict_plateau.v1",
+        "settle_window": 3
+      },
+      "remaining_stage_steps": [
+        100,
+        150,
+        150
+      ],
+      "resume_global_step_offset": 50,
+      "stage_transition_rule": "opening proposals shrink on exact joint-score ascent and roll back exactly; fire readiness uses cumulative stage00 component and residual safety; only an exact stage target advances; target-unmet limits and plateaus stop non-promoting",
+      "stages": [
+        {
+          "active_groups": [
+            "island_worldsheet",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 100,
+          "stage_id": "01_residual_bucket_realized_acceptance",
+          "target_d_pose": null,
+          "target_d_seg": 0.020602722168,
+          "verdict_interval_steps": 50
+        },
+        {
+          "active_groups": [
+            "lane_program",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "stage_id": "02_lane_production_joint_descent",
+          "target_d_pose": null,
+          "target_d_seg": 0.013735148112,
+          "verdict_interval_steps": 50
+        },
+        {
+          "active_groups": [
+            "island_worldsheet",
+            "lane_program",
+            "shared_template_dof"
+          ],
+          "maximum_steps": 150,
+          "stage_id": "03_pose_coupled_finish",
+          "target_d_pose": 163.06116431842463,
+          "target_d_seg": 0.006867574056,
+          "verdict_interval_steps": 50
+        }
+      ],
+      "train_batch": 4,
+      "verdict_shadow_policy": {
+        "decision_shadow": "live",
+        "emit_dual_rows": true,
+        "export_shadow": "ema",
+        "maximum_consecutive_degenerate_verdicts": 1,
+        "minimum_realized_parameter_count_delta": 1,
+        "same_shadow_reference_required": true,
+        "schema": "ddm_dual_shadow_verdict_policy.v1"
+      },
+      "warm_start_pair": 447,
+      "warm_start_reform": {
+        "adam_beta2": 0.999,
+        "component_fire_gate": "cumulative_vs_stage00_dseg_flat_or_down_pose_not_worse_any_component_and_residual_descend",
+        "first_realized_admission": "exact_n600_joint_delta_s_lt_zero_else_shrink_and_exact_rollback",
+        "frozen_groups_until_first_admission": [],
+        "group_release_condition": "first_component_safe_n600_residual_admission",
+        "lr_rewarmup_c": 2.0,
+        "lr_rewarmup_floor": 0.1,
+        "lr_rewarmup_shape": "linear",
+        "lr_rewarmup_steps": 2000,
+        "maximum_continuous_update_quantum_fraction": null,
+        "opening_active_groups": [
+          "island_worldsheet",
+          "shared_template_dof"
+        ],
+        "opening_candidate_ids": [
+          "worldsheet_joint_active_x_+1",
+          "worldsheet_joint_active_x_-1",
+          "worldsheet_joint_active_y_-1",
+          "local_exact_gradient"
+        ],
+        "opening_candidate_pair_ids": [
+          447,
+          53,
+          416,
+          296,
+          547,
+          278,
+          501,
+          346
+        ],
+        "proposal_multipliers": [
+          32.0,
+          16.0,
+          8.0,
+          4.0,
+          2.0,
+          1.0,
+          0.5,
+          0.25
+        ],
+        "proposal_q8_denominator": 256,
+        "proposal_staging": "camera_874x1164_q8_pre_final_uint8",
+        "realized_acceptance_policy": "pure_priced_exact_n600",
+        "residual_bucket_admission_required": true
+      },
+      "warm_start_steps": 4
+    },
+    "joint_objective": {
+      "ema_decay": 0.9387755102040817,
+      "ema_decay_compile": {
+        "compiled_flag": "--ema-decay",
+        "constant_manifest": {
+          "equation_id": "ema_decay_run_geometry_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "config_tags": {},
+              "kind": "literal",
+              "name": "mode",
+              "provenance": "mode code 2 == decay_from_warmup_fraction (numeric-literal encoding)",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 2
+            },
+            {
+              "config_tags": {},
+              "kind": "literal",
+              "name": "updates_per_run",
+              "provenance": "run geometry: optimizer updates in the averaging window (full-batch accum => 1/epoch)",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 450
+            },
+            {
+              "config_tags": {},
+              "kind": "literal",
+              "name": "warmup_fraction",
+              "provenance": "ARM-C ema calibration: pinned warmup completion fraction phi (d = 1 - 2/(phi*U))",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 0.0725925925925926
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "value": 0.9387755102040817,
+          "warnings": []
+        },
+        "dsl_lever": "EmaDecayCalibrated",
+        "lawref_declaration": {
+          "equation_id": "ema_decay_run_geometry_v1",
+          "fallback": null,
+          "fallback_waiver_reason": "",
+          "inputs": {
+            "mode": {
+              "artifact_path": null,
+              "config_tags": {},
+              "expected_sha256": null,
+              "extract": null,
+              "kind": "literal",
+              "max_staleness_days": null,
+              "provenance": "mode code 2 == decay_from_warmup_fraction (numeric-literal encoding)",
+              "value": 2
+            },
+            "updates_per_run": {
+              "artifact_path": null,
+              "config_tags": {},
+              "expected_sha256": null,
+              "extract": null,
+              "kind": "literal",
+              "max_staleness_days": null,
+              "provenance": "run geometry: optimizer updates in the averaging window (full-batch accum => 1/epoch)",
+              "value": 450
+            },
+            "warmup_fraction": {
+              "artifact_path": null,
+              "config_tags": {},
+              "expected_sha256": null,
+              "extract": null,
+              "kind": "literal",
+              "max_staleness_days": null,
+              "provenance": "ARM-C ema calibration: pinned warmup completion fraction phi (d = 1 - 2/(phi*U))",
+              "value": 0.0725925925925926
+            }
+          },
+          "ladder_class": "derived_at_config"
+        },
+        "run_geometry": {
+          "equilibration_time_constants": 3,
+          "first_scheduled_verdict_updates": 50,
+          "historical_named_parameter_count": 706,
+          "learning_rate_quantum_fraction": 0.25,
+          "minimum_receiver_quantum_by_first_verdict": 1,
+          "original_total_updates": 450,
+          "receiver_effective_parameter_count": 368,
+          "remaining_stage_updates": [
+            100,
+            150,
+            150
+          ],
+          "remaining_updates_after_materialized_step50": 400,
+          "stage_updates": [
+            150,
+            150,
+            150
+          ],
+          "strict_equilibration_budget_updates": 49
+        }
+      },
+      "formula": "100*d_seg_R + sqrt(10*d_pose_YUV6_R) + 25*archive_bytes/37545489",
+      "roundtrip": "proposal -> camera Q8 -> final uint8 -> evaluator R -> frozen scorers",
+      "stability": {
+        "grad_clip": 0.5,
+        "grad_normalize": true,
+        "per_group_grad_clip": true,
+        "pose_grad_coeff_max": 25,
+        "preset": "amber"
+      }
+    },
+    "num_pairs": 600,
+    "program_id": "ddm_j10_366_ema_verdict_shadow_cure_n600_seed0",
+    "receiver_effective_surface": {
+      "island_worldsheet_track_translation_count": 326,
+      "lane_periodic_wire_coordinate_count": 24,
+      "opening_held_group": "lane_program",
+      "opening_selective_unfreeze": [
+        "island_worldsheet.center_x and center_y coherent candidates",
+        "shared_template_dof local Q8 candidate"
+      ],
+      "parameter_count": 368,
+      "selection_authority": "exact n600 C1 residual-bucket effect, not parameter-group name",
+      "shared_template_channel_count": 18
+    },
+    "resume_after_attempt4": {
+      "attempted": true,
+      "attempted_steps": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "byte_compare_performed": false,
+      "decision": "RESTART_FROM_W_JOINT_INSUFFICIENT_SEED_CUSTODY",
+      "preserved_checkpoint_count": 0,
+      "proposal_sources": [
+        "worldsheet_joint_active_y_-1",
+        "local_exact_gradient",
+        "local_exact_gradient",
+        "local_exact_gradient",
+        "local_exact_gradient",
+        "local_exact_gradient",
+        "local_exact_gradient"
+      ],
+      "reason": "seed and proposal_source rows do not preserve gradients, Adam moments, EMA, theta, run cursor, or candidate archive bytes",
+      "required_state_fields": [
+        "ema",
+        "first_moment",
+        "run_cursor",
+        "second_moment",
+        "theta"
+      ],
+      "schema": "ddm_j9_attempt4_replay_decision.v1",
+      "score_claim": false,
+      "seed": 0,
+      "source_run_identity_sha256": "5aa8aeee04ca177dcb88baafd0f9da6e7e25c81904b5d8d2157a5d3bd97ca22a",
+      "source_run_log_sha256": "2a3873cdab3801cc02858555cc7c00d6c9b134d0bfb35324fd73f372b93baeca",
+      "state_fields_present": [],
+      "telemetry": [
+        {
+          "current_parseback_archive_sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e",
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_wjoint_20260725T032557Z/telemetry/step000001.json",
+          "sha256": "f5fa606a6eca61206115daa2b6feca9dd422f4b5b2c21a47afe8da0df611938a"
+        },
+        {
+          "current_parseback_archive_sha256": "4487754bf1517946eb7b604817f99c5623ec0320aad3287edc67b436bae793f5",
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_wjoint_20260725T032557Z/telemetry/step000002.json",
+          "sha256": "7c2eff986acc3cac5a86429808acf908602ab28bdd119967997a0bfa3ac7e5e2"
+        },
+        {
+          "current_parseback_archive_sha256": "4487754bf1517946eb7b604817f99c5623ec0320aad3287edc67b436bae793f5",
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_wjoint_20260725T032557Z/telemetry/step000003.json",
+          "sha256": "0c79293e2910e7d9637a2cd2135d7f5a871769a8213e787fc21868e1fc936184"
+        },
+        {
+          "current_parseback_archive_sha256": "15e31a50f33ed5712c4616c35759b915397aade590d15f4efca28d998dee9e20",
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_wjoint_20260725T032557Z/telemetry/step000004.json",
+          "sha256": "77b2660f3e90e361a659dd26e7441b5fa58acab68afdc5534ebe8950ebaa23c4"
+        },
+        {
+          "current_parseback_archive_sha256": "9601e777010b1dc45ed0841e118fcf34c58452324f8730fe9958a3440502e3a4",
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_wjoint_20260725T032557Z/telemetry/step000005.json",
+          "sha256": "7d7332271ebf27dc70b8eb5302ad3188aa8c335fa19397d093a3dc87baf9436d"
+        },
+        {
+          "current_parseback_archive_sha256": "9601e777010b1dc45ed0841e118fcf34c58452324f8730fe9958a3440502e3a4",
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_wjoint_20260725T032557Z/telemetry/step000006.json",
+          "sha256": "aca37c8f81693a81006b11e7fe7237de4839b8325dc1cb148f63d5ad6af810f2"
+        },
+        {
+          "current_parseback_archive_sha256": "111e0e86d9e137704a9fae3f552bde37eb88149d34346ff17b901e8d8e184565",
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_366_campaign_wjoint_20260725T032557Z/telemetry/step000007.json",
+          "sha256": "61d684842c210523e3b607d55e14c31d6af4a7229be6456478476cdb13ed0275"
+        }
+      ]
+    },
+    "resume_after_attempt5": {
+      "baseline_verdict_sha256": "206ad67430b013784e7cd1853a2eceb336a0990a5625d838c0958a5895a12c71",
+      "decision": "FRESH_TICKET_WARM_START_FROM_MATERIALIZED_STEP50_LIVE_THETA",
+      "materialized_receipt_sha256": "774eb2aa49924fe27935bcf71b6f7921b71917b2549e87ffa717ae950fce3c86",
+      "preserved_accepted_steps": 50,
+      "preserved_checkpoint_sha256": "043c2a8b3c89688510cc0ff002f37a375a974205a5f8760d93133c47b7cec7c1",
+      "true_resume_blocker": "J10 changes typed_config_hash and intentionally discards the lagged EMA history; old optimizer arrays stay preserved in the keep-all checkpoint",
+      "true_resume_legal": false
+    },
+    "schema": "DirectDescriptionJointDescentTypedConfigV1",
+    "seed": 0,
+    "target_cache": {
+      "bytes": 5078017610,
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "telemetry": {
+      "chunked_n600_verdict": true,
+      "every_exact_move": [
+        "pure-priced Seg/Pose/rate/joint deltas",
+        "C1 role-bucket delta",
+        "C1 residual-bucket per-move and cumulative delta",
+        "candidate id, shrink multiplier, Q8 staging, realized DOFs",
+        "component fire gate and exact archive identity",
+        "pose-finish exact-verdict rolling-slope state and monotone engage latch",
+        "governed stage-exit decision and exact final-target gate",
+        "proposal_infeasible_geometry status cured or rejected",
+        "atomic full-resume checkpoint after every accepted step",
+        "live decision row with same-shadow reference",
+        "EMA export row with receiver informativeness classification",
+        "VERDICT_NOT_YET_INFORMATIVE first-degenerate grace and next-verdict escalation"
+      ],
+      "pointer_promotion_from_advisory_forbidden": true,
+      "score_claim": false,
+      "verdict_batch": 32
+    },
+    "value_provenance": {
+      "beta2_ramp": "PRESERVED J4 LawRef adam_v_variance_warmup_length_v1: ceil(2/(1-0.999)) = 2000",
+      "bucket_partition": "MEASURED/DERIVED C1: Lane+Movable role ceiling 726416; Road+Undrivable+MyCar minus integer target allowance yields 2377273 baseline residual debt",
+      "camera_q8": "MEASURED V19: three of three pre-final-uint8 camera-Q8 variants were exact joint-score admissible",
+      "cap_removed": "MEASURED V19: strict realized joint delta-S admitted coherent moves that fixed collateral and quarter-quantum rules rejected",
+      "coherent_x_plus_1": "MEASURED V19 grammar-native eight-pair advisory on pair ids 447,53,416,296,547,278,501,346: both d_seg and d_pose descended with exact archive-byte pricing; J5 remeasures the exact lifecycle-feasible candidate through n600",
+      "governed_stop": "DERIVED control invariant: only exact target-met advances; maximum-step and plateau exits below target are non-promoting stops",
+      "j10_attempt5_preservation": "MEASURED attempt-5 step50 LIVE theta materialized receiver-closed; 50 accepted checkpoints and old optimizer arrays preserved",
+      "j10_ema_decay": "DERIVED_AT_CONFIG by EmaDecayCalibrated LawRef ema_decay_run_geometry_v1; 3/(1-d)=49<50 and first-verdict blend clears nearest-integer receiver quantum",
+      "j10_remaining_schedule": "DERIVED 400 remaining updates at MEASURED attempt-5 median 264.1739871671889 seconds/update",
+      "j10_verdict_shadow_policy": "L3 apparatus cure: stage control live-vs-live; EMA is export/promotion-only",
+      "j9_attempt4_cadence": "MEASURED attempt-4 full-n600 proposal seconds 452.71083845803514,436.65467699989676,410.85283304192126; main-loop telemetry seconds 272.22402341710404,273.1033891250845,272.74639812507667,272.4739739999641,329.62735133292153,329.45078045804985; DERIVED central 5.2 min/step and 39.36 h including the measured opening window",
+      "j9_checkpoint_every_accepted": "P0 resumability law; optimizer state is KB-scale; periodic-37 and stage checkpoints remain additive",
+      "j9_geometry_projection": "REUSED rg1 #679 project_polygon_center on the exact 512x384 scorer-plane legal set",
+      "j9_verdict_cadence": "PRESERVED sealed verdict_interval_steps=50; no unsealed cadence semantics invented",
+      "opening_groups": "C1-GUIDED: Lane remains held while coherent worldsheet and shared-template candidates are ranked by exact residual-bucket effect; no blanket template freeze",
+      "pose_finish_engage": "DERIVED #383 sibling: exact n600 d_seg uses the same EMA3, window3, hysteresis3, and 3e-4 rolling-relative-slope band; latch is run-owned and checkpointed",
+      "proposal_ladder": "DERIVED shrink ladder: first multiplier 32 maps the ramp-floor 0.025 base step to 0.8 receiver quantum; halve on exact ascent",
+      "same_vehicle_pose_floor": "MEASURED J5 exact proposal d_pose=163.06116431842463; governed non-regression floor for final target; banked R1 0.001610 is comparator-only",
+      "verdict_batch": "P0 J7 authority: exact n600 frozen CPU scorer verdicts use batch32",
+      "worst_geometry": "DERIVED static lifecycle enumeration: pair498 has 28 island plus 24 Lane realized secants; memory-only bootstrap must measure this exact all-groups window"
+    },
+    "warm_start": {
+      "baseline_d_pose": 35.49982080959101,
+      "baseline_d_seg": 0.06974277072482639,
+      "baseline_verdict_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_step50_live_materialization_20260725T1138Z/materialized_archive_n600.json",
+      "baseline_verdict_sha256": "206ad67430b013784e7cd1853a2eceb336a0990a5625d838c0958a5895a12c71",
+      "bytes": 138813,
+      "fresh_ema_anchor": true,
+      "kind": "receiver_closed_checkpoint_materialization",
+      "optimizer_state_loadable": false,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_step50_live_materialization_20260725T1138Z/step50_live_warm_start.zip.receipt-bytes",
+      "receipt_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_step50_live_materialization_20260725T1138Z/materialization_receipt.json",
+      "receipt_sha256": "774eb2aa49924fe27935bcf71b6f7921b71917b2549e87ffa717ae950fce3c86",
+      "sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241"
+    },
+    "worst_geometry_memory_preflight": {
+      "active_groups": [
+        "island_worldsheet",
+        "lane_program",
+        "shared_template_dof"
+      ],
+      "derived_basis_gib": 4.72976016998291,
+      "expected_island_secants": 28,
+      "expected_lane_secants": 24,
+      "expected_total_secants": 52,
+      "schema": "ddm_joint_descent_worst_geometry_memory_contract.v1",
+      "selected_pair_start": 498,
+      "train_batch": 4
+    }
+  },
+  "warm_start_candidates": {
+    "W_joint": {
+      "archive_bytes": 138801,
+      "candidate_id": "statistics_hard_analytic_composed_frame1",
+      "d_pose": 36.6181847780574,
+      "d_seg": 0.07051923116048177,
+      "mycar_errors": 4072489
+    },
+    "W_seg": {
+      "archive_bytes": 138031,
+      "candidate_id": "temporal_affine_16knot_frame1_seglex96_hood_masked",
+      "d_pose": 146.3649324958955,
+      "d_seg": 0.024124510023328993,
+      "mycar_errors": 37619
+    },
+    "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+    "main_landing_review_required": true,
+    "pointer_moved": false,
+    "schema": "DDMWS1WarmStartCandidatesV1",
+    "score_claim": false,
+    "slope_falsifier": {
+      "critical_ratio": 4.1215446777965665,
+      "execution_allowed": false,
+      "path": ".omx/research/configs/ddm_ws1_j5_slope_falsifier_20260724.json",
+      "sha256": "d504f55519f2490a8ae2b29c653c7d4c4cf4824d534972ae1dbf8146fe9c1b28",
+      "training_launched": false
+    },
+    "source_receipt": {
+      "bytes": 46615,
+      "path": ".omx/research/ddm_ws1_seglex96_filtered_warmstart_20260724T022500Z/ddm_ws1_seglex96_filtered_warmstart_receipt.json",
+      "sha256": "0282c083f6b74c0c56e152e85a8fa45dc7fff6a13e6296dd6b3315165fba04e0"
+    },
+    "status": "MEASURED_ADVISORY_CANDIDATES_WITH_PREREGISTERED_SLOPE_FALSIFIER",
+    "train_decision_table": {
+      "path": ".omx/research/ddm_train_decision_table_warm_start_rows_20260724.json",
+      "sha256": "810983f971ad0590e99fb0d3a8a3e9413eafc1d3a2eaf674c75ff84cc073feb8"
+    }
+  }
+}

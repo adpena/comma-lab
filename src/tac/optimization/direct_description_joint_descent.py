@@ -81,6 +81,7 @@ J7_PROGRAM_SHA256: Final = "bb30eade311ed15e7541bdda4f5d5edbd72b28933a0dd2066be8
 J7_W_SEG_PROGRAM_SHA256: Final = "de285d70b7ac1c823e70f4b2c5e2f5f728e5ff9e65e03c4e2c9583c486dda0a1"
 J7_W_JOINT_PROGRAM_SHA256: Final = "81ae90f3d1bfec508e23cbebe37e94f965b46e5d82903d2ae9d077eb365d7ce4"
 J9_W_JOINT_PROGRAM_SHA256: Final = "96ca852b61168cf86a6e6d9166a27aa73d955a00b5d06ed940210d79f92f34d7"
+J10_PROGRAM_ID: Final = "ddm_j10_366_ema_verdict_shadow_cure_n600_seed0"
 WS3_W_SEG_PROGRAM_SHA256: Final = "a90004c7d75571a2f97c7f6f87770b25cfda7ea46e76ce2e1e9d230e454ce838"
 J7_PROGRAM_SHA256S: Final = frozenset(
     {
@@ -125,6 +126,46 @@ class ProposalGeometryInfeasibleError(DirectDescriptionError):
         super().__init__(str(self.event["reason"]))
 
 
+def _canonical_parameter_shadow(value: Any) -> str:
+    """Collapse descriptive row labels onto the two load-bearing shadows."""
+
+    shadow = str(value).strip().lower()
+    if shadow.startswith("live"):
+        return "live"
+    if shadow.startswith("ema"):
+        return "ema"
+    return shadow
+
+
+def classify_verdict_informativeness(
+    *,
+    reference: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+    minimum_realized_parameter_count_delta: int,
+) -> tuple[bool, str]:
+    """Classify whether receiver bytes/counts carry a verdict-scale signal."""
+
+    minimum_delta = int(minimum_realized_parameter_count_delta)
+    if minimum_delta < 1:
+        return False, "REFUSE_VERDICT_INFORMATIVENESS_THRESHOLD_INVALID"
+    reference_sha = reference.get("archive_sha256")
+    candidate_sha = candidate.get("archive_sha256")
+    if not isinstance(reference_sha, str) or not isinstance(candidate_sha, str):
+        return False, "REFUSE_VERDICT_INFORMATIVENESS_ARCHIVE_CUSTODY_MISSING"
+    if reference_sha == candidate_sha:
+        return False, "ARCHIVE_BYTES_IDENTICAL_TO_SAME_SHADOW_REFERENCE"
+    try:
+        reference_count = int(reference["realized_parameter_count"])
+        candidate_count = int(candidate["realized_parameter_count"])
+    except (KeyError, TypeError, ValueError):
+        return False, "REFUSE_VERDICT_INFORMATIVENESS_REALIZED_COUNT_MISSING"
+    if reference_count < 0 or candidate_count < 0:
+        return False, "REFUSE_VERDICT_INFORMATIVENESS_REALIZED_COUNT_INVALID"
+    if abs(candidate_count - reference_count) < minimum_delta:
+        return False, "REALIZED_PARAMETER_COUNT_DELTA_BELOW_SIGNAL_FLOOR"
+    return True, "RECEIVER_BYTES_AND_REALIZED_COUNT_ABOVE_SIGNAL_FLOOR"
+
+
 def classify_realized_stage_verdict(
     *,
     reference_d_seg: float,
@@ -162,6 +203,75 @@ def classify_realized_stage_verdict(
         return "BLOCKED_REALIZED_NO_COMPONENT_DESCENT"
     target_met = candidate_d_seg <= target_d_seg and (target_d_pose is None or candidate_d_pose <= target_d_pose)
     return "REALIZED_STAGE_TARGET_MET" if target_met else "REALIZED_STAGE_DESCENT_CONTINUE"
+
+
+def classify_shadow_consistent_stage_verdict(
+    *,
+    reference: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+    policy: VerdictShadowPolicyV1,
+    consecutive_degenerate_verdicts: int,
+    target_d_seg: float,
+    target_d_pose: float | None,
+) -> tuple[str, dict[str, Any]]:
+    """Apply the J10 same-shadow and two-verdict informativeness apparatus."""
+
+    reference_shadow = _canonical_parameter_shadow(reference.get("parameter_shadow"))
+    candidate_shadow = _canonical_parameter_shadow(candidate.get("parameter_shadow"))
+    if policy.same_shadow_reference_required and (
+        reference_shadow != candidate_shadow or candidate_shadow != policy.decision_shadow
+    ):
+        return (
+            "REFUSE_REALIZED_STAGE_VERDICT_SHADOW_MISMATCH",
+            {
+                "informative": False,
+                "informativeness_reason": "PARAMETER_SHADOW_MISMATCH",
+                "reference_parameter_shadow": reference_shadow,
+                "candidate_parameter_shadow": candidate_shadow,
+            },
+        )
+    informative, reason = classify_verdict_informativeness(
+        reference=reference,
+        candidate=candidate,
+        minimum_realized_parameter_count_delta=policy.minimum_realized_parameter_count_delta,
+    )
+    apparatus = {
+        "informative": informative,
+        "informativeness_reason": reason,
+        "reference_parameter_shadow": reference_shadow,
+        "candidate_parameter_shadow": candidate_shadow,
+        "consecutive_degenerate_verdicts_before": int(consecutive_degenerate_verdicts),
+    }
+    if not informative:
+        if reason.startswith("REFUSE_"):
+            return reason, apparatus
+        if int(consecutive_degenerate_verdicts) < policy.maximum_consecutive_degenerate_verdicts:
+            return "VERDICT_NOT_YET_INFORMATIVE", apparatus
+        return "BLOCKED_VERDICT_STILL_NOT_INFORMATIVE_NEXT_SCHEDULED_VERDICT", apparatus
+    return (
+        classify_realized_stage_verdict(
+            reference_d_seg=float(reference["d_seg"]),
+            reference_d_pose=float(reference["d_pose"]),
+            candidate_d_seg=float(candidate["d_seg"]),
+            candidate_d_pose=float(candidate["d_pose"]),
+            target_d_seg=target_d_seg,
+            target_d_pose=target_d_pose,
+        ),
+        apparatus,
+    )
+
+
+def count_consecutive_scheduled_degenerate_verdicts(history: Sequence[Mapping[str, Any]]) -> int:
+    """Count only scheduled same-shadow verdicts for J10's one-verdict grace."""
+
+    count = 0
+    for historical in reversed(history):
+        if historical.get("scheduled_stage_verdict") is not True:
+            continue
+        if historical.get("realized_stage_decision") != "VERDICT_NOT_YET_INFORMATIVE":
+            break
+        count += 1
+    return count
 
 
 def classify_cumulative_fire_gate(
@@ -203,6 +313,12 @@ def classify_governed_stage_exit(
     if component_decision is not None and component_decision in {
         "BLOCKED_REALIZED_DSEG_REGRESSION",
         "BLOCKED_REALIZED_DPOSE_REGRESSION",
+        "BLOCKED_VERDICT_STILL_NOT_INFORMATIVE_NEXT_SCHEDULED_VERDICT",
+        "REFUSE_REALIZED_STAGE_VERDICT_SHADOW_MISMATCH",
+        "REFUSE_VERDICT_INFORMATIVENESS_ARCHIVE_CUSTODY_MISSING",
+        "REFUSE_VERDICT_INFORMATIVENESS_REALIZED_COUNT_MISSING",
+        "REFUSE_VERDICT_INFORMATIVENESS_REALIZED_COUNT_INVALID",
+        "REFUSE_VERDICT_INFORMATIVENESS_THRESHOLD_INVALID",
         "REFUSE_REALIZED_STAGE_VERDICT_NONFINITE_OR_NEGATIVE",
         "REFUSE_REALIZED_STAGE_TARGET_NONFINITE_OR_NEGATIVE",
     }:
@@ -258,6 +374,55 @@ class FullRunStageV1:
     verdict_interval_steps: int
     target_d_seg: float
     target_d_pose: float | None
+
+
+@dataclass(frozen=True, slots=True)
+class VerdictShadowPolicyV1:
+    """Typed L3 apparatus contract for dual-shadow scheduled verdicts."""
+
+    schema: str
+    decision_shadow: str
+    export_shadow: str
+    emit_dual_rows: bool
+    same_shadow_reference_required: bool
+    minimum_realized_parameter_count_delta: int
+    maximum_consecutive_degenerate_verdicts: int
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> VerdictShadowPolicyV1:
+        if not isinstance(payload, Mapping):
+            raise DirectDescriptionError("verdict shadow policy must be a mapping")
+        result = cls(
+            schema=str(payload["schema"]),
+            decision_shadow=_canonical_parameter_shadow(payload["decision_shadow"]),
+            export_shadow=_canonical_parameter_shadow(payload["export_shadow"]),
+            emit_dual_rows=bool(payload["emit_dual_rows"]),
+            same_shadow_reference_required=bool(payload["same_shadow_reference_required"]),
+            minimum_realized_parameter_count_delta=int(payload["minimum_realized_parameter_count_delta"]),
+            maximum_consecutive_degenerate_verdicts=int(payload["maximum_consecutive_degenerate_verdicts"]),
+        )
+        if (
+            result.schema != "ddm_dual_shadow_verdict_policy.v1"
+            or result.decision_shadow != "live"
+            or result.export_shadow != "ema"
+            or not result.emit_dual_rows
+            or not result.same_shadow_reference_required
+            or result.minimum_realized_parameter_count_delta != 1
+            or result.maximum_consecutive_degenerate_verdicts != 1
+        ):
+            raise DirectDescriptionError("verdict shadow policy differs from the J10 L3 apparatus contract")
+        return result
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "schema": self.schema,
+            "decision_shadow": self.decision_shadow,
+            "export_shadow": self.export_shadow,
+            "emit_dual_rows": self.emit_dual_rows,
+            "same_shadow_reference_required": self.same_shadow_reference_required,
+            "minimum_realized_parameter_count_delta": self.minimum_realized_parameter_count_delta,
+            "maximum_consecutive_degenerate_verdicts": self.maximum_consecutive_degenerate_verdicts,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -728,6 +893,7 @@ class FullRunScheduleV1:
     measured_seconds_per_step_high: float
     warm_start_reform: WarmStartReformV1 | None
     pose_finish_engage: PoseFinishEngageConfigV1 | None
+    verdict_shadow_policy: VerdictShadowPolicyV1 | None
     stages: tuple[FullRunStageV1, ...]
     event_continuation: Any | None = None
 
@@ -787,6 +953,11 @@ class FullRunScheduleV1:
                     if payload.get("pose_finish_engage") is None
                     else PoseFinishEngageConfigV1.from_payload(payload["pose_finish_engage"])
                 ),
+                verdict_shadow_policy=(
+                    None
+                    if payload.get("verdict_shadow_policy") is None
+                    else VerdictShadowPolicyV1.from_payload(payload["verdict_shadow_policy"])
+                ),
                 stages=(),
                 event_continuation=continuation,
             )
@@ -839,6 +1010,11 @@ class FullRunScheduleV1:
                 None
                 if payload.get("pose_finish_engage") is None
                 else PoseFinishEngageConfigV1.from_payload(payload["pose_finish_engage"])
+            ),
+            verdict_shadow_policy=(
+                None
+                if payload.get("verdict_shadow_policy") is None
+                else VerdictShadowPolicyV1.from_payload(payload["verdict_shadow_policy"])
             ),
             stages=stages,
             event_continuation=None,
@@ -946,6 +1122,141 @@ def _validate_execution_custody(payload: Mapping[str, Any]) -> None:
         raise DirectDescriptionError("banked R1 comparator custody differs")
 
 
+def _validate_j10_ema_compile(
+    *,
+    semantic: Mapping[str, Any],
+    resolved_ema_decay: float,
+) -> None:
+    """Re-resolve the J10 EMA DSL LawRef and its receiver-quantum geometry."""
+
+    compile_payload = semantic.get("joint_objective", {}).get("ema_decay_compile")
+    if not isinstance(compile_payload, Mapping):
+        raise DirectDescriptionError("J10 EMA decay lacks DSL compile custody")
+    geometry = compile_payload.get("run_geometry")
+    declaration = compile_payload.get("lawref_declaration")
+    manifest = compile_payload.get("constant_manifest")
+    if not isinstance(geometry, Mapping) or not isinstance(declaration, Mapping) or not isinstance(manifest, Mapping):
+        raise DirectDescriptionError("J10 EMA DSL compile payload is incomplete")
+    expected_geometry = {
+        "original_total_updates": 450,
+        "remaining_updates_after_materialized_step50": 400,
+        "stage_updates": [150, 150, 150],
+        "remaining_stage_updates": [100, 150, 150],
+        "first_scheduled_verdict_updates": 50,
+        "strict_equilibration_budget_updates": 49,
+        "equilibration_time_constants": 3,
+        "learning_rate_quantum_fraction": 0.25,
+        "historical_named_parameter_count": 706,
+        "receiver_effective_parameter_count": 368,
+        "minimum_receiver_quantum_by_first_verdict": 1,
+    }
+    if dict(geometry) != expected_geometry:
+        raise DirectDescriptionError("J10 EMA run geometry differs from the sealed derivation")
+    from tac.witness_dsl.lawref import (
+        lawref_from_declaration,
+        resolve,
+    )
+
+    ref = lawref_from_declaration(declaration)
+    resolved = resolve(ref, repo_root=Path(__file__).resolve().parents[3])
+    if (
+        ref.equation_id != "ema_decay_run_geometry_v1"
+        or resolved.fallback_used
+        or manifest.get("equation_id") != ref.equation_id
+        or manifest.get("fallback_used") is not False
+        or manifest.get("ladder_class") != "derived_at_config"
+        or not math.isclose(float(manifest.get("value", math.nan)), float(resolved.value), rel_tol=0.0, abs_tol=1.0e-15)
+        or not math.isclose(float(resolved.value), float(resolved_ema_decay), rel_tol=0.0, abs_tol=1.0e-15)
+    ):
+        raise DirectDescriptionError("J10 EMA LawRef resolution differs from the typed config")
+    horizon = geometry["equilibration_time_constants"] / (1.0 - float(resolved.value))
+    blend_at_first_verdict = 1.0 - float(resolved.value) ** geometry["first_scheduled_verdict_updates"]
+    if (
+        not math.isclose(
+            horizon,
+            float(geometry["strict_equilibration_budget_updates"]),
+            rel_tol=0.0,
+            abs_tol=1.0e-12,
+        )
+        or horizon >= float(geometry["first_scheduled_verdict_updates"])
+        or blend_at_first_verdict < 0.5
+    ):
+        raise DirectDescriptionError("J10 EMA decay does not clear the first-verdict receiver-quantum geometry")
+
+
+def _validate_j10_materialized_warm_start(warm: Mapping[str, Any]) -> None:
+    """Re-derive the materialized archive and measured-baseline custody."""
+
+    try:
+        archive_path = Path(str(warm["path"]))
+        receipt_path = Path(str(warm["receipt_path"]))
+        verdict_path = Path(str(warm["baseline_verdict_path"]))
+    except KeyError as exc:
+        raise DirectDescriptionError("J10 materialized source custody is incomplete") from exc
+    for label, path in (
+        ("archive", archive_path),
+        ("materialization receipt", receipt_path),
+        ("baseline verdict", verdict_path),
+    ):
+        if not path.is_absolute() or not path.is_file() or path.is_symlink():
+            raise DirectDescriptionError(f"J10 materialized {label} is unavailable")
+
+    receipt_bytes = receipt_path.read_bytes()
+    verdict_bytes = verdict_path.read_bytes()
+    if _sha256(receipt_bytes) != warm.get("receipt_sha256"):
+        raise DirectDescriptionError("J10 materialization receipt SHA-256 differs")
+    if _sha256(verdict_bytes) != warm.get("baseline_verdict_sha256"):
+        raise DirectDescriptionError("J10 materialized baseline verdict SHA-256 differs")
+    try:
+        receipt = json.loads(receipt_bytes)
+        verdict = json.loads(verdict_bytes)
+    except (TypeError, ValueError) as exc:
+        raise DirectDescriptionError("J10 materialized source receipt is not valid JSON") from exc
+
+    archive_sha256 = str(warm["sha256"])
+    archive_bytes = int(warm["bytes"])
+    materialized = receipt.get("materialized_archive")
+    source_checkpoint = receipt.get("source_checkpoint")
+    if (
+        receipt.get("schema") != "ddm_j10_step50_live_warm_start_materialization.v1"
+        or not isinstance(materialized, Mapping)
+        or not isinstance(source_checkpoint, Mapping)
+        or materialized.get("path") != str(archive_path)
+        or materialized.get("sha256") != archive_sha256
+        or int(materialized.get("bytes", -1)) != archive_bytes
+        or materialized.get("candidate") != "W_joint"
+        or materialized.get("receiver_parseback_identity") is not True
+        or materialized.get("fresh_zero_state_reemit_identity") is not True
+        or int(materialized.get("live_realized_parameter_count", -1)) != 119
+        or receipt.get("fresh_ema_anchored_at_materialized_live_state") is not True
+        or receipt.get("optimizer_arrays_preserved_but_not_loaded") is not True
+        or int(source_checkpoint.get("global_step", -1)) != 50
+        or source_checkpoint.get("sha256") != "043c2a8b3c89688510cc0ff002f37a375a974205a5f8760d93133c47b7cec7c1"
+    ):
+        raise DirectDescriptionError("J10 materialization receipt binding differs")
+
+    try:
+        baseline_d_seg = float(warm["baseline_d_seg"])
+        baseline_d_pose = float(warm["baseline_d_pose"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise DirectDescriptionError("J10 materialized source lacks measured baseline custody") from exc
+    if (
+        verdict.get("schema") != "ddm_materialized_warm_start_n600_verdict.v1"
+        or verdict.get("archive_path") != str(archive_path)
+        or verdict.get("archive_sha256") != archive_sha256
+        or int(verdict.get("archive_bytes", -1)) != archive_bytes
+        or verdict.get("parameter_shadow") != "live_materialized_step50"
+        or verdict.get("decision_authority") != "BASELINE_CUSTODY_ONLY"
+        or verdict.get("receiver_parseback_identity") is not True
+        or verdict.get("score_claim") is not False
+        or int(verdict.get("num_pairs", -1)) != 600
+        or int(verdict.get("batch_size", -1)) != 32
+        or not math.isclose(float(verdict.get("d_seg", math.nan)), baseline_d_seg, rel_tol=0.0, abs_tol=0.0)
+        or not math.isclose(float(verdict.get("d_pose", math.nan)), baseline_d_pose, rel_tol=0.0, abs_tol=0.0)
+    ):
+        raise DirectDescriptionError("J10 materialized baseline verdict binding differs")
+
+
 @dataclass(frozen=True, slots=True)
 class DirectDescriptionJointDescentTypedConfigV1:
     """Executable typed projection of the hash-sealed J1 semantic program."""
@@ -956,6 +1267,8 @@ class DirectDescriptionJointDescentTypedConfigV1:
     source_archive_path: str
     source_archive_sha256: str
     source_archive_bytes: int
+    source_baseline_d_seg: float | None
+    source_baseline_d_pose: float | None
     target_cache_path: str
     target_cache_sha256: str
     target_cache_bytes: int
@@ -986,17 +1299,15 @@ class DirectDescriptionJointDescentTypedConfigV1:
         semantic_hash = _sha256(rfc8785_canonicalize(semantic))
         sealed = ticket.get("compile_custody", {}).get("semantic_program_sha256")
         schedule_payload = semantic.get("full_run_schedule")
-        event_payload = (
-            schedule_payload.get("event_graph")
-            if isinstance(schedule_payload, Mapping)
-            else None
-        )
-        event_program = (
-            isinstance(event_payload, Mapping)
-            and event_payload.get("schema") == "DDMEventContinuationV1"
+        event_payload = schedule_payload.get("event_graph") if isinstance(schedule_payload, Mapping) else None
+        event_program = isinstance(event_payload, Mapping) and event_payload.get("schema") == "DDMEventContinuationV1"
+        j10_program = (
+            semantic.get("program_id") == J10_PROGRAM_ID
+            and isinstance(schedule_payload, Mapping)
+            and isinstance(schedule_payload.get("verdict_shadow_policy"), Mapping)
         )
         if semantic_hash != sealed or (
-            semantic_hash not in SUPPORTED_PROGRAM_SHA256 and not event_program
+            semantic_hash not in SUPPORTED_PROGRAM_SHA256 and not event_program and not j10_program
         ):
             raise DirectDescriptionError(f"joint-descent DSL hash mismatch: computed={semantic_hash} sealed={sealed}")
         if event_program:
@@ -1006,18 +1317,12 @@ class DirectDescriptionJointDescentTypedConfigV1:
             if event_payload.get("execution_allowed") is not False:
                 raise DirectDescriptionError("unreviewed DDM event continuation must be execution-disabled")
             witness_program = semantic.get("ddm_witness_program")
-            if not isinstance(witness_program, Mapping) or (
-                witness_program.get("schema") != "DDMWitnessProgramV1"
-            ):
-                raise DirectDescriptionError(
-                    "event continuation lacks its embedded typed WitnessProgram"
-                )
+            if not isinstance(witness_program, Mapping) or (witness_program.get("schema") != "DDMWitnessProgramV1"):
+                raise DirectDescriptionError("event continuation lacks its embedded typed WitnessProgram")
             if witness_program.get("program_id") != semantic.get("program_id") or (
                 witness_program.get("event_continuation") != event_payload
             ):
-                raise DirectDescriptionError(
-                    "event continuation and embedded WitnessProgram custody differ"
-                )
+                raise DirectDescriptionError("event continuation and embedded WitnessProgram custody differ")
             if (
                 witness_program.get("execution_allowed") is not False
                 or witness_program.get("op_gc1_5_execution_enabled") is not False
@@ -1025,9 +1330,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
                 or witness_program.get("ema_decay") != 0.997
                 or witness_program.get("beta2") != 0.999
             ):
-                raise DirectDescriptionError(
-                    "event WitnessProgram optimizer or execution contract differs"
-                )
+                raise DirectDescriptionError("event WitnessProgram optimizer or execution contract differs")
             source_bindings = witness_program.get("source_bindings")
             if not isinstance(source_bindings, Mapping) or set(source_bindings) != {
                 "launcher",
@@ -1036,18 +1339,14 @@ class DirectDescriptionJointDescentTypedConfigV1:
                 "dm4_adapter",
                 "dm4_constructor",
             }:
-                raise DirectDescriptionError(
-                    "event WitnessProgram source-binding set differs"
-                )
+                raise DirectDescriptionError("event WitnessProgram source-binding set differs")
             if any(
                 not isinstance(digest, str)
                 or len(digest) != 64
                 or any(char not in "0123456789abcdef" for char in digest)
                 for digest in source_bindings.values()
             ):
-                raise DirectDescriptionError(
-                    "event WitnessProgram source binding lacks canonical SHA-256"
-                )
+                raise DirectDescriptionError("event WitnessProgram source binding lacks canonical SHA-256")
         warm = semantic["warm_start"]
         cache = semantic["target_cache"]
         stability = semantic["joint_objective"]["stability"]
@@ -1056,13 +1355,21 @@ class DirectDescriptionJointDescentTypedConfigV1:
         execution_custody = ticket.get("execution_custody")
         if int(semantic["num_pairs"]) != 600 or int(semantic["seed"]) != 0:
             raise DirectDescriptionError("joint-descent ticket must remain n600/seed0")
-        if event_program or semantic_hash in {
-            J7_W_SEG_PROGRAM_SHA256,
-            J7_W_JOINT_PROGRAM_SHA256,
-            J9_W_JOINT_PROGRAM_SHA256,
-            WS3_W_SEG_PROGRAM_SHA256,
-        }:
-            if warm.get("kind") != "receiver_closed_ws1_archive":
+        if (
+            event_program
+            or j10_program
+            or semantic_hash
+            in {
+                J7_W_SEG_PROGRAM_SHA256,
+                J7_W_JOINT_PROGRAM_SHA256,
+                J9_W_JOINT_PROGRAM_SHA256,
+                WS3_W_SEG_PROGRAM_SHA256,
+            }
+        ):
+            expected_warm_kind = (
+                "receiver_closed_checkpoint_materialization" if j10_program else "receiver_closed_ws1_archive"
+            )
+            if warm.get("kind") != expected_warm_kind:
                 raise DirectDescriptionError("J7 WS1 warm start lacks its receiver-closed kind")
             warm_path = Path(str(warm["path"]))
             if not warm_path.is_absolute() or not warm_path.is_file() or warm_path.is_symlink():
@@ -1072,9 +1379,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
                 raise DirectDescriptionError("J7 WS1 warm-start archive custody differs")
             parsed_warm = parse_ws1_warm_start_archive(warm_archive)
             expected_candidate = (
-                "W_seg"
-                if semantic_hash in {J7_W_SEG_PROGRAM_SHA256, WS3_W_SEG_PROGRAM_SHA256}
-                else "W_joint"
+                "W_seg" if semantic_hash in {J7_W_SEG_PROGRAM_SHA256, WS3_W_SEG_PROGRAM_SHA256} else "W_joint"
             )
             if parsed_warm.candidate != expected_candidate or parsed_warm.exact_reemit() != warm_archive:
                 raise DirectDescriptionError("J7 WS1 warm-start receiver identity differs")
@@ -1085,12 +1390,25 @@ class DirectDescriptionJointDescentTypedConfigV1:
         verdict_batch = int(semantic.get("telemetry", {}).get("verdict_batch", 16))
         if verdict_batch not in {16, 32}:
             raise DirectDescriptionError("joint-descent verdict batch is not a sealed supported geometry")
-        if (semantic_hash in J7_PROGRAM_SHA256S or event_program) and verdict_batch != 32:
+        if (semantic_hash in J7_PROGRAM_SHA256S or event_program or j10_program) and verdict_batch != 32:
             raise DirectDescriptionError("J7 exact n600 scorer verdicts require batch32")
-        if semantic_hash == J6A_PROGRAM_SHA256 or semantic_hash in J7_PROGRAM_SHA256S:
+        if semantic_hash == J6A_PROGRAM_SHA256 or semantic_hash in J7_PROGRAM_SHA256S or j10_program:
             if worst_geometry_payload is None or not isinstance(execution_custody, Mapping):
                 raise DirectDescriptionError("J6A ticket lacks worst-geometry or execution custody")
             _validate_execution_custody(execution_custody)
+        ema_decay = float(semantic["joint_objective"]["ema_decay"])
+        if j10_program:
+            _validate_j10_materialized_warm_start(warm)
+            _validate_j10_ema_compile(
+                semantic=semantic,
+                resolved_ema_decay=ema_decay,
+            )
+            if schedule_payload.get("derived_total_steps") != 400:
+                raise DirectDescriptionError("J10 remaining schedule does not preserve exactly 400 updates")
+            if [int(row["maximum_steps"]) for row in schedule_payload["stages"]] != [100, 150, 150]:
+                raise DirectDescriptionError("J10 remaining per-stage schedule differs")
+            if not all(int(row["verdict_interval_steps"]) == 50 for row in schedule_payload["stages"]):
+                raise DirectDescriptionError("J10 verdict cadence differs")
         return cls(
             ticket_path=str(ticket_path),
             semantic_program=semantic,
@@ -1098,6 +1416,8 @@ class DirectDescriptionJointDescentTypedConfigV1:
             source_archive_path=str(warm["path"]),
             source_archive_sha256=str(warm["sha256"]),
             source_archive_bytes=int(warm["bytes"]),
+            source_baseline_d_seg=(None if warm.get("baseline_d_seg") is None else float(warm["baseline_d_seg"])),
+            source_baseline_d_pose=(None if warm.get("baseline_d_pose") is None else float(warm["baseline_d_pose"])),
             target_cache_path=str(cache["path"]),
             target_cache_sha256=str(cache["sha256"]),
             target_cache_bytes=int(cache["bytes"]),
@@ -1105,7 +1425,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
             num_pairs=600,
             seed=0,
             verdict_batch=verdict_batch,
-            ema_decay=float(semantic["joint_objective"]["ema_decay"]),
+            ema_decay=ema_decay,
             grad_clip=float(stability["grad_clip"]),
             memory_ceiling_gib=116.0,
             custom_grouped_backward_required=env.get("TAC_MLX_CUSTOM_GROUPED_BACKWARD") == "1",
@@ -1136,6 +1456,11 @@ class DirectDescriptionJointDescentTypedConfigV1:
             "score_claim": False,
             "research_only": True,
         }
+        if self.source_baseline_d_seg is not None or self.source_baseline_d_pose is not None:
+            payload["source_baseline"] = {
+                "d_seg": self.source_baseline_d_seg,
+                "d_pose": self.source_baseline_d_pose,
+            }
         if self.worst_geometry_memory_contract is not None:
             payload["worst_geometry_memory_contract"] = self.worst_geometry_memory_contract.to_payload()
         if self.full_run_schedule is not None:
@@ -1147,9 +1472,7 @@ class DirectDescriptionJointDescentTypedConfigV1:
                 "measured_seconds_per_step_high": self.full_run_schedule.measured_seconds_per_step_high,
             }
             if self.full_run_schedule.event_continuation is not None:
-                schedule_payload["event_graph"] = (
-                    self.full_run_schedule.event_continuation.to_payload()
-                )
+                schedule_payload["event_graph"] = self.full_run_schedule.event_continuation.to_payload()
             else:
                 schedule_payload.update(
                     {
@@ -1210,6 +1533,8 @@ class DirectDescriptionJointDescentTypedConfigV1:
                 schedule_payload["warm_start_reform"] = reform_payload
             if self.full_run_schedule.pose_finish_engage is not None:
                 schedule_payload["pose_finish_engage"] = self.full_run_schedule.pose_finish_engage.to_payload()
+            if self.full_run_schedule.verdict_shadow_policy is not None:
+                schedule_payload["verdict_shadow_policy"] = self.full_run_schedule.verdict_shadow_policy.to_payload()
             payload["full_run_schedule"] = schedule_payload
         return payload
 
@@ -1230,13 +1555,9 @@ class DirectDescriptionJointDescentTypedConfigV1:
         binding = proposal_sources.get("dm4_scorer_recursive")
         if not isinstance(binding, Mapping):
             raise DirectDescriptionError("J5 consumer lacks its DM4 proposal source")
-        if binding.get("adapter") != (
-            "tac.optimization.ddm_dm4_j5_adapter.adapt_dm4_proposals"
-        ):
+        if binding.get("adapter") != ("tac.optimization.ddm_dm4_j5_adapter.adapt_dm4_proposals"):
             raise DirectDescriptionError("J5 consumer DM4 adapter identity differs")
-        if binding.get("application_authority") != (
-            "fail_closed_until_counted_J5_application_operator_exists"
-        ):
+        if binding.get("application_authority") != ("fail_closed_until_counted_J5_application_operator_exists"):
             raise DirectDescriptionError("J5 consumer DM4 application authority differs")
         path_value = binding.get("path")
         digest = binding.get("sha256")
@@ -2481,6 +2802,7 @@ __all__ = [
     "J5_PROGRAM_SHA256",
     "J6A_PROGRAM_SHA256",
     "J9_W_JOINT_PROGRAM_SHA256",
+    "J10_PROGRAM_ID",
     "AdamStateV1",
     "DirectDescriptionJointDescentMLXModule",
     "DirectDescriptionJointDescentTypedConfigV1",
@@ -2492,14 +2814,18 @@ __all__ = [
     "PoseFinishEngageConfigV1",
     "PoseFinishEngageStateV1",
     "ProposalGeometryInfeasibleError",
+    "VerdictShadowPolicyV1",
     "WarmStartReformV1",
     "WorstGeometryMemoryContractV1",
     "classify_cumulative_fire_gate",
     "classify_governed_stage_exit",
     "classify_memory_preflight",
     "classify_realized_stage_verdict",
+    "classify_shadow_consistent_stage_verdict",
+    "classify_verdict_informativeness",
     "clipped_adam_step",
     "compile_parameterized_archive",
+    "count_consecutive_scheduled_degenerate_verdicts",
     "derive_lane_program_seeds",
     "exact_final_target_gate",
     "initial_adam_state",

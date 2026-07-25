@@ -88078,6 +88078,47 @@
         }
       },
       "notes": "Typed campaign checkpoint to receiver-closed E5 packet adapter; research-only local verification; MAIN review required."
+    },
+    {
+      "id": "lane_ddm_j10_366_ema_verdict_shadow_cure_20260725",
+      "name": "DDM J10 #366 EMA verdict shadow cure",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_j10_366_ema_verdict_shadow_cure_20260725T135139Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_ema_shadow_resmoke_20260725T1308Z/full_run_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j10_366_fresh_memory_bootstrap_20260725T1237Z/worst_geometry_memory_preflight.json"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_j10_366_ema_verdict_shadow_cure_20260725T135139Z_codex.md"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_j10_366_ema_verdict_shadow_cure_20260725T135139Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Implementation complete; bounded exact smoke blocked at step0: no pure-priced descent in sealed opening proposal set. INSTANCE-scoped; no READY/FIRE. MAIN review required."
     }
   ],
   "level_rules": {
