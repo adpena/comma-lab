@@ -1,0 +1,70 @@
+{
+  "schema": "ddm_ev2_per_pair_allocation_config.v1",
+  "run_id": "ddm_ev2_per_pair_allocation_20260725T041933Z",
+  "lane_id": "ddm_ev2_per_pair_allocation_producer",
+  "generated_at_utc": "2026-07-25T04:19:33Z",
+  "research_only": true,
+  "execution_allowed": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "output_dir": ".omx/research/ddm_ev2_per_pair_allocation_20260725T041933Z",
+  "delegation": {
+    "authority_file": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_ev2_per_pair_allocation_producer_20260725T041933Z.wrapped.prompt.txt",
+    "authority_bytes": 7503,
+    "authority_sha256": "1385a105e0ec838b8fef3a118ad9fa7b73ecc9777d66cb91284dd99e42c071d6",
+    "checkpoint_key": "codex_delegate:ddm_ev2_per_pair_allocation_producer:20260725T041933Z"
+  },
+  "source_artifacts": {
+    "c1_archive": {
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+      "bytes": 133941,
+      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+      "role": "exact C1 v15 counted archive object"
+    },
+    "c1_ledger": {
+      "path": ".omx/research/ddm_c1_composed_candidate_ledger_603_613_20260723.json",
+      "bytes": 18390,
+      "sha256": "14fdf1570b43df65ac949fe157e68ea328ff584f7df1331acf25cca8f900d936",
+      "role": "C1 composition authority firewall"
+    },
+    "lp1": {
+      "path": ".omx/research/ddm_lp1_layer_pricing_20260725T031654Z/ddm_lp1_layer_pricing_receipt.json",
+      "bytes": 43747,
+      "sha256": "6bd6a5baaa8f5995e93ef594e880beac77e9aa2b2083e661598c84feaba13fd5",
+      "role": "LP1 measured 134211-byte typed-home allocation"
+    },
+    "ev1": {
+      "path": ".omx/research/ddm_ev1_campaign_evidence_joins_20260724T191623Z/ddm_ev1_campaign_evidence_join_receipt.json",
+      "bytes": 668997,
+      "sha256": "28af280a6c40216616eb4cbd90b283b68822d3c5f9a604efbed2a638b46d9c0a",
+      "role": "EV1 600-pair and 162-cell accounting joins"
+    },
+    "rd1": {
+      "path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/typed_dimension_duals_effective_quantum.json",
+      "bytes": 104112,
+      "sha256": "c92bb7d4c863bae53f87a228cbbe79938966ff4b645e6c631be07e4bd574e2a0",
+      "role": "RD1 162-cell null-dual source"
+    },
+    "r3": {
+      "path": ".omx/research/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/receipt.json",
+      "bytes": 345742,
+      "sha256": "087ee26d6e34501b308b1cf5db80be16a54f9cbe4a6734793b3cbf53d42c0aa7",
+      "role": "R3 minimum-description headline source"
+    },
+    "ms5": {
+      "path": ".omx/research/ddm_ms5_pf2_bucket_assignment_20260724T044736Z/pf2_bucket_assignment_table.json",
+      "bytes": 1426698,
+      "sha256": "20fa2b2ce2bd96b91c64d4e1342109dd7dab399d4769cd372dbf67fbcdf97d8d",
+      "role": "MS5 causal-assignment loader lineage"
+    },
+    "bundle_complete": {
+      "path": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/BUNDLE-COMPLETE.json",
+      "bytes": 2799,
+      "sha256": "d670eff3dd01d61a24bdebedf045fa8cde2528953660dc6d1e64ba9c2fa94e25",
+      "role": "strict MS3 complete metric-custody bundle"
+    }
+  }
+}

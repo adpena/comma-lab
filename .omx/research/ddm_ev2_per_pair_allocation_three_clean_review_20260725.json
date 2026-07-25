@@ -1,0 +1,51 @@
+{
+  "schema": "ddm_ev2_per_pair_allocation_three_clean_review.v1",
+  "reviewed_at_utc": "2026-07-25T04:47:33Z",
+  "lane_id": "ddm_ev2_per_pair_allocation_producer",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "files": {
+    "src/tac/optimization/ddm_ev2_per_pair_allocation.py": "dc9a5bb93836807c3d7e88a353e3da56dd21e4b36ae4f103ef503b21c4fac0f3",
+    "tools/build_ddm_ev2_per_pair_allocation.py": "85bb2ea7731018b59c45ed3bfbc5cdf628a9b4dd30c96e7309e3f0c9b21cfb1e",
+    "src/tac/optimization/tests/test_ddm_ev2_per_pair_allocation.py": "b384198ea445c23292ae755dc9e095305cfb73dc45c3bffa3db3f4d391fd3efa"
+  },
+  "passes": [
+    {
+      "pass": 1,
+      "focus": "line-by-line structural review, exact schemas, archive ranges, authority boundaries",
+      "ruff": "PASS",
+      "py_compile": "PASS",
+      "focused_tests": "6 passed",
+      "review_tracker_marked": true,
+      "clean": true
+    },
+    {
+      "pass": 2,
+      "focus": "adversarial custody, Cartesian-cell completeness, same-object firewall, MS5 strict loader validation",
+      "custody_audit": "PASS",
+      "relevant_tests": "33 passed",
+      "ruff": "PASS",
+      "diff_check": "PASS",
+      "review_tracker_marked": true,
+      "clean": true
+    },
+    {
+      "pass": 3,
+      "focus": "byte determinism, immutable rerun, registered preflight refusal, final regression",
+      "materializer_byte_identical": true,
+      "registered_preflight_exit_code": 2,
+      "registered_preflight_verdict": "BLOCKED_PF3_RECEIVER_OBJECT_AND_TYPED_RATE_HOME_ABSENT",
+      "relevant_tests": "33 passed",
+      "ruff": "PASS",
+      "py_compile": "PASS",
+      "diff_check": "PASS",
+      "review_tracker_marked": true,
+      "clean": true
+    }
+  ],
+  "clean_pass_count": 3,
+  "verdict": "THREE_CLEAN_PASSES_COMPLETE"
+}
