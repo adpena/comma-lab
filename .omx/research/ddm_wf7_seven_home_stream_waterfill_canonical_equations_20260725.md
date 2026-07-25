@@ -1,6 +1,6 @@
 # Canonical equations note — DDM WF7 stream granularity
 
-Date: 2026-07-25  
+Date: 2026-07-25
 Scope: exact seven-home lossless recoding instance; no contest-score or family
 closure.
 

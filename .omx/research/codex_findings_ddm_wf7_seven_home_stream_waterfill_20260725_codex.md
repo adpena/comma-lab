@@ -1,8 +1,8 @@
 # Codex findings — DDM WF7 seven-home stream waterfill
 
-Date: 2026-07-25  
-Axis: `[macOS-CPU frozen-scorer advisory]`  
-Verdict: `STREAM_PRICE_DOMAIN_NONEMPTY_RATE_ONLY;NO_613_BOX_MEMBER`  
+Date: 2026-07-25
+Axis: `[macOS-CPU frozen-scorer advisory]`
+Verdict: `STREAM_PRICE_DOMAIN_NONEMPTY_RATE_ONLY;NO_613_BOX_MEMBER`
 Verdict scope: `INSTANCE x exact 134211-byte seeded C1 state x settled five-coder menu x exact CC3 composition and current E4 receiver endpoints`
 
 ## Answer to the delegated question
@@ -21,7 +21,7 @@ a granularity issue. It is not a distortion cure: lossless recoding leaves
 available to this arm remains far outside the #613 distortion box.
 
 Full receipt:
-`.omx/research/ddm_wf7_seven_home_stream_waterfill_20260725T203257Z/receipt.json`  
+`.omx/research/ddm_wf7_seven_home_stream_waterfill_20260725T203257Z/receipt.json`
 SHA-256: `4ca7ba5075ff93dc1b42b8c469c5154fe32ca7c90c03885603c37ceca2ae0e94`
 
 ## CC3 was seated first, without double counting
@@ -79,7 +79,7 @@ the exact original home. The final container has one 21-byte counted directory.
 | **candidate** | **134,211** | — | **132,435** | **-1,776** |
 
 Candidate SSD artifact:
-`/Volumes/VertigoDataTier/pact/experiments/results/ddm_wf7_seven_home_stream_waterfill_20260725T203257Z/wf7_state.dwf7`  
+`/Volumes/VertigoDataTier/pact/experiments/results/ddm_wf7_seven_home_stream_waterfill_20260725T203257Z/wf7_state.dwf7`
 SHA-256: `4b0c686c8cf2976d8961593669636fa4f5f7f2f25fea58a4d5285c2df01ad615`
 
 The receiver validates canonical varints, codec IDs, exact frame consumption,

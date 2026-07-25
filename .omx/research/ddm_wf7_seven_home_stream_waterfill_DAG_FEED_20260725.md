@@ -54,7 +54,7 @@ Pointer moved: false. Effective competitive reference is official leaderboard
 displayed `0.172`; local `0.1910828242 [contest-CPU]` remains separate.
 
 Receipt:
-`.omx/research/ddm_wf7_seven_home_stream_waterfill_20260725T203257Z/receipt.json`  
+`.omx/research/ddm_wf7_seven_home_stream_waterfill_20260725T203257Z/receipt.json`
 SHA-256: `4ca7ba5075ff93dc1b42b8c469c5154fe32ca7c90c03885603c37ceca2ae0e94`
 
 MAIN landing review required.
