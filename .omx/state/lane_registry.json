@@ -87907,6 +87907,49 @@
         }
       },
       "notes": "Isolated worktree; research_only; local n600 advisory; W_seg-pose-null vs preserved W_joint-step50; MAIN review required"
+    },
+    {
+      "id": "ddm_pc2_pose_descent_smoke",
+      "name": "DDM PC2 PC1 solved-plane pose descent smoke",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/run_ddm_pc2_pose_descent_smoke.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_pc2_pose_descent_smoke_result_20260725.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/configs/ddm_pc2_pose_descent_smoke_20260725T121448Z.json"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ddm_pc2_pose_descent_smoke_20260725T130832Z_codex.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Isolated delegated bounded local advisory smoke; no promotion or score claim; MAIN review required.",
+      "research_only": true,
+      "lane_class": "research_only"
     }
   ],
   "level_rules": {
@@ -87916,5 +87959,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-25T11:43:07Z"
+  "updated_at": "2026-07-25T13:28:30Z"
 }

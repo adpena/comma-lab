@@ -1,0 +1,147 @@
+{
+  "schema": "ddm_pc2_pose_descent_smoke_result.v1",
+  "utc": "2026-07-25T13:08:32Z",
+  "run_id": "ddm_pc2_pose_descent_smoke_20260725T121448Z",
+  "lane_id": "ddm_pc2_pose_descent_smoke",
+  "delegation_checkpoint_key": "codex_delegate:ddm_pc2_pose_descent_smoke:20260725T121448Z",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "execution_allowed": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "main_review_required": true,
+  "objective": {
+    "score_domain_loss": true,
+    "pose_marginal_weight_law": false,
+    "pose_objective_weight": 1.0,
+    "compile_refuse": "score_domain_loss XOR PoseMarginalWeightLaw",
+    "target_d_pose": 0.0000294,
+    "critical_ratio": 4.1215446777965665
+  },
+  "parent": {
+    "role": "ws4 W_joint_step50_live",
+    "parameter_shadow": "live_resume_state",
+    "bytes": 138813,
+    "sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241"
+  },
+  "governor": {
+    "target_accepted_steps": 16,
+    "accepted_steps": 16,
+    "maximum_candidate_evaluations": 768,
+    "candidate_evaluations": 192,
+    "train_batch": 4,
+    "verdict_batch": 32,
+    "stop_reason": "TARGET_ACCEPTED_STEPS_REACHED"
+  },
+  "exact_n600": {
+    "step_0": {
+      "d_seg": 0.02491527133517795,
+      "d_pose": 163.04531226928225,
+      "archive_bytes": 139547,
+      "advisory_action": 42.96331550786856,
+      "archive_sha256": "9c9e562968726fe94c550d4d9789e1c2345587f7fb8bc91c2c3a4397a1393bff"
+    },
+    "step_8": {
+      "d_seg": 0.02502353244357639,
+      "d_pose": 162.0079751433403,
+      "archive_bytes": 139562,
+      "advisory_action": 42.845496154523296,
+      "archive_sha256": "4292bf7f18e142691e30612ff7c403c05e226f01c43155a6b0c7ce838f5894fa"
+    },
+    "step_16": {
+      "d_seg": 0.025105328030056422,
+      "d_pose": 160.90004329290474,
+      "archive_bytes": 139570,
+      "advisory_action": 42.71581437381254,
+      "archive_sha256": "946cf434b96839318af63364021b2b3cbfe0c7d3dee68b0849cee8cc45312477"
+    },
+    "aggregate_delta_0_to_16": {
+      "d_seg": 0.0001900566948784717,
+      "d_pose": -2.1452689763775084,
+      "archive_bytes": 23,
+      "advisory_action": -0.24750113405601581
+    },
+    "per_class_d_seg_delta_0_to_16": {
+      "Road": 0.0018581718000546255,
+      "Lane": 0.010778424039186885,
+      "Undrivable": -0.00011262849624899506,
+      "Movable": -0.02262236146063376,
+      "MyCar": 0.00012215976463440803
+    }
+  },
+  "slope_rows": [
+    {
+      "window": [0, 8],
+      "d_pose_delta_per_step": -0.12966714074274321,
+      "d_seg_delta_per_step": 0.00001353263854980474,
+      "pose_term_progress_per_step": 0.01608193150867443,
+      "seg_term_delta_per_step": 0.0013532638549804688,
+      "observed_pose_to_seg_regression_ratio": 11.883810721381112,
+      "ratio_clears_critical": true,
+      "net_joint_delta": -0.11781935334526139
+    },
+    {
+      "window": [8, 16],
+      "d_pose_delta_per_step": -0.13849148130444533,
+      "d_seg_delta_per_step": 0.00001022444831000422,
+      "pose_term_progress_per_step": 0.01723333327879928,
+      "seg_term_delta_per_step": 0.0010224448310004464,
+      "observed_pose_to_seg_regression_ratio": 16.855025089164695,
+      "ratio_clears_critical": true,
+      "net_joint_delta": -0.12968178071075442
+    },
+    {
+      "window": [0, 16],
+      "aggregate": true,
+      "d_pose_delta_per_step": -0.13407931102359427,
+      "d_seg_delta_per_step": 0.00001187854342990448,
+      "pose_term_progress_per_step": 0.016657632393736854,
+      "seg_term_delta_per_step": 0.0011878543429904576,
+      "observed_pose_to_seg_regression_ratio": 14.023295441931698,
+      "ratio_clears_critical": true,
+      "net_joint_delta": -0.24750113405601581
+    }
+  ],
+  "horizon_to_target": {
+    "method": "DERIVED_CONSTANT_REALIZED_DPOSE_SLOPE_OUTSIDE_WINDOW",
+    "measured_d_pose_progress_per_step": 0.13407931102359427,
+    "total_steps_from_window_start": 1216.0361029942253,
+    "additional_steps_from_window_end": 1200.0361029942253,
+    "warning": "Constant-slope extrapolation only; quantization, curvature, and photometric saturation are unmodeled."
+  },
+  "disposition": {
+    "verdict": "PC1_DESCENT_MEASURED_NET_JOINT_NEGATIVE",
+    "verdict_scope": "INSTANCE: bounded PC1 score-domain coordinate descent from exact ws4 W_joint-step50",
+    "fork": "PC1_DESCENT_STAGE",
+    "family_closed": false,
+    "successor": "Continue only under an honest bounded horizon; retain depth-stratified object-local xi advection as the PREDICT successor, not a blanket family claim."
+  },
+  "custody": {
+    "ssd_root": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_pc2_pose_descent_smoke_20260725T121448Z",
+    "full_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_pc2_pose_descent_smoke_20260725T121448Z/ddm_pc2_pose_descent_smoke_receipt.json",
+      "bytes": 26844,
+      "sha256": "82713bc2bc1e128a0cd12ada95101bd85bd6d47f40a8ea6e85d8f503a088b234"
+    },
+    "exact_verdict_sha256": {
+      "step_0": "98026f33ab8fa61a6069b952037f6a978913cac43a73fca5a0370f8167154e3d",
+      "step_8": "11814216632afc417c067db93c2c0b203ad2227461e640ec2259ed2338128bcb",
+      "step_16": "308cc1c5e6c02112688ed388ec2613e863c5a18ee66f929fc657b2542f178964"
+    },
+    "preserved_checkpoint_count": 17,
+    "checkpoint_sha256": {
+      "step_0": "34dcb20b73f7a50fc4771b2711f41124575cb35f121e4fc2b7f483c3c0bc904f",
+      "step_8": "d89db84fcafbd822c029c49979b661bcdf59277a91b3bd05805a1a7ee31a0384",
+      "step_16": "3bf7894477c1809e5ef77625f3c38c073214544834b47726364795b075d9f15a"
+    },
+    "final_archive": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_pc2_pose_descent_smoke_20260725T121448Z/archives/accepted_016_pc1.zip.receipt-bytes",
+      "bytes": 139570,
+      "sha256": "946cf434b96839318af63364021b2b3cbfe0c7d3dee68b0849cee8cc45312477",
+      "parseback_exact": true
+    },
+    "elapsed_seconds": 1275.2549629998393
+  }
+}
