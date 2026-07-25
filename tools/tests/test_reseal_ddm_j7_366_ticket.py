@@ -19,6 +19,7 @@ from tools.launch_ddm_joint_descent import _expected_full_run_baseline_dseg
 from tools.reseal_ddm_j7_366_ticket import (
     J9_ATTEMPT4_RUN,
     J9_PROGRAM_ID,
+    J10_ATTEMPT5_RUN,
     REPO,
     WS3_W_SEG_PROGRAM_ID,
     _apply_profile,
@@ -128,6 +129,30 @@ def test_j10_ticket_binds_materialized_live_state_and_lawref_ema_policy() -> Non
     assert 3.0 / (1.0 - config.ema_decay) == pytest.approx(49.0)
     assert 1.0 - config.ema_decay**50 > 0.5
     assert ticket["semantic_program"]["resume_after_attempt5"]["preserved_accepted_steps"] == 50
+
+
+def test_j10_profile_reseal_is_semantically_idempotent() -> None:
+    path = REPO / ".omx/research/configs/ddm_j10_366_ema_verdict_shadow_cure_20260725.json"
+    semantic = json.loads(path.read_bytes())["semantic_program"]
+    warm = semantic["warm_start"]
+
+    hashes = []
+    for _ in range(2):
+        _apply_profile(
+            semantic,
+            profile="j10_ema_verdict_shadow_cure",
+            selected_warm_start="W_joint",
+            failed_run_dir=J10_ATTEMPT5_RUN,
+            materialized_receipt=Path(warm["receipt_path"]),
+            materialized_baseline_verdict=Path(warm["baseline_verdict_path"]),
+        )
+        hashes.append(hashlib.sha256(rfc8785_canonicalize(semantic)).hexdigest())
+
+    assert hashes[0] == hashes[1]
+    exact_moves = semantic["telemetry"]["every_exact_move"]
+    assert exact_moves.count("live decision row with same-shadow reference") == 1
+    assert exact_moves.count("EMA export row with receiver informativeness classification") == 1
+    assert exact_moves.count("VERDICT_NOT_YET_INFORMATIVE first-degenerate grace and next-verdict escalation") == 1
 
 
 @pytest.mark.parametrize(

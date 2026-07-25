@@ -417,13 +417,14 @@ def _apply_profile(
                 "standing_go_applies_only_after_main_review_and_READY_TO_FIRE_UNDER_STANDING_GO": True,
             }
         )
-        semantic["telemetry"]["every_exact_move"].extend(
-            [
-                "live decision row with same-shadow reference",
-                "EMA export row with receiver informativeness classification",
-                "VERDICT_NOT_YET_INFORMATIVE first-degenerate grace and next-verdict escalation",
-            ]
-        )
+        j10_telemetry = [
+            "live decision row with same-shadow reference",
+            "EMA export row with receiver informativeness classification",
+            "VERDICT_NOT_YET_INFORMATIVE first-degenerate grace and next-verdict escalation",
+        ]
+        semantic["telemetry"]["every_exact_move"] = [
+            value for value in semantic["telemetry"]["every_exact_move"] if value not in set(j10_telemetry)
+        ] + j10_telemetry
         semantic["value_provenance"].update(
             {
                 "j10_ema_decay": (
