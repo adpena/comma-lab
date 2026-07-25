@@ -1,0 +1,73 @@
+{
+  "candidate_output_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_wf7_seven_home_stream_waterfill_20260725T203257Z/wf7_state.dwf7",
+  "delegation": {
+    "authority_bytes": 5993,
+    "authority_file": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_wf7_seven_home_stream_waterfill_20260725T203257Z.wrapped.prompt.txt",
+    "authority_sha256": "b28d9cf11088525b3c95fd0c0c96f62314d576303142a93a2ac28bfff56ea36a",
+    "checkpoint_key": "codex_delegate:ddm_wf7_seven_home_stream_waterfill:20260725T203257Z"
+  },
+  "effective_frontier": "official leaderboard displayed 0.172",
+  "execution_allowed": false,
+  "generated_at_utc": "2026-07-25T20:50:00Z",
+  "main_landing_review_required": true,
+  "output_dir": ".omx/research/ddm_wf7_seven_home_stream_waterfill_20260725T203257Z",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "research_only": true,
+  "run_id": "ddm_wf7_seven_home_stream_waterfill_20260725T203257Z",
+  "schema": "ddm_wf7_seven_home_stream_waterfill_config.v1",
+  "score_claim": false,
+  "sources": {
+    "c1_ledger": {
+      "bytes": 18390,
+      "path": ".omx/research/ddm_c1_composed_candidate_ledger_603_613_20260723.json",
+      "sha256": "14fdf1570b43df65ac949fe157e68ea328ff584f7df1331acf25cca8f900d936"
+    },
+    "c1_source_archive": {
+      "bytes": 133941,
+      "path": ".omx/research/ddm_v15_scorer_solved_templates_n600_20260723T013000Z/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
+    },
+    "cc2": {
+      "bytes": 87834,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_cc2_coder_races_20260725T030606Z/ddm_cc2_coder_races_receipt.json",
+      "sha256": "f9432959d9c8711276379ef681f5b6985157f49bdd4b2f4a401bfb35ce737ec1"
+    },
+    "cc3": {
+      "bytes": 4907,
+      "path": ".omx/research/ddm_cc3_mixed_coder_receiver_receipt_20260725.json",
+      "sha256": "1aed9bba14ab2e6c37a5a87ec7dba43506a6f94d18c4b5b444026f693675a44f"
+    },
+    "e4_harness": {
+      "bytes": 2773,
+      "path": ".omx/research/ddm_e4_brotli_declared_dep_20260724/brotli_tagged/ddm_e4_brotli_upstream_harness_receipt.json",
+      "sha256": "c1b891c2acba1c945d196c9083118f2c4412730c7f7d9364dfeb598f0d69d8bf"
+    },
+    "ev2": {
+      "bytes": 12827,
+      "path": ".omx/research/ddm_ev2_per_pair_allocation_20260725T041933Z/receipt.json",
+      "sha256": "1d76934d9b52d61ac7eca4b4f95d6eb76a31e8c7b354e2913fab3dca991d3fcc"
+    },
+    "lp1": {
+      "bytes": 43747,
+      "path": ".omx/research/ddm_lp1_layer_pricing_20260725T031654Z/ddm_lp1_layer_pricing_receipt.json",
+      "sha256": "6bd6a5baaa8f5995e93ef594e880beac77e9aa2b2083e661598c84feaba13fd5"
+    }
+  },
+  "stores_consulted": [
+    "CLAUDE.md and byte-identical AGENTS.md",
+    "PROGRAM.md",
+    "docs/operating_manual_craft_handoff.md",
+    "fable eureka memo section A1",
+    "EV2 exact seven-home allocation receipt",
+    "LP1 corrected C1 typed-home receipt",
+    "CC2 five-coder race receipt",
+    "CC3 mixed-coder receiver and 135-frame replay receipts",
+    "C1 composed candidate ledger and number 613 box",
+    "MS4D direct metric completion receipt",
+    "MS2R and MS2RP box-tolerance receipts",
+    "E4 Brotli runtime and upstream harness receipts",
+    "routing card sections 4 through 6",
+    "operator inbox through 2026-07-25T19:52:29Z"
+  ]
+}
