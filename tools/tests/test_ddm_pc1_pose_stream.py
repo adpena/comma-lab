@@ -22,6 +22,7 @@ from tac.optimization.ddm_pc1_pose_stream import (
     PAIR_W,
     DDMPC1TrainableParameterMapV1,
     PC1PoseStreamError,
+    _warp_scorer_frame,
     active_tube_quadratic,
     build_counted_composition_archive,
     fresh_pose_initialization,
@@ -153,6 +154,17 @@ def test_depth_contains_continuous_ground_and_movable_contact_stratum() -> None:
     assert depth[260, 100] != depth[300, 100]
     assert np.unique(depth[movable]).size == 1
     assert depth[260, 250] != depth[260, 100]
+
+
+def test_warp_refuses_nonfinite_realization_without_numpy_warnings() -> None:
+    frame = torch.zeros((1, 3, PAIR_H, PAIR_W), dtype=torch.float32)
+    with pytest.raises(PC1PoseStreamError, match="nonfinite"):
+        _warp_scorer_frame(
+            frame,
+            xi=np.full(6, np.finfo(np.float64).max),
+            depth=np.ones((PAIR_H, PAIR_W), dtype=np.float32),
+            torch_module=torch,
+        )
 
 
 def test_solved_plane_target_is_exact_yuv6_shape_and_parent_derived() -> None:

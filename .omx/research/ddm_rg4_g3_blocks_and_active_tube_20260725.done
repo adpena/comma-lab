@@ -1,0 +1,35 @@
+{
+  "schema": "ddm_rg4_g3_blocks_and_active_tube_done.v1",
+  "run_id": "ddm_rg4_g3_blocks_and_active_tube_20260725T165958Z",
+  "lane_id": "ddm_rg4_g3_blocks_and_active_tube",
+  "implementation_commit": "9fe6b94a54",
+  "coverage_verdict": "FALSIFIER_FIRED_25_OF_25_TYPED_INSTANCE_OBSTRUCTIONS; G3_COVERAGE_REMAINS_UNPROVEN",
+  "candidate_verdicts": {
+    "c1_composed_line_current": "MEASURED_OUTSIDE_ACTIVE_TUBE",
+    "ws2_w_seg_138031": "MEASURED_OUTSIDE_ACTIVE_TUBE"
+  },
+  "complete_run_receipt": {
+    "path": ".omx/research/ddm_rg4_g3_blocks_and_active_tube_20260725T165958Z/run_receipt.json",
+    "bytes": 92300,
+    "sha256": "0c9a9cf1d048c570569191f96fe0abed251a1f41e5de62c7a28280de58e176bd"
+  },
+  "ssd_stage_root": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_rg4_g3_blocks_and_active_tube_20260725T165958Z",
+    "file_count": 151,
+    "bytes": 2211638,
+    "digest_chain_sha256": "84e15687a5e13e4a9f959365534fd48c4ddd79ff1522eb3f746df2b9a4dff597"
+  },
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU]",
+  "pointer_moved": false,
+  "live_j12_mutated": false,
+  "lane_maturity": {
+    "level": 2,
+    "owned_evidence_paths_exist": true,
+    "global_validate_status": "BLOCKED_BY_110_PREEXISTING_MISSING_LEGACY_EVIDENCE_PATHS_OUTSIDE_THIS_LANE"
+  },
+  "main_landing_review_required": true,
+  "main_landing_review_status": "PENDING"
+}

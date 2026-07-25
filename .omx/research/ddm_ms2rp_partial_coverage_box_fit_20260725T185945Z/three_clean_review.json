@@ -1,0 +1,75 @@
+{
+  "schema": "ddm_ms2rp_partial_coverage_box_fit_three_clean_review.v1",
+  "run_id": "ddm_ms2rp_partial_coverage_box_fit_20260725T185945Z",
+  "reviewer": "codex_round1_self_adversarial",
+  "reviewed_at_utc": "2026-07-25T19:15:00Z",
+  "passes": [
+    {
+      "pass": 1,
+      "axis": "premise_and_input_custody",
+      "status": "CLEAN",
+      "checks": [
+        "RG4 source commit cb34bbb0f1 re-read through git object custody",
+        "partial_coverage_proven=true and missing_block_count=25",
+        "RG4 assignment is 34 complete event-incidence rows plus 1166 unrecoverable rows",
+        "all five PF3 materialization fields occur in zero RG4 assignment rows",
+        "MS4D fully_materialized_occupied_bucket_count=0",
+        "RD1 finite rung price count=0/162",
+        "MS2R-R3 measured typed rung count=0"
+      ],
+      "finding": "The authority conflated 25 G3 pair/bucket support gaps with the complete null pricing domain. Exclusion alone cannot produce a candidate."
+    },
+    {
+      "pass": 2,
+      "axis": "box_and_control_arithmetic",
+      "status": "CLEAN",
+      "checks": [
+        "#613 integer Seg cap re-read as 136839 errors",
+        "#613 d_pose cap re-read as 0.00161",
+        "#613 byte cap re-read as 200000",
+        "exact C1 Seg headroom recomputed as 118912 errors",
+        "exact C1 byte excess recomputed as 409326925",
+        "finite q4/q8 Pose excess recomputed as 0.01502315390825408",
+        "finite q4/q8 byte excess recomputed as 291005400"
+      ],
+      "finding": "Both rows are settled controls, not the absent typed partial member; neither may be substituted into the verdict."
+    },
+    {
+      "pass": 3,
+      "axis": "measured_runnability_and_false_authority",
+      "status": "CLEAN",
+      "checks": [
+        "candidate_materialized=false implies receiver/R/scorer/coder calls all false",
+        "in_box_partial and out_of_box_partial remain null",
+        "excluded-block d_seg/error/deficit remain null rather than proxy-derived",
+        "score_claim=false, promotion_eligible=false, pointer_moved=false",
+        "verdict_scope is PRECONDITION/INSTANCE",
+        "git diff --check clean and both JSON artifacts parse"
+      ],
+      "finding": "A new n600 scorer pass would have no candidate input and could only relabel an ancestor; refusing it is the required NO-FAKE behavior."
+    }
+  ],
+  "reviewed_artifacts": {
+    "typed_config": {
+      "path": ".omx/research/configs/ddm_ms2rp_partial_coverage_box_fit_20260725.json",
+      "sha256": "6d65e22a8773330a97cf7523dcd37d9be8ebcc213bdf27b85398bc060496bf21"
+    },
+    "receipt": {
+      "path": ".omx/research/ddm_ms2rp_partial_coverage_box_fit_20260725T185945Z/receipt.json",
+      "sha256": "ec674e1125fb1ccc58334bea390833ffb88f0e92c67fb3c4586129cd0e3b42c1",
+      "content_sha256": "2f07b20bff1f09af415263a173b3c816a3a9f019f84f6be82855df16242fc53e"
+    },
+    "findings": {
+      "path": ".omx/research/codex_findings_ddm_ms2rp_partial_coverage_box_fit_20260725_codex.md",
+      "sha256": "b2ce12682e64a2bde434f13f982f8c1f69ff569dcb502bc36b0bb256ccde3ee2"
+    },
+    "dag_feed": {
+      "path": ".omx/research/ddm_ms2rp_partial_coverage_box_fit_DAG_FEED_20260725.md",
+      "sha256": "43fd537ff6a260f97beddbcda532ec88bc0f391a07ce83a4b1994afb68690b42"
+    }
+  },
+  "overall": "THREE_CLEAN_PASSES_PRECONDITION_FALSIFIER_ONLY",
+  "main_landing_review_required": true,
+  "score_claim": false,
+  "pointer_moved": false
+}
