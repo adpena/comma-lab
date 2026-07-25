@@ -1,0 +1,40 @@
+{
+  "schema": "ddm_ms2r_r3_box_tolerance_solve_review.v1",
+  "round": 1,
+  "reviewer": "codex",
+  "status": "CLEAN",
+  "review_pass_id": "r3_box_pass1_static_contract",
+  "python_files": [
+    {
+      "path": "src/tac/optimization/ddm_ms2r_r3_box_tolerance_solve.py",
+      "sha256": "b543257e9cdfd7fe04d8add4a3bbc56ae41c48a56a15ee30f48a9f4e218c2f81",
+      "review_tracker_entities": 4,
+      "review_tracker_marked": true
+    },
+    {
+      "path": "tools/run_ddm_ms2r_r3_box_tolerance_solve.py",
+      "sha256": "4010e225b7afc0666e4bbcd7d29cc7c8b098b568aeb30837ae923cc3d311cb4f",
+      "review_tracker_entities": 12,
+      "review_tracker_marked": true
+    },
+    {
+      "path": "tests/test_ddm_ms2r_r3_box_tolerance_solve.py",
+      "sha256": "773384df6418b09de20e253c2c7408c0b15873a169fc3bdf3893806caa9c28de",
+      "review_tracker_entities": 0,
+      "review_tracker_marked": false,
+      "manual_review": "PASS; top-level tests are outside review_tracker ingestion"
+    }
+  ],
+  "checks": {
+    "ruff": "PASS",
+    "focused_and_adjacent_tests": "70 passed, 1 deselected",
+    "git_diff_check": "PASS",
+    "legacy_full_test_attempt": {
+      "passed": 70,
+      "failed": 1,
+      "failure_status": "EXPECTED_FAIL_CLOSED_SUPERSESSION",
+      "reason": "legacy immutable R3 stage stores 14/7 oracle input and correctly refuses live 21/0 overwrite"
+    }
+  },
+  "score_claim": false
+}

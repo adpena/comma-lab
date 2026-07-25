@@ -1,0 +1,33 @@
+{
+  "schema": "ddm_ms2r_r3_box_tolerance_solve_review.v1",
+  "round": 3,
+  "reviewer": "codex",
+  "status": "CLEAN",
+  "review_pass_id": "r3_box_pass3_final_accounting_static",
+  "reason": "Fresh review after explicit EV1 per-cell diagnostic accounting slopes were added.",
+  "python_files": [
+    {
+      "path": "src/tac/optimization/ddm_ms2r_r3_box_tolerance_solve.py",
+      "sha256": "77e2615783f3abc9f38faa25d1ccc75d6d457a5dae776a0ca44e3540d9138833",
+      "review_tracker_entities": 4,
+      "review_tracker_marked": true
+    },
+    {
+      "path": "tools/run_ddm_ms2r_r3_box_tolerance_solve.py",
+      "sha256": "a7f43195a682e56ce5ea36ccb3ae0b9a964864538a312b72d7990ff3f8e0a50f",
+      "review_tracker_entities": 12,
+      "review_tracker_marked": true
+    },
+    {
+      "path": "tests/test_ddm_ms2r_r3_box_tolerance_solve.py",
+      "sha256": "1808f3447ba3ddec8643a5e5ccfb81942b2026b78a8156e121b4369efeebe09e",
+      "manual_review": "PASS; top-level tests are outside review_tracker ingestion"
+    }
+  ],
+  "checks": {
+    "ruff": "PASS",
+    "focused_and_adjacent_tests": "70 passed, 1 legacy supersession test deselected",
+    "git_diff_check": "PASS"
+  },
+  "score_claim": false
+}

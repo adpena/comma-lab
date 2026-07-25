@@ -1,0 +1,47 @@
+{
+  "schema": "ddm_ms2r_r3_box_tolerance_solve_review.v1",
+  "round": 2,
+  "reviewer": "codex",
+  "status": "CLEAN",
+  "review_pass_id": "r3_box_pass2_independent_rederivation",
+  "python_files": [
+    {
+      "path": "src/tac/optimization/ddm_ms2r_r3_box_tolerance_solve.py",
+      "sha256": "b543257e9cdfd7fe04d8add4a3bbc56ae41c48a56a15ee30f48a9f4e218c2f81",
+      "review_tracker_entities": 4,
+      "review_tracker_marked": true
+    },
+    {
+      "path": "tools/run_ddm_ms2r_r3_box_tolerance_solve.py",
+      "sha256": "4010e225b7afc0666e4bbcd7d29cc7c8b098b568aeb30837ae923cc3d311cb4f",
+      "review_tracker_entities": 12,
+      "review_tracker_marked": true
+    },
+    {
+      "path": "tests/test_ddm_ms2r_r3_box_tolerance_solve.py",
+      "sha256": "773384df6418b09de20e253c2c7408c0b15873a169fc3bdf3893806caa9c28de",
+      "review_tracker_entities": 0,
+      "review_tracker_marked": false,
+      "manual_review": "PASS; assertions independently reviewed and 5/5 executed"
+    }
+  ],
+  "independent_rederivation": {
+    "errors": 136839,
+    "additive_predictor_record_bytes": 291203920,
+    "archive_bytes": 291205400,
+    "archive_sha256": "e3d0581ff4a3f475057e77e530374dad444b640a049b058cd66b37563534773e",
+    "d_seg": 0.001159998575846354,
+    "d_pose": 0.01663315390825408,
+    "objective": 194.42556028324648,
+    "coder_streams_parseback_checked": 50,
+    "rd1_null_cells": 162,
+    "implementation_shas": "PASS"
+  },
+  "checks": {
+    "receipt_replay_deterministic_sha256": "723838417af3b468ad1ae1f33313a2a3610a5410a96ed4242a67ce3c3adb7bf0",
+    "focused_tests": "5 passed",
+    "ruff": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "score_claim": false
+}
