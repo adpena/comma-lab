@@ -1,10 +1,10 @@
 # Codex findings — DM4 → J5 counted application operator
 
-UTC: 2026-07-25T02:35:47Z  
-Lane: `lane_ddm_j8f_counted_application_20260724`  
-Delegation checkpoint: `codex_delegate:ddm_j8f_counted_application_operator:20260724T181414Z`  
-Evidence axis: `[macOS-CPU frozen-scorer advisory]`  
-Score claim: `false`  
+UTC: 2026-07-25T02:35:47Z
+Lane: `lane_ddm_j8f_counted_application_20260724`
+Delegation checkpoint: `codex_delegate:ddm_j8f_counted_application_operator:20260724T181414Z`
+Evidence axis: `[macOS-CPU frozen-scorer advisory]`
+Score claim: `false`
 Pointer: `0.1910828242 [contest-CPU]` — **UNMOVED**
 
 ## Disposition
