@@ -162,6 +162,22 @@ def backfill_rd1_cells_null_preserving(
         ev1 = ev1_by_key.get(key)
         if ev1_rows is not None and ev1 is None:
             raise MS2RR3DiagnosticError("EV1 and RD1 cell identities differ")
+        delta_D = None if ev1 is None else float(ev1.get("delta_D_dimension", 0.0))
+        delta_bytes = (
+            None
+            if ev1 is None
+            else _exact_nonnegative_int(
+                ev1.get("delta_counted_bytes_dimension"),
+                "ev1_delta_counted_bytes_dimension",
+            )
+        )
+        accounting_slope = (
+            delta_bytes / (-delta_D)
+            if delta_D is not None
+            and delta_D < 0.0
+            and delta_bytes is not None
+            else None
+        )
         cells.append(
             {
                 "dual_index": row.get("dual_index"),
@@ -187,6 +203,14 @@ def backfill_rd1_cells_null_preserving(
                         ),
                     }
                 ),
+                "observed_accounting_slope_full_bytes_per_D_improvement": (
+                    accounting_slope
+                ),
+                "observed_accounting_slope_status": (
+                    "DERIVED_FROM_MEASURED_EV1_ENDPOINT_ACCOUNTING_NONACTIONABLE"
+                    if accounting_slope is not None
+                    else "NULL_NO_OBSERVED_EV1_D_IMPROVEMENT"
+                ),
                 "binary_control_lambda_bytes_per_corrected_error": None,
                 "measurement_status": (
                     "EV1_ACCOUNTING_HOME_CONSUMED_BUT_STILL_NULL_NO_C1_PAIR_FOREIGN_KEY"
@@ -211,6 +235,11 @@ def backfill_rd1_cells_null_preserving(
             int(float(row.get("delta_D_dimension", 0.0)) != 0.0)
             for row in ev1_by_key.values()
         ),
+        "ev1_beneficial_accounting_slope_count": sum(
+            int(float(row.get("delta_D_dimension", 0.0)) < 0.0)
+            for row in ev1_by_key.values()
+        ),
+        "finite_per_dimension_dual_count": 0,
         "cells": cells,
         "blocker": (
             "C1 predictor records have no lawful stratum x scorer_visibility x "

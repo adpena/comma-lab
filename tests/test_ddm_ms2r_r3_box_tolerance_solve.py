@@ -51,7 +51,7 @@ def test_rd1_backfill_preserves_all_nulls() -> None:
     ev1 = [
         {
             **row,
-            "delta_D_dimension": 0.25 if row["dual_index"] == 0 else 0.0,
+            "delta_D_dimension": -0.25 if row["dual_index"] == 0 else 0.0,
             "delta_counted_bytes_dimension": 3 if row["dual_index"] == 0 else 0,
             "byte_home_ranges": [],
             "byte_home_epistemic_status": "DERIVED",
@@ -64,6 +64,10 @@ def test_rd1_backfill_preserves_all_nulls() -> None:
     assert result["measured_cell_count"] == 0
     assert result["still_null_cell_count"] == 162
     assert result["ev1_accounting_home_cell_count"] == 162
+    assert result["ev1_beneficial_accounting_slope_count"] == 1
+    assert result["cells"][0][
+        "observed_accounting_slope_full_bytes_per_D_improvement"
+    ] == 12
     assert all(row["lambda_bytes_per_D_dimension"] is None for row in result["cells"])
 
 

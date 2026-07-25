@@ -653,6 +653,12 @@ def run(config_path: Path = CONFIG_PATH) -> dict[str, Any]:
             "nonzero_distortion_cells": rd1[
                 "ev1_nonzero_distortion_cell_count"
             ],
+            "beneficial_diagnostic_accounting_slopes": rd1[
+                "ev1_beneficial_accounting_slope_count"
+            ],
+            "finite_per_dimension_duals": rd1[
+                "finite_per_dimension_dual_count"
+            ],
             "per_pair_rate_allocation_status": rd1[
                 "ev1_pair_rate_allocation_status"
             ],

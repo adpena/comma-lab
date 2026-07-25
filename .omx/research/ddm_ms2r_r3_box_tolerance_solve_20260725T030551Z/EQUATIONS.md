@@ -44,3 +44,14 @@ measured. They are not RD1 per-dimension duals: EV1 explicitly has
 `per_pair_allocation=null`, so no lawful map assigns a C1 predictor-record
 byte delta to a `stratum x scorer_visibility x G4` cell. All 162
 `lambda_bytes_per_D_dimension` values therefore remain null.
+
+For completeness, each EV1 accounting cell with observed improvement carries
+the diagnostic endpoint ratio
+
+\[
+\lambda^{\mathrm{EV1,diag}}_c =
+\frac{\Delta B_c}{-\Delta D_c},\qquad \Delta D_c<0.
+\]
+
+There are 29 such diagnostic slopes. They are explicitly non-actionable and
+do not replace the null per-dimension dual.

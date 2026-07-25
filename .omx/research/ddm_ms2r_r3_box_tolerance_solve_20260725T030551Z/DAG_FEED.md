@@ -55,6 +55,7 @@ delegated authority 9772f340...e437d65
 RD1 backfill
   - 162 EV1 accounting homes consumed
   - 29 nonzero accounting-byte cells; 38 nonzero distortion cells
+  - 29 beneficial diagnostic accounting slopes
   - 600 exact local binary lambda rows
   - 162/162 per-dimension lambdas still NULL
 ```

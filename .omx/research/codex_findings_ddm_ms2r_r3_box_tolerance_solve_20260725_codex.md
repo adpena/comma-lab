@@ -45,6 +45,9 @@ J8F-to-C1 composition, or full Fisher/G4 result.
 - EV1 contributes 600/600 pair joins and 162/162 exclusive accounting homes:
   29 have nonzero accounting bytes and 38 have nonzero distortion. These are
   consumed as accounting custody, not coerced into C1 physical coordinates.
+- The 29 EV1 cells with observed distortion improvement now carry their
+  explicit endpoint accounting slope. These are diagnostic and non-actionable;
+  the finite per-dimension dual count remains zero.
 
 ## BLOCKED
 
