@@ -19,6 +19,8 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from tac.optimization.seven_home_stream_allocator import (  # noqa: E402
+    ADAPTER_MANIFEST_SCHEMA,
+    RECEIPT_MANIFEST_SCHEMA,
     ReceiptEnvelope,
     SevenHomeAllocationError,
     build_allocation_plan,
@@ -55,6 +57,70 @@ def _input_identity(path: Path) -> dict[str, Any]:
     return {
         "path": path.relative_to(REPO).as_posix(),
         "file_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+
+
+def _exact_int(value: Any, name: str, *, nonnegative: bool = False) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise SevenHomeAllocationError(f"{name} must be an exact integer")
+    if nonnegative and value < 0:
+        raise SevenHomeAllocationError(f"{name} must be non-negative")
+    return value
+
+
+def _sha256(value: Any, name: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(char not in "0123456789abcdef" for char in value)
+    ):
+        raise SevenHomeAllocationError(f"{name} must be lowercase SHA-256 hex")
+    return value
+
+
+def _receipt_manifest_reconciliation(
+    manifest: Mapping[str, Any], parsed: tuple[ReceiptEnvelope, ...]
+) -> dict[str, Any]:
+    schema = manifest.get("schema")
+    if schema == ADAPTER_MANIFEST_SCHEMA:
+        results = manifest["results"]
+        receipt_count = _exact_int(
+            manifest["receipt_count"], "adapter manifest receipt_count", nonnegative=True
+        )
+        blocked_count = _exact_int(
+            manifest["blocked_source_count"],
+            "adapter manifest blocked_source_count",
+            nonnegative=True,
+        )
+        return {
+            "declared_receipt_count": receipt_count,
+            "declared_blocked_source_count": blocked_count,
+            "result_count": len(results),
+            "parsed_receipt_count": len(parsed),
+            "counts_reconciled": (
+                receipt_count == len(parsed)
+                and receipt_count + blocked_count == len(results)
+            ),
+            "content_sha256_reconciled": True,
+            "false_authority_reconciled": True,
+        }
+    if schema == RECEIPT_MANIFEST_SCHEMA:
+        receipt_count = _exact_int(
+            manifest["receipt_count"], "receipt manifest receipt_count", nonnegative=True
+        )
+        return {
+            "declared_receipt_count": receipt_count,
+            "parsed_receipt_count": len(parsed),
+            "counts_reconciled": receipt_count == len(parsed),
+            "content_sha256_reconciled": True,
+            "false_authority_reconciled": True,
+        }
+    return {
+        "declared_receipt_count": 1,
+        "parsed_receipt_count": len(parsed),
+        "counts_reconciled": len(parsed) == 1,
+        "content_sha256_reconciled": None,
+        "false_authority_reconciled": None,
     }
 
 
@@ -96,18 +162,16 @@ def build_from_paths(
         parsed = envelopes_from_manifest(manifest)
         envelopes.extend(parsed)
         blocked_results = []
-        if manifest.get("schema") == "tac.applied_action_adapter_manifest.v1":
-            raw_results = manifest.get("results")
-            if isinstance(raw_results, list):
-                blocked_results = [
-                    {
-                        "source_kind": row.get("source_kind"),
-                        "source_id": row.get("source_id"),
-                        "blockers": row.get("blockers"),
-                    }
-                    for row in raw_results
-                    if isinstance(row, Mapping) and row.get("ok") is False
-                ]
+        if manifest.get("schema") == ADAPTER_MANIFEST_SCHEMA:
+            blocked_results = [
+                {
+                    "source_kind": row["source_kind"],
+                    "source_id": row["source_id"],
+                    "blockers": row["blockers"],
+                }
+                for row in manifest["results"]
+                if row["ok"] is False
+            ]
         sources.append(
             {
                 **_input_identity(resolved),
@@ -115,6 +179,7 @@ def build_from_paths(
                 "declared_content_sha256": manifest.get("content_sha256"),
                 "receipt_count": len(parsed),
                 "blocked_results": blocked_results,
+                "reconciliation": _receipt_manifest_reconciliation(manifest, parsed),
             }
         )
     plan = build_allocation_plan(ev2=ev2, pointer=pointer, envelopes=envelopes)
@@ -134,21 +199,63 @@ def build_from_paths(
         for value in (cc3_source, cc3_candidate, e5a_archive, e5a_rate, e5a_framing)
     ):
         raise SevenHomeAllocationError("CC3/E5A evidence shape differs")
+    cc3_source_bytes = _exact_int(
+        cc3_source.get("bytes"), "CC3 source archive bytes", nonnegative=True
+    )
+    cc3_candidate_bytes = _exact_int(
+        cc3_candidate.get("bytes"), "CC3 candidate archive bytes", nonnegative=True
+    )
+    cc3_source_sha256 = _sha256(cc3_source.get("sha256"), "CC3 source archive sha256")
+    cc3_candidate_sha256 = _sha256(
+        cc3_candidate.get("sha256"), "CC3 candidate archive sha256"
+    )
+    e5a_archive_bytes = _exact_int(
+        e5a_archive.get("bytes"), "E5A archive bytes", nonnegative=True
+    )
+    e5a_archive_sha256 = _sha256(e5a_archive.get("sha256"), "E5A archive sha256")
+    packed_archive_bytes = _exact_int(
+        e5a_rate.get("packed_archive_bytes"), "E5A packed archive bytes", nonnegative=True
+    )
+    unpacked_state_bytes = _exact_int(
+        e5a_rate.get("unpacked_state_bytes"), "E5A unpacked state bytes", nonnegative=True
+    )
+    packed_minus_unpacked = _exact_int(
+        e5a_rate.get("packed_minus_unpacked_bytes"), "E5A packed-minus-unpacked bytes"
+    )
+    complete_packet_bytes = _exact_int(
+        e5a_framing.get("complete_packet_bytes"),
+        "E5A complete packet bytes",
+        nonnegative=True,
+    )
+    components = e5a_framing.get("components")
+    if not isinstance(components, list) or any(
+        not isinstance(component, Mapping) for component in components
+    ):
+        raise SevenHomeAllocationError("E5A framing components must be an array of objects")
+    if e5a_framing.get("receiver_closed") is not True:
+        raise SevenHomeAllocationError("E5A framing receiver_closed must be true")
+    if packed_archive_bytes != e5a_archive_bytes or complete_packet_bytes != e5a_archive_bytes:
+        raise SevenHomeAllocationError("E5A packed/archive/framing byte counts do not reconcile")
+    if packed_archive_bytes - unpacked_state_bytes != packed_minus_unpacked:
+        raise SevenHomeAllocationError("E5A packed-minus-unpacked bytes do not reconcile")
     plan["legacy_real_evidence"] = {
         "cc3": {
             "schema": cc3["schema"],
-            "source_archive": dict(cc3_source),
-            "candidate_archive": dict(cc3_candidate),
-            "measured_delta_bytes": int(cc3_candidate["bytes"]) - int(cc3_source["bytes"]),
+            "source_archive": {"bytes": cc3_source_bytes, "sha256": cc3_source_sha256},
+            "candidate_archive": {
+                "bytes": cc3_candidate_bytes,
+                "sha256": cc3_candidate_sha256,
+            },
+            "measured_delta_bytes": cc3_candidate_bytes - cc3_source_bytes,
             "allocation_authority": False,
             "blocker": "NO_SEVEN_HOME_APPLIED_ACTION_RECEIPT_FOREIGN_KEYS",
         },
         "e5a": {
             "schema": e5a["schema"],
-            "archive": {"bytes": e5a_archive.get("bytes"), "sha256": e5a_archive.get("sha256")},
-            "packed_minus_unpacked_bytes": e5a_rate.get("packed_minus_unpacked_bytes"),
-            "la1_component_count": len(e5a_framing.get("components") or ()),
-            "receiver_closed": e5a_framing.get("receiver_closed"),
+            "archive": {"bytes": e5a_archive_bytes, "sha256": e5a_archive_sha256},
+            "packed_minus_unpacked_bytes": packed_minus_unpacked,
+            "la1_component_count": len(components),
+            "receiver_closed": True,
             "allocation_authority": False,
             "blocker": "E5A_COMPONENTS_ARE_NOT_EV2_HOME_APPLIED_ACTION_RECEIPTS",
         },

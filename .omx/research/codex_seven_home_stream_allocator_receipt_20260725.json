@@ -2,6 +2,7 @@
   "applied_action_receipt_count": 0,
   "dynamic_target": {
     "axis": "official_leaderboard",
+    "contest_compatible": true,
     "custody": "external target only; no local archive authority implied",
     "evidence_grade": "[official-leaderboard display]",
     "score": 0.172,
@@ -23,7 +24,7 @@
       "path": ".omx/research/ddm_ev2_per_pair_allocation_20260725T041933Z/allocation_table.json"
     },
     "pointer": {
-      "file_sha256": "21908c8f363c5483e73bf90b1ed983ff83d22cfb563f2c3d4cc316719add5083",
+      "file_sha256": "c41d4307de16f04a42e943b3ab31bc97e8860300ba58e03109ad3e7caf66619a",
       "path": ".omx/state/canonical_frontier_pointer.json"
     }
   },
@@ -113,6 +114,15 @@
       "file_sha256": "df3546e0da9ed3c8e2143fefb1ca3376fdafd21e5ad7177c5e71fb050fafe671",
       "path": ".omx/research/applied_action_adapter_manifest_20260725.json",
       "receipt_count": 0,
+      "reconciliation": {
+        "content_sha256_reconciled": true,
+        "counts_reconciled": true,
+        "declared_blocked_source_count": 3,
+        "declared_receipt_count": 0,
+        "false_authority_reconciled": true,
+        "parsed_receipt_count": 0,
+        "result_count": 3
+      },
       "schema": "tac.applied_action_adapter_manifest.v1"
     }
   ],
@@ -149,15 +159,19 @@
     }
   },
   "opportunity_pools": [],
-  "plan_content_sha256": "b8bfeec9adfe276d57ce8fbc9f7a029027ede09cd608d8b2d723189b8b3490bd",
+  "plan_content_sha256": "331fc6a2ee1d18eaaad926068d96ba2709a509cf143632ee587c26dcfc69b6cc",
   "pointer_moved": false,
   "policy": {
     "coder_alternatives_same_home_mutually_exclusive": true,
     "cross_base_price_transfer_used": false,
     "cross_edge_price_transfer_used": false,
+    "dependency_dag_cycle_refusal": true,
+    "dynamic_target_requires_contest_compatible_axis": true,
     "exactly_one_owner_per_home": true,
     "independent_component_thresholds_used": false,
     "linearized_pose_used": false,
+    "mixed_authority_axis_comparison_used": false,
+    "nested_dependency_leaf_closure_required": true,
     "pf3_coordinate_and_wf7_stream_pools_additive": false
   },
   "promotion_eligible": false,
@@ -260,6 +274,8 @@
         "counted_bytes": 3345,
         "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
         "home_id": "manifest",
+        "receipt_layer_home": "L1_program",
+        "receipt_stream_type": "SKELETON",
         "source_home": "exact v15 outer ZIP unique home",
         "typed_home": {
           "layer_home": "L1_program",
@@ -275,6 +291,8 @@
         "counted_bytes": 100099,
         "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
         "home_id": "v15_predictor_zip_outer_home",
+        "receipt_layer_home": "L2_chart",
+        "receipt_stream_type": "CONNECTION",
         "source_home": "exact v15 outer ZIP unique home",
         "typed_home": {
           "layer_home": "L2_chart_grammar",
@@ -290,6 +308,8 @@
         "counted_bytes": 29878,
         "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
         "home_id": "g1_movable_worldsheet_outer_home",
+        "receipt_layer_home": "L2_chart",
+        "receipt_stream_type": "CONNECTION",
         "source_home": "exact v15 outer ZIP unique home",
         "typed_home": {
           "layer_home": "L2_chart_grammar",
@@ -305,6 +325,8 @@
         "counted_bytes": 85,
         "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
         "home_id": "receiver_realization_profile",
+        "receipt_layer_home": "L1_program",
+        "receipt_stream_type": "SKELETON",
         "source_home": "exact v15 outer ZIP unique home",
         "typed_home": {
           "layer_home": "L1_program",
@@ -320,6 +342,8 @@
         "counted_bytes": 151,
         "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
         "home_id": "solved_template_outer_home",
+        "receipt_layer_home": "L4_scorer_feature",
+        "receipt_stream_type": "FIBER",
         "source_home": "exact v15 outer ZIP unique home",
         "typed_home": {
           "layer_home": "L4_scorer_feature",
@@ -335,6 +359,8 @@
         "counted_bytes": 383,
         "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
         "home_id": "central_directory_and_eocd",
+        "receipt_layer_home": "L1_program",
+        "receipt_stream_type": "SKELETON",
         "source_home": "exact v15 outer ZIP unique home",
         "typed_home": {
           "layer_home": "L1_program",
@@ -347,6 +373,8 @@
         "counted_bytes": 270,
         "derivation_method": "EXACT_CONSTRUCTION_LINEAGE",
         "home_id": "lane_program_seed",
+        "receipt_layer_home": "L2_chart",
+        "receipt_stream_type": "CONNECTION",
         "source_home": "LP1 measured receiver-owning delta outside v15 control ZIP",
         "typed_home": {
           "layer_home": "L2_chart_grammar",
