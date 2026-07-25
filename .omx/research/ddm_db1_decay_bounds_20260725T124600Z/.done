@@ -1,0 +1,15 @@
+{
+  "schema": "ddm_db1_decay_bounds_done.v1",
+  "status": "complete_pending_main_landing_review",
+  "verdict": "INDETERMINATE",
+  "verdict_scope": "V19C accepted proposal-order formulation plus fixed SN1/AT1 predicted-boundary atlas; live scorer-recursive descent and E7 residual coding remain open",
+  "final_receipt": ".omx/research/ddm_db1_decay_bounds_20260725T124600Z/ddm_db1_decay_bounds_receipt.json",
+  "final_receipt_sha256": "f36fccd5e6fb1d072de01fb0ae90273398925559186d42a90ed964cb77345984",
+  "findings": ".omx/research/codex_findings_ddm_db1_decay_bounds_20260725T124600Z_codex.md",
+  "feed": ".omx/research/FEED-603-db1_20260725T124600Z.md",
+  "canonical_equation_id": "ddm_sn1_margin_mass_duplicate_budget_bounds_v1",
+  "pointer_moved": false,
+  "score_claim": false,
+  "paid_dispatch": false,
+  "main_landing_review_required": true
+}
