@@ -143,6 +143,22 @@ STORES CONSULTED: ms2rp findings + `.last.txt` + frontmatter (verdict `BLOCKED_N
 
 Pointer 0.1910828242 [contest-CPU] UNMOVED — ms2rp is advisory (macOS-CPU frozen-scorer), PRECONDITION/INSTANCE scope, ZERO member materialized; the R6 row is the end.
 
+## §6 amendment (2026-07-25, per-landing pantheon review of pf3 — DONE rc=0 :: the crux descends a THIRD layer, DIRECTION)
+
+STORES CONSULTED: pf3 findings (codex_findings_ddm_pf3_…_20260725T201605Z) + .last.txt + receipt (SHA 1e327384…, byte-identical rerun, 19 tests) · card §4-§5 (the coverage→materialization crux ladder) · j12 §3 (the descent-line twin of this finding) · j8f #697 (typed counted application operator precedent) · verdict_scope ladder · fleet_cap tree-vortex guard · findings_are_first_rungs.
+
+1. **PF3 largely SOLVED the §5 materialization layer** (MEASURED, worktree commit 7f9f803a60, unmerged): 29/37 occupied MS4D buckets now carry the full chain — deterministic existing-RG3 receiver builder → real uint8 effect → same-object scorer delta → physical E4 byte home → parse-back-exact coder owner. The bind→build→realize→measure machinery WORKS. 8 residual buckets typed exactly: 6 have NO existing RG1-RG3 coordinate assigned (alphabet gap — rg5 territory, HELD), 2 built-but-missed the target bucket (causal-join miss).
+
+2. **The blocker descended to a THIRD layer: DIRECTION.** Prices remain 0/162 NOT because edges can't be measured but because **all 16 measured single-coordinate edges WORSEN joint distortion** (Seg errors +1..+4,067; joint ΔS +8.08e-7..+3.44e-3; +772-939 marginal E4 bytes each). Event-local improvements exist but joint spill erases them. Null preserved as null — no price fabricated. **CONVERGENCE with §3:** this is the describe-line TWIN of j12's descent-line measurement (16 sealed singles active-zero, only the JOINT PC1 carrier opens). Both lines now show the same physics: at current endpoints, NO measured single-coordinate move in the existing alphabet is downhill in joint S — openings are JOINT/composed moves. The crux ladder to date: coverage (§4, symptom) → materialization (§5, mostly closed by pf3) → **direction (this §)**.
+
+3. **Honest limits (the arm's own):** only 16 of 68 support-positive probes were scored (bounded selection); **52 remain UNMEASURED — no exhaustion claim is admissible from the 16-row selection.** Separately, the RD1 edge-identity boundary is now typed: PF3 edges (V19C_BASE→RG3-coordinate) are a DIFFERENT hull-edge identity than the 162 RD1 cells; copying secants across would manufacture cross-edge prices; a typed counted APPLICATION OPERATOR for this edge class is ABSENT — the J8F operator (#697, DM4→J5 edges) is the in-house precedent/extension candidate.
+
+4. **Apparatus flag (two-landing candidate):** cross-process ZSTD trained-dictionary frames differ despite within-process determinism (changed bytes REFUSED by the runner; E4 pricing unaffected). New coder-reproducibility bug class — queue the fix+gate per "Bugs must be permanently fixed AND self-protected against."
+
+5. **Disposition:** pf3 `closed`; respawned **ddm_pf3b_52probe_joint_improving_hunt** at the arm's own named reformulation: rank the remaining 52 support-positive probes by exact event-correction direction + pose-null/joint-spill guard, measure boundedly until the FIRST joint-improving edge OR a sealed exhaustion receipt. Either outcome is decision-grade: a first finite price unblocks the waterfill→member→byte-close chain; sealed exhaustion honestly closes the existing-alphabet formulation at this endpoint and sharpens the operator fork (rg5 coordinate families vs joint-descent vs relaxed-path). The 25 RG4 exclusions + box falsifier stay HELD until a strictly-positive same-edge finite price exists. Merge-to-main of 7f9f803a60 rides the mr1 credential chain. (Arm-reported, UNVERIFIED by MAIN: a displayed public frontier of 0.172 — intake check queued, NOT routed as fact.)
+
+Pointer 0.1910828242 [contest-CPU] UNMOVED — pf3 is advisory (macOS-CPU frozen-scorer), PRECONDITION/INSTANCE scope; the R6 row is the end.
+
 ## §6 operator correction (2026-07-25, effective competitive frontier)
 
 STORES CONSULTED: live official comma.ai ranked video-compression table · PR130
