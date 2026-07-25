@@ -87443,6 +87443,47 @@
         }
       },
       "notes": "research_only=true; READY_TO_FIRE_DDM_EVENT_CONTINUATION on [macOS-CPU frozen-scorer advisory] exact n600 projected delta=-0.052757084057141856; score_claim=false; pointer unchanged; FIRE remains MAIN after independent landing review"
+    },
+    {
+      "id": "ddm_ms2r_r3_box_tolerance_solve",
+      "name": "DDM MS2R R3 BOX tolerance solve",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_ms2r_r3_box_tolerance_solve.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "tools/run_ddm_ms2r_r3_box_tolerance_solve.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Delegated #701/#694 fresh J8F-backed describe-route solve; research_only=true; MAIN review required."
     }
   ],
   "level_rules": {
@@ -87452,5 +87493,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T23:02:41Z"
+  "updated_at": "2026-07-25T04:05:33Z"
 }
