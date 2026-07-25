@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -30,6 +31,13 @@ from tac.optimization.ddm_p1_frame0_pose_quotient_carrier import (
     seeded_matched_control_basis,
     serialize_packet,
 )
+from tools.run_ddm_p1_frame0_pose_quotient_carrier import (
+    P1ConfigV1,
+    _linear_coefficients,
+    _quantize_basis,
+)
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _packet(*, treatment: bool, rank: int = 2, active: bool = True):
@@ -180,3 +188,44 @@ def test_matched_control_fence_requires_same_exact_frame1_and_packet_budget() ->
 def test_sealed_chart_geometry_is_24_by_32() -> None:
     packet = _packet(treatment=True)
     assert packet.q_basis.shape[2:] == (GRID_H, GRID_W)
+
+
+def test_typed_runner_config_is_canonical_and_seals_solver_budget() -> None:
+    config, digest = P1ConfigV1.from_path(
+        REPO_ROOT / ".omx/research/configs/ddm_p1_frame0_pose_quotient_carrier_20260725.json"
+    )
+    assert len(digest) == 64
+    assert config.gauss_newton_iterations == 4
+    assert config.gauss_newton_max_step == 4096.0
+    assert config.measurement.scorer_batch_size == 32
+
+
+def test_basis_quantization_is_deterministic_and_sign_canonical() -> None:
+    coordinates = 3 * GRID_H * GRID_W
+    basis = np.zeros((6, coordinates), dtype=np.float64)
+    for rank in range(6):
+        basis[rank, rank] = -float(rank + 1)
+        basis[rank, rank + 6] = 0.5
+    first = _quantize_basis(basis)
+    second = _quantize_basis(basis)
+    assert np.array_equal(first, second)
+    assert first.shape == (6, 3, GRID_H, GRID_W)
+    assert np.all(first.reshape(6, -1)[np.arange(6), np.arange(6)] == 127)
+
+
+def test_linear_coefficient_solve_consumes_receiver_scaled_basis() -> None:
+    coordinates = 3 * GRID_H * GRID_W
+    jacobian = np.zeros((1, 6, coordinates), dtype=np.float32)
+    jacobian[0, 0, 0] = 1.0
+    residual = np.zeros((1, 6), dtype=np.float64)
+    residual[0, 0] = 1.0
+    basis = np.zeros((1, 3, GRID_H, GRID_W), dtype=np.int8)
+    basis.reshape(1, -1)[0, 0] = 1
+    coefficients = _linear_coefficients(
+        jacobian=jacobian,
+        target_residual=residual,
+        q_basis=basis,
+        rank=1,
+        ridge=1.0e-12,
+    )
+    assert coefficients.tolist() == [[256]]
