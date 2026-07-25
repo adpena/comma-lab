@@ -24195,3 +24195,19 @@ Bellman residual · M34 per-state duals. (5) Unsound-method audit clean across 1
 files (no 77x/2.71x/params^-0.71/label-noise-ceiling priors). Innovations lag-1 corr 0.0668 =
 NO_LARGE_LAG_ONE_COLOR (scoped diagnostic). Organ stays _dev / advisory / actuation=NONE. 27+58
 tests green on merged main. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+### FEED-603-px2-patchpolicy (2026-07-24, Fable inline harvest, $0)
+Operator drop arXiv 2607.18236 (Patch Policy — Zhou/Cui/Langford/Tan/LeCun/Pinto), harvested
+inline per "Fable to harvest". External measured lesson [MEASURED_EXTERNAL, lessons-only]:
+dense FROZEN-encoder patch tokens + tiny head beat global-pooled features by +40% relative;
+0.7%-param head beats a fine-tuned billion-param VLA by 18%. Crosswalk (memo
+papers_checked_arxiv_2607_18236_patch_policy_20260724.md): (1) ADOPTED as the REFORMULATION
+SHAPE for the co4 Road-local gap — the failed ridge forms pooled bucket-aggregate atlas
+features (the "global-pooled" analog); the post-J8F rerun should be a tiny head over DENSE
+per-cell frozen-SegNet features (pre-SE locus #484 / at1 / sn1) with J8F realized telemetry as
+target — amends the FEED-603-co4 candidate, same J8F gate, no new arm. (2) Train-least /
+706-param #366 re-aim independently CORROBORATED (0.7%-param result). (3) Block-causal
+(causal-across-time, dense-within-observation) noted as the architecture shape if cc1's
+J8F-gated context-model race ever admits a learned model. (4) The +40% pooling price
+corroborates the g3 flip/margin currency law. verdict_scope: external-benchmark harvest, zero
+contest measurements. Pointer 0.1910828242 [contest-CPU] UNMOVED.
