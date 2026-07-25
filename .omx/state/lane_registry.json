@@ -87443,6 +87443,47 @@
         }
       },
       "notes": "research_only=true; READY_TO_FIRE_DDM_EVENT_CONTINUATION on [macOS-CPU frozen-scorer advisory] exact n600 projected delta=-0.052757084057141856; score_claim=false; pointer unchanged; FIRE remains MAIN after independent landing review"
+    },
+    {
+      "id": "lane_ddm_rs1_feature_relay_solve_20260725",
+      "name": "DDM RS1 feature-space relay multiple-shooting solve",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/ddm_feature_relay_multiple_shooting.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rs1_feature_relay_solve_20260725T030635Z/receipt.json"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; BLOCKED_INTERNAL_STATION_DYNAMICS_NOT_CUSTODIED on current SHA-bound #484/AT1/SN1/MS4D/J8F custody; 8 exact missing edges; two post-fix clean reviews; G3/n600 not run; score_claim=false; pointer unchanged; MAIN review required"
     }
   ],
   "level_rules": {
@@ -87452,5 +87493,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-24T23:02:41Z"
+  "updated_at": "2026-07-25T03:45:27Z"
 }

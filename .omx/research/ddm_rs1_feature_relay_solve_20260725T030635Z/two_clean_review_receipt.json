@@ -1,0 +1,71 @@
+{
+  "schema": "ddm_rs1_feature_relay_two_clean_review.v1",
+  "lane_id": "lane_ddm_rs1_feature_relay_solve_20260725",
+  "delegation_checkpoint": "codex_delegate:ddm_rs1_feature_relay_solve:20260725T030635Z",
+  "review_status": "TWO_CONSECUTIVE_POST_FIX_CLEAN_PASSES",
+  "main_landing_review_required": true,
+  "score_claim": false,
+  "pointer_moved": false,
+  "pre_clean_review_finding": {
+    "status": "FIXED_BEFORE_CLEAN_PASS_COUNT",
+    "finding": "The first gate could diagnose a missing station bundle but could not consume one, making its reactivation instruction non-executable.",
+    "fix": "Added a SHA-bound ddm_rs1_measured_station_bundle.v1 input with strict station, dual-metric, segment-Jacobian, and 24-row continuity-secant validation; the bundle instantiates relay/direct predictive solves while end acceptance remains realized-only."
+  },
+  "reviewed_files": [
+    {
+      "path": "src/tac/optimization/ddm_feature_relay_multiple_shooting.py",
+      "bytes": 19461,
+      "sha256": "80ed2c2fa3392c30c7a69397fadeedddbe3c55092b54b94d43c906974b1ef7d3"
+    },
+    {
+      "path": "src/tac/optimization/tests/test_ddm_feature_relay_multiple_shooting.py",
+      "bytes": 9199,
+      "sha256": "48ecd4508697728ac667c53aab8efcf9ce9386f9d0d3c1ae633b41ed19a12c87"
+    },
+    {
+      "path": "tools/run_ddm_rs1_feature_relay_solve.py",
+      "bytes": 34338,
+      "sha256": "349501024f36bb08e0614dd4a3dba62340a81804b4db4715bd64bcc37e9f1574"
+    },
+    {
+      "path": "tools/tests/test_run_ddm_rs1_feature_relay_solve.py",
+      "bytes": 11798,
+      "sha256": "eec7fe2b5a83e48c91b24ceaed37ffd6197c1cd54fc6ffc754d28d621dfb4fd7"
+    }
+  ],
+  "passes": [
+    {
+      "pass": "rs1_postfix_round1",
+      "reviewer": "codex-rs1-postfix1",
+      "tracked_entities": 60,
+      "pytest": "29 passed",
+      "adjacent_surface": "src/tac/optimization/tests/test_ddm_dm4_j5_counted_application.py",
+      "ruff": "PASS",
+      "py_compile": "PASS",
+      "git_diff_check": "PASS",
+      "receipt_contract": "PASS"
+    },
+    {
+      "pass": "rs1_postfix_round2",
+      "reviewer": "codex-rs1-postfix2",
+      "tracked_entities": 60,
+      "pytest": "29 passed",
+      "deterministic_property_cases": 2,
+      "deterministic_receipt_regeneration": "PASS",
+      "ruff": "PASS",
+      "py_compile": "PASS",
+      "git_diff_check": "PASS"
+    }
+  ],
+  "sealed_config": {
+    "path": ".omx/research/configs/ddm_rs1_feature_relay_solve_20260725.json",
+    "bytes": 4706,
+    "sha256": "90bf49690708dd444ce84a22bf765a362b7745394a76049007f3e5d93dcc6529"
+  },
+  "sealed_blocker_receipt": {
+    "path": ".omx/research/ddm_rs1_feature_relay_solve_20260725T030635Z/receipt.json",
+    "bytes": 13668,
+    "sha256": "23d074104ba2081fad50bdb00df5a3415cb076f7dee6f0ab18982350d91e7e71",
+    "verdict": "BLOCKED_INTERNAL_STATION_DYNAMICS_NOT_CUSTODIED"
+  }
+}

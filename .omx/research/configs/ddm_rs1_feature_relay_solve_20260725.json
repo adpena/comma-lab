@@ -1,0 +1,107 @@
+{
+  "schema": "ddm_rs1_feature_relay_solve_config.v1",
+  "lane_id": "lane_ddm_rs1_feature_relay_solve_20260725",
+  "run_id": "ddm_rs1_feature_relay_solve_20260725T030635Z",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "main_landing_review_required": true,
+  "metric_primary": "categorical_margin_fisher_gram",
+  "euclidean_control_only": true,
+  "realized_acceptance": "END_ONLY_REALIZED_RECEIVER_PARSEBACK_UINT8_R_FROZEN_SCORERS",
+  "hard_tail_block_count": 24,
+  "bounded_n600_block_count": 64,
+  "station_bundle": null,
+  "source_bindings": {
+    "authority": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_rs1_feature_relay_solve_20260725T030635Z.wrapped.prompt.txt",
+      "bytes": 6326,
+      "sha256": "dbde32acf8d4c5cd2ebc871990bdfb7f1287241b4d81181e038afe0bbc3202a8"
+    },
+    "pre_se_locus_memo": {
+      "path": ".omx/research/pre_se_locus_20260713.md",
+      "bytes": 9898,
+      "sha256": "c39843d20aa6fe24c870f1cc751fc3f7d3443695964e50c082d16d96ace1e8e8"
+    },
+    "pre_se_locus_equation": {
+      "path": "src/tac/canonical_equations/pre_se_locus_20260713.py",
+      "bytes": 8832,
+      "sha256": "20fc6acb9bb825ae3eaf9c320e8044f96760dd310704f61bade1384402234233"
+    },
+    "at1_tracked_receipt": {
+      "path": ".omx/research/ddm_at1x_atlas_materialize_20260723/atlas_receipt.json",
+      "bytes": 7382,
+      "sha256": "5ad26805b04d6158cdd06e238502203d7eb893aca43dc10619c832436d11d73e"
+    },
+    "at1_gaze_atlas": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_at1x_atlas_materialize_20260723T203027Z/gaze_contraction_atlas.json",
+      "bytes": 3178175,
+      "sha256": "a9e444cd7652061368d6daa8cf85e4c793c1b57da385890799ce7de19fd311e4"
+    },
+    "sn1_tracked_receipt": {
+      "path": ".omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/ddm_sn1_segnet_telemetry_asymmetry_receipt.json",
+      "bytes": 62166,
+      "sha256": "1f727c00f91a2425f8d40660b93594515c8038c42b802226ff11348791190eb4"
+    },
+    "sn1_telemetry": {
+      "path": ".omx/research/ddm_sn1_segnet_telemetry_asymmetry_n600_20260723/segnet_internal_telemetry_n600.jsonl",
+      "bytes": 3762510,
+      "sha256": "e8d26acd3b312e8213d04c48313b755de05e17268cc594e1d5b94927c443116b"
+    },
+    "ms4_bundle": {
+      "path": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/BUNDLE-COMPLETE.json",
+      "bytes": 2799,
+      "sha256": "d670eff3dd01d61a24bdebedf045fa8cde2528953660dc6d1e64ba9c2fa94e25"
+    },
+    "ms4_seg_metric": {
+      "path": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/seg_metric_direct_n600.json",
+      "bytes": 1361320,
+      "sha256": "bb8daeebb4cf745136049757aaffce38a32a3cb900b5a657e4fe9c12cb7ba53f"
+    },
+    "v17_validity_law": {
+      "path": "src/tac/canonical_equations/ddm_v17_validity_radius_law_20260723.py",
+      "bytes": 7685,
+      "sha256": "1dd0e308e7cd6f2700921389a70eb00db5ea07ea65f451babe7f035a4f0fc5e3"
+    },
+    "v17_validity_receipt": {
+      "path": ".omx/research/ddm_a1_bounded_collateral_realized_n64_20260723T031500Z/ddm_a1_bounded_collateral_realized_receipt.json",
+      "bytes": 124491,
+      "sha256": "7cad1d17c5697b578234db282e6191ba3f2789b188051473874638392e18f53a"
+    },
+    "j8f_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j8f_counted_application_20260724T181414Z/ddm_j8f_counted_application_receipt.json",
+      "bytes": 138748,
+      "sha256": "aa1a51dd34017d26b685966779b17139d780328f7cfcc294da94f78c1cc500f3"
+    },
+    "range_a_projector": {
+      "path": "src/tac/boundary_math/range_a_projection.py",
+      "bytes": 12594,
+      "sha256": "a97fed1347d17dfc6cf7821ef8f51f9cb988a2e74992ed8242be6b21068698dc"
+    },
+    "solver_source": {
+      "path": "src/tac/optimization/ddm_feature_relay_multiple_shooting.py",
+      "bytes": 19461,
+      "sha256": "80ed2c2fa3392c30c7a69397fadeedddbe3c55092b54b94d43c906974b1ef7d3"
+    },
+    "runner_source": {
+      "path": "tools/run_ddm_rs1_feature_relay_solve.py",
+      "bytes": 34338,
+      "sha256": "349501024f36bb08e0614dd4a3dba62340a81804b4db4715bd64bcc37e9f1574"
+    }
+  },
+  "declared_pre_se_receipts": [
+    {
+      "path": "experiments/results/pre_se_locus_20260713/receipt.json",
+      "bytes": 147648,
+      "sha256": "660a5763831539715d8593df0ba40a0f50f660af93c0e5bcd1d399ea340d1abb"
+    },
+    {
+      "path": "experiments/results/pre_se_multi_source_reopen_20260713/receipt.json",
+      "bytes": null,
+      "sha256": "a092dd5cf791ab060a4300ac3b9c1d49a196ddd83b158121b70fae6a130dc643"
+    }
+  ]
+}
