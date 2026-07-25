@@ -95,4 +95,3 @@ rows. Therefore every costate row is `SENSE_HOLD_ZERO_R0`.
 Recalibrate when any bound C1/G4/DM1/DM2/DM4/PF/MS7 receipt, scorer,
 receiver grammar, or same-object coder receipt changes. CC2 remains the owner
 of codec selection; LP1 preserves the measured source codec labels.
-

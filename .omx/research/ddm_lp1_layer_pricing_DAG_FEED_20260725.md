@@ -59,4 +59,3 @@ Re-run LP1 only after a bound source SHA changes or a new same-object,
 receiver-closed context/residual price is materialized. A new dynamic
 scorer-recursive reach curve may move an individual SENSE row out of R0; a
 generic spatial menu may not.
-
