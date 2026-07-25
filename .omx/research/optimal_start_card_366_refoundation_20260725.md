@@ -339,3 +339,13 @@ G3.5 ks1 queued-on-e5a · G4 e5a RUNNING · G5/G6 pending reseal.
   realization law (exact-grid STE; exact-gated lattice clicks) → R1/R2 rows corroborated
   (lessons; ΔS numbers vehicle-scoped). RF-7 boundary-placement claim = FROZEN-SPACE
   *candidate* only — verify on our apparatus before consuming.
+
+## 17. GATE G4 GREEN (e5a merged 1fe24eb674) — the R6 chain is CLOSED END-TO-END
+Typed mid-campaign checkpoint→E5 adapter PASS: campaign checkpoint (19,723B) → restored theta
+shadow → materialized state (byte-identical to ws4 SHA 2a2c0367) → COMPLETE E5 packet
+**130,101B** (sha fb69964d…), byte-identical parse-back + repeat-compile + fresh-process resume
+proof. R6_BLOCKED_E5_MIDCAMP_CHECKPOINT_ADAPTER_ABSENT DISSOLVED. la1's 128,254B honestly
+RE-BASED: not a closed packet; completeness costs +1,847B (bundle itself −253B). BYTE BASIS
+UPDATE for §1: B=130,101 closed ⇒ d_seg ≤ 8.730e-4 (≤102,986 errors) at pointer-class pose;
+sub-0.15 stretch 4.622e-4. GATES: G1 j10 RUNNING · G2 closes on j10 trace · G3 GREEN ·
+G3.5 ks1 NOW UNBLOCKED (adapter exists) · G4 **GREEN** · G5/G6 pending reseal.

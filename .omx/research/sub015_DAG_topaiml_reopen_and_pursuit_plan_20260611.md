@@ -24706,3 +24706,10 @@ rung (stays a named alternative). Per-class collateral watch binding (Lane +0.01
 +0.0019 vs Movable −0.0226 — composite hides it). 1,216-step horizon DERIVED-not-measured
 (pose decay unknown — sister of db1's seg question; campaign pose stage self-measures via the
 instrumented trace). Card §15. pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-603-E5A-G4-GREEN (2026-07-25, MAIN)
+SIGNAL: e5a merged (1fe24eb674, dispositioned) — G4 GREEN. Checkpoint→packet chain PROVEN:
+130,101B complete closed packet, parse-back byte-identical, resume proof green, live campaign
+dir untouched. la1 128,254B re-based (+1,847B completeness). Composing triple at REAL closed
+bytes: d_seg ≤8.730e-4 @130,101B. ks1 (G3.5 knee-member realization) UNBLOCKED. Card §17.
+pointer 0.1910828242 [contest-CPU] UNMOVED.
