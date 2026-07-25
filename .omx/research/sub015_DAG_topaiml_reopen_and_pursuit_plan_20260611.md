@@ -24486,3 +24486,21 @@ W_joint state — different state families, do not conflate.) Scope honesty: doe
 byte-identity losslessness; does not close the PC1 family. Consumers: R6 export chain ·
 lp1/c1 budgets · costate rows · the composed-object-scoring custody rule. Pointer 0.1910828242
 [contest-CPU] UNMOVED — means.
+
+### FEED-603-j9-cured-and-ATTEMPT-5-FIRED (2026-07-25T06:23Z — standing GO (b))
+j9 landed READY_TO_FIRE (MERGED b78fe8c0b1) with all 3 attempt-4 death defects CURED +
+SMOKE-PROVEN: **D1** typed `ProposalGeometryInfeasibleError` (proposal-only; custody faults stay
+fatal) + the landed RG1 projection on G1 track translations — forced (8192,0) escape CURED to
+(234,0), then LEGITIMATELY rejected by normal scoring (cure-not-crash, then honest rejection —
+both halves proven); **D2** atomic keep-all full-resume checkpoint after EVERY accepted step
+(bit-identical restore proven, ckpt SHA 51722d32…) layered on periodic-37 + stage boundaries +
+EMA shadow; **D3** honest reseal from MEASURED cadence: **39.36h central / 41.58h high** for 450
+steps (the 13.5h seal was a smoke-surrogate miss — retired). Smoke also re-proved descent: fresh
+y−1 proposal accepted at joint ΔS −0.0569. New typed_config_hash **4cf2d2e8…** (semantic change
+D1-D3, documented); authority chain intact (J7 8dac31be…); fresh worst-geometry receipt
+d957c817… (admission true). MAIN review: D1 catch verified TYPED (not blanket); consumer
+015add65… + launcher 34d967aa… SHAs verified BYTE-MATCH against merged main; 49+8 tests.
+**ATTEMPT 5 FIRED**: run dir ddm_366_campaign_v5_cured_20260725T062259Z, pid 67636, detached +
+persistent Monitor (startup gates · geometry-cure events · checkpoints · death). Chain to
+pointer: campaign endpoint → e4/e5 export (inherits cc3's −3,422B) → R6 dual-axis exact eval.
+Pointer 0.1910828242 [contest-CPU] UNMOVED.
