@@ -122,3 +122,18 @@ E6 OOPS BUDGET SLICING: campaign runs in budgeted slices w/ continuation decisio
    (keep-all checkpoints make this free); budget doubles only on measured-progress branches.
 Each lands as DSL-typed engine config in the G5 reseal; anything unbuildable-by-reseal-time is
 recorded as a named residual, never silently dropped.
+
+## 8a. E3 PREFILTER COMPOSITION (operator question 2026-07-25 "focused on the hardest frames
+## and pairs?" — answer: hardest-HEAVY, not hardest-only; STRATIFIED, support-aware, refreshed)
+- STRATA (per proposal): ~1/2 the proposal's SUPPORT pairs (ms6/rg1-rg3 actuator→pair
+  assignment — evaluate where the proposal ACTS); ~1/3 g3 hard-pair registry core (benefit
+  signal on residual mass); remainder COLLATERAL SENTINELS = thin-margin currently-correct
+  pairs from sn1/at1 atlases (regression tripwires — hardest-only is structurally blind to
+  collateral on at-floor pairs, inflating false-accepts).
+- THRESHOLD: permissive (borderline PROMOTES to full-n600 exact confirm) — false-accept costs
+  one exact verdict, false-reject silently costs opportunity; asymmetry favors promotion.
+  Acceptance stays exact-only, unchanged.
+- FRESHNESS: strata recomputed at stage boundaries from live campaign telemetry (E1 shifts
+  hardness as the tail drains; frozen subsets = the staleness confound class). Per-proposal
+  subset validity vs full n600 is TRACKED as a standing telemetry row; if measured validity
+  degrades below the g3-calibrated band, the ladder widens the subset before trusting it.
