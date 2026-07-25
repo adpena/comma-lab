@@ -24349,3 +24349,25 @@ unmeasured_internal_layers_claimed=false). NO RESPAWN (fleet-cap-not-quota + coh
 DISTANCE test): solve route is live via ms2r at box tolerance; descent route is the RUNNING
 #366 campaign; a station-dynamics producer arm does not shorten distance to the next exact row
 today. #659 → held-with-named-blocker. Pointer 0.1910828242 [contest-CPU] UNMOVED — means.
+
+### FEED-603-cc2-coder-races (2026-07-25, arm ddm_cc2_coder_races rc=0, MERGED e767418f3a)
+cc1 races 2+3 executed [macOS-CPU frozen-scorer advisory · score_claim=false]. RACE 2 (equal-byte
+139,538B quantizer race, exact n600 through real receiver/R/frozen scorers, SHA-pinned J8F parent):
+**Cool-Chic v5 terminal proxy WINS** — Δd_seg −2.47e-6, Δd_pose −0.00640, Δadvisory-action
+−0.00192; C3 original LOSES (+0.000124 pose). verdict_scope: INSTANCE (single-seed terminal
+source-schedule proxies, NOT retrained — one instance neither promotes v5 nor kills C3; multi-seed
+or real schedule-retrain evidence owed before adoption). RACE 3 (per-stream pricing: 27 counted
+leaves + 5,292B recursive ZIP overhead × 5 coder arms): lossless **−3,422B** (134,246→130,824
+leaf; 139,538→136,116 est archive; rate-action −0.00228, zero distortion by lossless identity);
+winners raw 19 / G4 decoder-derived context 1 / Bellard-class KT-mixing 7; ARM-IFCE + CTW 0;
+135/135 exact parse-backs; context/mixing coders carry ZERO model bytes (state derived from the
+already-decoded prefix — rule-118 free interpreter). Largest single leaf: Q8 receiver program
+1,233→649B via G4 (−584B); PC1 pose home + 29,819B G1 stream stay raw. **HARD BOUNDARY (honored,
+NO-FAKE):** −3,422B is a typed price table — DERIVED at archive level until the mixed
+context-frame interpreter is integrated into the real receiver; each per-frame byte count +
+parse-back is MEASURED. Cross-consumers: lp1's 134,211B corrected budget (cc2's leaf inventory =
+the same typed streams) · costate SENSE rows · c1 waterfill order. NEXT EXECUTABLE EDGE →
+cc3 successor: admit ONLY the 8 negative-delta leaves into receiver integration (member identity
+preserved, generic decoder in free interpreter code, exact mixed archive reconstruct + parse-back)
+— an R6-export rate lever. Verification: 49 tests + 57 deterministic round-trips + 114
+malformed rejections; byte-identical resume replay. Pointer 0.1910828242 [contest-CPU] UNMOVED.
