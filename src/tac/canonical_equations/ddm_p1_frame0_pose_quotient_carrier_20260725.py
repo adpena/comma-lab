@@ -79,9 +79,14 @@ def pose_targeted_actuator(
     ):
         raise ValueError("pose-targeted actuator inputs differ")
     gram = jac @ jac.T
-    return np.ascontiguousarray(
-        jac.T @ np.linalg.solve(gram + float(ridge) * np.eye(POSE_DIMS), residual)
-    )
+    with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
+        result = jac.T @ np.linalg.solve(
+            gram + float(ridge) * np.eye(POSE_DIMS),
+            residual,
+        )
+    if not np.all(np.isfinite(result)):
+        raise ValueError("pose-targeted actuator solve produced nonfinite values")
+    return np.ascontiguousarray(result)
 
 
 def descending_covariance_spectrum(actuators: np.ndarray) -> np.ndarray:
@@ -91,7 +96,10 @@ def descending_covariance_spectrum(actuators: np.ndarray) -> np.ndarray:
     if values.ndim != 2 or len(values) < 2 or not np.all(np.isfinite(values)):
         raise ValueError("actuators must be a finite (pairs,coordinates) matrix")
     centered = values - values.mean(axis=0, keepdims=True)
-    gram = centered @ centered.T
+    with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
+        gram = centered @ centered.T
+    if not np.all(np.isfinite(gram)):
+        raise ValueError("actuator covariance Gram matrix is nonfinite")
     eigenvalues = np.linalg.eigvalsh(gram)
     eigenvalues = np.maximum(eigenvalues[::-1], 0.0)
     return np.ascontiguousarray(eigenvalues)

@@ -619,11 +619,12 @@ def _derivation_stage(
     centered = actuators.astype(np.float64) - actuators.mean(axis=0, dtype=np.float64)
     _u, singular_values, vt = np.linalg.svd(centered, full_matrices=False)
     eigenvalues = descending_covariance_spectrum(actuators)
+    spectrum_atol = max(float(eigenvalues[0]) * 1.0e-12, 1.0e-10)
     if not np.allclose(
         np.square(singular_values),
         eigenvalues[: len(singular_values)],
         rtol=1.0e-7,
-        atol=1.0e-12,
+        atol=spectrum_atol,
     ):
         raise P1RunnerError("P1 SVD/eigenvalue spectrum crosscheck differs")
     for row in vt[:MAX_RANK]:

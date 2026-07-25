@@ -13,6 +13,7 @@ import torch
 from tac.canonical_equations.ddm_p1_frame0_pose_quotient_carrier_20260725 import (
     DELEGATED_TARGET_D_POSE,
     canonical_rank_law,
+    descending_covariance_spectrum,
     matched_control_fence,
     pose_targeted_actuator,
     reach_curve_disposition,
@@ -149,6 +150,9 @@ def test_targeted_actuator_and_rank_law_are_not_generic_spatial_menu() -> None:
     )
     assert law["selected_rank"] == 3
     assert law["rows"][2]["predicted_linearized_d_pose"] <= DELEGATED_TARGET_D_POSE
+    spectrum = descending_covariance_spectrum(np.stack((actuator, -actuator), axis=0))
+    assert np.all(np.isfinite(spectrum))
+    assert np.all(spectrum >= 0.0)
 
 
 def test_falsifier_requires_five_rows_and_is_formulation_scoped() -> None:
