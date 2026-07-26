@@ -21,23 +21,60 @@ def _write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def _pointer_payload(score: float = 0.172) -> dict[str, object]:
+    fetched = "2026-07-25T00:00:00+00:00"
+    public = {
+        "rank": 1,
+        "score": score,
+        "name": "fixture leader",
+        "pr_number": 130,
+        "pr_url": "https://example.test/130",
+    }
+    return {
+        "schema_version": "canonical_frontier_pointer_v1_20260519",
+        "our_local_frontier_contest_cpu": None,
+        "our_local_frontier_contest_cuda": None,
+        "submitted_pr_number_for_current_frontier": None,
+        "upstream_leaderboard_snapshot": {
+            "source": "official_leaderboard",
+            "fetched_at_utc": fetched,
+            "fetch_status": "ok",
+            "entries": [public],
+            "best_entry": public,
+            "entry_count": 1,
+            "score_precision": "official_display",
+        },
+        "upstream_leaderboard_snapshot_at_utc": fetched,
+        "last_refreshed_utc": fetched,
+        "auto_update_on_dispatch_completion": True,
+        "pointer_refresh_command": "fixture",
+        "refresh_provenance": {"kind": "test"},
+        "effective_frontier": {
+            "score": score,
+            "axis": "official_leaderboard",
+            "source": "upstream_official_leaderboard",
+            "source_kind": "external_public_leaderboard_target",
+            "leaderboard_rank": 1,
+            "submission_name": "fixture leader",
+            "pr_number": 130,
+            "pr_url": "https://example.test/130",
+            "snapshot_at_utc": fetched,
+            "evidence_grade": "[official-leaderboard display]",
+            "score_precision": "official_display",
+            "custody": "external target only; no local archive authority implied",
+            "selection_rule": (
+                "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, "
+                "upstream_official_leaderboard.best_entry)"
+            ),
+            "role": "competitive_score_to_beat",
+        },
+    }
+
+
 def test_report_reads_target_from_pointer_and_composes_all_axes(tmp_path: Path) -> None:
     pointer = tmp_path / "pointer.json"
     manifest = tmp_path / "manifest.json"
-    _write_json(
-        pointer,
-        {
-            "effective_frontier": {
-                "score": 0.172,
-                "axis": "official_leaderboard",
-                "custody": "external target only",
-                "evidence_grade": "[official-leaderboard display]",
-                "score_precision": "official_display",
-                "source": "upstream_official_leaderboard",
-                "source_kind": "external_public_leaderboard_target",
-            }
-        },
-    )
+    _write_json(pointer, _pointer_payload())
     _write_json(
         manifest,
         {
@@ -87,7 +124,7 @@ def test_report_fails_closed_without_effective_pointer_score(tmp_path: Path) -> 
     _write_json(pointer, {"effective_frontier": {}})
     _write_json(manifest, {"points": [], "transitions": []})
 
-    with pytest.raises(MODULE.CoupledScoreSurfaceError, match="lacks score"):
+    with pytest.raises(MODULE.CoupledScoreSurfaceError, match="canonical pointer is invalid"):
         MODULE.build_report(manifest_path=manifest, pointer_path=pointer)
 
 
@@ -96,7 +133,7 @@ def test_report_refuses_malformed_point_instead_of_inventing_axis_zero(
 ) -> None:
     pointer = tmp_path / "pointer.json"
     manifest = tmp_path / "manifest.json"
-    _write_json(pointer, {"effective_frontier": {"score": 0.172}})
+    _write_json(pointer, _pointer_payload())
     _write_json(
         manifest,
         {"points": [{"id": "missing_pose", "d_seg": 0.0, "archive_bytes": 1}]},

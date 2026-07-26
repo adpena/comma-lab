@@ -1,0 +1,560 @@
+{
+  "c1_to_target_interface_25": [
+    {
+      "baseline_class": 0,
+      "baseline_name": "Road",
+      "sites": 722868,
+      "target_class": 0,
+      "target_name": "Road"
+    },
+    {
+      "baseline_class": 0,
+      "baseline_name": "Road",
+      "sites": 65,
+      "target_class": 1,
+      "target_name": "Lane"
+    },
+    {
+      "baseline_class": 0,
+      "baseline_name": "Road",
+      "sites": 38,
+      "target_class": 2,
+      "target_name": "Undrivable"
+    },
+    {
+      "baseline_class": 0,
+      "baseline_name": "Road",
+      "sites": 11,
+      "target_class": 3,
+      "target_name": "Movable"
+    },
+    {
+      "baseline_class": 0,
+      "baseline_name": "Road",
+      "sites": 62,
+      "target_class": 4,
+      "target_name": "MyCar"
+    },
+    {
+      "baseline_class": 1,
+      "baseline_name": "Lane",
+      "sites": 53,
+      "target_class": 0,
+      "target_name": "Road"
+    },
+    {
+      "baseline_class": 1,
+      "baseline_name": "Lane",
+      "sites": 18697,
+      "target_class": 1,
+      "target_name": "Lane"
+    },
+    {
+      "baseline_class": 1,
+      "baseline_name": "Lane",
+      "sites": 0,
+      "target_class": 2,
+      "target_name": "Undrivable"
+    },
+    {
+      "baseline_class": 1,
+      "baseline_name": "Lane",
+      "sites": 0,
+      "target_class": 3,
+      "target_name": "Movable"
+    },
+    {
+      "baseline_class": 1,
+      "baseline_name": "Lane",
+      "sites": 1,
+      "target_class": 4,
+      "target_name": "MyCar"
+    },
+    {
+      "baseline_class": 2,
+      "baseline_name": "Undrivable",
+      "sites": 36,
+      "target_class": 0,
+      "target_name": "Road"
+    },
+    {
+      "baseline_class": 2,
+      "baseline_name": "Undrivable",
+      "sites": 0,
+      "target_class": 1,
+      "target_name": "Lane"
+    },
+    {
+      "baseline_class": 2,
+      "baseline_name": "Undrivable",
+      "sites": 1592425,
+      "target_class": 2,
+      "target_name": "Undrivable"
+    },
+    {
+      "baseline_class": 2,
+      "baseline_name": "Undrivable",
+      "sites": 8,
+      "target_class": 3,
+      "target_name": "Movable"
+    },
+    {
+      "baseline_class": 2,
+      "baseline_name": "Undrivable",
+      "sites": 0,
+      "target_class": 4,
+      "target_name": "MyCar"
+    },
+    {
+      "baseline_class": 3,
+      "baseline_name": "Movable",
+      "sites": 7,
+      "target_class": 0,
+      "target_name": "Road"
+    },
+    {
+      "baseline_class": 3,
+      "baseline_name": "Movable",
+      "sites": 0,
+      "target_class": 1,
+      "target_name": "Lane"
+    },
+    {
+      "baseline_class": 3,
+      "baseline_name": "Movable",
+      "sites": 15,
+      "target_class": 2,
+      "target_name": "Undrivable"
+    },
+    {
+      "baseline_class": 3,
+      "baseline_name": "Movable",
+      "sites": 12146,
+      "target_class": 3,
+      "target_name": "Movable"
+    },
+    {
+      "baseline_class": 3,
+      "baseline_name": "Movable",
+      "sites": 0,
+      "target_class": 4,
+      "target_name": "MyCar"
+    },
+    {
+      "baseline_class": 4,
+      "baseline_name": "MyCar",
+      "sites": 43,
+      "target_class": 0,
+      "target_name": "Road"
+    },
+    {
+      "baseline_class": 4,
+      "baseline_name": "MyCar",
+      "sites": 0,
+      "target_class": 1,
+      "target_name": "Lane"
+    },
+    {
+      "baseline_class": 4,
+      "baseline_name": "MyCar",
+      "sites": 0,
+      "target_class": 2,
+      "target_name": "Undrivable"
+    },
+    {
+      "baseline_class": 4,
+      "baseline_name": "MyCar",
+      "sites": 0,
+      "target_class": 3,
+      "target_name": "Movable"
+    },
+    {
+      "baseline_class": 4,
+      "baseline_name": "MyCar",
+      "sites": 799253,
+      "target_class": 4,
+      "target_name": "MyCar"
+    }
+  ],
+  "c1_to_wseg_confusion_25": [
+    {
+      "baseline_class": 0,
+      "baseline_name": "Road",
+      "sites": 702069,
+      "wseg_class": 0,
+      "wseg_name": "Road"
+    },
+    {
+      "baseline_class": 0,
+      "baseline_name": "Road",
+      "sites": 13034,
+      "wseg_class": 1,
+      "wseg_name": "Lane"
+    },
+    {
+      "baseline_class": 0,
+      "baseline_name": "Road",
+      "sites": 0,
+      "wseg_class": 2,
+      "wseg_name": "Undrivable"
+    },
+    {
+      "baseline_class": 0,
+      "baseline_name": "Road",
+      "sites": 102,
+      "wseg_class": 3,
+      "wseg_name": "Movable"
+    },
+    {
+      "baseline_class": 0,
+      "baseline_name": "Road",
+      "sites": 7839,
+      "wseg_class": 4,
+      "wseg_name": "MyCar"
+    },
+    {
+      "baseline_class": 1,
+      "baseline_name": "Lane",
+      "sites": 8467,
+      "wseg_class": 0,
+      "wseg_name": "Road"
+    },
+    {
+      "baseline_class": 1,
+      "baseline_name": "Lane",
+      "sites": 10201,
+      "wseg_class": 1,
+      "wseg_name": "Lane"
+    },
+    {
+      "baseline_class": 1,
+      "baseline_name": "Lane",
+      "sites": 0,
+      "wseg_class": 2,
+      "wseg_name": "Undrivable"
+    },
+    {
+      "baseline_class": 1,
+      "baseline_name": "Lane",
+      "sites": 0,
+      "wseg_class": 3,
+      "wseg_name": "Movable"
+    },
+    {
+      "baseline_class": 1,
+      "baseline_name": "Lane",
+      "sites": 83,
+      "wseg_class": 4,
+      "wseg_name": "MyCar"
+    },
+    {
+      "baseline_class": 2,
+      "baseline_name": "Undrivable",
+      "sites": 74963,
+      "wseg_class": 0,
+      "wseg_name": "Road"
+    },
+    {
+      "baseline_class": 2,
+      "baseline_name": "Undrivable",
+      "sites": 1496659,
+      "wseg_class": 1,
+      "wseg_name": "Lane"
+    },
+    {
+      "baseline_class": 2,
+      "baseline_name": "Undrivable",
+      "sites": 781,
+      "wseg_class": 2,
+      "wseg_name": "Undrivable"
+    },
+    {
+      "baseline_class": 2,
+      "baseline_name": "Undrivable",
+      "sites": 504,
+      "wseg_class": 3,
+      "wseg_name": "Movable"
+    },
+    {
+      "baseline_class": 2,
+      "baseline_name": "Undrivable",
+      "sites": 19562,
+      "wseg_class": 4,
+      "wseg_name": "MyCar"
+    },
+    {
+      "baseline_class": 3,
+      "baseline_name": "Movable",
+      "sites": 771,
+      "wseg_class": 0,
+      "wseg_name": "Road"
+    },
+    {
+      "baseline_class": 3,
+      "baseline_name": "Movable",
+      "sites": 24,
+      "wseg_class": 1,
+      "wseg_name": "Lane"
+    },
+    {
+      "baseline_class": 3,
+      "baseline_name": "Movable",
+      "sites": 0,
+      "wseg_class": 2,
+      "wseg_name": "Undrivable"
+    },
+    {
+      "baseline_class": 3,
+      "baseline_name": "Movable",
+      "sites": 11364,
+      "wseg_class": 3,
+      "wseg_name": "Movable"
+    },
+    {
+      "baseline_class": 3,
+      "baseline_name": "Movable",
+      "sites": 9,
+      "wseg_class": 4,
+      "wseg_name": "MyCar"
+    },
+    {
+      "baseline_class": 4,
+      "baseline_name": "MyCar",
+      "sites": 209,
+      "wseg_class": 0,
+      "wseg_name": "Road"
+    },
+    {
+      "baseline_class": 4,
+      "baseline_name": "MyCar",
+      "sites": 8,
+      "wseg_class": 1,
+      "wseg_name": "Lane"
+    },
+    {
+      "baseline_class": 4,
+      "baseline_name": "MyCar",
+      "sites": 0,
+      "wseg_class": 2,
+      "wseg_name": "Undrivable"
+    },
+    {
+      "baseline_class": 4,
+      "baseline_name": "MyCar",
+      "sites": 0,
+      "wseg_class": 3,
+      "wseg_name": "Movable"
+    },
+    {
+      "baseline_class": 4,
+      "baseline_name": "MyCar",
+      "sites": 799079,
+      "wseg_class": 4,
+      "wseg_name": "MyCar"
+    }
+  ],
+  "config_sha256": "4da1aa6b6ba490aae2f6e9c496069979b83083eacc9dd589ad8d9f491b4ce5e2",
+  "hashes": {
+    "cached_target_labels_sha256": "22180acf39c7c40d5349d9543caefed32f68c688f0fefd8e0ecb5580bb097c69",
+    "live_target_labels_sha256": "1bd67f586e69de4af8e5921897011453fade0e51b48a3a7bd65133a1d645f329",
+    "reconstructed_c1_baseline_sha256": "6513acc77118e21334f883553cbb6f329321de1be3d40a139f2f1565ed5ffbf4",
+    "s2_event_rows_sha256": "db19b4c54d7f490599edf6d4123132e2043816d55e127b9f3e904a23f64ad25a",
+    "wseg_owned_mask_sha256": "65b08d5bc21f6952c2ce0e7fc18a0ea79c1dc90299238eb5dc2c23c590634222",
+    "wseg_semantic_cells_sha256": "35f229c3f82a0e1678171404f86af164bf739f314d3923de1e96ddaa96c34285"
+  },
+  "non_event_residual": 1622039,
+  "pair_end_exclusive": 384,
+  "pair_start": 368,
+  "pairs": [
+    {
+      "non_event_residual": 101922,
+      "pair_id": 368,
+      "s2_events": 21,
+      "seeded_expected_baseline_mismatches": 11,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101933,
+      "wseg_owned_sites": 97441
+    },
+    {
+      "non_event_residual": 101630,
+      "pair_id": 369,
+      "s2_events": 28,
+      "seeded_expected_baseline_mismatches": 21,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101651,
+      "wseg_owned_sites": 97420
+    },
+    {
+      "non_event_residual": 100861,
+      "pair_id": 370,
+      "s2_events": 19,
+      "seeded_expected_baseline_mismatches": 8,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 100869,
+      "wseg_owned_sites": 97426
+    },
+    {
+      "non_event_residual": 101484,
+      "pair_id": 371,
+      "s2_events": 20,
+      "seeded_expected_baseline_mismatches": 15,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101499,
+      "wseg_owned_sites": 97484
+    },
+    {
+      "non_event_residual": 101974,
+      "pair_id": 372,
+      "s2_events": 25,
+      "seeded_expected_baseline_mismatches": 14,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101988,
+      "wseg_owned_sites": 97479
+    },
+    {
+      "non_event_residual": 101549,
+      "pair_id": 373,
+      "s2_events": 23,
+      "seeded_expected_baseline_mismatches": 15,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101564,
+      "wseg_owned_sites": 97507
+    },
+    {
+      "non_event_residual": 100955,
+      "pair_id": 374,
+      "s2_events": 24,
+      "seeded_expected_baseline_mismatches": 13,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 100968,
+      "wseg_owned_sites": 97516
+    },
+    {
+      "non_event_residual": 101140,
+      "pair_id": 375,
+      "s2_events": 15,
+      "seeded_expected_baseline_mismatches": 5,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101145,
+      "wseg_owned_sites": 97485
+    },
+    {
+      "non_event_residual": 101490,
+      "pair_id": 376,
+      "s2_events": 24,
+      "seeded_expected_baseline_mismatches": 13,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101503,
+      "wseg_owned_sites": 97497
+    },
+    {
+      "non_event_residual": 101308,
+      "pair_id": 377,
+      "s2_events": 18,
+      "seeded_expected_baseline_mismatches": 15,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101323,
+      "wseg_owned_sites": 97500
+    },
+    {
+      "non_event_residual": 101178,
+      "pair_id": 378,
+      "s2_events": 14,
+      "seeded_expected_baseline_mismatches": 6,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101184,
+      "wseg_owned_sites": 97518
+    },
+    {
+      "non_event_residual": 101446,
+      "pair_id": 379,
+      "s2_events": 24,
+      "seeded_expected_baseline_mismatches": 14,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101460,
+      "wseg_owned_sites": 97560
+    },
+    {
+      "non_event_residual": 101294,
+      "pair_id": 380,
+      "s2_events": 17,
+      "seeded_expected_baseline_mismatches": 13,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101307,
+      "wseg_owned_sites": 97549
+    },
+    {
+      "non_event_residual": 101339,
+      "pair_id": 381,
+      "s2_events": 25,
+      "seeded_expected_baseline_mismatches": 13,
+      "target_cache_label_mismatches": 1,
+      "total_wseg_to_c1_baseline_mismatches": 101352,
+      "wseg_owned_sites": 97570
+    },
+    {
+      "non_event_residual": 101217,
+      "pair_id": 382,
+      "s2_events": 19,
+      "seeded_expected_baseline_mismatches": 11,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101228,
+      "wseg_owned_sites": 97570
+    },
+    {
+      "non_event_residual": 101252,
+      "pair_id": 383,
+      "s2_events": 23,
+      "seeded_expected_baseline_mismatches": 8,
+      "target_cache_label_mismatches": 0,
+      "total_wseg_to_c1_baseline_mismatches": 101260,
+      "wseg_owned_sites": 97560
+    }
+  ],
+  "per_baseline_class": [
+    {
+      "baseline_class": 0,
+      "baseline_name": "Road",
+      "mismatch_fraction": 0.029009299572363506,
+      "sites": 723044,
+      "wseg_mismatches": 20975
+    },
+    {
+      "baseline_class": 1,
+      "baseline_name": "Lane",
+      "mismatch_fraction": 0.4559756812969975,
+      "sites": 18751,
+      "wseg_mismatches": 8550
+    },
+    {
+      "baseline_class": 2,
+      "baseline_name": "Undrivable",
+      "mismatch_fraction": 0.9995095665912492,
+      "sites": 1592469,
+      "wseg_mismatches": 1591688
+    },
+    {
+      "baseline_class": 3,
+      "baseline_name": "Movable",
+      "mismatch_fraction": 0.06607495069033531,
+      "sites": 12168,
+      "wseg_mismatches": 804
+    },
+    {
+      "baseline_class": 4,
+      "baseline_name": "MyCar",
+      "mismatch_fraction": 0.0002714889102410121,
+      "sites": 799296,
+      "wseg_mismatches": 217
+    }
+  ],
+  "s2_events": 339,
+  "schema": "tac.c0b_wseg_c1_baseline_join_stage.v1",
+  "seeded_expected_baseline_mismatches": 195,
+  "sites": 3145728,
+  "stage_complete": true,
+  "stage_sha256": "481c2245a45e95c20a19c62bd8c9e598eae6c48692847d0b9a00e7b82ff32802",
+  "target_cache_label_mismatches": 1,
+  "total_wseg_to_c1_baseline_mismatches": 1622234,
+  "wseg_owned_sites": 1560082
+}

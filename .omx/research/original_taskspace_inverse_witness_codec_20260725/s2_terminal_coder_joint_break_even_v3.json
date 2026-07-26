@@ -1,0 +1,143 @@
+{
+  "best_payload_only": {
+    "coder": "brotli_generic_q11",
+    "delta_s_if_all_events_realized_and_pose_unchanged": 0.007588303172691406,
+    "exceeds_seg_only_strict_total_break_even_cap": true,
+    "headers_and_container_bytes_assumed": 0,
+    "minimum_pose_reduction_fraction_required": 0.4190229658277914,
+    "payload_bytes": 34218,
+    "payload_only_rate_term": 0.02278436165793446,
+    "payload_sha256": "8c327284e8b55d2972950e52c1d2ee7f6da2008a181009ec063b78f6f622ebc9",
+    "strict_joint_improvement_requires_d_pose_after_below": 5.916871939646534e-05
+  },
+  "exact_economics": {
+    "baseline_mean_d_pose": 0.00010184347386600314,
+    "baseline_pose_score_term": 0.03191292432009375,
+    "conditional_joint_break_even_curve": [
+      {
+        "d_pose_after": 0.00010184347386600314,
+        "d_pose_after_fraction_of_baseline": 1.0,
+        "strict_total_break_even_bytes": 22821
+      },
+      {
+        "d_pose_after": 7.638260539950235e-05,
+        "d_pose_after_fraction_of_baseline": 0.75,
+        "strict_total_break_even_bytes": 29242
+      },
+      {
+        "d_pose_after": 5.092173693300157e-05,
+        "d_pose_after_fraction_of_baseline": 0.5,
+        "strict_total_break_even_bytes": 36859
+      },
+      {
+        "d_pose_after": 2.5460868466500785e-05,
+        "d_pose_after_fraction_of_baseline": 0.25,
+        "strict_total_break_even_bytes": 46785
+      },
+      {
+        "d_pose_after": 0.0,
+        "d_pose_after_fraction_of_baseline": 0.0,
+        "strict_total_break_even_bytes": 70749
+      }
+    ],
+    "current_packet_bytes_per_event": 2.2222470155082004,
+    "current_packet_delta_s_if_all_events_realized_and_pose_unchanged": 0.011329098771331763,
+    "current_packet_rate_term": 0.026525157256574818,
+    "current_packet_strict_joint_improvement_requires_d_pose_after_below": 4.236938742218667e-05,
+    "event_count": 17926,
+    "full_pose_elimination_strict_total_break_even_bytes": 70749,
+    "minimum_fractional_packet_reduction_required_if_pose_unchanged": 0.4271262174917161,
+    "pair_count": 600,
+    "scorer_hw": [
+      384,
+      512
+    ],
+    "seg_only_strict_break_even_bytes_per_event": 1.273067053441928,
+    "seg_only_strict_total_break_even_bytes": 22821,
+    "seg_score_saved_if_all_events_realized": 0.015196058485243054
+  },
+  "inputs": {
+    "bridge": {
+      "bytes": 4018,
+      "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/c1_s2_exact_debt_bridge_v4.json",
+      "receipt_sha256": "8ab1b65fac794a14cd951687cb0451ffdba03fa7d84e87659596b992ef7dd0bf",
+      "sha256": "59efc2b594d9ff58244ee0248b5ddb1cac779347a21be2b33c6be13c34afdb95"
+    },
+    "packet": {
+      "bytes": 39836,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/s2_compose_20260721/partition_seed/s2_partition_event_seed.bin",
+      "sha256": "df4c0534537a9919681509a0b44a392d7d4b46c812d7570c534e6b823adae7fc"
+    },
+    "raw_event_stream": {
+      "bytes": 51280,
+      "codec": "site_delta_uleb128_class6_zlib",
+      "sha256": "2357c498075e105784bc59f3a92c1c65bc12b419574bf80b1431b0c9f375415b"
+    }
+  },
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "receipt_sha256": "3494e16e709a74b5ca56e92b5d65873b92b66ae8b56bf97f4e10670b8ab08154",
+  "research_only": true,
+  "routing": "measure a receiver-closed realization's actual joint d_pose-after before admitting or killing the S2 packet; in parallel, use the exact S2 identity as supervision for V9 boundary/topology factorization because that transform can improve the rate side without presuming the Pose outcome",
+  "schema": "tac.s2_terminal_coder_break_even.v3",
+  "score_claim": false,
+  "terminal_coder_payload_lower_bounds": [
+    {
+      "coder": "brotli_generic_q11",
+      "delta_s_if_all_events_realized_and_pose_unchanged": 0.007588303172691406,
+      "exceeds_seg_only_strict_total_break_even_cap": true,
+      "headers_and_container_bytes_assumed": 0,
+      "minimum_pose_reduction_fraction_required": 0.4190229658277914,
+      "payload_bytes": 34218,
+      "payload_only_rate_term": 0.02278436165793446,
+      "payload_sha256": "8c327284e8b55d2972950e52c1d2ee7f6da2008a181009ec063b78f6f622ebc9",
+      "strict_joint_improvement_requires_d_pose_after_below": 5.916871939646534e-05
+    },
+    {
+      "coder": "bz2_level9",
+      "delta_s_if_all_events_realized_and_pose_unchanged": 0.009491993919667692,
+      "exceeds_seg_only_strict_total_break_even_cap": true,
+      "headers_and_container_bytes_assumed": 0,
+      "minimum_pose_reduction_fraction_required": 0.5064012440481398,
+      "payload_bytes": 37077,
+      "payload_only_rate_term": 0.024688052404910746,
+      "payload_sha256": "ee154d40482dfb3cd89e924a97f4cc101c3ee160f3385322842e7355b3427291",
+      "strict_joint_improvement_requires_d_pose_after_below": 5.026981200207494e-05
+    },
+    {
+      "coder": "lzma_xz_preset6",
+      "delta_s_if_all_events_realized_and_pose_unchanged": 0.00977631569265086,
+      "exceeds_seg_only_strict_total_break_even_cap": true,
+      "headers_and_container_bytes_assumed": 0,
+      "minimum_pose_reduction_fraction_required": 0.5188406061547768,
+      "payload_bytes": 37504,
+      "payload_only_rate_term": 0.024972374177893913,
+      "payload_sha256": "8582097ca0a11e651c940f09f61accc6593fed0b28e81be2fdb64ebe0cc220c1",
+      "strict_joint_improvement_requires_d_pose_after_below": 4.9002944152457906e-05
+    },
+    {
+      "coder": "lzma_xz_preset9_extreme",
+      "delta_s_if_all_events_realized_and_pose_unchanged": 0.009792296307525794,
+      "exceeds_seg_only_strict_total_break_even_cap": true,
+      "headers_and_container_bytes_assumed": 0,
+      "minimum_pose_reduction_fraction_required": 0.5195350618987976,
+      "payload_bytes": 37528,
+      "payload_only_rate_term": 0.024988354792768848,
+      "payload_sha256": "05f48e4b44d0826cb06db2e93d102fa305eaf0df85fdf24d291de7c0e21b836f",
+      "strict_joint_improvement_requires_d_pose_after_below": 4.893221836704062e-05
+    },
+    {
+      "coder": "zlib_level9",
+      "delta_s_if_all_events_realized_and_pose_unchanged": 0.0109848496925676,
+      "exceeds_seg_only_strict_total_break_even_cap": true,
+      "headers_and_container_bytes_assumed": 0,
+      "minimum_pose_reduction_fraction_required": 0.5699436684656242,
+      "payload_bytes": 39319,
+      "payload_only_rate_term": 0.026180908177810654,
+      "payload_sha256": "4ba4579f8fe3d216323269019da76830b9b054ebb05a95371ace217cceabdf77",
+      "strict_joint_improvement_requires_d_pose_after_below": 4.3798430761530385e-05
+    }
+  ],
+  "verdict": "POSE_CONDITIONAL_TERMINAL_CODER_ECONOMICS_RECEIVER_MEASUREMENT_REQUIRED",
+  "verdict_scope": "the exact supplied S2 site-delta/class raw stream under the enumerated deterministic terminal coders, conditional on realizing every Seg correction. Every tested payload is rate-negative when Pose is unchanged, but none is unconditionally rate-dead because a coupled receiver may lower Pose. The open d_pose-after thresholds and full conditional byte curve are derived, not score claims"
+}

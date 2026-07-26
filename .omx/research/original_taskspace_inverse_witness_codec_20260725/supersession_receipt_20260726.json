@@ -1,0 +1,55 @@
+{
+  "schema": "original_taskspace_inverse_witness_codec_supersession.v1",
+  "written_at_utc": "2026-07-26T02:09:04Z",
+  "supersessions": [
+    {
+      "superseded": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c1_s2_exact_debt_bridge_v2.json",
+        "file_sha256": "2db86359863e4a4e0443299fd2a20b092003a800e725c2bfe3c3991aa7b9cf26"
+      },
+      "replacement": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c1_s2_exact_debt_bridge_v4.json",
+        "file_sha256": "59efc2b594d9ff58244ee0248b5ddb1cac779347a21be2b33c6be13c34afdb95",
+        "receipt_sha256": "8ab1b65fac794a14cd951687cb0451ffdba03fa7d84e87659596b992ef7dd0bf"
+      },
+      "reason": "v2 reopened the S2 packet path after identity validation and split other receipt-stage hashes from parsed content; v4 binds every debt, R2b, S2 receipt, stage, and packet from one byte snapshot and carries baseline mean d_pose"
+    },
+    {
+      "superseded": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/s2_terminal_coder_break_even.json",
+        "file_sha256": "b3ed5a3d56d174792b87a3c2195e282f6734e141c2ad1dce400a9a2e4f483620"
+      },
+      "replacement": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/s2_terminal_coder_joint_break_even_v3.json",
+        "file_sha256": "8f78b63a7353529e4debee02b2a73d5e36661d12cc53e4ed173f976b0012b5f6",
+        "receipt_sha256": "3494e16e709a74b5ca56e92b5d65873b92b66ae8b56bf97f4e10670b8ab08154"
+      },
+      "reason": "v1 incorrectly promoted the unchanged-Pose Seg-only byte slice to an unconditional rate-dead verdict; v2 emits the full coupled conditional Pose break-even surface and validates all bridge identity legs"
+    },
+    {
+      "superseded": {
+        "paths": [
+          ".omx/research/original_taskspace_inverse_witness_codec_20260725/frontier_pointer_literal_audit.json",
+          ".omx/research/original_taskspace_inverse_witness_codec_20260725/frontier_pointer_literal_audit_v2.json"
+        ],
+        "file_sha256s": [
+          "9b7f0cc61a78bc69613a38a28dfbc2609b4df2942396d35a8c56610d77a01ec3",
+          "f306847110a482918011023f5f651ea9ef997bdbdf934c08a2b02377bfb2d7c8"
+        ]
+      },
+      "replacement": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/frontier_pointer_literal_audit_v3.json",
+        "file_sha256": "d50dc304f174f6be71e2ad913a4bb389c594be7f7dcc6b2774ed94ab23eba5f0",
+        "receipt_sha256": "add72a92acb5ff9375c8fc69c204f9a92ce93fbbd15b6b01cef2fab17e1970b7"
+      },
+      "reason": "v1 and v2 were mutable, unhashed, and conflated broad frontier-named component symbols with dynamic competitive-pointer literals; v3 is write-once, body-hashed, and separates the two counts"
+    }
+  ],
+  "authority": {
+    "research_only": true,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer_moved": false
+  },
+  "receipt_sha256": "aed6c6fdb4c60e78e57bf3e3809a3332339204c22c2c96a93f97d1b9ad451d91"
+}

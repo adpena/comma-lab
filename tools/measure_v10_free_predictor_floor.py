@@ -22,7 +22,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.machinery
 import importlib.metadata
+import inspect
 import json
 import math
 import os
@@ -52,9 +54,8 @@ for _path in (REPO, SRC):
         sys.path.insert(0, str(_path))
 
 from tac.canonical_frontier_pointer import (  # noqa: E402
+    POINTER_STALE_SECONDS,
     CanonicalFrontierPointer,
-    FrontierPointerCorruptError,
-    effective_frontier_score,
 )
 from tac.codec.v10_predictor_residual import (  # noqa: E402
     AFFINE6_Q12_ID,
@@ -70,6 +71,10 @@ from tac.codec.v10_predictor_residual import (  # noqa: E402
     CODEC_ID as PREDICTOR_RESIDUAL_CODEC_ID,
 )
 from tac.optimization.uint8_lattice_feasibility import DisjointResizeOperator  # noqa: E402
+from tools.audit_frontier_pointer_literals import (  # noqa: E402
+    PointerLiteralAuditError,
+    load_validated_canonical_pointer,
+)
 from tools.measure_uint8_lattice_feasibility import stored_npy_memmap  # noqa: E402
 
 SCHEMA_CHUNK = "v10_free_predictor_floor_chunk.v1"
@@ -164,6 +169,42 @@ class PredictorFloorError(RuntimeError):
     """Fail-closed cache, predictor, compressor, resume, or custody error."""
 
 
+def _callable_origin_chain(value: Any) -> list[dict[str, str]]:
+    """Record decorators while locating the source-defined callable exactly.
+
+    Torch's ``@no_grad`` wrapper legitimately lives in Torch's runtime, so the
+    outer ``co_filename`` is not the pinned upstream file.  The terminal
+    unwrapped callable must be pinned; every wrapper remains visible in custody
+    and is covered by the installed Torch distribution hash.
+    """
+
+    rows: list[dict[str, str]] = []
+    seen: set[int] = set()
+    current = value
+    while callable(current) and id(current) not in seen:
+        seen.add(id(current))
+        code = getattr(current, "__code__", None)
+        filename = getattr(code, "co_filename", None)
+        rows.append(
+            {
+                "module": str(getattr(current, "__module__", "")),
+                "qualname": str(getattr(current, "__qualname__", "")),
+                "code_origin": str(Path(filename).resolve()) if isinstance(filename, str) else "",
+            }
+        )
+        wrapped = getattr(current, "__wrapped__", None)
+        if wrapped is None:
+            break
+        current = wrapped
+    try:
+        unwrapped = inspect.unwrap(value)
+    except ValueError as exc:
+        raise PredictorFloorError("frozen scorer callable decorator chain is cyclic") from exc
+    if not rows or current is not unwrapped:
+        raise PredictorFloorError("frozen scorer callable decorator chain is ambiguous")
+    return rows
+
+
 def _effective_pointer_target(path: Path = DEFAULT_FRONTIER_POINTER) -> dict[str, Any]:
     """Load the competitive target from the canonical pointer, fail closed.
 
@@ -175,21 +216,29 @@ def _effective_pointer_target(path: Path = DEFAULT_FRONTIER_POINTER) -> dict[str
 
     resolved = path.expanduser().resolve()
     try:
-        pointer_bytes = resolved.read_bytes()
-        pointer_data = json.loads(pointer_bytes)
-        if not isinstance(pointer_data, Mapping):
-            raise FrontierPointerCorruptError("canonical pointer root must be an object")
-        pointer = CanonicalFrontierPointer.from_dict(pointer_data)
-    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError, FrontierPointerCorruptError) as exc:
+        validated = load_validated_canonical_pointer(resolved)
+        pointer = CanonicalFrontierPointer.from_dict(validated["pointer"])
+        pointer_bytes = validated["pointer_bytes"]
+    except (KeyError, TypeError, ValueError, PointerLiteralAuditError) as exc:
         raise PredictorFloorError(f"canonical frontier pointer is unavailable: {resolved}") from exc
     if pointer.is_stale():
         raise PredictorFloorError("canonical frontier pointer is stale; refresh before score-surface decisions")
-    score = effective_frontier_score(pointer)
-    if score is None:
-        raise PredictorFloorError("canonical frontier pointer lacks a finite positive effective score")
-    effective = pointer.effective_frontier
-    if not isinstance(effective, Mapping):
-        raise PredictorFloorError("canonical frontier pointer lacks effective-frontier custody")
+    score = float(validated["effective_score"])
+    effective = validated["effective_frontier"]
+    if effective.get("source") == "upstream_official_leaderboard":
+        try:
+            refreshed = datetime.fromisoformat(pointer.last_refreshed_utc.replace("Z", "+00:00"))
+            snapshot = datetime.fromisoformat(str(effective["snapshot_at_utc"]).replace("Z", "+00:00"))
+            if refreshed.tzinfo is None:
+                refreshed = refreshed.replace(tzinfo=UTC)
+            if snapshot.tzinfo is None:
+                snapshot = snapshot.replace(tzinfo=UTC)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise PredictorFloorError("competitive public snapshot timestamp is malformed") from exc
+        if (refreshed - snapshot).total_seconds() > POINTER_STALE_SECONDS:
+            raise PredictorFloorError(
+                "competitive public snapshot is stale behind the pointer refresh; fetch the official leaderboard"
+            )
     return {
         "score": score,
         "axis": effective.get("axis"),
@@ -1599,14 +1648,22 @@ def projected_action(
 
 
 def _load_scorers(upstream: Path, cpu_threads: int) -> tuple[Any, Any, Any]:
-    if not (upstream / "modules.py").is_file():
+    upstream = upstream.resolve()
+    expected_sources = {
+        "modules": (upstream / "modules.py").resolve(),
+        "frame_utils": (upstream / "frame_utils.py").resolve(),
+    }
+    if any(not path.is_file() for path in expected_sources.values()):
         raise PredictorFloorError(f"frozen upstream scorer source is absent: {upstream}")
     if not isinstance(cpu_threads, int) or isinstance(cpu_threads, bool) or cpu_threads < 1:
         raise PredictorFloorError("cpu_threads must be a positive exact integer")
-    expected_modules = (upstream / "modules.py").resolve()
-    loaded = sys.modules.get("modules")
-    if loaded is not None and Path(getattr(loaded, "__file__", "")).resolve() != expected_modules:
-        raise PredictorFloorError("a different modules.py is already imported; scorer custody is ambiguous")
+    # Never inherit these generic top-level module names.  Even a fake object
+    # whose ``__file__`` claims the expected path can otherwise bypass import
+    # execution and hand the oracle attacker-selected callables.
+    preloaded = [name for name in expected_sources if name in sys.modules]
+    if preloaded:
+        raise PredictorFloorError(f"frozen scorer imports are preloaded and ambiguous: {','.join(preloaded)}")
+    source_hashes_before = {name: _sha256_file(path) for name, path in expected_sources.items()}
     retained = []
     for entry in sys.path:
         try:
@@ -1621,18 +1678,81 @@ def _load_scorers(upstream: Path, cpu_threads: int) -> tuple[Any, Any, Any]:
         import torch
     except (ImportError, OSError) as exc:
         raise PredictorFloorError("frozen CPU scorer import failed") from exc
-    if Path(getattr(modules, "__file__", "")).resolve() != expected_modules:
-        raise PredictorFloorError("frozen scorer module resolved from the wrong source path")
+    frame_utils = sys.modules.get("frame_utils")
+    loaded_modules = {"modules": modules, "frame_utils": frame_utils}
+    for name, expected_path in expected_sources.items():
+        loaded_module = loaded_modules[name]
+        if loaded_module is None:
+            raise PredictorFloorError(f"frozen scorer import did not load {name}.py")
+        raw_file = getattr(loaded_module, "__file__", None)
+        spec = getattr(loaded_module, "__spec__", None)
+        origin = getattr(spec, "origin", None)
+        loader = getattr(spec, "loader", None)
+        try:
+            loaded_path = Path(raw_file).resolve() if isinstance(raw_file, str) else None
+            origin_path = Path(origin).resolve() if isinstance(origin, str) else None
+            loader_filename = loader.get_filename(name) if hasattr(loader, "get_filename") else None
+            loader_path = Path(loader_filename).resolve() if isinstance(loader_filename, str) else None
+        except (OSError, TypeError, ValueError) as exc:
+            raise PredictorFloorError(f"frozen scorer {name}.py import identity is malformed") from exc
+        if loaded_path != expected_path or origin_path != expected_path or loader_path != expected_path:
+            raise PredictorFloorError(f"frozen scorer {name}.py resolved through a source/editable hijack")
+        if not isinstance(loader, importlib.machinery.SourceFileLoader):
+            raise PredictorFloorError(f"frozen scorer {name}.py was not loaded by the source-file loader")
+    callable_chains = {
+        "modules": _callable_origin_chain(modules.DistortionNet.__init__),
+        "frame_utils": _callable_origin_chain(frame_utils.rgb_to_yuv6),
+    }
+    code_origins = {
+        name: Path(chain[-1]["code_origin"]).resolve()
+        for name, chain in callable_chains.items()
+    }
+    if code_origins != expected_sources:
+        raise PredictorFloorError("frozen scorer callable code origins differ from the pinned sources")
+    source_hashes_after = {name: _sha256_file(path) for name, path in expected_sources.items()}
+    if source_hashes_after != source_hashes_before:
+        raise PredictorFloorError("frozen scorer source changed during import")
     DistortionNet = modules.DistortionNet
     posenet_sd_path = modules.posenet_sd_path
     segnet_sd_path = modules.segnet_sd_path
+    weight_paths = {
+        "segnet_weights": Path(segnet_sd_path).resolve(),
+        "posenet_weights": Path(posenet_sd_path).resolve(),
+    }
+    if any(not path.is_file() for path in weight_paths.values()):
+        raise PredictorFloorError("frozen scorer weights are absent")
+    weight_hashes_before = {name: _sha256_file(path) for name, path in weight_paths.items()}
     torch.set_num_threads(int(cpu_threads))
     torch.manual_seed(20260719)
     torch.use_deterministic_algorithms(True)
     distortion = DistortionNet().eval().to("cpu")
     distortion.load_state_dicts(posenet_sd_path, segnet_sd_path, torch.device("cpu"))
+    weight_hashes_after = {name: _sha256_file(path) for name, path in weight_paths.items()}
+    if weight_hashes_after != weight_hashes_before:
+        raise PredictorFloorError("frozen scorer weights changed while loading")
     for parameter in distortion.parameters():
         parameter.requires_grad_(False)
+    modules._pact_scorer_import_custody = {
+        "sources": {
+            name: {
+                "path": str(expected_sources[name]),
+                "pre_import_sha256": source_hashes_before[name],
+                "post_import_sha256": source_hashes_after[name],
+                "loader": type(loaded_modules[name].__spec__.loader).__qualname__,
+                "callable_code_origin": str(code_origins[name]),
+                "callable_wrapper_chain": callable_chains[name],
+            }
+            for name in expected_sources
+        },
+        "weights": {
+            name: {
+                "path": str(weight_paths[name]),
+                "pre_load_sha256": weight_hashes_before[name],
+                "post_load_sha256": weight_hashes_after[name],
+            }
+            for name in weight_paths
+        },
+    }
     return distortion.segnet, distortion.posenet, torch
 
 
@@ -1676,12 +1796,48 @@ def _scorer_runtime_custody(upstream: Path, torch: Any) -> dict[str, Any]:
     """Hash the complete local and installed runtime used by the hard oracle."""
 
     modules = sys.modules.get("modules")
+    frame_utils = sys.modules.get("frame_utils")
     expected_modules = (upstream / "modules.py").resolve()
-    if modules is None or Path(getattr(modules, "__file__", "")).resolve() != expected_modules:
+    expected_frame_utils = (upstream / "frame_utils.py").resolve()
+    try:
+        modules_file = Path(modules.__file__).resolve() if isinstance(getattr(modules, "__file__", None), str) else None
+        frame_utils_file = (
+            Path(frame_utils.__file__).resolve()
+            if isinstance(getattr(frame_utils, "__file__", None), str)
+            else None
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        raise PredictorFloorError("frozen scorer runtime module identity is malformed") from exc
+    if modules is None or modules_file != expected_modules:
         raise PredictorFloorError("frozen scorer custody requested before the exact module was loaded")
+    if frame_utils is None or frame_utils_file != expected_frame_utils:
+        raise PredictorFloorError("frozen frame-utils custody requested before the exact module was loaded")
+    runtime_callable_chains: dict[str, list[dict[str, str]]] = {}
+    for name, loaded_module, expected, callable_value in (
+        ("modules", modules, expected_modules, modules.DistortionNet.__init__),
+        ("frame_utils", frame_utils, expected_frame_utils, frame_utils.rgb_to_yuv6),
+    ):
+        spec = getattr(loaded_module, "__spec__", None)
+        loader = getattr(spec, "loader", None)
+        try:
+            origin = Path(spec.origin).resolve() if isinstance(getattr(spec, "origin", None), str) else None
+            callable_chain = _callable_origin_chain(callable_value)
+            code_origin = Path(callable_chain[-1]["code_origin"]).resolve()
+        except (AttributeError, OSError, TypeError, ValueError) as exc:
+            raise PredictorFloorError(f"frozen scorer runtime code identity drifted: {name}") from exc
+        if origin != expected or code_origin != expected or not isinstance(loader, importlib.machinery.SourceFileLoader):
+            raise PredictorFloorError(f"frozen scorer runtime code identity drifted: {name}")
+        runtime_callable_chains[name] = callable_chain
+    import_custody = getattr(modules, "_pact_scorer_import_custody", None)
+    if not isinstance(import_custody, Mapping):
+        raise PredictorFloorError("frozen scorer import custody is absent")
+    source_rows = import_custody.get("sources")
+    weight_rows = import_custody.get("weights")
+    if not isinstance(source_rows, Mapping) or not isinstance(weight_rows, Mapping):
+        raise PredictorFloorError("frozen scorer import custody is malformed")
     paths = {
-        "modules_py": expected_modules,
-        "frame_utils_py": (upstream / "frame_utils.py").resolve(),
+        "modules_py": modules_file,
+        "frame_utils_py": frame_utils_file,
         "segnet_weights": Path(modules.segnet_sd_path).resolve(),
         "posenet_weights": Path(modules.posenet_sd_path).resolve(),
     }
@@ -1691,11 +1847,40 @@ def _scorer_runtime_custody(upstream: Path, torch: Any) -> dict[str, Any]:
         key: {"path": str(path), "bytes": path.stat().st_size, "sha256": _sha256_file(path)}
         for key, path in paths.items()
     }
+    source_key_by_file_key = {"modules_py": "modules", "frame_utils_py": "frame_utils"}
+    for file_key, source_key in source_key_by_file_key.items():
+        recorded = source_rows.get(source_key)
+        if not isinstance(recorded, Mapping) or any(
+            recorded.get(hash_key) != files[file_key]["sha256"]
+            for hash_key in ("pre_import_sha256", "post_import_sha256")
+        ) or recorded.get("path") != files[file_key]["path"] or recorded.get(
+            "callable_wrapper_chain"
+        ) != runtime_callable_chains[source_key]:
+            raise PredictorFloorError(f"frozen scorer source custody drifted after import: {source_key}")
+        files[file_key] |= {
+            "pre_import_sha256": recorded["pre_import_sha256"],
+            "post_import_sha256": recorded["post_import_sha256"],
+            "loader": recorded.get("loader"),
+            "callable_code_origin": recorded.get("callable_code_origin"),
+            "callable_wrapper_chain": runtime_callable_chains[source_key],
+        }
+    for file_key in ("segnet_weights", "posenet_weights"):
+        recorded = weight_rows.get(file_key)
+        if not isinstance(recorded, Mapping) or any(
+            recorded.get(hash_key) != files[file_key]["sha256"]
+            for hash_key in ("pre_load_sha256", "post_load_sha256")
+        ) or recorded.get("path") != files[file_key]["path"]:
+            raise PredictorFloorError(f"frozen scorer weight custody drifted after load: {file_key}")
+        files[file_key] |= {
+            "pre_load_sha256": recorded["pre_load_sha256"],
+            "post_load_sha256": recorded["post_load_sha256"],
+        }
     python_executable = Path(sys.executable).resolve()
     if not python_executable.is_file():
         raise PredictorFloorError("hard-oracle Python executable is absent")
     distributions = {name: _distribution_tree_custody(name) for name in SCORER_RUNTIME_DISTRIBUTIONS}
     return files | {
+        "source_import_custody": import_custody,
         "torch_version": str(torch.__version__),
         "device": "cpu",
         "deterministic_algorithms": True,
@@ -2050,6 +2235,30 @@ def _validate_scorer_custody(custody: Mapping[str, Any]) -> None:
         if not isinstance(row, Mapping):
             raise PredictorFloorError("hard-oracle scorer custody is incomplete")
         _validate_preserved_file(row, f"hard-oracle {key}")
+    source_import = custody.get("source_import_custody")
+    if source_import is not None:
+        if not isinstance(source_import, Mapping):
+            raise PredictorFloorError("hard-oracle source-import custody is malformed")
+        source_rows = source_import.get("sources")
+        weight_rows = source_import.get("weights")
+        if not isinstance(source_rows, Mapping) or not isinstance(weight_rows, Mapping):
+            raise PredictorFloorError("hard-oracle source-import custody is incomplete")
+        for file_key, source_key in (("modules_py", "modules"), ("frame_utils_py", "frame_utils")):
+            file_row = custody[file_key]
+            source_row = source_rows.get(source_key)
+            if not isinstance(source_row, Mapping) or any(
+                source_row.get(hash_key) != file_row.get("sha256")
+                for hash_key in ("pre_import_sha256", "post_import_sha256")
+            ):
+                raise PredictorFloorError(f"hard-oracle source-import custody is inconsistent: {source_key}")
+        for file_key in ("segnet_weights", "posenet_weights"):
+            file_row = custody[file_key]
+            weight_row = weight_rows.get(file_key)
+            if not isinstance(weight_row, Mapping) or any(
+                weight_row.get(hash_key) != file_row.get("sha256")
+                for hash_key in ("pre_load_sha256", "post_load_sha256")
+            ):
+                raise PredictorFloorError(f"hard-oracle weight-load custody is inconsistent: {file_key}")
     if custody.get("device") != "cpu" or custody.get("deterministic_algorithms") is not True:
         raise PredictorFloorError("hard-oracle runtime custody is not deterministic CPU")
     python_runtime = custody.get("python_runtime")

@@ -9,6 +9,7 @@ import pytest
 from tac.optimization.s2_partition_seed import (
     PartitionEvent,
     PartitionEventSeed,
+    decode_partition_seed,
     encode_partition_seed,
 )
 from tools import verify_c0b_s2_debt_bridge as bridge
@@ -209,6 +210,14 @@ def test_bridge_requires_three_way_exact_event_identity(tmp_path: Path) -> None:
     assert result["identity"]["debt_equals_r2b"] is True
     assert result["identity"]["debt_equals_s2"] is True
     assert result["identity"]["pose_rows_equal_r2b"] is True
+    assert result["authority_geometry"] == {
+        "pair_count": 4,
+        "scorer_hw": [2, 3],
+        "total_seg_sites": 24,
+        "mean_d_seg": 3 / 24,
+        "baseline_mean_d_pose": 0.025,
+        "s2_geometry_exact": True,
+    }
     assert result["score_claim"] is False
     assert len(result["receipt_sha256"]) == 64
 
@@ -244,3 +253,82 @@ def test_bridge_refuses_r2b_stage_mutation_even_if_event_count_is_unchanged(tmp_
             s2_packet_path=paths["s2_packet"],
             s2_receipt_path=paths["s2_receipt"],
         )
+
+
+def test_bridge_refuses_s2_geometry_drift_with_identical_events(tmp_path: Path) -> None:
+    paths = _fixture(tmp_path)
+    seed = decode_partition_seed(paths["s2_packet"].read_bytes())
+    drifted = PartitionEventSeed(
+        n_pairs=seed.n_pairs,
+        height=seed.height,
+        width=seed.width + 1,
+        semantic_class_ids=seed.semantic_class_ids,
+        events=seed.events,
+    )
+    packet = encode_partition_seed(drifted)
+    paths["s2_packet"].write_bytes(packet)
+    receipt = json.loads(paths["s2_receipt"].read_text(encoding="utf-8"))
+    receipt["finite_packet"].update(
+        {
+            "packet_bytes": len(packet),
+            "counted_seed_bytes": len(packet),
+            "packet_sha256": _sha(packet),
+        }
+    )
+    _write(paths["s2_receipt"], receipt)
+    with pytest.raises(bridge.BridgeError, match="population geometry"):
+        bridge.verify_bridge(
+            debt_path=paths["debt"],
+            r2b_receipt_path=paths["r2b_receipt"],
+            r2b_stage_dir=paths["r2b_stages"],
+            s2_packet_path=paths["s2_packet"],
+            s2_receipt_path=paths["s2_receipt"],
+        )
+
+
+def test_bridge_uses_one_s2_packet_snapshot_for_identity_and_geometry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = _fixture(tmp_path)
+    correct_packet = paths["s2_packet"].read_bytes()
+    seed = decode_partition_seed(correct_packet)
+    drifted_packet = encode_partition_seed(
+        PartitionEventSeed(
+            n_pairs=seed.n_pairs,
+            height=seed.height,
+            width=seed.width + 1,
+            semantic_class_ids=seed.semantic_class_ids,
+            events=seed.events,
+        )
+    )
+    receipt = json.loads(paths["s2_receipt"].read_text(encoding="utf-8"))
+    receipt["finite_packet"].update(
+        {
+            "packet_bytes": len(drifted_packet),
+            "counted_seed_bytes": len(drifted_packet),
+            "packet_sha256": _sha(drifted_packet),
+        }
+    )
+    _write(paths["s2_receipt"], receipt)
+
+    original_read_bytes = Path.read_bytes
+    packet_calls = 0
+
+    def swapping_read_bytes(path: Path) -> bytes:
+        nonlocal packet_calls
+        if path == paths["s2_packet"]:
+            packet_calls += 1
+            return drifted_packet if packet_calls == 1 else correct_packet
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", swapping_read_bytes)
+    with pytest.raises(bridge.BridgeError, match="population geometry"):
+        bridge.verify_bridge(
+            debt_path=paths["debt"],
+            r2b_receipt_path=paths["r2b_receipt"],
+            r2b_stage_dir=paths["r2b_stages"],
+            s2_packet_path=paths["s2_packet"],
+            s2_receipt_path=paths["s2_receipt"],
+        )
+    assert packet_calls == 1

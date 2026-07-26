@@ -33,7 +33,7 @@ from tac.optimization.s2_partition_seed import (  # noqa: E402
     encode_partition_seed,
 )
 
-SCHEMA = "tac.c0b_s2_debt_bridge.v1"
+SCHEMA = "tac.c0b_s2_debt_bridge.v4"
 DEBT_SCHEMA = "tac.coupled_witness_raw_debt.v2"
 R2B_SCHEMA = "r2b_sparse_target_selection_receipt.v1"
 R2B_STAGE_SCHEMA = "r2b_hard_oracle_batch.v1"
@@ -84,13 +84,18 @@ def _sha256_file(path: Path) -> str:
 
 
 def _load_json(path: Path, label: str) -> dict[str, Any]:
+    return _load_json_snapshot(path, label)[0]
+
+
+def _load_json_snapshot(path: Path, label: str) -> tuple[dict[str, Any], bytes]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        raw = path.read_bytes()
+        value = json.loads(raw)
     except (OSError, json.JSONDecodeError) as exc:
         raise BridgeError(f"cannot load {label}: {path}") from exc
     if not isinstance(value, dict):
         raise BridgeError(f"{label} root must be an object")
-    return value
+    return value, raw
 
 
 def _validate_body_hash(payload: Mapping[str, Any], field: str) -> None:
@@ -116,8 +121,8 @@ def _tree_hash(files: Sequence[Path], root: Path) -> str:
 
 def _event_stream_from_debt(
     path: Path,
-) -> tuple[dict[str, Any], list[list[int]], list[float]]:
-    receipt = _load_json(path, "batch-16 debt receipt")
+) -> tuple[dict[str, Any], list[list[int]], list[float], dict[str, Any]]:
+    receipt, receipt_bytes = _load_json_snapshot(path, "batch-16 debt receipt")
     _validate_body_hash(receipt, "receipt_sha256")
     if receipt.get("schema") != DEBT_SCHEMA:
         raise BridgeError("debt receipt is not the superseding batch-16/live-target schema")
@@ -218,20 +223,27 @@ def _event_stream_from_debt(
             stage_row.get("pair_start") != start
             or stage_row.get("pair_end_exclusive") != end
             or not stage_path.is_file()
-            or stage_row.get("sha256") != _sha256_file(stage_path)
         ):
             raise BridgeError(f"debt stage custody differs at batch {index}")
-        stage = _load_json(stage_path, "debt stage")
+        stage, stage_bytes = _load_json_snapshot(stage_path, "debt stage")
         _validate_body_hash(stage, "stage_sha256")
         if (
-            stage.get("config_sha256") != receipt.get("config_sha256")
+            stage_row.get("bytes") != len(stage_bytes)
+            or stage_row.get("sha256") != _sha256_bytes(stage_bytes)
+            or stage.get("config_sha256") != receipt.get("config_sha256")
             or stage.get("stage_sha256") != stage_row.get("stage_sha256")
             or stage.get("pair_start") != start
             or stage.get("pair_end_exclusive") != end
             or stage.get("rows") != rows[start:end]
         ):
             raise BridgeError(f"debt stage content differs at batch {index}")
-    return receipt, events, pose_mse
+    custody = {
+        "path": str(path.resolve()),
+        "bytes": len(receipt_bytes),
+        "sha256": _sha256_bytes(receipt_bytes),
+        "receipt_sha256": receipt["receipt_sha256"],
+    }
+    return receipt, events, pose_mse, custody
 
 
 def _event_stream_from_r2b(
@@ -240,7 +252,7 @@ def _event_stream_from_r2b(
     *,
     debt: Mapping[str, Any],
 ) -> tuple[dict[str, Any], list[list[int]], list[float], dict[str, Any]]:
-    receipt = _load_json(receipt_path, "R2b receipt")
+    receipt, receipt_bytes = _load_json_snapshot(receipt_path, "R2b receipt")
     if receipt.get("schema") != R2B_SCHEMA or receipt.get("score_claim") is not False:
         raise BridgeError("R2b receipt schema/authority differs")
     config = debt["config"]
@@ -267,8 +279,10 @@ def _event_stream_from_r2b(
     events: list[list[int]] = []
     pose_mse: list[float] = []
     cache_mismatches = 0
+    stage_snapshots: list[tuple[Path, bytes]] = []
     for path, start in zip(files, expected_starts, strict=True):
-        stage = _load_json(path, "R2b stage")
+        stage, stage_bytes = _load_json_snapshot(path, "R2b stage")
+        stage_snapshots.append((path, stage_bytes))
         end = min(start + batch_pairs, pair_count)
         flips = stage.get("flips")
         pose_squared = stage.get("pose_squared_error")
@@ -301,11 +315,15 @@ def _event_stream_from_r2b(
         raise BridgeError("R2b population/order differs")
     if len({tuple(event[:3]) for event in events}) != len(events):
         raise BridgeError("R2b sites are not unique")
-    tree = _tree_hash(files, stage_dir)
+    tree_digest = hashlib.sha256()
+    for stage_path, stage_bytes in stage_snapshots:
+        tree_digest.update(str(stage_path.relative_to(stage_dir)).encode("utf-8") + b"\0")
+        tree_digest.update(bytes.fromhex(_sha256_bytes(stage_bytes)))
+    tree = tree_digest.hexdigest()
     custody = {
         "receipt_path": str(receipt_path.resolve()),
-        "receipt_bytes": receipt_path.stat().st_size,
-        "receipt_sha256": _sha256_file(receipt_path),
+        "receipt_bytes": len(receipt_bytes),
+        "receipt_sha256": _sha256_bytes(receipt_bytes),
         "stage_dir": str(stage_dir.resolve()),
         "stage_count": len(files),
         "stage_tree_sha256": tree,
@@ -319,8 +337,8 @@ def _event_stream_from_s2(
     receipt_path: Path,
     *,
     r2b_custody: Mapping[str, Any],
-) -> tuple[dict[str, Any], list[list[int]], dict[str, Any]]:
-    receipt = _load_json(receipt_path, "S2 measurement receipt")
+) -> tuple[dict[str, Any], list[list[int]], dict[str, Any], Any]:
+    receipt, receipt_bytes = _load_json_snapshot(receipt_path, "S2 measurement receipt")
     if receipt.get("schema") != S2_SCHEMA or receipt.get("score_claim") is not False:
         raise BridgeError("S2 receipt schema/authority differs")
     try:
@@ -358,13 +376,17 @@ def _event_stream_from_s2(
         raise BridgeError("S2 decoded population differs from its receipt")
     custody = {
         "receipt_path": str(receipt_path.resolve()),
-        "receipt_bytes": receipt_path.stat().st_size,
-        "receipt_sha256": _sha256_file(receipt_path),
+        "receipt_bytes": len(receipt_bytes),
+        "receipt_sha256": _sha256_bytes(receipt_bytes),
         "packet_path": str(packet_path.resolve()),
         "packet_bytes": len(packet),
         "packet_sha256": packet_sha,
     }
-    return receipt, events, custody
+    # Return the seed decoded from the exact packet byte snapshot above.  The
+    # caller must not reopen the path for geometry: doing so would permit a
+    # path-swap race to combine packet identity from one file with dimensions
+    # from another.
+    return receipt, events, custody, seed
 
 
 def verify_bridge(
@@ -375,13 +397,17 @@ def verify_bridge(
     s2_packet_path: Path,
     s2_receipt_path: Path,
 ) -> dict[str, Any]:
-    debt, debt_events, debt_pose = _event_stream_from_debt(debt_path)
+    debt, debt_events, debt_pose, debt_custody = _event_stream_from_debt(debt_path)
     r2b, r2b_events, r2b_pose, r2b_custody = _event_stream_from_r2b(
         r2b_receipt_path, r2b_stage_dir, debt=debt
     )
-    _s2, s2_events, s2_custody = _event_stream_from_s2(
+    _s2, s2_events, s2_custody, seed = _event_stream_from_s2(
         s2_packet_path, s2_receipt_path, r2b_custody=r2b_custody
     )
+    debt_geometry = debt["config"]["scorer_hw"]
+    debt_pairs = debt["config"]["pair_count"]
+    if [seed.height, seed.width] != debt_geometry or seed.n_pairs != debt_pairs:
+        raise BridgeError("S2 population geometry differs from the batch-16 debt authority grid")
     if debt_events != r2b_events:
         raise BridgeError("batch-16 debt events differ from the R2b live-target inventory")
     if debt_events != s2_events:
@@ -401,10 +427,7 @@ def verify_bridge(
             "receiver, archive, score, or authority result"
         ),
         "debt_receipt": {
-            "path": str(debt_path.resolve()),
-            "bytes": debt_path.stat().st_size,
-            "sha256": _sha256_file(debt_path),
-            "receipt_sha256": debt["receipt_sha256"],
+            **debt_custody,
             "candidate_raw": debt["config"]["raw"],
             "target_raw": debt["config"]["target_raw"],
         },
@@ -428,6 +451,14 @@ def verify_bridge(
             },
             "pose_rows_equal_r2b": True,
             "pose_max_abs_mse_delta": max_pose_delta,
+        },
+        "authority_geometry": {
+            "pair_count": debt_pairs,
+            "scorer_hw": debt_geometry,
+            "total_seg_sites": debt_pairs * debt_geometry[0] * debt_geometry[1],
+            "mean_d_seg": debt["aggregate"]["mean_d_seg"],
+            "baseline_mean_d_pose": debt["aggregate"]["mean_d_pose"],
+            "s2_geometry_exact": True,
         },
         "composition_consequence": {
             "new_fact": (

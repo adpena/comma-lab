@@ -436,24 +436,51 @@ def test_strict_pointer_byte_cap_refuses_integral_equality_boundary() -> None:
 
 
 def test_effective_pointer_target_binds_fresh_pointer_file(tmp_path: Path) -> None:
+    fetched_at = datetime.now(UTC).isoformat()
+    public = {
+        "rank": 1,
+        "score": 0.172,
+        "name": "fixture leader",
+        "pr_number": 130,
+        "pr_url": "https://example.test/130",
+    }
     pointer = measure.CanonicalFrontierPointer(
         schema_version="canonical_frontier_pointer_v1_20260519",
         our_local_frontier_contest_cpu=None,
         our_local_frontier_contest_cuda=None,
         submitted_pr_number_for_current_frontier=None,
-        upstream_leaderboard_snapshot=None,
-        upstream_leaderboard_snapshot_at_utc=None,
-        last_refreshed_utc=datetime.now(UTC).isoformat(),
+        upstream_leaderboard_snapshot={
+            "source": "official_leaderboard",
+            "fetched_at_utc": fetched_at,
+            "fetch_status": "ok",
+            "entries": [public],
+            "best_entry": public,
+            "entry_count": 1,
+            "score_precision": "official_display",
+        },
+        upstream_leaderboard_snapshot_at_utc=fetched_at,
+        last_refreshed_utc=fetched_at,
         auto_update_on_dispatch_completion=True,
         pointer_refresh_command="fixture",
         refresh_provenance={"kind": "test"},
         effective_frontier={
             "score": 0.172,
             "axis": "official_leaderboard",
-            "source": "fixture",
+            "source": "upstream_official_leaderboard",
             "source_kind": "external_public_leaderboard_target",
-            "custody": "external target only",
+            "leaderboard_rank": 1,
+            "submission_name": "fixture leader",
+            "pr_number": 130,
+            "pr_url": "https://example.test/130",
+            "snapshot_at_utc": fetched_at,
+            "custody": "external target only; no local archive authority implied",
             "evidence_grade": "[official-leaderboard display]",
+            "score_precision": "official_display",
+            "selection_rule": (
+                "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, "
+                "upstream_official_leaderboard.best_entry)"
+            ),
+            "role": "competitive_score_to_beat",
         },
     )
     path = tmp_path / "pointer.json"
@@ -463,6 +490,61 @@ def test_effective_pointer_target_binds_fresh_pointer_file(tmp_path: Path) -> No
     assert len(target["pointer_sha256"]) == 64
     assert target["pointer_path"] == str(path.resolve())
     assert isinstance(target["source_kind"], str) and target["source_kind"]
+
+
+def test_effective_pointer_target_refuses_fabricated_effective_row(tmp_path: Path) -> None:
+    pointer_path = tmp_path / "pointer.json"
+    canonical = json.loads(measure.DEFAULT_FRONTIER_POINTER.read_text(encoding="utf-8"))
+    canonical["last_refreshed_utc"] = datetime.now(UTC).isoformat()
+    canonical["effective_frontier"]["score"] = 0.171
+    pointer_path.write_text(json.dumps(canonical), encoding="utf-8")
+    with pytest.raises(measure.PredictorFloorError, match="canonical frontier pointer is unavailable"):
+        measure._effective_pointer_target(pointer_path)
+
+
+def test_effective_pointer_target_refuses_old_cached_public_snapshot_after_fresh_refresh(
+    tmp_path: Path,
+) -> None:
+    pointer_path = tmp_path / "pointer.json"
+    canonical = json.loads(measure.DEFAULT_FRONTIER_POINTER.read_text(encoding="utf-8"))
+    refreshed = datetime.now(UTC)
+    old_snapshot = refreshed.replace(year=refreshed.year - 1).isoformat()
+    canonical["last_refreshed_utc"] = refreshed.isoformat()
+    canonical["upstream_leaderboard_snapshot"]["fetched_at_utc"] = old_snapshot
+    canonical["upstream_leaderboard_snapshot_at_utc"] = old_snapshot
+    canonical["effective_frontier"]["snapshot_at_utc"] = old_snapshot
+    pointer_path.write_text(json.dumps(canonical), encoding="utf-8")
+    with pytest.raises(measure.PredictorFloorError, match="public snapshot is stale"):
+        measure._effective_pointer_target(pointer_path)
+
+
+def test_load_scorers_refuses_preloaded_frame_utils_even_with_spoofed_expected_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    (upstream / "modules.py").write_text("raise AssertionError('must not import')\n", encoding="utf-8")
+    frame_utils_path = upstream / "frame_utils.py"
+    frame_utils_path.write_text("def rgb_to_yuv6(value): return value\n", encoding="utf-8")
+    injected = SimpleNamespace(__file__=str(frame_utils_path))
+    monkeypatch.setitem(sys.modules, "frame_utils", injected)
+    monkeypatch.delitem(sys.modules, "modules", raising=False)
+    with pytest.raises(measure.PredictorFloorError, match="preloaded and ambiguous: frame_utils"):
+        measure._load_scorers(upstream, 1)
+
+
+def test_callable_origin_chain_unwraps_real_torch_no_grad_decorator() -> None:
+    import torch
+
+    @torch.no_grad()
+    def decorated(value: Any) -> Any:
+        return value
+
+    chain = measure._callable_origin_chain(decorated)
+    assert len(chain) >= 2
+    assert Path(chain[-1]["code_origin"]).resolve() == Path(__file__).resolve()
+    assert chain[-1]["qualname"].endswith("decorated")
 
 
 def test_v10_measurement_tool_has_no_hardcoded_retired_pointer() -> None:
