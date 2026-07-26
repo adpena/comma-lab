@@ -206,3 +206,19 @@ that the score to beat is the best of ours or upstream.
 
 Effective frontier `0.172 [official leaderboard display]`; our archive has not
 beaten it; pointer refresh is target correction, not goal progress.
+
+## §8 amendment (2026-07-26 — the three-granularity pricing wave lands: the describe line is NOT sealed; two actions ADMITTED)
+
+STORES CONSULTED: pf3b/wf7/cb1 .last.txt + worktree findings memos + receipts (commits 074955c6ad · bdc3f7261b+e3c2140d3a · 2721704ab2) · MAIN re-derivations (pf3b rate arithmetic 25·860/37,545,489≈0.000573 ✓ · cb1 ΔS decomposition ≈−0.048 vs −0.0516 claimed, base-consistent ✓) · mc1 hood receipt (mechanism consistency) · card §4-§7 · non-additive-pools law.
+
+The §5-§7 hunt asked ONE question at three granularities: where is the first strictly joint-improving finite price on the describe line? Answered, all three arms, one coherent picture:
+
+1. **COORDINATE granularity (pf3b): distortion-downhill single edges EXIST but are RATE-DOMINATED.** First-hit among the 52: ΔD_joint −0.0001079924 at +860 E4 bytes → **ΔS +0.0004646** (break-even needs ≤162B/edge; measured edges cost ~5× that). With pf3's 16/16 uphill: single edges at this endpoint are distortion-uphill OR rate-dominated. 49/52 unmeasured (first-hit stop rule) — INSTANCE scope, endpoint+alphabet.
+2. **STREAM granularity (wf7): the price domain is NONEMPTY but RATE-ONLY.** Lossless seven-home repack −1,776B (rate ΔS **−0.0011826**) with byte-exact restoration; NO distortion-improving stream move, NO #613 box member. First finite describe-line price. [macOS-CPU advisory, state diagnostic — honestly NOT an E4 contest triple.]
+3. **CARRIER granularity (cb1): the wave's first strictly joint-improving move — MyCar hood ADMITTED.** +319B, Δd_seg −1.05e-5, Δd_pose **−0.1795**, joint ΔS **−0.051646** [macOS-CPU frozen-scorer advisory] — pose-dominated, mechanism = the winner's frame_1 repaint had INTRODUCED hood errors (mc1's receipt) and the static reassert removes them. **Lane band REJECTED** (+22.7 d_pose destruction), INSTANCE scope — consistent with the pose-fragility law; Lane remains descent-line territory.
+
+**Fork consequence (updates §7.3):** the describe line is NOT sealed — but its remaining openings are exactly the COMPOSED/structured moves the j12/pf3 twin predicted: a multi-pixel carrier (cb1) and a whole-stream recode (wf7) pay; single coordinates don't. The pricing chain continues as COMPOSITION: fold {cb1 MyCar −0.0516 · wf7 −1,776B · cc3-class stream rows} into the c1 waterfill on a merged base and re-measure jointly (non-additive pools — the two admitted actions must be co-measured, never summed).
+
+**Custody:** three worktree branches queued for the mr2 independent-approver merge wave (rg4/j12/ms2rp precedent). Until merged, all rows are worktree-forensic.
+
+Pointer 0.1910828242 [contest-CPU] UNMOVED · effective competitive target 0.172 [official-leaderboard display] — the R6 row is the end.
