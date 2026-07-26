@@ -1,0 +1,115 @@
+{
+  "schema": "ddm_mr2_pricing_wave_merge_conflict_receipt.v1",
+  "generated_at_utc": "2026-07-26T14:46:00Z",
+  "reviewer": "mr2-independent-approver",
+  "delegation_checkpoint_key": "codex_delegate:ddm_mr2_pricing_wave_merge:20260726T142758Z",
+  "delegated_authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_mr2_pricing_wave_merge_20260726T142758Z.wrapped.prompt.txt",
+    "bytes": 6022,
+    "sha256": "fd21e7dca8e7097ec18815b9820c75f938e537d2ce3204b510dba72fd5172e02"
+  },
+  "mr2_base": {
+    "commit": "5a55aa5914dc5675d2dd0fbe8bc225c77e2d9163",
+    "parent": "08279e376636189a2d93b3fe79092e56409dd2b2"
+  },
+  "entities": {
+    "pf3b": {
+      "commit": "074955c6ad0900268b01b7be6e359677e254b0d0",
+      "parent": "c279f1bdf98adfee4087a6b36a14a6c14b290fa0",
+      "content_verdict": "CLEAN",
+      "merge_status": "ABORTED_NONTRIVIAL_CONFLICT",
+      "python": {
+        "tools/hunt_ddm_pf3b_joint_improving_edge.py": "71cfd1570c44f84313e334a0fa1254cc71080b0311ec79a1f0a9a200fa4ac2f5",
+        "tools/materialize_ddm_pf3_finite_prices.py": "bdf3b82084098bae649d290994903cbbfb118ff15a16347e847acf506c54ac0d",
+        "tools/tests/test_hunt_ddm_pf3b_joint_improving_edge.py": "ece92eae72518176dbffe04becc5f54ffdb9b8453ef96c227a99362cf59fe475"
+      },
+      "diff_check": {
+        "status": "FAIL",
+        "finding": "two trailing-space Markdown lines in incoming PF3B findings"
+      }
+    },
+    "wf7": {
+      "commits": [
+        "bdc3f7261bad9d5d7c2fb755b79469f29560d399",
+        "e3c2140d3a9f096082efa7dfb938fd6d7f9b31db"
+      ],
+      "content_verdict": "CLEAN",
+      "merge_status": "NOT_ATTEMPTED_SERIAL_ORDER_BLOCKED",
+      "python": {
+        "src/tac/optimization/ddm_wf7_seven_home_stream_waterfill.py": "364c80dcc11eaa2a6dadad82f76312a38dd50914e16157a995694fce55b6c463",
+        "src/tac/optimization/tests/test_ddm_wf7_seven_home_stream_waterfill.py": "b4ce6040df0ca71c7f52d9254a66bdcddcc12e8a7e14e5af894ef2799f2e7c17",
+        "tools/run_ddm_wf7_seven_home_stream_waterfill.py": "e08c31ba342a9db749ed777e17980d29ac151024ffdfbe0b8fd351e2415a4e09"
+      },
+      "diff_check": {
+        "status": "PASS"
+      }
+    },
+    "cb1": {
+      "commit": "2721704ab215806d34788b29bae227554a6b9b50",
+      "parent": "2d7ed6024500204c3e279f29ec041adcacca00ab",
+      "content_verdict": "CLEAN",
+      "merge_status": "NOT_ATTEMPTED_SERIAL_ORDER_BLOCKED",
+      "python": {
+        "src/tac/optimization/ddm_runtime_exporter.py": "aa302a51c4861a00c468a98dfac1b3ed965ba736645b306aada5ce4562d65a97",
+        "src/tac/optimization/ddm_runtime_receiver.py": "a819564a48be8fb03d99344d7f8fadeae041a868cbfc8d6e3058012050e19616",
+        "src/tac/optimization/direct_description_carrier_compose.py": "4170277c2fd23bcd6fa88e011efdd252837c48b35fabd52bbefe8f9e4481f9db",
+        "src/tac/optimization/tests/test_ddm_runtime_exporter.py": "b78dd4ad77f9d119f55e671dd45c2322b05b02c2174e3f65fed1d3b684604f5f",
+        "src/tac/optimization/tests/test_direct_description_carrier_compose.py": "9bfc154326f449a27364c138ab7cd50550bd154ae7221ec088a5e814c52f4b7e",
+        "tools/measure_ddm_cb1_perclass_carrier_byteclose.py": "5826dc7f6d22416184b77516d51dd26f985ddd4eb58c000b60b6ec1dfd3db398",
+        "tools/tests/test_measure_ddm_cb1_perclass_carrier_byteclose.py": "4ec683b06088be8e9dadc08a05ac71aa2d1c7a6d780158da660a00133b77cc09"
+      },
+      "diff_check": {
+        "status": "PASS"
+      }
+    }
+  },
+  "merge_attempt": {
+    "command": [
+      "git",
+      "merge",
+      "--no-commit",
+      "--no-ff",
+      "074955c6ad"
+    ],
+    "conflicts": {
+      ".omx/state/lane_registry.json": {
+        "kind": "content",
+        "stage_1_blob": "f406fc53c599c2cdd864d0ec6ddcf3a0f6147714",
+        "stage_2_blob": "0c755c4f08d561e30b6f6163e5e0d1b368c928a5",
+        "stage_3_blob": "bd185f2672ab7e2c3bf8343c8c5820c50248b042",
+        "merge_driver_error": ".venv/bin/python: No such file or directory"
+      },
+      "tools/materialize_ddm_pf3_finite_prices.py": {
+        "kind": "add/add",
+        "stage_2_blob": "3d79b278b39427243e94a9b78c6c8134f20a920b",
+        "stage_3_blob": "07e7f7fdde5c532890cc1684dcbb538d0525d1d4"
+      }
+    },
+    "abort_status": "PASS_WORKTREE_RESTORED_CLEAN"
+  },
+  "review_credentials": {
+    "source_commit_review": "CLEAN_THREE_ENTITIES",
+    "review_tracker_greenup": "NOT_ISSUED_FAIL_CLOSED_NO_INCOMING_VERSION_IN_WORKTREE",
+    "review_gate_override_used": false,
+    "required_cure": "fresh MAIN review and greenup on final conflict-resolved hashes"
+  },
+  "artifacts": {
+    ".omx/research/codex_findings_ddm_mr2_pricing_wave_merge_20260726_codex.md": {
+      "bytes": 10201,
+      "sha256": "e1de6e964cb448d3b72fb76f68ec374d58a2047b0d4d427706850d294a1c3070"
+    },
+    ".omx/research/ddm_mr2_pricing_wave_merge_DAG_FEED_20260726.md": {
+      "bytes": 1430,
+      "sha256": "f212b8f7447e8620de5bdc32d43c2935f2c5cb6d8d549f064492f66ffe5d031c"
+    }
+  },
+  "effective_frontier": "official leaderboard displayed 0.172",
+  "local_baseline": "0.1910828242 [contest-CPU custody only]",
+  "research_only": true,
+  "score_claim": false,
+  "exact_eval": false,
+  "paid_dispatch": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "verdict": "CONTENT_CLEAN_SERIAL_MERGE_BLOCKED_AT_PF3B_NONTRIVIAL_CONFLICT"
+}
