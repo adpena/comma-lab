@@ -74,6 +74,7 @@ __all__ = [
     "effective_frontier_score",
     "load_canonical_frontier_pointer_lenient",
     "load_canonical_frontier_pointer_strict",
+    "recompute_effective_frontier",
     "refresh_canonical_frontier_from_local_state",
     "refresh_canonical_frontier_from_upstream_leaderboard",
     "write_canonical_frontier_pointer_locked",
@@ -253,7 +254,12 @@ def effective_frontier_score(pointer: CanonicalFrontierPointer) -> float | None:
     a better official leaderboard row cannot be hidden by a weaker local row.
     """
 
-    row = pointer.effective_frontier
+    # Recompose exclusively from the custody-bearing constituent rows.  The
+    # serialized ``effective_frontier`` row is a cache for display and
+    # provenance, never an independently authoritative score.  A historical
+    # pointer with no constituents has no defensible competitive target and
+    # therefore fails closed with ``None``.
+    row = recompute_effective_frontier(pointer)
     if not isinstance(row, Mapping):
         return None
     try:
@@ -486,6 +492,7 @@ def _best_public_entry(snapshot: Mapping[str, Any] | None) -> dict[str, Any] | N
 
     if not isinstance(snapshot, Mapping):
         return None
+    ranked: list[dict[str, Any]] = []
     best = snapshot.get("best_entry")
     if isinstance(best, Mapping):
         try:
@@ -493,10 +500,9 @@ def _best_public_entry(snapshot: Mapping[str, Any] | None) -> dict[str, Any] | N
         except (KeyError, TypeError, ValueError):
             score = math.nan
         if math.isfinite(score) and score > 0:
-            return dict(best)
+            ranked.append({**dict(best), "score": score})
     entries = snapshot.get("entries")
     if isinstance(entries, list):
-        ranked: list[dict[str, Any]] = []
         for entry in entries:
             if not isinstance(entry, Mapping):
                 continue
@@ -506,8 +512,8 @@ def _best_public_entry(snapshot: Mapping[str, Any] | None) -> dict[str, Any] | N
                 continue
             if math.isfinite(score) and score > 0:
                 ranked.append({**dict(entry), "score": score})
-        if ranked:
-            return min(ranked, key=lambda row: float(row["score"]))
+    if ranked:
+        return min(ranked, key=lambda row: float(row["score"]))
     cached = snapshot.get("cached_snapshot")
     return _best_public_entry(cached if isinstance(cached, Mapping) else None)
 
@@ -583,6 +589,29 @@ def _build_effective_frontier(
     )
     winner["role"] = "competitive_score_to_beat"
     return winner
+
+
+def recompute_effective_frontier(pointer: CanonicalFrontierPointer) -> dict[str, Any] | None:
+    """Re-derive the competitive winner from the pointer's constituent rows.
+
+    Callers that make admission or routing decisions must compare this result
+    with the serialized ``effective_frontier`` row.  This prevents a fresh
+    wrapper timestamp or a hand-edited cached winner from hiding a better
+    local or official score.
+    """
+
+    if not isinstance(pointer, CanonicalFrontierPointer):
+        raise TypeError("pointer must be a CanonicalFrontierPointer")
+    return _build_effective_frontier(
+        cpu_anchor=pointer.our_local_frontier_contest_cpu,
+        cuda_anchor=pointer.our_local_frontier_contest_cuda,
+        upstream_snapshot=(
+            pointer.upstream_leaderboard_snapshot
+            if isinstance(pointer.upstream_leaderboard_snapshot, Mapping)
+            else None
+        ),
+        upstream_snapshot_at_utc=pointer.upstream_leaderboard_snapshot_at_utc,
+    )
 
 
 def refresh_canonical_frontier_from_local_state(
@@ -858,7 +887,9 @@ def refresh_canonical_frontier_from_upstream_leaderboard(
         our_local_frontier_contest_cuda=pointer.our_local_frontier_contest_cuda,
         submitted_pr_number_for_current_frontier=pointer.submitted_pr_number_for_current_frontier,
         upstream_leaderboard_snapshot=new_snapshot,
-        upstream_leaderboard_snapshot_at_utc=snapshot.get("fetched_at_utc"),
+        # A failed fetch is an attempted-refresh timestamp, not fresh official
+        # evidence.  Preserve the last successful snapshot time fail-closed.
+        upstream_leaderboard_snapshot_at_utc=effective_snapshot_at,
         last_refreshed_utc=_now_iso(),
         auto_update_on_dispatch_completion=pointer.auto_update_on_dispatch_completion,
         pointer_refresh_command=pointer.pointer_refresh_command,

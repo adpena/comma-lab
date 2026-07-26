@@ -57,6 +57,7 @@ import time
 import zipfile
 from pathlib import Path, PurePosixPath
 
+from tac.contest_compliance import compute_upstream_snapshot_sha256
 from tac.device_axis_eval import is_contest_cuda_equivalent_gpu
 
 # Line-buffer stdout so progress flushes to log files immediately.
@@ -66,8 +67,9 @@ try:
 except (AttributeError, OSError):
     pass
 
-# Schema version for the JSON we emit. Bump when adding fields so downstream
-# tooling (BATTLE_PLAN parsers, leaderboard, etc.) can detect compatibility.
+# Schema version for the JSON we emit. Version 1 permits additive custody
+# fields; bump for a breaking shape or semantic change so downstream tooling
+# (BATTLE_PLAN parsers, leaderboard, etc.) can detect incompatibility.
 SCHEMA_VERSION = 1
 _RUNTIME_DEPENDENCY_SUFFIXES = {
     ".c",
@@ -100,6 +102,24 @@ _ALLOWED_INFLATE_ENV_KEYS = {"CUDA_VISIBLE_DEVICES"}
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
+
+
+def _require_upstream_snapshot_sha256(upstream_dir: Path) -> str:
+    """Hash the exact frozen evaluator tree or fail before score production."""
+
+    try:
+        digest = compute_upstream_snapshot_sha256(
+            upstream_dir,
+            upstream_subdir=".",
+            reject_executable_artifacts=True,
+        )
+    except (OSError, ValueError) as exc:
+        raise RuntimeError(
+            "canonical upstream snapshot could not be hashed without omitted dependencies"
+        ) from exc
+    if digest is None:
+        raise RuntimeError("canonical upstream snapshot is missing")
+    return digest
 
 
 def _sha256(path: Path, *, prefix: int = 16) -> str:
@@ -604,6 +624,7 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
         "inflate_script_sha256": _sha256(inflate_sh, prefix=0) if inflate_sh.exists() else None,
         "inflate_runtime_manifest": _runtime_dependency_manifest(inflate_sh, upstream_dir),
         "upstream_dir": str(upstream_dir),
+        "upstream_snapshot_sha256": _require_upstream_snapshot_sha256(upstream_dir),
         "device": args.device,
         "platform_system": platform.system(),
         "platform_machine": platform.machine(),

@@ -10,7 +10,9 @@ rotation; this gate adds the field + canonical helper.
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import py_compile
 from pathlib import Path
 
 import pytest
@@ -43,18 +45,47 @@ def test_compute_changes_on_content_mutation(tmp_path):
     assert sha_v1 != sha_v2
 
 
-def test_compute_skips_pycache_and_pyc(tmp_path):
+def _compile_sourceless_payload(source: Path, bytecode: Path, value: str) -> str:
+    source.write_text(f"VALUE = {value!r}\n", encoding="utf-8")
+    py_compile.compile(str(source), cfile=str(bytecode), doraise=True)
+    source.unlink()
+    spec = importlib.util.spec_from_file_location(f"payload_{value}", bytecode)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.VALUE
+
+
+def test_compute_binds_valid_sourceless_bytecode(tmp_path):
     (tmp_path / "upstream").mkdir()
     (tmp_path / "upstream" / "alpha.py").write_text("alpha\n")
     sha_clean = compute_upstream_snapshot_sha256(tmp_path)
-    # Add bytecode noise that MUST NOT change the snapshot hash.
-    (tmp_path / "upstream" / "__pycache__").mkdir()
-    (tmp_path / "upstream" / "__pycache__" / "alpha.cpython-311.pyc").write_bytes(
-        b"\x03\xf3\x0d\x0a"
+    source = tmp_path / "upstream" / "payload.py"
+    bytecode = tmp_path / "upstream" / "payload.pyc"
+
+    assert _compile_sourceless_payload(source, bytecode, "v1") == "v1"
+    sha_v1 = compute_upstream_snapshot_sha256(tmp_path)
+    assert sha_v1 != sha_clean
+
+    assert _compile_sourceless_payload(source, bytecode, "v2") == "v2"
+    sha_v2 = compute_upstream_snapshot_sha256(tmp_path)
+    assert sha_v2 != sha_v1
+
+
+def test_compute_authority_mode_rejects_executable_bytecode(tmp_path):
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    source = upstream / "payload.py"
+    bytecode = upstream / "payload.pyc"
+    assert _compile_sourceless_payload(source, bytecode, "authority_escape") == (
+        "authority_escape"
     )
-    (tmp_path / "upstream" / "alpha.pyc").write_bytes(b"\x00\x01\x02")
-    sha_with_noise = compute_upstream_snapshot_sha256(tmp_path)
-    assert sha_clean == sha_with_noise
+
+    with pytest.raises(ValueError, match="executable bytecode"):
+        compute_upstream_snapshot_sha256(
+            tmp_path,
+            reject_executable_artifacts=True,
+        )
 
 
 def test_compute_changes_on_path_rename(tmp_path):
@@ -64,6 +95,29 @@ def test_compute_changes_on_path_rename(tmp_path):
     (tmp_path / "upstream" / "alpha.py").rename(tmp_path / "upstream" / "beta.py")
     sha_renamed = compute_upstream_snapshot_sha256(tmp_path)
     assert sha_orig != sha_renamed
+
+
+def test_compute_rejects_symlink_instead_of_omitting_dependency(tmp_path):
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    external = tmp_path / "external-weights.bin"
+    external.write_bytes(b"scorer weights")
+    (upstream / "weights.bin").symlink_to(external)
+
+    with pytest.raises(ValueError, match="cannot contain symlinks"):
+        compute_upstream_snapshot_sha256(tmp_path)
+
+
+def test_compute_rejects_symlink_before_skipped_directory_rule(tmp_path):
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    external = tmp_path / "external-cache"
+    external.mkdir()
+    (external / "payload.py").write_text("VALUE = 'outside custody'\n", encoding="utf-8")
+    (upstream / ".pytest_cache").symlink_to(external, target_is_directory=True)
+
+    with pytest.raises(ValueError, match=r"cannot contain symlinks: \.pytest_cache"):
+        compute_upstream_snapshot_sha256(tmp_path)
 
 
 def test_contest_result_carries_field_with_default_none():
@@ -96,8 +150,8 @@ def test_contest_result_carries_field_with_default_none():
 
 def test_cost_band_anchor_carries_field_and_round_trips_through_jsonl(tmp_path):
     from tac.cost_band_calibration import (
-        CostBandAnchor,
         SUCCESSFUL_DISPATCH,
+        CostBandAnchor,
         append_anchor,
         load_anchors,
     )
@@ -125,7 +179,7 @@ def test_cost_band_anchor_carries_field_and_round_trips_through_jsonl(tmp_path):
 
 
 def test_cost_band_anchor_legacy_row_loads_as_none(tmp_path):
-    from tac.cost_band_calibration import SCHEMA_VERSION, load_anchors, SUCCESSFUL_DISPATCH
+    from tac.cost_band_calibration import SCHEMA_VERSION, SUCCESSFUL_DISPATCH, load_anchors
 
     posterior = tmp_path / "posterior.jsonl"
     # Pre-2026-05-16 row missing the new field.

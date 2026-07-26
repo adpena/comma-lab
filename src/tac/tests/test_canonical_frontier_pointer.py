@@ -78,8 +78,11 @@ def test_canonical_frontier_pointer_dataclass_round_trip() -> None:
         our_local_frontier_contest_cpu=anchor,
         our_local_frontier_contest_cuda=None,
         submitted_pr_number_for_current_frontier=None,
-        upstream_leaderboard_snapshot=None,
-        upstream_leaderboard_snapshot_at_utc=None,
+        upstream_leaderboard_snapshot={
+            "fetch_status": "ok",
+            "best_entry": {"rank": 1, "score": 0.172, "name": "public leader"},
+        },
+        upstream_leaderboard_snapshot_at_utc="2026-05-19T00:00:00+00:00",
         last_refreshed_utc="2026-05-19T00:00:00+00:00",
         auto_update_on_dispatch_completion=True,
         pointer_refresh_command="tools/refresh_canonical_frontier.py",
@@ -95,6 +98,52 @@ def test_canonical_frontier_pointer_dataclass_round_trip() -> None:
     assert restored.our_local_frontier_contest_cpu.score == anchor.score
     assert restored.our_local_frontier_contest_cuda is None
     assert effective_frontier_score(restored) == pytest.approx(0.172)
+
+
+def test_effective_frontier_score_recomposes_constituents_instead_of_trusting_cached_row() -> None:
+    pointer = CanonicalFrontierPointer.from_dict(
+        {
+            **_make_minimal_pointer().as_dict(),
+            "upstream_leaderboard_snapshot": {
+                "fetch_status": "ok",
+                "best_entry": {"rank": 1, "score": 0.172, "name": "public leader"},
+            },
+            "upstream_leaderboard_snapshot_at_utc": "2026-07-25T00:00:00Z",
+            "effective_frontier": {
+                "score": 0.99,
+                "source": "fabricated_cached_winner",
+            },
+        }
+    )
+    assert effective_frontier_score(pointer) == pytest.approx(0.172)
+
+
+def test_effective_frontier_score_rejects_cache_without_constituents() -> None:
+    pointer = CanonicalFrontierPointer.from_dict(
+        {
+            **_make_minimal_pointer().as_dict(),
+            "effective_frontier": {"score": 0.01, "source": "unverifiable_cache"},
+        }
+    )
+    assert effective_frontier_score(pointer) is None
+
+
+def test_public_minimum_is_derived_across_best_entry_and_ranked_entries() -> None:
+    pointer = CanonicalFrontierPointer.from_dict(
+        {
+            **_make_minimal_pointer().as_dict(),
+            "upstream_leaderboard_snapshot": {
+                "fetch_status": "ok",
+                "best_entry": {"rank": 1, "score": 0.19, "name": "stale best cache"},
+                "entries": [
+                    {"rank": 1, "score": 0.19, "name": "stale best cache"},
+                    {"rank": 2, "score": 0.17, "name": "actual minimum"},
+                ],
+            },
+            "upstream_leaderboard_snapshot_at_utc": "2026-07-25T00:00:00Z",
+        }
+    )
+    assert effective_frontier_score(pointer) == pytest.approx(0.17)
 
 
 def test_is_stale_detects_old_pointer() -> None:
@@ -479,6 +528,7 @@ def test_refresh_upstream_preserves_cached_snapshot_on_failure(tmp_path: Path) -
     cached = snap.get("cached_snapshot")
     assert cached is not None
     assert cached.get("entries")[0]["score"] == pytest.approx(0.180)
+    assert pointer.upstream_leaderboard_snapshot_at_utc == "2026-05-19T00:00:00Z"
     assert effective_frontier_score(pointer) == pytest.approx(0.180)
     assert pointer.effective_frontier is not None
     assert pointer.effective_frontier["snapshot_at_utc"] == "2026-05-19T00:00:00Z"

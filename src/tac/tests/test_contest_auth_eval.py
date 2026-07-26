@@ -16,7 +16,7 @@ import subprocess
 import sys
 import zipfile
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -43,6 +43,70 @@ def test_module_loads(cae):
     assert hasattr(cae, "_run_inflate")
     assert hasattr(cae, "_run_upstream_evaluate")
     assert cae.SCHEMA_VERSION == 1
+
+
+def test_record_provenance_emits_required_full_upstream_snapshot_hash(
+    cae, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    (upstream / "evaluate.py").write_text("# frozen evaluator\n", encoding="utf-8")
+    video_names = upstream / "public_test_video_names.txt"
+    video_names.write_text("0.mkv\n", encoding="utf-8")
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    inflate = tmp_path / "inflate.sh"
+    inflate.write_text("#!/bin/sh\n", encoding="utf-8")
+    expected = cae._require_upstream_snapshot_sha256(upstream)
+
+    monkeypatch.setattr(cae, "_runtime_dependency_manifest", lambda *_args: {})
+    provenance = cae._record_provenance(
+        work_dir,
+        archive,
+        inflate,
+        upstream,
+        SimpleNamespace(
+            device="cpu",
+            inflate_timeout=1,
+            evaluate_timeout=2,
+            video_names_file=video_names,
+        ),
+    )
+
+    assert provenance["upstream_snapshot_sha256"] == expected
+    persisted = json.loads((work_dir / "provenance.json").read_text())
+    assert persisted["upstream_snapshot_sha256"] == expected
+
+
+def test_required_upstream_snapshot_hash_rejects_unbound_symlink(
+    cae, tmp_path: Path
+) -> None:
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    external = tmp_path / "external-scorer.py"
+    external.write_text("# outside custody\n", encoding="utf-8")
+    (upstream / "evaluate.py").symlink_to(external)
+
+    with pytest.raises(
+        RuntimeError, match="could not be hashed without omitted dependencies"
+    ):
+        cae._require_upstream_snapshot_sha256(upstream)
+
+
+def test_required_upstream_snapshot_hash_rejects_executable_bytecode(
+    cae, tmp_path: Path
+) -> None:
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    (upstream / "evaluate.py").write_text("# frozen evaluator\n", encoding="utf-8")
+    (upstream / "payload.pyc").write_bytes(b"executable dependency")
+
+    with pytest.raises(
+        RuntimeError, match="could not be hashed without omitted dependencies"
+    ):
+        cae._require_upstream_snapshot_sha256(upstream)
 
 
 def test_parse_report_baseline_format(cae, tmp_path: Path):

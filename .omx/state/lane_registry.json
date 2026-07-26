@@ -88833,7 +88833,7 @@
           "evidence": ""
         }
       },
-      "notes": "Comprehensive C0B pass sealed exact PBR1/PBR2 as encoder-only teachers and exposed the candidate-lineage blocker: exact target residuals cannot ship. Next executable edge is bounded generative correction G plus oracle-admitted independent-Y0/Y1 CoupledPreimageProgram with exact joint-score admission.",
+      "notes": "Research-only P/G/A/optional-T stack. Exact generated output can be lawful; PBR/GT teacher payload cannot ship. G exact admission is fail-closed at receiver_consumption_custody_absent. Next executable edge: provenance-bound strict-G consumption receipt plus matched G-only counterfactual, in parallel with a source-custodied reverse-causal A-to-PairPopulation adapter; no candidate, score, promotion, or originality authority.",
       "research_only": true
     },
     {
@@ -88917,7 +88917,7 @@
           "evidence": ""
         }
       },
-      "notes": "Generic PBR1 research ABI landed after exact n600 BJ1 falsified W_seg-as-C1: it binds predictor program, renderer, decoded predictor, nested events, and recovered target. Because it losslessly reconstructs target semantics, candidate_payload_allowed=false. Use only as encoder-side debt/entropy teacher for non-exhaustive generative correction G; no archive, score, promotion, or candidate authority.",
+      "notes": "Research-only PBR1 teacher ABI binds predictor, renderer, decoded semantics, nested residual, and recovered target. Its lossless frozen-target payload is candidate-forbidden. Exact output from a counted generator can be legal, but originality and candidate eligibility require itemized lineage accounting plus receiver-closed archive and evaluator custody.",
       "research_only": true
     },
     {
@@ -89085,7 +89085,217 @@
           "evidence": ""
         }
       },
-      "notes": "Sealed research-only entropy teacher. Current exact n64 pairs 448:512 PBR2 is 78,665B versus PBR1 93,896B, saving 15,231B; staged debt 489519->95968->5551->0. Both losslessly encode frozen GT argmax and are candidate-forbidden. Use strata only to fit non-exhaustive generative correction G; no archive, score, or frontier authority.",
+      "notes": "Research-only encoder teacher. The current n64 measurement is a bounded implementation/timing diagnostic only, not a finding or fit-order authority. PBR packets store frozen target semantics and are candidate-forbidden; n600 lineage-clean generator, receiver-closed archive, and exact coupled score remain owed.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g1_bounded_taskspace_correction_20260726",
+      "name": "G1 bounded task-space correction compiler",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; typed finite G compiler with self-described ABI resources and encoder-only teacher custody. Literal member presence is non-authority; exact admission is hard-blocked by receiver_consumption_custody_absent until a runtime parse/apply-to-raw receipt and matched G-only counterfactual exist. No originality, candidate, exact-score, promotion, or frontier authority.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g1_pair_population_envelope_20260726",
+      "name": "G1 PairPopulation and derived identity envelope",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; typed PairPopulation, identity, source-binding, and role-counterfactual causality envelope. Counted own-lineage dense or inverse-preimage representations are structurally legal; candidate eligibility remains false until exact payload-lineage accounting, archive receiver closure, and evaluator custody exist.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g1_teacher_atom_census_20260726",
+      "name": "G1 exact teacher atom census",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; n64 bounded implementation, timing, and acquisition diagnostic only. It is non-promotable and cannot inform fit order or a decision; the n600 decision surface and candidate archive remain owed.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g1_prior_signal_harvest_20260726",
+      "name": "G1 canonical prior-signal harvest",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; typed prior-signal inventory for acquisition planning only. It carries no payload, score, originality, or promotion authority; n600 receiver-closed execution remains the decision surface.",
+      "research_only": true
+    },
+    {
+      "id": "lane_taskspace_coupled_preimage_program_20260726",
+      "name": "Task-space Y1-anchored coupled preimage program",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; declared original-work intent but lineage and originality remain unverified; reverse-causal G-to-exact-Y1-to-Y0-given-Y1 reference grammar; no canonical n600 instance, PairPopulation adapter, production archive receiver, score, or promotion authority.",
       "research_only": true
     }
   ],
@@ -89096,5 +89306,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-26T03:57:22Z"
+  "updated_at": "2026-07-26T07:56:42Z"
 }
