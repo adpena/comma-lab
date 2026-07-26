@@ -12,8 +12,11 @@ predictor it corrects.  This envelope binds an S2 partition-event payload to:
 The receiver refuses predictor-program, renderer, or semantic-stream swaps
 before applying a residual.  This closes the reference-frame bug in which a
 mathematically exact C1 residual was considered composable with an unrelated
-W_seg predictor.  The target-stream digest is a counted integrity checksum,
-not a stored target table and not score evidence.
+W_seg predictor.  The target-stream digest is an integrity checksum, but the
+event payload itself is a lossless predictor-conditional encoding of the
+caller-supplied semantic target.  This packet is therefore a research teacher
+and conditional-entropy measurement, not a candidate-admissible payload and
+not score evidence.
 """
 
 from __future__ import annotations
@@ -371,7 +374,12 @@ def packet_accounting(payload: bytes) -> dict[str, Any]:
         "predictor_program_sha256": decoded.predictor_program_sha256,
         "predictor_semantic_sha256": decoded.predictor_semantic_sha256,
         "target_semantic_sha256": decoded.target_semantic_sha256,
-        "target_table_bytes": 0,
+        "separate_dense_target_table_section_bytes": 0,
+        "pbr1_is_target_derived": True,
+        "pbr1_target_derived_section_bytes": len(payload),
+        "exact_target_semantic_reconstruction": True,
+        "candidate_payload_allowed": False,
+        "candidate_archive_blocker": "lossless predictor-conditional target-semantic-table encoding",
         "score_claim": False,
         "promotion_eligible": False,
     }

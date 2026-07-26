@@ -40,18 +40,12 @@ CONTENT_ADDRESS_SCHEMA = "tac.content_address.v1"
 SCIENTIFIC_STREAM_SCHEMA = "tac.coupled_witness_stream.v1"
 SCIENTIFIC_STREAM_DEPENDENCY_SCHEMA = "tac.coupled_witness_stream_dependency.v1"
 SCIENTIFIC_STREAM_PROVENANCE_SCHEMA = "tac.coupled_witness_stream_provenance.v1"
-SCIENTIFIC_STREAM_CONSTRUCTION_RECEIPT_SCHEMA = (
-    "tac.coupled_witness_stream_construction_receipt.v1"
-)
-SCIENTIFIC_STREAM_CONSTRUCTION_RECEIPT_ENVELOPE_SCHEMA = (
-    "tac.coupled_witness_stream_construction_receipt.envelope.v1"
-)
+SCIENTIFIC_STREAM_CONSTRUCTION_RECEIPT_SCHEMA = "tac.coupled_witness_stream_construction_receipt.v1"
+SCIENTIFIC_STREAM_CONSTRUCTION_RECEIPT_ENVELOPE_SCHEMA = "tac.coupled_witness_stream_construction_receipt.envelope.v1"
 STATE_PATCH_SCHEMA = "tac.coupled_witness_state_patch.v1"
 STATE_PATCH_ENVELOPE_SCHEMA = "tac.coupled_witness_state_patch.envelope.v1"
 STATE_TRANSITION_RECEIPT_SCHEMA = "tac.coupled_witness_transition_receipt.v1"
-STATE_TRANSITION_RECEIPT_ENVELOPE_SCHEMA = (
-    "tac.coupled_witness_transition_receipt.envelope.v1"
-)
+STATE_TRANSITION_RECEIPT_ENVELOPE_SCHEMA = "tac.coupled_witness_transition_receipt.envelope.v1"
 COMPILE_STREAM_POLICY_SCHEMA = "tac.witness_compile_stream_policy.v1"
 WITNESS_COMPILE_CONFIG_SCHEMA = "tac.witness_compile_config.v1"
 WITNESS_COMPILE_CONFIG_ENVELOPE_SCHEMA = "tac.witness_compile_config.envelope.v1"
@@ -73,9 +67,7 @@ def canonical_json_bytes(value: Any) -> bytes:
         if isinstance(item, Mapping):
             for key, child in item.items():
                 if not isinstance(key, str):
-                    raise CoupledWitnessStateError(
-                        f"canonical JSON mapping key at {path} must be a string"
-                    )
+                    raise CoupledWitnessStateError(f"canonical JSON mapping key at {path} must be a string")
                 require_string_mapping_keys(child, f"{path}.{key}")
         elif isinstance(item, (list, tuple)):
             for index, child in enumerate(item):
@@ -446,13 +438,18 @@ class ScientificStream:
         )
 
 
-def _expected_dependencies(
-    parent: CoupledWitnessState,
+def _expected_dependencies_from_streams(
+    streams: Sequence[ScientificStream],
     role: ScientificStreamRole,
 ) -> tuple[ScientificStreamDependency, ...]:
-    """Derive, rather than accept, the upstream content identities for one role."""
+    """Derive upstream identities from one complete prospective stream view."""
 
-    by_role = {stream.role: stream for stream in parent.streams}
+    rows = tuple(streams)
+    if any(not isinstance(stream, ScientificStream) for stream in rows):
+        raise CoupledWitnessStateError("dependency context contains an invalid scientific stream")
+    by_role = {stream.role: stream for stream in rows}
+    if len(by_role) != len(rows):
+        raise CoupledWitnessStateError("dependency context scientific stream roles must be unique")
     required_roles = tuple(sorted(_STREAM_DEPENDENCIES[role], key=_STREAM_INDEX.__getitem__))
     missing = [dependency_role for dependency_role in required_roles if dependency_role not in by_role]
     if missing:
@@ -467,6 +464,15 @@ def _expected_dependencies(
         )
         for dependency_role in required_roles
     )
+
+
+def _expected_dependencies(
+    parent: CoupledWitnessState,
+    role: ScientificStreamRole,
+) -> tuple[ScientificStreamDependency, ...]:
+    """Derive, rather than accept, the upstream content identities for one role."""
+
+    return _expected_dependencies_from_streams(parent.streams, role)
 
 
 def build_scientific_stream_provenance_snapshot(
@@ -497,9 +503,49 @@ def build_scientific_stream_provenance_snapshot(
             "role": role.value,
             "frozen_space_sha256": parent.frozen_space.identity_sha256,
             "source_video": parent.frozen_space.source_video.as_dict(),
-            "evaluator_artifacts": [
-                artifact.as_dict() for artifact in parent.frozen_space.evaluator_artifacts
-            ],
+            "evaluator_artifacts": [artifact.as_dict() for artifact in parent.frozen_space.evaluator_artifacts],
+            "parent_state_sha256": parent.state_sha256,
+            "parent_transition_index": parent.transition_index,
+            "generation_seed": parent.generation_seed,
+            "generation_rng_id": parent.generation_rng_id,
+            "dependencies": [dependency.as_dict() for dependency in dependencies],
+            "lineage": SOURCE_DERIVED_LINEAGE,
+            "borrowed_candidate_bytes": 0,
+        }
+    )
+
+
+def build_scientific_stream_replacement_provenance_snapshot(
+    parent: CoupledWitnessState,
+    role: ScientificStreamRole,
+    *,
+    dependency_streams: Sequence[ScientificStream],
+    derivation_id: str,
+) -> bytes:
+    """Bind replacement provenance to the parent and prospective dependencies.
+
+    A replacement is derived against one immutable parent transition, but its
+    dependencies may themselves be replacements in the same atomic patch.  The
+    caller therefore supplies the complete prospective stream view; dependency
+    identities are still derived here and never caller-asserted.
+    """
+
+    if not isinstance(parent, CoupledWitnessState):
+        raise CoupledWitnessStateError("replacement provenance parent must be a coupled witness state")
+    if not isinstance(role, ScientificStreamRole):
+        raise CoupledWitnessStateError("replacement provenance stream role is invalid")
+    if role not in parent.present_roles:
+        raise CoupledWitnessStateError(f"cannot replace absent scientific stream {role.value}")
+    _text(derivation_id, "derivation_id")
+    dependencies = _expected_dependencies_from_streams(dependency_streams, role)
+    return canonical_json_bytes(
+        {
+            "schema": SCIENTIFIC_STREAM_PROVENANCE_SCHEMA,
+            "derivation_id": derivation_id,
+            "role": role.value,
+            "frozen_space_sha256": parent.frozen_space.identity_sha256,
+            "source_video": parent.frozen_space.source_video.as_dict(),
+            "evaluator_artifacts": [artifact.as_dict() for artifact in parent.frozen_space.evaluator_artifacts],
             "parent_state_sha256": parent.state_sha256,
             "parent_transition_index": parent.transition_index,
             "generation_seed": parent.generation_seed,
@@ -555,10 +601,7 @@ def _validate_scientific_stream_provenance_snapshot(
         raise CoupledWitnessStateError("provenance parent-state identity differs")
     if value["parent_transition_index"] != parent.transition_index:
         raise CoupledWitnessStateError("provenance parent transition index differs")
-    if (
-        value["generation_seed"] != parent.generation_seed
-        or value["generation_rng_id"] != parent.generation_rng_id
-    ):
+    if value["generation_seed"] != parent.generation_seed or value["generation_rng_id"] != parent.generation_rng_id:
         raise CoupledWitnessStateError("provenance generation identity differs")
     rows = value["dependencies"]
     if not isinstance(rows, list):
@@ -594,9 +637,7 @@ class ScientificStreamConstructionReceipt:
             raise CoupledWitnessStateError("stream-construction-receipt schema differs")
         if not isinstance(self.role, ScientificStreamRole):
             raise CoupledWitnessStateError("construction receipt role is invalid")
-        if not isinstance(self.content, ContentAddress) or not isinstance(
-            self.provenance_manifest, ContentAddress
-        ):
+        if not isinstance(self.content, ContentAddress) or not isinstance(self.provenance_manifest, ContentAddress):
             raise CoupledWitnessStateError("construction receipt content addresses are invalid")
         if not isinstance(self.dependencies, tuple) or any(
             not isinstance(item, ScientificStreamDependency) for item in self.dependencies
@@ -701,6 +742,9 @@ class ScientificStreamConstructionReceipt:
         self,
         parent: CoupledWitnessState,
         stream: ScientificStream,
+        *,
+        dependency_streams: Sequence[ScientificStream] | None = None,
+        allow_replacement: bool = False,
     ) -> None:
         """Validate all state/role/dependency keys without re-reading payload bytes."""
 
@@ -720,17 +764,19 @@ class ScientificStreamConstructionReceipt:
             raise CoupledWitnessStateError("construction receipt parent-state identity differs")
         if self.frozen_space_sha256 != parent.frozen_space.identity_sha256:
             raise CoupledWitnessStateError("construction receipt frozen-space identity differs")
-        if (
-            self.generation_seed != parent.generation_seed
-            or self.generation_rng_id != parent.generation_rng_id
-        ):
+        if self.generation_seed != parent.generation_seed or self.generation_rng_id != parent.generation_rng_id:
             raise CoupledWitnessStateError("construction receipt generation identity differs")
         if self.transition_index != parent.transition_index + 1:
             raise CoupledWitnessStateError("construction receipt transition index differs")
-        if self.role in parent.present_roles:
+        if type(allow_replacement) is not bool:
+            raise CoupledWitnessStateError("construction receipt replacement policy must be boolean")
+        if self.role in parent.present_roles and not allow_replacement:
             raise CoupledWitnessStateError("construction receipt replays an already-declared stream")
-        if self.dependencies != _expected_dependencies(parent, self.role):
-            raise CoupledWitnessStateError("construction receipt dependencies do not match parent state")
+        if self.role not in parent.present_roles and allow_replacement:
+            raise CoupledWitnessStateError("construction receipt cannot replace an absent stream")
+        dependency_context = parent.streams if dependency_streams is None else dependency_streams
+        if self.dependencies != _expected_dependencies_from_streams(dependency_context, self.role):
+            raise CoupledWitnessStateError("construction receipt dependencies do not match prospective state")
 
     def validate_against(
         self,
@@ -739,10 +785,17 @@ class ScientificStreamConstructionReceipt:
         *,
         content_payload: bytes,
         provenance_payload: bytes,
+        dependency_streams: Sequence[ScientificStream] | None = None,
+        allow_replacement: bool = False,
     ) -> None:
         """Re-verify exact bytes and parsed provenance after storage/re-open."""
 
-        self.validate_binding_against(parent, stream)
+        self.validate_binding_against(
+            parent,
+            stream,
+            dependency_streams=dependency_streams,
+            allow_replacement=allow_replacement,
+        )
         self.content.verify_payload(content_payload)
         self.provenance_manifest.verify_payload(provenance_payload)
         _validate_scientific_stream_provenance_snapshot(
@@ -810,6 +863,70 @@ def construct_scientific_stream(
         stream,
         content_payload=content_payload,
         provenance_payload=provenance_payload,
+    )
+    return stream, receipt
+
+
+def construct_replacement_scientific_stream(
+    parent: CoupledWitnessState,
+    role: ScientificStreamRole,
+    *,
+    dependency_streams: Sequence[ScientificStream],
+    content_artifact_id: str,
+    content_artifact_schema: str,
+    content_payload: bytes,
+    provenance_artifact_id: str,
+    provenance_payload: bytes,
+) -> tuple[ScientificStream, ScientificStreamConstructionReceipt]:
+    """Construct one replacement against an atomic patch's prospective view."""
+
+    if not isinstance(parent, CoupledWitnessState):
+        raise CoupledWitnessStateError("replacement parent must be a coupled witness state")
+    if not isinstance(role, ScientificStreamRole):
+        raise CoupledWitnessStateError("replacement stream role is invalid")
+    if role not in parent.present_roles:
+        raise CoupledWitnessStateError(f"cannot replace absent scientific stream {role.value}")
+    if not isinstance(content_payload, bytes) or not isinstance(provenance_payload, bytes):
+        raise CoupledWitnessStateError("replacement construction requires exact content and provenance bytes")
+    dependencies = _expected_dependencies_from_streams(dependency_streams, role)
+    _validate_scientific_stream_provenance_snapshot(
+        provenance_payload,
+        parent=parent,
+        role=role,
+        dependencies=dependencies,
+    )
+    stream = ScientificStream(
+        role=role,
+        content=ContentAddress.from_payload(
+            artifact_id=content_artifact_id,
+            artifact_schema=content_artifact_schema,
+            payload=content_payload,
+        ),
+        provenance_manifest=ContentAddress.from_payload(
+            artifact_id=provenance_artifact_id,
+            artifact_schema=SCIENTIFIC_STREAM_PROVENANCE_SCHEMA,
+            payload=provenance_payload,
+        ),
+        dependencies=dependencies,
+    )
+    receipt = ScientificStreamConstructionReceipt(
+        role=role,
+        content=stream.content,
+        provenance_manifest=stream.provenance_manifest,
+        dependencies=dependencies,
+        parent_state_sha256=parent.state_sha256,
+        frozen_space_sha256=parent.frozen_space.identity_sha256,
+        generation_seed=parent.generation_seed,
+        generation_rng_id=parent.generation_rng_id,
+        transition_index=parent.transition_index + 1,
+    )
+    receipt.validate_against(
+        parent,
+        stream,
+        content_payload=content_payload,
+        provenance_payload=provenance_payload,
+        dependency_streams=dependency_streams,
+        allow_replacement=True,
     )
     return stream, receipt
 
@@ -1001,10 +1118,7 @@ class StatePatch:
             raise CoupledWitnessStateError("patch stream fields must be tuples")
         if any(not isinstance(stream, ScientificStream) for stream in self.set_streams):
             raise CoupledWitnessStateError("set_streams contain an invalid entry")
-        if any(
-            not isinstance(receipt, ScientificStreamConstructionReceipt)
-            for receipt in self.construction_receipts
-        ):
+        if any(not isinstance(receipt, ScientificStreamConstructionReceipt) for receipt in self.construction_receipts):
             raise CoupledWitnessStateError("construction_receipts contain an invalid entry")
         if any(not isinstance(role, ScientificStreamRole) for role in self.remove_roles):
             raise CoupledWitnessStateError("remove_roles contain an invalid entry")
@@ -1022,9 +1136,7 @@ class StatePatch:
             raise CoupledWitnessStateError("state patch must change at least one stream")
         receipt_roles = [receipt.role for receipt in self.construction_receipts]
         if receipt_roles != set_roles:
-            raise CoupledWitnessStateError(
-                "construction receipts must exactly and canonically cover set streams"
-            )
+            raise CoupledWitnessStateError("construction receipts must exactly and canonically cover set streams")
 
     @property
     def patch_sha256(self) -> str:
@@ -1084,8 +1196,7 @@ class StatePatch:
             expected_parent_state_sha256=value["expected_parent_state_sha256"],
             set_streams=tuple(ScientificStream.from_dict(item) for item in set_streams),
             construction_receipts=tuple(
-                ScientificStreamConstructionReceipt.from_dict(item)
-                for item in construction_receipts
+                ScientificStreamConstructionReceipt.from_dict(item) for item in construction_receipts
             ),
             remove_roles=parsed_remove_roles,
             rationale=value["rationale"],
@@ -1209,18 +1320,13 @@ class StateTransitionReceipt:
     ) -> None:
         """Replay and verify every edge identity and transition invariant."""
 
-        if not isinstance(parent, CoupledWitnessState) or not isinstance(
-            child, CoupledWitnessState
-        ):
+        if not isinstance(parent, CoupledWitnessState) or not isinstance(child, CoupledWitnessState):
             raise CoupledWitnessStateError("transition endpoint types differ")
         if not isinstance(patch, StatePatch):
             raise CoupledWitnessStateError("transition patch type differs")
         if child.frozen_space != parent.frozen_space:
             raise CoupledWitnessStateError("transition changed frozen-space identity")
-        if (
-            child.generation_seed != parent.generation_seed
-            or child.generation_rng_id != parent.generation_rng_id
-        ):
+        if child.generation_seed != parent.generation_seed or child.generation_rng_id != parent.generation_rng_id:
             raise CoupledWitnessStateError("transition changed generation identity")
         if child.parent_state_sha256 != parent.state_sha256:
             raise CoupledWitnessStateError("child parent-state foreign key differs")
@@ -1230,9 +1336,7 @@ class StateTransitionReceipt:
         if child != expected_child:
             raise CoupledWitnessStateError("child state differs from deterministic patch replay")
         if self != expected_receipt:
-            raise CoupledWitnessStateError(
-                "transition receipt foreign keys or changed-role semantics differ"
-            )
+            raise CoupledWitnessStateError("transition receipt foreign keys or changed-role semantics differ")
 
 
 def apply_state_patch(
@@ -1250,15 +1354,19 @@ def apply_state_patch(
         if role not in by_role:
             raise CoupledWitnessStateError(f"cannot remove absent stream {role.value}")
         del by_role[role]
-    for stream, construction_receipt in zip(
-        patch.set_streams, patch.construction_receipts, strict=True
-    ):
-        construction_receipt.validate_binding_against(state, stream)
+    for stream in patch.set_streams:
         prior = by_role.get(stream.role)
         if prior == stream:
             raise CoupledWitnessStateError(f"patch does not change stream {stream.role.value}")
         by_role[stream.role] = stream
     streams = tuple(by_role[role] for role in SCIENTIFIC_STREAM_ORDER if role in by_role)
+    for stream, construction_receipt in zip(patch.set_streams, patch.construction_receipts, strict=True):
+        construction_receipt.validate_binding_against(
+            state,
+            stream,
+            dependency_streams=streams,
+            allow_replacement=stream.role in state.present_roles,
+        )
     child = CoupledWitnessState(
         frozen_space=state.frozen_space,
         generation_seed=state.generation_seed,
@@ -1633,8 +1741,10 @@ __all__ = [
     "WitnessCompileConfig",
     "apply_state_patch",
     "build_scientific_stream_provenance_snapshot",
+    "build_scientific_stream_replacement_provenance_snapshot",
     "canonical_json_bytes",
     "canonical_sha256",
+    "construct_replacement_scientific_stream",
     "construct_scientific_stream",
     "decode_canonical_json",
     "load_scientific_stream",

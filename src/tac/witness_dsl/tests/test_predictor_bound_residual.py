@@ -63,7 +63,12 @@ def test_packet_is_deterministic_strict_and_recovers_target() -> None:
     accounting = packet_accounting(first)
     assert accounting["packet_bytes"] == len(first)
     assert accounting["event_count"] == 2
-    assert accounting["target_table_bytes"] == 0
+    assert accounting["separate_dense_target_table_section_bytes"] == 0
+    assert accounting["pbr1_is_target_derived"] is True
+    assert accounting["pbr1_target_derived_section_bytes"] == len(first)
+    assert accounting["exact_target_semantic_reconstruction"] is True
+    assert accounting["candidate_payload_allowed"] is False
+    assert accounting["candidate_archive_blocker"] == ("lossless predictor-conditional target-semantic-table encoding")
     assert accounting["score_claim"] is False
 
 

@@ -1,0 +1,305 @@
+{
+  "schema": "tac.original_taskspace_inverse_witness_codec_roadmap_receipt.v4",
+  "body": {
+    "schema": "tac.original_taskspace_inverse_witness_codec_roadmap.v4",
+    "generated_at_utc": "2026-07-26T03:45:05Z",
+    "supersedes": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/roadmap_v3.json",
+      "file_sha256": "3cd17f3782546adb348ed29fa73baeac4d61b5e993282c1dfc63903aab0a488c",
+      "delta": "reclassify the first counted receiver as an ABI ablation and make exclusive information ownership plus the oracle-admitted compact preimage program the production edge"
+    },
+    "authority": {
+      "research_only": true,
+      "score_claim": false,
+      "promotion_eligible": false,
+      "pointer_moved": false,
+      "dispatch_attempted": false,
+      "complete_receiver_closed_n600_archive": false,
+      "authoritative_score_measured": false
+    },
+    "mission": {
+      "strict_authoritative_target": 0.15,
+      "success_rule": "a custody-complete exact archive scores strictly below 0.15 on governed upstream evaluation",
+      "competitive_pointer_rule": "before every admission or dispatch use min(best local authoritative CPU score, best local authoritative CUDA score, best upstream official leaderboard score)",
+      "competitive_pointer_snapshot": {
+        "score": 0.172,
+        "axis": "official_leaderboard",
+        "evidence_grade": "[official-leaderboard display]",
+        "pr_number": 130,
+        "external_target_only": true,
+        "path": ".omx/state/canonical_frontier_pointer.json",
+        "file_sha256": "fd358b0020eca5412edfdc017be972fb463cb0259bf41b6659515a12a30d5e99"
+      }
+    },
+    "exact_objective": {
+      "score": "S=100*d_seg+sqrt(10*d_pose)+25*archive_bytes/37545489",
+      "finite_transition": "delta_S=100*delta_d_seg+sqrt(10*d_pose_after)-sqrt(10*d_pose_before)+25*delta_bytes/37545489",
+      "canonical_implementation": "src/tac/score_geometry.py::{score_sublevel_audit,score_transition_audit,target_byte_budget_for_score}",
+      "admission_rule": "only a complete same-object exact finite transition can admit, reject, rank for promotion, or move a pointer; component coordinates and equal-score byte ceilings are conditional surfaces, never independent gates"
+    },
+    "codec_gestalt": {
+      "statement": "compile the shortest original counted sufficient statistic whose deterministic generic receiver expands to native frames inside the frozen evaluator obligations",
+      "information_classes": [
+        {
+          "class": "encoder_only_truth_and_evidence",
+          "members": [
+            "source video",
+            "target semantic labels",
+            "winner margins and collateral ownership",
+            "Pose targets",
+            "hard-oracle logits and Pose observations",
+            "dense admitted Y0/Y1 teacher planes"
+          ],
+          "ships": false
+        },
+        {
+          "class": "counted_decoder_sufficient_statistic",
+          "members": [
+            "V9 predictor program P",
+            "compact generative task-space correction G",
+            "compact independent-frame preimage program A",
+            "optional irreducible terminal quotient T"
+          ],
+          "ships": true
+        },
+        {
+          "class": "generic_decoder_and_evidence_receipts",
+          "members": [
+            "standalone receiver source bundle",
+            "inflate entrypoint",
+            "state/archive/raw/eval receipts"
+          ],
+          "ships": "generic receiver code may be free but exact source custody and all evidence foreign keys are mandatory"
+        }
+      ],
+      "decoder_equation": "decode(P,G,A,T)=native_uint8_frames(Y0,Y1)",
+      "exclusive_ownership_invariant": "no semantic, pose, RGB, or terminal-plane information may be counted in two owners; exact PBR1/PBR2 target reconstruction and dense V10 Y-description are encoder-only teachers, while compact P+G+A is the candidate representation",
+      "training_policy": "derive, solve, or code first; train only a typed terminal remainder whose receiver-closed joint value beats matched-byte analytic and dictionary controls"
+    },
+    "landed_surfaces": [
+      {
+        "id": "STATE-CLOSURE",
+        "status": "LANDED_LOCAL",
+        "path": "src/tac/witness_dsl/coupled_witness_state.py",
+        "sha256": "5b04de3ae51fb78cb31cee97bd62820f5da0131cf76c4d0630a17b18ae7121f5",
+        "capability": "atomic replacement of an upstream scientific stream and every transitive dependent against one prospective state view"
+      },
+      {
+        "id": "V9-P",
+        "status": "GENERIC_ABI_LANDED_PRODUCTION_N600_OWED",
+        "path": "src/tac/witness_dsl/factorized_v9_predictor.py",
+        "sha256": "325ec698bc42aadbcf23a555c523c015f6ebc9e25f1d19836eab4dbc456f0c56",
+        "capability": "fresh exact-V9 five-class semantic decode with program, source-set, source-window, semantics, and Pose6 identities"
+      },
+      {
+        "id": "PBR1-E",
+        "status": "LANDED_RESEARCH_TEACHER_CANDIDATE_FORBIDDEN",
+        "path": "src/tac/witness_dsl/predictor_bound_residual.py",
+        "sha256": "4e7cf4b70e1cb2894c67986626c71ccb0f5ae6e89dca2c76693a9f455f27fd02",
+        "capability": "exact target debt bound to the exact predictor program, renderer, decoded predictor, and decoded target identities; candidate_payload_allowed=false"
+      },
+      {
+        "id": "PBR2-TEACHER",
+        "status": "SEALED_N64_RESEARCH_TEACHER_CANDIDATE_FORBIDDEN",
+        "path": "src/tac/witness_dsl/progressive_geometry_residual.py",
+        "sha256": "22d73203d332f283acc47367bda639b0d076b1322ecb98be9bc6614c370c185a",
+        "capability": "exact temporal, component-island, and sparse-tail conditional-entropy decomposition with receiver-derived V9 semantics",
+        "limitations": [
+          "losslessly reconstructs frozen GT argmax and therefore cannot enter a candidate archive",
+          "staged application requires the complete packet and is not physical prefix decoding",
+          "n64 only; no n600, RGB preimage, archive, scorer, or score authority"
+        ]
+      },
+      {
+        "id": "OBLIGATION-IR",
+        "status": "STRUCTURAL_COMPILE_LANDED_SYNTHESIS_EDGE_OWED",
+        "path": "src/tac/witness_dsl/evaluator_obligation_ir.py",
+        "sha256": "db7b765bacc24d7f5b9c6278417ccde1f9c50f5be6e32208363f4c5c30c6f422",
+        "capability": "typed cell/Pose obligations plus explicit distinct Y0/Y1 lattice, hard-oracle, and V10 receiver admission",
+        "limitations": [
+          "accepts rather than synthesizes explicit dense Y0/Y1",
+          "state and predictor hashes are caller fields rather than derived from reopened objects",
+          "cell coverage may be sparse and is not yet joined to every recovered PBR semantic obligation",
+          "compile result retains the V10 packet hash and size but not the exact packet bytes"
+        ]
+      },
+      {
+        "id": "C0B-ABI0",
+        "status": "LANDED_ABLATION_NOT_CAPSTONE",
+        "path": "src/tac/witness_dsl/c0b_counted_receiver_codec.py",
+        "sha256": "2c22ac0876d382da2a40988b21706c7fde93cff43b4dc1262ba4d4db2f1f893d",
+        "role": "abi_causality_ablation",
+        "capability": "cross-section-closed counted bytes, exact factor2 realization, causal sections, crash recovery, and output locking",
+        "limitations": [
+          "one shared semantic partition is painted through both plane palettes",
+          "no coupled-state, obligation-IR, hard-oracle, or independent-frame0 binding",
+          "repository decoder dependency and standalone inflate debt remain",
+          "never capstone, score, or promotion eligible"
+        ]
+      }
+    ],
+    "measured_receipts": {
+      "c0b_abi0_n1": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_counted_receiver_n1_structural_receipt_v2.json",
+        "file_sha256": "37ed0ca985c6b9c0d7cab9b0315f48a60ec3a0e7489aa80e8bd415bc6950ed4b",
+        "archive_bytes": 11328,
+        "archive_sha256": "e1b1281bafc07c93e7d71fd67c72f5d41332fdf02a659cca4ac33dc764c10ae8",
+        "raw_bytes": 6104016,
+        "raw_sha256": "77b7c78bcad0f0cc0cdadcbe0db755186fca18be0a567eea53816ac02d8c928c",
+        "scope": "n1 parser, causality, lattice, resume, and custody structure only"
+      },
+      "pbr2_n64_entropy_teacher": {
+        "status": "SEALED_RESEARCH_ONLY_CANDIDATE_FORBIDDEN",
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_pbr2_progressive_geometry_n64.json",
+        "file_sha256": "a56ed973f2169d26a117c96536ec7952b57bde420375f0b439d5e4d0b7407545",
+        "predictor_program_bytes": 51668,
+        "pair_window": [448, 512],
+        "mismatch_cells": 489519,
+        "mismatch_population": 12582912,
+        "pbr1_bytes": 93896,
+        "pbr1_sha256": "f598ff93c46a04da87683b19c375bd822e79e59352e02eb80029aad32abd722c",
+        "pbr2_bytes": 78665,
+        "pbr2_sha256": "3372eee1d989012fb3293c7abe08eac233c874bf485e5ea15c5bd26d7306f0a1",
+        "pbr2_bytes_saved_vs_pbr1": 15231,
+        "pbr2_target_derived_section_bytes": 75354,
+        "temporally_persistent_correction_cells": 393551,
+        "staged_error_cells": [489519, 95968, 5551, 0],
+        "candidate_payload_allowed": false,
+        "candidate_archive_blocker": "lossless predictor-conditional GT-argmax encoding",
+        "authority": "receiver-closed conditional-entropy measurement and teacher only; not candidate rate, archive, score, or frontier evidence"
+      }
+    },
+    "production_type_contract": {
+      "name": "CoupledPreimageProgramV1",
+      "production_sibling": "src/tac/witness_dsl/c0b_coupled_receiver_codec.py",
+      "pair_population": {
+        "type": "ordered tuple of (local_pair_index, source_pair_id)",
+        "reason": "V9 uses source-window coordinates while obligation IR and V10 currently assume local contiguous coordinates; equality at source start zero is not a general proof"
+      },
+      "counted_fields": [
+        "pair population",
+        "exact V9 predictor program",
+        "compact generative task-space correction parameters G, never exact PBR event/span bytes",
+        "frame1 palette/gauge and value residual",
+        "frame0 Pose residual conditional on V9 Pose6 and exact decoded frame1",
+        "optional terminal quotient, empty unless preceding owners cannot represent a measured obligation"
+      ],
+      "encoder_only_fields": [
+        "CoupledWitnessState object",
+        "EvaluatorObligationIR",
+        "hard-oracle evidence",
+        "dense admitted scorer Y0/Y1",
+        "target semantics and Pose targets",
+        "exact PBR1/PBR2 teacher packets and their error decomposition"
+      ],
+      "required_compile_function": "compile_oracle_admitted_c0b_archive(state,compile_config,predictor_receiver,generative_correction,pbr_teacher,obligation_ir,scorer_y0,scorer_y1,explicit_preimage_result)->(archive_bytes,C0BVerticalCompileReceipt)",
+      "compile_invariants": [
+        "reopen actual objects and derive every hash; caller-attested foreign-key strings cannot close a join",
+        "use PBR only as encoder-side teacher debt; candidate packaging must reject PBR1/PBR2 magic and exact target reconstruction",
+        "decode generative correction G and require its admitted subset to match IR winner obligations under an explicit complete-or-sparse-owned coverage policy",
+        "verify explicit preimage result against exact Y0/Y1 and the authenticated hard oracle",
+        "factor admitted planes into a compact preimage program before packaging",
+        "never include exact PBR or the dense V10 y-description packet alongside P+G+A",
+        "decode twice through a standalone receiver bundle and bind exact archive, Y0/Y1, native raw, runtime, and source hashes",
+        "every counted section has valid-alternative causality plus deletion and mutation tests"
+      ]
+    },
+    "foreign_key_chain": [
+      "FrozenSpaceIdentity -> CoupledWitnessState",
+      "CoupledWitnessState scientific streams -> exact predictor program and derivation receipts",
+      "PairPopulation(local,source) -> predictor window, teacher debt, G, IR, receiver, and raw frame order",
+      "Predictor program + renderer source -> predictor semantic and Pose6 identities",
+      "PBR1/PBR2 teacher -> exact predictor and target semantic identity, encoder-only",
+      "Teacher debt -> bounded generative correction G -> IR winner obligations and explicit coverage ownership",
+      "IR + exact Y0/Y1 + frozen hard oracle -> explicit preimage admission receipt",
+      "CoupledPreimageProgram -> exact decoded Y0/Y1",
+      "Archive + standalone receiver bundle -> deterministic native raw",
+      "Archive + raw + scorer runtime + axis -> exact score receipt"
+    ],
+    "byte_ownership": [
+      {
+        "owner": "V9",
+        "owns": "bulk regions, boundaries, Lane charts/phase, Movable/MyCar topology, temporal geometry, and Pose6 predictor"
+      },
+      {
+        "owner": "G",
+        "owns": "candidate-admissible generative semantic correction relative to exact V9; exact PBR target reconstruction is teacher-only and owns no candidate bytes"
+      },
+      {
+        "owner": "frame1_preimage",
+        "owns": "RGB palette/gauge/value debt conditional on recovered semantics"
+      },
+      {
+        "owner": "frame0_pose",
+        "owns": "only the residual beyond V9 Pose6 conditional on exact decoded frame1, never a second absolute pose stream"
+      },
+      {
+        "owner": "terminal_quotient",
+        "owns": "only receiver-closed effects unexplained by all preceding owners, with explicit deletion and no-relearning tests"
+      }
+    ],
+    "build_dag": [
+      {
+        "order": 1,
+        "id": "PBR2-SEAL",
+        "status": "COMPLETE_AS_RESEARCH_TEACHER_BLOCKED_AS_CANDIDATE",
+        "action": "retain the exact n64 progressive residual as a conditional-entropy bound and structured teacher",
+        "result": "78665 bytes versus 93896 for PBR1, but exact GT-argmax reconstruction forbids candidate use"
+      },
+      {
+        "order": 2,
+        "id": "G1-COMPILE",
+        "action": "fit bounded temporal, topology, and boundary primitives from the PBR2 teacher into candidate-admissible generative correction G",
+        "gate": "G is decoded from compact global/topological parameters, leaves explicitly priced debt, and contains no exhaustive target event/span table",
+        "falsifier": "candidate bytes can losslessly enumerate the frozen target semantics or fail exact coupled score value-per-byte admission"
+      },
+      {
+        "order": 3,
+        "id": "PX1-TYPE",
+        "action": "land PairPopulation, CoupledPreimageProgramV1, and C0BVerticalCompileReceipt with derived foreign keys and exclusive byte ownership",
+        "falsifier": "any caller-attested identity, duplicated terminal plane, unconsumed counted section, or ambiguous pair coordinate"
+      },
+      {
+        "order": 4,
+        "id": "PX1-INDEPENDENT-Y0",
+        "action": "compile frame0 Pose residual conditional on V9 Pose6 and exact decoded frame1 while preserving the palette/gauge sparse ABI as the control",
+        "falsifier": "frame0 remains the same semantic field, or the hard oracle cannot accept the exact realized pair"
+      },
+      {
+        "order": 5,
+        "id": "PX1-STANDALONE-N64",
+        "action": "package a source-custodied standalone receiver, clean-root double inflate, exact Y0/Y1 and raw hashes, then one local frozen-scorer joint debt row",
+        "falsifier": "archive cannot reproduce the admitted planes and native raw without repository/source/scorer dependencies"
+      },
+      {
+        "order": 6,
+        "id": "PX1-N600",
+        "action": "scale the exact grammar with per-pair write-once stages, storage preflight, preserved checkpoints, per-class/pair debt, section value per byte, and all 25 IS1 rows",
+        "falsifier": "aggregate identities do not close or exact finite joint score fails to improve the same-object control"
+      },
+      {
+        "order": 7,
+        "id": "AUTHORITY",
+        "action": "claim the lane and branch the exact same archive to governed contest CPU and CUDA evaluation",
+        "gate": "standalone custody, n600 closure, deterministic replay, originality receipt, and exact score-transition admission",
+        "stop": "bank a pointer break but continue until authoritative score is strictly below 0.15"
+      }
+    ],
+    "wire_in_contract": {
+      "sensitivity_map": "key per-pair, class, semantic-event, preimage-control, and byte effects to the exact predictor, IR, archive, and axis identities",
+      "pareto_constraint": "route all complete points and atomic replacements through exact score sublevel and transition audits",
+      "bit_allocator": "allocate between mutually exclusive representation bundles, hard-reject exact-target residual payloads, and charge every legal generative/realization byte to one owner",
+      "cathedral_autopilot": "schedule G1-COMPILE then PX1-TYPE as the missing executable edges; ABI0 and exact PBR packets remain controls and cannot masquerade as capstone progress",
+      "continual_learning": "append PBR2 as BLOCKED_FOR_CANDIDATE and USE_AS_TEACHER, then update promotion posteriors only from legal receiver-closed n64/n600 outcomes",
+      "probe_disambiguator": "keep palette/gauge sparse and analytic/feature-relay preimage modes callable; exact receiver-closed joint value per byte arbitrates"
+    },
+    "honest_terminal_state": {
+      "pointer_delta": 0.0,
+      "config_task": "closed and out of scope",
+      "public_candidate_payload_bytes": 0,
+      "current_counted_archive_role": "ABI and causal ablation only",
+      "next_exact_blocker": "derive candidate-admissible generative correction G from the sealed teacher decomposition, then encode an independent-Y0/Y1 CoupledPreimageProgram without exact PBR or dense terminal planes"
+    }
+  },
+  "body_sha256": "26df5235e1b0375309636f7ba65f9d915a8e97892201a7d696dd695b5e7b034c"
+}

@@ -1,0 +1,248 @@
+{
+  "authority_axis": "[research-only exact conditional semantic bytes; n64 formulation scope]",
+  "candidate_archive_blocker": "lossless predictor-conditional target-semantic-table encoding",
+  "candidate_payload_allowed": false,
+  "comparison": {
+    "conditional_predictor_plus_pbr1_bytes": 145564,
+    "conditional_predictor_plus_pbr2_bytes": 130333,
+    "pbr2_bytes_saved_vs_pbr1": 15231,
+    "pbr2_fraction_of_pbr1": 0.8377886171934906,
+    "pbr2_minus_pbr1_bytes": -15231
+  },
+  "exact_difference": {
+    "mismatch_cells": 489519,
+    "mismatch_fraction": 0.03890347480773926,
+    "total_cells": 12582912
+  },
+  "git_head_before_uncommitted_landing": "8c57d83d2ca9c18e36b8f3b3ea4398af999ef1a4",
+  "implementation": {
+    "src/tac/witness_dsl/factorized_v9_predictor.py": {
+      "bytes": 20488,
+      "sha256": "325ec698bc42aadbcf23a555c523c015f6ebc9e25f1d19836eab4dbc456f0c56"
+    },
+    "src/tac/witness_dsl/predictor_bound_residual.py": {
+      "bytes": 17063,
+      "sha256": "4e7cf4b70e1cb2894c67986626c71ccb0f5ae6e89dca2c76693a9f455f27fd02"
+    },
+    "src/tac/witness_dsl/progressive_geometry_residual.py": {
+      "bytes": 54466,
+      "sha256": "22d73203d332f283acc47367bda639b0d076b1322ecb98be9bc6614c370c185a"
+    },
+    "src/tac/witness_dsl/progressive_v9_entropy_measurement.py": {
+      "bytes": 1814,
+      "sha256": "6e54ad007a3efda2e9b743ab1291ba7d8ee1817d97ae86d398c6fa60f283c0dc"
+    },
+    "src/tac/witness_dsl/tests/test_factorized_v9_predictor.py": {
+      "bytes": 12240,
+      "sha256": "f6e95728b2176504267cc647dcf0315761a9f8d7940cb8bfada1672f79c13785"
+    },
+    "src/tac/witness_dsl/tests/test_predictor_bound_residual.py": {
+      "bytes": 6490,
+      "sha256": "4284f8f1570325095e8f4b234ad8679168b74295e084d6d56b8a767dbd782660"
+    },
+    "src/tac/witness_dsl/tests/test_progressive_geometry_residual.py": {
+      "bytes": 10304,
+      "sha256": "51e70b6af8e2743e062eff3ebe06667b71abb0484aea23398923821052d53a0a"
+    },
+    "tools/materialize_c0b_pbr2_entropy_measurement.py": {
+      "bytes": 12076,
+      "sha256": "7460cf8385b0063c76df5d13069ba98fd65f453b67c318a166d25ec6c3ee50b9"
+    }
+  },
+  "inputs": {
+    "gt_cache": {
+      "bytes": 5078017610,
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "source_member": "lstars[448:512]"
+    },
+    "predictor_program": {
+      "bytes": 51668,
+      "contract_id": "tac.factorized_v9_semantic_predictor.v1",
+      "path": ".omx/research/ddm_v9_carrier_compose_n64_603_613_20260722T122800Z/ddm_v9_carrier_compose_n64.not_a_candidate.zip.receipt-bytes",
+      "renderer_sha256": "92ab2350a644fc21453263d8ecc25011d7e454755f004d52e58be2ac42e5a199",
+      "sha256": "56b563f2f9fb442508134bfb144eb1dc67a07675c93e0c56ec3a569f649bac9a"
+    }
+  },
+  "limitations": [
+    "n64 conditional-entropy measurement only; not n600 authority",
+    "lossless frozen GT-argmax residual is forbidden from candidate archives",
+    "no RGB preimage, inflate archive, upstream evaluation, or score authority",
+    "repository receiver code is not yet a standalone inflate source bundle"
+  ],
+  "pbr1": {
+    "artifact_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_pbr1_exact_target_n64.pbr1",
+    "build_seconds": 0.9413370830006897,
+    "candidate_archive_blocker": "lossless predictor-conditional target-semantic-table encoding",
+    "candidate_payload_allowed": false,
+    "crc_bytes": 4,
+    "event_count": 489519,
+    "exact_target_semantic_reconstruction": true,
+    "header_bytes": 942,
+    "nested_residual_bytes": 92934,
+    "packet_bytes": 93896,
+    "packet_sha256": "f598ff93c46a04da87683b19c375bd822e79e59352e02eb80029aad32abd722c",
+    "pbr1_is_target_derived": true,
+    "pbr1_target_derived_section_bytes": 93896,
+    "predictor_program_sha256": "56b563f2f9fb442508134bfb144eb1dc67a07675c93e0c56ec3a569f649bac9a",
+    "predictor_semantic_sha256": "735c01a4463f269132855cfe89bc67d2d6a3acad34194e341e287a36b657988a",
+    "prefix_bytes": 16,
+    "promotion_eligible": false,
+    "schema": "tac.predictor_bound_partition_residual.v1",
+    "score_claim": false,
+    "separate_dense_target_table_section_bytes": 0,
+    "target_semantic_sha256": "570930a47789c438f3117d79927e49c51cbd9b3b88da0eec1eebbdc1a58b5f98"
+  },
+  "pbr2": {
+    "artifact_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_pbr2_progressive_geometry_n64.pbr2",
+    "artifact_role": "encoder_side_conditional_entropy_measurement",
+    "build_seconds": 7.578391957795247,
+    "candidate_archive_admissible": false,
+    "candidate_archive_blocker": "lossless predictor-conditional target-semantic-table encoding",
+    "crc_bytes": 4,
+    "decode_scorer_dependency": false,
+    "exact_target_semantic_reconstruction": true,
+    "final_error_cells": 0,
+    "generic_apply_requires_external_predictor_semantics": true,
+    "header_bytes": 3283,
+    "initial_error_cells": 489519,
+    "packet_bytes": 78665,
+    "packet_prefix_header_bytes": 24,
+    "packet_sha256": "3372eee1d989012fb3293c7abe08eac233c874bf485e5ea15c5bd26d7306f0a1",
+    "pbr2_event_count": 489519,
+    "pbr2_event_density_denominator": 12582912,
+    "pbr2_event_density_numerator": 489519,
+    "pbr2_is_target_derived": true,
+    "pbr2_reconstructs_exact_gt_argmax": true,
+    "pbr2_target_derived_section_bytes": 75354,
+    "physical_prefix_decode_supported": false,
+    "predictor_program_sha256": "56b563f2f9fb442508134bfb144eb1dc67a07675c93e0c56ec3a569f649bac9a",
+    "predictor_semantic_sha256": "735c01a4463f269132855cfe89bc67d2d6a3acad34194e341e287a36b657988a",
+    "promotion_eligible": false,
+    "reconstructed_target_semantic_bytes": 12582912,
+    "research_only": true,
+    "schema": "tac.progressive_geometry_residual.v3",
+    "score_claim": false,
+    "separate_dense_target_table_section_bytes": 0,
+    "source_pair_start": 448,
+    "source_pair_stop_exclusive": 512,
+    "staged_application_requires_complete_packet": true,
+    "strata": [
+      {
+        "block_size": 8,
+        "codec": "lzma6",
+        "corrected_cells": 393551,
+        "cumulative_section_bytes_inside_full_packet": 36151,
+        "errors_after": 95968,
+        "errors_before": 489519,
+        "mode": "block_context",
+        "name": "temporal_boundary",
+        "order": 1,
+        "payload_bytes": 32844,
+        "payload_sha256": "7d22bec29d9fa919c154241e05eaa01a8fea635ad465b70d48869dcd273fd26b",
+        "raw_bytes": 407903,
+        "raw_sha256": "284831cb96bd77d222650f96955ed0809100d920e5ffdd01279b153dd9427367",
+        "record_count": 17845,
+        "semantic_sha256_after": "863f14ef07fab3cfdc3d373bf2edc53e5679833c0952cf58d7df2e4851847bca",
+        "span_count": 17845
+      },
+      {
+        "block_size": 0,
+        "codec": "bz2_9",
+        "corrected_cells": 90417,
+        "cumulative_section_bytes_inside_full_packet": 69405,
+        "errors_after": 5551,
+        "errors_before": 95968,
+        "mode": "connected_row_spans_8",
+        "name": "component_islands",
+        "order": 2,
+        "payload_bytes": 33254,
+        "payload_sha256": "a47701945ff656b6e07e6010ef27d8a397e1b34a9cee6dcfe96f58cb39b15f5b",
+        "raw_bytes": 84970,
+        "raw_sha256": "1ab2b2e01da1d368a4e42233de01fbd5c16e7d5803d95d40e3b91e4de26a7d6a",
+        "record_count": 7629,
+        "semantic_sha256_after": "d5ab3ad46c765320e30d012a0dfd67abedbb2fda99e9c55d562eae20d0a7c232",
+        "span_count": 19292
+      },
+      {
+        "block_size": 0,
+        "codec": "lzma6",
+        "corrected_cells": 5551,
+        "cumulative_section_bytes_inside_full_packet": 78661,
+        "errors_after": 0,
+        "errors_before": 5551,
+        "mode": "singleton_delta_events",
+        "name": "sparse_tail",
+        "order": 3,
+        "payload_bytes": 9256,
+        "payload_sha256": "0ac0b0a649a1e6d1b7cf6bdd3cbf4e4805fbbaf7e5fafb005076ff7989d1ddfc",
+        "raw_bytes": 15013,
+        "raw_sha256": "3b3a1f00203f06969497f8716d53d607a941259cb58298c2fbca7ef66994220c",
+        "record_count": 5551,
+        "semantic_sha256_after": "570930a47789c438f3117d79927e49c51cbd9b3b88da0eec1eebbdc1a58b5f98",
+        "span_count": 5551
+      }
+    ],
+    "target_derived_residual_promotion_admitted": false,
+    "target_semantic_lineage": "frozen_gt_argmax",
+    "target_semantic_sha256": "570930a47789c438f3117d79927e49c51cbd9b3b88da0eec1eebbdc1a58b5f98"
+  },
+  "promotion_eligible": false,
+  "purpose": "encoder-side conditional-entropy bound and grammar teacher only",
+  "receiver_closure": {
+    "candidate_payload_allowed": false,
+    "exact_target_recovered_without_gt_cache_at_decode": true,
+    "fresh_process_regression_test": "src/tac/witness_dsl/tests/test_factorized_v9_predictor.py::test_progressive_measurement_rederives_v9_semantics_in_fresh_process",
+    "predictor_semantics_rederived_from_counted_program": true,
+    "standalone_candidate_receiver": false
+  },
+  "reproduction": {
+    "argv": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "tools/materialize_c0b_pbr2_entropy_measurement.py",
+      "--predictor-program",
+      ".omx/research/ddm_v9_carrier_compose_n64_603_613_20260722T122800Z/ddm_v9_carrier_compose_n64.not_a_candidate.zip.receipt-bytes",
+      "--predictor-sha256",
+      "56b563f2f9fb442508134bfb144eb1dc67a07675c93e0c56ec3a569f649bac9a",
+      "--gt-cache",
+      "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "--gt-cache-sha256",
+      "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "--expected-pair-start",
+      "448",
+      "--expected-pair-count",
+      "64",
+      "--output-pbr1",
+      ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_pbr1_exact_target_n64.pbr1",
+      "--output-pbr2",
+      ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_pbr2_progressive_geometry_n64.pbr2",
+      "--output-receipt",
+      ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_pbr2_progressive_geometry_n64.json"
+    ],
+    "bz2_module": "bz2",
+    "lzma_module": "lzma",
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+    "rng_used": false,
+    "shell_command": "/Users/adpena/Projects/pact/.venv/bin/python tools/materialize_c0b_pbr2_entropy_measurement.py --predictor-program .omx/research/ddm_v9_carrier_compose_n64_603_613_20260722T122800Z/ddm_v9_carrier_compose_n64.not_a_candidate.zip.receipt-bytes --predictor-sha256 56b563f2f9fb442508134bfb144eb1dc67a07675c93e0c56ec3a569f649bac9a --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n600.npz --gt-cache-sha256 cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6 --expected-pair-start 448 --expected-pair-count 64 --output-pbr1 .omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_pbr1_exact_target_n64.pbr1 --output-pbr2 .omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_pbr2_progressive_geometry_n64.pbr2 --output-receipt .omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_pbr2_progressive_geometry_n64.json",
+    "zlib_compile": "1.2.12",
+    "zlib_runtime": "1.2.12"
+  },
+  "research_only": true,
+  "schema": "tac.c0b_pbr2_progressive_geometry_measurement.v2",
+  "score_claim": false,
+  "target": {
+    "dtype": "uint8",
+    "pbr2_reconstructs_exact_gt_argmax": true,
+    "reconstructed_gt_argmax_bytes": 12582912,
+    "semantic_bytes": 12582912,
+    "semantic_sha256": "570930a47789c438f3117d79927e49c51cbd9b3b88da0eec1eebbdc1a58b5f98",
+    "shape": [
+      64,
+      384,
+      512
+    ]
+  },
+  "verdict_scope": "original factorized V9 predictor conditional residual, source pairs 448:512"
+}

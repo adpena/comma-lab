@@ -1,0 +1,94 @@
+{
+  "schema": "tac.c0b_counted_receiver_structural_receipt.v2",
+  "generated_at_utc": "2026-07-26T03:45:05Z",
+  "git_head_at_measurement": "8c57d83d2ca9c18e36b8f3b3ea4398af999ef1a4",
+  "branch": "main",
+  "working_tree_code_uncommitted_at_measurement": true,
+  "lane_id": "lane_c0b_counted_receiver_codec_20260726",
+  "evidence_axis": "[local-CPU structural receiver proof; no scorer score]",
+  "fixture_scope": {
+    "pair_count": 1,
+    "pair_ids": [0],
+    "pair_population_sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "purpose": "parser, causality, exact factor-2 realization, and resume proof only",
+    "scientific_branch_selection_authorized": false,
+    "n600_claim": false
+  },
+  "archive": {
+    "bytes": 11328,
+    "sha256": "e1b1281bafc07c93e7d71fd67c72f5d41332fdf02a659cca4ac33dc764c10ae8",
+    "packet_bytes": 11220,
+    "packet_sha256": "ef49e483289e6e449f6bd932f05c112171ae46f72d0b61f571b86a6c9f8e84ba",
+    "archive_container_bytes": 108,
+    "packet_framing_and_header_bytes": 1846,
+    "section_bytes": {
+      "factorized_v9_program": 7865,
+      "pbr1": 1465,
+      "rgb_preimage": 44
+    },
+    "section_sha256": {
+      "factorized_v9_program": "064051395f5f1ecff92611afea2802f5f07e5c53d4a3d2e84a4320d93123f76e",
+      "pbr1": "95348f9683eb4625ec140397e3507f0c2e7fb7c2e02c3f0e18b3d8c0c2c9dd2d",
+      "rgb_preimage": "e7198cd55206c54f6f420e79aaf0102420422490cf6be299afd83ad1679d24d1"
+    }
+  },
+  "predictor_residual_accounting": {
+    "predictor_semantic_sha256": "877b9438e886e422b64ed39934a928ceda8fc8d1cc5c75eb0bdc28d04919ee7c",
+    "target_semantic_sha256": "50c6c42a595723c979b4957b77e9d9d7a9ab6a4428120a4f25954a6973a9d2e0",
+    "pbr1_counted_bytes": 1465,
+    "pbr1_target_derived_section_bytes": 1465,
+    "pbr1_nested_semantic_residual_bytes": 516,
+    "pbr1_event_count": 1,
+    "pbr1_event_density_numerator": 1,
+    "pbr1_event_density_denominator": 196608,
+    "separate_dense_target_table_section_bytes": 0,
+    "target_derived_residual_promotion_admitted": false,
+    "exact_target_semantic_reconstruction": true,
+    "candidate_payload_allowed": false,
+    "candidate_archive_blocker": "contains lossless predictor-conditional target-semantic-table residual"
+  },
+  "receiver_output": {
+    "raw_bytes": 6104016,
+    "raw_sha256": "77b7c78bcad0f0cc0cdadcbe0db755186fca18be0a567eea53816ac02d8c928c",
+    "scorer_rgb_sha256": "d62199475423295f4583ddf3faf70c8bd9bec0d8fa9148cd209f46a59f6f1b2b",
+    "factor2_scorer_values_verified": 1179648,
+    "factor2_numerator_values_verified": 1179648,
+    "factor2_certified_exact": true,
+    "exact_archive_parse_back": true,
+    "same_process_double_decode_identical": true,
+    "valid_pbr_alternative_changes_target_and_raw": true,
+    "raw_fsync_before_state_fault_recovers_exactly": true,
+    "completed_prefix_resume_does_not_regress_state": true,
+    "concurrent_output_owner_refused": true
+  },
+  "explicit_debts": {
+    "codec_role": "abi_causality_ablation",
+    "candidate_payload_allowed": false,
+    "candidate_archive_blocker": "contains lossless predictor-conditional target-semantic-table residual",
+    "capstone_eligible": false,
+    "shared_semantic_partition_across_planes": true,
+    "repository_decoder_dependency": true,
+    "standalone_inflate_source_custody": false,
+    "standalone_inflate_owed": true,
+    "authority_receipt_owed": true,
+    "evaluator_obligation_ir_bound": false,
+    "coupled_witness_state_bound": false,
+    "hard_oracle_admission_bound": false,
+    "independent_frame0_preimage": false
+  },
+  "authority": {
+    "research_only": true,
+    "launch_ready": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer_moved": false,
+    "dispatch_attempted": false,
+    "verdict": "STRUCTURAL_RECEIVER_CLOSED_FOR_N1_ONLY_VERTICAL_CODEC_NOT_CLOSED"
+  },
+  "verification": {
+    "focused_command": ".venv/bin/python -m pytest -q src/tac/witness_dsl/tests/test_c0b_counted_receiver_codec.py",
+    "focused_result": "7 passed",
+    "ruff": "clean",
+    "python_compile": "clean"
+  }
+}

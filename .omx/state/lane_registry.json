@@ -88833,7 +88833,7 @@
           "evidence": ""
         }
       },
-      "notes": "Exact n600 BJ1 falsified W_seg-as-C1 (59,814,423 of 117,964,800 cells differ). PBR1 predictor-bound residual ABI and coupled-score routing are landed; next is a full-five-class V9 predictor plus the executable V9 obligation to V10 coupled-preimage archive edge.",
+      "notes": "Comprehensive C0B pass sealed exact PBR1/PBR2 as encoder-only teachers and exposed the candidate-lineage blocker: exact target residuals cannot ship. Next executable edge is bounded generative correction G plus oracle-admitted independent-Y0/Y1 CoupledPreimageProgram with exact joint-score admission.",
       "research_only": true
     },
     {
@@ -88917,7 +88917,175 @@
           "evidence": ""
         }
       },
-      "notes": "Generic PBR1 ABI landed after exact n600 BJ1 falsified W_seg-as-C1: every residual binds predictor program, renderer, decoded semantic stream, nested residual, and recovered target identities. Production full-five-class V9 predictor and receiver-closed archive remain owed.",
+      "notes": "Generic PBR1 research ABI landed after exact n600 BJ1 falsified W_seg-as-C1: it binds predictor program, renderer, decoded predictor, nested events, and recovered target. Because it losslessly reconstructs target semantics, candidate_payload_allowed=false. Use only as encoder-side debt/entropy teacher for non-exhaustive generative correction G; no archive, score, promotion, or candidate authority.",
+      "research_only": true
+    },
+    {
+      "id": "lane_c0b_obligation_preimage_compiler_20260726",
+      "name": "C0B evaluator obligation to coupled preimage compiler",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Original-work production seam from typed Seg/Pose obligations to explicit uint8 Y0/Y1 and receiver consumption; local build and exact debt evidence only until a custody-complete archive exists.",
+      "research_only": true
+    },
+    {
+      "id": "lane_c0b_factorized_v9_predictor_20260726",
+      "name": "C0B factorized five-class V9 predictor",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Original five-class task-space predictor assembled from existing V9 factors with explicit identities; diagnostic target tables forbidden from candidate payload.",
+      "research_only": true
+    },
+    {
+      "id": "lane_c0b_counted_receiver_codec_20260726",
+      "name": "C0B counted factorized predictor residual preimage receiver",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only ABI/causality ablation. It contains a lossless predictor-conditional target-semantic residual, uses one shared semantic partition for both planes, and is candidate_payload_allowed=false; no score or promotion claim.",
+      "research_only": true
+    },
+    {
+      "id": "lane_c0b_progressive_geometry_residual_20260726",
+      "name": "C0B progressive geometry residual PBR2",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Sealed research-only entropy teacher. Current exact n64 pairs 448:512 PBR2 is 78,665B versus PBR1 93,896B, saving 15,231B; staged debt 489519->95968->5551->0. Both losslessly encode frozen GT argmax and are candidate-forbidden. Use strata only to fit non-exhaustive generative correction G; no archive, score, or frontier authority.",
       "research_only": true
     }
   ],
@@ -88928,5 +89096,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-26T02:03:45Z"
+  "updated_at": "2026-07-26T03:57:22Z"
 }

@@ -24,8 +24,10 @@ from tac.witness_dsl.coupled_witness_state import (
     WitnessCompileConfig,
     apply_state_patch,
     build_scientific_stream_provenance_snapshot,
+    build_scientific_stream_replacement_provenance_snapshot,
     canonical_json_bytes,
     canonical_sha256,
+    construct_replacement_scientific_stream,
     construct_scientific_stream,
     decode_canonical_json,
     load_scientific_stream,
@@ -314,9 +316,7 @@ def test_construction_receipt_rejects_forged_or_replayed_parent_binding() -> Non
         generation_seed=0,
         generation_rng_id="numpy-pcg64-derived.v1",
     )
-    stream, construction, content, provenance = _constructed_stream(
-        root, ScientificStreamRole.TOPOLOGY_WORLDSHEET
-    )
+    stream, construction, content, provenance = _constructed_stream(root, ScientificStreamRole.TOPOLOGY_WORLDSHEET)
     forged_address = replace(construction, content=_address("forged-content", b"forged"))
     with pytest.raises(CoupledWitnessStateError, match="stream addresses or dependencies"):
         forged_address.validate_against(
@@ -358,9 +358,7 @@ def test_construction_requires_declared_dependencies_and_rejects_duplicate_patch
         generation_seed=0,
         generation_rng_id="numpy-pcg64-derived.v1",
     )
-    topology, topology_receipt, _, _ = _constructed_stream(
-        root, ScientificStreamRole.TOPOLOGY_WORLDSHEET
-    )
+    topology, topology_receipt, _, _ = _constructed_stream(root, ScientificStreamRole.TOPOLOGY_WORLDSHEET)
     state, _ = apply_state_patch(
         root,
         StatePatch(
@@ -488,9 +486,7 @@ def test_patch_is_parent_bound_and_emits_identity_transition_receipt() -> None:
         generation_seed=0,
         generation_rng_id="numpy-pcg64-derived.v1",
     )
-    stream, construction_receipt, _, _ = _constructed_stream(
-        root, ScientificStreamRole.TOPOLOGY_WORLDSHEET
-    )
+    stream, construction_receipt, _, _ = _constructed_stream(root, ScientificStreamRole.TOPOLOGY_WORLDSHEET)
     patch = StatePatch(
         patch_id="topology-seed",
         expected_parent_state_sha256=root.state_sha256,
@@ -550,9 +546,7 @@ def test_transition_validator_refuses_child_endpoint_mutations() -> None:
         generation_seed=0,
         generation_rng_id="numpy-pcg64-derived.v1",
     )
-    stream, construction_receipt, _, _ = _constructed_stream(
-        root, ScientificStreamRole.TOPOLOGY_WORLDSHEET
-    )
+    stream, construction_receipt, _, _ = _constructed_stream(root, ScientificStreamRole.TOPOLOGY_WORLDSHEET)
     patch = StatePatch(
         patch_id="topology-seed",
         expected_parent_state_sha256=root.state_sha256,
@@ -600,7 +594,7 @@ def test_patch_refuses_noop_and_dependency_breaking_delete() -> None:
         rationale="must be rejected",
         provenance_ref="test",
     )
-    with pytest.raises(CoupledWitnessStateError, match="replays an already-declared stream"):
+    with pytest.raises(CoupledWitnessStateError, match="does not change stream"):
         apply_state_patch(full, noop)
 
     breaking = StatePatch(
@@ -639,8 +633,79 @@ def test_replayed_stream_cannot_replace_declared_upstream() -> None:
         rationale="must not preserve descendants derived from the old topology",
         provenance_ref="test",
     )
-    with pytest.raises(CoupledWitnessStateError, match="replays an already-declared stream"):
+    with pytest.raises(CoupledWitnessStateError, match="does not change stream"):
         apply_state_patch(full, stale)
+
+
+def _replacement_patch(
+    parent: CoupledWitnessState,
+    roles: tuple[ScientificStreamRole, ...],
+) -> StatePatch:
+    prospective = {stream.role: stream for stream in parent.streams}
+    replacements: list[ScientificStream] = []
+    receipts: list[ScientificStreamConstructionReceipt] = []
+    for role in roles:
+        context = tuple(prospective[item] for item in SCIENTIFIC_STREAM_ORDER if item in prospective)
+        content = f"replacement-{role.value}".encode("ascii")
+        provenance = build_scientific_stream_replacement_provenance_snapshot(
+            parent,
+            role,
+            dependency_streams=context,
+            derivation_id=f"replace-{role.value}",
+        )
+        stream, receipt = construct_replacement_scientific_stream(
+            parent,
+            role,
+            dependency_streams=context,
+            content_artifact_id=f"replacement-{role.value}.bin",
+            content_artifact_schema=f"test.replacement.{role.value}.v1",
+            content_payload=content,
+            provenance_artifact_id=f"replacement-{role.value}.provenance.json",
+            provenance_payload=provenance,
+        )
+        prospective[role] = stream
+        replacements.append(stream)
+        receipts.append(receipt)
+    return StatePatch(
+        patch_id="closure-aware-replacement",
+        expected_parent_state_sha256=parent.state_sha256,
+        set_streams=tuple(replacements),
+        construction_receipts=tuple(receipts),
+        remove_roles=(),
+        rationale="replace an upstream factor and every dependent coordinate atomically",
+        provenance_ref="src/tac/tests/test_coupled_witness_state.py",
+    )
+
+
+def test_atomic_closure_replacement_rebinds_every_transitive_dependency() -> None:
+    parent = _full_state()
+    patch = _replacement_patch(parent, SCIENTIFIC_STREAM_ORDER)
+    child, receipt = apply_state_patch(parent, patch)
+
+    assert child.present_roles == parent.present_roles
+    assert receipt.changed_roles == SCIENTIFIC_STREAM_ORDER
+    assert all(
+        child_stream.content.sha256 != parent_stream.content.sha256
+        for child_stream, parent_stream in zip(child.streams, parent.streams, strict=True)
+    )
+    by_role = {stream.role: stream for stream in child.streams}
+    for stream in child.streams:
+        assert stream.dependencies == tuple(
+            ScientificStreamDependency(role=role, content_sha256=by_role[role].content.sha256)
+            for role in sorted(
+                {dependency.role for dependency in stream.dependencies},
+                key=SCIENTIFIC_STREAM_ORDER.index,
+            )
+        )
+    assert StatePatch.from_bytes(patch.to_bytes()) == patch
+    receipt.validate_against(parent, patch, child)
+
+
+def test_incomplete_upstream_replacement_refuses_stale_descendants() -> None:
+    parent = _full_state()
+    patch = _replacement_patch(parent, (ScientificStreamRole.TOPOLOGY_WORLDSHEET,))
+    with pytest.raises(CoupledWitnessStateError, match="stale dependency"):
+        apply_state_patch(parent, patch)
 
 
 def test_compile_policy_must_exactly_cover_state_and_match_frozen_geometry() -> None:
