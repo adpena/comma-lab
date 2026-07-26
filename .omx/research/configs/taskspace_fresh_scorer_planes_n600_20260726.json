@@ -1,0 +1,88 @@
+{
+  "schema": "tac.taskspace_fresh_scorer_plane_materializer_config.v1",
+  "run_id": "taskspace_fresh_scorer_planes_n600_20260726",
+  "mode": "DIRECT_TASK_LAYERED",
+  "semantic_status": "PROGRAM_RESIDUAL_LAYERED_OWED_FRESH_V15_BASE_ABSENT",
+  "source_npz": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "bytes": 5078017610,
+    "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "members": {
+      "n_pairs": {
+        "shape": [],
+        "dtype": "int64",
+        "bytes": 8,
+        "sha256": "dcd6e9b82ebb172375dd3040d193dc146c388390ead62c09c17b74782bce9691"
+      },
+      "gt_f0": {
+        "shape": [600, 874, 1164, 3],
+        "dtype": "uint8",
+        "bytes": 1831204800,
+        "sha256": "baba7fdd885f447c7342ceb79b6cdd576ed9db4e093f61fc3d25d5c54ff98d1e"
+      },
+      "gt_f1": {
+        "shape": [600, 874, 1164, 3],
+        "dtype": "uint8",
+        "bytes": 1831204800,
+        "sha256": "b64dd410727d5a4a95f3eea7cd76d2bfc69a5773e6ae745a6d24cf0a96ac47b5"
+      },
+      "gt_poses": {
+        "shape": [600, 6],
+        "dtype": "float64",
+        "bytes": 28800,
+        "sha256": "bee5821eeb892ad430878946dfcdf365e1a14202efb7cd1af2b019d75da0f481"
+      }
+    }
+  },
+  "fresh_teacher_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_teacher_batch16_20260726/12_encoder_only_receipt.json",
+    "bytes": 488267,
+    "sha256": "556c6b20f12ae7f5c6b8a1a2d08c6d2c2e32e7831ab552938c7866f3256dfad1",
+    "sealed_receipt_sha256": "58db7f01674c60f060a46b955fee8c4f777f31f528ebba404e871b26b17972a7",
+    "scorer_pair_batch_size": 16
+  },
+  "target_labels": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_teacher_batch16_20260726/11_target_labels/target_labels_n600_or_bounded.u8",
+    "bytes": 117964800,
+    "sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85",
+    "shape": [600, 384, 512],
+    "dtype": "uint8"
+  },
+  "producer_sources": [
+    {
+      "role": "materializer_module",
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/taskspace_fresh_scorer_plane_materializer_v1.py",
+      "bytes": 49063,
+      "sha256": "7c7dd4423ed71c5c3529ce0d31983572ac7c019397887342ef5d6e7358c96444"
+    },
+    {
+      "role": "materializer_cli",
+      "path": "/Users/adpena/Projects/pact/tools/materialize_taskspace_fresh_scorer_planes_n600.py",
+      "bytes": 2093,
+      "sha256": "eebca52005c2f0616ef698c422758ac08c0d40cf9a309fc920575c44663c4c48"
+    },
+    {
+      "role": "resize_operator_source",
+      "path": "/Users/adpena/Projects/pact/src/tac/optimization/uint8_lattice_feasibility.py",
+      "bytes": 57684,
+      "sha256": "70c98632bca585c2b6d6f02e77faf45bac155494154810d9167220a223f58f54"
+    }
+  ],
+  "output_root": "/Volumes/VertigoDataTier/pact/taskspace_fresh_scorer_planes_n600_20260726",
+  "pair_count": 600,
+  "stage_pairs": 120,
+  "camera_hw": [874, 1164],
+  "scorer_hw": [384, 512],
+  "resume": true,
+  "test_only_small_fixture": false,
+  "required_free_bytes": 2147483648,
+  "truth": {
+    "research_only": true,
+    "score_claim": false,
+    "candidate_claim": false,
+    "promotion_eligible": false,
+    "source_cache_pose_advisory_only": true,
+    "fresh_pose_target_custody": false,
+    "program_residual_layered_available": false
+  }
+}
