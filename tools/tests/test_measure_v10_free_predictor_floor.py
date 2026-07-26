@@ -8,6 +8,7 @@ import hashlib
 import json
 import platform
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -404,7 +405,14 @@ def test_banked_precision_drop_is_exact_uint8_predictor_toward_zero(
 
 
 def test_projected_action_uses_ceil_population_and_exact_contest_formula() -> None:
-    result = measure.projected_action(archive_bytes=101, pair_count=12, d_seg=0.001, d_pose=0.0001)
+    target_score = 0.172
+    result = measure.projected_action(
+        target_score=target_score,
+        archive_bytes=101,
+        pair_count=12,
+        d_seg=0.001,
+        d_pose=0.0001,
+    )
     assert result["projected_n600_archive_bytes"] == 5050
     assert result["distortion_term"] == pytest.approx(0.1 + np.sqrt(0.001))
     assert result["projected_exact_objective"] == pytest.approx(
@@ -412,17 +420,55 @@ def test_projected_action_uses_ceil_population_and_exact_contest_formula() -> No
     )
     cap = result["strict_pointer_byte_cap_at_measured_distortion"]
     distortion = result["distortion_term"]
-    assert distortion + 25 * cap / measure.CONTEST_ARCHIVE_DENOMINATOR < measure.POINTER_VALUE
-    assert distortion + 25 * (cap + 1) / measure.CONTEST_ARCHIVE_DENOMINATOR >= measure.POINTER_VALUE
+    assert result["target_score"] == target_score
+    assert distortion + 25 * cap / measure.CONTEST_ARCHIVE_DENOMINATOR < target_score
+    assert distortion + 25 * (cap + 1) / measure.CONTEST_ARCHIVE_DENOMINATOR >= target_score
 
 
 def test_strict_pointer_byte_cap_refuses_integral_equality_boundary() -> None:
+    target_score = 0.172
     desired_equality_bytes = 1_000
-    d_seg = (measure.POINTER_VALUE - 25.0 * desired_equality_bytes / measure.CONTEST_ARCHIVE_DENOMINATOR) / 100.0
-    cap = measure._strict_pointer_byte_cap(d_seg=d_seg, d_pose=0.0)
+    d_seg = (target_score - 25.0 * desired_equality_bytes / measure.CONTEST_ARCHIVE_DENOMINATOR) / 100.0
+    cap = measure._strict_pointer_byte_cap(target_score=target_score, d_seg=d_seg, d_pose=0.0)
     assert cap == desired_equality_bytes - 1
-    assert 100 * d_seg + 25 * cap / measure.CONTEST_ARCHIVE_DENOMINATOR < measure.POINTER_VALUE
-    assert 100 * d_seg + 25 * (cap + 1) / measure.CONTEST_ARCHIVE_DENOMINATOR >= measure.POINTER_VALUE
+    assert 100 * d_seg + 25 * cap / measure.CONTEST_ARCHIVE_DENOMINATOR < target_score
+    assert 100 * d_seg + 25 * (cap + 1) / measure.CONTEST_ARCHIVE_DENOMINATOR >= target_score
+
+
+def test_effective_pointer_target_binds_fresh_pointer_file(tmp_path: Path) -> None:
+    pointer = measure.CanonicalFrontierPointer(
+        schema_version="canonical_frontier_pointer_v1_20260519",
+        our_local_frontier_contest_cpu=None,
+        our_local_frontier_contest_cuda=None,
+        submitted_pr_number_for_current_frontier=None,
+        upstream_leaderboard_snapshot=None,
+        upstream_leaderboard_snapshot_at_utc=None,
+        last_refreshed_utc=datetime.now(UTC).isoformat(),
+        auto_update_on_dispatch_completion=True,
+        pointer_refresh_command="fixture",
+        refresh_provenance={"kind": "test"},
+        effective_frontier={
+            "score": 0.172,
+            "axis": "official_leaderboard",
+            "source": "fixture",
+            "source_kind": "external_public_leaderboard_target",
+            "custody": "external target only",
+            "evidence_grade": "[official-leaderboard display]",
+        },
+    )
+    path = tmp_path / "pointer.json"
+    path.write_text(json.dumps(pointer.as_dict()), encoding="utf-8")
+    target = measure._effective_pointer_target(path)
+    assert target["score"] == 0.172
+    assert len(target["pointer_sha256"]) == 64
+    assert target["pointer_path"] == str(path.resolve())
+    assert isinstance(target["source_kind"], str) and target["source_kind"]
+
+
+def test_v10_measurement_tool_has_no_hardcoded_retired_pointer() -> None:
+    source = Path(measure.__file__).read_text(encoding="utf-8")
+    assert "0.1910828242" not in source
+    assert "POINTER_VALUE" not in source
 
 
 def test_banked_ab_resume_closes_postreceipt_cleanup_window(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -800,7 +846,16 @@ def test_score_inflated_raw_preserves_pair_order_and_aggregates(
         observed.append(pair_id)
         assert labels.shape == (2, 2)
         assert target_pose.shape == (6,)
-        return {"d_seg": pair_id / 10, "seg_mismatched_pixels": pair_id, "d_pose": pair_id / 20, "pose6": [0] * 6}
+        mismatch = np.zeros_like(labels, dtype=bool)
+        if pair_id:
+            mismatch[0, 0] = True
+        return {
+            "d_seg": pair_id / 10,
+            "seg_mismatched_pixels": pair_id,
+            "per_class": measure._per_class_seg_debt(mismatch=mismatch, labels=labels),
+            "d_pose": pair_id / 20,
+            "pose6": [0] * 6,
+        }
 
     monkeypatch.setattr(measure, "_score_one_pair", fake_score)
     raw = tmp_path / "inflated.raw"
@@ -817,6 +872,17 @@ def test_score_inflated_raw_preserves_pair_order_and_aggregates(
     assert [row["pair_id"] for row in result["pairs"]] == [0, 1]
     assert result["mean_d_seg"] == pytest.approx(0.05)
     assert result["mean_d_pose"] == pytest.approx(0.025)
+    assert result["class_order"] == list(measure.CLASS_ORDER)
+    assert sum(row["errors"] for row in result["per_class"].values()) == 1
+
+
+def test_per_class_seg_debt_preserves_zero_site_classes() -> None:
+    labels = np.array([[0, 0], [1, 1]], dtype=np.uint8)
+    mismatch = np.array([[True, False], [True, True]])
+    result = measure._per_class_seg_debt(mismatch=mismatch, labels=labels)
+    assert result["Road"] == {"class_id": 0, "errors": 1, "sites": 2, "d_seg": 0.5}
+    assert result["Lane"] == {"class_id": 1, "errors": 2, "sites": 2, "d_seg": 1.0}
+    assert result["Undrivable"] == {"class_id": 2, "errors": 0, "sites": 0, "d_seg": None}
 
 
 def test_ephemeral_policy_only_cleans_narrow_temp_tree(tmp_path: Path) -> None:

@@ -1,0 +1,6 @@
+{
+  "completed_pairs": 600,
+  "config_sha256": "ea4298c777caf9517e50065291d54c1f9daf1bfdff43e708ac3e0d6936e051ee",
+  "latest_stage_sha256": "8eb1ae842bca3d83e41f90341018a4caf34bcb57ef6d715992656c996b30ddf7",
+  "schema": "tac.coupled_witness_raw_debt_state.v1"
+}

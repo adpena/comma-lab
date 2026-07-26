@@ -1,0 +1,71 @@
+{
+  "schema": "tac.coupled_witness_raw_debt_supersession.v1",
+  "historical_artifacts_preserved": true,
+  "superseded": {
+    "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c1_exact_target_raw_debt_n600.json",
+    "file_sha256": "60431f1946bc86918630f24a3dda2f73cd948c46938c5535d05309314ce32dc8",
+    "receipt_sha256": "bed8765bfc0ccfcf0d9160134194aa72d854430f4f104bca23e60069d5fefc67",
+    "schema": "tac.coupled_witness_raw_debt.v1",
+    "scientific_authority": false,
+    "reason": "singleton-batch scorer geometry plus cache targets changed four argmax decisions and every Pose row; the unchanged 17926 aggregate Seg count was a cancellation and cannot support pair/class/event routing"
+  },
+  "replacement": {
+    "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c1_live_target_debt_n600_batch16.json",
+    "file_sha256": "0db8e47a994cad5367e5eb3028055e667bc4caf3f174026d13171be662e7fbd3",
+    "receipt_sha256": "8b083df5b61955cce942b4e69133f28c639f287b3c4e3c9ba0351a57499aa853",
+    "schema": "tac.coupled_witness_raw_debt.v2",
+    "scorer_batch_pairs": 16,
+    "target_role": "live zero-distortion target raw",
+    "scientific_authority": "local nonpromotable routing telemetry only"
+  },
+  "exact_event_delta": {
+    "event_schema": "[pair,row,col,target_class,candidate_class]",
+    "v2_only": [
+      [
+        11,
+        286,
+        399,
+        4,
+        0
+      ],
+      [
+        437,
+        191,
+        353,
+        0,
+        2
+      ]
+    ],
+    "v1_only": [
+      [
+        381,
+        206,
+        433,
+        0,
+        2
+      ],
+      [
+        401,
+        286,
+        369,
+        4,
+        0
+      ]
+    ],
+    "net_event_count_delta": 0,
+    "v1_road_errors": 7832,
+    "v1_lane_errors": 2555,
+    "v2_road_errors": 7831,
+    "v2_lane_errors": 2556
+  },
+  "replacement_bridge": {
+    "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c1_s2_exact_debt_bridge.json",
+    "file_sha256": "98e192b25b1ae6bfde1727549298ade2e64425a736349435beb46124bf31d76b",
+    "receipt_sha256": "c8ce49f0c5e60366322f40aa0577ea20ecc23926c3cda61d9b9278854ca1799f",
+    "verdict": "EXACT_C1_LIVE_TARGET_DEBT_EQUALS_R2B_INVENTORY_EQUALS_S2_PACKET"
+  },
+  "downstream_selection_rule": "require the exact replacement path, schema v2, replacement file/body hashes, and the exact bridge receipt; never select c1_*raw_debt*.json by glob",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false
+}

@@ -51,6 +51,11 @@ for _path in (REPO, SRC):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+from tac.canonical_frontier_pointer import (  # noqa: E402
+    CanonicalFrontierPointer,
+    FrontierPointerCorruptError,
+    effective_frontier_score,
+)
 from tac.codec.v10_predictor_residual import (  # noqa: E402
     AFFINE6_Q12_ID,
     MODE_BY_ID,
@@ -78,14 +83,13 @@ SCHEMA_BANKED_AB_STAGE = "v10_free_predictor_floor_banked_ab_stage.v1"
 SCHEMA_EPHEMERAL_CLEANUP = "v10_ephemeral_cleanup_manifest.v1"
 PREPARED_CHUNK_SCHEMA = "v10_two_plane_receiver_prepare_chunk.v1"
 SCHEMA_ATTRIBUTION = "v10_predictor_attribution_stream.v1"
-POINTER = "0.1910828242 [contest-CPU Linux x86_64] UNMOVED"
-POINTER_VALUE = 0.1910828242
 CONTEST_ARCHIVE_DENOMINATOR = 37_545_489
 CONTEST_PAIR_COUNT = 600
 AXIS = f"[{platform.system()}-{platform.machine()} CPU advisory real-cache subset] NON-PROMOTABLE"
 CAMERA_HW = (874, 1164)
 SCORER_HW = (384, 512)
 N_CLASSES = 5
+CLASS_ORDER = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
 MAX_CHUNK = 12
 N48_PAIRS = tuple(range(48))
 CANONICAL_CHUNKS = tuple(tuple(range(start, start + MAX_CHUNK)) for start in range(0, 48, MAX_CHUNK))
@@ -94,6 +98,7 @@ MARGIN_EDGES = (0.0, 0.1, 0.25, 0.5, 1.0, 2.0, float("inf"))
 MARGIN_NAMES = ("[0,.1)", "[.1,.25)", "[.25,.5)", "[.5,1)", "[1,2)", "[2,inf)")
 DEFAULT_CACHE = Path("/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz")
 DEFAULT_UPSTREAM = Path("/Users/adpena/Projects/pact/upstream")
+DEFAULT_FRONTIER_POINTER = REPO / ".omx/state/canonical_frontier_pointer.json"
 DEFAULT_SACRED = Path("/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z")
 EXPECTED_CACHE_SHA256 = "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
 EXPECTED_PREPARED_N12_MANIFEST_SHA256 = "17f10449fe8a4420767b7977722154d4661d1ed6972266eb19b50cfe5b1b3fb7"
@@ -157,6 +162,45 @@ _EPHEMERAL_MARKER_BYTES = b"pact.v10.rung-e.ephemeral.v1\n"
 
 class PredictorFloorError(RuntimeError):
     """Fail-closed cache, predictor, compressor, resume, or custody error."""
+
+
+def _effective_pointer_target(path: Path = DEFAULT_FRONTIER_POINTER) -> dict[str, Any]:
+    """Load the competitive target from the canonical pointer, fail closed.
+
+    The target is a changing input to score-surface decisions, so every
+    receipt binds both the effective row and the exact pointer-file bytes.
+    Custody-specific local anchors remain in the pointer; this helper only
+    selects the current score-to-beat.
+    """
+
+    resolved = path.expanduser().resolve()
+    try:
+        pointer_bytes = resolved.read_bytes()
+        pointer_data = json.loads(pointer_bytes)
+        if not isinstance(pointer_data, Mapping):
+            raise FrontierPointerCorruptError("canonical pointer root must be an object")
+        pointer = CanonicalFrontierPointer.from_dict(pointer_data)
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError, FrontierPointerCorruptError) as exc:
+        raise PredictorFloorError(f"canonical frontier pointer is unavailable: {resolved}") from exc
+    if pointer.is_stale():
+        raise PredictorFloorError("canonical frontier pointer is stale; refresh before score-surface decisions")
+    score = effective_frontier_score(pointer)
+    if score is None:
+        raise PredictorFloorError("canonical frontier pointer lacks a finite positive effective score")
+    effective = pointer.effective_frontier
+    if not isinstance(effective, Mapping):
+        raise PredictorFloorError("canonical frontier pointer lacks effective-frontier custody")
+    return {
+        "score": score,
+        "axis": effective.get("axis"),
+        "custody": effective.get("custody"),
+        "evidence_grade": effective.get("evidence_grade"),
+        "source": effective.get("source"),
+        "source_kind": effective.get("source_kind"),
+        "pointer_path": str(resolved),
+        "pointer_sha256": _sha256_bytes(pointer_bytes),
+        "pointer_last_refreshed_utc": pointer.last_refreshed_utc,
+    }
 
 
 @dataclass(frozen=True)
@@ -1017,6 +1061,7 @@ def measure_chunk(args: argparse.Namespace) -> dict[str, Any]:
         raise PredictorFloorError("stage-dir exists but is not a directory")
     if output.exists():
         raise PredictorFloorError(f"write-once receipt already exists: {output}")
+    pointer_target = _effective_pointer_target()
     pair_ids = _pair_ids(args.pairs, args.chunk_index)
     cache_path = args.cache.expanduser().resolve()
     sacred = args.sacred.expanduser().resolve()
@@ -1121,7 +1166,7 @@ def measure_chunk(args: argparse.Namespace) -> dict[str, Any]:
         "authority": {
             "score_claim": False,
             "promotion_eligible": False,
-            "pointer": POINTER,
+            "pointer": pointer_target,
             "pointer_moved": False,
             "verdict_scope": "selected real n600-cache pairs and production predictor codec; no contest score or family kill",
         },
@@ -1177,6 +1222,7 @@ def compose_chunks(receipts: Sequence[Path], output: Path) -> dict[str, Any]:
     target = _durable_path(output, "output")
     if target.exists():
         raise PredictorFloorError(f"write-once composed receipt already exists: {target}")
+    pointer_target = _effective_pointer_target()
     paths = [path.expanduser().resolve() for path in receipts]
     if len(paths) != 4 or len(set(paths)) != 4:
         raise PredictorFloorError("n48 composition requires exactly four distinct chunk receipts")
@@ -1263,7 +1309,7 @@ def compose_chunks(receipts: Sequence[Path], output: Path) -> dict[str, Any]:
         "authority": {
             "score_claim": False,
             "promotion_eligible": False,
-            "pointer": POINTER,
+            "pointer": pointer_target,
             "pointer_moved": False,
             "verdict_scope": "48 real pairs and four independently compressed n12 streams only",
         },
@@ -1496,11 +1542,13 @@ def truncate_scorer_plane_predictor_residual(
     }
 
 
-def _strict_pointer_byte_cap(*, d_seg: float, d_pose: float) -> int:
+def _strict_pointer_byte_cap(*, target_score: float, d_seg: float, d_pose: float) -> int:
     """Return the greatest integer byte count whose exact action beats the pointer."""
 
+    if not math.isfinite(target_score) or target_score <= 0.0:
+        raise PredictorFloorError("target score must be finite and positive")
     distortion_term = 100.0 * d_seg + math.sqrt(10.0 * d_pose)
-    slack = POINTER_VALUE - distortion_term
+    slack = target_score - distortion_term
     if slack <= 0.0:
         return -1
     candidate = math.ceil(slack * CONTEST_ARCHIVE_DENOMINATOR / 25.0) - 1
@@ -1508,14 +1556,21 @@ def _strict_pointer_byte_cap(*, d_seg: float, d_pose: float) -> int:
     def action(byte_count: int) -> float:
         return distortion_term + 25.0 * byte_count / CONTEST_ARCHIVE_DENOMINATOR
 
-    while candidate >= 0 and action(candidate) >= POINTER_VALUE:
+    while candidate >= 0 and action(candidate) >= target_score:
         candidate -= 1
-    while action(candidate + 1) < POINTER_VALUE:
+    while action(candidate + 1) < target_score:
         candidate += 1
     return candidate
 
 
-def projected_action(*, archive_bytes: int, pair_count: int, d_seg: float, d_pose: float) -> dict[str, Any]:
+def projected_action(
+    *,
+    target_score: float,
+    archive_bytes: int,
+    pair_count: int,
+    d_seg: float,
+    d_pose: float,
+) -> dict[str, Any]:
     """Project a subset archive linearly to n600 and apply the exact objective."""
 
     if type(archive_bytes) is not int or archive_bytes <= 0 or type(pair_count) is not int or pair_count <= 0:
@@ -1525,8 +1580,13 @@ def projected_action(*, archive_bytes: int, pair_count: int, d_seg: float, d_pos
     projected_bytes = (archive_bytes * CONTEST_PAIR_COUNT + pair_count - 1) // pair_count
     distortion_term = 100.0 * float(d_seg) + math.sqrt(10.0 * float(d_pose))
     action = distortion_term + 25.0 * projected_bytes / CONTEST_ARCHIVE_DENOMINATOR
-    byte_cap = _strict_pointer_byte_cap(d_seg=float(d_seg), d_pose=float(d_pose))
+    byte_cap = _strict_pointer_byte_cap(
+        target_score=target_score,
+        d_seg=float(d_seg),
+        d_pose=float(d_pose),
+    )
     return {
+        "target_score": target_score,
         "projection": "ceil(measured subset archive bytes * 600 / measured pair count)",
         "projected_n600_archive_bytes": projected_bytes,
         "measured_subset_d_seg": float(d_seg),
@@ -1534,7 +1594,7 @@ def projected_action(*, archive_bytes: int, pair_count: int, d_seg: float, d_pos
         "distortion_term": distortion_term,
         "projected_exact_objective": action,
         "strict_pointer_byte_cap_at_measured_distortion": byte_cap,
-        "projected_beats_pointer": action < POINTER_VALUE,
+        "projected_beats_pointer": action < target_score,
     }
 
 
@@ -1678,9 +1738,57 @@ def _score_one_pair(
     return {
         "d_seg": float(np.mean(mismatch)),
         "seg_mismatched_pixels": int(np.count_nonzero(mismatch)),
+        "per_class": _per_class_seg_debt(mismatch=mismatch, labels=np.asarray(labels)),
         "d_pose": float(np.mean((pose6 - np.asarray(target_pose, dtype=np.float64)) ** 2)),
         "pose6": pose6.tolist(),
     }
+
+
+def _per_class_seg_debt(*, mismatch: np.ndarray, labels: np.ndarray) -> dict[str, dict[str, Any]]:
+    mismatch_array = np.asarray(mismatch, dtype=bool)
+    label_array = np.asarray(labels)
+    if mismatch_array.shape != label_array.shape or mismatch_array.ndim != 2:
+        raise PredictorFloorError("per-class Seg debt requires equal two-dimensional mismatch/label fields")
+    if np.any(label_array < 0) or np.any(label_array >= N_CLASSES):
+        raise PredictorFloorError("per-class Seg debt labels are outside the frozen class registry")
+    result: dict[str, dict[str, Any]] = {}
+    for class_id, class_name in enumerate(CLASS_ORDER):
+        sites = int(np.count_nonzero(label_array == class_id))
+        errors = int(np.count_nonzero(mismatch_array & (label_array == class_id)))
+        result[class_name] = {
+            "class_id": class_id,
+            "errors": errors,
+            "sites": sites,
+            "d_seg": errors / sites if sites else None,
+        }
+    return result
+
+
+def _aggregate_per_class_debt(rows: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for class_id, class_name in enumerate(CLASS_ORDER):
+        errors = 0
+        sites = 0
+        for row in rows:
+            per_class = row.get("per_class")
+            if not isinstance(per_class, Mapping) or not isinstance(per_class.get(class_name), Mapping):
+                raise PredictorFloorError("hard-oracle row lacks complete per-class Seg debt")
+            class_row = per_class[class_name]
+            if class_row.get("class_id") != class_id:
+                raise PredictorFloorError("hard-oracle row per-class registry differs")
+            row_errors = class_row.get("errors")
+            row_sites = class_row.get("sites")
+            if type(row_errors) is not int or row_errors < 0 or type(row_sites) is not int or row_sites < 0:
+                raise PredictorFloorError("hard-oracle row per-class counts must be non-negative exact integers")
+            errors += row_errors
+            sites += row_sites
+        result[class_name] = {
+            "class_id": class_id,
+            "errors": errors,
+            "sites": sites,
+            "d_seg": errors / sites if sites else None,
+        }
+    return result
 
 
 def score_inflated_raw(
@@ -1732,6 +1840,8 @@ def score_inflated_raw(
         "cache_sha256": cache_sha,
         "raw_sha256": _sha256_file(raw_path),
         "pairs": rows,
+        "class_order": list(CLASS_ORDER),
+        "per_class": _aggregate_per_class_debt(rows),
         "mean_d_seg": float(np.mean([row["d_seg"] for row in rows])),
         "mean_d_pose": float(np.mean([row["d_pose"] for row in rows])),
     }
@@ -2231,6 +2341,7 @@ def run_banked_ab(args: argparse.Namespace) -> dict[str, Any]:
     precleanup_path = _precleanup_receipt_path(receipt_path)
     if receipt_path.exists() or precleanup_path.exists():
         return _resume_banked_ab_postreceipt_cleanup(args, receipt_path)
+    pointer_target = _effective_pointer_target()
     custody = load_prepared_chunk(args.prepared_manifest)
     if args.cache.expanduser().resolve() != DEFAULT_CACHE.resolve() and not args.allow_noncanonical_cache:
         raise PredictorFloorError("banked A/B cache path differs from canonical custody")
@@ -2282,12 +2393,14 @@ def run_banked_ab(args: argparse.Namespace) -> dict[str, Any]:
         {"control": control, "precision-drop": treated},
     )
     control_projection = projected_action(
+        target_score=pointer_target["score"],
         archive_bytes=control["archive"]["bytes"],
         pair_count=len(custody.inputs.pair_ids),
         d_seg=control["hard_oracle"]["mean_d_seg"],
         d_pose=control["hard_oracle"]["mean_d_pose"],
     )
     treatment_projection = projected_action(
+        target_score=pointer_target["score"],
         archive_bytes=treated["archive"]["bytes"],
         pair_count=len(custody.inputs.pair_ids),
         d_seg=treated["hard_oracle"]["mean_d_seg"],
@@ -2315,7 +2428,7 @@ def run_banked_ab(args: argparse.Namespace) -> dict[str, Any]:
         "authority": {
             "score_claim": False,
             "promotion_eligible": False,
-            "pointer": POINTER,
+            "pointer": pointer_target,
             "pointer_moved": False,
             "verdict_scope": "one settled banked chunk; local native-f32 CPU hard oracle; linear n600 byte projection",
         },
@@ -2587,6 +2700,7 @@ def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
     composed_path = _durable_path(args.composed_receipt, "rung-E composed receipt")
     if receipt_path.exists() or precleanup_path.exists():
         return _resume_rung_e_postreceipt_cleanup(args, receipt_path)
+    pointer_target = _effective_pointer_target()
     try:
         composed = json.loads(composed_path.read_text())
     except (OSError, json.JSONDecodeError) as exc:
@@ -2733,7 +2847,7 @@ def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
         "authority": {
             "score_claim": False,
             "promotion_eligible": False,
-            "pointer": POINTER,
+            "pointer": pointer_target,
             "pointer_moved": False,
             "verdict_scope": "rung-E real n48 local CPU hard-oracle archive; not contest CPU/CUDA",
         },

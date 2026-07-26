@@ -1,0 +1,74 @@
+{
+  "composition_consequence": {
+    "direct_route": "semantic base -> baseline partition -> apply S2 cell constraints -> inverse-realize those classes through R -> encode only remaining quotient; solve Qpose conditionally with Y1 fixed",
+    "new_fact": "S2 is the exact finite Seg-error topology/class correction of the C1 baseline, not merely a prior",
+    "still_open": [
+      "compact source-derived baseline partition predictor",
+      "camera-space uint8 inverse realization of S2 class constraints",
+      "joint Pose/rate closure and exact archive runtime"
+    ]
+  },
+  "debt_receipt": {
+    "bytes": 2303785,
+    "candidate_raw": {
+      "bytes": 3662409600,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_serial/0.raw",
+      "sha256": "31d77be9ab9f00e9f814542368396a35ffa119a32571e701636d4747540e255b"
+    },
+    "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/c1_live_target_debt_n600_batch16.json",
+    "receipt_sha256": "8b083df5b61955cce942b4e69133f28c639f287b3c4e3c9ba0351a57499aa853",
+    "sha256": "0db8e47a994cad5367e5eb3028055e667bc4caf3f174026d13171be662e7fbd3",
+    "target_raw": {
+      "bytes": 3662409600,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m2_live_target_selection_20260720T1528Z/inflated/0.raw",
+      "role": "zero_distortion_live_target",
+      "sha256": "a7192f9387856c849d406a322a08ff77080502751ac200cc63fe80a704989dd5"
+    }
+  },
+  "identity": {
+    "debt_equals_r2b": true,
+    "debt_equals_s2": true,
+    "event_count": 17926,
+    "event_stream_schema": "[pair,row,col,target_class,baseline_class]",
+    "event_stream_sha256": "860bcd3804691e9fb23720450017af95d48db70c66c3676d10bf902eccc76cc4",
+    "per_target_class_errors": {
+      "Lane": 2556,
+      "Movable": 1346,
+      "MyCar": 2571,
+      "Road": 7831,
+      "Undrivable": 3622
+    },
+    "pose_max_abs_mse_delta": 0.0,
+    "pose_rows_equal_r2b": true,
+    "r2b_equals_s2": true,
+    "strict_site_order": true,
+    "unique_sites": true
+  },
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "r2b": {
+    "cache_label_mismatches": 3,
+    "hard_oracle_batch_size": 16,
+    "receipt_bytes": 8195,
+    "receipt_path": "/Volumes/VertigoDataTier/pact/evidence/r2b_sparse_target_selection_20260720T1621Z/receipt.json",
+    "receipt_schema": "r2b_sparse_target_selection_receipt.v1",
+    "receipt_sha256": "c86d15ff905c1de912c6a66fe63c2122bd69115a536f70265c59d9ae8cd34a68",
+    "stage_count": 38,
+    "stage_dir": "/Volumes/VertigoDataTier/pact/evidence/r2b_sparse_target_selection_20260720T1621Z/baseline_stages_a7192f938785_31d77be9ab9f_107a7d3a179d",
+    "stage_tree_sha256": "9287ba63fdb3eaf8d0ca58189487ac02fe8995c131daef021bf220255dffe5fc"
+  },
+  "receipt_sha256": "c8ce49f0c5e60366322f40aa0577ea20ecc23926c3cda61d9b9278854ca1799f",
+  "research_only": true,
+  "s2": {
+    "packet_bytes": 39836,
+    "packet_path": "/Volumes/VertigoDataTier/pact/evidence/s2_compose_20260721/partition_seed/s2_partition_event_seed.bin",
+    "packet_sha256": "df4c0534537a9919681509a0b44a392d7d4b46c812d7570c534e6b823adae7fc",
+    "receipt_bytes": 12972,
+    "receipt_path": "/Users/adpena/Projects/pact/.omx/research/s2_compose_full_partition_20260721T041640Z.json",
+    "receipt_sha256": "dd67fbe8d5aa67ea80e3d2dc689281547a5a7dd3a42c12d5c426214f68f3b023"
+  },
+  "schema": "tac.c0b_s2_debt_bridge.v1",
+  "score_claim": false,
+  "verdict": "EXACT_C1_LIVE_TARGET_DEBT_EQUALS_R2B_INVENTORY_EQUALS_S2_PACKET",
+  "verdict_scope": "all scorer-grid Seg mismatch sites/classes for the exact C1 baseline against the exact M2 zero-distortion target under the frozen batch-16 local CPU geometry; this is not a camera-space receiver, archive, score, or authority result"
+}
