@@ -1,0 +1,345 @@
+{
+  "schema": "tac.original_taskspace_inverse_witness_codec_roadmap_receipt.v3",
+  "body": {
+    "schema": "tac.original_taskspace_inverse_witness_codec_roadmap.v3",
+    "generated_at_utc": "2026-07-26T01:55:50Z",
+    "lane_id": "lane_codex_original_taskspace_inverse_codec_20260725",
+    "research_only": true,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer_moved": false,
+    "dispatch_attempted": false,
+    "mission": {
+      "strict_authoritative_target": 0.15,
+      "success_rule": "produce a custody-complete exact archive whose governed authoritative score is strictly below 0.15",
+      "competitive_pointer_rule": "before every admission or dispatch, strictly validate and use min(best local authoritative CPU or CUDA score, best upstream official leaderboard score)",
+      "competitive_pointer_snapshot": {
+        "score": 0.172,
+        "axis": "official_leaderboard",
+        "evidence_grade": "[official-leaderboard display]",
+        "custody": "external target only; no local archive authority implied",
+        "path": ".omx/state/canonical_frontier_pointer.json",
+        "file_sha256": "bd9bd00ec6bba8be09495fcb0323678b8e0544752fa47c8c5dd22e3e463c284b"
+      },
+      "milestone_rule": "a custody-complete score below the live competitive pointer is banked, but the campaign continues until the strict target is beaten"
+    },
+    "exact_coupled_geometry": {
+      "objective": "S(d_seg,d_pose,B)=100*d_seg+sqrt(10*d_pose)+25*B/37545489",
+      "finite_transition": "delta_S=100*(d_seg_after-d_seg_before)+sqrt(10*d_pose_after)-sqrt(10*d_pose_before)+25*(B_after-B_before)/37545489",
+      "conditional_strict_byte_ceiling": "ceil((37545489/25)*(T-100*d_seg-sqrt(10*d_pose)))-1 when residual slack is positive",
+      "canonical_implementation": "src/tac/score_geometry.py::{contest_score,score_sublevel_audit,score_transition_audit}",
+      "mandatory_admission_tool": "tools/audit_coupled_score_surface.py",
+      "admission_rule": "admit an atomic same-object serialized transition only when its exact finite joint delta_S is negative; component coordinates are conditional descriptions of one sublevel surface, never independent gates",
+      "ranker_rule": "gradients, costates, Fisher maps, and byte prices may rank proposals but may not admit, kill, promote, or claim a score",
+      "under_nose_composition_gap": "the repository already encoded the correct coupled sublevel and transition mathematics, but several active measurements and plans bypassed it and collapsed the surface to an arbitrary axis cap; the hardened audit is now the required routing seam"
+    },
+    "codec_gestalt": {
+      "statement": "compile the shortest legal candidate sufficient statistic whose deterministic decoded native frames inhabit the frozen evaluator cells required by the contest",
+      "scientific_lifecycle": [
+        "SourceTruth",
+        "TaskSpaceProgram(V9)",
+        "EvaluatorObligationIR",
+        "CoupledPreimageState(Y0,Y1;V10)",
+        "EntropyCodedArchive",
+        "DeterministicReceiverOutput",
+        "ExactScoreReceipt(axis)"
+      ],
+      "v9_role": "predictive semantic source model: five-class level sets, topology and Morse-Smale cells, per-class carriers, worldsheet/xi transport, sparse births/deaths/splits/merges, and merge-diff-correct grammar",
+      "v10_role": "inverse synthesis and quantization compiler: winner-cell margins, factor-two/native factor-ten preimages, palette/gauge/nullspace choice, temporally distinct Y0/Y1 realization, and conditional Pose feature relay",
+      "s2_role": "the exact 17,926-event C1-to-live-target difference is a syndrome, checksum, supervision surface, and possible terminal stream bound to the exact C1 decoded predictor identity; it cannot be applied to, or priced against, a different predictor without recomputing the syndrome",
+      "entropy_role": "the real coder is part of every representation decision from byte one; logical roles may be jointly coded while retaining provenance and mutation ownership",
+      "terminal_learning_role": "fit only a declared compact residual function for receiver-closed debt that remains after geometry, topology, inverse lattice, gauge, conditional Pose, and analytic/dictionary controls"
+    },
+    "measured_receipts": {
+      "c0_identity_reseal": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0_identity_scaffold_reseal_581a5589e9/scaffold_receipt.json",
+        "state_sha256": "d2e02be67208d789cdbd9b68dcc0fd0741546dff6dcfc50d9e6e2ceb0f8c57a6",
+        "compile_config_sha256": "194376a74e1510062949e437bcee95eb0b10e34e1a55a7d6ce92ecb0f30012dd",
+        "codec_object_sha256": "267671e5e7ca0b1f5b54490b1dddb8e7061066846af5a411183a53afc2a695db",
+        "archive_emitted": false,
+        "score_measured": false
+      },
+      "c1_live_target_debt": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c1_live_target_debt_n600_batch16.json",
+        "file_sha256": "0db8e47a994cad5367e5eb3028055e667bc4caf3f174026d13171be662e7fbd3",
+        "receipt_sha256": "8b083df5b61955cce942b4e69133f28c639f287b3c4e3c9ba0351a57499aa853",
+        "pair_count": 600,
+        "scorer_batch_pairs": 16,
+        "d_seg": 0.00015196058485243054,
+        "mean_d_pose": 0.00010184347386600314,
+        "event_count": 17926,
+        "scope": "exact local frozen-scorer debt receipt for the C1 baseline versus the live M2 target; not a contest score"
+      },
+      "c1_s2_identity_bridge": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c1_s2_exact_debt_bridge_v4.json",
+        "file_sha256": "59efc2b594d9ff58244ee0248b5ddb1cac779347a21be2b33c6be13c34afdb95",
+        "receipt_sha256": "8ab1b65fac794a14cd951687cb0451ffdba03fa7d84e87659596b992ef7dd0bf",
+        "identity": "the decoded S2 events exactly equal every C1-to-live-target Seg error over 117,964,800 sites"
+      },
+      "c0b_wseg_c1_baseline_join": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c0b_bj1_wseg_c1_baseline_join.json",
+        "file_sha256": "56302446b96e46634c397ac07b48965bdee3f69cab05f4db09e6da818b1f20ba",
+        "receipt_sha256": "52a33b7593dd0e84b5ec1b07c5ca6bd709098e9c2ec4dfa277840cd8d33a21a8",
+        "pair_count": 600,
+        "stages": 38,
+        "total_sites": 117964800,
+        "wseg_to_c1_baseline_mismatches": 59814423,
+        "mismatch_fraction": 0.5070531463623047,
+        "s2_event_sites_matching_c1_baseline": 7039,
+        "s2_event_sites_mismatching_c1_baseline": 10887,
+        "non_event_residual": 59803536,
+        "known_cache_discrepancies_reproduced": 3,
+        "verdict": "WSEG_SEMANTIC_PROGRAM_DOES_NOT_INITIALIZE_THE_EXACT_C1_BASELINE",
+        "interpretation": "W_seg and S2 use different predictor coordinates; treating W_seg as the base for a C1-referenced syndrome would orphan almost all residual meaning"
+      },
+      "v9_target_partition_grammar": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/v9_target_partition_grammar_census_n600.json",
+        "file_sha256": "c70c9b3062a746d1d6469e43cae3985a7092736d81d72390a729da6d64b4f545",
+        "body_sha256": "a0a6145eba5f07ecd55e0a785dcd4a068beaa2e048672311f29c519a9a429c6c",
+        "evidence_rows": 600,
+        "temporal_transition_rows": 599,
+        "total_sites": 117964800,
+        "row_runs_total": 570049,
+        "row_runs_mean": 950.0816666666667,
+        "horizontal_boundaries_mean": 566.0816666666667,
+        "vertical_boundaries_mean": 2133.78,
+        "successive_pair_end_changed_sites_mean": 2449.0233722871453,
+        "successive_pair_end_changed_fraction": 0.012456377015620652,
+        "components_8_connected_by_class": {
+          "Road": 1088,
+          "Lane": 14323,
+          "Undrivable": 631,
+          "Movable": 2197,
+          "MyCar": 600
+        },
+        "interpretation": "the target is a compact, slowly evolving heterogeneous partition grammar, but this diagnostic label table and any lossless restatement are forbidden candidate payload"
+      },
+      "s2_terminal_coder_joint_economics": {
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/s2_terminal_coder_joint_break_even_v3.json",
+        "file_sha256": "8f78b63a7353529e4debee02b2a73d5e36661d12cc53e4ed173f976b0012b5f6",
+        "receipt_sha256": "3494e16e709a74b5ca56e92b5d65873b92b66ae8b56bf97f4e10670b8ab08154",
+        "unchanged_pose_strict_byte_cap": 22821,
+        "full_pose_elimination_strict_byte_cap": 70749,
+        "conditional_caps": [
+          {"d_pose_fraction_of_baseline": 1.0, "strict_total_bytes": 22821},
+          {"d_pose_fraction_of_baseline": 0.75, "strict_total_bytes": 29242},
+          {"d_pose_fraction_of_baseline": 0.5, "strict_total_bytes": 36859},
+          {"d_pose_fraction_of_baseline": 0.25, "strict_total_bytes": 46785},
+          {"d_pose_fraction_of_baseline": 0.0, "strict_total_bytes": 70749}
+        ],
+        "current_packet": {
+          "bytes": 39836,
+          "joint_improvement_requires_d_pose_after_below": 0.00004236938742218667
+        },
+        "best_generic_brotli_payload": {
+          "bytes": 34218,
+          "joint_improvement_requires_d_pose_after_below": 0.00005916871939646534
+        },
+        "corrected_verdict": "both streams are rate-negative if Pose is unchanged, but neither can be killed without receiver-closed joint d_pose measurement"
+      }
+    },
+    "evidence_scoped_controls": [
+      "CPC1 exact target partition at 255288 bytes is a diagnostic ceiling with no RGB realization and is forbidden as target-table payload",
+      "the representative event ideal around 34378 bytes is not a full witness; rank-one and rank-two dynamics are representation clues only",
+      "C1 is a 409526925-byte teacher object, not a candidate codec",
+      "E1, W_seg, DDM V19/V19B, and old L13 outputs are controls or machinery donors because their rendered or full-n600 behavior is catastrophic, incomplete, or unproven",
+      "R1 is a vehicle-specific joint anchor and PC1 exposes a zero-packet route; neither is generic closure",
+      "public archives, weights, checkpoints, latents, sidecars, selectors, and source code are excluded from candidate lineage; public work supplies only mechanism priors and falsifiers"
+    ],
+    "confirmed_structural_gaps": [
+      {
+        "priority": "P0",
+        "gap": "no production consumer currently carries CoupledWitnessState through an executable EvaluatorObligationIR, coupled Y0/Y1 preimage state, archive artifact, fresh inflate, and axis-specific score receipt",
+        "consequence": "the architecture nouns exist in memos and state identity, but the same-object vertical compiler edge is not executable"
+      },
+      {
+        "priority": "P0",
+        "gap": "predict_project_receiver explicitly cannot turn semantic class IDs into RGB scorer planes without a realization map",
+        "consequence": "V9 geometry and V10 receiver code remain disconnected until the obligation-to-preimage compiler is built"
+      },
+      {
+        "priority": "P1",
+        "gap": "current CoupledWitnessState patch semantics cannot atomically replace one upstream logical role and all transitive dependents",
+        "consequence": "after the first complete object, same-object V9/V10 alternation needs closure-aware replacement rather than unrelated child objects"
+      },
+      {
+        "priority": "P1",
+        "gap": "the coupled-score audit validates exact mathematics but does not itself prove state/archive/raw/scorer foreign keys",
+        "consequence": "it remains planning admission until D6 supplies a custody-complete same-object score receipt"
+      }
+    ],
+    "build_dag": [
+      {
+        "id": "D0",
+        "name": "dynamic objective and custody root",
+        "status": "LANDED_HARDENED",
+        "deliverables": [
+          "strict canonical pointer validator and semantic literal audit",
+          "frozen scorer/runtime/archive/target identity gates",
+          "exact coupled sublevel and finite-transition admission tool"
+        ],
+        "gate": "no stale public snapshot laundering, no fabricated authority-shaped JSON, no pre-run-only hashes, and no arbitrary component gate"
+      },
+      {
+        "id": "D1",
+        "name": "C0B-BJ1 semantic baseline join",
+        "status": "COMPLETE_PREMISE_FALSIFIED",
+        "deliverable": "compare the exact W_seg semantic program to the reconstructed full C1 baseline at every one of 117,964,800 cells, with seeded-event and non-event residuals",
+        "interfaces": [
+          "tac.optimization.ddm_ws1_warm_start",
+          "c1_s2_exact_debt_bridge_v4.json",
+          "tools/measure_c0b_wseg_c1_baseline_join.py"
+        ],
+        "gate": "live M2 target is regenerated from custodied raw using the frozen batch-exact scorer; cached-label discrepancies remain diagnostic and no target table enters a payload",
+        "decision": "W_seg is not the C1 baseline: 59,814,423 of 117,964,800 cells differ and 10,887 of 17,926 S2 sites do not carry the baseline class expected by W_seg. Preserve W_seg only as a separately identified control/predictor; never compose the C1-referenced S2 packet onto it"
+      },
+      {
+        "id": "D2",
+        "name": "C0B-RB1 identity-bound predictor and syndrome rebase",
+        "status": "GENERIC_ABI_LANDED_PRODUCTION_V9_PREDICTOR_NEXT",
+        "deliverable": "define one canonical decoded semantic predictor P with an exact semantic-stream hash, compile V9 factors against the live target, and recompute E=target-minus-P so every residual header binds predictor_state_sha256 and predictor_semantic_sha256",
+        "interfaces": [
+          "src/tac/witness_dsl/coupled_witness_state.py",
+          "src/tac/witness_dsl/predictor_bound_residual.py",
+          "src/tac/optimization/direct_description_carrier_compose.py",
+          "src/tac/optimization/s2_partition_seed.py",
+          "v9_target_partition_grammar_census_n600.json"
+        ],
+        "gate": "decode(P)+decode(E) recovers the intended target cells exactly; swapping any predictor or residual is refused by hash; the old C1 S2 remains teacher/checksum evidence only unless P is exactly C1; no target-table restatement"
+      },
+      {
+        "id": "D3",
+        "name": "C0B-IR1 arbitrary-target inverse realization",
+        "status": "NEXT_PARALLEL",
+        "deliverable": "realize V9 obligations through factor-two Y1 and factor-ten native-frame uint8 constraints using target-versus-runner gradients, safe-margin cells, ERF collateral accounting, and palette/gauge reconciliation",
+        "interfaces": [
+          "src/tac/optimization/ddm_dm4_targeted_realization_cures.py",
+          "src/tac/optimization/uint8_lattice_feasibility.py",
+          "src/tac/witness_dsl/v10_production_receiver.py",
+          "src/tac/optimization/v10_constructive_solver.py"
+        ],
+        "gate": "same decoded receiver bytes satisfy the selected Seg cells; structural XOR/digest/cyclic V10 placeholders are forbidden production physics"
+      },
+      {
+        "id": "D4",
+        "name": "Y0 conditional Pose and feature-relay solve",
+        "status": "OPEN_AFTER_FIRST_Y1",
+        "deliverable": "solve the frame-zero plane conditional on realized Y1 using xi-advection, amplitude/frequency/phase/contrast controls, Pose VJP/rank-six projections, multiple shooting, and a frozen hard oracle",
+        "interfaces": [
+          "src/tac/optimization/vjp_custody.py",
+          "src/tac/optimization/v10_constructive_solver.py",
+          "src/tac/optimization/joint_seg_pose_rate.py"
+        ],
+        "gate": "receiver-closed official six-output Pose debt improves without hidden Seg or byte transfer; additive low-rank failure kills only that formulation"
+      },
+      {
+        "id": "D5",
+        "name": "C0B archive sibling and real coder",
+        "status": "OPEN_AFTER_D2_D3_MINIMUM",
+        "deliverable": "compile one original state into a deterministic legal archive and inflate path with real entropy syntax, canonical parse-back, double decode, native 1200-frame raw hash, and state-to-archive/decode receipts",
+        "interfaces": [
+          "src/tac/witness_dsl/c0b_semantic_quotient.py",
+          "src/tac/witness_dsl/coupled_witness_state.py"
+        ],
+        "gate": "all payload/provenance bytes are loaded and hashed from exact snapshots; receiver bytes are consumed; no scorer, target table, or borrowed archive bytes ship"
+      },
+      {
+        "id": "D6",
+        "name": "full n600 joint debt and 25-row interface readout",
+        "status": "BLOCKED_ON_D5",
+        "deliverable": "same-object local frozen-scorer d_seg, d_pose, archive bytes, exact coupled score, per-class/per-pair debt, and all 25 IS1 SKELETON/FIBER outcomes",
+        "gate": "resumable batch16 stages, immutable launch manifest, end-of-run input barrier, exact aggregate closure, and coupled-score audit"
+      },
+      {
+        "id": "D7",
+        "name": "factor compiler and terminal quotient race",
+        "status": "CONDITIONAL_ON_D6_DEBT",
+        "deliverable": "alternate V9 factor improvements, V10 realization, conditional Pose, joint/split coders, analytic bases, dictionaries, and optional learned terminal T on the same object",
+        "gate": "only exact atomic joint delta_S admits a transition; terminal T must beat matched-byte nonlearned controls and cannot relearn declared upstream roles"
+      },
+      {
+        "id": "D8",
+        "name": "governed authority branch",
+        "status": "BLOCKED_NO_COMPLETE_RECEIVER_CLOSED_ARCHIVE",
+        "deliverable": "evaluate the exact same archive separately on governed contest CPU and CUDA axes with full archive/runtime/command/hardware custody",
+        "gate": "claim the lane before dispatch; bank a real pointer break and continue until an authoritative exact score is below 0.15"
+      }
+    ],
+    "next_three_builds": [
+      {
+        "priority": 1,
+        "id": "C0B-RB1",
+        "why": "extinguishes the newly measured orphan-syndrome bug class by making every residual inseparable from the exact decoded predictor state and semantic stream it corrects"
+      },
+      {
+        "priority": 2,
+        "id": "C0B-SF1",
+        "why": "fits the measured compact n600 target grammar with V9 bulk, boundary, Lane, island, MyCar, and temporal factors, then computes the irreducible quotient against that exact predictor rather than against C1 or W_seg by assumption"
+      },
+      {
+        "priority": 3,
+        "id": "C0B-IR1",
+        "why": "creates the missing executable seam from compact task-space obligations to the actual frozen receiver surface, where both Seg and Pose consequences can finally be priced"
+      }
+    ],
+    "interface_acceptance": {
+      "source": ".omx/research/ddm_is1_rg3_solution_demand_25_20260724.json",
+      "rows": 25,
+      "skeleton": 16,
+      "fiber": 9,
+      "rule": "rematerialize every obligation through the new original receiver and real coder; historical bytes, actions, and null prices are not inherited"
+    },
+    "training_policy": {
+      "default": "DERIVE_SOLVE_OR_CODE",
+      "allowed": "training may fit a declared compact typed function when it is the cheapest numerical solver and the exact scorer and real coder are in the loop",
+      "required": [
+        "single recorded seed and deterministic algorithms",
+        "resumable complete per-stage checkpoints with all prior stages preserved",
+        "EMA shadow and byte-close NumPy reference where applicable",
+        "explicit variable and byte ownership",
+        "matched-byte analytic and dictionary controls",
+        "T-off, deletion, no-relearning, quantization, parse-back, and receiver mutation tests"
+      ]
+    },
+    "wire_in_contract": {
+      "sensitivity_map": "event/factor/receiver deltas emit per-pair, per-class, and per-byte Seg/Pose sensitivities keyed to the same archive identity",
+      "pareto_constraint": "all candidate points and transitions route through tac.score_geometry exact coupled audits",
+      "bit_allocator": "price physical coder sections and ordered factor bundles by measured same-object joint score value per exact byte",
+      "cathedral_autopilot": "only complete typed DAG nodes with exact blockers become schedulable; no chat-only insight or unregistered archive lineage",
+      "continual_learning": "every exact join, receiver, coder, and eval outcome appends a typed probe outcome and updates the next-action posterior",
+      "probe_disambiguator": "ship both defensible physical coder or realization modes behind callable interfaces and arbitrate with receiver-closed probes"
+    },
+    "authority_and_storage": {
+      "main_is_source_of_truth": true,
+      "large_artifact_waterfall": [
+        "/Volumes/VertigoDataTier/pact",
+        "/Volumes/APDataStore/pact",
+        "local disk only by explicit opt-in"
+      ],
+      "launch_rule": "no long run without deterministic resume, preserved per-stage checkpoints, storage preflight, success-only scratch cleanup, and full provenance",
+      "score_rule": "only upstream/evaluate.py on exact archive bytes on an explicitly labelled contest CPU or CUDA substrate is a score; local frozen-scorer measurements are debt evidence"
+    },
+    "stores_consulted": [
+      "CLAUDE.md",
+      "AGENTS.md",
+      ".omx/state/canonical_frontier_pointer.json",
+      ".omx/state/lane_registry.json",
+      ".omx/state/subagent_progress.jsonl",
+      ".omx/state/master_gradient_anchors.jsonl",
+      ".omx/state/cost_band_posterior.jsonl",
+      ".omx/state/continual_learning_posterior.jsonl",
+      ".omx/state/next_experiments.md",
+      "reports/latest.md",
+      "latest codex_findings and codex_session_summary memos",
+      "latest council_t3 and design memos",
+      "original task-space inverse witness receipts named above"
+    ],
+    "honest_terminal_state": {
+      "pointer_delta": 0.0,
+      "complete_receiver_closed_n600_archive": false,
+      "authoritative_score_measured": false,
+      "next_exact_blocker": "land the predictor-bound residual ABI and rebuild the V9 syndrome against one exact decoded predictor, then materialize that same object's first receiver-closed Y1/Y0 archive sibling"
+    }
+  },
+  "body_sha256": "36ddb19d1ab561fa53966e4edc28194b232035fcb43df6819a87725fa167898b"
+}

@@ -88833,7 +88833,91 @@
           "evidence": ""
         }
       },
-      "notes": "C0A identity scaffold and original V9-to-V10 evaluator-equivalence codec architecture landed; complete receiver-closed n600 C0B archive, score, and authority evidence remain explicitly owed.",
+      "notes": "Exact n600 BJ1 falsified W_seg-as-C1 (59,814,423 of 117,964,800 cells differ). PBR1 predictor-bound residual ABI and coupled-score routing are landed; next is a full-five-class V9 predictor plus the executable V9 obligation to V10 coupled-preimage archive edge.",
+      "research_only": true
+    },
+    {
+      "id": "lane_c0b_semantic_quotient_20260725",
+      "name": "C0B original semantic base plus exact two-plane dense quotient seam",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only dense quotient seam/control. BJ1 proves W_seg cannot serve as the C1 predictor. Any future quotient must bind the exact decoded predictor via PBR1 and pass through the production obligation-to-coupled-preimage receiver; no score, promotion, or candidate authority.",
+      "research_only": true
+    },
+    {
+      "id": "lane_c0b_predictor_bound_residual_20260726",
+      "name": "C0B predictor-bound semantic residual rebase",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Generic PBR1 ABI landed after exact n600 BJ1 falsified W_seg-as-C1: every residual binds predictor program, renderer, decoded semantic stream, nested residual, and recovered target identities. Production full-five-class V9 predictor and receiver-closed archive remain owed.",
       "research_only": true
     }
   ],
@@ -88844,5 +88928,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-25T23:24:04Z"
+  "updated_at": "2026-07-26T02:03:45Z"
 }

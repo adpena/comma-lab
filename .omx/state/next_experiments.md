@@ -2,49 +2,57 @@
 
 ## Immediate governed queue
 
-1. **C0B — first complete object:** extend the landed C0A identity scaffold into
-   one coarse, deterministic, receiver-closed n600 vertical codec. It must carry
-   all five classes, explicit coupled `Y0/Y1`, native `874x1164` uint8 frames, a
-   finite grammar, a real coder, archive/inflate/parse-back hashes, per-class and
-   per-pair debt, and same-object `d_seg`, `d_pose`, bytes, and coupled score on a
-   clearly labelled local axis. Populated streams require verified payload and
-   provenance loaders plus parent-state-bound construction receipts; asserted
-   hashes are not custody. A poor complete object is more useful than a polished
-   component with no archive edge.
-2. **V9 and V10 alternate on that object:** refine V9 level sets, Morse-Smale
-   topology, worldsheet/xi, per-class carriers, merge-diff-correct, and AA-SDF
-   while V10 performs two-plane uint8 preimage realization, palette/gauge
-   reconciliation, and R10 prosody/feature-relay inversion. Recompile and score
-   after every atomic bundle; do not finish one half before exercising the other.
-3. **Pose is conditional, not independent:** solve amplitude-structured,
+1. **C0B-RB1 — predictor-bound residual rebase:** instantiate one full-five-class
+   V9 decoded predictor and bind every residual to its exact program bytes,
+   renderer source, contract, and decoded semantic-stream hash. The generic
+   `predictor_bound_residual` ABI is landed; the production V9 predictor remains
+   owed. The n600 BJ1 receipt proved that W_seg is *not* the C1 baseline:
+   `59,814,423 / 117,964,800` cells differ, including `10,887 / 17,926` S2
+   event sites. Therefore the C1-referenced S2 packet may remain teacher/checksum
+   evidence but must never be applied to W_seg or another predictor by assumption.
+2. **C0B-SF1 — compile target grammar into V9 factors:** fit the measured n600
+   partition structure (570,049 row runs; 1.2456% successive pair-end change)
+   with Road/Undrivable bulk, Lane chart/phase, Movable events, MyCar closure,
+   topology, and worldsheet/xi. Recompute the exact irreducible syndrome against
+   that decoded predictor, not against C1 or W_seg. Target tables remain
+   encoder-side supervision and are forbidden candidate payload.
+3. **C0B-IR1 — make the missing V9-to-V10 compiler executable:** translate the
+   same predictor's semantic obligations into winner/margin constraints, then
+   realize coupled `Y0/Y1` through the actual factor-two and native factor-ten
+   uint8 receiver. Structural XOR/digest/cyclic handlers are not production
+   physics. Palette/gauge and collateral debt are part of this compiler edge.
+4. **Pose is conditional, not independent:** solve amplitude-structured,
    xi-advected frame-0 state conditioned on the realized last frame. Use frozen
-   PoseNet feature relay or multiple shooting where analytic inversion ends.
-   Do not extend the failed additive low-rank frame-0 family by reflex.
-4. **Make the 25 IS1 demand rows interface tests:** rematerialize all 16 SKELETON
-   and 9 FIBER obligations through the original receiver and real coder. Historical
-   actuator bytes and null prices are not inherited.
-5. **Price syntax from byte one:** race split and joint physical entropy modes,
-   but preserve seven logical provenance/mutation roles. Admit costate-ranked,
-   order-aware factor10 bundles only by exact final `delta S` after global
-   recompression; a useful bundle may contain an uphill intermediate prefix.
-6. **Train only typed necessity:** derive, solve, or code by default. Training may
-   fit a declared compact function with scorer and coder in loop, deterministic
-   resumable stage checkpoints, and explicit byte ownership. Additional quotient
-   `T` is terminal and must beat matched-byte analytic/dictionary controls.
-7. **Branch authority early:** any complete n600 archive may enter the governed
-   exact CPU/CUDA path; later C5/C6 polish is not a prerequisite. Bank a verified
-   score below the refreshed competitive pointer, then continue until an exact
-   archive is strictly below the mission target `0.15`.
-8. **Retire false composition paths:** EV2 seven-home allocation, WTNV2 linking,
-   J8F/J12/PF3 actions, and public PRs remain guard, mechanism, and falsifier
-   evidence only unless rebuilt as native same-state transitions. No public
-   archive, code, weights, checkpoint, latent, click, selector, token, or sidecar
-   may become candidate lineage.
+   PoseNet VJP/rank-six feature relay or multiple shooting where analytic
+   inversion ends. Do not extend the failed additive low-rank family by reflex.
+5. **Admit only on the exact coupled manifold:** route points and transitions
+   through `tac.score_geometry` and `tools/audit_coupled_score_surface.py`.
+   Component coordinates are conditional boundaries, never arbitrary gates.
+   The 39,836-byte S2 packet is rate-negative only if Pose is unchanged; a
+   receiver-closed result can still admit it if `d_pose_after` is below the
+   exact conditional threshold recorded in the joint-economics receipt.
+6. **Emit the first complete archive sibling:** compile one original state into
+   a deterministic real archive/inflate path with double decode, exact native
+   raw hash, real entropy coding, batch-16 scorer custody, per-class and per-pair
+   debt, and all 25 IS1 SKELETON/FIBER interface rows. A poor but complete object
+   is more informative than another polished orphan component.
+7. **Train only typed necessity:** derive, solve, or code by default. Training
+   may fit a declared compact function with scorer and coder in loop,
+   deterministic resumable per-stage checkpoints, and explicit byte ownership.
+   Additional quotient `T` is terminal and must beat matched-byte analytic and
+   dictionary controls.
+8. **Branch authority from any complete n600 archive:** after a lane claim and
+   full custody, evaluate the exact same archive separately on governed contest
+   CPU and CUDA. Bank a verified score below the refreshed competitive pointer,
+   then continue until an authoritative exact archive is strictly below `0.15`.
+   Public work and legacy mismatched-object packets remain mechanism/falsifier
+   evidence only; no public archive, code, weights, checkpoint, latent, selector,
+   token, or sidecar enters candidate lineage.
 
 Small n24-or-less fixtures are parser, unit, and mutation tests only. They may
 not choose a scientific branch or support a score verdict. The canonical
-machine-readable campaign DAG is
-`.omx/research/original_taskspace_inverse_witness_codec_20260725/roadmap.json`.
+machine-readable campaign DAG for this iteration is
+`.omx/research/original_taskspace_inverse_witness_codec_20260725/roadmap_v3.json`.
 
 Competitive target is always the dynamically refreshed canonical
 `effective_frontier`; its dated snapshot here is the official-leaderboard
