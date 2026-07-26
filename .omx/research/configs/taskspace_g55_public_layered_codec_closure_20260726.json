@@ -1,0 +1,19 @@
+{
+  "counted_operand_bundle": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/g55_fresh_scorer_plane_operand_compile_20260726/PENDING_OPERAND_BUNDLE.zip",
+    "sha256": "PENDING_FRESH_N600_OPERAND_BUNDLE_SHA256"
+  },
+  "operand_compiler_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/g55_fresh_scorer_plane_operand_compile_20260726/PENDING_COMPILER_RECEIPT.json",
+    "sha256": "PENDING_FRESH_N600_COMPILER_RECEIPT_SHA256"
+  },
+  "output_dir": "/Volumes/VertigoDataTier/pact/evidence/g55_public_task_layered_codec_closure_20260726/public_preview",
+  "pyav_runtime": {
+    "lock_path": "upstream/uv.lock",
+    "lock_sha256": "0489187bd4222ad24ea252c94e51585469c435b9c6a479a047aa85d0e7d17286",
+    "version": "17.0.0"
+  },
+  "repo_root": ".",
+  "runtime_dir": "submissions/robust_current/taskspace_layered_public",
+  "schema": "taskspace_g55_public_layered_codec_closure_config.v1"
+}
