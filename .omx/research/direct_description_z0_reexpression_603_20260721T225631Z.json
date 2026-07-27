@@ -1,0 +1,95 @@
+{
+  "archive_custody": {
+    "archive_bytes": 451191,
+    "archive_bytes_source": "len(exact_A_of_z_bytes)",
+    "archive_sha256": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed",
+    "compiler": "s4_archive_composer.v1",
+    "container_framing_bytes": 426,
+    "member_bytes": 1285943,
+    "member_sha256": "595e69d41f96cc1a33ca7b58c0ed386549bfda6389a8176b24d7044d1f55955b",
+    "receiver_consumption_blocker": "S4 receiver rejects nonempty pose6/dxi and legacy sections do not prove the six PRIMARY semantic owners",
+    "receiver_consumption_verified": false,
+    "schema": "direct_description_archive_build.v1",
+    "stream_ledger": [
+      {
+        "carrier_section": "manifest.json",
+        "claim_kind": "MEASURED_LEGACY_OPAQUE_SECTION_NOT_PRIMARY_OWNER_SEMANTICS",
+        "codec": "raw",
+        "decoded_bytes": 2534,
+        "encoded_payload_bytes": 2534,
+        "semantic_status": "LEGACY_OPAQUE_SECTION_REEXPRESSION",
+        "sha256": "188c1a785d23aa9ac38ec6438b536a9763ae4e25a7377861ad7c5f38b7545129",
+        "stream": "entropy_state"
+      },
+      {
+        "carrier_section": "seed.ppcs",
+        "claim_kind": "MEASURED_LEGACY_OPAQUE_SECTION_NOT_PRIMARY_OWNER_SEMANTICS",
+        "codec": "raw",
+        "decoded_bytes": 884872,
+        "encoded_payload_bytes": 884872,
+        "semantic_status": "LEGACY_OPAQUE_SECTION_REEXPRESSION",
+        "sha256": "a21dde38128bed7ff62860ef005b994b74202e0bd00a37d1df8824ee325e856b",
+        "stream": "xi_curve_knots"
+      },
+      {
+        "carrier_section": "base.pbase3",
+        "claim_kind": "MEASURED_LEGACY_OPAQUE_SECTION_NOT_PRIMARY_OWNER_SEMANTICS",
+        "codec": "mixed",
+        "decoded_bytes": 233124,
+        "encoded_payload_bytes": 36011,
+        "semantic_status": "LEGACY_OPAQUE_SECTION_REEXPRESSION",
+        "sha256": "7f2c95f8993136ac99b6ab179cc793cd4bccdf08407b7e31593503b750a81d5b",
+        "stream": "static_ground_coefficients"
+      },
+      {
+        "carrier_section": "causal.pcr3",
+        "claim_kind": "MEASURED_LEGACY_OPAQUE_SECTION_NOT_PRIMARY_OWNER_SEMANTICS",
+        "codec": "raw",
+        "decoded_bytes": 0,
+        "encoded_payload_bytes": 0,
+        "semantic_status": "LEGACY_OPAQUE_SECTION_REEXPRESSION",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stream": "pose6_dxi_residuals"
+      },
+      {
+        "carrier_section": "events.pce3",
+        "claim_kind": "MEASURED_LEGACY_OPAQUE_SECTION_NOT_PRIMARY_OWNER_SEMANTICS",
+        "codec": "lzma1_raw_1MiB",
+        "decoded_bytes": 942475,
+        "encoded_payload_bytes": 181904,
+        "semantic_status": "LEGACY_OPAQUE_SECTION_REEXPRESSION",
+        "sha256": "47c94bb47c450ef6bf5793e9583dcb06d40bfb8f33baa64becdde9fc1796e8c6",
+        "stream": "sparse_events"
+      },
+      {
+        "carrier_section": "components.pcomp3",
+        "claim_kind": "MEASURED_LEGACY_OPAQUE_SECTION_NOT_PRIMARY_OWNER_SEMANTICS",
+        "codec": "zlib9",
+        "decoded_bytes": 1155245,
+        "encoded_payload_bytes": 180196,
+        "semantic_status": "LEGACY_OPAQUE_SECTION_REEXPRESSION",
+        "sha256": "32b41a7db1c6927e6812a49bdea568cd00fd2c19ca9798e38666385e8ed2e68d",
+        "stream": "exceptions"
+      }
+    ],
+    "stream_payload_bytes": 1285517
+  },
+  "legacy_opaque_alias_mapping": {
+    "entropy_state": "manifest.json",
+    "exceptions": "components.pcomp3",
+    "pose6_dxi_residuals": "causal.pcr3",
+    "sparse_events": "events.pce3",
+    "static_ground_coefficients": "base.pbase3",
+    "xi_curve_knots": "seed.ppcs"
+  },
+  "parse_reencode_archive_byte_exact": true,
+  "primary_owner_semantics_blocker": "manifest/seed/causal S4 sections are not entropy/xi/Pose6 live-owner proofs",
+  "primary_owner_semantics_proven": false,
+  "schema": "direct_description_z0_reexpression.v1",
+  "settled_control_bytes_match": true,
+  "settled_control_sha256_match": true,
+  "source_archive_bytes": 451191,
+  "source_archive_path": "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/canonical_s4_20260721/archive.zip",
+  "source_archive_sha256": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed",
+  "verdict": "PASS_BYTE_EXACT"
+}

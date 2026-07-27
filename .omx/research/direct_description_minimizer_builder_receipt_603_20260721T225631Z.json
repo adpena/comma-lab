@@ -1,0 +1,102 @@
+{
+  "authority": {
+    "execution_allowed": false,
+    "main_landing_review_required": true,
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "research_only": true,
+    "score_claim": false
+  },
+  "durable_artifacts": {
+    "launch_ticket": {
+      "path": ".omx/research/direct_description_launch_ticket_DRAFT_603_20260721T225631Z.json",
+      "sha256": "5fb9bb9fbc984798e73abbdf8e5fb0e00e3e8a0d84721ded28475942ffe30b7c"
+    },
+    "owner_bundle": {
+      "path": ".omx/research/direct_description_minimizer_owner_bundle_603_20260721T225631Z.json",
+      "sha256": "8a9381dd1d67c788b035883790e71b96ddf9605fa82d60cb407ca2e9dd8a31e8"
+    },
+    "z0_reexpression": {
+      "path": ".omx/research/direct_description_z0_reexpression_603_20260721T225631Z.json",
+      "sha256": "1431d7cf8c137ecd77b9a53d222bd4ef6fbe9769c639f86cd481cfee6eb7f8a0"
+    }
+  },
+  "implemented_surfaces": {
+    "archive": "strict deterministic legacy S4 parse/re-encode with digest and path quarantine checks",
+    "cap_arithmetic": "full-precision SHA-bound Decimal ceil-minus-one receipt verifier",
+    "charged_free": "structural STEP0 partition verifier; never self-authorizing",
+    "completion": "per-coordinate rational residual, terminal evidence, and external independent-audit binding",
+    "failure": "external Ed25519-attested receipt verifier; no local failure certificate emitted",
+    "ladder": "same-artifact structural receipt validation; official measurement authority still absent",
+    "owner": "dedicated DDM typed config/program plus TypedLever/LawRef seed custody",
+    "per_stratum": "structural allocation audit with exact taxonomy, chart, quantization-floor, and common-lambda checks",
+    "resume": "atomic immutable checkpoint schema and restore audit only; no continuation runner",
+    "runner": "fail-closed preflight CLI; optimize and red preflight exit 2"
+  },
+  "git_proof": {
+    "branch": "codexwt/direct_description_minimizer_builder_20260721T221054Z",
+    "code_commit": "0e352c122a",
+    "main_merge_required": true
+  },
+  "lane_id": "lane_direct_description_minimizer_builder_603_20260721",
+  "master_task": 578,
+  "measured_control_container": {
+    "archive_bytes": 451191,
+    "archive_sha256": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed",
+    "claim_kind": "MEASURED_SETTLED_S4_CONTROL_CONTAINER_REEXPRESSION",
+    "member_bytes": 1285943,
+    "member_sha256": "595e69d41f96cc1a33ca7b58c0ed386549bfda6389a8176b24d7044d1f55955b",
+    "parse_reencode_archive_byte_exact": true,
+    "primary_owner_semantics_proven": false,
+    "receiver_consumption_verified": false
+  },
+  "non_capabilities": [
+    "no pose-consuming integer/uint8 receiver",
+    "no DDM optimizer or stage-continuation loop",
+    "no canonical WitnessProgram/TypedWitnessConfig compiler integration",
+    "no governed-launcher or memory-preflight adapter",
+    "no canonical resume-registry/cadence wiring or operational cleanup/cold-store hook",
+    "no final-ZIP unique-home rate attribution for the monolithic Deflate carrier",
+    "no fresh v3 pose-in-objective rung zero",
+    "no measured four-rung cells-then-pose ladder",
+    "no n64 custody smoke or n600 same-artifact closure",
+    "no separate contest-CPU and contest-CUDA replay receipts",
+    "no valid failure token or completion certificate",
+    "no candidate archive and no score"
+  ],
+  "planning_only_caps": {
+    "full_precision_target_receipt_present": false,
+    "pointer_cap_bytes": 216223,
+    "strict_0_15_cap_bytes": 154524,
+    "verdict": "DISPLAYED_DERIVATION_ONLY_EXCLUDED_FROM_LAUNCH_CONFIG"
+  },
+  "primary_spec": {
+    "path": ".omx/research/direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md",
+    "sha256": "3ae7166e633d46e6341c3565e0fd2d475c501e6120fa68c419ce89e931f37aa9"
+  },
+  "review": {
+    "independent_passes": 3,
+    "initial_launch_ready_claim": "REJECTED",
+    "required_disposition": "LAND_ONLY_AS_BLOCKED_STATIC_SCAFFOLD",
+    "review_tracker_passes_required_per_python_file": 2
+  },
+  "route": "R3_DIRECT_DESCRIPTION_REDIRECT",
+  "schema": "direct_description_minimizer_builder_receipt.v2",
+  "separate_counted_objects": {
+    "legacy_base_plus_components_payload_subtotal_bytes": 216207,
+    "legacy_seed_payload_bytes": 884872,
+    "null_byte_savings": null,
+    "projected_len_A_of_z_bytes": null
+  },
+  "test_evidence": {
+    "adjacent_apparatus_argv": "/Users/adpena/Projects/pact/.venv/bin/python -m pytest -q src/tac/tests/test_artifact_quarantine.py src/tac/tests/test_artifact_quarantine_runtime_gate.py src/tac/tests/test_dsl_compile_hash_enforcement.py src/tac/tests/test_dsl_config_gate_apparatus.py src/tac/tests/test_launch_dsl_config_gate.py src/tac/tests/test_operator_storage_waterfall.py src/tac/tests/test_resume_registry.py src/tac/tests/test_subagent_checkpoint_resume_lookup.py",
+    "adjacent_apparatus_result": "131 passed, 1 skipped",
+    "exact_consumer_argv_result": "exit 2; PREFLIGHT_REFUSE",
+    "focused_argv": "/Users/adpena/Projects/pact/.venv/bin/python -m pytest -q src/tac/optimization/tests/test_direct_description_minimizer.py tools/tests/test_run_direct_description_minimizer.py tools/tests/test_measure_per_stratum_recursive_fractal_optimal.py",
+    "focused_result": "37 passed",
+    "py_compile": "PASS",
+    "ruff": "PASS"
+  },
+  "verdict": "STATIC_SCAFFOLD_LANDED_LAUNCH_READINESS_FALSIFIED"
+}

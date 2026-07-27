@@ -1,0 +1,60 @@
+{
+  "schema": "direct_description_reuse_manifest.v1",
+  "utc": "2026-07-21T22:56:31Z",
+  "task": 603,
+  "research_only": true,
+  "execution_allowed": false,
+  "reused": [
+    {
+      "surface": "src/tac/optimization/s4_archive_composer.py",
+      "symbols": ["SectionBytes", "serialize_sections", "parse_sections", "deterministic_archive"],
+      "role": "measured canonical A(z0) carrier and exact ZIP parse-reencode"
+    },
+    {
+      "surface": "src/tac/witness_dsl/typed_config.py",
+      "symbols": ["TypedLever"],
+      "role": "seed custody manifest only; the DDM typed config/program are dedicated local types"
+    },
+    {
+      "surface": "src/tac/witness_dsl/lawref.py",
+      "symbols": ["LawRef", "InputRef", "resolve_flag_dict_constants"],
+      "role": "seed identity custody record"
+    },
+    {
+      "surface": "src/tac/artifact_quarantine.py",
+      "symbols": ["is_quarantined_archive_bytes", "scan_text"],
+      "role": "digest-plus-path PRIMARY archive-open refusal, including raw-byte inputs"
+    },
+    {
+      "surface": "tools/witness_memory_preflight.py",
+      "symbols": ["MemoryProjection", "system_aware_admission"],
+      "role": "required future launch preflight; current ticket REFUSE"
+    },
+    {
+      "surface": "tools/launch_witness_run.py",
+      "symbols": ["governed launcher"],
+      "role": "required future launcher; no direct invocation in this landing"
+    },
+    {
+      "surface": "tools/measure_per_stratum_recursive_fractal_optimal.py",
+      "symbols": ["requested_v9_row", "build_receipt"],
+      "role": "extended typed receiver-rate custody consumer; v1 permanently refuses nonlocal Deflate attribution"
+    },
+    {
+      "surface": ".omx/research/recursive_fractal_optimal_representation_design_503_20260715.md",
+      "symbols": ["nine-dimensional composition law"],
+      "role": "carrier/allocation design reuse; no fabricated live receipt"
+    }
+  ],
+  "not_reused_as_bytes": [
+    "DEFAULT_QUARANTINED R1 or stopped-witness payloads",
+    "fresh v3 measured bottom anchor",
+    "xi sibling candidate that worsened rate",
+    "wrong-level candidates with null byte fields"
+  ],
+  "new_surfaces": [
+    "src/tac/optimization/direct_description_minimizer.py",
+    "tools/run_direct_description_minimizer.py"
+  ],
+  "verdict": "STATIC_REUSE_SCAFFOLD_ONLY_CANONICAL_COMPILER_PRIMARY_RECEIVER_AND_RUNNER_BLOCKED"
+}
