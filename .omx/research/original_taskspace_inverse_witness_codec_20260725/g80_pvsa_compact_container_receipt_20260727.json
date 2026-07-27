@@ -12,7 +12,7 @@
     "tests": {
       "path": "src/tac/witness_dsl/tests/test_taskspace_pvsa_compact_container_v1.py",
       "bytes": 9348,
-      "sha256": "5b4e87c56156f44ad0b40465d02ed681175930211f92d441c4ff1325dbd1efe0"
+      "sha256": "8156e52e23f2b52af82f3450693fb029aa0e632f70804a4f1e8dbd801836c15a"
     },
     "spec": {
       "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g80_pvsa_compact_container_20260727.md",
@@ -111,5 +111,5 @@
   "score_claim": false,
   "promotion_eligible": false,
   "pointer_moved": false,
-  "receipt_sha256": "91213ca642471a874df80c117d9d2f20d420df7a3160bc15175917ee19fa6c4e"
+  "receipt_sha256": "00b5776984a2bcafb58001d2f7485f54d793cfc4aea1ddd712b07a1cc56e0957"
 }

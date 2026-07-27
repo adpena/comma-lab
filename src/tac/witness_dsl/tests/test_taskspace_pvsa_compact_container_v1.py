@@ -85,7 +85,7 @@ def _operand() -> bytes:
 def _build(
     *,
     with_g74: bool = True,
-    rich_ir_bytes: int | None = 3_591,
+    rich_ir_bytes: int | None = 3_593,
 ):
     return build_compact_pvsa_archive(
         semantic_p_archive=_semantic(),
@@ -110,7 +110,7 @@ def test_real_p_compacts_to_one_member_and_reconstructs_exact_semantic_zip() -> 
     assert selected.archive_nbytes < 130_000
     assert selected.archive_nbytes < len(_semantic()) - 4_500
     assert built.compact_member_bytes == 133_363
-    assert built.rich_ir_bytes_avoided == 3_539
+    assert built.rich_ir_bytes_avoided == 3_541
     assert built.selected.actuators[0].actuator_type is (CompactActuatorTypeV1.G74_ROLE_AWARE_PREPAINT)
     assert built.selected.actuators[0].payload == _operand()
     assert CONDITIONAL_Y0_ACTUATOR_BLOCKER in built.selected.open_product_blockers
