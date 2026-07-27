@@ -13196,9 +13196,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             written.update(
                 {
                     "fresh_lineage_schema": (
-                        "tac.fresh_producer_physical_checkpoint_node.v2"
-                        if _fresh_node.pair.native is not None
-                        else "tac.fresh_producer_physical_checkpoint_node.v1"
+                        "tac.fresh_producer_physical_checkpoint_node.v1"
                     ),
                     "fresh_lineage_receipt": str(_fresh_node.receipt_path),
                     "fresh_lineage_receipt_sha256": (
