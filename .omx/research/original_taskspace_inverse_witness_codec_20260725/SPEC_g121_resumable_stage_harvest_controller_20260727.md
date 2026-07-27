@@ -3,8 +3,9 @@
 Date: 2026-07-27  
 Axis: `[encoder-side macOS CPU orchestration; no score authority]`  
 Lane: `lane_g121_resumable_stage_harvest_controller_20260727`  
-Parent: G111/G112/G120/G119  
-Status: implementation contract; no launch, score, candidate, or pointer claim
+Parent: G111/G112/G120-v2/G119  
+Status: implementation contract; G120 v1 is explicitly inadmissible; no
+launch, score, candidate, or pointer claim
 
 ## Structural decision
 
@@ -55,7 +56,8 @@ physical receipts.
 3. Recursively reopen every lineage node and admit only preserved stage/final
    nodes with distinct physical deploy and full-state resume checkpoints.
 4. Materialize or reopen one G112 partition for each admitted node.
-5. Invoke G120 by G112 receipt path plus external SHA only.
+5. Invoke `run_g120_parsed_stage_production_authority_v2` by G112 receipt path
+   plus external SHA only. Reject v1 receipts and schemas.
 
 The controller must be restartable after any stage. Each stage has an atomic
 state row keyed by physical G112 receipt SHA and G120 measurement identity.
@@ -64,9 +66,15 @@ the live pointer is rebound only to the conditional observation.
 
 ## Retention rule
 
-Before pose is measured, retain every stage satisfying:
+Before pose is measured, retain every stage satisfying the exact integer
+inequality:
 
-`100*d_seg_public_wire < live_target`.
+`100*k*T_den < T_num*N`,
+
+where `k` is the exact public-wire disagreement count,
+`N=600*384*512=117,964,800`, and `T_num/T_den` is the reduced rational parsed
+from the pointer's exact lexical decimal. Binary floating-point values are
+telemetry only.
 
 Rejecting equality is intentional because rate and pose contributions are
 nonnegative. This is the only pre-pose pruning rule. Do not prune by semantic
@@ -84,6 +92,9 @@ For every retained stage, preserve:
 - G112 pose initializer identity;
 - exact public plugin-tree SHA;
 - exact public-wire `d_seg`;
+- exact public-wire disagreement numerator `k` and denominator `N`;
+- exact target lexical decimal, reduced rational, and integer comparison
+  operands;
 - exact four-way semantic-floor archive winner and all alternatives;
 - source-float-to-public-wire regret or explicit unmeasured state;
 - G120 measurement receipt and pointer-independent cache identity;
@@ -91,6 +102,19 @@ For every retained stage, preserve:
 
 `g105_public_wire_best.json` may be emitted only as a deterministic scheduling
 hint into this retained set. It has no pruning or score authority.
+
+Every attempt receives one typed disposition:
+
+- `RETAIN_POST_G105_POSE`;
+- `DEFER_G115_WIRE_QAT`;
+- `PRUNE_EXACT_DISTORTION_OBSTRUCTION`;
+- `BLOCKED_SCOPED`.
+
+Wire-blocked plus float-state unmeasured/open must defer. Exact pruning requires
+the float state also to be exactly blocked or a physical terminal G115 QAT
+child to have been measured blocked. Deferred and blocked rows remain in the
+append-only attempt ledger and completion proof; only retained rows enter the
+G119 manifest.
 
 ## Resumability and storage
 
@@ -145,8 +169,7 @@ DAG:
 
 Equation:
 
-`K_prepose = {s : 100 D_seg(R_public(Q_G105(theta_s))) < T_live}`.
+`K_prepose = {s : 100 k_s T_den < T_num N}`.
 
 No smaller set is justified before observing
 `V_pose(s) = min_Y0|Y1 [sqrt(10 D_pose) + lambda R(Y0|Y1)]`.
-
