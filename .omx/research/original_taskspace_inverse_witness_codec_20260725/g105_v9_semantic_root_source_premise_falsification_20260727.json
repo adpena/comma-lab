@@ -1,0 +1,153 @@
+{
+  "schema": "tac.taskspace_g105_v9_semantic_root_source_premise_falsification.v1",
+  "status": "BLOCKED_NO_FRESH_SOURCE",
+  "research_only": true,
+  "score_claim": false,
+  "candidate_claim": false,
+  "pointer_mutation_allowed": false,
+  "ready_for_semantic_root_adapter": false,
+  "exact_blocker": "G105_FRESH_G46_SOURCE_BOUND_V9_V10_CHECKPOINT_OWED",
+  "gate_execution": {
+    "argv": [
+      "uv",
+      "run",
+      "python",
+      "-m",
+      "tac.witness_dsl.taskspace_g105_v9_semantic_root_source_gate_v1",
+      "--config",
+      ".omx/research/configs/taskspace_g105_v9_semantic_root_source_gate_20260727.json"
+    ],
+    "expected_exit_code": 2,
+    "observed_exit_code": 2,
+    "status": "BLOCKED_NO_FRESH_SOURCE",
+    "source_authority_sha256": "bfddba8c16d18c667efd574c38d95fdcfbad554db733142b15a1dc53cb8b068e",
+    "pair_population_binding_sha256": "6d16f297d10c6070176295acc0c76510f6d8ee4382b55138cfd90e352eb0e860",
+    "teacher_evidence_identity_sha256": "e4678d458e144b22615548913e4a9e34685bcf3f9906a7a0ce2c02baf6626ee7"
+  },
+  "landed_artifacts": {
+    "gate": {
+      "path": "src/tac/witness_dsl/taskspace_g105_v9_semantic_root_source_gate_v1.py",
+      "bytes": 34086,
+      "sha256": "9590f2a5028147561e8c77e380c78bafc2d21cebb8bd6ab0152e3e8b2bb12433"
+    },
+    "tests": {
+      "path": "src/tac/witness_dsl/tests/test_taskspace_g105_v9_semantic_root_source_gate_v1.py",
+      "bytes": 8254,
+      "sha256": "3a7b6d24b88ba65037543e6affcc8dfc19235df24dea3dbe5c512897d2eff353"
+    },
+    "config": {
+      "path": ".omx/research/configs/taskspace_g105_v9_semantic_root_source_gate_20260727.json",
+      "bytes": 5560,
+      "sha256": "f18fbf04d8bc300ce28bacd86f02e437d359fe0d28d42a2617d8a51ff2f49730"
+    }
+  },
+  "fresh_source_authority": {
+    "pair_count": 600,
+    "batch_size": 16,
+    "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+    "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "g46_target_labels_sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85",
+    "g46_upstream_source_closure_sha256": "9c588c725d66c6e840c157568fc5414c37f175348921c6353a64c6431a26cd99",
+    "teacher_evidence_encoder_only": true,
+    "teacher_evidence_candidate_payload_allowed": false
+  },
+  "historical_checkpoint_audit": [
+    {
+      "path": "experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z/levelset_witness_ema_BEST.npz",
+      "bytes": 458622,
+      "sha256": "6dd28a6e295d007ef0e53ae3e0e792a517a5708394a17d2185870e44920dedca",
+      "pair_count": 600,
+      "trainer_latent_rows": 1200,
+      "modulation_dim": 32,
+      "epoch": 650,
+      "fresh_init": false,
+      "git_sha": "unknown",
+      "upstream_snapshot_sha256": "unknown",
+      "semantic_root_y1_projection_sha256": "17256df1b314f76693b028e29f6e6e5cdb2d7b0a66be3c1b27c6ec20dfa72263",
+      "payload_reuse_allowed": false
+    },
+    {
+      "path": "experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_witness_ema_BEST.npz",
+      "bytes": 379776,
+      "sha256": "2599ad8b396af2af220a3bdbeee2ade92f194771ae6ef01a6faa15d39333484c",
+      "pair_count": 600,
+      "trainer_latent_rows": 1200,
+      "modulation_dim": 19,
+      "epoch": 150,
+      "fresh_init": false,
+      "git_sha": "unknown",
+      "upstream_snapshot_sha256": "unknown",
+      "semantic_root_y1_projection_sha256": "4e333d2e8331601d68b8f4dfa49cd6d2f4071c834df806e5d28dfefc68cbe6a1",
+      "payload_reuse_allowed": false
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/probe537_metal_fix2_20260719/resumed/levelset_witness_ema_BEST.npz",
+      "bytes": 58000,
+      "sha256": "339815f0546be29b4a24f81a47a14bb7b36db71eb195374d7199f6245f26eb3a",
+      "pair_count": 24,
+      "trainer_latent_rows": 48,
+      "modulation_dim": 32,
+      "epoch": 4,
+      "fresh_init": false,
+      "git_sha": "unknown",
+      "upstream_snapshot_sha256": "unknown",
+      "semantic_root_y1_projection_sha256": "e1bf9bcb32eb03e422687236d6b729b79d84ef1b892e4a2c0bcb08f317c138ce",
+      "payload_reuse_allowed": false
+    }
+  ],
+  "historical_mechanism_evidence_only": {
+    "g28_receipt": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g28_ep725_xcodec_full_n600_bridge_eval_20260726.json",
+      "bytes": 18197,
+      "sha256": "7930b14740189a5b1e02a6d1406ded975aecbcb8730a9da8c1fa18decd3509d0"
+    },
+    "archive_bytes": 81027,
+    "d_seg": 0.0035127170849591494,
+    "d_pose": 127.35955810546875,
+    "score": 36.09269518733842,
+    "promotion_eligible": false,
+    "historical_payload_reuse_allowed": false
+  },
+  "conditional_rate_context_only": {
+    "g54_receipt": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g54_batch16_lowdist_anchor_rate_budget_receipt_20260726.json",
+      "bytes": 3951,
+      "sha256": "943970f69e179d8a673dd4ae636b4fadc1b00aeb8ac0351d5fdc109a12e70ca4"
+    },
+    "strict_less_than_0_172_max_archive_bytes_at_g54_distortions": 187563,
+    "mechanism_size_subtraction_only_bytes": 106536,
+    "candidate_budget_claim": false
+  },
+  "learned_root_contract": {
+    "population_shared_counted_state": [
+      "in_proj",
+      "film",
+      "hidden.*",
+      "out_sdf",
+      "out_tex",
+      "palette"
+    ],
+    "trainer_latents": "code[2*pair+frame]",
+    "trainer_latent_rows": 1200,
+    "semantic_root_counted_y1_projection": "root_latent[p]=code[2*p+1]",
+    "semantic_root_counted_y1_rows": 600,
+    "frame0_latents": "encoder-only compute overhead; discard before candidate packing",
+    "exclusive_y0_owner": "one G94-V2 conditional Y0 owner",
+    "topology_factor_is_not_a_substitute_for_learned_rgb_state": true
+  },
+  "exact_architecture_mismatches": [
+    "No checkpoint on or after the G46 fresh-source boundary was discovered.",
+    "Existing full-n600 V9 checkpoints carry unknown git/upstream provenance and no physical FreSh-init marker.",
+    "The newest discovered checkpoint is n24, not n600.",
+    "The existing V10 receiver consumes scorer-plane tensors, not the V9 learned-generator plus Y1-latent program.",
+    "The current trainer upstream-snapshot helper returns unknown because upstream/.venv is a symlink; it must bind the exact G46 source-only closure before launch.",
+    "The historical V9 exporter counts both frame rows; the G105 Y1 root must pack only the exact odd-row projection and leave Y0 to one G94-V2 owner."
+  ],
+  "next_physical_producer_edge": [
+    "Close trainer provenance stamping against the exact G46 source-only upstream closure.",
+    "Launch a clean-tree, governed, fresh-init n600 V9 training run with SSD storage, atomic full-state resume, positive periodic checkpoint cadence, and preserved per-stage EMA plus optimizer sidecars.",
+    "Export quantized shared generator tensors plus only the 600 odd Y1 latent rows; record the projection SHA and discard even frame0 rows from candidate bytes.",
+    "Measure the fresh root through exact R on n600, then add scorer-native sparse/full-lattice costate repair and pose ownership.",
+    "Compose exactly one G94-V2 conditional Y0 owner and delegate selected-solution whole-object authority to taskspace_selected_solution_compiler.py."
+  ]
+}

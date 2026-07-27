@@ -1,0 +1,100 @@
+{
+  "schema": "tac.taskspace_g105_v9_semantic_root_source_gate.v1",
+  "research_only": true,
+  "score_claim": false,
+  "candidate_claim": false,
+  "pointer_mutation_allowed": false,
+  "source_authority": {
+    "g46_preflight_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_teacher_batch16_20260726/00_custody_storage_preflight.json",
+      "bytes": 4309,
+      "sha256": "8f2f7a056e79269000cf7c5bf6013de338cd66fdb8c14dec271606c1877664ce"
+    },
+    "g46_teacher_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_teacher_batch16_20260726/12_encoder_only_receipt.json",
+      "bytes": 488267,
+      "sha256": "556c6b20f12ae7f5c6b8a1a2d08c6d2c2e32e7831ab552938c7866f3256dfad1"
+    },
+    "g46_target_labels": {
+      "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_teacher_batch16_20260726/11_target_labels/target_labels_n600_or_bounded.u8",
+      "bytes": 117964800,
+      "sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85"
+    },
+    "source_video": {
+      "path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+      "bytes": 37545489,
+      "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    },
+    "segnet_weights": {
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "bytes": 38502892,
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    }
+  },
+  "implementation_authority": {
+    "trainer": {
+      "path": "/Users/adpena/Projects/pact/experiments/train_levelset_witness_realized_through_R_mlx.py",
+      "bytes": 1236992,
+      "sha256": "cb1ac057c76bba2dde8d8d55b21e4f584a1907de1f806fab904b17c694bb2695"
+    },
+    "levelset_generator": {
+      "path": "/Users/adpena/Projects/pact/src/tac/boundary_math/lever_b_levelset_generator.py",
+      "bytes": 57944,
+      "sha256": "b47c6f8f20e5dc32a3ef5dbfe7bed9032576f545c53f49950e4e3a6aa5be2a43"
+    },
+    "byte_close_exporter": {
+      "path": "/Users/adpena/Projects/pact/tools/levelset_byte_close_and_eval.py",
+      "bytes": 286018,
+      "sha256": "1cecaa3ee9873d1378eaeb66b04cee56b621bccabe3fcecc01f60d3a0e692ddc"
+    },
+    "cross_tensor_codec": {
+      "path": "/Users/adpena/Projects/pact/src/tac/boundary_math/witness_crosstensor_codec.py",
+      "bytes": 12526,
+      "sha256": "74b9ad353b068202509a863211c2d539ab93a4101b319eadb7e9dc5dc9633d7a"
+    },
+    "v10_receiver": {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/v10_production_receiver.py",
+      "bytes": 56692,
+      "sha256": "84d4ce09e8611a185c6aa53c073a90cc5b6970793222a52f66c1f2672842cd47"
+    },
+    "selected_solution_compiler": {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_selected_solution_compiler.py",
+      "bytes": 199135,
+      "sha256": "36fb4997fd16e30a965e5924c84efa2971e632fc256c2e31c54957b3c4810c91"
+    },
+    "public_layered_inflate": {
+      "path": "/Users/adpena/Projects/pact/submissions/robust_current/taskspace_layered_public/inflate.py",
+      "bytes": 24535,
+      "sha256": "434bfeb9548e8b4791307c5a0f9bd7a70beca449400ffb52e3742a9f7c3e865c"
+    },
+    "upstream_evaluator": {
+      "path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+      "bytes": 6005,
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "expected_provenance": {
+    "git_sha": "91b251e96ea3d57ace8962bd0681ed8fc30c3f95",
+    "git_dirty": false,
+    "upstream_snapshot_sha256": "9c588c725d66c6e840c157568fc5414c37f175348921c6353a64c6431a26cd99"
+  },
+  "candidate": null,
+  "historical_mechanism_checkpoints": [
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z/levelset_witness_ema_BEST.npz",
+      "bytes": 458622,
+      "sha256": "6dd28a6e295d007ef0e53ae3e0e792a517a5708394a17d2185870e44920dedca"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_witness_ema_BEST.npz",
+      "bytes": 379776,
+      "sha256": "2599ad8b396af2af220a3bdbeee2ade92f194771ae6ef01a6faa15d39333484c"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/probe537_metal_fix2_20260719/resumed/levelset_witness_ema_BEST.npz",
+      "bytes": 58000,
+      "sha256": "339815f0546be29b4a24f81a47a14bb7b36db71eb195374d7199f6245f26eb3a"
+    }
+  ],
+  "next_physical_producer_edge": "First close the trainer provenance mismatch: its current full-upstream snapshot helper returns unknown because upstream/.venv is a symlink, while G46 binds the exact source-only closure 9c588c725d66c6e840c157568fc5414c37f175348921c6353a64c6431a26cd99. Then launch experiments/train_levelset_witness_realized_through_R_mlx.py from a clean committed tree through the governed launcher on the exact n600 source video and frozen scorer bound above, with --fresh-init, --stage-checkpoints, positive --ckpt-every, SSD output, and atomic full-state resume plus preserved EMA stage checkpoints. Export the fresh EMA through tools/levelset_byte_close_and_eval.py using counted quantized shared generator tensors plus exactly the 600 odd Y1 rows root_latent[p]=code[2*p+1]; frame0 rows are encoder-only compute overhead and must be discarded before candidate packing so exactly one G94-V2 conditional Y0 owner remains. Do not reuse any historical checkpoint values. Then measure post-R n600 semantic debt, add scorer-native sparse/full-lattice costate repair and pose ownership, and compose the single G94-V2 Y0 owner before selected-solution compilation."
+}
