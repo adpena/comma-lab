@@ -1,0 +1,95 @@
+{
+  "archive": {
+    "archive_bytes": 291205400,
+    "archive_sha256": "e3d0581ff4a3f475057e77e530374dad444b640a049b058cd66b37563534773e",
+    "container_overhead_bytes": 108,
+    "members": [
+      {
+        "compress_size": 291205292,
+        "compress_type": 0,
+        "file_size": 291205292,
+        "name": "0.bin",
+        "sha256": "daf1e1db6314e8cdbf63347afa35899e9891e3068428d42dc5a2fca235bb5295"
+      }
+    ]
+  },
+  "evaluate": {
+    "argv": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "/Users/adpena/Projects/pact/upstream/evaluate.py",
+      "--submission-dir",
+      "/Volumes/VertigoDataTier/pact/r6cal_byteclose_eval_20260727T230213Z/full",
+      "--uncompressed-dir",
+      "/Users/adpena/Projects/pact/upstream/videos",
+      "--video-names-file",
+      "/Users/adpena/Projects/pact/upstream/public_test_video_names.txt",
+      "--report",
+      "/Volumes/VertigoDataTier/pact/r6cal_byteclose_eval_20260727T230213Z/full/report.txt",
+      "--device",
+      "cpu",
+      "--batch-size",
+      "16",
+      "--num-threads",
+      "4"
+    ],
+    "returncode": 0,
+    "stdout_tail": "=== Evaluation config ===\n  batch_size: 16\n  device: cpu\n  num_threads: 4\n  prefetch_queue_depth: 4\n  report: /Volumes/VertigoDataTier/pact/r6cal_byteclose_eval_20260727T230213Z/full/report.txt\n  seed: 1234\n  submission_dir: /Volumes/VertigoDataTier/pact/r6cal_byteclose_eval_20260727T230213Z/full\n  uncompressed_dir: /Users/adpena/Projects/pact/upstream/videos\n  video_names_file: /Users/adpena/Projects/pact/upstream/public_test_video_names.txt\nAVVideoDataset on rank 0 with 1 files.\nTensorVideoDataset on rank 0 with 1 files.\n=== Evaluation results over 600 samples ===\n  Average PoseNet Distortion: 0.01663316\n  Average SegNet Distortion: 0.00115997\n  Submission file size: 291,205,400 bytes\n  Original uncompressed size: 37,545,489 bytes\n  Compression Rate: 7.75606891\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 194.43\n\n\n0it [00:00, ?it/s]/Users/adpena/Projects/pact/upstream/frame_utils.py:232: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:219.)\n  frames = torch.from_numpy(mm)  # (N, H, W, C), shares mmap memory\n\n1it [00:14, 14.10s/it]\n2it [00:27, 13.50s/it]\n3it [00:40, 13.32s/it]\n4it [00:53, 13.38s/it]\n5it [01:07, 13.40s/it]\n6it [01:20, 13.24s/it]\n7it [01:33, 13.20s/it]\n8it [01:46, 13.25s/it]\n9it [01:59, 13.15s/it]\n10it [02:12, 13.07s/it]\n11it [02:25, 13.18s/it]\n12it [02:38, 13.13s/it]\n13it [02:51, 13.11s/it]\n14it [03:05, 13.12s/it]\n15it [03:18, 13.09s/it]\n16it [03:31, 13.04s/it]\n17it [03:44, 13.06s/it]\n18it [03:57, 13.05s/it]\n19it [04:09, 12.96s/it]\n20it [04:23, 13.02s/it]\n21it [04:36, 13.09s/it]\n22it [04:49, 13.14s/it]\n23it [05:02, 13.17s/it]\n24it [05:16, 13.34s/it]\n25it [05:30, 13.42s/it]\n26it [05:43, 13.49s/it]\n27it [05:57, 13.41s/it]\n28it [06:09, 13.28s/it]\n29it [06:22, 13.14s/it]\n30it [06:35, 13.05s/it]\n31it [06:48, 13.07s/it]\n32it [07:01, 13.04s/it]\n33it [07:14, 12.94s/it]\n34it [07:27, 12.92s/it]\n35it [07:40, 12.97s/it]\n36it [07:53, 12.93s/it]\n37it [08:05, 12.87s/it]\n38it [08:15, 11.73s/it]\n38it [08:15, 13.03s/it]\n",
+    "wall_seconds": 498.79997181892395
+  },
+  "evaluator_parsed": {
+    "compressed_size": 291205400,
+    "posenet_distortion": 0.01663316,
+    "sample_count": 600,
+    "segnet_distortion": 0.00115997,
+    "uncompressed_size": 37545489
+  },
+  "evaluator_report_text": "=== Evaluation config ===\n  batch_size: 16\n  device: cpu\n  num_threads: 4\n  prefetch_queue_depth: 4\n  report: /Volumes/VertigoDataTier/pact/r6cal_byteclose_eval_20260727T230213Z/full/report.txt\n  seed: 1234\n  submission_dir: /Volumes/VertigoDataTier/pact/r6cal_byteclose_eval_20260727T230213Z/full\n  uncompressed_dir: /Users/adpena/Projects/pact/upstream/videos\n  video_names_file: /Users/adpena/Projects/pact/upstream/public_test_video_names.txt\n=== Evaluation results over 600 samples ===\n  Average PoseNet Distortion: 0.01663316\n  Average SegNet Distortion: 0.00115997\n  Submission file size: 291,205,400 bytes\n  Original uncompressed size: 37,545,489 bytes\n  Compression Rate: 7.75606891\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 194.43\n",
+  "evidence_axis": "[macOS-CPU advisory - real evaluator, real bytes]",
+  "git_head": "7b7f803af257bbb2b751a876b9d8e0ac6e80dc5d",
+  "host": {
+    "machine": "arm64",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "inflate": {
+    "completed": true,
+    "numerator_values_verified": 707788800,
+    "pair_stages_preserved": 600,
+    "raw_bytes": 3662409600,
+    "raw_path": "/Volumes/VertigoDataTier/pact/r6cal_byteclose_eval_20260727T230213Z/full/inflated/0.raw",
+    "raw_sha256": "32a773a23a79c036ca39352b9ca9a048e20c089dc45beaa4c847689083641558",
+    "tree_sha256": "bc7e37b021dbaa228ca30d8a3dbb5496eb2e98a8a054fb9018527314c5ced14b",
+    "wall_seconds": 382.30781984329224
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "run_dir": "/Volumes/VertigoDataTier/pact/r6cal_byteclose_eval_20260727T230213Z",
+  "schema": "r6cal_byteclose_eval_receipt.v1",
+  "score": {
+    "pose_term_sqrt_10x_dpose": 0.407837712822147,
+    "rate": 7.756068911500926,
+    "rate_term_25x_rate": 193.90172278752317,
+    "score_recomputed_from_components": 194.42555750034532,
+    "seg_term_100x_dseg": 0.115997
+  },
+  "score_claim": false,
+  "source_records": {
+    "/Volumes/VertigoDataTier/pact/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/stage_checkpoints/02_scorers/scorer_measurement.json": {
+      "bytes": 247416,
+      "sha256": "83d69944458a01ea39190fcbeba7fed084fddd20b1fed370c8849bc45cea6fcc"
+    },
+    "/Volumes/VertigoDataTier/pact/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/stage_checkpoints/03_solve/exact_binary_solve.json": {
+      "bytes": 229689,
+      "sha256": "3d8a100b56eb3e55c5886282a6c08fb806baed48e57cf2bddde85ecadc965f29"
+    },
+    "/Volumes/VertigoDataTier/pact/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/stage_checkpoints/04_candidate/candidate.json": {
+      "bytes": 34301,
+      "sha256": "fafb2ce93eecb8fe762d47769dae701f87678c725b57d814d19bd958e6238548"
+    },
+    "/Volumes/VertigoDataTier/pact/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/stage_checkpoints/05_coder_race/coder_race.json": {
+      "bytes": 48801,
+      "sha256": "3b83548fc5418042ee1e2fa9a9e3ffc2adf7009a19641ef6bcecc5ec329244e4"
+    }
+  },
+  "uncompressed_bytes_measured": 37545489
+}
