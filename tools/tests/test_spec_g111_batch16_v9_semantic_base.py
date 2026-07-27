@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 
 import pytest
@@ -11,6 +13,7 @@ from tac.witness_dsl.spec_g111_batch16_v9_semantic_base import (
     TARGET_LEVER_NAME,
     Y1_RATE_ARBITRATION_SCHEMA,
     G111Batch16V9SemanticBaseError,
+    _find_green_dry_start_release,
     compile_g111_batch16_v9_semantic_base_launch_config,
     structural_semantic_rate_preflight,
 )
@@ -34,6 +37,77 @@ def test_g111_structural_semantic_rate_is_exact_and_not_a_score_claim() -> None:
     assert preflight["complete_archive_measured"] is False
     assert preflight["learned_entropy_predicted"] is False
     assert preflight["candidate_or_score_claim"] is False
+
+
+def test_g111_release_requires_same_typed_config_and_physical_target(
+    tmp_path,
+) -> None:
+    run = tmp_path / "run"
+    run.mkdir()
+    target_path = str((tmp_path / "g109.json").resolve())
+    target_sha = "1" * 64
+    typed_hash = "2" * 64
+    report = {
+        "gate": "full_config_dry_start",
+        "config": PROGRAM_NAME,
+        "typed_config_hash": typed_hash,
+        "num_pairs": 600,
+        "green": True,
+        "boot_ok": True,
+        "resume_round_trip_ok": True,
+        "peak_rss_gib": 24.0,
+        "sec_per_ep_marginal": 42.0,
+        "ts": "20260727T150000Z",
+    }
+    argv = [
+        "python",
+        "trainer.py",
+        "--training-target-capsule",
+        target_path,
+        "--training-target-capsule-sha256",
+        target_sha,
+        "--num-pairs",
+        "600",
+    ]
+    launch = {
+        "schema": "witness_launch_manifest.v1",
+        "config_family": PROGRAM_NAME,
+        "spec_id": PROGRAM_NAME,
+        "dsl_compile_hash": "3" * 64,
+        "resolved_launch_argv": argv,
+    }
+    report_path = run / "dry_start_report.json"
+    launch_path = run / "launch_manifest.json"
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    launch_path.write_text(json.dumps(launch), encoding="utf-8")
+    contract = {
+        "physical_receipt": {"path": target_path},
+        "external_receipt_sha256": target_sha,
+    }
+
+    release = _find_green_dry_start_release(
+        typed_config_hash=typed_hash,
+        target_contract=contract,
+        search_roots=(tmp_path,),
+    )
+    assert release is not None
+    assert release["report"]["sha256"] == hashlib.sha256(
+        report_path.read_bytes()
+    ).hexdigest()
+    assert release["launch_manifest"]["sha256"] == hashlib.sha256(
+        launch_path.read_bytes()
+    ).hexdigest()
+
+    report["typed_config_hash"] = "4" * 64
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    assert (
+        _find_green_dry_start_release(
+            typed_config_hash=typed_hash,
+            target_contract=contract,
+            search_roots=(tmp_path,),
+        )
+        is None
+    )
 
 
 def test_g111_real_production_capsule_compiles_cold_typed_producer() -> None:
@@ -89,12 +163,22 @@ def test_g111_real_production_capsule_compiles_cold_typed_producer() -> None:
     assert target["semantic_verdict_surface"] == "parsed_G105_public_wire_v1"
     assert target["semantic_checkpoint_selection_surface"] == "parsed_G105_public_wire_v1"
     assert target["legacy_arbitrary_scale_int8_selection_allowed"] is False
-    assert target["parsed_g105_wire_verdict_implemented"] is False
-    assert target["frontier_launch_blocker"] == (
-        "parsed_G105_wire_quantized_semantic_verdict_and_selection_not_wired"
+    assert target["parsed_g105_wire_verdict_implemented"] is True
+    assert target["external_exhaustive_stage_compiler"] == (
+        "tac.g121_retained_prepose.v2"
     )
+    assert target["selected_xip2_coder_archive_abi_closed"] is True
+    assert target["frontier_launch_blocker"] is None
     assert target["structural_semantic_rate_preflight"] == (structural_semantic_rate_preflight())
     assert target["candidate_payload_allowed"] is False
-    assert config.dsl_program_manifest["held"] is True
-    assert "G105" in config.dsl_program_manifest["hold_reason"]
+    if config.dsl_program_manifest["launch_blockers"]:
+        assert config.dsl_program_manifest["held"] is True
+        assert "dry-start" in config.dsl_program_manifest["hold_reason"]
+    else:
+        assert config.dsl_program_manifest["held"] is False
+        assert config.dsl_program_manifest["hold_reason"] is None
+        assert (
+            config.dsl_program_manifest["green_dry_start_release"]["boot_ok"]
+            is True
+        )
     assert config.dsl_program_manifest["pointer_moved"] is False

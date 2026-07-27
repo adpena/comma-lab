@@ -9,6 +9,9 @@ encoder-only evidence; only a later exact G105 packet may enter a candidate.
 
 from __future__ import annotations
 
+import hashlib
+import json
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +45,12 @@ TARGET_LEVER_NAME = "g111_physical_batch16_target_custody"
 TARGET_CONTRACT_SCHEMA = "tac.g111_batch16_v9_semantic_base_target_contract.v2"
 Y1_RATE_ARBITRATION_SCHEMA = "tac.g105_y1_outer_archive_rate_arbitration.v1"
 SOURCE_VIDEO_BYTES = 37_545_489
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_DRY_START_SEARCH_ROOTS = (
+    _REPO_ROOT / "experiments" / "results",
+    Path("/Volumes/VertigoDataTier/pact"),
+    Path("/Volumes/APDataStore/pact"),
+)
 
 
 class G111Batch16V9SemanticBaseError(RuntimeError):
@@ -128,6 +137,143 @@ def _require_sha256(value: object, label: str) -> str:
     return value
 
 
+def _open_bound_json(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    candidate = path.expanduser()
+    if candidate.is_symlink():
+        raise G111Batch16V9SemanticBaseError(
+            f"release artifact must not be a symlink: {candidate}"
+        )
+    resolved = candidate.resolve()
+    if not resolved.is_file():
+        raise G111Batch16V9SemanticBaseError(
+            f"release artifact is not a regular file: {resolved}"
+        )
+    before = resolved.stat()
+    payload = resolved.read_bytes()
+    after = resolved.stat()
+    if (
+        before.st_dev,
+        before.st_ino,
+        before.st_size,
+        before.st_mtime_ns,
+        before.st_ctime_ns,
+    ) != (
+        after.st_dev,
+        after.st_ino,
+        after.st_size,
+        after.st_mtime_ns,
+        after.st_ctime_ns,
+    ) or len(payload) != before.st_size:
+        raise G111Batch16V9SemanticBaseError(
+            f"release artifact changed during reopen: {resolved}"
+        )
+    try:
+        value = json.loads(payload)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise G111Batch16V9SemanticBaseError(
+            f"release artifact is not JSON: {resolved}"
+        ) from exc
+    if type(value) is not dict:
+        raise G111Batch16V9SemanticBaseError(
+            f"release artifact root is not an object: {resolved}"
+        )
+    return value, {
+        "path": str(resolved),
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def _argv_value(argv: object, flag: str) -> str | None:
+    if (
+        type(argv) is not list
+        or any(type(token) is not str for token in argv)
+        or argv.count(flag) != 1
+    ):
+        return None
+    index = argv.index(flag)
+    if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
+        return None
+    return argv[index + 1]
+
+
+def _find_green_dry_start_release(
+    *,
+    typed_config_hash: str,
+    target_contract: dict[str, Any],
+    search_roots: Sequence[Path] = _DRY_START_SEARCH_ROOTS,
+) -> dict[str, Any] | None:
+    """Re-derive launch release only from a physical same-config dry-start."""
+
+    expected_typed_hash = _require_sha256(
+        typed_config_hash,
+        "G111 typed config hash",
+    )
+    target_path = target_contract["physical_receipt"]["path"]
+    target_sha = target_contract["external_receipt_sha256"]
+    candidates: list[tuple[str, str, dict[str, Any]]] = []
+    for root in search_roots:
+        if not root.is_dir():
+            continue
+        for report_path in root.glob("*/dry_start_report.json"):
+            if report_path.is_symlink() or not report_path.is_file():
+                continue
+            launch_path = report_path.parent / "launch_manifest.json"
+            if launch_path.is_symlink() or not launch_path.is_file():
+                continue
+            try:
+                report, report_binding = _open_bound_json(report_path)
+                launch, launch_binding = _open_bound_json(launch_path)
+            except (OSError, G111Batch16V9SemanticBaseError):
+                continue
+            argv = launch.get("resolved_launch_argv") if type(launch) is dict else None
+            if (
+                report.get("gate") != "full_config_dry_start"
+                or report.get("config") != PROGRAM_NAME
+                or report.get("typed_config_hash") != expected_typed_hash
+                or report.get("num_pairs") != PRODUCTION_PAIR_COUNT
+                or report.get("green") is not True
+                or report.get("boot_ok") is not True
+                or report.get("resume_round_trip_ok") is not True
+                or type(report.get("ts")) is not str
+                or not report["ts"]
+                or launch.get("schema") != "witness_launch_manifest.v1"
+                or launch.get("config_family") != PROGRAM_NAME
+                or launch.get("spec_id") != PROGRAM_NAME
+                or _argv_value(argv, "--training-target-capsule")
+                != target_path
+                or _argv_value(argv, "--training-target-capsule-sha256")
+                != target_sha
+                or _argv_value(argv, "--num-pairs")
+                != str(PRODUCTION_PAIR_COUNT)
+            ):
+                continue
+            dsl_hash = launch.get("dsl_compile_hash")
+            try:
+                _require_sha256(dsl_hash, "G111 dry-start DSL compile hash")
+            except G111Batch16V9SemanticBaseError:
+                continue
+            receipt = {
+                "schema": "tac.g111_green_dry_start_release.v1",
+                "typed_config_hash": expected_typed_hash,
+                "dsl_compile_hash": dsl_hash,
+                "target_capsule_receipt_sha256": target_sha,
+                "report": report_binding,
+                "launch_manifest": launch_binding,
+                "boot_ok": True,
+                "resume_round_trip_ok": True,
+                "peak_rss_gib": report.get("peak_rss_gib"),
+                "sec_per_ep_marginal": report.get("sec_per_ep_marginal"),
+                "measured_at_utc": report["ts"],
+            }
+            candidates.append(
+                (report["ts"], str(report_path.resolve()), receipt)
+            )
+    if not candidates:
+        return None
+    return max(candidates, key=lambda row: (row[0], row[1]))[2]
+
+
 def _open_production_target(
     path: str | Path,
     *,
@@ -195,8 +341,15 @@ def _target_contract(
         "semantic_verdict_surface": "parsed_G105_public_wire_v1",
         "semantic_checkpoint_selection_surface": "parsed_G105_public_wire_v1",
         "legacy_arbitrary_scale_int8_selection_allowed": False,
-        "parsed_g105_wire_verdict_implemented": False,
-        "frontier_launch_blocker": "parsed_G105_wire_quantized_semantic_verdict_and_selection_not_wired",
+        "parsed_g105_wire_verdict_implemented": True,
+        "external_exhaustive_stage_compiler": (
+            "tac.g121_retained_prepose.v2"
+        ),
+        "post_g105_conditional_pose_compiler": (
+            "tac.post_g105_generated_y1_pose_refit_run.v1"
+        ),
+        "selected_xip2_coder_archive_abi_closed": True,
+        "frontier_launch_blocker": None,
         "structural_semantic_rate_preflight": structural_semantic_rate_preflight(),
         "self_orient": False,
         "mod_dim": 32,
@@ -341,10 +494,7 @@ def compile_g111_batch16_v9_semantic_base_launch_config(
                 "selection are wired, then governed storage/memory/receiver "
                 "readiness gates pass"
             ),
-            "hold_reason": (
-                "legacy trainer selection uses a different arbitrary-scale int8 "
-                "realization than the power-of-two G105 public wire"
-            ),
+            "hold_reason": "current typed config still owes a green governed dry-start",
             "candidate_claim": False,
             "score_claim": False,
             "pointer_moved": False,
@@ -376,6 +526,29 @@ def compile_g111_batch16_v9_semantic_base_launch_config(
     # this manifest against the post-custody program, so its name belongs in the
     # final expected set after the pre-custody parent+delta equality above passed.
     manifest["expected_active_levers"] = [lever.name for lever in typed.to_program().levers]
+    release = _find_green_dry_start_release(
+        typed_config_hash=manifest["typed_config_hash"],
+        target_contract=manifest["training_target_contract"],
+    )
+    blockers: list[dict[str, str]] = []
+    if release is None:
+        blockers.append(
+            {
+                "id": "G111_CURRENT_TYPED_DRY_START_NOT_GREEN",
+                "detail": (
+                    "no physical GREEN full_config_dry_start receipt matches "
+                    "this exact G111 typed_config_hash and G109 target; run the "
+                    "governed launcher with --dry-start before real spawn"
+                ),
+            }
+        )
+    else:
+        manifest["green_dry_start_release"] = release
+    manifest["launch_blockers"] = blockers
+    manifest["held"] = bool(blockers)
+    manifest["hold_reason"] = (
+        blockers[0]["detail"] if blockers else None
+    )
 
     from tac.witness_autoconfig import CrucibleV7LaunchConfig
 
