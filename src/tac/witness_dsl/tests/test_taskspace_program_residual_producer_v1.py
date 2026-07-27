@@ -17,14 +17,12 @@ from tac.optimization.uint8_lattice_feasibility import (
     realize_factor2_uint8_scorer_plane,
 )
 from tac.witness_control.taskspace_codec_adversarial_gate_v2 import (
+    G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED,
     _validate_program_producer_config,
 )
 from tac.witness_dsl.taskspace_program_residual_producer_v1 import (
     CONFIG_SCHEMA,
     EXAMPLE_CONFIG_SCHEMA,
-    MISSING_PRIMARY_LAYERS,
-    PRIMARY_CODEC_BLOCKERS,
-    PRIMARY_CODEC_STATUS,
     PRODUCER_ROLE,
     ProgramResidualProducerError,
     build_counted_outer_archive_bytes,
@@ -74,20 +72,6 @@ def _write(path: Path, payload: bytes) -> dict[str, object]:
         "path": str(path.resolve()),
         "bytes": len(payload),
         "sha256": _sha(payload),
-    }
-
-
-def _primary_codec() -> dict[str, object]:
-    return {
-        "status": PRIMARY_CODEC_STATUS,
-        "g49_role": PRODUCER_ROLE,
-        "closed_g49_factor_vocabulary": [
-            "SHEARLET_BOUNDARY_TRANSPORT_Q4",
-            "COMPACT_LATENT_QUOTIENT_PLUGIN",
-        ],
-        "missing_required_layers": list(MISSING_PRIMARY_LAYERS),
-        "canonical_g17_ontology_bound": True,
-        "candidate_ready": False,
     }
 
 
@@ -302,7 +286,6 @@ def _config_fixture(
         "learned_decoder_sources": learned_rows,
         "campaign_seal_receipt": campaign,
         "factor_operands": list(factor_operand_inventory(program)),
-        "primary_program_codec": _primary_codec(),
         "outer_archive_members": {
             "semantic_member_name": "semantic/program.zip",
             "program_member_name": "residual/program.tspp",
@@ -390,8 +373,7 @@ def test_factor_inventory_separates_free_algorithm_from_both_counted_operands(
     tmp_path: Path,
 ) -> None:
     fixture = _config_fixture(tmp_path, include_learned=True)
-    config = load_config(fixture.config_path)
-    rows = config.factor_operands
+    rows = factor_operand_inventory(fixture.program)
     assert [row["role"] for row in rows] == [
         "ANALYTIC_RESIDUAL",
         "LEARNED_IRREDUCIBLE_QUOTIENT",
@@ -403,6 +385,8 @@ def test_factor_inventory_separates_free_algorithm_from_both_counted_operands(
     assert all(row["generic_algorithm_byte_home"] == "GENERIC_DECODER_CODE_FREE" for row in rows)
     assert all(row["operand_payload_counted"] is True for row in rows)
     assert all(str(row["operand_lineage_class"]).startswith("VIDEO_DERIVED_") for row in rows)
+    with pytest.raises(ProgramResidualProducerError, match="LEARNED_QUOTIENT_G17_PLACEMENT_OWED"):
+        load_config(fixture.config_path)
 
 
 def test_descriptor_stable_reads_and_atomic_write_once_refuse_alias_or_drift(
@@ -472,7 +456,7 @@ def test_outer_archive_is_exact_two_member_partition_and_names_fail_closed(
         load_config(fixture.config_path)
 
 
-def test_g59_accepts_exact_schema_custody_then_refuses_primary_codec(
+def test_g59_accepts_exact_g63_schema_custody_without_owning_g17_state(
     tmp_path: Path,
 ) -> None:
     fixture = _config_fixture(tmp_path)
@@ -483,9 +467,9 @@ def test_g59_accepts_exact_schema_custody_then_refuses_primary_codec(
             identity.to_mapping(),
             evidence,
         )
-        == PRIMARY_CODEC_BLOCKERS
+        == ()
     )
-    assert _validate_program_producer_config(identity.to_mapping(), evidence) == list(PRIMARY_CODEC_BLOCKERS)
+    assert _validate_program_producer_config(identity.to_mapping(), evidence) == []
 
     malformed = json.loads(fixture.config_path.read_text(encoding="utf-8"))
     malformed["factor_operands"][0]["operand_payload_counted"] = False
@@ -506,13 +490,12 @@ def test_g59_accepts_exact_schema_custody_then_refuses_primary_codec(
     assert "identity drifted" in drift_refusals[0]
 
 
-def test_primary_blockers_name_g17_vertical_debts_not_a_duplicate_schema() -> None:
-    assert PRIMARY_CODEC_STATUS == "OWED_G17_VERTICAL_LINKER"
-    assert PRIMARY_CODEC_BLOCKERS == (
-        "G17_PRIMARY_ARCHIVE_PRODUCER_OWED",
-        "G17_PUBLIC_RECEIVER_OPERATION_REGISTRY_OWED",
-    )
-    assert all("VOCABULARY_V2" not in blocker for blocker in PRIMARY_CODEC_BLOCKERS)
+def test_g17_terminal_link_blocker_is_not_owned_by_the_g63_config() -> None:
+    assert G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED not in {
+        CONFIG_SCHEMA,
+        EXAMPLE_CONFIG_SCHEMA,
+        PRODUCER_ROLE,
+    }
 
 
 @dataclass(frozen=True, slots=True)

@@ -19,23 +19,6 @@
   "learned_decoder_sources": [],
   "campaign_seal_receipt": null,
   "factor_operands": [],
-  "primary_program_codec": {
-    "status": "OWED_G17_VERTICAL_LINKER",
-    "g49_role": "G49_TERMINAL_RESIDUAL_TRANSPORT_V1",
-    "closed_g49_factor_vocabulary": [
-      "SHEARLET_BOUNDARY_TRANSPORT_Q4",
-      "COMPACT_LATENT_QUOTIENT_PLUGIN"
-    ],
-    "missing_required_layers": [
-      "SHARED_TOPOLOGY_WORLDSHEET",
-      "TEMPORAL_TRANSITION_AND_ISLAND_BIRTH_DEATH",
-      "CONDITIONAL_Y0_GIVEN_DECODED_Y1_POSE_ENHANCEMENT",
-      "ENTROPY_CONTEXTS",
-      "JOINT_PHYSICAL_CODING_GROUPS"
-    ],
-    "canonical_g17_ontology_bound": true,
-    "candidate_ready": false
-  },
   "outer_archive_members": {
     "semantic_member_name": "semantic/program.zip",
     "program_member_name": "residual/program.tspp"

@@ -18,8 +18,10 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from tac.admission_guard import assert_governed_admission  # noqa: E402
+from tac.witness_control.taskspace_codec_adversarial_gate_v2 import (  # noqa: E402
+    G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED,
+)
 from tac.witness_dsl.taskspace_program_residual_producer_v1 import (  # noqa: E402
-    PRIMARY_CODEC_BLOCKERS,
     ProgramResidualProducerError,
     canonical_json,
     load_config,
@@ -79,7 +81,9 @@ def main(argv: list[str] | None = None) -> int:
             "candidate_admission": False,
             "score_claim": False,
             "promotion_eligible": False,
-            "expected_terminal_blockers": list(PRIMARY_CODEC_BLOCKERS),
+            "expected_terminal_blockers": [
+                G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED
+            ],
         }
         publish_write_once(
             config.output_paths["output_root"] / "launch_receipt.json",

@@ -114,6 +114,11 @@ def _admitted_pre_encode(
         "_validate_program_producer_config",
         lambda *_args, **_kwargs: [],
     )
+    monkeypatch.setattr(
+        gate,
+        "_validate_g17_terminal_linkage",
+        lambda *_args, **_kwargs: [],
+    )
     output = tmp_path / f"{campaign_id}.pre_encode.json"
     receipt = gate.admit_pre_encode(
         campaign_seal_path=seal,
@@ -637,6 +642,12 @@ def test_analytic_g58_still_refuses_until_real_program_runner_config_exists(
     )
     assert receipt["status"] == "REFUSE"
     assert any(refusal.startswith("PROGRAM_PRODUCER_CONFIG_REFUSED:") for refusal in receipt["refusals"])
+
+
+def test_g17_terminal_linkage_blocker_is_canonical_and_separate_from_g63() -> None:
+    assert gate._validate_g17_terminal_linkage(
+        {"strict_production_evidence": {"analytic_only": True}}
+    ) == [gate.G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED]
 
 
 def test_research_only_public_receipts_cannot_mint_promotion_authority(

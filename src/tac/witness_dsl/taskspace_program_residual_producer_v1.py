@@ -22,11 +22,10 @@ The executable part here is real and narrow:
 * publish the G58 terminal/outer proof artifacts; and
 * feed those exact artifacts to G59.
 
-G59 must still refuse candidate admission with
-``G17_PRIMARY_ARCHIVE_PRODUCER_OWED`` and
-``G17_PUBLIC_RECEIVER_OPERATION_REGISTRY_OWED``.  That refusal is the truthful
-output of the current V1 contract, not a missing implementation hidden behind
-a success flag.
+G59 must still refuse candidate admission with the G17-owned
+``G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED``. That refusal is the
+truthful output of the current V1 contract, not G63-owned primary-codec state
+or a missing implementation hidden behind a success flag.
 """
 
 from __future__ import annotations
@@ -96,7 +95,6 @@ EXAMPLE_CONFIG_SCHEMA: Final = "tac.taskspace_program_residual_producer_config_e
 STAGE_RECEIPT_SCHEMA: Final = "tac.taskspace_program_residual_stage_checkpoint.v1"
 RUN_RECEIPT_SCHEMA: Final = "tac.taskspace_program_residual_producer_run.v1"
 PRODUCER_ROLE: Final = "G49_TERMINAL_RESIDUAL_TRANSPORT_V1"
-PRIMARY_CODEC_STATUS: Final = "OWED_G17_VERTICAL_LINKER"
 PROGRAM_RESIDUAL_LAYERED: Final = "PROGRAM_RESIDUAL_LAYERED"
 
 PRODUCTION_PAIR_COUNT: Final = 600
@@ -104,17 +102,6 @@ PRODUCTION_PAIRS_PER_STAGE: Final = 120
 PRODUCTION_STAGE_COUNT: Final = 5
 SCORER_BATCH_SIZE: Final = 16
 
-PRIMARY_CODEC_BLOCKERS: Final = (
-    "G17_PRIMARY_ARCHIVE_PRODUCER_OWED",
-    "G17_PUBLIC_RECEIVER_OPERATION_REGISTRY_OWED",
-)
-MISSING_PRIMARY_LAYERS: Final = (
-    "SHARED_TOPOLOGY_WORLDSHEET",
-    "TEMPORAL_TRANSITION_AND_ISLAND_BIRTH_DEATH",
-    "CONDITIONAL_Y0_GIVEN_DECODED_Y1_POSE_ENHANCEMENT",
-    "ENTROPY_CONTEXTS",
-    "JOINT_PHYSICAL_CODING_GROUPS",
-)
 CLOSED_G49_FACTOR_VOCABULARY: Final = (
     "SHEARLET_BOUNDARY_TRANSPORT_Q4",
     "COMPACT_LATENT_QUOTIENT_PLUGIN",
@@ -168,7 +155,6 @@ _TOP_LEVEL_FIELDS: Final = frozenset(
         "learned_decoder_sources",
         "campaign_seal_receipt",
         "factor_operands",
-        "primary_program_codec",
         "outer_archive_members",
         "output_paths",
         "required_free_bytes",
@@ -202,16 +188,6 @@ _TRUTH_FIELDS: Final = frozenset(
         "source_planes_embedded",
         "generic_algorithm_code_free",
         "all_video_derived_operands_counted",
-    }
-)
-_PRIMARY_CODEC_FIELDS: Final = frozenset(
-    {
-        "status",
-        "g49_role",
-        "closed_g49_factor_vocabulary",
-        "missing_required_layers",
-        "canonical_g17_ontology_bound",
-        "candidate_ready",
     }
 )
 _FACTOR_FIELDS: Final = frozenset(
@@ -457,19 +433,6 @@ class ProgramResidualProducerConfigV1:
     test_only_small_fixture: bool
 
 
-def _validate_primary_codec(value: object) -> None:
-    row = _require_exact_mapping(value, _PRIMARY_CODEC_FIELDS, "primary_program_codec")
-    if row != {
-        "status": PRIMARY_CODEC_STATUS,
-        "g49_role": PRODUCER_ROLE,
-        "closed_g49_factor_vocabulary": list(CLOSED_G49_FACTOR_VOCABULARY),
-        "missing_required_layers": list(MISSING_PRIMARY_LAYERS),
-        "canonical_g17_ontology_bound": True,
-        "candidate_ready": False,
-    }:
-        raise ProgramResidualProducerError("G49 V1 must remain terminal residual transport with primary codec owed")
-
-
 def _validate_truth(value: object) -> None:
     row = _require_exact_mapping(value, _TRUTH_FIELDS, "truth")
     if row != {
@@ -565,7 +528,6 @@ def _parse_execution_config(
         raise ProgramResidualProducerError("production must be exact n600/five-by-120/batch16")
     if raw["scorer_batch_size"] != SCORER_BATCH_SIZE:
         raise ProgramResidualProducerError("selected-preimage target geometry must remain batch16")
-    _validate_primary_codec(raw["primary_program_codec"])
     _validate_truth(raw["truth"])
 
     program_packet, packet_payload = (
@@ -666,6 +628,11 @@ def _parse_execution_config(
     }
     if seen_learned != learned_factor_ids:
         raise ProgramResidualProducerError("learned decoder sources do not cover exact learned factors")
+    if learned_factor_ids:
+        raise ProgramResidualProducerError(
+            "LEARNED_QUOTIENT_G17_PLACEMENT_OWED: learned decoder source/runtime "
+            "has no canonical generic-versus-video-derived placement proof"
+        )
 
     configured_factors = raw["factor_operands"]
     if type(configured_factors) is not list:
@@ -1358,6 +1325,7 @@ def run_structural_producer(
 
     # Local import avoids a module cycle: G59 imports this module's verifier.
     from tac.witness_control.taskspace_codec_adversarial_gate_v2 import (
+        G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED,
         admit_pre_encode,
     )
 
@@ -1370,11 +1338,13 @@ def run_structural_producer(
         g58_outer_proof_path=proof_identity.path,
         asserted_representation=PROGRAM_RESIDUAL_LAYERED,
     )
-    if g59.get("status") != "REFUSE" or not set(PRIMARY_CODEC_BLOCKERS).issubset(set(g59.get("refusals", ()))):
-        raise ProgramResidualProducerError("G49-only producer must end at named primary-codec G59 blockers")
+    if g59.get("status") != "REFUSE" or g59.get("refusals") != [
+        G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED
+    ]:
+        raise ProgramResidualProducerError("G49-only producer must end at the canonical G17 terminal-link blocker")
     body = {
         "schema": RUN_RECEIPT_SCHEMA,
-        "status": "G58_RESIDUAL_TRANSPORT_CLOSED_G59_PRIMARY_CODEC_REFUSED",
+        "status": "G58_RESIDUAL_TRANSPORT_CLOSED_G59_G17_TERMINAL_LINK_REFUSED",
         "run_id": config.run_id,
         "campaign_id": config.campaign_id,
         "config": config.file_identity.to_mapping(),
@@ -1394,7 +1364,7 @@ def run_structural_producer(
         "score_claim": False,
         "evaluation_claim": False,
         "promotion_eligible": False,
-        "blocking_conditions": list(PRIMARY_CODEC_BLOCKERS),
+        "blocking_conditions": [G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED],
     }
     receipt = {
         **body,
@@ -1499,19 +1469,16 @@ def validate_program_residual_producer_config_for_g59(
             or _lexical_absolute(str(row.get("path", ""))) != config.output_paths[output_key]
         ):
             raise ProgramResidualProducerError(f"G58 {evidence_key} path differs from bound producer output")
-    # Schema and source custody are accepted. Candidate admission remains
-    # impossible until the existing G17 ontology has an executable archive
-    # producer and public receiver operation registry.
-    return PRIMARY_CODEC_BLOCKERS
+    # G63 owns only residual-transport schema and custody. G17 owns all
+    # selected-solution placement, terminal-envelope, receiver, and authority
+    # admission state.
+    return ()
 
 
 __all__ = [
     "CLOSED_G49_FACTOR_VOCABULARY",
     "CONFIG_SCHEMA",
     "EXAMPLE_CONFIG_SCHEMA",
-    "MISSING_PRIMARY_LAYERS",
-    "PRIMARY_CODEC_BLOCKERS",
-    "PRIMARY_CODEC_STATUS",
     "PRODUCER_ROLE",
     "ProgramResidualProducerConfigV1",
     "ProgramResidualProducerError",

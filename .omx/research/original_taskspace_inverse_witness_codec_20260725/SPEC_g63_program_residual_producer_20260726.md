@@ -23,11 +23,11 @@ atom, learned latent, and learned parameter is counted in the G49 packet under
 `COUNTED_ANALYTIC_OPERAND` or `COUNTED_LEARNED_OPERAND`. Analytic does not mean
 free: only the generic analytic rasterizer is free.
 
-## Primary-codec boundary
+## G17 ownership boundary
 
-The following primary layers remain unexpressible in G49 V1, but already have
-canonical ownership and scientific-role types in the G17 selected-solution
-compiler:
+G49 V1 does not express shared topology/worldsheet state, temporal transition,
+conditional pose fiber, shared entropy context, or joint physical coding
+groups. Those are already canonical G17 selected-solution concerns:
 
 1. shared topology/worldsheet state;
 2. temporal transitions and island birth/death;
@@ -35,30 +35,23 @@ compiler:
 4. entropy contexts;
 5. joint physical coding groups.
 
-Therefore every V1 config carries:
+G63 therefore carries no primary-codec status, role map, or blocker list. It
+validates only the residual-transport schema and custody join. G59 owns the
+interim refusal:
 
 ```text
-primary_program_codec.status = OWED_G17_VERTICAL_LINKER
-primary_program_codec.candidate_ready = false
-```
-
-G59 accepts and recursively validates the producer **schema/custody join**, but
-must return both exact candidate blockers:
-
-```text
-G17_PRIMARY_ARCHIVE_PRODUCER_OWED
-G17_PUBLIC_RECEIVER_OPERATION_REGISTRY_OWED
+G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED
 ```
 
 A syntactically valid G49-only config never obtains `candidate_admission=true`.
 Malformed, mutated, cross-campaign, source-drifted, or G58-mismatched configs
 refuse earlier as `PROGRAM_PRODUCER_CONFIG_REFUSED:<reason>`.
 
-This is deliberately not a request for a V2 schema. The canonical
-`taskspace_selected_solution_compiler.py` already owns topology, connection,
-gauge, pose-fiber, quotient, entropy-context, and many-to-many physical-group
-semantics. The missing product is the executable vertical linker from selected
-state into those owners/groups and then through the public receiver.
+This is deliberately not a request for a V2 schema or a second archive builder.
+The canonical `taskspace_selected_solution_compiler.py` owns placement and
+archive lifecycle, while `taskspace_g17_production_envelope.py` already owns
+the P→G→A→E archive builder. The missing product is the G49 terminal-residual
+placement/linkage into that archive plus standalone n600 receiver custody.
 
 ## Config contract
 
@@ -73,7 +66,8 @@ Production is exactly:
 - exact semantic compile receipt, target-custody receipt, G51 auxiliary
   aggregate, compiler source, generic V10 source, and G59 campaign seal;
 - an exact factor inventory derived from G49 parse-back;
-- exact learned-decoder source rows for every learned section and no others;
+- no learned section until its decoder source/runtime has canonical G17
+  generic-versus-video-derived placement proof;
 - one output root on the SSD waterfall;
 - two outer ZIP members only: semantic archive plus G49 packet.
 
@@ -124,17 +118,16 @@ Executable now:
 - strict config and source-lineage reopen;
 - analytic versus learned counted operand partition;
 - analytic-only G49 runtime construction;
-- optional learned runtime only when an exact callable contract/source is
-  supplied programmatically;
 - G58 identity, per-stage chain, terminal receipt, deterministic outer ZIP, and
   outer proof;
-- exact G59 schema/custody validation and named primary-codec refusal.
+- exact G59 schema/custody validation and G17-owned terminal-link refusal.
 
 Still structural blockers:
 
 - no fresh n600 G49 factor packet is currently under custody;
-- no executable G17 primary archive producer;
-- no public G17 receiver operation registry;
+- no G49-to-G17 terminal/placement linkage;
+- no standalone n600 G17 receiver custody;
+- learned-quotient decoder source/runtime placement remains unproved;
 - no generic production learned-quotient runtime registry for learned packets;
 - no public receiver grammar for the primary codec;
 - no sealed contest authority emitter;

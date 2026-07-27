@@ -53,6 +53,9 @@ INTEGRATION_SCHEMA: Final = "tac.taskspace_codec_integration_receipt.v2"
 BLOCKER_SCHEMA: Final = "tac.taskspace_codec_integration_blocker.v2"
 PUBLIC_AUTH_SCHEMA: Final = "taskspace_layered_public_auth_receipt.v1"
 STRICT_PUBLIC_BUNDLE_SCHEMA: Final = "tac.taskspace_codec_strict_public_auth_bundle.v2"
+G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED: Final = (
+    "G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED"
+)
 
 LIVE: Final = "LIVE"
 RETROSPECTIVE_ONLY: Final = "RETROSPECTIVE_ONLY"
@@ -549,7 +552,7 @@ def _validate_program_producer_config(
     config_identity: Mapping[str, Any] | None,
     g58_evidence: Mapping[str, Any],
 ) -> list[str]:
-    """Reopen the typed residual producer and preserve primary-codec blockers."""
+    """Reopen only the typed residual-producer schema and custody."""
 
     try:
         return list(
@@ -560,6 +563,14 @@ def _validate_program_producer_config(
         )
     except ProgramResidualProducerError as exc:
         return [f"PROGRAM_PRODUCER_CONFIG_REFUSED:{exc}"]
+
+
+def _validate_g17_terminal_linkage(
+    _g58_evidence: Mapping[str, Any],
+) -> list[str]:
+    """Refuse until G49 is placed in the canonical G17 terminal envelope."""
+
+    return [G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED]
 
 
 def admit_pre_encode(
@@ -603,12 +614,13 @@ def admit_pre_encode(
                 )
                 body["evidence"] = evidence
                 refusals.extend(g58_refusals)
-                refusals.extend(
-                    _validate_program_producer_config(
-                        body.get("producer_config"),
-                        evidence,
-                    )
+                config_refusals = _validate_program_producer_config(
+                    body.get("producer_config"),
+                    evidence,
                 )
+                refusals.extend(config_refusals)
+                if not g58_refusals and not config_refusals:
+                    refusals.extend(_validate_g17_terminal_linkage(evidence))
             except AdversarialGateError as exc:
                 refusals.append(f"G58_EVIDENCE_NOT_REOPENABLE:{exc}")
     else:
@@ -1117,6 +1129,11 @@ def require_live_admission_receipt(
         )
         if config_blockers:
             raise AdversarialGateError(config_blockers[0])
+        linkage_blockers = _validate_g17_terminal_linkage(
+            pre_encode.get("evidence", {})
+        )
+        if linkage_blockers:
+            raise AdversarialGateError(linkage_blockers[0])
     else:
         raise AdversarialGateError("DIRECT_CONTROL_PRODUCTION_ADAPTER_NOT_SUPPLIED")
     return receipt
