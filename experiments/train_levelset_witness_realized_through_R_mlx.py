@@ -11350,8 +11350,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             stage=str(causal_stage or stage_tag or "checkpoint_unspecified_stage"),
             outcome_values=None,
             checkpoint_path=out_dir / _causal_resume_name,
-            weights_stepped=bool(_live.get("stepped", True)),
-            accepted_fraction=float(_live.get("frac", 1.0)),
+            # The cold root is physically written before any optimizer update.
+            # Keep the general liveness default "alive" for first-epoch telemetry,
+            # but never mislabel the ancestry root as having stepped weights.
+            weights_stepped=(
+                False
+                if causal_boundary_kind == "cold_root"
+                else bool(_live.get("stepped", True))
+            ),
+            accepted_fraction=(
+                1.0
+                if causal_boundary_kind == "cold_root"
+                else float(_live.get("frac", 1.0))
+            ),
         )
         if _component_wallclock_on:
             _da_checkpoint_clock.add_ns(
@@ -12748,6 +12759,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         write=lambda _p: _bc_write(_birth_completion),
         restore=lambda _p, cfg: _bc_restore(_birth_completion, cfg)))
 
+    # ── (C5+C6 confound fix 2026-07-05) RUN-LEVEL LIVENESS + typed confound alarms ──────────────────
+    # The checkpoint causal-boundary row consumes this state too, so its deterministic
+    # pre-epoch default is part of the complete cold root.  Keep it before the fresh
+    # cold-root call; the direct-load ordering diagnostic plus the precise _live
+    # dominance regression reject a repeat of the physical v6 failure.
+    _live: dict[str, Any] = {"ep_acc": 0, "ep_tot": 0, "frac": 1.0, "stepped": True,
+                            "acc": 0, "skip": 0, "ema_updates": 0}
+
     # A complete fresh-producer ancestry must terminate in a PHYSICAL full-state
     # node before the first optimizer step.  This checkpoint belongs HERE, after
     # every loop-state value captured by _do_checkpoint has been initialized and
@@ -12844,16 +12863,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _sg_state: dict[str, Any] = {"lr_scale": 1.0, "snap": None, "snap_epoch": None,
                                  "ep_spikes": 0, "ep_batches": 0, "exhausted_warned": False}
 
-    # ── (C5+C6 confound fix 2026-07-05) RUN-LEVEL LIVENESS + typed confound alarms ──────────────────
     # The #1 self-protect (operator "meta confounds"): stamp a LIVENESS signal (accepted-batch
     # fraction) onto EVERY verdict / loss_terms / closed_loop / eik_stabilizer row so no reader or
     # controller can mistake a FROZEN (all-skip) run for a converging one. `ep_acc`/`ep_tot` are the
     # RUNNING counters for the CURRENT epoch (reset at epoch top); `frac`/`stepped`/`acc`/`skip` snapshot
     # the LAST COMPLETED epoch (what epoch-top rows read). All default to "alive" so a fresh run's first
     # rows are not spuriously flagged.
-    _live: dict[str, Any] = {"ep_acc": 0, "ep_tot": 0, "frac": 1.0, "stepped": True,
-                            "acc": 0, "skip": 0, "ema_updates": 0}
-
     def _live_running_frac(pending_accept: "bool | None" = None) -> float:
         """Accepted-batch fraction SO FAR this epoch (for mid-epoch loss_terms rows).
         Thin closure over the module-level (unit-tested) ``_running_accepted_frac``: folds

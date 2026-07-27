@@ -32,6 +32,7 @@ def test_fresh_cold_root_follows_every_captured_loop_state_and_precedes_training
         '_resume_registry.register("tau_advance"',
         '_resume_registry.register("evt_curriculum"',
         '_resume_registry.register("birth_completion"',
+        '_live: dict[str, Any] = {"ep_acc": 0',
     )
     for marker in required_predecessors:
         assert source.index(marker) < cold_root, marker
@@ -40,3 +41,126 @@ def test_fresh_cold_root_follows_every_captured_loop_state_and_precedes_training
         "for ep in range(start_epoch, args.epochs + 1):"
     )
     assert source.count('stage_tag="stageColdRoot"') == 1
+
+
+def test_direct_checkpoint_closure_loads_have_prior_textual_bindings() -> None:
+    """Diagnostic for direct loads, not a transitive definite-assignment proof."""
+
+    source = TRAINER.read_text()
+    tree = ast.parse(source)
+    run_train = next(
+        item
+        for item in tree.body
+        if isinstance(item, ast.FunctionDef) and item.name == "run_train"
+    )
+    checkpoint = next(
+        item
+        for item in run_train.body
+        if isinstance(item, ast.FunctionDef) and item.name == "_do_checkpoint"
+    )
+    cold_root_lines = [
+        node.lineno
+        for node in ast.walk(run_train)
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name)
+            and target.id == "_cold_root_checkpoint"
+            for target in node.targets
+        )
+    ]
+    assert len(cold_root_lines) == 1
+    cold_root_line = cold_root_lines[0]
+
+    first_outer_binding: dict[str, int] = {}
+
+    def record(name: str, line: int) -> None:
+        first_outer_binding[name] = min(first_outer_binding.get(name, line), line)
+
+    def visit_outer(node: ast.AST) -> None:
+        if isinstance(
+            node,
+            (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda),
+        ):
+            if hasattr(node, "name"):
+                record(node.name, node.lineno)
+            return
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            for alias in node.names:
+                record(alias.asname or alias.name.split(".", maxsplit=1)[0], node.lineno)
+            return
+        if isinstance(node, ast.Name) and isinstance(
+            node.ctx, (ast.Store, ast.Param)
+        ):
+            record(node.id, node.lineno)
+        for child in ast.iter_child_nodes(node):
+            visit_outer(child)
+
+    for statement in run_train.body:
+        visit_outer(statement)
+    for argument in (
+        *run_train.args.posonlyargs,
+        *run_train.args.args,
+        *run_train.args.kwonlyargs,
+    ):
+        record(argument.arg, run_train.lineno)
+    if run_train.args.vararg is not None:
+        record(run_train.args.vararg.arg, run_train.lineno)
+    if run_train.args.kwarg is not None:
+        record(run_train.args.kwarg.arg, run_train.lineno)
+
+    checkpoint_loads = {
+        node.id
+        for node in ast.walk(checkpoint)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)
+    }
+    late_dependencies = {
+        name: first_outer_binding[name]
+        for name in checkpoint_loads
+        if first_outer_binding.get(name, 0) > cold_root_line
+    }
+    assert late_dependencies == {}
+
+
+def test_live_binding_unconditionally_dominates_cold_root() -> None:
+    source = TRAINER.read_text()
+    tree = ast.parse(source)
+    run_train = next(
+        item
+        for item in tree.body
+        if isinstance(item, ast.FunctionDef) and item.name == "run_train"
+    )
+    live_bindings = [
+        item
+        for item in run_train.body
+        if isinstance(item, ast.AnnAssign)
+        and isinstance(item.target, ast.Name)
+        and item.target.id == "_live"
+    ]
+    assert len(live_bindings) == 1
+    cold_root_if = next(
+        item
+        for item in run_train.body
+        if isinstance(item, ast.If)
+        and any(
+            isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name)
+                and target.id == "_cold_root_checkpoint"
+                for target in node.targets
+            )
+            for node in ast.walk(item)
+        )
+    )
+    assert live_bindings[0].lineno < cold_root_if.lineno
+
+
+def test_cold_root_causal_boundary_cannot_claim_weights_stepped() -> None:
+    source = _run_train_source()
+    checkpoint_start = source.index("def _do_checkpoint(")
+    checkpoint_end = source.index(
+        "# ---- RESUME restore",
+        checkpoint_start,
+    )
+    checkpoint_source = source[checkpoint_start:checkpoint_end]
+    assert 'if causal_boundary_kind == "cold_root"' in checkpoint_source
+    assert "weights_stepped=(\n                False" in checkpoint_source
