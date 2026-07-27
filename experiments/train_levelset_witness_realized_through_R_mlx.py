@@ -49,7 +49,7 @@ import re
 import sys
 import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -144,6 +144,28 @@ from tac.witness_dsl.v10_factor2_selected_preimage_v1 import (  # noqa: E402
     build_mlx_factor2_gather_plan,
     realize_factor2_scorer_plane_mlx,
     realize_factor2_uint8_numpy,
+)
+from tac.witness_control.g111_verdict_barrier_v1 import (  # noqa: E402
+    ImmutableVerdictResult,
+    QuiescentVerdictTransaction,
+)
+from tac.witness_control.trajectory_transaction_v2 import (  # noqa: E402
+    ATOMIC_OWNERS as G111_ATOMIC_OWNERS,
+    LINEAGE_ENVELOPE as G111_LINEAGE_ENVELOPE,
+    MANIFEST_KEY as G111_TRANSACTION_MANIFEST_KEY,
+    RESTORABLE_STATE_OWNERS as G111_RESTORABLE_STATE_OWNERS,
+    VERDICT_TRANSACTION as G111_VERDICT_TRANSACTION,
+    BarrierStateBinding,
+    EntrySpec,
+    ExpectedOwnerSchema,
+    ExpectedTransactionSchema,
+    StagedTransaction,
+    TransactionValidationError,
+    build_manifest as build_g111_transaction_manifest,
+    canonical_domain_coverage as g111_canonical_domain_coverage,
+    manifest_array as g111_manifest_array,
+    manifest_from_array as g111_manifest_from_array,
+    validate_transaction as validate_g111_transaction,
 )
 
 
@@ -921,104 +943,333 @@ _LEGACY_EVENT_PREFIXES = (
     "__mg_", "__lbg_", "__scg_", "__tsg_", "__pag_", "__evt_",
     "__posegate_", "__dtp_event_mark_",
 )
-_G111_COMPLETE_TRAJECTORY_SCHEMA = "g111_complete_trajectory_state.v1"
-_G111_COMPLETE_TRAJECTORY_KEY = "__resume_complete_trajectory_manifest_json"
-_G111_TRAJECTORY_COMPONENTS = (
-    "primary_model_ema_optimizer_family",
-    "protected_seed_optimizer_support",
-    "fresh_root_physical_lineage",
-    "rng_streams",
-    "event_gates_and_duplicate_booleans",
-    "stage_transition_rewarmup",
-    "spike_rollback_and_last_good_snapshot",
-    "ladder_state",
-    "tail_controller_and_verdict_inputs",
-    "verdict_journal_and_sensor_histories",
-    "pending_verdict_reducer_boundary",
-    "jacobian_basin_state",
-    "polyak_atomic_state",
-    "best_and_stage_checkpoint_bookkeeping",
+_G111_NATIVE_V3_BARRIER_PREFIX = "__g111_v3_verdict__"
+_G111_NATIVE_V3_BARRIER_BINDING = BarrierStateBinding.from_prefix(
+    _G111_NATIVE_V3_BARRIER_PREFIX
 )
+_G111_NATIVE_V3_JOURNAL_LIMIT = 64
 _PERIODIC_EMA_RE = re.compile(r"^levelset_periodic_ema_(?P<stage>[A-Za-z0-9_]+)_ep(?P<epoch>[0-9]+)\.npz$")
 _PERIODIC_RESUME_RE = re.compile(r"^levelset_periodic_resume_(?P<stage>[A-Za-z0-9_]+)_ep(?P<epoch>[0-9]+)\.npz$")
 
 
-def _validate_g111_complete_trajectory_manifest(
+def _g111_entry_spec(key: str, value: Any) -> EntrySpec:
+    """Construct the runtime-owned typed leaf contract for one real array."""
+
+    array = np.asarray(value)
+    return EntrySpec(
+        key=str(key),
+        dtype=array.dtype.str,
+        shape=tuple(int(dimension) for dimension in array.shape),
+        finite=array.dtype.kind in {"f", "c"},
+        allow_empty=bool(array.size == 0),
+    )
+
+
+def _g111_owner_arrays(
+    owner_arrays: Mapping[str, Mapping[str, Any]],
+    *,
+    activity: Mapping[str, bool],
+) -> dict[str, dict[str, np.ndarray]]:
+    """Normalize an independently constructed six-owner runtime inventory."""
+
+    if tuple(owner_arrays) != G111_ATOMIC_OWNERS:
+        raise TransactionValidationError(
+            "native-v3 owner inventory must contain O1-O6 in canonical order"
+        )
+    if tuple(activity) != G111_ATOMIC_OWNERS:
+        raise TransactionValidationError(
+            "native-v3 activity must contain O1-O6 in canonical order"
+        )
+    normalized: dict[str, dict[str, np.ndarray]] = {}
+    seen: set[str] = set()
+    for owner in G111_ATOMIC_OWNERS:
+        active = activity[owner]
+        if type(active) is not bool:
+            raise TransactionValidationError(
+                f"native-v3 owner {owner!r} activity must be an exact bool"
+            )
+        values = owner_arrays[owner]
+        if not isinstance(values, Mapping):
+            raise TransactionValidationError(
+                f"native-v3 owner {owner!r} inventory must be a mapping"
+            )
+        for key in values:
+            if (
+                type(key) is not str
+                or not key
+                or key.strip() != key
+            ):
+                raise TransactionValidationError(
+                    f"native-v3 owner {owner!r} keys must be exact canonical strings"
+                )
+        normalized[owner] = {}
+        for key in sorted(values):
+            if key == G111_TRANSACTION_MANIFEST_KEY or key in seen:
+                raise TransactionValidationError(
+                    f"native-v3 state key {key!r} is reserved or multiply owned"
+                )
+            seen.add(key)
+            normalized[owner][key] = np.asarray(values[key])
+        if active != bool(normalized[owner]):
+            raise TransactionValidationError(
+                f"native-v3 owner {owner!r} activity and real state disagree"
+            )
+    return normalized
+
+
+def _g111_derived_lineage_arrays(
+    values: Mapping[str, Any] | None,
+) -> dict[str, np.ndarray]:
+    """Normalize lineage keys without coercion or mixed-type sorting."""
+
+    if values is None:
+        return {}
+    if not isinstance(values, Mapping):
+        raise TransactionValidationError(
+            "native-v3 derived lineage inventory must be a mapping"
+        )
+    for key in values:
+        if (
+            type(key) is not str
+            or not key
+            or key.strip() != key
+        ):
+            raise TransactionValidationError(
+                "native-v3 derived lineage keys must be exact canonical strings"
+            )
+    return {
+        key: np.asarray(values[key])
+        for key in sorted(values)
+    }
+
+
+def _build_g111_native_v3_expected_schema(
+    expected_owner_arrays: Mapping[str, Mapping[str, Any]],
+    *,
+    activity: Mapping[str, bool],
+    expected_derived_lineage_arrays: Mapping[str, Any] | None = None,
+) -> ExpectedTransactionSchema:
+    """Build a structural expected topology; this is not launch authority."""
+
+    expected_owners = _g111_owner_arrays(
+        expected_owner_arrays,
+        activity=activity,
+    )
+    expected_derived = _g111_derived_lineage_arrays(
+        expected_derived_lineage_arrays
+    )
+    claimed = {
+        key
+        for values in expected_owners.values()
+        for key in values
+    }
+    overlap = claimed & set(expected_derived)
+    if overlap or G111_TRANSACTION_MANIFEST_KEY in expected_derived:
+        raise TransactionValidationError(
+            "native-v3 expected derived lineage collides with owned state: "
+            f"{sorted(overlap)}"
+        )
+    return ExpectedTransactionSchema(
+        owners=tuple(
+            ExpectedOwnerSchema(
+                owner=owner,
+                active=bool(activity[owner]),
+                required=tuple(
+                    _g111_entry_spec(key, value)
+                    for key, value in expected_owners[owner].items()
+                ),
+                permitted=tuple(
+                    _g111_entry_spec(key, value)
+                    for key, value in expected_owners[owner].items()
+                ),
+            )
+            for owner in G111_ATOMIC_OWNERS
+        ),
+        domain_coverage=g111_canonical_domain_coverage(),
+        derived_lineage=tuple(
+            _g111_entry_spec(key, value)
+            for key, value in expected_derived.items()
+        ),
+    )
+
+
+def _build_g111_native_v3_checkpoint(
+    owner_arrays: Mapping[str, Mapping[str, Any]],
+    *,
+    activity: Mapping[str, bool],
+    expected: ExpectedTransactionSchema,
+    derived_lineage_arrays: Mapping[str, Any] | None = None,
+) -> tuple[dict[str, np.ndarray], ExpectedTransactionSchema, StagedTransaction]:
+    """Build and immediately re-open one strict six-owner native-v3 transaction.
+
+    ``owner_arrays`` is the captured checkpoint view. ``expected`` must be
+    supplied separately from the captured view. Until the real trainer inventory
+    binder lands, this remains a serialization foundation, not launch authority.
+    The helper never invents missing leaves: active owners must supply a nonempty
+    runtime inventory and inactive owners must own no arrays.
+    """
+
+    if not isinstance(expected, ExpectedTransactionSchema):
+        raise TransactionValidationError(
+            "native-v3 checkpoint capture requires an independent expected schema"
+        )
+    normalized = _g111_owner_arrays(owner_arrays, activity=activity)
+    derived = _g111_derived_lineage_arrays(derived_lineage_arrays)
+    claimed = {
+        key
+        for values in normalized.values()
+        for key in values
+    }
+    overlap = claimed & set(derived)
+    if overlap or G111_TRANSACTION_MANIFEST_KEY in derived:
+        raise TransactionValidationError(
+            f"native-v3 derived lineage collides with owned state: {sorted(overlap)}"
+        )
+    payload = {
+        key: value
+        for owner in G111_ATOMIC_OWNERS
+        for key, value in normalized[owner].items()
+    }
+    payload.update(derived)
+    owner_claims = {
+        owner: tuple(normalized[owner])
+        for owner in G111_ATOMIC_OWNERS
+    }
+    manifest = build_g111_transaction_manifest(
+        payload,
+        owner_claims=owner_claims,
+        activity=activity,
+        domain_coverage={
+            row.domain: row.owners
+            for row in g111_canonical_domain_coverage()
+        },
+        derived_lineage_keys=tuple(derived),
+    )
+    checkpoint_arrays = {
+        **payload,
+        G111_TRANSACTION_MANIFEST_KEY: g111_manifest_array(manifest),
+    }
+    staged = validate_g111_transaction(
+        checkpoint_arrays,
+        manifest,
+        expected,
+        barrier_binding=(
+            _G111_NATIVE_V3_BARRIER_BINDING
+            if activity[G111_VERDICT_TRANSACTION]
+            else None
+        ),
+    )
+    return checkpoint_arrays, expected, staged
+
+
+def _require_g111_native_v3_launch_gate(
+    candidate: Any,
+) -> None:
+    """Unconditionally refuse until the real live O1-O6 binder replaces this."""
+
+    del candidate
+    raise TransactionValidationError(
+        "fresh G111 launch blocked: live-runtime native-v3 admission is not "
+        "implemented"
+    )
+
+
+def _stage_g111_native_v3_checkpoint(
     arrays: Mapping[str, Any],
     *,
-    expected_activity: Mapping[str, bool],
-) -> dict[str, Any]:
-    """Validate one total, collision-free active-component custody contract."""
+    expected: ExpectedTransactionSchema,
+) -> StagedTransaction:
+    """Open bytes structurally; this is non-authoritative for launch."""
 
-    raw = arrays.get(_G111_COMPLETE_TRAJECTORY_KEY)
-    if raw is None:
-        raise RuntimeError(
-            "fresh G111 launch blocked: complete trajectory-state manifest is "
-            "absent; controller-state closure is not proven"
+    if not isinstance(expected, ExpectedTransactionSchema):
+        raise TransactionValidationError(
+            "native-v3 checkpoint open requires an ExpectedTransactionSchema"
         )
-    try:
-        value = np.asarray(raw)
-        parsed = json.loads(str(value.item() if value.size == 1 else raw))
-    except (TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise RuntimeError(
-            "fresh G111 complete trajectory-state manifest is malformed"
-        ) from exc
-    if parsed.get("schema") != _G111_COMPLETE_TRAJECTORY_SCHEMA:
-        raise RuntimeError("fresh G111 complete trajectory-state schema differs")
-    components = parsed.get("components")
-    if not isinstance(components, list):
-        raise RuntimeError("fresh G111 trajectory components must be a list")
-    names = [
-        str(component.get("name", ""))
-        for component in components
-        if isinstance(component, dict)
-    ]
-    if len(names) != len(components) or len(set(names)) != len(names):
-        raise RuntimeError(
-            "fresh G111 trajectory manifest has malformed or duplicate components"
+    if G111_TRANSACTION_MANIFEST_KEY not in arrays:
+        raise TransactionValidationError(
+            "native-v3 checkpoint manifest is absent; legacy state cannot prove "
+            "G111 continuation"
         )
-    expected_names = set(_G111_TRAJECTORY_COMPONENTS)
-    if set(names) != expected_names or set(expected_activity) != expected_names:
-        raise RuntimeError(
-            "fresh G111 trajectory manifest has missing or extra components"
+    manifest = g111_manifest_from_array(arrays[G111_TRANSACTION_MANIFEST_KEY])
+    verdict_active = expected.owners[
+        G111_ATOMIC_OWNERS.index(G111_VERDICT_TRANSACTION)
+    ].active
+    return validate_g111_transaction(
+        arrays,
+        manifest,
+        expected,
+        barrier_binding=(
+            _G111_NATIVE_V3_BARRIER_BINDING if verdict_active else None
+        ),
+    )
+
+
+def _stage_and_publish_g111_native_v3_restore(
+    staged: StagedTransaction,
+    *,
+    stage_owner: Callable[[str, Mapping[str, np.ndarray]], Any],
+    publish: Callable[[Mapping[str, Any]], Any],
+) -> Any:
+    """Stage O1/O2/O3/O4/O5, then O6, before one publication callback.
+
+    ``stage_owner`` must be pure: it builds replacement values without touching
+    live trainer objects.  Any validation/staging failure therefore occurs
+    before ``publish`` is called.  The sole publisher receives owners in the
+    canonical O1→O6 order and is responsible for one atomic live-state swap.
+    """
+
+    if not isinstance(staged, StagedTransaction):
+        raise TypeError("staged must be a validated StagedTransaction")
+    if not callable(stage_owner) or not callable(publish):
+        raise TypeError("native-v3 restore stage_owner and publish must be callable")
+    claims = {
+        claim.owner: claim.keys for claim in staged.manifest.owner_claims
+    }
+    replacements: dict[str, Any] = {}
+    for owner in (*G111_RESTORABLE_STATE_OWNERS, G111_LINEAGE_ENVELOPE):
+        owned = {
+            key: staged.arrays[key]
+            for key in claims[owner]
+        }
+        if owner == G111_LINEAGE_ENVELOPE:
+            owned.update(
+                {
+                    key: staged.arrays[key]
+                    for key in staged.manifest.derived_lineage_keys
+                }
+            )
+        replacements[owner] = stage_owner(owner, owned)
+    return publish(replacements)
+
+
+def _restore_g111_native_v3_verdict_transaction(
+    staged: StagedTransaction,
+    *,
+    reducer: Callable[[Any, ImmutableVerdictResult], Any],
+    restored_reducer_state: Any,
+) -> QuiescentVerdictTransaction:
+    """Restore the real O4 cursor/journal after native-v3 staging succeeds."""
+
+    if not isinstance(staged, StagedTransaction):
+        raise TransactionValidationError(
+            "native-v3 O4 restore requires a validated StagedTransaction"
         )
-    claimed_keys: set[str] = set()
-    for component in components:
-        name = str(component["name"])
-        active = component.get("active")
-        keys = component.get("keys")
-        if type(active) is not bool or not isinstance(keys, list):
-            raise RuntimeError(
-                f"fresh G111 trajectory component {name!r} is malformed"
-            )
-        if active != bool(expected_activity[name]):
-            raise RuntimeError(
-                f"fresh G111 trajectory activity differs for {name!r}"
-            )
-        if not active and keys:
-            raise RuntimeError(
-                f"inactive fresh G111 trajectory component {name!r} claims state"
-            )
-        if active and not keys:
-            raise RuntimeError(
-                f"active fresh G111 trajectory component {name!r} has no state"
-            )
-        for key in keys:
-            key_name = str(key)
-            if (
-                not key_name
-                or key_name == _G111_COMPLETE_TRAJECTORY_KEY
-                or key_name in claimed_keys
-            ):
-                raise RuntimeError(
-                    "fresh G111 trajectory manifest has duplicate/colliding keys"
-                )
-            if key_name not in arrays:
-                raise RuntimeError(
-                    f"fresh G111 trajectory state vanished at {key_name!r}"
-                )
-            claimed_keys.add(key_name)
-    return parsed
+    activity = {
+        row.owner: row.active for row in staged.manifest.activity
+    }
+    if (
+        not activity.get(G111_VERDICT_TRANSACTION, False)
+        or staged.barrier_state is None
+    ):
+        raise TransactionValidationError(
+            "native-v3 O4 restore requires an active validated verdict_transaction"
+        )
+    return QuiescentVerdictTransaction.from_numpy_state(
+        staged.arrays,
+        reducer=reducer,
+        restored_reducer_state=restored_reducer_state,
+        prefix=_G111_NATIVE_V3_BARRIER_PREFIX,
+    )
 
 
 def _periodic_checkpoint_names(stage_tag: str, epoch: int) -> tuple[str, str]:
@@ -13704,47 +13955,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _cold_contract_arrays.update(
                 _polyak.heavy_state_arrays(_RESUME_POLYAK_PREFIX)
             )
-        _validate_g111_complete_trajectory_manifest(
-            _cold_contract_arrays,
-            expected_activity={
-                "primary_model_ema_optimizer_family": True,
-                "protected_seed_optimizer_support": bool(seed_mod is not None),
-                "fresh_root_physical_lineage": True,
-                "rng_streams": True,
-                "event_gates_and_duplicate_booleans": any(
-                    gate.event_mode
-                    for gate in (
-                        _muon_gate,
-                        _lane_band_gate,
-                        _chroma_gate,
-                        _temporal_screw_gate,
-                        _phase_advect_gate,
-                    )
-                ),
-                "stage_transition_rewarmup": bool(
-                    int(getattr(args, "stage_transition_rewarmup_epochs", 0))
-                    > 0
-                ),
-                "spike_rollback_and_last_good_snapshot": bool(
-                    _sg_guard is not None
-                ),
-                "ladder_state": bool(_ladder_state is not None),
-                "tail_controller_and_verdict_inputs": bool(
-                    _tail_ctrl is not None
-                ),
-                "verdict_journal_and_sensor_histories": bool(
-                    args.async_verdict
-                    or _annulus_on
-                    or _phase_advect_gate.event_mode
-                ),
-                "pending_verdict_reducer_boundary": bool(
-                    args.async_verdict
-                ),
-                "jacobian_basin_state": bool(_jbasin_on),
-                "polyak_atomic_state": bool(_polyak is not None),
-                "best_and_stage_checkpoint_bookkeeping": True,
-            },
-        )
+        # The former native-v1 component-list check was not a serialized state
+        # transaction and could not prove continuation. A manifest-shaped array
+        # is likewise not evidence. Fail closed until _do_checkpoint produces a
+        # fully validated StagedTransaction from independent expected topology.
+        _require_g111_native_v3_launch_gate(None)
         print(
             json.dumps(
                 {

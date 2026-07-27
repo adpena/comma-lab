@@ -21,6 +21,7 @@ from __future__ import annotations
 import inspect
 import json
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -762,51 +763,397 @@ def test_polyak_resume_presence_accepts_only_atomic_on_or_off():
     )
 
 
-def test_g111_complete_trajectory_manifest_is_total_unique_and_fail_closed():
-    activity = {
-        name: (name != "ladder_state")
-        for name in T._G111_TRAJECTORY_COMPONENTS
+def _g111_reducer(state, result):
+    state["total"] += int(result.payload["delta"])
+    return state
+
+
+def _g111_worker(sequence, snapshot):
+    return T.ImmutableVerdictResult.capture(
+        submission_seq=sequence,
+        result_id=f"verdict-{sequence}",
+        payload={"delta": int(snapshot["delta"])},
+    )
+
+
+def _g111_owner_fixture(verdict_arrays):
+    owners = {
+        T.G111_ATOMIC_OWNERS[0]: {
+            "liveP__weight": np.asarray([1.0, 2.0], np.float32),
+            "emaP__weight": np.asarray([0.5, 1.5], np.float32),
+            "optP__step": np.asarray([7], np.int64),
+        },
+        T.G111_ATOMIC_OWNERS[1]: {
+            "__g111_rollback_epoch": np.asarray([6], np.int64),
+            "__g111_rollback_weight": np.asarray([0.75, 1.75], np.float32),
+        },
+        T.G111_ATOMIC_OWNERS[2]: {
+            "__g111_stage_epoch": np.asarray([7], np.int64),
+            "__rng_np_keys": np.arange(8, dtype=np.uint32),
+        },
+        T.G111_ATOMIC_OWNERS[3]: dict(verdict_arrays),
+        T.G111_ATOMIC_OWNERS[4]: {
+            "__g111_best_present": np.asarray([1], np.int8),
+            "__g111_best_epoch": np.asarray([5], np.int64),
+            "__g111_best_dseg": np.asarray([0.01], np.float64),
+        },
+        T.G111_ATOMIC_OWNERS[5]: {
+            "__g111_lineage_parent": np.arange(32, dtype=np.uint8),
+        },
     }
-    arrays = {}
-    components = []
-    for index, name in enumerate(T._G111_TRAJECTORY_COMPONENTS):
-        keys = [f"__trajectory_fixture_{index}"] if activity[name] else []
-        for key in keys:
-            arrays[key] = np.asarray(index)
-        components.append(
-            {"name": name, "active": activity[name], "keys": keys}
+    activity = dict.fromkeys(T.G111_ATOMIC_OWNERS, True)
+    derived = {
+        "__g111_lineage_checkpoint": np.arange(32, dtype=np.uint8)[::-1],
+    }
+    return owners, activity, derived
+
+
+def _g111_checkpoint_fixture(*, journal_limit=3):
+    transaction = T.QuiescentVerdictTransaction(
+        reducer=_g111_reducer,
+        initial_state={"total": 0},
+        max_journal_rows=journal_limit,
+    )
+    with transaction.checkpoint() as capture:
+        expected_owners, activity, expected_derived = _g111_owner_fixture(
+            capture.numpy_state(prefix=T._G111_NATIVE_V3_BARRIER_PREFIX)
         )
-    arrays[T._G111_COMPLETE_TRAJECTORY_KEY] = np.asarray(
-        json.dumps(
-            {
-                "schema": T._G111_COMPLETE_TRAJECTORY_SCHEMA,
-                "components": components,
+        expected = T._build_g111_native_v3_expected_schema(
+            expected_owners,
+            activity=activity,
+            expected_derived_lineage_arrays=expected_derived,
+        )
+        owners, _, derived = _g111_owner_fixture(
+            capture.numpy_state(prefix=T._G111_NATIVE_V3_BARRIER_PREFIX)
+        )
+        arrays, expected, staged = T._build_g111_native_v3_checkpoint(
+            owners,
+            activity=activity,
+            expected=expected,
+            derived_lineage_arrays=derived,
+        )
+    return transaction, arrays, expected, staged
+
+
+def test_g111_native_v3_cold_root_covers_six_owners_and_fourteen_domains():
+    _, arrays, expected, staged = _g111_checkpoint_fixture()
+    assert tuple(owner.owner for owner in expected.owners) == T.G111_ATOMIC_OWNERS
+    assert len(expected.domain_coverage) == 14
+    claims = {
+        claim.owner: set(claim.keys)
+        for claim in staged.manifest.owner_claims
+    }
+    assert tuple(claims) == T.G111_ATOMIC_OWNERS
+    assert all(claims[owner] for owner in T.G111_ATOMIC_OWNERS)
+    covered = set().union(*claims.values()) | set(
+        staged.manifest.derived_lineage_keys
+    )
+    assert covered == set(arrays) - {T.G111_TRANSACTION_MANIFEST_KEY}
+    assert staged.barrier_state is not None
+    assert staged.barrier_state.pending_count == 0
+
+
+def test_g111_native_v3_malformed_and_legacy_pending_fail_closed():
+    _, arrays, expected, _ = _g111_checkpoint_fixture()
+    malformed = dict(arrays)
+    malformed[T._G111_NATIVE_V3_BARRIER_PREFIX + "pending_count"] = np.asarray(
+        [1], np.int64
+    )
+    with pytest.raises(T.TransactionValidationError):
+        T._stage_g111_native_v3_checkpoint(malformed, expected=expected)
+
+    transaction = T.QuiescentVerdictTransaction(
+        reducer=_g111_reducer,
+        initial_state={"total": 0},
+    )
+    with transaction.checkpoint() as capture:
+        expected_owners, activity, expected_derived = _g111_owner_fixture(
+            capture.numpy_state(prefix=T._G111_NATIVE_V3_BARRIER_PREFIX)
+        )
+        expected = T._build_g111_native_v3_expected_schema(
+            expected_owners,
+            activity=activity,
+            expected_derived_lineage_arrays=expected_derived,
+        )
+        owners, _, derived = _g111_owner_fixture(
+            capture.numpy_state(prefix=T._G111_NATIVE_V3_BARRIER_PREFIX)
+        )
+        owners[T.G111_VERDICT_TRANSACTION]["__cl_pend_epoch"] = np.asarray(
+            [1], np.int64
+        )
+        with pytest.raises(
+            T.TransactionValidationError, match="pending-verdict"
+        ):
+            T._build_g111_native_v3_checkpoint(
+                owners,
+                activity=activity,
+                expected=expected,
+                derived_lineage_arrays=derived,
+            )
+
+
+def test_g111_native_v3_restore_stages_canonical_order_without_partial_publication():
+    _, _, _, staged = _g111_checkpoint_fixture()
+    staged_owners = []
+    publications = []
+
+    def fail_at_o4(owner, arrays):
+        staged_owners.append((owner, tuple(arrays)))
+        if owner == T.G111_VERDICT_TRANSACTION:
+            raise RuntimeError("injected O4 restore failure")
+        return owner
+
+    with pytest.raises(RuntimeError, match="injected O4"):
+        T._stage_and_publish_g111_native_v3_restore(
+            staged,
+            stage_owner=fail_at_o4,
+            publish=lambda replacements: publications.append(replacements),
+        )
+    assert [owner for owner, _ in staged_owners] == list(
+        T.G111_RESTORABLE_STATE_OWNERS[:4]
+    )
+    assert publications == []
+
+    observed = []
+
+    def stage_owner(owner, arrays):
+        observed.append(owner)
+        return tuple(arrays)
+
+    published = T._stage_and_publish_g111_native_v3_restore(
+        staged,
+        stage_owner=stage_owner,
+        publish=lambda replacements: tuple(replacements),
+    )
+    assert observed == list(T.G111_ATOMIC_OWNERS)
+    assert published == T.G111_ATOMIC_OWNERS
+
+
+def test_g111_native_v3_interrupted_and_continuous_next_steps_are_exact():
+    continuous = T.QuiescentVerdictTransaction(
+        reducer=_g111_reducer,
+        initial_state={"total": 0},
+        max_journal_rows=2,
+    )
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        continuous.submit(executor, _g111_worker, {"delta": 2})
+        with continuous.checkpoint() as interrupted_capture:
+            expected_owners, activity, expected_derived = _g111_owner_fixture(
+                interrupted_capture.numpy_state(
+                    prefix=T._G111_NATIVE_V3_BARRIER_PREFIX
+                )
+            )
+            expected = T._build_g111_native_v3_expected_schema(
+                expected_owners,
+                activity=activity,
+                expected_derived_lineage_arrays=expected_derived,
+            )
+            owners, _, derived = _g111_owner_fixture(
+                interrupted_capture.numpy_state(
+                    prefix=T._G111_NATIVE_V3_BARRIER_PREFIX
+                )
+            )
+            arrays, expected, _ = T._build_g111_native_v3_checkpoint(
+                owners,
+                activity=activity,
+                expected=expected,
+                derived_lineage_arrays=derived,
+            )
+        reopened = T._stage_g111_native_v3_checkpoint(
+            arrays, expected=expected
+        )
+        resumed = T._restore_g111_native_v3_verdict_transaction(
+            reopened,
+            reducer=_g111_reducer,
+            restored_reducer_state=interrupted_capture.reducer_state,
+        )
+        for delta in (3, 5):
+            continuous.submit(executor, _g111_worker, {"delta": delta})
+            resumed.submit(executor, _g111_worker, {"delta": delta})
+        with continuous.checkpoint() as continuous_end:
+            pass
+        with resumed.checkpoint() as resumed_end:
+            pass
+
+    assert continuous_end.reducer_state == resumed_end.reducer_state == {
+        "total": 10
+    }
+    assert continuous_end.next_apply_seq == resumed_end.next_apply_seq == 3
+    assert len(continuous_end.journal) == len(resumed_end.journal) == 2
+    assert continuous_end.journal == resumed_end.journal
+
+
+def test_g111_native_v3_rejects_legacy_checkpoint_as_proof():
+    _, _, expected, _ = _g111_checkpoint_fixture()
+    legacy = {
+        "__resume_semantic_schema": np.asarray(
+            T._RESUME_SEMANTIC_SCHEMA
+        ),
+        "__cl_pend_epoch": np.asarray([4], np.int64),
+    }
+    with pytest.raises(
+        T.TransactionValidationError, match="manifest is absent"
+    ):
+        T._stage_g111_native_v3_checkpoint(legacy, expected=expected)
+
+
+def test_g111_native_v3_capture_cannot_define_its_own_expected_subset():
+    transaction = T.QuiescentVerdictTransaction(
+        reducer=_g111_reducer,
+        initial_state={"total": 0},
+    )
+    with transaction.checkpoint() as capture:
+        barrier = capture.numpy_state(
+            prefix=T._G111_NATIVE_V3_BARRIER_PREFIX
+        )
+        expected_owners, activity, expected_derived = _g111_owner_fixture(
+            barrier
+        )
+        expected = T._build_g111_native_v3_expected_schema(
+            expected_owners,
+            activity=activity,
+            expected_derived_lineage_arrays=expected_derived,
+        )
+        captured_owners, _, captured_derived = _g111_owner_fixture(barrier)
+        captured_owners[T.G111_ATOMIC_OWNERS[0]].pop("liveP__weight")
+        with pytest.raises(
+            T.TransactionValidationError, match="missing=.*liveP__weight"
+        ):
+            T._build_g111_native_v3_checkpoint(
+                captured_owners,
+                activity=activity,
+                expected=expected,
+                derived_lineage_arrays=captured_derived,
+            )
+
+
+def test_g111_native_v3_fake_manifest_presence_cannot_open_launch_gate():
+    _, arrays, _, _ = _g111_checkpoint_fixture()
+    fake = {
+        **arrays,
+        T.G111_TRANSACTION_MANIFEST_KEY: np.empty(0, np.uint8),
+    }
+    with pytest.raises(
+        T.TransactionValidationError, match="not implemented"
+    ):
+        T._require_g111_native_v3_launch_gate(fake)
+
+
+def test_g111_native_v3_same_source_incomplete_staged_cannot_admit_launch():
+    transaction = T.QuiescentVerdictTransaction(
+        reducer=_g111_reducer,
+        initial_state={"total": 0},
+    )
+    with transaction.checkpoint() as capture:
+        barrier = capture.numpy_state(
+            prefix=T._G111_NATIVE_V3_BARRIER_PREFIX
+        )
+        incomplete, activity, derived = _g111_owner_fixture(barrier)
+        incomplete[T.G111_ATOMIC_OWNERS[0]].pop("liveP__weight")
+        expected = T._build_g111_native_v3_expected_schema(
+            incomplete,
+            activity=activity,
+            expected_derived_lineage_arrays=derived,
+        )
+        captured, _, captured_derived = _g111_owner_fixture(barrier)
+        captured[T.G111_ATOMIC_OWNERS[0]].pop("liveP__weight")
+        _, _, structurally_valid = T._build_g111_native_v3_checkpoint(
+            captured,
+            activity=activity,
+            expected=expected,
+            derived_lineage_arrays=captured_derived,
+        )
+    with pytest.raises(
+        T.TransactionValidationError, match="not implemented"
+    ):
+        T._require_g111_native_v3_launch_gate(structurally_valid)
+
+
+@pytest.mark.parametrize("candidate", [None, object(), 0, "admit"])
+def test_g111_native_v3_launch_gate_has_no_adapter_success_path(candidate):
+    with pytest.raises(
+        T.TransactionValidationError, match="not implemented"
+    ):
+        T._require_g111_native_v3_launch_gate(candidate)
+
+
+def test_g111_native_v3_lineage_keys_require_exact_strings_before_sorting():
+    transaction = T.QuiescentVerdictTransaction(
+        reducer=_g111_reducer,
+        initial_state={"total": 0},
+    )
+    with transaction.checkpoint() as capture:
+        owners, activity, _ = _g111_owner_fixture(
+            capture.numpy_state(prefix=T._G111_NATIVE_V3_BARRIER_PREFIX)
+        )
+    with pytest.raises(
+        T.TransactionValidationError, match="exact canonical strings"
+    ):
+        T._build_g111_native_v3_expected_schema(
+            owners,
+            activity=activity,
+            expected_derived_lineage_arrays={
+                "__valid": np.asarray([1], np.int8),
+                1: np.asarray([2], np.int8),
             },
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-    )
-    parsed = T._validate_g111_complete_trajectory_manifest(
-        arrays, expected_activity=activity
-    )
-    assert len(parsed["components"]) == len(T._G111_TRAJECTORY_COMPONENTS)
-
-    duplicate = json.loads(str(arrays[T._G111_COMPLETE_TRAJECTORY_KEY]))
-    duplicate["components"].append(dict(duplicate["components"][0]))
-    broken = dict(arrays)
-    broken[T._G111_COMPLETE_TRAJECTORY_KEY] = np.asarray(
-        json.dumps(duplicate)
-    )
-    with pytest.raises(RuntimeError, match="duplicate components"):
-        T._validate_g111_complete_trajectory_manifest(
-            broken, expected_activity=activity
         )
 
-    missing_state = dict(arrays)
-    missing_state.pop("__trajectory_fixture_0")
-    with pytest.raises(RuntimeError, match="state vanished"):
-        T._validate_g111_complete_trajectory_manifest(
-            missing_state, expected_activity=activity
+
+def test_g111_native_v3_owner_keys_require_exact_strings_before_sorting():
+    transaction = T.QuiescentVerdictTransaction(
+        reducer=_g111_reducer,
+        initial_state={"total": 0},
+    )
+    with transaction.checkpoint() as capture:
+        owners, activity, derived = _g111_owner_fixture(
+            capture.numpy_state(prefix=T._G111_NATIVE_V3_BARRIER_PREFIX)
+        )
+    owners[T.G111_ATOMIC_OWNERS[0]][1] = np.asarray([2], np.int8)
+    with pytest.raises(
+        T.TransactionValidationError, match="exact canonical strings"
+    ):
+        T._build_g111_native_v3_expected_schema(
+            owners,
+            activity=activity,
+            expected_derived_lineage_arrays=derived,
+        )
+
+
+def test_g111_native_v3_checkpoint_open_requires_typed_expected_schema():
+    _, arrays, _, _ = _g111_checkpoint_fixture()
+    with pytest.raises(
+        T.TransactionValidationError, match="ExpectedTransactionSchema"
+    ):
+        T._stage_g111_native_v3_checkpoint(arrays, expected=None)
+
+
+def test_g111_native_v3_inactive_o4_restore_fails_typed():
+    transaction = T.QuiescentVerdictTransaction(
+        reducer=_g111_reducer,
+        initial_state={"total": 0},
+    )
+    with transaction.checkpoint():
+        expected_owners, activity, expected_derived = _g111_owner_fixture({})
+        activity[T.G111_VERDICT_TRANSACTION] = False
+        expected = T._build_g111_native_v3_expected_schema(
+            expected_owners,
+            activity=activity,
+            expected_derived_lineage_arrays=expected_derived,
+        )
+        captured_owners, _, captured_derived = _g111_owner_fixture({})
+        _, _, staged = T._build_g111_native_v3_checkpoint(
+            captured_owners,
+            activity=activity,
+            expected=expected,
+            derived_lineage_arrays=captured_derived,
+        )
+    with pytest.raises(
+        T.TransactionValidationError, match="active validated"
+    ):
+        T._restore_g111_native_v3_verdict_transaction(
+            staged,
+            reducer=_g111_reducer,
+            restored_reducer_state={"total": 0},
         )
 
 
