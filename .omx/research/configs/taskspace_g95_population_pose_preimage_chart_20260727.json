@@ -1,0 +1,93 @@
+{
+  "schema": "tac.g95_population_pose_preimage_chart_runner_config.v1",
+  "output_root": "/Volumes/VertigoDataTier/pact/g95_population_pose_preimage_chart_20260727_r1",
+  "final_receipt_path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/g95_population_pose_preimage_chart_receipt_20260727.json",
+  "seed": 1234,
+  "torch_num_threads": 4,
+  "pair_start": 0,
+  "pair_count": 1,
+  "scorer_batch_pairs": 1,
+  "safety_reserve_bytes": 53687091200,
+  "hardware_axis": "[macOS-CPU advisory / CPU-torch research-signal] NON-PROMOTABLE",
+  "research_only": true,
+  "candidate_claim": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "non_final_semantic_y1": true,
+  "reachability_threshold_d_pose": 0.00047366,
+  "grid_height": 48,
+  "grid_width": 64,
+  "rank_ladder": [
+    6,
+    12,
+    24
+  ],
+  "basis_fit": {
+    "dense_teacher_anchor_limit": 8,
+    "dense_teacher_initial_damping": 0.0001,
+    "dense_teacher_damping_increase": 5.0,
+    "dense_teacher_damping_decrease": 0.3,
+    "dense_teacher_line_search_steps": 6,
+    "svd_relative_threshold": 1e-08,
+    "basis_scale_floor": 1e-08
+  },
+  "coefficient_fit": {
+    "maximum_iterations": 12,
+    "initial_damping": 0.001,
+    "damping_increase": 5.0,
+    "damping_decrease": 0.3,
+    "line_search_steps": 6,
+    "coefficient_scale_floor": 1e-08,
+    "minimum_exact_improvement": 1e-12,
+    "checkpoint_every_iterations": 1
+  },
+  "richer_control_request": {
+    "requested_minimum_rank": 48,
+    "requested_minimum_grid_height": 64,
+    "requested_minimum_grid_width": 96,
+    "one_state_miss_axis": "HIGHER_STATIC_RANK_OR_GRID",
+    "population_transfer_failure_classification": "Y1_CONDITIONED_SHARED_GENERATOR_OR_FEATURE_MODULATED_BASIS",
+    "population_transfer_request": "Y1_CONDITIONED_SHARED_GENERATOR_OR_FEATURE_MODULATED_BASIS",
+    "pair0_population_viability_claim": false
+  },
+  "g94": {
+    "parent_git_commit": "9e84c69b8a389337270b70fd4023a4174ef3c552",
+    "product_member_bytes": 133929,
+    "product_member_sha256": "84335c287ccee915fafce19f0258dc3fa6939095b5bdd773e09dbf7e47fd934a",
+    "selected_outer_archive_bytes": 129799,
+    "selected_outer_archive_sha256": "bb8d5c4d75ff0b9c3e4d0c3d9ace7a4291b9fc7f8c818a2bdb55e14b2a313910",
+    "conditioning_state_sha256": "7ab4829d0ecf53b973629be518cc0be575cf826f8a33eceffcb13cb00d678c9b",
+    "g89_program_bytes": 247,
+    "g89_program_sha256": "50729be3d6803e4fa700be89addc96e2a82f88622614d42805145f38275c1ef8",
+    "g88_operand_bytes": 198,
+    "g88_operand_sha256": "f9170051a46ac71fbb34ca690d02578390c5f2bff16a391ec7f769dd9251e593"
+  },
+  "source_video": {
+    "path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+    "bytes": 37545489,
+    "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+  },
+  "base_archive": {
+    "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/archive.zip",
+    "bytes": 129392,
+    "sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd"
+  },
+  "base_member": {
+    "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/archive/0.bin",
+    "bytes": 133363,
+    "sha256": "d50aac6eab8114c2c15156354147d1cbfe007b474a0633d5cdec26e66751de31"
+  },
+  "semantic_p_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+  "gt_cache": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "bytes": 5078017610,
+    "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "gt_poses_member_sha256": "bee5821eeb892ad430878946dfcdf365e1a14202efb7cd1af2b019d75da0f481",
+  "posenet_weights": {
+    "path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+    "bytes": 55835560,
+    "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+  }
+}
