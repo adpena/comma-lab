@@ -1,0 +1,167 @@
+{
+  "adversarial_review": {
+    "closed": [
+      "all_five_semantic_roles_have_real_executable_addresses",
+      "lane_program_executes_against_inherited_v15_chart",
+      "shared_topology_template_is_physically_referenced_by_five_roles",
+      "y0_is_bit_identical",
+      "exact_integer_R_runs_on_realized_uint8",
+      "operand_binds_exact_semantic_P_sha256",
+      "no_fixed_component_threshold_crosses_wire"
+    ],
+    "open": [
+      "pair0_fixture_is_not_population_global_selected_program",
+      "fixture_is_not_current_base_costate_selected",
+      "G89_external_product_not_lowered_into_compact_PVSA_five_payload_grammar",
+      "conditional_Y0_given_Y1_transition_owed",
+      "public_inflate_expected_video_runtime_closure_owed",
+      "full_n600_upstream_component_row_and_G83_allocation_owed"
+    ]
+  },
+  "analytic_type_coverage": {
+    "Lane": [
+      "inherited_coherent_chart",
+      "periodic_program",
+      "sparse_drift_knot"
+    ],
+    "Movable": [
+      "island_shape",
+      "persistent_worldsheet",
+      "sparse_worldsheet_knot"
+    ],
+    "MyCar": [
+      "immutable_P_static_field",
+      "sparse_topology_exception"
+    ],
+    "Road": [
+      "shared_topology",
+      "directional_boundary_shearlet"
+    ],
+    "UndrivableBoundary": [
+      "shared_topology",
+      "directional_boundary_shearlet"
+    ]
+  },
+  "authority": "deterministic structural exact-P receiver proof",
+  "counted_structural_fixture": {
+    "archive_encoding": "zip_deflated",
+    "archive_nbytes": 129812,
+    "archive_sha256": "ba761b8ec0e738ad458d589f377e98856e70a864380e9b6ff477d7d4f0725f52",
+    "deflated_archive_nbytes": 129812,
+    "operand_nbytes": 247,
+    "operand_sha256": "50729be3d6803e4fa700be89addc96e2a82f88622614d42805145f38275c1ef8",
+    "product_nbytes": 134205,
+    "semantic_archive_nbytes": 133941,
+    "semantic_archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+    "stored_archive_nbytes": 134313
+  },
+  "exact_pair0_execution": {
+    "camera_pairs_sha256": "ddb777bac7b4486b9a973231acc0f4a904d15967d464dc9dc51c1210a6555dc4",
+    "changed_camera_values": 11760,
+    "changed_exact_r_values": 2616,
+    "changed_role_mask_cells": {
+      "Lane": 830,
+      "Movable": 13,
+      "MyCar": 9,
+      "Road": 9,
+      "UndrivableBoundary": 20
+    },
+    "changed_semantic_cells": 745,
+    "double_decode_camera_identical": true,
+    "double_decode_exact_r_identical": true,
+    "exact_r_pairs_sha256": "522f1357c218b33b92408167984191234b99e35d1085d750ab8364c19c2f127d",
+    "semantic_cells_sha256": "2a5529aed272dca7bb54685a4e6734f3aa0d64b034599ec0acc9c5487572c7a4",
+    "strict_member_effects_verified_both_decodes": true,
+    "strict_receiver_first_seconds": 31.232599042123184,
+    "strict_receiver_second_seconds": 2.954882999882102,
+    "y0_camera_preserved": true,
+    "y0_exact_r_preserved": true
+  },
+  "factorization": {
+    "direct_lowered_topology_nbytes": 92,
+    "outer_zip_saving_claim": false,
+    "physical_template_count": 1,
+    "role_application_count": 5,
+    "shared_topology_nbytes": 80,
+    "wire_nbytes_saved": 12
+  },
+  "g83_integration_contract": {
+    "admissible_now": false,
+    "decoder_transition_id": "g89:1:CLASS_COMPLETE_Y1_SEMANTIC",
+    "next_inputs": [
+      "G90_current_base_costate_projected_physical_tangents",
+      "population_global_factorized_G89_operand",
+      "public_receiver_closed_exact_archive_bytes",
+      "complete_n600_upstream_evaluate_py_component_row",
+      "same_axis_and_runtime_custody",
+      "fresh_dynamic_frontier_snapshot"
+    ],
+    "selection_rule": "G83 exact nonlinear whole-state argmin over d_seg,d_pose,actual archive bytes; no fixed thresholds"
+  },
+  "git_head_observed": "4fb4d297468c67aa4ce8e94262bf6cb8d30d1118",
+  "irreducible_learned_quotient": {
+    "definition": "target_labels minus class-complete analytic labels after exact R and frozen scorer argmax",
+    "dense_payload_admitted": false,
+    "status": "encoder_only_diagnostic_until_exact_byte_value_is_proven"
+  },
+  "lane_id": "lane_g89_class_complete_semantic_compiler_20260727",
+  "open_product_blockers": [
+    "G89_CURRENT_BASE_COSTATE_PROJECTED_GLOBAL_PROGRAM_NOT_MATERIALIZED",
+    "G89_FULL_N600_CLASS_COMPLETE_OPERAND_NOT_MATERIALIZED",
+    "G89_CONDITIONAL_Y0_GIVEN_EXACT_Y1_NOT_COMPOSED",
+    "G89_PUBLIC_INFLATE_SH_RUNTIME_INTEGRATION_OWED",
+    "G89_UPSTREAM_EVALUATE_PY_N600_AUTHORITY_OWED"
+  ],
+  "pointer_delta": {
+    "candidate_claim": false,
+    "complete_n600_component_row": false,
+    "exact_score_claim": false,
+    "frontier_moved": false,
+    "promotion_eligible": false,
+    "scorer_or_evaluator_invoked": false
+  },
+  "rate_context": {
+    "current_g82_archive_nbytes": 129392,
+    "fixture_delta_nbytes_vs_g82": 420,
+    "fixture_rate_only_delta_vs_g82": 0.00027966076031131194,
+    "fixture_total_rate_term": 0.0864364824226953,
+    "formats_are_not_yet_same_compact_grammar": true
+  },
+  "research_only": true,
+  "schema": "tac.g89_class_complete_semantic_compiler_fail_closed_landing.v1",
+  "selection_contract": {
+    "component_thresholds_used": false,
+    "costates_serialized": false,
+    "id": "EXTERNAL_G83_COSTATE_WHOLE_STATE_SCORE_ARBITRATION_NO_FIXED_THRESHOLDS",
+    "scorer_tensors_serialized": false,
+    "target_labels_serialized": false
+  },
+  "source_artifacts": {
+    ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g89_class_complete_semantic_obligation_20260727_codex.md": {
+      "bytes": 5873,
+      "sha256": "023da09e765e864a35a40d86991a3b4a2e7dcde49ee87b0a838dd557e0384231"
+    },
+    "src/tac/witness_dsl/taskspace_g89_class_complete_semantic_compiler_v1.py": {
+      "bytes": 39486,
+      "sha256": "01127ec2237b94cb028a702bdee995669ebe98fbd9bab386df38dc5eb822d29b"
+    },
+    "src/tac/witness_dsl/tests/test_taskspace_g89_class_complete_semantic_compiler_v1.py": {
+      "bytes": 7966,
+      "sha256": "18f6562a864d8acff9021c7f66c2c0e63823c9af442c98cb0368a16e23191e25"
+    }
+  },
+  "verification": [
+    {
+      "command": ".venv/bin/pytest -q src/tac/witness_dsl/tests/test_taskspace_g89_class_complete_semantic_compiler_v1.py",
+      "result": "5 passed in 36.67s"
+    },
+    {
+      "command": ".venv/bin/ruff check src/tac/witness_dsl/taskspace_g89_class_complete_semantic_compiler_v1.py src/tac/witness_dsl/tests/test_taskspace_g89_class_complete_semantic_compiler_v1.py",
+      "result": "All checks passed"
+    },
+    {
+      "command": ".venv/bin/ruff format --check src/tac/witness_dsl/taskspace_g89_class_complete_semantic_compiler_v1.py src/tac/witness_dsl/tests/test_taskspace_g89_class_complete_semantic_compiler_v1.py",
+      "result": "passed"
+    }
+  ]
+}
