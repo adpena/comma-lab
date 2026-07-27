@@ -1,0 +1,139 @@
+{
+  "archive_contract": {
+    "compression": "ZIP_DEFLATE_LEVEL_9",
+    "generic_runtime_packaged_in_archive": false,
+    "member_count": 1,
+    "member_name": "semantic_root_y1_v1.bin",
+    "proof_metadata_packaged_in_archive": false,
+    "video_specific_packet_counted": true
+  },
+  "assigned_git_head": "b602eac3a09c756dcdb48ecf66b4f2b28d47a09e",
+  "blockers": [
+    "G108_FRESH_SOURCE_COMPILER_LINEAGE_AND_EXACT_POST_R_CLOSURE_OWED",
+    "G17_WHOLE_OBJECT_PLACEMENT_AND_SOURCE_LINEAGE_OWED",
+    "G107_FINAL_CONDITIONAL_Y0_MUST_REPLACE_RESEARCH_ONLY_DUPLICATE",
+    "SAME_SELECTED_ARCHIVE_FULL_N600_UPSTREAM_EVALUATE_BATCH16_AUTHORITY_OWED"
+  ],
+  "candidate_claim": false,
+  "clean_extract_double_decode": {
+    "archive_bytes": 354,
+    "archive_sha256": "eabfb3b29367e4beba8e4979603e9ba2fd15616761177c3d88bd66fee089128e",
+    "clean_root_count": 2,
+    "double_decode_equal": true,
+    "elapsed_seconds": 188.35787704167888,
+    "external_repository_import_guard": true,
+    "output_bytes_each": 3662409600,
+    "output_name_each": "0.raw",
+    "output_sha256_each": "8d6a921953885b1d85e15a0c9f1cb00a81e38f2f46dae91dc83983007faa7fb3",
+    "packet_bytes": 612,
+    "packet_sha256": "a25c30d45d0c9049f40c4c07568fe3e2bc78482a70a337cc956324ed2433b954",
+    "packet_semantics": "synthetic_wire_valid_pair_invariant_full_n600_non_candidate",
+    "raw_cleanup": {
+      "action": "success_and_failure_finally_removed_exact_mkdtemp_root",
+      "rebuildable_from": "packet_archive_runtime_and_test_command",
+      "storage_tier": "/Volumes/VertigoDataTier/pact"
+    },
+    "runtime_tree_sha256": "23dd52fbd9035f236d6585ff7ca7e67a7062788ac1ff4b9b6fa9176eabc84ce5",
+    "score_claim": false,
+    "source_closure_claim": false
+  },
+  "files": [
+    {
+      "bytes": 8821,
+      "path": "src/tac/witness_dsl/taskspace_g108_semantic_root_public_product_v1.py",
+      "role": "G102_INTERFACE_AND_PUBLIC_ARCHIVE_ENVELOPE",
+      "sha256": "3a0b7a81bdef95421d0d552d2629cf4dd9089e6ecd9389cfc19447d4e4a633f7"
+    },
+    {
+      "bytes": 332,
+      "path": "submissions/robust_current/g108_semantic_root_receiver/inflate.sh",
+      "role": "PUBLIC_ENTRYPOINT",
+      "sha256": "91a07f89aafdc444722a675caae23204d9fb1939fcc9e13f66a4612033184098"
+    },
+    {
+      "bytes": 10624,
+      "path": "submissions/robust_current/g108_semantic_root_receiver/inflate.py",
+      "role": "PUBLIC_DISPATCH_FACTOR2_AND_RAW_WRITER",
+      "sha256": "b456ef8d057c4e5b5f126163dc18d5ef67571c38aa4fc38f8ab82b71bed9dbc3"
+    },
+    {
+      "bytes": 27755,
+      "path": "submissions/robust_current/g108_semantic_root_receiver/semantic_variants/original_coordinr_film_mlp_v1.py",
+      "role": "PUBLIC_G103_WIRE_AND_NUMPY_RENDERER",
+      "sha256": "c29bd90fbe5fcae494d4144a599dfd38b60f2ad6882cbe2a6c17160a54cb739f"
+    },
+    {
+      "bytes": 958,
+      "path": "submissions/robust_current/g108_semantic_root_receiver/frame0_variants/duplicate_y1_research_only_v1.py",
+      "role": "EXPLICIT_RESEARCH_ONLY_FRAME0_OWNER",
+      "sha256": "14505411e25435a2dcfda0abb4a3657b6a6195db339b710fac9da7f2347cb058"
+    },
+    {
+      "bytes": 14501,
+      "path": "tools/tests/test_taskspace_g108_semantic_root_public_product_v1.py",
+      "role": "PARITY_ARCHIVE_G102_AND_FULL_CLEAN_ROOT_TESTS",
+      "sha256": "31d648b276a0e4c9429687e3e8bb24fe3489b13d1342806999b38212a4990dea"
+    },
+    {
+      "bytes": 6342,
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g108_semantic_root_public_receiver_closure_20260727.md",
+      "role": "DURABLE_SPEC",
+      "sha256": "dae8db016fdb9e8c5b1e045481edf7a1311cb7bea726e218a4f93929b6eed750"
+    }
+  ],
+  "freeze_git_head": "d04b0ab9f60ffd7f9ca20c45e8afd5def96a5471",
+  "governance": {
+    "agents_sha256": "47d4ac3a38f91a8b8e7dc3061131717d8122bd48ffb204ffb914eb58e687f0c9",
+    "claude_sha256": "47d4ac3a38f91a8b8e7dc3061131717d8122bd48ffb204ffb914eb58e687f0c9",
+    "no_fake": true,
+    "program_sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+  },
+  "g102_interface": {
+    "all_required_callables_present": true,
+    "capability_key_set_exact": true,
+    "exact_post_r_pose_closure": false,
+    "exact_post_r_seg_closure": false,
+    "interface_id": "tac.semantic_root_y1.compiler_receiver.v2",
+    "own_lineage": false,
+    "public_runtime_tree_sha256": "23dd52fbd9035f236d6585ff7ca7e67a7062788ac1ff4b9b6fa9176eabc84ce5",
+    "s01_capability_gate_expected_to_refuse": true,
+    "scorer_free_receiver": true
+  },
+  "heavy_launch_performed": false,
+  "historical_payload_reused": false,
+  "lane_id": "lane_g108_semantic_root_public_receiver_closure_20260727",
+  "pointer": {
+    "effective_frontier": 0.172,
+    "moved": false,
+    "path": ".omx/state/canonical_frontier_pointer.json",
+    "sha256": "06027fa2dcb695d755858d6e101c7be57f1fbe5570903eb4bf8c5e2f38510388",
+    "source": "upstream_official_leaderboard_external"
+  },
+  "pointer_mutated": false,
+  "public_runtime": {
+    "dependency_contract": [
+      "python3",
+      "numpy",
+      "python_standard_library"
+    ],
+    "private_repository_imports": false,
+    "scorer_imports": false,
+    "tree_bytes": 39669,
+    "tree_file_count": 4,
+    "tree_sha256": "23dd52fbd9035f236d6585ff7ca7e67a7062788ac1ff4b9b6fa9176eabc84ce5",
+    "v9_reserved_variant_id": "tac.semantic_root_y1.v9_hosc_dual_head_odd_y1.v1",
+    "variant_dispatch": "exactly_one_accepts_packet"
+  },
+  "research_only": true,
+  "schema": "tac.g108_semantic_root_public_receiver_closure_receipt.v1",
+  "score_claim": false,
+  "source_closure_claim": false,
+  "tests": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q tools/tests/test_taskspace_g108_semantic_root_public_product_v1.py src/tac/witness_dsl/tests/test_taskspace_pfree_semantic_root_v1.py tools/tests/test_run_g102_semantic_root_s00_s01_n600_v1.py -p no:cacheprovider",
+    "full_n600_opt_in": "1 passed in 188.64s",
+    "result": "41 passed, 1 skipped in 1.57s",
+    "ruff": "all checks passed"
+  },
+  "upstream_evaluate_run": false,
+  "verdict": "PUBLIC_RECEIVER_AND_ARCHIVE_ENVELOPE_CLOSED_SOURCE_AND_CANDIDATE_AUTHORITY_STILL_OWED"
+}
