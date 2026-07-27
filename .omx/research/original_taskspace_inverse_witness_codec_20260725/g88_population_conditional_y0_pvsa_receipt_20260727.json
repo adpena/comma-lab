@@ -1,0 +1,308 @@
+{
+  "schema": "tac.g88_population_conditional_y0_pvsa_landing.v1",
+  "date": "2026-07-27",
+  "lane_id": "lane_g88_population_conditional_y0_pvsa_20260727",
+  "outcome": "NEW_N600_COUNTED_CONDITIONAL_Y0_SUCCESSOR_LANDED_WITH_REAL_PAIR0_COPY_ROLE_PROOFS_AND_TYPED_GLOBAL_XIP2_MODE",
+  "git_head_observed_in_shared_dirty_tree": "22d6b39c14070f7bdc38b1b33ab713598a28e192",
+  "evidence_axes": [
+    "[repository-runtime exact wire and uint8 receiver]",
+    "[macOS-CPU local advisory pair0 PoseNet]"
+  ],
+  "truth": {
+    "research_only": true,
+    "candidate_claim": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "public_runtime_closed": false,
+    "exact_contest_score_claim": false,
+    "n600_pose_inference_allowed": false,
+    "pointer_moved": false
+  },
+  "design": {
+    "receiver_id": "tac.g88.pvsa_population_conditional_y0_given_exact_y1.v1",
+    "wire_policy_id": "EXACT_PVSA1_MEMBER_PLUS_ONE_N600_DEFAULT_SPARSE_OVERRIDE_CONDITIONAL_OPERAND_V1",
+    "causal_transition_id": "PVSA1_TO_EXACT_CORRECTED_Y1_TO_COUNTED_Y0_GIVEN_Y1_V1",
+    "source_pair_range": [
+      0,
+      600
+    ],
+    "maximum_stream_batch_pairs": 16,
+    "population_defaults": [
+      "PASS_P0",
+      "XIP2_SE3_FRAME0_WARP"
+    ],
+    "sparse_override_modes": [
+      "PASS_P0",
+      "COPY_CONDITIONAL_Y1",
+      "ROLE_TRANSLATE_RGB",
+      "XIP2_SE3_FRAME0_WARP"
+    ],
+    "global_xip2_repeated_mode_rows": 0,
+    "global_xip2_fixed_operand_overhead_bytes_excluding_payload": 160,
+    "xip2_source_policy_id": "EXACT_CORRECTED_PVSA_Y1_AS_WARP_SOURCE_KEYFRAME_V1",
+    "xip2_policy_id": "COUNTED_XIP2_SE3_CAMERA_THEN_R_NUMPY_FP32_SAMPLE_RNE_U8_V1",
+    "xip2_numeric_reference_id": "NUMPY_FP32_SAMPLE_FP64_EON_RNE_U8_V1",
+    "xip2_transport": {
+      "exact_payload_magic": "XIP2",
+      "decoded_shape": [
+        600,
+        6
+      ],
+      "decoded_dtype": "int16",
+      "scale_shape": [
+        6
+      ],
+      "scale_dtype": "float32",
+      "source_foreign_key": "exact embedded PVSA member SHA-256",
+      "semantic_foreign_key": "exact semantic P SHA-256",
+      "pose6_relabel_allowed": false
+    },
+    "ownership": {
+      "y1_writable": false,
+      "copy_y0_support": "whole frame",
+      "xip2_y0_support": "whole frame",
+      "role_y0_support": "translated visible semantic role mask only",
+      "unowned_y0_policy": "byte-identical incoming P0"
+    }
+  },
+  "input_custody": {
+    "source": "fresh G82 member and G85 exact full-n600 deterministic double decode; no historical or public payload reuse",
+    "g85_input_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/receipts/input.json",
+      "bytes": 378,
+      "sha256": "d7e0bcde242584b98efd915394beb4f157704292c162be2117417073c9919e3e"
+    },
+    "base_archive": {
+      "bytes": 129392,
+      "sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd"
+    },
+    "base_pvsa_member": {
+      "bytes": 133363,
+      "sha256": "d50aac6eab8114c2c15156354147d1cbfe007b474a0633d5cdec26e66751de31"
+    },
+    "semantic_p": {
+      "bytes": 133941,
+      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
+    },
+    "g74_operand": {
+      "bytes": 52,
+      "sha256": "5616799adc0d2ab942f37a20b070f7a0fa48119771e8f1b56c1f45e2605306ca",
+      "pair_ids": [
+        0
+      ],
+      "selector": "BOTH"
+    },
+    "full_double_decode": {
+      "shape": [
+        600,
+        2,
+        874,
+        1164,
+        3
+      ],
+      "dtype": "uint8",
+      "bytes_per_decode": 3662409600,
+      "sha256": "436ce2b6965c859556a217df9b1cc17784d988f2af900c35201d3e3c7f372782",
+      "byte_identical": true
+    },
+    "pair0": {
+      "base_pair_sha256": "caf69dade383564ef8123149d193052b8b5b641711fed232b25dd67b29af25db",
+      "base_p0_sha256": "754ce88b494bfbc3bd560b23ee26cdbccffb10d5829fa09d882e04f918aa9126",
+      "exact_corrected_y1_sha256": "65ca46b182ef52d4cedffb56ec48576bd19610802b60f88027a9e7e46158a037"
+    }
+  },
+  "copy_pair0_exact_wire": {
+    "default_mode": "PASS_P0",
+    "sparse_rows": 1,
+    "operand_bytes": 198,
+    "operand_sha256": "f9170051a46ac71fbb34ca690d02578390c5f2bff16a391ec7f769dd9251e593",
+    "successor_member_bytes": 133646,
+    "successor_member_sha256": "809481dd63acedbc572bc034b3bd1b00bdd7bc08726241030fed9583f10fee1e",
+    "member_delta_bytes": 283,
+    "outer_store_bytes": 133754,
+    "outer_store_sha256": "dfc90a84806547e28add7531b30ce52e07dcb55f6a7fa4828df71b93a8fab30d",
+    "outer_deflate_bytes": 129606,
+    "outer_deflate_sha256": "caee21878c9da3f96085de1c354a3075ee61d64333dc48ac0ad1e256d9d81532",
+    "selected_outer_encoding": "zip_deflated",
+    "selected_outer_bytes": 129606,
+    "selected_outer_sha256": "caee21878c9da3f96085de1c354a3075ee61d64333dc48ac0ad1e256d9d81532",
+    "selected_outer_delta_vs_g85_bytes": 214,
+    "store_deflate_strict_parse_reencode_equal": true
+  },
+  "real_pair0_execution": {
+    "copy": {
+      "camera_pair_sha256": "04b35073dabf6c01578aa0d4cd8f8e25ec5a9f7541f6578e093c837e728b7435",
+      "base_pair_sha256": "caf69dade383564ef8123149d193052b8b5b641711fed232b25dd67b29af25db",
+      "exact_y1_sha256": "65ca46b182ef52d4cedffb56ec48576bd19610802b60f88027a9e7e46158a037",
+      "owned_y0_sha256": "a7e3c84412239ea67ce82c912b544ad2df08f545733d7f6da7587aebf377952c",
+      "changed_y0_values": 828605,
+      "changed_y0_pixels": 429630,
+      "preserved_unowned_y0_values": 0,
+      "output_y0_equals_exact_y1": true,
+      "exact_y1_preserved": true,
+      "deterministic_double_decode": true
+    },
+    "role_translate_rgb": {
+      "role": "Road",
+      "shift_y": 0,
+      "shift_x": 0,
+      "rgb_delta": [
+        1,
+        -1,
+        1
+      ],
+      "operand_bytes": 198,
+      "operand_sha256": "c62ccd7670030fbad46d1b3d36b66101efea70e1c312bfcf0130ca1b601d915f",
+      "camera_pair_sha256": "f63904bf6a3bda4fba0aa5f92a843e33877d8f124c0c40273e4575efb5edec7f",
+      "base_pair_sha256": "caf69dade383564ef8123149d193052b8b5b641711fed232b25dd67b29af25db",
+      "exact_y1_sha256": "65ca46b182ef52d4cedffb56ec48576bd19610802b60f88027a9e7e46158a037",
+      "owned_y0_sha256": "31eeedacaf5c81c91aaeb4cebb40e6aa911d90aa76641080ae7c87e99b956d1f",
+      "owned_y0_values": 690762,
+      "changed_y0_values": 690762,
+      "changed_y0_pixels": 230254,
+      "preserved_unowned_y0_values": 2361246,
+      "unowned_y0_equals_incoming_p0": true,
+      "exact_y1_preserved": true,
+      "deterministic_double_decode": true
+    }
+  },
+  "xip2_mechanism_regression": {
+    "truth": "TEST_ONLY_SYNTHETIC_MECHANISM_NOT_CANDIDATE_NOT_POSE_EVIDENCE",
+    "default_mode": "XIP2_SE3_FRAME0_WARP",
+    "sparse_rows": 0,
+    "active_pair_count": 600,
+    "pitch_fp32": -0.029999999329447746,
+    "xip2_payload_bytes": 176,
+    "xip2_payload_sha256": "24f99daf716d817abc55fed32c23058de18921bf66788242b9e193038ad8038f",
+    "operand_bytes": 336,
+    "operand_sha256": "0749a54b88eea7a1dc4e27297d46cba542b4a7900f7e5211698023f9e398539c",
+    "pair0_camera_sha256": "da30b0fe26364af6a549cc80a18cdf4313c8996b8cac9c65d39607509d8f2086",
+    "pair0_y0_sha256": "01b2f12079004599ac502b4d64272c89aedb70b2269b4ecd192248e786be4639",
+    "exact_y1_sha256": "65ca46b182ef52d4cedffb56ec48576bd19610802b60f88027a9e7e46158a037",
+    "changed_y0_values": 878469,
+    "changed_y0_pixels": 439127,
+    "owned_y0_values": 3052008,
+    "deterministic_double_decode": true,
+    "score_invoked": false
+  },
+  "pair0_frozen_cpu_pose_advisory": {
+    "axis": "[macOS-CPU local advisory pair0 only]",
+    "source_pair_id": 0,
+    "seed": 1234,
+    "torch_num_threads": 2,
+    "deterministic_algorithms": true,
+    "deterministic_double_forward": true,
+    "posenet_weights": {
+      "path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+      "bytes": 55835560,
+      "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+    },
+    "gt_pose_source": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sealed_container_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "gt_poses_member_sha256": "bee5821eeb892ad430878946dfcdf365e1a14202efb7cd1af2b019d75da0f481",
+      "pair0_float64_bytes_sha256": "912e5f586748d0d38c540befae07c85dff60df96949e3f6a90bc6d5a01f8fca3"
+    },
+    "gt_pose_pair0": [
+      34.24417495727539,
+      -0.00006736442446708679,
+      0.0017319992184638977,
+      -0.0008645877242088318,
+      -0.012666255235671997,
+      -0.00021489709615707397
+    ],
+    "pass_prediction": [
+      0.005018472671508789,
+      0.0017598941922187805,
+      -0.0022897161543369293,
+      -0.00013719499111175537,
+      -0.0002580881118774414,
+      -0.0004971325397491455
+    ],
+    "copy_prediction": [
+      0.014427661895751953,
+      0.0009296312928199768,
+      -0.00284460186958313,
+      -0.00008518248796463013,
+      -0.00017876923084259033,
+      -0.00040872395038604736
+    ],
+    "pass_d_pose": 195.38666847693818,
+    "copy_d_pose": 195.2792964045293,
+    "delta_copy_minus_pass_d_pose": -0.1073720724088787,
+    "pass_pairlocal_sqrt_10_d_pose": 44.20256423296483,
+    "copy_pairlocal_sqrt_10_d_pose": 44.19041710648693,
+    "delta_pairlocal_sqrt_10_d_pose": -0.01214712647789895,
+    "seg_delta": 0.0,
+    "seg_delta_reason": "Y1 is byte-identical and upstream SegNet reads only the last frame",
+    "selected_outer_rate_term_delta_if_used_as_one_n600_archive": 0.00014249381596814466,
+    "combined_score_or_population_rate_of_improvement_claim": false
+  },
+  "exact_blocker": {
+    "id": "G88_FRESH_V15_N600_XIP2_TRAJECTORY_CUSTODY_OWED",
+    "status": "OPEN",
+    "reason": "No fresh source-custodied n600 SE3 xi trajectory bound to the exact G82 PVSA member was found. Existing V15 Pose6 codes are not xi, and the older counted XIP2 packet is foreign-keyed to a bounded PASS-G source and cannot be relabeled.",
+    "active_source_custodied_xip2_scored": false,
+    "next_acceptance": "G83 or another inverse solve must emit one exact EOF-closed XIP2 [600,6] payload with positive fp32 scales, bind it to member d50aac6..., and pass this receiver before any pose claim."
+  },
+  "open_blockers": [
+    "G88_FRESH_V15_N600_XIP2_TRAJECTORY_CUSTODY_OWED",
+    "G88_PUBLIC_INFLATE_RUNTIME_GRAPH_LINK_OWED",
+    "G88_EXACT_POSE_OR_UPSTREAM_EVAL_OF_SUCCESSOR_ARCHIVE_OWED"
+  ],
+  "validation": {
+    "focused_pytest": "7 passed in 35.62s",
+    "ruff_check": "PASS",
+    "ruff_format": "PASS",
+    "mypy_follow_imports_skip": "PASS",
+    "py_compile": "PASS",
+    "adversarial_cases": [
+      "unknown mode",
+      "default-mode alias",
+      "unordered pair IDs",
+      "CRC mutation",
+      "EOF truncation",
+      "XIP2 digest mutation with resealed CRC",
+      "XIP2 missing payload",
+      "XIP2 payload on non-XIP2 program",
+      "raw Pose6 bytes refused as XIP2",
+      "foreign base member key",
+      "noncontiguous streaming IDs",
+      "base double-decode mismatch"
+    ]
+  },
+  "source_identities": {
+    "src/tac/witness_dsl/taskspace_g88_population_conditional_y0_pvsa_v1.py": {
+      "bytes": 53538,
+      "sha256": "cb3958e2cb24c72a5742d38c85c3490bd944a90e6269f8ea35503b7e6116ada3"
+    },
+    "src/tac/witness_dsl/tests/test_taskspace_g88_population_conditional_y0_pvsa_v1.py": {
+      "bytes": 19267,
+      "sha256": "706a91cbacdc28d9fa7d7fe4265e4883167488f97d13542fe3de89bc14fc6567"
+    },
+    "src/tac/witness_dsl/taskspace_counted_xip2_chronological_a3.py": {
+      "sha256": "eb4e185647118f02c5d9f4125702527260c524a55c72167d0993fd20b72c1f5f"
+    },
+    "src/tac/witness_dsl/taskspace_chronological_a3_encoder.py": {
+      "sha256": "c59366b97e7facac81809ad213f6646485db8e106439a6845ea6b5e4c838cd9a"
+    },
+    "src/tac/boundary_math/warp_real_luma_frame0.py": {
+      "sha256": "e291a7355eecb542c9146b8a75fc1c3e0e44e003e15fc23d54c5a0b91864a03f"
+    },
+    "upstream/evaluate.py": {
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    },
+    "upstream/modules.py": {
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    }
+  },
+  "pointer_delta": {
+    "effective_frontier_observed": 0.172,
+    "frontier_moved": false,
+    "reason": "No full-n600 source-custodied pose control, public runtime closure, or exact successor evaluation was produced."
+  },
+  "receipt_self_hash": {
+    "algorithm": "sha256(canonical_json(receipt with receipt_self_hash removed))",
+    "value": "1028136c252dffe4786a9db3b8a25c55eac258b9c87de961f2e59ff892810b55"
+  }
+}
