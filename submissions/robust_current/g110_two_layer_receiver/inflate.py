@@ -39,6 +39,13 @@ FRAME0_PLUGIN_CALLS: Final = (
     "render_scorer_y0",
     "verify_final_y1_population",
 )
+EXPECTED_SEMANTIC_PLUGINS: Final = {
+    "original_coordinr_film_mlp_v1.py": "tac.semantic_root_y1.original_coordinr_film_mlp.v1",
+    "v9_hosc_dual_head_odd_y1_v1.py": "tac.semantic_root_y1.v9_hosc_dual_head_odd_y1.v1",
+}
+EXPECTED_FRAME0_PLUGINS: Final = {
+    "conditional_lowrank_rice_v1.py": "tac.semantic_root_y0.conditional_lowrank_rice.v1",
+}
 
 
 class PublicInflateError(RuntimeError):
@@ -69,13 +76,23 @@ def _load_packet(archive_root: Path) -> bytes:
     return packet
 
 
-def _load_plugins(directory: Path, *, calls: tuple[str, ...]) -> dict[str, ModuleType]:
+def _load_plugins(
+    directory: Path,
+    *,
+    calls: tuple[str, ...],
+    expected: dict[str, str],
+) -> dict[str, ModuleType]:
     if directory.is_symlink() or not directory.is_dir():
         raise PublicInflateError(f"runtime plugin directory is absent: {directory.name}")
+    observed_entries = {path.name for path in directory.iterdir()}
+    if observed_entries != set(expected):
+        raise PublicInflateError(
+            f"runtime plugin filenames differ: {directory.name}"
+        )
     result: dict[str, ModuleType] = {}
-    for path in sorted(directory.glob("*.py")):
-        if path.name.startswith("_") or path.is_symlink():
-            continue
+    for filename, expected_variant in sorted(expected.items()):
+        path = directory / filename
+        _regular_file(path, label=f"runtime plugin {filename}")
         spec = importlib.util.spec_from_file_location(
             f"_public_{directory.name}_{path.stem}",
             path,
@@ -96,14 +113,16 @@ def _load_plugins(directory: Path, *, calls: tuple[str, ...]) -> dict[str, Modul
             or any(character not in "abcdefghijklmnopqrstuvwxyz0123456789_.-" for character in variant)
         ):
             raise PublicInflateError(f"runtime plugin has invalid VARIANT_ID: {path.name}")
+        if variant != expected_variant:
+            raise PublicInflateError(
+                f"runtime plugin filename/variant binding differs: {path.name}"
+            )
         if variant in result:
             raise PublicInflateError(f"duplicate runtime variant: {variant}")
         missing = [name for name in calls if not callable(getattr(module, name, None))]
         if missing:
             raise PublicInflateError(f"runtime plugin {variant} lacks calls: {missing}")
         result[variant] = module
-    if not result:
-        raise PublicInflateError(f"runtime plugin directory is empty: {directory.name}")
     return result
 
 
@@ -186,10 +205,12 @@ def inflate(archive_root: Path, output_root: Path, video_names_path: Path) -> Pa
     semantic_plugins = _load_plugins(
         runtime_root / "semantic_variants",
         calls=SEMANTIC_PLUGIN_CALLS,
+        expected=EXPECTED_SEMANTIC_PLUGINS,
     )
     frame0_plugins = _load_plugins(
         runtime_root / "frame0_variants",
         calls=FRAME0_PLUGIN_CALLS,
+        expected=EXPECTED_FRAME0_PLUGINS,
     )
     frame0_matches = [
         module for module in frame0_plugins.values() if module.accepts_packet(packet) is True

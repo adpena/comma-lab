@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import struct
 import zlib
 from typing import Final
@@ -208,6 +209,36 @@ def parse_packet(packet: bytes) -> dict[str, object]:
         dead_rank = np.all(basis == 0, axis=(1, 2, 3)) | np.all(coefficients == 0, axis=0)
         if np.any(dead_rank):
             raise ConditionalVariantError("unused conditional ranks were not removed")
+        amplitude_bounds = []
+        for rank_id in range(rank):
+            flat_basis = basis[rank_id].reshape(-1)
+            first_nonzero = flat_basis[np.flatnonzero(flat_basis)[0]]
+            if int(first_nonzero) < 0:
+                raise ConditionalVariantError(
+                    "conditional rank sign gauge is noncanonical"
+                )
+            coefficient_gcd = 0
+            for value in coefficients[:, rank_id]:
+                coefficient_gcd = math.gcd(coefficient_gcd, abs(int(value)))
+            if coefficient_gcd != 1:
+                raise ConditionalVariantError(
+                    "conditional coefficient/scale gauge is noncanonical"
+                )
+            amplitude_bounds.append(
+                float(np.max(np.abs(flat_basis.astype(np.int16))))
+                * float(np.max(np.abs(coefficients[:, rank_id].astype(np.int32))))
+                * float(scales[rank_id])
+            )
+        bounds = np.asarray(amplitude_bounds, dtype=np.float64)
+        if (
+            not np.all(np.isfinite(bounds))
+            or np.any(bounds < 0.5)
+            or float(np.sum(bounds, dtype=np.float64))
+            > float(np.finfo(np.float32).max) / 4.0
+        ):
+            raise ConditionalVariantError(
+                "conditional rank is decoder-dead or can overflow float32"
+            )
     return {
         "semantic_packet": sections[0],
         "binding": bytes(binding),
@@ -241,21 +272,26 @@ def verify_final_y1_population(
 
 def _bilinear_resize(image: np.ndarray) -> np.ndarray:
     input_h, input_w, _ = image.shape
-    ys = (np.arange(H, dtype=np.float64) + 0.5) * input_h / H - 0.5
-    xs = (np.arange(W, dtype=np.float64) + 0.5) * input_w / W - 0.5
-    y0 = np.floor(ys).astype(np.int64)
-    x0 = np.floor(xs).astype(np.int64)
-    wy = (ys - y0).astype(np.float32)
-    wx = (xs - x0).astype(np.float32)
-    y0 = np.clip(y0, 0, input_h - 1)
-    x0 = np.clip(x0, 0, input_w - 1)
-    y1 = np.clip(y0 + 1, 0, input_h - 1)
-    x1 = np.clip(x0 + 1, 0, input_w - 1)
-    top = image[y0[:, None], x0[None, :]] * (1.0 - wx[None, :, None])
-    top += image[y0[:, None], x1[None, :]] * wx[None, :, None]
-    bottom = image[y1[:, None], x0[None, :]] * (1.0 - wx[None, :, None])
-    bottom += image[y1[:, None], x1[None, :]] * wx[None, :, None]
-    return top * (1.0 - wy[:, None, None]) + bottom * wy[:, None, None]
+    ys = (np.arange(H, dtype=np.float32) + np.float32(0.5)) * np.float32(
+        input_h / H
+    ) - np.float32(0.5)
+    xs = (np.arange(W, dtype=np.float32) + np.float32(0.5)) * np.float32(
+        input_w / W
+    ) - np.float32(0.5)
+    ys = np.clip(ys, np.float32(0.0), np.float32(input_h - 1))
+    xs = np.clip(xs, np.float32(0.0), np.float32(input_w - 1))
+    y0 = np.floor(ys).astype(np.intp)
+    x0 = np.floor(xs).astype(np.intp)
+    y1 = np.minimum(y0 + 1, input_h - 1)
+    x1 = np.minimum(x0 + 1, input_w - 1)
+    wy = ys - y0.astype(np.float32)
+    wx = xs - x0.astype(np.float32)
+    vertical = image[y0, :, :] * (np.float32(1.0) - wy[:, None, None])
+    vertical += image[y1, :, :] * wy[:, None, None]
+    return (
+        vertical[:, x0, :] * (np.float32(1.0) - wx[None, :, None])
+        + vertical[:, x1, :] * wx[None, :, None]
+    )
 
 
 def render_scorer_y0(
@@ -279,15 +315,23 @@ def render_scorer_y0(
         raise ConditionalVariantError("parsed conditional operands lost ndarray types")
     if basis.shape[0] == 0 or not np.any(coefficients[pair_id]):
         return np.ascontiguousarray(y1)
-    weights = coefficients[pair_id].astype(np.float32) * scales
-    grid = np.einsum(
-        "r,rhwc->hwc",
-        weights,
-        basis.astype(np.float32),
-        optimize=True,
-        dtype=np.float32,
-    )
+    with np.errstate(over="ignore", invalid="ignore"):
+        weights = coefficients[pair_id].astype(np.float32) * scales
+        grid = np.einsum(
+            "r,rhwc->hwc",
+            weights,
+            basis.astype(np.float32),
+            optimize=True,
+            dtype=np.float32,
+        )
+    if not np.all(np.isfinite(weights)) or not np.all(np.isfinite(grid)):
+        raise ConditionalVariantError("conditional low-rank synthesis overflowed")
     residual = _bilinear_resize(np.ascontiguousarray(grid, dtype=np.float32))
+    if not np.all(np.isfinite(residual)):
+        raise ConditionalVariantError("conditional bilinear synthesis is non-finite")
+    summed = y1.astype(np.float32) + residual
+    if not np.all(np.isfinite(summed)):
+        raise ConditionalVariantError("conditional Y0 accumulation is non-finite")
     return np.ascontiguousarray(
-        np.clip(np.rint(y1.astype(np.float32) + residual), 0, 255).astype(np.uint8)
+        np.clip(np.rint(summed), 0, 255).astype(np.uint8)
     )

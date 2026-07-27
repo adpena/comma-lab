@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import io
+import json
 import sys
 import zipfile
 from pathlib import Path
@@ -18,6 +19,9 @@ import tac.witness_dsl.taskspace_g110_generic_two_layer_public_product_v1 as pro
 from tac.optimization.uint8_lattice_feasibility import (
     DisjointResizeOperator,
     verify_factor2_uint8_scorer_plane,
+)
+from tac.witness_dsl.taskspace_g95_population_pose_preimage_chart_v1 import (
+    bilinear_resize_align_corners_false_numpy,
 )
 from tac.witness_dsl.taskspace_pfree_semantic_root_v1 import (
     encode_semantic_root_y1_v1,
@@ -63,12 +67,12 @@ def _sha(label: str) -> str:
 def _conditional() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     basis = np.zeros((2, 2, 3, 3), dtype=np.int8)
     basis[0, 0, 0, 0] = 2
-    basis[1, 1, 2, 1] = -3
+    basis[1, 1, 2, 1] = 3
     scales = np.array([0.75, 0.25], dtype=np.float32)
     coefficients = np.zeros((600, 2), dtype=np.int16)
     coefficients[1:300, 0] = 2
     coefficients[300:, 0] = 3
-    coefficients[450:, 1] = -4
+    coefficients[450:, 1] = -1
     return basis, scales, coefficients
 
 
@@ -145,6 +149,134 @@ def test_compile_custody_cannot_be_hash_asserted() -> None:
             target_capsule_receipt_sha256=_sha("r"),
             fresh_checkpoint_sha256=_sha("c"),
         )
+    forged = object.__new__(product.G110Batch16SourcePoseCustodyV1)
+    basis, scales, coefficients = _conditional()
+    with pytest.raises(TypeError, match="unexpected keyword argument 'custody'"):
+        product.compile_g110_two_layer_v1(
+            b"not-a-packet",
+            basis_q=basis,
+            combined_scales=scales,
+            coefficients_q=coefficients,
+            custody=forged,  # type: ignore[call-arg]
+            target_capsule_receipt=Path("absent-g109.json"),
+            expected_target_capsule_receipt_sha256=_sha("g109"),
+            fresh_g105_checkpoint=Path("absent-g105.npz"),
+            conditional_operand_receipt=Path("absent-conditional.json"),
+            expected_conditional_operand_receipt_sha256=_sha("conditional"),
+        )
+
+
+def test_conditional_quotient_gauges_and_dead_or_overflow_ranks_refuse() -> None:
+    basis, scales, coefficients = _conditional()
+
+    negative_basis = basis.copy()
+    negative_basis[0] *= -1
+    with pytest.raises(product.G110TwoLayerError, match="sign gauge"):
+        product._validate_conditional(negative_basis, scales, coefficients)
+
+    nonprimitive_coefficients = coefficients.copy()
+    nonprimitive_coefficients[:, 0] *= 2
+    with pytest.raises(product.G110TwoLayerError, match="coefficient/scale gauge"):
+        product._validate_conditional(basis, scales, nonprimitive_coefficients)
+
+    decoder_dead_scales = scales.copy()
+    decoder_dead_scales[0] = np.nextafter(
+        np.float32(0.0),
+        np.float32(1.0),
+    )
+    with pytest.raises(product.G110TwoLayerError, match="decoder-dead"):
+        product._validate_conditional(basis, decoder_dead_scales, coefficients)
+
+    overflowing_scales = scales.copy()
+    overflowing_scales[0] = np.finfo(np.float32).max
+    with pytest.raises(product.G110TwoLayerError, match="overflow"):
+        product._validate_conditional(basis, overflowing_scales, coefficients)
+
+
+def test_conditional_operands_reopen_physical_checkpoint_and_run(
+    tmp_path: Path,
+) -> None:
+    basis, scales, coefficients = _conditional()
+    semantic_sha = _sha("semantic")
+    target_sha = _sha("target-capsule")
+    pose_sha = _sha("poses")
+    run_id = "g110-test-physical-producer"
+    seed = 110
+    checkpoint_path = (tmp_path / "conditional-final.npz").resolve()
+    np.savez(
+        checkpoint_path,
+        schema=np.asarray(product.CONDITIONAL_PRODUCER_CHECKPOINT_SCHEMA),
+        run_id=np.asarray(run_id),
+        seed=np.asarray(seed),
+        fresh_own_lineage=np.asarray(1),
+        joint_pose_conditioned=np.asarray(1),
+        semantic_packet_sha256=np.asarray(semantic_sha),
+        target_capsule_receipt_sha256=np.asarray(target_sha),
+        pose_targets_sha256=np.asarray(pose_sha),
+        basis_q=basis,
+        combined_scales=scales,
+        coefficients_q=coefficients,
+    )
+    checkpoint_binding = {
+        "path": str(checkpoint_path),
+        "bytes": checkpoint_path.stat().st_size,
+        "sha256": hashlib.sha256(checkpoint_path.read_bytes()).hexdigest(),
+    }
+    run_path = (tmp_path / "producer-run.json").resolve()
+    run_body = {
+        "schema": product.CONDITIONAL_PRODUCER_RUN_SCHEMA,
+        "run_id": run_id,
+        "seed": seed,
+        "source_git_sha": "1" * 40,
+        "command": ["g110-real-producer", "--resume-from", "stage"],
+        "fresh_own_lineage": True,
+        "joint_pose_conditioned": True,
+        "resumable_from_disk": True,
+        "stage_checkpoints_preserved": True,
+        "research_only": True,
+        "candidate_claim": False,
+        "score_claim": False,
+        "pointer_moved": False,
+        "semantic_packet_sha256": semantic_sha,
+        "target_capsule_receipt_sha256": target_sha,
+        "pose_targets_sha256": pose_sha,
+        "producer_checkpoint_sha256": checkpoint_binding["sha256"],
+        "producer_checkpoint_bytes": checkpoint_binding["bytes"],
+        "stage_checkpoints": [checkpoint_binding],
+    }
+    run = {
+        **run_body,
+        "receipt_sha256": hashlib.sha256(
+            json.dumps(
+                run_body,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
+            ).encode("ascii")
+        ).hexdigest(),
+    }
+    run_path.write_text(
+        json.dumps(run, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    run_binding = {
+        "path": str(run_path),
+        "bytes": run_path.stat().st_size,
+        "sha256": hashlib.sha256(run_path.read_bytes()).hexdigest(),
+    }
+    custody = object.__new__(product.G110Batch16SourcePoseCustodyV1)
+    object.__setattr__(custody, "target_capsule_receipt_sha256", target_sha)
+    object.__setattr__(custody, "pose_targets_sha256", pose_sha)
+    product._verify_conditional_producer(
+        checkpoint_binding=checkpoint_binding,
+        run_binding=run_binding,
+        custody=custody,
+        semantic_packet=b"semantic",
+        basis=basis,
+        scales=scales,
+        coefficients=coefficients,
+    )
 
 
 def test_custody_file_resolver_rejects_symlinks(tmp_path: Path) -> None:
@@ -243,6 +375,29 @@ def test_public_conditional_plugin_matches_repo_and_binding(
         conditional.verify_final_y1_population(state, bytes(wrong))
 
 
+def test_bilinear_boundary_vector_matches_independent_canonical_kernel() -> None:
+    grid = np.arange(18, dtype=np.float32).reshape(2, 3, 3)
+    expected = bilinear_resize_align_corners_false_numpy(
+        grid,
+        output_height=384,
+        output_width=512,
+    )
+    observed_repo = product._bilinear_resize(
+        grid,
+        output_height=384,
+        output_width=512,
+    )
+    conditional = _module(
+        RUNTIME_ROOT / "frame0_variants" / "conditional_lowrank_rice_v1.py",
+        "_g110_public_conditional_boundary",
+    )
+    observed_public = conditional._bilinear_resize(grid)
+    assert np.array_equal(observed_repo, expected)
+    assert np.array_equal(observed_public, expected)
+    assert np.array_equal(expected[0, 0], grid[0, 0])
+    assert np.array_equal(expected[-1, -1], grid[-1, -1])
+
+
 def test_public_v10_factor2_is_exact_for_both_planes(g103_packet: bytes) -> None:
     parsed = product.parse_g110_two_layer_v1(g103_packet)
     provider = product.open_final_y1_provider(parsed.semantic_packet)
@@ -267,6 +422,7 @@ def test_public_dispatch_is_unambiguous_for_both_semantic_variants(
     semantic_plugins = inflate._load_plugins(
         RUNTIME_ROOT / "semantic_variants",
         calls=inflate.SEMANTIC_PLUGIN_CALLS,
+        expected=inflate.EXPECTED_SEMANTIC_PLUGINS,
     )
     semantic_g103 = product.parse_g110_two_layer_v1(g103_packet).semantic_packet
     assert sum(module.accepts_packet(semantic_g103) is True for module in semantic_plugins.values()) == 1
@@ -274,7 +430,13 @@ def test_public_dispatch_is_unambiguous_for_both_semantic_variants(
     fixture = _g105_fixture_module()
     v9_packet = fixture.subject.encode_packet(fixture._fixture()[3])
     assert sum(module.accepts_packet(v9_packet) is True for module in semantic_plugins.values()) == 1
+    forbidden = ("from tac", "import tac", "SegNet", "PoseNet", "upstream.evaluate")
+    runtime_sources = [
+        *sorted(RUNTIME_ROOT.rglob("*.py")),
+        RUNTIME_ROOT / "inflate.sh",
+    ]
     assert not any(
-        token in (RUNTIME_ROOT / "inflate.py").read_text("utf-8")
-        for token in ("from tac", "import tac", "SegNet", "PoseNet", "upstream.evaluate")
+        token in path.read_text("utf-8")
+        for path in runtime_sources
+        for token in forbidden
     )

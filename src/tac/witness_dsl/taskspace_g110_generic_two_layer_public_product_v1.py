@@ -24,6 +24,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import math
 import struct
 import zipfile
 import zlib
@@ -43,6 +44,7 @@ from tac.witness_control.taskspace_v9_training_target_capsule_v1 import (
     V9TrainingTargetCapsuleLoaderV1,
     sha256_file,
 )
+from tac.witness_dsl import taskspace_g105_exact_v9_semantic_root_adapter_v1 as g105_adapter
 from tac.witness_dsl.taskspace_g105_exact_v9_semantic_root_adapter_v1 import (
     MAGIC as V9_MAGIC,
 )
@@ -50,7 +52,16 @@ from tac.witness_dsl.taskspace_g105_exact_v9_semantic_root_adapter_v1 import (
     VARIANT_ID as V9_VARIANT_ID,
 )
 from tac.witness_dsl.taskspace_g105_exact_v9_semantic_root_adapter_v1 import (
-    CompiledFreshV9SemanticRootV1,
+    ExactV9SemanticRootError,
+)
+from tac.witness_dsl.taskspace_g105_exact_v9_semantic_root_adapter_v1 import (
+    _checkpoint_config as _g105_checkpoint_config,
+)
+from tac.witness_dsl.taskspace_g105_exact_v9_semantic_root_adapter_v1 import (
+    _checkpoint_runtime_state as _g105_checkpoint_runtime_state,
+)
+from tac.witness_dsl.taskspace_g105_exact_v9_semantic_root_adapter_v1 import (
+    compile_from_state as compile_v9_from_state,
 )
 from tac.witness_dsl.taskspace_g105_exact_v9_semantic_root_adapter_v1 import (
     encode_packet as encode_v9_packet,
@@ -98,6 +109,18 @@ G46_SOURCE_PAIR_CHAIN_SHA256: Final = (
 POSE_TARGET_CONTRACT_ID: Final = "UPSTREAM_POSENET_SOURCE_TARGET_ORDERED_N600_BATCH16_V1"
 POSE_CANDIDATE_CONTRACT_ID: Final = "UPSTREAM_POSENET_FINAL_Y0_Y1_ORDERED_N600_BATCH16_V1"
 CONDITIONAL_OPERAND_RECEIPT_SCHEMA: Final = "tac.g110_fresh_conditional_y0_operand_receipt.v1"
+CONDITIONAL_PRODUCER_RUN_SCHEMA: Final = "tac.g110_conditional_y0_producer_run.v1"
+CONDITIONAL_PRODUCER_CHECKPOINT_SCHEMA: Final = (
+    "tac.g110_conditional_y0_producer_checkpoint.v1"
+)
+G109_PROJECTION_SCHEMA: Final = "tac.taskspace_v9_training_target_binding.v1"
+G109_CONSUMER_SCHEMA: Final = "tac.taskspace_v9_training_target_consumer.v1"
+G109_PROJECTION_KEY: Final = "__cfg_g109_target_projection_json"
+G109_PROJECTION_SHA_KEY: Final = "__cfg_g109_target_projection_sha256"
+G105_ADAPTER_SOURCE_SHA256: Final = (
+    "588b0ae20151565b86b235d101b3de46b89dbaf8cce9183614b48ec5b1702e65"
+)
+G105_ADAPTER_GIT_BLOB_SHA1: Final = "68fd3f226bfc25b5dba707ca50e7caaa004a23ea"
 
 _HEADER: Final = struct.Struct(">8sBBHHHBBHHBBIIII32sI")
 _ZIP_TIMESTAMP: Final = (1980, 1, 1, 0, 0, 0)
@@ -164,13 +187,14 @@ def _immutable_array(
 
 @dataclass(frozen=True, slots=True, init=False)
 class G110Batch16SourcePoseCustodyV1:
-    """Content-read G109 + fresh-G105 evidence required before compilation."""
+    """Point-of-use result of reopening G109 and rederiving physical G105."""
 
     target_margins_sha256: str
     pose_targets_sha256: str
     target_capsule_receipt_sha256: str
     fresh_checkpoint_sha256: str
     semantic_packet_sha256: str
+    g105_adapter_source_sha256: str = G105_ADAPTER_SOURCE_SHA256
     upstream_source_closure_sha256: str = UPSTREAM_SOURCE_CLOSURE_SHA256
     target_labels_sha256: str = G46_TARGET_LABELS_SHA256
     source_pair_chain_sha256: str = G46_SOURCE_PAIR_CHAIN_SHA256
@@ -190,17 +214,26 @@ class G110Batch16SourcePoseCustodyV1:
         )
 
     @classmethod
-    def from_verified_v9_producer(
+    def from_physical_v9_producer(
         cls,
         *,
         target_capsule_receipt: Path,
         expected_target_capsule_receipt_sha256: str,
-        compiled_v9: CompiledFreshV9SemanticRootV1,
+        fresh_g105_checkpoint: Path,
+        semantic_packet: bytes,
     ) -> G110Batch16SourcePoseCustodyV1:
-        """Reopen every G109 input and bind it to the fresh G105 packet."""
+        """Reopen G109 and recompile the exact packet from the physical NPZ."""
 
-        if type(compiled_v9) is not CompiledFreshV9SemanticRootV1:
-            raise G110TwoLayerError("custody requires exact fresh G105 compile output")
+        if type(semantic_packet) is not bytes:
+            raise G110TwoLayerError("custody requires exact semantic packet bytes")
+        adapter_path = _resolve_regular_nonsymlink(
+            Path(g105_adapter.__file__),
+            name="committed G105 adapter source",
+        )
+        if sha256_file(adapter_path) != G105_ADAPTER_SOURCE_SHA256:
+            raise G110TwoLayerError(
+                "physical G105 adapter source differs from the committed ABI dependency"
+            )
         expected_receipt_sha = _require_sha256(
             expected_target_capsule_receipt_sha256,
             name="target capsule receipt file",
@@ -219,41 +252,37 @@ class G110Batch16SourcePoseCustodyV1:
             or loader.preflight.get("test_only_small_fixture") is not False
         ):
             raise G110TwoLayerError("G109 target capsule is not exact n600 batch-16")
-        external = compiled_v9.external_receipt
-        if (
-            type(external) is not dict
-            or external.get("schema") != "tac.g105_fresh_v9_semantic_root_compile_receipt.v1"
-            or external.get("candidate") is not False
-            or external.get("score_claim") is not False
-        ):
-            raise G110TwoLayerError("G105 fresh compile receipt is absent or weakens authority")
-        checkpoint = external.get("checkpoint")
-        target = external.get("g46_batch16_training_target_evidence")
-        wire = external.get("wire")
         raw = loader.receipt.get("raw_arrays")
         runtime = loader.preflight.get("runtime_custody")
         if (
-            not isinstance(checkpoint, dict)
-            or not isinstance(target, dict)
-            or not isinstance(wire, dict)
-            or not isinstance(raw, dict)
+            not isinstance(raw, dict)
             or not isinstance(runtime, dict)
             or set(raw) != {"labels", "margins", "poses"}
         ):
             raise G110TwoLayerError("G105/G109 custody sections are incomplete")
-        exact_checkpoint_sha = _require_sha256(
-            checkpoint.get("sha256"),
-            name="fresh checkpoint",
-        )
         checkpoint_path = _resolve_regular_nonsymlink(
-            Path(str(checkpoint.get("path"))),
+            fresh_g105_checkpoint,
             name="fresh G105 checkpoint",
         )
-        if (
-            checkpoint_path.stat().st_size != checkpoint.get("bytes")
-            or sha256_file(checkpoint_path) != exact_checkpoint_sha
-        ):
-            raise G110TwoLayerError("fresh G105 checkpoint file no longer matches compile receipt")
+        try:
+            params, scalars, exact_checkpoint_sha, _checkpoint_bytes = (
+                _g105_checkpoint_runtime_state(checkpoint_path)
+            )
+            config = _g105_checkpoint_config(params, scalars)
+            rederived_program = compile_v9_from_state(
+                config=config,
+                params={key: value for key, value in params.items() if key != "code"},
+                interleaved_code=params["code"],
+            )
+            rederived_packet = encode_v9_packet(rederived_program)
+        except (OSError, ValueError, ExactV9SemanticRootError) as exc:
+            raise G110TwoLayerError(
+                "physical G105 checkpoint did not recompile through the exact adapter"
+            ) from exc
+        if rederived_packet != semantic_packet:
+            raise G110TwoLayerError(
+                "semantic packet is not the exact recompilation of the physical G105 checkpoint"
+            )
         exact_margin_sha = _require_sha256(
             raw["margins"].get("sha256"),
             name="G109 margins",
@@ -262,34 +291,105 @@ class G110Batch16SourcePoseCustodyV1:
             raw["poses"].get("sha256"),
             name="G109 poses",
         )
+        expected_projection = {
+            "schema": G109_PROJECTION_SCHEMA,
+            "aggregate_schema": TARGET_CAPSULE_SCHEMA,
+            "aggregate_receipt": {
+                "path": str(loader.receipt_path),
+                "bytes": loader.receipt_path.stat().st_size,
+                "sha256": expected_receipt_sha,
+            },
+            "aggregate_receipt_sha256": loader.receipt["aggregate_receipt_sha256"],
+            "preflight_sha256": loader.receipt["preflight_sha256"],
+            "batch_digest_chain_sha256": loader.receipt["batch_digest_chain_sha256"],
+            "g46_receipt_sha256": loader.receipt["g46_custody"]["receipt_sha256"],
+            "source_pair_chain_sha256": G46_SOURCE_PAIR_CHAIN_SHA256,
+            "source_video_sha256": loader.receipt["source_custody"]["source_video"]["sha256"],
+            "segnet_weights_sha256": loader.receipt["scorer_custody"]["segnet_weights"]["sha256"],
+            "posenet_weights_sha256": loader.receipt["scorer_custody"]["posenet_weights"]["sha256"],
+            "arrays": {
+                "seg_labels_u8": dict(raw["labels"]),
+                "seg_top1_minus_top2_margin_f32": dict(raw["margins"]),
+                "source_pose6_f32": dict(raw["poses"]),
+            },
+            "pair_count": PRODUCTION_PAIR_COUNT,
+            "scorer_pair_batch_size": PRODUCTION_BATCH_PAIRS,
+            "same_forward_seg_margin_pose": True,
+            "encoder_only": True,
+            "candidate_payload_allowed": False,
+        }
+        projection_sha = _sha256(_canonical_json(expected_projection))
+        projection_text = scalars.get(G109_PROJECTION_KEY)
+        if type(projection_text) is not str:
+            raise G110TwoLayerError("G105 checkpoint lacks the canonical G109 projection")
+        try:
+            observed_projection = json.loads(projection_text)
+        except json.JSONDecodeError as exc:
+            raise G110TwoLayerError("G105 checkpoint G109 projection is not JSON") from exc
+        active_target_sha = _require_sha256(
+            scalars.get("__cfg_target_authority_sha256"),
+            name="active target authority",
+        )
+        consumer_binding_sha = _sha256(
+            _canonical_json(
+                {
+                    "schema": G109_CONSUMER_SCHEMA,
+                    "target_projection_sha256": projection_sha,
+                    "active_target_authority_sha256": active_target_sha,
+                    "live_verdict_batch_size": PAIR_BATCH_SIZE,
+                }
+            )
+        )
+        target_evidence_sha = _sha256(
+            _canonical_json(
+                {
+                    "schema": "tac.taskspace_v9_training_target_evidence.v1",
+                    "target_projection_sha256": projection_sha,
+                    "batch_digest_chain_sha256": loader.receipt[
+                        "batch_digest_chain_sha256"
+                    ],
+                    "same_forward_seg_margin_pose": True,
+                }
+            )
+        )
+        checkpoint_target_binding = {
+            G109_PROJECTION_SHA_KEY: projection_sha,
+            "__cfg_g46_target_labels_sha256": raw["labels"].get("sha256"),
+            "__cfg_g46_target_margins_sha256": exact_margin_sha,
+            "__cfg_g46_source_pair_chain_sha256": G46_SOURCE_PAIR_CHAIN_SHA256,
+            "__cfg_g46_margin_aggregate_schema": TARGET_CAPSULE_SCHEMA,
+            "__cfg_g46_margin_aggregate_sha256": loader.receipt[
+                "aggregate_receipt_sha256"
+            ],
+            "__cfg_g46_target_consumer_binding_sha256": consumer_binding_sha,
+            "__cfg_g46_target_evidence_sha256": target_evidence_sha,
+        }
         if (
-            target.get("target_labels_sha256") != raw["labels"].get("sha256")
-            or target.get("target_margins_sha256") != exact_margin_sha
-            or target.get("scorer_pair_batch_size") != PAIR_BATCH_SIZE
-            or target.get("live_verdict_batch_size") != PAIR_BATCH_SIZE
-            or target.get("margins_from_same_batch16_forward") is not True
-            or target.get("source_pair_chain_sha256") != G46_SOURCE_PAIR_CHAIN_SHA256
-            or checkpoint.get("fresh_init") is not True
-            or checkpoint.get("portable_upstream_closure_sha256")
+            observed_projection != expected_projection
+            or scalars.get(G109_PROJECTION_SHA_KEY) != projection_sha
+            or any(scalars.get(key) != expected for key, expected in checkpoint_target_binding.items())
+            or int(scalars.get("__cfg_g46_target_scorer_batch_size", 0))
+            != PAIR_BATCH_SIZE
+            or int(scalars.get("__cfg_g46_margin_same_forward", 0)) != 1
+            or int(scalars.get("__cfg_verdict_batch", 0)) != PAIR_BATCH_SIZE
+            or scalars.get("__cfg_upstream_snapshot_sha256")
             != UPSTREAM_SOURCE_CLOSURE_SHA256
             or runtime.get("upstream_closure_sha256")
             != UPSTREAM_SOURCE_CLOSURE_SHA256
             or sha256_file(target_capsule_receipt) != expected_receipt_sha
-            or wire.get("packet_sha256") != _sha256(compiled_v9.packet)
-            or wire.get("packet_bytes") != len(compiled_v9.packet)
-            or wire.get("counted_y1_rows") != PAIR_COUNT_N600
-            or wire.get("excluded_y0_rows") != PAIR_COUNT_N600
-            or compiled_v9.wire_accounting.packet_sha256 != _sha256(compiled_v9.packet)
-            or encode_v9_packet(parse_v9_packet(compiled_v9.packet)) != compiled_v9.packet
+            or encode_v9_packet(parse_v9_packet(semantic_packet)) != semantic_packet
         ):
-            raise G110TwoLayerError("G105 packet and G109 batch-16 target capsule disagree")
+            raise G110TwoLayerError(
+                "physical G105 checkpoint and G109 batch-16 target capsule disagree"
+            )
         instance = object.__new__(cls)
         values = {
             "target_margins_sha256": exact_margin_sha,
             "pose_targets_sha256": exact_pose_sha,
             "target_capsule_receipt_sha256": expected_receipt_sha,
             "fresh_checkpoint_sha256": exact_checkpoint_sha,
-            "semantic_packet_sha256": _sha256(compiled_v9.packet),
+            "semantic_packet_sha256": _sha256(semantic_packet),
+            "g105_adapter_source_sha256": G105_ADAPTER_SOURCE_SHA256,
             "upstream_source_closure_sha256": UPSTREAM_SOURCE_CLOSURE_SHA256,
             "target_labels_sha256": G46_TARGET_LABELS_SHA256,
             "source_pair_chain_sha256": G46_SOURCE_PAIR_CHAIN_SHA256,
@@ -314,6 +414,7 @@ class G110Batch16SourcePoseCustodyV1:
             ("target capsule receipt", self.target_capsule_receipt_sha256),
             ("fresh checkpoint", self.fresh_checkpoint_sha256),
             ("semantic packet", self.semantic_packet_sha256),
+            ("G105 adapter source", self.g105_adapter_source_sha256),
         ):
             _require_sha256(value, name=name)
         if (
@@ -328,6 +429,7 @@ class G110Batch16SourcePoseCustodyV1:
             or self.live_verdict_batch_size != PAIR_BATCH_SIZE
             or self.margins_from_same_batch16_forward is not True
             or self.fresh_own_lineage is not True
+            or self.g105_adapter_source_sha256 != G105_ADAPTER_SOURCE_SHA256
         ):
             raise G110TwoLayerError(
                 "compile custody is not fresh own-lineage batch-16 source/margin/pose authority"
@@ -344,6 +446,7 @@ class G110Batch16SourcePoseCustodyV1:
             self.target_capsule_receipt_sha256,
             self.fresh_checkpoint_sha256,
             self.semantic_packet_sha256,
+            self.g105_adapter_source_sha256,
             self.target_capsule_schema,
             self.pose_target_contract_id,
             self.pose_candidate_contract_id,
@@ -569,7 +672,217 @@ def _validate_conditional(
         dead_rank = np.all(basis == 0, axis=(1, 2, 3)) | np.all(coefficients == 0, axis=0)
         if np.any(dead_rank):
             raise G110TwoLayerError("unused conditional ranks must be removed before encoding")
+        amplitude_bounds: list[float] = []
+        for rank_id in range(rank):
+            flat_basis = basis[rank_id].reshape(-1)
+            first_nonzero = flat_basis[np.flatnonzero(flat_basis)[0]]
+            if int(first_nonzero) < 0:
+                raise G110TwoLayerError(
+                    "conditional rank sign gauge requires first nonzero basis value positive"
+                )
+            coefficient_gcd = 0
+            for value in coefficients[:, rank_id]:
+                coefficient_gcd = math.gcd(coefficient_gcd, abs(int(value)))
+            if coefficient_gcd != 1:
+                raise G110TwoLayerError(
+                    "conditional coefficient/scale gauge requires per-rank coefficient gcd 1"
+                )
+            amplitude_bounds.append(
+                float(np.max(np.abs(flat_basis.astype(np.int16))))
+                * float(np.max(np.abs(coefficients[:, rank_id].astype(np.int32))))
+                * float(scales[rank_id])
+            )
+        bounds = np.asarray(amplitude_bounds, dtype=np.float64)
+        if (
+            not np.all(np.isfinite(bounds))
+            or np.any(bounds < 0.5)
+            or float(np.sum(bounds, dtype=np.float64))
+            > float(np.finfo(np.float32).max) / 4.0
+        ):
+            raise G110TwoLayerError(
+                "conditional rank is decoder-dead or can overflow float32 intermediates"
+            )
     return basis, scales, coefficients
+
+
+def _reopen_bound_file(binding: object, *, name: str) -> Path:
+    if type(binding) is not dict or set(binding) != {"path", "bytes", "sha256"}:
+        raise G110TwoLayerError(f"{name} file binding differs")
+    path = _resolve_regular_nonsymlink(Path(str(binding["path"])), name=name)
+    if (
+        binding["path"] != str(path)
+        or type(binding["bytes"]) is not int
+        or binding["bytes"] != path.stat().st_size
+        or binding["sha256"] != sha256_file(path)
+    ):
+        raise G110TwoLayerError(f"{name} physical file identity differs")
+    _require_sha256(binding["sha256"], name=name)
+    return path
+
+
+def _npz_scalar(value: np.ndarray, *, name: str) -> object:
+    raw = np.asarray(value)
+    if raw.size != 1:
+        raise G110TwoLayerError(f"{name} must be a scalar checkpoint member")
+    return raw.reshape(()).item()
+
+
+def _verify_conditional_producer(
+    *,
+    checkpoint_binding: object,
+    run_binding: object,
+    custody: G110Batch16SourcePoseCustodyV1,
+    semantic_packet: bytes,
+    basis: np.ndarray,
+    scales: np.ndarray,
+    coefficients: np.ndarray,
+) -> None:
+    """Reopen the real operand NPZ and its sealed resumable producer run."""
+
+    checkpoint_path = _reopen_bound_file(
+        checkpoint_binding,
+        name="conditional producer checkpoint",
+    )
+    run_path = _reopen_bound_file(
+        run_binding,
+        name="conditional producer run receipt",
+    )
+    try:
+        run = json.loads(run_path.read_text("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise G110TwoLayerError("conditional producer run receipt is not JSON") from exc
+    run_keys = {
+        "schema",
+        "run_id",
+        "seed",
+        "source_git_sha",
+        "command",
+        "fresh_own_lineage",
+        "joint_pose_conditioned",
+        "resumable_from_disk",
+        "stage_checkpoints_preserved",
+        "research_only",
+        "candidate_claim",
+        "score_claim",
+        "pointer_moved",
+        "semantic_packet_sha256",
+        "target_capsule_receipt_sha256",
+        "pose_targets_sha256",
+        "producer_checkpoint_sha256",
+        "producer_checkpoint_bytes",
+        "stage_checkpoints",
+        "receipt_sha256",
+    }
+    if type(run) is not dict or set(run) != run_keys:
+        raise G110TwoLayerError("conditional producer run receipt key set differs")
+    run_sha = _require_sha256(run["receipt_sha256"], name="conditional producer run")
+    if _sha256(_canonical_json({key: value for key, value in run.items() if key != "receipt_sha256"})) != run_sha:
+        raise G110TwoLayerError("conditional producer run receipt self-hash differs")
+    source_git_sha = run["source_git_sha"]
+    command = run["command"]
+    stages = run["stage_checkpoints"]
+    if (
+        run["schema"] != CONDITIONAL_PRODUCER_RUN_SCHEMA
+        or type(run["run_id"]) is not str
+        or not run["run_id"]
+        or type(run["seed"]) is not int
+        or type(source_git_sha) is not str
+        or len(source_git_sha) != 40
+        or any(character not in "0123456789abcdef" for character in source_git_sha)
+        or type(command) is not list
+        or not command
+        or any(type(token) is not str or not token for token in command)
+        or run["fresh_own_lineage"] is not True
+        or run["joint_pose_conditioned"] is not True
+        or run["resumable_from_disk"] is not True
+        or run["stage_checkpoints_preserved"] is not True
+        or run["research_only"] is not True
+        or run["candidate_claim"] is not False
+        or run["score_claim"] is not False
+        or run["pointer_moved"] is not False
+        or run["semantic_packet_sha256"] != _sha256(semantic_packet)
+        or run["target_capsule_receipt_sha256"]
+        != custody.target_capsule_receipt_sha256
+        or run["pose_targets_sha256"] != custody.pose_targets_sha256
+        or run["producer_checkpoint_sha256"] != checkpoint_binding["sha256"]
+        or run["producer_checkpoint_bytes"] != checkpoint_binding["bytes"]
+        or type(stages) is not list
+        or not stages
+    ):
+        raise G110TwoLayerError(
+            "conditional producer run is not physical fresh joint-pose resumable lineage"
+        )
+    reopened_stages = [
+        _reopen_bound_file(binding, name=f"conditional producer stage {index}")
+        for index, binding in enumerate(stages)
+    ]
+    if (
+        stages[-1] != checkpoint_binding
+        or reopened_stages[-1] != checkpoint_path
+    ):
+        raise G110TwoLayerError("conditional producer final stage is not the operand checkpoint")
+    try:
+        with np.load(checkpoint_path, allow_pickle=False) as archive:
+            if set(archive.files) != {
+                "schema",
+                "run_id",
+                "seed",
+                "fresh_own_lineage",
+                "joint_pose_conditioned",
+                "semantic_packet_sha256",
+                "target_capsule_receipt_sha256",
+                "pose_targets_sha256",
+                "basis_q",
+                "combined_scales",
+                "coefficients_q",
+            }:
+                raise G110TwoLayerError(
+                    "conditional producer checkpoint member set differs"
+                )
+            checkpoint_values = {
+                name: np.asarray(archive[name]).copy() for name in archive.files
+            }
+    except (OSError, ValueError) as exc:
+        raise G110TwoLayerError("conditional producer checkpoint is not a strict NPZ") from exc
+    if (
+        _npz_scalar(checkpoint_values["schema"], name="checkpoint schema")
+        != CONDITIONAL_PRODUCER_CHECKPOINT_SCHEMA
+        or _npz_scalar(checkpoint_values["run_id"], name="checkpoint run_id")
+        != run["run_id"]
+        or _npz_scalar(checkpoint_values["seed"], name="checkpoint seed")
+        != run["seed"]
+        or _npz_scalar(
+            checkpoint_values["fresh_own_lineage"],
+            name="checkpoint fresh_own_lineage",
+        )
+        != 1
+        or _npz_scalar(
+            checkpoint_values["joint_pose_conditioned"],
+            name="checkpoint joint_pose_conditioned",
+        )
+        != 1
+        or _npz_scalar(
+            checkpoint_values["semantic_packet_sha256"],
+            name="checkpoint semantic packet",
+        )
+        != _sha256(semantic_packet)
+        or _npz_scalar(
+            checkpoint_values["target_capsule_receipt_sha256"],
+            name="checkpoint target capsule",
+        )
+        != custody.target_capsule_receipt_sha256
+        or _npz_scalar(
+            checkpoint_values["pose_targets_sha256"],
+            name="checkpoint pose targets",
+        )
+        != custody.pose_targets_sha256
+        or not np.array_equal(checkpoint_values["basis_q"], basis)
+        or not np.array_equal(checkpoint_values["combined_scales"], scales)
+        or not np.array_equal(checkpoint_values["coefficients_q"], coefficients)
+    ):
+        raise G110TwoLayerError(
+            "conditional operands are not rederived from the physical producer checkpoint"
+        )
 
 
 def _verify_conditional_operand_receipt(
@@ -614,6 +927,8 @@ def _verify_conditional_operand_receipt(
         "basis_q",
         "combined_scales",
         "coefficients_q",
+        "producer_checkpoint",
+        "producer_run_receipt",
         "receipt_sha256",
     }
     if type(value) is not dict or set(value) != expected_keys:
@@ -658,6 +973,15 @@ def _verify_conditional_operand_receipt(
         raise G110TwoLayerError(
             "conditional operands are not content-bound fresh joint-pose batch-16 lineage"
         )
+    _verify_conditional_producer(
+        checkpoint_binding=value["producer_checkpoint"],
+        run_binding=value["producer_run_receipt"],
+        custody=custody,
+        semantic_packet=semantic_packet,
+        basis=basis,
+        scales=scales,
+        coefficients=coefficients,
+    )
     return receipt_sha
 
 
@@ -697,21 +1021,26 @@ def _bilinear_resize(
     output_width: int,
 ) -> np.ndarray:
     input_height, input_width, _ = image.shape
-    ys = (np.arange(output_height, dtype=np.float64) + 0.5) * input_height / output_height - 0.5
-    xs = (np.arange(output_width, dtype=np.float64) + 0.5) * input_width / output_width - 0.5
-    y0 = np.floor(ys).astype(np.int64)
-    x0 = np.floor(xs).astype(np.int64)
-    wy = (ys - y0).astype(np.float32)
-    wx = (xs - x0).astype(np.float32)
-    y0 = np.clip(y0, 0, input_height - 1)
-    x0 = np.clip(x0, 0, input_width - 1)
-    y1 = np.clip(y0 + 1, 0, input_height - 1)
-    x1 = np.clip(x0 + 1, 0, input_width - 1)
-    top = image[y0[:, None], x0[None, :]] * (1.0 - wx[None, :, None])
-    top += image[y0[:, None], x1[None, :]] * wx[None, :, None]
-    bottom = image[y1[:, None], x0[None, :]] * (1.0 - wx[None, :, None])
-    bottom += image[y1[:, None], x1[None, :]] * wx[None, :, None]
-    return top * (1.0 - wy[:, None, None]) + bottom * wy[:, None, None]
+    ys = (np.arange(output_height, dtype=np.float32) + np.float32(0.5)) * np.float32(
+        input_height / output_height
+    ) - np.float32(0.5)
+    xs = (np.arange(output_width, dtype=np.float32) + np.float32(0.5)) * np.float32(
+        input_width / output_width
+    ) - np.float32(0.5)
+    ys = np.clip(ys, np.float32(0.0), np.float32(input_height - 1))
+    xs = np.clip(xs, np.float32(0.0), np.float32(input_width - 1))
+    y0 = np.floor(ys).astype(np.intp)
+    x0 = np.floor(xs).astype(np.intp)
+    y1 = np.minimum(y0 + 1, input_height - 1)
+    x1 = np.minimum(x0 + 1, input_width - 1)
+    wy = ys - y0.astype(np.float32)
+    wx = xs - x0.astype(np.float32)
+    vertical = image[y0, :, :] * (np.float32(1.0) - wy[:, None, None])
+    vertical += image[y1, :, :] * wy[:, None, None]
+    return (
+        vertical[:, x0, :] * (np.float32(1.0) - wx[None, :, None])
+        + vertical[:, x1, :] * wx[None, :, None]
+    )
 
 
 def render_conditional_y0(
@@ -731,21 +1060,29 @@ def render_conditional_y0(
         raise G110TwoLayerError("conditional Y0 requires final uint8 scorer Y1")
     if basis_q.shape[0] == 0 or not np.any(coefficients_q[pair_id]):
         return np.ascontiguousarray(y1)
-    weights = coefficients_q[pair_id].astype(np.float32) * combined_scales
-    grid = np.einsum(
-        "r,rhwc->hwc",
-        weights,
-        basis_q.astype(np.float32),
-        optimize=True,
-        dtype=np.float32,
-    )
+    with np.errstate(over="ignore", invalid="ignore"):
+        weights = coefficients_q[pair_id].astype(np.float32) * combined_scales
+        grid = np.einsum(
+            "r,rhwc->hwc",
+            weights,
+            basis_q.astype(np.float32),
+            optimize=True,
+            dtype=np.float32,
+        )
+    if not np.all(np.isfinite(weights)) or not np.all(np.isfinite(grid)):
+        raise G110TwoLayerError("conditional low-rank synthesis overflowed")
     residual = _bilinear_resize(
         np.ascontiguousarray(grid, dtype=np.float32),
         output_height=SCORER_H,
         output_width=SCORER_W,
     )
+    if not np.all(np.isfinite(residual)):
+        raise G110TwoLayerError("conditional bilinear synthesis is non-finite")
+    summed = y1.astype(np.float32) + residual
+    if not np.all(np.isfinite(summed)):
+        raise G110TwoLayerError("conditional Y0 accumulation is non-finite")
     return np.ascontiguousarray(
-        np.clip(np.rint(y1.astype(np.float32) + residual), 0, 255).astype(np.uint8)
+        np.clip(np.rint(summed), 0, 255).astype(np.uint8)
     )
 
 
@@ -809,19 +1146,25 @@ def compile_g110_two_layer_v1(
     basis_q: object,
     combined_scales: object,
     coefficients_q: object,
-    custody: G110Batch16SourcePoseCustodyV1,
+    target_capsule_receipt: Path,
+    expected_target_capsule_receipt_sha256: str,
+    fresh_g105_checkpoint: Path,
     conditional_operand_receipt: Path,
     expected_conditional_operand_receipt_sha256: str,
 ) -> CompiledG110TwoLayerV1:
-    """Compile only from fresh batch-16/source/pose-bound external custody."""
+    """Reopen all producer evidence at point of use, then compile."""
 
-    if type(custody) is not G110Batch16SourcePoseCustodyV1:
-        raise G110TwoLayerError("compile requires exact G110 batch-16 custody")
     provider = open_final_y1_provider(semantic_packet)
-    if provider.variant_id != V9_VARIANT_ID or _sha256(provider.packet) != custody.semantic_packet_sha256:
+    if provider.variant_id != V9_VARIANT_ID:
         raise G110TwoLayerError(
-            "current compile authority admits only the exact content-verified fresh G105 packet"
+            "current compile authority admits only a physical fresh G105 packet"
         )
+    custody = G110Batch16SourcePoseCustodyV1.from_physical_v9_producer(
+        target_capsule_receipt=target_capsule_receipt,
+        expected_target_capsule_receipt_sha256=expected_target_capsule_receipt_sha256,
+        fresh_g105_checkpoint=fresh_g105_checkpoint,
+        semantic_packet=provider.packet,
+    )
     basis, scales, coefficients = _validate_conditional(
         basis_q,
         combined_scales,
