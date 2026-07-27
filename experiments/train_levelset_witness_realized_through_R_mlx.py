@@ -50,6 +50,7 @@ import sys
 import threading
 import time
 from collections.abc import Callable, Mapping
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -148,6 +149,16 @@ from tac.witness_dsl.v10_factor2_selected_preimage_v1 import (  # noqa: E402
 from tac.witness_control.g111_verdict_barrier_v1 import (  # noqa: E402
     ImmutableVerdictResult,
     QuiescentVerdictTransaction,
+)
+from tac.witness_control.g111_live_verdict_transaction_v1 import (  # noqa: E402
+    MainThreadVerdictEffectPublisher,
+    build_worker_snapshot as build_g111_live_verdict_snapshot,
+    compact_acknowledged_state as compact_g111_live_verdict_state,
+    new_reducer_state as new_g111_live_verdict_state,
+    reduce_result as reduce_g111_live_verdict_result,
+    run_worker as run_g111_live_verdict_worker,
+    state_arrays as g111_live_verdict_state_arrays,
+    validate_reducer_state as validate_g111_live_verdict_state,
 )
 from tac.witness_control.trajectory_transaction_v2 import (  # noqa: E402
     ATOMIC_OWNERS as G111_ATOMIC_OWNERS,
@@ -10417,6 +10428,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _gpu_verdict_count = [0]  # mutable closure counter of gpu verdicts (anchor cadence)
     _pose_verdict_count = [0]
     _pose_verdict_count_lock = threading.Lock()
+    _trainer_main_thread_ident = threading.get_ident()
+
+    def _reserve_pose_verdict_index_main() -> int:
+        """Reserve the pose cadence coordinate before a worker is submitted."""
+
+        if threading.get_ident() != _trainer_main_thread_ident:
+            raise RuntimeError(
+                "G111 pose-verdict indices must be reserved on the trainer main thread"
+            )
+        with _pose_verdict_count_lock:
+            index = int(_pose_verdict_count[0])
+            _pose_verdict_count[0] += 1
+        return index
 
     def _pose_verdict_gate_state(_prefix: str) -> dict[str, Any]:
         if not bool(getattr(args, "verdict_pose_gate", False)):
@@ -11208,6 +11232,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # (curv_feats_np, gt, frozen scorers) -> RACE-FREE (it never touches ema.shadow / model /
     # dir_feats_per_pair / cf_mx_cache, all of which the main loop keeps mutating). The worker
     # uses NO MLX op (pure numpy+torch) so it cannot race the GPU stream.
+    _verdict_pair_position = {
+        int(pair_index): position for position, pair_index in enumerate(vpairs)
+    }
+
     def _capture_verdict_snapshot(*, include_live: bool = False) -> dict[str, Any]:
         _snap = {
             # (review Med1) project the shadow film.weight on-manifold so the ASYNC verdict matches the
@@ -11215,7 +11243,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "ema_np": _project_shadow_film_np({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}),
             "softmax_temp": float(model.softmax_temp),
             "hosc_beta": float(model.hosc_beta),  # FEED-fb: snapshot the live (possibly annealed) beta
-            "dir": ({pi: dir_feats_per_pair[pi].copy() for pi in vpairs} if use_self_orient else None),
+            # Canonical positional order follows ``vpairs``.  Integer-keyed
+            # mappings are forbidden by the immutable verdict codec and used
+            # to make self-orient snapshots unshippable.
+            "dir": (
+                tuple(dir_feats_per_pair[pi].copy() for pi in vpairs)
+                if use_self_orient
+                else None
+            ),
         }
         if include_live:
             _snap["live_np"] = _project_shadow_film_np({
@@ -11227,17 +11262,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     def _feats_for_snapshot(pi: int, dir_snap) -> np.ndarray:
         if not use_self_orient:
             return curv_feats_np
-        return np.concatenate([curv_feats_np, dir_snap[pi]], axis=-1).astype(np.float32)
+        return np.concatenate(
+            [curv_feats_np, dir_snap[_verdict_pair_position[int(pi)]]],
+            axis=-1,
+        ).astype(np.float32)
 
-    def _verdict_from_snapshot(
+    def _render_verdict_snapshot(
         snap: dict[str, Any],
         *,
-        epoch: int,
         parameter_key: str = "ema_np",
-        pose_verdict_index: int | None = None,
-    ) -> dict[str, float]:
-        # BIT-IDENTICAL to realized_verdict() on the captured state: same int8 dequant, same
-        # fp32 ONE-CODEPATH forward, same softmax_temp, same per-pair feats, same CPU scorers.
+    ) -> tuple[list[Any], list[Any]]:
+        """Render detached verdict inputs without touching any controller."""
+
         deploy = int8_dequant_params(snap[parameter_key])
         st = snap["softmax_temp"]
         sb = snap["hosc_beta"]  # FEED-fb: the live beta captured at schedule time (anneal-correct, NO-FAKE)
@@ -11264,6 +11300,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             else:
                 f0s.append(_torch_R_to_camera_uint8(_r0))
             f1s.append(_torch_R_to_camera_uint8(_r1))
+        return f0s, f1s
+
+    def _verdict_from_snapshot(
+        snap: dict[str, Any],
+        *,
+        epoch: int,
+        parameter_key: str = "ema_np",
+        pose_verdict_index: int | None = None,
+    ) -> dict[str, float]:
+        # BIT-IDENTICAL to realized_verdict() on the captured state: same int8 dequant, same
+        # fp32 ONE-CODEPATH forward, same softmax_temp, same per-pair feats, same CPU scorers.
+        f0s, f1s = _render_verdict_snapshot(
+            snap,
+            parameter_key=parameter_key,
+        )
         # (#205 OOM fix) chunk the CPU-scorer inference (bit-identical; eval-mode BN running stats).
         # (#302) nucleus + (SENSE) annulus routed through the SAME shared _verdict_v tail as the sync
         # path, so the ASYNC worker's row is bit-identical and the flag-absent path is byte-identical.
@@ -11273,6 +11324,127 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             ep=int(epoch),
             pose_verdict_index=pose_verdict_index,
         )
+
+    def _g111_pure_verdict_from_snapshot(
+        snap: Mapping[str, Any],
+        *,
+        parameter_key: str = "ema_np",
+    ) -> dict[str, Any]:
+        """Native-v3 CPU scorer with no counters, prints, or live-state reads."""
+
+        f0s, f1s = _render_verdict_snapshot(
+            dict(snap),
+            parameter_key=parameter_key,
+        )
+        lstars_v = [gt.lstars[pi] for pi in vpairs]
+        poses_v = [gt.gt_poses[pi] for pi in vpairs]
+        pose_index = int(snap["pose_verdict_index"])
+        pose_decision = decide_pose_verdict(
+            epoch=int(snap["epoch"]),
+            pose_engaged_epoch=int(snap["pose_gate_engaged_epoch"]),
+            verdict_index=pose_index,
+            gate_on=bool(getattr(args, "verdict_pose_gate", False)),
+            canary_every=int(getattr(args, "verdict_pose_canary_every", 8)),
+            force_live=False,
+        )
+        realized = None
+        if _nucleus_on:
+            d_seg, d_pose, nucleus_counts = (
+                _verdict_dseg_dpose_nucleus_chunked(
+                    seg_cpu,
+                    posenet_cpu,
+                    f0s,
+                    f1s,
+                    lstars_v,
+                    poses_v,
+                    vbatch=int(args.verdict_batch),
+                    compute_pose=pose_decision.compute_live,
+                )
+            )
+            verdict: dict[str, Any] = {
+                "d_seg": d_seg,
+                "d_pose": d_pose,
+                "nucleus_counts": nucleus_counts,
+            }
+        elif _annulus_on:
+            d_seg, d_pose, realized = _verdict_dseg_dpose_chunked(
+                seg_cpu,
+                posenet_cpu,
+                f0s,
+                f1s,
+                lstars_v,
+                poses_v,
+                vbatch=int(args.verdict_batch),
+                return_realized=True,
+                compute_pose=pose_decision.compute_live,
+                workers=int(getattr(args, "verdict_parallel_workers", 0)),
+            )
+            verdict = {"d_seg": d_seg, "d_pose": d_pose}
+        else:
+            d_seg, d_pose = _verdict_dseg_dpose_chunked(
+                seg_cpu,
+                posenet_cpu,
+                f0s,
+                f1s,
+                lstars_v,
+                poses_v,
+                vbatch=int(args.verdict_batch),
+                compute_pose=pose_decision.compute_live,
+                workers=int(getattr(args, "verdict_parallel_workers", 0)),
+            )
+            verdict = {"d_seg": d_seg, "d_pose": d_pose}
+        if _annulus_on:
+            try:
+                if realized is None:
+                    realized = _annulus_realized_maps(
+                        seg_cpu,
+                        f1s,
+                        lstars_v,
+                        int(args.verdict_batch),
+                    )
+                verdict["annulus"] = _annulus_metrics_from_maps(
+                    realized,
+                    lstars_v,
+                    [gt.margins[pi] for pi in vpairs],
+                    band=_annulus_band,
+                    bottom_k=_annulus_bottom_k,
+                    chunk=int(args.verdict_batch),
+                )
+            except Exception as exc:
+                verdict["annulus"] = {
+                    "error": f"{type(exc).__name__}: {exc}"
+                }
+            try:
+                if realized is not None:
+                    from tac.witness_control.perclass_verdict import (
+                        per_class_dseg_fields,
+                        per_class_flip_stats,
+                    )
+
+                    flips, pixels = per_class_flip_stats(realized, lstars_v)
+                    verdict["per_class"] = per_class_dseg_fields(flips, pixels)
+            except Exception as exc:
+                verdict["per_class"] = {
+                    "error": f"{type(exc).__name__}: {exc}"
+                }
+        if pose_decision.compute_live and verdict.get("d_pose") is None:
+            raise RuntimeError(
+                "G111 pure scorer selected live PoseNet but d_pose is missing"
+            )
+        if not pose_decision.compute_live and verdict.get("d_pose") is not None:
+            raise RuntimeError(
+                "G111 pure scorer selected pose-blind progress but received d_pose"
+            )
+        if bool(getattr(args, "verdict_pose_gate", False)):
+            verdict["_pose_gate_telemetry"] = {
+                "pose_verdict_index": pose_index,
+                "d_pose_live": bool(pose_decision.compute_live),
+                "d_pose_source": str(pose_decision.d_pose_source),
+                "pose_gate_reason": str(pose_decision.reason),
+                "selection_eligible": bool(pose_decision.compute_live),
+                "score_claim": False,
+            }
+        return verdict
 
     history: list[dict[str, Any]] = []
     _verdict_lock = threading.Lock()
@@ -11307,7 +11479,36 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _cl_verdicts: list[dict[str, Any]] = []
     _cl_pending: dict[str, Any] = {"rec": None}
 
+    # G111 native-v3 keeps worker computation pure and defers every trainer
+    # mutation to an ordered main-thread publication phase.  This path is
+    # fresh-producer-only and remains unreachable while the unconditional
+    # native-v3 launch gate below is blocked.
+    _g111_native_verdict_on = bool(
+        getattr(args, "fresh_producer", False)
+        and getattr(args, "async_verdict", False)
+    )
+    _g111_live_transaction = (
+        QuiescentVerdictTransaction(
+            reducer=reduce_g111_live_verdict_result,
+            initial_state=new_g111_live_verdict_state(
+                history=history,
+                closed_loop_verdicts=_cl_verdicts,
+            ),
+            max_journal_rows=_G111_NATIVE_V3_JOURNAL_LIMIT,
+        )
+        if _g111_native_verdict_on
+        else None
+    )
+    _g111_live_publisher = (
+        MainThreadVerdictEffectPublisher()
+        if _g111_native_verdict_on
+        else None
+    )
+    _g111_live_executor: dict[str, ThreadPoolExecutor | None] = {"value": None}
+
     def _verdict_inflight() -> bool:
+        if _g111_live_transaction is not None:
+            return _g111_live_transaction.pending_count > 0
         t = _verdict_thread["t"]
         return t is not None and t.is_alive()
 
@@ -11638,7 +11839,271 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "prev_best": (round(prev, 6) if np.isfinite(prev) else None),
                               "path": "levelset_witness_ema_BEST.npz"}), flush=True)
 
+    def _score_g111_live_snapshot(
+        scorer_snapshot: Mapping[str, Any],
+    ) -> Mapping[str, Any]:
+        """Pure worker body: score detached arrays and return data only."""
+
+        if _verdict_device != "cpu" or _verdict_subprocess_on:
+            raise RuntimeError(
+                "G111 native-v3 worker purity currently requires the in-process "
+                "CPU verdict path"
+            )
+        verdict = _g111_pure_verdict_from_snapshot(scorer_snapshot)
+        live_gap: dict[str, float] = {}
+        if "live_np" in scorer_snapshot:
+            pose_meta = verdict.get("_pose_gate_telemetry", {})
+            live_verdict = _g111_pure_verdict_from_snapshot(
+                scorer_snapshot,
+                parameter_key="live_np",
+            )
+            if pose_meta.get("d_pose_live") is False:
+                live_gap = {
+                    "d_seg_live": float(live_verdict["d_seg"]),
+                    "d_seg_ema_minus_live": (
+                        float(verdict["d_seg"])
+                        - float(live_verdict["d_seg"])
+                    ),
+                }
+            else:
+                live_gap = live_gap_fields(verdict, live_verdict)
+        return {"verdict": verdict, "live_gap": live_gap}
+
+    def _run_g111_live_worker(
+        submission_seq: int,
+        snapshot: Mapping[str, Any],
+    ) -> ImmutableVerdictResult:
+        return run_g111_live_verdict_worker(
+            submission_seq,
+            snapshot,
+            score_snapshot=_score_g111_live_snapshot,
+        )
+
+    def _publish_g111_live_effect(effect: Mapping[str, Any]) -> None:
+        """Fail closed until legacy mutations are replacement-state owned.
+
+        ``_emit_verdict_row`` appends controller histories and mutates event,
+        causal, and telemetry stores.  A crash after those mutations but before
+        BEST/ack durability would replay them.  A result-ID receipt cannot make
+        that multi-store cut atomic, so native-v3 must not call the legacy
+        publisher.  The pure reducer intent remains preserved for the missing
+        deterministic controller-state adapter.
+        """
+
+        if threading.get_ident() != _trainer_main_thread_ident:
+            raise RuntimeError("G111 live verdict effect escaped the trainer main thread")
+        raise RuntimeError(
+            "G111 native-v3 effect publication REFUSED: legacy verdict emission "
+            "mutates controller/event/causal stores outside the pure replacement "
+            f"state (result_id={effect['result_id']}, "
+            f"result_sha256={effect['result_sha256']})"
+        )
+
+    def _publish_g111_live_best(
+        effect: Mapping[str, Any],
+        intent: Mapping[str, Any],
+    ) -> None:
+        """Replay-idempotently publish deterministic O5 BEST bytes on main."""
+
+        if threading.get_ident() != _trainer_main_thread_ident:
+            raise RuntimeError("G111 BEST publication escaped the trainer main thread")
+        if (
+            intent["result_id"] != effect["result_id"]
+            or intent["result_sha256"] != effect["result_sha256"]
+        ):
+            raise RuntimeError("G111 BEST intent/effect identity mismatch")
+        artifact = intent["artifact"]
+        ema_arrays = _build_ema_checkpoint_arrays(
+            dict(artifact["ema_np"]),
+            args=args,
+            softmax_temp=float(artifact["softmax_temp"]),
+            render_h=render_h,
+            render_w=render_w,
+            epoch=int(intent["epoch"]),
+            in_feat=in_feat,
+            hosc_beta=float(artifact["hosc_beta"]),
+            fresh_state=_fresh_state,
+        )
+        best_name = (
+            "levelset_witness_ema_BEST_"
+            f"{str(intent['result_sha256'])}.npz"
+        )
+        # The immutable payload is content-addressed by its worker-result SHA.
+        # Write it before atomically replacing the small pointer.  A crash
+        # between the two writes therefore leaves the old pointer naming the
+        # old immutable bytes; replay overwrites the same new content-addressed
+        # path and then advances the pointer.
+        _atomic_savez(
+            out_dir / best_name,
+            ema_arrays,
+        )
+        _atomic_write_json(
+            out_dir / "levelset_best.json",
+            {
+                "schema": "tac.g111_deterministic_best_pointer.v1",
+                "d_seg": float(intent["d_seg"]),
+                "epoch": int(intent["epoch"]),
+                "path": best_name,
+                "result_id": str(intent["result_id"]),
+                "result_sha256": str(intent["result_sha256"]),
+                "intent_sequence": int(intent["intent_sequence"]),
+            },
+        )
+        _best.update(
+            d_seg=float(intent["d_seg"]),
+            ep=int(intent["epoch"]),
+            path=best_name,
+        )
+        print(
+            json.dumps(
+                {
+                    "stage": "checkpoint",
+                    "kind": "best",
+                    "epoch": int(intent["epoch"]),
+                    "d_seg": round(float(intent["d_seg"]), 6),
+                    "path": best_name,
+                    "result_id": str(intent["result_id"]),
+                    "replay_idempotent": True,
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+
+    def _apply_g111_live_effect_transition(
+        state: Mapping[str, Any],
+    ) -> Mapping[str, Any]:
+        """Publish and return the compact post-ack state in one tx transition."""
+
+        publisher = _g111_live_publisher
+        if publisher is None:
+            raise RuntimeError("G111 live verdict transition lacks its publisher")
+        publisher.publish_pending(
+            state,
+            publish_effect=_publish_g111_live_effect,
+            publish_best=_publish_g111_live_best,
+        )
+        return compact_g111_live_verdict_state(state, publisher.cursor)
+
+    def _publish_g111_live_completed(*, wait: bool) -> int:
+        """Reduce, publish, and acknowledge before any controller decision."""
+
+        transaction = _g111_live_transaction
+        publisher = _g111_live_publisher
+        if transaction is None or publisher is None:
+            return 0
+        before = publisher.cursor.next_effect_sequence
+        if wait:
+            with transaction.prepared_checkpoint(
+                transition=_apply_g111_live_effect_transition,
+                validate_replacement=validate_g111_live_verdict_state,
+            ):
+                pass
+        else:
+            transaction.apply_external_effect_transition(
+                transition=_apply_g111_live_effect_transition,
+                validate_replacement=validate_g111_live_verdict_state,
+            )
+        return publisher.cursor.next_effect_sequence - before
+
+    def _g111_prepared_checkpoint():
+        """Open the same-transaction post-ack checkpoint barrier."""
+
+        transaction = _g111_live_transaction
+        if transaction is None:
+            raise RuntimeError("G111 live verdict checkpoint lacks its transaction")
+        return transaction.prepared_checkpoint(
+            transition=_apply_g111_live_effect_transition,
+            validate_replacement=validate_g111_live_verdict_state,
+        )
+
+    def _g111_live_state_snapshot_arrays() -> Mapping[str, np.ndarray]:
+        """Return quiescent compact O4/O5 state for the future O1-O6 adapter."""
+
+        transaction = _g111_live_transaction
+        publisher = _g111_live_publisher
+        if transaction is None or publisher is None:
+            return {}
+        with _g111_prepared_checkpoint() as capture:
+            return g111_live_verdict_state_arrays(
+                capture.reducer_state,
+                publisher.cursor,
+                prefix="__g111_live__",
+            )
+
+    def _schedule_g111_live_verdict(
+        ep: int,
+        seg_form: str,
+        ep_loss: float,
+    ) -> bool:
+        transaction = _g111_live_transaction
+        publisher = _g111_live_publisher
+        if transaction is None or publisher is None:
+            raise RuntimeError("G111 live verdict schedule lacks its transaction")
+        _publish_g111_live_completed(wait=False)
+        if transaction.pending_count > 0:
+            _verdict_skipped[0] += 1
+            print(
+                json.dumps(
+                    {
+                        "stage": "verdict_skip",
+                        "epoch": int(ep),
+                        "inflight_epoch": _verdict_thread["ep"],
+                        "total_skipped": int(_verdict_skipped[0]),
+                        "note": "prior G111 native-v3 verdict remains in flight",
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
+            _settle_component_verdict(ep, not_invoked=True)
+            return False
+        scorer_snapshot = _capture_verdict_snapshot(
+            include_live=_verdict_live_gap_is_due(ep)
+        )
+        scorer_snapshot["epoch"] = int(ep)
+        scorer_snapshot["pose_verdict_index"] = (
+            _reserve_pose_verdict_index_main()
+        )
+        scorer_snapshot["pose_gate_engaged_epoch"] = int(
+            _pose_gate["engaged_epoch"]
+        )
+        blob = quantize_levelset_blob(scorer_snapshot["ema_np"])
+        live_snapshot = dict(_live)
+        best_eligible = not (
+            int(_fork_ema_clearance["until"]) > 0
+            and "ema_updates" in live_snapshot
+            and int(live_snapshot["ema_updates"])
+            < int(_fork_ema_clearance["until"])
+        )
+        worker_snapshot = build_g111_live_verdict_snapshot(
+            epoch=int(ep),
+            seg_form=str(seg_form),
+            ep_loss=float(ep_loss),
+            blob_bytes=int(blob["total_quantized_blob_bytes"]),
+            best_eligible=bool(best_eligible),
+            closed_loop_enabled=bool(_cl_on),
+            liveness=live_snapshot,
+            scorer_snapshot=scorer_snapshot,
+        )
+        executor = _g111_live_executor["value"]
+        if executor is None:
+            executor = ThreadPoolExecutor(
+                max_workers=1,
+                thread_name_prefix="g111-native-v3-verdict",
+            )
+            _g111_live_executor["value"] = executor
+        transaction.submit(
+            executor,
+            _run_g111_live_worker,
+            worker_snapshot,
+        )
+        _verdict_thread["ep"] = int(ep)
+        return True
+
     def _schedule_async_verdict(ep: int, seg_form: str, ep_loss: float) -> bool:
+        if _g111_native_verdict_on:
+            return _schedule_g111_live_verdict(ep, seg_form, ep_loss)
         # (C6) capture the CURRENT-epoch liveness snapshot at SCHEDULE time (immutable copy); the
         # async worker emits its verdict row later, when the live _live dict would already reflect a
         # LATER epoch. Read _live directly (this fn is called SYNCHRONOUSLY at the epoch end, after
@@ -11735,6 +12200,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         return True
 
     def _join_async_verdict() -> None:
+        if _g111_native_verdict_on:
+            _publish_g111_live_completed(wait=True)
+            _verdict_thread["ep"] = None
+            return
         t = _verdict_thread["t"]
         if t is not None and t.is_alive():
             print(json.dumps({"stage": "verdict_async_join",
@@ -11916,6 +12385,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         nonlocal _fresh_lineage_parent_checkpoint_id
         nonlocal _fresh_lineage_parent_receipt_path
         nonlocal _fresh_lineage_parent_receipt_sha256
+        if _g111_native_verdict_on:
+            # The live worker/reducer has an explicit quiescent O4/O5 snapshot,
+            # but that snapshot is not yet admitted into the atomic O1-O6
+            # checkpoint publisher.  Never fall through to the legacy pending
+            # sidecar or imply crash-safe launch closure.
+            transaction = _g111_live_transaction
+            publisher = _g111_live_publisher
+            if transaction is None or publisher is None:
+                raise RuntimeError("G111 native-v3 checkpoint state is absent")
+            with _g111_prepared_checkpoint() as capture:
+                g111_live_verdict_state_arrays(
+                    capture.reducer_state,
+                    publisher.cursor,
+                    prefix="__g111_live__",
+                )
+                transaction.poison_checkpoint_publication(
+                    RuntimeError(
+                        "G111 native-v3 checkpoint publication remains blocked "
+                        "until the compact live-verdict O4/O5 arrays are bound "
+                        "into the validated O1-O6 transaction"
+                    )
+                )
+            raise AssertionError("unreachable G111 checkpoint refusal")
         _da_checkpoint_start_ns = time.perf_counter_ns()
         _da_checkpoint_clock = _component_clock
         shadow_np, live_np, opt_np, seed_packed_state = (
@@ -15830,6 +16322,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     # convention before applying the Stiefel tangent LMO.
                     _film_polar_lr *= muon_aspect_ratio_scale(
                         tuple(int(v) for v in model.film.weight.shape))
+                # A background scorer failure is latched by the native-v3
+                # future callback as soon as it occurs.  Refuse the optimizer
+                # publication at the last possible main-thread boundary so a
+                # fatal verdict cannot coexist with a later model state.
+                if _g111_live_transaction is not None:
+                    _g111_live_transaction.assert_healthy()
                 opt.update(model, clipped)
                 # The existing MultiOptimizer still visits film.weight in its
                 # standard tree, preserving all incumbent state/layout code.
@@ -16450,6 +16948,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # result.json is written (the DONE-marker contract). No-op when --async-verdict is off.
     if args.async_verdict:
         _join_async_verdict()
+    if _g111_live_executor["value"] is not None:
+        _g111_live_executor["value"].shutdown(wait=True)
+        _g111_live_executor["value"] = None
 
     # FINAL checkpoint (replaces the historical loop-end-only save, which is now FORBIDDEN). Always
     # writes the rolling latest + a PRESERVED final stage-encoded ckpt -> the run is byte-closeable

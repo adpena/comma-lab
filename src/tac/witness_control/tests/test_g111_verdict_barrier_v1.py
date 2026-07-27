@@ -13,9 +13,11 @@ import pytest
 from tac.witness_control.g111_verdict_barrier_v1 import (
     AppliedVerdictRow,
     CanonicalStateError,
+    CheckpointPublicationError,
     DeterministicVerdictReducer,
     DuplicateResultError,
     DuplicateSequenceError,
+    ExternalEffectTransitionError,
     ImmutableVerdictResult,
     NativeV3PendingPayloadError,
     NonQuiescentCheckpointError,
@@ -58,6 +60,33 @@ def _immediate_worker(
     return _result(sequence, int(snapshot["value"]))
 
 
+def _validate_ack_state(state: dict) -> None:
+    if set(state) != {"rows", "acked"}:
+        raise ValueError("ack state has unexpected fields")
+    if not isinstance(state["rows"], list):
+        raise TypeError("ack state rows must be a list")
+    if (
+        isinstance(state["acked"], bool)
+        or not isinstance(state["acked"], int)
+        or not 0 <= state["acked"] <= len(state["rows"])
+    ):
+        raise ValueError("ack cursor is outside the retained rows")
+
+
+def _idempotent_effect_transition(
+    published: list[tuple[str, int]],
+):
+    def transition(state: dict) -> dict:
+        for row in state["rows"][state["acked"] :]:
+            identity = (str(row["result_id"]), int(row["value"]))
+            if identity not in published:
+                published.append(identity)
+        state["acked"] = len(state["rows"])
+        return state
+
+    return transition
+
+
 def _assert_all_later_actions_refuse(
     transaction: QuiescentVerdictTransaction,
 ) -> None:
@@ -74,12 +103,29 @@ def _assert_all_later_actions_refuse(
         transaction.apply_completed()
     assert apply_error.value.__cause__ is fatal_error
 
+    with pytest.raises(TransactionPoisonedError) as transition_error:
+        transaction.apply_external_effect_transition(
+            transition=lambda state: state,
+            validate_replacement=lambda state: None,
+        )
+    assert transition_error.value.__cause__ is fatal_error
+
     with (
         pytest.raises(TransactionPoisonedError) as checkpoint_error,
         transaction.checkpoint(),
     ):
         raise AssertionError("unreachable")
     assert checkpoint_error.value.__cause__ is fatal_error
+
+    with (
+        pytest.raises(TransactionPoisonedError) as prepared_error,
+        transaction.prepared_checkpoint(
+            transition=lambda state: state,
+            validate_replacement=lambda state: None,
+        ),
+    ):
+        raise AssertionError("unreachable")
+    assert prepared_error.value.__cause__ is fatal_error
 
 
 def test_active_worker_checkpoint_blocks_submission_joins_and_applies_once() -> None:
@@ -339,6 +385,153 @@ def test_worker_exception_is_typed_fatal_and_preserves_original_cause() -> None:
     assert transaction.fatal_error is caught.value
     assert transaction.pending_count == 0
     assert transaction.checkpoint_active is False
+    _assert_all_later_actions_refuse(transaction)
+
+
+def test_worker_done_callback_poison_is_visible_before_main_thread_apply() -> None:
+    class WorkerSentinelError(Exception):
+        pass
+
+    worker_release = threading.Event()
+
+    def broken_worker(sequence: int, snapshot) -> ImmutableVerdictResult:
+        del sequence, snapshot
+        assert worker_release.wait(timeout=5.0)
+        raise WorkerSentinelError("injected asynchronous worker failure")
+
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": []},
+    )
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        transaction.submit(executor, broken_worker, {"value": 1})
+        worker_release.set()
+        deadline = time.monotonic() + 5.0
+        while not transaction.poisoned:
+            if time.monotonic() >= deadline:
+                raise AssertionError("worker done callback did not poison transaction")
+            time.sleep(0.001)
+
+        with pytest.raises(WorkerExecutionError) as caught:
+            transaction.assert_healthy()
+
+    assert isinstance(caught.value.__cause__, WorkerSentinelError)
+    assert transaction.fatal_error is caught.value
+    assert transaction.next_apply_seq == 0
+    assert transaction.pending_count == 0
+    assert transaction.reducer_state == {"rows": []}
+    _assert_all_later_actions_refuse(transaction)
+
+
+def test_successful_worker_done_callback_does_not_poison_before_ordered_apply() -> None:
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": []},
+    )
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        transaction.submit(executor, _immediate_worker, {"value": 41})
+        executor.shutdown(wait=True)
+        transaction.assert_healthy()
+        assert transaction.poisoned is False
+        assert transaction.apply_completed() == 1
+
+    assert transaction.reducer_state["rows"][0]["value"] == 41
+
+
+def test_successful_invalid_result_is_not_callback_poisoned_before_validation() -> None:
+    def invalid_worker(sequence: int, snapshot) -> dict:
+        return {"sequence": sequence, "value": snapshot["value"]}
+
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": []},
+    )
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        transaction.submit(executor, invalid_worker, {"value": 43})
+        executor.shutdown(wait=True)
+        transaction.assert_healthy()
+        with pytest.raises(WorkerResultTypeError) as caught, transaction.checkpoint():
+            raise AssertionError("unreachable")
+
+    assert transaction.fatal_error is caught.value
+    assert transaction.next_apply_seq == 0
+    _assert_all_later_actions_refuse(transaction)
+
+
+def test_later_worker_failure_poison_preempts_blocked_earlier_result() -> None:
+    class LaterWorkerError(Exception):
+        pass
+
+    first_started = threading.Event()
+    first_release = threading.Event()
+
+    def blocked_first(sequence: int, snapshot) -> ImmutableVerdictResult:
+        first_started.set()
+        assert first_release.wait(timeout=5.0)
+        return _result(sequence, int(snapshot["value"]))
+
+    def broken_later(sequence: int, snapshot) -> ImmutableVerdictResult:
+        del sequence, snapshot
+        raise LaterWorkerError("later scorer failed before ordered reduction")
+
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": []},
+    )
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        transaction.submit(executor, blocked_first, {"value": 47})
+        assert first_started.wait(timeout=5.0)
+        transaction.submit(executor, broken_later, {"value": 49})
+        deadline = time.monotonic() + 5.0
+        while not transaction.poisoned:
+            if time.monotonic() >= deadline:
+                raise AssertionError("later worker failure was not eagerly latched")
+            time.sleep(0.001)
+
+        with pytest.raises(WorkerExecutionError) as caught:
+            transaction.assert_healthy()
+        first_release.set()
+
+    assert isinstance(caught.value.__cause__, LaterWorkerError)
+    assert transaction.fatal_error is caught.value
+    assert transaction.next_apply_seq == 0
+    assert transaction.pending_count == 0
+    assert transaction.reducer_state == {"rows": []}
+    _assert_all_later_actions_refuse(transaction)
+
+
+def test_worker_failure_cancels_n600_queue_without_recursive_callbacks() -> None:
+    class QueueHeadError(Exception):
+        pass
+
+    head_release = threading.Event()
+
+    def queued_worker(sequence: int, snapshot) -> ImmutableVerdictResult:
+        if sequence == 0:
+            assert head_release.wait(timeout=5.0)
+            raise QueueHeadError("queue head failed")
+        return _result(sequence, int(snapshot["value"]))
+
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": []},
+    )
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        for value in range(600):
+            transaction.submit(executor, queued_worker, {"value": value})
+        assert transaction.pending_count == 600
+        head_release.set()
+        deadline = time.monotonic() + 5.0
+        while not transaction.poisoned:
+            if time.monotonic() >= deadline:
+                raise AssertionError("queue-head failure was not eagerly latched")
+            time.sleep(0.001)
+        with pytest.raises(WorkerExecutionError) as caught:
+            transaction.assert_healthy()
+
+    assert isinstance(caught.value.__cause__, QueueHeadError)
+    assert transaction.pending_count == 0
+    assert transaction.next_apply_seq == 0
     _assert_all_later_actions_refuse(transaction)
 
 
@@ -618,6 +811,414 @@ def test_checkpoint_barrier_releases_when_publication_body_fails() -> None:
         with transaction.checkpoint():
             pass
     assert transaction.next_apply_seq == 1
+
+
+def test_external_effect_transition_acknowledges_once_without_reapplying_reducer() -> None:
+    applied: list[int] = []
+    published: list[tuple[str, int]] = []
+
+    def reducer(state: dict, result: ImmutableVerdictResult) -> dict:
+        applied.append(result.submission_seq)
+        return _append_reducer(state, result)
+
+    transaction = QuiescentVerdictTransaction(
+        reducer=reducer,
+        initial_state={"rows": [], "acked": 0},
+    )
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        transaction.submit(executor, _immediate_worker, {"value": 10})
+        transaction.submit(executor, _immediate_worker, {"value": 11})
+        executor.shutdown(wait=True)
+        replacement = transaction.apply_external_effect_transition(
+            transition=_idempotent_effect_transition(published),
+            validate_replacement=_validate_ack_state,
+        )
+
+    assert applied == [0, 1]
+    assert published == [("result-0", 10), ("result-1", 11)]
+    assert replacement["acked"] == 2
+    replacement["acked"] = 0
+    assert transaction.reducer_state["acked"] == 2
+
+    transaction.apply_external_effect_transition(
+        transition=_idempotent_effect_transition(published),
+        validate_replacement=_validate_ack_state,
+    )
+    assert applied == [0, 1]
+    assert published == [("result-0", 10), ("result-1", 11)]
+    assert transaction.next_apply_seq == transaction.next_submit_seq == 2
+
+
+def test_reducer_external_transition_reentrant_apply_fails_without_publication() -> None:
+    reducer = DeterministicVerdictReducer(
+        reducer=_append_reducer,
+        initial_state={"rows": [{"result_id": "seed"}], "acked": 0},
+        max_journal_rows=4,
+    )
+
+    def reentrant_transition(state: dict) -> dict:
+        state["acked"] = 1
+        reducer.apply(_result(0, 5))
+        return state
+
+    with pytest.raises(ExternalEffectTransitionError) as caught:
+        reducer.apply_external_effect_transition(
+            transition=reentrant_transition,
+            validate_replacement=_validate_ack_state,
+        )
+
+    assert isinstance(caught.value.__cause__, ExternalEffectTransitionError)
+    assert reducer.poisoned is True
+    assert reducer.next_apply_seq == 0
+    assert reducer.journal == ()
+    assert reducer.state == {"rows": [{"result_id": "seed"}], "acked": 0}
+
+
+def test_reducer_external_transition_reentrant_transition_fails_without_publication() -> None:
+    reducer = DeterministicVerdictReducer(
+        reducer=_append_reducer,
+        initial_state={"rows": [], "acked": 0},
+        max_journal_rows=4,
+    )
+
+    def reentrant_transition(state: dict) -> dict:
+        state["acked"] = 1
+        reducer.apply_external_effect_transition(
+            transition=lambda nested_state: nested_state,
+            validate_replacement=_validate_ack_state,
+        )
+        return state
+
+    with pytest.raises(ExternalEffectTransitionError) as caught:
+        reducer.apply_external_effect_transition(
+            transition=reentrant_transition,
+            validate_replacement=_validate_ack_state,
+        )
+
+    assert isinstance(caught.value.__cause__, ExternalEffectTransitionError)
+    assert reducer.poisoned is True
+    assert reducer.next_apply_seq == 0
+    assert reducer.journal == ()
+    assert reducer.state == {"rows": [], "acked": 0}
+
+
+def test_reducer_apply_reentrant_apply_fails_without_publication() -> None:
+    reducer: DeterministicVerdictReducer
+
+    def reentrant_reducer(state: dict, result: ImmutableVerdictResult) -> dict:
+        state["rows"].append(result.result_id)
+        reducer.apply(_result(result.submission_seq, 59, result_id="nested"))
+        return state
+
+    reducer = DeterministicVerdictReducer(
+        reducer=reentrant_reducer,
+        initial_state={"rows": [], "acked": 0},
+        max_journal_rows=4,
+    )
+    with pytest.raises(ReducerApplicationError) as caught:
+        reducer.apply(_result(0, 53))
+
+    assert isinstance(caught.value.__cause__, ExternalEffectTransitionError)
+    assert reducer.poisoned is True
+    assert reducer.next_apply_seq == 0
+    assert reducer.journal == ()
+    assert reducer.state == {"rows": [], "acked": 0}
+
+
+def test_reducer_apply_reentrant_external_transition_fails_without_publication() -> None:
+    reducer: DeterministicVerdictReducer
+
+    def reentrant_reducer(state: dict, result: ImmutableVerdictResult) -> dict:
+        state["rows"].append(result.result_id)
+        reducer.apply_external_effect_transition(
+            transition=lambda nested_state: nested_state,
+            validate_replacement=_validate_ack_state,
+        )
+        return state
+
+    reducer = DeterministicVerdictReducer(
+        reducer=reentrant_reducer,
+        initial_state={"rows": [], "acked": 0},
+        max_journal_rows=4,
+    )
+    with pytest.raises(ReducerApplicationError) as caught:
+        reducer.apply(_result(0, 61))
+
+    assert isinstance(caught.value.__cause__, ExternalEffectTransitionError)
+    assert reducer.poisoned is True
+    assert reducer.next_apply_seq == 0
+    assert reducer.journal == ()
+    assert reducer.state == {"rows": [], "acked": 0}
+
+
+def test_caught_nested_reentry_still_prevents_outer_effect_commit() -> None:
+    reducer = DeterministicVerdictReducer(
+        reducer=_append_reducer,
+        initial_state={"rows": [{"result_id": "seed"}], "acked": 0},
+        max_journal_rows=4,
+    )
+
+    def catches_nested_failure(state: dict) -> dict:
+        try:
+            reducer.apply(_result(0, 67))
+        except ExternalEffectTransitionError:
+            pass
+        state["acked"] = 1
+        return state
+
+    with pytest.raises(ExternalEffectTransitionError) as caught:
+        reducer.apply_external_effect_transition(
+            transition=catches_nested_failure,
+            validate_replacement=_validate_ack_state,
+        )
+
+    assert isinstance(caught.value.__cause__, TransactionPoisonedError)
+    assert reducer.poisoned is True
+    assert reducer.next_apply_seq == 0
+    assert reducer.journal == ()
+    assert reducer.state == {"rows": [{"result_id": "seed"}], "acked": 0}
+
+
+def test_external_effect_validator_receives_only_discarded_copies() -> None:
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": [], "acked": 0},
+    )
+
+    def mutating_validator(state: dict) -> None:
+        _validate_ack_state(state)
+        state["validator_mutation"] = True
+
+    def transition(state: dict) -> dict:
+        assert "validator_mutation" not in state
+        return state
+
+    replacement = transaction.apply_external_effect_transition(
+        transition=transition,
+        validate_replacement=mutating_validator,
+    )
+    assert "validator_mutation" not in replacement
+    assert "validator_mutation" not in transaction.reducer_state
+
+
+def test_external_effect_failure_keeps_preack_state_and_permanently_poisons() -> None:
+    physical_effects: list[str] = []
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": [], "acked": 0},
+    )
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        transaction.submit(executor, _immediate_worker, {"value": 7})
+        executor.shutdown(wait=True)
+
+        def fail_after_physical_effect(state: dict) -> dict:
+            physical_effects.append(state["rows"][0]["result_id"])
+            state["acked"] = 1
+            raise OSError("injected external-effect failure")
+
+        with pytest.raises(ExternalEffectTransitionError) as caught:
+            transaction.apply_external_effect_transition(
+                transition=fail_after_physical_effect,
+                validate_replacement=_validate_ack_state,
+            )
+
+    assert isinstance(caught.value.__cause__, OSError)
+    assert transaction.fatal_error is caught.value
+    assert transaction.reducer_state["acked"] == 0
+    assert transaction.next_apply_seq == 1
+    assert physical_effects == ["result-0"]
+    _assert_all_later_actions_refuse(transaction)
+
+
+def test_external_effect_invalid_replacement_keeps_preack_state_and_poisons() -> None:
+    physical_effects: list[str] = []
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": [], "acked": 0},
+    )
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        transaction.submit(executor, _immediate_worker, {"value": 17})
+        executor.shutdown(wait=True)
+
+        def invalid_ack_after_physical_effect(state: dict) -> dict:
+            physical_effects.append(state["rows"][0]["result_id"])
+            state["acked"] = len(state["rows"]) + 1
+            return state
+
+        with pytest.raises(ExternalEffectTransitionError) as caught:
+            transaction.apply_external_effect_transition(
+                transition=invalid_ack_after_physical_effect,
+                validate_replacement=_validate_ack_state,
+            )
+
+    assert isinstance(caught.value.__cause__, ValueError)
+    assert transaction.fatal_error is caught.value
+    assert transaction.reducer_state["acked"] == 0
+    assert physical_effects == ["result-0"]
+    _assert_all_later_actions_refuse(transaction)
+
+
+def test_prepared_checkpoint_drains_then_captures_post_ack_state_once() -> None:
+    applied: list[int] = []
+    published: list[tuple[str, int]] = []
+    worker_started = threading.Event()
+    worker_release = threading.Event()
+
+    def reducer(state: dict, result: ImmutableVerdictResult) -> dict:
+        applied.append(result.submission_seq)
+        return _append_reducer(state, result)
+
+    transaction = QuiescentVerdictTransaction(
+        reducer=reducer,
+        initial_state={"rows": [], "acked": 0},
+    )
+    with ThreadPoolExecutor(max_workers=1) as executor:
+
+        def worker(sequence: int, snapshot) -> ImmutableVerdictResult:
+            worker_started.set()
+            assert worker_release.wait(timeout=5.0)
+            return _result(sequence, int(snapshot["value"]))
+
+        transaction.submit(executor, worker, {"value": 23})
+        assert worker_started.wait(timeout=5.0)
+
+        def release_after_barrier() -> None:
+            deadline = time.monotonic() + 5.0
+            while not transaction.checkpoint_active:
+                if time.monotonic() >= deadline:
+                    raise AssertionError("prepared checkpoint barrier did not activate")
+                time.sleep(0.001)
+            worker_release.set()
+
+        releaser = threading.Thread(target=release_after_barrier)
+        releaser.start()
+        with transaction.prepared_checkpoint(
+            transition=_idempotent_effect_transition(published),
+            validate_replacement=_validate_ack_state,
+        ) as capture:
+            assert transaction.checkpoint_active is True
+            assert capture.next_submit_seq == capture.next_apply_seq == 1
+            assert capture.pending_count == 0
+            assert capture.reducer_state["acked"] == 1
+            assert published == [("result-0", 23)]
+        releaser.join(timeout=5.0)
+        assert not releaser.is_alive()
+
+    assert applied == [0]
+    assert transaction.reducer_state["acked"] == 1
+    assert transaction.checkpoint_active is False
+    with transaction.prepared_checkpoint(
+        transition=_idempotent_effect_transition(published),
+        validate_replacement=_validate_ack_state,
+    ):
+        pass
+    assert applied == [0]
+    assert published == [("result-0", 23)]
+
+
+def test_prepared_checkpoint_restore_starts_from_durable_post_ack_state() -> None:
+    published: list[tuple[str, int]] = []
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": [], "acked": 0},
+    )
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        transaction.submit(executor, _immediate_worker, {"value": 31})
+        with transaction.prepared_checkpoint(
+            transition=_idempotent_effect_transition(published),
+            validate_replacement=_validate_ack_state,
+        ) as capture:
+            arrays = capture.numpy_state(prefix="verdict.")
+            durable_reducer_state = capture.reducer_state
+
+    restored = QuiescentVerdictTransaction.from_numpy_state(
+        arrays,
+        reducer=_append_reducer,
+        restored_reducer_state=durable_reducer_state,
+        prefix="verdict.",
+    )
+    restored.apply_external_effect_transition(
+        transition=_idempotent_effect_transition(published),
+        validate_replacement=_validate_ack_state,
+    )
+
+    assert restored.reducer_state["acked"] == 1
+    assert published == [("result-0", 31)]
+
+
+def test_prepared_checkpoint_effect_failure_poisons_before_capture() -> None:
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": [], "acked": 0},
+    )
+    yielded = False
+
+    def broken_transition(state: dict) -> dict:
+        del state
+        raise RuntimeError("injected preparation failure")
+
+    with (
+        pytest.raises(ExternalEffectTransitionError) as caught,
+        transaction.prepared_checkpoint(
+            transition=broken_transition,
+            validate_replacement=_validate_ack_state,
+        ),
+    ):
+        yielded = True
+
+    assert yielded is False
+    assert isinstance(caught.value.__cause__, RuntimeError)
+    assert transaction.fatal_error is caught.value
+    assert transaction.checkpoint_active is False
+    _assert_all_later_actions_refuse(transaction)
+
+
+def test_explicit_checkpoint_publication_poison_latches_same_transaction() -> None:
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": [], "acked": 0},
+    )
+    publish_failure = OSError("injected checkpoint file publication failure")
+
+    with (
+        pytest.raises(CheckpointPublicationError) as caught,
+        transaction.prepared_checkpoint(
+            transition=lambda state: state,
+            validate_replacement=_validate_ack_state,
+        ) as capture,
+    ):
+        assert capture.reducer_state["acked"] == 0
+        try:
+            raise publish_failure
+        except OSError as exc:
+            transaction.poison_checkpoint_publication(exc)
+
+    assert caught.value.__cause__ is publish_failure
+    assert transaction.fatal_error is caught.value
+    assert transaction.checkpoint_active is False
+    _assert_all_later_actions_refuse(transaction)
+
+
+def test_uncaught_prepared_checkpoint_body_failure_auto_poisons() -> None:
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": [], "acked": 0},
+    )
+    publication_failure = OSError("injected uncaught checkpoint publication failure")
+
+    with (
+        pytest.raises(CheckpointPublicationError) as caught,
+        transaction.prepared_checkpoint(
+            transition=lambda state: state,
+            validate_replacement=_validate_ack_state,
+        ),
+    ):
+        raise publication_failure
+
+    assert caught.value.__cause__ is publication_failure
+    assert transaction.fatal_error is caught.value
+    assert transaction.checkpoint_active is False
+    _assert_all_later_actions_refuse(transaction)
 
 
 def test_bounded_canonical_state_round_trip_and_next_sequence() -> None:

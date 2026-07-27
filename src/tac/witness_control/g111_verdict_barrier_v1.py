@@ -5,7 +5,8 @@ This module is deliberately trainer-independent.  A worker receives a detached,
 immutable NumPy tree and must return :class:`ImmutableVerdictResult`; it never
 touches controller state or a journal.  The thread that creates
 :class:`QuiescentVerdictTransaction` is the only thread allowed to reduce
-results or enter a checkpoint.
+results or enter a checkpoint.  Future callbacks may only latch cancellation or
+worker exceptions; they never inspect successful payloads or reduce state.
 
 Lock order is:
 
@@ -23,15 +24,24 @@ Native-v3 checkpoints use a strict barrier:
 * stop new submissions;
 * join every submitted worker;
 * reduce results in exact submission order;
+* publish and acknowledge external effects through one typed main-thread
+  transition;
 * require no pending work and equal submit/apply cursors;
-* keep the barrier active while the caller snapshots and publishes the rest of
-  the checkpoint;
+* capture the post-ack reducer state;
+* keep the barrier active while the caller publishes the rest of the
+  checkpoint;
 * release on success or failure.
 
 Legacy ``__cl_pend_*`` payloads are intentionally rejected by the native-v3
 state opener.  The bounded journal stores sequence, result ID, and content hash
 only; controller and sensor histories remain ordinary O3/O4 state owned by the
 caller's reducer.
+
+External effect callbacks must use a deterministic result identity as their
+idempotency key.  A process can crash after the physical effect but before the
+acknowledged replacement state is durable, so replay from the previous complete
+checkpoint is intentional.  Any callback/validation failure poisons the same
+transaction permanently; it can never be retried in-process.
 """
 
 from __future__ import annotations
@@ -122,6 +132,18 @@ class DuplicateResultError(FatalVerdictTransactionError):
 
 class ReducerApplicationError(FatalVerdictTransactionError):
     """The pure reducer failed before its replacement state was published."""
+
+
+class ExternalEffectTransitionError(FatalVerdictTransactionError):
+    """Main-thread external-effect publication/acknowledgement failed."""
+
+
+class CheckpointPreparationError(FatalVerdictTransactionError):
+    """Checkpoint preparation failed before a post-ack capture was yielded."""
+
+
+class CheckpointPublicationError(FatalVerdictTransactionError):
+    """Caller checkpoint publication failed while the barrier was held."""
 
 
 class NonQuiescentCheckpointError(VerdictTransactionError):
@@ -543,6 +565,8 @@ class AppliedVerdictRow:
 
 Reducer = Callable[[Any, ImmutableVerdictResult], Any]
 Worker = Callable[[int, Mapping[str, Any]], ImmutableVerdictResult]
+ExternalEffectTransition = Callable[[Any], Any]
+ReducerStateValidator = Callable[[Any], None]
 
 
 class DeterministicVerdictReducer:
@@ -570,6 +594,8 @@ class DeterministicVerdictReducer:
         self._journal: list[AppliedVerdictRow] = []
         self._lock = threading.RLock()
         self._poisoned_error: FatalVerdictTransactionError | None = None
+        self._application_active = False
+        self._external_transition_active = False
 
     @classmethod
     def restore(
@@ -646,6 +672,10 @@ class DeterministicVerdictReducer:
 
         with self._lock:
             self.assert_healthy()
+            if self._application_active or self._external_transition_active:
+                failure = ExternalEffectTransitionError("reducer application re-entry is forbidden")
+                self._poisoned_error = failure
+                raise failure
             try:
                 if not isinstance(result, ImmutableVerdictResult):
                     raise WorkerResultTypeError(
@@ -668,13 +698,17 @@ class DeterministicVerdictReducer:
                 raise
 
             candidate = _clone_numpy_tree(self._state)
+            self._application_active = True
             try:
                 replacement = self._reducer(candidate, result)
                 replacement = _clone_numpy_tree(replacement)
+                self.assert_healthy()
             except BaseException as exc:
                 failure = ReducerApplicationError(f"reducer failed for submission sequence {result.submission_seq}")
                 self._poisoned_error = failure
                 raise failure from exc
+            finally:
+                self._application_active = False
 
             self._state = replacement
             self._next_apply_seq += 1
@@ -688,6 +722,52 @@ class DeterministicVerdictReducer:
             if len(self._journal) > self._max_journal_rows:
                 del self._journal[: len(self._journal) - self._max_journal_rows]
             self._validate_journal()
+
+    def apply_external_effect_transition(
+        self,
+        *,
+        transition: ExternalEffectTransition,
+        validate_replacement: ReducerStateValidator,
+    ) -> Any:
+        """Publish effects and atomically replace state with their acknowledgement.
+
+        ``transition`` receives a detached candidate state.  It may perform
+        deterministic, idempotent external effects and must return the complete
+        acknowledged replacement state.  The validator is mandatory and runs
+        both before any effect and after the returned state has been detached.
+
+        A failure at any point keeps the pre-transition reducer state and
+        permanently poisons the reducer.  Physical effects that happened before
+        a failure may replay only after restart from a complete checkpoint, so
+        callers must key them by the result identity carried in reducer state.
+        """
+
+        if not callable(transition):
+            raise TypeError("external-effect transition must be callable")
+        if not callable(validate_replacement):
+            raise TypeError("replacement-state validator must be callable")
+        with self._lock:
+            self.assert_healthy()
+            if self._application_active or self._external_transition_active:
+                failure = ExternalEffectTransitionError("external-effect transition re-entry is forbidden")
+                self._poisoned_error = failure
+                raise failure
+            candidate = _clone_numpy_tree(self._state)
+            self._external_transition_active = True
+            try:
+                validate_replacement(_clone_numpy_tree(candidate))
+                replacement = transition(candidate)
+                replacement = _clone_numpy_tree(replacement)
+                validate_replacement(_clone_numpy_tree(replacement))
+                self.assert_healthy()
+            except BaseException as exc:
+                failure = ExternalEffectTransitionError("external-effect publication/acknowledgement transition failed")
+                self._poisoned_error = failure
+                raise failure from exc
+            finally:
+                self._external_transition_active = False
+            self._state = replacement
+            return _clone_numpy_tree(self._state)
 
 
 def _utf8_array(value: str) -> np.ndarray:
@@ -865,6 +945,7 @@ class QuiescentVerdictTransaction:
         self._main_thread_ident = threading.get_ident()
         self._gate = threading.Condition(threading.RLock())
         self._checkpoint_active = False
+        self._external_transition_active = False
         self._next_submit_seq = 0
         self._pending: dict[int, Future[ImmutableVerdictResult]] = {}
         self._reducer = DeterministicVerdictReducer(
@@ -873,6 +954,7 @@ class QuiescentVerdictTransaction:
             max_journal_rows=max_journal_rows,
         )
         self._fatal_error: FatalVerdictTransactionError | None = None
+        self._unobserved_async_fatal: FatalVerdictTransactionError | None = None
 
     @classmethod
     def from_numpy_state(
@@ -967,6 +1049,7 @@ class QuiescentVerdictTransaction:
         instance._main_thread_ident = threading.get_ident()
         instance._gate = threading.Condition(threading.RLock())
         instance._checkpoint_active = False
+        instance._external_transition_active = False
         instance._next_submit_seq = next_submit_seq
         instance._pending = {}
         instance._reducer = DeterministicVerdictReducer.restore(
@@ -977,6 +1060,7 @@ class QuiescentVerdictTransaction:
             journal=journal,
         )
         instance._fatal_error = None
+        instance._unobserved_async_fatal = None
         return instance
 
     def _assert_main_thread(self) -> None:
@@ -986,18 +1070,39 @@ class QuiescentVerdictTransaction:
     def _assert_healthy(self) -> None:
         with self._gate:
             fatal_error = self._fatal_error
+            raise_original = fatal_error is not None and self._unobserved_async_fatal is fatal_error
+            if raise_original:
+                self._unobserved_async_fatal = None
+            futures = tuple(self._pending.values()) if fatal_error is not None else ()
+            if fatal_error is not None:
+                self._pending.clear()
+        for future in futures:
+            future.cancel()
         if fatal_error is not None:
+            if raise_original:
+                raise fatal_error
             raise TransactionPoisonedError(
                 "verdict transaction is fatally poisoned; restart from the last complete checkpoint"
             ) from fatal_error
         self._reducer.assert_healthy()
+
+    def assert_healthy(self) -> None:
+        """Thread-safe fail-fast gate for state mutations outside this object.
+
+        A worker cancellation/exception is latched by its future callback before
+        the main thread next polls or reduces results.  Call this immediately
+        before any optimizer/controller mutation that is conditional on the
+        verdict transaction remaining healthy.
+        """
+
+        self._assert_healthy()
 
     def _poison(
         self,
         error: FatalVerdictTransactionError,
         *,
         cause: BaseException | None = None,
-    ) -> None:
+    ) -> FatalVerdictTransactionError:
         """Latch the first fatal error and discard all unusable pending futures."""
 
         if cause is not None and error.__cause__ is None:
@@ -1005,10 +1110,65 @@ class QuiescentVerdictTransaction:
         with self._gate:
             if self._fatal_error is None:
                 self._fatal_error = error
+            canonical_error = self._fatal_error
+            if self._unobserved_async_fatal is canonical_error:
+                self._unobserved_async_fatal = None
             futures = tuple(self._pending.values())
             self._pending.clear()
         for future in futures:
             future.cancel()
+        return canonical_error
+
+    def _latch_async_worker_failure(
+        self,
+        error: FatalVerdictTransactionError,
+        *,
+        cause: BaseException,
+    ) -> None:
+        """Latch a callback-observed worker fatal without reducing any result."""
+
+        if error.__cause__ is None:
+            error.__cause__ = cause
+        with self._gate:
+            if self._fatal_error is None:
+                self._fatal_error = error
+                self._unobserved_async_fatal = error
+            futures = tuple(self._pending.values())
+            self._pending.clear()
+        for future in futures:
+            if not future.done():
+                future.cancel()
+
+    def _observe_worker_completion(
+        self,
+        sequence: int,
+        future: Future[ImmutableVerdictResult],
+    ) -> None:
+        """Future callback: eagerly poison only cancellation or execution error."""
+
+        if future.cancelled():
+            cause: BaseException = CancelledError()
+            error: FatalVerdictTransactionError = WorkerCancelledError(
+                f"verdict worker sequence {sequence} was cancelled"
+            )
+            self._latch_async_worker_failure(error, cause=cause)
+            return
+        try:
+            worker_error = future.exception()
+        except CancelledError as exc:
+            error = WorkerCancelledError(f"verdict worker sequence {sequence} was cancelled")
+            self._latch_async_worker_failure(error, cause=exc)
+            return
+        except BaseException as exc:
+            error = WorkerExecutionError(
+                f"verdict worker sequence {sequence} completion inspection raised {type(exc).__name__}"
+            )
+            self._latch_async_worker_failure(error, cause=exc)
+            return
+        if worker_error is None:
+            return
+        error = WorkerExecutionError(f"verdict worker sequence {sequence} raised {type(worker_error).__name__}")
+        self._latch_async_worker_failure(error, cause=worker_error)
 
     @property
     def checkpoint_active(self) -> bool:
@@ -1040,7 +1200,8 @@ class QuiescentVerdictTransaction:
     @property
     def poisoned(self) -> bool:
         with self._gate:
-            return self._fatal_error is not None or self._reducer.poisoned
+            transaction_poisoned = self._fatal_error is not None
+        return transaction_poisoned or self._reducer.poisoned
 
     @property
     def fatal_error(self) -> FatalVerdictTransactionError | None:
@@ -1062,6 +1223,8 @@ class QuiescentVerdictTransaction:
             # worker-side submission gets the precise barrier refusal.
             if self._checkpoint_active:
                 raise SubmissionBlockedError("new verdict submissions are blocked by the checkpoint barrier")
+            if self._external_transition_active:
+                raise SubmissionBlockedError("new verdict submissions are blocked by the external-effect transition")
             self._assert_main_thread()
             self._assert_healthy()
             if not callable(worker):
@@ -1073,6 +1236,12 @@ class QuiescentVerdictTransaction:
             future = executor.submit(worker, sequence, frozen_snapshot)
             self._pending[sequence] = future
             self._next_submit_seq += 1
+            future.add_done_callback(
+                lambda completed, owned_sequence=sequence: self._observe_worker_completion(
+                    owned_sequence,
+                    completed,
+                )
+            )
             return sequence
 
     def _future_for_next_apply(self) -> Future[ImmutableVerdictResult] | None:
@@ -1083,8 +1252,7 @@ class QuiescentVerdictTransaction:
             future = self._pending.get(sequence)
             if future is None:
                 error = SequenceGapError(f"pending future for exact next sequence {sequence} is absent")
-                self._poison(error)
-                raise error
+                raise self._poison(error)
             return future
 
     def _apply_future(
@@ -1096,38 +1264,42 @@ class QuiescentVerdictTransaction:
             current = self._pending.get(expected_sequence)
             if current is not future:
                 error = SequenceGapError(f"pending future identity drift at sequence {expected_sequence}")
-                self._poison(error)
-                raise error
+                raise self._poison(error)
         try:
             result = future.result()
         except CancelledError as exc:
             error = WorkerCancelledError(f"verdict worker sequence {expected_sequence} was cancelled")
-            self._poison(error, cause=exc)
-            raise error from exc
+            canonical_error = self._poison(error, cause=exc)
+            raise canonical_error from canonical_error.__cause__
         except BaseException as exc:
             error = WorkerExecutionError(f"verdict worker sequence {expected_sequence} raised {type(exc).__name__}")
-            self._poison(error, cause=exc)
-            raise error from exc
-        try:
-            if not isinstance(result, ImmutableVerdictResult):
-                raise WorkerResultTypeError(f"worker must return ImmutableVerdictResult, got {type(result).__name__}")
-            self._reducer.apply(result)
-        except FatalVerdictTransactionError as exc:
-            self._poison(exc)
-            raise
-        except Exception as exc:
-            error = ReducerApplicationError(f"unexpected reducer failure for submission sequence {expected_sequence}")
-            self._poison(error, cause=exc)
-            raise error from exc
+            canonical_error = self._poison(error, cause=exc)
+            raise canonical_error from canonical_error.__cause__
         with self._gate:
+            self._assert_healthy()
+            try:
+                if not isinstance(result, ImmutableVerdictResult):
+                    raise WorkerResultTypeError(
+                        f"worker must return ImmutableVerdictResult, got {type(result).__name__}"
+                    )
+                self._reducer.apply(result)
+            except FatalVerdictTransactionError as exc:
+                canonical_error = self._poison(exc)
+                raise canonical_error from canonical_error.__cause__
+            except Exception as exc:
+                error = ReducerApplicationError(
+                    f"unexpected reducer failure for submission sequence {expected_sequence}"
+                )
+                canonical_error = self._poison(error, cause=exc)
+                raise canonical_error from canonical_error.__cause__
             current = self._pending.get(expected_sequence)
             if current is not future:
                 error = SequenceGapError(
                     f"pending future identity drift after reduction at sequence {expected_sequence}"
                 )
-                self._poison(error)
-                raise error
+                raise self._poison(error)
             del self._pending[expected_sequence]
+        self._assert_healthy()
 
     def apply_completed(self) -> int:
         """Apply the contiguous completed prefix without waiting for workers."""
@@ -1137,6 +1309,8 @@ class QuiescentVerdictTransaction:
         with self._gate:
             if self._checkpoint_active:
                 raise SubmissionBlockedError("standalone reduction is blocked while checkpointing")
+            if self._external_transition_active:
+                raise SubmissionBlockedError("standalone reduction is blocked during the external-effect transition")
         applied = 0
         while True:
             future = self._future_for_next_apply()
@@ -1175,20 +1349,165 @@ class QuiescentVerdictTransaction:
             _reducer_state=self._reducer.state,
         )
 
+    def _apply_external_effect_transition(
+        self,
+        *,
+        transition: ExternalEffectTransition,
+        validate_replacement: ReducerStateValidator,
+        checkpoint_owned: bool,
+    ) -> Any:
+        """Run one non-reentrant main-thread effect/ack transition."""
+
+        self._assert_main_thread()
+        self._assert_healthy()
+        if not callable(transition):
+            raise TypeError("external-effect transition must be callable")
+        if not callable(validate_replacement):
+            raise TypeError("replacement-state validator must be callable")
+        with self._gate:
+            if self._external_transition_active:
+                raise NonQuiescentCheckpointError("an external-effect transition is already active")
+            if checkpoint_owned:
+                if not self._checkpoint_active:
+                    raise NonQuiescentCheckpointError(
+                        "checkpoint-owned external-effect transition lacks an active barrier"
+                    )
+            elif self._checkpoint_active:
+                raise SubmissionBlockedError("standalone external-effect transition is blocked while checkpointing")
+            self._external_transition_active = True
+        try:
+            try:
+                replacement = self._reducer.apply_external_effect_transition(
+                    transition=transition,
+                    validate_replacement=validate_replacement,
+                )
+            except FatalVerdictTransactionError as exc:
+                canonical_error = self._poison(exc)
+                raise canonical_error from canonical_error.__cause__
+            self._assert_healthy()
+            return replacement
+        finally:
+            with self._gate:
+                self._external_transition_active = False
+                self._gate.notify_all()
+
+    def apply_external_effect_transition(
+        self,
+        *,
+        transition: ExternalEffectTransition,
+        validate_replacement: ReducerStateValidator,
+    ) -> Any:
+        """Reduce the completed prefix, publish its effects, and acknowledge it.
+
+        This is the ordinary main-loop transition.  It never waits for an
+        unfinished worker; :meth:`prepared_checkpoint` is the strict drain-all
+        variant.  The returned state is detached from transaction ownership.
+        """
+
+        self._assert_main_thread()
+        self._assert_healthy()
+        if not callable(transition):
+            raise TypeError("external-effect transition must be callable")
+        if not callable(validate_replacement):
+            raise TypeError("replacement-state validator must be callable")
+        self.apply_completed()
+        return self._apply_external_effect_transition(
+            transition=transition,
+            validate_replacement=validate_replacement,
+            checkpoint_owned=False,
+        )
+
+    @contextmanager
+    def _checkpoint_barrier(self) -> Iterator[None]:
+        """Activate and hold the single logical checkpoint barrier."""
+
+        with self._gate:
+            if self._checkpoint_active:
+                raise NonQuiescentCheckpointError("checkpoint barrier is already active")
+            if self._external_transition_active:
+                raise NonQuiescentCheckpointError("checkpoint cannot start during an external-effect transition")
+            self._checkpoint_active = True
+        try:
+            yield
+        finally:
+            with self._gate:
+                self._checkpoint_active = False
+                self._gate.notify_all()
+
+    def poison_checkpoint_publication(self, cause: BaseException) -> None:
+        """Latch and raise a typed fatal caller-publication failure.
+
+        Call this from an exception handler inside a checkpoint publication
+        body.  It raises :class:`CheckpointPublicationError`; the surrounding
+        context manager then releases the barrier without clearing the poison.
+        """
+
+        self._assert_main_thread()
+        self._assert_healthy()
+        if not isinstance(cause, BaseException):
+            raise TypeError("checkpoint publication cause must be an exception")
+        with self._gate:
+            if not self._checkpoint_active:
+                raise NonQuiescentCheckpointError(
+                    "checkpoint publication can be poisoned only while its barrier is active"
+                )
+            if self._external_transition_active:
+                raise NonQuiescentCheckpointError("checkpoint publication cannot start during effect preparation")
+        error = CheckpointPublicationError("caller checkpoint publication failed while the barrier was active")
+        raise self._poison(error, cause=cause)
+
     @contextmanager
     def checkpoint(self) -> Iterator[VerdictCheckpointCapture]:
         """Join, reduce, and hold the logical barrier through caller publication."""
 
         self._assert_main_thread()
         self._assert_healthy()
-        with self._gate:
-            if self._checkpoint_active:
-                raise NonQuiescentCheckpointError("checkpoint barrier is already active")
-            self._checkpoint_active = True
-        try:
+        with self._checkpoint_barrier():
             self._drain_all_in_order()
             yield self._capture()
-        finally:
-            with self._gate:
-                self._checkpoint_active = False
-                self._gate.notify_all()
+
+    @contextmanager
+    def prepared_checkpoint(
+        self,
+        *,
+        transition: ExternalEffectTransition,
+        validate_replacement: ReducerStateValidator,
+    ) -> Iterator[VerdictCheckpointCapture]:
+        """Drain, publish/ack effects, then yield one post-ack capture.
+
+        The barrier remains active through the caller's checkpoint writes.
+        Any exception from preparation or the caller body is latched as a typed
+        fatal error on this transaction.  Callers that catch their own write
+        exception may explicitly invoke :meth:`poison_checkpoint_publication`;
+        an uncaught body exception is wrapped and poisoned automatically.
+        """
+
+        self._assert_main_thread()
+        self._assert_healthy()
+        if not callable(transition):
+            raise TypeError("external-effect transition must be callable")
+        if not callable(validate_replacement):
+            raise TypeError("replacement-state validator must be callable")
+        with self._checkpoint_barrier():
+            try:
+                self._drain_all_in_order()
+                self._apply_external_effect_transition(
+                    transition=transition,
+                    validate_replacement=validate_replacement,
+                    checkpoint_owned=True,
+                )
+                capture = self._capture()
+            except BaseException as exc:
+                if self.fatal_error is not None:
+                    raise
+                error = CheckpointPreparationError("checkpoint preparation failed before post-ack capture")
+                canonical_error = self._poison(error, cause=exc)
+                raise canonical_error from canonical_error.__cause__
+            try:
+                yield capture
+            except BaseException as exc:
+                if self.fatal_error is not None:
+                    raise
+                error = CheckpointPublicationError("caller checkpoint publication failed while the barrier was active")
+                canonical_error = self._poison(error, cause=exc)
+                raise canonical_error from canonical_error.__cause__
