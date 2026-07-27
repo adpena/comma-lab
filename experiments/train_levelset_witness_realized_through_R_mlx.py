@@ -40,6 +40,7 @@ authority. OURS-ORIGINAL = composing the SegNet argmax as a softmax-of-SDF level
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -48,6 +49,7 @@ import re
 import sys
 import threading
 import time
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -136,6 +138,12 @@ from tac.witness_dsl.basis_control import (  # noqa: E402
     genuine_frame_windowed_curvelet_config,
     is_legacy_fourier_ab_control,
     normalize_basis_family,
+)
+from tac.witness_dsl.v10_factor2_selected_preimage_v1 import (  # noqa: E402
+    SCHEMA as V10_FACTOR2_SELECTED_PREIMAGE_SCHEMA,
+    build_mlx_factor2_gather_plan,
+    realize_factor2_scorer_plane_mlx,
+    realize_factor2_uint8_numpy,
 )
 
 
@@ -880,6 +888,17 @@ _RESUME_OPT_PREFIX = "optP__"
 # present when --polyak-finisher-arm is set + it has observed => an un-armed run is byte-identical.
 _RESUME_POLYAK_PREFIX = "polyakM__"
 _RESUME_SEMANTIC_SCHEMA = "levelset_full_state.v2"
+_FRESH_LINEAGE_SCHEMA = "tac.fresh_producer_lineage.v1"
+_FRESH_LINEAGE_ROOT_PARENT = "0" * 64
+_FRESH_LINEAGE_DERIVED_CFG_KEYS = frozenset(
+    {
+        "__cfg_fresh_lineage_parent_checkpoint_id_sha256",
+        "__cfg_fresh_lineage_state_sha256",
+        "__cfg_fresh_lineage_checkpoint_id_sha256",
+        "__cfg_fresh_lineage_epoch",
+        "__cfg_fresh_lineage_stage",
+    }
+)
 _RESUME_RNG_KEYS = (
     "__rng_np_algo", "__rng_np_keys", "__rng_np_pos",
     "__rng_np_has_gauss", "__rng_np_cached_gauss",
@@ -973,11 +992,329 @@ def _atomic_write_json(path: Path, obj: dict[str, Any]) -> Path:
     return path
 
 
+def _sha256_array_mapping(arrays: Mapping[str, Any]) -> str:
+    """Hash a tensor mapping without dtype/shape ambiguity or key-order drift."""
+
+    digest = hashlib.sha256()
+    for key in sorted(str(name) for name in arrays):
+        value = np.ascontiguousarray(np.asarray(arrays[key]))
+        key_bytes = key.encode("utf-8")
+        dtype_bytes = value.dtype.str.encode("ascii")
+        shape_bytes = json.dumps(
+            [int(dimension) for dimension in value.shape],
+            separators=(",", ":"),
+        ).encode("ascii")
+        for field in (key_bytes, dtype_bytes, shape_bytes):
+            digest.update(len(field).to_bytes(8, "big"))
+            digest.update(field)
+        raw = memoryview(value).cast("B")
+        digest.update(len(raw).to_bytes(8, "big"))
+        digest.update(raw)
+    return digest.hexdigest()
+
+
+def _require_lineage_sha256(value: Any, label: str) -> str:
+    if (
+        type(value) is not str
+        or len(value) != 64
+        or value != value.lower()
+        or any(character not in "0123456789abcdef" for character in value)
+    ):
+        raise ValueError(f"{label} must be a lowercase SHA-256")
+    return value
+
+
+def _canonical_lineage_sha256(value: Mapping[str, Any]) -> str:
+    try:
+        payload = json.dumps(
+            dict(value),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    except (TypeError, ValueError) as exc:
+        raise ValueError("fresh lineage identity is not canonical JSON") from exc
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _initialize_fresh_producer_lineage(
+    args: Any,
+    *,
+    initial_state: Mapping[str, Any],
+) -> None:
+    """Bind cold initialization to the governed DSL and physical G109 target."""
+
+    if not bool(getattr(args, "fresh_producer", False)):
+        return
+    current_launch_dsl_compile_hash = _require_lineage_sha256(
+        os.environ.get("TAC_DSL_COMPILE_HASH"),
+        "TAC_DSL_COMPILE_HASH",
+    )
+    dsl_compile_hash = _require_lineage_sha256(
+        getattr(
+            args,
+            "_fresh_lineage_resume_root_dsl_compile_hash",
+            current_launch_dsl_compile_hash,
+        ),
+        "fresh lineage root DSL compile hash",
+    )
+    target_arrays = getattr(args, "_v9_target_checkpoint_arrays", None)
+    if not isinstance(target_arrays, Mapping):
+        raise ValueError("fresh producer lacks physical G109 checkpoint projection")
+    target_projection_sha = _require_lineage_sha256(
+        str(target_arrays.get("__cfg_g109_target_projection_sha256", "")),
+        "G109 target projection SHA-256",
+    )
+    initial_state_sha = _sha256_array_mapping(initial_state)
+    root_sha = _canonical_lineage_sha256(
+        {
+            "schema": _FRESH_LINEAGE_SCHEMA,
+            "seed": int(args.seed),
+            "dsl_compile_hash": dsl_compile_hash,
+            "target_projection_sha256": target_projection_sha,
+            "initial_state_sha256": initial_state_sha,
+        }
+    )
+    args._fresh_lineage_root_sha256 = root_sha
+    args._fresh_lineage_initial_state_sha256 = initial_state_sha
+    args._fresh_lineage_dsl_compile_hash = dsl_compile_hash
+    args._fresh_lineage_current_launch_dsl_compile_hash = (
+        current_launch_dsl_compile_hash
+    )
+    args._fresh_lineage_target_projection_sha256 = target_projection_sha
+
+
+def _fresh_producer_root_arrays(args: Any) -> dict[str, np.ndarray]:
+    if not bool(getattr(args, "fresh_producer", False)):
+        return {}
+    values = {
+        "__cfg_fresh_lineage_schema": _FRESH_LINEAGE_SCHEMA,
+        "__cfg_fresh_seed": int(args.seed),
+        "__cfg_fresh_lineage_root_sha256": getattr(
+            args,
+            "_fresh_lineage_root_sha256",
+            None,
+        ),
+        "__cfg_fresh_initial_state_sha256": getattr(
+            args,
+            "_fresh_lineage_initial_state_sha256",
+            None,
+        ),
+        "__cfg_fresh_dsl_compile_hash": getattr(
+            args,
+            "_fresh_lineage_dsl_compile_hash",
+            None,
+        ),
+        "__cfg_fresh_target_projection_sha256": getattr(
+            args,
+            "_fresh_lineage_target_projection_sha256",
+            None,
+        ),
+    }
+    out = {
+        "__cfg_fresh_lineage_schema": np.asarray(
+            values["__cfg_fresh_lineage_schema"]
+        ),
+        "__cfg_fresh_seed": np.asarray(values["__cfg_fresh_seed"], dtype=np.int64),
+    }
+    out.update(
+        {
+            key: np.asarray(_require_lineage_sha256(value, key))
+            for key, value in values.items()
+            if key
+            not in {
+                "__cfg_fresh_lineage_schema",
+                "__cfg_fresh_seed",
+            }
+        }
+    )
+    return out
+
+
+def _lineage_cfg_value(value: Any) -> Any:
+    array = np.asarray(value)
+    if array.dtype.kind == "O":
+        raise ValueError("fresh lineage configuration cannot contain object dtype")
+    if array.size == 1:
+        item = array.item()
+        return item.item() if isinstance(item, np.generic) else item
+    return array.tolist()
+
+
+def _fresh_resume_semantic_state_sha256(
+    *,
+    live_state: Mapping[str, Any],
+    ema_state: Mapping[str, Any],
+    optimizer_state: Mapping[str, Any],
+    polyak_state: Mapping[str, Any],
+    config_state: Mapping[str, Any],
+) -> str:
+    """Hash every tensor and trajectory/control scalar needed for continuation."""
+
+    cfg = {
+        str(key): _lineage_cfg_value(value)
+        for key, value in config_state.items()
+        if str(key) not in _FRESH_LINEAGE_DERIVED_CFG_KEYS
+    }
+    return _canonical_lineage_sha256(
+        {
+            "live_sha256": _sha256_array_mapping(live_state),
+            "ema_sha256": _sha256_array_mapping(ema_state),
+            "optimizer_sha256": _sha256_array_mapping(optimizer_state),
+            "polyak_sha256": _sha256_array_mapping(polyak_state),
+            "config_sha256": _canonical_lineage_sha256(cfg),
+        }
+    )
+
+
+def _fresh_resume_semantic_state_sha256_from_flat(
+    arrays: Mapping[str, Any],
+) -> str:
+    """Split a pending resume sidecar exactly as the loader will split it."""
+
+    live: dict[str, Any] = {}
+    ema: dict[str, Any] = {}
+    optimizer: dict[str, Any] = {}
+    polyak: dict[str, Any] = {}
+    cfg: dict[str, Any] = {}
+    for key, value in arrays.items():
+        name = str(key)
+        if name.startswith(_RESUME_LIVE_PREFIX):
+            live[name[len(_RESUME_LIVE_PREFIX) :]] = value
+        elif name.startswith(_RESUME_EMA_PREFIX):
+            ema[name[len(_RESUME_EMA_PREFIX) :]] = value
+        elif name.startswith(_RESUME_OPT_PREFIX):
+            optimizer[name[len(_RESUME_OPT_PREFIX) :]] = value
+        elif name.startswith(_RESUME_POLYAK_PREFIX):
+            polyak[name[len(_RESUME_POLYAK_PREFIX) :]] = value
+        elif name.startswith("__"):
+            cfg[name] = value
+        else:
+            raise ValueError(
+                f"fresh resume sidecar has an unclassified member: {name}"
+            )
+    return _fresh_resume_semantic_state_sha256(
+        live_state=live,
+        ema_state=ema,
+        optimizer_state=optimizer,
+        polyak_state=polyak,
+        config_state=cfg,
+    )
+
+
+def _fresh_producer_checkpoint_lineage_arrays(
+    args: Any,
+    *,
+    resume_state_arrays: Mapping[str, Any],
+    epoch: int,
+    stage: str,
+    parent_checkpoint_id: str,
+) -> dict[str, np.ndarray]:
+    """Chain one complete full-state checkpoint to its cold deterministic root."""
+
+    if not bool(getattr(args, "fresh_producer", False)):
+        return {}
+    root_arrays = _fresh_producer_root_arrays(args)
+    parent = _require_lineage_sha256(
+        parent_checkpoint_id,
+        "fresh lineage parent checkpoint id",
+    )
+    state_sha = _fresh_resume_semantic_state_sha256_from_flat(
+        resume_state_arrays
+    )
+    checkpoint_id = _canonical_lineage_sha256(
+        {
+            "schema": _FRESH_LINEAGE_SCHEMA,
+            "root_sha256": str(
+                root_arrays["__cfg_fresh_lineage_root_sha256"].item()
+            ),
+            "parent_checkpoint_id_sha256": parent,
+            "state_sha256": state_sha,
+            "epoch": int(epoch),
+            "stage": str(stage),
+        }
+    )
+    return {
+        **root_arrays,
+        "__cfg_fresh_current_launch_dsl_compile_hash": np.asarray(
+            _require_lineage_sha256(
+                getattr(
+                    args,
+                    "_fresh_lineage_current_launch_dsl_compile_hash",
+                    None,
+                ),
+                "current fresh launch DSL compile hash",
+            )
+        ),
+        "__cfg_fresh_lineage_parent_checkpoint_id_sha256": np.asarray(parent),
+        "__cfg_fresh_lineage_state_sha256": np.asarray(state_sha),
+        "__cfg_fresh_lineage_checkpoint_id_sha256": np.asarray(checkpoint_id),
+        "__cfg_fresh_lineage_epoch": np.asarray(int(epoch), dtype=np.int64),
+        "__cfg_fresh_lineage_stage": np.asarray(str(stage)),
+    }
+
+
 def _is_new_best(d_seg: float, prev_best: float) -> bool:
     """NEW-best promotion rule (NO-FAKE): a FINITE, STRICTLY-better realized d_seg only. NaN/inf
     never win; a tie keeps the EARLIER best (reproducible). The 1e-12 guard avoids float-noise
     churn rewriting the best ckpt for sub-ULP "improvements". Module-level + pure -> unit-tested."""
     return bool(np.isfinite(d_seg)) and (float(d_seg) < float(prev_best) - 1e-12)
+
+
+def _pose_carrier_checkpoint_cfg_arrays(args: Any) -> dict[str, np.ndarray]:
+    """Persist the complete pose-carrier decode contract when the carrier is active.
+
+    ``pose_carrier.*`` tensors alone do not identify which source frame is warped,
+    how the residual folds into ``xi_stored``, or which camera geometry produced
+    the homography.  A public compiler must be able to prove all of those facts
+    from the physical checkpoint, and a crash resume must reject any divergence.
+    Absence remains the legacy-compatible marker for an inactive carrier.
+    """
+
+    if not bool(getattr(args, "pose_carrier", False)):
+        return {}
+    effective_s_t = getattr(args, "_pose_carrier_effective_s_t", None)
+    native_hw = getattr(args, "_pose_carrier_native_hw", None)
+    if effective_s_t is None or native_hw is None or len(tuple(native_hw)) != 2:
+        raise RuntimeError(
+            "active pose carrier is missing its effective calibration/native-HW checkpoint custody"
+        )
+    residual_mode = str(getattr(args, "pose_carrier_residual_mode", "table"))
+    return {
+        "__cfg_pose_carrier": np.asarray(1, np.int8),
+        "__cfg_pose_carrier_contract_schema": np.asarray(
+            "tac.v9_pose_carrier_checkpoint_contract.v2"
+        ),
+        "__cfg_pose_carrier_source": np.asarray(
+            str(getattr(args, "pose_carrier_source", "real_keyframe"))
+        ),
+        "__cfg_pose_carrier_residual_mode": np.asarray(residual_mode),
+        "__cfg_pose_carrier_residual_scale": np.asarray(
+            float(getattr(args, "pose_carrier_residual_scale", 1.0))
+        ),
+        "__cfg_pose_carrier_s_t": np.asarray(float(effective_s_t)),
+        "__cfg_pose_carrier_s_r": np.asarray(
+            float(getattr(args, "pose_carrier_s_r", 0.0))
+        ),
+        "__cfg_pose_carrier_pitch": np.asarray(
+            float(getattr(args, "pose_carrier_pitch", 0.0))
+        ),
+        "__cfg_pose_carrier_native_hw": np.asarray(
+            [int(native_hw[0]), int(native_hw[1])], dtype=np.int64
+        ),
+        "__cfg_pose_carrier_xi_formula": np.asarray(
+            "xi_stored+residual_scale*dxi"
+            if residual_mode == "table"
+            else "xi_stored+residual_scale*film(code)"
+        ),
+        "__cfg_pose_carrier_y1_selected_preimage_schema": np.asarray(
+            V10_FACTOR2_SELECTED_PREIMAGE_SCHEMA
+            if str(getattr(args, "pose_carrier_source", "real_keyframe"))
+            == "generated_y1"
+            else "not_applicable"
+        ),
+    }
 
 
 def _build_ema_checkpoint_arrays(
@@ -1085,8 +1422,27 @@ def _build_ema_checkpoint_arrays(
     flat["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
     flat["__cfg_aa_supersample"] = np.asarray(int(getattr(args, "aa_supersample", 1)))
     flat["__cfg_aa_ipe_footprint"] = np.asarray(float(getattr(args, "aa_ipe_footprint", 1.0)))
+    flat.update(_pose_carrier_checkpoint_cfg_arrays(args))
+    if bool(getattr(args, "fresh_producer", False)):
+        flat["__cfg_fresh_producer"] = np.asarray(1, np.int8)
+        flat.update(_fresh_producer_root_arrays(args))
+        flat["__cfg_fresh_current_launch_dsl_compile_hash"] = np.asarray(
+            _require_lineage_sha256(
+                getattr(
+                    args,
+                    "_fresh_lineage_current_launch_dsl_compile_hash",
+                    None,
+                ),
+                "current fresh launch DSL compile hash",
+            )
+        )
     if fresh_state is not None and fresh_state.enabled:
         flat.update(fresh_checkpoint_cfg_arrays(fresh_state, args=args))
+    _target_cfg = getattr(args, "_v9_target_checkpoint_arrays", None)
+    if _target_cfg is not None:
+        if not isinstance(_target_cfg, Mapping):
+            raise RuntimeError("V9 target checkpoint binding must be a mapping")
+        flat.update({str(key): np.asarray(value) for key, value in _target_cfg.items()})
     return flat
 
 
@@ -1267,6 +1623,7 @@ def _build_resume_state_arrays(
     # _resume_lever_divergences guard fails closed. Legacy-compatible (pre-#220 sidecars lack the key
     # => guard only checks present keys => NO spurious divergence). ZERO archive bytes (resume-only).
     out["__cfg_aa_supersample"] = np.asarray(int(getattr(args, "aa_supersample", 1)))
+    out.update(_pose_carrier_checkpoint_cfg_arrays(args))
     _hbe = getattr(args, "hosc_beta_end", None)
     out["__cfg_hosc_beta_end"] = np.asarray(-1.0 if _hbe is None else float(_hbe))
     # (#310 step-native activation) STRUCTURAL basis lever: the periodic activation kind + beta start +
@@ -1403,8 +1760,26 @@ def _build_resume_state_arrays(
         "active_event_flags": active_event_flags,
         "inactive_explicit": not bool(active_event_flags),
     }, sort_keys=True, separators=(",", ":")))
+    if bool(getattr(args, "fresh_producer", False)):
+        out["__cfg_fresh_producer"] = np.asarray(1, np.int8)
+        out.update(_fresh_producer_root_arrays(args))
+        out["__cfg_fresh_current_launch_dsl_compile_hash"] = np.asarray(
+            _require_lineage_sha256(
+                getattr(
+                    args,
+                    "_fresh_lineage_current_launch_dsl_compile_hash",
+                    None,
+                ),
+                "current fresh launch DSL compile hash",
+            )
+        )
     if fresh_state is not None and fresh_state.enabled:
         out.update(fresh_checkpoint_cfg_arrays(fresh_state, args=args))
+    _target_cfg = getattr(args, "_v9_target_checkpoint_arrays", None)
+    if _target_cfg is not None:
+        if not isinstance(_target_cfg, Mapping):
+            raise RuntimeError("V9 target checkpoint binding must be a mapping")
+        out.update({str(key): np.asarray(value) for key, value in _target_cfg.items()})
     # ---- PROVENANCE (git sha + upstream snapshot sha; cost ZERO archive bytes -- the resume sidecar
     # is not byte-closed; makes a --resume-from traceable to the exact code + frozen scorer). ----
     _prov = provenance or {}
@@ -1414,6 +1789,80 @@ def _build_resume_state_arrays(
         str(_prov.get("upstream_snapshot_schema", "unknown")))
     out["__cfg_upstream_snapshot_sha256"] = np.asarray(str(_prov.get("upstream_snapshot_sha256", "unknown")))
     return out
+
+
+def _validate_fresh_producer_resume_lineage(
+    args: argparse.Namespace,
+    resume_state: Mapping[str, Any],
+) -> None:
+    """Keep cold lineage resumable while rejecting copied-marker checkpoints."""
+
+    if not bool(getattr(args, "fresh_producer", False)):
+        return
+    cfg = resume_state.get("cfg")
+    if not isinstance(cfg, Mapping) or int(cfg.get("__cfg_fresh_producer", 0)) != 1:
+        raise ValueError(
+            "--fresh-producer resume checkpoint lacks its cold own-lineage state"
+        )
+    expected_root = {
+        key: str(value.item())
+        for key, value in _fresh_producer_root_arrays(args).items()
+    }
+    for key, expected in expected_root.items():
+        if str(cfg.get(key, "")) != expected:
+            raise ValueError(
+                f"--fresh-producer resume checkpoint differs at {key}"
+            )
+    _require_lineage_sha256(
+        cfg.get("__cfg_fresh_current_launch_dsl_compile_hash"),
+        "fresh checkpoint launch DSL compile hash",
+    )
+    parent = _require_lineage_sha256(
+        cfg.get("__cfg_fresh_lineage_parent_checkpoint_id_sha256"),
+        "fresh lineage parent checkpoint id",
+    )
+    stored_state_sha = _require_lineage_sha256(
+        cfg.get("__cfg_fresh_lineage_state_sha256"),
+        "fresh lineage state SHA-256",
+    )
+    checkpoint_id = _require_lineage_sha256(
+        cfg.get("__cfg_fresh_lineage_checkpoint_id_sha256"),
+        "fresh lineage checkpoint id",
+    )
+    live = resume_state.get("live")
+    ema = resume_state.get("ema")
+    optimizer = resume_state.get("opt")
+    polyak = resume_state.get("polyak")
+    if not isinstance(live, Mapping) or not isinstance(ema, Mapping) or not isinstance(
+        optimizer,
+        Mapping,
+    ) or not isinstance(polyak, Mapping):
+        raise ValueError("--fresh-producer resume checkpoint lacks typed full state")
+    current_state_sha = _fresh_resume_semantic_state_sha256(
+        live_state=live,
+        ema_state=ema,
+        optimizer_state=optimizer,
+        polyak_state=polyak,
+        config_state=cfg,
+    )
+    if current_state_sha != stored_state_sha:
+        raise ValueError("--fresh-producer resume checkpoint state hash differs")
+    lineage_epoch = int(cfg.get("__cfg_fresh_lineage_epoch", -1))
+    lineage_stage = str(cfg.get("__cfg_fresh_lineage_stage", ""))
+    if lineage_epoch != int(resume_state.get("epoch", -2)) or not lineage_stage:
+        raise ValueError("--fresh-producer resume checkpoint epoch/stage lineage differs")
+    expected_checkpoint_id = _canonical_lineage_sha256(
+        {
+            "schema": _FRESH_LINEAGE_SCHEMA,
+            "root_sha256": expected_root["__cfg_fresh_lineage_root_sha256"],
+            "parent_checkpoint_id_sha256": parent,
+            "state_sha256": stored_state_sha,
+            "epoch": lineage_epoch,
+            "stage": lineage_stage,
+        }
+    )
+    if checkpoint_id != expected_checkpoint_id:
+        raise ValueError("--fresh-producer resume checkpoint lineage id differs")
 
 
 def _load_resume_state(npz_path: Path) -> dict[str, Any]:
@@ -1698,6 +2147,12 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
     _hbe = getattr(args, "hosc_beta_end", None)
     cur_hbe = -1.0 if _hbe is None else float(_hbe)
     cur_band = int(bool(getattr(args, "lane_render_band", False)))
+    _pose_s_t = getattr(
+        args,
+        "_pose_carrier_effective_s_t",
+        getattr(args, "pose_carrier_s_t", None),
+    )
+    _pose_s_t_value = -1.0 if _pose_s_t is None else float(_pose_s_t)
     _current_basis = normalize_basis_family(
         getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL)
     )
@@ -1750,6 +2205,22 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         # check passes) but renders a different grid => fail closed. Only checked when PRESENT in the
         # sidecar (pre-#220 sidecars lack the key => no spurious divergence).
         ("__cfg_aa_supersample", int(getattr(args, "aa_supersample", 1)), False),
+        ("__cfg_pose_carrier", int(bool(getattr(args, "pose_carrier", False))), False),
+        ("__cfg_pose_carrier_contract_schema",
+         "tac.v9_pose_carrier_checkpoint_contract.v2", False),
+        ("__cfg_pose_carrier_source",
+         str(getattr(args, "pose_carrier_source", "real_keyframe")), False),
+        ("__cfg_pose_carrier_residual_mode",
+         str(getattr(args, "pose_carrier_residual_mode", "table")), False),
+        ("__cfg_pose_carrier_residual_scale",
+         float(getattr(args, "pose_carrier_residual_scale", 1.0)), True),
+        ("__cfg_pose_carrier_s_t", _pose_s_t_value, True),
+        ("__cfg_pose_carrier_s_r", float(getattr(args, "pose_carrier_s_r", 0.0)), True),
+        ("__cfg_pose_carrier_pitch", float(getattr(args, "pose_carrier_pitch", 0.0)), True),
+        ("__cfg_pose_carrier_y1_selected_preimage_schema",
+         (V10_FACTOR2_SELECTED_PREIMAGE_SCHEMA
+          if str(getattr(args, "pose_carrier_source", "real_keyframe")) == "generated_y1"
+          else "not_applicable"), False),
         ("__cfg_hosc_beta_end", cur_hbe, True),
         # (#310 step-native activation) STRUCTURAL basis lever (activation kind + beta start + anneal
         # shape + omega define the trained input basis; no param keys). A resume that changes any =>
@@ -1863,6 +2334,22 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
             diverged = str(ckpt) != str(cur)
         if diverged:
             div.append(f"{key[len('__cfg_'):]}: ckpt={ckpt!r} != resume-argv={cur!r}")
+    if "__cfg_pose_carrier_native_hw" in resume_cfg:
+        checkpoint_native_hw = tuple(
+            int(value)
+            for value in np.asarray(
+                resume_cfg["__cfg_pose_carrier_native_hw"], dtype=np.int64
+            ).reshape(-1)
+        )
+        current_native_hw = tuple(
+            int(value)
+            for value in getattr(args, "_pose_carrier_native_hw", ())
+        )
+        if checkpoint_native_hw != current_native_hw:
+            div.append(
+                "pose_carrier_native_hw: "
+                f"ckpt={checkpoint_native_hw!r} != resume-runtime={current_native_hw!r}"
+            )
     # FreSh selection changes the epoch-zero basis but adds no parameter keys.
     # Only an actually-applied FreSh checkpoint is binding; a requested lever
     # overwritten by a non-FreSh warm start persists __cfg_fresh_init=0 and is
@@ -4247,6 +4734,49 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError(
             f"--micro-batch-pairs ({getattr(args, 'micro_batch_pairs', None)}) must be >= 1 "
             "(1 = serial; >1 = batched functional-parity path).")
+    if bool(getattr(args, "fresh_producer", False)) and bool(
+        getattr(args, "warm_start_weights_only", False)
+    ):
+        raise ValueError(
+            "--fresh-producer cannot warm-start foreign weights; crash-resume of a "
+            "checkpoint carrying the same fresh-producer marker remains required"
+        )
+    if bool(getattr(args, "fresh_producer", False)) and bool(
+        getattr(args, "film_stiefel", False)
+    ):
+        raise ValueError(
+            "--fresh-producer physical custody currently requires deploy EMA "
+            "identity and therefore refuses --film-stiefel deploy-only "
+            "projection; land a typed projected-EMA lineage schema first"
+        )
+    _fresh_parent_receipt_arg = getattr(
+        args, "fresh_lineage_parent_receipt", None
+    )
+    _fresh_parent_receipt_sha_arg = getattr(
+        args, "fresh_lineage_parent_receipt_sha256", None
+    )
+    if bool(_fresh_parent_receipt_arg) != bool(_fresh_parent_receipt_sha_arg):
+        raise ValueError(
+            "--fresh-lineage-parent-receipt and "
+            "--fresh-lineage-parent-receipt-sha256 must be supplied together"
+        )
+    if _fresh_parent_receipt_arg and not (
+        bool(getattr(args, "fresh_producer", False)) and bool(args.resume_from)
+    ):
+        raise ValueError(
+            "physical fresh-lineage parent custody is valid only for a "
+            "--fresh-producer --resume-from continuation"
+        )
+    if (
+        bool(getattr(args, "fresh_producer", False))
+        and bool(args.resume_from)
+        and not _fresh_parent_receipt_arg
+    ):
+        raise ValueError(
+            "--fresh-producer --resume-from requires the exact physical parent "
+            "receipt path and SHA-256; a resume checkpoint cannot self-attest "
+            "its ancestry"
+        )
     _fresh_candidate_count = validate_fresh_init_args(args)
     _fresh_state = FreShInitState(
         enabled=bool(
@@ -4338,8 +4868,62 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     else:
         gt, seg_cpu, posenet_cpu = precompute_gt(args.num_pairs)
     P = gt.n_pairs
+    _v9_target_binding = None
+    _target_capsule_path = getattr(args, "training_target_capsule", None)
+    _target_capsule_sha = getattr(args, "training_target_capsule_sha256", None)
+    if bool(_target_capsule_path) != bool(_target_capsule_sha):
+        raise ValueError(
+            "--training-target-capsule and --training-target-capsule-sha256 "
+            "must be supplied together"
+        )
+    if _target_capsule_path:
+        if not args.gt_cache:
+            raise ValueError(
+                "--training-target-capsule requires --gt-cache so its source-frame "
+                "population can be verified before target substitution"
+            )
+        if not bool(getattr(args, "fresh_producer", False)):
+            raise ValueError(
+                "--training-target-capsule is admitted only on a typed --fresh-producer run"
+            )
+        if int(args.verdict_batch) != 16:
+            raise ValueError(
+                "--training-target-capsule requires --verdict-batch 16"
+            )
+        from tac.witness_control.taskspace_v9_training_target_binding_v1 import (
+            bind_v9_training_targets,
+        )
+
+        _v9_target_binding = bind_v9_training_targets(
+            aggregate_receipt_path=Path(str(_target_capsule_path)),
+            expected_receipt_sha256=str(_target_capsule_sha),
+            gt_f0=gt.gt_f0,
+            gt_f1=gt.gt_f1,
+        )
+        if int(_v9_target_binding.projection["pair_count"]) != P:
+            raise ValueError(
+                "G109 target capsule pair count differs from the active trainer population"
+            )
+        gt.lstars = [
+            np.asarray(_v9_target_binding.targets.seg_labels_u8[index], dtype=np.int64)
+            for index in range(P)
+        ]
+        gt.margins = [
+            np.asarray(
+                _v9_target_binding.targets.seg_top1_minus_top2_margin_f32[index],
+                dtype=np.float32,
+            )
+            for index in range(P)
+        ]
+        gt.gt_poses = [
+            np.asarray(
+                _v9_target_binding.targets.source_pose6_f32[index],
+                dtype=np.float32,
+            )
+            for index in range(P)
+        ]
     _fresh_target_authority_sha256 = None
-    if _fresh_state.enabled and not args.resume_from:
+    if _v9_target_binding is not None or (_fresh_state.enabled and not args.resume_from):
         _fresh_target_authority_sha256 = fresh_training_target_sha256({
             "gt_f0": gt.gt_f0,
             "gt_f1": gt.gt_f1,
@@ -4347,6 +4931,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "margins": gt.margins,
             "gt_poses": gt.gt_poses,
         })
+    if _v9_target_binding is not None:
+        args._v9_target_checkpoint_arrays = _v9_target_binding.checkpoint_arrays(
+            active_target_authority_sha256=str(_fresh_target_authority_sha256),
+            verdict_batch=int(args.verdict_batch),
+        )
+        print(
+            json.dumps(
+                {
+                    "stage": "v9_training_target_bound",
+                    "capsule_receipt_sha256": str(_target_capsule_sha),
+                    "target_projection_sha256": _v9_target_binding.projection_sha256,
+                    "active_target_authority_sha256": _fresh_target_authority_sha256,
+                    "pair_count": P,
+                    "verdict_batch": int(args.verdict_batch),
+                    "same_forward_seg_margin_pose": True,
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
     print(json.dumps({"stage": "gt", "n_pairs": P, "secs": round(time.time() - t0, 1)}), flush=True)
 
     _causal_writer: CausalManifestWriter | None = None
@@ -5777,6 +6381,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         pose_carrier_xi_stored = np.stack([
             _pc_xi_from_calib(np.asarray(gt.gt_poses[p]), _pc_st, _pc_sr, _pc_pitch)
             for p in range(P)]).astype(np.float32)
+        # The checkpoint builders run later, after the carrier has resolved either the
+        # explicit or fitted translation scale.  Carry the *effective* calibration and
+        # physical source geometry rather than merely the possibly-None argv request.
+        args._pose_carrier_effective_s_t = float(_pc_st)
+        args._pose_carrier_native_hw = (int(_pc_nat_h), int(_pc_nat_w))
         _pc_code_dim = int(args.mod_dim) if str(args.pose_carrier_residual_mode) == "film" else None
         pose_carrier = _PCCarrier.build(
             pose_carrier_xi_stored, pose_carrier_geom,
@@ -5791,13 +6400,142 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "s_t": round(_pc_st, 5), "s_r": _pc_sr, "pitch": _pc_pitch,
                           "s_t_fit": ({str(k): round(v, 3) for k, v in _pc_fit.items()} if _pc_fit else None),
                           "native_hw": [_pc_nat_h, _pc_nat_w], "n_pairs": P,
-                          "note": (("STORE-NOTHING: frame0 = warp(witness's OWN render, xi); stores ONLY "
-                                    "xi/H (~0 marginal bytes)" if str(getattr(args, "pose_carrier_source",
-                                    "real_keyframe")) == "generated" else
+                          "note": (("CONDITIONAL STORE-NOTHING: frame0 = warp(final Y1, xi); "
+                                    "stores ONLY xi/H" if str(getattr(
+                                        args,
+                                        "pose_carrier_source",
+                                        "real_keyframe",
+                                    )) == "generated_y1" else
+                                    "STORE-NOTHING: frame0 = warp(independent even-code render, xi); "
+                                    "stores xi/H plus the even code" if str(getattr(
+                                        args,
+                                        "pose_carrier_source",
+                                        "real_keyframe",
+                                    )) == "generated" else
                                     "frame0 real-luma SE(3)-warp pose carrier (stored keyframe)")
                                    + "; residual co-grad via child-attach (ONE value_and_grad + opt + EMA); "
-                                     "advisory; pointer 0.19110 UNMOVED")}),
+                                     "advisory; canonical frontier pointer UNMOVED")}),
               flush=True)
+
+    _fresh_lineage_parent_checkpoint_id = _FRESH_LINEAGE_ROOT_PARENT
+    _fresh_lineage_parent_receipt_path: Path | None = None
+    _fresh_lineage_parent_receipt_sha256: str | None = None
+    _fresh_lineage_resume_chain = None
+    if bool(getattr(args, "fresh_producer", False)):
+        if args.resume_from:
+            _fresh_lineage_resume_path = _resolve_resume_path(
+                Path(args.resume_from)
+            )
+            _fresh_lineage_early_resume_cfg = _load_resume_state(
+                _fresh_lineage_resume_path
+            )["cfg"]
+            args._fresh_lineage_resume_root_dsl_compile_hash = (
+                _require_lineage_sha256(
+                    _fresh_lineage_early_resume_cfg.get(
+                        "__cfg_fresh_dsl_compile_hash"
+                    ),
+                    "resumed fresh lineage root DSL compile hash",
+                )
+            )
+            from tac.witness_control.fresh_producer_lineage_v1 import (
+                open_fresh_physical_checkpoint_chain_v1,
+            )
+
+            _fresh_lineage_parent_receipt_path = Path(
+                str(args.fresh_lineage_parent_receipt)
+            ).expanduser()
+            _fresh_lineage_parent_receipt_sha256 = (
+                _require_lineage_sha256(
+                    args.fresh_lineage_parent_receipt_sha256,
+                    "fresh lineage parent receipt SHA-256",
+                )
+            )
+            _fresh_lineage_resume_chain = (
+                open_fresh_physical_checkpoint_chain_v1(
+                    _fresh_lineage_parent_receipt_path,
+                    expected_receipt_sha256=(
+                        _fresh_lineage_parent_receipt_sha256
+                    ),
+                    expected_current_launch_dsl_compile_hash=(
+                        _require_lineage_sha256(
+                            _fresh_lineage_early_resume_cfg.get(
+                                "__cfg_fresh_current_launch_dsl_compile_hash"
+                            ),
+                            "resumed checkpoint current-launch DSL compile hash",
+                        )
+                    ),
+                )
+            )
+            if (
+                causal_sha256_file(_fresh_lineage_resume_path)
+                != _fresh_lineage_resume_chain.current.pair.resume.sha256
+            ):
+                raise ValueError(
+                    "--resume-from bytes differ from the recursively reopened "
+                    "physical parent resume checkpoint"
+                )
+            _fresh_lineage_parent_checkpoint_id = (
+                _require_lineage_sha256(
+                    _fresh_lineage_early_resume_cfg.get(
+                        "__cfg_fresh_lineage_checkpoint_id_sha256"
+                    ),
+                    "resumed fresh lineage checkpoint id",
+                )
+            )
+            if (
+                _fresh_lineage_parent_checkpoint_id
+                != _fresh_lineage_resume_chain.current.pair.checkpoint_id_sha256
+            ):
+                raise ValueError(
+                    "--resume-from checkpoint id differs from its physical "
+                    "parent receipt chain"
+                )
+        _initialize_fresh_producer_lineage(
+            args,
+            initial_state={
+                key: np.asarray(value)
+                for key, value in tree_flatten(model.parameters())
+            },
+        )
+        if (
+            _fresh_lineage_resume_chain is not None
+            and args._fresh_lineage_root_sha256
+            != _fresh_lineage_resume_chain.root_sha256
+        ):
+            raise ValueError(
+                "reconstructed fresh-producer cold root differs from the "
+                "physical resume chain"
+            )
+        print(
+            json.dumps(
+                {
+                    "stage": "fresh_producer_lineage_root",
+                    "schema": _FRESH_LINEAGE_SCHEMA,
+                    "root_sha256": args._fresh_lineage_root_sha256,
+                    "initial_state_sha256": args._fresh_lineage_initial_state_sha256,
+                    "dsl_compile_hash": args._fresh_lineage_dsl_compile_hash,
+                    "current_launch_dsl_compile_hash": (
+                        args._fresh_lineage_current_launch_dsl_compile_hash
+                    ),
+                    "target_projection_sha256": (
+                        args._fresh_lineage_target_projection_sha256
+                    ),
+                    "physical_parent_receipt": (
+                        None
+                        if _fresh_lineage_parent_receipt_path is None
+                        else str(_fresh_lineage_parent_receipt_path)
+                    ),
+                    "physical_parent_receipt_sha256": (
+                        _fresh_lineage_parent_receipt_sha256
+                    ),
+                    "complete_trajectory_proven": (
+                        _fresh_lineage_resume_chain is not None
+                    ),
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
 
     ema = MlxEMA(model, decay=args.ema_decay)
     # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA. DEFAULT-OFF: --ema-decay-finisher None =>
@@ -5874,7 +6612,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "dilate": int(_rb.dilate),
                           "composition_override_frac": float(_resid_mask_np.mean()),
                           "note": "INR trains on the COMPOSED-render d_seg (bulk (+) INR); the bulk "
-                          "is OUTSIDE the counted weights (rate win). advisory; pointer UNMOVED 0.19110"}),
+                          "is OUTSIDE the counted weights (rate win). advisory; canonical effective-frontier pointer UNMOVED"}),
               flush=True)
 
     # =====================================================================================
@@ -5957,7 +6695,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "note": "#287 ego-phase comb replaces per-pair fitted dash phase; "
                               "per-slot transported-vs-static + anchored/pairwise concentration "
                               "MEASURE the phase-from-xi transport quality; advisory; "
-                              "pointer 0.19110 UNMOVED"}), flush=True)
+                              "canonical effective-frontier pointer UNMOVED"}), flush=True)
         else:
             for _pi in range(P):
                 _prior = build_analytic_lane_band_prior(
@@ -5997,7 +6735,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "band_vs_gt_lane_recall_mean": (round(float(np.mean(_band_recalls)), 4)
                                                           if _band_recalls else None),
                           "note": "class-1 render-time authority composited PRE-R; gated at start_epoch "
-                          "(spike-guard re-treat); advisory; pointer 0.19110 UNMOVED"}), flush=True)
+                          "(spike-guard re-treat); advisory; canonical effective-frontier pointer UNMOVED"}), flush=True)
     # #224 (5) island SEED compose state (LATE-BOUND; populated at the seed build below, which runs
     # AFTER this chain is defined but BEFORE value_and_grad + the training loop, so _compose_chain
     # reads it at CALL time). The seed is a SEPARATE module (own optimizer group) -> NOT in
@@ -6097,19 +6835,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # child-attach. Default OFF (pose_carrier is None) => render_fn unchanged => byte-identical.
     if pose_carrier is not None:
         _pc_witness_render = _render_R if (_aa_on or _use_chain) else render_through_R_mlx
-        _pc_source_generated = str(getattr(args, "pose_carrier_source", "real_keyframe")) == "generated"
+        _pc_source_mode = str(
+            getattr(args, "pose_carrier_source", "real_keyframe")
+        )
+        _pc_source_generated = _pc_source_mode in ("generated", "generated_y1")
+        _pc_source_is_y1 = _pc_source_mode == "generated_y1"
+        _pc_y1_factor2_plan = (
+            build_mlx_factor2_gather_plan(mlx_module=mx)
+            if _pc_source_is_y1
+            else None
+        )
 
         _pc_code_provider = None
         if str(args.pose_carrier_residual_mode) == "film":
             def _pc_code_provider(pi: int):
-                return model.code[2 * pi + 0]   # frame0 per-pair code for the FiLM residual MLP
+                code_offset = 1 if _pc_source_is_y1 else 0
+                return model.code[2 * pi + code_offset]
 
         if _pc_source_generated:
-            # #205 STORE-NOTHING-but-xi: frame0 = warp(the witness's OWN plain frame0 render, xi_eff).
+            # #205 STORE-NOTHING-but-xi: frame0 = warp(the witness's OWN plain render, xi_eff).
             # NO stored keyframe -> stores ONLY xi/H (~0 marginal bytes; the render is FREE, rule-118).
-            # The plain (no-compose) witness f0 render is up-sampled to camera-native (the R "up" step,
-            # == the byte-close store_nothing warp source _R), then the carrier warps it + R-downs to
-            # SEG. The dxi residual co-grads THROUGH the witness f0 render (the co-adaptation).
+            # generated_y1 uses the exact sparse V10 selected preimage that the public decoder emits;
+            # generated retains the legacy bicubic camera up-step. The dxi residual co-grads THROUGH
+            # that actual selected-preimage map, so the optimization object and shipped object agree.
             from tac.local_acceleration.pr95_hnerv_mlx_training import (
                 CAMERA_HW as _PC_CAMERA_HW,
                 apply_contest_faithful_roundtrip_nhwc as _pc_up_to_camera,
@@ -6121,9 +6869,31 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     return _pc_witness_render(model, coord_feats, code_idx, rh, rw)
                 # f0 -> STORE-NOTHING: the witness's OWN plain frame0 render, up to camera-native, warped.
                 pair_idx = int(code_idx) // 2
-                rgb = mx.reshape(model(coord_feats, code_idx), (1, rh, rw, 3))
-                src_native = _pc_up_to_camera(rgb, output_hw=_PC_CAMERA_HW, ste_round=True)[0]
-                code_vec = model.code[2 * pair_idx] if (_pc_code_provider is not None) else None
+                source_code_idx = (2 * pair_idx + 1) if _pc_source_is_y1 else code_idx
+                rgb = mx.reshape(
+                    model(coord_feats, source_code_idx),
+                    (1, rh, rw, 3),
+                )
+                if _pc_source_is_y1:
+                    if _pc_y1_factor2_plan is None:
+                        raise RuntimeError("generated_y1 lacks its exact V10 factor-2 device plan")
+                    src_native = realize_factor2_scorer_plane_mlx(
+                        rgb,
+                        mlx_module=mx,
+                        plan=_pc_y1_factor2_plan,
+                        ste_round=True,
+                    )[0]
+                else:
+                    src_native = _pc_up_to_camera(
+                        rgb,
+                        output_hw=_PC_CAMERA_HW,
+                        ste_round=True,
+                    )[0]
+                code_vec = (
+                    model.code[2 * pair_idx + (1 if _pc_source_is_y1 else 0)]
+                    if _pc_code_provider is not None
+                    else None
+                )
                 return _pc_impl.render_f0(src_native, pair_idx, code_vec, ste_round=True)
         else:
             def _pc_gt_f0_provider(pi: int):
@@ -6134,12 +6904,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             render_fn = pose_carrier.make_pair_render_dispatch(
                 _pc_witness_render, _pc_gt_f0_provider, code_provider=_pc_code_provider)
         print(json.dumps({"stage": "pose_carrier_render_dispatch", "residual_mode": str(args.pose_carrier_residual_mode),
-                          "source": ("generated" if _pc_source_generated else "real_keyframe"),
+                          "source": _pc_source_mode,
                           "witness_render": ("aa/chain" if (_aa_on or _use_chain) else "bare"),
-                          "note": ("STORE-NOTHING: frame0 = warp(witness's OWN render, xi); stores ONLY xi/H"
+                          "note": (("CONDITIONAL STORE-NOTHING: frame0 = warp(final odd-code Y1, xi); "
+                                    "stores ONLY xi/H"
+                                    if _pc_source_is_y1 else
+                                    "STORE-NOTHING: frame0 = warp(independent even-code render, xi); "
+                                    "stores xi/H plus the even code")
                                    if _pc_source_generated else
                                    "parity dispatch (even code=f0->carrier warp of the stored real keyframe, "
-                                   "odd=f1->witness)") + "; advisory; pointer 0.19110 UNMOVED"}), flush=True)
+                                   "odd=f1->witness)") + "; advisory; canonical frontier pointer UNMOVED"}),
+              flush=True)
 
     # (--seg-focal-gamma, council levelset-loss-geometry symposium 2026-07-05; DEFAULT 0.0 =>
     # make_loss_fn's focal branch NEVER runs => loss + grads BYTE-IDENTICAL). The reweight applies
@@ -6220,7 +6995,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "offsets": [round(float(x), 4) for x in _la_off],
                           "note": "Menon logit-adjusted seg loss (training-LOSS surface only; "
                                   "deployed argmax/verdict/byte-close read RAW logits); "
-                                  "advisory; pointer 0.19110 UNMOVED"}), flush=True)
+                                  "advisory; canonical effective-frontier pointer UNMOVED"}), flush=True)
     base_loss = make_loss_fn(
         _loss_adapter, render_h, render_w, score_domain=args.score_domain_loss, pose_eps=args.pose_eps,
         seg_loss=args.seg_loss, tau_softplus_tau=args.tau_softplus_tau, l7_mult=args.l7_mult,
@@ -6396,7 +7171,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # (needs a formed partition + tie field). GROUND classes {0,1,2} only (homography wrong on
     # Movable/MyCar). Reuses the SHARED realized ``_signed`` (NO 2nd SegNet forward, _seg_levers_on
     # gated). Shared primitives: tac.boundary_math.phase_primitives (t_wit + A_ξ + GT tie targets +
-    # residual). Advisory until byte-closed; pointer 0.19108282 UNMOVED.
+    # residual). Advisory until byte-closed; canonical effective-frontier pointer UNMOVED.
     from tac.boundary_math.phase_primitives import (
         phase_advection_weighted_mse_mlx as _pp_phase_mse,
         witness_tie_coordinate_mlx as _pp_tie_coord,
@@ -6689,7 +7464,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "weight": persist_w, "recall_weight": persist_recall_w,
                           "cldice_iters": persist_cldice_iters, "warmup_epochs": persist_warmup,
                           "note": "soft-clDice + persistence-weighted island recall on the SHARED "
-                          "realized seg forward; annealed; advisory; pointer 0.19110 UNMOVED"}), flush=True)
+                          "realized seg forward; annealed; advisory; canonical effective-frontier pointer UNMOVED"}), flush=True)
 
     # (--cache-gt-skeleton, #260) declared here (in the enclosing scope, BEFORE total_loss_fn) so the
     # closure binds the cell; POPULATED after lstar_cache is built (see the build block below). None
@@ -6775,7 +7550,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "weight": amplify_w, "form": amplify_form, "margin_target": amplify_mtgt,
                           "persist": str(args.amplify_persist),
                           "note": "island-birth rides the SHARED realized _signed margin (#141); "
-                          "advisory; pointer 0.19110 UNMOVED"}), flush=True)
+                          "advisory; canonical effective-frontier pointer UNMOVED"}), flush=True)
         if _ladder_on:
             from tac.witness_curriculum.ladder_homotopy import (
                 ARM_LANE as _L_LANE,
@@ -6821,7 +7596,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "note": "#323 per-class-λ-gated LADDER continuation over the AMPLIFY "
                               "island-birth radius (movable dilation-GO + lane curve-prior); "
                               "UNIFORM amplification is the measured net-negative anti-pattern; "
-                              "advisory; pointer 0.19110 UNMOVED"}), flush=True)
+                              "advisory; canonical effective-frontier pointer UNMOVED"}), flush=True)
     elif bool(getattr(args, "ladder_island_homotopy", False)):
         raise ValueError("--ladder-island-homotopy requires --amplify-weight > 0: the homotopy "
                          "modulates the AMPLIFY island-birth support radius; with amplify off it has "
@@ -6867,7 +7642,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "one-sided Chan-Vese area constraint on the birthed classes' realized "
                           "soft mass (precision counter-force vs recall-only birth over-paint); consumes "
                           "the SHARED realized seg forward (no extra forward); advisory; "
-                          "pointer 0.19110 UNMOVED"}), flush=True)
+                          "canonical effective-frontier pointer UNMOVED"}), flush=True)
     # ---- (v7.5 Lever-2) MORSE-SMALE BIRTH-COMPLETION controller setup. DETECTS per-class birth
     # completion (persistence + area band) and emits the LOUD hand-off telemetry at each verdict. The
     # birth-stack RAMP APPLICATION to the loss surfaces is the OWED integration (memo
@@ -6900,7 +7675,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                    "island-amplify/persistence-recall/logit-adjust" if _bc_ramp_on
                                    else "Morse-Smale birth-completion DETECTOR-ONLY (byte-neutral; "
                                    "--birth-completion-ramp OFF => loss surfaces byte-identical)")
-                          + "; advisory; pointer 0.19110 UNMOVED"}), flush=True)
+                          + "; advisory; canonical effective-frontier pointer UNMOVED"}), flush=True)
     # (v7.5 Lever-2 RAMP) fail-closed: --birth-completion-ramp APPLIES the per-class multiplier to the
     # loss surfaces, which requires the DETECTOR (--birth-completion-event) to latch the fire epochs.
     if _bc_ramp_on and _birth_completion is None:
@@ -6931,7 +7706,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                        "persistence_recall": bool(persist_w > 0.0),
                                        "logit_adjust": bool(_bc_la_cell is not None)},
                           "note": "per-class birth-completion ramp WIRED to the active birth surfaces; "
-                          "byte-identical until a class fires; advisory; pointer 0.19110 UNMOVED"}),
+                          "byte-identical until a class fires; advisory; canonical effective-frontier pointer UNMOVED"}),
                           flush=True)
     # #224 (5) island SEED + CONTAINMENT build (SEPARATE protected-seed module + its OWN AdamW group;
     # grad-shield applied to the seed leaf BETWEEN the dual value_and_grad and seed_opt.update — NEVER
@@ -7002,7 +7777,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "n_pairs": P,
                           "note": "SEPARATE protected seed module (own AdamW; NOT in EMA/blob/deploy = "
                           "0-byte accelerant; verdict=witness-alone=deploy=absorption readout); "
-                          "shield-grad defends it; advisory; pointer 0.19110 UNMOVED"}), flush=True)
+                          "shield-grad defends it; advisory; canonical effective-frontier pointer UNMOVED"}), flush=True)
 
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, terms_out=None):
         # ``terms_out`` (#304 item 4 per-term loss telemetry; ADDITIVE, default None => BYTE-IDENTICAL):
@@ -7203,7 +7978,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # (i+1,j)); Mw[q] is a pure shift of the SHARED Mw (fully vectorized, both differentiable). Masked
         # to the precomputed active straddle set (sentinel t<0 => weight 0). Default subpix_w=0 => skipped
         # => byte-identical. MODEST 2nd-order refinement (weakest on thin lanes; effect in the 1-2px flip
-        # band, #149) -> an A/B arm, NOT a claim. pointer 0.19110 UNMOVED.
+        # band, #149) -> an A/B arm, NOT a claim. canonical effective-frontier pointer UNMOVED.
         if subpix_w > 0.0 and subpix_gate["on"] and _subpix_t_prov is not None:
             _pi_sp = int(c1) // 2
             _t_tgt = _subpix_t_prov[_pi_sp]                              # (1,H,W) f32, -1 sentinel
@@ -7244,7 +8019,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # chroma is the differentiable loss path that pulls the per-pixel RGB head to paint the boundary
         # chroma the near-per-class-constant palette can't. Default chroma_bnd_w=0 => skipped =>
         # byte-identical. BOUNDARY SHARPENER (weakest in bulk; power at the knife-edge flips) -> an A/B
-        # arm, NOT a claim. pointer 0.19110 UNMOVED.
+        # arm, NOT a claim. canonical effective-frontier pointer UNMOVED.
         if chroma_bnd_w > 0.0 and chroma_bnd_gate["on"] and _chroma_gt_prov is not None:
             _pi_ch = int(c1) // 2
             _cgt = _chroma_gt_prov[_pi_ch]                              # (1,H,W,3) GT chroma const
@@ -7290,7 +8065,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # the stable interior onto the fragile band (UNIWARD/Fisher satisficing). m_safe = MEASURED
         # R-noise floor headroom (delta_R p95). Reuses ``_signed`` (NO 2nd forward). Default ms_w=0 =>
         # skipped => byte-identical. MASK-BY-STAGE at l7 (start>=l7) preserves the tau-anneal; does NOT
-        # replace CE. A/B arm, NOT a claim; pointer 0.19110 UNMOVED.
+        # replace CE. A/B arm, NOT a claim; canonical effective-frontier pointer UNMOVED.
         if ms_w > 0.0 and ms_gate["on"] and _ms_ann_prov is not None:
             _pi_ms = int(c1) // 2
             _ms_ann = _ms_ann_prov[_pi_ms]                             # (1,H,W) annulus mask {0,1}
@@ -7309,7 +8084,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # <lo IRREDUCIBLE label-noise (frozen-SegNet coin-flip; ~193x-concentrated below 0.05) — chasing
         # those would be fitting noise (the exit-criterion caveat). Zero gradient where m_wit >= m_target
         # (satisficing — don't over-push). Default hz_w=0 => skipped => byte-identical. A/B arm, NOT a
-        # claim (oracle ceiling ΔS≈0.024); pointer 0.19110 UNMOVED.
+        # claim (oracle ceiling ΔS≈0.024); canonical effective-frontier pointer UNMOVED.
         if hz_w > 0.0 and hz_gate["on"] and _hz_mask_prov is not None:
             _pi_hz = int(c1) // 2
             _hz_mask = _hz_mask_prov[_pi_hz]                            # (1,H,W) stratified mask {0,1}
@@ -7328,7 +8103,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # NOT the pose-carrier dispatch). The 3 GROUND softmax channels are warped as an (H,W,3) field by
         # the SEG-res homography (bit-checked warp; Movable/MyCar NON-ground are never warped). ts_w=0
         # (DEFAULT) => skipped + no extra forward => byte-identical. start>=l7 (needs a formed partition).
-        # A/B arm; pointer 0.19110 UNMOVED.
+        # A/B arm; canonical effective-frontier pointer UNMOVED.
         if ts_w > 0.0 and ts_gate["on"] and _ts_ann_prov is not None and _slog is not None:
             _pi_ts = int(c1) // 2
             _ts_ann = _ts_ann_prov[_pi_ts]                             # (1,H,W) annulus mask {0,1}
@@ -7423,7 +8198,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # (the per-pair GT area). Reads the WITNESS-ALONE seg logits (== deploy render) so the cap
         # constrains the SHIPPED partition. lambda_c is DERIVED-LIVE (setup block). _area_lambda None
         # (default OFF) => skipped => byte-identical. Equations leg:
-        # chan_vese_area_constraint_birth_balance_20260708. Advisory; pointer 0.19110 UNMOVED.
+        # chan_vese_area_constraint_birth_balance_20260708. Advisory; canonical effective-frontier pointer UNMOVED.
         if _area_lambda is not None and _slog_wa is not None:
             _soft_wa = mx.softmax(_slog_wa, axis=-1)                    # (1, H, W, 5) realized soft part.
             _area_contrib = None
@@ -7863,7 +8638,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "sR_norm_mean": round(float(np.asarray(_sR_all[:P]).mean()), 5),
                           "note": "LEVER-4 saliency weighted by cached through-R margin-Jacobian S_R "
                           "(REPLACES the measured-inert 1/(1+beta*tex) texture path); advisory build, "
-                          "A/B owed (needs GO); pointer 0.19110 UNMOVED"}), flush=True)
+                          "A/B owed (needs GO); canonical effective-frontier pointer UNMOVED"}), flush=True)
 
     # (--seg-spike-reweight, source-split MEASURED 2026-07-03) precompute the theta-INDEPENDENT per-pair
     # spike/coherent weight map from the GT argmax TEMPORAL neighbors (list[mx.array (1,H,W)] indexed by
@@ -7874,7 +8649,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # boundary residual). Map = downweight@spike, upweight@coherent, 1.0 else. Endpoints (pi in {0,P-1},
     # only one neighbor) => all-1.0. Default OFF (_spike_w_mx None) OR both scalars==1.0 (map==1.0) =>
     # base_loss gets seg_pixel_w=None/ones => BYTE-IDENTICAL. Fails CLOSED with micro-batch (serial path
-    # only; the batched twin does not consume seg_pixel_w yet). A/B owed (needs GO); pointer 0.19110 UNMOVED.
+    # only; the batched twin does not consume seg_pixel_w yet). A/B owed (needs GO); canonical effective-frontier pointer UNMOVED.
     _spike_reweight_on = bool(getattr(args, "seg_spike_reweight", False))
     _spike_w_mx = None
     if _spike_reweight_on:
@@ -7908,7 +8683,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "byte_identical_scalars": _sp_byte_identical,
                           "note": "per-pixel seg-CE reweight: down-weight single-frame flicker "
                           "(~88.6%% irreducible, smooth-is-optimal), up-weight coherent boundary; "
-                          "A/B owed (needs GO); pointer 0.19110 UNMOVED"}), flush=True)
+                          "A/B owed (needs GO); canonical effective-frontier pointer UNMOVED"}), flush=True)
 
     # (--boundary-distance-weight) PRECOMPUTE the per-pair GT-boundary band maps. theta-INDEPENDENT
     # + computed ONCE per pair from the cached GT argmax (pure numpy/scipy distance transform — NO
@@ -7926,7 +8701,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "band_px_share_mean": round(_bd_mass / max(P, 1), 5),
                           "note": "SDF-native Kervadec boundary-placement loss on the GT-boundary "
                           "band (distance-transform, once per pair); council levelset-loss-geometry "
-                          "symposium 2026-07-05; A/B owed (needs GO); pointer 0.19110 UNMOVED"}),
+                          "symposium 2026-07-05; A/B owed (needs GO); canonical effective-frontier pointer UNMOVED"}),
               flush=True)
         # (MB-TWIN #313) RE-POINT the batched twin's LeverConfig at the populated provider: unlike the
         # gate dicts (mutated in place, reference-captured), ``_bd_band_prov`` is REASSIGNED from its
@@ -7949,7 +8724,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # shifts Mw by to gather Mw[q]. Providers stay None unless subpix_w>0 => the OFF path is byte-identical.
     # Fails CLOSED with micro-batch (the batched twin does not consume this dormant lever yet). Memory
     # ~ 2x the down-weight map (t + dir float maps): P*H*W*4*2 ~= 940 MB at n600 (trivial vs RAM; noted for
-    # the launcher preflight). A/B owed (needs GO); pointer 0.19110 UNMOVED.
+    # the launcher preflight). A/B owed (needs GO); canonical effective-frontier pointer UNMOVED.
     if subpix_w > 0.0:
         if _use_micro_batch:
             raise ValueError(
@@ -8044,7 +8819,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "t_target_mean": _sx_t_mean,
                           "note": "sub-pixel boundary-placement target t=M_GT[p]/(M_GT[p]+M_GT[q]) on "
                           "genuine-V straddles; supervises the witness realized margin ratio (DIRECTIONAL "
-                          "upgrade of LEVER-4 #141); A/B owed (needs GO); pointer 0.19110 UNMOVED"}), flush=True)
+                          "upgrade of LEVER-4 #141); A/B owed (needs GO); canonical effective-frontier pointer UNMOVED"}), flush=True)
         if _subpix_ew_prov is not None:
             print(json.dumps({"stage": "seg_subpix_edge_weight", "active": True, "source": _we_src,
                               "path": subpix_ew_path, "ref_domain": subpix_ref_domain,
@@ -8053,7 +8828,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "note": "P0 FORCE 3 flip-density edge weighting (Road-hub, Road<->Lane "
                               "heaviest); ref_domain seg384 is correct for the training loss (post-R); "
                               "camera874_dphase reserved for the decode-time Consumer B (not built). "
-                              "A/B owed; pointer 0.19110 UNMOVED"}), flush=True)
+                              "A/B owed; canonical effective-frontier pointer UNMOVED"}), flush=True)
 
     # P0 FORCE 2 (margin-band satisficing; task #360) ANNULUS PRECOMPUTE. theta-INDEPENDENT + cheap
     # (pure numpy from gt.margins). Built ONLY when ms_w>0; else _ms_ann_prov stays None => byte-identical.
@@ -8074,7 +8849,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "annulus_frac": round(_ms_n_ann / max(P * _ms_H * _ms_W, 1), 4),
                           "note": "P0 FORCE 2 one-sided relu(m_safe - m_wit) on the annulus; m_safe = "
                           "headroom*delta_R (MEASURED R-noise floor); frees interior gradient budget; "
-                          "MASK-BY-STAGE at l7 preserves tau-anneal; A/B owed; pointer 0.19110 UNMOVED"}),
+                          "MASK-BY-STAGE at l7 preserves tau-anneal; A/B owed; canonical effective-frontier pointer UNMOVED"}),
               flush=True)
 
     # (v7.5 B.5) HORIZON-WEIGHTED MARGIN (#169) STRATIFIED-MASK PRECOMPUTE. theta-INDEPENDENT + cheap
@@ -8107,7 +8882,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "#169 one-sided relu(m_target - m_wit) on (horizon rows AND GT-margin in "
                           "[lo,hi]); pushes ONLY the reducible confident-GT band, EXCLUDES the <lo "
                           "irreducible label-noise; 0-byte SHARED-structure; A/B owed (oracle ceiling "
-                          "ΔS~0.024); pointer 0.19110 UNMOVED"}), flush=True)
+                          "ΔS~0.024); canonical effective-frontier pointer UNMOVED"}), flush=True)
 
     # P0 FORCE 1 (temporal screw-consistency; task #360) PRECOMPUTE. theta-INDEPENDENT providers (per-pair
     # GT screw xi + annulus mask + a SEG-res warp geom + the GROUND class-include mask). Built ONLY when
@@ -8167,7 +8942,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "P0 FORCE 1 GROUND-class annulus prob-warp MSE (ego homography H(xi)); "
                           "kills the 44% lane-dominated flicker; xi_source=" + ts_xi_source
                           + " (ground_gt=pure seg regularizer, ZERO pose coupling); ramp w_t at stage "
-                          "boundaries only; A/B owed; pointer 0.19110 UNMOVED"}), flush=True)
+                          "boundaries only; A/B owed; canonical effective-frontier pointer UNMOVED"}), flush=True)
 
     # T1 CROSS-PAIR PHASE-ADVECTION CONSISTENCY (memo §4 T1) PRECOMPUTE. theta-INDEPENDENT: the entire
     # cross-pair coupling is baked into a per-pair TARGET = the ξ-advected GT tie of the PREVIOUS scored
@@ -8267,7 +9042,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "(θ-independent target; per-pair-local; ZERO batching change); composes with "
                           "Force-3 subpix as the shrinkage toward the ξ-advected trajectory; kills the "
                           "predictable flicker channel (blink-back 0.42/L67 0.44); GROUND classes only; "
-                          "advisory until byte-closed; pointer 0.19108282 UNMOVED"}), flush=True)
+                          "advisory until byte-closed; canonical effective-frontier pointer UNMOVED"}), flush=True)
 
     # LEVER-4c (ANNULUS-DIRECTED CHROMA-SHARPENING) PRECOMPUTE. theta-INDEPENDENT + cheap (pure numpy +
     # the numpy-portable bilinear ``_resize_map`` -- NO SegNet forward, NO torch autograd), so it is
@@ -8281,7 +9056,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # Providers stay None unless chroma_bnd_w>0 => the OFF path is byte-identical. The batched twin
     # consumes these same theta-independent providers. Memory ~ P*H*W*4*4 (3
     # chroma channels + 1 mask) ~= 1.9 GB at n600 (trivial vs RAM; noted for the launcher preflight).
-    # A/B owed (needs GO); pointer 0.19110 UNMOVED.
+    # A/B owed (needs GO); canonical effective-frontier pointer UNMOVED.
     if chroma_bnd_w > 0.0:
         from tac.optimization.frame1_seg_safe_pose_atoms import _resize_map as _chroma_resize_map
         _ch_H, _ch_W = np.asarray(gt.lstars[0]).shape                  # (384, 512) SegNet output == input
@@ -8308,8 +9083,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "annulus_frac": round(_ch_n_active / max(P * _ch_H * _ch_W, 1), 4),
                           "note": "GT chroma-match at the fragile annulus (margin<band); chroma=rgb-"
                           "BT.601-luma (luma-invariant) on the SHARED realized _f1; boundary-SHARPENER "
-                          "orthogonal to the geometry levers; A/B owed (needs GO); pointer 0.19110 "
-                          "UNMOVED"}), flush=True)
+                          "orthogonal to the geometry levers; A/B owed (needs GO); "
+                          "canonical effective-frontier pointer UNMOVED"}), flush=True)
 
     # ARM-C #524 (LANE STRIDE-2 SKIP-BAND) PRECOMPUTE. theta-INDEPENDENT + cheap (pure numpy via the
     # canonical tac.boundary_math.lane_skipband reference — NO SegNet forward), built INLINE here
@@ -8384,7 +9159,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps({"stage": "cache_gt_skeleton", "n_pairs": int(P),
                           "target_classes": list(persist_classes), "cldice_iters": persist_cldice_iters,
                           "note": "precomputed CONSTANT GT soft-skeleton per pair (bit-identical "
-                          "speed-only; skips ~half the clDice recompute); pointer 0.19110 UNMOVED"}),
+                          "speed-only; skips ~half the clDice recompute); canonical effective-frontier pointer UNMOVED"}),
               flush=True)
         _micro_batch_lc.persistence_sg_cache = _sg_cache
 
@@ -8416,11 +9191,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         from tac.boundary_math.warp_real_luma_frame0 import warp_frame0_uint8_numpy as _pc_warp_u8
         xi = np.asarray(pose_carrier_xi_stored[pi], np.float64)
         scale = float(args.pose_carrier_residual_scale)
+        _pc_verdict_source = str(
+            getattr(args, "pose_carrier_source", "real_keyframe")
+        )
+        source_offset = 1 if _pc_verdict_source == "generated_y1" else 0
         if str(args.pose_carrier_residual_mode) == "table":
             dxi = np.asarray(deploy.get("pose_carrier.dxi"), np.float64)[pi]
         else:  # film: numpy twin of gelu(film_in(code)) -> film_out (advisory reconstruction)
             from scipy.special import erf
-            code = np.asarray(deploy["code"][2 * pi + 0], np.float64)
+            code = np.asarray(deploy["code"][2 * pi + source_offset], np.float64)
             w_in = np.asarray(deploy["pose_carrier.film_in.weight"], np.float64)
             b_in = np.asarray(deploy["pose_carrier.film_in.bias"], np.float64)
             w_out = np.asarray(deploy["pose_carrier.film_out.weight"], np.float64)
@@ -8429,11 +9208,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             h = 0.5 * h * (1.0 + erf(h / np.sqrt(2.0)))    # exact gelu (matches mlx.nn.gelu)
             dxi = (h @ w_out.T + b_out).reshape(-1)
         xi_eff = xi + scale * dxi
-        if str(getattr(args, "pose_carrier_source", "real_keyframe")) == "generated":
-            # STORE-NOTHING: warp the witness's OWN plain frame0 render (up to camera-native uint8),
-            # not the stored real keyframe -> the same source the store_nothing byte-close decodes.
-            rgb, _phi = _fwd_numpy(deploy, _feats_np_for_pair(pi), deploy["code"][2 * pi + 0])
-            src_native = _torch_R_to_camera_uint8(rgb.reshape(render_h, render_w, 3))
+        if _pc_verdict_source in ("generated", "generated_y1"):
+            # STORE-NOTHING: warp the witness's OWN plain render, not the stored real keyframe.
+            # generated_y1 realizes the rounded scorer operand through the exact sparse V10 map
+            # used by public inflate; generated retains the legacy camera roundtrip.
+            rgb, _phi = _fwd_numpy(
+                deploy,
+                _feats_np_for_pair(pi),
+                deploy["code"][2 * pi + source_offset],
+            )
+            if _pc_verdict_source == "generated_y1":
+                scorer_u8 = np.clip(
+                    np.rint(rgb.reshape(render_h, render_w, 3)),
+                    0.0,
+                    255.0,
+                ).astype(np.uint8)
+                src_native = realize_factor2_uint8_numpy(scorer_u8)
+            else:
+                src_native = _torch_R_to_camera_uint8(
+                    rgb.reshape(render_h, render_w, 3)
+                )
         else:
             src_native = np.asarray(gt.gt_f0[pi])
         return _pc_warp_u8(src_native, xi_eff, pose_carrier_geom)
@@ -9272,7 +10066,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     "delta": _hos_off_d - _hos_base_d,
                     "note": "#288 byte-free out_sdf.bias fold; ADVISORY realized-through-R (frozen CPU "
                             "SegNet); NEVER mutates shipped/EMA/resumed weights; NON-PROMOTABLE; "
-                            "pointer 0.19110 UNMOVED"}), flush=True)
+                            "canonical effective-frontier pointer UNMOVED"}), flush=True)
             except Exception as _hos_exc:  # fail-open: advisory readout must NEVER break the verdict
                 print(json.dumps({"stage": "head_offset_solver_skip", "epoch": int(ep),
                                   "error": f"{type(_hos_exc).__name__}: {_hos_exc}"}), flush=True)
@@ -10381,6 +11175,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         causal_boundary_kind: str | None = None,
         causal_stage: str | None = None,
     ) -> dict[str, Any]:
+        nonlocal _fresh_lineage_parent_checkpoint_id
+        nonlocal _fresh_lineage_parent_receipt_path
+        nonlocal _fresh_lineage_parent_receipt_sha256
         _da_checkpoint_start_ns = time.perf_counter_ns()
         _da_checkpoint_clock = _component_clock
         shadow_np, live_np, opt_np = _snapshot_numpy_state()
@@ -10423,12 +11220,96 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # sidecar is byte-identical for an un-armed run.
         if _polyak is not None:
             resume_arrays.update(_polyak.heavy_state_arrays(_RESUME_POLYAK_PREFIX))
+        resume_arrays.update(
+            _fresh_producer_checkpoint_lineage_arrays(
+                args,
+                resume_state_arrays=resume_arrays,
+                epoch=epoch,
+                stage=str(
+                    causal_stage
+                    or stage_tag
+                    or periodic_stage_tag
+                    or "unknown"
+                ),
+                parent_checkpoint_id=_fresh_lineage_parent_checkpoint_id,
+            )
+        )
         # rolling latest: the byte-close default name + the quick resume target (overwritten atomically).
         _atomic_savez(out_dir / "levelset_witness_ema_mlx.npz", ema_arrays)
         _atomic_savez(out_dir / "levelset_resume_state.npz", resume_arrays)
         written: dict[str, Any] = {
             "epoch": epoch, "ema_latest": "levelset_witness_ema_mlx.npz",
             "resume_latest": "levelset_resume_state.npz", "has_opt": bool(opt_np)}
+        if bool(getattr(args, "fresh_producer", False)):
+            from tac.witness_control.fresh_producer_lineage_v1 import (
+                write_fresh_physical_checkpoint_node_v1,
+            )
+
+            _fresh_node = write_fresh_physical_checkpoint_node_v1(
+                out_dir=out_dir.resolve(strict=True),
+                deploy_checkpoint=(
+                    out_dir / "levelset_witness_ema_mlx.npz"
+                ),
+                expected_deploy_sha256=causal_sha256_file(
+                    out_dir / "levelset_witness_ema_mlx.npz"
+                ),
+                resume_checkpoint=out_dir / "levelset_resume_state.npz",
+                expected_resume_sha256=causal_sha256_file(
+                    out_dir / "levelset_resume_state.npz"
+                ),
+                expected_current_launch_dsl_compile_hash=(
+                    _require_lineage_sha256(
+                        args._fresh_lineage_current_launch_dsl_compile_hash,
+                        "current launch DSL compile hash",
+                    )
+                ),
+                parent_receipt_path=_fresh_lineage_parent_receipt_path,
+                expected_parent_receipt_sha256=(
+                    _fresh_lineage_parent_receipt_sha256
+                ),
+            )
+            _fresh_lineage_parent_checkpoint_id = (
+                _fresh_node.pair.checkpoint_id_sha256
+            )
+            _fresh_lineage_parent_receipt_path = _fresh_node.receipt_path
+            _fresh_lineage_parent_receipt_sha256 = (
+                _fresh_node.receipt_sha256
+            )
+            written.update(
+                {
+                    "fresh_lineage_schema": (
+                        "tac.fresh_producer_physical_checkpoint_node.v1"
+                    ),
+                    "fresh_lineage_receipt": str(_fresh_node.receipt_path),
+                    "fresh_lineage_receipt_sha256": (
+                        _fresh_node.receipt_sha256
+                    ),
+                    "fresh_lineage_sequence_index": (
+                        _fresh_node.sequence_index
+                    ),
+                    "fresh_lineage_checkpoint_id_sha256": (
+                        _fresh_node.pair.checkpoint_id_sha256
+                    ),
+                    "fresh_lineage_complete_trajectory_proven": True,
+                }
+            )
+            _atomic_write_json(
+                out_dir / "fresh_lineage_tip.json",
+                {
+                    "schema": "tac.fresh_producer_lineage_tip.v1",
+                    "receipt_path": str(_fresh_node.receipt_path),
+                    "receipt_sha256": _fresh_node.receipt_sha256,
+                    "receipt_bytes": _fresh_node.receipt_bytes,
+                    "checkpoint_id_sha256": (
+                        _fresh_node.pair.checkpoint_id_sha256
+                    ),
+                    "root_sha256": _fresh_node.pair.root_sha256,
+                    "sequence_index": _fresh_node.sequence_index,
+                    "epoch": _fresh_node.pair.epoch,
+                    "stage": _fresh_node.pair.stage,
+                    "complete_trajectory_proven": True,
+                },
+            )
         # (R-7 finisher 2) export the Polyak tail mean as an ADDITIONAL deploy candidate (same builder +
         # on-manifold film projection as the EMA deploy npz), NEVER replacing levelset_witness_ema_mlx.npz.
         # Only when armed AND it has observed >=1 epoch (else no candidate yet).
@@ -10497,6 +11378,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         rp = _resolve_resume_path(Path(args.resume_from))
         rs = _load_resume_state(rp)
         resume_cfg = rs["cfg"]
+        _validate_fresh_producer_resume_lineage(args, rs)
+        if bool(getattr(args, "fresh_producer", False)):
+            _fresh_lineage_parent_checkpoint_id = _require_lineage_sha256(
+                resume_cfg.get("__cfg_fresh_lineage_checkpoint_id_sha256"),
+                "fresh lineage resumed checkpoint id",
+            )
+        from tac.witness_control.taskspace_v9_training_target_binding_v1 import (
+            CHECKPOINT_PROJECTION_KEY,
+        )
+
+        if _v9_target_binding is not None:
+            _v9_target_binding.validate_checkpoint_cfg(
+                resume_cfg,
+                active_target_authority_sha256=str(
+                    _fresh_target_authority_sha256
+                ),
+                verdict_batch=int(args.verdict_batch),
+            )
+        elif CHECKPOINT_PROJECTION_KEY in resume_cfg:
+            raise ValueError(
+                "--resume-from carries a G109 target binding but this launch omitted "
+                "--training-target-capsule and its SHA-256"
+            )
         if not rs["live"]:
             raise ValueError(f"--resume-from {rp} has no live/param tensors (NO-FAKE: cannot resume).")
         print(json.dumps(_validate_resume_state_for_continuation(
@@ -11172,6 +12076,40 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": ("bit-faithful RNG resume" if _rng_restored["np_global"] else
                                    "pre-FEED-fm sidecar (no RNG state); fresh-seeded RNGs (back-compat)")}),
               flush=True)
+
+    # A complete fresh-producer ancestry must terminate in a PHYSICAL full-state
+    # node before the first optimizer step.  The prior logical chain began at
+    # the first periodic/stage checkpoint, which let an arbitrary trained state
+    # masquerade as a descendant of the cold root.  Persist the initialized
+    # model + EMA + optimizer + RNG/controllers as the unique zero-parent node.
+    if bool(getattr(args, "fresh_producer", False)) and resume_cfg is None:
+        # MLX lazily initializes AdamW moments on the first update.  Initialize
+        # them explicitly to their deterministic zero state so the cold-root
+        # checkpoint is itself complete and resumable without taking a training
+        # step or mutating model parameters.
+        opt.init(model.trainable_parameters())
+        mx.eval(opt.state)
+        _cold_root_checkpoint = _do_checkpoint(
+            0,
+            stage_tag="stageColdRoot",
+            causal_boundary_kind="cold_root",
+            causal_stage="stageColdRoot",
+        )
+        print(
+            json.dumps(
+                {
+                    "stage": "fresh_producer_physical_cold_root",
+                    "checkpoint": _cold_root_checkpoint,
+                    "parent_checkpoint_id_sha256": _FRESH_LINEAGE_ROOT_PARENT,
+                    "note": (
+                        "complete initialized full state preserved before the "
+                        "first optimizer step"
+                    ),
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
 
     # ---- (#304 item 4) PER-TERM LOSS TELEMETRY. A NO-GRAD RECOMPUTE of total_loss_fn with
     # ``terms_out`` on the logged chunk's pairs -- it reads model/gates/caches and mutates NOTHING
@@ -12124,7 +13062,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "forward_bit_identical": bool(_fr_gate["forward_bit_identical"]),
                               "grad_bit_identical": bool(_fr_gate["grad_bit_identical"]),
                               "note": "fused Metal R roundtrip active; per-chip parity gate PASSED; buys "
-                              "SPEED not score (verdict stays numpy/torch-CPU authority); pointer 0.19110 UNMOVED"}),
+                              "SPEED not score (verdict stays numpy/torch-CPU authority); canonical effective-frontier pointer UNMOVED"}),
                   flush=True)
         _mxc = maybe_enable_mx_compile_r(bool(getattr(args, "mx_compile", False)), render_hw=(render_h, render_w))
         if _mxc:
@@ -12273,7 +13211,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "law": "eos_adam_preconditioned_threshold_v1 (FORMALIZATION_PENDING): stability iff "
                        "eta*lambda_pre <~ 2(1+b1)/(1-b1) = 38 at b1=0.9",
                 "axis": "[n24 advisory -- mechanism probe, NOT n600 evidence]",
-                "pointer": "0.19110 UNMOVED",
+                "pointer": "canonical effective-frontier pointer UNMOVED",
             }
             print(json.dumps(_lp_report), flush=True)
             _atomic_write_json(out_dir / "lambda_pre_probe.json", _lp_report)
@@ -12377,7 +13315,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                                       else round(float(_ladder_state["lambda"][_ladder_state["arm_lane"]]), 8)),
                                       "lambda_movable": (None if _ladder_state["lambda"][_ladder_state["arm_mov"]] == float("inf")
                                                          else round(float(_ladder_state["lambda"][_ladder_state["arm_mov"]]), 8)),
-                                      "note": "advisory; pointer 0.19110 UNMOVED"}), flush=True)
+                                      "note": "advisory; canonical effective-frontier pointer UNMOVED"}), flush=True)
             # task-408 Q6: a discrete, resume-safe completion row for each
             # configured ladder class (birth + hold + anneal fully elapsed).
             if _ladder_state is not None:
@@ -13097,7 +14035,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "amp_active": _bc_ramp["amp_active"],
                                       "fired": {int(c): int(e) for c, e in _birth_completion.fired.items()},
                                       "note": "per-class birth->boundary hand-off ramp (advisory); "
-                                      "pointer 0.19110 UNMOVED"}), flush=True)
+                                      "canonical effective-frontier pointer UNMOVED"}), flush=True)
             # BUILD #300 (b) island-SEED compose-weight anneal (transfer schedule full->0). Deterministic
             # in ep => RESUME reproduces the same weight (nothing to checkpoint). No spike-guard re-treat:
             # the ramp is SMOOTH (small per-epoch delta), not a discrete engage, so it never trips the
@@ -14400,7 +15338,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     "R_fraction_of_step_est": (round(_r_share, 4) if _r_share is not None else None),
                     "fused_r_active": bool(getattr(args, "fused_r_kernel", False)),
                     "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl "
-                    "1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED"}),
+                    "1/((1-f)+f/su_R); advisory, buys SPEED not score; canonical effective-frontier pointer UNMOVED"}),
                     flush=True)
             if _evt_on or _nucleus_on:
                 # (#292 build-2) record THIS epoch's synchronous training loss into the current stage's
@@ -14619,6 +15557,24 @@ def main(argv: list[str] | None = None) -> int:
                     help="resume a run from a checkpoint: a run DIR (prefers levelset_resume_state.npz, "
                     "falls back to levelset_witness_ema_mlx.npz) OR an explicit npz. Restores decoder + "
                     "per-pair codes + EMA shadow + optimizer (best-effort) + the epoch position.")
+    ap.add_argument(
+        "--fresh-lineage-parent-receipt",
+        type=str,
+        default=None,
+        help=(
+            "with --fresh-producer --resume-from, exact immutable physical-node "
+            "receipt for the resumed checkpoint; required with its external SHA-256"
+        ),
+    )
+    ap.add_argument(
+        "--fresh-lineage-parent-receipt-sha256",
+        type=str,
+        default=None,
+        help=(
+            "external file SHA-256 of --fresh-lineage-parent-receipt; the "
+            "recursive chain is reopened to the unique cold root before restore"
+        ),
+    )
     ap.add_argument("--resume-allow-lever-drift", action=argparse.BooleanOptionalAction, default=False,
                     help="(F2) allow a --resume-from whose render-side LEVERS (lane_render_band / "
                     "persistence_loss_weight / amplify_weight / lane_band_start_epoch / render_aa / "
@@ -15304,6 +16260,31 @@ def main(argv: list[str] | None = None) -> int:
                     "=> zero added work, byte-identical.")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--gt-cache", type=str, default=None)
+    ap.add_argument(
+        "--training-target-capsule",
+        type=str,
+        default=None,
+        help=(
+            "strict G109 aggregate receipt supplying same-forward upstream-batch16 "
+            "labels, margins, and Pose6; typed producer configs only"
+        ),
+    )
+    ap.add_argument(
+        "--training-target-capsule-sha256",
+        type=str,
+        default=None,
+        help="external SHA-256 of --training-target-capsule; both flags are required together",
+    )
+    ap.add_argument(
+        "--fresh-producer",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "stamp a cold, own-lineage producer checkpoint; refuses foreign "
+            "weights-only warm-start, permits only marker-matched crash resume, and "
+            "is distinct from the optional FreSh spectral initializer"
+        ),
+    )
     ap.add_argument("--chroma", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--palette-anchor", action=argparse.BooleanOptionalAction, default=True,
                     help="(DIAGNOSED FIX) init learnable palette to natural per-class mean GT RGB (transfer-probe ingredient; "
@@ -16058,7 +17039,7 @@ def main(argv: list[str] | None = None) -> int:
     # θ-independent mask (horizon rows) AND (GT top-2 margin ∈ [lo, hi]) — pushing ONLY the reducible
     # confident-GT band, AVOIDING the <lo label-noise. seg_horizon_margin_weight=0.0 (DEFAULT) => branch
     # skipped + provider None => BYTE-IDENTICAL. A/B arm, NOT a claim (exit criterion below); pointer
-    # 0.19110 UNMOVED.
+    # canonical effective-frontier pointer UNMOVED.
     ap.add_argument("--seg-horizon-margin-weight", type=float, default=0.0,
                     help="v7.5 B.5 (#169): weight w_h on the horizon-weighted margin hinge (0=off). "
                     "L_hz = w_h * mean_{horizon-band AND GT-margin∈[lo,hi]} relu(m_target - m_wit). Reuses "
@@ -16695,13 +17676,15 @@ def main(argv: list[str] | None = None) -> int:
                     "(even code=f0->carrier, odd=f1->witness). Requires --w-pose>0. DEFAULT OFF => "
                     "byte-identical (the witness's own f0 render).")
     ap.add_argument("--pose-carrier-source", type=str, default="real_keyframe",
-                    choices=["real_keyframe", "generated"],
+                    choices=["real_keyframe", "generated", "generated_y1"],
                     help="#205 pose-carrier frame0 SOURCE (Track B store-nothing-but-xi, 18927a1ae). "
                     "real_keyframe (default) = warp the STORED real keyframe luma (gt_f0; COUNTS the "
                     "keyframe in archive.zip). generated = STORE-NOTHING: warp the witness's OWN plain "
-                    "frame0 INR render (up to camera-native) by the twist -> stores ONLY xi/H (~0 "
-                    "marginal bytes; the render is FREE, rule-118). The dxi residual co-adapts to the "
-                    "witness-render warp. Default real_keyframe => byte-identical (unchanged wiring).")
+                    "independent even-code frame0 INR render by the twist. generated_y1 = the genuine "
+                    "conditional codec: warp the final odd-code Y1 render by the twist, so Y0|Y1 "
+                    "stores only the counted effective xi and no even-code payload. The dxi residual "
+                    "co-adapts to the selected witness-render source. Default real_keyframe remains "
+                    "byte-identical (unchanged wiring).")
     ap.add_argument("--pose-carrier-residual-mode", type=str, default="table", choices=["table", "film"],
                     help="#224 pose-carrier residual parametrization: table (per-pair (P,6), byte-minimal) "
                     "or film (code-conditioned MLP). Default table.")
@@ -16829,7 +17812,7 @@ def main(argv: list[str] | None = None) -> int:
                     "each PER-CLASS independently, once a class fires. REQUIRES --birth-completion-event "
                     "(fails closed otherwise). DEFAULT OFF => DETECTOR-ONLY (byte-identical loss; the "
                     "detector + LOUD hand-off telemetry + resume state still run). ON => byte-identical "
-                    "UNTIL a class fires (multiplier==1.0 pre-fire). Advisory; pointer 0.19110 UNMOVED.")
+                    "UNTIL a class fires (multiplier==1.0 pre-fire). Advisory; canonical effective-frontier pointer UNMOVED.")
     # BUILD #300 (SEED-ABSORPTION FIX; memo plateau_disambiguator_results_20260704.md). The island seed
     # (--seed-islands) is composited into the SegNet-scored frame1 and read by EVERY realized-through-R
     # seg lever, so once the seed satisfies the loss on the Lane+Movable island, dL/d(witness) ~= 0 there
