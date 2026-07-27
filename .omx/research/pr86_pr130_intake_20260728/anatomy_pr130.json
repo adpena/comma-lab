@@ -1,0 +1,138 @@
+{
+  "schema": "public_pr_anatomy.v1",
+  "pr_number": 130,
+  "repo": "commaai/comma_video_compression_challenge",
+  "title": "semantic-pose-HPAC_CPR1",
+  "author": "fesalfayed",
+  "head_sha": "9a77b6ad660d6310ab54436757ab07a9bbc9f3e1",
+  "state_at_intake": "closed, unmerged; OFFICIAL LEADERBOARD RANK 1 (display 0.172)",
+  "custody": {
+    "clone_dir": "experiments/results/public_pr130_intake_20260725_fable/source/",
+    "clone_method": "git archive from blobless detached scratch clone (never the shared worktree)",
+    "clone_fetched_utc": "2026-07-25T13:24:47Z",
+    "archive_zip_present_locally": false,
+    "archive_url": "https://github.com/fesalfayed/comma_video_compression_challenge/releases/download/semantic-pose-HPAC_CPR1/archive.zip",
+    "archive_sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd",
+    "archive_bytes": 191052,
+    "ledger_source": "submissions/semantic-pose-HPAC_CPR1/verification.json (schema_version 4), CROSS-VERIFIED against inflate.py:main() parse order",
+    "ledger_authority": "CODE-VERIFIED (not prose-asserted): inflate.py reads u32 models_bytes prefix, lzma-decompresses [4:4+models_bytes], passes the remainder to decode_tokens"
+  },
+  "byte_ledger_measured": {
+    "archive_zip": 191052,
+    "zip_overhead": 100,
+    "member_p": 190952,
+    "member_count": 1,
+    "member_compression": "stored",
+    "breakdown": {
+      "u32_models_length_prefix": 4,
+      "xz_models_blob": 73968,
+      "hpac_token_stream_range_coded": 116980
+    },
+    "xz_models_blob_raw": 83493,
+    "xz_saving": 9525,
+    "models_raw_breakdown": {
+      "two_u32_length_fields": 8,
+      "semantic_renderer_int4_weights": 40252,
+      "pose_carrier_CPR1": 23054,
+      "hpac_integer_model": 20179
+    },
+    "arithmetic_closure": "4 + 73968 + 116980 = 190952 EXACT; 8 + 40252 + 23054 + 20179 = 83493 EXACT",
+    "leg_attribution_derived": {
+      "note": "xz compresses renderer+carrier+hpac jointly; carrier is already entropy-coded (CPR1) so it is assumed ~incompressible, giving the split below. DERIVED, not measured.",
+      "seg_partition_leg_bytes": 167894,
+      "seg_partition_leg_pct_of_member": 87.9,
+      "pose_leg_bytes": 23054,
+      "pose_leg_pct_of_member": 12.1
+    },
+    "CORRECTION": "Supersedes .omx/research/public_pr129_132_intake_20260725.md which reported 'semantic stream 40,252B + models 73,944B' and OMITTED the 116,980 B token stream. 40,252 is the int4 RENDERER, not the token stream. The 2026-07-26 codex crux memo's mapping was correct."
+  },
+  "scores_external": [
+    {
+      "label": "github-actions bot, CPR1 archive",
+      "axis": "[contest-CUDA]",
+      "samples": 600,
+      "d_seg": 0.00029660,
+      "d_pose": 0.00002331,
+      "bytes": 191052,
+      "S_recomputed": 0.172141,
+      "components": {"seg": 0.02966, "pose": 0.015268, "rate": 0.127209},
+      "status": "MEASURED BY UPSTREAM BOT (external)"
+    },
+    {
+      "label": "author RTX 2000 Ada, SOURCE archive (194,380 B predecessor)",
+      "axis": "[external, non-1:1 hardware]",
+      "d_seg": 0.00028609, "d_pose": 0.00001967, "bytes": 194380, "S_recomputed": 0.172064
+    },
+    {
+      "label": "author RTX A4500, SOURCE archive",
+      "axis": "[external, non-1:1 hardware]",
+      "d_seg": 0.00029607, "d_pose": 0.00001981, "bytes": 194380, "S_recomputed": 0.173111
+    },
+    {
+      "label": "0.169848 'CPR1 projected'",
+      "axis": "[PROJECTION — NOT A MEASURED ROW]",
+      "status": "HONESTY FLAG: distortion metrics measured on the 194,380 B SOURCE archive were substituted with the 191,052 B CPR1 byte count. No evaluator ever produced 0.1698 on the CPR1 bytes. Our 2026-07-26 codex crux memo cited it as if it were a component-displayed score."
+    }
+  ],
+  "score_decomposition_insight": {
+    "rate_share_of_S": 0.739,
+    "seg_share_of_S": 0.172,
+    "pose_share_of_S": 0.089,
+    "implication": "RATE dominates PR130's remaining score. Driving BOTH distortions to exactly zero only reaches S=0.1272."
+  },
+  "pose_carrier_mechanics": {
+    "role": "frame_0 (even index) — pure PoseNet actuator, ZERO semantic content; SegNet never reads it (reads last frame only)",
+    "stored_objects": {
+      "basis": {"shape": [12, 3, 24, 32], "symbols": 27648, "precision_bits": 5, "coding": "canonical Huffman of signed-zigzag", "bits": 104135, "bytes": 13017, "avg_bits_per_symbol": 3.766},
+      "coefficients": {"shape": [600, 12], "symbols": 7200, "precision_bits": 12, "coding": "per-dimension Rice of delta-zigzag codes, k per dim", "bits": 79076, "bytes": 9885, "avg_bits_per_symbol": 10.983},
+      "header": 12, "scales_fp32": 96, "huffman_lengths_plus_rice_k": 44
+    },
+    "total_bytes": 23054,
+    "bytes_per_pair": 38.4,
+    "marginal_bytes_per_pair_coefficients_only": 16.5,
+    "amortized_basis_bytes_per_pair": 21.7,
+    "decode_recipe_free_generator": [
+      "basis_codes (int5) * per-dim fp32 scale",
+      "F.interpolate bicubic -> (384,512)",
+      "per-basis-element zero-mean + unit-RMS normalize  [makes stored codes scale-free -> 5 bits suffice]",
+      "coeff = cumsum(unzigzag(delta)) & 0xFFF, sign-corrected, * per-dim fp32 scale",
+      "carrier = einsum('bk,kchw->bchw', coeff, basis) / sqrt(12)",
+      "slave = round(clamp(127.5 + 64.0 * carrier, 0, 255))",
+      "bicubic -> (874,1164) -> clamp -> round -> uint8"
+    ],
+    "key_structural_fact": "The pose actuator is stored on a 24x32 grid (768 px) and bicubic-upsampled twice. PoseNet's 6-dim output is steerable by a 12-dim, very-low-spatial-frequency field. Strong empirical statement about the smoothness of the pose preimage.",
+    "temporal_exploit": "delta-zigzag + cumsum along the FRAME axis exploits pose-trajectory smoothness; the 12 Rice k values (8-9) are all near-uniform, i.e. per-frame coefficient deltas are ~9-10 bits of genuine entropy each",
+    "achieved_d_pose": 0.00002331,
+    "achieved_S_contribution": 0.015268
+  },
+  "seg_leg_mechanics": {
+    "stored_object": "the exact 5-class SegNet partition for all 600 scored frames at 384x512 (SegNet's own input grid), losslessly arithmetic-coded",
+    "token_stream_bytes": 116980,
+    "bpp": 0.0079332,
+    "coder": "constriction RangeDecoder + Categorical, non-perfect",
+    "prior": "IntegerHPAC — patch-group causal AR: Type-A 7x7 / Type-B depthwise dilated masked convs, conv_past prev-frame context, per-frame FiLM (frame_embed 600x8), CausalSPM cross-patch summary",
+    "group_order": "s = c + delta*r with delta=2, patch 64",
+    "renderer": "SemanticTokenRenderer width=96: token_embed(5,96) -> coord_mix(+4 coord channels x,y,x^2,y^2) -> 4 TokenBlocks (depthwise 3x3 dilations 1,1,2,4 + 1x1 + GroupNorm + per-frame FiLM) -> head 3x3 -> sigmoid*255",
+    "renderer_bytes_int4": 40252,
+    "hpac_prior_bytes": 20179,
+    "achieved_d_seg": 0.00029660
+  },
+  "engineering_stack": {
+    "loc_submission_dir": 3201,
+    "external_deps": ["torch", "numpy", "constriction"],
+    "stdlib_codecs": ["lzma"],
+    "gpu_required": true,
+    "gpu_refusal": "inflate.py raises RuntimeError if not torch.cuda.is_available() — NO CPU fallback path exists",
+    "tf32_disabled": true,
+    "determinism_claim": "symbol/token-exact decode across GPU architectures via integer-lattice HPAC (bounded integer intermediates, dyadic requantization, 1/8-logit canonical entropy lattice). RGB bit-identity explicitly NOT claimed.",
+    "portability_evidence": "2 full official evaluations on independent GPU architectures (Ada, Ampere) + entropy_logit_hash cross-GPU match + a 2197.6 s CPU full-token decode reproducing decoded_raw_token_sha256",
+    "reproduction_gate": "compress.sh fail-closed: verifies SOURCE archive sha256+bytes BEFORE repack and OUTPUT sha256+bytes AFTER; refuses on mismatch. Scope is the lossless frozen-source repack ONLY — full training from the original video is explicitly NOT included.",
+    "test_evidence": "14 pytest cases, 200 randomized roundtrip cases, malformed-stream tests, frozen-archive golden",
+    "contest_cpu_row": "NONE PUBLISHED — the leaderboard-ranked 0.172 is a [contest-CUDA] bot row only"
+  },
+  "borrowed_substrate_accounting": {
+    "quality": "BEST-IN-CLASS observed in this contest. LINEAGE_AND_CITATIONS.md gives a mermaid lineage map, a dated chronology with immutable anchors, a mechanically verifiable git merge-base assertion, and an explicit narrowing clause ('original within this audited lineage' != worldwide priority).",
+    "declared_inherited": ["HPAC architecture (Li et al. 2025)", "semantic class-token stream rendered to RGB (PR86)", "patch-group hierarchical AR coding (PR86)", "Type-A/Type-B masked convs (PR86)", "per-frame FiLM (PR86)", "prev-frame token context (PR86)", "arithmetic coding (PR86)", "asymmetric master/slave frame split (PR86)", "low-rank einsum pose actuation (qpose PR67/79, cited as novelty-LIMITING prior art)"],
+    "declared_original_within_lineage": ["exact integer-lattice HPAC implementation", "standalone learned low-rank neutral-gray pose carrier replacing PR86's NeRV slave", "exact deterministic carrier repack (canonical Huffman + Rice) with decoded-symbol and archive-hash gates", "the validation/artifact-integrity system"]
+  }
+}
