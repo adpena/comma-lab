@@ -164,6 +164,7 @@ def _source_arrays() -> dict[str, np.ndarray]:
             dtype=np.int64,
         ),
         "__cfg_pose_carrier_xi_formula": np.asarray("xi_stored+residual_scale*dxi"),
+        "__cfg_pose_carrier_y1_selected_preimage_schema": np.asarray(subject.Y1_SELECTED_PREIMAGE_SCHEMA),
     }
     return {**params, **configs, **_fake_target_arrays()}
 
@@ -177,6 +178,7 @@ def _write_checkpoint(path: Path, arrays: dict[str, np.ndarray]) -> str:
 def test_physical_checkpoint_path_sha_and_symlink_fail_closed(
     tmp_path: Path,
 ) -> None:
+    assert len(subject.POSE_CONFIG_KEYS) == 11
     checkpoint = tmp_path / "source.npz"
     sha = _write_checkpoint(checkpoint, _source_arrays())
     arrays, identity = subject._open_physical_checkpoint(
@@ -254,6 +256,7 @@ def test_odd_only_partition_is_deterministic_and_even_invariant(
     assert np.array_equal(initializer.xi_init, expected_xi)
     assert initializer.requires_post_g105_refit is True
     assert initializer.candidate_payload_eligible is False
+    assert initializer.selected_preimage_schema == subject.Y1_SELECTED_PREIMAGE_SCHEMA
 
     with np.load(first.semantic_child_path, allow_pickle=False) as archive:
         assert subject.SEMANTIC_ODD_CODE_KEY in archive.files
@@ -308,6 +311,17 @@ def test_odd_only_partition_is_deterministic_and_even_invariant(
         (
             lambda arrays: arrays.pop("__cfg_pose_carrier_s_t"),
             "pose config set is not exact",
+        ),
+        (
+            lambda arrays: arrays.pop("__cfg_pose_carrier_y1_selected_preimage_schema"),
+            "pose config set is not exact",
+        ),
+        (
+            lambda arrays: arrays.__setitem__(
+                "__cfg_pose_carrier_y1_selected_preimage_schema",
+                np.asarray("tac.v10_factor2_selected_preimage.wrong"),
+            ),
+            "differs at __cfg_pose_carrier_y1_selected_preimage_schema",
         ),
         (
             lambda arrays: arrays.__setitem__(

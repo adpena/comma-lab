@@ -53,7 +53,8 @@ from tac.witness_dsl import (
 SCHEMA: Final = "tac.g112_exact_checkpoint_partition.v1"
 SEMANTIC_CHILD_SCHEMA: Final = "tac.g112_g105_semantic_odd_checkpoint.v1"
 INITIALIZER_SCHEMA: Final = "tac.g112_generated_y1_pose_initializer.v1"
-POSE_CHECKPOINT_CONTRACT_SCHEMA: Final = "tac.v9_pose_carrier_checkpoint_contract.v1"
+POSE_CHECKPOINT_CONTRACT_SCHEMA: Final = "tac.v9_pose_carrier_checkpoint_contract.v2"
+Y1_SELECTED_PREIMAGE_SCHEMA: Final = "tac.v10_factor2_selected_preimage.v1"
 SEMANTIC_CHILD_NAME: Final = "10_g105_semantic_child.npz"
 INITIALIZER_NAME: Final = "20_generated_y1_pose_initializer.npz"
 RECEIPT_NAME: Final = "30_g112_partition_receipt.json"
@@ -70,6 +71,7 @@ POSE_CONFIG_KEYS: Final = frozenset(
         "__cfg_pose_carrier_pitch",
         "__cfg_pose_carrier_native_hw",
         "__cfg_pose_carrier_xi_formula",
+        "__cfg_pose_carrier_y1_selected_preimage_schema",
     }
 )
 INITIALIZER_ARRAY_KEYS: Final = frozenset(
@@ -87,6 +89,7 @@ INITIALIZER_ARRAY_KEYS: Final = frozenset(
         "__pose_carrier_pitch",
         "__pose_carrier_native_hw",
         "__pose_carrier_xi_formula",
+        "__pose_carrier_y1_selected_preimage_schema",
         "__semantic_packet_sha256",
         "__g109_target_projection_json",
         "__g109_target_projection_sha256",
@@ -163,6 +166,7 @@ class G112PoseInitializerV1:
     s_r: float
     pitch: float
     native_hw: tuple[int, int]
+    selected_preimage_schema: str = Y1_SELECTED_PREIMAGE_SCHEMA
     requires_post_g105_refit: bool = True
     candidate_payload_eligible: bool = False
     score_claim: bool = False
@@ -320,6 +324,7 @@ def _validate_pose_contract(
         "__cfg_pose_carrier_source": "generated_y1",
         "__cfg_pose_carrier_residual_mode": "table",
         "__cfg_pose_carrier_xi_formula": "xi_stored+residual_scale*dxi",
+        "__cfg_pose_carrier_y1_selected_preimage_schema": Y1_SELECTED_PREIMAGE_SCHEMA,
     }
     for key, expected in exact.items():
         if _scalar(arrays, key) != expected:
@@ -662,6 +667,7 @@ def open_g112_pose_initializer(
         "__pose_carrier_source": "generated_y1",
         "__pose_carrier_residual_mode": "table",
         "__pose_carrier_xi_formula": "xi_stored+residual_scale*dxi",
+        "__pose_carrier_y1_selected_preimage_schema": Y1_SELECTED_PREIMAGE_SCHEMA,
         "__requires_post_g105_refit": 1,
         "__candidate_payload_eligible": 0,
         "__score_claim": 0,
@@ -745,6 +751,7 @@ def open_g112_pose_initializer(
         s_r=values["__pose_carrier_s_r"],
         pitch=values["__pose_carrier_pitch"],
         native_hw=(874, 1164),
+        selected_preimage_schema=Y1_SELECTED_PREIMAGE_SCHEMA,
     )
 
 
@@ -904,6 +911,7 @@ def materialize_g112_checkpoint_partition(
         ),
         "__pose_carrier_native_hw": np.asarray([874, 1164], dtype=np.int64),
         "__pose_carrier_xi_formula": np.asarray("xi_stored+residual_scale*dxi"),
+        "__pose_carrier_y1_selected_preimage_schema": np.asarray(Y1_SELECTED_PREIMAGE_SCHEMA),
         "__semantic_packet_sha256": np.asarray(semantic_packet_sha),
         "__g109_target_projection_json": np.asarray(_scalar(arrays, CHECKPOINT_PROJECTION_KEY)),
         "__g109_target_projection_sha256": np.asarray(_scalar(arrays, CHECKPOINT_PROJECTION_SHA_KEY)),
@@ -1040,6 +1048,7 @@ def materialize_g112_checkpoint_partition(
             "strict_parse_back": True,
             "xi_init": _array_identity(xi_init),
             "source": "generated_y1",
+            "selected_preimage_schema": Y1_SELECTED_PREIMAGE_SCHEMA,
             "final_payload": False,
             "candidate_payload_eligible": False,
             "requires_real_post_g105_refit": True,
@@ -1123,6 +1132,7 @@ __all__ = [
     "SEMANTIC_CHILD_SCHEMA",
     "SEMANTIC_ODD_CODE_KEY",
     "SSD_ROOTS",
+    "Y1_SELECTED_PREIMAGE_SCHEMA",
     "G112CheckpointPartitionError",
     "G112CheckpointPartitionResultV1",
     "G112PoseInitializerV1",
