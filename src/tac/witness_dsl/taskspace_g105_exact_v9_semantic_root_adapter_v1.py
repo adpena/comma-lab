@@ -12,7 +12,9 @@ packet contains:
 * optional, explicitly typed ``film_pl`` and ``concat_pl`` tensors; and
 * only the 600 odd ``code[2*p+1]`` Y1 rows.
 
-The even Y0 rows never enter this packet.  G94-V2 is their exclusive owner.
+The even Y0 rows never enter this packet.  The typed G110 conditional
+``Y0|final-G105-Y1`` product is their exclusive public owner; the interleaved
+even rows remain encoder-only dead state.
 Phase advection is a training force which shapes these counted weights; it is
 external encoder evidence, not a fictitious inflate-time operand.
 
@@ -31,7 +33,7 @@ import os
 import stat
 import struct
 import zlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, Final
@@ -42,12 +44,25 @@ from tac.witness_control.taskspace_fresh_teacher_materializer_v1 import (
     FreshTeacherMaterializationError,
     load_compile_ready_materialization_receipt,
 )
+from tac.witness_control.taskspace_v9_training_target_binding_v1 import (
+    CHECKPOINT_PROJECTION_KEY,
+    CHECKPOINT_PROJECTION_SHA_KEY,
+    V9TrainingTargetBindingError,
+    checkpoint_target_arrays_from_projection,
+    reopen_v9_training_target_projection,
+)
 from tac.witness_dsl.basis_control import (
     LEGACY_FOURIER_AB_CONTROL,
     normalize_basis_family,
 )
+from tac.witness_dsl.taskspace_pfree_semantic_root_v1 import (
+    SemanticRootY1V1Error,
+    TemporalLatentStreamV1,
+    _rice_decode_signed,
+)
 
 VARIANT_ID: Final = "tac.semantic_root_y1.v9_hosc_dual_head_odd_y1.v1"
+Y0_OWNER: Final = "G110_GENERATED_Y1_CONDITIONAL"
 MAGIC: Final = b"SV9Y1V1\0"
 VERSION: Final = 1
 PAIR_COUNT_N600: Final = 600
@@ -71,7 +86,11 @@ G46_TARGET_LABELS_BYTES: Final = PAIR_COUNT_N600 * SCORER_H * SCORER_W
 G46_SOURCE_PAIR_CHAIN_SHA256: Final = (
     "5b391fa4a5f651452fdf9a861af3f52abdc58017dcd8bfc0566ebcf86cab3559"
 )
-G46_MARGIN_AGGREGATE_SCHEMA: Final = "tac.taskspace_batch16_margin_base_scorer_aggregate.v1"
+# G109 supersedes the earlier margin-only G78 aggregate.  The semantic-root
+# checkpoint must bind the one same-forward capsule that owns labels, margins,
+# and Pose6 together; accepting the old margin-only schema would leave the
+# enhancement target on a different scorer fiber.
+G46_MARGIN_AGGREGATE_SCHEMA: Final = "tac.taskspace_v9_training_target_capsule_aggregate.v1"
 G46_PORTABLE_SOURCE_MEMBERS: Final = (
     (
         "evaluate.py",
@@ -99,10 +118,12 @@ _HEADER = struct.Struct(">8sBBHIII")
 _SECTION = struct.Struct(">4sI")
 _MODEL_HEADER = struct.Struct(">4sH")
 _TENSOR_HEADER = struct.Struct(">BBbB4HI")
-_Y1_HEADER = struct.Struct(">4sHHb3xI")
+_Y1_HEADER = struct.Struct(">4sHHbBBxI")
 _SECTION_ORDER: Final = (b"CONF", b"MODL", b"Y1CD")
 _MODEL_MAGIC: Final = b"V9M1"
-_Y1_MAGIC: Final = b"Y1C1"
+_Y1_MAGIC: Final = b"Y1R1"
+_Y1_CODEC_RAW_I16_LE: Final = 0
+_Y1_CODEC_DELTA_RICE: Final = 1
 _FLAG_FILM_PL: Final = 1 << 0
 _FLAG_CONCAT_PL: Final = 1 << 1
 _FLAG_CHROMA: Final = 1 << 2
@@ -111,6 +132,13 @@ _KNOWN_FLAGS: Final = _FLAG_FILM_PL | _FLAG_CONCAT_PL | _FLAG_CHROMA
 
 class ExactV9SemanticRootError(ValueError):
     """An exact V9 packet, checkpoint, or receiver invariant failed closed."""
+
+
+class Y1WireCodecV1(IntEnum):
+    """Canonical-within-family Y1 wire alternatives for outer archive arbitration."""
+
+    RAW_I16_LE = _Y1_CODEC_RAW_I16_LE
+    DELTA_RICE_BEST_K = _Y1_CODEC_DELTA_RICE
 
 
 class V9TensorDTypeV1(IntEnum):
@@ -140,6 +168,102 @@ def _require_git_sha(value: object) -> str:
     ):
         raise ExactV9SemanticRootError("checkpoint git SHA must be a concrete lowercase 40-hex identity")
     return value
+
+
+_FRESH_LINEAGE_SCHEMA: Final = "tac.fresh_producer_lineage.v1"
+_FRESH_LINEAGE_ROOT_SHA_KEYS: Final = (
+    "__cfg_fresh_lineage_root_sha256",
+    "__cfg_fresh_initial_state_sha256",
+    "__cfg_fresh_dsl_compile_hash",
+    "__cfg_fresh_target_projection_sha256",
+    "__cfg_fresh_current_launch_dsl_compile_hash",
+)
+
+
+def _validate_fresh_lineage_root_custody(
+    scalars: dict[str, object],
+) -> dict[str, object]:
+    """Validate a deploy-visible self-consistent root assertion.
+
+    The compact deploy checkpoint cannot prove the complete training trajectory:
+    G112 owns that proof using the corresponding full-state resume checkpoint.
+    This gate nevertheless prevents a copied ``fresh_producer=1`` marker from
+    being accepted as a well-formed root assertion.  It does not prove origin;
+    a downstream own-lineage claim requires G112's recursive physical chain.
+    """
+
+    if int(scalars.get("__cfg_fresh_producer", 0)) != 1:
+        raise ExactV9SemanticRootError(
+            "checkpoint lacks the fresh-producer marker required for root custody"
+        )
+    schema = scalars.get("__cfg_fresh_lineage_schema")
+    if schema != _FRESH_LINEAGE_SCHEMA:
+        raise ExactV9SemanticRootError(
+            "checkpoint fresh-lineage root schema is missing or wrong"
+        )
+    custody = {
+        key: _require_sha256(scalars.get(key), name=key)
+        for key in _FRESH_LINEAGE_ROOT_SHA_KEYS
+    }
+    seed_value = scalars.get("__cfg_fresh_seed")
+    if type(seed_value) is not int or seed_value < 0:
+        raise ExactV9SemanticRootError(
+            "checkpoint fresh-lineage seed must be a nonnegative integer"
+        )
+    projection_sha = _require_sha256(
+        scalars.get(CHECKPOINT_PROJECTION_SHA_KEY),
+        name=CHECKPOINT_PROJECTION_SHA_KEY,
+    )
+    if custody["__cfg_fresh_target_projection_sha256"] != projection_sha:
+        raise ExactV9SemanticRootError(
+            "checkpoint fresh-lineage root is not bound to its physical G109 "
+            "target projection"
+        )
+    expected_root_sha = _sha256(
+        _canonical_json(
+            {
+                "schema": _FRESH_LINEAGE_SCHEMA,
+                "seed": seed_value,
+                "dsl_compile_hash": custody[
+                    "__cfg_fresh_dsl_compile_hash"
+                ],
+                "target_projection_sha256": custody[
+                    "__cfg_fresh_target_projection_sha256"
+                ],
+                "initial_state_sha256": custody[
+                    "__cfg_fresh_initial_state_sha256"
+                ],
+            }
+        )
+    )
+    if custody["__cfg_fresh_lineage_root_sha256"] != expected_root_sha:
+        raise ExactV9SemanticRootError(
+            "checkpoint fresh-lineage root SHA-256 does not recompute from "
+            "seed, root DSL, physical G109 target, and initial state"
+        )
+    return {
+        "schema": _FRESH_LINEAGE_SCHEMA,
+        "seed": seed_value,
+        "fresh_lineage_root_sha256": custody[
+            "__cfg_fresh_lineage_root_sha256"
+        ],
+        "fresh_initial_state_sha256": custody[
+            "__cfg_fresh_initial_state_sha256"
+        ],
+        "fresh_root_dsl_compile_hash": custody[
+            "__cfg_fresh_dsl_compile_hash"
+        ],
+        "fresh_target_projection_sha256": custody[
+            "__cfg_fresh_target_projection_sha256"
+        ],
+        "physical_target_projection_sha256": projection_sha,
+        "node_metadata_current_launch_dsl_compile_hash": custody[
+            "__cfg_fresh_current_launch_dsl_compile_hash"
+        ],
+        "root_self_consistent": True,
+        "origin_proven": False,
+        "complete_trajectory_proven": False,
+    }
 
 
 def _canonical_json(value: Any) -> bytes:
@@ -318,7 +442,10 @@ class V9RuntimeConfigV1:
             "film_concat_code": self.film_concat_code,
             "basis": self.basis.to_dict(),
             "y1_projection": "code[2*p+1]",
-            "y0_owner": "G94-V2",
+            "y1_temporal_codec": (
+                "raw_i16le_or_delta_rice_best_k_outer_archive_selected_v1"
+            ),
+            "y0_owner": Y0_OWNER,
         }
 
     @classmethod
@@ -343,6 +470,7 @@ class V9RuntimeConfigV1:
             "film_concat_code",
             "basis",
             "y1_projection",
+            "y1_temporal_codec",
             "y0_owner",
         }
         if set(value) != expected:
@@ -354,7 +482,9 @@ class V9RuntimeConfigV1:
             or value["scorer_shape"] != [SCORER_H, SCORER_W, SCORER_CHANNELS]
             or value["n_classes"] != N_CLASSES
             or value["y1_projection"] != "code[2*p+1]"
-            or value["y0_owner"] != "G94-V2"
+            or value["y1_temporal_codec"]
+            != "raw_i16le_or_delta_rice_best_k_outer_archive_selected_v1"
+            or value["y0_owner"] != Y0_OWNER
         ):
             raise ExactV9SemanticRootError("runtime config changes a sealed V9/Y1 contract")
         if (
@@ -432,6 +562,7 @@ class ExactV9SemanticRootY1ProgramV1:
     tensors: tuple[V9CountedTensorV1, ...]
     y1_code_scale_exponent: int
     y1_code_q: np.ndarray = field(repr=False)
+    y1_wire_codec: Y1WireCodecV1 | None = None
 
     def __post_init__(self) -> None:
         if type(self.config) is not V9RuntimeConfigV1:
@@ -444,6 +575,10 @@ class ExactV9SemanticRootY1ProgramV1:
             raise ExactV9SemanticRootError("program tensor tuple is malformed")
         if type(self.y1_code_scale_exponent) is not int or not -64 <= self.y1_code_scale_exponent <= 63:
             raise ExactV9SemanticRootError("Y1 code scale exponent is invalid")
+        if self.y1_wire_codec is not None and type(self.y1_wire_codec) is not Y1WireCodecV1:
+            raise ExactV9SemanticRootError(
+                "Y1 wire codec must be a typed Y1WireCodecV1 or unresolved encoder choice"
+            )
         code = np.asarray(self.y1_code_q)
         if code.dtype != np.dtype("<i2") or code.shape != (
             PAIR_COUNT_N600,
@@ -911,13 +1046,18 @@ def _stack_checkpoint_params(
     return result
 
 
-def compile_from_state(
+def compile_from_y1_state(
     *,
     config: V9RuntimeConfigV1,
     params: dict[str, np.ndarray],
-    interleaved_code: np.ndarray,
+    y1_code: np.ndarray,
 ) -> ExactV9SemanticRootY1ProgramV1:
-    """Compile an exact V9 state; only odd Y1 rows become counted state."""
+    """Compile the candidate-owned shared tensors plus exact odd/Y1 child.
+
+    This is the canonical G112 partition consumer surface.  It accepts no even
+    rows, so a semantic candidate cannot accidentally retain a dependency on
+    the encoder-only Y0 training state.
+    """
 
     if type(config) is not V9RuntimeConfigV1:
         raise ExactV9SemanticRootError("compile config is not V9RuntimeConfigV1")
@@ -939,10 +1079,15 @@ def compile_from_state(
         )
         for name in expected_names
     )
-    code = np.asarray(interleaved_code, dtype=np.float32)
-    if code.shape != (2 * PAIR_COUNT_N600, config.modulation_dim) or not np.isfinite(code).all():
-        raise ExactV9SemanticRootError("interleaved code must be finite float[1200,modulation_dim]")
-    y1 = np.ascontiguousarray(code[1::2])
+    y1 = np.asarray(y1_code, dtype=np.float32)
+    if (
+        y1.shape != (PAIR_COUNT_N600, config.modulation_dim)
+        or not np.isfinite(y1).all()
+    ):
+        raise ExactV9SemanticRootError(
+            "candidate-owned Y1 code must be finite float[600,modulation_dim]"
+        )
+    y1 = np.ascontiguousarray(y1)
     maximum = float(np.max(np.abs(y1.astype(np.float64))))
     exponent = -32 if maximum == 0.0 else math.ceil(math.log2(maximum / 32767.0))
     if not -64 <= exponent <= 63:
@@ -956,6 +1101,29 @@ def compile_from_state(
         tensors=tensors,
         y1_code_scale_exponent=exponent,
         y1_code_q=y1_q,
+    )
+
+
+def compile_from_state(
+    *,
+    config: V9RuntimeConfigV1,
+    params: dict[str, np.ndarray],
+    interleaved_code: np.ndarray,
+) -> ExactV9SemanticRootY1ProgramV1:
+    """Compatibility intake for a full trainer state; discard even rows."""
+
+    code = np.asarray(interleaved_code, dtype=np.float32)
+    if (
+        code.shape != (2 * PAIR_COUNT_N600, config.modulation_dim)
+        or not np.isfinite(code).all()
+    ):
+        raise ExactV9SemanticRootError(
+            "interleaved code must be finite float[1200,modulation_dim]"
+        )
+    return compile_from_y1_state(
+        config=config,
+        params=params,
+        y1_code=np.ascontiguousarray(code[1::2]),
     )
 
 
@@ -1032,34 +1200,140 @@ def _decode_model(payload: bytes) -> tuple[V9CountedTensorV1, ...]:
     return tuple(result)
 
 
+def _best_temporal_y1_stream(values: np.ndarray) -> TemporalLatentStreamV1:
+    canonical = np.asarray(values, dtype=np.int64)
+    previous = np.vstack(
+        [
+            np.zeros((1, canonical.shape[1]), dtype=np.int64),
+            canonical[:-1],
+        ]
+    )
+    delta = canonical - previous
+    unsigned = np.where(delta >= 0, 2 * delta, -2 * delta - 1)
+    candidates: list[tuple[int, int]] = []
+    for rice_k in range(16):
+        quotient = unsigned >> rice_k
+        if int(quotient.max(initial=0)) > 0xFFFF:
+            continue
+        bit_count = int(quotient.sum()) + int(unsigned.size) * (1 + rice_k)
+        byte_count = (bit_count + 7) // 8
+        if byte_count <= MAX_PACKET_BYTES:
+            candidates.append((byte_count, rice_k))
+    if not candidates:
+        raise ExactV9SemanticRootError(
+            "no bounded temporal Rice code can represent the Y1 trajectory"
+        )
+    _, best_k = min(candidates)
+    try:
+        return TemporalLatentStreamV1.from_array(values, rice_k=best_k)
+    except SemanticRootY1V1Error as exc:
+        raise ExactV9SemanticRootError(
+            "selected temporal Rice code failed canonical construction"
+        ) from exc
+
+
+def _canonical_y1_payload(
+    values: np.ndarray,
+    codec: Y1WireCodecV1,
+) -> tuple[int, int, bytes]:
+    """Return the unique encoding inside one family, not a cross-family winner."""
+
+    if type(codec) is not Y1WireCodecV1:
+        raise ExactV9SemanticRootError("Y1 wire codec is not typed")
+    if codec is Y1WireCodecV1.RAW_I16_LE:
+        return (
+            int(codec),
+            0,
+            np.asarray(values, dtype="<i2").tobytes(order="C"),
+        )
+    temporal = _best_temporal_y1_stream(values)
+    return int(codec), temporal.rice_k, temporal.encoded_bytes
+
+
+def _best_y1_payload(values: np.ndarray) -> tuple[int, int, bytes]:
+    choices = tuple(
+        _canonical_y1_payload(values, codec)
+        for codec in Y1WireCodecV1
+    )
+    return min(choices, key=lambda item: (len(item[2]), item[0], item[1]))
+
+
 def _encode_y1(program: ExactV9SemanticRootY1ProgramV1) -> bytes:
-    data = np.asarray(program.y1_code_q, dtype="<i2").tobytes(order="C")
+    if program.y1_wire_codec is None:
+        codec, rice_k, data = _best_y1_payload(program.y1_code_q)
+    else:
+        codec, rice_k, data = _canonical_y1_payload(
+            program.y1_code_q,
+            program.y1_wire_codec,
+        )
     return _Y1_HEADER.pack(
         _Y1_MAGIC,
         PAIR_COUNT_N600,
         program.config.modulation_dim,
         program.y1_code_scale_exponent,
+        codec,
+        rice_k,
         len(data),
     ) + data
 
 
-def _decode_y1(payload: bytes, *, modulation_dim: int) -> tuple[int, np.ndarray]:
+def _decode_y1(
+    payload: bytes,
+    *,
+    modulation_dim: int,
+) -> tuple[int, np.ndarray, Y1WireCodecV1]:
     if len(payload) < _Y1_HEADER.size:
         raise ExactV9SemanticRootError("Y1 code section is truncated")
-    magic, pair_count, inner_modulation_dim, exponent, byte_length = _Y1_HEADER.unpack_from(payload)
+    (
+        magic,
+        pair_count,
+        inner_modulation_dim,
+        exponent,
+        codec,
+        rice_k,
+        byte_length,
+    ) = _Y1_HEADER.unpack_from(payload)
     if (
         magic != _Y1_MAGIC
         or pair_count != PAIR_COUNT_N600
         or inner_modulation_dim != modulation_dim
-        or byte_length != PAIR_COUNT_N600 * modulation_dim * 2
+        or codec not in {_Y1_CODEC_RAW_I16_LE, _Y1_CODEC_DELTA_RICE}
+        or not 0 <= rice_k <= 15
         or len(payload) != _Y1_HEADER.size + byte_length
     ):
         raise ExactV9SemanticRootError("Y1 code header disagrees with the exact odd-row contract")
-    code = np.frombuffer(payload[_Y1_HEADER.size :], dtype="<i2").reshape(
-        PAIR_COUNT_N600,
-        modulation_dim,
+    encoded = payload[_Y1_HEADER.size :]
+    if codec == _Y1_CODEC_RAW_I16_LE:
+        if rice_k != 0 or byte_length != PAIR_COUNT_N600 * modulation_dim * 2:
+            raise ExactV9SemanticRootError(
+                "raw Y1 code header is noncanonical"
+            )
+        code = np.frombuffer(encoded, dtype="<i2").reshape(
+            PAIR_COUNT_N600,
+            modulation_dim,
+        )
+    else:
+        try:
+            code = _rice_decode_signed(
+                encoded,
+                pair_count=PAIR_COUNT_N600,
+                latent_dim=modulation_dim,
+                rice_k=int(rice_k),
+            )
+        except SemanticRootY1V1Error as exc:
+            raise ExactV9SemanticRootError(
+                "Y1 temporal Rice stream failed strict decode"
+            ) from exc
+    wire_codec = Y1WireCodecV1(codec)
+    canonical_codec, canonical_k, canonical_bytes = _canonical_y1_payload(
+        code,
+        wire_codec,
     )
-    return int(exponent), np.ascontiguousarray(code)
+    if (canonical_codec, canonical_k, canonical_bytes) != (codec, rice_k, encoded):
+        raise ExactV9SemanticRootError(
+            "Y1 stream is not canonical within its selected wire family"
+        )
+    return int(exponent), np.ascontiguousarray(code), wire_codec
 
 
 def encode_packet(program: ExactV9SemanticRootY1ProgramV1) -> bytes:
@@ -1086,6 +1360,32 @@ def encode_packet(program: ExactV9SemanticRootY1ProgramV1) -> bytes:
     if len(payload) > MAX_PACKET_BYTES:
         raise ExactV9SemanticRootError("exact V9 semantic-root packet exceeds the bounded ABI")
     return payload
+
+
+def encode_packet_y1_variant(
+    program: ExactV9SemanticRootY1ProgramV1,
+    codec: Y1WireCodecV1,
+) -> bytes:
+    """Encode one exact Y1 alternative for complete-archive rate arbitration."""
+
+    if type(program) is not ExactV9SemanticRootY1ProgramV1:
+        raise ExactV9SemanticRootError(
+            "Y1 variant encode requires ExactV9SemanticRootY1ProgramV1"
+        )
+    if type(codec) is not Y1WireCodecV1:
+        raise ExactV9SemanticRootError("Y1 variant codec is not Y1WireCodecV1")
+    return encode_packet(replace(program, y1_wire_codec=codec))
+
+
+def encode_packet_y1_variants(
+    program: ExactV9SemanticRootY1ProgramV1,
+) -> tuple[tuple[Y1WireCodecV1, bytes], ...]:
+    """Enumerate all legal same-semantic Y1 wire forms in stable codec order."""
+
+    return tuple(
+        (codec, encode_packet_y1_variant(program, codec))
+        for codec in Y1WireCodecV1
+    )
 
 
 def _split_sections(payload: bytes) -> tuple[int, dict[bytes, bytes]]:
@@ -1134,7 +1434,7 @@ def parse_packet(payload: bytes) -> ExactV9SemanticRootY1ProgramV1:
     if config.flags != flags:
         raise ExactV9SemanticRootError("packet flags disagree with runtime config")
     tensors = _decode_model(sections[b"MODL"])
-    exponent, y1_code = _decode_y1(
+    exponent, y1_code, y1_wire_codec = _decode_y1(
         sections[b"Y1CD"],
         modulation_dim=config.modulation_dim,
     )
@@ -1143,6 +1443,7 @@ def parse_packet(payload: bytes) -> ExactV9SemanticRootY1ProgramV1:
         tensors=tensors,
         y1_code_scale_exponent=exponent,
         y1_code_q=y1_code,
+        y1_wire_codec=y1_wire_codec,
     )
     if encode_packet(program) != payload:
         raise ExactV9SemanticRootError("packet changed under strict parse/re-emit")
@@ -1153,7 +1454,8 @@ def candidate_wire_accounting(payload: bytes) -> V9CandidateWireAccountingV1:
     _, sections = _split_sections(payload)
     tensors = _decode_model(sections[b"MODL"])
     tensor_data = sum(len(tensor.data) for tensor in tensors)
-    y1_data = PAIR_COUNT_N600 * parse_packet(payload).config.modulation_dim * 2
+    parse_packet(payload)
+    y1_data = len(sections[b"Y1CD"]) - _Y1_HEADER.size
     return V9CandidateWireAccountingV1(
         packet_bytes=len(payload),
         packet_sha256=_sha256(payload),
@@ -1297,8 +1599,7 @@ def _checkpoint_config(
     params: dict[str, np.ndarray],
     scalars: dict[str, object],
 ) -> V9RuntimeConfigV1:
-    if int(scalars.get("__cfg_fresh_init", 0)) != 1:
-        raise ExactV9SemanticRootError("checkpoint is not marked as an applied fresh initialization")
+    _validate_fresh_lineage_root_custody(scalars)
     if scalars.get("__cfg_activation") != "hosc":
         raise ExactV9SemanticRootError("exact adapter admits only repository HOSC checkpoints")
     if scalars.get("__cfg_upstream_snapshot_schema") != UPSTREAM_SOURCE_CLOSURE_SCHEMA:
@@ -1316,6 +1617,10 @@ def _checkpoint_config(
     if int(scalars.get("__cfg_self_orient", 0)) != 0:
         raise ExactV9SemanticRootError(
             "self-orient checkpoints require a separately reviewed decoder-owned fixed-point basis ABI"
+        )
+    if str(scalars.get("__cfg_render_aa", "none")) != "none":
+        raise ExactV9SemanticRootError(
+            "checkpoint deploy features use an AA/IPE ABI not implemented by the exact public G105 receiver"
         )
     _require_exact_polar_basis(scalars.get("__cfg_basis", LEGACY_FOURIER_AB_CONTROL))
     basis = V9PolarFourierConfigV1(
@@ -1410,32 +1715,83 @@ def _checkpoint_config(
 def _validate_checkpoint_target_binding(
     scalars: dict[str, object],
     evidence: V9G46Batch16TrainingTargetEvidenceV1,
-) -> None:
-    exact = {
-        "__cfg_target_authority_sha256": evidence.active_target_authority_sha256,
-        "__cfg_g46_target_labels_sha256": evidence.target_labels_sha256,
-        "__cfg_g46_target_margins_sha256": evidence.target_margins_sha256,
-        "__cfg_g46_source_pair_chain_sha256": evidence.source_pair_chain_sha256,
-        "__cfg_g46_margin_aggregate_schema": evidence.margin_aggregate_schema,
-        "__cfg_g46_margin_aggregate_sha256": evidence.margin_aggregate_receipt_sha256,
-        "__cfg_g46_target_consumer_binding_sha256": evidence.consumer_binding_sha256,
-        "__cfg_g46_target_evidence_sha256": evidence.evidence_sha256,
+) -> dict[str, Any]:
+    projection_json = scalars.get(CHECKPOINT_PROJECTION_KEY)
+    projection_sha = scalars.get(CHECKPOINT_PROJECTION_SHA_KEY)
+    if not isinstance(projection_json, str) or not isinstance(projection_sha, str):
+        raise ExactV9SemanticRootError(
+            "checkpoint lacks its canonical physical G109 target projection"
+        )
+    try:
+        projection = reopen_v9_training_target_projection(
+            projection_json=projection_json,
+            expected_projection_sha256=projection_sha,
+        )
+        expected_arrays = checkpoint_target_arrays_from_projection(
+            projection,
+            active_target_authority_sha256=evidence.active_target_authority_sha256,
+            verdict_batch=evidence.live_verdict_batch_size,
+        )
+    except (V9TrainingTargetBindingError, KeyError, TypeError, ValueError) as exc:
+        raise ExactV9SemanticRootError(
+            "checkpoint physical G109 target projection failed recursive reopen"
+        ) from exc
+    for key, expected_array in expected_arrays.items():
+        expected_value = (
+            np.asarray(expected_array).item()
+            if np.asarray(expected_array).size == 1
+            else np.asarray(expected_array)
+        )
+        observed = scalars.get(key)
+        if isinstance(expected_value, np.ndarray):
+            if not isinstance(observed, np.ndarray) or not np.array_equal(
+                observed, expected_value
+            ):
+                raise ExactV9SemanticRootError(
+                    f"checkpoint target binding differs at {key}"
+                )
+        elif observed != expected_value:
+            raise ExactV9SemanticRootError(
+                f"checkpoint target binding differs at {key}"
+            )
+    evidence_expected = {
+        "target_labels_sha256": np.asarray(
+            expected_arrays["__cfg_g46_target_labels_sha256"]
+        ).item(),
+        "target_margins_sha256": np.asarray(
+            expected_arrays["__cfg_g46_target_margins_sha256"]
+        ).item(),
+        "source_pair_chain_sha256": np.asarray(
+            expected_arrays["__cfg_g46_source_pair_chain_sha256"]
+        ).item(),
+        "margin_aggregate_schema": np.asarray(
+            expected_arrays["__cfg_g46_margin_aggregate_schema"]
+        ).item(),
+        "margin_aggregate_receipt_sha256": np.asarray(
+            expected_arrays["__cfg_g46_margin_aggregate_sha256"]
+        ).item(),
+        "consumer_binding_sha256": np.asarray(
+            expected_arrays["__cfg_g46_target_consumer_binding_sha256"]
+        ).item(),
+        "evidence_sha256": np.asarray(
+            expected_arrays["__cfg_g46_target_evidence_sha256"]
+        ).item(),
+        "scorer_pair_batch_size": int(
+            np.asarray(
+                expected_arrays["__cfg_g46_target_scorer_batch_size"]
+            ).item()
+        ),
+        "margins_from_same_batch16_forward": True,
+        "live_verdict_batch_size": int(
+            np.asarray(expected_arrays["__cfg_verdict_batch"]).item()
+        ),
     }
-    for key, expected in exact.items():
-        if scalars.get(key) != expected:
-            raise ExactV9SemanticRootError(f"checkpoint target binding differs at {key}")
-    integer_exact = {
-        "__cfg_g46_target_scorer_batch_size": evidence.scorer_pair_batch_size,
-        "__cfg_g46_margin_same_forward": 1,
-        "__cfg_verdict_batch": evidence.live_verdict_batch_size,
-    }
-    for key, expected in integer_exact.items():
-        try:
-            observed = int(scalars.get(key, -1))
-        except (TypeError, ValueError) as exc:
-            raise ExactV9SemanticRootError(f"checkpoint target binding is not integral at {key}") from exc
-        if observed != expected:
-            raise ExactV9SemanticRootError(f"checkpoint target binding differs at {key}")
+    for field_name, expected_value in evidence_expected.items():
+        if getattr(evidence, field_name) != expected_value:
+            raise ExactV9SemanticRootError(
+                f"caller target evidence differs from physical G109 at {field_name}"
+            )
+    return projection
 
 
 def compile_fresh_checkpoint(
@@ -1445,7 +1801,12 @@ def compile_fresh_checkpoint(
     phase_advection: V9PhaseAdvectionTrainingEvidenceV1,
     training_target: V9G46Batch16TrainingTargetEvidenceV1,
 ) -> CompiledFreshV9SemanticRootV1:
-    """Compile a fresh G46-bound checkpoint and keep all proof outside bytes."""
+    """Compile a legacy semantic-only checkpoint and keep proof outside bytes.
+
+    Total G111 checkpoints are intentionally not accepted here.  Their pose
+    state must first pass G112's exhaustive partition/no-orphan proof, which
+    then calls :func:`compile_from_y1_state` on the exact semantic child.
+    """
 
     if type(phase_advection) is not V9PhaseAdvectionTrainingEvidenceV1:
         raise ExactV9SemanticRootError("phase_advection must be typed external evidence")
@@ -1453,8 +1814,20 @@ def compile_fresh_checkpoint(
         raise ExactV9SemanticRootError("training_target must be typed G46 batch-16 external evidence")
     g46 = _portable_g46_receipt_identity(g46_encoder_receipt)
     params, scalars, checkpoint_sha, checkpoint_bytes = _checkpoint_runtime_state(checkpoint)
+    total_state_keys = sorted(
+        key for key in params if key.startswith("pose_carrier.")
+    )
+    if total_state_keys:
+        raise ExactV9SemanticRootError(
+            "total G111 checkpoint cannot use the legacy semantic-only top-level "
+            "compiler; partition it through G112 before compile_from_y1_state "
+            f"(pose keys={total_state_keys})"
+        )
     config = _checkpoint_config(params, scalars)
-    _validate_checkpoint_target_binding(scalars, training_target)
+    fresh_lineage_root_assertion = _validate_fresh_lineage_root_custody(scalars)
+    target_projection = _validate_checkpoint_target_binding(
+        scalars, training_target
+    )
     program = compile_from_state(
         config=config,
         params={key: value for key, value in params.items() if key != "code"},
@@ -1477,7 +1850,14 @@ def compile_fresh_checkpoint(
             "bytes": checkpoint_bytes,
             "sha256": checkpoint_sha,
             "git_sha": scalars["__cfg_git_sha"],
-            "fresh_init": True,
+            "fresh_producer": True,
+            "fresh_lineage_root_assertion": fresh_lineage_root_assertion,
+            "full_training_trajectory_proof_owner": (
+                "G112 recursive physical checkpoint chain"
+            ),
+            "fresh_spectral_initializer": bool(
+                int(scalars.get("__cfg_fresh_init", 0))
+            ),
             "portable_upstream_closure_schema": scalars["__cfg_upstream_snapshot_schema"],
             "portable_upstream_closure_sha256": scalars["__cfg_upstream_snapshot_sha256"],
         },
@@ -1497,6 +1877,12 @@ def compile_fresh_checkpoint(
             "live_verdict_batch_size": training_target.live_verdict_batch_size,
             "margins_from_same_batch16_forward": True,
             "serialized_in_candidate": False,
+            "physical_target_projection_sha256": scalars[
+                CHECKPOINT_PROJECTION_SHA_KEY
+            ],
+            "physical_aggregate_receipt": target_projection[
+                "aggregate_receipt"
+            ],
         },
         "runtime": {
             "activation": "tanh(beta*sin(omega*x))",
@@ -1507,7 +1893,7 @@ def compile_fresh_checkpoint(
             "counted_y1_projection": "code[2*p+1]",
             "counted_y1_rows": PAIR_COUNT_N600,
             "serialized_y0_rows": 0,
-            "exclusive_y0_owner": "G94-V2",
+            "exclusive_y0_owner": Y0_OWNER,
         },
         "wire": accounting.to_dict(),
     }
@@ -1531,6 +1917,8 @@ __all__ = [
     "UPSTREAM_SOURCE_CLOSURE_SCHEMA",
     "UPSTREAM_SOURCE_CLOSURE_SHA256",
     "VARIANT_ID",
+    "Y0_OWNER",
+    "Y1WireCodecV1",
     "CompiledFreshV9SemanticRootV1",
     "ExactV9SemanticRootError",
     "ExactV9SemanticRootY1ProgramV1",
@@ -1545,7 +1933,10 @@ __all__ = [
     "candidate_wire_accounting",
     "compile_fresh_checkpoint",
     "compile_from_state",
+    "compile_from_y1_state",
     "encode_packet",
+    "encode_packet_y1_variant",
+    "encode_packet_y1_variants",
     "forward_float32",
     "parse_packet",
     "render_scorer_y1",

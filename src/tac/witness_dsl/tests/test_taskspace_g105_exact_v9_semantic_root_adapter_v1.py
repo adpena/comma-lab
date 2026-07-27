@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import io
+import zipfile
 from dataclasses import replace
 from pathlib import Path
 
@@ -132,6 +134,23 @@ def test_packet_is_strict_and_counts_only_odd_y1_rows() -> None:
     parsed = subject.parse_packet(packet)
     assert subject.encode_packet(parsed) == packet
     assert parsed.config == config
+    partitioned_packet = subject.encode_packet(
+        subject.compile_from_y1_state(
+            config=config,
+            params=params,
+            y1_code=code[1::2],
+        )
+    )
+    assert partitioned_packet == packet
+    with pytest.raises(
+        subject.ExactV9SemanticRootError,
+        match=r"float\[600,modulation_dim\]",
+    ):
+        subject.compile_from_y1_state(
+            config=config,
+            params=params,
+            y1_code=code,
+        )
 
     changed_even = code.copy()
     changed_even[0::2] += 123.0
@@ -158,7 +177,8 @@ def test_packet_is_strict_and_counts_only_odd_y1_rows() -> None:
     accounting = subject.candidate_wire_accounting(packet)
     assert accounting.counted_y1_rows == 600
     assert accounting.excluded_y0_rows == 600
-    assert accounting.y1_code_data_bytes == 600 * config.modulation_dim * 2
+    assert accounting.y1_code_data_bytes < 600 * config.modulation_dim * 2
+    assert accounting.y1_code_metadata_bytes == subject._Y1_HEADER.size
     assert accounting.packet_bytes == (
         accounting.header_bytes
         + accounting.section_directory_bytes
@@ -176,6 +196,86 @@ def test_packet_is_strict_and_counts_only_odd_y1_rows() -> None:
     assert accounting.to_dict()["candidate_or_score_claim"] is False
 
 
+def test_y1_entropy_codec_arbitrates_rice_against_raw_int16() -> None:
+    _config, _params, _code, program = _fixture()
+    rng = np.random.default_rng(17)
+    high_entropy = rng.integers(
+        -32768,
+        32768,
+        size=program.y1_code_q.shape,
+        dtype=np.int16,
+    )
+    packet = subject.encode_packet(
+        replace(program, y1_code_q=high_entropy)
+    )
+    parsed = subject.parse_packet(packet)
+    assert np.array_equal(parsed.y1_code_q, high_entropy)
+    _flags, sections = subject._split_sections(packet)
+    (
+        _magic,
+        _pair_count,
+        _modulation_dim,
+        _exponent,
+        codec,
+        rice_k,
+        byte_length,
+    ) = subject._Y1_HEADER.unpack_from(sections[b"Y1CD"])
+    assert codec == subject._Y1_CODEC_RAW_I16_LE
+    assert rice_k == 0
+    assert byte_length == high_entropy.nbytes
+
+
+def _deterministic_single_member_zip(payload: bytes) -> bytes:
+    output = io.BytesIO()
+    with zipfile.ZipFile(
+        output,
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+    ) as archive:
+        info = zipfile.ZipInfo(
+            "candidate.packet",
+            date_time=(1980, 1, 1, 0, 0, 0),
+        )
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = 0o100644 << 16
+        archive.writestr(
+            info,
+            payload,
+            compress_type=zipfile.ZIP_DEFLATED,
+            compresslevel=9,
+        )
+    return output.getvalue()
+
+
+def test_y1_wire_variants_preserve_tag_and_expose_outer_zip_inversion() -> None:
+    _config, _params, _code, program = _fixture()
+    alternating = np.broadcast_to(
+        ((np.arange(600) % 2) * 2000 - 1000).astype("<i2")[:, None],
+        program.y1_code_q.shape,
+    ).copy()
+    selected = replace(
+        program,
+        y1_code_q=np.ascontiguousarray(alternating, dtype="<i2"),
+    )
+    variants = dict(subject.encode_packet_y1_variants(selected))
+    raw = variants[subject.Y1WireCodecV1.RAW_I16_LE]
+    rice = variants[subject.Y1WireCodecV1.DELTA_RICE_BEST_K]
+
+    assert len(rice) < len(raw)
+    assert len(_deterministic_single_member_zip(raw)) < len(
+        _deterministic_single_member_zip(rice)
+    )
+    for codec, packet in variants.items():
+        parsed = subject.parse_packet(packet)
+        assert parsed.y1_wire_codec is codec
+        assert np.array_equal(parsed.y1_code_q, alternating)
+        assert subject.encode_packet(parsed) == packet
+    assert subject.render_scorer_y1(subject.parse_packet(raw), 37).tobytes() == (
+        subject.render_scorer_y1(subject.parse_packet(rice), 37).tobytes()
+    )
+
+
 def test_packet_corruption_and_original_coord_inr_cross_cast_fail_closed() -> None:
     _config, _params, _code, program = _fixture()
     packet = subject.encode_packet(program)
@@ -191,6 +291,84 @@ def _sha(label: str) -> str:
     import hashlib
 
     return hashlib.sha256(label.encode("ascii")).hexdigest()
+
+
+def _fresh_root_custody_scalars() -> dict[str, object]:
+    projection_sha = _sha("physical-g109-projection")
+    scalars: dict[str, object] = {
+        "__cfg_fresh_producer": 1,
+        "__cfg_fresh_lineage_schema": "tac.fresh_producer_lineage.v1",
+        "__cfg_fresh_seed": 105,
+        "__cfg_fresh_initial_state_sha256": _sha("initial-state"),
+        "__cfg_fresh_dsl_compile_hash": _sha("root-dsl"),
+        "__cfg_fresh_target_projection_sha256": projection_sha,
+        "__cfg_fresh_current_launch_dsl_compile_hash": _sha("launch-dsl"),
+        subject.CHECKPOINT_PROJECTION_SHA_KEY: projection_sha,
+    }
+    scalars["__cfg_fresh_lineage_root_sha256"] = subject._sha256(
+        subject._canonical_json(
+            {
+                "schema": scalars["__cfg_fresh_lineage_schema"],
+                "seed": scalars["__cfg_fresh_seed"],
+                "dsl_compile_hash": scalars[
+                    "__cfg_fresh_dsl_compile_hash"
+                ],
+                "target_projection_sha256": scalars[
+                    "__cfg_fresh_target_projection_sha256"
+                ],
+                "initial_state_sha256": scalars[
+                    "__cfg_fresh_initial_state_sha256"
+                ],
+            }
+        )
+    )
+    return scalars
+
+
+def test_fresh_root_custody_binds_typed_hashes_to_physical_g109_projection() -> None:
+    scalars = _fresh_root_custody_scalars()
+    custody = subject._validate_fresh_lineage_root_custody(scalars)
+    assert custody["schema"] == "tac.fresh_producer_lineage.v1"
+    assert custody["fresh_lineage_root_sha256"] == scalars[
+        "__cfg_fresh_lineage_root_sha256"
+    ]
+    assert custody["physical_target_projection_sha256"] == scalars[
+        subject.CHECKPOINT_PROJECTION_SHA_KEY
+    ]
+    assert custody["node_metadata_current_launch_dsl_compile_hash"] == scalars[
+        "__cfg_fresh_current_launch_dsl_compile_hash"
+    ]
+    assert custody["root_self_consistent"] is True
+    assert custody["origin_proven"] is False
+    assert custody["complete_trajectory_proven"] is False
+
+    for key in (
+        "__cfg_fresh_producer",
+        "__cfg_fresh_lineage_schema",
+        "__cfg_fresh_seed",
+        "__cfg_fresh_lineage_root_sha256",
+        "__cfg_fresh_initial_state_sha256",
+        "__cfg_fresh_dsl_compile_hash",
+        "__cfg_fresh_target_projection_sha256",
+        "__cfg_fresh_current_launch_dsl_compile_hash",
+        subject.CHECKPOINT_PROJECTION_SHA_KEY,
+    ):
+        mutated = dict(scalars)
+        mutated.pop(key)
+        with pytest.raises(subject.ExactV9SemanticRootError):
+            subject._validate_fresh_lineage_root_custody(mutated)
+
+    copied_marker = dict(scalars)
+    copied_marker["__cfg_fresh_target_projection_sha256"] = _sha(
+        "foreign-g109-projection"
+    )
+    with pytest.raises(subject.ExactV9SemanticRootError, match="physical G109"):
+        subject._validate_fresh_lineage_root_custody(copied_marker)
+
+    forged_root = dict(scalars)
+    forged_root["__cfg_fresh_lineage_root_sha256"] = _sha("forged-root")
+    with pytest.raises(subject.ExactV9SemanticRootError, match="does not recompute"):
+        subject._validate_fresh_lineage_root_custody(forged_root)
 
 
 def _target_evidence() -> subject.V9G46Batch16TrainingTargetEvidenceV1:
@@ -236,9 +414,13 @@ def test_checkpoint_basis_refuses_nonpolar_family() -> None:
         subject._require_exact_polar_basis("windowed_curvelet")
 
 
-def test_fresh_producer_gate_requires_g46_margins_and_live_verdict_batch16() -> None:
+def test_fresh_producer_gate_requires_physical_g109_and_live_verdict_batch16(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     evidence = _target_evidence()
     scalars = {
+        subject.CHECKPOINT_PROJECTION_KEY: "{}",
+        subject.CHECKPOINT_PROJECTION_SHA_KEY: "f" * 64,
         "__cfg_target_authority_sha256": evidence.active_target_authority_sha256,
         "__cfg_g46_target_labels_sha256": evidence.target_labels_sha256,
         "__cfg_g46_target_margins_sha256": evidence.target_margins_sha256,
@@ -251,6 +433,25 @@ def test_fresh_producer_gate_requires_g46_margins_and_live_verdict_batch16() -> 
         "__cfg_g46_margin_same_forward": 1,
         "__cfg_verdict_batch": 16,
     }
+
+    monkeypatch.setattr(
+        subject,
+        "reopen_v9_training_target_projection",
+        lambda **_kwargs: {
+            "aggregate_receipt": {
+                "path": "/physical/g109.json",
+                "bytes": 1,
+                "sha256": "e" * 64,
+            }
+        },
+    )
+    monkeypatch.setattr(
+        subject,
+        "checkpoint_target_arrays_from_projection",
+        lambda *_args, **_kwargs: {
+            key: np.asarray(value) for key, value in scalars.items()
+        },
+    )
     subject._validate_checkpoint_target_binding(scalars, evidence)
 
     for key, wrong in (
@@ -265,3 +466,45 @@ def test_fresh_producer_gate_requires_g46_margins_and_live_verdict_batch16() -> 
 
     with pytest.raises(subject.ExactV9SemanticRootError, match="batch geometry"):
         replace(evidence, live_verdict_batch_size=32)
+
+
+def test_legacy_top_level_compiler_refuses_unpartitioned_g111_pose_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    phase = subject.V9PhaseAdvectionTrainingEvidenceV1(
+        weight=1.0,
+        start_epoch=0,
+        classes=(0, 1, 2),
+        band=1.0,
+        gap_xi="interp",
+        reference="gt_advected",
+        evidence_sha256=_sha("phase"),
+    )
+    monkeypatch.setattr(
+        subject,
+        "_portable_g46_receipt_identity",
+        lambda _path: {},
+    )
+    monkeypatch.setattr(
+        subject,
+        "_checkpoint_runtime_state",
+        lambda _path: (
+            {
+                "pose_carrier.xi_stored": np.zeros((600, 6), dtype=np.float32),
+                "pose_carrier.dxi": np.zeros((600, 6), dtype=np.float32),
+            },
+            {},
+            "a" * 64,
+            1,
+        ),
+    )
+    with pytest.raises(
+        subject.ExactV9SemanticRootError,
+        match="partition it through G112",
+    ):
+        subject.compile_fresh_checkpoint(
+            checkpoint=Path("/not-opened-g111.npz"),
+            g46_encoder_receipt=Path("/not-opened-g46.json"),
+            phase_advection=phase,
+            training_target=_target_evidence(),
+        )
