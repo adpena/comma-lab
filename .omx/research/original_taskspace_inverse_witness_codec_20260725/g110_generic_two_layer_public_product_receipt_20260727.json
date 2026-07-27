@@ -1,0 +1,128 @@
+{
+  "schema": "tac.g110_generic_two_layer_public_product_receipt.v1",
+  "written_at_utc": "2026-07-27T10:51:48Z",
+  "lane_id": "lane_g110_generic_two_layer_public_product_20260727",
+  "source_git_head": "1689d2025d93be7fe71f5608d094293fd29b06cd",
+  "status": "RECEIVER_CLOSED_PRODUCER_BLOCKED",
+  "authority": {
+    "research_only": true,
+    "candidate": false,
+    "exact_score": false,
+    "pointer_moved": false,
+    "pointer_statement": "G110 produced no archive score and does not change the canonical effective_frontier."
+  },
+  "contract": {
+    "packet_magic": "G110TL01",
+    "archive_member": "taskspace_two_layer_v1.bin",
+    "pair_count": 600,
+    "semantic_provider_dispatch": [
+      {
+        "packet_magic_prefix_ascii": "SRY1V1",
+        "provider": "G103 original coordinate-INR FiLM MLP"
+      },
+      {
+        "packet_magic_prefix_ascii": "SV9Y1V1",
+        "provider": "G105 exact V9 HOSC dual-head odd-Y1"
+      }
+    ],
+    "conditional_frame0_equation": "Y0=clip(round(Y1+bilinear_upsample(sum_r c[p,r]*s[r]*B[r])))",
+    "coefficient_representation": "chronological int16 delta, zigzag, globally minimal canonical Rice k in [0,15]",
+    "scale_gauge": "one combined float32 scale per rank; no independently rescalable basis and coefficient scales",
+    "zero_residual_rows": "legal",
+    "realization": "both Y0 and Y1 use the generic V10 factor-2 uint8 realization",
+    "final_y1_binding": "SHA256('G110_FINAL_Y1_N600_V1\\0' || SHA256(semantic_packet) || SHA256(concat_p(u16be(p), rendered_final_Y1[p])))",
+    "public_runtime": "receiver-only Python, NumPy, and standard library; no repository, compiler, target-loader, scorer, SegNet, or PoseNet imports"
+  },
+  "custody": {
+    "repo_compile_policy": "fresh exact-V9 only until another semantic producer has equivalent content-verified evidence",
+    "g109_requirement": "strict content-read tac.taskspace_v9_training_target_capsule_aggregate.v1 with all 600 margins, pose targets, source closure, batch-16 custody, G46 chain, and no test fixture",
+    "g105_requirement": "physical fresh own-lineage checkpoint and exact packet/wire validation",
+    "conditional_operand_requirement": "content-read, self-hashed tac.g110_fresh_conditional_y0_operand_receipt.v1 binding semantic packet, G109 receipt, pose targets, basis, scales, and coefficients with joint-pose-conditioned fresh own-lineage evidence",
+    "public_decode_policy": "custody and scorer free; verifies packet syntax and the hash of all 600 actually rendered final Y1 frames before atomic publication"
+  },
+  "files": [
+    {
+      "path": "src/tac/witness_dsl/taskspace_g110_generic_two_layer_public_product_v1.py",
+      "bytes_sha256": "7ecc07dd84286d96d1b5c8a05f431604c90cf8e6588805e0ed3c0411592cc824"
+    },
+    {
+      "path": "tools/tests/test_taskspace_g110_generic_two_layer_public_product_v1.py",
+      "bytes_sha256": "e1a883f73051892b6c8679efbfb052859e3946149ee1a5a212d7ba38ee4cff62"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g110_generic_two_layer_public_product_20260727.md",
+      "bytes_sha256": "a49b31381ec3d31f13299ec310efffdb14b1739ac92357b89cc471442a9b955b"
+    },
+    {
+      "path": "submissions/robust_current/g110_two_layer_receiver/inflate.sh",
+      "bytes": 332,
+      "bytes_sha256": "91a07f89aafdc444722a675caae23204d9fb1939fcc9e13f66a4612033184098"
+    },
+    {
+      "path": "submissions/robust_current/g110_two_layer_receiver/inflate.py",
+      "bytes": 11468,
+      "bytes_sha256": "7b70c452e2e69f36e38ee03ac4b32978958398b752fdd5c98670082b717b421b"
+    },
+    {
+      "path": "submissions/robust_current/g110_two_layer_receiver/semantic_variants/original_coordinr_film_mlp_v1.py",
+      "bytes": 27755,
+      "bytes_sha256": "c29bd90fbe5fcae494d4144a599dfd38b60f2ad6882cbe2a6c17160a54cb739f"
+    },
+    {
+      "path": "submissions/robust_current/g110_two_layer_receiver/semantic_variants/v9_hosc_dual_head_odd_y1_v1.py",
+      "bytes": 32024,
+      "bytes_sha256": "e636448df3028dae91348b5b08d35ff9b17c64df8cee736f3c32a947c4136e94"
+    },
+    {
+      "path": "submissions/robust_current/g110_two_layer_receiver/frame0_variants/conditional_lowrank_rice_v1.py",
+      "bytes": 10612,
+      "bytes_sha256": "091273886aa3c78163b910b6c7a8fe7308035d2e5f46779999d2579dbc8a4e11"
+    }
+  ],
+  "public_runtime_tree_sha256": "32ad4cfa1d6b07e5874acce87e80eccae82a634c9c16b7bf35cb04e1b9b1ff3e",
+  "verification": {
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "focused_pytest": {
+      "command": "pytest -q tools/tests/test_taskspace_g110_generic_two_layer_public_product_v1.py",
+      "result": "11 passed in 32.03s on HEAD 1689d2025d93be7fe71f5608d094293fd29b06cd"
+    },
+    "coverage": [
+      "G103 public regression at pairs 0, 137, and 599",
+      "V9 public parity with the G105 renderer at pairs 0, 17, and 599",
+      "conditional public parity including a legal zero residual row",
+      "exact final-Y1 binding verification and refusal",
+      "single-scale gauge and canonical Rice representation",
+      "deterministic one-member archive parse-back",
+      "unambiguous G103/V9 public provider dispatch",
+      "exact factor-2 realization for both Y0 and Y1",
+      "custody-file symlink refusal before path resolution",
+      "oversized compressed archive member refusal before decompression"
+    ],
+    "public_forbidden_import_scan": "PASS",
+    "git_diff_check": "PASS",
+    "full_public_double_decode": "NOT_RUN",
+    "upstream_evaluate_n600": "NOT_RUN"
+  },
+  "blockers": [
+    {
+      "id": "FRESH_G109_G105_CUSTODY_PAIR_ABSENT",
+      "detail": "G109 is committed at 1689d2025d and its strict preflight is green, but no materialized full-n600 G109 aggregate plus physical fresh own-lineage G105 checkpoint and exact semantic packet has yet satisfied the content-read custody factory."
+    },
+    {
+      "id": "CONDITIONAL_OPERAND_PRODUCER_ABSENT",
+      "detail": "No producer yet emits the required self-hashed tac.g110_fresh_conditional_y0_operand_receipt.v1 for a real full-n600 joint-pose-conditioned basis, scale, and coefficient payload."
+    },
+    {
+      "id": "NO_RECEIVER_CLOSED_EXACT_ROW",
+      "detail": "Without those real operands, no archive.zip, parse-back double decode, exact bytes/SHA, or upstream/evaluate.py n600 row exists. G110 therefore makes no frontier claim."
+    }
+  ],
+  "dependency_order": [
+    "materialize the committed G109 full-n600 aggregate and pair it to a fresh G105 exact-V9 checkpoint and packet",
+    "produce a fresh full-n600 G110 conditional operand receipt",
+    "compile one receiver-closed archive",
+    "run parse-back plus deterministic double decode",
+    "run authoritative upstream/evaluate.py n600 and arbitrate against the canonical effective_frontier"
+  ]
+}
