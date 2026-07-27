@@ -1,0 +1,74 @@
+{
+  "artifact": "G65 G17 archive-object conditional operand linker blocker receipt",
+  "audit_receipt": {
+    "a_descriptor_index": 0,
+    "archive_object_receiver_liveness_proven": false,
+    "baseline_archive_bytes": 1461,
+    "baseline_archive_sha256": "627e997fa138f8f238121f7c3d5e54e38de1b4d8d13adf33002828b961a2bf20",
+    "baseline_member_bytes": 8794,
+    "baseline_member_sha256": "5012334e146b2cb34ca57439a0121c866eea3306f423f14f524691f314e89070",
+    "baseline_outer_encoding": "zip_deflated",
+    "candidate_claim": false,
+    "conditional_operand_bytes": 652,
+    "conditional_operand_sha256": "b7ff4dd393c8406ceba6986883086253875da766716a47ef023528d578426952",
+    "conditional_operand_unique_in_a": true,
+    "conditional_owner_id": "g65-pose-owner",
+    "deterministic_double_parse": true,
+    "exact_archive_builder_custody": true,
+    "hidden_or_direct_plane_inputs": 0,
+    "honest_physical_group_scope": "WHOLE_ARCHIVE_SHARED_MANY_TO_MANY",
+    "local_zip_operand_owner_ranges_claimed": 0,
+    "placement_manifest_sha256": "9d2d6b9686529ec7c6a880308b81905f7f0879e2da75298b8d7476f0efad60f3",
+    "pointer_moved": false,
+    "prior_g64_blocker_retained": "G17_CONDITIONAL_LOGICAL_OPERAND_TO_ARCHIVE_RANGE_LINK_OWED",
+    "required_additive_type": "physical_group_id + logical_owner_id + receiver_consumer + receiver_operation incidence",
+    "research_only": true,
+    "schema": "tac.g17_archive_object_operand_link_blocker.v1",
+    "score_claim": false,
+    "scorer_teacher_target_inputs": 0,
+    "unresolved_blocker": "G17_SHARED_PHYSICAL_GROUP_OWNER_SPECIFIC_RECEIVER_INCIDENCE_TYPE_OWED"
+  },
+  "audit_receipt_sha256": "c25f29cb54ebc7cbcc4815dd291eefcb9b552f4edc56129462b44fa35b57dca4",
+  "git_head_at_verification": "b84b4c6d948f24f3aa399c1774f557dcecfa3658",
+  "lane_id": "lane_g65_g17_archive_object_operand_linker_20260727",
+  "production_module": {
+    "bytes": 12306,
+    "sha256": "21c42ffcde37dc86f7019f4923a9d7fc01bb493403d0758e7995525062080d1d"
+  },
+  "test_module": {
+    "bytes": 9485,
+    "sha256": "a99dd5e6d944ac18a0579eee9756c824f46e2427812b96c124ae9b6c784206ac"
+  },
+  "truth": {
+    "candidate_claim": false,
+    "exact_eval_run": false,
+    "pointer_moved": false,
+    "research_only": true,
+    "score_claim": false
+  },
+  "verification": {
+    "format_check": {
+      "command": "uv run ruff format --check src/tac/witness_dsl/taskspace_g17_archive_object_operand_linker_v1.py src/tac/witness_dsl/tests/test_taskspace_g17_archive_object_operand_linker_v1.py",
+      "result": "2 files already formatted",
+      "ruff_version": "0.15.20"
+    },
+    "lint": {
+      "command": "uv run ruff check src/tac/witness_dsl/taskspace_g17_archive_object_operand_linker_v1.py src/tac/witness_dsl/tests/test_taskspace_g17_archive_object_operand_linker_v1.py",
+      "result": "All checks passed",
+      "ruff_version": "0.15.20"
+    },
+    "pycompile": {
+      "command": ".venv/bin/python -m py_compile src/tac/witness_dsl/taskspace_g17_archive_object_operand_linker_v1.py src/tac/witness_dsl/tests/test_taskspace_g17_archive_object_operand_linker_v1.py",
+      "python_version": "3.13.12",
+      "result": "exit 0"
+    },
+    "pytest": {
+      "command": ".venv/bin/pytest -q src/tac/witness_dsl/tests/test_taskspace_g17_archive_object_operand_linker_v1.py src/tac/witness_dsl/tests/test_taskspace_conditional_fullframe_receiver_operation_v1.py src/tac/witness_dsl/tests/test_taskspace_g17_production_envelope.py src/tac/witness_dsl/tests/test_taskspace_selected_solution_compiler.py",
+      "failed": 0,
+      "passed": 43,
+      "pytest_version": "9.1.1",
+      "result": "43 passed in 0.97s"
+    }
+  },
+  "verdict": "BLOCKED_CURRENT_CANONICAL_PLACEMENT_ONTOLOGY"
+}
