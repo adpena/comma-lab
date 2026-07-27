@@ -1,0 +1,170 @@
+{
+  "axis": "[macOS-CPU advisory/private-runtime]",
+  "dependency_closure": {
+    "brotli_executed_section_count": 12,
+    "opencv_fillpoly_materially_executed": true,
+    "pydantic_import_only_baggage": true,
+    "public_default_failure": "ModuleNotFoundError: No module named 'pydantic'",
+    "public_default_output_created": false,
+    "scipy_import_only_baggage": true,
+    "self_contained_public_runtime": false
+  },
+  "double_decode": {
+    "byte_identical": true,
+    "canonical": {
+      "peak_rss_mib": 2613,
+      "receiver_elapsed_seconds": 851.9686696669087,
+      "safe_run_wall_seconds": 887.95
+    },
+    "output_bytes": 3662409600,
+    "output_dtype": "uint8",
+    "output_sha256": "436ce2b6965c859556a217df9b1cc17784d988f2af900c35201d3e3c7f372782",
+    "output_shape": [
+      1200,
+      874,
+      1164,
+      3
+    ],
+    "sparse": {
+      "addressed_operand_pair_count": 1,
+      "peak_rss_mib": 843,
+      "receiver_elapsed_seconds": 150.75097354198806,
+      "safe_run_wall_seconds": 184.76
+    },
+    "speedup_receiver_elapsed": 5.651496966483028,
+    "speedup_safe_run_wall": 4.805964494479325
+  },
+  "evaluator": {
+    "archive_bytes": 129392,
+    "archive_sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd",
+    "batch_size": 16,
+    "batch_count": 38,
+    "device": "cpu",
+    "d_pose": 163.06130981,
+    "d_seg": 0.0274712,
+    "evaluator_invoked": true,
+    "exact_score_from_reported_components": 43.21412745782408,
+    "frozen_upstream_entrypoint": "upstream/evaluate.py",
+    "num_threads": 2,
+    "original_uncompressed_bytes": 37545489,
+    "pose_score_contribution": 40.38085063616169,
+    "prefetch_queue_depth": 2,
+    "printed_score": 43.21,
+    "rate_score_contribution": 0.08615682166238399,
+    "report_path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/eval_private_r1/report.txt",
+    "report_sha256": "75e85ae2a75748423f4c74e592982a9bf61d07e3b0ef7fee294934a71a6bde7c",
+    "safe_run_exit": 0,
+    "safe_run_peak_rss_mib": 10267,
+    "safe_run_stdout_log_preserved": false,
+    "safe_run_wall_seconds": 576.09,
+    "sample_count": 600,
+    "seed": 1234,
+    "seg_score_contribution": 2.74712,
+    "size_ratio": 0.00344627,
+    "size_ratio_definition": "archive_bytes / original_uncompressed_bytes"
+  },
+  "git_head_observed": "dc42c1423a7b1046e6a91694f243bd5f181c5625",
+  "input_custody": {
+    "actuator_count": 1,
+    "addressed_pair_ids": [
+      0
+    ],
+    "archive_bytes": 129392,
+    "archive_sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd",
+    "g74_atom_count": 2,
+    "member_bytes": 133363,
+    "member_sha256": "d50aac6eab8114c2c15156354147d1cbfe007b474a0633d5cdec26e66751de31",
+    "operand_bytes": 52,
+    "operand_sha256": "5616799adc0d2ab942f37a20b070f7a0fa48119771e8f1b56c1f45e2605306ca",
+    "semantic_p_bytes": 133941,
+    "semantic_p_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
+  },
+  "lane_id": "lane_g85_pvsa_public_receiver_closure_20260727",
+  "open_blockers": [
+    "PVSA_POPULATION_SCORER_CELL_CLOSURE_OWED",
+    "G1_OPENCV_FILLPOLY_BIT_EXACT_GENERIC_RASTERIZER_OWED",
+    "PVSA_DECODER_ONLY_UPSTREAM_IMPORT_CLOSURE_OWED",
+    "PUBLIC_ENTRYPOINT_DOUBLE_DECODE_OWED",
+    "CONTEST_CPU_OR_CUDA_AUTHORITY_EVAL_OWED"
+  ],
+  "pair01_sparse_parity": {
+    "bytes": 12208032,
+    "equal": true,
+    "sha256": "1e91105f88d348c2a08d9ea5f92056406cca0ca9e8bd8d1e87803eec3f6dbc42"
+  },
+  "pointer_delta": {
+    "candidate_claim": false,
+    "effective_frontier_observed": 0.172,
+    "exact_contest_score_claim": false,
+    "frontier_moved": false,
+    "promotion_eligible": false,
+    "public_receiver_closed": false
+  },
+  "portable_recode": {
+    "all_changed_sections_decoded_byte_identical": true,
+    "archive_bytes": 144633,
+    "archive_delta_bytes": 15241,
+    "archive_sha256": "63654e8e3e988d638921144295d2a3b28eceb0488b3de0d56a10af79fb8cbaa4",
+    "changed_section_count": 12,
+    "member_bytes": 161337,
+    "member_sha256": "47ffe1585950fbb093cecd1be093ef761a078f8369cae3181ed719cc1b5bbd86",
+    "output_video_equality_proven": false,
+    "rate_score_delta": 0.010148356304535014,
+    "receipt_path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/portable_recode/receipt.json",
+    "receipt_sha256": "e7bb960e2503d72984c9263f8c7924595f9dcbd81a5aea3662d139586dc99fa9",
+    "semantic_p_bytes": 161915,
+    "semantic_p_sha256": "f44dd0e1f2fd76847a1109080fa3f3594572fd124fd90a9adafc682eb0916657"
+  },
+  "rasterizer_parity": {
+    "canonical_mask_sha256": "42ecdc1d82402cd27ce7c54b198087389f51c114c4f691324d12d433c8d8acd4",
+    "differing_frames": 600,
+    "differing_pixels": 28648,
+    "exact_mask_equality": false,
+    "maximum_differing_pixels_per_frame": 134,
+    "one_vertex_polygon_count": 42,
+    "pair_count": 600,
+    "pillow_mask_sha256": "826d3a9df72fd09e1ec84e9ddc959c6b46a81fe69e0c3247c3c4939dd0dc0825",
+    "polygon_count": 2197,
+    "three_or_more_vertex_polygon_count": 2054,
+    "two_vertex_polygon_count": 101,
+    "verdict_scope": "this_exact_pillow_integer_rasterizer_on_retained_G1_n600",
+    "vertex_count": 19150
+  },
+  "receipt_self_hash": {
+    "algorithm": "sha256(canonical_json(receipt with receipt_self_hash removed))",
+    "value": "69f86a1b8fbac49b6fc439dedeaf1558b7651f38c799c4323feb3943f0863552"
+  },
+  "research_only": true,
+  "schema": "tac.g85_pvsa_public_receiver_closure_landing.v1",
+  "source_artifacts": {
+    ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g85_pvsa_public_receiver_closure_20260727.md": "9bc01a629cabada451902b929b4239629da7c455727bb9808c217334ddb852d8",
+    "src/tac/witness_dsl/taskspace_g85_g1_rasterizer_parity_v1.py": "a7d3ae33100d0942b6ad281dc83de1e5de25792316b5f23d51730a3463ddd2de",
+    "src/tac/witness_dsl/taskspace_g85_portable_semantic_recode_v1.py": "3e21e1672e1487d5850e915ecfc5c8bdf0605d6cc31179a090532f7acc24303b",
+    "src/tac/witness_dsl/taskspace_g85_pvsa_public_receiver_v1.py": "801d7c623d0bb4dab3126914c44873e025e5a8377a9b04faf20e7714fff2a7ae",
+    "submissions/robust_current/taskspace_pvsa_staging/README.md": "a274d972bad214641e29bb9ccd02a68a3b7ba9e8dcedd059993a20bc0be91267",
+    "submissions/robust_current/taskspace_pvsa_staging/inflate.py": "7eb76960f8dec581f9ae9b66f53d9794e9c0da25e31d9f1683617904ae061fa7",
+    "submissions/robust_current/taskspace_pvsa_staging/inflate.sh": "5b75a6f55ecf6b68b26aeff351a0e5584edd9ef5150d5fe2216df5357dc26c02"
+  },
+  "structural_verdict": {
+    "container_and_repository_runtime_validated": true,
+    "g82_candidate_invalidated": true,
+    "missing_gate": "population evaluator-cell closure before public receiver optimization",
+    "population_actuator_coverage_closed": false,
+    "population_syntax_closed": true,
+    "source_wide_selected_preimage_closed": false
+  },
+  "tests": [
+    {
+      "result": "7 passed",
+      "surface": "G85 bounded receiver"
+    },
+    {
+      "result": "5 passed",
+      "surface": "G85 portable semantic recode"
+    },
+    {
+      "result": "2 passed",
+      "surface": "G85 exact all-n600 G1 raster parity"
+    }
+  ]
+}
