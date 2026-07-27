@@ -1,0 +1,61 @@
+{
+  "schema": "tac.g102_activation_custody_scope_correction.v1",
+  "created_at_utc": "2026-07-27T09:23:40Z",
+  "authority": "append_only_custody_and_scope_correction_no_score_evidence",
+  "g102_committed_custody": {
+    "git_commit": "638b2e600c76fb6e0c93ac596012d2503ed7c0b6",
+    "findings": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g102_final_y1_semantic_base_escape_20260727_codex.md",
+      "sha256": "1748df4ebcf157136560106dea12a3132d6654a4035fdc41f07546520a2f3a36"
+    },
+    "activation": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g102_final_y1_semantic_base_escape_activation_20260727.json",
+      "sha256": "f4902dfd414c0d69d4815e97856c1180fcf97144d2eda8b647e7aa5d423db059"
+    },
+    "supersedes_precommit_subagent_checkpoint_hashes": true
+  },
+  "adversarial_review": {
+    "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g102_adversarial_20260727_codex.md",
+    "sha256": "450478593805ad1e28a8de3b5a3aafed7b8f10b831fab511f7d9803dcbda93a7"
+  },
+  "lineage_scope": {
+    "fresh_encoder_boundary": "G46_BATCH16_TARGET_LABEL_BANK_AND_FROZEN_SOURCE_SCORER_ENCODE_PATH",
+    "historical_c1_ms1_ms2r_role": "METRICS_EXISTENCE_AND_FACTOR_FAMILY_EVIDENCE_ONLY",
+    "historical_c1_ms1_ms2r_values_planes_events_residuals_derivatives_in_candidate_lineage": "FORBIDDEN"
+  },
+  "receiver_scope": {
+    "g57_staged_raw_assembly_pattern_reusable": true,
+    "existing_g57_public_receiver_accepts_semantic_root": false,
+    "semantic_root_public_dispatcher_required": true
+  },
+  "rate_identity_scope": {
+    "g85_charged_outer_archive_bytes": 129392,
+    "g85_source_semantic_p_archive_bytes": 133941,
+    "strict_below_0_172_headroom_from_charged_outer_archive_bytes": 58171,
+    "strict_below_0_172_headroom_from_source_semantic_p_archive_bytes": 53622,
+    "strict_below_0_15_headroom_from_charged_outer_archive_bytes": 25131,
+    "strict_below_0_15_headroom_from_source_semantic_p_archive_bytes": 20582,
+    "identity_rule": "NEVER_COMPARE_OR_SUBTRACT_WITHOUT_NAMING_THE_PHYSICAL_OBJECT"
+  },
+  "semantic_root_scope": {
+    "required": "ONE_SCORER_NATIVE_RGB_SELECTED_SOLUTION_PROGRAM_WITH_COUNTED_TEXTURE_CHROMA_BOUNDARY_SURVIVAL_AND_PARALLAX_GAUGE_THROUGH_EXACT_R",
+    "label_mask_palette_only": "FORBIDDEN",
+    "topology_as_one_factor": "ALLOWED",
+    "independent_label_store_plus_pose_carrier": "FORBIDDEN"
+  },
+  "pointer": {
+    "selection_rule": "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)",
+    "effective_frontier_at_receipt": 0.172,
+    "pointer_path": ".omx/state/canonical_frontier_pointer.json",
+    "pointer_sha256": "06027fa2dcb695d755858d6e101c7be57f1fbe5570903eb4bf8c5e2f38510388",
+    "pointer_moved": false
+  },
+  "truth": {
+    "candidate_claim": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "heavy_launch_performed": false,
+    "s01_physically_executable": false,
+    "open_blocker": "P_FREE_ROOT_SEMANTIC_PROGRAM_COMPILER_AND_PUBLIC_CODEC_SECTION_OWED"
+  }
+}
