@@ -272,7 +272,7 @@ def _row_mapping(row: object) -> dict[str, object]:
 def _exact_prepose_coordinates(
     value: Mapping[str, object],
 ) -> tuple[int, int, float, str, int, int, str, str]:
-    """Recompute G121-v2 retention using only exact integer/rational custody."""
+    """Recompute base- or terminal-G115 retention from exact coordinates."""
 
     public_wire = value.get("public_wire_seg")
     live_target = value.get("live_target")
@@ -367,6 +367,7 @@ def _exact_prepose_coordinates(
     )
     lhs = 100 * disagreements * target_fraction.denominator
     rhs = target_fraction.numerator * pixel_denominator
+    base_open = lhs < rhs
     if (
         obstruction["rule"] != _EXACT_OBSTRUCTION_RULE
         or type(obstruction["lhs"]) is not str
@@ -375,15 +376,58 @@ def _exact_prepose_coordinates(
         or _UNSIGNED_INTEGER.fullmatch(obstruction["rhs"]) is None
         or obstruction["lhs"] != str(lhs)
         or obstruction["rhs"] != str(rhs)
-        or obstruction["strict_distortion_open"] is not (lhs < rhs)
+        or obstruction["strict_distortion_open"] is not base_open
         or obstruction["disposition"] != G121_RETAIN_DISPOSITION
-        or not lhs < rhs
     ):
         raise PostG105PoseRefitPopulationError("G121-v2 retained row fails exact distortion-open cross-product")
+    effective_disagreements = disagreements
+    if not base_open:
+        qat = value.get("g115_qat")
+        physical_sha = value.get("physical_stage_identity_sha256")
+        if (
+            type(qat) is not dict
+            or set(qat)
+            != {
+                "status",
+                "terminal_stage_physical_identity_sha256",
+                "disagreement_pixels",
+                "pixel_denominator",
+                "receipt",
+            }
+            or qat["status"] != "terminal_stage_measured"
+            or _require_sha256(
+                qat["terminal_stage_physical_identity_sha256"],
+                name="G115 terminal-stage identity",
+            )
+            != _require_sha256(
+                physical_sha,
+                name="G121 physical terminal-stage identity",
+            )
+            or type(qat["disagreement_pixels"]) is not int
+            or qat["pixel_denominator"] != pixel_denominator
+            or not 0 <= qat["disagreement_pixels"] <= pixel_denominator
+        ):
+            raise PostG105PoseRefitPopulationError(
+                "base-blocked retained row lacks the matching physical terminal G115-QAT child"
+            )
+        _strict_file_binding(
+            qat["receipt"],
+            name="terminal G115-QAT receipt",
+        )
+        terminal_lhs = (
+            100
+            * int(qat["disagreement_pixels"])
+            * target_fraction.denominator
+        )
+        if not terminal_lhs < rhs:
+            raise PostG105PoseRefitPopulationError(
+                "terminal G115-QAT child is not exact distortion-open"
+            )
+        effective_disagreements = int(qat["disagreement_pixels"])
     return (
-        disagreements,
+        effective_disagreements,
         pixel_denominator,
-        disagreements / pixel_denominator,
+        effective_disagreements / pixel_denominator,
         target_decimal_text,
         target_fraction.numerator,
         target_fraction.denominator,
@@ -660,6 +704,9 @@ def run_g121_retained_pose_population(
             "final_archive_bytes": result.selected_archive_bytes,
             "final_archive_sha256": result.selected_archive_sha256,
             "selected_q_levels": result.selected_q_levels,
+            "selected_xip2_coder": result.selected_xip2_coder,
+            "g110_selected_xip2_coder_abi_closed": True,
+            "xip2_wire_matrix_closure": result.xip2_wire_matrix_closure,
             "component_objective_not_contest_score": component_objective,
             "optimizer_verdict_scope": OPTIMIZER_VERDICT_SCOPE,
             "global_xip2_range_optimality_claim": False,
@@ -711,6 +758,8 @@ def run_g121_retained_pose_population(
         "global_xip2_range_optimality_claim": False,
         "global_range_reactivation_required": True,
         "global_range_reactivation_blocker_schema": (GLOBAL_RANGE_BLOCKER_SCHEMA),
+        "g110_selected_xip2_coder_abi_closed": True,
+        "xip2_wire_matrix_closure_preserved_per_row": True,
         "upstream_evaluate_py_run": False,
         "research_only": True,
         "candidate_claim": False,

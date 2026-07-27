@@ -121,6 +121,119 @@ def test_cached_v10_operator_is_exact_public_realization() -> None:
     assert subject._v10_factor2_operator() is subject._v10_factor2_operator()
 
 
+def test_pose_reductions_match_upstream_float32_batch_order() -> None:
+    torch = pytest.importorskip("torch")
+    oracle = object.__new__(subject.ExactBatch16PoseOracleV1)
+    oracle.torch = torch
+    oracle.device = torch.device("cpu")
+    rng = np.random.default_rng(119)
+    outputs = rng.standard_normal((subject.PAIR_COUNT, subject.POSE_DIM)).astype(
+        np.float32
+    )
+    targets = rng.standard_normal((subject.PAIR_COUNT, subject.POSE_DIM)).astype(
+        np.float32
+    )
+    observed_losses = oracle.pose_losses(outputs, targets)
+    expected_losses = (
+        (torch.from_numpy(outputs) - torch.from_numpy(targets))
+        .pow(2)
+        .mean(dim=1)
+        .to(torch.float64)
+        .numpy()
+    )
+    assert np.array_equal(observed_losses, expected_losses)
+    accumulator = torch.zeros([], dtype=torch.float32)
+    for start in range(0, subject.PAIR_COUNT, subject.BATCH_PAIRS):
+        accumulator += torch.from_numpy(
+            expected_losses[start : start + subject.BATCH_PAIRS].astype(
+                np.float32
+            )
+        ).sum()
+    assert oracle.population_mse(observed_losses) == (
+        accumulator / subject.PAIR_COUNT
+    ).item()
+
+
+def test_archive_oracle_enumerates_full_semantic_xip2_zip_matrix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    q = np.zeros((subject.PAIR_COUNT, subject.POSE_DIM), dtype=np.int16)
+    scales = np.ones((subject.POSE_DIM,), dtype=np.float32)
+    packet_rows: dict[bytes, SimpleNamespace] = {}
+    archive_rows: dict[bytes, tuple[bytes, object]] = {}
+
+    def encode_packet(
+        *,
+        semantic_packet: bytes,
+        final_y1_binding: str,
+        xip2_payload: bytes,
+        pitch: float,
+    ) -> bytes:
+        packet = (
+            bytes([len(packet_rows)])
+            + semantic_packet
+            + xip2_payload
+            + np.asarray(pitch, dtype="<f8").tobytes()
+        )
+        packet_rows[packet] = SimpleNamespace(
+            semantic_packet=semantic_packet,
+            final_y1_binding_sha256=final_y1_binding,
+            q=q,
+            scales=scales,
+        )
+        return packet
+
+    def build_archive(packet: bytes, method: object) -> bytes:
+        archive = bytes([len(archive_rows)]) + packet
+        archive_rows[archive] = (packet, method)
+        return archive
+
+    monkeypatch.setattr(subject, "_encode_g110_packet", encode_packet)
+    monkeypatch.setattr(
+        subject,
+        "parse_g110_generated_y1_pose_v1",
+        lambda packet: packet_rows[packet],
+    )
+    monkeypatch.setattr(subject, "_build_g110_archive_for_method", build_archive)
+    monkeypatch.setattr(
+        subject,
+        "_read_g110_archive_member",
+        lambda archive: archive_rows[archive],
+    )
+    monkeypatch.setattr(
+        subject,
+        "serialize_xi_payload",
+        lambda _q, _scales, *, coder: (
+            b"XIP2" + bytes([0]) + b"r"
+            if coder == "none"
+            else b"XIP2" + bytes([1]) + b"delta-is-longer"
+        ),
+    )
+    oracle = subject.ExactCompleteArchiveRateOracleV1(
+        semantic_variants=(
+            (
+                subject.Y1WireCodecV1.RAW_I16_LE,
+                b"raw-semantic",
+                _sha("raw-binding"),
+            ),
+            (
+                subject.Y1WireCodecV1.DELTA_RICE_BEST_K,
+                b"rice-semantic",
+                _sha("rice-binding"),
+            ),
+        ),
+        pitch=0.0,
+    )
+    xip2, _packet, _archive, selected, alternatives = oracle.materialize(
+        q=q,
+        scales=scales,
+    )
+    assert len(alternatives) == 8
+    assert {row.xip2_coder for row in alternatives} == {"none", "delta_ar"}
+    assert selected.xip2_coder == "none"
+    assert xip2[4] == 0
+
+
 def _population_config(
     tmp_path: Path,
     *,
@@ -290,6 +403,60 @@ def test_defer_g115_wire_qat_is_not_misread_as_pose_eligible() -> None:
         population._exact_prepose_coordinates(row)
 
 
+def test_terminal_g115_exact_open_child_is_pose_eligible(
+    tmp_path: Path,
+) -> None:
+    denominator = population.EXACT_SEG_PIXEL_DENOMINATOR
+    base_disagreements = 300_000
+    terminal_disagreements = 100_000
+    target_numerator = 43
+    target_denominator = 250
+    lhs = 100 * base_disagreements * target_denominator
+    rhs = target_numerator * denominator
+    physical_sha = _sha("terminal-physical-stage")
+    terminal_receipt = tmp_path / "g115_terminal_receipt.json"
+    terminal_receipt.write_text("terminal", encoding="ascii")
+    row = {
+        "public_wire_seg": {
+            "disagreement_pixels": base_disagreements,
+            "pixel_denominator": denominator,
+            "d_seg_rational": {
+                "numerator": base_disagreements,
+                "denominator": denominator,
+            },
+            "d_seg_display_float": base_disagreements / denominator,
+            "measurement_identity_sha256": _sha("measurement"),
+        },
+        "live_target": {
+            "score_decimal": "0.172",
+            "score_rational": {
+                "numerator": target_numerator,
+                "denominator": target_denominator,
+            },
+            "pointer_snapshot_identity_sha256": _sha("pointer"),
+            "postverified_pointer_identity_sha256": _sha("postverified"),
+        },
+        "prepose_obstruction": {
+            "rule": population._EXACT_OBSTRUCTION_RULE,
+            "lhs": str(lhs),
+            "rhs": str(rhs),
+            "strict_distortion_open": False,
+            "disposition": population.G121_RETAIN_DISPOSITION,
+        },
+        "physical_stage_identity_sha256": physical_sha,
+        "g115_qat": {
+            "status": "terminal_stage_measured",
+            "terminal_stage_physical_identity_sha256": physical_sha,
+            "disagreement_pixels": terminal_disagreements,
+            "pixel_denominator": denominator,
+            "receipt": _binding(terminal_receipt),
+        },
+    }
+    coordinates = population._exact_prepose_coordinates(row)
+    assert coordinates[0] == terminal_disagreements
+    assert coordinates[2] == terminal_disagreements / denominator
+
+
 def test_public_population_config_refuses_semantic_best(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -407,6 +574,7 @@ def test_final_checkpoint_and_run_receipt_are_accepted_by_g110(
                 custody=custody,
                 q_levels=32,
                 xi_eff=xi_eff,
+                selected_xip2_coder="delta_ar",
             )
         ),
     )
@@ -435,6 +603,8 @@ def test_final_checkpoint_and_run_receipt_are_accepted_by_g110(
         "target_projection_sha256": hashes["projection"],
         "target_capsule_receipt_sha256": hashes["capsule"],
         "pose_targets_sha256": hashes["pose-targets"],
+        "selected_xip2_coder": "delta_ar",
+        "g110_selected_xip2_coder_abi_closed": True,
         "exact_public_receiver_in_loop": True,
         "resumable_from_disk": True,
         "stage_checkpoints_preserved": True,
@@ -451,7 +621,9 @@ def test_final_checkpoint_and_run_receipt_are_accepted_by_g110(
 
     reopened = g110._verify_post_g105_refit(
         checkpoint=checkpoint,
+        expected_checkpoint_sha256=subject.sha256_file(checkpoint),
         run_receipt=run_path,
+        expected_run_receipt_sha256=subject.sha256_file(run_path),
         base_custody=base,
         initializer=initializer,
         semantic_packet=semantic_packet,

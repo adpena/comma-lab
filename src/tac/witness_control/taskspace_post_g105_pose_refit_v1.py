@@ -84,7 +84,6 @@ from tac.witness_dsl.taskspace_g110_generated_y1_pose_product_v1 import (
     POST_G105_REFIT_RUN_SCHEMA,
     RENDER_ORDER,
     SOURCE_DOMAIN,
-    G110CompleteArchiveWireCandidateV1,
     G110G112CompileCustodyV1,
     _build_g110_archive_for_method,
     _final_y1_binding_from_population,
@@ -114,6 +113,9 @@ CANDIDATE_SCHEMA: Final = "tac.post_g105_generated_y1_pose_refit_candidate.v1"
 AUDIT_SCHEMA: Final = "tac.post_g105_generated_y1_pose_refit_audit.v1"
 BLOCKER_SCHEMA: Final = "tac.post_g105_generated_y1_pose_refit_blocker.v1"
 GLOBAL_RANGE_BLOCKER_SCHEMA: Final = "tac.post_g105_generated_y1_pose_refit_global_range_reactivation_blocker.v1"
+XIP2_WIRE_MATRIX_CLOSURE_SCHEMA: Final = (
+    "tac.post_g105_generated_y1_pose_refit_xip2_wire_matrix_closure.v1"
+)
 OPTIMIZER_VERDICT_SCOPE: Final = "fixed_extremum_gauge_integer_q_local_formulation"
 PAIR_COUNT: Final = PRODUCTION_PAIR_COUNT
 BATCH_PAIRS: Final = PRODUCTION_BATCH_PAIRS
@@ -198,8 +200,14 @@ _CANDIDATE_RECEIPT_MEMBERS: Final = frozenset(
         "product_packet_bytes",
         "product_packet_sha256",
         "selected_y1_wire_codec",
+        "selected_xip2_coder",
         "selected_outer_zip_method",
         "complete_archive_wire_candidates",
+        "g110_selected_xip2_coder_abi_closed",
+        "xip2_wire_matrix_closure",
+        "global_wire_winner_xip2_coder",
+        "global_wire_winner_archive_bytes",
+        "global_wire_winner_archive_sha256",
         "selection_objective_pose_plus_rate",
         "rate_term",
         "accepted_rows",
@@ -280,6 +288,27 @@ def global_range_reactivation_blocker() -> dict[str, object]:
         ),
         "candidate_result_valid_within_scope": True,
         "global_optimality_claim": False,
+    }
+
+
+def xip2_wire_matrix_closure(*, selected_xip2_coder: str) -> dict[str, object]:
+    """Bind the globally selected XIP2 coder through the G119/G110 ABI."""
+
+    if selected_xip2_coder not in {"none", "delta_ar"}:
+        raise PostG105PoseRefitError("selected XIP2 coder is not public-wire supported")
+
+    return {
+        "schema": XIP2_WIRE_MATRIX_CLOSURE_SCHEMA,
+        "measured_matrix": (
+            "2_semantic_y1_codecs_x_2_xip2_coders_x_2_outer_zip_methods"
+        ),
+        "public_receiver_supported_xip2_coders": ["none", "delta_ar"],
+        "selected_xip2_coder": selected_xip2_coder,
+        "global_wire_winner_selected": True,
+        "selected_coder_carried_in_final_checkpoint": True,
+        "selected_coder_carried_in_run_receipt": True,
+        "g110_compile_selected_xip2_coder_abi_closed": True,
+        "blocked_claim": None,
     }
 
 
@@ -633,6 +662,23 @@ def open_custody(config: PostG105PoseRefitConfigV1) -> PostG105RefitCustodyV1:
 
 
 @dataclass(frozen=True, slots=True)
+class G119CompleteArchiveWireCandidateV1:
+    """One exact semantic/XIP2/outer-ZIP candidate measured by G119."""
+
+    y1_wire_codec: Y1WireCodecV1
+    xip2_coder: str
+    outer_zip_method: object
+    semantic_packet_bytes: int
+    semantic_packet_sha256: str
+    xip2_bytes: int
+    xip2_sha256: str
+    product_packet_bytes: int
+    product_packet_sha256: str
+    archive_bytes: int
+    archive_sha256: str
+
+
+@dataclass(frozen=True, slots=True)
 class ExactCompleteArchiveRateOracleV1:
     """Prepared exact G110 wire/ZIP matrix with semantic rendering cached."""
 
@@ -678,48 +724,61 @@ class ExactCompleteArchiveRateOracleV1:
         bytes,
         bytes,
         bytes,
-        G110CompleteArchiveWireCandidateV1,
-        tuple[G110CompleteArchiveWireCandidateV1, ...],
+        G119CompleteArchiveWireCandidateV1,
+        tuple[G119CompleteArchiveWireCandidateV1, ...],
     ]:
-        """Return exact selected XIP2, packet, archive, and full wire matrix."""
+        """Return the global wire winner plus the full 2x2x2 matrix."""
 
-        xip2 = serialize_xi_payload(q, scales, coder="delta_ar")
-        artifacts: list[tuple[bytes, bytes]] = []
-        records: list[G110CompleteArchiveWireCandidateV1] = []
+        artifacts: list[tuple[bytes, bytes, bytes]] = []
+        records: list[G119CompleteArchiveWireCandidateV1] = []
+        xip2_payloads = tuple(
+            (coder, serialize_xi_payload(q, scales, coder=coder))
+            for coder in ("none", "delta_ar")
+        )
         for codec, semantic_packet, binding in self.semantic_variants:
-            packet = _encode_g110_packet(
-                semantic_packet=semantic_packet,
-                final_y1_binding=binding,
-                xip2_payload=xip2,
-                pitch=self.pitch,
-            )
-            parsed = parse_g110_generated_y1_pose_v1(packet)
-            if (
-                parsed.semantic_packet != semantic_packet
-                or parsed.final_y1_binding_sha256 != binding
-                or not np.array_equal(parsed.q, q)
-                or not np.array_equal(parsed.scales, scales)
-            ):
-                raise PostG105PoseRefitError("prepared complete packet changes shipped XIP2/Y1 operands")
-            for method in _OUTER_ZIP_METHODS:
-                archive = _build_g110_archive_for_method(packet, method)
-                reopened_packet, reopened_method = _read_g110_archive_member(archive)
-                if reopened_packet != packet or reopened_method is not method:
-                    raise PostG105PoseRefitError("prepared complete archive changes under parse-back")
-                records.append(
-                    G110CompleteArchiveWireCandidateV1(
-                        y1_wire_codec=codec,
-                        outer_zip_method=method,
-                        semantic_packet_bytes=len(semantic_packet),
-                        semantic_packet_sha256=_sha256(semantic_packet),
-                        product_packet_bytes=len(packet),
-                        product_packet_sha256=_sha256(packet),
-                        archive_bytes=len(archive),
-                        archive_sha256=_sha256(archive),
-                    )
+            for xip2_coder, xip2 in xip2_payloads:
+                packet = _encode_g110_packet(
+                    semantic_packet=semantic_packet,
+                    final_y1_binding=binding,
+                    xip2_payload=xip2,
+                    pitch=self.pitch,
                 )
-                artifacts.append((packet, archive))
-        expected = len(Y1WireCodecV1) * len(_OUTER_ZIP_METHODS)
+                parsed = parse_g110_generated_y1_pose_v1(packet)
+                if (
+                    parsed.semantic_packet != semantic_packet
+                    or parsed.final_y1_binding_sha256 != binding
+                    or not np.array_equal(parsed.q, q)
+                    or not np.array_equal(parsed.scales, scales)
+                    or (xip2_coder == "none" and xip2[4] != 0)
+                    or (xip2_coder == "delta_ar" and xip2[4] != 1)
+                ):
+                    raise PostG105PoseRefitError(
+                        "prepared complete packet changes shipped XIP2/Y1 operands"
+                    )
+                for method in _OUTER_ZIP_METHODS:
+                    archive = _build_g110_archive_for_method(packet, method)
+                    reopened_packet, reopened_method = _read_g110_archive_member(archive)
+                    if reopened_packet != packet or reopened_method is not method:
+                        raise PostG105PoseRefitError(
+                            "prepared complete archive changes under parse-back"
+                        )
+                    records.append(
+                        G119CompleteArchiveWireCandidateV1(
+                            y1_wire_codec=codec,
+                            xip2_coder=xip2_coder,
+                            outer_zip_method=method,
+                            semantic_packet_bytes=len(semantic_packet),
+                            semantic_packet_sha256=_sha256(semantic_packet),
+                            xip2_bytes=len(xip2),
+                            xip2_sha256=_sha256(xip2),
+                            product_packet_bytes=len(packet),
+                            product_packet_sha256=_sha256(packet),
+                            archive_bytes=len(archive),
+                            archive_sha256=_sha256(archive),
+                        )
+                    )
+                    artifacts.append((xip2, packet, archive))
+        expected = len(Y1WireCodecV1) * 2 * len(_OUTER_ZIP_METHODS)
         if len(records) != expected:
             raise AssertionError("prepared complete archive matrix is incomplete")
         selected_index = min(
@@ -727,13 +786,14 @@ class ExactCompleteArchiveRateOracleV1:
             key=lambda index: (
                 records[index].archive_bytes,
                 int(records[index].y1_wire_codec),
+                records[index].xip2_coder,
                 int(records[index].outer_zip_method),
                 records[index].archive_sha256,
             ),
         )
-        selected_packet, selected_archive = artifacts[selected_index]
+        selected_xip2, selected_packet, selected_archive = artifacts[selected_index]
         return (
-            xip2,
+            selected_xip2,
             selected_packet,
             selected_archive,
             records[selected_index],
@@ -857,6 +917,59 @@ class ExactBatch16PoseOracleV1:
             "torch_rng_state_u8": np.ascontiguousarray(cpu),
             "torch_cuda_rng_states_u8": np.ascontiguousarray(cuda),
         }
+
+    def pose_losses(
+        self,
+        pose_outputs: np.ndarray,
+        pose_targets: np.ndarray,
+    ) -> np.ndarray:
+        """Mirror upstream PoseNet's float32 per-pair MSE reduction."""
+
+        outputs = np.asarray(pose_outputs)
+        targets = np.asarray(pose_targets)
+        if (
+            outputs.shape != targets.shape
+            or outputs.ndim != 2
+            or outputs.shape[1] != POSE_DIM
+            or not np.all(np.isfinite(outputs))
+            or not np.all(np.isfinite(targets))
+        ):
+            raise PostG105PoseRefitError("PoseNet loss operands differ")
+        output_tensor = self.torch.from_numpy(
+            np.ascontiguousarray(outputs, dtype=np.float32)
+        ).to(self.device)
+        target_tensor = self.torch.from_numpy(
+            np.ascontiguousarray(targets, dtype=np.float32)
+        ).to(self.device)
+        with self.torch.inference_mode():
+            losses = (output_tensor - target_tensor).pow(2).mean(dim=1)
+        result = np.ascontiguousarray(
+            losses.detach().to(device="cpu", dtype=self.torch.float64).numpy(),
+            dtype=np.float64,
+        )
+        if result.shape != (outputs.shape[0],) or not np.all(np.isfinite(result)):
+            raise PostG105PoseRefitError("PoseNet loss reduction returned invalid values")
+        return result
+
+    def population_mse(self, pose_losses: np.ndarray) -> float:
+        """Mirror evaluate.py's chronological float32 batch accumulation."""
+
+        losses = np.asarray(pose_losses)
+        if losses.shape != (PAIR_COUNT,) or not np.all(np.isfinite(losses)) or np.any(losses < 0.0):
+            raise PostG105PoseRefitError("PoseNet population losses differ")
+        accumulator = self.torch.zeros([], device=self.device, dtype=self.torch.float32)
+        with self.torch.inference_mode():
+            for start in range(0, PAIR_COUNT, BATCH_PAIRS):
+                stop = min(start + BATCH_PAIRS, PAIR_COUNT)
+                batch = self.torch.from_numpy(
+                    np.ascontiguousarray(losses[start:stop], dtype=np.float32)
+                ).to(self.device)
+                accumulator += batch.sum()
+            value = (accumulator / PAIR_COUNT).detach().to(device="cpu").item()
+        result = float(value)
+        if not math.isfinite(result) or result < 0.0:
+            raise PostG105PoseRefitError("PoseNet population reduction returned invalid value")
+        return result
 
     def restore_rng(self, arrays: Mapping[str, np.ndarray]) -> None:
         cpu = np.asarray(arrays["torch_rng_state_u8"], dtype=np.uint8)
@@ -1281,6 +1394,23 @@ def _load_latest_state(
         or controller["attempted_rows"] < controller["accepted_rows"]
     ):
         raise PostG105PoseRefitError("resume controller/cursor state differs")
+    measured_outputs, measured_losses = _measure_q_population(
+        q=q,
+        scales=scales,
+        custody=custody,
+        oracle=oracle,
+    )
+    compared_stop = next_pair if stage == 0 else PAIR_COUNT
+    if not np.array_equal(
+        outputs[:compared_stop],
+        measured_outputs[:compared_stop],
+    ) or not np.array_equal(
+        losses[:compared_stop],
+        measured_losses[:compared_stop],
+    ):
+        raise PostG105PoseRefitError(
+            "resume state PoseNet outputs/losses were not reproduced from physical q"
+        )
     return (
         _SolverState(
             q_levels=q_levels,
@@ -1288,8 +1418,8 @@ def _load_latest_state(
             next_pair=next_pair,
             q=np.ascontiguousarray(q),
             scales=np.ascontiguousarray(scales),
-            pose_outputs=np.ascontiguousarray(outputs),
-            pose_losses=np.ascontiguousarray(losses),
+            pose_outputs=measured_outputs,
+            pose_losses=measured_losses,
             accepted_rows=int(controller["accepted_rows"]),
             attempted_rows=int(controller["attempted_rows"]),
         ),
@@ -1368,9 +1498,50 @@ def _baseline_batch(
         scales=state.scales,
         pitch=float(custody.base.pose_initializer.pitch),
     )
-    residual = predicted - custody.pose_targets[start:stop].astype(np.float64)
     state.pose_outputs[start:stop] = predicted
-    state.pose_losses[start:stop] = np.mean(residual * residual, axis=1)
+    state.pose_losses[start:stop] = oracle.pose_losses(
+        predicted,
+        custody.pose_targets[start:stop],
+    )
+
+
+def _measure_q_population(
+    *,
+    q: np.ndarray,
+    scales: np.ndarray,
+    custody: PostG105RefitCustodyV1,
+    oracle: ExactBatch16PoseOracleV1,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Rerun all physical PoseNet batches before trusting persisted state."""
+
+    values = np.asarray(q)
+    scale_values = np.asarray(scales)
+    if (
+        values.dtype != np.int16
+        or values.shape != (PAIR_COUNT, POSE_DIM)
+        or scale_values.dtype != np.float32
+        or scale_values.shape != (POSE_DIM,)
+    ):
+        raise PostG105PoseRefitError("PoseNet population remeasurement operands differ")
+    outputs = np.empty((PAIR_COUNT, POSE_DIM), dtype=np.float64)
+    losses = np.empty((PAIR_COUNT,), dtype=np.float64)
+    for start in range(0, PAIR_COUNT, BATCH_PAIRS):
+        stop = min(start + BATCH_PAIRS, PAIR_COUNT)
+        y1 = _render_camera_y1_batch(custody.provider, start=start, stop=stop)
+        predicted = _predict_for_q_batch(
+            oracle,
+            y1,
+            pair_start=start,
+            q_batch=values[start:stop],
+            scales=scale_values,
+            pitch=float(custody.base.pose_initializer.pitch),
+        )
+        outputs[start:stop] = predicted
+        losses[start:stop] = oracle.pose_losses(
+            predicted,
+            custody.pose_targets[start:stop],
+        )
+    return np.ascontiguousarray(outputs), np.ascontiguousarray(losses)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1386,6 +1557,7 @@ def _pose_rate_key(
     pose_losses: np.ndarray,
     archive_bytes: int,
     proposal_order: int,
+    pose_mse: float | None = None,
 ) -> tuple[float, int, float, int]:
     losses = np.asarray(pose_losses, dtype=np.float64)
     if (
@@ -1398,9 +1570,51 @@ def _pose_rate_key(
         or proposal_order < 0
     ):
         raise PostG105PoseRefitError("score-native pose/rate proposal operands differ")
-    pose_mse = float(np.mean(losses, dtype=np.float64))
-    objective = math.sqrt(10.0 * pose_mse) + 25.0 * archive_bytes / ARCHIVE_DENOMINATOR_BYTES
-    return objective, archive_bytes, pose_mse, proposal_order
+    measured_pose_mse = (
+        float(np.mean(losses, dtype=np.float64))
+        if pose_mse is None
+        else float(pose_mse)
+    )
+    if not math.isfinite(measured_pose_mse) or measured_pose_mse < 0.0:
+        raise PostG105PoseRefitError("score-native PoseNet population MSE differs")
+    objective = (
+        math.sqrt(10.0 * measured_pose_mse)
+        + 25.0 * archive_bytes / ARCHIVE_DENOMINATOR_BYTES
+    )
+    return objective, archive_bytes, measured_pose_mse, proposal_order
+
+
+def solver_work_estimate(config: PostG105PoseRefitConfigV1) -> dict[str, object]:
+    """Return the exact static n600 work count owed before a heavy launch."""
+
+    batches = math.ceil(PAIR_COUNT / BATCH_PAIRS)
+    line_count = len(config.line_search_scales)
+    q_count = len(config.q_levels_candidates)
+    pose_batch_forwards = q_count * batches * (
+        1 + config.local_gauss_newton_stages * (2 * POSE_DIM + line_count)
+    )
+    archive_materializations = q_count * (
+        config.local_gauss_newton_stages * batches * (2 * line_count + 2)
+        + 1
+    )
+    return {
+        "pair_count": PAIR_COUNT,
+        "batch_pairs": BATCH_PAIRS,
+        "chronological_batches": batches,
+        "q_level_candidates": q_count,
+        "gauss_newton_stages": config.local_gauss_newton_stages,
+        "line_search_scales": line_count,
+        "pose_batch_forwards": pose_batch_forwards,
+        "complete_archive_materializations": archive_materializations,
+        "wire_candidates_per_materialization": 8,
+        "outer_zip_builds": archive_materializations * 8,
+        "measured_seconds_per_pose_batch_forward": None,
+        "measured_seconds_per_archive_materialization": None,
+        "timing_smoke_required_before_heavy_launch": True,
+        "timing_smoke_authority": (
+            "same device, exact batch16 PoseNet, exact 2x2x2 archive matrix"
+        ),
+    }
 
 
 def _local_inverse_batch(
@@ -1504,8 +1718,7 @@ def _local_inverse_batch(
             scales=state.scales,
             pitch=float(custody.base.pose_initializer.pitch),
         )
-        residual = output - targets
-        losses = np.mean(residual * residual, axis=1)
+        losses = oracle.pose_losses(output, targets)
         proposals.append(
             _BatchProposalV1(
                 label=f"line_{line_index:02d}_all",
@@ -1585,6 +1798,7 @@ def _local_inverse_batch(
                     pose_losses=full_losses,
                     archive_bytes=len(archive),
                     proposal_order=proposal_order,
+                    pose_mse=oracle.population_mse(full_losses),
                 ),
                 proposal,
             )
@@ -1618,6 +1832,7 @@ def _candidate_receipt(
     *,
     config: PostG105PoseRefitConfigV1,
     custody: PostG105RefitCustodyV1,
+    oracle: ExactBatch16PoseOracleV1,
     archive_oracle: ExactCompleteArchiveRateOracleV1,
     state: _SolverState,
     anchors: np.ndarray,
@@ -1643,7 +1858,7 @@ def _candidate_receipt(
         q=state.q,
         scales=state.scales,
     )
-    pose_mse = float(np.mean(state.pose_losses, dtype=np.float64))
+    pose_mse = oracle.population_mse(state.pose_losses)
     pose_term = math.sqrt(10.0 * pose_mse)
     rate_term = 25.0 * len(archive) / ARCHIVE_DENOMINATOR_BYTES
     state_path = _candidate_state_path(config.output_root, state.q_levels)
@@ -1669,9 +1884,12 @@ def _candidate_receipt(
     alternatives_rows = [
         {
             "y1_wire_codec": row.y1_wire_codec.name,
+            "xip2_coder": row.xip2_coder,
             "outer_zip_method": row.outer_zip_method.name,
             "semantic_packet_bytes": row.semantic_packet_bytes,
             "semantic_packet_sha256": row.semantic_packet_sha256,
+            "xip2_bytes": row.xip2_bytes,
+            "xip2_sha256": row.xip2_sha256,
             "product_packet_bytes": row.product_packet_bytes,
             "product_packet_sha256": row.product_packet_sha256,
             "archive_bytes": row.archive_bytes,
@@ -1679,6 +1897,18 @@ def _candidate_receipt(
         }
         for row in alternatives
     ]
+    global_wire_winner = min(
+        alternatives,
+        key=lambda row: (
+            row.archive_bytes,
+            int(row.y1_wire_codec),
+            row.xip2_coder,
+            int(row.outer_zip_method),
+            row.archive_sha256,
+        ),
+    )
+    if global_wire_winner != selected:
+        raise AssertionError("selected complete archive is not the global wire winner")
     body: dict[str, object] = {
         "schema": CANDIDATE_SCHEMA,
         "run_id": config.run_id,
@@ -1704,8 +1934,16 @@ def _candidate_receipt(
         "product_packet_bytes": len(packet),
         "product_packet_sha256": _sha256(packet),
         "selected_y1_wire_codec": selected.y1_wire_codec.name,
+        "selected_xip2_coder": selected.xip2_coder,
         "selected_outer_zip_method": selected.outer_zip_method.name,
         "complete_archive_wire_candidates": alternatives_rows,
+        "g110_selected_xip2_coder_abi_closed": True,
+        "xip2_wire_matrix_closure": xip2_wire_matrix_closure(
+            selected_xip2_coder=selected.xip2_coder,
+        ),
+        "global_wire_winner_xip2_coder": global_wire_winner.xip2_coder,
+        "global_wire_winner_archive_bytes": global_wire_winner.archive_bytes,
+        "global_wire_winner_archive_sha256": global_wire_winner.archive_sha256,
         "selection_objective_pose_plus_rate": pose_term + rate_term,
         "rate_term": rate_term,
         "accepted_rows": state.accepted_rows,
@@ -1785,6 +2023,8 @@ def _load_candidate_receipt(
     *,
     config: PostG105PoseRefitConfigV1,
     custody: PostG105RefitCustodyV1,
+    oracle: ExactBatch16PoseOracleV1,
+    archive_oracle: ExactCompleteArchiveRateOracleV1,
     q_levels: int,
 ) -> dict[str, object] | None:
     path = _candidate_receipt_path(config.output_root, q_levels)
@@ -1809,6 +2049,11 @@ def _load_candidate_receipt(
         or value.get("global_xip2_range_optimality_claim") is not False
         or value.get("global_range_reactivation_required") is not True
         or value.get("global_range_reactivation_blocker") != global_range_reactivation_blocker()
+        or value.get("selected_xip2_coder") not in {"none", "delta_ar"}
+        or value.get("g110_selected_xip2_coder_abi_closed") is not True
+        or type(value.get("xip2_wire_matrix_closure")) is not dict
+        or value["xip2_wire_matrix_closure"].get("schema")
+        != XIP2_WIRE_MATRIX_CLOSURE_SCHEMA
         or _sha256(_canonical_json({key: item for key, item in value.items() if key != "candidate_receipt_sha256"}))
         != value.get("candidate_receipt_sha256")
     ):
@@ -1817,11 +2062,86 @@ def _load_candidate_receipt(
         value.get("candidate_state"),
         name="candidate state",
     )
-    _open_candidate_state(
+    arrays = _open_candidate_state(
         state_binding=state_binding,
         config=config,
         q_levels=q_levels,
     )
+    q = np.ascontiguousarray(arrays["q"], dtype=np.int16)
+    scales = np.ascontiguousarray(arrays["scales"], dtype=np.float32)
+    measured_outputs, measured_losses = _measure_q_population(
+        q=q,
+        scales=scales,
+        custody=custody,
+        oracle=oracle,
+    )
+    if not np.array_equal(arrays["pose_outputs"], measured_outputs) or not np.array_equal(
+        arrays["pose_losses"],
+        measured_losses,
+    ):
+        raise PostG105PoseRefitError(
+            "candidate receipt PoseNet outputs/losses were not reproduced from physical q"
+        )
+    xip2, packet, archive, selected, alternatives = archive_oracle.materialize(
+        q=q,
+        scales=scales,
+    )
+    alternative_rows = [
+        {
+            "y1_wire_codec": row.y1_wire_codec.name,
+            "xip2_coder": row.xip2_coder,
+            "outer_zip_method": row.outer_zip_method.name,
+            "semantic_packet_bytes": row.semantic_packet_bytes,
+            "semantic_packet_sha256": row.semantic_packet_sha256,
+            "xip2_bytes": row.xip2_bytes,
+            "xip2_sha256": row.xip2_sha256,
+            "product_packet_bytes": row.product_packet_bytes,
+            "product_packet_sha256": row.product_packet_sha256,
+            "archive_bytes": row.archive_bytes,
+            "archive_sha256": row.archive_sha256,
+        }
+        for row in alternatives
+    ]
+    global_wire_winner = min(
+        alternatives,
+        key=lambda row: (
+            row.archive_bytes,
+            int(row.y1_wire_codec),
+            row.xip2_coder,
+            int(row.outer_zip_method),
+            row.archive_sha256,
+        ),
+    )
+    pose_mse = oracle.population_mse(measured_losses)
+    pose_term = math.sqrt(10.0 * pose_mse)
+    rate_term = 25.0 * len(archive) / ARCHIVE_DENOMINATOR_BYTES
+    exact_fields = {
+        "xi_eff_sha256": _xi_digest(arrays["xi_eff"]),
+        "xip2_bytes": len(xip2),
+        "xip2_sha256": _sha256(xip2),
+        "pose_mse": pose_mse,
+        "pose_term": pose_term,
+        "complete_archive_bytes": len(archive),
+        "complete_archive_sha256": _sha256(archive),
+        "product_packet_bytes": len(packet),
+        "product_packet_sha256": _sha256(packet),
+        "selected_y1_wire_codec": selected.y1_wire_codec.name,
+        "selected_xip2_coder": selected.xip2_coder,
+        "selected_outer_zip_method": selected.outer_zip_method.name,
+        "complete_archive_wire_candidates": alternative_rows,
+        "selection_objective_pose_plus_rate": pose_term + rate_term,
+        "rate_term": rate_term,
+        "xip2_wire_matrix_closure": xip2_wire_matrix_closure(
+            selected_xip2_coder=global_wire_winner.xip2_coder,
+        ),
+        "global_wire_winner_xip2_coder": global_wire_winner.xip2_coder,
+        "global_wire_winner_archive_bytes": global_wire_winner.archive_bytes,
+        "global_wire_winner_archive_sha256": global_wire_winner.archive_sha256,
+    }
+    if any(value.get(name) != expected for name, expected in exact_fields.items()):
+        raise PostG105PoseRefitError(
+            "candidate receipt PoseNet/archive measurement was not physically reproduced"
+        )
     return value
 
 
@@ -1836,6 +2156,8 @@ def _run_one_q_level(
     existing = _load_candidate_receipt(
         config=config,
         custody=custody,
+        oracle=oracle,
+        archive_oracle=archive_oracle,
         q_levels=q_levels,
     )
     if existing is not None:
@@ -1903,6 +2225,7 @@ def _run_one_q_level(
     receipt = _candidate_receipt(
         config=config,
         custody=custody,
+        oracle=oracle,
         archive_oracle=archive_oracle,
         state=state,
         anchors=anchors,
@@ -1933,8 +2256,11 @@ def _final_checkpoint_arrays(
     custody: PostG105RefitCustodyV1,
     q_levels: int,
     xi_eff: np.ndarray,
+    selected_xip2_coder: str,
 ) -> dict[str, np.ndarray]:
     base = custody.base
+    if selected_xip2_coder not in {"none", "delta_ar"}:
+        raise PostG105PoseRefitError("final checkpoint XIP2 coder differs")
     return {
         "schema": np.asarray(POST_G105_REFIT_CHECKPOINT_SCHEMA),
         "run_id": np.asarray(config.run_id),
@@ -1959,6 +2285,7 @@ def _final_checkpoint_arrays(
         "exact_public_receiver_in_loop": np.asarray(1, dtype=np.int8),
         "pitch": np.asarray(base.pose_initializer.pitch, dtype=np.float64),
         "q_levels": np.asarray(q_levels, dtype=np.int64),
+        "selected_xip2_coder": np.asarray(selected_xip2_coder),
         "xi_eff": np.ascontiguousarray(xi_eff, dtype=np.float64),
     }
 
@@ -1974,6 +2301,8 @@ class PostG105PoseRefitResultV1:
     selected_pose_mse: float
     selected_archive_bytes: int
     selected_archive_sha256: str
+    selected_xip2_coder: str
+    xip2_wire_matrix_closure: dict[str, object]
 
 
 def run_post_g105_pose_refit(
@@ -2008,6 +2337,7 @@ def run_post_g105_pose_refit(
         "resumable_from_disk": True,
         "periodic_checkpoint_every_pairs": BATCH_PAIRS,
         "stage_checkpoints_preserved": True,
+        "static_work_estimate": solver_work_estimate(config),
         "success_scratch_auto_cleaned": True,
         "research_only": True,
         "candidate_claim": False,
@@ -2047,6 +2377,9 @@ def run_post_g105_pose_refit(
         name="selected candidate state",
     )
     q_levels = int(selected["q_levels"])
+    selected_xip2_coder = str(selected["selected_xip2_coder"])
+    if selected_xip2_coder not in {"none", "delta_ar"}:
+        raise PostG105PoseRefitError("selected candidate XIP2 coder differs")
     selected_state = _open_candidate_state(
         state_binding=selected_state_binding,
         config=config,
@@ -2072,6 +2405,7 @@ def run_post_g105_pose_refit(
                 custody=custody,
                 q_levels=q_levels,
                 xi_eff=xi_eff,
+                selected_xip2_coder=selected_xip2_coder,
             )
         ),
     )
@@ -2110,6 +2444,8 @@ def run_post_g105_pose_refit(
         "target_projection_sha256": base.target_projection_sha256,
         "target_capsule_receipt_sha256": (base.target_capsule_receipt_sha256),
         "pose_targets_sha256": base.pose_targets_sha256,
+        "selected_xip2_coder": selected_xip2_coder,
+        "g110_selected_xip2_coder_abi_closed": True,
         "exact_public_receiver_in_loop": True,
         "resumable_from_disk": True,
         "stage_checkpoints_preserved": True,
@@ -2138,6 +2474,13 @@ def run_post_g105_pose_refit(
         "global_xip2_range_optimality_claim": False,
         "global_range_reactivation_required": True,
         "global_range_reactivation_blocker": global_range_reactivation_blocker(),
+        "static_work_estimate": solver_work_estimate(config),
+        "xip2_wire_matrix": (
+            "2_semantic_y1_codecs_x_2_xip2_coders_x_2_outer_zip_methods"
+        ),
+        "selected_xip2_coder": selected_xip2_coder,
+        "g110_selected_xip2_coder_abi_closed": True,
+        "xip2_wire_matrix_closure": selected["xip2_wire_matrix_closure"],
         "candidate_rows": [
             _output_binding(
                 _candidate_receipt_path(
@@ -2180,6 +2523,8 @@ def run_post_g105_pose_refit(
         selected_pose_mse=float(selected["pose_mse"]),
         selected_archive_bytes=int(selected["complete_archive_bytes"]),
         selected_archive_sha256=str(selected["complete_archive_sha256"]),
+        selected_xip2_coder=selected_xip2_coder,
+        xip2_wire_matrix_closure=dict(selected["xip2_wire_matrix_closure"]),
     )
 
 
@@ -2234,7 +2579,9 @@ __all__ = [
     "POST_G105_REFIT_CHECKPOINT_SCHEMA",
     "POST_G105_REFIT_RUN_SCHEMA",
     "STATE_SCHEMA",
+    "XIP2_WIRE_MATRIX_CLOSURE_SCHEMA",
     "ExactBatch16PoseOracleV1",
+    "G119CompleteArchiveWireCandidateV1",
     "PostG105PoseRefitConfigV1",
     "PostG105PoseRefitError",
     "PostG105PoseRefitResultV1",
@@ -2245,5 +2592,7 @@ __all__ = [
     "open_custody",
     "run_post_g105_pose_refit",
     "seal_config",
+    "solver_work_estimate",
     "write_blocker_receipt",
+    "xip2_wire_matrix_closure",
 ]
