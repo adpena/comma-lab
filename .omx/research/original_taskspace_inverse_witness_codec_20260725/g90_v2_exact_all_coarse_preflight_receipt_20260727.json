@@ -1,0 +1,101 @@
+{
+  "schema": "tac.g90_v2_exact_all_coarse_preflight_handoff.v1",
+  "receipt_self_hash": "09b1f2185935501fab7daa9a4c3e59a7b9b4666442bfb33cde452a33e08ed328",
+  "created_utc": "2026-07-27T07:55:41Z",
+  "status": "PREFLIGHT_CLOSED_LAUNCH_AWAITING_ROOT_REVIEW",
+  "candidate_claim": false,
+  "score_claim": false,
+  "pointer_moved": false,
+  "effective_frontier": 0.172,
+  "research_only": true,
+  "encoder_only": true,
+  "v1_terminal": {
+    "receipt_path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/g90_projected_population_costates_receipt_20260727.json",
+    "receipt_file_bytes": 18033,
+    "receipt_file_sha256": "fc7c45a6663ec70b1918c3edef94c6bc2a5c4f8a2a9654e51ebf8984d86ec3f0",
+    "receipt_self_hash": "45f361d883ab6297e6139ef8850526bfc9757a1ce0e571a88d9a3697f484862a",
+    "status": "V1_TERMINAL_FAIL_CLOSED_SIX_BATCHES_STAGE0_INCOMPLETE",
+    "sealed_pair_range": [
+      0,
+      96
+    ],
+    "sealed_batch_count": 6,
+    "terminal_blocker_path": "/Volumes/VertigoDataTier/pact/taskspace_projected_population_costates_n600_20260727_r1/blocker_receipt_c7095d792afe.json",
+    "terminal_blocker_file_sha256": "85090243f9b2d7603faa6c55d2c5671e31a43c763e60d1d631466292d1440be8",
+    "terminal_blocker_self_sha256": "c7095d792afe9d9f773146bba607a2aa295c47b0a98e61eaab837440f656982b",
+    "terminal_finding": "one pair-100 boundary cell differs between inference authority and autograd surface at a 7.152557373046875e-7 top-two margin",
+    "stage_receipt_emitted": false,
+    "aggregate_receipt_emitted": false
+  },
+  "v2_contract": {
+    "inference_cells_separate_from_differentiable_cells": true,
+    "inference_pose_targets_and_base_mse_separate_from_differentiable_pose": true,
+    "tie_drift_annotated": true,
+    "authority_surfaces_drive_exact_replay": true,
+    "semantic_family_coordinate_count": 8,
+    "physical_group_count_policy": "VARIABLE_GTE_8",
+    "known_observed_maximum_physical_groups": 12,
+    "known_collision_split_batch": [
+      288,
+      304
+    ],
+    "exact_replay_policy": "ALL_DETERMINISTIC_PHYSICAL_GROUPS",
+    "expected_ordered_group_ids_and_count_bound_per_batch": true,
+    "checkpoint_self_hash_sufficient_for_reuse": false,
+    "skipped_batch_groups_freshly_rederived_from_source": true,
+    "skipped_batch_projection_ids_order_count_revalidated": true,
+    "immutable_resume_frontier_reuses_strict_batch_validator": true,
+    "stage_and_aggregate_counts_derived_from_checkpoints": true,
+    "pareto_pruning_allowed": false,
+    "local_admission_allowed": false,
+    "dense_costates_persisted": false,
+    "actual_zip_delta_required_for_rate": true,
+    "batch_pairs_maximum": 16,
+    "stage_pairs": 120,
+    "stage_count": 5,
+    "immutable_batch_and_stage_checkpoints": true,
+    "full_n600_base_component_reproduction_gate": true
+  },
+  "v2_preflight": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_exact_coarse_costates_v2_n600_20260727_r5/00_preflight_receipt.json",
+    "file_bytes": 2666,
+    "file_sha256": "f03135a848a5b7ddeb295544704210acb38da54de8258eb8764d7e6ab80ca1b1",
+    "preflight_sha256": "bcdb09fe320c96d55939cad6af656a96a9fa0443b9e7269a66e5ca64b3ae49f8",
+    "free_bytes_observed": 349042044928,
+    "safety_reserve_bytes": 53687091200,
+    "safe_run_label": "g90_v2_r5_formatted_strict_resume_review_preflight_only",
+    "elapsed_seconds": 36.51,
+    "peak_rss_mib": 853,
+    "launch_review_required": true,
+    "materialization_launched": false
+  },
+  "reviewed_launch_command_not_executed": ".venv/bin/python tools/safe_run.py --rss-mb 49152 --projected-gib 40 --timeout 7200 --label g90_v2_exact_all_physical_groups_stage0_r1 -- .venv/bin/python tools/materialize_taskspace_exact_coarse_costates_v2.py .omx/research/configs/taskspace_exact_coarse_costates_v2_n600_20260727_r5.json --materialize-next-stage",
+  "source_artifacts": {
+    "src/tac/optimization/taskspace_projected_population_costates_v1.py": "7065c6a754c94b91915c213ca803b86ccde49cda9db32d3dbed4a8b22cc46492",
+    "src/tac/optimization/tests/test_taskspace_projected_population_costates_v1.py": "374edbafaa60e231cedb6a731501963eb508f9a0c1ea242e322babd4438c1e4e",
+    "tools/materialize_taskspace_projected_population_costates.py": "87d4b02d414462669ad24e0c12a3bd05eb96b0e4d10d8506bde1146fab9d1083",
+    "tools/tests/test_materialize_taskspace_projected_population_costates.py": "b3690ac75d96097862d49eb0dc24a67f1f3ec4b5740ed707dfb2483f21267c5d",
+    "src/tac/optimization/taskspace_exact_coarse_costates_v2.py": "01aa4404d03855c218a50da5d0636edd1486679bc6642a04181e1e99f6100f4d",
+    "src/tac/optimization/tests/test_taskspace_exact_coarse_costates_v2.py": "a9d50eb6fa4fb64ba6e87b99c9266313eb740c24763ad793eea1c6be34332bbb",
+    "tools/materialize_taskspace_exact_coarse_costates_v2.py": "4fa3522de739322fca543863dae2ef7405147702bf361c75b9637c1b06031df3",
+    "tools/tests/test_materialize_taskspace_exact_coarse_costates_v2.py": "1650eca3b30776c879b3acad4cf52c972d084aa7dbb7c9d374079519477637dd",
+    ".omx/research/configs/taskspace_exact_coarse_costates_v2_n600_20260727_r5.json": "f9717d21920f0098f14c7e6c76053ff4e819c96aa5c3b135e89d53a2edd286eb",
+    ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g90_v2_exact_all_coarse_costates_20260727.md": "125b0737685fd99c8e919b20a1c522c57be87795f85e72454527b9cc2d84bb5a"
+  },
+  "verification": {
+    "pytest": "17 passed in 1.02s",
+    "ruff": "all checks passed",
+    "ruff_format": "8 files already formatted",
+    "py_compile": "8 files compiled",
+    "review_tracker": "118 entities policy-compliant after two clean review passes",
+    "git_worktree_clean": false,
+    "committed_or_staged_by_lane": false
+  },
+  "most_important_adversarial_risk": {
+    "risk": "Exact-all closes false negatives among every deterministic physical-group intervention, including collision-split batches, but it does not make their gains additive when multiple groups are composed.",
+    "failure_mode": "A controller could sum individually exact rows even though donor collisions, uint8 saturation, argmax topology, and Pose pair coupling change the joint result.",
+    "required_gate": "Hierarchical or multi-coordinate selection must exact-replay each composed Y1 state, then solve and replay Y0 conditioned on that final Y1 before G94 archive pricing.",
+    "forbidden_inference": "No independent exact row may be treated as an additive score or rate coefficient."
+  },
+  "next_action": "Root reviews the preflight and command. If approved, materialize stage 0 only; inspect exact-all nonlinear interactions and drift telemetry before authorizing any later stage."
+}

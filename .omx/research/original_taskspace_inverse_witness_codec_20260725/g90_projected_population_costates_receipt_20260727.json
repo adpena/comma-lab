@@ -1,0 +1,337 @@
+{
+  "schema": "tac.g90_projected_population_costates_landing_receipt.v1",
+  "receipt_self_hash": "45f361d883ab6297e6139ef8850526bfc9757a1ce0e571a88d9a3697f484862a",
+  "created_utc": "2026-07-27T07:26:24Z",
+  "lane_id": "lane_g90_projected_population_costates",
+  "status": "V1_TERMINAL_FAIL_CLOSED_SIX_BATCHES_STAGE0_INCOMPLETE",
+  "authority": "[macOS-CPU frozen-scorer advisory/encoder-only]",
+  "research_only": true,
+  "encoder_only": true,
+  "candidate_claim": false,
+  "score_claim": false,
+  "full_n600_complete": false,
+  "exact_evaluator_archive_replay_complete": false,
+  "pointer_moved": false,
+  "effective_frontier": 0.172,
+  "purpose": "Project exact scorer-native Pose and Seg costates onto compact, reconstructible G72 actuator coordinates for G92/G83 whole-state allocation.",
+  "current_base": {
+    "identity": "G85 exact P plus incumbent G74 A",
+    "archive_path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/archive.zip",
+    "archive_bytes": 129392,
+    "archive_sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd",
+    "raw_path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/decode_a/0.raw",
+    "raw_bytes": 3662409600,
+    "raw_sha256": "436ce2b6965c859556a217df9b1cc17784d988f2af900c35201d3e3c7f372782",
+    "sample_count": 600,
+    "d_seg": 0.0274712,
+    "d_pose": 163.06130981,
+    "incumbent_selector": "BOTH",
+    "incumbent_atoms_sha256": "5616799adc0d2ab942f37a20b070f7a0fa48119771e8f1b56c1f45e2605306ca"
+  },
+  "input_custody": {
+    "g46_target_labels_sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85",
+    "g78_aggregate_file_sha256": "3ca3cf5503d5b5144f48e2e562e398780a74a91fcfbd59e60248849d279d6215",
+    "g78_aggregate_self_sha256": "22926b9689d5e493b3b8bb1e0a6dbfe1d26d6a6d56756e6426f591a4cf8dbf28",
+    "g87_aggregate_file_sha256": "27ffb9b9ddd6068828f36b5a572046aa92d22f1ffe70c0d2d2af696023f4e951",
+    "g87_aggregate_self_sha256": "60cdf20839db7a1d63b390c106582b423e1c0befa076a0c9a4a57b2e63f7b168",
+    "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "upstream_closure_sha256": "9c588c725d66c6e840c157568fc5414c37f175348921c6353a64c6431a26cd99"
+  },
+  "costate_definition": {
+    "pose": "raw per-pair PoseNet six-scalar MSE VJP multiplied by the exact G85 population score derivative scale",
+    "population_pose_pair_mse_vjp_scale": 0.00020636844449905425,
+    "seg": "target-minus-current class-logit gap directional derivative, screened only on exact current mismatches",
+    "projection": "collision-free role by direction by amplitude G72 grouped actuator coordinates",
+    "screening_pareto": "unweighted minimize pose directional delta and maximize Seg gap directional delta",
+    "admission": "forbidden locally; exact realized rows are inputs to G92/G83 whole-state selection"
+  },
+  "representation_scope": {
+    "classification": "COARSE_FAMILY_COSTATE_ATLAS_ONLY",
+    "coordinates_per_batch": 8,
+    "largest_observed_group_atom_count": 2533,
+    "largest_observed_group_operand_member_bytes": 32955,
+    "atom_selector_claim": false,
+    "program_induction_claim": false,
+    "constituent_gain_attribution_claim": false,
+    "constituent_rate_attribution_claim": false,
+    "permitted_use": "choose a family for exact hierarchical refinement and retain joint exact nonlinear replay",
+    "forbidden_use": "rank atoms or infer a compact factorized program from a family aggregate",
+    "next_schema": "tac.taskspace_projected_population_costate_refinement_request.v1",
+    "next_hierarchy": [
+      "role",
+      "temporal_span",
+      "geometric_chart",
+      "collision_free_atom_block"
+    ],
+    "next_leaf_custody": [
+      "parent_group_id",
+      "pair_span",
+      "constituent_proposal_fingerprints",
+      "proposed_atoms_sha256",
+      "incumbent_atoms_sha256",
+      "deterministic_partition_sha256"
+    ],
+    "additive_attribution_gate": "explicitly verify additivity and interactions; otherwise retain joint block coordinates",
+    "exact_gain_and_rate_default": null,
+    "active_v1_schema_mutated": false
+  },
+  "composition_law": {
+    "historical_semantic_base": "G78 and G87 describe P only and are donor/proposal custody, not current truth",
+    "current_seg_cells": "derived from exact G85 raw",
+    "incumbent_affected_geometry": "regenerated and checked against unaffected fresh G87 proposals",
+    "candidate_y0": "exact incumbent-base Y0",
+    "candidate_y1": "joint exact G74 realization of incumbent Y1 plus proposed atoms",
+    "donor_address_collision": "fail closed",
+    "pvsa_v1_mixed_selector_serialization": "not claimed and not available",
+    "current_batch_g85_vs_g78_p_only_cell_drift": 134
+  },
+  "sealed_first_batch": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_projected_population_costates_n600_20260727_r1/20_stage_00_0000_0120/batches/batch_0000_0016.json",
+    "file_bytes": 3813773,
+    "file_sha256": "36edc465f5778c848e4a574e8e8259faf4bdffb65fc0952f292939320c9fcba6",
+    "batch_checkpoint_sha256": "f8629f8244450ef21b9e93ef7c5d641fd2ec55eddf959fb85e0734d6bb7d4cda",
+    "pair_range": [
+      0,
+      16
+    ],
+    "projection_coordinate_count": 8,
+    "proposed_atom_count_across_coordinates": 11732,
+    "pareto_replay_count": 3,
+    "dense_costates_persisted": false,
+    "actual_zip_delta_measured": false,
+    "local_admission_performed": false,
+    "base_seg_mismatch_count": 56684,
+    "pareto_rows": [
+      {
+        "operand_id": "g72:0000_0016:Road:d1:a0.5:p0",
+        "pose_linearized_score_delta": -0.0000011447716911649702,
+        "seg_gap_directional_delta": 16445.979404844,
+        "exact_pose_score_delta": -0.00005673120892168981,
+        "exact_seg_mismatch_delta": 1943,
+        "exact_seg_score_delta": 0.0016471015082465278
+      },
+      {
+        "operand_id": "g72:0000_0016:UndrivableBoundary:d0:a0.5:p0",
+        "pose_linearized_score_delta": -0.000613384413614268,
+        "seg_gap_directional_delta": 8819.77377195941,
+        "exact_pose_score_delta": 0.000013301088962691665,
+        "exact_seg_mismatch_delta": -2697,
+        "exact_seg_score_delta": -0.0022862752278645835
+      },
+      {
+        "operand_id": "g72:0000_0016:UndrivableBoundary:d0:a1:p0",
+        "pose_linearized_score_delta": -0.0006713281351695134,
+        "seg_gap_directional_delta": -3070.2491130140297,
+        "exact_pose_score_delta": -0.000007910119371956625,
+        "exact_seg_mismatch_delta": -2835,
+        "exact_seg_score_delta": -0.00240325927734375
+      }
+    ]
+  },
+  "sealed_second_batch": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_projected_population_costates_n600_20260727_r1/20_stage_00_0000_0120/batches/batch_0016_0032.json",
+    "file_bytes": 4771285,
+    "file_sha256": "34161e8af9b01ce7292f66771536e7d8057ea38a3a73c9bed97667c92d2bdad2",
+    "batch_checkpoint_sha256": "858093bfa2dbc0e879871e72606e054702d93900332be475275b621a65094f97",
+    "pair_range": [
+      16,
+      32
+    ],
+    "projection_coordinate_count": 8,
+    "pareto_replay_count": 3,
+    "current_g85_vs_g78_p_only_cell_drift": 0,
+    "strongest_exact_seg_row": {
+      "operand_id": "g72:0016_0032:UndrivableBoundary:d0:a1:p0",
+      "pose_linearized_score_delta": -0.0006051074018949132,
+      "seg_gap_directional_delta": 8617.646703979372,
+      "exact_pose_score_delta": -3.5268044484837446e-7,
+      "exact_seg_mismatch_delta": -6640,
+      "exact_seg_score_delta": -0.005628797743055556
+    },
+    "second_sign_reversal": {
+      "operand_id": "g72:0016_0032:Road:d1:a1:p0",
+      "pose_linearized_score_delta": 0.00024195838130088032,
+      "seg_gap_directional_delta": 19004.79886293102,
+      "exact_pose_score_delta": -0.00047707869735802433,
+      "exact_seg_mismatch_delta": 5138,
+      "exact_seg_score_delta": 0.004355536566840278
+    }
+  },
+  "sealed_third_batch": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_projected_population_costates_n600_20260727_r1/20_stage_00_0000_0120/batches/batch_0032_0048.json",
+    "file_bytes": 5126093,
+    "file_sha256": "6230418636e83e03652805b8e8e74f2f3ff89672a8548f566d68d9ba9cad3ade",
+    "batch_checkpoint_sha256": "b412123ed3057064ca27441f10c5fe9858f8591de84b38318803d25bf885d977",
+    "pair_range": [
+      32,
+      48
+    ],
+    "projection_coordinate_count": 8,
+    "pareto_replay_count": 2,
+    "retained_exact_rows": [
+      {
+        "operand_id": "g72:0032_0048:Road:d0:a0.5:p0",
+        "pose_linearized_score_delta": -0.0008866980423550145,
+        "seg_gap_directional_delta": -6796.1439473425335,
+        "exact_pose_score_delta": -0.005519120804443389,
+        "exact_seg_mismatch_delta": 28141,
+        "exact_seg_score_delta": 0.023855421278211806
+      },
+      {
+        "operand_id": "g72:0032_0048:Road:d1:a1:p0",
+        "pose_linearized_score_delta": -0.0001280149860365938,
+        "seg_gap_directional_delta": 3005.308389824565,
+        "exact_pose_score_delta": -0.000545247652418368,
+        "exact_seg_mismatch_delta": 13393,
+        "exact_seg_score_delta": 0.011353386773003472
+      }
+    ]
+  },
+  "pareto_screening_adversarial_verdict": {
+    "scope": "V1 finite-step first-order two-axis Pareto replay filter",
+    "verdict": "INADMISSIBLE_AS_FALSE_NEGATIVE_GATE",
+    "reason": "Directional signs reverse under exact realized R, so linearly dominated groups are not proved exact dominated.",
+    "v1_exact_coverage": "incomplete",
+    "v1_permitted_interpretation": "replay-budget heuristic and coarse population atlas only",
+    "v2_gate": "exact replay every deterministic collision-partitioned physical group per batch, or prove sign and rank fidelity inside a measured amplitude trust region before pruning",
+    "launch_guidance": "finish active stage 0; do not launch stages 1 through 4 under V1 Pareto-as-filter interpretation"
+  },
+  "joint_state_costate_custody": {
+    "system_order": [
+      "choose and exactly realize final semantic Y1 state from incumbent plus G89 or G90-derived program",
+      "reuse an exact G90 Seg delta only for the byte-identical measured Y1 mutation",
+      "use G91 only as initializer and factorability evidence, then solve Y0 conditioned on final Y1",
+      "serialize and price the sequential disjoint-frame product through G94"
+    ],
+    "seg_transfer_law": "SegNet reads Y1 only; exact Seg fields transfer across a Y0-only change only when the exact measured Y1 mutation is reproduced byte-for-byte",
+    "pose_transfer_law": "none across either Y0 or Y1 state change; PoseNet reads both frames",
+    "g91_selected_custody": {
+      "receipt_path": "/Volumes/VertigoDataTier/pact/g91_n600_pose_trajectory_20260727_r1/stage_04_selection/selected/receipt.json",
+      "receipt_file_sha256": "7ea55156ddec593f2163467ad260fb40b3209e1f49dddcc9db517e13e46f9807",
+      "archive_bytes": 132132,
+      "archive_sha256": "de16c751fc5f27dd46ab0606e263c44e70d4cbef71f917848cc2ade4ac059a28",
+      "exact_y1_preserved_every_batch": true,
+      "changed_y0_pixels": 330541378,
+      "role": "initializer_and_factorability_evidence_only",
+      "terminal_pose_solution_claim": false
+    },
+    "v2_required_hashes": [
+      "pose_conditioning_y0_sha256",
+      "pose_conditioning_y1_sha256",
+      "seg_mutated_y1_sha256"
+    ],
+    "pose_invalidation": "invalidate whenever either conditioning frame hash differs",
+    "seg_invalidation": "invalidate whenever the measured Y1 mutation hash differs"
+  },
+  "terminal_v1": {
+    "sealed_pair_range": [
+      0,
+      96
+    ],
+    "sealed_batch_count": 6,
+    "stage0_complete": false,
+    "stage_receipt_emitted": false,
+    "aggregate_receipt_emitted": false,
+    "second_retry_allowed": false,
+    "terminal_blocker": {
+      "path": "/Volumes/VertigoDataTier/pact/taskspace_projected_population_costates_n600_20260727_r1/blocker_receipt_c7095d792afe.json",
+      "file_sha256": "85090243f9b2d7603faa6c55d2c5671e31a43c763e60d1d631466292d1440be8",
+      "blocker_receipt_sha256": "c7095d792afe9d9f773146bba607a2aa295c47b0a98e61eaab837440f656982b",
+      "failing_pair_range": [
+        96,
+        112
+      ],
+      "mismatch_pair_ids": [
+        100
+      ],
+      "mismatch_cell_count": 1,
+      "actual_differentiable_cells_sha256": "4f19ba7e09f19df484ef06c1e82f5fb78e8cb9f02ea81fe2671fb6b732053a34",
+      "expected_authority_cells_sha256": "0c4ac563e6706d1efbfd942263c825a4614bb5e8269339371a928341b229bb82"
+    },
+    "boundary_tie": {
+      "source_pair_id": 100,
+      "scorer_y": 200,
+      "scorer_x": 429,
+      "authority_class": 0,
+      "differentiable_class": 2,
+      "class_0_logit": 1.7809603214263916,
+      "class_2_logit": 1.780961036682129,
+      "top_two_margin": 7.152557373046875e-7
+    },
+    "classification": "INFERENCE_AUTHORITY_VS_AUTOGRAD_SURROGATE_TIE_DRIFT_NOT_RAW_OR_G78_CUSTODY_DRIFT",
+    "v2_required": [
+      "separate scorer-authority inference cells from differentiable cells",
+      "explicitly annotate tie drift",
+      "use authority cells for exact realized replay",
+      "exact replay every deterministic collision-partitioned physical group and bind ordered group IDs and actual counts",
+      "new schemas and new SSD output root with immutable batch and stage checkpoints"
+    ]
+  },
+  "structural_finding": {
+    "statement": "Finite-step realized-R response can reverse first-order Seg gap screening sign. Costates are proposal coordinates, not an admission oracle.",
+    "evidence": [
+      "UndrivableBoundary d0 a1 had negative Seg gap directional delta but improved exact mismatch by 2835 cells.",
+      "Road d1 a0.5 had positive Seg gap directional delta but worsened exact mismatch by 1943 cells."
+    ],
+    "controller_requirement": "G92/G83 must retain exact realized nonlinear rows and evaluate the composed population state rather than scalarize local derivatives."
+  },
+  "preflight": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_projected_population_costates_n600_20260727_r1/00_preflight_receipt.json",
+    "file_sha256": "2aea54c4fc7a821bcb4c9bb1ba63013fa98dab7844c3d0b3048a91262d6a43bc",
+    "preflight_sha256": "52cdc16b53e7b7a0fef715484f7595d0834a347f5239e7c05d3b16a27eedbc17"
+  },
+  "resume_and_storage": {
+    "output_root": "/Volumes/VertigoDataTier/pact/taskspace_projected_population_costates_n600_20260727_r1",
+    "batch_pairs_maximum": 16,
+    "stage_pairs": 120,
+    "stage_count": 5,
+    "checkpoint_policy": "immutable atomic every batch and every 120-pair stage",
+    "prior_checkpoint_overwrite_allowed": false,
+    "ssd_reserve_bytes": 53687091200,
+    "governed_materialization": "running"
+  },
+  "consumer_contract": {
+    "consumer": "G92 whole-state allocator and G83 composition controller only",
+    "verify_file": "SHA-256 the exact batch file",
+    "verify_self": "canonical JSON SHA-256 excluding batch_checkpoint_sha256",
+    "basis": "actuator_basis_groups contains exact proposed atom dictionaries and proposal fingerprints keyed by group_id",
+    "coordinates": "projection_rows keyed by operand_id; exact fields are non-null only for pareto_nondominated_operand_ids",
+    "rate": "exact_zip_delta_bytes remains null until an actual receiver-closed ZIP delta exists",
+    "aggregate": "not yet available; do not infer n600 from this bounded batch"
+  },
+  "source_artifacts": {
+    "src/tac/optimization/taskspace_projected_population_costates_v1.py": "9cff329511675b4812593088914ba2d8c0f4817ed02e1c0a8dc1c7d2b97b1eb0",
+    "src/tac/optimization/tests/test_taskspace_projected_population_costates_v1.py": "3bce87ea0bf03ea9e8e7b06f2dcf9219ed93ac9df5a402f914b71bcefcb5fde3",
+    "tools/materialize_taskspace_projected_population_costates.py": "7d3c1206bc08ae3db0827452ccf6b120bc77d4c1998754c7c56d65daff306073",
+    "tools/tests/test_materialize_taskspace_projected_population_costates.py": "8638183e0cf93fbe6fe6b5d51fde6a8e2e4789efab5976c86c26464938435c6b",
+    ".omx/research/configs/taskspace_projected_population_costates_n600_20260727.json": "f36299cd4d330c5e66bd3d934d5e0192dec09d040c69bf99d868b15172a50416",
+    ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g90_projected_population_costates_20260727.md": "eb4820a8432f5fcfbb70e51088a3d78b9ac7b2a7924abd2f1f776304ee3a681d",
+    ".omx/research/original_taskspace_inverse_witness_codec_20260725/g90_stage0_deterministic_retry_receipt_20260727.json": "9b6085051169a320eb236206cb069a1a47c5e1825c242b4b1c869f0c4ff2a22c"
+  },
+  "verification": {
+    "pytest": "11 passed in 0.95s",
+    "ruff": "all checks passed",
+    "git_head": "e4b9d02162f52cc0273f2613dc64424775ae2a04",
+    "git_worktree_clean": false,
+    "committed_or_staged_by_lane": false
+  },
+  "preserved_blocker_self_hashes": [
+    "99ec6014a336e7964c74126f7ad70b84ec3d19523ef46d4be7f696f7b8ce39b5",
+    "2d8e5dc355926b1144fe29ae6d1df412939dabfc16f1e9bbedb79b85cf4ddd4a",
+    "3c426b0473bc5dfc5fbdf75ee663ad7df32f62b9fa86f36b3ed782fffd5dae0a",
+    "81fae7ad6f15e0c6f432a24a4deb7eb1b51be1e6a94595560af978b7742f4b2e",
+    "a422bce13aaceb0be29843bcfa22a6867964b6b9fc3119ef7b457f38eab4e803",
+    "c5c98f33dc1a8289615655f2e8cc8f4b77f36754146f7a483eafe00926bb37db"
+  ],
+  "open_blockers": [
+    "V1 terminated after six batches; stage 0 and full five-stage n600 aggregate are incomplete.",
+    "V1 coarse family coordinates suppress within-group signal; hierarchical refinement is required before atom or program induction.",
+    "V1 first-order Pareto pruning has unbounded exact false-negative risk until all coarse coordinates are replayed or a trust region is proved.",
+    "G90 Pose costates are bound to the exact G85 pair and must be recomputed after final semantic Y1 selection and conditional Y0 solving.",
+    "No actual receiver-closed ZIP delta exists.",
+    "PVSA V1 cannot serialize the mixed incumbent BOTH plus proposed Y1 selector state.",
+    "Fresh counted n600 G88 XIP2 trajectory and quantization-scale custody are absent.",
+    "G89/G92 class-complete exact tangent providers remain separate prerequisites."
+  ]
+}

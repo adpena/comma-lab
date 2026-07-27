@@ -1,0 +1,24 @@
+{
+  "schema": "tac.taskspace_exact_coarse_costate_config.v2",
+  "output_root": "/Volumes/VertigoDataTier/pact/taskspace_exact_coarse_costates_v2_n600_20260727_r2",
+  "v1_config": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/configs/taskspace_projected_population_costates_n600_20260727.json",
+    "bytes": 3606,
+    "sha256": "f36299cd4d330c5e66bd3d934d5e0192dec09d040c69bf99d868b15172a50416"
+  },
+  "v1_terminal_receipt": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/g90_projected_population_costates_receipt_20260727.json",
+    "bytes": 17932,
+    "sha256": "936403d665e4297daf7fc768a91dd04934c84dfc990dfec596ab8b6d873e8285"
+  },
+  "seed": 1234,
+  "num_threads": 4,
+  "safety_reserve_bytes": 53687091200,
+  "batch_pairs_maximum": 16,
+  "stage_pairs": 120,
+  "stage_count": 5,
+  "exact_replay_policy": "ALL_EIGHT_COARSE_COORDINATES",
+  "pareto_pruning_allowed": false,
+  "dense_costates_persisted": false,
+  "research_only": true
+}

@@ -1,0 +1,141 @@
+{
+  "schema": "tac.g90_stage0_deterministic_retry_receipt.v1",
+  "receipt_self_hash": "58599fe4579cc6ed7efc77656fe3f227f3092f8fd2f9f9aaaf8502011d431cdf",
+  "created_utc": "2026-07-27T07:22:00Z",
+  "status": "ONE_STAGE0_ONLY_RETRY_AUTHORIZED",
+  "candidate_claim": false,
+  "score_claim": false,
+  "pointer_moved": false,
+  "research_only": true,
+  "failed_invocation": {
+    "safe_run_label": "g90_currentbase_projected_costates_stage0_r7",
+    "exit_code": 1,
+    "elapsed_seconds": 1686.52,
+    "peak_rss_mib": 18755,
+    "exception_type": "ProjectedPopulationCostateError",
+    "exception_message": "current-base SegNet argmax differs from fresh G78 described cells",
+    "reported_blocker_path": "/Volumes/VertigoDataTier/pact/taskspace_projected_population_costates_n600_20260727_r1/blocker_receipt_2d8e5dc35592.json",
+    "reported_blocker_self_sha256": "2d8e5dc355926b1144fe29ae6d1df412939dabfc16f1e9bbedb79b85cf4ddd4a",
+    "failure_occurred_before_pair_range": [
+      96,
+      112
+    ]
+  },
+  "immutable_resume_frontier": {
+    "sealed_batch_count": 6,
+    "next_pair_range": [
+      96,
+      112
+    ],
+    "sealed_batches": [
+      {
+        "pair_range": [
+          0,
+          16
+        ],
+        "bytes": 3813773,
+        "file_sha256": "36edc465f5778c848e4a574e8e8259faf4bdffb65fc0952f292939320c9fcba6",
+        "batch_checkpoint_sha256": "f8629f8244450ef21b9e93ef7c5d641fd2ec55eddf959fb85e0734d6bb7d4cda"
+      },
+      {
+        "pair_range": [
+          16,
+          32
+        ],
+        "bytes": 4771285,
+        "file_sha256": "34161e8af9b01ce7292f66771536e7d8057ea38a3a73c9bed97667c92d2bdad2",
+        "batch_checkpoint_sha256": "858093bfa2dbc0e879871e72606e054702d93900332be475275b621a65094f97"
+      },
+      {
+        "pair_range": [
+          32,
+          48
+        ],
+        "bytes": 5126093,
+        "file_sha256": "6230418636e83e03652805b8e8e74f2f3ff89672a8548f566d68d9ba9cad3ade",
+        "batch_checkpoint_sha256": "b412123ed3057064ca27441f10c5fe9858f8591de84b38318803d25bf885d977"
+      },
+      {
+        "pair_range": [
+          48,
+          64
+        ],
+        "bytes": 3157065,
+        "file_sha256": "7b3fa52881eb14a402452729d4d91e76a8f9ebbe562657d2b1fd3c955723a909",
+        "batch_checkpoint_sha256": "cd07500170d1cd65896bfd53541e4ec4cfe9682e799629ecb93f22f40cdd6282"
+      },
+      {
+        "pair_range": [
+          64,
+          80
+        ],
+        "bytes": 2642898,
+        "file_sha256": "46d4cfc777f5c760c9d674d15ae78e1c2503ad17d6df65435c79b415e84ed679",
+        "batch_checkpoint_sha256": "a29b4236911c85bc4842361deac0456326259ca9d641bdab54c399e144781dc1"
+      },
+      {
+        "pair_range": [
+          80,
+          96
+        ],
+        "bytes": 2350021,
+        "file_sha256": "44a81132c9de127c8792016c95d00ee7402dd8c58c75783124de56bf300bb787",
+        "batch_checkpoint_sha256": "71bdce353f27ceea2ee20ea4458852c2eac251715f0b320a6496ec6a2a65a5ea"
+      }
+    ]
+  },
+  "isolated_exact_recheck": {
+    "same_config_seed": 1234,
+    "same_config_num_threads": 4,
+    "same_g85_raw_sha256": "436ce2b6965c859556a217df9b1cc17784d988f2af900c35201d3e3c7f372782",
+    "same_segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "rows": [
+      {
+        "pair_range": [
+          80,
+          96
+        ],
+        "mismatch_cell_count": 0,
+        "actual_cells_sha256": "efe127ecf8d1d6a79c1f24faeb68aa1b5f4c7b23ce5a27751b7699a14ffa9e44",
+        "expected_cells_sha256": "efe127ecf8d1d6a79c1f24faeb68aa1b5f4c7b23ce5a27751b7699a14ffa9e44"
+      },
+      {
+        "pair_range": [
+          96,
+          112
+        ],
+        "mismatch_cell_count": 0,
+        "actual_cells_sha256": "c553b1b685d2e89ef5ef94d977c9efdfa15182e9a5750101b4c88ca51705d5ff",
+        "expected_cells_sha256": "c553b1b685d2e89ef5ef94d977c9efdfa15182e9a5750101b4c88ca51705d5ff"
+      },
+      {
+        "pair_range": [
+          112,
+          120
+        ],
+        "mismatch_cell_count": 0,
+        "actual_cells_sha256": "f763c63d396a29ea0aefe7dd6a5f5b322eeaac24e8884b9c868b550b2afff305",
+        "expected_cells_sha256": "f763c63d396a29ea0aefe7dd6a5f5b322eeaac24e8884b9c868b550b2afff305"
+      }
+    ]
+  },
+  "retry_classification": {
+    "class": "CONDITIONAL_SINGLE_RETRY_GATE_SATISFIED",
+    "reason": "The same-config four-thread isolated frozen-SegNet recheck exactly reproduced stored cells with zero mismatches before and across the failed range.",
+    "scope": "resume stage 0 from immutable batch 96 only",
+    "automatic_retry": false,
+    "retry_count_authorized": 1,
+    "stages_1_through_4_authorized": false,
+    "on_repeat": "fail closed with hardened exception context and no second retry"
+  },
+  "hardened_sources": {
+    "src/tac/optimization/taskspace_projected_population_costates_v1.py": "9cff329511675b4812593088914ba2d8c0f4817ed02e1c0a8dc1c7d2b97b1eb0",
+    "src/tac/optimization/tests/test_taskspace_projected_population_costates_v1.py": "3bce87ea0bf03ea9e8e7b06f2dcf9219ed93ac9df5a402f914b71bcefcb5fde3",
+    "tools/materialize_taskspace_projected_population_costates.py": "7d3c1206bc08ae3db0827452ccf6b120bc77d4c1998754c7c56d65daff306073",
+    "tools/tests/test_materialize_taskspace_projected_population_costates.py": "8638183e0cf93fbe6fe6b5d51fde6a8e2e4789efab5976c86c26464938435c6b"
+  },
+  "verification": {
+    "pytest": "11 passed in 0.95s",
+    "ruff": "all checks passed"
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "schema": "tac.taskspace_projected_population_costates_config.v1",
+  "output_root": "/Volumes/VertigoDataTier/pact/taskspace_projected_population_costates_n600_20260727_r1",
+  "seed": 1234,
+  "num_threads": 4,
+  "safety_reserve_bytes": 53687091200,
+  "source_video": {
+    "path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+    "bytes": 37545489,
+    "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+  },
+  "g85": {
+    "sample_count": 600,
+    "d_pose": 163.06130981,
+    "d_seg": 0.0274712,
+    "archive": {
+      "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/archive.zip",
+      "bytes": 129392,
+      "sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd"
+    },
+    "raw": {
+      "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/decode_a/0.raw",
+      "bytes": 3662409600,
+      "sha256": "436ce2b6965c859556a217df9b1cc17784d988f2af900c35201d3e3c7f372782"
+    }
+  },
+  "semantic_archive": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+    "bytes": 133941,
+    "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
+  },
+  "g46_target_labels": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_teacher_batch16_20260726/11_target_labels/target_labels_n600_or_bounded.u8",
+    "bytes": 117964800,
+    "sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85"
+  },
+  "segnet_weights": {
+    "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "bytes": 38502892,
+    "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+  },
+  "posenet_weights": {
+    "path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+    "bytes": 55835560,
+    "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+  },
+  "upstream_closure_sha256": "9c588c725d66c6e840c157568fc5414c37f175348921c6353a64c6431a26cd99",
+  "upstream_members": [
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+      "bytes": 6005,
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/frame_utils.py",
+      "bytes": 9345,
+      "sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+      "bytes": 8322,
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/public_test_video_names.txt",
+      "bytes": 6,
+      "sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8"
+    }
+  ],
+  "g78_aggregate": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_batch16_margin_base_scorer_cache_n600_20260727_r5/aggregate_receipt.json",
+    "bytes": 42684,
+    "sha256": "3ca3cf5503d5b5144f48e2e562e398780a74a91fcfbd59e60248849d279d6215"
+  },
+  "g78_aggregate_self_sha256": "22926b9689d5e493b3b8bb1e0a6dbfe1d26d6a6d56756e6426f591a4cf8dbf28",
+  "g87_aggregate": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_g87_g78_to_g72_complete_proposals_n600_20260727_r2/aggregate_receipt.json",
+    "bytes": 5272,
+    "sha256": "27ffb9b9ddd6068828f36b5a572046aa92d22f1ffe70c0d2d2af696023f4e951"
+  },
+  "g87_aggregate_self_sha256": "60cdf20839db7a1d63b390c106582b423e1c0befa076a0c9a4a57b2e63f7b168"
+}
