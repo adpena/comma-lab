@@ -1,0 +1,568 @@
+# SPDX-License-Identifier: MIT
+"""Vertical contract tests for the G121 exhaustive stage harvester."""
+
+from __future__ import annotations
+
+import hashlib
+from decimal import Decimal
+from fractions import Fraction
+from pathlib import Path
+
+import pytest
+
+from tac.witness_control import taskspace_g121_resumable_stage_harvest_v1 as g121
+
+
+def _binding(path: Path, payload: bytes) -> dict[str, object]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    return {
+        "path": str(path.resolve()),
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def _target(
+    score: str = "0.172",
+    *,
+    pointer: str = "a",
+) -> dict[str, object]:
+    fraction = Fraction(Decimal(score))
+    return {
+        "score_decimal": score,
+        "score_rational": {
+            "numerator": fraction.numerator,
+            "denominator": fraction.denominator,
+        },
+        "pointer_snapshot_identity_sha256": pointer * 64,
+        "postverified_pointer_identity_sha256": pointer * 64,
+    }
+
+
+def _physical(root: Path, tag: str) -> dict[str, object]:
+    bindings = {
+        name: _binding(root / tag / f"{name}.bin", f"{tag}:{name}".encode())
+        for name in (
+            "g112_partition_receipt",
+            "g112_semantic_child",
+            "g112_pose_initializer",
+            "g111_deploy_checkpoint",
+            "g111_full_state_resume_checkpoint",
+            "g111_fresh_lineage_receipt",
+        )
+    }
+    return {
+        **bindings,
+        "g111_checkpoint_id_sha256": hashlib.sha256(
+            f"checkpoint:{tag}".encode()
+        ).hexdigest(),
+        "g111_stage": tag,
+        "g111_epoch": 1,
+        "fresh_lineage_complete": True,
+    }
+
+
+def _alternatives(
+    root: Path,
+    tag: str,
+    selected: dict[str, object],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    matrix = (
+        ("RAW_I16_LE", "STORE"),
+        ("RAW_I16_LE", "DEFLATE"),
+        ("DELTA_RICE_BEST_K", "STORE"),
+        ("DELTA_RICE_BEST_K", "DEFLATE"),
+    )
+    for index, (codec, method) in enumerate(matrix):
+        archive = (
+            selected
+            if index == 0
+            else _binding(
+                root / tag / f"{codec}.{method}.zip",
+                f"{tag}:{codec}:{method}".encode(),
+            )
+        )
+        rows.append(
+            {
+                "alternative_identity_sha256": hashlib.sha256(
+                    f"{tag}:{codec}:{method}:identity".encode()
+                ).hexdigest(),
+                "y1_wire_codec": codec,
+                "outer_zip_method": method,
+                "archive": archive,
+            }
+        )
+    return rows
+
+
+def _raw(
+    root: Path,
+    *,
+    tag: str,
+    physical: dict[str, object],
+    live_target: dict[str, object],
+    wire_k: int,
+    semantic_bytes: int = 100,
+    source_k: int | None = None,
+    qat_status: str = "not_required",
+    terminal_k: int | None = None,
+) -> dict[str, object]:
+    measurement_identity = hashlib.sha256(f"measurement:{tag}".encode()).hexdigest()
+    observation_identity = hashlib.sha256(
+        (
+            f"observation:{tag}:"
+            f"{live_target['pointer_snapshot_identity_sha256']}"
+        ).encode()
+    ).hexdigest()
+    selected = _binding(
+        root / tag / "selected.zip",
+        (f"selected:{tag}".encode() + b"x" * semantic_bytes),
+    )
+    measurement = _binding(
+        root / tag / "measurement.json",
+        f"measurement:{tag}".encode(),
+    )
+    observation = _binding(
+        root / tag / "observation.json",
+        f"observation:{tag}".encode(),
+    )
+    production = _binding(
+        root / tag / "production.json",
+        f"production:{tag}".encode(),
+    )
+    if source_k is None:
+        source = {
+            "status": "unmeasured",
+            "disagreement_pixels": None,
+            "pixel_denominator": g121.EXACT_SEG_PIXEL_DENOMINATOR,
+            "measurement_receipt": None,
+        }
+        regret = {
+            "status": "unmeasured",
+            "disagreement_delta_pixels": None,
+            "rational": None,
+            "receipt": None,
+        }
+    else:
+        source_receipt = _binding(
+            root / tag / "source_float.json",
+            f"source:{tag}".encode(),
+        )
+        regret_receipt = _binding(
+            root / tag / "regret.json",
+            f"regret:{tag}".encode(),
+        )
+        delta = wire_k - source_k
+        source = {
+            "status": "measured",
+            "disagreement_pixels": source_k,
+            "pixel_denominator": g121.EXACT_SEG_PIXEL_DENOMINATOR,
+            "measurement_receipt": source_receipt,
+        }
+        regret = {
+            "status": "measured",
+            "disagreement_delta_pixels": delta,
+            "rational": {
+                "numerator": delta,
+                "denominator": g121.EXACT_SEG_PIXEL_DENOMINATOR,
+            },
+            "receipt": regret_receipt,
+        }
+    if qat_status == "terminal_stage_measured":
+        qat = {
+            "status": qat_status,
+            "terminal_stage_physical_identity_sha256": hashlib.sha256(
+                f"qat:{tag}".encode()
+            ).hexdigest(),
+            "disagreement_pixels": terminal_k,
+            "pixel_denominator": g121.EXACT_SEG_PIXEL_DENOMINATOR,
+            "receipt": _binding(
+                root / tag / "g115_qat.json",
+                f"qat:{tag}".encode(),
+            ),
+        }
+    else:
+        qat = {
+            "status": qat_status,
+            "terminal_stage_physical_identity_sha256": None,
+            "disagreement_pixels": None,
+            "pixel_denominator": g121.EXACT_SEG_PIXEL_DENOMINATOR,
+            "receipt": None,
+        }
+    fraction = Fraction(
+        live_target["score_rational"]["numerator"],
+        live_target["score_rational"]["denominator"],
+    )
+    obstruction = g121._exact_obstruction(
+        wire_disagreements=wire_k,
+        target=fraction,
+        source_disagreements=source_k,
+        g115_qat=qat,
+    )
+    physical_sha = hashlib.sha256(g121._canonical_json(physical)).hexdigest()
+    public_wire = {
+        "disagreement_pixels": wire_k,
+        "pixel_denominator": g121.EXACT_SEG_PIXEL_DENOMINATOR,
+        "d_seg_rational": {
+            "numerator": wire_k,
+            "denominator": g121.EXACT_SEG_PIXEL_DENOMINATOR,
+        },
+        "d_seg_display_float": wire_k / g121.EXACT_SEG_PIXEL_DENOMINATOR,
+        "measurement_identity_sha256": measurement_identity,
+    }
+    return {
+        "stage_tag": tag,
+        "measurement_receipt": measurement,
+        "measurement_identity_sha256": measurement_identity,
+        "public_wire_seg": public_wire,
+        "physical_stage_identity": physical,
+        "physical_stage_identity_sha256": physical_sha,
+        "pose_initializer_identity_sha256": physical[
+            "g112_pose_initializer"
+        ]["sha256"],
+        "selected_archive": selected,
+        "alternatives": _alternatives(root, tag, selected),
+        "source_float_seg": source,
+        "wire_regret": regret,
+        "g115_qat": qat,
+        "live_target": live_target,
+        "prepose_obstruction": obstruction,
+        "observation_receipt": observation,
+        "observation_identity_sha256": observation_identity,
+        "production_receipt": production,
+        "public_runtime_tree": {"tree_sha256": "f" * 64},
+    }
+
+
+def _run(
+    tmp_path: Path,
+    *,
+    stages: list[dict[str, object]],
+    target: dict[str, object],
+    provider,
+) -> g121.G121StageHarvestResultV1:
+    launch = tmp_path / "launch_manifest.json"
+    if not launch.exists():
+        launch.write_bytes(b"fixture launch")
+    return g121._harvest_g111_stages_v1_test_only(
+        stages=stages,
+        live_target=target,
+        launch_manifest=launch,
+        output_dir=tmp_path / "out",
+        progress_dir=tmp_path / "progress",
+        provider=provider,
+        injected_inputs_are_test_only=True,
+    )
+
+
+def test_public_surface_is_frozen() -> None:
+    assert g121.RETAINED_PREPOSE_SCHEMA == "tac.g121_retained_prepose.v2"
+    assert g121.RETAINED_PREPOSE_BASENAME == "g121_retained_prepose.json"
+    assert callable(g121.harvest_g111_stages_v1)
+    assert callable(g121.open_g121_retained_prepose_v1)
+
+
+def test_production_rejects_unsafe_g120_v1(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    unsafe = type(
+        "UnsafeG120V1",
+        (),
+        {
+            "PRODUCTION_SCHEMA": "tac.g120_parsed_stage_production_authority.v1",
+            "MEASUREMENT_SCHEMA": "tac.g120_public_plugin_measurement.v1",
+            "OBSERVATION_SCHEMA": None,
+        },
+    )()
+    monkeypatch.setattr(
+        g121.importlib,
+        "import_module",
+        lambda _name: unsafe,
+    )
+    with pytest.raises(g121.G121StageHarvestError, match="unsafe G120"):
+        g121.harvest_g111_stages_v1(
+            producer_run_dir=tmp_path,
+            expected_launch_manifest_sha256="0" * 64,
+            output_dir=tmp_path / "out",
+            progress_dir=tmp_path / "progress",
+        )
+
+
+def test_equality_is_not_retained() -> None:
+    target = Fraction(1, 8)
+    k = g121.EXACT_SEG_PIXEL_DENOMINATOR // 800
+    obstruction = g121._exact_obstruction(
+        wire_disagreements=k,
+        target=target,
+        source_disagreements=None,
+        g115_qat={
+            "status": "required_unmeasured",
+            "disagreement_pixels": None,
+        },
+    )
+    assert obstruction["lhs"] == obstruction["rhs"]
+    assert obstruction["strict_distortion_open"] is False
+    assert obstruction["disposition"] == g121.DEFER_G115_WIRE_QAT
+
+
+def test_exact_rational_escapes_float_collision() -> None:
+    k = g121.EXACT_SEG_PIXEL_DENOMINATOR // 800
+    lower = Fraction(Decimal("0.12499999999999999999"))
+    upper = Fraction(Decimal("0.12500000000000000001"))
+    assert float(lower) == float(upper) == 0.125
+    qat = {"status": "required_unmeasured", "disagreement_pixels": None}
+    assert (
+        g121._exact_obstruction(
+            wire_disagreements=k,
+            target=lower,
+            source_disagreements=k,
+            g115_qat=qat,
+        )["disposition"]
+        == g121.PRUNE_EXACT_DISTORTION_OBSTRUCTION
+    )
+    assert (
+        g121._exact_obstruction(
+            wire_disagreements=k,
+            target=upper,
+            source_disagreements=k - 1,
+            g115_qat=qat,
+        )["disposition"]
+        == g121.RETAIN_POST_G105_POSE
+    )
+
+
+def test_dominated_semantic_bytes_do_not_prune(tmp_path: Path) -> None:
+    target = _target()
+    physical_a = _physical(tmp_path, "a")
+    physical_b = _physical(tmp_path, "b")
+    stages = [
+        {"stage_tag": "a", "physical_stage_identity": physical_a},
+        {"stage_tag": "b", "physical_stage_identity": physical_b},
+    ]
+
+    def provider(stage, _prior):
+        return (
+            _raw(
+                tmp_path,
+                tag=stage["stage_tag"],
+                physical=stage["physical_stage_identity"],
+                live_target=target,
+                wire_k=100,
+                semantic_bytes=100_000 if stage["stage_tag"] == "b" else 1,
+            ),
+            True,
+        )
+
+    result = _run(tmp_path, stages=stages, target=target, provider=provider)
+    assert result.retained_stage_count == 2
+    assert result.accounted_stage_count == 2
+
+
+def test_qat_uncertainty_is_deferred_not_pruned(tmp_path: Path) -> None:
+    target = _target("0.125")
+    physical = _physical(tmp_path, "qat_defer")
+    stage = {"stage_tag": "qat_defer", "physical_stage_identity": physical}
+    equality_k = g121.EXACT_SEG_PIXEL_DENOMINATOR // 800
+
+    def provider(_stage, _prior):
+        return (
+            _raw(
+                tmp_path,
+                tag="qat_defer",
+                physical=physical,
+                live_target=target,
+                wire_k=equality_k,
+                source_k=equality_k - 1,
+                qat_status="required_unmeasured",
+            ),
+            True,
+        )
+
+    result = _run(tmp_path, stages=[stage], target=target, provider=provider)
+    assert result.retained_stage_count == 0
+    assert result.deferred_stage_count == 1
+    assert result.pruned_stage_count == 0
+
+
+def test_terminal_qat_exact_count_controls_disposition() -> None:
+    target = Fraction(1, 8)
+    k = g121.EXACT_SEG_PIXEL_DENOMINATOR // 800
+    obstruction = g121._exact_obstruction(
+        wire_disagreements=k,
+        target=target,
+        source_disagreements=k - 1,
+        g115_qat={
+            "status": "terminal_stage_measured",
+            "disagreement_pixels": k - 1,
+        },
+    )
+    assert obstruction["disposition"] == g121.RETAIN_POST_G105_POSE
+
+
+def test_pointer_refresh_reuses_external_measurement(tmp_path: Path) -> None:
+    first_target = _target("0.172", pointer="a")
+    second_target = _target("0.171", pointer="b")
+    physical = _physical(tmp_path, "refresh")
+    stage = {"stage_tag": "refresh", "physical_stage_identity": physical}
+    calls: list[bool] = []
+
+    def first_provider(_stage, prior):
+        calls.append(prior is not None)
+        return (
+            _raw(
+                tmp_path,
+                tag="refresh",
+                physical=physical,
+                live_target=first_target,
+                wire_k=100,
+            ),
+            prior is None,
+        )
+
+    first = _run(
+        tmp_path,
+        stages=[stage],
+        target=first_target,
+        provider=first_provider,
+    )
+    assert first.scorer_replay_count == 1
+
+    def second_provider(_stage, prior):
+        calls.append(prior is not None)
+        assert prior["g120"]["measurement_receipt"]["sha256"]
+        return (
+            _raw(
+                tmp_path,
+                tag="refresh",
+                physical=physical,
+                live_target=second_target,
+                wire_k=100,
+            ),
+            False,
+        )
+
+    second = _run(
+        tmp_path,
+        stages=[stage],
+        target=second_target,
+        provider=second_provider,
+    )
+    assert second.scorer_replay_count == 0
+    assert second.reused_measurement_count == 1
+    assert calls == [False, True]
+
+
+def test_idempotent_resume_does_not_call_provider(tmp_path: Path) -> None:
+    target = _target()
+    physical = _physical(tmp_path, "resume")
+    stage = {"stage_tag": "resume", "physical_stage_identity": physical}
+
+    def provider(_stage, _prior):
+        return (
+            _raw(
+                tmp_path,
+                tag="resume",
+                physical=physical,
+                live_target=target,
+                wire_k=100,
+            ),
+            True,
+        )
+
+    first = _run(tmp_path, stages=[stage], target=target, provider=provider)
+    ledger_before = first.stage_ledger_path.read_bytes()
+
+    def forbidden(*_args):
+        raise AssertionError("provider was replayed")
+
+    second = _run(tmp_path, stages=[stage], target=target, provider=forbidden)
+    assert second.stage_ledger_path.read_bytes() == ledger_before
+    assert second.scorer_replay_count == 0
+    assert second.reused_measurement_count == 1
+
+
+def test_exhaustive_completion_accounts_scoped_blocker(tmp_path: Path) -> None:
+    target = _target()
+    good = _physical(tmp_path, "good")
+    bad = _physical(tmp_path, "bad")
+    stages = [
+        {"stage_tag": "good", "physical_stage_identity": good},
+        {"stage_tag": "bad", "physical_stage_identity": bad},
+    ]
+
+    def provider(stage, _prior):
+        if stage["stage_tag"] == "bad":
+            raise RuntimeError("physical stage corrupt")
+        return (
+            _raw(
+                tmp_path,
+                tag="good",
+                physical=good,
+                live_target=target,
+                wire_k=100,
+            ),
+            True,
+        )
+
+    result = _run(tmp_path, stages=stages, target=target, provider=provider)
+    assert result.exhaustive_enumeration_proven is True
+    assert result.discovered_stage_count == result.accounted_stage_count == 2
+    assert result.blocked_stage_count == 1
+    assert result.retained_stage_count == 1
+
+
+def test_strict_fixture_opener_round_trips_population(tmp_path: Path) -> None:
+    target = _target()
+    physical = _physical(tmp_path, "open")
+    stage = {"stage_tag": "open", "physical_stage_identity": physical}
+
+    def provider(_stage, _prior):
+        return (
+            _raw(
+                tmp_path,
+                tag="open",
+                physical=physical,
+                live_target=target,
+                wire_k=100,
+            ),
+            True,
+        )
+
+    result = _run(tmp_path, stages=[stage], target=target, provider=provider)
+    opened = g121._open_g121_retained_prepose_v1_test_only(
+        result.retained_prepose_path,
+        expected_sha256=result.retained_prepose_sha256,
+        injected_inputs_are_test_only=True,
+    )
+    assert opened.schema == "tac.g121_retained_prepose.v2"
+    assert len(opened.rows) == 1
+    assert opened.rows[0].to_dict()["prepose_obstruction"][
+        "disposition"
+    ] == g121.RETAIN_POST_G105_POSE
+
+
+def test_best_and_rolling_files_are_not_discovered(tmp_path: Path) -> None:
+    lineage = tmp_path / "fresh_lineage"
+    lineage.mkdir()
+    (lineage / "levelset_best.json").write_text("{}")
+    (lineage / "levelset_witness_ema_BEST.npz").write_bytes(b"best")
+    assert g121._discover_physical_stages(
+        tmp_path,
+        expected_current_launch_dsl_compile_hash="0" * 64,
+    ) == []
+
+
+def test_private_injection_requires_explicit_fixture_marker(tmp_path: Path) -> None:
+    with pytest.raises(g121.G121StageHarvestError, match="test_only"):
+        g121._harvest_g111_stages_v1_test_only(
+            stages=[],
+            live_target=_target(),
+            launch_manifest=tmp_path / "missing",
+            output_dir=tmp_path / "out",
+            progress_dir=tmp_path / "progress",
+            provider=lambda *_args: ({}, False),
+            injected_inputs_are_test_only=False,
+        )
