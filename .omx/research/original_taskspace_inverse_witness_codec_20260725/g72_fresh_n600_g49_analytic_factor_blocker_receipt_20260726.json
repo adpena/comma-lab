@@ -1,0 +1,139 @@
+{
+  "schema": "tac.g72_fresh_n600_g49_analytic_factor_blocker_receipt.v1",
+  "lane": "lane_g72_fresh_n600_g49_analytic_factor_compiler_20260726",
+  "observed_git_head": "64f728d1cbc0ee7995bb221b12137d57f8cd200c",
+  "outcome": "FAIL_CLOSED_BEFORE_PACKET",
+  "artifacts": {
+    "source": {
+      "path": "src/tac/witness_dsl/taskspace_g72_fresh_n600_g49_analytic_factor_compiler_v1.py",
+      "bytes": 42395,
+      "sha256": "0b514239f85a073eb8f523558cefa1afc8660697678a691f3e15f5ec2b646828"
+    },
+    "test": {
+      "path": "src/tac/witness_dsl/tests/test_taskspace_g72_fresh_n600_g49_analytic_factor_compiler_v1.py",
+      "bytes": 9446,
+      "sha256": "af2ffe565597f9dcda94e7522d4cf67e2cef8db2658dc3cb370b3dd54f7b8ce3"
+    },
+    "spec": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g72_fresh_n600_g49_analytic_factor_compiler_20260726.md",
+      "bytes": 7972,
+      "sha256": "91f2c1f4c5b8f794b3456e01a7fd34a5a157331c1a620eecd106addca7aec7ed"
+    }
+  },
+  "frontier": {
+    "pointer_path": ".omx/state/canonical_frontier_pointer.json",
+    "pointer_file_sha256": "b544fda607eae6bb02871fb145166773e05d2ef8b1a470c12996056e0b26235d",
+    "effective_frontier": 0.172,
+    "authority": "[official-leaderboard display; external target only]",
+    "pointer_moved": false
+  },
+  "readiness": {
+    "schema": "tac.g72_fresh_n600_g49_analytic_factor_readiness.v1",
+    "readiness_receipt_sha256": "9f92cbafb0318cb196c3dcfae770a16c48971f94468e2334d97a44bf88672dcc",
+    "production_compile_ready": false,
+    "fresh_semantic_lineage": {
+      "compile_receipt_file_sha256": "53b60e4a397fc1cdb7660a0c543221be17b723d38942157ff075b49e76a76e65",
+      "semantic_archive_bytes": 133941,
+      "semantic_archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+      "pair_count": 600,
+      "receiver_contract_id": "tac.optimization.direct_description_carrier_compose.CarrierComposeReceiverV1.render_pairs.v9_v13",
+      "lineage_reopened": true
+    },
+    "g46_target_custody": {
+      "receipt_file_sha256": "556c6b20f12ae7f5c6b8a1a2d08c6d2c2e32e7831ab552938c7866f3256dfad1",
+      "receipt_self_hash": "58db7f01674c60f060a46b955fee8c4f777f31f528ebba404e871b26b17972a7",
+      "target_labels_sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85",
+      "pair_count": 600,
+      "scorer_batch_size": 16,
+      "target_margins_present": false,
+      "compile_ready_reopened": true
+    },
+    "g51_direct_task_operand_custody": {
+      "aggregate_file_sha256": "ae9048dfc24947a6268315590b65da02b56549379e347cbaced25e2e6f67d915",
+      "aggregate_self_hash": "4363827c2aeb613916029d8bacde8aeb4ded961c4d1ca297310a1e53e204619c",
+      "pair_count": 600,
+      "pairs_per_stage": 120,
+      "stage_count": 5,
+      "target_labels_sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85",
+      "y0_y1_source_derived_and_recursively_reopened": true,
+      "pose_authority": "SEALED_SOURCE_CACHE_ADVISORY_ONLY",
+      "fresh_pose_target_authority": false
+    },
+    "current_g49_role_semantics": {
+      "payloads_byte_identical": true,
+      "role_preserved_by_current_g49_wire": false,
+      "road_payload_sha256": "783ecc896f1dbd9dfbea458589b40b78eb3d5d79d66b5d47df061c39b5c21834",
+      "undrivable_payload_sha256": "783ecc896f1dbd9dfbea458589b40b78eb3d5d79d66b5d47df061c39b5c21834"
+    },
+    "canonical_stage_plan": [
+      {
+        "stage_index": 0,
+        "pair_range": [0, 120]
+      },
+      {
+        "stage_index": 1,
+        "pair_range": [120, 240]
+      },
+      {
+        "stage_index": 2,
+        "pair_range": [240, 360]
+      },
+      {
+        "stage_index": 3,
+        "pair_range": [360, 480]
+      },
+      {
+        "stage_index": 4,
+        "pair_range": [480, 600]
+      }
+    ],
+    "open_blockers": [
+      "G72_FRESH_BATCH16_TARGET_MARGIN_CUSTODY_OWED",
+      "G72_FRESH_V15_CAMERA_R_BATCH16_BASE_SCORER_STAGE_CACHE_OWED",
+      "G72_G49_ROLE_PRESERVING_ANALYTIC_WIRE_ABI_OWED",
+      "G72_V15_ROLE_AWARE_PREPAINT_ANALYTIC_DECODER_PROOF_OWED",
+      "G72_FRESH_POSE_TARGET_AUTHORITY_OR_EXACT_UPSTREAM_FINAL_REPLAY_OWED",
+      "G72_FIVE_STAGE_EXACT_WHOLE_OBJECT_JOINT_ADMISSION_OWED"
+    ]
+  },
+  "g74_dependency": {
+    "owner": "/root/g74_v15_roleaware_overlay_decoder",
+    "source_path": "src/tac/witness_dsl/taskspace_g74_v15_roleaware_overlay_decoder_v1.py",
+    "receipt_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g74_v15_roleaware_overlay_decoder_receipt_20260727.json",
+    "green_receipt_observed": false,
+    "state": "IN_FLIGHT_NOT_ADMITTED_BY_G72"
+  },
+  "implementation_contract": {
+    "real_v9_fisher_margin_shearlet_derivation": true,
+    "semantic_role_preserved_in_proposal": true,
+    "five_exact_120_pair_stage_checkpoints": true,
+    "atomic_immutable_resume_contract": true,
+    "ssd_preflight_required": true,
+    "exact_whole_object_joint_admission_only": true,
+    "independent_dseg_dpose_rate_thresholds": false,
+    "learned_quotient_claim": false
+  },
+  "verification": {
+    "commands": [
+      "uv run ruff format --check <g72 source> <g72 test>",
+      "uv run ruff check <g72 source> <g72 test>",
+      "uv run python -m py_compile <g72 source> <g72 test>",
+      "uv run pytest -q <g72 test>"
+    ],
+    "focused_tests_passed": 6,
+    "focused_tests_failed": 0,
+    "real_retained_custody_test_skipped": false
+  },
+  "authority": {
+    "research_only": true,
+    "candidate_claim": false,
+    "score_claim": false,
+    "n600_distortion_claim": false,
+    "packet_emitted": false,
+    "archive_built": false,
+    "full_n600_launched": false,
+    "public_runtime_claim": false,
+    "pointer_moved": false
+  },
+  "receipt_sha256": "5a74c590abf2fb4bac2c7ca3a20e1be645b6e52cc95749bae55da426c73487c9"
+}
