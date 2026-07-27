@@ -1,0 +1,97 @@
+{
+  "schema": "tac.g91_n600_pose_trajectory_runner_config.v1",
+  "output_root": "/Volumes/VertigoDataTier/pact/g91_n600_pose_trajectory_20260727_r1",
+  "seed": 1234,
+  "torch_num_threads": 4,
+  "batch_pairs": 8,
+  "smoke_pairs": 8,
+  "selfcheck_pairs": 4,
+  "safety_reserve_bytes": 53687091200,
+  "research_only": true,
+  "score_claim": false,
+  "source_video": {
+    "path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+    "bytes": 37545489,
+    "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+  },
+  "base_archive": {
+    "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/archive.zip",
+    "bytes": 129392,
+    "sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd"
+  },
+  "base_member": {
+    "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/archive/0.bin",
+    "bytes": 133363,
+    "sha256": "d50aac6eab8114c2c15156354147d1cbfe007b474a0633d5cdec26e66751de31"
+  },
+  "base_member_sha256": "d50aac6eab8114c2c15156354147d1cbfe007b474a0633d5cdec26e66751de31",
+  "semantic_p_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+  "g85_decode_a": {
+    "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/decode_a/0.raw",
+    "bytes": 3662409600,
+    "sha256": "436ce2b6965c859556a217df9b1cc17784d988f2af900c35201d3e3c7f372782"
+  },
+  "g85_decode_b": {
+    "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/decode_b/0.raw",
+    "bytes": 3662409600,
+    "sha256": "436ce2b6965c859556a217df9b1cc17784d988f2af900c35201d3e3c7f372782"
+  },
+  "gt_cache": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "bytes": 5078017610,
+    "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "gt_poses_member_sha256": "bee5821eeb892ad430878946dfcdf365e1a14202efb7cd1af2b019d75da0f481",
+  "posenet_weights": {
+    "path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+    "bytes": 55835560,
+    "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+  },
+  "g85_d_seg": 0.0274712,
+  "coders": [
+    "none",
+    "delta_ar",
+    "spline_residual",
+    "delta_res"
+  ],
+  "treatments": [
+    {
+      "treatment_id": "st0020_rank3_q4096",
+      "s_t": 0.02,
+      "s_r": 0.0,
+      "pitch": 0.0,
+      "centered_rank": 3,
+      "q_levels": 4096
+    },
+    {
+      "treatment_id": "st0044_rank3_q4096",
+      "s_t": 0.044,
+      "s_r": 0.0,
+      "pitch": 0.0,
+      "centered_rank": 3,
+      "q_levels": 4096
+    },
+    {
+      "treatment_id": "st0080_rank3_q4096",
+      "s_t": 0.08,
+      "s_r": 0.0,
+      "pitch": 0.0,
+      "centered_rank": 3,
+      "q_levels": 4096
+    },
+    {
+      "treatment_id": "st0044_rank2_q4096",
+      "s_t": 0.044,
+      "s_r": 0.0,
+      "pitch": 0.0,
+      "centered_rank": 2,
+      "q_levels": 4096
+    }
+  ],
+  "full_treatment_ids": [
+    "st0020_rank3_q4096",
+    "st0044_rank3_q4096",
+    "st0080_rank3_q4096",
+    "st0044_rank2_q4096"
+  ]
+}

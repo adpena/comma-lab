@@ -1,0 +1,226 @@
+{
+  "schema": "tac.g91_n600_pose_trajectory_dominated_family_stop_receipt.v1",
+  "date": "2026-07-27",
+  "lane_id": "lane_g91_n600_pose_trajectory_compiler_selector_20260727",
+  "git_head_observed_in_shared_dirty_tree": "9e84c69b8a389337270b70fd4023a4174ef3c552",
+  "outcome": "OPERATOR_ABORTED_MACRO_DOMINATED_FAMILY_PRESERVE_EXACT_BASE",
+  "verdict_scope": "The four preregistered source-Pose-calibrated fixed XIP2 warp treatments, either G88 default direction, every stable measured-benefit prefix K, and the unchanged G85 base. This is not a negative on PoseNet-in-loop inverse solving over decoder controls.",
+  "operator_stop": {
+    "label": "g91_exhaustive_full_prefix_v3",
+    "exit": 130,
+    "classification": "OPERATOR_MACRO_STOP_NOT_RUNNER_FAILURE",
+    "reason": "Exact frontier feasibility is already falsified by invariant d_seg plus exact rate, and measured fixed-warp pose losses are orders outside the required basin.",
+    "stage_05_selection_exhaustive_full_prefix_v3_files_written": 0,
+    "stage_05_selection_exhaustive_full_prefix_v3_path_absent": true,
+    "preserved_stages": [
+      "stage_00_preflight",
+      "stage_01_compile",
+      "stage_02_operational_smoke",
+      "stage_03_full_n600",
+      "stage_04_selection"
+    ],
+    "safe_run_stdout_log_claimed": false
+  },
+  "truth": {
+    "research_only": true,
+    "score_claim": false,
+    "candidate_claim": false,
+    "promotion_eligible": false,
+    "public_runtime_closed": false,
+    "upstream_exact_n600_eval_run": false,
+    "pointer_moved": false,
+    "full_v3_selector_execution_completed": false,
+    "inverse_control_solved": false,
+    "direct_pose_target_as_warp_control_admissible": false,
+    "source_pose_trajectory_role": "FACTORIZATION_AND_INITIALIZER_EVIDENCE_ONLY",
+    "selected_archive_role": "PROVISIONAL_LOCAL_FIXED_FAMILY_EVIDENCE_NOT_V3_SELECTION_NOT_CANDIDATE"
+  },
+  "exact_input_custody": {
+    "base_archive": {
+      "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/archive.zip",
+      "bytes": 129392,
+      "sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd"
+    },
+    "base_member": {
+      "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/archive/0.bin",
+      "bytes": 133363,
+      "sha256": "d50aac6eab8114c2c15156354147d1cbfe007b474a0633d5cdec26e66751de31"
+    },
+    "source_pose_target": {
+      "shape": [
+        600,
+        6
+      ],
+      "dtype": "float64",
+      "sha256": "bee5821eeb892ad430878946dfcdf365e1a14202efb7cd1af2b019d75da0f481"
+    },
+    "semantic_p_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+    "posenet_weights_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "preflight_receipt_sha256": "c06941cb55949408e4f1684a7b0f5d00a0929ae9a6c6cc105dd7de43ac945c3c",
+    "compile_aggregate_sha256": "d035349432a35d788ca1a045285346ca63b2b8d3bc06dd92ea784845291f7055"
+  },
+  "factorability_evidence": {
+    "centered_rank_1_explained_energy_fraction": 0.9986276536814037,
+    "centered_rank_2_explained_energy_fraction": 0.9994494228162201,
+    "centered_rank_3_explained_energy_fraction": 1.0,
+    "expanded_int16_plus_scales_bytes": 7224,
+    "interpretation": "The calibrated source-Pose trajectory is strongly low-rank. This proves a compact initializer/factorization, not that PoseNet targets are inverse renderer controls."
+  },
+  "full_n600_local_frozen_posenet": {
+    "authority": "[macOS-CPU frozen-torch local research-signal]",
+    "sample_count": 600,
+    "pass": {
+      "d_pose": 163.0613202823172,
+      "vector_sha256": "47c11ad81e9773cf1cbadf7255e0dd3577ffc5f18ba9d44b5ff8d669d6ea43f4",
+      "final_receipt_sha256": "e52c4bc0d0ba7ab268a7243e69a0815ab21b7e182566654f83e67d5123b8d736"
+    },
+    "treatments": [
+      {
+        "treatment_id": "st0020_rank3_q4096",
+        "global_d_pose": 5.744202348694083,
+        "pass_or_xip2_pairwise_oracle_d_pose": 5.744202348694083,
+        "xip2_better_pair_count": 600,
+        "vector_sha256": "a873e12911f52098c596164292b5da4614dd20cddc8b378a57d5ca0e83154567",
+        "final_receipt_sha256": "2d1065ca68c2226a9785e3cf379eaab8bc9a0b4516d2c7aa0fc851205d9416b8"
+      },
+      {
+        "treatment_id": "st0044_rank2_q4096",
+        "global_d_pose": 5.803632774771892,
+        "pass_or_xip2_pairwise_oracle_d_pose": 5.803632774771892,
+        "xip2_better_pair_count": 600,
+        "vector_sha256": "175502091f68f9c6c488d5cfe7a8d888dab8656fd9220648d1886192183ca9dc",
+        "final_receipt_sha256": "d829afb3fe40cdbf28cddbddca13b3e398ab1c59c04db9527df3f554dd9e2e2b"
+      },
+      {
+        "treatment_id": "st0044_rank3_q4096",
+        "global_d_pose": 5.8068364782709905,
+        "pass_or_xip2_pairwise_oracle_d_pose": 5.8068364782709905,
+        "xip2_better_pair_count": 600,
+        "vector_sha256": "ff2fdec35bc1e0babbac7aceed6d84bb514973fe94fec9696110e582effd9985",
+        "final_receipt_sha256": "b233f425ea439aeec67c8cb586513168dd433fdaef2ceadf011defd83d7ade32"
+      },
+      {
+        "treatment_id": "st0080_rank3_q4096",
+        "global_d_pose": 4.7841469259991705,
+        "pass_or_xip2_pairwise_oracle_d_pose": 4.781669243334157,
+        "xip2_better_pair_count": 597,
+        "pass_better_pair_ids": [
+          313,
+          319,
+          327
+        ],
+        "vector_sha256": "72eb7e5472999527ac91d6eebdff9d094294232439eb7de4db8961db822f95ba",
+        "pairwise_oracle_vector_sha256": "117980dd7cfbffe5a128e5b59ea1f6c764ef2565b8f24243f394f2cd7994142e",
+        "final_receipt_sha256": "cd0f25b2558872de2e6bdda15e4d942857125ae9e16f535978ca0b8b3f8cc372"
+      }
+    ]
+  },
+  "macro_dominance": {
+    "competitive_target": 0.172,
+    "invariant_d_seg": 0.0274712,
+    "seg_score_term": 2.74712,
+    "unchanged_base_rate_score_term": 0.08615682166238399,
+    "unchanged_base_zero_pose_score_floor": 2.833276821662384,
+    "unchanged_base_target_residual_before_pose": -2.661276821662384,
+    "required_nonnegative_d_pose_on_current_seam": null,
+    "required_nonnegative_d_pose_reason": "No feasible value: invariant Seg plus exact base rate already exceeds 0.172.",
+    "provisional_132132_byte_rate_score_term": 0.08798127519393874,
+    "provisional_132132_byte_zero_pose_score_floor": 2.835101275193939,
+    "operator_teacher_seam_required_d_pose_upper_bound": 0.000474,
+    "operator_teacher_seam_bound_scope": "Operator-provided approximately-132KB teacher-dseg comparison, not the current G85/G88 seam.",
+    "best_executable_single_treatment_pass_or_xip2_oracle_d_pose": 4.781669243334157,
+    "best_executable_vs_operator_basin_ratio": 10087.909796063623,
+    "non_executable_all_treatment_per_pair_union_oracle_d_pose": 0.9080311069153633,
+    "non_executable_all_treatment_union_vector_sha256": "f4c0c187cf9829dce573db0c799f82259cb5dccbbb1f59293261325560ea755c",
+    "non_executable_union_vs_operator_basin_ratio": 1915.6774407497116,
+    "non_executable_union_scope": "Lower-bound diagnostic only: the current G88 operand carries one XIP2 trajectory, so per-pair choice among all four treatments is not executable."
+  },
+  "selector_implementation": {
+    "default_xip2_pass_exception_prefix_counts": "K=0..599",
+    "default_pass_xip2_activation_prefix_counts": "K=1..600",
+    "executable_prefix_rows_per_treatment": 1200,
+    "unchanged_base_k0_default_pass_decision": 1,
+    "decision_universe_per_treatment_including_base": 1201,
+    "full_four_treatment_executable_rows_if_run": 4800,
+    "scope": "Every prefix length in both stable measured-benefit orders, including beyond the positive-gain boundary; not the combinatorial 2^600 subset universe.",
+    "base_tie_policy": "Preserve exact incoming G85 archive; never fabricate an empty XIP2 operand.",
+    "custody_hardening": "Every coder receipt size, SHA, encoding, operand, member, STORE archive, DEFLATE archive, selected archive, and nested parsed object is bound to actual bytes.",
+    "implementation_proven_not_full_v3_executed": true
+  },
+  "provisional_prior_stage_04_evidence": {
+    "receipt_path": "/Volumes/VertigoDataTier/pact/g91_n600_pose_trajectory_20260727_r1/stage_04_selection/selected/receipt.json",
+    "receipt_sha256": "7ea55156ddec593f2163467ad260fb40b3209e1f49dddcc9db517e13e46f9807",
+    "selection_grid_status": "SUPERSEDED_PRE_V3_PREFIX_GRID_NOT_A_FINAL_V3_SELECTION",
+    "treatment_id": "st0080_rank3_q4096",
+    "d_pose": 4.781669243334157,
+    "local_combined_formula_value": 9.750062767013077,
+    "archive": {
+      "path": "/Volumes/VertigoDataTier/pact/g91_n600_pose_trajectory_20260727_r1/stage_04_selection/selected/selected.archive.zip",
+      "bytes": 132132,
+      "sha256": "de16c751fc5f27dd46ab0606e263c44e70d4cbef71f917848cc2ade4ac059a28",
+      "encoding": "zip_deflated"
+    },
+    "member": {
+      "bytes": 136436,
+      "sha256": "9e036102b7d4ce14a8a4a1a02723900cb46bf0bdd68f63e6c94de654e0306608"
+    },
+    "operand": {
+      "bytes": 2988,
+      "sha256": "032db740818fab18241f909985aab4ea1e0582aaee479c79c7dd62746bae2727"
+    },
+    "xip2": {
+      "bytes": 2714,
+      "sha256": "0c04be92e3f2abac256f95e332cf1e420239f5a43f6b5b8b0b51722116ce0da0"
+    },
+    "double_decode": {
+      "batch_count": 75,
+      "batch_pairs_maximum": 8,
+      "deterministic_double_decode_every_batch": true,
+      "exact_y1_preserved_every_batch": true,
+      "ordered_batch_camera_digest": "0b55ce1670a63ff57d17beb76cf6e9c10258583d39435e15c5327096ccc6c195",
+      "ordered_batch_y1_digest": "ffceeebc6fa71236bd7f2da13859abdf0721bd87b50d9ea0c737bef7fb280652"
+    }
+  },
+  "settled_negative_and_next_path": {
+    "g16_spec_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g16_quantized_xip2_inverse_solver_20260726.md",
+    "g16_spec_sha256": "0ed9a29d350149985c277a3a90d996059ff8ed0ebef616a8f247f9f9d5381ad6",
+    "prior_affine_xi_to_posenet_r_squared": -0.215,
+    "direct_pose_target_as_warp_control_admissible": false,
+    "inverse_control_solved": false,
+    "only_admissible_promotion_path": "G95_POSENET_IN_LOOP_INVERSE_SOLVE_OVER_DECODER_CONTROLS_THEN_FACTOR_AND_QUANTIZE"
+  },
+  "g90_linkage": {
+    "receipt_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g90_projected_population_costates_receipt_20260727.json",
+    "receipt_file_sha256": "936403d665e4297daf7fc768a91dd04934c84dfc990dfec596ab8b6d873e8285",
+    "status_at_g91_stop": "PARTIAL_SIX_IMMUTABLE_BATCHES_NO_AGGREGATE_NO_ADMISSION",
+    "family": "COARSE_FAMILY_COSTATE_ATLAS_ONLY",
+    "serialized_or_used_for_g91_selection": false,
+    "seg_transfer": "Exact only for each measured Y1 byte pair; G91 preserves Y1, so it supplies no G91 pose actuator.",
+    "pose_transfer": "Not transferable across Y0 or Y1 changes and not PoseNet-inverse decoder-control authority."
+  },
+  "implementation_custody": {
+    ".omx/research/configs/taskspace_g91_n600_pose_trajectory_20260727.json": "36b324d0d3967b56f10f9a5eb38f5dbfdba88f577338115323a1b515703d6c4c",
+    "src/tac/witness_dsl/taskspace_g91_n600_pose_trajectory_compiler_v1.py": "2b4000af450d46ae1bcc78e6a38730361ac4f9901d601d0bbb52b630c6248683",
+    "tools/compile_taskspace_g91_n600_pose_trajectory.py": "a30eec2dba6c1eb4995fbd5dfc7eb28bcb0ea1b030033dcda89f9048c17e7382",
+    "src/tac/witness_dsl/tests/test_taskspace_g91_n600_pose_trajectory_compiler_v1.py": "4b75147c5b8a739adccdfd20f2037ace2e8e64c18deefa56663f8ed29027bc49"
+  },
+  "validation": {
+    "focused_pytest": "7 passed",
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "lane_registry_validate": "PASS_2231_LANES",
+    "lane_maturity": "L2_LOCAL_INTEGRATION"
+  },
+  "open_blockers": [
+    "G91_FIXED_SOURCE_POSE_WARP_FAMILY_MACRO_DOMINATED",
+    "G16_AFFINE_XI_TO_POSENET_SETTLED_NEGATIVE",
+    "G91_POSENET_IN_LOOP_INVERSE_CONTROL_SOLVE_OWED_AS_G95",
+    "G91_PUBLIC_RUNTIME_AND_UPSTREAM_EXACT_N600_EVAL_OWED",
+    "G88_PUBLIC_INFLATE_RUNTIME_GRAPH_LINK_OWED"
+  ],
+  "pointer_delta": {
+    "effective_frontier_moved": false,
+    "candidate_landed": false,
+    "statement": "Pointer UNMOVED. G91 produced initializer/factorability and formulation-falsification evidence, not a public or exact-eval candidate."
+  }
+}
