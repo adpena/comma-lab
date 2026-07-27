@@ -3,7 +3,42 @@
 Date: 2026-07-27  
 Axis: `[macOS-CPU exact parsed-wire producer screen; non-promotable until final archive eval]`  
 Parent: G111/G112/G115/G117/G110/V10  
-Status: implementation contract; no score or pointer claim
+Status: v1 implementation `f92813301f` is **UNSAFE FOR PRODUCTION
+AUTHORITY** after G122 adversarial review; G120 v2 is required. No score or
+pointer claim.
+
+## Fail-closed v1 finding
+
+The v1 fresh-path custody is useful research infrastructure, but no caller may
+treat its receipt as production authority. The adversarial review found:
+
+- resumed G117/G120 batch rows can coherently self-attest predicted-label
+  hashes and disagreement counts;
+- the frontier obstruction uses binary floats instead of exact disagreement
+  counts and the pointer's exact decimal/rational;
+- pointer-independent measurements and pointer-conditioned reductions are
+  mixed in one shared ledger;
+- parsed-wire obstruction can erase a state before its G115 QAT disposition is
+  known, and signed quantization regret is not representable;
+- hashed public runtime/scorer files are loaded later by path without closing
+  the mutation window.
+
+G111 remains held. G121 and G119 must require the versioned v2
+measurement/observation schemas and reject G120 v1.
+
+The v2 split is:
+
+- immutable `tac.g120_stage_measurement.v2`, pointer-independent, carrying
+  physical predicted-label arrays, exact disagreement counts, all four archive
+  alternatives, and complete stage/scorer/runtime custody;
+- immutable `tac.g120_stage_observation.v2`, binding that measurement to the
+  exact lexical target decimal/reduced rational and integer cross-product;
+- G121 alone owns exhaustive attempts, retained/deferred views, scheduling
+  hints, and completion.
+
+Fresh or untrusted resume state must rerun the internal scorer. Cache reuse is
+admissible only through an externally expected prior v2 measurement-receipt
+SHA whose physical prediction arrays are reopened and recomputed.
 
 ## Objective
 
