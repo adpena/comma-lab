@@ -421,7 +421,10 @@ def test_actual_v9_identical_compile_is_deterministic(v9_document: dict) -> None
     assert v9_document["dsl_compile_hash"] == doc_b["dsl_compile_hash"]
 
 
-def test_internal_smoke_delta_is_typed_lever_and_writes_valid_binding(tmp_path: Path) -> None:
+def test_internal_smoke_delta_is_typed_lever_and_writes_valid_binding(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from tac.witness_dsl.spec_v9_cgauge import compile_v9_cgauge_ideal_launch_config
 
     launcher = _load_tool("launch_witness_run")
@@ -451,6 +454,18 @@ def test_internal_smoke_delta_is_typed_lever_and_writes_valid_binding(tmp_path: 
     # (levers compose last, later wins) — the delta remains DSL-authored.
     assert bindings["--ckpt-every"]["lever_owners"][-1] == "catalog406_test_resume"
     assert bindings["--resume-from"]["lever_owners"] == ["catalog406_test_resume"]
+
+    # A governor/trainer opens this artifact in a fresh process.  Its correctness
+    # may not depend on the factory having warmed the module-global provenance
+    # registry in the launcher process.
+    import tac.v9_provenance_gates as provenance_gates
+
+    monkeypatch.setattr(
+        provenance_gates,
+        "_provenance_table_for_program",
+        lambda _program_name: {},
+    )
+    assert provenance_gates._verify_dsl_program_recompile(document)[0]
 
 
 def test_actual_v9_run_identity_is_excluded_but_semantic_seed_is_not(

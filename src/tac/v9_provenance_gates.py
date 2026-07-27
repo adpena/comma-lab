@@ -531,6 +531,9 @@ def _verify_dsl_program_recompile(document: Mapping[str, Any]) -> tuple[bool, st
             str(document["spec_id"]),
             program,
             compiler_manifest=document["lawref_provenance"],
+            provenance=_provenance_rows_from_compiler_manifest(
+                document["lawref_provenance"]
+            ),
             repo_root=_REPO_ROOT,
         )
         recomputed_manifest = _canonical_bijection_payload(asdict(snapshot))
@@ -1119,6 +1122,31 @@ def build_config_bijection_snapshot(
     )
 
 
+def _provenance_rows_from_compiler_manifest(
+    manifest: Mapping[str, Any] | None,
+) -> dict[str, dict[str, Any]]:
+    """Recover the rung leg from the compile artifact itself.
+
+    ``dsl_provenance.json`` must be independently reopenable in a fresh process.
+    The live factory registry is useful while authoring a config, but it is
+    ambient process state and therefore cannot be a prerequisite for the
+    artifact recompile performed by the governor or trainer.  Every semantic
+    flag's canonical compiler record already carries the same ladder class that
+    the #332 snapshot records, so derive the recompile input from that counted
+    document rather than consulting a warmed registry.
+    """
+
+    rows: dict[str, dict[str, Any]] = {}
+    for key, record in dict(manifest or {}).items():
+        if not isinstance(record, Mapping):
+            continue
+        flag = _normalized_manifest_flag(str(key))
+        rung = record.get("ladder_class")
+        if rung is not None:
+            rows[flag] = {"rung": str(rung)}
+    return rows
+
+
 def build_dsl_compile_provenance_document(
     *,
     program_name: str,
@@ -1167,6 +1195,7 @@ def build_dsl_compile_provenance_document(
         program_name,
         program,
         compiler_manifest=lawref_rows,
+        provenance=_provenance_rows_from_compiler_manifest(lawref_rows),
         repo_root=repo_root,
     )
     raw_spec = typed_config.model_dump(mode="json", by_alias=True)
