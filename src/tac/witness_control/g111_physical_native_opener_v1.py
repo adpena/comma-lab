@@ -103,6 +103,42 @@ class G111PhysicalOwnerMetadata:
 
 
 @dataclass(frozen=True, slots=True)
+class G111PhysicalEntryMetadata:
+    """Immutable physical descriptor for one exact NPZ payload leaf."""
+
+    key: str
+    owner: str
+    dtype: str
+    shape: tuple[int, ...]
+    nbytes: int
+    sha256: str
+
+    @classmethod
+    def from_descriptor(
+        cls,
+        descriptor: EntryDescriptor,
+    ) -> G111PhysicalEntryMetadata:
+        return cls(
+            key=descriptor.key,
+            owner=descriptor.owner,
+            dtype=descriptor.dtype,
+            shape=descriptor.shape,
+            nbytes=descriptor.nbytes,
+            sha256=descriptor.sha256,
+        )
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "key": self.key,
+            "owner": self.owner,
+            "dtype": self.dtype,
+            "shape": list(self.shape),
+            "nbytes": self.nbytes,
+            "sha256": self.sha256,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class G111PhysicalNativeReceipt:
     """Immutable metadata proven from one content-addressed physical NPZ."""
 
@@ -112,6 +148,7 @@ class G111PhysicalNativeReceipt:
     manifest_schema: str
     manifest_semantic_sha256: str
     manifest_array_sha256: str
+    entries: Mapping[str, G111PhysicalEntryMetadata]
     entry_count: int
     payload_nbytes: int
     derived_lineage_keys: tuple[str, ...]
@@ -124,7 +161,14 @@ class G111PhysicalNativeReceipt:
         hashes = dict(self.owner_semantic_sha256)
         if tuple(hashes) != ATOMIC_OWNERS:
             _fail("receipt owner semantic hashes are not in canonical O1--O6 order")
+        entries = dict(self.entries)
+        if tuple(entries) != tuple(sorted(entries)):
+            _fail("receipt physical entries are not in canonical key order")
+        for key, entry in entries.items():
+            if key != entry.key:
+                _fail(f"receipt entry mapping key {key!r} differs from descriptor key {entry.key!r}")
         object.__setattr__(self, "owner_semantic_sha256", MappingProxyType(hashes))
+        object.__setattr__(self, "entries", MappingProxyType(entries))
 
     def as_dict(self) -> dict[str, object]:
         """Return a JSON-safe copy suitable for a physical-lineage receipt."""
@@ -138,6 +182,10 @@ class G111PhysicalNativeReceipt:
             "manifest_schema": self.manifest_schema,
             "manifest_semantic_sha256": self.manifest_semantic_sha256,
             "manifest_array_sha256": self.manifest_array_sha256,
+            "entries": {
+                key: entry.as_dict()
+                for key, entry in self.entries.items()
+            },
             "entry_count": self.entry_count,
             "payload_nbytes": self.payload_nbytes,
             "derived_lineage_keys": list(self.derived_lineage_keys),
@@ -424,6 +472,12 @@ def open_g111_native_v3_physical(
         manifest_schema=manifest.schema,
         manifest_semantic_sha256=canonical_semantic_hash(manifest),
         manifest_array_sha256=hashlib.sha256(manifest_bytes).hexdigest(),
+        entries=MappingProxyType(
+            {
+                entry.key: G111PhysicalEntryMetadata.from_descriptor(entry)
+                for entry in manifest.entries
+            }
+        ),
         entry_count=len(manifest.entries),
         payload_nbytes=payload_nbytes,
         derived_lineage_keys=manifest.derived_lineage_keys,
@@ -437,6 +491,7 @@ def open_g111_native_v3_physical(
 
 __all__ = [
     "CLAIM_SCOPE",
+    "G111PhysicalEntryMetadata",
     "G111PhysicalNativeOpenError",
     "G111PhysicalNativeReceipt",
     "G111PhysicalOwnerMetadata",

@@ -99,6 +99,12 @@ def test_opens_exact_physical_native_v3_and_returns_immutable_receipt(
     assert receipt.file_sha256 == _sha256(path)
     assert receipt.manifest_schema == SCHEMA
     assert receipt.entry_count == len(arrays)
+    assert tuple(receipt.entries) == tuple(sorted(arrays))
+    first_key = next(iter(receipt.entries))
+    assert receipt.entries[first_key].sha256 == next(
+        entry.sha256 for entry in manifest.entries if entry.key == first_key
+    )
+    assert receipt.as_dict()["entries"][first_key]["shape"] == [2]  # type: ignore[index]
     assert receipt.payload_nbytes == sum(array.nbytes for array in arrays.values())
     assert receipt.claim_scope == CLAIM_SCOPE
     assert tuple(receipt.owner_semantic_sha256) == ATOMIC_OWNERS
@@ -110,6 +116,8 @@ def test_opens_exact_physical_native_v3_and_returns_immutable_receipt(
     ).hexdigest()
     with pytest.raises(TypeError):
         receipt.owner_semantic_sha256[ATOMIC_OWNERS[0]] = "0" * 64  # type: ignore[index]
+    with pytest.raises(TypeError):
+        receipt.entries[first_key] = receipt.entries[first_key]  # type: ignore[index]
 
 
 def test_requires_exact_lowercase_sha256(tmp_path: Path) -> None:
