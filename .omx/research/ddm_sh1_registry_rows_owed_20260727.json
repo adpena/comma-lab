@@ -1,0 +1,34 @@
+{
+  "schema": "sh1_registry_rows_owed.v1",
+  "generated_utc": "2026-07-27T00:00:00Z",
+  "producer": "ddm_sh1_compose_and_local_exact (claude arm, worktree branch ddm/sh1_integration_20260727)",
+  "purpose": "Registry rows added by pricing-wave branches that were NOT merged into .omx/state/lane_registry.json (resolved to main's version per sh1 charter step 1). MAIN applies these at a quiet boundary via tools/lane_maturity.py add-lane or the registry merge driver; never applied to main's live registry by this arm.",
+  "conflict_context": {
+    "merge": "PF3B 074955c6ad into sh1 integration branch (base ad464e269c)",
+    "resolution": "lane_registry.json -> main/ours; ddm_pf3_finite_price_materialization row was IDENTICAL on both sides (no action); only the row below is owed",
+    "mr2_review": ".omx/research/codex_findings_ddm_mr2_pricing_wave_merge_20260726_codex.md (commit e71e99dab1)"
+  },
+  "apply_instructions": "At a quiet boundary on main, with the shared .venv present: .venv/bin/python tools/lane_maturity.py add-lane ddm_pf3b_52probe_joint_improving_hunt --name 'DDM PF3B 52-probe joint-improving hunt' --phase 1 ; then set notes per the row below (or splice the JSON row into lanes[] and run tools/lane_maturity.py validate).",
+  "rows_owed": [
+    {
+      "id": "ddm_pf3b_52probe_joint_improving_hunt",
+      "name": "DDM PF3B 52-probe joint-improving hunt",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {"status": false, "evidence": ""},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "contest_cpu": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Research-only local macOS-CPU frozen-scorer advisory hunt; pointer unchanged; MAIN landing review required."
+    }
+  ],
+  "rows_from_wf7": [],
+  "rows_from_cb1": [],
+  "note": "WF7 (e3c2140d3a) and CB1 (2721704ab2) merges did not touch lane_registry.json; no rows owed from those branches."
+}
