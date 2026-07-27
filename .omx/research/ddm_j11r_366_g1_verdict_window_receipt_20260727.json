@@ -1,0 +1,138 @@
+{
+ "schema": "ddm_j11r_366_g1_verdict_window_receipt.v1",
+ "utc": "2026-07-27T22:00:23Z",
+ "lane_id": "lane_ddm_j11r_366_g1_reopener_verdict_20260727",
+ "task": "#714 (j11r, 1:1 replacement of quota-killed codex arm)",
+ "charter": ".omx/tmp/codex_prompts/ddm_j11r_366_opening_proposal_decomposition.md",
+ "evidence_axis": "[macOS-CPU frozen-scorer advisory] (consumed from j12; no new scorer invocation by j11r)",
+ "research_only": true,
+ "score_claim": false,
+ "pointer_moved": false,
+ "mode": "VERIFICATION_AND_VERDICT_ONLY \u2014 the charter's measurement was already executed by j12 (merged to main via mr1 chain aa83f79b21); re-running it would violate the ALREADY-SETTLED rule. j11r verified custody on main, re-derived all S-arithmetic from raw receipt triples (residuals <= 2.3e-15), and issues the typed G1 verdict.",
+ "consumed_receipts": {
+  "j12_compact_receipt": {
+   "path": ".omx/research/ddm_j12_366_receiver_coordinate_custody_receipt_20260725.json",
+   "sha256": "71b4ce5932be07483892e4c6627106da34ce2d142a9c83f05ba526c9cf913b64",
+   "sha256_reverified_by_j11r": true
+  },
+  "j12_full_receipt": {
+   "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j12_366_receiver_coordinate_custody_producers_20260725T150405Z/ddm_j12_receiver_coordinate_custody_receipt_v2.json",
+   "sha256": "0135dca6ad1bdd4691041e66161b4ccfed71d2cce3258d86b23a0345e2591c6d"
+  },
+  "j12_pricing_receipt_sha256": "e73090c4d145edba8a9c5ac67b1833706183f47699bd42873f0398484fcd8def",
+  "j12_smoke_receipt_sha256": "695c7943ee7253023defd5b3fede49262496b5f4ecfa8f7d009738b83a8b39d3",
+  "j12_jacobian_index_sha256": "803b11013a540288179ee387274c854e5a8858dc995757e59aa1478b56071dd5",
+  "j11_refusal_receipt_sha256": "25f092d3499283a77dfcda274015af6826d1f3ce38ac91c26d4a01afa12ad7f4",
+  "mr1_merge_commit_on_main": "aa83f79b21",
+  "j12_producer_on_main": "tools/run_ddm_j12_receiver_coordinate_custody.py"
+ },
+ "warm_start_identity": {
+  "arbitration": "ws3 KEEP_WJOINT (re-graded PROFILE-CONDITIONED per card \u00a722; \u00a721 transfers start decision to pure-priced rows)",
+  "source_archive_sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+  "source_bytes": 138813
+ },
+ "unsplit_opening_baseline_j10": {
+  "note": "the 'inert-or-ascending' unsplit receipts the charter cites",
+  "rows": [
+   {
+    "proposal": "worldsheet_joint_active_x_+1",
+    "joint_delta_S": 0.00994017010407013,
+    "disposition": "rejected"
+   },
+   {
+    "proposal": "worldsheet_joint_active_y_-1",
+    "joint_delta_S": 0.04382082650052955,
+    "disposition": "rejected"
+   },
+   {
+    "proposal": "local_exact_gradient",
+    "joint_delta_S": 0.06531830924357995,
+    "disposition": "rejected"
+   },
+   {
+    "proposal": "worldsheet_joint_active_x_-1",
+    "joint_delta_S": 0.1919619536286387,
+    "disposition": "rejected"
+   }
+  ]
+ },
+ "split_leg_result": {
+  "verdict": "SPLIT_NULL_PROJECTORS_IDENTICALLY_ZERO",
+  "detail": "On all 4 sealed 1-D proposal rays W(alpha)=W0+alpha*delta_p, the receiver-coordinate Pose6 Jacobian and the rank-4-inner Seg Jacobian are each rank-1 / nullity-0 (exact positive Grams: pose 59.01/132.37/178.13/204.04; seg 1.26e5/4.51e5/7.72e5/1.22e6). Both null projectors are exactly [0]; all 16 pose-null/seg-null singles are active-zero with delta_S=0 under the strict realized joint rule (fixed_R_star_used=false, break_even_ratio=1.0).",
+  "which_projector_leg_failed": "BOTH \u2014 degenerately, by rank-1 geometry of the sealed 1-D proposal set, not by measurement noise or apparatus fault",
+  "verdict_scope": "INSTANCE \u2014 sealed 4-ray J10 proposal set x W_joint-step-50 source; NOT a family negative for higher-dimensional proposal families"
+ },
+ "opening_window_pc1_joint": {
+  "note": "The charter's composed leg (pose-null-seg + PC1-pose) degenerates to the pure PC1 joint carrier because every pose-null seg component is zero. This IS the exact delta_S<0 opening-window receipt.",
+  "acceptance_rule": "strict_realized_joint_delta_s_lt_zero (unchanged)",
+  "per_step_rows": [
+   {
+    "step": 0,
+    "bytes": 138813,
+    "sha": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+    "d_seg": 0.06974277072482639,
+    "d_pose": 35.49982080959101,
+    "S_advisory": 25.908103080501977,
+    "delta_d_seg_vs_prev": 0.0,
+    "delta_d_pose_vs_prev": 0.0,
+    "delta_S_vs_prev": 0.0,
+    "delta_S_vs_source": 0.0
+   },
+   {
+    "step": 8,
+    "bytes": 139693,
+    "sha": "be6663320b5f7b1cd73b61bb4fb03ecac7aa40566bbfd9fd08ebba150e72ffec",
+    "d_seg": 0.06472418891059027,
+    "d_pose": 31.7612616254476,
+    "S_advisory": 24.3871242151382,
+    "delta_d_seg_vs_prev": -0.005018581814236117,
+    "delta_d_pose_vs_prev": -3.7385591841434085,
+    "delta_S_vs_prev": -1.5209788653637766,
+    "delta_S_vs_source": -1.5209788653637766
+   },
+   {
+    "step": 16,
+    "bytes": 139701,
+    "sha": "9d1e599fe9d48bb2030e11e742be9ac8b2c5a2d3430df4a476f8b83006a91fba",
+    "d_seg": 0.0627319590250651,
+    "d_pose": 28.15912801903941,
+    "S_advisory": 23.146898819945093,
+    "delta_d_seg_vs_prev": -0.0019922298855251652,
+    "delta_d_pose_vs_prev": -3.602133606408188,
+    "delta_S_vs_prev": -1.2402253951931073,
+    "delta_S_vs_source": -2.761204260556884
+   }
+  ],
+  "w_seg_base_composite": {
+   "base_sha256": "264a09abb8f614eca104eb4ab1d0a12005ba65ec6a4fbc6620ff92f1c73281a9",
+   "base_S_advisory": 40.76203031959233,
+   "composite_sha256": "b8013857fae78b129799cb620a56df7f9aaed4937b52c97cea4c3c77cb555f97",
+   "composite_S_advisory": 37.190887194756534,
+   "joint_delta_S": -3.5711431248357903
+  },
+  "rederivation_residuals": {
+   "step8": 1.1102230246251565e-15,
+   "step16": 2.220446049250313e-15,
+   "w_seg": 2.220446049250313e-15
+  }
+ },
+ "continuation": {
+  "live_4step_joint_delta_vs_initial_merged": 0.12759259096760986,
+  "accepted": false,
+  "ema_delta": 0.0,
+  "ema_byte_identical": true,
+  "conclusion": "continuation past the PC1 opening NOT established; live co-optimization from W_joint+PC1 is adverse"
+ },
+ "g1_verdict": {
+  "split_leg": "NOT_CLEARED \u2014 typed reason RANK1_RAY_NULL_PROJECTORS_ZERO (both legs), INSTANCE scope",
+  "opening_window": "EXACT_DELTA_S_NEGATIVE_RECEIPT_EXISTS \u2014 PC1 joint carrier: -2.761204260556886 from W_joint-step-50 (16 accepted steps) / -3.5711431248357903 from W_seg; consumable by the #710 card as the G1 opening receipt",
+  "fire_gate": "NOT_SATISFIED_BY_THIS_ALONE \u2014 D3 fire rule requires measured opening delta_S/hour vs the solve-line comparator; continuation regression + PREPARED_REVIEW_REQUIRED reseal state (no J12 resealer profile) remain owed; #710 HOLD stands, FIRE is MAIN-only",
+  "named_reformulation": "openings at this endpoint are JOINT/COMPOSED moves (j12 x pf3 twin convergence, routing card \u00a73/\u00a76): PC1 tube-finish on the descent line; composition wave (cb1 MyCar -0.0516 / wf7 -1776B / c1 waterfill co-measure) on the describe line"
+ },
+ "reanchor_0172": {
+  "binding": "card \u00a79 \u2014 all acceptance arithmetic vs min(0.15, official leaderboard best)=0.172, never 0.19108",
+  "absolute_S_at_best_window_endpoint_advisory": 23.146898819945093,
+  "distance_to_bar_S": 22.974898819945093,
+  "statement": "the opening is real (-2.76 S) but the campaign endpoint sits ~22.97 S above the 0.172 bar [macOS-CPU frozen-scorer advisory]; the opening receipt gates G1 bookkeeping, not competitiveness"
+ }
+}
