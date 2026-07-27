@@ -14,10 +14,22 @@ from typing import Any, Final
 import numpy as np
 
 from tac.witness_control import (
+    taskspace_g112_exact_checkpoint_partition_v1 as g112,
+)
+from tac.witness_control import (
     taskspace_g121_resumable_stage_harvest_v1 as g121,
 )
 from tac.witness_dsl import (
+    g111_parsed_g105_stage_selector_v1 as g111_selector,
+)
+from tac.witness_dsl import (
+    g120_parsed_stage_production_authority_v1 as g120_v1,
+)
+from tac.witness_dsl import (
     g120_parsed_stage_production_authority_v2 as g120,
+)
+from tac.witness_dsl import (
+    taskspace_g105_exact_v9_semantic_root_adapter_v1 as g105_adapter,
 )
 
 SCHEMA: Final = "tac.g120_governed_clean_dry_run.v1"
@@ -120,6 +132,22 @@ def _source_binding(path: Path, *, name: str) -> dict[str, Any]:
 
 def _source_bindings(repo_root: Path) -> dict[str, dict[str, Any]]:
     return {
+        "g105_semantic_adapter": _source_binding(
+            Path(g105_adapter.__file__).resolve(),
+            name="G105 semantic adapter source",
+        ),
+        "g111_stage_selector": _source_binding(
+            Path(g111_selector.__file__).resolve(),
+            name="G111 parsed-G105 stage selector source",
+        ),
+        "g112_checkpoint_partition": _source_binding(
+            Path(g112.__file__).resolve(),
+            name="G112 checkpoint partition source",
+        ),
+        "g120_production_engine": _source_binding(
+            Path(g120_v1.__file__).resolve(),
+            name="G120-v1 production engine source",
+        ),
         "g120_production_wrapper": _source_binding(
             Path(g120.__file__).resolve(),
             name="G120-v2 production source",
@@ -127,6 +155,13 @@ def _source_bindings(repo_root: Path) -> dict[str, dict[str, Any]]:
         "g120_dry_run_gate": _source_binding(
             Path(__file__).resolve(),
             name="G120 dry-run gate source",
+        ),
+        "g120_dry_run_cli": _source_binding(
+            (
+                repo_root
+                / "tools/run_g120_governed_clean_dry_run.py"
+            ).resolve(),
+            name="G120 dry-run CLI source",
         ),
         "g121_harvester": _source_binding(
             Path(g121.__file__).resolve(),

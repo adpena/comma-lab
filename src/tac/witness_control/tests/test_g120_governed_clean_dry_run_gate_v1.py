@@ -11,6 +11,17 @@ from tac.witness_control import (
 )
 
 REPO = Path(__file__).resolve().parents[4]
+EXPECTED_SOURCE_BINDINGS = {
+    "g105_semantic_adapter",
+    "g111_stage_selector",
+    "g112_checkpoint_partition",
+    "g120_dry_run_cli",
+    "g120_dry_run_gate",
+    "g120_production_engine",
+    "g120_production_wrapper",
+    "g121_harvester",
+    "g121_live_monitor",
+}
 
 
 def _sha(payload: bytes) -> str:
@@ -95,6 +106,9 @@ def test_checkpoint_resume_and_reopen_are_distinct_process_no_scorer(
     assert receipt["resume_pid"] == 1002
     assert receipt["batch_resume_proof"]["scorer_calls"] == 0
     assert receipt["authority"]["heavy_scorer_run_launched"] is False
+    assert set(receipt["binding"]["source_bindings"]) == (
+        EXPECTED_SOURCE_BINDINGS
+    )
 
 
 def test_resume_in_checkpoint_process_is_refused(
@@ -182,9 +196,14 @@ def test_non_ssd_path_and_insufficient_free_space_fail_closed(
         )
 
 
-def test_current_source_binding_change_invalidates_completed_gate(
+@pytest.mark.parametrize(
+    "changed_source",
+    sorted(EXPECTED_SOURCE_BINDINGS),
+)
+def test_each_source_binding_change_invalidates_completed_gate(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    changed_source: str,
 ) -> None:
     kwargs = _fixture(tmp_path, monkeypatch)
     monkeypatch.setattr(subject.os, "getpid", lambda: 3001)
@@ -201,8 +220,8 @@ def test_current_source_binding_change_invalidates_completed_gate(
 
     def changed_sources(repo_root: Path):
         rows = original(repo_root)
-        rows["g120_production_wrapper"] = {
-            **rows["g120_production_wrapper"],
+        rows[changed_source] = {
+            **rows[changed_source],
             "sha256": _sha(b"changed"),
         }
         return rows
@@ -231,4 +250,40 @@ def test_current_source_binding_change_invalidates_completed_gate(
             measurement_cache_dir=kwargs[
                 "measurement_cache_dir"
             ],
+        )
+
+
+def test_resume_refuses_source_change_after_checkpoint(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    kwargs = _fixture(tmp_path, monkeypatch)
+    monkeypatch.setattr(subject.os, "getpid", lambda: 3101)
+    subject.run_g120_governed_clean_dry_run_v1(
+        phase="checkpoint",
+        **kwargs,
+    )
+    original = subject._source_bindings
+
+    def changed_sources(repo_root: Path):
+        rows = original(repo_root)
+        rows["g111_stage_selector"] = {
+            **rows["g111_stage_selector"],
+            "sha256": _sha(b"changed-between-processes"),
+        }
+        return rows
+
+    monkeypatch.setattr(
+        subject,
+        "_source_bindings",
+        changed_sources,
+    )
+    monkeypatch.setattr(subject.os, "getpid", lambda: 3102)
+    with pytest.raises(
+        subject.G120GovernedDryRunError,
+        match="refusing to overwrite different output",
+    ):
+        subject.run_g120_governed_clean_dry_run_v1(
+            phase="resume",
+            **kwargs,
         )
