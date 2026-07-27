@@ -55,15 +55,18 @@ from collections.abc import Callable, Iterator, Mapping
 from concurrent.futures import CancelledError, Executor, Future
 from contextlib import contextmanager
 from dataclasses import dataclass
-from itertools import pairwise
 from types import MappingProxyType
 from typing import Any, Final
 
 import numpy as np
 
+from tac.witness_control.trajectory_transaction_v2 import VERDICT_RESULT_ID_MAX_UTF8_BYTES
+
 SCHEMA: Final = "tac.g111_verdict_barrier.v1"
 LEGACY_PENDING_PREFIX: Final = "__cl_pend_"
 SHA256_HEX_LENGTH: Final = 64
+RESULT_ID_MAX_UTF8_BYTES: Final = VERDICT_RESULT_ID_MAX_UTF8_BYTES
+INT64_MAX: Final = int(np.iinfo(np.int64).max)
 _RESULT_DOMAIN: Final = b"tac.g111.immutable-verdict-result.v1\0"
 _STATE_FIELDS: Final = frozenset(
     {
@@ -465,6 +468,14 @@ class ImmutableVerdictResult:
             raise ValueError("result_id must have exact non-empty str type")
         if any(character.isspace() for character in result_id):
             raise ValueError("result_id must not contain whitespace")
+        try:
+            result_id_bytes = result_id.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise ValueError("result_id must be valid UTF-8") from exc
+        if b"\0" in result_id_bytes:
+            raise ValueError("result_id must not contain NUL")
+        if len(result_id_bytes) > RESULT_ID_MAX_UTF8_BYTES:
+            raise ValueError(f"result_id UTF-8 encoding exceeds {RESULT_ID_MAX_UTF8_BYTES} bytes")
         if not isinstance(payload, Mapping):
             raise TypeError(f"payload must be a mapping, got {type(payload).__name__}")
         payload_bytes = _canonical_payload_bytes(payload)
@@ -491,6 +502,14 @@ class ImmutableVerdictResult:
             raise ResultIntegrityError("result_id must have exact non-empty str type")
         if any(character.isspace() for character in self.result_id):
             raise ResultIntegrityError("result_id must not contain whitespace")
+        try:
+            result_id_bytes = self.result_id.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise ResultIntegrityError("result_id must be valid UTF-8") from exc
+        if b"\0" in result_id_bytes:
+            raise ResultIntegrityError("result_id must not contain NUL")
+        if len(result_id_bytes) > RESULT_ID_MAX_UTF8_BYTES:
+            raise ResultIntegrityError(f"result_id UTF-8 encoding exceeds {RESULT_ID_MAX_UTF8_BYTES} bytes")
         if not isinstance(self.payload_bytes, bytes):
             raise ResultIntegrityError("payload_bytes must be immutable bytes")
         if type(self.result_sha256) is not str:
@@ -551,6 +570,14 @@ class AppliedVerdictRow:
             raise CanonicalStateError("applied result ID must have exact non-empty str type")
         if any(character.isspace() for character in self.result_id):
             raise CanonicalStateError("applied result ID must not contain whitespace")
+        try:
+            result_id_bytes = self.result_id.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise CanonicalStateError("applied result ID must be valid UTF-8") from exc
+        if b"\0" in result_id_bytes:
+            raise CanonicalStateError("applied result ID must not contain NUL")
+        if len(result_id_bytes) > RESULT_ID_MAX_UTF8_BYTES:
+            raise CanonicalStateError(f"applied result ID UTF-8 encoding exceeds {RESULT_ID_MAX_UTF8_BYTES} bytes")
         if type(self.result_sha256) is not str:
             raise CanonicalStateError("applied result SHA-256 must have exact str type")
         if len(self.result_sha256) != SHA256_HEX_LENGTH:
@@ -784,6 +811,40 @@ def _decode_utf8_array(value: np.ndarray, *, name: str) -> str:
         raise CanonicalStateError(f"{name} is not valid UTF-8") from exc
 
 
+def _fixed_padded_utf8_array(value: str, *, width: int, name: str) -> np.ndarray:
+    encoded = value.encode("utf-8")
+    if b"\0" in encoded:
+        raise CanonicalStateError(f"{name} must not contain NUL")
+    if len(encoded) > width:
+        raise CanonicalStateError(f"{name} UTF-8 encoding exceeds {width} bytes")
+    result = np.zeros(width, dtype=np.uint8)
+    result[: len(encoded)] = np.frombuffer(encoded, dtype=np.uint8)
+    return _readonly_array(result)
+
+
+def _decode_fixed_padded_utf8_array(
+    value: np.ndarray,
+    *,
+    width: int,
+    name: str,
+) -> str:
+    array = np.asarray(value)
+    if array.dtype != np.dtype(np.uint8) or array.shape != (width,):
+        raise CanonicalStateError(f"{name} must have dtype uint8 and shape ({width},)")
+    raw = array.tobytes(order="C")
+    padding_start = raw.find(b"\0")
+    if padding_start < 0:
+        encoded = raw
+    else:
+        encoded = raw[:padding_start]
+        if any(raw[padding_start:]):
+            raise CanonicalStateError(f"{name} has noncanonical nonzero padding")
+    try:
+        return encoded.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise CanonicalStateError(f"{name} is not valid UTF-8") from exc
+
+
 def _int64_scalar(value: int) -> np.ndarray:
     return _readonly_array(np.asarray([value], dtype=np.int64))
 
@@ -795,37 +856,74 @@ def _read_int64_scalar(value: np.ndarray, *, name: str) -> int:
     return _validate_nonnegative_int(array[0], name=name)
 
 
-def _pack_result_ids(rows: tuple[AppliedVerdictRow, ...]) -> tuple[np.ndarray, np.ndarray]:
+def _pack_result_ids(
+    rows: tuple[AppliedVerdictRow, ...],
+    *,
+    journal_limit: int,
+) -> tuple[np.ndarray, np.ndarray]:
     encoded = [row.result_id.encode("utf-8") for row in rows]
-    offsets = np.zeros(len(encoded) + 1, dtype=np.int64)
+    offsets = np.zeros(journal_limit + 1, dtype=np.int64)
+    data = np.zeros(
+        journal_limit * RESULT_ID_MAX_UTF8_BYTES,
+        dtype=np.uint8,
+    )
+    cursor = 0
     for index, item in enumerate(encoded, start=1):
-        offsets[index] = offsets[index - 1] + len(item)
-    data = np.frombuffer(b"".join(encoded), dtype=np.uint8).copy()
+        if len(item) > RESULT_ID_MAX_UTF8_BYTES:
+            raise CanonicalStateError(f"journal result ID UTF-8 encoding exceeds {RESULT_ID_MAX_UTF8_BYTES} bytes")
+        next_cursor = cursor + len(item)
+        data[cursor:next_cursor] = np.frombuffer(item, dtype=np.uint8)
+        cursor = next_cursor
+        offsets[index] = cursor
+    offsets[len(encoded) + 1 :] = cursor
     return _readonly_array(data), _readonly_array(offsets)
 
 
-def _unpack_result_ids(data: np.ndarray, offsets: np.ndarray) -> tuple[str, ...]:
+def _unpack_result_ids(
+    data: np.ndarray,
+    offsets: np.ndarray,
+    *,
+    row_count: int,
+    journal_limit: int,
+) -> tuple[str, ...]:
     data_array = np.asarray(data)
     offsets_array = np.asarray(offsets)
-    if data_array.dtype != np.dtype(np.uint8) or data_array.ndim != 1:
-        raise CanonicalStateError("journal_result_id_data must be a one-dimensional uint8 array")
-    if offsets_array.dtype != np.dtype(np.int64) or offsets_array.ndim != 1:
-        raise CanonicalStateError("journal_result_id_offsets must be a one-dimensional int64 array")
-    if offsets_array.size < 1 or int(offsets_array[0]) != 0:
+    expected_data_shape = (journal_limit * RESULT_ID_MAX_UTF8_BYTES,)
+    if data_array.dtype != np.dtype(np.uint8) or data_array.shape != expected_data_shape:
+        raise CanonicalStateError(
+            f"journal_result_id_data must have dtype uint8 and fixed capacity shape {expected_data_shape}"
+        )
+    if offsets_array.dtype != np.dtype(np.int64) or offsets_array.shape != (journal_limit + 1,):
+        raise CanonicalStateError(
+            f"journal_result_id_offsets must have dtype int64 and fixed shape ({journal_limit + 1},)"
+        )
+    if int(offsets_array[0]) != 0:
         raise CanonicalStateError("journal result-ID offsets must start at zero")
+    active_offsets = offsets_array[: row_count + 1]
+    if np.any(np.diff(active_offsets) <= 0):
+        raise CanonicalStateError("active journal result-ID offsets must be strictly increasing")
+    terminal = int(active_offsets[-1])
+    if terminal > row_count * RESULT_ID_MAX_UTF8_BYTES:
+        raise CanonicalStateError("journal result-ID data exceeds its active fixed-capacity rows")
+    if np.any(offsets_array[row_count + 1 :] != terminal):
+        raise CanonicalStateError("journal result-ID offsets have noncanonical padding")
+    if np.any(data_array[terminal:] != 0):
+        raise CanonicalStateError("journal result-ID data has noncanonical nonzero padding")
+    if np.any(np.diff(active_offsets) > RESULT_ID_MAX_UTF8_BYTES):
+        raise CanonicalStateError("journal result ID exceeds its fixed UTF-8 width")
     if np.any(np.diff(offsets_array) < 0):
         raise CanonicalStateError("journal result-ID offsets must be monotone")
-    if int(offsets_array[-1]) != int(data_array.size):
-        raise CanonicalStateError("journal result-ID offsets do not close over the data array")
     result: list[str] = []
-    raw = data_array.tobytes()
-    for start, stop in pairwise(offsets_array):
+    raw = data_array.tobytes(order="C")
+    for index in range(row_count):
+        start = int(offsets_array[index])
+        stop = int(offsets_array[index + 1])
         try:
-            value = raw[int(start) : int(stop)].decode("utf-8")
+            value = raw[start:stop].decode("utf-8")
         except UnicodeDecodeError as exc:
             raise CanonicalStateError("journal result ID is not valid UTF-8") from exc
-        if not value:
-            raise CanonicalStateError("journal result IDs must be non-empty")
+        if not value or "\0" in value or any(character.isspace() for character in value):
+            raise CanonicalStateError("journal result ID is not canonical")
         result.append(value)
     return tuple(result)
 
@@ -869,6 +967,8 @@ class VerdictCheckpointCapture:
             raise CanonicalStateError("checkpoint capture cursors and limits must be nonnegative integers") from exc
         if pending_count != 0 or next_submit_seq != next_apply_seq:
             raise NonQuiescentCheckpointError("checkpoint capture requires pending_count=0 and equal cursors")
+        if max(next_submit_seq, next_apply_seq, journal_limit) > INT64_MAX:
+            raise CanonicalStateError("checkpoint capture cursor or journal limit exceeds int64 capacity")
         if journal_limit < 1:
             raise CanonicalStateError("journal_limit must be at least one")
         if not isinstance(self.journal, tuple):
@@ -903,28 +1003,35 @@ class VerdictCheckpointCapture:
         if not isinstance(prefix, str) or prefix.strip() != prefix:
             raise CanonicalStateError(f"barrier prefix must be a canonical string, got {prefix!r}")
         self._validate()
-        id_data, id_offsets = _pack_result_ids(self.journal)
-        if self.journal:
-            sha_rows = np.stack(
-                [np.frombuffer(bytes.fromhex(row.result_sha256), dtype=np.uint8) for row in self.journal],
-                axis=0,
+        id_data, id_offsets = _pack_result_ids(
+            self.journal,
+            journal_limit=self.journal_limit,
+        )
+        sequences = np.zeros(self.journal_limit, dtype=np.int64)
+        sequences[: len(self.journal)] = [row.submission_seq for row in self.journal]
+        sha_rows = np.zeros((self.journal_limit, 32), dtype=np.uint8)
+        for index, row in enumerate(self.journal):
+            sha_rows[index] = np.frombuffer(
+                bytes.fromhex(row.result_sha256),
+                dtype=np.uint8,
             )
-        else:
-            sha_rows = np.empty((0, 32), dtype=np.uint8)
         arrays = {
             f"{prefix}schema": _utf8_array(SCHEMA),
             f"{prefix}next_submit_seq": _int64_scalar(self.next_submit_seq),
             f"{prefix}next_apply_seq": _int64_scalar(self.next_apply_seq),
             f"{prefix}pending_count": _int64_scalar(self.pending_count),
-            f"{prefix}last_applied_result_id": _utf8_array(self.last_applied_result_id or ""),
-            f"{prefix}last_applied_result_sha256": _utf8_array(self.last_applied_result_sha256 or ""),
-            f"{prefix}journal_limit": _int64_scalar(self.journal_limit),
-            f"{prefix}journal_sequences": _readonly_array(
-                np.asarray(
-                    [row.submission_seq for row in self.journal],
-                    dtype=np.int64,
-                )
+            f"{prefix}last_applied_result_id": _fixed_padded_utf8_array(
+                self.last_applied_result_id or "",
+                width=RESULT_ID_MAX_UTF8_BYTES,
+                name="last_applied_result_id",
             ),
+            f"{prefix}last_applied_result_sha256": _fixed_padded_utf8_array(
+                self.last_applied_result_sha256 or "",
+                width=SHA256_HEX_LENGTH,
+                name="last_applied_result_sha256",
+            ),
+            f"{prefix}journal_limit": _int64_scalar(self.journal_limit),
+            f"{prefix}journal_sequences": _readonly_array(sequences),
             f"{prefix}journal_result_id_data": id_data,
             f"{prefix}journal_result_id_offsets": id_offsets,
             f"{prefix}journal_result_sha256": _readonly_array(sha_rows),
@@ -1010,17 +1117,26 @@ class QuiescentVerdictTransaction:
         )
         if journal_limit < 1:
             raise CanonicalStateError("journal_limit must be at least one")
+        journal_count = min(next_apply_seq, journal_limit)
         sequences = np.asarray(arrays[f"{prefix}journal_sequences"])
-        if sequences.dtype != np.dtype(np.int64) or sequences.ndim != 1:
-            raise CanonicalStateError("journal_sequences must be a one-dimensional int64 array")
+        if sequences.dtype != np.dtype(np.int64) or sequences.shape != (journal_limit,):
+            raise CanonicalStateError(f"journal_sequences must have dtype int64 and fixed shape ({journal_limit},)")
+        if np.any(sequences[journal_count:] != 0):
+            raise CanonicalStateError("journal_sequences has noncanonical nonzero padding")
         result_ids = _unpack_result_ids(
             arrays[f"{prefix}journal_result_id_data"],
             arrays[f"{prefix}journal_result_id_offsets"],
+            row_count=journal_count,
+            journal_limit=journal_limit,
         )
         hashes = np.asarray(arrays[f"{prefix}journal_result_sha256"])
-        if hashes.dtype != np.dtype(np.uint8) or hashes.shape != (len(sequences), 32):
-            raise CanonicalStateError("journal_result_sha256 must have dtype uint8 and shape (N, 32)")
-        if len(result_ids) != len(sequences):
+        if hashes.dtype != np.dtype(np.uint8) or hashes.shape != (journal_limit, 32):
+            raise CanonicalStateError(
+                f"journal_result_sha256 must have dtype uint8 and fixed shape ({journal_limit}, 32)"
+            )
+        if np.any(hashes[journal_count:] != 0):
+            raise CanonicalStateError("journal_result_sha256 has noncanonical nonzero padding")
+        if len(result_ids) != journal_count:
             raise CanonicalStateError("journal result-ID count does not equal sequence count")
         journal = tuple(
             AppliedVerdictRow(
@@ -1028,16 +1144,18 @@ class QuiescentVerdictTransaction:
                 result_id=result_ids[index],
                 result_sha256=hashes[index].tobytes().hex(),
             )
-            for index, sequence in enumerate(sequences)
+            for index, sequence in enumerate(sequences[:journal_count])
         )
         if len(journal) != min(next_apply_seq, journal_limit):
             raise CanonicalStateError("bounded journal length does not equal min(next_apply_seq, journal_limit)")
-        last_id = _decode_utf8_array(
+        last_id = _decode_fixed_padded_utf8_array(
             arrays[f"{prefix}last_applied_result_id"],
+            width=RESULT_ID_MAX_UTF8_BYTES,
             name=f"{prefix}last_applied_result_id",
         )
-        last_sha = _decode_utf8_array(
+        last_sha = _decode_fixed_padded_utf8_array(
             arrays[f"{prefix}last_applied_result_sha256"],
+            width=SHA256_HEX_LENGTH,
             name=f"{prefix}last_applied_result_sha256",
         )
         expected_last_id = journal[-1].result_id if journal else ""

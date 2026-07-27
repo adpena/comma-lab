@@ -22,6 +22,7 @@ from tac.witness_control.trajectory_transaction_v2 import (
     ROLLBACK_SAVEPOINT,
     SCHEDULE_CONTROL_STATE,
     SEMANTIC_DOMAINS,
+    VERDICT_RESULT_ID_MAX_UTF8_BYTES,
     VERDICT_TRANSACTION,
     BarrierStateBinding,
     DomainCoverage,
@@ -74,6 +75,14 @@ _DERIVED_KEYS = ("complete_state_sha",)
 _DEFAULT_BARRIER = object()
 
 
+def _padded_utf8(value: str, width: int) -> np.ndarray:
+    encoded = value.encode("utf-8")
+    assert len(encoded) <= width
+    result = np.zeros(width, dtype=np.uint8)
+    result[: len(encoded)] = np.frombuffer(encoded, dtype=np.uint8)
+    return result
+
+
 def _arrays() -> dict[str, np.ndarray]:
     def utf8(value: str) -> np.ndarray:
         return np.frombuffer(value.encode("utf-8"), dtype=np.uint8).copy()
@@ -89,8 +98,11 @@ def _arrays() -> dict[str, np.ndarray]:
         "vtx.next_submit_seq": np.asarray([3], dtype=np.int64),
         "vtx.next_apply_seq": np.asarray([3], dtype=np.int64),
         "vtx.pending_count": np.asarray([0], dtype=np.int64),
-        "vtx.last_applied_result_id": utf8("result-2"),
-        "vtx.last_applied_result_sha256": utf8("c" * 64),
+        "vtx.last_applied_result_id": _padded_utf8(
+            "result-2",
+            VERDICT_RESULT_ID_MAX_UTF8_BYTES,
+        ),
+        "vtx.last_applied_result_sha256": _padded_utf8("c" * 64, 64),
         "best_content_sha": np.asarray(b"a" * 64, dtype="S64"),
         "seed": np.asarray(11, dtype="<u8"),
         "complete_state_sha": np.asarray(b"b" * 64, dtype="S64"),
@@ -642,14 +654,11 @@ def test_serialized_cursor_tamper_fails_against_pristine_expected_object():
 
 def test_serialized_last_identity_tamper_fails_against_pristine_expected_object():
     arrays = _arrays()
-    arrays["vtx.last_applied_result_id"] = np.frombuffer(
-        b"result-X",
-        dtype=np.uint8,
+    arrays["vtx.last_applied_result_id"] = _padded_utf8(
+        "result-X",
+        VERDICT_RESULT_ID_MAX_UTF8_BYTES,
     ).copy()
-    arrays["vtx.last_applied_result_sha256"] = np.frombuffer(
-        b"d" * 64,
-        dtype=np.uint8,
-    ).copy()
+    arrays["vtx.last_applied_result_sha256"] = _padded_utf8("d" * 64, 64)
     with pytest.raises(TransactionValidationError, match="differs from supplied"):
         validate_transaction(arrays, _manifest(arrays), _expected(arrays))
 
@@ -670,11 +679,14 @@ def test_serialized_last_identity_tamper_fails_against_pristine_expected_object(
         (
             "vtx.last_applied_result_id",
             np.asarray(b"result-2", dtype="S8"),
-            "one-dimensional uint8",
+            "padded UTF-8 field",
         ),
         (
             "vtx.last_applied_result_id",
-            np.asarray([0xFF], dtype=np.uint8),
+            np.pad(
+                np.asarray([0xFF], dtype=np.uint8),
+                (0, VERDICT_RESULT_ID_MAX_UTF8_BYTES - 1),
+            ),
             "not valid UTF-8",
         ),
         (
@@ -693,6 +705,19 @@ def test_serialized_barrier_fields_enforce_capture_dtype_shape_and_utf8(
     arrays[key] = value
     with pytest.raises(TransactionValidationError, match=match):
         validate_transaction(arrays, _manifest(arrays), _expected(arrays))
+
+
+def test_barrier_binding_decodes_fixed_padding_and_rejects_padding_tamper():
+    arrays = _arrays()
+    state = _barrier_binding().parse(arrays)
+    assert state.last_applied_result_id == "result-2"
+    assert state.last_applied_result_sha256 == "c" * 64
+
+    tampered = np.array(arrays["vtx.last_applied_result_id"], copy=True)
+    tampered[len(b"result-2") + 1] = ord("x")
+    arrays["vtx.last_applied_result_id"] = tampered
+    with pytest.raises(TransactionValidationError, match="noncanonical nonzero padding"):
+        _barrier_binding().parse(arrays)
 
 
 @pytest.mark.parametrize(

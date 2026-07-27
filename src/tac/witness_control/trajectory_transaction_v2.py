@@ -32,6 +32,11 @@ SCHEMA: Final = "g111_trajectory_transaction.v2"
 MANIFEST_KEY: Final = "__g111_trajectory_transaction_v2_manifest"
 PENDING_VERDICT_PREFIX: Final = "__cl_pend_"
 VERDICT_BARRIER_SCHEMA: Final = "tac.g111_verdict_barrier.v1"
+# Fixed wire capacity, not a tuned score lever.  Canonical producer IDs occupy
+# fewer than 64 bytes; four such blocks reserve deterministic namespace growth.
+# Changing this value changes O4 EntrySpec shapes and therefore requires a
+# checkpoint-schema migration.
+VERDICT_RESULT_ID_MAX_UTF8_BYTES: Final = 256
 
 CURRENT_TRAIN_STATE: Final = "current_train_state"
 ROLLBACK_SAVEPOINT: Final = "rollback_savepoint"
@@ -171,6 +176,29 @@ def _decode_utf8_uint8(array: np.ndarray, *, key: str) -> str:
         _fail(f"{key!r}: serialized UTF-8 field must be one-dimensional uint8")
     try:
         return value.tobytes(order="C").decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise TransactionValidationError(f"{key!r}: serialized field is not valid UTF-8") from exc
+
+
+def _decode_zero_padded_utf8_uint8(
+    array: np.ndarray,
+    *,
+    key: str,
+    width: int,
+) -> str:
+    value = np.asarray(array)
+    if value.dtype != np.dtype(np.uint8) or value.shape != (width,):
+        _fail(f"{key!r}: serialized padded UTF-8 field must have dtype uint8 and shape ({width},)")
+    raw = value.tobytes(order="C")
+    padding_start = raw.find(b"\0")
+    if padding_start < 0:
+        encoded = raw
+    else:
+        encoded = raw[:padding_start]
+        if any(raw[padding_start:]):
+            _fail(f"{key!r}: serialized padded UTF-8 field has noncanonical nonzero padding")
+    try:
+        return encoded.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise TransactionValidationError(f"{key!r}: serialized field is not valid UTF-8") from exc
 
@@ -590,6 +618,14 @@ class QuiescentBarrierState:
             _fail("last applied result ID must have exact str type")
         if type(self.last_applied_result_sha256) is not str:
             _fail("last applied result SHA-256 must have exact str type")
+        try:
+            encoded_result_id = self.last_applied_result_id.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise TransactionValidationError("last applied result ID must be valid UTF-8") from exc
+        if b"\0" in encoded_result_id:
+            _fail("last applied result ID must not contain NUL")
+        if len(encoded_result_id) > VERDICT_RESULT_ID_MAX_UTF8_BYTES:
+            _fail(f"last applied result ID UTF-8 encoding exceeds {VERDICT_RESULT_ID_MAX_UTF8_BYTES} bytes")
         if self.last_applied_result_id and any(character.isspace() for character in self.last_applied_result_id):
             _fail("last applied result ID is not canonical")
         has_id = bool(self.last_applied_result_id)
@@ -692,13 +728,15 @@ class BarrierStateBinding:
                 arrays[self.pending_count_key],
                 key=self.pending_count_key,
             ),
-            last_applied_result_id=_decode_utf8_uint8(
+            last_applied_result_id=_decode_zero_padded_utf8_uint8(
                 arrays[self.last_applied_result_id_key],
                 key=self.last_applied_result_id_key,
+                width=VERDICT_RESULT_ID_MAX_UTF8_BYTES,
             ),
-            last_applied_result_sha256=_decode_utf8_uint8(
+            last_applied_result_sha256=_decode_zero_padded_utf8_uint8(
                 arrays[self.last_applied_result_sha256_key],
                 key=self.last_applied_result_sha256_key,
+                width=64,
             ),
         )
         state.validate()

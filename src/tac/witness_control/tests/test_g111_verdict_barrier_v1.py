@@ -4,6 +4,7 @@ import base64
 import json
 import threading
 import time
+from collections.abc import Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import replace
 
@@ -11,6 +12,7 @@ import numpy as np
 import pytest
 
 from tac.witness_control.g111_verdict_barrier_v1 import (
+    RESULT_ID_MAX_UTF8_BYTES,
     AppliedVerdictRow,
     CanonicalStateError,
     CheckpointPublicationError,
@@ -1256,6 +1258,152 @@ def test_bounded_canonical_state_round_trip_and_next_sequence() -> None:
             assert [row.submission_seq for row in capture.journal] == [2, 3]
 
 
+def test_cold_and_saturated_captures_have_identical_fixed_array_contract_and_round_trip() -> None:
+    cold = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": []},
+        max_journal_rows=2,
+    )
+    with cold.checkpoint() as capture:
+        cold_arrays = capture.numpy_state(prefix="vtx.")
+        cold_reducer_state = capture.reducer_state
+
+    saturated = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": []},
+        max_journal_rows=2,
+    )
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        saturated.submit(executor, _immediate_worker, {"value": 10})
+        saturated.submit(executor, _immediate_worker, {"value": 11})
+        with saturated.checkpoint() as capture:
+            saturated_arrays = capture.numpy_state(prefix="vtx.")
+            saturated_reducer_state = capture.reducer_state
+
+    def contract(arrays: Mapping[str, np.ndarray]) -> dict[str, tuple[str, tuple[int, ...]]]:
+        return {key: (value.dtype.str, value.shape) for key, value in arrays.items()}
+
+    assert contract(cold_arrays) == contract(saturated_arrays)
+    assert cold_arrays["vtx.journal_sequences"].shape == (2,)
+    assert cold_arrays["vtx.journal_result_id_data"].shape == (2 * RESULT_ID_MAX_UTF8_BYTES,)
+    assert cold_arrays["vtx.journal_result_id_offsets"].shape == (3,)
+    assert cold_arrays["vtx.journal_result_sha256"].shape == (2, 32)
+    assert cold_arrays["vtx.last_applied_result_id"].shape == (RESULT_ID_MAX_UTF8_BYTES,)
+    assert cold_arrays["vtx.last_applied_result_sha256"].shape == (64,)
+
+    cold_bound = BarrierStateBinding.from_prefix("vtx.").parse(cold_arrays)
+    assert cold_bound.next_apply_seq == 0
+    assert cold_bound.last_applied_result_id == ""
+    assert cold_bound.last_applied_result_sha256 == ""
+
+    for arrays, reducer_state, expected_sequences in (
+        (cold_arrays, cold_reducer_state, []),
+        (saturated_arrays, saturated_reducer_state, [0, 1]),
+    ):
+        restored = QuiescentVerdictTransaction.from_numpy_state(
+            arrays,
+            reducer=_append_reducer,
+            restored_reducer_state=reducer_state,
+            prefix="vtx.",
+        )
+        assert [row.submission_seq for row in restored.journal] == expected_sequences
+        with restored.checkpoint() as recapture:
+            roundtrip = recapture.numpy_state(prefix="vtx.")
+        assert set(roundtrip) == set(arrays)
+        for key in arrays:
+            assert np.array_equal(roundtrip[key], arrays[key]), key
+
+
+def test_result_id_utf8_width_is_code_bounded_before_journal_capture() -> None:
+    exact_width = "x" * RESULT_ID_MAX_UTF8_BYTES
+    assert _result(0, 1, result_id=exact_width).result_id == exact_width
+
+    with pytest.raises(ValueError, match="UTF-8 encoding exceeds"):
+        _result(0, 1, result_id="é" * (RESULT_ID_MAX_UTF8_BYTES // 2 + 1))
+
+    with pytest.raises(ValueError, match="valid UTF-8"):
+        _result(0, 1, result_id="\ud800")
+
+    with pytest.raises(CanonicalStateError, match="UTF-8 encoding exceeds"):
+        AppliedVerdictRow(
+            submission_seq=0,
+            result_id="x" * (RESULT_ID_MAX_UTF8_BYTES + 1),
+            result_sha256="a" * 64,
+        ).validate()
+
+
+def test_fixed_capture_refuses_cursor_capacity_that_cannot_serialize_as_int64() -> None:
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": []},
+        max_journal_rows=int(np.iinfo(np.int64).max) + 1,
+    )
+    with (
+        pytest.raises(CanonicalStateError, match="exceeds int64 capacity"),
+        transaction.checkpoint() as capture,
+    ):
+        capture.numpy_state()
+
+
+@pytest.mark.parametrize(
+    ("key", "index", "match"),
+    [
+        ("last_applied_result_id", 7, "noncanonical nonzero padding"),
+        ("last_applied_result_sha256", 7, "noncanonical nonzero padding"),
+        ("journal_sequences", 1, "noncanonical nonzero padding"),
+        ("journal_result_id_data", 7, "noncanonical nonzero padding"),
+        ("journal_result_id_offsets", 1, "noncanonical padding"),
+        ("journal_result_sha256", (1, 0), "noncanonical nonzero padding"),
+    ],
+)
+def test_cold_fixed_capacity_restore_rejects_noncanonical_padding(
+    key: str,
+    index: int | tuple[int, int],
+    match: str,
+) -> None:
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": []},
+        max_journal_rows=2,
+    )
+    with transaction.checkpoint() as capture:
+        arrays = dict(capture.numpy_state())
+        reducer_state = capture.reducer_state
+
+    tampered = np.array(arrays[key], copy=True)
+    tampered[index] = 1
+    arrays[key] = tampered
+    with pytest.raises(CanonicalStateError, match=match):
+        QuiescentVerdictTransaction.from_numpy_state(
+            arrays,
+            reducer=_append_reducer,
+            restored_reducer_state=reducer_state,
+        )
+
+
+def test_fixed_capacity_restore_rejects_active_result_id_width_overflow() -> None:
+    transaction = QuiescentVerdictTransaction(
+        reducer=_append_reducer,
+        initial_state={"rows": []},
+        max_journal_rows=2,
+    )
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        transaction.submit(executor, _immediate_worker, {"value": 1})
+        with transaction.checkpoint() as capture:
+            arrays = dict(capture.numpy_state())
+            reducer_state = capture.reducer_state
+
+    offsets = np.array(arrays["journal_result_id_offsets"], copy=True)
+    offsets[1:] = RESULT_ID_MAX_UTF8_BYTES + 1
+    arrays["journal_result_id_offsets"] = offsets
+    with pytest.raises(CanonicalStateError, match="exceeds its active fixed-capacity"):
+        QuiescentVerdictTransaction.from_numpy_state(
+            arrays,
+            reducer=_append_reducer,
+            restored_reducer_state=reducer_state,
+        )
+
+
 def test_native_v3_restore_rejects_legacy_pending_and_nonquiescent_state() -> None:
     transaction = QuiescentVerdictTransaction(
         reducer=_append_reducer,
@@ -1327,10 +1475,9 @@ def test_canonical_restore_rejects_journal_tail_identity_drift() -> None:
             arrays = dict(capture.numpy_state())
             restored_state = capture.reducer_state
 
-    arrays["last_applied_result_id"] = np.frombuffer(
-        b"wrong-id",
-        dtype=np.uint8,
-    ).copy()
+    wrong_id = np.zeros(RESULT_ID_MAX_UTF8_BYTES, dtype=np.uint8)
+    wrong_id[: len(b"wrong-id")] = np.frombuffer(b"wrong-id", dtype=np.uint8)
+    arrays["last_applied_result_id"] = wrong_id
     with pytest.raises(CanonicalStateError, match="journal tail"):
         QuiescentVerdictTransaction.from_numpy_state(
             arrays,
