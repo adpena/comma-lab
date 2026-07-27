@@ -1,0 +1,319 @@
+{
+  "schema": "tac.g102_final_y1_semantic_base_escape_activation.v1",
+  "created_at_utc": "2026-07-27T09:18:00Z",
+  "lane_id": "lane_g102_final_y1_semantic_base_escape_20260727",
+  "experiment_id": "G102_SR1_PFREE_SUBSTITUTIVE_SEMANTIC_ROOT_FINAL_Y1_N600",
+  "status": "BLOCKED_PREREQUISITE_NO_HEAVY_LAUNCH",
+  "pointer": {
+    "effective_frontier": 0.172,
+    "axis": "official_leaderboard",
+    "source": "upstream_official_leaderboard",
+    "selection_rule": "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)",
+    "pointer_path": ".omx/state/canonical_frontier_pointer.json",
+    "pointer_sha256": "06027fa2dcb695d755858d6e101c7be57f1fbe5570903eb4bf8c5e2f38510388",
+    "mission_target_rule": "STRICTLY_BELOW_DYNAMIC_EFFECTIVE_FRONTIER",
+    "stretch_reference_not_pointer_or_gate": 0.15,
+    "pointer_delta": "UNMOVED"
+  },
+  "structural_eureka": {
+    "wrong_current_topology": "ADDITIVE_CORRECTIONS_AROUND_IMMUTABLE_P_G85",
+    "required_topology": "SUBSTITUTIVE_P_FREE_SEMANTIC_ROOT_PLUS_EXCLUSIVE_FINAL_Y1_CONDITIONAL_Y0",
+    "rate_implication": {
+      "batch16_lowdist_bmax_strict_below_0_172": 187563,
+      "batch16_lowdist_bmax_strict_below_0_15": 154523,
+      "historical_shape_semantic_base_bytes": 133941,
+      "additive_headroom_below_0_172": 53622,
+      "additive_headroom_below_0_15": 20582,
+      "conclusion": "A substitutive root may allocate the complete archive envelope; additive repair incorrectly treats the old base allocation as sunk."
+    },
+    "representation_implication": "The G57 public pipeline encoded direct lossy raster planes. The successor must encode a semantic/topological selected-solution program and generate pixels in the decoder."
+  },
+  "teacher_custody": {
+    "fresh_batch16_target_labels": {
+      "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_teacher_batch16_20260726/11_target_labels/target_labels_n600_or_bounded.u8",
+      "bytes": 117964800,
+      "sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85",
+      "role": "ENCODER_ONLY",
+      "candidate_payload_allowed": false
+    },
+    "canonical_batch16_lowdist_coordinate": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/c1_live_target_debt_n600_batch16.json",
+      "bytes": 2303785,
+      "sha256": "0db8e47a994cad5367e5eb3028055e667bc4caf3f174026d13171be662e7fbd3",
+      "d_seg": 0.00015196058485243054,
+      "d_pose": 0.00010184347386600314,
+      "distortion_term": 0.047108982805336805,
+      "authority": "planning coordinate and encoder teacher; not a receiver-closed candidate"
+    },
+    "ms1_lowdist_existence": {
+      "receipt_path": ".omx/research/ddm_ms1_min_description_lattice_solve_20260724_receipt.json",
+      "receipt_sha256": "1b7063a44574b0839ede08c807f348ad417be0492ac32d68634b124b9c2b1e97",
+      "d_seg": 0.0001519690619574653,
+      "d_pose": 0.00010184327939026322,
+      "best_previous_frame_residual_bytes": 731622325,
+      "role": "ENCODER_ONLY_EXISTENCE_AND_FACTOR_FAMILY_EVIDENCE"
+    },
+    "ms2r_high_rate_teacher": {
+      "receipt_path": ".omx/research/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/receipt.json",
+      "receipt_sha256": "03cd9aabc1275c49c983631dd547e7497f8fe95804a9bfd7a24c5d61e9a81d25",
+      "archive_bytes": 291205400,
+      "d_seg": 0.001159998575846354,
+      "d_pose": 0.01663315449034709,
+      "distortion_term_at_zero_bytes": 0.5238375028596528,
+      "score": 194.42556029038283,
+      "role": "ENCODER_ONLY_HIGH_RATE_TEACHER_AND_FORMULATION_FALSIFIER",
+      "g100_h1_frontier_reachable": false,
+      "reason": "The same MS2R state has distortion above 0.172 before any rate is charged."
+    }
+  },
+  "current_selected_solution": {
+    "compact_pfree_final_y1_exists": false,
+    "status": "NONE",
+    "nearby_objects": [
+      {
+        "name": "G85",
+        "role": "receiver-custodied wrong base",
+        "archive_bytes": 129392,
+        "archive_sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd",
+        "d_seg": 0.0274712,
+        "usable_as_final_base": false
+      },
+      {
+        "name": "G89",
+        "role": "class-complete typed actuator vocabulary over exact P",
+        "receipt_sha256": "d510a234231cea017c48727eb16383d1cf65699573c267115a47cf65b5aa861a",
+        "full_population_selected_program_exists": false
+      },
+      {
+        "name": "G90_STAGE0",
+        "role": "isolated exact scorer-costate atlas",
+        "receipt_sha256": "d4d5671f21f33841747f4968ee2a084458dd0c0fdd576db07761bab00c8bad11",
+        "raw_selected_operand_bytes": 89596,
+        "break_even_bytes": 65545,
+        "full_population_complete": false
+      },
+      {
+        "name": "G92",
+        "role": "population program plan without realized cumulative state",
+        "receipt_sha256": "f0a24e6222a255a34fbba1781abb5b06fc5b97da0d388101668d14923227f03a",
+        "materialized_final_y1": false
+      },
+      {
+        "name": "G98",
+        "role": "correct sparse cumulative lowering semantics over P/G85",
+        "source_sha256": "b60e90ed8a28e1dd76fcc7932e47225dcf12d98b806edfca78b08aa9e934e46a",
+        "pfree": false
+      },
+      {
+        "name": "G94_V2",
+        "role": "exclusive conditional-Y0 ownership and final-Y1 foreign-key algebra",
+        "source_sha256": "c9c23f5106eced440d3c3aa5157f75f4f270646e97f888df24de3927f9b684b4",
+        "pfree_left_factor": false
+      }
+    ]
+  },
+  "already_settled_realization_falsifier": {
+    "direct_symbolic_partition_result": {
+      "path": "experiments/results/symbolic_topological_partition_mdl_20260625/symbolic_topological_partition_mdl.json",
+      "sha256": "53659d3ca68cc1a054fa57151ad063991e70762be8471f28bfb839027528595a",
+      "pair_count": 600,
+      "exact_partition_bytes": 255288,
+      "direct_label_d_seg": 0.0,
+      "role": "ENCODER_SIDE_FACTOR_RATE_EVIDENCE_NOT_A_REALIZED_CANDIDATE"
+    },
+    "byte_closed_palette_realization_probe": {
+      "path": "experiments/results/feedy_byteclosed_exact_row_20260625/exact_row.json",
+      "sha256": "12e455c5c05b4e00d3226f76545e257f96aee1e509b1d73c6e554aaf68b7af05",
+      "authority": "contest-CPU-advisory-direct-scorer-mirror",
+      "pair_count_measured": 24,
+      "palette_only_realized_d_seg": 0.00640763176812066,
+      "palette_only_realized_d_pose": 188.44457475619993,
+      "palette_only_archive_bytes_600pair_est": 274125,
+      "verdict_scope": "KILL_DIRECT_LABEL_OR_MASK_GRAMMAR_PLUS_PALETTE_AND_INDEPENDENT_POSE_SPLIT_ONLY"
+    },
+    "required_root_semantics": "ONE_SCORER_NATIVE_RGB_SELECTED_SOLUTION_PROGRAM_WITH_COUNTED_TEXTURE_CHROMA_BOUNDARY_SURVIVAL_AND_PARALLAX_GAUGE_THROUGH_EXACT_R",
+    "topology_role": "FACTOR_NOT_COMPLETE_SELECTED_SOLUTION",
+    "palette_only_root_allowed": false
+  },
+  "g57_control": {
+    "receipt_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g57_direct_task_layered_fulln600_public_eval_receipt_20260726.json",
+    "receipt_sha256": "884377a9dbc3dadd5517cb555bfb62338bffe876f6b4c179107bf93762c10b7d",
+    "representation": "DIRECT_TASK_LAYERED",
+    "archive_bytes": 182220,
+    "archive_sha256": "736d9c2e0313a51f79dddbdf2e899d69e8b8bcf5555c5801869464064cf27f98",
+    "d_seg": 0.17946555,
+    "d_pose": 45.10546494,
+    "score": 39.30593503092899,
+    "base_stream_bytes": 90129,
+    "enhancement_stream_bytes": 90135,
+    "public_receiver_reusable": true,
+    "counted_streams_reusable": false,
+    "verdict_scope": "KILL_DIRECT_RASTER_X264RGB_23K_PLUS_23K_FORMULATION_ONLY"
+  },
+  "receiver_bridge": {
+    "reusable_generic_mechanisms": [
+      {
+        "name": "G89 semantic role vocabulary",
+        "path": "src/tac/witness_dsl/taskspace_g89_class_complete_semantic_compiler_v1.py",
+        "sha256": "01127ec2237b94cb028a702bdee995669ebe98fbd9bab386df38dc5eb822d29b"
+      },
+      {
+        "name": "G98 cumulative state and resumable prefix discipline",
+        "path": "src/tac/witness_dsl/taskspace_sparse_atlas_cumulative_lowering_v1.py",
+        "sha256": "b60e90ed8a28e1dd76fcc7932e47225dcf12d98b806edfca78b08aa9e934e46a"
+      },
+      {
+        "name": "G94 V2 exclusive conditional Y0 union",
+        "path": "src/tac/witness_dsl/taskspace_g94_typed_union_product_v2.py",
+        "sha256": "c9c23f5106eced440d3c3aa5157f75f4f270646e97f888df24de3927f9b684b4"
+      },
+      {
+        "name": "V10 exact factor2 production receiver",
+        "path": "src/tac/witness_dsl/v10_production_receiver.py",
+        "sha256": "84d4ce09e8611a185c6aa53c073a90cc5b6970793222a52f66c1f2672842cd47"
+      },
+      {
+        "name": "G57 public staged raw assembly",
+        "path": "submissions/robust_current/taskspace_layered_public/inflate.py",
+        "sha256": "434bfeb9548e8b4791307c5a0f9bd7a70beca449400ffb52e3742a9f7c3e865c"
+      }
+    ],
+    "missing_edge": {
+      "id": "P_FREE_ROOT_SEMANTIC_PROGRAM_COMPILER_AND_PUBLIC_CODEC_SECTION_OWED",
+      "description": "No current counted wire/compiler/receiver begins from a population-global class-complete semantic program without exact P/PVSA/G85, then renders a fresh jointly selected gauge through V10 and public inflate.",
+      "smallest_real_implementation": [
+        "strict P-free SemanticRootY1V1 counted packet and parser",
+        "full-n600 own-lineage compiler using fresh batch16 encoder custody",
+        "generic scorer-free semantic renderer plus exact V10 factor2 realization",
+        "public extracted-directory dispatcher integrated into the proven staged raw assembly",
+        "G94-V2 successor whose left factor is the P-free final-Y1 state and whose right factor is exactly one conditional-Y0 owner"
+      ]
+    }
+  },
+  "counted_packet_contract": {
+    "required_video_derived_homes": [
+      "shared topology dictionary",
+      "chronological population event stream",
+      "Road and Undrivable level-set or directional boundary program",
+      "Lane ground-chart curves, widths, phase, births and deaths",
+      "Movable persistent worldsheets and sparse exceptions",
+      "MyCar camera-static component and sparse exceptions",
+      "jointly selected scorer-native RGB chroma, texture, boundary-survival and parallax-support gauge",
+      "optional irreducible learned quotient with every weight and latent counted",
+      "exactly one final-Y1-conditioned Y0 owner"
+    ],
+    "forbidden_payloads": [
+      "historical V15 archive or members",
+      "historical C1 or MS2R planes",
+      "G85 archive or PVSA member",
+      "G57 raster streams",
+      "PR86 or PR130 payload",
+      "scorer weights",
+      "target labels or target bank",
+      "dense selected-preimage planes",
+      "teacher state",
+      "video-derived constants hidden in inflate code"
+    ],
+    "free_generic_decoder_work": [
+      "packet parsing and deterministic generation",
+      "semantic rasterization",
+      "factor expansion",
+      "generic inverse solving and repair",
+      "V10 factor2 realization",
+      "stage resume and raw assembly"
+    ]
+  },
+  "score_surface": {
+    "equation": "S=100*d_seg+sqrt(10*d_pose)+25*archive_bytes/37545489",
+    "strict_byte_envelope": "ceil((target-100*d_seg-sqrt(10*d_pose))*37545489/25)-1",
+    "examples_at_d_pose_0_00010184347386600314": [
+      {
+        "archive_bytes": 100000,
+        "max_d_seg_below_0_172": 0.000735011803676891,
+        "max_d_seg_below_0_15": 0.0005150118036768911
+      },
+      {
+        "archive_bytes": 120000,
+        "max_d_seg_below_0_172": 0.0006018400130524568,
+        "max_d_seg_below_0_15": 0.00038184001305245684
+      },
+      {
+        "archive_bytes": 130000,
+        "max_d_seg_below_0_172": 0.0005352541177402396,
+        "max_d_seg_below_0_15": 0.0003152541177402397
+      },
+      {
+        "archive_bytes": 140000,
+        "max_d_seg_below_0_172": 0.0004686682224280224,
+        "max_d_seg_below_0_15": 0.00024866822242802246
+      },
+      {
+        "archive_bytes": 150000,
+        "max_d_seg_below_0_172": 0.00040208232711580526,
+        "max_d_seg_below_0_15": 0.00018208232711580536
+      },
+      {
+        "archive_bytes": 154523,
+        "max_d_seg_below_0_172": 0.00037196552666608957,
+        "max_d_seg_below_0_15": 0.00015196552666608965
+      },
+      {
+        "archive_bytes": 187563,
+        "max_d_seg_below_0_172": 0.00015196572855452408,
+        "max_d_seg_below_0_15": -0.00006803427144547583
+      }
+    ],
+    "selection_rule": "Retain exact complete-object nondominated states and select by the coupled score; no independent Seg, Pose, segment, or rate threshold."
+  },
+  "resumable_experiment": {
+    "pair_count": 600,
+    "scorer_batch_size": 16,
+    "checkpoint_pair_span": 120,
+    "seed_required": true,
+    "atomic_stage_checkpoints_required": true,
+    "distinct_stage_checkpoints_preserved": true,
+    "every_measurement_is_full_n600": true,
+    "stages": [
+      "S00_CUSTODY",
+      "S01_ROOT_PROGRAM",
+      "S02_GAUGE_AND_SURVIVAL",
+      "S03_ANALYTIC_HOMOTOPY",
+      "S04_IRREDUCIBLE_QUOTIENT_IF_OWED",
+      "S05_FREEZE_FINAL_Y1",
+      "S06_REFIT_EXCLUSIVE_CONDITIONAL_Y0",
+      "S07_PUBLIC_CLOSURE_AND_UPSTREAM_EVAL",
+      "S08_CONTEST_AUTHORITY_AND_POINTER_ARBITRATION"
+    ],
+    "first_physical_row": "S01_ROOT_PROGRAM",
+    "launch_gate": "P_FREE_ROOT_SEMANTIC_PROGRAM_COMPILER_AND_PUBLIC_CODEC_SECTION_OWED"
+  },
+  "do_not_launch": [
+    "G100 H1 on the unchanged MS2R state",
+    "another G57 direct raster bitrate allocation",
+    "isolated G90 corrections represented as a final semantic base",
+    "G95 against a non-final Y1",
+    "any candidate reusing historical V15, C1, G85, PR86 or PR130 payload"
+  ],
+  "adversarial_gates": [
+    "P-free producer identity",
+    "physical deletion of inherited base bytes",
+    "one counted home per video-derived degree of freedom",
+    "teacher and scorer quarantine",
+    "full ordered n600 coverage",
+    "final whole-population Y1 foreign key before conditional Y0 fit",
+    "public recursive receiver closure to expected raw video",
+    "same exact archive upstream score and promotion custody"
+  ],
+  "truth": {
+    "historical_payload_reused": false,
+    "heavy_run_launched": false,
+    "candidate_archive_created": false,
+    "exact_g102_eval_run": false,
+    "contest_dispatch_performed": false,
+    "score_claim": false,
+    "candidate_claim": false,
+    "promotion_eligible": false,
+    "pointer_mutation_performed": false,
+    "research_only": true
+  }
+}
