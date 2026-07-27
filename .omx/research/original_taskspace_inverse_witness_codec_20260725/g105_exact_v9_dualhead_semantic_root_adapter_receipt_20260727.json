@@ -1,0 +1,97 @@
+{
+  "schema": "tac.g105_exact_v9_dualhead_semantic_root_adapter_receipt.v1",
+  "lane_id": "lane_g105_exact_v9_dualhead_semantic_root_adapter_20260727",
+  "variant_id": "tac.semantic_root_y1.v9_hosc_dual_head_odd_y1.v1",
+  "wire_magic_hex": "5356395931563100",
+  "research_only": true,
+  "candidate": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "commit_created": false,
+  "files_staged": false,
+  "heavy_launch_performed": false,
+  "implementation": {
+    "path": "src/tac/witness_dsl/taskspace_g105_exact_v9_semantic_root_adapter_v1.py",
+    "sha256": "8a51171848eed4811c639e57b2a813c9f9931f5a472b3a01471c6d7531332182"
+  },
+  "tests": {
+    "path": "src/tac/witness_dsl/tests/test_taskspace_g105_exact_v9_semantic_root_adapter_v1.py",
+    "sha256": "4a185d8fb62cc26172da2f70cfb4d14a3f0d3c5245c7be2e8bedac35481f1d96",
+    "command": ".venv/bin/python -m pytest -q src/tac/witness_dsl/tests/test_taskspace_g105_exact_v9_semantic_root_adapter_v1.py",
+    "result": "10 passed in 0.39s"
+  },
+  "lint": {
+    "command": ".venv/bin/ruff check src/tac/witness_dsl/taskspace_g105_exact_v9_semantic_root_adapter_v1.py src/tac/witness_dsl/tests/test_taskspace_g105_exact_v9_semantic_root_adapter_v1.py",
+    "result": "All checks passed!"
+  },
+  "spec": {
+    "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g105_exact_v9_dualhead_semantic_root_adapter_20260727.md",
+    "sha256": "3b70bf6b165bc3a096c15b98f4931aedcc2da8ce564bf45f1c86470d4495812e"
+  },
+  "public_abi": {
+    "exports": [
+      "VARIANT_ID",
+      "parse_packet(bytes)",
+      "render_scorer_y1(parsed,pair_id)"
+    ],
+    "scorer_y1_shape": [
+      384,
+      512,
+      3
+    ],
+    "scorer_y1_dtype": "uint8",
+    "counted_projection": "code[2*p+1]",
+    "counted_y1_rows": 600,
+    "excluded_y0_rows": 600,
+    "exclusive_y0_owner": "G94-V2",
+    "g103_cross_cast": false,
+    "g103_intent_patch_required": false
+  },
+  "behavior_fixture_wire": {
+    "fixture_only": true,
+    "outer_zip_measured": false,
+    "packet_bytes": 4813,
+    "packet_sha256": "889f3947c5fc116bb45950be40ef970a3a8b8e06cfe0964a8ed2669ecc5b0568",
+    "config_bytes": 517,
+    "model_section_bytes": 632,
+    "model_tensor_data_bytes": 186,
+    "model_tensor_metadata_bytes": 446,
+    "y1_section_bytes": 3616,
+    "y1_code_data_bytes": 3600,
+    "y1_code_metadata_bytes": 16
+  },
+  "fresh_producer_status": {
+    "status": "P0_BLOCKED",
+    "g46_target_labels_sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85",
+    "legacy_labels_sha256": "f2c8be94774780bda718adf337900403a8533b6ffa1352b5aae19e200a005557",
+    "legacy_label_mismatch_count": 3,
+    "batch16_margin_aggregate_schema_required": "tac.taskspace_batch16_margin_base_scorer_aggregate.v1",
+    "same_forward_labels_and_margins_required": true,
+    "live_verdict_batch_required": 16,
+    "qualifying_margin_aggregate_found": false,
+    "qualifying_checkpoint_found": false,
+    "blockers": [
+      "G46_BATCH16_LABELS_AND_SAME_FORWARD_MARGIN_AGGREGATE_NOT_MATERIALIZED_OR_BOUND_TO_TRAINER",
+      "FRESH_V9_TYPED_CONFIG_AND_CHECKPOINT_MUST_DERIVE_AND_STAMP_LIVE_VERDICT_BATCH_16"
+    ]
+  },
+  "source_custody": {
+    "task_start_head": "b602eac3a09c756dcdb48ecf66b4f2b28d47a09e",
+    "shared_tree_head_at_freeze": "d04b0ab9f60ffd7f9ca20c45e8afd5def96a5471",
+    "g103_source_sha256": "93ee478fd188d4655949a1b89e093f32c5b80317068d7959db7bee3a839ccbb1",
+    "g103_git_blob": "b299c6a29331f8cdbd0c6e3093970bab8182f9ca",
+    "repo_v9_numpy_reference_sha256": "b47c6f8f20e5dc32a3ef5dbfe7bed9032576f545c53f49950e4e3a6aa5be2a43",
+    "portable_upstream_closure_schema": "tac.upstream_source_closure.v1",
+    "portable_upstream_closure_sha256": "e93f6c744fe0025ecc30d1f1cef00617a3f1397b68cadb856817766cfec63279"
+  },
+  "competitive_envelope": {
+    "classification": "STRUCTURAL_FILTER_NOT_A_SCORE_CLAIM",
+    "near_total_archive_bytes": 81027,
+    "required_d_seg_approx_max": 0.0008,
+    "unless_g94_d_pose_below": 0.000145,
+    "historical_v9_d_seg_approx": 0.0035,
+    "historical_v9_competitive": false
+  },
+  "next_exact_edge": "Materialize and seal the existing batch16 target-margin aggregate, wire a typed V9 launch config that consumes G46 labels plus those same-forward margins and derives verdict_batch=16, then train a fresh resumable staged producer before compiling this packet."
+}
