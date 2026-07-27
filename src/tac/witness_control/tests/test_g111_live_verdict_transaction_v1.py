@@ -9,6 +9,10 @@ import numpy as np
 import pytest
 
 from tac.witness_control.g111_live_verdict_transaction_v1 import (
+    SERIALIZED_MAX_BEST_INTENT_ROWS,
+    SERIALIZED_MAX_EFFECT_ROWS,
+    SERIALIZED_O4_FIELDS,
+    SERIALIZED_O5_FIELDS,
     LiveVerdictEffectPublicationError,
     LiveVerdictStateError,
     MainThreadVerdictEffectPublisher,
@@ -128,7 +132,9 @@ def test_worker_is_data_only_and_main_thread_publishes_before_decide() -> None:
         with transaction.checkpoint() as capture:
             # Reduction is pure: no telemetry/controller/BEST callback fired.
             assert physical == []
-            assert capture.reducer_state["history"][0]["d_seg"] == 0.02
+            # The replacement controller is the sole durable O4 history owner.
+            assert capture.reducer_state["history"] == []
+            assert capture.reducer_state["closed_loop_verdicts"] == []
             publisher.publish_pending(
                 capture.reducer_state,
                 publish_effect=lambda effect: physical.append(
@@ -143,6 +149,36 @@ def test_worker_is_data_only_and_main_thread_publishes_before_decide() -> None:
     assert worker_idents and all(ident != main_ident for ident in worker_idents)
     assert [kind for kind, _, _ in physical] == ["effect", "best", "decide"]
     assert all(ident == main_ident for _, _, ident in physical)
+
+
+def test_cold_and_live_array_schemas_match_and_separate_o4_from_o5() -> None:
+    prefix = "fixed__"
+    cold = state_arrays(new_reducer_state(), PublisherCursor(), prefix=prefix)
+    live_state = reduce_result(
+        new_reducer_state(),
+        run_worker(0, _snapshot(epoch=1, d_seg=0.02), score_snapshot=_score),
+    )
+    live = state_arrays(live_state, PublisherCursor(), prefix=prefix)
+
+    assert set(cold) == set(live)
+    assert {
+        key: (array.dtype.str, array.shape)
+        for key, array in cold.items()
+    } == {
+        key: (array.dtype.str, array.shape)
+        for key, array in live.items()
+    }
+    o4 = {f"{prefix}o4_{field}" for field in SERIALIZED_O4_FIELDS}
+    o5 = {f"{prefix}o5_{field}" for field in SERIALIZED_O5_FIELDS}
+    assert set(live) == o4 | o5
+    assert o4.isdisjoint(o5)
+    assert all(key.startswith(f"{prefix}o4_") for key in o4)
+    assert all(key.startswith(f"{prefix}o5_") for key in o5)
+    assert not any(key.endswith("state_payload") for key in live)
+    assert int(cold[f"{prefix}o4_effect_count"]) == 0
+    assert int(live[f"{prefix}o4_effect_count"]) == 1
+    assert int(cold[f"{prefix}o5_best_intent_count"]) == 0
+    assert int(live[f"{prefix}o5_best_intent_count"]) == 1
 
 
 def test_checkpoint_compacts_acknowledged_full_snapshots_but_retains_best_tail() -> None:
@@ -173,13 +209,50 @@ def test_checkpoint_compacts_acknowledged_full_snapshots_but_retains_best_tail()
     validate_reducer_state(restored)
     assert restored["effect_base_sequence"] == compacted["effect_base_sequence"]
     assert restored["effects"] == []
-    assert restored["history"] == compacted["history"]
+    assert restored["history"] == []
+    assert restored["closed_loop_verdicts"] == []
     assert restored["o5"]["best_d_seg"] == compacted["o5"]["best_d_seg"]
     assert np.array_equal(
         restored["o5"]["best_intents"][0]["artifact"]["ema_np"]["code"],
         compacted["o5"]["best_intents"][0]["artifact"]["ema_np"]["code"],
     )
     assert cursor == PublisherCursor(3, 3)
+
+
+def test_nonzero_base_parseback_is_canonically_stable_and_replays_tail() -> None:
+    state = new_reducer_state()
+    for sequence, d_seg in enumerate((0.03, 0.04, 0.02)):
+        state = reduce_result(
+            state,
+            run_worker(
+                sequence,
+                _snapshot(epoch=sequence + 1, d_seg=d_seg),
+                score_snapshot=_score,
+            ),
+        )
+    prefix = "tail__"
+    arrays = state_arrays(state, PublisherCursor(1, 1), prefix=prefix)
+    restored, cursor = state_from_arrays(arrays, prefix=prefix)
+    reserialized = state_arrays(restored, cursor, prefix=prefix)
+    assert set(reserialized) == set(arrays)
+    assert all(
+        np.array_equal(reserialized[key], arrays[key])
+        for key in arrays
+    )
+
+    published: list[tuple[str, int]] = []
+    publisher = MainThreadVerdictEffectPublisher(cursor=cursor)
+    assert publisher.publish_pending(
+        restored,
+        publish_effect=lambda effect: published.append(
+            ("effect", int(effect["sequence"]))
+        ),
+        publish_best=lambda effect, intent: published.append(
+            ("best", int(intent["intent_sequence"]))
+        ),
+    ) == 2
+    assert published == [("effect", 1), ("effect", 2), ("best", 1)]
+    assert publisher.cursor == PublisherCursor(3, 2)
 
 
 def test_crash_after_best_write_replays_same_content_addressed_bytes() -> None:
@@ -258,6 +331,122 @@ def test_worse_result_after_resume_does_not_emit_best_intent() -> None:
     assert after_worse["o5"]["next_best_intent_sequence"] == 1
     assert after_worse["effects"][-1]["best_intent_sequence"] is None
     assert after_worse["o5"]["best_d_seg"] == 0.01
+
+
+def test_live_transaction_refuses_duplicate_controller_history() -> None:
+    with pytest.raises(
+        LiveVerdictStateError,
+        match="controller-owned histories",
+    ):
+        new_reducer_state(history=[{"epoch": 1}])
+
+    state = new_reducer_state()
+    state["history"].append({"epoch": 1})
+    with pytest.raises(
+        LiveVerdictStateError,
+        match="duplicates controller-owned history",
+    ):
+        validate_reducer_state(state)
+
+
+def test_fixed_row_capacities_fail_closed() -> None:
+    state = new_reducer_state()
+    for sequence in range(SERIALIZED_MAX_EFFECT_ROWS + 1):
+        state = reduce_result(
+            state,
+            run_worker(
+                sequence,
+                _snapshot(epoch=sequence + 1, d_seg=0.02 + sequence * 0.001),
+                score_snapshot=_score,
+            ),
+        )
+    with pytest.raises(
+        LiveVerdictStateError,
+        match="O4 effect count exceeds fixed capacity",
+    ):
+        state_arrays(state, PublisherCursor(), prefix="effect_overflow__")
+
+    state = new_reducer_state()
+    for sequence in range(SERIALIZED_MAX_BEST_INTENT_ROWS + 1):
+        state = reduce_result(
+            state,
+            run_worker(
+                sequence,
+                _snapshot(epoch=sequence + 1, d_seg=1.0 / (sequence + 1)),
+                score_snapshot=_score,
+            ),
+        )
+    # Model the independently valid coordinate where effects have been
+    # acknowledged but their O5 publications have not.  The fixed codec must
+    # still refuse rather than truncate the retained physical artifacts.
+    state["effects"] = []
+    state["effect_base_sequence"] = state["next_effect_sequence"]
+    validate_reducer_state(state)
+    with pytest.raises(
+        LiveVerdictStateError,
+        match="O5 BEST-intent count exceeds fixed capacity",
+    ):
+        state_arrays(
+            state,
+            PublisherCursor(
+                next_effect_sequence=state["next_effect_sequence"],
+                next_best_intent_sequence=0,
+            ),
+            prefix="best_overflow__",
+        )
+
+
+def test_fixed_arrays_refuse_payload_identity_padding_and_census_tamper() -> None:
+    prefix = "tamper__"
+    state = reduce_result(
+        new_reducer_state(),
+        run_worker(0, _snapshot(epoch=1, d_seg=0.02), score_snapshot=_score),
+    )
+
+    unknown = dict(state_arrays(state, PublisherCursor(), prefix=prefix))
+    unknown[f"{prefix}mixed_owner_payload"] = np.zeros(1, dtype=np.uint8)
+    with pytest.raises(LiveVerdictStateError, match="array census differs"):
+        state_from_arrays(unknown, prefix=prefix)
+
+    payload = dict(state_arrays(state, PublisherCursor(), prefix=prefix))
+    payload[f"{prefix}o4_effect_payload_data"] = payload[
+        f"{prefix}o4_effect_payload_data"
+    ].copy()
+    payload[f"{prefix}o4_effect_payload_data"][10] ^= np.uint8(1)
+    with pytest.raises(
+        LiveVerdictStateError,
+        match="O4 effect payload or identity is invalid",
+    ):
+        state_from_arrays(payload, prefix=prefix)
+
+    padding = dict(state_arrays(state, PublisherCursor(), prefix=prefix))
+    used = int(padding[f"{prefix}o5_artifact_payload_offsets"][1])
+    padding[f"{prefix}o5_artifact_payload_data"] = padding[
+        f"{prefix}o5_artifact_payload_data"
+    ].copy()
+    padding[f"{prefix}o5_artifact_payload_data"][used] = np.uint8(1)
+    with pytest.raises(LiveVerdictStateError, match="unused data"):
+        state_from_arrays(padding, prefix=prefix)
+
+    identity = dict(state_arrays(state, PublisherCursor(), prefix=prefix))
+    identity[f"{prefix}o4_effect_result_id_data"] = identity[
+        f"{prefix}o4_effect_result_id_data"
+    ].copy()
+    result_id_length = int(identity[f"{prefix}o4_effect_result_id_lengths"][0])
+    identity[f"{prefix}o4_effect_result_id_data"][0, result_id_length] = np.uint8(1)
+    with pytest.raises(LiveVerdictStateError, match="padding"):
+        state_from_arrays(identity, prefix=prefix)
+
+    digest = dict(state_arrays(state, PublisherCursor(), prefix=prefix))
+    digest[f"{prefix}o5_artifact_sha256"] = digest[
+        f"{prefix}o5_artifact_sha256"
+    ].copy()
+    digest[f"{prefix}o5_artifact_sha256"][0, 0] ^= np.uint8(1)
+    with pytest.raises(
+        LiveVerdictStateError,
+        match="O5 artifact payload or identity is invalid",
+    ):
+        state_from_arrays(digest, prefix=prefix)
 
 
 def test_worker_failure_poison_refuses_later_submit_and_checkpoint() -> None:
@@ -350,7 +539,9 @@ def test_real_trainer_source_wires_native_order_and_keeps_admission_blocked() ->
         source.index("def _publish_g111_live_effect") :
         source.index("def _publish_g111_live_best")
     ]
-    assert "effect publication REFUSED" in native_effect
+    assert "reduce_g111_controller_state" in native_effect
+    assert "intent['idempotency_key']" in native_effect
+    assert "_g111_controller_state[\"value\"] = candidate" in native_effect
     assert "_emit_verdict_row(" not in native_effect
     native_best = source[
         source.index("def _publish_g111_live_best") :
