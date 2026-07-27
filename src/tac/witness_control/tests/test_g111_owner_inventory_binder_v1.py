@@ -8,8 +8,13 @@ import numpy as np
 import pytest
 
 from tac.witness_control.g111_live_verdict_transaction_v1 import (
+    SERIALIZED_O4_FIELDS,
+    SERIALIZED_O5_FIELDS,
     PublisherCursor,
+    build_worker_snapshot,
     new_reducer_state,
+    reduce_result,
+    run_worker,
 )
 from tac.witness_control.g111_live_verdict_transaction_v1 import (
     state_arrays as live_state_arrays,
@@ -76,6 +81,12 @@ _O1_PREFIXES = (
     "seedOptP__",
     "polyakM__",
 )
+_LIVE_O4_KEYS = frozenset(
+    f"{CURRENT_LIVE_STATE_PREFIX}o4_{field}" for field in SERIALIZED_O4_FIELDS
+)
+_LIVE_O5_KEYS = frozenset(
+    f"{CURRENT_LIVE_STATE_PREFIX}o5_{field}" for field in SERIALIZED_O5_FIELDS
+)
 
 
 def _resume_builder_literal_keys() -> frozenset[str]:
@@ -140,6 +151,70 @@ def _controller_arrays() -> dict[str, np.ndarray]:
             "__g111_selection__deploy_bytes": np.asarray(111840, np.int64),
         }
     )
+    return controller
+
+
+def _live_controller_arrays() -> dict[str, np.ndarray]:
+    scorer = {
+        "epoch": 1,
+        "ema_np": {
+            "code": np.arange(24, dtype=np.float32).reshape(6, 4),
+        },
+        "softmax_temp": 0.25,
+        "hosc_beta": 2.0,
+        "dir": (
+            np.arange(8, dtype=np.float32).reshape(4, 2),
+            np.arange(8, 16, dtype=np.float32).reshape(4, 2),
+            np.arange(16, 24, dtype=np.float32).reshape(4, 2),
+        ),
+        "pose_verdict_index": 11,
+        "pose_gate_engaged_epoch": -1,
+        "expected_d_seg": 0.02,
+        "expected_d_pose": 0.002,
+    }
+    snapshot = build_worker_snapshot(
+        epoch=1,
+        seg_form="tau_softplus",
+        ep_loss=1.25,
+        blob_bytes=48_001,
+        best_eligible=True,
+        closed_loop_enabled=True,
+        liveness={
+            "ema_updates": 20,
+            "frac": 1.0,
+            "stepped": True,
+            "acc": 3,
+            "skip": 0,
+            "ep_tot": 3,
+        },
+        scorer_snapshot=scorer,
+    )
+    result = run_worker(
+        0,
+        snapshot,
+        score_snapshot=lambda payload: {
+            "verdict": {
+                "d_seg": float(payload["expected_d_seg"]),
+                "d_pose": payload["expected_d_pose"],
+                "_pose_gate_telemetry": {
+                    "pose_verdict_index": int(payload["pose_verdict_index"]),
+                    "d_pose_live": True,
+                },
+            },
+            "live_gap": {
+                "d_seg_live": float(payload["expected_d_seg"]) + 0.001,
+            },
+        },
+    )
+    live = dict(
+        live_state_arrays(
+            reduce_result(new_reducer_state(), result),
+            PublisherCursor(),
+            prefix=CURRENT_LIVE_STATE_PREFIX,
+        )
+    )
+    controller = _controller_arrays()
+    controller.update(live)
     return controller
 
 
@@ -218,7 +293,11 @@ def _owner_refs(
     controller = set(by_source[CONTROLLER_SOURCE])
     controller_o2 = {key for key in controller if key.startswith("__g111_rollback__") or key.startswith("rbLiveP__")}
     controller_o3 = {key for key in controller if key.startswith("__g111_control__")}
-    controller_o5 = {key for key in controller if key.startswith("__g111_selection__")}
+    controller_o5 = {
+        key
+        for key in controller
+        if key.startswith("__g111_selection__") or key in _LIVE_O5_KEYS
+    }
     controller_o4 = controller - controller_o2 - controller_o3 - controller_o5
     derived = (RuntimeLeafRef(LINEAGE_SOURCE, "__cfg_fresh_lineage_state_sha256"),)
     refs = {
@@ -297,6 +376,96 @@ def test_current_g111_active_config_census_is_owned_exactly_once() -> None:
     assert "trunk.in_proj.weight" in replacements[CAUSAL_SELECTION_STATE].deploy
     assert "__cfg_n_hidden" in replacements[LINEAGE_ENVELOPE].resume
     assert not replacements[CURRENT_TRAIN_STATE].resume["liveP__trunk.in_proj.weight"].flags.writeable
+
+
+def test_fixed_live_census_is_split_between_o4_and_o5_owners() -> None:
+    runtime = _runtime()
+    bound = bind_g111_owner_inventory(runtime, fresh_schema=_schema(runtime))
+    claims = {claim.owner: set(claim.keys) for claim in bound.staged.manifest.owner_claims}
+    qualified_o4 = {f"{CONTROLLER_SOURCE}.{key}" for key in _LIVE_O4_KEYS}
+    qualified_o5 = {f"{CONTROLLER_SOURCE}.{key}" for key in _LIVE_O5_KEYS}
+
+    assert qualified_o4 <= claims[VERDICT_TRANSACTION]
+    assert qualified_o5 <= claims[CAUSAL_SELECTION_STATE]
+    assert qualified_o4.isdisjoint(claims[CAUSAL_SELECTION_STATE])
+    assert qualified_o5.isdisjoint(claims[VERDICT_TRANSACTION])
+    assert set(runtime.controller) & {
+        key for key in runtime.controller if key.startswith(CURRENT_LIVE_STATE_PREFIX)
+    } == _LIVE_O4_KEYS | _LIVE_O5_KEYS
+
+
+def test_cold_schema_accepts_live_values_with_identical_fixed_topology() -> None:
+    cold = _runtime()
+    live_controller = _live_controller_arrays()
+    live = G111RuntimeArrays(
+        deploy=cold.deploy,
+        resume=cold.resume,
+        barrier=cold.barrier,
+        controller=live_controller,
+        lineage=cold.lineage,
+    )
+
+    assert set(cold.controller) == set(live.controller)
+    assert {
+        key: (np.asarray(value).dtype.str, np.asarray(value).shape)
+        for key, value in cold.controller.items()
+    } == {
+        key: (np.asarray(value).dtype.str, np.asarray(value).shape)
+        for key, value in live.controller.items()
+    }
+    bind_g111_owner_inventory(live, fresh_schema=_schema(cold))
+
+
+@pytest.mark.parametrize(
+    ("key", "source_owner", "wrong_owner", "message"),
+    (
+        (
+            next(iter(sorted(_LIVE_O4_KEYS))),
+            VERDICT_TRANSACTION,
+            CAUSAL_SELECTION_STATE,
+            "fixed O4 live-verdict",
+        ),
+        (
+            next(iter(sorted(_LIVE_O5_KEYS))),
+            CAUSAL_SELECTION_STATE,
+            VERDICT_TRANSACTION,
+            "fixed O5 best_archive_pointer",
+        ),
+    ),
+)
+def test_fixed_live_leaf_wrong_owner_is_refused(
+    key: str,
+    source_owner: str,
+    wrong_owner: str,
+    message: str,
+) -> None:
+    runtime = _runtime()
+    refs, derived = _owner_refs(runtime)
+    leaf = RuntimeLeafRef(CONTROLLER_SOURCE, key)
+    refs[source_owner] = tuple(ref for ref in refs[source_owner] if ref != leaf)
+    refs[wrong_owner] = (*refs[wrong_owner], leaf)
+    with pytest.raises(TransactionValidationError, match=message):
+        build_fresh_g111_runtime_schema(
+            runtime,
+            owner_refs=refs,
+            derived_lineage_refs=derived,
+        )
+
+
+@pytest.mark.parametrize("mutation", ("missing", "unknown"))
+def test_fixed_live_census_drift_is_refused(mutation: str) -> None:
+    runtime = _runtime()
+    if mutation == "missing":
+        del runtime.controller[next(iter(sorted(_LIVE_O5_KEYS)))]
+    else:
+        runtime.controller[f"{CURRENT_LIVE_STATE_PREFIX}o5_unknown_future_leaf"] = np.asarray(0, np.int8)
+    refs, derived = _owner_refs(runtime)
+    with pytest.raises(TransactionValidationError, match="fixed O4/O5 live reducer census differs"):
+        build_fresh_g111_runtime_schema(
+            runtime,
+            owner_refs=refs,
+            derived_lineage_refs=derived,
+        )
 
 
 def test_unknown_captured_key_is_refused_against_fresh_schema() -> None:

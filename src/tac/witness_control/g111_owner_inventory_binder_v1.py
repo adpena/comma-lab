@@ -27,6 +27,10 @@ from typing import Any, Final
 import numpy as np
 
 from tac.witness_control.g111_live_verdict_transaction_v1 import (
+    SERIALIZED_O4_FIELDS,
+    SERIALIZED_O5_FIELDS,
+)
+from tac.witness_control.g111_live_verdict_transaction_v1 import (
     state_from_arrays as open_live_verdict_state,
 )
 from tac.witness_control.g111_verdict_barrier_v1 import (
@@ -34,6 +38,7 @@ from tac.witness_control.g111_verdict_barrier_v1 import (
 )
 from tac.witness_control.trajectory_transaction_v2 import (
     ATOMIC_OWNERS,
+    CAUSAL_SELECTION_STATE,
     LINEAGE_ENVELOPE,
     MANIFEST_KEY,
     VERDICT_TRANSACTION,
@@ -80,13 +85,16 @@ _BARRIER_FIELDS: Final[tuple[str, ...]] = (
     "journal_result_id_offsets",
     "journal_result_sha256",
 )
-_LIVE_STATE_FIELDS: Final[tuple[str, ...]] = (
-    "schema",
-    "state_payload",
-    "state_sha256",
-    "effect_cursor",
-    "best_intent_cursor",
-)
+
+
+def _live_owner_keys(
+    *,
+    prefix: str,
+) -> tuple[frozenset[str], frozenset[str]]:
+    return (
+        frozenset(f"{prefix}o4_{field}" for field in SERIALIZED_O4_FIELDS),
+        frozenset(f"{prefix}o5_{field}" for field in SERIALIZED_O5_FIELDS),
+    )
 
 
 def _fail(message: str) -> None:
@@ -252,11 +260,14 @@ def _require_current_live_state(
     *,
     prefix: str,
 ) -> None:
-    expected = {f"{prefix}{field}" for field in _LIVE_STATE_FIELDS}
+    expected_o4, expected_o5 = _live_owner_keys(prefix=prefix)
+    if expected_o4 & expected_o5:
+        _fail("current G111 fixed O4/O5 live-state censuses overlap")
+    expected = expected_o4 | expected_o5
     actual = {key for key in arrays if key.startswith(prefix)}
     if actual != expected:
         _fail(
-            "current G111 live reducer/controller census differs; "
+            "current G111 fixed O4/O5 live reducer census differs; "
             f"missing={sorted(expected - actual)}, unknown={sorted(actual - expected)}"
         )
 
@@ -313,6 +324,16 @@ def build_fresh_g111_runtime_schema(
     _require_current_barrier(fresh[BARRIER_SOURCE], prefix=barrier_prefix)
     if require_live_state:
         _require_current_live_state(fresh[CONTROLLER_SOURCE], prefix=live_state_prefix)
+        live_o4_keys, live_o5_keys = _live_owner_keys(prefix=live_state_prefix)
+        for key in live_o4_keys:
+            if owner_by_ref.get(RuntimeLeafRef(CONTROLLER_SOURCE, key)) != VERDICT_TRANSACTION:
+                _fail("every fixed O4 live-verdict leaf must be owned by O4 verdict_transaction")
+        for key in live_o5_keys:
+            if owner_by_ref.get(RuntimeLeafRef(CONTROLLER_SOURCE, key)) != CAUSAL_SELECTION_STATE:
+                _fail(
+                    "every fixed O5 best_archive_pointer leaf must be owned by "
+                    "O5 causal_selection_state"
+                )
 
     expected_owners: list[ExpectedOwnerSchema] = []
     for owner in ATOMIC_OWNERS:
