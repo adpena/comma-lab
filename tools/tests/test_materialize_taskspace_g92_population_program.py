@@ -124,3 +124,25 @@ def test_missing_g90_aggregate_writes_honest_blocker(tmp_path: Path) -> None:
     assert value["pointer_moved"] is False
     assert value["archive_emitted"] is False
     assert value["archive_priced"] is False
+
+
+def test_v2_blocker_advances_only_to_composed_state_replay(tmp_path: Path) -> None:
+    body = _config_body()
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps(body), encoding="utf-8")
+    config = MODULE.load_config(path)
+    object.__setattr__(config, "output_root", tmp_path / "out")
+    config.output_root.mkdir()
+    next_step = "G92_TO_G94_EXACT_COMPOSED_STATE_REPLAY_PLUS_SAME_STATE_FULL_N600_ROWS_OWED"
+    blocker = MODULE._write_blocker(
+        config,
+        plan_path=None,
+        exc=MODULE.G92MaterializerError(next_step),
+        required_next_implementation=next_step,
+        blocker_schema=MODULE.V2_BLOCKER_SCHEMA,
+    )
+    value = json.loads(blocker.read_text(encoding="utf-8"))
+    assert value["schema"] == MODULE.V2_BLOCKER_SCHEMA
+    assert value["required_next_implementation"] == next_step
+    assert "AS_ADDITIVE_CUMULATIVE_OPTIMAL_OR_RATE_EVIDENCE" in value["forbidden_false_action"]
+    assert value["archive_priced"] is False

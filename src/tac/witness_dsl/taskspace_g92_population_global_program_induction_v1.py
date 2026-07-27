@@ -1,22 +1,18 @@
 # SPDX-License-Identifier: MIT
-"""Population-global induction of a partial typed-actuator program atlas.
+"""Population-global induction over sealed G90 V1 and V2 observation atlases.
 
-G90 exact-replayed interventions are observations at one incumbent operating
-point.  V1's linear screening and Pareto filter are not sound completeness or
-optimality certificates; discarded rows remain unresolved.  The exact rows
-are useful as a partial atlas, but their isolated component deltas are not
-transferable to a cumulative G89/G94 state.  This module therefore emits:
+The V1 path remains a partial atlas: its screening/Pareto policy leaves
+discarded projections unresolved.  The V2 path strictly reopens every
+deterministic physical group in the exact-all coarse atlas, including batches
+whose physical group count exceeds the common eight-coordinate case.  Both
+paths preserve the exact proposed atoms and derive only genuinely shared
+physical-family identities plus collision-free storage branches.
 
-* the sealed G90 partial observation atlas and exact proposed atoms;
-* genuinely shared physical-family identities; and
-* collision-free intervention branches for later same-state lowering.
-
-It deliberately emits and prices no archive.  The exact G85 incumbent selects
-``BOTH`` while the new intervention selects ``Y1``.  G94 supplies that
-sequential receiver type, but G92 still owes integration against a G90 V2
-exact-all-coarse atlas and full-n600 same-state rows.  No threshold,
-scalarized proxy, completeness claim, or historical dense/full-residual
-payload is admitted here.
+Neither path composes isolated interventions, proves cumulative optimality, or
+infers archive rate from operand member bytes.  G90 observations are anchored
+at one incumbent operating point, so their component deltas are not
+transferable to a cumulative G89/G94 state.  This module emits and prices no
+archive; exact composed-state replay and full-n600 rows remain downstream.
 """
 
 from __future__ import annotations
@@ -29,6 +25,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
+
+import numpy as np
 
 from tac.optimization.direct_description_carrier_compose import (
     BoundaryShearletAtomV1,
@@ -48,6 +46,10 @@ SOURCE_VIDEO_BYTES: Final = 37_545_489
 G90_AGGREGATE_SCHEMA: Final = "tac.taskspace_projected_population_costate_aggregate.v1"
 G90_STAGE_SCHEMA: Final = "tac.taskspace_projected_population_costate_stage.v1"
 G90_BATCH_SCHEMA: Final = "tac.taskspace_projected_population_costate_batch.v1"
+G90_V2_AGGREGATE_SCHEMA: Final = "tac.taskspace_exact_coarse_costate_aggregate.v2"
+G90_V2_STAGE_SCHEMA: Final = "tac.taskspace_exact_coarse_costate_stage.v2"
+G90_V2_BATCH_SCHEMA: Final = "tac.taskspace_exact_coarse_costate_batch.v2"
+G90_V2_EXACT_REPLAY_POLICY: Final = "ALL_DETERMINISTIC_PHYSICAL_GROUPS"
 G92_FAMILY_SCHEMA: Final = "tac.taskspace_g92_population_global_prefix_family.v1"
 G92_MEASUREMENT_SCHEMA: Final = "tac.taskspace_g92_exact_prefix_measurement.v1"
 G92_SELECTION_CONTRACT: Final = "NO_PROXY_RANKING_REQUIRE_SAME_ARCHIVE_FULL_N600_REALIZED_THROUGH_R_PUBLIC_CLOSURE"
@@ -55,6 +57,7 @@ G51_PAYLOAD_POLICY: Final = "OPAQUE_EXACT_RECEIPT_PROVENANCE_NOT_PARSED_NO_PAYLO
 EXACT_LOWERING_CHAIN_BLOCKER: Final = (
     "G90_V2_EXACT_ALL_COARSE_ATLAS_PLUS_G92_TO_G94_LOWERING_PLUS_SAME_STATE_FULL_N600_ROWS_OWED"
 )
+V2_COMPOSED_LOWERING_BLOCKER: Final = "G92_TO_G94_EXACT_COMPOSED_STATE_REPLAY_PLUS_SAME_STATE_FULL_N600_ROWS_OWED"
 # Compatibility name for callers of V1.  Its value is the current blocker,
 # not the now-implemented G94 receiver seam.
 SEQUENTIAL_LOWERING_BLOCKER: Final = EXACT_LOWERING_CHAIN_BLOCKER
@@ -154,6 +157,119 @@ _BASIS_GROUP_KEYS: Final = {
     "proposals",
     "proposed_atoms_sha256",
     "role",
+}
+_V2_AGGREGATE_KEYS: Final = {
+    "aggregate_receipt_sha256",
+    "authority_drift",
+    "base_row",
+    "candidate_claim",
+    "encoder_only",
+    "exact_replay_count",
+    "exact_replay_policy",
+    "hierarchical_refinement_required_before_atom_selection",
+    "pair_range",
+    "pareto_pruning_performed",
+    "pointer_moved",
+    "projection_coordinate_count",
+    "rate_axis",
+    "research_only",
+    "schema",
+    "score_claim",
+    "stages",
+}
+_V2_STAGE_KEYS: Final = {
+    "base_pose_squared_error_sum_f32",
+    "base_segmentation_error_count",
+    "batch_count",
+    "batches",
+    "candidate_claim",
+    "checkpoint_policy",
+    "dense_costates_persisted",
+    "differentiable_current_argmax_drift_cells",
+    "differentiable_target_argmax_drift_cells",
+    "encoder_only",
+    "exact_replay_count",
+    "exact_replay_policy",
+    "g78_stage_receipt_sha256",
+    "g87_stage_checkpoint_sha256",
+    "pair_range",
+    "pareto_pruning_performed",
+    "projection_coordinate_count",
+    "research_only",
+    "schema",
+    "score_claim",
+    "stage_index",
+    "stage_receipt_sha256",
+}
+_V2_BATCH_KEYS: Final = {
+    "actual_zip_delta_measured",
+    "actuator_basis_groups",
+    "all_deterministic_physical_groups_exact_replayed",
+    "authority_drift",
+    "base_components",
+    "batch_checkpoint_sha256",
+    "candidate_claim",
+    "dense_costates_persisted",
+    "encoder_only",
+    "exact_replay_policy",
+    "exact_replay_state_custody",
+    "expected_physical_group_count",
+    "expected_physical_group_ids",
+    "local_admission_performed",
+    "member_bytes_used_as_rate",
+    "pair_range",
+    "pareto_pruning_performed",
+    "population_pose_pair_mse_vjp_scale",
+    "projection_coordinate_count",
+    "projection_rows",
+    "research_only",
+    "schema",
+    "score_claim",
+    "source_custody",
+}
+_V2_SOURCE_CUSTODY_KEYS: Final = {
+    "candidate_camera_sha256",
+    "current_cells_sha256",
+    "target_camera_sha256",
+    "target_cells_sha256",
+}
+_V2_BASE_COMPONENT_KEYS: Final = {
+    "pair_pose_mse_f32",
+    "seg_mismatch_count",
+    "target_minus_current_gap_sum",
+}
+_V2_REPLAY_STATE_KEYS: Final = {
+    "candidate_y0_preserved",
+    "operand_id",
+    "pose_conditioning_y0_sha256",
+    "pose_conditioning_y1_sha256",
+    "seg_base_y1_sha256",
+    "seg_candidate_y1_sha256",
+}
+_V2_AUTHORITY_DRIFT_KEYS: Final = {
+    "authority_cells_drive_exact_replay",
+    "authority_pose_targets_and_base_mse_drive_exact_replay",
+    "current",
+    "differentiable_argmax_has_no_authority",
+    "pose",
+    "target",
+}
+_V2_SEG_DRIFT_KEYS: Final = {
+    "authority_cells_sha256",
+    "axis",
+    "differentiable_cells_sha256",
+    "expected_cells_sha256",
+    "minimum_top_two_margin_at_drift",
+    "mismatch_cell_count",
+    "mismatch_pair_ids",
+}
+_V2_POSE_DRIFT_KEYS: Final = {
+    "authority_current_pose6_sha256",
+    "authority_target_pose6_sha256",
+    "differentiable_current_pose6_sha256",
+    "differentiable_target_pose6_sha256",
+    "maximum_abs_current_delta",
+    "maximum_abs_target_delta",
 }
 
 
@@ -337,6 +453,14 @@ class G90ExactInterventionV1:
             proposed_operand.to_bytes()
         ):
             raise PopulationProgramInductionError("G90 proposed operand row/basis custody differs")
+        if (
+            type(self.operand_member_bytes) is not int
+            or self.operand_member_bytes <= 0
+            or type(self.changed_camera_values) is not int
+            or self.changed_camera_values < 0
+            or type(self.exact_seg_mismatch_delta) is not int
+        ):
+            raise PopulationProgramInductionError("G90 exact row integer fields differ")
         for label, value in (
             ("pose linearized delta", self.pose_linearized_score_delta),
             ("Seg directional delta", self.seg_gap_directional_delta),
@@ -366,6 +490,8 @@ class SealedG90PopulationV1:
     base_archive_sha256: str
     interventions: tuple[G90ExactInterventionV1, ...]
     unresolved_projection_ids: tuple[str, ...]
+    source_schema: str = G90_AGGREGATE_SCHEMA
+    exact_replay_atlas_complete: bool = False
 
     def __post_init__(self) -> None:
         if not self.interventions:
@@ -375,6 +501,17 @@ class SealedG90PopulationV1:
             raise PopulationProgramInductionError("G90 interventions are not unique canonical order")
         if set(ids).intersection(self.unresolved_projection_ids):
             raise PopulationProgramInductionError("G90 resolved/unresolved projections overlap")
+        if self.source_schema not in {
+            G90_AGGREGATE_SCHEMA,
+            G90_V2_AGGREGATE_SCHEMA,
+        }:
+            raise PopulationProgramInductionError("sealed G90 source schema is unsupported")
+        if self.source_schema == G90_AGGREGATE_SCHEMA and self.exact_replay_atlas_complete:
+            raise PopulationProgramInductionError("G90 V1 cannot claim an exact-all coarse atlas")
+        if self.source_schema == G90_V2_AGGREGATE_SCHEMA and (
+            not self.exact_replay_atlas_complete or self.unresolved_projection_ids
+        ):
+            raise PopulationProgramInductionError("G90 V2 lost exact-all coarse-atlas coverage")
 
 
 def _parse_basis_group(
@@ -403,12 +540,23 @@ def _parse_basis_group(
         raise PopulationProgramInductionError("G90 actuator basis proposal custody is incomplete")
     atoms: list[BoundaryShearletAtomV1] = []
     for index, (proposal, fingerprint) in enumerate(zip(proposals, fingerprints, strict=True)):
-        if type(proposal) is not dict or set(proposal) != {
-            "atom",
-            "candidate_id",
-            "fisher_priority",
-            "schema",
-        }:
+        if (
+            type(proposal) is not dict
+            or set(proposal)
+            != {
+                "atom",
+                "candidate_id",
+                "fisher_priority",
+                "schema",
+            }
+            or (
+                proposal.get("schema") != "tac.g72.boundary_shearlet_proposal.v1"
+                or type(proposal.get("candidate_id")) is not str
+                or not proposal["candidate_id"]
+                or type(proposal.get("fisher_priority")) is not str
+                or not proposal["fisher_priority"]
+            )
+        ):
             raise PopulationProgramInductionError("G90 proposal key set differs")
         expected_fingerprint = _require_sha(
             fingerprint,
@@ -467,6 +615,17 @@ def _parse_exact_intervention(
         "BLOCKED_MEMBER_BYTES_ARE_NOT_A_ZIP_DELTA"
     ):
         raise PopulationProgramInductionError("G90 row falsely promoted member bytes to ZIP rate")
+    if row.get("family_id") != "G72_CURRENT_BASE_COMPOSED_ROLE_AWARE_SHEARLET_BATCH_GROUP":
+        raise PopulationProgramInductionError("G90 row family identity differs")
+    if (
+        type(row.get("atom_count")) is not int
+        or type(row.get("pose_linearized_score_delta")) not in {int, float}
+        or type(row.get("seg_gap_directional_delta")) not in {int, float}
+        or type(row.get("exact_seg_score_delta")) not in {int, float}
+        or type(row.get("exact_pose_mean_delta")) not in {int, float}
+        or type(row.get("exact_pose_score_delta")) not in {int, float}
+    ):
+        raise PopulationProgramInductionError("G90 exact row numeric ABI differs")
     match = _GROUP_RE.fullmatch(operand_id)
     if match is None:
         raise PopulationProgramInductionError("G90 operand ID is not a physical G72 group")
@@ -504,12 +663,501 @@ def _parse_exact_intervention(
     )
 
 
+def _validate_v2_authority_drift(
+    value: object,
+    *,
+    pair_ids: tuple[int, ...],
+    source_custody: Mapping[str, Any],
+) -> tuple[int, int]:
+    if type(value) is not dict or set(value) != _V2_AUTHORITY_DRIFT_KEYS:
+        raise PopulationProgramInductionError("G90 V2 authority-drift key set differs")
+    if (
+        value.get("authority_cells_drive_exact_replay") is not True
+        or value.get("authority_pose_targets_and_base_mse_drive_exact_replay") is not True
+        or value.get("differentiable_argmax_has_no_authority") is not True
+    ):
+        raise PopulationProgramInductionError("G90 V2 differentiable surface gained authority")
+    drift_counts: list[int] = []
+    for axis, custody_key in (
+        ("current", "current_cells_sha256"),
+        ("target", "target_cells_sha256"),
+    ):
+        row = value.get(axis)
+        if type(row) is not dict or set(row) != _V2_SEG_DRIFT_KEYS:
+            raise PopulationProgramInductionError(f"G90 V2 {axis} drift key set differs")
+        mismatch_count = row.get("mismatch_cell_count")
+        mismatch_pair_ids = row.get("mismatch_pair_ids")
+        if (
+            row.get("axis") != axis
+            or type(mismatch_count) is not int
+            or mismatch_count < 0
+            or type(mismatch_pair_ids) is not list
+            or any(type(pair_id) is not int or pair_id not in pair_ids for pair_id in mismatch_pair_ids)
+            or mismatch_pair_ids != sorted(set(mismatch_pair_ids))
+            or (mismatch_count == 0) != (not mismatch_pair_ids)
+            or mismatch_count < len(mismatch_pair_ids)
+        ):
+            raise PopulationProgramInductionError(f"G90 V2 {axis} drift identity differs")
+        expected_sha = _require_sha(
+            row.get("expected_cells_sha256"),
+            label=f"G90 V2 {axis} expected cells SHA",
+        )
+        authority_sha = _require_sha(
+            row.get("authority_cells_sha256"),
+            label=f"G90 V2 {axis} authority cells SHA",
+        )
+        _require_sha(
+            row.get("differentiable_cells_sha256"),
+            label=f"G90 V2 {axis} differentiable cells SHA",
+        )
+        if expected_sha != authority_sha or authority_sha != source_custody.get(custody_key):
+            raise PopulationProgramInductionError(f"G90 V2 {axis} authority custody differs")
+        margin = row.get("minimum_top_two_margin_at_drift")
+        if (mismatch_count == 0 and margin is not None) or (
+            mismatch_count > 0
+            and (type(margin) not in {int, float} or not math.isfinite(float(margin)) or float(margin) < 0.0)
+        ):
+            raise PopulationProgramInductionError(f"G90 V2 {axis} tie-drift margin differs")
+        drift_counts.append(mismatch_count)
+    pose = value.get("pose")
+    if type(pose) is not dict or set(pose) != _V2_POSE_DRIFT_KEYS:
+        raise PopulationProgramInductionError("G90 V2 pose drift key set differs")
+    for key in (
+        "authority_current_pose6_sha256",
+        "authority_target_pose6_sha256",
+        "differentiable_current_pose6_sha256",
+        "differentiable_target_pose6_sha256",
+    ):
+        _require_sha(pose.get(key), label=f"G90 V2 pose drift {key}")
+    for key in ("maximum_abs_current_delta", "maximum_abs_target_delta"):
+        number = pose.get(key)
+        if type(number) not in {int, float} or not math.isfinite(float(number)) or float(number) < 0.0:
+            raise PopulationProgramInductionError(f"G90 V2 pose drift {key} differs")
+    return drift_counts[0], drift_counts[1]
+
+
+def _load_sealed_g90_population_v2(
+    aggregate_identity: ExactFileIdentityV1,
+    *,
+    expected_aggregate_self_sha256: str,
+) -> SealedG90PopulationV1:
+    """Reopen a complete exact-all V2 coarse atlas without composing its rows."""
+
+    aggregate_path = aggregate_identity.verify(label="G90 V2 aggregate")
+    aggregate = _load_mapping(aggregate_path, label="G90 V2 aggregate")
+    if set(aggregate) != _V2_AGGREGATE_KEYS or aggregate.get("schema") != G90_V2_AGGREGATE_SCHEMA:
+        raise PopulationProgramInductionError("G90 V2 aggregate schema/key set differs")
+    aggregate_self = _verify_seal(
+        aggregate,
+        field="aggregate_receipt_sha256",
+        label="G90 V2 aggregate",
+    )
+    if aggregate_self != _require_sha(
+        expected_aggregate_self_sha256,
+        label="expected G90 V2 aggregate self SHA",
+    ):
+        raise PopulationProgramInductionError("G90 V2 aggregate self SHA differs from caller custody")
+    aggregate_drift = aggregate.get("authority_drift")
+    if (
+        aggregate.get("pair_range") != [0, PAIR_COUNT]
+        or aggregate.get("exact_replay_policy") != G90_V2_EXACT_REPLAY_POLICY
+        or aggregate.get("pareto_pruning_performed") is not False
+        or aggregate.get("hierarchical_refinement_required_before_atom_selection") is not True
+        or aggregate.get("rate_axis") != "UNMEASURED_UNTIL_G94_COMPOSES_ACTUAL_ZIP"
+        or aggregate.get("candidate_claim") is not False
+        or aggregate.get("score_claim") is not False
+        or aggregate.get("pointer_moved") is not False
+        or aggregate.get("research_only") is not True
+        or aggregate.get("encoder_only") is not True
+        or type(aggregate_drift) is not dict
+        or set(aggregate_drift)
+        != {
+            "differentiable_current_argmax_drift_cells",
+            "differentiable_target_argmax_drift_cells",
+            "inference_cells_remain_authoritative",
+        }
+        or aggregate_drift.get("inference_cells_remain_authoritative") is not True
+    ):
+        raise PopulationProgramInductionError("G90 V2 aggregate weakened authority/rate boundary")
+    stages = aggregate.get("stages")
+    if type(stages) is not list or len(stages) != 5:
+        raise PopulationProgramInductionError("G90 V2 aggregate is not sealed full n600")
+
+    interventions: list[G90ExactInterventionV1] = []
+    expected_stage_start = 0
+    total_projection_count = 0
+    total_exact_replay_count = 0
+    total_base_pose_sum = 0.0
+    total_base_seg_errors = 0
+    total_current_drift = 0
+    total_target_drift = 0
+    for stage_index, stage_binding in enumerate(stages):
+        if type(stage_binding) is not dict or set(stage_binding) != {
+            "bytes",
+            "pair_range",
+            "path",
+            "sha256",
+            "stage_index",
+            "stage_receipt_sha256",
+        }:
+            raise PopulationProgramInductionError("G90 V2 stage binding key set differs")
+        stage_identity = ExactFileIdentityV1(
+            stage_binding["path"],
+            stage_binding["bytes"],
+            stage_binding["sha256"],
+        )
+        stage_path = stage_identity.verify(label=f"G90 V2 stage {stage_index}")
+        stage = _load_mapping(stage_path, label=f"G90 V2 stage {stage_index}")
+        if set(stage) != _V2_STAGE_KEYS or stage.get("schema") != G90_V2_STAGE_SCHEMA:
+            raise PopulationProgramInductionError("G90 V2 stage schema/key set differs")
+        stage_self = _verify_seal(
+            stage,
+            field="stage_receipt_sha256",
+            label=f"G90 V2 stage {stage_index}",
+        )
+        expected_stage_range = [expected_stage_start, expected_stage_start + 120]
+        if (
+            stage_binding.get("stage_index") != stage_index
+            or stage.get("stage_index") != stage_index
+            or stage_binding.get("stage_receipt_sha256") != stage_self
+            or stage_binding.get("pair_range") != stage.get("pair_range")
+            or stage.get("pair_range") != expected_stage_range
+            or stage.get("exact_replay_policy") != G90_V2_EXACT_REPLAY_POLICY
+            or stage.get("pareto_pruning_performed") is not False
+            or stage.get("checkpoint_policy") != "immutable_atomic_preserve_every_120_pair_stage"
+            or stage.get("dense_costates_persisted") is not False
+            or stage.get("candidate_claim") is not False
+            or stage.get("score_claim") is not False
+            or stage.get("research_only") is not True
+            or stage.get("encoder_only") is not True
+        ):
+            raise PopulationProgramInductionError("G90 V2 stage continuity/authority differs")
+        _require_sha(
+            stage.get("g78_stage_receipt_sha256"),
+            label=f"G90 V2 stage {stage_index} G78 SHA",
+        )
+        _require_sha(
+            stage.get("g87_stage_checkpoint_sha256"),
+            label=f"G90 V2 stage {stage_index} G87 SHA",
+        )
+        expected_stage_start += 120
+        batches = stage.get("batches")
+        if (
+            type(batches) is not list
+            or not batches
+            or type(stage.get("batch_count")) is not int
+            or stage.get("batch_count") != len(batches)
+        ):
+            raise PopulationProgramInductionError("G90 V2 stage batch count differs")
+        expected_batch_start = stage["pair_range"][0]
+        stage_projection_count = 0
+        stage_exact_replay_count = 0
+        stage_base_pose_sum = 0.0
+        stage_base_seg_errors = 0
+        stage_current_drift = 0
+        stage_target_drift = 0
+        for batch_binding in batches:
+            if type(batch_binding) is not dict or set(batch_binding) != {
+                "batch_checkpoint_sha256",
+                "bytes",
+                "pair_range",
+                "path",
+                "sha256",
+            }:
+                raise PopulationProgramInductionError("G90 V2 batch binding key set differs")
+            batch_identity = ExactFileIdentityV1(
+                batch_binding["path"],
+                batch_binding["bytes"],
+                batch_binding["sha256"],
+            )
+            batch_path = batch_identity.verify(label="G90 V2 batch")
+            batch = _load_mapping(batch_path, label="G90 V2 batch")
+            if set(batch) != _V2_BATCH_KEYS or batch.get("schema") != G90_V2_BATCH_SCHEMA:
+                raise PopulationProgramInductionError("G90 V2 batch schema/key set differs")
+            batch_self = _verify_seal(
+                batch,
+                field="batch_checkpoint_sha256",
+                label="G90 V2 batch",
+            )
+            pair_range = batch.get("pair_range")
+            if (
+                batch_binding.get("batch_checkpoint_sha256") != batch_self
+                or batch_binding.get("pair_range") != pair_range
+                or type(pair_range) is not list
+                or len(pair_range) != 2
+                or any(type(item) is not int for item in pair_range)
+                or pair_range[0] != expected_batch_start
+                or not pair_range[0] < pair_range[1] <= stage["pair_range"][1]
+                or pair_range[1] - pair_range[0] > 16
+            ):
+                raise PopulationProgramInductionError("G90 V2 batch continuity/custody differs")
+            expected_batch_start = pair_range[1]
+            pair_ids = tuple(range(pair_range[0], pair_range[1]))
+            expected_ids_value = batch.get("expected_physical_group_ids")
+            expected_group_count = batch.get("expected_physical_group_count")
+            if (
+                type(expected_ids_value) is not list
+                or any(type(group_id) is not str for group_id in expected_ids_value)
+                or len(expected_ids_value) < 8
+                or expected_ids_value != list(dict.fromkeys(expected_ids_value))
+                or type(expected_group_count) is not int
+                or expected_group_count != len(expected_ids_value)
+                or batch.get("projection_coordinate_count") != expected_group_count
+                or batch.get("exact_replay_policy") != G90_V2_EXACT_REPLAY_POLICY
+                or batch.get("all_deterministic_physical_groups_exact_replayed") is not True
+                or batch.get("pareto_pruning_performed") is not False
+                or batch.get("local_admission_performed") is not False
+                or batch.get("dense_costates_persisted") is not False
+                or batch.get("actual_zip_delta_measured") is not False
+                or batch.get("member_bytes_used_as_rate") is not False
+                or batch.get("candidate_claim") is not False
+                or batch.get("score_claim") is not False
+                or batch.get("research_only") is not True
+                or batch.get("encoder_only") is not True
+            ):
+                raise PopulationProgramInductionError("G90 V2 batch lost exact-all/no-admission authority")
+            expected_group_ids = tuple(expected_ids_value)
+            for group_id in expected_group_ids:
+                match = _GROUP_RE.fullmatch(group_id)
+                if match is None or int(match["start"]) != pair_range[0] or int(match["stop"]) != pair_range[1]:
+                    raise PopulationProgramInductionError("G90 V2 expected physical group ID/range differs")
+            source_custody = batch.get("source_custody")
+            if type(source_custody) is not dict or set(source_custody) != _V2_SOURCE_CUSTODY_KEYS:
+                raise PopulationProgramInductionError("G90 V2 source custody key set differs")
+            for key in sorted(_V2_SOURCE_CUSTODY_KEYS):
+                _require_sha(source_custody.get(key), label=f"G90 V2 source custody {key}")
+            current_drift, target_drift = _validate_v2_authority_drift(
+                batch.get("authority_drift"),
+                pair_ids=pair_ids,
+                source_custody=source_custody,
+            )
+            base_components = batch.get("base_components")
+            if (
+                type(base_components) is not dict
+                or set(base_components) != _V2_BASE_COMPONENT_KEYS
+                or type(base_components.get("pair_pose_mse_f32")) is not list
+                or len(base_components["pair_pose_mse_f32"]) != len(pair_ids)
+                or any(
+                    type(number) not in {int, float} or not math.isfinite(float(number)) or float(number) < 0.0
+                    for number in base_components["pair_pose_mse_f32"]
+                )
+                or type(base_components.get("seg_mismatch_count")) is not int
+                or base_components["seg_mismatch_count"] < 0
+                or type(base_components.get("target_minus_current_gap_sum")) not in {int, float}
+                or not math.isfinite(float(base_components["target_minus_current_gap_sum"]))
+            ):
+                raise PopulationProgramInductionError("G90 V2 base components differ")
+            pose_vjp_scale = batch.get("population_pose_pair_mse_vjp_scale")
+            if (
+                type(pose_vjp_scale) not in {int, float}
+                or not math.isfinite(float(pose_vjp_scale))
+                or float(pose_vjp_scale) <= 0.0
+            ):
+                raise PopulationProgramInductionError("G90 V2 pose VJP scale differs")
+
+            rows = batch.get("projection_rows")
+            basis_rows = batch.get("actuator_basis_groups")
+            replay_rows = batch.get("exact_replay_state_custody")
+            if (
+                type(rows) is not list
+                or type(basis_rows) is not list
+                or type(replay_rows) is not list
+                or len(rows) != expected_group_count
+                or len(basis_rows) != expected_group_count
+                or len(replay_rows) != expected_group_count
+                or tuple(row.get("operand_id") if type(row) is dict else None for row in rows) != expected_group_ids
+                or tuple(row.get("group_id") if type(row) is dict else None for row in basis_rows) != expected_group_ids
+                or tuple(row.get("operand_id") if type(row) is dict else None for row in replay_rows)
+                != expected_group_ids
+            ):
+                raise PopulationProgramInductionError("G90 V2 ordered row/basis/replay coverage differs")
+            basis_by_id: dict[
+                str,
+                tuple[
+                    tuple[BoundaryShearletAtomV1, ...],
+                    tuple[str, ...],
+                    str,
+                    str,
+                ],
+            ] = {}
+            for basis_value in basis_rows:
+                group_id, atoms, fingerprints, proposed_sha, incumbent_sha = _parse_basis_group(basis_value)
+                if group_id in basis_by_id:
+                    raise PopulationProgramInductionError("G90 V2 basis IDs are duplicate")
+                basis_by_id[group_id] = (
+                    atoms,
+                    fingerprints,
+                    proposed_sha,
+                    incumbent_sha,
+                )
+            if tuple(basis_by_id) != expected_group_ids:
+                raise PopulationProgramInductionError("G90 V2 basis order differs")
+            for replay_value, expected_group_id in zip(
+                replay_rows,
+                expected_group_ids,
+                strict=True,
+            ):
+                if type(replay_value) is not dict or set(replay_value) != _V2_REPLAY_STATE_KEYS:
+                    raise PopulationProgramInductionError("G90 V2 replay-state custody key set differs")
+                if (
+                    replay_value.get("operand_id") != expected_group_id
+                    or replay_value.get("candidate_y0_preserved") is not True
+                ):
+                    raise PopulationProgramInductionError("G90 V2 replay-state identity/Y0 preservation differs")
+                for key in (
+                    "pose_conditioning_y0_sha256",
+                    "pose_conditioning_y1_sha256",
+                    "seg_base_y1_sha256",
+                    "seg_candidate_y1_sha256",
+                ):
+                    _require_sha(
+                        replay_value.get(key),
+                        label=f"G90 V2 {expected_group_id} {key}",
+                    )
+                if replay_value["pose_conditioning_y1_sha256"] != replay_value["seg_base_y1_sha256"]:
+                    raise PopulationProgramInductionError("G90 V2 pose/Seg base Y1 custody differs")
+            for row_value in rows:
+                if type(row_value) is not dict:
+                    raise PopulationProgramInductionError("G90 V2 projection row is not one object")
+                exact = _parse_exact_intervention(
+                    row_value,
+                    pareto_ids=set(),
+                    basis_by_id=basis_by_id,
+                )
+                if exact is None:
+                    raise PopulationProgramInductionError("G90 V2 exact-all row lacks exact replay")
+                interventions.append(exact)
+
+            batch_pose_sum = float(
+                np.asarray(
+                    base_components["pair_pose_mse_f32"],
+                    dtype=np.float32,
+                ).sum(dtype=np.float32)
+            )
+            stage_base_pose_sum += batch_pose_sum
+            stage_base_seg_errors += base_components["seg_mismatch_count"]
+            stage_current_drift += current_drift
+            stage_target_drift += target_drift
+            stage_projection_count += expected_group_count
+            stage_exact_replay_count += expected_group_count
+        if (
+            expected_batch_start != stage["pair_range"][1]
+            or type(stage.get("projection_coordinate_count")) is not int
+            or stage["projection_coordinate_count"] < 0
+            or stage.get("projection_coordinate_count") != stage_projection_count
+            or type(stage.get("exact_replay_count")) is not int
+            or stage["exact_replay_count"] < 0
+            or stage.get("exact_replay_count") != stage_exact_replay_count
+            or type(stage.get("base_pose_squared_error_sum_f32")) not in {int, float}
+            or not math.isfinite(float(stage["base_pose_squared_error_sum_f32"]))
+            or float(stage["base_pose_squared_error_sum_f32"]) < 0.0
+            or float(stage["base_pose_squared_error_sum_f32"]) != stage_base_pose_sum
+            or type(stage.get("base_segmentation_error_count")) is not int
+            or stage["base_segmentation_error_count"] < 0
+            or stage.get("base_segmentation_error_count") != stage_base_seg_errors
+            or type(stage.get("differentiable_current_argmax_drift_cells")) is not int
+            or stage["differentiable_current_argmax_drift_cells"] < 0
+            or stage.get("differentiable_current_argmax_drift_cells") != stage_current_drift
+            or type(stage.get("differentiable_target_argmax_drift_cells")) is not int
+            or stage["differentiable_target_argmax_drift_cells"] < 0
+            or stage.get("differentiable_target_argmax_drift_cells") != stage_target_drift
+        ):
+            raise PopulationProgramInductionError("G90 V2 stage child totals differ")
+        total_projection_count += stage_projection_count
+        total_exact_replay_count += stage_exact_replay_count
+        total_base_pose_sum += stage_base_pose_sum
+        total_base_seg_errors += stage_base_seg_errors
+        total_current_drift += stage_current_drift
+        total_target_drift += stage_target_drift
+
+    base = aggregate.get("base_row")
+    if type(base) is not dict or set(base) != {
+        "archive_bytes",
+        "archive_sha256",
+        "d_pose",
+        "d_seg",
+        "exact_g85_components_reproduced_to_reported_precision",
+    }:
+        raise PopulationProgramInductionError("G90 V2 base row key set differs")
+    derived_d_pose = total_base_pose_sum / PAIR_COUNT
+    derived_d_seg = total_base_seg_errors / (PAIR_COUNT * 48 * 64)
+    if (
+        type(base.get("archive_bytes")) is not int
+        or base["archive_bytes"] <= 0
+        or type(base.get("d_pose")) not in {int, float}
+        or type(base.get("d_seg")) not in {int, float}
+        or not math.isfinite(float(base["d_pose"]))
+        or not math.isfinite(float(base["d_seg"]))
+        or float(base["d_pose"]) < 0.0
+        or float(base["d_seg"]) < 0.0
+        or expected_stage_start != PAIR_COUNT
+        or type(aggregate.get("projection_coordinate_count")) is not int
+        or aggregate["projection_coordinate_count"] < 0
+        or aggregate.get("projection_coordinate_count") != total_projection_count
+        or type(aggregate.get("exact_replay_count")) is not int
+        or aggregate["exact_replay_count"] < 0
+        or aggregate.get("exact_replay_count") != total_exact_replay_count
+        or total_projection_count != total_exact_replay_count
+        or type(aggregate_drift.get("differentiable_current_argmax_drift_cells")) is not int
+        or aggregate_drift["differentiable_current_argmax_drift_cells"] < 0
+        or aggregate_drift.get("differentiable_current_argmax_drift_cells") != total_current_drift
+        or type(aggregate_drift.get("differentiable_target_argmax_drift_cells")) is not int
+        or aggregate_drift["differentiable_target_argmax_drift_cells"] < 0
+        or aggregate_drift.get("differentiable_target_argmax_drift_cells") != total_target_drift
+        or base.get("exact_g85_components_reproduced_to_reported_precision") is not True
+        or float(base.get("d_pose")) != derived_d_pose
+        or float(base.get("d_seg")) != derived_d_seg
+    ):
+        raise PopulationProgramInductionError("G90 V2 aggregate child/base totals differ")
+    ordered = tuple(sorted(interventions, key=lambda row: row.operand_id))
+    if len(ordered) != total_exact_replay_count:
+        raise PopulationProgramInductionError("G90 V2 intervention count differs")
+    return SealedG90PopulationV1(
+        aggregate=aggregate_identity,
+        aggregate_self_sha256=aggregate_self,
+        base_d_seg=derived_d_seg,
+        base_d_pose=derived_d_pose,
+        base_archive_bytes=base["archive_bytes"],
+        base_archive_sha256=_require_sha(
+            base["archive_sha256"],
+            label="G90 V2 base archive SHA",
+        ),
+        interventions=ordered,
+        unresolved_projection_ids=(),
+        source_schema=G90_V2_AGGREGATE_SCHEMA,
+        exact_replay_atlas_complete=True,
+    )
+
+
 def load_sealed_g90_population(
     aggregate_identity: ExactFileIdentityV1,
     *,
     expected_aggregate_self_sha256: str,
 ) -> SealedG90PopulationV1:
-    """Reopen the complete aggregate→stage→batch seal graph.
+    """Dispatch only between the two closed G90 aggregate schema contracts."""
+
+    aggregate_path = aggregate_identity.verify(label="G90 aggregate")
+    aggregate = _load_mapping(aggregate_path, label="G90 aggregate")
+    schema = aggregate.get("schema")
+    if schema == G90_AGGREGATE_SCHEMA:
+        return _load_sealed_g90_population_v1(
+            aggregate_identity,
+            expected_aggregate_self_sha256=expected_aggregate_self_sha256,
+        )
+    if schema == G90_V2_AGGREGATE_SCHEMA:
+        return _load_sealed_g90_population_v2(
+            aggregate_identity,
+            expected_aggregate_self_sha256=expected_aggregate_self_sha256,
+        )
+    raise PopulationProgramInductionError("G90 aggregate schema is unsupported")
+
+
+def _load_sealed_g90_population_v1(
+    aggregate_identity: ExactFileIdentityV1,
+    *,
+    expected_aggregate_self_sha256: str,
+) -> SealedG90PopulationV1:
+    """Reopen the V1 aggregate→stage→batch seal graph.
 
     The input ABI intentionally requires proposal atoms in each row.  A G90
     aggregate that records only an operand hash cannot be lowered into G89 and
@@ -734,6 +1382,8 @@ class PopulationProgramPlanV1:
 
     g90_aggregate_sha256: str
     g90_aggregate_self_sha256: str
+    g90_source_schema: str
+    exact_replay_atlas_complete: bool
     g51_receipt_sha256: str
     current_base_archive_bytes: int
     current_base_archive_sha256: str
@@ -789,12 +1439,17 @@ def compile_population_program_plan(
     return PopulationProgramPlanV1(
         g90_aggregate_sha256=g90.aggregate.sha256,
         g90_aggregate_self_sha256=g90.aggregate_self_sha256,
+        g90_source_schema=g90.source_schema,
+        exact_replay_atlas_complete=g90.exact_replay_atlas_complete,
         g51_receipt_sha256=g51_receipt_identity.sha256,
         current_base_archive_bytes=g90.base_archive_bytes,
         current_base_archive_sha256=g90.base_archive_sha256,
         shared_families=induce_shared_physical_families(g90.interventions),
         branches=tuple(tuple(row.operand_id for row in branch) for branch in branch_rows),
         screening_only_projection_ids=g90.unresolved_projection_ids,
+        lowering_blocker=(
+            V2_COMPOSED_LOWERING_BLOCKER if g90.exact_replay_atlas_complete else SEQUENTIAL_LOWERING_BLOCKER
+        ),
     )
 
 
@@ -808,10 +1463,15 @@ __all__ = [
     "EXACT_LOWERING_CHAIN_BLOCKER",
     "G51_PAYLOAD_POLICY",
     "G83_DECODER_TRANSITION_ID",
+    "G90_V2_AGGREGATE_SCHEMA",
+    "G90_V2_BATCH_SCHEMA",
+    "G90_V2_EXACT_REPLAY_POLICY",
+    "G90_V2_STAGE_SCHEMA",
     "G92_FAMILY_SCHEMA",
     "G92_MEASUREMENT_SCHEMA",
     "G92_SELECTION_CONTRACT",
     "SEQUENTIAL_LOWERING_BLOCKER",
+    "V2_COMPOSED_LOWERING_BLOCKER",
     "ExactFileIdentityV1",
     "G90ExactInterventionV1",
     "PopulationProgramInductionError",

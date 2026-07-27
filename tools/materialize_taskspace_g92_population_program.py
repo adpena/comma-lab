@@ -22,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from tac.witness_dsl.taskspace_g92_population_global_program_induction_v1 import (
     G51_PAYLOAD_POLICY,
+    G90_V2_AGGREGATE_SCHEMA,
     G92_FAMILY_SCHEMA,
     G92_SELECTION_CONTRACT,
     SEQUENTIAL_LOWERING_BLOCKER,
@@ -37,6 +38,8 @@ from tac.witness_dsl.taskspace_g92_population_global_program_induction_v1 import
 CONFIG_SCHEMA: Final = "tac.taskspace_g92_population_global_program_config.v1"
 PREFLIGHT_SCHEMA: Final = "tac.taskspace_g92_population_global_program_preflight.v1"
 BLOCKER_SCHEMA: Final = "tac.taskspace_g92_population_global_program_blocker.v1"
+V2_PROGRAM_SCHEMA: Final = "tac.taskspace_g92_exact_coarse_atlas_program.v2"
+V2_BLOCKER_SCHEMA: Final = "tac.taskspace_g92_exact_coarse_atlas_blocker.v2"
 
 
 class G92MaterializerError(RuntimeError):
@@ -216,8 +219,8 @@ def _compile_plan(config: G92ConfigV1) -> tuple[dict[str, Any], dict[str, Any]]:
         "research_only": True,
         "encoder_only": True,
     }
-    plan_body = {
-        "schema": G92_FAMILY_SCHEMA,
+    plan_body: dict[str, Any] = {
+        "schema": V2_PROGRAM_SCHEMA if plan.exact_replay_atlas_complete else G92_FAMILY_SCHEMA,
         "g90_aggregate_sha256": plan.g90_aggregate_sha256,
         "g90_aggregate_self_sha256": plan.g90_aggregate_self_sha256,
         "g51_opaque_provenance_receipt_sha256": plan.g51_receipt_sha256,
@@ -242,7 +245,6 @@ def _compile_plan(config: G92ConfigV1) -> tuple[dict[str, Any], dict[str, Any]]:
         "branch_order_semantics": ("CANONICAL_STORAGE_ORDER_ONLY_NO_PREFIX_OPTIMALITY_OR_COMPREHENSIVENESS"),
         "screening_only_projection_ids": list(plan.screening_only_projection_ids),
         "screening_completeness_claim": False,
-        "exact_replay_atlas_complete": False,
         "selection_contract": G92_SELECTION_CONTRACT,
         "g51_payload_policy": G51_PAYLOAD_POLICY,
         "lowering_blocker": plan.lowering_blocker,
@@ -254,15 +256,36 @@ def _compile_plan(config: G92ConfigV1) -> tuple[dict[str, Any], dict[str, Any]]:
         "research_only": True,
         "encoder_only": True,
     }
+    if plan.exact_replay_atlas_complete:
+        if plan.g90_source_schema != G90_V2_AGGREGATE_SCHEMA:
+            raise G92MaterializerError("exact G92 atlas lacks G90 V2 source identity")
+        plan_body["g90_source_schema"] = plan.g90_source_schema
+        plan_body["exact_replay_atlas_complete"] = True
+        plan_body["exact_replay_atlas_scope"] = (
+            "ISOLATED_COARSE_INTERVENTIONS_ONLY_NOT_ADDITIVE_CUMULATIVE_OPTIMAL_OR_RATE_EVIDENCE"
+        )
+    else:
+        # Preserve the historical V1 wire shape exactly.
+        plan_body["exact_replay_atlas_complete"] = False
     return (
         _seal(preflight_body, field="preflight_receipt_sha256"),
         _seal(plan_body, field="program_plan_sha256"),
     )
 
 
-def _write_blocker(config: G92ConfigV1, *, plan_path: Path | None, exc: BaseException) -> Path:
+def _write_blocker(
+    config: G92ConfigV1,
+    *,
+    plan_path: Path | None,
+    exc: BaseException,
+    required_next_implementation: str = SEQUENTIAL_LOWERING_BLOCKER,
+    blocker_schema: str = BLOCKER_SCHEMA,
+) -> Path:
+    if blocker_schema not in {BLOCKER_SCHEMA, V2_BLOCKER_SCHEMA}:
+        raise G92MaterializerError("unsupported G92 blocker schema")
+    is_v2 = blocker_schema == V2_BLOCKER_SCHEMA
     body = {
-        "schema": BLOCKER_SCHEMA,
+        "schema": blocker_schema,
         "config_path": str(config.path),
         "output_root": str(config.output_root),
         "program_plan": (
@@ -276,8 +299,12 @@ def _write_blocker(config: G92ConfigV1, *, plan_path: Path | None, exc: BaseExce
         ),
         "exception_type": type(exc).__name__,
         "exception_message": str(exc),
-        "required_next_implementation": SEQUENTIAL_LOWERING_BLOCKER,
-        "forbidden_false_action": ("DO_NOT_TREAT_V1_PARETO_ROWS_OR_BRANCH_ORDER_AS_COMPLETE_OR_OPTIMAL"),
+        "required_next_implementation": required_next_implementation,
+        "forbidden_false_action": (
+            "DO_NOT_TREAT_ISOLATED_EXACT_ROWS_OR_BRANCH_ORDER_AS_ADDITIVE_CUMULATIVE_OPTIMAL_OR_RATE_EVIDENCE"
+            if is_v2
+            else "DO_NOT_TREAT_V1_PARETO_ROWS_OR_BRANCH_ORDER_AS_COMPLETE_OR_OPTIMAL"
+        ),
         "g51_payload_policy": G51_PAYLOAD_POLICY,
         "candidate_claim": False,
         "score_claim": False,
@@ -307,13 +334,15 @@ def compile_and_block(config: G92ConfigV1) -> dict[str, Any]:
     blocker = _write_blocker(
         config,
         plan_path=plan_path,
-        exc=G92MaterializerError(SEQUENTIAL_LOWERING_BLOCKER),
+        exc=G92MaterializerError(plan["lowering_blocker"]),
+        required_next_implementation=plan["lowering_blocker"],
+        blocker_schema=(V2_BLOCKER_SCHEMA if plan["schema"] == V2_PROGRAM_SCHEMA else BLOCKER_SCHEMA),
     )
     return {
         "status": "blocked",
         "program_plan": str(plan_path),
         "blocker_receipt": str(blocker),
-        "required_next_implementation": SEQUENTIAL_LOWERING_BLOCKER,
+        "required_next_implementation": plan["lowering_blocker"],
         "archive_emitted": False,
         "archive_priced": False,
     }
