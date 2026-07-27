@@ -3,18 +3,159 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 
-from tac.optimization.inflate_postprocess_surface import RawVideoShape
 from tac.optimization.sparse_residual_oracle import (
     SparseResidualPlan,
     build_sparse_residual_plan_from_global_values,
 )
 
+if TYPE_CHECKING:
+    from tac.optimization.inflate_postprocess_surface import RawVideoShape
+
 GradientComponent = Literal["pose", "seg", "combined"]
+
+
+@dataclass(frozen=True)
+class GlobalPoseScoreCostateScale:
+    """Exact evaluator chain-rule scale for one sample's pose-MSE VJP.
+
+    The upstream evaluator forms ``D = mean_i(d_i)`` and only then evaluates
+    ``sqrt(10 * D)``.  A per-sample VJP of ``d_i`` therefore carries the same
+    population scale
+
+    ``(1/N) * d/dD sqrt(10D) = 5 / (N * sqrt(10D))``.
+
+    This is deliberately separate from :func:`compute_pair_scorer_gradient`,
+    whose ``component="pose"`` mode is a local-pair diagnostic
+    ``sqrt(10*d_i)`` and is not a population costate.
+    """
+
+    global_mean_pose_dist: float
+    sample_count: int
+    pair_mse_vjp_scale: float
+
+    def __post_init__(self) -> None:
+        mean = float(self.global_mean_pose_dist)
+        if not math.isfinite(mean) or mean <= 0.0:
+            raise ValueError("global_mean_pose_dist must be finite and positive")
+        if type(self.sample_count) is not int or self.sample_count <= 0:
+            raise ValueError("sample_count must be a positive exact integer")
+        expected = 5.0 / (self.sample_count * math.sqrt(10.0 * mean))
+        if not math.isclose(
+            float(self.pair_mse_vjp_scale),
+            expected,
+            rel_tol=1e-15,
+            abs_tol=0.0,
+        ):
+            raise ValueError("pair_mse_vjp_scale differs from exact evaluator chain rule")
+
+
+def global_pose_score_costate_scale(
+    *,
+    global_mean_pose_dist: float,
+    sample_count: int,
+) -> GlobalPoseScoreCostateScale:
+    """Return the exact population score multiplier for ``d(d_i)/d(pixel)``.
+
+    ``global_mean_pose_dist`` must come from the same complete decoded object
+    whose intervention is being priced.  Passing a per-pair distortion here
+    recreates the pairwise-square-root bug this helper exists to prevent.
+    """
+
+    mean = float(global_mean_pose_dist)
+    if not math.isfinite(mean) or mean <= 0.0:
+        raise ValueError("global_mean_pose_dist must be finite and positive")
+    if type(sample_count) is not int or sample_count <= 0:
+        raise ValueError("sample_count must be a positive exact integer")
+    return GlobalPoseScoreCostateScale(
+        global_mean_pose_dist=mean,
+        sample_count=sample_count,
+        pair_mse_vjp_scale=5.0 / (sample_count * math.sqrt(10.0 * mean)),
+    )
+
+
+def scale_pair_pose_mse_vjp_for_global_score(
+    pair_pose_mse_vjp: np.ndarray,
+    *,
+    global_mean_pose_dist: float,
+    sample_count: int,
+) -> tuple[np.ndarray, GlobalPoseScoreCostateScale]:
+    """Scale a raw pair-pose-MSE pixel VJP into the complete-score costate."""
+
+    gradient = np.asarray(pair_pose_mse_vjp)
+    if gradient.dtype not in (np.dtype(np.float32), np.dtype(np.float64)):
+        raise ValueError("pair_pose_mse_vjp must have exact float32 or float64 dtype")
+    if gradient.ndim != 4 or gradient.shape[0] != 2 or gradient.shape[-1] != 3:
+        raise ValueError("pair_pose_mse_vjp must have shape (2,height,width,3)")
+    if not np.all(np.isfinite(gradient)):
+        raise ValueError("pair_pose_mse_vjp must be finite")
+    scale = global_pose_score_costate_scale(
+        global_mean_pose_dist=global_mean_pose_dist,
+        sample_count=sample_count,
+    )
+    return (
+        np.multiply(
+            gradient,
+            scale.pair_mse_vjp_scale,
+            dtype=gradient.dtype,
+        ),
+        scale,
+    )
+
+
+def compute_pair_pose_mse_vjp(
+    *,
+    baseline_pair_hwc: np.ndarray,
+    target_pair_hwc: np.ndarray,
+    posenet: Any,
+    device: str,
+) -> tuple[np.ndarray, dict[str, float | str]]:
+    """Return the unscaled VJP of the evaluator's per-sample pose MSE.
+
+    Apply :func:`scale_pair_pose_mse_vjp_for_global_score` with the complete
+    decoded object's mean pose distortion before comparing interventions across
+    pairs.  Keeping the raw MSE VJP separate prevents a local square root from
+    changing the population objective.
+    """
+
+    import torch
+
+    cand_np = np.asarray(baseline_pair_hwc, dtype=np.float32)
+    gt_np = np.asarray(target_pair_hwc, dtype=np.float32)
+    if cand_np.shape != gt_np.shape or cand_np.ndim != 4 or cand_np.shape[0] != 2 or cand_np.shape[-1] != 3:
+        raise ValueError(f"expected pair arrays with shape (2,H,W,3), got {cand_np.shape} and {gt_np.shape}")
+
+    torch_device = torch.device(device)
+    cand = (
+        torch.from_numpy(cand_np)
+        .to(torch_device)
+        .permute(0, 3, 1, 2)
+        .unsqueeze(0)
+        .contiguous()
+        .detach()
+        .requires_grad_(True)
+    )
+    gt = torch.from_numpy(gt_np).to(torch_device).permute(0, 3, 1, 2).unsqueeze(0).contiguous().detach()
+    pose_pred = posenet(posenet.preprocess_input(cand))
+    with torch.no_grad():
+        pose_gt = posenet(posenet.preprocess_input(gt))
+    pose_dim = pose_pred["pose"].shape[-1] // 2
+    if pose_dim <= 0 or pose_dim * 2 != pose_pred["pose"].shape[-1] or pose_gt["pose"].shape != pose_pred["pose"].shape:
+        raise ValueError("PoseNet output changed evaluator pose-head ABI")
+    pose_dist = (pose_pred["pose"][..., :pose_dim] - pose_gt["pose"][..., :pose_dim]).pow(2).mean()
+    (cand_gradient,) = torch.autograd.grad(pose_dist, inputs=(cand,))
+    gradient = cand_gradient.detach().squeeze(0).permute(0, 2, 3, 1).cpu().numpy().astype(np.float32)
+    return gradient, {
+        "pair_pose_dist": float(pose_dist.detach().cpu().item()),
+        "vjp_objective": "UPSTREAM_PER_SAMPLE_POSE_MSE_BEFORE_GLOBAL_MEAN_AND_SQRT",
+        "grad_abs_max": float(np.abs(gradient).max()) if gradient.size else 0.0,
+        "grad_abs_mean": float(np.abs(gradient).mean()) if gradient.size else 0.0,
+    }
 
 
 @dataclass(frozen=True)
@@ -279,17 +420,16 @@ def select_budgeted_gradient_residuals(
             continue
         chosen_parts.append(int(idx))
         budget_used += cost
-    if not chosen_parts:
-        chosen = np.asarray([], dtype=np.int64)
-    else:
-        chosen = np.asarray(chosen_parts, dtype=np.int64)
+    chosen = np.asarray([], dtype=np.int64) if not chosen_parts else np.asarray(chosen_parts, dtype=np.int64)
 
     pixels_per_frame = shape.height * shape.width
     if chosen.size:
         local_frame_slot = chosen // pixels_per_frame
         local_pixel_offset = chosen % pixels_per_frame
         frame_arr = np.asarray(frame_indices, dtype=np.uint64)
-        global_indices = frame_arr[local_frame_slot] * np.uint64(pixels_per_frame) + local_pixel_offset.astype(np.uint64)
+        global_indices = frame_arr[local_frame_slot] * np.uint64(pixels_per_frame) + local_pixel_offset.astype(
+            np.uint64
+        )
     else:
         global_indices = np.asarray([], dtype=np.uint64)
 
@@ -361,9 +501,7 @@ def compute_pair_scorer_gradient(
         with torch.no_grad():
             pose_gt = posenet(posenet.preprocess_input(gt))
         pose_dim = pose_pred["pose"].shape[-1] // 2
-        pose_dist = (
-            pose_pred["pose"][..., :pose_dim] - pose_gt["pose"][..., :pose_dim]
-        ).pow(2).mean()
+        pose_dist = (pose_pred["pose"][..., :pose_dim] - pose_gt["pose"][..., :pose_dim]).pow(2).mean()
         pose_term = torch.sqrt(10.0 * pose_dist.clamp_min(0.0) + pose_eps)
 
     seg_ce = torch.zeros((), device=torch_device)
@@ -418,9 +556,7 @@ def compute_pair_component_distortions(
         pose_pred = posenet(posenet.preprocess_input(cand))
         pose_gt = posenet(posenet.preprocess_input(gt))
         pose_dim = pose_pred["pose"].shape[-1] // 2
-        pose_dist = (
-            pose_pred["pose"][..., :pose_dim] - pose_gt["pose"][..., :pose_dim]
-        ).pow(2).mean()
+        pose_dist = (pose_pred["pose"][..., :pose_dim] - pose_gt["pose"][..., :pose_dim]).pow(2).mean()
         seg_logits_pred = segnet(segnet.preprocess_input(cand))
         seg_logits_gt = segnet(segnet.preprocess_input(gt))
         seg_dist = (seg_logits_pred.argmax(dim=1) != seg_logits_gt.argmax(dim=1)).float().mean()
