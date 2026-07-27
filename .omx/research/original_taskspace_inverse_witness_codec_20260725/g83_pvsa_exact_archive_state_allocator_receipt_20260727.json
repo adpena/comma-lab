@@ -1,0 +1,140 @@
+{
+  "adversarial_review": {
+    "finding": "Initial logical actuator tuples were count-bound but not identity-bound to parsed wire decoder transitions.",
+    "fix": "ExactArchiveStateV1 now carries selected_decoder_transition_ids; allocator validation binds them one-for-one to the typed registry; G80 and G82 adapters derive IDs from the parsed PVSA1 wire enum.",
+    "regression_test": "test_exact_decoder_transition_identity_cannot_be_relabelled",
+    "status": "FIXED_BEFORE_RECEIPT"
+  },
+  "allocator_contract": {
+    "component_thresholds_used": false,
+    "custody_axes": [
+      "contest_cpu",
+      "contest_cuda"
+    ],
+    "dynamic_frontier_required": true,
+    "exact_object_fields": [
+      "actual_selected_archive_bytes",
+      "actual_selected_archive_sha256",
+      "complete_upstream_evaluate_py_n600_component_row",
+      "exact_axis_and_custody_sha256",
+      "ordered_logical_actuator_ids",
+      "ordered_exact_decoder_transition_ids",
+      "archive_validation_receipt_sha256"
+    ],
+    "global_selection_rule": "minimum exact nonlinear score, then archive bytes, then actuator tuple, then state id",
+    "pareto_axes": [
+      "d_seg",
+      "d_pose",
+      "archive_bytes"
+    ],
+    "score_equation": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "state_family": "finite prefix-closed measured exact archive states only",
+    "transition_kinds": [
+      "add",
+      "remove",
+      "rollback"
+    ]
+  },
+  "dependency_interfaces": {
+    "g80_compact_pvsa_build_type": "CompactPVSAArchiveBuildV1",
+    "g80_source_edited_by_g83": false,
+    "g80_source_sha256": "d993146868db756439dde46a6d592030d00cf607673ac322c91a0b5b04d7768c",
+    "g82_lowering_type": "TSPPV2ToPVSA1LoweringV1",
+    "g82_source_edited_by_g83": false,
+    "g82_source_sha256": "e05914a213202a799d65fcb2fd8a6740cb4f62cea517cdcbc20467b45198259e"
+  },
+  "dynamic_frontier_observed": {
+    "compiled_threshold": false,
+    "pointer_sha256": "b544fda607eae6bb02871fb145166773e05d2ef8b1a470c12996056e0b26235d",
+    "selected_source": "upstream_official_leaderboard",
+    "target_score": 0.172
+  },
+  "fail_closed": [
+    "missing_or_duplicate_state",
+    "missing_zero_actuator_baseline",
+    "missing_strict_prefix_state",
+    "unknown_or_out_of_order_actuator",
+    "unsatisfied_prerequisite",
+    "asymmetric_or_active_conflict",
+    "logical_actuator_decoder_transition_relabeling",
+    "archive_payload_length_sha_or_component_row_identity_drift",
+    "nonfinite_negative_partial_proxy_or_advisory_row",
+    "component_score_recomposition_drift",
+    "stale_or_foreign_custody",
+    "cross_axis_component_rows",
+    "missing_stale_forged_or_mutated_dynamic_pointer",
+    "nonexact_g80_or_g82_interface_type"
+  ],
+  "git_head_observed": "dc43244b51c56fa3b92466e1d96256a003274734",
+  "lane_id": "lane_g83_pvsa_exact_archive_state_allocator_20260727",
+  "open_product_blockers": [
+    "PVSA_CONDITIONAL_Y0_GIVEN_Y1_ACTUATOR_TYPE_AND_TRANSITION_OWED",
+    "PVSA_PUBLIC_INFLATE_SH_RUNTIME_INTEGRATION_OWED",
+    "PVSA_FULL_N600_DOUBLE_DECODE_AND_UPSTREAM_EVAL_OWED",
+    "ZERO_ONE_MULTI_COMPOSED_EXACT_ARCHIVE_ROWS_OWED"
+  ],
+  "pointer_delta": {
+    "candidate_claim": false,
+    "exact_score_claim": false,
+    "frontier_moved": false,
+    "promotion_eligible": false
+  },
+  "real_archive_transport_fixture": {
+    "authority": "G80 exact selected archive byte identity only; component values in allocator tests are synthetic structural fixtures",
+    "archive_bytes": 129335,
+    "archive_sha256": "fa173ef4f75adbe9194d3cd89b04021dabd2b9e9fd3aa87081148b6b42a26c75",
+    "empirical_component_row_claim": false,
+    "origin": "G80 semantic-only compact PVSA selected outer archive",
+    "score_claim": false
+  },
+  "receipt_self_hash": {
+    "algorithm": "sha256(canonical_json(receipt with receipt_self_hash removed))",
+    "value": "4c74257a3a54e69ca6fae3aceed1e201a6d8f3a6d1db2c9ab8de602b4bbc07c8"
+  },
+  "research_only": true,
+  "schema": "tac.g83_pvsa_exact_archive_state_allocator_landing.v1",
+  "scorer_or_evaluator_invoked": false,
+  "source_artifacts": {
+    ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_spec_g83_pvsa_exact_archive_state_allocator_20260727.md": {
+      "bytes": 9121,
+      "sha256": "2e33a58c9e8dccc27b1c119a9036bad24f5afca8745a9f050268f6c4ab8cdd90"
+    },
+    "src/tac/witness_dsl/taskspace_g83_pvsa_exact_archive_state_allocator_v1.py": {
+      "bytes": 36481,
+      "sha256": "1b967c10c39439fae7da26837f4b873ec26a7dbd6a645c26f0fdc763648fffa5"
+    },
+    "src/tac/witness_dsl/tests/test_taskspace_g83_pvsa_exact_archive_state_allocator_v1.py": {
+      "bytes": 22048,
+      "sha256": "fe6949ce8ee6154f663b249b4d7e97f6e0ae73ab45edc0ed65e3af71a24523b4"
+    }
+  },
+  "structural_fixture_verdict": {
+    "empirical_score_evidence": false,
+    "locally_beneficial_globally_rejected_proven": true,
+    "locally_harmful_globally_selected_proven": true,
+    "nonlinear_pose_rate_composition_used": true,
+    "rollback_and_recomposition_proven": true
+  },
+  "verification": [
+    {
+      "command": ".venv/bin/pytest -q src/tac/witness_dsl/tests/test_taskspace_g83_pvsa_exact_archive_state_allocator_v1.py",
+      "result": "16 passed in 0.78s"
+    },
+    {
+      "command": ".venv/bin/pytest -q src/tac/witness_dsl/tests/test_taskspace_pvsa_compact_container_v1.py src/tac/witness_dsl/tests/test_taskspace_g82_tsppv2_pvsa1_lowering_v1.py src/tac/witness_dsl/tests/test_dynamic_frontier_target.py src/tac/witness_dsl/tests/test_taskspace_whole_archive_allocator.py",
+      "result": "56 passed in 54.45s"
+    },
+    {
+      "command": "ruff check src/tac/witness_dsl/taskspace_g83_pvsa_exact_archive_state_allocator_v1.py src/tac/witness_dsl/tests/test_taskspace_g83_pvsa_exact_archive_state_allocator_v1.py",
+      "result": "passed"
+    },
+    {
+      "command": "ruff format --check src/tac/witness_dsl/taskspace_g83_pvsa_exact_archive_state_allocator_v1.py src/tac/witness_dsl/tests/test_taskspace_g83_pvsa_exact_archive_state_allocator_v1.py",
+      "result": "passed"
+    },
+    {
+      "command": "python3 -m py_compile src/tac/witness_dsl/taskspace_g83_pvsa_exact_archive_state_allocator_v1.py src/tac/witness_dsl/tests/test_taskspace_g83_pvsa_exact_archive_state_allocator_v1.py",
+      "result": "passed"
+    }
+  ]
+}
