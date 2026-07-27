@@ -47,8 +47,8 @@ BORROWED-SUBSTRATE (CLAUDE.md NO-FAKE #7):
 Evidence: training gradient [macOS-MLX training-gradient]; the d_seg/d_pose
 VERDICT is [contest-CPU advisory] (frozen CPU-torch mirror of evaluate.py over
 the measured pair subset). promotion_eligible=False; NO score claim beyond
-advisory; pointer UNMOVED unless a real byte-closed sub-0.19110 exact-eval row
-lands. Disk: SSD/repo results, NEVER /tmp durable.
+advisory; pointer UNMOVED unless a real byte-closed exact-eval row beats the
+live canonical frontier. Disk: SSD/repo results, NEVER /tmp durable.
 """
 from __future__ import annotations
 
@@ -279,20 +279,24 @@ def r_isolated_microbench(
 
 
 def _load_frontier() -> float:
-    """Read the canonical contest-CPU frontier from the pointer (NEVER a hardcoded literal,
-    per CLAUDE.md "Frontier scores are pointer-only"). Falls back to the last-known 0.19110
-    ONLY if the pointer is unreadable. The pointer's ``score`` IS the recorded exact-eval row.
+    """Read the effective local-or-upstream frontier through the canonical accessor.
+
+    Competitive routing must use ``min(local CPU, local CUDA, upstream official)``;
+    reading only the local CPU row would currently steer against 0.188 instead of
+    the official 0.172 target. An unreadable pointer fails closed.
     """
-    ptr = REPO / ".omx" / "state" / "canonical_frontier_pointer.json"
-    try:
-        d = json.loads(ptr.read_text())
-        cpu = d.get("our_local_frontier_contest_cpu") or {}
-        s = cpu.get("score")
-        if isinstance(s, (int, float)) and s > 0:
-            return float(s)
-    except Exception:
-        pass
-    return 0.19110  # last-known pointer value; fail-soft only
+    from tac.canonical_frontier_pointer import (
+        effective_frontier_score,
+        load_canonical_frontier_pointer_strict,
+    )
+
+    pointer = load_canonical_frontier_pointer_strict(repo_root=REPO)
+    score = effective_frontier_score(pointer)
+    if score is not None:
+        return float(score)
+    raise RuntimeError(
+        "canonical frontier pointer lacks a positive effective local-or-upstream score"
+    )
 
 
 FRONTIER = _load_frontier()

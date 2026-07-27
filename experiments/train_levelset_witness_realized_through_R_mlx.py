@@ -29,7 +29,7 @@ COMPUTE-SUBSTRATE LAW / NO-FAKE / authority: identical to the imported trainer â
 is the fp32 TRAINING-GRADIENT device; the d_seg/d_pose VERDICT is the FROZEN CPU-torch SegNet
 argmax + PoseNet MSE (NEVER MLX, NEVER MPS). Evidence ``[macOS-MLX training-gradient]`` /
 verdict ``[macOS-CPU advisory]``; promotion_eligible=False; pointer UNMOVED until a byte-closed
-exact-eval row (tools/witness_byte_close_and_eval.py) lands sub-0.19110.
+exact-eval row (tools/witness_byte_close_and_eval.py) beats the live canonical frontier.
 
 BORROWED-SUBSTRATE (NO-FAKE #7): BORROWED = the entire realized-through-R RGB-witness pipeline
 (a7660df3), curvelets/shearlets, WIRE/HOSC, FiLM, Eikonal/Chan-Vese, the frozen scorers + CPU
