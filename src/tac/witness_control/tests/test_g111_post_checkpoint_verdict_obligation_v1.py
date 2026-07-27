@@ -118,9 +118,16 @@ def _snapshot_hash(sequence: int, snapshot: Mapping[str, object]) -> str:
 def test_fixed_typed_state_has_no_pending_payload_and_roundtrips_canonically() -> None:
     transaction = _FakeTransaction(sequence=7)
     state = PostCheckpointVerdictObligation()
+    cold_arrays = state.numpy_state(prefix=PREFIX)
     _arm(state, transaction)
 
     arrays = state.numpy_state(prefix=PREFIX)
+    assert set(cold_arrays) == set(arrays)
+    assert all(
+        cold_arrays[key].dtype == arrays[key].dtype
+        and cold_arrays[key].shape == arrays[key].shape
+        for key in arrays
+    )
     assert set(arrays) == {
         f"{PREFIX}schema",
         f"{PREFIX}present",
@@ -152,6 +159,15 @@ def test_fixed_typed_state_has_no_pending_payload_and_roundtrips_canonically() -
         assert arrays[key].dtype == reserialized[key].dtype
         assert arrays[key].shape == reserialized[key].shape
         assert np.array_equal(arrays[key], reserialized[key])
+
+    tampered = dict(arrays)
+    tampered[f"{PREFIX}stage"] = tampered[f"{PREFIX}stage"].copy()
+    tampered[f"{PREFIX}stage"][-1] = np.uint8(1)
+    with pytest.raises(MalformedVerdictObligationError, match="padding"):
+        PostCheckpointVerdictObligation.from_numpy_state(
+            tampered,
+            prefix=PREFIX,
+        )
 
 
 def test_checkpoint_then_dispatch_blocks_optimizer_and_submits_exactly_once() -> None:
@@ -368,7 +384,11 @@ def test_rejects_duplicate_malformed_stale_and_wrong_coordinate() -> None:
 
     absent = PostCheckpointVerdictObligation().numpy_state(prefix=PREFIX)
     bad_absent = dict(absent)
-    bad_absent[f"{PREFIX}stage"] = np.frombuffer(b"not-empty", dtype=np.uint8)
+    bad_absent[f"{PREFIX}stage"] = bad_absent[f"{PREFIX}stage"].copy()
+    bad_absent[f"{PREFIX}stage"][:9] = np.frombuffer(
+        b"not-empty",
+        dtype=np.uint8,
+    )
     with pytest.raises(MalformedVerdictObligationError, match="empty sentinels"):
         PostCheckpointVerdictObligation.from_numpy_state(
             bad_absent,

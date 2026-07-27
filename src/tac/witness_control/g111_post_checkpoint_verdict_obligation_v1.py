@@ -142,6 +142,42 @@ def _utf8_array(value: str) -> np.ndarray:
     return np.frombuffer(value.encode("utf-8"), dtype=np.uint8).copy()
 
 
+def _fixed_utf8_array(value: str, *, capacity: int, name: str) -> np.ndarray:
+    encoded = value.encode("utf-8")
+    if len(encoded) > capacity:
+        raise MalformedVerdictObligationError(
+            f"{name} exceeds fixed capacity {capacity}"
+        )
+    array = np.zeros(capacity, dtype=np.uint8)
+    array[: len(encoded)] = np.frombuffer(encoded, dtype=np.uint8)
+    return array
+
+
+def _decode_fixed_utf8_array(
+    value: object,
+    *,
+    capacity: int,
+    name: str,
+) -> str:
+    array = np.asarray(value)
+    if array.dtype != np.dtype(np.uint8) or array.shape != (capacity,):
+        raise MalformedVerdictObligationError(
+            f"{name} must be a fixed uint8 array of shape ({capacity},)"
+        )
+    zero = np.flatnonzero(array == 0)
+    stop = int(zero[0]) if zero.size else capacity
+    if np.any(array[stop:]):
+        raise MalformedVerdictObligationError(
+            f"{name} has nonzero bytes after canonical padding"
+        )
+    try:
+        return array[:stop].tobytes().decode("utf-8")
+    except UnicodeError as exc:
+        raise MalformedVerdictObligationError(
+            f"{name} is not valid UTF-8"
+        ) from exc
+
+
 def _decode_utf8_array(value: object, *, name: str) -> str:
     array = np.asarray(value)
     if array.dtype != np.dtype(np.uint8) or array.ndim != 1:
@@ -596,17 +632,25 @@ class PostCheckpointVerdictObligation:
             f"{prefix}submission_seq": _int64_scalar(
                 record.submission_seq if record is not None else -1
             ),
-            f"{prefix}stage": _utf8_array(
-                record.stage if record is not None else ""
+            f"{prefix}stage": _fixed_utf8_array(
+                record.stage if record is not None else "",
+                capacity=MAX_STAGE_UTF8_BYTES,
+                name="stage",
             ),
-            f"{prefix}boundary_kind": _utf8_array(
-                record.boundary_kind if record is not None else ""
+            f"{prefix}boundary_kind": _fixed_utf8_array(
+                record.boundary_kind if record is not None else "",
+                capacity=MAX_BOUNDARY_KIND_UTF8_BYTES,
+                name="boundary_kind",
             ),
-            f"{prefix}config_sha256": _utf8_array(
-                record.config_sha256 if record is not None else ""
+            f"{prefix}config_sha256": _fixed_utf8_array(
+                record.config_sha256 if record is not None else "",
+                capacity=SHA256_HEX_LENGTH,
+                name="config_sha256",
             ),
-            f"{prefix}obligation_id": _utf8_array(
-                record.obligation_id if record is not None else ""
+            f"{prefix}obligation_id": _fixed_utf8_array(
+                record.obligation_id if record is not None else "",
+                capacity=SHA256_HEX_LENGTH,
+                name="obligation_id",
             ),
         }
         for key, array in arrays.items():
@@ -655,17 +699,24 @@ class PostCheckpointVerdictObligation:
             matched["submission_seq"],
             name="submission_seq",
         )
-        stage = _decode_utf8_array(matched["stage"], name="stage")
-        boundary_kind = _decode_utf8_array(
+        stage = _decode_fixed_utf8_array(
+            matched["stage"],
+            capacity=MAX_STAGE_UTF8_BYTES,
+            name="stage",
+        )
+        boundary_kind = _decode_fixed_utf8_array(
             matched["boundary_kind"],
+            capacity=MAX_BOUNDARY_KIND_UTF8_BYTES,
             name="boundary_kind",
         )
-        config_sha256 = _decode_utf8_array(
+        config_sha256 = _decode_fixed_utf8_array(
             matched["config_sha256"],
+            capacity=SHA256_HEX_LENGTH,
             name="config_sha256",
         )
-        obligation_id = _decode_utf8_array(
+        obligation_id = _decode_fixed_utf8_array(
             matched["obligation_id"],
+            capacity=SHA256_HEX_LENGTH,
             name="obligation_id",
         )
         if not present:
