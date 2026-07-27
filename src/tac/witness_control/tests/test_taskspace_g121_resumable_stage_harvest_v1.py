@@ -652,6 +652,7 @@ def test_discovery_uses_latest_tip_ancestry_filters_periodic_and_accepts_resume_
                 bytes=len(resume_payload),
                 sha256=hashlib.sha256(resume_payload).hexdigest(),
             ),
+            native=None,
         )
         return SimpleNamespace(
             receipt_path=receipt,
@@ -659,6 +660,7 @@ def test_discovery_uses_latest_tip_ancestry_filters_periodic_and_accepts_resume_
             receipt_sha256=hashlib.sha256(receipt.read_bytes()).hexdigest(),
             sequence_index=epoch - 1,
             pair=pair,
+            complete_trajectory_proven=True,
         )
 
     preserved_old = node("preserved-old", 1, old_hash)
@@ -668,6 +670,7 @@ def test_discovery_uses_latest_tip_ancestry_filters_periodic_and_accepts_resume_
         current=periodic_latest,
         root_sha256=root_sha,
         current_launch_dsl_compile_hash=latest_hash,
+        complete_trajectory_proven=True,
     )
     monkeypatch.setattr(
         lineage,
@@ -721,8 +724,8 @@ def test_preserved_alias_is_admitted_by_semantic_checkpoint_id_not_zip_bytes(
     tmp_path: Path,
 ) -> None:
     deploy, resume, launch_hash = lineage_fixtures._source_pair_arrays(
-        epoch=17,
-        stage="ce",
+        epoch=0,
+        stage="stageColdRoot",
     )
     node = lineage_fixtures._publish_node(
         tmp_path,
@@ -734,16 +737,60 @@ def test_preserved_alias_is_admitted_by_semantic_checkpoint_id_not_zip_bytes(
     producer = tmp_path / "run"
     with np.load(node.pair.deploy.path, allow_pickle=False) as archive:
         np.savez(
-            producer / "levelset_ckpt_stageCE_ep17.npz",
+            producer / "levelset_ckpt_stageColdRoot_ep0.npz",
             **{key: archive[key] for key in archive.files},
         )
     with np.load(node.pair.resume.path, allow_pickle=False) as archive:
         np.savez(
-            producer / "levelset_resume_stageCE_ep17.npz",
+            producer / "levelset_resume_stageColdRoot_ep0.npz",
             **{key: archive[key] for key in archive.files},
         )
     mapped = g121._preserved_stage_checkpoint_ids(producer, (node,))
-    assert mapped == {node.pair.checkpoint_id_sha256: "stageCE"}
+    assert mapped == {node.pair.checkpoint_id_sha256: "stageColdRoot"}
+
+
+def test_preserved_native_alias_reopens_complete_physical_transaction(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    producer = tmp_path / "run"
+    producer.mkdir()
+    checkpoint_id = "a" * 64
+    launch_hash = "b" * 64
+    for name in (
+        "levelset_ckpt_stageColdRoot_ep0.npz",
+        "levelset_resume_stageColdRoot_ep0.npz",
+        "levelset_g111_native_stageColdRoot_ep0.npz",
+    ):
+        (producer / name).write_bytes(name.encode("ascii"))
+    pair = SimpleNamespace(
+        checkpoint_id_sha256=checkpoint_id,
+        current_launch_dsl_compile_hash=launch_hash,
+        epoch=0,
+        native=SimpleNamespace(),
+    )
+    node = SimpleNamespace(pair=pair)
+    calls: list[dict[str, object]] = []
+
+    def _open_pair(**kwargs: object) -> object:
+        calls.append(kwargs)
+        return pair
+
+    monkeypatch.setattr(
+        lineage,
+        "open_fresh_producer_checkpoint_pair_v1",
+        _open_pair,
+    )
+    mapped = g121._preserved_stage_checkpoint_ids(producer, (node,))
+
+    assert mapped == {checkpoint_id: "stageColdRoot"}
+    assert len(calls) == 1
+    assert calls[0]["native_checkpoint"] == (
+        producer / "levelset_g111_native_stageColdRoot_ep0.npz"
+    ).resolve()
+    assert calls[0]["expected_native_sha256"] == hashlib.sha256(
+        b"levelset_g111_native_stageColdRoot_ep0.npz"
+    ).hexdigest()
 
 
 def test_private_injection_requires_explicit_fixture_marker(tmp_path: Path) -> None:

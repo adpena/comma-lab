@@ -2169,6 +2169,10 @@ def _discover_physical_stages(
             current_launch_dsl_compile_hash=(
                 pair.current_launch_dsl_compile_hash
             ),
+            complete_trajectory_proven=all(
+                prefix_node.complete_trajectory_proven
+                for prefix_node in chain.nodes[: index + 1]
+            ),
         )
         receipt_binding = {
             "path": str(node.receipt_path),
@@ -2249,8 +2253,19 @@ def _preserved_stage_checkpoint_ids(
             name="preserved stage resume checkpoint",
         )
         candidates = [node for node in nodes if node.pair.epoch == epoch]
+        native_path = (
+            producer / f"levelset_g111_native_{stage_tag}_ep{epoch}.npz"
+        )
+        native_binding: dict[str, object] | None = None
+        if any(node.pair.native is not None for node in candidates):
+            _native_payload, native_binding = _stable_regular_file(
+                native_path.resolve(),
+                name="preserved stage native-v3 checkpoint",
+            )
         matched: list[object] = []
         for node in candidates:
+            if (node.pair.native is None) != (native_binding is None):
+                continue
             try:
                 alias_pair = open_fresh_producer_checkpoint_pair_v1(
                     deploy_checkpoint=deploy_path.resolve(),
@@ -2259,6 +2274,16 @@ def _preserved_stage_checkpoint_ids(
                     expected_resume_sha256=str(resume_binding["sha256"]),
                     expected_current_launch_dsl_compile_hash=(
                         node.pair.current_launch_dsl_compile_hash
+                    ),
+                    native_checkpoint=(
+                        None
+                        if native_binding is None
+                        else native_path.resolve()
+                    ),
+                    expected_native_sha256=(
+                        None
+                        if native_binding is None
+                        else str(native_binding["sha256"])
                     ),
                 )
             except FreshProducerLineageV1Error:
