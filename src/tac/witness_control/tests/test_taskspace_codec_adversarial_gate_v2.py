@@ -601,7 +601,7 @@ def test_strict_g58_learned_custody_reaches_separate_program_config_blocker(
         output_path=tmp_path / "learned_refused.json",
     )
     assert "G58_LEARNED_FACTOR_DECODER_SOURCE_CUSTODY_NOT_REOPENED" not in receipt["refusals"]
-    assert "PROGRAM_PRODUCER_CONFIG_SCHEMA_OWED" in receipt["refusals"]
+    assert any(refusal.startswith("PROGRAM_PRODUCER_CONFIG_REFUSED:") for refusal in receipt["refusals"])
 
 
 def test_analytic_g58_still_refuses_until_real_program_runner_config_exists(
@@ -636,7 +636,7 @@ def test_analytic_g58_still_refuses_until_real_program_runner_config_exists(
         output_path=tmp_path / "program_config_owed.json",
     )
     assert receipt["status"] == "REFUSE"
-    assert "PROGRAM_PRODUCER_CONFIG_SCHEMA_OWED" in receipt["refusals"]
+    assert any(refusal.startswith("PROGRAM_PRODUCER_CONFIG_REFUSED:") for refusal in receipt["refusals"])
 
 
 def test_research_only_public_receipts_cannot_mint_promotion_authority(

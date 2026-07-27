@@ -28,6 +28,10 @@ from tac.witness_dsl.dynamic_frontier_target import (
     load_dynamic_frontier_target,
     verify_dynamic_frontier_target_snapshot,
 )
+from tac.witness_dsl.taskspace_program_residual_producer_v1 import (
+    ProgramResidualProducerError,
+    validate_program_residual_producer_config_for_g59,
+)
 from tac.witness_dsl.taskspace_public_auth_eval_closure import (
     OfficialEvaluationRunReceiptV1,
     PublicAuthClosureError,
@@ -542,17 +546,20 @@ def _validate_g58_pre_encode(
 
 
 def _validate_program_producer_config(
-    _config_identity: Mapping[str, Any] | None,
-    _g58_evidence: Mapping[str, Any],
+    config_identity: Mapping[str, Any] | None,
+    g58_evidence: Mapping[str, Any],
 ) -> list[str]:
-    """Refuse until a real runner/config binds the exact G58 artifact triple.
+    """Reopen the typed residual producer and preserve primary-codec blockers."""
 
-    No production call site currently compiles an n600 G49 program/factor set.
-    Defining a permissive placeholder schema here would recreate the G57
-    substitution bug, so this is an explicit structural blocker.
-    """
-
-    return ["PROGRAM_PRODUCER_CONFIG_SCHEMA_OWED"]
+    try:
+        return list(
+            validate_program_residual_producer_config_for_g59(
+                config_identity,
+                g58_evidence,
+            )
+        )
+    except ProgramResidualProducerError as exc:
+        return [f"PROGRAM_PRODUCER_CONFIG_REFUSED:{exc}"]
 
 
 def admit_pre_encode(

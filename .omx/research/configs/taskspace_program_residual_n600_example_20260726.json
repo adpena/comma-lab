@@ -1,0 +1,69 @@
+{
+  "schema": "tac.taskspace_program_residual_producer_config_example.v1",
+  "run_id": "replace_with_fresh_g49_run_id",
+  "campaign_id": "replace_with_fresh_g59_campaign_id",
+  "requested_representation": "PROGRAM_RESIDUAL_LAYERED",
+  "producer_role": "G49_TERMINAL_RESIDUAL_TRANSPORT_V1",
+  "execution_ready": false,
+  "pair_count": 600,
+  "pairs_per_stage": 120,
+  "stage_count": 5,
+  "scorer_batch_size": 16,
+  "program_packet": null,
+  "semantic_archive": null,
+  "semantic_compile_receipt": null,
+  "target_custody_receipt": null,
+  "auxiliary_aggregate_receipt": null,
+  "compiler_source": null,
+  "generic_v10_source": null,
+  "learned_decoder_sources": [],
+  "campaign_seal_receipt": null,
+  "factor_operands": [],
+  "primary_program_codec": {
+    "status": "OWED_G17_VERTICAL_LINKER",
+    "g49_role": "G49_TERMINAL_RESIDUAL_TRANSPORT_V1",
+    "closed_g49_factor_vocabulary": [
+      "SHEARLET_BOUNDARY_TRANSPORT_Q4",
+      "COMPACT_LATENT_QUOTIENT_PLUGIN"
+    ],
+    "missing_required_layers": [
+      "SHARED_TOPOLOGY_WORLDSHEET",
+      "TEMPORAL_TRANSITION_AND_ISLAND_BIRTH_DEATH",
+      "CONDITIONAL_Y0_GIVEN_DECODED_Y1_POSE_ENHANCEMENT",
+      "ENTROPY_CONTEXTS",
+      "JOINT_PHYSICAL_CODING_GROUPS"
+    ],
+    "canonical_g17_ontology_bound": true,
+    "candidate_ready": false
+  },
+  "outer_archive_members": {
+    "semantic_member_name": "semantic/program.zip",
+    "program_member_name": "residual/program.tspp"
+  },
+  "output_paths": {
+    "output_root": "/Volumes/VertigoDataTier/pact/replace_with_fresh_g49_run_id",
+    "stage_checkpoint_dir": "/Volumes/VertigoDataTier/pact/replace_with_fresh_g49_run_id/stages",
+    "g58_identity_receipt": "/Volumes/VertigoDataTier/pact/replace_with_fresh_g49_run_id/g58_identity.json",
+    "g58_terminal_stage_chain_receipt": "/Volumes/VertigoDataTier/pact/replace_with_fresh_g49_run_id/g58_terminal.json",
+    "outer_archive": "/Volumes/VertigoDataTier/pact/replace_with_fresh_g49_run_id/archive.zip",
+    "g58_outer_proof_receipt": "/Volumes/VertigoDataTier/pact/replace_with_fresh_g49_run_id/g58_outer_proof.json",
+    "g59_pre_encode_receipt": "/Volumes/VertigoDataTier/pact/replace_with_fresh_g49_run_id/g59_pre_encode.json",
+    "run_receipt": "/Volumes/VertigoDataTier/pact/replace_with_fresh_g49_run_id/run_receipt.json"
+  },
+  "required_free_bytes": 1073741824,
+  "resume_required": true,
+  "test_only_small_fixture": false,
+  "truth": {
+    "research_only": true,
+    "score_claim": false,
+    "candidate_claim": false,
+    "evaluation_claim": false,
+    "promotion_eligible": false,
+    "historical_payload_reused": false,
+    "direct_source_plane_fallback_allowed": false,
+    "raw_labels_embedded": false,
+    "source_planes_embedded": false,
+    "generic_algorithm_code_free": true,
+    "all_video_derived_operands_counted": true
+  }
+}
