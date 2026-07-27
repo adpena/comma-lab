@@ -8,9 +8,10 @@ Authority: BUILD + governed local verification; no score or pointer claim
 Status: typed producer implemented but **HELD** before heavy launch. The legacy
 trainer selects checkpoints after an arbitrary-scale int8 realization, while
 G105 ships a different power-of-two int8/int16 public wire. G111 may fire only
-after serialize/parse through G105 is the semantic verdict and checkpoint
-selection surface; post-G105 pose refit cannot repair semantic quantization
-spill.
+after the external G120/G121 compiler path proves that every immutable stage is
+serialized, parsed, scored through the shipped public wire, and retained
+without consulting the legacy BEST. Post-G105 pose refit cannot repair
+semantic quantization spill.
 
 Every cold, periodic, stage, and final checkpoint is also published as an
 immutable deploy/resume/receipt node under `fresh_lineage/`. Each nonroot node
@@ -274,12 +275,18 @@ authority, a checkpoint, archive, score, candidate, or pointer-mutation receipt.
 
 ## Next gate
 
-Finish G110 complete-archive arbitration/public conditional closure, then
-regenerate a clean governed dry-run under the V2 selected-preimage and
-state-bound lineage contracts. Run the governed two-pass dry-start to prove cold boot,
-checkpoint creation, physical G109 binding, same-lineage crash resume, total
-tensor accounting, G105 temporal parse-back, conditional parse-back, and public
-reconstruction. If green, launch the resumable per-stage n600 producer on SSD.
-Compile every preserved stage into the paired G105 semantic and refit
-conditional operands, measure packet bytes and scorer components, and stop as
-soon as the exact public semantic row cannot support a sub-frontier total.
+G110 complete-archive arbitration/public conditional closure is implemented.
+Finish the strict one-stage G120 production wrapper, the external resumable
+G121 exhaustive stage harvester, and the G119 post-G105 conditional pose
+runner. Then regenerate a clean governed dry-run under the exact
+selected-preimage, state-bound lineage, and external-stage-compiler contracts.
+Run the governed two-pass dry-start to prove cold boot, checkpoint creation,
+physical G109 binding, same-lineage crash resume, total tensor accounting, G105
+temporal parse-back, conditional parse-back, and public reconstruction.
+
+If green, launch the resumable per-stage n600 producer on SSD. G121 must compile
+every immutable stage and retain every row satisfying only the strict
+distortion obstruction `100*d_seg < live_target`. G119 then refits conditional
+pose for each retained row. Whole-archive `d_seg`, `d_pose`, and exact bytes,
+not a semantic-only BEST or a fixed component threshold, select the archive for
+clean-extract double decode and `upstream/evaluate.py`.
