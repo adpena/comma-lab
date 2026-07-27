@@ -1,0 +1,87 @@
+{
+  "aggregate": {
+    "bytes": 631924,
+    "chunk_count": 50,
+    "chunk_receipt_count": 50,
+    "chunk_receipt_root_sha256": "cb03e068f0ef6061aecea2e447b61ac865d0a2263ed1e1677344ac68a8d9e496",
+    "file_sha256": "e1a9497c3af61e0183a899f9bbaab2c9fa0c257cf9e24c1d7c40ac063bf71f2f",
+    "full_population_profiled": true,
+    "internal_receipt_sha256": "129a5ce0de652311d8391809ea1576063139c80897519effe3875b07f1e8a612",
+    "internal_self_hash_verified": true,
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_conditional_quotient_profile_n600_fresh_v15_20260726_r2/aggregate_receipt.json",
+    "run_binding_sha256": "3e3e6b0cd6aefb91a1cc8ac1cb46b05b64fee03689d876d59979dbe66206055c",
+    "schema": "tac.taskspace_conditional_quotient_aggregate.v1"
+  },
+  "basis_ranking_by_best_exact_block_bytes": [
+    {
+      "best_compressor": "c0b_lzma_block",
+      "payload_bytes": 400035534,
+      "representation_id": "common_differential_signed"
+    },
+    {
+      "best_compressor": "c0b_lzma_block",
+      "payload_bytes": 411217998,
+      "representation_id": "signed_residual_separate"
+    },
+    {
+      "best_compressor": "c0b_lzma_block",
+      "payload_bytes": 418598640,
+      "representation_id": "c0b_xor_separate"
+    },
+    {
+      "best_compressor": "c0b_lzma_block",
+      "payload_bytes": 419224202,
+      "representation_id": "c0b_xor_interleaved"
+    },
+    {
+      "best_compressor": "c0b_lzma_block",
+      "payload_bytes": 420418711,
+      "representation_id": "seg_y1_plus_pose_y0_xor_y1"
+    },
+    {
+      "best_compressor": "c0b_lzma_block",
+      "payload_bytes": 432349494,
+      "representation_id": "pair_temporal_signed_chunk_reset"
+    }
+  ],
+  "current_planning_coordinate": {
+    "base_archive_bytes": 133941,
+    "d_pose": 0.00010184347386600314,
+    "d_seg": 0.00015196058485243054,
+    "headroom_bytes_below_0_15": 20582,
+    "headroom_bytes_below_dynamic_frontier_at_profile_start": 53622,
+    "pointer_at_profile_start": 0.172,
+    "scorer_batch_pairs": 16
+  },
+  "harvest": {
+    "date": "2026-07-27",
+    "discovered_state": "FULL_N600_RUN_ALREADY_COMPLETE_BUT_DURABLE_FINDINGS_STILL_REPORTED_NOT_LAUNCHED",
+    "false_status_class": "COMPLETED_SSD_AGGREGATE_NOT_HARVESTED_IN_CANONICAL_PROJECT_NARRATIVE",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "implications": {
+    "direct_lossless_residual_payload_rejected": true,
+    "learned_quotient_mandatory": false,
+    "learned_quotient_necessity_status": "NOT_PROVEN_BY_FINITE_EXACT_BASIS_RACE",
+    "next_representation_class": "NONLOCAL_ANALYTIC_OR_GENERATIVE_FACTORIZATION_THEN_ONLY_IRREDUCIBLE_TRAINED_QUOTIENT",
+    "task_weighted_costate_projection_now_available_via": "G90_PROJECTED_POPULATION_COSTATES",
+    "whole_object_decision_surface": "G83_EXACT_ARCHIVE_STATE_ALLOCATOR"
+  },
+  "schema": "tac.g51_full_n600_quotient_harvest.v1",
+  "tool_receipt": {
+    "file_sha256": "6c77670f27e27b0d3eee26be536166be67864ff6a29259a7e865515cfad3c917",
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_conditional_quotient_profile_n600_fresh_v15_20260726_r2/tool_receipt.json",
+    "recorded_git_sha": "36c8a8aaa5d0a09f088e5392073bc1a25216bcc8",
+    "tool_receipt_sha256": "e9fd0001b90724a2637e661b43d28a0294af1f327840484001831b257772c27c"
+  },
+  "validation": {
+    "current_resume_binding_bug_commit": "e6535801e6",
+    "current_resume_binding_bug_fixed": true,
+    "regression_tests": "8 passed",
+    "safe_run_reopen_peak_rss_mib": 789,
+    "safe_run_reopen_result_before_fix": "KeyError_v15_receiver",
+    "safe_run_reopen_wall_seconds": 46.873
+  }
+}
