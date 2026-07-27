@@ -78,6 +78,7 @@ __all__ = [
     "stop_marginal_s_lawref",
     "tail_constant_provenance",
     "tau_star_from_mq",
+    "validated_stop_marginal_s",
 ]
 
 _LN5 = math.log(5.0)
@@ -141,6 +142,35 @@ def tail_constant_provenance() -> dict[str, dict]:
     """The TAIL constants' req-T provenance rows (a defensive copy). Consumed by the crucible manifest
     so every sealed TAIL literal is auditable (no silent literals; S4-R2 auditability contract)."""
     return {k: dict(v) for k, v in TAIL_CONSTANT_PROVENANCE.items()}
+
+
+def validated_stop_marginal_s(value: object) -> float:
+    """Return one runtime-safe PowerPlay floor or fail closed.
+
+    Only exact built-in ``int``/``float`` scalars are admitted. In particular,
+    ``bool`` (an ``int`` subclass), numeric strings, NumPy/coercive scalars, and
+    arbitrary ``__float__`` objects are not configuration values. Oversized
+    integers that cannot be represented as a finite float are rejected as a
+    normal validation error rather than leaking ``OverflowError``.
+    """
+    if type(value) not in (int, float):
+        raise ValueError(
+            "stop_marginal_s must be an exact built-in int or float, "
+            f"finite, and >= 0; got {value!r} ({type(value).__name__})"
+        )
+    try:
+        normalized = float(value)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "stop_marginal_s must be representable as a finite float and >= 0, "
+            f"got {value!r}"
+        ) from exc
+    if not math.isfinite(normalized) or normalized < 0.0:
+        raise ValueError(
+            "stop_marginal_s must be finite and >= 0, "
+            f"got {value!r}"
+        )
+    return normalized
 
 
 def tau_star_from_mq(m_q: float) -> float:
@@ -239,6 +269,10 @@ class TailCycleConfig:
             p.append(f"TailCycleConfig: tau_halving must be in (0,1), got {self.tau_halving}")
         if self.tau_end < 0.0:
             p.append(f"TailCycleConfig: tau_end must be >= 0, got {self.tau_end}")
+        try:
+            validated_stop_marginal_s(self.stop_marginal_s)
+        except ValueError as exc:
+            p.append(f"TailCycleConfig: {exc}")
         if self.min_points < 4:
             p.append(f"TailCycleConfig: min_points must be >= 4 (two 3-param tail models), "
                      f"got {self.min_points}")

@@ -24,6 +24,7 @@ from tac.witness_control.taskspace_v9_training_target_capsule_v1 import (
     sha256_file,
 )
 from tac.witness_dsl.spec_v9_cgauge import (
+    DSL_IDENTITY_EQUATION_ID,
     _merge_lever_constant_manifests,
     attach_flag_custody,
     compile_v9_cgauge_ideal_launch_config,
@@ -42,6 +43,8 @@ from tac.witness_dsl.v10_factor2_selected_preimage_v1 import (
 
 PROGRAM_NAME = "g111_batch16_v9_semantic_base"
 TARGET_LEVER_NAME = "g111_physical_batch16_target_custody"
+TAIL_STOP_FLAG = "--tail-stop-marginal-s"
+G111_TAIL_STOP_MARGINAL_S = 0.0
 TARGET_CONTRACT_SCHEMA = "tac.g111_batch16_v9_semantic_base_target_contract.v2"
 Y1_RATE_ARBITRATION_SCHEMA = "tac.g105_y1_outer_archive_rate_arbitration.v1"
 SOURCE_VIDEO_BYTES = 37_545_489
@@ -703,6 +706,10 @@ def _target_contract(
         "serialized_even_code_rows_required": False,
         "render_aa": "none",
         "post_semantic_compile_xi_refit_required": True,
+        "tail_stop_marginal_s": G111_TAIL_STOP_MARGINAL_S,
+        "tail_stop_policy": "pareto_nonnegative_score_benefit_v1",
+        "tail_stop_current_g111_law_fit": "owed",
+        "tail_stop_ancestor_forfeit_law_authoritative": False,
         "y1_rate_arbitration": Y1_RATE_ARBITRATION_SCHEMA,
         "y1_rate_domain": "exact_complete_archive_zip_bytes",
         "y1_wire_families": ["raw_i16le", "delta_rice_best_k"],
@@ -773,6 +780,41 @@ def compile_g111_batch16_v9_semantic_base_launch_config(
         flag_custody=False,
     )
     typed = wrapped.typed
+    # The inherited TAIL owner carries the historical global 1e-4 stop floor.
+    # That value and the ancestor forfeit-matched LawRef have no current-G111
+    # dynamics authority. Re-home this ONE flag in the G111 child target Lever
+    # so last-wins composition also has exactly one semantic owner. The G111
+    # floor is the Pareto-dominance boundary: stop only when net score benefit
+    # is negative; nonnegative cycles remain eligible for k_max-bounded mining
+    # and whole-object G121 stage harvesting.
+    inherited_tail_owners = [
+        lever for lever in typed.levers if TAIL_STOP_FLAG in lever.overrides
+    ]
+    if (
+        len(inherited_tail_owners) != 1
+        or inherited_tail_owners[0].name != "tail_k_warm_restart"
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "G111 expected exactly one inherited tail_k_warm_restart owner for "
+            f"{TAIL_STOP_FLAG}, got {[lever.name for lever in inherited_tail_owners]}"
+        )
+    parent_levers: list[TypedLever] = []
+    for lever in typed.levers:
+        if TAIL_STOP_FLAG not in lever.overrides:
+            parent_levers.append(lever)
+            continue
+        updates: dict[str, object] = {}
+        for field_name in (
+            "overrides",
+            "lawrefs",
+            "lawref_declarations",
+            "constant_manifest",
+            "runtime_receipt_schemas",
+        ):
+            values = dict(getattr(lever, field_name))
+            values.pop(TAIL_STOP_FLAG, None)
+            updates[field_name] = values
+        parent_levers.append(lever.model_copy(update=updates))
     target_lever = TypedLever(
         name=TARGET_LEVER_NAME,
         overrides={
@@ -783,11 +825,14 @@ def compile_g111_batch16_v9_semantic_base_launch_config(
             "--self-orient": False,
             "--render-aa": "none",
             "--pose-carrier-source": "generated_y1",
+            TAIL_STOP_FLAG: G111_TAIL_STOP_MARGINAL_S,
         },
         notes=(
             "Reopen physical G109 at compile and train time; bind labels, margins, "
             "and Pose6 from one upstream-batch16 forward; cold own-lineage producer; "
-            "derive Y0 conditionally by warping the final odd-code Y1 render."
+            "derive Y0 conditionally by warping the final odd-code Y1 render; "
+            "own the G111-only Pareto tail floor 0.0 so no nonnegative score-benefit "
+            "cycle is truncated before k_max/G121 whole-object harvesting."
         ),
     )
     typed = typed.model_copy(
@@ -804,7 +849,7 @@ def compile_g111_batch16_v9_semantic_base_launch_config(
                 **dict(typed.base),
                 "--out-dir": str(out_dir),
             },
-            "levers": (*tuple(typed.levers), target_lever),
+            "levers": (*tuple(parent_levers), target_lever),
         }
     )
     violations = typed.validate_program()
@@ -823,6 +868,7 @@ def compile_g111_batch16_v9_semantic_base_launch_config(
         "--render-aa": "none",
         "--pose-carrier-source": "generated_y1",
         "--mod-dim": 32,
+        TAIL_STOP_FLAG: G111_TAIL_STOP_MARGINAL_S,
     }
     mismatches = {flag: (flags.get(flag), value) for flag, value in required.items() if flags.get(flag) != value}
     forbidden = {
@@ -882,21 +928,52 @@ def compile_g111_batch16_v9_semantic_base_launch_config(
     # value with 3.177 and make the equation self-recompile falsely compare
     # 10.0->3.177.  Preserve parent rows verbatim; only retire a row when this
     # child actually changes its flag, so attach_flag_custody honestly rebuilds
-    # that changed flag from the child's emitted scalar.
+    # that changed flag from the child's emitted scalar. The G111 tail floor is
+    # always retired even if an ancestor row happens to share the numeric value:
+    # current G111 explicitly rejects ancestor derivational authority.
     constants = {
         key: (dict(value) if isinstance(value, dict) else value) for key, value in wrapped.constants_manifest.items()
     }
     for flag, child_value in target_lever.overrides.items():
         key = flag.removeprefix("--").replace("-", "_")
         row = constants.get(key)
-        if isinstance(row, dict) and row.get("value") != child_value:
-            constants.pop(key)
+        if flag == TAIL_STOP_FLAG or (
+            isinstance(row, dict) and row.get("value") != child_value
+        ):
+            constants.pop(key, None)
     constants = _merge_lever_constant_manifests(constants, tuple(program.levers))
     typed, constants = attach_flag_custody(
         typed,
         constants,
         program_name=PROGRAM_NAME,
     )
+    tail_key = TAIL_STOP_FLAG.removeprefix("--").replace("-", "_")
+    tail_row = constants.get(tail_key)
+    final_tail_owners = [
+        lever
+        for lever in typed.levers
+        if TAIL_STOP_FLAG in lever.overrides
+    ]
+    if (
+        len(final_tail_owners) != 1
+        or final_tail_owners[0].name != TARGET_LEVER_NAME
+        or final_tail_owners[0].overrides[TAIL_STOP_FLAG]
+        != G111_TAIL_STOP_MARGINAL_S
+        or final_tail_owners[0].lawref_declarations.get(
+            TAIL_STOP_FLAG, {}
+        ).get("equation_id")
+        != DSL_IDENTITY_EQUATION_ID
+        or not isinstance(tail_row, dict)
+        or tail_row.get("value") != G111_TAIL_STOP_MARGINAL_S
+        or tail_row.get("equation_id") != DSL_IDENTITY_EQUATION_ID
+        or tail_row.get("ladder_class") != "hardcoded_waiver"
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "G111 tail-stop custody must be one target-Lever-owned 0.0 scalar "
+            "under non-derivational hardcoded-waiver identity custody"
+        )
+    tail_row["single_value_owner"] = f"dsl_lever:{TARGET_LEVER_NAME}"
+    tail_row["emitted_flag"] = TAIL_STOP_FLAG
     manifest["typed_config_hash"] = typed.typed_config_hash()
     # The custody rollup is itself a real composed Lever.  The launcher compares
     # this manifest against the post-custody program, so its name belongs in the
@@ -937,7 +1014,9 @@ def compile_g111_batch16_v9_semantic_base_launch_config(
 
 
 __all__ = [
+    "G111_TAIL_STOP_MARGINAL_S",
     "PROGRAM_NAME",
+    "TAIL_STOP_FLAG",
     "TARGET_CONTRACT_SCHEMA",
     "TARGET_LEVER_NAME",
     "G111Batch16V9SemanticBaseError",

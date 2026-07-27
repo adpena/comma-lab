@@ -2626,6 +2626,9 @@ def TailCycles(cycles_max: int = 5, start_epoch: int = 0,
     default-OFF (``--tail-cycles-max 0`` = byte-identical) so this factory is what ARMS the stage; it
     requires a Muon finisher (``--muon-start-epoch``) in the same program. Live-m_q (SC-3) is the owed
     render build — the factory arms the τ-halving fallback (``--tail-live-mq`` stays unset)."""
+    from tac.witness_control.tail_cycles import validated_stop_marginal_s
+
+    stop_value = validated_stop_marginal_s(stop_marginal_s)
     return Lever("tail_k_warm_restart",
                  overrides={"--tail-cycles-max": int(cycles_max),
                             "--tail-start-epoch": int(start_epoch),
@@ -2633,7 +2636,7 @@ def TailCycles(cycles_max: int = 5, start_epoch: int = 0,
                             "--tail-dwell-min": int(dwell_min),
                             "--tail-tau-halving": float(tau_halving),
                             "--tail-lr-prop-tau": float(lr_prop_tau),
-                            "--tail-stop-marginal-s": float(stop_marginal_s)},
+                            "--tail-stop-marginal-s": stop_value},
                  notes="post-Muon warm-restart cycles (τ_k halving/live-m_q; LR ∝ τ_k, moments kept; "
                        "per-cycle powerlaw_meat exit; PowerPlay stop; k_max fail-safe)")
 

@@ -251,6 +251,15 @@ authority, a checkpoint, archive, score, candidate, or pointer-mutation receipt.
   `beta_end=10` custody with the emitted 3.177 and broke LawRef self-recompile;
   G111 preserves the parent reconciliation and retires only rows its child
   actually changes.
+- The global `TailCycles` factory and historical v7.5.2 launch retain their
+  ancestor `tail_stop_marginal_s=1e-4`; neither artifact is relabeled as current
+  G111 authority. G111 removes that flag from the inherited TAIL owner and
+  re-homes it exactly once in `g111_physical_batch16_target_custody` at `0.0`.
+  This is the Pareto-dominance floor: never stop a cycle whose net score benefit
+  is nonnegative; rely on `k_max` plus per-stage whole-object G121 harvesting
+  until fresh G111 dynamics fit a current law. Its constants row is explicitly
+  non-derivational `dsl_custodied_scalar_identity_v1` /
+  `hardcoded_waiver`, not the ancestor `forfeit_matched_exit_v1`.
 
 ## Unified-stack wire-in
 

@@ -9,7 +9,9 @@ import types
 import pytest
 
 from tac.witness_dsl.spec_g111_batch16_v9_semantic_base import (
+    G111_TAIL_STOP_MARGINAL_S,
     PROGRAM_NAME,
+    TAIL_STOP_FLAG,
     TARGET_CONTRACT_SCHEMA,
     TARGET_LEVER_NAME,
     Y1_RATE_ARBITRATION_SCHEMA,
@@ -18,6 +20,7 @@ from tac.witness_dsl.spec_g111_batch16_v9_semantic_base import (
     compile_g111_batch16_v9_semantic_base_launch_config,
     structural_semantic_rate_preflight,
 )
+from tac.witness_dsl.spec_v9_cgauge import DSL_IDENTITY_EQUATION_ID
 
 
 def test_g111_rejects_non_sha_before_opening_target() -> None:
@@ -293,6 +296,29 @@ def test_g111_real_production_capsule_compiles_cold_typed_producer(
     assert flags["--render-aa"] == "none"
     assert flags["--mod-dim"] == 32
     assert flags["--pose-carrier-source"] == "generated_y1"
+    assert flags[TAIL_STOP_FLAG] == G111_TAIL_STOP_MARGINAL_S
+    emitted = dict(config.to_trainer_flags())
+    assert emitted[TAIL_STOP_FLAG] == str(G111_TAIL_STOP_MARGINAL_S)
+    assert emitted[TAIL_STOP_FLAG] != "0.0001"
+    stop_row = config.constants_manifest["tail_stop_marginal_s"]
+    assert stop_row["value"] == G111_TAIL_STOP_MARGINAL_S
+    assert stop_row["equation_id"] == DSL_IDENTITY_EQUATION_ID
+    assert stop_row["equation_id"] != "forfeit_matched_exit_v1"
+    assert stop_row["ladder_class"] == "hardcoded_waiver"
+    assert stop_row["single_value_owner"] == f"dsl_lever:{TARGET_LEVER_NAME}"
+    assert stop_row["emitted_flag"] == TAIL_STOP_FLAG
+    stop_owners = [
+        lever
+        for lever in config.typed.levers
+        if TAIL_STOP_FLAG in lever.overrides
+    ]
+    assert len(stop_owners) == 1
+    assert stop_owners[0].name == TARGET_LEVER_NAME
+    assert stop_owners[0].overrides[TAIL_STOP_FLAG] == G111_TAIL_STOP_MARGINAL_S
+    assert (
+        stop_owners[0].lawref_declarations[TAIL_STOP_FLAG]["equation_id"]
+        == DSL_IDENTITY_EQUATION_ID
+    )
     assert flags["--out-dir"].startswith("/Volumes/VertigoDataTier/pact/")
     assert flags.get("--resume-from") is None
     assert flags.get("--warm-start-weights-only") is None
@@ -307,6 +333,10 @@ def test_g111_real_production_capsule_compiles_cold_typed_producer(
     assert target["semantic_stage_selection_public_wire_identical"] is False
     assert target["serialized_even_code_rows_required"] is False
     assert target["post_semantic_compile_xi_refit_required"] is True
+    assert target["tail_stop_marginal_s"] == G111_TAIL_STOP_MARGINAL_S
+    assert target["tail_stop_policy"] == "pareto_nonnegative_score_benefit_v1"
+    assert target["tail_stop_current_g111_law_fit"] == "owed"
+    assert target["tail_stop_ancestor_forfeit_law_authoritative"] is False
     assert target["y1_rate_arbitration"] == Y1_RATE_ARBITRATION_SCHEMA
     assert target["y1_rate_domain"] == "exact_complete_archive_zip_bytes"
     assert target["y1_wire_families"] == ["raw_i16le", "delta_rice_best_k"]
@@ -405,3 +435,13 @@ def test_g111_real_production_capsule_compiles_cold_typed_producer(
     assert len(document["dsl_compile_hash"]) == 64
     assert "--resume-from" in document["resolved_argv"]
     assert str(tmp_path.resolve()) in document["resolved_argv"]
+    from tac.v9_provenance_gates import verify_dsl_provenance_artifacts
+
+    recompiled, recompile_detail = verify_dsl_provenance_artifacts(
+        launch_sh,
+        provenance_path=provenance,
+        launch_manifest_path=manifest,
+        expected_hash=document["dsl_compile_hash"],
+    )
+    assert recompiled, recompile_detail
+    assert "recompile matched" in recompile_detail

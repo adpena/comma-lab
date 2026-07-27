@@ -11,8 +11,8 @@ import math
 import pytest
 
 from tac.witness_control.tail_cycles import (
-    TailCycleConfig,
     TailController,
+    TailCycleConfig,
     lr_for_tau,
     next_tau,
     tau_star_from_mq,
@@ -61,6 +61,66 @@ def test_config_validate_rejects_bad_values():
     assert TailCycleConfig(k_max=5).validate() == []                 # sealed defaults are valid
 
 
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        -1e-12,
+        float("nan"),
+        float("inf"),
+        -float("inf"),
+        "0.0",
+        True,
+        False,
+        10**400,
+        object(),
+    ],
+)
+def test_stop_marginal_s_rejects_unsafe_values_at_both_boundaries(invalid):
+    from tac.witness_dsl.curriculum_dsl import TailCycles
+
+    with pytest.raises(ValueError, match=r"stop_marginal_s.*>= 0"):
+        TailCycles(stop_marginal_s=invalid)
+    cfg = TailCycleConfig(k_max=1, stop_marginal_s=invalid)
+    assert any(
+        "stop_marginal_s" in problem and ">= 0" in problem
+        for problem in cfg.validate()
+    )
+    with pytest.raises(ValueError, match=r"stop_marginal_s.*>= 0"):
+        TailController(cfg, tau_ref=0.62, lr_ref=1e-3, tau0=0.62)
+
+
+def test_zero_stop_marginal_s_is_admitted_at_both_boundaries():
+    from tac.witness_dsl.curriculum_dsl import TailCycles
+
+    emitted = TailCycles(stop_marginal_s=0.0).overrides["--tail-stop-marginal-s"]
+    assert emitted == 0.0 and type(emitted) is float
+    cfg = TailCycleConfig(k_max=1, stop_marginal_s=0.0)
+    assert cfg.validate() == []
+    assert type(cfg.stop_marginal_s) is float
+
+
+def test_zero_floor_continues_nonnegative_cycle_and_stops_negative_cycle():
+    cfg = TailCycleConfig(
+        k_max=2,
+        cycle_floor_epochs=5,
+        dwell_min=0,
+        stop_marginal_s=0.0,
+        min_points=4,
+    )
+    nonnegative = TailController(cfg, tau_ref=0.62, lr_ref=1e-3, tau0=0.62)
+    nonnegative.step(0, [(0, 0.005)])
+    zero_benefit = nonnegative.step(4, [(0, 0.005), (4, 0.005)])
+    assert zero_benefit.begin_cycle is True
+    assert zero_benefit.stop is False
+
+    negative = TailController(cfg, tau_ref=0.62, lr_ref=1e-3, tau0=0.62)
+    negative.step(0, [(0, 0.005)])
+    harm = negative.step(4, [(0, 0.005), (4, 0.0051)])
+    assert harm.marginal < 0.0
+    assert harm.stop is True
+    assert "powerplay stop" in harm.reason
+
+
 def test_controller_raises_on_invalid_config():
     with pytest.raises(ValueError):
         TailController(TailCycleConfig(k_max=0), tau_ref=0.62, lr_ref=1e-3, tau0=0.62)
@@ -85,9 +145,9 @@ def _run(ctrl, epochs, dseg_of, *, live_mq=None):
 # ----------------------------------------------------------------------------- cycle behavior
 def test_first_cycle_begins_and_tau_halves_across_cycles():
     cfg = TailCycleConfig(k_max=5, cycle_floor_epochs=50, dwell_min=20, tau_halving=0.5,
-                          tau_end=0.0, stop_marginal_s=-1.0, min_points=8)  # stop disabled
+                          tau_end=0.0, stop_marginal_s=0.0, min_points=8)  # stop on harm only
     ctrl = TailController(cfg, tau_ref=0.8, lr_ref=1e-3, tau0=0.8)
-    # descending trajectory (marginal above the -1 floor => never powerplay), verdict every 5 ep
+    # descending trajectory (positive marginal above the zero floor => never powerplay), every 5 ep
     def dseg(ep):
         return (0.02 - 2e-4 * (ep - 1000)) if ep % 5 == 0 else None
     steps = _run(ctrl, range(1000, 1260), dseg)
@@ -104,7 +164,7 @@ def test_first_cycle_begins_and_tau_halves_across_cycles():
 
 def test_cycle_floor_cap_forces_exit_at_floor_length():
     cfg = TailCycleConfig(k_max=9, cycle_floor_epochs=40, dwell_min=15, tau_halving=0.5,
-                          tau_end=0.0, stop_marginal_s=-1.0, min_points=8)
+                          tau_end=0.0, stop_marginal_s=0.0, min_points=8)
     ctrl = TailController(cfg, tau_ref=0.8, lr_ref=1e-3, tau0=0.8)
     def dseg(ep):
         return (0.02 - 2e-4 * (ep - 1000)) if ep % 5 == 0 else None
@@ -171,7 +231,7 @@ def test_cycle_arithmetic_matches_sealed_budget():
 def test_determinism_same_inputs_same_decisions():
     def build():
         cfg = TailCycleConfig(k_max=4, cycle_floor_epochs=40, dwell_min=15, tau_halving=0.5,
-                              tau_end=0.0, stop_marginal_s=-1.0, min_points=8)
+                              tau_end=0.0, stop_marginal_s=0.0, min_points=8)
         return TailController(cfg, tau_ref=0.8, lr_ref=1e-3, tau0=0.8)
     def dseg(ep):
         return (0.02 - 2e-4 * (ep - 1000)) if ep % 5 == 0 else None
@@ -183,7 +243,7 @@ def test_determinism_same_inputs_same_decisions():
 def test_controller_checkpoint_resume_preserves_cycle_and_next_decision():
     cfg = TailCycleConfig(k_max=4, cycle_floor_epochs=40, dwell_min=15,
                           tau_halving=0.5, tau_end=0.0,
-                          stop_marginal_s=-1.0, min_points=8)
+                          stop_marginal_s=0.0, min_points=8)
     first = TailController(cfg, tau_ref=0.8, lr_ref=1e-3, tau0=0.8)
     rows = [(1000, 0.02), (1005, 0.019)]
     first.step(1000, rows[:1])
@@ -200,7 +260,7 @@ def test_controller_checkpoint_resume_preserves_cycle_and_next_decision():
     drifted = TailController(
         TailCycleConfig(k_max=3, cycle_floor_epochs=40, dwell_min=15,
                         tau_halving=0.5, tau_end=0.0,
-                        stop_marginal_s=-1.0, min_points=8),
+                        stop_marginal_s=0.0, min_points=8),
         tau_ref=0.8, lr_ref=1e-3, tau0=0.8,
     )
     with pytest.raises(ValueError, match="typed configuration"):
