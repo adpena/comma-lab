@@ -1,0 +1,206 @@
+{
+  "schema": "tac.g74_v15_roleaware_overlay_decoder_receipt.v1",
+  "created_at_utc": "2026-07-27T03:51:13Z",
+  "git_head": "64f728d1cbc0ee7995bb221b12137d57f8cd200c",
+  "receipt_sha256": "6a55d4d4a56a6e51336916831b1e84f7aa37f741a935faebd97f1930bcdea9ec",
+  "authority": {
+    "axis": "[macOS-CPU exact integer plus live Torch pre-scorer proof; no frozen network forward]",
+    "research_only": true,
+    "scorer_invoked": false,
+    "pose_invoked": false,
+    "pose_preservation_claim": false,
+    "score_claim": false,
+    "candidate_claim": false,
+    "public_runtime_claim": false,
+    "n600_evidence_claim": false,
+    "cross_host_torch_parity_claim": false,
+    "pointer_moved": false
+  },
+  "source": {
+    "semantic_archive_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+    "semantic_archive_bytes": 133941,
+    "semantic_archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+    "decoder_source_path": "src/tac/witness_dsl/taskspace_g74_v15_roleaware_overlay_decoder_v1.py",
+    "decoder_source_bytes": 59797,
+    "decoder_source_sha256": "96de0f530db1394383b83976371f727d4c4a0cac8a10a2f38dc79842fc3ce1b8",
+    "test_source_path": "src/tac/witness_dsl/tests/test_taskspace_g74_v15_roleaware_overlay_decoder_v1.py",
+    "test_source_bytes": 13302,
+    "test_source_sha256": "33907632fa2f95043ec4b184a954c0cb6d667701aab7c08afb4ff2c10c85aed9",
+    "spec_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g74_v15_roleaware_overlay_decoder_20260727.md",
+    "spec_bytes": 6856,
+    "spec_sha256": "977023a1b512c21b97156de5b54be9143c1a08ec0164ded09777987d5313e569"
+  },
+  "operand": {
+    "schema": "tac.g74.role_aware_boundary_shearlet_operand.v1",
+    "frame_selector": "BOTH",
+    "atom_count": 1,
+    "fields": {
+      "pair_index": 0,
+      "role": "Road",
+      "center_y": 160,
+      "center_x": 256,
+      "scale_y": 24,
+      "scale_x": 96,
+      "shear_q4": 0,
+      "amplitude_q4": 64
+    },
+    "bytes": 39,
+    "sha256": "39f99ce0e8283a4e3f42ab8bfc4b9d3aa319128f9f62ed1e8d753a1f5ca1f75e",
+    "parse_reencode_identical": true,
+    "counted_operand": true,
+    "candidate_payload_claim": false
+  },
+  "decoder_receipt": {
+    "schema": "tac.g74_v15_roleaware_overlay_decode_receipt.v1",
+    "decoder_contract_id": "tac.g74.v15_roleaware_native_support_overlay.v1",
+    "decoder_source_sha256": "96de0f530db1394383b83976371f727d4c4a0cac8a10a2f38dc79842fc3ce1b8",
+    "replacement_policy_id": "v15_native_donor_tap_copy_per_changed_support.v1",
+    "receiver_schema": "direct_description_v15_scorer_solved_template_receiver.v1",
+    "realization_profile_consumed": true,
+    "scorer_solved_template_count": 6,
+    "legacy_render_pairs_used": false,
+    "ephemeral_receiver_only": true,
+    "ephemeral_receiver_archive_claim": false,
+    "local_pair_ids": [
+      0
+    ],
+    "source_pair_ids": [
+      0
+    ],
+    "changed_support_cells_per_frame": [
+      69,
+      69
+    ],
+    "changed_support_values_per_frame": [
+      207,
+      207
+    ],
+    "changed_integer_numerator_values_per_frame": [
+      207,
+      207
+    ],
+    "fractional_changed_numerators_per_frame": [
+      79,
+      79
+    ],
+    "maximum_fractional_distance_to_u8_per_frame": [
+      0.4920654296875,
+      0.472930908203125
+    ],
+    "owned_camera_values_per_frame": [
+      828,
+      828
+    ],
+    "actually_changed_camera_values_per_frame": [
+      633,
+      633
+    ],
+    "preserved_unowned_camera_values": 6102360,
+    "unchanged_scorer_numerator_values": 1179234,
+    "exact_resize_denominator": 786432,
+    "selected_frames_match_native_mutated_numerators": true,
+    "selected_frames_match_native_torch_bilinear": true,
+    "torch_version": "2.12.1",
+    "cross_host_torch_parity_claim": false,
+    "unselected_frames_byte_identical_to_base": true,
+    "deterministic_double_decode": true,
+    "base_integer_numerators_sha256": "2256ddd114ee001e62b334db18777106edaafe0bee87da62e33b0ccccde622f9",
+    "native_mutated_integer_numerators_sha256": "e2fd6a190aeb8668b037ecc1534733a24e0ed094b9ae11ee0505390016152dde",
+    "output_integer_numerators_sha256": "e2fd6a190aeb8668b037ecc1534733a24e0ed094b9ae11ee0505390016152dde",
+    "native_mutated_torch_bilinear_sha256": "b35ad94ffb6a3cfa302861aa93bf92932ee859a2765b7e7638a4c32db7ca040b",
+    "output_torch_bilinear_sha256": "b35ad94ffb6a3cfa302861aa93bf92932ee859a2765b7e7638a4c32db7ca040b",
+    "changed_support_values_sha256": "20c3169badc3bfcab466e2c732634f84314ef68d03f2268c17e4913a585b0a93",
+    "changed_integer_numerator_values_sha256": "20c3169badc3bfcab466e2c732634f84314ef68d03f2268c17e4913a585b0a93",
+    "owned_camera_values_sha256": "b8d9a31fa2e96b6fe5c2e0b7eda91ba194fe3963fd6f1e77a6dc53eaf057dcd3",
+    "output_camera_sha256": "55a976d40ca26810e8a341d8717e23ff527d451f74d29cfbd56fccb6bb3e4655",
+    "output_rounded_u8_diagnostic_sha256": "3fdf39d481c0b19809f7181253b93c1e9d58e82177b6ddeca1355fbbc70a1ba2",
+    "receipt_parse_reencode_identical": true
+  },
+  "torch_integer_nullspace_falsifier": {
+    "scorer_row": 13,
+    "scorer_col": 0,
+    "channel": 0,
+    "coefficients": [
+      220968,
+      387288,
+      64728,
+      113448
+    ],
+    "tap_deltas": [
+      29,
+      0,
+      -99,
+      0
+    ],
+    "exact_integer_numerator_delta": 0,
+    "base_torch_float32": 128.0,
+    "mutated_torch_float32": 127.99990844726562,
+    "changed_support_owned": true,
+    "donor_copy_torch_bit_equal": true
+  },
+  "legacy_coordinate_diagnostic": {
+    "diagnostic_only": true,
+    "legacy_vs_native_rounded_u8_changed_values_per_frame": [
+      17570,
+      17732
+    ],
+    "legacy_vs_native_rounded_u8_changed_cells_per_frame": [
+      6728,
+      6928
+    ],
+    "legacy_vs_native_rounded_u8_max_abs_per_frame": [
+      116,
+      116
+    ],
+    "whole_factor2_vs_native_camera_changed_values_per_frame": [
+      745497,
+      745958
+    ],
+    "whole_factor2_zero_camera_values_per_frame": [
+      708180,
+      708180
+    ],
+    "native_v15_zero_camera_values_per_frame": [
+      20680,
+      20680
+    ]
+  },
+  "proofs": {
+    "sealed_open_only_decoder_construction": true,
+    "archive_sha_receiver_operator_policy_bound": true,
+    "combined_g2sh_canonical_and_collision_checked": true,
+    "role_preserved_before_native_v15_paint": true,
+    "frame_selector_counted_and_bound": true,
+    "global_operand_pair_subset_streaming": true,
+    "ownership_derived_independently_from_any_donor_tap_change": true,
+    "unowned_camera_values_equal_base": true,
+    "selected_torch_scorer_inputs_bit_equal_native_donor": true,
+    "typed_receipt_canonical_parseback": true,
+    "result_shape_dtype_and_hash_validation": true,
+    "real_nonzero_source_window_decode_proven": false,
+    "existing_shearlet_plus_static_rule_fixture_proven": false,
+    "g49_old_mode_reinterpreted": false,
+    "public_archive_closed": false
+  },
+  "verification": {
+    "focused_pytest_command": "uv run pytest -q src/tac/witness_dsl/tests/test_taskspace_g74_v15_roleaware_overlay_decoder_v1.py",
+    "focused_pytest_result": "7 passed in 39.65s",
+    "adjacent_g49_g17_pytest_command": "uv run pytest -q src/tac/witness_dsl/tests/test_taskspace_g17_g49_active_a_abi.py src/tac/witness_dsl/tests/test_taskspace_g17_g49_selected_program_product_bridge_v1.py src/tac/witness_dsl/tests/test_taskspace_selected_preimage_program_v1.py",
+    "adjacent_g49_g17_pytest_result": "31 passed in 34.34s",
+    "ruff_command": "uv run ruff check src/tac/witness_dsl/taskspace_g74_v15_roleaware_overlay_decoder_v1.py src/tac/witness_dsl/tests/test_taskspace_g74_v15_roleaware_overlay_decoder_v1.py",
+    "ruff_result": "All checks passed!",
+    "pycompile_command": "uv run python -m py_compile src/tac/witness_dsl/taskspace_g74_v15_roleaware_overlay_decoder_v1.py src/tac/witness_dsl/tests/test_taskspace_g74_v15_roleaware_overlay_decoder_v1.py",
+    "pycompile_result": "PASS"
+  },
+  "composition": {
+    "g72_status": "BLOCKED until a source-backed compiler emits this distinct counted role-aware operand",
+    "g76_status": "compatible post-G74 base-preferred local preimage policy with live Torch parity",
+    "bounded_integration_blockers": [
+      "no retained real nonzero-source-window V15 fixture",
+      "no retained V15 fixture combining pre-existing shearlets and static rules"
+    ],
+    "future_g49_requirement": "additive role-aware native-prepaint factor mode; aggregate all atoms before one native render; old role-stripped mode remains frozen",
+    "pointer_delta": "NONE"
+  },
+  "verdict": "BOUNDED_G74_RECEIVER_PRIMITIVE_PROVEN_ONLY"
+}
