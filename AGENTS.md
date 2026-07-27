@@ -272,6 +272,23 @@ remains the hard long-tail). Lever ranking, measured on the frozen CPU-torch Seg
    capacity-limit regime. (The `gauss`/step activation is in-code but UNSWEPT — the deep-math-predicted
    step-native lever, a named headroom item toward the ~0.001 need; best measured so far 0.004445 ≈4.4×.)
 
+**SUPERSEDED PRODUCTION ROUTING FOR ITEMS 1–2 (2026-07-27):** Items 1–2 above are retained as
+formulation-scoped historical evidence, not as a live vehicle prerequisite or current capacity-ordering
+constraint; items 3–5 are not superseded by this note. Later matched n600 realized-through-R evidence
+found the self-orient/directional channels approximately neutral and marginally worse than OFF at the
+matched trained cells, while carrying a large memory tax. That result is single-seed
+`[macOS-CPU advisory]`, non-promotable, and has no measured noise floor: it is sufficient to forbid
+transferring the “−48%” proxy into production routing, not to kill the directional-basis family.
+Therefore the live production default is self-orient OFF. Absent new current-vehicle evidence, never
+route a launch on “−48%,” require basis-match before capacity, or present the direct-partition proxy as
+public-wire transfer. Directional bases may re-enter only through a matched from-scratch n600
+ON/OFF A/B with the same seed, schedule, and starting floor, followed by exact parsed-public-wire
+comparison on the same-object Seg/Pose/rate action. Canonical evidence:
+`.omx/research/owed16_bounded_ab_and_drystart_20260710.md`,
+`.omx/research/owed16_verdict_20260710.json`,
+`.omx/research/owed16v2_verdict_20260710.json`, and
+`.omx/research/codex_premise_falsification_g114_self_orient_required_cure_20260727_codex.md`.
+
 ### inflate.py is a FREE interpreter — COMPILE the generator, count only the video-derived payload (operator 2026-06-25)
 
 **The rate term scores ONLY `archive.zip` bytes (`upstream/evaluate.py:63` — `compressed_size = (submission_dir/'archive.zip').stat().st_size`); inflate.py / inflate.sh are NOT sized, and the score has NO time term (`evaluate.py:92`) — the only constraint is the 30-min full-eval budget (`README.md:114`, T4 16GB-VRAM or CPU 4×/16GB).** Contest rule (`README.md:118`): external CODE/tools are FREE and don't count; **large video-derived artifacts (neural-net weights, meshes, point clouds) MUST be in archive.zip and ARE counted.** The crisp boundary that IS the rate game:
