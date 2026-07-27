@@ -386,6 +386,8 @@ def test_preflight_seals_zero_chunk_receipt_without_launch(
         fresh={},
         binding={"fixture": "strictly prepared upstream"},
         implementation_sources=sources,
+        config_sha256=tool.sha256_file(config_path),
+        git_sha_start="b" * 40,
         work_root=tmp_path / "work",
     )
     monkeypatch.setattr(tool, "_prepare_inputs", lambda _path: prepared)
@@ -407,4 +409,18 @@ def test_preflight_seals_zero_chunk_receipt_without_launch(
     assert receipt["pair_rendering_started"] is False
     assert receipt["chunks_profiled"] == 0
     assert receipt["full_n600_launch_authorized_by_this_receipt"] is False
+    assert receipt["pointer_mutation_performed"] is False
+    assert receipt["launch_governance"]["status"] == "LAUNCH_NOT_PERFORMED"
     assert (prepared.work_root / "preflight_receipt.json").is_file()
+
+
+def test_recursive_source_closure_includes_direct_and_transitive_dependencies() -> None:
+    closure = tool._implementation_sources()
+    assert "tools/profile_taskspace_conditional_quotient_n600.py" in closure
+    assert "tools/build_c0b_semantic_quotient_archive.py" in closure
+    assert "src/tac/optimization/direct_description_minimizer.py" in closure
+    assert "src/tac/witness_dsl/v10_production_receiver.py" in closure
+    assert all(
+        (tool.REPO_ROOT / row["path"]).is_file() and row["bytes"] > 0 and len(row["sha256"]) == 64
+        for row in closure.values()
+    )

@@ -14,6 +14,7 @@ used only for class-conditioned statistics.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import math
@@ -70,8 +71,8 @@ from tac.witness_dsl.taskspace_conditional_quotient_profiler_v1 import (  # noqa
 )
 
 CLI_CONFIG_SCHEMA: Final = "tac.taskspace_conditional_quotient_profile_cli_config.v1"
-TOOL_RECEIPT_SCHEMA: Final = "tac.taskspace_conditional_quotient_profile_tool_receipt.v1"
-PREFLIGHT_RECEIPT_SCHEMA: Final = "tac.taskspace_conditional_quotient_profile_preflight.v1"
+TOOL_RECEIPT_SCHEMA: Final = "tac.taskspace_conditional_quotient_profile_tool_receipt.v2"
+PREFLIGHT_RECEIPT_SCHEMA: Final = "tac.taskspace_conditional_quotient_profile_preflight.v2"
 CONTEST_ARCHIVE_DENOMINATOR: Final = 37_545_489
 CONTEST_RATE_NUMERATOR: Final = 25
 C1_CHUNK_PAIRS: Final = 12
@@ -232,9 +233,7 @@ def _validate_fresh_v15_derivation_config(value: Any) -> dict[str, Any]:
             "expected_sha256",
         }:
             raise ConditionalQuotientProfilerError(f"fresh V15 producer source {index} identity keys differ")
-        producer_paths.append(
-            _require_path_text(identity["path"], label=f"fresh V15 producer source {index} path")
-        )
+        producer_paths.append(_require_path_text(identity["path"], label=f"fresh V15 producer source {index} path"))
         if (
             isinstance(identity["expected_bytes"], bool)
             or not isinstance(identity["expected_bytes"], int)
@@ -269,21 +268,15 @@ def _validate_fresh_v15_derivation_config(value: Any) -> dict[str, Any]:
             "expected_sha256",
             "local_pair_range",
         }:
-            raise ConditionalQuotientProfilerError(
-                f"fresh V15 identity checkpoint {index} identity keys differ"
-            )
+            raise ConditionalQuotientProfilerError(f"fresh V15 identity checkpoint {index} identity keys differ")
         checkpoint_path = _require_path_text(
             identity["path"],
             label=f"fresh V15 identity checkpoint {index} path",
         )
         if Path(checkpoint_path).name != f"batch_{start:04d}_{stop:04d}.json":
-            raise ConditionalQuotientProfilerError(
-                f"fresh V15 identity checkpoint {index} filename/range differ"
-            )
+            raise ConditionalQuotientProfilerError(f"fresh V15 identity checkpoint {index} filename/range differ")
         if identity["local_pair_range"] != [start, stop]:
-            raise ConditionalQuotientProfilerError(
-                f"fresh V15 identity checkpoint {index} ordered range differs"
-            )
+            raise ConditionalQuotientProfilerError(f"fresh V15 identity checkpoint {index} ordered range differs")
         _require_sha256(
             identity["expected_sha256"],
             label=f"fresh_v15.identity_checkpoints[{index}].expected_sha256",
@@ -412,23 +405,104 @@ def _git_head() -> str:
     return head
 
 
+def _module_source_path(module: str) -> Path | None:
+    if module == "tac" or module.startswith("tac."):
+        stem = SRC_ROOT.joinpath(*module.split("."))
+    elif "." not in module:
+        stem = TOOLS_ROOT / module
+    else:
+        return None
+    module_path = stem.with_suffix(".py")
+    if module_path.is_file():
+        return module_path.resolve()
+    package_path = stem / "__init__.py"
+    if package_path.is_file():
+        return package_path.resolve()
+    return None
+
+
+def _module_name_for_path(path: Path) -> tuple[str, tuple[str, ...]]:
+    resolved = path.resolve()
+    if resolved.is_relative_to(SRC_ROOT):
+        relative = resolved.relative_to(SRC_ROOT)
+    elif resolved.is_relative_to(TOOLS_ROOT):
+        relative = resolved.relative_to(TOOLS_ROOT)
+    else:
+        raise ConditionalQuotientProfilerError("implementation source escaped repository source roots")
+    if relative.name == "__init__.py":
+        module_parts = relative.parts[:-1]
+        package_parts = module_parts
+    else:
+        module_parts = (*relative.parts[:-1], relative.stem)
+        package_parts = module_parts[:-1]
+    return ".".join(module_parts), tuple(package_parts)
+
+
+def _local_import_paths(path: Path) -> tuple[Path, ...]:
+    try:
+        tree = ast.parse(path.read_bytes(), filename=str(path))
+    except (OSError, SyntaxError) as exc:
+        raise ConditionalQuotientProfilerError(f"cannot parse implementation dependency: {path}") from exc
+    _module_name, package_parts = _module_name_for_path(path)
+    resolved: set[Path] = set()
+    for node in ast.walk(tree):
+        candidates: list[str] = []
+        aliases: tuple[ast.alias, ...] = ()
+        if isinstance(node, ast.Import):
+            candidates.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            aliases = tuple(node.names)
+            if node.level:
+                if node.level > len(package_parts) + 1:
+                    raise ConditionalQuotientProfilerError(f"relative import escapes local package: {path}")
+                prefix = package_parts[: len(package_parts) - (node.level - 1)]
+                suffix = tuple(node.module.split(".")) if node.module else ()
+                base = ".".join((*prefix, *suffix))
+            else:
+                base = node.module or ""
+            if base:
+                candidates.append(base)
+                candidates.extend(f"{base}.{alias.name}" for alias in aliases if alias.name != "*")
+        for candidate in candidates:
+            dependency = _module_source_path(candidate)
+            if dependency is not None:
+                resolved.add(dependency)
+    return tuple(sorted(resolved))
+
+
 def _implementation_sources() -> dict[str, Any]:
-    paths = {
-        "profiler": REPO_ROOT / "src/tac/witness_dsl/taskspace_conditional_quotient_profiler_v1.py",
-        "cli": Path(__file__).resolve(strict=True),
-        "c0b_seam": REPO_ROOT / "src/tac/witness_dsl/c0b_semantic_quotient.py",
-        "v15_receiver": REPO_ROOT / "src/tac/optimization/direct_description_carrier_compose.py",
-        "factor2_lattice": REPO_ROOT / "src/tac/optimization/uint8_lattice_feasibility.py",
-        "fresh_teacher_gate": REPO_ROOT / "src/tac/witness_control/taskspace_fresh_teacher_materializer_v1.py",
-        "c1_teacher": REPO_ROOT / "tools/build_c0b_semantic_quotient_archive.py",
-    }
+    pending = [
+        Path(__file__).resolve(strict=True),
+        (REPO_ROOT / "src/tac/witness_dsl/taskspace_conditional_quotient_profiler_v1.py").resolve(strict=True),
+    ]
+    paths: set[Path] = set()
+    while pending:
+        path = pending.pop()
+        if path in paths:
+            continue
+        paths.add(path)
+        pending.extend(_local_import_paths(path))
+    try:
+        tracked_result = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise ConditionalQuotientProfilerError("cannot enumerate tracked implementation closure") from exc
+    tracked = {(REPO_ROOT / raw.decode()).resolve() for raw in tracked_result.stdout.split(b"\0") if raw}
+    missing = sorted(path for path in paths if path not in tracked)
+    if missing:
+        names = ", ".join(path.relative_to(REPO_ROOT).as_posix() for path in missing)
+        raise ConditionalQuotientProfilerError(f"implementation dependency closure contains untracked sources: {names}")
     return {
-        name: {
+        path.relative_to(REPO_ROOT).as_posix(): {
             "path": path.relative_to(REPO_ROOT).as_posix(),
             "bytes": path.stat().st_size,
             "sha256": sha256_file(path),
         }
-        for name, path in paths.items()
+        for path in sorted(paths)
     }
 
 
@@ -499,8 +573,7 @@ def _resolve_fresh_v15_derivation(value: Mapping[str, Any]) -> _FreshV15Derivati
     if (
         typed_config_sha != config_identity["expected_rfc8785_sha256"]
         or typed_config_sha != receipt.get("typed_config_sha256")
-        or rfc8785_canonicalize(source_config)
-        != rfc8785_canonicalize(receipt.get("typed_config"))
+        or rfc8785_canonicalize(source_config) != rfc8785_canonicalize(receipt.get("typed_config"))
         or source_config.get("run_id") != run_id
     ):
         raise ConditionalQuotientProfilerError("fresh V15 source/RFC8785 typed config custody differs")
@@ -544,18 +617,14 @@ def _resolve_fresh_v15_derivation(value: Mapping[str, Any]) -> _FreshV15Derivati
     if not isinstance(producer_records, list) or len(producer_records) != len(configured_producers):
         raise ConditionalQuotientProfilerError("fresh V15 producer custody count differs")
     live_producers: list[dict[str, Any]] = []
-    for index, (configured, recorded) in enumerate(
-        zip(configured_producers, producer_records, strict=True)
-    ):
+    for index, (configured, recorded) in enumerate(zip(configured_producers, producer_records, strict=True)):
         expected_record = {
             "path": configured["path"],
             "bytes": configured["expected_bytes"],
             "sha256": configured["expected_sha256"],
         }
         if recorded != expected_record:
-            raise ConditionalQuotientProfilerError(
-                f"fresh V15 producer source {index} receipt/config custody differs"
-            )
+            raise ConditionalQuotientProfilerError(f"fresh V15 producer source {index} receipt/config custody differs")
         producer_path = _resolve_repo_recorded_file(
             configured["path"],
             label=f"fresh V15 producer source {index}",
@@ -564,9 +633,7 @@ def _resolve_fresh_v15_derivation(value: Mapping[str, Any]) -> _FreshV15Derivati
             producer_path.stat().st_size != configured["expected_bytes"]
             or sha256_file(producer_path) != configured["expected_sha256"]
         ):
-            raise ConditionalQuotientProfilerError(
-                f"fresh V15 producer source {index} live bytes/SHA-256 differ"
-            )
+            raise ConditionalQuotientProfilerError(f"fresh V15 producer source {index} live bytes/SHA-256 differ")
         live_producers.append(
             {
                 "path": configured["path"],
@@ -617,13 +684,9 @@ def _resolve_fresh_v15_derivation(value: Mapping[str, Any]) -> _FreshV15Derivati
     ):
         raise ConditionalQuotientProfilerError("fresh V15 compile receipt identity summary differs")
     checkpoint_root = receipt_path.parent / "stage_checkpoints" / "full_p_camera_identity"
-    expected_checkpoint_names = {
-        Path(identity["path"]).name for identity in derivation["identity_checkpoints"]
-    }
+    expected_checkpoint_names = {Path(identity["path"]).name for identity in derivation["identity_checkpoints"]}
     actual_checkpoint_names = {
-        entry.name
-        for entry in checkpoint_root.iterdir()
-        if entry.is_file() and not entry.is_symlink()
+        entry.name for entry in checkpoint_root.iterdir() if entry.is_file() and not entry.is_symlink()
     }
     if actual_checkpoint_names != expected_checkpoint_names:
         raise ConditionalQuotientProfilerError(
@@ -666,9 +729,7 @@ def _resolve_fresh_v15_derivation(value: Mapping[str, Any]) -> _FreshV15Derivati
             or row.get("camera_bytes_released_after_compare") is not True
             or row.get("score_claim") is not False
         ):
-            raise ConditionalQuotientProfilerError(
-                f"fresh V15 identity checkpoint {index} contract differs"
-            )
+            raise ConditionalQuotientProfilerError(f"fresh V15 identity checkpoint {index} contract differs")
         base_digest = _require_sha256(
             row.get("base_camera_sha256"),
             label=f"fresh V15 identity checkpoint {index} base camera digest",
@@ -678,9 +739,7 @@ def _resolve_fresh_v15_derivation(value: Mapping[str, Any]) -> _FreshV15Derivati
             label=f"fresh V15 identity checkpoint {index} final camera digest",
         )
         if base_digest != final_digest:
-            raise ConditionalQuotientProfilerError(
-                f"fresh V15 identity checkpoint {index} camera digests differ"
-            )
+            raise ConditionalQuotientProfilerError(f"fresh V15 identity checkpoint {index} camera digests differ")
         digest_material.append(base_digest + final_digest)
         checkpoint_rows.append(
             {
@@ -696,9 +755,8 @@ def _resolve_fresh_v15_derivation(value: Mapping[str, Any]) -> _FreshV15Derivati
             }
         )
     recomputed_chain = _sha256("".join(digest_material).encode("ascii"))
-    if (
-        recomputed_chain != derivation["identity_digest_chain_sha256"]
-        or recomputed_chain != identity_summary.get("digest_chain_sha256")
+    if recomputed_chain != derivation["identity_digest_chain_sha256"] or recomputed_chain != identity_summary.get(
+        "digest_chain_sha256"
     ):
         raise ConditionalQuotientProfilerError("fresh V15 38-checkpoint digest chain differs")
 
@@ -1064,11 +1122,15 @@ class _PreparedInputs:
     fresh: Mapping[str, Any]
     binding: Mapping[str, Any]
     implementation_sources: Mapping[str, Any]
+    config_sha256: str
+    git_sha_start: str
     work_root: Path
 
 
 def _prepare_inputs(config_path: Path) -> _PreparedInputs:
     resolved_config = config_path.expanduser().resolve(strict=True)
+    config_sha256 = sha256_file(resolved_config)
+    git_sha_start = _git_head()
     cli = load_cli_config(resolved_config)
     config = ConditionalQuotientProfileConfigV1.from_mapping(cli["profile"])
     if config.test_only_small_fixture:
@@ -1141,8 +1203,21 @@ def _prepare_inputs(config_path: Path) -> _PreparedInputs:
         fresh=fresh,
         binding=binding,
         implementation_sources=sources_pre,
+        config_sha256=config_sha256,
+        git_sha_start=git_sha_start,
         work_root=Path(str(cli["work_root"])).expanduser().resolve(strict=False),
     )
+
+
+def _require_prepared_sources_stable(
+    prepared: _PreparedInputs,
+) -> tuple[dict[str, Any], str]:
+    if sha256_file(prepared.config_path) != prepared.config_sha256:
+        raise ConditionalQuotientProfilerError("typed config changed after preparation")
+    sources_post = _implementation_sources()
+    if sources_post != prepared.implementation_sources:
+        raise ConditionalQuotientProfilerError("complete implementation dependency closure changed")
+    return sources_post, _git_head()
 
 
 def preflight(config_path: Path) -> dict[str, Any]:
@@ -1158,14 +1233,18 @@ def preflight(config_path: Path) -> dict[str, Any]:
         )
     except SemanticQuotientError as exc:
         raise ConditionalQuotientProfilerError("profile preflight storage gate refused") from exc
-    sources_post = _implementation_sources()
-    if sources_post != prepared.implementation_sources:
-        raise ConditionalQuotientProfilerError("implementation sources changed during preflight")
+    sources_post, git_sha_end = _require_prepared_sources_stable(prepared)
     receipt = {
         "schema": PREFLIGHT_RECEIPT_SCHEMA,
         "config_path": str(prepared.config_path),
-        "config_sha256": sha256_file(prepared.config_path),
-        "git_sha": _git_head(),
+        "config_sha256": prepared.config_sha256,
+        "git_sha_start": prepared.git_sha_start,
+        "git_sha_end": git_sha_end,
+        "git_head_stable": git_sha_end == prepared.git_sha_start,
+        "git_head_drift_policy": (
+            "diagnostic remains reproducible only when the complete local source "
+            "dependency closure and typed config are byte-identical"
+        ),
         "profile": prepared.config.as_mapping(),
         "input_binding": dict(prepared.binding),
         "storage_preflight": {
@@ -1189,7 +1268,12 @@ def preflight(config_path: Path) -> dict[str, Any]:
         "frontier_feasibility_inference_allowed": False,
         "score_claim": False,
         "promotion_eligible": False,
-        "pointer_moved": False,
+        "pointer_mutation_performed": False,
+        "launch_governance": {
+            "status": "LAUNCH_NOT_PERFORMED",
+            "dispatch_claim_bound": False,
+            "governed_launcher_receipt_bound": False,
+        },
         "implementation_sources": {
             "pre": dict(prepared.implementation_sources),
             "post": sources_post,
@@ -1231,14 +1315,18 @@ def run(config_path: Path) -> dict[str, Any]:
         work_root=prepared.work_root,
         chunk_loader=loader,
     )
-    sources_post = _implementation_sources()
-    if sources_post != prepared.implementation_sources:
-        raise ConditionalQuotientProfilerError("implementation sources changed during profile")
+    sources_post, git_sha_end = _require_prepared_sources_stable(prepared)
     receipt = {
         "schema": TOOL_RECEIPT_SCHEMA,
         "config_path": str(prepared.config_path),
-        "config_sha256": sha256_file(prepared.config_path),
-        "git_sha": _git_head(),
+        "config_sha256": prepared.config_sha256,
+        "git_sha_start": prepared.git_sha_start,
+        "git_sha_end": git_sha_end,
+        "git_head_stable": git_sha_end == prepared.git_sha_start,
+        "git_head_drift_policy": (
+            "diagnostic remains reproducible only when the complete local source "
+            "dependency closure and typed config are byte-identical"
+        ),
         "python": sys.version.split()[0],
         "platform": platform.platform(),
         "implementation_sources": {
@@ -1256,7 +1344,13 @@ def run(config_path: Path) -> dict[str, Any]:
         "per_stage_checkpoints": True,
         "score_claim": False,
         "promotion_eligible": False,
-        "pointer_moved": False,
+        "pointer_mutation_performed": False,
+        "launch_governance": {
+            "status": "NOT_CAPTURED_BY_PROFILER_V2",
+            "dispatch_claim_bound": False,
+            "governed_launcher_receipt_bound": False,
+            "candidate_or_promotion_authority": False,
+        },
     }
     receipt["tool_receipt_sha256"] = _sha256(_canonical_json(receipt))
     try:

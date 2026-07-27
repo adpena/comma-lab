@@ -259,11 +259,16 @@ def test_profile_chunk_races_all_exact_bases_and_emits_actionable_statistics() -
     )
     assert tuple(row["representations"]) == REPRESENTATION_IDS
     assert row["all_representations_exact_roundtrip"] is True
-    assert len(row["pair_marginals"]) == 2
+    assert len(row["per_pair_diagnostics"]) == 2
     assert len(row["class_conditioned_signed_residual"]) == 30
     assert all(
         representation["codec_sizes"]["zlib9_block_bytes"] > 0 for representation in row["representations"].values()
     )
+    assert "zlib9_standalone_pair_block_bytes" in row["per_pair_diagnostics"][0]
+    assert "zlib9_marginal_bytes" not in row["per_pair_diagnostics"][0]
+    bookkeeping = row["per_pair_diagnostics"][0]["final_output_residual_bookkeeping_groups"]
+    assert "final_output_residual_bookkeeping_diagonal" in bookkeeping
+    assert "ambient_unweighted_gram" not in bookkeeping
     assert row["score_claim"] is False
     assert row["candidate_payload"] is False
 
@@ -303,11 +308,24 @@ def test_run_is_resumable_without_reopening_completed_scientific_chunks(tmp_path
     assert first["conditional_budget_arbitration"]["current_batch16_headroom_bytes_to_effective_frontier"] == 53_622
     assert set(first["downstream_hook_coverage"]) == {"1", "2", "3", "4", "5", "6"}
     assert first["downstream_hook_coverage"]["5"]["status"] == "BLOCKED_NONAUTHORITY_LOCAL_BATCH16"
-    operator = first["functional_operator_proposal_surface"]
-    assert operator["task_weighted_operator"]["status"] == "BLOCKED_MISSING_SCORER_COSTATE_EFFECTS"
-    assert operator["hope_compatibility_fences"]["ph1_batchnorm_closed_forms_allowed"] is False
-    assert operator["hope_compatibility_fences"]["static_parameter_count_as_rate_allowed"] is False
+    bookkeeping = first["final_output_residual_bookkeeping_surface"]
+    assert bookkeeping["task_weighted_operator"]["status"] == "BLOCKED_MISSING_SCORER_COSTATE_EFFECTS"
+    assert bookkeeping["hope_compatibility_fences"]["ph1_batchnorm_closed_forms_allowed"] is False
+    assert bookkeeping["hope_compatibility_fences"]["static_parameter_count_as_rate_allowed"] is False
     assert "planning coordinate" in first["conditional_budget_arbitration"]["reason_frontier_inference_forbidden"]
+    arbitration = first["conditional_budget_arbitration"]
+    assert arbitration["archive_feasibility_claim_allowed"] is False
+    assert "best_tested_exact_basis" not in arbitration
+    assert all(
+        row["archive_feasibility_claim_allowed"] is False
+        and row["same_object_zip_delta_measured"] is False
+        and not any(key.startswith("fits_") for key in row)
+        for row in arbitration["tested_chunk_payload_rows"]
+    )
+    assert first["downstream_hook_coverage"]["3"]["status"].startswith("PROPOSED_UNWIRED")
+    assert first["downstream_hook_coverage"]["4"]["status"].startswith("PROPOSED_UNWIRED")
+    assert first["downstream_hook_coverage"]["6"]["status"].startswith("PROPOSED_UNWIRED")
+    assert first["pointer_mutation_performed"] is False
 
     def forbidden_loader(_chunk_index: int, _pair_ids: tuple[int, ...]):
         raise AssertionError("completed chunk was reopened")

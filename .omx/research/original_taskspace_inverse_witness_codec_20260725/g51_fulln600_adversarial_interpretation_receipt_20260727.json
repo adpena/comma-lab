@@ -1,0 +1,120 @@
+{
+  "schema": "tac.taskspace_conditional_quotient_profile_adversarial_interpretation.v1",
+  "profile_status": "FULL_N600_ENCODER_ONLY_EXACT_BYTE_DIAGNOSTIC",
+  "population_pairs": 600,
+  "chunk_count": 50,
+  "resumable": true,
+  "per_stage_checkpoints": true,
+  "work_root": "/Volumes/VertigoDataTier/pact/taskspace_conditional_quotient_profile_n600_fresh_v15_20260726_r2",
+  "historical_aggregate": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_conditional_quotient_profile_n600_fresh_v15_20260726_r2/aggregate_receipt.json",
+    "bytes": 631924,
+    "file_sha256": "e1a9497c3af61e0183a899f9bbaab2c9fa0c257cf9e24c1d7c40ac063bf71f2f",
+    "internal_aggregate_receipt_sha256": "129a5ce0de652311d8391809ea1576063139c80897519effe3875b07f1e8a612",
+    "chunk_receipt_root_sha256": "cb03e068f0ef6061aecea2e447b61ac865d0a2263ed1e1677344ac68a8d9e496"
+  },
+  "historical_tool_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_conditional_quotient_profile_n600_fresh_v15_20260726_r2/tool_receipt.json",
+    "bytes": 3370,
+    "file_sha256": "6c77670f27e27b0d3eee26be536166be67864ff6a29259a7e865515cfad3c917",
+    "internal_tool_receipt_sha256": "e9fd0001b90724a2637e661b43d28a0294af1f327840484001831b257772c27c",
+    "captured_git_sha": "36c8a8aaa5d0a09f088e5392073bc1a25216bcc8"
+  },
+  "source_chronology": {
+    "historical_receipt_git_sha_did_not_yet_track_g51_sources": true,
+    "exact_profile_source_commit": "361b11eeb8",
+    "profile_source_sha256": "e40b8b4432b66dbe523dbdab1ffd680e73234affc85f9bcc304719f1d7a0be54",
+    "runner_source_sha256": "32304edf1d465cc8364b3d6a06c09ec729f98beb18d3ba8c34c875daa986905e",
+    "implementation_sources_byte_identical_pre_post": true,
+    "historical_source_closure_complete": false,
+    "historical_source_closure_limitation": "The v1 receipt hashed seven selected sources rather than the complete recursive local import closure.",
+    "salvage_basis": "The exact profiler and runner source hashes are tracked by commit 361b11eeb8 and all seven v1 source identities remained byte-identical across the run."
+  },
+  "planning_coordinate": {
+    "effective_frontier_at_profile_start": 0.172,
+    "base_archive_bytes": 133941,
+    "conditional_headroom_bytes_to_effective_frontier": 53622,
+    "conditional_headroom_bytes_to_sub_0_15": 20582,
+    "authority": "BATCH16_PLANNING_ARITHMETIC_ONLY_NOT_SCORE_AUTHORITY"
+  },
+  "tested_exact_chunk_payloads": [
+    {
+      "representation_id": "common_differential_signed",
+      "compressor_id": "c0b_lzma_block",
+      "chunk_block_payload_bytes": 400035534
+    },
+    {
+      "representation_id": "signed_residual_separate",
+      "compressor_id": "c0b_lzma_block",
+      "chunk_block_payload_bytes": 411217998
+    },
+    {
+      "representation_id": "c0b_xor_separate",
+      "compressor_id": "c0b_lzma_block",
+      "chunk_block_payload_bytes": 418598640
+    },
+    {
+      "representation_id": "c0b_xor_interleaved",
+      "compressor_id": "c0b_lzma_block",
+      "chunk_block_payload_bytes": 419224202
+    },
+    {
+      "representation_id": "seg_y1_plus_pose_y0_xor_y1",
+      "compressor_id": "c0b_lzma_block",
+      "chunk_block_payload_bytes": 420418711
+    },
+    {
+      "representation_id": "pair_temporal_signed_chunk_reset",
+      "compressor_id": "c0b_lzma_block",
+      "chunk_block_payload_bytes": 432349494
+    }
+  ],
+  "structural_measurements": {
+    "smallest_tested_chunk_payload_diagnostic": {
+      "representation_id": "common_differential_signed",
+      "compressor_id": "c0b_lzma_block",
+      "chunk_block_payload_bytes": 400035534,
+      "ratio_to_conditional_frontier_headroom": 7460.287456640931
+    },
+    "strict_logical_layering_lzma_chunk_payload_bytes": 420418711,
+    "shared_common_differential_saves_bytes_vs_strict_layering": 20383177,
+    "shared_common_differential_saves_percent_vs_strict_layering": 4.848303956671424,
+    "seg_primary_standalone_pair_zlib9_sum": 234225208,
+    "pose_enhancement_standalone_pair_zlib9_sum": 223990655,
+    "class_conditioned_signed_residual_entropy_lower_bound_bytes": 459805095,
+    "plane_only_signed_residual_entropy_lower_bound_bytes": 585282008,
+    "class_conditioning_entropy_lower_bound_reduction_bytes": 125476913,
+    "class_conditioning_entropy_lower_bound_reduction_percent": 21.438710106393703
+  },
+  "corrected_interpretation": {
+    "archive_feasibility_claim_allowed": false,
+    "smallest_or_best_archive_claim_allowed": false,
+    "per_pair_values_are_archive_marginals": false,
+    "functional_gram_measured": false,
+    "actuator_effect_gram_measured": false,
+    "bit_allocator_wired": false,
+    "cathedral_autopilot_wired": false,
+    "probe_disambiguator_wired": false,
+    "learned_irreducible_quotient_mandatory": false,
+    "learned_necessity_status": "NOT_PROVEN_BY_FINITE_EXACT_CHUNK_PAYLOAD_RACE",
+    "verdict": "The tested direct chunk-block spellings are not candidate-scale. The result selects a population-global analytic, procedural, generative, or learned quotient search; it does not kill the representation families or establish whole-archive feasibility.",
+    "physical_coding_implication": "Logical decode may remain Y1 then Y0 given Y1, but physical coding must permit shared many-to-many groups because common-differential coding beat rigid semantic-plus-pose layering."
+  },
+  "execution_governance": {
+    "dispatch_claim_bound": false,
+    "governed_launcher_receipt_bound": false,
+    "status": "UNGOVERNED_BUT_RESUMABLE_DIAGNOSTIC",
+    "candidate_or_promotion_authority": false
+  },
+  "remaining_blockers": [
+    "receiver grammar and section framing were not materialized",
+    "same-object ZIP bytes and ZIP delta were not measured",
+    "scorer-costate or JVP/VJP actuator effects were not measured",
+    "a population-global quotient backend has not been trained or inverse-compiled",
+    "the G17 logical operand is not linked through a physical archive range and public runtime graph"
+  ],
+  "score_claim": false,
+  "candidate_payload": false,
+  "promotion_eligible": false,
+  "pointer_mutation_performed": false
+}

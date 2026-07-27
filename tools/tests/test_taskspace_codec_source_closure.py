@@ -13,6 +13,7 @@ ENTRYPOINTS = (
     Path("src/tac/witness_control/taskspace_codec_adversarial_gate_v2.py"),
     Path("tools/run_taskspace_lossy_selected_plane_codec_n600.py"),
     Path("tools/run_taskspace_program_residual_n600.py"),
+    Path("tools/profile_taskspace_conditional_quotient_n600.py"),
     Path("tools/build_taskspace_layered_public_closure.py"),
 )
 

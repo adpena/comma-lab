@@ -40,8 +40,8 @@ from tac.witness_dsl.c0b_semantic_quotient import (
 
 CONFIG_SCHEMA: Final = "tac.taskspace_conditional_quotient_profile_config.v1"
 INPUT_BINDING_SCHEMA: Final = "tac.taskspace_conditional_quotient_profile_inputs.v1"
-CHUNK_SCHEMA: Final = "tac.taskspace_conditional_quotient_chunk_profile.v1"
-AGGREGATE_SCHEMA: Final = "tac.taskspace_conditional_quotient_aggregate.v1"
+CHUNK_SCHEMA: Final = "tac.taskspace_conditional_quotient_chunk_profile.v2"
+AGGREGATE_SCHEMA: Final = "tac.taskspace_conditional_quotient_aggregate.v2"
 RUN_SCHEMA: Final = "tac.taskspace_conditional_quotient_run.v1"
 EVIDENCE_AXIS: Final = "[encoder-only exact-byte quotient diagnostic]"
 UPSTREAM_DEFAULT_BATCH_SIZE: Final = 16
@@ -327,7 +327,8 @@ def _validate_fresh_v15_derivation_custody(
     for index, producer in enumerate(producers):
         if (
             not isinstance(producer, dict)
-            or set(producer) != {
+            or set(producer)
+            != {
                 "path",
                 "resolved_path",
                 "bytes",
@@ -336,9 +337,7 @@ def _validate_fresh_v15_derivation_custody(
             }
             or producer.get("live_rehashed") is not True
         ):
-            raise ConditionalQuotientProfilerError(
-                f"fresh V15 live producer source {index} custody differs"
-            )
+            raise ConditionalQuotientProfilerError(f"fresh V15 live producer source {index} custody differs")
         path = producer.get("path")
         if not isinstance(path, str) or not path or path in producer_paths:
             raise ConditionalQuotientProfilerError("fresh V15 producer source paths are invalid")
@@ -433,9 +432,7 @@ def _validate_fresh_v15_derivation_custody(
             or checkpoint.get("byte_identical") is not True
             or checkpoint.get("score_claim") is not False
         ):
-            raise ConditionalQuotientProfilerError(
-                f"fresh V15 full-P identity checkpoint {index} differs"
-            )
+            raise ConditionalQuotientProfilerError(f"fresh V15 full-P identity checkpoint {index} differs")
         _require_exact_int(
             checkpoint.get("bytes"),
             field=f"fresh_v15.full_p_camera_identity.ordered_checkpoints[{index}].bytes",
@@ -464,10 +461,7 @@ def _validate_fresh_v15_derivation_custody(
         identity.get("receipt_digest_chain_sha256"),
         field="fresh_v15.full_p_camera_identity.receipt_digest_chain_sha256",
     )
-    if (
-        identity.get("recomputed_digest_chain_sha256") != recomputed
-        or receipt_chain != recomputed
-    ):
+    if identity.get("recomputed_digest_chain_sha256") != recomputed or receipt_chain != recomputed:
         raise ConditionalQuotientProfilerError("fresh V15 full-P identity digest chain differs")
 
 
@@ -884,7 +878,10 @@ def profile_conditional_quotient_chunk(
         pair_rows.append(
             {
                 "pair_id": pair_id,
-                "zlib9_marginal_bytes": {
+                # Each value is one independently reset zlib stream for this
+                # pair.  It is not a marginal of a chunk stream or a materialized
+                # archive and is therefore barred from score/rate costates.
+                "zlib9_standalone_pair_block_bytes": {
                     "c0b_xor_separate": _pair_zlib_bytes((pair_xor0.tobytes(order="C"), pair_xor1.tobytes(order="C"))),
                     "c0b_xor_interleaved": _pair_zlib_bytes((pair_interleaved.tobytes(order="C"),)),
                     "signed_residual_separate": _pair_zlib_bytes(
@@ -906,18 +903,18 @@ def profile_conditional_quotient_chunk(
                     "seg_primary_y1": int(np.count_nonzero(pair_seg)),
                     "pose_enhancement_y0_xor_y1": int(np.count_nonzero(pair_pose)),
                 },
-                "functional_operator_groups": {
+                "final_output_residual_bookkeeping_groups": {
                     "group_ids": [
                         "seg_primary_output_delta_y1",
                         "pose_enhancement_output_delta_y0_given_y1",
                     ],
-                    "ambient_unweighted_gram": [
+                    "final_output_residual_bookkeeping_diagonal": [
                         [seg_effect_energy, 0],
                         [0, pose_effect_energy],
                     ],
-                    "ambient_cross_term_is_zero_by_disjoint_output_coordinates": True,
+                    "cross_term_omitted_by_disjoint_coordinate_bookkeeping": True,
                     "task_weighted_cross_term_available": False,
-                    "block_zlib9_bytes": {
+                    "standalone_pair_output_block_zlib9_bytes": {
                         "seg_primary_output_delta_y1": _pair_zlib_bytes((pair_seg.tobytes(order="C"),)),
                         "pose_enhancement_output_delta_y0_given_y1": _pair_zlib_bytes((pair_pose.tobytes(order="C"),)),
                     },
@@ -949,7 +946,7 @@ def profile_conditional_quotient_chunk(
             "serialized_in_candidate": False,
         },
         "representations": representations,
-        "pair_marginals": pair_rows,
+        "per_pair_diagnostics": pair_rows,
         "class_conditioned_signed_residual": class_rows,
         "all_representations_exact_roundtrip": True,
         "temporal_reset_policy": "first_pair_absolute_then_pair_delta_within_each_chunk",
@@ -1051,7 +1048,7 @@ def _combine_symbol_stats(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 
 def _quantile_summary(values: Sequence[int]) -> dict[str, Any]:
     if not values:
-        raise ConditionalQuotientProfilerError("cannot summarize empty marginal bytes")
+        raise ConditionalQuotientProfilerError("cannot summarize empty block-byte diagnostics")
     array = np.asarray(values, dtype=np.int64)
     return {
         "count": int(array.size),
@@ -1065,7 +1062,7 @@ def _quantile_summary(values: Sequence[int]) -> dict[str, Any]:
     }
 
 
-def _functional_operator_surface(
+def _output_residual_bookkeeping_surface(
     all_pair_rows: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     group_ids = (
@@ -1077,10 +1074,10 @@ def _functional_operator_surface(
     seg_block_bytes: list[int] = []
     pose_block_bytes: list[int] = []
     for row in all_pair_rows:
-        groups = row.get("functional_operator_groups")
+        groups = row.get("final_output_residual_bookkeeping_groups")
         if not isinstance(groups, Mapping) or groups.get("group_ids") != list(group_ids):
-            raise ConditionalQuotientProfilerError("functional operator group registry differs")
-        gram = groups.get("ambient_unweighted_gram")
+            raise ConditionalQuotientProfilerError("final-output bookkeeping group registry differs")
+        gram = groups.get("final_output_residual_bookkeeping_diagonal")
         if (
             not isinstance(gram, list)
             or len(gram) != 2
@@ -1088,12 +1085,12 @@ def _functional_operator_surface(
             or gram[0][1] != 0
             or gram[1][0] != 0
         ):
-            raise ConditionalQuotientProfilerError("ambient functional group Gram shape differs")
+            raise ConditionalQuotientProfilerError("final-output residual diagonal shape differs")
         total_seg_energy += gram[0][0]
         total_pose_energy += gram[1][1]
-        block_bytes = groups.get("block_zlib9_bytes")
+        block_bytes = groups.get("standalone_pair_output_block_zlib9_bytes")
         if not isinstance(block_bytes, Mapping):
-            raise ConditionalQuotientProfilerError("functional group byte marginals are absent")
+            raise ConditionalQuotientProfilerError("standalone output-block byte diagnostics are absent")
         seg_block_bytes.append(block_bytes[group_ids[0]])
         pose_block_bytes.append(block_bytes[group_ids[1]])
     trace = total_seg_energy + total_pose_energy
@@ -1105,25 +1102,25 @@ def _functional_operator_surface(
                 "output_support": "Y1",
                 "scorer_visibility": ["SegNet", "PoseNet"],
                 "ambient_squared_energy": total_seg_energy,
-                "per_pair_block_zlib9_bytes": _quantile_summary(seg_block_bytes),
+                "standalone_pair_block_zlib9_bytes": _quantile_summary(seg_block_bytes),
             },
             group_ids[1]: {
                 "output_support": "Y0 conditioned on decoded Y1",
                 "scorer_visibility": ["PoseNet"],
                 "ambient_squared_energy": total_pose_energy,
-                "per_pair_block_zlib9_bytes": _quantile_summary(pose_block_bytes),
+                "standalone_pair_block_zlib9_bytes": _quantile_summary(pose_block_bytes),
             },
         },
-        "ambient_unweighted_group_gram": [
+        "final_output_residual_bookkeeping_diagonal": [
             [total_seg_energy, 0],
             [0, total_pose_energy],
         ],
-        "ambient_unweighted_largest_energy_fraction": (
+        "largest_final_output_residual_energy_fraction": (
             max(total_seg_energy, total_pose_energy) / trace if trace else 0.0
         ),
-        "ambient_gram_authority": (
-            "EXACT_OUTPUT_SPACE_DIAGNOSTIC_ONLY; disjoint plane coordinates force a zero "
-            "cross-term and therefore cannot reveal evaluator coupling"
+        "bookkeeping_authority": (
+            "EXACT_FINAL_OUTPUT_RESIDUAL_DIAGNOSTIC_ONLY; the omitted cross-term follows "
+            "from disjoint storage coordinates and is not an actuator-effect or scorer Gram"
         ),
         "task_weighted_operator": {
             "status": "BLOCKED_MISSING_SCORER_COSTATE_EFFECTS",
@@ -1189,9 +1186,9 @@ def aggregate_conditional_quotient_chunks(
     representation_rows: dict[str, Any] = {}
     all_pair_rows: list[dict[str, Any]] = []
     for row in validated:
-        all_pair_rows.extend(row["pair_marginals"])
+        all_pair_rows.extend(row["per_pair_diagnostics"])
     if [row["pair_id"] for row in all_pair_rows] != list(range(config.pair_count)):
-        raise ConditionalQuotientProfilerError("per-pair marginal chronology differs")
+        raise ConditionalQuotientProfilerError("per-pair diagnostic chronology differs")
 
     for representation_id in REPRESENTATION_IDS:
         source = [row["representations"][representation_id] for row in validated]
@@ -1211,11 +1208,11 @@ def aggregate_conditional_quotient_chunks(
             component: _combine_symbol_stats([row["components"][component] for row in source])
             for component in component_names
         }
-        marginals = [row["zlib9_marginal_bytes"][representation_id] for row in all_pair_rows]
+        standalone_blocks = [row["zlib9_standalone_pair_block_bytes"][representation_id] for row in all_pair_rows]
         representation_rows[representation_id] = {
             "codec_sizes_chunk_block_sum": codec_totals,
             "components": components,
-            "per_pair_zlib9_marginal_summary": _quantile_summary(marginals),
+            "per_pair_zlib9_standalone_block_summary": _quantile_summary(standalone_blocks),
         }
 
     class_keys: list[tuple[str, int, int]] = []
@@ -1252,7 +1249,7 @@ def aggregate_conditional_quotient_chunks(
     historical = binding["historical_ms1_batch32_counterfactual"]
     headroom_frontier = planning["headroom_bytes_to_effective_frontier"]
     headroom_015 = planning["headroom_bytes_to_sub_0_15"]
-    exact_size_rows = []
+    payload_diagnostic_rows = []
     for representation_id, row in representation_rows.items():
         sizes = row["codec_sizes_chunk_block_sum"]
         for compressor_id, field in (
@@ -1260,42 +1257,38 @@ def aggregate_conditional_quotient_chunks(
             ("c0b_lzma_block", "c0b_lzma_block_bytes"),
         ):
             payload_bytes = sizes[field]
-            exact_size_rows.append(
+            payload_diagnostic_rows.append(
                 {
                     "representation_id": representation_id,
                     "compressor_id": compressor_id,
-                    "payload_bytes": payload_bytes,
-                    "fits_current_batch16_headroom_to_effective_frontier": payload_bytes <= headroom_frontier,
-                    "fits_current_batch16_headroom_to_0_15": payload_bytes <= headroom_015,
-                    "fits_historical_batch32_headroom_to_effective_frontier": (
-                        payload_bytes <= historical["headroom_bytes_to_effective_frontier"]
+                    "chunk_block_payload_bytes": payload_bytes,
+                    "ratio_to_current_batch16_frontier_headroom": (
+                        payload_bytes / headroom_frontier if headroom_frontier else None
                     ),
-                    "fits_historical_batch32_headroom_to_0_15": (
-                        payload_bytes <= historical["headroom_bytes_to_sub_0_15"]
+                    "ratio_to_current_batch16_sub_0_15_headroom": (
+                        payload_bytes / headroom_015 if headroom_015 else None
                     ),
+                    "archive_feasibility_claim_allowed": False,
+                    "receiver_framing_measured": False,
+                    "same_object_zip_delta_measured": False,
                 }
             )
-    exact_size_rows.sort(
+    payload_diagnostic_rows.sort(
         key=lambda row: (
-            row["payload_bytes"],
+            row["chunk_block_payload_bytes"],
             row["representation_id"],
             row["compressor_id"],
         )
     )
-    best = exact_size_rows[0]
+    smallest = payload_diagnostic_rows[0]
     geometry_aligned = binding["current_planning_matches_upstream_batch_geometry"]
-    if best["fits_current_batch16_headroom_to_effective_frontier"]:
-        conclusion = (
-            "At least one tested exact block-coded quotient fits the canonical batch-16 "
-            "planning headroom; build a receiver-closed archive and exact-evaluate the "
-            "same object before any score inference."
-        )
-    else:
-        conclusion = (
-            "No tested exact local/block quotient fits the canonical batch-16 planning "
-            "payload headroom. A nonlocal analytic/generative factorization or a learned "
-            "irreducible quotient is the next representation class; learned necessity is not proven."
-        )
+    conclusion = (
+        "The smallest tested exact chunk-block spelling remains far above the "
+        "conditional planning headroom. This falsifies direct transport of those "
+        "exact chunk-block spellings, not the underlying representation family or "
+        "whole-archive feasibility after a new cross-chunk/receiver factorization. "
+        "Learned necessity is not proven."
+    )
     hook_coverage = {
         "1": {
             "hook": "SENSITIVITY_MAP",
@@ -1304,18 +1297,18 @@ def aggregate_conditional_quotient_chunks(
         },
         "2": {
             "hook": "PARETO_CONSTRAINT",
-            "status": "CONDITIONAL_EXACT_BYTE_ROWS_ONLY",
-            "payload": "conditional_budget_arbitration.exact_tested_basis_rows",
+            "status": "PROPOSED_UNWIRED_CHUNK_PAYLOAD_DIAGNOSTIC",
+            "payload": "conditional_budget_arbitration.tested_chunk_payload_rows",
         },
         "3": {
             "hook": "BIT_ALLOCATOR",
-            "status": "READY_ENCODER_DIAGNOSTIC_ONLY",
-            "payload": "per_pair_marginals",
+            "status": "PROPOSED_UNWIRED_ENCODER_DIAGNOSTIC",
+            "payload": "per_pair_diagnostics",
         },
         "4": {
             "hook": "CATHEDRAL_AUTOPILOT_DISPATCH",
-            "status": "TIER_A_OBSERVABILITY_NO_DISPATCH",
-            "payload": "conditional_budget_arbitration.best_tested_exact_basis",
+            "status": "PROPOSED_UNWIRED_NO_DISPATCH",
+            "payload": "conditional_budget_arbitration.smallest_tested_chunk_payload_diagnostic",
         },
         "5": {
             "hook": "CONTINUAL_LEARNING_POSTERIOR",
@@ -1324,7 +1317,7 @@ def aggregate_conditional_quotient_chunks(
         },
         "6": {
             "hook": "PROBE_DISAMBIGUATOR",
-            "status": "READY_FOR_OWNER_REVIEW",
+            "status": "PROPOSED_UNWIRED_OWNER_REVIEW",
             "payload": "conditional_budget_arbitration.conclusion",
         },
     }
@@ -1342,8 +1335,8 @@ def aggregate_conditional_quotient_chunks(
             )
         ),
         "representations": representation_rows,
-        "per_pair_marginals": all_pair_rows,
-        "functional_operator_proposal_surface": _functional_operator_surface(all_pair_rows),
+        "per_pair_diagnostics": all_pair_rows,
+        "final_output_residual_bookkeeping_surface": (_output_residual_bookkeeping_surface(all_pair_rows)),
         "class_conditioned_signed_residual": aggregate_class,
         "conditional_budget_arbitration": {
             "authority": planning["authority"],
@@ -1366,8 +1359,14 @@ def aggregate_conditional_quotient_chunks(
             "planning_coordinate_premise": binding["planning_coordinate_premise"],
             "canonical_batch16_debt_receipt": binding["canonical_batch16_debt_receipt"],
             "independent_batch16_replay_corroboration": binding["independent_batch16_replay_corroboration"],
-            "exact_tested_basis_rows": exact_size_rows,
-            "best_tested_exact_basis": best,
+            "tested_chunk_payload_rows": payload_diagnostic_rows,
+            "smallest_tested_chunk_payload_diagnostic": smallest,
+            "archive_feasibility_claim_allowed": False,
+            "archive_feasibility_blockers": [
+                "receiver grammar and section framing are not materialized",
+                "same-object ZIP bytes and ZIP delta are not measured",
+                "chunk-reset coding is not a population-global archive spelling",
+            ],
             "learned_irreducible_quotient_mandatory": False,
             "learned_necessity_status": "NOT_PROVEN_BY_FINITE_EXACT_BASIS_RACE",
             "conclusion": conclusion,
@@ -1379,7 +1378,7 @@ def aggregate_conditional_quotient_chunks(
         "score_claim": False,
         "promotion_eligible": False,
         "candidate_payload": False,
-        "pointer_moved": False,
+        "pointer_mutation_performed": False,
     }
     aggregate_body["aggregate_receipt_sha256"] = _sha256(_canonical_mapping(aggregate_body, label="aggregate profile"))
     return aggregate_body
