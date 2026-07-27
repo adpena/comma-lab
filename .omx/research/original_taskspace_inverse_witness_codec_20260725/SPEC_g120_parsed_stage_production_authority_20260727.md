@@ -90,10 +90,14 @@ inferior stage may be the full-score winner. `g105_public_wire_best.json` is
 only an execution pointer into the preserved pre-pose set. It must never name
 `levelset_best.json` or the legacy arbitrary-scale int8 BEST.
 
-## Trainer/DSL integration
+## G121 orchestration integration
 
-Add one explicit typed G111-only flag. Default-off behavior elsewhere must
-remain byte-identical. When enabled, fail closed unless all of these hold:
+Do not place the full-n600 CPU screen in the MLX optimizer. G121 is the
+resumable external controller that exhaustively enumerates immutable physical
+G111 stage nodes, materializes G112, and invokes this one-stage wrapper. This
+keeps scorer work independent of optimizer state and prevents a floating-state
+BEST pointer from suppressing signal. G121 must fail closed unless all of these
+hold:
 
 - n600, verdict batch 16;
 - physical G109 target binding;
@@ -106,7 +110,8 @@ remain byte-identical. When enabled, fail closed unless all of these hold:
 The semantic training loss remains pre-G105 floating-state optimization.
 Post-hoc parsed-wire stage selection closes deployment custody. Terminal
 wire-QAT is a separate resumable stage admitted only if measured quantization
-regret justifies it.
+regret justifies it. G111 emits immutable states; G120 measures one state; G121
+owns exhaustive retention; G119 measures the downstream conditional-pose value.
 
 ## Acceptance
 
@@ -118,8 +123,8 @@ regret justifies it.
   public/repository population equality, pointer-independent measurement reuse,
   retain-all-below-distortion-obstruction behavior, and deterministic
   tie-breaking.
-- G111 real physical compile emits the explicit selector flag and is no longer
-  held on the parsed-wire-selection blocker.
+- G121 proves every eligible immutable G111 stage is either measured by G120 or
+  has a scoped fail-closed blocker, without reading the trainer BEST.
 - No full-n600 launch occurs until a governed clean dry-run proves the new
   production wrapper, storage preflight, physical cold root, and crash resume.
 
