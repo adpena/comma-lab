@@ -1,0 +1,118 @@
+{
+  "artifact": "G69 canonical G17 active-A ABI for the G49 selected-preimage program",
+  "git_head_at_implementation_start": "0dd5bbf346dd886e1a72d91450cb76774089f30d",
+  "git_head_at_verification": "0dd5bbf346dd886e1a72d91450cb76774089f30d",
+  "lane_id": "lane_g69_g49_active_a_abi_20260727",
+  "result": {
+    "a_family": {
+      "name": "G49_SELECTED_PREIMAGE_PROGRAM",
+      "wire_value": 6
+    },
+    "a_mode": {
+      "name": "SELECTED_PREIMAGE_PROGRAM",
+      "wire_value": 5
+    },
+    "accepted_nested_magic_hex": "5453505056310000",
+    "adapter": "G17G49SelectedPreimageStrictParserV1",
+    "adapter_checks": [
+      "existing G49 strict parse",
+      "existing G49 exact re-encode",
+      "descriptor versus compile-config window equality",
+      "descriptor versus semantic-identity window equality",
+      "exact expected semantic identity",
+      "exact expected target custody identity",
+      "exact expected decoder identity",
+      "caller-owned maximum packet byte ceiling"
+    ],
+    "global_layout_only": true,
+    "new_parallel_packet_schema": false,
+    "terminal_a_family": {
+      "name": "G49_SELECTED_PREIMAGE",
+      "wire_value": 5
+    },
+    "terminal_a_mode": {
+      "name": "SELECTED_PREIMAGE_PROGRAM",
+      "wire_value": 6
+    },
+    "wire_values_append_only": true
+  },
+  "schema": "tac.g69_g49_active_a_g17_abi_receipt.v1",
+  "source_custody": {
+    "production_module": {
+      "bytes": 73570,
+      "path": "src/tac/witness_dsl/taskspace_g17_production_envelope.py",
+      "sha256": "f25bfff936d0a230cd99606325e9e0de0bd168d0b26bdcb7961d65730d511e98"
+    },
+    "specification": {
+      "bytes": 4901,
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g69_g49_active_a_g17_abi_20260727.md",
+      "sha256": "f15933a9f8c757fb94967f13df8bbf409aa6747029174232018aeef71ffb0718"
+    },
+    "test_module": {
+      "bytes": 15077,
+      "path": "src/tac/witness_dsl/tests/test_taskspace_g17_g49_active_a_abi.py",
+      "sha256": "d77418a05a0aff8554ffeb2e72fa7dd1c510d9c6dd78a9b5dd8f59551f807457"
+    }
+  },
+  "structural_proof": {
+    "archive_build_parse_reencode": true,
+    "descriptor_and_terminal_mutations_refused": true,
+    "exact_nested_g49_parse_reencode": true,
+    "foreign_family_refused": true,
+    "foreign_mode_refused": true,
+    "maximum_byte_ceiling_refused": true,
+    "nested_mutation_refused": true,
+    "structural_pair_counts": [
+      2,
+      600
+    ],
+    "wrong_decoder_identity_refused": true,
+    "wrong_magic_refused": true,
+    "wrong_semantic_identity_refused": true,
+    "wrong_target_identity_refused": true,
+    "wrong_window_refused": true
+  },
+  "truth": {
+    "candidate_claim": false,
+    "dense_plane_payloads": 0,
+    "exact_eval_run": false,
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "research_only": true,
+    "score_claim": false,
+    "scorer_or_target_payloads": 0
+  },
+  "verification": {
+    "focused_and_adjacent_pytest": {
+      "command": ".venv/bin/pytest -q src/tac/witness_dsl/tests/test_taskspace_g17_g49_active_a_abi.py src/tac/witness_dsl/tests/test_taskspace_g17_production_envelope.py src/tac/witness_dsl/tests/test_taskspace_selected_preimage_program_v1.py",
+      "failed": 0,
+      "passed": 35,
+      "pytest_version": "9.1.1",
+      "result": "35 passed in 2.53s"
+    },
+    "git_diff_check": {
+      "command": "git diff --check -- src/tac/witness_dsl/taskspace_g17_production_envelope.py",
+      "result": "exit 0"
+    },
+    "format": {
+      "command": "uv run ruff format --check src/tac/witness_dsl/taskspace_g17_production_envelope.py src/tac/witness_dsl/tests/test_taskspace_g17_g49_active_a_abi.py",
+      "result": "2 files already formatted",
+      "ruff_version": "0.15.20"
+    },
+    "lint": {
+      "command": "uv run ruff check src/tac/witness_dsl/taskspace_g17_production_envelope.py src/tac/witness_dsl/tests/test_taskspace_g17_g49_active_a_abi.py",
+      "result": "All checks passed",
+      "ruff_version": "0.15.20"
+    },
+    "receipt_json": {
+      "command": ".venv/bin/python -m json.tool .omx/research/original_taskspace_inverse_witness_codec_20260725/g69_g49_active_a_g17_abi_receipt_20260727.json",
+      "result": "exit 0"
+    },
+    "pycompile": {
+      "command": ".venv/bin/python -m py_compile src/tac/witness_dsl/taskspace_g17_production_envelope.py src/tac/witness_dsl/tests/test_taskspace_g17_g49_active_a_abi.py",
+      "python_version": "3.13.12",
+      "result": "exit 0"
+    }
+  },
+  "verdict": "IMPLEMENTED_STRUCTURAL_ABI_ONLY"
+}

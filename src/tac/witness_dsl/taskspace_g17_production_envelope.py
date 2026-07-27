@@ -37,6 +37,17 @@ from tac.witness_dsl.taskspace_outer_archive_codec import (
     TaskspaceOuterArchiveBuild,
     parse_taskspace_outer_archive,
 )
+from tac.witness_dsl.taskspace_selected_preimage_program_v1 import (
+    MAGIC as G49_SELECTED_PREIMAGE_PROGRAM_MAGIC,
+)
+from tac.witness_dsl.taskspace_selected_preimage_program_v1 import (
+    GenericV10Factor2DecoderIdentityV1,
+    ScorerTargetCustodyIdentityV1,
+    TaskspaceSelectedPreimageProgramError,
+    V15SemanticProgramIdentityV1,
+    encode_selected_preimage_program,
+    parse_selected_preimage_program,
+)
 
 G_PACKET_MAGIC: Final = b"TACG17G\x00"
 A_PACKET_MAGIC: Final = b"TACG17A\x00"
@@ -53,6 +64,9 @@ E_PACKET_BYTES: Final = 151
 _SHA256_RE: Final = re.compile(r"[0-9a-f]{64}\Z")
 _POPULATION_COUNTS: Final = frozenset({2, 24, 600})
 _MAX_NESTED_PAYLOAD_BYTES: Final = 1 << 31
+G49_SELECTED_PREIMAGE_STRICT_PARSER_ID: Final = (
+    "tac.g17.active_a.taskspace_selected_preimage_program.parse_reencode_identity.v1"
+)
 
 
 class G17ProductionEnvelopeError(ValueError):
@@ -97,6 +111,7 @@ class G17AFamily(IntEnum):
     NATIVE_SELECTIVE_POST_G8 = 3
     G13_PASS_SOURCE_XIP2 = 4
     G17_GENERAL_CONDITIONAL_XIP2 = 5
+    G49_SELECTED_PREIMAGE_PROGRAM = 6
 
 
 class G17AMode(IntEnum):
@@ -105,6 +120,7 @@ class G17AMode(IntEnum):
     COPY_FINAL_Y1_SUPPORT = 2
     GLOBAL_COPY_FINAL_Y1 = 3
     QUANTIZED_XIP2 = 4
+    SELECTED_PREIMAGE_PROGRAM = 5
 
 
 class G17TerminalSemanticMode(IntEnum):
@@ -129,6 +145,7 @@ class G17TerminalAFamily(IntEnum):
     G13 = 2
     G17_GENERAL = 3
     MIXED = 4
+    G49_SELECTED_PREIMAGE = 5
 
 
 class G17TerminalAMode(IntEnum):
@@ -138,6 +155,7 @@ class G17TerminalAMode(IntEnum):
     GLOBAL_COPY = 3
     QUANTIZED_XIP2 = 4
     MIXED = 5
+    SELECTED_PREIMAGE_PROGRAM = 6
 
 
 class G17SemanticSummaryV1(StrEnum):
@@ -376,10 +394,84 @@ def _validate_a_family_mode(family: G17AFamily, mode: G17AMode, payload: bytes) 
             {G17AMode.GLOBAL_COPY_FINAL_Y1, G17AMode.QUANTIZED_XIP2},
             b"TACX2A4\x00",
         ),
+        G17AFamily.G49_SELECTED_PREIMAGE_PROGRAM: (
+            {G17AMode.SELECTED_PREIMAGE_PROGRAM},
+            G49_SELECTED_PREIMAGE_PROGRAM_MAGIC,
+        ),
     }
     allowed = matrix.get(family)
     if allowed is None or mode not in allowed[0] or not payload.startswith(allowed[1]):
         raise G17ProductionEnvelopeError("active A nested magic or mode disagrees with descriptor family")
+
+
+@dataclass(frozen=True, slots=True)
+class G17G49SelectedPreimageStrictParserV1:
+    """Frozen adapter from the G49 strict parser into the canonical active-A ABI."""
+
+    expected_semantic_program_identity: V15SemanticProgramIdentityV1
+    expected_target_custody_identity: ScorerTargetCustodyIdentityV1
+    expected_decoder_identity: GenericV10Factor2DecoderIdentityV1
+    maximum_packet_bytes: int
+
+    def __post_init__(self) -> None:
+        if type(self.expected_semantic_program_identity) is not V15SemanticProgramIdentityV1:
+            raise G17ProductionEnvelopeError("expected G49 semantic identity must use its exact frozen type")
+        if type(self.expected_target_custody_identity) is not ScorerTargetCustodyIdentityV1:
+            raise G17ProductionEnvelopeError("expected G49 target identity must use its exact frozen type")
+        if type(self.expected_decoder_identity) is not GenericV10Factor2DecoderIdentityV1:
+            raise G17ProductionEnvelopeError("expected G49 decoder identity must use its exact frozen type")
+        if (
+            type(self.maximum_packet_bytes) is not int
+            or isinstance(self.maximum_packet_bytes, bool)
+            or self.maximum_packet_bytes < 1
+        ):
+            raise G17ProductionEnvelopeError("G49 strict-parser byte ceiling must be an exact positive integer")
+
+    def __call__(
+        self,
+        payload: bytes,
+        pair_start: int,
+        pair_count: int,
+        family: G17AFamily,
+        mode: G17AMode,
+    ) -> G17AActiveNestedV1:
+        if family is not G17AFamily.G49_SELECTED_PREIMAGE_PROGRAM or mode is not G17AMode.SELECTED_PREIMAGE_PROGRAM:
+            raise G17ProductionEnvelopeError("G49 strict parser received a foreign A family or mode")
+        _validate_window(pair_start, pair_count)
+        _validate_a_family_mode(family, mode, payload)
+        try:
+            parsed = parse_selected_preimage_program(
+                payload,
+                maximum_packet_bytes=self.maximum_packet_bytes,
+            )
+            reencoded = encode_selected_preimage_program(parsed)
+        except TaskspaceSelectedPreimageProgramError as exc:
+            raise G17ProductionEnvelopeError("G49 selected-preimage program failed its frozen strict parser") from exc
+        if reencoded != payload:
+            raise G17ProductionEnvelopeError("G49 selected-preimage program changed on parse/re-encode")
+        if (
+            parsed.compile_config.source_pair_start != pair_start
+            or parsed.compile_config.pair_count != pair_count
+            or parsed.semantic_program_identity.source_pair_start != pair_start
+            or parsed.semantic_program_identity.pair_count != pair_count
+        ):
+            raise G17ProductionEnvelopeError("G49 selected-preimage program and A descriptor windows differ")
+        if parsed.semantic_program_identity != self.expected_semantic_program_identity:
+            raise G17ProductionEnvelopeError("G49 selected-preimage semantic identity differs from expected custody")
+        if parsed.target_custody_identity != self.expected_target_custody_identity:
+            raise G17ProductionEnvelopeError("G49 selected-preimage target identity differs from expected custody")
+        if parsed.decoder_identity != self.expected_decoder_identity:
+            raise G17ProductionEnvelopeError("G49 selected-preimage decoder identity differs from expected custody")
+        return G17AActiveNestedV1(
+            payload=payload,
+            reencoded_payload=reencoded,
+            pair_start=pair_start,
+            pair_count=pair_count,
+            family=family,
+            mode=mode,
+            strict_parser_id=G49_SELECTED_PREIMAGE_STRICT_PARSER_ID,
+            parsed_object=parsed,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -562,6 +654,14 @@ def derive_g17_a_parent_binding(p_section: bytes, g_section: bytes) -> str:
     return _sha256(b"G17-A-PARENT-V1\0" + bytes.fromhex(_sha256(p_section)) + bytes.fromhex(_sha256(g_section)))
 
 
+def _is_global_a_family_mode(family: G17AFamily, mode: G17AMode) -> bool:
+    return (family, mode) in {
+        (G17AFamily.G17_GENERAL_CONDITIONAL_XIP2, G17AMode.GLOBAL_COPY_FINAL_Y1),
+        (G17AFamily.G17_GENERAL_CONDITIONAL_XIP2, G17AMode.QUANTIZED_XIP2),
+        (G17AFamily.G49_SELECTED_PREIMAGE_PROGRAM, G17AMode.SELECTED_PREIMAGE_PROGRAM),
+    }
+
+
 def _encode_population_packet(
     *,
     magic: bytes,
@@ -581,16 +681,19 @@ def _encode_population_packet(
     else:
         if any(type(row) is not G17ADescriptorV1 for row in rows):
             raise G17ProductionEnvelopeError("A packet requires exact A descriptor types")
+        if layout is not G17PopulationLayout.GLOBAL and any(
+            row.family is G17AFamily.G49_SELECTED_PREIMAGE_PROGRAM for row in rows
+        ):
+            raise G17ProductionEnvelopeError("TSPPV1 selected-preimage A requires the population-global layout")
         required_windows = canonical_windows if layout is G17PopulationLayout.SHARDED else ((pair_start, pair_count),)
         if layout is G17PopulationLayout.GLOBAL:
             only = rows[0] if len(rows) == 1 else None
             if (
                 only is None
                 or type(only) is not G17ADescriptorV1
-                or only.family is not G17AFamily.G17_GENERAL_CONDITIONAL_XIP2
-                or only.mode not in {G17AMode.GLOBAL_COPY_FINAL_Y1, G17AMode.QUANTIZED_XIP2}
+                or not _is_global_a_family_mode(only.family, only.mode)
             ):
-                raise G17ProductionEnvelopeError("global A requires one full-population TACX2A4 descriptor")
+                raise G17ProductionEnvelopeError("global A requires one full-population TACX2A4 or TSPPV1 descriptor")
     observed_windows = tuple((row.pair_start, row.pair_count) for row in rows)
     if observed_windows != required_windows:
         raise G17ProductionEnvelopeError("descriptor windows are not the unique canonical partition/layout")
@@ -899,6 +1002,10 @@ def parse_g17_a_packet(
         offset += payload_bytes
     if offset != len(body):
         raise G17ProductionEnvelopeError("A payload body has trailing or unconsumed bytes")
+    if layout is not G17PopulationLayout.GLOBAL and any(
+        row.family is G17AFamily.G49_SELECTED_PREIMAGE_PROGRAM for row in descriptors
+    ):
+        raise G17ProductionEnvelopeError("TSPPV1 selected-preimage A requires the population-global layout")
     windows = tuple((row.pair_start, row.pair_count) for row in descriptors)
     required = (
         canonical_g17_shard_windows(pair_start, pair_count)
@@ -909,12 +1016,8 @@ def parse_g17_a_packet(
         raise G17ProductionEnvelopeError("A descriptors do not equal the canonical selected layout")
     if layout is G17PopulationLayout.GLOBAL:
         only = descriptors[0] if len(descriptors) == 1 else None
-        if (
-            only is None
-            or only.family is not G17AFamily.G17_GENERAL_CONDITIONAL_XIP2
-            or only.mode not in {G17AMode.GLOBAL_COPY_FINAL_Y1, G17AMode.QUANTIZED_XIP2}
-        ):
-            raise G17ProductionEnvelopeError("global A is not one exact full-population TACX2A4")
+        if only is None or not _is_global_a_family_mode(only.family, only.mode):
+            raise G17ProductionEnvelopeError("global A is not one exact full-population TACX2A4 or TSPPV1")
     parsed = ParsedG17APacketV1(
         packet, layout, pair_start, pair_count, parent, tuple(descriptors), tuple(encoded), footer_crc
     )
@@ -959,12 +1062,14 @@ def _derive_terminal_summaries(
         G17AFamily.NATIVE_SELECTIVE_POST_G8: G17TerminalAFamily.NATIVE,
         G17AFamily.G13_PASS_SOURCE_XIP2: G17TerminalAFamily.G13,
         G17AFamily.G17_GENERAL_CONDITIONAL_XIP2: G17TerminalAFamily.G17_GENERAL,
+        G17AFamily.G49_SELECTED_PREIMAGE_PROGRAM: G17TerminalAFamily.G49_SELECTED_PREIMAGE,
     }
     mode_map = {
         G17AMode.SPARSE_CONSTANT_RGB: G17TerminalAMode.SPARSE_CONSTANT,
         G17AMode.COPY_FINAL_Y1_SUPPORT: G17TerminalAMode.COPY_SUPPORT,
         G17AMode.GLOBAL_COPY_FINAL_Y1: G17TerminalAMode.GLOBAL_COPY,
         G17AMode.QUANTIZED_XIP2: G17TerminalAMode.QUANTIZED_XIP2,
+        G17AMode.SELECTED_PREIMAGE_PROGRAM: G17TerminalAMode.SELECTED_PREIMAGE_PROGRAM,
     }
     for row in a_packet.descriptors:
         if row.family is not G17AFamily.CANONICAL_PASS:
