@@ -1,0 +1,7 @@
+{
+  "aggregate_file_sha256": "3ca3cf5503d5b5144f48e2e562e398780a74a91fcfbd59e60248849d279d6215",
+  "aggregate_receipt_path": "/Volumes/VertigoDataTier/pact/taskspace_batch16_margin_base_scorer_cache_n600_20260727_r5/aggregate_receipt.json",
+  "aggregate_self_sha256": "22926b9689d5e493b3b8bb1e0a6dbfe1d26d6a6d56756e6426f591a4cf8dbf28",
+  "output_root": "/Volumes/VertigoDataTier/pact/taskspace_g87_g78_to_g72_complete_proposals_n600_20260727_r2",
+  "schema": "tac.taskspace_g87_g78_to_g72_exact_compile_materializer_config.v1"
+}

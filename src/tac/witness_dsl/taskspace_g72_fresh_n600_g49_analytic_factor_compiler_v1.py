@@ -61,6 +61,7 @@ READINESS_SCHEMA: Final = "tac.g72_fresh_n600_g49_analytic_factor_readiness.v1"
 PROPOSAL_SCHEMA: Final = "tac.g72_v9_boundary_shearlet_proposal.v1"
 STAGE_CHECKPOINT_SCHEMA: Final = "tac.g72_analytic_factor_stage_checkpoint.v1"
 JOINT_ADMISSION_SCHEMA: Final = "tac.g72_exact_whole_object_joint_admission.v1"
+PROPOSAL_LAW: Final = "V9_FISHER_MARGIN_BOUNDARY_SHEARLET_ROLE_PRESERVING_EXACT_COMPONENT_MEMBERSHIP"
 
 PAIR_COUNT: Final = 600
 PAIRS_PER_STAGE: Final = 120
@@ -303,14 +304,14 @@ def _component_boxes(
     *,
     minimum_sites: int,
     maximum: int,
-) -> list[tuple[int, int, int, int, int]]:
+) -> tuple[np.ndarray, list[tuple[int, int, int, int, int, int]]]:
     if int(np.count_nonzero(mask)) < minimum_sites:
-        return []
+        return np.zeros(mask.shape, dtype=np.int32), []
     labels, _ = ndimage.label(
         mask,
         structure=np.ones((3, 3), dtype=np.uint8),
     )
-    rows: list[tuple[int, int, int, int, int]] = []
+    rows: list[tuple[int, int, int, int, int, int]] = []
     for component, slices in enumerate(ndimage.find_objects(labels), start=1):
         if slices is None:
             continue
@@ -325,10 +326,11 @@ def _component_boxes(
                 int(x_slice.start),
                 int(y_slice.stop),
                 int(x_slice.stop),
+                component,
             )
         )
     rows.sort(reverse=True)
-    return rows[:maximum]
+    return labels, rows[:maximum]
 
 
 def derive_v9_boundary_shearlet_stage_proposals(
@@ -389,16 +391,20 @@ def derive_v9_boundary_shearlet_stage_proposals(
         )
         for role, class_id in (("Road", 0), ("UndrivableBoundary", 2)):
             mismatch = (target_pair == class_id) != (described_pair == class_id)
-            boxes = _component_boxes(
+            component_labels, boxes = _component_boxes(
                 mismatch,
                 minimum_sites=minimum,
                 maximum=maximum,
             )
-            for ordinal, (site_count, y0, x0, y1, x1) in enumerate(boxes):
-                local_mismatch = mismatch[y0:y1, x0:x1]
-                component_sites = np.argwhere(local_mismatch) + np.asarray((y0, x0))
+            for ordinal, (site_count, y0, x0, y1, x1, component_id) in enumerate(boxes):
+                local_component = component_labels[y0:y1, x0:x1] == component_id
+                component_sites = np.argwhere(local_component) + np.asarray((y0, x0))
                 if component_sites.size == 0:
                     continue
+                if component_sites.shape[0] != site_count:
+                    raise G72AnalyticFactorCompilerError(
+                        "connected-component membership changed during proposal geometry derivation"
+                    )
                 center_y, center_x = np.rint(component_sites.mean(axis=0)).astype(np.int64)
                 centered = component_sites - component_sites.mean(axis=0)
                 var_x = float(np.square(centered[:, 1]).mean()) + 1.0e-6
@@ -412,12 +418,12 @@ def derive_v9_boundary_shearlet_stage_proposals(
                         256,
                     )
                 )
-                missing = int(np.count_nonzero((target_pair[y0:y1, x0:x1] == class_id) & local_mismatch))
+                missing = int(np.count_nonzero((target_pair[y0:y1, x0:x1] == class_id) & local_component))
                 excess = site_count - missing
                 inferred_sign = 1 if missing >= excess else -1
                 amplitude = float(np.clip(max(1.0, (y1 - y0) / 2.0), 1.0, 24.0))
                 family_name = "Road" if role == "Road" else "Undrivable"
-                local_priority = float(priority[y0:y1, x0:x1][local_mismatch].sum())
+                local_priority = float(priority[y0:y1, x0:x1][local_component].sum())
                 for direction_rank, direction in enumerate((inferred_sign, -inferred_sign)):
                     for scale in (0.5, 1.0):
                         amplitude_q4 = int(
@@ -731,7 +737,7 @@ def write_stage_checkpoint(
         "derivation_config": {
             "minimum_component_sites": minimum_component_sites,
             "maximum_components_per_pair_role": (maximum_components_per_pair_role),
-            "proposal_law": ("V9_FISHER_MARGIN_BOUNDARY_SHEARLET_ROLE_PRESERVING"),
+            "proposal_law": PROPOSAL_LAW,
         },
         "proposals": [row.to_dict() for row in proposals],
         "proposal_fingerprints": [row.fingerprint for row in proposals],
@@ -867,7 +873,7 @@ def reopen_stage_checkpoint(
             "minimum_component_sites",
             "proposal_law",
         }
-        or config["proposal_law"] != "V9_FISHER_MARGIN_BOUNDARY_SHEARLET_ROLE_PRESERVING"
+        or config["proposal_law"] != PROPOSAL_LAW
     ):
         raise G72AnalyticFactorCompilerError("stage checkpoint derivation config differs")
     _require_exact_int(

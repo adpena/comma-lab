@@ -85,6 +85,43 @@ def test_real_v9_fisher_shearlet_stage_derivation_preserves_role(
     )
 
 
+def test_proposal_geometry_uses_exact_component_membership_not_bbox_mismatch() -> None:
+    target = np.broadcast_to(
+        np.asarray(0, dtype=np.uint8),
+        _SCORER_FIELD_SHAPE,
+    )
+    described = np.zeros(_SCORER_FIELD_SHAPE, dtype=np.uint8)
+    margins = np.broadcast_to(
+        np.asarray(0.05, dtype=np.float32),
+        _SCORER_FIELD_SHAPE,
+    )
+
+    # A 40-site ring encloses, but is disconnected from, a 16-site island.
+    # The old bbox-based geometry path incorrectly charged the island's sites
+    # to the ring as well.  Equal per-site Fisher mass makes the exact 40/16
+    # component-site ratio independently visible in proposal priority.
+    described[0, 10, 10:21] = 1
+    described[0, 20, 10:21] = 1
+    described[0, 10:21, 10] = 1
+    described[0, 10:21, 20] = 1
+    described[0, 12:16, 12:16] = 1
+
+    proposals = derive_v9_boundary_shearlet_stage_proposals(
+        stage=g72_stage_plan()[0],
+        target_cells=target,
+        target_margins=margins,
+        described_cells=described,
+        minimum_component_sites=1,
+        maximum_components_per_pair_role=4096,
+    )
+    ring = next(row for row in proposals if row.candidate_id == "road_0_0_sh_d0_a1")
+    island = next(row for row in proposals if row.candidate_id == "road_0_1_sh_d0_a1")
+
+    assert (ring.atom.center_y, ring.atom.center_x) == (15, 15)
+    assert (island.atom.center_y, island.atom.center_x) == (14, 14)
+    assert ring.fisher_priority / island.fisher_priority == pytest.approx(40 / 16)
+
+
 def test_stage_partition_is_exactly_five_by_120_and_refuses_drift() -> None:
     plan = g72_stage_plan()
 

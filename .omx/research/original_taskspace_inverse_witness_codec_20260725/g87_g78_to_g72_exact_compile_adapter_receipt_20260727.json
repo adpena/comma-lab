@@ -1,0 +1,162 @@
+{
+  "schema": "tac.taskspace_g87_g78_to_g72_exact_compile_adapter_receipt.v1",
+  "date": "2026-07-27",
+  "evidence_axis": "[macOS-CPU advisory]",
+  "research_only": true,
+  "pointer_moved": false,
+  "candidate_claim": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "payload_selection_performed": false,
+  "proposal_law_transition": {
+    "old": "V9_FISHER_MARGIN_BOUNDARY_SHEARLET_ROLE_PRESERVING",
+    "new": "V9_FISHER_MARGIN_BOUNDARY_SHEARLET_ROLE_PRESERVING_EXACT_COMPONENT_MEMBERSHIP"
+  },
+  "adversarial_population_audit": {
+    "component_count": 75882,
+    "contaminated_component_count": 7546,
+    "contaminated_component_fraction": 0.09944387338235681,
+    "foreign_site_inclusion_count": 713131,
+    "maximum_foreign_sites_one_component": 2063,
+    "by_role": {
+      "Road": {
+        "component_count": 64253,
+        "contaminated_component_count": 6975,
+        "foreign_site_inclusion_count": 694771
+      },
+      "Undrivable": {
+        "component_count": 11629,
+        "contaminated_component_count": 571,
+        "foreign_site_inclusion_count": 18360
+      }
+    }
+  },
+  "exact_r1_r2_proposal_diff": {
+    "proposal_count": 303528,
+    "changed_proposal_count": 30184,
+    "changed_proposal_fraction": 0.09944387338235681,
+    "four_proposals_per_contaminated_component_exact": true,
+    "by_role": {
+      "Road": 27900,
+      "UndrivableBoundary": 2284
+    },
+    "changed_fields": {
+      "fisher_priority": 30184,
+      "center": 22212,
+      "shear": 18140,
+      "amplitude": 896,
+      "scale": 0
+    },
+    "changed_by_stage": [5572, 5708, 6652, 5860, 6392]
+  },
+  "superseded_r1": {
+    "root": "/Volumes/VertigoDataTier/pact/taskspace_g87_g78_to_g72_complete_proposals_n600_20260727_r1",
+    "aggregate_file_sha256": "861c1d72170ec5866f2cc439e5d39c4ddee580d690a7e2ea0b5b995f94ddb7cd",
+    "aggregate_self_sha256": "0afabaefd638a6429728d64cea33c55047a47edf9ffe495d18e03f5f7e4ea697",
+    "false_authority": true,
+    "promotion_eligible": false,
+    "payload_selection_allowed": false,
+    "reason": "bbox mismatch contamination corrupted proposal geometry"
+  },
+  "fresh_g78_r5": {
+    "root": "/Volumes/VertigoDataTier/pact/taskspace_batch16_margin_base_scorer_cache_n600_20260727_r5",
+    "preflight_file_sha256": "103a8c2f04d304406d655e19710c65b92078429a3553463e339464fd9babd14a",
+    "preflight_self_sha256": "58bce5e2b20813e74f241e61f0f4bf4a114d629c23b149553297b2ab6807a1c8",
+    "aggregate_file_sha256": "3ca3cf5503d5b5144f48e2e562e398780a74a91fcfbd59e60248849d279d6215",
+    "aggregate_self_sha256": "22926b9689d5e493b3b8bb1e0a6dbfe1d26d6a6d56756e6426f591a4cf8dbf28",
+    "tree_file_bytes": 2123868021,
+    "batch_checkpoint_count": 38,
+    "stage_checkpoint_count": 5,
+    "elapsed_seconds": 515.49,
+    "peak_rss_mib": 7062,
+    "r4_r5_stable_sha_fields_per_stage": 10,
+    "dense_and_upstream_sha_fields_identical_r4_r5": true,
+    "only_preflight_and_stage_self_identities_changed": true
+  },
+  "fresh_g87_r2": {
+    "root": "/Volumes/VertigoDataTier/pact/taskspace_g87_g78_to_g72_complete_proposals_n600_20260727_r2",
+    "tree_file_bytes": 99361100,
+    "aggregate_bytes": 5272,
+    "aggregate_file_sha256": "27ffb9b9ddd6068828f36b5a572046aa92d22f1ffe70c0d2d2af696023f4e951",
+    "aggregate_self_sha256": "60cdf20839db7a1d63b390c106582b423e1c0befa076a0c9a4a57b2e63f7b168",
+    "compile_input_self_sha256": "370898d6a62bb424ec9848e228929ac1d0fb93157ce85623e145dbbaa2facf4e",
+    "component_count": 75882,
+    "proposal_count": 303528,
+    "mismatch_site_count": 4493276,
+    "maximum_components_per_pair_role_observed": 248,
+    "exact_component_membership_drives_geometry": true,
+    "bbox_foreign_mismatch_sites_included": false,
+    "selection_thresholds_used": false,
+    "selected_preimage_operand_emitted": false,
+    "selected_preimage_packet_emitted": false,
+    "archive_emitted": false,
+    "first_elapsed_seconds": 21.88,
+    "first_peak_rss_mib": 1465,
+    "resume_elapsed_seconds": 6.41,
+    "resume_peak_rss_mib": 1304,
+    "all_six_output_file_hashes_identical_after_resume": true,
+    "stages": [
+      {
+        "stage_index": 0,
+        "component_count": 19525,
+        "proposal_count": 78100,
+        "file_sha256": "8d6cbbbe07900c04f5fe132c04dfaf54aea8639e95d6600cd7341a2214b417da",
+        "checkpoint_sha256": "21a311e7e11e02107dadd1288206022b277f260c1106abba21476be3d7261039"
+      },
+      {
+        "stage_index": 1,
+        "component_count": 14403,
+        "proposal_count": 57612,
+        "file_sha256": "736df63b6694542694877f10ec3065652ca4fefb126e20af3184147314efe924",
+        "checkpoint_sha256": "e26b10b7446d8f8c37290513bf2b76f679e402ba4ead8dcc54b0b41398f9b1f7"
+      },
+      {
+        "stage_index": 2,
+        "component_count": 14563,
+        "proposal_count": 58252,
+        "file_sha256": "be870573e3fc9400e6884ff7ec73e8ae6c6482e4a6753411758473dcff942e4b",
+        "checkpoint_sha256": "3392c3470b497122dc4569c26e7697c4f9d96bd8e174588190db5065a667de03"
+      },
+      {
+        "stage_index": 3,
+        "component_count": 13632,
+        "proposal_count": 54528,
+        "file_sha256": "9d43a19b684f368da52d8690dbfd74ae1c12096fb84a91a6413f34ceb7a9e508",
+        "checkpoint_sha256": "95a40dfd29bd980b5b1e710628e4396140be56fcccafcd6b1b26d08f57af1279"
+      },
+      {
+        "stage_index": 4,
+        "component_count": 13759,
+        "proposal_count": 55036,
+        "file_sha256": "a4f585b336f2c3602e3b45b5560f1eda741ee0434d036329427cf20d8377aceb",
+        "checkpoint_sha256": "34b0a757e6cdcbab7fb6a85538c7c7a4427a4f27218f245721d2d6b73a750986"
+      }
+    ]
+  },
+  "source_identities": {
+    "g72_compiler_sha256": "d9bd328fe87c03bed3d302c3a2085f6e2e97e63bb7b33a0ed719d0d22d7e5c09",
+    "g72_test_sha256": "fcf886574095fde70e18ff320607a6510a4ca703fd0cbdaa6060b23bda9678c3",
+    "g87_adapter_sha256": "b4f8d300ba602e7121610120b853fccfb4acc58049c916cdb4aae193cb493a4e",
+    "g87_test_sha256": "399455e521d49bfe2be0f3068d744af2fdedc7e998371a91ca0c4dc0deb842ab",
+    "materializer_sha256": "7a2c6ad84edba40f8323f88ef3b31ad19c576a0d3974d7db7749a139e5144be2",
+    "materializer_test_sha256": "74f393d820669551e6824b82b65e623f26e50d866e61bdb690859e24504c37d8",
+    "g87_config_sha256": "59c60216588c0fcbee627033b391db324f36f7bec49d73079b15a9ef846841cf",
+    "g78_r5_config_sha256": "d0b261b524c4e245fd66c3403402d82686b4e71bb29ab5af52fb65aaf0b524f2"
+  },
+  "validation": {
+    "focused_tests_passed": 14,
+    "adjacent_g72_g78_g87_tests_passed": 27,
+    "strict_g78_r5_status_reopen_passed": true,
+    "strict_g87_r2_status_reopen_passed": true,
+    "ruff_check_passed": true,
+    "ruff_format_clean": true,
+    "py_compile_passed": true
+  },
+  "remaining_g72_blockers": [
+    "G72_G49_ROLE_AWARE_ANALYTIC_WIRE_OWED",
+    "G72_V15_ROLE_AWARE_DECODER_PROOF_OWED",
+    "G72_FRESH_POSE_AUTHORITY_OR_FINAL_EXACT_POSE_REPLAY_OWED",
+    "G72_FIVE_STAGE_EXACT_WHOLE_OBJECT_JOINT_ADMISSION_OWED"
+  ],
+  "receipt_sha256": "4de84d38a9e9c7a1f5d8d953ac71ebf646d1a09d2c4ea850f7590efcff502b17"
+}
