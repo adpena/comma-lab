@@ -34,9 +34,29 @@ from typing import Any, Final
 
 import numpy as np
 
+from tac.witness_control.g111_physical_native_opener_v1 import (
+    G111PhysicalNativeOpenError,
+    G111PhysicalNativeReceipt,
+    open_g111_native_v3_physical,
+)
+from tac.witness_control.g111_schedule_control_state_v1 import (
+    G111ScheduleControlStateError,
+)
+from tac.witness_control.g111_schedule_control_state_v1 import (
+    state_from_arrays as g111_schedule_control_state_from_arrays,
+)
+from tac.witness_control.g111_verdict_barrier_v1 import (
+    ImmutableVerdictResult,
+    ResultIntegrityError,
+)
+from tac.witness_control.trajectory_transaction_v2 import MANIFEST_KEY
+
 FRESH_PRODUCER_LINEAGE_SCHEMA: Final = "tac.fresh_producer_lineage.v1"
 FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA: Final = (
     "tac.fresh_producer_physical_checkpoint_node.v1"
+)
+FRESH_PHYSICAL_CHECKPOINT_NODE_NATIVE_SCHEMA: Final = (
+    "tac.fresh_producer_physical_checkpoint_node.v2"
 )
 RESUME_SEMANTIC_SCHEMA: Final = "levelset_full_state.v3"
 LEGACY_RESUME_SEMANTIC_SCHEMA: Final = "levelset_full_state.v2"
@@ -161,6 +181,7 @@ class FreshProducerCheckpointPairV1:
     seed_optimizer_tensor_count: int
     polyak_tensor_count: int
     config_array_count: int
+    native: G111PhysicalNativeReceipt | None = None
     rng_complete: bool = True
     event_ledger_complete: bool = True
     deploy_equals_ema: bool = True
@@ -697,6 +718,7 @@ def _validate_full_state_semantics(
     seed_optimizer: Mapping[str, Any],
     polyak: Mapping[str, Any],
     cfg: Mapping[str, Any],
+    native_complete_state: bool = False,
 ) -> tuple[int, str, bool]:
     if not live or not ema:
         raise FreshProducerLineageV1Error(
@@ -733,6 +755,11 @@ def _validate_full_state_semantics(
         )
     )
     if semantic_schema == LEGACY_RESUME_SEMANTIC_SCHEMA:
+        if native_complete_state:
+            raise FreshProducerLineageV1Error(
+                "native-v3 complete trajectory cannot be attached to a legacy "
+                "full-state v2 resume companion"
+            )
         if seed_active or seed or seed_optimizer:
             raise FreshProducerLineageV1Error(
                 "legacy full-state v2 fresh chains cannot carry an active "
@@ -1013,16 +1040,195 @@ def _validate_full_state_semantics(
             "scalar controller declaration"
         )
     if semantic_schema == RESUME_SEMANTIC_SCHEMA:
-        _validate_complete_trajectory_manifest_skeleton(
-            arrays=arrays,
-            seed_active=seed_active,
-            polyak_active=polyak_declared,
-        )
+        if native_complete_state:
+            complete_state_manifest_proven = True
+        else:
+            _validate_complete_trajectory_manifest_skeleton(
+                arrays=arrays,
+                seed_active=seed_active,
+                polyak_active=polyak_declared,
+            )
     return (
         int(_scalar(cfg, "__resume_epoch")),
         stage,
         complete_state_manifest_proven,
     )
+
+
+def _equal_array(
+    left: Any,
+    right: Any,
+    *,
+    label: str,
+) -> None:
+    lhs = np.asarray(left)
+    rhs = np.asarray(right)
+    scalar_codec_equivalent = (
+        lhs.dtype == rhs.dtype
+        and {lhs.shape, rhs.shape} == {(), (1,)}
+        and np.array_equal(lhs.reshape(1), rhs.reshape(1))
+    )
+    if (
+        lhs.dtype != rhs.dtype
+        or (
+            not scalar_codec_equivalent
+            and (
+                lhs.shape != rhs.shape
+                or not np.array_equal(lhs, rhs)
+            )
+        )
+    ):
+        raise FreshProducerLineageV1Error(
+            f"native-v3/legacy checkpoint differs at {label}"
+        )
+
+
+def _decode_native_lineage_envelope(
+    arrays: Mapping[str, Any],
+) -> dict[str, Any]:
+    prefix = "lineage.__g111_o6__"
+    expected = {
+        f"{prefix}schema",
+        f"{prefix}payload",
+        f"{prefix}payload_length",
+        f"{prefix}sha256",
+    }
+    observed = {key for key in arrays if key.startswith(prefix)}
+    if observed != expected:
+        raise FreshProducerLineageV1Error(
+            "native-v3 O6 lineage-envelope keyset differs"
+        )
+    schema = np.asarray(arrays[f"{prefix}schema"])
+    payload = np.asarray(arrays[f"{prefix}payload"])
+    length_array = np.asarray(arrays[f"{prefix}payload_length"])
+    sha_array = np.asarray(arrays[f"{prefix}sha256"])
+    if (
+        schema.dtype != np.dtype(np.uint8)
+        or schema.ndim != 1
+        or schema.tobytes() != b"tac.g111_lineage_envelope_arrays.v1"
+        or payload.dtype != np.dtype(np.uint8)
+        or payload.ndim != 1
+        or length_array.dtype != np.dtype(np.int64)
+        or length_array.shape != ()
+        or sha_array.dtype != np.dtype(np.uint8)
+        or sha_array.shape != (64,)
+    ):
+        raise FreshProducerLineageV1Error(
+            "native-v3 O6 lineage-envelope physical schema differs"
+        )
+    length = int(length_array.item())
+    if (
+        length <= 0
+        or length > payload.size
+        or np.any(payload[length:] != 0)
+    ):
+        raise FreshProducerLineageV1Error(
+            "native-v3 O6 lineage-envelope length or zero padding differs"
+        )
+    try:
+        result_sha256 = sha_array.tobytes().decode("ascii")
+        payload_decoded = ImmutableVerdictResult(
+            submission_seq=0,
+            result_id="g111-o6-lineage-envelope",
+            payload_bytes=payload[:length].tobytes(),
+            result_sha256=result_sha256,
+        ).payload
+    except (UnicodeDecodeError, ResultIntegrityError) as exc:
+        raise FreshProducerLineageV1Error(
+            "native-v3 O6 lineage-envelope content address differs"
+        ) from exc
+    if (
+        set(payload_decoded) != {"lineage"}
+        or not isinstance(payload_decoded["lineage"], dict)
+    ):
+        raise FreshProducerLineageV1Error(
+            "native-v3 O6 lineage-envelope payload differs"
+        )
+    return dict(payload_decoded["lineage"])
+
+
+def _validate_native_complete_trajectory(
+    *,
+    native: G111PhysicalNativeReceipt,
+    native_arrays: Mapping[str, Any],
+    deploy_arrays: Mapping[str, Any],
+    resume_arrays: Mapping[str, Any],
+    resume_epoch: int,
+) -> None:
+    """Require native O1/O3/O6 to reconstruct the exact legacy pair."""
+
+    physical_keys = set(native_arrays) - {MANIFEST_KEY}
+    if physical_keys != set(native.entries):
+        raise FreshProducerLineageV1Error(
+            "native-v3 receipt/physical payload keysets differ"
+        )
+    native_deploy = {
+        key.removeprefix("deploy."): native_arrays[key]
+        for key in physical_keys
+        if key.startswith("deploy.")
+    }
+    if set(native_deploy) != set(deploy_arrays):
+        raise FreshProducerLineageV1Error(
+            "native-v3 O1 deploy keyset differs from legacy deploy"
+        )
+    for key, value in deploy_arrays.items():
+        _equal_array(
+            native_deploy[key],
+            value,
+            label=f"deploy.{key}",
+        )
+
+    direct_resume = {
+        key.removeprefix("resume."): native_arrays[key]
+        for key in physical_keys
+        if key.startswith("resume.")
+    }
+    o3_arrays = {
+        key.removeprefix("controller."): native_arrays[key]
+        for key in physical_keys
+        if key.startswith("controller.__g111_o3__")
+    }
+    try:
+        o3 = g111_schedule_control_state_from_arrays(
+            o3_arrays,
+            prefix="__g111_o3__",
+        )
+    except G111ScheduleControlStateError as exc:
+        raise FreshProducerLineageV1Error(
+            "native-v3 O3 schedule/control state is invalid"
+        ) from exc
+    coordinate = o3["coordinate"]
+    if int(coordinate["completed_epoch"]) != resume_epoch:
+        raise FreshProducerLineageV1Error(
+            "native-v3 O3 completed epoch differs from legacy resume"
+        )
+    o3_resume = dict(o3["resume_control_arrays"])
+    o6_resume = _decode_native_lineage_envelope(native_arrays)
+    reconstructed: dict[str, Any] = {}
+    for label, state in (
+        ("O1", direct_resume),
+        ("O3", o3_resume),
+        ("O6", o6_resume),
+    ):
+        overlap = set(reconstructed) & set(state)
+        if overlap:
+            raise FreshProducerLineageV1Error(
+                f"native-v3 {label} overlaps another legacy-resume owner"
+            )
+        reconstructed.update(state)
+    missing_legacy = set(resume_arrays) - set(reconstructed)
+    native_only = set(reconstructed) - set(resume_arrays)
+    if missing_legacy or not native_only.issubset(set(o3_resume)):
+        raise FreshProducerLineageV1Error(
+            "native-v3 O1/O3/O6 do not cover the exact legacy resume keyset, "
+            "or native-only state escaped O3 custody"
+        )
+    for key, value in resume_arrays.items():
+        _equal_array(
+            reconstructed[key],
+            value,
+            label=f"resume.{key}",
+        )
 
 
 def _matching_namespace(
@@ -1063,9 +1269,15 @@ def open_fresh_producer_checkpoint_pair_v1(
     resume_checkpoint: Path,
     expected_resume_sha256: str,
     expected_current_launch_dsl_compile_hash: str,
+    native_checkpoint: Path | None = None,
+    expected_native_sha256: str | None = None,
 ) -> FreshProducerCheckpointPairV1:
     """Open and validate one mandatory deploy/full-state companion pair."""
 
+    if (native_checkpoint is None) != (expected_native_sha256 is None):
+        raise FreshProducerLineageV1Error(
+            "native checkpoint path and SHA-256 must be supplied together"
+        )
     expected_launch = require_sha256(
         expected_current_launch_dsl_compile_hash,
         label="expected current launch DSL compile hash",
@@ -1080,6 +1292,23 @@ def open_fresh_producer_checkpoint_pair_v1(
         expected_sha256=expected_resume_sha256,
         label="full-state resume companion",
     )
+    native: G111PhysicalNativeReceipt | None = None
+    native_physical: PhysicalNpzV1 | None = None
+    if native_checkpoint is not None and expected_native_sha256 is not None:
+        try:
+            native = open_g111_native_v3_physical(
+                native_checkpoint,
+                expected_sha256=expected_native_sha256,
+            )
+        except G111PhysicalNativeOpenError as exc:
+            raise FreshProducerLineageV1Error(
+                "native-v3 physical transaction failed validation"
+            ) from exc
+        native_physical = open_physical_npz(
+            native_checkpoint,
+            expected_sha256=expected_native_sha256,
+            label="native-v3 checkpoint",
+        )
     live, ema, optimizer, seed_state, seed_optimizer, polyak, cfg = (
         split_resume_state(resume.arrays)
     )
@@ -1096,7 +1325,16 @@ def open_fresh_producer_checkpoint_pair_v1(
         seed_optimizer=seed_optimizer,
         polyak=polyak,
         cfg=cfg,
+        native_complete_state=native is not None,
     )
+    if native is not None and native_physical is not None:
+        _validate_native_complete_trajectory(
+            native=native,
+            native_arrays=native_physical.arrays,
+            deploy_arrays=deploy.arrays,
+            resume_arrays=resume.arrays,
+            resume_epoch=resume_epoch,
+        )
     for key in FRESH_DEPLOY_KEYS:
         if key not in deploy.arrays:
             raise FreshProducerLineageV1Error(
@@ -1299,11 +1537,13 @@ def open_fresh_producer_checkpoint_pair_v1(
         seed_optimizer_tensor_count=len(seed_optimizer),
         polyak_tensor_count=len(polyak),
         config_array_count=len(cfg),
+        native=native,
+        complete_trajectory_proven=complete_state_manifest_proven,
         complete_state_manifest_proven=complete_state_manifest_proven,
     )
 
 
-_NODE_RECEIPT_KEYS: Final = frozenset(
+_NODE_RECEIPT_KEYS_V1: Final = frozenset(
     {
         "schema",
         "sequence_index",
@@ -1318,6 +1558,9 @@ _NODE_RECEIPT_KEYS: Final = frozenset(
         "parent_receipt",
         "receipt_sha256",
     }
+)
+_NODE_RECEIPT_KEYS_V2: Final = frozenset(
+    {*_NODE_RECEIPT_KEYS_V1, "native"}
 )
 _NODE_ROOT_FIELD_KEYS: Final = frozenset(
     {
@@ -1404,9 +1647,19 @@ def _open_physical_receipt(
         raise FreshProducerLineageV1Error(
             "physical-node receipt is not ASCII JSON"
         ) from exc
+    schema = parsed.get("schema") if isinstance(parsed, dict) else None
+    expected_keys = (
+        _NODE_RECEIPT_KEYS_V1
+        if schema == FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA
+        else (
+            _NODE_RECEIPT_KEYS_V2
+            if schema == FRESH_PHYSICAL_CHECKPOINT_NODE_NATIVE_SCHEMA
+            else frozenset()
+        )
+    )
     if (
         not isinstance(parsed, dict)
-        or set(parsed) != _NODE_RECEIPT_KEYS
+        or set(parsed) != expected_keys
         or _canonical_json_bytes(parsed) + b"\n" != payload
     ):
         raise FreshProducerLineageV1Error(
@@ -1468,7 +1721,10 @@ def _open_physical_node_once(
         receipt_path,
         expected_sha256=expected_receipt_sha256,
     )
-    if parsed["schema"] != FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA:
+    if parsed["schema"] not in {
+        FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA,
+        FRESH_PHYSICAL_CHECKPOINT_NODE_NATIVE_SCHEMA,
+    }:
         raise FreshProducerLineageV1Error(
             "physical-node receipt schema is wrong"
         )
@@ -1485,6 +1741,14 @@ def _open_physical_node_once(
         parsed["resume"],
         label="physical-node resume",
     )
+    native_identity = (
+        None
+        if parsed["schema"] == FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA
+        else _require_identity_dict(
+            parsed["native"],
+            label="physical-node native-v3",
+        )
+    )
     pair = open_fresh_producer_checkpoint_pair_v1(
         deploy_checkpoint=Path(str(deploy_identity["path"])),
         expected_deploy_sha256=str(deploy_identity["sha256"]),
@@ -1493,10 +1757,27 @@ def _open_physical_node_once(
         expected_current_launch_dsl_compile_hash=str(
             root_fields.get("current_launch_dsl_compile_hash", "")
         ),
+        native_checkpoint=(
+            None
+            if native_identity is None
+            else Path(str(native_identity["path"]))
+        ),
+        expected_native_sha256=(
+            None
+            if native_identity is None
+            else str(native_identity["sha256"])
+        ),
     )
     if (
         int(deploy_identity["bytes"]) != pair.deploy.bytes
         or int(resume_identity["bytes"]) != pair.resume.bytes
+        or (
+            native_identity is not None
+            and (
+                pair.native is None
+                or int(native_identity["bytes"]) != pair.native.file_bytes
+            )
+        )
     ):
         raise FreshProducerLineageV1Error(
             "physical-node deploy/resume byte identity differs"
@@ -1549,9 +1830,19 @@ def _open_physical_node_once(
         raise FreshProducerLineageV1Error(
             "physical-node resume filename is not content addressed"
         )
+    if pair.native is not None and Path(pair.native.path).name != (
+        f"{pair.checkpoint_id_sha256}.native.npz"
+    ):
+        raise FreshProducerLineageV1Error(
+            "physical-node native-v3 filename is not content addressed"
+        )
     if (
         receipt.parent != pair.deploy.path.parent
         or receipt.parent != pair.resume.path.parent
+        or (
+            pair.native is not None
+            and receipt.parent != Path(pair.native.path).parent
+        )
         or receipt.parent.name != "fresh_lineage"
     ):
         raise FreshProducerLineageV1Error(
@@ -1752,6 +2043,8 @@ def write_fresh_physical_checkpoint_node_v1(
     expected_current_launch_dsl_compile_hash: str,
     parent_receipt_path: Path | None = None,
     expected_parent_receipt_sha256: str | None = None,
+    native_checkpoint: Path | None = None,
+    expected_native_sha256: str | None = None,
 ) -> FreshProducerPhysicalCheckpointNodeV1:
     """Publish one immutable node after physically proving its complete parent chain."""
 
@@ -1787,6 +2080,8 @@ def write_fresh_physical_checkpoint_node_v1(
         expected_current_launch_dsl_compile_hash=(
             expected_current_launch_dsl_compile_hash
         ),
+        native_checkpoint=native_checkpoint,
+        expected_native_sha256=expected_native_sha256,
     )
     parent_node: FreshProducerPhysicalCheckpointNodeV1 | None = None
     if pair.parent_checkpoint_id_sha256 == ROOT_PARENT_CHECKPOINT_ID:
@@ -1858,12 +2153,18 @@ def write_fresh_physical_checkpoint_node_v1(
     checkpoint_id = pair.checkpoint_id_sha256
     deploy_target = lineage_dir / f"{checkpoint_id}.deploy.npz"
     resume_target = lineage_dir / f"{checkpoint_id}.resume.npz"
+    native_target = lineage_dir / f"{checkpoint_id}.native.npz"
     receipt_target = lineage_dir / f"{checkpoint_id}.receipt.json"
     missing_payload_bytes = sum(
         size
         for path, size in (
             (deploy_target, pair.deploy.bytes),
             (resume_target, pair.resume.bytes),
+            *(
+                ()
+                if pair.native is None
+                else ((native_target, pair.native.file_bytes),)
+            ),
         )
         if not path.exists()
     )
@@ -1883,9 +2184,22 @@ def write_fresh_physical_checkpoint_node_v1(
     try:
         deploy_payload = pair.deploy.path.read_bytes()
         resume_payload = pair.resume.path.read_bytes()
+        native_payload = (
+            None
+            if pair.native is None
+            else Path(pair.native.path).read_bytes()
+        )
         if (
             hashlib.sha256(deploy_payload).hexdigest() != pair.deploy.sha256
             or hashlib.sha256(resume_payload).hexdigest() != pair.resume.sha256
+            or (
+                pair.native is not None
+                and (
+                    native_payload is None
+                    or hashlib.sha256(native_payload).hexdigest()
+                    != pair.native.file_sha256
+                )
+            )
         ):
             raise FreshProducerLineageV1Error(
                 "source checkpoint pair changed before immutable publication"
@@ -1900,6 +2214,12 @@ def write_fresh_physical_checkpoint_node_v1(
             resume_payload,
             scratch=scratch,
         )
+        if native_payload is not None:
+            _write_immutable_or_verify(
+                native_target,
+                native_payload,
+                scratch=scratch,
+            )
         deploy_identity = {
             "path": str(deploy_target),
             "bytes": len(deploy_payload),
@@ -1910,6 +2230,15 @@ def write_fresh_physical_checkpoint_node_v1(
             "bytes": len(resume_payload),
             "sha256": pair.resume.sha256,
         }
+        native_identity = (
+            None
+            if pair.native is None
+            else {
+                "path": str(native_target),
+                "bytes": len(native_payload),
+                "sha256": pair.native.file_sha256,
+            }
+        )
         parent_identity = (
             None
             if parent_node is None
@@ -1920,7 +2249,11 @@ def write_fresh_physical_checkpoint_node_v1(
             }
         )
         body = {
-            "schema": FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA,
+            "schema": (
+                FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA
+                if pair.native is None
+                else FRESH_PHYSICAL_CHECKPOINT_NODE_NATIVE_SCHEMA
+            ),
             "sequence_index": sequence_index,
             "root_sha256": pair.root_sha256,
             "checkpoint_id_sha256": checkpoint_id,
@@ -1946,6 +2279,8 @@ def write_fresh_physical_checkpoint_node_v1(
             "resume": resume_identity,
             "parent_receipt": parent_identity,
         }
+        if native_identity is not None:
+            body["native"] = native_identity
         receipt_payload = (
             _canonical_json_bytes(_seal_node_receipt(body)) + b"\n"
         )
@@ -1974,6 +2309,14 @@ def write_fresh_physical_checkpoint_node_v1(
         chain.current.pair.deploy.sha256 != pair.deploy.sha256
         or chain.current.pair.resume.sha256 != pair.resume.sha256
         or chain.current.pair.checkpoint_id_sha256 != checkpoint_id
+        or (
+            pair.native is not None
+            and (
+                chain.current.pair.native is None
+                or chain.current.pair.native.file_sha256
+                != pair.native.file_sha256
+            )
+        )
     ):
         raise FreshProducerLineageV1Error(
             "published physical checkpoint node differs after recursive reopen"
@@ -1987,16 +2330,17 @@ def write_fresh_physical_checkpoint_node_v1(
 __all__ = [
     "FRESH_DEPLOY_KEYS",
     "FRESH_LINEAGE_DERIVED_CFG_KEYS",
+    "FRESH_PHYSICAL_CHECKPOINT_NODE_NATIVE_SCHEMA",
     "FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA",
     "FRESH_PRODUCER_LINEAGE_SCHEMA",
     "FRESH_RESUME_KEYS",
     "FRESH_ROOT_KEYS",
+    "G109_TARGET_PROJECTION_SHA_KEY",
     "G111_COMPLETE_TRAJECTORY_KEY",
     "G111_COMPLETE_TRAJECTORY_SCHEMA",
     "G111_TRAJECTORY_COMPONENTS",
-    "G109_TARGET_PROJECTION_SHA_KEY",
-    "LEGACY_RESUME_SEMANTIC_SCHEMA",
     "LEGACY_EVENT_PREFIXES",
+    "LEGACY_RESUME_SEMANTIC_SCHEMA",
     "RESUME_EMA_PREFIX",
     "RESUME_EVENT_LEDGER_SCHEMA",
     "RESUME_LIVE_PREFIX",

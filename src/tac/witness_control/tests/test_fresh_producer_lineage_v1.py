@@ -8,6 +8,21 @@ import numpy as np
 import pytest
 
 from tac.witness_control import fresh_producer_lineage_v1 as subject
+from tac.witness_control.g111_schedule_control_state_v1 import (
+    new_state as new_g111_schedule_control_state,
+)
+from tac.witness_control.g111_schedule_control_state_v1 import (
+    state_arrays as g111_schedule_control_state_arrays,
+)
+from tac.witness_control.g111_verdict_barrier_v1 import ImmutableVerdictResult
+from tac.witness_control.trajectory_transaction_v2 import (
+    ATOMIC_OWNERS,
+    CANONICAL_DOMAIN_COVERAGE,
+    MANIFEST_KEY,
+    build_manifest,
+    manifest_array,
+    manifest_from_array,
+)
 
 
 def _sha(label: str) -> str:
@@ -18,6 +33,116 @@ def _write_npz(path: Path, arrays: dict[str, np.ndarray]) -> str:
     np.savez(path, **arrays)
     payload = path.read_bytes()
     return hashlib.sha256(payload).hexdigest()
+
+
+def _native_arrays_for_pair(
+    *,
+    deploy: dict[str, np.ndarray],
+    resume: dict[str, np.ndarray],
+    typed_config_sha256: str,
+) -> dict[str, np.ndarray]:
+    direct_prefixes = (
+        subject.RESUME_LIVE_PREFIX,
+        subject.RESUME_EMA_PREFIX,
+        subject.RESUME_OPT_PREFIX,
+        subject.RESUME_SEED_LIVE_PREFIX,
+        subject.RESUME_SEED_OPT_PREFIX,
+        subject.RESUME_POLYAK_PREFIX,
+    )
+    direct_resume = {
+        key: value
+        for key, value in resume.items()
+        if key.startswith(direct_prefixes)
+    }
+    lineage = {
+        key: np.atleast_1d(value)
+        for key, value in resume.items()
+        if key.startswith("__cfg_fresh_")
+    }
+    control = {
+        key: np.atleast_1d(value)
+        for key, value in resume.items()
+        if key not in direct_resume and key not in lineage
+    }
+    epoch = int(np.asarray(resume["__resume_epoch"]).item())
+    o3 = new_g111_schedule_control_state(
+        typed_config_sha256=typed_config_sha256,
+        completed_epoch=epoch,
+        next_epoch=epoch + 1,
+        accepted_optimizer_steps=0,
+        stop_latched=False,
+        control_scalars={},
+        resume_control_arrays=control,
+    )
+    o3_arrays = g111_schedule_control_state_arrays(
+        o3,
+        prefix="__g111_o3__",
+    )
+    encoded_o6 = ImmutableVerdictResult.capture(
+        submission_seq=0,
+        result_id="g111-o6-lineage-envelope",
+        payload={"lineage": lineage},
+    )
+    o6_payload = np.zeros(64 * 1024, dtype=np.uint8)
+    o6_payload[: len(encoded_o6.payload_bytes)] = np.frombuffer(
+        encoded_o6.payload_bytes,
+        dtype=np.uint8,
+    )
+    by_owner = {
+        ATOMIC_OWNERS[0]: {
+            **{f"deploy.{key}": value for key, value in deploy.items()},
+            **{
+                f"resume.{key}": value
+                for key, value in direct_resume.items()
+            },
+        },
+        ATOMIC_OWNERS[1]: {
+            "controller.__test_o2_state": np.asarray([1], dtype=np.int64),
+        },
+        ATOMIC_OWNERS[2]: {
+            f"controller.{key}": value
+            for key, value in o3_arrays.items()
+        },
+        ATOMIC_OWNERS[3]: {
+            "barrier.__test_o4_state": np.asarray([1], dtype=np.int64),
+        },
+        ATOMIC_OWNERS[4]: {
+            "controller.__test_o5_state": np.asarray([1], dtype=np.int64),
+        },
+        ATOMIC_OWNERS[5]: {
+            "lineage.__g111_o6__schema": np.frombuffer(
+                b"tac.g111_lineage_envelope_arrays.v1",
+                dtype=np.uint8,
+            ).copy(),
+            "lineage.__g111_o6__payload": o6_payload,
+            "lineage.__g111_o6__payload_length": np.asarray(
+                len(encoded_o6.payload_bytes),
+                dtype=np.int64,
+            ),
+            "lineage.__g111_o6__sha256": np.frombuffer(
+                encoded_o6.result_sha256.encode("ascii"),
+                dtype=np.uint8,
+            ).copy(),
+        },
+    }
+    arrays = {
+        key: np.asarray(value)
+        for state in by_owner.values()
+        for key, value in state.items()
+    }
+    manifest = build_manifest(
+        arrays,
+        owner_claims={
+            owner: tuple(sorted(state))
+            for owner, state in by_owner.items()
+        },
+        activity=dict.fromkeys(ATOMIC_OWNERS, True),
+        domain_coverage=dict(CANONICAL_DOMAIN_COVERAGE),
+    )
+    return {
+        **arrays,
+        MANIFEST_KEY: manifest_array(manifest),
+    }
 
 
 def _source_pair_arrays(
@@ -218,6 +343,7 @@ def _publish_node(
     launch_dsl: str,
     parent: subject.FreshProducerPhysicalCheckpointNodeV1 | None = None,
     run_name: str = "run",
+    native: dict[str, np.ndarray] | None = None,
 ) -> subject.FreshProducerPhysicalCheckpointNodeV1:
     source_dir = tmp_path / "sources"
     source_dir.mkdir(exist_ok=True)
@@ -225,8 +351,14 @@ def _publish_node(
     output_dir.mkdir(exist_ok=True)
     deploy_path = source_dir / f"{name}.deploy.npz"
     resume_path = source_dir / f"{name}.resume.npz"
+    native_path = source_dir / f"{name}.native.npz"
     deploy_sha = _write_npz(deploy_path, deploy)
     resume_sha = _write_npz(resume_path, resume)
+    native_sha = (
+        None
+        if native is None
+        else _write_npz(native_path, native)
+    )
     return subject.write_fresh_physical_checkpoint_node_v1(
         out_dir=output_dir,
         deploy_checkpoint=deploy_path,
@@ -240,6 +372,8 @@ def _publish_node(
         expected_parent_receipt_sha256=(
             None if parent is None else parent.receipt_sha256
         ),
+        native_checkpoint=None if native is None else native_path,
+        expected_native_sha256=native_sha,
     )
 
 
@@ -313,6 +447,128 @@ def test_v3_skeleton_manifest_cannot_claim_complete_trajectory(
         match="skeleton-only",
     ):
         _open(tmp_path, deploy, resume, launch_dsl)
+
+
+def test_v3_native_transaction_proves_complete_trajectory_and_scalar_codec(
+    tmp_path: Path,
+) -> None:
+    deploy, resume, launch_dsl = _source_pair_arrays(
+        semantic_schema=subject.RESUME_SEMANTIC_SCHEMA,
+        include_complete_manifest=False,
+    )
+    deploy_path = tmp_path / "deploy.npz"
+    resume_path = tmp_path / "resume.npz"
+    native_path = tmp_path / "native.npz"
+    deploy_sha = _write_npz(deploy_path, deploy)
+    resume_sha = _write_npz(resume_path, resume)
+    native_sha = _write_npz(
+        native_path,
+        _native_arrays_for_pair(
+            deploy=deploy,
+            resume=resume,
+            typed_config_sha256=launch_dsl,
+        ),
+    )
+
+    pair = subject.open_fresh_producer_checkpoint_pair_v1(
+        deploy_checkpoint=deploy_path,
+        expected_deploy_sha256=deploy_sha,
+        resume_checkpoint=resume_path,
+        expected_resume_sha256=resume_sha,
+        expected_current_launch_dsl_compile_hash=launch_dsl,
+        native_checkpoint=native_path,
+        expected_native_sha256=native_sha,
+    )
+
+    assert pair.complete_state_manifest_proven is True
+    assert pair.complete_trajectory_proven is True
+    assert pair.native is not None
+    assert pair.native.file_sha256 == native_sha
+
+
+def test_v3_native_transaction_crossmix_fails_closed(
+    tmp_path: Path,
+) -> None:
+    deploy, resume, launch_dsl = _source_pair_arrays(
+        semantic_schema=subject.RESUME_SEMANTIC_SCHEMA,
+    )
+    native_arrays = _native_arrays_for_pair(
+        deploy=deploy,
+        resume=resume,
+        typed_config_sha256=launch_dsl,
+    )
+    native_arrays["deploy.layer.bias"] = np.ones(4, dtype=np.float32)
+    manifest_payload = {
+        key: value
+        for key, value in native_arrays.items()
+        if key != MANIFEST_KEY
+    }
+    old_manifest = manifest_from_array(native_arrays[MANIFEST_KEY])
+    owner_claims = {
+        row.owner: row.keys
+        for row in old_manifest.owner_claims
+    }
+    native_arrays[MANIFEST_KEY] = manifest_array(
+        build_manifest(
+            manifest_payload,
+            owner_claims=owner_claims,
+            activity=dict.fromkeys(ATOMIC_OWNERS, True),
+            domain_coverage=dict(CANONICAL_DOMAIN_COVERAGE),
+        )
+    )
+    deploy_path = tmp_path / "deploy.npz"
+    resume_path = tmp_path / "resume.npz"
+    native_path = tmp_path / "native.npz"
+    deploy_sha = _write_npz(deploy_path, deploy)
+    resume_sha = _write_npz(resume_path, resume)
+    native_sha = _write_npz(native_path, native_arrays)
+    with pytest.raises(
+        subject.FreshProducerLineageV1Error,
+        match=r"differs at deploy\.layer\.bias",
+    ):
+        subject.open_fresh_producer_checkpoint_pair_v1(
+            deploy_checkpoint=deploy_path,
+            expected_deploy_sha256=deploy_sha,
+            resume_checkpoint=resume_path,
+            expected_resume_sha256=resume_sha,
+            expected_current_launch_dsl_compile_hash=launch_dsl,
+            native_checkpoint=native_path,
+            expected_native_sha256=native_sha,
+        )
+
+
+def test_v3_native_physical_node_receipt_recursively_reopens(
+    tmp_path: Path,
+) -> None:
+    deploy, resume, launch_dsl = _source_pair_arrays(
+        semantic_schema=subject.RESUME_SEMANTIC_SCHEMA,
+    )
+    node = _publish_node(
+        tmp_path,
+        name="native-root",
+        deploy=deploy,
+        resume=resume,
+        launch_dsl=launch_dsl,
+        native=_native_arrays_for_pair(
+            deploy=deploy,
+            resume=resume,
+            typed_config_sha256=launch_dsl,
+        ),
+    )
+    receipt = json.loads(node.receipt_path.read_text(encoding="ascii"))
+    chain = subject.open_fresh_physical_checkpoint_chain_v1(
+        node.receipt_path,
+        expected_receipt_sha256=node.receipt_sha256,
+        expected_current_launch_dsl_compile_hash=launch_dsl,
+    )
+    assert (
+        receipt["schema"]
+        == subject.FRESH_PHYSICAL_CHECKPOINT_NODE_NATIVE_SCHEMA
+    )
+    assert receipt["native"]["path"].endswith(".native.npz")
+    assert node.complete_trajectory_proven is True
+    assert chain.complete_trajectory_proven is True
+    assert chain.current.pair.native is not None
 
 
 @pytest.mark.parametrize("direction", ["declared_without_heavy", "heavy_without_declared"])
