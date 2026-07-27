@@ -322,3 +322,35 @@ plus a typed richer-control request, not a fake success and not a family kill.
 
 The bounded outcome never mutates the competitive pointer. Its receipt binds
 whatever strict live target is current when the receipt is written.
+
+## Real full rank-ladder result and stop decision — 2026-07-27
+
+The governed pair-0 run completed all pre-registered ranks against the exact
+G94 non-final semantic Y1. Exact receiver/PoseNet replay measured:
+
+| treatment | d_pose | Pose term | counted wire |
+|---|---:|---:|---:|
+| copy exact conditional Y1 | 195.3849207449817 | 44.202366536757026 | 0 |
+| rank 6, 48x64 | 184.80407179434312 | 42.98884411034369 | 55,932 B |
+| rank 12, 48x64 | 113.50078431819412 | 33.689877458695825 | 111,288 B |
+| rank 24, 48x64 | 71.80534459059021 | 26.79651928713694 | 222,000 B |
+
+This is strong real inverse-control signal but a coupled frontier miss. At the
+live `0.172` target, zero Seg and zero rate permit at most mean
+`d_pose=0.0029584`, or sum `1.77504` over n600. Rank-24 pair 0 alone is
+`40.4528x` that entire idealized population sum. The scoped action is therefore
+to stop the predeclared rank-48/grid-64x96 escalation and any full-n600 fit on
+this exact G94 state. This is not a family kill: retain the costates, singular
+values, coefficient checkpoints, and 42 exact ablation rows as a proposal
+dictionary for a final-Y1-conditioned nonlinear or feature-modulated carrier.
+
+The run also exposed a numerical sharp edge in the LM dual solve for tiny Gram
+spectra. Post-run code uses the algebraically equivalent damped SVD spectral
+filter and has direct-equivalence plus tiny-Jacobian regression coverage. The
+raw measurement remains bound to its original preflight tool hash; the
+hardening is a subsequent implementation change, not a claim to have rerun it.
+
+The exact raw receipt is
+`g95_population_pose_preimage_chart_receipt_20260727.json`. The superseding
+coupled classification is
+`g95_pair0_full_rank_ladder_adversarial_receipt_20260727.json`.

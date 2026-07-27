@@ -40,6 +40,7 @@ from tools.measure_taskspace_g95_population_pose_preimage_chart import (
     REACHABILITY_THRESHOLD,
     G95RunnerError,
     _live_competitive_target_snapshot,
+    _lm_minimum_norm_delta,
     _load_config,
     _load_or_build_basis,
     _resume_state_array,
@@ -580,3 +581,37 @@ def test_live_competitive_target_is_pointer_derived_and_custodied() -> None:
     )
     assert snapshot["role"] == "REPORTING_CUSTODY_ONLY_NOT_G95_FIT_OR_DECODE_STATE"
     assert len(snapshot["sha256"]) == 64
+
+
+def test_lm_minimum_norm_spectral_solve_is_exact_and_tiny_jacobian_safe() -> None:
+    jacobian = np.asarray(
+        [
+            [1.0, 2.0, -1.0],
+            [0.5, -0.25, 3.0],
+        ],
+        dtype=np.float64,
+    )
+    residual = np.asarray([2.0, -1.0], dtype=np.float64)
+    damping = 0.125
+    gram = jacobian @ jacobian.T
+    maximum_eigenvalue = float(np.linalg.eigvalsh(gram)[-1])
+    expected = -jacobian.T @ np.linalg.solve(
+        gram + damping * maximum_eigenvalue * np.eye(2, dtype=np.float64),
+        residual,
+    )
+    actual, observed_maximum = _lm_minimum_norm_delta(
+        jacobian=jacobian,
+        residual=residual,
+        damping=damping,
+    )
+    np.testing.assert_allclose(actual, expected, rtol=1e-12, atol=1e-12)
+    assert observed_maximum == pytest.approx(maximum_eigenvalue)
+
+    tiny, tiny_maximum = _lm_minimum_norm_delta(
+        jacobian=np.full((6, 24), 1e-200, dtype=np.float64),
+        residual=np.arange(6, dtype=np.float64),
+        damping=1e-12,
+    )
+    assert np.all(np.isfinite(tiny))
+    assert float(np.linalg.norm(tiny)) < 1e-150
+    assert tiny_maximum == 1e-30

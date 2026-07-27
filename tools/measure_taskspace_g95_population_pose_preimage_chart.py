@@ -1207,14 +1207,16 @@ def _lm_minimum_norm_delta(
 ) -> tuple[np.ndarray, float]:
     j = np.asarray(jacobian, dtype=np.float64)
     r = np.asarray(residual, dtype=np.float64)
-    gram = j @ j.T
-    maximum_eigenvalue = float(max(np.linalg.eigvalsh(gram)[-1], 1e-30))
-    system = gram + damping * maximum_eigenvalue * np.eye(gram.shape[0], dtype=np.float64)
     try:
-        dual = np.linalg.solve(system, r)
+        left_vectors, singular_values, right_vectors_t = np.linalg.svd(
+            j,
+            full_matrices=False,
+        )
     except np.linalg.LinAlgError:
-        dual = np.linalg.lstsq(system, r, rcond=None)[0]
-    delta = -(j.T @ dual)
+        raise G95RunnerError("damped natural-gradient SVD did not converge") from None
+    maximum_eigenvalue = float(max(singular_values[0] ** 2, 1e-30))
+    spectral_filter = singular_values / (singular_values * singular_values + damping * maximum_eigenvalue)
+    delta = -(right_vectors_t.T @ (spectral_filter * (left_vectors.T @ r)))
     if not np.all(np.isfinite(delta)):
         raise G95RunnerError("damped natural-gradient step became nonfinite")
     return delta, maximum_eigenvalue

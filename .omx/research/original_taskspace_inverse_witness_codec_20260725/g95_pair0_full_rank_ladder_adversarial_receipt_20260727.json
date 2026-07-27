@@ -1,0 +1,93 @@
+{
+  "schema": "tac.g95_pair0_full_rank_ladder_adversarial_receipt.v1",
+  "lane": "lane_g95_population_pose_inverse_control_20260727",
+  "reviewed_at_utc": "2026-07-27T09:09:00Z",
+  "source_measurement": {
+    "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g95_population_pose_preimage_chart_receipt_20260727.json",
+    "bytes": 138816,
+    "sha256": "853f2b03acda466bc4deb53b9d4c6e93fac2e030911c7bdc468a974c32cb7ab0",
+    "run_root": "/Volumes/VertigoDataTier/pact/g95_population_pose_preimage_chart_20260727_r1",
+    "safe_run_elapsed_seconds": 1772.98,
+    "safe_run_peak_rss_mib": 3704,
+    "source_pair_ids": [
+      0
+    ],
+    "non_final_semantic_y1": true
+  },
+  "exact_rows": [
+    {
+      "treatment_id": "COPY_EXACT_CONDITIONAL_Y1",
+      "d_pose": 195.3849207449817,
+      "pose_term": 44.202366536757026,
+      "counted_wire_bytes": 0
+    },
+    {
+      "treatment_id": "RANK_06_48X64",
+      "d_pose": 184.80407179434312,
+      "pose_term": 42.98884411034369,
+      "counted_wire_bytes": 55932
+    },
+    {
+      "treatment_id": "RANK_12_48X64",
+      "d_pose": 113.50078431819412,
+      "pose_term": 33.689877458695825,
+      "counted_wire_bytes": 111288
+    },
+    {
+      "treatment_id": "RANK_24_48X64",
+      "d_pose": 71.80534459059021,
+      "pose_term": 26.79651928713694,
+      "counted_wire_bytes": 222000
+    }
+  ],
+  "coupled_live_pointer_falsifier": {
+    "competitive_target": 0.172,
+    "pointer_sha256_observed_by_source": "06027fa2dcb695d755858d6e101c7be57f1fbe5570903eb4bf8c5e2f38510388",
+    "zero_rate_zero_seg_maximum_mean_d_pose": 0.0029584,
+    "zero_rate_zero_seg_maximum_sum_d_pose_n600": 1.77504,
+    "rank24_pair0_d_pose": 71.80534459059021,
+    "rank24_pair0_over_entire_zero_rate_n600_pose_budget": 40.452803649827736,
+    "proof": "Even if the other 599 pairs, Seg, and rate were perfect, this one exact pair exceeds the entire n600 Pose budget at the live target.",
+    "scope": "EXACT_G94_NON_FINAL_Y1_PLUS_STATIC_SHARED_LINEAR_48X64_CHART",
+    "not_a_family_kill": true
+  },
+  "rate_diagnostic": {
+    "g94_fixture_outer_archive_bytes": 129799,
+    "rank24_raw_counted_wire_bytes": 222000,
+    "raw_sum_bytes": 351799,
+    "raw_sum_rate_term": 0.23424851384942677,
+    "authority": "DIAGNOSTIC_ONLY_BEFORE_JOINT_OUTER_ZIP",
+    "reason": "Joint outer coding may compress across sections, so raw addition is not an archive-price claim."
+  },
+  "signal_harvest": {
+    "costate_basis_ranks": [
+      6,
+      12,
+      24
+    ],
+    "exact_direction_ablation_rows": 42,
+    "checkpoint_manifest_bound_in_source_receipt": true,
+    "use": "proposal_dictionary_and_controller_telemetry_for_a_final_Y1_conditioned_nonlinear_or_feature_modulated_carrier",
+    "do_not_use": "blind_static_rank48_or_grid64x96_escalation"
+  },
+  "adversarial_findings": [
+    "The rank ladder proves strong real inverse-control signal but remains orders of magnitude outside the coupled frontier surface.",
+    "Several exact rank24 ablations improve d_pose, so retained SVD order is not a byte-optimal nonlinear subset and final joint descent/pruning remains required.",
+    "The encoder-side LM solve emitted overflow and invalid matmul warnings; the post-run implementation now uses the algebraically equivalent damped SVD spectral filter.",
+    "The source receipt's G88/G94 typed-product blocker was closed afterward by commit 0d5f56ac5e; final-Y1 refit and public/evaluator closure remain open."
+  ],
+  "decision": {
+    "status": "STOP_CURRENT_G94_STATIC_SHARED_CHART_ESCALATION",
+    "next_action": "BUILD_SUBSTITUTIVE_FINAL_SEMANTIC_Y1_THEN_REFIT_ONE_EXCLUSIVE_Y0_OWNER",
+    "rank48_grid64x96_authorized": false,
+    "full_n600_current_g94_g95_fit_authorized": false,
+    "preserve_all_checkpoints": true
+  },
+  "authority": {
+    "research_only": true,
+    "candidate_claim": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer_moved": false
+  }
+}
