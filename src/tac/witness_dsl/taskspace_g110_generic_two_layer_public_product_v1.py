@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Receiver-closed two-layer packet over a generic final-Y1 provider.
+"""Public-runtime two-layer packet over a generic final-Y1 provider.
 
 The counted object is one semantic Y1 program plus one conditional Y0 stream::
 
@@ -17,6 +17,11 @@ fit either stream, claim source closure, claim an evaluator score, or move the
 frontier pointer.  Fresh source, same-forward batch-16 target/margin custody,
 batch-16 PoseNet custody, and fresh checkpoint lineage are mandatory external
 compile inputs and remain outside candidate bytes.
+
+The deterministic one-member ``archive.zip`` is only the counted payload
+container.  It is not receiver closure without the separately sealed public
+runtime tree, clean-extract double decode, exact output-video proof, and
+recursive ``upstream/evaluate.py`` evidence.
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ import struct
 import zipfile
 import zlib
 from dataclasses import dataclass, field
+from enum import IntEnum
 from pathlib import Path
 from typing import Any, Final
 
@@ -118,9 +124,18 @@ G109_CONSUMER_SCHEMA: Final = "tac.taskspace_v9_training_target_consumer.v1"
 G109_PROJECTION_KEY: Final = "__cfg_g109_target_projection_json"
 G109_PROJECTION_SHA_KEY: Final = "__cfg_g109_target_projection_sha256"
 G105_ADAPTER_SOURCE_SHA256: Final = (
-    "588b0ae20151565b86b235d101b3de46b89dbaf8cce9183614b48ec5b1702e65"
+    "549f2cd67d0e2961560faa810166332970a8270cdee681c9d15c748d68ed2aad"
 )
-G105_ADAPTER_GIT_BLOB_SHA1: Final = "68fd3f226bfc25b5dba707ca50e7caaa004a23ea"
+G105_ADAPTER_GIT_BLOB_SHA1: Final = "1a354d51e10dd7d38097d74c96bbc2206f93e994"
+G111_POSE_PARAM_KEYS: Final = frozenset(
+    {"pose_carrier.xi_stored", "pose_carrier.dxi"}
+)
+G111_POSE_CHECKPOINT_CONTRACT_SCHEMA: Final = (
+    "tac.v9_pose_carrier_checkpoint_contract.v2"
+)
+G111_POSE_Y1_SELECTED_PREIMAGE_SCHEMA: Final = (
+    "tac.v10_factor2_selected_preimage.v1"
+)
 
 _HEADER: Final = struct.Struct(">8sBBHHHBBHHBBIIII32sI")
 _ZIP_TIMESTAMP: Final = (1980, 1, 1, 0, 0, 0)
@@ -129,6 +144,16 @@ _F32_BE: Final = np.dtype(">f4")
 
 class G110TwoLayerError(ValueError):
     """The generic provider, conditional stream, custody, or packet failed."""
+
+
+class G110OuterZipMethodV1(IntEnum):
+    """Legal deterministic counted-archive methods, in tie-break order."""
+
+    STORE = zipfile.ZIP_STORED
+    DEFLATE = zipfile.ZIP_DEFLATED
+
+
+_OUTER_ZIP_METHODS: Final = tuple(G110OuterZipMethodV1)
 
 
 def _sha256(payload: bytes | memoryview) -> str:
@@ -183,6 +208,74 @@ def _immutable_array(
     result = np.array(raw, dtype=dtype, copy=True, order="C")
     result.setflags(write=False)
     return result
+
+
+def _partition_g111_checkpoint_params(
+    params: dict[str, np.ndarray],
+    scalars: dict[str, object],
+) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+    """Separate the G105 semantic tensors from the exact generated-Y1 pose child.
+
+    G105 consumes only the shared trunk plus odd code rows.  A G111 checkpoint
+    may additionally contain the two table-mode pose tensors; those are owned
+    exclusively by the conditional compiler.  Any partial/extra pose subtree
+    fails closed instead of being silently dropped.
+    """
+
+    observed_pose = {key for key in params if key.startswith("pose_carrier.")}
+    if not observed_pose:
+        return dict(params), {}
+    if observed_pose != G111_POSE_PARAM_KEYS:
+        raise G110TwoLayerError(
+            "G111 pose tensor set is partial or contains an unconsumed member"
+        )
+    if (
+        scalars.get("__cfg_pose_carrier_contract_schema")
+        != G111_POSE_CHECKPOINT_CONTRACT_SCHEMA
+        or int(scalars.get("__cfg_pose_carrier", 0)) != 1
+        or scalars.get("__cfg_pose_carrier_source") != "generated_y1"
+        or scalars.get("__cfg_pose_carrier_residual_mode") != "table"
+        or scalars.get("__cfg_pose_carrier_xi_formula")
+        != "xi_stored+residual_scale*dxi"
+        or scalars.get("__cfg_pose_carrier_y1_selected_preimage_schema")
+        != G111_POSE_Y1_SELECTED_PREIMAGE_SCHEMA
+        or tuple(
+            int(value)
+            for value in np.asarray(
+                scalars.get("__cfg_pose_carrier_native_hw", ()),
+                dtype=np.int64,
+            ).reshape(-1)
+        )
+        != (874, 1164)
+    ):
+        raise G110TwoLayerError(
+            "G111 pose tensors lack exact generated_y1/table decode custody"
+        )
+    for key in (
+        "__cfg_pose_carrier_residual_scale",
+        "__cfg_pose_carrier_s_t",
+        "__cfg_pose_carrier_s_r",
+        "__cfg_pose_carrier_pitch",
+    ):
+        try:
+            value = float(scalars[key])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise G110TwoLayerError(
+                f"G111 pose checkpoint lacks finite scalar {key}"
+            ) from exc
+        if not math.isfinite(value):
+            raise G110TwoLayerError(
+                f"G111 pose checkpoint scalar {key} is non-finite"
+            )
+    semantic = {
+        key: value
+        for key, value in params.items()
+        if key not in G111_POSE_PARAM_KEYS
+    }
+    pose = {key: params[key] for key in sorted(G111_POSE_PARAM_KEYS)}
+    if set(semantic).intersection(pose) or set(semantic).union(pose) != set(params):
+        raise AssertionError("G111 tensor ownership partition is not total/disjoint")
+    return semantic, pose
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -268,11 +361,19 @@ class G110Batch16SourcePoseCustodyV1:
             params, scalars, exact_checkpoint_sha, _checkpoint_bytes = (
                 _g105_checkpoint_runtime_state(checkpoint_path)
             )
-            config = _g105_checkpoint_config(params, scalars)
+            semantic_params, _pose_params = _partition_g111_checkpoint_params(
+                params,
+                scalars,
+            )
+            config = _g105_checkpoint_config(semantic_params, scalars)
             rederived_program = compile_v9_from_state(
                 config=config,
-                params={key: value for key, value in params.items() if key != "code"},
-                interleaved_code=params["code"],
+                params={
+                    key: value
+                    for key, value in semantic_params.items()
+                    if key != "code"
+                },
+                interleaved_code=semantic_params["code"],
             )
             rederived_packet = encode_v9_packet(rederived_program)
         except (OSError, ValueError, ExactV9SemanticRootError) as exc:
@@ -1124,6 +1225,46 @@ def _encode_packet(
     return packet
 
 
+def build_g110_rank_zero_semantic_floor_packet(
+    semantic_packet: bytes,
+) -> bytes:
+    """Wrap one exact semantic provider in the receiver-valid ``Y0 == Y1`` floor."""
+
+    provider = open_final_y1_provider(semantic_packet)
+    packet = _encode_packet(
+        semantic_packet=provider.packet,
+        final_y1_binding=final_y1_binding_sha256(provider),
+        basis=np.empty((0, 0, 0, SCORER_CHANNELS), dtype=np.int8),
+        scales=np.empty((0,), dtype=np.float32),
+        coefficients=np.empty((PAIR_COUNT_N600, 0), dtype=np.int16),
+    )
+    parsed = parse_g110_two_layer_v1(packet)
+    if (
+        parsed.semantic_packet != provider.packet
+        or parsed.basis_q.shape != (0, 0, 0, SCORER_CHANNELS)
+        or parsed.combined_scales.shape != (0,)
+        or parsed.coefficients_q.shape != (PAIR_COUNT_N600, 0)
+    ):
+        raise AssertionError("rank-zero semantic floor changed under parse-back")
+    return packet
+
+
+def render_g110_rank_zero_scorer_pair(
+    packet: bytes,
+    pair_id: int,
+) -> np.ndarray:
+    """Decode one rank-zero pair and prove its receiver equation is ``Y0 == Y1``."""
+
+    parsed = parse_g110_two_layer_v1(packet)
+    if parsed.basis_q.shape[0] != 0:
+        raise G110TwoLayerError("semantic-floor render requires rank-zero G110")
+    provider = open_final_y1_provider(parsed.semantic_packet)
+    pair = parsed.render_scorer_pair(provider, pair_id)
+    if not np.array_equal(pair[0], pair[1]):
+        raise AssertionError("rank-zero receiver violated Y0 == Y1")
+    return pair
+
+
 @dataclass(frozen=True, slots=True)
 class CompiledG110TwoLayerV1:
     packet: bytes = field(repr=False)
@@ -1305,42 +1446,82 @@ def parse_g110_two_layer_v1(payload: bytes) -> ParsedG110TwoLayerV1:
     )
 
 
-def _zip_member(payload: bytes) -> zipfile.ZipInfo:
+def _zip_member(method: G110OuterZipMethodV1) -> zipfile.ZipInfo:
     info = zipfile.ZipInfo(PACKET_MEMBER, date_time=_ZIP_TIMESTAMP)
-    info.compress_type = zipfile.ZIP_DEFLATED
+    info.compress_type = int(method)
     info.create_system = 3
     info.external_attr = 0o100644 << 16
     info.flag_bits = 0
     return info
 
 
-def build_g110_public_archive(packet: bytes) -> bytes:
+def _build_g110_public_archive_for_method(
+    packet: bytes,
+    method: G110OuterZipMethodV1,
+) -> bytes:
     parsed = parse_g110_two_layer_v1(packet)
     if parsed.packet != packet:
         raise AssertionError("internal packet custody drifted")
+    if type(method) is not G110OuterZipMethodV1:
+        raise G110TwoLayerError(
+            "outer ZIP method must be a typed G110OuterZipMethodV1"
+        )
     stream = io.BytesIO()
+    compression_kwargs: dict[str, int] = {"compression": int(method)}
+    if method is G110OuterZipMethodV1.DEFLATE:
+        compression_kwargs["compresslevel"] = 9
     with zipfile.ZipFile(
         stream,
         "w",
-        compression=zipfile.ZIP_DEFLATED,
-        compresslevel=9,
         allowZip64=False,
+        **compression_kwargs,
     ) as archive:
-        archive.writestr(
-            _zip_member(packet),
-            packet,
-            compress_type=zipfile.ZIP_DEFLATED,
-            compresslevel=9,
-        )
+        write_kwargs: dict[str, int] = {"compress_type": int(method)}
+        if method is G110OuterZipMethodV1.DEFLATE:
+            write_kwargs["compresslevel"] = 9
+        archive.writestr(_zip_member(method), packet, **write_kwargs)
     result = stream.getvalue()
     if not result or len(result) > MAX_ARCHIVE_BYTES:
         raise G110TwoLayerError("public archive exceeds the bounded envelope")
+    return result
+
+
+def build_g110_counted_archive_variant(
+    packet: bytes,
+    method: G110OuterZipMethodV1,
+) -> bytes:
+    """Build one exact typed counted-archive alternative without selecting it."""
+
+    return _build_g110_public_archive_for_method(packet, method)
+
+
+def _select_g110_public_archive(
+    packet: bytes,
+) -> tuple[G110OuterZipMethodV1, bytes]:
+    alternatives = tuple(
+        (method, _build_g110_public_archive_for_method(packet, method))
+        for method in _OUTER_ZIP_METHODS
+    )
+    return min(
+        alternatives,
+        key=lambda item: (
+            len(item[1]),
+            int(item[0]),
+            _sha256(item[1]),
+        ),
+    )
+
+
+def build_g110_public_archive(packet: bytes) -> bytes:
+    _method, result = _select_g110_public_archive(packet)
     if parse_g110_public_archive(result) != packet:
         raise AssertionError("internal archive parse-back changed packet bytes")
     return result
 
 
-def parse_g110_public_archive(archive_bytes: bytes) -> bytes:
+def _read_g110_public_archive(
+    archive_bytes: bytes,
+) -> tuple[bytes, G110OuterZipMethodV1]:
     if type(archive_bytes) is not bytes or not 0 < len(archive_bytes) <= MAX_ARCHIVE_BYTES:
         raise G110TwoLayerError("public archive must be bounded exact bytes")
     try:
@@ -1350,11 +1531,16 @@ def parse_g110_public_archive(archive_bytes: bytes) -> bytes:
                 raise G110TwoLayerError("public archive member set/order differs")
             info = infos[0]
             mode = (info.external_attr >> 16) & 0o170000
+            try:
+                method = G110OuterZipMethodV1(info.compress_type)
+            except ValueError as exc:
+                raise G110TwoLayerError(
+                    "public archive compression method is unsupported"
+                ) from exc
             if (
                 info.is_dir()
                 or info.flag_bits & 0x1
                 or mode == 0o120000
-                or info.compress_type != zipfile.ZIP_DEFLATED
                 or not _HEADER.size <= info.file_size <= MAX_PACKET_BYTES
                 or info.compress_size > len(archive_bytes)
             ):
@@ -1365,6 +1551,38 @@ def parse_g110_public_archive(archive_bytes: bytes) -> bytes:
     except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
         raise G110TwoLayerError("public archive cannot be decoded") from exc
     parse_g110_two_layer_v1(packet)
+    return packet, method
+
+
+def parse_g110_counted_archive_variant(
+    archive_bytes: bytes,
+    expected_method: G110OuterZipMethodV1,
+) -> bytes:
+    """Parse one exact typed alternative, including nonselected matrix entries."""
+
+    if type(expected_method) is not G110OuterZipMethodV1:
+        raise G110TwoLayerError(
+            "expected archive method must be G110OuterZipMethodV1"
+        )
+    packet, method = _read_g110_public_archive(archive_bytes)
+    if (
+        method is not expected_method
+        or archive_bytes
+        != _build_g110_public_archive_for_method(packet, expected_method)
+    ):
+        raise G110TwoLayerError(
+            "counted archive differs from its typed deterministic variant"
+        )
+    return packet
+
+
+def parse_g110_public_archive(archive_bytes: bytes) -> bytes:
+    packet, method = _read_g110_public_archive(archive_bytes)
+    selected_method, selected_archive = _select_g110_public_archive(packet)
+    if method is not selected_method or archive_bytes != selected_archive:
+        raise G110TwoLayerError(
+            "public archive is not the deterministic canonical method/layout"
+        )
     return packet
 
 
@@ -1377,14 +1595,19 @@ __all__ = [
     "V9_VARIANT_ID",
     "CompiledG110TwoLayerV1",
     "G110Batch16SourcePoseCustodyV1",
+    "G110OuterZipMethodV1",
     "G110TwoLayerError",
     "OpenedFinalY1ProviderV1",
     "ParsedG110TwoLayerV1",
+    "build_g110_counted_archive_variant",
     "build_g110_public_archive",
+    "build_g110_rank_zero_semantic_floor_packet",
     "compile_g110_two_layer_v1",
     "final_y1_binding_sha256",
     "open_final_y1_provider",
+    "parse_g110_counted_archive_variant",
     "parse_g110_public_archive",
     "parse_g110_two_layer_v1",
     "render_conditional_y0",
+    "render_g110_rank_zero_scorer_pair",
 ]

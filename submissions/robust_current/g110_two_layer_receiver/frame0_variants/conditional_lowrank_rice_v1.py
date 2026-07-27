@@ -18,6 +18,8 @@ PAIR_COUNT: Final = 600
 H: Final = 384
 W: Final = 512
 C: Final = 3
+CAMERA_H: Final = 874
+CAMERA_W: Final = 1164
 MAX_RANK: Final = 64
 MAX_GRID_SIDE: Final = 64
 MAX_PACKET_BYTES: Final = 2_100_000
@@ -335,3 +337,69 @@ def render_scorer_y0(
     return np.ascontiguousarray(
         np.clip(np.rint(summed), 0, 255).astype(np.uint8)
     )
+
+
+def _axis_support_indices(input_size: int, output_size: int) -> np.ndarray:
+    denominator = 2 * output_size
+    rows: list[tuple[int, int]] = []
+    claimed: set[int] = set()
+    for output_index in range(output_size):
+        coordinate_numerator = (2 * output_index + 1) * input_size - output_size
+        left = coordinate_numerator // denominator
+        fraction_numerator = coordinate_numerator - left * denominator
+        taps: dict[int, int] = {}
+        for raw_index, numerator in (
+            (left, denominator - fraction_numerator),
+            (left + 1, fraction_numerator),
+        ):
+            if numerator:
+                index = min(max(raw_index, 0), input_size - 1)
+                taps[index] = taps.get(index, 0) + numerator
+        indices = tuple(sorted(taps))
+        if len(indices) != 2 or sum(taps.values()) != denominator or claimed.intersection(indices):
+            raise ConditionalVariantError(
+                "camera/scorer geometry is not certified disjoint factor-2"
+            )
+        claimed.update(indices)
+        rows.append((indices[0], indices[1]))
+    return np.asarray(rows, dtype=np.intp)
+
+
+_ROW_INDICES = _axis_support_indices(CAMERA_H, H)
+_COL_INDICES = _axis_support_indices(CAMERA_W, W)
+
+
+def _realize_factor2(scorer_rgb: np.ndarray) -> np.ndarray:
+    raw = np.asarray(scorer_rgb)
+    if raw.dtype != np.uint8 or raw.shape != (H, W, C):
+        raise ConditionalVariantError("factor-2 source must be uint8[384,512,3]")
+    camera = np.zeros((CAMERA_H, CAMERA_W, C), dtype=np.uint8)
+    for row_offset in range(2):
+        for column_offset in range(2):
+            camera[
+                _ROW_INDICES[:, row_offset, None],
+                _COL_INDICES[None, :, column_offset],
+                :,
+            ] = raw
+    return camera
+
+
+def render_camera_y0(
+    state: dict[str, object],
+    pair_id: int,
+    scorer_y1: np.ndarray,
+    camera_y1: np.ndarray,
+) -> np.ndarray:
+    """Legacy low-rank Y0 keeps its sealed scorer-plane then factor-2 order."""
+
+    expected_y1 = _realize_factor2(scorer_y1)
+    observed_y1 = np.asarray(camera_y1)
+    if (
+        observed_y1.dtype != np.uint8
+        or observed_y1.shape != (CAMERA_H, CAMERA_W, C)
+        or not np.array_equal(observed_y1, expected_y1)
+    ):
+        raise ConditionalVariantError(
+            "legacy conditional received a camera Y1 outside exact factor-2 custody"
+        )
+    return _realize_factor2(render_scorer_y0(state, pair_id, scorer_y1))

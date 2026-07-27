@@ -27,6 +27,9 @@ from tac.witness_dsl.taskspace_pfree_semantic_root_v1 import (
     encode_semantic_root_y1_v1,
     render_semantic_root_y1_scorer,
 )
+from tac.witness_dsl.v10_factor2_selected_preimage_v1 import (
+    realize_factor2_uint8_numpy,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_ROOT = REPO_ROOT / product.PUBLIC_RUNTIME_RELATIVE_ROOT
@@ -37,7 +40,12 @@ def _module(path: Path, name: str) -> ModuleType:
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    prior = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = prior
     return module
 
 
@@ -139,6 +147,57 @@ def test_archive_is_one_receiver_counted_member(
         assert [info.filename for info in infos] == [product.PACKET_MEMBER]
         assert infos[0].compress_type == zipfile.ZIP_DEFLATED
         assert archive.read(infos[0]) == g103_packet
+
+
+def test_rank_zero_semantic_floor_and_typed_archive_matrix(
+    g103_packet: bytes,
+) -> None:
+    semantic_packet = product.parse_g110_two_layer_v1(
+        g103_packet
+    ).semantic_packet
+    floor_packet = product.build_g110_rank_zero_semantic_floor_packet(
+        semantic_packet
+    )
+    parsed = product.parse_g110_two_layer_v1(floor_packet)
+    assert parsed.basis_q.shape == (0, 0, 0, 3)
+    assert parsed.combined_scales.shape == (0,)
+    assert parsed.coefficients_q.shape == (600, 0)
+    pair = product.render_g110_rank_zero_scorer_pair(floor_packet, 137)
+    assert pair.shape == (2, 384, 512, 3)
+    assert np.array_equal(pair[0], pair[1])
+
+    alternatives = []
+    for method in product.G110OuterZipMethodV1:
+        archive_bytes = product.build_g110_counted_archive_variant(
+            floor_packet,
+            method,
+        )
+        assert (
+            product.parse_g110_counted_archive_variant(
+                archive_bytes,
+                method,
+            )
+            == floor_packet
+        )
+        alternatives.append((method, archive_bytes))
+    expected_method, expected_archive = min(
+        alternatives,
+        key=lambda item: (
+            len(item[1]),
+            int(item[0]),
+            hashlib.sha256(item[1]).hexdigest(),
+        ),
+    )
+    assert product.build_g110_public_archive(floor_packet) == expected_archive
+    assert product.parse_g110_public_archive(expected_archive) == floor_packet
+    for method, archive_bytes in alternatives:
+        if method is expected_method:
+            continue
+        with pytest.raises(
+            product.G110TwoLayerError,
+            match="canonical method/layout",
+        ):
+            product.parse_g110_public_archive(archive_bytes)
 
 
 def test_compile_custody_cannot_be_hash_asserted() -> None:
@@ -411,6 +470,8 @@ def test_public_v10_factor2_is_exact_for_both_planes(g103_packet: bytes) -> None
     )
     for scorer_plane in scorer_pair:
         camera = inflate._realize_factor2(scorer_plane)
+        canonical = realize_factor2_uint8_numpy(scorer_plane)
+        assert np.array_equal(camera, canonical)
         proof = verify_factor2_uint8_scorer_plane(operator, camera, scorer_plane)
         assert proof.certified_exact
 
@@ -440,3 +501,33 @@ def test_public_dispatch_is_unambiguous_for_both_semantic_variants(
         for path in runtime_sources
         for token in forbidden
     )
+
+
+def test_public_plugin_loading_is_repeatable_without_runtime_mutation() -> None:
+    inflate = _module(RUNTIME_ROOT / "inflate.py", "_g110_inflate_repeatable")
+    before = sorted(
+        path.relative_to(RUNTIME_ROOT).as_posix()
+        for path in RUNTIME_ROOT.rglob("*")
+    )
+    for _pass in range(2):
+        semantic_plugins = inflate._load_plugins(
+            RUNTIME_ROOT / "semantic_variants",
+            calls=inflate.SEMANTIC_PLUGIN_CALLS,
+            expected=inflate.EXPECTED_SEMANTIC_PLUGINS,
+        )
+        frame0_plugins = inflate._load_plugins(
+            RUNTIME_ROOT / "frame0_variants",
+            calls=inflate.FRAME0_PLUGIN_CALLS,
+            expected=inflate.EXPECTED_FRAME0_PLUGINS,
+        )
+        assert set(semantic_plugins) == set(
+            inflate.EXPECTED_SEMANTIC_PLUGINS.values()
+        )
+        assert set(frame0_plugins) == set(
+            inflate.EXPECTED_FRAME0_PLUGINS.values()
+        )
+    after = sorted(
+        path.relative_to(RUNTIME_ROOT).as_posix()
+        for path in RUNTIME_ROOT.rglob("*")
+    )
+    assert after == before

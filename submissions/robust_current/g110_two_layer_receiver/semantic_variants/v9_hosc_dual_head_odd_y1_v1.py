@@ -12,7 +12,8 @@ packet contains:
 * optional, explicitly typed ``film_pl`` and ``concat_pl`` tensors; and
 * only the 600 odd ``code[2*p+1]`` Y1 rows.
 
-The even Y0 rows never enter this packet.  G94-V2 is their exclusive owner.
+The even Y0 rows never enter this packet. The typed G110 generated-Y1
+conditional is the exclusive Y0 owner; legacy G94-V2 is not this product.
 Phase advection is a training force which shapes these counted weights; it is
 external encoder evidence, not a fictitious inflate-time operand.
 
@@ -27,7 +28,7 @@ import json
 import math
 import struct
 import zlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import IntEnum
 from typing import Any, Final
 
@@ -44,20 +45,30 @@ N_CLASSES: Final = 5
 MAX_PACKET_BYTES: Final = 2_000_000
 MAX_TENSORS: Final = 16
 MAX_TENSOR_RANK: Final = 4
+MAX_RUNTIME_FEATURE_CACHE_BYTES: Final = 512 * 1024 * 1024
 _HEADER = struct.Struct(">8sBBHIII")
 _SECTION = struct.Struct(">4sI")
 _MODEL_HEADER = struct.Struct(">4sH")
 _TENSOR_HEADER = struct.Struct(">BBbB4HI")
-_Y1_HEADER = struct.Struct(">4sHHb3xI")
+_Y1_HEADER = struct.Struct(">4sHHbBBxI")
 _SECTION_ORDER: Final = (b"CONF", b"MODL", b"Y1CD")
 _MODEL_MAGIC: Final = b"V9M1"
-_Y1_MAGIC: Final = b"Y1C1"
+_Y1_MAGIC: Final = b"Y1R1"
+_Y1_CODEC_RAW_I16_LE: Final = 0
+_Y1_CODEC_DELTA_RICE: Final = 1
 _FLAG_FILM_PL: Final = 1 << 0
 _FLAG_CONCAT_PL: Final = 1 << 1
 _FLAG_CHROMA: Final = 1 << 2
 _KNOWN_FLAGS: Final = _FLAG_FILM_PL | _FLAG_CONCAT_PL | _FLAG_CHROMA
 class ExactV9SemanticRootError(ValueError):
     """An exact V9 packet or receiver invariant failed closed."""
+
+
+class Y1WireCodecV1(IntEnum):
+    """Canonical-within-family Y1 wire alternatives selected by outer ZIP."""
+
+    RAW_I16_LE = _Y1_CODEC_RAW_I16_LE
+    DELTA_RICE_BEST_K = _Y1_CODEC_DELTA_RICE
 
 
 class V9TensorDTypeV1(IntEnum):
@@ -225,7 +236,10 @@ class V9RuntimeConfigV1:
             "film_concat_code": self.film_concat_code,
             "basis": self.basis.to_dict(),
             "y1_projection": "code[2*p+1]",
-            "y0_owner": "G94-V2",
+            "y1_temporal_codec": (
+                "raw_i16le_or_delta_rice_best_k_outer_archive_selected_v1"
+            ),
+            "y0_owner": "G110_GENERATED_Y1_CONDITIONAL",
         }
 
     @classmethod
@@ -250,6 +264,7 @@ class V9RuntimeConfigV1:
             "film_concat_code",
             "basis",
             "y1_projection",
+            "y1_temporal_codec",
             "y0_owner",
         }
         if set(value) != expected:
@@ -261,7 +276,9 @@ class V9RuntimeConfigV1:
             or value["scorer_shape"] != [SCORER_H, SCORER_W, SCORER_CHANNELS]
             or value["n_classes"] != N_CLASSES
             or value["y1_projection"] != "code[2*p+1]"
-            or value["y0_owner"] != "G94-V2"
+            or value["y1_temporal_codec"]
+            != "raw_i16le_or_delta_rice_best_k_outer_archive_selected_v1"
+            or value["y0_owner"] != "G110_GENERATED_Y1_CONDITIONAL"
         ):
             raise ExactV9SemanticRootError("runtime config changes a sealed V9/Y1 contract")
         if (
@@ -339,6 +356,22 @@ class ExactV9SemanticRootY1ProgramV1:
     tensors: tuple[V9CountedTensorV1, ...]
     y1_code_scale_exponent: int
     y1_code_q: np.ndarray = field(repr=False)
+    y1_wire_codec: Y1WireCodecV1 | None = None
+    _runtime_features_f64: np.ndarray = field(
+        init=False,
+        repr=False,
+        compare=False,
+    )
+    _runtime_params_f64: dict[str, np.ndarray] = field(
+        init=False,
+        repr=False,
+        compare=False,
+    )
+    _runtime_y1_code_f64: np.ndarray = field(
+        init=False,
+        repr=False,
+        compare=False,
+    )
 
     def __post_init__(self) -> None:
         if type(self.config) is not V9RuntimeConfigV1:
@@ -351,6 +384,10 @@ class ExactV9SemanticRootY1ProgramV1:
             raise ExactV9SemanticRootError("program tensor tuple is malformed")
         if type(self.y1_code_scale_exponent) is not int or not -64 <= self.y1_code_scale_exponent <= 63:
             raise ExactV9SemanticRootError("Y1 code scale exponent is invalid")
+        if self.y1_wire_codec is not None and type(self.y1_wire_codec) is not Y1WireCodecV1:
+            raise ExactV9SemanticRootError(
+                "Y1 wire codec must be typed or unresolved"
+            )
         code = np.asarray(self.y1_code_q)
         if code.dtype != np.dtype("<i2") or code.shape != (
             PAIR_COUNT_N600,
@@ -360,6 +397,35 @@ class ExactV9SemanticRootY1ProgramV1:
         if not code.flags.c_contiguous:
             raise ExactV9SemanticRootError("Y1 code must be C-contiguous")
         _validate_tensor_abi(self.config, self.tensors)
+        feature_cache_bytes = (
+            SCORER_H
+            * SCORER_W
+            * self.config.input_dim
+            * np.dtype(np.float64).itemsize
+        )
+        if feature_cache_bytes > MAX_RUNTIME_FEATURE_CACHE_BYTES:
+            raise ExactV9SemanticRootError(
+                "runtime Fourier cache exceeds the bounded receiver envelope"
+            )
+        features_f64 = np.ascontiguousarray(
+            build_runtime_features(self.config),
+            dtype=np.float64,
+        )
+        params_f64 = {
+            name: np.ascontiguousarray(value, dtype=np.float64)
+            for name, value in self.params.items()
+        }
+        y1_code_f64 = np.ascontiguousarray(
+            self.y1_code,
+            dtype=np.float64,
+        )
+        features_f64.setflags(write=False)
+        y1_code_f64.setflags(write=False)
+        for value in params_f64.values():
+            value.setflags(write=False)
+        object.__setattr__(self, "_runtime_features_f64", features_f64)
+        object.__setattr__(self, "_runtime_params_f64", params_f64)
+        object.__setattr__(self, "_runtime_y1_code_f64", y1_code_f64)
 
     @property
     def params(self) -> dict[str, np.ndarray]:
@@ -466,9 +532,9 @@ def forward_float32(
     if type(pair_id) is not int or not 0 <= pair_id < PAIR_COUNT_N600:
         raise ExactV9SemanticRootError("pair_id must be an exact integer in [0,599]")
     config = program.config
-    params = {name: np.asarray(value, np.float64) for name, value in program.params.items()}
-    features = np.asarray(build_runtime_features(config), np.float64)
-    code = np.asarray(program.y1_code[pair_id], np.float64)
+    params = program._runtime_params_f64
+    features = program._runtime_features_f64
+    code = program._runtime_y1_code_f64[pair_id]
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         hidden = _hosc(
             features @ params["in_proj.weight"].T + params["in_proj.bias"],
@@ -662,34 +728,228 @@ def _decode_model(payload: bytes) -> tuple[V9CountedTensorV1, ...]:
     return tuple(result)
 
 
+class _BitWriter:
+    def __init__(self) -> None:
+        self.data = bytearray()
+        self.byte = 0
+        self.used = 0
+
+    def bit(self, value: int) -> None:
+        self.byte = (self.byte << 1) | (value & 1)
+        self.used += 1
+        if self.used == 8:
+            self.data.append(self.byte)
+            self.byte = 0
+            self.used = 0
+
+    def finish(self) -> bytes:
+        if self.used:
+            self.data.append(self.byte << (8 - self.used))
+        return bytes(self.data)
+
+
+class _BitReader:
+    def __init__(self, payload: bytes) -> None:
+        self.payload = payload
+        self.offset = 0
+
+    def bit(self) -> int:
+        if self.offset >= len(self.payload) * 8:
+            raise ExactV9SemanticRootError("temporal Rice stream is truncated")
+        value = (
+            self.payload[self.offset // 8] >> (7 - self.offset % 8)
+        ) & 1
+        self.offset += 1
+        return value
+
+    def zero_padding(self) -> None:
+        while self.offset < len(self.payload) * 8:
+            if self.bit():
+                raise ExactV9SemanticRootError(
+                    "temporal Rice stream has noncanonical trailing bits"
+                )
+
+
+def _rice_encode_signed(values: np.ndarray, rice_k: int) -> bytes:
+    writer = _BitWriter()
+    previous = np.zeros(values.shape[1], dtype=np.int64)
+    for row in values.astype(np.int64, copy=False):
+        for column, current in enumerate(row):
+            delta = int(current - previous[column])
+            previous[column] = current
+            unsigned = 2 * delta if delta >= 0 else -2 * delta - 1
+            quotient = unsigned >> rice_k
+            if quotient > 0xFFFF:
+                raise ExactV9SemanticRootError(
+                    "temporal Rice quotient exceeds closed decoder bound"
+                )
+            for _ in range(quotient):
+                writer.bit(1)
+            writer.bit(0)
+            for shift in range(rice_k - 1, -1, -1):
+                writer.bit((unsigned >> shift) & 1)
+    return writer.finish()
+
+
+def _rice_decode_signed(
+    payload: bytes,
+    *,
+    pair_count: int,
+    latent_dim: int,
+    rice_k: int,
+) -> np.ndarray:
+    reader = _BitReader(payload)
+    output = np.empty((pair_count, latent_dim), dtype=np.int16)
+    previous = np.zeros(latent_dim, dtype=np.int64)
+    for pair_id in range(pair_count):
+        for column in range(latent_dim):
+            quotient = 0
+            while reader.bit():
+                quotient += 1
+                if quotient > 0xFFFF:
+                    raise ExactV9SemanticRootError(
+                        "temporal Rice unary quotient exceeds decoder bound"
+                    )
+            remainder = 0
+            for _ in range(rice_k):
+                remainder = (remainder << 1) | reader.bit()
+            unsigned = (quotient << rice_k) | remainder
+            delta = (
+                unsigned // 2
+                if unsigned % 2 == 0
+                else -(unsigned // 2) - 1
+            )
+            value = int(previous[column]) + delta
+            if not -0x8000 <= value <= 0x7FFF:
+                raise ExactV9SemanticRootError(
+                    "temporal latent delta leaves the int16 range"
+                )
+            output[pair_id, column] = value
+            previous[column] = value
+    reader.zero_padding()
+    return np.ascontiguousarray(output)
+
+
+def _best_temporal_y1(values: np.ndarray) -> tuple[int, bytes]:
+    canonical = np.asarray(values, dtype=np.int64)
+    previous = np.vstack(
+        [
+            np.zeros((1, canonical.shape[1]), dtype=np.int64),
+            canonical[:-1],
+        ]
+    )
+    delta = canonical - previous
+    unsigned = np.where(delta >= 0, 2 * delta, -2 * delta - 1)
+    candidates: list[tuple[int, int]] = []
+    for rice_k in range(16):
+        quotient = unsigned >> rice_k
+        if int(quotient.max(initial=0)) > 0xFFFF:
+            continue
+        bit_count = int(quotient.sum()) + int(unsigned.size) * (1 + rice_k)
+        byte_count = (bit_count + 7) // 8
+        if byte_count <= MAX_PACKET_BYTES:
+            candidates.append((byte_count, rice_k))
+    if not candidates:
+        raise ExactV9SemanticRootError(
+            "no bounded temporal Rice code can represent the Y1 trajectory"
+        )
+    _, rice_k = min(candidates)
+    return rice_k, _rice_encode_signed(canonical, rice_k)
+
+
+def _canonical_y1_payload(
+    values: np.ndarray,
+    codec: Y1WireCodecV1,
+) -> tuple[int, int, bytes]:
+    if type(codec) is not Y1WireCodecV1:
+        raise ExactV9SemanticRootError("Y1 wire codec is not typed")
+    if codec is Y1WireCodecV1.RAW_I16_LE:
+        return (
+            int(codec),
+            0,
+            np.asarray(values, dtype="<i2").tobytes(order="C"),
+        )
+    rice_k, encoded = _best_temporal_y1(values)
+    return int(codec), rice_k, encoded
+
+
+def _best_y1_payload(values: np.ndarray) -> tuple[int, int, bytes]:
+    choices = tuple(
+        _canonical_y1_payload(values, codec)
+        for codec in Y1WireCodecV1
+    )
+    return min(choices, key=lambda item: (len(item[2]), item[0], item[1]))
+
+
 def _encode_y1(program: ExactV9SemanticRootY1ProgramV1) -> bytes:
-    data = np.asarray(program.y1_code_q, dtype="<i2").tobytes(order="C")
+    if program.y1_wire_codec is None:
+        codec, rice_k, data = _best_y1_payload(program.y1_code_q)
+    else:
+        codec, rice_k, data = _canonical_y1_payload(
+            program.y1_code_q,
+            program.y1_wire_codec,
+        )
     return _Y1_HEADER.pack(
         _Y1_MAGIC,
         PAIR_COUNT_N600,
         program.config.modulation_dim,
         program.y1_code_scale_exponent,
+        codec,
+        rice_k,
         len(data),
     ) + data
 
 
-def _decode_y1(payload: bytes, *, modulation_dim: int) -> tuple[int, np.ndarray]:
+def _decode_y1(
+    payload: bytes,
+    *,
+    modulation_dim: int,
+) -> tuple[int, np.ndarray, Y1WireCodecV1]:
     if len(payload) < _Y1_HEADER.size:
         raise ExactV9SemanticRootError("Y1 code section is truncated")
-    magic, pair_count, inner_modulation_dim, exponent, byte_length = _Y1_HEADER.unpack_from(payload)
+    (
+        magic,
+        pair_count,
+        inner_modulation_dim,
+        exponent,
+        codec,
+        rice_k,
+        byte_length,
+    ) = _Y1_HEADER.unpack_from(payload)
     if (
         magic != _Y1_MAGIC
         or pair_count != PAIR_COUNT_N600
         or inner_modulation_dim != modulation_dim
-        or byte_length != PAIR_COUNT_N600 * modulation_dim * 2
+        or codec not in {_Y1_CODEC_RAW_I16_LE, _Y1_CODEC_DELTA_RICE}
+        or not 0 <= rice_k <= 15
         or len(payload) != _Y1_HEADER.size + byte_length
     ):
         raise ExactV9SemanticRootError("Y1 code header disagrees with the exact odd-row contract")
-    code = np.frombuffer(payload[_Y1_HEADER.size :], dtype="<i2").reshape(
-        PAIR_COUNT_N600,
-        modulation_dim,
+    encoded = payload[_Y1_HEADER.size :]
+    if codec == _Y1_CODEC_RAW_I16_LE:
+        if rice_k != 0 or byte_length != PAIR_COUNT_N600 * modulation_dim * 2:
+            raise ExactV9SemanticRootError("raw Y1 code header is noncanonical")
+        code = np.frombuffer(encoded, dtype="<i2").reshape(
+            PAIR_COUNT_N600,
+            modulation_dim,
+        )
+    else:
+        code = _rice_decode_signed(
+            encoded,
+            pair_count=PAIR_COUNT_N600,
+            latent_dim=modulation_dim,
+            rice_k=int(rice_k),
+        )
+    wire_codec = Y1WireCodecV1(codec)
+    canonical_codec, canonical_k, canonical_bytes = _canonical_y1_payload(
+        code,
+        wire_codec,
     )
-    return int(exponent), np.ascontiguousarray(code)
+    if (canonical_codec, canonical_k, canonical_bytes) != (codec, rice_k, encoded):
+        raise ExactV9SemanticRootError(
+            "Y1 stream is not canonical within its selected wire family"
+        )
+    return int(exponent), np.ascontiguousarray(code), wire_codec
 
 
 def encode_packet(program: ExactV9SemanticRootY1ProgramV1) -> bytes:
@@ -716,6 +976,19 @@ def encode_packet(program: ExactV9SemanticRootY1ProgramV1) -> bytes:
     if len(payload) > MAX_PACKET_BYTES:
         raise ExactV9SemanticRootError("exact V9 semantic-root packet exceeds the bounded ABI")
     return payload
+
+
+def encode_packet_y1_variant(
+    program: ExactV9SemanticRootY1ProgramV1,
+    codec: Y1WireCodecV1,
+) -> bytes:
+    if type(program) is not ExactV9SemanticRootY1ProgramV1:
+        raise ExactV9SemanticRootError(
+            "Y1 variant encode requires ExactV9SemanticRootY1ProgramV1"
+        )
+    if type(codec) is not Y1WireCodecV1:
+        raise ExactV9SemanticRootError("Y1 variant codec is not typed")
+    return encode_packet(replace(program, y1_wire_codec=codec))
 
 
 def _split_sections(payload: bytes) -> tuple[int, dict[bytes, bytes]]:
@@ -764,7 +1037,7 @@ def parse_packet(payload: bytes) -> ExactV9SemanticRootY1ProgramV1:
     if config.flags != flags:
         raise ExactV9SemanticRootError("packet flags disagree with runtime config")
     tensors = _decode_model(sections[b"MODL"])
-    exponent, y1_code = _decode_y1(
+    exponent, y1_code, y1_wire_codec = _decode_y1(
         sections[b"Y1CD"],
         modulation_dim=config.modulation_dim,
     )
@@ -773,6 +1046,7 @@ def parse_packet(payload: bytes) -> ExactV9SemanticRootY1ProgramV1:
         tensors=tensors,
         y1_code_scale_exponent=exponent,
         y1_code_q=y1_code,
+        y1_wire_codec=y1_wire_codec,
     )
     if encode_packet(program) != payload:
         raise ExactV9SemanticRootError("packet changed under strict parse/re-emit")

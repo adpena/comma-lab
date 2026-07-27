@@ -1,8 +1,8 @@
 {
   "schema": "tac.g110_generic_two_layer_public_product_receipt.v1",
-  "written_at_utc": "2026-07-27T11:10:15Z",
+  "written_at_utc": "2026-07-27T13:17:30Z",
   "lane_id": "lane_g110_generic_two_layer_public_product_20260727",
-  "source_git_head": "5079679b7c71b130d6b1e390fc3ecd867c3a15c1",
+  "source_git_head": "a0164871e103a128af1e32ef6cabc34056944ccb",
   "status": "PUBLIC_RUNTIME_IMPLEMENTED_PRODUCER_AND_DOUBLE_DECODE_BLOCKED",
   "authority": {
     "research_only": true,
@@ -12,8 +12,13 @@
     "pointer_statement": "G110 produced no archive score and does not change the canonical effective_frontier."
   },
   "contract": {
-    "packet_magic": "G110TL01",
+    "packet_magics": [
+      "G110TL01",
+      "G110PC01"
+    ],
     "archive_member": "taskspace_two_layer_v1.bin",
+    "counted_archive_scope": "archive.zip contains only the one video-specific packet member and is the exact evaluate.py rate object; it is not receiver closure by itself",
+    "public_submission_scope": "inflate.sh, inflate.py, and exact provider/frame0 plugins are uncounted sibling runtime files under the authoritative contest rules; receiver closure requires the sealed runtime tree plus counted archive.zip plus exact output and recursive evaluate.py proof",
     "pair_count": 600,
     "semantic_provider_dispatch": [
       {
@@ -29,33 +34,52 @@
     "coefficient_representation": "chronological int16 delta, zigzag, globally minimal canonical Rice k in [0,15]",
     "scale_gauge": "one combined float32 scale per rank; first nonzero basis value positive; coefficient gcd 1; decoder-dead and overflowing ranks refused",
     "zero_residual_rows": "legal",
-    "realization": "both Y0 and Y1 use the generic V10 factor-2 uint8 realization",
+    "realization": "low-rank Y0 and semantic Y1 use generic V10 factor-2; generated-Y1 pose Y0 is the native uint8 homography warp of the actual final V10 camera Y1 with no false scorer-round/V10 reorder",
+    "generated_y1_pose": {
+      "conditional_variant": "tac.semantic_root_y0.generated_y1_pose_xip2.v1",
+      "source_domain": "parsed_g105_y1_v10_camera",
+      "render_order": "parsed_g105_scorer_y1->v10_camera_y1->native_homography_warp->camera_uint8_y0",
+      "counted_operand": "canonical XIP2 delta_ar encoding of post-G105 refit xi_eff[600,6] plus pitch",
+      "trained_g111_xi_status": "G112 physical initializer child only, never admitted as final counted operand without post-G105 exact-public-receiver refit",
+      "even_code": "physically absent: G112 semantic child stores code_y1[600,mod] and no interleaved code[1200,mod]",
+      "selected_preimage_contract": "tac.v10_factor2_selected_preimage.v1",
+      "semantic_wire_arbitration": "enumerate the exact {RAW_I16_LE, DELTA_RICE_BEST_K} x {STORE, DEFLATE} counted archive.zip matrix, prove identical rendered n600 Y1 population across semantic wires, select the exact byte minimum, and retain all four method/byte/SHA records"
+    },
     "final_y1_binding": "SHA256('G110_FINAL_Y1_N600_V1\\0' || SHA256(semantic_packet) || SHA256(concat_p(u16be(p), rendered_final_Y1[p])))",
     "bilinear_kernel": "canonical G95 align_corners=False half-pixel; clip coordinates before calculating weights",
     "plugin_dispatch": "exact filename-to-variant allowlists",
-    "public_runtime": "receiver-only Python, NumPy, and standard library; no repository, compiler, target-loader, scorer, SegNet, or PoseNet imports; clean-extract double decode not yet run"
+    "public_runtime": "receiver-only Python, NumPy, Brotli, and standard library; no repository, compiler, target-loader, scorer, SegNet, or PoseNet imports; plugin imports suppress bytecode mutation; pair-invariant V9 Fourier/features/parameters/code are derived once at strict parse and reused across n600; clean-extract double decode and contest timing are not yet run"
   },
   "custody": {
     "repo_compile_policy": "fresh exact-V9 only until another semantic producer has equivalent content-verified evidence",
     "g109_requirement": "strict content-read tac.taskspace_v9_training_target_capsule_aggregate.v1 with all 600 margins, pose targets, source closure, batch-16 custody, G46 chain, and no test fixture",
-    "g105_requirement": "point-of-use physical fresh checkpoint reopen, canonical G109 projection reconstruction, and exact V9 packet recompilation; no accepted custody capability object",
-    "g105_adapter_source_sha256": "588b0ae20151565b86b235d101b3de46b89dbaf8cce9183614b48ec5b1702e65",
-    "g105_adapter_git_blob_sha1": "68fd3f226bfc25b5dba707ca50e7caaa004a23ea",
+    "g105_requirement": "point-of-use physical tac.g112_exact_checkpoint_partition.v2 reopen through one self-hashed receipt; it recursively reopens both children plus every source-node receipt to a unique zero-parent cold root and requires complete_trajectory_proven; no separately selected child, full G111 checkpoint, or caller-supplied semantic packet enters official compile",
+    "g105_adapter_source_sha256": "549f2cd67d0e2961560faa810166332970a8270cdee681c9d15c748d68ed2aad",
+    "g105_adapter_git_blob_sha1": "1a354d51e10dd7d38097d74c96bbc2206f93e994",
     "conditional_operand_requirement": "content-read self-hashed operand receipt plus strict physical NPZ and sealed resumable producer-run receipt; every preserved stage is reopened and the final stage must equal the operand NPZ",
+    "generated_y1_pose_requirement": "recursive physical G112 partition receipt with exact V10 selected-preimage v2 custody, plus self-hashed tac.g110_post_g105_generated_y1_pose_refit_run.v1 and strict physical final NPZ through the exact public source/render order; refit binds partition, children, deploy, resume, current source-node/checkpoint, cold root, and all preserved refit stages",
     "public_decode_policy": "custody and scorer free; verifies packet syntax and the hash of all 600 actually rendered final Y1 frames before atomic publication"
   },
   "files": [
     {
       "path": "src/tac/witness_dsl/taskspace_g110_generic_two_layer_public_product_v1.py",
-      "bytes_sha256": "7c0ba238d89852753f5f22e610e388c27235124908c49c23307b62a6329f40fc"
+      "bytes_sha256": "cd863bd4f2dcae5e4b61912efd76f86bb4ee22fb2f1a56e5be9003e6bbbe3f00"
+    },
+    {
+      "path": "src/tac/witness_dsl/taskspace_g110_generated_y1_pose_product_v1.py",
+      "bytes_sha256": "0cb13cedfffd8e9f5c45d16389443be26363ff399e1f13e1ae1bc1c79137cf3e"
     },
     {
       "path": "tools/tests/test_taskspace_g110_generic_two_layer_public_product_v1.py",
-      "bytes_sha256": "c089f17bdcf20b4f78430d83ce845a483aefc0f935aa6c52e9985f5fd4f33992"
+      "bytes_sha256": "6f6f3a9a1d278afed23391530b21349122e94b3e658a344af65f9694a0d917bd"
     },
     {
       "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g110_generic_two_layer_public_product_20260727.md",
-      "bytes_sha256": "13b0586b5508aa3e88ba1540d2cdf0876d51b47da5e3f87a08e58390ed1cfd46"
+      "bytes_sha256": "16ce445c52cad58b069120c8492c19069f7541737557b9aee08b0a6f43fd60a5"
+    },
+    {
+      "path": "tools/tests/test_taskspace_g110_generated_y1_pose_product_v1.py",
+      "bytes_sha256": "2f1f5b8e34ce8560dc8bb79b875fbe80d4c0186b0e389a06e8186980e16090aa"
     },
     {
       "path": "submissions/robust_current/g110_two_layer_receiver/inflate.sh",
@@ -64,8 +88,8 @@
     },
     {
       "path": "submissions/robust_current/g110_two_layer_receiver/inflate.py",
-      "bytes": 12267,
-      "bytes_sha256": "909edf96fdbd0a77ee1bf981c75bc44cabe027b1eebf98257f119fc8fc2b999b"
+      "bytes": 12929,
+      "bytes_sha256": "1daf6e5862524399a5a19426cf82f092a9c7a9096d66dcaa603936a402d57147"
     },
     {
       "path": "submissions/robust_current/g110_two_layer_receiver/semantic_variants/original_coordinr_film_mlp_v1.py",
@@ -74,25 +98,30 @@
     },
     {
       "path": "submissions/robust_current/g110_two_layer_receiver/semantic_variants/v9_hosc_dual_head_odd_y1_v1.py",
-      "bytes": 32024,
-      "bytes_sha256": "e636448df3028dae91348b5b08d35ff9b17c64df8cee736f3c32a947c4136e94"
+      "bytes": 41162,
+      "bytes_sha256": "88bdcc14050efb096c4319855f565ce853b113990f8e99a4a34af87201bd3d0d"
     },
     {
       "path": "submissions/robust_current/g110_two_layer_receiver/frame0_variants/conditional_lowrank_rice_v1.py",
-      "bytes": 12542,
-      "bytes_sha256": "cfc89631c41180b7546b79b3172a0cd000385a7bd775aaad26e9b40833c33773"
+      "bytes": 15070,
+      "bytes_sha256": "28c9228231b2cfa44d74e27c81fd88947beedacb092ad9bfcbcdf63f363083ac"
+    },
+    {
+      "path": "submissions/robust_current/g110_two_layer_receiver/frame0_variants/generated_y1_pose_xip2_v1.py",
+      "bytes": 17046,
+      "bytes_sha256": "65d55d3011e726abc6b64c8039b6c13e1f37ee81e42978dba080fe4edff66b0c"
     }
   ],
-  "public_runtime_tree_sha256": "3b20a5ac439ce93a5b79c794b30d2f29aaf2236ddb568cbc5c62aa576b4f0976",
+  "public_runtime_tree_sha256": "0aad3b7e5f9109ea0fef9e162653da0410bc1ed121e5710a46245157fad32ac5",
   "public_runtime_tree_hash_algorithm": "experiments.run_g102_semantic_root_s00_s01_n600_v1._public_runtime_records plus _public_runtime_sha256",
-  "public_runtime_tree_files": 5,
-  "public_runtime_tree_bytes": 84920,
+  "public_runtime_tree_files": 6,
+  "public_runtime_tree_bytes": 114294,
   "verification": {
     "ruff": "PASS",
-    "py_compile": "PASS",
+    "builtin_compile": "PASS over 9 sources without volatile bytecode",
     "focused_pytest": {
-      "command": "pytest -q tools/tests/test_taskspace_g110_generic_two_layer_public_product_v1.py",
-      "result": "14 passed in 32.22s on base HEAD 5079679b7c71b130d6b1e390fc3ecd867c3a15c1"
+      "command": "pytest -q tools/tests/test_taskspace_g110_generated_y1_pose_product_v1.py tools/tests/test_taskspace_g110_generic_two_layer_public_product_v1.py",
+      "result": "29 passed in 66.07s on base HEAD a0164871e103a128af1e32ef6cabc34056944ccb"
     },
     "coverage": [
       "G103 public regression at pairs 0, 137, and 599",
@@ -103,13 +132,22 @@
       "deterministic one-member archive parse-back",
       "unambiguous G103/V9 public provider dispatch",
       "exact factor-2 realization for both Y0 and Y1",
+      "generated-Y1 public XIP2 decode and native camera warp exact equality with the repository fp64 NumPy authority",
+      "G105 public canonical-within-family raw-int16 and best-k delta-Rice parse/re-emission parity",
+      "exact counted archive.zip {raw,Rice} x {STORE,DEFLATE} arbitration with all four method/byte/SHA records retained and a real STORE-wins regression",
+      "public rank-zero semantic-floor API wraps G105 as receiver-valid G110 Y0=Y1 and exposes typed STORE/DEFLATE build plus exact variant parse-back for the stage selector",
+      "G112 recursive physical partition receipt is the sole official compile surface; separately selected children, full G111, and caller-supplied semantic bytes are absent",
+      "G112 source_chain.complete_trajectory_proven is mandatory and the post-G105 refit binds the partition, deploy/resume/source-node/checkpoint, and cold-root identities",
+      "exact public V10 factor-2 output parity with tac.v10_factor2_selected_preimage.v1 NumPy authority",
+      "physical post-G105 final NPZ plus self-hashed resumable run/stage-chain reopen",
       "custody-file symlink refusal before path resolution",
       "oversized compressed archive member refusal before decompression",
       "object.__new__ custody forgery cannot enter compile",
       "physical conditional NPZ and sealed resumable producer-run stage chain reopen",
       "independent canonical G95 bilinear boundary vector and exact corners",
       "canonical sign and integer scale gauges plus decoder-dead and overflow refusal",
-      "exact plugin filename-to-variant allowlists",
+      "exact plugin filename-to-variant allowlists and repeated plugin loading without runtime-tree mutation",
+      "public V9 parse-time invariant cache survives repeated rendering without feature or parameter reconstruction and refuses cache shapes above 512 MiB",
       "forbidden import scan over every public runtime source"
     ],
     "public_forbidden_import_scan": "PASS",
@@ -119,12 +157,16 @@
   },
   "blockers": [
     {
-      "id": "FRESH_G109_G105_CUSTODY_PAIR_ABSENT",
-      "detail": "G109 is committed at 1689d2025d and its strict preflight is green, but no materialized full-n600 G109 aggregate plus physical fresh own-lineage G105 checkpoint has yet satisfied point-of-use target reconstruction and exact packet recompilation."
+      "id": "G111_G105_WIRE_QUANTIZER_MISMATCH",
+      "detail": "Trainer checkpoint selection uses an arbitrary-scale int8 surrogate while G105 ships power-of-two int8 weights plus power-of-two int16 biases, palette, and Y1 code, so selection is over a different semantic Y1. Current G111/G105 is not frontier-ready until exact parsed-G105 wire-QAT/selection closes. Self-orient is optional under newer n600 evidence; any future self-orient arm must use a new exact packet magic/version and strict public plugin branch, never reinterpret SV9Y1V1."
     },
     {
-      "id": "CONDITIONAL_OPERAND_PRODUCER_ABSENT",
-      "detail": "No producer yet emits the required self-hashed operand receipt, strict physical operand NPZ, and sealed resumable producer-run stage chain for a real full-n600 joint-pose-conditioned payload."
+      "id": "REAL_G112_PARTITION_ABSENT",
+      "detail": "The recursive physical partition ABI is implemented and tested, but no real full-n600 fresh producer has yet materialized a matching G112 partition receipt with complete physical ancestry for G110."
+    },
+    {
+      "id": "POST_G105_EXACT_POSE_REFIT_ABSENT",
+      "detail": "The G112 xi table is only an initializer. No real full-n600 post-G105 refit yet emits xi_eff from the exact parsed-G105 Y1 plus public V10 camera source and native camera-warp order with the required selected-preimage marker and self-hashed resumable run/stage receipt."
     },
     {
       "id": "NO_RECEIVER_CLOSED_EXACT_ROW",
@@ -132,10 +174,11 @@
     }
   ],
   "dependency_order": [
-    "materialize the committed G109 full-n600 aggregate and pair it to a fresh G105 exact-V9 checkpoint and packet",
-    "produce a fresh full-n600 G110 conditional operand receipt",
-    "compile one receiver-closed archive",
-    "run parse-back plus deterministic double decode",
+    "train or terminally finish and select every preserved stage through exact parsed-G105 power-of-two wire quantization; apply the optimistic semantic-only kill gate before pose work",
+    "run the fresh full-n600 exact-V10-conditioned producer and materialize its strict recursive G112 partition receipt",
+    "run the real full-n600 post-G105 exact-public-receiver pose refit from the G112 initializer and preserve every stage",
+    "compile the exact {raw,Rice} x {STORE,DEFLATE} counted archive.zip matrix and retain the exact minimum plus all records",
+    "seal the counted archive.zip and public runtime tree separately, then run clean-extract parse-back plus deterministic double decode and prove exact output video",
     "run authoritative upstream/evaluate.py n600 and arbitrate against the canonical effective_frontier"
   ]
 }

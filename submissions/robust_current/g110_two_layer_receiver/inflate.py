@@ -36,7 +36,7 @@ FRAME0_PLUGIN_CALLS: Final = (
     "accepts_packet",
     "parse_packet",
     "semantic_packet",
-    "render_scorer_y0",
+    "render_camera_y0",
     "verify_final_y1_population",
 )
 EXPECTED_SEMANTIC_PLUGINS: Final = {
@@ -45,6 +45,7 @@ EXPECTED_SEMANTIC_PLUGINS: Final = {
 }
 EXPECTED_FRAME0_PLUGINS: Final = {
     "conditional_lowrank_rice_v1.py": "tac.semantic_root_y0.conditional_lowrank_rice.v1",
+    "generated_y1_pose_xip2_v1.py": "tac.semantic_root_y0.generated_y1_pose_xip2.v1",
 }
 
 
@@ -101,11 +102,15 @@ def _load_plugins(
             raise PublicInflateError(f"cannot load runtime plugin {path.name}")
         module = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = module
+        prior_dont_write_bytecode = sys.dont_write_bytecode
+        sys.dont_write_bytecode = True
         try:
             spec.loader.exec_module(module)
         except BaseException:
             sys.modules.pop(spec.name, None)
             raise
+        finally:
+            sys.dont_write_bytecode = prior_dont_write_bytecode
         variant = getattr(module, "VARIANT_ID", None)
         if (
             type(variant) is not str
@@ -258,12 +263,21 @@ def inflate(archive_root: Path, output_root: Path, video_names_path: Path) -> Pa
                     camera_y1 = _realize_factor2(scorer_y1)
                     previous_scorer = scorer_y1
                     previous_camera = camera_y1
-                scorer_y0 = frame0.render_scorer_y0(
+                camera_y0 = frame0.render_camera_y0(
                     frame0_state,
                     pair_id,
                     scorer_y1,
+                    camera_y1,
                 )
-                camera_y0 = _realize_factor2(scorer_y0)
+                if (
+                    not isinstance(camera_y0, np.ndarray)
+                    or camera_y0.dtype != np.uint8
+                    or camera_y0.shape != (CAMERA_H, CAMERA_W, CHANNELS)
+                    or not camera_y0.flags.c_contiguous
+                ):
+                    raise PublicInflateError(
+                        "conditional variant violated uint8 camera-Y0 ABI"
+                    )
                 output.write(memoryview(np.ascontiguousarray(camera_y0)).cast("B"))
                 output.write(memoryview(camera_y1).cast("B"))
             output.flush()
