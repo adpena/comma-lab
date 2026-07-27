@@ -1,0 +1,31 @@
+{
+  "schema": "tac.taskspace_program_residual_producer_config_blocker.v1",
+  "status": "BLOCKED_NOT_EXECUTABLE",
+  "campaign_id": "g59_first_real_program_residual_n600_20260726",
+  "requested_representation": "PROGRAM_RESIDUAL_LAYERED",
+  "pair_count": 600,
+  "scorer_pair_batch_size": 16,
+  "target_score": 0.172,
+  "frontier_pointer_sha256": "2a61b052be496d3a9a1be1a9c230c8d179a788e61fd03472e50fc85832da94c6",
+  "historical_v15_c1_payload_reused": false,
+  "direct_source_plane_fallback_allowed": false,
+  "training_required": false,
+  "candidate_admission_requested": false,
+  "missing_contracts": [
+    "FRESH_N600_SELECTED_PREIMAGE_FACTOR_COMPILER",
+    "PROGRAM_RESIDUAL_PRODUCER_CONFIG_SCHEMA",
+    "PROGRAM_RESIDUAL_PRODUCER_RUNNER",
+    "PROGRAM_RESIDUAL_PUBLIC_RECEIVER_GRAMMAR",
+    "SEALED_CONTEST_AUTHORITY_EMITTER"
+  ],
+  "next_executable_action": [
+    "compile fresh own-lineage semantic state into analytic topology, boundary, temporal, and conditional-pose factors",
+    "train only an irreducible quotient if analytic factors leave score-valued debt",
+    "bind the exact G58 identity, terminal chain, and two-member outer proof into a typed producer config",
+    "rerun G59 PRE_ENCODE and proceed only if the recurrent gate admits"
+  ],
+  "research_only": true,
+  "score_claim": false,
+  "evaluation_claim": false,
+  "promotion_eligible": false
+}

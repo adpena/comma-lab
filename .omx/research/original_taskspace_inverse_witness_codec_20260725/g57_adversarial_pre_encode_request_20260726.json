@@ -1,0 +1,28 @@
+{
+  "schema": "tac.taskspace_codec_adversarial_review_request.v1",
+  "review_id": "g57-program-residual-premise-20260726",
+  "boundary": "PRE_ENCODE",
+  "requested_representation": "PROGRAM_RESIDUAL_LAYERED",
+  "frontier": {
+    "target_score": 0.172,
+    "selection_rule": "min(our contest-authority best, upstream official leaderboard best entry)",
+    "pointer_sha256": "2a61b052be496d3a9a1be1a9c230c8d179a788e61fd03472e50fc85832da94c6"
+  },
+  "evidence": {
+    "actual_representation": "DIRECT_TASK_LAYERED",
+    "pair_count": 600,
+    "scorer_batch_size": 16,
+    "provider_kind": "FRESH_SOURCE_RESIZE_PLANES",
+    "source_plane_definition": "Yk[p]=round_u8(DisjointResizeOperator(gt_fk[p]))",
+    "semantic_archive_bytes": 0,
+    "semantic_archive_sha256": null,
+    "semantic_archive_counted": false,
+    "semantic_archive_reopened": false,
+    "program_packet_bytes": 0,
+    "program_packet_sha256": null,
+    "factor_count": 0,
+    "behavior_changing_factor_count": 0,
+    "target_payload_embedded": false,
+    "historical_payload_reused": false
+  }
+}

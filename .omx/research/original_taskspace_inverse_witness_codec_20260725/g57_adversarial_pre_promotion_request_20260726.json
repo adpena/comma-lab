@@ -1,0 +1,30 @@
+{
+  "schema": "tac.taskspace_codec_adversarial_review_request.v1",
+  "review_id": "g57-public-custody-promotion-20260726",
+  "boundary": "PRE_PROMOTION",
+  "requested_representation": "DIRECT_TASK_LAYERED_CONTROL",
+  "frontier": {
+    "target_score": 0.172,
+    "selection_rule": "min(our contest-authority best, upstream official leaderboard best entry)",
+    "pointer_sha256": "2a61b052be496d3a9a1be1a9c230c8d179a788e61fd03472e50fc85832da94c6"
+  },
+  "evidence": {
+    "pair_count": 600,
+    "archive_bytes": 182220,
+    "archive_sha256": "736d9c2e0313a51f79dddbdf2e899d69e8b8bcf5555c5801869464064cf27f98",
+    "runtime_tree_sha256": "0938ac608ec57e6c9daf5d9d688a9cc1b1ae64ff48829d6a22bda37412003e86",
+    "upstream_recursive_closure": true,
+    "two_distinct_clean_roots": true,
+    "fresh_decode_count_a": 1,
+    "fresh_decode_count_b": 1,
+    "resume_count_a": 0,
+    "resume_count_b": 0,
+    "raw_sha256_a": "ccddfd9ab3606ed7a1b8e6bc0d2213028e9408f0dc082c1cba62587118a2ca3d",
+    "raw_sha256_b": "ccddfd9ab3606ed7a1b8e6bc0d2213028e9408f0dc082c1cba62587118a2ca3d",
+    "raw_bytes_a": 3662409600,
+    "raw_bytes_b": 3662409600,
+    "frame_count_a": 1200,
+    "frame_count_b": 1200,
+    "axis": "[macOS-CPU advisory]"
+  }
+}

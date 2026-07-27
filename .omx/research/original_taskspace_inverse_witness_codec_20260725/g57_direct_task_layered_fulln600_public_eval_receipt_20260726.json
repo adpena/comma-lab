@@ -1,0 +1,321 @@
+{
+  "schema": "taskspace_g57_direct_task_layered_fulln600_public_eval.v1",
+  "created_at_utc": "2026-07-26T23:03:57Z",
+  "git_head": "1c3172341201e99affa82bf75d99db88b49b801c",
+  "lane_id": "lane_original_taskspace_inverse_witness_codec_capstone_20260726",
+  "requested_experiment": "fresh batch16 selected-preimage PROGRAM_RESIDUAL_LAYERED codec with counted fresh semantic program and factors",
+  "completed_experiment": "DIRECT_TASK_LAYERED x264rgb 23kbps Y1 plus 23kbps centered-q2 Y0-given-Y1 control",
+  "literal_requested_experiment_completed": false,
+  "status": "FULL_N600_PUBLIC_RECEIVER_AND_UPSTREAM_EVAL_CLOSED_DIRECT_CONTROL_PROGRAM_RESIDUAL_BLOCKED",
+  "representation_truth": {
+    "representation_mode": "DIRECT_TASK_LAYERED",
+    "source_plane_definition": "Yk[p] = round_u8(DisjointResizeOperator(gt_fk[p]))",
+    "selected_preimage_program_consumed": false,
+    "selected_preimage_factors_consumed": false,
+    "fresh_semantic_archive_embedded": false,
+    "fresh_semantic_archive_bytes_in_archive": 0,
+    "historical_payload_reused": false,
+    "v15_composition_claim": false,
+    "program_residual_layered_available": false,
+    "program_residual_blocker": "G49 packet and fresh V15 archive are identity-closed separately, but no production adapter embeds and charges the semantic archive plus behavior-changing counted selected-preimage factors, reopens them into CarrierComposeReceiverV1, and exposes the resulting five 120-pair stages to the lossy codec.",
+    "code_evidence": [
+      {
+        "path": "src/tac/witness_control/taskspace_fresh_scorer_plane_materializer_v1.py",
+        "sha256": "7c7dd4423ed71c5c3529ce0d31983572ac7c019397887342ef5d6e7358c96444",
+        "lines": "3-9,792-798",
+        "fact": "the production provider materializes resized source frames and explicitly does not provide a V15 semantic base"
+      },
+      {
+        "path": "src/tac/witness_dsl/taskspace_fresh_selected_plane_codec_v1.py",
+        "sha256": "4712e28543ea9cd72e5882a43cba65564d1018a3a7130a7ed044e2b428526c15",
+        "lines": "10-17,250-266",
+        "fact": "the completed codec implements DIRECT_TASK_LAYERED and refuses PROGRAM_RESIDUAL_LAYERED"
+      },
+      {
+        "path": "src/tac/witness_dsl/taskspace_selected_preimage_program_v1.py",
+        "sha256": "5fd2938ce96bc592fbeddfe519f36b3f2371789dcf322617691e607490c281f0",
+        "lines": "1260-1334,2207-2251",
+        "fact": "G49 retains semantic embedding as owed and exposes the missing segmented selected-preimage decode surface"
+      }
+    ]
+  },
+  "fresh_semantic_compile_custody": {
+    "receipt": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/ddm_v15_scorer_solved_templates_n600_receipt.json",
+      "bytes": 169982,
+      "sha256": "53b60e4a397fc1cdb7660a0c543221be17b723d38942157ff075b49e76a76e65"
+    },
+    "archive": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+      "bytes": 133941,
+      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+      "execution_allowed": false,
+      "embedded_in_g57_archive": false
+    },
+    "freshness_rule": "fresh derivation lineage, not output-hash novelty",
+    "use_in_this_row": "identity evidence only; zero bytes consumed or copied"
+  },
+  "g51_operand_custody": {
+    "schema": "tac.taskspace_fresh_scorer_plane_aggregate.v1",
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_scorer_planes_n600_20260726/aggregate_receipt.json",
+    "file_sha256": "ae9048dfc24947a6268315590b65da02b56549379e347cbaced25e2e6f67d915",
+    "self_seal_sha256": "4363827c2aeb613916029d8bacde8aeb4ded961c4d1ca297310a1e53e204619c",
+    "stage_digest_chain_sha256": "36f1aa103f7ee6c374a8b5b9baad38f5c7b9e6f19b0ef4b58b5f963a4c433e62",
+    "pair_count": 600,
+    "stage_count": 5,
+    "pairs_per_stage": 120,
+    "scorer_batch_size": 16,
+    "target_bank_sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85",
+    "target_payload_embedded": false,
+    "pose_authority": false,
+    "pose_custody": "SEALED_SOURCE_CACHE_ADVISORY_ONLY"
+  },
+  "g52_codec_custody": {
+    "aggregate_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_selected_plane_codec_x264rgb_46k_n600_20260726/aggregate_receipt.json",
+      "sha256": "0305e72d72f3f4f1beb36d8e085fec032ff81ca8dfbe76ee10ce1389f1dc83a0"
+    },
+    "config": {
+      "path": ".omx/research/configs/taskspace_fresh_selected_plane_codec_x264rgb_46k_n600_20260726.json",
+      "sha256": "a3aef05a491161a358ef1c5f63713bc5d76e5cda9b780f3593f3dde0493822af",
+      "endpoint": "frontier_rate_feasible_46k_equal_lambda_price_x264rgb_v1",
+      "base_bitrate_bps": 23000,
+      "enhancement_bitrate_bps": 23000
+    },
+    "ffmpeg": {
+      "path": "/opt/homebrew/Cellar/ffmpeg/8.1.2_1/bin/ffmpeg",
+      "bytes": 441728,
+      "sha256": "1332dc2de372bade9a8a63da0d6cdfab9de97fcefbae707bcc0b0506e1203327",
+      "version": "ffmpeg 8.1.2",
+      "encoder": "libx264rgb",
+      "preset": "veryslow",
+      "threads": 1
+    },
+    "counted_bundle": {
+      "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_selected_plane_codec_x264rgb_46k_n600_20260726/final/counted_stream_bundle.zip",
+      "bytes": 184052,
+      "sha256": "52865d91133ccf41518e738ac47c6119d3aa19e91f70a8b657d841bbb78441cd",
+      "payload_stream_bytes": 180264
+    },
+    "streams": [
+      {
+        "role": "Y1 semantic-base control stream",
+        "bytes": 90129,
+        "sha256": "e6f99e42bd9d78c2c21acb1c887724ab75d58749734b849a66c59c6f2f2e87dc",
+        "decoded_sha256": "6d804d281d83f1075f0de90a95d078aa287b9275b68fc880510266e2fe2e515d"
+      },
+      {
+        "role": "centered-q2 Y0-given-Y1 enhancement control stream",
+        "bytes": 90135,
+        "sha256": "2b82e7094265af56e854b31a91e43220369d2a1b22fb4316afe0450a3a9f3fcf",
+        "decoded_sha256": "d5fc907fa84ebb528337c598c784f810223ffa0897ec0c7628d3040ef0a2150f"
+      }
+    ],
+    "decoded_plane_sha256": {
+      "y0": "e544009bd7258bc0163acb88f601a48c07e7ea8efb1a45da335c3d8ba8509b0f",
+      "y1": "6d804d281d83f1075f0de90a95d078aa287b9275b68fc880510266e2fe2e515d"
+    },
+    "final_recode_receipt_sha256": "8ddd95e3a2ece4422abfc6e708694d20ccfd96026b289f60cfc996c78c2fce61"
+  },
+  "public_archive_closure": {
+    "archive": {
+      "path": "/Volumes/VertigoDataTier/pact/g55_public_task_layered_codec_closure_x264rgb_46k_20260726/public_preview/archive.zip",
+      "bytes": 182220,
+      "sha256": "736d9c2e0313a51f79dddbdf2e899d69e8b8bcf5555c5801869464064cf27f98",
+      "member_count": 3,
+      "manifest_bytes": 1538,
+      "payload_stream_bytes": 180264,
+      "zip_overhead_bytes": 418,
+      "historical_payload_bytes": 0
+    },
+    "build_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/g55_public_task_layered_codec_closure_x264rgb_46k_20260726/public_preview/build_receipt.json",
+      "sha256": "15d20eac1398e5bf84fabe1ad0a360b064cf3124030ed8b13216de611c8e20dc"
+    },
+    "exact_eval_staging_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/g55_public_task_layered_codec_closure_x264rgb_46k_20260726/public_preview/exact_eval_staging_receipt.json",
+      "sha256": "c8b9d04253c9c115df0386fec3627eab8d3aef0e0f75edd7b26f8e3673fcbf81"
+    },
+    "generic_runtime": {
+      "inflate_py_sha256": "434bfeb9548e8b4791307c5a0f9bd7a70beca449400ffb52e3742a9f7c3e865c",
+      "inflate_sh_sha256": "75a2da5ab4bd43448ab3cc029640f48c90e55ad37390e21eb8da9c5c1f728bef",
+      "tree_sha256": "0938ac608ec57e6c9daf5d9d688a9cc1b1ae64ff48829d6a22bda37412003e86",
+      "counted_as_video_payload": false
+    },
+    "parse_back": {
+      "pyav_version": "17.0.0",
+      "libavcodec": "62.11.100",
+      "native_pixel_format": "gbrp",
+      "factor2_receiver_contract": "factor2-disjoint-half-pixel-uint8.v1",
+      "manifest_sha256": "d3331dd5b5e9bfa446e3de5200d67af8b6a793103c582e0e77a37bcb7d0efe76"
+    }
+  },
+  "double_decode_proof": {
+    "distinct_initially_clean_roots": true,
+    "decode_a": {
+      "receipt_path": "/Volumes/VertigoDataTier/pact/g55_public_task_layered_codec_closure_x264rgb_46k_20260726/double_decode_proof/output_a/.taskspace-layered-public/0/inflate-receipt-fresh.json",
+      "receipt_sha256": "d7fa5a35fe00a9109b2410d517ef556315513a812125c86c72594d6941972475",
+      "output_root_identity_sha256": "39f004a95e826cab40de8982a3fda7af7abb8565041177b5d9241715130ac267",
+      "elapsed_s": 372.656,
+      "peak_rss_mib": 3460
+    },
+    "decode_b": {
+      "receipt_path": "/Volumes/VertigoDataTier/pact/g55_public_task_layered_codec_closure_x264rgb_46k_20260726/double_decode_proof/output_b/.taskspace-layered-public/0/inflate-receipt-fresh.json",
+      "receipt_sha256": "07fca25bebad758fd2821dde10a6373460e758e686721af43c8bd11dd2437211",
+      "output_root_identity_sha256": "158374dc4f31706fe5a3d87f8e3aa8aacf0b6b900f7093f864b17c96ae419e6f",
+      "elapsed_s": 371.714,
+      "peak_rss_mib": 3460
+    },
+    "frame_count_each": 1200,
+    "raw_bytes_each": 3662409600,
+    "raw_sha256_each": "ccddfd9ab3606ed7a1b8e6bc0d2213028e9408f0dc082c1cba62587118a2ca3d",
+    "fresh_stage_decode_count_each": 1,
+    "resume_count_each": 0,
+    "byte_identical": true
+  },
+  "upstream_evaluation": {
+    "axis": "[macOS-CPU advisory]",
+    "entrypoint": "upstream/evaluate.py",
+    "batch_size": 16,
+    "device": "cpu",
+    "seed": 1234,
+    "pair_count": 600,
+    "report": {
+      "path": "/Volumes/VertigoDataTier/pact/g55_public_task_layered_codec_closure_x264rgb_46k_20260726/upstream_eval_macos_cpu_batch16/report.txt",
+      "bytes": 801,
+      "sha256": "de0185f94117509108b1e3a756c255b33d1999ca6eb44912ea64793ca3a2d85c"
+    },
+    "stdout_log": {
+      "path": "/Volumes/VertigoDataTier/pact/g55_public_task_layered_codec_closure_x264rgb_46k_20260726/upstream_eval_macos_cpu_batch16/evaluate_stdout.log",
+      "bytes": 2582,
+      "sha256": "1550396c63c5c6c169782b3f39e36f40ba2db6b12995eaf29212a076eb956a9c"
+    },
+    "safe_run": {
+      "status": "ok",
+      "exit_code": 0,
+      "elapsed_s": 429.86,
+      "peak_rss_mib": 10011,
+      "rss_limit_mib": 24576,
+      "timeout_s": 7200
+    },
+    "average_segnet_distortion": 0.17946555,
+    "average_posenet_distortion": 45.10546494,
+    "archive_bytes": 182220,
+    "original_uncompressed_bytes": 37545489,
+    "compression_rate_exact": 0.004853312737516883,
+    "score_terms_from_report_rounded_components": {
+      "segnet": 17.946555,
+      "posenet": 21.238047212491075,
+      "rate": 0.12133281843792207
+    },
+    "score_recomputed_from_report_rounded_components": 39.30593503092899,
+    "score_printed_by_upstream": 39.31,
+    "score_claim": false,
+    "reason_score_claim_false": "macOS CPU is advisory; contest CPU/CUDA authority was neither requested nor economically justified after this decisive noncompetitive result"
+  },
+  "anticipation_audit": {
+    "pipeline_defect": "The experiment advanced on rate feasibility and receiver closure without requiring identity with the G49 selected-preimage producer or a coupled full-n600 scorer admission row.",
+    "pre_eval_signals_that_should_have_stopped_candidate_interpretation": [
+      "G51 source explicitly defines direct resized source RGB rather than inverse-selected scorer planes.",
+      "G52 config and code explicitly set DIRECT_TASK_LAYERED and refuse PROGRAM_RESIDUAL_LAYERED.",
+      "The fresh V15 semantic archive and every G49 counted factor contributed zero archive bytes.",
+      "The final G52 plane SSEs implied large scorer-grid RGB errors at only about 0.00611 bits per scorer pixel per layer."
+    ],
+    "decoded_plane_error": {
+      "scalars_per_plane_population": 353894400,
+      "y0_sse": 27302951404,
+      "y0_mse": 77.14999560320818,
+      "y0_rmse": 8.783507021868212,
+      "y1_sse": 25672222216,
+      "y1_mse": 72.54204139992042,
+      "y1_rmse": 8.51716158117952
+    },
+    "rate_density": {
+      "base_bits_per_scorer_pixel": 0.006112263997395833,
+      "enhancement_bits_per_scorer_pixel": 0.0061126708984375,
+      "combined_bits_per_scorer_pixel": 0.012224934895833333
+    },
+    "frontier_feasibility_check": {
+      "distortion_score_budget_after_rate": 0.05066718156207792,
+      "maximum_d_seg_if_pose_were_zero": 0.0005066718156207791,
+      "measured_d_seg_multiple_of_that_impossible_best_case_allowance": 354.20472279500507
+    },
+    "structural_fix": "Before public double-decode/promotion work, require a typed producer-identity gate and one full-n600 coupled scorer row on the exact decoded planes. Rate feasibility alone is never admission."
+  },
+  "recurrent_adversarial_review": {
+    "lane_id": "lane_g59_recurrent_codec_adversarial_gate_20260726",
+    "v1_authority": "RETROSPECTIVE_LINTER_ONLY",
+    "policy_target": "Enforce representation-premise review before encode, exact coupled score and learning custody after eval, competitive admission before public closure, and same-object contest-axis custody before promotion.",
+    "regression_conclusion": "The post-hoc PRE_ENCODE request diagnoses the representation substitution, but v1 did not anticipate or stop G57: the requests were authored after evaluation, boundaries were unchained, the frontier and custody were self-attested, and no launcher enforced the exit code.",
+    "v1_adversarial_verdict": "REFUSE_AS_ENFORCEMENT_GATE",
+    "v2_owed": "Bind the live canonical frontier and canonical score helper; reopen artifacts; chain campaign, representation, archive, raw, eval, and predecessor receipt identities; require competitive score before promotion; and enforce the chain in governed launchers.",
+    "canonical_post_eval_learning": {
+      "ledger_path": ".omx/state/probe_outcomes.jsonl",
+      "probe_id": "g57_direct_task_layered_x264rgb_46k_n600_20260726",
+      "verdict": "KILL",
+      "blocker_status": "advisory",
+      "verdict_scope": "FORMULATION:DIRECT_TASK_LAYERED_X264RGB_23K_PLUS_23K_CENTERED_Q2",
+      "candidate_admission": false,
+      "not_killed_count": 5
+    },
+    "reviews": [
+      {
+        "boundary": "PRE_ENCODE",
+        "verdict": "REFUSE",
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g57_adversarial_pre_encode_receipt_20260726.json",
+        "sha256": "98a61abff46fd85a9df09910cba1f083af5cb4a86a244ba81927bd6c7587d261"
+      },
+      {
+        "boundary": "PRE_PUBLIC_CLOSURE",
+        "verdict": "REFUSE",
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g57_adversarial_pre_public_receipt_20260726.json",
+        "sha256": "e949b9aaa51f6badf53cf8c252254b680307310302452e7869392893d95fe030"
+      },
+      {
+        "boundary": "PRE_PROMOTION",
+        "verdict": "REFUSE",
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g57_adversarial_pre_promotion_receipt_20260726.json",
+        "sha256": "cd465fce95c9005e0e5b9acc6fb45308e35821515de2c7508afec026780c8aee"
+      },
+      {
+        "boundary": "POST_EVAL",
+        "verdict": "ADMIT",
+        "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g57_adversarial_post_eval_receipt_20260726.json",
+        "sha256": "72b42f6c8e0bd9b7b535dbdbaf9a1487f2a1afe162c2fc43ca10e8711fb807b6",
+        "meaning": "The v1 linter admitted a narrowly scoped negative record, but a subsequent adversarial review found that prose-only integration blockers are insufficient. This receipt is non-promotable retrospective evidence."
+      }
+    ]
+  },
+  "frontier": {
+    "selection_rule": "min(our best contest-authority score, upstream official leaderboard best entry)",
+    "live_effective_score": 0.172,
+    "selected_axis": "official_leaderboard",
+    "selected_source": "upstream_official_leaderboard",
+    "source_url": "https://github.com/commaai/comma_video_compression_challenge#leaderboard-lower-is-better",
+    "refreshed_at_utc": "2026-07-26T23:03:57Z",
+    "candidate_delta_from_rounded_components": 39.133935030928996,
+    "pointer_delta": "UNMOVED"
+  },
+  "verdict": {
+    "decision": "KILL_FORMULATION_ONLY",
+    "killed_scope": "DIRECT_TASK_LAYERED source-resize scorer planes encoded as equal-price 23kbps libx264rgb Y1 and centered-q2 Y0-given-Y1, then generic factor2 realization",
+    "not_killed": [
+      "G49 selected-preimage program family",
+      "PROGRAM_RESIDUAL_LAYERED with a counted fresh semantic archive",
+      "analytic boundary factors",
+      "learned irreducible quotient",
+      "unequal scorer-costate layer allocation",
+      "other exact selected-preimage representatives"
+    ],
+    "reason": "The archive rate term is only 0.1213328184, but direct pixel-plane quantization contributes approximately 39.1846 distortion score units. The failure is representation distortion, not container overhead or public receiver drift.",
+    "next_required_implementation": "Bridge G49 iter_selected_preimage_segment into the G52 operand-provider protocol; require a behavior-changing counted factor packet; embed and charge the fresh semantic archive plus packet/factors in the outer archive; decode the semantic program first and encode only its selected-preimage quotient; then allocate Y1 and Y0-given-Y1 bytes by measured coupled score costates instead of equal bitrate."
+  },
+  "authority": {
+    "research_only": true,
+    "candidate_lineage_allowed": true,
+    "promotion_eligible": false,
+    "candidate_claim": false,
+    "score_claim": false,
+    "pointer_mutation_performed": false
+  }
+}

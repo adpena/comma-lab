@@ -1,0 +1,148 @@
+{
+  "schema": "tac.taskspace_selected_preimage_prerequisite_blocker.v1",
+  "status": "FAIL_CLOSED_NO_CANDIDATE",
+  "created_at_utc": "2026-07-27T00:13:25Z",
+  "campaign_id": "g59_first_real_program_residual_n600_20260726",
+  "requested_representation": "PROGRAM_RESIDUAL_LAYERED",
+  "frontier": {
+    "target_score": 0.172,
+    "selected_axis": "official_leaderboard",
+    "selected_source": "upstream_official_leaderboard",
+    "pointer_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "pointer_bytes": 17319,
+    "pointer_sha256": "2a61b052be496d3a9a1be1a9c230c8d179a788e61fd03472e50fc85832da94c6",
+    "pointer_delta": "UNMOVED"
+  },
+  "g57_control": {
+    "representation": "DIRECT_TASK_LAYERED",
+    "selected_preimage_program_consumed": false,
+    "archive_bytes": 182220,
+    "archive_sha256": "736d9c2e0313a51f79dddbdf2e899d69e8b8bcf5555c5801869464064cf27f98",
+    "decoded_raw_bytes": 3662409600,
+    "decoded_raw_sha256": "ccddfd9ab3606ed7a1b8e6bc0d2213028e9408f0dc082c1cba62587118a2ca3d",
+    "axis": "[macOS-CPU advisory]",
+    "pair_count": 600,
+    "batch_size": 16,
+    "d_seg": 0.17946555,
+    "d_pose": 45.10546494,
+    "score": 39.30593503092899,
+    "verdict": "KILL_DIRECT_FORMULATION_ONLY"
+  },
+  "g58": {
+    "status": "STRICT_TRANSPORT_SEAM_IMPLEMENTED",
+    "spec": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g58_selected_preimage_operand_adapter_20260726.md",
+      "sha256": "896982bf6c2a30f01e4ff490a7e23ea666682be361e5ef9fe3926a5fedd5ae14"
+    },
+    "source": {
+      "path": "src/tac/witness_dsl/taskspace_selected_preimage_operand_adapter_v1.py",
+      "sha256": "d8c892a6821cb9a3c8b27ddc24073c756956f2c6b1541bf2645441d1d075b73b"
+    },
+    "test": {
+      "path": "src/tac/witness_dsl/tests/test_taskspace_selected_preimage_operand_adapter_v1.py",
+      "sha256": "19bc368037fa88b202aba166697eb6ac91f2bf9f56e98e80b52980b8ed6e6ef9"
+    },
+    "adversarial_review": {
+      "finding": "neutral-name third ZIP member could carry target or historical bytes while absence booleans remained false",
+      "reproduced_extra_bytes": 786432,
+      "pre_fix_result": "ADMITTED",
+      "fix": "descriptor-stable exact two-member typed partition with independent production re-enumeration",
+      "post_fix_result": "REFUSED_AS_REQUIRED",
+      "regression_reason": "outer archive contains an unexpected untyped member"
+    },
+    "does_not_supply": [
+      "selected_preimage_factor_synthesis",
+      "program_producer_config",
+      "program_producer_runner",
+      "public_receiver"
+    ]
+  },
+  "g59": {
+    "status": "RECURRENT_GATE_IMPLEMENTED_FAIL_CLOSED",
+    "spec": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g59_recurrent_adversarial_gate_v2_20260726.md",
+      "sha256": "228ffebf06189c2a7d444955c2d92449557ede80e4e53e0197e8ae80f49c5a8d"
+    },
+    "source": {
+      "path": "src/tac/witness_control/taskspace_codec_adversarial_gate_v2.py",
+      "sha256": "0f8cb56a013e6c20d3a1bff1493da79853a8e9cbc58a49ea4e659598bfb6f207"
+    },
+    "test": {
+      "path": "src/tac/witness_control/tests/test_taskspace_codec_adversarial_gate_v2.py",
+      "sha256": "2aa9d34764a7bdf38eeafd7b69d8fcf9f021e724867e36ce0edb2cdb1dca067c"
+    },
+    "campaign_seal": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g59_program_residual_campaign_seal_20260726.json",
+      "sha256": "f02cabc4be4657812616f42eaa6f183bd675b968fc999ae169b5aa020ba27556",
+      "status": "ADMIT",
+      "next_stage": "PRE_ENCODE"
+    },
+    "pre_encode_refusal": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g59_program_residual_pre_encode_refusal_20260726.json",
+      "sha256": "7c69fc424f7b026276f226ebbaa3e475b1160ee3a7246520324be2a821367973",
+      "status": "REFUSE",
+      "candidate_admission": false,
+      "refusals": [
+        "G58_ADAPTER_IDENTITY_RECEIPT_REQUIRED"
+      ]
+    },
+    "deliberate_later_gate": "AUTHORITY_EMITTER_OWED_SEALED_C0B_OR_CONTEST_OWNER",
+    "independent_quality_review": {
+      "pre_fix_findings": [
+        "DIRECT_CONTROL_LAUNCHERS_REQUIRED_AN_UNREACHABLE_PROGRAM_CANDIDATE_RECEIPT",
+        "EXACT_EVAL_STAGING_DEPENDED_CIRCULARLY_ON_POST_EVAL_PRE_PUBLIC_RECEIPT",
+        "FULL_CHAIN_REOPEN_DID_NOT_ENFORCE_ADJACENT_STAGE_PREFIX"
+      ],
+      "fixes": [
+        "direct G52 build and exact-eval staging remain explicitly research-only and create no candidate authority",
+        "promotion alone requires the same-object PRE_PROMOTION chain",
+        "every live chain must equal the exact adjacent lifecycle prefix"
+      ],
+      "post_fix_release_verdict": "PASS_NO_REMAINING_P0_OR_P1",
+      "post_fix_focused_tests_passed": 32,
+      "post_fix_ruff": "PASS",
+      "program_candidate_launch_status": "BLOCKED_UNTIL_TYPED_PRODUCER_CONFIG_AND_RUNNER_EXIST"
+    }
+  },
+  "verification": {
+    "focused_pytest": {
+      "passed": 91,
+      "failed": 0,
+      "elapsed_seconds": 3.94
+    },
+    "ruff": "PASS",
+    "compileall": "PASS",
+    "neutral_third_member_post_fix": "REFUSED_AS_REQUIRED"
+  },
+  "blocking_conditions": [
+    "NO_PRODUCTION_FRESH_N600_SELECTED_PREIMAGE_FACTOR_COMPILE",
+    "PROGRAM_RESIDUAL_PRODUCER_CONFIG_SCHEMA_OWED",
+    "PROGRAM_RESIDUAL_PRODUCER_RUNNER_OWED",
+    "PROGRAM_RESIDUAL_PUBLIC_RECEIVER_GRAMMAR_OWED",
+    "SEALED_CONTEST_AUTHORITY_EMITTER_OWED"
+  ],
+  "verdict_scope": {
+    "level": "IMPLEMENTATION",
+    "name": "PROGRAM_RESIDUAL_LAYERED_PRODUCTION_COMPILER_AND_RECEIVER"
+  },
+  "not_killed": [
+    "G49 selected-preimage program family",
+    "analytic topology and boundary factors",
+    "temporal factorization",
+    "conditional Y0 given decoded Y1 pose factors",
+    "learned irreducible quotient when analytic factors are insufficient",
+    "full-lattice teacher signal",
+    "joint exact score and byte descent"
+  ],
+  "next_executable_action": [
+    "implement a fresh n600 selected-preimage factor compiler",
+    "emit a typed program producer config bound to exact G58 artifacts",
+    "add a resumable five-stage program runner and generic public receiver",
+    "rerun G59 PRE_ENCODE and proceed only on a live same-campaign admission"
+  ],
+  "historical_payload_reused": false,
+  "candidate_archive_created": false,
+  "score_claim": false,
+  "evaluation_claim": false,
+  "promotion_eligible": false
+}

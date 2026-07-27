@@ -1,0 +1,22 @@
+{
+  "schema": "tac.taskspace_codec_adversarial_review_request.v1",
+  "review_id": "g57-coupled-score-admission-20260726",
+  "boundary": "PRE_PUBLIC_CLOSURE",
+  "requested_representation": "DIRECT_TASK_LAYERED_CONTROL",
+  "frontier": {
+    "target_score": 0.172,
+    "selection_rule": "min(our contest-authority best, upstream official leaderboard best entry)",
+    "pointer_sha256": "2a61b052be496d3a9a1be1a9c230c8d179a788e61fd03472e50fc85832da94c6"
+  },
+  "evidence": {
+    "pair_count": 600,
+    "archive_bytes": 182220,
+    "archive_sha256": "736d9c2e0313a51f79dddbdf2e899d69e8b8bcf5555c5801869464064cf27f98",
+    "raw_sha256": "ccddfd9ab3606ed7a1b8e6bc0d2213028e9408f0dc082c1cba62587118a2ca3d",
+    "exact_components_available": true,
+    "exact_component_source": "FULL_N600_FROZEN_SCORER_ON_EXACT_DECODED_PLANES",
+    "realized_through_R": true,
+    "d_seg": 0.17946555,
+    "d_pose": 45.10546494
+  }
+}

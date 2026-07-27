@@ -1,0 +1,37 @@
+{
+  "schema": "tac.taskspace_codec_adversarial_review_request.v1",
+  "review_id": "g57-scoped-verdict-integration-20260726",
+  "boundary": "POST_EVAL",
+  "requested_representation": "DIRECT_TASK_LAYERED_CONTROL",
+  "frontier": {
+    "target_score": 0.172,
+    "selection_rule": "min(our contest-authority best, upstream official leaderboard best entry)",
+    "pointer_sha256": "2a61b052be496d3a9a1be1a9c230c8d179a788e61fd03472e50fc85832da94c6"
+  },
+  "evidence": {
+    "pair_count": 600,
+    "archive_bytes": 182220,
+    "archive_sha256": "736d9c2e0313a51f79dddbdf2e899d69e8b8bcf5555c5801869464064cf27f98",
+    "d_seg": 0.17946555,
+    "d_pose": 45.10546494,
+    "axis": "[macOS-CPU advisory]",
+    "verdict_scope": "FORMULATION:DIRECT_TASK_LAYERED_X264RGB_23K_PLUS_23K_CENTERED_Q2",
+    "not_killed": [
+      "G49_SELECTED_PREIMAGE_PROGRAM",
+      "PROGRAM_RESIDUAL_LAYERED",
+      "ANALYTIC_BOUNDARY_FACTORS",
+      "LEARNED_IRREDUCIBLE_QUOTIENT",
+      "UNEQUAL_SCORER_COSTATE_ALLOCATION"
+    ],
+    "evidence_receipt_sha256": "de0185f94117509108b1e3a756c255b33d1999ca6eb44912ea64793ca3a2d85c",
+    "integration_hooks": {
+      "sensitivity_map": false,
+      "pareto_allocator": false,
+      "bit_allocator": false,
+      "autopilot": false,
+      "continual_posterior": false,
+      "probe_ledger": false
+    },
+    "integration_blocker": "G57 is durably sealed and candidate dispatch is refused; canonical costate, allocator, autopilot, posterior, and shared probe-ledger consumers remain explicitly owed after the recurrent gate and G49 operand adapter land."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "counted_operand_bundle": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_selected_plane_codec_x264rgb_46k_n600_20260726/final/counted_stream_bundle.zip",
+    "sha256": "52865d91133ccf41518e738ac47c6119d3aa19e91f70a8b657d841bbb78441cd"
+  },
+  "operand_compiler_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_selected_plane_codec_x264rgb_46k_n600_20260726/aggregate_receipt.json",
+    "sha256": "0305e72d72f3f4f1beb36d8e085fec032ff81ca8dfbe76ee10ce1389f1dc83a0"
+  },
+  "output_dir": "/Volumes/VertigoDataTier/pact/g55_public_task_layered_codec_closure_x264rgb_46k_20260726/public_preview",
+  "pyav_runtime": {
+    "lock_path": "upstream/uv.lock",
+    "lock_sha256": "0489187bd4222ad24ea252c94e51585469c435b9c6a479a047aa85d0e7d17286",
+    "version": "17.0.0"
+  },
+  "repo_root": ".",
+  "runtime_dir": "submissions/robust_current/taskspace_layered_public",
+  "schema": "taskspace_g55_public_layered_codec_closure_config.v1"
+}

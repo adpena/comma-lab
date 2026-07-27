@@ -1,0 +1,52 @@
+{
+  "schema": "tac.rebuildable_artifact_coldstore_manifest.v1",
+  "created_at_utc": "2026-07-26T23:05:00Z",
+  "operation": "LOSSLESS_MOVE_TO_SSD_COLD_STORE",
+  "delete_performed": false,
+  "reason": "G56 created a generated repository-local frozen upstream environment during recursive evaluator closure. The exact completed G57 evaluation used the separately bound SSD environment, so the duplicate local environment is rebuildable bulk and must leave local disk under the storage waterfall.",
+  "source": {
+    "path": "/Users/adpena/Projects/pact/upstream/.venv",
+    "logical_regular_file_bytes": 504973801,
+    "disk_kib": 540952,
+    "regular_file_count": 18229,
+    "symlink_count": 3,
+    "directory_count": 1317,
+    "content_inventory_sha256": "078b431ce2e7deaebadbd540e5becded73d19f335e4598011abe741693b4b479"
+  },
+  "cold_store": {
+    "path": "/Volumes/VertigoDataTier/pact/cold_store/upstream_local_venv_batch16_20260726T2305Z",
+    "preserve_losslessly": true,
+    "move_completed": true,
+    "source_path_absent_after_move": true,
+    "verified_regular_file_count": 18229,
+    "verified_logical_regular_file_bytes": 504973801,
+    "verified_content_inventory_sha256": "078b431ce2e7deaebadbd540e5becded73d19f335e4598011abe741693b4b479"
+  },
+  "active_runtime": {
+    "path": "/Volumes/VertigoDataTier/pact/upstream_runtime_av170_cpu_20260726",
+    "purpose": "frozen full-n600 upstream batch16 macOS CPU advisory evaluation",
+    "python_version": "3.11.15",
+    "pyav_version": "17.0.0",
+    "torch_version": "2.10.0",
+    "torchvision_version": "0.25.0",
+    "numpy_version": "2.3.4"
+  },
+  "reproducibility": {
+    "command": "UV_PROJECT_ENVIRONMENT=/Users/adpena/Projects/pact/upstream/.venv uv sync --project upstream --frozen --group cpu --python /opt/homebrew/bin/python3.11",
+    "uv_lock_sha256": "0489187bd4222ad24ea252c94e51585469c435b9c6a479a047aa85d0e7d17286",
+    "pyproject_sha256": "8651cd68ab65367953056b5769303671a01442921288fedc335527789e7dfba8",
+    "evaluate_py_sha256": "7da71a84e5b455c235a0e08588893ec5cadb83c1be83e474fe2351831620e553",
+    "exact_old_byte_rebuild_claim": false,
+    "note": "The preserved cold-store tree is the exact-byte authority; the frozen rebuild command is the functional reproducibility path."
+  },
+  "authority": {
+    "research_only": true,
+    "score_claim": false,
+    "candidate_claim": false,
+    "promotion_eligible": false,
+    "false_authority_score_flags": [
+      "macOS CPU is advisory",
+      "moving a generated environment does not change the G57 report or archive custody"
+    ]
+  }
+}
