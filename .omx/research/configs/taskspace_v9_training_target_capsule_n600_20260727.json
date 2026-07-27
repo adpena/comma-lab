@@ -1,0 +1,23 @@
+{
+  "schema": "tac.taskspace_v9_training_target_capsule_config.v1",
+  "run_id": "g109_v9_training_target_capsule_n600_20260727",
+  "output_root": "/Volumes/VertigoDataTier/pact/taskspace_v9_training_target_capsule_n600_20260727",
+  "g46_compile_ready_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_teacher_batch16_20260726/12_encoder_only_receipt.json",
+    "expected_sha256": "556c6b20f12ae7f5c6b8a1a2d08c6d2c2e32e7831ab552938c7866f3256dfad1"
+  },
+  "posenet_weights": {
+    "path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+    "expected_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+  },
+  "required_free_bytes": 12884901888,
+  "truth": {
+    "research_only": true,
+    "encoder_only": true,
+    "score_claim": false,
+    "candidate_claim": false,
+    "promotion_eligible": false,
+    "dense_targets_candidate_payload_allowed": false,
+    "scorer_weights_candidate_payload_allowed": false
+  }
+}
