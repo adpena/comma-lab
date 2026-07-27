@@ -1,0 +1,124 @@
+{
+  "schema": "tac.g121_exact_monotone_seg_obstruction.v1",
+  "status": "EXACT_FRONTIER_OBSTRUCTION_PROVEN",
+  "created_utc": "2026-07-27T21:43:00Z",
+  "stage": {
+    "stage_tag": "stageColdRoot.epoch_0.chk_5ac7fc549618",
+    "g111_checkpoint_id_sha256": "5ac7fc5496182dcd0814a22fde119de0a84558746321ea4cba7a61fd90e75661",
+    "g120_physical_stage_identity_sha256": "e03ddc9340d8e5b2738b26080d1a0b9f757649f3d9a0d3604c7095e646d5ec21",
+    "g120_batch_progress_key_sha256": "8a18359f5fc38e4c94b67a2853ec31633194617cca5e14d18cf6186750b0e6a0",
+    "g120_pointer_snapshot_identity_sha256": "0fe70da91e8bc91755496963b8a5967ae44873c8699881ff9c21c3f03697dae5"
+  },
+  "frontier_target": {
+    "pointer_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "pointer_bytes": 17319,
+    "pointer_sha256": "a90f3de45792cc9dab1b505013bff4a675d22ba2e1956c6caaf5bebfb40902dc",
+    "score_decimal": "0.172",
+    "score_rational": {
+      "numerator": 43,
+      "denominator": 250
+    },
+    "selected_source": "upstream_official_leaderboard"
+  },
+  "population_contract": {
+    "pair_count": 600,
+    "seg_height": 384,
+    "seg_width": 512,
+    "pixel_denominator": 117964800,
+    "batch_pairs": 16,
+    "exact_obstruction_equation": "100*cumulative_disagreement_pixels*target_denominator >= target_numerator*pixel_denominator",
+    "pose_contribution_assumed_for_lower_bound": 0,
+    "rate_contribution_assumed_for_lower_bound": 0
+  },
+  "first_proving_prefix": {
+    "completed_batch_count": 2,
+    "pair_stop": 32,
+    "cumulative_disagreement_pixels": 315088,
+    "seg_score_lower_bound_rational": {
+      "numerator": 19693,
+      "denominator": 73728
+    },
+    "seg_score_lower_bound_display": 0.2671034071180556,
+    "strictly_exceeds_frontier": true
+  },
+  "preserved_prefix_at_stop": {
+    "completed_batch_count": 5,
+    "pair_stop": 80,
+    "cumulative_disagreement_pixels": 790028,
+    "d_seg_lower_bound_rational": {
+      "numerator": 197507,
+      "denominator": 29491200
+    },
+    "d_seg_lower_bound_display": 0.006697150336371528,
+    "seg_score_lower_bound_rational": {
+      "numerator": 197507,
+      "denominator": 294912
+    },
+    "seg_score_lower_bound_display": 0.6697150336371528,
+    "frontier_slack_upper_bound_rational": {
+      "numerator": -18347767,
+      "denominator": 36864000
+    },
+    "frontier_slack_upper_bound_display": -0.4977150336371528
+  },
+  "batch_receipts": [
+    {
+      "batch_index": 0,
+      "pair_start": 0,
+      "pair_stop": 16,
+      "disagreement_pixels": 158256,
+      "path": "/Volumes/VertigoDataTier/pact/g111_batch16_v9_semantic_base_full_n600_v3_20260727/g121_progress/g120/stageColdRoot.epoch_0.chk_5ac7fc549618.5ac7fc5496182dcd/g120-v2-fresh-engine-yrj9u_73/progress/8a18359f5fc38e4c94b67a2853ec31633194617cca5e14d18cf6186750b0e6a0/batch_000_000_016.json",
+      "sha256": "6864f66a4f2abc17401328880ab9f73e67ee64c61fd73320951b2fa4c69e8e9d"
+    },
+    {
+      "batch_index": 1,
+      "pair_start": 16,
+      "pair_stop": 32,
+      "disagreement_pixels": 156832,
+      "path": "/Volumes/VertigoDataTier/pact/g111_batch16_v9_semantic_base_full_n600_v3_20260727/g121_progress/g120/stageColdRoot.epoch_0.chk_5ac7fc549618.5ac7fc5496182dcd/g120-v2-fresh-engine-yrj9u_73/progress/8a18359f5fc38e4c94b67a2853ec31633194617cca5e14d18cf6186750b0e6a0/batch_001_016_032.json",
+      "sha256": "d307a4ba8099d8df8a4e44c381ee2a6d990ca3077eec20158ed62b14507bd109"
+    },
+    {
+      "batch_index": 2,
+      "pair_start": 32,
+      "pair_stop": 48,
+      "disagreement_pixels": 159120,
+      "path": "/Volumes/VertigoDataTier/pact/g111_batch16_v9_semantic_base_full_n600_v3_20260727/g121_progress/g120/stageColdRoot.epoch_0.chk_5ac7fc549618.5ac7fc5496182dcd/g120-v2-fresh-engine-yrj9u_73/progress/8a18359f5fc38e4c94b67a2853ec31633194617cca5e14d18cf6186750b0e6a0/batch_002_032_048.json",
+      "sha256": "727afcbbcafc2380380a97b8c3214c143c5fd41b1a0b0ba60c993ddd5160d725"
+    },
+    {
+      "batch_index": 3,
+      "pair_start": 48,
+      "pair_stop": 64,
+      "disagreement_pixels": 161946,
+      "path": "/Volumes/VertigoDataTier/pact/g111_batch16_v9_semantic_base_full_n600_v3_20260727/g121_progress/g120/stageColdRoot.epoch_0.chk_5ac7fc549618.5ac7fc5496182dcd/g120-v2-fresh-engine-yrj9u_73/progress/8a18359f5fc38e4c94b67a2853ec31633194617cca5e14d18cf6186750b0e6a0/batch_003_048_064.json",
+      "sha256": "951ed8096b701c85a7c4386368993b84bb4f6bafad370f7358f9b7c5fd4654ec"
+    },
+    {
+      "batch_index": 4,
+      "pair_start": 64,
+      "pair_stop": 80,
+      "disagreement_pixels": 153874,
+      "path": "/Volumes/VertigoDataTier/pact/g111_batch16_v9_semantic_base_full_n600_v3_20260727/g121_progress/g120/stageColdRoot.epoch_0.chk_5ac7fc549618.5ac7fc5496182dcd/g120-v2-fresh-engine-yrj9u_73/progress/8a18359f5fc38e4c94b67a2853ec31633194617cca5e14d18cf6186750b0e6a0/batch_004_064_080.json",
+      "sha256": "1aa365f6b8b57a8bd16a64b199a0a8a97ea6137a7ad83da0b4c9403ebdf9f1f0"
+    }
+  ],
+  "execution": {
+    "terminated_process_pid": 1587,
+    "termination_reason": "exact monotone Seg lower bound already excludes frontier movement; preserve completed batch receipts and return CPU to trained-stage pursuit",
+    "completed_batches_resumable": true,
+    "incomplete_in_memory_batch_discarded": true,
+    "cold_root_full_score_intentionally_not_spent": true
+  },
+  "authority": {
+    "exact_monotone_obstruction_claim": true,
+    "full_n600_score_claim": false,
+    "pose_score_claim": false,
+    "archive_score_claim": false,
+    "candidate_claim": false,
+    "promotion_eligible": false,
+    "pointer_moved": false,
+    "research_only": true
+  },
+  "next_action": "score the first trained immutable checkpoint; add a source-bound exact cumulative-disagreement early-prune receipt so future noncompetitive stages stop after the first proving batch prefix"
+}
