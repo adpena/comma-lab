@@ -1,0 +1,97 @@
+{
+  "schema": "ddm_lattice_teacher_compaction_h0_takeoff_receipt.v1",
+  "lane_id": "lane_g100_lattice_teacher_compaction_takeoff_20260727",
+  "finished_at_utc": "2026-07-27T08:40:27Z",
+  "authority": {
+    "research_only": true,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "candidate_claim": false,
+    "exact_eval_invoked": false,
+    "scorer_invoked": false,
+    "receiver_candidate_invoked": false,
+    "h1_materialized": false,
+    "paid_dispatch": false,
+    "pointer_moved": false
+  },
+  "result": {
+    "status": "H0_COMPLETE",
+    "pair_count": 600,
+    "q4_pair_count": 208,
+    "q8_pair_count": 392,
+    "content_root_sha256": "073d079ed3cc30abe7b7e13bfdfa96debb9f7cc06eb5482d07dc55a229981c6c",
+    "decoded_two_plane_sha256": "3494c0cf81a6df32512ffb524e1f75186f3213cf050d55111d793ec3d6351338",
+    "decoder_peak_population_rows": 1,
+    "asset_count": 12,
+    "sense_row_count": 600,
+    "admitted_proposal_factor_count": 6,
+    "dense_teacher_bytes_persisted": 0,
+    "candidate_payload_created": false,
+    "historical_payload_reused": false,
+    "teacher_role": "encoder_evidence_only",
+    "pointer_delta": "NONE"
+  },
+  "storage_preflight": {
+    "tier": "vertigo-data-tier",
+    "required_bytes": 1073741824,
+    "free_bytes_at_check": 349017460736,
+    "passed": true,
+    "dense_teacher_persistence_allowed": false,
+    "h1_materialization_authorized": false
+  },
+  "stage_checkpoints": {
+    "00_storage_preflight": {
+      "path": "/Volumes/VertigoDataTier/pact/g100_lattice_teacher_compaction_takeoff_20260727/stage_checkpoints/00_storage_preflight.json",
+      "bytes": 885,
+      "sha256": "7e23246b4e53198b342255d5e9e5b4abc9675ab3a85adbc4b003854619e35c95",
+      "content_sha256": "17b18c220c8a95d1eb6853325c8799a02fff2cad2f515a56cc09c87d6b2782a9"
+    },
+    "01_solution_index": {
+      "path": "/Volumes/VertigoDataTier/pact/g100_lattice_teacher_compaction_takeoff_20260727/stage_checkpoints/01_solution_index.json",
+      "bytes": 877374,
+      "sha256": "b0838bdada728c4537ca95b4552ff284da7fe1296d0774c5219a13db8e6d3445",
+      "content_sha256": "45688a219bc7476dfc602f90eab928f14ae502c62bc152fe47947439d9ead7d3"
+    }
+  },
+  "implementation": {
+    "config": {
+      "path": ".omx/research/configs/ddm_lattice_teacher_compaction_homotopy_h0_20260727.json",
+      "sha256": "184b91b8e736a635ef57ff24c66d3ede40575e613d17f4eed87c9156aa35b8ee"
+    },
+    "solution_index": {
+      "path": "src/tac/optimization/ddm_lattice_teacher_solution_index.py",
+      "sha256": "7a7a201c637cfdb1188c9b15e4ef9e397aed747fa506414984bfbf953a9cea92"
+    },
+    "bounded_h1_codec_unlaunched": {
+      "path": "src/tac/codec/v10_population_predictor_residual_v2.py",
+      "sha256": "1af26e1a076fff24c6a6ae7e64c3181a4421307daecd6add2897a7b1d0af9b07"
+    },
+    "whole_object_homotopy_ledger": {
+      "path": "src/tac/optimization/ddm_lattice_teacher_compaction_homotopy.py",
+      "sha256": "0fdd9ee16b81b4081f907f7000749d79a3c237d629b24af40df35a280582a592"
+    },
+    "governed_runner": {
+      "path": "tools/run_ddm_lattice_teacher_compaction_homotopy.py",
+      "sha256": "2c37f43c1dc7153f628a2c6edbcd4987c61b2fe398ee153103d73c1c049776cc"
+    },
+    "g21_spec": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g21_lattice_teacher_extreme_compaction_homotopy_20260726.md",
+      "sha256": "1738addc4284e111d286269350e055e3b82460e0914c16ba7f79a2bd25cd51a7"
+    }
+  },
+  "validation": {
+    "focused_test_count": 7,
+    "focused_test_status": "PASS",
+    "ruff_status": "PASS",
+    "format_check_status": "PASS",
+    "py_compile_status": "PASS",
+    "static_review_status": "PASS"
+  },
+  "continuation_blockers": [
+    "CURRENT_G17_SELECTED_SOLUTION_TEACHER_OWED",
+    "CURRENT_RECEIVER_ACTUATOR_FOREIGN_KEYS_OWED",
+    "R10_DECODER_COMPUTABLE_FEATURE_RELAY_OWED",
+    "POPULATION_GLOBAL_SAME_SOLUTION_CODEC_MEASUREMENT_OWED",
+    "ROOT_REVIEW_REQUIRED_BEFORE_291MB_SELECTED_PACKET_RECODE"
+  ]
+}

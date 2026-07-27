@@ -1,0 +1,88 @@
+{
+  "schema": "ddm_lattice_teacher_compaction_homotopy_config.v1",
+  "lane_id": "lane_g100_lattice_teacher_compaction_takeoff_20260727",
+  "seed": 20260727,
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pair_count": 600,
+  "output_root": "/Volumes/VertigoDataTier/pact/g100_lattice_teacher_compaction_takeoff_20260727",
+  "required_free_bytes": 1073741824,
+  "h1_materialization_authorized": false,
+  "assets": {
+    "ms2r_receipt": {
+      "role": "ms2r_selected_solution_receipt",
+      "path": ".omx/research/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/receipt.json",
+      "bytes": 92594,
+      "sha256": "03cd9aabc1275c49c983631dd547e7497f8fe95804a9bfd7a24c5d61e9a81d25"
+    },
+    "selected_packet": {
+      "role": "ms2r_selected_receiver_packet",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/stage_checkpoints/04_candidate/0.bin",
+      "bytes": 291205292,
+      "sha256": "daf1e1db6314e8cdbf63347afa35899e9891e3068428d42dc5a2fca235bb5295"
+    },
+    "ms1_receipt": {
+      "role": "ms1_immutable_receipt",
+      "path": ".omx/research/ddm_ms1_min_description_lattice_solve_20260723T233549Z/receipt.json",
+      "bytes": 8624,
+      "sha256": "546a7fddb0225edb15b2254ab73e362758b7b0f244e4ff39cb7bfef25f779098"
+    },
+    "ms1_sense_rows": {
+      "role": "ms1_sense_pair_rows",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ms1_min_description_lattice_solve_20260723_final/sense/pair_rows.jsonl",
+      "bytes": 1170365,
+      "sha256": "276dde04cc0d6f4f4df1bfb1c7544f997800da189d49e789d00f87e699073803"
+    },
+    "ms1_factorization": {
+      "role": "ms1_sense_factorization",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ms1_min_description_lattice_solve_20260723_final/sense/factorization.json",
+      "bytes": 5232,
+      "sha256": "1c798be26b6e8aeb4b259d9e56beedd0cd99f5e5d6b5c2c6ba59f1a0ee03b450"
+    }
+  },
+  "additional_encoder_evidence": [
+    {
+      "role": "ms2r_selected_archive",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ms2r_tolerance_capped_solve_r2_20260724T181428Z/stage_checkpoints/04_candidate/archive.zip",
+      "bytes": 291205400,
+      "sha256": "e3d0581ff4a3f475057e77e530374dad444b640a049b058cd66b37563534773e"
+    },
+    {
+      "role": "ms2r_c1_control_archive",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/archive.zip",
+      "bytes": 409526925,
+      "sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42"
+    },
+    {
+      "role": "ms1_dense_teacher_raw",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "sha256": "31d77be9ab9f00e9f814542368396a35ffa119a32571e701636d4747540e255b"
+    },
+    {
+      "role": "ms1_target_scorer_cache",
+      "path": "experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz",
+      "bytes": 2064464,
+      "sha256": "e41718a047b77b9072828e72f8cbffa0f5ef7ddf462c7ef4329d997ace89de50"
+    },
+    {
+      "role": "ms2r_typed_config",
+      "path": ".omx/research/configs/ddm_ms2r_tolerance_capped_solve_r2_20260724.json",
+      "bytes": 2020,
+      "sha256": "04d496a79ae10486e4ee5f2edc0e2ec0a0269523fbb01a830069e4d767339486"
+    },
+    {
+      "role": "ms2r_solver_module",
+      "path": "src/tac/optimization/ddm_ms2r_tolerance_capped_solve_r2.py",
+      "bytes": 6197,
+      "sha256": "97bc41e37ee64f805ddbd40620bcd023065335b5268cb6723516ee2565a117fe"
+    },
+    {
+      "role": "ms2r_materializer",
+      "path": "tools/run_ddm_ms2r_tolerance_capped_solve_r2.py",
+      "bytes": 39864,
+      "sha256": "9ec93cf99c1de2e263adb80459dc9131284311b00fcc6fbded1d46b5a04fcee7"
+    }
+  ]
+}
