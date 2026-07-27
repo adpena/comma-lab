@@ -1,0 +1,147 @@
+{
+  "archive_product": {
+    "actuator_member_slots": [
+      "taskspace/selected_preimage_program.tsppv2"
+    ],
+    "bytes": 131906,
+    "complete_compression_bits": "110011",
+    "compression_bit_meaning": {
+      "0": "ZIP_STORED",
+      "1": "ZIP_DEFLATED"
+    },
+    "compression_policy_id": "EXHAUSTIVE_ALL_TOP_LEVEL_MEMBER_STORE_DEFLATE_RACE_V1",
+    "deflate_level": 9,
+    "final_multi_actuator_demux_closed": false,
+    "method_profiles_evaluated": 64,
+    "nested_complete_semantic_zip_stored": false,
+    "program_compression_bit": "1",
+    "public_inflate_integration_closed": false,
+    "public_unzip_reconstruction_closed": true,
+    "semantic_compression_bits": "11001",
+    "sha256": "6e67c3bf6b2908dc31e05fad3bbb06e4ccde6598859f79542bc4cef1a32be8c7",
+    "zlib_runtime_version": "1.2.12"
+  },
+  "blockers": [
+    "PUBLIC_INFLATE_FLAT_V15_TSPPV2_RUNTIME_INTEGRATION_OWED",
+    "COMPACT_BINARY_TSPPV2_RECEIVER_PACKET_OWED",
+    "CROSS_HOST_TORCH_FLOAT32_DETERMINISM_OR_FIXED_CAMERA_BYTES_OWED",
+    "FINAL_ORDERED_Y1_THEN_Y0_MULTI_ACTUATOR_DEMUX_ABI_OWED",
+    "FRESH_N600_ROLE_AWARE_FACTOR_AND_WHOLE_SCORE_ADMISSION_OWED",
+    "POSE_SAFE_PUBLIC_CPU_OR_CUDA_EXACT_EVAL_OWED"
+  ],
+  "compatibility": {
+    "frozen_g17_a": {
+      "bytes": 3758,
+      "sha256": "44435df8e5a2c6385075b76a1640acc21bffa267b32f7bda2241414dee943b2a"
+    },
+    "frozen_g17_e": {
+      "bytes": 151,
+      "sha256": "650003635e004a6336bdf541a59387fe98f0587ba01342ab293d66ad589cf08d"
+    },
+    "frozen_g17_g": {
+      "bytes": 142,
+      "sha256": "b1ac2bbacefbc049be31a0d9f496246f3201d4b1fa184fd44c69836fc536a6d1"
+    },
+    "frozen_tsppv1": {
+      "bytes": 3616,
+      "sha256": "8a898992d7bbd84a544f5a9918244c9a0155b6f4bcbd717072dcf52801830e68"
+    },
+    "legacy_sources_edited": false
+  },
+  "execution_receipt": {
+    "bounded_pair_ids": [
+      0
+    ],
+    "deterministic_g74_inner_double_decode": true,
+    "deterministic_tsppv2_outer_double_decode": true,
+    "frame_selector": "BOTH",
+    "legacy_render_pairs_used": false,
+    "native_render_camera_pairs_used": true,
+    "operand_atom_count": 2,
+    "operand_roles": [
+      "Road",
+      "UndrivableBoundary"
+    ],
+    "pose_invoked": false,
+    "realization_profile_consumed": true,
+    "scorer_invoked": false,
+    "selected_frames_match_native_mutated_numerators": true,
+    "selected_frames_match_native_torch_bilinear": true
+  },
+  "git_head_observed": "baa863756d740591330324779c2998f5db48e131",
+  "lane_id": "lane_g77_g49_v15_roleaware_selected_preimage_factor_v2_20260727",
+  "legacy_source_custody": {
+    "src/tac/witness_dsl/taskspace_g17_actuator_ir_v1.py": "3aaa16f3c25deb22afef7acdb651aab209795ffa1d32ee08df742ed6c08194ad",
+    "src/tac/witness_dsl/taskspace_g17_g49_selected_program_product_bridge_v1.py": "2d8c88daddaca03ee4f8c11cc1e5dbc303984124c154054ad604ec3d52a4e3d3",
+    "src/tac/witness_dsl/taskspace_g17_production_envelope.py": "f25bfff936d0a230cd99606325e9e0de0bd168d0b26bdcb7961d65730d511e98",
+    "src/tac/witness_dsl/taskspace_g72_fresh_n600_g49_analytic_factor_compiler_v1.py": "0b514239f85a073eb8f523558cefa1afc8660697678a691f3e15f5ec2b646828",
+    "src/tac/witness_dsl/taskspace_g74_v15_roleaware_overlay_decoder_v1.py": "96de0f530db1394383b83976371f727d4c4a0cac8a10a2f38dc79842fc3ce1b8",
+    "src/tac/witness_dsl/taskspace_g76_base_preferred_exact_numerator_overlay_v1.py": "fe6eacb8715cfc3081ae88d1a81afd1d0537733f81efb81b5438ccf4449ca416",
+    "src/tac/witness_dsl/taskspace_selected_preimage_program_v1.py": "5fd2938ce96bc592fbeddfe519f36b3f2371789dcf322617691e607490c281f0"
+  },
+  "pointer_delta": {
+    "candidate_claim": false,
+    "exact_score_claim": false,
+    "frontier_moved": false,
+    "n600_evidence_claim": false
+  },
+  "program": {
+    "bytes": 3593,
+    "factor_count": 1,
+    "factor_mode": "V15_ROLE_AWARE_PREPAINT_G74RA1",
+    "factor_role": "ANALYTIC_ROLE_AWARE_PREPAINT",
+    "frame_selector": "BOTH",
+    "framing_bytes": 3541,
+    "legacy_v1_factor_semantics_reinterpreted": false,
+    "mixed_legacy_and_role_aware_factors": false,
+    "operand_bytes": 52,
+    "operand_sha256": "5616799adc0d2ab942f37a20b070f7a0fa48119771e8f1b56c1f45e2605306ca",
+    "pair_count_metadata": 600,
+    "pair_start": 0,
+    "semantic_p_embedded": false,
+    "sha256": "8bd80138198fb01d9c2a376c8918634eb0e7f08f12a15d6eb9a888dc941fb6bb"
+  },
+  "public_unzip_reconstruction": {
+    "complete_p_byte_string_present_as_product_member": false,
+    "extraction_command": "/usr/bin/unzip -qq archive.zip -d extracted",
+    "original_product_zipinfo_used_for_reconstruction": false,
+    "reconstructed_semantic_p_bytes": 133941,
+    "reconstructed_semantic_p_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+    "typed_demux_retains_counted_tsppv2": true
+  },
+  "receipt_self_hash": {
+    "algorithm": "sha256(canonical_json(receipt with receipt_self_hash removed))",
+    "value": "53bffd35879cfad9117c58b0d1da32d026ded71096386186f5170e2c209b0200"
+  },
+  "research_only": true,
+  "runtime_custody": {
+    "g74_decoder_source_sha256": "96de0f530db1394383b83976371f727d4c4a0cac8a10a2f38dc79842fc3ce1b8",
+    "program_decoder_source_sha256": "a7201c82c7b23a1237b2a8116a7a6f183296dfcdcd59eb6bd1b5073f658fb48b",
+    "torch_version": "2.12.1"
+  },
+  "schema": "tac.g77_additive_g49_v15_roleaware_factor_v2.receipt.v1",
+  "source_artifacts": {
+    ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g77_additive_g49_v15_roleaware_factor_v2_20260727.md": "100a2ceeaf660753bcf097fd8736d72441976f2ee7824be9d73f05cab300bce7",
+    "src/tac/witness_dsl/taskspace_g77_flat_v15_selected_preimage_product_v1.py": "05d3df3e320a169e7dab73e7d29ce263e77d92ce2f4ed6ec8bf89527372b0245",
+    "src/tac/witness_dsl/taskspace_selected_preimage_program_v2.py": "a7201c82c7b23a1237b2a8116a7a6f183296dfcdcd59eb6bd1b5073f658fb48b",
+    "src/tac/witness_dsl/tests/test_taskspace_selected_preimage_program_v2.py": "ac4f2febdd660222a9d9f69246bba9d8683062221eaa14ab8fed5171980829d4"
+  },
+  "tests": [
+    {
+      "command": ".venv/bin/pytest -q src/tac/witness_dsl/tests/test_taskspace_selected_preimage_program_v2.py",
+      "result": "8 passed in 38.41s"
+    },
+    {
+      "command": ".venv/bin/pytest -q src/tac/witness_dsl/tests/test_taskspace_g17_g49_active_a_abi.py src/tac/witness_dsl/tests/test_taskspace_g17_g49_selected_program_product_bridge_v1.py src/tac/witness_dsl/tests/test_taskspace_g74_v15_roleaware_overlay_decoder_v1.py src/tac/witness_dsl/tests/test_taskspace_g76_base_preferred_exact_numerator_overlay_v1.py",
+      "result": "27 passed in 43.56s"
+    },
+    {
+      "command": ".venv/bin/ruff check src/tac/witness_dsl/taskspace_selected_preimage_program_v2.py src/tac/witness_dsl/taskspace_g77_flat_v15_selected_preimage_product_v1.py src/tac/witness_dsl/tests/test_taskspace_selected_preimage_program_v2.py",
+      "result": "passed"
+    },
+    {
+      "command": ".venv/bin/python -m py_compile src/tac/witness_dsl/taskspace_selected_preimage_program_v2.py src/tac/witness_dsl/taskspace_g77_flat_v15_selected_preimage_product_v1.py src/tac/witness_dsl/tests/test_taskspace_selected_preimage_program_v2.py",
+      "result": "passed"
+    }
+  ]
+}
