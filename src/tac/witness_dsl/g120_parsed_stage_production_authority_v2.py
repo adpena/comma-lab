@@ -48,7 +48,9 @@ from tac.witness_dsl.dynamic_frontier_target import (
 )
 from tac.witness_dsl.g111_parsed_g105_stage_selector_v1 import (
     VERDICT_BATCH_SIZES,
+    G111ParsedG105ExactPrefixObstruction,
     compile_select_parsed_g105_stage_v1,
+    open_g111_parsed_g105_exact_prefix_obstruction_v1,
 )
 from tac.witness_dsl.taskspace_g105_exact_v9_semantic_root_adapter_v1 import (
     Y1WireCodecV1,
@@ -64,6 +66,9 @@ from tac.witness_dsl.taskspace_g110_generic_two_layer_public_product_v1 import (
 MEASUREMENT_SCHEMA: Final = "tac.g120_stage_measurement.v2"
 OBSERVATION_SCHEMA: Final = "tac.g120_stage_observation.v2"
 PRODUCTION_SCHEMA: Final = "tac.g120_parsed_stage_production_authority.v2"
+EXACT_DISTORTION_OBSTRUCTION_SCHEMA: Final = (
+    "tac.g120_exact_distortion_obstruction.v1"
+)
 SCHEMA: Final = PRODUCTION_SCHEMA
 MINIMUM_SAFE_AUTHORITY_COMPLETE: Final = True
 BATCH_SCHEMA: Final = "tac.g120_stage_measurement_batch.v2"
@@ -75,6 +80,29 @@ DEFER_G115_WIRE_QAT: Final = "DEFER_G115_WIRE_QAT"
 PRUNE_EXACT_DISTORTION_OBSTRUCTION: Final = "PRUNE_EXACT_DISTORTION_OBSTRUCTION"
 BLOCKED_SCOPED: Final = "BLOCKED_SCOPED"
 _LOWER_SHA256: Final = frozenset("0123456789abcdef")
+_EXACT_DISTORTION_OBSTRUCTION_FIELDS: Final = frozenset(
+    {
+        "schema",
+        "evidence_axis",
+        "stage_tag",
+        "obstruction_identity_sha256",
+        "disposition",
+        "verdict_scope",
+        "engine_prefix_obstruction",
+        "g112_partition_receipt",
+        "physical_stage_identity",
+        "physical_stage_identity_sha256",
+        "g109_custody",
+        "seg_scorer",
+        "public_runtime",
+        "live_target",
+        "pointer_snapshot",
+        "pointer_reverified_at_atomic_commit",
+        "production_authority_closed",
+        "semantic_only",
+        "false_authority",
+    }
+)
 _MEASUREMENT_FIELDS: Final = frozenset(
     {
         "schema",
@@ -169,6 +197,39 @@ _BATCH_RECEIPT_FIELDS: Final = _BATCH_FIELDS - {"physical_receipt"}
 
 class G120ProductionAuthorityV2Error(RuntimeError):
     """Physical custody or exact decision formation failed closed."""
+
+
+@dataclass(frozen=True, slots=True)
+class G120ExactDistortionObstructionV1:
+    """One pointer-atomic, custody-bound, engine-prefix scoped blocker."""
+
+    receipt_path: Path
+    receipt_sha256: str
+    receipt_bytes: int
+    receipt: dict[str, Any]
+
+    @property
+    def live_target(self) -> dict[str, Any]:
+        return dict(self.receipt["live_target"])
+
+
+class G120ExactDistortionObstruction(G120ProductionAuthorityV2Error):
+    """A physical stage is scoped-blocked before a full public-wire screen."""
+
+    def __init__(
+        self,
+        obstruction: G120ExactDistortionObstructionV1,
+    ) -> None:
+        self.obstruction = obstruction
+        self.receipt_path = obstruction.receipt_path
+        self.receipt_sha256 = obstruction.receipt_sha256
+        self.receipt = obstruction.receipt
+        self.live_target = obstruction.live_target
+        super().__init__(
+            "exact engine-prefix obstruction is BLOCKED_SCOPED pending "
+            "sealed public-prefix and cross-wire equality: "
+            f"{self.receipt_path} sha256={self.receipt_sha256}"
+        )
 
 
 def _sha256(payload: bytes | bytearray | memoryview) -> str:
@@ -646,6 +707,173 @@ def _postverify_authority_sources(
         "segnet_weights_postverified": weights,
         "public_runtime_postverified": public_post,
     }
+
+
+def _build_exact_distortion_obstruction_receipt(
+    *,
+    engine_obstruction: Any,
+    authority: Any,
+    snapshot: DynamicFrontierTargetSnapshot,
+    public_runtime_pre: Mapping[str, Any],
+    postverified: Mapping[str, Any],
+    scorer_calls: int,
+) -> dict[str, Any]:
+    """Bind an engine-prefix stop without promoting it to a public-wire prune."""
+
+    score_decimal, target_numerator, target_denominator = (
+        _exact_target_from_snapshot(snapshot)
+    )
+    pointer_identity = _v1.dynamic_snapshot_identity_sha256(snapshot)
+    engine_receipt = engine_obstruction.receipt
+    engine_target = engine_receipt["effective_frontier_target_exact"]
+    progress_identity = engine_receipt["progress_identity"]
+    if (
+        engine_target
+        != {
+            "decimal": score_decimal,
+            "numerator": target_numerator,
+            "denominator": target_denominator,
+        }
+        or progress_identity["pointer_snapshot_identity_sha256"]
+        != pointer_identity
+        or progress_identity["source_checkpoint_identity_sha256"]
+        != authority.physical_stage_identity_sha256
+        or progress_identity["target_labels_sha256"]
+        != _sha256(memoryview(authority.target_labels))
+        or progress_identity["seg_scorer_identity_sha256"]
+        != authority.seg_scorer_identity_sha256
+        or progress_identity["pose_initializer_identity_sha256"]
+        != authority.g112.initializer.checkpoint_sha256
+        or progress_identity["pair_count"] != PRODUCTION_PAIR_COUNT
+        or progress_identity["batch_sizes"] != list(VERDICT_BATCH_SIZES)
+        or engine_receipt["stage_tag"] != authority.stage_tag
+        or public_runtime_pre
+        != postverified["public_runtime_postverified"]
+    ):
+        raise G120ProductionAuthorityV2Error(
+            "engine-prefix obstruction differs from the physical stage, "
+            "exact live target, or postverified public runtime"
+        )
+    receipt: dict[str, Any] = {
+        "schema": EXACT_DISTORTION_OBSTRUCTION_SCHEMA,
+        "evidence_axis": EVIDENCE_AXIS,
+        "stage_tag": authority.stage_tag,
+        "obstruction_identity_sha256": None,
+        "disposition": BLOCKED_SCOPED,
+        "verdict_scope": (
+            "one_physical_stage_engine_prefix_without_"
+            "sealed_public_prefix_or_cross_wire_equality"
+        ),
+        "engine_prefix_obstruction": {
+            "path": str(engine_obstruction.receipt_path),
+            "bytes": engine_obstruction.receipt_bytes,
+            "sha256": engine_obstruction.receipt_sha256,
+        },
+        "g112_partition_receipt": dict(
+            authority.physical_stage_identity["g112_partition_receipt"]
+        ),
+        "physical_stage_identity": authority.physical_stage_identity,
+        "physical_stage_identity_sha256": (
+            authority.physical_stage_identity_sha256
+        ),
+        "g109_custody": authority.g109_custody,
+        "seg_scorer": {
+            "identity_sha256": authority.seg_scorer_identity_sha256,
+            "device": "cpu",
+            "fresh_direct_scorer_calls": scorer_calls,
+            "weights_pre": authority.g109_custody["segnet_weights"],
+            "weights_post": postverified["segnet_weights_postverified"],
+            "upstream_closure_pre": authority.g109_custody[
+                "upstream_closure"
+            ],
+            "upstream_closure_post": postverified[
+                "upstream_closure_postverified"
+            ],
+        },
+        "public_runtime": {
+            "source_pre": dict(public_runtime_pre),
+            "sealed_tree_sha256": public_runtime_pre["tree_sha256"],
+            "source_post": postverified["public_runtime_postverified"],
+            "sealed_runtime_captured": True,
+            "public_prefix_execution_performed": False,
+            "public_prefix_equality": False,
+            "cross_wire_prefix_equality": False,
+        },
+        "live_target": {
+            "score_decimal": score_decimal,
+            "score_rational": {
+                "numerator": target_numerator,
+                "denominator": target_denominator,
+            },
+            "pointer_snapshot_identity_sha256": pointer_identity,
+            "postverified_pointer_identity_sha256": pointer_identity,
+        },
+        "pointer_snapshot": dataclasses.asdict(snapshot),
+        "pointer_reverified_at_atomic_commit": True,
+        "production_authority_closed": False,
+        "semantic_only": True,
+        "false_authority": {
+            "contest_score_claim": False,
+            "candidate_claim": False,
+            "promotion_eligible": False,
+            "pointer_moved": False,
+            "public_wire_prune_claim": False,
+            "family_wide_claim": False,
+        },
+    }
+    receipt["obstruction_identity_sha256"] = _receipt_identity(
+        receipt,
+        identity_field="obstruction_identity_sha256",
+    )
+    return receipt
+
+
+def _commit_exact_distortion_obstruction(
+    *,
+    repo_root: Path,
+    out_dir: Path,
+    engine_obstruction: Any,
+    authority: Any,
+    snapshot: DynamicFrontierTargetSnapshot,
+    public_runtime_pre: Mapping[str, Any],
+    postverified: Mapping[str, Any],
+    scorer_calls: int,
+) -> G120ExactDistortionObstructionV1:
+    receipt = _build_exact_distortion_obstruction_receipt(
+        engine_obstruction=engine_obstruction,
+        authority=authority,
+        snapshot=snapshot,
+        public_runtime_pre=public_runtime_pre,
+        postverified=postverified,
+        scorer_calls=scorer_calls,
+    )
+    path = out_dir / (
+        f"{authority.stage_tag}."
+        f"{receipt['obstruction_identity_sha256']}."
+        "g120_exact_distortion_obstruction.v1.json"
+    )
+    lock_path = repo_root / CANONICAL_FRONTIER_POINTER_LOCK_PATH
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_fd = os.open(lock_path, os.O_WRONLY | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_SH)
+        try:
+            verify_dynamic_frontier_target_snapshot(snapshot)
+            binding = _immutable_write(path, _canonical_json(receipt))
+        except Exception as exc:
+            if isinstance(exc, G120ProductionAuthorityV2Error):
+                raise
+            raise G120ProductionAuthorityV2Error(
+                "frontier pointer changed before atomic obstruction commit"
+            ) from exc
+        finally:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+    finally:
+        os.close(lock_fd)
+    return open_g120_exact_distortion_obstruction_v1(
+        path,
+        expected_sha256=binding["sha256"],
+    )
 
 
 class _FreshPredictionBroker:
@@ -1801,22 +2029,58 @@ def run_g120_parsed_stage_production_authority_v2(
                     durable_progress / "g117_engine_progress",
                     name="durable G117 progress directory",
                 )
-                engine = compile_select_parsed_g105_stage_v1(
-                    config=authority.config,
-                    semantic_params=authority.g112.semantic_child.shared_params,
-                    odd_y1=authority.g112.semantic_child.code_y1,
-                    target_labels=authority.target_labels,
-                    seg_argmax_batch_scorer=broker,
-                    injected_inputs_are_test_only=True,
-                    seg_scorer_identity_sha256=(authority.seg_scorer_identity_sha256),
-                    source_checkpoint_identity_sha256=(authority.physical_stage_identity_sha256),
-                    pose_initializer_identity_sha256=(authority.g112.initializer.checkpoint_sha256),
-                    effective_frontier_target=float(snapshot.target_score),
-                    pointer_snapshot_identity_sha256=pointer_identity,
-                    out_dir=engine_out,
-                    progress_dir=engine_progress,
-                    stage_tag=authority.stage_tag,
-                )
+                try:
+                    engine = compile_select_parsed_g105_stage_v1(
+                        config=authority.config,
+                        semantic_params=(
+                            authority.g112.semantic_child.shared_params
+                        ),
+                        odd_y1=authority.g112.semantic_child.code_y1,
+                        target_labels=authority.target_labels,
+                        seg_argmax_batch_scorer=broker,
+                        injected_inputs_are_test_only=True,
+                        seg_scorer_identity_sha256=(
+                            authority.seg_scorer_identity_sha256
+                        ),
+                        source_checkpoint_identity_sha256=(
+                            authority.physical_stage_identity_sha256
+                        ),
+                        pose_initializer_identity_sha256=(
+                            authority.g112.initializer.checkpoint_sha256
+                        ),
+                        effective_frontier_target=float(
+                            snapshot.target_score
+                        ),
+                        pointer_snapshot_identity_sha256=pointer_identity,
+                        out_dir=engine_out,
+                        progress_dir=engine_progress,
+                        stage_tag=authority.stage_tag,
+                    )
+                except G111ParsedG105ExactPrefixObstruction as exc:
+                    engine_obstruction = (
+                        open_g111_parsed_g105_exact_prefix_obstruction_v1(
+                            exc.receipt_path,
+                            expected_sha256=exc.receipt_sha256,
+                        )
+                    )
+                    obstruction_postverified = (
+                        _postverify_authority_sources(
+                            repo_root=repo_root,
+                            authority=authority,
+                            public_runtime_pre=public_pre,
+                        )
+                    )
+                    scoped = _commit_exact_distortion_obstruction(
+                        repo_root=repo_root,
+                        out_dir=durable_out,
+                        engine_obstruction=engine_obstruction,
+                        authority=authority,
+                        snapshot=snapshot,
+                        public_runtime_pre=public_pre,
+                        postverified=obstruction_postverified,
+                        scorer_calls=broker.actual_scorer_calls,
+                    )
+                    raise G120ExactDistortionObstruction(scoped) from exc
                 try:
                     _v1._validate_engine_handoff(
                         authority=authority,
@@ -1950,6 +2214,120 @@ def run_g120_parsed_stage_production_authority_v2(
         measurement=measurement,
         observation=observation,
         production_receipt=production,
+    )
+
+
+def open_g120_exact_distortion_obstruction_v1(
+    path: Path,
+    *,
+    expected_sha256: str,
+) -> G120ExactDistortionObstructionV1:
+    """Strictly reopen one custody-bound engine-prefix scoped blocker."""
+
+    value, physical = _open_canonical_receipt(
+        path,
+        expected_sha256=expected_sha256,
+        schema=EXACT_DISTORTION_OBSTRUCTION_SCHEMA,
+        fields=_EXACT_DISTORTION_OBSTRUCTION_FIELDS,
+        identity_field="obstruction_identity_sha256",
+        name="G120 exact distortion obstruction",
+    )
+    engine_binding = value["engine_prefix_obstruction"]
+    _reopen_binding(
+        engine_binding,
+        name="G111 exact-prefix obstruction",
+    )
+    engine = open_g111_parsed_g105_exact_prefix_obstruction_v1(
+        Path(engine_binding["path"]),
+        expected_sha256=engine_binding["sha256"],
+    )
+    g112_binding = value["g112_partition_receipt"]
+    _reopen_binding(g112_binding, name="G112 partition receipt")
+    g112 = open_g112_partition_receipt(
+        Path(g112_binding["path"]),
+        expected_sha256=g112_binding["sha256"],
+    )
+    physical_stage, physical_stage_sha, stage_tag = (
+        _v1._physical_stage_identity(g112)
+    )
+    live = value["live_target"]
+    rational = live.get("score_rational") if type(live) is dict else None
+    try:
+        snapshot = DynamicFrontierTargetSnapshot(
+            **value["pointer_snapshot"]
+        )
+    except (TypeError, KeyError) as exc:
+        raise G120ProductionAuthorityV2Error(
+            "G120 scoped obstruction pointer snapshot is malformed"
+        ) from exc
+    pointer_identity = _v1.dynamic_snapshot_identity_sha256(snapshot)
+    public_runtime = value["public_runtime"]
+    false_authority = value["false_authority"]
+    if (
+        value["disposition"] != BLOCKED_SCOPED
+        or value["verdict_scope"]
+        != (
+            "one_physical_stage_engine_prefix_without_"
+            "sealed_public_prefix_or_cross_wire_equality"
+        )
+        or value["stage_tag"] != stage_tag
+        or engine.receipt["stage_tag"] != stage_tag
+        or physical_stage != value["physical_stage_identity"]
+        or physical_stage_sha != value["physical_stage_identity_sha256"]
+        or type(live) is not dict
+        or set(live)
+        != {
+            "score_decimal",
+            "score_rational",
+            "pointer_snapshot_identity_sha256",
+            "postverified_pointer_identity_sha256",
+        }
+        or type(rational) is not dict
+        or set(rational) != {"numerator", "denominator"}
+        or live["score_decimal"]
+        != engine.receipt["effective_frontier_target_exact"]["decimal"]
+        or rational["numerator"]
+        != engine.receipt["effective_frontier_target_exact"]["numerator"]
+        or rational["denominator"]
+        != engine.receipt["effective_frontier_target_exact"]["denominator"]
+        or live["pointer_snapshot_identity_sha256"] != pointer_identity
+        or live["postverified_pointer_identity_sha256"] != pointer_identity
+        or engine.receipt["progress_identity"][
+            "pointer_snapshot_identity_sha256"
+        ]
+        != pointer_identity
+        or value["pointer_reverified_at_atomic_commit"] is not True
+        or value["production_authority_closed"] is not False
+        or value["semantic_only"] is not True
+        or type(public_runtime) is not dict
+        or _reopen_runtime_tree(public_runtime.get("source_pre"))
+        != public_runtime.get("source_pre")
+        or public_runtime.get("source_pre")
+        != public_runtime.get("source_post")
+        or public_runtime.get("sealed_tree_sha256")
+        != public_runtime["source_pre"].get("tree_sha256")
+        or public_runtime.get("sealed_runtime_captured") is not True
+        or public_runtime.get("public_prefix_execution_performed") is not False
+        or public_runtime.get("public_prefix_equality") is not False
+        or public_runtime.get("cross_wire_prefix_equality") is not False
+        or false_authority
+        != {
+            "contest_score_claim": False,
+            "candidate_claim": False,
+            "promotion_eligible": False,
+            "pointer_moved": False,
+            "public_wire_prune_claim": False,
+            "family_wide_claim": False,
+        }
+    ):
+        raise G120ProductionAuthorityV2Error(
+            "G120 scoped obstruction custody, target, or authority differs"
+        )
+    return G120ExactDistortionObstructionV1(
+        receipt_path=path,
+        receipt_sha256=physical["sha256"],
+        receipt_bytes=physical["bytes"],
+        receipt=value,
     )
 
 

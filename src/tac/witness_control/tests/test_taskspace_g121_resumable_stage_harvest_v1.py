@@ -656,6 +656,62 @@ def test_exhaustive_completion_accounts_scoped_blocker(tmp_path: Path) -> None:
     assert result.retained_stage_count == 1
 
 
+def test_custodied_scoped_obstruction_supplies_its_own_live_target(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = _target()
+    physical = _physical(tmp_path, "scoped")
+    source = g121._source_from_completed_physical(physical)
+    obstruction = _binding(
+        tmp_path / "scoped" / "g120_obstruction.json",
+        b"g120-scoped-obstruction",
+    )
+    opened = SimpleNamespace(
+        receipt_path=Path(str(obstruction["path"])),
+        receipt_bytes=obstruction["bytes"],
+        receipt_sha256=obstruction["sha256"],
+        receipt={
+            "live_target": target,
+            "physical_stage_identity": physical,
+        },
+    )
+    fake_g120 = SimpleNamespace(
+        open_g120_exact_distortion_obstruction_v1=(
+            lambda path, *, expected_sha256: opened
+            if path == opened.receipt_path
+            and expected_sha256 == opened.receipt_sha256
+            else pytest.fail("wrong scoped obstruction binding")
+        ),
+    )
+    monkeypatch.setattr(
+        g121,
+        "_require_safe_g120_v2",
+        lambda: fake_g120,
+    )
+    row = g121._compile_blocked_attempt(
+        stage_tag="scoped",
+        source_stage_identity=source,
+        live_target=target,
+        blocker_code="G120ExactDistortionObstruction",
+        blocker_detail="engine prefix crossed exact target",
+        g120_scoped_obstruction=obstruction,
+    )
+    assert g121._validate_blocked_attempt(row) == row
+    assert row["live_target"] == target
+    assert row["prepose_obstruction"] == {
+        "disposition": g121.BLOCKED_SCOPED,
+    }
+    assert row["g120_scoped_obstruction"] == obstruction
+
+    opened.receipt["live_target"] = _target("0.17", pointer="b")
+    with pytest.raises(
+        g121.G121StageHarvestError,
+        match="differs from blocked stage custody",
+    ):
+        g121._validate_blocked_attempt(row)
+
+
 def test_strict_fixture_opener_round_trips_population(tmp_path: Path) -> None:
     target = _target()
     physical = _physical(tmp_path, "open")

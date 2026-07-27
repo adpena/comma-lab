@@ -36,6 +36,192 @@ def test_production_signature_is_physical_and_has_no_cross_stage_reducer() -> No
     assert "pareto" not in source.lower()
     assert 'durable_progress / "g117_engine_progress"' in source
     assert 'engine_root / "progress"' not in source
+    assert "except G111ParsedG105ExactPrefixObstruction" in source
+    assert "raise G120ExactDistortionObstruction" in source
+
+
+def _scoped_obstruction_inputs() -> dict[str, object]:
+    pointer_identity = _sha("scoped-pointer")
+    physical_identity = {
+        "g112_partition_receipt": {
+            "path": "/physical/g112.json",
+            "bytes": 10,
+            "sha256": _sha("g112"),
+        },
+    }
+    authority = SimpleNamespace(
+        stage_tag="stage_unify_tau.epoch_25.chk_aaaaaaaaaaaa",
+        physical_stage_identity=physical_identity,
+        physical_stage_identity_sha256=_sha("physical-stage"),
+        target_labels=np.zeros((1, 2, 2), dtype=np.uint8),
+        seg_scorer_identity_sha256=_sha("seg-scorer"),
+        g112=SimpleNamespace(
+            initializer=SimpleNamespace(
+                checkpoint_sha256=_sha("pose-initializer"),
+            ),
+        ),
+        g109_custody={
+            "segnet_weights": {"sha256": _sha("weights")},
+            "upstream_closure": {"tree_sha256": _sha("upstream")},
+        },
+    )
+    engine_receipt = {
+        "stage_tag": authority.stage_tag,
+        "effective_frontier_target_exact": {
+            "decimal": "0.172",
+            "numerator": 43,
+            "denominator": 250,
+        },
+        "progress_identity": {
+            "stage_tag": authority.stage_tag,
+            "source_checkpoint_identity_sha256": (
+                authority.physical_stage_identity_sha256
+            ),
+            "target_labels_sha256": hashlib.sha256(
+                memoryview(authority.target_labels)
+            ).hexdigest(),
+            "seg_scorer_identity_sha256": (
+                authority.seg_scorer_identity_sha256
+            ),
+            "pointer_snapshot_identity_sha256": pointer_identity,
+            "pose_initializer_identity_sha256": (
+                authority.g112.initializer.checkpoint_sha256
+            ),
+            "pair_count": subject.PRODUCTION_PAIR_COUNT,
+            "batch_sizes": list(subject.VERDICT_BATCH_SIZES),
+        },
+    }
+    engine = SimpleNamespace(
+        receipt_path=Path("/physical/g111-obstruction.json"),
+        receipt_sha256=_sha("g111-obstruction"),
+        receipt_bytes=100,
+        receipt=engine_receipt,
+    )
+    runtime = {
+        "root": "/physical/runtime",
+        "files": [],
+        "tree_sha256": _sha("runtime"),
+        "physical_tree_identity_sha256": _sha("runtime-physical"),
+    }
+    postverified = {
+        "segnet_weights_postverified": authority.g109_custody[
+            "segnet_weights"
+        ],
+        "upstream_closure_postverified": authority.g109_custody[
+            "upstream_closure"
+        ],
+        "public_runtime_postverified": runtime,
+    }
+    return {
+        "engine_obstruction": engine,
+        "authority": authority,
+        "snapshot": _snapshot(0.172, suffix="scoped"),
+        "public_runtime_pre": runtime,
+        "postverified": postverified,
+        "scorer_calls": 2,
+        "pointer_identity": pointer_identity,
+    }
+
+
+def test_engine_prefix_obstruction_is_scoped_not_public_prune(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inputs = _scoped_obstruction_inputs()
+    monkeypatch.setattr(
+        subject,
+        "_exact_target_from_snapshot",
+        lambda _snapshot_value: ("0.172", 43, 250),
+    )
+    monkeypatch.setattr(
+        subject._v1,
+        "dynamic_snapshot_identity_sha256",
+        lambda _snapshot_value: inputs["pointer_identity"],
+    )
+    receipt = subject._build_exact_distortion_obstruction_receipt(
+        **{
+            key: value
+            for key, value in inputs.items()
+            if key != "pointer_identity"
+        },
+    )
+    assert receipt["schema"] == (
+        subject.EXACT_DISTORTION_OBSTRUCTION_SCHEMA
+    )
+    assert receipt["disposition"] == subject.BLOCKED_SCOPED
+    assert receipt["production_authority_closed"] is False
+    assert receipt["public_runtime"][
+        "public_prefix_execution_performed"
+    ] is False
+    assert receipt["public_runtime"]["public_prefix_equality"] is False
+    assert receipt["public_runtime"]["cross_wire_prefix_equality"] is False
+    assert receipt["false_authority"]["public_wire_prune_claim"] is False
+    assert receipt["false_authority"]["family_wide_claim"] is False
+    assert receipt["obstruction_identity_sha256"] == (
+        subject._receipt_identity(
+            receipt,
+            identity_field="obstruction_identity_sha256",
+        )
+    )
+
+
+def test_scoped_obstruction_refuses_runtime_change_and_pointer_toctou(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inputs = _scoped_obstruction_inputs()
+    monkeypatch.setattr(
+        subject,
+        "_exact_target_from_snapshot",
+        lambda _snapshot_value: ("0.172", 43, 250),
+    )
+    monkeypatch.setattr(
+        subject._v1,
+        "dynamic_snapshot_identity_sha256",
+        lambda _snapshot_value: inputs["pointer_identity"],
+    )
+    changed = dict(inputs["postverified"])
+    changed["public_runtime_postverified"] = {
+        **inputs["public_runtime_pre"],
+        "tree_sha256": _sha("changed-runtime"),
+    }
+    with pytest.raises(
+        subject.G120ProductionAuthorityV2Error,
+        match="postverified public runtime",
+    ):
+        subject._build_exact_distortion_obstruction_receipt(
+            engine_obstruction=inputs["engine_obstruction"],
+            authority=inputs["authority"],
+            snapshot=inputs["snapshot"],
+            public_runtime_pre=inputs["public_runtime_pre"],
+            postverified=changed,
+            scorer_calls=2,
+        )
+
+    repo = tmp_path.resolve() / "repo"
+    out = repo / "out"
+    out.mkdir(parents=True)
+    monkeypatch.setattr(
+        subject,
+        "verify_dynamic_frontier_target_snapshot",
+        lambda _snapshot_value: (_ for _ in ()).throw(
+            RuntimeError("pointer moved"),
+        ),
+    )
+    with pytest.raises(
+        subject.G120ProductionAuthorityV2Error,
+        match="frontier pointer changed",
+    ):
+        subject._commit_exact_distortion_obstruction(
+            repo_root=repo,
+            out_dir=out,
+            engine_obstruction=inputs["engine_obstruction"],
+            authority=inputs["authority"],
+            snapshot=inputs["snapshot"],
+            public_runtime_pre=inputs["public_runtime_pre"],
+            postverified=inputs["postverified"],
+            scorer_calls=2,
+        )
+    assert not tuple(out.iterdir())
 
 
 def _sha(label: str) -> str:

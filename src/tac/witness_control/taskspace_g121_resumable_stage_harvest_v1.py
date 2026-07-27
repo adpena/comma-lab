@@ -36,9 +36,18 @@ G120_REQUIRED_PRODUCTION_SCHEMA: Final = (
 )
 G120_REQUIRED_MEASUREMENT_SCHEMA: Final = "tac.g120_stage_measurement.v2"
 G120_REQUIRED_OBSERVATION_SCHEMA: Final = "tac.g120_stage_observation.v2"
+G120_REQUIRED_SCOPED_OBSTRUCTION_SCHEMA: Final = (
+    "tac.g120_exact_distortion_obstruction.v1"
+)
 G120_REQUIRED_RUNNER: Final = "run_g120_parsed_stage_production_authority_v2"
 G120_REQUIRED_MEASUREMENT_OPENER: Final = "open_g120_stage_measurement_v2"
 G120_REQUIRED_OBSERVATION_OPENER: Final = "open_g120_stage_observation_v2"
+G120_REQUIRED_SCOPED_OBSTRUCTION_OPENER: Final = (
+    "open_g120_exact_distortion_obstruction_v1"
+)
+G120_REQUIRED_SCOPED_OBSTRUCTION_ERROR: Final = (
+    "G120ExactDistortionObstruction"
+)
 RETAINED_PREPOSE_BASENAME: Final = "g121_retained_prepose.json"
 STAGE_LEDGER_BASENAME: Final = "g121_stage_measurements.jsonl"
 COMPLETION_RECEIPT_BASENAME: Final = "g121_completion_receipt.json"
@@ -695,6 +704,9 @@ def _require_safe_g120_v2() -> Any:
         "PRODUCTION_SCHEMA": G120_REQUIRED_PRODUCTION_SCHEMA,
         "MEASUREMENT_SCHEMA": G120_REQUIRED_MEASUREMENT_SCHEMA,
         "OBSERVATION_SCHEMA": G120_REQUIRED_OBSERVATION_SCHEMA,
+        "EXACT_DISTORTION_OBSTRUCTION_SCHEMA": (
+            G120_REQUIRED_SCOPED_OBSTRUCTION_SCHEMA
+        ),
     }
     if any(getattr(module, name, None) != value for name, value in expected_schemas.items()):
         raise G121StageHarvestError(
@@ -726,11 +738,24 @@ def _require_safe_g120_v2() -> Any:
     for opener_name in (
         G120_REQUIRED_MEASUREMENT_OPENER,
         G120_REQUIRED_OBSERVATION_OPENER,
+        G120_REQUIRED_SCOPED_OBSTRUCTION_OPENER,
     ):
         if not callable(getattr(module, opener_name, None)):
             raise G121StageHarvestError(
                 f"G120-v2 lacks required physical opener {opener_name}"
             )
+    obstruction_error = getattr(
+        module,
+        G120_REQUIRED_SCOPED_OBSTRUCTION_ERROR,
+        None,
+    )
+    if (
+        not isinstance(obstruction_error, type)
+        or not issubclass(obstruction_error, Exception)
+    ):
+        raise G121StageHarvestError(
+            "G120-v2 lacks its typed exact scoped-obstruction error"
+        )
     return module
 
 
@@ -1162,6 +1187,7 @@ def _compile_blocked_attempt(
     live_target: Mapping[str, object],
     blocker_code: str,
     blocker_detail: str,
+    g120_scoped_obstruction: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     stage_tag = _require_stage_tag(stage_tag)
     source, source_sha = _source_stage_identity(source_stage_identity)
@@ -1189,6 +1215,13 @@ def _compile_blocked_attempt(
             "verdict_scope": "one_physical_stage_attempt",
         },
     }
+    if g120_scoped_obstruction is not None:
+        binding = dict(g120_scoped_obstruction)
+        _validate_file_binding_shape(
+            binding,
+            name="G120 scoped obstruction",
+        )
+        body["g120_scoped_obstruction"] = binding
     return _seal(body, key="attempt_identity_sha256")
 
 
@@ -1206,7 +1239,10 @@ def _validate_blocked_attempt(value: object) -> dict[str, Any]:
         "prepose_obstruction",
         "blocker",
     }
-    if set(value) != expected:
+    if set(value) not in (
+        expected,
+        expected | {"g120_scoped_obstruction"},
+    ):
         raise G121StageHarvestError(
             "G121 blocked attempt has a noncanonical key set"
         )
@@ -1243,6 +1279,30 @@ def _validate_blocked_attempt(value: object) -> dict[str, Any]:
         or blocker["verdict_scope"] != "one_physical_stage_attempt"
     ):
         raise G121StageHarvestError("scoped blocker differs")
+    scoped_binding = value.get("g120_scoped_obstruction")
+    if scoped_binding is not None:
+        _validate_file_binding_shape(
+            scoped_binding,
+            name="G120 scoped obstruction",
+        )
+        g120 = _require_safe_g120_v2()
+        opened = getattr(
+            g120,
+            G120_REQUIRED_SCOPED_OBSTRUCTION_OPENER,
+        )(
+            Path(str(scoped_binding["path"])),
+            expected_sha256=str(scoped_binding["sha256"]),
+        )
+        if (
+            opened.receipt["live_target"] != value["live_target"]
+            or _source_from_completed_physical(
+                opened.receipt["physical_stage_identity"]
+            )
+            != value["source_stage_identity"]
+        ):
+            raise G121StageHarvestError(
+                "G120 scoped obstruction differs from blocked stage custody"
+            )
     return value
 
 
@@ -1778,6 +1838,10 @@ def _harvest_g111_stages_impl(
     pending_blockers: list[
         tuple[dict[str, Any], str, str]
     ] = []
+    scoped_obstruction_error = getattr(
+        g120_module,
+        G120_REQUIRED_SCOPED_OBSTRUCTION_ERROR,
+    )
     for stage in stages:
         checkpoint_id = stage["source_stage_identity"][
             "g111_checkpoint_id_sha256"
@@ -1860,6 +1924,32 @@ def _harvest_g111_stages_impl(
                 reused_measurement_count += 1
             _append_attempt(ledger_path, row)
             stage_rows.append(row)
+        except scoped_obstruction_error as exc:
+            opened = getattr(
+                g120_module,
+                G120_REQUIRED_SCOPED_OBSTRUCTION_OPENER,
+            )(
+                exc.receipt_path,
+                expected_sha256=exc.receipt_sha256,
+            )
+            scoped_binding = {
+                "path": str(opened.receipt_path),
+                "bytes": opened.receipt_bytes,
+                "sha256": opened.receipt_sha256,
+            }
+            row = _compile_blocked_attempt(
+                stage_tag=str(stage["stage_tag"]),
+                source_stage_identity=stage["source_stage_identity"],
+                live_target=opened.receipt["live_target"],
+                blocker_code=type(exc).__name__,
+                blocker_detail=(
+                    str(exc) or "exact scoped obstruction"
+                ),
+                g120_scoped_obstruction=scoped_binding,
+            )
+            _append_attempt(ledger_path, row)
+            stage_rows.append(row)
+            scorer_replay_count += 1
         except Exception as exc:
             pending_blockers.append(
                 (
