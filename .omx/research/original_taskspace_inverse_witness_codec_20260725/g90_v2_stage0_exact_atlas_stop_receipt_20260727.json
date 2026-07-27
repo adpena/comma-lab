@@ -1,0 +1,106 @@
+{
+  "schema": "tac.g90_v2_stage0_exact_atlas_stop_receipt.v1",
+  "lane": "lane_g90_exact_all_physical_groups_v2_20260727",
+  "stage": {
+    "index": 0,
+    "pair_range": [
+      0,
+      120
+    ],
+    "batch_count": 8,
+    "exact_replay_count": 64,
+    "projection_coordinate_count": 64,
+    "receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/taskspace_exact_coarse_costates_v2_n600_20260727_r5/20_stage_00_0000_0120/stage_receipt.json",
+      "bytes": 3722,
+      "sha256": "ff8f820a0274d17790b37d69cd022eccea458ddbbff6b8c168c69ed9b4e1c25b",
+      "self_sha256": "96c2478662e499534b09129dd44ad6c44127eed740923aba8413e272cb5c442e"
+    },
+    "governed_run": {
+      "label": "g90_v2_exact_all_physical_groups_stage0_r1",
+      "status": "ok",
+      "exit_code": 0,
+      "elapsed_seconds": 2259.12,
+      "peak_rss_mib": 18740,
+      "rss_limit_mib": 49152,
+      "timeout_seconds": 7200
+    },
+    "authority_drift": {
+      "differentiable_current_argmax_cells": 1,
+      "differentiable_target_argmax_cells": 0,
+      "exact_replay_remains_authority": true
+    }
+  },
+  "exact_row_summary": {
+    "row_count": 64,
+    "beneficial_distortion_rows": 21,
+    "roles": [
+      {
+        "role": "Road",
+        "row_count": 32,
+        "beneficial_distortion_rows": 5,
+        "best_operand_id": "g72:0080_0096:Road:d1:a0.5:p0",
+        "best_distortion_score_delta": -0.011932688258644773,
+        "best_operand_member_bytes": 19097
+      },
+      {
+        "role": "UndrivableBoundary",
+        "row_count": 32,
+        "beneficial_distortion_rows": 16,
+        "best_operand_id": "g72:0064_0080:UndrivableBoundary:d0:a0.5:p0",
+        "best_distortion_score_delta": -0.005910142757043799,
+        "best_operand_member_bytes": 4641
+      }
+    ],
+    "independent_best_per_batch": {
+      "distortion_score_delta_sum": -0.04364374494965596,
+      "raw_operand_member_bytes_sum": 89596,
+      "break_even_outer_bytes_sum": 65545.02983704454,
+      "required_outer_shrink_fraction_before_interactions": 0.268437990122,
+      "selected_operand_ids_in_measurement_order": [
+        "g72:0000_0016:UndrivableBoundary:d1:a1:p0",
+        "g72:0016_0032:UndrivableBoundary:d0:a1:p0",
+        "g72:0032_0048:UndrivableBoundary:d0:a1:p0",
+        "g72:0048_0064:Road:d1:a0.5:p0",
+        "g72:0064_0080:UndrivableBoundary:d0:a0.5:p0",
+        "g72:0080_0096:Road:d1:a0.5:p0",
+        "g72:0096_0112:UndrivableBoundary:d0:a0.5:p0",
+        "g72:0112_0120:Road:d1:a0.5:p0"
+      ],
+      "authority": "ISOLATED_EXACT_ROWS_ONLY",
+      "additivity_claim": false,
+      "rate_admission_claim": false
+    }
+  },
+  "decision": {
+    "verdict": "STOP_CURRENT_BASE_STAGES_1_THROUGH_4",
+    "verdict_scope": "G90_V2_ROAD_UDB_LOCAL_REFINEMENT_ON_CURRENT_G74_BOTH_INCUMBENT_STAGE0_ONLY",
+    "reason": "The exact atlas contains real local signal, but its independent distortion gain is small relative to the incumbent semantic debt and its raw selected operands exceed their break-even outer-byte budget before cumulative interactions. Completing the same atlas on the current base is lower value than final-semantic-state construction and lattice-teacher solution compaction.",
+    "family_kill": false,
+    "rearm_conditions": [
+      "A materially improved final semantic Y1 becomes the exact incumbent and changes the G90 costates.",
+      "G98 cumulative replay plus STORE/DEFLATE realizes the eight listed operands below 65546 outer bytes while retaining enough exact whole-state distortion gain.",
+      "A downstream joint selector requests a specific later-stage batch because its conditional marginal value is measured rather than extrapolated."
+    ],
+    "next_primary_edges": [
+      "G100 full-lattice teacher solution indexing and bounded identity compaction.",
+      "G94 V2 sparse semantic Y1 plus mutually exclusive G88-or-G95 conditional Y0 composition.",
+      "G95 exact pair-0 mechanism measurement followed by final-Y1 population refit only if warranted."
+    ]
+  },
+  "system_wiring": {
+    "sensitivity_map": "The 64 exact rows remain immutable G90 costates and are consumable by G92/G98.",
+    "pareto": "No row is locally admitted; cumulative whole-state replay is mandatory.",
+    "bit_allocator": "Use exact distortion score delta and measured outer ZIP bytes; raw member bytes are diagnostic only.",
+    "autopilot": "Do not materialize G90 stages 1-4 on this incumbent unless a listed rearm condition is proved.",
+    "continual_learning": "Preserve role/batch sign changes and the one-cell differentiable-current drift; exact replay is authority.",
+    "probe_disambiguator": "G98 declared intervention order is a counted decision variable and must be arbitrated by cumulative prefix replay."
+  },
+  "false_authority": {
+    "research_only": true,
+    "candidate_claim": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer_moved": false
+  }
+}
