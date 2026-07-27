@@ -104,13 +104,21 @@ def _as_float(value: Any) -> float | None:
     return None
 
 
-def _score_terms(row: dict[str, Any]) -> tuple[float, float, float]:
+def _score_terms(
+    row: dict[str, Any],
+    *,
+    global_pose_dist: float | None,
+) -> tuple[float, float, float]:
     pose_term = _as_float(row.get("pose_score_contribution"))
     seg_term = _as_float(row.get("seg_score_contribution"))
     pose_dist = _as_float(row.get("pose_dist"))
     seg_dist = _as_float(row.get("seg_dist"))
     if pose_term is None and pose_dist is not None:
-        pose_term = math.sqrt(max(0.0, 10.0 * pose_dist))
+        if global_pose_dist is None:
+            raise ValueError("raw pose_dist needs complete population context for global-sqrt attribution")
+        pose_term = (
+            0.0 if global_pose_dist == 0.0 else math.sqrt(10.0 * global_pose_dist) * pose_dist / global_pose_dist
+        )
     if seg_term is None and seg_dist is not None:
         seg_term = 100.0 * seg_dist
     pose = pose_term or 0.0
@@ -129,15 +137,49 @@ def load_pair_xray(path: Path) -> list[PairObservation]:
         device = payload.get("device")
         evidence_grade = payload.get("evidence_grade")
         row_payload = payload.get("rows")
+        schema = payload.get("schema")
     elif isinstance(payload, list):
         source_label = path.stem
         device = None
         evidence_grade = None
         row_payload = payload
+        schema = None
     else:
         raise ValueError(f"{path} must contain a JSON object or JSONL row list")
     if not isinstance(row_payload, list):
         raise ValueError(f"{path} is missing a rows list from pair XRay output")
+    attribution = payload.get("pair_attribution") if isinstance(payload, dict) else None
+    scorer_native_v1 = (
+        schema == "pair_component_error_xray_v1"
+        and isinstance(attribution, dict)
+        and attribution.get("policy") == "GLOBAL_SQRT_PROPORTIONAL_EULER_COMPLETE_V1"
+        and attribution.get("pair_local_sqrt_used") is False
+    )
+    legacy_v1 = schema == "pair_component_error_xray_v1" and not scorer_native_v1
+    if legacy_v1 and not all(
+        isinstance(row, dict)
+        and _as_float(row.get("pose_dist")) is not None
+        and _as_float(row.get("seg_dist")) is not None
+        for row in row_payload
+    ):
+        raise ValueError(
+            f"{path} uses legacy pair-local sqrt rows without raw component "
+            "distortions; regenerate with scorer-native pair attribution"
+        )
+    if schema == "pair_component_error_xray_v2" and (
+        not isinstance(attribution, dict)
+        or attribution.get("policy") != "GLOBAL_SQRT_PROPORTIONAL_EULER_COMPLETE_V1"
+        or attribution.get("pair_local_sqrt_used") is not False
+    ):
+        raise ValueError(f"{path} lost scorer-native population attribution custody")
+    pose_values = [
+        value
+        for item in row_payload
+        if isinstance(item, dict) and (value := _as_float(item.get("pose_dist"))) is not None
+    ]
+    global_pose_dist = (
+        sum(pose_values) / len(pose_values) if len(pose_values) == len(row_payload) and pose_values else None
+    )
 
     observations: list[PairObservation] = []
     for idx, item in enumerate(row_payload):
@@ -146,7 +188,19 @@ def load_pair_xray(path: Path) -> list[PairObservation]:
         pair_idx = item.get("pair_idx", item.get("pair_index"))
         if not isinstance(pair_idx, int):
             raise ValueError(f"{path} rows[{idx}] missing integer pair_idx")
-        pose, seg, component = _score_terms(item)
+        if legacy_v1:
+            # Ignore the legacy pair-local sqrt fields and reattribute from raw
+            # distortions using the complete population operating point.
+            item = {
+                **item,
+                "pose_score_contribution": None,
+                "seg_score_contribution": None,
+                "component_score_no_rate": None,
+            }
+        pose, seg, component = _score_terms(
+            item,
+            global_pose_dist=global_pose_dist,
+        )
         observations.append(
             PairObservation(
                 pair_idx=pair_idx,
@@ -505,7 +559,11 @@ def build_hitlist(
                     }
                     for obs in sorted(
                         pair_observations,
-                        key=lambda obs: (obs.source_path, obs.pair_idx, obs.source_label),
+                        key=lambda obs: (
+                            obs.source_path,
+                            obs.pair_idx,
+                            obs.source_label,
+                        ),
                     )
                 ],
                 "axis": [
@@ -670,7 +728,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_ORIGINAL_UNCOMPRESSED_SIZE_BYTES,
     )
-    parser.add_argument("--output-dir", type=Path, help="Write hardpair_hitlist.json/md and rebuild_command.txt.")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help="Write hardpair_hitlist.json/md and rebuild_command.txt.",
+    )
     return parser
 
 
@@ -694,11 +756,7 @@ def main(argv: list[str] | None = None) -> int:
         print("ERROR: at least one --pair-xray-json is required", file=sys.stderr)
         return 2
     try:
-        pair_rows = [
-            obs
-            for path in args.pair_xray_json
-            for obs in load_pair_xray(path)
-        ]
+        pair_rows = [obs for path in args.pair_xray_json for obs in load_pair_xray(path)]
         axis_contexts = [load_axis_context(path) for path in args.paired_axis_artifact]
         report = build_hitlist(
             pair_observations=pair_rows,

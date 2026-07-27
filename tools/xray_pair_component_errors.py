@@ -15,7 +15,7 @@ import json
 import math
 import sys
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -24,6 +24,7 @@ import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = "pair_component_error_xray_v1"
+ATTRIBUTION_POLICY = "GLOBAL_SQRT_PROPORTIONAL_EULER_COMPLETE_V1"
 NON_PROMOTABLE = {
     "score_claim": False,
     "dispatch_attempted": False,
@@ -74,19 +75,42 @@ def _finite_mean(values: list[float]) -> float:
     return float(sum(values) / len(values))
 
 
-def _score_terms(pose_dist: float, seg_dist: float) -> tuple[float, float, float]:
-    pose_term = math.sqrt(max(0.0, 10.0 * pose_dist))
+def _score_terms(
+    pose_dist: float,
+    seg_dist: float,
+) -> tuple[float, float, float]:
+    """Recompose one already-aggregated global component row."""
+
+    pose_term = math.sqrt(10.0 * pose_dist)
     seg_term = 100.0 * seg_dist
     return pose_term, seg_term, pose_term + seg_term
+
+
+def _reattribute_rows(rows: list[PairRow]) -> list[PairRow]:
+    """Replace pair-local square roots with exact global-score attribution."""
+
+    _ensure_import_paths(REPO_ROOT / "upstream")
+    from tac.score_geometry import population_score_attribution
+
+    attribution = population_score_attribution(
+        [row.seg_dist for row in rows],
+        [row.pose_dist for row in rows],
+    )
+    return [
+        replace(
+            row,
+            pose_score_contribution=attribution.per_item_pose_attribution[index],
+            seg_score_contribution=attribution.per_item_seg_attribution[index],
+            component_score_no_rate=(attribution.per_item_distortion_attribution[index]),
+        )
+        for index, row in enumerate(rows)
+    ]
 
 
 def _top_rows(rows: list[PairRow], field: str, top_k: int) -> list[dict[str, Any]]:
     if top_k <= 0:
         return []
-    return [
-        row.to_json()
-        for row in sorted(rows, key=lambda row: getattr(row, field), reverse=True)[:top_k]
-    ]
+    return [row.to_json() for row in sorted(rows, key=lambda row: getattr(row, field), reverse=True)[:top_k]]
 
 
 def _load_scorer(upstream_dir: Path, device: torch.device) -> torch.nn.Module:
@@ -186,15 +210,14 @@ def compute_pair_rows(
             for i in range(batch_gt.shape[0]):
                 pose = float(pose_dist[i].item())
                 seg = float(seg_dist[i].item())
-                pose_term, seg_term, component_score = _score_terms(pose, seg)
                 rows.append(
                     PairRow(
                         pair_idx=pair_base + i,
                         pose_dist=pose,
                         seg_dist=seg,
-                        pose_score_contribution=pose_term,
-                        seg_score_contribution=seg_term,
-                        component_score_no_rate=component_score,
+                        pose_score_contribution=0.0,
+                        seg_score_contribution=0.0,
+                        component_score_no_rate=0.0,
                         frame0_l1=float(frame0_l1[i].item()),
                         frame1_l1=float(frame1_l1[i].item()),
                         frame0_changed_fraction=float(frame0_changed[i].item()),
@@ -204,7 +227,7 @@ def compute_pair_rows(
             pair_base += batch_gt.shape[0]
             if max_pairs is not None and len(rows) >= max_pairs:
                 break
-    return rows
+    return _reattribute_rows(rows)
 
 
 def build_report(
@@ -218,6 +241,7 @@ def build_report(
     top_k: int,
     archive: Path | None,
 ) -> dict[str, Any]:
+    rows = _reattribute_rows(rows)
     pose_mean = _finite_mean([row.pose_dist for row in rows])
     seg_mean = _finite_mean([row.seg_dist for row in rows])
     pose_term, seg_term, component_score = _score_terms(pose_mean, seg_mean)
@@ -231,6 +255,12 @@ def build_report(
         "upstream_dir": str(upstream_dir),
         "video_names_file": str(video_names_file),
         "n_pairs": len(rows),
+        "pair_attribution": {
+            "policy": ATTRIBUTION_POLICY,
+            "score_equation": "100*mean(seg_i)+sqrt(10*mean(pose_i))",
+            "pair_local_sqrt_used": False,
+            "population_mean_recomposes_component_summary": True,
+        },
         "component_summary": {
             "avg_posenet_dist": pose_mean,
             "avg_segnet_dist": seg_mean,
@@ -295,7 +325,14 @@ def render_markdown(report: dict[str, Any]) -> str:
         "",
     ]
     for section, rows in report["top_pairs"].items():
-        lines.extend([f"## Top {section}", "", "| pair | component | pose | seg | f0_l1 | f1_l1 |", "|---:|---:|---:|---:|---:|---:|"])
+        lines.extend(
+            [
+                f"## Top {section}",
+                "",
+                "| pair | component | pose | seg | f0_l1 | f1_l1 |",
+                "|---:|---:|---:|---:|---:|---:|",
+            ]
+        )
         for row in rows:
             lines.append(
                 f"| {row['pair_idx']} | {row['component_score_no_rate']:.9f} | "
@@ -310,7 +347,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--inflated-dir", type=Path, required=True)
     parser.add_argument("--upstream-dir", type=Path, default=Path("upstream"))
-    parser.add_argument("--video-names-file", type=Path, default=Path("upstream/public_test_video_names.txt"))
+    parser.add_argument(
+        "--video-names-file",
+        type=Path,
+        default=Path("upstream/public_test_video_names.txt"),
+    )
     parser.add_argument("--device", choices=("cpu", "mps", "cuda"), default="cpu")
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--max-pairs", type=int)

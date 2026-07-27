@@ -63,6 +63,7 @@ from tac.master_gradient import (
     compute_marginal_coefficients,
     latest_anchor_for_archive,
 )
+from tac.score_geometry import population_score_attribution
 
 __all__ = [
     "GRANULARITIES",
@@ -249,19 +250,13 @@ def byte_axis_sensitivity_from_master_gradient(
         )
     arr_path = anchor.get("gradient_array_path")
     if not arr_path:
-        raise MultiGranularitySensitivityError(
-            f"anchor for {archive_sha256[:12]} has no gradient_array_path"
-        )
+        raise MultiGranularitySensitivityError(f"anchor for {archive_sha256[:12]} has no gradient_array_path")
     p = Path(arr_path)
     if not p.exists():
-        raise MultiGranularitySensitivityError(
-            f"gradient array missing on disk: {arr_path}"
-        )
+        raise MultiGranularitySensitivityError(f"gradient array missing on disk: {arr_path}")
     grad = np.load(p)
     if grad.ndim != 2 or grad.shape[1] != 3:
-        raise MultiGranularitySensitivityError(
-            f"expected (n_bytes, 3) array; got {grad.shape!r} from {arr_path}"
-        )
+        raise MultiGranularitySensitivityError(f"expected (n_bytes, 3) array; got {grad.shape!r} from {arr_path}")
     op_raw = anchor.get("operating_point") or {}
     try:
         op = OperatingPoint(
@@ -271,9 +266,7 @@ def byte_axis_sensitivity_from_master_gradient(
             score=float(op_raw.get("score", 0.0)),
         )
     except Exception as exc:  # malformed operating point in the anchor
-        raise MultiGranularitySensitivityError(
-            f"anchor operating_point invalid: {op_raw!r} ({exc})"
-        ) from exc
+        raise MultiGranularitySensitivityError(f"anchor operating_point invalid: {op_raw!r} ({exc})") from exc
     seg_m, pose_m, byte_m = compute_marginal_coefficients(op)
     marginals = np.array([seg_m, pose_m, byte_m * CONTEST_RATE_DENOM_BYTES], dtype=np.float64)
     # NOTE: the byte-domain rate marginal is per-byte (25/N); multiplying by N
@@ -329,7 +322,7 @@ class PerPairAxisContribution:
     d_seg: float
     d_pose: float
     seg_score_contribution: float  # 100 · d_seg
-    pose_score_contribution: float  # sqrt(10 · d_pose)
+    pose_score_contribution: float  # global-sqrt score attribution
     dominant_axis: str
 
 
@@ -339,27 +332,21 @@ def per_pair_axis_score_contribution(
 ) -> list[PerPairAxisContribution]:
     """Decompose the contest score into per-pair seg + pose contributions.
 
-    Pure contest-score math (``upstream/modules.py``): the contest sums seg over
-    pairs as ``100·d_seg`` and pose as ``sqrt(10·d_pose)``. This identifies WHICH
-    of the 600 pairs dominate each axis — the per-pair signal the operator asked
-    for. ``d_seg``/``d_pose`` are caller-supplied (from a scorer forward pass);
-    this kernel does the score-faithful decomposition, fabricating no numbers.
-
-    Note: ``sqrt(10·d_pose)`` is SUPER-ADDITIVE across pairs only if pose is summed
-    pre-sqrt; the contest pose term is ``sqrt(10·mean_pairs(d_pose))`` at the video
-    level, so per-pair ``sqrt(10·d_pose)`` here is the pair-local pose magnitude
-    used for RANKING which pairs carry pose signal, not an additive decomposition.
+    The contest pose term is ``sqrt(10·mean_pairs(d_pose))``, not the mean
+    pair-local square root.  This kernel uses the canonical proportional
+    Euler-complete attribution, whose population mean exactly equals that
+    global pose term.  ``d_seg``/``d_pose`` are caller-supplied scorer rows;
+    no component value is fabricated.
     """
     ds = np.asarray(d_seg_per_pair, dtype=np.float64).ravel()
     dp = np.asarray(d_pose_per_pair, dtype=np.float64).ravel()
     if ds.shape != dp.shape:
-        raise MultiGranularitySensitivityError(
-            f"d_seg_per_pair {ds.shape} and d_pose_per_pair {dp.shape} must match"
-        )
+        raise MultiGranularitySensitivityError(f"d_seg_per_pair {ds.shape} and d_pose_per_pair {dp.shape} must match")
+    attribution = population_score_attribution(ds.tolist(), dp.tolist())
     out: list[PerPairAxisContribution] = []
     for i in range(ds.size):
-        seg_c = 100.0 * float(ds[i])
-        pose_c = math.sqrt(10.0 * max(float(dp[i]), 0.0))
+        seg_c = attribution.per_item_seg_attribution[i]
+        pose_c = attribution.per_item_pose_attribution[i]
         dominant = "seg" if seg_c >= pose_c else "pose"
         out.append(
             PerPairAxisContribution(
@@ -404,15 +391,11 @@ def per_pose_dim_score_contribution(
     s = np.asarray(student_pose, dtype=np.float64).ravel()
     t = np.asarray(teacher_pose, dtype=np.float64).ravel()
     if s.shape != t.shape:
-        raise MultiGranularitySensitivityError(
-            f"student_pose {s.shape} and teacher_pose {t.shape} must match"
-        )
+        raise MultiGranularitySensitivityError(f"student_pose {s.shape} and teacher_pose {t.shape} must match")
     n = s.size
     window = contest_window_dims if contest_window_dims is not None else n // 2
     if window < 0 or window > n:
-        raise MultiGranularitySensitivityError(
-            f"contest_window_dims={window} out of range for {n} pose dims"
-        )
+        raise MultiGranularitySensitivityError(f"contest_window_dims={window} out of range for {n} pose dims")
     if d_pose_running is None:
         # use the realized d_pose over the contest window as the operating point
         in_win = (s[:window] - t[:window]) ** 2
@@ -484,19 +467,13 @@ def segnet_boundary_band_weights(
     elif torch.is_tensor(teacher_logits):
         logits = teacher_logits.detach().float()
     else:
-        raise MultiGranularitySensitivityError(
-            "teacher_logits must be a torch tensor or numpy array"
-        )
+        raise MultiGranularitySensitivityError("teacher_logits must be a torch tensor or numpy array")
     if logits.ndim == 3:
         logits = logits.unsqueeze(0)  # (1, C, H, W)
     if logits.ndim != 4:
-        raise MultiGranularitySensitivityError(
-            f"expected (C,H,W) or (B,C,H,W) logits; got ndim={logits.ndim}"
-        )
+        raise MultiGranularitySensitivityError(f"expected (C,H,W) or (B,C,H,W) logits; got ndim={logits.ndim}")
     if logits.shape[1] < 2:
-        raise MultiGranularitySensitivityError(
-            f"need >=2 classes for a top-2 margin; got C={logits.shape[1]}"
-        )
+        raise MultiGranularitySensitivityError(f"need >=2 classes for a top-2 margin; got C={logits.shape[1]}")
     # top-2 margin per pixel
     top2 = torch.topk(logits, k=2, dim=1).values  # (B, 2, H, W)
     margin = (top2[:, 0, :, :] - top2[:, 1, :, :]).clamp_min(0.0)  # (B, H, W)
@@ -568,13 +545,9 @@ def design_input_domain_sensitivity_measurement(
     GPU-holding (operator-attended) slot fills the actual numbers.
     """
     if granularity not in GRANULARITIES:
-        raise MultiGranularitySensitivityError(
-            f"granularity must be one of {GRANULARITIES}; got {granularity!r}"
-        )
+        raise MultiGranularitySensitivityError(f"granularity must be one of {GRANULARITIES}; got {granularity!r}")
     if score_axis not in SCORE_AXES:
-        raise MultiGranularitySensitivityError(
-            f"score_axis must be one of {SCORE_AXES}; got {score_axis!r}"
-        )
+        raise MultiGranularitySensitivityError(f"score_axis must be one of {SCORE_AXES}; got {score_axis!r}")
     prov = non_promotable_provenance_dict(
         model_id=f"pending_input_domain_{granularity}_{score_axis}_sensitivity",
         inputs_sha256="0" * 64,  # no inputs measured yet (pending)

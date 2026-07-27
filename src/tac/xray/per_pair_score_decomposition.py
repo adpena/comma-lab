@@ -1,19 +1,31 @@
 # SPDX-License-Identifier: MIT
-"""F9: Per-pair score decomposition primitive.
+"""F9: Population-score attribution over frame pairs.
 
-Per deep_math §4.1, the contest score decomposes as
-``S = (1/N) * Sum_pairs (100*seg_i + sqrt(10*pose_i)) + 25*B/N``
-— each of the 600 frame pairs contributes independently to the
-distortion sum. Per-pair contribution is heterogeneous: a small minority
-of pairs typically dominates >50% of the total distortion sum.
+The segmentation term is additive across equal-sized scorer cells, but the
+pose term is not:
+
+``S_dist = 100 * mean(seg_i) + sqrt(10 * mean(pose_i))``.
+
+In particular, ``mean(sqrt(10 * pose_i))`` is not the evaluator objective.
+For ranking and allocation this primitive uses the unique proportional
+degree-one attribution of the global square-root term:
+
+``pose_attr_i = sqrt(10 * D_pose) * pose_i / D_pose``.
+
+The mean of ``pose_attr_i`` is exactly the global pose term.  Equivalently it
+is twice the global score costate times the pair distortion, as required by
+Euler's theorem for a degree-one-half homogeneous function.  It is an
+attribution for prioritization, not an independently evaluable pair score.
 
 This primitive:
 
-1. Given per-pair (seg_distortion, pose_distortion) tensors, computes
-   the per-pair score contribution: ``c_i = 100*seg_i + sqrt(10*pose_i)``.
-2. Returns the sorted contribution distribution + the top-K pair indices
+1. Given per-pair (seg_distortion, pose_distortion) tensors, recomposes the
+   exact global scorer distortion.
+2. Attributes that score across pairs without moving the square root inside
+   the population mean.
+3. Returns the sorted attribution distribution + the top-K pair indices
    (the "high-leverage" pairs the autopilot should target).
-3. Provides a priority vector consumable by the cathedral-autopilot
+4. Provides a priority vector consumable by the cathedral-autopilot
    ranker: pairs with higher c_i get higher dispatch priority.
 
 Wire-in hooks engaged:
@@ -40,12 +52,14 @@ CLAUDE.md compliance tags
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import torch
 
+from tac.score_geometry import population_score_attribution
 from tac.xray.base import (
     ComposedXRayPrimitive,
     WireInHook,
@@ -89,17 +103,37 @@ class PerPairScoreBreakdown:
     per_pair_priority: tuple[float, ...]
     master_gradient_pair_norm: tuple[float, ...] = ()
     master_gradient_reweighted_priority: tuple[float, ...] = ()
+    per_pair_score_attribution: tuple[float, ...] = ()
+    global_seg_distortion: float = 0.0
+    global_pose_distortion: float = 0.0
+    global_pose_score_term: float = 0.0
+    exact_global_distortion_score: float = 0.0
+    pose_pair_mse_vjp_scale: float | None = None
+    pose_attribution_policy: str = "GLOBAL_SQRT_PROPORTIONAL_EULER_COMPLETE_V1"
 
     def __post_init__(self) -> None:
         if self.n_pairs < 0:
             raise ValueError("n_pairs must be non-negative")
         if self.total_distortion_sum < 0.0:
             raise ValueError("total_distortion_sum must be non-negative")
+        if len(self.per_pair_score_attribution) not in {0, self.n_pairs}:
+            raise ValueError("per_pair_score_attribution must be empty or have n_pairs entries")
+        for name in (
+            "global_seg_distortion",
+            "global_pose_distortion",
+            "global_pose_score_term",
+            "exact_global_distortion_score",
+        ):
+            value = float(getattr(self, name))
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError(f"{name} must be finite and non-negative")
+        if self.pose_pair_mse_vjp_scale is not None and (
+            not math.isfinite(self.pose_pair_mse_vjp_scale) or self.pose_pair_mse_vjp_scale <= 0.0
+        ):
+            raise ValueError("pose_pair_mse_vjp_scale must be positive finite or None at D_pose=0")
         for f in self.top_k_cumulative_fraction:
             if not (-1e-6 <= f <= 1.0 + 1e-6):
-                raise ValueError(
-                    f"cumulative fraction {f} must be in [0.0, 1.0]"
-                )
+                raise ValueError(f"cumulative fraction {f} must be in [0.0, 1.0]")
 
 
 class PerPairScoreDecomposition:
@@ -141,25 +175,17 @@ class PerPairScoreDecomposition:
             Number of top-contribution pairs to surface (default 10).
         """
         if target.dim() == 2 and target.shape[1] == 2:
-            seg = target[:, 0].float()
-            pose = target[:, 1].float()
+            seg = target[:, 0].to(dtype=torch.float64)
+            pose = target[:, 1].to(dtype=torch.float64)
         elif target.dim() == 1:
             if target_pose is None:
-                raise ValueError(
-                    "target_pose must be provided when target is (N,)"
-                )
+                raise ValueError("target_pose must be provided when target is (N,)")
             if target_pose.dim() != 1 or target_pose.shape != target.shape:
-                raise ValueError(
-                    f"target_pose must be (N,) matching target; got shape "
-                    f"{tuple(target_pose.shape)}"
-                )
-            seg = target.float()
-            pose = target_pose.float()
+                raise ValueError(f"target_pose must be (N,) matching target; got shape {tuple(target_pose.shape)}")
+            seg = target.to(dtype=torch.float64)
+            pose = target_pose.to(dtype=torch.float64)
         else:
-            raise ValueError(
-                f"target must be (N,) or (N, 2); got shape "
-                f"{tuple(target.shape)}"
-            )
+            raise ValueError(f"target must be (N,) or (N, 2); got shape {tuple(target.shape)}")
 
         n_pairs = seg.shape[0]
         if top_k <= 0:
@@ -167,13 +193,34 @@ class PerPairScoreDecomposition:
         if top_k > n_pairs:
             top_k = n_pairs
 
-        # Per-pair contribution: 100*seg + sqrt(10*pose).
-        per_pair = (
-            SEG_COEFF * seg + torch.sqrt(POSE_SQRT_COEFF * pose.clamp(min=0.0))
+        if not bool(torch.isfinite(seg).all()) or not bool(torch.isfinite(pose).all()):
+            raise ValueError("per-pair distortions must be finite")
+        if bool((seg < 0.0).any()) or bool((pose < 0.0).any()):
+            raise ValueError("per-pair distortions must be non-negative")
+
+        attribution = population_score_attribution(seg.tolist(), pose.tolist())
+        global_seg = attribution.global_seg_distortion
+        global_pose = attribution.global_pose_distortion
+        global_pose_term = attribution.pose_term
+        exact_global_distortion = attribution.distortion_score
+        pose_pair_mse_vjp_scale = (
+            None if math.isinf(attribution.pose_item_mse_vjp_scale) else attribution.pose_item_mse_vjp_scale
+        )
+        per_pair = torch.as_tensor(
+            attribution.per_item_distortion_attribution,
+            dtype=seg.dtype,
+            device=seg.device,
         )
         total = float(per_pair.sum().item())
         mean = float(per_pair.mean().item()) if n_pairs > 0 else 0.0
         maxv = float(per_pair.max().item()) if n_pairs > 0 else 0.0
+        if not math.isclose(
+            mean,
+            exact_global_distortion,
+            rel_tol=1e-12,
+            abs_tol=1e-12,
+        ):
+            raise RuntimeError("population score attribution failed exact global recomposition")
 
         # Sort descending for top-K.
         sorted_per_pair, sorted_indices = torch.sort(per_pair, descending=True)
@@ -182,18 +229,12 @@ class PerPairScoreDecomposition:
         # Cumulative fraction over top 1..top_k.
         cum_sum = torch.cumsum(sorted_per_pair, dim=0)
         if total > 0:
-            cum_frac = tuple(
-                float(cum_sum[i].item()) / total for i in range(top_k)
-            )
+            cum_frac = tuple(float(cum_sum[i].item()) / total for i in range(top_k))
         else:
             cum_frac = tuple(0.0 for _ in range(top_k))
 
         # Priority vector = c_i / mean. Clip pathological 0-mean.
-        priority_tensor = (
-            per_pair / mean
-            if mean > 0
-            else torch.zeros((n_pairs,), dtype=per_pair.dtype)
-        )
+        priority_tensor = per_pair / mean if mean > 0 else torch.zeros((n_pairs,), dtype=per_pair.dtype)
         priority = tuple(float(v) for v in priority_tensor.tolist())
 
         master_gradient_pair_norm: tuple[float, ...] = ()
@@ -220,9 +261,7 @@ class PerPairScoreDecomposition:
                     "per-pair master gradient must have shape "
                     f"(N_bytes, {n_pairs}, 3); got {tuple(gradient_tensor.shape)}"
                 )
-            pair_norm = torch.sqrt(
-                torch.sum(gradient_tensor * gradient_tensor, dim=(0, 2))
-            )
+            pair_norm = torch.sqrt(torch.sum(gradient_tensor * gradient_tensor, dim=(0, 2)))
             norm_mean = float(pair_norm.mean().item()) if n_pairs > 0 else 0.0
             if norm_mean > 0.0:
                 gradient_priority = pair_norm / norm_mean
@@ -233,23 +272,15 @@ class PerPairScoreDecomposition:
             else:
                 gradient_priority = torch.zeros_like(pair_norm)
                 fused = torch.zeros_like(pair_norm)
-            master_gradient_pair_norm = tuple(
-                float(v) for v in pair_norm.tolist()
-            )
-            master_gradient_reweighted_priority = tuple(
-                float(v) for v in fused.tolist()
-            )
+            master_gradient_pair_norm = tuple(float(v) for v in pair_norm.tolist())
+            master_gradient_reweighted_priority = tuple(float(v) for v in fused.tolist())
             master_gradient_metadata = {
                 "master_gradient_consumed": True,
                 "master_gradient_archive_sha256": master_gradient_archive_sha256,
                 "master_gradient_measurement_axis": anchor.get("measurement_axis"),
-                "master_gradient_measurement_hardware": anchor.get(
-                    "measurement_hardware"
-                ),
+                "master_gradient_measurement_hardware": anchor.get("measurement_hardware"),
                 "master_gradient_pair_norm_mean": norm_mean,
-                "master_gradient_pair_norm_max": (
-                    float(pair_norm.max().item()) if n_pairs > 0 else 0.0
-                ),
+                "master_gradient_pair_norm_max": (float(pair_norm.max().item()) if n_pairs > 0 else 0.0),
             }
 
         breakdown = PerPairScoreBreakdown(
@@ -262,6 +293,12 @@ class PerPairScoreDecomposition:
             per_pair_priority=priority,
             master_gradient_pair_norm=master_gradient_pair_norm,
             master_gradient_reweighted_priority=master_gradient_reweighted_priority,
+            per_pair_score_attribution=tuple(float(value) for value in per_pair.tolist()),
+            global_seg_distortion=global_seg,
+            global_pose_distortion=global_pose,
+            global_pose_score_term=global_pose_term,
+            exact_global_distortion_score=exact_global_distortion,
+            pose_pair_mse_vjp_scale=pose_pair_mse_vjp_scale,
         )
 
         return XRayPrimitiveResult(
@@ -280,6 +317,10 @@ class PerPairScoreDecomposition:
                 "top_k": top_k,
                 "seg_coeff": SEG_COEFF,
                 "pose_sqrt_coeff": POSE_SQRT_COEFF,
+                "score_equation": ("100*mean(seg_i)+sqrt(10*mean(pose_i))"),
+                "pose_attribution_policy": breakdown.pose_attribution_policy,
+                "pose_pair_mse_vjp_scale": pose_pair_mse_vjp_scale,
+                "pair_local_sqrt_used": False,
                 **master_gradient_metadata,
             },
         )
@@ -293,23 +334,15 @@ class PerPairScoreDecomposition:
     ) -> list[int]:
         """Return pair indices in the top ``percentile`` of contribution."""
         if not (0.0 <= percentile <= 100.0):
-            raise ValueError(
-                f"percentile must be in [0.0, 100.0]; got {percentile}"
-            )
+            raise ValueError(f"percentile must be in [0.0, 100.0]; got {percentile}")
         result = self.compute(target, target_pose=target_pose, top_k=10000)
         breakdown = result.primitive_value
         # Threshold at the percentile boundary.
         priorities = torch.tensor(breakdown.per_pair_priority)
         if priorities.numel() == 0:
             return []
-        threshold = float(
-            priorities.quantile(percentile / 100.0).item()
-        )
-        return [
-            int(i)
-            for i, p in enumerate(breakdown.per_pair_priority)
-            if p >= threshold
-        ]
+        threshold = float(priorities.quantile(percentile / 100.0).item())
+        return [int(i) for i, p in enumerate(breakdown.per_pair_priority) if p >= threshold]
 
     def compose_with(self, other: Any) -> Any:
         return ComposedXRayPrimitive(left=self, right=other)

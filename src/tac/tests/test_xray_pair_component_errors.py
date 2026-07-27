@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_PATH = REPO_ROOT / "tools" / "xray_pair_component_errors.py"
 
@@ -68,6 +70,10 @@ def test_build_report_is_false_authority_and_sorts_hard_pairs(tmp_path: Path) ->
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["component_summary"]["avg_posenet_dist"] == 0.00025
+    assert report["pair_attribution"]["pair_local_sqrt_used"] is False
+    assert sum(row["pose_score_contribution"] for row in report["rows"]) / 2 == (
+        pytest.approx(report["component_summary"]["pose_score_contribution"])
+    )
     assert report["top_pairs"]["combined"][0]["pair_idx"] == 1
     assert report["top_pairs"]["frame1_l1"][0]["pair_idx"] == 1
 

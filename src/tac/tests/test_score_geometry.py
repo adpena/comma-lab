@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Tests for the closed-form contest score geometry analyzer."""
+
 from __future__ import annotations
 
 import math
@@ -25,6 +26,7 @@ from tac.score_geometry import (
     marginal_value_per_byte,
     operating_regime,
     planner_axis_marginals,
+    population_score_attribution,
     pose_byte_tradeoff,
     pose_score_saving_from_delta,
     predict_cpu_axis_marginals,
@@ -39,6 +41,35 @@ from tac.score_geometry import (
     score_transition_audit,
     target_byte_budget_for_score,
 )
+
+
+def test_population_score_attribution_preserves_global_pose_sqrt() -> None:
+    row = population_score_attribution(
+        (0.01, 0.03),
+        (0.0, 4.0),
+    )
+
+    expected = 100.0 * 0.02 + math.sqrt(10.0 * 2.0)
+    naive_pair_local = (math.sqrt(0.0) + math.sqrt(40.0)) / 2.0
+    assert row.distortion_score == pytest.approx(expected)
+    assert math.fsum(row.per_item_distortion_attribution) / 2 == pytest.approx(expected)
+    assert row.pose_term != pytest.approx(naive_pair_local)
+    assert row.per_item_pose_attribution == pytest.approx((0.0, 2.0 * math.sqrt(20.0)))
+    assert row.pose_item_mse_vjp_scale == pytest.approx(5.0 / (2.0 * math.sqrt(20.0)))
+    assert row.pair_local_sqrt_used is False
+
+
+def test_population_score_attribution_zero_and_invalid_contract() -> None:
+    zero = population_score_attribution((0.0, 0.0), (0.0, 0.0))
+    assert zero.distortion_score == 0.0
+    assert zero.pose_item_mse_vjp_scale == math.inf
+    assert zero.per_item_pose_attribution == (0.0, 0.0)
+
+    with pytest.raises(ValueError, match="equal length"):
+        population_score_attribution((0.0,), (0.0, 1.0))
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        population_score_attribution((0.0,), (float("nan"),))
+
 
 # ---------------------------------------------------------------------------
 # Sanity: known-anchor scores
@@ -227,8 +258,12 @@ def test_marginal_value_per_byte_pose_depends_on_op_point() -> None:
 def test_pareto_envelope_at_floor_returns_floor_score() -> None:
     """If candidate equals all floors, the slack is zero on every axis."""
     envelope, slack = project_onto_pareto_envelope(
-        d_seg=0.0, d_pose=0.0, archive_bytes=178258,
-        seg_floor=0.0, pose_floor=0.0, byte_floor=178258,
+        d_seg=0.0,
+        d_pose=0.0,
+        archive_bytes=178258,
+        seg_floor=0.0,
+        pose_floor=0.0,
+        byte_floor=178258,
     )
     assert math.isclose(envelope, contest_score(0.0, 0.0, 178258))
     assert slack["seg_slack"] == 0.0
@@ -239,8 +274,12 @@ def test_pareto_envelope_at_floor_returns_floor_score() -> None:
 def test_pareto_envelope_slack_reflects_axis_gap() -> None:
     """Score-slack on each axis equals the per-axis term-gap."""
     envelope, slack = project_onto_pareto_envelope(
-        d_seg=0.001, d_pose=1e-4, archive_bytes=200000,
-        seg_floor=0.0, pose_floor=0.0, byte_floor=178258,
+        d_seg=0.001,
+        d_pose=1e-4,
+        archive_bytes=200000,
+        seg_floor=0.0,
+        pose_floor=0.0,
+        byte_floor=178258,
     )
     expected_byte_score_slack = 25.0 * (200000 - 178258) / CONTEST_REFERENCE_BYTES
     assert math.isclose(slack["byte_score_slack"], expected_byte_score_slack, rel_tol=1e-9)
@@ -254,7 +293,9 @@ def test_pareto_envelope_rejects_below_floor() -> None:
     """A candidate that violates a stated floor raises ValueError."""
     with pytest.raises(ValueError):
         project_onto_pareto_envelope(
-            d_seg=0.0, d_pose=0.0, archive_bytes=100,
+            d_seg=0.0,
+            d_pose=0.0,
+            archive_bytes=100,
             byte_floor=178258,
         )
 
@@ -564,7 +605,9 @@ def test_negative_inputs_raise() -> None:
 
 def test_predict_cpu_axis_marginals_includes_required_keys() -> None:
     out = predict_cpu_axis_marginals(
-        d_seg_cuda=6.7e-4, d_pose_cuda=1.7e-4, archive_class="hnerv",
+        d_seg_cuda=6.7e-4,
+        d_pose_cuda=1.7e-4,
+        archive_class="hnerv",
     )
     assert "pose_marginal" in out
     assert "seg_marginal" in out
@@ -580,7 +623,9 @@ def test_predict_cpu_axis_marginals_includes_required_keys() -> None:
 
 def test_predict_cpu_axis_marginals_seg_marginal_is_constant_100() -> None:
     out = predict_cpu_axis_marginals(
-        d_seg_cuda=6.7e-4, d_pose_cuda=1.7e-4, archive_class="hnerv",
+        d_seg_cuda=6.7e-4,
+        d_pose_cuda=1.7e-4,
+        archive_class="hnerv",
     )
     assert out["seg_marginal"] == 100.0
 
@@ -590,7 +635,9 @@ def test_predict_cpu_axis_marginals_at_pose_floor_returns_high_marginal() -> Non
     is still small and the pose marginal is HIGH (sqrt singularity)."""
     # PR106 frontier with d_pose_cuda just above floor.
     out = predict_cpu_axis_marginals(
-        d_seg_cuda=7.84e-4, d_pose_cuda=1.7e-4, archive_class="hnerv",
+        d_seg_cuda=7.84e-4,
+        d_pose_cuda=1.7e-4,
+        archive_class="hnerv",
     )
     # CPU pose < CUDA pose (floor stripped).
     assert out["cpu_d_pose"] < out["cuda_d_pose"]
@@ -675,7 +722,9 @@ def test_planner_axis_marginals_negative_and_unknown_axis_raise() -> None:
 
 def test_dual_axis_recommendation_returns_dataclass() -> None:
     rec = recommend_dispatch_axis_dual(
-        cuda_d_seg=6.88e-4, cuda_d_pose=1.74e-4, archive_bytes=178392,
+        cuda_d_seg=6.88e-4,
+        cuda_d_pose=1.74e-4,
+        archive_bytes=178392,
     )
     assert isinstance(rec, DualAxisDispatchRecommendation)
     assert rec.evidence_grade == "[prediction; dual-axis-dispatch-recommendation]"
@@ -686,7 +735,9 @@ def test_dual_axis_recommendation_returns_dataclass() -> None:
 def test_dual_axis_priority_axis_is_pose_at_pr107_frontier() -> None:
     """PR107 operating point: pose_avg=3.58e-5 << flip threshold 2.5e-4."""
     rec = recommend_dispatch_axis_dual(
-        cuda_d_seg=6.88e-4, cuda_d_pose=1.74e-4, archive_bytes=178392,
+        cuda_d_seg=6.88e-4,
+        cuda_d_pose=1.74e-4,
+        archive_bytes=178392,
     )
     # CUDA pose marginal (5/sqrt(10*1.74e-4) ~= 119.9) > seg marginal (100)
     assert rec.cuda_priority_axis == "pose"
@@ -697,7 +748,9 @@ def test_dual_axis_priority_axis_is_pose_at_pr107_frontier() -> None:
 
 def test_dual_axis_target_score_gap_is_signed_correctly() -> None:
     rec = recommend_dispatch_axis_dual(
-        cuda_d_seg=6.88e-4, cuda_d_pose=1.74e-4, archive_bytes=178392,
+        cuda_d_seg=6.88e-4,
+        cuda_d_pose=1.74e-4,
+        archive_bytes=178392,
         target_score_cpu=0.17,
     )
     # PR107 CPU score is ~0.197; gap is positive (above target)
@@ -708,7 +761,9 @@ def test_dual_axis_target_score_gap_is_signed_correctly() -> None:
 
 def test_dual_axis_decision_attack_map_covers_all_axes() -> None:
     rec = recommend_dispatch_axis_dual(
-        cuda_d_seg=6.88e-4, cuda_d_pose=1.74e-4, archive_bytes=178392,
+        cuda_d_seg=6.88e-4,
+        cuda_d_pose=1.74e-4,
+        archive_bytes=178392,
     )
     assert "seg" in rec.decision_attack_map
     assert "pose" in rec.decision_attack_map
@@ -722,15 +777,21 @@ def test_dual_axis_decision_attack_map_covers_all_axes() -> None:
 def test_dual_axis_negative_inputs_raise() -> None:
     with pytest.raises(ValueError):
         recommend_dispatch_axis_dual(
-            cuda_d_seg=-0.1, cuda_d_pose=1e-4, archive_bytes=178392,
+            cuda_d_seg=-0.1,
+            cuda_d_pose=1e-4,
+            archive_bytes=178392,
         )
     with pytest.raises(ValueError):
         recommend_dispatch_axis_dual(
-            cuda_d_seg=1e-4, cuda_d_pose=-0.1, archive_bytes=178392,
+            cuda_d_seg=1e-4,
+            cuda_d_pose=-0.1,
+            archive_bytes=178392,
         )
     with pytest.raises(ValueError):
         recommend_dispatch_axis_dual(
-            cuda_d_seg=1e-4, cuda_d_pose=1e-4, archive_bytes=-1,
+            cuda_d_seg=1e-4,
+            cuda_d_pose=1e-4,
+            archive_bytes=-1,
         )
 
 
@@ -771,7 +832,9 @@ def test_dual_axis_at_exact_flip_threshold_detects_seg_pose_tie() -> None:
     """At d_pose == flip threshold, seg and pose marginals are equal (both 100)."""
     threshold = importance_flip_threshold()
     rec = recommend_dispatch_axis_dual(
-        cuda_d_seg=1e-4, cuda_d_pose=threshold, archive_bytes=178392,
+        cuda_d_seg=1e-4,
+        cuda_d_pose=threshold,
+        archive_bytes=178392,
     )
     # Both axes should be in the tied set on CUDA side
     assert "seg" in rec.cuda_tied_axes
@@ -784,7 +847,9 @@ def test_dual_axis_at_exact_flip_threshold_detects_seg_pose_tie() -> None:
 def test_dual_axis_no_tie_when_sufficiently_off_threshold() -> None:
     """At pose well below threshold, only pose is in cuda_tied_axes (single-element tuple)."""
     rec = recommend_dispatch_axis_dual(
-        cuda_d_seg=6.88e-4, cuda_d_pose=1.74e-4, archive_bytes=178392,
+        cuda_d_seg=6.88e-4,
+        cuda_d_pose=1.74e-4,
+        archive_bytes=178392,
     )
     # Pose dominates at this PR107-frontier operating point
     assert rec.cuda_priority_axis == "pose"
@@ -795,6 +860,8 @@ def test_dual_axis_no_tie_when_sufficiently_off_threshold() -> None:
 
 def test_dual_axis_tie_rtol_is_documented() -> None:
     rec = recommend_dispatch_axis_dual(
-        cuda_d_seg=1e-4, cuda_d_pose=1e-4, archive_bytes=178392,
+        cuda_d_seg=1e-4,
+        cuda_d_pose=1e-4,
+        archive_bytes=178392,
     )
     assert rec.tie_rtol == 1e-9

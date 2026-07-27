@@ -37,6 +37,10 @@ def _pair_xray_payload() -> dict[str, Any]:
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "pair_attribution": {
+            "policy": "GLOBAL_SQRT_PROPORTIONAL_EULER_COMPLETE_V1",
+            "pair_local_sqrt_used": False,
+        },
         "rows": [
             {
                 "pair_idx": 0,
@@ -66,6 +70,18 @@ def _pair_xray_payload() -> dict[str, Any]:
     }
 
 
+def test_legacy_pairlocal_rows_without_raw_distortions_fail_closed(
+    tmp_path: Path,
+) -> None:
+    payload = _pair_xray_payload()
+    payload["schema"] = "pair_component_error_xray_v1"
+    payload.pop("pair_attribution")
+    path = _write_json(tmp_path / "legacy.json", payload)
+
+    with pytest.raises(ValueError, match="legacy pair-local sqrt"):
+        _load_module().load_pair_xray(path)
+
+
 def _paired_axis_payload() -> dict[str, Any]:
     return {
         "schema_version": "xray_paired_cpu_cuda_axis_delta_v1",
@@ -93,7 +109,9 @@ def _paired_axis_payload() -> dict[str, Any]:
     }
 
 
-def test_build_hitlist_keeps_false_authority_and_prioritizes_axis_dominant_pose(tmp_path: Path) -> None:
+def test_build_hitlist_keeps_false_authority_and_prioritizes_axis_dominant_pose(
+    tmp_path: Path,
+) -> None:
     module = _load_module()
     pair_path = _write_json(tmp_path / "pair_component_xray.json", _pair_xray_payload())
     axis_path = _write_json(tmp_path / "paired_axis_delta.json", _paired_axis_payload())
@@ -158,7 +176,9 @@ def test_markdown_axis_context_can_shift_priority_to_seg_repair(tmp_path: Path) 
     assert "cpu_leaderboard_seg_repair" in report["hitlist"][0]["suggested_lane_tags"]
 
 
-def test_markdown_axis_context_reads_target_gap_not_axis_score_table(tmp_path: Path) -> None:
+def test_markdown_axis_context_reads_target_gap_not_axis_score_table(
+    tmp_path: Path,
+) -> None:
     module = _load_module()
     md_path = tmp_path / "paired_axis_delta.md"
     md_path.write_text(
@@ -193,20 +213,23 @@ def test_cli_writes_json_markdown_and_rebuild_command(tmp_path: Path) -> None:
     axis_path = _write_json(tmp_path / "paired_axis_delta.json", _paired_axis_payload())
     out_dir = tmp_path / "out"
 
-    assert module.main(
-        [
-            "--pair-xray-json",
-            str(pair_path),
-            "--paired-axis-artifact",
-            str(axis_path),
-            "--label",
-            "cli_fixture",
-            "--top-k",
-            "1",
-            "--output-dir",
-            str(out_dir),
-        ]
-    ) == 0
+    assert (
+        module.main(
+            [
+                "--pair-xray-json",
+                str(pair_path),
+                "--paired-axis-artifact",
+                str(axis_path),
+                "--label",
+                "cli_fixture",
+                "--top-k",
+                "1",
+                "--output-dir",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
 
     report = json.loads((out_dir / "hardpair_hitlist.json").read_text(encoding="utf-8"))
     assert report["label"] == "cli_fixture"

@@ -38,9 +38,11 @@ Cross-references:
   * ``tools/contest_score_pareto_3axis.py`` evidence-space Pareto ranking
   * ``.omx/research/grand_council_optimal_path_to_shannon_floor_20260507.md``
 """
+
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
@@ -68,6 +70,29 @@ class ScoreDecomposition:
         if s == 0.0:
             return (0.0, 0.0, 0.0)
         return (self.seg_term / s, self.pose_term / s, self.rate_term / s)
+
+
+@dataclass(frozen=True)
+class PopulationScoreAttribution:
+    """Exact global distortion plus a score-preserving per-item attribution.
+
+    The attribution is for prioritization only.  Individual items are not
+    independently scored because the pose square root couples the population.
+    The mean per-item attribution exactly recomposes ``distortion_score``.
+    """
+
+    item_count: int
+    global_seg_distortion: float
+    global_pose_distortion: float
+    seg_term: float
+    pose_term: float
+    distortion_score: float
+    per_item_seg_attribution: tuple[float, ...]
+    per_item_pose_attribution: tuple[float, ...]
+    per_item_distortion_attribution: tuple[float, ...]
+    pose_item_mse_vjp_scale: float
+    attribution_policy: str = "GLOBAL_SQRT_PROPORTIONAL_EULER_COMPLETE_V1"
+    pair_local_sqrt_used: bool = False
 
 
 @dataclass(frozen=True)
@@ -193,9 +218,9 @@ class ReceiverEquivalenceFloorAudit:
 class ScoreGradient:
     """Partial derivatives of S w.r.t. each axis at one operating point."""
 
-    d_seg: float          # dS/d(d_seg) — constant 100
-    d_pose: float         # dS/d(d_pose) — = 5 / sqrt(10*d_pose), undefined at 0
-    d_bytes: float        # dS/dB — constant 25/N_REF
+    d_seg: float  # dS/d(d_seg) — constant 100
+    d_pose: float  # dS/d(d_pose) — = 5 / sqrt(10*d_pose), undefined at 0
+    d_bytes: float  # dS/dB — constant 25/N_REF
 
     @property
     def seg_over_pose_marginal(self) -> float:
@@ -382,9 +407,7 @@ def _priority_axis_with_ties(
     ]
     winner_score = max(score for score, _ in scores)
     tied = tuple(
-        name
-        for score, name in scores
-        if math.isclose(score, winner_score, rel_tol=tie_rtol, abs_tol=tie_rtol)
+        name for score, name in scores if math.isclose(score, winner_score, rel_tol=tie_rtol, abs_tol=tie_rtol)
     )
     winner: Literal["seg", "pose", "bytes"] = tied[0]  # type: ignore[assignment]
     return winner, tied
@@ -425,6 +448,78 @@ def score_decomposition(
     )
 
 
+def population_score_attribution(
+    seg_distortions: Sequence[float],
+    pose_distortions: Sequence[float],
+) -> PopulationScoreAttribution:
+    """Attribute the exact nonseparable population distortion across items.
+
+    For ``D_pose = mean(pose_i) > 0`` the pose attribution is
+
+    ``a_i = sqrt(10*D_pose) * pose_i / D_pose``.
+
+    Thus ``mean(a_i) == sqrt(10*D_pose)``.  This is also twice the local
+    score-costate product, which completes the degree-one-half square-root
+    term under Euler's theorem.  At ``D_pose == 0`` all pose attributions are
+    zero and the exact derivative is represented as ``math.inf``.
+    """
+
+    seg = tuple(float(value) for value in seg_distortions)
+    pose = tuple(float(value) for value in pose_distortions)
+    if len(seg) != len(pose):
+        raise ValueError("population seg and pose distortions must have equal length")
+    if any(not math.isfinite(value) or value < 0.0 for value in (*seg, *pose)):
+        raise ValueError("population distortions must be finite and non-negative")
+    count = len(seg)
+    if count == 0:
+        return PopulationScoreAttribution(
+            item_count=0,
+            global_seg_distortion=0.0,
+            global_pose_distortion=0.0,
+            seg_term=0.0,
+            pose_term=0.0,
+            distortion_score=0.0,
+            per_item_seg_attribution=(),
+            per_item_pose_attribution=(),
+            per_item_distortion_attribution=(),
+            pose_item_mse_vjp_scale=math.inf,
+        )
+    global_seg = math.fsum(seg) / count
+    global_pose = math.fsum(pose) / count
+    seg_term = SEG_COEFFICIENT * global_seg
+    pose_term = math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * global_pose)
+    per_seg = tuple(SEG_COEFFICIENT * value for value in seg)
+    if global_pose == 0.0:
+        per_pose = tuple(0.0 for _ in pose)
+        pose_vjp_scale = math.inf
+    else:
+        multiplier = pose_term / global_pose
+        per_pose = tuple(multiplier * value for value in pose)
+        pose_vjp_scale = 5.0 / (count * math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * global_pose))
+    per_distortion = tuple(seg_value + pose_value for seg_value, pose_value in zip(per_seg, per_pose, strict=True))
+    distortion_score = seg_term + pose_term
+    attributed_mean = math.fsum(per_distortion) / count
+    if not math.isclose(
+        attributed_mean,
+        distortion_score,
+        rel_tol=1e-12,
+        abs_tol=1e-12,
+    ):
+        raise RuntimeError("population attribution failed exact score recomposition")
+    return PopulationScoreAttribution(
+        item_count=count,
+        global_seg_distortion=global_seg,
+        global_pose_distortion=global_pose,
+        seg_term=seg_term,
+        pose_term=pose_term,
+        distortion_score=distortion_score,
+        per_item_seg_attribution=per_seg,
+        per_item_pose_attribution=per_pose,
+        per_item_distortion_attribution=per_distortion,
+        pose_item_mse_vjp_scale=pose_vjp_scale,
+    )
+
+
 def score_gradient(
     d_seg: float,
     d_pose: float,
@@ -439,11 +534,7 @@ def score_gradient(
     """
     if d_pose < 0.0:
         raise ValueError("d_pose must be non-negative")
-    d_pose_grad = (
-        math.inf
-        if d_pose == 0.0
-        else 0.5 * math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT / d_pose)
-    )
+    d_pose_grad = math.inf if d_pose == 0.0 else 0.5 * math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT / d_pose)
     return ScoreGradient(
         d_seg=SEG_COEFFICIENT,
         d_pose=d_pose_grad,
@@ -514,7 +605,7 @@ def operating_regime(
     elif d_pose < threshold:
         advice = (
             f"pose-dominated regime (d_pose {d_pose:.2e} < {threshold:.2e}); "
-            f"prioritize pose-targeted lanes — they have {1.0/seg_over_pose:.2f}x the "
+            f"prioritize pose-targeted lanes — they have {1.0 / seg_over_pose:.2f}x the "
             "marginal score-per-byte vs seg lanes here"
         )
     else:
@@ -657,16 +748,10 @@ def receiver_equivalence_floor_audit(
         seg_debt_score=decomp.seg_term,
         pose_debt_score=decomp.pose_term,
         rate_term=decomp.rate_term,
-        distortion_debt_fraction_of_score=(
-            positive_debt / total if total > 0.0 else 0.0
-        ),
+        distortion_debt_fraction_of_score=(positive_debt / total if total > 0.0 else 0.0),
         rate_fraction_of_score=decomp.rate_term / total if total > 0.0 else 0.0,
-        seg_fraction_of_distortion_debt=(
-            decomp.seg_term / positive_debt if positive_debt > 0.0 else 0.0
-        ),
-        pose_fraction_of_distortion_debt=(
-            decomp.pose_term / positive_debt if positive_debt > 0.0 else 0.0
-        ),
+        seg_fraction_of_distortion_debt=(decomp.seg_term / positive_debt if positive_debt > 0.0 else 0.0),
+        pose_fraction_of_distortion_debt=(decomp.pose_term / positive_debt if positive_debt > 0.0 else 0.0),
         largest_distortion_debt_axis=largest_axis,
         steepest_distortion_marginal_axis=steepest_axis,
         seg_marginal=grad.d_seg,
@@ -816,9 +901,7 @@ def pose_byte_tradeoff(
         raise ValueError("candidate_pose_delta cannot exceed current_d_pose")
 
     pose_before = math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * current_d_pose)
-    pose_after = math.sqrt(
-        POSE_COEFFICIENT_INSIDE_SQRT * (current_d_pose - candidate_pose_delta)
-    )
+    pose_after = math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * (current_d_pose - candidate_pose_delta))
     pose_saving = pose_before - pose_after
     byte_cost = score_saving_from_byte_savings(
         added_bytes,
@@ -829,9 +912,7 @@ def pose_byte_tradeoff(
         feasible = False
     else:
         required_pose_term_after = pose_before - byte_cost
-        required_d_pose_after = (
-            required_pose_term_after * required_pose_term_after
-        ) / POSE_COEFFICIENT_INSIDE_SQRT
+        required_d_pose_after = (required_pose_term_after * required_pose_term_after) / POSE_COEFFICIENT_INSIDE_SQRT
         required_delta = current_d_pose - required_d_pose_after
         feasible = True
     return PoseByteTradeoff(
@@ -876,8 +957,7 @@ def project_onto_pareto_envelope(
         raise ValueError("floors must be non-negative")
     if d_seg < seg_floor or d_pose < pose_floor or archive_bytes < byte_floor:
         raise ValueError(
-            "candidate is below stated floor on at least one axis; "
-            "either the floor is wrong or the score is invalid"
+            "candidate is below stated floor on at least one axis; either the floor is wrong or the score is invalid"
         )
     envelope = contest_score(seg_floor, pose_floor, byte_floor, reference_bytes=reference_bytes)
     slack = {
@@ -886,8 +966,7 @@ def project_onto_pareto_envelope(
         "byte_slack": float(archive_bytes - byte_floor),
         "seg_score_slack": SEG_COEFFICIENT * (d_seg - seg_floor),
         "pose_score_slack": (
-            math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * d_pose)
-            - math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * pose_floor)
+            math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * d_pose) - math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * pose_floor)
         ),
         "byte_score_slack": RATE_COEFFICIENT * (archive_bytes - byte_floor) / reference_bytes,
     }
@@ -914,7 +993,7 @@ def equal_score_curve_d_pose(
     pose_term_required = target_score - seg_term - rate_term
     if pose_term_required < 0.0:
         return None
-    return (pose_term_required ** 2) / POSE_COEFFICIENT_INSIDE_SQRT
+    return (pose_term_required**2) / POSE_COEFFICIENT_INSIDE_SQRT
 
 
 def equal_score_curve_archive_bytes(
@@ -975,11 +1054,7 @@ def score_sublevel_audit(
     )
     score = decomp.total
     residual_for_seg = target_score - decomp.pose_term - decomp.rate_term
-    boundary_d_seg = (
-        residual_for_seg / SEG_COEFFICIENT
-        if residual_for_seg >= 0.0
-        else None
-    )
+    boundary_d_seg = residual_for_seg / SEG_COEFFICIENT if residual_for_seg >= 0.0 else None
     return ScoreSublevelAudit(
         target_score=target_score,
         d_seg=d_seg,
@@ -1073,9 +1148,7 @@ def score_transition_audit(
     elif after_d_pose == before_d_pose:
         linearized_delta = (
             SEG_COEFFICIENT * (after_d_seg - before_d_seg)
-            + RATE_COEFFICIENT
-            * (after_archive_bytes - before_archive_bytes)
-            / reference_bytes
+            + RATE_COEFFICIENT * (after_archive_bytes - before_archive_bytes) / reference_bytes
         )
     else:
         linearized_delta = None
@@ -1096,22 +1169,12 @@ def score_transition_audit(
         exact_score_delta=exact_delta,
         exact_score_improvement=max(0.0, -exact_delta),
         linearized_score_delta_at_before=linearized_delta,
-        nonlinear_remainder=(
-            exact_delta - linearized_delta
-            if linearized_delta is not None
-            else None
-        ),
+        nonlinear_remainder=(exact_delta - linearized_delta if linearized_delta is not None else None),
         changed_axes=tuple(changed_axes),
         jointly_coupled_transition=len(changed_axes) >= 2,
         improves_score=exact_delta < 0.0,
-        crosses_into_strict_sublevel=(
-            not before.inside_strict_sublevel
-            and after.inside_strict_sublevel
-        ),
-        remains_inside_strict_sublevel=(
-            before.inside_strict_sublevel
-            and after.inside_strict_sublevel
-        ),
+        crosses_into_strict_sublevel=(not before.inside_strict_sublevel and after.inside_strict_sublevel),
+        remains_inside_strict_sublevel=(before.inside_strict_sublevel and after.inside_strict_sublevel),
         after_signed_target_slack=after.signed_target_slack,
     )
 
@@ -1145,17 +1208,10 @@ def target_byte_budget_for_score(
     if current_archive_bytes is not None and current_archive_bytes < 0:
         raise ValueError("current_archive_bytes must be non-negative")
 
-    distortion_floor_score = (
-        SEG_COEFFICIENT * d_seg_floor
-        + math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * d_pose_floor)
-    )
+    distortion_floor_score = SEG_COEFFICIENT * d_seg_floor + math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * d_pose_floor)
     rate_term_budget = target_score - distortion_floor_score
     feasible = rate_term_budget >= 0.0
-    max_bytes = (
-        math.floor(rate_term_budget * reference_bytes / RATE_COEFFICIENT)
-        if feasible
-        else None
-    )
+    max_bytes = math.floor(rate_term_budget * reference_bytes / RATE_COEFFICIENT) if feasible else None
     required_savings: int | None = None
     if max_bytes is not None and current_archive_bytes is not None:
         required_savings = max(0, int(current_archive_bytes) - max_bytes)
@@ -1300,6 +1356,7 @@ def predict_cpu_axis_marginals(
     if d_pose_cuda < 0.0 or d_seg_cuda < 0.0:
         raise ValueError("d_pose_cuda and d_seg_cuda must be non-negative")
     from tac.optimization.cuda_cpu_axis_calibration import CudaCpuCalibration
+
     cal = CudaCpuCalibration(architecture_class=archive_class)
     cpu_d_pose = cal.effective_pose_loss_for_cpu(d_pose_cuda)
     cpu_d_seg = max(0.0, d_seg_cuda / cal.r_seg)
@@ -1442,10 +1499,7 @@ def recommend_dispatch_axis_dual(
     )
     # Two priorities differ either when their deterministic winner differs OR
     # when one is at a tie and the other is not (parallel-attack vs single-axis).
-    differs = (
-        cuda_priority != cpu_priority
-        or len(cuda_tied) != len(cpu_tied)
-    )
+    differs = cuda_priority != cpu_priority or len(cuda_tied) != len(cpu_tied)
 
     cpu_score_at_op = contest_score(
         float(cpu_view["cpu_d_seg"]),
@@ -1453,11 +1507,7 @@ def recommend_dispatch_axis_dual(
         archive_bytes,
         reference_bytes=reference_bytes,
     )
-    cpu_gap = (
-        cpu_score_at_op - target_score_cpu
-        if target_score_cpu is not None
-        else None
-    )
+    cpu_gap = cpu_score_at_op - target_score_cpu if target_score_cpu is not None else None
 
     decision_attack_map: dict[str, list[str]] = {
         "seg": ["A1_score_gradient_segnet_kl", "A3_alt_mallat_wavelet_importance"],
@@ -1530,6 +1580,7 @@ __all__ = [
     "DualAxisDispatchRecommendation",
     "OperatingRegime",
     "PlannerAxisMarginals",
+    "PopulationScoreAttribution",
     "PoseByteTradeoff",
     "RateOnlyDeltaAudit",
     "ReceiverEquivalenceFloorAudit",
@@ -1545,6 +1596,7 @@ __all__ = [
     "marginal_value_per_byte",
     "operating_regime",
     "planner_axis_marginals",
+    "population_score_attribution",
     "pose_byte_tradeoff",
     "pose_score_saving_from_delta",
     "predict_cpu_axis_marginals",

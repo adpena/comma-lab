@@ -24,9 +24,7 @@ torch = pytest.importorskip("torch")
 # Provenance non-promotable contract (Catalog #341 / #192 / #127 / #323).
 # ---------------------------------------------------------------------------
 def test_non_promotable_provenance_is_never_promotable() -> None:
-    prov = mgs.non_promotable_provenance_dict(
-        model_id="x", inputs_sha256="a" * 64
-    )
+    prov = mgs.non_promotable_provenance_dict(model_id="x", inputs_sha256="a" * 64)
     assert prov["promotion_eligible"] is False
     assert prov["score_claim_valid"] is False
     assert prov["measurement_axis"] == "[predicted]"
@@ -67,17 +65,13 @@ def test_boundary_band_accepts_chw_and_numpy() -> None:
     logits_chw[1, :, 2:] = 5.0  # boundary
     w1, _ = mgs.segnet_boundary_band_weights(logits_chw, tau=1.0)
     assert tuple(w1.shape) == (4, 4)
-    w2, _ = mgs.segnet_boundary_band_weights(
-        logits_chw.numpy(), tau=1.0
-    )
+    w2, _ = mgs.segnet_boundary_band_weights(logits_chw.numpy(), tau=1.0)
     assert tuple(w2.shape) == (4, 4)
     assert np.allclose(w1.numpy(), w2.numpy(), atol=1e-5)
 
 
 def test_boundary_band_hard_margin_threshold() -> None:
-    _, st = mgs.segnet_boundary_band_weights(
-        _two_class_boundary_logits(), tau=1.0, margin_threshold=0.5
-    )
+    _, st = mgs.segnet_boundary_band_weights(_two_class_boundary_logits(), tau=1.0, margin_threshold=0.5)
     # hard band: pixels with margin < 0.5 (only the 0.1-margin column)
     assert st.margin_threshold == 0.5
     assert 0.0 < st.boundary_band_fraction < 0.3
@@ -111,9 +105,7 @@ def test_pose_dims_outside_contest_window_contribute_zero() -> None:
     # dims 3-5 have huge error but are OUTSIDE the out//2=3 contest window
     student = np.array([34.5, 0.1, 0.02, 99.0, 99.0, 99.0])
     teacher = np.array([34.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    dims = mgs.per_pose_dim_score_contribution(
-        student, teacher, contest_window_dims=3
-    )
+    dims = mgs.per_pose_dim_score_contribution(student, teacher, contest_window_dims=3)
     for d in dims:
         if d.dim_index >= 3:
             assert d.score_contribution == 0.0
@@ -126,9 +118,7 @@ def test_pose_dims_outside_contest_window_contribute_zero() -> None:
 def test_pose_dim_score_contribution_uses_hyperbolic_marginal() -> None:
     student = np.array([1.0, 0.0])
     teacher = np.array([0.0, 0.0])
-    dims = mgs.per_pose_dim_score_contribution(
-        student, teacher, contest_window_dims=1, d_pose_running=0.01
-    )
+    dims = mgs.per_pose_dim_score_contribution(student, teacher, contest_window_dims=1, d_pose_running=0.01)
     expected_marginal = 5.0 / math.sqrt(10.0 * 0.01)
     # dim0 delta_sq=1.0 → contribution = 1.0 * marginal
     assert dims[0].score_contribution == pytest.approx(expected_marginal, rel=1e-6)
@@ -159,6 +149,14 @@ def test_per_pair_seg_contribution_is_100_times_d_seg() -> None:
 def test_per_pair_pose_contribution_is_sqrt_10_d_pose() -> None:
     pairs = mgs.per_pair_axis_score_contribution([0.0], [0.4])
     assert pairs[0].pose_score_contribution == pytest.approx(math.sqrt(10.0 * 0.4))
+
+
+def test_per_pair_pose_attribution_recomposes_global_nonseparable_term() -> None:
+    pairs = mgs.per_pair_axis_score_contribution([0.0, 0.0], [0.0, 4.0])
+    attributed_mean = sum(row.pose_score_contribution for row in pairs) / 2
+
+    assert attributed_mean == pytest.approx(math.sqrt(10.0 * 2.0))
+    assert attributed_mean != pytest.approx((math.sqrt(10.0 * 0.0) + math.sqrt(10.0 * 4.0)) / 2)
 
 
 def test_per_pair_dominant_axis_classification() -> None:
