@@ -69,6 +69,10 @@ _UNSIGNED_DECIMAL = re.compile(r"^(0|[1-9][0-9]*)(?:\.[0-9]+)?$")
 _PRESERVED_DEPLOY = re.compile(
     r"^levelset_ckpt_(?P<tag>stage[A-Za-z0-9_]+)_ep(?P<epoch>[0-9]+)\.npz$"
 )
+_PERIODIC_DEPLOY = re.compile(
+    r"^levelset_periodic_ema_(?P<tag>stage[A-Za-z0-9_]+)_ep"
+    r"(?P<epoch>[0-9]+)\.npz$"
+)
 _EPHEMERAL_ROOTS: Final = (
     Path("/tmp"),
     Path("/private/tmp"),
@@ -2216,15 +2220,16 @@ def _preserved_stage_checkpoint_ids(
     producer: Path,
     nodes: Sequence[object],
 ) -> dict[str, str]:
-    """Map only physical nodes with a preserved stage/final alias.
+    """Map physical nodes with a complete stage/final or periodic alias.
 
-    Periodic nodes are immutable in ``fresh_lineage`` too, but G121's contract
-    explicitly excludes them.  The trainer writes the preserved deploy/resume
-    pair from the same captured arrays immediately after publishing the physical
-    node. Each alias pair is therefore reopened as a complete fresh-producer
-    checkpoint and must recompute the exact physical checkpoint ID. The NPZ ZIP
-    container bytes need not match because the two atomic ``np.savez`` calls can
-    carry different container metadata.
+    The trainer writes each alias from the same captured arrays immediately
+    after publishing the physical node.  Stage/final aliases are the historical
+    deploy/resume pair plus native-v3 when the lineage node carries it. Periodic
+    aliases are admitted only as the complete deploy/resume/native-v3 triplet.
+    Every alias is reopened as a complete fresh-producer checkpoint and must
+    recompute the exact current-ancestry physical checkpoint ID. The NPZ ZIP
+    container bytes need not match because separate atomic ``np.savez`` calls
+    can carry different container metadata.
     """
 
     from tac.witness_control.fresh_producer_lineage_v1 import (
@@ -2232,7 +2237,7 @@ def _preserved_stage_checkpoint_ids(
         open_fresh_producer_checkpoint_pair_v1,
     )
 
-    mapped: dict[str, str] = {}
+    aliases: list[tuple[str, int, Path, Path, Path | None, str]] = []
     for deploy_path in sorted(producer.glob("levelset_ckpt_stage*_ep*.npz")):
         if deploy_path.is_symlink() or not deploy_path.is_file():
             raise G121StageHarvestError(
@@ -2243,24 +2248,62 @@ def _preserved_stage_checkpoint_ids(
             continue
         stage_tag = match.group("tag")
         epoch = int(match.group("epoch"))
-        resume_path = producer / f"levelset_resume_{stage_tag}_ep{epoch}.npz"
+        aliases.append(
+            (
+                stage_tag,
+                epoch,
+                deploy_path,
+                producer / f"levelset_resume_{stage_tag}_ep{epoch}.npz",
+                None,
+                "preserved stage",
+            )
+        )
+    for (
+        stage_tag,
+        epoch,
+        deploy_path,
+        resume_path,
+        native_path,
+    ) in _complete_periodic_alias_triplets(producer):
+        aliases.append(
+            (
+                f"{stage_tag}_periodic",
+                epoch,
+                deploy_path,
+                resume_path,
+                native_path,
+                "periodic",
+            )
+        )
+
+    mapped: dict[str, str] = {}
+    for (
+        stage_tag,
+        epoch,
+        deploy_path,
+        resume_path,
+        required_native_path,
+        alias_kind,
+    ) in aliases:
         _deploy_payload, deploy_binding = _stable_regular_file(
-            deploy_path.resolve(),
-            name="preserved stage deploy checkpoint",
+            deploy_path,
+            name=f"{alias_kind} deploy checkpoint",
         )
         _resume_payload, resume_binding = _stable_regular_file(
-            resume_path.resolve(),
-            name="preserved stage resume checkpoint",
+            resume_path,
+            name=f"{alias_kind} resume checkpoint",
         )
         candidates = [node for node in nodes if node.pair.epoch == epoch]
-        native_path = (
+        native_path = required_native_path or (
             producer / f"levelset_g111_native_{stage_tag}_ep{epoch}.npz"
         )
         native_binding: dict[str, object] | None = None
-        if any(node.pair.native is not None for node in candidates):
+        if required_native_path is not None or any(
+            node.pair.native is not None for node in candidates
+        ):
             _native_payload, native_binding = _stable_regular_file(
-                native_path.resolve(),
-                name="preserved stage native-v3 checkpoint",
+                native_path,
+                name=f"{alias_kind} native-v3 checkpoint",
             )
         matched: list[object] = []
         for node in candidates:
@@ -2268,9 +2311,9 @@ def _preserved_stage_checkpoint_ids(
                 continue
             try:
                 alias_pair = open_fresh_producer_checkpoint_pair_v1(
-                    deploy_checkpoint=deploy_path.resolve(),
+                    deploy_checkpoint=deploy_path,
                     expected_deploy_sha256=str(deploy_binding["sha256"]),
-                    resume_checkpoint=resume_path.resolve(),
+                    resume_checkpoint=resume_path,
                     expected_resume_sha256=str(resume_binding["sha256"]),
                     expected_current_launch_dsl_compile_hash=(
                         node.pair.current_launch_dsl_compile_hash
@@ -2278,7 +2321,7 @@ def _preserved_stage_checkpoint_ids(
                     native_checkpoint=(
                         None
                         if native_binding is None
-                        else native_path.resolve()
+                        else native_path
                     ),
                     expected_native_sha256=(
                         None
@@ -2306,6 +2349,49 @@ def _preserved_stage_checkpoint_ids(
             )
         mapped[checkpoint_id] = stage_tag
     return mapped
+
+
+def _complete_periodic_alias_triplets(
+    producer: Path,
+) -> tuple[tuple[str, int, Path, Path, Path], ...]:
+    """Enumerate only complete, physical periodic native-v3 alias triplets.
+
+    Checkpoint publication is sequential. A watcher can therefore observe the
+    deploy alias before the resume or native alias exists. Such a partial
+    coordinate is not evidence and remains invisible until all three regular,
+    non-symlink files are present; the strict reopen above then rechecks every
+    byte and its current-ancestry semantic checkpoint identity.
+    """
+
+    rows: list[tuple[str, int, Path, Path, Path]] = []
+    for deploy_path in sorted(
+        producer.glob("levelset_periodic_ema_stage*_ep*.npz")
+    ):
+        match = _PERIODIC_DEPLOY.fullmatch(deploy_path.name)
+        if match is None:
+            continue
+        stage_tag = match.group("tag")
+        epoch = int(match.group("epoch"))
+        resume_path = (
+            producer / f"levelset_periodic_resume_{stage_tag}_ep{epoch}.npz"
+        )
+        native_path = (
+            producer
+            / f"levelset_g111_native_{stage_tag}_periodic_ep{epoch}.npz"
+        )
+        triplet = (deploy_path, resume_path, native_path)
+        try:
+            modes = tuple(
+                path.stat(follow_symlinks=False).st_mode for path in triplet
+            )
+        except OSError:
+            continue
+        if not all(stat.S_ISREG(mode) for mode in modes):
+            continue
+        rows.append(
+            (stage_tag, epoch, deploy_path, resume_path, native_path)
+        )
+    return tuple(rows)
 
 
 def _open_terminal_producer_result(

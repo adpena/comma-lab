@@ -23,6 +23,20 @@ def _preserved_stage(producer: Path) -> None:
     (producer / "levelset_resume_stageCE_ep25.npz").write_bytes(b"resume")
 
 
+def _periodic_stage(producer: Path, *, complete: bool = True) -> None:
+    (
+        producer / "levelset_periodic_ema_stage_unify_tau_ep25.npz"
+    ).write_bytes(b"deploy")
+    (
+        producer / "levelset_periodic_resume_stage_unify_tau_ep25.npz"
+    ).write_bytes(b"resume")
+    if complete:
+        (
+            producer
+            / "levelset_g111_native_stage_unify_tau_periodic_ep25.npz"
+        ).write_bytes(b"native")
+
+
 def _gate(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -120,6 +134,50 @@ def test_once_harvests_available_stage_without_exhaustive_publication(
     assert binding["old_producer_payload_reuse"] is False
     assert binding["terminal_only_exhaustive_publication"] is True
     assert not (output / g121.COMPLETION_RECEIPT_BASENAME).exists()
+
+
+def test_once_harvests_complete_periodic_triplet_before_terminal_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    producer = tmp_path / "producer"
+    launch_sha = _launch(producer, b"launch-a")
+    _periodic_stage(producer)
+    calls: list[str] = []
+    monkeypatch.setattr(
+        g121,
+        "harvest_g111_available_stages_v1",
+        lambda **_kwargs: (calls.append("incremental") or _progress(tmp_path)),
+    )
+    output = tmp_path / "out"
+    gate_path, gate_sha = _gate(tmp_path, monkeypatch)
+
+    assert (
+        monitor.run_monitor(
+            producer_run_dir=producer,
+            expected_launch_manifest_sha256=launch_sha,
+            g120_dry_run_receipt=gate_path,
+            expected_g120_dry_run_receipt_sha256=gate_sha,
+            output_dir=output,
+            progress_dir=tmp_path / "progress",
+            poll_seconds=0.01,
+            once=True,
+        )
+        == 0
+    )
+    assert calls == ["incremental"]
+    assert not (producer / "levelset_train_result.json").exists()
+    assert len(monitor._preserved_signature(producer)) == 3
+
+
+def test_incomplete_periodic_triplet_is_absent_from_watcher_signature(
+    tmp_path: Path,
+) -> None:
+    producer = tmp_path / "producer"
+    producer.mkdir()
+    _periodic_stage(producer, complete=False)
+
+    assert monitor._preserved_signature(producer) == ()
 
 
 def test_terminal_marker_routes_incremental_before_final(

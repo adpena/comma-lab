@@ -697,7 +697,7 @@ def test_best_and_rolling_files_are_not_discovered(tmp_path: Path) -> None:
     ) == []
 
 
-def test_discovery_uses_latest_tip_ancestry_filters_periodic_and_accepts_resume_hash(
+def test_discovery_uses_latest_tip_ancestry_filters_unaliased_tip_and_accepts_resume_hash(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -873,6 +873,68 @@ def test_preserved_native_alias_reopens_complete_physical_transaction(
     assert calls[0]["expected_native_sha256"] == hashlib.sha256(
         b"levelset_g111_native_stageColdRoot_ep0.npz"
     ).hexdigest()
+
+
+def test_complete_periodic_native_triplet_reopens_physical_transaction(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    producer = tmp_path / "run"
+    producer.mkdir()
+    checkpoint_id = "a" * 64
+    launch_hash = "b" * 64
+    names = (
+        "levelset_periodic_ema_stage_unify_tau_ep25.npz",
+        "levelset_periodic_resume_stage_unify_tau_ep25.npz",
+        "levelset_g111_native_stage_unify_tau_periodic_ep25.npz",
+    )
+    for name in names:
+        (producer / name).write_bytes(name.encode("ascii"))
+    pair = SimpleNamespace(
+        checkpoint_id_sha256=checkpoint_id,
+        current_launch_dsl_compile_hash=launch_hash,
+        epoch=25,
+        native=SimpleNamespace(),
+    )
+    node = SimpleNamespace(pair=pair)
+    calls: list[dict[str, object]] = []
+
+    def _open_pair(**kwargs: object) -> object:
+        calls.append(kwargs)
+        return pair
+
+    monkeypatch.setattr(
+        lineage,
+        "open_fresh_producer_checkpoint_pair_v1",
+        _open_pair,
+    )
+    mapped = g121._preserved_stage_checkpoint_ids(producer, (node,))
+
+    assert mapped == {checkpoint_id: "stage_unify_tau_periodic"}
+    assert len(calls) == 1
+    assert calls[0]["deploy_checkpoint"] == (producer / names[0]).resolve()
+    assert calls[0]["resume_checkpoint"] == (producer / names[1]).resolve()
+    assert calls[0]["native_checkpoint"] == (producer / names[2]).resolve()
+
+
+def test_incomplete_or_symlinked_periodic_triplet_is_not_discovered(
+    tmp_path: Path,
+) -> None:
+    producer = tmp_path / "run"
+    producer.mkdir()
+    deploy = producer / "levelset_periodic_ema_stage_unify_tau_ep25.npz"
+    resume = producer / "levelset_periodic_resume_stage_unify_tau_ep25.npz"
+    native = (
+        producer
+        / "levelset_g111_native_stage_unify_tau_periodic_ep25.npz"
+    )
+    deploy.write_bytes(b"deploy")
+    resume.write_bytes(b"resume")
+
+    assert g121._complete_periodic_alias_triplets(producer) == ()
+
+    native.symlink_to(deploy)
+    assert g121._complete_periodic_alias_triplets(producer) == ()
 
 
 def test_private_injection_requires_explicit_fixture_marker(tmp_path: Path) -> None:

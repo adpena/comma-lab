@@ -3,12 +3,13 @@
 """Watch one governed G111 run and harvest preserved stages through G121.
 
 The monitor invokes the incremental, non-exhaustive G121 entrypoint whenever a
-new preserved stage alias becomes visible.  It invokes the exhaustive entrypoint
-only after ``levelset_train_result.json`` physically binds the current final
-fresh-lineage tip.  A single output directory is permanently bound to one
-producer path; each cold/resume launch epoch is appended only after reopening
-its externally supplied manifest SHA.  This prevents reuse of another run's
-payloads while preserving one exact checkpoint-keyed ledger across resumes.
+new preserved stage alias or complete periodic native-v3 triplet becomes
+visible. It invokes the exhaustive entrypoint only after
+``levelset_train_result.json`` physically binds the current final fresh-lineage
+tip. A single output directory is permanently bound to one producer path; each
+cold/resume launch epoch is appended only after reopening its externally
+supplied manifest SHA. This prevents reuse of another run's payloads while
+preserving one exact checkpoint-keyed ledger across resumes.
 """
 
 from __future__ import annotations
@@ -78,6 +79,29 @@ def _preserved_signature(producer: Path) -> tuple[tuple[str, int, int], ...]:
         rows.append(
             (resume.name, resume_stat.st_size, resume_stat.st_mtime_ns)
         )
+        native = producer / path.name.replace(
+            "levelset_ckpt_", "levelset_g111_native_", 1
+        )
+        try:
+            native_stat = native.stat(follow_symlinks=False)
+        except OSError:
+            continue
+        rows.append(
+            (native.name, native_stat.st_size, native_stat.st_mtime_ns)
+        )
+    for _tag, _epoch, deploy, resume, native in (
+        g121._complete_periodic_alias_triplets(producer)
+    ):
+        triplet_rows: list[tuple[str, int, int]] = []
+        try:
+            for path in (deploy, resume, native):
+                path_stat = path.stat(follow_symlinks=False)
+                triplet_rows.append(
+                    (path.name, path_stat.st_size, path_stat.st_mtime_ns)
+                )
+        except OSError:
+            continue
+        rows.extend(triplet_rows)
     return tuple(rows)
 
 
