@@ -1,0 +1,138 @@
+{
+  "schema": "tac.g78_batch16_margin_base_scorer_cache_landing.v1",
+  "lane_id": "lane_g78_batch16_margin_base_scorer_cache_materializer_20260726",
+  "subagent_id": "G78_BATCH16_MARGIN_BASE_CACHE_20260726",
+  "git_head_observed": "e153f2031657d9f781fa4c79e4bbb2c68c247f45",
+  "outcome": "LAUNCH_HARDENED_IMPLEMENTATION_TESTS_AND_REAL_R4_ZERO_FORWARD_PREFLIGHT_COMPLETE_AGGREGATE_NOT_LAUNCHED",
+  "implementation": {
+    "core": {
+      "path": "src/tac/witness_control/taskspace_batch16_margin_base_scorer_cache_v1.py",
+      "bytes": 61837,
+      "sha256": "5d33fcac0463f0d309a96b5dd48924cb2d4959263a4ff35e0f74dd966accc59d"
+    },
+    "core_tests": {
+      "path": "src/tac/witness_control/tests/test_taskspace_batch16_margin_base_scorer_cache_v1.py",
+      "bytes": 16721,
+      "sha256": "51b4993202efa17f1ad1b6b8636782d29e24dae517af13708af9676e8da56b00"
+    },
+    "cli": {
+      "path": "tools/materialize_taskspace_batch16_margin_base_scorer_cache_n600.py",
+      "bytes": 38878,
+      "sha256": "056efa08ea16a99d2874776689c270f5eb6e605b476ffefb7e2e29b42a1f1c9d"
+    },
+    "cli_tests": {
+      "path": "tools/tests/test_materialize_taskspace_batch16_margin_base_scorer_cache_n600.py",
+      "bytes": 3126,
+      "sha256": "16448dcb213fff7243316edeb2bbf61877819d27afac4aed1560df67b2d10187"
+    },
+    "typed_config": {
+      "path": ".omx/research/configs/taskspace_batch16_margin_base_scorer_cache_n600_20260726.json",
+      "bytes": 2346,
+      "sha256": "6ccfee809ef7b642a3f8c6bf46ac80094d969c818a254a5cfa0044ab378ffe41"
+    },
+    "spec": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g78_batch16_margin_base_scorer_cache_materializer_20260726.md",
+      "bytes": 11437,
+      "sha256": "363876314e3ae89dace227bcb8e758d625773926075ea17d42ab2a6c7eec5fe3"
+    }
+  },
+  "exact_contract": {
+    "pair_count": 600,
+    "global_scorer_batch_size": 16,
+    "global_scorer_batch_count": 38,
+    "final_partial_batch_size": 8,
+    "stage_pairs": 120,
+    "stage_count": 5,
+    "scorer_hw": [384, 512],
+    "target_margin": "winner_logit_minus_maximum_nonwinner_logit",
+    "target_argmax_must_equal_owned_g46": true,
+    "described_surface": "fresh_V15_render_camera_pairs_then_upstream_SegNet_preprocess_input_live_R_then_frozen_SegNet",
+    "described_fields": [
+      "described_cells.uint8",
+      "described_winner_margin.float32_le"
+    ],
+    "target_labels_rederived": false,
+    "g51_y0_y1_rederived": false,
+    "cross_stage_batch_fragments_bound": true,
+    "fresh_v15_camera_sha_must_equal_owned_identity_per_global_batch": true,
+    "completed_batch_v15_camera_and_live_r_input_rehashed_before_forward_skip": true,
+    "stage_fragments_rederived_on_strict_reopen": true,
+    "stage_dense_bytes_streaming_rehashed_from_validated_batch_fragments": true,
+    "g51_stage_binding_reopened_and_exactly_compared": true,
+    "executed_receiver_contract": "CarrierComposeReceiverV1.render_camera_pairs.v15"
+  },
+  "input_custody": {
+    "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+    "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "upstream_closure_sha256": "9c588c725d66c6e840c157568fc5414c37f175348921c6353a64c6431a26cd99",
+    "g46_target_labels_sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85",
+    "g46_receipt_file_sha256": "556c6b20f12ae7f5c6b8a1a2d08c6d2c2e32e7831ab552938c7866f3256dfad1",
+    "g46_receipt_self_sha256": "58db7f01674c60f060a46b955fee8c4f777f31f528ebba404e871b26b17972a7",
+    "g51_aggregate_file_sha256": "ae9048dfc24947a6268315590b65da02b56549379e347cbaced25e2e6f67d915",
+    "g51_aggregate_self_sha256": "4363827c2aeb613916029d8bacde8aeb4ded961c4d1ca297310a1e53e204619c",
+    "v15_archive_bytes": 133941,
+    "v15_archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+    "v15_typed_config_rfc8785_sha256": "5ab13e5fd1de997d0d4018a0ce94a2e84d74c582db18ad280ffe3b805526dd30",
+    "v15_camera_identity_digest_chain_sha256": "5d502c1eafe0bd6b3a3e8ea323b02a66573f51939e0a21ebde6e592e04141d7c",
+    "sealed_input_file_count": 632,
+    "runtime_source_file_count": 558,
+    "resolution_chain_sha256": "6d476b13d2130a7c9d366ceef5cd679bc356f34ccda508729dfad72b0f2934d0",
+    "contest_eval_contract_sha256": "4240a3dc1966a35f0d561a495fab6098be382fc12d8208104ca860f8bed68308"
+  },
+  "preflight": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_batch16_margin_base_scorer_cache_n600_20260726_r4/00_preflight_receipt.json",
+    "bytes": 342543,
+    "sha256": "3a65a8ce9cfe0eaa681b9abb875703aefb4f3b0adff7d65020153259e13134fe",
+    "sealed_preflight_sha256": "d5a2b4d621af6b62d2fb06e0b051006e1acf02be94f5a158e68513cce2dd989e",
+    "required_free_bytes": 12884901888,
+    "observed_free_bytes": 360839086080,
+    "storage_tier": "/Volumes/VertigoDataTier/pact",
+    "strict_custody_reopened": true,
+    "scorer_forward_started": false,
+    "dense_files_written": 0
+  },
+  "verification": {
+    "ruff": "PASS",
+    "ruff_format": "PASS",
+    "py_compile": "PASS",
+    "pytest": "PASS",
+    "pytest_passed": 13,
+    "adjacent_pytest_passed": 39,
+    "total_pytest_passed": 52,
+    "resume_v15_camera_drift_refusal": "PASS",
+    "resume_v15_live_r_input_drift_refusal": "PASS",
+    "resealed_wrong_g51_stage_refusal": "PASS",
+    "resealed_stage_bytes_divergent_from_batch_refusal": "PASS",
+    "transitive_v15_runtime_closure_check": "PASS",
+    "tests_are_implementation_and_custody_evidence_only": true,
+    "n600_measurement_claim": false
+  },
+  "launch": {
+    "governed_materialization_launched": false,
+    "aggregate_present": false,
+    "launch_readiness_verdict": "READY_FOR_GOVERNED_MATERIALIZATION_NO_SCORER_FORWARD_RUN_YET",
+    "run_command_preserved_in_spec": true,
+    "resumable": true,
+    "per_global_batch_checkpoints": true,
+    "per_stage_checkpoints": true,
+    "r2_r3_preserved": true,
+    "r4_contains_only_zero_forward_preflight": true
+  },
+  "blockers": {
+    "G72_FRESH_BATCH16_TARGET_MARGIN_CUSTODY_OWED": "OPEN_UNTIL_COMPLETE_AGGREGATE_STRICTLY_REOPENS",
+    "G72_FRESH_V15_CAMERA_R_BATCH16_BASE_SCORER_STAGE_CACHE_OWED": "OPEN_UNTIL_COMPLETE_AGGREGATE_STRICTLY_REOPENS",
+    "other_g72_blockers_changed": false
+  },
+  "cleanup": {
+    "status": "PRESERVED_NO_DELETE",
+    "certify_or_block": true,
+    "preflight_is_durable_not_tmp": true
+  },
+  "research_only": true,
+  "encoder_only": true,
+  "candidate_claim": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "receipt_sha256": "3116a0f88492df2b59ac3667957f3194f3a15cf558fe101f6fb2c4b57cfb0f19"
+}
