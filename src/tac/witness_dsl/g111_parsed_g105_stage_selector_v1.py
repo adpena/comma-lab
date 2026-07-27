@@ -27,6 +27,7 @@ import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Final
 
@@ -59,6 +60,7 @@ from tac.witness_dsl.v10_factor2_selected_preimage_v1 import (
 
 SCHEMA: Final = "tac.g111_parsed_g105_stage_selector.v1"
 BATCH_PROGRESS_SCHEMA: Final = "tac.g111_parsed_g105_stage_selector.batch_progress.v1"
+EXACT_PREFIX_OBSTRUCTION_SCHEMA: Final = "tac.g111_parsed_g105_exact_prefix_obstruction.v1"
 CROSS_STAGE_PARETO_ROW_SCHEMA: Final = "tac.g111_parsed_g105_stage_selector.cross_stage_pareto_row.v1"
 POPULATION_HASH_SCHEMA: Final = "sha256_canonical_batch_digest_chain.v1"
 EXECUTION_SURFACE: Final = "engine_only_untrusted_injected_inputs"
@@ -70,6 +72,12 @@ VERDICT_BATCH_SIZES: Final = (16,) * 37 + (8,)
 ARCHIVE_RATE_DENOMINATOR: Final = 37_545_489
 SEG_SCORE_WEIGHT: Final = 100.0
 RATE_SCORE_WEIGHT: Final = 25.0
+EXACT_SEG_PIXEL_DENOMINATOR: Final = PAIR_COUNT_N600 * SCORER_H * SCORER_W
+EXACT_PREFIX_OBSTRUCTION_BASENAME: Final = "exact_prefix_obstruction.json"
+EXACT_PREFIX_OBSTRUCTION_RULE: Final = (
+    "100*cumulative_disagreement_pixels*target_denominator"
+    ">=target_numerator*117964800"
+)
 _STAGE_TAG = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
 _LOWER_SHA256 = frozenset("0123456789abcdef")
 _EPHEMERAL_ROOTS = (
@@ -91,6 +99,30 @@ SegArgmaxBatchScorerV1 = Callable[[np.ndarray], np.ndarray]
 
 class G111ParsedG105StageSelectorError(ValueError):
     """The exact semantic-only stage selector failed closed."""
+
+
+@dataclass(frozen=True, slots=True)
+class G111ParsedG105ExactPrefixObstructionV1:
+    """Verified durable engine-only exact-prefix obstruction receipt."""
+
+    receipt_path: Path
+    receipt_sha256: str
+    receipt_bytes: int
+    receipt: dict[str, Any]
+
+
+class G111ParsedG105ExactPrefixObstruction(G111ParsedG105StageSelectorError):
+    """A verified parsed-G105 prefix already exhausts the exact Seg target."""
+
+    def __init__(self, obstruction: G111ParsedG105ExactPrefixObstructionV1) -> None:
+        self.obstruction = obstruction
+        self.receipt_path = obstruction.receipt_path
+        self.receipt_sha256 = obstruction.receipt_sha256
+        self.receipt = obstruction.receipt
+        super().__init__(
+            "exact parsed-G105 prefix obstruction is BLOCKED_SCOPED: "
+            f"{self.receipt_path} sha256={self.receipt_sha256}"
+        )
 
 
 def _sha256(payload: bytes | memoryview) -> str:
@@ -117,6 +149,47 @@ def _require_sha256(value: object, *, name: str) -> str:
     if type(value) is not str or len(value) != 64 or any(character not in _LOWER_SHA256 for character in value):
         raise G111ParsedG105StageSelectorError(f"{name} must be a lowercase SHA-256")
     return value
+
+
+def _exact_frontier_target_record(effective_frontier_target: float) -> dict[str, Any]:
+    exact_target = Decimal(str(effective_frontier_target))
+    target_numerator, target_denominator = exact_target.as_integer_ratio()
+    return {
+        "decimal": str(exact_target),
+        "numerator": target_numerator,
+        "denominator": target_denominator,
+    }
+
+
+def _validated_exact_frontier_target_record(
+    value: object,
+    *,
+    name: str,
+) -> tuple[dict[str, Any], int, int]:
+    if type(value) is not dict or set(value) != {"decimal", "numerator", "denominator"}:
+        raise G111ParsedG105StageSelectorError(f"{name} has a noncanonical field census")
+    decimal_text = value["decimal"]
+    numerator = value["numerator"]
+    denominator = value["denominator"]
+    if (
+        type(decimal_text) is not str
+        or type(numerator) is not int
+        or type(denominator) is not int
+        or denominator <= 0
+    ):
+        raise G111ParsedG105StageSelectorError(f"{name} must carry one exact positive decimal rational")
+    try:
+        exact_target = Decimal(decimal_text)
+    except InvalidOperation as exc:
+        raise G111ParsedG105StageSelectorError(f"{name} decimal is invalid") from exc
+    if (
+        not exact_target.is_finite()
+        or exact_target <= 0
+        or str(exact_target) != decimal_text
+        or exact_target.as_integer_ratio() != (numerator, denominator)
+    ):
+        raise G111ParsedG105StageSelectorError(f"{name} decimal and rational differ")
+    return value, numerator, denominator
 
 
 def _pose_reserve_record(
@@ -608,6 +681,306 @@ def _batch_digest_chain(
     )
 
 
+def open_g111_parsed_g105_exact_prefix_obstruction_v1(
+    path: Path,
+    *,
+    expected_sha256: str,
+) -> G111ParsedG105ExactPrefixObstructionV1:
+    """Reopen and verify one canonical exact-prefix obstruction and its rows."""
+
+    _require_sha256(expected_sha256, name="expected obstruction receipt")
+    if not isinstance(path, Path) or not path.is_absolute():
+        raise G111ParsedG105StageSelectorError("obstruction receipt path must be an absolute pathlib.Path")
+    if path.name != EXACT_PREFIX_OBSTRUCTION_BASENAME or path.is_symlink() or not path.is_file():
+        raise G111ParsedG105StageSelectorError("obstruction receipt must be the canonical regular file")
+    try:
+        receipt_bytes = path.read_bytes()
+        receipt = json.loads(receipt_bytes.decode("ascii"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise G111ParsedG105StageSelectorError("obstruction receipt cannot be decoded") from exc
+    if _sha256(receipt_bytes) != expected_sha256:
+        raise G111ParsedG105StageSelectorError("obstruction receipt SHA-256 differs")
+    if type(receipt) is not dict or _canonical_json(receipt) != receipt_bytes:
+        raise G111ParsedG105StageSelectorError("obstruction receipt is not canonical ASCII JSON")
+    expected_keys = {
+        "schema",
+        "receipt_body_sha256",
+        "execution_surface",
+        "engine_only",
+        "production_authority_closed",
+        "production_wrapper_required",
+        "production_verdict_emitted",
+        "production_admission",
+        "status",
+        "verdict_scope",
+        "candidate_claim",
+        "score_claim",
+        "evaluation_claim",
+        "pointer_moved",
+        "stage_tag",
+        "progress_key_sha256",
+        "progress_identity",
+        "effective_frontier_target_exact",
+        "full_n600_pixel_denominator",
+        "observed_pair_count",
+        "completed_batch_count",
+        "cumulative_disagreement_pixels",
+        "completed_batch_rows",
+        "batch_receipt_chain_sha256",
+        "exact_obstruction",
+    }
+    if set(receipt) != expected_keys:
+        raise G111ParsedG105StageSelectorError("obstruction receipt has a noncanonical field census")
+    receipt_body = {key: value for key, value in receipt.items() if key != "receipt_body_sha256"}
+    if (
+        receipt["schema"] != EXACT_PREFIX_OBSTRUCTION_SCHEMA
+        or receipt["receipt_body_sha256"] != _sha256(_canonical_json(receipt_body))
+        or receipt["execution_surface"] != EXECUTION_SURFACE
+        or receipt["engine_only"] is not True
+        or receipt["production_authority_closed"] is not False
+        or receipt["production_wrapper_required"] is not True
+        or receipt["production_verdict_emitted"] is not False
+        or receipt["production_admission"] is not False
+        or receipt["status"] != "BLOCKED_SCOPED"
+        or receipt["verdict_scope"] != "one_engine_only_parsed_G105_wire_prefix"
+        or receipt["candidate_claim"] is not False
+        or receipt["score_claim"] is not False
+        or receipt["evaluation_claim"] is not False
+        or receipt["pointer_moved"] is not False
+    ):
+        raise G111ParsedG105StageSelectorError("obstruction receipt authority or body binding differs")
+    progress_identity = receipt["progress_identity"]
+    progress_key_sha256 = _require_sha256(
+        receipt["progress_key_sha256"],
+        name="obstruction progress key",
+    )
+    if (
+        type(progress_identity) is not dict
+        or progress_key_sha256 != _batch_progress_key(progress_identity)
+        or path.parent.name != progress_key_sha256
+        or receipt["stage_tag"] != progress_identity.get("stage_tag")
+    ):
+        raise G111ParsedG105StageSelectorError("obstruction progress identity differs")
+    exact_target, target_numerator, target_denominator = _validated_exact_frontier_target_record(
+        receipt["effective_frontier_target_exact"],
+        name="obstruction exact frontier target",
+    )
+    if progress_identity.get("effective_frontier_target_exact") != exact_target:
+        raise G111ParsedG105StageSelectorError("obstruction target is not bound into progress identity")
+    if receipt["full_n600_pixel_denominator"] != EXACT_SEG_PIXEL_DENOMINATOR:
+        raise G111ParsedG105StageSelectorError("obstruction full-n600 pixel denominator differs")
+
+    completed_batch_count = receipt["completed_batch_count"]
+    observed_pair_count = receipt["observed_pair_count"]
+    cumulative_disagreement_pixels = receipt["cumulative_disagreement_pixels"]
+    completed_batch_rows = receipt["completed_batch_rows"]
+    if (
+        type(completed_batch_count) is not int
+        or not 1 <= completed_batch_count <= len(VERDICT_BATCH_SIZES)
+        or type(observed_pair_count) is not int
+        or not 1 <= observed_pair_count <= PAIR_COUNT_N600
+        or type(cumulative_disagreement_pixels) is not int
+        or cumulative_disagreement_pixels < 0
+        or type(completed_batch_rows) is not list
+        or len(completed_batch_rows) != completed_batch_count
+    ):
+        raise G111ParsedG105StageSelectorError("obstruction prefix geometry is invalid")
+
+    verified_rows: list[dict[str, Any]] = []
+    expected_pair_start = 0
+    cumulative_from_rows = 0
+    binding_keys = {
+        "path",
+        "bytes",
+        "sha256",
+        "batch_index",
+        "pair_start",
+        "pair_stop",
+        "disagreement_pixels",
+        "row_body_sha256",
+    }
+    for expected_batch_index, binding in enumerate(completed_batch_rows):
+        expected_pair_stop = expected_pair_start + VERDICT_BATCH_SIZES[expected_batch_index]
+        if type(binding) is not dict or set(binding) != binding_keys:
+            raise G111ParsedG105StageSelectorError("obstruction batch binding has a noncanonical field census")
+        row_path_text = binding["path"]
+        if type(row_path_text) is not str:
+            raise G111ParsedG105StageSelectorError("obstruction batch path must be exact text")
+        row_path = Path(row_path_text)
+        expected_row_path = path.parent / (
+            f"batch_{expected_batch_index:03d}_{expected_pair_start:03d}_{expected_pair_stop:03d}.json"
+        )
+        if row_path != expected_row_path or not row_path.is_absolute() or row_path.is_symlink() or not row_path.is_file():
+            raise G111ParsedG105StageSelectorError("obstruction completed batch path differs")
+        try:
+            row_bytes = row_path.read_bytes()
+            row_payload = json.loads(row_bytes.decode("ascii"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise G111ParsedG105StageSelectorError("obstruction completed batch row cannot be decoded") from exc
+        row_sha256 = _require_sha256(binding["sha256"], name="obstruction completed batch row")
+        if _sha256(row_bytes) != row_sha256:
+            raise G111ParsedG105StageSelectorError("obstruction completed batch row SHA-256 differs")
+        if type(binding["bytes"]) is not int or binding["bytes"] != len(row_bytes):
+            raise G111ParsedG105StageSelectorError("obstruction completed batch row byte count differs")
+        if type(row_payload) is not dict:
+            raise G111ParsedG105StageSelectorError("obstruction completed batch row is not an object")
+        target_batch_sha256 = row_payload.get("target_batch_sha256")
+        verified_row = _load_verified_batch_row(
+            path=row_path,
+            identity=progress_identity,
+            progress_key_sha256=progress_key_sha256,
+            batch_index=expected_batch_index,
+            pair_start=expected_pair_start,
+            pair_stop=expected_pair_stop,
+            target_batch_sha256=_require_sha256(
+                target_batch_sha256,
+                name="obstruction target batch",
+            ),
+        )
+        if verified_row is None:
+            raise AssertionError("verified obstruction batch row disappeared")
+        if (
+            binding["batch_index"] != expected_batch_index
+            or binding["pair_start"] != expected_pair_start
+            or binding["pair_stop"] != expected_pair_stop
+            or binding["disagreement_pixels"] != verified_row["disagreement_pixels"]
+            or binding["row_body_sha256"] != verified_row["row_body_sha256"]
+        ):
+            raise G111ParsedG105StageSelectorError("obstruction completed batch binding differs")
+        verified_rows.append(verified_row)
+        cumulative_from_rows += verified_row["disagreement_pixels"]
+        expected_pair_start = expected_pair_stop
+
+    if (
+        observed_pair_count != expected_pair_start
+        or cumulative_disagreement_pixels != cumulative_from_rows
+        or cumulative_disagreement_pixels > observed_pair_count * SCORER_H * SCORER_W
+        or receipt["batch_receipt_chain_sha256"]
+        != _batch_digest_chain(verified_rows, digest_field="row_body_sha256")
+    ):
+        raise G111ParsedG105StageSelectorError("obstruction cumulative prefix binding differs")
+    _require_sha256(
+        receipt["batch_receipt_chain_sha256"],
+        name="obstruction batch receipt chain",
+    )
+
+    exact_obstruction = receipt["exact_obstruction"]
+    obstruction_keys = {
+        "rule",
+        "comparison",
+        "lhs_integer",
+        "rhs_integer",
+        "full_n600_denominator_used",
+        "unobserved_disagreement_pixels_assumed",
+        "all_n600_pairs_scored",
+    }
+    lhs_integer = 100 * cumulative_disagreement_pixels * target_denominator
+    rhs_integer = target_numerator * EXACT_SEG_PIXEL_DENOMINATOR
+    if (
+        type(exact_obstruction) is not dict
+        or set(exact_obstruction) != obstruction_keys
+        or exact_obstruction["rule"] != EXACT_PREFIX_OBSTRUCTION_RULE
+        or exact_obstruction["comparison"] != ">="
+        or exact_obstruction["lhs_integer"] != lhs_integer
+        or exact_obstruction["rhs_integer"] != rhs_integer
+        or exact_obstruction["full_n600_denominator_used"] is not True
+        or exact_obstruction["unobserved_disagreement_pixels_assumed"] != 0
+        or exact_obstruction["all_n600_pairs_scored"] is not (observed_pair_count == PAIR_COUNT_N600)
+        or lhs_integer < rhs_integer
+    ):
+        raise G111ParsedG105StageSelectorError("obstruction exact inequality does not hold")
+    return G111ParsedG105ExactPrefixObstructionV1(
+        receipt_path=path,
+        receipt_sha256=expected_sha256,
+        receipt_bytes=len(receipt_bytes),
+        receipt=receipt,
+    )
+
+
+def _raise_if_exact_prefix_obstructed(
+    *,
+    progress_identity: dict[str, Any],
+    progress_key_sha256: str,
+    progress_namespace: Path,
+    completed_rows: list[dict[str, Any]],
+    completed_row_paths: list[Path],
+    cumulative_disagreement_pixels: int,
+    observed_pair_count: int,
+) -> None:
+    exact_target, target_numerator, target_denominator = _validated_exact_frontier_target_record(
+        progress_identity.get("effective_frontier_target_exact"),
+        name="progress exact frontier target",
+    )
+    lhs_integer = 100 * cumulative_disagreement_pixels * target_denominator
+    rhs_integer = target_numerator * EXACT_SEG_PIXEL_DENOMINATOR
+    if lhs_integer < rhs_integer:
+        return
+    completed_batch_rows = []
+    for row, row_path in zip(completed_rows, completed_row_paths, strict=True):
+        row_bytes = row_path.read_bytes()
+        completed_batch_rows.append(
+            {
+                "path": str(row_path),
+                "bytes": len(row_bytes),
+                "sha256": _sha256(row_bytes),
+                "batch_index": row["batch_index"],
+                "pair_start": row["pair_start"],
+                "pair_stop": row["pair_stop"],
+                "disagreement_pixels": row["disagreement_pixels"],
+                "row_body_sha256": row["row_body_sha256"],
+            }
+        )
+    receipt_body = {
+        "schema": EXACT_PREFIX_OBSTRUCTION_SCHEMA,
+        "execution_surface": EXECUTION_SURFACE,
+        "engine_only": True,
+        "production_authority_closed": False,
+        "production_wrapper_required": True,
+        "production_verdict_emitted": False,
+        "production_admission": False,
+        "status": "BLOCKED_SCOPED",
+        "verdict_scope": "one_engine_only_parsed_G105_wire_prefix",
+        "candidate_claim": False,
+        "score_claim": False,
+        "evaluation_claim": False,
+        "pointer_moved": False,
+        "stage_tag": progress_identity["stage_tag"],
+        "progress_key_sha256": progress_key_sha256,
+        "progress_identity": progress_identity,
+        "effective_frontier_target_exact": exact_target,
+        "full_n600_pixel_denominator": EXACT_SEG_PIXEL_DENOMINATOR,
+        "observed_pair_count": observed_pair_count,
+        "completed_batch_count": len(completed_rows),
+        "cumulative_disagreement_pixels": cumulative_disagreement_pixels,
+        "completed_batch_rows": completed_batch_rows,
+        "batch_receipt_chain_sha256": _batch_digest_chain(
+            completed_rows,
+            digest_field="row_body_sha256",
+        ),
+        "exact_obstruction": {
+            "rule": EXACT_PREFIX_OBSTRUCTION_RULE,
+            "comparison": ">=",
+            "lhs_integer": lhs_integer,
+            "rhs_integer": rhs_integer,
+            "full_n600_denominator_used": True,
+            "unobserved_disagreement_pixels_assumed": 0,
+            "all_n600_pairs_scored": observed_pair_count == PAIR_COUNT_N600,
+        },
+    }
+    receipt = {
+        **receipt_body,
+        "receipt_body_sha256": _sha256(_canonical_json(receipt_body)),
+    }
+    receipt_bytes = _canonical_json(receipt)
+    receipt_path = progress_namespace / EXACT_PREFIX_OBSTRUCTION_BASENAME
+    _atomic_write_idempotent(receipt_path, receipt_bytes)
+    reopened = open_g111_parsed_g105_exact_prefix_obstruction_v1(
+        receipt_path,
+        expected_sha256=_sha256(receipt_bytes),
+    )
+    raise G111ParsedG105ExactPrefixObstruction(reopened)
+
+
 def _score_one_parsed_surface(
     *,
     program: object,
@@ -622,6 +995,7 @@ def _score_one_parsed_surface(
     progress_key_sha256 = _batch_progress_key(progress_identity)
     progress_namespace = _durable_out_dir(progress_dir / progress_key_sha256)
     completed_rows: list[dict[str, Any]] = []
+    completed_row_paths: list[Path] = []
 
     pair_start = 0
     for batch_index, expected_batch_size in enumerate(VERDICT_BATCH_SIZES):
@@ -641,8 +1015,18 @@ def _score_one_parsed_surface(
         if completed_row is not None:
             disagreement_pixels += completed_row["disagreement_pixels"]
             completed_rows.append(completed_row)
+            completed_row_paths.append(row_path)
             observed_batch_sizes.append(expected_batch_size)
             pair_start = pair_stop
+            _raise_if_exact_prefix_obstructed(
+                progress_identity=progress_identity,
+                progress_key_sha256=progress_key_sha256,
+                progress_namespace=progress_namespace,
+                completed_rows=completed_rows,
+                completed_row_paths=completed_row_paths,
+                cumulative_disagreement_pixels=disagreement_pixels,
+                observed_pair_count=pair_start,
+            )
             continue
 
         scorer_digest = hashlib.sha256()
@@ -718,8 +1102,18 @@ def _score_one_parsed_surface(
             _canonical_json(completed_row),
         )
         completed_rows.append(completed_row)
+        completed_row_paths.append(row_path)
         observed_batch_sizes.append(expected_batch_size)
         pair_start = pair_stop
+        _raise_if_exact_prefix_obstructed(
+            progress_identity=progress_identity,
+            progress_key_sha256=progress_key_sha256,
+            progress_namespace=progress_namespace,
+            completed_rows=completed_rows,
+            completed_row_paths=completed_row_paths,
+            cumulative_disagreement_pixels=disagreement_pixels,
+            observed_pair_count=pair_start,
+        )
 
     if (
         pair_start != PAIR_COUNT_N600
@@ -1010,6 +1404,7 @@ def compile_select_parsed_g105_stage_v1(
         or effective_frontier_target <= 0.0
     ):
         raise G111ParsedG105StageSelectorError("effective_frontier_target must be an exact positive finite float")
+    effective_frontier_target_exact = _exact_frontier_target_record(effective_frontier_target)
     artifact_namespace = _artifact_namespace(
         stage_tag=stage_tag,
         pointer_snapshot_identity_sha256=(pointer_snapshot_identity_sha256),
@@ -1094,6 +1489,7 @@ def compile_select_parsed_g105_stage_v1(
             "seg_scorer_identity_sha256": seg_scorer_identity_sha256,
             "pointer_snapshot_identity_sha256": (pointer_snapshot_identity_sha256),
             "pose_initializer_identity_sha256": (pose_initializer_identity_sha256),
+            "effective_frontier_target_exact": effective_frontier_target_exact,
             "pair_count": PAIR_COUNT_N600,
             "batch_sizes": list(VERDICT_BATCH_SIZES),
         }
@@ -1306,6 +1702,7 @@ __all__ = [
     "ARCHIVE_RATE_DENOMINATOR",
     "BATCH_PROGRESS_SCHEMA",
     "CROSS_STAGE_PARETO_ROW_SCHEMA",
+    "EXACT_PREFIX_OBSTRUCTION_SCHEMA",
     "EXECUTION_SURFACE",
     "PAIR_COUNT_N600",
     "POPULATION_HASH_SCHEMA",
@@ -1313,10 +1710,13 @@ __all__ = [
     "VERDICT_BATCH_SIZE",
     "VERDICT_BATCH_SIZES",
     "G111CrossStageParetoRowV1",
+    "G111ParsedG105ExactPrefixObstruction",
+    "G111ParsedG105ExactPrefixObstructionV1",
     "G111ParsedG105StageSelectionV1",
     "G111ParsedG105StageSelectorError",
     "G111SemanticStageAlternativeV1",
     "compile_select_parsed_g105_stage_v1",
+    "open_g111_parsed_g105_exact_prefix_obstruction_v1",
     "select_semantic_stage_alternative",
     "semantic_stage_action",
     "semantic_stage_conditional_observation",

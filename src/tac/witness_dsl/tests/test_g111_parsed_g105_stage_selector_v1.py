@@ -71,6 +71,64 @@ def _small_exact_state() -> tuple[
     return config, params, odd_y1
 
 
+def _run_obstruction_screen(
+    *,
+    monkeypatch: pytest.MonkeyPatch,
+    out_dir: Path,
+    progress_dir: Path,
+    scorer: subject.SegArgmaxBatchScorerV1,
+    effective_frontier_target: float,
+) -> subject.G111ParsedG105StageSelectionV1:
+    config, params, odd_y1 = _small_exact_state()
+    scorer_y1 = np.zeros((384, 512, 3), dtype=np.uint8)
+    rank_zero_pair = np.ascontiguousarray(np.stack((scorer_y1, scorer_y1)))
+    camera_y1 = np.zeros((2, 2, 3), dtype=np.uint8)
+    monkeypatch.setattr(subject, "render_scorer_y1", lambda _program, _pair_id: scorer_y1)
+    monkeypatch.setattr(
+        subject,
+        "render_g110_rank_zero_scorer_pair",
+        lambda _packet, _pair_id: rank_zero_pair,
+    )
+    monkeypatch.setattr(
+        subject,
+        "realize_factor2_uint8_numpy",
+        lambda _scorer_y1: camera_y1,
+    )
+    monkeypatch.setattr(subject, "CAMERA_HW", (2, 2))
+    return subject.compile_select_parsed_g105_stage_v1(
+        config=config,
+        semantic_params=params,
+        odd_y1=odd_y1,
+        target_labels=np.zeros((600, 384, 512), dtype=np.uint8),
+        seg_argmax_batch_scorer=scorer,
+        injected_inputs_are_test_only=True,
+        seg_scorer_identity_sha256=_sha("obstruction-seg-scorer"),
+        source_checkpoint_identity_sha256=_sha("obstruction-source-checkpoint"),
+        pose_initializer_identity_sha256=_sha("obstruction-pose-initializer"),
+        effective_frontier_target=effective_frontier_target,
+        pointer_snapshot_identity_sha256=_sha("obstruction-pointer"),
+        out_dir=out_dir,
+        progress_dir=progress_dir,
+        stage_tag="obstruction_stage",
+    )
+
+
+def _counted_mismatch_scorer(
+    disagreement_counts: list[int],
+    calls: list[int],
+) -> subject.SegArgmaxBatchScorerV1:
+    def scorer(camera_batch: np.ndarray) -> np.ndarray:
+        calls.append(camera_batch.shape[0])
+        prediction = np.zeros(
+            (camera_batch.shape[0], 384, 512),
+            dtype=np.uint8,
+        )
+        prediction.reshape(-1)[: disagreement_counts[len(calls) - 1]] = 1
+        return prediction
+
+    return scorer
+
+
 def _alternative(
     *,
     codec: Y1WireCodecV1,
@@ -186,6 +244,136 @@ def test_pointer_identity_namespaces_historical_stage_artifacts() -> None:
     assert first != second
     assert first.startswith("ce_stage_0001.ptr_")
     assert second.startswith("ce_stage_0001.ptr_")
+
+
+def test_fresh_exact_prefix_crossing_persists_reopens_and_raises(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[int] = []
+    out_dir = (tmp_path / "fresh-out").resolve()
+    progress_dir = (tmp_path / "fresh-progress").resolve()
+
+    with pytest.raises(subject.G111ParsedG105ExactPrefixObstruction) as caught:
+        _run_obstruction_screen(
+            monkeypatch=monkeypatch,
+            out_dir=out_dir,
+            progress_dir=progress_dir,
+            scorer=_counted_mismatch_scorer([110_000, 110_000], calls),
+            effective_frontier_target=0.172,
+        )
+
+    obstruction = caught.value.obstruction
+    assert calls == [16, 16]
+    assert obstruction.receipt_path.read_bytes()
+    assert hashlib.sha256(obstruction.receipt_path.read_bytes()).hexdigest() == obstruction.receipt_sha256
+    assert caught.value.receipt_path == obstruction.receipt_path
+    assert caught.value.receipt_sha256 == obstruction.receipt_sha256
+    assert obstruction.receipt["schema"] == subject.EXACT_PREFIX_OBSTRUCTION_SCHEMA
+    assert obstruction.receipt["status"] == "BLOCKED_SCOPED"
+    assert obstruction.receipt["engine_only"] is True
+    assert obstruction.receipt["candidate_claim"] is False
+    assert obstruction.receipt["score_claim"] is False
+    assert obstruction.receipt["evaluation_claim"] is False
+    assert obstruction.receipt["pointer_moved"] is False
+    assert obstruction.receipt["effective_frontier_target_exact"] == {
+        "decimal": "0.172",
+        "numerator": 43,
+        "denominator": 250,
+    }
+    assert obstruction.receipt["observed_pair_count"] == 32
+    assert obstruction.receipt["cumulative_disagreement_pixels"] == 220_000
+    assert (
+        obstruction.receipt["exact_obstruction"]["lhs_integer"]
+        > obstruction.receipt["exact_obstruction"]["rhs_integer"]
+    )
+    assert len(list(progress_dir.rglob("batch_*.json"))) == 2
+    assert not list(out_dir.iterdir())
+
+
+def test_exact_prefix_obstruction_triggers_on_rational_equality(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[int] = []
+    with pytest.raises(subject.G111ParsedG105ExactPrefixObstruction) as caught:
+        _run_obstruction_screen(
+            monkeypatch=monkeypatch,
+            out_dir=(tmp_path / "equality-out").resolve(),
+            progress_dir=(tmp_path / "equality-progress").resolve(),
+            scorer=_counted_mismatch_scorer([202_896], calls),
+            effective_frontier_target=0.1719970703125,
+        )
+
+    receipt = caught.value.receipt
+    assert calls == [16]
+    assert receipt["effective_frontier_target_exact"] == {
+        "decimal": "0.1719970703125",
+        "numerator": 1409,
+        "denominator": 8192,
+    }
+    assert receipt["observed_pair_count"] == 16
+    assert receipt["exact_obstruction"]["comparison"] == ">="
+    assert receipt["exact_obstruction"]["lhs_integer"] == receipt["exact_obstruction"]["rhs_integer"]
+
+
+def test_exact_prefix_obstruction_resume_uses_zero_scorer_calls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    out_dir = (tmp_path / "resume-out").resolve()
+    progress_dir = (tmp_path / "resume-progress").resolve()
+    first_calls: list[int] = []
+    with pytest.raises(subject.G111ParsedG105ExactPrefixObstruction) as first:
+        _run_obstruction_screen(
+            monkeypatch=monkeypatch,
+            out_dir=out_dir,
+            progress_dir=progress_dir,
+            scorer=_counted_mismatch_scorer([110_000, 110_000], first_calls),
+            effective_frontier_target=0.172,
+        )
+    assert first_calls == [16, 16]
+
+    with pytest.raises(subject.G111ParsedG105ExactPrefixObstruction) as resumed:
+        _run_obstruction_screen(
+            monkeypatch=monkeypatch,
+            out_dir=out_dir,
+            progress_dir=progress_dir,
+            scorer=lambda _batch: pytest.fail("verified obstructed prefix must not replay the scorer"),
+            effective_frontier_target=0.172,
+        )
+
+    assert resumed.value.receipt_path == first.value.receipt_path
+    assert resumed.value.receipt_sha256 == first.value.receipt_sha256
+    assert resumed.value.receipt == first.value.receipt
+
+
+def test_exact_prefix_obstruction_opener_refuses_completed_row_corruption(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[int] = []
+    with pytest.raises(subject.G111ParsedG105ExactPrefixObstruction) as caught:
+        _run_obstruction_screen(
+            monkeypatch=monkeypatch,
+            out_dir=(tmp_path / "corruption-out").resolve(),
+            progress_dir=(tmp_path / "corruption-progress").resolve(),
+            scorer=_counted_mismatch_scorer([110_000, 110_000], calls),
+            effective_frontier_target=0.172,
+        )
+    assert calls == [16, 16]
+    obstruction = caught.value.obstruction
+    first_row_path = Path(obstruction.receipt["completed_batch_rows"][0]["path"])
+    first_row_path.write_bytes(first_row_path.read_bytes() + b"\n")
+
+    with pytest.raises(
+        subject.G111ParsedG105StageSelectorError,
+        match="completed batch row SHA-256 differs",
+    ):
+        subject.open_g111_parsed_g105_exact_prefix_obstruction_v1(
+            obstruction.receipt_path,
+            expected_sha256=obstruction.receipt_sha256,
+        )
 
 
 def test_exact_stage_selector_uses_rank_zero_g110_and_full_batch16_geometry(
