@@ -1,0 +1,115 @@
+{
+  "schema": "tac.g80_pvsa_compact_container_landing.v1",
+  "lane_id": "lane_g80_flattened_semantic_product_archive_20260727",
+  "git_head_observed": "baa863756d740591330324779c2998f5db48e131",
+  "outcome": "EXACT_COMPACT_WIRE_AND_ONE_MEMBER_OUTER_ARCHIVE_TRANSPORT_PROOF",
+  "implementation": {
+    "source": {
+      "path": "src/tac/witness_dsl/taskspace_pvsa_compact_container_v1.py",
+      "bytes": 33291,
+      "sha256": "d993146868db756439dde46a6d592030d00cf607673ac322c91a0b5b04d7768c"
+    },
+    "tests": {
+      "path": "src/tac/witness_dsl/tests/test_taskspace_pvsa_compact_container_v1.py",
+      "bytes": 9348,
+      "sha256": "5b4e87c56156f44ad0b40465d02ed681175930211f92d441c4ff1325dbd1efe0"
+    },
+    "spec": {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g80_pvsa_compact_container_20260727.md",
+      "bytes": 8281,
+      "sha256": "cf2ede06e0259ff9a5701455b5c1f1e0df93b9a3eff0b125a47de438e3a9fe29"
+    }
+  },
+  "semantic_p": {
+    "population_pairs": 600,
+    "archive_bytes": 133941,
+    "archive_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+    "member_count": 5,
+    "semantic_payload_bytes": 133277,
+    "exact_manual_zip32_reconstruction": true,
+    "complete_zip_embedded_in_compact_member": false
+  },
+  "transport_operand": {
+    "type": "G74_ROLE_AWARE_PREPAINT",
+    "frame_selector": "Y1",
+    "pair_indices": [0],
+    "atom_count": 2,
+    "bytes": 52,
+    "sha256": "632465f836a33fe11458f7b32079df6f33815fbb7064ef70f0d51934e2abe3f6",
+    "full_n600_correction_claim": false
+  },
+  "compact_member": {
+    "wire_magic": "PVSA1",
+    "semantic_only": {
+      "bytes": 133306,
+      "sha256": "6208ac91c465caa8990f7d643f50c06da28c1e00ca359d4ee55005818cc12352"
+    },
+    "with_g74": {
+      "bytes": 133363,
+      "sha256": "308b05e623ad0c6d16b69da61c592b9c87e9fd934aeeec71a76850eace618f39"
+    },
+    "rich_tsp_pv2_example_bytes": 3593,
+    "rich_ir_bytes_avoided": 3541,
+    "rich_ir_embedded": false,
+    "target_custody_embedded": false,
+    "decoder_source_hash_embedded": false,
+    "zero_actuator_baseline_admitted": true,
+    "actuator_transition_authority": "EXPLICIT_NORMATIVE_STATE_MACHINE_PREFIX",
+    "cached_semantic_receiver": true,
+    "maximum_stream_batch_pairs": 16
+  },
+  "outer_archive_race": {
+    "member_name": "0.bin",
+    "semantic_only_selected": {
+      "encoding": "zip_deflated",
+      "bytes": 129335,
+      "sha256": "fa173ef4f75adbe9194d3cd89b04021dabd2b9e9fd3aa87081148b6b42a26c75"
+    },
+    "with_g74_stored": {
+      "bytes": 133471,
+      "sha256": "951d8290b0724eeb23fa467aaef4c5a73771e6a33922d3d6051da2c87b356464"
+    },
+    "with_g74_deflated": {
+      "bytes": 129392,
+      "sha256": "6b6b6dc8fd715241339932fbf2fea37060704b8e389169eac30e45455b67edc6"
+    },
+    "with_g74_selected_encoding": "zip_deflated",
+    "with_g74_selected_bytes": 129392,
+    "with_g74_selected_sha256": "6b6b6dc8fd715241339932fbf2fea37060704b8e389169eac30e45455b67edc6",
+    "container_recode_byte_savings": 4606,
+    "container_recode_fixed_distortion_rate_score_delta": -0.003066946338080721,
+    "g74_same_container_marginal_bytes": 57,
+    "g74_same_container_rate_score_delta_before_distortion": 0.000037953960327963764,
+    "g79_best_multimember_bytes": 129800,
+    "gain_vs_g79_bytes": 408
+  },
+  "verification": {
+    "ruff_format": "PASS",
+    "ruff_check": "PASS",
+    "py_compile": "PASS",
+    "pytest": "PASS",
+    "pytest_passed": 7,
+    "semantic_p_exact_reconstruction": true,
+    "outer_store_parse_back": true,
+    "outer_deflate_parse_back": true,
+    "compact_parse_reencode_exact": true,
+    "deterministic_pair_double_decode": true,
+    "zero_add_remove_rollback_exact": true,
+    "cached_receiver_opens_semantic_p_once": true,
+    "bounded_stream_batch_pairs": 16,
+    "normative_transition_state_machine": true,
+    "unknown_duplicate_order_length_eof_and_trailing_refusal": true
+  },
+  "open_blockers": [
+    "PVSA_TSPPV2_RICH_IR_TO_COMPACT_WIRE_LOWERING_RECEIPT_OWED",
+    "PVSA_CONDITIONAL_Y0_GIVEN_Y1_ACTUATOR_TYPE_AND_TRANSITION_OWED",
+    "PVSA_PUBLIC_INFLATE_SH_RUNTIME_INTEGRATION_OWED",
+    "PVSA_FULL_N600_DOUBLE_DECODE_AND_UPSTREAM_EVAL_OWED"
+  ],
+  "research_only": true,
+  "candidate_claim": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "receipt_sha256": "91213ca642471a874df80c117d9d2f20d420df7a3160bc15175917ee19fa6c4e"
+}
