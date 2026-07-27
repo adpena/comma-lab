@@ -13139,6 +13139,23 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "resume_latest": "levelset_resume_state.npz", "has_opt": bool(opt_np),
             **native_written,
         }
+        _native_checkpoint_path = (
+            out_dir / str(native_written["g111_native_latest"])
+            if "g111_native_latest" in native_written
+            else None
+        )
+        _native_checkpoint_sha256 = (
+            causal_sha256_file(_native_checkpoint_path)
+            if _native_checkpoint_path is not None
+            else None
+        )
+        if _native_checkpoint_path is not None:
+            written["g111_native_latest_bytes"] = (
+                _native_checkpoint_path.stat().st_size
+            )
+            written["g111_native_latest_sha256"] = (
+                _native_checkpoint_sha256
+            )
         if bool(getattr(args, "fresh_producer", False)):
             from tac.witness_control.fresh_producer_lineage_v1 import (
                 write_fresh_physical_checkpoint_node_v1,
@@ -13156,6 +13173,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 expected_resume_sha256=causal_sha256_file(
                     out_dir / "levelset_resume_state.npz"
                 ),
+                native_checkpoint=_native_checkpoint_path,
+                expected_native_sha256=_native_checkpoint_sha256,
                 expected_current_launch_dsl_compile_hash=(
                     _require_lineage_sha256(
                         args._fresh_lineage_current_launch_dsl_compile_hash,

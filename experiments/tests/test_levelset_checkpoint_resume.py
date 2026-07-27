@@ -1034,7 +1034,7 @@ def test_g111_native_v3_fake_manifest_presence_cannot_open_launch_gate():
         T.G111_TRANSACTION_MANIFEST_KEY: np.empty(0, np.uint8),
     }
     with pytest.raises(
-        T.TransactionValidationError, match="not implemented"
+        T.TransactionValidationError, match="real G111BoundInventory"
     ):
         T._require_g111_native_v3_launch_gate(fake)
 
@@ -1064,15 +1064,15 @@ def test_g111_native_v3_same_source_incomplete_staged_cannot_admit_launch():
             derived_lineage_arrays=captured_derived,
         )
     with pytest.raises(
-        T.TransactionValidationError, match="not implemented"
+        T.TransactionValidationError, match="real G111BoundInventory"
     ):
         T._require_g111_native_v3_launch_gate(structurally_valid)
 
 
 @pytest.mark.parametrize("candidate", [None, object(), 0, "admit"])
-def test_g111_native_v3_launch_gate_has_no_adapter_success_path(candidate):
+def test_g111_native_v3_launch_gate_rejects_non_bound_inventory(candidate):
     with pytest.raises(
-        T.TransactionValidationError, match="not implemented"
+        T.TransactionValidationError, match="real G111BoundInventory"
     ):
         T._require_g111_native_v3_launch_gate(candidate)
 
