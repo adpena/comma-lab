@@ -44,6 +44,7 @@ from tac.witness_dsl.v10_factor2_selected_preimage_v1 import (
 PROGRAM_NAME = "g111_batch16_v9_semantic_base"
 TARGET_LEVER_NAME = "g111_physical_batch16_target_custody"
 TAIL_STOP_FLAG = "--tail-stop-marginal-s"
+SKIP_BOOT_BASELINE_FLAG = "--skip-boot-baseline-verdict"
 G111_TAIL_STOP_MARGINAL_S = 0.0
 TARGET_CONTRACT_SCHEMA = "tac.g111_batch16_v9_semantic_base_target_contract.v2"
 Y1_RATE_ARBITRATION_SCHEMA = "tac.g105_y1_outer_archive_rate_arbitration.v1"
@@ -705,6 +706,9 @@ def _target_contract(
         "semantic_stage_selection_public_wire_identical": False,
         "serialized_even_code_rows_required": False,
         "render_aa": "none",
+        "boot_baseline_verdict_observability_only": True,
+        "boot_baseline_verdict_skipped": True,
+        "first_own_lineage_measurement": "first_immutable_in_loop_stage",
         "post_semantic_compile_xi_refit_required": True,
         "tail_stop_marginal_s": G111_TAIL_STOP_MARGINAL_S,
         "tail_stop_policy": "pareto_nonnegative_score_benefit_v1",
@@ -825,12 +829,20 @@ def compile_g111_batch16_v9_semantic_base_launch_config(
             "--self-orient": False,
             "--render-aa": "none",
             "--pose-carrier-source": "generated_y1",
+            # The pre-loop full-n600 scorer is observation-only and costs about
+            # one complete verdict wall before the cold-root checkpoint.  G111
+            # obtains its first own-lineage measurement from the first immutable
+            # in-loop stage instead, so omitting the boot row changes no update,
+            # controller decision, checkpoint tensor, or receiver output.
+            SKIP_BOOT_BASELINE_FLAG: True,
             TAIL_STOP_FLAG: G111_TAIL_STOP_MARGINAL_S,
         },
         notes=(
             "Reopen physical G109 at compile and train time; bind labels, margins, "
             "and Pose6 from one upstream-batch16 forward; cold own-lineage producer; "
             "derive Y0 conditionally by warping the final odd-code Y1 render; "
+            "skip the observation-only pre-loop full-population verdict so the "
+            "cold root and first trainable stage are reached one scorer wall sooner; "
             "own the G111-only Pareto tail floor 0.0 so no nonnegative score-benefit "
             "cycle is truncated before k_max/G121 whole-object harvesting."
         ),
@@ -867,6 +879,7 @@ def compile_g111_batch16_v9_semantic_base_launch_config(
         "--self-orient": False,
         "--render-aa": "none",
         "--pose-carrier-source": "generated_y1",
+        SKIP_BOOT_BASELINE_FLAG: True,
         "--mod-dim": 32,
         TAIL_STOP_FLAG: G111_TAIL_STOP_MARGINAL_S,
     }
@@ -1016,6 +1029,7 @@ def compile_g111_batch16_v9_semantic_base_launch_config(
 __all__ = [
     "G111_TAIL_STOP_MARGINAL_S",
     "PROGRAM_NAME",
+    "SKIP_BOOT_BASELINE_FLAG",
     "TAIL_STOP_FLAG",
     "TARGET_CONTRACT_SCHEMA",
     "TARGET_LEVER_NAME",

@@ -11,6 +11,7 @@ import pytest
 from tac.witness_dsl.spec_g111_batch16_v9_semantic_base import (
     G111_TAIL_STOP_MARGINAL_S,
     PROGRAM_NAME,
+    SKIP_BOOT_BASELINE_FLAG,
     TAIL_STOP_FLAG,
     TARGET_CONTRACT_SCHEMA,
     TARGET_LEVER_NAME,
@@ -296,8 +297,10 @@ def test_g111_real_production_capsule_compiles_cold_typed_producer(
     assert flags["--render-aa"] == "none"
     assert flags["--mod-dim"] == 32
     assert flags["--pose-carrier-source"] == "generated_y1"
+    assert flags[SKIP_BOOT_BASELINE_FLAG] is True
     assert flags[TAIL_STOP_FLAG] == G111_TAIL_STOP_MARGINAL_S
     emitted = dict(config.to_trainer_flags())
+    assert emitted[SKIP_BOOT_BASELINE_FLAG] is None
     assert emitted[TAIL_STOP_FLAG] == str(G111_TAIL_STOP_MARGINAL_S)
     assert emitted[TAIL_STOP_FLAG] != "0.0001"
     stop_row = config.constants_manifest["tail_stop_marginal_s"]
@@ -332,6 +335,11 @@ def test_g111_real_production_capsule_compiles_cold_typed_producer(
     assert target["semantic_training_loss_public_wire_identical"] is False
     assert target["semantic_stage_selection_public_wire_identical"] is False
     assert target["serialized_even_code_rows_required"] is False
+    assert target["boot_baseline_verdict_observability_only"] is True
+    assert target["boot_baseline_verdict_skipped"] is True
+    assert target["first_own_lineage_measurement"] == (
+        "first_immutable_in_loop_stage"
+    )
     assert target["post_semantic_compile_xi_refit_required"] is True
     assert target["tail_stop_marginal_s"] == G111_TAIL_STOP_MARGINAL_S
     assert target["tail_stop_policy"] == "pareto_nonnegative_score_benefit_v1"
