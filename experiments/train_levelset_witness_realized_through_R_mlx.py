@@ -841,28 +841,17 @@ def _git_provenance() -> dict[str, Any]:
     NO-FAKE: when git is unavailable / not a repo, every field is ``"unknown"`` / ``False`` -- NEVER
     a fabricated sha. ``git_sha`` (repo HEAD) pins the trainer code AND the committed pinned
     ``upstream/`` snapshot (both live in the same tree); ``git_dirty`` flags an uncommitted working
-    tree (a run from a dirty tree is NOT reproducible from the sha alone); ``upstream_tree_sha`` is the
-    ``upstream/`` subtree object id (the frozen-scorer snapshot the verdict authority runs)."""
-    import subprocess
+    tree (a run from a dirty tree is NOT reproducible from the sha alone);
+    ``upstream_snapshot_sha256`` is the portable source-only closure of the four evaluator files.
+    Source video, scorer weights, and encoder-only targets remain separately content-addressed
+    custody inputs rather than being conflated with a host-local ``upstream/.venv``."""
+    # ``upstream/`` is an UNTRACKED pinned workspace and can legally contain an environment-local
+    # ``.venv`` symlink.  Hashing that whole workspace made an exact run stamp ``unknown`` and made
+    # custody depend on its absolute checkout path.  The shared helper binds exactly the four portable
+    # evaluator source members; models/video/targets are separately content-addressed.
+    from tac.training_source_provenance import capture_training_source_provenance
 
-    def _g(*a: str) -> str:
-        try:
-            r = subprocess.run(["git", "-C", str(REPO), *a], capture_output=True, text=True, timeout=8)
-            return r.stdout.strip() if r.returncode == 0 else ""
-        except Exception:
-            return ""
-
-    sha = _g("rev-parse", "HEAD") or "unknown"
-    dirty = bool(_g("status", "--porcelain"))
-    # upstream/ is an UNTRACKED pinned snapshot (not in git HEAD), so the frozen-scorer authority is
-    # pinned by the CANONICAL content hash (tac.contest_compliance) -- the same upstream_snapshot_sha256
-    # every ledger/anchor carries -- NOT a git tree sha. Best-effort; "unknown" when absent (NO-FAKE).
-    try:
-        from tac.contest_compliance import compute_upstream_snapshot_sha256
-        upstream_sha = compute_upstream_snapshot_sha256(REPO) or "unknown"
-    except Exception:
-        upstream_sha = "unknown"
-    return {"git_sha": sha, "git_dirty": dirty, "upstream_snapshot_sha256": upstream_sha}
+    return capture_training_source_provenance(REPO)
 
 
 # ---------------------------------------------------------------------------
@@ -1086,6 +1075,8 @@ def _build_ema_checkpoint_arrays(
     _prov = provenance or {}
     flat["__cfg_git_sha"] = np.asarray(str(_prov.get("git_sha", "unknown")))
     flat["__cfg_git_dirty"] = np.asarray(int(bool(_prov.get("git_dirty", False))))
+    flat["__cfg_upstream_snapshot_schema"] = np.asarray(
+        str(_prov.get("upstream_snapshot_schema", "unknown")))
     flat["__cfg_upstream_snapshot_sha256"] = np.asarray(str(_prov.get("upstream_snapshot_sha256", "unknown")))
     # ---- #224 AA-SDF observation-map render cfg (additive provenance; the exact-eval decode
     # (#202) reconstructs the SAME AA mode deterministically -- NO extra archive bytes: the IPE
@@ -1419,6 +1410,8 @@ def _build_resume_state_arrays(
     _prov = provenance or {}
     out["__cfg_git_sha"] = np.asarray(str(_prov.get("git_sha", "unknown")))
     out["__cfg_git_dirty"] = np.asarray(int(bool(_prov.get("git_dirty", False))))
+    out["__cfg_upstream_snapshot_schema"] = np.asarray(
+        str(_prov.get("upstream_snapshot_schema", "unknown")))
     out["__cfg_upstream_snapshot_sha256"] = np.asarray(str(_prov.get("upstream_snapshot_sha256", "unknown")))
     return out
 
