@@ -1,0 +1,111 @@
+{
+  "schema": "tac.taskspace_g51_costate_admission_guard_implementation_receipt.v1",
+  "lane_id": "lane_g67_g51_costate_admission_guard_20260727",
+  "verdict": "IMPLEMENTED_FAIL_CLOSED_G51_ENCODER_DIAGNOSTIC_ONLY_CANONICAL_EFFECT_MATERIALIZER_OWED",
+  "source_custody": {
+    "git_head_at_implementation": "b84b4c6d948f24f3aa399c1774f557dcecfa3658",
+    "g51_adversarial_receipt_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g51_fulln600_adversarial_interpretation_receipt_20260727.json",
+    "g51_adversarial_receipt_bytes": 6053,
+    "g51_adversarial_receipt_sha256": "756dd421dd8b6ad21dd6d8b7ed271bdbac1ac84b036ab92bf36b40686a998a13",
+    "accepted_interpretation": "ENCODER_DIAGNOSTIC_ONLY",
+    "actionable_costate_input": false
+  },
+  "implementation_artifacts": [
+    {
+      "path": "src/tac/witness_control/taskspace_g51_costate_admission_guard_v1.py",
+      "bytes": 30876,
+      "sha256": "65ca4b4e22a0069816fd8b7dd430447bf9e26cd1ec10c0e86a088868fc544aeb"
+    },
+    {
+      "path": "src/tac/witness_control/tests/test_taskspace_g51_costate_admission_guard_v1.py",
+      "bytes": 15490,
+      "sha256": "a2b0d36eb2cccdc90611021bf8c65b16b9af20b858724de5d323cd5a99a0c2fd"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g67_g51_costate_admission_guard_20260727.md",
+      "bytes": 7778,
+      "sha256": "514958d0ef60465ba12a91f9ab319bfce3ddffde05f30d32a4205d5f74f8ec80"
+    }
+  ],
+  "guard_contract": {
+    "historical_g51_numeric_payload_crosses_boundary": false,
+    "recursively_rejected_historical_surfaces": [
+      "zlib9_marginal_bytes",
+      "per_pair_marginals",
+      "fits_*",
+      "best archive or basis claims",
+      "ambient or functional Gram labels",
+      "declarative READY hook statuses"
+    ],
+    "actionable_evidence_required": [
+      "ordered full-n600 scorer-term effect vectors",
+      "ordered full-n600 realized scorer JVP contractions",
+      "ordered full-n600 realized scorer VJP contractions",
+      "public receiver and realized-through-R frozen CPU-torch scorer binding",
+      "reopened baseline and candidate outer ZIP identities",
+      "recomputed same-object archive ZIP byte delta",
+      "shared object, transition, receiver-output, and effect-bundle custody",
+      "canonical materializer that computes and seals all effect surfaces from the same public receiver/R/scorer transition"
+    ],
+    "self_attested_measurement_booleans_are_authority": false,
+    "arbitrary_runtime_or_evaluator_files_can_unlock_admission": false,
+    "unrelated_nonzero_jvp_vjp_can_unlock_admission": false,
+    "integrity_checked_candidate_exposes_effect_values": false,
+    "actionable_consumer_payload_exists": false,
+    "canonical_receiver_r_scorer_effect_materializer_bound": false
+  },
+  "real_integration": {
+    "entrypoint": "tac.witness_control.taskspace_g51_costate_admission_guard_v1.request_g51_costate_bit_allocation",
+    "guard_called_before_consumer": true,
+    "consumer": null,
+    "canonical_allocator_invoked": false,
+    "canonical_serialized_archive_delta_consumer": "tac.optimization.serialized_archive_economics.build_serialized_archive_delta_contract",
+    "arbitrary_fixture_and_unrelated_jvp_vjp_refusal_tested": true,
+    "all_sensitivity_allocator_costate_autopilot_pareto_consumers_blocked": true,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false
+  },
+  "verification": {
+    "focused_pytest": {
+      "command": "uv run pytest -q src/tac/witness_control/tests/test_taskspace_g51_costate_admission_guard_v1.py",
+      "passed": 16,
+      "failed": 0,
+      "result": "16 passed in 0.60s"
+    },
+    "ruff_check": {
+      "command": "uv run ruff check src/tac/witness_control/taskspace_g51_costate_admission_guard_v1.py src/tac/witness_control/tests/test_taskspace_g51_costate_admission_guard_v1.py",
+      "result": "All checks passed!"
+    },
+    "ruff_format_check": {
+      "command": "uv run ruff format --check src/tac/witness_control/taskspace_g51_costate_admission_guard_v1.py src/tac/witness_control/tests/test_taskspace_g51_costate_admission_guard_v1.py",
+      "result": "2 files already formatted"
+    },
+    "py_compile": {
+      "command": "python3 -m py_compile src/tac/witness_control/taskspace_g51_costate_admission_guard_v1.py src/tac/witness_control/tests/test_taskspace_g51_costate_admission_guard_v1.py",
+      "result": "pass"
+    },
+    "synthetic_test_fixtures_are_empirical_evidence": false
+  },
+  "current_actionable_admission": {
+    "status": "REFUSED",
+    "blockers": [
+      "G51_SCORER_EFFECT_VECTORS_OWED",
+      "G51_REALIZED_SCORER_JVP_VJP_OWED",
+      "G51_SAME_OBJECT_ARCHIVE_ZIP_DELTA_OWED",
+      "G51_CANONICAL_RECEIVER_R_SCORER_EFFECT_MATERIALIZER_OWED"
+    ]
+  },
+  "authority": {
+    "research_only": true,
+    "score_claim": false,
+    "candidate_claim": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "heavy_run_performed": false,
+    "contest_eval_performed": false,
+    "pointer_mutation_performed": false,
+    "exact_frontier_moved": false,
+    "goal_achieved": false
+  }
+}
