@@ -152,19 +152,66 @@ from tac.witness_control.g111_verdict_barrier_v1 import (  # noqa: E402
 )
 from tac.witness_control.g111_live_verdict_transaction_v1 import (  # noqa: E402
     MainThreadVerdictEffectPublisher,
+    SERIALIZED_O4_FIELDS as G111_LIVE_O4_FIELDS,
+    SERIALIZED_O5_FIELDS as G111_LIVE_O5_FIELDS,
     build_worker_snapshot as build_g111_live_verdict_snapshot,
     compact_acknowledged_state as compact_g111_live_verdict_state,
     new_reducer_state as new_g111_live_verdict_state,
     reduce_result as reduce_g111_live_verdict_result,
     run_worker as run_g111_live_verdict_worker,
     state_arrays as g111_live_verdict_state_arrays,
+    state_from_arrays as g111_live_verdict_state_from_arrays,
     validate_reducer_state as validate_g111_live_verdict_state,
+)
+from tac.witness_control.g111_owner_inventory_binder_v1 import (  # noqa: E402
+    BARRIER_SOURCE as G111_BARRIER_SOURCE,
+    CONTROLLER_SOURCE as G111_CONTROLLER_SOURCE,
+    DEPLOY_SOURCE as G111_DEPLOY_SOURCE,
+    LINEAGE_SOURCE as G111_LINEAGE_SOURCE,
+    RESUME_SOURCE as G111_RESUME_SOURCE,
+    G111BoundInventory,
+    G111RuntimeArrays,
+    RuntimeLeafRef,
+    bind_g111_owner_inventory,
+    build_fresh_g111_runtime_schema,
+    reopen_g111_owner_inventory,
+    staged_g111_owner_replacements,
+    write_and_reopen_g111_owner_inventory,
+)
+from tac.witness_control.g111_post_checkpoint_verdict_obligation_v1 import (  # noqa: E402
+    PostCheckpointVerdictObligation,
+)
+from tac.witness_control.g111_rollback_trajectory_state_v1 import (  # noqa: E402
+    TREE_PREFIXES as G111_ROLLBACK_TREE_PREFIXES,
+    build_rollback_savepoint_topology,
+    capture_rollback_trajectory_state,
+    config_for_topology as g111_rollback_config_for_topology,
+    state_arrays as g111_rollback_state_arrays,
+    state_from_arrays as g111_rollback_state_from_arrays,
+)
+from tac.witness_control.g111_schedule_control_state_v1 import (  # noqa: E402
+    new_state as new_g111_schedule_control_state,
+    state_arrays as g111_schedule_control_state_arrays,
+    state_from_arrays as g111_schedule_control_state_from_arrays,
+)
+from tac.witness_control.g111_verdict_controller_state_v1 import (  # noqa: E402
+    active_g111_controller_config_v1,
+    adapt_live_reducer_effect as adapt_g111_live_reducer_effect,
+    new_controller_state as new_g111_controller_state,
+    reduce_controller_state as reduce_g111_controller_state,
+    state_arrays as g111_controller_state_arrays,
+    state_from_arrays as g111_controller_state_from_arrays,
+    validate_controller_state as validate_g111_controller_state,
 )
 from tac.witness_control.trajectory_transaction_v2 import (  # noqa: E402
     ATOMIC_OWNERS as G111_ATOMIC_OWNERS,
+    CAUSAL_SELECTION_STATE as G111_CAUSAL_SELECTION_STATE,
+    CURRENT_TRAIN_STATE as G111_CURRENT_TRAIN_STATE,
     LINEAGE_ENVELOPE as G111_LINEAGE_ENVELOPE,
     MANIFEST_KEY as G111_TRANSACTION_MANIFEST_KEY,
     RESTORABLE_STATE_OWNERS as G111_RESTORABLE_STATE_OWNERS,
+    ROLLBACK_SAVEPOINT as G111_ROLLBACK_SAVEPOINT,
+    SCHEDULE_CONTROL_STATE as G111_SCHEDULE_CONTROL_STATE,
     VERDICT_TRANSACTION as G111_VERDICT_TRANSACTION,
     BarrierStateBinding,
     EntrySpec,
@@ -1176,13 +1223,29 @@ def _build_g111_native_v3_checkpoint(
 def _require_g111_native_v3_launch_gate(
     candidate: Any,
 ) -> None:
-    """Unconditionally refuse until the real live O1-O6 binder replaces this."""
+    """Admit only a fully staged real-runtime O1--O6 inventory."""
 
-    del candidate
-    raise TransactionValidationError(
-        "fresh G111 launch blocked: live-runtime native-v3 admission is not "
-        "implemented"
-    )
+    if not isinstance(candidate, G111BoundInventory):
+        raise TransactionValidationError(
+            "fresh G111 launch requires a real G111BoundInventory"
+        )
+    staged = candidate.staged
+    if not isinstance(staged, StagedTransaction):
+        raise TransactionValidationError(
+            "fresh G111 launch inventory lacks its staged transaction"
+        )
+    activity = {
+        row.owner: bool(row.active)
+        for row in staged.manifest.activity
+    }
+    if tuple(activity) != G111_ATOMIC_OWNERS or not all(activity.values()):
+        raise TransactionValidationError(
+            "fresh G111 launch requires all O1--O6 owners active"
+        )
+    if staged.manifest.schema != "g111_trajectory_transaction.v2":
+        raise TransactionValidationError(
+            "fresh G111 launch transaction schema differs"
+        )
 
 
 def _stage_g111_native_v3_checkpoint(
@@ -11504,6 +11567,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if _g111_native_verdict_on
         else None
     )
+    _g111_controller_config = (
+        active_g111_controller_config_v1(
+            typed_config_sha256=_require_lineage_sha256(
+                args._fresh_lineage_current_launch_dsl_compile_hash,
+                "current launch DSL compile hash",
+            )
+        )
+        if _g111_native_verdict_on
+        else None
+    )
+    _g111_controller_state: dict[str, Any] = {
+        "value": (
+            new_g111_controller_state(_g111_controller_config)
+            if _g111_controller_config is not None
+            else None
+        )
+    }
+    _g111_post_checkpoint_obligation = (
+        PostCheckpointVerdictObligation()
+        if _g111_native_verdict_on
+        else None
+    )
+    _g111_fresh_runtime_schema: dict[str, Any] = {"value": None}
+    _g111_rollback_contract: dict[str, Any] = {
+        "topology": None,
+        "config": None,
+    }
+    _g111_restored_native: dict[str, Any] = {"value": None}
     _g111_live_executor: dict[str, ThreadPoolExecutor | None] = {"value": None}
 
     def _verdict_inflight() -> bool:
@@ -11880,24 +11971,107 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         )
 
     def _publish_g111_live_effect(effect: Mapping[str, Any]) -> None:
-        """Fail closed until legacy mutations are replacement-state owned.
-
-        ``_emit_verdict_row`` appends controller histories and mutates event,
-        causal, and telemetry stores.  A crash after those mutations but before
-        BEST/ack durability would replay them.  A result-ID receipt cannot make
-        that multi-store cut atomic, so native-v3 must not call the legacy
-        publisher.  The pure reducer intent remains preserved for the missing
-        deterministic controller-state adapter.
-        """
+        """Reduce one effect into canonical O4 state and idempotent receipts."""
 
         if threading.get_ident() != _trainer_main_thread_ident:
             raise RuntimeError("G111 live verdict effect escaped the trainer main thread")
-        raise RuntimeError(
-            "G111 native-v3 effect publication REFUSED: legacy verdict emission "
-            "mutates controller/event/causal stores outside the pure replacement "
-            f"state (result_id={effect['result_id']}, "
-            f"result_sha256={effect['result_sha256']})"
-        )
+        config = _g111_controller_config
+        current = _g111_controller_state["value"]
+        if config is None or current is None:
+            raise RuntimeError("G111 replacement controller state is absent")
+        observation = adapt_g111_live_reducer_effect(effect, config=config)
+        reduction = reduce_g111_controller_state(current, observation)
+        candidate = reduction.state
+        validate_g111_controller_state(candidate)
+
+        intent_dir = out_dir / "g111_verdict_intents"
+        intent_dir.mkdir(parents=True, exist_ok=True)
+        newly_published: list[Mapping[str, Any]] = []
+        for intent in reduction.intents:
+            canonical = (
+                json.dumps(
+                    intent,
+                    allow_nan=False,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ).encode("utf-8")
+                + b"\n"
+            )
+            receipt = intent_dir / f"{intent['idempotency_key']}.json"
+            created = not receipt.exists()
+            if created:
+                tmp = receipt.with_name(f".{receipt.name}.tmp.{os.getpid()}")
+                try:
+                    with open(tmp, "xb") as fh:
+                        fh.write(canonical)
+                        fh.flush()
+                        os.fsync(fh.fileno())
+                    os.replace(tmp, receipt)
+                finally:
+                    if tmp.exists():
+                        tmp.unlink()
+            if receipt.read_bytes() != canonical:
+                raise RuntimeError(
+                    "G111 controller intent receipt differs from canonical bytes: "
+                    f"{receipt.name}"
+                )
+            if created:
+                newly_published.append(intent)
+
+        # The holder swap is the only in-process publication point. A crash
+        # before checkpoint durability replays the same result; the canonical
+        # receipts above make that replay idempotent.
+        _g111_controller_state["value"] = candidate
+        history[:] = [dict(row) for row in candidate["history"]]
+        _cl_verdicts[:] = [
+            dict(row) for row in candidate["closed_loop_verdicts"]
+        ]
+        _evt_state["nucleus_ready"] = bool(candidate["nucleus_ready"])
+        lane_sensor = candidate["lane_sensor"]
+        if lane_sensor is not None:
+            _wire_sense["lane_ev"] = dict(lane_sensor["event"])
+            _wire_sense["lane_ev_epoch"] = int(lane_sensor["epoch"])
+        _wire_sense["annulus_series"] = [
+            (int(row["epoch"]), float(row["annulus_flip_frac"]))
+            for row in candidate["annulus_series"]
+        ]
+        _wire_sense["labelfloor_series"] = [
+            dict(row) for row in candidate["label_floor_series"]
+        ]
+        if candidate["last_d_pose"] is not None:
+            _w_pose_law_state["last_d_pose"] = float(
+                candidate["last_d_pose"]
+            )
+        ladder_costates = candidate["ladder_costates"]
+        if _ladder_state is not None and ladder_costates is not None:
+            _ladder_state["lambda"][_ladder_state["arm_lane"]] = float(
+                ladder_costates["lane"]
+            )
+            _ladder_state["lambda"][_ladder_state["arm_mov"]] = float(
+                ladder_costates["movable"]
+            )
+        if _birth_completion is not None:
+            fired = {
+                int(cls): int(epoch)
+                for cls, epoch in candidate["birth_completion"][
+                    "fired_epochs"
+                ].items()
+            }
+            _birth_completion.fired.clear()
+            _birth_completion.fired.update(fired)
+            _birth_completion._fires[:] = sorted(
+                fired.items(),
+                key=lambda row: (row[1], row[0]),
+            )
+
+        for intent in newly_published:
+            payload = intent["payload"]
+            if intent["channel"] == "stdout":
+                for row in payload["rows"]:
+                    print(json.dumps(row, sort_keys=True), flush=True)
+            else:
+                print(json.dumps(payload, sort_keys=True), flush=True)
 
     def _publish_g111_live_best(
         effect: Mapping[str, Any],
@@ -12031,6 +12205,75 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 prefix="__g111_live__",
             )
 
+    def _g111_controller_state_snapshot_arrays() -> Mapping[str, np.ndarray]:
+        """Return the fixed-shape canonical O4 controller state."""
+
+        state = _g111_controller_state["value"]
+        if state is None:
+            return {}
+        return g111_controller_state_arrays(
+            state,
+            prefix="__g111_controller__",
+        )
+
+    def _build_g111_live_worker_snapshot(
+        ep: int,
+        seg_form: str,
+        ep_loss: float,
+    ) -> Mapping[str, Any]:
+        """Reconstruct one scorer snapshot from the current/restored O1-O5."""
+
+        scorer_snapshot = _capture_verdict_snapshot(
+            include_live=_verdict_live_gap_is_due(ep)
+        )
+        scorer_snapshot["epoch"] = int(ep)
+        scorer_snapshot["pose_verdict_index"] = (
+            _reserve_pose_verdict_index_main()
+        )
+        scorer_snapshot["pose_gate_engaged_epoch"] = int(
+            _pose_gate["engaged_epoch"]
+        )
+        blob = quantize_levelset_blob(scorer_snapshot["ema_np"])
+        live_snapshot = dict(_live)
+        best_eligible = not (
+            int(_fork_ema_clearance["until"]) > 0
+            and "ema_updates" in live_snapshot
+            and int(live_snapshot["ema_updates"])
+            < int(_fork_ema_clearance["until"])
+        )
+        return build_g111_live_verdict_snapshot(
+            epoch=int(ep),
+            seg_form=str(seg_form),
+            ep_loss=float(ep_loss),
+            blob_bytes=int(blob["total_quantized_blob_bytes"]),
+            best_eligible=bool(best_eligible),
+            closed_loop_enabled=bool(_cl_on),
+            liveness=live_snapshot,
+            scorer_snapshot=scorer_snapshot,
+        )
+
+    def _submit_g111_live_worker_snapshot(
+        worker_snapshot: Mapping[str, Any],
+    ) -> int:
+        transaction = _g111_live_transaction
+        publisher = _g111_live_publisher
+        if transaction is None or publisher is None:
+            raise RuntimeError("G111 live verdict submit lacks its transaction")
+        executor = _g111_live_executor["value"]
+        if executor is None:
+            executor = ThreadPoolExecutor(
+                max_workers=1,
+                thread_name_prefix="g111-native-v3-verdict",
+            )
+            _g111_live_executor["value"] = executor
+        sequence = transaction.submit(
+            executor,
+            _run_g111_live_worker,
+            worker_snapshot,
+        )
+        _verdict_thread["ep"] = int(worker_snapshot["epoch"])
+        return sequence
+
     def _schedule_g111_live_verdict(
         ep: int,
         seg_form: str,
@@ -12058,48 +12301,56 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             )
             _settle_component_verdict(ep, not_invoked=True)
             return False
-        scorer_snapshot = _capture_verdict_snapshot(
-            include_live=_verdict_live_gap_is_due(ep)
+        _submit_g111_live_worker_snapshot(
+            _build_g111_live_worker_snapshot(ep, seg_form, ep_loss)
         )
-        scorer_snapshot["epoch"] = int(ep)
-        scorer_snapshot["pose_verdict_index"] = (
-            _reserve_pose_verdict_index_main()
-        )
-        scorer_snapshot["pose_gate_engaged_epoch"] = int(
-            _pose_gate["engaged_epoch"]
-        )
-        blob = quantize_levelset_blob(scorer_snapshot["ema_np"])
-        live_snapshot = dict(_live)
-        best_eligible = not (
-            int(_fork_ema_clearance["until"]) > 0
-            and "ema_updates" in live_snapshot
-            and int(live_snapshot["ema_updates"])
-            < int(_fork_ema_clearance["until"])
-        )
-        worker_snapshot = build_g111_live_verdict_snapshot(
-            epoch=int(ep),
-            seg_form=str(seg_form),
-            ep_loss=float(ep_loss),
-            blob_bytes=int(blob["total_quantized_blob_bytes"]),
-            best_eligible=bool(best_eligible),
-            closed_loop_enabled=bool(_cl_on),
-            liveness=live_snapshot,
-            scorer_snapshot=scorer_snapshot,
-        )
-        executor = _g111_live_executor["value"]
-        if executor is None:
-            executor = ThreadPoolExecutor(
-                max_workers=1,
-                thread_name_prefix="g111-native-v3-verdict",
-            )
-            _g111_live_executor["value"] = executor
-        transaction.submit(
-            executor,
-            _run_g111_live_worker,
-            worker_snapshot,
-        )
-        _verdict_thread["ep"] = int(ep)
         return True
+
+    def _arm_g111_post_checkpoint_verdict(
+        *,
+        ep: int,
+        seg_form: str,
+        boundary_kind: str,
+    ) -> None:
+        transaction = _g111_live_transaction
+        obligation = _g111_post_checkpoint_obligation
+        config = _g111_controller_config
+        if transaction is None or obligation is None or config is None:
+            raise RuntimeError("G111 post-checkpoint obligation state is absent")
+        obligation.arm(
+            checkpoint_epoch=int(ep),
+            submission_seq=transaction.next_submit_seq,
+            stage=str(seg_form),
+            boundary_kind=str(boundary_kind),
+            config_sha256=config.typed_config_sha256,
+            next_submit_seq=transaction.next_submit_seq,
+            next_apply_seq=transaction.next_apply_seq,
+        )
+
+    def _discharge_g111_post_checkpoint_verdict(
+        *,
+        ep: int,
+        seg_form: str,
+        ep_loss: float,
+        boundary_kind: str,
+    ) -> int:
+        transaction = _g111_live_transaction
+        obligation = _g111_post_checkpoint_obligation
+        config = _g111_controller_config
+        if transaction is None or obligation is None or config is None:
+            raise RuntimeError("G111 post-checkpoint obligation state is absent")
+        return obligation.discharge(
+            restored_checkpoint_epoch=int(ep),
+            restored_stage=str(seg_form),
+            restored_boundary_kind=str(boundary_kind),
+            restored_config_sha256=config.typed_config_sha256,
+            next_submit_seq=lambda: transaction.next_submit_seq,
+            next_apply_seq=lambda: transaction.next_apply_seq,
+            reconstruct_snapshot=lambda _record: (
+                _build_g111_live_worker_snapshot(ep, seg_form, ep_loss)
+            ),
+            submit=_submit_g111_live_worker_snapshot,
+        )
 
     def _schedule_async_verdict(ep: int, seg_form: str, ep_loss: float) -> bool:
         if _g111_native_verdict_on:
@@ -12374,40 +12625,421 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         seed_packed_state = _snapshot_sparse_seed_state_mlx()
         return shadow_np, live_np, opt_np, seed_packed_state
 
-    def _do_checkpoint(
+    def _g111_lineage_state_arrays(
+        lineage_arrays: Mapping[str, Any],
+    ) -> Mapping[str, np.ndarray]:
+        """Encode variable lineage strings in one fixed-shape O6 payload."""
+
+        encoded = ImmutableVerdictResult.capture(
+            submission_seq=0,
+            result_id="g111-o6-lineage-envelope",
+            payload={"lineage": dict(lineage_arrays)},
+        )
+        capacity = 64 * 1024
+        length = len(encoded.payload_bytes)
+        if length > capacity:
+            raise RuntimeError(
+                f"G111 O6 lineage payload exceeds fixed capacity {length} > {capacity}"
+            )
+        payload = np.zeros(capacity, dtype=np.uint8)
+        payload[:length] = np.frombuffer(encoded.payload_bytes, dtype=np.uint8)
+        return {
+            "__g111_o6__schema": np.frombuffer(
+                b"tac.g111_lineage_envelope_arrays.v1",
+                dtype=np.uint8,
+            ).copy(),
+            "__g111_o6__payload": payload,
+            "__g111_o6__payload_length": np.asarray(length, dtype=np.int64),
+            "__g111_o6__sha256": np.frombuffer(
+                encoded.result_sha256.encode("ascii"),
+                dtype=np.uint8,
+            ).copy(),
+        }
+
+    def _g111_rollback_arrays(
+        *,
+        live_np: Mapping[str, np.ndarray],
+        shadow_np: Mapping[str, np.ndarray],
+        opt_np: Mapping[str, np.ndarray],
+        seed_packed_state: Any | None,
+    ) -> Mapping[str, np.ndarray]:
+        """Capture the real rollback actuator into fixed O2 arrays."""
+
+        film_arrays = (
+            _film_polar_state.state_arrays(FILM_POLAR_CHART_RESUME_PREFIX)
+            if _film_polar_state is not None and _film_polar_state.initialized
+            else {}
+        )
+        seed_live = (
+            {} if seed_packed_state is None else dict(seed_packed_state.live)
+        )
+        seed_opt_state = (
+            {}
+            if seed_packed_state is None
+            else dict(seed_packed_state.optimizer)
+        )
+        seed_support_sha = (
+            None
+            if seed_packed_state is None
+            else str(seed_packed_state.support_geometry_sha256)
+        )
+        topology = _g111_rollback_contract["topology"]
+        if topology is None:
+            topology = build_rollback_savepoint_topology(
+                live=live_np,
+                ema=shadow_np,
+                opt=opt_np,
+                film_polar=film_arrays,
+                seed=seed_live,
+                seed_opt=seed_opt_state,
+                seed_support_geometry_sha256=seed_support_sha,
+            )
+            _g111_rollback_contract["topology"] = topology
+        config = _g111_rollback_contract["config"]
+        if config is None:
+            config = g111_rollback_config_for_topology(
+                typed_config_sha256=(
+                    _g111_controller_config.typed_config_sha256
+                ),
+                topology=topology,
+                mode=_sg_mode,
+                window=int(args.spike_rollback_window),
+                frac=float(args.spike_rollback_frac),
+                lr_cut=float(args.spike_rollback_lr_cut),
+                max_rollbacks=int(args.spike_rollback_max),
+                recent_losses_capacity=50,
+            )
+            _g111_rollback_contract["config"] = config
+        snapshot = _sg_state["snap"]
+        savepoint = None
+        snap_epoch = None
+        snap_steps = None
+        if snapshot is not None:
+            savepoint = {
+                "live": snapshot["live"],
+                "ema": snapshot["ema"],
+                "opt": snapshot["opt"],
+                "film_polar": snapshot.get("film_polar", {}),
+                # Runtime rollback keeps dense device tensors below, but O2
+                # must persist the same sparse selected-state representation
+                # used by the resume sidecar.  Mixing the dense snapshot with
+                # the cold-derived sparse topology is both shape-invalid and
+                # an avoidable multi-GB host transfer at n600.
+                "seed": snapshot.get("seed_packed", {}),
+                "seed_opt": snapshot.get("seed_opt_packed", {}),
+            }
+            snap_epoch = int(_sg_state["snap_epoch"])
+            snap_steps = int(snapshot["completed_optimizer_steps"])
+        state = capture_rollback_trajectory_state(
+            config=config,
+            topology=topology,
+            rollbacks=(0 if _sg_guard is None else int(_sg_guard.rollbacks)),
+            events=(
+                ()
+                if _sg_guard is None
+                else tuple(bool(value) for value in _sg_guard._events)
+            ),
+            lr_scale=float(_sg_state["lr_scale"]),
+            ep_spikes=int(_sg_state["ep_spikes"]),
+            ep_batches=int(_sg_state["ep_batches"]),
+            recent_losses=recent_losses,
+            savepoint=savepoint,
+            snap_epoch=snap_epoch,
+            completed_optimizer_steps=snap_steps,
+        )
+        return g111_rollback_state_arrays(
+            state,
+            topology=topology,
+        )
+
+    def _g111_schedule_control_arrays(
+        *,
+        epoch: int,
+        resume_control_arrays: Mapping[str, Any],
+        stop_latched: bool,
+    ) -> Mapping[str, np.ndarray]:
+        """Capture variable legacy controller arrays inside fixed O3."""
+
+        tail_payload = (
+            None
+            if _tail_ctrl is None
+            else json.dumps(
+                _tail_ctrl.state_dict(),
+                allow_nan=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        )
+        ladder_lane = (
+            None if _ladder_state is None
+            else float(_ladder_state["prev"][_ladder_state["arm_lane"]])
+        )
+        ladder_movable = (
+            None if _ladder_state is None
+            else float(_ladder_state["prev"][_ladder_state["arm_mov"]])
+        )
+        ladder_lane_rung = (
+            None if _ladder_state is None
+            else _ladder_state["rung"][_ladder_state["arm_lane"]]
+        )
+        ladder_movable_rung = (
+            None if _ladder_state is None
+            else _ladder_state["rung"][_ladder_state["arm_mov"]]
+        )
+        control_scalars = {
+            "prev_seg_form": str(prev_seg_form),
+            "muon_switched": bool(muon_switched),
+            "last_boundary_epoch": (
+                None
+                if last_boundary_epoch is None
+                else int(last_boundary_epoch)
+            ),
+            "live_ep_acc": int(_live["ep_acc"]),
+            "live_ep_tot": int(_live["ep_tot"]),
+            "live_frac": float(_live["frac"]),
+            "live_stepped": bool(_live["stepped"]),
+            "live_acc": int(_live["acc"]),
+            "live_skip": int(_live["skip"]),
+            "pose_gate_engaged_epoch": int(_pose_gate["engaged_epoch"]),
+            "jbasin_fails": int(_jbasin_state["fails"]),
+            "jbasin_disabled": bool(_jbasin_state["disabled"]),
+            "jbasin_plateau": float(_jbasin_state["plateau"]),
+            "jbasin_t1_count": int(_jbasin_state["t1_count"]),
+            "fork_head_freeze_until": (
+                None
+                if _fhs_freeze_until is None
+                else int(_fhs_freeze_until)
+            ),
+            "ladder_lane_prev": ladder_lane,
+            "ladder_movable_prev": ladder_movable,
+            "ladder_lane_rung": (
+                None if ladder_lane_rung is None else int(ladder_lane_rung)
+            ),
+            "ladder_movable_rung": (
+                None
+                if ladder_movable_rung is None
+                else int(ladder_movable_rung)
+            ),
+        }
+        variable_arrays = dict(resume_control_arrays)
+        if tail_payload is not None:
+            variable_arrays["__g111_tail_state_json"] = np.frombuffer(
+                tail_payload.encode("utf-8"),
+                dtype=np.uint8,
+            ).copy()
+        state = new_g111_schedule_control_state(
+            typed_config_sha256=(
+                _g111_controller_config.typed_config_sha256
+            ),
+            completed_epoch=int(epoch),
+            next_epoch=(int(epoch) if stop_latched else int(epoch) + 1),
+            accepted_optimizer_steps=int(_live["ema_updates"]),
+            stop_latched=bool(stop_latched),
+            control_scalars=control_scalars,
+            resume_control_arrays=variable_arrays,
+        )
+        return g111_schedule_control_state_arrays(
+            state,
+            prefix="__g111_o3__",
+        )
+
+    def _g111_native_runtime(
+        *,
+        epoch: int,
+        deploy_arrays: Mapping[str, Any],
+        resume_arrays: Mapping[str, Any],
+        seed_packed_state: Any | None,
+        capture: Any,
+        stop_latched: bool,
+    ) -> tuple[G111RuntimeArrays, Mapping[str, tuple[RuntimeLeafRef, ...]]]:
+        """Partition one real quiescent checkpoint into disjoint O1--O6."""
+
+        if _g111_live_publisher is None or _g111_post_checkpoint_obligation is None:
+            raise RuntimeError("G111 native checkpoint state is absent")
+        o1_resume = {
+            key: value
+            for key, value in resume_arrays.items()
+            if key.startswith(
+                (
+                    _RESUME_LIVE_PREFIX,
+                    _RESUME_EMA_PREFIX,
+                    _RESUME_OPT_PREFIX,
+                    _RESUME_SEED_LIVE_PREFIX,
+                    _RESUME_SEED_OPT_PREFIX,
+                    _RESUME_POLYAK_PREFIX,
+                )
+            )
+        }
+        lineage_raw = {
+            key: value
+            for key, value in resume_arrays.items()
+            if key in _FRESH_LINEAGE_DERIVED_CFG_KEYS
+        }
+        control_raw = {
+            key: value
+            for key, value in resume_arrays.items()
+            if key not in o1_resume and key not in lineage_raw
+        }
+        o2 = _g111_rollback_arrays(
+            live_np={
+                key[len(_RESUME_LIVE_PREFIX) :]: value
+                for key, value in o1_resume.items()
+                if key.startswith(_RESUME_LIVE_PREFIX)
+            },
+            shadow_np={
+                key[len(_RESUME_EMA_PREFIX) :]: value
+                for key, value in o1_resume.items()
+                if key.startswith(_RESUME_EMA_PREFIX)
+            },
+            opt_np={
+                key[len(_RESUME_OPT_PREFIX) :]: value
+                for key, value in o1_resume.items()
+                if key.startswith(_RESUME_OPT_PREFIX)
+            },
+            seed_packed_state=seed_packed_state,
+        )
+        o3 = _g111_schedule_control_arrays(
+            epoch=int(epoch),
+            resume_control_arrays=control_raw,
+            stop_latched=stop_latched,
+        )
+        barrier = capture.numpy_state(
+            prefix=_G111_NATIVE_V3_BARRIER_PREFIX
+        )
+        controller = {
+            **o2,
+            **o3,
+            **_g111_controller_state_snapshot_arrays(),
+            **_g111_post_checkpoint_obligation.numpy_state(
+                prefix="__g111_obligation__",
+            ),
+            **g111_live_verdict_state_arrays(
+                capture.reducer_state,
+                _g111_live_publisher.cursor,
+                prefix="__g111_live__",
+            ),
+        }
+        lineage = _g111_lineage_state_arrays(lineage_raw)
+        runtime = G111RuntimeArrays(
+            deploy=deploy_arrays,
+            resume=o1_resume,
+            barrier=barrier,
+            controller=controller,
+            lineage=lineage,
+        )
+        refs: dict[str, list[RuntimeLeafRef]] = {
+            owner: [] for owner in G111_ATOMIC_OWNERS
+        }
+        refs[G111_CURRENT_TRAIN_STATE].extend(
+            RuntimeLeafRef(G111_DEPLOY_SOURCE, key)
+            for key in deploy_arrays
+        )
+        refs[G111_CURRENT_TRAIN_STATE].extend(
+            RuntimeLeafRef(G111_RESUME_SOURCE, key)
+            for key in o1_resume
+        )
+        refs[G111_VERDICT_TRANSACTION].extend(
+            RuntimeLeafRef(G111_BARRIER_SOURCE, key)
+            for key in barrier
+        )
+        rollback_tree_prefixes = tuple(G111_ROLLBACK_TREE_PREFIXES.values())
+        for key in controller:
+            ref = RuntimeLeafRef(G111_CONTROLLER_SOURCE, key)
+            if key.startswith("__g111_rollback__") or key.startswith(
+                rollback_tree_prefixes
+            ):
+                refs[G111_ROLLBACK_SAVEPOINT].append(ref)
+            elif key.startswith("__g111_o3__"):
+                refs[G111_SCHEDULE_CONTROL_STATE].append(ref)
+            elif key.startswith("__g111_live__o5_"):
+                refs[G111_CAUSAL_SELECTION_STATE].append(ref)
+            else:
+                refs[G111_VERDICT_TRANSACTION].append(ref)
+        refs[G111_LINEAGE_ENVELOPE].extend(
+            RuntimeLeafRef(G111_LINEAGE_SOURCE, key)
+            for key in lineage
+        )
+        return runtime, {
+            owner: tuple(rows)
+            for owner, rows in refs.items()
+        }
+
+    def _publish_g111_native_checkpoint(
+        *,
+        epoch: int,
+        deploy_arrays: Mapping[str, Any],
+        resume_arrays: Mapping[str, Any],
+        seed_packed_state: Any | None,
+        capture: Any,
+        stage_tag: str | None,
+        periodic_stage_tag: str | None,
+        stop_latched: bool,
+    ) -> tuple[G111BoundInventory, dict[str, Any]]:
+        runtime, owner_refs = _g111_native_runtime(
+            epoch=int(epoch),
+            deploy_arrays=deploy_arrays,
+            resume_arrays=resume_arrays,
+            seed_packed_state=seed_packed_state,
+            capture=capture,
+            stop_latched=stop_latched,
+        )
+        schema = _g111_fresh_runtime_schema["value"]
+        if schema is None:
+            schema = build_fresh_g111_runtime_schema(
+                runtime,
+                owner_refs=owner_refs,
+            )
+            _g111_fresh_runtime_schema["value"] = schema
+        bound = bind_g111_owner_inventory(
+            runtime,
+            fresh_schema=schema,
+        )
+        latest_name = "levelset_g111_native_v3.npz"
+        reopened = write_and_reopen_g111_owner_inventory(
+            out_dir / latest_name,
+            bound,
+        )
+        native_written: dict[str, Any] = {
+            "g111_native_latest": latest_name,
+        }
+        preserved_tag = stage_tag or (
+            f"{periodic_stage_tag}_periodic"
+            if periodic_stage_tag is not None
+            else None
+        )
+        if preserved_tag is not None:
+            preserved_name = (
+                f"levelset_g111_native_{preserved_tag}_ep{int(epoch)}.npz"
+            )
+            write_and_reopen_g111_owner_inventory(
+                out_dir / preserved_name,
+                reopened,
+            )
+            native_written["g111_native_preserved"] = preserved_name
+        _require_g111_native_v3_launch_gate(reopened)
+        return reopened, native_written
+
+    def _do_checkpoint_impl(
         epoch: int,
         *,
         stage_tag: str | None = None,
         periodic_stage_tag: str | None = None,
         causal_boundary_kind: str | None = None,
         causal_stage: str | None = None,
+        g111_capture: Any | None = None,
     ) -> dict[str, Any]:
         nonlocal _fresh_lineage_parent_checkpoint_id
         nonlocal _fresh_lineage_parent_receipt_path
         nonlocal _fresh_lineage_parent_receipt_sha256
-        if _g111_native_verdict_on:
-            # The live worker/reducer has an explicit quiescent O4/O5 snapshot,
-            # but that snapshot is not yet admitted into the atomic O1-O6
-            # checkpoint publisher.  Never fall through to the legacy pending
-            # sidecar or imply crash-safe launch closure.
-            transaction = _g111_live_transaction
-            publisher = _g111_live_publisher
-            if transaction is None or publisher is None:
-                raise RuntimeError("G111 native-v3 checkpoint state is absent")
-            with _g111_prepared_checkpoint() as capture:
-                g111_live_verdict_state_arrays(
-                    capture.reducer_state,
-                    publisher.cursor,
-                    prefix="__g111_live__",
-                )
-                transaction.poison_checkpoint_publication(
-                    RuntimeError(
-                        "G111 native-v3 checkpoint publication remains blocked "
-                        "until the compact live-verdict O4/O5 arrays are bound "
-                        "into the validated O1-O6 transaction"
-                    )
-                )
-            raise AssertionError("unreachable G111 checkpoint refusal")
+        if _g111_native_verdict_on and g111_capture is None:
+            raise RuntimeError(
+                "G111 native-v3 checkpoint implementation was entered without "
+                "the quiescent transaction capture"
+            )
+        if not _g111_native_verdict_on and g111_capture is not None:
+            raise RuntimeError(
+                "legacy checkpoint received an unexpected G111 capture"
+            )
         _da_checkpoint_start_ns = time.perf_counter_ns()
         _da_checkpoint_clock = _component_clock
         shadow_np, live_np, opt_np, seed_packed_state = (
@@ -12471,12 +13103,36 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 parent_checkpoint_id=_fresh_lineage_parent_checkpoint_id,
             )
         )
+        native_written: dict[str, Any] = {}
+        if _g111_native_verdict_on:
+            transaction = _g111_live_transaction
+            obligation = _g111_post_checkpoint_obligation
+            if transaction is None or obligation is None:
+                raise RuntimeError("G111 native checkpoint state is absent")
+            stop_latched = causal_boundary_kind == "final"
+            if stop_latched:
+                obligation.assert_final_checkpoint_ready(
+                    next_submit_seq=transaction.next_submit_seq,
+                    next_apply_seq=transaction.next_apply_seq,
+                )
+            _, native_written = _publish_g111_native_checkpoint(
+                epoch=int(epoch),
+                deploy_arrays=ema_arrays,
+                resume_arrays=resume_arrays,
+                seed_packed_state=seed_packed_state,
+                capture=g111_capture,
+                stage_tag=stage_tag,
+                periodic_stage_tag=periodic_stage_tag,
+                stop_latched=stop_latched,
+            )
         # rolling latest: the byte-close default name + the quick resume target (overwritten atomically).
         _atomic_savez(out_dir / "levelset_witness_ema_mlx.npz", ema_arrays)
         _atomic_savez(out_dir / "levelset_resume_state.npz", resume_arrays)
         written: dict[str, Any] = {
             "epoch": epoch, "ema_latest": "levelset_witness_ema_mlx.npz",
-            "resume_latest": "levelset_resume_state.npz", "has_opt": bool(opt_np)}
+            "resume_latest": "levelset_resume_state.npz", "has_opt": bool(opt_np),
+            **native_written,
+        }
         if bool(getattr(args, "fresh_producer", False)):
             from tac.witness_control.fresh_producer_lineage_v1 import (
                 write_fresh_physical_checkpoint_node_v1,
@@ -12609,6 +13265,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _da_checkpoint_clock.add_ns(
                 "checkpoint_io_s", time.perf_counter_ns() - _da_checkpoint_start_ns)
         return written
+
+    def _do_checkpoint(
+        epoch: int,
+        *,
+        stage_tag: str | None = None,
+        periodic_stage_tag: str | None = None,
+        causal_boundary_kind: str | None = None,
+        causal_stage: str | None = None,
+    ) -> dict[str, Any]:
+        """Hold the native verdict barrier across capture and publication."""
+
+        if not _g111_native_verdict_on:
+            return _do_checkpoint_impl(
+                epoch,
+                stage_tag=stage_tag,
+                periodic_stage_tag=periodic_stage_tag,
+                causal_boundary_kind=causal_boundary_kind,
+                causal_stage=causal_stage,
+            )
+        with _g111_prepared_checkpoint() as capture:
+            return _do_checkpoint_impl(
+                epoch,
+                stage_tag=stage_tag,
+                periodic_stage_tag=periodic_stage_tag,
+                causal_boundary_kind=causal_boundary_kind,
+                causal_stage=causal_stage,
+                g111_capture=capture,
+            )
 
     # ---- RESUME restore (FEED-dz; --resume-from None => fresh start => behavior UNCHANGED). Loads
     # decoder + per-pair codes (live) + EMA shadow + optimizer + the epoch position;
@@ -14276,6 +14960,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "live": dict(tree_flatten(model.parameters())),
             "ema": dict(ema.shadow),
             "opt": dict(tree_flatten(opt.state)),
+            "completed_optimizer_steps": int(_live["ema_updates"]),
         }
         if _film_polar_state is not None and _film_polar_state.initialized:
             snap["film_polar"] = _film_polar_state.state_arrays(
@@ -14283,6 +14968,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if seed_mod is not None:
             snap["seed"] = dict(tree_flatten(seed_mod.parameters()))
             snap["seed_opt"] = dict(tree_flatten(seed_opt.state))
+            seed_packed = _snapshot_sparse_seed_state_mlx()
+            if seed_packed is None:
+                raise RuntimeError(
+                    "active protected seed snapshot did not produce sparse checkpoint state"
+                )
+            snap["seed_packed"] = dict(seed_packed.live)
+            snap["seed_opt_packed"] = dict(seed_packed.optimizer)
         _sg_state["snap"] = snap
         _sg_state["snap_epoch"] = int(ep)
 
@@ -14447,11 +15139,6 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _cold_contract_arrays.update(
                 _polyak.heavy_state_arrays(_RESUME_POLYAK_PREFIX)
             )
-        # The former native-v1 component-list check was not a serialized state
-        # transaction and could not prove continuation. A manifest-shaped array
-        # is likewise not evidence. Fail closed until _do_checkpoint produces a
-        # fully validated StagedTransaction from independent expected topology.
-        _require_g111_native_v3_launch_gate(None)
         print(
             json.dumps(
                 {
@@ -15089,7 +15776,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     "muon", status="fired", epoch=ep,
                     via=(_mstep.fired_by if _mstep is not None else "configured_boundary"))), flush=True)
                 if args.stage_checkpoints:
-                    _wm = _do_checkpoint(ep, stage_tag="stageMuonStart")
+                    # This checkpoint is taken before epoch ``ep`` performs
+                    # any optimizer work.  Its continuation coordinate is
+                    # therefore the end of ep-1, with ep still owed.
+                    _wm = _do_checkpoint(ep - 1, stage_tag="stageMuonStart")
                     stage_ckpts.append(_wm)
                     print(json.dumps({"stage": "checkpoint", "kind": "muon_finisher_start", **_wm}), flush=True)
             # lane-edge engagement gate + transition RE-TREAT (spike-guard reset at the engage epoch
@@ -15730,7 +16420,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # A complete octave checkpoint must encode the controller's NEW rung and model's NEW
                 # τ/β state together. Saving before these assignments produced a resume-inconsistent
                 # boundary artifact (new controller rung with old model continuation values).
-                _oc = _do_checkpoint(ep, stage_tag=f"stageOctave{int(_adv.rung)}")
+                _oc = _do_checkpoint(ep - 1, stage_tag=f"stageOctave{int(_adv.rung)}")
                 stage_ckpts.append(_oc)
             # (#292 build-3) closed-loop BOUNDED bump composes on TOP of the now-current rung/stage
             # schedule. Keeping this after the τ-rung recompute prevents the event-native actuator
@@ -15865,7 +16555,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     )
                     if _tail_endpoint is not None:
                         print(json.dumps(_tail_endpoint), flush=True)
-                    _tw = (_do_checkpoint(ep, stage_tag=_tstep.stage_tag + "_muon")
+                    _tw = (_do_checkpoint(ep - 1, stage_tag=_tstep.stage_tag + "_muon")
                            if args.stage_checkpoints else {})
                     if _tw:
                         stage_ckpts.append(_tw)
@@ -16328,6 +17018,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # fatal verdict cannot coexist with a later model state.
                 if _g111_live_transaction is not None:
                     _g111_live_transaction.assert_healthy()
+                if _g111_post_checkpoint_obligation is not None:
+                    _g111_post_checkpoint_obligation.assert_optimizer_step_allowed()
                 opt.update(model, clipped)
                 # The existing MultiOptimizer still visits film.weight in its
                 # standard tree, preserving all incumbent state/layout code.
@@ -16494,6 +17186,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (#292 build-3) closed-loop early-stop flag, re-armed each epoch by the decision
             # point below. OFF (default; the #205 path) => stays False => never fires.
             _cl_stop_now = False
+            if _evt_on:
+                is_transition = bool(
+                    args.stage_checkpoints and _evt_event is not None
+                )
+            else:
+                is_transition = (
+                    args.stage_checkpoints
+                    and ep < args.epochs
+                    and _seg_form_for_epoch(ep + 1, args) != seg_form
+                )
+            do_periodic = (
+                args.ckpt_every > 0 and ep % args.ckpt_every == 0
+            )
+            _g111_checkpoint_collision = bool(
+                _g111_native_verdict_on
+                and (is_transition or do_periodic)
+                and (ep % args.eval_every == 0 or ep == args.epochs)
+            )
+            _g111_boundary_kind = (
+                "stage_transition" if is_transition else "intra_stage"
+            )
             if ep % args.eval_every == 0 or ep == args.epochs:
                 if args.async_verdict:
                     # (#480) time the MAIN-thread submit block (join + decide + snapshot +
@@ -16502,7 +17215,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _rp_t0 = time.perf_counter_ns()
                     # FEED-em: offload the observational verdict to a background thread so the
                     # GPU loop never idles. BIT-IDENTICAL training (verdict is never read back).
-                    if _cl_on:
+                    if _g111_native_verdict_on:
+                        # Native-v3 always joins the previous result before a
+                        # decision or checkpoint. At a cadence collision the
+                        # current verdict becomes a fixed post-checkpoint
+                        # obligation instead of an in-flight payload.
+                        _join_async_verdict()
+                        if _cl_on:
+                            _cl_stop_now = _cl_decide(ep)
+                        if _g111_checkpoint_collision:
+                            _arm_g111_post_checkpoint_verdict(
+                                ep=ep,
+                                seg_form=seg_form,
+                                boundary_kind=_g111_boundary_kind,
+                            )
+                        else:
+                            _schedule_async_verdict(
+                                ep,
+                                seg_form,
+                                ep_loss,
+                            )
+                    elif _cl_on:
                         # ── (M2 fix) DECIDE-ON-PREVIOUS-VERDICT reorder (closed-loop + async) ──
                         # The pre-fix order (schedule THIS epoch's verdict, then JOIN it at the
                         # decision point) blocked the GPU for the FULL verdict wall at every eval
@@ -16528,7 +17261,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         # closed-loop OFF async path — the ORIGINAL FEED-em order, unchanged:
                         # at the FINAL epoch, JOIN first so the last row is not skip-throttled.
                         _join_async_verdict()
-                    _schedule_async_verdict(ep, seg_form, ep_loss)
+                    if not _g111_native_verdict_on:
+                        _schedule_async_verdict(ep, seg_form, ep_loss)
                     _rp_ns["submit"] += time.perf_counter_ns() - _rp_t0  # (#480) submit block end
                 else:
                     _da_sync_verdict_start_ns = time.perf_counter_ns()
@@ -16790,21 +17524,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if _polyak is not None:
                 _polyak.observe(ep, {k: np.asarray(v, np.float32)
                                      for k, v in tree_flatten(model.parameters())})
+            if _evt_on or _nucleus_on:
+                # This completed-epoch loss is trajectory state required to
+                # reconstruct a post-checkpoint verdict. Persist it before any
+                # checkpoint at this coordinate.
+                _evt_state["losses"].append(float(ep_loss))
             # ---- CHECKPOINTING (FEED-dz; mandatory per operator "never launch non-resumable / save
             # per-stage" rule). PER-STAGE: at every curriculum-stage TRANSITION save a PRESERVED,
             # stage-encoded, byte-close-loadable ckpt (per-stage A/B of which stage moves d_seg).
             # INTRA-STAGE: every --ckpt-every epochs save the rolling latest (crash-resume window).
-            if _evt_on:
-                # (#292 build-2) event-triggered: the OFF lookahead _seg_form_for_epoch(ep+1) is invalid
-                # (the next transition depends on FUTURE losses not yet known), so save the PRESERVED
-                # stage-transition ckpt at the epoch the transition ACTUALLY fired (this epoch, the first
-                # of the new stage). _evt_event is set at the START of this epoch by _evt_resolve_seg_form.
-                is_transition = bool(args.stage_checkpoints and _evt_event is not None)
-            else:
-                is_transition = (
-                    args.stage_checkpoints and ep < args.epochs
-                    and _seg_form_for_epoch(ep + 1, args) != seg_form)
-            do_periodic = args.ckpt_every > 0 and ep % args.ckpt_every == 0
             if is_transition:
                 # FEED-fi: tag the preserved ckpt with the optimizer phase too, so a curriculum
                 # transition DURING the Muon finisher is distinctly byte-closeable (suffix "" when
@@ -16816,6 +17544,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 )
                 stage_ckpts.append(w)
                 print(json.dumps({"stage": "checkpoint", "kind": "stage_transition", **w}), flush=True)
+                if _g111_checkpoint_collision:
+                    _discharge_g111_post_checkpoint_verdict(
+                        ep=ep,
+                        seg_form=seg_form,
+                        ep_loss=ep_loss,
+                        boundary_kind=_g111_boundary_kind,
+                    )
             elif do_periodic:
                 w = _do_checkpoint(
                     ep,
@@ -16823,6 +17558,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     causal_stage=str(seg_form),
                 )
                 print(json.dumps({"stage": "checkpoint", "kind": "intra_stage", **w}), flush=True)
+                if _g111_checkpoint_collision:
+                    _discharge_g111_post_checkpoint_verdict(
+                        ep=ep,
+                        seg_form=seg_form,
+                        ep_loss=ep_loss,
+                        boundary_kind=_g111_boundary_kind,
+                    )
             # (MOD-DIM DYNAMICS 2026-07-08, cut 3) per-dim d_seg zero-ablation attribution at CHECKPOINT
             # cadence (heavier => governor-gated + skip-logged inside the helper). AFTER the checkpoint
             # write so I/O completes first; OBSERVABILITY-ONLY (renders on a COPY of the code, never read
@@ -16861,15 +17603,6 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl "
                     "1/((1-f)+f/su_R); advisory, buys SPEED not score; canonical effective-frontier pointer UNMOVED"}),
                     flush=True)
-            if _evt_on or _nucleus_on:
-                # (#292 build-2) record THIS epoch's synchronous training loss into the current stage's
-                # history, consumed by _evt_resolve_seg_form at the START of the NEXT epoch (so the
-                # controller only ever reads PAST epochs -> no lookahead). ep_loss is the seeded per-epoch
-                # loss sum (NOT the async d_seg verdict) => the fired epochs stay deterministic. When ONLY
-                # --handoff-readiness-telemetry is on (event trigger OFF), the history still feeds the
-                # readiness row's plateau_ok (passive validation) but no boundary ever fires => training
-                # is byte-identical. Both OFF => skipped entirely => byte-identical (the #205 path).
-                _evt_state["losses"].append(float(ep_loss))
             # task-408 Q1: one per-epoch aggregation row from the norms the
             # existing global/per-group clip sites already materialized.
             print(json.dumps(_clip_activation.row(epoch=int(ep))), flush=True)

@@ -507,7 +507,7 @@ def test_validation_binds_best_summary_and_effect_payload_hash() -> None:
         validate_reducer_state(bad_effect)
 
 
-def test_real_trainer_source_wires_native_order_and_keeps_admission_blocked() -> None:
+def test_real_trainer_source_wires_native_order_and_atomic_admission() -> None:
     from experiments import train_levelset_witness_realized_through_R_mlx as trainer
 
     source = inspect.getsource(trainer.run_train)
@@ -516,12 +516,13 @@ def test_real_trainer_source_wires_native_order_and_keeps_admission_blocked() ->
     assert "reduce_g111_live_verdict_result" in source
     assert "transaction.apply_external_effect_transition(" in source
     assert "transaction.prepared_checkpoint(" in source
-    assert "transaction.poison_checkpoint_publication(" in source
     assert "_g111_live_transaction.assert_healthy()" in source
     assert "_publish_g111_live_completed(wait=True)" in source
     assert "tuple(dir_feats_per_pair[pi].copy() for pi in vpairs)" in source
-    assert "_require_g111_native_v3_launch_gate(None)" in source
-    assert "checkpoint publication remains blocked" in source
+    assert "_publish_g111_native_checkpoint(" in source
+    assert "_require_g111_native_v3_launch_gate(reopened)" in source
+    assert "bind_g111_owner_inventory(" in source
+    assert "write_and_reopen_g111_owner_inventory(" in source
     pure_scorer = source[
         source.index("def _g111_pure_verdict_from_snapshot") :
         source.index("history: list[dict[str, Any]]")
