@@ -66,6 +66,9 @@ DISPOSITIONS: Final = frozenset(
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _STAGE_TAG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _UNSIGNED_DECIMAL = re.compile(r"^(0|[1-9][0-9]*)(?:\.[0-9]+)?$")
+_PRESERVED_DEPLOY = re.compile(
+    r"^levelset_ckpt_(?P<tag>stage[A-Za-z0-9_]+)_ep(?P<epoch>[0-9]+)\.npz$"
+)
 _EPHEMERAL_ROOTS: Final = (
     Path("/tmp"),
     Path("/private/tmp"),
@@ -126,6 +129,25 @@ class G121StageHarvestResultV1:
     scorer_replay_count: int
     reused_measurement_count: int
     exhaustive_enumeration_proven: bool = True
+    research_only: bool = True
+    score_claim: bool = False
+    evaluation_claim: bool = False
+    promotion_eligible: bool = False
+    pointer_moved: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class G121StageHarvestProgressV1:
+    """Durable incremental work; deliberately carries no exhaustive manifest."""
+
+    stage_ledger_path: Path
+    stage_ledger_sha256: str
+    discovered_stage_count: int
+    accounted_stage_count: int
+    scorer_replay_count: int
+    reused_measurement_count: int
+    exhaustive_enumeration_proven: bool = False
+    producer_terminal_proven: bool = False
     research_only: bool = True
     score_claim: bool = False
     evaluation_claim: bool = False
@@ -1317,16 +1339,48 @@ def harvest_g111_stages_v1(
     output_dir: Path,
     progress_dir: Path,
 ) -> G121StageHarvestResultV1:
-    """Harvest every immutable fresh-lineage G111 stage through G120-v2."""
+    """Finalize every preserved G111 stage after terminal-tip proof."""
 
     g120 = _require_safe_g120_v2()
-    return _harvest_g111_stages_impl(
+    result = _harvest_g111_stages_impl(
         producer_run_dir=producer_run_dir,
         expected_launch_manifest_sha256=expected_launch_manifest_sha256,
         output_dir=output_dir,
         progress_dir=progress_dir,
         g120_module=g120,
+        finalize=True,
     )
+    if not isinstance(result, G121StageHarvestResultV1):
+        raise AssertionError("final G121 harvest returned incremental progress")
+    return result
+
+
+def harvest_g111_available_stages_v1(
+    *,
+    producer_run_dir: Path,
+    expected_launch_manifest_sha256: str,
+    output_dir: Path,
+    progress_dir: Path,
+) -> G121StageHarvestProgressV1:
+    """Measure the currently preserved stage set without claiming completion.
+
+    This is the only production entrypoint intended while G111 is still live.
+    It may append idempotent stage attempts, but it cannot emit either the
+    exhaustive completion receipt or the retained-prepose manifest.
+    """
+
+    g120 = _require_safe_g120_v2()
+    result = _harvest_g111_stages_impl(
+        producer_run_dir=producer_run_dir,
+        expected_launch_manifest_sha256=expected_launch_manifest_sha256,
+        output_dir=output_dir,
+        progress_dir=progress_dir,
+        g120_module=g120,
+        finalize=False,
+    )
+    if not isinstance(result, G121StageHarvestProgressV1):
+        raise AssertionError("incremental G121 harvest returned a final result")
+    return result
 
 
 def _open_g121_retained_prepose_impl(
@@ -1666,7 +1720,8 @@ def _harvest_g111_stages_impl(
     output_dir: Path,
     progress_dir: Path,
     g120_module: Any,
-) -> G121StageHarvestResultV1:
+    finalize: bool,
+) -> G121StageHarvestResultV1 | G121StageHarvestProgressV1:
     producer = _durable_directory(producer_run_dir, name="producer_run_dir")
     output = _durable_directory(output_dir, name="output_dir")
     progress = _durable_directory(progress_dir, name="progress_dir")
@@ -1685,6 +1740,17 @@ def _harvest_g111_stages_impl(
     if not stages:
         raise G121StageHarvestError(
             "no immutable fresh-lineage G111 stages were discovered"
+        )
+    terminal_binding: dict[str, object] | None = None
+    if finalize:
+        terminal_binding = _open_terminal_producer_result(
+            producer,
+            expected_current_launch_dsl_compile_hash=compile_hash,
+            expected_final_checkpoint_id=str(
+                stages[-1]["source_stage_identity"][
+                    "g111_checkpoint_id_sha256"
+                ]
+            ),
         )
     ledger_path = output / STAGE_LEDGER_BASENAME
     existing = _read_stage_ledger(ledger_path)
@@ -1717,7 +1783,6 @@ def _harvest_g111_stages_impl(
             g112_binding = _materialize_or_open_g112_stage(
                 producer=producer,
                 stage=stage,
-                expected_current_launch_dsl_compile_hash=compile_hash,
             )
             prior_measurement: dict[str, Any] | None = None
             if prior is not None and prior.get("attempt_status") == "COMPLETED":
@@ -1824,6 +1889,45 @@ def _harvest_g111_stages_impl(
         )
         _append_attempt(ledger_path, row)
         stage_rows.append(row)
+    if not finalize:
+        ledger_binding = _binding_from_path(
+            ledger_path,
+            name="G121 incremental stage ledger",
+        )
+        return G121StageHarvestProgressV1(
+            stage_ledger_path=ledger_path,
+            stage_ledger_sha256=str(ledger_binding["sha256"]),
+            discovered_stage_count=len(stages),
+            accounted_stage_count=len(stage_rows),
+            scorer_replay_count=scorer_replay_count,
+            reused_measurement_count=reused_measurement_count,
+        )
+    stages_after = _discover_physical_stages(
+        producer,
+        expected_current_launch_dsl_compile_hash=compile_hash,
+    )
+    before_ids = [
+        str(row["source_stage_identity"]["g111_checkpoint_id_sha256"])
+        for row in stages
+    ]
+    after_ids = [
+        str(row["source_stage_identity"]["g111_checkpoint_id_sha256"])
+        for row in stages_after
+    ]
+    if before_ids != after_ids:
+        raise G121StageHarvestError(
+            "eligible preserved-stage census changed during final harvest; "
+            "rerun reuses completed measurements"
+        )
+    reopened_terminal = _open_terminal_producer_result(
+        producer,
+        expected_current_launch_dsl_compile_hash=compile_hash,
+        expected_final_checkpoint_id=after_ids[-1],
+    )
+    if reopened_terminal != terminal_binding:
+        raise G121StageHarvestError(
+            "producer terminal receipt changed during final harvest"
+        )
     return _publish_reductions(
         output_dir=output,
         ledger_path=ledger_path,
@@ -1979,37 +2083,98 @@ def _discover_physical_stages(
     lineage_dir = producer / "fresh_lineage"
     if lineage_dir.is_symlink() or not lineage_dir.is_dir():
         raise G121StageHarvestError("fresh_lineage directory is absent")
-    from tac.witness_control.fresh_producer_lineage_v1 import (
-        open_fresh_physical_checkpoint_chain_v1,
-    )
-
-    rows: list[dict[str, Any]] = []
-    seen_checkpoint_ids: set[str] = set()
-    for receipt_path in sorted(lineage_dir.glob("*.receipt.json")):
+    receipt_paths = sorted(lineage_dir.glob("*.receipt.json"))
+    if not receipt_paths:
+        return []
+    for receipt_path in receipt_paths:
         if receipt_path.is_symlink() or not receipt_path.is_file():
             raise G121StageHarvestError(
                 "fresh-lineage enumeration found a non-regular receipt"
             )
-        payload, receipt_binding = _stable_regular_file(
-            receipt_path.resolve(),
-            name="fresh-lineage receipt",
+    tip_payload, _tip_binding = _stable_regular_file(
+        producer / "fresh_lineage_tip.json",
+        name="fresh-lineage tip",
+    )
+    try:
+        tip = json.loads(tip_payload.decode("ascii"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise G121StageHarvestError("fresh-lineage tip is corrupt") from exc
+    tip_keys = {
+        "schema",
+        "receipt_path",
+        "receipt_sha256",
+        "receipt_bytes",
+        "checkpoint_id_sha256",
+        "root_sha256",
+        "sequence_index",
+        "epoch",
+        "stage",
+        "complete_trajectory_proven",
+    }
+    if (
+        type(tip) is not dict
+        or set(tip) != tip_keys
+        or tip["schema"] != "tac.fresh_producer_lineage_tip.v1"
+        or tip["complete_trajectory_proven"] is not True
+    ):
+        raise G121StageHarvestError("fresh-lineage tip schema or custody differs")
+    from tac.witness_control.fresh_producer_lineage_v1 import (
+        FreshProducerPhysicalCheckpointChainV1,
+        open_fresh_physical_checkpoint_chain_v1,
+    )
+
+    tip_receipt = Path(str(tip["receipt_path"]))
+    if not tip_receipt.is_absolute():
+        raise G121StageHarvestError("fresh-lineage tip receipt path is not absolute")
+    chain = open_fresh_physical_checkpoint_chain_v1(
+        tip_receipt,
+        expected_receipt_sha256=_require_sha256(
+            tip["receipt_sha256"],
+            name="fresh-lineage tip receipt SHA-256",
+        ),
+        expected_current_launch_dsl_compile_hash=(
+            expected_current_launch_dsl_compile_hash
+        ),
+    )
+    current = chain.current
+    if (
+        tip_receipt.resolve() != current.receipt_path.resolve()
+        or tip["receipt_bytes"] != current.receipt_bytes
+        or tip["checkpoint_id_sha256"] != current.pair.checkpoint_id_sha256
+        or tip["root_sha256"] != chain.root_sha256
+        or tip["sequence_index"] != current.sequence_index
+        or tip["epoch"] != current.pair.epoch
+        or tip["stage"] != current.pair.stage
+    ):
+        raise G121StageHarvestError(
+            "fresh-lineage tip differs from its recursively reopened chain"
         )
-        del payload
-        chain = open_fresh_physical_checkpoint_chain_v1(
-            receipt_path.resolve(),
-            expected_receipt_sha256=str(receipt_binding["sha256"]),
-            expected_current_launch_dsl_compile_hash=(
-                expected_current_launch_dsl_compile_hash
+    enumerated_receipts = {path.resolve() for path in receipt_paths}
+    ancestry_receipts = {node.receipt_path.resolve() for node in chain.nodes}
+    if enumerated_receipts != ancestry_receipts:
+        raise G121StageHarvestError(
+            "fresh-lineage receipt census is not the unique current-tip ancestry"
+        )
+    preserved = _preserved_stage_checkpoint_ids(producer, chain.nodes)
+
+    rows: list[dict[str, Any]] = []
+    for index, node in enumerate(chain.nodes):
+        pair = node.pair
+        if pair.checkpoint_id_sha256 not in preserved:
+            continue
+        prefix = FreshProducerPhysicalCheckpointChainV1(
+            nodes=chain.nodes[: index + 1],
+            current=node,
+            root_sha256=chain.root_sha256,
+            current_launch_dsl_compile_hash=(
+                pair.current_launch_dsl_compile_hash
             ),
         )
-        if chain.complete_trajectory_proven is not True:
-            raise G121StageHarvestError("fresh physical lineage is incomplete")
-        pair = chain.current.pair
-        if pair.checkpoint_id_sha256 in seen_checkpoint_ids:
-            raise G121StageHarvestError(
-                "duplicate immutable checkpoint identity discovered"
-            )
-        seen_checkpoint_ids.add(pair.checkpoint_id_sha256)
+        receipt_binding = {
+            "path": str(node.receipt_path),
+            "bytes": node.receipt_bytes,
+            "sha256": node.receipt_sha256,
+        }
         source = {
             "g111_deploy_checkpoint": {
                 "path": str(pair.deploy.path),
@@ -2030,24 +2195,172 @@ def _discover_physical_stages(
         rows.append(
             {
                 "stage_tag": (
-                    f"{pair.stage}.epoch_{pair.epoch}."
+                    f"{preserved[pair.checkpoint_id_sha256]}.epoch_{pair.epoch}."
                     f"chk_{pair.checkpoint_id_sha256[:12]}"
                 ),
                 "source_stage_identity": source,
                 "source_stage_identity_sha256": _sha256(
                     _canonical_json(source)
                 ),
-                "chain": chain,
+                "chain": prefix,
             }
         )
     return rows
+
+
+def _preserved_stage_checkpoint_ids(
+    producer: Path,
+    nodes: Sequence[object],
+) -> dict[str, str]:
+    """Map only physical nodes with a preserved stage/final alias.
+
+    Periodic nodes are immutable in ``fresh_lineage`` too, but G121's contract
+    explicitly excludes them.  The trainer writes the preserved deploy/resume
+    pair from the same captured arrays immediately after publishing the physical
+    node. Each alias pair is therefore reopened as a complete fresh-producer
+    checkpoint and must recompute the exact physical checkpoint ID. The NPZ ZIP
+    container bytes need not match because the two atomic ``np.savez`` calls can
+    carry different container metadata.
+    """
+
+    from tac.witness_control.fresh_producer_lineage_v1 import (
+        FreshProducerLineageV1Error,
+        open_fresh_producer_checkpoint_pair_v1,
+    )
+
+    mapped: dict[str, str] = {}
+    for deploy_path in sorted(producer.glob("levelset_ckpt_stage*_ep*.npz")):
+        if deploy_path.is_symlink() or not deploy_path.is_file():
+            raise G121StageHarvestError(
+                "preserved deploy checkpoint is not a regular file"
+            )
+        match = _PRESERVED_DEPLOY.fullmatch(deploy_path.name)
+        if match is None:
+            continue
+        stage_tag = match.group("tag")
+        epoch = int(match.group("epoch"))
+        resume_path = producer / f"levelset_resume_{stage_tag}_ep{epoch}.npz"
+        _deploy_payload, deploy_binding = _stable_regular_file(
+            deploy_path.resolve(),
+            name="preserved stage deploy checkpoint",
+        )
+        _resume_payload, resume_binding = _stable_regular_file(
+            resume_path.resolve(),
+            name="preserved stage resume checkpoint",
+        )
+        candidates = [node for node in nodes if node.pair.epoch == epoch]
+        matched: list[object] = []
+        for node in candidates:
+            try:
+                alias_pair = open_fresh_producer_checkpoint_pair_v1(
+                    deploy_checkpoint=deploy_path.resolve(),
+                    expected_deploy_sha256=str(deploy_binding["sha256"]),
+                    resume_checkpoint=resume_path.resolve(),
+                    expected_resume_sha256=str(resume_binding["sha256"]),
+                    expected_current_launch_dsl_compile_hash=(
+                        node.pair.current_launch_dsl_compile_hash
+                    ),
+                )
+            except FreshProducerLineageV1Error:
+                continue
+            if (
+                alias_pair.checkpoint_id_sha256
+                == node.pair.checkpoint_id_sha256
+            ):
+                matched.append(node)
+        if len(matched) != 1:
+            raise G121StageHarvestError(
+                "preserved stage alias does not uniquely reopen one current-ancestry "
+                "physical checkpoint"
+            )
+        checkpoint_id = matched[0].pair.checkpoint_id_sha256
+        prior = mapped.get(checkpoint_id)
+        if prior is not None and prior != stage_tag:
+            raise G121StageHarvestError(
+                "two preserved stage aliases name the same physical state"
+            )
+        mapped[checkpoint_id] = stage_tag
+    return mapped
+
+
+def _open_terminal_producer_result(
+    producer: Path,
+    *,
+    expected_current_launch_dsl_compile_hash: str,
+    expected_final_checkpoint_id: str,
+) -> dict[str, object]:
+    """Prove the trainer's terminal result names the current physical tip."""
+
+    _require_sha256(
+        expected_current_launch_dsl_compile_hash,
+        name="terminal launch DSL compile hash",
+    )
+    expected_id = _require_sha256(
+        expected_final_checkpoint_id,
+        name="terminal checkpoint identity",
+    )
+    payload, binding = _stable_regular_file(
+        producer / "levelset_train_result.json",
+        name="G111 terminal train result",
+    )
+    try:
+        result = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise G121StageHarvestError("G111 terminal train result is corrupt") from exc
+    stages = result.get("stage_checkpoints") if type(result) is dict else None
+    if (
+        type(result) is not dict
+        or result.get("n_pairs") != 600
+        or result.get("resumable") is not True
+        or type(result.get("final_epoch")) is not int
+        or type(stages) is not list
+        or not stages
+        or type(stages[-1]) is not dict
+    ):
+        raise G121StageHarvestError(
+            "G111 terminal train result lacks n600 resumable final custody"
+        )
+    final = stages[-1]
+    required = {
+        "kind": "final",
+        "fresh_lineage_complete_trajectory_proven": True,
+        "fresh_lineage_checkpoint_id_sha256": expected_id,
+    }
+    if any(final.get(key) != value for key, value in required.items()):
+        raise G121StageHarvestError(
+            "G111 terminal result does not name the expected physical final node"
+        )
+    if final.get("epoch") != result["final_epoch"]:
+        raise G121StageHarvestError(
+            "G111 terminal result final epoch differs from its checkpoint"
+        )
+    receipt_path = Path(str(final.get("fresh_lineage_receipt", "")))
+    receipt_sha = _require_sha256(
+        final.get("fresh_lineage_receipt_sha256"),
+        name="terminal fresh-lineage receipt SHA-256",
+    )
+    from tac.witness_control.fresh_producer_lineage_v1 import (
+        open_fresh_physical_checkpoint_chain_v1,
+    )
+
+    terminal_chain = open_fresh_physical_checkpoint_chain_v1(
+        receipt_path,
+        expected_receipt_sha256=receipt_sha,
+        expected_current_launch_dsl_compile_hash=(
+            expected_current_launch_dsl_compile_hash
+        ),
+    )
+    if terminal_chain.current.pair.checkpoint_id_sha256 != expected_id:
+        raise G121StageHarvestError(
+            "G111 terminal result receipt differs from the final checkpoint"
+        )
+    return binding
 
 
 def _materialize_or_open_g112_stage(
     *,
     producer: Path,
     stage: Mapping[str, object],
-    expected_current_launch_dsl_compile_hash: str,
 ) -> dict[str, object]:
     from tac.witness_control.taskspace_g112_exact_checkpoint_partition_v1 import (
         materialize_g112_checkpoint_partition,
@@ -2084,7 +2397,7 @@ def _materialize_or_open_g112_stage(
         lineage_receipt=chain.current.receipt_path,
         expected_lineage_receipt_sha256=chain.current.receipt_sha256,
         expected_current_launch_dsl_compile_hash=(
-            expected_current_launch_dsl_compile_hash
+            pair.current_launch_dsl_compile_hash
         ),
         output_root=root,
     )
@@ -2417,7 +2730,9 @@ __all__ = [
     "G121RetainedPreposeV2",
     "G121RetainedStageV2",
     "G121StageHarvestError",
+    "G121StageHarvestProgressV1",
     "G121StageHarvestResultV1",
+    "harvest_g111_available_stages_v1",
     "harvest_g111_stages_v1",
     "open_g121_retained_prepose_v1",
 ]

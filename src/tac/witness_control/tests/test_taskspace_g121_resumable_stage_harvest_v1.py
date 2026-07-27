@@ -4,13 +4,20 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from decimal import Decimal
 from fractions import Fraction
 from pathlib import Path
+from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
+from tac.witness_control import fresh_producer_lineage_v1 as lineage
 from tac.witness_control import taskspace_g121_resumable_stage_harvest_v1 as g121
+from tac.witness_control.tests import (
+    test_fresh_producer_lineage_v1 as lineage_fixtures,
+)
 
 
 def _binding(path: Path, payload: bytes) -> dict[str, object]:
@@ -261,6 +268,7 @@ def test_public_surface_is_frozen() -> None:
     assert g121.RETAINED_PREPOSE_SCHEMA == "tac.g121_retained_prepose.v2"
     assert g121.RETAINED_PREPOSE_BASENAME == "g121_retained_prepose.json"
     assert callable(g121.harvest_g111_stages_v1)
+    assert callable(g121.harvest_g111_available_stages_v1)
     assert callable(g121.open_g121_retained_prepose_v1)
 
 
@@ -289,6 +297,59 @@ def test_production_rejects_unsafe_g120_v1(
             output_dir=tmp_path / "out",
             progress_dir=tmp_path / "progress",
         )
+
+
+def test_live_and_final_public_entrypoints_select_distinct_authority_modes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    modes: list[bool] = []
+    progress = g121.G121StageHarvestProgressV1(
+        stage_ledger_path=tmp_path / "ledger",
+        stage_ledger_sha256="a" * 64,
+        discovered_stage_count=1,
+        accounted_stage_count=1,
+        scorer_replay_count=1,
+        reused_measurement_count=0,
+    )
+    final = g121.G121StageHarvestResultV1(
+        retained_prepose_path=tmp_path / "retained",
+        retained_prepose_sha256="b" * 64,
+        completion_receipt_path=tmp_path / "complete",
+        completion_receipt_sha256="c" * 64,
+        stage_ledger_path=tmp_path / "ledger",
+        stage_ledger_sha256="d" * 64,
+        scheduling_hint_path=None,
+        scheduling_hint_sha256=None,
+        discovered_stage_count=1,
+        accounted_stage_count=1,
+        retained_stage_count=1,
+        deferred_stage_count=0,
+        pruned_stage_count=0,
+        blocked_stage_count=0,
+        scorer_replay_count=0,
+        reused_measurement_count=1,
+    )
+    monkeypatch.setattr(g121, "_require_safe_g120_v2", lambda: object())
+
+    def fake_impl(**kwargs):
+        modes.append(kwargs["finalize"])
+        return final if kwargs["finalize"] else progress
+
+    monkeypatch.setattr(g121, "_harvest_g111_stages_impl", fake_impl)
+    common = {
+        "producer_run_dir": tmp_path,
+        "expected_launch_manifest_sha256": "e" * 64,
+        "output_dir": tmp_path / "out",
+        "progress_dir": tmp_path / "progress",
+    }
+    assert (
+        g121.harvest_g111_available_stages_v1(**common)
+        .exhaustive_enumeration_proven
+        is False
+    )
+    assert g121.harvest_g111_stages_v1(**common).exhaustive_enumeration_proven
+    assert modes == [False, True]
 
 
 def test_equality_is_not_retained() -> None:
@@ -553,6 +614,136 @@ def test_best_and_rolling_files_are_not_discovered(tmp_path: Path) -> None:
         tmp_path,
         expected_current_launch_dsl_compile_hash="0" * 64,
     ) == []
+
+
+def test_discovery_uses_latest_tip_ancestry_filters_periodic_and_accepts_resume_hash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    producer = tmp_path.resolve()
+    physical = producer / "fresh_lineage"
+    physical.mkdir()
+    old_hash = hashlib.sha256(b"old launch").hexdigest()
+    latest_hash = hashlib.sha256(b"latest launch").hexdigest()
+    root_sha = hashlib.sha256(b"cold root").hexdigest()
+
+    def node(label: str, epoch: int, launch_hash: str):
+        checkpoint_id = hashlib.sha256(f"checkpoint:{label}".encode()).hexdigest()
+        receipt = physical / f"{checkpoint_id}.receipt.json"
+        receipt.write_bytes(f"receipt:{label}".encode())
+        deploy_payload = f"deploy:{label}".encode()
+        resume_payload = f"resume:{label}".encode()
+        deploy_path = physical / f"{checkpoint_id}.deploy.npz"
+        resume_path = physical / f"{checkpoint_id}.resume.npz"
+        deploy_path.write_bytes(deploy_payload)
+        resume_path.write_bytes(resume_payload)
+        pair = SimpleNamespace(
+            checkpoint_id_sha256=checkpoint_id,
+            epoch=epoch,
+            stage="unify_tau",
+            current_launch_dsl_compile_hash=launch_hash,
+            deploy=SimpleNamespace(
+                path=deploy_path,
+                bytes=len(deploy_payload),
+                sha256=hashlib.sha256(deploy_payload).hexdigest(),
+            ),
+            resume=SimpleNamespace(
+                path=resume_path,
+                bytes=len(resume_payload),
+                sha256=hashlib.sha256(resume_payload).hexdigest(),
+            ),
+        )
+        return SimpleNamespace(
+            receipt_path=receipt,
+            receipt_bytes=receipt.stat().st_size,
+            receipt_sha256=hashlib.sha256(receipt.read_bytes()).hexdigest(),
+            sequence_index=epoch - 1,
+            pair=pair,
+        )
+
+    preserved_old = node("preserved-old", 1, old_hash)
+    periodic_latest = node("periodic-latest", 2, latest_hash)
+    chain = lineage.FreshProducerPhysicalCheckpointChainV1(
+        nodes=(preserved_old, periodic_latest),
+        current=periodic_latest,
+        root_sha256=root_sha,
+        current_launch_dsl_compile_hash=latest_hash,
+    )
+    monkeypatch.setattr(
+        lineage,
+        "open_fresh_physical_checkpoint_chain_v1",
+        lambda *_args, **_kwargs: chain,
+    )
+    monkeypatch.setattr(
+        lineage,
+        "open_fresh_producer_checkpoint_pair_v1",
+        lambda **_kwargs: preserved_old.pair,
+    )
+    (producer / "levelset_ckpt_stageCE_ep1.npz").write_bytes(
+        preserved_old.pair.deploy.path.read_bytes()
+    )
+    (producer / "levelset_resume_stageCE_ep1.npz").write_bytes(
+        preserved_old.pair.resume.path.read_bytes()
+    )
+    (producer / "fresh_lineage_tip.json").write_text(
+        json.dumps(
+            {
+                "schema": "tac.fresh_producer_lineage_tip.v1",
+                "receipt_path": str(periodic_latest.receipt_path),
+                "receipt_sha256": periodic_latest.receipt_sha256,
+                "receipt_bytes": periodic_latest.receipt_bytes,
+                "checkpoint_id_sha256": (
+                    periodic_latest.pair.checkpoint_id_sha256
+                ),
+                "root_sha256": root_sha,
+                "sequence_index": periodic_latest.sequence_index,
+                "epoch": periodic_latest.pair.epoch,
+                "stage": periodic_latest.pair.stage,
+                "complete_trajectory_proven": True,
+            },
+            sort_keys=True,
+        )
+    )
+
+    stages = g121._discover_physical_stages(
+        producer,
+        expected_current_launch_dsl_compile_hash=latest_hash,
+    )
+    assert len(stages) == 1
+    assert stages[0]["stage_tag"].startswith("stageCE.epoch_1.")
+    assert stages[0]["chain"].current is preserved_old
+    assert (
+        stages[0]["chain"].current_launch_dsl_compile_hash == old_hash
+    )
+
+
+def test_preserved_alias_is_admitted_by_semantic_checkpoint_id_not_zip_bytes(
+    tmp_path: Path,
+) -> None:
+    deploy, resume, launch_hash = lineage_fixtures._source_pair_arrays(
+        epoch=17,
+        stage="ce",
+    )
+    node = lineage_fixtures._publish_node(
+        tmp_path,
+        name="semantic",
+        deploy=deploy,
+        resume=resume,
+        launch_dsl=launch_hash,
+    )
+    producer = tmp_path / "run"
+    with np.load(node.pair.deploy.path, allow_pickle=False) as archive:
+        np.savez(
+            producer / "levelset_ckpt_stageCE_ep17.npz",
+            **{key: archive[key] for key in archive.files},
+        )
+    with np.load(node.pair.resume.path, allow_pickle=False) as archive:
+        np.savez(
+            producer / "levelset_resume_stageCE_ep17.npz",
+            **{key: archive[key] for key in archive.files},
+        )
+    mapped = g121._preserved_stage_checkpoint_ids(producer, (node,))
+    assert mapped == {node.pair.checkpoint_id_sha256: "stageCE"}
 
 
 def test_private_injection_requires_explicit_fixture_marker(tmp_path: Path) -> None:
