@@ -181,6 +181,11 @@ def test_active_config_reduces_every_live_controller_surface_to_state_and_intent
     # config and therefore remain byte-neutral.
     assert reduced.state["label_floor_series"] == []
     assert reduced.state["last_d_pose"] is None
+    assert reduced.state["ladder_costates"] == {
+        "epoch": 25,
+        "lane": pytest.approx(0.0002),
+        "movable": pytest.approx(0.00015),
+    }
     birth = reduced.state["birth_completion"]
     assert birth["fired_epochs"] == {"1": 25, "3": 25}
     assert len(birth["observations"]) == 1
@@ -263,6 +268,11 @@ def test_all_trajectory_series_and_replay_journal_are_bounded() -> None:
     assert state["history"][0]["epoch"] == 75
     assert state["annulus_series"][0]["epoch"] == 2_875
     assert state["last_d_pose"] == pytest.approx(0.0016 + 129e-7)
+    assert state["ladder_costates"] == {
+        "epoch": 3_250,
+        "lane": pytest.approx(0.0002),
+        "movable": pytest.approx(0.00015),
+    }
     with pytest.raises(
         G111VerdictControllerStateError,
         match="evicted controller result identity",
@@ -324,3 +334,22 @@ def test_restore_refuses_tamper_and_wrong_config() -> None:
     arrays["ctrl__state_payload"][10] ^= np.uint8(1)
     with pytest.raises(Exception, match=r"SHA-256|canonical"):
         state_from_arrays(arrays, prefix="ctrl__")
+
+
+def test_active_ladder_refuses_missing_or_nonpartitioned_per_class_signal() -> None:
+    config = _config()
+    for mutation in ("missing", "bad_share"):
+        effect = _live_effects(1)[0]
+        if mutation == "missing":
+            effect["payload"]["verdict"].pop("per_class")
+        else:
+            effect["payload"]["verdict"]["per_class"]["flip_share_by_class"] = [
+                0.6,
+                0.1,
+                0.1,
+                0.1,
+                0.0,
+            ]
+        _rehash_effect(effect)
+        with pytest.raises(G111VerdictControllerStateError, match="per_class"):
+            adapt_live_reducer_effect(effect, config=config)

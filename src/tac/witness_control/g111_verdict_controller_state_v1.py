@@ -33,6 +33,11 @@ from tac.witness_control.birth_completion import birth_complete, birth_persisten
 from tac.witness_control.event_wirings import lane_nucleus_event
 from tac.witness_control.g111_live_verdict_transaction_v1 import WORKER_PAYLOAD_SCHEMA
 from tac.witness_control.g111_verdict_barrier_v1 import ImmutableVerdictResult
+from tac.witness_curriculum.ladder_homotopy import (
+    ARM_LANE,
+    ARM_MOVABLE,
+    perclass_lambda_proxy,
+)
 
 SCHEMA: Final = "tac.g111_verdict_controller_state.v1"
 OBSERVATION_SCHEMA: Final = "tac.g111_verdict_controller_observation.v1"
@@ -109,6 +114,7 @@ _STATE_KEYS: Final = frozenset(
         "annulus_series",
         "label_floor_series",
         "last_d_pose",
+        "ladder_costates",
         "birth_completion",
     }
 )
@@ -243,12 +249,14 @@ class G111VerdictControllerConfigV1:
     annulus_sensor_enabled: bool = True
     label_floor_sensor_enabled: bool = False
     w_pose_law_enabled: bool = False
+    ladder_enabled: bool = True
     birth_completion_enabled: bool = True
     require_live_d_pose: bool = True
     n_classes: int = 5
     nucleus_within_flip_thresh: float = 0.5
     nucleus_min_part_frac: float = 0.0
     lane_class: int = 1
+    movable_class: int = 3
     birth_classes: tuple[int, ...] = (1, 3)
     birth_tau_persist: float = 0.8
     birth_area_band: float = 0.25
@@ -273,6 +281,7 @@ class G111VerdictControllerConfigV1:
             "annulus_sensor_enabled",
             "label_floor_sensor_enabled",
             "w_pose_law_enabled",
+            "ladder_enabled",
             "birth_completion_enabled",
             "require_live_d_pose",
         ):
@@ -293,6 +302,11 @@ class G111VerdictControllerConfigV1:
         lane_class = _integer(self.lane_class, name="lane_class")
         if lane_class >= n_classes:
             raise G111VerdictControllerStateError("lane_class exceeds n_classes")
+        movable_class = _integer(self.movable_class, name="movable_class")
+        if movable_class >= n_classes:
+            raise G111VerdictControllerStateError("movable_class exceeds n_classes")
+        if lane_class == movable_class:
+            raise G111VerdictControllerStateError("lane_class and movable_class must differ")
         if not self.birth_classes or len(set(self.birth_classes)) != len(self.birth_classes):
             raise G111VerdictControllerStateError("birth_classes must be non-empty and unique")
         for cls in self.birth_classes:
@@ -353,11 +367,13 @@ def active_g111_controller_config_v1(*, typed_config_sha256: str) -> G111Verdict
         annulus_sensor_enabled=True,
         label_floor_sensor_enabled=False,
         w_pose_law_enabled=False,
+        ladder_enabled=True,
         birth_completion_enabled=True,
         require_live_d_pose=True,
         nucleus_within_flip_thresh=0.5,
         nucleus_min_part_frac=0.0,
         lane_class=1,
+        movable_class=3,
         birth_classes=(1, 3),
         birth_tau_persist=0.8,
         birth_area_band=0.25,
@@ -391,6 +407,7 @@ def new_controller_state(
         "annulus_series": [],
         "label_floor_series": [],
         "last_d_pose": None,
+        "ladder_costates": None,
         "birth_completion": {
             "classes": list(cfg.birth_classes),
             "fired_epochs": {},
@@ -536,7 +553,11 @@ def adapt_live_reducer_effect(
     )
     per_class = verdict.get("per_class")
     if per_class is not None:
-        per_class = _clone(_mapping(per_class, name="verdict.per_class"))
+        per_class = _validate_per_class(per_class, config=cfg)
+    elif cfg.ladder_enabled:
+        raise G111VerdictControllerStateError(
+            "active LADDER controller requires verdict.per_class"
+        )
     pose_gate = verdict.get("_pose_gate_telemetry")
     if pose_gate is not None:
         pose_gate = _clone(_mapping(pose_gate, name="verdict._pose_gate_telemetry"))
@@ -614,9 +635,54 @@ def _validate_observation(
             raise G111VerdictControllerStateError("observation annulus value differs from metrics")
     elif config.annulus_sensor_enabled:
         raise G111VerdictControllerStateError("active annulus controller lacks metrics")
-    for field in ("per_class", "pose_gate"):
-        if value[field] is not None:
-            _mapping(value[field], name=f"observation {field}")
+    if value["per_class"] is not None:
+        normalized_per_class = _validate_per_class(
+            value["per_class"],
+            config=config,
+        )
+        if normalized_per_class != value["per_class"]:
+            raise G111VerdictControllerStateError(
+                "observation per_class differs from normalized vectors"
+            )
+    elif config.ladder_enabled:
+        raise G111VerdictControllerStateError(
+            "active LADDER controller lacks per_class vectors"
+        )
+    if value["pose_gate"] is not None:
+        _mapping(value["pose_gate"], name="observation pose_gate")
+
+
+def _validate_per_class(
+    per_class: object,
+    *,
+    config: G111VerdictControllerConfigV1,
+) -> dict[str, list[float]]:
+    value = _mapping(per_class, name="per_class")
+    expected = {"d_seg_by_class", "flip_share_by_class"}
+    if set(value) != expected:
+        raise G111VerdictControllerStateError("per_class fields differ")
+    normalized: dict[str, list[float]] = {}
+    for field in ("d_seg_by_class", "flip_share_by_class"):
+        raw = value[field]
+        if not isinstance(raw, (list, tuple)) or len(raw) != config.n_classes:
+            raise G111VerdictControllerStateError(
+                f"per_class.{field} must contain exactly {config.n_classes} values"
+            )
+        normalized[field] = [
+            _number(
+                item,
+                name=f"per_class.{field}[{index}]",
+                minimum=0.0,
+                maximum=1.0,
+            )
+            for index, item in enumerate(raw)
+        ]
+    share_sum = sum(normalized["flip_share_by_class"])
+    if not (math.isclose(share_sum, 0.0, abs_tol=1e-6) or math.isclose(share_sum, 1.0, abs_tol=5e-6)):
+        raise G111VerdictControllerStateError(
+            "per_class.flip_share_by_class must sum to zero or one"
+        )
+    return normalized
 
 
 def _nucleus_decision(
@@ -811,6 +877,25 @@ def reduce_controller_state(
         )
     if config.w_pose_law_enabled and obs["d_pose"] is not None and float(obs["d_pose"]) > 0.0:
         candidate["last_d_pose"] = float(obs["d_pose"])
+    if config.ladder_enabled:
+        per_class = obs["per_class"]
+        if per_class is None:  # guarded by observation validation; retain fail-closed locality
+            raise G111VerdictControllerStateError(
+                "active LADDER controller lacks per_class vectors"
+            )
+        rates = per_class["d_seg_by_class"]
+        shares = per_class["flip_share_by_class"]
+        candidate["ladder_costates"] = {
+            "epoch": int(obs["epoch"]),
+            ARM_LANE: perclass_lambda_proxy(
+                rates[config.lane_class],
+                shares[config.lane_class],
+            ),
+            ARM_MOVABLE: perclass_lambda_proxy(
+                rates[config.movable_class],
+                shares[config.movable_class],
+            ),
+        }
 
     verdict_row = {
         "stage": "verdict",
@@ -852,6 +937,7 @@ def reduce_controller_state(
         "annulus_series_length": len(candidate["annulus_series"]),
         "label_floor_series_length": len(candidate["label_floor_series"]),
         "last_d_pose": candidate["last_d_pose"],
+        "ladder_costates": candidate["ladder_costates"],
         "birth_fired_epochs": candidate["birth_completion"]["fired_epochs"],
     }
     intents = (
@@ -1052,6 +1138,18 @@ def validate_controller_state(state: Mapping[str, Any]) -> None:
         _string(row["seg_form"], name="label_floor_series seg_form")
     if value["last_d_pose"] is not None:
         _number(value["last_d_pose"], name="last_d_pose", minimum=0.0)
+    ladder_costates = value["ladder_costates"]
+    if ladder_costates is not None:
+        ladder = _mapping(ladder_costates, name="ladder_costates")
+        if set(ladder) != {"epoch", ARM_LANE, ARM_MOVABLE}:
+            raise G111VerdictControllerStateError("ladder_costates fields differ")
+        _integer(ladder["epoch"], name="ladder_costates epoch")
+        _number(ladder[ARM_LANE], name="ladder lane costate", minimum=0.0)
+        _number(ladder[ARM_MOVABLE], name="ladder movable costate", minimum=0.0)
+    elif config.ladder_enabled and next_sequence > 0:
+        raise G111VerdictControllerStateError(
+            "active LADDER controller lacks reduced costates"
+        )
     birth = _mapping(value["birth_completion"], name="birth_completion")
     _keys(birth, _BIRTH_KEYS, name="birth_completion")
     if birth["classes"] != list(config.birth_classes):
