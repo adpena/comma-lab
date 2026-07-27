@@ -11567,6 +11567,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if _g111_native_verdict_on
         else None
     )
+    # A cold launch binds its fresh-lineage DSL hash only after the complete
+    # initialized model state is hashed.  Keep these holders empty until that
+    # binding point; reading the namespace attribute here is necessarily early.
     _g111_controller_config = (
         active_g111_controller_config_v1(
             typed_config_sha256=_require_lineage_sha256(
@@ -11574,7 +11577,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "current launch DSL compile hash",
             )
         )
-        if _g111_native_verdict_on
+        if (
+            _g111_native_verdict_on
+            and hasattr(args, "_fresh_lineage_current_launch_dsl_compile_hash")
+        )
         else None
     )
     _g111_controller_state: dict[str, Any] = {
@@ -15119,6 +15125,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 )
             ),
         )
+        if _g111_native_verdict_on and _g111_controller_config is None:
+            _g111_controller_config = active_g111_controller_config_v1(
+                typed_config_sha256=_require_lineage_sha256(
+                    args._fresh_lineage_current_launch_dsl_compile_hash,
+                    "current launch DSL compile hash",
+                )
+            )
+            _g111_controller_state["value"] = new_g111_controller_state(
+                _g111_controller_config
+            )
         _cold_contract_arrays = _build_resume_state_arrays(
             _cold_live_np,
             _cold_shadow_np,
