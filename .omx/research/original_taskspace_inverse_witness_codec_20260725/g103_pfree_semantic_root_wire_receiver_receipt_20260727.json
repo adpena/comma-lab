@@ -1,0 +1,169 @@
+{
+  "schema": "tac.g103_pfree_semantic_root_wire_receiver_receipt.v1",
+  "written_at_utc": "2026-07-27T09:52:00Z",
+  "lane_id": "lane_g103_pfree_semantic_root_wire_receiver_20260727",
+  "git_head_observed": "91b251e96ea3d57ace8962bd0681ed8fc30c3f95",
+  "authority": "RESEARCH_ONLY_SOURCE_BACKED_BEHAVIOR",
+  "research_only": true,
+  "candidate": false,
+  "score_claim": false,
+  "pointer_moved": false,
+  "archive_built": false,
+  "heavy_run_launched": false,
+  "historical_payload_reused": false,
+  "current_competitive_target": {
+    "score": 0.172,
+    "axis": "official_leaderboard",
+    "source": "upstream_official_leaderboard",
+    "custody": "external target only; no local archive authority implied",
+    "pointer_path": ".omx/state/canonical_frontier_pointer.json",
+    "pointer_sha256": "06027fa2dcb695d755858d6e101c7be57f1fbe5570903eb4bf8c5e2f38510388"
+  },
+  "governance": {
+    "claude_md_sha256": "47d4ac3a38f91a8b8e7dc3061131717d8122bd48ffb204ffb914eb58e687f0c9",
+    "agents_md_sha256": "47d4ac3a38f91a8b8e7dc3061131717d8122bd48ffb204ffb914eb58e687f0c9",
+    "program_md_sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+  },
+  "artifacts": [
+    {
+      "path": "src/tac/witness_dsl/taskspace_pfree_semantic_root_v1.py",
+      "bytes": 79455,
+      "sha256": "93ee478fd188d4655949a1b89e093f32c5b80317068d7959db7bee3a839ccbb1"
+    },
+    {
+      "path": "src/tac/witness_dsl/tests/test_taskspace_pfree_semantic_root_v1.py",
+      "bytes": 20560,
+      "sha256": "fd5df9f7110e1319a5bc179c69d3c67736cdb4a29f5cd30e067bbb9c50b94e19"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g103_pfree_semantic_root_wire_receiver_20260727.md",
+      "bytes": 10874,
+      "sha256": "638c91c44de94d404e0911634ff776e7c17495f5173b271d41843332a053a8ef"
+    }
+  ],
+  "fixture_wire_proof": {
+    "purpose": "deterministic behavior fixture only; not source-video output or a candidate",
+    "packet_bytes": 2351,
+    "packet_sha256": "2109ba56382f535c656dbc3b771a413a67e7403e68b44fb808e649b7e57dca76",
+    "section_bytes": {
+      "PROF": 27,
+      "TOPO": 16,
+      "EVNT": 18,
+      "MODL": 400,
+      "LATN": 1756,
+      "RGBF": 10,
+      "IRRQ": 32
+    },
+    "source_lineage_manifest_counted": false,
+    "source_lineage_magic_present_in_packet": false,
+    "explicit_raw_gauge_rows": 0,
+    "latent_encoded_bytes": 1738
+  },
+  "wire_contract": {
+    "pair_count": 600,
+    "scorer_y1_shape": [
+      384,
+      512,
+      3
+    ],
+    "camera_y1_shape": [
+      874,
+      1164,
+      3
+    ],
+    "section_union_closed": true,
+    "unknown_section_fails_closed": true,
+    "exact_eof": true,
+    "body_crc32": true,
+    "per_section_sha_counted": false,
+    "per_tensor_sha_counted": false,
+    "lineage_hashes_counted": false,
+    "shared_generator_typed_and_counted": true,
+    "temporal_latent_typed_entropy_coded_and_counted": true,
+    "learned_receiver_consumes_all_fixture_tensors_and_selected_latent": true,
+    "topology_is_optional_factor": true,
+    "dense_scorer_raster_home_rejected": true,
+    "v10_factor2_certified_exact_behavior_test": true,
+    "g17_is_sole_lifecycle_ownership_and_proof_authority": true,
+    "g94_v2_is_sole_conditional_y0_owner": true
+  },
+  "lineage": {
+    "fresh_own_lineage_required": true,
+    "external_manifest_type": "SemanticRootSourceLineageV1",
+    "canonical_g17_owner_type": "G17EncoderOnlyTeacherOracleEvidenceV1",
+    "external_manifest_binds": [
+      "root_packet_sha256",
+      "source_video_sha256",
+      "target_custody_sha256",
+      "compiler_source_sha256",
+      "compile_config_sha256",
+      "originality_declaration_sha256",
+      "model_section_sha256",
+      "latent_decoded_sha256"
+    ],
+    "known_historical_archives_or_payloads_read_or_copied": false
+  },
+  "v9_compatibility": {
+    "claimed": false,
+    "current_architecture": "ORIGINAL_COORDINR_FILM_MLP_V1",
+    "blocker": "V9_FILM_TANH_BETA_SIN_PHASE_ADVECTION_TYPED_ABI_AND_REFERENCE_FORWARD_OWED",
+    "known_missing_inventory": [
+      "positional Fourier basis/config",
+      "phase-advection beta/frequency contract",
+      "5-class out_sdf head",
+      "out_tex head",
+      "palette tensor",
+      "optional film_pl/concat_pl"
+    ],
+    "interleaved_code_projection": "count only code[2*p+1] Y1 rows; discard even/Y0 rows",
+    "historical_ep725_payload_reused": false
+  },
+  "validation": [
+    {
+      "command": "uv run pytest -q src/tac/witness_dsl/tests/test_taskspace_pfree_semantic_root_v1.py",
+      "result": "12 passed in 0.60s"
+    },
+    {
+      "command": "uv run ruff check src/tac/witness_dsl/taskspace_pfree_semantic_root_v1.py src/tac/witness_dsl/tests/test_taskspace_pfree_semantic_root_v1.py",
+      "result": "All checks passed"
+    },
+    {
+      "command": "uv run python -m py_compile src/tac/witness_dsl/taskspace_pfree_semantic_root_v1.py src/tac/witness_dsl/tests/test_taskspace_pfree_semantic_root_v1.py",
+      "result": "passed"
+    }
+  ],
+  "settled_negative_reused_without_rerun": {
+    "source": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:805-829",
+    "facts": [
+      "direct symbolic labels/contours were about 255-332KB",
+      "palette realization through R realized d_seg about 0.005-0.008",
+      "palette realization collapsed pose to d_pose about 188",
+      "best measured task-space split composed to about S=1.118",
+      "one joint RGB code with texture/chroma/parallax through R is required"
+    ]
+  },
+  "rate_status": {
+    "classification": "CORRECTNESS_FIRST_RESEARCH_ABI",
+    "competitive_rate_claim": false,
+    "proof_metadata_removed_from_counted_wire": true,
+    "candidate_minimized_wire_pass_owed": true,
+    "candidate_minimized_wire_pass_scope": [
+      "fixed-width versus entropy-coded section headers",
+      "tensor metadata amortization",
+      "topology/event and sparse-quotient coding",
+      "profile/procedural field score-value arbitration",
+      "outer ZIP interaction and duplicate integrity fields",
+      "exact public decoder/runtime parse-back"
+    ]
+  },
+  "open_product_blockers": [
+    "FRESH_SOURCE_BACKED_G17_COMPILER_MUST_FIT_TOPOLOGY_RGB_GAUGE_AND_IRREDUCIBLE_QUOTIENT",
+    "V9_FILM_TANH_BETA_SIN_PHASE_ADVECTION_TYPED_ABI_AND_REFERENCE_FORWARD_OWED",
+    "PUBLIC_INFLATE_DISPATCH_AND_EXTRACTED_DIRECTORY_PARSE_BACK_OWED",
+    "G94_V2_MUST_BIND_TO_THE_FROZEN_FINAL_SEMANTIC_ROOT_Y1_POPULATION_SHA",
+    "EXPLICIT_RGB_GAUGE_OVER_TEMPORAL_LATENT_VALUE_PER_BYTE_ARBITRATION_OWED",
+    "CANDIDATE_MINIMIZED_WIRE_AND_WHOLE_ARCHIVE_BYTE_ARBITRATION_OWED",
+    "FULL_N600_BATCH16_UPSTREAM_EVALUATE_AUTHORITY_ROW_OWED"
+  ],
+  "next_action": "Root adversarial review, then implement or adapt one fresh source-backed G17 producer into the exact wire; do not launch or claim a candidate until public receiver closure and full-n600 exact eval are ready."
+}
