@@ -9,7 +9,11 @@ import pytest
 from tac.boundary_math import warp_real_luma_frame0 as g1_warp
 from tac.boundary_math.analytic_lane_render_band import LaneBandRenderConfig
 from tac.boundary_math.lane_sdf_component import LaneLine
-from tac.optimization.predictor_upgrade_xi_chart import StaticCharts
+from tac.optimization.predictor_upgrade_xi_chart import (
+    LaneCoefficientAddress,
+    ProjectedChartChoice,
+    StaticCharts,
+)
 from tac.optimization.resize_full_kernel import FullResizeKernel
 from tools.measure_realization_g2_lattice import (
     CONTEXTUAL_STAGE_SCHEMA,
@@ -30,18 +34,26 @@ from tools.measure_realization_g2_lattice import (
     contextual_advected_rgb_plane,
     contextual_banded_projection,
     derive_bidirectional_amplitude_ladder,
+    derive_lane_coefficient_addresses,
     encode_contextual_rgb_exceptions,
     encode_dying_write_exceptions,
     interior_rgb_plane,
+    joint_chart_model_constraint_key,
+    joint_chart_multirow_parseback,
+    joint_chart_response_constraint_key,
+    lane_coefficient_native_gain,
+    main,
     openpilot_frame0_class_prior,
     parse_frozen_scorer_palette,
     protect_seed_class_sites,
+    quantized_pose_tube_debt,
     serialize_frozen_scorer_palette,
     summarize_chart_symbol_receiver_rows,
     summarize_contextual_prefix,
     summarize_interior_prefix,
     summarize_secant_prefix,
     summarize_source_control_prefix,
+    target_rival_fisher_weights,
 )
 
 
@@ -89,6 +101,117 @@ def test_g2g_chart_symbol_summary_refuses_duplicate_or_unsorted_pairs() -> None:
             [_chart_symbol_stage(34, admitted=False), _chart_symbol_stage(0, admitted=False)],
             candidate_scope="malformed",
         )
+
+
+def _joint_line(coefficients: list[float]) -> LaneLine:
+    return LaneLine(
+        centerline_coeffs=np.asarray(coefficients, dtype=np.float64),
+        halfwidth_coeffs=np.asarray([0.0, 1.8], dtype=np.float64),
+        forward_range=(0.0, 500.0),
+    )
+
+
+def test_g2g2_derives_all_decoded_centerline_addresses_and_native_gain() -> None:
+    lines = [_joint_line([0.0, -1.0]), _joint_line([0.0, 0.0, 2.0])]
+    addresses = derive_lane_coefficient_addresses(lines)
+    assert addresses == (
+        LaneCoefficientAddress(0, 0),
+        LaneCoefficientAddress(0, 1),
+        LaneCoefficientAddress(1, 0),
+        LaneCoefficientAddress(1, 1),
+        LaneCoefficientAddress(1, 2),
+    )
+    config = LaneBandRenderConfig(dash_gate=False)
+    gain_one, custody_one = lane_coefficient_native_gain(lines[1], 2, config)
+    gain_two, custody_two = lane_coefficient_native_gain(lines[1], 2, config)
+    assert gain_one == gain_two > 0.0
+    assert custody_one == custody_two
+    assert custody_one["active_row_count"] > 0
+    assert custody_one["max_abs_native_pixels_per_coefficient_unit"] == gain_one
+
+
+def _tube_constraints(lower: list[int], upper: list[int]) -> list[dict]:
+    return [{"pose_tube": {"lower_q": lower, "upper_q": upper}}]
+
+
+def test_g2g2_fisher_weights_quantized_tube_and_model_key_are_deterministic() -> None:
+    logits = np.zeros((5, 384, 512), dtype=np.float64)
+    represented = np.zeros((384, 512), dtype=np.uint8)
+    weights_one = target_rival_fisher_weights(logits, represented)
+    weights_two = target_rival_fisher_weights(logits.copy(), represented.copy())
+    np.testing.assert_array_equal(weights_one, weights_two)
+    assert weights_one.shape == logits.shape
+    assert np.count_nonzero(weights_one[0]) == 0
+    assert np.all(weights_one[1:] > 0.0)
+
+    tube = _tube_constraints([-1] * 6, [1] * 6)
+    assert quantized_pose_tube_debt(np.zeros(6), tube)[0] == 0
+    outside_pose = np.zeros(6)
+    outside_pose[0] = 2.0 / 1_048_576
+    debt, vector = quantized_pose_tube_debt(outside_pose, tube)
+    assert debt == 1
+    assert vector.tolist() == [1, 0, 0, 0, 0, 0]
+
+    logits[1, 0, 0] = 1.0
+    key_one = joint_chart_model_constraint_key(logits, np.zeros(6), represented, tube, weights_one)
+    key_two = joint_chart_model_constraint_key(logits.copy(), np.zeros(6), represented, tube, weights_one)
+    assert key_one == key_two
+    assert key_one[0] == 1 and key_one[1] == 0 and key_one[2] > 0.0
+
+
+def test_g2g2_response_key_and_multirow_parseback_are_nonvacuous() -> None:
+    address = LaneCoefficientAddress(0, 0)
+    represented = np.zeros((384, 512), dtype=np.uint8)
+    baseline_logits = np.zeros((5, 384, 512), dtype=np.float64)
+    baseline_logits[1, 0, 0] = 1.0
+    weights = target_rival_fisher_weights(baseline_logits, represented)
+    response_logits = np.zeros_like(baseline_logits, dtype=np.float32)
+    response_logits[1, 0, 0] = -2.0
+    response = {address: (response_logits, np.zeros(6, dtype=np.float32))}
+    constraints = _tube_constraints([-1] * 6, [1] * 6)
+    choices = (ProjectedChartChoice(address, 1.0),)
+    key_one = joint_chart_response_constraint_key(
+        choices,
+        baseline_logits=baseline_logits,
+        baseline_pose6=np.zeros(6),
+        response=response,
+        represented=represented,
+        constraints=constraints,
+        fisher_weights=weights,
+    )
+    key_two = joint_chart_response_constraint_key(
+        choices,
+        baseline_logits=baseline_logits,
+        baseline_pose6=np.zeros(6),
+        response=response,
+        represented=represented,
+        constraints=constraints,
+        fisher_weights=weights,
+    )
+    assert key_one == key_two == (0, 0, 0.0)
+    assert joint_chart_multirow_parseback([]) is False
+    prefixes = [
+        {
+            "k": 1,
+            "packet_bytes": 20,
+            "packet_parseback": {"symbol_count": 1, "chart_symbol_bytes": 20},
+            "admission_predicates": {"counted_bytes": True, "double_decode": True},
+        },
+        {
+            "k": 2,
+            "packet_bytes": 28,
+            "packet_parseback": {"symbol_count": 2, "chart_symbol_bytes": 28},
+            "admission_predicates": {"counted_bytes": True, "double_decode": True},
+        },
+    ]
+    assert joint_chart_multirow_parseback(prefixes) is True
+    prefixes[1]["admission_predicates"]["double_decode"] = False
+    assert joint_chart_multirow_parseback(prefixes) is False
+
+
+def test_g2g2_cli_mode_is_mutually_exclusive_before_any_measurement() -> None:
+    with pytest.raises(RealizationAuditError, match="mutually exclusive"):
+        main(["--joint-chart-symbol-solve", "--chart-symbol-receiver"])
 
 
 def _stage(pair: int) -> dict:
