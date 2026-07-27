@@ -66,6 +66,8 @@ For a governed real G111 run on the SSD tier:
 .venv/bin/python tools/run_taskspace_g121_live_stage_harvest.py \
   --producer-run-dir /Volumes/VertigoDataTier/pact/G111_REAL_RUN \
   --expected-launch-manifest-sha256 MANIFEST_SHA256 \
+  --g120-dry-run-receipt /Volumes/VertigoDataTier/pact/G111_REAL_RUN/g120_dry_run_gate/g120_governed_clean_dry_run_receipt.json \
+  --expected-g120-dry-run-receipt-sha256 G120_DRY_RUN_RECEIPT_SHA256 \
   --output-dir /Volumes/VertigoDataTier/pact/G111_REAL_RUN/g121_harvest \
   --progress-dir /Volumes/VertigoDataTier/pact/G111_REAL_RUN/g121_progress \
   --poll-seconds 30
@@ -73,14 +75,17 @@ For a governed real G111 run on the SSD tier:
 
 `MANIFEST_SHA256` is an external value computed from the exact current
 `launch_manifest.json`; the tool reopens those bytes before registering the
-launch epoch. On governed resume, invoke the same command and directories with
-the new externally computed manifest SHA. If the original monitor is still
-live, the second invocation appends the new launch epoch and exits; the
-fcntl-singleton monitor adopts it. The fixed monitor binding refuses a
-different producer path, so an old G111 payload population cannot be silently
-substituted. A resume after terminal G121 reductions already exist must use a
-fresh output/progress pair, preventing stale “complete” files from remaining
-visible during a new treatment.
+launch epoch. The dry-run receipt SHA is also external; the tool reopens that
+receipt against the exact producer manifest, output/progress/cache paths, and
+current G120/G121 source bytes before monitor binding or launch-epoch
+registration. On governed resume, rerun the two-process dry-run in a fresh gate
+directory, then invoke the monitor with the new externally computed manifest
+and receipt SHAs. If the original monitor is still live, the second invocation
+appends the new launch epoch and exits; the fcntl-singleton monitor adopts it.
+The fixed monitor binding refuses a different producer path, so an old G111
+payload population cannot be silently substituted. A resume after terminal
+G121 reductions already exist must use a fresh output/progress pair, preventing
+stale “complete” files from remaining visible during a new treatment.
 
 Reuse is limited to same-producer, exact physical checkpoint identities:
 G112 partitions are checkpoint-ID-addressed, G120 reuse requires the prior
@@ -90,12 +95,14 @@ reuse the output ledger.
 ## Launch authority boundary
 
 The monitor itself was not auto-spawned beside the active G111 dry-start and no
-full-n600 G120 job was launched. G120's acceptance contract requires a governed
-clean dry-run of the production wrapper, storage preflight, physical cold root,
-and crash resume before a full-n600 launch. Wiring unconditional auto-spawn
-before that receipt would violate the gate. This landing closes the executable
-handoff and concurrency semantics; the next authorized action is the governed
-G121 dry-run, then durable monitor spawn for the real producer.
+full-n600 G120 job was launched. The formerly open gate is now closed for the
+exact v6 producer launch and current source bytes by
+`g120_governed_clean_dry_run_gate_receipt_20260727.md`, receipt SHA-256
+`178907cd677d2d6a2e2b6a3a394e110778a2d3c524365e5db38db786882ffc65`.
+That receipt proves the production wrapper's physical SSD storage preflight and
+two-process batch resume with zero scorer calls. The next authorized action,
+when the G111 producer is ready for scorer-carrying monitoring, is the literal
+receipt-bound G121 monitor invocation recorded there.
 
 ## Triality
 

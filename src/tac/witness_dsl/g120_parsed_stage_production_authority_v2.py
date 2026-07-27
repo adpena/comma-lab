@@ -164,6 +164,7 @@ _BATCH_FIELDS: Final = frozenset(
         "physical_receipt",
     }
 )
+_BATCH_RECEIPT_FIELDS: Final = _BATCH_FIELDS - {"physical_receipt"}
 
 
 class G120ProductionAuthorityV2Error(RuntimeError):
@@ -878,6 +879,161 @@ def _verify_selected_semantic_packet(
         raise G120ProductionAuthorityV2Error("sealed public dispatch changed selected G105 semantic packet")
 
 
+def _reopen_completed_prediction_batch(
+    *,
+    receipt_path: Path,
+    prediction_path: Path,
+    expected_execution_key_sha256: str,
+    batch_index: int,
+    pair_start: int,
+    pair_stop: int,
+    target_batch: np.ndarray,
+    scorer_y1_batch_sha256: str,
+    camera_y1_batch_sha256: str,
+) -> dict[str, Any] | None:
+    """Reopen one exact crash-complete batch before any scorer invocation."""
+
+    if receipt_path.is_symlink():
+        raise G120ProductionAuthorityV2Error(
+            "prediction batch receipt must not be a symlink"
+        )
+    if not receipt_path.exists():
+        return None
+    raw, physical = _stable_file(
+        receipt_path,
+        name=f"prediction batch {batch_index} receipt",
+    )
+    try:
+        row = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise G120ProductionAuthorityV2Error(
+            "prediction batch receipt is corrupt"
+        ) from exc
+    body = dict(row) if type(row) is dict else {}
+    identity = body.pop("row_identity_sha256", None)
+    expected_shape = (pair_stop - pair_start, *PRODUCTION_SEG_HW)
+    if (
+        type(row) is not dict
+        or set(row) != _BATCH_RECEIPT_FIELDS
+        or _canonical_json(row) != raw
+        or row.get("schema") != BATCH_SCHEMA
+        or row.get("measurement_execution_key_sha256")
+        != expected_execution_key_sha256
+        or row.get("batch_index") != batch_index
+        or row.get("pair_start") != pair_start
+        or row.get("pair_stop") != pair_stop
+        or row.get("target_labels_batch_sha256")
+        != _sha256(memoryview(target_batch))
+        or row.get("scorer_y1_batch_sha256")
+        != scorer_y1_batch_sha256
+        or row.get("camera_y1_batch_sha256")
+        != camera_y1_batch_sha256
+        or identity != _sha256(_canonical_json(body))
+    ):
+        raise G120ProductionAuthorityV2Error(
+            "prediction batch resume identity differs"
+        )
+    prediction = row.get("prediction_file")
+    if (
+        type(prediction) is not dict
+        or prediction.get("path") != str(prediction_path.resolve())
+    ):
+        raise G120ProductionAuthorityV2Error(
+            "prediction batch resume array path differs"
+        )
+    prediction_payload = _reopen_binding(
+        prediction,
+        name=f"prediction batch {batch_index} array",
+    )
+    try:
+        predicted = np.load(
+            io.BytesIO(prediction_payload),
+            allow_pickle=False,
+        )
+    except (OSError, ValueError) as exc:
+        raise G120ProductionAuthorityV2Error(
+            "prediction batch resume array cannot be reopened"
+        ) from exc
+    if (
+        type(predicted) is not np.ndarray
+        or predicted.dtype != np.uint8
+        or predicted.shape != expected_shape
+        or not predicted.flags.c_contiguous
+        or np.any(predicted >= 5)
+    ):
+        raise G120ProductionAuthorityV2Error(
+            "prediction batch resume array geometry differs"
+        )
+    disagreement = int(np.count_nonzero(predicted != target_batch))
+    if (
+        row.get("predicted_labels_batch_sha256")
+        != _sha256(memoryview(predicted))
+        or row.get("disagreement_pixels") != disagreement
+    ):
+        raise G120ProductionAuthorityV2Error(
+            "prediction batch resume array/count differs"
+        )
+    return {**row, "physical_receipt": physical}
+
+
+def _persist_prediction_batch(
+    *,
+    receipt_path: Path,
+    prediction_path: Path,
+    execution_key_sha256: str,
+    batch_index: int,
+    pair_start: int,
+    pair_stop: int,
+    target_batch: np.ndarray,
+    scorer_y1_batch_sha256: str,
+    camera_y1_batch_sha256: str,
+    predicted: np.ndarray,
+) -> dict[str, Any]:
+    """Atomically persist one production-shaped batch for exact later resume."""
+
+    expected_shape = (pair_stop - pair_start, *PRODUCTION_SEG_HW)
+    if (
+        type(predicted) is not np.ndarray
+        or predicted.dtype != np.uint8
+        or predicted.shape != expected_shape
+        or not predicted.flags.c_contiguous
+        or np.any(predicted >= 5)
+    ):
+        raise G120ProductionAuthorityV2Error(
+            "frozen CPU SegNet returned malformed public labels"
+        )
+    prediction_buffer = io.BytesIO()
+    np.save(prediction_buffer, predicted, allow_pickle=False)
+    prediction_binding = _immutable_write(
+        prediction_path,
+        prediction_buffer.getvalue(),
+    )
+    body = {
+        "schema": BATCH_SCHEMA,
+        "measurement_execution_key_sha256": execution_key_sha256,
+        "batch_index": batch_index,
+        "pair_start": pair_start,
+        "pair_stop": pair_stop,
+        "target_labels_batch_sha256": _sha256(memoryview(target_batch)),
+        "scorer_y1_batch_sha256": scorer_y1_batch_sha256,
+        "camera_y1_batch_sha256": camera_y1_batch_sha256,
+        "predicted_labels_batch_sha256": _sha256(memoryview(predicted)),
+        "prediction_file": prediction_binding,
+        "disagreement_pixels": int(
+            np.count_nonzero(predicted != target_batch)
+        ),
+    }
+    row = {
+        **body,
+        "row_identity_sha256": _sha256(_canonical_json(body)),
+    }
+    receipt_binding = _immutable_write(
+        receipt_path,
+        _canonical_json(row),
+    )
+    return {**row, "physical_receipt": receipt_binding}
+
+
 def _measure_public_surface_fresh(
     *,
     authority: Any,
@@ -930,6 +1086,7 @@ def _measure_public_surface_fresh(
         name="G120-v2 physical prediction bundle",
     )
     rows: list[dict[str, Any]] = []
+    resumed_batch_count = 0
     final_y1_population = hashlib.sha256()
     pair_start = 0
     for batch_index, batch_size in enumerate(VERDICT_BATCH_SIZES):
@@ -969,40 +1126,41 @@ def _measure_public_surface_fresh(
             np.stack(camera_frames),
             dtype=np.uint8,
         )
-        predicted = broker(camera_batch)
         target = authority.target_labels[pair_start:pair_stop]
-        prediction_buffer = io.BytesIO()
-        np.save(prediction_buffer, predicted, allow_pickle=False)
         prediction_path = cache_root / (
             f"batch_{batch_index:03d}_{pair_start:03d}_{pair_stop:03d}.predicted_labels.npy"
         )
-        prediction_binding = _immutable_write(
-            prediction_path,
-            prediction_buffer.getvalue(),
+        receipt_path = cache_root / (
+            f"batch_{batch_index:03d}_{pair_start:03d}_{pair_stop:03d}.receipt.json"
         )
-        body = {
-            "schema": BATCH_SCHEMA,
-            "measurement_execution_key_sha256": execution_key,
-            "batch_index": batch_index,
-            "pair_start": pair_start,
-            "pair_stop": pair_stop,
-            "target_labels_batch_sha256": _sha256(memoryview(target)),
-            "scorer_y1_batch_sha256": scorer_digest.hexdigest(),
-            "camera_y1_batch_sha256": camera_digest.hexdigest(),
-            "predicted_labels_batch_sha256": _sha256(memoryview(predicted)),
-            "prediction_file": prediction_binding,
-            "disagreement_pixels": int(np.count_nonzero(predicted != target)),
-        }
-        row = {
-            **body,
-            "row_identity_sha256": _sha256(_canonical_json(body)),
-        }
-        receipt_path = cache_root / (f"batch_{batch_index:03d}_{pair_start:03d}_{pair_stop:03d}.receipt.json")
-        receipt_binding = _immutable_write(
-            receipt_path,
-            _canonical_json(row),
+        row = _reopen_completed_prediction_batch(
+            receipt_path=receipt_path,
+            prediction_path=prediction_path,
+            expected_execution_key_sha256=execution_key,
+            batch_index=batch_index,
+            pair_start=pair_start,
+            pair_stop=pair_stop,
+            target_batch=target,
+            scorer_y1_batch_sha256=scorer_digest.hexdigest(),
+            camera_y1_batch_sha256=camera_digest.hexdigest(),
         )
-        rows.append({**row, "physical_receipt": receipt_binding})
+        if row is None:
+            predicted = broker(camera_batch)
+            row = _persist_prediction_batch(
+                receipt_path=receipt_path,
+                prediction_path=prediction_path,
+                execution_key_sha256=execution_key,
+                batch_index=batch_index,
+                pair_start=pair_start,
+                pair_stop=pair_stop,
+                target_batch=target,
+                scorer_y1_batch_sha256=scorer_digest.hexdigest(),
+                camera_y1_batch_sha256=camera_digest.hexdigest(),
+                predicted=predicted,
+            )
+        else:
+            resumed_batch_count += 1
+        rows.append(row)
         pair_start = pair_stop
     frame0.verify_final_y1_population(
         frame0_state,
@@ -1036,6 +1194,8 @@ def _measure_public_surface_fresh(
         "scorer_y1_population_sha256": scorer_population,
         "camera_y1_population_sha256": camera_population,
         "predicted_labels_population_sha256": predicted_population,
+        "fresh_measured_batch_count": len(rows) - resumed_batch_count,
+        "resumed_physical_batch_count": resumed_batch_count,
     }
 
 
@@ -1155,6 +1315,12 @@ def _build_measurement_receipt(
             "identity_sha256": authority.seg_scorer_identity_sha256,
             "device": "cpu",
             "fresh_direct_scorer_calls": scorer_calls,
+            "fresh_measured_batch_count": public[
+                "fresh_measured_batch_count"
+            ],
+            "resumed_physical_batch_count": public[
+                "resumed_physical_batch_count"
+            ],
             "disk_prediction_cache_trusted": False,
             "weights_pre": authority.g109_custody["segnet_weights"],
             "weights_post": postverified["segnet_weights_postverified"],
@@ -1885,6 +2051,8 @@ def open_g120_stage_measurement_v2(
             "identity_sha256",
             "device",
             "fresh_direct_scorer_calls",
+            "fresh_measured_batch_count",
+            "resumed_physical_batch_count",
             "disk_prediction_cache_trusted",
             "weights_pre",
             "weights_post",
@@ -1894,7 +2062,22 @@ def open_g120_stage_measurement_v2(
         or scorer.get("identity_sha256") != g109.get("scorer_runtime_identity_sha256")
         or scorer.get("device") != "cpu"
         or type(scorer.get("fresh_direct_scorer_calls")) is not int
-        or scorer["fresh_direct_scorer_calls"] <= 0
+        or scorer["fresh_direct_scorer_calls"] < 0
+        or type(scorer.get("fresh_measured_batch_count")) is not int
+        or scorer["fresh_measured_batch_count"] < 0
+        or type(scorer.get("resumed_physical_batch_count")) is not int
+        or scorer["resumed_physical_batch_count"] < 0
+        or (
+            scorer["fresh_measured_batch_count"]
+            + scorer["resumed_physical_batch_count"]
+            != len(VERDICT_BATCH_SIZES)
+        )
+        or scorer["fresh_direct_scorer_calls"]
+        > scorer["fresh_measured_batch_count"]
+        or (
+            scorer["fresh_measured_batch_count"] > 0
+            and scorer["fresh_direct_scorer_calls"] == 0
+        )
         or scorer.get("disk_prediction_cache_trusted") is not False
         or scorer.get("weights_pre") != scorer.get("weights_post")
         or scorer.get("upstream_closure_pre") != scorer.get("upstream_closure_post")

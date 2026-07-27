@@ -23,6 +23,21 @@ def _preserved_stage(producer: Path) -> None:
     (producer / "levelset_resume_stageCE_ep25.npz").write_bytes(b"resume")
 
 
+def _gate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[Path, str]:
+    path = tmp_path / "g120-dry-run-receipt.json"
+    path.write_bytes(b'{"clean":true}\n')
+    sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    monkeypatch.setattr(
+        monitor.g120_gate,
+        "open_g120_governed_clean_dry_run_v1",
+        lambda *_args, **_kwargs: {"clean": True},
+    )
+    return path, sha
+
+
 def _progress(tmp_path: Path) -> g121.G121StageHarvestProgressV1:
     ledger = tmp_path / "ledger.jsonl"
     ledger.write_bytes(b"{}\n")
@@ -84,10 +99,13 @@ def test_once_harvests_available_stage_without_exhaustive_publication(
     )
     output = tmp_path / "out"
     progress = tmp_path / "progress"
+    gate_path, gate_sha = _gate(tmp_path, monkeypatch)
     assert (
         monitor.run_monitor(
             producer_run_dir=producer,
             expected_launch_manifest_sha256=launch_sha,
+            g120_dry_run_receipt=gate_path,
+            expected_g120_dry_run_receipt_sha256=gate_sha,
             output_dir=output,
             progress_dir=progress,
             poll_seconds=0.01,
@@ -124,10 +142,13 @@ def test_terminal_marker_routes_incremental_before_final(
         lambda **_kwargs: (calls.append("final") or _final(tmp_path)),
     )
     output = tmp_path / "out"
+    gate_path, gate_sha = _gate(tmp_path, monkeypatch)
     assert (
         monitor.run_monitor(
             producer_run_dir=producer,
             expected_launch_manifest_sha256=launch_sha,
+            g120_dry_run_receipt=gate_path,
+            expected_g120_dry_run_receipt_sha256=gate_sha,
             output_dir=output,
             progress_dir=tmp_path / "progress",
             poll_seconds=0.01,
@@ -158,9 +179,12 @@ def test_output_binding_refuses_a_different_producer(
         lambda **_kwargs: _progress(tmp_path),
     )
     output = tmp_path / "out"
+    gate_path, gate_sha = _gate(tmp_path, monkeypatch)
     monitor.run_monitor(
         producer_run_dir=producer_a,
         expected_launch_manifest_sha256=launch_a,
+        g120_dry_run_receipt=gate_path,
+        expected_g120_dry_run_receipt_sha256=gate_sha,
         output_dir=output,
         progress_dir=tmp_path / "progress-a",
         poll_seconds=0.01,
@@ -173,6 +197,8 @@ def test_output_binding_refuses_a_different_producer(
         monitor.run_monitor(
             producer_run_dir=producer_b,
             expected_launch_manifest_sha256=launch_b,
+            g120_dry_run_receipt=gate_path,
+            expected_g120_dry_run_receipt_sha256=gate_sha,
             output_dir=output,
             progress_dir=tmp_path / "progress-b",
             poll_seconds=0.01,
@@ -194,10 +220,13 @@ def test_same_producer_accepts_a_new_externally_bound_resume_launch_epoch(
     )
     output = tmp_path / "out"
     progress = tmp_path / "progress"
+    gate_path, gate_sha = _gate(tmp_path, monkeypatch)
     assert (
         monitor.run_monitor(
             producer_run_dir=producer,
             expected_launch_manifest_sha256=launch_a,
+            g120_dry_run_receipt=gate_path,
+            expected_g120_dry_run_receipt_sha256=gate_sha,
             output_dir=output,
             progress_dir=progress,
             poll_seconds=0.01,
@@ -211,6 +240,8 @@ def test_same_producer_accepts_a_new_externally_bound_resume_launch_epoch(
         monitor.run_monitor(
             producer_run_dir=producer,
             expected_launch_manifest_sha256=launch_resume,
+            g120_dry_run_receipt=gate_path,
+            expected_g120_dry_run_receipt_sha256=gate_sha,
             output_dir=output,
             progress_dir=progress,
             poll_seconds=0.01,
@@ -239,9 +270,12 @@ def test_resume_launch_refuses_stale_terminal_reduction_directory(
     )
     output = tmp_path / "out"
     progress = tmp_path / "progress"
+    gate_path, gate_sha = _gate(tmp_path, monkeypatch)
     monitor.run_monitor(
         producer_run_dir=producer,
         expected_launch_manifest_sha256=launch_a,
+        g120_dry_run_receipt=gate_path,
+        expected_g120_dry_run_receipt_sha256=gate_sha,
         output_dir=output,
         progress_dir=progress,
         poll_seconds=0.01,
@@ -258,8 +292,49 @@ def test_resume_launch_refuses_stale_terminal_reduction_directory(
             expected_launch_manifest_sha256=hashlib.sha256(
                 b"launch-resume"
             ).hexdigest(),
+            g120_dry_run_receipt=gate_path,
+            expected_g120_dry_run_receipt_sha256=gate_sha,
             output_dir=output,
             progress_dir=progress,
             poll_seconds=0.01,
             once=True,
         )
+
+
+def test_monitor_refuses_before_binding_when_g120_dry_run_gate_is_stale(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    producer = tmp_path / "producer"
+    launch_sha = _launch(producer, b"launch-a")
+    _preserved_stage(producer)
+    gate_path = tmp_path / "stale-g120-gate.json"
+    gate_path.write_bytes(b"stale\n")
+    gate_sha = hashlib.sha256(gate_path.read_bytes()).hexdigest()
+    monkeypatch.setattr(
+        monitor.g120_gate,
+        "open_g120_governed_clean_dry_run_v1",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            monitor.g120_gate.G120GovernedDryRunError(
+                "source binding changed"
+            )
+        ),
+    )
+    output = tmp_path / "out"
+    with pytest.raises(
+        g121.G121StageHarvestError,
+        match="clean dry-run gate refused",
+    ):
+        monitor.run_monitor(
+            producer_run_dir=producer,
+            expected_launch_manifest_sha256=launch_sha,
+            g120_dry_run_receipt=gate_path,
+            expected_g120_dry_run_receipt_sha256=gate_sha,
+            output_dir=output,
+            progress_dir=tmp_path / "progress",
+            poll_seconds=0.01,
+            once=True,
+        )
+    assert not (
+        output / monitor.MONITOR_BINDING_BASENAME
+    ).exists()

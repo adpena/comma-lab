@@ -714,3 +714,204 @@ def test_pointer_only_refresh_reuses_completed_measurement_without_scorer(
     ):
         subject.run_g120_parsed_stage_production_authority_v2(**kwargs)
     assert set((repo / "out").glob("*g120_stage_observation.v2.json")) == before
+
+
+def test_fresh_measurement_resumes_completed_physical_batch_without_rescoring(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(subject, "VERDICT_BATCH_SIZES", (1, 1))
+    monkeypatch.setattr(subject, "PRODUCTION_PAIR_COUNT", 2)
+    monkeypatch.setattr(subject, "PRODUCTION_SEG_HW", (2, 2))
+    monkeypatch.setattr(subject, "PIXEL_DENOMINATOR", 8)
+
+    class Semantic:
+        @staticmethod
+        def parse_packet(_packet: bytes) -> object:
+            return object()
+
+        @staticmethod
+        def render_scorer_y1(
+            _parsed: object,
+            pair_id: int,
+        ) -> np.ndarray:
+            return np.full(
+                (2, 2, 3),
+                pair_id,
+                dtype=np.uint8,
+            )
+
+    class Inflate:
+        @staticmethod
+        def _realize_factor2(scorer_y1: np.ndarray) -> np.ndarray:
+            return np.full(
+                (874, 1164, 3),
+                int(scorer_y1[0, 0, 0]),
+                dtype=np.uint8,
+            )
+
+    class Frame0:
+        @staticmethod
+        def render_camera_y0(
+            _state: object,
+            _pair_id: int,
+            _scorer_y1: np.ndarray,
+            camera_y1: np.ndarray,
+        ) -> np.ndarray:
+            return camera_y1
+
+        @staticmethod
+        def verify_final_y1_population(
+            _state: object,
+            _digest: bytes,
+        ) -> None:
+            return None
+
+    monkeypatch.setattr(
+        subject,
+        "_load_public_plugins",
+        lambda **_kwargs: (
+            Inflate(),
+            Semantic(),
+            Frame0(),
+            object(),
+            b"semantic-packet",
+        ),
+    )
+    predicted_sha = hashlib.sha256(
+        memoryview(np.zeros((1, 2, 2), dtype=np.uint8))
+    ).hexdigest()
+    scorer_shas = [
+        hashlib.sha256(
+            memoryview(np.full((2, 2, 3), pair_id, dtype=np.uint8))
+        ).hexdigest()
+        for pair_id in range(2)
+    ]
+    camera_shas = [
+        hashlib.sha256(
+            memoryview(
+                np.full(
+                    (874, 1164, 3),
+                    pair_id,
+                    dtype=np.uint8,
+                )
+            )
+        ).hexdigest()
+        for pair_id in range(2)
+    ]
+    expected_rows = [
+        {
+            "batch_index": batch_index,
+            "scorer_y1_batch_sha256": scorer_shas[batch_index],
+            "camera_y1_batch_sha256": camera_shas[batch_index],
+            "predicted_labels_batch_sha256": predicted_sha,
+        }
+        for batch_index in range(2)
+    ]
+    selected = SimpleNamespace(
+        archive=b"archive",
+        scorer_y1_population_sha256=subject._batch_chain(
+            expected_rows,
+            "scorer_y1_batch_sha256",
+        ),
+        camera_y1_population_sha256=subject._batch_chain(
+            expected_rows,
+            "camera_y1_batch_sha256",
+        ),
+        predicted_labels_sha256=subject._batch_chain(
+            expected_rows,
+            "predicted_labels_batch_sha256",
+        ),
+        disagreement_pixels=0,
+        d_seg=0.0,
+    )
+    engine = SimpleNamespace(
+        selected=selected,
+        alternatives=(
+            SimpleNamespace(
+                y1_wire_codec=SimpleNamespace(name="RAW_I16_LE"),
+                outer_zip_method=SimpleNamespace(name="STORE"),
+                archive=b"archive",
+            ),
+        ),
+    )
+    authority = SimpleNamespace(
+        physical_stage_identity_sha256=_sha("physical-stage"),
+        target_labels=np.zeros((2, 2, 2), dtype=np.uint8),
+        seg_scorer_identity_sha256=_sha("seg-scorer"),
+    )
+    selected_row = {
+        "archive": {
+            "sha256": hashlib.sha256(b"archive").hexdigest(),
+        },
+        "semantic_packet": {
+            "sha256": hashlib.sha256(
+                b"semantic-packet"
+            ).hexdigest(),
+        },
+    }
+
+    class CrashAfterFirstBatch:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def _predict(self, camera: np.ndarray) -> np.ndarray:
+            self.calls += 1
+            if self.calls == 2:
+                raise RuntimeError("simulated process crash")
+            return np.zeros(
+                (camera.shape[0], 2, 2),
+                dtype=np.uint8,
+            )
+
+    first_scorer = CrashAfterFirstBatch()
+    with pytest.raises(RuntimeError, match="simulated process crash"):
+        subject._measure_public_surface_fresh(
+            authority=authority,
+            engine=engine,
+            broker=subject._FreshPredictionBroker(first_scorer),
+            sealed_root=tmp_path,
+            progress_dir=tmp_path,
+            measurement_cache_dir=(tmp_path / "cache"),
+            public_runtime_tree_sha256=_sha("public-runtime"),
+            selected_row=selected_row,
+        )
+    first_receipt = next(
+        (tmp_path / "cache").rglob(
+            "batch_000_000_001.receipt.json"
+        )
+    )
+    first_receipt_sha = hashlib.sha256(
+        first_receipt.read_bytes()
+    ).hexdigest()
+
+    class ResumeScorer:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def _predict(self, camera: np.ndarray) -> np.ndarray:
+            self.calls += 1
+            assert int(camera[0, 0, 0, 0]) == 1
+            return np.zeros(
+                (camera.shape[0], 2, 2),
+                dtype=np.uint8,
+            )
+
+    resume_scorer = ResumeScorer()
+    result = subject._measure_public_surface_fresh(
+        authority=authority,
+        engine=engine,
+        broker=subject._FreshPredictionBroker(resume_scorer),
+        sealed_root=tmp_path,
+        progress_dir=tmp_path,
+        measurement_cache_dir=(tmp_path / "cache"),
+        public_runtime_tree_sha256=_sha("public-runtime"),
+        selected_row=selected_row,
+    )
+    assert resume_scorer.calls == 1
+    assert result["fresh_measured_batch_count"] == 1
+    assert result["resumed_physical_batch_count"] == 1
+    assert (
+        hashlib.sha256(first_receipt.read_bytes()).hexdigest()
+        == first_receipt_sha
+    )
