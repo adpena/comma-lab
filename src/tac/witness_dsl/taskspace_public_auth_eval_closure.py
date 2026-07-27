@@ -43,6 +43,7 @@ from tac.contest_score import compute_contest_score
 from tac.witness_dsl.ep725_lossless_xcodec_recode import parse_ep725_lvls1
 from tac.witness_dsl.ep725_population_global_recode_v2 import (
     MEMBER_NAME,
+    Ep725PopulationGlobalRecodeError,
     parse_population_global_member,
 )
 from tac.witness_dsl.taskspace_selected_solution_compiler import (
@@ -1952,7 +1953,10 @@ def _inspect_exact_lvpg2_archive(archive_path: Path) -> tuple[bytes, bytes, Any]
                 raise PublicAuthClosureError("LVPG2 archive CRC verification failed")
     except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
         raise PublicAuthClosureError("LVPG2 archive failed strict reopen") from exc
-    parsed = parse_population_global_member(member)
+    try:
+        parsed = parse_population_global_member(member)
+    except Ep725PopulationGlobalRecodeError as exc:
+        raise PublicAuthClosureError("LVPG2 archive member failed strict packet parse") from exc
     manifest = parsed.manifest
     if (
         manifest.get("n_pairs") != EXPECTED_N_PAIRS

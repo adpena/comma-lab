@@ -1,0 +1,119 @@
+{
+  "schema": "tac.g66_g29_public_auth_eval_recovery_receipt.v1",
+  "written_at_utc": "2026-07-27T02:18:59Z",
+  "lane_id": "lane_g66_g29_public_auth_eval_recovery_20260727",
+  "git_head_observed": "b84b4c6d948f24f3aa399c1774f557dcecfa3658",
+  "lineage": {
+    "g29_source_closure_commit": "81f4e4653bd7dc8c8db4bc81d173c1cb1d5c5251",
+    "g17_production_envelope_commit": "36c8a8aaa5d0a09f088e5392073bc1a25216bcc8",
+    "g64_conditional_receiver_commit": "509a6908ac36728d719765690cbedbc24f11a462",
+    "g25_lvpg2_archive_sha256": "68351f57781d8fe60c05ab59fc250e48d6bb03e7cdf95b3d00987328d08d2a98",
+    "g29_runtime_domain": "G25_LVPG2_TO_LVLS1",
+    "current_g17_archive_domain": "TACPGA3_P_G_A_E"
+  },
+  "implementation_files": [
+    {
+      "path": "src/tac/witness_dsl/taskspace_public_auth_eval_closure.py",
+      "sha256": "f7ad196cd92889b9740ce595743dca667eefc387dfce60ed284173ff35528628",
+      "tracked_at_observed_head": true
+    },
+    {
+      "path": "src/tac/witness_dsl/tests/test_taskspace_public_auth_eval_closure.py",
+      "sha256": "994b2a0b3ff4ed44d08ced16496a47bcae0f15036c34edc483c52af9bef19bc4",
+      "tracked_at_observed_head": true
+    },
+    {
+      "path": "tools/run_taskspace_public_auth_eval_closure.py",
+      "sha256": "06ea9972978e7b53dd3f22b741122758e3e91de74784ba5c75d5f4bb4a0950e4",
+      "tracked_at_observed_head": false
+    },
+    {
+      "path": "tools/tests/test_run_taskspace_public_auth_eval_closure.py",
+      "sha256": "51ee5aa75f3dd63b4927111094112f3a847509650b835ef3d2fbd47b784af93d",
+      "tracked_at_observed_head": false
+    },
+    {
+      "path": "src/tac/witness_dsl/taskspace_g17_production_envelope.py",
+      "sha256": "6f74cad03943098ffcb00b3e1648274a6a21752872074ba9fd97eec1cb1609aa",
+      "tracked_at_observed_head": true
+    },
+    {
+      "path": "src/tac/witness_dsl/taskspace_selected_solution_compiler.py",
+      "sha256": "36fb4997fd16e30a965e5924c84efa2971e632fc256c2e31c54957b3c4810c91",
+      "tracked_at_observed_head": true
+    }
+  ],
+  "hardening": {
+    "bug_class": "FOREIGN_ARCHIVE_PARSER_EXCEPTION_ESCAPED_PUBLIC_CLOSURE_BOUNDARY",
+    "change": "Normalize a non-LVPG2 member refusal to PublicAuthClosureError and regression-test the current tracked G17 production archive.",
+    "g17_as_g29_lvpg2_result": "REFUSED_AT_PUBLIC_AUTH_CLOSURE_BOUNDARY",
+    "g25_as_g17_result": "REFUSED_AT_G17_PRODUCTION_ENVELOPE_BOUNDARY"
+  },
+  "compatibility_verdict": {
+    "status": "BLOCKED",
+    "verdict_scope": "G29 public runtime versus the current tracked G17 production archive domain",
+    "reason": "G29 emits a real public inverse only for the historical G25 LVPG2 member. The current G17 production envelope is a strict TACPGA3 archive with one P/G/A/E member and has no byte-owned public inflate runtime or raster bridge into G29.",
+    "canonical_c0b_used_as_authority_boundary": true,
+    "canonical_c0b_constructed": false,
+    "c0b_seal_or_authority_fabricated": false
+  },
+  "blockers": [
+    "G17_TO_G29_PUBLIC_RASTER_BRIDGE_RECEIPT_OWED",
+    "G17_CONDITIONAL_DECODER_GENERIC_SOURCE_PLACEMENT_OWED",
+    "G17_CONDITIONAL_DECODER_RUNTIME_GRAPH_LINK_OWED",
+    "G17_CONDITIONAL_LOGICAL_OPERAND_TO_ARCHIVE_RANGE_LINK_OWED",
+    "G17_CONDITIONAL_OPERAND_TO_PHYSICAL_GROUP_SPAN_LINKER_OWED",
+    "G66_G29_RUNNER_AND_TEST_TRACKED_SOURCE_CUSTODY_OWED",
+    "EXTERNAL_GOVERNED_EXECUTION_EVIDENCE_BOUNDARY",
+    "SEALED_C0B_AUTH_EVAL_ADAPTER_REVIEW"
+  ],
+  "verification": [
+    {
+      "command_class": "focused_g29_c0b_g17_regression",
+      "passed": true,
+      "tests_passed": 61,
+      "elapsed_seconds": 1.66
+    },
+    {
+      "command_class": "existing_taskspace_clean_checkout_source_guard",
+      "passed": true,
+      "tests_passed": 1,
+      "elapsed_seconds": 2.47
+    },
+    {
+      "command_class": "exact_g29_target_git_source_custody",
+      "passed": false,
+      "exit_code": 3,
+      "missing_tracked_paths": [
+        "tools/run_taskspace_public_auth_eval_closure.py",
+        "tools/tests/test_run_taskspace_public_auth_eval_closure.py"
+      ]
+    },
+    {
+      "command_class": "ruff_format_check",
+      "passed": true
+    },
+    {
+      "command_class": "ruff_check",
+      "passed": true
+    },
+    {
+      "command_class": "py_compile",
+      "passed": true
+    },
+    {
+      "command_class": "json_parse_and_diff_check",
+      "passed": true
+    }
+  ],
+  "authority": {
+    "research_only": true,
+    "full_n600_eval_invoked": false,
+    "public_output_rendered": false,
+    "contest_cpu_or_cuda_evidence": false,
+    "candidate": false,
+    "score_claim": false,
+    "pointer_moved": false
+  },
+  "next_legal_action": "First put the exact G29 runner and runner test under source custody. Separately implement and strict-test a generic G17 TACPGA3 P/G/A/E public receiver/runtime plus the G17-to-public-raster bridge. Only an externally governed Linux double run through upstream/evaluate.sh may then feed an independent sealed C0B review."
+}

@@ -21,6 +21,12 @@ from tac.witness_dsl.ep725_population_global_recode_v2 import (
     MEMBER_NAME,
     parse_population_global_member,
 )
+from tac.witness_dsl.taskspace_g17_production_envelope import (
+    build_g17_a_packet,
+    build_g17_g_packet,
+    build_g17_production_archive,
+    build_g17_terminal_envelope,
+)
 from tac.witness_dsl.taskspace_lvpg2_public_inverse import lvpg2_to_lvls1
 from tac.witness_dsl.taskspace_public_auth_eval_closure import (
     AuthClosureCheckpointArtifactV1,
@@ -190,6 +196,35 @@ def test_real_g25_lvpg2_inverse_preserves_full_quantized_state() -> None:
     logical = lvpg2_to_lvls1(selected.member_bytes)
     reopened = parse_ep725_lvls1(logical, require_source_form=True)
     assert closure._decoded_state_sha256(selected) == closure._decoded_state_sha256(reopened)
+
+
+def test_lvpg2_compiler_refuses_current_g17_production_archive_at_typed_boundary(
+    tmp_path: Path,
+) -> None:
+    p_section = b"g66-current-g17-production-p"
+    g_section = build_g17_g_packet(p_section=p_section, pair_start=0, pair_count=600)
+    a_section = build_g17_a_packet(
+        p_section=p_section,
+        g_section=g_section,
+        pair_start=0,
+        pair_count=600,
+    )
+    terminal = build_g17_terminal_envelope(
+        p_section=p_section,
+        g_section=g_section,
+        a_section=a_section,
+    )
+    archive = build_g17_production_archive(
+        p_section=p_section,
+        g_section=g_section,
+        a_section=a_section,
+        terminal_section=terminal,
+    ).selected.outer.archive_bytes
+    archive_path = tmp_path / "archive.zip"
+    archive_path.write_bytes(archive)
+
+    with pytest.raises(PublicAuthClosureError, match="failed strict packet parse"):
+        closure._inspect_exact_lvpg2_archive(archive_path)
 
 
 def test_real_compile_executes_emitted_inverse_parseback(
