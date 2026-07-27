@@ -137,7 +137,7 @@ def _require_sha256(value: object, label: str) -> str:
     return value
 
 
-def _open_bound_json(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+def _open_bound_bytes(path: Path) -> tuple[bytes, dict[str, Any]]:
     candidate = path.expanduser()
     if candidate.is_symlink():
         raise G111Batch16V9SemanticBaseError(
@@ -167,21 +167,26 @@ def _open_bound_json(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         raise G111Batch16V9SemanticBaseError(
             f"release artifact changed during reopen: {resolved}"
         )
-    try:
-        value = json.loads(payload)
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise G111Batch16V9SemanticBaseError(
-            f"release artifact is not JSON: {resolved}"
-        ) from exc
-    if type(value) is not dict:
-        raise G111Batch16V9SemanticBaseError(
-            f"release artifact root is not an object: {resolved}"
-        )
-    return value, {
+    return payload, {
         "path": str(resolved),
         "bytes": len(payload),
         "sha256": hashlib.sha256(payload).hexdigest(),
     }
+
+
+def _open_bound_json(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    payload, binding = _open_bound_bytes(path)
+    try:
+        value = json.loads(payload)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise G111Batch16V9SemanticBaseError(
+            f"release artifact is not JSON: {binding['path']}"
+        ) from exc
+    if type(value) is not dict:
+        raise G111Batch16V9SemanticBaseError(
+            f"release artifact root is not an object: {binding['path']}"
+        )
+    return value, binding
 
 
 def _argv_value(argv: object, flag: str) -> str | None:
@@ -195,6 +200,365 @@ def _argv_value(argv: object, flag: str) -> str | None:
     if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
         return None
     return argv[index + 1]
+
+
+def _parse_dry_start_log_evidence(
+    payload: bytes,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Recompute the boot/resume facts from trainer and safe-run telemetry."""
+
+    try:
+        text = payload.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise G111Batch16V9SemanticBaseError(
+            "dry-start run.log is not UTF-8"
+        ) from exc
+    metrics: dict[str, Any] = {
+        "epochs_completed": -1,
+        "checkpoint_written": False,
+        "last_ckpt_epoch": None,
+        "resume_model_source": False,
+        "resume_start_epoch": None,
+        "resume_ckpt_epoch": None,
+    }
+    safe_rows: list[dict[str, Any]] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line.startswith("SAFE_RUN "):
+            try:
+                safe = json.loads(line.removeprefix("SAFE_RUN ").strip())
+            except json.JSONDecodeError:
+                continue
+            if type(safe) is dict:
+                safe_rows.append(safe)
+            continue
+        if not line.startswith("{"):
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if type(row) is not dict:
+            continue
+        epoch = row.get("ep", row.get("epoch"))
+        if isinstance(epoch, (int, float)) and not isinstance(epoch, bool):
+            metrics["epochs_completed"] = max(
+                int(metrics["epochs_completed"]),
+                int(epoch),
+            )
+        stage = row.get("stage")
+        if stage == "checkpoint" and row.get("resume_latest"):
+            metrics["checkpoint_written"] = True
+            checkpoint_epoch = row.get("epoch")
+            if isinstance(checkpoint_epoch, (int, float)) and not isinstance(
+                checkpoint_epoch,
+                bool,
+            ):
+                metrics["last_ckpt_epoch"] = int(checkpoint_epoch)
+        if stage == "resume_model_source":
+            metrics["resume_model_source"] = True
+        resume_start = row.get("resume_start_epoch")
+        if isinstance(resume_start, (int, float)) and not isinstance(
+            resume_start,
+            bool,
+        ):
+            metrics["resume_start_epoch"] = int(resume_start)
+        resume_checkpoint = row.get("resume_ckpt_epoch")
+        if isinstance(resume_checkpoint, (int, float)) and not isinstance(
+            resume_checkpoint,
+            bool,
+        ):
+            metrics["resume_ckpt_epoch"] = int(resume_checkpoint)
+    if len(safe_rows) != 1:
+        raise G111Batch16V9SemanticBaseError(
+            "dry-start run.log must contain exactly one SAFE_RUN terminal row"
+        )
+    safe = safe_rows[0]
+    if (
+        not isinstance(safe.get("exit"), int)
+        or isinstance(safe.get("exit"), bool)
+        or not isinstance(safe.get("peak_rss_mib"), (int, float))
+        or isinstance(safe.get("peak_rss_mib"), bool)
+        or float(safe["peak_rss_mib"]) <= 0.0
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "dry-start SAFE_RUN row lacks an integer exit or positive peak RSS"
+        )
+    return metrics, safe
+
+
+def _verify_dsl_launch_unit(
+    unit_dir: Path,
+    *,
+    target_path: str,
+    target_sha: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Reopen and independently verify one root/pass DSL launch unit."""
+
+    launch_path = unit_dir / "launch.sh"
+    provenance_path = unit_dir / "dsl_provenance.json"
+    manifest_path = unit_dir / "launch_manifest.json"
+    _, launch_binding = _open_bound_bytes(launch_path)
+    _, provenance_binding = _open_bound_bytes(provenance_path)
+    manifest, manifest_binding = _open_bound_json(manifest_path)
+    dsl_hash = _require_sha256(
+        manifest.get("dsl_compile_hash"),
+        "G111 dry-start DSL compile hash",
+    )
+    from tac.v9_provenance_gates import verify_dsl_provenance_artifacts
+
+    ok, detail = verify_dsl_provenance_artifacts(
+        launch_path,
+        provenance_path=provenance_path,
+        launch_manifest_path=manifest_path,
+        expected_hash=dsl_hash,
+    )
+    if not ok:
+        raise G111Batch16V9SemanticBaseError(
+            f"dry-start DSL artifact verification failed: {detail}"
+        )
+    argv = manifest.get("resolved_launch_argv")
+    if (
+        manifest.get("schema") != "witness_launch_manifest.v1"
+        or manifest.get("config_family") != PROGRAM_NAME
+        or manifest.get("spec_id") != PROGRAM_NAME
+        or _argv_value(argv, "--training-target-capsule") != target_path
+        or _argv_value(argv, "--training-target-capsule-sha256") != target_sha
+        or _argv_value(argv, "--num-pairs") != str(PRODUCTION_PAIR_COUNT)
+        or type(argv) is not list
+        or argv.count("--fresh-producer") != 1
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "dry-start DSL launch unit differs from G111/G109 custody"
+        )
+    return manifest, {
+        "dsl_compile_hash": dsl_hash,
+        "launch_sh": launch_binding,
+        "dsl_provenance": provenance_binding,
+        "launch_manifest": manifest_binding,
+    }
+
+
+def _verify_pass_log_matches_report(
+    pass_report: object,
+    *,
+    pass_dir: Path,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    if type(pass_report) is not dict:
+        raise G111Batch16V9SemanticBaseError(
+            "GREEN dry-start report lacks a pass object"
+        )
+    reported_dir = Path(str(pass_report.get("dir", ""))).expanduser()
+    if (
+        pass_dir.is_symlink()
+        or not pass_dir.is_dir()
+        or reported_dir.resolve() != pass_dir.resolve()
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "dry-start pass directory differs from its report/run custody"
+        )
+    log_payload, log_binding = _open_bound_bytes(pass_dir / "run.log")
+    metrics, safe = _parse_dry_start_log_evidence(log_payload)
+    for key, value in metrics.items():
+        if pass_report.get(key) != value:
+            raise G111Batch16V9SemanticBaseError(
+                f"dry-start report {key} differs from run.log recomputation"
+            )
+    peak_gib = round(float(safe["peak_rss_mib"]) / 1024.0, 3)
+    if (
+        pass_report.get("rc") != safe["exit"]
+        or pass_report.get("outer_timeout") is not False
+        or pass_report.get("peak_rss_gib") != peak_gib
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "dry-start report rc/timeout/peak differs from SAFE_RUN telemetry"
+        )
+    return metrics, safe, log_binding
+
+
+def _open_pass1_physical_checkpoint(
+    pass_dir: Path,
+    *,
+    dsl_compile_hash: str,
+    last_ckpt_epoch: int,
+) -> dict[str, Any]:
+    """Reopen the immutable deploy/resume pair and its recursive ancestry."""
+
+    tip, tip_binding = _open_bound_json(pass_dir / "fresh_lineage_tip.json")
+    if (
+        tip.get("schema") != "tac.fresh_producer_lineage_tip.v1"
+        or tip.get("complete_trajectory_proven") is not True
+        or tip.get("epoch") != last_ckpt_epoch
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "pass-1 fresh-lineage tip does not name its logged checkpoint"
+        )
+    receipt_path = Path(str(tip.get("receipt_path", "")))
+    receipt_payload, receipt_binding = _open_bound_bytes(receipt_path)
+    receipt_sha = _require_sha256(
+        tip.get("receipt_sha256"),
+        "pass-1 physical checkpoint receipt SHA-256",
+    )
+    checkpoint_id = _require_sha256(
+        tip.get("checkpoint_id_sha256"),
+        "pass-1 physical checkpoint id",
+    )
+    if (
+        hashlib.sha256(receipt_payload).hexdigest() != receipt_sha
+        or len(receipt_payload) != tip.get("receipt_bytes")
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "pass-1 physical checkpoint receipt identity differs from its tip"
+        )
+    try:
+        from tac.witness_control.fresh_producer_lineage_v1 import (
+            open_fresh_physical_checkpoint_chain_v1,
+        )
+
+        chain = open_fresh_physical_checkpoint_chain_v1(
+            receipt_path,
+            expected_receipt_sha256=receipt_sha,
+            expected_current_launch_dsl_compile_hash=dsl_compile_hash,
+        )
+    except Exception as exc:
+        raise G111Batch16V9SemanticBaseError(
+            f"pass-1 physical checkpoint chain failed recursive reopen: {exc}"
+        ) from exc
+    if (
+        chain.current.pair.epoch != last_ckpt_epoch
+        or chain.current.pair.checkpoint_id_sha256 != checkpoint_id
+        or chain.current.receipt_path.resolve() != receipt_path.resolve()
+        or chain.current.receipt_sha256 != receipt_sha
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "pass-1 reopened physical checkpoint differs from tip/log"
+        )
+    return {
+        "tip": tip_binding,
+        "receipt": receipt_binding,
+        "receipt_sha256": receipt_sha,
+        "checkpoint_id_sha256": checkpoint_id,
+        "epoch": last_ckpt_epoch,
+        "root_sha256": chain.root_sha256,
+        "sequence_index": chain.current.sequence_index,
+    }
+
+
+def _verify_green_physical_evidence(
+    run_dir: Path,
+    *,
+    report: dict[str, Any],
+    target_path: str,
+    target_sha: str,
+) -> dict[str, Any]:
+    """Make GREEN a recomputed physical verdict, never a JSON marker."""
+
+    root_manifest, root_dsl = _verify_dsl_launch_unit(
+        run_dir,
+        target_path=target_path,
+        target_sha=target_sha,
+    )
+    root_argv = root_manifest["resolved_launch_argv"]
+    if _argv_value(root_argv, "--resume-from") is not None:
+        raise G111Batch16V9SemanticBaseError(
+            "dry-start release root launch is not the cold G111 producer"
+        )
+
+    pass1_dir = run_dir / "dry_start"
+    pass1_manifest, pass1_dsl = _verify_dsl_launch_unit(
+        pass1_dir,
+        target_path=target_path,
+        target_sha=target_sha,
+    )
+    pass1_argv = pass1_manifest["resolved_launch_argv"]
+    if (
+        _argv_value(pass1_argv, "--ckpt-every") != "1"
+        or pass1_argv.count("--no-mod-dim-ablation") != 1
+        or _argv_value(pass1_argv, "--resume-from") is not None
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "pass-1 launch lacks the typed crash-checkpoint bench lever"
+        )
+    pass1_metrics, pass1_safe, pass1_log = _verify_pass_log_matches_report(
+        report.get("pass1"),
+        pass_dir=pass1_dir,
+    )
+    if (
+        pass1_metrics["epochs_completed"] < 1
+        or pass1_metrics["checkpoint_written"] is not True
+        or not isinstance(pass1_metrics["last_ckpt_epoch"], int)
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "pass-1 physical log does not prove boot, step, and checkpoint"
+        )
+    checkpoint = _open_pass1_physical_checkpoint(
+        pass1_dir,
+        dsl_compile_hash=pass1_dsl["dsl_compile_hash"],
+        last_ckpt_epoch=pass1_metrics["last_ckpt_epoch"],
+    )
+
+    pass2_dir = run_dir / "dry_start_resume"
+    pass2_manifest, pass2_dsl = _verify_dsl_launch_unit(
+        pass2_dir,
+        target_path=target_path,
+        target_sha=target_sha,
+    )
+    pass2_argv = pass2_manifest["resolved_launch_argv"]
+    if (
+        _argv_value(pass2_argv, "--ckpt-every") != "1"
+        or pass2_argv.count("--no-mod-dim-ablation") != 1
+        or _argv_value(pass2_argv, "--resume-from") != str(pass1_dir)
+        or _argv_value(pass2_argv, "--fresh-lineage-parent-receipt")
+        != checkpoint["receipt"]["path"]
+        or _argv_value(
+            pass2_argv,
+            "--fresh-lineage-parent-receipt-sha256",
+        )
+        != checkpoint["receipt_sha256"]
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "pass-2 launch is not bound to the exact pass-1 physical parent"
+        )
+    pass2_metrics, pass2_safe, pass2_log = _verify_pass_log_matches_report(
+        report.get("pass2"),
+        pass_dir=pass2_dir,
+    )
+    resume_start = pass2_metrics["resume_start_epoch"]
+    resume_checkpoint = pass2_metrics["resume_ckpt_epoch"]
+    if (
+        pass2_metrics["resume_model_source"] is not True
+        or not isinstance(resume_start, int)
+        or not isinstance(resume_checkpoint, int)
+        or resume_checkpoint != pass1_metrics["last_ckpt_epoch"]
+        or resume_start != resume_checkpoint + 1
+        or pass2_metrics["epochs_completed"] < resume_start
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "pass-2 physical log does not prove exact-position resume and progress"
+        )
+    if (
+        report.get("peak_rss_gib")
+        != round(float(pass1_safe["peak_rss_mib"]) / 1024.0, 3)
+    ):
+        raise G111Batch16V9SemanticBaseError(
+            "top-level GREEN peak differs from pass-1 physical telemetry"
+        )
+    return {
+        "root": root_dsl,
+        "pass1": {
+            **pass1_dsl,
+            "run_log": pass1_log,
+            "safe_run_exit": pass1_safe["exit"],
+            "checkpoint": checkpoint,
+        },
+        "pass2": {
+            **pass2_dsl,
+            "run_log": pass2_log,
+            "safe_run_exit": pass2_safe["exit"],
+            "resumed_checkpoint_epoch": resume_checkpoint,
+            "resume_start_epoch": resume_start,
+        },
+    }
 
 
 def _find_green_dry_start_release(
@@ -253,13 +617,25 @@ def _find_green_dry_start_release(
                 _require_sha256(dsl_hash, "G111 dry-start DSL compile hash")
             except G111Batch16V9SemanticBaseError:
                 continue
+            try:
+                physical_evidence = _verify_green_physical_evidence(
+                    report_path.parent,
+                    report=report,
+                    target_path=target_path,
+                    target_sha=target_sha,
+                )
+            except (OSError, G111Batch16V9SemanticBaseError):
+                continue
+            if physical_evidence["root"]["dsl_compile_hash"] != dsl_hash:
+                continue
             receipt = {
-                "schema": "tac.g111_green_dry_start_release.v1",
+                "schema": "tac.g111_green_dry_start_release.v2",
                 "typed_config_hash": expected_typed_hash,
                 "dsl_compile_hash": dsl_hash,
                 "target_capsule_receipt_sha256": target_sha,
                 "report": report_binding,
                 "launch_manifest": launch_binding,
+                "physical_evidence": physical_evidence,
                 "boot_ok": True,
                 "resume_round_trip_ok": True,
                 "peak_rss_gib": report.get("peak_rss_gib"),

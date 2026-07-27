@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import types
 
 import pytest
 
@@ -41,6 +42,7 @@ def test_g111_structural_semantic_rate_is_exact_and_not_a_score_claim() -> None:
 
 def test_g111_release_requires_same_typed_config_and_physical_target(
     tmp_path,
+    monkeypatch,
 ) -> None:
     run = tmp_path / "run"
     run.mkdir()
@@ -68,6 +70,7 @@ def test_g111_release_requires_same_typed_config_and_physical_target(
         target_sha,
         "--num-pairs",
         "600",
+        "--fresh-producer",
     ]
     launch = {
         "schema": "witness_launch_manifest.v1",
@@ -85,6 +88,138 @@ def test_g111_release_requires_same_typed_config_and_physical_target(
         "external_receipt_sha256": target_sha,
     }
 
+    # Marker-only GREEN is forbidden: no pass launch/log/checkpoint evidence
+    # exists yet, so these two mutable JSON files cannot clear a real launch.
+    assert (
+        _find_green_dry_start_release(
+            typed_config_hash=typed_hash,
+            target_contract=contract,
+            search_roots=(tmp_path,),
+        )
+        is None
+    )
+
+    for unit in (run, run / "dry_start", run / "dry_start_resume"):
+        unit.mkdir(exist_ok=True)
+        (unit / "launch.sh").write_text("#!/bin/sh\n")
+        (unit / "dsl_provenance.json").write_text("{}\n")
+    parent_receipt = run / "dry_start" / "fresh_lineage" / f"{'a' * 64}.receipt.json"
+    parent_receipt.parent.mkdir()
+    parent_receipt.write_bytes(b'{"physical":"checkpoint-pair"}\n')
+    parent_sha = hashlib.sha256(parent_receipt.read_bytes()).hexdigest()
+    (run / "dry_start" / "fresh_lineage_tip.json").write_text(
+        json.dumps(
+            {
+                "schema": "tac.fresh_producer_lineage_tip.v1",
+                "receipt_path": str(parent_receipt),
+                "receipt_sha256": parent_sha,
+                "receipt_bytes": parent_receipt.stat().st_size,
+                "checkpoint_id_sha256": "a" * 64,
+                "root_sha256": "b" * 64,
+                "sequence_index": 0,
+                "epoch": 1,
+                "stage": "stageCE",
+                "complete_trajectory_proven": True,
+            }
+        )
+    )
+    pass1_argv = [
+        *argv,
+        "--ckpt-every",
+        "1",
+        "--no-mod-dim-ablation",
+    ]
+    pass2_argv = [
+        *pass1_argv,
+        "--resume-from",
+        str(run / "dry_start"),
+        "--fresh-lineage-parent-receipt",
+        str(parent_receipt),
+        "--fresh-lineage-parent-receipt-sha256",
+        parent_sha,
+    ]
+    for unit, unit_argv, unit_hash in (
+        (run / "dry_start", pass1_argv, "4" * 64),
+        (run / "dry_start_resume", pass2_argv, "5" * 64),
+    ):
+        (unit / "launch_manifest.json").write_text(
+            json.dumps(
+                {
+                    "schema": "witness_launch_manifest.v1",
+                    "config_family": PROGRAM_NAME,
+                    "spec_id": PROGRAM_NAME,
+                    "dsl_compile_hash": unit_hash,
+                    "resolved_launch_argv": unit_argv,
+                }
+            )
+        )
+    (run / "dry_start" / "run.log").write_text(
+        '{"ep":1}\n'
+        '{"stage":"checkpoint","resume_latest":"state.npz","epoch":1}\n'
+        'SAFE_RUN {"exit":124,"peak_rss_mib":24576}\n'
+    )
+    (run / "dry_start_resume" / "run.log").write_text(
+        '{"stage":"resume_model_source"}\n'
+        '{"resume_start_epoch":2,"resume_ckpt_epoch":1}\n'
+        '{"ep":2}\n'
+        'SAFE_RUN {"exit":124,"peak_rss_mib":24576}\n'
+    )
+    report.update(
+        {
+            "peak_rss_gib": 24.0,
+            "pass1": {
+                "dir": str(run / "dry_start"),
+                "rc": 124,
+                "outer_timeout": False,
+                "peak_rss_gib": 24.0,
+                "epochs_completed": 1,
+                "checkpoint_written": True,
+                "last_ckpt_epoch": 1,
+                "resume_model_source": False,
+                "resume_start_epoch": None,
+                "resume_ckpt_epoch": None,
+            },
+            "pass2": {
+                "dir": str(run / "dry_start_resume"),
+                "rc": 124,
+                "outer_timeout": False,
+                "peak_rss_gib": 24.0,
+                "epochs_completed": 2,
+                "checkpoint_written": False,
+                "last_ckpt_epoch": None,
+                "resume_model_source": True,
+                "resume_start_epoch": 2,
+                "resume_ckpt_epoch": 1,
+            },
+        }
+    )
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    import tac.v9_provenance_gates as provenance_gates
+    import tac.witness_control.fresh_producer_lineage_v1 as lineage
+
+    monkeypatch.setattr(
+        provenance_gates,
+        "verify_dsl_provenance_artifacts",
+        lambda *args, **kwargs: (True, "fixture verified"),
+    )
+    monkeypatch.setattr(
+        lineage,
+        "open_fresh_physical_checkpoint_chain_v1",
+        lambda *args, **kwargs: types.SimpleNamespace(
+            current=types.SimpleNamespace(
+                pair=types.SimpleNamespace(
+                    epoch=1,
+                    checkpoint_id_sha256="a" * 64,
+                ),
+                receipt_path=parent_receipt.resolve(),
+                receipt_sha256=parent_sha,
+                sequence_index=0,
+            ),
+            root_sha256="b" * 64,
+        ),
+    )
+
     release = _find_green_dry_start_release(
         typed_config_hash=typed_hash,
         target_contract=contract,
@@ -97,6 +232,29 @@ def test_g111_release_requires_same_typed_config_and_physical_target(
     assert release["launch_manifest"]["sha256"] == hashlib.sha256(
         launch_path.read_bytes()
     ).hexdigest()
+    assert release["schema"] == "tac.g111_green_dry_start_release.v2"
+    assert release["physical_evidence"]["pass1"]["safe_run_exit"] == 124
+    assert (
+        release["physical_evidence"]["pass2"]["resumed_checkpoint_epoch"] == 1
+    )
+
+    resume_log = run / "dry_start_resume" / "run.log"
+    original_resume_log = resume_log.read_text()
+    resume_log.write_text(
+        original_resume_log.replace(
+            '"resume_start_epoch":2,"resume_ckpt_epoch":1',
+            '"resume_start_epoch":3,"resume_ckpt_epoch":2',
+        )
+    )
+    assert (
+        _find_green_dry_start_release(
+            typed_config_hash=typed_hash,
+            target_contract=contract,
+            search_roots=(tmp_path,),
+        )
+        is None
+    )
+    resume_log.write_text(original_resume_log)
 
     report["typed_config_hash"] = "4" * 64
     report_path.write_text(json.dumps(report), encoding="utf-8")
