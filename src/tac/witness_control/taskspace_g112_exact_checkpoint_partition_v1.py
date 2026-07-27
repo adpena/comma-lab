@@ -6,13 +6,16 @@ The physical G111 deploy checkpoint contains two different ownership domains:
 * the exact G105 V9 semantic program (shared tensors plus odd Y1 code rows);
 * a jointly trained generated-Y1 pose initializer (``xi_stored`` and ``dxi``).
 
-This module separates those domains without silently dropping any learned
-tensor.  The semantic child stores only ``code_y1[600, D]``.  Its strict loader
-uses G105's ``compile_from_y1_state`` API directly and never reconstructs even
-rows.  The odd-only compile must produce the same packet as the source
-checkpoint's legacy interleaved projection.  The folded pose table is
-explicitly an initializer which requires a real post-G105 refit; it is never
-represented as a final candidate payload.
+This module first requires the deploy checkpoint's immutable, recursively
+reopened zero-parent-to-current physical checkpoint ancestry and its exact
+full-state companion.  It then separates the two ownership domains without
+silently dropping any learned tensor.  The semantic child stores only
+``code_y1[600, D]``.  Its strict loader uses G105's
+``compile_from_y1_state`` API directly and never reconstructs even rows.  The
+odd-only compile must produce the same packet as the source checkpoint's
+legacy interleaved projection.  The folded pose table is explicitly an
+initializer which requires a real post-G105 refit; it is never represented as
+a final candidate payload.
 
 No scorer is run here and no score or archive claim is made.
 """
@@ -35,6 +38,13 @@ from typing import Any, Final
 
 import numpy as np
 
+from tac.witness_control.fresh_producer_lineage_v1 import (
+    FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA,
+    FRESH_PRODUCER_LINEAGE_SCHEMA,
+    FreshProducerLineageV1Error,
+    FreshProducerPhysicalCheckpointChainV1,
+    open_fresh_physical_checkpoint_chain_v1,
+)
 from tac.witness_control.taskspace_v9_training_target_binding_v1 import (
     CHECKPOINT_PROJECTION_KEY,
     CHECKPOINT_PROJECTION_SHA_KEY,
@@ -50,7 +60,7 @@ from tac.witness_dsl import (
     taskspace_g105_exact_v9_semantic_root_adapter_v1 as g105_adapter,
 )
 
-SCHEMA: Final = "tac.g112_exact_checkpoint_partition.v1"
+SCHEMA: Final = "tac.g112_exact_checkpoint_partition.v2"
 SEMANTIC_CHILD_SCHEMA: Final = "tac.g112_g105_semantic_odd_checkpoint.v1"
 INITIALIZER_SCHEMA: Final = "tac.g112_generated_y1_pose_initializer.v1"
 POSE_CHECKPOINT_CONTRACT_SCHEMA: Final = "tac.v9_pose_carrier_checkpoint_contract.v2"
@@ -135,6 +145,21 @@ class G112CheckpointPartitionResultV1:
     receipt_sha256: str
     semantic_packet_sha256: str
     source_checkpoint_sha256: str
+    source_resume_checkpoint_sha256: str
+    fresh_lineage_checkpoint_id_sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class G112PartitionReceiptV2:
+    """Strict receipt reopen binding both children to one physical source pair."""
+
+    receipt_path: Path
+    receipt_sha256: str
+    receipt_bytes: int
+    semantic_child: G112SemanticChildV1
+    initializer: G112PoseInitializerV1
+    source_chain: FreshProducerPhysicalCheckpointChainV1
+    semantic_packet_sha256: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -821,19 +846,302 @@ def _seal_receipt(body: Mapping[str, Any]) -> dict[str, Any]:
     return sealed
 
 
+def _open_physical_receipt_json(
+    receipt_path: Path,
+    *,
+    expected_sha256: str,
+) -> tuple[dict[str, Any], dict[str, object]]:
+    path = Path(receipt_path).expanduser()
+    if not path.is_absolute():
+        raise G112CheckpointPartitionError(
+            "G112 receipt path must be absolute physical custody"
+        )
+    expected = _require_sha256(expected_sha256, name="G112 receipt")
+    try:
+        before = path.lstat()
+    except OSError as exc:
+        raise G112CheckpointPartitionError(
+            "G112 receipt is not readable"
+        ) from exc
+    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+        raise G112CheckpointPartitionError(
+            "G112 receipt must be a regular non-symlink file"
+        )
+    payload = path.read_bytes()
+    if _sha256(payload) != expected:
+        raise G112CheckpointPartitionError(
+            "G112 receipt physical SHA-256 differs"
+        )
+    try:
+        parsed = json.loads(payload.decode("ascii"))
+    except (UnicodeDecodeError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise G112CheckpointPartitionError(
+            "G112 receipt is not ASCII JSON"
+        ) from exc
+    if not isinstance(parsed, dict) or _canonical_json(parsed) + b"\n" != payload:
+        raise G112CheckpointPartitionError(
+            "G112 receipt is not canonical newline-terminated JSON"
+        )
+    after = path.lstat()
+    if (
+        stat.S_ISLNK(after.st_mode)
+        or not stat.S_ISREG(after.st_mode)
+        or (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+        != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+        or _sha256(path.read_bytes()) != expected
+    ):
+        raise G112CheckpointPartitionError(
+            "G112 receipt changed during recursive reopen"
+        )
+    return parsed, {
+        "path": str(path),
+        "bytes": len(payload),
+        "sha256": expected,
+    }
+
+
+def open_g112_partition_receipt(
+    receipt_path: Path,
+    *,
+    expected_sha256: str,
+) -> G112PartitionReceiptV2:
+    """Reopen the complete G112 source pair and both published children."""
+
+    receipt, identity = _open_physical_receipt_json(
+        receipt_path,
+        expected_sha256=expected_sha256,
+    )
+    sealed_sha = receipt.pop("receipt_sha256", None)
+    if sealed_sha != _sha256(_canonical_json(receipt)):
+        raise G112CheckpointPartitionError(
+            "G112 receipt self-hash differs"
+        )
+    exact = {
+        "schema": SCHEMA,
+        "status": "PARTITIONED_RESEARCH_ONLY_REQUIRES_POST_G105_REFIT",
+        "research_only": True,
+        "candidate": False,
+        "score_claim": False,
+        "pointer_mutation_allowed": False,
+        "archive_claim": False,
+        "scope": "compile_infrastructure_only",
+    }
+    for key, expected in exact.items():
+        if receipt.get(key) != expected:
+            raise G112CheckpointPartitionError(
+                f"G112 receipt differs at {key}"
+            )
+    try:
+        deploy_info = receipt["source_checkpoint"]
+        resume_info = receipt["source_resume_checkpoint"]
+        lineage_receipt_info = receipt["source_lineage_receipt"]
+        lineage = receipt["fresh_producer_lineage"]
+        semantic_info = receipt["semantic_child"]
+        initializer_info = receipt["conditional_initializer"]
+    except KeyError as exc:
+        raise G112CheckpointPartitionError(
+            "G112 receipt is missing a required custody section"
+        ) from exc
+    if not all(
+        isinstance(value, dict)
+        for value in (
+            deploy_info,
+            resume_info,
+            lineage_receipt_info,
+            lineage,
+            semantic_info,
+            initializer_info,
+        )
+    ):
+        raise G112CheckpointPartitionError(
+            "G112 receipt custody section has the wrong type"
+        )
+    if (
+        semantic_info.get("filename") != SEMANTIC_CHILD_NAME
+        or initializer_info.get("filename") != INITIALIZER_NAME
+    ):
+        raise G112CheckpointPartitionError(
+            "G112 receipt child filename contract differs"
+        )
+    try:
+        source_chain = open_fresh_physical_checkpoint_chain_v1(
+            Path(str(lineage_receipt_info["path"])),
+            expected_receipt_sha256=str(
+                lineage_receipt_info["sha256"]
+            ),
+            expected_current_launch_dsl_compile_hash=str(
+                lineage["current_launch_dsl_compile_hash"]
+            ),
+        )
+    except (
+        KeyError,
+        TypeError,
+        ValueError,
+        FreshProducerLineageV1Error,
+    ) as exc:
+        raise G112CheckpointPartitionError(
+            "G112 receipt source physical ancestry failed recursive reopen"
+        ) from exc
+    source_pair = source_chain.current.pair
+    if (
+        source_chain.complete_trajectory_proven is not True
+        or str(source_pair.deploy.path) != deploy_info.get("path")
+        or source_pair.deploy.sha256 != deploy_info.get("sha256")
+        or source_pair.deploy.bytes != deploy_info.get("bytes")
+        or str(source_pair.resume.path) != resume_info.get("path")
+        or source_pair.resume.sha256 != resume_info.get("sha256")
+        or source_pair.resume.bytes != resume_info.get("bytes")
+        or str(source_chain.current.receipt_path)
+        != lineage_receipt_info.get("path")
+        or source_chain.current.receipt_sha256
+        != lineage_receipt_info.get("sha256")
+        or source_chain.current.receipt_bytes
+        != lineage_receipt_info.get("bytes")
+    ):
+        raise G112CheckpointPartitionError(
+            "G112 receipt source pair is not the recursively proven current node"
+        )
+    expected_lineage = {
+        "schema": FRESH_PRODUCER_LINEAGE_SCHEMA,
+        "physical_node_schema": FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA,
+        "seed": source_pair.seed,
+        "root_sha256": source_pair.root_sha256,
+        "initial_state_sha256": source_pair.initial_state_sha256,
+        "root_dsl_compile_hash": source_pair.root_dsl_compile_hash,
+        "current_launch_dsl_compile_hash": (
+            source_pair.current_launch_dsl_compile_hash
+        ),
+        "target_projection_sha256": source_pair.target_projection_sha256,
+        "parent_checkpoint_id_sha256": (
+            source_pair.parent_checkpoint_id_sha256
+        ),
+        "state_sha256": source_pair.state_sha256,
+        "checkpoint_id_sha256": source_pair.checkpoint_id_sha256,
+        "epoch": source_pair.epoch,
+        "stage": source_pair.stage,
+        "current_sequence_index": source_chain.current.sequence_index,
+        "physical_chain_node_count": len(source_chain.nodes),
+        "live_tensor_count": source_pair.live_tensor_count,
+        "ema_tensor_count": source_pair.ema_tensor_count,
+        "optimizer_tensor_count": source_pair.optimizer_tensor_count,
+        "polyak_tensor_count": source_pair.polyak_tensor_count,
+        "config_array_count": source_pair.config_array_count,
+        "rng_complete": True,
+        "event_ledger_complete": True,
+        "deploy_equals_companion_ema": True,
+        "film_stiefel": False,
+        "cold_root_recomputed": True,
+        "full_semantic_state_recomputed": True,
+        "checkpoint_id_recomputed": True,
+        "current_launch_hash_external_custody_matched": True,
+        "zero_parent_root_recursively_reopened": True,
+        "every_parent_receipt_sha256_reopened": True,
+        "complete_trajectory_proven": True,
+    }
+    if lineage != expected_lineage:
+        raise G112CheckpointPartitionError(
+            "G112 receipt fresh-lineage identity differs from physical source pair"
+        )
+    root = Path(str(identity["path"])).parent
+    semantic = open_g112_semantic_child(
+        root / SEMANTIC_CHILD_NAME,
+        expected_sha256=str(semantic_info.get("sha256", "")),
+    )
+    initializer = open_g112_pose_initializer(
+        root / INITIALIZER_NAME,
+        expected_sha256=str(initializer_info.get("sha256", "")),
+    )
+    semantic_packet_sha = str(
+        semantic_info.get("semantic_packet_sha256", "")
+    )
+    if (
+        semantic.semantic_packet_sha256 != semantic_packet_sha
+        or initializer.semantic_packet_sha256 != semantic_packet_sha
+        or int(semantic_info.get("bytes", -1)) != semantic.checkpoint_bytes
+        or int(initializer_info.get("bytes", -1))
+        != initializer.checkpoint_bytes
+    ):
+        raise G112CheckpointPartitionError(
+            "G112 receipt child identity or semantic-packet binding differs"
+        )
+    return G112PartitionReceiptV2(
+        receipt_path=Path(str(identity["path"])),
+        receipt_sha256=str(identity["sha256"]),
+        receipt_bytes=int(identity["bytes"]),
+        semantic_child=semantic,
+        initializer=initializer,
+        source_chain=source_chain,
+        semantic_packet_sha256=semantic_packet_sha,
+    )
+
+
+def _lineage_physical_identity(
+    physical: Any,
+) -> dict[str, object]:
+    return {
+        "path": str(physical.path),
+        "bytes": int(physical.bytes),
+        "sha256": str(physical.sha256),
+        "device": int(physical.device),
+        "inode": int(physical.inode),
+        "mtime_ns": int(physical.mtime_ns),
+        "regular_file": True,
+        "symlink": False,
+        "reopened_unchanged": True,
+    }
+
+
 def materialize_g112_checkpoint_partition(
     *,
     checkpoint: Path,
     expected_checkpoint_sha256: str,
+    resume_checkpoint: Path,
+    expected_resume_checkpoint_sha256: str,
+    lineage_receipt: Path,
+    expected_lineage_receipt_sha256: str,
+    expected_current_launch_dsl_compile_hash: str,
     output_root: Path,
     allowed_output_roots: Sequence[Path] = SSD_ROOTS,
 ) -> G112CheckpointPartitionResultV1:
-    """Partition one physical G111 checkpoint into immutable source artifacts."""
+    """Partition one physical G111 deploy/full-state pair into immutable artifacts."""
 
-    arrays, checkpoint_identity = _open_physical_checkpoint(
-        checkpoint,
-        expected_sha256=expected_checkpoint_sha256,
-    )
+    try:
+        source_chain = open_fresh_physical_checkpoint_chain_v1(
+            lineage_receipt,
+            expected_receipt_sha256=expected_lineage_receipt_sha256,
+            expected_current_launch_dsl_compile_hash=(
+                expected_current_launch_dsl_compile_hash
+            ),
+        )
+    except FreshProducerLineageV1Error as exc:
+        raise G112CheckpointPartitionError(
+            "G111 physical fresh-lineage ancestry custody failed: "
+            f"{exc}"
+        ) from exc
+    source_pair = source_chain.current.pair
+    requested_deploy = Path(checkpoint).expanduser()
+    requested_resume = Path(resume_checkpoint).expanduser()
+    if (
+        source_chain.complete_trajectory_proven is not True
+        or source_pair.deploy.path != requested_deploy
+        or source_pair.resume.path != requested_resume
+        or source_pair.deploy.sha256
+        != _require_sha256(
+            expected_checkpoint_sha256,
+            name="source checkpoint",
+        )
+        or source_pair.resume.sha256
+        != _require_sha256(
+            expected_resume_checkpoint_sha256,
+            name="source resume checkpoint",
+        )
+    ):
+        raise G112CheckpointPartitionError(
+            "requested G111 deploy/resume pair is not the recursively proven current node"
+        )
+    arrays = source_pair.deploy.arrays
+    checkpoint_identity = _lineage_physical_identity(source_pair.deploy)
+    resume_checkpoint_identity = _lineage_physical_identity(source_pair.resume)
     params, scalars = _checkpoint_views(arrays)
     pose_values, xi_init = _validate_pose_contract(params, arrays)
     projection = _validate_target_custody(arrays)
@@ -999,13 +1307,57 @@ def materialize_g112_checkpoint_partition(
         "archive_claim": False,
         "scope": "compile_infrastructure_only",
         "remaining_blockers": [
-            "real G111 launch and stage checkpoint do not yet exist",
+            "G114 self-orient versus shipped-quantizer contract remains open; this receipt does not make G111 launch-ready",
             "train/public V10 camera-realization parity is not yet closed",
             "conditional archive-domain raw-versus-Rice arbitration is not yet measured",
-            "fresh marker lineage chain remains P1",
             "xi initializer requires a real post-G105 refit",
         ],
         "source_checkpoint": checkpoint_identity,
+        "source_resume_checkpoint": resume_checkpoint_identity,
+        "source_lineage_receipt": {
+            "path": str(source_chain.current.receipt_path),
+            "bytes": source_chain.current.receipt_bytes,
+            "sha256": source_chain.current.receipt_sha256,
+        },
+        "fresh_producer_lineage": {
+            "schema": FRESH_PRODUCER_LINEAGE_SCHEMA,
+            "physical_node_schema": FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA,
+            "seed": source_pair.seed,
+            "root_sha256": source_pair.root_sha256,
+            "initial_state_sha256": source_pair.initial_state_sha256,
+            "root_dsl_compile_hash": source_pair.root_dsl_compile_hash,
+            "current_launch_dsl_compile_hash": (
+                source_pair.current_launch_dsl_compile_hash
+            ),
+            "target_projection_sha256": source_pair.target_projection_sha256,
+            "parent_checkpoint_id_sha256": (
+                source_pair.parent_checkpoint_id_sha256
+            ),
+            "state_sha256": source_pair.state_sha256,
+            "checkpoint_id_sha256": source_pair.checkpoint_id_sha256,
+            "epoch": source_pair.epoch,
+            "stage": source_pair.stage,
+            "current_sequence_index": (
+                source_chain.current.sequence_index
+            ),
+            "physical_chain_node_count": len(source_chain.nodes),
+            "live_tensor_count": source_pair.live_tensor_count,
+            "ema_tensor_count": source_pair.ema_tensor_count,
+            "optimizer_tensor_count": source_pair.optimizer_tensor_count,
+            "polyak_tensor_count": source_pair.polyak_tensor_count,
+            "config_array_count": source_pair.config_array_count,
+            "rng_complete": source_pair.rng_complete,
+            "event_ledger_complete": source_pair.event_ledger_complete,
+            "deploy_equals_companion_ema": source_pair.deploy_equals_ema,
+            "film_stiefel": source_pair.film_stiefel,
+            "cold_root_recomputed": True,
+            "full_semantic_state_recomputed": True,
+            "checkpoint_id_recomputed": True,
+            "current_launch_hash_external_custody_matched": True,
+            "zero_parent_root_recursively_reopened": True,
+            "every_parent_receipt_sha256_reopened": True,
+            "complete_trajectory_proven": True,
+        },
         "physical_g109_target_custody": {
             "projection_sha256": _scalar(
                 arrays,
@@ -1101,10 +1453,18 @@ def materialize_g112_checkpoint_partition(
         or _sha256(receipt_path.read_bytes()) != _sha256(receipt_payload)
     ):
         raise G112CheckpointPartitionError("published G112 artifact differs after durable reopen")
-    parsed_receipt = json.loads(receipt_path.read_text(encoding="ascii"))
-    sealed_sha = parsed_receipt.pop("receipt_sha256", None)
-    if sealed_sha != _sha256(_canonical_json(parsed_receipt)):
-        raise G112CheckpointPartitionError("published G112 receipt self-hash failed reopen")
+    reopened_receipt = open_g112_partition_receipt(
+        receipt_path,
+        expected_sha256=_sha256(receipt_payload),
+    )
+    if (
+        reopened_receipt.semantic_packet_sha256 != semantic_packet_sha
+        or reopened_receipt.source_chain.current.pair.checkpoint_id_sha256
+        != source_pair.checkpoint_id_sha256
+    ):
+        raise G112CheckpointPartitionError(
+            "published G112 receipt recursive closure differs"
+        )
 
     return G112CheckpointPartitionResultV1(
         output_root=output,
@@ -1116,6 +1476,10 @@ def materialize_g112_checkpoint_partition(
         receipt_sha256=_sha256(receipt_payload),
         semantic_packet_sha256=semantic_packet_sha,
         source_checkpoint_sha256=str(checkpoint_identity["sha256"]),
+        source_resume_checkpoint_sha256=str(
+            resume_checkpoint_identity["sha256"]
+        ),
+        fresh_lineage_checkpoint_id_sha256=source_pair.checkpoint_id_sha256,
     )
 
 
@@ -1135,9 +1499,11 @@ __all__ = [
     "Y1_SELECTED_PREIMAGE_SCHEMA",
     "G112CheckpointPartitionError",
     "G112CheckpointPartitionResultV1",
+    "G112PartitionReceiptV2",
     "G112PoseInitializerV1",
     "G112SemanticChildV1",
     "materialize_g112_checkpoint_partition",
+    "open_g112_partition_receipt",
     "open_g112_pose_initializer",
     "open_g112_semantic_child",
 ]

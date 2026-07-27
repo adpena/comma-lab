@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tac.witness_control import fresh_producer_lineage_v1 as lineage
 from tac.witness_control import taskspace_g112_exact_checkpoint_partition_v1 as subject
 from tac.witness_dsl import (
     taskspace_g105_exact_v9_semantic_root_adapter_v1 as g105,
@@ -132,8 +133,33 @@ def _source_arrays() -> dict[str, np.ndarray]:
             dtype=np.float32,
         ).reshape(600, 6),
     }
+    seed = 112
+    initial_sha = hashlib.sha256(b"g111-initial").hexdigest()
+    root_dsl = hashlib.sha256(b"g111-root-dsl").hexdigest()
+    launch_dsl = hashlib.sha256(b"g111-launch-dsl").hexdigest()
+    target_projection_sha = "1" * 64
+    root_sha = lineage.fresh_producer_root_sha256(
+        seed=seed,
+        dsl_compile_hash=root_dsl,
+        target_projection_sha256=target_projection_sha,
+        initial_state_sha256=initial_sha,
+    )
     configs = {
         "__cfg_fresh_producer": np.asarray(1, dtype=np.int8),
+        "__cfg_fresh_lineage_schema": np.asarray(
+            lineage.FRESH_PRODUCER_LINEAGE_SCHEMA
+        ),
+        "__cfg_fresh_seed": np.asarray(seed, dtype=np.int64),
+        "__cfg_fresh_lineage_root_sha256": np.asarray(root_sha),
+        "__cfg_fresh_initial_state_sha256": np.asarray(initial_sha),
+        "__cfg_fresh_dsl_compile_hash": np.asarray(root_dsl),
+        "__cfg_fresh_target_projection_sha256": np.asarray(
+            target_projection_sha
+        ),
+        "__cfg_fresh_current_launch_dsl_compile_hash": np.asarray(
+            launch_dsl
+        ),
+        "__epoch": np.asarray(17),
         "__cfg_activation": np.asarray("hosc"),
         "__cfg_upstream_snapshot_schema": np.asarray(g105.UPSTREAM_SOURCE_CLOSURE_SCHEMA),
         "__cfg_upstream_snapshot_sha256": np.asarray(g105.UPSTREAM_SOURCE_CLOSURE_SHA256),
@@ -173,6 +199,157 @@ def _write_checkpoint(path: Path, arrays: dict[str, np.ndarray]) -> str:
     payload = subject._deterministic_npz_bytes(arrays)
     path.write_bytes(payload)
     return hashlib.sha256(payload).hexdigest()
+
+
+def _resume_arrays(
+    deploy: dict[str, np.ndarray],
+    *,
+    parent_checkpoint_id: str = lineage.ROOT_PARENT_CHECKPOINT_ID,
+) -> dict[str, np.ndarray]:
+    resume: dict[str, np.ndarray] = {}
+    params = {
+        key: np.asarray(value)
+        for key, value in deploy.items()
+        if not key.startswith("__")
+    }
+    for key, value in params.items():
+        resume[lineage.RESUME_LIVE_PREFIX + key] = np.asarray(value).copy()
+        resume[lineage.RESUME_EMA_PREFIX + key] = np.asarray(value).copy()
+    resume[lineage.RESUME_OPT_PREFIX + "step"] = np.asarray(
+        17,
+        dtype=np.int64,
+    )
+    resume[lineage.RESUME_OPT_PREFIX + "m"] = np.zeros(
+        8,
+        dtype=np.float32,
+    )
+    for key, value in deploy.items():
+        if (
+            key in lineage.FRESH_DEPLOY_KEYS
+            or key.startswith("__cfg_pose_carrier")
+            or key.startswith("__cfg_g109_")
+            or key.startswith("__cfg_g46_")
+            or key
+            in {
+                "__cfg_target_authority_sha256",
+                "__cfg_verdict_batch",
+            }
+        ):
+            resume[key] = np.asarray(value).copy()
+    stage = "tau_softplus"
+    event_ledger = json.dumps(
+        {
+            "schema": lineage.RESUME_EVENT_LEDGER_SCHEMA,
+            "stage": stage,
+            "persisted_keys": [],
+            "active_event_flags": [],
+            "inactive_explicit": True,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    resume.update(
+        {
+            "__cfg_film_stiefel": np.asarray(0),
+            "__resume_epoch": np.asarray(17),
+            "__resume_has_opt": np.asarray(1),
+            "__resume_semantic_schema": np.asarray(
+                lineage.RESUME_SEMANTIC_SCHEMA
+            ),
+            "__resume_stage": np.asarray(stage),
+            "__resume_event_ledger_json": np.asarray(event_ledger),
+            "__rng_np_algo": np.asarray("MT19937"),
+            "__rng_np_keys": np.arange(624, dtype=np.uint32),
+            "__rng_np_pos": np.asarray(23),
+            "__rng_np_has_gauss": np.asarray(0),
+            "__rng_np_cached_gauss": np.asarray(0.0),
+            "__recent_losses": np.asarray(
+                [1.0, 0.5],
+                dtype=np.float64,
+            ),
+        }
+    )
+    state_sha = lineage.fresh_resume_semantic_state_sha256_from_flat(
+        resume
+    )
+    checkpoint_id = lineage.fresh_checkpoint_id_sha256(
+        root_sha256=str(
+            resume["__cfg_fresh_lineage_root_sha256"].item()
+        ),
+        parent_checkpoint_id_sha256=parent_checkpoint_id,
+        state_sha256=state_sha,
+        epoch=17,
+        stage=stage,
+    )
+    resume.update(
+        {
+            "__cfg_fresh_lineage_parent_checkpoint_id_sha256": np.asarray(
+                parent_checkpoint_id
+            ),
+            "__cfg_fresh_lineage_state_sha256": np.asarray(state_sha),
+            "__cfg_fresh_lineage_checkpoint_id_sha256": np.asarray(
+                checkpoint_id
+            ),
+            "__cfg_fresh_lineage_epoch": np.asarray(
+                17,
+                dtype=np.int64,
+            ),
+            "__cfg_fresh_lineage_stage": np.asarray(stage),
+        }
+    )
+    return resume
+
+
+def _publish_source_node(
+    tmp_path: Path,
+    *,
+    name: str,
+    arrays: dict[str, np.ndarray],
+) -> lineage.FreshProducerPhysicalCheckpointNodeV1:
+    source_dir = tmp_path / f"{name}-sources"
+    source_dir.mkdir()
+    run_dir = tmp_path / f"{name}-run"
+    run_dir.mkdir()
+    deploy_path = source_dir / "deploy.npz"
+    resume_path = source_dir / "resume.npz"
+    deploy_sha = _write_checkpoint(deploy_path, arrays)
+    resume_sha = _write_checkpoint(
+        resume_path,
+        _resume_arrays(arrays),
+    )
+    return lineage.write_fresh_physical_checkpoint_node_v1(
+        out_dir=run_dir,
+        deploy_checkpoint=deploy_path,
+        expected_deploy_sha256=deploy_sha,
+        resume_checkpoint=resume_path,
+        expected_resume_sha256=resume_sha,
+        expected_current_launch_dsl_compile_hash=str(
+            arrays[
+                "__cfg_fresh_current_launch_dsl_compile_hash"
+            ].item()
+        ),
+    )
+
+
+def _materialize(
+    *,
+    node: lineage.FreshProducerPhysicalCheckpointNodeV1,
+    output_root: Path,
+    allowed_output_roots: tuple[Path, ...],
+) -> subject.G112CheckpointPartitionResultV1:
+    return subject.materialize_g112_checkpoint_partition(
+        checkpoint=node.pair.deploy.path,
+        expected_checkpoint_sha256=node.pair.deploy.sha256,
+        resume_checkpoint=node.pair.resume.path,
+        expected_resume_checkpoint_sha256=node.pair.resume.sha256,
+        lineage_receipt=node.receipt_path,
+        expected_lineage_receipt_sha256=node.receipt_sha256,
+        expected_current_launch_dsl_compile_hash=(
+            node.pair.current_launch_dsl_compile_hash
+        ),
+        output_root=output_root,
+        allowed_output_roots=allowed_output_roots,
+    )
 
 
 def test_physical_checkpoint_path_sha_and_symlink_fail_closed(
@@ -215,24 +392,31 @@ def test_odd_only_partition_is_deterministic_and_even_invariant(
     first_arrays = _source_arrays()
     second_arrays = {key: value.copy() for key, value in first_arrays.items()}
     second_arrays["code"][0::2] = np.float32(91.0)
-    first_checkpoint = tmp_path / "source-a.npz"
-    second_checkpoint = tmp_path / "source-b.npz"
-    first_sha = _write_checkpoint(first_checkpoint, first_arrays)
-    second_sha = _write_checkpoint(second_checkpoint, second_arrays)
+    first_node = _publish_source_node(
+        tmp_path,
+        name="first",
+        arrays=first_arrays,
+    )
+    second_node = _publish_source_node(
+        tmp_path,
+        name="second",
+        arrays=second_arrays,
+    )
 
-    first = subject.materialize_g112_checkpoint_partition(
-        checkpoint=first_checkpoint,
-        expected_checkpoint_sha256=first_sha,
+    first = _materialize(
+        node=first_node,
         output_root=tmp_path / "out-a",
         allowed_output_roots=(tmp_path,),
     )
-    second = subject.materialize_g112_checkpoint_partition(
-        checkpoint=second_checkpoint,
-        expected_checkpoint_sha256=second_sha,
+    second = _materialize(
+        node=second_node,
         output_root=tmp_path / "out-b",
         allowed_output_roots=(tmp_path,),
     )
-    assert first_sha != second_sha
+    assert (
+        first_node.pair.deploy.sha256
+        != second_node.pair.deploy.sha256
+    )
     assert first.semantic_child_sha256 == second.semantic_child_sha256
     assert first.initializer_sha256 == second.initializer_sha256
     assert first.semantic_packet_sha256 == second.semantic_packet_sha256
@@ -271,6 +455,15 @@ def test_odd_only_partition_is_deterministic_and_even_invariant(
     assert partition["source_atom_ownership"]["even_code_rows"]["semantic_child_storage"] == "absent"
     assert receipt["conditional_initializer"]["final_payload"] is False
     assert receipt["conditional_initializer"]["requires_real_post_g105_refit"] is True
+    assert receipt["fresh_producer_lineage"][
+        "complete_trajectory_proven"
+    ] is True
+    reopened_receipt = subject.open_g112_partition_receipt(
+        first.receipt_path,
+        expected_sha256=first.receipt_sha256,
+    )
+    assert reopened_receipt.source_chain.complete_trajectory_proven is True
+    assert len(reopened_receipt.source_chain.nodes) == 1
 
 
 @pytest.mark.parametrize(
@@ -347,12 +540,20 @@ def test_extra_missing_wrong_and_nonfinite_fail_closed(
 ) -> None:
     arrays = _source_arrays()
     mutation(arrays)
-    checkpoint = tmp_path / "bad.npz"
-    sha = _write_checkpoint(checkpoint, arrays)
-    with pytest.raises(subject.G112CheckpointPartitionError, match=match):
-        subject.materialize_g112_checkpoint_partition(
-            checkpoint=checkpoint,
-            expected_checkpoint_sha256=sha,
+    with pytest.raises(
+        (
+            subject.G112CheckpointPartitionError,
+            lineage.FreshProducerLineageV1Error,
+        ),
+        match=match,
+    ):
+        node = _publish_source_node(
+            tmp_path,
+            name="bad",
+            arrays=arrays,
+        )
+        _materialize(
+            node=node,
             output_root=tmp_path / "out",
             allowed_output_roots=(tmp_path,),
         )
@@ -364,17 +565,62 @@ def test_extra_target_config_fails_closed(
 ) -> None:
     arrays = _source_arrays()
     arrays["__cfg_g46_orphan"] = np.asarray("forbidden")
-    checkpoint = tmp_path / "bad-target.npz"
-    sha = _write_checkpoint(checkpoint, arrays)
     with pytest.raises(
         subject.G112CheckpointPartitionError,
         match="target config set is not exact",
     ):
-        subject.materialize_g112_checkpoint_partition(
-            checkpoint=checkpoint,
-            expected_checkpoint_sha256=sha,
+        node = _publish_source_node(
+            tmp_path,
+            name="bad-target",
+            arrays=arrays,
+        )
+        _materialize(
+            node=node,
             output_root=tmp_path / "out",
             allowed_output_roots=(tmp_path,),
+        )
+
+
+def test_receipt_rejects_cross_partition_initializer_mix(
+    tmp_path: Path,
+    fake_target_custody: None,
+) -> None:
+    first_arrays = _source_arrays()
+    second_arrays = {
+        key: value.copy()
+        for key, value in first_arrays.items()
+    }
+    second_arrays["pose_carrier.dxi"] += np.float32(0.125)
+    first_node = _publish_source_node(
+        tmp_path,
+        name="mix-first",
+        arrays=first_arrays,
+    )
+    second_node = _publish_source_node(
+        tmp_path,
+        name="mix-second",
+        arrays=second_arrays,
+    )
+    first = _materialize(
+        node=first_node,
+        output_root=tmp_path / "mix-out-first",
+        allowed_output_roots=(tmp_path,),
+    )
+    second = _materialize(
+        node=second_node,
+        output_root=tmp_path / "mix-out-second",
+        allowed_output_roots=(tmp_path,),
+    )
+    first.initializer_path.write_bytes(
+        second.initializer_path.read_bytes()
+    )
+    with pytest.raises(
+        subject.G112CheckpointPartitionError,
+        match="physical SHA-256 differs",
+    ):
+        subject.open_g112_partition_receipt(
+            first.receipt_path,
+            expected_sha256=first.receipt_sha256,
         )
 
 
