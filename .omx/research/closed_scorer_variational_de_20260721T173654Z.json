@@ -1,0 +1,305 @@
+{
+  "authority": "[macOS-CPU advisory real frozen-SegNet tiles; NON-PROMOTABLE]",
+  "d1_fidelity": {
+    "bregman_voronoi_vs_live_argmax_disagreement_rate": 0.0,
+    "cached_target_vs_live_argmax_disagreement_rate": 0.0,
+    "frame_ids": [
+      228,
+      584,
+      591,
+      597
+    ],
+    "generic_f64_power_vs_live_argmax_disagreement_rate": 0.0,
+    "heldout_pixels": 20480,
+    "heldout_tiles": 20,
+    "max_normalized_residual": 0.0,
+    "native_f32_power_vs_live_argmax_disagreement_rate": 0.0,
+    "rows": [
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 228,
+        "generic_f64_power_vs_live": 0,
+        "left": 382,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 41
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 228,
+        "generic_f64_power_vs_live": 0,
+        "left": 378,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 85
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 228,
+        "generic_f64_power_vs_live": 0,
+        "left": 66,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 92
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 228,
+        "generic_f64_power_vs_live": 0,
+        "left": 257,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 112
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 228,
+        "generic_f64_power_vs_live": 0,
+        "left": 381,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 112
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 584,
+        "generic_f64_power_vs_live": 0,
+        "left": 267,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 93
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 584,
+        "generic_f64_power_vs_live": 0,
+        "left": 122,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 155
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 584,
+        "generic_f64_power_vs_live": 0,
+        "left": 431,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 215
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 584,
+        "generic_f64_power_vs_live": 0,
+        "left": 310,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 304
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 584,
+        "generic_f64_power_vs_live": 0,
+        "left": 460,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 340
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 591,
+        "generic_f64_power_vs_live": 0,
+        "left": 417,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 78
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 591,
+        "generic_f64_power_vs_live": 0,
+        "left": 22,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 232
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 591,
+        "generic_f64_power_vs_live": 0,
+        "left": 459,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 238
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 591,
+        "generic_f64_power_vs_live": 0,
+        "left": 355,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 259
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 591,
+        "generic_f64_power_vs_live": 0,
+        "left": 249,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 304
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 597,
+        "generic_f64_power_vs_live": 0,
+        "left": 78,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 21
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 597,
+        "generic_f64_power_vs_live": 0,
+        "left": 379,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 60
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 597,
+        "generic_f64_power_vs_live": 0,
+        "left": 67,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 236
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 597,
+        "generic_f64_power_vs_live": 0,
+        "left": 19,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 241
+      },
+      {
+        "bregman_voronoi_vs_live": 0,
+        "cached_target_vs_live": 0,
+        "frame_id": 597,
+        "generic_f64_power_vs_live": 0,
+        "left": 232,
+        "native_f32_power_vs_live": 0,
+        "pixels": 1024,
+        "size": 32,
+        "top": 307
+      }
+    ],
+    "tile_size": 32
+  },
+  "d2_stationarity": {
+    "hard_cap_multiplier": "mu_B; distinct from the fixed objective rate price",
+    "objective_rate_price_exact": "25/37545489",
+    "objective_rate_price_float": 6.658589531221714e-07,
+    "pose_differential": "SE(3) geodesic xi force with measured decoder pullback owed",
+    "rate_differential": "entropy/MDL code-length gradient with exact-byte residual gate",
+    "seg_differential": "viscosity/subgradient Hamilton-Jacobi force on Laguerre cell interfaces"
+  },
+  "d3_constrained": {
+    "byte_cap": 154600,
+    "known_under_cap_advisory_incumbent": {
+      "archive_bytes": 91062,
+      "axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+      "score": 35.955425463668846,
+      "source": ".omx/research/einstein_kolmogorov_crux_v3_20260720.json"
+    },
+    "missing_witness": [
+      "legal deterministic decoder/description language",
+      "exact archive bytes <= cap",
+      "receiver parse-back and runtime custody",
+      "realized-through-R frozen SegNet/PoseNet debts"
+    ],
+    "numeric_infimum": null,
+    "numeric_infimum_status": "REFUSED_UNKNOWN_DESCRIPTION_LANGUAGE_AND_NO_SUB015_BYTE_CLOSED_WITNESS",
+    "rate_at_cap": 0.10294179415268769,
+    "rate_at_cap_exact": "3865000/37545489",
+    "residual_distortion_budget": 0.04705820584731231,
+    "s_floor_0_118_retained_scope": "EMPIRICAL_ACHIEVER_RATE_REFERENCE_AT_177169_BYTES; OUTSIDE_154600_BYTE_CAP",
+    "s_floor_0_118_verdict": "REFUTE_AS_ESTABLISHED_EXACT_MINIMUM",
+    "status": "UNRESOLVED_REQUIRES_BYTE_CLOSED_WITNESS",
+    "target_score": 0.15
+  },
+  "d4_routing": {
+    "einstein_kolmogorov_ultra.U1": "closed_scorer_viscosity_kkt_stationarity_v1",
+    "einstein_kolmogorov_ultra.U2": "closed_scorer_archive_reachability_bound_v1 lower-bound relaxation",
+    "einstein_kolmogorov_ultra.U3": "byte-closed S-star/reachability witness and exact replay"
+  },
+  "interpretation": {
+    "confirmed": "rank-4 native-f32 Laguerre and negative-entropy Bregman cells reproduce the live frozen final-head argmax on measured tiles",
+    "not_confirmed": "archive-feasible inverse image, decoder reachability, exact byte rate, contest score, or V9 model factorization",
+    "v9_gauge_status": "GAUGE_IDENTITY_VERIFIED_NOT_MODEL_FACTORIZED"
+  },
+  "pointer_moved": false,
+  "schema": "closed_scorer_variational_de_fidelity.v1",
+  "score_claim_valid": false,
+  "seed": 1234,
+  "source_custody": {
+    "batch_geometry_scope": "algebraic closure at captured live features; cached-target disagreement is diagnostic only",
+    "equation_module_sha256": "dfe7d0a2865747da2522939a837d1fb201c239db0213494e37593a9743c5a151",
+    "factorization_module_sha256": "4dcd9a61f9cfda499d2ff51691c5c5663e1137dbf1b4c803ce2ab73f4c001a63",
+    "git_sha_before_landing": "c2188225d319326f168653afaead3152fe263832",
+    "gt_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "gt_cache_bytes": 5078017610,
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "measurement_batch_geometry": 1,
+    "official_n600_batch_geometry": 32,
+    "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "torch_threads": 1,
+    "torch_version": "2.12.1",
+    "upstream_frame_utils_sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+    "upstream_modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+    "verification_tool_sha256": "9b016c2cdeefe80a682432706460326fc66fb83949c9040ab9d791c3e381ecfc"
+  },
+  "written_at_utc": "2026-07-21T17:48:45Z"
+}
