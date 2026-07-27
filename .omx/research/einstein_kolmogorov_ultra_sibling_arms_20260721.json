@@ -1,0 +1,44 @@
+{
+  "advected_ground_stratified": {
+    "authority_axis": "[macOS-CPU advisory]",
+    "completed_prefix": 64,
+    "eligible_frontier_candidate": false,
+    "receipt": {
+      "bytes": 14259,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/advected_base_20260721/advected_base/receipt.json",
+      "sha256": "4a6650f2b1c8f8290a0a099fecf8fa7dd7a1d8826b5bfa72441cf553f1e676d0"
+    },
+    "receipt_schema": "predict_project_advected_base_measurement.v1",
+    "score_claim": false,
+    "verdict": "N64_RATE_GATE_FAIL_STOP_BEFORE_N600",
+    "verdict_scope": "counted PPCS planar-xi formulation against deterministic solved-target reconstruction"
+  },
+  "bidirectional_amplitude": {
+    "authority_axis": "[macOS-CPU advisory]",
+    "completed_prefix": 64,
+    "eligible_frontier_candidate": false,
+    "receipt": {
+      "bytes": 84257468,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/g2f_amplitude_20260721/receipt.json",
+      "sha256": "0a09b7b5022ff64eebc54d086f00c89378d7eb7091c5963cf1056120469bc38e"
+    },
+    "receipt_schema": "bidirectional_amplitude_ladder_receipt.v1",
+    "score_claim": false,
+    "verdict": "MEASURED_G2F_BIDIRECTIONAL_QP_NO_ADMISSION_N64_FAMILY_OPEN",
+    "verdict_scope": "local-linear bidirectional rank-4 realization charts on exact contiguous n64 openpilot-base pairs"
+  },
+  "mdl_polytope_member": {
+    "authority_axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+    "completed_prefix": 64,
+    "eligible_frontier_candidate": false,
+    "receipt": {
+      "bytes": 9242,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/mdl_member_20260721/receipt_n64.json",
+      "sha256": "b71ad6ab036b62fca640c4dc1a76fa37eec404901f6854239d35eb5c90d803a3"
+    },
+    "receipt_schema": "mdl_polytope_member_measurement.v1",
+    "score_claim": false,
+    "verdict": "MEASURED_NO_MEMBER_RATE_CUT_RETAIN_CANONICAL",
+    "verdict_scope": "n64 exact member selection with same diagnostic tile coder; no whole-archive or n600 score implication"
+  }
+}
