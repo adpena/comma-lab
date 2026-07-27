@@ -20,9 +20,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from tac.boundary_math import warp_real_luma_frame0 as W
 from tac.boundary_math import xi_pose_coder as X
 from tac.boundary_math import xi_spline_residual_coder as SR
-from tac.boundary_math import warp_real_luma_frame0 as W
 
 
 def _smooth_xi(P: int, seed: int = 0) -> np.ndarray:
@@ -161,17 +161,28 @@ def test_default_coder_unchanged_and_byte_identical_to_delta_ar():
     delta_ar_bytes = X.serialize_xi_payload(q, scales, coder="delta_ar")
     assert default_bytes == delta_ar_bytes, "DEFAULT payload must be the delta_ar path, byte-identical"
     # coder ids are stable (the shipped inflate's verbatim copies depend on them)
-    assert (X._CODER_RAW, X._CODER_DELTA_AR, X._CODER_SPLINE_RESIDUAL, X._CODER_DELTA_RES) \
-        == (0, 1, 2, 3)
+    assert (
+        X._CODER_RAW,
+        X._CODER_DELTA_AR,
+        X._CODER_SPLINE_RESIDUAL,
+        X._CODER_DELTA_RES,
+        X._CODER_DELTA_AR_ZLIB,
+    ) == (0, 1, 2, 3, 4)
     # and the delta_ar body layout is untouched: header byte says cid=1
     assert default_bytes[len(X._XI_MAGIC)] == X._CODER_DELTA_AR
 
 
-def test_strict_parity_across_all_four_coders():
+def test_strict_parity_across_all_five_coders():
     xi = _smooth_xi(90, 13)
     q, scales = X.quantize_xi(xi)
     decoded = {}
-    for coder in ("none", "delta_ar", "spline_residual", "delta_res"):
+    for coder in (
+        "none",
+        "delta_ar",
+        "delta_ar_zlib",
+        "spline_residual",
+        "delta_res",
+    ):
         blob = X.serialize_xi_payload(q, scales, coder=coder, spline_knots=8)
         decoded[coder], _ = X.parse_xi_payload(blob)
     for coder, qd in decoded.items():

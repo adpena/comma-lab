@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import builtins
 import hashlib
 import importlib.util
 import inspect
@@ -72,13 +73,75 @@ def _xi() -> np.ndarray:
 def _packet() -> bytes:
     semantic = _g105_packet()
     q, scales = quantize_xi(_xi(), q_levels=4096)
-    xip2 = serialize_xi_payload(q, scales, coder="delta_ar")
+    xip2 = serialize_xi_payload(q, scales, coder="delta_ar_zlib")
     return pose_product._encode_packet(
         semantic_packet=semantic,
         final_y1_binding=hashlib.sha256(b"binding").hexdigest(),
         xip2_payload=xip2,
         pitch=0.0,
     )
+
+
+def test_public_pose_plugin_has_no_undeclared_brotli_dependency(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plugin = (
+        RUNTIME_ROOT
+        / "frame0_variants"
+        / "generated_y1_pose_xip2_v1.py"
+    )
+    original_import = builtins.__import__
+
+    def guarded_import(
+        name: str,
+        globals: dict[str, object] | None = None,
+        locals: dict[str, object] | None = None,
+        fromlist: tuple[str, ...] = (),
+        level: int = 0,
+    ) -> object:
+        if name == "brotli" or name.startswith("brotli."):
+            raise ModuleNotFoundError("clean upstream has no brotli")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    public = _module(plugin, "_g110_public_without_brotli")
+    assert public.accepts_packet(_packet()) is True
+    assert public.parse_packet(_packet())["xi"].shape == (600, 6)
+
+
+def test_public_inflate_prepares_clean_and_repeat_output_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    public = _module(
+        RUNTIME_ROOT / "inflate.py",
+        "_g110_public_output_contract",
+    )
+    monkeypatch.setattr(public, "EXPECTED_RAW_BYTES", 17)
+    monkeypatch.setattr(public, "MIN_OUTPUT_HEADROOM_BYTES", 0)
+    output_root = tmp_path / "inflated"
+    final_path, temporary_path = public._prepare_output(
+        output_root,
+        "video.raw",
+    )
+    assert output_root.is_dir()
+    assert final_path == output_root / "video.raw"
+    assert temporary_path == output_root / ".video.raw.g110.tmp"
+
+    final_path.write_bytes(b"x" * 17)
+    repeated_final, repeated_temporary = public._prepare_output(
+        output_root,
+        "video.raw",
+    )
+    assert repeated_final == final_path
+    assert repeated_temporary == temporary_path
+
+    (output_root / "foreign.bin").write_bytes(b"x")
+    with pytest.raises(
+        public.PublicInflateError,
+        match="outside the exact G110 product",
+    ):
+        public._prepare_output(output_root, "video.raw")
 
 
 def test_pose_packet_xip2_and_archive_are_canonical() -> None:
@@ -271,7 +334,7 @@ def test_complete_archive_arbitration_uses_exact_outer_zip_bytes(
         lambda _provider: expected_population,
     )
     q, scales = quantize_xi(_xi(), q_levels=4096)
-    xip2 = serialize_xi_payload(q, scales, coder="delta_ar")
+    xip2 = serialize_xi_payload(q, scales, coder="delta_ar_zlib")
     packet, archive, selected, records = (
         pose_product._select_complete_archive_y1_wire(
             semantic_program=program,
@@ -321,7 +384,7 @@ def test_complete_archive_arbitration_uses_exact_outer_zip_bytes(
     assert parsed_semantic.y1_wire_codec is selected.y1_wire_codec
 
 
-def test_outer_zip_canonical_arbitration_selects_store_when_smaller() -> None:
+def test_outer_zip_canonical_arbitration_selects_deflate_when_smaller() -> None:
     fixture = _module(
         REPO_ROOT
         / "src"
@@ -406,7 +469,7 @@ def test_outer_zip_canonical_arbitration_selects_store_when_smaller() -> None:
             dtype=np.int16,
         ),
         np.ones(6, dtype=np.float64),
-        coder="delta_ar",
+        coder="delta_ar_zlib",
     )
     packet = pose_product._encode_packet(
         semantic_packet=semantic_packet,
@@ -422,14 +485,14 @@ def test_outer_zip_canonical_arbitration_selects_store_when_smaller() -> None:
         packet,
         pose_product.G110OuterZipMethodV1.DEFLATE,
     )
-    assert len(stored) < len(deflated)
-    assert pose_product.build_g110_generated_y1_pose_archive(packet) == stored
-    assert pose_product.parse_g110_generated_y1_pose_archive(stored) == packet
+    assert len(deflated) < len(stored)
+    assert pose_product.build_g110_generated_y1_pose_archive(packet) == deflated
+    assert pose_product.parse_g110_generated_y1_pose_archive(deflated) == packet
     with pytest.raises(
         pose_product.G110GeneratedY1PoseError,
         match="canonical method/layout",
     ):
-        pose_product.parse_g110_generated_y1_pose_archive(deflated)
+        pose_product.parse_g110_generated_y1_pose_archive(stored)
 
 
 def test_g111_pose_partition_is_total_disjoint_and_fail_closed() -> None:
@@ -554,7 +617,10 @@ def test_g110_requires_complete_recursive_g112_source_chain(
         )
 
 
-@pytest.mark.parametrize("selected_xip2_coder", ["none", "delta_ar"])
+@pytest.mark.parametrize(
+    "selected_xip2_coder",
+    ["none", "delta_ar_zlib"],
+)
 def test_post_g105_refit_reopens_resumable_exact_public_stage(
     tmp_path: Path,
     selected_xip2_coder: str,
@@ -758,7 +824,7 @@ def test_post_g105_refit_reopens_resumable_exact_public_stage(
 
 @pytest.mark.parametrize(
     ("selected_xip2_coder", "expected_coder_id"),
-    [("none", 0), ("delta_ar", 1)],
+    [("none", 0), ("delta_ar_zlib", 4)],
 )
 def test_compile_propagates_selected_xip2_coder_into_public_archive(
     monkeypatch: pytest.MonkeyPatch,

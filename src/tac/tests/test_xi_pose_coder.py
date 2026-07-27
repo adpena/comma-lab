@@ -15,23 +15,24 @@ Covers the deliverable gates:
 
 All TINY + CPU-only. NO GPU, NO MPS, NO touch of any live run.
 """
+
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from tac.boundary_math import xi_pose_coder as X
 from tac.boundary_math import warp_real_luma_frame0 as W
+from tac.boundary_math import xi_pose_coder as X
 
 
 def _smooth_xi(P: int, seed: int = 0) -> np.ndarray:
     """A smooth ego-twist trajectory (P,6) via the real calibration path (live-#205-style: fwd + jitter)."""
     rng = np.random.default_rng(seed)
     poses = np.zeros((P, 6))
-    poses[:, 0] = 30.0 + 0.4 * np.arange(P) + 0.2 * rng.standard_normal(P)   # forward
-    poses[:, 1] = 0.05 * np.sin(np.arange(P) / 7.0)                          # small lateral
-    poses[:, 2] = -0.03 + 0.01 * rng.standard_normal(P)                      # small vertical
-    poses[:, 3:] = 0.002 * rng.standard_normal((P, 3))                       # small rotation
+    poses[:, 0] = 30.0 + 0.4 * np.arange(P) + 0.2 * rng.standard_normal(P)  # forward
+    poses[:, 1] = 0.05 * np.sin(np.arange(P) / 7.0)  # small lateral
+    poses[:, 2] = -0.03 + 0.01 * rng.standard_normal(P)  # small vertical
+    poses[:, 3:] = 0.002 * rng.standard_normal((P, 3))  # small rotation
     return np.stack([W.xi_from_pose_calibration(poses[p], 0.16, 1.0, 0.02) for p in range(P)])
 
 
@@ -78,12 +79,27 @@ def test_coder_handles_zero_crossing_and_size1_alphabet():
     # a channel oscillating through zero (negative deltas) + a constant channel (size-1 delta alphabet).
     P = 60
     xi = np.zeros((P, 6))
-    xi[:, 0] = 0.1 * np.sin(np.arange(P) / 3.0)   # crosses zero -> negative deltas
-    xi[:, 1] = 0.5                                 # constant -> all deltas 0 (size-1 alphabet)
+    xi[:, 0] = 0.1 * np.sin(np.arange(P) / 3.0)  # crosses zero -> negative deltas
+    xi[:, 1] = 0.5  # constant -> all deltas 0 (size-1 alphabet)
     q, scales = X.quantize_xi(xi, q_levels=4096)
     coded = X.serialize_xi_payload(q, scales, coder="delta_ar")
     q2, _ = X.parse_xi_payload(coded)
     assert np.array_equal(q2, q)
+
+
+@pytest.mark.parametrize("P", [1, 2, 60, 600])
+def test_zlib_arithmetic_coder_is_lossless_and_versioned(P: int) -> None:
+    xi = _smooth_xi(P, seed=4_000 + P)
+    q, scales = X.quantize_xi(xi, q_levels=4096)
+    coded = X.serialize_xi_payload(
+        q,
+        scales,
+        coder="delta_ar_zlib",
+    )
+    assert coded[len(X._XI_MAGIC)] == X._CODER_DELTA_AR_ZLIB == 4
+    q_coded, scales_coded = X.parse_xi_payload(coded)
+    assert np.array_equal(q_coded, q)
+    assert np.array_equal(scales_coded, scales)
 
 
 # --------------------------------------------------------------------------- #
@@ -114,24 +130,41 @@ def test_derive_H_render_unchanged_vs_stored_fp64_H():
     src = np.random.default_rng(9).integers(0, 256, (WW.NATIVE_H, WW.NATIVE_W, 3)).astype(np.float64)
     H_derived = X.homographies_from_xi(xi_dq, pitch)
     for p in range(xi_dq.shape[0]):
-        H_stored = WW.homography_from_xi_numpy(xi_dq[p], geom)   # what a store-H path would ship
-        f_stored = WW.warp_frame0_uint8_numpy(src, xi_dq[p], geom)          # via internal H(ξ)==H_stored
+        H_stored = WW.homography_from_xi_numpy(xi_dq[p], geom)  # what a store-H path would ship
+        f_stored = WW.warp_frame0_uint8_numpy(src, xi_dq[p], geom)  # via internal H(ξ)==H_stored
         # warp with the DERIVED H directly (inverse-warp bilinear, uint8) — must be bit-identical
         Hinv = np.linalg.inv(H_derived[p])
         us, vs = np.meshgrid(np.arange(WW.NATIVE_W), np.arange(WW.NATIVE_H))
         grid = np.stack([us.ravel(), vs.ravel(), np.ones(WW.NATIVE_H * WW.NATIVE_W)], 0).astype(np.float64)
         with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
-            sh = Hinv @ grid; z = sh[2]; su = sh[0] / z; sv = sh[1] / z
-        valid = (np.isfinite(su) & np.isfinite(sv) & (z > 0) & (su >= 0) & (su <= WW.NATIVE_W - 1)
-                 & (sv >= 0) & (sv <= WW.NATIVE_H - 1))
-        suc = np.clip(su, 0, WW.NATIVE_W - 1); svc = np.clip(sv, 0, WW.NATIVE_H - 1)
-        x0 = np.floor(suc).astype(np.int64); y0 = np.floor(svc).astype(np.int64)
-        x1 = np.minimum(x0 + 1, WW.NATIVE_W - 1); y1 = np.minimum(y0 + 1, WW.NATIVE_H - 1)
-        wx = (suc - x0)[:, None]; wy = (svc - y0)[:, None]
+            sh = Hinv @ grid
+            z = sh[2]
+            su = sh[0] / z
+            sv = sh[1] / z
+        valid = (
+            np.isfinite(su)
+            & np.isfinite(sv)
+            & (z > 0)
+            & (su >= 0)
+            & (su <= WW.NATIVE_W - 1)
+            & (sv >= 0)
+            & (sv <= WW.NATIVE_H - 1)
+        )
+        suc = np.clip(su, 0, WW.NATIVE_W - 1)
+        svc = np.clip(sv, 0, WW.NATIVE_H - 1)
+        x0 = np.floor(suc).astype(np.int64)
+        y0 = np.floor(svc).astype(np.int64)
+        x1 = np.minimum(x0 + 1, WW.NATIVE_W - 1)
+        y1 = np.minimum(y0 + 1, WW.NATIVE_H - 1)
+        wx = (suc - x0)[:, None]
+        wy = (svc - y0)[:, None]
         flat = src.reshape(-1, 3)
-        Ia = flat[y0 * WW.NATIVE_W + x0]; Ib = flat[y0 * WW.NATIVE_W + x1]
-        Ic = flat[y1 * WW.NATIVE_W + x0]; Id = flat[y1 * WW.NATIVE_W + x1]
-        top = Ia * (1 - wx) + Ib * wx; bot = Ic * (1 - wx) + Id * wx
+        Ia = flat[y0 * WW.NATIVE_W + x0]
+        Ib = flat[y0 * WW.NATIVE_W + x1]
+        Ic = flat[y1 * WW.NATIVE_W + x0]
+        Id = flat[y1 * WW.NATIVE_W + x1]
+        top = Ia * (1 - wx) + Ib * wx
+        bot = Ic * (1 - wx) + Id * wx
         samp = top * (1 - wy) + bot * wy
         out = np.where(valid[:, None], samp, flat).reshape(WW.NATIVE_H, WW.NATIVE_W, 3)
         f_derived = np.clip(np.round(out), 0, 255).astype(np.uint8)
@@ -158,9 +191,11 @@ def test_coder_beats_raw_on_smooth_trajectory_and_rate_report():
 # --------------------------------------------------------------------------- #
 def test_module_is_pure_numpy_no_torch_no_mps():
     import inspect
+
     src = inspect.getsource(X)
-    assert "import torch" not in src and "mps" not in src.lower(), \
+    assert "import torch" not in src and "mps" not in src.lower(), (
         "xi_pose_coder must be pure numpy/stdlib (NO torch/MPS) — it produces bytes, never a score"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -168,7 +203,7 @@ def test_module_is_pure_numpy_no_torch_no_mps():
 # --------------------------------------------------------------------------- #
 def test_bad_inputs_raise():
     with pytest.raises(X.XiPoseCoderError):
-        X.quantize_xi(np.zeros((5, 4)))          # not 6-dim
+        X.quantize_xi(np.zeros((5, 4)))  # not 6-dim
     with pytest.raises(X.XiPoseCoderError):
         X.quantize_xi(_smooth_xi(4), q_levels=0)  # invalid precision
     with pytest.raises(X.XiPoseCoderError):

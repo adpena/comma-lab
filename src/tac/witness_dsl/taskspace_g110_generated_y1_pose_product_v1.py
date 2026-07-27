@@ -690,7 +690,10 @@ def _verify_post_g105_refit(
         or run["target_capsule_receipt_sha256"]
         != base_custody.target_capsule_receipt_sha256
         or run["pose_targets_sha256"] != base_custody.pose_targets_sha256
-        or run["selected_xip2_coder"] not in {"none", "delta_ar"}
+        or run["selected_xip2_coder"] not in {
+            "none",
+            "delta_ar_zlib",
+        }
         or run["g110_selected_xip2_coder_abi_closed"] is not True
         or run["exact_public_receiver_in_loop"] is not True
         or run["resumable_from_disk"] is not True
@@ -943,10 +946,10 @@ def parse_g110_generated_y1_pose_v1(
         or not np.all(np.isfinite(scales))
         or np.any(scales <= 0.0)
         or len(xip2) < 5
-        or xip2[4] not in {0, 1}
+        or xip2[4] not in {0, 4}
     ):
         raise G110GeneratedY1PoseError("pose XIP2 geometry/scales/coder differ")
-    coder = "none" if xip2[4] == 0 else "delta_ar"
+    coder = "none" if xip2[4] == 0 else "delta_ar_zlib"
     canonical_xip2 = serialize_xi_payload(q, scales, coder=coder)
     if canonical_xip2 != xip2:
         raise G110GeneratedY1PoseError(

@@ -18,7 +18,6 @@ import zlib
 from bisect import bisect_right
 from typing import Final
 
-import brotli
 import numpy as np
 
 VARIANT_ID: Final = "tac.semantic_root_y0.generated_y1_pose_xip2.v1"
@@ -141,7 +140,7 @@ def _parse_xip2(blob: bytes) -> np.ndarray:
     except struct.error as exc:
         raise GeneratedY1PoseVariantError("XIP2 header is truncated") from exc
     offset += 4
-    if (pairs, dimensions) != (PAIR_COUNT, 6) or coder not in {0, 1}:
+    if (pairs, dimensions) != (PAIR_COUNT, 6) or coder not in {0, 4}:
         raise GeneratedY1PoseVariantError(
             "XIP2 changes n600/6D geometry or uses an unsupported coder"
         )
@@ -205,14 +204,24 @@ def _parse_xip2(blob: bytes) -> np.ndarray:
                     raise GeneratedY1PoseVariantError(
                         f"XIP2 channel {column_id} nonconstant stream is empty"
                     )
-                try:
-                    decoded_model = brotli.decompress(model)
-                except brotli.error as exc:
-                    raise GeneratedY1PoseVariantError(
-                        f"XIP2 channel {column_id} model is not brotli"
-                    ) from exc
                 alphabet = high_delta - low_delta + 1
-                if len(decoded_model) != alphabet * 4:
+                expected_model_bytes = alphabet * 4
+                try:
+                    decompressor = zlib.decompressobj()
+                    decoded_model = decompressor.decompress(
+                        model,
+                        expected_model_bytes + 1,
+                    )
+                except zlib.error as exc:
+                    raise GeneratedY1PoseVariantError(
+                        f"XIP2 channel {column_id} model is not zlib"
+                    ) from exc
+                if (
+                    len(decoded_model) != expected_model_bytes
+                    or not decompressor.eof
+                    or decompressor.unused_data
+                    or decompressor.unconsumed_tail
+                ):
                     raise GeneratedY1PoseVariantError(
                         f"XIP2 channel {column_id} model length differs"
                     )

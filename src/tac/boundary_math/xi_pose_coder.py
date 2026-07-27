@@ -50,6 +50,7 @@ coder); the shipped inflate.py inlines VERBATIM copies of ``decode_xi_payload`` 
 from __future__ import annotations
 
 import struct
+import zlib
 
 import numpy as np
 
@@ -60,6 +61,7 @@ _CODER_RAW = 0
 _CODER_DELTA_AR = 1
 _CODER_SPLINE_RESIDUAL = 2  # SE(3)-spline predictor + lossless residual (xi_spline_residual_coder)
 _CODER_DELTA_RES = 3  # delta predictor + best-of-{varint,zlib9,rice} residual (MEASURED winner)
+_CODER_DELTA_AR_ZLIB = 4  # public-runtime-safe delta+AR with stdlib-zlib PMF models
 
 # Plane-induced ground-homography geometry constants (EON / comma2k19 road camera,
 # native 1164x874). MUST match tac.boundary_math.warp_real_luma_frame0 exactly so the
@@ -169,14 +171,16 @@ def homographies_from_xi(xi: np.ndarray, pitch: float) -> np.ndarray:
 # --------------------------------------------------------------------------- #
 # arithmetic coder over the temporal-delta stream (reuses tac.lossless.range_coder)
 # --------------------------------------------------------------------------- #
-def _channel_delta_encode(col: np.ndarray) -> bytes:
+def _channel_delta_encode(
+    col: np.ndarray,
+    *,
+    model_codec: str = "brotli",
+) -> bytes:
     """Encode one int16 channel column ``(P,)`` as: seed + temporal-delta arithmetic stream.
 
     Layout: ``<i seed> <i lo> <i hi> <I model_len> brotli(counts uint32[hi-lo+1]) <I stream_len>
     stream``. A size-1 delta alphabet (all deltas equal) carries ZERO information → empty
     model+stream, deterministically reconstructed from ``lo`` at decode."""
-    import brotli
-
     from tac.lossless.range_coder import encode_static_symbols
 
     col = np.asarray(col, dtype=np.int64)
@@ -189,7 +193,17 @@ def _channel_delta_encode(col: np.ndarray) -> bytes:
         counts = np.bincount((deltas - lo).astype(np.int64), minlength=hi - lo + 1)
         counts = np.maximum(counts, 1).astype(np.uint32)  # every symbol >= 1 (decoder-safe)
         stream = encode_static_symbols((deltas - lo).astype(np.int64).tolist(), frequencies=counts.tolist())
-        model = brotli.compress(counts.tobytes(), quality=11)
+        model_raw = counts.tobytes()
+        if model_codec == "brotli":
+            import brotli
+
+            model = brotli.compress(model_raw, quality=11)
+        elif model_codec == "zlib":
+            model = zlib.compress(model_raw, level=9)
+        else:
+            raise XiPoseCoderError(
+                f"unknown arithmetic-model codec {model_codec!r}"
+            )
     else:
         stream = b""
         model = b""
@@ -200,17 +214,45 @@ def _channel_delta_encode(col: np.ndarray) -> bytes:
     )
 
 
-def _channel_delta_decode(blob: bytes, off: int, P: int) -> tuple[np.ndarray, int]:
+def _channel_delta_decode(
+    blob: bytes,
+    off: int,
+    P: int,
+    *,
+    model_codec: str = "brotli",
+) -> tuple[np.ndarray, int]:
     """Inverse of :func:`_channel_delta_encode`. Returns ``(col int64 (P,), new_off)``."""
-    import brotli
-
     from tac.lossless.range_coder import decode_static_symbols
 
     seed, lo, hi = struct.unpack_from("<iii", blob, off)
     off += 12
     (mlen,) = struct.unpack_from("<I", blob, off)
     off += 4
-    counts = np.frombuffer(brotli.decompress(blob[off : off + mlen]), dtype=np.uint32) if mlen else None
+    if mlen:
+        model = blob[off : off + mlen]
+        if model_codec == "brotli":
+            import brotli
+
+            try:
+                model_raw = brotli.decompress(model)
+            except brotli.error as exc:
+                raise XiPoseCoderError(
+                    "arithmetic-model Brotli stream is invalid"
+                ) from exc
+        elif model_codec == "zlib":
+            try:
+                model_raw = zlib.decompress(model)
+            except zlib.error as exc:
+                raise XiPoseCoderError(
+                    "arithmetic-model zlib stream is invalid"
+                ) from exc
+        else:
+            raise XiPoseCoderError(
+                f"unknown arithmetic-model codec {model_codec!r}"
+            )
+        counts = np.frombuffer(model_raw, dtype=np.uint32)
+    else:
+        counts = None
     off += mlen
     (slen,) = struct.unpack_from("<I", blob, off)
     off += 4
@@ -245,6 +287,9 @@ def serialize_xi_payload(
     Layout: ``XIP2 | <B coder> <H P> <B D> | scales(D fp32) | body``.
     body(coder=none)     = q int16 (P,D) tobytes  (the raw ~0.005-rate fallback).
     body(coder=delta_ar) = per-channel :func:`_channel_delta_encode` (the ~0.0007 target).
+    body(coder=delta_ar_zlib) = the same lossless delta+arithmetic stream with stdlib-zlib
+    PMF models.  This has its own coder id so historical Brotli XIP2 bytes keep their
+    immutable meaning while public runtimes need no undeclared third-party dependency.
     body(coder=spline_residual) = SE(3)-spline predictor knots + lossless integer residual
     (``xi_spline_residual_coder``; ``spline_knots``/``spline_q_levels_knots`` apply ONLY here).
     body(coder=delta_res) = delta predictor + best-of-{varint,zlib9,rice} residual (the MEASURED
@@ -263,6 +308,12 @@ def serialize_xi_payload(
     elif coder == "delta_ar":
         cid = _CODER_DELTA_AR
         body = b"".join(_channel_delta_encode(q[:, k]) for k in range(D))
+    elif coder == "delta_ar_zlib":
+        cid = _CODER_DELTA_AR_ZLIB
+        body = b"".join(
+            _channel_delta_encode(q[:, k], model_codec="zlib")
+            for k in range(D)
+        )
     elif coder == "spline_residual":
         from tac.boundary_math.xi_spline_residual_coder import encode_spline_residual_body
 
@@ -276,7 +327,10 @@ def serialize_xi_payload(
         body = encode_delta_res_body(q)
     else:
         raise XiPoseCoderError(
-            f"unknown coder {coder!r} (none|delta_ar|spline_residual|delta_res)")
+            "unknown coder "
+            f"{coder!r} "
+            "(none|delta_ar|delta_ar_zlib|spline_residual|delta_res)"
+        )
     return _XI_MAGIC + struct.pack("<BHB", cid, P, D) + scales.tobytes() + body
 
 
@@ -298,6 +352,17 @@ def parse_xi_payload(blob: bytes) -> tuple[np.ndarray, np.ndarray]:
         cols = []
         for _k in range(D):
             col, off = _channel_delta_decode(blob, off, P)
+            cols.append(col)
+        q = np.stack(cols, axis=1).astype(np.int16)
+    elif cid == _CODER_DELTA_AR_ZLIB:
+        cols = []
+        for _k in range(D):
+            col, off = _channel_delta_decode(
+                blob,
+                off,
+                P,
+                model_codec="zlib",
+            )
             cols.append(col)
         q = np.stack(cols, axis=1).astype(np.int16)
     elif cid == _CODER_SPLINE_RESIDUAL:
@@ -349,11 +414,11 @@ def xi_payload_rate_report(xi: np.ndarray, pitch: float, *, q_levels: int = _XI_
 
 __all__ = [
     "XiPoseCoderError",
-    "quantize_xi",
+    "decode_xi_payload",
     "dequantize_xi",
     "homographies_from_xi",
-    "serialize_xi_payload",
     "parse_xi_payload",
-    "decode_xi_payload",
+    "quantize_xi",
+    "serialize_xi_payload",
     "xi_payload_rate_report",
 ]

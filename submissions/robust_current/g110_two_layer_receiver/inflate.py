@@ -190,17 +190,32 @@ def _output_name(video_names_path: Path) -> str:
 
 
 def _prepare_output(output_root: Path, output_name: str) -> tuple[Path, Path]:
+    if output_root.is_symlink():
+        raise PublicInflateError("output root must not be a symlink")
+    if not output_root.exists():
+        output_root.mkdir(mode=0o755)
     if output_root.is_symlink() or not output_root.is_dir():
-        raise PublicInflateError("output root must be an existing regular directory")
-    if any(output_root.iterdir()):
-        raise PublicInflateError("output root must be empty")
+        raise PublicInflateError("output root must be a regular directory")
+    final_path = output_root / output_name
+    temporary_path = output_root / f".{output_name}.g110.tmp"
+    observed = sorted(path.name for path in output_root.iterdir())
+    if observed not in ([], [output_name]):
+        raise PublicInflateError(
+            "output root contains entries outside the exact G110 product"
+        )
+    if final_path.exists() and (
+        final_path.is_symlink()
+        or not final_path.is_file()
+        or final_path.stat().st_size != EXPECTED_RAW_BYTES
+    ):
+        raise PublicInflateError(
+            "existing exact output is not a replaceable G110 raw product"
+        )
+    if temporary_path.exists() or temporary_path.is_symlink():
+        raise PublicInflateError("output temporary target already exists")
     free_bytes = os.statvfs(output_root).f_bavail * os.statvfs(output_root).f_frsize
     if free_bytes < MIN_OUTPUT_HEADROOM_BYTES:
         raise PublicInflateError("insufficient output storage for exact n600 raw video")
-    final_path = output_root / output_name
-    temporary_path = output_root / f".{output_name}.g110.tmp"
-    if final_path.exists() or temporary_path.exists():
-        raise PublicInflateError("output target already exists")
     return final_path, temporary_path
 
 

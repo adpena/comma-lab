@@ -206,7 +206,7 @@ def test_archive_oracle_enumerates_full_semantic_xip2_zip_matrix(
         lambda _q, _scales, *, coder: (
             b"XIP2" + bytes([0]) + b"r"
             if coder == "none"
-            else b"XIP2" + bytes([1]) + b"delta-is-longer"
+            else b"XIP2" + bytes([4]) + b"delta-is-longer"
         ),
     )
     oracle = subject.ExactCompleteArchiveRateOracleV1(
@@ -229,7 +229,10 @@ def test_archive_oracle_enumerates_full_semantic_xip2_zip_matrix(
         scales=scales,
     )
     assert len(alternatives) == 8
-    assert {row.xip2_coder for row in alternatives} == {"none", "delta_ar"}
+    assert {row.xip2_coder for row in alternatives} == {
+        "none",
+        "delta_ar_zlib",
+    }
     assert selected.xip2_coder == "none"
     assert xip2[4] == 0
 
@@ -574,7 +577,7 @@ def test_final_checkpoint_and_run_receipt_are_accepted_by_g110(
                 custody=custody,
                 q_levels=32,
                 xi_eff=xi_eff,
-                selected_xip2_coder="delta_ar",
+                selected_xip2_coder="delta_ar_zlib",
             )
         ),
     )
@@ -603,7 +606,7 @@ def test_final_checkpoint_and_run_receipt_are_accepted_by_g110(
         "target_projection_sha256": hashes["projection"],
         "target_capsule_receipt_sha256": hashes["capsule"],
         "pose_targets_sha256": hashes["pose-targets"],
-        "selected_xip2_coder": "delta_ar",
+        "selected_xip2_coder": "delta_ar_zlib",
         "g110_selected_xip2_coder_abi_closed": True,
         "exact_public_receiver_in_loop": True,
         "resumable_from_disk": True,

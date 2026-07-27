@@ -294,7 +294,7 @@ def global_range_reactivation_blocker() -> dict[str, object]:
 def xip2_wire_matrix_closure(*, selected_xip2_coder: str) -> dict[str, object]:
     """Bind the globally selected XIP2 coder through the G119/G110 ABI."""
 
-    if selected_xip2_coder not in {"none", "delta_ar"}:
+    if selected_xip2_coder not in {"none", "delta_ar_zlib"}:
         raise PostG105PoseRefitError("selected XIP2 coder is not public-wire supported")
 
     return {
@@ -302,7 +302,10 @@ def xip2_wire_matrix_closure(*, selected_xip2_coder: str) -> dict[str, object]:
         "measured_matrix": (
             "2_semantic_y1_codecs_x_2_xip2_coders_x_2_outer_zip_methods"
         ),
-        "public_receiver_supported_xip2_coders": ["none", "delta_ar"],
+        "public_receiver_supported_xip2_coders": [
+            "none",
+            "delta_ar_zlib",
+        ],
         "selected_xip2_coder": selected_xip2_coder,
         "global_wire_winner_selected": True,
         "selected_coder_carried_in_final_checkpoint": True,
@@ -733,7 +736,7 @@ class ExactCompleteArchiveRateOracleV1:
         records: list[G119CompleteArchiveWireCandidateV1] = []
         xip2_payloads = tuple(
             (coder, serialize_xi_payload(q, scales, coder=coder))
-            for coder in ("none", "delta_ar")
+            for coder in ("none", "delta_ar_zlib")
         )
         for codec, semantic_packet, binding in self.semantic_variants:
             for xip2_coder, xip2 in xip2_payloads:
@@ -750,7 +753,10 @@ class ExactCompleteArchiveRateOracleV1:
                     or not np.array_equal(parsed.q, q)
                     or not np.array_equal(parsed.scales, scales)
                     or (xip2_coder == "none" and xip2[4] != 0)
-                    or (xip2_coder == "delta_ar" and xip2[4] != 1)
+                    or (
+                        xip2_coder == "delta_ar_zlib"
+                        and xip2[4] != 4
+                    )
                 ):
                     raise PostG105PoseRefitError(
                         "prepared complete packet changes shipped XIP2/Y1 operands"
@@ -2049,7 +2055,8 @@ def _load_candidate_receipt(
         or value.get("global_xip2_range_optimality_claim") is not False
         or value.get("global_range_reactivation_required") is not True
         or value.get("global_range_reactivation_blocker") != global_range_reactivation_blocker()
-        or value.get("selected_xip2_coder") not in {"none", "delta_ar"}
+        or value.get("selected_xip2_coder")
+        not in {"none", "delta_ar_zlib"}
         or value.get("g110_selected_xip2_coder_abi_closed") is not True
         or type(value.get("xip2_wire_matrix_closure")) is not dict
         or value["xip2_wire_matrix_closure"].get("schema")
@@ -2259,7 +2266,7 @@ def _final_checkpoint_arrays(
     selected_xip2_coder: str,
 ) -> dict[str, np.ndarray]:
     base = custody.base
-    if selected_xip2_coder not in {"none", "delta_ar"}:
+    if selected_xip2_coder not in {"none", "delta_ar_zlib"}:
         raise PostG105PoseRefitError("final checkpoint XIP2 coder differs")
     return {
         "schema": np.asarray(POST_G105_REFIT_CHECKPOINT_SCHEMA),
@@ -2378,7 +2385,7 @@ def run_post_g105_pose_refit(
     )
     q_levels = int(selected["q_levels"])
     selected_xip2_coder = str(selected["selected_xip2_coder"])
-    if selected_xip2_coder not in {"none", "delta_ar"}:
+    if selected_xip2_coder not in {"none", "delta_ar_zlib"}:
         raise PostG105PoseRefitError("selected candidate XIP2 coder differs")
     selected_state = _open_candidate_state(
         state_binding=selected_state_binding,
