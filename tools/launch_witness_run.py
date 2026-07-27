@@ -27,8 +27,9 @@ Determinism/resumability/observability are preserved: the emitted command carrie
 the run is rendered live by the dashboard.
 
 means != ends: this LAUNCHES an advisory [macOS-MLX] run. Only a byte-closed exact
-n600 row < 0.19110 moves the pointer. Use ``--dry-run`` to emit + validate + write
-launch.sh WITHOUT spawning (CPU-only, GPU-free, safe).
+n600 row below the canonical effective frontier
+``min(local_best, upstream_best)`` moves the pointer. Use ``--dry-run`` to emit +
+validate + write launch.sh WITHOUT spawning (CPU-only, GPU-free, safe).
 
 Usage:
     .venv/bin/python tools/launch_witness_run.py \\
@@ -74,6 +75,50 @@ from tac.witness_dsl.curriculum_dsl import (  # noqa: E402
 )
 
 _TRAINER = TRAINER_PATH  # canonical single-source: curriculum_dsl.TRAINER_PATH
+
+
+def fresh_lineage_resume_overrides(
+    resume_from: Path,
+) -> dict[str, str]:
+    """Recover the exact physical parent receipt for a fresh-producer resume."""
+
+    tip_path = Path(resume_from) / "fresh_lineage_tip.json"
+    if not tip_path.is_file() or tip_path.is_symlink():
+        return {}
+    tip = json.loads(tip_path.read_text())
+    if set(tip) != {
+        "schema",
+        "receipt_path",
+        "receipt_sha256",
+        "receipt_bytes",
+        "checkpoint_id_sha256",
+        "root_sha256",
+        "sequence_index",
+        "epoch",
+        "stage",
+        "complete_trajectory_proven",
+    } or tip.get("schema") != "tac.fresh_producer_lineage_tip.v1":
+        raise RuntimeError(
+            "fresh-producer resume tip has a noncanonical schema"
+        )
+    receipt_path = Path(str(tip["receipt_path"]))
+    if not receipt_path.is_file() or receipt_path.is_symlink():
+        raise RuntimeError(
+            "fresh-producer resume parent receipt is missing or a symlink"
+        )
+    receipt_sha = hashlib.sha256(receipt_path.read_bytes()).hexdigest()
+    if (
+        receipt_sha != tip["receipt_sha256"]
+        or receipt_path.stat().st_size != tip["receipt_bytes"]
+        or tip["complete_trajectory_proven"] is not True
+    ):
+        raise RuntimeError(
+            "fresh-producer resume parent receipt identity differs"
+        )
+    return {
+        "--fresh-lineage-parent-receipt": str(receipt_path),
+        "--fresh-lineage-parent-receipt-sha256": receipt_sha,
+    }
 
 
 def _composable_lever_names() -> tuple[str, ...]:
@@ -404,6 +449,7 @@ def config_family(cfg) -> str:
                                     "v9_cgauge_truly_optimal_core",
                                     "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod19_sR",
                                     "v9_cgauge_ideal_mod32",
+                                    "g111_batch16_v9_semantic_base",
                                     *_V9_BASIS_CONFIG_NAMES,
                                     *_V9_ISO_CONFIG_NAMES,
                                     "next_launch_all_levers_20260713",
@@ -907,8 +953,16 @@ def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None,
 
 
 # ───────────────────────── named-config derivation (shared by launch + calibration) ─────────────
-def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int,
-                                   epochs: int | None, overfit: bool):
+def _derive_named_config_unchecked(
+    config: str,
+    gt_cache: str,
+    *,
+    num_pairs: int,
+    epochs: int | None,
+    overfit: bool,
+    training_target_capsule: str | None = None,
+    training_target_capsule_sha256: str | None = None,
+):
     """Resolve a canonical named config to a derived trainer config at the given scale. The
     RSS-calibration smoke reuses this with a SMALL num_pairs/epochs but the SAME config name, so
     the calibration exercises the REAL flag set (not a toy variant).
@@ -992,6 +1046,23 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
             gt_cache, num_pairs=num_pairs, mod_dim=mod_dim,
             program_name=config,
             with_reachability=(config == "v9_cgauge_ideal_mod19_sR"), **_ek)
+    if config == "g111_batch16_v9_semantic_base":
+        if not training_target_capsule or not training_target_capsule_sha256:
+            raise ValueError(
+                "g111_batch16_v9_semantic_base requires both "
+                "--training-target-capsule and --training-target-capsule-sha256"
+            )
+        from tac.witness_dsl.spec_g111_batch16_v9_semantic_base import (
+            compile_g111_batch16_v9_semantic_base_launch_config,
+        )
+
+        return compile_g111_batch16_v9_semantic_base_launch_config(
+            training_target_capsule=training_target_capsule,
+            training_target_capsule_sha256=training_target_capsule_sha256,
+            gt_cache_path=gt_cache,
+            num_pairs=num_pairs,
+            **_ek,
+        )
     if config in _V9_BASIS_CONFIG_NAMES:
         # Genuine-frame fresh-start A/B/C. Each name resolves through a reviewed
         # typed factory whose config/LawRef/consumer/receipt bijection proves the
@@ -1111,6 +1182,7 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
         f"crucible_v7, crucible_v752, crucible_v753, v9_cgauge_432, "
         f"v9_cgauge_truly_optimal_core, v9_cgauge_ideal_mod19, "
         f"v9_cgauge_ideal_mod19_sR, v9_cgauge_ideal_mod32, "
+        f"g111_batch16_v9_semantic_base, "
         f"{', '.join(_V9_BASIS_CONFIG_NAMES)}, "
         f"{', '.join(_V9_ISO_CONFIG_NAMES)}, "
         f"next_launch_all_levers_20260713, next_launch_all_levers_trimmed_20260713, "
@@ -1121,8 +1193,16 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
         f"silently fall through to proven_base).")
 
 
-def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: int | None,
-                        overfit: bool):
+def derive_named_config(
+    config: str,
+    gt_cache: str,
+    *,
+    num_pairs: int,
+    epochs: int | None,
+    overfit: bool,
+    training_target_capsule: str | None = None,
+    training_target_capsule_sha256: str | None = None,
+):
     """Derive a named config and reject an impossible curriculum before writes.
 
     The wrapper covers typed and legacy config families alike and therefore runs
@@ -1132,7 +1212,13 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: i
     """
 
     cfg = _derive_named_config_unchecked(
-        config, gt_cache, num_pairs=num_pairs, epochs=epochs, overfit=overfit
+        config,
+        gt_cache,
+        num_pairs=num_pairs,
+        epochs=epochs,
+        overfit=overfit,
+        training_target_capsule=training_target_capsule,
+        training_target_capsule_sha256=training_target_capsule_sha256,
     )
     emitted = cfg.to_trainer_flags("SCHEDULE_FEASIBILITY_AUDIT")
     violations = _schedule_epoch_budget_violations(emitted, TRAINER_PATH)
@@ -1170,6 +1256,19 @@ def calibration_verdict(projected_gib: float, actual_gib: float,
                f"full-scale launch (recalibrate the preflight constants before launching)")
 
 
+def _named_target_kwargs(args) -> dict[str, str | None]:
+    """Carry physical G109 custody through every repeated named-config compile."""
+
+    return {
+        "training_target_capsule": getattr(args, "training_target_capsule", None),
+        "training_target_capsule_sha256": getattr(
+            args,
+            "training_target_capsule_sha256",
+            None,
+        ),
+    }
+
+
 def _run_rss_calibration(args, config: str, overfit: bool, out_dir: Path, label: str,
                          extra_flags: list[str] | None, wmp) -> int:
     """Run the emitted config at SMALL scale (REAL flag set, governed safe_run path, FOREGROUND,
@@ -1178,9 +1277,24 @@ def _run_rss_calibration(args, config: str, overfit: bool, out_dir: Path, label:
     to the margin ledger — every calibration feeds calibrated_margin()."""
     import subprocess
 
+    if config == "g111_batch16_v9_semantic_base":
+        print(
+            "[launch-witness] ERROR: G111 is a physical full-n600-only producer; "
+            "--calibrate-rss would recompile it at a smaller, non-authoritative "
+            "population and is intentionally unsupported (rc=8). Use the governed "
+            "full-n600 projection/preflight and dry-start instead.",
+            file=sys.stderr,
+        )
+        return 8
     calib_dir = out_dir / "calibrate_rss"
-    cfg_c = derive_named_config(config, args.gt_cache, num_pairs=args.calibrate_pairs,
-                                epochs=args.calibrate_epochs, overfit=overfit)
+    cfg_c = derive_named_config(
+        config,
+        args.gt_cache,
+        num_pairs=args.calibrate_pairs,
+        epochs=args.calibrate_epochs,
+        overfit=overfit,
+        **_named_target_kwargs(args),
+    )
     if extra_flags:
         print(
             "[launch-witness] ERROR: calibration received post-DSL trainer flags; "
@@ -2041,8 +2155,14 @@ def _run_dry_start_inner(args, config: str, overfit: bool, out_dir: Path, label:
 
     def _pass(sub_name: str, resume_from: Path | None) -> dict:
         sub = out_dir / sub_name
-        cfg_b = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
-                                    epochs=None, overfit=overfit)  # REAL sealed epochs → all validators pass
+        cfg_b = derive_named_config(
+            config,
+            args.gt_cache,
+            num_pairs=args.num_pairs,
+            epochs=None,
+            overfit=overfit,
+            **_named_target_kwargs(args),
+        )  # REAL sealed epochs → all validators pass
         if extra_flags:
             raise RuntimeError(
                 "Catalog #406 dry-start received post-DSL trainer flags; compose a typed Lever"
@@ -2069,6 +2189,9 @@ def _run_dry_start_inner(args, config: str, overfit: bool, out_dir: Path, label:
             overrides["--skip-boot-baseline-verdict"] = True
         if resume_from is not None:
             overrides["--resume-from"] = str(resume_from)
+            overrides.update(
+                fresh_lineage_resume_overrides(resume_from)
+            )
         cfg_b = with_internal_dsl_lever(
             cfg_b,
             name=f"catalog406_dry_start_{sub_name}",
@@ -2186,8 +2309,14 @@ def _run_dry_start_inner(args, config: str, overfit: bool, out_dir: Path, label:
     # hash-matches; a pre-amendment bench must not green-light an amended config). Legacy
     # configs without a typed surface record null (hash-matching factories then fail-closed).
     try:
-        _cfg_h = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
-                                     epochs=None, overfit=overfit)
+        _cfg_h = derive_named_config(
+            config,
+            args.gt_cache,
+            num_pairs=args.num_pairs,
+            epochs=None,
+            overfit=overfit,
+            **_named_target_kwargs(args),
+        )
         _typed = getattr(_cfg_h, "typed", None)
         typed_config_hash = _typed.typed_config_hash() if _typed is not None else None
     except Exception:
@@ -2376,6 +2505,7 @@ def main(argv: list[str] | None = None) -> int:
                              "v9_cgauge_truly_optimal_core",
                              "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod19_sR",
                              "v9_cgauge_ideal_mod32",
+                             "g111_batch16_v9_semantic_base",
                              *_V9_BASIS_CONFIG_NAMES,
                              "next_launch_all_levers_20260713",
                              "next_launch_all_levers_trimmed_20260713",
@@ -2423,6 +2553,23 @@ def main(argv: list[str] | None = None) -> int:
                     "the SPEC_v9 base]; the #430 cascade rides the wired trainer sensors; FRESH start "
                     "— mod-19 cannot warm-start mod-32 checkpoints; CONTROL = the #205 banked "
                     "mod-32 baseline).")
+    ap.add_argument(
+        "--training-target-capsule",
+        default=None,
+        help=(
+            "physical G109 aggregate receipt for "
+            "--config g111_batch16_v9_semantic_base; recursively reopened by the "
+            "typed compiler and trainer"
+        ),
+    )
+    ap.add_argument(
+        "--training-target-capsule-sha256",
+        default=None,
+        help=(
+            "external file SHA-256 of --training-target-capsule; both values are "
+            "required for the G111 typed producer"
+        ),
+    )
     ap.add_argument("--extra-trainer-flags", default=None,
                     help="(C5 passthrough) EXTRA trainer flags appended verbatim to the emitted "
                     "launch.sh command (shell-split; e.g. \"--eikonal-weight 0.07 --seed-islands\"). "
@@ -2607,8 +2754,14 @@ def main(argv: list[str] | None = None) -> int:
               f"(--all-levers == --config all_levers); pass exactly one.", file=sys.stderr)
         return 2
 
-    cfg = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
-                              epochs=args.epochs, overfit=overfit)
+    cfg = derive_named_config(
+        config,
+        args.gt_cache,
+        num_pairs=args.num_pairs,
+        epochs=args.epochs,
+        overfit=overfit,
+        **_named_target_kwargs(args),
+    )
     # (fresh-eyes advisory P0-1 required gate, 2026-07-10) EXPECTED-ACTIVE-LEVER manifest re-check at
     # the LAUNCHER (compile already enforced it fail-closed; this catches a cfg object mutated/patched
     # between compile and launch, and runs for dry-run, dry-start, AND real spawns). Applies to any

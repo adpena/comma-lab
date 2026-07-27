@@ -8,7 +8,9 @@ fragility), perf-env verification parsing, and the --dry-run safe path. NO real
 spawn, NO GPU — --dry-run + unit helpers only (the live n600 run is untouched)."""
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
 import os
 import sys
 from pathlib import Path
@@ -46,7 +48,41 @@ def _cfg():
 def test_real_trainer_flags_nonempty_and_has_known():
     flags = lw.real_trainer_flags()
     assert "--out-dir" in flags and "--curriculum" in flags and "--muon-start-epoch" in flags
+    assert "--fresh-lineage-parent-receipt" in flags
+    assert "--fresh-lineage-parent-receipt-sha256" in flags
     assert len(flags) > 30
+
+
+def test_fresh_lineage_resume_tip_restores_exact_parent_custody(
+    tmp_path: Path,
+) -> None:
+    receipt = tmp_path / "fresh_lineage" / f"{'a' * 64}.receipt.json"
+    receipt.parent.mkdir()
+    receipt.write_bytes(b'{"sealed":"physical-parent"}\n')
+    receipt_sha = hashlib.sha256(receipt.read_bytes()).hexdigest()
+    tip = {
+        "schema": "tac.fresh_producer_lineage_tip.v1",
+        "receipt_path": str(receipt),
+        "receipt_sha256": receipt_sha,
+        "receipt_bytes": receipt.stat().st_size,
+        "checkpoint_id_sha256": "a" * 64,
+        "root_sha256": "b" * 64,
+        "sequence_index": 3,
+        "epoch": 17,
+        "stage": "stageCE",
+        "complete_trajectory_proven": True,
+    }
+    (tmp_path / "fresh_lineage_tip.json").write_text(
+        json.dumps(tip, sort_keys=True)
+    )
+    assert lw.fresh_lineage_resume_overrides(tmp_path) == {
+        "--fresh-lineage-parent-receipt": str(receipt),
+        "--fresh-lineage-parent-receipt-sha256": receipt_sha,
+    }
+
+    receipt.write_bytes(b"mutated")
+    with pytest.raises(RuntimeError, match="identity differs"):
+        lw.fresh_lineage_resume_overrides(tmp_path)
 
 
 def test_real_trainer_flags_includes_boolean_optional_negations_only():
@@ -414,6 +450,23 @@ def test_main_extra_bank6_is_caught_by_the_fixed_mem_preflight(tmp_path, monkeyp
     assert rc == 4
     err = capsys.readouterr().err
     assert "REFUSING to launch" in err
+
+
+def test_g111_small_population_rss_calibration_fails_closed(
+    tmp_path,
+    capsys,
+):
+    rc = lw._run_rss_calibration(
+        object(),
+        "g111_batch16_v9_semantic_base",
+        False,
+        tmp_path,
+        "g111",
+        None,
+        object(),
+    )
+    assert rc == 8
+    assert "full-n600-only" in capsys.readouterr().err
 
 
 # ───────────────── safe-frac policy derivation (L5/XC-ii, operator memory policy 2026-07-04) ────
