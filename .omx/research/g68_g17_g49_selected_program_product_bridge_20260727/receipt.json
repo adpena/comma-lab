@@ -1,0 +1,84 @@
+{
+  "audit_core": {
+    "a_packet_bytes": 3897,
+    "a_packet_sha256": "07a002f74aae74a9f70c145deb28f6df92db12d5506c741b611e311b8c3c7996",
+    "additional_unowned_or_unembedded_target_payload_inputs": 0,
+    "boundv10_decoder_source_matched": true,
+    "candidate_claim": false,
+    "dense_n600_materialized": false,
+    "exact_g49_global_a_parse_reencode_twice": true,
+    "exact_p_is_boundv10_carrier_archive": true,
+    "g17_product_archive_built": false,
+    "g17_product_archive_reopened": false,
+    "g_packet_bytes": 7592,
+    "g_packet_sha256": "7729c5392dc00585caa47be44a7cc2cac60ae614141e2a7c0c5968e538668c66",
+    "open_product_blockers": [
+      "G17_SEMANTIC_PROGRAM_LOGICAL_VALUE_TYPE_OWED",
+      "G17_SELECTED_PREIMAGE_PROGRAM_LOGICAL_VALUE_TYPE_OWED",
+      "G17_SEMANTIC_PROGRAM_P_NESTED_ARCHIVE_CONTAINER_ABI_OWED",
+      "G17_OWNER_SPECIFIC_RECEIVER_INCIDENCE_EXECUTION_RECEIPT_OWED"
+    ],
+    "owner_specific_receiver_execution_evidence": false,
+    "owner_specific_receiver_incidence_type_landed": true,
+    "pointer_moved": false,
+    "preplacement_factor2_stream_callable": true,
+    "product_structural_routing_closed": false,
+    "research_only": true,
+    "schema": "tac.g17_g49_selected_program_product_blocker.v1",
+    "score_claim": false,
+    "selected_preimage_program_logical_value_type_available": false,
+    "selected_program_component_incidences": [
+      {
+        "byte_home": "COUNTED_PACKET_FRAMING",
+        "byte_length": 3485,
+        "factor_mode": null,
+        "factor_role": null,
+        "lineage_class": "FRESH_ORIGINAL_SEMANTIC_COMPILE_IDENTITY",
+        "packet_offset": 0,
+        "payload_sha256": "a85642cfc32514d029b9b20374834b97a70ed76220c41a11d6a6e95d60405470",
+        "scientific_role": null,
+        "section_id": "PROGRAM_FRAMING_AND_MANIFEST",
+        "semantic_role": null
+      },
+      {
+        "byte_home": "COUNTED_ANALYTIC_OPERAND",
+        "byte_length": 270,
+        "factor_mode": "SHEARLET_BOUNDARY_TRANSPORT_Q4",
+        "factor_role": "ANALYTIC_RESIDUAL",
+        "lineage_class": "VIDEO_DERIVED_ANALYTIC_FACTOR",
+        "packet_offset": 3485,
+        "payload_sha256": "783ecc896f1dbd9dfbea458589b40b78eb3d5d79d66b5d47df061c39b5c21834",
+        "scientific_role": "bulk_boundary",
+        "section_id": "g68.boundary_transport",
+        "semantic_role": "RESIDUAL"
+      }
+    ],
+    "selected_program_packet_bytes": 3755,
+    "selected_program_packet_sha256": "a8e855f6633bc53f636c5250e427d0257f077fc51590939355d7fb619c579df7",
+    "semantic_p_bytes": 133941,
+    "semantic_p_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+    "semantic_program_logical_value_type_available": false,
+    "terminal_packet_bytes": 151,
+    "terminal_packet_sha256": "ba0229aa88feda6b393b27218a2e78b7f44d6e9f77c4c648f150ebb73dce5440"
+  },
+  "audit_core_receipt_sha256": "60e7ee7620734f77579ebac02ca2ff70c3590f99d279b26d033aa8c60fccd1f1",
+  "authority": "structural_research_only",
+  "implementation_start_head": "0dd5bbf346dd886e1a72d91450cb76774089f30d",
+  "no_heavy_eval": true,
+  "parent_head_at_final_verification": "029a83779252278025e5adee08df249e463b740e",
+  "pointer_moved": false,
+  "schema": "tac.g68_g17_g49_selected_program_product_bridge_receipt.v1",
+  "source_custody": {
+    "src/tac/witness_dsl/taskspace_g17_g49_selected_program_product_bridge_v1.py": "2d8c88daddaca03ee4f8c11cc1e5dbc303984124c154054ad604ec3d52a4e3d3",
+    "src/tac/witness_dsl/taskspace_g17_production_envelope.py": "f25bfff936d0a230cd99606325e9e0de0bd168d0b26bdcb7961d65730d511e98",
+    "src/tac/witness_dsl/taskspace_selected_preimage_program_v1.py": "5fd2938ce96bc592fbeddfe519f36b3f2371789dcf322617691e607490c281f0",
+    "src/tac/witness_dsl/taskspace_selected_solution_compiler.py": "36fb4997fd16e30a965e5924c84efa2971e632fc256c2e31c54957b3c4810c91",
+    "src/tac/witness_dsl/tests/test_taskspace_g17_g49_selected_program_product_bridge_v1.py": "b8db83699328fff4c7d583614c6e7abdd75b868043a240bbd625694073df2501"
+  },
+  "verification": {
+    "g69_g68_integration_pytest": "14 passed in 32.59s",
+    "py_compile": "PASS",
+    "pytest": "4 passed in 32.31s",
+    "ruff": "All checks passed"
+  }
+}
