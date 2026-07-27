@@ -110,7 +110,9 @@ def test_g111_release_requires_same_typed_config_and_physical_target(
     )
 
 
-def test_g111_real_production_capsule_compiles_cold_typed_producer() -> None:
+def test_g111_real_production_capsule_compiles_cold_typed_producer(
+    tmp_path,
+) -> None:
     receipt = os.environ.get("TAC_G109_PRODUCTION_RECEIPT")
     receipt_sha = os.environ.get("TAC_G109_PRODUCTION_RECEIPT_SHA256")
     if not receipt or not receipt_sha:
@@ -182,3 +184,66 @@ def test_g111_real_production_capsule_compiles_cold_typed_producer() -> None:
             is True
         )
     assert config.dsl_program_manifest["pointer_moved"] is False
+
+    # The governed continuation is a typed delta over this same cold producer:
+    # it must preserve the G109 physical target binding while committing to the
+    # resume directory and its exact fresh-lineage parent receipt.
+    from tools.launch_witness_run import (
+        g111_production_resume_overrides,
+        with_internal_dsl_lever,
+        write_dsl_bound_launch,
+    )
+
+    parent_receipt = (
+        tmp_path / "fresh_lineage" / f"{'a' * 64}.receipt.json"
+    )
+    parent_receipt.parent.mkdir()
+    parent_receipt.write_bytes(b'{"sealed":"g111-parent"}\n')
+    parent_sha = hashlib.sha256(parent_receipt.read_bytes()).hexdigest()
+    (tmp_path / "fresh_lineage_tip.json").write_text(
+        json.dumps(
+            {
+                "schema": "tac.fresh_producer_lineage_tip.v1",
+                "receipt_path": str(parent_receipt),
+                "receipt_sha256": parent_sha,
+                "receipt_bytes": parent_receipt.stat().st_size,
+                "checkpoint_id_sha256": "a" * 64,
+                "root_sha256": "b" * 64,
+                "sequence_index": 1,
+                "epoch": 1,
+                "stage": "stageCE",
+                "complete_trajectory_proven": True,
+            },
+            sort_keys=True,
+        )
+    )
+    resume_overrides = g111_production_resume_overrides(
+        PROGRAM_NAME,
+        tmp_path,
+        dry_start=False,
+    )
+    resumed = with_internal_dsl_lever(
+        config,
+        name="g111_production_resume_v1",
+        overrides=resume_overrides,
+    )
+    resumed_flags = resumed.typed.to_program().flag_dict()
+    assert resumed_flags["--training-target-capsule"] == (
+        target["physical_receipt"]["path"]
+    )
+    assert resumed_flags["--training-target-capsule-sha256"] == receipt_sha
+    assert resumed_flags["--resume-from"] == str(tmp_path.resolve())
+    assert resumed_flags["--fresh-lineage-parent-receipt"] == str(parent_receipt)
+    assert (
+        resumed_flags["--fresh-lineage-parent-receipt-sha256"] == parent_sha
+    )
+    assert resumed.typed.typed_config_hash() != config.typed.typed_config_hash()
+    launch_sh, provenance, manifest, document = write_dsl_bound_launch(
+        resumed,
+        tmp_path / "bound_resume_launch",
+        program_name=PROGRAM_NAME,
+    )
+    assert launch_sh.is_file() and provenance.is_file() and manifest.is_file()
+    assert len(document["dsl_compile_hash"]) == 64
+    assert "--resume-from" in document["resolved_argv"]
+    assert str(tmp_path.resolve()) in document["resolved_argv"]

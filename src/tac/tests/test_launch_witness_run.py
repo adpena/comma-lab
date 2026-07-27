@@ -85,6 +85,70 @@ def test_fresh_lineage_resume_tip_restores_exact_parent_custody(
         lw.fresh_lineage_resume_overrides(tmp_path)
 
 
+def _write_fresh_lineage_tip(run_dir: Path) -> tuple[Path, str]:
+    receipt = run_dir / "fresh_lineage" / f"{'c' * 64}.receipt.json"
+    receipt.parent.mkdir(parents=True)
+    receipt.write_bytes(b'{"sealed":"g111-production-parent"}\n')
+    receipt_sha = hashlib.sha256(receipt.read_bytes()).hexdigest()
+    (run_dir / "fresh_lineage_tip.json").write_text(
+        json.dumps(
+            {
+                "schema": "tac.fresh_producer_lineage_tip.v1",
+                "receipt_path": str(receipt),
+                "receipt_sha256": receipt_sha,
+                "receipt_bytes": receipt.stat().st_size,
+                "checkpoint_id_sha256": "c" * 64,
+                "root_sha256": "d" * 64,
+                "sequence_index": 4,
+                "epoch": 23,
+                "stage": "stageCE",
+                "complete_trajectory_proven": True,
+            },
+            sort_keys=True,
+        )
+    )
+    return receipt, receipt_sha
+
+
+def test_g111_production_resume_is_one_typed_physical_custody_bundle(
+    tmp_path: Path,
+) -> None:
+    receipt, receipt_sha = _write_fresh_lineage_tip(tmp_path)
+    assert lw.g111_production_resume_overrides(
+        "g111_batch16_v9_semantic_base",
+        tmp_path,
+        dry_start=False,
+    ) == {
+        "--resume-from": str(tmp_path.resolve()),
+        "--fresh-lineage-parent-receipt": str(receipt),
+        "--fresh-lineage-parent-receipt-sha256": receipt_sha,
+    }
+
+
+def test_g111_production_resume_refuses_partial_or_wrong_mode(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(RuntimeError, match="no canonical fresh_lineage_tip"):
+        lw.g111_production_resume_overrides(
+            "g111_batch16_v9_semantic_base",
+            tmp_path,
+            dry_start=False,
+        )
+    _write_fresh_lineage_tip(tmp_path)
+    with pytest.raises(RuntimeError, match="currently governed only"):
+        lw.g111_production_resume_overrides(
+            "crucible_v752",
+            tmp_path,
+            dry_start=False,
+        )
+    with pytest.raises(RuntimeError, match="cannot be combined with --dry-start"):
+        lw.g111_production_resume_overrides(
+            "g111_batch16_v9_semantic_base",
+            tmp_path,
+            dry_start=True,
+        )
+
+
 def test_real_trainer_flags_includes_boolean_optional_negations_only():
     """(CLASS-fix 2026-07-07) the DSL merge renders a False override as --no-<flag>; the
     validator must accept the negation for BooleanOptionalAction flags and STILL refuse it

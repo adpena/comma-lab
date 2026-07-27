@@ -121,6 +121,55 @@ def fresh_lineage_resume_overrides(
     }
 
 
+def g111_production_resume_overrides(
+    config: str,
+    resume_from: str | Path | None,
+    *,
+    dry_start: bool,
+) -> dict[str, str]:
+    """Compile a governed G111 real-run resume into one physical-custody bundle.
+
+    The bounded dry-start owns its own two-pass resume lever.  A production
+    continuation instead has to bind all three trainer flags together: the run
+    directory plus the exact fresh-lineage parent receipt path and external
+    SHA-256 recovered from that directory's durable tip.  Returning a partial
+    bundle would make a real launch appear resumable while leaving the trainer
+    unable to prove its physical parent.
+    """
+
+    if resume_from is None:
+        return {}
+    if config != "g111_batch16_v9_semantic_base":
+        raise RuntimeError(
+            "--resume-from is currently governed only for "
+            "--config g111_batch16_v9_semantic_base"
+        )
+    if dry_start:
+        raise RuntimeError(
+            "--resume-from cannot be combined with --dry-start; the bounded "
+            "dry-start owns and verifies its own fresh/resume pair"
+        )
+    raw_resume_dir = Path(resume_from).expanduser()
+    if (
+        not raw_resume_dir.is_dir()
+        or raw_resume_dir.is_symlink()
+    ):
+        raise RuntimeError(
+            "G111 production resume directory is missing, not a directory, or a symlink"
+        )
+    resume_dir = raw_resume_dir.resolve()
+    parent = fresh_lineage_resume_overrides(resume_dir)
+    if not parent:
+        raise RuntimeError(
+            "G111 production resume directory has no canonical "
+            "fresh_lineage_tip.json; refusing a non-custodied continuation"
+        )
+    return {
+        "--resume-from": str(resume_dir),
+        **parent,
+    }
+
+
 def _composable_lever_names() -> tuple[str, ...]:
     """The --dsl-lever help-text enumeration, derived from the DSL's own composability
     predicate (tac.witness_dsl.lever_registry.name_composable_levers) — never a hand-typed
@@ -2570,6 +2619,19 @@ def main(argv: list[str] | None = None) -> int:
             "required for the G111 typed producer"
         ),
     )
+    ap.add_argument(
+        "--resume-from",
+        default=None,
+        metavar="G111_RUN_DIR",
+        help=(
+            "governed production continuation for "
+            "--config g111_batch16_v9_semantic_base. The launcher reopens "
+            "G111_RUN_DIR/fresh_lineage_tip.json, verifies its physical parent "
+            "receipt bytes, and composes --resume-from plus the parent receipt "
+            "path/SHA as one typed DSL lever. Refused for other configs and "
+            "with --dry-start."
+        ),
+    )
     ap.add_argument("--extra-trainer-flags", default=None,
                     help="(C5 passthrough) EXTRA trainer flags appended verbatim to the emitted "
                     "launch.sh command (shell-split; e.g. \"--eikonal-weight 0.07 --seed-islands\"). "
@@ -2815,6 +2877,40 @@ def main(argv: list[str] | None = None) -> int:
         else:
             cfg = _dc.replace(cfg, dsl_levers=(*cfg.dsl_levers, *args.dsl_lever))
         print(f"[launch-witness] DSL levers composed: {', '.join(cfg.dsl_levers)}")
+
+    # P0 resumability (G111 release-gate audit 2026-07-27): the bounded dry-start
+    # already proved the trainer's resume path, but the governed REAL launcher
+    # previously exposed no way to use it.  Compose the production continuation
+    # through the same typed internal-lever path as the dry-start; never route it
+    # through Catalog #406's forbidden raw extra flags.  The base config is
+    # re-derived first, so the G109 target capsule and the released cold-program
+    # custody remain present, while the rebound typed hash commits to the exact
+    # physical resume directory and parent receipt.
+    try:
+        _production_resume = g111_production_resume_overrides(
+            config,
+            args.resume_from,
+            dry_start=bool(args.dry_start),
+        )
+    except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
+        print(
+            "[launch-witness] ERROR: REFUSING production resume — "
+            f"{type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        return 2
+    if _production_resume:
+        cfg = with_internal_dsl_lever(
+            cfg,
+            name="g111_production_resume_v1",
+            overrides=_production_resume,
+        )
+        print(
+            "# G111 production resume: typed physical custody bound "
+            f"resume_from={_production_resume['--resume-from']} "
+            "parent_receipt_sha256="
+            f"{_production_resume['--fresh-lineage-parent-receipt-sha256']}"
+        )
 
     # RUN-IDENTITY: thread the DECLARED purpose into the config (metadata only; the
     # identity header in launch.sh renders it; the argv is untouched by construction).
