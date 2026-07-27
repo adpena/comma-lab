@@ -1,0 +1,383 @@
+{
+  "schema": "tac.taskspace_conditional_quotient_profile_cli_config.v1",
+  "profile": {
+    "schema": "tac.taskspace_conditional_quotient_profile_config.v1",
+    "pair_count": 600,
+    "chunk_pairs": 12,
+    "scorer_hw": [
+      384,
+      512
+    ],
+    "channels": 3,
+    "resume": true,
+    "test_only_small_fixture": false,
+    "allow_local_storage": false
+  },
+  "work_root": "/Volumes/VertigoDataTier/pact/taskspace_conditional_quotient_profile_n600_fresh_v15_20260726_r2",
+  "fresh_v15_derivation": {
+    "schema": "tac.taskspace_fresh_v15_derivation_custody.v1",
+    "expected_run_id": "taskspace_fresh_v15_semantic_base_n600_20260726",
+    "compile_receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/ddm_v15_scorer_solved_templates_n600_receipt.json",
+      "expected_sha256": "53b60e4a397fc1cdb7660a0c543221be17b723d38942157ff075b49e76a76e65",
+      "expected_schema": "ddm_v15_scorer_solved_template_receipt.v1"
+    },
+    "source_config": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/configs/taskspace_fresh_v15_semantic_base_n600_20260726.json",
+      "expected_sha256": "b7f0c380de4cb354e0fe5d6432aa91f50a166c8558f73d1c56f22ac6fa08d5f6",
+      "expected_rfc8785_sha256": "5ab13e5fd1de997d0d4018a0ce94a2e84d74c582db18ad280ffe3b805526dd30"
+    },
+    "adjacent_archive": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+      "expected_bytes": 133941,
+      "expected_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
+    },
+    "producer_sources": [
+      {
+        "path": "tools/measure_ddm_v15_scorer_solved_templates.py",
+        "expected_bytes": 33966,
+        "expected_sha256": "a39dad6f79a560f3f7d544593d3aa49e9d68f234d83e9263551d2e277d8456d2"
+      },
+      {
+        "path": "src/tac/optimization/direct_description_carrier_compose.py",
+        "expected_bytes": 156551,
+        "expected_sha256": "3e1f69bb168da7b42a55ac4ba1a573c0c291a559f6622b40cffa71c219d76d48"
+      }
+    ],
+    "receiver_checkpoint": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/02_receiver_closed_archive.json",
+      "expected_sha256": "2ef945a700f3d7544fdd38b8a1f0e430339608d30ee41a111e85dd4a60eddb73"
+    },
+    "identity_checkpoints": [
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0000_0016.json",
+        "expected_sha256": "c4e6f66d3870fcacb362cfe1f28f513c5c1a8435f40f783f6304b8125555ed2a",
+        "local_pair_range": [
+          0,
+          16
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0016_0032.json",
+        "expected_sha256": "117cdc1db2e89128021480b01d63738c88da9cf263635caebce02f1c7b548543",
+        "local_pair_range": [
+          16,
+          32
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0032_0048.json",
+        "expected_sha256": "1566550003a5280f228ec89b438cefb354bcccc4b8e68df8d2e1ecf5c064f391",
+        "local_pair_range": [
+          32,
+          48
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0048_0064.json",
+        "expected_sha256": "42f997e3f3a7202af64dfbe7d8e4b935890976a97a5289471e3171b266be7811",
+        "local_pair_range": [
+          48,
+          64
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0064_0080.json",
+        "expected_sha256": "10f06ac8d66e15c7ba05476e4356c7dc1a58a333a8d9134d20f381149ba6612f",
+        "local_pair_range": [
+          64,
+          80
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0080_0096.json",
+        "expected_sha256": "73c86de264979a0fcaa7c3eacd872b992cd57a2d3c7265ab724c56ab35e62ecf",
+        "local_pair_range": [
+          80,
+          96
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0096_0112.json",
+        "expected_sha256": "dad61cfb263592b8ace627a855dcba91b417f7e5fd610eb232267f704e87fb69",
+        "local_pair_range": [
+          96,
+          112
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0112_0128.json",
+        "expected_sha256": "1c42e00883076100ac8bc8fece39c2c15c327fcfb46594fb0788b53597dedf92",
+        "local_pair_range": [
+          112,
+          128
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0128_0144.json",
+        "expected_sha256": "5e12c21d185b04d4bcfd16aed9a2f72fa40019163a19059a31ebf51a21df531c",
+        "local_pair_range": [
+          128,
+          144
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0144_0160.json",
+        "expected_sha256": "116c21dc8be0a59fe8384b5dccbce7a8a39fd39e5b0c4ce4e6c46b082489b34e",
+        "local_pair_range": [
+          144,
+          160
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0160_0176.json",
+        "expected_sha256": "be1bb7aa89333a55cb3cea9cd9f23e8cbcc9040a7daf59ad6bc705753fccc649",
+        "local_pair_range": [
+          160,
+          176
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0176_0192.json",
+        "expected_sha256": "8ba6a8927bd5db4ccd1fa8ead83d8999b80be8309474965e0c8394bc80b7778a",
+        "local_pair_range": [
+          176,
+          192
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0192_0208.json",
+        "expected_sha256": "ff0b3000178318cf4d6f07ca5d9954ed1e8f03f5501a2ef2ab8d110de502e115",
+        "local_pair_range": [
+          192,
+          208
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0208_0224.json",
+        "expected_sha256": "ccd11bc54a0c1dc5c6f12c4c9841764b7dcea644bd9476e17ae428797ae69969",
+        "local_pair_range": [
+          208,
+          224
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0224_0240.json",
+        "expected_sha256": "8fa849c2c933a310c6efb2ee29f0c06b404aa29e1ed369bd4ca3c38ec9bdf564",
+        "local_pair_range": [
+          224,
+          240
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0240_0256.json",
+        "expected_sha256": "c044b373811fb1fab07e9eeeb38180f4ca324437369c0f3fc8877268f98803dd",
+        "local_pair_range": [
+          240,
+          256
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0256_0272.json",
+        "expected_sha256": "ee622ec87d40a773423ef5ad68c7f81cadd1809c3e0dde8790da97ab108dfc31",
+        "local_pair_range": [
+          256,
+          272
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0272_0288.json",
+        "expected_sha256": "9d3013a220375fce65e46dd244a3b2455c3b10a03385736c9bdb9813f41105cf",
+        "local_pair_range": [
+          272,
+          288
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0288_0304.json",
+        "expected_sha256": "4ee639440b31a256324d515f2bf5ab6d54b6cec56d71e8a14e5d57a101f1de2f",
+        "local_pair_range": [
+          288,
+          304
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0304_0320.json",
+        "expected_sha256": "ffa2373817386c3b5d9eeebeb55b1c8e1963eab59ae5f832ae9b78fa9f920c58",
+        "local_pair_range": [
+          304,
+          320
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0320_0336.json",
+        "expected_sha256": "7b556ba121f7a0371af2ba00bb2b4f785cb51ae74b819898ffa06a3565e2d651",
+        "local_pair_range": [
+          320,
+          336
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0336_0352.json",
+        "expected_sha256": "cf54f2340162e42a11de270b508dd5ac8e6add0e161427ea4547ed03b450d4a9",
+        "local_pair_range": [
+          336,
+          352
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0352_0368.json",
+        "expected_sha256": "d0008dbe08fcedf50c31fb8786359dcd72ca9b57d95fcdb70a5393c5667c4e59",
+        "local_pair_range": [
+          352,
+          368
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0368_0384.json",
+        "expected_sha256": "285bfae354b3ffddfb0c0b2fd0a26816d26a91599b20ecaa8cca71557bd7d816",
+        "local_pair_range": [
+          368,
+          384
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0384_0400.json",
+        "expected_sha256": "68d12adababdddc331ee4d6db845af5c66011035807e9aba5114b8df875a1758",
+        "local_pair_range": [
+          384,
+          400
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0400_0416.json",
+        "expected_sha256": "90e25ed32d49d2b660d7e3ffa7546988cc2c80badcd34983e282f1942d543c66",
+        "local_pair_range": [
+          400,
+          416
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0416_0432.json",
+        "expected_sha256": "9f56c1c0f59416008cd7761e51addfeb43bb1dc347c436282ad113faa5fcd235",
+        "local_pair_range": [
+          416,
+          432
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0432_0448.json",
+        "expected_sha256": "785678652fd66e7a1d8b663eefef6910506f71138591b8d70491285197fbd2c6",
+        "local_pair_range": [
+          432,
+          448
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0448_0464.json",
+        "expected_sha256": "986e35d18957636c97a21de056a4e4c32461440fddebbe0d76f97bb85d57f365",
+        "local_pair_range": [
+          448,
+          464
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0464_0480.json",
+        "expected_sha256": "f836c36a7c4e819bce70e3b6a9f136d63b43564e05f8337cc596dca9c45eb326",
+        "local_pair_range": [
+          464,
+          480
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0480_0496.json",
+        "expected_sha256": "f09bd1b7b1e910fa14ed3f66135e45942e5eff99411574db693f63b8b68b96fd",
+        "local_pair_range": [
+          480,
+          496
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0496_0512.json",
+        "expected_sha256": "ab70e47bddae980badce3ab520188d35a63f0f98909805d0113274d1966d3ac1",
+        "local_pair_range": [
+          496,
+          512
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0512_0528.json",
+        "expected_sha256": "fba81bb7c23f502eb075ed00c72301af8b2bfdcd85db5f2c4d037aaa8567fd5e",
+        "local_pair_range": [
+          512,
+          528
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0528_0544.json",
+        "expected_sha256": "41e5bfced5bbe728b22e61ec5d5c3d17ed8f09b63e66579ca10e1cf5c93b23ec",
+        "local_pair_range": [
+          528,
+          544
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0544_0560.json",
+        "expected_sha256": "dfd89af2c41d1ed2f7675195acb9c9929f10b1d8e117bd10dc8b8836ac332341",
+        "local_pair_range": [
+          544,
+          560
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0560_0576.json",
+        "expected_sha256": "78976720cf6b449f05997925c4ac0037bb171861dafb906c9e2ffe4284c94ef7",
+        "local_pair_range": [
+          560,
+          576
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0576_0592.json",
+        "expected_sha256": "461437fc69f0d4d4e144678450461094542f2dd2c03729b5e903e3a138909fe4",
+        "local_pair_range": [
+          576,
+          592
+        ]
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/stage_checkpoints/full_p_camera_identity/batch_0592_0600.json",
+        "expected_sha256": "cf79a468f38523e57a1a86e0cc3226adafeeba0b1a3a048bb28b63d5a6d33025",
+        "local_pair_range": [
+          592,
+          600
+        ]
+      }
+    ],
+    "identity_digest_chain_sha256": "5d502c1eafe0bd6b3a3e8ea323b02a66573f51939e0a21ebde6e592e04141d7c"
+  },
+  "c1_root": {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719",
+    "prepare_receipt_sha256": "f5a0334002b0c212a994c1bc8135da449a3be247eec9b75e9b7830a92ed54183"
+  },
+  "selected_plane_geometry_custody": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/v15_ms1_coordinate_compatibility_receipt_20260726.json",
+    "expected_sha256": "3ad9192ae2fc2c99d7d2f33c7780a1edade4f7e3df443bc5705303be9299a0aa"
+  },
+  "canonical_batch16_debt_receipt": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/original_taskspace_inverse_witness_codec_20260725/c1_live_target_debt_n600_batch16.json",
+    "expected_sha256": "0db8e47a994cad5367e5eb3028055e667bc4caf3f174026d13171be662e7fbd3"
+  },
+  "independent_batch16_replay_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/c1_batch16_exact_replay_20260726/11_batch_replay_receipt.json",
+    "expected_sha256": "2d117579c13bf8209c3d6ed8d884f86b7f902a8e1b15a82e146ab4afbe2a49cf"
+  },
+  "fresh_teacher_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_teacher_batch16_20260726/12_encoder_only_receipt.json",
+    "expected_sha256": "556c6b20f12ae7f5c6b8a1a2d08c6d2c2e32e7831ab552938c7866f3256dfad1"
+  },
+  "frontier_pointer": {
+    "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "expected_sha256": "b544fda607eae6bb02871fb145166773e05d2ef8b1a470c12996056e0b26235d"
+  }
+}
