@@ -1,0 +1,328 @@
+{
+ "coordinate_family": "FISHER_MARGIN_SITE_LOCAL_PER_STRATUM_CODEBOOK",
+ "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+ "input_custody": {
+  "capacity_table_sha256": "ef3216a51d3366f2025448bf06eed734c9eab361193896af334e4d9d4f11ac53",
+  "margin_f16_sha256": "177d22f0ef16e31f9de0229606f72e69d22dd550b7ff55342f82d01ebe6f228d",
+  "ms6_receipt_sha256": "29faac211c6442f9462ba25f66c9e1ef7e2caedd325d190568ae25e5d640971e",
+  "per_stratum_table_sha256": "c11fb0d26c202fe1117a6fbd2fc47fd420fc7b7b651998ce07e443e5bd8a3bf9",
+  "pf2_event_index_sha256": "dd164a75d4c09dc9bad6bdad549477533d13ba56a8f5f777c91fc4bbddf3d1d1",
+  "rg3_assignment_sha256": "40d4150eb3c1bee1197b4023a1e2986e498f429d85677e992a8464ac7acab82e",
+  "rg3_support_summary_sha256": "3d4c4fb635ec37668cbf6037cefca63fe7c08a9ad950e6724ae023deb0473fd2",
+  "target_pair_features_npz": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_hb1_hope_bn_capacity_20260727T0001Z/target_pair_prehead_features.npz",
+   "sha256": "bfb7797e36dbe2fc78361dd2f1a81c673d2e558a409af14f9edaf93b534ea24e"
+  },
+  "v19c_base_sha256": "dc767b59c9e8671b6870e0f9f17a24cfe900dd0f2ae2a251825e41566b52e4c9"
+ },
+ "pointer_moved": false,
+ "rate_denominator_policy": "no rate columns; score_units_per_byte_status=OWED_NOT_ADMITTED",
+ "research_only": true,
+ "rows": [
+  {
+   "blocked_in_sealed_sweep": false,
+   "bucket_id": "road_movable__cell__static_in_image",
+   "capacity_refined_fine_band": 1,
+   "class_pair": "0-3",
+   "generator_parity_fine_band": 1,
+   "in_repo_reference_fine_band": 1,
+   "pair_id": 1,
+   "parity_match": true,
+   "recorded_fine_band": 1,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 3
+  },
+  {
+   "blocked_in_sealed_sweep": false,
+   "bucket_id": "road_movable__cell__static_in_image",
+   "capacity_refined_fine_band": 1,
+   "class_pair": "0-3",
+   "generator_parity_fine_band": 1,
+   "in_repo_reference_fine_band": 1,
+   "pair_id": 7,
+   "parity_match": true,
+   "recorded_fine_band": 1,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 3
+  },
+  {
+   "blocked_in_sealed_sweep": false,
+   "bucket_id": "road_movable__cell__transient",
+   "capacity_refined_fine_band": 1,
+   "class_pair": "0-3",
+   "generator_parity_fine_band": 1,
+   "in_repo_reference_fine_band": 1,
+   "pair_id": 7,
+   "parity_match": true,
+   "recorded_fine_band": 1,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 3
+  },
+  {
+   "blocked_in_sealed_sweep": true,
+   "bucket_id": "lane_undrivable__cell__static_in_image",
+   "capacity_refined_fine_band": 0,
+   "class_pair": "1-2",
+   "generator_parity_fine_band": 0,
+   "in_repo_reference_fine_band": 0,
+   "pair_id": 14,
+   "parity_match": true,
+   "recorded_fine_band": 0,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 4
+  },
+  {
+   "blocked_in_sealed_sweep": false,
+   "bucket_id": "lane_movable__cell__static_in_image",
+   "capacity_refined_fine_band": 1,
+   "class_pair": "1-3",
+   "generator_parity_fine_band": 1,
+   "in_repo_reference_fine_band": 1,
+   "pair_id": 16,
+   "parity_match": true,
+   "recorded_fine_band": 1,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 3
+  },
+  {
+   "blocked_in_sealed_sweep": false,
+   "bucket_id": "road_movable__cell__static_in_image",
+   "capacity_refined_fine_band": 1,
+   "class_pair": "0-3",
+   "generator_parity_fine_band": 1,
+   "in_repo_reference_fine_band": 1,
+   "pair_id": 16,
+   "parity_match": true,
+   "recorded_fine_band": 1,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 3
+  },
+  {
+   "blocked_in_sealed_sweep": true,
+   "bucket_id": "road_mycar__cell__static_in_image",
+   "capacity_refined_fine_band": 0,
+   "class_pair": "0-4",
+   "generator_parity_fine_band": 0,
+   "in_repo_reference_fine_band": 0,
+   "pair_id": 16,
+   "parity_match": true,
+   "recorded_fine_band": 0,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 5
+  },
+  {
+   "blocked_in_sealed_sweep": true,
+   "bucket_id": "road_mycar__cell__static_in_image",
+   "capacity_refined_fine_band": 0,
+   "class_pair": "0-4",
+   "generator_parity_fine_band": 0,
+   "in_repo_reference_fine_band": 0,
+   "pair_id": 54,
+   "parity_match": true,
+   "recorded_fine_band": 0,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 5
+  },
+  {
+   "blocked_in_sealed_sweep": true,
+   "bucket_id": "lane_movable__cell__static_in_image",
+   "capacity_refined_fine_band": 1,
+   "class_pair": "1-3",
+   "generator_parity_fine_band": 1,
+   "in_repo_reference_fine_band": 1,
+   "pair_id": 56,
+   "parity_match": true,
+   "recorded_fine_band": 1,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 3
+  },
+  {
+   "blocked_in_sealed_sweep": true,
+   "bucket_id": "road_mycar__cell__static_in_image",
+   "capacity_refined_fine_band": 0,
+   "class_pair": "0-4",
+   "generator_parity_fine_band": 0,
+   "in_repo_reference_fine_band": 0,
+   "pair_id": 60,
+   "parity_match": true,
+   "recorded_fine_band": 0,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 5
+  },
+  {
+   "blocked_in_sealed_sweep": false,
+   "bucket_id": "lane_movable__cell__static_in_image",
+   "capacity_refined_fine_band": 2,
+   "class_pair": "1-3",
+   "generator_parity_fine_band": 2,
+   "in_repo_reference_fine_band": 2,
+   "pair_id": 90,
+   "parity_match": true,
+   "recorded_fine_band": 2,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 2
+  },
+  {
+   "blocked_in_sealed_sweep": false,
+   "bucket_id": "road_movable__cell__static_in_image",
+   "capacity_refined_fine_band": 0,
+   "class_pair": "0-3",
+   "generator_parity_fine_band": 0,
+   "in_repo_reference_fine_band": 0,
+   "pair_id": 90,
+   "parity_match": true,
+   "recorded_fine_band": 0,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 3
+  },
+  {
+   "blocked_in_sealed_sweep": true,
+   "bucket_id": "road_mycar__cell__static_in_image",
+   "capacity_refined_fine_band": 0,
+   "class_pair": "0-4",
+   "generator_parity_fine_band": 0,
+   "in_repo_reference_fine_band": 0,
+   "pair_id": 327,
+   "parity_match": true,
+   "recorded_fine_band": 0,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 5
+  },
+  {
+   "blocked_in_sealed_sweep": true,
+   "bucket_id": "lane_undrivable__cell__static_in_image",
+   "capacity_refined_fine_band": 3,
+   "class_pair": "1-2",
+   "generator_parity_fine_band": 3,
+   "in_repo_reference_fine_band": 3,
+   "pair_id": 446,
+   "parity_match": true,
+   "recorded_fine_band": 3,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 2
+  },
+  {
+   "blocked_in_sealed_sweep": true,
+   "bucket_id": "lane_movable__cell__static_in_image",
+   "capacity_refined_fine_band": 2,
+   "class_pair": "1-3",
+   "generator_parity_fine_band": 2,
+   "in_repo_reference_fine_band": 2,
+   "pair_id": 523,
+   "parity_match": true,
+   "recorded_fine_band": 2,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 2
+  },
+  {
+   "blocked_in_sealed_sweep": true,
+   "bucket_id": "lane_undrivable__cell__static_in_image",
+   "capacity_refined_fine_band": 0,
+   "class_pair": "1-2",
+   "generator_parity_fine_band": 0,
+   "in_repo_reference_fine_band": 0,
+   "pair_id": 523,
+   "parity_match": true,
+   "recorded_fine_band": 0,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 3
+  },
+  {
+   "blocked_in_sealed_sweep": false,
+   "bucket_id": "road_mycar__cell__transient",
+   "capacity_refined_fine_band": 0,
+   "class_pair": "0-4",
+   "generator_parity_fine_band": 0,
+   "in_repo_reference_fine_band": 0,
+   "pair_id": 523,
+   "parity_match": true,
+   "recorded_fine_band": 0,
+   "refined_equals_recorded": true,
+   "refinement_status": "REFINEMENT_CONFIRMS_PARITY",
+   "row_band": 5
+  }
+ ],
+ "run_tag": "20260727T0001Z",
+ "schema": "ddm_hb1_hope_rg3_agreement_receipt.v1",
+ "score_claim": false,
+ "validation_gate": {
+  "blocked_rows_with_refined_proposals": [
+   {
+    "bucket_id": "lane_undrivable__cell__static_in_image",
+    "capacity_refined_fine_band": 0,
+    "pair_id": 14,
+    "recorded_fine_band": 0
+   },
+   {
+    "bucket_id": "road_mycar__cell__static_in_image",
+    "capacity_refined_fine_band": 0,
+    "pair_id": 16,
+    "recorded_fine_band": 0
+   },
+   {
+    "bucket_id": "road_mycar__cell__static_in_image",
+    "capacity_refined_fine_band": 0,
+    "pair_id": 54,
+    "recorded_fine_band": 0
+   },
+   {
+    "bucket_id": "lane_movable__cell__static_in_image",
+    "capacity_refined_fine_band": 1,
+    "pair_id": 56,
+    "recorded_fine_band": 1
+   },
+   {
+    "bucket_id": "road_mycar__cell__static_in_image",
+    "capacity_refined_fine_band": 0,
+    "pair_id": 60,
+    "recorded_fine_band": 0
+   },
+   {
+    "bucket_id": "road_mycar__cell__static_in_image",
+    "capacity_refined_fine_band": 0,
+    "pair_id": 327,
+    "recorded_fine_band": 0
+   },
+   {
+    "bucket_id": "lane_undrivable__cell__static_in_image",
+    "capacity_refined_fine_band": 3,
+    "pair_id": 446,
+    "recorded_fine_band": 3
+   },
+   {
+    "bucket_id": "lane_movable__cell__static_in_image",
+    "capacity_refined_fine_band": 2,
+    "pair_id": 523,
+    "recorded_fine_band": 2
+   },
+   {
+    "bucket_id": "lane_undrivable__cell__static_in_image",
+    "capacity_refined_fine_band": 0,
+    "pair_id": 523,
+    "recorded_fine_band": 0
+   }
+  ],
+  "capacity_refined_equal_to_recorded": 17,
+  "parity_matches": 17,
+  "parity_verdict": "REPRODUCED_17_OF_17",
+  "required": "reproduce-or-refine the 17 hand-derived RG3 Fisher-margin codebook rows",
+  "rows_total": 17
+ },
+ "wallclock_seconds": 775.2650928497314
+}
