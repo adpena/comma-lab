@@ -221,9 +221,12 @@ def test_schema_models_label_floor_and_last_pose_when_their_typed_gates_are_on()
 def test_serialized_crash_replay_returns_identical_intents_and_continuation() -> None:
     effects = _live_effects(2)
     config = _config()
+    cold_arrays = state_arrays(new_controller_state(config), prefix="g111_ctrl__")
     observations = [adapt_live_reducer_effect(effect, config=config) for effect in effects]
     first = reduce_controller_state(new_controller_state(config), observations[0])
     arrays = state_arrays(first.state, prefix="g111_ctrl__")
+    assert set(arrays) == set(cold_arrays)
+    assert all(arrays[key].shape == cold_arrays[key].shape for key in arrays)
     restored = state_from_arrays(
         arrays,
         prefix="g111_ctrl__",
@@ -333,6 +336,13 @@ def test_restore_refuses_tamper_and_wrong_config() -> None:
     arrays["ctrl__state_payload"] = arrays["ctrl__state_payload"].copy()
     arrays["ctrl__state_payload"][10] ^= np.uint8(1)
     with pytest.raises(Exception, match=r"SHA-256|canonical"):
+        state_from_arrays(arrays, prefix="ctrl__")
+
+    arrays = dict(state_arrays(state, prefix="ctrl__"))
+    payload_length = int(arrays["ctrl__state_payload_length"])
+    arrays["ctrl__state_payload"] = arrays["ctrl__state_payload"].copy()
+    arrays["ctrl__state_payload"][payload_length] = np.uint8(1)
+    with pytest.raises(G111VerdictControllerStateError, match="nonzero bytes"):
         state_from_arrays(arrays, prefix="ctrl__")
 
 

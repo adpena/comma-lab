@@ -42,8 +42,9 @@ from tac.witness_curriculum.ladder_homotopy import (
 SCHEMA: Final = "tac.g111_verdict_controller_state.v1"
 OBSERVATION_SCHEMA: Final = "tac.g111_verdict_controller_observation.v1"
 INTENT_SCHEMA: Final = "tac.g111_verdict_controller_intent.v1"
-SERIALIZED_STATE_SCHEMA: Final = "tac.g111_verdict_controller_state_arrays.v1"
+SERIALIZED_STATE_SCHEMA: Final = "tac.g111_verdict_controller_state_arrays.v2"
 STATE_RESULT_ID: Final = "g111-verdict-controller-state"
+SERIALIZED_STATE_PAYLOAD_CAPACITY: Final = 2 * 1024 * 1024
 
 DEFAULT_HISTORY_LIMIT: Final = 128
 DEFAULT_CLOSED_LOOP_LIMIT: Final = 128
@@ -1188,9 +1189,18 @@ def state_arrays(
         result_id=STATE_RESULT_ID,
         payload={"state": state},
     )
+    payload_length = len(encoded.payload_bytes)
+    if payload_length > SERIALIZED_STATE_PAYLOAD_CAPACITY:
+        raise G111VerdictControllerStateError(
+            "serialized controller state exceeds fixed payload capacity "
+            f"{payload_length} > {SERIALIZED_STATE_PAYLOAD_CAPACITY}"
+        )
+    payload = np.zeros(SERIALIZED_STATE_PAYLOAD_CAPACITY, dtype=np.uint8)
+    payload[:payload_length] = np.frombuffer(encoded.payload_bytes, dtype=np.uint8)
     arrays = {
         f"{prefix}schema": _utf8_array(SERIALIZED_STATE_SCHEMA),
-        f"{prefix}state_payload": np.frombuffer(encoded.payload_bytes, dtype=np.uint8).copy(),
+        f"{prefix}state_payload": payload,
+        f"{prefix}state_payload_length": np.asarray(payload_length, dtype=np.int64),
         f"{prefix}state_sha256": _utf8_array(encoded.result_sha256),
     }
     return MappingProxyType(arrays)
@@ -1209,6 +1219,7 @@ def state_from_arrays(
     required = {
         f"{prefix}schema",
         f"{prefix}state_payload",
+        f"{prefix}state_payload_length",
         f"{prefix}state_sha256",
     }
     missing = required - set(arrays)
@@ -1217,12 +1228,32 @@ def state_from_arrays(
     if _decode_utf8(arrays[f"{prefix}schema"], name="state schema") != SERIALIZED_STATE_SCHEMA:
         raise G111VerdictControllerStateError("serialized controller state schema differs")
     payload_array = np.asarray(arrays[f"{prefix}state_payload"])
-    if payload_array.dtype != np.dtype(np.uint8) or payload_array.ndim != 1:
-        raise G111VerdictControllerStateError("state payload must be a one-dimensional uint8 array")
+    if (
+        payload_array.dtype != np.dtype(np.uint8)
+        or payload_array.ndim != 1
+        or payload_array.shape != (SERIALIZED_STATE_PAYLOAD_CAPACITY,)
+    ):
+        raise G111VerdictControllerStateError(
+            "state payload must be the fixed-capacity one-dimensional uint8 array"
+        )
+    length_array = np.asarray(arrays[f"{prefix}state_payload_length"])
+    if length_array.dtype != np.dtype(np.int64) or length_array.shape != ():
+        raise G111VerdictControllerStateError(
+            "state payload length must be an int64 scalar"
+        )
+    payload_length = int(length_array)
+    if not 0 < payload_length <= SERIALIZED_STATE_PAYLOAD_CAPACITY:
+        raise G111VerdictControllerStateError(
+            "state payload length lies outside fixed capacity"
+        )
+    if np.any(payload_array[payload_length:]):
+        raise G111VerdictControllerStateError(
+            "state payload has nonzero bytes beyond its declared length"
+        )
     encoded = ImmutableVerdictResult(
         submission_seq=0,
         result_id=STATE_RESULT_ID,
-        payload_bytes=payload_array.tobytes(),
+        payload_bytes=payload_array[:payload_length].tobytes(),
         result_sha256=_decode_utf8(arrays[f"{prefix}state_sha256"], name="state SHA-256"),
     )
     encoded.validate()
@@ -1244,6 +1275,7 @@ restore_controller_state = state_from_arrays
 __all__ = [
     "OBSERVATION_SCHEMA",
     "SCHEMA",
+    "SERIALIZED_STATE_PAYLOAD_CAPACITY",
     "SERIALIZED_STATE_SCHEMA",
     "ControllerReductionV1",
     "G111VerdictControllerConfigV1",
