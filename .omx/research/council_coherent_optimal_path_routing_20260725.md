@@ -222,3 +222,23 @@ The §5-§7 hunt asked ONE question at three granularities: where is the first s
 **Custody:** three worktree branches queued for the mr2 independent-approver merge wave (rg4/j12/ms2rp precedent). Until merged, all rows are worktree-forensic.
 
 Pointer 0.1910828242 [contest-CPU] UNMOVED · effective competitive target 0.172 [official-leaderboard display] — the R6 row is the end.
+
+## §9 amendment (2026-07-27 — OPERATOR RE-ANCHOR: pointer fixation ABANDONED; the bar is min(0.15, official leaderboard best))
+
+Operator verbatim: "the pointer is not honest. We need to abandon fixation on that. Our goal is sub 0.15
+or the lowest score on the official upstream leaderboard, whether merged and closed or not, which is now
+0.17-something. So we have fallen behind."
+
+BINDING consequences on this card: (1) every §'s closing line changes currency — the honest state line is
+now **DISTANCE TO THE BAR** (best submittable exact row vs 0.172 / the 0.15 box), never "pointer UNMOVED";
+(2) all break-even and acceptance arithmetic that referenced 0.19108 (pf3b's 162B/edge break-even, ic1/ic2
+"beats 0.19108" row-buying staging, m6's 0.0151-S rate-gap framing) is RE-ANCHORED to the 0.172 bar and
+the #613 box — a candidate beating 0.19108 but above 0.172 is still BEHIND; (3) the row-buying trigger
+becomes "composed arithmetic lands ≤~0.17 aimed at ~0.15" and the Modal envelope is spent on that, not
+hoarded; (4) shipping a composed end-to-end candidate through exact eval outranks further crux
+characterization — pricing without a shipped row is falling further behind. Memory:
+goal_is_sub015_or_below_official_leaderboard_best_pointer_fixation_abandoned_20260727.
+
+HONEST STATE: best submittable exact row 0.19108 [contest-CPU] — **0.019 BEHIND the 0.172 bar**; no exact
+row of OUR vehicle since 07-12. STORES CONSULTED: operator message 07-27 · effective_frontier (PR130
+0.172) · card §1-§8 · THE GOAL.
