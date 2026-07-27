@@ -83,6 +83,7 @@ EXPECTED_SELECTION_RULE: Final = (
 FRESH_V15_DERIVATION_SCHEMA: Final = "tac.taskspace_fresh_v15_derivation_custody.v1"
 FRESH_V15_RECEIPT_SCHEMA: Final = "ddm_v15_scorer_solved_template_receipt.v1"
 FRESH_V15_RECEIVER_CHECKPOINT_SCHEMA: Final = "ddm_v15_receiver_closed_archive.v1"
+V15_RECEIVER_SOURCE_PATH: Final = "src/tac/optimization/direct_description_carrier_compose.py"
 FRESH_V15_IDENTITY_CHECKPOINT_SCHEMA: Final = "ddm_v15_full_p_camera_identity_batch.v1"
 FRESH_V15_ARCHIVE_BYTES: Final = 133_941
 FRESH_V15_ARCHIVE_SHA256: Final = "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
@@ -837,6 +838,15 @@ def _build_input_binding(
     implementation_sources: Mapping[str, Any],
     fresh_v15_derivation_custody: Mapping[str, Any],
 ) -> dict[str, Any]:
+    v15_receiver_source = implementation_sources.get(V15_RECEIVER_SOURCE_PATH)
+    if (
+        not isinstance(v15_receiver_source, Mapping)
+        or v15_receiver_source.get("path") != V15_RECEIVER_SOURCE_PATH
+        or not isinstance(v15_receiver_source.get("sha256"), str)
+    ):
+        raise ConditionalQuotientProfilerError(
+            "recursive implementation closure lacks the exact V15 receiver source identity"
+        )
     artifacts = geometry_custody.get("artifacts")
     if not isinstance(artifacts, Mapping):
         raise ConditionalQuotientProfilerError("selected-plane geometry custody lacks artifacts")
@@ -959,7 +969,7 @@ def _build_input_binding(
         "v15_archive_bytes": len(v15_payload),
         "v15_archive_sha256": _sha256(v15_payload),
         "v15_strict_parse": True,
-        "v15_current_receiver_source_sha256": implementation_sources["v15_receiver"]["sha256"],
+        "v15_current_receiver_source_sha256": v15_receiver_source["sha256"],
         "fresh_v15_derivation_custody": dict(fresh_v15_derivation_custody),
         "base_coordinate_transform": {
             "camera_hw": [874, 1164],

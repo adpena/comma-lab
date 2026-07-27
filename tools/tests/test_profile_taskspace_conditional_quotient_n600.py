@@ -420,6 +420,7 @@ def test_recursive_source_closure_includes_direct_and_transitive_dependencies() 
     assert "tools/build_c0b_semantic_quotient_archive.py" in closure
     assert "src/tac/optimization/direct_description_minimizer.py" in closure
     assert "src/tac/witness_dsl/v10_production_receiver.py" in closure
+    assert tool.V15_RECEIVER_SOURCE_PATH in closure
     assert all(
         (tool.REPO_ROOT / row["path"]).is_file() and row["bytes"] > 0 and len(row["sha256"]) == 64
         for row in closure.values()
