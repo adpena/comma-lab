@@ -24777,3 +24777,56 @@ re-derived all rows to 1e-12; BOX excluded (291,205,400B exact archive; verdict_
 realization). W_seg = §7 STATIC presumptive (0.024124510 @130,870B closed-packet). Start resolution transferred to
 j11's pure-priced realized rows (ws4 measured W_seg x+ at joint −0.00043 blocked only by window component gate).
 Card §21 gate scoreboard: G3/G4/G3.5 GREEN; G1+G2 on j11; pose leg on p1. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+FEED-r6cal-solved-object-byteclose-eval (2026-07-27, arm r6cal_solved_object_byteclose_eval_20260727T230213Z):
+THE ROW on the ms2r_r3 box-tolerance archive (sha e3d0581ff4…, 291,205,400B, sole STORED member 0.bin
+daf1e1db…): real `upstream/evaluate.py` n600 `--device cpu` on the exact bytes after a receiver-closed
+inflate (600/600 pairs, 707,788,800 plane values verified, raw 3,662,409,600B sha 32a773a2…, tree
+bc7e37b0…). **S = 194.42555750** = 0.115997 seg + 0.407838 pose + 193.901723 rate; d_seg 0.00115997,
+d_pose 0.01663316, rate 7.75606891. `[macOS-CPU advisory — real evaluator, real bytes]`; score_claim=false;
+pointer 0.1910828242 [contest-CPU] UNMOVED. **99.731% of S is rate; 0.269% is all distortion.**
+CHAIN VALIDATED: the evaluator independently reproduces 03_solve's own frozen-scorer record to
+|Δd_seg|=2.9e-8, |Δd_pose|=6.1e-9 — ms2r_r3 solve-record distortion values are now evaluator-confirmed.
+PREMISE CORRECTIONS (both load-bearing): (a) the archive is the BOX SOLVE (realized_errors ==
+allowed_errors == 136,839, d_seg 1.16e-3), NOT the 1.52e-4 object — that is the **q1 exact control**
+(17,931 errors, d_pose 1.018e-4) and **zero q1 records exist on disk** (01_rate holds only q4/q8), so it
+is NOT byte-closed and must not be cited as a byte-closed result; (b) the V10 production receiver has
+**no pose section** — SECTION_ORDER is a closed 3-tuple and the parser computes
+expected_ids=SECTION_ORDER[:section_count], so a 4th section is rejected at parse; 0 pose|dxi|twist|screw
+tokens in receiver+codec. Composing R1's dxi here = counted-but-inert (#417). This base is NOT pose-less:
+d_pose 0.01663 is realized implicitly because PoseNet reads the frames the description writes.
+DESCRIPTION-COMPRESSION FLOOR (measured, schema r6cal_description_compression_floor.v1): records are
+**already brotli-q11 internally** (v10_predictor_residual CONTENT_CODEC_ID="brotli-q11.v1"); H0 7.999 /
+H1 7.986 bits-per-byte; brotli-q11/lzma-9e/zlib-9/bz2-9 all EXPAND real chunks; in-tree 05_coder_race
+(RAW / E4_BROTLI_Q11 / ZSTD19_TRAINED_DICT / CONSTRICTION_ORDER1_ANS over 50 streams,
+parseback_exact=true throughout) has **RAW winning 50/50**. 291,205,400B IS the coded floor —
+**coding is dead as a lever; this is a DESCRIPTION problem.**
+BUDGET (exact walk, 0 unaccounted, 600 selected records): residual 210,029,373B **72.12%** @4.7478
+bits/plane-value (89% nonzero, sigma~10); bootstrap 81,085,747B 27.85% @1.8330; **descriptor 0B on all
+1,200 records, mode uniformly SPATIAL_SMOOTH_121** — a fixed parameter-free 1-2-1 blur carrying ZERO
+video-derived prediction parameters. Total 6.5828 bits/plane-value vs **0.0035 required at the 154,524B
+strict box** (1,884.5x) / 0.0045 at the 200,000B planning box (1,456.0x).
+DUALS: lambda_B=6.658590e-7 score/byte, lambda_E=8.477105e-7 score/seg-error ⇒ **score-optimal exchange
+= 1.2731 B per corrected seg error**. Measured ms2r_r3 q8→q4 edge = 405.50 B/error (**319x worse**) ⇒
+the shipped archive's 208 q4 selections are **score-negative by ΔS = −30.3221** (revert-all-to-q8:
+−45,681,677B = −30.4176 rate for +112,656 errors = +0.0955 seg). The solve minimized bytes subject to an
+ERROR BOX, which at this rate operating point is 319x tighter than the score-optimal trade.
+verdict_scope: instance/formulation — exact over the finite q4/q8 per-pair family; source dual is scoped
+MEASURED_ERRORS_NONADDITIVE_SHARED_RATE_EDGE, actionable_for_allocator=false.
+#603 REGISTER CHANGE: #603 held that "no measured receiver-closed component owns that residual all-role
+debt" (3,103,689 errors above the v14 control 133,247B / d_seg 0.027470296 / d_pose 163.061). ms2r_r3
+owns **exactly 3,103,689 = 100.00%** of it and beats v14 on pose by 9,803x ⇒ **the distortion target is
+demonstrably reachable**, and #603's "does not arithmetically reach the box" resolves to **rate-only**.
+BLOCKED: at 93.8 B/removed-error it is 74x over score-optimal and **2,642x short** of the 28.1677
+errors/B the 25,789B contextual reserve requires — no #603 admission rule can accept it; the 16,384B
+v18b/J3 reserves and 7,232B contingency are unreachable by orders of magnitude. This CONFIRMS and PRICES
+the FEED-603-ks1-route BOX exclusion.
+FIRST RUNGS: (1) price a real PREDICT stage — materialize AFFINE6_Q12 / PREVIOUS_PLANE_COPY on the same
+600 pairs, record Δresidual bytes at fixed seg errors (only in-family lever touching the 72.1% cost
+centre); (2) re-solve this family under the S objective with the 1.2731 B/error dual as stopping rule
+(expect the family's own S-optimum at all-q8 or coarser); (3) materialize ONE q1 record to price the q1
+family before anyone plans on 1.52e-4 again; (4) retire "compress the description" — future rate
+proposals here must state a bits/plane-value target against 0.0035.
+Artifacts: .omx/research/r6cal_solved_object_byteclose_eval_20260727.md + r6cal_asbuilt_row_receipt_20260727.json
++ r6cal_description_compression_floor_20260727.json + r6cal_evaluator_report_20260727.txt;
+tools/r6cal_byteclose_and_eval.py + tools/r6cal_description_compression_floor.py (commits d74a846abc, 1678fae24c).
