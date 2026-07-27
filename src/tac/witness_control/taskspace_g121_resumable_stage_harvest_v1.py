@@ -2170,7 +2170,7 @@ def _discover_physical_stages(
                 pair.current_launch_dsl_compile_hash
             ),
             complete_trajectory_proven=all(
-                prefix_node.complete_trajectory_proven
+                prefix_node.pair.complete_state_manifest_proven
                 for prefix_node in chain.nodes[: index + 1]
             ),
         )

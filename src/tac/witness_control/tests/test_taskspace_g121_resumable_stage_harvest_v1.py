@@ -653,6 +653,7 @@ def test_discovery_uses_latest_tip_ancestry_filters_periodic_and_accepts_resume_
                 sha256=hashlib.sha256(resume_payload).hexdigest(),
             ),
             native=None,
+            complete_state_manifest_proven=True,
         )
         return SimpleNamespace(
             receipt_path=receipt,
