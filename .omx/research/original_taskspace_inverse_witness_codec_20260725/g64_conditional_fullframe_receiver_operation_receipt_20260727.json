@@ -1,0 +1,103 @@
+{
+  "schema": "tac.g64_conditional_fullframe_receiver_operation_implementation.v1",
+  "written_at_utc": "2026-07-27T01:52:29Z",
+  "lane_id": "lane_g64_primary_selected_solution_program_v2_20260727",
+  "git_head_observed": "36c8a8aaa5d0a09f088e5392073bc1a25216bcc8",
+  "operation": {
+    "operation_id": "G17_CONDITIONAL_FULLFRAME_Y0_GIVEN_EXACT_DECODED_Y1_V1",
+    "callable_arguments": [
+      "strict_counted_learned_quotient_payload",
+      "source_pair_id",
+      "exact_decoded_camera_y1_uint8"
+    ],
+    "output": "camera_y0_uint8_874x1164x3",
+    "canonical_placement_manifest": "G17CompilerPlacementManifestV1",
+    "canonical_runtime_dependency": "G17RuntimeDependencyFileV1:SUBMISSION_RUNTIME_DEPENDENCY",
+    "canonical_wire": "taskspace-selected-preimage-learned-quotient-v1",
+    "closed_registry": true,
+    "unknown_operation_dispatch_allowed": false,
+    "caller_y1_mutation_allowed": false,
+    "direct_or_hidden_plane_path": false,
+    "scorer_teacher_target_path": false,
+    "dense_fallback_path": false,
+    "local_import_path": false
+  },
+  "implementation_files": [
+    {
+      "path": "src/tac/witness_dsl/taskspace_conditional_fullframe_receiver_operation_v1.py",
+      "sha256": "02023b376fddd9f73b32d4ef799c8333ade1e10af9f7136a122355d4c749449f"
+    },
+    {
+      "path": "src/tac/witness_dsl/tests/test_taskspace_conditional_fullframe_receiver_operation_v1.py",
+      "sha256": "ef52e0cc2d64352f78070973c391ec727ffb616bbe8cfcb8f0553d3c6a8e06ef"
+    }
+  ],
+  "source_closure": {
+    "schema": "tac.g17_conditional_fullframe_receiver_source_closure.v1",
+    "closure_sha256": "b7670360f23f546bdf60d3483852faa10855467c825c4ec0711433d3218c6f6d",
+    "files": [
+      {
+        "path": "taskspace_conditional_fullframe_receiver_operation_v1.py",
+        "sha256": "02023b376fddd9f73b32d4ef799c8333ade1e10af9f7136a122355d4c749449f"
+      },
+      {
+        "path": "taskspace_selected_preimage_program_v1.py",
+        "sha256": "5fd2938ce96bc592fbeddfe519f36b3f2371789dcf322617691e607490c281f0"
+      },
+      {
+        "path": "taskspace_selected_solution_compiler.py",
+        "sha256": "36fb4997fd16e30a965e5924c84efa2971e632fc256c2e31c54957b3c4810c91"
+      }
+    ],
+    "external_reads": [],
+    "scorer_teacher_target_dependencies": []
+  },
+  "verification": [
+    {
+      "command_class": "ruff_format",
+      "passed": true
+    },
+    {
+      "command_class": "ruff_check",
+      "passed": true
+    },
+    {
+      "command_class": "py_compile",
+      "passed": true
+    },
+    {
+      "command_class": "focused_g64_mechanics",
+      "tests_passed": 12,
+      "elapsed_seconds": 0.92,
+      "passed": true
+    },
+    {
+      "command_class": "g49_g17_g64_adjacent_regression",
+      "tests_passed": 50,
+      "elapsed_seconds": 2.76,
+      "passed": true
+    }
+  ],
+  "blockers": [
+    "G17_CONDITIONAL_DECODER_GENERIC_SOURCE_PLACEMENT_OWED",
+    "G17_CONDITIONAL_DECODER_RUNTIME_GRAPH_LINK_OWED",
+    "G17_CONDITIONAL_LOGICAL_OPERAND_TO_ARCHIVE_RANGE_LINK_OWED",
+    "G17_CONDITIONAL_OPERAND_TO_PHYSICAL_GROUP_SPAN_LINKER_OWED"
+  ],
+  "truth": {
+    "implementation_mechanics_only": true,
+    "full_n600_evidence": false,
+    "exact_eval_invoked": false,
+    "archive_candidate_built": false,
+    "public_archive_closed": false,
+    "runtime_graph_closed": false,
+    "generic_source_provenance_closed": false,
+    "score_claim": false,
+    "candidate_claim": false,
+    "promotion_eligible": false,
+    "pointer_moved": false,
+    "competitive_target_observed": 0.172,
+    "local_contest_cpu_defensive_bank_observed": 0.188044398,
+    "goal_progress": false
+  }
+}
