@@ -18,6 +18,7 @@ All MLX-free (the helpers operate on numpy dicts; the caller does the mx->np con
 """
 from __future__ import annotations
 
+import inspect
 import json
 import sys
 from pathlib import Path
@@ -594,6 +595,10 @@ def _complete_native_resume_state():
         "__resume_semantic_schema": T._RESUME_SEMANTIC_SCHEMA,
         "__resume_epoch": 25,
         "__resume_stage": "ce",
+        "__resume_primary_optimizer_family": "adamw",
+        "__cfg_seed_islands": 0,
+        "__resume_has_seed": 0,
+        "__resume_active_trainable_components_json": '["primary_model"]',
         "__resume_event_ledger_json": json.dumps({
             "schema": "levelset_resume_event_ledger.v1",
             "active_event_flags": [],
@@ -672,8 +677,149 @@ def test_normal_resume_refuses_each_missing_semantic_leg(leg, mutate, match):
 def test_native_resume_guard_accepts_complete_state():
     row = T._validate_resume_state_for_continuation(
         _complete_native_resume_state(), warm_start_weights_only=False)
-    assert row["compatibility"] == "native_v2"
+    assert row["compatibility"] == "native_v3"
     assert row["treatment_kind"] == "bit_faithful_continuation"
+
+
+def test_legacy_v2_seed_off_resume_uses_ledger_without_v3_only_fields():
+    rs = _complete_native_resume_state()
+    cfg = rs["cfg"]
+    cfg["__resume_semantic_schema"] = T._LEGACY_RESUME_SEMANTIC_SCHEMA
+    cfg.pop("__resume_primary_optimizer_family")
+    cfg.pop("__resume_active_trainable_components_json")
+    cfg.pop("__resume_has_seed")
+    row = T._validate_resume_state_for_continuation(
+        rs, warm_start_weights_only=False
+    )
+    assert row["compatibility"] == "legacy_v2_seed_off"
+    T._validate_resume_optimizer_family(
+        semantic_schema=T._LEGACY_RESUME_SEMANTIC_SCHEMA,
+        checkpoint_family="",
+        expected_family="adamw",
+        warm_start_weights_only=False,
+    )
+
+
+def test_v3_optimizer_family_remains_fail_closed():
+    with pytest.raises(RuntimeError, match="optimizer family changed"):
+        T._validate_resume_optimizer_family(
+            semantic_schema=T._RESUME_SEMANTIC_SCHEMA,
+            checkpoint_family="",
+            expected_family="adamw",
+            warm_start_weights_only=False,
+        )
+
+
+@pytest.mark.parametrize(
+    ("heavy", "scalar_count", "runtime", "arm", "count"),
+    [
+        (True, 3, False, 1, 2),
+        (False, 0, True, None, None),
+        (False, 1, False, 1, 0),
+        (True, 0, False, None, None),
+        (True, 3, True, 1, 0),
+        (False, 3, True, 1, 2),
+    ],
+)
+def test_polyak_resume_presence_refuses_on_off_or_partial_drift(
+    heavy,
+    scalar_count,
+    runtime,
+    arm,
+    count,
+):
+    with pytest.raises(RuntimeError, match="Polyak continuation"):
+        T._validate_polyak_resume_presence(
+            heavy_present=heavy,
+            scalar_keys_present=scalar_count,
+            runtime_active=runtime,
+            checkpoint_arm=arm,
+            checkpoint_count=count,
+        )
+
+
+def test_polyak_resume_presence_accepts_only_atomic_on_or_off():
+    T._validate_polyak_resume_presence(
+        heavy_present=False,
+        scalar_keys_present=0,
+        runtime_active=False,
+        checkpoint_arm=None,
+        checkpoint_count=None,
+    )
+    T._validate_polyak_resume_presence(
+        heavy_present=False,
+        scalar_keys_present=3,
+        runtime_active=True,
+        checkpoint_arm=1,
+        checkpoint_count=0,
+    )
+    T._validate_polyak_resume_presence(
+        heavy_present=True,
+        scalar_keys_present=3,
+        runtime_active=True,
+        checkpoint_arm=1,
+        checkpoint_count=4,
+    )
+
+
+def test_g111_complete_trajectory_manifest_is_total_unique_and_fail_closed():
+    activity = {
+        name: (name != "ladder_state")
+        for name in T._G111_TRAJECTORY_COMPONENTS
+    }
+    arrays = {}
+    components = []
+    for index, name in enumerate(T._G111_TRAJECTORY_COMPONENTS):
+        keys = [f"__trajectory_fixture_{index}"] if activity[name] else []
+        for key in keys:
+            arrays[key] = np.asarray(index)
+        components.append(
+            {"name": name, "active": activity[name], "keys": keys}
+        )
+    arrays[T._G111_COMPLETE_TRAJECTORY_KEY] = np.asarray(
+        json.dumps(
+            {
+                "schema": T._G111_COMPLETE_TRAJECTORY_SCHEMA,
+                "components": components,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    )
+    parsed = T._validate_g111_complete_trajectory_manifest(
+        arrays, expected_activity=activity
+    )
+    assert len(parsed["components"]) == len(T._G111_TRAJECTORY_COMPONENTS)
+
+    duplicate = json.loads(str(arrays[T._G111_COMPLETE_TRAJECTORY_KEY]))
+    duplicate["components"].append(dict(duplicate["components"][0]))
+    broken = dict(arrays)
+    broken[T._G111_COMPLETE_TRAJECTORY_KEY] = np.asarray(
+        json.dumps(duplicate)
+    )
+    with pytest.raises(RuntimeError, match="duplicate components"):
+        T._validate_g111_complete_trajectory_manifest(
+            broken, expected_activity=activity
+        )
+
+    missing_state = dict(arrays)
+    missing_state.pop("__trajectory_fixture_0")
+    with pytest.raises(RuntimeError, match="state vanished"):
+        T._validate_g111_complete_trajectory_manifest(
+            missing_state, expected_activity=activity
+        )
+
+
+def test_g111_seed_custody_has_no_dense_host_snapshot_or_restore():
+    source = inspect.getsource(T.run_train)
+    assert "_seed_res_np = np.zeros" not in source
+    assert "_seed_msk_np = np.zeros" not in source
+    assert "mx.take(" in source
+    assert "pack_sparse_auxiliary_selected_state" in source
+    assert "validate_sparse_auxiliary_packed_state" in source
+    assert "rows.at[seed_support_indices_mx].add(value_mx)" in source
+    assert '"complete_trajectory_proven": True' not in source
+    assert '"fresh_lineage_complete_trajectory_proven": True' not in source
 
 
 def test_legacy_full_state_requires_and_reports_direct_event_evidence():

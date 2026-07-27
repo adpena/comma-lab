@@ -883,15 +883,29 @@ def _git_provenance() -> dict[str, Any]:
 _RESUME_LIVE_PREFIX = "liveP__"
 _RESUME_EMA_PREFIX = "emaP__"
 _RESUME_OPT_PREFIX = "optP__"
+# Protected-island seed state is trainable but deliberately excluded from the deploy model/EMA.
+# It therefore needs distinct resume-only namespaces.  Dense spatial leaves are stored in sparse
+# deterministic-support form by tac.witness_control.sparse_auxiliary_resume_v1.
+_RESUME_SEED_LIVE_PREFIX = "seedP__"
+_RESUME_SEED_OPT_PREFIX = "seedOptP__"
 # (R-7 finisher 2) the Polyak tail-averager's HEAVY running-mean arrays. Distinct from live/ema/opt so
 # _load_resume_state routes them to their own dict (never polluting the model param restore). Only ever
 # present when --polyak-finisher-arm is set + it has observed => an un-armed run is byte-identical.
 _RESUME_POLYAK_PREFIX = "polyakM__"
-_RESUME_SEMANTIC_SCHEMA = "levelset_full_state.v2"
+_RESUME_SEMANTIC_SCHEMA = "levelset_full_state.v3"
+_LEGACY_RESUME_SEMANTIC_SCHEMA = "levelset_full_state.v2"
 _FRESH_LINEAGE_SCHEMA = "tac.fresh_producer_lineage.v1"
 _FRESH_LINEAGE_ROOT_PARENT = "0" * 64
 _FRESH_LINEAGE_DERIVED_CFG_KEYS = frozenset(
     {
+        "__cfg_fresh_producer",
+        "__cfg_fresh_lineage_schema",
+        "__cfg_fresh_seed",
+        "__cfg_fresh_lineage_root_sha256",
+        "__cfg_fresh_initial_state_sha256",
+        "__cfg_fresh_dsl_compile_hash",
+        "__cfg_fresh_target_projection_sha256",
+        "__cfg_fresh_current_launch_dsl_compile_hash",
         "__cfg_fresh_lineage_parent_checkpoint_id_sha256",
         "__cfg_fresh_lineage_state_sha256",
         "__cfg_fresh_lineage_checkpoint_id_sha256",
@@ -907,8 +921,104 @@ _LEGACY_EVENT_PREFIXES = (
     "__mg_", "__lbg_", "__scg_", "__tsg_", "__pag_", "__evt_",
     "__posegate_", "__dtp_event_mark_",
 )
+_G111_COMPLETE_TRAJECTORY_SCHEMA = "g111_complete_trajectory_state.v1"
+_G111_COMPLETE_TRAJECTORY_KEY = "__resume_complete_trajectory_manifest_json"
+_G111_TRAJECTORY_COMPONENTS = (
+    "primary_model_ema_optimizer_family",
+    "protected_seed_optimizer_support",
+    "fresh_root_physical_lineage",
+    "rng_streams",
+    "event_gates_and_duplicate_booleans",
+    "stage_transition_rewarmup",
+    "spike_rollback_and_last_good_snapshot",
+    "ladder_state",
+    "tail_controller_and_verdict_inputs",
+    "verdict_journal_and_sensor_histories",
+    "pending_verdict_reducer_boundary",
+    "jacobian_basin_state",
+    "polyak_atomic_state",
+    "best_and_stage_checkpoint_bookkeeping",
+)
 _PERIODIC_EMA_RE = re.compile(r"^levelset_periodic_ema_(?P<stage>[A-Za-z0-9_]+)_ep(?P<epoch>[0-9]+)\.npz$")
 _PERIODIC_RESUME_RE = re.compile(r"^levelset_periodic_resume_(?P<stage>[A-Za-z0-9_]+)_ep(?P<epoch>[0-9]+)\.npz$")
+
+
+def _validate_g111_complete_trajectory_manifest(
+    arrays: Mapping[str, Any],
+    *,
+    expected_activity: Mapping[str, bool],
+) -> dict[str, Any]:
+    """Validate one total, collision-free active-component custody contract."""
+
+    raw = arrays.get(_G111_COMPLETE_TRAJECTORY_KEY)
+    if raw is None:
+        raise RuntimeError(
+            "fresh G111 launch blocked: complete trajectory-state manifest is "
+            "absent; controller-state closure is not proven"
+        )
+    try:
+        value = np.asarray(raw)
+        parsed = json.loads(str(value.item() if value.size == 1 else raw))
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError(
+            "fresh G111 complete trajectory-state manifest is malformed"
+        ) from exc
+    if parsed.get("schema") != _G111_COMPLETE_TRAJECTORY_SCHEMA:
+        raise RuntimeError("fresh G111 complete trajectory-state schema differs")
+    components = parsed.get("components")
+    if not isinstance(components, list):
+        raise RuntimeError("fresh G111 trajectory components must be a list")
+    names = [
+        str(component.get("name", ""))
+        for component in components
+        if isinstance(component, dict)
+    ]
+    if len(names) != len(components) or len(set(names)) != len(names):
+        raise RuntimeError(
+            "fresh G111 trajectory manifest has malformed or duplicate components"
+        )
+    expected_names = set(_G111_TRAJECTORY_COMPONENTS)
+    if set(names) != expected_names or set(expected_activity) != expected_names:
+        raise RuntimeError(
+            "fresh G111 trajectory manifest has missing or extra components"
+        )
+    claimed_keys: set[str] = set()
+    for component in components:
+        name = str(component["name"])
+        active = component.get("active")
+        keys = component.get("keys")
+        if type(active) is not bool or not isinstance(keys, list):
+            raise RuntimeError(
+                f"fresh G111 trajectory component {name!r} is malformed"
+            )
+        if active != bool(expected_activity[name]):
+            raise RuntimeError(
+                f"fresh G111 trajectory activity differs for {name!r}"
+            )
+        if not active and keys:
+            raise RuntimeError(
+                f"inactive fresh G111 trajectory component {name!r} claims state"
+            )
+        if active and not keys:
+            raise RuntimeError(
+                f"active fresh G111 trajectory component {name!r} has no state"
+            )
+        for key in keys:
+            key_name = str(key)
+            if (
+                not key_name
+                or key_name == _G111_COMPLETE_TRAJECTORY_KEY
+                or key_name in claimed_keys
+            ):
+                raise RuntimeError(
+                    "fresh G111 trajectory manifest has duplicate/colliding keys"
+                )
+            if key_name not in arrays:
+                raise RuntimeError(
+                    f"fresh G111 trajectory state vanished at {key_name!r}"
+                )
+            claimed_keys.add(key_name)
+    return parsed
 
 
 def _periodic_checkpoint_names(stage_tag: str, epoch: int) -> tuple[str, str]:
@@ -1041,7 +1151,8 @@ def _canonical_lineage_sha256(value: Mapping[str, Any]) -> str:
 def _initialize_fresh_producer_lineage(
     args: Any,
     *,
-    initial_state: Mapping[str, Any],
+    initial_state: Mapping[str, Any] | None = None,
+    initial_state_sha256: str | None = None,
 ) -> None:
     """Bind cold initialization to the governed DSL and physical G109 target."""
 
@@ -1066,7 +1177,18 @@ def _initialize_fresh_producer_lineage(
         str(target_arrays.get("__cfg_g109_target_projection_sha256", "")),
         "G109 target projection SHA-256",
     )
-    initial_state_sha = _sha256_array_mapping(initial_state)
+    if (initial_state is None) == (initial_state_sha256 is None):
+        raise ValueError(
+            "fresh lineage requires exactly one of initial_state or "
+            "initial_state_sha256"
+        )
+    initial_state_sha = (
+        _sha256_array_mapping(initial_state or {})
+        if initial_state_sha256 is None
+        else _require_lineage_sha256(
+            initial_state_sha256, "fresh lineage initial-state SHA-256"
+        )
+    )
     root_sha = _canonical_lineage_sha256(
         {
             "schema": _FRESH_LINEAGE_SCHEMA,
@@ -1147,6 +1269,8 @@ def _fresh_resume_semantic_state_sha256(
     live_state: Mapping[str, Any],
     ema_state: Mapping[str, Any],
     optimizer_state: Mapping[str, Any],
+    seed_state: Mapping[str, Any],
+    seed_optimizer_state: Mapping[str, Any],
     polyak_state: Mapping[str, Any],
     config_state: Mapping[str, Any],
 ) -> str:
@@ -1162,6 +1286,8 @@ def _fresh_resume_semantic_state_sha256(
             "live_sha256": _sha256_array_mapping(live_state),
             "ema_sha256": _sha256_array_mapping(ema_state),
             "optimizer_sha256": _sha256_array_mapping(optimizer_state),
+            "seed_sha256": _sha256_array_mapping(seed_state),
+            "seed_optimizer_sha256": _sha256_array_mapping(seed_optimizer_state),
             "polyak_sha256": _sha256_array_mapping(polyak_state),
             "config_sha256": _canonical_lineage_sha256(cfg),
         }
@@ -1176,6 +1302,8 @@ def _fresh_resume_semantic_state_sha256_from_flat(
     live: dict[str, Any] = {}
     ema: dict[str, Any] = {}
     optimizer: dict[str, Any] = {}
+    seed: dict[str, Any] = {}
+    seed_optimizer: dict[str, Any] = {}
     polyak: dict[str, Any] = {}
     cfg: dict[str, Any] = {}
     for key, value in arrays.items():
@@ -1186,6 +1314,10 @@ def _fresh_resume_semantic_state_sha256_from_flat(
             ema[name[len(_RESUME_EMA_PREFIX) :]] = value
         elif name.startswith(_RESUME_OPT_PREFIX):
             optimizer[name[len(_RESUME_OPT_PREFIX) :]] = value
+        elif name.startswith(_RESUME_SEED_LIVE_PREFIX):
+            seed[name[len(_RESUME_SEED_LIVE_PREFIX) :]] = value
+        elif name.startswith(_RESUME_SEED_OPT_PREFIX):
+            seed_optimizer[name[len(_RESUME_SEED_OPT_PREFIX) :]] = value
         elif name.startswith(_RESUME_POLYAK_PREFIX):
             polyak[name[len(_RESUME_POLYAK_PREFIX) :]] = value
         elif name.startswith("__"):
@@ -1198,6 +1330,8 @@ def _fresh_resume_semantic_state_sha256_from_flat(
         live_state=live,
         ema_state=ema,
         optimizer_state=optimizer,
+        seed_state=seed,
+        seed_optimizer_state=seed_optimizer,
         polyak_state=polyak,
         config_state=cfg,
     )
@@ -1453,6 +1587,12 @@ def _build_resume_state_arrays(
     resume_registry: "Any" = None, hardness_prob: "np.ndarray | None" = None,
     fresh_state: FreShInitState | None = None,
     resume_stage: str | None = None,
+    seed_live_np: "dict[str, np.ndarray] | None" = None,
+    seed_opt_np: "dict[str, np.ndarray] | None" = None,
+    seed_support_mask: "np.ndarray | None" = None,
+    seed_packed_state: "Any | None" = None,
+    include_fresh_lineage: bool = True,
+    primary_optimizer_family: str = "adamw",
 ) -> dict[str, np.ndarray]:
     """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
     tensors + epoch + light cfg provenance. MLX-free (caller converts mx->np)."""
@@ -1467,8 +1607,83 @@ def _build_resume_state_arrays(
             out[_RESUME_OPT_PREFIX + k] = np.asarray(v)
     out["__resume_epoch"] = np.asarray(int(epoch))
     out["__resume_has_opt"] = np.asarray(int(has_opt))
+    out["__resume_primary_optimizer_family"] = np.asarray(
+        str(primary_optimizer_family)
+    )
     out["__resume_semantic_schema"] = np.asarray(_RESUME_SEMANTIC_SCHEMA)
     out["__resume_stage"] = np.asarray(str(resume_stage or "epoch_position_only"))
+    seed_enabled = bool(getattr(args, "seed_islands", False))
+    if seed_enabled:
+        if seed_packed_state is None and (
+            not seed_live_np or not seed_opt_np or seed_support_mask is None
+        ):
+            raise RuntimeError(
+                "refusing to checkpoint an active protected-island seed without its complete "
+                "live, optimizer, and deterministic-support state"
+            )
+        if seed_packed_state is not None:
+            if seed_live_np or seed_opt_np:
+                raise RuntimeError(
+                    "protected-island seed checkpoint supplied both selected-row and dense "
+                    "host state; refusing an ambiguous or memory-unsafe checkpoint"
+                )
+            packed_seed = seed_packed_state
+        else:
+            if set(seed_live_np or {}) != {"residual"}:
+                raise RuntimeError(
+                    "protected-island seed live-state inventory changed; register every new "
+                    f"leaf before checkpointing (keys={sorted(seed_live_np or {})})"
+                )
+            from tac.witness_control.sparse_auxiliary_resume_v1 import (
+                pack_sparse_auxiliary_state,
+            )
+
+            packed_seed = pack_sparse_auxiliary_state(
+                component="island_seed",
+                live_state=seed_live_np or {},
+                optimizer_state=seed_opt_np or {},
+                support_mask=seed_support_mask,
+                dense_shape=tuple(
+                    int(v) for v in (seed_live_np or {})["residual"].shape
+                ),
+            )
+        out.update(
+            {
+                _RESUME_SEED_LIVE_PREFIX + key: value
+                for key, value in packed_seed.live.items()
+            }
+        )
+        out.update(
+            {
+                _RESUME_SEED_OPT_PREFIX + key: value
+                for key, value in packed_seed.optimizer.items()
+            }
+        )
+        out["__resume_seed_state_manifest_json"] = np.asarray(
+            packed_seed.manifest_json
+        )
+        out["__resume_seed_support_count"] = np.asarray(
+            packed_seed.support_count, np.int64
+        )
+        out["__resume_seed_support_geometry_sha256"] = np.asarray(
+            packed_seed.support_geometry_sha256
+        )
+    elif (
+        seed_live_np
+        or seed_opt_np
+        or seed_support_mask is not None
+        or seed_packed_state is not None
+    ):
+        raise RuntimeError(
+            "protected-island seed state was supplied while --seed-islands is disabled"
+        )
+    out["__resume_has_seed"] = np.asarray(int(seed_enabled))
+    out["__resume_active_trainable_components_json"] = np.asarray(
+        json.dumps(
+            ["primary_model", *(["island_seed"] if seed_enabled else [])],
+            separators=(",", ":"),
+        )
+    )
     out["__cfg_n_hidden"] = np.asarray(args.n_hidden)
     out["__cfg_hidden_dim"] = np.asarray(args.hidden_dim)
     out["__cfg_mod_dim"] = np.asarray(args.mod_dim)
@@ -1616,6 +1831,21 @@ def _build_resume_state_arrays(
     out["__cfg_dseg_aware_taper_floor"] = np.asarray(float(getattr(args, "dseg_aware_taper_floor", 0.05)))
     out["__cfg_seed_anneal_epochs"] = np.asarray(int(getattr(args, "seed_anneal_epochs", 0)))
     out["__cfg_seed_anneal_shape"] = np.asarray(str(getattr(args, "seed_anneal_shape", "linear")))
+    # The protected seed is a separate trainable module + optimizer.  Every switch that changes its
+    # initialization, support, gradient containment, or update law is trajectory-affecting and must
+    # be bound into the resume contract.
+    out["__cfg_seed_islands"] = np.asarray(
+        int(bool(getattr(args, "seed_islands", False))))
+    out["__cfg_seed_lr"] = np.asarray(float(getattr(args, "seed_lr", 0.02)))
+    out["__cfg_seed_blend"] = np.asarray(float(getattr(args, "seed_blend", 1.0)))
+    out["__cfg_seed_island_eased"] = np.asarray(
+        int(bool(getattr(args, "seed_island_eased", False))))
+    out["__cfg_island_dilate_px"] = np.asarray(
+        int(getattr(args, "island_dilate_px", 1)))
+    out["__cfg_containment_mode"] = np.asarray(
+        str(getattr(args, "containment_mode", "shield")))
+    out["__cfg_containment_damp"] = np.asarray(
+        float(getattr(args, "containment_damp", 0.1)))
     out["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
     # (#220) persist the AA supersample FACTOR too: --render-aa mode is guarded above, but a resume
     # that keeps mode="supersample" while changing --aa-supersample 2->3 renders a DIFFERENT grid
@@ -1760,7 +1990,7 @@ def _build_resume_state_arrays(
         "active_event_flags": active_event_flags,
         "inactive_explicit": not bool(active_event_flags),
     }, sort_keys=True, separators=(",", ":")))
-    if bool(getattr(args, "fresh_producer", False)):
+    if bool(getattr(args, "fresh_producer", False)) and include_fresh_lineage:
         out["__cfg_fresh_producer"] = np.asarray(1, np.int8)
         out.update(_fresh_producer_root_arrays(args))
         out["__cfg_fresh_current_launch_dsl_compile_hash"] = np.asarray(
@@ -1832,16 +2062,22 @@ def _validate_fresh_producer_resume_lineage(
     live = resume_state.get("live")
     ema = resume_state.get("ema")
     optimizer = resume_state.get("opt")
+    seed = resume_state.get("seed")
+    seed_optimizer = resume_state.get("seed_opt")
     polyak = resume_state.get("polyak")
     if not isinstance(live, Mapping) or not isinstance(ema, Mapping) or not isinstance(
         optimizer,
         Mapping,
+    ) or not isinstance(seed, Mapping) or not isinstance(
+        seed_optimizer, Mapping
     ) or not isinstance(polyak, Mapping):
         raise ValueError("--fresh-producer resume checkpoint lacks typed full state")
     current_state_sha = _fresh_resume_semantic_state_sha256(
         live_state=live,
         ema_state=ema,
         optimizer_state=optimizer,
+        seed_state=seed,
+        seed_optimizer_state=seed_optimizer,
         polyak_state=polyak,
         config_state=cfg,
     )
@@ -1872,6 +2108,8 @@ def _load_resume_state(npz_path: Path) -> dict[str, Any]:
     live: dict[str, np.ndarray] = {}
     ema: dict[str, np.ndarray] = {}
     opt: dict[str, np.ndarray] = {}
+    seed: dict[str, np.ndarray] = {}
+    seed_opt: dict[str, np.ndarray] = {}
     polyak: dict[str, np.ndarray] = {}
     cfg: dict[str, Any] = {}
     for k in z.files:
@@ -1881,6 +2119,10 @@ def _load_resume_state(npz_path: Path) -> dict[str, Any]:
             ema[k[len(_RESUME_EMA_PREFIX):]] = np.asarray(z[k], np.float32)
         elif k.startswith(_RESUME_OPT_PREFIX):
             opt[k[len(_RESUME_OPT_PREFIX):]] = np.asarray(z[k])
+        elif k.startswith(_RESUME_SEED_LIVE_PREFIX):
+            seed[k[len(_RESUME_SEED_LIVE_PREFIX):]] = np.asarray(z[k])
+        elif k.startswith(_RESUME_SEED_OPT_PREFIX):
+            seed_opt[k[len(_RESUME_SEED_OPT_PREFIX):]] = np.asarray(z[k])
         elif k.startswith(_RESUME_POLYAK_PREFIX):
             # (R-7 finisher 2) the Polyak running-mean (fp64) — restored into the averager, never the
             # model. Absent for an un-armed run (byte-identical).
@@ -1894,8 +2136,10 @@ def _load_resume_state(npz_path: Path) -> dict[str, Any]:
             live.setdefault(k, np.asarray(z[k], np.float32))
     epoch = int(cfg.get("__resume_epoch", cfg.get("__epoch", 0)))
     return {
-        "live": live, "ema": ema, "opt": opt, "polyak": polyak,
+        "live": live, "ema": ema, "opt": opt, "seed": seed, "seed_opt": seed_opt,
+        "polyak": polyak,
         "epoch": epoch, "has_opt": bool(int(cfg.get("__resume_has_opt", 0))), "cfg": cfg,
+        "has_seed": bool(int(cfg.get("__resume_has_seed", 0))),
     }
 
 
@@ -1928,8 +2172,55 @@ def _validate_resume_state_for_continuation(
     if "__resume_epoch" not in cfg:
         missing.append("stage_epoch_position:__resume_epoch")
 
+    seed_cfg_active = bool(int(cfg.get("__cfg_seed_islands", 0) or 0))
+    seed_state_present = bool(rs.get("seed")) or bool(rs.get("seed_opt"))
+    seed_declared = bool(rs.get("has_seed"))
+    if seed_cfg_active:
+        if not seed_declared:
+            missing.append("auxiliary_trainable_state:island_seed_declaration")
+        if not rs.get("seed"):
+            missing.append("auxiliary_trainable_state:island_seed_live")
+        if not rs.get("seed_opt"):
+            missing.append("auxiliary_trainable_state:island_seed_optimizer")
+        if "__resume_seed_state_manifest_json" not in cfg:
+            missing.append("auxiliary_trainable_state:island_seed_manifest")
+    elif seed_declared or seed_state_present:
+        missing.append("auxiliary_trainable_state:island_seed_present_but_config_inactive")
+
+    component_manifest_raw = cfg.get("__resume_active_trainable_components_json")
+    if component_manifest_raw is not None:
+        try:
+            component_manifest = json.loads(str(component_manifest_raw))
+            expected_components = [
+                "primary_model", *(["island_seed"] if seed_cfg_active else [])
+            ]
+            if component_manifest != expected_components:
+                missing.append(
+                    "auxiliary_trainable_state:component_manifest_mismatch"
+                )
+        except (TypeError, ValueError, json.JSONDecodeError):
+            missing.append("auxiliary_trainable_state:malformed_component_manifest")
+    elif (
+        str(cfg.get("__resume_semantic_schema", "")) == _RESUME_SEMANTIC_SCHEMA
+        or seed_cfg_active
+        or seed_declared
+        or seed_state_present
+    ):
+        missing.append("auxiliary_trainable_state:component_manifest_missing")
+
     schema = str(cfg.get("__resume_semantic_schema", ""))
-    if schema == _RESUME_SEMANTIC_SCHEMA:
+    if schema in {
+        _RESUME_SEMANTIC_SCHEMA,
+        _LEGACY_RESUME_SEMANTIC_SCHEMA,
+    }:
+        optimizer_family = str(
+            cfg.get("__resume_primary_optimizer_family", "")
+        )
+        if (
+            schema == _RESUME_SEMANTIC_SCHEMA
+            and optimizer_family not in {"adamw", "muon_multioptimizer"}
+        ):
+            missing.append("optimizer_family:unknown_or_missing")
         if "__resume_stage" not in cfg:
             missing.append("stage_epoch_position:__resume_stage")
         if "__resume_event_ledger_json" not in cfg:
@@ -1946,7 +2237,11 @@ def _validate_resume_state_for_continuation(
                     missing.append("event_state:inactive_not_explicit")
             except (TypeError, ValueError, json.JSONDecodeError):
                 missing.append("event_state:malformed_ledger")
-        compatibility = "native_v2"
+        compatibility = (
+            "native_v3"
+            if schema == _RESUME_SEMANTIC_SCHEMA
+            else "legacy_v2_seed_off"
+        )
     else:
         # Legacy full-state artifacts predate the semantic manifest. Accept only direct event-ledger
         # evidence (the sacred layout carries __posegate_* and __dtp_event_mark_* custody) and emit a
@@ -1972,6 +2267,69 @@ def _validate_resume_state_for_continuation(
         "compatibility": compatibility,
         "legacy_compatibility": compatibility == "legacy_semantic_keys",
     }
+
+
+def _validate_resume_optimizer_family(
+    *,
+    semantic_schema: str,
+    checkpoint_family: str,
+    expected_family: str,
+    warm_start_weights_only: bool,
+) -> None:
+    """Enforce v3 family custody while preserving seed-off v2 compatibility."""
+
+    if warm_start_weights_only:
+        return
+    if semantic_schema == _LEGACY_RESUME_SEMANTIC_SCHEMA:
+        return
+    if (
+        semantic_schema != _RESUME_SEMANTIC_SCHEMA
+        or checkpoint_family != expected_family
+    ):
+        raise RuntimeError(
+            "primary optimizer family changed across ordinary continuation: "
+            f"schema={semantic_schema!r}, "
+            f"checkpoint={checkpoint_family!r}, "
+            f"expected={expected_family!r}"
+        )
+
+
+def _validate_polyak_resume_presence(
+    *,
+    heavy_present: bool,
+    scalar_keys_present: int,
+    runtime_active: bool,
+    checkpoint_arm: int | None,
+    checkpoint_count: int | None,
+) -> None:
+    """Validate unarmed, armed-empty, and armed-observed Polyak states."""
+
+    if scalar_keys_present not in {0, 3}:
+        raise RuntimeError(
+            "Polyak continuation state is partial: all three scalar keys are "
+            "required atomically"
+        )
+    scalar_present = scalar_keys_present == 3
+    if not scalar_present:
+        if heavy_present or runtime_active:
+            raise RuntimeError(
+                "Polyak continuation state changed across resume: an unarmed "
+                "checkpoint cannot carry heavy state or resume armed"
+            )
+        return
+    if checkpoint_arm != 1 or checkpoint_count is None or checkpoint_count < 0:
+        raise RuntimeError(
+            "Polyak continuation scalar arm/count state is invalid"
+        )
+    if not runtime_active:
+        raise RuntimeError(
+            "Polyak continuation arm was dropped across resume"
+        )
+    if heavy_present != (checkpoint_count > 0):
+        raise RuntimeError(
+            "Polyak continuation heavy state must be absent at count zero and "
+            "complete after the first observation"
+        )
 
 
 def _validate_optimizer_restore_keysets(
@@ -2082,14 +2440,23 @@ def _resolve_weights_only_warm_start(
     Returns {'discarded_opt': bool, 'clear_spike_guard': bool, 'allow_lever_drift': bool,
              'start_epoch': int, 'ckpt_had_opt': bool}."""
     ckpt_had_opt = bool(rs.get("has_opt", False)) and bool(rs.get("opt"))
+    ckpt_had_seed = bool(rs.get("has_seed", False)) or bool(rs.get("seed"))
     if not warm_start_weights_only:
         return {"discarded_opt": False, "clear_spike_guard": False, "allow_lever_drift": False,
-                "start_epoch": int(ckpt_start_epoch), "ckpt_had_opt": ckpt_had_opt}
+                "start_epoch": int(ckpt_start_epoch), "ckpt_had_opt": ckpt_had_opt,
+                "ckpt_had_seed": ckpt_had_seed}
     rs["opt"] = {}
     rs["has_opt"] = False
+    # A weights-only warm start is an explicit new treatment.  The training-only seed is not a
+    # deploy/model weight, so its residual and moments must be discarded together with primary
+    # optimizer state and deterministically rebuilt from the new round's bound source.
+    rs["seed"] = {}
+    rs["seed_opt"] = {}
+    rs["has_seed"] = False
     _ep = int(warm_start_epoch) if int(warm_start_epoch) >= 0 else int(ckpt_start_epoch)
     return {"discarded_opt": True, "clear_spike_guard": True, "allow_lever_drift": True,
-            "start_epoch": _ep, "ckpt_had_opt": ckpt_had_opt}
+            "start_epoch": _ep, "ckpt_had_opt": ckpt_had_opt,
+            "ckpt_had_seed": ckpt_had_seed}
 
 
 def _emit_resume_start_epoch_row(start_epoch: int, ckpt_epoch: int, *,
@@ -2193,6 +2560,17 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         # BUILD #300 seed-absorption levers (material, trajectory-affecting).
         ("__cfg_witness_alone_island_loss", int(bool(getattr(args, "witness_alone_island_loss", False))), False),
         ("__cfg_seed_anneal_epochs", int(getattr(args, "seed_anneal_epochs", 0)), False),
+        # The protected island seed is a separate trainable module and AdamW group.  Bind every
+        # initialization/support/update lever so a normal continuation cannot silently reconstruct a
+        # different auxiliary trajectory while the deploy-model baseline still happens to match.
+        ("__cfg_seed_islands", int(bool(getattr(args, "seed_islands", False))), False),
+        ("__cfg_seed_lr", float(getattr(args, "seed_lr", 0.02)), True),
+        ("__cfg_seed_blend", float(getattr(args, "seed_blend", 1.0)), True),
+        ("__cfg_seed_island_eased",
+         int(bool(getattr(args, "seed_island_eased", False))), False),
+        ("__cfg_island_dilate_px", int(getattr(args, "island_dilate_px", 1)), False),
+        ("__cfg_containment_mode", str(getattr(args, "containment_mode", "shield")), False),
+        ("__cfg_containment_damp", float(getattr(args, "containment_damp", 0.1)), True),
         # (#121 d_seg-aware taper) STRUCTURAL basis lever (changes the curvelet feats the in_proj is
         # trained on; no param keys). A resume that adds/drops/re-strengths/re-scales it would train on
         # a different basis than the ckpt => fail closed (deterministic-repro).
@@ -6429,6 +6807,41 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _fresh_lineage_early_resume_cfg = _load_resume_state(
                 _fresh_lineage_resume_path
             )["cfg"]
+            # Ordinary continuation reopens the immutable zero-parent root
+            # from the physical chain.  It must not re-hash the *current*
+            # checkpoint as though that were a new cold root.
+            args._fresh_lineage_root_sha256 = _require_lineage_sha256(
+                _fresh_lineage_early_resume_cfg.get(
+                    "__cfg_fresh_lineage_root_sha256"
+                ),
+                "resumed fresh lineage root SHA-256",
+            )
+            args._fresh_lineage_initial_state_sha256 = _require_lineage_sha256(
+                _fresh_lineage_early_resume_cfg.get(
+                    "__cfg_fresh_initial_state_sha256"
+                ),
+                "resumed fresh lineage initial-state SHA-256",
+            )
+            args._fresh_lineage_dsl_compile_hash = _require_lineage_sha256(
+                _fresh_lineage_early_resume_cfg.get(
+                    "__cfg_fresh_dsl_compile_hash"
+                ),
+                "resumed fresh lineage DSL compile hash",
+            )
+            args._fresh_lineage_target_projection_sha256 = (
+                _require_lineage_sha256(
+                    _fresh_lineage_early_resume_cfg.get(
+                        "__cfg_fresh_target_projection_sha256"
+                    ),
+                    "resumed fresh lineage target projection SHA-256",
+                )
+            )
+            args._fresh_lineage_current_launch_dsl_compile_hash = (
+                _require_lineage_sha256(
+                    os.environ.get("TAC_DSL_COMPILE_HASH"),
+                    "TAC_DSL_COMPILE_HASH",
+                )
+            )
             args._fresh_lineage_resume_root_dsl_compile_hash = (
                 _require_lineage_sha256(
                     _fresh_lineage_early_resume_cfg.get(
@@ -6490,53 +6903,6 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     "--resume-from checkpoint id differs from its physical "
                     "parent receipt chain"
                 )
-        _initialize_fresh_producer_lineage(
-            args,
-            initial_state={
-                key: np.asarray(value)
-                for key, value in tree_flatten(model.parameters())
-            },
-        )
-        if (
-            _fresh_lineage_resume_chain is not None
-            and args._fresh_lineage_root_sha256
-            != _fresh_lineage_resume_chain.root_sha256
-        ):
-            raise ValueError(
-                "reconstructed fresh-producer cold root differs from the "
-                "physical resume chain"
-            )
-        print(
-            json.dumps(
-                {
-                    "stage": "fresh_producer_lineage_root",
-                    "schema": _FRESH_LINEAGE_SCHEMA,
-                    "root_sha256": args._fresh_lineage_root_sha256,
-                    "initial_state_sha256": args._fresh_lineage_initial_state_sha256,
-                    "dsl_compile_hash": args._fresh_lineage_dsl_compile_hash,
-                    "current_launch_dsl_compile_hash": (
-                        args._fresh_lineage_current_launch_dsl_compile_hash
-                    ),
-                    "target_projection_sha256": (
-                        args._fresh_lineage_target_projection_sha256
-                    ),
-                    "physical_parent_receipt": (
-                        None
-                        if _fresh_lineage_parent_receipt_path is None
-                        else str(_fresh_lineage_parent_receipt_path)
-                    ),
-                    "physical_parent_receipt_sha256": (
-                        _fresh_lineage_parent_receipt_sha256
-                    ),
-                    "complete_trajectory_proven": (
-                        _fresh_lineage_resume_chain is not None
-                    ),
-                },
-                sort_keys=True,
-            ),
-            flush=True,
-        )
-
     ema = MlxEMA(model, decay=args.ema_decay)
     # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA. DEFAULT-OFF: --ema-decay-finisher None =>
     # ema_finisher_decay None => the loop NEVER mutates ema.decay => the EMA trajectory is
@@ -7722,6 +8088,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     seed_opt = None
     seed_spec = None
     _seed_shield = None
+    _seed_support_mask_np: "Any | None" = None
     if seed_on:
         if float(args.w_seg) <= 0.0:
             raise ValueError("--seed-islands requires --w-seg > 0: the seed helps ONLY through the "
@@ -7733,14 +8100,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             build_island_seed as _build_isl_seed,
             contain_protected_grad_mx as _contain_grad_mx,
             eased_island_masks as _eased_isl_masks,
-            identify_island_classes as _ident_isl,
+            identify_island_classes_streaming as _ident_isl_streaming,
         )
         _seed_shield = _contain_grad_mx
         _mk_seed_masks = _eased_isl_masks if bool(getattr(args, "seed_island_eased", False)) else _build_isl_masks
-        _lst_stack_s = np.stack([np.asarray(gt.lstars[pi], np.int64) for pi in range(P)], axis=0)
-        _sdet = _ident_isl(_lst_stack_s, n_classes=5)
-        _seed_res_np = np.zeros((P, render_h, render_w, 3), np.float32)
-        _seed_msk_np = np.zeros((P, render_h, render_w, 1), np.float32)
+        _sdet = _ident_isl_streaming(gt.lstars, n_classes=5)
+        _seed_support_indices_parts: list[np.ndarray] = []
+        _seed_support_values_parts: list[np.ndarray] = []
+        _seed_support_rows_parts: list[np.ndarray] = []
         _s_supp = []
         for pi in range(P):
             _im = _mk_seed_masks(np.asarray(gt.lstars[pi], np.int64), _sdet.lane_cls,
@@ -7753,23 +8120,73 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                        size=(render_h, render_w), mode="bilinear", align_corners=False
                                        )[0].permute(1, 2, 0).numpy()
             _seed = _build_isl_seed(_gt1, _im, base_render_segres=None, blend=float(args.seed_blend))
-            _seed_res_np[pi] = _seed.residual
-            _seed_msk_np[pi, ..., 0] = np.asarray(_im.any_mask, np.float32)
+            _pair_mask = np.asarray(_im.any_mask, np.float32).reshape(-1)
+            _pair_indices = np.flatnonzero(_pair_mask != 0.0).astype(
+                np.int64, copy=False
+            )
+            _seed_support_indices_parts.append(
+                _pair_indices + int(pi) * int(render_h * render_w)
+            )
+            _seed_support_values_parts.append(_pair_mask[_pair_indices])
+            _seed_support_rows_parts.append(
+                np.asarray(_seed.residual, np.float32)
+                .reshape(-1, 3)[_pair_indices]
+                .copy()
+            )
             _s_supp.append(float(_seed.support_frac))
+
+        _seed_support_indices_np = np.concatenate(_seed_support_indices_parts)
+        _seed_support_values_np = np.concatenate(_seed_support_values_parts).astype(
+            np.float32, copy=False
+        )
+        _seed_support_rows_np = np.concatenate(_seed_support_rows_parts).astype(
+            np.float32, copy=False
+        )
+        from tac.witness_control.sparse_auxiliary_resume_v1 import (
+            SparseSupportGeometry,
+        )
+
+        _seed_support_mask_np = SparseSupportGeometry(
+            indices=_seed_support_indices_np,
+            values=_seed_support_values_np,
+            spatial_shape=(P, render_h, render_w),
+        )
+        _seed_support_indices_mx = mx.array(_seed_support_indices_np)
+        _seed_rows_mx = mx.zeros((P * render_h * render_w, 3), dtype=mx.float32)
+        _seed_rows_mx = _seed_rows_mx.at[_seed_support_indices_mx].add(
+            mx.array(_seed_support_rows_np)
+        )
+        _seed_mask_rows_mx = mx.zeros(
+            (P * render_h * render_w, 1), dtype=mx.float32
+        )
+        _seed_mask_rows_mx = _seed_mask_rows_mx.at[
+            _seed_support_indices_mx
+        ].add(mx.array(_seed_support_values_np[:, None]))
+        _seed_res_mx = mx.reshape(
+            _seed_rows_mx, (P, render_h, render_w, 3)
+        )
+        _seed_masks_mx = mx.reshape(
+            _seed_mask_rows_mx, (P, render_h, render_w, 1)
+        )
+        mx.eval(_seed_res_mx, _seed_masks_mx)
 
         class _SeedMod(_seed_nn.Module):
             def __init__(self, res):
                 super().__init__()
-                self.residual = mx.array(res)
+                self.residual = res
 
-        seed_mod = _SeedMod(_seed_res_np)
+        seed_mod = _SeedMod(_seed_res_mx)
         mx.eval(seed_mod.parameters())
-        _seed_masks_mx = mx.array(_seed_msk_np)
         seed_state["mod"] = seed_mod
         seed_state["masks"] = [_seed_masks_mx[pi] for pi in range(P)]
         seed_spec = _SeedSpec(mode=str(args.containment_mode), damp=float(args.containment_damp),
                               protected_mask=None)
         seed_opt = optim.AdamW(learning_rate=float(args.seed_lr), weight_decay=0.0)
+        # Initialize moments before the ancestry/cold-root checkpoint.  An uninitialized auxiliary
+        # optimizer is not a complete epoch-zero trajectory state and used to let pass two silently
+        # cold-start the seed moments.
+        seed_opt.init(seed_mod.trainable_parameters())
+        mx.eval(seed_opt.state)
         print(json.dumps({"stage": "island_seed", "lane_cls": _sdet.lane_cls, "movable_cls": _sdet.movable_cls,
                           "island_classes": list(_sdet.island_classes),
                           "mean_support_frac": round(float(np.mean(_s_supp)), 5),
@@ -7778,6 +8195,70 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "SEPARATE protected seed module (own AdamW; NOT in EMA/blob/deploy = "
                           "0-byte accelerant; verdict=witness-alone=deploy=absorption readout); "
                           "shield-grad defends it; advisory; canonical effective-frontier pointer UNMOVED"}), flush=True)
+
+    def _snapshot_sparse_seed_state_mlx() -> "Any | None":
+        """Gather protected-seed support rows in MLX before NumPy conversion.
+
+        The n600 residual and Adam moments are dense on the training device but
+        sparse by construction.  Crossing those dense tensors to NumPy would
+        transiently allocate multiple host gigabytes and defeats sparse stage
+        custody, so only canonical support rows may cross the boundary.
+        """
+
+        if seed_mod is None:
+            return None
+        if _seed_support_mask_np is None:
+            raise RuntimeError("active protected seed has no deterministic support mask")
+        from tac.witness_control.sparse_auxiliary_resume_v1 import (
+            SelectedStateLeaf,
+            pack_sparse_auxiliary_selected_state,
+        )
+
+        dense_shape = tuple(int(v) for v in seed_mod.residual.shape)
+        support_indices = np.asarray(
+            _seed_support_mask_np.indices, dtype=np.int64
+        )
+        support_indices_mx = mx.array(support_indices)
+        zero_outside_mx = _seed_masks_mx == 0
+
+        def _gather(tree: Any) -> dict[str, SelectedStateLeaf]:
+            selected: dict[str, SelectedStateLeaf] = {}
+            for key, value in tree_flatten(tree):
+                logical_shape = tuple(int(v) for v in value.shape)
+                if logical_shape == dense_shape:
+                    outside_abs = mx.sum(mx.abs(value) * zero_outside_mx)
+                    rows = mx.take(
+                        mx.reshape(value, (-1, dense_shape[-1])),
+                        support_indices_mx,
+                        axis=0,
+                    )
+                    mx.eval(outside_abs, rows)
+                    if float(outside_abs) != 0.0:
+                        raise RuntimeError(
+                            f"protected seed tensor {key!r} has signal outside its "
+                            "deterministic support"
+                        )
+                    array = np.asarray(rows)
+                    encoding = "support_rows"
+                else:
+                    mx.eval(value)
+                    array = np.asarray(value)
+                    encoding = "full"
+                selected[str(key)] = SelectedStateLeaf(
+                    value=array,
+                    logical_shape=logical_shape,
+                    dtype=array.dtype.str,
+                    encoding=encoding,
+                )
+            return selected
+
+        return pack_sparse_auxiliary_selected_state(
+            component="island_seed",
+            live_state=_gather(seed_mod.parameters()),
+            optimizer_state=_gather(seed_opt.state),
+            support_mask=_seed_support_mask_np,
+            dense_shape=dense_shape,
+        )
 
     def total_loss_fn(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, terms_out=None):
         # ``terms_out`` (#304 item 4 per-term loss telemetry; ADDITIVE, default None => BYTE-IDENTICAL):
@@ -11154,7 +11635,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # ---- CHECKPOINT closures (FEED-dz; mx->np snapshot + atomic save of the deploy EMA npz + the
     # resume sidecar). The deploy npz keeps the canonical name so the byte-close tool consumes it
     # as-is; the resume sidecar is separate so the deploy npz stays byte-close-clean. ----
-    def _snapshot_numpy_state() -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, np.ndarray]]:
+    def _snapshot_numpy_state() -> tuple[
+        dict[str, np.ndarray],
+        dict[str, np.ndarray],
+        dict[str, np.ndarray],
+        Any | None,
+    ]:
         shadow_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
         live_np = {k: np.asarray(v, np.float32) for k, v in tree_flatten(model.parameters())}
         opt_np: dict[str, np.ndarray] = {}
@@ -11165,7 +11651,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     opt_np[k] = arr
         except Exception:
             opt_np = {}
-        return shadow_np, live_np, opt_np
+        seed_packed_state = _snapshot_sparse_seed_state_mlx()
+        return shadow_np, live_np, opt_np, seed_packed_state
 
     def _do_checkpoint(
         epoch: int,
@@ -11180,7 +11667,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         nonlocal _fresh_lineage_parent_receipt_sha256
         _da_checkpoint_start_ns = time.perf_counter_ns()
         _da_checkpoint_clock = _component_clock
-        shadow_np, live_np, opt_np = _snapshot_numpy_state()
+        shadow_np, live_np, opt_np, seed_packed_state = (
+            _snapshot_numpy_state()
+        )
         if not opt_np:
             raise RuntimeError(
                 "refusing to write a full-state checkpoint without optimizer moments"
@@ -11214,7 +11703,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # key absent -> byte-identical). Closure-captures the loop-scope hardness_prob (bound at the
             # loop-start precompute, always before any checkpoint fires).
             hardness_prob=hardness_prob,
-            resume_stage=str(causal_stage or stage_tag or periodic_stage_tag or "unknown"))
+            resume_stage=str(causal_stage or stage_tag or periodic_stage_tag or "unknown"),
+            seed_support_mask=_seed_support_mask_np,
+            seed_packed_state=seed_packed_state,
+            primary_optimizer_family=(
+                "muon_multioptimizer" if muon_switched else "adamw"
+            ))
         # (R-7 finisher 2) merge the Polyak running-mean (heavy fp64) into the SAME atomic resume savez
         # as its scalar sentinel (registry) => no cross-file desync. {} unless armed+observed => the
         # sidecar is byte-identical for an un-armed run.
@@ -11290,7 +11784,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     "fresh_lineage_checkpoint_id_sha256": (
                         _fresh_node.pair.checkpoint_id_sha256
                     ),
-                    "fresh_lineage_complete_trajectory_proven": True,
+                    "fresh_lineage_complete_trajectory_proven": (
+                        _fresh_node.complete_trajectory_proven
+                    ),
                 }
             )
             _atomic_write_json(
@@ -11307,7 +11803,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     "sequence_index": _fresh_node.sequence_index,
                     "epoch": _fresh_node.pair.epoch,
                     "stage": _fresh_node.pair.stage,
-                    "complete_trajectory_proven": True,
+                    "complete_trajectory_proven": (
+                        _fresh_node.complete_trajectory_proven
+                    ),
                 },
             )
         # (R-7 finisher 2) export the Polyak tail mean as an ADDITIONAL deploy candidate (same builder +
@@ -11645,19 +12143,42 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # HEAVY running-mean from the sidecar-routed arrays (rs["polyak"]) so --resume-from continues a
         # bit-faithful uniform tail average. FAIL-OPEN: a sentinel-says-armed-but-heavy-missing mismatch
         # is LOUD-but-non-fatal (the EMA shadow is untouched; the Polyak candidate just restarts).
+        _poly_heavy = rs.get("polyak") or {}
+        _poly_scalar_key_count = sum(
+            key in resume_cfg
+            for key in ("__pta_arm", "__pta_count", "__pta_start")
+        )
+        _poly_runtime_active = _polyak is not None
+        _validate_polyak_resume_presence(
+            heavy_present=bool(_poly_heavy),
+            scalar_keys_present=_poly_scalar_key_count,
+            runtime_active=_poly_runtime_active,
+            checkpoint_arm=(
+                int(resume_cfg["__pta_arm"])
+                if "__pta_arm" in resume_cfg
+                else None
+            ),
+            checkpoint_count=(
+                int(resume_cfg["__pta_count"])
+                if "__pta_count" in resume_cfg
+                else None
+            ),
+        )
+        _poly_checkpoint_scalar = _poly_scalar_key_count == 3
         if _polyak is not None:
-            _poly_heavy = rs.get("polyak") or {}
+            _poly_scalar = bool(
+                _resume_report.restored.get("polyak_finisher", False)
+            )
+            if _poly_scalar != _poly_checkpoint_scalar:
+                raise RuntimeError(
+                    "Polyak continuation scalar state was not restored by "
+                    "the canonical registry"
+                )
             if _poly_heavy:
                 _polyak.restore_heavy(_poly_heavy)
                 print(json.dumps({"stage": "polyak_finisher_resumed",
                                   "count": int(_polyak.count),
                                   "start_epoch": int(_polyak.start_epoch)}), flush=True)
-            elif bool(_resume_report.restored.get("polyak_finisher", False)):
-                print(json.dumps({"stage": "polyak_finisher_resume_heavy_missing",
-                                  "note": "sidecar recorded Polyak scalar state but no heavy mean "
-                                  "arrays present — restarting the tail average (fail-open; EMA "
-                                  "shadow untouched)."}), flush=True)
-                _polyak._count = 0  # noqa: SLF001 — reset so the restarted average is n-consistent
         _muon_fire_restored = bool(_resume_report.restored.get("muon", False))
         if _muon_fire_restored and _muon_gate.fired_epoch is not None:
             _resume_into_finisher = start_epoch > int(_muon_gate.fired_epoch)
@@ -11674,6 +12195,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         else:
             _resume_into_finisher = (args.muon_start_epoch is not None
                                      and start_epoch > int(args.muon_start_epoch))
+        _expected_optimizer_family = (
+            "muon_multioptimizer" if _resume_into_finisher else "adamw"
+        )
+        _checkpoint_optimizer_family = str(
+            resume_cfg.get("__resume_primary_optimizer_family", "")
+        )
+        _validate_resume_optimizer_family(
+            semantic_schema=str(
+                resume_cfg.get("__resume_semantic_schema", "")
+            ),
+            checkpoint_family=_checkpoint_optimizer_family,
+            expected_family=_expected_optimizer_family,
+            warm_start_weights_only=_warm_start_wo,
+        )
         if _film_polar_state is not None:
             _film_polar_restored = bool(
                 _resume_report.restored.get("film_polar_chart_spel", False))
@@ -11784,6 +12319,116 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     "optimizer-state restore failed during normal continuation; refusing to "
                     f"cold-start moments ({type(e).__name__}: {e})"
                 ) from e
+        restored_seed = False
+        if seed_mod is not None:
+            if _warm_start_wo:
+                print(json.dumps({
+                    "stage": "seed_state_retreated",
+                    "checkpoint_had_seed": bool(_ws["ckpt_had_seed"]),
+                    "note": "explicit weights-only warm start: training-only protected seed "
+                            "residual/moments discarded and deterministically rebuilt",
+                }), flush=True)
+            else:
+                if not rs.get("has_seed") or not rs.get("seed") or not rs.get("seed_opt"):
+                    raise RuntimeError(
+                        "active --seed-islands continuation checkpoint lacks the protected seed "
+                        "residual and/or AdamW state; refusing a silent epoch-zero auxiliary restart"
+                    )
+                if _seed_support_mask_np is None:
+                    raise RuntimeError(
+                        "active protected seed has no deterministic support mask at restore"
+                    )
+                from tac.witness_control.sparse_auxiliary_resume_v1 import (
+                    validate_sparse_auxiliary_packed_state,
+                )
+
+                validated_seed = validate_sparse_auxiliary_packed_state(
+                    component="island_seed",
+                    packed_live=rs["seed"],
+                    packed_optimizer=rs["seed_opt"],
+                    manifest_json=str(
+                        resume_cfg.get("__resume_seed_state_manifest_json", "")
+                    ),
+                    support_mask=_seed_support_mask_np,
+                    expected_optimizer_family="adamw",
+                )
+                seed_support_indices_mx = mx.array(
+                    np.asarray(validated_seed.support_indices, dtype=np.int64)
+                )
+
+                def _scatter_seed_domain(
+                    values: Mapping[str, np.ndarray],
+                    entries: tuple[dict[str, object], ...],
+                ) -> dict[str, Any]:
+                    restored: dict[str, Any] = {}
+                    row_count = int(
+                        np.prod(validated_seed.dense_shape[:-1], dtype=np.int64)
+                    )
+                    channels = int(validated_seed.dense_shape[-1])
+                    for entry in entries:
+                        key = str(entry["key"])
+                        value_mx = mx.array(values[key])
+                        if str(entry["encoding"]) == "support_rows":
+                            rows = mx.zeros(
+                                (row_count, channels), dtype=value_mx.dtype
+                            )
+                            rows = rows.at[seed_support_indices_mx].add(value_mx)
+                            restored[key] = mx.reshape(
+                                rows, validated_seed.dense_shape
+                            )
+                        else:
+                            restored[key] = value_mx
+                    return restored
+
+                restored_seed_live = _scatter_seed_domain(
+                    validated_seed.live, validated_seed.live_entries
+                )
+                restored_seed_opt = _scatter_seed_domain(
+                    validated_seed.optimizer, validated_seed.optimizer_entries
+                )
+                runtime_seed_keys = {
+                    key for key, _ in tree_flatten(seed_mod.parameters())
+                }
+                runtime_seed_opt_keys = {
+                    key for key, _ in tree_flatten(seed_opt.state)
+                }
+                if set(restored_seed_live) != runtime_seed_keys:
+                    raise RuntimeError(
+                        "protected seed live-state keyset changed across resume "
+                        f"(checkpoint={sorted(restored_seed_live)}, "
+                        f"runtime={sorted(runtime_seed_keys)})"
+                    )
+                _validate_optimizer_restore_keysets(
+                    set(restored_seed_opt), runtime_seed_opt_keys
+                )
+                seed_mod.update(
+                    tree_unflatten(
+                        list(restored_seed_live.items())
+                    )
+                )
+                seed_opt.state = tree_unflatten(
+                    list(restored_seed_opt.items())
+                )
+                mx.eval(seed_mod.parameters(), seed_opt.state)
+                restored_seed = True
+                print(json.dumps({
+                    "stage": "seed_state_resumed",
+                    "support_count": int(
+                        resume_cfg.get("__resume_seed_support_count", -1)
+                    ),
+                    "support_geometry_sha256": str(
+                        resume_cfg.get(
+                            "__resume_seed_support_geometry_sha256", ""
+                        )
+                    ),
+                    "live_keys": sorted(restored_seed_live),
+                    "optimizer_keys": sorted(restored_seed_opt),
+                }), flush=True)
+        elif (rs.get("has_seed") or rs.get("seed") or rs.get("seed_opt")) and not _warm_start_wo:
+            raise RuntimeError(
+                "resume checkpoint contains active protected seed state but this launch did not "
+                "construct --seed-islands; refusing to drop an auxiliary trainable component"
+            )
         if use_self_orient:
             ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
             mag = recompute_self_orient(int8_dequant_params(ema_np))
@@ -11792,6 +12437,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             print(json.dumps({"stage": "resume_reorient", "mean_abs_dir_feat": round(mag, 5)}), flush=True)
         print(json.dumps({"stage": "resume", "from": str(rp), "resumed_epoch": int(rs["epoch"]),
                           "start_epoch": start_epoch, "restored_opt": restored_opt,
+                          "restored_seed": restored_seed,
                           "resumed_into_finisher": bool(_resume_into_finisher)}), flush=True)
         # (p0_resume_warmup_geometry_20260717 item 7) FORK EMA CLEARANCE arm: at a warm-start fork
         # the shadow restarts as a point mass at the restored weights; suppress BEST-banking (and
@@ -12767,42 +13413,6 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _live: dict[str, Any] = {"ep_acc": 0, "ep_tot": 0, "frac": 1.0, "stepped": True,
                             "acc": 0, "skip": 0, "ema_updates": 0}
 
-    # A complete fresh-producer ancestry must terminate in a PHYSICAL full-state
-    # node before the first optimizer step.  This checkpoint belongs HERE, after
-    # every loop-state value captured by _do_checkpoint has been initialized and
-    # after the late write-side resume-registry fold above.  Placing it earlier
-    # made recent_losses an unbound closure variable and, even after a superficial
-    # empty-list fix, would have omitted RNG/closed-loop/tau/event/birth state from
-    # the purportedly complete cold root.
-    if bool(getattr(args, "fresh_producer", False)) and resume_cfg is None:
-        # MLX lazily initializes AdamW moments on the first update.  Initialize
-        # them explicitly to their deterministic zero state so the cold-root
-        # checkpoint is itself complete and resumable without taking a training
-        # step or mutating model parameters.
-        opt.init(model.trainable_parameters())
-        mx.eval(opt.state)
-        _cold_root_checkpoint = _do_checkpoint(
-            0,
-            stage_tag="stageColdRoot",
-            causal_boundary_kind="cold_root",
-            causal_stage="stageColdRoot",
-        )
-        print(
-            json.dumps(
-                {
-                    "stage": "fresh_producer_physical_cold_root",
-                    "checkpoint": _cold_root_checkpoint,
-                    "parent_checkpoint_id_sha256": _FRESH_LINEAGE_ROOT_PARENT,
-                    "note": (
-                        "complete initialized full state preserved before the "
-                        "first optimizer step"
-                    ),
-                },
-                sort_keys=True,
-            ),
-            flush=True,
-        )
-
     # CURRICULUM stage-transition spike-guard re-treat tracker (operator 2026-06-26 "different
     # stages need different treatment ... transitions must re-treat"). Init to the START epoch's
     # seg_form so a fresh-start / resume does NOT spuriously re-treat (prev == current at ep0). Under
@@ -13031,6 +13641,187 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "tau_end": float(args.softmax_temp_end), "lr_ref": float(muon_lr_eff),
                           "note": "post-Muon warm-restart cycles; live-m_q fallback = τ-halving"}),
               flush=True)
+
+    # Bind the immutable fresh root only after every active trainable and both
+    # AdamW families exist.  The root's initial-state SHA is the semantic hash
+    # of the exact pre-lineage cold resume state; lineage fields themselves are
+    # excluded from that hash to avoid a root/hash cycle.
+    if bool(getattr(args, "fresh_producer", False)) and resume_cfg is None:
+        opt.init(model.trainable_parameters())
+        mx.eval(opt.state)
+        (
+            _cold_shadow_np,
+            _cold_live_np,
+            _cold_opt_np,
+            _cold_seed_packed,
+        ) = _snapshot_numpy_state()
+        _cold_semantic_arrays = _build_resume_state_arrays(
+            _cold_live_np,
+            _cold_shadow_np,
+            _cold_opt_np,
+            args=args,
+            epoch=0,
+            in_feat=in_feat,
+            recent_losses=recent_losses,
+            provenance=_run_provenance,
+            resume_registry=_resume_registry,
+            hardness_prob=hardness_prob,
+            fresh_state=_fresh_state,
+            resume_stage="stageColdRoot",
+            seed_support_mask=_seed_support_mask_np,
+            seed_packed_state=_cold_seed_packed,
+            include_fresh_lineage=False,
+        )
+        if _polyak is not None:
+            _cold_semantic_arrays.update(
+                _polyak.heavy_state_arrays(_RESUME_POLYAK_PREFIX)
+            )
+        _initialize_fresh_producer_lineage(
+            args,
+            initial_state_sha256=(
+                _fresh_resume_semantic_state_sha256_from_flat(
+                    _cold_semantic_arrays
+                )
+            ),
+        )
+        _cold_contract_arrays = _build_resume_state_arrays(
+            _cold_live_np,
+            _cold_shadow_np,
+            _cold_opt_np,
+            args=args,
+            epoch=0,
+            in_feat=in_feat,
+            recent_losses=recent_losses,
+            provenance=_run_provenance,
+            resume_registry=_resume_registry,
+            hardness_prob=hardness_prob,
+            fresh_state=_fresh_state,
+            resume_stage="stageColdRoot",
+            seed_support_mask=_seed_support_mask_np,
+            seed_packed_state=_cold_seed_packed,
+        )
+        if _polyak is not None:
+            _cold_contract_arrays.update(
+                _polyak.heavy_state_arrays(_RESUME_POLYAK_PREFIX)
+            )
+        _validate_g111_complete_trajectory_manifest(
+            _cold_contract_arrays,
+            expected_activity={
+                "primary_model_ema_optimizer_family": True,
+                "protected_seed_optimizer_support": bool(seed_mod is not None),
+                "fresh_root_physical_lineage": True,
+                "rng_streams": True,
+                "event_gates_and_duplicate_booleans": any(
+                    gate.event_mode
+                    for gate in (
+                        _muon_gate,
+                        _lane_band_gate,
+                        _chroma_gate,
+                        _temporal_screw_gate,
+                        _phase_advect_gate,
+                    )
+                ),
+                "stage_transition_rewarmup": bool(
+                    int(getattr(args, "stage_transition_rewarmup_epochs", 0))
+                    > 0
+                ),
+                "spike_rollback_and_last_good_snapshot": bool(
+                    _sg_guard is not None
+                ),
+                "ladder_state": bool(_ladder_state is not None),
+                "tail_controller_and_verdict_inputs": bool(
+                    _tail_ctrl is not None
+                ),
+                "verdict_journal_and_sensor_histories": bool(
+                    args.async_verdict
+                    or _annulus_on
+                    or _phase_advect_gate.event_mode
+                ),
+                "pending_verdict_reducer_boundary": bool(
+                    args.async_verdict
+                ),
+                "jacobian_basin_state": bool(_jbasin_on),
+                "polyak_atomic_state": bool(_polyak is not None),
+                "best_and_stage_checkpoint_bookkeeping": True,
+            },
+        )
+        print(
+            json.dumps(
+                {
+                    "stage": "fresh_producer_lineage_root",
+                    "schema": _FRESH_LINEAGE_SCHEMA,
+                    "root_sha256": args._fresh_lineage_root_sha256,
+                    "initial_state_sha256": (
+                        args._fresh_lineage_initial_state_sha256
+                    ),
+                    "dsl_compile_hash": args._fresh_lineage_dsl_compile_hash,
+                    "current_launch_dsl_compile_hash": (
+                        args._fresh_lineage_current_launch_dsl_compile_hash
+                    ),
+                    "target_projection_sha256": (
+                        args._fresh_lineage_target_projection_sha256
+                    ),
+                    "physical_parent_receipt": None,
+                    "physical_parent_receipt_sha256": None,
+                    "complete_trajectory_proven": False,
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+        _cold_root_checkpoint = _do_checkpoint(
+            0,
+            stage_tag="stageColdRoot",
+            causal_boundary_kind="cold_root",
+            causal_stage="stageColdRoot",
+        )
+        print(
+            json.dumps(
+                {
+                    "stage": "fresh_producer_physical_cold_root",
+                    "checkpoint": _cold_root_checkpoint,
+                    "parent_checkpoint_id_sha256": _FRESH_LINEAGE_ROOT_PARENT,
+                    "note": (
+                        "complete initialized full state preserved before the "
+                        "first optimizer step"
+                    ),
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+    elif bool(getattr(args, "fresh_producer", False)):
+        if (
+            _fresh_lineage_resume_chain is None
+            or args._fresh_lineage_root_sha256
+            != _fresh_lineage_resume_chain.root_sha256
+        ):
+            raise ValueError(
+                "resumed fresh-producer root differs from its physical chain"
+            )
+        print(
+            json.dumps(
+                {
+                    "stage": "fresh_producer_lineage_root_reopened",
+                    "root_sha256": args._fresh_lineage_root_sha256,
+                    "initial_state_sha256": (
+                        args._fresh_lineage_initial_state_sha256
+                    ),
+                    "physical_parent_receipt": str(
+                        _fresh_lineage_parent_receipt_path
+                    ),
+                    "physical_parent_receipt_sha256": (
+                        _fresh_lineage_parent_receipt_sha256
+                    ),
+                    "complete_trajectory_proven": (
+                        _fresh_lineage_resume_chain.complete_trajectory_proven
+                    ),
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+
     # (#205 OOM instrumentation) env-gated per-accum-batch memory telemetry. Default OFF -> no
     # per-batch prints in production; set TAC_MEM_PROBE=1 to trace active/cache/peak/RSS for the
     # first TAC_MEM_PROBE_EPOCHS epochs (the OOM-diagnosis + fix-verification A/B). Pure observability
@@ -18049,6 +18840,15 @@ def main(argv: list[str] | None = None) -> int:
             "once, then re-freezes in 1-13 ep on the same sustained loss shift; #205 measured). Use "
             "--spike-guard-mode rollback (the DEFAULT, and the actual cure) OR "
             "--warm-start-weights-only (a clean fresh-optimizer re-treatment).")
+    if bool(getattr(args, "fresh_producer", False)) and bool(
+        getattr(args, "warm_start_weights_only", False)
+    ):
+        raise ValueError(
+            "--fresh-producer with --warm-start-weights-only is refused: "
+            "discarding optimizer/seed/controller state while retaining the same "
+            "immutable root is an unrecorded trajectory discontinuity. Land a "
+            "typed fork-root treatment before enabling this composition."
+        )
     # (V9 self-protect) Resolve the eikonal ramp actuator before applying the direction guard below.
     # This is the fail-loud config-orphan invariant: unified-τ may not arm an end weight unless the
     # live event-mode τ-rung controller can actually move it.

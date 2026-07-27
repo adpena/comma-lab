@@ -1,9 +1,17 @@
 # G111 Complete Trajectory-State Resume Closure
 
 Date: 2026-07-27  
-Status: IMPLEMENTATION IN PROGRESS  
+Status: PARTIAL IMPLEMENTATION CLOSED; FULL CONTRACT BLOCKED FAIL-CLOSED
 Lane: G111 fresh batch-16 V9 semantic-base producer  
 Authority: local implementation and deterministic tests only; no score claim
+
+Durable status receipt:
+`g111_complete_trajectory_state_resume_blocker_20260727.json`. Device-first
+protected-seed custody, semantic cold-root binding, optimizer-family custody,
+Polyak atomicity, and the total-manifest validator are implemented and tested.
+The remaining controller/journal/snapshot adapters are not implemented; a new
+fresh G111 cold-root launch is deliberately refused until the total fourteen-
+component manifest exists and validates.
 
 ## Objective
 
@@ -117,4 +125,3 @@ The implementation unit is complete only when all of the following pass:
 - No claim that the full-n600 producer is complete merely because unit tests
   pass.
 - No change to the frozen upstream evaluator or scorer.
-

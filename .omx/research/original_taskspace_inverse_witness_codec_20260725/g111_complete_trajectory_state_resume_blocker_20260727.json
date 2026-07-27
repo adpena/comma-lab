@@ -1,0 +1,60 @@
+{
+  "schema": "g111_complete_trajectory_state_resume_blocker.v1",
+  "date": "2026-07-27",
+  "lane": "lane_g111_fresh_batch16_v9_training_binding_20260727",
+  "status": "BLOCKED_FAIL_CLOSED",
+  "authority": "local implementation and deterministic focused tests only",
+  "pointer_moved": false,
+  "score_claim": false,
+  "launch_authorized": false,
+  "closed_layers": [
+    "protected seed initialization streams per-pair host results into sparse support rows and constructs the dense training tensor only in MLX",
+    "checkpoint gathers protected seed residual and AdamW moment support rows with mx.take before NumPy conversion",
+    "ordinary resume validates the packed support/key/dtype/shape/optimizer-family contract and scatters rows into dense MLX tensors without a dense host reconstruction",
+    "primary optimizer family is explicit continuation state",
+    "Polyak scalar, heavy, and runtime-arm state must agree atomically; armed-empty checkpoints persist arm/start/count zero without heavy tensors, observed checkpoints require heavy tensors, and ON-to-OFF, OFF-to-ON, and partial continuation are fatal",
+    "legacy full-state v2 seed-off fresh chains and ordinary resumes remain readable without v3-only fields but can never claim complete trajectory proof; v2 active-seed custody is refused",
+    "fresh weights-only continuation is refused until a typed fork-root treatment exists",
+    "fresh immutable root binds the semantic epoch-zero state after primary AdamW, EMA, protected seed, seed AdamW, support identity, and registered early controllers exist",
+    "a zero-parent physical opener requires epoch 0, stageColdRoot, and initial_state_sha256 equal to the recomputed semantic cold state",
+    "the complete trajectory manifest skeleton validator requires all fourteen contract components exactly once, explicit active/inactive status, disjoint state keys, and no missing claimed state, then refuses proof because component-specific required keysets and reverse state coverage are not implemented",
+    "packed sparse restore rejects non-finite state leaves and active protected-seed custody rejects empty deterministic support",
+    "protected-seed island-class identification streams the label population one frame at a time and is exactly equivalent to the former n600 int64 population-stack reference"
+  ],
+  "remaining_blockers": [
+    {
+      "id": "G111_TRAJECTORY_WRITER_RESTORE_SYMMETRY",
+      "detail": "The trainer does not yet write and restore the total fourteen-component manifest. Fresh cold-root and v3 resume are deliberately refused both when the manifest is absent and when only the current topology skeleton is present; proof requires component-specific required keysets and reverse coverage."
+    },
+    {
+      "id": "G111_SPIKE_LAST_GOOD_SNAPSHOT",
+      "detail": "Spike rollback metadata and its last-good model, EMA, primary optimizer, seed, and seed-optimizer snapshot still need one atomic sparse-aware checkpoint adapter."
+    },
+    {
+      "id": "G111_CONTROLLER_AND_SELECTION_STATE",
+      "detail": "Rewarmup boundary, duplicate gate booleans, ladder, TailController plus verdict inputs, transactional verdict and sensor journal, Jacobian-basin cadence, BEST pointer, and stage-checkpoint bookkeeping still require symmetric write/restore adapters."
+    },
+    {
+      "id": "G111_PENDING_VERDICT_BOUNDARY",
+      "detail": "The fresh producer still needs either a strict checkpoint join barrier or an exactly-once pending-verdict reducer receipt integrated into the total manifest."
+    },
+    {
+      "id": "FOCUSED_SUITE_DSL_ADMISSION_FIXTURES",
+      "detail": "Four pre-existing main-entry tests are intercepted by the enforced DSL admission gate before reaching their intended Muon-placement assertions. This is not a trajectory-logic failure, but the literal focused command is not green until those test fixtures carry valid governed DSL custody or mock the guard."
+    }
+  ],
+  "verification": {
+    "ruff_F821_F823": "PASS",
+    "py_compile": "PASS",
+    "expanded_island_polyak_sparse_and_fresh_lineage_suites": "80 passed, 1 unrelated DSL completeness-staleness test deselected",
+    "checkpoint_resume_logic_excluding_known_admission_intercepts": "63 passed, 4 deselected",
+    "literal_focused_command_last_result": "not rerun in the corrective pass; the same four governed DSL admission fixture intercepts remain explicitly deselected",
+    "training_launched": false,
+    "evaluator_launched": false
+  },
+  "fail_closed_surface": {
+    "key": "__resume_complete_trajectory_manifest_json",
+    "schema": "g111_complete_trajectory_state.v1",
+    "behavior": "A fresh G111 cold root or v3 physical resume cannot be opened or written while the manifest is absent or skeleton-only; legacy v2 seed-off physical chains reopen with complete_trajectory_proven=false."
+  }
+}

@@ -252,6 +252,111 @@ def identify_island_classes(
     )
 
 
+def identify_island_classes_streaming(
+    lstars: Any,
+    *,
+    n_classes: int = 5,
+    area_max: float = DEFAULT_AREA_MAX,
+    static_iou_max: float = DEFAULT_STATIC_IOU_MAX,
+) -> IslandDetection:
+    """Exact island detection without a population ``(N,H,W)`` stack."""
+
+    frames = lstars
+    n = len(frames)
+    if n <= 0:
+        raise ValueError("lstars must contain at least one frame")
+    first = np.asarray(frames[0])
+    if first.ndim != 2:
+        raise ValueError(
+            f"each lstar must be an (H,W) integer argmax, got {first.shape}"
+        )
+    h, w = first.shape
+    from scipy.ndimage import distance_transform_edt
+
+    ev: list[IslandClassEvidence] = []
+    for c in range(int(n_classes)):
+        total = 0
+        union = np.zeros((h, w), dtype=bool)
+        intersection = np.ones((h, w), dtype=bool)
+        col_rows = np.zeros(h, dtype=np.int64)
+        depths: list[float] = []
+        for frame in frames:
+            labels = np.asarray(frame)
+            if labels.shape != (h, w):
+                raise ValueError(
+                    "all lstar frames must share one (H,W) shape"
+                )
+            mask = labels == c
+            count = int(mask.sum())
+            total += count
+            union |= mask
+            intersection &= mask
+            col_rows += mask.sum(axis=1, dtype=np.int64)
+            if count:
+                distance = distance_transform_edt(mask)
+                depths.append(float(distance[mask].mean()))
+        if total == 0:
+            ev.append(
+                IslandClassEvidence(
+                    c, 0.0, 0.0, 0.0, 0.0, 0.0, False, None
+                )
+            )
+            continue
+        area = float(total) / float(n * h * w)
+        union_count = int(union.sum())
+        iou = (
+            float(intersection.sum()) / float(union_count)
+            if union_count
+            else 0.0
+        )
+        row_total = int(col_rows.sum())
+        vcen = (
+            float((col_rows * np.arange(h)).sum()) / max(1, row_total)
+        ) / h
+        thick = float(np.mean(depths)) if depths else 0.0
+        is_isl = (area < area_max) and (iou < static_iou_max)
+        ev.append(
+            IslandClassEvidence(
+                c,
+                area,
+                iou,
+                vcen,
+                thick,
+                total / n,
+                is_isl,
+                None,
+            )
+        )
+
+    islands = [e for e in ev if e.is_island]
+    lane_cls: int | None = None
+    movable_cls: int | None = None
+    if len(islands) == 1:
+        only = islands[0]
+        if only.mean_thickness_px <= 3.0:
+            lane_cls = only.cls
+            only.island_kind = "lane"
+        else:
+            movable_cls = only.cls
+            only.island_kind = "movable"
+    elif len(islands) >= 2:
+        by_thick = sorted(
+            islands, key=lambda e: (e.mean_thickness_px, e.area_frac)
+        )
+        lane_e = by_thick[0]
+        movable_e = by_thick[-1]
+        lane_e.island_kind = "lane"
+        movable_e.island_kind = "movable"
+        lane_cls, movable_cls = lane_e.cls, movable_e.cls
+    return IslandDetection(
+        lane_cls=lane_cls,
+        movable_cls=movable_cls,
+        island_classes=tuple(e.cls for e in islands),
+        evidence=tuple(ev),
+        n_classes=int(n_classes),
+    )
+
+
 # ===========================================================================
 # 2. ISLAND MASKS — per-frame boolean masks (+ optional annulus dilation).
 # ===========================================================================

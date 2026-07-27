@@ -160,8 +160,8 @@ class PolyakTailAverager:
 
     # --- Resumable protocol (scalar sentinel; rides the resume registry) ------
     def state_arrays(self, prefix: str) -> "dict[str, Any]":
-        """Scalar bookkeeping under ``prefix`` — ``{}`` when inert/empty (byte-identical)."""
-        if not self.arm or self._count <= 0:
+        """Persist arm/start/count, including the armed-empty pre-start state."""
+        if not self.arm:
             return {}
         import numpy as np
         return {
@@ -171,14 +171,19 @@ class PolyakTailAverager:
         }
 
     def restore_from_cfg(self, prefix: str, cfg: dict) -> bool:
-        """Restore count/start from the parsed sidecar cfg. Returns True iff scalar state restored.
-        (``arm`` is a launch decision — it comes from argv, not the sidecar — so a resume that drops
-        ``--polyak-finisher-arm`` legitimately stops averaging; we only restore count/start.)"""
+        """Restore the checkpoint-bound armed state and scalar trajectory."""
         ckey = prefix + "count"
         if ckey not in cfg:
             return False
-        self._count = int(cfg[ckey])
         skey = prefix + "start"
-        if skey in cfg:
-            self.start_epoch = int(cfg[skey])
+        akey = prefix + "arm"
+        if skey not in cfg or akey not in cfg:
+            raise ValueError("Polyak scalar state is partial")
+        if int(cfg[akey]) != 1:
+            raise ValueError("Polyak checkpoint arm marker must equal one")
+        count = int(cfg[ckey])
+        if count < 0:
+            raise ValueError("Polyak checkpoint count must be nonnegative")
+        self._count = count
+        self.start_epoch = int(cfg[skey])
         return True

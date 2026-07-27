@@ -28,7 +28,7 @@ import stat
 import tempfile
 import zipfile
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Final
 
@@ -38,14 +38,39 @@ FRESH_PRODUCER_LINEAGE_SCHEMA: Final = "tac.fresh_producer_lineage.v1"
 FRESH_PHYSICAL_CHECKPOINT_NODE_SCHEMA: Final = (
     "tac.fresh_producer_physical_checkpoint_node.v1"
 )
-RESUME_SEMANTIC_SCHEMA: Final = "levelset_full_state.v2"
+RESUME_SEMANTIC_SCHEMA: Final = "levelset_full_state.v3"
+LEGACY_RESUME_SEMANTIC_SCHEMA: Final = "levelset_full_state.v2"
 RESUME_EVENT_LEDGER_SCHEMA: Final = "levelset_resume_event_ledger.v1"
 ROOT_PARENT_CHECKPOINT_ID: Final = "0" * 64
 G109_TARGET_PROJECTION_SHA_KEY: Final = "__cfg_g109_target_projection_sha256"
+G111_COMPLETE_TRAJECTORY_SCHEMA: Final = (
+    "g111_complete_trajectory_state.v1"
+)
+G111_COMPLETE_TRAJECTORY_KEY: Final = (
+    "__resume_complete_trajectory_manifest_json"
+)
+G111_TRAJECTORY_COMPONENTS: Final = (
+    "primary_model_ema_optimizer_family",
+    "protected_seed_optimizer_support",
+    "fresh_root_physical_lineage",
+    "rng_streams",
+    "event_gates_and_duplicate_booleans",
+    "stage_transition_rewarmup",
+    "spike_rollback_and_last_good_snapshot",
+    "ladder_state",
+    "tail_controller_and_verdict_inputs",
+    "verdict_journal_and_sensor_histories",
+    "pending_verdict_reducer_boundary",
+    "jacobian_basin_state",
+    "polyak_atomic_state",
+    "best_and_stage_checkpoint_bookkeeping",
+)
 
 RESUME_LIVE_PREFIX: Final = "liveP__"
 RESUME_EMA_PREFIX: Final = "emaP__"
 RESUME_OPT_PREFIX: Final = "optP__"
+RESUME_SEED_LIVE_PREFIX: Final = "seedP__"
+RESUME_SEED_OPT_PREFIX: Final = "seedOptP__"
 RESUME_POLYAK_PREFIX: Final = "polyakM__"
 RESUME_RNG_KEYS: Final = (
     "__rng_np_algo",
@@ -79,6 +104,9 @@ FRESH_DEPLOY_KEYS: Final = (
 )
 FRESH_LINEAGE_DERIVED_CFG_KEYS: Final = frozenset(
     {
+        "__cfg_fresh_producer",
+        *FRESH_ROOT_KEYS,
+        "__cfg_fresh_current_launch_dsl_compile_hash",
         "__cfg_fresh_lineage_parent_checkpoint_id_sha256",
         "__cfg_fresh_lineage_state_sha256",
         "__cfg_fresh_lineage_checkpoint_id_sha256",
@@ -129,6 +157,8 @@ class FreshProducerCheckpointPairV1:
     live_tensor_count: int
     ema_tensor_count: int
     optimizer_tensor_count: int
+    seed_tensor_count: int
+    seed_optimizer_tensor_count: int
     polyak_tensor_count: int
     config_array_count: int
     rng_complete: bool = True
@@ -136,6 +166,7 @@ class FreshProducerCheckpointPairV1:
     deploy_equals_ema: bool = True
     film_stiefel: bool = False
     complete_trajectory_proven: bool = False
+    complete_state_manifest_proven: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,6 +180,7 @@ class FreshProducerPhysicalCheckpointNodeV1:
     pair: FreshProducerCheckpointPairV1
     parent_receipt_path: Path | None
     parent_receipt_sha256: str | None
+    complete_trajectory_proven: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,7 +191,7 @@ class FreshProducerPhysicalCheckpointChainV1:
     current: FreshProducerPhysicalCheckpointNodeV1
     root_sha256: str
     current_launch_dsl_compile_hash: str
-    complete_trajectory_proven: bool = True
+    complete_trajectory_proven: bool
 
 
 def require_sha256(value: object, *, label: str) -> str:
@@ -274,6 +306,8 @@ def fresh_resume_semantic_state_sha256(
     live_state: Mapping[str, Any],
     ema_state: Mapping[str, Any],
     optimizer_state: Mapping[str, Any],
+    seed_state: Mapping[str, Any],
+    seed_optimizer_state: Mapping[str, Any],
     polyak_state: Mapping[str, Any],
     config_state: Mapping[str, Any],
 ) -> str:
@@ -289,6 +323,8 @@ def fresh_resume_semantic_state_sha256(
             "live_sha256": sha256_array_mapping(live_state),
             "ema_sha256": sha256_array_mapping(ema_state),
             "optimizer_sha256": sha256_array_mapping(optimizer_state),
+            "seed_sha256": sha256_array_mapping(seed_state),
+            "seed_optimizer_sha256": sha256_array_mapping(seed_optimizer_state),
             "polyak_sha256": sha256_array_mapping(polyak_state),
             "config_sha256": canonical_lineage_sha256(cfg),
         }
@@ -303,12 +339,16 @@ def split_resume_state(
     dict[str, Any],
     dict[str, Any],
     dict[str, Any],
+    dict[str, Any],
+    dict[str, Any],
 ]:
     """Split a full-state sidecar exactly as the trainer's loader does."""
 
     live: dict[str, Any] = {}
     ema: dict[str, Any] = {}
     optimizer: dict[str, Any] = {}
+    seed: dict[str, Any] = {}
+    seed_optimizer: dict[str, Any] = {}
     polyak: dict[str, Any] = {}
     cfg: dict[str, Any] = {}
     for key, value in arrays.items():
@@ -319,6 +359,10 @@ def split_resume_state(
             ema[name[len(RESUME_EMA_PREFIX) :]] = value
         elif name.startswith(RESUME_OPT_PREFIX):
             optimizer[name[len(RESUME_OPT_PREFIX) :]] = value
+        elif name.startswith(RESUME_SEED_LIVE_PREFIX):
+            seed[name[len(RESUME_SEED_LIVE_PREFIX) :]] = value
+        elif name.startswith(RESUME_SEED_OPT_PREFIX):
+            seed_optimizer[name[len(RESUME_SEED_OPT_PREFIX) :]] = value
         elif name.startswith(RESUME_POLYAK_PREFIX):
             polyak[name[len(RESUME_POLYAK_PREFIX) :]] = value
         elif name.startswith("__"):
@@ -327,7 +371,7 @@ def split_resume_state(
             raise FreshProducerLineageV1Error(
                 f"fresh resume sidecar has an unclassified member: {name}"
             )
-    return live, ema, optimizer, polyak, cfg
+    return live, ema, optimizer, seed, seed_optimizer, polyak, cfg
 
 
 def fresh_resume_semantic_state_sha256_from_flat(
@@ -335,11 +379,15 @@ def fresh_resume_semantic_state_sha256_from_flat(
 ) -> str:
     """Recompute the full-state semantic hash from a flat resume sidecar."""
 
-    live, ema, optimizer, polyak, cfg = split_resume_state(arrays)
+    live, ema, optimizer, seed, seed_optimizer, polyak, cfg = split_resume_state(
+        arrays
+    )
     return fresh_resume_semantic_state_sha256(
         live_state=live,
         ema_state=ema,
         optimizer_state=optimizer,
+        seed_state=seed,
+        seed_optimizer_state=seed_optimizer,
         polyak_state=polyak,
         config_state=cfg,
     )
@@ -523,15 +571,133 @@ def _require_int64_scalar(
     return result
 
 
+def _validate_complete_trajectory_manifest_skeleton(
+    *,
+    arrays: Mapping[str, Any],
+    seed_active: bool,
+    polyak_active: bool,
+) -> None:
+    """Validate the G111 inventory skeleton without claiming state closure."""
+
+    try:
+        raw = _scalar(arrays, G111_COMPLETE_TRAJECTORY_KEY)
+    except FreshProducerLineageV1Error as exc:
+        raise FreshProducerLineageV1Error(
+            "full-state v3 resume companion lacks the complete trajectory-state "
+            "manifest"
+        ) from exc
+    if type(raw) is not str:
+        raise FreshProducerLineageV1Error(
+            "complete trajectory-state manifest must be scalar JSON text"
+        )
+    try:
+        parsed = json.loads(raw)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise FreshProducerLineageV1Error(
+            "complete trajectory-state manifest is malformed"
+        ) from exc
+    if not isinstance(parsed, dict):
+        raise FreshProducerLineageV1Error(
+            "complete trajectory-state manifest must be a JSON object"
+        )
+    if parsed.get("schema") != G111_COMPLETE_TRAJECTORY_SCHEMA:
+        raise FreshProducerLineageV1Error(
+            "complete trajectory-state manifest schema differs"
+        )
+    components = parsed.get("components")
+    if not isinstance(components, list):
+        raise FreshProducerLineageV1Error(
+            "complete trajectory-state components must be a list"
+        )
+    if raw != json.dumps(
+        parsed,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ):
+        raise FreshProducerLineageV1Error(
+            "complete trajectory-state manifest is not canonical JSON"
+        )
+    expected_names = set(G111_TRAJECTORY_COMPONENTS)
+    names: list[str] = []
+    for component in components:
+        if not isinstance(component, dict) or type(component.get("name")) is not str:
+            raise FreshProducerLineageV1Error(
+                "complete trajectory-state manifest has a malformed component"
+            )
+        names.append(component["name"])
+    if (
+        len(names) != len(set(names))
+        or set(names) != expected_names
+        or len(names) != len(G111_TRAJECTORY_COMPONENTS)
+    ):
+        raise FreshProducerLineageV1Error(
+            "complete trajectory-state manifest must inventory each of the "
+            "14 domains exactly once"
+        )
+
+    known_activity = {
+        "primary_model_ema_optimizer_family": True,
+        "protected_seed_optimizer_support": bool(seed_active),
+        "fresh_root_physical_lineage": True,
+        "rng_streams": True,
+        "polyak_atomic_state": bool(polyak_active),
+        "best_and_stage_checkpoint_bookkeeping": True,
+    }
+    claimed_keys: set[str] = set()
+    for component in components:
+        name = component["name"]
+        active = component.get("active")
+        keys = component.get("keys")
+        if type(active) is not bool or not isinstance(keys, list):
+            raise FreshProducerLineageV1Error(
+                f"complete trajectory-state component {name!r} is malformed"
+            )
+        if name in known_activity and active != known_activity[name]:
+            raise FreshProducerLineageV1Error(
+                f"complete trajectory-state activity differs for {name!r}"
+            )
+        if (active and not keys) or (not active and keys):
+            raise FreshProducerLineageV1Error(
+                f"complete trajectory-state component {name!r} does not "
+                "explicitly match its activity"
+            )
+        for key in keys:
+            if (
+                type(key) is not str
+                or not key
+                or key == G111_COMPLETE_TRAJECTORY_KEY
+                or key in claimed_keys
+            ):
+                raise FreshProducerLineageV1Error(
+                    "complete trajectory-state manifest has duplicate or "
+                    "colliding state keys"
+                )
+            if key not in arrays:
+                raise FreshProducerLineageV1Error(
+                    f"complete trajectory-state manifest references missing "
+                    f"state {key!r}"
+                )
+            claimed_keys.add(key)
+    raise FreshProducerLineageV1Error(
+        "full-state v3 complete trajectory-state manifest is skeleton-only: "
+        "component-specific required keysets and reverse state coverage are not "
+        "implemented, so complete trajectory proof is refused"
+    )
+
+
 def _validate_full_state_semantics(
     *,
     arrays: Mapping[str, Any],
     live: Mapping[str, Any],
     ema: Mapping[str, Any],
     optimizer: Mapping[str, Any],
+    seed: Mapping[str, Any],
+    seed_optimizer: Mapping[str, Any],
     polyak: Mapping[str, Any],
     cfg: Mapping[str, Any],
-) -> tuple[int, str]:
+) -> tuple[int, str, bool]:
     if not live or not ema:
         raise FreshProducerLineageV1Error(
             "resume companion must contain complete live and EMA model state"
@@ -547,13 +713,155 @@ def _validate_full_state_semantics(
                 raise FreshProducerLineageV1Error(
                     f"resume companion {domain_name} tensor {key} is not float32"
                 )
-    if _scalar(cfg, "__resume_semantic_schema") != RESUME_SEMANTIC_SCHEMA:
+    semantic_schema = _scalar(cfg, "__resume_semantic_schema")
+    if semantic_schema not in {
+        RESUME_SEMANTIC_SCHEMA,
+        LEGACY_RESUME_SEMANTIC_SCHEMA,
+    }:
         raise FreshProducerLineageV1Error(
-            "resume companion semantic schema is not full-state v2"
+            "resume companion semantic schema is not supported full-state v2/v3"
         )
     if int(_scalar(cfg, "__resume_has_opt")) != 1 or not optimizer:
         raise FreshProducerLineageV1Error(
             "resume companion lacks complete optimizer state"
+        )
+    seed_active = bool(
+        int(
+            cfg.get("__cfg_seed_islands", 0)
+            if semantic_schema == LEGACY_RESUME_SEMANTIC_SCHEMA
+            else _scalar(cfg, "__cfg_seed_islands")
+        )
+    )
+    if semantic_schema == LEGACY_RESUME_SEMANTIC_SCHEMA:
+        if seed_active or seed or seed_optimizer:
+            raise FreshProducerLineageV1Error(
+                "legacy full-state v2 fresh chains cannot carry an active "
+                "protected-island seed"
+            )
+        has_seed = int(cfg.get("__resume_has_seed", 0))
+        if has_seed != 0:
+            raise FreshProducerLineageV1Error(
+                "legacy full-state v2 fresh chains cannot declare protected-seed state"
+            )
+        complete_state_manifest_proven = False
+    else:
+        if _scalar(cfg, "__resume_primary_optimizer_family") not in {
+            "adamw",
+            "muon_multioptimizer",
+        }:
+            raise FreshProducerLineageV1Error(
+                "resume companion primary optimizer family is missing or unknown"
+            )
+        try:
+            active_components = json.loads(
+                str(_scalar(cfg, "__resume_active_trainable_components_json"))
+            )
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise FreshProducerLineageV1Error(
+                "resume companion active-trainable-component manifest is malformed"
+            ) from exc
+        expected_components = [
+            "primary_model", *(["island_seed"] if seed_active else [])
+        ]
+        if active_components != expected_components:
+            raise FreshProducerLineageV1Error(
+                "resume companion active-trainable-component manifest differs"
+            )
+        complete_state_manifest_proven = False
+    has_seed = (
+        0
+        if semantic_schema == LEGACY_RESUME_SEMANTIC_SCHEMA
+        else int(_scalar(cfg, "__resume_has_seed"))
+    )
+    if seed_active:
+        if has_seed != 1 or not seed or not seed_optimizer:
+            raise FreshProducerLineageV1Error(
+                "resume companion lacks complete protected-island seed state"
+            )
+        try:
+            seed_manifest = json.loads(
+                str(_scalar(cfg, "__resume_seed_state_manifest_json"))
+            )
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise FreshProducerLineageV1Error(
+                "resume companion protected-seed manifest is malformed"
+            ) from exc
+        if (
+            seed_manifest.get("schema") != "tac.sparse_auxiliary_resume.v1"
+            or seed_manifest.get("component") != "island_seed"
+            or seed_manifest.get("optimizer_family") != "adamw"
+        ):
+            raise FreshProducerLineageV1Error(
+                "resume companion protected-seed manifest schema is wrong"
+            )
+        seed_dense_shape = tuple(
+            int(v) for v in seed_manifest.get("dense_shape", [])
+        )
+        if len(seed_dense_shape) < 2:
+            raise FreshProducerLineageV1Error(
+                "resume companion protected-seed dense shape is malformed"
+            )
+        for domain_name, domain, entries_key in (
+            ("seed live", seed, "live"),
+            ("seed optimizer", seed_optimizer, "optimizer"),
+        ):
+            entries = seed_manifest.get(entries_key)
+            if not isinstance(entries, list):
+                raise FreshProducerLineageV1Error(
+                    f"resume companion {domain_name} manifest inventory is malformed"
+                )
+            entry_by_key = {
+                str(entry.get("key", "")): entry
+                for entry in entries
+                if isinstance(entry, dict)
+            }
+            if not all(entry_by_key) or set(entry_by_key) != set(domain):
+                raise FreshProducerLineageV1Error(
+                    f"resume companion {domain_name} keyset differs from its manifest"
+                )
+            for key, value in domain.items():
+                array = np.asarray(value)
+                entry = entry_by_key[key]
+                try:
+                    logical_shape = tuple(
+                        int(v) for v in entry.get("logical_shape", [])
+                    )
+                    expected_dtype = np.dtype(str(entry.get("dtype", "")))
+                except (TypeError, ValueError) as exc:
+                    raise FreshProducerLineageV1Error(
+                        f"resume companion {domain_name} manifest entry is malformed"
+                    ) from exc
+                if array.dtype != expected_dtype:
+                    raise FreshProducerLineageV1Error(
+                        f"resume companion {domain_name} dtype differs at {key}"
+                    )
+                encoding = str(entry.get("encoding", ""))
+                if encoding == "full" and tuple(array.shape) != logical_shape:
+                    raise FreshProducerLineageV1Error(
+                        f"resume companion {domain_name} shape differs at {key}"
+                    )
+                if encoding == "support_rows":
+                    support_count = int(seed_manifest.get("support_count", -1))
+                    channel_shape = logical_shape[len(seed_dense_shape) - 1 :]
+                    expected_packed_shape = (support_count, *channel_shape)
+                    if (
+                        logical_shape != seed_dense_shape
+                        or tuple(array.shape) != expected_packed_shape
+                    ):
+                        raise FreshProducerLineageV1Error(
+                            f"resume companion {domain_name} packed support shape differs at {key}"
+                        )
+                elif encoding != "full":
+                    raise FreshProducerLineageV1Error(
+                        f"resume companion {domain_name} encoding is unknown at {key}"
+                    )
+        require_sha256(
+            str(seed_manifest.get("support_geometry_sha256", "")),
+            label="protected-seed support geometry SHA-256",
+        )
+    elif has_seed != 0 or seed or seed_optimizer:
+        raise FreshProducerLineageV1Error(
+            "resume companion carries protected-seed state while seed config is inactive"
         )
     for key in RESUME_RNG_KEYS:
         if key not in cfg:
@@ -669,17 +977,28 @@ def _validate_full_state_semantics(
         raise FreshProducerLineageV1Error(
             "resume companion event ledger is not canonical JSON"
         )
-    if polyak:
-        scalar_keys = {"__pta_arm", "__pta_count", "__pta_start"}
-        if not scalar_keys.issubset(cfg):
+    polyak_scalar_keys = {"__pta_arm", "__pta_count", "__pta_start"}
+    polyak_declared = any(key in cfg for key in polyak_scalar_keys)
+    if polyak_declared:
+        if not polyak_scalar_keys.issubset(cfg):
             raise FreshProducerLineageV1Error(
                 "resume companion Polyak mean lacks its scalar controller state"
             )
-        if int(_scalar(cfg, "__pta_arm")) != 1 or int(_scalar(cfg, "__pta_count")) <= 0:
+        polyak_count = int(_scalar(cfg, "__pta_count"))
+        if int(_scalar(cfg, "__pta_arm")) != 1 or polyak_count < 0:
             raise FreshProducerLineageV1Error(
                 "resume companion Polyak scalar controller state is invalid"
             )
-        if set(polyak) != set(live):
+        if polyak_count == 0 and polyak:
+            raise FreshProducerLineageV1Error(
+                "resume companion carries Polyak heavy state at count zero"
+            )
+        if polyak_count > 0 and not polyak:
+            raise FreshProducerLineageV1Error(
+                "resume companion declares active Polyak state without its "
+                "heavy tensor state"
+            )
+        if polyak and set(polyak) != set(live):
             raise FreshProducerLineageV1Error(
                 "resume companion Polyak tensor key set differs from model state"
             )
@@ -688,7 +1007,22 @@ def _validate_full_state_semantics(
                 raise FreshProducerLineageV1Error(
                     f"resume companion Polyak tensor {key} is not float64"
                 )
-    return int(_scalar(cfg, "__resume_epoch")), stage
+    elif polyak:
+        raise FreshProducerLineageV1Error(
+            "resume companion carries Polyak heavy state without an active "
+            "scalar controller declaration"
+        )
+    if semantic_schema == RESUME_SEMANTIC_SCHEMA:
+        _validate_complete_trajectory_manifest_skeleton(
+            arrays=arrays,
+            seed_active=seed_active,
+            polyak_active=polyak_declared,
+        )
+    return (
+        int(_scalar(cfg, "__resume_epoch")),
+        stage,
+        complete_state_manifest_proven,
+    )
 
 
 def _matching_namespace(
@@ -746,12 +1080,20 @@ def open_fresh_producer_checkpoint_pair_v1(
         expected_sha256=expected_resume_sha256,
         label="full-state resume companion",
     )
-    live, ema, optimizer, polyak, cfg = split_resume_state(resume.arrays)
-    resume_epoch, resume_stage = _validate_full_state_semantics(
+    live, ema, optimizer, seed_state, seed_optimizer, polyak, cfg = (
+        split_resume_state(resume.arrays)
+    )
+    (
+        resume_epoch,
+        resume_stage,
+        complete_state_manifest_proven,
+    ) = _validate_full_state_semantics(
         arrays=resume.arrays,
         live=live,
         ema=ema,
         optimizer=optimizer,
+        seed=seed_state,
+        seed_optimizer=seed_optimizer,
         polyak=polyak,
         cfg=cfg,
     )
@@ -840,6 +1182,8 @@ def open_fresh_producer_checkpoint_pair_v1(
         live_state=live,
         ema_state=ema,
         optimizer_state=optimizer,
+        seed_state=seed_state,
+        seed_optimizer_state=seed_optimizer,
         polyak_state=polyak,
         config_state=cfg,
     )
@@ -872,6 +1216,15 @@ def open_fresh_producer_checkpoint_pair_v1(
     ):
         raise FreshProducerLineageV1Error(
             "deploy/resume/lineage epoch or stage contract differs"
+        )
+    if parent_id == ROOT_PARENT_CHECKPOINT_ID and (
+        lineage_epoch != 0
+        or lineage_stage != "stageColdRoot"
+        or initial_state_sha != recomputed_state
+    ):
+        raise FreshProducerLineageV1Error(
+            "zero-parent fresh node must be the exact epoch-0 stageColdRoot "
+            "semantic state bound by fresh initial_state_sha256"
         )
     recomputed_checkpoint_id = fresh_checkpoint_id_sha256(
         root_sha256=root_sha,
@@ -942,8 +1295,11 @@ def open_fresh_producer_checkpoint_pair_v1(
         live_tensor_count=len(live),
         ema_tensor_count=len(ema),
         optimizer_tensor_count=len(optimizer),
+        seed_tensor_count=len(seed_state),
+        seed_optimizer_tensor_count=len(seed_optimizer),
         polyak_tensor_count=len(polyak),
         config_array_count=len(cfg),
+        complete_state_manifest_proven=complete_state_manifest_proven,
     )
 
 
@@ -1330,6 +1686,9 @@ def open_fresh_physical_checkpoint_chain_v1(
         current=nodes[-1],
         root_sha256=root_sha,
         current_launch_dsl_compile_hash=expected_launch,
+        complete_trajectory_proven=all(
+            node.pair.complete_state_manifest_proven for node in nodes
+        ),
     )
 
 
@@ -1619,7 +1978,10 @@ def write_fresh_physical_checkpoint_node_v1(
         raise FreshProducerLineageV1Error(
             "published physical checkpoint node differs after recursive reopen"
         )
-    return chain.current
+    return replace(
+        chain.current,
+        complete_trajectory_proven=chain.complete_trajectory_proven,
+    )
 
 
 __all__ = [
@@ -1629,7 +1991,11 @@ __all__ = [
     "FRESH_PRODUCER_LINEAGE_SCHEMA",
     "FRESH_RESUME_KEYS",
     "FRESH_ROOT_KEYS",
+    "G111_COMPLETE_TRAJECTORY_KEY",
+    "G111_COMPLETE_TRAJECTORY_SCHEMA",
+    "G111_TRAJECTORY_COMPONENTS",
     "G109_TARGET_PROJECTION_SHA_KEY",
+    "LEGACY_RESUME_SEMANTIC_SCHEMA",
     "LEGACY_EVENT_PREFIXES",
     "RESUME_EMA_PREFIX",
     "RESUME_EVENT_LEDGER_SCHEMA",

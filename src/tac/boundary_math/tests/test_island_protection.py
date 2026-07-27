@@ -69,6 +69,15 @@ def test_detection_is_deterministic():
     assert (d1.lane_cls, d1.movable_cls, d1.island_classes) == (d2.lane_cls, d2.movable_cls, d2.island_classes)
 
 
+def test_streaming_detection_matches_population_reference_exactly():
+    lst = _synthetic_lstars()
+    reference = ip.identify_island_classes(lst)
+    streamed = ip.identify_island_classes_streaming(
+        [frame.copy() for frame in lst]
+    )
+    assert streamed == reference
+
+
 def test_detection_never_hardcodes_index_permuted_labels():
     """Permute the class labels — detection must FOLLOW the signature, not the index."""
     lst = _synthetic_lstars()

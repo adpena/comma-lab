@@ -69,7 +69,22 @@ def test_armed_but_before_start_is_noop():
     avg = PolyakTailAverager(start_epoch=100, arm=True)
     assert avg.observe(50, {"w": np.ones(4)}) is False
     assert avg.count == 0
-    assert avg.state_arrays(POLYAK_SCALAR_PREFIX) == {}  # empty until it has observed
+    scalar = avg.state_arrays(POLYAK_SCALAR_PREFIX)
+    assert {key: int(value) for key, value in scalar.items()} == {
+        "__pta_count": 0,
+        "__pta_start": 100,
+        "__pta_arm": 1,
+    }
+    assert avg.heavy_state_arrays("polyakM__") == {}
+
+    reopened = PolyakTailAverager(start_epoch=100, arm=True)
+    assert reopened.restore_from_cfg(
+        POLYAK_SCALAR_PREFIX,
+        {key: int(value) for key, value in scalar.items()},
+    )
+    assert reopened.count == 0
+    assert reopened.start_epoch == 100
+    assert reopened.heavy_state_arrays("polyakM__") == {}
 
 
 # --- uniform-mean correctness -------------------------------------------------
