@@ -14,7 +14,7 @@ import json
 import os
 import struct
 import zlib
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
@@ -118,6 +118,319 @@ class LaneCoefficientDelta:
                 "chart-symbol coefficient delta must be finite and nonzero after fp32 quantization"
             )
         object.__setattr__(self, "coefficient_delta", quantized)
+
+
+@dataclass(frozen=True, order=True)
+class LaneCoefficientAddress:
+    """One pair-local decoded ``LaneLine`` centerline address."""
+
+    line_index: int
+    coefficient_index: int
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("line_index", self.line_index),
+            ("coefficient_index", self.coefficient_index),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value < 256:
+                raise PredictorUpgradeError(f"chart-search {name} is outside the G2CS1 wire range")
+
+
+@dataclass(frozen=True, order=True)
+class ProjectedChartChoice:
+    """One address/amplitude choice in the bounded response-model search."""
+
+    address: LaneCoefficientAddress
+    amplitude: float
+
+    def __post_init__(self) -> None:
+        amplitude = float(self.amplitude)
+        if not np.isfinite(amplitude) or amplitude == 0.0:
+            raise PredictorUpgradeError("chart-search amplitude must be finite and nonzero")
+        object.__setattr__(self, "amplitude", amplitude)
+
+
+ConstraintKey = tuple[int, int, float]
+
+
+@dataclass(frozen=True)
+class ProjectedChartPrefix:
+    """A preserved cardinality prefix after coordinate polish and swap."""
+
+    cardinality: int
+    choices: tuple[ProjectedChartChoice, ...]
+    constraint_key: ConstraintKey
+
+
+@dataclass(frozen=True)
+class ProjectedChartSearchResult:
+    """Bounded-search result; never a global-optimum certificate."""
+
+    status: str
+    initial_constraint_key: ConstraintKey
+    final_constraint_key: ConstraintKey
+    prefixes: tuple[ProjectedChartPrefix, ...]
+    address_count: int
+    amplitude_count: int
+    objective_evaluation_count: int
+    polish_pass_limit: int
+    swap_pass_limit: int
+    search_completeness: str = (
+        "bounded deterministic projected greedy coordinate search with lattice polish and "
+        "selected/unselected swaps; not MIQP and not a global-optimum proof"
+    )
+
+
+def lane_coefficient_packet_size(symbol_count: int) -> int:
+    """Return the canonical G2CS1 size without constructing placeholder rows."""
+
+    if isinstance(symbol_count, bool) or not isinstance(symbol_count, int) or not 0 <= symbol_count <= 0xFFFF:
+        raise PredictorUpgradeError("chart-symbol count must be an exact uint16")
+    return 0 if symbol_count == 0 else _CHART_SYMBOL_HEADER.size + symbol_count * _CHART_SYMBOL_ROW.size
+
+
+def _validated_constraint_key(value: ConstraintKey) -> ConstraintKey:
+    if not isinstance(value, tuple) or len(value) != 3:
+        raise PredictorUpgradeError("chart-search objective must return a three-item constraint key")
+    mismatch, pose_debt, margin_debt = value
+    for label, item in (("semantic mismatch", mismatch), ("pose debt", pose_debt)):
+        if isinstance(item, bool) or not isinstance(item, (int, np.integer)) or int(item) < 0:
+            raise PredictorUpgradeError(f"chart-search {label} must be an exact nonnegative integer")
+    margin = float(margin_debt)
+    if not np.isfinite(margin) or margin < 0.0:
+        raise PredictorUpgradeError("chart-search margin debt must be finite and nonnegative")
+    return int(mismatch), int(pose_debt), margin
+
+
+def projected_greedy_with_swap_search(
+    *,
+    addresses: Sequence[LaneCoefficientAddress],
+    amplitudes: Sequence[float],
+    objective: Callable[[tuple[ProjectedChartChoice, ...]], ConstraintKey],
+    polish_pass_limit: int = 4,
+    swap_pass_limit: int = 1,
+) -> ProjectedChartSearchResult:
+    """Run the G2g2 bounded projected coordinate search deterministically.
+
+    ``objective`` owns the response model and returns, in minimization order,
+    full-field semantic mismatch count, exact quantized pose-tube outside debt,
+    and summed negative target-vs-rival margin debt.  Only a strict improvement
+    in that three-term key is accepted.  Address/amplitude values break ties;
+    they never masquerade as an objective improvement.
+    """
+
+    canonical_addresses = tuple(addresses)
+    if (
+        not canonical_addresses
+        or any(not isinstance(address, LaneCoefficientAddress) for address in canonical_addresses)
+        or canonical_addresses != tuple(sorted(set(canonical_addresses)))
+    ):
+        raise PredictorUpgradeError("chart-search addresses must be nonempty, sorted, and unique")
+    canonical_amplitudes = tuple(sorted(float(value) for value in amplitudes))
+    if (
+        not canonical_amplitudes
+        or len(canonical_amplitudes) != len(set(canonical_amplitudes))
+        or any(not np.isfinite(value) or value == 0.0 for value in canonical_amplitudes)
+    ):
+        raise PredictorUpgradeError("chart-search amplitudes must be finite, nonzero, and unique")
+    for label, value in (("polish", polish_pass_limit), ("swap", swap_pass_limit)):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise PredictorUpgradeError(f"chart-search {label} pass limit must be a nonnegative integer")
+    if not callable(objective):
+        raise PredictorUpgradeError("chart-search objective must be callable")
+
+    evaluations = 0
+
+    def evaluate(selection: Mapping[LaneCoefficientAddress, float]) -> ConstraintKey:
+        nonlocal evaluations
+        choices = tuple(ProjectedChartChoice(address, selection[address]) for address in sorted(selection))
+        evaluations += 1
+        return _validated_constraint_key(objective(choices))
+
+    selected: dict[LaneCoefficientAddress, float] = {}
+    initial_key = evaluate(selected)
+    current_key = initial_key
+    prefixes: list[ProjectedChartPrefix] = []
+    status = "STALLED_MODEL"
+
+    while True:
+        unused = tuple(address for address in canonical_addresses if address not in selected)
+        if not unused:
+            status = "EXHAUSTED_ALL_ADDRESSES"
+            break
+        additions: list[tuple[ConstraintKey, LaneCoefficientAddress, float]] = []
+        for address in unused:
+            for amplitude in canonical_amplitudes:
+                trial = {**selected, address: amplitude}
+                additions.append((evaluate(trial), address, amplitude))
+        best_key, best_address, best_amplitude = min(additions)
+        if not best_key < current_key:
+            status = "STALLED_MODEL"
+            break
+        selected[best_address] = best_amplitude
+        current_key = best_key
+
+        for _ in range(polish_pass_limit):
+            alternatives: list[tuple[ConstraintKey, LaneCoefficientAddress, float]] = []
+            for address in sorted(selected):
+                for amplitude in canonical_amplitudes:
+                    if amplitude == selected[address]:
+                        continue
+                    trial = dict(selected)
+                    trial[address] = amplitude
+                    alternatives.append((evaluate(trial), address, amplitude))
+            if not alternatives:
+                break
+            polished_key, polished_address, polished_amplitude = min(alternatives)
+            if not polished_key < current_key:
+                break
+            selected[polished_address] = polished_amplitude
+            current_key = polished_key
+
+        for _ in range(swap_pass_limit):
+            unused = tuple(address for address in canonical_addresses if address not in selected)
+            swaps: list[tuple[ConstraintKey, LaneCoefficientAddress, LaneCoefficientAddress, float]] = []
+            for removed in sorted(selected):
+                for added in unused:
+                    for amplitude in canonical_amplitudes:
+                        trial = dict(selected)
+                        del trial[removed]
+                        trial[added] = amplitude
+                        swaps.append((evaluate(trial), removed, added, amplitude))
+            if not swaps:
+                break
+            swapped_key, removed, added, swapped_amplitude = min(swaps)
+            if not swapped_key < current_key:
+                break
+            del selected[removed]
+            selected[added] = swapped_amplitude
+            current_key = swapped_key
+
+        choices = tuple(ProjectedChartChoice(address, selected[address]) for address in sorted(selected))
+        prefixes.append(ProjectedChartPrefix(len(choices), choices, current_key))
+        if current_key == (0, 0, 0.0):
+            status = "MODEL_ADMITTED_CANDIDATE"
+            break
+        if len(selected) == len(canonical_addresses):
+            status = "EXHAUSTED_ALL_ADDRESSES"
+            break
+
+    return ProjectedChartSearchResult(
+        status=status,
+        initial_constraint_key=initial_key,
+        final_constraint_key=current_key,
+        prefixes=tuple(prefixes),
+        address_count=len(canonical_addresses),
+        amplitude_count=len(canonical_amplitudes),
+        objective_evaluation_count=evaluations,
+        polish_pass_limit=polish_pass_limit,
+        swap_pass_limit=swap_pass_limit,
+    )
+
+
+def summarize_joint_chart_prefix_rows(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Summarize measured hard-replay prefixes without trusting a model verdict."""
+
+    predicates = (
+        "semantic_exact",
+        "pose_tube",
+        "factor2_uint8_exact",
+        "double_decode",
+        "receiver_RGB",
+        "counted_bytes",
+        "rate_above_lambda",
+    )
+    curve: list[dict[str, Any]] = []
+    admitted: list[dict[str, Any]] = []
+    rate_stop: dict[str, Any] | None = None
+    for expected_k, row in enumerate(rows, start=1):
+        if not isinstance(row, Mapping) or row.get("k") != expected_k:
+            raise PredictorUpgradeError("joint-chart measured prefixes must be contiguous from k=1")
+        packet_bytes = row.get("packet_bytes")
+        if (
+            isinstance(packet_bytes, bool)
+            or not isinstance(packet_bytes, int)
+            or packet_bytes != lane_coefficient_packet_size(expected_k)
+        ):
+            raise PredictorUpgradeError("joint-chart prefix packet bytes are not canonical G2CS1 size")
+        predicate_values = row.get("admission_predicates")
+        if not isinstance(predicate_values, Mapping) or set(predicate_values) != set(predicates):
+            raise PredictorUpgradeError("joint-chart prefix admission predicates are incomplete")
+        if any(not isinstance(predicate_values[name], bool) for name in predicates):
+            raise PredictorUpgradeError("joint-chart prefix admission predicates must be boolean")
+        is_admitted = all(predicate_values[name] for name in predicates)
+        if "admitted" in row and row["admitted"] is not is_admitted:
+            raise PredictorUpgradeError("joint-chart prefix admitted marker disagrees with hard predicates")
+        terminal_stop_reason = row.get("terminal_stop_reason")
+        expected_terminal = (
+            "FIRST_ADMITTED_MIN_K_STOP"
+            if is_admitted
+            else "RATE_BREAK_EVEN_STOP"
+            if bool(row.get("rate_stop", False))
+            else None
+        )
+        if terminal_stop_reason != expected_terminal:
+            raise PredictorUpgradeError("joint-chart prefix terminal stop reason disagrees with its predicates")
+        if terminal_stop_reason is not None and expected_k != len(rows):
+            raise PredictorUpgradeError("joint-chart terminal stop must be the last measured prefix")
+        expected_delta_bytes = packet_bytes if expected_k == 1 else 8
+        if row.get("delta_bytes") != expected_delta_bytes:
+            raise PredictorUpgradeError("joint-chart prefix incremental packet bytes must be 20 then 8")
+        summary_row = {
+            "k": expected_k,
+            "packet_bytes": packet_bytes,
+            "delta_bytes": expected_delta_bytes,
+            "semantic_mismatch_count": int(row["semantic_mismatch_count"]),
+            "pose_tube_debt": float(row["pose_tube_debt"]),
+            "d_seg": float(row["d_seg"]),
+            "d_pose": float(row["d_pose"]),
+            "incremental_delta_d_seg": float(row["incremental_delta_d_seg"]),
+            "incremental_delta_d_pose": float(row["incremental_delta_d_pose"]),
+            "cumulative_delta_d_seg": float(row["cumulative_delta_d_seg"]),
+            "cumulative_delta_d_pose": float(row["cumulative_delta_d_pose"]),
+            "incremental_score_units_recovered": float(row["incremental_score_units_recovered"]),
+            "cumulative_score_units_recovered": float(row["cumulative_score_units_recovered"]),
+            "incremental_marginal_score_units_per_byte": float(row["incremental_marginal_score_units_per_byte"]),
+            "cumulative_average_score_units_per_byte": float(row["cumulative_average_score_units_per_byte"]),
+            "admission_predicates": {name: predicate_values[name] for name in predicates},
+            "admitted": is_admitted,
+            "rate_stop": bool(row.get("rate_stop", False)),
+            "terminal_stop_reason": terminal_stop_reason,
+        }
+        curve.append(summary_row)
+        if is_admitted:
+            admitted.append(summary_row)
+        if summary_row["rate_stop"]:
+            if rate_stop is not None or expected_k != len(rows):
+                raise PredictorUpgradeError("joint-chart rate stop must be unique and terminal")
+            rate_stop = {
+                "status": "RATE_BREAK_EVEN_STOP",
+                "k": expected_k,
+                "packet_bytes": packet_bytes,
+                "delta_bytes": expected_delta_bytes,
+                "incremental_marginal_score_units_per_byte": summary_row["incremental_marginal_score_units_per_byte"],
+                "verdict_scope": (
+                    "reverse-waterfill stop for later cardinality prefixes of this measured pair/search path only"
+                ),
+            }
+    minimum = admitted[0] if admitted else None
+    return {
+        "measured_prefix_count": len(curve),
+        "admitted_prefix_count": len(admitted),
+        "minimum_admitted_k": minimum["k"] if minimum else None,
+        "minimum_admitted_packet_bytes": minimum["packet_bytes"] if minimum else None,
+        "headline_first_measured_admitted_prefix": minimum is not None,
+        "status": (
+            "MEASURED_ADMITTED_PREFIX"
+            if minimum
+            else "RATE_BREAK_EVEN_STOP"
+            if rate_stop is not None
+            else "NO_MEASURED_PREFIX_ADMISSION"
+        ),
+        "measured_k_curve": curve,
+        "rate_break_even_stop": rate_stop,
+        "model_prediction_is_hard_predicate": False,
+    }
 
 
 def encode_lane_coefficient_deltas(symbols: Sequence[LaneCoefficientDelta]) -> bytes:

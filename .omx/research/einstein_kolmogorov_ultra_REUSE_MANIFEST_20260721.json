@@ -1,0 +1,249 @@
+{
+  "authority": {
+    "main_landing_review_required": true,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "binding_updates_consumed": [
+    "2026-07-21T15:55:00Z landed sibling coefficient update",
+    "2026-07-21T16:01:59Z scorer-plane-seed and seed-not-archive sharpening",
+    "2026-07-21T16:05:14Z generic inflate.py runtime is free and unsized",
+    "2026-07-21T16:37:00Z G2CS1 priced primitive, fixed Pose routing, and n-scale discipline",
+    "2026-07-21T16:51:35Z ops grammar, BEV staticity, and worldsheet-developability hypotheses",
+    "2026-07-21T16:59:45Z meet-it-where-it-is smallest-basis n600 principle and live sibling probe non-duplication",
+    "2026-07-21T17:06:56Z per-pair one-sided separatrix asymmetry and ranking-only zero-byte carrier context",
+    "2026-07-21T17:09:12Z smallest-basis rich-residual no-loss guard",
+    "2026-07-21T17:10:39Z frozen-problem omniscience with U3 score-authority boundary",
+    "2026-07-21T17:14:02Z direct archive-description through free-decode scorer objective bridge",
+    "2026-07-21T17:22:07Z Fisher-Rao and Bregman information-geometry spine gated on sibling D1 fidelity"
+  ],
+  "code": [
+    {
+      "bytes": 68134,
+      "path": "src/tac/optimization/einstein_kolmogorov_frontier.py",
+      "sha256": "d911e5693b7cf934e2cab3589bd7df7c19084d1565cc250fb027e027802bd6c5"
+    },
+    {
+      "bytes": 6650,
+      "path": "tools/measure_einstein_kolmogorov_frontier.py",
+      "sha256": "ea54c625ffdb40f5e95108e6d021ff0a87e2b3ea5b27622f9be5691c0ba1bfd4"
+    },
+    {
+      "bytes": 22451,
+      "path": "src/tac/tests/test_einstein_kolmogorov_frontier.py",
+      "sha256": "343983ac1f5f4d86bc1ad5b0ffea0c98f766fbb1e4188cf38dfd18733dd615e8"
+    }
+  ],
+  "commands": {
+    "compile": "/Users/adpena/Projects/pact/.venv/bin/python tools/measure_einstein_kolmogorov_frontier.py compile --candidate .omx/research/einstein_kolmogorov_ultra_candidate_manifest_20260721.json --u3-row .omx/research/einstein_kolmogorov_ultra_u3_input_20260721.json --sibling-arms .omx/research/einstein_kolmogorov_ultra_sibling_arms_20260721.json --pointer-source reports/latest.md --output /Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_20260721/frontier_receipt_20260721T170000Z.json",
+    "focused_test": "/Users/adpena/Projects/pact/.venv/bin/python -m pytest -q src/tac/tests/test_einstein_kolmogorov_frontier.py",
+    "validate": "/Users/adpena/Projects/pact/.venv/bin/python tools/measure_einstein_kolmogorov_frontier.py validate --receipt /Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_20260721/frontier_receipt_20260721T170000Z.json"
+  },
+  "current_inputs": [
+    {
+      "bytes": 3,
+      "kind": "explicit_candidate_manifest",
+      "path": ".omx/research/einstein_kolmogorov_ultra_candidate_manifest_20260721.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "use": "explicit custody scope; empty list is not family authority"
+    },
+    {
+      "bytes": 1978,
+      "kind": "sibling_arm_manifest",
+      "path": ".omx/research/einstein_kolmogorov_ultra_sibling_arms_20260721.json",
+      "sha256": "61d6edfcb231c972f0f14a9d9e7da0d62da5a84db8556a01c1c3d39284ba7ad4",
+      "use": "exact local wrapper for three hash-bound sibling receipts"
+    },
+    {
+      "bytes": 439,
+      "kind": "u3_description_input",
+      "path": ".omx/research/einstein_kolmogorov_ultra_u3_input_20260721.json",
+      "sha256": "77bd7fa6f524681d1525fd015aea07dbad13d6c8923cf9397cb7f4a464d46ac2",
+      "use": "description-only U3 preflight input"
+    },
+    {
+      "bytes": 14259,
+      "kind": "advected_ground_stratified_n64_receipt",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/advected_base_20260721/advected_base/receipt.json",
+      "sha256": "4a6650f2b1c8f8290a0a099fecf8fa7dd7a1d8826b5bfa72441cf553f1e676d0",
+      "use": "status and level attribution only"
+    },
+    {
+      "bytes": 84257468,
+      "kind": "bidirectional_amplitude_n64_receipt",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/g2f_amplitude_20260721/receipt.json",
+      "sha256": "0a09b7b5022ff64eebc54d086f00c89378d7eb7091c5963cf1056120469bc38e",
+      "use": "status and level attribution only"
+    },
+    {
+      "bytes": 9242,
+      "kind": "mdl_member_n64_receipt",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/mdl_member_20260721/receipt_n64.json",
+      "sha256": "b71ad6ab036b62fca640c4dc1a76fa37eec404901f6854239d35eb5c90d803a3",
+      "use": "status, coder upper bound, and level attribution only"
+    },
+    {
+      "bytes": 4096,
+      "kind": "current_s4_payload_manifest",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/canonical_s4_20260721/archive_payload_manifest.json",
+      "sha256": "853e35acd8c9a02567c667c24875fc631bf5c4de45e01439d171b152003de7de",
+      "use": "current section byte custody and rule-118 state classification"
+    },
+    {
+      "bytes": 5214,
+      "kind": "settled_s4_measurement_receipt",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/measurement_s4_20260721/measurement_receipt.json",
+      "sha256": "244d7b8fa695068755cd64a47572d58f2212f215e287e5d1ee6e6182384ea428",
+      "use": "decode and evaluation wall-clock reference only"
+    },
+    {
+      "bytes": 409526925,
+      "kind": "historical_c1_archive_non_admitted",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/archive.zip",
+      "sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42",
+      "use": "tight high-rate historical context only; current validator blocks score claim and promotion"
+    },
+    {
+      "bytes": 2720,
+      "kind": "historical_c1_current_validation",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/modal_cpu_auth_eval_validation.json",
+      "sha256": "7230903c6fdad0474ccc4470160fa9dda36ddcd06af3ba5a8c454cfe4d414196",
+      "use": "current non-admission authority: score_claim=false, score_claim_valid=false, adjudication required"
+    },
+    {
+      "bytes": 105193,
+      "kind": "g2g_chart_symbol_receiver_n64_post_compile_context",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/g2g_chart_receiver_20260721/run_20260721T1622Z/receipt.json",
+      "sha256": "fa49a2ca71cb2960b1e497d425f05c4a496cc7634c45b2e193e3977dfa0667da",
+      "use": "20-byte one-symbol receiver-closed carrier pricing and 0/6 targeted n64 admission only; never an n600 frontier row"
+    },
+    {
+      "bytes": 29812,
+      "kind": "current_s4_runtime_source",
+      "path": "submissions/s4_archive_composer/inflate.py",
+      "sha256": "eef055896474b8327baf57ace016c37fe651f4c22534e2442ebc44da8c3f40b0",
+      "use": "rule-118 AST/function audit"
+    },
+    {
+      "bytes": 8191630,
+      "kind": "g1_worldsheet_measurement_receipt",
+      "path": ".omx/research/g1_worldsheet_g3_cellcode_measurements_20260720T210000Z.json",
+      "sha256": "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089",
+      "use": "BEV/worldsheet executable preflight only; 0.2255866 px image-plane Chamfer is not intrinsic curvature or supplied-xi BEV staticity"
+    },
+    {
+      "bytes": 15505,
+      "kind": "historical_lane_factorization_probe_source",
+      "path": "tools/probe_v8_lane_anisotropic_factorization.py",
+      "sha256": "2f771c09b141739f625f3c185258f6651d9aba89c3db96047b7b2e18aab4dd3d",
+      "use": "closest reusable lane geometry, but no max-pairs bound and lane-derived rather than supplied-xi motion"
+    },
+    {
+      "bytes": 6745,
+      "kind": "historical_lane_factorization_probe_result",
+      "path": "/Users/adpena/Projects/pact/experiments/results/v8_lane_factorization_probe_20260710/probe.json",
+      "sha256": "a25458ccbcb2dc96b39cf00e5142f4389c497f66a143a303c45dc366bd55ca7b",
+      "use": "29-track/2948-observation geometric-rate context only; not relabeled as the requested probe"
+    },
+    {
+      "bytes": 5078017610,
+      "kind": "future_bev_probe_ground_truth_cache",
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "use": "future exact-strip n64 probe input; pairwise gt_poses are not an absolute trajectory"
+    },
+    {
+      "bytes": 117964928,
+      "kind": "future_bev_probe_f0_label_sidecar",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/g1g3_successor_measurements_20260720T203750Z/lstars_f0_n600_batch32.npy",
+      "sha256": "cda80013ef79258e1102bc30fd4528ef1a461041fb35ab6e2f975b56c563dfc6",
+      "use": "future exact-strip n64 probe input; retain three G1 batch-geometry label mismatches in verdict scope"
+    },
+    {
+      "bytes": 13954,
+      "kind": "separatrix_asymmetry_measurement_memo",
+      "path": ".omx/research/c2_perclass_stratum_carrier_taxonomy_20260716.md",
+      "sha256": "8ae65930b160bb0d68b10f6f078c5a78c6319ecbec2c8ae55641470ac305dc97",
+      "use": "per-pair shallow-side law plus stride-5 one-sided carrier ranking; not a frontier score"
+    },
+    {
+      "bytes": 12825,
+      "kind": "separatrix_asymmetry_n600_canonical_equation",
+      "path": "src/tac/canonical_equations/perclass_stratum_carrier_taxonomy_20260716.py",
+      "sha256": "33b465c185e0b69cc8499b506d4711c5de44c743efa89db83fcdb02bf3b96ca3",
+      "use": "canonical per-pair orientation/asymmetry schema and explicit ranking-only domain"
+    },
+    {
+      "bytes": 4181,
+      "kind": "separatrix_asymmetry_slope_artifact",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/slope.json",
+      "sha256": "b88ab29b4123842dd81043aaee2caa09104a0639d019e386a64622d2a41e470a",
+      "use": "n600 cached-label, stride-5 per-pair slope context"
+    },
+    {
+      "bytes": 875,
+      "kind": "one_sided_movable_carrier_smoke",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716/smoke_oneside_movable_b2.0.json",
+      "sha256": "aa93152bb6736704ce1d70b482979bc1622cd9f5e9a14bf666d1975c1d095f08",
+      "use": "palette-vehicle 120-frame ranking-only -29.5% d_seg at constants-only 0 B/frame; not an archive delta and not transferable to current witness"
+    },
+    {
+      "bytes": 13471,
+      "kind": "one_sided_carrier_witness_transfer_falsification_memo",
+      "path": ".omx/research/c2_witness_own_decomp_20260716.md",
+      "sha256": "d754db762e7888a82cff841d4fc9a48f3ec068e7ddf53e3497297d18ec0e5105",
+      "use": "same beta=2 form worsened the frozen current witness by 80.1 percent; only orientation/asymmetry context transfers"
+    },
+    {
+      "bytes": 876,
+      "kind": "one_sided_carrier_witness_transfer_falsification_smoke",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716/smoke_oneside_movable_b2.0.json",
+      "sha256": "ff26a27d8adbb3d9fa3e56ee40656e048e3d79ff64c1eee0702ed22486f33222",
+      "use": "witness-own 120-frame advisory d_seg 0.0031068 to 0.0055949741, plus 80.1 percent; no value transfer"
+    }
+  ],
+  "exclusions": {
+    "canonical_quarantine": "all bytes/content matching the canonical quarantine manifest excluded",
+    "empty_candidate_manifest": "records absence of custody-qualified candidates; never treated as family authority",
+    "local_execution_json": "cannot authorize a measured frontier point; live external provider reconciliation is not implemented and therefore refuses",
+    "live_bev_worldsheet_probe": "owned by sibling bev_staticity_developability_probe stamp 20260721T165801Z; no landed receipt consumed and no duplicate launched",
+    "settled_s4_bytes_and_score": "not transferred to the 216207-byte U3 row",
+    "sibling_advisory_metrics": "never admitted as contest frontier measurements"
+  },
+  "generated_at_utc": "2026-07-21T17:29:15Z",
+  "lane_id": "lane_einstein_kolmogorov_ultra_20260721",
+  "manifest_sha256": "2d1024d9a7fe788337d5026a9dd357ba8c42152f706fd7d81048bdb5286cf4b7",
+  "outputs": [
+    {
+      "bytes": 8814,
+      "kind": "ssd_compiled_frontier_receipt",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_20260721/frontier_receipt_20260721T170000Z.json",
+      "sha256": "956094a5bcf1ee11e7dbfe7feb389bbf3f620ed2e75c00318b24d14d3fd56216"
+    },
+    {
+      "kind": "delegated_receipt",
+      "path": ".omx/research/einstein_kolmogorov_ultra_20260721T155726Z_receipt.json",
+      "receipt_sha256": "81809332c0375ebe3fd6ecf1e552d9ae2137aff56a241f0330463df674773496"
+    }
+  ],
+  "schema": "einstein_kolmogorov_reuse_manifest.v1",
+  "source_base_commit": "03c9db82a32c7f7733fabed0017ae1ea8f8dba4a",
+  "storage": {
+    "bulk_root": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_20260721",
+    "compiler_write": "exclusive hard-link final-name claim, idempotent byte-equal resume, and incompatible/racing overwrite refusal",
+    "large_local_artifacts_created": false,
+    "ssd_preflight": "64 MiB plus four times total input metadata bytes"
+  },
+  "verification": {
+    "focused_tests": "26 passed",
+    "py_compile": "passed",
+    "receipt_rederivation": "passed",
+    "review_tracker_passes": [
+      "einstein_structural_20260721 by codex-main-structural on all three Python files",
+      "einstein_adversarial_20260721 by codex-agent-adversarial on all three Python files"
+    ],
+    "ruff": "passed"
+  }
+}

@@ -1,0 +1,517 @@
+{
+  "authority": {
+    "external_execution_attestation": "BLOCKED_UNTIL_LIVE_PROVIDER_RECONCILIATION_VERIFIER_EXISTS",
+    "main_landing_review_required": true,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "compiled_frontier": {
+    "file": {
+      "bytes": 8814,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_20260721/frontier_receipt_20260721T170000Z.json",
+      "sha256": "956094a5bcf1ee11e7dbfe7feb389bbf3f620ed2e75c00318b24d14d3fd56216"
+    },
+    "receipt_sha256": "b8165f49ea4b82b995c17462f9dac8be4d6c4282ccb0b5dfbd36cfce82c9f18f",
+    "schema": "einstein_kolmogorov_rd_frontier.v1",
+    "validated_by_rederivation": true
+  },
+  "generated_at_utc": "2026-07-21T17:29:15Z",
+  "input_manifests": [
+    {
+      "bytes": 3,
+      "kind": "explicit_candidate_manifest",
+      "path": ".omx/research/einstein_kolmogorov_ultra_candidate_manifest_20260721.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "bytes": 1978,
+      "kind": "sibling_arm_manifest",
+      "path": ".omx/research/einstein_kolmogorov_ultra_sibling_arms_20260721.json",
+      "sha256": "61d6edfcb231c972f0f14a9d9e7da0d62da5a84db8556a01c1c3d39284ba7ad4"
+    },
+    {
+      "bytes": 439,
+      "kind": "u3_description_input",
+      "path": ".omx/research/einstein_kolmogorov_ultra_u3_input_20260721.json",
+      "sha256": "77bd7fa6f524681d1525fd015aea07dbad13d6c8923cf9397cb7f4a464d46ac2"
+    }
+  ],
+  "lane_id": "lane_einstein_kolmogorov_ultra_20260721",
+  "receipt_sha256": "81809332c0375ebe3fd6ecf1e552d9ae2137aff56a241f0330463df674773496",
+  "schema": "einstein_kolmogorov_ultra_delegated_receipt.v1",
+  "source_base_commit": "03c9db82a32c7f7733fabed0017ae1ea8f8dba4a",
+  "u1_rd_frontier": {
+    "candidate_manifest": ".omx/research/einstein_kolmogorov_ultra_candidate_manifest_20260721.json",
+    "curve_kind": "STRICT_RECEIPT_ADMISSIBILITY_NOT_EXECUTED_OPTIMIZER_SWEEP",
+    "direct_description_target": "complete counted ops-grammar/archive program for the frozen-scorer sufficient statistic plus exact rich residual at each tolerance; the scorer-plane seed is only the charged intermediate exposed by current receipts, the camera member is derived for free, and generic receiver code is unpriced",
+    "execution": {
+      "blocker": "NO_CURRENT_FOUR_TOLERANCE_REENCODER_OR_POSE_BEARING_CARRIER",
+      "optimizer_executed": false,
+      "status": "U1_EXECUTION_BLOCKED_NO_TOLERANCE_REENCODER_OR_POSE_CARRIER",
+      "verdict_scope": "no current command produces complete receiver-closed joint Seg/Pose archives at all four tolerances; the compiler rows only adjudicate supplied receipts"
+    },
+    "future_runner_contract": {
+      "authority": "n600 must be measured directly on contest CPU or CUDA; n64 is advisory and never extrapolated",
+      "bridge_status": "NOT_IMPLEMENTED_END_TO_END",
+      "checkpointing": "atomic SSD per-chunk and per-tolerance stage receipts with resume and certified cleanup",
+      "decision_variable": "complete counted ops-grammar/archive-description parameters, not a materialized solved scorer plane",
+      "descent_metric": "Fisher-Rao natural gradient induced by the frozen SegNet log-sum-exp Bregman generator; Euclidean descent is not the canonical geometry",
+      "exact_payoff": "the fully known scorer makes derivation and inversion deterministic, but only a byte-closed official evaluate.py row on the exact archive can move the pointer",
+      "global_miss_ceilings_n600": [
+        17930,
+        35389,
+        58982,
+        94371
+      ],
+      "global_miss_ceilings_n64_advisory": [
+        1912,
+        3774,
+        6291,
+        10066
+      ],
+      "implementation_boundary": "reuse the typed custody, prepared-chunk, production archive build/parse/inflate, exact-numerator, and hard-raw-scoring surfaces from tools/measure_v10_free_predictor_floor.py, but optimize the archive description through free decode and the frozen scorer in one loop; do not materialize a solved plane and compress it sequentially",
+      "objective": "minimize S=100*d_seg+sqrt(10*d_pose)+(25/37545489)*archive_bytes directly over description parameters",
+      "pose_guard": "treat the n600 approximately 1.02e-4 Pose carrier as a fixed cheap prior, spend search budget on Seg/rate, and admit it only when physically present in the same complete archive",
+      "post_compile_chart_symbol_primitive": {
+        "admitted_candidates": 0,
+        "bytes_per_one_symbol_candidate": 20,
+        "measurement_scale": "six selected n64 pairs",
+        "receipt": {
+          "bytes": 105193,
+          "path": "/Volumes/VertigoDataTier/pact/evidence/g2g_chart_receiver_20260721/run_20260721T1622Z/receipt.json",
+          "sha256": "fa49a2ca71cb2960b1e497d425f05c4a496cc7634c45b2e193e3977dfa0667da"
+        },
+        "status": "PRICED_RECEIVER_CLOSED_PRIMITIVE_NOT_N600_FRONTIER_ROW"
+      },
+      "realization_scale_guard": "no n600 realization/correction rung exists; every sub-n600 point remains provisional and incomparable as an n600 row",
+      "richness_guard": "static geometry plus xi plus sparse events is only a necessary-condition facet; the same unified n600 program must preserve lane curvature changes, forks, dash rhythm, independent movable motion, per-class coupling, bifurcations, Fisher/separatrix anisotropy, and every receiver-visible residual exactly rather than discard them as noise",
+      "sufficient_statistic_target": "argmax partition plus xi plus topology/events and the smallest exact residual program required by SegNet/PoseNet, not the ambient scorer plane",
+      "water_level_score_per_byte": 6.658589531221714e-07,
+      "status": "NOT_IMPLEMENTED_IN_CURRENT_TREE"
+    },
+    "historical_tight_reference_non_admitted": {
+      "archive": {
+        "bytes": 409526925,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/archive.zip",
+        "sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42"
+      },
+      "current_validator": {
+        "adjudication_required": true,
+        "bytes": 2720,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/modal_cpu_auth_eval_validation.json",
+        "promotable": false,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "sha256": "7230903c6fdad0474ccc4470160fa9dda36ddcd06af3ba5a8c454cfe4d414196"
+      },
+      "double_decode": {
+        "first_receiver_receipt_sha256": "5a130bb81ac286a5996fac23343695cbbe745543384c035ad565aa94daf59142",
+        "raw_bytes": 3662409600,
+        "raw_sha256": "31d77be9ab9f00e9f814542368396a35ffa119a32571e701636d4747540e255b",
+        "second_receiver_receipt_sha256": "6e083f316167d82e26d9e20a78201dabee69be5025eb73b425022b99b5f4ba4b"
+      },
+      "historical_contest_cpu_report": {
+        "bytes": 11533,
+        "d_pose": 0.00010184,
+        "d_seg": 0.00015196,
+        "n_samples": 600,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/contest_auth_eval.json",
+        "sha256": "4ef77cc58c4232fc0bfa76f02c74ceb6c258e064707522a4b510e9fe06495e99"
+      },
+      "non_admission_reasons": [
+        "CURRENT_VALIDATOR_SCORE_CLAIM_FALSE_AND_ADJUDICATION_REQUIRED",
+        "HISTORICAL_WRAPPER_ARGV_NOT_CURRENT_DIRECT_EVALUATOR_ARGV",
+        "CURRENT_LOCAL_INTERPRETER_RUNTIME_GT_SOURCE_CONFIG_MANIFESTS_ABSENT",
+        "DOUBLE_DECODE_AND_EVALUATION_NOT_ONE_CROSS_BOUND_CURRENT_AUTHORITY_BUNDLE",
+        "WORKTREE_CURRENT_UPSTREAM_EVALUATE_PY_ABSENT"
+      ],
+      "status": "NON_ADMITTED_HISTORICAL_CONTEXT_ONLY"
+    },
+    "level_attribution": [
+      {
+        "authority": "MEASURED n64 advisory rate comparison",
+        "bytes_delta": 180280,
+        "d_seg_delta_advected_minus_static": 0.0004104773106519133,
+        "level": "chart",
+        "result": "planar-xi chart transport cost more exception bytes and worsened d_seg; no n600 admission",
+        "source_receipt_sha256": "4a6650f2b1c8f8290a0a099fecf8fa7dd7a1d8826b5bfa72441cf553f1e676d0"
+      },
+      {
+        "authority": "MEASURED n64 advisory member selection",
+        "bytes_delta": 0,
+        "level": "object",
+        "result": "exact scorer plane deterministically realizes the camera member; zero object-class-stratum selections and zero same-coder byte cut",
+        "source_receipt_sha256": "b71ad6ab036b62fca640c4dc1a76fa37eec404901f6854239d35eb5c90d803a3"
+      },
+      {
+        "authority": "MEASURED description bytes; not through-R and not a score",
+        "bytes": 181904,
+        "level": "event",
+        "result": "S4 event alphabet is counted but has no separately custodied receiver-closed distortion point",
+        "source_manifest_sha256": "853e35acd8c9a02567c667c24875fc631bf5c4de45e01439d171b152003de7de"
+      },
+      {
+        "authority": "MEASURED n64 advisory",
+        "bytes_delta": 0,
+        "level": "exception",
+        "result": "bidirectional amplitude QP admitted no corrections; chart transport instead added 180280 exception bytes",
+        "source_receipt_sha256": "0a09b7b5022ff64eebc54d086f00c89378d7eb7091c5963cf1056120469bc38e"
+      },
+      {
+        "authority": "MEASURED n64 advisory member selection",
+        "bytes_delta": 0,
+        "level": "pixel",
+        "result": "zero pixel-tile-residual selections and zero same-coder byte cut; higher-level seed language remains the first acquisition target",
+        "source_receipt_sha256": "b71ad6ab036b62fca640c4dc1a76fa37eec404901f6854239d35eb5c90d803a3"
+      }
+    ],
+    "measured_frontier": [],
+    "tolerance_rows": [
+      {
+        "d_seg_tolerance": 0.000152,
+        "status": "NO_FEASIBLE_CANDIDATE"
+      },
+      {
+        "d_seg_tolerance": 0.0003,
+        "status": "NO_FEASIBLE_CANDIDATE"
+      },
+      {
+        "d_seg_tolerance": 0.0005,
+        "status": "NO_FEASIBLE_CANDIDATE"
+      },
+      {
+        "d_seg_tolerance": 0.0008,
+        "status": "NO_FEASIBLE_CANDIDATE"
+      }
+    ],
+    "verdict_scope": "current non-quarantined explicitly supplied candidate receipts; no family impossibility claim"
+  },
+  "u2_lower_bound": {
+    "conclusion": "154600_BYTES_NOT_RULED_OUT",
+    "conditioned_object": "contest-video-derived scorer-plane seed conditioned on the frozen evaluator and a generic free receiver",
+    "model_relative_equation": "L_M(x_seed)=-sum_l n_l*log2(p_M(symbol_l|context_l))",
+    "model_relative_limit": "a positive value only lower-bounds scorer-plane-seed codes inside the fixed, complete model M; no current receipt supplies a complete conditional alphabet and counts at every causal level",
+    "future_conditioned_object": "the temporally unified smallest exact ops-grammar program for the scorer sufficient statistic plus all receiver-visible rich residual dynamics",
+    "future_information_projection_bound": "candidate model-relative route: Legendre-dual Bregman information projection onto the argmax-cell plus pose-tube constraint set; no positive value is authorized until the closed-form functional matches real evaluate.py components at the D1 fidelity gate",
+    "richness_guard": "smallest basis means structural match, never lossy flattening; any model-relative bound must count the exact residual after static geometry, xi, and sparse events",
+    "per_level": {
+      "chart": "NO_POSITIVE_LOWER_BOUND; one n64 chart formulation was rate-worse, which is not a chart-family entropy floor",
+      "event": "NO_POSITIVE_LOWER_BOUND; 181904 bytes is a construction size, not an information-theoretic floor",
+      "exception": "NO_POSITIVE_LOWER_BOUND; QP no-admission is formulation-local",
+      "object": "NO_POSITIVE_LOWER_BOUND; n64 zero-selection is a finite search negative",
+      "pixel": "NO_POSITIVE_LOWER_BOUND; diagnostic member zlib bytes are non-additive to the whole witness"
+    },
+    "target_bits": 1236800,
+    "target_bytes": 154600,
+    "universal_instance_lower_bound_bits": 0,
+    "universal_reason": "K_U(x_seed|evaluator,receiver) is uncomputable and machine-dependent up to an additive constant; from the supplied finite observations the only sound machine-independent nonnegative bound is zero bits",
+    "upper_bound_not_floor": {
+      "mdl_seed_plus_calibration_zlib9_bytes": 79385,
+      "scope": "counted scorer-plane seed plus calibration only, not a complete solved-pair archive or receiver-closed witness"
+    }
+  },
+  "u1_u2_describe_line_hypotheses": {
+    "binding_representation_principle": {
+      "clauses": [
+        "meet each stratum in its natural coordinates",
+        "carry the intrinsic thing itself in its smallest basis as a grammar program, not an embedding, proxy, or arbitrary gauge member",
+        "span the temporal axis with one n600 worldsheet object rather than paying for 600 slices"
+      ],
+      "direct_archive_bridge": "future optimization decision variables are the complete archive-description/ops-grammar parameters and objective S after free decode; a solved plane must remain implicit rather than becoming a separately materialized description target",
+      "implication": "future U1 and U2 rows must price a temporally unified n600 program over static ground geometry, xi, topology events, rank-4 argmax-relevant state, and the exact rich residual; this landing has no measured program row",
+      "omniscience_boundary": "the frozen resize, SegNet argmax, PoseNet, and byte counter are fully known and can be queried, differentiated, and inverted; this authorizes derivation, never a score claim without U3 exact evaluation",
+      "richness_guard": "smallest basis is structural matching, not flattening: one coupled program must still reproduce curvature changes, forks, dash rhythm, movable-object motion, per-class interactions, bifurcations, label-noise effects, and every receiver-visible residual"
+    },
+    "hypotheses": [
+      {
+        "id": "OPS_GRAMMAR_PAYLOAD",
+        "primitives": [
+          "TRANSPORT_XI",
+          "RASTER_LANE_POLY",
+          "SPAWN_EVENT",
+          "HOMOGRAPHY_TO_IMAGE"
+        ],
+        "status": "HYPOTHESIS_UNMEASURED"
+      },
+      {
+        "id": "BEV_STATIC_ROAD_LANE",
+        "status": "HYPOTHESIS_AWAITING_N64_PROBE"
+      },
+      {
+        "id": "DEVELOPABLE_ROAD_LANE_WORLDSHEET",
+        "metric": "Gaussian curvature under xi transport",
+        "status": "HYPOTHESIS_AWAITING_N64_PROBE"
+      },
+      {
+        "id": "RANK4_RELEVANT_SEED_PROJECTION",
+        "status": "HYPOTHESIS_UNMEASURED"
+      },
+      {
+        "id": "GENERATOR_NOT_STATE",
+        "status": "HYPOTHESIS_UNMEASURED"
+      }
+    ],
+    "information_geometry_spine": {
+      "bregman": "SegNet log-sum-exp generates the smooth Bregman distortion; its argmax cells are the associated Bregman-Voronoi or Laguerre/power cells",
+      "duality": "logit natural coordinates and softmax expectation coordinates are Legendre dual; a future constrained description solve is formulated as an information projection, with generalized-Pythagorean decomposition as the candidate gauge/null split",
+      "fisher_rao": "the Hessian metric of the generator supplies Fisher-natural rather than Euclidean descent; the measured margin-Fisher colocation is contextual support, not a closed-form score receipt",
+      "lower_bound_authority": "no new positive U2 lower bound; the Bregman rate-distortion/Legendre-dual route remains model-relative and gated",
+      "sibling": {
+        "d1_gate": "closed-form S components must match real evaluate.py components before load-bearing use",
+        "owner": "closed_scorer_variational_de",
+        "status": "LIVE_DO_NOT_DUPLICATE"
+      },
+      "status": "HYPOTHESIS_PENDING_CLOSED_FORM_D1_FIDELITY_GATE",
+      "v9_scope": "reuse only as GAUGE_IDENTITY_VERIFIED_NOT_MODEL_FACTORIZED non-authority context"
+    },
+    "lower_bound_effect": "future model-relative bounds should price normalized program symbols in a fixed ops grammar; the current universal lower bound remains zero bits",
+    "next_probe": "same-scale n64 road/lane BEV staticity plus worldsheet developability before generic seed-coder tuning",
+    "probe_preflight": {
+      "blockers": [
+        "no existing tool computes supplied-xi BEV staticity or intrinsic Gaussian curvature of a correspondence-preserving 2D worldsheet",
+        "banked gt_poses are pairwise PoseNet targets, not an absolute cross-pair trajectory, so the first probe must stay within the 64 exact f0-to-f1 strips unless separately custodied cumulative xi is supplied",
+        "the G1 f0 scorer-label sidecar has three batch-geometry mismatches that must remain in scope",
+        "the closest existing n600 lane factorization probe has no max-pairs bound and infers travel from lane dashes instead of consuming supplied xi"
+      ],
+      "developability_metric_contract": "for matched static Road-Lane and Road-Undrivable tracks only, construct correspondence-preserving ruled X(s,t) under supplied xi; report area-weighted median and p90 signed Gaussian curvature in m^-2 and dimensionless abs(K)*L_s*L_t; exclude births, deaths, and movable strata; report distributions because no pass threshold is preregistered",
+      "execution": false,
+      "existing_evidence_scope": "the settled G1 transition-median residual 0.2255866 px is image-plane Chamfer, and the historical 29-track/2948-observation lane probe is lane-derived-shift geometric-rate evidence; neither is supplied-xi BEV staticity or intrinsic 2D developability",
+      "future_input_custody": [
+        {
+          "bytes": 5078017610,
+          "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+          "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+          "scope": "lstars[600,384,512] plus pairwise gt_poses[600,6]; not an absolute cross-pair trajectory"
+        },
+        {
+          "bytes": 117964928,
+          "path": "/Volumes/VertigoDataTier/pact/evidence/g1g3_successor_measurements_20260720T203750Z/lstars_f0_n600_batch32.npy",
+          "sha256": "cda80013ef79258e1102bc30fd4528ef1a461041fb35ab6e2f975b56c563dfc6",
+          "scope": "f0 scorer labels with three batch-geometry mismatches retained"
+        }
+      ],
+      "reusable_surfaces": [
+        "tools/measure_g1_worldsheet_g3_cellcode.py:pose_homography and extract_interclass_edges",
+        "tac.boundary_math.ground_frame_chart",
+        "tac.boundary_math.lane_sdf_component",
+        "tac.boundary_math.lane_ground_factorization"
+      ],
+      "staticity_metric_contract": "fit Road-Lane and Road-Undrivable curves per exact pair in BEV, transport them by supplied xi into one reference chart, and report robust median and p90 normal-offset residual in meters against an identity-image baseline; any positive statement is scoped to n64 and the recorded label geometry",
+      "local_surface_status": "BLOCKED_NO_CUSTODIED_N64_BEV_STATICITY_AND_2D_WORLDSHEET_GAUSSIAN_CURVATURE_RUNNER",
+      "sibling_probe": {
+        "directive_timestamp_utc": "2026-07-21T16:59:45Z",
+        "landed_receipt_consumed": false,
+        "owner": "bev_staticity_developability_probe",
+        "stamp": "20260721T165801Z",
+        "status": "LIVE_DO_NOT_DUPLICATE"
+      },
+      "status": "PENDING_SIBLING_LIVE_PROBE_NO_LANDED_RECEIPT",
+      "verdict_scope": "existing n600 lane probe is lane-derived-shift geometric-rate evidence, not supplied-xi BEV staticity or intrinsic 2D developability; banked poses lack an absolute cross-pair trajectory; G1 f0 sidecar has 3 batch-geometry label mismatches"
+    },
+    "separatrix_asymmetry_context": {
+      "axis": "[macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT",
+      "canonical_equations": [
+        "separatrix_asymmetry_t_subpixel_boundary_localizer_v1",
+        "perclass_stratum_residual_carrier_taxonomy_v1"
+      ],
+      "implications": {
+        "u1": "carry per-pair orientation as candidate metadata and measure the same-artifact carrier; do not transfer the palette beta=2 gain to the current witness",
+        "u2": "a future model-relative lower bound may count only shallow-side symbols after proving the deep side is deterministically implied; current universal lower bound remains zero",
+        "u5": "the ops grammar needs a per-boundary orientation symbol and per-pair asymmetry parameter; no grammar implementation or archive row is built here"
+      },
+      "one_sided_smoke": {
+        "baseline_d_seg": 0.013044,
+        "byte_scope": "zero constants-only bytes per frame in smoke accounting, not a demonstrated exact archive delta; later design estimated about 16 bytes when appended",
+        "counted_bytes_per_frame": 0,
+        "d_seg": 0.009195624457465279,
+        "relative_delta": -0.2950303237,
+        "scale": "stride-5 subset, 120 frames, ranking only",
+        "status": "MEASURED_ADVISORY_RANKING_ONLY_NOT_N600_BYTE_CLOSED",
+        "variant": "2px one-sided Movable-side border-contrast band, beta=2.0"
+      },
+      "per_pair_rule": "shallow side is pair-specific, not a global class rule: Road-Undrivable is Road-shallow, Lane-MyCar and Road-Lane are Lane-shallow, and Movable pairs are approximately symmetric and low-margin",
+      "slope_scale": "n600 cached labels sampled stride-5 over 120 frames with about 6k to 0.9M pixels per pair",
+      "status": "MEASURED_ORIENTATION_CONTEXT_PALETTE_GAIN_TRANSFER_FALSIFIED",
+      "transfer_falsification": {
+        "baseline_d_seg": 0.0031068,
+        "d_seg": 0.0055949741,
+        "relative_delta": 0.80088,
+        "result": "the same beta=2 form worsened the frozen mod32cap ep650 witness by 80.1 percent",
+        "scale": "witness-own stride-5 120-frame advisory smoke",
+        "status": "MEASURED_NO_VALUE_TRANSFER"
+      },
+      "verdict_scope": "per-pair orientation/asymmetry transfers as measured frozen-scorer context; the palette carrier gain does not transfer to the current witness, still owes n600 through-R byte-closed A/B, and pose interaction is unmeasured"
+    },
+    "status": "NO_MEASUREMENT_OR_FRONTIER_AUTHORITY"
+  },
+  "u3_authority_smoke": {
+    "current_216207_description": {
+      "base_bytes": 36011,
+      "component_bytes": 180196,
+      "d_pose": null,
+      "d_seg_description": 0.016095318264431422,
+      "receiver_closed": false,
+      "score_claim": false,
+      "total_bytes": 216207
+    },
+    "execution_plan": null,
+    "physical_search": {
+      "exact_216207_byte_files_found": 0,
+      "zip_archives_200kb_to_230kb_found": 0
+    },
+    "required_complete_receiver_tuple": [
+      "seed.ppcs",
+      "base.pbase3",
+      "causal.pcr3",
+      "events.pce3",
+      "components.pcomp3",
+      "manifest",
+      "outer_container",
+      "archive.zip"
+    ],
+    "seed_not_archive_guard": "79385-byte seed-plus-calibration and 216207-byte base-plus-components are both incomplete; U3 prices and evaluates only the complete submitted archive",
+    "settled_complete_tuple_accounting": {
+      "container_overhead_bytes": 426,
+      "events_bytes": 181904,
+      "manifest_bytes": 2534,
+      "monolithic_0_bin_bytes": 1285943,
+      "seed_bytes": 884872
+    },
+    "settled_s4_timing_reference_only": {
+      "archive_bytes": 451191,
+      "archive_sha256": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed",
+      "axis": "[macOS-CPU advisory]",
+      "evaluate_wall_seconds": 351.00913258315995,
+      "inflate_wall_seconds": 94.15378933306783,
+      "measurement_receipt": {
+        "bytes": 5214,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/measurement_s4_20260721/measurement_receipt.json",
+        "sha256": "244d7b8fa695068755cd64a47572d58f2212f215e287e5d1ee6e6182384ea428"
+      },
+      "reuse_policy": "timing/reference only; no bytes, content, or score promoted to the 216207-byte row"
+    },
+    "status": "BLOCKED_DESCRIPTION_ROW_NOT_RECEIVER_TUPLE",
+    "verdict_scope": "the present 216207-byte R3 row lacks concrete seed/event semantics, measured pose, and a receiver-closed stream hash; rerunning the settled 451191-byte S4 artifact would answer a different question"
+  },
+  "u4_rule_118": {
+    "adverse_case": "a representation prior selected after studying the video may conceal per-video literals, tables, branch values, or weights; classify by whether content could be authored without the contest video, never by source size",
+    "binding_rule": "generic inflate.py generator, receiver, decoder, tables generated from a generic seed, and deterministic compute are free and unsized; only contest-video-derived or learned payload is counted",
+    "buckets": {
+      "defensible": [
+        "decode_base",
+        "decode_lane",
+        "lane_mask",
+        "decode_events",
+        "_decode_component_raw",
+        "decode_components",
+        "_catmull",
+        "trajectory",
+        "shift",
+        "apply_tracks",
+        "realize",
+        "prepare",
+        "decode"
+      ],
+      "move_to_counted": [],
+      "safe": [
+        "_canonical",
+        "parse_s4",
+        "parse_ppcs",
+        "_terminal",
+        "range_decode_static",
+        "_uvarint",
+        "support_indices",
+        "main"
+      ]
+    },
+    "byte_deltas": {
+      "defensible_generic_runtime_archive_delta_bytes": 0,
+      "defensible_generic_runtime_rate_score_delta": 0.0,
+      "move_to_counted_current_archive_delta_bytes": 0,
+      "move_to_counted_current_rate_score_delta": 0.0,
+      "rule": "future video-derived content must move into the archive and its exact added archive bytes become counted"
+    },
+    "rejected_adverse_counterfactual": {
+      "base_archive": {
+        "bytes": 451191,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/s4_composer_20260721/canonical_s4_20260721/archive.zip",
+        "sha256": "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed"
+      },
+      "deterministic_recipe": {
+        "archive_mode": "append in-memory to exact base bytes",
+        "compression": "zipfile.ZIP_DEFLATED with ZipFile compresslevel=9 and explicit ZipInfo._compresslevel=9",
+        "function_tail_extraction": "AST top-level function source segments in listed bucket order, joined by two LF bytes and terminated by one LF byte",
+        "full_runtime_member_name": "charged_full_runtime.py",
+        "function_tail_member_name": "charged_runtime_source.py",
+        "member_timestamp": "1980-01-01T00:00:00",
+        "python": "CPython 3.13.12",
+        "zip_archive_comment_hex": "",
+      "zipinfo": {
+        "_compresslevel": 9,
+        "comment_hex": "",
+          "create_system": 3,
+          "create_version": 20,
+          "external_attr": 25165824,
+          "extract_version": 20,
+          "extra_hex": "",
+          "flag_bits": 0,
+          "internal_attr": 0
+        },
+        "zlib_build_version": "1.2.12",
+        "zlib_runtime_version": "1.2.12",
+        "persistence": "no counterfactual archive persisted because the binding rule rejects charging generic code; hashes and complete deterministic reconstruction recipe retained"
+      },
+      "full_runtime": {
+        "archive_bytes_if_reclassified": 459793,
+        "archive_delta_bytes_if_reclassified": 8602,
+        "archive_sha256": "d43a0dbe5b4eabaf7be11fdbd699ed3a69031dd28d8222c530822111a75fa1f4"
+      },
+      "function_tail": {
+        "archive_bytes_if_reclassified": 456573,
+        "archive_delta_bytes_if_reclassified": 5382,
+        "archive_sha256": "837d0f561fdf76528a8e5af3dddcef2222dd5b093bcdaeff2b889578655a6193"
+      },
+      "method": "append a DEFLATE-9 source member to the exact 451191-byte reference archive",
+      "purpose": "authority-requested adverse quantification only; never a budget or score delta",
+      "status": "REJECTED_BY_BINDING_GENERIC_CODE_FREE_RULE"
+    },
+    "defense": "the functions are deterministic video-agnostic grammar/interpreter operations that can be authored without the contest video; all video-derived coefficients, events, tracks, seed state, and camera constants are in counted 0.bin sections, with no scorer, source video, or GT table loaded by inflate",
+    "runtime": {
+      "bytes": 29812,
+      "path": "submissions/s4_archive_composer/inflate.py",
+      "sha256": "eef055896474b8327baf57ace016c37fe651f4c22534e2442ebc44da8c3f40b0",
+      "source_bytes_for_provenance_only": 29812
+    },
+    "source_tail": {
+      "raw_bytes": 17864,
+      "sha256": "57670dbcefed57fd6d669bd1e0005cc01ab411f9ea8fbcfed771c4c6c326adbf",
+      "source_bytes_for_provenance_only": 17864
+    }
+  },
+  "u5": {
+    "future_bridge_contract": "compose differentiable free decode, the matched ops grammar, the frozen evaluator, and exact byte cost into one direct archive-description optimization at the registered score-per-byte water level; never run solve then describe as separate objectives",
+    "future_grammar_guard": "carry the whole richly coupled n600 flow and its exact residual; static lanes plus xi plus events is not permission to drop complex dynamics",
+    "status": "NOT_RUN_PRIORITY_EXHAUSTED",
+    "verdict_scope": "no G4/G5 byte delta was measured; U1/U3 custody and U4 adjudication took precedence"
+  },
+  "verification": {
+    "focused_tests": "26 passed",
+    "positive_admission_fail_closed": "BLOCKED_EXTERNAL_EXECUTION_ATTESTATION_UNVERIFIED",
+    "no_paid_dispatch": true,
+    "review_tracker": {
+      "files": [
+        "src/tac/optimization/einstein_kolmogorov_frontier.py",
+        "tools/measure_einstein_kolmogorov_frontier.py",
+        "src/tac/tests/test_einstein_kolmogorov_frontier.py"
+      ],
+      "passes": [
+        "einstein_structural_20260721 by codex-main-structural",
+        "einstein_adversarial_20260721 by codex-agent-adversarial"
+      ]
+    },
+    "ruff": "passed",
+    "ssd_output_only_for_bulk": true
+  }
+}

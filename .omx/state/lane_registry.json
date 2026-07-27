@@ -89297,6 +89297,4850 @@
       },
       "notes": "research_only=true; declared original-work intent but lineage and originality remain unverified; reverse-causal G-to-exact-Y1-to-Y0-given-Y1 reference grammar; no canonical n600 instance, PairPopulation adapter, production archive receiver, score, or promotion authority.",
       "research_only": true
+    },
+    {
+      "id": "lane_g2_receiver_consumption_archive_20260726",
+      "name": "G2 governed archive receiver consumption",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Original-work archive receiver path: counted G member must be parsed and applied into decoded raw outputs, with provenance-bound runtime receipt and matched G-only counterfactual. Research-only until exact n600 archive and contest-axis score exist.",
+      "research_only": true
+    },
+    {
+      "id": "lane_a2_pair_counted_preimage_adapter_20260726",
+      "name": "A2 counted coupled-preimage Pair adapter",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Original reverse-causal A modes adapted into PairPopulation counted sections with source custody, canonical ordering, parser closure, and mutation causality. Research-only until standalone archive replay and exact score.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g2_orphan_signal_candidate_harvest_20260726",
+      "name": "G2 exact-candidate orphan signal harvest",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Read-only harvest of completed-but-unreviewed original DDM arms for concrete receiver, byte-close, and exact-row pieces. No borrowed payload, score, or promotion authority.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g3_ep725_p_source_adapter_20260726",
+      "name": "G3 ep725 counted P source adapter",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; exact ep725 n600 LVLS1 source/runtime custody; bounded n2/n24 resumable decode; expose P-owned frames and internal labels; no Pose6/score/candidate claim; feeds generalized G/A composition"
+    },
+    {
+      "id": "lane_dynamic_frontier_target_consumption_20260726",
+      "name": "Dynamic frontier target consumption for composed codec",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; replace static target literals on active composed-codec planning and receipt path; no pointer mutation"
+    },
+    {
+      "id": "lane_g3_outer_entropy_archive_codec_20260726",
+      "name": "G3 deterministic outer archive entropy codec",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g5_label_local_transport_fix_20260726",
+      "name": "Label-local G transport independence and V2 target compiler",
+      "phase": 603.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Narrow exact semantic correction: zero-gain topology/island atoms are label-local and must not read or fabricate Pose6; nonzero gains and worldsheets remain fail-closed. Adds exact V2 bounded target-G entrypoint. No score/candidate/promotion authority.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g7_taskspace_whole_archive_allocator_20260726",
+      "name": "Original task-space whole-object nonlinear marginal allocator",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; candidate=false; score_claim=false; eval=false; promotion=false; no dispatch; exact P/G/A[/T] monolithic-member plus canonical STORE/DEFLATE pricing via injected receiver and typed measurement callbacks; isolated new module/tests/spec; parent owns materializer; g2/g5 files excluded"
+    },
+    {
+      "id": "lane_g8_same_class_realization_repair_20260726",
+      "name": "G8 counted same-class camera realization repair",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; coordinate_present=true; through_r_target_realization_debt_closed=false; scorer_invoked=false; candidate=false; score_claim=false; eval=false; promotion=false; no dispatch; counted canonical horizontal scorer-cell runs bind corrected-Y1 camera bytes/hash, G semantic labels hash, source pair IDs, and P/G identities; encoder-only target-label custody admits only same-class sites; target/scorer data never ship; isolated new module/tests/spec; g2/g5/g7 files excluded"
+    },
+    {
+      "id": "lane_g9_a3_xip2_encoder_20260726",
+      "name": "G9 Chronological A3 XIP2 Encoder Seam",
+      "phase": 603.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g10_post_g8_a3_integration_20260726",
+      "name": "G10 post-G8 conditional A composition seam",
+      "phase": 603.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g11_taskspace_a3_n2_allocator_runner_20260726",
+      "name": "G11 task-space A3 n2 allocator runner",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g12_g8_realization_encoder_20260726",
+      "name": "G12 encoder-side same-class realization acquisition",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g12_same_class_realization_encoder_20260726.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Frozen encoder-only G8 acquisition API; exact-G control and PASS topology remain separate; no scorer/eval/allocator claim; through-R admission required.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g13_counted_xip2_a3_20260726",
+      "name": "G13 Counted XIP2 Chronological A3 Packet Receiver ABI",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; L0 implemented/locally verified counted XIP2 chronological-A receiver; production authority solely PassConditionalASurfaceV1/PassConditionalASourceBindingV1 over PASS_NO_G8 or PASS_THEN_G8; G9 digest opaque lineage only; preserves conditional Y1 exactly; isolated module/tests/spec; no scorer, archive, eval, dispatch, n600, candidate, promotion, or pointer claim; G9/G10/G12 ownership boundaries untouched.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g14_taskspace_g8_a3_n2_allocator_20260726",
+      "name": "G14 task-space G8 plus A3 n2 allocator runner",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/run_taskspace_g8_a3_n2_allocator.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_selective_topology_acquisition_20260726",
+      "name": "Selective topology acquisition",
+      "phase": 603.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g16_quantized_xip2_inverse_solver_20260726",
+      "name": "G16 Quantized XIP2 Direct Inverse Solver",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; isolated encoder-side deterministic direct search over exact G13 counted XIP2 packet/receiver coordinates for PassConditionalASurfaceV1; callback Pose/Seg/byte objective only; no affine xi-to-Pose assumption; atomic stage checkpoints and deterministic seed; no scorer, archive, eval, dispatch, n2 execution, candidate, promotion, or pointer claim; G10/G13/G14/G15 frozen and untouched.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g17_unified_production_envelope_20260726",
+      "name": "G17 lawful task-space production composition envelope",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; spec-only Sol-ultra architecture landing; composes frozen G10/G12/G13/G14/G15/G16 without editing them; no scorer/eval/dispatch"
+    },
+    {
+      "id": "g18_taskspace_g8_a3_interaction_feedback",
+      "name": "G18 task-space G8 x A3 interaction feedback",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_dsl/taskspace_g8_a3_interaction_feedback.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Deterministic dense-free adapter over strictly validated G14 n2 macOS advisory receipts; no live eval, promotion, dispatch, or ledger mutation.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g19_costate_control_bridge_20260726",
+      "name": "G19 exact-interaction costate control bridge v1",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_control/taskspace_interaction_costate_bridge_v1.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; advisory controller bridge over exact-base-bound G18 feedback; no scorer/eval/dispatch/promotion; fail-closed on target/pointer/axis/archive/custody drift; no edits to frozen G18/G17/G14a surfaces",
+      "research_only": true,
+      "lane_class": "decision_apparatus",
+      "reactivation_criteria": [
+        "strictly validated real exact-base-bound G18 receipt under current pointer and axis",
+        "root-reviewed lawful consumer integration"
+      ]
+    },
+    {
+      "id": "ep725_lossless_xcodec_recode_20260726",
+      "name": "ep725 exact lossless cross-tensor archive recode",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_dsl/ep725_lossless_xcodec_recode.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/ep725_lossless_xcodec_recode_20260726/receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
+    },
+    {
+      "id": "lane_g21_lattice_teacher_extreme_compaction_spec_20260726",
+      "name": "G21 historical lattice teacher to extreme-compaction homotopy spec",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only executable spec complete: selected-solution active-inflate homotopy; exact MS2R R2 291205400-byte stored_problem control (-28.8922456%); C0B lifecycle joins and R10 prosody/Pose feature relay; artifact SPEC_g21_lattice_teacher_extreme_compaction_homotopy_20260726.md SHA256 a608b25ae18e07636a6794fa13a3e49bd1a80a2d63b8dc73e3d8162ebc792130; no run/eval/dispatch.",
+      "research_only": true,
+      "lane_class": "research_design",
+      "reactivation_criteria": [
+        "root review authorizes smallest real executable cut",
+        "full-object input custody and exact hashes remain available"
+      ]
+    },
+    {
+      "id": "lane_g22_ep725_xcodec_n600_equality_replay_20260726",
+      "name": "G22 ep725 xcodec full-n600 equality replay",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/replay_ep725_xcodec_n600_equality.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g22_ep725_xcodec_n600_equality_replay_20260726/bounded_pair0_decode_receipt_v4.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; append-only local harness and bounded exact-byte smoke; full n600 heavy replay requires root review; no score, candidate, archive replacement, or pointer claim",
+      "research_only": true,
+      "reactivation_criteria": [
+        "root reviews exact command",
+        "SSD preflight passes",
+        "frozen contract hashes match",
+        "semantic competitive target changes are rebased before any admission"
+      ]
+    },
+    {
+      "id": "lane_g23_capstone_vertical_bundle_v1_20260726",
+      "name": "G23 G17 capstone vertical bundle v1",
+      "phase": 1.5,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "G17/G23-owned local build and structural verification only; research_only=true; no launch/eval/candidate/score/pointer claim"
+    },
+    {
+      "id": "lane_g24_missing_type_compiler_audit_20260726",
+      "name": "G24 missing type compiler audit",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g14b_semantic_frontier_continuity_20260726",
+      "name": "Semantic frontier continuity for resumable long runs",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Real G14 interruption proved exact pointer artifact identity must be distinct from semantic competitive target identity; design frozen, implementation waits for hashed live G14 run to finish."
+    },
+    {
+      "id": "lane_g25_population_global_same_solution_recode_20260726",
+      "name": "G25 population-global same-solution recode",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_dsl/ep725_population_global_recode_v2.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/ep725_population_global_recode_v2_20260726_r2/receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; exact whole-object population-global recode of our ep725 LVLS1 state; dynamic final ZIP pricing; full-state equality; substitutive action output; no scorer/eval/candidate/promotion",
+      "research_only": true,
+      "lane_class": "substrate_engineering"
+    },
+    {
+      "id": "lane_g26_g14_feedback_costate_materializer_20260726",
+      "name": "G26 G14 final-receipt feedback and costate materializer",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_control/taskspace_feedback_costate_materializer_v1.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; production-shaped local materializer requires canonical terminal G14 final_receipt plus strict serialized canonical n600 PairPopulation; derives population identity; emits frozen G18 plus G19 telemetry; typed G22 closure requires exact G20/G22 archive/runtime/member/state/pair-order/full decode and receipt custody; pointer artifact/decode proof/semantic admission separated; no scorer/eval/dispatch/candidate/pointer mutation; G14/G23/G25 untouched",
+      "research_only": true,
+      "lane_class": "decision_apparatus"
+    },
+    {
+      "id": "lane_g27_r10_feature_texture_relay_20260726",
+      "name": "G27 R10 deterministic feature texture luma edge relay",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Execution of G21 R10 design; no independent Pose-vector sidecar; video-specific operands counted; generic NumPy receiver intended for inflate.py; research_only until receiver-closed exact n600 authority.",
+      "research_only": true,
+      "design_evidence": {
+        "parser_section_manifest": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g27_r10_feature_texture_relay/r10_feature_texture_relay_46ea72798b4c0cf6a930e6df5e4724432ea1c2c0324788143ce7f07a99433af6.receipt.json",
+        "runtime_dep_closure": [
+          "src/tac/witness_dsl/taskspace_r10_feature_texture_relay.py",
+          "src/tac/boundary_math/dash_phase_carrier.py",
+          "src/tac/boundary_math/phase_primitives.py",
+          "src/tac/boundary_math/stratified_depth_warp.py",
+          "src/tac/boundary_math/warp_real_luma_frame0.py",
+          "src/tac/boundary_math/xi_pose_coder.py",
+          "src/tac/boundary_math/xi_spline_residual_coder.py",
+          "src/tac/lie/_se3_numpy.py",
+          "src/tac/lossless/range_coder.py"
+        ]
+      }
+    },
+    {
+      "id": "lane_g28_ep725_xcodec_full_n600_bridge_eval_20260726",
+      "name": "G28 ep725 xcodec full-n600 same-object bridge evaluation",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only local macOS-CPU advisory first exact own-lineage triple; gated on terminal G22 equality; no pointer mutation or dispatch"
+    },
+    {
+      "id": "lane_g29_public_decoder_auth_closure_20260726",
+      "name": "G29 public decoder AuthEvalClosure",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g29_public_decoder_auth_eval_closure_20260726.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g29_public_decoder_auth_eval_closure_20260726_codex.md"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/witness_dsl/tests/test_taskspace_public_auth_eval_closure.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Real LVPG2 public inverse and resumable static compile/discovery/preflight only; external governed Linux A/B scorer/workflow/C0B authority remains open; pointer unmoved.",
+      "research_only": true,
+      "lane_class": "substrate_engineering",
+      "reactivation_criteria": [
+        "governed Linux x86_64 evaluator ABI",
+        "official run A and B",
+        "38-batch and n600 scorer mirror ledgers",
+        "whole GitHub test job under 1800s",
+        "sealed C0B review"
+      ]
+    },
+    {
+      "id": "lane_g31_upstream_recursive_auth_audit_20260726",
+      "name": "G31 frozen upstream recursive authority execution audit",
+      "phase": 1.5,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "READ-ONLY declarative audit; no scorer/eval run; no candidate/pointer/upstream mutation",
+      "research_only": true
+    },
+    {
+      "id": "lane_g32_r10_n600_inverse_fitter_20260726",
+      "name": "G32 R10 n600 maximum inverse fitter",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g32_r10_n600_maximum_inverse_fitter_20260726.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only production fitter/compiler; nine counted G27 R10 sections; no scorer/eval/full-n600 launch while G28/G14 live."
+    },
+    {
+      "id": "lane_g34_r10_fitter_adversarial_review_20260726",
+      "name": "G34 R10 fitter adversarial review",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
+    },
+    {
+      "id": "lane_g35_r10_fitter_p0_hardening_20260726",
+      "name": "G35 R10 fitter P0 hardening",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Disjoint remediation of G32 checkpoint/resume/governance/claim-scope P0s; no n600 launch; G29/G31 and root costate/controller frozen.",
+      "lane_class": "substrate_engineering",
+      "research_only": true
+    },
+    {
+      "id": "lane_g36_g23_g33_exact_endpoint_adapter_20260726",
+      "name": "G36 G23 to G33 exact endpoint adapter",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Composes exact selected-solution whole-object states, public closure, continuation proof, decoder constraints, and sign-reversal hypergraph into controller endpoints; no scorer dispatch or pointer movement."
+    },
+    {
+      "id": "lane_g37_coupled_multiscale_controller_audit_20260726",
+      "name": "G37 coupled multiscale controller local-to-global suppression audit",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
+    },
+    {
+      "id": "lane_g38_verified_continuation_certificate_20260726",
+      "name": "G38 verified continuation certificate",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g38_verified_continuation_certificate_20260726_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; typed proof-byte verification for continuation subtree/cost-to-go bounds; no scorer/eval/dispatch/pointer; G33 controller and existing tests root-owned"
+    },
+    {
+      "id": "lane_g40_g33_g38_proofbyte_integration_20260726",
+      "name": "G40 G33-G38 proof-byte integration",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; parent-transferred exclusive ownership of G33 controller/test/spec; no evaluator/archive/dispatch/pointer/commit",
+      "research_only": true
+    },
+    {
+      "id": "lane_g39_selected_solution_macro_crux_20260726",
+      "name": "G39 selected-solution macro crux review",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; bounded adversarial architecture/crux review; no implementation, heavy launch, evaluator, dispatch, commit, or pointer mutation",
+      "lane_class": "research_substrate",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Root selects exact implementation cut",
+        "typed bridge consumes original n600 teacher artifact",
+        "public receiver closure proves exact archive bytes"
+      ]
+    },
+    {
+      "id": "lane_g41_g17_strict_state_receipt_20260726",
+      "name": "G41 G17 strict reopenable whole-object state receipt",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g41_g17_strict_state_receipt_20260726_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Strict evidence receipt only; does not prove G29 public RGB raster equality, score authority, candidate, or pointer movement.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g42_actuator_ir_donor_contract_20260726",
+      "name": "G42 selected actuator IR donor implementation contract",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
+    },
+    {
+      "id": "lane_g43_g17_actuator_ir_20260726",
+      "name": "G43 G17 exact EP725 label-local semantic G actuator IR",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g43_g17_actuator_ir_20260726_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "First real actuator only: EP725_LABEL_LOCAL_SEMANTIC_G via PredictorStateV2 NoTransportV2; bounded pair smoke, no n600/public/score authority.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g44_fresh_teacher_source_custody_20260726",
+      "name": "G44 fresh current-G17 teacher source custody audit",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "G44 audit memo sealed: source-to-target custody closed by fresh G46 batch16 n600 bank sha256 6d2ca48a... (encoder-only, non-candidate); batch4 quarantined. Public changed-state row remains blocked on fresh-target custody adapter, G45 current-P page-factory ordering, renderer foreign-key derivation, sharded n600 compile, and one counted composite public runtime/archive. No G44 heavy run/eval/pointer mutation.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "lawful original-source custody identified",
+        "frozen n600 target producer command identified",
+        "current ep725 P label producer identified",
+        "fresh teacher producer identified",
+        "n600 acquisition memory plan classified"
+      ]
+    },
+    {
+      "id": "lane_g46_fresh_teacher_materializer_20260726",
+      "name": "G46 fresh encoder-only SegNet teacher materializer",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Fresh source-to-frozen-SegNet n600 labels; resumable pair shards; encoder-only evidence; no launch until governed fire gates."
+    },
+    {
+      "id": "lane_g45_ep725_label_local_g_stream_20260726",
+      "name": "G45 ep725 V2 label-local G pairwise stream receiver",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_dsl/taskspace_ep725_label_local_g_stream.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Production-shaped arbitrary n<=600 pairwise receiver seam; bounded mechanics only; no heavy n600 run, score, candidate, evaluator authority, or pointer mutation.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g47_lowdist_selected_state_path_20260726",
+      "name": "G47 low-distortion selected-state path audit",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g48_v15_ms1_coordinate_compatibility_20260726",
+      "name": "G48 V15 to MS1 coordinate compatibility audit",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g49_selected_preimage_program_20260726",
+      "name": "G49 selected preimage program V1",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only L0. Delivered strict counted TaskspaceSelectedPreimageProgramV1, coupled Y0/Y1 pluggable receiver, analytic and learned quotient factor homes, batch16 custody, V10 factor2 adapter, and 120-pair resume iterator; 7 focused tests plus Ruff pass. Owed: fresh current-source V15 semantic compile bytes and receipt, counted outer embedding, real n600 factor encoder/allocator, public inflate closure, exact contest eval. No historical archive copying; no dense target/teacher/scorer/preimage payload; pointer delta zero.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g50_lossy_selected_preimage_codec_audit_20260726",
+      "name": "G50 lossy selected-preimage codec audit",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Read-only original-work audit of lossy/hybrid coding for C1/MS1 selected scorer-plane solution or V15 residual. No heavy run, candidate, exact-score, public payload reuse, or pointer mutation.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g51_conditional_selected_preimage_quotient_profiler_20260726",
+      "name": "G51 conditional selected-preimage quotient profiler",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Production-grade full-n600 resumable research profiler; compares strict V15 semantic base to fresh batch16-selected C1/V10 scorer-plane targets; score_claim=false; no candidate/archive target payload; no heavy launch by subagent."
+    },
+    {
+      "id": "lane_g52_fulln600_lossy_selected_plane_codec_20260726",
+      "name": "G52 full-n600 lossy selected-plane codec diagnostic",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Original-codec diagnostic only; historical C1 is encoder-side oracle/mechanism evidence and forbidden candidate lineage. Five immutable 120-pair resumable segments; direct interleaved and task-layered arms; no score/frontier claim.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Fresh batch16 current-source selected planes or original current-source selected-preimage program must replace historical C1 before any candidate or exact-eval path."
+      ]
+    },
+    {
+      "id": "lane_g53_selected_preimage_program_review_20260726",
+      "name": "G53 selected-preimage program adversarial review",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g55_public_task_layered_codec_closure_20260726",
+      "name": "G55 public TASK_LAYERED selected-plane codec closure",
+      "phase": 603.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Independent public archive/runtime closure for G52 TASK_LAYERED selected-plane payload. L0 until G52 exact whole-n600 scorer receipt admits an arm; no G51/G52-owned file edits; dynamic target S<0.172; original payload only."
+    },
+    {
+      "id": "lane_g56_capstone_integration_audit_20260726",
+      "name": "G56 capstone integration adversarial audit",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
+    },
+    {
+      "id": "lane_g58_selected_preimage_program_operand_adapter_20260726",
+      "name": "G58 Selected-Preimage Program Operand Adapter",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 production bridge: adapt G49 program decoder segments into G52 FreshOperandProviderV1; fail closed on uncharged semantic embedding; no heavy run; root review before commit."
+    },
+    {
+      "id": "lane_g59_recurrent_codec_adversarial_gate_20260726",
+      "name": "G59 recurrent codec adversarial gate",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g63_selected_preimage_program_residual_producer_20260726",
+      "name": "G63 selected-preimage program-residual producer",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_dsl/taskspace_program_residual_producer_v1.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "G63 owns only G49 terminal residual transport, counted charge/proof bundle, immutable stage custody, and G58/G59 schema join; it is not a G17 archive or primary codec. Learned factors fail closed until canonical G17 generic-versus-video-derived placement exists. Current terminal blocker is G17_PRODUCTION_TERMINAL_ENVELOPE_RECEIVER_OWED.",
+      "research_only": true,
+      "lane_class": "production_seam",
+      "reactivation_criteria": [
+        "fresh own-lineage n600 G49 selected-preimage program with physical semantic and packet custody",
+        "G58 production verification",
+        "G59 PRE_ENCODE admission",
+        "public receiver closure",
+        "exact contest evaluation"
+      ]
+    },
+    {
+      "id": "lane_g52_g61_v2_primary_codec_abi_review_20260727",
+      "name": "G52 adversarial G61 V2 primary codec ABI review",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "report_only=true; no source/doc edits; no commit; independent adversarial ABI review of G61 against G49/G58/G59/V9/V10/full-lattice/G51; parent=root"
+    },
+    {
+      "id": "lane_g64_primary_selected_solution_program_v2_20260727",
+      "name": "G64 conditional G17 selected-solution receiver vertical",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Reuse canonical G17 ontology and P-G-A-E builder; no V2 schema. Missing executable is full-frame Y0 conditional on exact decoded Y1 with counted operand placement, deterministic public receiver operation, standalone n600 custody, and later exact public eval closure."
+    },
+    {
+      "id": "lane_g65_g17_archive_object_operand_linker_20260727",
+      "name": "G65 G17 archive-object conditional operand linker",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; disjoint G65 module/tests/spec/receipt; bridge canonical G17CompilerPlacementManifestV1 plus G64 logical conditional operand through the tracked taskspace_g17_production_envelope.py P-G-A-E archive object; whole-archive shared many-to-many physical group when outer ZIP compression is nonlocal; no G51/G64/G59/G63 edits, heavy run, score, candidate, pointer, staging, or commit"
+    },
+    {
+      "id": "lane_g67_g51_costate_admission_guard_20260727",
+      "name": "G67 G51 costate admission guard",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; additive G67 guard/tests/spec/receipt only; exact b84 G51 receipt is encoder diagnostic only; self-attested effect/JVP/VJP/ZIP candidates remain integrity diagnostics and every sensitivity/allocator/costate/autopilot/Pareto consumer is blocked until a canonical receiver-R-scorer effect materializer exists; no G51/G64/G65/G66 edits, heavy run, score, candidate, pointer, staging, or commit",
+      "research_only": true,
+      "lane_class": "production_seam"
+    },
+    {
+      "id": "lane_g66_g29_public_auth_eval_recovery_20260727",
+      "name": "G66 G29 public AuthEval recovery",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g66_g29_public_auth_eval_recovery_receipt_20260727.json"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Bounded source-recovery/adversarial closure only; no n600 eval, dispatch, pointer, candidate, or score claim; owns G29 public-closure files plus append-only G66 findings/receipt; no G51/G64/G65 edits.",
+      "lane_class": "substrate_engineering",
+      "research_only": true,
+      "reactivation_criteria": [
+        "G29 runner and runner test enter tracked source custody",
+        "G17 TACPGA3 public receiver and raster bridge close",
+        "Governed Linux double run and sealed C0B review are authorized"
+      ]
+    },
+    {
+      "id": "lane_g68_g17_g49_selected_program_product_bridge_20260727",
+      "name": "G68 G17-to-G49 selected-program product bridge",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; additive disjoint G68 module/tests/spec/receipt; reopen exact G17 archive; require counted fresh semantic P and exact G49 selected-program packet as receiver-live A; bind CarrierCompose/BoundV10 factor2 streaming decode; consume G65 API if landed without editing G65 files; no scorer/targets/dense n600 fallback/heavy eval/launch/score/candidate/pointer/staging/commit",
+      "research_only": true,
+      "lane_class": "production_seam"
+    },
+    {
+      "id": "lane_g69_g49_active_a_abi_20260727",
+      "name": "G69 G49 active-A canonical G17 ABI",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; extend only canonical G17 production-envelope ABI plus focused G69 tests/spec/receipt so exact G49 TSPPV1 is receiver-live active A; strict adapter calls existing G49 parse+reencode and verifies window plus target/semantic/decoder identities; preserve wire values and compatibility; no G68/G65/G64 edits, dense planes, scorer/target payload, heavy eval, score, candidate, pointer, staging, or commit",
+      "research_only": true,
+      "lane_class": "production_seam"
+    },
+    {
+      "id": "lane_g70_canonical_receiver_scorer_effect_materializer_20260727",
+      "name": "G70 canonical receiver-R-scorer effect materializer",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; additive disjoint G70 module/tests/spec/receipt plus L0 lane state only; derive per-pair full-n600 score-term effects only from exact baseline/candidate receiver outputs and bind JVP/VJP claims to actual scorer differentiation/costate artifacts; couple same transition to reopened baseline/candidate archive ZIP bytes; synthetic/self-attested inputs may only refuse and never become actionable; if exact inputs or differentiation artifacts are absent, emit executable blocker contract G70_CANONICAL_RECEIVER_R_SCORER_EFFECT_INPUTS_OWED; no heavy scorer run, score/candidate/pointer claim, staging, commit, or edits to G65/G67/G68/G69 files"
+    },
+    {
+      "id": "lane_g72_fresh_n600_g49_analytic_factor_compiler_20260726",
+      "name": "G72 fresh n600 analytic-only G49/TSPPV1 factor compiler",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true until fresh V15 scorer-plane coordinate custody, role-aware pre-paint factor semantics, exact target labels+margins+Pose6/frozen scorer outputs, SSD/resume/checkpoints, parse-back/double-realize, and exact joint-score admission close; no learned quotient claim; pointer unchanged."
+    },
+    {
+      "id": "lane_g74_v15_roleaware_overlay_decoder_20260727",
+      "name": "G74 V15 role-aware scorer-cell overlay decoder",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g76_base_preferred_exact_numerator_overlay_20260727",
+      "name": "G76 base-preferred exact numerator overlay",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g77_g49_v15_roleaware_selected_preimage_factor_v2_20260727",
+      "name": "G77 additive G49 V15 role-aware selected-preimage factor V2",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g77_additive_g49_v15_roleaware_factor_v2_20260727.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Rich additive TSPPV2 compiler/provenance IR closed: one global role-aware G74RA1 bank before native V15 render, exact P and target/runtime custody, frozen TSPPV1/G17 compatibility, public-unzip flat-product proof. Normative candidate wire is delegated to G80/G82; no n600 score/public inflate."
+    },
+    {
+      "id": "lane_g78_batch16_margin_base_scorer_cache_materializer_20260726",
+      "name": "G78 batch16 target-margin and V15 base-scorer cache materializer",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_control/taskspace_batch16_margin_base_scorer_cache_v1.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/taskspace_batch16_margin_base_scorer_cache_n600_20260726_r4/00_preflight_receipt.json"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LAUNCH-READY for governed research-only n600 materialization after G81 repair: current V15 camera/live-R custody revalidated on resume; 558-file transitive receiver runtime closure; semantic stage/G51/batch-fragment strict reopen; r4 zero-forward preflight file SHA256 3a65a8ce9cfe0eaa681b9abb875703aefb4f3b0adff7d65020153259e13134fe. Aggregate/scorer not launched; blockers remain open; no score/candidate/pointer claim."
+    },
+    {
+      "id": "lane_g79_capstone_public_archive_composition_adversarial_review_20260727",
+      "name": "G79 capstone public archive composition adversarial review",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; read-only execution/adversarial review of exact P-once public archive/demux/state-transition ABI after G68/G69/G72/G74/G76; no source edits, candidate, archive, score, or pointer claim."
+    },
+    {
+      "id": "lane_g80_flattened_semantic_product_archive_20260727",
+      "name": "G80 flattened semantic plus actuator product archive",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g80_pvsa_compact_container_20260727.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Exact PVSA1 compact lowering now admits semantic-only zero-actuator baseline, explicit normative actuator-transition prefix, exact add/remove rollback, cached semantic receiver, and bounded <=16-pair chronological stream; exact P baseline 129335B, pair0 G74 marginal +57B; rich TSPPV2 lowering receipt/public writer/full-n600 eval remain open.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g81_g80_pvsa_compact_container_adversarial_review_20260727",
+      "name": "G81 G80 PVSA compact container adversarial review",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Read-only adversarial audit of G80 compact receiver wire; no source/test edits, score, candidate, or pointer claim.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g81_g78_batch16_margin_base_scorer_cache_adversarial_review_20260727",
+      "name": "G81 G78 batch16 margin/base scorer cache adversarial launch review",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "READ-ONLY REVIEW COMPLETE: original REFUSE findings preserved in memo SHA256 45070f74445962e38f4654f584ad34a071181d47dfede951d22a241200d1f451; all P0/P1 launch blockers are now remediated in G78 and covered by regressions. Fresh r4 zero-forward preflight file SHA256 3a65a8ce9cfe0eaa681b9abb875703aefb4f3b0adff7d65020153259e13134fe strictly reopens. Current verdict: READY FOR GOVERNED RESEARCH-ONLY MATERIALIZATION; scorer/n600 not launched.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g82_tsppv2_to_pvsa1_compact_lowering_adapter_20260727",
+      "name": "G82 rich TSPPV2 to compact PVSA1 lowering adapter",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Additive research-only lowering adapter; G77/G80 immutable inputs; exact operand/P/custody/decode/marginal-byte receipts."
+    },
+    {
+      "id": "lane_g83_pvsa_exact_archive_state_allocator_20260727",
+      "name": "G83 PVSA exact archive-state allocator",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
+    },
+    {
+      "id": "lane_g85_pvsa_public_receiver_closure_20260727",
+      "name": "G85 PVSA public receiver closure",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; new-only staging runtime; no public entrypoint mutation; no score/candidate claim until exact receiver closure"
+    },
+    {
+      "id": "lane_g87_g78_to_g72_exact_cache_adapter_20260727",
+      "name": "G87 exact G78 cache to G72 compile adapter",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "New-only bounded exact full-n600 adapter; consumes sealed G78 cache into fresh semantic compile inputs; no score/candidate payload authority.",
+      "research_only": true
+    },
+    {
+      "id": "lane_g89_class_complete_semantic_compiler_20260727",
+      "name": "G89 class-complete population-addressed Y1 semantic receiver seam",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g89_class_complete_semantic_compiler_20260727.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; exact-P executable class-complete Y1 operand and receiver; pair0 fixture only; population-global selected n600 program blocked on G90 costates, compact PVSA lowering, public closure, exact upstream row, and G83 whole-state arbitration; no score/candidate/pointer claim"
+    },
+    {
+      "id": "lane_g90_projected_population_costates",
+      "name": "G90 projected population costates",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g91_n600_pose_trajectory_compiler_selector_20260727",
+      "name": "G91 n600 source-custodied pose trajectory compiler and selector",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_dsl/taskspace_g91_n600_pose_trajectory_compiler_v1.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g91_n600_pose_trajectory_dominated_family_stop_receipt_20260727.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L2 local integration: fresh n600 fixed-warp family measured and macro-dominated; v3 operator-stopped exit130; initializer/factorability only; G95 PoseNet-in-loop inverse solve owed; no candidate/public closure",
+      "research_only": true
+    },
+    {
+      "id": "lane_g92_population_global_g89_program_induction_20260727",
+      "name": "G92 population-global program induction and mixed-selector blocker",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_dsl/taskspace_g92_population_global_program_induction_v1.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; strict sealed G90 actuator-basis ABI + collision-free finite program plan; archive emission/pricing fail-closed because G85 incumbent selector BOTH and new intervention selector Y1 require G94 sequential receiver; no score claim",
+      "research_only": true,
+      "reactivation_criteria": [
+        "G94 fixed-order counted sequential product preserves exact incumbent BOTH Y0",
+        "dynamically merges incumbent boundaries into G89 Y1 collision-refuse",
+        "composes G88",
+        "and proves strict parse/reencode plus double decode"
+      ]
+    },
+    {
+      "id": "lane_g93_nonseparable_pose_attribution_20260727",
+      "name": "G93 exact nonseparable pose attribution",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g93_nonseparable_population_pose_attribution_20260727_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/xray/tests/test_per_pair_score_decomposition.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
+    },
+    {
+      "id": "lane_g94_sequential_typed_actuator_product_20260727",
+      "name": "G94 sequential typed mixed-selector actuator product receiver",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_dsl/taskspace_g94_sequential_typed_actuator_product_v1.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; fresh original-lineage P -> incumbent G74 BOTH -> G89 class-complete Y1 -> G88 conditional Y0|Y1; counted source-specific operands; generic deterministic receiver; exact parseback/double-decode and outer archive byte race; no candidate/score until public inflate and upstream n600 closure"
+    },
+    {
+      "id": "lane_g95_population_pose_inverse_control_20260727",
+      "name": "G95 population PoseNet-in-loop inverse decoder-control solver",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; initialize from G91 trajectory but optimize decoder control coordinates against actual frozen per-pair PoseNet losses and global nonlinear objective; factor/quantize solved control trajectory into XIP2; exact G94 receiver state and outer bytes; resumable per-stage; no source-Pose6-as-warp-coordinate conflation; no candidate until public/upstream closure"
+    },
+    {
+      "id": "lane_g96_g92_v2_exact_atlas_intake_20260727",
+      "name": "G96 G92 V2 exact-atlas intake",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 compile-closed dual-version adapter; no empirical/output/score authority; G90/G95 files not owned"
+    },
+    {
+      "id": "lane_g97_capstone_stack_adversarial_audit_20260727",
+      "name": "G97 Capstone Stack Adversarial Audit",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Read-only macro-to-micro adversarial audit of G90->G92->G89/G94->G95->public closure; durable Codex findings only, no implementation overlap."
+    },
+    {
+      "id": "lane_g98_sparse_atlas_cumulative_g94_lowering_20260727",
+      "name": "G98 Sparse Atlas Cumulative G94 Lowering",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Implement smallest exact sparse G90/G92 selected-atlas lowering into cumulative realized Y1/G94 without G89 filler; fail closed on missing same-state replay."
+    },
+    {
+      "id": "lane_g100_lattice_teacher_compaction_takeoff_20260727",
+      "name": "G100 Lattice Teacher Compaction Takeoff",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Implement the first real missing G21 selected-solution homotopy surface from own full-lattice teacher; dense-free, hash-verified, resumable, no historical payload reuse."
+    },
+    {
+      "id": "lane_g101_g94_v2_typed_union_product_20260727",
+      "name": "G101 G94 V2 sparse-Y1 exclusive conditional-Y0 union product",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 research-only versioned union/product: G98 cumulative final Y1 plus exactly one exclusive G88 or G95 Y0 owner; scorer-free deterministic receiver; exact STORE/DEFLATE parse-back; no candidate/score/pointer claim; public inflate and final-Y1 G95 refit remain blockers.",
+      "research_only": true,
+      "lane_class": "substrate_engineering",
+      "reactivation_criteria": [
+        "public inflate.sh recursively imports this exact V2 receiver",
+        "final semantic G98 Y1 exists and G95 basis/chunks are freshly refit to its exact whole-state identity",
+        "same selected archive closes full n600 upstream evaluate.py authority"
+      ]
+    },
+    {
+      "id": "lane_g102_final_y1_semantic_base_escape_20260727",
+      "name": "G102 final Y1 semantic base escape activation",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Bounded Codex execution/adversarial lane. Own-lineage only; actual full-lattice/V9/V10/G20/G21/G25/G74/G85/G89/G90/G92/G94/G98 custody. Output is executable n600 final-Y1 experiment activation artifact or exact blocker; no heavy run, no foreign archive/payload reuse.",
+      "research_only": true,
+      "lane_class": "strategic_review",
+      "reactivation_criteria": [
+        "P-free semantic-root wire/compiler/receiver exists",
+        "public extracted-directory dispatcher consumes the P-free root",
+        "full-n600 S01 root archive is measured",
+        "G95-style Y0 is refit only after final Y1 freeze"
+      ]
+    },
+    {
+      "id": "lane_g103_g102_adversarial_review_20260727",
+      "name": "G103 adversarial review of G102 final-Y1 activation",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Read-only bounded adversarial audit of the two frozen G102 artifacts and every source/hash/score-envelope/lineage/executability assertion. Owns one append-only findings memo only; no G102/code edits, heavy run, score/pointer mutation, or commit.",
+      "research_only": true,
+      "lane_class": "strategic_review"
+    },
+    {
+      "id": "lane_g102_s00_s01_n600_state_machine_20260727",
+      "name": "G102 S00-S01 deterministic full-n600 experiment state machine",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only runner skeleton. S00 custody may checkpoint; S01 must refuse until a real fresh own-lineage SemanticRootY1V1 compiler/receiver and public codec section are present. No heavy launch, score, candidate, pointer, or historical payload reuse.",
+      "research_only": true,
+      "lane_class": "substrate_engineering",
+      "reactivation_criteria": [
+        "fresh own-lineage SemanticRootY1V1 compiler and scorer-free receiver land",
+        "public codec section consumes the exact packet and survives extracted-directory parse-back",
+        "five immutable 120-pair stages plus exact batch-16 full-n600 upstream row complete on one archive"
+      ]
+    },
+    {
+      "id": "lane_g103_pfree_semantic_root_wire_receiver_20260727",
+      "name": "G103 P-free SemanticRootY1V1 wire and receiver",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "New-files-only research-only implementation of strict P-free counted semantic-root wire, parser/serializer, generic deterministic integer renderer, V10 factor2 compatibility, and full-ordered-n600 behavior tests. No compiler/run/archive/score/pointer claim.",
+      "research_only": true,
+      "lane_class": "substrate_engineering",
+      "reactivation_criteria": [
+        "source-backed full-n600 compiler emits a real counted SemanticRootY1V1 packet",
+        "public inflate dispatcher consumes the exact packet",
+        "final Y1 is frozen and conditional Y0 is freshly fit",
+        "same archive closes upstream evaluate.py"
+      ]
+    },
+    {
+      "id": "lane_g105_semantic_root_producer_takeoff_20260727",
+      "name": "G105 fresh own-lineage SemanticRootY1 producer takeoff",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Bounded premise verification and smallest REAL producer/adapter or strict missing-edge gate. Sole authority taskspace_selected_solution_compiler.py; fresh own V9/V10 plus G46/source/scorer lineage only; full-n600 final-Y1, substitutive/P-free, exact-R state; no historical payload reuse, heavy launch, candidate/score/pointer claim, commit, or sibling-file edits."
+    },
+    {
+      "id": "lane_g105_exact_v9_dualhead_semantic_root_adapter_20260727",
+      "name": "G105 exact V9 dual-head SemanticRootY1 adapter",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Exact architecture-preserving V9 HOSC/phase-advection learned-root adapter: fresh G46-bound checkpoint only; tanh(beta*sin(wx)), positional basis/config, out_sdf+out_tex+palette, optional film_pl/concat_pl; counted odd code[2*p+1] Y1 rows only; Y0 exclusive to G94-V2; explicit public runtime ABI; deterministic NumPy parity and wire-byte accounting; no historical payload, heavy launch, proxy score, candidate, pointer mutation, or commit before root review."
+    },
+    {
+      "id": "lane_g106_v9_g46_provenance_closure_20260727",
+      "name": "G106 V9 G46 source-closure provenance",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g107_g94v2_conditional_y0_final_semanticroot_y1_20260727",
+      "name": "G107 G94-V2 conditional Y0 over frozen final SemanticRootY1V1",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; new-files-only typed composition contract; exact frozen final-Y1 population binding; exactly-once Y0 ownership; no duplicate gauge/temporal state; source/scorer-free receiver; ordered n600 and V10 factor-2 realization; candidate-byte accounting; no G102/G103 edits, heavy run, proxy score, candidate, pointer, commit, or historical V15/C1/PR payload reuse"
+    },
+    {
+      "id": "lane_g108_semantic_root_public_receiver_closure_20260727",
+      "name": "G108 SemanticRootY1V1 public receiver closure",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; disjoint public runtime/package/test/spec/receipt; exact committed G103 packet parse/render and deterministic clean-extract n600 0.raw closure; variant dispatch seam for exact V9; no source compiler, historical payload, scorer, eval, candidate, score, pointer, heavy launch, G103/G94/V9 edits, or commit before root review",
+      "research_only": true,
+      "lane_class": "substrate_engineering",
+      "reactivation_criteria": [
+        "fresh own-lineage source compiler emits full-n600 SemanticRootY1V1 packet",
+        "final conditional Y0 plug-in closes against frozen Y1",
+        "same archive passes double-decode and upstream evaluate.py authority"
+      ]
+    },
+    {
+      "id": "lane_g110_generic_two_layer_public_product_20260727",
+      "name": "G110 generic semantic-provider plus conditional-Y0 public product",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Whole-object public archive ABI over committed G103 and frozen G105; conditional Y0 consumes rendered final Y1; no training or score claim."
+    },
+    {
+      "id": "lane_g111_fresh_batch16_v9_training_binding_20260727",
+      "name": "G111 fresh batch-16 V9 training and checkpoint binding",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g109_v9_training_target_capsule_20260727",
+      "name": "G109 fresh upstream batch16 V9 training target capsule",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "commit 1689d2025d; exact five-file G109 capsule landing; 27 adjacent G46 G78 G109 tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; exact G46 source/model/upstream custody; chronological upstream-default batch16 SegNet top1-top2 margin plus source Pose6 in one scorer callback; immutable atomic per-batch checkpoints and strict aggregate loader; no scorer/target candidate payload, heavy launch, score, promotion, or pointer claim",
+      "research_only": true,
+      "lane_class": "substrate_engineering",
+      "reactivation_criteria": [
+        "root approves governed n600 encoder-only materialization",
+        "strict aggregate receipt reopens under exact external SHA",
+        "G111 trainer binds aggregate receipt plus target arrays into stage checkpoints"
+      ]
+    },
+    {
+      "id": "lane_g112_exact_checkpoint_partition_20260727",
+      "name": "G112 exact generated-y1 checkpoint partition",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g114_coupled_feasibility_audit_20260727",
+      "name": "G114 coupled feasibility adversarial audit",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_g115_g105_public_wire_quantization_surface_20260727",
+      "name": "G115 exact G105 public-wire quantization surface",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "New-module exact NumPy and MLX STE surface for G105 ABI; integration-only, no trainer/G105 edits or score claim"
+    },
+    {
+      "id": "lane_g117_parsed_g105_stage_selector_20260727",
+      "name": "G117 parsed-G105 public-wire semantic stage selector",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Standalone exact n600 parsed-G105 public-wire semantic stage selector over G115 compile/encode/parse; renders parsed G105 and realizes V10 factor2 uint8; exact injected Seg scorer batches of 16; deterministic STORE/DEFLATE semantic-only ZIP same-object action selection; durable atomic packet/ZIP/receipt outputs; incomplete_semantic_only=true; candidate_claim=false; score_claim=false; pointer_moved=false; no trainer, launcher, G110, G111 spec, G105, G115, AGENTS, or CLAUDE edits."
+    },
+    {
+      "id": "lane_g119_post_g105_generated_y1_pose_refit_20260727",
+      "name": "G119 post-G105 generated-Y1 exact Pose6 refit",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; production runner contract for recursive physical G112 partition + exact parsed G105 semantic wire + physical G109 Pose6 custody -> exact batch16 frozen upstream PoseNet xi_eff inverse refit; no score/pointer claim; heavy n600 launch governed; owned implementation files only"
+    },
+    {
+      "id": "lane_g120_parsed_stage_production_authority_20260727",
+      "name": "G120 parsed-stage production authority wrapper",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Bounded implementation of physical G112/G109/frozen CPU SegNet/dynamic pointer closure; non-promotable semantic-only receipt; no launch."
+    },
+    {
+      "id": "lane_g121_resumable_stage_harvest_controller_20260727",
+      "name": "G121 resumable immutable-stage harvest controller",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "External controller enumerates physical G111/G112 stage receipts, invokes strict G120 production compiler, caches pointer-independent exact public-wire measurements, retains every stage with 100*d_seg below live target until G119 pose, and never reads legacy BEST."
+    },
+    {
+      "id": "g111_physical_native_opener_20260727",
+      "name": "G111 physical native-v3 content-addressed opener",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "commits 7d14062991+ca1977a64f; content-addressed physical opener; 100 focused transaction/binder/opener tests green"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_fastest_existing_score_path_20260727",
+      "name": "Fastest fresh-original existing score path audit",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "g111_lineage_native_closure_20260727",
+      "name": "G111 lineage native closure",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "g111_native_stable_phase_rehydration_20260727",
+      "name": "G111 native stable AdamW phase rehydration",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Helper-only sublane under lane_g111_fresh_batch16_v9_training_binding_20260727; rehydrate native O1-O6 at topology-stable AdamW coordinates and fail closed on Muon/film-polar incompatibility; no trainer edits or launches."
     }
   ],
   "level_rules": {
@@ -89306,5 +94150,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-26T07:56:42Z"
+  "updated_at": "2026-07-27T20:49:50Z"
 }

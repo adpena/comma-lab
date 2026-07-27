@@ -1,0 +1,70 @@
+{
+  "blockers": [
+    "PRIMARY_SPEC_EXECUTION_ALLOWED_FALSE",
+    "FULL_PRECISION_SHA_BOUND_TARGET_RECEIPT_MISSING",
+    "LIVE_V8_V9_OWNER_RECEIPTS_MISSING",
+    "N64_DETERMINISTIC_CUSTODY_SMOKE_MISSING",
+    "N600_SAME_ARTIFACT_ARCHIVE_CLOSURE_MISSING",
+    "PER_STRATUM_RECEIVER_RATE_CUSTODY_MISSING",
+    "FRESH_V3_FAMILY_POSE_IN_OBJECTIVE_RUNG_ZERO_MISSING",
+    "FOUR_RUNG_CELLS_THEN_POSE_MEASUREMENT_LADDER_MISSING",
+    "POSE_CONSUMING_INTEGER_UINT8_RECEIVER_NOT_IMPLEMENTED",
+    "DDM_OPTIMIZER_AND_STAGE_CONTINUATION_RUNNER_NOT_IMPLEMENTED",
+    "MONOLITHIC_DEFLATE_UNIQUE_HOME_RATE_ATTRIBUTION_UNSUPPORTED",
+    "CANONICAL_TYPED_COMPILER_INTEGRATION_MISSING",
+    "GOVERNED_LAUNCHER_AND_MEMORY_PREFLIGHT_ADAPTER_NOT_IMPLEMENTED",
+    "CANONICAL_RESUME_REGISTRY_AND_CHECKPOINT_CADENCE_NOT_IMPLEMENTED",
+    "OPERATIONAL_CLEANUP_COLD_STORE_HOOK_NOT_IMPLEMENTED",
+    "CONTEST_CPU_AND_CUDA_REPLAYS_MISSING",
+    "WITNESS_MEMORY_PREFLIGHT_REFUSE",
+    "SYSTEM_MEMORY_GOVERNOR_REFUSE",
+    "SEPARATE_SHA_BOUND_OPERATOR_GO_MISSING"
+  ],
+  "consumer_argv": [
+    "/usr/bin/env",
+    "python3",
+    "tools/run_direct_description_minimizer.py",
+    "--owner-manifest",
+    ".omx/research/direct_description_minimizer_owner_bundle_603_20260721T225631Z.json",
+    "--mode",
+    "preflight",
+    "--execution-allowed",
+    "false"
+  ],
+  "dsl_compile_hash": "b52deb678fd63fc916fa3156520741f81056f0e292dd67b0bd828ccf9c0d932d",
+  "execution_allowed": false,
+  "full_precision_caps": null,
+  "governed_launcher": "tools/launch_witness_run.py",
+  "governor_outcome": "REFUSE",
+  "launch_ready": false,
+  "memory_preflight": "tools/witness_memory_preflight.py",
+  "memory_preflight_outcome": "REFUSE",
+  "research_only": true,
+  "schema": "direct_description_launch_ticket.v1",
+  "spawn_permitted": false,
+  "status": "DRAFT_DO_NOT_FIRE",
+  "storage_preflight": {
+    "cleanup_policy": "certify_or_block; success_only_scratch_delete; bulk_cold_store_first",
+    "evidence_root": "/Volumes/VertigoDataTier/pact/evidence/ddm_builder_20260721",
+    "expected_bulk_bytes": 2147483648,
+    "outcome": "ADMIT",
+    "reserve_bytes": 10737418240,
+    "schema": "direct_description_storage_preflight.v1",
+    "selected_tier": "/Volumes/VertigoDataTier/pact",
+    "waterfall": [
+      {
+        "admissible": true,
+        "exists": true,
+        "free_bytes": 659536871424,
+        "required_bytes_including_reserve": 12884901888,
+        "tier": "/Volumes/VertigoDataTier/pact"
+      },
+      {
+        "admissible": false,
+        "exists": false,
+        "tier": "/Volumes/APDataStore/pact"
+      }
+    ]
+  },
+  "typed_config_hash": "7ce188c4a9995986112b8886451ec5593c9c0086e7363d989d62db9a3f9725df"
+}
