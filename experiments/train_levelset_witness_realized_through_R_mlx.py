@@ -12077,40 +12077,6 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                    "pre-FEED-fm sidecar (no RNG state); fresh-seeded RNGs (back-compat)")}),
               flush=True)
 
-    # A complete fresh-producer ancestry must terminate in a PHYSICAL full-state
-    # node before the first optimizer step.  The prior logical chain began at
-    # the first periodic/stage checkpoint, which let an arbitrary trained state
-    # masquerade as a descendant of the cold root.  Persist the initialized
-    # model + EMA + optimizer + RNG/controllers as the unique zero-parent node.
-    if bool(getattr(args, "fresh_producer", False)) and resume_cfg is None:
-        # MLX lazily initializes AdamW moments on the first update.  Initialize
-        # them explicitly to their deterministic zero state so the cold-root
-        # checkpoint is itself complete and resumable without taking a training
-        # step or mutating model parameters.
-        opt.init(model.trainable_parameters())
-        mx.eval(opt.state)
-        _cold_root_checkpoint = _do_checkpoint(
-            0,
-            stage_tag="stageColdRoot",
-            causal_boundary_kind="cold_root",
-            causal_stage="stageColdRoot",
-        )
-        print(
-            json.dumps(
-                {
-                    "stage": "fresh_producer_physical_cold_root",
-                    "checkpoint": _cold_root_checkpoint,
-                    "parent_checkpoint_id_sha256": _FRESH_LINEAGE_ROOT_PARENT,
-                    "note": (
-                        "complete initialized full state preserved before the "
-                        "first optimizer step"
-                    ),
-                },
-                sort_keys=True,
-            ),
-            flush=True,
-        )
-
     # ---- (#304 item 4) PER-TERM LOSS TELEMETRY. A NO-GRAD RECOMPUTE of total_loss_fn with
     # ``terms_out`` on the logged chunk's pairs -- it reads model/gates/caches and mutates NOTHING
     # (no opt/ema/RNG/recent_losses touch; the loss math has no RNG), so the training trajectory is
@@ -12781,6 +12747,42 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _resume_registry.register("birth_completion", "__bc_", _FnResumable(
         write=lambda _p: _bc_write(_birth_completion),
         restore=lambda _p, cfg: _bc_restore(_birth_completion, cfg)))
+
+    # A complete fresh-producer ancestry must terminate in a PHYSICAL full-state
+    # node before the first optimizer step.  This checkpoint belongs HERE, after
+    # every loop-state value captured by _do_checkpoint has been initialized and
+    # after the late write-side resume-registry fold above.  Placing it earlier
+    # made recent_losses an unbound closure variable and, even after a superficial
+    # empty-list fix, would have omitted RNG/closed-loop/tau/event/birth state from
+    # the purportedly complete cold root.
+    if bool(getattr(args, "fresh_producer", False)) and resume_cfg is None:
+        # MLX lazily initializes AdamW moments on the first update.  Initialize
+        # them explicitly to their deterministic zero state so the cold-root
+        # checkpoint is itself complete and resumable without taking a training
+        # step or mutating model parameters.
+        opt.init(model.trainable_parameters())
+        mx.eval(opt.state)
+        _cold_root_checkpoint = _do_checkpoint(
+            0,
+            stage_tag="stageColdRoot",
+            causal_boundary_kind="cold_root",
+            causal_stage="stageColdRoot",
+        )
+        print(
+            json.dumps(
+                {
+                    "stage": "fresh_producer_physical_cold_root",
+                    "checkpoint": _cold_root_checkpoint,
+                    "parent_checkpoint_id_sha256": _FRESH_LINEAGE_ROOT_PARENT,
+                    "note": (
+                        "complete initialized full state preserved before the "
+                        "first optimizer step"
+                    ),
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
 
     # CURRICULUM stage-transition spike-guard re-treat tracker (operator 2026-06-26 "different
     # stages need different treatment ... transitions must re-treat"). Init to the START epoch's
