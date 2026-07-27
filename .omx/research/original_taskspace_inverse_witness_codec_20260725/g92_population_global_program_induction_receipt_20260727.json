@@ -1,0 +1,113 @@
+{
+  "archive_emitted": false,
+  "archive_priced": false,
+  "authority": "partial_exact_replay_atlas_structural_research_only",
+  "candidate_claim": false,
+  "crux": {
+    "branch_order_optimality_claim": false,
+    "current_base_selector": "BOTH",
+    "exact_replay_atlas_complete": false,
+    "g94_sequential_receiver_type_implemented": true,
+    "new_intervention_selector": "Y1",
+    "screening_completeness_claim": false,
+    "screening_simulation_valid": false,
+    "unreplayed_rows_resolved_as_negative": false
+  },
+  "effective_frontier": 0.172,
+  "files": {
+    "compiler": {
+      "bytes": 33618,
+      "path": "src/tac/witness_dsl/taskspace_g92_population_global_program_induction_v1.py",
+      "sha256": "af8642c9ecc86312b9fdff3d788c3f31523a94fed99503370d580afb615535a2"
+    },
+    "compiler_tests": {
+      "bytes": 8338,
+      "path": "src/tac/witness_dsl/tests/test_taskspace_g92_population_global_program_induction_v1.py",
+      "sha256": "064c3be7e070e635049c022c4584ec24628bd95c00eabf9ccfab8e41c547e3b2"
+    },
+    "g94_integration_target": {
+      "bytes": 41479,
+      "path": "src/tac/witness_dsl/taskspace_g94_sequential_typed_actuator_product_v1.py",
+      "sha256": "e3d6db514897404af4d9c95768183dbeb81a8e7da223d051adc574fa27925e1e"
+    },
+    "materializer": {
+      "bytes": 13118,
+      "path": "tools/materialize_taskspace_g92_population_program.py",
+      "sha256": "8d4ec122e4c2fa0e5e4b2948475e79aff2be31710ef85916ed5cff80bb89d555"
+    },
+    "materializer_tests": {
+      "bytes": 4505,
+      "path": "tools/tests/test_materialize_taskspace_g92_population_program.py",
+      "sha256": "b2362ce85a12a19c6d1d985a737755ebb3a3f35aec8f5381ac554592caaf6a19"
+    },
+    "spec": {
+      "bytes": 4052,
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g92_population_global_program_induction_20260727.md",
+      "sha256": "e4215e21f548b07f8972d57ed1858bdf62badbd7d5adef52d77c778b48b0ae58"
+    }
+  },
+  "g83_ready": false,
+  "g90_authority": {
+    "discarded_v1_rows": "UNRESOLVED_NOT_NEGATIVE",
+    "exact_replayed_rows": "PARTIAL_ATLAS_ONLY",
+    "pareto_filter": "PROVENANCE_ONLY_NOT_ADMISSION_OR_COMPLETENESS",
+    "required_source": "G90_V2_EXACT_ALL_COARSE_ATLAS"
+  },
+  "implemented": {
+    "collision_free_partial_atlas_branches": true,
+    "exact_actuator_basis_proposal_fingerprint_and_operand_sha_custody": true,
+    "g51_receipt_policy_parsed": false,
+    "g51_receipt_treated_as_opaque_exact_provenance_only": true,
+    "immutable_ssd_plan_and_blocker_materializer": true,
+    "nonpareto_exact_rows_retained_when_present": true,
+    "partial_branch_state_count_excludes_duplicate_shared_base": true,
+    "population_shared_role_direction_amplitude_families": true,
+    "sealed_g90_aggregate_stage_batch_reopen": true,
+    "separate_seg_pose_rate_coordinates": true
+  },
+  "input_custody": {
+    "g51_opaque_receipt": {
+      "bytes": 3593,
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g51_full_n600_quotient_harvest_receipt_20260727.json",
+      "sha256": "cc9fc0ecf6d00efc9431d32cb7b6fab4658573ec385cf7bf82b826b79d0966fa"
+    },
+    "g85_current_base_archive": {
+      "bytes": 129392,
+      "path": "/Volumes/VertigoDataTier/pact/g85_pvsa_public_receiver_20260727_r1/archive.zip",
+      "sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd"
+    },
+    "g87_aggregate": {
+      "bytes": 5272,
+      "path": "/Volumes/VertigoDataTier/pact/taskspace_g87_g78_to_g72_complete_proposals_n600_20260727_r2/aggregate_receipt.json",
+      "sha256": "27ffb9b9ddd6068828f36b5a572046aa92d22f1ffe70c0d2d2af696023f4e951"
+    },
+    "semantic_p": {
+      "bytes": 133941,
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/fresh_v15_semantic_base_n600_20260726/ddm_v15_solved_templates_n600.not_a_candidate.zip.receipt-bytes",
+      "sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df"
+    }
+  },
+  "lane_id": "lane_g92_population_global_g89_program_induction_20260727",
+  "next": "Complete G90 V2 exact-all-coarse atlas, lower its exact typed rows through G92 into G94 exact states, bind G88 fits to each G94 conditioning_state_sha256, then obtain same-archive full-n600 public upstream rows.",
+  "no_fake": {
+    "arbitrary_operand_id_order_claimed_optimal": false,
+    "exact_n600_score_claimed": false,
+    "g51_filename_used_to_infer_teacher_policy": false,
+    "isolated_g90_deltas_used_as_cumulative_state_scores": false,
+    "pareto_only_atlas_claimed_comprehensive": false,
+    "public_receiver_closure_claimed": false
+  },
+  "pointer_moved": false,
+  "receipt_sha256": "f6946cc86773239838ab62c040dca29ef444c24714760d1a48cb9dbe6a49af8b",
+  "required_next_implementation": "G90_V2_EXACT_ALL_COARSE_ATLAS_PLUS_G92_TO_G94_LOWERING_PLUS_SAME_STATE_FULL_N600_ROWS_OWED",
+  "schema": "tac.taskspace_g92_population_global_program_induction_receipt.v1",
+  "score_claim": false,
+  "status": "IMPLEMENTED_L1_PARTIAL_ATLAS_BLOCKED_BEFORE_SAME_STATE_N600_LOWERING",
+  "validation": {
+    "combined_g92_g94_focused_pytest": "23 passed in 45.48s",
+    "g92_focused_pytest": "13 passed in 0.79s",
+    "py_compile": "PASS",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS"
+  }
+}
