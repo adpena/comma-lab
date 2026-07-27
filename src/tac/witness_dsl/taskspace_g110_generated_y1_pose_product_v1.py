@@ -536,6 +536,7 @@ class PostG105PoseRefitV1:
     xi_eff: np.ndarray = field(repr=False)
     pitch: float
     q_levels: int
+    selected_xip2_coder: str
     checkpoint_sha256: str
     run_receipt_sha256: str
     xi_eff_sha256: str
@@ -551,12 +552,22 @@ def _npz_scalar(value: np.ndarray, *, name: str) -> object:
 def _verify_post_g105_refit(
     *,
     checkpoint: Path,
+    expected_checkpoint_sha256: str,
     run_receipt: Path,
+    expected_run_receipt_sha256: str,
     base_custody: G110G112CompileCustodyV1,
     initializer: G112PoseInitializerV1,
     semantic_packet: bytes,
     final_y1_binding: str,
 ) -> PostG105PoseRefitV1:
+    expected_checkpoint_sha = _require_sha256(
+        expected_checkpoint_sha256,
+        name="expected post-G105 pose refit checkpoint",
+    )
+    expected_run_sha = _require_sha256(
+        expected_run_receipt_sha256,
+        name="expected post-G105 pose refit run receipt",
+    )
     checkpoint_path = _regular_file(
         checkpoint,
         name="post-G105 pose refit checkpoint",
@@ -565,6 +576,15 @@ def _verify_post_g105_refit(
         run_receipt,
         name="post-G105 pose refit run receipt",
     )
+    observed_checkpoint_sha = sha256_file(checkpoint_path)
+    observed_run_sha = sha256_file(run_path)
+    if (
+        observed_checkpoint_sha != expected_checkpoint_sha
+        or observed_run_sha != expected_run_sha
+    ):
+        raise G110GeneratedY1PoseError(
+            "post-G105 refit differs from its externally expected SHA-256"
+        )
     try:
         run = json.loads(run_path.read_text("utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -595,6 +615,8 @@ def _verify_post_g105_refit(
         "target_projection_sha256",
         "target_capsule_receipt_sha256",
         "pose_targets_sha256",
+        "selected_xip2_coder",
+        "g110_selected_xip2_coder_abi_closed",
         "exact_public_receiver_in_loop",
         "resumable_from_disk",
         "stage_checkpoints_preserved",
@@ -668,6 +690,8 @@ def _verify_post_g105_refit(
         or run["target_capsule_receipt_sha256"]
         != base_custody.target_capsule_receipt_sha256
         or run["pose_targets_sha256"] != base_custody.pose_targets_sha256
+        or run["selected_xip2_coder"] not in {"none", "delta_ar"}
+        or run["g110_selected_xip2_coder_abi_closed"] is not True
         or run["exact_public_receiver_in_loop"] is not True
         or run["resumable_from_disk"] is not True
         or run["stage_checkpoints_preserved"] is not True
@@ -720,6 +744,7 @@ def _verify_post_g105_refit(
                 "exact_public_receiver_in_loop",
                 "pitch",
                 "q_levels",
+                "selected_xip2_coder",
                 "xi_eff",
             }
             if set(archive.files) != expected_members:
@@ -783,6 +808,7 @@ def _verify_post_g105_refit(
         "target_capsule_receipt_sha256": base_custody.target_capsule_receipt_sha256,
         "pose_targets_sha256": base_custody.pose_targets_sha256,
         "exact_public_receiver_in_loop": 1,
+        "selected_xip2_coder": run["selected_xip2_coder"],
     }
     for name, expected in scalar_expectations.items():
         if _npz_scalar(arrays[name], name=name) != expected:
@@ -795,8 +821,9 @@ def _verify_post_g105_refit(
         xi_eff=xi,
         pitch=pitch,
         q_levels=q_levels,
-        checkpoint_sha256=sha256_file(checkpoint_path),
-        run_receipt_sha256=sha256_file(run_path),
+        selected_xip2_coder=run["selected_xip2_coder"],
+        checkpoint_sha256=observed_checkpoint_sha,
+        run_receipt_sha256=observed_run_sha,
         xi_eff_sha256=_xi_digest(xi),
     )
 
@@ -1143,6 +1170,7 @@ class CompiledG110GeneratedY1PoseV1:
     refit_source_semantic_packet_sha256: str
     final_y1_binding_sha256: str
     selected_y1_wire_codec: Y1WireCodecV1
+    selected_xip2_coder: str
     selected_outer_zip_method: G110OuterZipMethodV1
     complete_archive_wire_candidates: tuple[
         G110CompleteArchiveWireCandidateV1,
@@ -1168,7 +1196,9 @@ def compile_g110_generated_y1_pose_v1(
     g112_partition_receipt: Path,
     expected_g112_partition_receipt_sha256: str,
     post_g105_refit_checkpoint: Path,
+    expected_post_g105_refit_checkpoint_sha256: str,
     post_g105_refit_run_receipt: Path,
+    expected_post_g105_refit_run_receipt_sha256: str,
 ) -> CompiledG110GeneratedY1PoseV1:
     """Compile only from one recursive G112 partition plus the post-G105 refit."""
 
@@ -1205,14 +1235,24 @@ def compile_g110_generated_y1_pose_v1(
         raise AssertionError("final-Y1 binding helper disagrees with generic ABI")
     refit = _verify_post_g105_refit(
         checkpoint=post_g105_refit_checkpoint,
+        expected_checkpoint_sha256=(
+            expected_post_g105_refit_checkpoint_sha256
+        ),
         run_receipt=post_g105_refit_run_receipt,
+        expected_run_receipt_sha256=(
+            expected_post_g105_refit_run_receipt_sha256
+        ),
         base_custody=base_custody,
         initializer=initializer,
         semantic_packet=semantic_packet,
         final_y1_binding=binding,
     )
     q, scales = quantize_xi(refit.xi_eff, q_levels=refit.q_levels)
-    xip2 = serialize_xi_payload(q, scales, coder="delta_ar")
+    xip2 = serialize_xi_payload(
+        q,
+        scales,
+        coder=refit.selected_xip2_coder,
+    )
     semantic_program = parse_v9_packet(semantic_packet)
     packet, archive, selected_wire, wire_candidates = (
         _select_complete_archive_y1_wire(
@@ -1243,6 +1283,7 @@ def compile_g110_generated_y1_pose_v1(
         refit_source_semantic_packet_sha256=_sha256(semantic_packet),
         final_y1_binding_sha256=parsed.final_y1_binding_sha256,
         selected_y1_wire_codec=selected_wire.y1_wire_codec,
+        selected_xip2_coder=refit.selected_xip2_coder,
         selected_outer_zip_method=selected_wire.outer_zip_method,
         complete_archive_wire_candidates=wire_candidates,
         xip2_bytes=len(xip2),

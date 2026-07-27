@@ -519,6 +519,8 @@ def test_official_compile_accepts_only_recursive_g112_partition_receipt() -> Non
     assert "expected_g112_pose_initializer_sha256" not in parameters
     assert "fresh_g111_checkpoint" not in parameters
     assert "semantic_packet" not in parameters
+    assert "expected_post_g105_refit_checkpoint_sha256" in parameters
+    assert "expected_post_g105_refit_run_receipt_sha256" in parameters
 
 
 def test_g110_requires_complete_recursive_g112_source_chain(
@@ -552,8 +554,10 @@ def test_g110_requires_complete_recursive_g112_source_chain(
         )
 
 
+@pytest.mark.parametrize("selected_xip2_coder", ["none", "delta_ar"])
 def test_post_g105_refit_reopens_resumable_exact_public_stage(
     tmp_path: Path,
+    selected_xip2_coder: str,
 ) -> None:
     semantic = b"semantic"
     semantic_sha = hashlib.sha256(semantic).hexdigest()
@@ -614,6 +618,7 @@ def test_post_g105_refit_reopens_resumable_exact_public_stage(
         exact_public_receiver_in_loop=np.asarray(1, dtype=np.int8),
         pitch=np.asarray(0.0, dtype=np.float64),
         q_levels=np.asarray(4096, dtype=np.int64),
+        selected_xip2_coder=np.asarray(selected_xip2_coder),
         xi_eff=np.ascontiguousarray(xi_eff, dtype=np.float64),
     )
     checkpoint_binding = {
@@ -653,6 +658,8 @@ def test_post_g105_refit_reopens_resumable_exact_public_stage(
         "target_projection_sha256": target_projection_sha,
         "target_capsule_receipt_sha256": target_sha,
         "pose_targets_sha256": pose_sha,
+        "selected_xip2_coder": selected_xip2_coder,
+        "g110_selected_xip2_coder_abi_closed": True,
         "exact_public_receiver_in_loop": True,
         "resumable_from_disk": True,
         "stage_checkpoints_preserved": True,
@@ -715,14 +722,133 @@ def test_post_g105_refit_reopens_resumable_exact_public_stage(
 
     reopened = pose_product._verify_post_g105_refit(
         checkpoint=checkpoint,
+        expected_checkpoint_sha256=checkpoint_binding["sha256"],
         run_receipt=run_path,
+        expected_run_receipt_sha256=hashlib.sha256(
+            run_path.read_bytes()
+        ).hexdigest(),
         base_custody=base,
         initializer=initializer,
         semantic_packet=semantic,
         final_y1_binding=final_y1_binding,
     )
     assert np.array_equal(reopened.xi_eff, xi_eff)
+    assert reopened.selected_xip2_coder == selected_xip2_coder
     assert reopened.checkpoint_sha256 == checkpoint_binding["sha256"]
     assert reopened.run_receipt_sha256 == hashlib.sha256(
         run_path.read_bytes()
     ).hexdigest()
+    with pytest.raises(
+        pose_product.G110GeneratedY1PoseError,
+        match="externally expected SHA-256",
+    ):
+        pose_product._verify_post_g105_refit(
+            checkpoint=checkpoint,
+            expected_checkpoint_sha256="0" * 64,
+            run_receipt=run_path,
+            expected_run_receipt_sha256=hashlib.sha256(
+                run_path.read_bytes()
+            ).hexdigest(),
+            base_custody=base,
+            initializer=initializer,
+            semantic_packet=semantic,
+            final_y1_binding=final_y1_binding,
+        )
+
+
+@pytest.mark.parametrize(
+    ("selected_xip2_coder", "expected_coder_id"),
+    [("none", 0), ("delta_ar", 1)],
+)
+def test_compile_propagates_selected_xip2_coder_into_public_archive(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    selected_xip2_coder: str,
+    expected_coder_id: int,
+) -> None:
+    semantic_packet = _g105_packet()
+    semantic_sha = hashlib.sha256(semantic_packet).hexdigest()
+    xi_eff = _xi()
+    initializer = SimpleNamespace(
+        semantic_packet_sha256=semantic_sha,
+        xi_init=xi_eff,
+        pitch=0.0,
+    )
+    custody = SimpleNamespace(
+        semantic_packet_sha256=semantic_sha,
+        semantic_child=SimpleNamespace(semantic_packet=semantic_packet),
+        pose_initializer=initializer,
+        partition_receipt_sha256="1" * 64,
+        semantic_child_sha256="2" * 64,
+        pose_initializer_sha256="3" * 64,
+        source_checkpoint_id_sha256="4" * 64,
+        source_root_sha256="5" * 64,
+    )
+    population_digest = hashlib.sha256(b"g110 compiler seam").digest()
+    initial_binding = pose_product._final_y1_binding_from_population(
+        semantic_packet,
+        population_digest,
+    )
+
+    monkeypatch.setattr(
+        pose_product,
+        "G110G112CompileCustodyV1",
+        SimpleNamespace(
+            from_physical_partition_receipt=lambda **_kwargs: custody
+        ),
+    )
+    monkeypatch.setattr(
+        pose_product,
+        "_population_digest",
+        lambda _provider: population_digest,
+    )
+    monkeypatch.setattr(
+        pose_product,
+        "final_y1_binding_sha256",
+        lambda _provider: initial_binding,
+    )
+
+    observed_custody: dict[str, object] = {}
+
+    def _open_refit(**kwargs: object) -> pose_product.PostG105PoseRefitV1:
+        observed_custody.update(kwargs)
+        return pose_product.PostG105PoseRefitV1(
+            xi_eff=xi_eff,
+            pitch=0.0,
+            q_levels=4096,
+            selected_xip2_coder=selected_xip2_coder,
+            checkpoint_sha256="6" * 64,
+            run_receipt_sha256="7" * 64,
+            xi_eff_sha256=pose_product._xi_digest(xi_eff),
+        )
+
+    monkeypatch.setattr(pose_product, "_verify_post_g105_refit", _open_refit)
+    result = pose_product.compile_g110_generated_y1_pose_v1(
+        target_capsule_receipt=tmp_path / "g109.json",
+        expected_target_capsule_receipt_sha256="8" * 64,
+        g112_partition_receipt=tmp_path / "g112.json",
+        expected_g112_partition_receipt_sha256="9" * 64,
+        post_g105_refit_checkpoint=tmp_path / "g119.npz",
+        expected_post_g105_refit_checkpoint_sha256="a" * 64,
+        post_g105_refit_run_receipt=tmp_path / "g119.json",
+        expected_post_g105_refit_run_receipt_sha256="b" * 64,
+    )
+
+    assert observed_custody["expected_checkpoint_sha256"] == "a" * 64
+    assert observed_custody["expected_run_receipt_sha256"] == "b" * 64
+    assert result.selected_xip2_coder == selected_xip2_coder
+    reopened_packet = pose_product.parse_g110_generated_y1_pose_archive(
+        result.archive
+    )
+    assert reopened_packet == result.packet
+    parsed = pose_product.parse_g110_generated_y1_pose_v1(reopened_packet)
+    assert parsed.xip2_payload[4] == expected_coder_id
+    expected_q, expected_scales = quantize_xi(xi_eff, q_levels=4096)
+    assert np.array_equal(parsed.q, expected_q)
+    assert np.array_equal(parsed.scales, expected_scales)
+    public = _module(
+        RUNTIME_ROOT / "frame0_variants" / "generated_y1_pose_xip2_v1.py",
+        f"_g110_public_selected_xip2_{selected_xip2_coder}",
+    )
+    assert public.accepts_packet(reopened_packet) is True
+    public.parse_packet(reopened_packet)
