@@ -34,6 +34,8 @@ def test_production_signature_is_physical_and_has_no_cross_stage_reducer() -> No
     assert "cross_stage" not in source
     assert "BEST" not in source
     assert "pareto" not in source.lower()
+    assert 'durable_progress / "g117_engine_progress"' in source
+    assert 'engine_root / "progress"' not in source
 
 
 def _sha(label: str) -> str:

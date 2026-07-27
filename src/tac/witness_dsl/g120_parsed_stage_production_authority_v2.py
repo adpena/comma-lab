@@ -1798,8 +1798,8 @@ def run_g120_parsed_stage_production_authority_v2(
                     name="private G117 out directory",
                 )
                 engine_progress = _durable_dir(
-                    engine_root / "progress",
-                    name="private G117 progress directory",
+                    durable_progress / "g117_engine_progress",
+                    name="durable G117 progress directory",
                 )
                 engine = compile_select_parsed_g105_stage_v1(
                     config=authority.config,
