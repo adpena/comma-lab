@@ -2388,16 +2388,19 @@ def _materialize_or_open_g112_stage(
     stage: Mapping[str, object],
 ) -> dict[str, object]:
     from tac.witness_control.taskspace_g112_exact_checkpoint_partition_v1 import (
+        RECEIPT_NAME,
         materialize_g112_checkpoint_partition,
         open_g112_partition_receipt,
     )
 
     chain = stage["chain"]
     pair = chain.current.pair
-    root = (
-        producer / "g121_stage_partitions" / pair.checkpoint_id_sha256
+    partition_root = _durable_directory(
+        producer / "g121_stage_partitions",
+        name="G121 stage partition root",
     )
-    receipt_path = root / "g112_partition_receipt.json"
+    root = partition_root / pair.checkpoint_id_sha256
+    receipt_path = root / RECEIPT_NAME
     if root.exists():
         if root.is_symlink() or not root.is_dir() or not receipt_path.is_file():
             raise G121StageHarvestError(

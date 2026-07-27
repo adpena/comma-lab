@@ -14,6 +14,9 @@ import numpy as np
 import pytest
 
 from tac.witness_control import fresh_producer_lineage_v1 as lineage
+from tac.witness_control import (
+    taskspace_g112_exact_checkpoint_partition_v1 as g112,
+)
 from tac.witness_control import taskspace_g121_resumable_stage_harvest_v1 as g121
 from tac.witness_control.tests import (
     test_fresh_producer_lineage_v1 as lineage_fixtures,
@@ -28,6 +31,84 @@ def _binding(path: Path, payload: bytes) -> dict[str, object]:
         "bytes": len(payload),
         "sha256": hashlib.sha256(payload).hexdigest(),
     }
+
+
+def test_g112_stage_partition_creates_parent_and_reopens_canonical_receipt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    producer = tmp_path.resolve() / "producer"
+    producer.mkdir()
+    checkpoint_id = "a" * 64
+    deploy = _binding(producer / "source" / "deploy.npz", b"deploy")
+    resume = _binding(producer / "source" / "resume.npz", b"resume")
+    lineage_receipt = _binding(
+        producer / "source" / "lineage.json",
+        b"lineage",
+    )
+    pair = SimpleNamespace(
+        checkpoint_id_sha256=checkpoint_id,
+        deploy=SimpleNamespace(**deploy),
+        resume=SimpleNamespace(**resume),
+        current_launch_dsl_compile_hash="b" * 64,
+    )
+    chain = SimpleNamespace(
+        current=SimpleNamespace(
+            pair=pair,
+            receipt_path=Path(str(lineage_receipt["path"])),
+            receipt_sha256=str(lineage_receipt["sha256"]),
+        ),
+    )
+    stage = {"chain": chain}
+    calls = 0
+
+    def materialize(**kwargs: object) -> SimpleNamespace:
+        nonlocal calls
+        calls += 1
+        output_root = kwargs["output_root"]
+        assert isinstance(output_root, Path)
+        assert output_root.parent.is_dir()
+        output_root.mkdir()
+        receipt_path = output_root / g112.RECEIPT_NAME
+        receipt_path.write_bytes(b"g112")
+        return SimpleNamespace(
+            receipt_path=receipt_path.resolve(),
+            receipt_sha256=hashlib.sha256(b"g112").hexdigest(),
+        )
+
+    def reopen(
+        path: Path,
+        *,
+        expected_sha256: str,
+    ) -> SimpleNamespace:
+        assert path.name == g112.RECEIPT_NAME
+        payload = path.read_bytes()
+        assert hashlib.sha256(payload).hexdigest() == expected_sha256
+        return SimpleNamespace(
+            receipt_path=path.resolve(),
+            receipt_bytes=len(payload),
+            receipt_sha256=expected_sha256,
+        )
+
+    monkeypatch.setattr(
+        g112,
+        "materialize_g112_checkpoint_partition",
+        materialize,
+    )
+    monkeypatch.setattr(g112, "open_g112_partition_receipt", reopen)
+
+    first = g121._materialize_or_open_g112_stage(
+        producer=producer,
+        stage=stage,
+    )
+    second = g121._materialize_or_open_g112_stage(
+        producer=producer,
+        stage=stage,
+    )
+
+    assert calls == 1
+    assert first == second
+    assert Path(str(first["path"])).name == g112.RECEIPT_NAME
 
 
 def _target(
