@@ -1,0 +1,151 @@
+{
+  "schema": "tac.fastest_existing_score_path_blocker.v1",
+  "written_at_utc": "2026-07-27T20:55:00Z",
+  "lane_id": "lane_fastest_existing_score_path_20260727",
+  "verdict": "NO_EXISTING_FRESH_ORIGINAL_RECEIVER_CLOSED_FRONTIER_COMPETITIVE_ARCHIVE",
+  "verdict_scope": "existing G20/G25/G29/G41/G42/G45/G47/G49/G50/G54/G55/G57/G66/G108/G110/G111 artifacts and their exact recorded n600 rows or fail-closed production receipts",
+  "effective_frontier": {
+    "score": 0.172,
+    "axis": "official_leaderboard",
+    "custody": "external target only",
+    "pointer_sha256": "a90f3de45792cc9dab1b505013bff4a675d22ba2e1956c6caaf5bebfb40902dc",
+    "pointer_refreshed_at_utc": "2026-07-27T18:03:21.625472+00:00"
+  },
+  "score_formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+  "audited_paths": [
+    {
+      "id": "G20_G25_G29_EP725_SAME_STATE",
+      "representation": "ep725 LVLS1/LVPG2 exact same-quantized-state recode",
+      "fresh_original_payload": true,
+      "best_existing_archive_bytes": 80238,
+      "best_existing_archive_sha256": "68351f57781d8fe60c05ab59fc250e48d6bb03e7cdf95b3d00987328d08d2a98",
+      "measured_same_state_d_seg": 0.0035127170849591494,
+      "measured_same_state_d_pose": 127.35955810546875,
+      "zero_rate_score_lower_bound": 36.03874263394379,
+      "score_at_best_existing_archive_bytes": 36.092169824624406,
+      "frontier_feasible": false,
+      "public_decoder_work_value": "NO_DIVERSION",
+      "reason": "G25 changes only exact lossless spelling. G29 decoder closure cannot alter the measured state or its score lower bound."
+    },
+    {
+      "id": "G41_G42_G45_EP725_LABEL_LOCAL_G",
+      "representation": "ep725 predictor plus label-local semantic G pages",
+      "fresh_original_payload": true,
+      "receiver_mechanics_present": true,
+      "full_n600_changed_state_present": false,
+      "counted_outer_archive_present": false,
+      "coupled_pose_preimage_present": false,
+      "frontier_feasible": null,
+      "reason": "The receiver seam is real, but no fresh n600 G-page population, changed-state scorer row, or public counted archive exists. Completing it is a new producer/solve, not a small decoder closure."
+    },
+    {
+      "id": "C1_MS1_FULL_LATTICE",
+      "representation": "exact selected two-plane scorer-state raster",
+      "fresh_original_payload": false,
+      "historical_payload_reuse_forbidden": true,
+      "archive_bytes": 409526925,
+      "archive_sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42",
+      "batch16_d_seg": 0.00015196057211142033,
+      "batch16_d_pose": 0.0001018434704747051,
+      "zero_rate_score_lower_bound": 0.04710898099989964,
+      "score_at_existing_archive_bytes": 272.7342785368419,
+      "strict_archive_ceiling_for_sub_0_172_if_distortion_preserved": 187563,
+      "required_compression_ratio_from_existing_archive": 2183.4012645085647,
+      "frontier_feasible_without_new_factorized_producer": false,
+      "reason": "The distortion existence proof is excellent, but the stored raster is historical and more than three orders of magnitude over the conditional rate ceiling. A decoder wrapper or lossless recode cannot close this gap."
+    },
+    {
+      "id": "MS2R_TOLERANCE_CAPPED_LATTICE",
+      "representation": "distortion-capped selected lattice state",
+      "fresh_original_payload": true,
+      "archive_bytes": 291205400,
+      "zero_rate_score_lower_bound": 0.5238375028596528,
+      "frontier_feasible": false,
+      "reason": "The exact selected state is outside the 0.172 sublevel even at zero bytes; recoding or public closure cannot make it competitive."
+    },
+    {
+      "id": "G51_G55_G57_DIRECT_TASK_LAYERED",
+      "representation": "fresh direct scorer-plane temporal Y1 plus centered-q2 Y0-given-Y1 streams",
+      "fresh_original_payload": true,
+      "receiver_closed_full_n600": true,
+      "archive_bytes": 182220,
+      "archive_sha256": "736d9c2e0313a51f79dddbdf2e899d69e8b8bcf5555c5801869464064cf27f98",
+      "d_seg": 0.17946555,
+      "d_pose": 45.10546494,
+      "zero_rate_score_lower_bound": 39.18460221249107,
+      "score": 39.30593503092899,
+      "frontier_feasible": false,
+      "reason": "This exact formulation has already completed public double decode and upstream batch-16 n600 evaluation. Re-running G55 would rediscover the settled G57 failure."
+    },
+    {
+      "id": "G49_G108_G110_SELECTED_PREIMAGE_PRODUCT",
+      "representation": "fresh semantic-root Y1 plus conditional selected-preimage Y0 public product",
+      "fresh_original_payload_required": true,
+      "generic_public_runtime_present": true,
+      "real_full_n600_producer_operands_present": false,
+      "archive_zip_present": false,
+      "exact_score_present": false,
+      "frontier_feasible": null,
+      "reason": "The ABI and receiver are implemented, but G110 explicitly lacks a real G112 physical partition, exact parsed-G105 wire-QAT producer, and post-G105 conditional pose refit. This is the live score path, not an existing candidate."
+    }
+  ],
+  "small_decoder_patch_decision": {
+    "implemented": false,
+    "reason": "No isolated decoder patch unlocks a frontier-competitive state. G29 would only score the measured 36.04-distortion-floor ep725 object; G55/G57 public closure already exists; G110 is blocked on absent producer operands rather than decoder code."
+  },
+  "shortest_frontier_relevant_exact_path": [
+    "Finish G111 native-v3 complete-trajectory transaction writer/restore symmetry and pass the governed cold-root/resume gate.",
+    "Launch one fresh n600 batch-16 own-lineage G111 producer on SSD with immutable stage checkpoints and the receipt-bound G121 monitor.",
+    "At the first complete preserved stage, run G112 partition plus G120-v2 exact parsed-G105 public-wire scorer measurement; retain only stages with 100*d_seg below the live target obstruction.",
+    "Run G119 post-G105 conditional pose inverse/refit on retained stages.",
+    "Run G110 whole-archive variant arbitration, public clean-root double decode, and upstream/evaluate.py batch-16 n600 exact evaluation on the selected exact bytes."
+  ],
+  "current_blocker": {
+    "id": "G111_NATIVE_V3_TOTAL_TRAJECTORY_WRITE_RESTORE",
+    "receipt_path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g111_complete_trajectory_state_resume_blocker_20260727.json",
+    "receipt_sha256": "8f391ed64921d69ae9fd23662fd60ccc5a12447e5ae1b0cb11a8bac411e89a25",
+    "owner_boundary": "root owns the trainer/native checkpoint integration; this audit made no trainer or fresh-lineage edits"
+  },
+  "evidence": [
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g28_ep725_xcodec_full_n600_bridge_eval_20260726.json",
+      "sha256": "7930b14740189a5b1e02a6d1406ded975aecbcb8730a9da8c1fa18decd3509d0"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g47_lowdist_selected_state_path_20260726_codex.md",
+      "sha256": "939612280dbc4fee91ac7378608f9170a233e0705a08273692aaa0d59102caf0"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g49_selected_preimage_program_20260726_codex.md",
+      "sha256": "7df4be9e322d2dc6a34ed9ef040eb8741fe23db59b962aff1aa7318215a229f7"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/codex_findings_g50_lossy_selected_preimage_codec_audit_20260726_codex.md",
+      "sha256": "21855ad9518283dd963a9c581eedec5aae22953c1d114af60dfadfb4a1453f0c"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g54_batch16_lowdist_anchor_rate_budget_receipt_20260726.json",
+      "sha256": "943970f69e179d8a673dd4ae636b4fadc1b00aeb8ac0351d5fdc109a12e70ca4"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g57_direct_task_layered_fulln600_public_eval_receipt_20260726.json",
+      "sha256": "884377a9dbc3dadd5517cb555bfb62338bffe876f6b4c179107bf93762c10b7d"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g66_g29_public_auth_eval_recovery_receipt_20260727.json",
+      "sha256": "432a2ead5972d7edb1e258283a77bd9244e4e38926721ed4e28c27e7b1f8177d"
+    },
+    {
+      "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g110_generic_two_layer_public_product_receipt_20260727.json",
+      "sha256": "2fc2e9c0d8e0d460a895f009267d576d4c08a194a6522d24881b3ec88c546675"
+    }
+  ],
+  "authority": {
+    "research_only": true,
+    "score_claim": false,
+    "candidate_claim": false,
+    "evaluation_invoked": false,
+    "pointer_moved": false,
+    "historical_payload_reused": false
+  }
+}
