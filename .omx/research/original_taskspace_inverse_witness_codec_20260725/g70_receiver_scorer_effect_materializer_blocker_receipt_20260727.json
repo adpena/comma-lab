@@ -1,0 +1,135 @@
+{
+  "schema": "tac.taskspace_g70_receiver_scorer_effect_blocker.v1",
+  "lane_id": "lane_g70_canonical_receiver_scorer_effect_materializer_20260727",
+  "implementation_start_head": "0dd5bbf346dd886e1a72d91450cb76774089f30d",
+  "observed_head": "0dd5bbf346dd886e1a72d91450cb76774089f30d",
+  "status": "EXACT_FINITE_EFFECT_EMITTER_IMPLEMENTED_TRANSITION_DERIVATIVE_JOIN_BLOCKED",
+  "finite_effect_emitter": {
+    "implemented": true,
+    "source": {
+      "path": "src/tac/witness_control/taskspace_g70_receiver_scorer_effect_materializer_v1.py",
+      "sha256": "0bc553610dcba7b722645aecb581d1acb4a0fedbae3e79cb00294fe9433dab77"
+    },
+    "accepted_inputs": [
+      "same exact G17TargetForwardObservationV1 object",
+      "baseline G17CandidateForwardObservationV1",
+      "candidate G17CandidateForwardObservationV1",
+      "ordered source_pair_ids 0..599",
+      "different reopenable outer ZIP byte strings"
+    ],
+    "derived_outputs": [
+      "full-n600 additive seg score-term endpoint effects",
+      "full-n600 Aumann-Shapley pose score-term endpoint effects",
+      "reopened same-transition outer-ZIP byte delta",
+      "baseline/candidate receiver and decoded-output identities"
+    ],
+    "caller_effect_arrays_accepted": false,
+    "caller_jvp_arrays_accepted": false,
+    "caller_vjp_arrays_accepted": false,
+    "actionable_costate_input": false
+  },
+  "source_audit": {
+    "g17_forward_observation": {
+      "path": "src/tac/witness_dsl/taskspace_g17_forward_observation.py",
+      "sha256": "46a6261e72e040ef60bbc751e1798814d91aae9033309080f305c4069767828b",
+      "exact_dense_types_exist": true,
+      "production_observation_artifacts_located": 0,
+      "search": "rg -l 'G17CandidateForwardObservationV1\\(' .omx/research/original_taskspace_inverse_witness_codec_20260725 --glob '*.json' --glob '*.md'",
+      "test_constructor_files_located": [
+        "src/tac/witness_control/tests/test_taskspace_g70_receiver_scorer_effect_materializer_v1.py",
+        "src/tac/witness_dsl/tests/test_taskspace_selected_solution_compiler.py"
+      ]
+    },
+    "vjp_implementation": {
+      "library": {
+        "path": "src/tac/optimization/vjp_custody.py",
+        "sha256": "1d863e301258f6a09afc7ee8d4687571f2f8814d3555246de9edd6837e648f52"
+      },
+      "producer": {
+        "path": "tools/produce_vjp_custody.py",
+        "sha256": "489aa7bdf41d37823e938cd07d01f3aebe418b494c243abd555ec61bf4f75890"
+      },
+      "n600_extension": {
+        "path": "tools/extend_vjp_custody_n600.py",
+        "sha256": "4a5a3ac458acfa23d47f14c62aa3a632b988d5393c6bafc5a95d7844aa59f9bc"
+      }
+    },
+    "terminal_vjp_campaign": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_n600_20260720/campaign_receipt.json",
+      "bytes": 32297,
+      "sha256": "11d441acec2640f607e87514e35c9244c9d8dfec617a810b2c9763b2e116d284",
+      "schema": "vjp_custody_n600_extension.v1",
+      "status": "COMPLETE_N600",
+      "final_completed_count": 600,
+      "final_pair_ids_int32_sha256": "41a6d969bdeb3de6103d7426af9337de7357a9d6cfa712fc8004761f915c2f6d",
+      "refused_pair_ids": [],
+      "still_missing_pair_ids": [],
+      "campaign_git_head": "d9227d184ff094dd0c33c361523d2f457c68d8ae",
+      "updated_at_utc": "2026-07-20T20:36:48Z",
+      "source_cache": {
+        "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+      },
+      "actual_frozen_scorer_vjp_campaign": true,
+      "derivative_anchor": "gt_n600 source-cache/native-winner arrangement",
+      "g17_baseline_candidate_transition_bound": false
+    }
+  },
+  "missing_transition_join_fields": [
+    "transition_id",
+    "baseline_g17_forward_receipt_sha256",
+    "candidate_g17_forward_receipt_sha256",
+    "baseline_archive_zip_sha256",
+    "baseline_archive_zip_bytes",
+    "candidate_archive_zip_sha256",
+    "candidate_archive_zip_bytes",
+    "baseline_receiver_receipt_sha256",
+    "candidate_receiver_receipt_sha256",
+    "baseline_decoded_output_sha256",
+    "candidate_decoded_output_sha256",
+    "per_pair_differentiation_anchor_frame_sha256",
+    "per_pair_transition_direction_frame_sha256",
+    "per_pair_realized_scorer_jvp_contraction_sha256",
+    "per_pair_realized_scorer_vjp_contraction_sha256"
+  ],
+  "strict_guard": {
+    "entrypoint": "require_g70_actionable_costate_input",
+    "actionable_costate_input": false,
+    "actionable_consumers": [],
+    "arbitrary_file_attestations_can_satisfy": false,
+    "existing_source_vjp_campaign_can_satisfy": false
+  },
+  "blockers": [
+    "G70_BASELINE_G17_N600_FORWARD_OBSERVATION_OWED",
+    "G70_CANDIDATE_G17_N600_FORWARD_OBSERVATION_OWED",
+    "G70_GT_SOURCE_VJP_CANNOT_BE_RELABELED_AS_G17_TRANSITION_JVP_VJP",
+    "G70_TRANSITION_ANCHORED_SCORER_DIFFERENTIATION_OWED",
+    "G70_G67_ADVERSARIAL_ADMISSION_REVIEW_OWED"
+  ],
+  "next_executable_prerequisite": {
+    "kind": "governed_resumable_full_n600_transition_derivative_materialization",
+    "launch_performed": false,
+    "required_anchor": "exact retained baseline G17 receiver/R camera tensors",
+    "required_direction": "exact retained candidate minus baseline G17 receiver/R camera tensors",
+    "required_derivatives": "frozen CPU-torch SegNet and PoseNet autograd VJP plus computed same-direction JVP/VJP contractions",
+    "required_custody": "immutable per-pair stage sidecars and terminal manifest sealing every missing_transition_join_fields key",
+    "postcondition": "new adversarial G67 admission review before any sensitivity, allocation, costate, Pareto, or autopilot consumer"
+  },
+  "verification": {
+    "focused_pytest": "7 passed",
+    "ruff_check": "passed",
+    "ruff_format_check": "passed",
+    "py_compile": "passed",
+    "json_validation": "passed"
+  },
+  "authority": {
+    "research_only": true,
+    "score_claim": false,
+    "candidate_claim": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "pointer_mutation": false,
+    "heavy_scorer_run_launched": false
+  },
+  "pointer": "UNMOVED"
+}
