@@ -1,0 +1,42 @@
+{
+  "affected_commits": [
+    "4e357db719",
+    "95b3143dd2"
+  ],
+  "authority": {
+    "candidate": false,
+    "contest_score": false,
+    "pointer_moved": false
+  },
+  "before": {
+    "guard_result": "1 failed",
+    "missing_tracked_source": [
+      "src/tac/witness_control/taskspace_fresh_teacher_materializer_v1.py",
+      "src/tac/witness_dsl/dynamic_frontier_target.py",
+      "src/tac/witness_dsl/ep725_lossless_xcodec_recode.py",
+      "src/tac/witness_dsl/ep725_population_global_recode_v2.py",
+      "src/tac/witness_dsl/taskspace_g17_forward_observation.py",
+      "src/tac/witness_dsl/taskspace_lossy_selected_plane_codec_v1.py",
+      "src/tac/witness_dsl/taskspace_public_auth_eval_closure.py",
+      "src/tac/witness_dsl/taskspace_selected_solution_compiler.py"
+    ]
+  },
+  "bug_class": "DIRTY_CHECKOUT_FALSE_SOURCE_CLOSURE",
+  "closed_at_utc": "2026-07-27T00:40:51Z",
+  "evidence": {
+    "adversarial_gate_suite": "92 passed in 6.45s",
+    "dependency_suite": "181 passed in 9.39s",
+    "guard_after": "1 passed in 2.49s",
+    "guard_path": "tools/tests/test_taskspace_codec_source_closure.py",
+    "guard_sha256": "0acb613b8481fc0e71703f76f246349c7a6ed1aa039277c10f52d4fad7562afb",
+    "review_policy": {
+      "approver": "codex",
+      "clean_passes": 2,
+      "result": "COMPLIANT"
+    }
+  },
+  "fix_commit": "81f4e4653bd7dc8c8db4bc81d173c1cb1d5c5251",
+  "schema": "tac.taskspace_clean_checkout_source_closure_receipt.v1",
+  "status": "CLOSED",
+  "verdict_scope": "source and import closure only; no receiver output, distortion, rate, or frontier claim"
+}
