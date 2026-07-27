@@ -1,0 +1,114 @@
+{
+  "dependencies": {
+    "g74_source_sha256": "96de0f530db1394383b83976371f727d4c4a0cac8a10a2f38dc79842fc3ce1b8",
+    "g77_source_edited_by_g82": false,
+    "g80_source_edited_by_g82": false,
+    "outer_archive_source_sha256": "705c15ba644897e76ba37d6941991706071109281d967fff1706c5eefe29e378",
+    "pvsa_source_sha256": "d993146868db756439dde46a6d592030d00cf607673ac322c91a0b5b04d7768c",
+    "tsppv2_source_sha256": "a7201c82c7b23a1237b2a8116a7a6f183296dfcdcd59eb6bd1b5073f658fb48b"
+  },
+  "external_lowering_receipt": {
+    "actuator_same_container_marginal_bytes": 57,
+    "candidate_claim": false,
+    "compact_archive_bytes": 129392,
+    "compact_archive_sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd",
+    "compact_deflate_parse_back_exact": true,
+    "compact_member_bytes": 133363,
+    "compact_member_sha256": "d50aac6eab8114c2c15156354147d1cbfe007b474a0633d5cdec26e66751de31",
+    "compact_outer_deflated_bytes": 129392,
+    "compact_outer_deflated_sha256": "b9c8ab2af8886c5b26bba63e02b7c5fe9951bb42a871c5e8472483977788d9fd",
+    "compact_outer_stored_bytes": 133471,
+    "compact_outer_stored_sha256": "144d68dae35534fcad11edb216540e3e5a5b10b88b735ab2af5b28d75b418384",
+    "compact_pair_zero_camera_sha256": "caf69dade383564ef8123149d193052b8b5b641711fed232b25dd67b29af25db",
+    "compact_store_parse_back_exact": true,
+    "decoder_identity_embedded_in_compact": false,
+    "decoder_identity_sha256": "db7ffbaaf5cd3a5453f367741ea750f6bd180ca92ebf87859946e0206d3fba0b",
+    "evaluator_invoked": false,
+    "frame_selector": "BOTH",
+    "full_n600_decode_evidence": false,
+    "g74_decoder_source_sha256": "96de0f530db1394383b83976371f727d4c4a0cac8a10a2f38dc79842fc3ce1b8",
+    "lowering_contract_id": "EXACT_TSPPV2_G74RA1_TO_PVSA1_OPERAND_PRESERVING_LOWERING_V1",
+    "lowering_source_sha256": "e05914a213202a799d65fcb2fd8a6740cb4f62cea517cdcbc20467b45198259e",
+    "operand_bytes": 52,
+    "operand_bytes_preserved_exactly": true,
+    "operand_sha256": "5616799adc0d2ab942f37a20b070f7a0fa48119771e8f1b56c1f45e2605306ca",
+    "outer_archive_source_sha256": "705c15ba644897e76ba37d6941991706071109281d967fff1706c5eefe29e378",
+    "pair_count": 600,
+    "pair_zero_camera_equality_proven": true,
+    "pair_zero_execution_receipt_sha256": "b56a2c418460f0c0d3957f88d647aa4a5eac6d568999a4a04b6a0abf36d4991d",
+    "program_decoder_source_sha256": "a7201c82c7b23a1237b2a8116a7a6f183296dfcdcd59eb6bd1b5073f658fb48b",
+    "public_inflate_closed": false,
+    "pvsa_source_sha256": "d993146868db756439dde46a6d592030d00cf607673ac322c91a0b5b04d7768c",
+    "research_only": true,
+    "rich_framing_bytes": 3541,
+    "rich_identity_json_embedded_in_compact": false,
+    "rich_ir_bytes_avoided": 3541,
+    "rich_pair_zero_camera_sha256": "caf69dade383564ef8123149d193052b8b5b641711fed232b25dd67b29af25db",
+    "rich_parse_reemit_exact": true,
+    "rich_program_bytes": 3593,
+    "rich_program_sha256": "8bd80138198fb01d9c2a376c8918634eb0e7f08f12a15d6eb9a888dc941fb6bb",
+    "schema": "tac.tsppv2_to_pvsa1_external_lowering_receipt.v1",
+    "score_claim": false,
+    "scorer_invoked": false,
+    "semantic_baseline_archive_bytes": 129335,
+    "semantic_baseline_archive_sha256": "fa173ef4f75adbe9194d3cd89b04021dabd2b9e9fd3aa87081148b6b42a26c75",
+    "semantic_baseline_member_bytes": 133306,
+    "semantic_baseline_member_sha256": "6208ac91c465caa8990f7d643f50c06da28c1e00ca359d4ee55005818cc12352",
+    "semantic_container_recode_delta_bytes": -4606,
+    "semantic_identity_sha256": "1583276ad2f8166cf8b9119d221d0dc7894558681b63be6a03a79e7c5c0cfc28",
+    "semantic_p_bytes": 133941,
+    "semantic_p_sha256": "759e28332ce1ea2d4cabba731e4b7b2b21c191fef1bd2b104fab18805388d6df",
+    "source_pair_start": 0,
+    "target_bank_sha256": "6d2ca48ac07323c7fc3a5299023bc291363192e10130eb3bc63d446bb8e65b85",
+    "target_custody_embedded_in_compact": false,
+    "target_custody_receipt_sha256": "58db7f01674c60f060a46b955fee8c4f777f31f528ebba404e871b26b17972a7",
+    "target_identity_sha256": "fc17dcf09682af8ae411546136ef1e6b8eb98e8c4175f455bad22008b01ab149",
+    "torch_version": "2.12.1"
+  },
+  "external_lowering_receipt_bytes": 3249,
+  "external_lowering_receipt_sha256": "08a411af145228ff3d615a91eb395b7ada205bee55e8666cfd22ad45871dcc65",
+  "git_head_observed": "1cef621de781f7f006cddf3770b9b49196925746",
+  "lane_id": "lane_g82_tsppv2_to_pvsa1_compact_lowering_adapter_20260727",
+  "open_blockers": [
+    "PVSA_CONDITIONAL_Y0_GIVEN_Y1_ACTUATOR_TYPE_AND_TRANSITION_OWED",
+    "PVSA_PUBLIC_INFLATE_SH_RUNTIME_INTEGRATION_OWED",
+    "PVSA_FULL_N600_DOUBLE_DECODE_AND_UPSTREAM_EVAL_OWED"
+  ],
+  "pointer_delta": {
+    "candidate_claim": false,
+    "effective_frontier_observed": 0.172,
+    "exact_score_claim": false,
+    "frontier_moved": false,
+    "full_n600_evidence_claim": false,
+    "promotion_eligible": false
+  },
+  "receipt_self_hash": {
+    "algorithm": "sha256(canonical_json(receipt with receipt_self_hash removed))",
+    "value": "ff0a5cc59e330ebc69740afbdec9f6b464cd362d9e4310f2c1c5211048b96b6f"
+  },
+  "research_only": true,
+  "schema": "tac.g82_tsppv2_to_pvsa1_compact_lowering_landing.v1",
+  "source_artifacts": {
+    ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g82_tsppv2_to_pvsa1_compact_lowering_20260727.md": "c36d528df50f39618c8e885f938b45bb6e100a261caa49aea8c7f887009df314",
+    "src/tac/witness_dsl/taskspace_g82_tsppv2_pvsa1_lowering_v1.py": "e05914a213202a799d65fcb2fd8a6740cb4f62cea517cdcbc20467b45198259e",
+    "src/tac/witness_dsl/tests/test_taskspace_g82_tsppv2_pvsa1_lowering_v1.py": "c7265fee03e91b5d9242f86756841e968dd80091b09e2b5249ec47ceefa22548"
+  },
+  "tests": [
+    {
+      "command": ".venv/bin/pytest -q src/tac/witness_dsl/tests/test_taskspace_g82_tsppv2_pvsa1_lowering_v1.py",
+      "result": "7 passed in 39.31s"
+    },
+    {
+      "command": ".venv/bin/pytest -q src/tac/witness_dsl/tests/test_taskspace_pvsa_compact_container_v1.py src/tac/witness_dsl/tests/test_taskspace_selected_preimage_program_v2.py src/tac/witness_dsl/tests/test_taskspace_outer_archive_codec.py",
+      "result": "31 passed in 53.64s"
+    },
+    {
+      "command": ".venv/bin/ruff check src/tac/witness_dsl/taskspace_g82_tsppv2_pvsa1_lowering_v1.py src/tac/witness_dsl/tests/test_taskspace_g82_tsppv2_pvsa1_lowering_v1.py",
+      "result": "passed"
+    },
+    {
+      "command": ".venv/bin/python -m py_compile src/tac/witness_dsl/taskspace_g82_tsppv2_pvsa1_lowering_v1.py src/tac/witness_dsl/tests/test_taskspace_g82_tsppv2_pvsa1_lowering_v1.py",
+      "result": "passed"
+    }
+  ]
+}
