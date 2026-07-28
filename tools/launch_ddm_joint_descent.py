@@ -2543,6 +2543,347 @@ def _full_run_locked(args: argparse.Namespace, config: DirectDescriptionJointDes
     return 0 if admission and campaign_blocker is None and not non_promoting_stop else EXIT_REFUSE
 
 
+def _fd1_gn_window_locked(args: argparse.Namespace, config: DirectDescriptionJointDescentTypedConfigV1) -> int:
+    """ddm_fd1: bounded governed family-d Gauss-Newton/CG window (second-order, seg leg).
+
+    Extends the governed launcher with the gc5-named family-d mode: per-step a
+    matrix-free Gauss-Newton/CG proposal in description coordinates (module
+    :mod:`tac.optimization.ddm_family_d_gn_description`), realized through the
+    UNCHANGED path (compile -> parse-back -> uint8 -> R -> frozen CPU scorers)
+    and admitted by the UNCHANGED v19 rule: accept iff realized joint
+    advisory action (100*d_seg + sqrt(10*d_pose) + 25*bytes/37_545_489)
+    strictly decreases. Pose stays terminal (#383): the GN objective is the
+    seg leg (pose_objective_weight == 0); pose collateral + rate are priced by
+    the realized acceptance itself (the 1.273108 B/error water level is the
+    exchange rate that acceptance implements).
+
+    Memory admission honesty: the sealed worst-geometry custody chain of the
+    ws3 ticket binds launcher/consumer source hashes from 07-24 and cannot
+    re-bind on the current tree (post-j8f refinements); this mode therefore
+    reads the ws3 MEASURED projection values and passes them through the live
+    system governor, and records that degradation in the window receipt. The
+    campaign fire requires a fresh reseal (MAIN-owned).
+    """
+    import mlx.core as mx
+
+    from tac.optimization.ddm_family_d_gn_description import FamilyDGaussNewtonEngineV1
+
+    out_dir = Path(args.out_dir)
+    if args.resume_from is None:
+        raise DirectDescriptionError("fd1 GN window requires --resume-from (the arbitrated W_joint checkpoint)")
+    if args.memory_receipt is None:
+        raise DirectDescriptionError("fd1 GN window requires --memory-receipt (measured projection source)")
+    memory_row = json.loads(Path(args.memory_receipt).read_bytes())
+    if memory_row.get("typed_config_hash") != config.typed_config_hash():
+        raise DirectDescriptionError("fd1 memory receipt typed config hash differs")
+    projected = float(memory_row["projected_peak_gib"])
+    admitted, reason = classify_memory_preflight(projected, ceiling_gib=config.memory_ceiling_gib)
+    if not admitted:
+        raise DirectDescriptionError(reason)
+    governor = _governor(projected)
+
+    source_path = _resolve_input(config.source_archive_path)
+    cache_path = _resolve_input(config.target_cache_path, allow_authority_cache=True)
+    _verify_regular(source_path, expected_bytes=config.source_archive_bytes, expected_sha256=config.source_archive_sha256)
+    _verify_regular(cache_path, expected_bytes=config.target_cache_bytes, expected_sha256=config.target_cache_sha256)
+    os.environ["TAC_MLX_CUSTOM_GROUPED_BACKWARD"] = "1"
+    np.random.seed(config.seed)
+    started = time.monotonic()
+    with _RSSMonitor() as monitor, temporary_mlx_device("gpu"):
+        mx.random.seed(config.seed)
+        assert_metal_matches_cpu_oracle(seed=config.seed)
+        archive = source_path.read_bytes()
+        lift = lift_v15_archive(archive)
+        groups = parameter_group_indices(lift)
+        labels = open_stored_npy_memmap(cache_path, "lstars")
+        poses = open_stored_npy_memmap(cache_path, "gt_poses")
+        adapter = load_mlx_distortion_scorer_adapter_from_upstream(config.upstream_root, device="cpu")
+        model = DirectDescriptionJointDescentMLXModule(
+            lift=lift,
+            scorer_adapter=adapter,
+            seg_targets=labels,
+            pose_targets=poses,
+        )
+        state, metadata = load_stage_checkpoint(Path(args.resume_from), config=config)
+        if state.theta.size != model.parameter_count:
+            raise DirectDescriptionError("fd1 resume parameter count differs")
+        engine = FamilyDGaussNewtonEngineV1(
+            model,
+            repository_root=str(REPO),
+            hutchinson_probes=int(args.fd1_hutchinson_probes),
+            seed=config.seed,
+        )
+        schedule = config.full_run_schedule
+        if schedule is None or not schedule.stages:
+            raise DirectDescriptionError("fd1 GN window requires a sealed full-run schedule ticket")
+        stage0 = schedule.stages[0]
+        active_groups = tuple(stage0.active_groups)
+        train_batch = int(schedule.train_batch)
+        pair_start = int(schedule.warm_start_pair)
+        pair_ids = tuple((pair_start + offset) % 600 for offset in range(train_batch))
+        cpu_scorers = _load_cpu_frozen_scorers(config.upstream_root)
+
+        # Baseline v19 verdict at the resumed theta: reuse the checkpoint's
+        # recorded realized verdict ONLY under archive sha equality.
+        current_archive_bytes, _ = compile_parameterized_archive(lift, state.theta, include_lane_programs=False)
+        current_sha = hashlib.sha256(current_archive_bytes).hexdigest()
+        history = list(metadata.get("run_cursor", {}).get("verdict_history", ()))
+        recorded = next(
+            (row for row in reversed(history) if row.get("archive_sha256") == current_sha),
+            None,
+        )
+        if recorded is not None:
+            current_verdict = dict(recorded)
+            baseline_source = "checkpoint_recorded_verdict_sha_bound"
+        else:
+            current_verdict = _chunked_n600_verdict(
+                archive=current_archive_bytes,
+                labels=labels,
+                poses=poses,
+                segnet=cpu_scorers[0],
+                posenet=cpu_scorers[1],
+                batch_size=config.verdict_batch,
+            )
+            baseline_source = "fresh_chunked_n600_verdict"
+        curve: list[dict[str, Any]] = [
+            {
+                "gn_step": 0,
+                "global_step": int(state.step),
+                "d_seg": float(current_verdict["d_seg"]),
+                "d_pose": float(current_verdict["d_pose"]),
+                "archive_bytes": int(current_verdict["archive_bytes"]),
+                "advisory_action": float(current_verdict["advisory_action"]),
+                "accepted": True,
+                "baseline_source": baseline_source,
+                "wall_seconds": 0.0,
+            }
+        ]
+        damping = float(args.fd1_damping)
+        active = sorted(set().union(*(groups[name] for name in active_groups)))
+        proposals: list[dict[str, Any]] = []
+        consecutive_rejections = 0
+        for gn_step in range(1, int(args.fd1_gn_steps) + 1):
+            step_started = time.monotonic()
+            base_camera, template_masks, basis, basis_indices, local_theta, _ = realized_training_state(
+                lift,
+                state.theta,
+                pair_ids=pair_ids,
+                active_groups=active_groups,
+                include_lane_programs=False,
+            )
+            loss, gradient = model.loss_and_grad(
+                local_theta,
+                pair_ids=pair_ids,
+                base_camera=base_camera,
+                template_masks=template_masks,
+                realized_secant_basis=basis,
+                realized_secant_indices=basis_indices,
+                pose_objective_weight=0.0,
+            )
+            step_active = sorted(set(active) | set(basis_indices))
+            gradient = gradient.copy()
+            gradient[[index for index in range(len(gradient)) if index not in set(step_active)]] = 0.0
+            delta, diagnostics = engine.propose(
+                local_theta,
+                gradient,
+                pair_ids=pair_ids,
+                base_camera=base_camera,
+                template_masks=template_masks,
+                realized_secant_basis=basis,
+                realized_secant_indices=basis_indices,
+                active_indices=step_active,
+                damping=damping,
+                cg_iterations=int(args.fd1_cg_iters),
+            )
+            current_realized = realize_parameter_theta(lift, state.theta)
+            accepted_row: dict[str, Any] | None = None
+            attempts: list[dict[str, Any]] = []
+            for multiplier in (1.0, 0.5, 0.25):
+                candidate_theta = state.theta + np.float32(multiplier) * delta
+                # Keep GN candidates inside the exact lift geometry via the
+                # engine's own projection (as the first-order loop does).
+                try:
+                    projected_state, _events = project_adam_state_geometry(
+                        lift,
+                        AdamStateV1(
+                            step=state.step,
+                            theta=np.asarray(candidate_theta, dtype=np.float32),
+                            ema=state.ema,
+                            first_moment=state.first_moment,
+                            second_moment=state.second_moment,
+                        ),
+                    )
+                except ProposalGeometryInfeasibleError as exc:
+                    attempts.append(
+                        {
+                            "multiplier": multiplier,
+                            "geometry_infeasible": str(exc),
+                            "realized_changed": False,
+                            "block_proxy_delta": 0.0,
+                        }
+                    )
+                    continue
+                candidate_theta = projected_state.theta
+                candidate_local = candidate_theta - (state.theta - local_theta)
+                metrics = model.measure_components(
+                    candidate_local,
+                    pair_ids=pair_ids,
+                    base_camera=base_camera,
+                    template_masks=template_masks,
+                    realized_secant_basis=basis,
+                    realized_secant_indices=basis_indices,
+                )
+                block_proxy_delta = 100.0 * float(metrics["seg_ce_margin"]) - float(loss)
+                candidate_realized = realize_parameter_theta(lift, candidate_theta)
+                realized_changed = not np.array_equal(candidate_realized, current_realized)
+                attempt = {
+                    "multiplier": multiplier,
+                    "block_proxy_delta": block_proxy_delta,
+                    "realized_changed": realized_changed,
+                }
+                if not realized_changed or block_proxy_delta >= 0.0:
+                    attempts.append(attempt)
+                    continue
+                try:
+                    candidate_archive, _ = compile_parameterized_archive(
+                        lift, candidate_theta, include_lane_programs=False
+                    )
+                except ProposalGeometryInfeasibleError as exc:
+                    attempt["geometry_infeasible"] = str(exc)
+                    attempts.append(attempt)
+                    continue
+                verdict = _chunked_n600_verdict(
+                    archive=candidate_archive,
+                    labels=labels,
+                    poses=poses,
+                    segnet=cpu_scorers[0],
+                    posenet=cpu_scorers[1],
+                    batch_size=config.verdict_batch,
+                )
+                attempt["realized_advisory_action"] = float(verdict["advisory_action"])
+                attempt["realized_d_seg"] = float(verdict["d_seg"])
+                attempts.append(attempt)
+                if float(verdict["advisory_action"]) < float(current_verdict["advisory_action"]):
+                    ema = config.ema_decay * state.ema + (1.0 - config.ema_decay) * candidate_theta
+                    state = AdamStateV1(
+                        step=state.step + 1,
+                        theta=np.asarray(candidate_theta, dtype=np.float32),
+                        ema=np.asarray(ema, dtype=np.float32),
+                        first_moment=state.first_moment,
+                        second_moment=state.second_moment,
+                    )
+                    current_verdict = verdict
+                    accepted_row = attempt
+                    break
+            wall = time.monotonic() - step_started
+            # Capacity telemetry classifier (gc5 disambiguator input).
+            block_deltas = [a["block_proxy_delta"] for a in attempts]
+            if accepted_row is not None:
+                capacity = "DESCENDING"
+                consecutive_rejections = 0
+                damping = max(damping * 0.5, 1.0e-8)
+            elif not attempts or all(not a["realized_changed"] for a in attempts):
+                capacity = "REALIZATION_QUANTIZATION_GATED"  # fp32 step below re-emit quantum
+                consecutive_rejections += 1
+                damping *= 0.25  # allow a larger step to cross the staircase
+            elif min(block_deltas) >= 0.0:
+                capacity = "ENGINE_SCALE_SATURATION"  # GN model cannot reduce even the block proxy
+                consecutive_rejections += 1
+                damping *= 4.0
+            else:
+                capacity = "BLOCK_LOCALITY_OR_REALIZATION_GAP"  # block improves, n600 joint action does not
+                consecutive_rejections += 1
+                damping *= 4.0
+            row = {
+                "gn_step": gn_step,
+                "global_step": int(state.step),
+                "d_seg": float(current_verdict["d_seg"]),
+                "d_pose": float(current_verdict["d_pose"]),
+                "archive_bytes": int(current_verdict["archive_bytes"]),
+                "advisory_action": float(current_verdict["advisory_action"]),
+                "accepted": accepted_row is not None,
+                "accepted_multiplier": None if accepted_row is None else accepted_row["multiplier"],
+                "capacity_classification": capacity,
+                "damping_next": damping,
+                "attempts": attempts,
+                "gn_diagnostics": diagnostics.to_payload(),
+                "wall_seconds": wall,
+            }
+            curve.append(row)
+            proposals.append(row)
+            if accepted_row is not None:
+                checkpoint_path = (
+                    out_dir
+                    / "checkpoints"
+                    / f"fd1_gn_window_global{state.step:06d}.npz"
+                )
+                save_stage_checkpoint(
+                    checkpoint_path,
+                    state,
+                    stage_id="fd1_gn_window",
+                    config=config,
+                    telemetry=[{"mode": "fd1_gn_window", "gn_step": gn_step}],
+                    run_cursor={
+                        "global_step": int(state.step),
+                        "verdict_history": [*history, dict(current_verdict)],
+                        "fd1_gn_window": True,
+                    },
+                    realized_archive={
+                        "bytes": int(current_verdict["archive_bytes"]),
+                        "sha256": current_verdict["archive_sha256"],
+                    },
+                )
+            if consecutive_rejections >= 2:
+                break
+        receipt = {
+            "schema": "ddm_fd1_gn_window_receipt.v1",
+            "mode": "fd1_gn_window",
+            "ticket_typed_config_hash": config.typed_config_hash(),
+            "resume_from": str(args.resume_from),
+            "pair_block": list(pair_ids),
+            "active_groups": list(active_groups),
+            "gn_controls": {
+                "cg_iterations": int(args.fd1_cg_iters),
+                "initial_damping": float(args.fd1_damping),
+                "hutchinson_probes": int(args.fd1_hutchinson_probes),
+                "gn_steps_requested": int(args.fd1_gn_steps),
+                "multipliers": [1.0, 0.5, 0.25],
+            },
+            "acceptance_rule": "v19 realized joint advisory action strictly decreases (UNCHANGED)",
+            "water_level_bytes_per_error": 1.273108,
+            "memory_admission": {
+                "projected_peak_gib": projected,
+                "source": "ws3 measured full-run receipt values through the live system governor",
+                "sealed_worst_geometry_chain": "NOT_REBINDABLE_ON_CURRENT_TREE_RESEAL_OWED_AT_CAMPAIGN_FIRE",
+                "governor": governor,
+            },
+            "curve": curve,
+            "first_order_reference": {
+                "source": "ws3 W_joint exact four-step window (checkpoint history)",
+                "exact_d_seg_history": [0.07051923116048177, 0.07030889723036024, 0.07030889723036024, 0.0702156745062934, 0.0702156745062934],
+                "relative_slope_per_step": -0.0007777633166947246,
+            },
+            "peak_rss_gib": monitor.peak_rss_bytes / float(1 << 30),
+            "elapsed_seconds": time.monotonic() - started,
+            "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "pointer": POINTER,
+            "pointer_moved": False,
+        }
+        receipt_path = out_dir / "fd1_gn_window_receipt.json"
+        _atomic_json(receipt_path, receipt)
+        print(json.dumps({"verdict": "FD1_GN_WINDOW_COMPLETE", "receipt": str(receipt_path), "steps_accepted": sum(1 for row in curve[1:] if row["accepted"]), "score_claim": False}))
+    return 0
+
+
+def _fd1_gn_window(args: argparse.Namespace, config: DirectDescriptionJointDescentTypedConfigV1) -> int:
+    out_dir = Path(args.out_dir)
+    _storage_receipt(out_dir)
+    with _same_outdir_guard(out_dir, config):
+        return _fd1_gn_window_locked(args, config)
+
+
 def _full_run(args: argparse.Namespace, config: DirectDescriptionJointDescentTypedConfigV1) -> int:
     out_dir = Path(args.out_dir)
     _storage_receipt(out_dir)
@@ -2562,6 +2903,11 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--worst-geometry-memory-bootstrap", action="store_true")
     mode.add_argument("--resume-proof", action="store_true")
     mode.add_argument("--materialized-archive-verdict", action="store_true")
+    mode.add_argument("--fd1-gn-window", action="store_true")
+    parser.add_argument("--fd1-gn-steps", type=int, default=2)
+    parser.add_argument("--fd1-cg-iters", type=int, default=6)
+    parser.add_argument("--fd1-damping", type=float, default=1.0e-3)
+    parser.add_argument("--fd1-hutchinson-probes", type=int, default=4)
     parser.add_argument("--bootstrap-measurement", action="store_true")
     parser.add_argument("--resume-from", type=Path)
     parser.add_argument("--materialized-archive", type=Path)
@@ -2600,6 +2946,25 @@ def main(argv: list[str] | None = None) -> int:
             return _materialized_archive_verdict(args, config)
         if args.materialized_archive is not None:
             raise DirectDescriptionError("--materialized-archive is restricted to --materialized-archive-verdict")
+        if args.fd1_gn_window:
+            if (
+                args.bootstrap_measurement
+                or args.simulate_kill_after_checkpoint
+                or args.max_steps is not None
+                or args.stage_exit_on_stop
+                or args.force_geometry_escape_once
+                or args.measure_full_config_window
+                or args.measurement_train_batch != 1
+                or args.verify_group_ownership
+                or args.pair_id != 447
+                or args.stop_after_step != 1
+            ):
+                raise DirectDescriptionError("fd1 GN window accepts only its resume checkpoint, memory receipt, and fd1 controls")
+            if args.fd1_gn_steps <= 0 or args.fd1_cg_iters <= 0 or args.fd1_hutchinson_probes <= 0:
+                raise DirectDescriptionError("fd1 GN controls must be positive")
+            return _fd1_gn_window(args, config)
+        if args.fd1_gn_steps != 2 or args.fd1_cg_iters != 6 or args.fd1_damping != 1.0e-3 or args.fd1_hutchinson_probes != 4:
+            raise DirectDescriptionError("fd1 controls are restricted to --fd1-gn-window")
         if args.worst_geometry_memory_bootstrap:
             if (
                 args.bootstrap_measurement
