@@ -7,8 +7,15 @@
     "pointer_moved": false,
     "score_claim": false,
     "fire_owner": "MAIN",
-    "state": "READY_TO_FIRE_UNDER_STANDING_GO",
-    "standing_go_applies_only_after_main_review": true
+    "state": "BLOCKED_ZERO_ACCEPT_WINDOW_CAPACITY_ROUTED",
+    "standing_go_applies_only_after_main_review": true,
+    "blocker": {
+      "measured_by": "ddm_fd1r S2 window receipt /Volumes/VertigoDataTier/pact/ddm_fd1_20260728/s2_gn_window/fd1_gn_window_receipt.json",
+      "finding": "first measured window: 0 accepted steps of 2 (6 realized candidates, all v19-rejected; BLOCK_LOCALITY_OR_REALIZATION_GAP x2); the continue_while condition is violated at window 1 -> firing would halt by the ticket own event rules",
+      "mechanism": "cross-pair seg transfer ZERO (n600 d_seg bit-identical in 5/6 candidates) + pose collateral +2.8..+13.1pct at pose-unsolved warm start (pose leg 72.8pct of action)",
+      "resolution_route": "gc5 capacity disambiguator two-rung ladder in event_continuation_schedule.stop_events (rung 1 shared/cross-pair DOF growth [+ pose-null projector per #383 dual]; rung 2 token-grid + trained partition->pixel renderer per ee1 C10, PR130 existence LESSONS-ONLY); next arm charter input, fire owner MAIN",
+      "verdict_scope": "INSTANCE (706-param lift + 4-pair block + joint v19 at pose-unsolved warm start); family-d GN solve itself measured CORRECT on-block"
+    }
   },
   "semantic_program": {
     "program_id": "ddm_fd1_family_d_gn_long_campaign",
