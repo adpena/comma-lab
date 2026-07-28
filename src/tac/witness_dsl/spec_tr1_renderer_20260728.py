@@ -87,6 +87,20 @@ def lever_seg_physics(form_start: str = "ce", w_seg: float = 100.0,
                        "class_weight_lane = sn1 sided-asymmetry lever")
 
 
+def lever_token_init(mode: str = "zero", solve_init_epochs: int = 8) -> Lever:
+    if mode not in ("zero", "solve_project"):
+        raise ValueError("token init mode is zero|solve_project")
+    return Lever(name=f"tr1_token_init_{mode}",
+                 overrides={"--token-init-mode": mode,
+                            "--solve-init-epochs": str(solve_init_epochs)},
+                 notes="lv1 B solve-init: eu1 teacher-as-init-oracle — bounded L2 "
+                       "projection of the materializable solution-set member (GT frame_1 "
+                       "at the render plane) into token space before the scorer loop; "
+                       "zero = tb1 gauge-hygiene control (ker(A) stays at the zero "
+                       "lattice point). Adopt iff strictly better realized d_seg at "
+                       "matched epoch (pre-registered lv1 B rule)")
+
+
 def lever_a1_gate(gate_every: int = 5) -> Lever:
     return Lever(name=f"tr1_a1_gate_every{gate_every}", overrides={"--gate-every": str(gate_every)},
                  notes="A1 (fd2 binding transfer lesson): realized-argmax gate cadence")

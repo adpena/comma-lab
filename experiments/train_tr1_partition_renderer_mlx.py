@@ -196,6 +196,8 @@ class TR1Config:
     token_ste: str                # "round" | "dither" (RACED — uint8 rounding is asymmetric)
     class_weight_lane: float      # 1.0 = off; sn1 asymmetry lever (per-GT-class weight)
     margin_target: float          # margin_hinge form target (raced lever)
+    token_init_mode: str = "zero"  # "zero" (tb1 gauge-hygiene control) | "solve_project"
+    solve_init_epochs: int = 8     # bounded L2 gtfit pretrain epochs (solve_project only)
 
     @property
     def grid_h(self) -> int:
@@ -661,6 +663,14 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument("--verdict-chunk", type=int, default=32,
                     help="pairs per CPU SegNet verdict chunk (<=120 per the charter)")
     ap.add_argument("--mlx-device", default="gpu", choices=("gpu", "cpu"))
+    ap.add_argument("--token-init-mode", default="zero", choices=("zero", "solve_project"),
+                    help="lv1 B solve-init: project the materializable solution-set member "
+                         "(GT frame_1 bilinear-resized to the render plane) into token space "
+                         "via a bounded L2 pretrain BEFORE the scorer loop (eu1 "
+                         "teacher-as-init-oracle mechanism); zero = tb1 control")
+    ap.add_argument("--solve-init-epochs", type=int, default=8,
+                    help="bounded solve-init pretrain epochs over all pairs "
+                         "(consumed only when --token-init-mode solve_project)")
     return ap
 
 
@@ -700,6 +710,7 @@ def main() -> int:
         gate_every=args.gate_every, ema_decay=ema_decay, ema_decay_provenance=ema_prov,
         token_temporal_mode=args.token_temporal_mode, token_ste=args.token_ste,
         class_weight_lane=args.class_weight_lane, margin_target=args.margin_target,
+        token_init_mode=args.token_init_mode, solve_init_epochs=args.solve_init_epochs,
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"
@@ -733,6 +744,72 @@ def main() -> int:
 
     model = build_module(cfg)
     mx.eval(model.parameters())
+
+    # lv1 Phase B — SOLVE-INIT (eu1 "teacher-to-packet": the solved object is an
+    # INITIALIZATION ORACLE, never a shippable payload). Custody verdict (lv1 memo):
+    # the q1-lineage C1/BOX solved frames exist only as 277.7M archive-form candidates
+    # (ms2r_r3 stage_checkpoints/04_candidate); the canonical MATERIALIZABLE
+    # solution-set member in this trainer's own data path is the GT frame itself
+    # (d_seg == 0 through R by construction of the GT labels). Projection = bounded
+    # L2 fit of (tokens + renderer) to bilinear-resized GT frame_1 at the render
+    # plane — NO scorer in the pretrain loop (train-least: don't learn what is
+    # solved). Skipped on resume (state comes from the checkpoint; P0 resumability).
+    if cfg.token_init_mode == "solve_project" and args.resume_from is None:
+        import torch
+        import torch.nn.functional as F
+        gt_f1 = open_stored_npy_memmap(args.gt_cache, "gt_f1")  # (P,874,1164,3) u8 camera
+        tgt = np.empty((cfg.num_pairs, SEG_H, SEG_W, 3), dtype=np.uint8)
+        for i in range(cfg.num_pairs):
+            fr = torch.from_numpy(
+                np.asarray(gt_f1[i], dtype=np.float32)).permute(2, 0, 1)[None]
+            dn = F.interpolate(fr, size=(SEG_H, SEG_W), mode="bilinear",
+                               align_corners=False)
+            tgt[i] = dn[0].permute(1, 2, 0).clamp(0, 255).round().to(torch.uint8).numpy()
+        tlog({"event": "solve_init_targets_ready", "pairs": int(cfg.num_pairs),
+              "note": "GT frame_1 bilinear->render plane = the materializable "
+                      "solution-set member (q1-lineage C1/BOX frames exist only as "
+                      "277.7M archive-form candidates; custody in the lv1 memo)"})
+
+        def _fit_loss(mdl, ids: list[int]):
+            acc = None
+            for i in ids:
+                r = mdl.render_frame(int(i)) / 255.0
+                t = mx.array(tgt[int(i)].astype(np.float32) / 255.0)[None]
+                li = mx.mean(mx.square(r - t))
+                acc = li if acc is None else acc + li
+            return acc / len(ids)
+
+        vg_fit = nn.value_and_grad(model, _fit_loss)
+        pre_opt = optim.Adam(learning_rate=cfg.lr)
+        pre_rng = np.random.default_rng(cfg.seed + 3)
+        for pep in range(cfg.solve_init_epochs):
+            pperm = pre_rng.permutation(cfg.num_pairs)
+            pe_loss, psteps = 0.0, 0
+            for b0 in range(0, cfg.num_pairs, cfg.batch_pairs):
+                pids = [int(i) for i in pperm[b0:b0 + cfg.batch_pairs]]
+                pl, pg = vg_fit(model, pids)
+                pre_opt.update(model, pg)
+                mx.eval(model.parameters(), pre_opt.state, pl)
+                plv = float(pl)
+                if not np.isfinite(plv):
+                    tlog({"event": "confound_alarm", "kind": "nonfinite_loss",
+                          "stage": "solve_init_pretrain", "pretrain_epoch": pep})
+                    raise SystemExit("solve-init pretrain nonfinite loss (fail-closed)")
+                pe_loss += plv
+                psteps += 1
+            tlog({"event": "solve_init_epoch", "pretrain_epoch": pep,
+                  "l2_rgb01": pe_loss / max(psteps, 1)})
+        save_checkpoint(out_dir / "checkpoints" / "stage_solve_init_pretrain.npz",
+                        model=model,
+                        ema={k: mx.array(v)
+                             for k, v in tree_flatten(model.trainable_parameters())},
+                        opt_state_flat={}, epoch=-1, stage="solve_init_pretrain",
+                        cfg=cfg, telemetry_tail=[])
+        del tgt, vg_fit, pre_opt
+        # Scorer-loop Adam moments are created FRESH below (warm-start re-anchor
+        # law #517/#518); the EMA shadow initializes from the post-pretrain params
+        # (fresh warmup window => live-basis gates until W, same as the control).
+
     optimizer = optim.Adam(learning_rate=cfg.lr)
 
     ema: dict[str, Any] = {k: mx.array(v) for k, v in tree_flatten(model.trainable_parameters())}
