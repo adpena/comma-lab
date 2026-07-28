@@ -1,3 +1,5 @@
+STORES CONSULTED: .omx/research 07-28 arc memos (ddm_fc1_assembly_capstone / ddm_da1_telemetry_decomposition / ddm_ar1_archetype_codec_priced_spec + their DAG FEEDs and SSD receipts) · memories (box_retired_min_s_target_* §1-§7, pose_is_a_terminal_six_equation_solve_*, train_least doctrine, verdict-scope ladder) · canonical equations (ddm_r6cal_solved_object_realized_rate_dominance_v1, pose_plane_proximity_corollary_v1) · council posterior (gc1/gc4 anchors) · task ledger (#731-#736) · sc1 charter · j2-chain receipts (64c421698c) · pi1 PR86/PR130 intake. No new measurements; no scorer runs.
+
 # FEED-gc5 (2026-07-28) — Schmidhuber-led T3 pantheon pass: micro↔macro bridges adjudicated
 
 **Node:** `council_gc5_schmidhuber_micro_macro_bridge_20260728` (operator-convened, override
