@@ -25008,3 +25008,35 @@ byteaccount.py (dbc3e5b80f). Memo .omx/research/ddm_r2s_stratified_and_sparse_re
 LEDGER: 18 assets USED/RACED/N-A incl Bridge-5 correction blind⊂ker(A) + round-4 free-depth crown-jewel
 gated). Artifacts SSD /Volumes/VertigoDataTier/pact/ddm_r2s_20260727/{flip_support_n600_strat,sparse_
 byteaccount_n600}.json.
+
+## FEED-fc1 (2026-07-28) — ASSEMBLY CAPSTONE: STAGE-1 tier-mover H(flip|context) MEASURED (F6 NULL→FILLED) + full compose. [no-triality] [p0-ledger-ok]
+ddm_fc1, base main@4cdc7517c0 (r2s+iv1-4+cv1). [macOS-CPU advisory]; pointer UNMOVED 0.19108; no score
+claim. Self-check EXACT (copy flip mask = 1,019,467 sites = oc1/r2s, 3rd reproduction). **STAGE 1 (THE
+tier-mover, F6 NULL→FILLED): H(flip-label | free decoder context) = 0.32454 bits/flip in-sample plug-in,
+0.34497 held-out 2-fold (AGREES, not overfit; 80 cells, ~12.7K flips/cell). Label floor 41,358 B for all
+1M corrected labels.** Context = copy_argmax + copy_margin(top1-top2) + boundary-dist + nearest-adjacent
+class (all decoder-derivable). Per-class bits/flip: Road 0.090 (50%) / Lane 0.233 (25%) / Undriv 0.541 /
+MyCar 0.618 / Movable 0.953 (hardest) — the 75% Road+Lane boundary mass is near-deterministic = the
+Slepian-Wolf/Wyner-Ziv COSET collapse (iv4 A1) MEASURED. **STAGE 2 (REAL coders, decode-timed): constriction
+context-categorical LABEL coder = 41,392 B (0.3248 b/flip, lossless roundtrip TRUE, decode 0.010s) == the
+STAGE-1 floor to 0.05% → tier-mover is coder-REAL not a proxy (A14 killed for labels). SUPPORT geometry
+packbits+LZMA1 = 421,366 B (reproduces r2s 421,496; per-pixel context-arith 499 KB LOSES → support is
+SPATIAL). Correction total 463,586 B, decode 0.025s.** KEY: correction stream 463.6 KB is already 2.47x the
+0.172 bar; 421 KB is the WHERE (support geom), only 42 KB the WHAT (labels) — the tier-mover moves the WHAT,
+which was never the wall. **STAGE 3 (frame_0 binding stream, MEASURED WebP n600): Q1 2,695,020 B → rate_term
+1.79 (10.4x bar), Q30 6.05 MB → 4.03. Irreducibly multi-MB; needs 75 B/frame to fit → only INR amortization
+(banned) or A5 backward-pred (degenerate on copy) could, neither exists.** STAGE 4 pose SETTLED (R1 dxi
+875 B → d_pose 0.001610 / contrib 0.127; solved-pose 0.0319 only at 291 MB). **STAGE 5 compose (arithmetic
+over MEASURED bytes, NO byte-close): A full=S 2.246 (rate 2.104 frame_0-dominated); B frame_0-free=0.451;
+C +contour-support(184KB)=0.266; D distortion-floor banked-pose zero-rate=0.142; E +solved-pose=0.047.
+FORK-3 (S 2.246 >> 0.35).** Binding stream = frame_0 (2.70 MB) then support geom (421 KB). Exact gap: banked
+pose 0.127 + near-solved seg 0.0152 = 0.142 floor leaves 0.030 rate = 45 KB for ALL streams; correction
+alone 463 KB (contour best 184 KB), frame_0 2.70 MB. Even FREE-frame_0+contour (C) = 0.266, 0.094 over bar,
+of which 0.127 is pose. Sub-bar needs SIMULTANEOUSLY frame amortization + contour-support<45KB + solved-pose
+(291 MB) = the 3-way realization crux, re-proven a 3rd time (iv4 §1.5). NO evaluate.py row fired (correctly:
+near-solved needs UNBUILT realization; copy-base close = rate wall, worse than r6cal). Correction stream is
+SOLVED to its floor; the wall is the frame carrier + solved pose, routed to MAIN. Pointer UNMOVED 0.19108.
+Tools: experiments/ddm_fc1_{context_cache,flip_entropy,stage2_coders,stage3_frame0_crush,stage5_compose}.py.
+Memo .omx/research/ddm_fc1_assembly_capstone_flip_entropy_and_compose_20260728.md (PLUG-IN LEDGER: 13
+assets USED/NAMED/N-A). Artifacts SSD /Volumes/VertigoDataTier/pact/ddm_fc1_20260728/{entropy,stage2_coders,
+stage3_frame0_crush,stage5_compose}_n600.json + chunks/.
