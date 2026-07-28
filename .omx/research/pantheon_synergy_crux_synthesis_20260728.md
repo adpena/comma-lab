@@ -238,6 +238,69 @@ preimage: NO-OP (fp32-exact 0/117.96M). Borrowed-incumbent rate polish: PERMANEN
 (operator ban). M2-widens-box citations: stale. The describe line is NOT sealed (§8 wave:
 cb1/wf7 admitted) — but its remaining openings are composed moves, which is what this codec IS.
 
+## §7 DESIGN FOR FACTORIZABILITY + COMPACTABILITY (operator design axis, 2026-07-28 — the design contract family-(d) inherits)
+
+**THE UNIFICATION:** a description space W that is factorizable (separable/low-rank/gauge-split
+factors) AND compactable (each factor born coder-cheap) IS the minimal program (Schmidhuber).
+"Design the DOF" is the lever we own: the family-(d) Gauss-Newton/CG solver optimizes over a
+space WE construct, so we construct it factorized + compact BY DESIGN, then waterfill bytes
+across factors by the non-additive-pools KKT (co-measure, never sum). Distortion is already
+solved (§1); this addendum designs the description so the OPEN axis (rate) is minimal by
+construction. Rule: every factor is solved AND coded separately; the atlas is JOINTLY-fit live
+parameters (NOT a stapled oracle — sy1 fixed-atlas-transmit REFUSED, 192,020 px short [MEASURED]).
+
+### The factor decomposition of W (each factor: design-for-compactness mechanism · MEASURED price)
+
+Prices are `(bytes, ΔS)` through a REAL coder across n600 where measured; NULL where no
+receiver-closed generator+coder exists yet (NULL≠0, NO-FAKE #1). Advisory rows tagged.
+
+| Factor | Factorization mechanism | Compactness mechanism (born-compact) | MEASURED (bytes, ΔS) · receipt/SHA |
+|---|---|---|---|
+| **F1 atlas — image-chart static sprite** | space×time split (sprite stored once × ξ advection); per-stratum independent carriers (Road/Lane/Undrivable/Movable/MyCar, v8/#359 argmax-native) | Laguerre/power-diagram GENERATORS not pixels (v8 rate-falls-out); MDL two-part code objective (#602/#620 grammar); shared codebook amortized across n600 | G4 static fields [MEASURED, cell-space, NOT receiver-realized]: full 19,661-rule field **4,107 B raw-LZMA** → Δd_seg 0.0078; Movable-band **1,533 B Brotli-11** → 0.0037; hood **34 B zlib9** → 3.4e-5; 12-B bands → 0.00135/0.00101 (receipt `bea555b9…`, SHA-bound G4). db1 fixed-atlas oracle: **short 192,020 px** [MEASURED] ⇒ live-fit REQUIRED. Receiver-realized bytes: **NULL** |
+| **F2 ξ(t) — ego-screw trajectory** | cross-frame temporal factor: 1 keyframe + 1199 ξ-predicted residuals (#574); dual-use (same ξ = pose payload = advection warp = coding context) | ξ-keyed delta coder (#574, strongest UNBUILT rate axis); AR/spline knots; ξ-warp-confidence as CAE context (crosswalk §4b) | BEV D0 SE(3) closure exact ≤3.58e-15 m [MEASURED n600, bev_staticity_v2]. Knot payload bracket 0.3–2 KB [DERIVED]. #574 delta coder **UNBUILT** ⇒ (bytes,ΔS) **NULL**. Caveat: ξ-transport does NOT place boundaries (39–47 px, §2) — ξ is pose+context, not placement |
+| **F3 pose section** | low-rank: rank-2 pose codec (#140, 2.7×); rides F2's ξ (dual-use) | quantization-aware uint8-lattice solve (#532); descent-fit carrier (A3) not storage-shaped | Exact quotient d_pose 1.02e-4 [MEASURED, is1/rd1]; pc2 accept-loop 16/16, joint ΔS **−0.2475** [macOS-CPU advisory exact n600]; storage-shaped floor d_pose 19.9 (p1, FORMULATION-scoped). Byte-closed carrier: **NULL** (existence: PR130 23 KB→2.33e-5 external) |
+| **F4 VOPs — sparse dynamic events** | per-object separable planes (Movable band + transients + lane birth/death tokens); Morse-persistence-ranked | latent-structure-induced (dedup/AR-codeable #110); event grammar (#620) | Movable = **27.0%** of flip mass, transients **1.19%** [MEASURED n600, G4]; cell-space Movable field 1,533 B (row above). Realized VOP price: **NULL** |
+| **F5 gauge/null split** | range(A) counted ⊕ ker(A) FREE — put maximal description mass in the scorer-invisible fiber | gauge-fixed canonical low-entropy representative (PDW2 #553); the free fiber costs 0 S by construction | ker(A) ≈ **52%** of head-norm is rate-neutral / scorer-invisible (dense-int8; precision 22%) [MEASURED, null_subspace_rate_measure_20260717]. This is a **design multiplier on every other factor**: ~half of F1–F4's representational DOF can live free |
+| **F6 residual syndrome** | context-coded flip corrections where F1–F4 miss | coder-in-the-loop (Brotli-Q11/LZMA1/arithmetic INSIDE the objective, not post-hoc); real-coder H not entropy proxy | Sized by **H(flip-field \| free decoder context)** — the tier-moving scalar, **UNMEASURED** (405.5 B/err is a channel upper bound; boundary-distance entropy proxy REJECTED, 192,417 B WORSE than context-free [MEASURED, G4]). (bytes,ΔS) **NULL** |
+
+### Whole-object compactness moves already MEASURED (compound onto any export, born from the solve)
+
+- **cc3 lossless stream transform:** **−3,422 B** receiver-closed, byte-identical scorer outputs,
+  zero distortion delta, rate ΔS **−0.0022785693** (139,538→136,116 B) [MEASURED, FEED-603-cc3
+  merged 06845c4582]. Inheritable by F1–F6's container.
+- **wf7 seven-home stream waterfill:** lossless **−1,776 B**, rate ΔS **−0.0011826**, byte-exact
+  restoration, 135/135 parse-backs [macOS-CPU advisory, card §8]. The stream-granularity price
+  row (competes with pf3b coordinate-granularity in the describe pool — never summed).
+- **cb1 MyCar carrier (first strictly joint-improving composed move):** **+319 B**, Δd_seg
+  −1.05e-5, Δd_pose −0.1795, joint ΔS **−0.051646** [macOS-CPU frozen-scorer advisory, card §8].
+  Lane band REJECTED (+22.7 d_pose) — per-class factorization is REQUIRED (F1's per-stratum split
+  is not cosmetic; carriers have opposite signs).
+- **pf3b coordinate edge:** first distortion-downhill single edge Δd_seg-side, but **+860 B** vs
+  ~162 B break-even ⇒ ΔS +0.00046 [MEASURED] — proves single coordinates are rate-dominated;
+  the win is COMPOSED factors (this addendum's whole point).
+- **hb1 Fisher-margin per-stratum codebook:** builder for the FISHER_MARGIN_SITE_LOCAL family now
+  EXISTS (17/17 capacity addresses reproduced), rate column **OWED_NOT_ADMITTED** (no coder bytes
+  measured) [MEASURED custody, canonical eq `hope_bn_capacity_per_stratum_codebook_v1`, 07-27].
+
+### The design contract (what family-(d)'s confirming build MUST honor)
+
+1. Optimize over W = F1⊕F2⊕F3⊕F4 with the **F5 gauge-split applied first** (route ~52% of DOF
+   into ker(A) free) and **F6 as the priced remainder**.
+2. **Coder-in-the-loss** (F6 mechanism) is non-negotiable: MDL two-part objective (#602/#620),
+   real Brotli-Q11/LZMA1 bytes as the rate term, uint8-lattice (#532) so quantized values are
+   born cheap.
+3. **Waterfill bytes across F1–F6 by the non-additive KKT** (`boundary_routing.py`), tolerance
+   per-factor (box 7.6× error headroom = the per-stratum RD ladder). Co-measure the admitted
+   composed moves (cb1 + wf7 + cc3 + F-factors) on a merged base — NEVER sum their advisory ΔS.
+4. Every factor reports `(bytes, ΔS)` through the real coder across n600 or carries NULL; the
+   confirming measurement (§5, unchanged) is exactly this table filled to non-NULL for F1–F4+F6.
+
+Design honesty: F1/F2/F4/F6 realized prices are all NULL today — the addendum designs the space
+so those NULLs become fillable in ONE joint fit, it does not claim they are filled. The
+factorization is DERIVED from measured structure (space×time 98.8% stationarity; low-rank the
+rank-4 head; gauge the 52% null; per-stratum the opposite-sign carriers); the compactness
+mechanisms are MEASURED where a coder ran (cc3/wf7/G4 fields/cb1) and named-buildable elsewhere.
+
 STORES CONSULTED: routing card `council_coherent_optimal_path_routing_20260725.md` §1–§9 ·
 G3 `codex_findings_ddm_g3_score_atlas_20260722T204813Z` (#622) · G4
 `codex_findings_ddm_g4_spatial_stationarity_20260722T212138Z` (#623) ·
@@ -249,7 +312,8 @@ hb1 findings (#725) · `mpeg4_shape_coding_intake_and_crosswalk_20260719.md` ·
 `codec_archetype_mpeg4…20260728` · `master_thesis_invert_frozen_space…20260720` ·
 `seg_and_pose_solved_exact_lattice…20260719` · `frozen_scorer_exact_factorization_20260715` ·
 `opportunity_pools_non_additive…20260718` · `distortion_byte_economics_are_upper_bounds…20260724` ·
-`goal_is_sub015_or_below_official_leaderboard_best…20260727` · CLAUDE.md frontier sections ·
+`goal_is_sub015_or_below_official_leaderboard_best…20260727` · `null_subspace_rate_measure_20260717`
+(ker(A) 52%) · CLAUDE.md frontier sections · cc3 FEED-603 (06845c4582) · wf7/cb1/pf3b card §8 ·
 canonical equations (`segnet_head_rank4_linear_flipdist_v1` · `hope_bn_capacity_per_stratum_codebook_v1`).
 
 Bar honesty: no score claim anywhere above; the bar moves only via a real sub-bar contest row
