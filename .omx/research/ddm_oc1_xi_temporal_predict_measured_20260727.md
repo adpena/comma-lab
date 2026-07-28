@@ -28,12 +28,25 @@ the joint differentiable solve, whose stage-1 is ξ-temporal prediction. This un
    **parallax-dominated (3D)**, exactly the case a 2D homography cannot model, so "one keyframe reaches
    far" is FALSE for this scene under homography.
 
-3. **BUT this is the wrong distortion metric for the operator's codec, and that is the load-bearing
-   re-scope.** The coherent order is **TASK-LOSSY**: stage-3 QUANTIZE is auth-weighted — it zeros the
-   residual everywhere the scorer's argmax does NOT flip, and distortion is E-cell violation, NOT L2.
-   This measurement priced the **L2-lossless** residual; it does NOT test whether ξ-PREDICT shrinks the
-   **argmax-flip SUPPORT** (the only residual the task codec pays for). **verdict_scope: FORMULATION**
-   (2D-homography PREDICT, L2-lossless residual) — NOT the ξ-temporal family, NOT the task codec.
+3. **The TASK-domain measurement (rung 1, done) makes it WORSE, not better, and relocates the
+   compounding lever off PREDICT entirely.** The coherent order is TASK-LOSSY: stage-3 QUANTIZE zeros
+   the residual everywhere the frozen SegNet argmax does NOT flip. So the PREDICT stage's real cost is
+   the argmax-flip SUPPORT it leaves. MEASURED through the frozen SegNet on all 600 predicted last
+   frames vs the cached GT argmax (`lstars`), d_seg with ZERO residual:
+   **copy 0.008642 · blur 0.008648 · homography 0.018672**. The 2D-homography PREDICT is **2.16× WORSE
+   than trivial frame-copy** in the task domain too (16.1× the shipped codec's 0.00116 vs copy's 7.45×).
+   ξ-temporal-via-homography is measured NEGATIVE on BOTH axes (L2 +4.6%, task +116%). The falsification
+   threshold (homography flip-support < 0.5× blur ⇒ task lever) is decisively FAILED (2.16× blur).
+   **verdict_scope: FORMULATION** (2D-homography PREDICT); true-3D-depth prediction is the only PREDICT
+   reformulation left untested, and the compounding lever is NOT the predictor (below).
+
+3b. **THE compounding lever, located and sized: the SPARSE auth-weighted residual (stage-3), not
+   PREDICT.** Trivial copy-PREDICT already leaves only **0.864% of sites flipped** (1,019,467 of
+   117,964,800). The shipped codec drives that to 0.116% (the box) but pays a **DENSE 210 MB residual
+   (89% nonzero)** to do it. The escape is a residual RESTRICTED to the ~0.86% flip support (+ its
+   SegNet receptive-field dilation), which is 60–100× sparser than dense — exactly the operator's
+   stage-3 auth-weighted QUANTIZE, and exactly what the shipped codec does NOT do. The synergy chain
+   fires from stage-3, not stage-1.
 
 4. **The composed real evaluator row on the coding-tree codec AS IT EXISTS is r6cal's S = 194.42556**
    (inherited, real `upstream/evaluate.py` n600 CPU on the exact 291,205,400 B bytes; 99.731% rate).
@@ -57,7 +70,10 @@ the codec's q11). Frames decoded from `0.mkv` via BT.601 YUV420→RGB then area-
 the exact plane the V10 archive encodes.
 
 Artifacts (SSD, small JSON): `/Volumes/VertigoDataTier/pact/ddm_oc1_20260727/xi_n1200_q9.json`
-(n600, full atlas curves) + `xi_smoke40.json` (n20 smoke, q11, confirms the same ratios).
+(L2, n600, full atlas curves) + `xi_smoke40.json` (n20, q11, same ratios) +
+`flip_support_n600_aggregate.json` (task-domain d_seg, n600, from `fs_chunk0..4.json`). Tools:
+`experiments/ddm_oc1_xi_temporal_measure.py` (L2) + `experiments/ddm_oc1_flip_support_measure.py`
+(task, self-validated against `lstars`). Both ruff-clean.
 
 ---
 
@@ -101,49 +117,52 @@ on a +194 archive; the dominant carrier is still the missing PREDICT/TRANSFORM.
 
 ---
 
-## First rungs — each names its next measurement (the crux is now sharp + READY)
+## First rungs — each names its next measurement
 
-1. **THE decisive next measurement (READY, $0, first rung): argmax-flip support after ξ-PREDICT.**
-   For each pair, run the frozen SegNet (`upstream/models/segnet.safetensors`) on the homography-,
-   blur-, and copy-predicted last frame and compare argmax to the cached GT argmax
-   (`experiments/results/mlx_fleet_gt_cache/gt_n600.npz['lstars']`). The flip fraction per predictor =
-   the residual support the task codec must pay for after auth-weighted QUANTIZE. If ξ-PREDICT collapses
-   the support far below blur/copy, ξ-temporal IS the dominant task lever (operator right) and the whole
-   coherent order fires; if it does not, the PREDICT node must be true-3D-depth, not a 2D warp.
-   *Falsification threshold:* ξ-PREDICT flip-support < 0.5 × blur flip-support ⇒ ξ-temporal is a task
-   lever; ≥ blur ⇒ 2D warp is neutral for the task codec too (escalate PREDICT to depth/MPI).
-2. **Re-solve stage-3 under S, not the error box** (r6cal rung 2): the exact q4→q8 ΔS = −30.32 is a
-   free, in-family correction; re-run the DP with the 1.2731 B/error dual as the stopping rule and
-   byte-close the all-q8 S-optimum through the r6cal tool → a real evaluator row banking −30. Deprioritized
-   per operator ("keep the compress-the-solved-object path ONLY as a control") — it lands ~S 164, still
-   rate-dead; it validates the machinery, not the goal.
-3. **If rung 1 is positive, build the TRANSFORM node** (boundary-aligned/curvelet on the small
-   support) then the tree recursion with the shared dynamical λ waterfill (Ortega-Ramchandran) — the
-   full recursive-fractal codec. Gate it on rung 1; do not build the tree before PREDICT is shown to
-   collapse the task support.
+1. **DONE (this unit): argmax-flip support after ξ-PREDICT.** Result above (§3): 2D-homography is
+   task-NEGATIVE (2.16× copy); the falsifier fired; the PREDICT node is not the lever. The measurement
+   is self-validated (SegNet reproduces the cached `lstars` to 1 site in 117.9M). Tool:
+   `experiments/ddm_oc1_flip_support_measure.py`. Artifact: `flip_support_n600_aggregate.json`.
+2. **THE next build (READY, high-EV): the SPARSE auth-weighted residual (stage-3 first-class).** Store
+   residual only on the copy-PREDICT flip support (~0.86% of sites) dilated by the SegNet receptive
+   field, brotli-code it, byte-close through the r6cal tool → the first real evaluator row that could
+   move rate by ~60–100× while holding d_seg. *Falsification:* if the receptive-field dilation to hold
+   argmax needs > ~10% of sites, the sparse path does not beat dense and the crux moves to the pose leg /
+   scorer-native description. This is the composed-S candidate the coherent order actually points at.
+3. **Re-solve stage-3 under S, not the error box** (r6cal rung 2): the exact q4→q8 ΔS = −30.32 is a
+   free, in-family correction toward the S-objective; byte-close the all-q8 S-optimum through the r6cal
+   tool → a real evaluator row banking −30. Deprioritized per operator ("keep the compress-the-solved-
+   object path ONLY as a control"): it lands ~S 164, still rate-dead; validates the machinery, not the goal.
+4. **PREDICT reformulation, only if rung 2 walls: true-3D-depth prediction** (MPI / per-pixel depth +
+   6-DOF ego), NOT a 2D warp — the parallax the homography cannot model. Gate on rung 2; a 2D warp is
+   measured dead on both axes, so do not re-attempt homography/affine sprites.
 
 ---
 
 ## What this unit did NOT do, and why (honest boundaries)
 
-- **Did not build the full recursive-tree auth-weighted codec.** It is the capstone; a wrap-up cannot
-  fake it. This unit built + ran its stage-1 (PREDICT) measurement and relocated the crux to a single
-  READY $0 measurement (rung 1).
-- **Did not run the frozen SegNet argmax-flip measurement here.** The code path is identified and it is
-  rung 1; doing it faithfully (camera-res, lattice embedding, exact preprocess) is real scorer plumbing,
-  not a wrap-up line — and a subtly-wrong scorer measurement would be worse than none (NO-FAKE).
-- **Did not claim ξ-temporal is dead.** It is measured-neutral only for the **L2-lossless** codec; for
-  the task codec it is UNMEASURED (rung 1). One failed formulation is not a dead family.
+- **Did not build the full recursive-tree auth-weighted codec, and did not byte-close a new archive.**
+  It is the capstone; a wrap-up cannot fake it. This unit built + ran BOTH the L2 (stage-1) and the
+  task-domain (argmax-flip support) measurements and relocated the crux to stage-3 (rung 2, sparse
+  residual), the composed-S candidate.
+- **Did not claim ξ-temporal is a dead FAMILY.** The 2D-homography realization is measured NEGATIVE
+  (both axes, n600); true-3D-depth prediction is untested. verdict_scope: FORMULATION. But the crux moved
+  OFF PREDICT regardless — the lever is the sparse residual, so depth-PREDICT is now a low-priority rung 4.
 - **Did not move the pointer.** No new evaluator row was produced beyond r6cal's inherited 194.42556.
+- **The n600 task measurement was run in 5 chunks of 120 pairs (harness kills any single call >3 min);
+  self-validation (SegNet reproduces `lstars` to 1 site/117.9M) was run once then skipped in the chunks.
+  Aggregated exactly over all 600 pairs (117,964,800 sites) — this is n600 evidence, not a subset.**
 
 ## FORK
 
 Composed S is NOT ≤ 0.17 @ ≤ 200 KB (it is r6cal's 194.42556, rate-dead). → **ELSE branch.** The exact
-binding stage: **PREDICT** — the coding-tree's PREDICT node is dead at every scale, and its natural 2D
-realization (homography ξ-advection) is measured-NEUTRAL at the L2 level (rung-1 test pending for the
-task level). The reformulation that can compound: a PREDICT that collapses the **argmax-flip support**
-(not the L2 residual), realized as either true-3D-depth prediction OR a task-domain PREDICT→auth-quantize
-solve — measured first via rung 1. Not an R6 exact-row candidate this unit.
+binding stage is **QUANTIZE (stage-3), not PREDICT** — corrected by this unit's rung-1 measurement. The
+2D-homography PREDICT (MPEG-GMC/sprite ξ-advection) is measured NEGATIVE on both axes (L2 +4.6%, task
++116%), so PREDICT is not the lever; the compounding lever is the **SPARSE auth-weighted residual**: the
+shipped codec stores a DENSE 210 MB residual where only 0.864% of sites flip after trivial copy-PREDICT.
+The reformulation that compounds: restrict the residual to the flip support (+ receptive-field dilation)
+— rung 2, the composed-S candidate. Not an R6 exact-row candidate this unit (no byte-closed archive was
+produced; the composed real row remains r6cal's inherited 194.42556).
 
 ## STORES CONSULTED
 

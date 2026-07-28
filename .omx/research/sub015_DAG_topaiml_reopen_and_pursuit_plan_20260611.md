@@ -24948,3 +24948,29 @@ RUNG 1 (READY, $0, decisive): argmax-flip support after xi-PREDICT via frozen Se
 too, escalate PREDICT to depth/MPI. Pointer UNMOVED. [no-triality: eqs leg owed to rung-1 measurement]
 Artifacts: .omx/research/ddm_oc1_xi_temporal_predict_measured_20260727.md +
 /Volumes/VertigoDataTier/pact/ddm_oc1_20260727/xi_n1200_q9.json + experiments/ddm_oc1_xi_temporal_measure.py.
+
+
+FEED-oc1-rung1-flip-support (2026-07-27, arm ddm_oc1, task-domain measurement DONE, n600):
+Rung 1 (the coherent-order task-lossy test) RUN + DECISIVE. Tool experiments/ddm_oc1_flip_support_measure.py
+(ruff-clean, self-validated: frozen SegNet upstream/models/segnet.safetensors reproduces cached GT argmax
+gt_n600.npz['lstars'] to 1 site in 117,964,800 = 8.5e-9). d_seg realized through the frozen SegNet on each
+predicted last frame vs lstars, ZERO residual (= the argmax-flip SUPPORT the task codec pays for after
+stage-3 auth-weighted quantize), exact over all 600 pairs [macOS-CPU advisory, NOT a byte-closed S]:
+  copy(frame1=frame0)        d_seg 0.008642  (0.864% sites, 7.45x shipped)
+  blur(shipped 1-2-1)        d_seg 0.008648  (~=copy)
+  homography(xi-temporal 2D) d_seg 0.018672  (1.867% sites, 16.10x shipped) = 2.16x WORSE than copy
+VERDICT: 2D-homography xi-PREDICT is TASK-NEGATIVE (2.16x worse than trivial frame-copy), matching its L2
+result (+4.6%). Negative on BOTH axes. Falsifier (homography flip-support < 0.5x blur => task lever)
+DECISIVELY FAILED (2.16x). verdict_scope FORMULATION (2D-homography); true-3D-depth PREDICT untested.
+CRUX RELOCATED OFF PREDICT: copy-PREDICT already leaves only 0.864% flip support (1,019,467 sites); the
+shipped codec drives it to 0.116% but pays a DENSE 210MB residual (89% nonzero). The compounding lever is
+the SPARSE auth-weighted residual restricted to the flip support (+ SegNet receptive-field dilation),
+60-100x sparser than dense = the operator's stage-3, which the shipped codec does NOT do. FORK=ELSE
+binding stage = QUANTIZE stage-3 (corrected from PREDICT). RUNG 2 (READY, composed-S candidate): store
+residual only on the copy-PREDICT flip support dilated by the SegNet RF, byte-close via r6cal tool ->
+first real evaluator row that could move rate ~60-100x holding d_seg; falsify if RF dilation needs >10%
+sites. Composed real row UNCHANGED = r6cal S=194.42556 inherited; pointer UNMOVED. Ran as 5x120-pair chunks
+(harness SIGURG kills any single call/detach >3min; even tools/launch_detached_process.py died -- known
+harness fragility), aggregated exactly over n600. [no-triality: eqs leg owed to rung-2 byte-closed row]
+Artifacts: flip_support_n600_aggregate.json (+ fs_chunk0..4) + experiments/ddm_oc1_flip_support_measure.py;
+memo .omx/research/ddm_oc1_xi_temporal_predict_measured_20260727.md updated.
