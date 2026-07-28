@@ -187,6 +187,30 @@ def trainer_declared_flags(trainer_path: Path | None = None) -> set[str]:
     return flags
 
 
+def default_t3_long_burn_program(variant: str, out_dir: str, *, epochs: int = 400,
+                                 max_wall_minutes: float = 480.0,
+                                 gt_cache: str | None = None,
+                                 resume_from: str | None = None) -> TR1RendererProgramV1:
+    """The T3 sealed long-burn skeleton (READY_TO_FIRE_UNDER_STANDING_GO — fires from
+    MAIN only, never from a build arm). Event-driven schedule inside the trainer;
+    resumable-from-disk; per-stage EMA-shadow checkpoints; A1 stage-exit gates."""
+    levers = [
+        lever_variant(variant),
+        lever_token_grid(16, 4),
+        lever_renderer_capacity(24),
+        lever_desc_level_roundtrip(16, "round"),
+        lever_token_temporal("shared_base"),
+        lever_seg_physics("ce", 100.0),
+        lever_a1_gate(10),
+        lever_window(epochs, max_wall_minutes, batch_pairs=8, lr=2e-3),
+    ]
+    if variant == "lotto":
+        levers.append(lever_lotto(118, 0.5))
+    return TR1RendererProgramV1(levers=tuple(levers), num_pairs=600, out_dir=out_dir,
+                                gt_cache=gt_cache, resume_from=resume_from,
+                                full_confirm=True)
+
+
 def default_t1_smoke_program(variant: str, out_dir: str, *, num_pairs: int = 24,
                              epochs: int = 60, max_wall_minutes: float = 75.0,
                              gt_cache: str | None = None) -> TR1RendererProgramV1:
