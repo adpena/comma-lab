@@ -24914,3 +24914,63 @@ proposals here must state a bits/plane-value target against 0.0035.
 Artifacts: .omx/research/r6cal_solved_object_byteclose_eval_20260727.md + r6cal_asbuilt_row_receipt_20260727.json
 + r6cal_description_compression_floor_20260727.json + r6cal_evaluator_report_20260727.txt;
 tools/r6cal_byteclose_and_eval.py + tools/r6cal_description_compression_floor.py (commits d74a846abc, 1678fae24c).
+
+
+FEED-oc1-xi-temporal-predict-measured (2026-07-27, arm ddm_oc1_composed_pipeline_20260727, branched from r6cal):
+Operator 3 nested reframes CONFIRMED (compose -> joint-solve -> coherent-order recursive coding-tree
+PREDICT->TRANSFORM->QUANTIZE->CODE at every scale, shared dynamical auth-weighted lambda waterfill /
+Ortega-Ramchandran). Built + ran stage-1 (PREDICT) on the REAL 0.mkv at 384x512 (the plane V10 encodes),
+tool experiments/ddm_oc1_xi_temporal_measure.py (ruff-clean, self-checking, n600 all pairs, 0 fit fails,
+cover 0.978). MEASURED [macOS-CPU advisory, description-byte prices not S]:
+(1) 2D-homography xi-PREDICT (MPEG GMC/sprite) is the WORST intra-pair predictor -- homography/blur=1.0458
+(+4.6% vs shipped 1-2-1 blur); per-pair floor ~360KB: blur 362,379 / copy 374,795 / homography 378,985 B
+(brotli-q9). Predictor does NOT matter at L2-lossless pixel level.
+(2) cross-frame "one scene x xi(t)" mosaic-atlas via cumulative homography GROWS with distance
+(385KB@d1 -> 416@d8 -> 432@d32 -> 477@d85, L1 3.8->23) and is already > intra blur at d1: forward-drive
+is PARALLAX-dominated (3D), the 2D-homography's blind spot; "one keyframe reaches far" is FALSE.
+(3) VALIDATION: blur q9 362,379 B/pair ~= 335KB q11 ~= r6cal shipped residual 350,049 B/pair (within 4%)
+-- measurement reproduces the real archive.
+LOAD-BEARING RE-SCOPE: this priced the L2-LOSSLESS residual; the operator's codec is TASK-LOSSY (stage-3
+auth-weighted quantize zeros residual off the argmax-flip boundary; distortion = E-cell not L2). So the
+2D-homography verdict is verdict_scope FORMULATION (L2-lossless), NOT the xi-temporal family, NOT the task
+codec. Whether xi-PREDICT collapses the argmax-flip SUPPORT (the task codec's only cost) is UNMEASURED.
+BYTE MAP (which scale/stage, from r6cal exact walk + this datum): bytes carried at FRAME scale by the
+RESIDUAL (72.12%,210MB) + frame0 BOOTSTRAP (27.85%,81MB) = the ABSENCE of a working PREDICT+TRANSFORM node;
+PREDICT dead (descriptor_len=0 all 1200 records, blur only); TRANSFORM absent; QUANTIZE mis-tuned to a seg
+ERROR box not S (208 q4 score-negative dS-30.32); ENTROPY-CODE saturated (RAW 50/50). Even a REAL 2D
+homography PREDICT node does not move the L2 residual -> reviving PREDICT needs true-3D-depth OR the
+task/argmax domain, not L2.
+COMPOSED REAL ROW = r6cal S=194.42556 inherited (real evaluate.py n600 CPU on 291,205,400B; 99.731% rate)
+-- the coding tree AS IT EXISTS, dead PREDICT node. FORK = ELSE (not <=0.17): binding stage = PREDICT.
+RUNG 1 (READY, $0, decisive): argmax-flip support after xi-PREDICT via frozen SegNet
+(upstream/models/segnet.safetensors) vs cached GT argmax (gt_n600.npz['lstars']); falsify: xi flip-support
+< 0.5x blur => xi-temporal is the task lever + coherent order fires; >= blur => 2D warp neutral for task
+too, escalate PREDICT to depth/MPI. Pointer UNMOVED. [no-triality: eqs leg owed to rung-1 measurement]
+Artifacts: .omx/research/ddm_oc1_xi_temporal_predict_measured_20260727.md +
+/Volumes/VertigoDataTier/pact/ddm_oc1_20260727/xi_n1200_q9.json + experiments/ddm_oc1_xi_temporal_measure.py.
+
+
+FEED-oc1-rung1-flip-support (2026-07-27, arm ddm_oc1, task-domain measurement DONE, n600):
+Rung 1 (the coherent-order task-lossy test) RUN + DECISIVE. Tool experiments/ddm_oc1_flip_support_measure.py
+(ruff-clean, self-validated: frozen SegNet upstream/models/segnet.safetensors reproduces cached GT argmax
+gt_n600.npz['lstars'] to 1 site in 117,964,800 = 8.5e-9). d_seg realized through the frozen SegNet on each
+predicted last frame vs lstars, ZERO residual (= the argmax-flip SUPPORT the task codec pays for after
+stage-3 auth-weighted quantize), exact over all 600 pairs [macOS-CPU advisory, NOT a byte-closed S]:
+  copy(frame1=frame0)        d_seg 0.008642  (0.864% sites, 7.45x shipped)
+  blur(shipped 1-2-1)        d_seg 0.008648  (~=copy)
+  homography(xi-temporal 2D) d_seg 0.018672  (1.867% sites, 16.10x shipped) = 2.16x WORSE than copy
+VERDICT: 2D-homography xi-PREDICT is TASK-NEGATIVE (2.16x worse than trivial frame-copy), matching its L2
+result (+4.6%). Negative on BOTH axes. Falsifier (homography flip-support < 0.5x blur => task lever)
+DECISIVELY FAILED (2.16x). verdict_scope FORMULATION (2D-homography); true-3D-depth PREDICT untested.
+CRUX RELOCATED OFF PREDICT: copy-PREDICT already leaves only 0.864% flip support (1,019,467 sites); the
+shipped codec drives it to 0.116% but pays a DENSE 210MB residual (89% nonzero). The compounding lever is
+the SPARSE auth-weighted residual restricted to the flip support (+ SegNet receptive-field dilation),
+60-100x sparser than dense = the operator's stage-3, which the shipped codec does NOT do. FORK=ELSE
+binding stage = QUANTIZE stage-3 (corrected from PREDICT). RUNG 2 (READY, composed-S candidate): store
+residual only on the copy-PREDICT flip support dilated by the SegNet RF, byte-close via r6cal tool ->
+first real evaluator row that could move rate ~60-100x holding d_seg; falsify if RF dilation needs >10%
+sites. Composed real row UNCHANGED = r6cal S=194.42556 inherited; pointer UNMOVED. Ran as 5x120-pair chunks
+(harness SIGURG kills any single call/detach >3min; even tools/launch_detached_process.py died -- known
+harness fragility), aggregated exactly over n600. [no-triality: eqs leg owed to rung-2 byte-closed row]
+Artifacts: flip_support_n600_aggregate.json (+ fs_chunk0..4) + experiments/ddm_oc1_flip_support_measure.py;
+memo .omx/research/ddm_oc1_xi_temporal_predict_measured_20260727.md updated.
