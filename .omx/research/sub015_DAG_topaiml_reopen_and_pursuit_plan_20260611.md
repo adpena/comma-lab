@@ -24838,3 +24838,27 @@ measurement IS this table filled to non-NULL for F1–F4+F6. HONEST: F1/F2/F4/F6
 today — the addendum designs the space so those NULLs become fillable in ONE joint fit; it does NOT claim
 them filled. verdict_scope: DIRECTION (design axis + factor decomposition MEASURED where non-NULL). Pointer
 0.1910828242 [contest-CPU] UNMOVED, 0.019 behind 0.172 bar; no score claim. [p0-ledger-ok]
+
+## FEED-730c-dynamical-authweighted (2026-07-27, MAIN — Fable arm ab4c0be8, landed aa85bf233a, §7.1) [no-triality — design-contract; DSL/eqs legs land WITH the family-(d) build]
+DESIGN CONSTRAINT (operator: "pull thresholds and Pareto points... not naive, all dynamical and
+differentiable" + "And weighted in the auth eval scorer"). Unified rule: every gate carries {DYNAMICAL:
+source law · DIFFERENTIABLE: relaxation · metric: Fisher/Bregman · AUTH-WEIGHTED: sensitivity object+SHA}.
+Contest math forbids static: ∂S/∂d_seg=100 flat, ∂S/∂d_pose=5/√(10·d_pose)→∞ at tube (crossover≈2.5e-4),
+∂S/∂B=25/N tiny — every exchange rate is operating-point-dependent; weight = (exact contest coefficient)
+× (auth-eval scorer MEASURED local sensitivity thru REAL frozen SegNet-argmax + PoseNet-6MSE), never a
+surrogate. PER-GATE AUDIT (hidden static constant → dynamical+auth replacement): pf3b 162B/edge → local
+∂S ratio per-step, auth-weighted by at1 #660 factored-influence · #613 box (200KB/0.00116/0.00161 hard
+step) → soft homotopy tracking rd1 λ-continuation frontier, tolerance weighted by auth flip-ledger mass
+per stratum (G3/G4 SHAs) · waterfill knee/guessed budget → max-curvature of traced D(λ) + Sinkhorn/
+soft-top-k on local duals, weighted by auth Fisher-margin 0.5·sech²(m/2) trace (hb1) · cb1 sign(ΔS) if-else
+→ Bregman prox on merged base, pull traces to auth Δd_seg/Δd_pose · trust radius → Fisher-ball from local
+margin curvature + LM-λ, scaled by auth rank-4 head + Pose6 Jacobian norms · ranking → costate ∂S/∂DOF
+per-step, weighted by at1 #660 gaze atlas (ρ 0.9027 measured). AUTHORITY LADDER: through-R frozen-CPU-torch
+= local per-step pull authority; exact evaluate.py contest-CPU/CUDA = FINAL for accepted rows; MLX/advisory
+PROPOSE only; MPS/proxy NEVER weight a decision. OWED static→dynamical fixes FLAGGED (not shipped silently):
+v19 acceptance extension to ranking/trust-radius/box · seg-secant ∂B/∂d_seg curve unfinished · pose
+decay-law instrument (until it lands, ∂S/∂d_pose along horizon = hidden constant-slope assumption) · at1
+locked-source materializer. Any surviving constant OR any weight that cannot cite its auth-scorer
+sensitivity object = an owed fix, labeled. family-(d) confirming build (§5) inherits this whole contract.
+verdict_scope: DIRECTION (design contract; per-gate audit named). Pointer 0.1910828242 [contest-CPU]
+UNMOVED, 0.019 behind 0.172 bar; no score claim. [no-triality]
