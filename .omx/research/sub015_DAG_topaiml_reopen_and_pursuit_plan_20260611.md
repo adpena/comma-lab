@@ -24777,3 +24777,38 @@ re-derived all rows to 1e-12; BOX excluded (291,205,400B exact archive; verdict_
 realization). W_seg = §7 STATIC presumptive (0.024124510 @130,870B closed-packet). Start resolution transferred to
 j11's pure-priced realized rows (ws4 measured W_seg x+ at joint −0.00043 blocked only by window component gate).
 Card §21 gate scoreboard: G3/G4/G3.5 GREEN; G1+G2 on j11; pose leg on p1. Pointer 0.1910828242 [contest-CPU] UNMOVED.
+
+## FEED-730-pantheon (2026-07-27, MAIN — Fable arm ab4c0be8, landed a3281cf312, pushed)
+CONVOCATION verdict (operator: "find the synergy and crux based on everything... optimized against the
+frozen contest information space... ACROSS n600... like MPEG-4 but lossy, Netflix fused with robotics").
+THE SYNERGY = the **task-lossy ego-scene codec**: ONE world-program W = {scene atlas (IMAGE-chart sprite)
+· ξ(t) ego-screw (dual-use: pose payload + prediction context) · sparse VOP events} → free inflate.py →
+the ONE 384×512 plane BOTH heads read. Coupling PROVEN (not conjectured): A_seg≡A_pose resize-first, and
+the 07-19 lattice solve pinned that plane and bought both heads AT ONCE (d_seg 0.0, d_pose 9.3e-10) —
+the empirical death of staple-composition. It IS MPEG-4 sprite/GMC/VOP made lossy-to-the-task (distortion
+= E-cell violation, not PSNR/VMAF) × Netflix per-content RD retargeted to E's Fisher/flip sensitivity
+atlas × robotics world-model as the coded state. n600 grounding: 98.806% of flip mass image-stationary
+(G4), debt broad not heavy-tailed (G3 top-10 = 1.98%), Road+Lane = 61% boundary content → amortize atlas
+ONCE across the drive. DECISIVE n600 CORRECTION: atlas lives in the IMAGE chart, NOT BEV — ξ/BEV warp
+misses Road 39.0px / Lane 47.1px p50 at scorer precision (ξ predicts motion, cannot place boundaries).
+THE CRUX = the in-cell realization operator in the right chart, three measured faces: chart (class-birth
+0/10, placement is counted content) · paint (describe-then-repaint 159×: 17,927→2,845,843 err; v14
+2.8e-4→0.0275) · direction (no single downhill move — j12 16 singles active-zero, pf3 16/16 uphill,
+pf3b first-edge rate-dominated; only composed pay: cb1 −0.0516 @+319B, wf7 −1,776B). SHARPEST ATTACK =
+**solve IN description coordinates** — GN/CG over {atlas generators, ξ knots, VOP params} + custodied
+exact rank-4 head law + ≤6-dim pose quadratic + uint8-STE + real coder INSIDE the objective = is1 family
+(d), NEVER BUILT; bundle-adjustment is its robotics twin. FEASIBILITY (n600-projected): atlas 90-130KB
+(114KB generic-AR / 138KB ws1@2.85M err / 236KB MDL-upper) + ξ 0.3-2KB (#574 unbuilt) + pose 5-23KB
+(quotient closed; PR130 23KB existence; p1 19.9 storage-floor forces descent-fit) + VOP 10-30KB (Movable
+27.0% flip mass, transients 1.19%) + syndrome H(flip|context) unmeasured. Box = 200KB/333B-pair; sub-0.15
+= 154,522B/257B-pair. POSE FEASIBLE; SEG is the open axis (136,839 allowed vs 2,845,843 best-described =
+~2.7M-error realization workload = the crux itself). CONFIRMING MEASUREMENT (named, km1-class composed fit
+in description coords through exact E, byte-close e5a/E4, ONE (bytes,d_seg,d_pose) n600 triple): CONFIRM
+≤~0.5M err @≤130KB pose≤2.5e-4 ⇒ composed ≤~0.17 ⇒ spend Modal R6 | KILL <3× over ws1 at equal bytes ⇒
+image-chart-atlas FORMULATION falsified (verdict_scope: formulation, instance endpoint), weight → #366
+descent-finisher. km1 (Opus 5) RUNNING = first empirical cut; MAIN interprets on land, fires family-(d)
+only on the fork (no duplicate arm now). STORES CONSULTED: pantheon memo a3281cf312, G3/G4/bev_staticity_v2
+n600 rows, 07-19 lattice-solve receipt, card §4-§6 crux ladder, cb1/wf7/pf3/j12 pricing rows, is1 family.
+verdict_scope: DIRECTION (synergy = codec archetype named + coupling MEASURED; crux = realization operator
+in image chart; attack = family-d solve-in-description-coordinates). Pointer 0.1910828242 [contest-CPU]
+UNMOVED — behind the 0.172 bar by 0.019; no score claim. [no-triality]
