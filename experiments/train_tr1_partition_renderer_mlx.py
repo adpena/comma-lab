@@ -136,10 +136,37 @@ DUTY_TO_MEASURE: tuple[dict[str, str], ...] = (
      "receipt": "steer #3: clDice held by curriculum_dsl/typed_config/gauge (+#260 "
                 "Metal kernel, ANCESTOR-vehicle +26% per L18 — RE-RACE never adopt); "
                 "persistence/Betti in curriculum_dsl + spec_c2; sn1 sided weights; "
-                "#382 sigma_cc'",
-     "note": "POOLS LAW: these four ALL draw the SAME Lane-error pool — COMPETE never "
+                "#382 sigma_cc'; op1 P3 row 4 OASIS per-pixel class balancing "
+                "(class_weight_lane IS this lever family's simplest member)",
+     "note": "POOLS LAW: these ALL draw the SAME Lane-error pool — COMPETE never "
              "sum; race per-lever at own-optimum then KKT-waterfill winners; blind "
              "stacking is the named non-additivity bug"},
+    {"lever": "renderer_conditioning_clade_geo_icpe_vs_spade_mini", "state": "never-fired",
+     "receipt": "op1 P3 row 1 (CLADE TPAMI 2021 arXiv 2012.04644: class-adaptive "
+                "modulation at ~39% less param overhead than a SPADE subnet; ICPE "
+                "positional maps computed at decode = rule-118 FREE — the openpilot "
+                "features v-174, d(v)=488.3/(v-192), dist-to-boundary; geometry "
+                "custody op1 P2: fx=400.27/fy=399.82/c=(256,192), two-horizon-roles "
+                "174 lane-IPM / 192 pose-geometric)",
+     "note": "matched A/B at (D=16,c=4) EQUAL counted bytes: CLADE+geo-ICPE vs "
+             "mini-SPADE; adopt lower native d_seg arm; transfer falsified if "
+             "mini-SPADE wins by >10%; DSL lever name renderer_conditioning"},
+    {"lever": "row_anisotropic_D_foveation", "state": "GATE-PASSED-QUEUED",
+     "receipt": "op1 P3 row 2 + tb1 MEASURED $0 gate "
+                "(/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/"
+                "op1_row_foveation_gate.json): 72.1% of flip-prone mass (GT margin<thr,"
+                " stable across thr 0.05/0.1/0.25, n600 margins memmap) lies in rows "
+                "160-240 (21% of rows) >= the pre-registered 50% adoption criterion; "
+                "best 81-row band 166-246 @ 72.7%",
+     "note": "ENTERS the S1.2 grid race as ONE variant lane (D=8 rows 160-240, D=16 "
+             "elsewhere) — raced, never unconditionally adopted; IMAGE-PLANE ONLY "
+             "(NO BEV lane: #609-v2 exact-chart KILL, Road 39.02/Lane 47.12 px p50 "
+             "ruling residual; re-entry only via the memo's F1^F2 falsifier)"},
+    {"lever": "boundary_gated_token_code_width", "state": "never-fired",
+     "receipt": "op1 P3 row 3 (PointRend logic at the coder; boundary 2,436 px/frame "
+                "= 1.2% of pixels; partition piecewise-constant)",
+     "note": "$0 gate owed: H(cell|neighbors) interior vs boundary cells on GT tokens "
+             "at (D,c); adopt iff >=15% token-stream saving vs uniform c; feeds G4"},
 )
 
 
