@@ -115,6 +115,23 @@ DUTY_TO_MEASURE: tuple[dict[str, str], ...] = (
     {"lever": "renderer_bit_depth_race_int4_int5", "state": "never-fired",
      "receipt": "SPEC_tr1 G3 (bit-depth-DOF law; int8 export is the T0 estimate)",
      "note": "QAT int4/int5 export race; T0 ledger prices int8 only"},
+    {"lever": "trunk_forces_360_set", "state": "never-fired",
+     "receipt": "#360 (temporal screw-consistency / MarginBandSatisficing #459 / "
+                "tie-locus displacement / R-phase alignment)",
+     "note": "witness-vehicle-derived in-trunk forces; EXCLUDED from the T1 base-loop "
+             "race to avoid confounding the A2 arm comparison; MarginBandSatisficing is "
+             "the first T2+ candidate (min-S-over-solution-SET law: stop over-deepening "
+             "margins past the flip boundary)"},
+    {"lever": "perclass_pair_surface_tension_sigma_ccprime", "state": "never-fired",
+     "receipt": "#382 Gamma-limit per-class-pair sigma law",
+     "note": "NO scalar length/MCF term exists in the tr1 loss => the Lane-erasure "
+             "mechanism is absent BY CONSTRUCTION; sigma_cc' becomes binding only if a "
+             "curvature/length regularizer is added"},
+    {"lever": "update_rms_matched_optimizer_race", "state": "logged-not-enforced",
+     "receipt": "#685 px1 (fair optimizer A/Bs need update-RMS matching)",
+     "note": "Adam per-param normalization approximately equalizes update RMS across "
+             "arms; the per-gate param_delta_rms telemetry MEASURES it instead of "
+             "assuming it — enforcement lever queued if arms diverge >2x"},
 )
 
 
@@ -699,6 +716,8 @@ def main() -> int:
     a1_consecutive = 0
     ep_losses: list[float] = []
     telemetry_tail: list[dict] = []
+    gnorm_hist: list[float] = []
+    gate_param_snapshot: dict[str, np.ndarray] | None = None
     order_rng = np.random.default_rng(cfg.seed + 1)
     knee_switched = stage != "seg_trunk_ce"
     stop_reason = "epochs_complete"
@@ -710,6 +729,7 @@ def main() -> int:
             break
         perm = order_rng.permutation(cfg.num_pairs)
         ep_loss, steps = 0.0, 0
+        last_gnorm = None
         for b0 in range(0, cfg.num_pairs, cfg.batch_pairs):
             ids = [int(i) for i in perm[b0:b0 + cfg.batch_pairs]]
             loss, grads = vg(model, ids)
@@ -725,12 +745,31 @@ def main() -> int:
             flat = tree_flatten(model.trainable_parameters())
             for k, v in flat:
                 ema[k] = cfg.ema_decay * ema[k] + (1.0 - cfg.ema_decay) * v
+            if b0 + cfg.batch_pairs >= cfg.num_pairs:  # last batch: gnorm telemetry
+                from mlx.utils import tree_flatten as _tf
+
+                sq = 0.0
+                for _k, g in _tf(grads):
+                    sq += float(mx.sum(mx.square(g)))
+                last_gnorm = float(np.sqrt(sq))
         if stop_reason == "nonfinite_loss":
             break
         ep_loss /= max(steps, 1)
         ep_losses.append(ep_loss)
         row = {"event": "epoch", "epoch": epoch, "stage": stage, "seg_form": state_form["form"],
-               "ep_loss": ep_loss, "weights_stepped": steps > 0, "steps": steps}
+               "ep_loss": ep_loss, "weights_stepped": steps > 0, "steps": steps,
+               "gnorm_last_batch": last_gnorm}
+        # Confound immune system (day-one, L1 runtime alarms — LOUD, never silent):
+        if ep_loss == 0.0:
+            tlog({"event": "confound_alarm", "kind": "frozen_epoch", "epoch": epoch,
+                  "note": "ep_loss==0.0 liveness ALERT (#304 median-freeze class)"})
+        if last_gnorm is not None:
+            gnorm_hist.append(last_gnorm)
+            if len(gnorm_hist) >= 4:
+                med = float(np.median(gnorm_hist[:-1][-8:]))
+                if med > 0 and last_gnorm > 100.0 * med:
+                    tlog({"event": "confound_alarm", "kind": "gnorm_hijack",
+                          "epoch": epoch, "gnorm": last_gnorm, "trailing_median": med})
         # Event-driven form switch (never a PR95 stage skeleton): CE knee -> tau_softplus.
         if (not knee_switched and state_form["form"] == "ce" and len(ep_losses) >= 4):
             w = ep_losses[-4:]
@@ -748,6 +787,18 @@ def main() -> int:
                 # comparing tau_softplus loss against a CE baseline would fire a
                 # FALSE realization-gap alarm at the next gate. One-gate rebase.
                 prev_gate_smooth = None
+        # F2 EVENT-FALLBACK (triggers-forces P0): if the CE knee never fires, the
+        # form switch still fires at the window midpoint — an event with a fallback,
+        # never a stranded stage (recorded as fallback, distinct from the knee).
+        if not knee_switched and state_form["form"] == "ce" and epoch >= cfg.epochs // 2:
+            save_checkpoint(out_dir / "checkpoints" / "stage_seg_trunk_ce_exit.npz",
+                            model=model, ema=ema, opt_state_flat={}, epoch=epoch,
+                            stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)
+            state_form["form"] = "tau_softplus"
+            stage = "seg_trunk_tau"
+            knee_switched = True
+            prev_gate_smooth = None
+            row["event_knee_fallback"] = {"epoch": epoch, "kind": "F2_midpoint_fallback"}
         tlog(row)
         telemetry_tail.append(row)
 
@@ -760,6 +811,15 @@ def main() -> int:
             finally:
                 ema_restore(model, live)
             realized_argmax = gate_row.pop("_realized_argmax")
+            # #685 px1 race-fairness telemetry: MEASURED update magnitude per arm —
+            # RMS of the live-param delta accumulated since the previous gate.
+            live_np = {k: np.asarray(v) for k, v in live.items()}
+            if gate_param_snapshot is not None:
+                num = sum(float(np.sum((live_np[k] - gate_param_snapshot[k]) ** 2))
+                          for k in live_np)
+                den = sum(v.size for v in live_np.values())
+                gate_row["param_delta_rms_since_prev_gate"] = float(np.sqrt(num / max(den, 1)))
+            gate_param_snapshot = live_np
             a1 = a1_adjudicate(prev_gate_row, gate_row, prev_gate_smooth, ep_loss)
             gate_row.update(a1)
             gate_row.update(ledger)
