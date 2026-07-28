@@ -1,0 +1,185 @@
+{
+  "all_records_budget": {
+    "bootstrap": 175039421,
+    "chunk_header": 2800,
+    "descriptor": 0,
+    "file_bytes": 596649573,
+    "header": 177600,
+    "records": 1200,
+    "residual": 421429752
+  },
+  "box_pricing": [
+    {
+      "archive_bytes": 291205400,
+      "bits_per_plane_value_at_box": 0.003493109809027778,
+      "box_bytes": 154524,
+      "bytes_per_pair_at_box": 257.54,
+      "compression_factor_required": 1884.5318526571923,
+      "rate_term_at_box": 0.1028911888722504,
+      "rate_term_now": 193.90172278752317
+    },
+    {
+      "archive_bytes": 291205400,
+      "bits_per_plane_value_at_box": 0.004521122685185185,
+      "box_bytes": 200000,
+      "bytes_per_pair_at_box": 333.3333333333333,
+      "compression_factor_required": 1456.027,
+      "rate_term_at_box": 0.13317179062443427,
+      "rate_term_now": 193.90172278752317
+    }
+  ],
+  "coder_race": [
+    {
+      "chunk": "chunk-0000.q4.predictor.bin",
+      "rows": [
+        {
+          "bytes": 6123181,
+          "coder": "RAW",
+          "delta_vs_raw": 0,
+          "ratio_vs_raw": 1.0
+        },
+        {
+          "bytes": 6124793,
+          "coder": "zlib-9",
+          "delta_vs_raw": 1612,
+          "ratio_vs_raw": 1.000263261856868
+        },
+        {
+          "bytes": 6151199,
+          "coder": "bz2-9",
+          "delta_vs_raw": 28018,
+          "ratio_vs_raw": 1.0045757262442512
+        },
+        {
+          "bytes": 6123548,
+          "coder": "lzma-9e",
+          "delta_vs_raw": 367,
+          "ratio_vs_raw": 1.0000599361671654
+        },
+        {
+          "bytes": 6123201,
+          "coder": "brotli-q11",
+          "delta_vs_raw": 20,
+          "ratio_vs_raw": 1.0000032662761398
+        },
+        {
+          "bytes": null,
+          "coder": "zstd-19",
+          "note": "zstandard unavailable"
+        }
+      ]
+    },
+    {
+      "chunk": "chunk-0000.q8.predictor.bin",
+      "rows": [
+        {
+          "bytes": 5200322,
+          "coder": "RAW",
+          "delta_vs_raw": 0,
+          "ratio_vs_raw": 1.0
+        },
+        {
+          "bytes": 5200969,
+          "coder": "zlib-9",
+          "delta_vs_raw": 647,
+          "ratio_vs_raw": 1.0001244153727404
+        },
+        {
+          "bytes": 5224945,
+          "coder": "bz2-9",
+          "delta_vs_raw": 24623,
+          "ratio_vs_raw": 1.0047348991081706
+        },
+        {
+          "bytes": 5200508,
+          "coder": "lzma-9e",
+          "delta_vs_raw": 186,
+          "ratio_vs_raw": 1.0000357670159656
+        },
+        {
+          "bytes": 5200339,
+          "coder": "brotli-q11",
+          "delta_vs_raw": 17,
+          "ratio_vs_raw": 1.000003269028341
+        },
+        {
+          "bytes": null,
+          "coder": "zstd-19",
+          "note": "zstandard unavailable"
+        }
+      ]
+    }
+  ],
+  "entropy": [
+    {
+      "bytes": 6123181,
+      "chunk": "chunk-0000.q4.predictor.bin",
+      "distinct_symbols": 256,
+      "h0_bits_per_byte": 7.999232761202831,
+      "h1_bits_per_byte": 7.986634157449456
+    },
+    {
+      "bytes": 5200322,
+      "chunk": "chunk-0000.q8.predictor.bin",
+      "distinct_symbols": 256,
+      "h0_bits_per_byte": 7.999123761157169,
+      "h1_bits_per_byte": 7.985862496524698
+    }
+  ],
+  "evidence_axis": "[measured-on-artifact bytes; no distortion claim]",
+  "per_step_budget": {
+    "4": {
+      "bootstrap": 37778844,
+      "bytes_per_pair": 536071.7403846154,
+      "descriptor": 0,
+      "header": 30784,
+      "records": 208,
+      "residual": 73693294
+    },
+    "8": {
+      "bootstrap": 43306903,
+      "bytes_per_pair": 458420.9132653061,
+      "descriptor": 0,
+      "header": 58016,
+      "records": 392,
+      "residual": 136336079
+    }
+  },
+  "predictor_mode_histogram": {
+    "SPATIAL_SMOOTH_121": 1200
+  },
+  "promotion_eligible": false,
+  "schema": "r6cal_description_compression_floor.v1",
+  "score_claim": false,
+  "score_duals": {
+    "lambda_byte_score_per_byte": 6.658589531221714e-07,
+    "lambda_seg_error_score_per_error": 8.477105034722222e-07,
+    "score_optimal_bytes_per_corrected_seg_error": 1.273108215332031
+  },
+  "selected_records_budget": {
+    "bits_per_plane_value_bootstrap": 1.8329930510344328,
+    "bits_per_plane_value_residual": 4.747842814127604,
+    "bits_per_plane_value_total": 6.582843243634259,
+    "bootstrap": 81085747,
+    "bytes_per_pair": 485339.86666666664,
+    "descriptor": 0,
+    "header": 88800,
+    "payload_bytes": 291203920,
+    "records": 600,
+    "residual": 210029373,
+    "share_bootstrap": 0.27845005314488896,
+    "share_residual": 0.7212450059051403
+  },
+  "source": {
+    "candidate_json": "/Volumes/VertigoDataTier/pact/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/stage_checkpoints/04_candidate/candidate.json",
+    "candidate_sha256": "fafb2ce93eecb8fe762d47769dae701f87678c725b57d814d19bd958e6238548",
+    "chunk_files": 100,
+    "geometry": {
+      "channels": 3,
+      "file_bytes": 5439258,
+      "height": 384,
+      "width": 512
+    },
+    "rate_dir": "/Volumes/VertigoDataTier/pact/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/stage_checkpoints/01_rate"
+  }
+}

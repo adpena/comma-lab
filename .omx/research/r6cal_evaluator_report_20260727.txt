@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 4
+  prefetch_queue_depth: 4
+  report: /Volumes/VertigoDataTier/pact/r6cal_byteclose_eval_20260727T230213Z/full/report.txt
+  seed: 1234
+  submission_dir: /Volumes/VertigoDataTier/pact/r6cal_byteclose_eval_20260727T230213Z/full
+  uncompressed_dir: /Users/adpena/Projects/pact/upstream/videos
+  video_names_file: /Users/adpena/Projects/pact/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.01663316
+  Average SegNet Distortion: 0.00115997
+  Submission file size: 291,205,400 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 7.75606891
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 194.43
