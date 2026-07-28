@@ -132,6 +132,14 @@ DUTY_TO_MEASURE: tuple[dict[str, str], ...] = (
      "note": "Adam per-param normalization approximately equalizes update RMS across "
              "arms; the per-gate param_delta_rms telemetry MEASURES it instead of "
              "assuming it — enforcement lever queued if arms diverge >2x"},
+    {"lever": "lane_pool_topology_loss_race", "state": "never-fired",
+     "receipt": "steer #3: clDice held by curriculum_dsl/typed_config/gauge (+#260 "
+                "Metal kernel, ANCESTOR-vehicle +26% per L18 — RE-RACE never adopt); "
+                "persistence/Betti in curriculum_dsl + spec_c2; sn1 sided weights; "
+                "#382 sigma_cc'",
+     "note": "POOLS LAW: these four ALL draw the SAME Lane-error pool — COMPETE never "
+             "sum; race per-lever at own-optimum then KKT-waterfill winners; blind "
+             "stacking is the named non-additivity bug"},
 )
 
 
@@ -430,6 +438,37 @@ def counted_bytes_ledger(model, cfg: TR1Config) -> dict[str, int]:
 # forward is reduced-precision — the witness PORT-FIDELITY lesson), lift to
 # camera uint8 with the TORCH-authority R, frozen CPU SegNet argmax.
 # ---------------------------------------------------------------------------
+def topology_per_class(realized: np.ndarray, gts: list[np.ndarray]) -> dict[str, list[int]]:
+    """A1 anti-aliasing telemetry (steer #3): SegNet sees REGIONS and the measured
+    error mode is ERASURE of low-persistence components (lane dashes; error ~
+    1/persistence) — equal flip counts can hide wrong component structure. Per class:
+    Betti-0 (connected components) realized vs GT, GT components ERASED (zero realized
+    overlap), and the smallest SURVIVING GT component (px) — erasure/birth failures
+    become visible the moment they happen. Score-neutral, default-on."""
+    from scipy import ndimage
+
+    b0_r = [0] * 5
+    b0_g = [0] * 5
+    erased = [0] * 5
+    min_surv = [0] * 5  # 0 = none survived / class absent
+    for i in range(realized.shape[0]):
+        for c in range(5):
+            _, nr = ndimage.label(realized[i] == c)
+            lg, ng = ndimage.label(gts[i] == c)
+            b0_r[c] += int(nr)
+            b0_g[c] += int(ng)
+            for comp in range(1, ng + 1):
+                m = lg == comp
+                if not np.any(realized[i][m] == c):
+                    erased[c] += 1
+                else:
+                    sz = int(np.count_nonzero(m))
+                    if min_surv[c] == 0 or sz < min_surv[c]:
+                        min_surv[c] = sz
+    return {"betti0_realized": b0_r, "betti0_gt": b0_g,
+            "gt_components_erased": erased, "smallest_surviving_gt_component_px": min_surv}
+
+
 def realized_gate(model, gate_ids: tuple[int, ...], lstars, seg_cpu,
                   prev_realized: np.ndarray | None) -> dict[str, Any]:
     import mlx.core as mx
@@ -459,6 +498,7 @@ def realized_gate(model, gate_ids: tuple[int, ...], lstars, seg_cpu,
     }
     if prev_realized is not None and prev_realized.shape == realized.shape:
         row["realized_flips_vs_prev_gate"] = int(np.count_nonzero(realized != prev_realized))
+    row["topology_per_class"] = topology_per_class(realized, gts)
     row["_realized_argmax"] = realized
     return row
 
