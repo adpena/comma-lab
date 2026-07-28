@@ -301,6 +301,75 @@ factorization is DERIVED from measured structure (space×time 98.8% stationarity
 rank-4 head; gauge the 52% null; per-stratum the opposite-sign carriers); the compactness
 mechanisms are MEASURED where a coder ran (cc3/wf7/G4 fields/cb1) and named-buildable elsewhere.
 
+### §7.1 NO NAIVE STATIC THRESHOLDS — every gate DYNAMICAL + DIFFERENTIABLE (operator constraint, binding)
+
+Constants-are-poison lifted to the acceptance/Pareto apparatus. The contest math FORBIDS static
+gates: S = 100·d_seg + √(10·d_pose) + 25·B/N ⇒ ∂S/∂d_seg = 100 (flat), ∂S/∂d_pose = 5/√(10·d_pose)
+(→∞ as pose→tube; crossover pose_avg≈2.5e-4, below it pose marginal dominates SegNet 2.71×),
+∂S/∂B = 25/N ≈ 6.66e-7/byte (flat). So EVERY exchange rate is operating-point-dependent; any
+fixed byte break-even or accept-margin is naive. Each numeric gate below is labeled
+{DYNAMICAL: source law · DIFFERENTIABLE: relaxation · metric}. The costate λ(state)=∂S/∂x
+(#247/#426 Pontryagin adjoint) IS the pull threshold — one dynamical source, not a constant table.
+
+**AUTH-EVAL SOURCED WEIGHTING (operator amendment, binds with the above — NO-FAKE authority ladder).**
+Every pull/threshold/Pareto weight = (exact contest coefficient) × (the AUTH-EVAL scorer's MEASURED
+local sensitivity at that DOF). The contest coefficients are the S partials (100 for d_seg, the
+√10-nonlinear 5/√(10·d_pose) for d_pose, 25/N for bytes); the local sensitivity comes THROUGH the
+REAL frozen SegNet argmax + PoseNet 6-MSE — the at1 #660 factored-influence atlas / Fisher-margin
+trace / flip-ledger — NOT a surrogate. So the weighting is heterogeneous per-pixel/per-pair (small-
+margin flip-prone sites and the pose-sensitive subspace weigh far more), operating-point-dynamical,
+differentiable, in the auth scorer's OWN Fisher metric. **Authority ladder:** through-R frozen-
+CPU-torch scorer = the local measurement authority for per-step pulls; exact `upstream/evaluate.py`
+(contest-CPU/CUDA) = FINAL authority for any accepted row; MLX/advisory may PROPOSE candidates but
+the weighting that DECIDES acceptance must trace to the auth-eval scorer; MPS/proxy NEVER weight a
+decision. Every gate below gains a fourth label {AUTH-WEIGHTED: sensitivity object · receipt/SHA}.
+
+**The five mechanism laws (bind, do not re-derive):**
+1. **Thresholds = local dual/gradient.** accept-pull on any DOF = ∂S/∂(DOF) at the CURRENT
+   (d_seg,d_pose,B), recomputed each step. {DYNAMICAL: costate λ #247/#426 · DIFFERENTIABLE:
+   v19 realized-acceptance already re-measures joint ΔS — EXTEND so ranking + trust-radius +
+   tolerance are ALSO local-gradient-derived · metric: Fisher}.
+2. **Pareto = a CURVE by λ-continuation, never picked points.** trace D(λ) by predictor-corrector
+   on KKT stationarity; knee = max-curvature of the traced frontier (computed). {DYNAMICAL:
+   bind to rd1 #667 λ-continuation frontier · DIFFERENTIABLE: predictor-corrector along λ ·
+   metric: Fisher-Rao arc-length}.
+3. **Differentiable machinery.** Lagrangian S+λ·rate with λ SWEPT (continuation) NOT a hard byte
+   cap; uint8-STE through the lattice; soft/annealed tolerance homotopy (box loosens smoothly);
+   entropic-OT/Sinkhorn or soft-top-k for the F1–F6 waterfill allocation (NOT hard argmax);
+   proximal/Bregman acceptance operator (NOT if-else).
+4. **Metric = Fisher/Bregman, not Euclid.** pull direction+magnitude are metric-dependent;
+   dual-metric readback (Euclid-vs-Fisher cosine can SIGN-FLIP — Fisher is authority,
+   `dual_metric_readback_euclid_cosine_vs_fisher_both_informative_20260717`). The non-additive
+   KKT waterfill runs IN the Fisher metric.
+5. **Costate = the dynamical λ.** the Pontryagin adjoint is the source of every per-factor pull.
+
+**Per-gate audit of the existing MEASURED rows (hidden static constants → dynamical replacement):**
+
+| Gate (current form) | Static constant (the poison) | DYNAMICAL replacement · metric | AUTH-WEIGHTED source (receipt/SHA) |
+|---|---|---|---|
+| pf3b byte break-even | **162 B/edge** (hardcoded; = byte-equivalent of a seg flip at ∂S/∂B only) | break-even_B(x) = ΔD_joint·(∂S/∂D at current d_seg,d_pose) / (∂S/∂B) — pose-dominated near the tube ⇒ 162 B correct at ONE operating point. {DYNAMICAL: local ∂S ratio · DIFFERENTIABLE: continuous · Fisher} | ΔD_joint measured through real frozen SegNet+PoseNet (pf3b receipt, card §8); the per-edge sensitivity = at1 #660 factored-influence, NOT a proxy |
+| Box tolerance | **200 KB / d_seg≤0.00116 / d_pose≤0.00161** (hard step; #613 gate) | soft homotopy; OPERATING box = the λ-traced frontier point at the current bar, not the hard #613 triple (representation gate ≠ optimum — is1). {DYNAMICAL: rd1 λ-continuation · DIFFERENTIABLE: annealed soft box · Fisher} | tolerance weighted by the auth flip-ledger mass per stratum (G3 #622 / G4 #623 exact-flip fields, SHA `faaff729…`/`bea555b9…`) — loosen where the auth scorer is insensitive |
+| Waterfill knee / byte budget | **guessed byte budget** (any fixed 130 KB / 154,522 B split) | knee = max-curvature of the traced D(λ) frontier; F1–F6 allocation by Sinkhorn/soft-top-k on local duals. {DYNAMICAL: KKT curvature · DIFFERENTIABLE: entropic-OT · Fisher} | duals weighted by auth per-pixel/per-pair sensitivity (Fisher-margin 0.5·sech²(m/2) trace, hb1 `hope_bn_capacity_per_stratum_codebook_v1`; margin field SHA `177d22f0…`) — bytes flow where the auth argmax is flip-prone |
+| cb1 / carrier acceptance | **sign(ΔS) if-else at fixed base** (+319 B accepted at THAT base) | Bregman prox acceptance on the MERGED base; +319 B admissible only while ∂S/∂(carrier) stays negative under co-measurement. {DYNAMICAL: costate λ · DIFFERENTIABLE: Bregman prox · Fisher} | ΔS measured through the real frozen scorer (cb1 receipt, macOS-CPU advisory → owes contest-CPU/CUDA final); the acceptance pull traces to auth Δd_seg/Δd_pose, never MPS/proxy |
+| Trust-region radius (family-(d) GN/CG) | **any fixed radius** | Fisher-ball radius from local margin curvature + LM-λ adaptive (grow on convergence, shrink on overshoot). {DYNAMICAL: Fisher trace + Levenberg-Marquardt λ · DIFFERENTIABLE: continuation · Fisher} | radius scaled by the auth PoseNet-6 + SegNet rank-4 Jacobian norms at the iterate (`segnet_head_rank4_linear_flipdist_v1` + Pose6 quadratic custody) — the auth scorer's own curvature |
+| Ranking / proposal order | **fixed saliency/greedy rank** | rank by local ∂S/∂(DOF) (costate), refreshed each step; v19 re-measures ΔS — EXTEND to ranking. {DYNAMICAL: costate · owed extension} | rank weight = at1 #660 factored-influence atlas (auth-scorer gaze; ρ 0.9027 measured, blocked `LOCKED_LIBRARY_SOURCE_NOT_MATERIALIZED` — materializer is a named owed build) |
+
+**OWED static→dynamical fixes (flagged, not yet built):** (i) v19 acceptance extension so
+ranking + trust-radius + box tolerance read the local gradient (mechanism 1); (ii) the seg
+SECANT curve (bytes vs d_seg through the real coder) is the differentiable ∂B/∂d_seg the
+waterfill needs and is UNFINISHED (`seg_secant_rd_curve_20260719`); (iii) the pose decay-law
+instrument (P2 ten-interval trace extended to pose) — until it lands, ∂S/∂d_pose along the
+horizon is constant-slope DERIVED, i.e. a hidden static assumption in every pose-budget number.
+
+**Contract amendment:** family-(d)'s confirming build (§5) inherits this — NO hardcoded byte cap,
+break-even, accept-margin, box step, trust radius, or waterfill split. λ is SWEPT; the box is a
+homotopy; acceptance is a Bregman prox in the Fisher metric; the knee is computed from the traced
+frontier. Every weight in that machinery is AUTH-EVAL-SOURCED (contest coefficient × at1/Fisher/
+flip-ledger sensitivity through the real frozen scorer) per the authority ladder — the through-R
+frozen-CPU-torch scorer decides per-step pulls, exact evaluate.py (contest-CPU/CUDA) is final for
+any accepted row, MPS/proxy never weight a decision. Any surviving constant OR any weight that
+cannot cite its auth-scorer sensitivity object is an OWED fix, labeled, not shipped silently.
+
 STORES CONSULTED: routing card `council_coherent_optimal_path_routing_20260725.md` §1–§9 ·
 G3 `codex_findings_ddm_g3_score_atlas_20260722T204813Z` (#622) · G4
 `codex_findings_ddm_g4_spatial_stationarity_20260722T212138Z` (#623) ·
