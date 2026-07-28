@@ -190,3 +190,26 @@ terminal-solved pose; the remaining distance to 0.172/0.15 is the realization cr
 quant alphabet (~4–5 b) is the value-stream allocator input. 4 cathedral dispatch: N/A (no archive
 mutation). 5 continual-learning: the e_p receipt + this ledger. 6 probe-disambiguator: the e_p probe IS
 the pose-carrier disambiguator (paint-carries-motion vs from-scratch-field).
+
+---
+
+## MAIN annotation (post-landing, #741 e_p↔ξ dual-use check — $0, receipts-only, appended)
+
+Ran the pre-registered dual-use check on the ep_chunks custody (600×6 tp_local/bp, centered per
+ch1 S5). **VERDICT: ξ-DERIVABILITY REFUTED (INSTANCE scope — flat-paint base).** Numbers:
+- Custody: centered e_p SVD energy 0.998624 = receipt exactly; t_p SVD energy 0.998025 (BOTH
+  rank-1 — t_p is the smooth trajectory, e_p is the residual).
+- corr(c, motion-principal f) = ±0.482; R²(c | full 6-dim t_p) = 0.291; linear c~f residual =
+  87.6% of std. Only ~29% of the residual amplitude is pose-trajectory-explainable.
+- **The structural killer: lag-1 autocorr(c) = +0.086 — the rank-1 amplitude series is
+  temporally near-WHITE.** A ξ-curve (smooth knots) cannot generate a white series; no smooth
+  motion carrier can absorb this field. Also c anti-tracks tp·dim0 (−0.48) while tracking
+  bp·dim0 (+0.44) → the amplitude is dominated by paint-idiosyncratic photometric disagreement,
+  consistent with sc1's affine R² 0.384.
+**Consequences:** (a) the ~2,039B AR-int5 field STANDS as the pose steering price — mandatory
+AND cheap, no further collapse available from ξ; (b) the negative CONFIRMS the terminal-solve
+design: a temporally white per-pair amplitude is exactly why the 3-delta architecture uses
+PER-PAIR coefficients rather than a shared basis-target — the measured structure matches the
+built structure; (c) reformulation residue: any future base with HIGHER motion transmission
+(affine R² → 1) re-opens the check — the refutation is base-scoped, not family. Pointer
+0.1910828242 UNMOVED; advisory receipts-derivation, no scorer run.
