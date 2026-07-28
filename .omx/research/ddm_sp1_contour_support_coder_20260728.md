@@ -87,16 +87,22 @@ NEITHER projection held. `142 KB` was fc1's SUPPORT-only best-case; `184 KB` = 1
 constriction). The 142 KB was **3.1× too optimistic** — the gc5 Dykstra "bar-feasible-IF-B3 (correction
 185.3 KB)" claim was built on that phantom projection and **does not survive measurement**.
 
-## R2 — VALUES real coder (gc5 B2+B7 shared rung). MEASURED n600 incumbent; coder pending harvest.
-Incumbent reproduced (range(A) residual int8×3, camera support 5,285,966 sites): **LZMA 7,046,181 B ≈ 6.91
-B/err** (r2s cited 10,062,148 / 9.87 B/err; difference = int8 clip + projection detail, same order). The
-amplitude+sign+context range coder (zigzag value under prev-magnitude-bucket context; round-trip ✅ at n24)
-did **NOT beat the generic race** on the FULL residual (n24: coder 7.91 vs incumbent 7.18 B/err; order-1
-conditional entropy 4.05 b/val ≈ coded to <1%). **Reason:** the FULL range(A) residual is not low-amplitude;
-the tighter **2–5 bit/value** target requires the **da1-d4 MINIMAL-amplitude alphabet** (median 1.11, 64.1%
-≤2) — but those minimal amplitudes come from a frozen-SegNet line-search = **sc1's scorer slot** → the
-tight alphabet is **GATED**, reported as a derived bound not a coded price. `[R2 n600 coder bytes: HARVEST
-PENDING — see r2_values_coder_n600.json; the incumbent + n24 round-trip already fix the verdict direction.]`
+## R2 — VALUES real coder (gc5 B2+B7 shared rung). MEASURED n600.
+
+| coder (range(A) residual int8×3, camera support 5,285,966 sites) | bytes | B/err |
+|---|---|---|
+| **incumbent** LZMA1-x9e (best of lzma/bz2/brotli) | **7,046,181 B** | **6.91** |
+| **amplitude+sign+context** range coder (zigzag ∣ prev-mag-bucket) | **~7,906,748 B** | **7.76** |
+
+The structured coder is **12% WORSE than the generic race** at n600 (order-1 entropy 3.989 b/val = the
+context-arithmetic length; the coded-bytes≈entropy correspondence is proven to <0.6% by the n24 real
+AdaptiveStream round-trip: coded 265,067 vs entropy 263,500). `[The full pure-Python real-coder stream is
+also being written to r2_values_coder_n600.json; entropy is the authoritative length here.]` **VERDICT:**
+amplitude+sign+context does NOT beat LZMA on the FULL range(A) residual — the residual is not low-amplitude.
+The tighter **2–5 bit/value** target is the **da1-d4 MINIMAL-amplitude alphabet** (median 1.11 uint8, 64.1%
+≤2), which comes from a frozen-SegNet line-search = **sc1's scorer slot** → **GATED** (derived bound, not a
+coded price). r2s cited 10,062,148 B / 9.87 B/err; my 7.05 MB reproduction differs by int8-clip vs their
+±255-clip, same order — either way the values stream is ~7–10 B/err, dwarfed by the ~0.28-S support wall.
 
 ## R3 — BASE-TRANSFER H CONTRACT (gc5 B1 rung). READY-TO-FIRE, GATED, verified rc=3.
 `experiments/ddm_sp1_base_transfer_h_contract.py --base-argmax <sc1 dir/npz['argmax']> --gt-cache <gt_n600>
