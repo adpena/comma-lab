@@ -753,7 +753,15 @@ def main() -> int:
     prev_gate_row: dict[str, Any] | None = None
     prev_gate_smooth: float | None = None
     prev_realized: np.ndarray | None = None
+    prev_gate_basis: str | None = None
     a1_consecutive = 0
+    # #85 EMA shadow-lag instrument guard (measured live 2026-07-28: at decay 0.99867 a
+    # ~675-step shadow is ~41% zero-init seed and the half-warmed mixed render scored
+    # 0.842 — WORSE than gray init — firing a FALSE A1 alarm chain). The law's own
+    # warmup boundary W = 2/(1-d) decides the gate basis: LIVE params before W,
+    # EMA shadow after; the basis change REBASES the A1 comparison (one gate).
+    ema_warmup_updates = int(np.ceil(2.0 / max(1.0 - cfg.ema_decay, 1e-9)))
+    global_step = 0 if args.resume_from is None else ema_warmup_updates  # resume => warm shadow
     ep_losses: list[float] = []
     telemetry_tail: list[dict] = []
     gnorm_hist: list[float] = []
@@ -782,6 +790,7 @@ def main() -> int:
                 break
             ep_loss += lv
             steps += 1
+            global_step += 1
             flat = tree_flatten(model.trainable_parameters())
             for k, v in flat:
                 ema[k] = cfg.ema_decay * ema[k] + (1.0 - cfg.ema_decay) * v
@@ -842,18 +851,29 @@ def main() -> int:
         tlog(row)
         telemetry_tail.append(row)
 
-        # A1 realized gate (EMA shadow — inference artifacts come from the shadow).
+        # A1 realized gate. Basis = EMA shadow once warm (W = 2/(1-d) updates), LIVE
+        # params before that (the #85 shadow-lag guard above; basis recorded, LOUD).
         if (epoch + 1) % cfg.gate_every == 0 or epoch == cfg.epochs - 1:
-            live = ema_snapshot_swap(model, ema)
+            gate_basis = "ema_shadow" if global_step >= ema_warmup_updates else "live_ema_warmup"
+            live_np = {k: np.asarray(v) for k, v in tree_flatten(model.trainable_parameters())}
+            live = ema_snapshot_swap(model, ema) if gate_basis == "ema_shadow" else None
             try:
                 gate_row = realized_gate(model, gate_ids, lstars, seg_cpu, prev_realized)
                 ledger = counted_bytes_ledger(model, cfg)
             finally:
-                ema_restore(model, live)
+                if live is not None:
+                    ema_restore(model, live)
             realized_argmax = gate_row.pop("_realized_argmax")
+            gate_row["gate_params"] = gate_basis
+            gate_row["ema_warmup_updates"] = ema_warmup_updates
+            gate_row["global_step"] = global_step
+            # Basis change (live->shadow) REBASES the A1 comparison + flip baseline.
+            if prev_gate_basis is not None and gate_basis != prev_gate_basis:
+                prev_gate_smooth = None
+                gate_row.pop("realized_flips_vs_prev_gate", None)
+            prev_gate_basis = gate_basis
             # #685 px1 race-fairness telemetry: MEASURED update magnitude per arm —
             # RMS of the live-param delta accumulated since the previous gate.
-            live_np = {k: np.asarray(v) for k, v in live.items()}
             if gate_param_snapshot is not None:
                 num = sum(float(np.sum((live_np[k] - gate_param_snapshot[k]) ** 2))
                           for k in live_np)
@@ -909,7 +929,8 @@ def main() -> int:
             cpu_verdict_d_seg_batch,
         )
 
-        live = ema_snapshot_swap(model, ema)
+        confirm_basis = "ema_shadow" if global_step >= ema_warmup_updates else "live_ema_warmup"
+        live = ema_snapshot_swap(model, ema) if confirm_basis == "ema_shadow" else None
         try:
             t0 = time.monotonic()
             all_dsegs: list[float] = []
@@ -930,9 +951,11 @@ def main() -> int:
                 "realized_dseg_max": float(np.max(all_dsegs)),
                 "wall_seconds": time.monotonic() - t0,
                 "verdict_chunk": args.verdict_chunk,
+                "confirm_params": confirm_basis,
             }
         finally:
-            ema_restore(model, live)
+            if live is not None:
+                ema_restore(model, live)
 
     rp = out_dir / "tr1_window_receipt.json"
     tmp = rp.with_suffix(".json.tmp")
