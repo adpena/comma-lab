@@ -318,3 +318,23 @@ Sources: [ECC semantic map compression](https://arxiv.org/html/2603.03073) ·
 - No n600 scorer jobs were run by this arm (slot owned by fd1); every number cited is from receipts
   or frozen-object arithmetic.
 
+
+---
+
+## MAIN annotation (post-landing, magnitude-dismissal compliance — appended, body unmutated)
+
+The §A waterfill passage ("deliberately abandons isolated boundary jitter … drop until the
+marginal detail costs 1.27") is a PRICED concession under the registered exchange-rate law, not
+an absolute-magnitude dismissal. Relative-significance grounding, both numbers stated:
+
+- **The criterion IS per-detail ΔS arithmetic:** conceding k errors while saving B bytes has
+  ΔS = k·(100/117,964,800) − B·(25/37,545,489); the waterfill drops a detail ONLY when this is
+  ≤ 0 (coded cost > 1.2731 B/err = the S-breakeven, registered law, endgame memory §3 /
+  ddm_r6cal). Every concession is ΔS-favorable BY CONSTRUCTION, never eyeballed.
+- **Measured instance (sp1 concession table, k≥2 point):** conceded 4.5% of flips (+0.0389 seg
+  term) for −59,964 B (−0.0399 rate term) → **net ΔS = −0.00058** at the support-stream level.
+  Relative to the remaining competitive gap (S_current 0.19108 − bar 0.172 = 0.0191):
+  **|ΔS|/gap ≈ 3.0%**, sign favorable — a paid trade, not an orphaned small-ΔS.
+- verdict_scope: the "abandon jitter" clause is the waterfill's marginal rule (INSTANCE-level,
+  re-evaluated per detail at the operating point), not a family kill of boundary-jitter coding;
+  any future base shifts the water level and the same rule re-prices everything.
