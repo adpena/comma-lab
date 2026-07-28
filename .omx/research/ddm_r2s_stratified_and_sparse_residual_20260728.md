@@ -90,6 +90,14 @@ REAL coders, the bytes of the three sparse streams + the composed rate, and name
 | frame_0 carrier (baseline) | — | **81,000,000** (recall) | seg-free; MUST crush (keyframe_codec / p1 race, d_pose-certified) — the #1 binding stream |
 | **composed rate (radius 0) / S-rate-term** | — | **91,483,644 → rate 2.4366 / rate_term 60.92** | **457.4× the 200 KB box** |
 
+**DECODE WALL-CLOCK (contract addendum — the 30-min CPU-4-core inflate budget):** the raced coders are
+C-native ONE-SHOT (aggregate-stream, not per-symbol). Measured on matched-size representative streams:
+support-geom (14.7 MB raw → LZMA 1.22 MB **decode 49 ms** / Brotli 1.27 MB **decode 10 ms**); residual
+values (15.9 MB raw → LZMA 8.49 MB **decode 298 ms** / Brotli 8.16 MB **decode 33 ms**). Full-n600 decode
+≪ 1 s — trivially admissible. **DECODE-RISK flag:** `context_partition_codec`'s range coder (#307 named
+target) MAY be Python-per-symbol over 117.9 M sites → could bust the budget; verify a C/vectorized decode
+path BEFORE adoption (flagged, not silently adopted).
+
 **Binding stream (MEASURED):** **frame_0 carrier (81 MB)** #1, then **residual values (10.06 MB)** #2. The
 support geometry (421 KB) is small. The DISTORTION side (support 0.864%) is cheap; the **RATE is the wall**
 — CONFIRMING the oc1 verdict (shipped codec 99.73% rate). Even the SPARSE residual value stream (10 MB at
@@ -123,7 +131,7 @@ distortion alone).**
 | laguerre-RGB-realized 0-byte logit offset (r4/Bridge-7) | PREDICT/head | **N-A** | a decode-side RGB realization of the per-class logit offset (PR98-analog) MAY shrink flip support before the fix-vs-concede solve, but the RGB realization is murky (DERIVED-only) and THIS arm does not train; N-A per the confirm-or-drop caveat. |
 | `movable_site_coder` (#394) | SUPPORT (Movable) | **RACED-AND-LOST (this base)** | MEASURED: Movable is only 6% of the copy support (Road+Lane boundary = 75%). On the copy-PREDICT base, temporal change ≠ Movable-island-birth; the support is boundary-shift, not object birth. Movable-site coding is NOT the binding-support target here (it IS on the DESCRIBE-line). N-A for this arm's base. |
 | `dash_phase_carrier` (#425) | SUPPORT/CODING (Lane) | **RACED-RELEVANT** | MEASURED: Lane = 25% of the copy support (0.002131). Curve-domain δ(s) ~2.2 bits/site for the Lane class-1 boundary is the 2nd-largest support-coding target; NAMED for the support-geometry coder (Road boundary = 50% is the largest → contour/context-arith). |
-| `context_partition_codec` (temporal-125) | CODING (support geom) | **N-A (named target)** | SOTA context-arith replacement for the Brotli/LZMA geometry race; not re-implemented — brotli/lzma are the measured floor, context-arith is the named next coder. |
+| `context_partition_codec` (temporal-125) | CODING (support geom) | **N-A (named target) — DECODE-RISK** | SOTA context-arith replacement for the Brotli/LZMA geometry race; not re-implemented — brotli/lzma are the measured floor (decode 10–49 ms), context-arith is the named next coder BUT flag DECODE-RISK: a Python-per-symbol range decode over 117.9 M sites could bust the 30-min budget — verify a C/vectorized decode before adoption. |
 | `xi_pose_coder` (#257) | CODING (pose) | **USED (routed)** | pose stream = `xi_pose_coder(R1 dxi)` → 474–875 B; H derived FREE at decode (rule-118). Pose SETTLED (round 3). |
 | `xi_temporal_delta_coder` (#574) | CODING (values) | **N-A (named)** | ξ-keyed cross-pair temporal delta (12.6× over per-frame zlib); the tool codes intra-frame temporal delta (f1−f0) only; cross-pair delta is the named value-coder rung. |
 | `region_merge` (MDL 1.27 B/flip) | SUPPORT SELECTION | **N-A (named)** | the fix-vs-concede MDL SOLVE at the 1.27 B/flip water level (box headroom 136,839 errors); named as the support-selection SOLVE (this pass measured full-support bytes, not the MDL-pruned subset). |
