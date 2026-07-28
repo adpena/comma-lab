@@ -42,6 +42,20 @@ GiB, SAFE; 51 s/epoch incl. gate). Sealed tickets d6eeefd7 (plain) / 0a6eba28 (l
 in the tb1 memo §T2. Token stream at n600 D16/c4/L16 ≈ 400 KB ⇒ the (D,c,levels) Pareto race is the
 binding rate axis next (G4 ≤130 KB; waterfill after the race per pools law).
 
+**FEED-tb1f (T2 MEASURED + ADJUDICATED + SEALED):** both n600 windows complete (40 ep / ~25 min each,
+zero alarms, all comparable gates COUPLED_DESCENT). Full-n600 realized confirms: plain **0.014088** @
+549,927 B; lotto **0.013833** @ 534,597 B (renderer stream **3,284 vs 20,214 B = 6.2×**). Pre-registered
+Pareto rule ⇒ **WINNER = G1-LOTTO** (both axes ≤; margins 1.8%/2.8%, single-seed INSTANCE). Named caveat
+recorded not promoted: plain leads Lane nucleation (realized B0 264 vs 164 of 985) — the Lane-pool lever
+race fires FIRST in the burn; plain final checkpoint retained as fallback. Subset/full disagreement:
+gate-36 reads +3.8%/+4.1% high, sign-stable (valid rank-only inner instrument). #685 fairness MEASURED:
+param_delta_rms within 3.2%. **T3 SEALED READY_TO_FIRE_UNDER_STANDING_GO**: ticket
+`.omx/research/configs/ddm_tb1_t3_long_burn_lotto_20260728.json` (ticket 007d8eac… / sealed 99b13a53… /
+code 17166ee9c4); fires from MAIN only. op1 consumed (image-plane grid receipt-backed; row-foveation $0
+gate RUN+PASSED 72.1%≥50% ⇒ raced lane; CLADE-ICPE + boundary-gated-c + OASIS registered with
+falsifiers). BINDING rate axis next: token stream ~530 KB ≫ G4 130 KB — entropy-coded learned prior +
+boundary-gated c + (D,c,levels) waterfill.
+
 **POINTER: 0.1910828242 [contest-CPU] UNMOVED.** All rows advisory; no byte-closed archive; E4/WS1
-exporter + numpy deploy port + governed-launcher adaptation + R6 chain = named T3 owed items. LONG burn
+exporter + numpy deploy port + governed-launcher adaptation + R6 chain = named owed items. LONG burn
 fires from MAIN only.
