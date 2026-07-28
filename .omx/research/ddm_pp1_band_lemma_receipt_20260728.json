@@ -1,0 +1,114 @@
+{
+  "schema": "ddm_pp1_band_lemma_receipt.v1",
+  "evidence_axis": "[macOS-CPU advisory] NON-PROMOTABLE \u2014 real position-coding bytes over synthetic correction-support densities (margin-thresholded coherent + random incoherent); NOT a byte-closed evaluate.py row. pointer 0.1910828242 UNMOVED.",
+  "water_B_per_flip": 1.2731,
+  "N_sites": 117964800,
+  "uniform_bound_crossing_density": 0.0008591513961238275,
+  "measured_coherent_crossing_density": 0.0005015010841012719,
+  "lemma_confirmed": true,
+  "coherent_curve": [
+    {
+      "tau": 0.008,
+      "density": 0.00022474500868055556,
+      "b_per_err_best": 1.4686557030778515,
+      "uniform_bound_b_per_err": 1.5149279129994482
+    },
+    {
+      "tau": 0.02,
+      "density": 0.000563201904296875,
+      "b_per_err_best": 1.2448297660977152,
+      "uniform_bound_b_per_err": 1.3492575209411395
+    },
+    {
+      "tau": 0.05,
+      "density": 0.0014131334092881945,
+      "b_per_err_best": 1.0054409118176364,
+      "uniform_bound_b_per_err": 1.183360826556987
+    },
+    {
+      "tau": 0.1,
+      "density": 0.002823537190755208,
+      "b_per_err_best": 0.8026348182707954,
+      "uniform_bound_b_per_err": 1.058535081310824
+    },
+    {
+      "tau": 0.2,
+      "density": 0.0056219482421875,
+      "b_per_err_best": 0.5872236094524662,
+      "uniform_bound_b_per_err": 0.9343392641108449
+    },
+    {
+      "tau": 0.4,
+      "density": 0.011123648749457465,
+      "b_per_err_best": 0.359315164849234,
+      "uniform_bound_b_per_err": 0.8112782618901258
+    },
+    {
+      "tau": 0.8,
+      "density": 0.02170474582248264,
+      "b_per_err_best": 0.19991712219516045,
+      "uniform_bound_b_per_err": 0.6907307077546543
+    },
+    {
+      "tau": 1.5,
+      "density": 0.037999326917860246,
+      "b_per_err_best": 0.11806407154089506,
+      "uniform_bound_b_per_err": 0.5897352906814746
+    },
+    {
+      "tau": 3.0,
+      "density": 0.07006178961859809,
+      "b_per_err_best": 0.06790924187747471,
+      "uniform_bound_b_per_err": 0.47940354372257565
+    }
+  ],
+  "incoherent_curve": [
+    {
+      "target_density": 0.0001,
+      "density": 9.999593098958334e-05,
+      "b_per_err_lzma": 2.6925228891149544,
+      "uniform_bound_b_per_err": 1.6609713855194126
+    },
+    {
+      "target_density": 0.0003,
+      "density": 0.0002999962700737847,
+      "b_per_err_lzma": 1.972675125038854,
+      "uniform_bound_b_per_err": 1.4628459770116642
+    },
+    {
+      "target_density": 0.001,
+      "density": 0.001000001695421007,
+      "b_per_err_lzma": 1.403899461704743,
+      "uniform_bound_b_per_err": 1.2457227298360851
+    },
+    {
+      "target_density": 0.003,
+      "density": 0.002999996609157986,
+      "b_per_err_lzma": 0.962296619891832,
+      "uniform_bound_b_per_err": 1.0476029268240215
+    },
+    {
+      "target_density": 0.01,
+      "density": 0.01,
+      "b_per_err_lzma": 0.5590667724609375,
+      "uniform_bound_b_per_err": 0.8304820237218405
+    }
+  ],
+  "fc1_anchor": {
+    "density": 0.00864212883843316,
+    "b_per_err_lzma": 0.41331990147792913
+  },
+  "cross_check_note": "at fc1 density 0.00864 the coherent curve interpolates ~0.44 B/err vs fc1 measured 0.413 B/err (LZMA support) \u2014 the synthesis reproduces the real anchor",
+  "band": {
+    "lower_edge_coherent_density": 0.0005015010841012719,
+    "lower_edge_uniform_density": 0.0008591513961238275,
+    "lower_edge_incoherent_density_approx": 0.0015,
+    "rational_band_base_error": "~5e-4 .. ~1e-2 (coherent); below -> concede at 1.2731 dominates; above -> total support bytes explode (sp1 421KB wall at 0.864%)"
+  },
+  "full_curve_ssd": "/Volumes/VertigoDataTier/pact/ddm_pp1_20260728/r2_band_lemma_curve_n600.json",
+  "producer_receipts": [
+    "ddm_fc1 stage2/entropy (support 421366B/0.413 B/err @0.864%; 1.2731 water)",
+    "ddm_sp1 r1 (contour support 444394B, concession U-min at edge)",
+    "PR130 native base 3e-4 ships NO correction stream (below band)"
+  ]
+}
