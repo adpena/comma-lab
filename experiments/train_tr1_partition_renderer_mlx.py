@@ -197,7 +197,9 @@ class TR1Config:
     class_weight_lane: float      # 1.0 = off; sn1 asymmetry lever (per-GT-class weight)
     margin_target: float          # margin_hinge form target (raced lever)
     token_init_mode: str = "zero"  # "zero" (tb1 gauge-hygiene control) | "solve_project"
-    solve_init_epochs: int = 8     # bounded L2 gtfit pretrain epochs (solve_project only)
+    # solve_project = v3 ANALYTIC chart projection (area-mean GT downsample -> lattice;
+    # base = temporal mean, delta = residual). No pretrain knob: v1 joint-L2 and
+    # v2 tokens-only-gradient formulations are MEASURED inadmissible (see main()).
 
     @property
     def grid_h(self) -> int:
@@ -664,13 +666,10 @@ def build_argparser() -> argparse.ArgumentParser:
                     help="pairs per CPU SegNet verdict chunk (<=120 per the charter)")
     ap.add_argument("--mlx-device", default="gpu", choices=("gpu", "cpu"))
     ap.add_argument("--token-init-mode", default="zero", choices=("zero", "solve_project"),
-                    help="lv1 B solve-init: project the materializable solution-set member "
-                         "(GT frame_1 bilinear-resized to the render plane) into token space "
-                         "via a bounded L2 pretrain BEFORE the scorer loop (eu1 "
-                         "teacher-as-init-oracle mechanism); zero = tb1 control")
-    ap.add_argument("--solve-init-epochs", type=int, default=8,
-                    help="bounded solve-init pretrain epochs over all pairs "
-                         "(consumed only when --token-init-mode solve_project)")
+                    help="lv1 B solve-init: v3 ANALYTIC projection of the materializable "
+                         "solution-set member (GT frame_1 at the render plane, area-mean "
+                         "downsampled) into token space as base+delta BEFORE the scorer "
+                         "loop (eu1 teacher-as-init-oracle mechanism); zero = tb1 control")
     return ap
 
 
@@ -710,7 +709,7 @@ def main() -> int:
         gate_every=args.gate_every, ema_decay=ema_decay, ema_decay_provenance=ema_prov,
         token_temporal_mode=args.token_temporal_mode, token_ste=args.token_ste,
         class_weight_lane=args.class_weight_lane, margin_target=args.margin_target,
-        token_init_mode=args.token_init_mode, solve_init_epochs=args.solve_init_epochs,
+        token_init_mode=args.token_init_mode,
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"
@@ -770,44 +769,47 @@ def main() -> int:
                       "solution-set member (q1-lineage C1/BOX frames exist only as "
                       "277.7M archive-form candidates; custody in the lv1 memo)"})
 
-        def _fit_loss(mdl, ids: list[int]):
-            acc = None
-            for i in ids:
-                r = mdl.render_frame(int(i)) / 255.0
-                t = mx.array(tgt[int(i)].astype(np.float32) / 255.0)[None]
-                li = mx.mean(mx.square(r - t))
-                acc = li if acc is None else acc + li
-            return acc / len(ids)
-
-        vg_fit = nn.value_and_grad(model, _fit_loss)
-        pre_opt = optim.Adam(learning_rate=cfg.lr)
-        pre_rng = np.random.default_rng(cfg.seed + 3)
-        for pep in range(cfg.solve_init_epochs):
-            pperm = pre_rng.permutation(cfg.num_pairs)
-            pe_loss, psteps = 0.0, 0
-            for b0 in range(0, cfg.num_pairs, cfg.batch_pairs):
-                pids = [int(i) for i in pperm[b0:b0 + cfg.batch_pairs]]
-                pl, pg = vg_fit(model, pids)
-                pre_opt.update(model, pg)
-                mx.eval(model.parameters(), pre_opt.state, pl)
-                plv = float(pl)
-                if not np.isfinite(plv):
-                    tlog({"event": "confound_alarm", "kind": "nonfinite_loss",
-                          "stage": "solve_init_pretrain", "pretrain_epoch": pep})
-                    raise SystemExit("solve-init pretrain nonfinite loss (fail-closed)")
-                pe_loss += plv
-                psteps += 1
-            tlog({"event": "solve_init_epoch", "pretrain_epoch": pep,
-                  "l2_rgb01": pe_loss / max(psteps, 1)})
+        # v3 ANALYTIC projection (both gradient formulations MEASURED inadmissible:
+        # v1 JOINT tokens+renderer L2 fit -> GELU-dead mean-image basin (custody
+        # b_solveinit_v1_aborted_joint_pretrain_gelu_dead_basin: l2 frozen to 9 digits
+        # from pretrain_epoch 2; downstream scorer gnorm ~1e-9, ep_loss flat);
+        # v2 TOKENS-ONLY gradient fit through the frozen random decoder -> glacial
+        # (measured dl2 ~2e-5/update at n4; injects ~nothing). verdict_scope:
+        # FORMULATION for both; paradigm intact. v3 = zeroth-order chart projection:
+        # tokens := area-mean downsample of the solution-set member into the lattice,
+        # split as base = temporal mean (the 98.806% image-stationary static scene,
+        # op1) + per-frame delta residual — the deterministic, dead-basin-impossible
+        # projection. The renderer starts at its gelu-ALIVE zero-init either way; the
+        # A/B measures GT-structured vs zero tokens as the starting description.
+        gh, gw, D = cfg.grid_h, cfg.grid_w, cfg.grid_downsample
+        ds = tgt.reshape(cfg.num_pairs, gh, D, gw, D, 3).astype(np.float32)
+        ds = ds.mean(axis=(2, 4)) / 255.0 * 2.0 - 1.0  # (P, gh, gw, 3) in [-1, 1]
+        tok = np.zeros((cfg.num_pairs, gh, gw, cfg.code_width), dtype=np.float32)
+        nch = min(3, cfg.code_width)
+        tok[..., :nch] = ds[..., :nch]
+        if cfg.token_temporal_mode == "shared_base":
+            base = tok.mean(axis=0)
+            delta = np.clip(tok - base[None], -1.0, 1.0)
+            model.tokens_base = mx.array(base)
+            model.tokens_delta = mx.array(delta)
+            tlog({"event": "solve_init_projected", "mode": "shared_base",
+                  "base_absmax": float(np.abs(base).max()),
+                  "delta_absmax": float(np.abs(delta).max()),
+                  "delta_rms": float(np.sqrt(np.mean(delta ** 2)))})
+        else:
+            model.tokens = mx.array(np.clip(tok, -1.0, 1.0))
+            tlog({"event": "solve_init_projected", "mode": "independent",
+                  "tok_absmax": float(np.abs(tok).max())})
+        mx.eval(model.parameters())
         save_checkpoint(out_dir / "checkpoints" / "stage_solve_init_pretrain.npz",
                         model=model,
                         ema={k: mx.array(v)
                              for k, v in tree_flatten(model.trainable_parameters())},
                         opt_state_flat={}, epoch=-1, stage="solve_init_pretrain",
                         cfg=cfg, telemetry_tail=[])
-        del tgt, vg_fit, pre_opt
+        del tgt, ds, tok
         # Scorer-loop Adam moments are created FRESH below (warm-start re-anchor
-        # law #517/#518); the EMA shadow initializes from the post-pretrain params
+        # law #517/#518); the EMA shadow initializes from the post-projection params
         # (fresh warmup window => live-basis gates until W, same as the control).
 
     optimizer = optim.Adam(learning_rate=cfg.lr)
