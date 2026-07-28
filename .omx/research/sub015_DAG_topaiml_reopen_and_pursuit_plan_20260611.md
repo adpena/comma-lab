@@ -25040,3 +25040,27 @@ Tools: experiments/ddm_fc1_{context_cache,flip_entropy,stage2_coders,stage3_fram
 Memo .omx/research/ddm_fc1_assembly_capstone_flip_entropy_and_compose_20260728.md (PLUG-IN LEDGER: 13
 assets USED/NAMED/N-A). Artifacts SSD /Volumes/VertigoDataTier/pact/ddm_fc1_20260728/{entropy,stage2_coders,
 stage3_frame0_crush,stage5_compose}_n600.json + chunks/.
+
+FEED-sp1 (2026-07-28, ddm_sp1 B3 rung, worktree off 3ad18419ee): the CONTOUR SUPPORT CODER is BUILT +
+MEASURED n600, round-trip-proven, REUSING #307 (tools/measure_contour_string_flip_coding.py) on cached
+copy-flip masks (fc1 chunks copy_argmax + GT lstars; NO scorer — sc1's slot). VERDICT: **B3 FLOOR_DEAD**
+(FORMULATION scope: explicit support stream on copy-PREDICT base). Real contour SUPPORT = 444,394 B (3.487
+bits/flip, lossless) — 5.5% WORSE than the 421,366 B LZMA incumbent, and 3.1× (212%) ABOVE the fc1 stage5
+142 KB projection. The 1-1.5 bits/contour-px published floor does NOT apply: 87.4% coherent (≥4px) yet
+many-small-components (anchor+END overhead dominates); LZMA beats contour at EVERY concession level. DRIFT
+RESOLVED with ONE measured number: NEITHER 142 (support-only) nor 184 (support+labels) held — real is
+421-444 KB support + 65 KB contour labels (vs 41 KB constriction). LOSSY concession curve (water 1.2731
+B/flip, registered law): U-shaped, min S_support = 0.280 at k>=2 (361,402 B + 4.5% conceded); every deeper
+concession is a NET LOSS; S_support_optimal 0.280 ALONE exceeds the 0.172 bar (distortion floor leaves ~45KB
+for ALL streams; support is 8×). The gc5 Dykstra "bar-feasible-IF-B3 (correction 185.3KB)" rested on the
+phantom 142KB projection → does NOT survive. ROUTING per the reformulation ladder: (1) B1 UPSTREAM (better
+base) = the queued GATED next rung — R3 tool ddm_sp1_base_transfer_h_contract.py READY, fires rc=3-gated the
+moment sc1's seeded base lands; (2) DOWNSTREAM = implicit-support realization carrier (a learned carrier
+draws its own boundaries, no explicit support stream) — the real route; explicit-coder shaving (STC/UNIWARD)
+is dominated. R2 (values, B2+B7 shared rung): int8×3 range(A)-residual incumbent reproduced = 7,046,181 B /
+6.91 B/err; amplitude+sign+context range coder does NOT beat the generic race on the FULL residual (n24
+7.91 vs 7.18 B/err, round-trip ✅); the tighter 2-5 bit/value target = da1-d4 minimal-amplitude alphabet
+(median 1.11, 64.1%≤2) is GATED on sc1's scorer line-search (derived bound only). Pointer UNMOVED 0.19108.
+Tools: experiments/ddm_sp1_{contour_support_coder,values_coder,base_transfer_h_contract}.py. Memo
+.omx/research/ddm_sp1_contour_support_coder_20260728.md. Artifacts SSD
+/Volumes/VertigoDataTier/pact/ddm_sp1_20260728/{r1_contour_support,r2_values_coder}_n600.json.
