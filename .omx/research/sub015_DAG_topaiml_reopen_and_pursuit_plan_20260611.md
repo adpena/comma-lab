@@ -24812,3 +24812,29 @@ n600 rows, 07-19 lattice-solve receipt, card §4-§6 crux ladder, cb1/wf7/pf3/j1
 verdict_scope: DIRECTION (synergy = codec archetype named + coupling MEASURED; crux = realization operator
 in image chart; attack = family-d solve-in-description-coordinates). Pointer 0.1910828242 [contest-CPU]
 UNMOVED — behind the 0.172 bar by 0.019; no score claim. [no-triality]
+
+## FEED-730b-factorize (2026-07-27, MAIN — Fable arm ab4c0be8, landed 8f826b3bf6, §7 addendum)
+DESIGN AXIS (operator: "Also can design for factorizationability and compactability"). The family-(d)
+solver optimizes over a description space WE design → design W factorizable + compactable BY CONSTRUCTION;
+a factorizable+compactable description IS the minimal program (Schmidhuber). Factor decomposition
+W = F1⊕F2⊕F3⊕F4⊕F5⊕F6, each with its compactness mechanism + MEASURED (bytes,ΔS) via real coder n600
+(NULL≠0 preserved): F1 atlas (space×time sprite/GMC + per-stratum argmax carriers v8/#359 + Laguerre
+generators + MDL two-part) — cell-space full field 4,107B raw-LZMA→Δd_seg 0.0078, Movable 1,533B, hood 34B
+(G4 SHA bea555b9…); receiver-realized NULL; db1 oracle short 192,020px ⇒ live-fit REQUIRED not stapled.
+F2 ξ (cross-frame temporal 1 keyframe+1199 residuals #574 + dual-use pose=warp=context) — BEV D0 closure
+exact ≤3.58e-15m; #574 delta coder UNBUILT ⇒ NULL. F3 pose (rank-2 #140 2.7× + uint8) — pc2 joint ΔS
+−0.2475 [advisory]; byte-closed NULL (PR130 23KB existence). F4 VOPs (sparse separable) — Movable=27.0%
+flip mass, transients 1.19% MEASURED; realized NULL. F5 gauge-split — ker(A)≈52% scorer-invisible/FREE
+[MEASURED null_subspace_rate_measure] = design MULTIPLIER (~half of every factor's DOF free). F6 residual
+syndrome (coder-in-the-loss) — sized by H(flip|context) = UNMEASURED tier-moving scalar (405.5 B/err
+upper bound only) ⇒ NULL. Whole-object compactness MEASURED (compound onto any export): cc3 −3,422B/ΔS
+−0.00228 (merged), wf7 −1,776B, cb1 MyCar +319B/ΔS −0.0516 (Lane REJECTED +22.7 d_pose — PROVES per-class
+factorization load-bearing not cosmetic), pf3b single edge +860B vs 162B break-even (PROVES single
+coordinates rate-dominated → win is COMPOSED factors = this addendum's whole point), hb1 Fisher-margin
+builder exists rate OWED. DESIGN CONTRACT family-(d) inherits: apply F5 gauge-split FIRST (route 52% into
+free fiber) → coder-in-the-loss MDL objective on uint8 lattice → waterfill F1–F6 by non-additive KKT with
+per-factor box tolerance → every factor fills its (bytes,ΔS) or carries NULL. The §5 km1-class confirming
+measurement IS this table filled to non-NULL for F1–F4+F6. HONEST: F1/F2/F4/F6 realized prices ALL NULL
+today — the addendum designs the space so those NULLs become fillable in ONE joint fit; it does NOT claim
+them filled. verdict_scope: DIRECTION (design axis + factor decomposition MEASURED where non-NULL). Pointer
+0.1910828242 [contest-CPU] UNMOVED, 0.019 behind 0.172 bar; no score claim. [p0-ledger-ok]
