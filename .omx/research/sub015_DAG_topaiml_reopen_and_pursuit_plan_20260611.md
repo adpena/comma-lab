@@ -24974,3 +24974,37 @@ sites. Composed real row UNCHANGED = r6cal S=194.42556 inherited; pointer UNMOVE
 harness fragility), aggregated exactly over n600. [no-triality: eqs leg owed to rung-2 byte-closed row]
 Artifacts: flip_support_n600_aggregate.json (+ fs_chunk0..4) + experiments/ddm_oc1_flip_support_measure.py;
 memo .omx/research/ddm_oc1_xi_temporal_predict_measured_20260727.md updated.
+
+FEED-r2s (2026-07-28) — ddm_r2s rung-2/3: LEVER B stratified PREDICT MEASURED NEGATIVE n600 + LEVER A
+binding-stream byte accounting. [no-triality: eqs leg owed to a byte-closed row] [macOS-CPU advisory]
+LEVER B (reopener gate, oc1 flip-support currency, n600 real 0.mkv, frozen SegNet): stratified
+plane+parallax warp does NOT beat copy. strat_ground (ground-restricted ORB H on Road+Lane = the GENEROUS
+8-DOF upper bound on the ξ-parametric ground-H) = 0.008631 / 1,018,212 flip sites vs copy 0.008642 /
+1,019,467, ratio 0.9988 (NEUTRAL, −0.12%, 1,255 sites). strat_full (+off-plane/upper stratum H) = 0.009258
+/ 1,092,142 (WORSE, +7.1%). global-homography 0.018672 (2.16×, oc1 control). n8 smoke's −22% was TOY NOISE,
+retracted (n600 is the authority). Warp fits fired on real regions (ground 600/600, 239K px/frame mean;
+off-plane 600/600; upper 561/600) — neutrality is REAL not a fit failure. FALSIFIER REACHED: PREDICT stays
+CLOSED at FAMILY scope for warps; proceed with copy. Bridge-1 free-depth analytic variant gated shut too
+(a 6-DOF restriction on the same ground stratum the generous ORB fit already left neutral). Per-class copy
+support: Road 50% / Lane 25% / Undrivable 13.5% / Movable 6% / MyCar 6% — Road+Lane BOUNDARY-dominated, NOT
+Movable-birth (DISTINCT from the DESCRIBE-line lineage; movable_site_coder N-A for this base, dash_phase
+δ(s) relevant for the 25% Lane). Mechanism: flips are codim-1 boundary sub-pixel shifts; warp resampling
+blur trades fixed flips for new ones ~1:1; Road interior uniform (argmax-stable).
+LEVER A (QUANTIZE, copy base, real coders, n600): support geometry 421,496 B (LZMA1, from 14.7 MB
+packbits; decode 49 ms) · residual VALUES radius-0 10,062,148 B (LZMA1; 5,285,966 camera sites,
+barely-compressible; decode 298 ms) · range(A)-proj ~5 MB (DERIVED ~52% #519/#520) · frame_0 81 MB baseline.
+COMPOSE radius-0 = 91,483,644 B → rate 2.4366 → rate_term 60.92 → 457.4× the 200 KB box. Binding stream =
+frame_0 (81 MB) #1, residual VALUES (10 MB) #2; support geometry (421 KB) small. DISTORTION side (support
+0.864%) cheap; RATE is the wall — CONFIRMS oc1 99.73%-rate. Even sparse per-pixel residual values are
+25–50× box → mechanism must be PARAMETRIC carriers (keyframe-crushed frame_0 + boundary-contour support +
+region_merge MDL concede within the 136,839-error box headroom), not per-pixel residual. Fork: rate_term
+60.92 ≫ 0.35 → NOT an R6-candidate; no byte-closed evaluate.py row (sparse grammar ≠ V10 receiver r6cal
+targets; ddm_runtime_exporter compose = named next rung, L-cost, routed to MAIN). Pose SETTLED (R1 dxi
+7.2 KB → d_pose 0.001610 / contrib 0.127; serialize via xi_pose_coder 474–875 B). DECODE addendum: raced
+coders C-native one-shot (brotli 10–33 ms / lzma 49–298 ms full-n600, ≪30-min budget); context-arith range
+coder flagged DECODE-RISK (verify non-Python-per-symbol). Pointer UNMOVED 0.19108. Tools:
+experiments/ddm_r2s_stratified_flip_support.py (3a8af14f91) + experiments/ddm_r2s_sparse_residual_
+byteaccount.py (dbc3e5b80f). Memo .omx/research/ddm_r2s_stratified_and_sparse_residual_20260728.md (PLUG-IN
+LEDGER: 18 assets USED/RACED/N-A incl Bridge-5 correction blind⊂ker(A) + round-4 free-depth crown-jewel
+gated). Artifacts SSD /Volumes/VertigoDataTier/pact/ddm_r2s_20260727/{flip_support_n600_strat,sparse_
+byteaccount_n600}.json.
