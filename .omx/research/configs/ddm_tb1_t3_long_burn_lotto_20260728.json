@@ -1,0 +1,145 @@
+{
+  "adjudication": {
+    "arithmetic": {
+      "lotto": {
+        "full_dseg": 0.013832855224609374,
+        "total_bytes": 534597
+      },
+      "margins": "d_seg -1.8% rel, bytes -2.8%; renderer stream 3,284 vs 20,214 B (6.2x, structural)",
+      "plain": {
+        "full_dseg": 0.01408838060167101,
+        "total_bytes": 549927
+      }
+    },
+    "code": "17166ee9c4",
+    "named_caveat": "plain leads the Lane-nucleation channel (realized lane Betti-0 264 vs 164 of 985 GT at ep39); Lane pool race (class_weight_lane sweep first) is the FIRST burn item; plain final checkpoint retained as live fallback (INSTANCE scope, single seed, no noise floor)",
+    "rule": "pre-registered Pareto (tb1 memo S-T2): full-confirm n600 realized d_seg AND total counted bytes",
+    "status": "READY_TO_FIRE_UNDER_STANDING_GO \u2014 fires from MAIN only",
+    "winner_arm": "lotto"
+  },
+  "argv": [
+    "experiments/train_tr1_partition_renderer_mlx.py",
+    "--num-pairs",
+    "600",
+    "--out-dir",
+    "/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t3_long_burn_lotto",
+    "--seed",
+    "0",
+    "--batch-pairs",
+    "8",
+    "--class-weight-lane",
+    "1.0",
+    "--code-width",
+    "4",
+    "--epochs",
+    "400",
+    "--gate-every",
+    "10",
+    "--grid-downsample",
+    "16",
+    "--lotto-mask-density-init",
+    "0.5",
+    "--lotto-seed",
+    "118",
+    "--lr",
+    "0.002",
+    "--margin-target",
+    "1.0",
+    "--max-wall-minutes",
+    "480.0",
+    "--renderer-width",
+    "24",
+    "--seg-form-start",
+    "ce",
+    "--token-quant-levels",
+    "16",
+    "--token-ste",
+    "round",
+    "--token-temporal-mode",
+    "shared_base",
+    "--variant",
+    "lotto",
+    "--w-seg",
+    "100.0",
+    "--full-confirm"
+  ],
+  "levers": [
+    {
+      "name": "tr1_variant_lotto",
+      "notes": "A2 race arm: plain-conv vs G1-LOTTO supermask under matched counted bytes",
+      "overrides": {
+        "--variant": "lotto"
+      }
+    },
+    {
+      "name": "tr1_token_grid_D16_c4",
+      "notes": "grid pitch vs bytes; ERF-bounded (r50~85px); Pareto-raced",
+      "overrides": {
+        "--code-width": "4",
+        "--grid-downsample": "16"
+      }
+    },
+    {
+      "name": "tr1_renderer_w24",
+      "notes": "G3 capacity; topology derives from D (conv0 + per-up conv + head)",
+      "overrides": {
+        "--renderer-width": "24"
+      }
+    },
+    {
+      "name": "tr1_token_quant_L16_round",
+      "notes": "S2.1 fd2-wall STE across the description lattice; STE variant RACED",
+      "overrides": {
+        "--token-quant-levels": "16",
+        "--token-ste": "round"
+      }
+    },
+    {
+      "name": "tr1_token_temporal_shared_base",
+      "notes": "Einstein d_cov/d_gauge force: identity-xi shared base vs A/B control",
+      "overrides": {
+        "--token-temporal-mode": "shared_base"
+      }
+    },
+    {
+      "name": "tr1_seg_ce",
+      "notes": "scorer-in-loop seg trunk; pose TERMINAL (#383) \u2014 no pose flag exists on this trainer by design; margin_hinge = step-native raced form; class_weight_lane = sn1 sided-asymmetry lever",
+      "overrides": {
+        "--class-weight-lane": "1.0",
+        "--margin-target": "1.0",
+        "--seg-form-start": "ce",
+        "--w-seg": "100.0"
+      }
+    },
+    {
+      "name": "tr1_a1_gate_every10",
+      "notes": "A1 (fd2 binding transfer lesson): realized-argmax gate cadence",
+      "overrides": {
+        "--gate-every": "10"
+      }
+    },
+    {
+      "name": "tr1_window_ep400",
+      "notes": "bounded governed window; checkpoint-on-exit (P0 resumability)",
+      "overrides": {
+        "--batch-pairs": "8",
+        "--epochs": "400",
+        "--lr": "0.002",
+        "--max-wall-minutes": "480.0"
+      }
+    },
+    {
+      "name": "tr1_lotto_seed118",
+      "notes": "rule-118: PRNG expansion FREE; seed+density COUNTED in selector ledger",
+      "overrides": {
+        "--lotto-mask-density-init": "0.5",
+        "--lotto-seed": "118"
+      }
+    }
+  ],
+  "schema": "ddm_tb1_tr1_sealed_ticket.v1",
+  "score_claim": false,
+  "sealed_sha256": "99b13a53fa412cbe5ed0263ff920efe0798e01fee9d848c14a86030ee605e659",
+  "ticket_hash": "007d8eacf402c4fe1a2d8156cfbcd4dac9645d2234177dae825ce7c53e163884",
+  "trainer": "experiments/train_tr1_partition_renderer_mlx.py"
+}
