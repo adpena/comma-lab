@@ -643,3 +643,92 @@ def test_canonical_pointer_module_exempt_from_bare_write_gate() -> None:
     from tac.preflight import _BARE_WRITE_CANONICAL_HELPERS
 
     assert "src/tac/canonical_frontier_pointer.py" in _BARE_WRITE_CANONICAL_HELPERS
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Worktree-aware fallback (ddm_fd2 structural fix): the pointer is gitignored
+# shared state absent in fresh linked worktrees; the strict READ path falls
+# back to the main worktree's pointer, preserving Catalog #138 fail-closed.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def _make_fake_worktree(tmp_path: Path, *, main_has_pointer: bool) -> Path:
+    """Simulate a git linked-worktree layout under tmp_path.
+
+    main/ (primary checkout, has .git DIR + the pointer)
+    main/.git/worktrees/wt/ (gitdir; commondir -> ../..)
+    wt/ (linked worktree, has .git FILE pointing at the gitdir)
+    """
+    main = tmp_path / "main"
+    (main / ".git").mkdir(parents=True)
+    gitdir = main / ".git" / "worktrees" / "wt"
+    gitdir.mkdir(parents=True)
+    (gitdir / "commondir").write_text("../..\n", encoding="utf-8")
+    if main_has_pointer:
+        pointer_path = main / ".omx" / "state" / "canonical_frontier_pointer.json"
+        pointer_path.parent.mkdir(parents=True)
+        pointer_path.write_text(
+            json.dumps(_make_minimal_pointer().as_dict()), encoding="utf-8"
+        )
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    (wt / ".git").write_text(f"gitdir: {gitdir}\n", encoding="utf-8")
+    return wt
+
+
+def test_worktree_fallback_resolves_main_pointer(tmp_path: Path) -> None:
+    """Missing worktree pointer -> strict load recovers from the main worktree."""
+
+    from tac.canonical_frontier_pointer import _linked_worktree_main_pointer_fallback
+
+    wt = _make_fake_worktree(tmp_path, main_has_pointer=True)
+    fallback = _linked_worktree_main_pointer_fallback(repo_root=wt)
+    assert fallback is not None
+    assert fallback == tmp_path / "main" / ".omx" / "state" / "canonical_frontier_pointer.json"
+    # strict load recovers (no exception) via the fallback
+    pointer = load_canonical_frontier_pointer_strict(repo_root=wt)
+    assert pointer.schema_version == POINTER_SCHEMA_VERSION
+
+
+def test_worktree_fallback_fail_closed_when_main_also_missing(tmp_path: Path) -> None:
+    """Catalog #138 preserved: neither worktree nor main has it -> raises."""
+
+    from tac.canonical_frontier_pointer import _linked_worktree_main_pointer_fallback
+
+    wt = _make_fake_worktree(tmp_path, main_has_pointer=False)
+    assert _linked_worktree_main_pointer_fallback(repo_root=wt) is None
+    with pytest.raises(FrontierPointerCorruptError):
+        load_canonical_frontier_pointer_strict(repo_root=wt)
+
+
+def test_worktree_fallback_returns_none_for_non_worktree(tmp_path: Path) -> None:
+    """A normal checkout (.git DIR, or no .git) has no fallback target."""
+
+    from tac.canonical_frontier_pointer import _linked_worktree_main_pointer_fallback
+
+    # no .git at all
+    assert _linked_worktree_main_pointer_fallback(repo_root=tmp_path) is None
+    # .git as a DIRECTORY (primary checkout) -> not a linked worktree
+    (tmp_path / ".git").mkdir()
+    assert _linked_worktree_main_pointer_fallback(repo_root=tmp_path) is None
+
+
+def test_worktree_fallback_not_applied_for_explicit_path(tmp_path: Path) -> None:
+    """Explicit --path callers are unaffected by the fallback (still fail-closed)."""
+
+    wt = _make_fake_worktree(tmp_path, main_has_pointer=True)
+    with pytest.raises(FrontierPointerCorruptError):
+        load_canonical_frontier_pointer_strict(
+            repo_root=wt, path=tmp_path / "nonexistent.json"
+        )
+
+
+def test_worktree_fallback_present_worktree_pointer_wins(tmp_path: Path) -> None:
+    """When the worktree HAS its own pointer, the fallback is not consulted."""
+
+    wt = _make_fake_worktree(tmp_path, main_has_pointer=True)
+    own = wt / ".omx" / "state" / "canonical_frontier_pointer.json"
+    own.parent.mkdir(parents=True)
+    own.write_text(json.dumps(_make_minimal_pointer().as_dict()), encoding="utf-8")
+    pointer = load_canonical_frontier_pointer_strict(repo_root=wt)
+    assert pointer.schema_version == POINTER_SCHEMA_VERSION

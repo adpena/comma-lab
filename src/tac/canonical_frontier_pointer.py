@@ -327,6 +327,64 @@ def write_canonical_frontier_pointer_locked(
     return resolved_path
 
 
+def _linked_worktree_main_pointer_fallback(*, repo_root: Path | str) -> Path | None:
+    """Resolve the canonical pointer from the MAIN worktree when ``repo_root``
+    is a linked git worktree that lacks the (gitignored) pointer file.
+
+    The canonical frontier pointer at
+    ``.omx/state/canonical_frontier_pointer.json`` is gitignored shared state;
+    it exists only in the primary checkout, never in a fresh linked worktree
+    (the standard subagent-arm layout). This helper performs a read-only,
+    deterministic, value-identical fallback so any strict reader (the joint-
+    descent launcher, ``taskspace_inverse_stack_receipt``, preflight) recovers
+    the canonical value instead of failing closed on a structurally-absent
+    file. Pure file I/O; no subprocess.
+
+    Returns the main-worktree pointer path if it exists as a regular file,
+    else ``None`` (Catalog #138 fail-closed is preserved: the strict loader
+    still raises when NEITHER location has the pointer).
+    """
+
+    root = Path(repo_root)
+    git_marker = root / ".git"
+    # A linked worktree has a ``.git`` FILE (``gitdir: <path>``); the primary
+    # checkout has a ``.git`` DIRECTORY (there is nothing to fall back to).
+    try:
+        if not git_marker.is_file():
+            return None
+        marker_text = git_marker.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    prefix = "gitdir:"
+    if not marker_text.startswith(prefix):
+        return None
+    gitdir_raw = marker_text[len(prefix) :].strip()
+    if not gitdir_raw:
+        return None
+    gitdir = Path(gitdir_raw)
+    if not gitdir.is_absolute():
+        gitdir = root / gitdir
+    # ``gitdir`` == ``<common>/.git/worktrees/<name>``. ``commondir`` resolves
+    # to ``<common>/.git``; the main worktree top is its parent.
+    commondir_file = gitdir / "commondir"
+    try:
+        commondir_raw = commondir_file.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    if not commondir_raw:
+        return None
+    common_git = Path(commondir_raw)
+    if not common_git.is_absolute():
+        common_git = gitdir / commondir_raw
+    try:
+        common_git = common_git.resolve()
+    except OSError:
+        return None
+    main_worktree = common_git.parent  # parent of ``<common>/.git``
+    fallback_path = main_worktree / CANONICAL_FRONTIER_POINTER_PATH
+    return fallback_path if fallback_path.is_file() else None
+
+
 def load_canonical_frontier_pointer_strict(
     *,
     repo_root: Path | str = ".",
@@ -337,14 +395,24 @@ def load_canonical_frontier_pointer_strict(
     Per Catalog #138 strict-load discipline: missing-file is fail-closed too
     (callers that want lenient missing-file semantics should call
     ``load_canonical_frontier_pointer_lenient`` instead).
+
+    Worktree-aware: when ``path`` is not explicitly given and the resolved
+    pointer is absent (the gitignored file does not exist in a fresh linked
+    worktree), fall back READ-ONLY to the main worktree's pointer via
+    :func:`_linked_worktree_main_pointer_fallback` before failing closed.
     """
 
     resolved_path = _resolve_pointer_path(repo_root=repo_root, path=path)
     if not resolved_path.is_file():
-        raise FrontierPointerCorruptError(
-            f"canonical frontier pointer missing at {resolved_path}; "
-            "run `tools/refresh_canonical_frontier.py` to populate"
-        )
+        if path is None:
+            fallback = _linked_worktree_main_pointer_fallback(repo_root=repo_root)
+            if fallback is not None:
+                resolved_path = fallback
+        if not resolved_path.is_file():
+            raise FrontierPointerCorruptError(
+                f"canonical frontier pointer missing at {resolved_path}; "
+                "run `tools/refresh_canonical_frontier.py` to populate"
+            )
     try:
         text = resolved_path.read_text(encoding="utf-8")
     except OSError as exc:
