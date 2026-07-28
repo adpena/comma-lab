@@ -1,0 +1,40 @@
+{
+ "schema": "ddm_fd1_gn_proposal.v1",
+ "block_pair_ids": [
+  447,
+  448,
+  449,
+  450
+ ],
+ "active_parameter_count": 344,
+ "hvp_calls": 6,
+ "hvp_mode": "fd_secant(eps=0.5)+vjp",
+ "cg_iterations": 3,
+ "cg_relative_residual": 0.4957036761243554,
+ "damping": 0.001,
+ "preconditioner_source": "measured_hutchinson_jacobi_diagonal_of_exact_ggn",
+ "preconditioner_probes": 2,
+ "model_reduction": 14.530061857124853,
+ "gradient_norm": 1.905100764034553,
+ "step_norm": 276.81625927383476,
+ "rayleigh_curvature": 0.0003851068268029765,
+ "metric_custody": {
+  "bundle_status": "COMPLETE",
+  "preconditioner_from_bundle": false,
+  "reason": "bundle atlas dimensions do not index the lift parameters; operative preconditioner is the measured Hutchinson Jacobi diagonal of the exact GGN (documented degradation)",
+  "bundle_id": "ddm_ms4d_direct_metric_completion_20260724T155932Z",
+  "components": {
+   "SEG_METRIC": "COMPLETE",
+   "POSE_METRIC": "COMPLETE",
+   "COMPOSITE_R_SECOND_ORDER": "COMPLETE",
+   "DUAL_METRIC_DIAGNOSTICS": "COMPLETE"
+  }
+ },
+ "evidence_axis": "[macOS-MLX research-signal]",
+ "score_claim": false,
+ "propose_seconds": 2.003988027572632,
+ "per_hvp_seconds": 0.33399800459543866,
+ "block_proxy_before": 27.01517677307129,
+ "block_proxy_after_full_step": 23.815785348415375,
+ "block_proxy_delta_full_step": -3.1993914246559143
+}
