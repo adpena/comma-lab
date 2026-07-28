@@ -55,6 +55,65 @@ MATURITY = "_dev"
 EVIDENCE_AXIS = "[macOS-CPU frozen-scorer advisory]"
 G2F_SOURCE_SHA256 = "92d860ab35bba158e7fd817edf632d3e3e7fc90b05669402d537c26a6e09a88e"
 
+# CO5 re-adjudication (2026-07-28): each held enhancement carries a NAMED producer gate so
+# "off" is a tracked duty-to-measure queue, never a silent collective PREMISE_FALSIFIED. The
+# gates are the concrete telemetry a CT1-v2 (or a fired-duty ledger) would emit to flip the
+# backtest; the enhancement designs remain valid (RE_PREMISE), none are RETIRED.
+_CO5_ENHANCEMENT_GATES: dict[str, dict[str, Any]] = {
+    "pontryagin_bellman_transition_residual": {
+        "named_gate": "CT1V2_EMITS_ORDERED_ADJACENT_CAMPAIGN_COSTATES_AND_TRANSITION_JACOBIANS",
+        "producer": (
+            "a CT1-v2 telemetry emitter surfacing ordered adjacent campaign costates + realized "
+            "transition Jacobians (CT1 surfaces one exact endpoint + cadence, no costate/Jacobian)"
+        ),
+        "unblocks": (),
+    },
+    "m34_per_state_dual_consistency": {
+        "named_gate": "CT1V2_EMITS_PER_STATE_M34_AND_ORGAN_DUAL_WITH_MEASURED_UNCERTAINTY",
+        "producer": (
+            "a CT1-v2 emitter of per-state M34 + same-state organ dual + measured uncertainty band "
+            "(CT1 emits neither dual)"
+        ),
+        "unblocks": (),
+    },
+    "compression_progress_per_effort": {
+        "named_gate": "CT1V2_SURFACES_TWO_PLUS_EXACT_N600_S_ENDPOINTS_WITH_WALL_CLOCK_AND_BYTE_IDENTITY",
+        "producer": (
+            "a CT1-v2 encoding >=2 exact n600 S-endpoints as full rows (CT1 ran 3 verdict steps "
+            "[0,1,50] but surfaces only step 50 as a full S-row; the cumulative trace is explicitly "
+            "ADVISORY_BATCH_LOCAL, not n600)"
+        ),
+        "unblocks": ("regret_bounded_duty_allocation",),
+    },
+    "regret_bounded_duty_allocation": {
+        "named_gate": "TYPED_FIRED_DUTY_HISTORY_LEDGER_PLUS_ACTIVE_COMPRESSION_PROGRESS_PER_EFFORT",
+        "producer": (
+            "a typed fired-duty history ledger + an active compression-progress-per-effort signal "
+            "(downstream of the compression-progress gate; CT1's 12 geometry-cure events are a "
+            "count, not typed duty identity/outcome history)"
+        ),
+        "unblocks": (),
+    },
+}
+
+
+def _co5_disposition(passed: bool, named_gate: str | None) -> tuple[str, str]:
+    """Derive an enhancement's disposition from its backtest + named-gate availability.
+
+    ACTIVATE if the premise is satisfied at consumption; RE_PREMISE (tracked, not silent) when a
+    named producer could flip the backtest; RETIRE only when no producer can supply the evidence.
+    """
+
+    if passed:
+        return "ACTIVATE_ADVISORY", "premise satisfied at consumption; advisory-only, actuation NONE"
+    if named_gate:
+        return (
+            "RE_PREMISE",
+            f"held on named producer gate {named_gate}; tracked in the duty-to-measure queue",
+        )
+    return "RETIRE", "no producer can supply the required evidence; design closed with recorded reason"
+
+
 DIMENSION_CONTRACT = ".omx/research/ddm_366_dimension_completeness_contract_20260724.md"
 J8F_GLOBS = (
     ".omx/research/ddm_j8f_*/ddm_j8f_event_marks.jsonl",
@@ -1242,6 +1301,13 @@ def _co5_enhancement_state(
         reason = spec["backtest_reason"]
         if not freshness["fresh"]:
             reason = f"{freshness['tag']} CT1 input is not current at consumption: {freshness['reason']}; {reason}"
+        # Backtest fails closed for all four: CT1 (landed 2026-07-25, AFTER the original gate
+        # string) DELIBERATELY declines to fabricate the campaign delta_S/hour and surfaces only
+        # one full exact n600 S-endpoint, so the required matched authority genuinely does not
+        # exist yet. The disposition is DERIVED from that fact + the named producer gate.
+        passed = False
+        gate = _CO5_ENHANCEMENT_GATES.get(spec["enhancement_id"], {})
+        disposition, disposition_reason = _co5_disposition(passed, gate.get("named_gate"))
         enhancement_rows.append(
             {
                 "schema": ENHANCEMENT_SCHEMA,
@@ -1254,30 +1320,77 @@ def _co5_enhancement_state(
                 "backtest": {
                     "schema": ENHANCEMENT_BACKTEST_SCHEMA,
                     "status": "FAILED_CLOSED_MISSING_MATCHED_AUTHORITY",
-                    "passed": False,
+                    "passed": passed,
                     "reason": reason,
                     "required_evidence": spec["required_evidence"],
                     "verdict_scope": (
                         "CT1 stopped-v5 telemetry x EV1 N600 campaign evidence join; enhancement design remains open"
                     ),
                 },
-                "active": False,
-                "status": "DESIGNED_NOT_ACTIVE",
+                "active": disposition == "ACTIVATE_ADVISORY",
+                "disposition": disposition,
+                "disposition_reason": disposition_reason,
+                "named_gate": gate.get("named_gate"),
+                "producer_duty": gate.get("producer"),
+                "unblocks": list(gate.get("unblocks") or ()),
+                "status": (
+                    "ACTIVE_ADVISORY"
+                    if disposition == "ACTIVATE_ADVISORY"
+                    else f"RE_PREMISED_{gate.get('named_gate', 'NO_GATE')}"
+                    if disposition == "RE_PREMISE"
+                    else "RETIRED"
+                ),
                 "actuation": "NONE",
                 "score_claim": False,
                 "main_landing_review_required": True,
             }
         )
     active_count = sum(row["active"] for row in enhancement_rows)
+    re_premised = [row for row in enhancement_rows if row["disposition"] == "RE_PREMISE"]
+    retired = [row for row in enhancement_rows if row["disposition"] == "RETIRE"]
+    # Duty-to-measure queue: the RE_PREMISE producer gates, ranked by how many sibling
+    # enhancements each unblocks (dependency-topology), then id — a tracked drainable queue.
+    duty_to_measure = sorted(
+        (
+            {
+                "enhancement_id": row["enhancement_id"],
+                "layer": row["layer"],
+                "named_gate": row["named_gate"],
+                "producer_duty": row["producer_duty"],
+                "unblocks": row["unblocks"],
+                "actuation": "NONE",
+            }
+            for row in re_premised
+        ),
+        key=lambda r: (-len(r["unblocks"]), r["enhancement_id"]),
+    )
+    for rank, row in enumerate(duty_to_measure, 1):
+        row["rank"] = rank
+    if active_count:
+        status = "ACTIVE_ADVISORY"
+    elif re_premised:
+        status = f"RE_PREMISED_TRACKED_QUEUE_{len(re_premised)}_NAMED_GATES"
+    else:
+        status = "ALL_ENHANCEMENTS_RETIRED"
     return {
         "schema": "ddm_costate_organ_enhancement_activation.v1",
-        "status": ("ACTIVE_ADVISORY" if active_count else "PREMISE_FALSIFIED_CT1_DELTA_S_PER_HOUR_GATE_NOT_SATISFIED"),
+        "status": status,
         "charter_claimed_gate": "CT1_CAMPAIGN_DELTA_S_PER_WALL_CLOCK_HOUR",
         "gate_satisfied": False,
+        "re_adjudicated": (
+            "2026-07-28: per-enhancement named-gate dispositions replace the silent collective "
+            "PREMISE_FALSIFIED; CT1 landed 2026-07-25 but deliberately declines the campaign "
+            "delta_S/hour (only 1 full exact n600 S-endpoint surfaced) so all 4 are genuinely "
+            "unsatisfied -> RE_PREMISE with named producer gates, 0 retired. Off is a tracked queue."
+        ),
         "source_freshness": freshness,
         "active_count": active_count,
+        "re_premised_count": len(re_premised),
+        "retired_count": len(retired),
         "held_count": len(enhancement_rows) - active_count,
         "total_count": len(enhancement_rows),
+        "dispositions": {row["enhancement_id"]: row["disposition"] for row in enhancement_rows},
+        "duty_to_measure": duty_to_measure,
         "rows": enhancement_rows,
         "actuation": "NONE",
         "score_claim": False,

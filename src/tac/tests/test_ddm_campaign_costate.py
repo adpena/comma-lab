@@ -199,11 +199,17 @@ def test_co5_enhancements_consume_fresh_ct1_and_fail_closed_before_activation(
     _patch_ct1_fresh(monkeypatch)
     state = _campaign()
     activation = state["enhancement_activation"]
-    assert activation["status"] == ("PREMISE_FALSIFIED_CT1_DELTA_S_PER_HOUR_GATE_NOT_SATISFIED")
+    # ddm_co6 re-adjudication (2026-07-28): the silent collective PREMISE_FALSIFIED is replaced by
+    # per-enhancement RE_PREMISE named gates ("off is a tracked queue"). All 4 remain genuinely
+    # unsatisfied (CT1 declines the campaign delta_S/hour), 0 retired.
+    assert activation["status"] == "RE_PREMISED_TRACKED_QUEUE_4_NAMED_GATES"
+    assert "PREMISE_FALSIFIED" not in activation["status"]
     assert activation["gate_satisfied"] is False
     assert activation["source_freshness"]["status"] == ("FRESH_CONTENT_HASH_VERIFIED_AT_CONSUMPTION")
     assert activation["source_freshness"]["tag"] == "[fresh]"
     assert activation["active_count"] == 0
+    assert activation["re_premised_count"] == 4
+    assert activation["retired_count"] == 0
     assert activation["held_count"] == 4
     assert activation["total_count"] == 4
     assert len(state["sense"]["enhancement_rows"]) == 3
@@ -218,13 +224,19 @@ def test_co5_enhancements_consume_fresh_ct1_and_fail_closed_before_activation(
     }
     assert all(row["schema"] == ENHANCEMENT_SCHEMA for row in rows.values())
     assert all(row["backtest"]["schema"] == ENHANCEMENT_BACKTEST_SCHEMA for row in rows.values())
-    assert all(row["status"] == "DESIGNED_NOT_ACTIVE" for row in rows.values())
+    assert all(row["disposition"] == "RE_PREMISE" for row in rows.values())
+    assert all(row["status"].startswith("RE_PREMISED_") for row in rows.values())
+    assert all(row["named_gate"] and row["producer_duty"] for row in rows.values())
     assert all(row["active"] is False for row in rows.values())
     assert all(row["actuation"] == "NONE" for row in rows.values())
     assert all(row["score_claim"] is False for row in rows.values())
     assert all(row["backtest"]["status"] == "FAILED_CLOSED_MISSING_MATCHED_AUTHORITY" for row in rows.values())
     assert "ADVISORY_BATCH_LOCAL" in rows["compression_progress_per_effort"]["backtest"]["reason"]
     assert "cross-sectional" in rows["pontryagin_bellman_transition_residual"]["backtest"]["reason"]
+    # The duty-to-measure queue is ranked by dependency topology (compression_progress unblocks regret).
+    dtm = activation["duty_to_measure"]
+    assert dtm[0]["enhancement_id"] == "compression_progress_per_effort"
+    assert [row["rank"] for row in dtm] == [1, 2, 3, 4]
     assert len([blocker for blocker in state["blockers"] if blocker["blocker_id"].startswith("BLOCKED_CO5_")]) == 4
 
 
@@ -435,7 +447,13 @@ def test_organ_digest_dashboard_and_digest_tool_share_campaign_digest(
     assert data["ddm_campaign_activation_nag"]["lambda_ranker_admission"]["passed"] is True
     assert data["duty_to_measure"]["lambda_ranker"]["pair_precision"]["unranked_precision_owed"] == 0
     assert any(line.startswith("DDM-campaign:") for line in lines)
-    assert any(line.startswith("DDM-CO5: active=0/4 held=4 freshness=[fresh]") for line in lines)
+    # ddm_co6: the CO5 digest line surfaces the tracked re-premise queue + next named gate.
+    assert any(
+        line.startswith("DDM-CO5: active=0/4 re-premised=4 retired=0 freshness=[fresh]")
+        and "gate=RE_PREMISED_TRACKED_QUEUE_4_NAMED_GATES" in line
+        and "next-gate=CT1V2_SURFACES_TWO_PLUS_EXACT_N600" in line
+        for line in lines
+    )
     assert data["ddm_campaign"]["enhancement_activation"] == (organ["campaign"]["enhancement_activation"])
 
 
