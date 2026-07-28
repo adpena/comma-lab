@@ -1,0 +1,89 @@
+{
+  "schema": "ddm_fd1_gn_campaign_fire_ticket.v1",
+  "authority": {
+    "arm": "ddm_fd1_20260728",
+    "charter": "family-d GN/CG in description coordinates (gc5-named built form; extend j2, never rebuild)",
+    "pointer": "0.1910828242 [contest-CPU]",
+    "pointer_moved": false,
+    "score_claim": false,
+    "fire_owner": "MAIN",
+    "state": "READY_TO_FIRE_UNDER_STANDING_GO",
+    "standing_go_applies_only_after_main_review": true
+  },
+  "semantic_program": {
+    "program_id": "ddm_fd1_family_d_gn_long_campaign",
+    "mode": "fd1_gn_window",
+    "launcher_invocation": [
+      ".venv/bin/python",
+      "tools/launch_ddm_joint_descent.py",
+      "--ticket",
+      ".omx/research/configs/ddm_ws3_w_joint_history_fill_20260724.json",
+      "--fd1-gn-window",
+      "--out-dir",
+      "<MAIN-owned run dir>",
+      "--resume-from",
+      "<latest fd1_gn_window checkpoint (bootstrap: the ws3 W_joint step-4 checkpoint below)>",
+      "--memory-receipt",
+      "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/full_run_memory_preflight.json",
+      "--fd1-gn-steps",
+      "<window length; event-continuation decides the number of windows>",
+      "--fd1-cg-iters",
+      "6",
+      "--fd1-damping",
+      "1e-3",
+      "--fd1-hutchinson-probes",
+      "4"
+    ],
+    "typed_config_identity": {
+      "ticket_path": ".omx/research/configs/ddm_ws3_w_joint_history_fill_20260724.json",
+      "ticket_sha256": "239a09bc2689c44c783fd6c882ac7fc282f8f42fb7e87d3582f6b63b61677c93",
+      "typed_config_hash": "346975b25fce972766ef89ebce437ba87cc2e11e37f709683682246116dbcf93",
+      "why_reused": "fd1 checkpoints and the arbitrated W_joint checkpoint bind this exact typed identity; changing it would orphan bit-faithful resume"
+    },
+    "warm_start": {
+      "selected": "W_joint (ws3 arbitration ARBITRATED_FORMULATION_STOP_KEEP_WJOINT)",
+      "source_archive_sha256": "5aa45850ab05d47f411583fd7582e27644c5bf289cd6d5bc32c05a52706c433e",
+      "bootstrap_checkpoint_path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000004.npz",
+      "bootstrap_checkpoint_sha256": "f6e88a743e188eb84f75f3a500acd04ef9ea685c86a1ee774709148c9cc65e41"
+    },
+    "acceptance": "v19 UNCHANGED: accept iff realized joint advisory action (100*d_seg + sqrt(10*d_pose) + 25*bytes/37_545_489) strictly decreases through compile -> parse-back -> uint8 -> R -> frozen CPU scorers, n600 chunked",
+    "objective": "seg leg GN (pose_objective_weight=0 per #383 terminal-pose law); pose collateral and rate priced inside the realized acceptance; water level 1.273108 B/error",
+    "event_continuation_schedule": {
+      "doctrine": "sched1 event-continuation; never PR95 stage skeletons",
+      "continue_while": "latest window has >=1 accepted step AND the accepted-step relative d_seg slope < 0",
+      "adapt": "damping halves on acceptance, x4 on block-saturation rejection, x0.25 on quantization-gated rejection (as implemented in _fd1_gn_window_locked)",
+      "stop_events": [
+        "two consecutive windows with 0 accepted steps",
+        "capacity_classification ENGINE_SCALE_SATURATION in two consecutive windows -> route to the gc5 capacity disambiguator with the TWO-RUNG ladder (orchestrator steers 1+2; ee1 C10 convergence): rung 1 = grow shared/cross-pair template DOF (ONE lift dimension at fixed discipline); rung 2 = re-parametrize as token-grid + small trained partition->pixel renderer (<=64KB counted class, scorer-in-loop through R + uint8-STE; external existence proof PR130 40,252B int4 -> native d_seg 2.97e-4 official rail, LESSONS-ONLY never adopted bytes/constants). That routing is the NEXT arm charter input, not this campaign to sweep",
+        "d_seg <= 1e-3 at <= ~180 KB with pose path intact -> byte-close and buy the exact row (r6cal spine -> upstream/evaluate.py)"
+      ],
+      "band_lemma_watch": "ee1 DERIVED correction-stream band lemma: correction streams pay only in base-error band ~1e-3..1e-2 (position floor log2(N/k)/8 B/err crosses the 1.2731 water level near 1e-3). The descent from W_joint d_seg 0.0705 passes THROUGH the band: log/expect marginal byte-efficiency character changes near d_seg~1e-2 and again ~1e-3; below ~1e-3 sub-water correction machinery is permanently pointless (carrier must be natively <=~1e-3, ideally <=3e-4)"
+    },
+    "execution_custody_at_seal": {
+      "launcher": {
+        "path": "tools/launch_ddm_joint_descent.py",
+        "sha256": "a2adf9d09921ceafdae74f08aa982e741e5da15e2a8f437d81314c88a893cb78"
+      },
+      "consumer": {
+        "path": "src/tac/optimization/direct_description_joint_descent.py",
+        "sha256": "09a23871ad0fce7547efe5bf4f133128bb8d31a86940a89d4196c957ff7d925a"
+      },
+      "family_d_engine": {
+        "path": "src/tac/optimization/ddm_family_d_gn_description.py",
+        "sha256": "142b6ca1c66fce1f05813277ef32cd02bdfb0ca2215478bc5ee7628da33ee2ed"
+      },
+      "note": "shas are the fd1r final worktree seal (launcher committed e8e0566e81, engine committed bf216cf4a4); MAIN MUST re-hash after merge and refuse on drift (the ws3 sealed worst-geometry chain already does not re-bind on the current tree; this ticket custody is the replacement surface)"
+    },
+    "metric_custody": {
+      "bundle": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/BUNDLE-COMPLETE.json",
+      "loaded_via": "tac.optimization.ddm_metric_custody_bundle.load_metric_custody_bundle(require_complete=True)",
+      "preconditioner": "measured Hutchinson Jacobi diagonal of the exact GGN (bundle atlas dims do not index lift params; degradation explicit)"
+    },
+    "resumability": "P0: per-accepted-step distinct checkpoints via save_stage_checkpoint (stage_id fd1_gn_window); bit-faithful resume via the canonical resume registry; window receipt fd1_gn_window_receipt.json per window"
+  },
+  "compile_custody": {
+    "hash_algorithm": "sha256",
+    "hash_scope": "RFC8785 canonical bytes of semantic_program",
+    "semantic_program_sha256": "31ce3d2bbed798c534f666ea4fe987d1a809de2c2ff0ca66b230785a9c78d9c6"
+  }
+}
