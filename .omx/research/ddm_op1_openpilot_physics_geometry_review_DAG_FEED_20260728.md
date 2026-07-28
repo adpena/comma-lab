@@ -45,3 +45,9 @@ For MAIN to fold into `sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md`. 
   P2 is a derivation over already-registered/receipted anchors). verdict_scope: review/derivation;
   the BEV family is NOT killed (exact-chart scope preserved).
 - Pointer `0.1910828242 [contest-CPU]` UNMOVED — all means, no ends claimed.
+
+- MAIN annotation (append-only): the #609-v2 **KILL** referenced in this FEED carries
+  `verdict_scope: formulation — BEV-staticity in the exact G1 chart only`; BEV family alive
+  behind the pre-registered F1∧F2 re-entry falsifier. Parked rows are INSTANCE-scoped
+  sequencing decisions with falsifiers, not magnitude kills (see memo annotation for the
+  relative-significance arithmetic). [magnitude-ok]

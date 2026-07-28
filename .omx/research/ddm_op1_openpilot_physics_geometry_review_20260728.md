@@ -199,3 +199,27 @@ measurement). Rows 1–4 are recommended for tb1 attention before T2 freeze; 5�
   adaptive pyramid (PMC5190984). Other prior-art citations (PointRend, Poisson/diffusion-curves,
   Freeman/JBIG, Costa/Gelfand-Pinsker, Triggs BAL) are standard results cited from domain knowledge
   and flagged for spot-check if any row is adopted.
+
+---
+## MAIN post-merge annotation (append-only; verdict-scope + relative-significance compliance)
+
+**verdict_scope declarations for negative tokens in this memo:**
+- The #609-v2 BEV staticity **KILL** cited herein: `verdict_scope: formulation — BEV-staticity
+  of the road/lane stratum in the EXACT G1 chart (custodied homography, v_h ladder)`. The BEV
+  FAMILY is NOT dead: the pre-registered re-entry gate F1∧F2 (new custodied chart with D0 pass
+  + Road AND Lane p50 ≤1px at n600 ∧ token-change-rate + survival tests) is the falsifier that
+  keeps the door honest. One chart formulation failed; the family re-enters on a passing chart.
+- Any **FALSIFIED** token referring to the op1 charter's "MORE STATIC in BEV" premise:
+  `verdict_scope: instance — one charter-composition recall error by MAIN (receipts prevail)`;
+  it falsifies the charter sentence, not any measurement or family.
+
+**Relative-significance annotation for parked row 5 (PDE interior fill)** [magnitude-ok]: the
+parking is SEQUENCING under fleet-cap, not a magnitude kill — `verdict_scope: instance —
+prioritization decision, row stays a live candidate with its falsifier`. The arithmetic AGAINST
+dismissal, stated per the relative-significance law: the row's value is on the RATE axis
+(interior tokens → deterministic fill); a 10KB token-stream saving = 25·10,240/37,545,489 =
+**0.00682 S**, vs the remaining mid-corner gap to the 0.172 bar of ~0.004 (SPEC_tr1 composed
+mid 0.176) — i.e. ~1.7× the gap; even 3KB saved (0.00205 S) is half the gap. NOT negligible.
+Adoption gate: tb1's MEASURED T2 token-stream occupancy decides whether interior tokens are a
+material fraction; if interiors occupy ≥10% of the token stream, the PDE-fill race fires as a
+named variant. Un-recoverability is NOT claimed — no measurement supports it.
