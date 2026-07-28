@@ -1,0 +1,104 @@
+{
+  "schema": "public_pr_anatomy.v1",
+  "pr_number": 86,
+  "repo": "commaai/comma_video_compression_challenge",
+  "title": "jas0xf_adversarial_neural_representation (ANR)",
+  "author": "jas0xf (Jason Yuan, UCSD)",
+  "head_sha": "0eabe354f09b7490fd1cbb2b05a9102ab528d4d4",
+  "merge_commit": "14bcede815306415a0005c3cd98804151bce4049",
+  "state_at_intake": "MERGED 2026-05-04 (pre-PR95-era in leaderboard terms; root of the semantic-token lineage)",
+  "custody": {
+    "clone_dir": "experiments/results/public_pr86_intake_20260725_fable/source/",
+    "archive_zip_local": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+    "archive_sha256_measured": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+    "archive_bytes_measured": 207579,
+    "writeup": "experiments/results/public_pr86_intake_20260725_fable/writeup.pdf (24pp, 4.3MB)",
+    "supplementary_repo": "https://github.com/jas0xf/comma-anr-supplementary"
+  },
+  "byte_ledger_measured": {
+    "method": "zipfile.ZipFile member enumeration on the local archive.zip — MEASURED, not from the writeup",
+    "archive_zip": 207579,
+    "member_count": 5,
+    "all_members_compression": "stored (compress_type 0) — every member is already entropy-coded; ZIP adds nothing",
+    "members": [
+      {"name": "tokens.bin", "bytes": 113900, "pct": 54.87},
+      {"name": "slave.pt.gz", "bytes": 32287, "pct": 15.55},
+      {"name": "master.pt.gz", "bytes": 31144, "pct": 15.00},
+      {"name": "hpac.pt.ppmd", "bytes": 28243, "pct": 13.61},
+      {"name": "meta.pt", "bytes": 1499, "pct": 0.72}
+    ],
+    "sum_members": 207073,
+    "zip_overhead": 506,
+    "CORRECTION": "The writeup's section table (master 31,154 / slave 32,210 / meta 1,563 / hpac 27,579 / tokens 113,860) does NOT match the shipped member sizes — largest divergence 664 B on hpac. Totals agree at 207,579 only because the writeup implicitly absorbs the 506 B ZIP overhead. MEASURED member sizes above are authoritative; our 2026-07-25 intake memo propagated the writeup numbers."
+  },
+  "scores_external": [
+    {
+      "label": "github-actions bot",
+      "axis": "[contest-CUDA]",
+      "samples": 600,
+      "d_seg": 0.00067815,
+      "d_pose": 0.00045701,
+      "bytes": 207579,
+      "S_recomputed": 0.273636,
+      "components": {"seg": 0.067815, "pose": 0.067603, "rate": 0.138218}
+    }
+  ],
+  "architecture": {
+    "reframe": "writeup section 1: 'the true entropy isn't the video itself, but the expected outputs of the evaluation models... The answer itself is the true entropy.' Independent public discovery of the evaluator-equivalent-witness paradigm.",
+    "adversarial_existence_proof": {
+      "claim": "direct gradient descent on INPUT PIXELS against the frozen evaluators (Adam + Huber, C&W margin, per-dim normalized PoseNet outputs) reached SegNet 100% agreement (d_seg 0.00) + PoseNet MSE < 1e-9 in 2h on one T4",
+      "status": "[external claim, THEIR measurement — not verified on our apparatus]",
+      "why_abandoned": "storing per-pixel adversarial frames busts rate; generating them at inflate time would require scorer weights in-archive (the same rule-118 compliance wall we codified)"
+    },
+    "master_renderer": {
+      "name": "TokenRendererV62",
+      "role": "frame_1 (odd index) — carries the SegNet decision state",
+      "input": "one-hot(5 classes) on the 384x512 SegNet input grid",
+      "body": "3-layer 3x3 stride-1 CNN (32ch, GroupNorm, GELU) + per-pair FiLM (600x8 embedding -> 64) -> sigmoid*255 -> bilinear up to 874x1164",
+      "receptive_field_claim": "EXACTLY 7 by derivation (writeup 7.2): SegNet's boundary decision localizes to stem (stride-2 3x3) + Stage-0 depthwise 3x3 => a 7-input-pixel window; 3 layers is the unique depth matching it (RF 5 under-covers, RF 9 wastes capacity the metric cannot see)",
+      "receptive_field_status": "[THEIR derivation + working existence proof — FROZEN-SPACE CANDIDATE, not our measurement]",
+      "determinism_engineering": "bake_film_table() computes the FiLM table on CPU FP32 because cuBLAS tiny-matmul kernels differ Ada vs Turing",
+      "shipped_bytes": 31144
+    },
+    "slave_renderer": {
+      "name": "ShrinkSingleNeRV",
+      "role": "frame_0 — pose duty only; SegNet never sees it",
+      "body": "6-float per-pair latent -> Linear stem -> 5x (depthwise 3x3 + 1x1 + PixelShuffle) -> per-pair RGB bias; LSQ+ INT4 throughout; NO FiLM, NO skips (deliberate: the latent already carries frame identity)",
+      "shipped_bytes": 32287,
+      "achieved_d_pose": 0.00045701,
+      "superseded_by": "PR130's 23,054 B neutral-gray low-rank carrier at d_pose 2.331e-5 — 19.6x better d_pose at 9,233 FEWER bytes"
+    },
+    "token_coder": {
+      "prior": "HPAC — PixelCNN-class masked-conv AR made 30-min-feasible",
+      "two_level_partition": "12x16 = 192 independent P=32 patches (cross-frame conditioned via prev-frame tokens conv_past + CausalSPM cross-patch summary) x group order s = c + delta*r (delta=2)",
+      "parallelism_gain": "94 sequential group steps per frame instead of 196,608 raster steps (~2000x fewer); T4 end-to-end decode ~18 min",
+      "coder": "constriction arithmetic coder",
+      "bpp": 0.00773,
+      "shipped_bytes": 113900
+    },
+    "weight_compression": "SCN (Self-Compressing Networks): learnable per-layer bit budget IN the loss — the optimizer allocates quantization precision; + PPMd over the quantized state-dict bytes (~2x further)"
+  },
+  "failed_variants_worth_remembering": [
+    {
+      "name": "HPAC residual-prediction direction",
+      "what": "factorize as p(class-diff | prev frame) instead of p(class | spatial ctx, prev frame)",
+      "result": "3.5x WORSE bpp (0.02786 vs 0.00797) — ABANDONED (writeup Table 7)",
+      "status": "[external, VEHICLE-SCOPED number; directional lesson only]",
+      "lesson": "for temporal grammars: condition on the past, do NOT code the label-diff"
+    }
+  ],
+  "gt_decode_custody_incident": {
+    "what": "pre-DALI phases trained against PyAV-decoded GT",
+    "measured_gap": "train-set d_seg 0.000035 vs evaluator 0.000712 — 20x, from NVDEC vs PyAV chroma/color conversion",
+    "resolution": "shipped checkpoint required a DALI-corrected fine-tune",
+    "significance": "their independent instance of our GT-decode custody law (frame_utils.yuv420_to_rgb only)"
+  },
+  "engineering_stack": {
+    "loc_submission_dir": 610,
+    "external_deps": ["torch", "numpy", "constriction", "pyppmd"],
+    "archive_grammar": "5 separate STORED ZIP members (tokens.bin, slave.pt.gz, master.pt.gz, hpac.pt.ppmd, meta.pt)",
+    "member_overhead_cost": "506 B vs PR130's 100 B single-member — 406 B lost purely to member count. Independent measured confirmation of our L20 monolithic-archive lesson.",
+    "hpac_decode_device": "FORCED TO CPU — comment: different GPUs (encoder RTX 4090, eval T4) produce slightly different FP32 softmax -> arithmetic decoder asserts. CPU FP32 is portable.",
+    "determinism_approach": "pin the non-portable ops to CPU FP32 (both the FiLM table and the whole HPAC decode). PR130 replaced this with an integer lattice — a strictly stronger fix that also removes the CPU-speed penalty."
+  }
+}
