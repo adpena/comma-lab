@@ -590,6 +590,340 @@ def _duties(scheduler: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+# ── 2026-07-28 describe-line arc: evidence join + band-position SENSE law + refreshed duty ──
+# Advisory SENSE/DECIDE extension (actuation NONE, score_claim False). Every row is
+# content-hashed to a committed artifact so a fresh checkout reproduces it. This EXTENDS the
+# organ's evidence surface (per the #247 de-orphan law) with the measured 07-28 arc rows; it
+# never rebuilds the organ beside itself.
+ARC_EVIDENCE_AXIS = "[macOS-CPU advisory]"  # coder-rate / frozen-scorer advisory; NOT a contest score
+# The live base error rate the arc is descending: the latest exact n600 SegNet-argmax d_seg,
+# read machine-readably from the committed CT1 verdict (a fraction of sites = the density the
+# pp1 band lemma is defined over). fd1 (0.0702156745) and sc1/rp1 (0.070519) are sister witnesses.
+LIVE_BASE_DSEG_RECEIPT = (
+    ".omx/research/ddm_ct1_campaign_telemetry_encode_20260725T111500Z/r6_rehearsal_receipt.json"
+)
+
+
+@dataclass(frozen=True)
+class ArcEvidenceSpec:
+    finding_id: str
+    artifact: str  # committed path relative to repo root
+    headline: str  # the measured row (numbers)
+    crux_status: str  # SETTLED | LIVE_CRUX | SOLVED | LAW | APPARATUS
+    verdict_scope: str
+
+
+ARC_EVIDENCE_SPECS: tuple[ArcEvidenceSpec, ...] = (
+    ArcEvidenceSpec(
+        "fd1_zero_accept_window",
+        ".omx/research/ddm_fd1_family_d_gn_description_engine_20260728.md",
+        "6 family-d GN candidates, 0 accepted; slope 0.000%/step; realized n600 d_seg "
+        "bit-identical 0.0702156745 (5/6); seal BLOCKED_ZERO_ACCEPT_WINDOW_CAPACITY_ROUTED; "
+        "99.6% wall-clock is realized-acceptance pricing",
+        "LIVE_CRUX",
+        "fixed-capacity GN descent of the W_joint base is exhausted; realization moves to "
+        "the fd1 capacity/parametrization ladder (Rung1 grow shared/cross-pair DOF + #383-dual "
+        "pose-null; Rung2 token-grid + partition->pixel renderer <=64KB scorer-in-loop)",
+    ),
+    ArcEvidenceSpec(
+        "fd1_box_solve_s0_hold",
+        ".omx/research/ddm_fd1_family_d_gn_description_engine_20260728.md",
+        "S0 box-solve C1/C0 d_seg 1.077x (1.2492e-3 vs 1.1600e-3); cells-hold flip 3.757e-4 "
+        "~= 3.630e-4 GT; margin gap 165x box / 166x GT; HOLD hardened",
+        "SETTLED",
+        "the cell-space box partition reproduces baseline and holds; not the open crux",
+    ),
+    ArcEvidenceSpec(
+        "pp1_direct_partition_price",
+        ".omx/research/ddm_pp1_direct_partition_pricing_20260728.md",
+        "direct partition 173,616 B lossless (KT context-arith o8+prev5); composed explicit "
+        "route S~0.189 > 0.172 bar; >=350KB falsifier NOT reached (priced, NOT dead)",
+        "SETTLED",
+        "explicit-partition compression priced; does not beat PR130's implicit ~177KB leg",
+    ),
+    ArcEvidenceSpec(
+        "pp1_band_lemma",
+        ".omx/research/ddm_pp1_band_lemma_receipt_20260728.json",
+        "correction-stream position band: water 1.2731 B/flip; rho_c 5.015e-4 measured coherent; "
+        "rho_u 8.59e-4 derived; rational only for base error rho in ~[5e-4, 1e-2]",
+        "LAW",
+        "registered ddm_pp1_correction_stream_position_band_v1; the SENSE law the band-position "
+        "modulator consumes",
+    ),
+    ArcEvidenceSpec(
+        "rp1_cells_hold",
+        ".omx/research/ddm_rp1_rangeA_cell_realized_probe_20260728.md",
+        "flipped/held pre-round SegNet margin 166.5x (0.0337 vs 5.6136); C1 d_seg 3.63e-4 "
+        "= 2.39x q1; C0 0 flips; CELLS HOLD",
+        "SETTLED",
+        "flips concentrate at near-zero margin; sc1-far = engine capacity, not a formulation break",
+    ),
+    ArcEvidenceSpec(
+        "sp1_support_race",
+        ".omx/research/ddm_sp1_contour_support_coder_20260728.md",
+        "support contour 444,394 B vs LZMA 421,366 B @ rho=0.864% (contour 5.5% worse, 3.1x above "
+        "the phantom 142KB floor); min lossy S=0.27999 alone exceeds 0.172 bar; FLOOR_DEAD",
+        "SETTLED",
+        "explicit-residual copy-base support family CLOSED; corrections at this base explode",
+    ),
+    ArcEvidenceSpec(
+        "sc1_ep_rank1_pose",
+        ".omx/research/ddm_sc1_seeded_scene_carrier_20260728.md",
+        "e_p SVD energy frac[0]=0.9986 (rank-1); AR-int5 residual 2,039 B (~2KB, ~9% of PR130's "
+        "23,054 B); pose leg feasibility-bounded ~2KB, NOT binding (DC-mean stored separately, ch1)",
+        "SOLVED",
+        "pose carrier feasibility-bounded ~2KB; not the binding constraint",
+    ),
+    ArcEvidenceSpec(
+        "ch1_confound_pass",
+        ".omx/research/ddm_ch1_recursive_confound_pass_20260728.md",
+        "15 rows checked: 7 CLEAN / 8 SEAM-NAMED / 0 CONFIRMED-CONFOUND; S1 plumbing-reopener "
+        "DECISIVELY REFUTED (pose deltas realized-measured)",
+        "APPARATUS",
+        "apparatus-validity metadata: the 07-28 stack carries zero confirmed confounds",
+    ),
+)
+
+
+def _arc_evidence_rows(repo_root: Path) -> list[dict[str, Any]]:
+    """Content-hashed advisory rows for the committed 2026-07-28 describe-line arc."""
+
+    rows: list[dict[str, Any]] = []
+    for spec in ARC_EVIDENCE_SPECS:
+        path = repo_root / spec.artifact
+        if not path.is_file():
+            rows.append(
+                {
+                    "finding_id": spec.finding_id,
+                    "artifact": spec.artifact,
+                    "available": False,
+                    "reason": "COMMITTED_ARTIFACT_ABSENT",
+                    "crux_status": spec.crux_status,
+                    "actuation": "NONE",
+                    "score_claim": False,
+                }
+            )
+            continue
+        rows.append(
+            {
+                "finding_id": spec.finding_id,
+                "artifact": spec.artifact,
+                "available": True,
+                "sha256": _sha256(path),
+                "headline": spec.headline,
+                "crux_status": spec.crux_status,
+                "verdict_scope": spec.verdict_scope,
+                "evidence_axis": ARC_EVIDENCE_AXIS,
+                "actuation": "NONE",
+                "score_claim": False,
+            }
+        )
+    return rows
+
+
+def _band_position(repo_root: Path) -> dict[str, Any]:
+    """Wire the REGISTERED band lemma into the organ: place the live base in the rho-band.
+
+    Reads the live base error rate (d_seg = fraction of flipped sites) from the committed CT1
+    exact-n600 verdict and evaluates the canonical ``position_cost_band`` equation. The regime
+    is the correction-class duty modulator: below rho_c -> concede (correction pointless),
+    in-band -> rational, above the band upper -> support cost explodes (lower the base first).
+    """
+
+    from tac.canonical_equations.ddm_pp1_correction_stream_position_band_20260728 import (  # noqa: PLC0415
+        BAND_UPPER_DENSITY,
+        EQUATION_ID,
+        MEASURED_COHERENT_CROSSING_DENSITY,
+        WATER_B_PER_FLIP,
+        position_cost_band,
+    )
+
+    path = repo_root / LIVE_BASE_DSEG_RECEIPT
+    if not path.is_file():
+        return {
+            "available": False,
+            "reason": "LIVE_BASE_DSEG_RECEIPT_ABSENT",
+            "equation_id": EQUATION_ID,
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+    payload = _load_json(path)
+    rows = ((payload.get("observability_digest") or {}).get("rows")) or []
+    verdict = next((r for r in rows if r.get("row_id") == "latest_exact_n600_verdict"), None)
+    if not isinstance(verdict, Mapping) or "d_seg" not in verdict:
+        return {
+            "available": False,
+            "reason": "LIVE_BASE_EXACT_N600_VERDICT_ABSENT",
+            "equation_id": EQUATION_ID,
+            "source": {"path": LIVE_BASE_DSEG_RECEIPT, "sha256": _sha256(path)},
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+    base_d_seg = _number(verdict["d_seg"])
+    if not (0.0 < base_d_seg < 1.0):
+        # A perfect (0) or degenerate (>=1) base is outside the correction-band domain; do not
+        # crash the DDM-LIVE section — report it gracefully so the digest stays fail-open.
+        return {
+            "available": False,
+            "reason": f"LIVE_BASE_DSEG_OUT_OF_BAND_DOMAIN ({base_d_seg:g})",
+            "base_d_seg": base_d_seg,
+            "equation_id": EQUATION_ID,
+            "source": {"path": LIVE_BASE_DSEG_RECEIPT, "sha256": _sha256(path)},
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+    band = position_cost_band(base_d_seg)
+    regime = str(band["regime"])
+    if regime == "concede":
+        correction_regime = "CONCEDE_SHIP_NO_CORRECTION_STREAM_BELOW_RHO_C"
+        correction_multiplier = 0.0
+    elif regime == "correct":
+        correction_regime = "CORRECTION_RATIONAL_IN_BAND"
+        correction_multiplier = 1.0
+    else:  # explode
+        correction_regime = "ABOVE_BAND_SUPPORT_COST_EXPLODES_LOWER_BASE_FIRST"
+        correction_multiplier = 0.0
+    return {
+        "available": True,
+        "equation_id": EQUATION_ID,
+        "base_d_seg": base_d_seg,
+        "band": dict(band),
+        "regime": regime,
+        "rho_c": MEASURED_COHERENT_CROSSING_DENSITY,
+        "band_upper": BAND_UPPER_DENSITY,
+        "water_b_per_flip": WATER_B_PER_FLIP,
+        "correction_class_regime": correction_regime,
+        "correction_duty_multiplier": correction_multiplier,
+        "source": {
+            "path": LIVE_BASE_DSEG_RECEIPT,
+            "sha256": _sha256(path),
+            "row_id": "latest_exact_n600_verdict",
+            "verdict_source_path": verdict.get("source_path"),
+            "axis": verdict.get("evidence_axis", ARC_EVIDENCE_AXIS),
+        },
+        "evidence_axis": ARC_EVIDENCE_AXIS,
+        "actuation": "NONE",
+        "score_claim": False,
+    }
+
+
+def _refreshed_duties(
+    legacy_duties: Mapping[str, Any],
+    arc_rows: Sequence[Mapping[str, Any]],
+    band_position: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Recompute the duty head against the live 07-28 arc state (DERIVED, not hand-ordered).
+
+    Elimination argument, each leg cited to a measured arc row:
+    (1) band-position places the base above the rational correction band -> correction-class
+        duties score 0 (sp1's 444KB support wall is the measured teeth);
+    (2) fd1's zero-accept window seals fixed-capacity GN descent -> that duty is exhausted;
+    (3) rp1 cells-hold (166x) + fd1 S0 box-hold settle the cell-space realization (J_paint) premise.
+    The surviving lever is the capacity/parametrization ladder (fd1 Rung1/Rung2), which therefore
+    becomes the refreshed head, displacing the pre-arc J_paint cell-space realization.
+    """
+
+    index = {row["finding_id"]: row for row in arc_rows if row.get("available")}
+    zero_accept_sealed = "fd1_zero_accept_window" in index
+    cells_hold = "rp1_cells_hold" in index
+    box_hold = "fd1_box_solve_s0_hold" in index
+    support_dead = "sp1_support_race" in index
+    band_regime = str(band_position.get("regime")) if band_position.get("available") else None
+    correction_multiplier = float(band_position.get("correction_duty_multiplier", 1.0))
+
+    # Derived priority per duty kind (higher = more live).
+    candidates: list[dict[str, Any]] = []
+
+    ladder_live = bool(band_regime == "explode" and zero_accept_sealed)
+    candidates.append(
+        {
+            "duty": "FD1_REALIZATION_LADDER_MATERIALIZATION",
+            "kind": "capacity_ladder",
+            "priority": 2.0 if ladder_live else 1.0,
+            "basis": (
+                "DERIVED: base above-band (correction explodes) + fd1 zero-accept "
+                "(fixed-capacity descent exhausted) => lower the base by growing capacity/"
+                "re-parametrizing (fd1 Rung1 shared/cross-pair DOF + #383-dual pose-null; "
+                "Rung2 token-grid partition->pixel renderer <=64KB scorer-in-loop)"
+            ),
+            "cites": [
+                fid
+                for fid in ("pp1_band_lemma", "fd1_zero_accept_window", "rp1_cells_hold")
+                if fid in index
+            ],
+            "actuation": "NONE",
+        }
+    )
+    candidates.append(
+        {
+            "duty": "R6_rehearsal",
+            "kind": "receiver_closed_rehearsal",
+            "priority": 1.0,
+            "basis": "receiver-closed exact rehearsal, downstream of materialization",
+            "cites": [],
+            "actuation": "NONE",
+        }
+    )
+    candidates.append(
+        {
+            "duty": "DDM_iteration_curves",
+            "kind": "instrument",
+            "priority": 0.5,
+            "basis": "fit only on DDM recursion; witness NCDE r2=0.060 invalid here",
+            "cites": [],
+            "actuation": "NONE",
+        }
+    )
+    candidates.sort(key=lambda row: (-row["priority"], row["duty"]))
+    for rank, row in enumerate(candidates, 1):
+        row["rank"] = rank
+
+    demoted: list[dict[str, Any]] = []
+    if cells_hold and box_hold:
+        demoted.append(
+            {
+                "duty": "J_paint (cell-space receiver realization)",
+                "prior_rank": 1,
+                "disposition": "SETTLED_CELL_SPACE_SUBSUMED_INTO_MATERIALIZATION",
+                "basis": "rp1 cells-hold 166x + fd1 S0 box-hold settle the cell-space premise; "
+                "the open crux is materializing/lowering the W_joint base, not cell-space reach",
+                "cites": ["rp1_cells_hold", "fd1_box_solve_s0_hold"],
+            }
+        )
+    if support_dead or correction_multiplier == 0.0:
+        demoted.append(
+            {
+                "duty": "correction/support/explicit-residual class",
+                "prior_rank": None,
+                "disposition": (
+                    "BAND_DEAD_BELOW_RHO_C_CONCEDE"
+                    if band_regime == "concede"
+                    else "BAND_DEAD_ABOVE_BAND_EXPLODE"
+                ),
+                "basis": (
+                    f"band-position regime={band_regime}; correction_duty_multiplier="
+                    f"{correction_multiplier:g}"
+                    + ("; sp1 FLOOR_DEAD 444KB support wall" if support_dead else "")
+                ),
+                "cites": [fid for fid in ("pp1_band_lemma", "sp1_support_race") if fid in index],
+            }
+        )
+
+    return {
+        "schema": "ddm_live_costate_refreshed_duties.v1",
+        "derivation": "band-position + 07-28 arc-evidence elimination; not hand-ordered",
+        "band_regime": band_regime,
+        "live_ranked": candidates,
+        "demoted": demoted,
+        "superseded_legacy_head": (
+            legacy_duties["live_ranked"][0]["duty"] if legacy_duties.get("live_ranked") else None
+        ),
+        "legacy_live_ranked": list(legacy_duties.get("live_ranked") or []),
+        "actuation": "NONE",
+        "score_claim": False,
+    }
+
+
 def _instrument_audit(backtest: Mapping[str, Any], v19b: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "ncde": {
@@ -694,6 +1028,9 @@ def build_live_ddm_costate(
     primitives = _primitive_costates(dv1, g4)
     scheduler = _scheduler(dv1, g4, blocks)
     duties = _duties(scheduler)
+    arc_evidence = _arc_evidence_rows(repo_root)
+    band_position = _band_position(repo_root)
+    duties_refreshed = _refreshed_duties(duties, arc_evidence, band_position)
     instruments = _instrument_audit(backtest, v19b)
 
     spline = next(row for row in dv1["joint_compositions"] if row["candidate_id"] == "spline_plus_events")
@@ -815,6 +1152,18 @@ def build_live_ddm_costate(
         },
         "scheduler": scheduler,
         "duties": duties,
+        "duties_refreshed": duties_refreshed,
+        "arc_evidence": {
+            "schema": "ddm_live_costate_arc_evidence.v1",
+            "arc": "2026-07-28 describe-line arc (fd1/pp1/rp1/sp1/sc1/ch1)",
+            "rows": arc_evidence,
+            "present": sum(1 for row in arc_evidence if row.get("available")),
+            "registered": len(arc_evidence),
+            "evidence_axis": ARC_EVIDENCE_AXIS,
+            "actuation": "NONE",
+            "score_claim": False,
+        },
+        "band_position": band_position,
         "instruments": instruments,
         "campaign": campaign,
         "staleness": {
@@ -850,6 +1199,9 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
     backtest = report["lambda"]["backtest"]
     next_block = report["scheduler"]["next_block"]
     duties = report["duties"]
+    refreshed = report.get("duties_refreshed") or {}
+    band_pos = report.get("band_position") or {}
+    arc = report.get("arc_evidence") or {}
     stale_q = report["staleness"]["rederivation_queue"]
     campaign = report["campaign"]
     campaign_digest = campaign_consumer_view(campaign, "digest")
@@ -880,14 +1232,44 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
             "shared candidate bytes=MEASURED_EXACT_GLOBAL_HOME"
         ),
         (
-            f"DDM-next: {next_block['block_id']} rank={next_block['rank']} "
+            f"DDM-next[pre-arc-scheduler]: {next_block['block_id']} rank={next_block['rank']} "
             f"mode={next_block['lambda_status']} "
             f"GS={next_block['gauss_southwell_validity']:.6g}"
         ),
         (
+            "DDM-duty[07-28-refreshed]: "
+            + " > ".join(row["duty"] for row in refreshed.get("live_ranked") or [])
+            + (
+                f"; superseded pre-arc head {refreshed['superseded_legacy_head']} "
+                f"({refreshed['demoted'][0]['disposition']})"
+                if refreshed.get("demoted")
+                else ""
+            )
+        )
+        if refreshed.get("live_ranked")
+        else (
             "DDM-duty: "
             + " > ".join(row["duty"] for row in duties["live_ranked"])
             + f"; legacy={duties['current_legacy_rows_retained']} retained DOMINATED"
+        ),
+        (
+            (
+                f"DDM-band: base d_seg={band_pos['base_d_seg']:.6g} "
+                f"regime={band_pos['regime'].upper()} (rho_c={band_pos['rho_c']:.3g}, "
+                f"upper={band_pos['band_upper']:.3g}) -> corrections "
+                f"{'RATIONAL' if band_pos['correction_duty_multiplier'] else 'DEAD'}: "
+                f"{band_pos['correction_class_regime']}"
+            )
+            if band_pos.get("available")
+            else f"DDM-band: unavailable ({band_pos.get('reason', 'no live base')})"
+        ),
+        (
+            f"DDM-arc[07-28]: {arc.get('present', 0)}/{arc.get('registered', 0)} rows "
+            + " ".join(
+                f"{row['finding_id']}={row['crux_status']}"
+                for row in (arc.get("rows") or [])
+                if row.get("available")
+            )
         ),
         (
             f"DDM-staleness: hashes={len(report['source_custody']['input_hashes'])} "
@@ -916,9 +1298,13 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
             ),
             (
                 f"DDM-CO5: active={enhancements['active_count']}/"
-                f"{enhancements['total_count']} held={enhancements['held_count']} "
+                f"{enhancements['total_count']} "
+                f"re-premised={enhancements.get('re_premised_count', enhancements['held_count'])} "
+                f"retired={enhancements.get('retired_count', 0)} "
                 f"freshness={enhancements['source_freshness']['tag']} "
-                f"gate={enhancements['status']} actuation=NONE"
+                f"gate={enhancements['status']} "
+                f"next-gate={(enhancements.get('duty_to_measure') or [{}])[0].get('named_gate', 'NONE')} "
+                "actuation=NONE"
             ),
         )
     )

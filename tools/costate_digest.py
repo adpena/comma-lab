@@ -121,15 +121,55 @@ def _last_jsonl_row(path: Path) -> dict | None:
 
 
 # ─────────────────────────── sections (each fail-open) ───────────────────────────
+# The submittable original-work contest-CPU custody anchor (PR110-lineage recode). The pointer
+# JSON's ``our_local_frontier_contest_cpu`` currently records the BORROWED PR128-on-PR110 bank
+# (a lower but NON-SUBMISSION exact-CPU row); this anchor is the submittable frontier tracked in
+# the committed council routing card + git-log ("pointer 0.19108 UNMOVED"). Used only as a
+# fallback while the SoT's CPU frontier is the known bank (sha match); once a submittable row
+# lands in the pointer JSON its sha will not match and the digest reads the JSON value directly.
+_SUBMITTABLE_CONTEST_CPU_SCORE = 0.1910828242  # HISTORICAL_SCORE_LITERAL_OK: submittable-custody anchor, committed council routing card + git-log pointer 0.19108
+_NON_SUBMISSION_BANK_SHA8 = "196acd18"  # PR128-on-PR110 borrowed NON-SUBMISSION bank (memory: banked 0.18804)
+
+
 def section_pointer() -> tuple[str, dict]:
-    """AMENDMENT 1 (means-as-ends firewall, operating manual §8.1): the END first."""
+    """AMENDMENT 1 (means-as-ends firewall, operating manual §8.1): the END first.
+
+    AMENDMENT 2 (ddm_co6, 2026-07-28): lead with the SUBMITTABLE original-work custody anchor +
+    the effective score-to-beat bar, and label the pointer JSON's contest-CPU frontier as the
+    borrowed NON-SUBMISSION bank when its archive sha matches. The prior line led with 0.18804 —
+    the bank — presenting a borrowed non-submission row as our frontier ("everything below is
+    means"), which conflates the defensive bank with submittable progress toward the goal.
+    """
     try:
         d = json.loads(_POINTER_JSON.read_text())
         cpu = d.get("our_local_frontier_contest_cpu") or {}
-        score = float(cpu["score"])
+        cpu_score = float(cpu["score"])
         since = str(cpu.get("measured_at_utc", ""))[:10] or "?"
-        line = f"POINTER {score:.5f} [contest-CPU] UNMOVED since {since} — everything below is means."
-        return line, {"score": score, "axis": "contest-CPU", "since": since}
+        sha8 = str(cpu.get("archive_sha256", ""))[:8]
+        bar = (d.get("effective_frontier") or {}).get("score")
+        bar_s = f"{float(bar):g}" if isinstance(bar, (int, float)) else "?"
+        is_bank = sha8.startswith(_NON_SUBMISSION_BANK_SHA8)
+        if is_bank:
+            submittable = _SUBMITTABLE_CONTEST_CPU_SCORE
+            line = (
+                f"POINTER submittable {submittable:.7g} [contest-CPU custody] UNMOVED · "
+                f"effective bar {bar_s} · {cpu_score:.5f} = NON-SUBMISSION bank "
+                f"(borrowed PR128-on-PR110, sha {sha8}, {since}) — everything below is means."
+            )
+        else:
+            submittable = cpu_score  # the SoT CPU frontier is itself submittable
+            line = (
+                f"POINTER {cpu_score:.5f} [contest-CPU] UNMOVED since {since} · "
+                f"effective bar {bar_s} — everything below is means."
+            )
+        return line, {
+            "score": submittable,
+            "submittable_contest_cpu": submittable,
+            "effective_bar": bar,
+            "local_cpu_frontier": {"score": cpu_score, "sha8": sha8, "since": since},
+            "non_submission_bank": is_bank,
+            "axis": "contest-CPU",
+        }
     except Exception as exc:
         return (f"POINTER: unavailable ({type(exc).__name__}) — read .omx/state/canonical_frontier_pointer.json"), {
             "error": str(exc)
