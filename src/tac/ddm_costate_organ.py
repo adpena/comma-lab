@@ -1103,12 +1103,18 @@ T3_SEALED_TICKET = ".omx/research/configs/ddm_tb1_t3_long_burn_lotto_20260728.js
 
 @dataclass(frozen=True)
 class PendingProducerSpec:
-    """A named in-flight producer whose numbers stay uncounted until committed."""
+    """A named in-flight producer whose numbers stay uncounted until committed.
+
+    ``consumed_by`` names the organ round that folded the committed artifact into
+    typed rows (co8: rv1); a committed-but-unfolded producer keeps the co7
+    FOLD_ON_NEXT_ROUND status so the queue never silently absorbs a landing.
+    """
 
     name: str
     glob: str  # scanned under .omx/research/
     expectation: str
     named_gate: str
+    consumed_by: str | None = None
 
 
 PENDING_PRODUCER_SPECS: tuple[PendingProducerSpec, ...] = (
@@ -1128,6 +1134,7 @@ PENDING_PRODUCER_SPECS: tuple[PendingProducerSpec, ...] = (
         "arc-local precondition rows ONLY and consumes rv1's committed table when it lands "
         "(no duplicate sweep).",
         "RV1_COMMITTED_CONDITIONAL_VALIDITY_TABLE",
+        consumed_by="co8_rv1_conditional_validity_table",
     ),
 )
 
@@ -1156,11 +1163,672 @@ def _pending_producers(repo_root: Path) -> list[dict[str, Any]]:
             row["path"] = str(latest.relative_to(repo_root))
             if target is not None:
                 row["sha256"] = _sha256(target)
-            row["status"] = "COMMITTED_ARTIFACT_PRESENT_FOLD_ON_NEXT_ROUND"
+            row["status"] = (
+                f"COMMITTED_CONSUMED_BY_{spec.consumed_by.upper()}"
+                if spec.consumed_by
+                else "COMMITTED_ARTIFACT_PRESENT_FOLD_ON_NEXT_ROUND"
+            )
         else:
             row["reason"] = "PENDING_COMMITTED_PRODUCER"
         rows.append(row)
     return rows
+
+
+# ── co8 (2026-07-28): consume the COMMITTED rv1 conditional-validity table + the pn1
+# pantheon-of-pantheons rows (VOI ranking · nu-pivot decision node · granularity-ladder law +
+# ARMED race · S1 dress-rehearsal duties) + the allocator-law duty waterfill. Advisory
+# SENSE/DECIDE only (actuation NONE, score_claim False); every row content-hashed to the
+# committed memo it is folded from; ASSUMED priors stay labeled ASSUMED (NO-FAKE #8).
+RV1_TABLE_MEMO = ".omx/research/ddm_rv1_conditional_validity_regrade_20260728.md"
+PN1_MEMO = ".omx/research/ddm_pn1_pantheon_of_pantheons_completion_20260728.md"
+
+
+@dataclass(frozen=True)
+class Rv1ReactivationSpec:
+    """One rv1 re-grade row: a standing negative whose killing precondition changed."""
+
+    row_id: str
+    rank: int  # rv1 §1 leverage x cheapness ranking
+    negatives: tuple[str, ...]  # the committed verdicts re-graded (quoted in the memo)
+    precondition_changed: str  # YES | YES_CONDITIONAL | PARTIAL_RACE | PARTIAL
+    measurement: str  # the NAMED reactivation measurement — nothing reactivates without it
+    status: str  # when the measurement can run
+    consumer: str
+
+
+RV1_REACTIVATION_SPECS: tuple[Rv1ReactivationSpec, ...] = (
+    Rv1ReactivationSpec(
+        "R1_terminal_band_discrete_search",
+        1,
+        (
+            "eu1_dr1_composed_candidate_admissible_false",
+            "v19c_correction_saturation_instance",
+            "mc_finisher_400_execution_enabled_false",
+        ),
+        "YES",
+        "EU1-FD2-QDBS-N600 exactly as eu1 pre-specified (<=48 full-n600 verdicts + base) on "
+        "the burn's final lotto checkpoint TOKEN lattice; #400 mc_finisher diagonal adapted "
+        "to tr1 token/renderer tensors; unblock DR1's ordered pairwise redundancy audit",
+        "POST_BURN",
+        "eg1 finishers / post-burn wave",
+    ),
+    Rv1ReactivationSpec(
+        "R7_token_stream_coder_race",
+        2,
+        (
+            "ab1_rate_axis_dead_misscoped",
+            "ab3_ac_coder_dominated_int8_weights",
+            "ab4_temporal_delta_hurts_int8_weights",
+            "bb12_hyperprior_falsified_pr101_symbols",
+        ),
+        "YES",
+        "$0 coder race on the T2 lotto token stream: brotli/LZMA baselines vs pp1 "
+        "context-arith (o8 spatial + prev-N temporal KT) vs a small learned prior; "
+        "falsifier: generic ~= context ~= iid floor => the negative honestly re-scopes "
+        "onto the token object",
+        "MEASURABLE_NOW_T2_DUMPS",
+        "burn rate axis (entropy-coded prior + boundary-gated c + (D,c,levels) waterfill)",
+    ),
+    Rv1ReactivationSpec(
+        "R4_token_granularity_correction_probe",
+        3,
+        (
+            "n51_defer_pending_new_carrier",
+            "multiscale_defer_pending_decoder_axis",
+            "g4_no_go_unchanged_literal_scope",
+        ),
+        "YES",
+        "$0 single-token perturbation probe on the T2 lotto checkpoint: realized flip "
+        "footprint (36-pair gate + full-confirm), collateral ratio vs #51's 2,823/467, "
+        "B/flip of a token-coordinate entry vs the 1.2731 water",
+        "MEASURABLE_NOW_T2_CHECKPOINTS",
+        "feeds R1 QDBS proposal design + R2 pricing + the token-stream entropy race; "
+        "doubles as granularity-ladder rung-2 instrument",
+    ),
+    Rv1ReactivationSpec(
+        "R2_correction_stream_band_repriced",
+        4,
+        (
+            "n72_lever_d_defer_not_kill",
+            "n110_lever_d_no_go_with_reactivation",
+            "n280_flip_coder_no_go_n600",
+            "finishing_kit_no_go_at_convergence",
+        ),
+        "YES_CONDITIONAL",
+        "the moment a burn checkpoint's realized d_seg enters [5e-4, 1e-2]: price the REAL "
+        "correction stream (fc1 label coder + coherent support coder) on its residual flip "
+        "masks; GO iff measured coded B/err < 1.2731 AND composed S improves; native "
+        "<=~5e-4 ships NO stream",
+        "BAND_ENTRY_ARMED",
+        "byte-close composition of the burn candidate (E4/WS1 exporter chain)",
+    ),
+    Rv1ReactivationSpec(
+        "R6_lane_channel_intraining_entrants",
+        5,
+        (
+            "c14_render_band_posthoc_misscoped_high",
+            "c15_dash_comb_posthoc_net_negative",
+            "c12_lane_prior_dead_gate_tainted",
+        ),
+        "YES",
+        "enter the three as RACED entrants in the sealed FIRST burn item (Lane pool race): "
+        "band-ACTIVE-in-training arm + in-training dash-comb arm + fixed-gate lane-prior "
+        "arm; readout = realized Lane Betti-0 nucleation + per-class d_seg at the A1 gates",
+        "BURN_WINDOW_RACE_FIRST_ITEM",
+        "burn Lane-pool race (plain checkpoint retained as nucleation fallback)",
+    ),
+    Rv1ReactivationSpec(
+        "R8_solve_init_tokens_distill_shape",
+        6,
+        # rv1 counts R8 as ONE parked family (KD/distill); the pose-tube wall is the
+        # PRECONDITION that parked it (does not transfer: pose TERMINAL on tr1), not a
+        # separately re-graded negative.
+        ("n74_kd_family_parked_continue_pending_corrected",),
+        "PARTIAL",
+        "A/B zero-init vs solve-INIT tokens, same seed/schedule (the tb1 s14 owed item); "
+        "teacher = the exact-solve object, never a banned-lineage teacher",
+        "BURN_WINDOW_RACE",
+        "burn config (lv1-B slot; pn1 S5 solve-ANCHOR rides as a third arm)",
+    ),
+    Rv1ReactivationSpec(
+        "R3_directional_conditioning_from_scratch_race",
+        7,
+        # rv1 counts R3 as ONE family negative (owed16v2 FORMULATION NO-GO); #502 is a
+        # built-never-raced orphan folded into the same race, not a second negative.
+        ("owed16v2_directional_family_no_go_formulation_scope",),
+        "PARTIAL_RACE",
+        "matched from-scratch ON/OFF A/B of an oriented boundary-tangent conditioning "
+        "channel (honest label: oriented-Fourier) inside the burn's registered CLADE-ICPE "
+        "race slot, same seed/schedule/floor, realized-through-R n600 readout",
+        "BURN_WINDOW_RACE",
+        "burn config lever race (falsifiers already registered)",
+    ),
+    Rv1ReactivationSpec(
+        "R5_step_hosc_head_conditional",
+        8,
+        ("hosc_fixed_beta_diverges_instance_formulation",),
+        "PARTIAL",
+        "ONLY IF the burn's Lane-nucleation channel stalls (N8 falsifier): race ONE "
+        "step-native/annealed-beta head variant under the cured form (beta-anneal 1.0->4.0 "
+        "+ siren-init) inside the (D,c,levels) window; otherwise leave closed",
+        "CONDITIONAL_TRIGGER_ONLY",
+        "burn lever race (conditional entry only)",
+    ),
+)
+
+
+@dataclass(frozen=True)
+class Rv1NonReactivationSpec:
+    """One rv1 honest non-reactivation: precondition NOT changed — stays closed."""
+
+    row_id: str
+    family: str
+    disposition: str
+    reason: str
+
+
+RV1_NON_REACTIVATION_SPECS: tuple[Rv1NonReactivationSpec, ...] = (
+    Rv1NonReactivationSpec(
+        "X1_warp_predict_family",
+        "warp-PREDICT",
+        "STAYS_CLOSED_FAMILY_SCOPE",
+        "resample-blur flip physics is scorer/vehicle-independent; copy-PREDICT stays locked",
+    ),
+    Rv1NonReactivationSpec(
+        "X2_per_pixel_literal_correction",
+        "per-pixel/per-flip literal form",
+        "STAYS_CLOSED_SCORER_PHYSICS",
+        "position floor + receptive-field collateral are frozen-scorer arithmetic; live "
+        "descendants are the TOKEN form (R4) and the band-priced fallback (R2), never dense",
+    ),
+    Rv1NonReactivationSpec(
+        "X3_flip_label_coding",
+        "flip-LABEL coding",
+        "SOLVED_TO_FLOOR_CONSUMED_AS_IS",
+        "fc1 0.32454 b/flip, coder 0.05% off floor; a component R2 consumes, not a negative",
+    ),
+    Rv1NonReactivationSpec(
+        "X4_island_homotopy_ladder_323",
+        "island/homotopy ladder",
+        "DISSOLVED_ON_TOKEN_VEHICLE",
+        "token-grid component birth is a discrete change — no bifurcation/hysteresis/barrier; "
+        "residual Lane-birth routes to the sealed Lane-pool race",
+    ),
+    Rv1NonReactivationSpec(
+        "X5_chroma_sub2px",
+        "chroma <2px",
+        "RECLASSIFIED_POSE_SAFE_EXPLOIT",
+        "never a NO-GO: pose-invisible NOT seg-invisible; transfers to seg-null chroma "
+        "steering in the terminal pose solve (charter-framing correction recorded)",
+    ),
+    Rv1NonReactivationSpec(
+        "X6_posthoc_stored_pose_family",
+        "post-hoc/stored pose",
+        "STAYS_DEAD_PRECONDITION_STRENGTHENED",
+        "tr1 frames are seg-only-trained BY DESIGN (pose TERMINAL #383) — even less "
+        "pose-shaped than the witness's; only the terminal JOINT solve crosses the wall",
+    ),
+    Rv1NonReactivationSpec(
+        "X7_lane_dash_dictionary",
+        "lane dash-dictionary",
+        "STAYS_CLOSED_DOMINATED_BY_CONTEXT_CODER",
+        "pp1: contour Lane field 219.5 KB >> context-arith Lane attribution 62.3 KB",
+    ),
+    Rv1NonReactivationSpec(
+        "X8_explicit_contour_support_copy_base",
+        "explicit contour-support stream",
+        "OBVIATED_OR_BAND_PRICED_ONLY",
+        "measured-dead on the copy base; on the burn carrier native <=5e-4 ships no stream; "
+        "in-band re-entry only through R2 pricing",
+    ),
+    Rv1NonReactivationSpec(
+        "X9_self_orient_prerequisite",
+        "self-orient as launch prerequisite",
+        "STAYS_FALSIFIED_AS_PREREQUISITE",
+        "g114 falsified the prerequisite premise; R3 races the family as a conditioning "
+        "channel only — no adopt-by-citation",
+    ),
+    Rv1NonReactivationSpec(
+        "X10_kd74_literal_hnerv_student",
+        "KD #74 literal HNeRV-student path",
+        "NOT_REFUNDED_BANNED_LINEAGE_DESCENDANT_LIVE",
+        "#74's own verdict was CONTINUE-pending (never a negative; inert loop was #75/#76, "
+        "firewalled) — charter-framing correction recorded; live descendant is R8",
+    ),
+    Rv1NonReactivationSpec(
+        "X11_eikonal_viscosity_era",
+        "eikonal/viscosity era",
+        "RETRACTED_NO_REACTIVATION_VENUE_HERE",
+        "the retraction stands (guard-tainted measurements void) but no SDF/level-set object "
+        "exists on the token/conv vehicle for an eikonal term to act on",
+    ),
+    Rv1NonReactivationSpec(
+        "X12_witness_era_formulation_negatives",
+        "witness-era formulation negatives",
+        "SWEPT_REMAIN_CLOSED",
+        "A-C2/C3/C5/C16 + A-E1..E7 correctly scoped; none of N1-N8 touches their killing "
+        "preconditions — the honesty check that this sweep does NOT reactivate everything",
+    ),
+)
+
+
+RV1_CHARTER_CORRECTIONS: tuple[str, ...] = (
+    "X10: KD #74 was never a blocked negative — committed verdict CONTINUE-pending-funded-"
+    "long-train; the inert loop was #75/#76 (fleet-level) and the trust ledger firewalls #74",
+    "X5: chroma '<2px' was never a NO-GO — it is a pose-safety EXPLOIT (pose-invisible, "
+    "not seg-invisible) that transfers to the new vehicle unchanged",
+)
+
+
+def _rv1_conditional_validity_table(repo_root: Path) -> dict[str, Any]:
+    """Fold the COMMITTED rv1 re-grade table into typed advisory rows (co8, rung 1).
+
+    co7 registered rv1 as a PENDING producer (table_owner) so the organ would never
+    duplicate the sweep; rv1 landed on main (merge 6cf5454509) and this function is the
+    named fold: 8 reactivation rows (each a PROPOSAL with a named measurement — nothing
+    reactivates until its measurement lands) + 12 honest non-reactivations as tagged
+    closed verdicts + 2 charter-framing corrections, all stamped with the committed
+    memo's content hash.
+    """
+
+    path = repo_root / RV1_TABLE_MEMO
+    if not path.is_file():
+        return {
+            "available": False,
+            "reason": "RV1_COMMITTED_TABLE_ABSENT",
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+    sha = _sha256(path)
+    source = {"path": RV1_TABLE_MEMO, "sha256": sha}
+    reactivations = [
+        {
+            "row_id": spec.row_id,
+            "rank": spec.rank,
+            "negatives": list(spec.negatives),
+            "precondition_changed": spec.precondition_changed,
+            "measurement": spec.measurement,
+            "status": spec.status,
+            "consumer": spec.consumer,
+            "reactivated": False,  # PROPOSAL until its named measurement lands
+            "source": source,
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+        for spec in sorted(RV1_REACTIVATION_SPECS, key=lambda s: s.rank)
+    ]
+    closed = [
+        {
+            "row_id": spec.row_id,
+            "family": spec.family,
+            "disposition": spec.disposition,
+            "reason": spec.reason,
+            "source": source,
+        }
+        for spec in RV1_NON_REACTIVATION_SPECS
+    ]
+    by_status: dict[str, int] = {}
+    for row in reactivations:
+        by_status[row["status"]] = by_status.get(row["status"], 0) + 1
+    # rv1 §2b accounting: 20 distinct negatives re-graded across the 8 rows (R1:3 · R2:4 ·
+    # R3:1 family · R4:3 · R5:1 · R6:3 · R7:4 · R8:1). Derived from the typed rows, never
+    # asserted beside them.
+    distinct_negatives = sum(len(row["negatives"]) for row in reactivations)
+    return {
+        "schema": "ddm_costate_rv1_table.v1",
+        "available": True,
+        "source": source,
+        "reactivation_rows": reactivations,
+        "non_reactivation_rows": closed,
+        "charter_corrections": list(RV1_CHARTER_CORRECTIONS),
+        "counts": {
+            "reactivations": len(reactivations),
+            "non_reactivations": len(closed),
+            "distinct_negatives_regraded": distinct_negatives,
+            "by_status": dict(sorted(by_status.items())),
+        },
+        "boundary": (
+            "re-grades are PROPOSALS with named measurements; NOTHING reactivates without "
+            "its measurement landing (rv1 memo boundary, quoted)"
+        ),
+        "actuation": "NONE",
+        "score_claim": False,
+    }
+
+
+def _pn1_nodes(repo_root: Path, band_parents: Mapping[str, Any]) -> dict[str, Any]:
+    """Fold the committed pn1 rows the organ consumes (co8, rung 2).
+
+    Four typed nodes, all content-hashed to the pn1 memo: (a) the S6 VOI ranking as a
+    SENSE input (S2+R7 outrank every schedulable action because they can RE-ROUTE the
+    sealed burn's waterfill before capacity is spent); (b) the nu-pivot as a named
+    DECISION NODE (G4 feasibility pivots at nu in ~[0.55, 0.75]); (c) the S1
+    dress-rehearsal Stage-A/Stage-B duty rows; (d) the granularity-ladder ARMED race +
+    the rebalance-event watch. Priors from pn1 s7 stay labeled ASSUMED.
+    """
+
+    path = repo_root / PN1_MEMO
+    if not path.is_file():
+        return {
+            "available": False,
+            "reason": "PN1_COMMITTED_MEMO_ABSENT",
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+    source = {"path": PN1_MEMO, "sha256": _sha256(path)}
+    any_in_band = bool(band_parents.get("any_parent_in_band"))
+    voi = {
+        "schema": "ddm_costate_voi_ranking.v1",
+        "rule": "VOI = P(outcome changes a decision) x value of the changed decision / cost",
+        "priors_label": "ASSUMED (pn1 s7 bands are labeled priors, not measurements)",
+        "rows": [
+            {
+                "rank": 1,
+                "measurement": "S2_NU_AUDIT_PLUS_R7_CODER_RACE",
+                "cost": "$0, NOW (existing T2 lotto dump)",
+                "voi_class": "REROUTING_PRE_BURN",
+                "value": (
+                    "the ONLY $0 measurements that can RE-ROUTE the sealed burn's "
+                    "(D,c,levels) waterfill BEFORE 400 epochs are spent (L2 wide AND "
+                    "decision-coupled: nu low => move D up / gate c)"
+                ),
+            },
+            {
+                "rank": 2,
+                "measurement": "FIRST_BURN_GATES",
+                "cost": "inside the burn (operator-GO pending)",
+                "voi_class": "NOT_SCHEDULABLE_ARRIVES_WITH_BURN",
+                "value": (
+                    "most posterior mass (L1 is the wall: 0.0138 -> 5e-4 = 27.7x descent) "
+                    "but not a CHOICE; VOI realized automatically when the burn fires"
+                ),
+            },
+            {
+                "rank": 3,
+                "measurement": "S1_STAGE_A_LOCAL_FULL_N600",
+                "cost": "$0, ~35-60 min",
+                "voi_class": "CHAIN_VALIDITY",
+                "value": (
+                    "collapses L5 (chain/drift validity, ASSUMED prior 0.9-0.99) cheaply; "
+                    "can only surface GOOD failures (deploy-parity bugs found before they "
+                    "contaminate the burn's exact row)"
+                ),
+            },
+            {
+                "rank": 4,
+                "measurement": "S1_STAGE_B_MODAL_CPU_FLIGHT",
+                "cost": "est <$2 inside a <=$20 envelope (PAID; operator-GO)",
+                "voi_class": "CALIBRATION_NON_DECAYING",
+                "value": "calibrates delta_seg/delta_pose (L5 tail); quiet-slot; value non-decaying",
+            },
+            {
+                "rank": 5,
+                "measurement": "LV1_B_VERDICT_T1_VALIDITY",
+                "cost": "fires inside burn windows regardless",
+                "voi_class": "SPEED_NOT_FEASIBILITY",
+                "value": "tunes descent speed + rate-stack order, not feasibility (lv1 PENDING)",
+            },
+        ],
+        "attach_under": {
+            "S2_NU_AUDIT_PLUS_R7_CODER_RACE": "FIRST_GATES (prep lane)",
+            "S1_STAGE_A_LOCAL_FULL_N600": "BYTE_CLOSE_CHAIN_READY",
+            "S1_STAGE_B_MODAL_CPU_FLIGHT": "BYTE_CLOSE_CHAIN_READY",
+        },
+        "no_new_heads": True,  # pn1 FEED-pn1f: slots under existing heads
+    }
+    nu_pivot = {
+        "schema": "ddm_costate_decision_node.v1",
+        "node_id": "nu_fiber_fraction_g4_feasibility_pivot",
+        "status": "UNMEASURED_REROUTING_CLASS_PRE_BURN",
+        "pivot_window": [0.55, 0.75],
+        "feasibility_condition": (
+            "(1 - nu) * h_vis <= 0.578 b/quantum (G4 130 KB at N=1,843,200 token quanta; "
+            "current lotto stream 2.305 b/q)"
+        ),
+        "measurement": (
+            "S2 token-nullspace audit on the EXISTING T2 lotto dump: |g| sensitivity map "
+            "(1 MLX backward) + stratified +/-1-quantum hard-null verification (fd2 36-pair "
+            "geometry) + null-snap rate readout, q in {25,50,70,80,90}, tolerance "
+            "delta d_seg <= +2e-4"
+        ),
+        "decision_routed": (
+            "burn (D,c,levels) waterfill: nu low => coder race alone cannot reach 130 KB at "
+            "D16 — move D up / gate c on boundary cells (both registered levers); either "
+            "direction verifies-or-falsifies tb1 design decision #3 (zero-init gauge)"
+        ),
+        "anchors": (
+            "pp1 173.6 KB partition price (upper); eg1 ceilings => tokens <=184.8 KB @0.172 "
+            "/ <=151.8 KB @0.15 after renderer+selector+pose sections"
+        ),
+    }
+    s1 = {
+        "schema": "ddm_costate_s1_rehearsal_duties.v1",
+        "why": (
+            "the own-vehicle chain checkpoint -> TR1 export -> archive.zip -> inflate -> "
+            "full-n600 evaluate.py has NEVER run end-to-end; the first own-vehicle exact "
+            "row validates every stage against the only authority (score quality irrelevant)"
+        ),
+        "stages": [
+            {
+                "duty": "S1_STAGE_A_LOCAL_FULL_N600",
+                "status": "READY_QUIET_SLOT_ZERO_DOLLARS",
+                "spec": (
+                    "sh1 protocol on the eg1 rehearsal packet (504,736 B ZIP): resumable "
+                    "inflate -> upstream evaluate.py --device cpu, all 600 samples, "
+                    "recompute S from components; drift row #1 = evaluator d_seg vs tb1 "
+                    "full-confirm 0.013833 on the SAME weights, green band |delta| <= 5e-4; "
+                    "OUTSIDE band => STOP, deploy-parity bug found (the rehearsal's value)"
+                ),
+                "cost": "$0",
+                "actuation": "NONE",
+            },
+            {
+                "duty": "S1_STAGE_B_MODAL_CPU_FLIGHT",
+                "status": "OPERATOR_GO_PAID_DISPATCH",
+                "spec": (
+                    "ONE staged Modal CPU-axis flight via "
+                    "tools/dispatch_modal_paired_auth_eval.py (argparse verified; lane claim "
+                    "first; harvest within 24h); bare-venv bootstrap smoke + decode "
+                    "wall/RSS telemetry; drift row #2 = per-component deltas => eg1 E2's "
+                    "staging gate becomes CALIBRATED instead of assumed"
+                ),
+                "cost": "est <$2 inside a <=$20 envelope",
+                "actuation": "NONE (the organ surfaces readiness; dispatch is operator-GO)",
+            },
+        ],
+        "attach_under": "BYTE_CLOSE_CHAIN_READY",
+    }
+    granularity_race = {
+        "schema": "ddm_costate_armed_race_duty.v1",
+        "duty": "GRANULARITY_LADDER_RACE",
+        "status": "DUE" if any_in_band else "ARMED_NOT_DUE_BAND_STILL_EXPLODE",
+        "trigger": (
+            "first burn checkpoint whose full-confirm realized d_seg enters the priced "
+            "band [5e-4, 1e-2] (the sp1/pp1 armed-duty pattern)"
+        ),
+        "race": (
+            "rungs 2-4 (token delta / mask-bit flip / conditioning delta) at matched bytes "
+            "against the rung-5 TerminalSolve quote; eg1 E2's same-parent conservative "
+            "score-gain-rate rule adjudicates; rung 0 (native <= rho_c) moots from below, "
+            "rung 5 (basin->solve handoff) moots from above"
+        ),
+        "instrument": "rv1 R4's single-token probe doubles as rung-2's entry instrument",
+        "actuation": "NONE",
+    }
+    rebalance_watch = {
+        "schema": "ddm_costate_rebalance_watch.v1",
+        "duty": "REBALANCE_EVENT_WATCH",
+        "status": "STANDING_WATCH",
+        "events": [
+            "nu measured (S2) -> re-route the burn (D,c,levels) waterfill pre-capacity",
+            "R7 coder-race verdict -> h_vis input to the S4 floor + coder choice",
+            "band-entry [5e-4, 1e-2] -> granularity race + R2 pricing flip ARMED->DUE",
+            "lv1 receipt or CT1-v2 telemetry lands -> T1 validity + CO5 gate re-check",
+            "S1 Stage-A drift row outside |delta d_seg| <= 5e-4 -> deploy-parity STOP",
+        ],
+        "actuation": "NONE",
+    }
+    return {
+        "schema": "ddm_costate_pn1_nodes.v1",
+        "available": True,
+        "source": source,
+        "voi_ranking": voi,
+        "nu_pivot": nu_pivot,
+        "s1_rehearsal": s1,
+        "granularity_race_duty": granularity_race,
+        "rebalance_watch": rebalance_watch,
+        "actuation": "NONE",
+        "score_claim": False,
+    }
+
+
+def _duty_allocator_waterfill(
+    pn1_nodes: Mapping[str, Any],
+    rv1_table: Mapping[str, Any],
+) -> dict[str, Any]:
+    """The allocator law applied to the organ itself (co8, rung 3).
+
+    Operator elevation 07-28: "capacity should flow to where it buys the most." The
+    schedulable ($0/cheap) duty queue is ranked by an explicit marginal-value-per-effort
+    waterfill WHERE PRICES EXIST; each row labels its pricing basis (DERIVED arithmetic
+    vs ASSUMED pn1 prior); same-pool rows COMPETE, never sum (the registered
+    non-additive pools law), so R7 races AFTER S2 on the shared token-rate axis (pn1
+    row 2: race the coder on the null-snapped stream). This waterfill is ADVISORY and
+    is NOT the gated CO5 regret allocator, which requires MEASURED
+    compression-progress-per-effort + a typed fired-duty history (both still held).
+    """
+
+    if not (pn1_nodes.get("available") and rv1_table.get("available")):
+        return {
+            "available": False,
+            "reason": "PN1_OR_RV1_SOURCE_ABSENT",
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+    rows = [
+        {
+            "rank": 1,
+            "duty": "S2_NU_AUDIT",
+            "cost": "$0 (~minutes-hours, existing T2 lotto dump)",
+            "schedulable": True,
+            "pool": "token_rate_axis",
+            "value": (
+                "re-routes the binding token-rate leg (~530 -> <=130-150 KB target, "
+                "~0.27 S-scale) BEFORE burn capacity is spent + emits nu for the G4 "
+                "feasibility pivot + verifies/falsifies tb1 zero-init gauge"
+            ),
+            "pricing_basis": "DERIVED_ARITHMETIC (pn1 s4 byte arithmetic; decision-coupled)",
+            "depends_on": None,
+        },
+        {
+            "rank": 2,
+            "duty": "R7_CODER_RACE",
+            "cost": "$0 (T2 token dumps exist now)",
+            "schedulable": True,
+            "pool": "token_rate_axis",
+            "value": (
+                "measures h_vis under the best admissible coder (S4 floor input); pp1 "
+                "precedent: context-arith beat generic 2-4x, temporal-as-context -33 KB"
+            ),
+            "pricing_basis": "DERIVED_PRECEDENT (pp1 measured sister-object transfer)",
+            "depends_on": "S2_NU_AUDIT (race on the null-snapped stream; same pool => competes)",
+        },
+        {
+            "rank": 3,
+            "duty": "R4_TOKEN_PROBE",
+            "cost": "$0 TODAY (T2 checkpoints exist)",
+            "schedulable": True,
+            "pool": "correction_family",
+            "value": (
+                "cheapest disambiguator of the whole correction family; unblocks R1 QDBS "
+                "design + R2 pricing (2 downstream consumers) + rung-2 instrument"
+            ),
+            "pricing_basis": "ASSUMED_LEVERAGE (rv1 rank-3; unblock count is structural)",
+            "depends_on": None,
+        },
+        {
+            "rank": 4,
+            "duty": "S1_STAGE_A",
+            "cost": "$0 (~35-60 min)",
+            "schedulable": True,
+            "pool": "chain_validity",
+            "value": "collapses the L5 validity leg (ASSUMED 0.9-0.99) + drift row #1",
+            "pricing_basis": "ASSUMED_PRIOR_BAND (pn1 s7, labeled)",
+            "depends_on": None,
+        },
+        {
+            "rank": 5,
+            "duty": "S1_STAGE_B",
+            "cost": "est <$2 (PAID)",
+            "schedulable": False,
+            "pool": "chain_validity",
+            "value": "delta-calibration of the staging gate; non-decaying",
+            "pricing_basis": "ASSUMED_PRIOR_BAND (pn1 s7, labeled)",
+            "depends_on": "operator-GO (paid dispatch; the organ cannot schedule it)",
+        },
+        {
+            "rank": 6,
+            "duty": "GRANULARITY_LADDER_RACE",
+            "cost": "bounded burn windows",
+            "schedulable": False,
+            "pool": "correction_family",
+            "value": "adjudicates rungs 2-4 vs the rung-5 solve quote at matched bytes",
+            "pricing_basis": "CONTINGENT (armed on band-entry; no price until triggered)",
+            "depends_on": "band-entry trigger (ARMED_NOT_DUE while every parent explodes)",
+        },
+    ]
+    return {
+        "schema": "ddm_costate_duty_allocator_waterfill.v1",
+        "available": True,
+        "sources": {
+            "pn1": dict(pn1_nodes["source"]),
+            "rv1": dict(rv1_table["source"]),
+        },
+        "law": (
+            "rank schedulable duties by marginal value per effort where prices exist; "
+            "unpriced rows fall back to dependency topology; same-pool rows COMPETE, "
+            "never sum (non-additive pools law)"
+        ),
+        "rows": rows,
+        "pools": {
+            "token_rate_axis": "S2 precedes R7 (R7 races on S2's null-snapped stream)",
+            "correction_family": "R4 is the entry instrument; the race stays armed",
+            "chain_validity": "Stage A free/now; Stage B paid/operator-GO",
+        },
+        "co5_regret_allocator": (
+            "GATED_RE_PREMISE — this waterfill uses DERIVED/ASSUMED value bands and is "
+            "NOT the regret-bounded allocator (held on TYPED_FIRED_DUTY_HISTORY + "
+            "measured compression-progress-per-effort; see CO5 duty-to-measure queue)"
+        ),
+        "actuation": "NONE",
+        "score_claim": False,
+    }
+
+
+def consumed_evidence_registry() -> dict[str, Any]:
+    """The organ's consumed-evidence surface, DERIVED from the live module constants.
+
+    Consumed by ``tools/organ_freshness_gate.py`` (co8 rung 6): the freshness detector
+    diffs merged campaign landings on main against exactly this registry, so organ
+    rounds become event-driven instead of operator-driven. NO-FAKE: this is computed
+    from the same structures ``build_live_ddm_costate`` reads at build time — never a
+    manually-maintained sibling list.
+    """
+
+    from tac.ddm_campaign_costate import J8F_GLOBS
+    from tac.ddm_campaign_costate import SOURCES as CAMPAIGN_SOURCES
+
+    paths = {spec.artifact for spec in ARC_EVIDENCE_SPECS}
+    paths.update((LIVE_BASE_DSEG_RECEIPT, T3_SEALED_TICKET, RV1_TABLE_MEMO, PN1_MEMO))
+    paths.update(spec.path for spec in CAMPAIGN_SOURCES)
+    globs = [".omx/research/" + spec.glob for spec in SOURCE_SPECS]
+    globs += [".omx/research/" + spec.glob for spec in PENDING_PRODUCER_SPECS]
+    globs += list(J8F_GLOBS)
+    return {
+        "schema": "ddm_costate_consumed_evidence_registry.v1",
+        "paths": sorted(paths),
+        "globs": sorted(set(globs)),
+    }
 
 
 def _band_position_parents(repo_root: Path, base_band: Mapping[str, Any]) -> dict[str, Any]:
@@ -1229,14 +1897,19 @@ def _band_position_parents(repo_root: Path, base_band: Mapping[str, Any]) -> dic
     }
 
 
-def _sense_laws(arc_index: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
-    """The two 07-28-late SENSE laws, anchored to committed artifacts.
+def _sense_laws(
+    arc_index: Mapping[str, Mapping[str, Any]],
+    pn1_source: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """The 07-28 SENSE laws, anchored to committed artifacts.
 
     * ``ema_gate_basis_v1`` — instrument-validity precondition (the #85 class):
       gate basis is LIVE params before warmup W = 2/(1-d), EMA shadow after.
     * ``basin_solve_handoff_v1`` — operator-binding preference: on MEASURED
       basin-entry, hand descent to the solve/finisher chain; detectors PRIORITIZE a
       finisher quote (eg1 E2 typed policy), they never auto-stop training.
+    * ``correction_granularity_ladder_v1`` (co8) — the pn1 s8 DERIVED law; its RACE
+      stays a contingent ARMED duty (band-entry trigger), never a pre-burn spend.
     """
 
     tb1 = arc_index.get("tb1_t2_race_verdict")
@@ -1304,9 +1977,44 @@ def _sense_laws(arc_index: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
             else None
         ),
     }
+    ladder = {
+        "law_id": "correction_granularity_ladder_v1",
+        "kind": "DERIVED_LAW",
+        "statement": (
+            "for a frozen scorer whose error mass is REGION/topology-level, "
+            "bytes-per-realized-flip improves monotonically with the COHERENCE of the "
+            "edit bought per byte: collateral (#51: a local appearance discontinuity "
+            "reads as a NEW boundary) falls as coherence rises while position/value cost "
+            "per affected pixel falls as one coordinate steers a larger footprint"
+        ),
+        "rungs": (
+            "0 native<=rho_c (no corrections exist) | 1 per-pixel (MEASURED DEAD: 1.525 "
+            "B/flip floor + collateral) | 2 per-token region repaint (UNMEASURED; rv1 R4 "
+            "probe = entry instrument) | 3 mask-bit flip | 4 conditioning delta | "
+            "5 NO stream: extra TerminalSolve iterations on already-counted params "
+            "(the basin->solve law applied to corrections; eg1 E3 executors built)"
+        ),
+        "dominance_hypothesis": (
+            "pre-registered: bytes-per-realized-flip strictly improves up the ladder"
+        ),
+        "falsifier": (
+            "any rung inversion at matched bytes through the realized flip gate replaces "
+            "the ladder's ordering — the race result has authority, never the elegance"
+        ),
+        "race_posture": (
+            "CONTINGENT, not a pre-burn spend: fires ONLY on band-entry [5e-4, 1e-2] "
+            "(see granularity_race_duty in pn1_nodes; sp1/pp1 ARMED pattern)"
+        ),
+        "cross_links": (
+            "g2g2 low-dim coefficient dominance; #669c deepest-layer assignment; "
+            "pools law (rungs compete for ONE residual — race then waterfill, never stack)"
+        ),
+        "status": "REGISTERED_LAW_RACE_ARMED_NOT_DUE",
+        "source": dict(pn1_source) if pn1_source else None,
+    }
     return {
         "schema": "ddm_costate_sense_laws.v1",
-        "rows": [gate_basis, basin],
+        "rows": [gate_basis, basin, ladder],
         "actuation": "NONE",
         "score_claim": False,
     }
@@ -1315,14 +2023,17 @@ def _sense_laws(arc_index: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
 def _conditional_validity_review(
     arc_rows: Sequence[Mapping[str, Any]],
     band_parents: Mapping[str, Any],
+    *,
+    rv1_table_available: bool = False,
 ) -> dict[str, Any]:
     """The substrate-change trigger: evaluate precondition tags against the live state.
 
     A negative verdict binds only while its preconditions hold. When a precondition
     breaks: a committed successor re-grades it in place (RE_GRADED_BY_COMMITTED_SUCCESSOR),
     otherwise a typed re-grade duty is surfaced (DUE, or ARMED while the band still
-    explodes). The FULL historical sweep is owned by the pending rv1 arm; this review
-    seeds arc-local rows only.
+    explodes). The FULL historical sweep is owned by rv1: PENDING through co7,
+    COMMITTED + CONSUMED as ``rv1_table`` since co8 — the arc-local rows here remain
+    the live-arc seeds (no duplicate sweep either way).
     """
 
     index = {row["finding_id"]: row for row in arc_rows if row.get("available")}
@@ -1399,9 +2110,15 @@ def _conditional_validity_review(
         "rows": rows,
         "re_grade_duties": duties,
         "table_owner": (
-            "rv1_conditional_validity_table (pending producer; this organ seeds arc-local "
-            "rows only — no duplicate sweep)"
+            "rv1_conditional_validity_table (COMMITTED + CONSUMED co8 as rv1_table; "
+            "arc-local rows here remain the live-arc seeds — no duplicate sweep)"
+            if rv1_table_available
+            else (
+                "rv1_conditional_validity_table (pending producer; this organ seeds "
+                "arc-local rows only — no duplicate sweep)"
+            )
         ),
+        "table_owner_state": "CONSUMED_CO8" if rv1_table_available else "PENDING",
         "actuation": "NONE",
         "score_claim": False,
     }
@@ -1611,9 +2328,19 @@ def build_live_ddm_costate(
     band_position = _band_position(repo_root)
     band_parents = _band_position_parents(repo_root, band_position)
     arc_index = {row["finding_id"]: row for row in arc_evidence if row.get("available")}
-    sense_laws = _sense_laws(arc_index)
+    rv1_table = _rv1_conditional_validity_table(repo_root)
+    pn1_nodes = _pn1_nodes(repo_root, band_parents)
+    sense_laws = _sense_laws(
+        arc_index,
+        pn1_source=pn1_nodes.get("source") if pn1_nodes.get("available") else None,
+    )
     pending_producers = _pending_producers(repo_root)
-    conditional_validity = _conditional_validity_review(arc_evidence, band_parents)
+    conditional_validity = _conditional_validity_review(
+        arc_evidence,
+        band_parents,
+        rv1_table_available=bool(rv1_table.get("available")),
+    )
+    duty_allocator = _duty_allocator_waterfill(pn1_nodes, rv1_table)
     duties_endgame = _endgame_chain_duties(arc_index, pending_producers, band_parents)
     duties_refreshed = _refreshed_duties(duties, arc_evidence, band_position)
     instruments = _instrument_audit(backtest, v19b)
@@ -1753,6 +2480,9 @@ def build_live_ddm_costate(
         "sense_laws": sense_laws,
         "pending_producers": pending_producers,
         "conditional_validity": conditional_validity,
+        "rv1_table": rv1_table,
+        "pn1_nodes": pn1_nodes,
+        "duty_allocator": duty_allocator,
         "duties_endgame": duties_endgame,
         "instruments": instruments,
         "campaign": campaign,
@@ -1910,10 +2640,15 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
         ]
         v_duties = validity.get("re_grade_duties") or []
         due = sum(1 for row in v_duties if row.get("status") == "DUE")
+        owner_state = (
+            "consumed-co8"
+            if validity.get("table_owner_state") == "CONSUMED_CO8"
+            else "pending"
+        )
         lines.append(
             f"DDM-validity: preconditions={len(v_rows)} broken={len(broken)} "
             f"re-graded={len(regraded)} re-grade-duties={len(v_duties)} (due={due}) "
-            f"live-parent={validity.get('live_parent')} table-owner=rv1[pending]"
+            f"live-parent={validity.get('live_parent')} table-owner=rv1[{owner_state}]"
         )
     pending = report.get("pending_producers") or []
     if pending:
@@ -1925,6 +2660,38 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
                 for row in pending
             )
             + "; numbers uncounted until committed (NO-FAKE)"
+        )
+    # ── co8 lines: rv1 table fold · pn1 VOI/nu-pivot/S1 nodes · allocator waterfill.
+    rv1 = report.get("rv1_table") or {}
+    if rv1.get("available"):
+        counts = rv1["counts"]
+        by_status = counts.get("by_status") or {}
+        now = sum(v for k, v in by_status.items() if k.startswith("MEASURABLE_NOW"))
+        armed = sum(v for k, v in by_status.items() if "ARMED" in k)
+        lines.append(
+            f"DDM-rv1[consumed]: reactivations={counts['reactivations']} "
+            f"(now=$0x{now} armed={armed} post-burn={by_status.get('POST_BURN', 0)}) "
+            f"closed={counts['non_reactivations']} "
+            f"corrections={len(rv1.get('charter_corrections') or [])} "
+            "nothing-reactivates-without-its-measurement"
+        )
+    pn1 = report.get("pn1_nodes") or {}
+    if pn1.get("available"):
+        pivot = pn1["nu_pivot"]
+        race = pn1["granularity_race_duty"]
+        lines.append(
+            "DDM-voi[pn1]: top=S2_NU_AUDIT+R7 ($0, re-routes the sealed burn pre-capacity) "
+            f"nu-pivot={pivot['pivot_window']} ({pivot['status']}) "
+            f"S1=A:$0-ready B:<$2-operator-GO "
+            f"granularity-race={race['status']} no-new-heads"
+        )
+    alloc = report.get("duty_allocator") or {}
+    if alloc.get("available"):
+        schedulable = [row for row in alloc["rows"] if row.get("schedulable")]
+        lines.append(
+            f"DDM-alloc[waterfill]: schedulable={len(schedulable)}/{len(alloc['rows'])} "
+            + " > ".join(row["duty"] for row in schedulable)
+            + "; pools=token-rate(S2>R7) regret-allocator=GATED(CO5) actuation=NONE"
         )
     lines.extend(
         (

@@ -301,7 +301,12 @@ def test_report_and_digest_surface_the_new_sections():
     assert "head=T3_BURN_FIRE" in joined
     assert "DDM-laws:" in joined and "basin-solve=ARMED_NO_TRIGGER" in joined
     assert "DDM-parents:" in joined and "corrections DEAD at every live parent" in joined
-    assert "DDM-validity:" in joined and "table-owner=rv1[pending]" in joined
+    # PREMISE FLIP (co8, 2026-07-28): at co7 rv1 was an UNCOMMITTED parallel arm, so the
+    # digest read table-owner=rv1[pending]. rv1 landed on main (merge 6cf5454509) and co8
+    # folded its table (rv1_table section) -> the owner state is now consumed-co8. The
+    # original co7 assertion is preserved below as the documented prior state.
+    #   was: assert "table-owner=rv1[pending]" in joined
+    assert "DDM-validity:" in joined and "table-owner=rv1[consumed-co8]" in joined
     assert "DDM-pending:" in joined and "lv1_token_stack_prices=" in joined
     # Pointer-first honesty is owned by tools/costate_digest.py section_pointer (co6);
     # the organ's lines never carry a contest-authority tag.

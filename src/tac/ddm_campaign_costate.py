@@ -1408,7 +1408,14 @@ def _co5_enhancement_state(
             "RE_PREMISE, none fire. Producer-state delta: the compression-progress gate's producer "
             "is now PARTIALLY_BUILT_AWAITING_BURN (tb1 T3 sealed full-confirm cadence + eg1 "
             "terminal pose finisher); tb1 T2 surfaced one seg-only full-confirm endpoint per arm, "
-            "which is not two same-campaign exact n600 S-endpoints."
+            "which is not two same-campaign exact n600 S-endpoints. "
+            "2026-07-28 (co8): pn1's S6 VOI table adjudicated against the compression-progress "
+            "gate — it is decision analysis on typed ASSUMED priors with ZERO exact n600 "
+            "S-endpoints, so it is NOT the named CT1-v2-class producer; the gate stays HELD "
+            "(producer still PARTIALLY_BUILT_AWAITING_BURN). The organ's co8 duty-allocator "
+            "waterfill ranks duties on DERIVED/ASSUMED value bands and is explicitly distinct "
+            "from the gated regret allocator (which requires MEASURED compression-progress-"
+            "per-effort + a typed fired-duty history); no gate fires."
         ),
         "source_freshness": freshness,
         "active_count": active_count,
