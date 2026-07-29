@@ -27,11 +27,29 @@ from tac.ddm_costate_organ import (  # noqa: E402
     _refreshed_duties,
 )
 
+# The 8 findings the co6 round folded (used to test co6 behavior as a function of inputs
+# after co7 extended the spec set with the late 07-28 arc).
+CO6_FINDING_IDS = {
+    "fd1_zero_accept_window",
+    "fd1_box_solve_s0_hold",
+    "pp1_direct_partition_price",
+    "pp1_band_lemma",
+    "rp1_cells_hold",
+    "sp1_support_race",
+    "sc1_ep_rank1_pose",
+    "ch1_confound_pass",
+}
+
+
+def _co6_arc(repo_root):
+    return [row for row in _arc_evidence_rows(repo_root) if row["finding_id"] in CO6_FINDING_IDS]
+
 
 # ── R1: arc-evidence join ──────────────────────────────────────────────────────
 def test_arc_evidence_rows_present_and_content_hashed():
     rows = _arc_evidence_rows(REPO)
-    assert len(rows) == len(ARC_EVIDENCE_SPECS) == 8
+    # co6 folded 8 rows; co7 extended the committed arc (fd2/tb1/eg1) — never shrink.
+    assert len(rows) == len(ARC_EVIDENCE_SPECS) >= 8
     for row in rows:
         # Every committed 07-28 artifact is git-tracked, so all rows must be present.
         assert row["available"] is True, f"{row['finding_id']}: {row.get('reason')}"
@@ -40,7 +58,7 @@ def test_arc_evidence_rows_present_and_content_hashed():
         assert row["score_claim"] is False
         assert row["crux_status"] in {"SETTLED", "LIVE_CRUX", "SOLVED", "LAW", "APPARATUS"}
     ids = {row["finding_id"] for row in rows}
-    assert {"fd1_zero_accept_window", "pp1_band_lemma", "rp1_cells_hold", "sc1_ep_rank1_pose"} <= ids
+    assert ids >= CO6_FINDING_IDS
 
 
 def test_arc_evidence_absent_artifact_is_fail_open(tmp_path):
@@ -49,12 +67,14 @@ def test_arc_evidence_absent_artifact_is_fail_open(tmp_path):
     assert all(row["reason"] == "COMMITTED_ARTIFACT_ABSENT" for row in rows)
 
 
-def test_no_uncommitted_fd2_or_quantum_cure_row():
-    # NO-FAKE: fd2 has no committed artifact and "quantum cure" appears in none; the arc join
-    # must ground only committed evidence (the fd1 realization ladder), never those.
+def test_fd2_now_committed_and_quantum_cure_still_absent():
+    # co6 recorded fd2 as UNCOMMITTED and refused to cite it (NO-FAKE). The premise flipped
+    # on 2026-07-28: ddm_fd2_posenull_gn_disambiguation_20260728.md landed (merge e4bacb5d39),
+    # so co7 folds it as committed evidence. "quantum cure" remains uncommitted and absent.
     blob = json.dumps([spec.__dict__ for spec in ARC_EVIDENCE_SPECS]).lower()
     assert "quantum cure" not in blob
-    assert "fd2" not in blob  # no fd2 arm cited as committed evidence
+    ids = {spec.finding_id for spec in ARC_EVIDENCE_SPECS}
+    assert "fd2_zero_accept_disambiguation" in ids
 
 
 # ── R2: band-position SENSE law ────────────────────────────────────────────────
@@ -96,7 +116,9 @@ def _legacy_stub():
 
 
 def test_refreshed_duty_head_displaces_j_paint():
-    arc = _arc_evidence_rows(REPO)
+    # At the co6 arc state (the 8 co6 findings, before tb1/eg1 landed) the derived head is
+    # the fd1 realization ladder — the derivation is a function of the input arc rows.
+    arc = _co6_arc(REPO)
     bp = _band_position(REPO)
     if not bp.get("available"):
         pytest.skip("live-base receipt absent")
@@ -115,7 +137,7 @@ def test_refreshed_duty_head_displaces_j_paint():
 def test_refreshed_duty_not_hand_ordered_reacts_to_band():
     # If the base were in-band (corrections rational) AND zero-accept not sealed, the ladder is
     # not elevated -> the derivation is a real function of the inputs, not a fixed order.
-    arc_no_zero_accept = [r for r in _arc_evidence_rows(REPO) if r["finding_id"] != "fd1_zero_accept_window"]
+    arc_no_zero_accept = [r for r in _co6_arc(REPO) if r["finding_id"] != "fd1_zero_accept_window"]
     in_band = {
         "available": True,
         "regime": "correct",
@@ -155,7 +177,7 @@ def test_co5_enhancement_state_re_premised_not_silent():
 
     try:
         sources, payloads = load_campaign_sources(REPO)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         pytest.skip(f"campaign source fleet unavailable: {type(exc).__name__}: {exc}")
     state = _co5_enhancement_state(
         ct1_payload=payloads["ct1_campaign_telemetry"],
