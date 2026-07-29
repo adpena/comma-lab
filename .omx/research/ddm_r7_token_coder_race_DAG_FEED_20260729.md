@@ -1,8 +1,8 @@
 # DDM R7 token coder race — DAG FEED — 2026-07-29
 
 `research_only=true` · `score_claim=false` · `promotion_eligible=false` ·
-`[macOS-CPU advisory, rate-only]`  
-local custody pointer `0.1910828242 [contest-CPU] UNMOVED`  
+`[macOS-CPU advisory, rate-only]`
+local custody pointer `0.1910828242 [contest-CPU] UNMOVED`
 competitive target official PR130 `0.172141 [contest-CUDA]`
 
 ## FEED-R7-A — estimated-rate seam closed

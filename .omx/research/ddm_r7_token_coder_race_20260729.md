@@ -1,8 +1,8 @@
 # DDM R7 token-stream coder race and vehicle entropy floor — 2026-07-29
 
-**Local custody pointer:** `0.1910828242 [contest-CPU] UNMOVED`.  
+**Local custody pointer:** `0.1910828242 [contest-CPU] UNMOVED`.
 **Competitive target:** official PR130 `0.172141 [contest-CUDA]` (displayed `0.172`), not the local
-custody baseline.  
+custody baseline.
 **Authority:** all R7 rows are `[macOS-CPU advisory, rate-only]` lossless byte measurements on
 checkpoint arrays; PR130 is an `[external official contest-CUDA]` comparison, not a local custody row.
 `score_claim=false`, `promotion_eligible=false`. No scorer, evaluator, paid dispatch, archive
