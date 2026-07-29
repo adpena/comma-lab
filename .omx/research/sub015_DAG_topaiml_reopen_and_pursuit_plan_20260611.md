@@ -25085,3 +25085,30 @@ KLT-rebasis control); LOW prior (learned channels ≠ GA blades; must beat the K
 burn payload, not T2). Filed nothing-unreachable: Clifford renderer block = trigger-gated tb1 renderer-pool row
 (trigger = renderer capacity binds Lane nucleation). Pointer UNMOVED 0.1910828242 [contest-CPU]; all advisory.
 Memo .omx/research/ddm_cl1_cliffordnet_crosswalk_20260729.md. [no-triality] [p0-ledger-ok]
+
+## FEED-wr1-reverse-waterfill
+**ddm_wr1 (task #766 / QA06) BUILD-DONE-GATES-STAGED — the token-stream rate lever, MEASURED.**
+Ref row = pfs1 D1 exact-protocol **S=2.256641** (569,996 B; d_seg 0.00389011 → 0.389, d_pose
+0.22144216 → 1.488 = **66%**, rate 0.3795); `tokens.dr7t` = **557,253 B = 97.8%** of archive,
+non-token floor 12,743 B. Reverse-waterfill = drop-to-mode on the `[600,24,32,4]` DR7 grid,
+cells ordered flip-risk-asc / mass-desc (ru1 atlas: 486 zero-flip, top100=83.1% — reproduced
+bit-for-bit), **COMPOSED re-pricing = real SMEVR re-encode per tranche** (never summed; pb1-P4
+8.8%). MEASURED descent (bytes exact, d_seg PREDICTED): **Knee A k=486 → 274,333 B (−295,663 B
+tokens, −0.1968 S rate) at PREDICTED ~zero d_seg** (drops 288 sky + 170 hood + 28 stable-road =
+the SegNet-irrelevant 40% of the delta stream); **Knee B k=600 → 174,578 B** = first tranche
+INSIDE the sub-0.15 byte budget (≤179,467 B if seg+pose solved). Composed-if-solved (seg 0.0152
+rp1-q1 + pose 0.0153 PR130 + measured rate): Knee A **0.213** (over bar), Knee B **0.147**
+(SUB-0.15). **POSE-SAFETY FINDING:** the sub-0.15 crossing (Knee B) requires ~100 road-plane
+midband drops (28→129) — simultaneously the highest seg-flip AND pose-leakage tranche (warp reads
+f1→f0; PoseNet ego-motion cue = road plane); in the pose-solved regime the pose term (0.0153) is
+razor-thin, sensitivity ≈327/unit d_pose ⇒ byte lever and pose solve are COUPLED through the road
+cells ⇒ Knee B needs a pose-safety-CONSTRAINED variant + the gate must measure d_pose. Both knees
+byte-closed (sha `b6be1691…` / `8a75ac38…`, roundtrip + inflate-smoke verified; no source edited —
+inflate_runner ignores manifest tokens_sha256). Gate STAGED (not fired; sb1 owns slot, QA43
+ahead): `experiments/stage_wr1_realized_gate.sh {kneeA|kneeB}` = archive swap + stock evaluate.sh,
+~17 min/candidate. QA07 (lossy rungs) = SAME pool (per-cell exclusive; refines knee granularity,
+no new savings); QA08 (context mixing) = lossless coder swap, composes only by re-encoding the
+DROPPED stream (never sum). **Bottom line: rate lever real+large; exact S is POSE-bound not
+rate-bound; rung DONE at build level, pointer UNMOVED 0.1910828242 [contest-CPU]; next = MAIN
+fires 2 staged gates (~34 min).** Memo .omx/research/ddm_wr1_reverse_waterfill_20260729.md;
+receipts /Volumes/VertigoDataTier/pact/ddm_wr1_20260729/. [no-triality] [p0-ledger-ok]
