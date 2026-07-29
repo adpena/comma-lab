@@ -23,11 +23,16 @@ consumers: [ddm_pb1_p6_modal_stageB_staging_20260729, v10_SPEC_row12_pose_in_bur
 **Pointer `0.1910828242 [contest-CPU]` UNMOVED.** Everything below is
 `[macOS-CPU advisory]`; the composed row is real-evaluator/real-bytes but NOT contest hardware.
 
-- **D1 (measured):** the pb1 composed archive re-shipped with the warp-base pose carrier.
-  n600 warp solve on the archive's OWN shipped f1: mean d_pose **0.22155** → pose
-  contribution **1.4884** (better than p3v2's stale-frame 1.9827). Local locked-env
-  evaluate row: [D1-EVAL-FILL].
-- **D2:** [D2-FILL — ladder + falsifier side].
+- **D1 (MEASURED local row):** the pb1 composed archive re-shipped with the warp-base pose
+  carrier, solved on the archive's OWN shipped f1 (stale-frame confound cured, §1). Locked-env
+  full-n600 evaluate row: **S = 2.256641** (pose 0.22144216 → 1.488093 + seg 0.00389011 →
+  0.389011 + rate 569,996 B → 0.379537), rc=0 — **ΔS = −18.018 vs the pb1 Stage-A 20.2746**
+  at +5,116 bytes. Stage-B staging REPOINTED at this archive (sha `624ffe57…`).
+- **D2 (MEASURED ladder + falsifier):** the e_p warp-pose-field GN solve reaches
+  6-DOF contribution **1.2630** (rank-1 int8: 1.4383 @ **702 B**; rank-4 int8: 1.3159 @
+  2,004 B). **The pre-registered falsifier FIRED** (no ≤4KB point beats 0.5) →
+  **pose-in-burn returns to REQUIRED in the v10 SPEC**; the residual is typed §5 (tail-
+  concentrated, off-homography). The rank rungs stand as rate levers (−6.1KB at ~equal pose).
 
 ## §1 The stale-frame confound (caught, cured — why p3v2's 0.3931 did NOT transfer)
 
@@ -70,7 +75,21 @@ attack exactly this member. Instrument prediction: S_pred = 0.38901 (seg, pb1 en
 
 ## §3 D1 — the measured local row (locked-env evaluate.sh, full n600)
 
-[D1-EVAL-ROW-FILL]
+**MEASURED (rc=0, full 600 samples, locked env, archive sha `624ffe57…`):**
+`Average PoseNet Distortion 0.22144216 · Average SegNet Distortion 0.00389011 ·
+Submission file size 569,996 bytes · Compression Rate 0.01518148 · Final score 2.26`.
+S recomputed from components (never the rounded field):
+0.389011 + √(10·0.22144216) + 25·569,996/37,545,489 = 0.389011 + 1.488093 + 0.379537 =
+**2.256641 [macOS-CPU advisory — real evaluator, real bytes]**.
+
+- **vs the pb1 Stage-A row 20.274647: ΔS = −18.018** — the entire move is the pose axis
+  (19.5095 → 1.4881); rate +0.00345 (the 5,116-B heavier pose member); seg EXACTLY preserved.
+- **Drift rows (instruments vs live evaluator):** d_seg 0.00389011 = the pb1 evaluator value
+  BIT-EQUAL (frame_1 untouched — the frame_0-seg-free law confirmed on deployed bytes);
+  d_pose 0.22154653 (solve instrument, banked targets) vs 0.22144216 (live GT PoseNet) →
+  |Δ| ≈ 1.04e-4 (rel 4.7e-4) — the banked-target instrument agrees with the live evaluator
+  at the pb1-calibration class (1.7e-5 there, 1.0e-4 here; both ≪ any decision threshold).
+- Receipts: `d1_eval_receipt.json` (+ stdout/stderr) at the SSD custody; eval wall ~19 min.
 
 ## §4 D2 — the realization: the shipped warp pose is a FREE control; δ = p* − t_p IS e_p
 
@@ -89,15 +108,78 @@ coded low-rank, priced at shipped quantization.
 is contained: rotation dims → 0). D2 rungs are therefore priced for a one-line grammar-v4
 receiver amendment (generic code), NOT built/eval'd in this arm.
 
-## §5 D2 — the (contribution, bytes) ladder [MEASURED, realized at shipped quantization]
+**Three measured solver findings (each cost one aborted chunk, all receipts in the D2 jsonl
+lineage):**
+1. **The s_t·dim0 scale ridge is real:** co-optimizing s_t with the pose let GN walk the
+   degenerate ridge to points where f16 rounding exploded d_pose (pair 0: f64-solved 0.116 →
+   f16-shipped 10.22). Cure: s_t FIXED at the D1 grid value (the s_t direction is contained
+   in uniform translation scaling anyway); acceptance moved to the SHIPPED f16 lattice.
+2. **Raw t_p rotation dims are POISON as expmap angles:** starting the s_r=1 solve at t_p's
+   dims 3–5 lands d_pose 10.82 vs 0.146 translation-only (74×) — PoseNet's output dims 3–5
+   are not raw metric rotations in this frame convention. Cure: rotation starts at ZERO
+   (expmap(0)=I = exactly the D1 point) and enters only as GN-grown capacity.
+3. **The objective is f16-lattice-bound along dim0:** at |dim0|≈34 the f16 spacing is
+   0.03125, and a 0.011 rounding moved d_pose by +10 at a ridge point — the pose-input
+   sensitivity is razor-sharp along the forward-translation direction. Quantized-acceptance
+   GN (accept only f16-REPRESENTABLE improvements) is the honest solver under this lattice.
 
-[D2-LADDER-FILL]
+## §5 D2 — the (contribution, bytes) ladder (MEASURED n600, realized at shipped quantization)
 
-Falsifier (pre-registered): warp+e_p ≤ 4,096 B must beat contribution 0.5. [D2-VERDICT-FILL]
+Every rung is a REALIZED point (fresh frozen-PoseNet forwards on the quantized reconstruction
+through the exact receiver path), never a ceiling. Stream bytes = the full pose member
+(coeffs/values coded + s_t SMEVR 189 B + f16 dirs/mean/scales where applicable). Composed S =
+seg 0.389011 + contribution + rate at the recomposed archive size.
 
-## §6 Routing
+| rung | d_pose mean | contribution | pose-stream B | composed S |
+|---|---:|---:|---:|---:|
+| warp-only s_r=0 (D1 SHIPPED, evaluator-measured) | 0.221442 | 1.4881 | 6,844 | **2.256641 (MEASURED)** |
+| warp + e_p 6dof f16 (s_r=1) | 0.159509 | **1.2630** | 6,824 | 2.031503 |
+| warp + e_p rank-1 int8 | 0.206878 | 1.4383 | **702** | 2.202784 |
+| warp + e_p rank-2 int8 | 0.189858 | 1.3779 | 1,164 | 2.142656 |
+| warp + e_p rank-4 int8 | 0.173152 | 1.3159 | 2,004 | 2.081198 |
+| free-frame_0 floor (p3v2 §0, CITED) | ~9.1e-5 | 0.030 | unpriced | — |
 
-[D2-ROUTING-FILL]
+(int16 variants measured IDENTICAL to int8 to 4 decimals at ~2× bytes — int8 coeff
+quantization is FREE on this field. p_star SVD energy [0.970, 0.024, 0.006, …];
+e_p delta field SVD [0.906, 0.074, 0.018, …] — rank-~2, matching sc1's rank-1 law on a
+different base. δ per-dim std [0.82, 0.12, 0.24, 0.010, 0.007, 0.029] — translation-dominant,
+rotation dims small-but-used.)
+
+**FALSIFIER (pre-registered: warp+e_p ≤ 4,096 B must beat contribution 0.5): FIRED.**
+The best ≤4KB rung (rank-4 int8, 2,004 B) lands 1.3159; even the unpriced 6-DOF reach is
+1.2630. No warp-pose e_p point approaches 0.5.
+
+**The residual, typed (verdict_scope FORMULATION — warp-pose-space e_p on this seg-only
+vehicle):** the failure is TAIL-CONCENTRATED, not uniform. Median pair solves to d_pose
+0.0027 (essentially closed); but 9.3% of pairs (>0.5) carry 74.6% of the mean and 4.3%
+carry 51.8% — the 71–90 turn/dynamic cluster (worst: pair 77 at 4.83). On those pairs the
+FULL 6-DOF plane-induced homography family (rotation ACTIVE, run to GN convergence at the
+shipped lattice) cannot produce the frame_0 photometric structure PoseNet reads — the
+residual is OFF the ground-homography manifold (parallax/non-planar/photometric detail),
+the same wall class p3v2 measured as basis-adversarial for cheap pixel carriers. What the
+e_p field CAN do post-hoc it does: −28% mean d_pose at ~0 marginal bytes (6dof) or −6.6%
+at −6,142 B (rank-1). What it CANNOT do is carry the tail — that needs pose-legible frames,
+i.e. pose in the TRAINING loop.
+
+## §6 Routing (the falsifier consequences, per charter + gc8 op-routable 3)
+
+1. **v10 SPEC row-12: pose-in-burn returns to REQUIRED.** The p3v2 "OPTIMIZATION choice"
+   framing is superseded by this measured ladder: post-hoc warp+e_p saturates at
+   contribution ~1.26 (mean-tail-bound), 25× above the ≤0.05-class gc8 drop-condition.
+   The gc8 extension-window pose axis STAYS (its drop-condition "pfs1 closes pose to
+   ≤0.05-class post-hoc" is NOT met).
+2. **QA25 gets the measured optimization curve anyway** (the ladder above) — the pose-route
+   decision point is now MEASURED, not conjectured: cheap post-hoc = 1.26–1.49 class;
+   in-burn conditioning is the only named path below it (sc1 e_p ~2KB MEASURED-CLOSED lives
+   on a CONDITIONED base; this vehicle is not one).
+3. **Rate-side consumers (live now):** rank-1 int8 carries the pose member at 702 B — a
+   −6,142 B / −0.0041 S rate lever at −6.6% d_pose vs the D1 shipped member; the 6dof
+   f16 stream is the best-S point (2.0315). Both are grammar-v4 (s_r=1 one-line receiver
+   amendment). Named consumer: the next recompose (P5-v3) if/when a composed row is worth
+   another local eval; NOT re-evaluated this arm (one 19-min slot spent on D1, by design).
+4. **Verdict-scope:** FORMULATION for the warp-pose e_p family on this vehicle. NOT a
+   paradigm kill: on a pose-conditioned base (v10 in-burn), the terminal e_p solve remains
+   the banked closer (sc1/#741 lineage).
 
 ## §7 Wire-in (#125) + labels + custody
 

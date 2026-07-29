@@ -2,12 +2,13 @@
 
 > **REPOINTED 2026-07-29 (ddm_pfs1): the staged flight now targets the pfs1 D1 recomposed
 > archive** — the pb1 archive with its 6-cosine pose member swapped for the warp-base carrier
-> (grammar v3; D1 solve receipt d_pose 0.22155 → pose contribution 1.4884; instrument S_pred
-> 2.2570 vs the prior 20.2746 row; local Stage-A eval receipt at
-> `ddm_pfs1_20260729/d1/d1_eval_receipt.json`). The operator's <$2 flight buys the calibration
-> on the BEST local row. The command block below is updated in place; the superseded
-> pb1-archive parameters are preserved in this file's git history (commit c91c27ca30) per
-> APPEND-ONLY provenance.
+> (grammar v3). **Local Stage-A row MEASURED (rc=0, full n600, locked env): S = 2.256641**
+> (PoseNet 0.22144216 → 1.488093 + SegNet 0.00389011 → 0.389011 + rate 0.379537) vs the prior
+> 20.2746 row; receipt `ddm_pfs1_20260729/d1/d1_eval_receipt.json` (committed copy
+> `.omx/research/ddm_pfs1_d1_eval_receipt_20260729.json`). The operator's <$2 flight buys the
+> calibration on the BEST local row. The command block below is updated in place; the
+> superseded pb1-archive parameters are preserved in this file's git history (commit
+> c91c27ca30) per APPEND-ONLY provenance.
 
 **Status: STAGED ONLY. No dispatch fired. No paid spend. Pointer 0.1910828242 [contest-CPU] UNMOVED.**
 
@@ -73,8 +74,8 @@ the GO surface — the operator's `--execute` is the only remaining action.
 
 ## Honest framing
 
-The composed local row (pfs1 D1, S ≈ 2.26-class) is still far above the 0.172 bar — pose
-~1.49 + seg 0.389 + rate 0.380 all individually exceed it. This flight's value at the CURRENT
+The composed local row (pfs1 D1, S = 2.256641 MEASURED) is still far above the 0.172 bar —
+pose 1.488 + seg 0.389 + rate 0.380 all individually exceed it. This flight's value at the CURRENT
 composed S is calibration (the Stage-B drift constants + first own-vehicle exact row on
 contest hardware), NOT a competitive row. If the operator prefers to hold the <$2 until a
 composed row is within striking distance of the bar, that is a legitimate routing decision —

@@ -1,0 +1,11 @@
+{
+ "archive_sha256": "624ffe57000c6fe4a6802a6d8b9a5d6002617f29b0bbb9e186d1273fa996600c",
+ "evidence_axis": "[macOS-CPU advisory - real evaluator, real bytes]",
+ "note": "ADVISORY until the Modal contest-CPU flight (P6 operator-GO)",
+ "report": "=== Evaluation config ===\n  batch_size: 16\n  device: cpu\n  num_threads: 2\n  prefetch_queue_depth: 4\n  report: /Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/pfs1/report.txt\n  seed: 1234\n  submission_dir: /Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/pfs1\n  uncompressed_dir: /Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/videos\n  video_names_file: /Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/public_test_video_names.txt\n=== Evaluation results over 600 samples ===\n  Average PoseNet Distortion: 0.22144216\n  Average SegNet Distortion: 0.00389011\n  Submission file size: 569,996 bytes\n  Original uncompressed size: 37,545,489 bytes\n  Compression Rate: 0.01518148\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 2.26\n",
+ "returncode": 0,
+ "schema": "ddm_pfs1_d1_receipt.v3_warp",
+ "score_claim": false,
+ "stage": "eval",
+ "wall_seconds": 1006.0645861625671
+}

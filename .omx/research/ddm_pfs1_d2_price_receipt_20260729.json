@@ -1,0 +1,106 @@
+{
+ "schema": "ddm_pfs1_d2_price.v1",
+ "utc": "2026-07-29T22:05:30Z",
+ "n_pairs": 600,
+ "axis": "[macOS-CPU frozen-PoseNet advisory] NON-PROMOTABLE",
+ "score_claim": false,
+ "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+ "s_r": 1.0,
+ "receiver_note": "rungs are priced for the s_r-active grammar v4 receiver (one-line generic-code amendment); the D1 archive ships v3 s_r=0",
+ "p_star_svd_energy_frac": [
+  0.969830333929491,
+  0.023794446675810856,
+  0.006372661607742981,
+  2.172649978886699e-06,
+  2.3197006600003484e-07,
+  1.5316691022690816e-07
+ ],
+ "e_p_delta_svd_energy_frac": [
+  0.9058959443033168,
+  0.0744428884545691,
+  0.018370524470291368,
+  0.0010969622864052194,
+  0.00012216041801161367,
+  7.152006740583794e-05
+ ],
+ "e_p_per_dim_std": [
+  0.8194990393774372,
+  0.11700728743621269,
+  0.2378569094538602,
+  0.009603388953838013,
+  0.007504927328392508,
+  0.02859067510872544
+ ],
+ "free_floor_contribution_cite": 0.0327,
+ "falsifier": {
+  "budget_bytes": 4096,
+  "bar_contribution": 0.5,
+  "fired": true
+ },
+ "ladder": [
+  {
+   "rung": "warp_only_tp_f16_sr0_D1",
+   "d_pose_mean": 0.22154653134807972,
+   "contribution": 1.4884439235257731,
+   "stream_bytes": 6844,
+   "note": "the D1 shipped point (s_r=0 receiver), CITED from d1_solve_receipt"
+  },
+  {
+   "rung": "warp_start_tp_sr_active",
+   "d_pose_mean": 0.22144127485947232,
+   "contribution": 1.4880903025672614,
+   "stream_bytes": 6844,
+   "note": "the (t_p, s_t_D1) start point WITH s_r active (solve-row starts)"
+  },
+  {
+   "rung": "warp_plus_ep_6dof_f16",
+   "d_pose_mean": 0.15950891917937637,
+   "contribution": 1.262968404907171,
+   "stream_bytes": 6824,
+   "note": "full 6-DOF solved warp pose, f16, SAME receiver format as D1",
+   "gn_unsnapped_mean_cite": 0.15950891917937637
+  },
+  {
+   "rung": "warp_plus_ep_rank1_int8",
+   "d_pose_mean": 0.20687789329538048,
+   "contribution": 1.4383250442628763,
+   "stream_bytes": 702,
+   "note": "SVD-of-p_star code: coeffs + f16 dirs/mean/scale + s_t; t_p never ships"
+  },
+  {
+   "rung": "warp_plus_ep_rank1_int16",
+   "d_pose_mean": 0.20689403295161854,
+   "contribution": 1.4383811489018428,
+   "stream_bytes": 1375,
+   "note": "SVD-of-p_star code: coeffs + f16 dirs/mean/scale + s_t; t_p never ships"
+  },
+  {
+   "rung": "warp_plus_ep_rank2_int8",
+   "d_pose_mean": 0.18985761329829293,
+   "contribution": 1.3778882875556093,
+   "stream_bytes": 1164,
+   "note": "SVD-of-p_star code: coeffs + f16 dirs/mean/scale + s_t; t_p never ships"
+  },
+  {
+   "rung": "warp_plus_ep_rank2_int16",
+   "d_pose_mean": 0.18989483514853295,
+   "contribution": 1.3780233493977267,
+   "stream_bytes": 2443,
+   "note": "SVD-of-p_star code: coeffs + f16 dirs/mean/scale + s_t; t_p never ships"
+  },
+  {
+   "rung": "warp_plus_ep_rank4_int8",
+   "d_pose_mean": 0.17315209100351817,
+   "contribution": 1.315872680024622,
+   "stream_bytes": 2004,
+   "note": "SVD-of-p_star code: coeffs + f16 dirs/mean/scale + s_t; t_p never ships"
+  },
+  {
+   "rung": "warp_plus_ep_rank4_int16",
+   "d_pose_mean": 0.1732021222641044,
+   "contribution": 1.316062773062533,
+   "stream_bytes": 4541,
+   "note": "SVD-of-p_star code: coeffs + f16 dirs/mean/scale + s_t; t_p never ships"
+  }
+ ]
+}

@@ -1,0 +1,51 @@
+{
+ "archive_bytes": 569996,
+ "archive_sha256": "624ffe57000c6fe4a6802a6d8b9a5d6002617f29b0bbb9e186d1273fa996600c",
+ "evidence_axis": "[macOS-CPU advisory]",
+ "frame0_policy": "warp_base",
+ "instrument_composed_prediction": {
+  "S_pred": 2.2569908633695985,
+  "note": "seg(pb1 endpoint) + pose(solve d_pose on shipped f1) + rate; eval MEASURES seg+pose live.",
+  "pose_contribution": 1.4884439235257731,
+  "pose_d_pose_solve": 0.22154653134807972,
+  "rate": 0.3795369398438252,
+  "seg_from_pb1": 0.38901
+ },
+ "instrument_rate_term": 0.3795369398438252,
+ "members": {
+  "manifest.json": 1234,
+  "state/pose_stub.sec": 83,
+  "state/pose_warp.stp": 6864,
+  "state/renderer.sec": 3341,
+  "state/selector.sec": 535,
+  "state/tokens.dr7t": 557253
+ },
+ "pb1_pose_tpgn_replaced_coded_bytes": 1876,
+ "pb1_pose_tpgn_replaced_raw_bytes": 7295,
+ "pose_warp_meta": {
+  "pose_warp_bytes": 6864,
+  "st_coded_bytes": 189,
+  "tp_coded_bytes": 6655,
+  "tp_dtype": "float16",
+  "tp_raw_bytes": 7200
+ },
+ "schema": "ddm_pfs1_d1_receipt.v3_warp",
+ "score_claim": false,
+ "seg_archive_sha256": "b9a7983bb91dea91c6d4e5fcb6e9465ea56a8099bd1364c6c46a92ed461b0217",
+ "stage": "build",
+ "vendored": [
+  {
+   "patch": "'from tac.repo_io import sha256_bytes' -> 'from hashlib import sha256 as _sha256\\n\\n\\ndef sha256_bytes(data: bytes) -> str:\\n    return _sha256(data).hexdigest()'",
+   "source": "/Users/adpena/projects/pact/src/tac/optimization/repair_entropy_coder_runtime_adapters.py",
+   "source_sha256": "7b5820ed29ea93ff78036189b2db6bc26167cb6df5e95beb76f353fd610ab8b6",
+   "vendored_sha256": "8ef8520d5ed5ccb7ce83d5b4faf7f3dc580c7f9de6c90f55e32854346421a14e"
+  },
+  {
+   "patch": "'from tac.optimization.repair_entropy_coder_runtime_adapters import (' -> 'from repair_entropy_coder_runtime_adapters import ('",
+   "source": "/Users/adpena/projects/pact/experiments/ddm_r7_token_coder.py",
+   "source_sha256": "f84b29e794a902425c560ff62fa3e20dbc2017449f14db474d347acbbc3b9396",
+   "vendored_sha256": "2a9c5a3a0b113eb0217c6549d057bc92df4bc76b0a311f72782a954936836136"
+  }
+ ],
+ "warp_vendored_vs_original_max_abs_pixel": 0
+}
