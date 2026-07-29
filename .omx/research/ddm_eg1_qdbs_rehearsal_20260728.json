@@ -1,0 +1,64 @@
+{
+  "authority_blocker": "Deterministic test hard oracle and compact rehearsal codec were used; the production DDM compiler, public receiver, frozen scorers, and full-n600 upstream evaluator were not invoked.",
+  "authority_mode": "STALE_REHEARSAL",
+  "base_action_test_oracle": {
+    "archive_bytes": 2956,
+    "archive_sha256": "ed12ab7de3f8252f8df5e5c51885f8335e8314959cc03b79d98b7358b9662975",
+    "joint_action": 0.10197697471760306
+  },
+  "best_strict_improvement": {
+    "archive_bytes": 2956,
+    "archive_sha256": "8d20c76a138bef1de8d191c631d91aafee5e9a260fe49c52f2e6343b64809f8b",
+    "delta_joint_action_test_oracle": -5.434782608670918e-07,
+    "identity": "fd2_scorer_group_rank00_coord253_coord255"
+  },
+  "candidate_evaluations": 48,
+  "candidate_schedule": {
+    "active_indices_count": 344,
+    "active_indices_sha256": "8f54bbc5f54abed6752633356f7390b43061ee68165c06deb49ae4cd592f54de",
+    "base_inactive_nonzero_count": 0,
+    "inactive_control_coordinates": [],
+    "matched_integer_random_controls": 24,
+    "max_candidate_evaluations": 48,
+    "schedule_sha256": "03408beaad388c6206a55a020a35710ec190b5ee6ca1434bd2bb169da7ba748e",
+    "scorer_derived_grouped": 8,
+    "scorer_derived_signed_singletons": 16,
+    "seed": 20260728
+  },
+  "evidence_axis": "[deterministic stale mechanism rehearsal]",
+  "generated_by": "tools/rehearse_fd2_qdbs_terminal.py",
+  "governed_handoff_eligible": false,
+  "governed_handoff_identity": null,
+  "outer_governor_required": true,
+  "pointer_moved": false,
+  "production_contract_exercised": [
+    "explicit active coordinate set with zero-valued inactive seed coordinates",
+    "precommit all scorer and active-set matched-random proposals before evaluation",
+    "compile exact candidate bytes and bind action SHA-256 plus byte count",
+    "exact parse-back of realized description coordinates",
+    "exact receiver-consumption certification",
+    "fresh realized joint-action callback",
+    "strict candidate action less than shared base action",
+    "synthetic result remains nonpromotable and requires an outer governor"
+  ],
+  "promotion_allowed": false,
+  "rehearsal_command": "PYTHONPATH=src uv run --no-project python tools/rehearse_fd2_qdbs_terminal.py --max-candidate-evals 48",
+  "resume_ledger": {
+    "required_for_production": true,
+    "used_by_stale_rehearsal": false
+  },
+  "schema": "ddm_eg1_qdbs_stale_rehearsal.v2",
+  "score_claim": false,
+  "shared_base_evaluations": 1,
+  "stale_substrate": {
+    "active_description_coordinates": 344,
+    "checkpoint": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_ws3_w_joint_exact_history_20260724T132200Z/checkpoints/01_residual_bucket_realized_acceptance_intra_global000004.npz",
+    "checkpoint_sha256": "f6e88a743e188eb84f75f3a500acd04ef9ea685c86a1ee774709148c9cc65e41",
+    "description_coordinates_total": 368,
+    "fd2_receipt": "/Volumes/VertigoDataTier/pact/ddm_fd2_20260728/fd2_disambiguation_receipt.json",
+    "fd2_receipt_sha256": "92deae9d4cf31a54fda2ea6405d7cfdbadc5fe7b45e9edfdb8b2af309d04af4e",
+    "proposal_signal": "checkpoint first_moment from stale scorer-trained FD2 state",
+    "typed_config_hash": "346975b25fce972766ef89ebce437ba87cc2e11e37f709683682246116dbcf93"
+  },
+  "status": "REHEARSAL_NONPROMOTABLE"
+}
