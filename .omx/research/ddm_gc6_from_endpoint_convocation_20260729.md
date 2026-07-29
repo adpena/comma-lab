@@ -416,3 +416,25 @@ r7 worktree memo + endpoint/main progress JSONs (SMEVR/KT/rANS rows, S4 floor, l
 design); lv1 c_token_stack_race receipt (T1_revert numbers); rv1 memo (precondition-tag
 vocabulary, X6/X12 non-reactivations); sp1 contour verdict (via box memo §8);
 #341 GN economics (via sc2 quote); coordinator PR132 signal (this session, folded §0).
+
+## §7 AMENDMENT (2026-07-29, MAIN — Stop-hook #404 magnitude-dismissal cure for row 10)
+
+Row 10 (granularity re-race / ECVQ grid) as originally written carried magnitude language
+("token raw mass −50–75% at unknown d_seg cost") without the relative-significance arithmetic
+the #404 discipline requires. The cure, with both numbers at the verified §0 operating point:
+
+- **ΔS reach [DERIVED from measured masses]:** endpoint raw token stream 875,171 B (tr1 receipt);
+  r7's coded scale for this field ≈ ~560 KB-class (row 5 receipt basis). A −50–75% raw-mass
+  re-race at comparable codability scales the coded stream toward ~140–280 KB WITHOUT row 6,
+  i.e. ΔS_rate ≈ 25·(280,000…420,000)/37,545,489 ≈ **0.19–0.28**.
+- **Remaining gap at the operating point [§0 verified]:** S_best-now ≈ 0.369 vs 0.172 →
+  gap ≈ **0.197**. Relative significance = **~96–142% of the ENTIRE remaining gap** — the
+  largest single-lever reach in this table, larger than rows 5+6 composed.
+- **Therefore row 10's rank is SEQUENCING-ONLY, not a magnitude verdict:** it is BLOCKED
+  strictly because (a) its d_seg cost is UNMEASURED (that is its falsifier, to be measured at
+  matched epochs — never assumed), (b) never-weaker-state binds the config to inherit every
+  adopted lever + the row-7 schedule verdict, and (c) E2 node N4 gates it behind the rows 6
+  AND 7 falsifiers so the re-burn fires from the strongest known state. verdict_scope:
+  INSTANCE (this endpoint, this token geometry). Adversarial note (recorded): if rows 6 and 7
+  resolve quickly, row 10 is the highest-EV successor burn on the board and should be
+  re-ranked accordingly at the E2 boundary — nothing in this table dismisses it.
