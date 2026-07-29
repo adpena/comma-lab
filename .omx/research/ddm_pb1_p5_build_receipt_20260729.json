@@ -1,0 +1,40 @@
+{
+ "archive_bytes": 564880,
+ "archive_sha256": "ddc54ecb22b0d3f1122aa0ef556fdfb68047660bbfa776b7b4ac7a363b1730b5",
+ "evidence_axis": "[macOS-CPU advisory]",
+ "frame0_policy": "zeros",
+ "members": {
+  "manifest.json": 1114,
+  "state/pose.tpgn": 1876,
+  "state/pose_stub.sec": 83,
+  "state/renderer.sec": 3341,
+  "state/selector.sec": 535,
+  "state/tokens.dr7t": 557253
+ },
+ "pose_coded_bytes": 1876,
+ "pose_raw_bytes": 7295,
+ "schema": "ddm_pb1_p5_receipt.v2_smevr",
+ "score_claim": false,
+ "seg_archive_sha256": "b9a7983bb91dea91c6d4e5fcb6e9465ea56a8099bd1364c6c46a92ed461b0217",
+ "smevr_encode_wall_seconds": 16.879446029663086,
+ "stage": "build",
+ "token_coder": "r7 SMEVR (DR7T v1) via experiments/ddm_r7_token_coder.py",
+ "tokens_vs_brotli_incumbent": {
+  "brotli_q11_section_bytes": 762663,
+  "smevr_bytes": 557253
+ },
+ "vendored": [
+  {
+   "patch": "'from tac.repo_io import sha256_bytes' -> 'from hashlib import sha256 as _sha256\\n\\n\\ndef sha256_bytes(data: bytes) -> str:\\n    return _sha256(data).hexdigest()'",
+   "source": "/Users/adpena/projects/pact/src/tac/optimization/repair_entropy_coder_runtime_adapters.py",
+   "source_sha256": "7b5820ed29ea93ff78036189b2db6bc26167cb6df5e95beb76f353fd610ab8b6",
+   "vendored_sha256": "8ef8520d5ed5ccb7ce83d5b4faf7f3dc580c7f9de6c90f55e32854346421a14e"
+  },
+  {
+   "patch": "'from tac.optimization.repair_entropy_coder_runtime_adapters import (' -> 'from repair_entropy_coder_runtime_adapters import ('",
+   "source": "/Users/adpena/projects/pact/experiments/ddm_r7_token_coder.py",
+   "source_sha256": "f84b29e794a902425c560ff62fa3e20dbc2017449f14db474d347acbbc3b9396",
+   "vendored_sha256": "2a9c5a3a0b113eb0217c6549d057bc92df4bc76b0a311f72782a954936836136"
+  }
+ ]
+}

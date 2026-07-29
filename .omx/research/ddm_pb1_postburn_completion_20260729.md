@@ -218,8 +218,20 @@ manifest round-trip, nonzero-row consumption count.
   `p5_build_receipt.json`).
 - **Instrument-side composed prediction** (receiver-realized d_seg 0.0038901 + banked-target
   d_pose 38.0622 + 564,880 B): S ≈ 0.38901 + 19.50954 + 0.37609 = **20.2746**.
-- **Stage-A evaluate row: [P5-EVAL-FILL — report components + S recomputed from components
-  + drift vs the instrument prediction]**
+- **Stage-A evaluate row (MEASURED — rc=0, wall 1,157 s, full 600 samples, locked env):**
+  `Average PoseNet Distortion 38.06224823 · Average SegNet Distortion 0.00389011 ·
+  Submission file size 564,880 bytes · Compression Rate 0.01504522 · Final score 20.27`.
+  S recomputed from components (never the rounded field): 0.389011 + √(10·38.06224823) +
+  25·564,880/37,545,489 = 0.389011 + 19.509548 + 0.376088 = **20.274647**
+  **[macOS-CPU advisory — real evaluator, real bytes]**; archive sha `ddc54ecb…`;
+  receipts committed at `.omx/research/ddm_pb1_p5_{build,eval}_receipt_20260729.json`
+  (QA02 closed).
+- **Drift row (instruments vs live evaluator):** d_seg 0.00389012 (receiver-realized
+  instrument) vs 0.00389011 (evaluator) → |Δ| ≈ 4e-9 ≪ the 5e-4 pn1 green band; d_pose
+  38.06223092 (banked-target instrument) vs 38.06224823 (live GT PoseNet) → |Δ| ≈ 1.7e-5
+  (rel 4.5e-7); bytes identical. **Both pb1 instruments agree with the exact-protocol
+  evaluator at the exact-agreement class — the calibration this dress rehearsal existed
+  to buy.**
 
 ## §7 THE HONEST GAP STATEMENT (composed arithmetic vs the bar)
 
@@ -283,6 +295,8 @@ drift band, <$2 est / ≤$20 envelope, honest calibration-vs-competitive framing
 | lv1 T1-validity | **SETTLED** (C-race validate rows: T1_revert d_seg 0.023111 = dominated, +0.93 S for −0.16 S bytes; lossless −31% factorization stands as the transform; receipt `/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/c_token_stack_race/receipt.json`). |
 | S2 ν=0 nullspace | **SETTLED** (ν=0.0 at +2e-4 tolerance; no nullspace lever; 530→130KB routes through coding). |
 | sh1 merge | **SETTLED-ELSEWHERE-BLOCKED** (#729 parallel-session WIP; not pb1's). |
+| charter P2(b) FULL-POPULATION GN/CG seg solve (the −0.138 joint-GN ceiling) | **NEVER RAN (orphan QA03, gc7r)**: pb1 landed the DISCRETE finishers (QDBS §2, aimed cells §4b) + the #400 renderer diagonal (§4), but the continuous full-population GN/CG token/renderer solve was not executed — the −0.138 ceiling remains UNMEASURED (Contrarian bound −0.046 stands). Fires in the post-P3v2 seg batch (gc6 T3 attack-search round-2), not pb1's. |
+| the 20.27 Stage-A row (gc7r Contrarian ruling) | **MEASURED** (receipt rc=0, 1,157 s, full 600) — and NEVER quoted without the axis tag: **[macOS-CPU advisory — real evaluator, real bytes]**. It is a calibration/milestone row, not a contest row; the pointer moves only through Modal/contest hardware. |
 
 If E2 ever verdicts extend-window on this parent, the EXTENSION-WINDOW LEDGER rows above ARE
 the reseal fold list (sc2 R2 verbatim set + D5 + waterfill + R8/R3 + S5).

@@ -38,8 +38,13 @@ positive same-parent training quote; FLAT/worsening final window) — solve-hand
 basin→solve law; sc2 extension folds recorded NOT fired. Consumer: any extend-window
 proposal must beat the measured finisher quotes (§2/§4/§5 of the memo).
 
-FEED-pb1-g [P5-FILL]: composed byte-closed row through the locked evaluate.sh path
-(pn1 Stage-A executed on the pb1 composed archive) + per-term S arithmetic vs 0.172/0.15.
-Consumer: pn1 Stage-B (staged, operator-GO), the honest-gap ledger.
+FEED-pb1-g [MEASURED — the first OWN-VEHICLE exact-protocol row]: composed archive
+564,880 B (r7 SMEVR tokens; sha ddc54ecb…) through archive→inflate.sh→evaluate.py, full
+600 samples, locked env, rc=0 in 1,157 s: SegNet 0.00389011 · PoseNet 38.06224823 ·
+S=20.2746 [macOS-CPU advisory — real evaluator, real bytes]. Drift vs the pb1 instruments:
+|Δd_seg|≈4e-9, |Δd_pose|≈1.7e-5 — exact-agreement class; the Stage-A calibration is
+bought. S is pose-dominated (96%); the bars need pose-in-burn (v10 SPEC) + the seg
+−0.046/−0.138 bands + the rate→130KB box. Consumer: pn1 Stage-B (staged, operator-GO);
+the gc6 E2 tree (N1=NO recorded); the honest-gap ledger.
 
 Pointer 0.1910828242 [contest-CPU] UNMOVED. All rows [macOS-CPU advisory]; score_claim=false.
