@@ -23,7 +23,8 @@ Authority: ``STALE_REHEARSAL`` mode is used DELIBERATELY — the module's
 ``[macOS-CPU advisory]``; claiming ``[contest-CPU]`` custody would be a fake
 axis label.  The evaluations themselves are full-population on the deployed
 bytes.  Any strict winner is re-confirmed by an independent non-incremental
-full verdict (``--confirm-winner``).
+full verdict via ``tools/pb1_receiver_realized_verdict.py`` on the winner
+archive (separate invocation).
 
 Proposal recipe (pre-registered, deterministic from P1 caches):
   rank coordinate (pair,gh,gw,ch) by  cell_flips[pair,gh,gw] * |quant_resid|,
@@ -70,8 +71,6 @@ def parse_args() -> argparse.Namespace:
                     help="out dir holding p1_chunks/ from the P1 base verdict")
     ap.add_argument("--out-dir", required=True, type=Path)
     ap.add_argument("--seed", type=int, default=20260729)
-    ap.add_argument("--confirm-winner", action="store_true",
-                    help="independent full non-incremental verdict of winner")
     return ap.parse_args()
 
 
@@ -248,8 +247,10 @@ class TR1Oracle:
         check_pairs = [*[int(p) for p in touched[:4]], 0]
         for p in check_pairs:
             grid = self.rt.decode_token_grid(parsed.packet, int(p))
-            if not np.array_equal(np.asarray(grid, dtype=np.int64),
-                                  codes[int(p)]):
+            x01 = codes[int(p)].astype(np.float32) / np.float32(LEVELS - 1)
+            expected = x01 * np.float32(2) - np.float32(1)
+            if not np.array_equal(np.asarray(grid, dtype=np.float32),
+                                  expected):
                 raise ValueError("decode_token_grid mismatch")
         return ConsumedDescriptionCandidate(
             realized_theta=parsed_candidate.realized_theta,

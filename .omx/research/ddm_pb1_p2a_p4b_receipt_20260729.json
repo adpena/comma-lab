@@ -1,0 +1,52 @@
+{
+ "schema": "ddm_pb1_p2a_p4b_receipt.v1",
+ "arm": "ddm_pb1",
+ "steps": "P2a QDBS + P4a decomposition + P4b composed-knee",
+ "date_utc": "2026-07-29",
+ "pointer_honesty": "0.1910828242 [contest-CPU] UNMOVED; all rows [macOS-CPU advisory]; score_claim=false",
+ "p2a_qdbs": {
+  "harness": "tac.optimization.fd2_qdbs_terminal.run_fd2_qdbs_terminal (committed eg1 E3)",
+  "authority_mode": "STALE_REHEARSAL - DELIBERATE: ContestAxis has no advisory member; claiming [contest-CPU] custody would be a fake axis label; evaluations are full-population incremental-exact on deployed bytes",
+  "lattice": "flat int64 view of token codes [600,24,32,4], 16 levels",
+  "proposal_recipe": "p1_cell_flips_x_quant_resid_v1 (pre-registered in the P1 commit before any eval)",
+  "schedule": "16 signed singletons + 8 groups + 24 matched integer-random controls; 48 candidates + 1 shared base; seed 20260729",
+  "base_recompile": "BYTE-IDENTICAL to the exporter archive (determinism gate)",
+  "receipt": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p2a_qdbs_receipt.json",
+  "wall_seconds": 130,
+  "result": {
+   "status": "REHEARSAL_NONPROMOTABLE",
+   "strict_improvements": "28/48 (scorer 17/24, controls 11/24)",
+   "best": "group_02_idx1641798_1531354 delta -6.733e-4 (bytes -717 -> rate -4.77e-4; pose-term -1.98e-4; seg +2.5e-6)"
+  },
+  "independent_winner_confirm": {
+   "receipt": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p2a_winner_confirm/p1_receiver_realized_verdict.json",
+   "d_seg": 0.0038887956407335075,
+   "d_pose": 78.19691416214236,
+   "verdict": "fresh non-incremental full n600 MATCHES the incremental bookkeeping exactly (seg +2.54e-6, pose-term -1.98e-4) - the incremental-exact evaluator is independently verified; untouched chunk 0:120 reproduced bit-identically (dseg_mean 0.0039594 both)"
+  }
+ },
+ "p4a_decomposition_finding": {
+  "statement": "across ALL 48 candidates the seg component is ~nil (max |dSeg contribution| ~1.1e-5 S); improvements are BYTES (Brotli, up to -5.2e-4 each) + small pose jitter. The quant-residual token-edit recipe is a RATE POLISHER, not a seg repairer, at this base.",
+  "verdict_scope": "INSTANCE (this recipe, this base, 16-level lattice)",
+  "named_next_rung": "coherent CELL-level (multi-channel) edits per the band-lemma coherence law - single-coordinate edits cannot move a region-level scorer"
+ },
+ "p4b_composed_knee": {
+  "receipt": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p4b_composed_receipt.json",
+  "composed": "28 improving candidates, 38 coords, 33 pairs, 0 overlaps",
+  "composed_delta": -7.214e-4,
+  "sum_of_singles": -8.164e-3,
+  "additivity_ratio": 0.088,
+  "statement": "THE KNEE IS MEASURED: single-edit Brotli byte savings do NOT compose (91% of the naive sum evaporates in shared compression context). In-place token-edit corrections buy ~7e-4 S TOTAL at this base then flatten. The charter's 'corrections buy a SLICE' is now a measured law on this vehicle.",
+  "ladder_note": "rungs 2 (per-token) and 3 (mask-bit) COLLAPSE to rung-5 in-place edits on this vehicle - every candidate carrier is already a counted stream; no sidecar/position bytes are ever paid; the 1.2731 B/err water level is trivially cleared by in-place edits and is NOT the binding constraint - the binding constraint is Brotli-context non-additivity",
+  "composed_endpoint": {
+   "archive": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p4b_composed_archive.zip",
+   "archive_sha256": "see receipt",
+   "d_seg": "see receipt",
+   "joint_action": 28.863904
+  }
+ },
+ "rv1_r4_disposition": "the per-token correction probe (MEASURABLE_NOW row) is SUBSUMED by P2a+P4b at a stronger form: measured on the LIVE t3 endpoint (not the T2 dumps), 48 priced rows + a composed knee row",
+ "evidence_axis": "[macOS-CPU advisory]",
+ "score_claim": false,
+ "promotion_eligible": false
+}
