@@ -43,6 +43,7 @@ EXPECTED_CHECKPOINT_SHA256 = "67454bc9ac30ea6f971c29c6c6cea7b8af8d98293ed77e44be
 EXPECTED_EVALUATE_PY_SHA256 = "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
 EXPECTED_EVALUATE_SH_SHA256 = "9612284ce6e9585aefcf636f3027808a56160ffd572edffdf4b8622a65fac917"
 PORTABLE_PARITY_MIN = 0.9997
+MIN_PROOF_FREE_BYTES = 256 * 1024 * 1024
 
 INFLATE_RUNNER = b"""\
 from __future__ import annotations
@@ -219,6 +220,26 @@ def _write_exact(path: Path, payload: bytes, *, executable: bool = False) -> Non
         path.chmod(0o755)
 
 
+def _storage_preflight(proof_root: Path) -> dict[str, Any]:
+    if not str(proof_root).startswith("/Volumes/VertigoDataTier/pact/"):
+        raise runtime.TR1RuntimeError("bounded proof root must use VertigoDataTier")
+    probe = proof_root
+    while not probe.exists():
+        if probe == probe.parent:
+            raise runtime.TR1RuntimeError("cannot resolve proof-root storage tier")
+        probe = probe.parent
+    stat = os.statvfs(probe)
+    free_bytes = stat.f_bavail * stat.f_frsize
+    if free_bytes < MIN_PROOF_FREE_BYTES:
+        raise runtime.TR1RuntimeError("bounded proof root lacks the 256 MiB storage safety floor")
+    return {
+        "checked_tier": "/Volumes/VertigoDataTier/pact",
+        "minimum_free_bytes": MIN_PROOF_FREE_BYTES,
+        "passed": True,
+        "scratch_policy": "atomic temporary files removed; durable proof bytes retained",
+    }
+
+
 def _bounded_video(
     *,
     source: Path,
@@ -325,8 +346,7 @@ def _run_bounded_upstream_smoke(
             "evaluate_sh_sha256": sh_sha,
             "status": "BLOCKED_LOCKED_UPSTREAM_HASH_MISMATCH",
         }
-    if not str(proof_root).startswith("/Volumes/VertigoDataTier/pact/"):
-        raise runtime.TR1RuntimeError("bounded proof root must use VertigoDataTier")
+    storage_preflight = _storage_preflight(proof_root)
 
     proof_root.mkdir(parents=True, exist_ok=True)
     copied: list[dict[str, Any]] = []
@@ -443,6 +463,7 @@ def _run_bounded_upstream_smoke(
         "report_path": str(report),
         "report_sha256": report_sha,
         "sample_count": int(sample_match.group(1)) if sample_match else None,
+        "storage_preflight": storage_preflight,
         "stderr_path": str(stderr_path),
         "status": status,
         "stdout_path": str(stdout_path),

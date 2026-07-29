@@ -55,9 +55,9 @@
     "runtime_bytes": 48443,
     "runtime_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_eg1_endgame_chain_20260729T000937Z/src/tac/optimization/ddm_tr1_runtime.py",
     "runtime_sha256": "f3b93708b542e53d7a135233d8ba51bd406a5f6b6a55a7b80855369e9cebb2e9",
-    "tool_bytes": 21126,
+    "tool_bytes": 21991,
     "tool_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_eg1_endgame_chain_20260729T000937Z/tools/rehearse_ddm_tr1_runtime.py",
-    "tool_sha256": "087cf6015d9a24deab069589e3c6c41e956377374c428018e982bfac03347e6a"
+    "tool_sha256": "1509fde5c9c4710cf64300abfae9a8ea84fff352ffd3f10249a3ce5ec5f5c13e"
   },
   "packet": {
     "bytes": 504249,
@@ -173,6 +173,12 @@
     "status": "PASS_INTERFACE_ONLY_NONCOMPARABLE",
     "stderr_path": "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt/bounded_evaluate.stderr.8de73fd64ec0570d850127b4eba81929f98f0dcf18c164775eb97c6b1ebd1a52.txt",
     "stdout_path": "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt/bounded_evaluate.stdout.76c0e5037ead189cada8e9403b8a30be96f3a2d85d6a6d6426fceeafed07f7c4.txt",
+    "storage_preflight": {
+      "checked_tier": "/Volumes/VertigoDataTier/pact",
+      "minimum_free_bytes": 268435456,
+      "passed": true,
+      "scratch_policy": "atomic temporary files removed; durable proof bytes retained"
+    },
     "video_derivation": {
       "command": [
         "/opt/homebrew/bin/ffmpeg",
