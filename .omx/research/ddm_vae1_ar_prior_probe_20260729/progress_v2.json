@@ -1,0 +1,38 @@
+{
+  "checkpoint": {
+    "bytes": 14963203,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/t3_long_burn_lotto_v2/checkpoints/stage_seg_trunk_tau_final.npz",
+    "sha256": "33776302e4fabf0127b01dc3551bafbd747daff71f76946883177fede24de0d3"
+  },
+  "created_at_unix": 1785341530.8266811,
+  "custody_manifest_path": ".omx/research/ddm_vae1_ar_prior_probe_20260729/artifact_custody.json",
+  "schema": "ddm_vae1_counted_ar_prior_probe.v1.progress",
+  "source_files": {
+    "probe": {
+      "bytes": 36551,
+      "sha256": "5043d0c9e5e679af84f1f7290099bf09f212ddc950da599e19a08e26c38a5d84"
+    },
+    "r7_coder": {
+      "bytes": 39421,
+      "sha256": "f84b29e794a902425c560ff62fa3e20dbc2017449f14db474d347acbbc3b9396"
+    },
+    "tr1_runtime": {
+      "bytes": 48443,
+      "sha256": "f3b93708b542e53d7a135233d8ba51bd406a5f6b6a55a7b80855369e9cebb2e9"
+    }
+  },
+  "stages": {
+    "encode_frame": {
+      "bytes": 581771,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_vae1_20260729/ar_prior_probe_static_pooled_4f86dd21/progress_v2.stage-002-33776302e4fa.bin",
+      "path": ".omx/research/ddm_vae1_ar_prior_probe_20260729/progress_v2.stage-002-33776302e4fa.bin",
+      "sha256": "88fdc5d40537b69fcf334e20a6b9e601043653db68e84449a5118bb6d38ceb1d"
+    },
+    "fit_model": {
+      "bytes": 23425,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_vae1_20260729/ar_prior_probe_static_pooled_4f86dd21/progress_v2.stage-001-33776302e4fa.npz",
+      "path": ".omx/research/ddm_vae1_ar_prior_probe_20260729/progress_v2.stage-001-33776302e4fa.npz",
+      "sha256": "ac6a8e0b81afcdc0ea404f4c255cd2f8834cf9768866f84e5828824f8bc16735"
+    }
+  }
+}

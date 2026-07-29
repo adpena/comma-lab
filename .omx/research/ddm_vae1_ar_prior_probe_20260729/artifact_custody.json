@@ -1,0 +1,59 @@
+{
+  "artifacts": [
+    {
+      "bytes": 23425,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_vae1_20260729/ar_prior_probe_static_pooled_4f86dd21/progress_v2.stage-001-33776302e4fa.npz",
+      "kind": "immutable_fitted_model_stage_checkpoint",
+      "original_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_vae1_vae_corpus_harvest_20260729T153131Z/.omx/research/ddm_vae1_ar_prior_probe_20260729/progress_v2.stage-001-33776302e4fa.npz",
+      "sha256": "ac6a8e0b81afcdc0ea404f4c255cd2f8834cf9768866f84e5828824f8bc16735"
+    },
+    {
+      "bytes": 581771,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_vae1_20260729/ar_prior_probe_static_pooled_4f86dd21/progress_v2.stage-002-33776302e4fa.bin",
+      "kind": "immutable_complete_candidate_frame_stage_checkpoint",
+      "original_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_vae1_vae_corpus_harvest_20260729T153131Z/.omx/research/ddm_vae1_ar_prior_probe_20260729/progress_v2.stage-002-33776302e4fa.bin",
+      "sha256": "88fdc5d40537b69fcf334e20a6b9e601043653db68e84449a5118bb6d38ceb1d"
+    }
+  ],
+  "cleanup": {
+    "action": "verified_copy_to_ssd_then_move_local_rebuildable_copies_to_trash",
+    "reason": "Stage checkpoints are deterministic rebuildable bulk and their .npz/.bin extensions are intentionally gitignored. Exact bytes are preserved on the primary SSD tier; Git carries this custody record and the progress/measurement receipts."
+  },
+  "copied_at_utc": "2026-07-29T16:19:53Z",
+  "reproduction": {
+    "command_argv": [
+      "uv",
+      "run",
+      "--no-project",
+      "--with",
+      "numpy",
+      "--with",
+      "brotli",
+      "python",
+      "-m",
+      "experiments.ddm_vae1_ar_prior_probe",
+      "--checkpoint",
+      "/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/t3_long_burn_lotto_v2/checkpoints/stage_seg_trunk_tau_final.npz",
+      "--output",
+      ".omx/research/ddm_vae1_ar_prior_probe_20260729/receipt.json",
+      "--resume-from",
+      ".omx/research/ddm_vae1_ar_prior_probe_20260729/progress_v2.json"
+    ],
+    "cwd": ".",
+    "environment": {
+      "PYTHONPATH": "src:."
+    },
+    "formulation_config_sha256": "4f86dd2101c7e6b992f797255917010297fcaab768fbff29f442ca5c8e6ffd62",
+    "input_checkpoint_sha256": "33776302e4fabf0127b01dc3551bafbd747daff71f76946883177fede24de0d3",
+    "probe_sha256": "5043d0c9e5e679af84f1f7290099bf09f212ddc950da599e19a08e26c38a5d84",
+    "rng": "none",
+    "seed": null,
+    "token_sha256": "c95441ac92499772705b8d8d9853564858aeb8c08de7ae5560a37562db7e2b02"
+  },
+  "schema": "ddm_vae1_artifact_custody.v1",
+  "verification": {
+    "cold_store_bytes_match": true,
+    "cold_store_sha256_match": true,
+    "local_rebuildable_copies_trashed_at_utc": "2026-07-29T16:21:00Z"
+  }
+}
