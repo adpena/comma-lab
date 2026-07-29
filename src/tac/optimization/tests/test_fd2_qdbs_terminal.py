@@ -424,6 +424,39 @@ def test_scorer_delta_sets_must_be_distinct_across_all_24_proposals() -> None:
         )
 
 
+def test_all_candidate_identities_are_unique_and_shared_base_is_reserved() -> None:
+    singletons, groups = _proposals()
+    with pytest.raises(FD2QDBSError, match="base/candidate identities"):
+        precommit_qdbs_schedule(
+            (replace(singletons[0], identity="__base__"), *singletons[1:]),
+            groups,
+            coordinate_count=64,
+            active_indices=_active_indices(),
+            seed=8128,
+        )
+
+    first = precommit_qdbs_schedule(
+        singletons,
+        groups,
+        coordinate_count=64,
+        active_indices=_active_indices(),
+        seed=8128,
+    )
+    colliding_identity = first.random_controls[0].identity
+    with pytest.raises(FD2QDBSError, match="base/candidate identities"):
+        precommit_qdbs_schedule(
+            (
+                singletons[0],
+                replace(singletons[1], identity=colliding_identity),
+                *singletons[2:],
+            ),
+            groups,
+            coordinate_count=64,
+            active_indices=_active_indices(),
+            seed=8128,
+        )
+
+
 def test_production_requires_custody_resume_path_and_full_n600(tmp_path: Path) -> None:
     singletons, groups = _proposals()
     base = _base_theta()

@@ -683,6 +683,9 @@ def precommit_qdbs_schedule(
 
     if len(controls) != RANDOM_CONTROL_COUNT:
         raise AssertionError("internal QDBS control count differs")
+    all_identities = ("__base__", *identities, *(control.identity for control in controls))
+    if len(all_identities) != MAX_CANDIDATE_EVALUATIONS + 1 or len(set(all_identities)) != len(all_identities):
+        raise FD2QDBSError("all QDBS base/candidate identities must be unique and reserved")
     unsigned_payload = {
         "seed": seed,
         "coordinate_count": coordinate_count,
