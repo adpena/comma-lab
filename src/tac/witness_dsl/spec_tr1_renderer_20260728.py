@@ -102,6 +102,23 @@ def lever_token_init(mode: str = "zero") -> Lever:
                        "MEASURED inadmissible — custody in the lv1 memo)")
 
 
+def lever_basin_handoff(mode: str = "off") -> Lever:
+    if mode not in ("off", "on"):
+        raise ValueError("basin handoff is off|on")
+    return Lever(name=f"tr1_basin_handoff_{mode}",
+                 overrides={"--basin-handoff": mode},
+                 notes="operator x2 2026-07-28 burn schedule rule: TRAIN ONLY TO CONDITION "
+                       "— on basin-entry (TerminalSolve §16.1 validity: quadratic crawl + "
+                       "topology stable + no transitions + zero-alarm COUPLED_DESCENT "
+                       "window) STOP permanently and hand off to the solve executors "
+                       "(#423 quadratic_basin_finisher_probe GN/CG + eg1 E3 QDBS rail "
+                       "cf7172e747 + #383 terminal pose; v19 realized acceptance vs the "
+                       "handoff full-confirm baseline). Saddle/grokking #216/#475 "
+                       "disambiguation: stalled solve + still-descending training => "
+                       "resume training, re-arm doubled window. SHORTENS the sealed "
+                       "wall-clock (train-least realized)")
+
+
 def lever_a1_gate(gate_every: int = 5) -> Lever:
     return Lever(name=f"tr1_a1_gate_every{gate_every}", overrides={"--gate-every": str(gate_every)},
                  notes="A1 (fd2 binding transfer lesson): realized-argmax gate cadence")
