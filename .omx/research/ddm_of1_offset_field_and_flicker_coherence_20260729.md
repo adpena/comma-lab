@@ -158,8 +158,96 @@ receiver support-derivability** (transmitting supports costs 1.42 MB;
 prohibitive). **Precondition tag (the next $0 rung):** can the receiver DERIVE
 the flicker region supports from its own reconstruction / token field, or from
 a stored low-dim map cheaper than 12.6 KB? That is the SW-DERIVE sub-probe —
-the true gate, and the honest successor question this probe hands forward. 15%
-of flicker mass (incoherent, agreement < 0.8) stays per-pixel-priced.
+the true gate, and the honest successor question this probe hands forward
+(**NOW MEASURED — §SW-DERIVE below; verdict: PARTIAL, channel ADMISSIBLE via a
+stored static map at 12–26 KB all-in**). 15% of flicker mass (incoherent,
+agreement < 0.8) stays per-pixel-priced.
+
+## §SW-DERIVE — receiver support-derivability (coordinator round-2; the W1-COH admission gate)
+
+**THE QUESTION:** can the RECEIVER derive the flicker-region supports at decode
+time, so the ~12.6 KB phase channel pays without the 1.42 MB support
+transmission? **THE ANSWER (one line): PARTIAL → REDUCED ARITHMETIC, CHANNEL
+ADMISSIBLE — not derivable at 0 support bytes (the receiver-instability oracle
+is structurally blind to the target mass), but the supports are strongly STATIC
+in image coordinates, so a stored static map collapses support cost 1.42 MB →
+9.7–13.5 KB and the channel nets B/err 0.075–0.141 vs the 1.2731 water (9–17×
+under), at recall 0.79–0.92.** Receipt:
+`swderive_support_derivability_receipt.json` (same SSD dir; n600; deterministic
+re-run identical; NO scorer — realized argmax reconstructed EXACTLY from
+gt lstars + the atlas flip records, which record every flip).
+
+### Source (a) — receiver-realized argmax instability: ORACLE, and it FAILS structurally
+
+R[p] = realized[p] ≠ realized[nb] (nb = p+1, ru1 convention). MEASURED:
+- **As a FIELD, R aligns well with GT flicker:** pixel recall 0.708, precision
+  0.768, IoU 0.583 — the receiver's own temporal instability lives in the same
+  places as the scorer's.
+- **But at the TARGET pixels (flicker-flagged flips) exact-pixel recall =
+  0.054 — the coordinator's <50% falsifier FIRES.** Mechanism (the honest
+  finding): a flip-on-flicker-site is a place where GT flickers and our carrier
+  does NOT — the receiver's output is temporally STABLE precisely where it is
+  stably wrong. The signal the receiver would look for is absent at the target
+  mass BY CONSTRUCTION. Net at strict reading: 9,975 B / 10,645 fixed = B/err
+  0.937 (under water only nominally; reach negligible).
+- **Rim structure:** R dilated 1 px recalls **0.641** of flicker flips — the
+  targets sit immediately ADJACENT to receiver-visible instability. With R⊕1 as
+  support: ≤9,975 B (dilation only merges instances) / 126,600 fixed → B/err
+  ≈ 0.079. BUT: **source (a) is an ORACLE BOUND regardless** — decode-time
+  argmax needs SegNet, FORBIDDEN at inflate (strict scorer rule). Compliant
+  realization would need a counted distilled proxy head (unpriced here).
+  **Precondition tag:** re-prices if a tiny counted proxy (< ~10 KB) can
+  reproduce R⊕1; not a live channel today.
+
+### Source (b) — realized margin bands: UNMEASURABLE-WITHOUT-SCORER (skipped honestly)
+
+Full-field realized margins are not on disk (atlas `gap12` covers flip sites
+only). No scorer forwards permitted in this arm → skipped, stated honestly.
+
+### Source (c) — static flicker-frequency map: THE COMPLIANT WINNER
+
+f(y,x) = per-pixel GT-flicker frequency over n600 (g4 stationarity lineage,
+recomputed fresh from GT lstars — vehicle-independent); static support =
+{f ≥ θ}, shipped as COUNTED bytes (entropy-bound priced; rule-118 honest).
+MEASURED sweep (θ → recall / total bytes / net B/err):
+
+| θ | map px | static comps | map bytes | phase bytes (optimistic: comp×600) | total B | flicker-flip recall | flips fixed | net B/err | vs water |
+|---|---|---|---|---|---|---|---|---|---|
+| 0.02 | 24,841 | 60 | 13,451 | 4,500 | **17,951** | **0.924** | 182,544 | **0.0983** | 13× under |
+| **0.05** | 15,339 | 27 | 9,711 | 2,025 | **11,736** | **0.790** | 155,956 | **0.0753** | 17× under |
+| 0.10 | 8,394 | 40 | 6,255 | 3,000 | 9,255 | 0.538 | 106,336 | 0.0870 | 15× under |
+| 0.20 | 2,520 | 16 | 2,432 | 1,200 | 3,632 | 0.206 | 40,611 | 0.0894 | falsifier fired |
+
+**Conservative pricing** (1 phase bit per PER-PAIR flicker component
+intersecting the map, honest against out-of-phase subregions merged inside one
+static component — the 0.869 coherence was measured at per-pair granularity):
+θ=0.05 → 88,927 instances, total **20,827 B, net B/err 0.134**; θ=0.02 →
+98,411 instances, total **25,753 B, net B/err 0.141**. **Both still 9–10×
+under water — the verdict is robust to the pricing granularity.**
+
+### The reduced arithmetic (the coordinator's decisive number)
+
+- **Admissible operating point (reach-max, θ=0.02):** 17,951–25,753 B all-in
+  (optimistic→conservative) fixes ~182,544 flicker flips → **d_seg reach
+  0.00155**, net **B/err 0.098–0.141** vs water 1.2731. Deep-tail view: fixes
+  ~39,889 of the 49,680 deep-tail flicker flips — even charging ALL bytes to
+  the deep tail alone gives B/err 0.65, still under water.
+- **Honest miss mass:** 17,206 flicker flips outside the θ=0.02 map (7.6%) +
+  ~23,900 incoherent-region flips (1−0.869 of recalled) ≈ **44,724 flicker
+  flips stay per-pixel-priced** (plus the 36% non-flicker tail remainder,
+  unchanged). The priced-above-water tail collapses from ~16.9% of flip mass
+  toward ~7–8% under this channel.
+- **Labels:** recall/bytes/instances MEASURED; the ×0.869 coherence factor and
+  the reach numbers DERIVED (information-layer); actuation (how the receiver
+  realizes the phase-fix on frames — painting/token conditioning) is the
+  remaining carrier-design question, NOT priced here (realization is
+  quantization-gated; the lesson stands). Map bytes are entropy bounds; a real
+  coder (brotli-packed bitmap) lands within ~1.2×, inside the water margin.
+- **Verdict vocabulary (per coordinator): PARTIAL** — source (a) falsifier
+  FIRED (0.054 < 0.5, structural), source (c) falsifier NOT fired (0.79–0.92
+  recall), support cost is 9.7–13.5 KB stored (not 0). **Channel ADMISSIBLE
+  under the reduced arithmetic; admission condition for E2/r7 = ship the
+  static map + phase stream and solve the actuation leg.**
 
 ## Consumers (named, per gc6 §4 routing)
 
@@ -179,13 +267,18 @@ of flicker mass (incoherent, agreement < 0.8) stays per-pixel-priced.
   gated on SW-DERIVE** (reach ≤ 0.00167 d_seg if all-flicker; ≤ 0.00037 for the
   deep-tail portion; overlap with the GN band is unquantified here — a
   composition question for E2).
-- **r7 flicker-phase channel** ← Probe 2: the phase channel is priced
-  (12.6 KB, B/err 0.064) — route the SW-DERIVE support-derivability sub-probe as
-  the r7 carrier-design gate; this is a real carrier candidate IF supports
-  derivable.
-- **c1 waterfill** ← Probe 2: the flicker-phase action enters the waterfill
-  at B/err 0.064, clearing break-even by ~20× (conditional on SW-DERIVE); the
-  flicker regions form a natural sensitivity-decile structure.
+- **r7 flicker-phase channel** ← Probe 2 + §SW-DERIVE: the admission gate is
+  now MEASURED — carrier design = static support map (θ∈[0.02,0.05], 9.7–13.5
+  KB counted) + per-region phase stream (2–12.3 KB), net B/err 0.075–0.141;
+  the remaining r7 leg is ACTUATION (how the decode realizes the phase-fix on
+  frames), not support location.
+- **c1 waterfill** ← Probe 2 + §SW-DERIVE: the flicker-phase action's
+  conditional 0.064 row is re-priced UNCONDITIONAL at **0.098–0.141 B/err**
+  (θ=0.02 reach-max, optimistic→conservative) — still clears break-even
+  25·ΔB/37,545,489 by ~9–13×; enters the waterfill as a real action.
+- **pb1 P2c round-2 (SW-DERIVE addendum):** the θ=0.02 static map (24,841 px,
+  60 regions) is ALSO the natural aim-mask for flicker-targeted quantum edits —
+  92.4% of flicker-flip mass lives inside it.
 
 ## Honesty labels, scope, hooks
 
@@ -241,6 +334,29 @@ arm (per-quantum currency confirmed) · E2 N3-N4 (remove offset-field lever, add
 SW-DERIVE-gated flicker-phase lever) · r7 (flicker channel design) · c1
 (waterfill action B/err 0.064). Pointer 0.1910828242 [contest-CPU] UNMOVED; all
 advisory. [no-triality] [p0-ledger-ok]
+
+FEED-of1b (SW-DERIVE round-2, same arm): the W1-COH admission gate MEASURED at
+n600, $0, NO scorer (realized argmax reconstructed EXACTLY from gt lstars +
+atlas flips). **VERDICT: PARTIAL → channel ADMISSIBLE via stored static map.**
+Source (a) receiver-instability ORACLE FAILS STRUCTURALLY at the target mass:
+exact-pixel flicker-flip recall **0.054** (<0.5 falsifier FIRED) because the
+receiver is temporally STABLE precisely where it is stably wrong (GT flickers,
+carrier doesn't — that IS the flip); yet as a field R aligns (pixel recall
+0.708/precision 0.768/IoU 0.583) and R⊕1px recalls **0.641** — flips sit on the
+RIM of receiver-visible instability; (a) is compliance-blocked anyway (SegNet
+at decode forbidden; counted-proxy precondition, unpriced). Source (b) realized
+margins UNMEASURABLE-without-scorer (skipped honestly). **Source (c) static
+flicker-frequency map = the compliant winner (g4 stationarity lineage, fresh
+from GT lstars):** θ=0.02 → recall 0.924, 60 static regions, 17.9 KB all-in,
+net B/err 0.098; θ=0.05 → recall 0.790, 11.7 KB, 0.075; CONSERVATIVE per-pair-
+component pricing 20.8–25.8 KB → 0.134–0.141 — ALL 9–17× under the 1.2731
+water. Reduced arithmetic: d_seg reach 0.00155 at θ=0.02; miss mass ≈44.7K
+flicker flips stays per-pixel-priced; priced-above-water tail collapses ~16.9%
+→ ~7–8%. Support cost 1.42 MB → 9.7–13.5 KB. Remaining leg = ACTUATION
+(realization-is-quantization-gated), routed to r7 carrier design; c1 waterfill
+row re-priced UNCONDITIONAL 0.098–0.141; pb1 gets the θ=0.02 map as flicker
+aim-mask. Pointer 0.1910828242 [contest-CPU] UNMOVED; all advisory.
+[no-triality] [p0-ledger-ok]
 
 ## STORES CONSULTED
 
