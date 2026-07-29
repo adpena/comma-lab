@@ -21,11 +21,17 @@ into rung-5 on stream-native vehicles (no sidecar bytes exist to price). Consume
 correction-granularity ladder LAW (pn1 §8) — first measured knee row; costate organ (co9)
 band-entry duties DISPOSITIONED.
 
-FEED-pb1-e [MEASURED]: The pose axis dominates this vehicle: zeros-frame0 base d_pose
-78.198 (term 27.96) ≈ 97% of operating S. [P2B/P3-FILL: renderer-diagonal + terminal pose
-GN outcomes.] Consumer: the v10/tr1-successor pose charter — pose must enter the TRAINING
-loop (the pose-terminal law's conditioned-base precondition is NOT met by a seg-only burn;
-this is the measured cost of that gap).
+FEED-pb1-e [MEASURED — N1=NO, the photometric wall at full n600]: The pose axis dominates
+this vehicle: zeros-frame0 base d_pose 78.198 (term 27.96) ≈ 97% of operating S. The full
+terminal chain moved it: #400 renderer-diagonal ES −0.231 d_pose (pure pose-term −0.0413 S,
+frame1-luma channel), then the 600-pair terminal pose GN halved it (77.965 → 38.062, EVERY
+pair improved, budget-truncated at relin=2) → term 19.51. Even the vehicle's ENTIRE
+post-hoc arsenal lands ~6 orders of magnitude above the ≤3.24e-5 class the bar needs — the
+L68 photometric wall is now measured on OUR vehicle at n600, not inherited. Sub-findings:
+copy-predict frame0 is 2.35× WORSE than zeros (static pair reads as zero-ego-motion vs
+~34-magnitude speed targets; the copy-PREDICT law does not transfer to PoseNet targets).
+Consumer: the v10 SPEC pose-in-burn charter (gc6 row 12) — pose must enter the TRAINING
+loop; gc6 row 7 (tau A/B) drops to LOW priority.
 
 FEED-pb1-f [MEASURED]: E2 typed policy on the endpoint = MEASURE_FINISHER_QUOTE (no
 positive same-parent training quote; FLAT/worsening final window) — solve-handoff per the

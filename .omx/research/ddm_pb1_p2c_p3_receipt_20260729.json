@@ -1,0 +1,45 @@
+{
+ "schema": "ddm_pb1_p2c_p3_receipt.v1",
+ "arm": "ddm_pb1",
+ "steps": "P2c aimed-cell edits (round-1) + P3 terminal pose GN 600-pair sweep",
+ "date_utc": "2026-07-29",
+ "pointer_honesty": "0.1910828242 [contest-CPU] UNMOVED; all rows [macOS-CPU advisory]; score_claim=false",
+ "p2c_aimed_cell_edits": {
+  "aim_source": "ru1 atlas_flat.npz (458,738 flip rows; verified bit-identical to the pb1 P1 verdict - max |diff| 0.0, flip totals equal = the chain's apparatus-validity positive control)",
+  "receipt": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p2c_aimed_receipt.json",
+  "recipe": "top-24 (pair,cell) instances by flip count; best-of-8 single-quantum edits (4ch x +/-1, lattice-legal); FULL-PAIR realized acceptance (never cell-local, ERF collateral); greedy-sequential exact; composed final gate on full joint action with real Brotli bytes",
+  "result": {
+   "accepted": "23/24",
+   "net_flips": -155,
+   "falsifier": "ru1 row-1 falsifier (+151 lower bound) did NOT fire - the strict free-solve band (11.9%, dS -0.046 Contrarian-bound) SURVIVES on the deployed vehicle",
+   "composed_joint": 28.82244246091229,
+   "composed_delta": -3.88e-4,
+   "composed_archive_bytes": 767812,
+   "wall_seconds": 433
+  },
+  "gc6_time_box": "honored - round-1 ran to its falsifier answer; frames FROZEN at p2c_aimed_archive.zip; P3 fired immediately; round-2 aim recipe = ru1 hotspots x of1 coherent-flicker components x of1-r2 theta=0.02 static flicker map (92.4% of flicker mass); offset-field family DROPPED (of1 FORMULATION-dead)"
+ },
+ "p3_terminal_pose_gn": {
+  "receipt": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p3/p3_terminal_pose_receipt.json",
+  "progress": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p3/p3_progress.json",
+  "frame0_policy_probe": {"zeros": 79.999, "copy": 188.215, "verdict": "zeros wins 2.35x; copy-PREDICT law does NOT transfer to PoseNet targets (static pair reads as zero ego-motion vs ~34-magnitude dim-0 speed targets); INSTANCE-scope negative, mechanism named"},
+  "result": {
+   "pairs_solved": 600,
+   "pairs_improved": 600,
+   "d_pose_base": 77.96479228595507,
+   "d_pose_solved_effective": 38.06223091602088,
+   "mean_per_pair_ratio": 0.492,
+   "solved_min": 13.10,
+   "solved_max": 98.84,
+   "wall_seconds": 2591.5,
+   "per_pair_seconds": 4.3,
+   "pose_stream_raw_bytes": 7295,
+   "pose_stream_brotli_bytes": 1876
+  },
+  "convergence_caveat": "every pair ran the relin=2 budget with line-search acceptances throughout: 38.06 is BUDGET-TRUNCATED, not established convergence; the N1 verdict is budget-insensitive (>=20 further halvings needed to reach 3.24e-5; a 6-coefficient static cosine paint cannot carry that photometric structure - the wall is REPRESENTATIONAL)",
+  "n1_answer": "NO - LOUD. Pose term lands at sqrt(10*38.06) ~= 19.51, not the <=0.018 class. The L68 photometric wall is CONFIRMED at full n600 on THIS vehicle. Pose-in-burn conditioning routes to the v10 SPEC (gc6 row 12); gc6 row 7 tau A/B drops to LOW priority."
+ },
+ "evidence_axis": "[macOS-CPU advisory]",
+ "score_claim": false,
+ "promotion_eligible": false
+}

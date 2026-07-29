@@ -149,23 +149,47 @@ real Brotli bytes (the §3 knee lesson).
 - Composed joint gate PASSED: 28.822830 → **28.822442** (−3.88e-4 net of bytes; archive
   767,812 B). Contrast with §2: BLIND singletons were seg-nil; AIMED singletons repair seg.
 - **gc6 time-box honored:** round-1 ran to its falsifier answer, frames FROZE at
-  `p2c_aimed_archive.zip`, P3 fired immediately. Round-2 (post-P3, gc6 T3) aim list per
-  of1: coherent-flicker components (70.9% of flicker mass at ≥0.8 phase agreement) are the
-  high-value targets; the offset-field/boundary-walk family is DROPPED (of1:
-  FORMULATION-dead — δ(s) autocorr 1 px, deep-tail lag-1 negative, 5–21× less efficient
-  than aimed edits).
+  `p2c_aimed_archive.zip`, P3 fired immediately. Round-2 (post-P3, gc6 T3) aim recipe,
+  composed from of1 r1+r2: intersect the ru1 atlas hotspot cells with (a) coherent-flicker
+  components (70.9% of flicker mass at ≥0.8 phase agreement — whole components flip
+  together) and (b) the of1-r2 θ=0.02 STATIC flicker-frequency map (commit 24e4fdde87;
+  24,841 px / 60 regions; 92.4% of flicker-flip mass; receipts
+  `/Volumes/VertigoDataTier/pact/ddm_of1_20260729/`) as the aim-mask. The
+  offset-field/boundary-walk family is DROPPED (of1 r1: FORMULATION-dead — δ(s) autocorr
+  1 px, deep-tail lag-1 negative, 5–21× less efficient than aimed edits). The flicker
+  phase CHANNEL itself (12–26 KB, B/err 0.098–0.141, ADMISSIBLE) is an E2-boundary
+  composition question with an actuation leg still owed — recorded, not built here.
 
 ## §5 P3 — terminal pose GN, 600 pairs (eg1 E3 production shape; #400 dxi pose-polish leg)
 
-- **Frame0 policy race (32-pair probe): [P3-PROBE-FILL]** — zeros (inert-stub semantics) vs
-  copy-predict (frame0:=frame1, the locked copy-PREDICT law; zero counted bytes, generic
-  receiver code).
+- **Frame0 policy race (32-pair probe): zeros WINS decisively — copy-predict is 2.35×
+  WORSE** (mean d_pose 188.21 vs 80.00). Mechanism: a static (f1,f1) pair reads as
+  zero-ego-motion to PoseNet while the banked targets carry ~34-magnitude dim-0 speed; the
+  locked copy-PREDICT law does NOT transfer to this target structure (INSTANCE-scope
+  negative, mechanism named). Shipped policy: `zeros`.
 - Production sweep: committed `solve_terminal_pose_gn` per pair on the FROZEN final seg
   endpoint frames (frame1 byte-identity module-asserted per candidate); basis = the
   committed eg1 six-field cosine basis (seed 20260728, amplitude_q8 512); counted payload =
   TerminalPosePacketV1 [600,6] int16; all-pair base d_pose precomputed so every attested
   incremental mean is exact; per-pair-resumable progress ledger.
-- **[P3-FILL: pairs done, base→solved d_pose mean, pose term before/after, wall, per-pair cost]**
+- **Result: 600/600 pairs solved, EVERY pair improved; d_pose 77.9648 → 38.0622**
+  (mean per-pair ratio 0.492; solved min 13.10 / max 98.84; 4.3 s/pair; wall 2,591 s;
+  pose stream 7,295 B raw → 1,876 B Brotli in the composed archive). Pose term
+  27.94 → **19.51**: the single largest S movement of the whole chain (−8.44), and still
+  nowhere near the class the bar needs.
+- **Convergence caveat (stated exactly as measured):** every pair ran the full
+  relinearization budget (2) with line-search acceptances throughout — 38.06 is a
+  **BUDGET-TRUNCATED landing, not established convergence**. The N1 verdict is
+  budget-INSENSITIVE either way: reaching the ≤3.24e-5 class from 38 requires ~20 further
+  halvings, and a 6-coefficient static cosine paint cannot carry that photometric
+  structure — the wall is REPRESENTATIONAL, not iterative.
+- **N1 ANSWER (gc6 E2 tree) — LOUD AND CLEAR: NO.** The terminal pose solve lands at
+  contribution √(10·38.06) ≈ **19.51**, not the ≤0.018 class. This is the photometric wall
+  CONFIRMED at full n600 on this vehicle: frames trained seg-only carry no pose-legible
+  photometric signal; post-hoc paint cannot fix frames never shaped for pose (the L68
+  clarification; the e_p rank-1 ~2KB MEASURED-CLOSED result lives on a CONDITIONED base,
+  which this vehicle is not). **Pose-in-burn conditioning routes to the v10 SPEC (gc6
+  row 12 consumer); gc6 row 7 (tau A/B) drops to LOW-priority science per the tree.**
 
 ## §6 P5 — compose + byte-close + pn1 S1 Stage-A dress rehearsal (THIS IS Stage-A)
 
@@ -185,15 +209,48 @@ manifest round-trip, nonzero-row consumption count.
   Composed grammar v2 carries the token codes as a DR7T member; the receiver reconstructs
   the TR1 packet from decoded codes via the committed `_encode_tokens` + `build_packet`
   (generic free code) and asserts BYTE-IDENTITY against the frozen endpoint packet.
-- **[P5-FILL: build receipt (archive bytes, member split, pose stream bytes), Stage-A
-  evaluate rc/wall, report components, S recomputed from components, drift row vs the
-  composed advisory prediction]**
+- **Build receipt (MEASURED):** final composed archive **564,880 B**
+  (sha `ddc54ecb…`): DR7T tokens 557,253 + renderer.sec 3,341 + selector.sec 535 +
+  pose_stub.sec 83 + pose.tpgn 1,876 (Brotli from 7,295 raw) + manifest 1,114. All
+  custody asserts green: DR7T roundtrip exact; receiver-reconstructed TR1 packet
+  BYTE-IDENTICAL to the frozen endpoint packet; pose packet round-trip exact; locked-env
+  vendored decode smoke OK. Vendoring = 2 recorded one-line import patches (shas in
+  `p5_build_receipt.json`).
+- **Instrument-side composed prediction** (receiver-realized d_seg 0.0038901 + banked-target
+  d_pose 38.0622 + 564,880 B): S ≈ 0.38901 + 19.50954 + 0.37609 = **20.2746**.
+- **Stage-A evaluate row: [P5-EVAL-FILL — report components + S recomputed from components
+  + drift vs the instrument prediction]**
 
 ## §7 THE HONEST GAP STATEMENT (composed arithmetic vs the bar)
 
-**[P7-FILL after P5: per-term table 100·d_seg + √(10·d_pose) + 25·B/37,545,489 vs 0.172 and
-0.15; the eg1 exact ceilings 190,334 B @0.172 / 157,294 B @0.15 at d_seg 3e-4/d_pose 2.33e-5;
-where this vehicle actually stands per axis and what the binding axes are.]**
+Stated plainly, per gc6's binding instruction — this is the milestone framing WITH the
+three-axis gap chain, not a failure narrative and not a competitive row:
+
+| term | this composed row | needed at the 0.172 bar (ru1 corrected box) | gap factor |
+|---|---:|---:|---:|
+| seg `100·d_seg` | 0.0038901 → **0.389** | ~6e-4 → 0.060 (at 130 KB tokens + pose 0.018) | **6.5×** |
+| pose `√(10·d_pose)` | 38.062 → **19.510** | ≤3.24e-5 → 0.018 | **~10⁶× in d_pose** |
+| rate `25·B/37,545,489` | 564,880 B → **0.376** | ~150 KB → ~0.100 | **3.8×** |
+| **S** | **≈20.27** | ≤0.172 | — |
+
+- **vs our own 0.19108 pointer:** gc6's verified composed sentence holds — even at the
+  GN-ceiling seg (0.002511) + fully-solved pose + 150 KB, S ≈ 0.369; crossing our OWN
+  pointer needs d_seg ≤ 7.3e-4. This vehicle's composed row is not near either threshold.
+- **The three-axis chain (what closes each gap, all named consumers):**
+  1. **POSE (the binding axis, ~96% of the row):** post-hoc is measured DEAD at n600 (§5,
+     N1=NO) — pose must enter the TRAINING loop; routed to the **v10 SPEC pose-in-burn
+     charter** (gc6 row 12). Nothing at byte-close can buy this.
+  2. **SEG:** the aimed-edit + coherent-flicker levers (§4b round-2, gc6 T3 attack-search)
+     toward the −0.046 free-solve band, then the joint-GN band (−0.138 ceiling,
+     Contrarian-bound); beyond-GN levers per ru1 rows 3–5 triggers.
+  3. **RATE:** r7's SMEVR landed (−206 KB, consumed §6); next rungs = gc6 row 6
+     sensitivity-weighted reverse-waterfill (UNBLOCKED by r7's H≈3.17 b/token floor
+     receipt) + the lane-corridor sub-carrier (ru1 row-4 trigger) toward the 130 KB box.
+- **Milestone honesty:** this IS the first OWN-VEHICLE byte-closed row measured through the
+  exact evaluator protocol end-to-end (archive → inflate.sh → evaluate.py, full n600) — the
+  apparatus the sub-0.15 program needs, now push-button on a vehicle we own outright. The
+  row's VALUE is the calibrated instrument + the measured per-axis gaps; its S is honestly
+  ~118× the bar, pose-dominated by design of the seg-only burn.
 
 ## §8 P6 — Modal Stage-B: STAGED, NOT FIRED
 

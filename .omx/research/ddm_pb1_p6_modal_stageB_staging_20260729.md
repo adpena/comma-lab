@@ -10,7 +10,7 @@ pb1 composed archive. The operator fires it by appending `--execute` to the stag
 ## Preconditions (all satisfied at staging time or blocking-noted)
 
 1. Composed archive byte-closed with parse-back + exact-consumption asserts (P5 build receipt:
-   `/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p5/p5_build_receipt.json`).
+   `/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p5/p5_build_receipt.json` (archive 564,880 B; DR7T tokens 557,253 B via the r7 SMEVR winner; receiver-reconstructed packet BYTE-IDENTICAL)).
 2. Local Stage-A advisory-exact row measured through the locked evaluate.sh path (P5 eval
    receipt: `/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p5/p5_eval_receipt.json`).
 3. Lane claim BEFORE dispatch (the staged command sequence includes it).
@@ -30,7 +30,7 @@ pb1 composed archive. The operator fires it by appending `--execute` to the stag
 # 2) the ONE staged flight (DRY-RUN as written; append --execute for the paid dispatch)
 .venv/bin/python tools/dispatch_modal_paired_auth_eval.py \
   --archive /Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p5/submission/archive.zip \
-  --expected-archive-sha256 <P5_BUILD_ARCHIVE_SHA256> \
+  --expected-archive-sha256 ddc54ecb22b0d3f1122aa0ef556fdfb68047660bbfa776b7b4ac7a363b1730b5 \
   --submission-dir /Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p5/submission \
   --label ddm_pb1_composed_20260729 \
   --lane-id-base lane_ddm_pb1_composed_paired_auth_20260729 \
