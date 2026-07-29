@@ -26,9 +26,10 @@ bound → the photometric wall is CONFIRMED at FORMULATION scope and the vehicle
 calibration instrument.*
 
 MEASURED (frozen CPU-torch PoseNet6 authority, STE-uint8 camera-res, work-res 192×256, ~160 Adam
-iters run to convergence, n=16 pairs, `[macOS-CPU advisory]`): the free-frame_0 upper-bound
-**mean d_pose = 1.070e-4 → pose contribution √(10·d_pose) = 0.0327 ≤ 0.05.** 100% of pairs reach
-≤ 1e-3; 93.75% reach ≤ 2.5e-4; max = 4.6e-4. **The wall claim FAILS its own falsifier.**
+iters run to convergence, n=24 pairs — the full charter ladder, `[macOS-CPU advisory]`): the
+free-frame_0 upper-bound **mean d_pose = 9.123e-5 → pose contribution √(10·d_pose) = 0.0302 ≤ 0.05.**
+100% of pairs reach ≤ 1e-3; 95.83% reach ≤ 2.5e-4; max = 4.6e-4; median = 5.8e-5. **The wall claim
+FAILS its own falsifier.**
 
 The P3 verdict N1=NO (photometric wall) was an ARTIFACT of a naive solve, exactly as the operator's
 07-29 INSTANCE-downgrade suspected: P3 started frame_0 from `zeros` (d_pose ~85), actuated through a
@@ -52,13 +53,13 @@ below is ON that advisory row.
 
 | P3 choice | measured cost | optimal form |
 |---|---|---|
-| frame_0 START = `zeros` (d_pose ~85) | threw away a far better base | stored render 8.06 / warp base 0.56 |
+| frame_0 START = `zeros` (d_pose ~88) | threw away a far better base | stored render 10.22 / warp base 0.59 |
 | ACTUATION = fixed rank-6 cosine basis | RANK-DEFICIENT: plateaus at d_pose ~15 (§2) | free / Jacobian-aligned / warp |
 | BUDGET = ~2 relinearizations | truncated 38.06 vs converged ~15 | run to convergence |
 
-The stored composed frame_0 (the vehicle's own render) already scores d_pose **8.06** (contribution
-8.98) — better than P3's converged 6-cosine result — and P3 discarded it to start from zeros. That
-alone shows the 38.06 was not a floor.
+The stored composed frame_0 (the vehicle's own render) already scores d_pose **10.22** (contribution
+10.11, n24) — better than P3's converged 6-cosine result — and P3 discarded it to start from zeros.
+That alone shows the 38.06 was not a floor.
 
 ## §2 S0 — the EXISTING actuation (rank-6 cosine) run to convergence: RANK_DEFICIENT
 
@@ -78,24 +79,24 @@ frame_1 (the seg frame) is never touched. The frame_0 seg-free spot check: SegNe
 same frame_1. SegNet reads `x[:,-1]` = frame_1 only (upstream/modules.py:108); d_seg (0.38901) is
 untouched by any frame_0 actuation. The ENTIRE frame_0 is a pose-only surface at zero seg risk.
 
-## §4 S1 — the banked-carrier race (n=16, frozen-uint8 authority; banked rows CITED not rebuilt)
+## §4 S1 — the banked-carrier race (n=24, frozen-uint8 authority; banked rows CITED not rebuilt)
 
 | carrier | d_pose (mean) | pose contribution | carrier bytes | note |
 |---|---:|---:|---|---|
-| copy(f1) | 187.79 | 43.34 | 0 | zero-motion baseline |
-| zeros (P3 start) | 84.88 | 29.13 | 0 | P3's start policy |
+| copy(f1) | 188.57 | 43.42 | 0 | zero-motion baseline |
+| zeros (P3 start) | 88.35 | 29.72 | 0 | P3's start policy |
 | **P3 6-cosine (budget-truncated)** | **38.06** | **19.51** | 7,295 (n600) | THE 20.27 row |
 | #715 quotient rank-1 (CITED) | 19.89 | 14.10 | 3,520 | generic covariance basis; d_pose RISES w/ rank |
-| stored_f0 render | 8.06 | 8.98 | full frame | the vehicle's own frame_0 |
-| **WARP BASE (s_t, DECODER-REPRODUCIBLE)** | **0.564** | **2.38** | ~0–1 B/pair | ego-motion homography of f1 by carried pose |
-| **FREE frame_0 (S1d, UNPRICED)** | **1.07e-4** | **0.033** | ~147K/pair | the reach ceiling; basis-adversarial |
+| stored_f0 render | 10.22 | 10.11 | full frame | the vehicle's own frame_0 |
+| **WARP BASE (s_t, DECODER-REPRODUCIBLE)** | **0.589** (n600: 0.393) | **2.43** (n600: 1.98) | ~0–1 B/pair | ego-motion homography of f1 by carried pose |
+| **FREE frame_0 (S1d, UNPRICED)** | **9.12e-5** | **0.030** | ~147K/pair | the reach ceiling; basis-adversarial |
 | sc1 e_p rank-1 (CITED, pose-FIELD) | (raw seed 36–146) | — | 2,039 | different carrier family; needs terminal solve |
 
 The decisive banked carriers (#249 free-frame0 machinery, #715 quotient, the eg1 6-cosine) are the
 substrate; the NEW measured rows are the warp-base and free-frame0 family on the tr1 composed frames.
 The **warp base** — a ground-homography warp of frame_1 by the already-carried 6-value pose target,
 with a single per-pair translation-scale s_t on an 11-value grid — is the cheap decoder-reproducible
-carrier that dominates every banked one (d_pose 0.56 vs 38 / 19.89 / 8.06) at ~0 bytes.
+carrier that dominates every banked one (d_pose 0.59 vs 38 / 19.89 / 10.22) at ~0 bytes.
 
 ## §5 S1 price + S2 LOTTO — the free win is BASIS-ADVERSARIAL; LOTTO beats per-pair but not the warp
 
@@ -109,17 +110,20 @@ basis? Measured on the free-solve residual over the warp base:
   amortized over n600) + per-pair coefficients, vs per-pair rank-1.** The shared dictionary DOES beat
   per-pair rank-1 (a real finding — the pose-relevant directions are partially SHARED across pairs):
 
-  | | d_pose mean | contribution | bytes/pair (n600-amortized) |
+  | | d_pose mean (n24) | contribution | bytes/pair (n600-amortized) |
   |---|---:|---:|---|
-  | LOTTO shared R1 | 0.591 | 2.43 | 450 |
-  | LOTTO shared R4 | 0.380 | 1.95 | 1,812 |
-  | LOTTO shared R8 | 0.308 | 1.75 | 3,628 |
-  | per-pair rank-1 | 3.498 | 5.92 | 2,660 |
-  | **warp base (the comparator)** | **0.564** | **2.38** | **~0** |
+  | LOTTO shared R1 | 0.735 | 2.71 | 450 |
+  | LOTTO shared R4 | 0.312 | 1.77 | 1,813 |
+  | LOTTO shared R8 | 0.366 | 1.91 | 3,628 |
+  | LOTTO shared R16 | 0.258 | 1.61 | 7,264 |
+  | per-pair rank-1 | 3.526 | 5.94 | 2,661 |
+  | **warp base (the comparator)** | **0.589** (n600: 0.393) | **2.43** (n600: 1.98) | **~0** |
 
-  LOTTO shared R8 (contribution 1.75) marginally out-reaches the warp base but at 3,628 B/pair
-  (≈2.2 MB over n600); the warp base gets contribution 2.38 at ~0 bytes. **The frame_0-pixel LOTTO is
-  Pareto-dominated by the warp base for cheap realization and never approaches the free floor (0.033).**
+  LOTTO shared R4–R16 (contribution 1.6–1.9) marginally out-reach the warp base on the FIT pairs but
+  at 1.8–7.3 KB/pair (1–4 MB over n600), with NO cross-pair generalization evidence (the dictionary
+  was fit on these 24 pairs' own deltas), while the n600-priced warp base already reaches 1.98 at
+  194 B total. **The frame_0-pixel LOTTO is Pareto-dominated by the warp base for cheap realization
+  and never approaches the free floor (0.030).**
   Verdict-scope: FORMULATION — the SVD-of-deltas dictionary is basis-adversarial for the last-mile
   precision; a JACOBIAN-aligned shared dictionary (store the pose-direction basis once) remains the
   named next rung, NOT built here.
@@ -137,8 +141,8 @@ target is the already-carried sc1 t_p sidecar):
   **ΔS ≈ −17.53** move on the pb1 instrument row, driven entirely by the pose term
   (banked-6-cosine → optimal-form warp actuation).
 
-The free upper bound (contribution 0.033 → composed S ≈ 0.80) is the REACH, NOT a realized point: it
-is basis-adversarial and not carriable as cheap frame_0 pixels. Closing the ~2.4 → 0.03 gap is the
+The free upper bound (contribution 0.030 → composed S ≈ 0.80) is the REACH, NOT a realized point: it
+is basis-adversarial and not carriable as cheap frame_0 pixels. Closing the ~2.0 → 0.03 gap is the
 pose-field terminal-solve (sc1 e_p ~2 KB, joint-descent-trained) or the v10 pose-in-burn conditioning
 (#383 gate) — pose entering the TRAINING loop, per the photometric-wall lesson: post-hoc frame_0
 carriers realize the ego-motion coarsely (warp) but the fine pose precision needs joint descent.
@@ -146,13 +150,13 @@ carriers realize the ego-motion coarsely (warp) but the fine pose precision need
 ## §7 Honest bar arithmetic + verdict-scope
 
 - ≤ 0.018-contribution (the banked pose target) needs d_pose ≈ 3.2e-5. The free upper bound (mean
-  1.07e-4) is ~3× above it; the per-pair MIN reaches 1.2e-5 (below it). The warp cheap carrier
+  9.12e-5) is ~2.9× above it; the per-pair MIN reaches 1.2e-5 (below it). The warp cheap carrier
   (n600 mean 0.3931) is contribution 1.98 — far above, but at 194 B/n600 and a **−17.53 S** move on
   the instrument row.
 - Verdict-scope on every negative: the S2 frame_0-pixel LOTTO negative is FORMULATION (SVD-of-deltas
   dictionary), NOT a paradigm kill — the Jacobian-aligned shared dictionary is un-raced. The
   basis-adversarial finding is INSTANCE→FORMULATION on this vehicle (matches #249 on the witness line).
-- No family/paradigm kill anywhere. Pointer UNMOVED. score_claim=false. n=16 (ladder) / n600 (S3
+- No family/paradigm kill anywhere. Pointer UNMOVED. score_claim=false. n=24 (ladder) / n600 (S3
   warp) `[macOS-CPU frozen-PoseNet advisory]`; the pb1 row is instrument-side (QA02 owed).
 
 ## §8 Wire-in (Catalog #125) + boundaries
@@ -164,6 +168,6 @@ carriers realize the ego-motion coarsely (warp) but the fine pose precision need
 - [p0-ledger-ok]: ledger QA01 DUE → FIRED with this receipt; QA25 pose-in-burn note updated (wall
   refuted → pose-in-burn is an OPTIMIZATION choice, not a forced head).
 - Receipts (SSD custody, certify-or-block): `/Volumes/VertigoDataTier/pact/ddm_p3v2_20260729/`
-  {`p3v2_ladder_receipt_final.json` (n16 ladder), `p3v2_s3_receipt.json` (n600 warp), per-pair
-  npz cache, tool snapshot}. Tools: `experiments/ddm_p3v2_optimal_form_pose_resolve.py` +
-  `experiments/ddm_p3v2_finalize_from_cache.py`.
+  {`p3v2_ladder_receipt_final.json` (n24 ladder, sha256 12838f63ea71…), `p3v2_s3_receipt.json`
+  (n600 warp, sha256 ac87e05ee830…), per-pair npz cache, tool snapshot}. Tools:
+  `experiments/ddm_p3v2_optimal_form_pose_resolve.py` + `experiments/ddm_p3v2_finalize_from_cache.py`.

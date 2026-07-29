@@ -5,10 +5,10 @@ score_claim=false. [no-triality] [p0-ledger-ok]. Memo: `ddm_p3v2_optimal_form_po
 
 FEED-p3v2-a [MEASURED — the pre-registered rule: WALL REFUTED, vehicle = CANDIDATE_LINE]: the
 free-frame_0 UNPRICED upper bound (work-res 192×256, STE-uint8, frozen CPU-torch PoseNet6, ~160 Adam
-iters to convergence, n16) reaches mean d_pose **1.070e-4 → pose contribution 0.0327 ≤ the 0.05
-binding threshold** (100% of pairs ≤1e-3; 93.75% ≤2.5e-4; max 4.6e-4). The photometric-wall N1=NO was
-an ARTIFACT of P3's naive solve (zeros start d_pose~85 + rank-6 cosine basis + ~2-relin budget
-truncation), NOT a vehicle property. **N1 re-decided YES.** Consumer: E2 node N1; the v10 pose-in-burn
+iters to convergence, n24 — the full charter ladder) reaches mean d_pose **9.123e-5 → pose
+contribution 0.0302 ≤ the 0.05 binding threshold** (100% of pairs ≤1e-3; 95.83% ≤2.5e-4; max 4.6e-4;
+median 5.8e-5). The photometric-wall N1=NO was an ARTIFACT of P3's naive solve (zeros start
+d_pose~88 + rank-6 cosine basis + ~2-relin budget truncation), NOT a vehicle property. **N1 re-decided YES.** Consumer: E2 node N1; the v10 pose-in-burn
 charter (QA25) is NO LONGER forced by a confirmed wall — it becomes an OPTIMIZATION choice.
 Receipt: `/Volumes/VertigoDataTier/pact/ddm_p3v2_20260729/p3v2_ladder_receipt_final.json`.
 
@@ -21,17 +21,19 @@ covariance basis confirms the class failure: d_pose RISES 19.89→48 with rank. 
 FEED-p3v2-c [MEASURED — the cheap realizable carrier = the WARP BASE; the free win is
 BASIS-ADVERSARIAL]: a ground-homography warp of frame_1 by the CARRIED 6-value pose target + a per-pair
 s_t index (DECODER-REPRODUCIBLE, s_t stream = 194 B r7-SMEVR / n600) reaches d_pose n600 mean 0.393
-(median 0.085; contribution 1.98) — beating 6-cosine (38), #715 (19.89), stored_f0 (8.06). BUT generic
+(median 0.085; contribution 1.98) — beating 6-cosine (38), #715 (19.89), stored_f0 (10.22). BUT generic
 DECODER-REPRODUCIBLE compression of the free residual over that base — 2D-DCT (low-freq + largest-mag),
 low-rank SVD, AND the S2 LOTTO shared dictionary — ALL collapse back toward the warp-base class. The
 pose-relevant frame_0 win is BASIS-ADVERSARIAL (needs the net's Jacobian, not a cheap generic basis);
 confirms #249's expensive/adversarial finding on the tr1 vehicle. Verdict-scope FORMULATION.
 
-FEED-p3v2-d [MEASURED — S2 LOTTO race (gc7r's flagged highest-leverage surface)]: the SHARED low-rank
-frame_0 dictionary (counted once, n600-amortized) + per-pair coeffs BEATS per-pair rank-1 (R8: d_pose
-0.308 @ 3,628 B/pair vs per-pair-r1 3.498 @ 2,660 B/pair) — the pose directions ARE partially shared
-across pairs, a real finding. But LOTTO never approaches the free floor and is Pareto-DOMINATED by the
-warp base (contribution 2.38 @ ~0 B vs LOTTO R8 1.75 @ 3,628 B). The frame_0-pixel LOTTO is closed at
+FEED-p3v2-d [MEASURED — S2 LOTTO race (gc7r's flagged highest-leverage surface), n24]: the SHARED
+low-rank frame_0 dictionary (counted once, n600-amortized) + per-pair coeffs BEATS per-pair rank-1
+(R4: d_pose 0.312 @ 1,813 B/pair vs per-pair-r1 3.526 @ 2,661 B/pair) — the pose directions ARE
+partially shared across pairs, a real finding. But LOTTO never approaches the free floor, has no
+cross-pair generalization evidence (dictionary fit on its own 24 pairs), and is Pareto-DOMINATED by
+the warp base for cheap realization (n600: contribution 1.98 @ 194 B total vs LOTTO R4 1.77 @
+1,813 B/pair = ~1.1 MB). The frame_0-pixel LOTTO is closed at
 FORMULATION; the JACOBIAN-aligned shared dictionary (store the pose-direction basis once) is the named
 next rung, un-raced. gc7r LOTTO-audit row-3 dispositioned: RACED, dominated-for-cheap-realization.
 
