@@ -25064,3 +25064,24 @@ is dominated. R2 (values, B2+B7 shared rung): int8×3 range(A)-residual incumben
 Tools: experiments/ddm_sp1_{contour_support_coder,values_coder,base_transfer_h_contract}.py. Memo
 .omx/research/ddm_sp1_contour_support_coder_20260728.md. Artifacts SSD
 /Volumes/VertigoDataTier/pact/ddm_sp1_20260728/{r1_contour_support,r2_values_coder}_n600.json.
+
+FEED-cl1 (2026-07-29, ddm_cl1 $0 paper-crosswalk, MAIN, no code/no launches): CliffordNet (arXiv 2601.06793
+v2, Zhongping Ji, single author; "geometric product uv=u·v+u∧v as sole interaction; No-FFN; Nano 1.4M→77.82%
+CIFAR-100, 8× fewer params") crosswalked vs the post-burn state. Evidence grade **PROMISING-BUT-UNVERIFIED-FOR-
+OUR-TASK**: CIFAR-scale, **classification-only (NO dense/segmentation result)**, single author, code released
+(github ParaMind2025/CAN, MIT, model.py/train.py/cuda, 178★, no weights, no exact-cmd README), no independent
+replication. **THE decisive arithmetic (all MEASURED from receipts):** LOTTO renderer stream = **3,284 B** =
+**0.37%** of the burn-endpoint counted total (t3_long_burn_lotto_v2 receipt: tokens **875,171** + renderer 3,284
++ selector 216 = 878,671 B @ full n600 realized d_seg **0.0038892**). Renderer→0 B ceiling ΔS_rate=**2.19e-3**;
+Clifford-8× best case ΔS_rate=**1.91e-3**. Binding token axis: lv1 lossless factorize (c_token_stack_race
+F1 kt_prev1) 531,097→364,581.7 B = ΔS_rate **0.1109** = **58× the entire Clifford-8× renderer gain**. VERDICT:
+**Clifford renderer race does NOT clear "shortens distance to a lower exact row" — renderer bytes NON-BINDING,
+dominated by the token axis; do not spend a vehicle slot.** GA pose check: rotor/**motor ≡ exp(se(3)) = Chasles
+= tac.lie** → N-A/ALREADY-COVERED (no byte/conditioning advantage; expected-NO confirmed). **SLEEPER (the one
+live thread):** token field [600,24,32,**4**] — c=4 = dim Cl(2,0) multivector {1,e1,e2,e12} → a `u·v`+`u∧v`
+(coherence/variation, or inter-frame-rotor) **lossless transform** is a $0 **coder-race candidate** (NOT arch
+change) → consumer **r7 coder race / pb1-P5**; falsifier = transformed-field entropy ≥ min(KT-prev1 364.6 KB,
+KLT-rebasis control); LOW prior (learned channels ≠ GA blades; must beat the KLT control; re-run on the 875 KB
+burn payload, not T2). Filed nothing-unreachable: Clifford renderer block = trigger-gated tb1 renderer-pool row
+(trigger = renderer capacity binds Lane nucleation). Pointer UNMOVED 0.1910828242 [contest-CPU]; all advisory.
+Memo .omx/research/ddm_cl1_cliffordnet_crosswalk_20260729.md. [no-triality] [p0-ledger-ok]
