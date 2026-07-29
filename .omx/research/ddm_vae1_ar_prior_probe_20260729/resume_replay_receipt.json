@@ -1,0 +1,174 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory, rate-only]",
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "checkpoint": {
+    "bytes": 14963203,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/t3_long_burn_lotto_v2/checkpoints/stage_seg_trunk_tau_final.npz",
+    "sha256": "33776302e4fabf0127b01dc3551bafbd747daff71f76946883177fede24de0d3"
+  },
+  "input": {
+    "levels": 16,
+    "shape": [
+      600,
+      24,
+      32,
+      4
+    ],
+    "token_sha256": "c95441ac92499772705b8d8d9853564858aeb8c08de7ae5560a37562db7e2b02"
+  },
+  "learned_ar_prior": {
+    "base_bytes": 1361,
+    "canonical_reencode_exact": true,
+    "formulation_config": {
+      "base": {
+        "codec": "raw_lzma1",
+        "extreme": true,
+        "packed_nibbles": "high_then_low",
+        "preset": 9,
+        "residual": "(token-stored_global_mode) mod levels",
+        "stored_global_mode": "lowest-symbol temporal mode at each h,w,c"
+      },
+      "context": {
+        "conditioning": [
+          "channel",
+          "stored_global_mode[h,w,c]",
+          "delta[t-1,h,w,c]"
+        ],
+        "pooling": "all h,w cells sharing channel,mode,previous_delta",
+        "t0_previous_delta": 0,
+        "target": "delta[t,h,w,c]"
+      },
+      "frame": {
+        "header": "<4sBBBB4HIII32s",
+        "max_channels": 256,
+        "max_model_bytes": 16777216,
+        "semantic_hash": "sha256(version,levels,shape,uint8_token_bytes)"
+      },
+      "model": {
+        "codec": "zlib",
+        "compression_level": 9,
+        "frequency_dtype": "little-endian uint16",
+        "frequency_total": 32768,
+        "normalization": "raw=2*count+1; proportional floor; min-one; stable largest-remainder add or stable reducible-mass remove",
+        "order": [
+          "channel",
+          "mode",
+          "previous_delta",
+          "current_delta"
+        ],
+        "smoothing": "2*count+1"
+      },
+      "range_coder": {
+        "state_bits": 32,
+        "traversal": [
+          "channel",
+          "pair",
+          "row-major cell"
+        ]
+      },
+      "schema": "ddm_vae1_counted_ar_prior_probe.v1.formulation"
+    },
+    "formulation_config_sha256": "4f86dd2101c7e6b992f797255917010297fcaab768fbff29f442ca5c8e6ffd62",
+    "formulation_scope": "STATIC_POOLED_MODE_DELTA_PREV1_COUNTED_CONFIG",
+    "framed_bytes": 581771,
+    "header_bytes": 60,
+    "model": "static pooled p(delta[t,h,w,c] | channel c, stored_global_mode[h,w,c], delta[t-1,h,w,c]), with t0 previous=0; (2*count+1) smoothing, uint16 CDF total 2^15, channel-major 32-bit range coder, zlib9 model, LZMA1-preset9-extreme mode-base side stream",
+    "model_bytes": 21868,
+    "model_weights_counted": true,
+    "parseback_exact": true,
+    "raw_model_bytes": 32768,
+    "raw_token_bytes": 1843200,
+    "residual_bytes": 558482,
+    "rule_118": "all fitted uint16 frequencies are carried in the counted model section; free code contains only generic fit/encode/decode algorithms",
+    "sha256": "88fdc5d40537b69fcf334e20a6b9e601043653db68e84449a5118bb6d38ceb1d"
+  },
+  "provenance": {
+    "command_argv": [
+      "uv",
+      "run",
+      "--no-project",
+      "--with",
+      "numpy",
+      "--with",
+      "brotli",
+      "python",
+      "-m",
+      "experiments.ddm_vae1_ar_prior_probe",
+      "--checkpoint",
+      "/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/t3_long_burn_lotto_v2/checkpoints/stage_seg_trunk_tau_final.npz",
+      "--output",
+      ".omx/research/ddm_vae1_ar_prior_probe_20260729/resume_replay_receipt.json",
+      "--resume-from",
+      ".omx/research/ddm_vae1_ar_prior_probe_20260729/progress_v2.json"
+    ],
+    "cwd": ".",
+    "environment": {
+      "PYTHONPATH": "src:."
+    },
+    "git_head_at_measurement": "24e4fdde877e88e79650f967323a0b8be3597ac9",
+    "rng": "none",
+    "seed": null
+  },
+  "race": {
+    "delta_bytes_ar_minus_smevr": 24533,
+    "disposition": "FALSIFIED_AT_STATIC_POOLED_MODE_DELTA_PREV1_COUNTED_CONFIG_FORMULATION_SCOPE",
+    "falsifier": "coded_bytes + prior_bytes >= SMEVR same-object bytes",
+    "falsifier_fired": true,
+    "prompt_incumbent_bytes": 557238,
+    "same_object_smevr_bytes": 557238,
+    "same_object_smevr_sha256": "9d8fd725a75364173d79e4e8d60cf2f1146057c099e6f0d9cb9e547d8b1065f1",
+    "verdict_scope": "FORMULATION x STATIC_POOLED_MODE_DELTA_PREV1_COUNTED_CONFIG x config_sha256=4f86dd2101c7e6b992f797255917010297fcaab768fbff29f442ca5c8e6ffd62"
+  },
+  "resumability": {
+    "artifact_custody": {
+      "bytes": 2767,
+      "path": ".omx/research/ddm_vae1_ar_prior_probe_20260729/artifact_custody.json",
+      "sha256": "37d602009a3b01325a05ba0e6bf376247bfa1b04b7563c2fd9274fae7a38204a"
+    },
+    "model_checkpoint": {
+      "bytes": 23425,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_vae1_20260729/ar_prior_probe_static_pooled_4f86dd21/progress_v2.stage-001-33776302e4fa.npz",
+      "path": ".omx/research/ddm_vae1_ar_prior_probe_20260729/progress_v2.stage-001-33776302e4fa.npz",
+      "sha256": "ac6a8e0b81afcdc0ea404f4c255cd2f8834cf9768866f84e5828824f8bc16735"
+    },
+    "progress": {
+      "bytes": 1665,
+      "path": ".omx/research/ddm_vae1_ar_prior_probe_20260729/progress_v2.json",
+      "sha256": "9ccb546df7662459e030e4053deae6aee81b9605f1b93c7c7ead56dfdf67cbaf"
+    },
+    "token_frame_checkpoint": {
+      "bytes": 581771,
+      "cold_store_path": "/Volumes/VertigoDataTier/pact/ddm_vae1_20260729/ar_prior_probe_static_pooled_4f86dd21/progress_v2.stage-002-33776302e4fa.bin",
+      "path": ".omx/research/ddm_vae1_ar_prior_probe_20260729/progress_v2.stage-002-33776302e4fa.bin",
+      "sha256": "88fdc5d40537b69fcf334e20a6b9e601043653db68e84449a5118bb6d38ceb1d"
+    }
+  },
+  "runtime": {
+    "decode_seconds_including_canonical_reencode": 4.234699,
+    "incumbent_encode_seconds": 5.338775,
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+    "wall_seconds": 21.999488,
+    "zlib_runtime": "1.2.12"
+  },
+  "schema": "ddm_vae1_counted_ar_prior_probe.v1",
+  "source_files": {
+    "probe": {
+      "bytes": 36551,
+      "sha256": "5043d0c9e5e679af84f1f7290099bf09f212ddc950da599e19a08e26c38a5d84"
+    },
+    "r7_coder": {
+      "bytes": 39421,
+      "sha256": "f84b29e794a902425c560ff62fa3e20dbc2017449f14db474d347acbbc3b9396"
+    },
+    "tr1_runtime": {
+      "bytes": 48443,
+      "sha256": "f3b93708b542e53d7a135233d8ba51bd406a5f6b6a55a7b80855369e9cebb2e9"
+    }
+  }
+}
