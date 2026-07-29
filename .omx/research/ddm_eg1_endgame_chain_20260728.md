@@ -233,7 +233,8 @@ pretending a group is one pixel `IntegerMove`. It requires:
   no-new-score/scorer signals;
 - exactly 24 precommitted matched integer-random controls;
 - at most 48 candidate evaluations plus one shared base;
-- deterministic proposal/control identities and seed;
+- deterministic, all-distinct proposal/control identities with a reserved
+  shared-base identity and fixed seed;
 - compile, parse-back, exact-consumption, realized joint-action evaluation for
   every candidate; and
 - strict score improvement for selection.
@@ -302,7 +303,7 @@ inside this module, even a strict full-n600-shaped improvement sets only
 
 | surface | final verification |
 |---|---|
-| focused tests | 57 passed: TR1 8, policy 19, QDBS 21, pose 9 |
+| focused tests | 58 passed: TR1 8, policy 19, QDBS 22, pose 9 |
 | static checks | Ruff check/format and Python byte-compilation clean on all 12 new Python files; `git diff --check` clean |
 | receipt determinism | all four generated JSON receipts reproduced byte-identically; receipt SHA-256 values are recorded above |
 | review gate | two explicit review passes recorded for every new/modified Python file; no review-gate override |
