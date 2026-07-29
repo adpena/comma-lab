@@ -1,0 +1,134 @@
+{
+  "competitive_target": {
+    "note": "0.172 is the conservative displayed comparator; only an exact official row is authority",
+    "official_displayed": 0.172,
+    "sub015": 0.15
+  },
+  "configuration_corners": {
+    "pp1_conditional": {
+      "archive_bytes": 215616.5,
+      "d_pose": 2.33e-05,
+      "d_seg": 0.0003,
+      "pose_term": 0.015264337522473748,
+      "rate_term": 0.14357017696586666,
+      "score": 0.1888345144883404,
+      "seg_term": 0.03
+    },
+    "tr1_banked_pose_fallback": {
+      "archive_bytes": 201000,
+      "d_pose": 0.00161,
+      "d_seg": 0.0005,
+      "pose_term": 0.1268857754044952,
+      "rate_term": 0.13383764957755645,
+      "score": 0.31072342498205163,
+      "seg_term": 0.05
+    },
+    "tr1_optimistic_decimal_149k": {
+      "archive_bytes": 149000,
+      "d_pose": 2.33e-05,
+      "d_seg": 0.000297,
+      "pose_term": 0.015264337522473748,
+      "rate_term": 0.09921298401520354,
+      "score": 0.1441773215376773,
+      "seg_term": 0.0297
+    },
+    "tr1_spec_mid": {
+      "archive_bytes": 196000,
+      "d_pose": 2.33e-05,
+      "d_seg": 0.0003,
+      "pose_term": 0.015264337522473748,
+      "rate_term": 0.1305083548119456,
+      "score": 0.17577269233441933,
+      "seg_term": 0.03
+    },
+    "tr1_spec_mid_dseg_5e4": {
+      "archive_bytes": 196000,
+      "d_pose": 2.33e-05,
+      "d_seg": 0.0005,
+      "pose_term": 0.015264337522473748,
+      "rate_term": 0.1305083548119456,
+      "score": 0.19577269233441935,
+      "seg_term": 0.05
+    }
+  },
+  "current_t2": {
+    "archive_bytes": 534597,
+    "conditional_note": "CONTINUE requires a positive measured hard receiver-realized training quote; the tracked T2 endpoint alone is not such a next-window quote",
+    "conditional_train_only_action": "CONTINUE_BOUNDED_WINDOW",
+    "d_seg": 0.013833,
+    "policy_without_same_parent_quotes": "MEASURE_FINISHER_QUOTE",
+    "pose_lower_bound": 0.0,
+    "score_lower_bound": 1.7392661987622535
+  },
+  "generator": "tools/derive_ddm_endgame_policy.py",
+  "main_landing_review_required": true,
+  "promotion_eligible": false,
+  "qdbs_cost_quote": {
+    "candidate_evaluations_max": 48,
+    "full_verdict_seconds_lower": 423,
+    "full_verdict_seconds_upper": 514,
+    "gain": null,
+    "qdbs_candidates": 24,
+    "random_controls": 24,
+    "shared_base_verdicts": 1,
+    "status": "DERIVED_FROM_MEASURED_FULL_VERDICT_TIMES_NOT_MEASURED_QDBS_RUNTIME",
+    "total_full_verdicts": 49,
+    "total_seconds_lower": 20727,
+    "total_seconds_upper": 25186
+  },
+  "r1_banked_pose": {
+    "counted_section_bytes": 7195,
+    "d_pose": 0.00161,
+    "pose_term": 0.1268857754044952,
+    "score_at_dseg_3e4_zero_bytes": 0.1568857754044952,
+    "sub015_possible_at_dseg_3e4": false
+  },
+  "research_only": true,
+  "schema": "ddm_eg1_policy_arithmetic.v1",
+  "score_claim": false,
+  "score_law": {
+    "archive_denominator": 37545489,
+    "binary_64kib_score_price": 0.043637732351814625,
+    "binary_kib_score_price": 0.0006818395679971035,
+    "byte_score_price": 6.658589531221714e-07,
+    "formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489"
+  },
+  "source_receipts": [
+    ".omx/research/ddm_tb1_renderer_build_20260728.md",
+    ".omx/research/SPEC_tr1_trained_partition_renderer_20260728.md",
+    ".omx/research/ddm_eu1_sol_ultra_eureka_hunt_20260728.md",
+    ".omx/research/ddm_pc2_pose_descent_smoke_result_20260725.json",
+    ".omx/research/r1_dxi_shippability_byteclose_20260708.md",
+    ".omx/research/basin_finisher_head_solve_probe_measured_20260707.md"
+  ],
+  "strict_integer_byte_ceilings": {
+    "dseg_0_banked_r1_pose": {
+      "official_displayed_0p172": 67753,
+      "sub015": 34713
+    },
+    "dseg_3e4_banked_r1_pose": {
+      "official_displayed_0p172": 22698,
+      "sub015": null
+    },
+    "dseg_3e4_dpose_2p33e5": {
+      "official_displayed_0p172": 190334,
+      "sub015": 157294
+    },
+    "dseg_5e4_dpose_2p33e5": {
+      "official_displayed_0p172": 160297,
+      "sub015": 127257
+    }
+  },
+  "terminal_pose_measured_quote": {
+    "accepted_steps": 16,
+    "candidate_evaluations": 192,
+    "delta_archive_bytes": 23,
+    "delta_d_pose": -2.1452689763775084,
+    "delta_d_seg": 0.0001900566948784717,
+    "delta_score": -0.24750113405601581,
+    "elapsed_seconds": 1275.2549629998393,
+    "gain_score_per_hour": 0.6986870143251261,
+    "scope": "PC2 exact ws4 W_joint-step50 parent only; no transfer to TR1",
+    "tr1_2kb_dpose_2p33e5_price_status": "UNMEASURED_ON_OUR_VEHICLE"
+  }
+}

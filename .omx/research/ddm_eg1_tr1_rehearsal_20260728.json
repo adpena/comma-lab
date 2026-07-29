@@ -1,0 +1,223 @@
+{
+  "archive": {
+    "bytes": 504736,
+    "deterministic_compile_twice": true,
+    "exact_parse_reemit": true,
+    "sha256": "5c33f231339854e929dc0d1ef19abf51abd7ede521ad0e04650f572e8b5c12db",
+    "zip_compression": "stored"
+  },
+  "catalog_417_receiver_consumption": {
+    "catalog_402_correction": "#402 is telemetry liveness; exact counted consumption is #417",
+    "final_cursor_equal": true,
+    "pose_stub_consumed": true,
+    "section_ledger": [
+      {
+        "bytes": 499587,
+        "consumer": "TR1Receiver.decode_combined_tokens",
+        "name": "tokens",
+        "sha256": "60cdfc0b848b850faf22b39a7093416b1562a3d06e13acc4b5d62f14a9c6deb0"
+      },
+      {
+        "bytes": 3341,
+        "consumer": "TR1Receiver.regenerate_bank_and_apply_mask_mods",
+        "name": "lotto_renderer",
+        "sha256": "71eb7926527da09a6c11f45afedba380d8db5290f3f8b678656d4cd0e88dfc0c"
+      },
+      {
+        "bytes": 535,
+        "consumer": "TR1Receiver.select_decode_program",
+        "name": "selector",
+        "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+      },
+      {
+        "bytes": 83,
+        "consumer": "TR1Receiver.consume_inert_pose_declaration",
+        "name": "pose_stub",
+        "sha256": "01cfd661fde76ba244436e66dcb5d842e6293461c29c32834dc8f0285ca9001d"
+      }
+    ],
+    "strict_order": [
+      "tokens",
+      "lotto_renderer",
+      "selector",
+      "pose_stub"
+    ],
+    "trailing_bytes_refused": true
+  },
+  "checkpoint": {
+    "bytes": 14963191,
+    "config_hash": "4084272b5441a3732e642c2550e66349c61d60738915870c2d867f54c305f1ae",
+    "parameter_set": "ema",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/checkpoints/stage_seg_trunk_tau_final.npz",
+    "sha256": "67454bc9ac30ea6f971c29c6c6cea7b8af8d98293ed77e44be3a14b8a8667bc2"
+  },
+  "implementation": {
+    "runtime_bytes": 48443,
+    "runtime_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_eg1_endgame_chain_20260729T000937Z/src/tac/optimization/ddm_tr1_runtime.py",
+    "runtime_sha256": "f3b93708b542e53d7a135233d8ba51bd406a5f6b6a55a7b80855369e9cebb2e9",
+    "tool_bytes": 21991,
+    "tool_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/ddm_eg1_endgame_chain_20260729T000937Z/tools/rehearse_ddm_tr1_runtime.py",
+    "tool_sha256": "1509fde5c9c4710cf64300abfae9a8ea84fff352ffd3f10249a3ce5ec5f5c13e"
+  },
+  "packet": {
+    "bytes": 504249,
+    "combined_ema_base_plus_delta": true,
+    "sha256": "1dd5453a36cf75a6f4be80287961f0e455c8e2e6b35aecc991a174204665f7bf"
+  },
+  "parity": {
+    "backend_a": "numpy_fp32_scipy_erf_receiver",
+    "backend_b": "mlx_cpu_fp32_with_deployed_fp16_values_upcast",
+    "camera_reference": "torch_cpu_bicubic_align_corners_false_uint8",
+    "pair_rows": [
+      {
+        "camera_byte_agreement": 0.999979357852273,
+        "camera_byte_mismatches": 63,
+        "camera_values": 3052008,
+        "float32_max_abs": 0.0002288818359375,
+        "float32_mean_abs": 9.401179340784438e-06,
+        "pair_id": 0,
+        "source_ema_fp32_camera_byte_agreement": 0.9908771536640795,
+        "source_ema_fp32_camera_byte_mismatches": 27843,
+        "source_ema_fp32_float32_max_abs": 0.2470245361328125,
+        "source_ema_fp32_float32_mean_abs": 0.009095950052142143,
+        "token_max_abs": 0.0,
+        "token_mean_abs": 0.0
+      }
+    ],
+    "parity_minimum": 0.9997,
+    "passed": true,
+    "source_ema_fp32_deploy_gap_status": "MEASURED_NOT_BACKEND_PARITY",
+    "source_ema_fp32_reference": "mlx_cpu_fp32_checkpoint_forward",
+    "trainer_source_sha256": "2adf40b896493fbf72802c3adde244cf2dcf327dbb36ed3e4173d7d988a8bafa"
+  },
+  "pointer_moved": false,
+  "pose_claim": false,
+  "pose_stub": {
+    "frame0_behavior": "generic_zero_frame",
+    "inert": true,
+    "pose_claim": false,
+    "values_count": 0
+  },
+  "promotion_eligible": false,
+  "research_only": true,
+  "run_id": "ddm_eg1_tr1_rehearsal_20260728",
+  "schema": "ddm_eg1_tr1_rehearsal.v1",
+  "score_claim": false,
+  "stale_pairs_rendered": [
+    0
+  ],
+  "upstream_bounded_smoke": {
+    "attempted": true,
+    "blocker": null,
+    "command": [
+      "bash",
+      "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt/evaluate.sh",
+      "--submission-dir",
+      "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt/submission",
+      "--video-names-file",
+      "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt/public_test_video_names.txt",
+      "--device",
+      "cpu"
+    ],
+    "copied_locked_assets": [
+      {
+        "bytes": 6005,
+        "path": "evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      },
+      {
+        "bytes": 1934,
+        "path": "evaluate.sh",
+        "sha256": "9612284ce6e9585aefcf636f3027808a56160ffd572edffdf4b8622a65fac917"
+      },
+      {
+        "bytes": 9345,
+        "path": "frame_utils.py",
+        "sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90"
+      },
+      {
+        "bytes": 8322,
+        "path": "modules.py",
+        "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+      },
+      {
+        "bytes": 38502892,
+        "path": "models/segnet.safetensors",
+        "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+      },
+      {
+        "bytes": 55835560,
+        "path": "models/posenet.safetensors",
+        "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+      }
+    ],
+    "evaluate_py_bytes": 6005,
+    "evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+    "evaluate_sh_bytes": 1934,
+    "evaluate_sh_sha256": "9612284ce6e9585aefcf636f3027808a56160ffd572edffdf4b8622a65fac917",
+    "exit_code": 0,
+    "inflated_bytes": 6104016,
+    "inflated_path": "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt/submission/inflated/0.raw",
+    "inflated_sha256": "b92919d073d6598c33a6e6a33c8c95364986f5564cd7c6f7e7bf251bc30711d7",
+    "interface_only": true,
+    "locked_hashes_match": true,
+    "locked_python_exists": true,
+    "locked_python_path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e4_brotli_declared_dep_20260724/env_brotli/bin/python",
+    "locked_python_resolved": "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+    "proof_root": "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt",
+    "rate_and_score_comparable": false,
+    "report_bytes": 869,
+    "report_path": "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt/submission/report.txt",
+    "report_sha256": "3390f22f6cedeabf5ad8fe4fd7be7e4a584a9e3cb1539e663038147b3ad51716",
+    "sample_count": 1,
+    "status": "PASS_INTERFACE_ONLY_NONCOMPARABLE",
+    "stderr_path": "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt/bounded_evaluate.stderr.8de73fd64ec0570d850127b4eba81929f98f0dcf18c164775eb97c6b1ebd1a52.txt",
+    "stdout_path": "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt/bounded_evaluate.stdout.76c0e5037ead189cada8e9403b8a30be96f3a2d85d6a6d6426fceeafed07f7c4.txt",
+    "storage_preflight": {
+      "checked_tier": "/Volumes/VertigoDataTier/pact",
+      "minimum_free_bytes": 268435456,
+      "passed": true,
+      "scratch_policy": "atomic temporary files removed; durable proof bytes retained"
+    },
+    "video_derivation": {
+      "command": [
+        "/opt/homebrew/bin/ffmpeg",
+        "-v",
+        "error",
+        "-nostdin",
+        "-i",
+        "/Volumes/VertigoDataTier/pact/molab_witness_machine_upstream_20260709/videos/0.mkv",
+        "-map",
+        "0:v:0",
+        "-frames:v",
+        "2",
+        "-an",
+        "-c:v",
+        "ffv1",
+        "-level",
+        "3",
+        "-pix_fmt",
+        "yuv420p",
+        "-fflags",
+        "+bitexact",
+        "-flags:v",
+        "+bitexact",
+        "-map_metadata",
+        "-1",
+        "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt/videos/0.bounded.tmp.mkv"
+      ],
+      "ffmpeg_bytes": 441728,
+      "ffmpeg_path": "/opt/homebrew/bin/ffmpeg",
+      "ffmpeg_sha256": "1332dc2de372bade9a8a63da0d6cdfab9de97fcefbae707bcc0b0506e1203327",
+      "source_bytes": 37545489,
+      "source_path": "/Volumes/VertigoDataTier/pact/molab_witness_machine_upstream_20260709/videos/0.mkv",
+      "source_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+      "superseded_previous": null,
+      "target_bytes": 1205740,
+      "target_path": "/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728_root_review_fmt/videos/0.mkv",
+      "target_sha256": "84e151176966c976625859f6a0ba231f070db3c9341123cfedd85add773e92e6",
+      "temporary_removed": true
+    }
+  },
+  "verdict": "PASS_BOUNDED_RUNTIME_AND_INTERFACE_ONLY_EVALUATOR"
+}
