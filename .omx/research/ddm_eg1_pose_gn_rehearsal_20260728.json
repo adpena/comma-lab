@@ -1,0 +1,299 @@
+{
+  "authority_blocker": "Pinned frozen PoseNet was evaluated on exactly one stale composed pair. d_seg=0 encodes the exact frame1-frozen delta but omits the constant parent d_seg; archive_bytes prices only the terminal section because candidate artifact equals terminal packet; no full archive, n600 scorer pass, or public evaluator was invoked.",
+  "basis_provenance": {
+    "amplitude_q8": 512,
+    "basis_key_contract": [
+      "seed",
+      "basis_selector",
+      "frame_shape"
+    ],
+    "basis_selector": "eg1_generic_low_frequency_six_v1",
+    "copied_pr130_constants_or_payload": false,
+    "kind": "generic analytic lowest-frequency cosine fields",
+    "pr130_transfer": "lessons only: low-frequency carrier, per-field zero-mean/unit-RMS normalization, per-pair coefficients",
+    "rank": 6,
+    "seed": 20260728
+  },
+  "frozen_posenet_rehearsal": {
+    "authority_mode": "STALE_REHEARSAL",
+    "candidate_artifact_scope": "terminal-section-only; outer artifact equals packet",
+    "evidence_axis": "[macOS-CPU frozen-PoseNet one-pair advisory]",
+    "final_candidate_artifact": {
+      "archive_bytes": 107,
+      "archive_sha256": "600aae6bad9c17cdfd37363e7161da29fd26fc6966e6fc84259688ca2553ee94",
+      "binding_sha256": "146be7918eb3fab07b3e5d2bc6754e4fdd2c6d1546c58eb6fd7a14b37896b052",
+      "scope": "TERMINAL_SECTION_ONLY",
+      "terminal_packet_bytes": 107,
+      "terminal_packet_sha256": "600aae6bad9c17cdfd37363e7161da29fd26fc6966e6fc84259688ca2553ee94"
+    },
+    "final_coefficients": [
+      0,
+      5,
+      0,
+      1,
+      5,
+      4
+    ],
+    "final_packet_bytes": 107,
+    "final_packet_sha256": "600aae6bad9c17cdfd37363e7161da29fd26fc6966e6fc84259688ca2553ee94",
+    "frame1_frozen_all_realized_verdicts": true,
+    "governed_handoff_eligible": false,
+    "initial_coefficients": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "joint_action_final": 3.6749310673368702,
+    "joint_action_initial": 7.267594455511593,
+    "joint_components_final": {
+      "archive_bytes": 107,
+      "archive_sha256": "600aae6bad9c17cdfd37363e7161da29fd26fc6966e6fc84259688ca2553ee94",
+      "custody_digest": null,
+      "d_pose": 1.3504594699802628,
+      "d_seg": 0.0
+    },
+    "joint_components_initial": {
+      "archive_bytes": 107,
+      "archive_sha256": "4f3cb7e63c42c6ede3c52b511e03f218a78f4302e4c679621c687a21fe7c1c6e",
+      "custody_digest": null,
+      "d_pose": 5.28168935875921,
+      "d_seg": 0.0
+    },
+    "max_pairs": 1,
+    "oracle": {
+      "mode": "pinned_upstream_frozen_posenet_cpu",
+      "modules_path": "/Volumes/VertigoDataTier/pact/molab_witness_machine_upstream_20260709/modules.py",
+      "modules_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "pose_model_path": "/Volumes/VertigoDataTier/pact/molab_witness_machine_upstream_20260709/models/posenet.safetensors",
+      "pose_model_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+    },
+    "pose_mse_final": 1.3504594699802628,
+    "pose_mse_initial": 5.28168935875921,
+    "production_accepted": false,
+    "promotion_allowed": false,
+    "rehearsal_command": "PYTHONPATH=src uv run --no-project python tools/rehearse_terminal_pose_gn.py --max-pairs 1 --relinearizations 2 --oracle frozen-posenet",
+    "score_claim": false,
+    "steps": [
+      {
+        "admitted": true,
+        "coefficients_after": [
+          1,
+          3,
+          1,
+          1,
+          2,
+          3
+        ],
+        "coefficients_before": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "finite_difference_evaluations": 12,
+        "iteration": 0,
+        "joint_action_after": 3.9448445497273634,
+        "joint_action_before": 7.267594455511593,
+        "line_search_alpha": 0.5,
+        "pose_mse_after": 1.5561236410636514,
+        "pose_mse_before": 5.28168935875921
+      },
+      {
+        "admitted": true,
+        "coefficients_after": [
+          0,
+          5,
+          0,
+          1,
+          5,
+          4
+        ],
+        "coefficients_before": [
+          1,
+          3,
+          1,
+          1,
+          2,
+          3
+        ],
+        "finite_difference_evaluations": 12,
+        "iteration": 1,
+        "joint_action_after": 3.6749310673368702,
+        "joint_action_before": 3.9448445497273634,
+        "line_search_alpha": 0.25,
+        "pose_mse_after": 1.3504594699802628,
+        "pose_mse_before": 1.5561236410636514
+      }
+    ],
+    "strict_realized_improvement": true,
+    "target_pose6": [
+      34.244171142578125,
+      -6.718933582305908e-05,
+      0.0017319023609161377,
+      -0.0008645355701446533,
+      -0.012666240334510803,
+      -0.0002148747444152832
+    ]
+  },
+  "generated_by": "tools/rehearse_terminal_pose_gn.py --oracle both",
+  "max_pairs": 1,
+  "mechanism_canary": {
+    "authority_mode": "STALE_REHEARSAL",
+    "candidate_artifact_scope": "terminal-section-only; outer artifact equals packet",
+    "evidence_axis": "[deterministic stale mechanism rehearsal]",
+    "final_candidate_artifact": {
+      "archive_bytes": 107,
+      "archive_sha256": "dca97f35857b74b42e6c5b1d639453582a3c1caa7b6d349207ed7d9581f99a3b",
+      "binding_sha256": "077ee1c64254b22952089b7a5c3812811eec7c144b67050d37daccadbe945293",
+      "scope": "TERMINAL_SECTION_ONLY",
+      "terminal_packet_bytes": 107,
+      "terminal_packet_sha256": "dca97f35857b74b42e6c5b1d639453582a3c1caa7b6d349207ed7d9581f99a3b"
+    },
+    "final_coefficients": [
+      -2,
+      -2,
+      -1,
+      -1,
+      0,
+      0
+    ],
+    "final_packet_bytes": 107,
+    "final_packet_sha256": "dca97f35857b74b42e6c5b1d639453582a3c1caa7b6d349207ed7d9581f99a3b",
+    "frame1_frozen_all_realized_verdicts": true,
+    "governed_handoff_eligible": false,
+    "initial_coefficients": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "joint_action_final": 1.660079128739362,
+    "joint_action_initial": 7.359871968847857,
+    "joint_components_final": {
+      "archive_bytes": 107,
+      "archive_sha256": "dca97f35857b74b42e6c5b1d639453582a3c1caa7b6d349207ed7d9581f99a3b",
+      "custody_digest": null,
+      "d_pose": 0.27556261677422983,
+      "d_seg": 0.0
+    },
+    "joint_components_initial": {
+      "archive_bytes": 107,
+      "archive_sha256": "4f3cb7e63c42c6ede3c52b511e03f218a78f4302e4c679621c687a21fe7c1c6e",
+      "custody_digest": null,
+      "d_pose": 5.416666666666667,
+      "d_seg": 0.0
+    },
+    "max_pairs": 1,
+    "oracle": {
+      "mode": "deterministic_test_oracle",
+      "pose_model_sha256": null
+    },
+    "pose_mse_final": 0.27556261677422983,
+    "pose_mse_initial": 5.416666666666667,
+    "production_accepted": false,
+    "promotion_allowed": false,
+    "rehearsal_command": "PYTHONPATH=src uv run --no-project python tools/rehearse_terminal_pose_gn.py --max-pairs 1 --relinearizations 2 --oracle test",
+    "score_claim": false,
+    "steps": [
+      {
+        "admitted": true,
+        "coefficients_after": [
+          -2,
+          -2,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        "coefficients_before": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "finite_difference_evaluations": 12,
+        "iteration": 0,
+        "joint_action_after": 1.8947843830919322,
+        "joint_action_before": 7.359871968847857,
+        "line_search_alpha": 1.0,
+        "pose_mse_after": 0.35899378684280125,
+        "pose_mse_before": 5.416666666666667
+      },
+      {
+        "admitted": true,
+        "coefficients_after": [
+          -2,
+          -2,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        "coefficients_before": [
+          -2,
+          -2,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        "finite_difference_evaluations": 12,
+        "iteration": 1,
+        "joint_action_after": 1.660079128739362,
+        "joint_action_before": 1.8947843830919322,
+        "line_search_alpha": 1.0,
+        "pose_mse_after": 0.27556261677422983,
+        "pose_mse_before": 0.35899378684280125
+      }
+    ],
+    "strict_realized_improvement": true,
+    "target_pose6": [
+      34.244171142578125,
+      -6.718933582305908e-05,
+      0.0017319023609161377,
+      -0.0008645355701446533,
+      -0.012666240334510803,
+      -0.0002148747444152832
+    ]
+  },
+  "pointer_moved": false,
+  "production_accepted": false,
+  "promotion_allowed": false,
+  "promotion_eligible": false,
+  "schema": "ddm_eg1_terminal_pose_gn_stale_rehearsal.v2",
+  "score_claim": false,
+  "stale_substrate": {
+    "pair_id": 0,
+    "pair_shape": [
+      2,
+      874,
+      1164,
+      3
+    ],
+    "pairs_raw": "/Volumes/VertigoDataTier/pact/ddm_ct1_campaign_telemetry_encode_20260725/e5a_runtime/output_identity/2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241/pairs_0000_0032.raw",
+    "pairs_raw_bytes": 195328512,
+    "pairs_raw_sha256_from_sidecar": "e77fc230cff749fae4d2a24f0be653d5a22c2a1834a97ef91afd4d54a230ee2c",
+    "pairs_sidecar": "/Volumes/VertigoDataTier/pact/ddm_ct1_campaign_telemetry_encode_20260725/e5a_runtime/output_identity/2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241/pairs_0000_0032.json",
+    "pairs_sidecar_sha256": "98a2704cff9b6933f9b558b75cf7313cffb6938d16f4726f9a5daa620792d547",
+    "state_sha256": "2a2c0367150f8c8c0953dfb5c1485e238bbc9995c37385e149e52ae22f506241",
+    "target_bundle": "/Volumes/VertigoDataTier/pact/ddm_ms4_metric_producers_and_measurement_20260724T042005Z/pose_metric_n600_batch32.json",
+    "target_bundle_sha256": "5e06cc78711a6ca6984c907600a25816cdecc6239903f782d85bcf9473a8f1bc",
+    "target_pose6": [
+      34.244171142578125,
+      -6.718933582305908e-05,
+      0.0017319023609161377,
+      -0.0008645355701446533,
+      -0.012666240334510803,
+      -0.0002148747444152832
+    ]
+  }
+}
