@@ -1,0 +1,22 @@
+{
+ "schema": "ddm_pb1_p2b_receipt.v1",
+ "arm": "ddm_pb1",
+ "step": "P2b #400 mc_finisher diagonal (1+1)-ES on the tr1 renderer stream",
+ "date_utc": "2026-07-29",
+ "pointer_honesty": "0.1910828242 [contest-CPU] UNMOVED; [macOS-CPU advisory]; score_claim=false",
+ "design_source": "rv1-R1 verbatim (#400 diagonal adapted to the tr1 renderer stream; typed node was execution_enabled=false/unbuilt); bounded tr1 instantiation, budget 8, seed 20260729",
+ "base": {"archive": "p4b_composed_archive.zip", "d_seg": 0.0038887956407335075, "d_pose": 78.19573685749938, "archive_bytes": 768216, "joint_action": 28.863903715112325},
+ "best": {"archive": "p2b_best_archive.zip", "d_seg": 0.003891432020399305, "d_pose": 77.96472264897838, "archive_bytes": 768216, "joint_action": 28.822830417900505},
+ "delta_vs_base": -0.0410732972118204,
+ "component_deltas": {"seg_term": 0.00026, "pose_term": -0.04134, "rate_term": 0.0},
+ "trials": "8 evaluated: trial1 accepted -1.94e-2 (sigma 0.6), trial2 accepted -2.17e-2 (sigma 0.9); trials 0,3,4,5,6,7 rejected as sigma annealed 1.0->0.175 (one-fifth rule); receipt on SSD has the full per-trial table",
+ "finding": "the diagonal ES gain is PURE POSE-TERM: renderer g/b mutations move frame1 luma that PoseNet reads; at the zeros-frame0 base (d_pose 78.2) the pose gradient in renderer space dwarfs the seg gradient. Seg cost +2.6e-4 S; bytes unchanged (768,216 both - fp16 re-encode Brotli-size-stable).",
+ "quote_for_e2": {"kind": "SEG_GN_FAMILY_DIAGONAL_ES", "gain": 0.0410732972118204, "wall_seconds": 2023.15, "gain_rate_per_hour": 0.0731, "verdict_scope": "INSTANCE (budget 8, this sigma schedule, zeros-frame0 operating point)"},
+ "endpoint_decision": "P2b best FROZEN as the seg endpoint for P2c/P3: greedy joint (-4.11e-2) + at post-P3 pose scales the sqrt-term sensitivity (5/sqrt(10d)) amplifies any surviving base-pose advantage (0.179/unit at d=78 vs 1.118/unit at d=2) while the seg cost is trivial; survival-under-frame0-painting is the open empirical question P3 answers. INSTANCE-scope reasoning, documented not assumed.",
+ "independent_confirm": "fresh per-pair full verdict launched on p2b_best_archive.zip (out-dir p2_endpoint) - also the P2c/P3/P5 cache",
+ "authority_note": "STALE_REHEARSAL-analog honest labeling; full-population realized verdicts per candidate (renderer edits touch all pairs - no incremental shortcut used)",
+ "sha256": {"p2b_best_archive": "see SSD receipt", "receipt": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p2b_mc400_diagonal_receipt.json"},
+ "evidence_axis": "[macOS-CPU advisory]",
+ "score_claim": false,
+ "promotion_eligible": false
+}
