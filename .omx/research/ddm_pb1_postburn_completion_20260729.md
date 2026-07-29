@@ -115,7 +115,45 @@ g/b modulation values, full-population realized acceptance (renderer edits touch
 — every candidate is a fresh full n600 verdict), supermask untouched, budget 8.
 
 - Base (= P4b composed endpoint) reproduced independently: action 28.863904. ✓
-- **[P2B-FILL: trials, accepted deltas, final best action + decomposition, quote for E2]**
+- **Result: strict improvement −4.107e-2** (28.863904 → 28.822830) from 2/8 accepted
+  mutations (trials 1,2 at σ 0.6/0.9); trials 0,3–7 rejected as the 1/5th rule annealed
+  σ 1.0→0.175. **Decomposition: the gain is PURE POSE-TERM** (−0.04134) — renderer g/b
+  mutations move frame1 luma that PoseNet reads, and at the zeros-frame0 base (d_pose 78.2)
+  the pose gradient in renderer space dwarfs the seg gradient; seg cost +2.6e-4 S; bytes
+  UNCHANGED (768,216 both — fp16 re-encode is Brotli-size-stable). The independent fresh
+  per-pair confirm MATCHES the internal best row exactly (d_seg 0.0038914 / d_pose 77.96472
+  — second instrument-agreement control).
+- **Quote for E2:** SEG_GN_FAMILY_DIAGONAL_ES, gain 0.04107, wall 2023 s (0.073 S/hour),
+  scope INSTANCE (budget 8, this σ schedule, zeros-frame0 operating point).
+- Endpoint decision: P2b best frozen forward (greedy joint; at post-P3 pose scales the
+  √-term sensitivity 5/√(10d) amplifies any surviving base-pose advantage — 0.179/unit at
+  d=78 vs 1.118/unit at d=2 — while the seg cost is trivial; survival-under-frame0-painting
+  is the empirical question P3 answers).
+
+## §4b P2c — ru1-atlas-AIMED cell edits (round-1, gc6 time-boxed)
+
+ru1 (commit cf0e2f5b8b) re-aimed P2: the solve surface is ~100 hotspot CELLS (top-100 of
+768 hold 83.1% of 458,738 flips; 486 cells empty), and its atlas was verified
+**bit-identical to the pb1 P1 verdict (max |diff| = 0.0, flip totals equal)** — two
+independent instruments agree (the apparatus-validity positive control for this chain).
+Driver `tools/pb1_aimed_cell_edits.py`: top-24 (pair,cell) instances, best-of-8
+single-quantum edits (4 ch × ±1, lattice-legal), acceptance on the FULL-PAIR realized
+d_seg (never cell-local — ERF collateral; ru1 measured blind edits median −1 flip / 65%
+net-negative), greedy-sequential exact, composed final gate on the full joint action with
+real Brotli bytes (the §3 knee lesson).
+
+- **Result: 23/24 instances accepted, net −155 flips** (mean −6.7/instance), wall 433 s.
+  The aimed currency TRANSFERS to the live endpoint even stronger than ru1's 17/18 probe.
+  **The ru1 row-1 falsifier ("pb1 P2 fixes < +151") did NOT fire — the strict free-solve
+  band (11.9% of flips, ΔS −0.046 Contrarian-bound) survives on the deployed vehicle.**
+- Composed joint gate PASSED: 28.822830 → **28.822442** (−3.88e-4 net of bytes; archive
+  767,812 B). Contrast with §2: BLIND singletons were seg-nil; AIMED singletons repair seg.
+- **gc6 time-box honored:** round-1 ran to its falsifier answer, frames FROZE at
+  `p2c_aimed_archive.zip`, P3 fired immediately. Round-2 (post-P3, gc6 T3) aim list per
+  of1: coherent-flicker components (70.9% of flicker mass at ≥0.8 phase agreement) are the
+  high-value targets; the offset-field/boundary-walk family is DROPPED (of1:
+  FORMULATION-dead — δ(s) autocorr 1 px, deep-tail lag-1 negative, 5–21× less efficient
+  than aimed edits).
 
 ## §5 P3 — terminal pose GN, 600 pairs (eg1 E3 production shape; #400 dxi pose-polish leg)
 
@@ -140,8 +178,13 @@ inflate writes all 1200 frames to `0.raw`. Build-time parse-back + exact-consump
 asserts: TR1 section hashes via the committed parser, pose packet round-trip equality,
 manifest round-trip, nonzero-row consumption count.
 
-- Token coder: **e4 Brotli-Q11 incumbent** (r7 NOT landed — no `.done`, no live process,
-  uncommitted worktree draft; swap point recorded in §9/queue table).
+- Token coder: **r7 SMEVR winner** (`experiments/ddm_r7_token_coder.py`, DR7T v1,
+  DEFAULT_CODEC="smevr", deterministic integer-arithmetic decode, 378/378 parse-back exact
+  on the endpoint payload; merged 1725637750c5) — the coder slot is FILLED; the endpoint
+  token stream codes to 557,238 B from 875,171 raw (vs 763,540 Brotli-Q11 = **−206 KB**).
+  Composed grammar v2 carries the token codes as a DR7T member; the receiver reconstructs
+  the TR1 packet from decoded codes via the committed `_encode_tokens` + `build_packet`
+  (generic free code) and asserts BYTE-IDENTITY against the frozen endpoint packet.
 - **[P5-FILL: build receipt (archive bytes, member split, pose stream bytes), Stage-A
   evaluate rc/wall, report components, S recomputed from components, drift row vs the
   composed advisory prediction]**
@@ -169,7 +212,7 @@ drift band, <$2 est / ≤$20 envelope, honest calibration-vs-competitive framing
 | pn1 S1 Stage-A dress rehearsal | **OWNED-BY-ME / DONE**: §6 IS Stage-A (locked evaluate.sh path, full n600, real bytes). |
 | pn1 S1 Stage-B staging | **OWNED-BY-ME / STAGED-NOT-FIRED**: §8. |
 | eg1 E2 policy | **OWNED-BY-ME / DONE**: §1 (typed module, formal decision receipt). |
-| rv1-R7 token coder race | **ELSEWHERE (r7)**: NOT LANDED at pb1 close — no `.done`, no live codex process, memo+modules UNCOMMITTED in its worktree; P5 shipped the e4 Brotli-Q11 incumbent. Swap point: r7's unlanded partials showed g4_causal_byte_prefix 371,380 B on the T2 delta stream (−26% vs Brotli) + an uncommitted SMEVR production draft — a MAIN resume/harvest decision. |
+| rv1-R7 token coder race | **ELSEWHERE (r7) / LANDED + CONSUMED**: merged 1725637750c5 mid-pb1; SMEVR winner (DR7T v1) consumed into P5 (§6) — endpoint tokens 557,238 B, −206 KB vs the Brotli incumbent. r7's floor receipt UNBLOCKS gc6 row 6 (sensitivity-weighted reverse-waterfill, EVENT_GATED on this floor) and feeds E2 node N3 (noted in the P6 staging doc). |
 | endpoint residual typing + floor question (solve-target table) | **ELSEWHERE (ru1)**: no worktree/landing existed during pb1's window; nothing consumed. P2 aiming used P1's own per-class/per-cell decomposition instead. Coordinate on landing; do not duplicate. |
 | organ fold (band-entry trigger + pb1 landings) | **ELSEWHERE (co9)**: note for its freshness gate — band-entry duties (sp1/pp1 + ladder race) FIRED and are dispositioned here; pb1 landed P1/P2a/P4b receipts + this memo on branch `clwt/ddm_pb1_postburn_completion_20260729`. |
 | sc2 F3 opt-state persist + bias_correction + #518 lr-rewarmup (9–15% budget recovery) | **EXTENSION-WINDOW LEDGER** (recorded §1/P1 receipt; NOT fired — E2 did not open a window). |

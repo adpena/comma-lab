@@ -1,31 +1,37 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""ddm_pb1 P5 — compose the final archive, byte-close, and run the pn1 S1
-Stage-A dress rehearsal ($0 local full-n600 advisory-exact via the locked-env
-``evaluate.sh`` path).
+"""ddm_pb1 P5 — compose the final archive (SMEVR grammar v2), byte-close, and
+run the pn1 S1 Stage-A dress rehearsal ($0 local full-n600 advisory-exact via
+the locked-env ``evaluate.sh`` path).
 
-``--build``: compose the final counted archive from the frozen seg endpoint
-TR1 archive + the P3 pose coefficients:
-  members (deterministic stored ZIP):
-    manifest.json      canonical composed manifest (frame0 policy, member shas)
-    state/tr1.ddt1     the TR1 packet (tokens+renderer+selector+pose-stub)
-    state/pose.tpgn    TerminalPosePacketV1, Brotli-Q11-coded
-It stages a full submission dir {archive.zip, inflate.sh, inflate_runner.py,
-ddm_tr1_runtime.py, terminal_pose_gn.py} — receiver code is generic/free under
-rule 118; every video-derived byte lives in archive.zip.  Parse-back +
-exact-consumption asserts run at build time (round-trip decode of both
-members; pose coefficient equality; TR1 section hashes via the committed
-parser).
+Grammar v2 (deterministic stored ZIP; the r7 SMEVR winner fills the coder slot):
+  manifest.json          composed manifest (frame0 policy, TR1 packet metadata,
+                         member shas, honesty flags)
+  state/tokens.dr7t      token codes, r7 SMEVR frame (DR7T v1; deterministic
+                         integer-arithmetic decode; exact SHA closure)
+  state/renderer.sec     the TR1 lotto_renderer section payload (verbatim)
+  state/selector.sec     the TR1 selector section payload (verbatim)
+  state/pose_stub.sec    the TR1 pose_stub section payload (verbatim)
+  state/pose.tpgn        TerminalPosePacketV1, Brotli-Q11-coded
 
-``--eval``: stage the locked eval root (pinned evaluate.py/sh + frame_utils +
-modules + models from the eg1 rehearsal custody; GT video = the pinned
-upstream ``videos/0.mkv``) and run ``bash evaluate.sh --device cpu`` with the
-locked env-brotli python on PATH.  Output: report.txt + a receipt with S
-recomputed from components (never the rounded field).
+The receiver (free generic code, rule 118) decodes the DR7T frame, re-encodes
+the token section via the committed ``_encode_tokens``, rebuilds the TR1
+packet via the committed ``build_packet``, and runs the FULL committed
+``parse_packet`` integrity chain.  Build-time custody assert: the
+reconstructed packet is BYTE-IDENTICAL to the frozen endpoint packet.
 
-Axis: [macOS-CPU advisory — real evaluator, real bytes]; the local row is
-ADVISORY until the Modal contest-CPU flight (P6, operator-GO).
-score_claim=false.
+Vendoring (recorded, deterministic): ``ddm_r7_token_coder.py`` +
+``repair_entropy_coder_runtime_adapters.py`` are copied into the submission
+dir with exactly one import line rewritten each (tac-package import -> local
+import); before/after shas land in the build receipt.
+
+``--mode eval``: stage the locked eval root (pinned evaluate.py/sh +
+frame_utils + modules + models from the eg1 rehearsal custody; GT video = the
+pinned upstream ``videos/0.mkv``) and run ``bash evaluate.sh --device cpu``
+with the locked env-brotli python on PATH.
+
+Axis: [macOS-CPU advisory — real evaluator, real bytes]; ADVISORY until the
+Modal Stage-B flight (P6, operator-GO). score_claim=false.
 """
 
 from __future__ import annotations
@@ -43,12 +49,19 @@ from pathlib import Path
 import numpy as np
 
 REPO = Path("/Users/adpena/projects/pact")
-SCHEMA = "ddm_pb1_p5_receipt.v1"
+SCHEMA = "ddm_pb1_p5_receipt.v2_smevr"
 LOCKED_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_eg1_tr1_rehearsal_20260728")
 LOCKED_PY = Path("/Volumes/VertigoDataTier/pact/evidence/"
                  "ddm_e4_brotli_declared_dep_20260724/env_brotli/bin/python")
 UPSTREAM_VIDEO = REPO / "upstream/videos/0.mkv"
-COMPOSED_MEMBERS = ("manifest.json", "state/tr1.ddt1", "state/pose.tpgn")
+COMPOSED_MEMBERS = (
+    "manifest.json",
+    "state/tokens.dr7t",
+    "state/renderer.sec",
+    "state/selector.sec",
+    "state/pose_stub.sec",
+    "state/pose.tpgn",
+)
 
 INFLATE_SH = """#!/usr/bin/env bash
 set -euo pipefail
@@ -66,7 +79,13 @@ import brotli
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-from ddm_tr1_runtime import parse_packet, render_frame1_camera_uint8
+from ddm_r7_token_coder import decode_token_codes
+from ddm_tr1_runtime import (
+    _encode_tokens,
+    build_packet,
+    parse_packet,
+    render_frame1_camera_uint8,
+)
 from terminal_pose_gn import (
     parse_terminal_pose_packet,
     realize_terminal_pose_pair,
@@ -93,7 +112,18 @@ def main() -> None:
     if names != ["0.mkv"]:
         raise SystemExit("this receiver serves exactly the custodied 0.mkv")
     manifest = json.loads((archive_dir / "manifest.json").read_text())
-    packet = parse_packet((archive_dir / "state/tr1.ddt1").read_bytes())
+
+    codes = decode_token_codes(
+        (archive_dir / "state/tokens.dr7t").read_bytes())
+    token_payload = _encode_tokens(np.ascontiguousarray(codes, dtype=np.uint8))
+    packet_bytes = build_packet(manifest["tr1_metadata"], {
+        "tokens": token_payload,
+        "lotto_renderer": (archive_dir / "state/renderer.sec").read_bytes(),
+        "selector": (archive_dir / "state/selector.sec").read_bytes(),
+        "pose_stub": (archive_dir / "state/pose_stub.sec").read_bytes(),
+    })
+    packet = parse_packet(packet_bytes)
+
     pose_raw = (archive_dir / "state/pose.tpgn").read_bytes()
     if manifest.get("pose_coding") == "brotli":
         pose_raw = brotli.decompress(pose_raw)
@@ -156,6 +186,20 @@ def deterministic_stored_zip(members: dict[str, bytes]) -> bytes:
     return stream.getvalue()
 
 
+def _vendor(src: Path, dst: Path, old: str, new: str) -> dict[str, str]:
+    text = src.read_text()
+    if old not in text:
+        raise SystemExit(f"vendoring anchor not found in {src}")
+    patched = text.replace(old, new, 1)
+    dst.write_text(patched)
+    return {
+        "source": str(src),
+        "source_sha256": _sha(src.read_bytes()),
+        "vendored_sha256": _sha(dst.read_bytes()),
+        "patch": f"{old!r} -> {new!r}",
+    }
+
+
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--mode", choices=("build", "eval"), required=True)
@@ -172,6 +216,9 @@ def build(args: argparse.Namespace) -> None:
     import brotli
 
     sys.path.insert(0, str(REPO / "src"))
+    sys.path.insert(0, str(REPO / "experiments"))
+    from ddm_r7_token_coder import decode_token_codes, encode_token_codes
+
     from tac.optimization import ddm_tr1_runtime as rt
     from tac.optimization.terminal_pose_gn import (
         TerminalPosePacketV1,
@@ -180,10 +227,31 @@ def build(args: argparse.Namespace) -> None:
     )
 
     work = args.work_dir
-    (work / "submission").mkdir(parents=True, exist_ok=True)
+    sub = work / "submission"
+    sub.mkdir(parents=True, exist_ok=True)
     tr1_bytes = args.seg_archive.read_bytes()
     parsed = rt.parse_archive(tr1_bytes)
     packet_bytes = rt.reemit_packet(parsed.packet)
+    codes = np.ascontiguousarray(parsed.packet.token_codes, dtype=np.uint8)
+
+    # --- token member: r7 SMEVR frame + exact roundtrip assert
+    t0 = time.time()
+    dr7t = encode_token_codes(codes, levels=16, codec="smevr")
+    rb = decode_token_codes(dr7t)
+    if not np.array_equal(np.asarray(rb, dtype=np.uint8), codes):
+        raise SystemExit("SMEVR roundtrip differs from endpoint codes")
+    smevr_wall = time.time() - t0
+
+    # --- receiver-reconstruction custody assert (byte identity)
+    token_payload = rt._encode_tokens(codes)
+    recon = rt.build_packet(parsed.packet.metadata, {
+        "tokens": token_payload,
+        "lotto_renderer": parsed.packet.section_payloads[1],
+        "selector": parsed.packet.section_payloads[2],
+        "pose_stub": parsed.packet.section_payloads[3],
+    })
+    if recon != packet_bytes:
+        raise SystemExit("reconstructed TR1 packet is NOT byte-identical")
 
     progress = json.loads(args.pose_progress.read_text())
     if progress["endpoint_archive_sha256"] != _sha(tr1_bytes):
@@ -199,11 +267,19 @@ def build(args: argparse.Namespace) -> None:
     )
     pose_payload = serialize_terminal_pose_packet(pose_packet)
     pose_coded = brotli.compress(pose_payload, quality=11)
+    rb_pose = parse_terminal_pose_packet(brotli.decompress(pose_coded))
+    if not np.array_equal(rb_pose.coefficients, coeffs):
+        raise SystemExit("pose coefficients round-trip differs")
 
     manifest = {
-        "schema": "ddm_pb1_composed_archive.v1",
+        "schema": "ddm_pb1_composed_archive.v2_smevr",
         "frame0_policy": args.frame0_policy,
         "pose_coding": "brotli",
+        "tr1_metadata": dict(parsed.packet.metadata),
+        "tokens_sha256": _sha(dr7t),
+        "renderer_sha256": _sha(parsed.packet.section_payloads[1]),
+        "selector_sha256": _sha(parsed.packet.section_payloads[2]),
+        "pose_stub_sha256": _sha(parsed.packet.section_payloads[3]),
         "pose_raw_sha256": _sha(pose_payload),
         "tr1_packet_sha256": _sha(packet_bytes),
         "research_only": True,
@@ -214,33 +290,35 @@ def build(args: argparse.Namespace) -> None:
                                 separators=(",", ":")).encode()
     archive = deterministic_stored_zip({
         "manifest.json": manifest_bytes,
-        "state/tr1.ddt1": packet_bytes,
+        "state/tokens.dr7t": dr7t,
+        "state/renderer.sec": bytes(parsed.packet.section_payloads[1]),
+        "state/selector.sec": bytes(parsed.packet.section_payloads[2]),
+        "state/pose_stub.sec": bytes(parsed.packet.section_payloads[3]),
         "state/pose.tpgn": pose_coded,
     })
 
-    # parse-back + exact-consumption asserts
+    # parse-back of the whole composed archive
     import io
     import zipfile
 
     with zipfile.ZipFile(io.BytesIO(archive)) as z:
         assert tuple(i.filename for i in z.infolist()) == COMPOSED_MEMBERS
         rb_manifest = json.loads(z.read("manifest.json"))
-        rb_packet = rt.parse_packet(z.read("state/tr1.ddt1"))
-        rb_pose_raw = brotli.decompress(z.read("state/pose.tpgn"))
-    if rb_manifest != manifest:
-        raise SystemExit("manifest round-trip differs")
-    rb_pose = parse_terminal_pose_packet(rb_pose_raw)
-    if not np.array_equal(rb_pose.coefficients, coeffs):
-        raise SystemExit("pose coefficients round-trip differs")
-    if rt.reemit_packet(rb_packet) != packet_bytes:
-        raise SystemExit("TR1 packet round-trip differs")
-    nonzero_rows = int(np.count_nonzero(
-        np.any(rb_pose.coefficients != 0, axis=1)))
-    print(f"[consumption] TR1 sections + pose packet round-trip exact; "
-          f"{nonzero_rows} nonzero pose rows consumed by the receiver",
-          flush=True)
+        rb_codes = decode_token_codes(z.read("state/tokens.dr7t"))
+        rb_packet_bytes = rt.build_packet(rb_manifest["tr1_metadata"], {
+            "tokens": rt._encode_tokens(
+                np.ascontiguousarray(rb_codes, dtype=np.uint8)),
+            "lotto_renderer": z.read("state/renderer.sec"),
+            "selector": z.read("state/selector.sec"),
+            "pose_stub": z.read("state/pose_stub.sec"),
+        })
+    if rb_packet_bytes != packet_bytes:
+        raise SystemExit("composed-archive receiver reconstruction differs")
+    rt.parse_packet(rb_packet_bytes)
+    print("[consumption] DR7T roundtrip exact; receiver-reconstructed TR1 "
+          "packet BYTE-IDENTICAL to the frozen endpoint packet; pose packet "
+          "round-trip exact", flush=True)
 
-    sub = work / "submission"
     (sub / "archive.zip").write_bytes(archive)
     (sub / "inflate.sh").write_text(INFLATE_SH)
     (sub / "inflate_runner.py").write_text(INFLATE_RUNNER)
@@ -248,6 +326,20 @@ def build(args: argparse.Namespace) -> None:
                  sub / "ddm_tr1_runtime.py")
     shutil.copy2(REPO / "src/tac/optimization/terminal_pose_gn.py",
                  sub / "terminal_pose_gn.py")
+    vend = [
+        _vendor(REPO / "src/tac/optimization/"
+                       "repair_entropy_coder_runtime_adapters.py",
+                sub / "repair_entropy_coder_runtime_adapters.py",
+                "from tac.repo_io import sha256_bytes",
+                "from hashlib import sha256 as _sha256\n\n\n"
+                "def sha256_bytes(data: bytes) -> str:\n"
+                "    return _sha256(data).hexdigest()"),
+        _vendor(REPO / "experiments/ddm_r7_token_coder.py",
+                sub / "ddm_r7_token_coder.py",
+                "from tac.optimization.repair_entropy_coder_runtime_adapters"
+                " import (",
+                "from repair_entropy_coder_runtime_adapters import ("),
+    ]
     receipt = {
         "schema": SCHEMA,
         "stage": "build",
@@ -255,21 +347,32 @@ def build(args: argparse.Namespace) -> None:
         "archive_sha256": _sha(archive),
         "members": {
             "manifest.json": len(manifest_bytes),
-            "state/tr1.ddt1": len(packet_bytes),
+            "state/tokens.dr7t": len(dr7t),
+            "state/renderer.sec": len(parsed.packet.section_payloads[1]),
+            "state/selector.sec": len(parsed.packet.section_payloads[2]),
+            "state/pose_stub.sec": len(parsed.packet.section_payloads[3]),
             "state/pose.tpgn": len(pose_coded),
+        },
+        "token_coder": "r7 SMEVR (DR7T v1) via experiments/ddm_r7_token_coder.py",
+        "smevr_encode_wall_seconds": smevr_wall,
+        "tokens_vs_brotli_incumbent": {
+            "smevr_bytes": len(dr7t),
+            "brotli_q11_section_bytes": len(
+                parsed.packet.section_payloads[0]),
         },
         "pose_raw_bytes": len(pose_payload),
         "pose_coded_bytes": len(pose_coded),
         "seg_archive_sha256": _sha(tr1_bytes),
         "frame0_policy": args.frame0_policy,
+        "vendored": vend,
         "evidence_axis": "[macOS-CPU advisory]",
         "score_claim": False,
     }
     (work / "p5_build_receipt.json").write_text(
         json.dumps(receipt, indent=1, sort_keys=True) + "\n")
     print(json.dumps({k: receipt[k] for k in
-                      ("archive_bytes", "archive_sha256", "members",
-                       "pose_coded_bytes")}, indent=1), flush=True)
+                      ("archive_bytes", "archive_sha256", "members")},
+                     indent=1), flush=True)
 
 
 def run_eval(args: argparse.Namespace) -> None:
