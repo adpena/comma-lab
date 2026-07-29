@@ -291,3 +291,20 @@ re-open this crosswalk.
   `p2b_mc400_diagonal_receipt.json` (SSD) · `segnet_recursive_fractal_factorization_20260715`
   (exact rank-4 head Jacobian = the pathwise operator) · MEMORY costate/organ + default-off-
   orphan + verdict-scope-ladder rows.
+
+## §AMENDMENT (2026-07-29, MAIN — #404 relative-significance cure for the "negligible pose / deprioritize" routing language)
+
+The consumer-routing rows above use magnitude words ("negligible pose", "deprioritize blind") — here
+is the RELATIVE arithmetic they rest on, at the current operating point (post-P3 composed row:
+S ≈ 20.3 advisory vs target 0.172 → remaining gap ≈ 20.1):
+
+- P2b ES yield: ΔS = −0.0411 (100% pose √-term; d_seg +2.6e-6 wrong-way) = **0.20% of the remaining
+  gap for 2,023 s of wall** [MEASURED, p2b receipt]. The dismissal is NOT absolute-magnitude: it is
+  DOMINANCE — the aimed pathwise alternative books −0.046 (Contrarian bound, ceiling −0.138) at ~$0
+  bytes and comparable wall [ru1/gc6 receipts], i.e. ≥1.1× the yield with a measured +24-flips/quantum
+  mechanism vs a variance-dominated one. verdict_scope: INSTANCE (this endpoint, this budget).
+- "Deprioritize blind edits" in the P2c split likewise rests on a MEASURED dominance ratio, not
+  eyeball: blind single-token edits median −1 flips (65% net-negative) vs aimed best-of-8 positive in
+  17/18 hotspot cells [ru1 receipt] — a sign flip, not a small number.
+- Un-retired: the LAW's own falsifier (an ES/MC row beating aimed edits at matched evals at this
+  endpoint) is the standing exit criterion; nothing here is a family kill.
