@@ -257,3 +257,21 @@ ddm_g3/g4 receipts; at1/at1x receipts; #580 resize_full_kernel;
 pb1 live receipts (/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/ + worktree tool);
 t3_long_burn_lotto_v2 run dir (receipt/telemetry/manifest); gt_n600 cache; instrument-inventory
 subagent report (paths/interfaces verified against committed artifacts).
+
+## §AMENDMENT (2026-07-29, MAIN — #404 relative-significance cure for the tier-table price language)
+
+The tier table's row-2 fragment ("collateral is the binding constraint") and sibling
+priced-band rows use binding/limiting language — here is the relative arithmetic at the
+CURRENT operating point (milestone row S=20.27 advisory: pose 19.51 / seg 0.389 / rate 0.376;
+bars 0.19108/0.172):
+
+- Row 2 (m_def<0.25 joint-GN band, ΔS −0.138 ceiling) is a POSITIVE-reach row, not a
+  dismissal: −0.138 = **42% of the seg-axis gap** (seg contribution 0.389 vs seg-budget-at-bar
+  ~0.061 → axis gap 0.328) and 0.69% of the total gap (pose-dominated until P3v2 resolves).
+- "Collateral is the binding constraint" is MEASURED, not eyeball: blind single-token edits
+  land median **−1 net flips (65% net-negative)** [this memo's aim-gain measurement] — the
+  collateral cost that caps naive actuation — while aimed best-of-8 edits flip positive in
+  17/18 hotspot cells (+24/quantum). Exit criterion (standing falsifier): aimed joint-GN
+  realized rows measuring net-negative at scale would refute the reach ceiling downward;
+  an ES/MC family row beating aimed edits at matched evals would refute the aim-currency
+  upward. verdict_scope: INSTANCE (this endpoint, this actuation alphabet).
