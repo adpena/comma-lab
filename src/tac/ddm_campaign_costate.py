@@ -59,6 +59,13 @@ G2F_SOURCE_SHA256 = "92d860ab35bba158e7fd817edf632d3e3e7fc90b05669402d537c26a6e0
 # "off" is a tracked duty-to-measure queue, never a silent collective PREMISE_FALSIFIED. The
 # gates are the concrete telemetry a CT1-v2 (or a fired-duty ledger) would emit to flip the
 # backtest; the enhancement designs remain valid (RE_PREMISE), none are RETIRED.
+#
+# co7 re-check (2026-07-28, round 7): CT1's landed state is UNCHANGED (no CT1-v2 receipt
+# exists) => all four gates KEEP RE_PREMISE; none fire. What DID change: tb1 sealed the T3
+# long-burn full-confirm cadence (gate_every 10 -> >=2 n600 d_seg+bytes+wall-clock endpoints
+# per burn window) and eg1 rehearsed the terminal pose finisher (the S-composition pose leg),
+# so the compression-progress gate's producer is now PARTIALLY BUILT and awaiting the burn —
+# recorded per gate in `producer_state` (a queue-state annotation, not a satisfaction claim).
 _CO5_ENHANCEMENT_GATES: dict[str, dict[str, Any]] = {
     "pontryagin_bellman_transition_residual": {
         "named_gate": "CT1V2_EMITS_ORDERED_ADJACENT_CAMPAIGN_COSTATES_AND_TRANSITION_JACOBIANS",
@@ -66,6 +73,7 @@ _CO5_ENHANCEMENT_GATES: dict[str, dict[str, Any]] = {
             "a CT1-v2 telemetry emitter surfacing ordered adjacent campaign costates + realized "
             "transition Jacobians (CT1 surfaces one exact endpoint + cadence, no costate/Jacobian)"
         ),
+        "producer_state": "HYPOTHETICAL_EMITTER_NOT_BUILT",
         "unblocks": (),
     },
     "m34_per_state_dual_consistency": {
@@ -74,6 +82,7 @@ _CO5_ENHANCEMENT_GATES: dict[str, dict[str, Any]] = {
             "a CT1-v2 emitter of per-state M34 + same-state organ dual + measured uncertainty band "
             "(CT1 emits neither dual)"
         ),
+        "producer_state": "HYPOTHETICAL_EMITTER_NOT_BUILT",
         "unblocks": (),
     },
     "compression_progress_per_effort": {
@@ -82,6 +91,14 @@ _CO5_ENHANCEMENT_GATES: dict[str, dict[str, Any]] = {
             "a CT1-v2 encoding >=2 exact n600 S-endpoints as full rows (CT1 ran 3 verdict steps "
             "[0,1,50] but surfaces only step 50 as a full S-row; the cumulative trace is explicitly "
             "ADVISORY_BATCH_LOCAL, not n600)"
+        ),
+        "producer_state": (
+            "PARTIALLY_BUILT_AWAITING_BURN: the tb1 T3 sealed full-confirm cadence "
+            "(gate_every 10) will emit >=2 n600 d_seg+bytes+wall-clock endpoints per burn "
+            "window; the S composition still owes the pose leg (eg1 terminal pose finisher "
+            "rehearsed, external governor required). tb1 T2 surfaced ONE full-confirm "
+            "endpoint per arm (seg-only, pose stubbed) — not two same-campaign exact "
+            "S-endpoints, so the gate stays HELD"
         ),
         "unblocks": ("regret_bounded_duty_allocation",),
     },
@@ -92,6 +109,7 @@ _CO5_ENHANCEMENT_GATES: dict[str, dict[str, Any]] = {
             "(downstream of the compression-progress gate; CT1's 12 geometry-cure events are a "
             "count, not typed duty identity/outcome history)"
         ),
+        "producer_state": "DOWNSTREAM_OF_COMPRESSION_PROGRESS_GATE",
         "unblocks": (),
     },
 }
@@ -1332,6 +1350,7 @@ def _co5_enhancement_state(
                 "disposition_reason": disposition_reason,
                 "named_gate": gate.get("named_gate"),
                 "producer_duty": gate.get("producer"),
+                "producer_state": gate.get("producer_state"),
                 "unblocks": list(gate.get("unblocks") or ()),
                 "status": (
                     "ACTIVE_ADVISORY"
@@ -1357,6 +1376,7 @@ def _co5_enhancement_state(
                 "layer": row["layer"],
                 "named_gate": row["named_gate"],
                 "producer_duty": row["producer_duty"],
+                "producer_state": row["producer_state"],
                 "unblocks": row["unblocks"],
                 "actuation": "NONE",
             }
@@ -1382,6 +1402,13 @@ def _co5_enhancement_state(
             "PREMISE_FALSIFIED; CT1 landed 2026-07-25 but deliberately declines the campaign "
             "delta_S/hour (only 1 full exact n600 S-endpoint surfaced) so all 4 are genuinely "
             "unsatisfied -> RE_PREMISE with named producer gates, 0 retired. Off is a tracked queue."
+        ),
+        "re_checked": (
+            "2026-07-28 (co7): CT1 landed state unchanged (no CT1-v2 receipt) -> all four KEEP "
+            "RE_PREMISE, none fire. Producer-state delta: the compression-progress gate's producer "
+            "is now PARTIALLY_BUILT_AWAITING_BURN (tb1 T3 sealed full-confirm cadence + eg1 "
+            "terminal pose finisher); tb1 T2 surfaced one seg-only full-confirm endpoint per arm, "
+            "which is not two same-campaign exact n600 S-endpoints."
         ),
         "source_freshness": freshness,
         "active_count": active_count,

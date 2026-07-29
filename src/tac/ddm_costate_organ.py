@@ -611,6 +611,11 @@ class ArcEvidenceSpec:
     headline: str  # the measured row (numbers)
     crux_status: str  # SETTLED | LIVE_CRUX | SOLVED | LAW | APPARATUS
     verdict_scope: str
+    # co7 conditional-validity extension: typed precondition tags on negative/settled
+    # verdict rows. Each tag: {precondition_id, kind, holds_when, invalidated_by}.
+    # A verdict binds only while its preconditions hold; a substrate change that breaks
+    # one surfaces a re-grade duty (never a silent stale verdict).
+    preconditions: tuple[Mapping[str, str], ...] = ()
 
 
 ARC_EVIDENCE_SPECS: tuple[ArcEvidenceSpec, ...] = (
@@ -624,6 +629,17 @@ ARC_EVIDENCE_SPECS: tuple[ArcEvidenceSpec, ...] = (
         "fixed-capacity GN descent of the W_joint base is exhausted; realization moves to "
         "the fd1 capacity/parametrization ladder (Rung1 grow shared/cross-pair DOF + #383-dual "
         "pose-null; Rung2 token-grid + partition->pixel renderer <=64KB scorer-in-loop)",
+        (
+            {
+                "precondition_id": "fd1_fixed_capacity_wjoint_parametrization",
+                "kind": "parametrization",
+                "holds_when": "the fixed-capacity W_joint family-d parametrization is the live descent vehicle",
+                "invalidated_by": (
+                    "a committed successor materializes the capacity ladder (tr1 renderer) "
+                    "or re-adjudicates the zero-accept fork (fd2)"
+                ),
+            },
+        ),
     ),
     ArcEvidenceSpec(
         "fd1_box_solve_s0_hold",
@@ -640,6 +656,17 @@ ARC_EVIDENCE_SPECS: tuple[ArcEvidenceSpec, ...] = (
         "route S~0.189 > 0.172 bar; >=350KB falsifier NOT reached (priced, NOT dead)",
         "SETTLED",
         "explicit-partition compression priced; does not beat PR130's implicit ~177KB leg",
+        (
+            {
+                "precondition_id": "pp1_wjoint_partition_source",
+                "kind": "parent",
+                "holds_when": (
+                    "the partition source is the q1/W_joint cell partition and the "
+                    "competitive bar is 0.172"
+                ),
+                "invalidated_by": "a cheaper partition source (tr1 token stream) or a bar move",
+            },
+        ),
     ),
     ArcEvidenceSpec(
         "pp1_band_lemma",
@@ -665,6 +692,20 @@ ARC_EVIDENCE_SPECS: tuple[ArcEvidenceSpec, ...] = (
         "the phantom 142KB floor); min lossy S=0.27999 alone exceeds 0.172 bar; FLOOR_DEAD",
         "SETTLED",
         "explicit-residual copy-base support family CLOSED; corrections at this base explode",
+        (
+            {
+                "precondition_id": "sp1_copy_base_parent",
+                "kind": "parent",
+                "holds_when": "the W_joint copy-base at rho~0.86% is the live correction parent",
+                "invalidated_by": "parent switch to the tr1 renderer output",
+            },
+            {
+                "precondition_id": "sp1_band_regime_explode",
+                "kind": "band_regime",
+                "holds_when": "every live parent base sits above the band upper (regime explode)",
+                "invalidated_by": "a live parent base entering the rational band [rho_c, 1e-2]",
+            },
+        ),
     ),
     ArcEvidenceSpec(
         "sc1_ep_rank1_pose",
@@ -681,6 +722,79 @@ ARC_EVIDENCE_SPECS: tuple[ArcEvidenceSpec, ...] = (
         "DECISIVELY REFUTED (pose deltas realized-measured)",
         "APPARATUS",
         "apparatus-validity metadata: the 07-28 stack carries zero confirmed confounds",
+    ),
+    # ── co7 (2026-07-28 late arc): fd2 disambiguation + tb1 renderer build + eg1 endgame ──
+    ArcEvidenceSpec(
+        "fd2_zero_accept_disambiguation",
+        ".omx/research/ddm_fd2_posenull_gn_disambiguation_20260728.md",
+        "typed fork verdict SEG_REALIZATION_GAP_AT_UINT8_DOMINANT: pose-veto cure REFUTED as "
+        "the binding mechanism (0/6 seg-only accepts, MEASURED); realization-gap dominant, "
+        "directionally-unfaithful at flip amplitude (per-block)",
+        "SETTLED",
+        "adjudicates the fd1 zero-accept fork; the crux transfers to the trained "
+        "partition->pixel renderer line (tr1/tb1), not to a pose-veto cure",
+    ),
+    ArcEvidenceSpec(
+        "tb1_t2_race_verdict",
+        ".omx/research/ddm_tb1_renderer_build_20260728.md",
+        "pre-registered n600 A2 race: LOTTO Pareto-dominates (full-confirm d_seg 0.013833 @ "
+        "534,597 B vs plain 0.014088 @ 549,927 B; -1.8%/-2.8%; renderer stream 3,284 vs "
+        "20,214 B = 6.2x structural); Lane-Betti-0 caveat recorded NOT promoted (plain leads "
+        "nucleation 264 vs 164, erased 906 vs 916); plain checkpoint retained as fallback",
+        "SETTLED",
+        "INSTANCE — single seed, no noise floor; pre-registered rule applied as written; the "
+        "Lane-pool lever race fires FIRST in the burn plan",
+    ),
+    ArcEvidenceSpec(
+        "tb1_t3_sealed_ticket",
+        ".omx/research/configs/ddm_tb1_t3_long_burn_lotto_20260728.json",
+        "T3 long-burn LOTTO ticket SEALED READY_TO_FIRE_UNDER_STANDING_GO (fires from MAIN "
+        "only): n600 x 400 ep / 480-min resumable windows, gate_every 10 full-confirm; "
+        "ticket_hash 007d8eacf402c4fe..., code 17166ee9c4",
+        "APPARATUS",
+        "burn-fire is a heavy launch = operator-GO (CONTAINMENT); the organ surfaces "
+        "readiness only",
+    ),
+    ArcEvidenceSpec(
+        "eg1_e1_byteclose_rehearsal",
+        ".omx/research/ddm_eg1_tr1_rehearsal_20260728.json",
+        "TR1 four-section byte-close rehearsed on the stale T2 checkpoint: canonical packet "
+        "504,249 B (tokens 499,587 + renderer 3,341 + selector 535 + pose stub 83, "
+        "Brotli-Q11); exact parse/re-emit + closed cursor + trailing-byte refusal; NumPy/MLX "
+        "camera-byte parity 0.9999793579 (>0.9997 gate); locked evaluate.sh interface pass "
+        "PASS_INTERFACE_ONLY_NONCOMPARABLE",
+        "APPARATUS",
+        "the R6 exact-eval on-ramp is BUILT; stale-checkpoint rehearsal — no candidate, no "
+        "score, partial outputs non-comparable",
+    ),
+    ArcEvidenceSpec(
+        "eg1_e2_stop_policy",
+        ".omx/research/ddm_eg1_policy_arithmetic_20260728.json",
+        "typed stop/continue/handoff policy + exact corner economics: strict byte ceilings "
+        "190,334 B (0.172) / 157,294 B (0.15) at (d_seg 3e-4, d_pose 2.33e-5); TR1-A 149 KB "
+        "-> S 0.144177 is the only sub-bar corner; QDBS cost bound 5.76-7.00 h, gain null",
+        "APPARATUS",
+        "advisory policy; a handoff needs a same-parent conservative score-gain-rate "
+        "dominance quote — never a trajectory-detector hit alone",
+    ),
+    ArcEvidenceSpec(
+        "eg1_e3_qdbs_finisher",
+        ".omx/research/ddm_eg1_qdbs_rehearsal_20260728.json",
+        "FD2-QDBS hard terminal finisher rehearsed: 48 candidates + shared base on the stale "
+        "368-coordinate fd2 checkpoint; best test-oracle delta -5.4347826087e-7 (mechanism "
+        "canary only); production custody REQUIRES_EXTERNAL_GOVERNOR",
+        "APPARATUS",
+        "finisher BUILT; no production compiler/receiver/frozen-scorer/n600 payoff exercised",
+    ),
+    ArcEvidenceSpec(
+        "eg1_e3_pose_finisher",
+        ".omx/research/ddm_eg1_pose_gn_rehearsal_20260728.json",
+        "terminal six-equation pose GN rehearsed from frozen composed uint8 frames: one-pair "
+        "advisory PoseNet MSE 5.2816893588 -> 1.3504594700 with frame 1 byte-identical; "
+        "107-byte terminal section; not a candidate payoff (parent constant omitted)",
+        "APPARATUS",
+        "pose-leg finisher BUILT; production gating self-attested -> external governor "
+        "required",
     ),
 )
 
@@ -704,20 +818,21 @@ def _arc_evidence_rows(repo_root: Path) -> list[dict[str, Any]]:
                 }
             )
             continue
-        rows.append(
-            {
-                "finding_id": spec.finding_id,
-                "artifact": spec.artifact,
-                "available": True,
-                "sha256": _sha256(path),
-                "headline": spec.headline,
-                "crux_status": spec.crux_status,
-                "verdict_scope": spec.verdict_scope,
-                "evidence_axis": ARC_EVIDENCE_AXIS,
-                "actuation": "NONE",
-                "score_claim": False,
-            }
-        )
+        row = {
+            "finding_id": spec.finding_id,
+            "artifact": spec.artifact,
+            "available": True,
+            "sha256": _sha256(path),
+            "headline": spec.headline,
+            "crux_status": spec.crux_status,
+            "verdict_scope": spec.verdict_scope,
+            "evidence_axis": ARC_EVIDENCE_AXIS,
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+        if spec.preconditions:
+            row["preconditions"] = [dict(pre) for pre in spec.preconditions]
+        rows.append(row)
     return rows
 
 
@@ -730,7 +845,7 @@ def _band_position(repo_root: Path) -> dict[str, Any]:
     in-band -> rational, above the band upper -> support cost explodes (lower the base first).
     """
 
-    from tac.canonical_equations.ddm_pp1_correction_stream_position_band_20260728 import (  # noqa: PLC0415
+    from tac.canonical_equations.ddm_pp1_correction_stream_position_band_20260728 import (
         BAND_UPPER_DENSITY,
         EQUATION_ID,
         MEASURED_COHERENT_CROSSING_DENSITY,
@@ -828,23 +943,55 @@ def _refreshed_duties(
     cells_hold = "rp1_cells_hold" in index
     box_hold = "fd1_box_solve_s0_hold" in index
     support_dead = "sp1_support_race" in index
+    # co7: the ladder head is MATERIALIZED once tb1 lands (Rung2 built + raced + sealed);
+    # the duty head then hands off to the committed endgame chain (see duties_endgame).
+    ladder_materialized = "tb1_t3_sealed_ticket" in index and "tb1_t2_race_verdict" in index
     band_regime = str(band_position.get("regime")) if band_position.get("available") else None
     correction_multiplier = float(band_position.get("correction_duty_multiplier", 1.0))
 
     # Derived priority per duty kind (higher = more live).
     candidates: list[dict[str, Any]] = []
 
-    ladder_live = bool(band_regime == "explode" and zero_accept_sealed)
+    if ladder_materialized:
+        candidates.append(
+            {
+                "duty": "ENDGAME_CHAIN_HANDOFF",
+                "kind": "endgame_chain",
+                "priority": 3.0,
+                "basis": (
+                    "DERIVED: tb1 materialized the fd1 capacity ladder (Rung2 renderer "
+                    "raced + T3 sealed) and eg1 built the byte-close/policy/terminal chain "
+                    "=> the duty head moves to the endgame chain (duties_endgame): "
+                    "B-verdict watch > burn-fire > first-gates > T1-validity > byte-close"
+                ),
+                "cites": [
+                    fid
+                    for fid in (
+                        "tb1_t3_sealed_ticket",
+                        "tb1_t2_race_verdict",
+                        "eg1_e1_byteclose_rehearsal",
+                        "fd2_zero_accept_disambiguation",
+                    )
+                    if fid in index
+                ],
+                "actuation": "NONE",
+            }
+        )
+    ladder_live = bool(band_regime == "explode" and zero_accept_sealed and not ladder_materialized)
     candidates.append(
         {
             "duty": "FD1_REALIZATION_LADDER_MATERIALIZATION",
             "kind": "capacity_ladder",
-            "priority": 2.0 if ladder_live else 1.0,
+            "priority": 0.25 if ladder_materialized else (2.0 if ladder_live else 1.0),
             "basis": (
-                "DERIVED: base above-band (correction explodes) + fd1 zero-accept "
-                "(fixed-capacity descent exhausted) => lower the base by growing capacity/"
-                "re-parametrizing (fd1 Rung1 shared/cross-pair DOF + #383-dual pose-null; "
-                "Rung2 token-grid partition->pixel renderer <=64KB scorer-in-loop)"
+                "MATERIALIZED by tb1 (kept for lineage; see ENDGAME_CHAIN_HANDOFF)"
+                if ladder_materialized
+                else (
+                    "DERIVED: base above-band (correction explodes) + fd1 zero-accept "
+                    "(fixed-capacity descent exhausted) => lower the base by growing capacity/"
+                    "re-parametrizing (fd1 Rung1 shared/cross-pair DOF + #383-dual pose-null; "
+                    "Rung2 token-grid partition->pixel renderer <=64KB scorer-in-loop)"
+                )
             ),
             "cites": [
                 fid
@@ -908,6 +1055,28 @@ def _refreshed_duties(
                 "cites": [fid for fid in ("pp1_band_lemma", "sp1_support_race") if fid in index],
             }
         )
+    if ladder_materialized:
+        demoted.append(
+            {
+                "duty": "FD1_REALIZATION_LADDER_MATERIALIZATION (as the head)",
+                "prior_rank": 1,
+                "disposition": "MATERIALIZED_BY_TB1_SEALED_TICKET",
+                "basis": (
+                    "tb1 raced Rung2 (tr1 token-grid + partition->pixel renderer) to a "
+                    "pre-registered n600 Pareto verdict and sealed the T3 long-burn ticket; "
+                    "fd2 adjudicated the fork (seg-realization-gap, not pose veto)"
+                ),
+                "cites": [
+                    fid
+                    for fid in (
+                        "tb1_t2_race_verdict",
+                        "tb1_t3_sealed_ticket",
+                        "fd2_zero_accept_disambiguation",
+                    )
+                    if fid in index
+                ],
+            }
+        )
 
     return {
         "schema": "ddm_live_costate_refreshed_duties.v1",
@@ -919,6 +1088,416 @@ def _refreshed_duties(
             legacy_duties["live_ranked"][0]["duty"] if legacy_duties.get("live_ranked") else None
         ),
         "legacy_live_ranked": list(legacy_duties.get("live_ranked") or []),
+        "actuation": "NONE",
+        "score_claim": False,
+    }
+
+
+# ── co7 (2026-07-28): pending producers · per-parent band placement · SENSE laws ·
+# conditional-validity trigger · the endgame duty chain. Advisory SENSE/DECIDE only
+# (actuation NONE, score_claim False); every number cites a committed content-hashed
+# artifact; in-flight parallel arms are registered PENDING, never folded early.
+PRECONDITION_SCHEMA = "ddm_costate_verdict_precondition.v1"
+T3_SEALED_TICKET = ".omx/research/configs/ddm_tb1_t3_long_burn_lotto_20260728.json"
+
+
+@dataclass(frozen=True)
+class PendingProducerSpec:
+    """A named in-flight producer whose numbers stay uncounted until committed."""
+
+    name: str
+    glob: str  # scanned under .omx/research/
+    expectation: str
+    named_gate: str
+
+
+PENDING_PRODUCER_SPECS: tuple[PendingProducerSpec, ...] = (
+    PendingProducerSpec(
+        "lv1_token_stack_prices",
+        "ddm_lv1_*",
+        "token-stack pricing on the tb1 token stream (~531 KB): factorization/truncation "
+        "ladder prices are admissible only WITH realized-validity rows; pools-law: truncation "
+        "vs quantization candidates COMPETE, never sum. Charter-cited prices stay uncounted "
+        "until the committed receipt lands (NO-FAKE #4).",
+        "LV1_COMMITTED_RECEIPT_WITH_REALIZED_VALIDITY_ROWS",
+    ),
+    PendingProducerSpec(
+        "rv1_conditional_validity_table",
+        "ddm_rv1_*",
+        "the full historical conditional-validity/precondition table sweep; this organ seeds "
+        "arc-local precondition rows ONLY and consumes rv1's committed table when it lands "
+        "(no duplicate sweep).",
+        "RV1_COMMITTED_CONDITIONAL_VALIDITY_TABLE",
+    ),
+)
+
+
+def _pending_producers(repo_root: Path) -> list[dict[str, Any]]:
+    """Registered in-flight producers: tracked queue rows, never silent absences."""
+
+    research = repo_root / ".omx" / "research"
+    rows: list[dict[str, Any]] = []
+    for spec in PENDING_PRODUCER_SPECS:
+        matches = [p for p in sorted(research.glob(spec.glob)) if p.exists()]
+        row: dict[str, Any] = {
+            "producer": spec.name,
+            "glob": spec.glob,
+            "expectation": spec.expectation,
+            "named_gate": spec.named_gate,
+            "available": bool(matches),
+            "actuation": "NONE",
+            "score_claim": False,
+        }
+        if matches:
+            latest = matches[-1]
+            target = latest if latest.is_file() else next(
+                (p for p in sorted(latest.rglob("*")) if p.is_file()), None
+            )
+            row["path"] = str(latest.relative_to(repo_root))
+            if target is not None:
+                row["sha256"] = _sha256(target)
+            row["status"] = "COMMITTED_ARTIFACT_PRESENT_FOLD_ON_NEXT_ROUND"
+        else:
+            row["reason"] = "PENDING_COMMITTED_PRODUCER"
+        rows.append(row)
+    return rows
+
+
+def _band_position_parents(repo_root: Path, base_band: Mapping[str, Any]) -> dict[str, Any]:
+    """Per-parent band placement: W_joint base + the tb1 T2 tr1 full-confirm bases.
+
+    The tr1 arm bases are read machine-readably from the committed sealed ticket
+    (``adjudication.arithmetic.{plain,lotto}.full_dseg``), never hardcoded. All bases
+    currently above the band upper => corrections stay dead at EVERY live parent.
+    """
+
+    from tac.canonical_equations.ddm_pp1_correction_stream_position_band_20260728 import (
+        EQUATION_ID,
+        position_cost_band,
+    )
+
+    rows: list[dict[str, Any]] = []
+    if base_band.get("available"):
+        rows.append(
+            {
+                "parent": "W_joint_describe_line",
+                "base_d_seg": base_band["base_d_seg"],
+                "regime": base_band["regime"],
+                "source": dict(base_band["source"]),
+            }
+        )
+    ticket_path = repo_root / T3_SEALED_TICKET
+    ticket_row: dict[str, Any] = {"available": False, "reason": "SEALED_TICKET_ABSENT"}
+    if ticket_path.is_file():
+        ticket = _load_json(ticket_path)
+        arithmetic = (ticket.get("adjudication") or {}).get("arithmetic") or {}
+        sha = _sha256(ticket_path)
+        for arm in ("plain", "lotto"):
+            arm_row = arithmetic.get(arm)
+            if not isinstance(arm_row, Mapping) or "full_dseg" not in arm_row:
+                continue
+            base = _number(arm_row["full_dseg"])
+            in_domain = 0.0 < base < 1.0
+            rows.append(
+                {
+                    "parent": f"tr1_{arm}_t2_full_confirm",
+                    "base_d_seg": base,
+                    "counted_bytes": arm_row.get("total_bytes"),
+                    "regime": (
+                        str(position_cost_band(base)["regime"]) if in_domain else "OUT_OF_DOMAIN"
+                    ),
+                    "source": {"path": T3_SEALED_TICKET, "sha256": sha},
+                }
+            )
+        adjudication = ticket.get("adjudication") or {}
+        ticket_row = {
+            "available": True,
+            "path": T3_SEALED_TICKET,
+            "sha256": sha,
+            "status": str(adjudication.get("status", "")),
+            "winner_arm": adjudication.get("winner_arm"),
+        }
+    return {
+        "schema": "ddm_costate_band_position_parents.v1",
+        "equation_id": EQUATION_ID,
+        "rows": rows,
+        "any_parent_in_band": any(row.get("regime") == "correct" for row in rows),
+        "sealed_ticket": ticket_row,
+        "evidence_axis": ARC_EVIDENCE_AXIS,
+        "actuation": "NONE",
+        "score_claim": False,
+    }
+
+
+def _sense_laws(arc_index: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """The two 07-28-late SENSE laws, anchored to committed artifacts.
+
+    * ``ema_gate_basis_v1`` — instrument-validity precondition (the #85 class):
+      gate basis is LIVE params before warmup W = 2/(1-d), EMA shadow after.
+    * ``basin_solve_handoff_v1`` — operator-binding preference: on MEASURED
+      basin-entry, hand descent to the solve/finisher chain; detectors PRIORITIZE a
+      finisher quote (eg1 E2 typed policy), they never auto-stop training.
+    """
+
+    tb1 = arc_index.get("tb1_t2_race_verdict")
+    policy = arc_index.get("eg1_e2_stop_policy")
+    gate_basis = {
+        "law_id": "ema_gate_basis_v1",
+        "statement": (
+            "gate/instrument basis = LIVE params before the registered warmup boundary "
+            "W = 2/(1-d) steps (d = EMA decay), EMA shadow after; every gate row records "
+            "the basis it was measured on"
+        ),
+        "empirical_anchor": (
+            "#85 EMA shadow-lag confound CAUGHT LIVE: the first tb1 T2 launch aborted at ep9 "
+            "on a shadow-lag gate artifact (custody t2_n600_plain_aborted_emawarmup_gate_"
+            "artifact/); the relaunch under this law ran 40/40 epochs with zero confound "
+            "alarms and correctly classified the ep24 double-rebase as FIRST_GATE"
+        ),
+        "consequence": (
+            "a gate/telemetry row without basis custody is #85-suspect and must not clear "
+            "L3 verdict-clearance"
+        ),
+        "status": "ACTIVE_INSTRUMENT_VALIDITY_PRECONDITION",
+        "code_commit": "17166ee9c4",
+        "source": (
+            {"path": tb1["artifact"], "sha256": tb1["sha256"]}
+            if tb1 and tb1.get("available")
+            else None
+        ),
+    }
+    basin = {
+        "law_id": "basin_solve_handoff_v1",
+        "statement": (
+            "on MEASURED basin-entry, hand descent off to the solve/finisher chain "
+            "(solve-only preferable; the train-least doctrine); trajectory detectors "
+            "PRIORITIZE a finisher quote, they never auto-stop training"
+        ),
+        "never_auto_stop": True,
+        "detector_guards": {
+            "#344_ncde": "shadow-only, actuation NONE; defaults are provisional forecast features",
+            "#216_saddle_staircase": (
+                "no calibrated classifier; a staircase prioritizes a QDBS quote only"
+            ),
+            "#475_grokking": (
+                "negative scoped to a fixed 31-feature quadratic chart; no stage-advance "
+                "authority"
+            ),
+        },
+        "executable_form": (
+            "eg1 E2 typed policy: MEASURE_FINISHER_QUOTE -> HANDOFF_* only on a same-parent "
+            "conservative score-gain-rate dominance (finisher lower bound strictly above the "
+            "training window's upper bound)"
+        ),
+        "live_evaluation": {
+            "status": "ARMED_NO_TRIGGER",
+            "reason": (
+                "tb1 T2 measured still-descending trajectories at window end (no plateau); "
+                "no basin-entry detector hit is committed on the live tr1 parent"
+            ),
+            "duty_modulation": "NONE — bounded training windows remain the head",
+        },
+        "doctrine_anchor": "train_least_surgical_kolmogorov_projection_realization_doctrine_20260716",
+        "source": (
+            {"path": policy["artifact"], "sha256": policy["sha256"]}
+            if policy and policy.get("available")
+            else None
+        ),
+    }
+    return {
+        "schema": "ddm_costate_sense_laws.v1",
+        "rows": [gate_basis, basin],
+        "actuation": "NONE",
+        "score_claim": False,
+    }
+
+
+def _conditional_validity_review(
+    arc_rows: Sequence[Mapping[str, Any]],
+    band_parents: Mapping[str, Any],
+) -> dict[str, Any]:
+    """The substrate-change trigger: evaluate precondition tags against the live state.
+
+    A negative verdict binds only while its preconditions hold. When a precondition
+    breaks: a committed successor re-grades it in place (RE_GRADED_BY_COMMITTED_SUCCESSOR),
+    otherwise a typed re-grade duty is surfaced (DUE, or ARMED while the band still
+    explodes). The FULL historical sweep is owned by the pending rv1 arm; this review
+    seeds arc-local rows only.
+    """
+
+    index = {row["finding_id"]: row for row in arc_rows if row.get("available")}
+    live_parent = (
+        "tr1_lotto_sealed" if "tb1_t3_sealed_ticket" in index else "W_joint_describe_line"
+    )
+    any_in_band = bool(band_parents.get("any_parent_in_band"))
+    successors: dict[str, list[str]] = {
+        "fd1_fixed_capacity_wjoint_parametrization": [
+            fid
+            for fid in (
+                "fd2_zero_accept_disambiguation",
+                "tb1_t2_race_verdict",
+                "tb1_t3_sealed_ticket",
+            )
+            if fid in index
+        ],
+    }
+    rows: list[dict[str, Any]] = []
+    duties: list[dict[str, Any]] = []
+    for row in arc_rows:
+        if not row.get("available"):
+            continue
+        for pre in row.get("preconditions") or ():
+            kind = str(pre["kind"])
+            if kind == "band_regime":
+                status = "BROKEN" if any_in_band else "HOLDS"
+            elif kind == "parent":
+                status = "HOLDS" if live_parent == "W_joint_describe_line" else "BROKEN"
+            elif kind == "parametrization":
+                status = "BROKEN" if successors.get(str(pre["precondition_id"])) else "HOLDS"
+            else:
+                status = "UNEVALUATED"
+            entry: dict[str, Any] = {
+                "schema": PRECONDITION_SCHEMA,
+                "finding_id": row["finding_id"],
+                "precondition_id": pre["precondition_id"],
+                "kind": kind,
+                "holds_when": pre["holds_when"],
+                "invalidated_by": pre["invalidated_by"],
+                "status": status,
+                "live_parent": live_parent,
+            }
+            if status == "BROKEN":
+                named = successors.get(str(pre["precondition_id"])) or []
+                if named:
+                    entry["disposition"] = "RE_GRADED_BY_COMMITTED_SUCCESSOR"
+                    entry["successors"] = named
+                else:
+                    entry["disposition"] = "REGRADE_CANDIDATE"
+                    duties.append(
+                        {
+                            "duty": f"RE_GRADE_{row['finding_id'].upper()}",
+                            "finding_id": row["finding_id"],
+                            "precondition_id": pre["precondition_id"],
+                            "reason": (
+                                f"precondition {pre['precondition_id']} broken "
+                                f"(live parent={live_parent}); re-grade the verdict on the "
+                                "new substrate"
+                            ),
+                            "status": (
+                                "DUE"
+                                if any_in_band or kind == "band_regime"
+                                else "ARMED_NOT_DUE_BAND_STILL_EXPLODE"
+                            ),
+                            "actuation": "NONE",
+                        }
+                    )
+            rows.append(entry)
+    return {
+        "schema": "ddm_costate_conditional_validity.v1",
+        "live_parent": live_parent,
+        "any_parent_in_band": any_in_band,
+        "rows": rows,
+        "re_grade_duties": duties,
+        "table_owner": (
+            "rv1_conditional_validity_table (pending producer; this organ seeds arc-local "
+            "rows only — no duplicate sweep)"
+        ),
+        "actuation": "NONE",
+        "score_claim": False,
+    }
+
+
+def _endgame_chain_duties(
+    arc_index: Mapping[str, Mapping[str, Any]],
+    pending_rows: Sequence[Mapping[str, Any]],
+    band_parents: Mapping[str, Any],
+) -> dict[str, Any]:
+    """The 07-28-late endgame duty chain, each leg cited to a committed receipt.
+
+    Chain: B-verdict watch -> burn-fire -> first-gates -> T1-validity-gate ->
+    byte-close chain readiness (eg1's E1 as the R6 on-ramp). The organ is advisory:
+    burn-fire is a heavy launch and stays operator-GO.
+    """
+
+    pending = {row["producer"]: row for row in pending_rows}
+    lv1 = pending.get("lv1_token_stack_prices") or {}
+    sealed = "tb1_t3_sealed_ticket" in arc_index
+
+    def _cites(*fids: str) -> list[str]:
+        return [fid for fid in fids if fid in arc_index]
+
+    chain = [
+        {
+            "rank": 1,
+            "duty": "B_VERDICT_WATCH",
+            "status": "STANDING_WATCH",
+            "basis": (
+                "watch the burn's realized corner against the eg1 exact ceilings "
+                "(190,334 B @0.172 / 157,294 B @0.15 at d_seg 3e-4, d_pose 2.33e-5; "
+                "TR1-A 149 KB -> S 0.144177 is the only sub-bar corner)"
+            ),
+            "cites": _cites("eg1_e2_stop_policy"),
+        },
+        {
+            "rank": 2,
+            "duty": "T3_BURN_FIRE",
+            "status": "READY_OPERATOR_GO" if sealed else "NOT_SEALED",
+            "basis": (
+                "sealed LOTTO ticket READY_TO_FIRE_UNDER_STANDING_GO; fires from MAIN only; "
+                "heavy launch = operator-GO (CONTAINMENT) — the organ surfaces readiness only"
+            ),
+            "cites": _cites("tb1_t3_sealed_ticket", "tb1_t2_race_verdict"),
+        },
+        {
+            "rank": 3,
+            "duty": "FIRST_GATES",
+            "status": "BLOCKED_ON_BURN_FIRE",
+            "basis": (
+                "first gate_every=10 full-confirms under ema_gate_basis_v1 (live before "
+                "W=2/(1-d), shadow after); lane Betti-0 is a burn stage-exit facet; the "
+                "Lane-pool lever race fires FIRST (tb1 caveat handling)"
+            ),
+            "cites": _cites("tb1_t2_race_verdict"),
+            "law": "ema_gate_basis_v1",
+        },
+        {
+            "rank": 4,
+            "duty": "T1_VALIDITY_GATE",
+            "status": (
+                "PRODUCER_COMMITTED_FOLD_NEXT_ROUND"
+                if lv1.get("available")
+                else "PENDING_COMMITTED_PRODUCER_LV1"
+            ),
+            "basis": (
+                "truncated token-stack prices are admissible only with realized-validity "
+                "rows; pools-law: truncation vs quantization candidates COMPETE, never sum"
+            ),
+            "cites": [],
+            "pending_producer": "lv1_token_stack_prices",
+        },
+        {
+            "rank": 5,
+            "duty": "BYTE_CLOSE_CHAIN_READY",
+            "status": "BUILT_STANDING",
+            "basis": (
+                "eg1 E1 rehearsed the TR1 packet/receiver/locked-eval interface = the R6 "
+                "exact-eval on-ramp; keep exporter identity bound to the burn's checkpoints"
+            ),
+            "cites": _cites("eg1_e1_byteclose_rehearsal"),
+        },
+    ]
+    for row in chain:
+        row["actuation"] = "NONE"
+    head = next((row for row in chain if row["status"] == "READY_OPERATOR_GO"), chain[0])
+    return {
+        "schema": "ddm_costate_endgame_chain.v1",
+        "derivation": (
+            "committed-receipt chain (tb1 seal + eg1 E1/E2/E3); head = the first "
+            "operator-actionable leg; corrections-class legs absent because every live "
+            f"parent is above-band (any_parent_in_band={band_parents.get('any_parent_in_band')})"
+        ),
+        "chain": chain,
+        "head_actionable": head["duty"],
         "actuation": "NONE",
         "score_claim": False,
     }
@@ -1030,6 +1609,12 @@ def build_live_ddm_costate(
     duties = _duties(scheduler)
     arc_evidence = _arc_evidence_rows(repo_root)
     band_position = _band_position(repo_root)
+    band_parents = _band_position_parents(repo_root, band_position)
+    arc_index = {row["finding_id"]: row for row in arc_evidence if row.get("available")}
+    sense_laws = _sense_laws(arc_index)
+    pending_producers = _pending_producers(repo_root)
+    conditional_validity = _conditional_validity_review(arc_evidence, band_parents)
+    duties_endgame = _endgame_chain_duties(arc_index, pending_producers, band_parents)
     duties_refreshed = _refreshed_duties(duties, arc_evidence, band_position)
     instruments = _instrument_audit(backtest, v19b)
 
@@ -1164,6 +1749,11 @@ def build_live_ddm_costate(
             "score_claim": False,
         },
         "band_position": band_position,
+        "band_position_parents": band_parents,
+        "sense_laws": sense_laws,
+        "pending_producers": pending_producers,
+        "conditional_validity": conditional_validity,
+        "duties_endgame": duties_endgame,
         "instruments": instruments,
         "campaign": campaign,
         "staleness": {
@@ -1277,6 +1867,65 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
             "actuation=NONE MAIN-review=REQUIRED"
         ),
     ]
+    # ── co7 lines: endgame chain · SENSE laws · per-parent band · conditional validity ·
+    # pending producers. Advisory; every row cites committed content-hashed artifacts.
+    chain = report.get("duties_endgame") or {}
+    if chain.get("chain"):
+        lines.append(
+            "DDM-chain[endgame]: "
+            + " > ".join(f"{row['duty']}({row['status'].lower()})" for row in chain["chain"])
+            + f"; head={chain['head_actionable']} actuation=NONE"
+        )
+    laws = report.get("sense_laws") or {}
+    law_rows = {row["law_id"]: row for row in laws.get("rows") or []}
+    if law_rows:
+        gate_law = law_rows.get("ema_gate_basis_v1") or {}
+        basin_law = law_rows.get("basin_solve_handoff_v1") or {}
+        lines.append(
+            "DDM-laws: gate-basis=ACTIVE(W=2/(1-d), #85-fixed) "
+            f"basin-solve={((basin_law.get('live_evaluation') or {}).get('status', 'ABSENT'))} "
+            f"(never-auto-stop={basin_law.get('never_auto_stop')}; "
+            f"gate-basis-commit={gate_law.get('code_commit', 'ABSENT')})"
+        )
+    parents = report.get("band_position_parents") or {}
+    if parents.get("rows"):
+        lines.append(
+            "DDM-parents: "
+            + " · ".join(
+                f"{row['parent']}={row['base_d_seg']:.6g}:{str(row['regime']).upper()}"
+                for row in parents["rows"]
+            )
+            + (
+                " -> corrections DEAD at every live parent"
+                if not parents.get("any_parent_in_band")
+                else " -> A PARENT IS IN-BAND: correction-class re-grade DUE"
+            )
+        )
+    validity = report.get("conditional_validity") or {}
+    if validity.get("rows") is not None:
+        v_rows = validity.get("rows") or []
+        broken = [row for row in v_rows if row.get("status") == "BROKEN"]
+        regraded = [
+            row for row in broken if row.get("disposition") == "RE_GRADED_BY_COMMITTED_SUCCESSOR"
+        ]
+        v_duties = validity.get("re_grade_duties") or []
+        due = sum(1 for row in v_duties if row.get("status") == "DUE")
+        lines.append(
+            f"DDM-validity: preconditions={len(v_rows)} broken={len(broken)} "
+            f"re-graded={len(regraded)} re-grade-duties={len(v_duties)} (due={due}) "
+            f"live-parent={validity.get('live_parent')} table-owner=rv1[pending]"
+        )
+    pending = report.get("pending_producers") or []
+    if pending:
+        lines.append(
+            "DDM-pending: "
+            + " ".join(
+                f"{row['producer']}="
+                + ("COMMITTED" if row.get("available") else "PENDING")
+                for row in pending
+            )
+            + "; numbers uncounted until committed (NO-FAKE)"
+        )
     lines.extend(
         (
             (
@@ -1305,6 +1954,14 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
                 f"gate={enhancements['status']} "
                 f"next-gate={(enhancements.get('duty_to_measure') or [{}])[0].get('named_gate', 'NONE')} "
                 "actuation=NONE"
+                + (
+                    " next-producer="
+                    + str(
+                        (enhancements.get("duty_to_measure") or [{}])[0]["producer_state"]
+                    ).split(":", 1)[0]
+                    if (enhancements.get("duty_to_measure") or [{}])[0].get("producer_state")
+                    else ""
+                )
             ),
         )
     )
