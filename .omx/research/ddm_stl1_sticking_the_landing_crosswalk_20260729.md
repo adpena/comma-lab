@@ -30,6 +30,11 @@ reparameteriz* | score.function | DReG | 1703.09194`. Findings:
     score-function-class. The P2b retro-typing (§2) does NOT get to claim that as novel.
 - The `codex_findings_onpolicy_forward_surrogate_*` + `warmstart_organ_n1_rl_*` cluster uses
   adjoint/pathwise costate gradients but never names STL or the variance-at-optimum result.
+- Grep inoculation (all 15 `roeder|DReG`-token hits verified INCIDENTAL): "Sch**roeder** 2014"
+  (DNA storage) · "AffineLegen**dreG**auge" (Bregman v9) · "Pe**dreg**osa" (PG survey seed) ·
+  base85 blobs in packet `inflate.py` · **Roeder 2021** (Roeder–Metz–Kingma, linear
+  IDENTIFIABILITY, arXiv:2007.00810 — a DIFFERENT paper by the same first author, consulted in
+  `sub015_DAG` + `north_star_task_geometry`; unrelated to STL).
 
 **Net recall verdict:** the DICHOTOMY (ES = likelihood-ratio class; use pathwise where
 differentiable) is established. What STL ADDS, and what this memo contributes, is the
