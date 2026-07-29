@@ -1,0 +1,59 @@
+{
+ "schema": "ddm_pb1_p1_receipt.v1",
+ "arm": "ddm_pb1",
+ "step": "P1_e2_policy_quote_plus_receiver_realized_base",
+ "date_utc": "2026-07-29",
+ "pointer_honesty": "0.1910828242 [contest-CPU] UNMOVED; competitive effective frontier = official displayed 0.172; everything here is [macOS-CPU advisory], score_claim=false",
+ "burn_endpoint_custody": {
+  "checkpoint": "/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/t3_long_burn_lotto_v2/checkpoints/stage_seg_trunk_tau_final.npz",
+  "checkpoint_sha256": "33776302e4fabf0127b01dc3551bafbd747daff71f76946883177fede24de0d3",
+  "config_hash": "53ac33ce0e7bf92293d72b8407512304de836067fcd8e7c9f98e5e629bb76178",
+  "trainer_full_confirm_dseg_fp32_ema": 0.0038892194959852435,
+  "stop_reason": "epochs_complete",
+  "final_gate": "FLAT (gates 0.00415->0.00401->0.00382->0.00393; last window WORSENED -> no positive same-parent training quote exists)"
+ },
+ "base_archive": {
+  "compiled_by": "tac.optimization.ddm_tr1_runtime.compile_archive_from_checkpoint (committed exporter, main e31ff0fdc8)",
+  "archive_sha256": "85d575bed157aa1b2e43d2970ad597f938834777cbe7d0ba007d9be405a5c7e4",
+  "archive_bytes": 768689,
+  "sections": {"tokens_brotli_q11": 763540, "lotto_renderer": 3341, "selector": 535, "pose_stub": 83},
+  "note_vs_t2": "T2 zero-init tokens coded to 499,587 B; the t3 solve-init token field carries GT appearance detail and codes to 763,540 B (lv1 SectionB honesty-axis prediction CONFIRMED at the exporter)"
+ },
+ "receiver_realized_base_verdict": {
+  "receipt": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p1_receiver_realized_verdict.json",
+  "d_seg_mean": 0.0038887702094184034,
+  "d_seg_max_pair": 0.006779988606770833,
+  "deploy_parity_delta_vs_fp32_confirm": -4.492865668401474e-07,
+  "deploy_parity_verdict": "far inside the pn1 pre-registered |delta|<=5e-4 green band; deployed fp16/uint8 bytes reproduce the fp32 EMA confirm at population level",
+  "per_class_d_seg": [0.0012046644422743055, 0.0015057288275824652, 0.0004994964599609375, 0.0005862002902560764, 9.268018934461806e-05],
+  "per_class_note": "Lane (c1) carries 38.7% of flip mass, Road (c0) 31.0% - the lane long-tail law confirmed on deployed bytes",
+  "d_pose_zeros_frame0": 78.19802405770572,
+  "d_pose_note": "the inert pose stub's executable meaning (frame0=zeros) prices the pose term at sqrt(10*78.198)=27.96 - the vehicle's pose axis is WIDE OPEN; P3 owns most of the composed S mass; copy-predict frame0 (locked law) to be raced as the P3 base"
+ },
+ "e2_policy": {
+  "tool": "tools/derive_ddm_endgame_policy.py --request (committed eg1 E2)",
+  "request": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p1_policy_request.json",
+  "decision_receipt": "/Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p1_policy_decision.json",
+  "action": "MEASURE_FINISHER_QUOTE",
+  "reason_codes": ["MISSING_SAME_PARENT_MEASURED_TRAINING_QUOTE"],
+  "operating_score": 28.86462508198478,
+  "verdict_vs_charter_prediction": "AGREES with solve-handoff: the burn endpoint has no admissible positive training quote (FLAT/worsening final window) so the policy routes to measuring finisher quotes = P2/P3; extend-window is NOT indicated now",
+  "advisory_signals": "none supplied (NCDE shadow-only; no calibrated regime classifier) - policy is advisory, actuation NONE"
+ },
+ "sc2_extension_window_folds_recorded_not_fired": {
+  "source": "commit b449aae37f (ddm_sc2 memo, branch worktree-agent-a8874da260a3c5602) R2 verbatim fold set",
+  "folds": [
+   "F3: opt-state persistence for same-config ratchets OR lr-rewarmup per adam_v_variance_warmup_length_v1 (measured 9-15% epoch-budget leak from Adam re-anchor x~11 ratchets; cures: opt-state persist + bias_correction=True + #518 lr-rewarmup)",
+   "F2: knee predicate non-negativity guard + rel<-0.02 alarm (knee currently fires on RISING loss; only measured fire was the T1-plain ep7 misfire)",
+   "F1: EMA clamp made explicit-derived (W from gate cadence, not phi=0.5; the executed 0.9995 silently overrides LawRef 0.999867 with unrecorded provenance)",
+   "resume-form restore: global_step persisted in checkpoint; E2 quotes the solve from stage_*_final.npz even absent a basin receipt (R3 Contrarian fold)",
+   "lr derivation owed: 2x bracket race (0.001/0.004) on a 40-ep warm-started extension window"
+  ],
+  "status": "CONFIG FOR ANY FUTURE EXTENSION WINDOW - NOT FIRED in this chain (policy says measure finishers first)"
+ },
+ "scorer_slot": "held by pb1; one n600 job at a time; chunk<=120 respected (chunk=120, verdict batches 12)",
+ "evidence_axis": "[macOS-CPU advisory]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "generated_by": "ddm_pb1 P1; tools/pb1_receiver_realized_verdict.py + tools/derive_ddm_endgame_policy.py"
+}

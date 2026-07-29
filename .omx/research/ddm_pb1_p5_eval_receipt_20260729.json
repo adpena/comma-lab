@@ -1,0 +1,11 @@
+{
+ "archive_sha256": "ddc54ecb22b0d3f1122aa0ef556fdfb68047660bbfa776b7b4ac7a363b1730b5",
+ "evidence_axis": "[macOS-CPU advisory - real evaluator, real bytes]",
+ "note": "ADVISORY until the Modal contest-CPU flight (P6 operator-GO)",
+ "report": "=== Evaluation config ===\n  batch_size: 16\n  device: cpu\n  num_threads: 2\n  prefetch_queue_depth: 4\n  report: /Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p5/eval_root/submissions/pb1/report.txt\n  seed: 1234\n  submission_dir: /Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p5/eval_root/submissions/pb1\n  uncompressed_dir: /Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p5/eval_root/videos\n  video_names_file: /Volumes/VertigoDataTier/pact/ddm_pb1_20260729/p5/eval_root/public_test_video_names.txt\n=== Evaluation results over 600 samples ===\n  Average PoseNet Distortion: 38.06224823\n  Average SegNet Distortion: 0.00389011\n  Submission file size: 564,880 bytes\n  Original uncompressed size: 37,545,489 bytes\n  Compression Rate: 0.01504522\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 20.27\n",
+ "returncode": 0,
+ "schema": "ddm_pb1_p5_receipt.v2_smevr",
+ "score_claim": false,
+ "stage": "eval",
+ "wall_seconds": 1157.1789999008179
+}
