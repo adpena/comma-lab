@@ -72,6 +72,7 @@ def _custody() -> ProductionPoseCustodyV1:
 
     return ProductionPoseCustodyV1(
         parent_archive_sha256=digest("parent"),
+        compiler_sha256=digest("compiler"),
         receiver_sha256=digest("receiver"),
         evaluator_sha256=digest("evaluator"),
         upstream_sha256=digest("upstream"),
@@ -196,7 +197,7 @@ def test_rehearsal_gn_uses_realized_verdicts_but_never_promotes() -> None:
     assert frozen and all(frozen)
 
 
-def test_production_yields_governed_handoff_never_promotion(
+def test_production_yields_external_review_never_handoff_or_promotion(
     tmp_path,
 ) -> None:
     parent = _parent()
@@ -223,10 +224,12 @@ def test_production_yields_governed_handoff_never_promotion(
         config=config,
     )
     assert result.strict_realized_improvement
-    assert result.governed_handoff_eligible
+    assert not result.governed_handoff_eligible
+    assert result.external_governor_review_required
     assert result.final_evaluation.full_n600
     payload = result.to_payload()
-    assert payload["governed_handoff_eligible"] is True
+    assert payload["governed_handoff_eligible"] is False
+    assert payload["external_governor_review_required"] is True
     assert payload["production_accepted"] is False
     assert payload["promotion_allowed"] is False
     assert payload["score_claim"] is False

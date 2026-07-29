@@ -11,9 +11,10 @@ the receiver path:
 
 Only frame 0 may change.  Frame 1 is copied byte-for-byte from the frozen
 composed parent and asserted after every realization.  A bounded stale
-rehearsal can exercise the mechanism, but only a marked full-n600 joint verdict
-with matching typed custody may produce a governed handoff.  This module never
-promotes a score or moves the frontier pointer.  Production mode additionally
+rehearsal can exercise the mechanism. A marked full-n600 joint verdict with
+matching typed custody produces only an external-governor review package:
+typed custody is self-attested here, so this module never authorizes a handoff,
+promotes a score, or moves the frontier pointer. Production mode additionally
 requires an atomic disk resume directory with immutable verdict, iteration,
 and completed ledgers.
 """
@@ -148,6 +149,7 @@ class ProductionPoseCustodyV1:
     """Typed full-n600 scorer and runtime custody bound to every verdict."""
 
     parent_archive_sha256: str
+    compiler_sha256: str
     receiver_sha256: str
     evaluator_sha256: str
     upstream_sha256: str
@@ -158,6 +160,7 @@ class ProductionPoseCustodyV1:
     def __post_init__(self) -> None:
         for name in (
             "parent_archive_sha256",
+            "compiler_sha256",
             "receiver_sha256",
             "evaluator_sha256",
             "upstream_sha256",
@@ -176,7 +179,9 @@ class ProductionPoseCustodyV1:
     def to_payload(self) -> dict[str, object]:
         return {
             "schema": "ddm_terminal_pose_production_custody.v1",
+            "authority_class": "SELF_ATTESTED_REQUIRES_EXTERNAL_GOVERNOR",
             "parent_archive_sha256": self.parent_archive_sha256,
+            "compiler_sha256": self.compiler_sha256,
             "receiver_sha256": self.receiver_sha256,
             "evaluator_sha256": self.evaluator_sha256,
             "upstream_sha256": self.upstream_sha256,
@@ -674,6 +679,7 @@ class TerminalPoseGNResult:
     pose_mse_final: float
     strict_realized_improvement: bool
     governed_handoff_eligible: bool
+    external_governor_review_required: bool
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -687,6 +693,10 @@ class TerminalPoseGNResult:
             _coefficients(self.final_coefficients, "result.final_coefficients"),
         )
         object.__setattr__(self, "target_pose6", _pose6(self.target_pose6, "result.target_pose6"))
+        if self.governed_handoff_eligible is not False:
+            raise TerminalPoseError("terminal pose cannot authorize its own governed handoff")
+        if type(self.external_governor_review_required) is not bool:
+            raise TerminalPoseError("external_governor_review_required must be bool")
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -716,6 +726,7 @@ class TerminalPoseGNResult:
             "steps": [step.to_payload() for step in self.steps],
             "strict_realized_improvement": self.strict_realized_improvement,
             "governed_handoff_eligible": self.governed_handoff_eligible,
+            "external_governor_review_required": self.external_governor_review_required,
             "production_accepted": False,
             "promotion_allowed": False,
             "score_claim": False,
@@ -724,6 +735,8 @@ class TerminalPoseGNResult:
 
 
 def _checked_ledger_payload(path: Path, *, expected_binding_sha256: str) -> dict[str, Any]:
+    if path.is_symlink() or not path.is_file():
+        raise TerminalPoseError(f"resume ledger must be a regular file: {path}")
     try:
         wrapper = json.loads(path.read_bytes())
     except (OSError, json.JSONDecodeError) as exc:
@@ -751,6 +764,8 @@ def _atomic_checked_ledger_write(path: Path, *, binding_sha256: str, payload: di
     """Write once atomically; an existing path must be byte-logically identical."""
 
     binding_sha256 = _sha256_text(binding_sha256, "ledger.binding_sha256")
+    if path.is_symlink() or path.parent.is_symlink():
+        raise TerminalPoseError(f"resume ledger path must not be a symlink: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         existing = _checked_ledger_payload(path, expected_binding_sha256=binding_sha256)
@@ -797,6 +812,7 @@ def _resume_result_payload(result: TerminalPoseGNResult) -> dict[str, Any]:
         "pose_mse_final": result.pose_mse_final,
         "strict_realized_improvement": result.strict_realized_improvement,
         "governed_handoff_eligible": result.governed_handoff_eligible,
+        "external_governor_review_required": result.external_governor_review_required,
     }
 
 
@@ -815,6 +831,7 @@ def _result_from_resume_payload(payload: dict[str, Any]) -> TerminalPoseGNResult
         pose_mse_final=float(payload["pose_mse_final"]),
         strict_realized_improvement=bool(payload["strict_realized_improvement"]),
         governed_handoff_eligible=bool(payload["governed_handoff_eligible"]),
+        external_governor_review_required=bool(payload["external_governor_review_required"]),
     )
 
 
@@ -1101,7 +1118,7 @@ def solve_terminal_pose_gn(
             )
 
     strict_improvement = current_mse < initial_mse and current_evaluation.joint_action < initial_evaluation.joint_action
-    governed_handoff_eligible = (
+    external_governor_review_required = (
         strict_improvement
         and config.authority_mode is PoseAuthorityMode.PRODUCTION_FULL_N600
         and current_evaluation.full_n600
@@ -1118,7 +1135,8 @@ def solve_terminal_pose_gn(
         pose_mse_initial=initial_mse,
         pose_mse_final=current_mse,
         strict_realized_improvement=strict_improvement,
-        governed_handoff_eligible=governed_handoff_eligible,
+        governed_handoff_eligible=False,
+        external_governor_review_required=external_governor_review_required,
     )
     if config.authority_mode is PoseAuthorityMode.PRODUCTION_FULL_N600 and resume_root is not None:
         _atomic_checked_ledger_write(

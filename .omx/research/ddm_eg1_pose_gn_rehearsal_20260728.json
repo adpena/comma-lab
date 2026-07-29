@@ -18,6 +18,7 @@
     "authority_mode": "STALE_REHEARSAL",
     "candidate_artifact_scope": "terminal-section-only; outer artifact equals packet",
     "evidence_axis": "[macOS-CPU frozen-PoseNet one-pair advisory]",
+    "external_governor_review_required": false,
     "final_candidate_artifact": {
       "archive_bytes": 107,
       "archive_sha256": "600aae6bad9c17cdfd37363e7161da29fd26fc6966e6fc84259688ca2553ee94",
@@ -146,6 +147,7 @@
     "authority_mode": "STALE_REHEARSAL",
     "candidate_artifact_scope": "terminal-section-only; outer artifact equals packet",
     "evidence_axis": "[deterministic stale mechanism rehearsal]",
+    "external_governor_review_required": false,
     "final_candidate_artifact": {
       "archive_bytes": 107,
       "archive_sha256": "dca97f35857b74b42e6c5b1d639453582a3c1caa7b6d349207ed7d9581f99a3b",
