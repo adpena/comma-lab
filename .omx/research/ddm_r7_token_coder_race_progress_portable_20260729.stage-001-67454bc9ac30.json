@@ -1,0 +1,2769 @@
+{
+  "checkpoint_custody": {
+    "/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/t3_long_burn_lotto_v2/checkpoints/intra_seg_trunk_ce_ep00009.npz": {
+      "bytes": 14962976,
+      "sha256": "9548ad7f915163e9e5ea2339d041dd14163662f99e2dd3c32cd2c3f6bbc87c97"
+    },
+    "/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/t3_long_burn_lotto_v2/checkpoints/intra_seg_trunk_tau_ep00399.npz": {
+      "bytes": 14963203,
+      "sha256": "f9efba6ac537dcd836515c89f4fd8c136001702706b6aa5765e0e831f028d749"
+    },
+    "/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/checkpoints/stage_seg_trunk_tau_final.npz": {
+      "bytes": 14963191,
+      "sha256": "67454bc9ac30ea6f971c29c6c6cea7b8af8d98293ed77e44be3a14b8a8667bc2"
+    }
+  },
+  "checkpoint_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/checkpoints/stage_seg_trunk_tau_final.npz",
+    "/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/t3_long_burn_lotto_v2/checkpoints/intra_seg_trunk_ce_ep00009.npz",
+    "/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/t3_long_burn_lotto_v2/checkpoints/intra_seg_trunk_tau_ep00399.npz"
+  ],
+  "completed": {
+    "/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/checkpoints/stage_seg_trunk_tau_final.npz": {
+      "checkpoint": {
+        "bytes": 14963191,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/checkpoints/stage_seg_trunk_tau_final.npz",
+        "sha256": "67454bc9ac30ea6f971c29c6c6cea7b8af8d98293ed77e44be3a14b8a8667bc2"
+      },
+      "competitive_arithmetic": {
+        "ceiling_0.15_bytes": 157294,
+        "ceiling_0.172_bytes": 190334,
+        "composed_section_estimate_bytes": 365661,
+        "deficit_to_0.15_ceiling_bytes": 208367,
+        "deficit_to_0.172_ceiling_bytes": 175327,
+        "exact_byteclose_status": "OWED_EG1_INTEGRATION_NOT_AN_ARCHIVE_ROW",
+        "fixed_e1_archive_overhead_bytes": 1190,
+        "metadata_pool_selection": "joint_raw_stream",
+        "metadata_selected_bytes": 3645,
+        "rate_score_term_at_composed_estimate": 0.2434786506576063
+      },
+      "entropy": {
+        "argmax_equivalence_conditional_bound": {
+          "exact_universal_lower_bound_bytes": 0,
+          "identifiability": "NOT_IDENTIFIABLE_FROM_CHECKPOINT: token dump has no realized partition array and only one realization per checkpoint",
+          "proxy_assumed_average_fiber_floor_bytes": 190641.05944670583,
+          "proxy_assumption": "ASSUME the residual empirical plug-in first-order model is the source ensemble and H_assumed(P) is no more than pp1 GT-partition KT 173616.498 B; excludes the counted mode base; not a dump theorem or score row",
+          "proxy_inequality": "under the assumed first-order source only: H_assumed(R|B,P) >= H_assumed(R|B) - H_assumed(P)"
+        },
+        "channels": [
+          {
+            "channel": 0,
+            "empirical_plugin_h_delta_bits_per_symbol": 1.6209094389761791,
+            "empirical_plugin_h_delta_given_previous_bits_per_symbol": 1.586953660460794,
+            "p_delta_zero": 0.5353602430555555
+          },
+          {
+            "channel": 1,
+            "empirical_plugin_h_delta_bits_per_symbol": 1.6387827803682393,
+            "empirical_plugin_h_delta_given_previous_bits_per_symbol": 1.6041311107707956,
+            "p_delta_zero": 0.5287174479166666
+          },
+          {
+            "channel": 2,
+            "empirical_plugin_h_delta_bits_per_symbol": 1.5992928890804798,
+            "empirical_plugin_h_delta_given_previous_bits_per_symbol": 1.5649170981310307,
+            "p_delta_zero": 0.54171875
+          },
+          {
+            "channel": 3,
+            "empirical_plugin_h_delta_bits_per_symbol": 1.6093814708243603,
+            "empirical_plugin_h_delta_given_previous_bits_per_symbol": 1.5679140585315783,
+            "p_delta_zero": 0.5404817708333334
+          }
+        ],
+        "mode_base_packed_bytes": 1536,
+        "mode_base_symbols": 3072,
+        "residual_empirical_plugin_prev1_bytes": 364257.5574467058,
+        "residual_empirical_plugin_unconditional_bytes": 372577.9149647573
+      },
+      "existing_e1": {
+        "archive_bytes": 504736,
+        "archive_sha256": "5c33f231339854e929dc0d1ef19abf51abd7ede521ad0e04650f572e8b5c12db",
+        "section_ledger": [
+          {
+            "bytes": 499587,
+            "consumer": "TR1Receiver.decode_combined_tokens",
+            "name": "tokens",
+            "sha256": "60cdfc0b848b850faf22b39a7093416b1562a3d06e13acc4b5d62f14a9c6deb0"
+          },
+          {
+            "bytes": 3341,
+            "consumer": "TR1Receiver.regenerate_bank_and_apply_mask_mods",
+            "name": "lotto_renderer",
+            "sha256": "71eb7926527da09a6c11f45afedba380d8db5290f3f8b678656d4cd0e88dfc0c"
+          },
+          {
+            "bytes": 535,
+            "consumer": "TR1Receiver.select_decode_program",
+            "name": "selector",
+            "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+          },
+          {
+            "bytes": 83,
+            "consumer": "TR1Receiver.consume_inert_pose_declaration",
+            "name": "pose_stub",
+            "sha256": "01cfd661fde76ba244436e66dcb5d842e6293461c29c32834dc8f0285ca9001d"
+          }
+        ]
+      },
+      "ranked": {
+        "metadata_complete": [
+          {
+            "coder": "brotli_q11",
+            "framed_bytes": 3645,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "bayes_linear_mix_4expert+brotli_q11",
+            "framed_bytes": 3662,
+            "source": "mixed_coder_joint_renderer_plus_selector_counted_pool"
+          },
+          {
+            "coder": "bayes_linear_mix_4expert+bayes_linear_mix_4expert+brotli_q11",
+            "framed_bytes": 3663,
+            "source": "mixed_coder_three_member_counted_pool"
+          },
+          {
+            "coder": "lzma1_extreme",
+            "framed_bytes": 3703,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "r7_lzma2_64k_joint_inspired",
+            "framed_bytes": 3717,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "logistic_mix_4expert_fixedpoint",
+            "framed_bytes": 3756,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "bayes_linear_mix_4expert",
+            "framed_bytes": 3848,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "g4_causal_byte_prefix",
+            "framed_bytes": 3848,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "willems_ctw_depth8",
+            "framed_bytes": 3868,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "rans_o0_static",
+            "framed_bytes": 4555,
+            "source": "joint_raw_stream"
+          }
+        ],
+        "mode_base": [
+          {
+            "coder": "bayes_linear_mix_4expert",
+            "framed_bytes": 945
+          },
+          {
+            "coder": "logistic_mix_4expert_fixedpoint",
+            "framed_bytes": 961
+          },
+          {
+            "coder": "brotli_q11",
+            "framed_bytes": 969
+          },
+          {
+            "coder": "willems_ctw_depth8",
+            "framed_bytes": 1027
+          },
+          {
+            "coder": "rans_o0_static",
+            "framed_bytes": 1092
+          },
+          {
+            "coder": "g4_causal_byte_prefix",
+            "framed_bytes": 1114
+          },
+          {
+            "coder": "lzma1_extreme",
+            "framed_bytes": 1154
+          },
+          {
+            "coder": "r7_lzma2_64k_joint_inspired",
+            "framed_bytes": 1161
+          }
+        ],
+        "mode_delta": [
+          {
+            "coder": "brotli_q11",
+            "framed_bytes": 359785
+          },
+          {
+            "coder": "g4_causal_byte_prefix",
+            "framed_bytes": 371380
+          },
+          {
+            "coder": "bayes_linear_mix_4expert",
+            "framed_bytes": 371395
+          },
+          {
+            "coder": "logistic_mix_4expert_fixedpoint",
+            "framed_bytes": 371757
+          },
+          {
+            "coder": "rans_o0_static",
+            "framed_bytes": 373536
+          },
+          {
+            "coder": "lzma1_extreme",
+            "framed_bytes": 373595
+          },
+          {
+            "coder": "r7_lzma2_64k_joint_inspired",
+            "framed_bytes": 383589
+          },
+          {
+            "coder": "willems_ctw_depth8",
+            "framed_bytes": 460850
+          }
+        ],
+        "mods": [
+          {
+            "coder": "bayes_linear_mix_4expert",
+            "framed_bytes": 496
+          },
+          {
+            "coder": "logistic_mix_4expert_fixedpoint",
+            "framed_bytes": 503
+          },
+          {
+            "coder": "brotli_q11",
+            "framed_bytes": 505
+          },
+          {
+            "coder": "willems_ctw_depth8",
+            "framed_bytes": 527
+          },
+          {
+            "coder": "r7_lzma2_64k_joint_inspired",
+            "framed_bytes": 529
+          },
+          {
+            "coder": "g4_causal_byte_prefix",
+            "framed_bytes": 533
+          },
+          {
+            "coder": "lzma1_extreme",
+            "framed_bytes": 536
+          },
+          {
+            "coder": "rans_o0_static",
+            "framed_bytes": 969
+          }
+        ],
+        "renderer_supermask_mods": [
+          {
+            "coder": "bayes_linear_mix_4expert",
+            "framed_bytes": 3327,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "willems_ctw_depth8",
+            "framed_bytes": 3329,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "brotli_q11",
+            "framed_bytes": 3330,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "bayes_linear_mix_4expert",
+            "framed_bytes": 3337,
+            "source": "split_counted_pool"
+          },
+          {
+            "coder": "bayes_linear_mix_4expert+bayes_linear_mix_4expert",
+            "framed_bytes": 3337,
+            "source": "mixed_coder_split_counted_pool"
+          },
+          {
+            "coder": "logistic_mix_4expert_fixedpoint",
+            "framed_bytes": 3343,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "brotli_q11",
+            "framed_bytes": 3348,
+            "source": "split_counted_pool"
+          },
+          {
+            "coder": "lzma1_extreme",
+            "framed_bytes": 3351,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "r7_lzma2_64k_joint_inspired",
+            "framed_bytes": 3357,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "logistic_mix_4expert_fixedpoint",
+            "framed_bytes": 3363,
+            "source": "split_counted_pool"
+          },
+          {
+            "coder": "willems_ctw_depth8",
+            "framed_bytes": 3368,
+            "source": "split_counted_pool"
+          },
+          {
+            "coder": "lzma1_extreme",
+            "framed_bytes": 3423,
+            "source": "split_counted_pool"
+          },
+          {
+            "coder": "r7_lzma2_64k_joint_inspired",
+            "framed_bytes": 3431,
+            "source": "split_counted_pool"
+          },
+          {
+            "coder": "g4_causal_byte_prefix",
+            "framed_bytes": 3443,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "g4_causal_byte_prefix",
+            "framed_bytes": 3480,
+            "source": "split_counted_pool"
+          },
+          {
+            "coder": "rans_o0_static",
+            "framed_bytes": 4061,
+            "source": "joint_raw_stream"
+          },
+          {
+            "coder": "rans_o0_static",
+            "framed_bytes": 4568,
+            "source": "split_counted_pool"
+          }
+        ],
+        "selector": [
+          {
+            "coder": "brotli_q11",
+            "framed_bytes": 322
+          },
+          {
+            "coder": "logistic_mix_4expert_fixedpoint",
+            "framed_bytes": 391
+          },
+          {
+            "coder": "bayes_linear_mix_4expert",
+            "framed_bytes": 404
+          },
+          {
+            "coder": "g4_causal_byte_prefix",
+            "framed_bytes": 404
+          },
+          {
+            "coder": "lzma1_extreme",
+            "framed_bytes": 406
+          },
+          {
+            "coder": "willems_ctw_depth8",
+            "framed_bytes": 462
+          },
+          {
+            "coder": "r7_lzma2_64k_joint_inspired",
+            "framed_bytes": 465
+          },
+          {
+            "coder": "rans_o0_static",
+            "framed_bytes": 489
+          }
+        ],
+        "supermask": [
+          {
+            "coder": "bayes_linear_mix_4expert",
+            "framed_bytes": 2828
+          },
+          {
+            "coder": "willems_ctw_depth8",
+            "framed_bytes": 2828
+          },
+          {
+            "coder": "brotli_q11",
+            "framed_bytes": 2830
+          },
+          {
+            "coder": "logistic_mix_4expert_fixedpoint",
+            "framed_bytes": 2847
+          },
+          {
+            "coder": "lzma1_extreme",
+            "framed_bytes": 2874
+          },
+          {
+            "coder": "r7_lzma2_64k_joint_inspired",
+            "framed_bytes": 2889
+          },
+          {
+            "coder": "g4_causal_byte_prefix",
+            "framed_bytes": 2934
+          },
+          {
+            "coder": "rans_o0_static",
+            "framed_bytes": 3586
+          }
+        ],
+        "token_mode_delta": [
+          {
+            "coder": "bayes_linear_mix_4expert+brotli_q11",
+            "framed_bytes": 360743,
+            "source": "mixed_coder_mode_delta_counted_pool"
+          },
+          {
+            "coder": "brotli_q11",
+            "framed_bytes": 360767,
+            "source": "generic_mode_delta_counted_pool"
+          },
+          {
+            "coder": "brotli11",
+            "framed_bytes": 360905,
+            "source": "production_token_frame"
+          },
+          {
+            "coder": "smevr",
+            "framed_bytes": 363528,
+            "source": "production_token_frame"
+          },
+          {
+            "coder": "kt_prev1",
+            "framed_bytes": 365670,
+            "source": "production_token_frame"
+          },
+          {
+            "coder": "cae_inspired_identity_inter",
+            "framed_bytes": 368817,
+            "source": "production_token_frame"
+          },
+          {
+            "coder": "bayes_linear_mix_4expert",
+            "framed_bytes": 372353,
+            "source": "generic_mode_delta_counted_pool"
+          },
+          {
+            "coder": "g4_causal_byte_prefix",
+            "framed_bytes": 372507,
+            "source": "generic_mode_delta_counted_pool"
+          },
+          {
+            "coder": "logistic_mix_4expert_fixedpoint",
+            "framed_bytes": 372731,
+            "source": "generic_mode_delta_counted_pool"
+          },
+          {
+            "coder": "rans_o0_static",
+            "framed_bytes": 374641,
+            "source": "generic_mode_delta_counted_pool"
+          },
+          {
+            "coder": "rans_o0",
+            "framed_bytes": 374701,
+            "source": "production_token_frame"
+          },
+          {
+            "coder": "lzma1",
+            "framed_bytes": 374715,
+            "source": "production_token_frame"
+          },
+          {
+            "coder": "lzma1_extreme",
+            "framed_bytes": 374762,
+            "source": "generic_mode_delta_counted_pool"
+          },
+          {
+            "coder": "r7_lzma2_64k_joint_inspired",
+            "framed_bytes": 384763,
+            "source": "generic_mode_delta_counted_pool"
+          },
+          {
+            "coder": "huffman_nibble",
+            "framed_bytes": 404771,
+            "source": "production_token_frame"
+          },
+          {
+            "coder": "kt_o8_prev5_backoff",
+            "framed_bytes": 407980,
+            "source": "production_token_frame"
+          },
+          {
+            "coder": "rans_o0_on_adjacent_innovation",
+            "framed_bytes": 461524,
+            "source": "production_token_frame"
+          },
+          {
+            "coder": "willems_ctw_depth8",
+            "framed_bytes": 461890,
+            "source": "generic_mode_delta_counted_pool"
+          },
+          {
+            "coder": "lzma1_extreme",
+            "framed_bytes": 465861,
+            "source": "generic_token_planes_counted_pool"
+          },
+          {
+            "coder": "lzma1_extreme+lzma1_extreme+lzma1_extreme+lzma1_extreme",
+            "framed_bytes": 465861,
+            "source": "mixed_coder_token_planes_counted_pool"
+          },
+          {
+            "coder": "r7_lzma2_64k_joint_inspired",
+            "framed_bytes": 471001,
+            "source": "generic_token_planes_counted_pool"
+          },
+          {
+            "coder": "brotli_q11",
+            "framed_bytes": 492127,
+            "source": "generic_token_planes_counted_pool"
+          },
+          {
+            "coder": "logistic_mix_4expert_fixedpoint",
+            "framed_bytes": 526742,
+            "source": "generic_token_planes_counted_pool"
+          },
+          {
+            "coder": "g4_causal_byte_prefix",
+            "framed_bytes": 528837,
+            "source": "generic_token_planes_counted_pool"
+          },
+          {
+            "coder": "bayes_linear_mix_4expert",
+            "framed_bytes": 528838,
+            "source": "generic_token_planes_counted_pool"
+          },
+          {
+            "coder": "rans_o0_static",
+            "framed_bytes": 545126,
+            "source": "generic_token_planes_counted_pool"
+          },
+          {
+            "coder": "willems_ctw_depth8",
+            "framed_bytes": 587438,
+            "source": "generic_token_planes_counted_pool"
+          }
+        ],
+        "token_planes": [
+          [
+            {
+              "coder": "lzma1_extreme",
+              "framed_bytes": 117522
+            },
+            {
+              "coder": "r7_lzma2_64k_joint_inspired",
+              "framed_bytes": 119097
+            },
+            {
+              "coder": "brotli_q11",
+              "framed_bytes": 123280
+            },
+            {
+              "coder": "logistic_mix_4expert_fixedpoint",
+              "framed_bytes": 130854
+            },
+            {
+              "coder": "bayes_linear_mix_4expert",
+              "framed_bytes": 131394
+            },
+            {
+              "coder": "g4_causal_byte_prefix",
+              "framed_bytes": 131394
+            },
+            {
+              "coder": "rans_o0_static",
+              "framed_bytes": 135713
+            },
+            {
+              "coder": "willems_ctw_depth8",
+              "framed_bytes": 146041
+            }
+          ],
+          [
+            {
+              "coder": "lzma1_extreme",
+              "framed_bytes": 117182
+            },
+            {
+              "coder": "r7_lzma2_64k_joint_inspired",
+              "framed_bytes": 118265
+            },
+            {
+              "coder": "brotli_q11",
+              "framed_bytes": 123136
+            },
+            {
+              "coder": "logistic_mix_4expert_fixedpoint",
+              "framed_bytes": 131471
+            },
+            {
+              "coder": "bayes_linear_mix_4expert",
+              "framed_bytes": 132087
+            },
+            {
+              "coder": "g4_causal_byte_prefix",
+              "framed_bytes": 132087
+            },
+            {
+              "coder": "rans_o0_static",
+              "framed_bytes": 134725
+            },
+            {
+              "coder": "willems_ctw_depth8",
+              "framed_bytes": 145410
+            }
+          ],
+          [
+            {
+              "coder": "lzma1_extreme",
+              "framed_bytes": 115214
+            },
+            {
+              "coder": "r7_lzma2_64k_joint_inspired",
+              "framed_bytes": 116477
+            },
+            {
+              "coder": "brotli_q11",
+              "framed_bytes": 122193
+            },
+            {
+              "coder": "logistic_mix_4expert_fixedpoint",
+              "framed_bytes": 132588
+            },
+            {
+              "coder": "g4_causal_byte_prefix",
+              "framed_bytes": 133164
+            },
+            {
+              "coder": "bayes_linear_mix_4expert",
+              "framed_bytes": 133165
+            },
+            {
+              "coder": "rans_o0_static",
+              "framed_bytes": 136213
+            },
+            {
+              "coder": "willems_ctw_depth8",
+              "framed_bytes": 146796
+            }
+          ],
+          [
+            {
+              "coder": "lzma1_extreme",
+              "framed_bytes": 115922
+            },
+            {
+              "coder": "r7_lzma2_64k_joint_inspired",
+              "framed_bytes": 117141
+            },
+            {
+              "coder": "brotli_q11",
+              "framed_bytes": 123497
+            },
+            {
+              "coder": "logistic_mix_4expert_fixedpoint",
+              "framed_bytes": 131808
+            },
+            {
+              "coder": "bayes_linear_mix_4expert",
+              "framed_bytes": 132171
+            },
+            {
+              "coder": "g4_causal_byte_prefix",
+              "framed_bytes": 132171
+            },
+            {
+              "coder": "rans_o0_static",
+              "framed_bytes": 138454
+            },
+            {
+              "coder": "willems_ctw_depth8",
+              "framed_bytes": 149170
+            }
+          ]
+        ]
+      },
+      "raw_streams": {
+        "mode_base": {
+          "bytes": 1536,
+          "sha256": "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f"
+        },
+        "mode_delta": {
+          "bytes": 921600,
+          "sha256": "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+        },
+        "mods": {
+          "bytes": 492,
+          "sha256": "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+        },
+        "selector": {
+          "bytes": 535,
+          "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+        },
+        "supermask": {
+          "bytes": 2781,
+          "sha256": "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c"
+        },
+        "supermask_mods_joint": {
+          "bytes": 3281,
+          "sha256": "ceba2c663bf9107aef6f32f2148e791b87929fa2480188f71d2040eeb5f5640f"
+        },
+        "supermask_mods_selector_joint": {
+          "bytes": 3820,
+          "sha256": "424ad58b490473e1b47bbdee30d24fd43cedf3a4d6cff208c14dcef597edd471"
+        },
+        "token_planes": [
+          {
+            "bytes": 230400,
+            "sha256": "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a"
+          },
+          {
+            "bytes": 230400,
+            "sha256": "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2"
+          },
+          {
+            "bytes": 230400,
+            "sha256": "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb"
+          },
+          {
+            "bytes": 230400,
+            "sha256": "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+          }
+        ]
+      },
+      "rows": {
+        "byte_coders": {
+          "bayes_linear_mix_4expert": {
+            "mode_base": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.053702,
+              "encode_seconds": 0.026103,
+              "frame_sha256": "18dd8494df1d39d35e63370e83ce4ef2e438cd7bd982a819a3f465ddafec9d84",
+              "framed_bytes": 945,
+              "implementation": "bayes_linear_mix_4expert",
+              "parseback_exact": true,
+              "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+              "raw_bytes": 1536,
+              "raw_sha256": "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f"
+            },
+            "mode_delta": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 32.771197,
+              "encode_seconds": 16.039328,
+              "frame_sha256": "078718bdce592af08658a132169d822a81b400e0cb5576e74df5f83073465fea",
+              "framed_bytes": 371395,
+              "implementation": "bayes_linear_mix_4expert",
+              "parseback_exact": true,
+              "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+              "raw_bytes": 921600,
+              "raw_sha256": "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+            },
+            "mode_delta_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 31.959543,
+              "encode_seconds": 15.880137,
+              "frame_sha256": "0a209fb11f3bbb99c439621482bba6a45c926f272920255d7ee6173dafaae1e8",
+              "framed_bytes": 372353,
+              "implementations": [
+                "bayes_linear_mix_4expert",
+                "bayes_linear_mix_4expert"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                945,
+                371395
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+              "raw_bytes": 923136,
+              "raw_sha256": [
+                "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f",
+                "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+              ]
+            },
+            "mods": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.017865,
+              "encode_seconds": 0.008943,
+              "frame_sha256": "61ca7a9a26ef29f3ea1ad77c4efa36dd8ce9d841fdf6646aa40751d3d962abd8",
+              "framed_bytes": 496,
+              "implementation": "bayes_linear_mix_4expert",
+              "parseback_exact": true,
+              "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+              "raw_bytes": 492,
+              "raw_sha256": "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+            },
+            "selector": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.019004,
+              "encode_seconds": 0.009498,
+              "frame_sha256": "307fdb5de8d435d66bfca28729bebbadae0162174004dcfdd6ab98bfc3e6508b",
+              "framed_bytes": 404,
+              "implementation": "bayes_linear_mix_4expert",
+              "parseback_exact": true,
+              "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+              "raw_bytes": 535,
+              "raw_sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+            },
+            "supermask": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.102131,
+              "encode_seconds": 0.053051,
+              "frame_sha256": "ca96ce2cc56a2ce1ca407d2c72c400e44b9a106fc98d53f7ae60bc08a0c6b3f3",
+              "framed_bytes": 2828,
+              "implementation": "bayes_linear_mix_4expert",
+              "parseback_exact": true,
+              "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+              "raw_bytes": 2781,
+              "raw_sha256": "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c"
+            },
+            "supermask_mods_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.123005,
+              "encode_seconds": 0.060335,
+              "frame_sha256": "34ad633e2c67f5281991fd629bec8020595875bc4aa242121e250529b1bc5be0",
+              "framed_bytes": 3327,
+              "implementation": "bayes_linear_mix_4expert",
+              "parseback_exact": true,
+              "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+              "raw_bytes": 3281,
+              "raw_sha256": "ceba2c663bf9107aef6f32f2148e791b87929fa2480188f71d2040eeb5f5640f"
+            },
+            "supermask_mods_selector_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.142323,
+              "encode_seconds": 0.070623,
+              "frame_sha256": "134b97ee32ce10a0d4d15847382d53b2d3aed254d7f5633db112eb02a4bee971",
+              "framed_bytes": 3848,
+              "implementation": "bayes_linear_mix_4expert",
+              "parseback_exact": true,
+              "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer; PR130 joint-XZ/model-pool lesson tested as a non-additive alternative",
+              "raw_bytes": 3820,
+              "raw_sha256": "424ad58b490473e1b47bbdee30d24fd43cedf3a4d6cff208c14dcef597edd471"
+            },
+            "supermask_mods_split_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.124612,
+              "encode_seconds": 0.059218,
+              "frame_sha256": "1f003df94a44a55ecd8e626f463c835f62bc7fdd98084823c9d5f760375255ad",
+              "framed_bytes": 3337,
+              "implementations": [
+                "bayes_linear_mix_4expert",
+                "bayes_linear_mix_4expert"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                2828,
+                496
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+              "raw_bytes": 3273,
+              "raw_sha256": [
+                "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c",
+                "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+              ]
+            },
+            "token_planes": {
+              "non_additive_alternative_to": "mode_delta",
+              "planes": [
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 8.2241,
+                  "encode_seconds": 4.072843,
+                  "frame_sha256": "d805cb0047e53cbf7b3bbe29f1eee524c71f5dfe843ca26f99afe219917ff910",
+                  "framed_bytes": 131394,
+                  "implementation": "bayes_linear_mix_4expert",
+                  "parseback_exact": true,
+                  "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 8.195337,
+                  "encode_seconds": 4.108704,
+                  "frame_sha256": "d313ca8ba87ac0cfaafc35dad784f82bbead4cdaca28bf4b08651fe901926fc3",
+                  "framed_bytes": 132087,
+                  "implementation": "bayes_linear_mix_4expert",
+                  "parseback_exact": true,
+                  "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 8.232434,
+                  "encode_seconds": 4.10847,
+                  "frame_sha256": "365526b8ba759eaaa2d6d7b4f8fa4c34a957714495f7365476af3c078bb15af9",
+                  "framed_bytes": 133165,
+                  "implementation": "bayes_linear_mix_4expert",
+                  "parseback_exact": true,
+                  "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 8.21159,
+                  "encode_seconds": 4.080766,
+                  "frame_sha256": "9ac740dd3d7a2fec7b42eac14cb318a821a3e0d5738f86edfdd7516eae935a9a",
+                  "framed_bytes": 132171,
+                  "implementation": "bayes_linear_mix_4expert",
+                  "parseback_exact": true,
+                  "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                }
+              ],
+              "pool": {
+                "available": true,
+                "decode_seconds_including_canonical_reencode": 32.504586,
+                "encode_seconds": 16.004169,
+                "frame_sha256": "9d3a13bc72bae7b9dde9cf4dd4d8483534a3b06af7869144e08ded8c4811b3ec",
+                "framed_bytes": 528838,
+                "implementations": [
+                  "bayes_linear_mix_4expert",
+                  "bayes_linear_mix_4expert",
+                  "bayes_linear_mix_4expert",
+                  "bayes_linear_mix_4expert"
+                ],
+                "member_count": 4,
+                "member_framed_bytes": [
+                  131394,
+                  132087,
+                  133165,
+                  132171
+                ],
+                "parseback_exact": true,
+                "pr130_lesson": "owned Bayesian probability mix control; not the delegated logistic mixer",
+                "raw_bytes": 921600,
+                "raw_sha256": [
+                  "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a",
+                  "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2",
+                  "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb",
+                  "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                ]
+              }
+            }
+          },
+          "brotli_q11": {
+            "mode_base": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000377,
+              "encode_seconds": 0.000441,
+              "frame_sha256": "3cb2d96cb633819df2d02076be18acf0d75aa49132fc26fb19ef49203152e84d",
+              "framed_bytes": 969,
+              "implementation": "brotli_q11",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+              "raw_bytes": 1536,
+              "raw_sha256": "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f"
+            },
+            "mode_delta": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.876081,
+              "encode_seconds": 0.875181,
+              "frame_sha256": "5388f3577a5957c6f68ec4109afd6a26680722f609266e0e9b981e9f6fc20ded",
+              "framed_bytes": 359785,
+              "implementation": "brotli_q11",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+              "raw_bytes": 921600,
+              "raw_sha256": "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+            },
+            "mode_delta_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.871641,
+              "encode_seconds": 0.874468,
+              "frame_sha256": "a1062b1c783f78f37ad12721fb638551606b37a5d32ea0bbdbc932e533a4aaac",
+              "framed_bytes": 360767,
+              "implementations": [
+                "brotli_q11",
+                "brotli_q11"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                969,
+                359785
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+              "raw_bytes": 923136,
+              "raw_sha256": [
+                "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f",
+                "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+              ]
+            },
+            "mods": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000429,
+              "encode_seconds": 0.000436,
+              "frame_sha256": "6f572b3c64e13e0c3075f80cb565d97fc413a0986f48a8f3c7f094da70bec432",
+              "framed_bytes": 505,
+              "implementation": "brotli_q11",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+              "raw_bytes": 492,
+              "raw_sha256": "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+            },
+            "selector": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000446,
+              "encode_seconds": 0.00048,
+              "frame_sha256": "bb3d2fd80b8911246c4b235188d77d5889b940a267091d0037f3802d196318e8",
+              "framed_bytes": 322,
+              "implementation": "brotli_q11",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+              "raw_bytes": 535,
+              "raw_sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+            },
+            "supermask": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.002155,
+              "encode_seconds": 0.002242,
+              "frame_sha256": "08fbef198390bc1aa0ff56455358a74a7d1f144dbe257a8b81b8ae249420fcb9",
+              "framed_bytes": 2830,
+              "implementation": "brotli_q11",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+              "raw_bytes": 2781,
+              "raw_sha256": "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c"
+            },
+            "supermask_mods_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.002756,
+              "encode_seconds": 0.002731,
+              "frame_sha256": "f464ec10a557a85baa62050b91cb3392683a568f37c8583940592bc3d0786035",
+              "framed_bytes": 3330,
+              "implementation": "brotli_q11",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+              "raw_bytes": 3281,
+              "raw_sha256": "ceba2c663bf9107aef6f32f2148e791b87929fa2480188f71d2040eeb5f5640f"
+            },
+            "supermask_mods_selector_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.003669,
+              "encode_seconds": 0.003821,
+              "frame_sha256": "41f798551542dab52d7696fa01c5dcd160b7b1a0c653836d482d4b3050a4c8d0",
+              "framed_bytes": 3645,
+              "implementation": "brotli_q11",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream; PR130 joint-XZ/model-pool lesson tested as a non-additive alternative",
+              "raw_bytes": 3820,
+              "raw_sha256": "424ad58b490473e1b47bbdee30d24fd43cedf3a4d6cff208c14dcef597edd471"
+            },
+            "supermask_mods_split_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.00257,
+              "encode_seconds": 0.002678,
+              "frame_sha256": "7f3a88c67c8b331123ddbdf4db1a24890b1034eb7bb4f95cdd167f557ef0748c",
+              "framed_bytes": 3348,
+              "implementations": [
+                "brotli_q11",
+                "brotli_q11"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                2830,
+                505
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+              "raw_bytes": 3273,
+              "raw_sha256": [
+                "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c",
+                "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+              ]
+            },
+            "token_planes": {
+              "non_additive_alternative_to": "mode_delta",
+              "planes": [
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.188507,
+                  "encode_seconds": 0.189355,
+                  "frame_sha256": "9bb5d2a5249a7d23bb4712ed5ceaa3f99f210b3557c6d416d776731973ccbebf",
+                  "framed_bytes": 123280,
+                  "implementation": "brotli_q11",
+                  "parseback_exact": true,
+                  "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.182767,
+                  "encode_seconds": 0.179292,
+                  "frame_sha256": "e7f41da712cd4caba7517c41ba4edb54ff47e1ff95c647ed161128ce5df9d763",
+                  "framed_bytes": 123136,
+                  "implementation": "brotli_q11",
+                  "parseback_exact": true,
+                  "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.174293,
+                  "encode_seconds": 0.17144,
+                  "frame_sha256": "3dfe19f25d41cab2b98deb70466c0a74d47e31eb47db0ebc5d834b746ffe2c3b",
+                  "framed_bytes": 122193,
+                  "implementation": "brotli_q11",
+                  "parseback_exact": true,
+                  "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.205308,
+                  "encode_seconds": 0.20287,
+                  "frame_sha256": "e078a79068468358abff0af33ff1c7fef583feafbb3a7a7a00c643a09f6a8c55",
+                  "framed_bytes": 123497,
+                  "implementation": "brotli_q11",
+                  "parseback_exact": true,
+                  "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                }
+              ],
+              "pool": {
+                "available": true,
+                "decode_seconds_including_canonical_reencode": 0.742953,
+                "encode_seconds": 0.743057,
+                "frame_sha256": "53697edb244b811c77bf08fd89e49d83abba8a62f941b6d03b9cdf3a8daa630f",
+                "framed_bytes": 492127,
+                "implementations": [
+                  "brotli_q11",
+                  "brotli_q11",
+                  "brotli_q11",
+                  "brotli_q11"
+                ],
+                "member_count": 4,
+                "member_framed_bytes": [
+                  123280,
+                  123136,
+                  122193,
+                  123497
+                ],
+                "parseback_exact": true,
+                "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+                "raw_bytes": 921600,
+                "raw_sha256": [
+                  "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a",
+                  "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2",
+                  "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb",
+                  "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                ]
+              }
+            }
+          },
+          "g4_causal_byte_prefix": {
+            "mode_base": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.024331,
+              "encode_seconds": 0.011742,
+              "frame_sha256": "9bc20e0b6028ad6fc9a101d23262b4c94f8086c7be9da4e34b3c375754062fdf",
+              "framed_bytes": 1114,
+              "implementation": "g4_causal_byte_prefix",
+              "parseback_exact": true,
+              "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+              "raw_bytes": 1536,
+              "raw_sha256": "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f"
+            },
+            "mode_delta": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 13.823492,
+              "encode_seconds": 6.802927,
+              "frame_sha256": "40d64c55632aa104787d4b11bbe5cd05db55e6426dbd25c8a6dcaa4c5628c014",
+              "framed_bytes": 371380,
+              "implementation": "g4_causal_byte_prefix",
+              "parseback_exact": true,
+              "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+              "raw_bytes": 921600,
+              "raw_sha256": "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+            },
+            "mode_delta_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 13.851835,
+              "encode_seconds": 6.792672,
+              "frame_sha256": "9ce0db2ce29b4d75c18f65c268ae2f437069478ead9d741268bd0402b1041aee",
+              "framed_bytes": 372507,
+              "implementations": [
+                "g4_causal_byte_prefix",
+                "g4_causal_byte_prefix"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                1114,
+                371380
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+              "raw_bytes": 923136,
+              "raw_sha256": [
+                "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f",
+                "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+              ]
+            },
+            "mods": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.008415,
+              "encode_seconds": 0.004023,
+              "frame_sha256": "ae980f2c2015777c934d752c366c7a777716ea2892ea45fbd3889f122965bbe0",
+              "framed_bytes": 533,
+              "implementation": "g4_causal_byte_prefix",
+              "parseback_exact": true,
+              "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+              "raw_bytes": 492,
+              "raw_sha256": "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+            },
+            "selector": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.00842,
+              "encode_seconds": 0.004117,
+              "frame_sha256": "56b3a46dd77257278278b583c61a07b7174a9e198c0d44e94cb9e32acceef03f",
+              "framed_bytes": 404,
+              "implementation": "g4_causal_byte_prefix",
+              "parseback_exact": true,
+              "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+              "raw_bytes": 535,
+              "raw_sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+            },
+            "supermask": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.048268,
+              "encode_seconds": 0.023153,
+              "frame_sha256": "89acdc3759031803838e93b69623fd31ed1a887831b34d603eaeb95fc99c5319",
+              "framed_bytes": 2934,
+              "implementation": "g4_causal_byte_prefix",
+              "parseback_exact": true,
+              "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+              "raw_bytes": 2781,
+              "raw_sha256": "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c"
+            },
+            "supermask_mods_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.060242,
+              "encode_seconds": 0.027599,
+              "frame_sha256": "91a1cbf87072de4d6bf54580b9c34ce487314cef6d869f9ffa134b0e10df2b15",
+              "framed_bytes": 3443,
+              "implementation": "g4_causal_byte_prefix",
+              "parseback_exact": true,
+              "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+              "raw_bytes": 3281,
+              "raw_sha256": "ceba2c663bf9107aef6f32f2148e791b87929fa2480188f71d2040eeb5f5640f"
+            },
+            "supermask_mods_selector_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.067316,
+              "encode_seconds": 0.032026,
+              "frame_sha256": "ed7647915eeab8fb3e7a690c12685da52a699fefe58bee86db89ec38e1833864",
+              "framed_bytes": 3848,
+              "implementation": "g4_causal_byte_prefix",
+              "parseback_exact": true,
+              "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4; PR130 joint-XZ/model-pool lesson tested as a non-additive alternative",
+              "raw_bytes": 3820,
+              "raw_sha256": "424ad58b490473e1b47bbdee30d24fd43cedf3a4d6cff208c14dcef597edd471"
+            },
+            "supermask_mods_split_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.058967,
+              "encode_seconds": 0.028411,
+              "frame_sha256": "0bd6eec6da196b492489784de8755063f65b70f62571385fdbec08868edb603a",
+              "framed_bytes": 3480,
+              "implementations": [
+                "g4_causal_byte_prefix",
+                "g4_causal_byte_prefix"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                2934,
+                533
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+              "raw_bytes": 3273,
+              "raw_sha256": [
+                "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c",
+                "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+              ]
+            },
+            "token_planes": {
+              "non_additive_alternative_to": "mode_delta",
+              "planes": [
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 3.663497,
+                  "encode_seconds": 1.787191,
+                  "frame_sha256": "6148ecbbfbd1c45e86cf0a9cf3ea033bfdb6743b5e4aab81e1bb95d3bd2e67aa",
+                  "framed_bytes": 131394,
+                  "implementation": "g4_causal_byte_prefix",
+                  "parseback_exact": true,
+                  "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 3.634553,
+                  "encode_seconds": 1.782245,
+                  "frame_sha256": "dc961d80e85813e6e1195b9ffc5f4bcc0206e546f41b12c83cdfffc2d8423742",
+                  "framed_bytes": 132087,
+                  "implementation": "g4_causal_byte_prefix",
+                  "parseback_exact": true,
+                  "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 3.645926,
+                  "encode_seconds": 1.776812,
+                  "frame_sha256": "7b21227abffbd58e53d2a0e7938afada36dfad715f57392ee55de4b1cb91c57c",
+                  "framed_bytes": 133164,
+                  "implementation": "g4_causal_byte_prefix",
+                  "parseback_exact": true,
+                  "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 3.670094,
+                  "encode_seconds": 1.784877,
+                  "frame_sha256": "bd0011431bf7b3360f65508018c08aab08eb990824f1d2a90f841593a44654d2",
+                  "framed_bytes": 132171,
+                  "implementation": "g4_causal_byte_prefix",
+                  "parseback_exact": true,
+                  "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                }
+              ],
+              "pool": {
+                "available": true,
+                "decode_seconds_including_canonical_reencode": 14.670684,
+                "encode_seconds": 7.111131,
+                "frame_sha256": "de74cb2ddf0e2b5ffecd808452c9c75cd71f31a1625ad34541efa91770e01c6c",
+                "framed_bytes": 528837,
+                "implementations": [
+                  "g4_causal_byte_prefix",
+                  "g4_causal_byte_prefix",
+                  "g4_causal_byte_prefix",
+                  "g4_causal_byte_prefix"
+                ],
+                "member_count": 4,
+                "member_framed_bytes": [
+                  131394,
+                  132087,
+                  133164,
+                  132171
+                ],
+                "parseback_exact": true,
+                "pr130_lesson": "owned previous-byte plus bit-prefix context; not token-lattice left/up G4",
+                "raw_bytes": 921600,
+                "raw_sha256": [
+                  "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a",
+                  "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2",
+                  "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb",
+                  "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                ]
+              }
+            }
+          },
+          "logistic_mix_4expert_fixedpoint": {
+            "mode_base": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.06185,
+              "encode_seconds": 0.030173,
+              "frame_sha256": "a8d016cb009ca589bd6726f2200b50315c11b3fb71c7b21ebde5cd07b675c744",
+              "framed_bytes": 961,
+              "implementation": "logistic_mix_4expert_fixedpoint",
+              "parseback_exact": true,
+              "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+              "raw_bytes": 1536,
+              "raw_sha256": "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f"
+            },
+            "mode_delta": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 37.592579,
+              "encode_seconds": 18.168461,
+              "frame_sha256": "9f6a6f674030f971038549ea382102a01d5c68fcce38976ba53ac590fbbe5581",
+              "framed_bytes": 371757,
+              "implementation": "logistic_mix_4expert_fixedpoint",
+              "parseback_exact": true,
+              "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+              "raw_bytes": 921600,
+              "raw_sha256": "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+            },
+            "mode_delta_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 37.22133,
+              "encode_seconds": 18.266322,
+              "frame_sha256": "e95c132ec009b48976f4a6cc6653185bf1746795437bd04acc6b78e4fdbc7caf",
+              "framed_bytes": 372731,
+              "implementations": [
+                "logistic_mix_4expert_fixedpoint",
+                "logistic_mix_4expert_fixedpoint"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                961,
+                371757
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+              "raw_bytes": 923136,
+              "raw_sha256": [
+                "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f",
+                "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+              ]
+            },
+            "mods": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.020676,
+              "encode_seconds": 0.010064,
+              "frame_sha256": "ddf2b84456974504d1b0fe4bd1b2e807fbdc7f1f3772716afe39da182bd43338",
+              "framed_bytes": 503,
+              "implementation": "logistic_mix_4expert_fixedpoint",
+              "parseback_exact": true,
+              "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+              "raw_bytes": 492,
+              "raw_sha256": "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+            },
+            "selector": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.021596,
+              "encode_seconds": 0.010602,
+              "frame_sha256": "c9415623c68b7300d2656c81c1a75c2e3e217978a1e39415bdb48744b67bacdf",
+              "framed_bytes": 391,
+              "implementation": "logistic_mix_4expert_fixedpoint",
+              "parseback_exact": true,
+              "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+              "raw_bytes": 535,
+              "raw_sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+            },
+            "supermask": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.119418,
+              "encode_seconds": 0.060787,
+              "frame_sha256": "f6e62bfee7ec21caecb208d5fc13ce51fe273d1357a89efe7670d3dd56aed9f7",
+              "framed_bytes": 2847,
+              "implementation": "logistic_mix_4expert_fixedpoint",
+              "parseback_exact": true,
+              "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+              "raw_bytes": 2781,
+              "raw_sha256": "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c"
+            },
+            "supermask_mods_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.139293,
+              "encode_seconds": 0.068051,
+              "frame_sha256": "e6edae74584c3dfad58873e297f0b50e91c86020d8afc187481e486461d5c1dd",
+              "framed_bytes": 3343,
+              "implementation": "logistic_mix_4expert_fixedpoint",
+              "parseback_exact": true,
+              "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+              "raw_bytes": 3281,
+              "raw_sha256": "ceba2c663bf9107aef6f32f2148e791b87929fa2480188f71d2040eeb5f5640f"
+            },
+            "supermask_mods_selector_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.161198,
+              "encode_seconds": 0.078339,
+              "frame_sha256": "91717bc49772d082b562962d60b1c50b109def0bd13e6f259e844a3d05f1537f",
+              "framed_bytes": 3756,
+              "implementation": "logistic_mix_4expert_fixedpoint",
+              "parseback_exact": true,
+              "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts; PR130 joint-XZ/model-pool lesson tested as a non-additive alternative",
+              "raw_bytes": 3820,
+              "raw_sha256": "424ad58b490473e1b47bbdee30d24fd43cedf3a4d6cff208c14dcef597edd471"
+            },
+            "supermask_mods_split_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.138055,
+              "encode_seconds": 0.067039,
+              "frame_sha256": "46ed48ff6e3e5e7f3d5a34c3d5335bfaea431c0ec6b264050a763a02e343ff89",
+              "framed_bytes": 3363,
+              "implementations": [
+                "logistic_mix_4expert_fixedpoint",
+                "logistic_mix_4expert_fixedpoint"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                2847,
+                503
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+              "raw_bytes": 3273,
+              "raw_sha256": [
+                "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c",
+                "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+              ]
+            },
+            "token_planes": {
+              "non_additive_alternative_to": "mode_delta",
+              "planes": [
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 9.818824,
+                  "encode_seconds": 4.806895,
+                  "frame_sha256": "9e36d0fa04e99364e9612072a81dd6904446f6c71366403e9a0cdc61239eeaad",
+                  "framed_bytes": 130854,
+                  "implementation": "logistic_mix_4expert_fixedpoint",
+                  "parseback_exact": true,
+                  "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 10.034314,
+                  "encode_seconds": 4.825209,
+                  "frame_sha256": "c678c1b4b0f25f7a6eb8e4f4fda73dbc1ccb7dea709f8fe97306f8b817fcf560",
+                  "framed_bytes": 131471,
+                  "implementation": "logistic_mix_4expert_fixedpoint",
+                  "parseback_exact": true,
+                  "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 9.957175,
+                  "encode_seconds": 4.801506,
+                  "frame_sha256": "c92bf0f8eec2bf384d641329bedf17731986d452208b5be1aa0ce06516f8d335",
+                  "framed_bytes": 132588,
+                  "implementation": "logistic_mix_4expert_fixedpoint",
+                  "parseback_exact": true,
+                  "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 9.832104,
+                  "encode_seconds": 4.849884,
+                  "frame_sha256": "d172ac6d05a34264d99e4f3b45292b927f32453162c241d1dce9bf3cea39ac24",
+                  "framed_bytes": 131808,
+                  "implementation": "logistic_mix_4expert_fixedpoint",
+                  "parseback_exact": true,
+                  "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                }
+              ],
+              "pool": {
+                "available": true,
+                "decode_seconds_including_canonical_reencode": 39.281918,
+                "encode_seconds": 19.310222,
+                "frame_sha256": "a573235cad7cba07441482b57e68287e9df9d3b85ae40dd4e26f3b14eee9d4e9",
+                "framed_bytes": 526742,
+                "implementations": [
+                  "logistic_mix_4expert_fixedpoint",
+                  "logistic_mix_4expert_fixedpoint",
+                  "logistic_mix_4expert_fixedpoint",
+                  "logistic_mix_4expert_fixedpoint"
+                ],
+                "member_count": 4,
+                "member_framed_bytes": [
+                  130854,
+                  131471,
+                  132588,
+                  131808
+                ],
+                "parseback_exact": true,
+                "pr130_lesson": "delegated Mahoney-lite family: true fixed-point logit-domain mix with four owned causal experts",
+                "raw_bytes": 921600,
+                "raw_sha256": [
+                  "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a",
+                  "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2",
+                  "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb",
+                  "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                ]
+              }
+            }
+          },
+          "lzma1_extreme": {
+            "mode_base": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000377,
+              "encode_seconds": 0.000357,
+              "frame_sha256": "75d6f304bda56eda0745e095c7640b4defcf175e8985d23e07dabadf05303306",
+              "framed_bytes": 1154,
+              "implementation": "lzma1_extreme",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+              "raw_bytes": 1536,
+              "raw_sha256": "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f"
+            },
+            "mode_delta": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.158298,
+              "encode_seconds": 0.150174,
+              "frame_sha256": "caca3b2695149e108b5581d7c619cbd5575e16a7f069024d64de1e26680ef098",
+              "framed_bytes": 373595,
+              "implementation": "lzma1_extreme",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+              "raw_bytes": 921600,
+              "raw_sha256": "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+            },
+            "mode_delta_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.156,
+              "encode_seconds": 0.140005,
+              "frame_sha256": "abf5dea25847fe557bcb72f43a8fe86269db4166b48b5e832805b17d79baf753",
+              "framed_bytes": 374762,
+              "implementations": [
+                "lzma1_extreme",
+                "lzma1_extreme"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                1154,
+                373595
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+              "raw_bytes": 923136,
+              "raw_sha256": [
+                "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f",
+                "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+              ]
+            },
+            "mods": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.00028,
+              "encode_seconds": 0.000288,
+              "frame_sha256": "3ff5f4270c708f74394ff57a580d62be124db3bc2d1acef2127bc47bab0f0f26",
+              "framed_bytes": 536,
+              "implementation": "lzma1_extreme",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+              "raw_bytes": 492,
+              "raw_sha256": "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+            },
+            "selector": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000297,
+              "encode_seconds": 0.000311,
+              "frame_sha256": "869ed513fff021229dcd95c5a8bd503bc43bdf9c8b076d8f56298f867556eea2",
+              "framed_bytes": 406,
+              "implementation": "lzma1_extreme",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+              "raw_bytes": 535,
+              "raw_sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+            },
+            "supermask": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000436,
+              "encode_seconds": 0.000489,
+              "frame_sha256": "e12743df079ff1791b535f1eb43b5dfb860b377c0fdf1e09664b8defa45bbff6",
+              "framed_bytes": 2874,
+              "implementation": "lzma1_extreme",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+              "raw_bytes": 2781,
+              "raw_sha256": "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c"
+            },
+            "supermask_mods_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000475,
+              "encode_seconds": 0.000411,
+              "frame_sha256": "9f503382769a72a6b09a4f6d4be28aa901012f6dced19b834c9e40d01a04e420",
+              "framed_bytes": 3351,
+              "implementation": "lzma1_extreme",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+              "raw_bytes": 3281,
+              "raw_sha256": "ceba2c663bf9107aef6f32f2148e791b87929fa2480188f71d2040eeb5f5640f"
+            },
+            "supermask_mods_selector_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000525,
+              "encode_seconds": 0.000439,
+              "frame_sha256": "0f4bc1e3773577203820df40a87ba5648b902e277656d91f796af55c3a5fa391",
+              "framed_bytes": 3703,
+              "implementation": "lzma1_extreme",
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe; PR130 joint-XZ/model-pool lesson tested as a non-additive alternative",
+              "raw_bytes": 3820,
+              "raw_sha256": "424ad58b490473e1b47bbdee30d24fd43cedf3a4d6cff208c14dcef597edd471"
+            },
+            "supermask_mods_split_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.00074,
+              "encode_seconds": 0.000673,
+              "frame_sha256": "b24d5052eb8f0d8c2d1422846d0850fcb45a0e61adbd247c7bc508dfe1c56b44",
+              "framed_bytes": 3423,
+              "implementations": [
+                "lzma1_extreme",
+                "lzma1_extreme"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                2874,
+                536
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+              "raw_bytes": 3273,
+              "raw_sha256": [
+                "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c",
+                "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+              ]
+            },
+            "token_planes": {
+              "non_additive_alternative_to": "mode_delta",
+              "planes": [
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.023968,
+                  "encode_seconds": 0.023827,
+                  "frame_sha256": "d29a8fc798d677299712820fe6749292a4ebb4b02f388624ef88c31c6b60d77e",
+                  "framed_bytes": 117522,
+                  "implementation": "lzma1_extreme",
+                  "parseback_exact": true,
+                  "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.023428,
+                  "encode_seconds": 0.020059,
+                  "frame_sha256": "d4cc0c7ba424830233de496d1743fb250dd57586543afd405b6b8b49f9826206",
+                  "framed_bytes": 117182,
+                  "implementation": "lzma1_extreme",
+                  "parseback_exact": true,
+                  "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.02397,
+                  "encode_seconds": 0.020885,
+                  "frame_sha256": "ab9b06bf397ba4e709b516f9d39105846d0c48f6e7e8199e54fa7078d1fd3cbc",
+                  "framed_bytes": 115214,
+                  "implementation": "lzma1_extreme",
+                  "parseback_exact": true,
+                  "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.023828,
+                  "encode_seconds": 0.020651,
+                  "frame_sha256": "a8adc8d8294510a1454c2c5e1e00b9b9028e203b1b5f06e9f55762ac4a0da801",
+                  "framed_bytes": 115922,
+                  "implementation": "lzma1_extreme",
+                  "parseback_exact": true,
+                  "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                }
+              ],
+              "pool": {
+                "available": true,
+                "decode_seconds_including_canonical_reencode": 0.097488,
+                "encode_seconds": 0.079008,
+                "frame_sha256": "73cb56906dda2d4a969464f966ccaec56e42678ba8c435a563dee3dbb87e4a7a",
+                "framed_bytes": 465861,
+                "implementations": [
+                  "lzma1_extreme",
+                  "lzma1_extreme",
+                  "lzma1_extreme",
+                  "lzma1_extreme"
+                ],
+                "member_count": 4,
+                "member_framed_bytes": [
+                  117522,
+                  117182,
+                  115214,
+                  115922
+                ],
+                "parseback_exact": true,
+                "pr130_lesson": "existing E4 raw-LZMA1 fallback; distinct from PR130 LZMA2 recipe",
+                "raw_bytes": 921600,
+                "raw_sha256": [
+                  "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a",
+                  "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2",
+                  "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb",
+                  "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                ]
+              }
+            }
+          },
+          "r7_lzma2_64k_joint_inspired": {
+            "mode_base": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000129,
+              "encode_seconds": 0.000102,
+              "frame_sha256": "9d537fb6669cb8df7d8dbd1c69b3f0c386a9c31807430adbb74b6c53beb4f652",
+              "framed_bytes": 1161,
+              "implementation": "r7_lzma2_64k_joint_inspired",
+              "parseback_exact": true,
+              "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+              "raw_bytes": 1536,
+              "raw_sha256": "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f"
+            },
+            "mode_delta": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.117668,
+              "encode_seconds": 0.099011,
+              "frame_sha256": "30c2f537ec708542f835c2e431a115e3d9c5ae23d76160be5220a694e12b8230",
+              "framed_bytes": 383589,
+              "implementation": "r7_lzma2_64k_joint_inspired",
+              "parseback_exact": true,
+              "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+              "raw_bytes": 921600,
+              "raw_sha256": "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+            },
+            "mode_delta_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.118218,
+              "encode_seconds": 0.098406,
+              "frame_sha256": "c83cb7acf005d9384b972404d89bb0fdd016e7de58715f69ff584ab3fd3ad687",
+              "framed_bytes": 384763,
+              "implementations": [
+                "r7_lzma2_64k_joint_inspired",
+                "r7_lzma2_64k_joint_inspired"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                1161,
+                383589
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+              "raw_bytes": 923136,
+              "raw_sha256": [
+                "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f",
+                "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+              ]
+            },
+            "mods": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.00004,
+              "encode_seconds": 0.000032,
+              "frame_sha256": "6f0c3fa998acb59f3e1d882f678797223e40945796d2d161f7dd24ffca8fa9eb",
+              "framed_bytes": 529,
+              "implementation": "r7_lzma2_64k_joint_inspired",
+              "parseback_exact": true,
+              "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+              "raw_bytes": 492,
+              "raw_sha256": "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+            },
+            "selector": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000046,
+              "encode_seconds": 0.000044,
+              "frame_sha256": "96b967e5d5d5abdf82bf39bd9c8317fabf17ef4c93a938f4d535c539710e8a6e",
+              "framed_bytes": 465,
+              "implementation": "r7_lzma2_64k_joint_inspired",
+              "parseback_exact": true,
+              "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+              "raw_bytes": 535,
+              "raw_sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+            },
+            "supermask": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000139,
+              "encode_seconds": 0.000156,
+              "frame_sha256": "931bd9c42bb4a2b93ff645789dc3708bc13833fdbcb3b751eedb3afc66a72cb8",
+              "framed_bytes": 2889,
+              "implementation": "r7_lzma2_64k_joint_inspired",
+              "parseback_exact": true,
+              "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+              "raw_bytes": 2781,
+              "raw_sha256": "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c"
+            },
+            "supermask_mods_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000239,
+              "encode_seconds": 0.000168,
+              "frame_sha256": "e4cfe17233ea9fefa502c886ffb506aa0f84be9646f24ff674bb31db48e14c0d",
+              "framed_bytes": 3357,
+              "implementation": "r7_lzma2_64k_joint_inspired",
+              "parseback_exact": true,
+              "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+              "raw_bytes": 3281,
+              "raw_sha256": "ceba2c663bf9107aef6f32f2148e791b87929fa2480188f71d2040eeb5f5640f"
+            },
+            "supermask_mods_selector_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000283,
+              "encode_seconds": 0.000202,
+              "frame_sha256": "92c84f12b011249377b5b23628996d2f08580540a300f1be5d44e3273d8578fc",
+              "framed_bytes": 3717,
+              "implementation": "r7_lzma2_64k_joint_inspired",
+              "parseback_exact": true,
+              "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody; PR130 joint-XZ/model-pool lesson tested as a non-additive alternative",
+              "raw_bytes": 3820,
+              "raw_sha256": "424ad58b490473e1b47bbdee30d24fd43cedf3a4d6cff208c14dcef597edd471"
+            },
+            "supermask_mods_split_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000168,
+              "encode_seconds": 0.000158,
+              "frame_sha256": "5e6254b428bf26f8a2cb4d29b58f77665b15e5184d5339c864750079632a70b5",
+              "framed_bytes": 3431,
+              "implementations": [
+                "r7_lzma2_64k_joint_inspired",
+                "r7_lzma2_64k_joint_inspired"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                2889,
+                529
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+              "raw_bytes": 3273,
+              "raw_sha256": [
+                "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c",
+                "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+              ]
+            },
+            "token_planes": {
+              "non_additive_alternative_to": "mode_delta",
+              "planes": [
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.023642,
+                  "encode_seconds": 0.019402,
+                  "frame_sha256": "aeedc7ec5efa0cf5b430d5f677540a08b615490ec9dfbf130856b99fa2a47468",
+                  "framed_bytes": 119097,
+                  "implementation": "r7_lzma2_64k_joint_inspired",
+                  "parseback_exact": true,
+                  "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.023274,
+                  "encode_seconds": 0.018905,
+                  "frame_sha256": "9e389cffcbc8692b901e6dfdac18a13b94d6033a1aaec43e9b1bc0f215a66716",
+                  "framed_bytes": 118265,
+                  "implementation": "r7_lzma2_64k_joint_inspired",
+                  "parseback_exact": true,
+                  "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.023315,
+                  "encode_seconds": 0.01882,
+                  "frame_sha256": "ca4f5f090c6b87ccd491bc0db4a47b6a723787e064a769dd4819458995c7d31f",
+                  "framed_bytes": 116477,
+                  "implementation": "r7_lzma2_64k_joint_inspired",
+                  "parseback_exact": true,
+                  "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.023705,
+                  "encode_seconds": 0.019185,
+                  "frame_sha256": "5921a6bc5df68a51480602ca28d3ad9239dee850a0119e6e0837d16837bb4b5f",
+                  "framed_bytes": 117141,
+                  "implementation": "r7_lzma2_64k_joint_inspired",
+                  "parseback_exact": true,
+                  "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                }
+              ],
+              "pool": {
+                "available": true,
+                "decode_seconds_including_canonical_reencode": 0.09418,
+                "encode_seconds": 0.076081,
+                "frame_sha256": "37a2432df60f5e6ce7b066043c59a025c7d725432ed5055d40c296b71bfed652",
+                "framed_bytes": 471001,
+                "implementations": [
+                  "r7_lzma2_64k_joint_inspired",
+                  "r7_lzma2_64k_joint_inspired",
+                  "r7_lzma2_64k_joint_inspired",
+                  "r7_lzma2_64k_joint_inspired"
+                ],
+                "member_count": 4,
+                "member_framed_bytes": [
+                  119097,
+                  118265,
+                  116477,
+                  117141
+                ],
+                "parseback_exact": true,
+                "pr130_lesson": "R7-owned 64KiB LZMA2 variant inspired by PR130 joint-XZ pooling; no claim of exact filter custody",
+                "raw_bytes": 921600,
+                "raw_sha256": [
+                  "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a",
+                  "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2",
+                  "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb",
+                  "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                ]
+              }
+            }
+          },
+          "rans_o0_static": {
+            "mode_base": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.0003,
+              "encode_seconds": 0.000405,
+              "frame_sha256": "195701a2f606a8095a0e1875e1ed6db7d712124bee105ae55723638f594e59af",
+              "framed_bytes": 1092,
+              "implementation": "rans_o0_static",
+              "parseback_exact": true,
+              "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+              "raw_bytes": 1536,
+              "raw_sha256": "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f"
+            },
+            "mode_delta": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.105629,
+              "encode_seconds": 0.122062,
+              "frame_sha256": "3b845cb2055c79e51988d758156053ae616832403e5f677bd90d1286da94754d",
+              "framed_bytes": 373536,
+              "implementation": "rans_o0_static",
+              "parseback_exact": true,
+              "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+              "raw_bytes": 921600,
+              "raw_sha256": "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+            },
+            "mode_delta_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.105462,
+              "encode_seconds": 0.121926,
+              "frame_sha256": "55a1cca2f8e8b152ee0ccd258a1e8c923ddd794ae595d238397a6215889f2f90",
+              "framed_bytes": 374641,
+              "implementations": [
+                "rans_o0_static",
+                "rans_o0_static"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                1092,
+                373536
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+              "raw_bytes": 923136,
+              "raw_sha256": [
+                "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f",
+                "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+              ]
+            },
+            "mods": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000188,
+              "encode_seconds": 0.001096,
+              "frame_sha256": "0d30f69e2aac50810a9fee33a9ff564be373313d7a2c7a3d997a57f5148574c8",
+              "framed_bytes": 969,
+              "implementation": "rans_o0_static",
+              "parseback_exact": true,
+              "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+              "raw_bytes": 492,
+              "raw_sha256": "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+            },
+            "selector": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000174,
+              "encode_seconds": 0.000245,
+              "frame_sha256": "40c194b085abd1e58b7f78dca1be42871f83a97cde662712426bbb9c80ce2639",
+              "framed_bytes": 489,
+              "implementation": "rans_o0_static",
+              "parseback_exact": true,
+              "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+              "raw_bytes": 535,
+              "raw_sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+            },
+            "supermask": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000495,
+              "encode_seconds": 0.002194,
+              "frame_sha256": "5e4d590804956f78482758a4962e3aad3500551a1c74a2b36b368ccc48150b72",
+              "framed_bytes": 3586,
+              "implementation": "rans_o0_static",
+              "parseback_exact": true,
+              "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+              "raw_bytes": 2781,
+              "raw_sha256": "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c"
+            },
+            "supermask_mods_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000556,
+              "encode_seconds": 0.002805,
+              "frame_sha256": "610ed71255fb2b581f4e76bb07a9efc36026c2dfebbae3c50457a25a64e08e0a",
+              "framed_bytes": 4061,
+              "implementation": "rans_o0_static",
+              "parseback_exact": true,
+              "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+              "raw_bytes": 3281,
+              "raw_sha256": "ceba2c663bf9107aef6f32f2148e791b87929fa2480188f71d2040eeb5f5640f"
+            },
+            "supermask_mods_selector_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000648,
+              "encode_seconds": 0.002561,
+              "frame_sha256": "e3c58f98296ca2dccfa41fe5b9fcee8369b39cf3e5bc4bfb5fbd2bbaceac03df",
+              "framed_bytes": 4555,
+              "implementation": "rans_o0_static",
+              "parseback_exact": true,
+              "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced; PR130 joint-XZ/model-pool lesson tested as a non-additive alternative",
+              "raw_bytes": 3820,
+              "raw_sha256": "424ad58b490473e1b47bbdee30d24fd43cedf3a4d6cff208c14dcef597edd471"
+            },
+            "supermask_mods_split_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.000689,
+              "encode_seconds": 0.003267,
+              "frame_sha256": "a7ba89f4b7efdf4a78f92dfe96e062b5cd2f84d1885a7222df9bb929e1e90b00",
+              "framed_bytes": 4568,
+              "implementations": [
+                "rans_o0_static",
+                "rans_o0_static"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                3586,
+                969
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+              "raw_bytes": 3273,
+              "raw_sha256": [
+                "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c",
+                "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+              ]
+            },
+            "token_planes": {
+              "non_additive_alternative_to": "mode_delta",
+              "planes": [
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.02737,
+                  "encode_seconds": 0.030946,
+                  "frame_sha256": "3c0f03b81ac51e543df6015bf53922951bc917915a41b9c44abbd1b4b71d4392",
+                  "framed_bytes": 135713,
+                  "implementation": "rans_o0_static",
+                  "parseback_exact": true,
+                  "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.02744,
+                  "encode_seconds": 0.031032,
+                  "frame_sha256": "bbac5299d6da78df9be9be24923980b50a06ec1616fc5ec2f156ec8ca54fc3f4",
+                  "framed_bytes": 134725,
+                  "implementation": "rans_o0_static",
+                  "parseback_exact": true,
+                  "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.027202,
+                  "encode_seconds": 0.03079,
+                  "frame_sha256": "850425d236c72fdb14a11765b1f1aea9a5939399f90cfdcef50bcb60ccfb4a43",
+                  "framed_bytes": 136213,
+                  "implementation": "rans_o0_static",
+                  "parseback_exact": true,
+                  "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 0.027387,
+                  "encode_seconds": 0.03075,
+                  "frame_sha256": "d669faa06d6f8e45fe60c69e82edda87f6095f81249aeb7e9eeeda52e99cc42b",
+                  "framed_bytes": 138454,
+                  "implementation": "rans_o0_static",
+                  "parseback_exact": true,
+                  "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                }
+              ],
+              "pool": {
+                "available": true,
+                "decode_seconds_including_canonical_reencode": 0.109743,
+                "encode_seconds": 0.128717,
+                "frame_sha256": "da19c29130eb9d1e731708e18d3ce2c344e0c402971311183888f702a51bfdf8",
+                "framed_bytes": 545126,
+                "implementations": [
+                  "rans_o0_static",
+                  "rans_o0_static",
+                  "rans_o0_static",
+                  "rans_o0_static"
+                ],
+                "member_count": 4,
+                "member_framed_bytes": [
+                  135713,
+                  134725,
+                  136213,
+                  138454
+                ],
+                "parseback_exact": true,
+                "pr130_lesson": "PR130 range backend is reference only; complete owned rANS bytes reraced",
+                "raw_bytes": 921600,
+                "raw_sha256": [
+                  "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a",
+                  "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2",
+                  "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb",
+                  "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                ]
+              }
+            }
+          },
+          "willems_ctw_depth8": {
+            "mode_base": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.424352,
+              "encode_seconds": 0.213667,
+              "frame_sha256": "1927585c57da4a30713e6b14bbea7b5b2102910ae81e8cc8cfd89ff793f5028a",
+              "framed_bytes": 1027,
+              "implementation": "willems_ctw_depth8",
+              "parseback_exact": true,
+              "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+              "raw_bytes": 1536,
+              "raw_sha256": "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f"
+            },
+            "mode_delta": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 263.574036,
+              "encode_seconds": 131.126286,
+              "frame_sha256": "9338af192591af4c1cd969e3d89a842070623900aaa74ac5e4a24073102d1e86",
+              "framed_bytes": 460850,
+              "implementation": "willems_ctw_depth8",
+              "parseback_exact": true,
+              "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+              "raw_bytes": 921600,
+              "raw_sha256": "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+            },
+            "mode_delta_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 270.876443,
+              "encode_seconds": 131.656265,
+              "frame_sha256": "38803edf52a92e84062a9c8352ef13cbd055f9f8848b9579e6b376b02506c33c",
+              "framed_bytes": 461890,
+              "implementations": [
+                "willems_ctw_depth8",
+                "willems_ctw_depth8"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                1027,
+                460850
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+              "raw_bytes": 923136,
+              "raw_sha256": [
+                "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f",
+                "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+              ]
+            },
+            "mods": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.156563,
+              "encode_seconds": 0.08207,
+              "frame_sha256": "77bc40f85385bc7a8c10ba508ffc8e067c0a2314885de025171d3735da496f53",
+              "framed_bytes": 527,
+              "implementation": "willems_ctw_depth8",
+              "parseback_exact": true,
+              "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+              "raw_bytes": 492,
+              "raw_sha256": "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+            },
+            "selector": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.176636,
+              "encode_seconds": 0.085431,
+              "frame_sha256": "2fdb93cca1e7327a41b7c39425174a257a43a8047832f43ca82cd2550c8a449c",
+              "framed_bytes": 462,
+              "implementation": "willems_ctw_depth8",
+              "parseback_exact": true,
+              "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+              "raw_bytes": 535,
+              "raw_sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+            },
+            "supermask": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 0.899712,
+              "encode_seconds": 0.511714,
+              "frame_sha256": "5876b04f7866ba864b262e40330fadbe6059afa7cba0b77ca30567cac10082c8",
+              "framed_bytes": 2828,
+              "implementation": "willems_ctw_depth8",
+              "parseback_exact": true,
+              "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+              "raw_bytes": 2781,
+              "raw_sha256": "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c"
+            },
+            "supermask_mods_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 1.017462,
+              "encode_seconds": 0.511152,
+              "frame_sha256": "d046a5dde100444a1da17a725250867166a04ab9f9b3f8f30e51b5220a2081ec",
+              "framed_bytes": 3329,
+              "implementation": "willems_ctw_depth8",
+              "parseback_exact": true,
+              "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+              "raw_bytes": 3281,
+              "raw_sha256": "ceba2c663bf9107aef6f32f2148e791b87929fa2480188f71d2040eeb5f5640f"
+            },
+            "supermask_mods_selector_joint": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 1.158822,
+              "encode_seconds": 0.601108,
+              "frame_sha256": "af26b60e7e146d6ffcbb8476f2ed27785e6aad20365f88738155dad797c77dfb",
+              "framed_bytes": 3868,
+              "implementation": "willems_ctw_depth8",
+              "parseback_exact": true,
+              "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights; PR130 joint-XZ/model-pool lesson tested as a non-additive alternative",
+              "raw_bytes": 3820,
+              "raw_sha256": "424ad58b490473e1b47bbdee30d24fd43cedf3a4d6cff208c14dcef597edd471"
+            },
+            "supermask_mods_split_pool": {
+              "available": true,
+              "decode_seconds_including_canonical_reencode": 1.00645,
+              "encode_seconds": 0.522012,
+              "frame_sha256": "efc47f5ef04c66b93aaf63b6c8f0e4b7f2fcde9c45ff4c31e103e9b74efe2fdf",
+              "framed_bytes": 3368,
+              "implementations": [
+                "willems_ctw_depth8",
+                "willems_ctw_depth8"
+              ],
+              "member_count": 2,
+              "member_framed_bytes": [
+                2828,
+                527
+              ],
+              "parseback_exact": true,
+              "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+              "raw_bytes": 3273,
+              "raw_sha256": [
+                "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c",
+                "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+              ]
+            },
+            "token_planes": {
+              "non_additive_alternative_to": "mode_delta",
+              "planes": [
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 64.190255,
+                  "encode_seconds": 32.056594,
+                  "frame_sha256": "8e1fc38d2a0de0d3bbf1f27dace0d637e6aa57f5073079fe390d1b8c8824f223",
+                  "framed_bytes": 146041,
+                  "implementation": "willems_ctw_depth8",
+                  "parseback_exact": true,
+                  "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 64.258427,
+                  "encode_seconds": 32.030563,
+                  "frame_sha256": "0e30c09dd0646275adb89ba39672313b7064435c15ba802e43cc5d0d81fe8bb0",
+                  "framed_bytes": 145410,
+                  "implementation": "willems_ctw_depth8",
+                  "parseback_exact": true,
+                  "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 64.08717,
+                  "encode_seconds": 32.205086,
+                  "frame_sha256": "12e234fcd7e34d6a360193137efe96960cb1d357956d5da1a86c82ed86d9946d",
+                  "framed_bytes": 146796,
+                  "implementation": "willems_ctw_depth8",
+                  "parseback_exact": true,
+                  "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb"
+                },
+                {
+                  "available": true,
+                  "decode_seconds_including_canonical_reencode": 68.554875,
+                  "encode_seconds": 33.567769,
+                  "frame_sha256": "99bba3155ea71e1e3677d4683a50e76de5c60527a2e2f87c39887c29cc0f82b2",
+                  "framed_bytes": 149170,
+                  "implementation": "willems_ctw_depth8",
+                  "parseback_exact": true,
+                  "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+                  "raw_bytes": 230400,
+                  "raw_sha256": "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                }
+              ],
+              "pool": {
+                "available": true,
+                "decode_seconds_including_canonical_reencode": 257.014187,
+                "encode_seconds": 133.920392,
+                "frame_sha256": "bee5b1761f5ee119e39b3156b110554353d42b08e55b04fb28956b52ba6e2a19",
+                "framed_bytes": 587438,
+                "implementations": [
+                  "willems_ctw_depth8",
+                  "willems_ctw_depth8",
+                  "willems_ctw_depth8",
+                  "willems_ctw_depth8"
+                ],
+                "member_count": 4,
+                "member_framed_bytes": [
+                  146041,
+                  145410,
+                  146796,
+                  149170
+                ],
+                "parseback_exact": true,
+                "pr130_lesson": "universal context-tree candidate; PR130 context lesson tested without its weights",
+                "raw_bytes": 921600,
+                "raw_sha256": [
+                  "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a",
+                  "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2",
+                  "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb",
+                  "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+                ]
+              }
+            }
+          }
+        },
+        "mixed_coder_pools": {
+          "metadata_renderer_joint_selector": {
+            "available": true,
+            "decode_seconds_including_canonical_reencode": 0.132734,
+            "encode_seconds": 0.06535,
+            "frame_sha256": "2d61fc97d58126efb087a1b8308f4bc1e3836a9c2bb1a6b7b8f76ec11c1ac9b1",
+            "framed_bytes": 3662,
+            "implementations": [
+              "bayes_linear_mix_4expert",
+              "brotli_q11"
+            ],
+            "member_count": 2,
+            "member_framed_bytes": [
+              3327,
+              322
+            ],
+            "parseback_exact": true,
+            "pr130_lesson": "best joint renderer plus selector with exact counted pool wrapper",
+            "raw_bytes": 3816,
+            "raw_sha256": [
+              "ceba2c663bf9107aef6f32f2148e791b87929fa2480188f71d2040eeb5f5640f",
+              "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+            ]
+          },
+          "metadata_renderer_split_selector": {
+            "available": true,
+            "decode_seconds_including_canonical_reencode": 0.138232,
+            "encode_seconds": 0.064908,
+            "frame_sha256": "1b6f040d05a93f103016de16fc39cb48dae068d602a5aab4110fedee86b1aea5",
+            "framed_bytes": 3663,
+            "implementations": [
+              "bayes_linear_mix_4expert",
+              "bayes_linear_mix_4expert",
+              "brotli_q11"
+            ],
+            "member_count": 3,
+            "member_framed_bytes": [
+              2828,
+              496,
+              322
+            ],
+            "parseback_exact": true,
+            "pr130_lesson": "independent supermask/mods/selector minima with exact counted pool wrapper",
+            "raw_bytes": 3808,
+            "raw_sha256": [
+              "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c",
+              "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada",
+              "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1"
+            ]
+          },
+          "mode_delta": {
+            "available": true,
+            "decode_seconds_including_canonical_reencode": 1.143166,
+            "encode_seconds": 1.011008,
+            "frame_sha256": "6f41cf7b605308822ad4187787a7f63c5b840c94897f5abfcc66267afbb5ac03",
+            "framed_bytes": 360743,
+            "implementations": [
+              "bayes_linear_mix_4expert",
+              "brotli_q11"
+            ],
+            "member_count": 2,
+            "member_framed_bytes": [
+              945,
+              359785
+            ],
+            "parseback_exact": true,
+            "pr130_lesson": "per-stream non-additive minimum with exact counted pool wrapper",
+            "raw_bytes": 923136,
+            "raw_sha256": [
+              "ace653ad4ea5c524d04b61e5397fd3db1184fb22a0e401381fbea30edc938c7f",
+              "fe907e6613beda0261ca4dfdcd934cce421aad31f0b0fd6c2bfad1740c97f319"
+            ]
+          },
+          "renderer_split": {
+            "available": true,
+            "decode_seconds_including_canonical_reencode": 0.13419,
+            "encode_seconds": 0.065927,
+            "frame_sha256": "1f003df94a44a55ecd8e626f463c835f62bc7fdd98084823c9d5f760375255ad",
+            "framed_bytes": 3337,
+            "implementations": [
+              "bayes_linear_mix_4expert",
+              "bayes_linear_mix_4expert"
+            ],
+            "member_count": 2,
+            "member_framed_bytes": [
+              2828,
+              496
+            ],
+            "parseback_exact": true,
+            "pr130_lesson": "independent supermask/mods minima with exact counted pool wrapper",
+            "raw_bytes": 3273,
+            "raw_sha256": [
+              "7154b28b5f0aaae047083a08576ac68a5ab531f325f8385e246488b548e85e0c",
+              "70ce95429083022290bdf6db160490e22002db2e74bf2102adf6d002cf263ada"
+            ]
+          },
+          "token_planes": {
+            "available": true,
+            "decode_seconds_including_canonical_reencode": 0.117739,
+            "encode_seconds": 0.119177,
+            "frame_sha256": "73cb56906dda2d4a969464f966ccaec56e42678ba8c435a563dee3dbb87e4a7a",
+            "framed_bytes": 465861,
+            "implementations": [
+              "lzma1_extreme",
+              "lzma1_extreme",
+              "lzma1_extreme",
+              "lzma1_extreme"
+            ],
+            "member_count": 4,
+            "member_framed_bytes": [
+              117522,
+              117182,
+              115214,
+              115922
+            ],
+            "parseback_exact": true,
+            "pr130_lesson": "per-plane non-additive minimum with exact counted pool wrapper",
+            "raw_bytes": 921600,
+            "raw_sha256": [
+              "360bcb666cc0152ff89292046a3539f4a10d12164bb4d8ecdcebd6338840c54a",
+              "dc84cbcb12c86ba240485b674924085d4cb6d10298fd035ddff6175e1d5df8c2",
+              "7ceec1653f112256f929ed4170f00fca056bac86ecb70bc8a0986b51e52576bb",
+              "8afc3936cb3a9a2f576ffa49a21e7b43c140f6ec0230c9dd68deb2f2eebb9b4b"
+            ]
+          }
+        },
+        "production_token_frames": {
+          "brotli11": {
+            "available": true,
+            "base_bytes": 1109,
+            "decode_seconds_including_canonical_reencode": 0.891393,
+            "delta_bytes": 359740,
+            "encode_seconds": 0.881861,
+            "frame_sha256": "4f7c962a2e7b0e5135996daa59af89f3475848a556b9c179662addf45887e729",
+            "framed_bytes": 360905,
+            "implementation": "experiments.ddm_r7_token_coder:brotli11",
+            "parseback_exact": true,
+            "pr130_lesson": "existing E4 baseline; PR130 did not Brotli-code its token stream",
+            "raw_token_bytes": 1843200,
+            "representation_pool": "mode_delta"
+          },
+          "cae_inspired_identity_inter": {
+            "available": true,
+            "base_bytes": 1109,
+            "decode_seconds_including_canonical_reencode": 20.357777,
+            "delta_bytes": 367652,
+            "encode_seconds": 9.668557,
+            "frame_sha256": "62c9cbd35b18e9516454d89588f8ab2d45c827177118ea69ad97bc8c5074d8e5",
+            "framed_bytes": 368817,
+            "implementation": "experiments.ddm_r7_token_coder:cae_inspired_identity_inter",
+            "parseback_exact": true,
+            "pr130_lesson": "PR130 causal past+spatial lesson translated to owned DDM mode/base/lattice contexts; P64 topology, weights, embeddings, and constants rejected",
+            "raw_token_bytes": 1843200,
+            "representation_pool": "mode_delta"
+          },
+          "huffman_nibble": {
+            "available": true,
+            "base_bytes": 1109,
+            "decode_seconds_including_canonical_reencode": 0.777399,
+            "delta_bytes": 403606,
+            "encode_seconds": 0.282462,
+            "frame_sha256": "99205700db9291b68da9b66740ea52346c960c5abe4d56ed61349647d459efd2",
+            "framed_bytes": 404771,
+            "implementation": "experiments.ddm_r7_token_coder:huffman_nibble",
+            "parseback_exact": true,
+            "pr130_lesson": "PR130 canonical-Huffman lesson reraced with the complete 16-byte DDM code-length table charged",
+            "raw_token_bytes": 1843200,
+            "representation_pool": "mode_delta"
+          },
+          "kt_o8_prev5_backoff": {
+            "available": true,
+            "base_bytes": 1109,
+            "decode_seconds_including_canonical_reencode": 12.213456,
+            "delta_bytes": 406815,
+            "encode_seconds": 5.80195,
+            "frame_sha256": "5533d541f67f274bb21f785306200e0023fdcfefad021668d622fa25183e2b5d",
+            "framed_bytes": 407980,
+            "implementation": "experiments.ddm_r7_token_coder:kt_o8_prev5_backoff",
+            "parseback_exact": true,
+            "pr130_lesson": "PR130 causal past+spatial lesson translated to owned DDM mode/base/lattice contexts; P64 topology, weights, embeddings, and constants rejected",
+            "raw_token_bytes": 1843200,
+            "representation_pool": "mode_delta"
+          },
+          "kt_prev1": {
+            "available": true,
+            "base_bytes": 1109,
+            "decode_seconds_including_canonical_reencode": 3.25497,
+            "delta_bytes": 364505,
+            "encode_seconds": 1.344614,
+            "frame_sha256": "cbc919265cf7aca2466b22661b017e5238e12b735a73d38a6fcbfdc198e546dd",
+            "framed_bytes": 365670,
+            "implementation": "experiments.ddm_r7_token_coder:kt_prev1",
+            "parseback_exact": true,
+            "pr130_lesson": "PR130 causal past+spatial lesson translated to owned DDM mode/base/lattice contexts; P64 topology, weights, embeddings, and constants rejected",
+            "raw_token_bytes": 1843200,
+            "representation_pool": "mode_delta"
+          },
+          "lzma1": {
+            "available": true,
+            "base_bytes": 1109,
+            "decode_seconds_including_canonical_reencode": 0.170035,
+            "delta_bytes": 373550,
+            "encode_seconds": 0.154393,
+            "frame_sha256": "b34f5226f46004ad2bc8e856ea41180aef9ccba69fcdeccbe67704534344c080",
+            "framed_bytes": 374715,
+            "implementation": "experiments.ddm_r7_token_coder:lzma1",
+            "parseback_exact": true,
+            "pr130_lesson": "existing E4 fallback; PR130 exact XZ/LZMA2 is a separate arm",
+            "raw_token_bytes": 1843200,
+            "representation_pool": "mode_delta"
+          },
+          "rans_o0": {
+            "available": true,
+            "base_bytes": 1109,
+            "decode_seconds_including_canonical_reencode": 0.240889,
+            "delta_bytes": 373536,
+            "encode_seconds": 0.131225,
+            "frame_sha256": "3a8ed9ae4985715dfca56e2ce12b8fdf7ee2362dd6e5745008dc72e63082184b",
+            "framed_bytes": 374701,
+            "implementation": "experiments.ddm_r7_token_coder:rans_o0",
+            "parseback_exact": true,
+            "pr130_lesson": "PR130 range backend is reference only; complete owned rANS frame reraced",
+            "raw_token_bytes": 1843200,
+            "representation_pool": "mode_delta"
+          },
+          "rans_o0_on_adjacent_innovation": {
+            "available": true,
+            "base_bytes": 1109,
+            "decode_seconds_including_canonical_reencode": 0.414766,
+            "delta_bytes": 460359,
+            "encode_seconds": 0.134681,
+            "frame_sha256": "b288c43f409ce782519bb4154a59efe2ca695a44a6bdea9959f309966b84176f",
+            "framed_bytes": 461524,
+            "implementation": "experiments.ddm_r7_token_coder:rans_o0_on_adjacent_innovation",
+            "parseback_exact": true,
+            "pr130_lesson": "PR130 range backend is reference only; complete owned rANS frame reraced",
+            "raw_token_bytes": 1843200,
+            "representation_pool": "mode_delta"
+          },
+          "smevr": {
+            "available": true,
+            "base_bytes": 1109,
+            "decode_seconds_including_canonical_reencode": 9.566309,
+            "delta_bytes": 362363,
+            "encode_seconds": 4.927422,
+            "frame_sha256": "ca766e0b94d4ee46a64fab36a3691cfdaa7e88429a22ff1e86b92b223545e544",
+            "framed_bytes": 363528,
+            "implementation": "experiments.ddm_r7_token_coder:smevr",
+            "parseback_exact": true,
+            "pr130_lesson": "PR130 causal past+spatial lesson translated to owned DDM mode/base/lattice contexts; P64 topology, weights, embeddings, and constants rejected",
+            "raw_token_bytes": 1843200,
+            "representation_pool": "mode_delta"
+          }
+        }
+      },
+      "selector": {
+        "activation": "gelu_exact_erf",
+        "arch": "tr1_lotto_combined_ema_v1",
+        "bank_algorithm": "numpy_default_rng_choice_signed_he_v1",
+        "code_width": 4,
+        "frame_role": "frame1_only",
+        "grid_downsample": 16,
+        "grid_h": 24,
+        "grid_w": 32,
+        "lotto_seed": 118,
+        "mask_density": 0.5,
+        "num_pairs": 600,
+        "output_activation": "sigmoid_times_255",
+        "output_height": 384,
+        "output_width": 512,
+        "renderer_width": 24,
+        "schema": "ddm_tr1_selector.v1",
+        "token_encoding": "combined_ema_base_plus_delta_uint8_codes_v1",
+        "token_quant_levels": 16,
+        "token_ste": "round",
+        "token_temporal_mode": "shared_base"
+      }
+    }
+  },
+  "created_at_unix": 1785325113.359113,
+  "include_slow_ctw": true,
+  "last_completed_stage": "/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/checkpoints/stage_seg_trunk_tau_final.npz",
+  "last_stage": "/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/checkpoints/stage_seg_trunk_tau_final.npz",
+  "partials": {},
+  "runtime_fingerprint": {
+    "brotli_module_sha256": "813610bf0d74a6998d7b47d912e8892c3896e6eac19cb7b22575e04fc294b63f",
+    "brotli_version": "1.2.0",
+    "lzma_module_sha256": "6a923ba49b33897152a9398d2a39d08670238290c90c050b8f4d838046339db5",
+    "numpy_version": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+  },
+  "schema": "ddm_r7_token_coder_race.v1.progress.v2",
+  "source_sha256": {
+    "coder": "f84b29e794a902425c560ff62fa3e20dbc2017449f14db474d347acbbc3b9396",
+    "logistic_mix": "e6a0813e414c350b9e32745e0c57b2c6e3ad36a9b792b928b2cb75f80ab7354e",
+    "race": "4b7870258009380c1bbaa0f80b5f056faedc4994efa57e66067c18eab7c3f6bb",
+    "range_coder": "f93270db5e2da4e478552b7701c6be53d1115e9ead3498a0f0b4fb37931f3a91",
+    "repair_adapters": "7b5820ed29ea93ff78036189b2db6bc26167cb6df5e95beb76f353fd610ab8b6",
+    "repo_io": "a081e533abd5dc6be1c575d4536065d2dd22fb724c45af876685d4ec8dfacc67",
+    "selfcomp_coders": "f00a3fa4ab9152d92d9c8517ab0d80eb53441f69136075f0382e3f91ee0231a1",
+    "tr1_runtime": "f3b93708b542e53d7a135233d8ba51bd406a5f6b6a55a7b80855369e9cebb2e9"
+  },
+  "stage_checkpoints": [
+    {
+      "checkpoint_path": "/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/checkpoints/stage_seg_trunk_tau_final.npz",
+      "path": ".omx/research/ddm_r7_token_coder_race_progress_portable_20260729.stage-001-67454bc9ac30.json",
+      "stage_index": 1
+    }
+  ],
+  "updated_at_unix": 1785327659.502047
+}

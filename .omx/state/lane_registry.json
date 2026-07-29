@@ -94141,6 +94141,53 @@
         }
       },
       "notes": "Helper-only sublane under lane_g111_fresh_batch16_v9_training_binding_20260727; rehydrate native O1-O6 at topology-stable AdamW coordinates and fail closed on Muon/film-polar incompatibility; no trainer edits or launches."
+    },
+    {
+      "id": "ddm_r7_token_coder_race",
+      "name": "DDM R7 token-stream coder race and production receiver",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; $0 lossless token-dump coder race; no scorer, launch, paid dispatch, archive, exact eval, score, promotion, or pointer authority; live burn checkpoints read-only; MAIN landing review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "MAIN reviews deterministic encode-decode and real-checkpoint receipts",
+        "post-burn exporter integrates the winner and proves counted archive parse-back",
+        "exact contest CPU-CUDA evaluation remains separately governed"
+      ]
     }
   ],
   "level_rules": {
@@ -94150,5 +94197,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-27T20:49:50Z"
+  "updated_at": "2026-07-29T10:41:12Z"
 }
