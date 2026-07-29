@@ -87,6 +87,38 @@ def lever_seg_physics(form_start: str = "ce", w_seg: float = 100.0,
                        "class_weight_lane = sn1 sided-asymmetry lever")
 
 
+def lever_token_init(mode: str = "zero") -> Lever:
+    if mode not in ("zero", "solve_project"):
+        raise ValueError("token init mode is zero|solve_project")
+    return Lever(name=f"tr1_token_init_{mode}",
+                 overrides={"--token-init-mode": mode},
+                 notes="lv1 B solve-init: eu1 teacher-as-init-oracle — v3 ANALYTIC "
+                       "projection of the materializable solution-set member (GT frame_1 "
+                       "at the render plane, area-mean downsample) into token space as "
+                       "base+delta before the scorer loop; zero = tb1 gauge-hygiene "
+                       "control (ker(A) stays at the zero lattice point). Adopt iff "
+                       "strictly better realized d_seg at matched epoch (pre-registered "
+                       "lv1 B rule; v1 joint-L2 + v2 token-gradient formulations "
+                       "MEASURED inadmissible — custody in the lv1 memo)")
+
+
+def lever_basin_handoff(mode: str = "off") -> Lever:
+    if mode not in ("off", "on"):
+        raise ValueError("basin handoff is off|on")
+    return Lever(name=f"tr1_basin_handoff_{mode}",
+                 overrides={"--basin-handoff": mode},
+                 notes="operator x2 2026-07-28 burn schedule rule: TRAIN ONLY TO CONDITION "
+                       "— on basin-entry (TerminalSolve §16.1 validity: quadratic crawl + "
+                       "topology stable + no transitions + zero-alarm COUPLED_DESCENT "
+                       "window) STOP permanently and hand off to the solve executors "
+                       "(#423 quadratic_basin_finisher_probe GN/CG + eg1 E3 QDBS rail "
+                       "cf7172e747 + #383 terminal pose; v19 realized acceptance vs the "
+                       "handoff full-confirm baseline). Saddle/grokking #216/#475 "
+                       "disambiguation: stalled solve + still-descending training => "
+                       "resume training, re-arm doubled window. SHORTENS the sealed "
+                       "wall-clock (train-least realized)")
+
+
 def lever_a1_gate(gate_every: int = 5) -> Lever:
     return Lever(name=f"tr1_a1_gate_every{gate_every}", overrides={"--gate-every": str(gate_every)},
                  notes="A1 (fd2 binding transfer lesson): realized-argmax gate cadence")

@@ -196,6 +196,14 @@ class TR1Config:
     token_ste: str                # "round" | "dither" (RACED — uint8 rounding is asymmetric)
     class_weight_lane: float      # 1.0 = off; sn1 asymmetry lever (per-GT-class weight)
     margin_target: float          # margin_hinge form target (raced lever)
+    token_init_mode: str = "zero"  # "zero" (tb1 gauge-hygiene control) | "solve_project"
+    # solve_project = v3 ANALYTIC chart projection (area-mean GT downsample -> lattice;
+    # base = temporal mean, delta = residual). No pretrain knob: v1 joint-L2 and
+    # v2 tokens-only-gradient formulations are MEASURED inadmissible (see main()).
+    basin_handoff: str = "off"  # "on" = operator 2026-07-28 train-ONLY-to-condition rule:
+    # on basin-entry (TerminalSolve §16.1 validity: quadratic crawl + topology stable +
+    # no transitions remaining) STOP training permanently and hand off to the SOLVE
+    # executors (#423 GN/CG + eg1 QDBS rail + #383 terminal pose; v19 realized acceptance).
 
     @property
     def grid_h(self) -> int:
@@ -530,6 +538,31 @@ def realized_gate(model, gate_ids: tuple[int, ...], lstars, seg_cpu,
     return row
 
 
+BASIN_THRESHOLDS = {
+    "smooth_rel_per_window": 0.01, "dseg_rel_per_window": 0.02,
+    "lane_b0_delta_max": 2, "lane_erased_delta_max": 1,
+}
+
+
+def basin_entry_fires(w: list[dict]) -> bool:
+    """TerminalSolve §16.1 validity predicate over the last-3-gate window (pure logic;
+    unit-tested; consumed by main()'s basin-handoff block). Conditions: (a) quadratic
+    crawl in BOTH smooth and realized channels; (b) lane topology stable; (c) shadow
+    basis + tau stage throughout (no transitions remaining); zero A1 alarms in-window
+    (linearization fidelity)."""
+    t = BASIN_THRESHOLDS
+    return (len(w) == 3
+            and all(x["basis"] == "ema_shadow" for x in w)
+            and all(x["stage"] == "seg_trunk_tau" for x in w)
+            and not any(x["alarm"] for x in w)
+            and w[0]["smooth"] > 0 and w[0]["dseg"] > 0
+            and (w[0]["smooth"] - w[-1]["smooth"]) / abs(w[0]["smooth"])
+                < t["smooth_rel_per_window"]
+            and (w[0]["dseg"] - w[-1]["dseg"]) / w[0]["dseg"] < t["dseg_rel_per_window"]
+            and abs(w[-1]["lane_b0"] - w[0]["lane_b0"]) <= t["lane_b0_delta_max"]
+            and abs(w[-1]["lane_er"] - w[0]["lane_er"]) <= t["lane_erased_delta_max"])
+
+
 def resolve_gate_ids(num_pairs: int) -> tuple[int, ...]:
     """Pre-registered A1 gate set: all pairs below n600; else fd2 instrument geometry
     (block 447-450 + 32 rng(0)-sampled off-block pairs)."""
@@ -661,6 +694,17 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument("--verdict-chunk", type=int, default=32,
                     help="pairs per CPU SegNet verdict chunk (<=120 per the charter)")
     ap.add_argument("--mlx-device", default="gpu", choices=("gpu", "cpu"))
+    ap.add_argument("--token-init-mode", default="zero", choices=("zero", "solve_project"),
+                    help="lv1 B solve-init: v3 ANALYTIC projection of the materializable "
+                         "solution-set member (GT frame_1 at the render plane, area-mean "
+                         "downsampled) into token space as base+delta BEFORE the scorer "
+                         "loop (eu1 teacher-as-init-oracle mechanism); zero = tb1 control")
+    ap.add_argument("--basin-handoff", default="off", choices=("off", "on"),
+                    help="operator 2026-07-28 basin rule: train ONLY to condition; on "
+                         "basin-entry detection (quadratic crawl + topology stable + no "
+                         "transitions remaining, TerminalSolve validity conditions) STOP "
+                         "and hand off to the solve executors (handoff receipt written; "
+                         "full-confirm at handoff = the v19 realized acceptance baseline)")
     return ap
 
 
@@ -700,6 +744,7 @@ def main() -> int:
         gate_every=args.gate_every, ema_decay=ema_decay, ema_decay_provenance=ema_prov,
         token_temporal_mode=args.token_temporal_mode, token_ste=args.token_ste,
         class_weight_lane=args.class_weight_lane, margin_target=args.margin_target,
+        token_init_mode=args.token_init_mode, basin_handoff=args.basin_handoff,
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"
@@ -733,6 +778,75 @@ def main() -> int:
 
     model = build_module(cfg)
     mx.eval(model.parameters())
+
+    # lv1 Phase B — SOLVE-INIT (eu1 "teacher-to-packet": the solved object is an
+    # INITIALIZATION ORACLE, never a shippable payload). Custody verdict (lv1 memo):
+    # the q1-lineage C1/BOX solved frames exist only as 277.7M archive-form candidates
+    # (ms2r_r3 stage_checkpoints/04_candidate); the canonical MATERIALIZABLE
+    # solution-set member in this trainer's own data path is the GT frame itself
+    # (d_seg == 0 through R by construction of the GT labels). Projection = bounded
+    # L2 fit of (tokens + renderer) to bilinear-resized GT frame_1 at the render
+    # plane — NO scorer in the pretrain loop (train-least: don't learn what is
+    # solved). Skipped on resume (state comes from the checkpoint; P0 resumability).
+    if cfg.token_init_mode == "solve_project" and args.resume_from is None:
+        import torch
+        import torch.nn.functional as F
+        gt_f1 = open_stored_npy_memmap(args.gt_cache, "gt_f1")  # (P,874,1164,3) u8 camera
+        tgt = np.empty((cfg.num_pairs, SEG_H, SEG_W, 3), dtype=np.uint8)
+        for i in range(cfg.num_pairs):
+            fr = torch.from_numpy(
+                np.asarray(gt_f1[i], dtype=np.float32)).permute(2, 0, 1)[None]
+            dn = F.interpolate(fr, size=(SEG_H, SEG_W), mode="bilinear",
+                               align_corners=False)
+            tgt[i] = dn[0].permute(1, 2, 0).clamp(0, 255).round().to(torch.uint8).numpy()
+        tlog({"event": "solve_init_targets_ready", "pairs": int(cfg.num_pairs),
+              "note": "GT frame_1 bilinear->render plane = the materializable "
+                      "solution-set member (q1-lineage C1/BOX frames exist only as "
+                      "277.7M archive-form candidates; custody in the lv1 memo)"})
+
+        # v3 ANALYTIC projection (both gradient formulations MEASURED inadmissible:
+        # v1 JOINT tokens+renderer L2 fit -> GELU-dead mean-image basin (custody
+        # b_solveinit_v1_aborted_joint_pretrain_gelu_dead_basin: l2 frozen to 9 digits
+        # from pretrain_epoch 2; downstream scorer gnorm ~1e-9, ep_loss flat);
+        # v2 TOKENS-ONLY gradient fit through the frozen random decoder -> glacial
+        # (measured dl2 ~2e-5/update at n4; injects ~nothing). verdict_scope:
+        # FORMULATION for both; paradigm intact. v3 = zeroth-order chart projection:
+        # tokens := area-mean downsample of the solution-set member into the lattice,
+        # split as base = temporal mean (the 98.806% image-stationary static scene,
+        # op1) + per-frame delta residual — the deterministic, dead-basin-impossible
+        # projection. The renderer starts at its gelu-ALIVE zero-init either way; the
+        # A/B measures GT-structured vs zero tokens as the starting description.
+        gh, gw, D = cfg.grid_h, cfg.grid_w, cfg.grid_downsample
+        ds = tgt.reshape(cfg.num_pairs, gh, D, gw, D, 3).astype(np.float32)
+        ds = ds.mean(axis=(2, 4)) / 255.0 * 2.0 - 1.0  # (P, gh, gw, 3) in [-1, 1]
+        tok = np.zeros((cfg.num_pairs, gh, gw, cfg.code_width), dtype=np.float32)
+        nch = min(3, cfg.code_width)
+        tok[..., :nch] = ds[..., :nch]
+        if cfg.token_temporal_mode == "shared_base":
+            base = tok.mean(axis=0)
+            delta = np.clip(tok - base[None], -1.0, 1.0)
+            model.tokens_base = mx.array(base)
+            model.tokens_delta = mx.array(delta)
+            tlog({"event": "solve_init_projected", "mode": "shared_base",
+                  "base_absmax": float(np.abs(base).max()),
+                  "delta_absmax": float(np.abs(delta).max()),
+                  "delta_rms": float(np.sqrt(np.mean(delta ** 2)))})
+        else:
+            model.tokens = mx.array(np.clip(tok, -1.0, 1.0))
+            tlog({"event": "solve_init_projected", "mode": "independent",
+                  "tok_absmax": float(np.abs(tok).max())})
+        mx.eval(model.parameters())
+        save_checkpoint(out_dir / "checkpoints" / "stage_solve_init_pretrain.npz",
+                        model=model,
+                        ema={k: mx.array(v)
+                             for k, v in tree_flatten(model.trainable_parameters())},
+                        opt_state_flat={}, epoch=-1, stage="solve_init_pretrain",
+                        cfg=cfg, telemetry_tail=[])
+        del tgt, ds, tok
+        # Scorer-loop Adam moments are created FRESH below (warm-start re-anchor
+        # law #517/#518); the EMA shadow initializes from the post-projection params
+        # (fresh warmup window => live-basis gates until W, same as the control).
+
     optimizer = optim.Adam(learning_rate=cfg.lr)
 
     ema: dict[str, Any] = {k: mx.array(v) for k, v in tree_flatten(model.trainable_parameters())}
@@ -792,6 +906,7 @@ def main() -> int:
     ep_losses: list[float] = []
     telemetry_tail: list[dict] = []
     gnorm_hist: list[float] = []
+    basin_window: list[dict] = []  # basin-entry detector state (basin_handoff == "on")
     gate_param_snapshot: dict[str, np.ndarray] | None = None
     order_rng = np.random.default_rng(cfg.seed + 1)
     knee_switched = stage != "seg_trunk_ce"
@@ -933,6 +1048,71 @@ def main() -> int:
                             model=model, ema=ema, opt_state_flat={}, epoch=epoch,
                             stage=stage, cfg=cfg, telemetry_tail=telemetry_tail)
 
+            # ---- BASIN-ENTRY HANDOFF (operator ×2 2026-07-28: "train only to condition;
+            # if basin hit, solve only, preferable always"). Detection = the TerminalSolve
+            # §16.1 validity conditions, honestly disambiguated: (a) quadratic crawl in
+            # BOTH smooth and realized channels; (b) partition topology STABLE (lane =
+            # the live nucleation channel); (c) form switch done + EMA shadow warm (no
+            # transitions remaining); plus zero A1 alarms in-window (COUPLED_DESCENT =
+            # the smooth-realized linearization fidelity that fd2 measured MISSING on
+            # the unconditioned pixel-lattice lift — conditioning creates solve-validity).
+            # Saddle/grokking (#216/#475) disambiguation is POST-solve by contract (see
+            # the handoff receipt): a stalled solve + still-descending training = saddle
+            # => resume training, re-arm doubled window. ----
+            if cfg.basin_handoff == "on":
+                topo = gate_row.get("topology_per_class", {})
+                basin_window.append({
+                    "epoch": epoch, "basis": gate_basis, "stage": stage,
+                    "dseg": float(gate_row["realized_gate_dseg_mean"]),
+                    "smooth": float(ep_loss), "alarm": bool(a1["a1_alarm"]),
+                    "lane_b0": int(topo.get("betti0_realized", [0] * 5)[1]),
+                    "lane_er": int(topo.get("gt_components_erased", [0] * 5)[1])})
+                basin_window = basin_window[-3:]
+                w = basin_window
+                if basin_entry_fires(w):
+                    save_checkpoint(out_dir / "checkpoints" / "stage_basin_entry.npz",
+                                    model=model, ema=ema, opt_state_flat={}, epoch=epoch,
+                                    stage="basin_entry", cfg=cfg,
+                                    telemetry_tail=telemetry_tail)
+                    handoff = {
+                        "schema": "ddm_lv1_basin_handoff_receipt.v1",
+                        "fired_epoch": epoch, "window": w,
+                        "rule": ("operator 2026-07-28: TRAIN ONLY TO CONDITION; on "
+                                 "basin-entry switch to SOLVE-ONLY permanently"),
+                        "validity": ("TerminalSolve §16.1 (a)+(b)+(c) + zero-alarm window "
+                                     "(linearization fidelity; fd2's empty faithful-flip "
+                                     "window was the UNCONDITIONED pixel-lattice lift)"),
+                        "executors": {
+                            "quadratic_solve": ("tools/quadratic_basin_finisher_probe.py "
+                                                "(#423 damped Newton-CG, head+full stages; "
+                                                "per-pair token blocks separable given the "
+                                                "frozen renderer)"),
+                            "discrete_rail": ("eg1 E3 crash-safe QDBS terminal rail "
+                                              "(cf7172e747; all-49 closure 218ed874c7)"),
+                            "pose": "#383 terminal 6-eq GN on frozen composed frames"},
+                        "acceptance": ("v19 REALIZED: solve steps accepted ONLY on realized "
+                                       "joint dS<0 through the flip gate, vs the handoff "
+                                       "full-confirm baseline — never smooth say-so"),
+                        "saddle_disambiguation": ("#216/#475: solve STALLS while training "
+                                                  "resumed from stage_basin_entry.npz still "
+                                                  "descends => saddle/grokking plateau => "
+                                                  "RESUME training, re-arm doubled window"),
+                        "thresholds": {
+                            **BASIN_THRESHOLDS,
+                            "provenance": ("PROVISIONAL-derived: separates the §16.1 "
+                                           "measured witness quadratic crawl (~0.2%/25ep) "
+                                           "from tb1 T2 active descent (~5-8%/gate) by "
+                                           "~10x on each side; rederivation trigger = the "
+                                           "burn's own gate-delta distribution")},
+                        "checkpoint": "checkpoints/stage_basin_entry.npz",
+                    }
+                    (out_dir / "basin_handoff_receipt.json").write_text(
+                        json.dumps(handoff, indent=2, sort_keys=True) + "\n")
+                    tlog({"event": "basin_entry_handoff", "epoch": epoch,
+                          "window": w, "checkpoint": handoff["checkpoint"]})
+                    stop_reason = "basin_entry_handoff"
+                    break
+
     # Terminal stage checkpoint (distinct stage-encoded name; EMA shadow inside).
     save_checkpoint(out_dir / "checkpoints" / f"stage_{stage}_final.npz",
                     model=model, ema=ema, opt_state_flat={}, epoch=len(ep_losses) + start_epoch,
@@ -950,7 +1130,8 @@ def main() -> int:
     }
 
     # Optional full realized confirm (chunked <=120; EMA shadow).
-    if args.full_confirm and stop_reason in ("epochs_complete", "max_wall_minutes"):
+    if args.full_confirm and stop_reason in ("epochs_complete", "max_wall_minutes",
+                                             "basin_entry_handoff"):
         from experiments.train_witness_realized_through_R_mlx import (
             _torch_R_to_camera_uint8,
             cpu_verdict_d_seg_batch,
