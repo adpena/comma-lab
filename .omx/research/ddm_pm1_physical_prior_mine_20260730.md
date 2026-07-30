@@ -153,8 +153,15 @@ column: SV=scorer-visible · SP=sensitivity-priced · CO=compact · NR=non-redun
   2 photometric coeffs/pair (~4 B) + rung-A free rolling-shutter receiver amendment**; rung C deferred
   into QA48.
 - **New ledger rows** for the top UNCONSUMED $0-probe candidates: **QA53** (mount-pitch global
-  refinement, rank 5, $0) · **QA54** (per-channel/luma-only exposure gain, rank 9, rung-B variant,
-  $0). Ranks 3/6/7/8 already have homes (QA52 / oracle / QA52 / QA28) — folded, not duplicated.
+  refinement, rank 5) · **QA54** (per-channel/luma-only exposure gain, rank 9, rung-B variant, $0,
+  DUE). Ranks 3/6/7/8 already have homes (QA52 / oracle / QA52 / QA28) — folded, not duplicated.
+- **QA53 FIRED 07-30 → NULL** (mount-pitch, full-tail-112 transfer, receipt sha 671a947ef49b7e4e):
+  **pitch=0 IS the aggregate global optimum** (tail-sel 22.734 / contribution 0.7229); every non-zero
+  global pitch is worse (p+0.02→25.49, p−0.02→84.46). Per-pair scatter (57/112 prefer +0.02/+0.04) is
+  not capturable by one free constant, and a per-pair pitch costs bytes. VERDICT: the ground-plane
+  calibration is already optimal at pitch=0 — a clean honest negative (constants-are-poison clean, not
+  a missed lever). Confound: transfer only (pose solved at pitch=0); a pitch≠0 re-solve is a v4c option
+  but NOT free. This RESOLVES mine rank 5 to NULL and removes it from the UNCONSUMED tail.
 - **Full-tail-112 QA44 confirmation** running detached (upgrades the −0.041 S projection to a
   measured full-tail pose-member number); §1 table updates at completion (receipt appended).
 - **Standing (PH-4 / QA50):** the residual-axis loop's next firing = SVD the post-rung residual on the
