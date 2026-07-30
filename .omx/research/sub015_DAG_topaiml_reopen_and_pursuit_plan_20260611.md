@@ -25498,3 +25498,41 @@ further slope-holding burn beyond burn-3 remains the honest central expectation.
 comparison → gc9 fork row; burn-3 config consumption; ax1_capacity_split_v1 registration ONLY
 post-pj1-anchor; Pool-A race harness = the one named build gap. All rows [macOS-CPU advisory].
 pointer 0.1910828242 [contest-CPU] UNMOVED
+
+
+## FEED-pj1 (2026-07-30) — PROJECTION PROBE: f MEASURED 0.505 but CONFOUNDED; photometric route CLOSED (task #788)
+
+Memo `.omx/research/ddm_pj1_projection_probe_20260730.md`; code `experiments/ddm_pj1_token_projection_fit.py`.
+**f_photometric = realized d_seg 0.504824 (n600, max 0.519241 @ pair 133; per-class Road 0.2323 /
+MyCar-hood 0.2542 dominate) — MEASURED, [macOS-CPU advisory], authority frozen CPU-torch SegNet via
+pb1 receiver (archive f2c2c37779d4c371, 318,401 B).** BUT the number is a CONFOUND, not a capacity floor.
+The probe froze the QA24 endpoint renderer (sha e51178c0…, ema deploy weights) and fit tokens (cell-mask
+384/768, 16-level STE, warm-init from ema shadow) to the b2p C1 solve frames THROUGH R (contest-faithful,
+uint8@camera). It plateaued at 55.5 px RMS (ep75) and gated to 0.505 = 96× WORSE than the endpoint
+E2 0.0052766. **Mechanism (airtight receipts):** the C1 solve is a DIFFERENT VEHICLE (v10 receiver /
+ms2r_r3 DARK class-field: mean 20.7/15.3) vs TR1's BRIGHT rgb-head (sigmoid*255, mean 103.4); camera L2
+93.98 px; and the frozen renderer's dark-reachability floors at mean 67.95 even when tokens are maximally
+driven black (RANGE wall, init/metric-independent). d_seg cares only about argmax; forcing TR1 pixels
+onto the unreachable dark manifold COLLAPSES the large bright classes (Road 22.9% area, MyCar 25.6%) —
+exactly the per-class damage. **The photometric objective measures the cross-vehicle manifold gap, not
+TR1 d_seg-expressivity.** verdict_scope = FORMULATION (photometric projection-probe falsified as a
+capacity measurement) — capacity QUESTION OPEN, burn-3 FAMILY + renderer PARADIGM untouched.
+
+**gc9 §4 fork:** row-2 returns NOT-ADJUDICABLE / photometric route CLOSED. The naive f-table (f≥2.6e-3 ⇒
+"capacity wall") would MISREAD 0.505; do not. Clean arbiter = QA75 distill-WINDOW (§3 row5, scorer-in-loop,
+d_seg-aligned soft-margin teacher), needs the b2b SegNet logit/margin field on solve frames (OWED).
+**Collateral (decisive):** the gc9 1.52e-4 "existence proof" is a DIFFERENT vehicle's score — the 25.58×
+"amortization gap" (QA74) is CROSS-VEHICLE, NOT measured within-TR1 headroom (borrowed-number caution;
+strengthens gc9 A-A's CARGO-CULTED classification of "25.58× attackable by training"). TR1's own MEASURED
+d_seg floor stays 0.00528 (E2, GT-CE-aligned, UPPER bound on true floor). Byte side: fitted tokens
+compress to 318,401 B (−39,808 vs 358,209) — dark target lowered token entropy, but coupled to the d_seg
+collapse (not separable).
+
+**CROSS-ARM RECONCILIATION with FEED-ax1 (#789):** ax1 PRE-REGISTERED f∈[7e-4,2.0e-3] central 1.2e-3 on
+the premise "against solve targets ALL residual is capacity by construction (target-infeasibility zero)."
+**MEASURED f=0.505 falsifies that band by ~250×, and the falsified premise IS the confound:** matching
+cross-vehicle solve frames is NOT "capacity by construction" — the frozen bright renderer cannot reach the
+dark solve pixels regardless of capacity. ax1's `ax1_capacity_split_v1` registration was gated on the
+pj1 anchor; the anchor says the photometric split is invalid → register the CONFOUND, not the split.
+DEAD-END: do NOT re-run cold/margin photometric variants (range wall is init/metric-independent). Pointer
+delta UNMOVED (0.1910828242 [contest-CPU]) — means, not end.
