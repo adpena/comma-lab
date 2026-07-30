@@ -25296,3 +25296,18 @@ object/structure/operator-tomography/process, SEALED at round-3 zero-new-sites).
   binding over derived 0.999867 (constants-are-poison instance); w_rate provenance; margin-temp.
 - gd1.watch: single A1_REALIZATION_GAP_ALARM at burn ep49 gate (2-consecutive = stage-exit refuse)
   — surfaced to MAIN, not actioned.
+
+## FEED-2026-07-31-j — census §3a repair: the gate caught the census's own failure mode
+- **Pointer honesty: 0.1910828242 [contest-CPU] UNMOVED.** Apparatus/verdict-hygiene trajectory
+  point (gd1 commit 1fa3eb18ef, gate = magnitude-dismissal detector fired by MAIN's turn).
+- T2 sigmoid output-squash: eyeball close → TWO-SIDED no-direction-call, GENERIC-UNRACED with
+  registered race (arms sigmoid/hard-clip/softsign/hard-sigmoid; falsifier: matched-budget
+  no-win ⇒ sigmoid = the law's 2nd surviving default after raster) + $0 scorer-free pre-check
+  (annulus-vs-interior saturation fraction on burn checkpoints, boundary window). Exposure:
+  seg capacity pool, 53% of gap-to-T_3 at the 0.9640 base; COMPETES with T1 (one A/B window).
+- Self-sweep repaired 5 more eyeball verdicts (T10 padding → measured border-mass bound ·
+  T13 int8 → exact 0.27%-of-gap ceiling · T18 pair order → pools-slot, NOT-measured label ·
+  T3 companding → ru1 anchor INSTANCE-scoped · P7/P9 → relative numbers + reopen triggers).
+- STANDING CENSUS RULE adopted (§3a): no row closes on an eyeball — every LOW/hold carries
+  {measured basis or derivation} + relative number + verdict_scope + reopen trigger. Seal
+  stands (zero new sites); top-5 ranking unchanged.
