@@ -193,17 +193,30 @@ def lever_token_rowband(grammar) -> Lever:
     post-hoc); the trained-renderer from-birth form is uncovered. Raster wire order UNCHANGED
     (QA85 Hilbert receipt stands). Falsifier: no matched-bytes d_seg win vs uniform D16 =>
     spatial uniformity survives at INSTANCE on this vehicle."""
+    # constant_refs (=lawrefs) custody the LOAD-BEARING measured flip-mass (0.721) via the
+    # registered anchor rowband_flip_mass_foveation_band_v1 (MAIN drift-detector EQUATIONS leg).
+    from tac.witness_dsl.lawref import LADDER_MEASURED_ANCHOR, InputRef, LawRef
+
+    flip_mass_ref = LawRef(
+        equation_id="rowband_flip_mass_foveation_band_v1",
+        inputs={"value": InputRef.literal(
+            0.721, "op1 foveation gate QA74 per-render-row flip-mass typing (rows 160-240)",
+            config_tags={"vehicle": "tr1_renderer"})},
+        ladder_class=LADDER_MEASURED_ANCHOR)
     return Lever(
         name="tr1_token_rowband", overrides={"--token-rowband-spec": grammar.spec_json()},
         notes=f"QA84 §4.2 row-band foveation; DOF {grammar.dof_summary()}; falsifier: no "
               "matched-bytes d_seg win vs uniform D16 => uniformity survives at INSTANCE; "
               "row-band >= quadtree => the separable approximation suffices, quadtree closes",
+        lawrefs={"--token-rowband-spec": flip_mass_ref},
         constant_manifest={
             "--token-rowband-spec": {
-                "value": grammar.spec_json(), "rung": "DERIVED (op1 foveation gate, QA74 typing)",
+                "value": grammar.spec_json(), "rung": "MEASURED_ANCHOR (op1 foveation gate, QA74)",
+                "equation_id": "rowband_flip_mass_foveation_band_v1",
                 "provenance": "band rows from FLIP_BAND_RENDER_ROWS = 72.1-72.7%% flip mass "
-                              "(op1 gate PASSED >=50%%); D ~ (flip-density)^-alpha separable "
-                              "approximation; not a bare constant — a measured density field"},
+                              "(op1 gate PASSED >=50%%; custodied by rowband_flip_mass_"
+                              "foveation_band_v1 EmpiricalAnchor); D ~ (flip-density)^-alpha "
+                              "separable approximation; not a bare constant — a measured field"},
         })
 
 
