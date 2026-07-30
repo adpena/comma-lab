@@ -205,3 +205,30 @@ re-measured; no rank-1 dz law; INSTANCE, consistent with kl1 FAMILY falsificatio
 | QA65 | dim0 offset-coded lattice (kl1 §9 + pi2 f16-marginal law): shared f16 mean + 16×-finer residual; re-solve dim0 on that lattice — NOT implemented in v4c (receiver-freeze one-rule; charter novelty item deferred, stated plainly in memo §9) | kl1 §9; pi2 §1c; ddm_v4c §9 | v4d grammar slot | OPEN | ~0.03 S potential (0.040 S/ULP × ~4 bits); partially absorbed by the (a,b) member (unmeasured split) | ~1.5 h re-solve + grammar + verify | v4d pose member | DUE-AT-v4d |
 | QA66 | per-pair rung-A beta member (~2 bits/pair ≈ 150 B, +0.0001 S rate) buying the measured per-pair-best −0.0135 S over global g*=0 | ddm_v4c photo receipt (rungAB 0.009533 vs rung-B 0.010384) | v4d grammar slot | OPEN | net ≈ −0.0134 S | ~0 (data already measured; grammar+build) | v4d receiver | DUE-AT-v4d |
 | QA67 | unsolved-350 single-static polish (pre-photo residual sum 3.32/10.16; photo already ate part) | ddm_v4c solve/photo jsonls | PoseNet slot | HELD (diminishing) | small −S (unmeasured) | ~1 h | v4d pose field | HELD |
+
+**Addendum (ddm_v4d, 2026-07-31) — v4d COMPOSED CANDIDATES BUILT+VERIFIED+STAGED; QA65/QA66/QA69/QA72a/QA70 FIRED, QA67 retired-subsumed (defer-at-source):**
+Memo `ddm_v4d_adaptive_hybrid_20260731.md`; receipts SSD `ddm_v4d_20260731/`; tools committed 6056433146.
+All advisory [macOS-CPU frozen-PoseNet]; pointer 0.1910828242 [contest-CPU] UNMOVED. Two byte-closed
+candidates on the v4c base (cell_drop50 tokens byte-identical, sha-checked ⇒ d_seg = the v4c-gate-measured
+0.00431179): **(1) v4d-full PRIMARY `refine_celldrop50` 360,238 B sha f1f32880… — predicted S 0.963986**
+(pose d̄ 0.008581 → contrib 0.292939, −0.029309 S vs v4c shipped; rate +488 B = +0.000325 S); **(2) QA66-only
+FLOOR `qa66_celldrop50` 359,890 B sha d5149d81… — predicted S 0.979578** (pose d̄ 0.009533 EXACT, realized in
+the v4c photo pass, zero new evals). Both verify all_checks_ok (#417 bijection + bit-exact fields incl
+dim0-offset round-trip + independent recompute incl beta≠0 + deterministic rebuild same-sha). Row updates:
+**QA65 → FIRED** (dim0 offset lattice: 19.3× finer quantum MEASURED (pi2 f16-marginal law 2nd anchor);
+re-solved on-lattice, isolated slice −0.009196 S at +319 B; 92% pairs improved) · **QA66 → FIRED** (per-pair
+beta member {0,0.5,1.0}, sign free from yaw; −0.013485 S at +140 B; joint re-select in v4d-full → 459/65/76)
+· **QA69 → FIRED-as-instrument** (the coarse→fine race ran under the Contrarian brake; verdict: pose is
+CONTENT/TAIL-limited past the offset lattice — hardest-164 carry the stage gains, easy-400 near-zero; the
+per-stream falsifier honored) · **QA72a → FIRED** (hardest-80 stage attribution: recoverable d 0.004927 vs
+f16-storage penalty 0.000518 = 10.5%; offset lattice eliminates ~84% of the storage tax; **verdict
+CONTENT/RE-SOLVE-LIMITED — QA65-as-future-direction DEMOTED, ja1 #4 CONFIRMED; next pose spend = QA68
+tail**) · **QA70 → FIRED** (bounded local gauge probe: hardest-120, entropy reduction 0 B (260→260), MAD −0.77% at no-worse d — INTRINSIC WHITENESS at this chart; local ±0.05 dim0-only member selection refuted, non-local/joint gauge traverse (dim0×pitch×dz, sc1 aliasing) is the only open door; 4th white-field receipt, kl1 family extends) · **QA67 →
+RETIRED-SUBSUMED** (the refine re-solved all 600; easy-pair marginal measured near-zero). Ops incident
+recorded: first refine launch externally killed at 570/600 (resumable JSONL — zero loss); brief duplicate
+resolve from a pgrep-matching-zsh-snapshot liveness false positive, killed in seconds, 1 benign duplicate
+row (lesson: liveness checks must match the python pid). New row:
+
+| id | item | source receipt | parking gate | status NOW | effect (advisory) | price | consumer | status |
+|---|---|---|---|---|---|---|---|---|
+| QA78 | v4d composed gate FIRE (n600 evaluate.py; PRIMARY `bash experiments/stage_v4d_realized_gate.sh cpu refine_celldrop50` 360,238 B sha f1f32880… predicted S 0.963986; FLOOR `... cpu qa66_celldrop50` 359,890 B sha d5149d81… predicted S 0.979578; fire ONE — primary first) | ddm_v4d memo §6; build+verify receipts | — | STAGED | −0.028986 S vs v4c (primary, predicted) | one n600 slot | v4e; QA68 tail charter | DUE (MAIN) |
