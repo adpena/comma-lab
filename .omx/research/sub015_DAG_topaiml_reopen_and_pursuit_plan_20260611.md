@@ -25190,3 +25190,22 @@ receipts /Volumes/VertigoDataTier/pact/ddm_wr1_20260729/. [no-triality] [p0-ledg
   pose-aware cell re-order. Axis state at 0.993: rate 0.2395 (24%) · seg 0.4312 (43%) · pose 0.3222
   (32%) — seg is now the largest axis; the seg structural rung (granularity re-burn QA24 /
   renderer line) rises in rank.
+
+## FEED-2026-07-31-e — tt1 FINAL (QA71 FIRED-POSITIVE) + ph3 §9 in-loop completeness doctrine
+- **Pointer honesty: 0.1910828242 [contest-CPU] UNMOVED.** All rows [macOS-CPU advisory].
+- **tt1 FINAL (arm commits 32c0e77a25, 550773ac54):** realized gradient-TTO on frozen v4c —
+  acceptor control 0.0 residual (numpy decoder + frozen PoseNet reproduces the fired gate
+  bit-exactly); best-of(joint, pose_only) ΔS600 = **−0.0630 in 13.6 min** (S 0.993→0.930
+  advisory, worst-50 only); pose_only −0.0568 at −0.95 S/hr; ~90% of the win = the analytic
+  twin gradient beating v4c's converged coarse-FD GN ON ALREADY-SOLVED PAIRS (pair 16
+  0.638→0.284, 21 0.394→0.099, 71 0.292→0.032); coupling real-but-modest (−0.006 S; hardest
+  pair 44 improved ONLY via coupled moves). d_seg exactly frozen (structural: SegNet reads
+  frame_1 only). VERDICT: TTO promoted to standing v4e TERMINAL stage; the v4c/v4d pose solve
+  adopts the twin analytic gradient outright. Falsifier (beats rung rate) exceeded ~100×.
+- **ph3 §9 (commit 4fdb11d4a0):** operator "where else inside the loop" → the in-loop
+  completeness sweep. Principle: every measured failure was a SEAM (stage outside the loop);
+  optimal loop = the entire bytes→S map, only the verification gate stays outside. Ladder:
+  QA77 bilevel composed-S burn (LITE = composed-S stage-exit verdicts, fires in QA24 NOW;
+  FULL = v6 implicit diff) > stl1 rate-in-loss law APPLIED to the burn > receiver
+  predict-then-innovate (v5/v6 grammar) > support-in-loop > rounding/precision/context
+  (existing rows QA72/69/70). Items 1-2 messaged to sg1 pre-freeze.
