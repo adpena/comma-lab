@@ -971,6 +971,25 @@ def compile_archive_from_checkpoint(
     expected_delta_shape = (selector["num_pairs"], *expected_base_shape)
     if base.shape != expected_base_shape or delta.shape != expected_delta_shape:
         raise TR1RuntimeError("checkpoint token arrays differ from selector geometry")
+    # QA24 cell-mask vehicles (bc1 2026-07-30): the trainer forward is
+    # tie(cell_mask*(base+delta)) — dropped cells carry UNTRAINED init values that
+    # the forward never renders. Apply the keep mask BEFORE quantization so archive
+    # tokens equal the trained forward exactly (schema-neutral: zeros travel in the
+    # token section; receiver unchanged; maskless checkpoints byte-identical).
+    # Measured incident: unmasked export realized d_seg 0.4429 vs 0.005278 confirm.
+    cell_mask_path = config.get("token_cell_mask")
+    if cell_mask_path:
+        mask_file = Path(str(cell_mask_path))
+        if not mask_file.is_file():
+            raise TR1RuntimeError(
+                f"checkpoint config names token_cell_mask {mask_file} but it is absent"
+            )
+        keep = np.load(mask_file)
+        if keep.shape != (selector["grid_h"], selector["grid_w"]):
+            raise TR1RuntimeError("token_cell_mask shape differs from selector grid")
+        keep_f = keep.astype(base.dtype)[..., None]
+        base = base * keep_f
+        delta = delta * keep_f[None, ...]
     codes = _token_codes(
         base,
         delta,
