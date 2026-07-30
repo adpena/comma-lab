@@ -275,3 +275,35 @@ lead rung.
 **Routing:** QA74 ($0, fires inside the sg1 arm first) · QA24 FIRES under the standing GO just
 granted (sg1 arm stages through the governed chain and launches) · QA75 rowed as the follow-on
 rung. Sister: ja1 table (QA24 = the only seg descent, capacity pool, parallel).
+
+## §8b CORRECTION + EXTENSION (operator 2026-07-31, three pointers — supersedes two §8 claims)
+
+**(1) TWO SOLVED OBJECTS — §8 CONFLATED THEM (honest correction, operator-caught):** custody holds
+BOTH the BOX-tolerance solve (136,839 err = d_seg 0.00116 @ 291.2 MB; S=194.4 receipt) AND the
+**EXACT C1 solve (17,927 err = d_seg ≈1.52e-4 @ 409.5 MB; S=272.7 receipt)** — the r6cal SHA-bound
+settled controls. §8 cited the box solve as "the existence proof"; the EXACT solve is the stronger
+proof and the correct DISTILLATION TEACHER (teacher rate is FREE at compress time — the strict
+scorer rule bars decode-time only; the teacher never ships). **The true amortization gap is
+renderer 0.00389 vs exact 1.52e-4 ≈ 25.6×**, not 3.35×; the box solve remains useful as the
+"rate-relevant tolerance" secondary column in QA74's typing. QA75 + solve-INIT re-aimed at the
+exact object; sg1 messaged mid-design.
+
+**(2) RENDERER FORM CAVEAT (operator: "never really fully iterated or optimized"):** the 0.00389
+plateau is possibly LIFTED-TRAINER-form, not a capacity/target wall — per the OPTIMAL-FORM
+non-negotiable + the NSCS06 v6→v7 precedent (one form iteration = 44%). sg1 runs a bounded form
+audit vs SPEC_tr1 + the witness lever inventory BEFORE freezing the burn config (never launch a
+weaker state); un-taken iteration levers listed for the post-burn round. This widens §8's
+conclusion: the amortization gap is attackable from BOTH ends — better burn (QA24) AND better
+renderer form.
+
+**(3) QAT-DYNAMICS DERIVATION (PR95 lessons-only, NEVER the recipe — operator: study the
+what/where/when/why + how things REDISTRIBUTE; derive possibly-original adaptations):** the
+transferable DYNAMICS: (a) **staged quantizer engagement** — smooth optimization finds the basin
+first, the quantizer engages MID-training, refinement continues on-lattice → maps to a sched1
+EVENT engaging the token-quantizer/uint8-STE mid-burn, or annealing the token lattice fine→shipped
+as a homotopy (ms2 tolerance-homotopy lineage — possibly original as "lattice annealing"); (b)
+**the redistribution effect** — training through a quantizer clumps the learned distribution at
+quantizer levels = CODER-FRIENDLY fields = a RATE co-benefit (the #110 latent-structure-regularizer
+idea reborn: quantizer+coder awareness in-loop shapes token entropy down); (c) sigma-noise as
+quantization simulation (eval_roundtrip already partial). Adoption path: DERIVED as DSL events
+with provenance + per-dynamic pre-registered falsifiers — never bolted on. → QA76.
