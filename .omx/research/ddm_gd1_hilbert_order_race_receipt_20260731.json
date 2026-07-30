@@ -1,0 +1,82 @@
+{
+ "schema": "ddm_gd1_hilbert_order_race.v1",
+ "axis": "[macOS-CPU advisory, rate-only lossless byte measurement]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+ "payload": {
+  "archive": "/Volumes/VertigoDataTier/pact/ddm_v4d_20260731/v4d_composed_refine_celldrop50_archive.zip",
+  "member": "state/tokens.dr7t",
+  "stored_bytes": 346478,
+  "sha256": "305a2be96a292967268105241170d0f9d94e5dd7342b0ede573916ad46c53d91",
+  "shape": [
+   600,
+   24,
+   32,
+   4
+  ]
+ },
+ "coder_custody": "experiments/ddm_r7_token_coder.py (r7 landed harness, reused)",
+ "token_arms": {
+  "a0_smevr_2d_control": {
+   "bytes": 346478,
+   "codec": "smevr",
+   "seconds": 15.24
+  },
+  "a1_smevr_raster_1d": {
+   "bytes": 346903,
+   "codec": "smevr",
+   "seconds": 12.71
+  },
+  "a2_smevr_hilbert_1d": {
+   "bytes": 346930,
+   "codec": "smevr",
+   "seconds": 12.91
+  },
+  "a3_smevr_serpent_1d": {
+   "bytes": 346866,
+   "codec": "smevr",
+   "seconds": 13.49
+  },
+  "b0_brotli11_2d": {
+   "bytes": 396442,
+   "codec": "brotli11",
+   "seconds": 1.2
+  },
+  "b1_brotli11_hilbert": {
+   "bytes": 401438,
+   "codec": "brotli11",
+   "seconds": 1.67
+  },
+  "c0_lzma1_2d": {
+   "bytes": 398024,
+   "codec": "lzma1",
+   "seconds": 0.29
+  },
+  "c1_lzma1_hilbert": {
+   "bytes": 403109,
+   "codec": "lzma1",
+   "seconds": 0.35
+  }
+ },
+ "keep_mask_arms": {
+  "raw_bytes": 96,
+  "raster": {
+   "adaptive_binary_ac": 30,
+   "zlib9": 44,
+   "brotli11": 61
+  },
+  "hilbert": {
+   "adaptive_binary_ac": 37,
+   "zlib9": 64,
+   "brotli11": 72
+  },
+  "serpentine": {
+   "adaptive_binary_ac": 30,
+   "zlib9": 45,
+   "brotli11": 47
+  }
+ },
+ "verification": "every token arm decode-verified lossless + inverse-permutation checked",
+ "generated_at_utc": "2026-07-30T15:29:51Z"
+}
