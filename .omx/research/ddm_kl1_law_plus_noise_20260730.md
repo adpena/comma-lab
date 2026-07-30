@@ -160,3 +160,47 @@ own the PoseNet Jacobian surface) rather than spend it here to confirm a strongl
   vehicle, these solves). The container-recompression totals are INSTANCE to the STANDIN build.
 - **Advisory everywhere:** frozen advisory vehicle, macOS-CPU, non-promotable, `score_claim=false`,
   pointer 0.1910828242 UNMOVED.
+
+## §9 ADDENDUM (coordinator feed 1 — pi2) — EFFECTIVE QUANTUM is a DISTORTION lever
+
+`experiments/ddm_kl1_quantum_and_exposure.py`. pi2's inversion measured **dim0 (forward
+translation, |val|~32.6) as f16-MARGINAL: 1 f16 ULP ≈ 0.040 S** at the operating point; dims1-5
+are f16-free. This RECONCILES B3: the shared-mean (DC) component that LOSES on rate WINS on
+**distortion**. Offset-coding (shared f16 mean + per-pair f16 residual) stores each dim at a
+**finer effective quantum** at ~same bytes (the mean is 2 B shared across 600):
+
+| dim | raw f16 ULP | offset-resid ULP | effective bits gained |
+|---|---:|---:|:--:|
+| **0 (speed, f16-MARGINAL)** | 0.015625 | 0.00098 | **+4.0** |
+| 1 | 4.9e-4 | 6.1e-5 | +3.0 |
+| 2 | 9.8e-4 | 1.2e-4 | +3.0 |
+| 3 | 1.9e-6 | 2.4e-7 | +3.0 |
+| 4 | 3.8e-6 | 2.4e-7 | +4.0 |
+| 5 | 1.5e-5 | 9.5e-7 | +4.0 |
+
+**The distortion lever is dim0-specific** (the only f16-marginal dim per pi2): +4 bits × pi2's
+0.040 S/ULP ⇒ **potential ~0.03 S d_pose recovery**, ~free (mean is 2 B). **Report this as a
+first-class column: it is a distortion lever, not only rate.** **Realizability caveat (honest):**
+the shipped `p_star` is ALREADY f16, so offset-coding the EXISTING values is distortion-neutral —
+the win requires a **v4c RE-SOLVE that keeps dim0 above single-f16 precision** (store mean +
+finer residual before the single-f16 rounding), and the d_pose recovery is **OWED to measure
+through PoseNet** (not realized here). This is the higher-value follow-up to the ~0.0006 S rate
+win: a design recommendation with pi2's measured sensitivity as its basis.
+
+## §10 ADDENDUM (coordinator feed 2 — pm1) — exposure (a,b) stream (seed item 6, LIVE)
+
+pm1's QA44 rung-B (per-pair auto-exposure gain/bias `a·warp(f1)+b`) is now LIVE: **112/112
+improvement, −0.1039 S composed with rung-A at ≤4 B/pair** (cited, not re-measured). The (a,b)
+series is a camerad AE control loop. Measured on the AVAILABLE fits:
+
+- **a (gain): median 0.999, 88.4% of pairs within 0.1 of 1.0** — gain is **near-constant ≈ 1**
+  with a few failed-fit outliers (min −5.32 on hard pairs); only **b (bias) genuinely varies**
+  (median ~0.9, but noisy, range [−52, +21]).
+- **The smooth-control-loop law (AR(1)/spline vs raw 2.4KB) is NOT testable here:** QA44 fit
+  (a,b) only on **~112 SCATTERED tail pairs** (span 1–590, non-contiguous), and a scattered
+  noisy subset cannot exhibit temporal smoothness. Coding the tail-112 (a,b): raw 448 B →
+  byteplane 387 B. **The full-600 contiguous (a,b) stream + its AR/spline race is OWED on a
+  FULL-600 rung-B fit** (v4c build) — ledger QA58.
+- **Preliminary law (measured, tail):** gain ≈ constant → ship `a` as ~1 exception-coded (a few
+  pairs); the stream is dominated by `b`. Whether `b` over the full 600 is a smooth AE curve
+  (compressible) or noise (raw) is the OWED full-600 measurement.
