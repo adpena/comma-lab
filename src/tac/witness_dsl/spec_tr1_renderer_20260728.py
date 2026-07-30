@@ -134,6 +134,116 @@ def lever_window(epochs: int, max_wall_minutes: float, batch_pairs: int = 8,
 
 
 # ---------------------------------------------------------------------------
+# QA24 5-piece composed re-burn levers (sg1 §3; each with a pre-registered falsifier).
+# ---------------------------------------------------------------------------
+def lever_token_cell_mask(mask_path: str) -> Lever:
+    """§3.1 COARSE-FROM-BIRTH: a (grid_h,grid_w) bool .npy (True = KEEP). The derived
+    gr1 cell_drop50 keep-384 (99.61% flip mass; sg1 §2). Inactive cells are zeroed in the
+    token field (no gradient, excluded from the coded stream). Not a config tweak: the
+    uniform lever_token_grid only supports D in {8,16}; this is a SELECTIVE 384-cell mask."""
+    return Lever(name="tr1_token_cell_mask", overrides={"--token-cell-mask": str(mask_path)},
+                 notes="§3.1 coarse-from-birth keep-set (gr1 cell_drop50 -0.098 post-hoc bound; "
+                       "falsifier: re-burn endpoint d_seg >= 0.004310 at matched bytes => "
+                       "coarse-from-birth closes at INSTANCE, solve-distillation leads)")
+
+
+def lever_seg_margin_weight(temp: float = 1.0) -> Lever:
+    """§3.2 boundary-annulus form fix: 100% of realized flips are in the bottom GT-margin
+    decile (sg1 §1.3) yet the burn loss is uniform. Reweights the per-pixel seg loss toward
+    the small-margin boundary annulus across ALL classes (distinct from class_weight_lane,
+    which lv1 §D.4 rejected at 2.0). RACE vs the uniform arm."""
+    return Lever(name="tr1_seg_margin_weight",
+                 overrides={"--margin-weighted-loss": "on", "--margin-weight-temp": str(temp)},
+                 notes="§3.2 inverse-margin reweight (make_loss_fn margin_weighted); falsifier: "
+                       "margin-weighted endpoint d_seg >= uniform at matched epoch => close at "
+                       "INSTANCE (does not help THIS renderer)")
+
+
+def lever_rate_in_loss(w_rate: float, rate_model: str = "entropy") -> Lever:
+    """§3.4 rate-in-loss (stl1 row-8 LAW, first application to the renderer burn): a
+    differentiable token code-length/entropy surrogate added to the seg loss. The explicit
+    form of the §3.3(b) redistribution co-benefit. 'entropy' = marginal soft-histogram of the
+    quantized token lattice; 'smevr_surrogate' = temporal-delta soft-histogram (zlib-on-delta
+    coder surrogate)."""
+    if rate_model not in ("entropy", "smevr_surrogate"):
+        raise ValueError("rate_model must be entropy|smevr_surrogate")
+    return Lever(name=f"tr1_rate_in_loss_{rate_model}",
+                 overrides={"--w-rate": str(w_rate), "--rate-model": rate_model},
+                 notes="§3.4 stl1 row-8 rate-in-loss LAW; falsifier: rate-in-loss arm archive "
+                       "bytes not lower than distortion-only at matched d_seg => law does not "
+                       "bind this payload, fall back to post-hoc coding (gr1/lv1 stack)")
+
+
+def lever_token_quant_anneal(mode: str = "at_knee") -> Lever:
+    """§3.3(a) lattice annealing / staged quantizer (PR95 DYNAMICS only, never the recipe):
+    'off' engages the token STE from birth (tb1 control); 'at_knee' keeps float tokens (no
+    STE) until the CE->tau knee EVENT, then engages the STE — find the basin in float, refine
+    on the shipped lattice (possibly-original 'lattice annealing', ms2 tolerance-homotopy
+    lineage)."""
+    if mode not in ("off", "at_knee"):
+        raise ValueError("token_quant_anneal must be off|at_knee")
+    return Lever(name=f"tr1_token_quant_anneal_{mode}",
+                 overrides={"--token-quant-anneal": mode},
+                 notes="§3.3(a) staged quantizer engagement; falsifier: annealed-STE endpoint "
+                       "d_seg >= from-birth-STE at matched bytes => no basin benefit, close")
+
+
+def lever_composed_s_verdict(subset: int, subset_ids_path: str | None = None) -> Lever:
+    """§3.5 QA77-lite: >0 = at stage exits run the bounded terminal pose+photometric solve on
+    this many pairs and record COMPOSED S (100*d_seg + sqrt(10*d_pose) + rate) so stage/
+    endpoint decisions see the co9 sky/hood-freeze pose cost (Knee-A externality). VERDICT-
+    level only (never differentiated through). REQUIRED by §2's pose caveat when the grid drops
+    sky/hood. ``subset_ids_path`` (MAIN QA66 signal): .npy of pair indices = the pose-mass TAIL
+    (top-17 = 74.3%) for max signal/sec; None = head. Solver = the PROVEN warp-constrained
+    FD-Jacobian LM-GN (eg1/tt1 approach; MAIN steer) — the razor-sharp realized pose landscape
+    needs damped GN, not first-order descent; convergence is smoke-gated before fire."""
+    ov = {"--composed-s-gate-subset": str(subset)}
+    if subset_ids_path is not None:
+        ov["--composed-s-subset-ids"] = str(subset_ids_path)
+    return Lever(name="tr1_composed_s_verdict", overrides=ov,
+                 notes="§3.5 co9 Knee-A pricing; QA66 pose-tail subset; falsifier: composed-S "
+                       "never diverges from seg-only at stage exits => free insurance that "
+                       "changed no decision (record; keep it — the correct instrument)")
+
+
+def qa24_composed_burn_program(variant: str, out_dir: str, mask_path: str, *,
+                               epochs: int = 400, max_wall_minutes: float = 480.0,
+                               w_rate: float = 0.05, rate_model: str = "entropy",
+                               margin_temp: float = 1.0, composed_s_subset: int = 16,
+                               composed_s_subset_ids: str | None = None,
+                               gt_cache: str | None = None,
+                               resume_from: str | None = None) -> TR1RendererProgramV1:
+    """The QA24 5-piece COMPOSED seg re-burn (sg1 §3): the sealed T3 skeleton + solve_project
+    init + basin-handoff on + the FIVE composed pieces (coarse-grid mask · margin-weight ·
+    QAT lattice-anneal · rate-in-loss · composed-S verdict). ATOMIC: the sealed ticket depends
+    on all pieces. §3.5 uses the PROVEN warp-pose6 FD-LM-GN solver (eg1/tt1); firing is gated on
+    a bc1 convergence smoke (fire iff the tail-subset composed-S converges trustworthily)."""
+    levers = [
+        lever_variant(variant),
+        lever_token_grid(16, 4),
+        lever_renderer_capacity(24),
+        lever_desc_level_roundtrip(16, "round"),
+        lever_token_temporal("shared_base"),
+        lever_seg_physics("ce", 100.0),
+        lever_token_init("solve_project"),
+        lever_basin_handoff("on"),
+        lever_a1_gate(10),
+        lever_window(epochs, max_wall_minutes, batch_pairs=8, lr=2e-3),
+        # ---- the 5 composed pieces ----
+        lever_token_cell_mask(mask_path),
+        lever_seg_margin_weight(margin_temp),
+        lever_token_quant_anneal("at_knee"),
+        lever_rate_in_loss(w_rate, rate_model),
+        lever_composed_s_verdict(composed_s_subset, composed_s_subset_ids),
+    ]
+    if variant == "lotto":
+        levers.append(lever_lotto(118, 0.5))
+    return TR1RendererProgramV1(levers=tuple(levers), num_pairs=600, out_dir=out_dir,
+                                gt_cache=gt_cache, resume_from=resume_from,
+                                full_confirm=True)
+
+
+# ---------------------------------------------------------------------------
 # Program
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)

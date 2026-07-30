@@ -43,6 +43,44 @@ def refuse(msg: str) -> int:
     return 4
 
 
+def venv_custody_gate0(cwd: Path) -> str | None:
+    """G0 SHARED-VENV HIJACK GUARD (sg1 §10 owed guard): before ANY dispatch, prove the
+    shared .venv is not editable-installed to a codex_worktrees / linked-worktree ``src``
+    (the eg1 hijack class — 2nd recurrence). Prefers the canonical tools/check_venv_src_custody.py
+    (MAIN is landing it); falls back to an inline scan of the venv's ``.pth``/``__editable__``
+    entries for out-of-tree targets. Returns a REFUSE message or None (clean)."""
+    checker = cwd / "tools" / "check_venv_src_custody.py"
+    if checker.is_file():
+        r = subprocess.run([str(cwd / ".venv" / "bin" / "python"), str(checker)],
+                           cwd=cwd, capture_output=True, text=True)
+        if r.returncode != 0:
+            return f"venv custody gate0 (tools/check_venv_src_custody.py rc={r.returncode}): " \
+                   f"{(r.stderr or r.stdout).strip()[:400]}"
+        return None
+    # inline fallback: scan the venv site-packages for editable *.pth targets pointing OUT of cwd.
+    bad: list[str] = []
+    for pth in (cwd / ".venv").glob("lib/python*/site-packages/*.pth"):
+        try:
+            for ln in pth.read_text(errors="ignore").splitlines():
+                ln = ln.strip()
+                if not ln or ln.startswith("import "):
+                    continue
+                if "codex_worktrees" in ln or (
+                        "/src" in ln and str(cwd) not in ln and Path(ln).is_absolute()):
+                    bad.append(f"{pth.name}: {ln}")
+        except Exception:
+            continue
+    # editable finder modules (uv/setuptools) can also embed an out-of-tree path.
+    for ed in (cwd / ".venv").glob("lib/python*/site-packages/__editable__*.py"):
+        txt = ed.read_text(errors="ignore")
+        if "codex_worktrees" in txt:
+            bad.append(f"{ed.name}: codex_worktrees target")
+    if bad:
+        return "venv custody gate0 (inline .pth scan) — shared-venv HIJACK to out-of-tree src:\n" \
+               + "\n".join(bad[:5])
+    return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--ticket", required=True, type=Path,
@@ -58,6 +96,12 @@ def main() -> int:
     args = ap.parse_args()
 
     cwd = args.cwd.resolve()
+
+    # G0 — shared-venv hijack guard (runs BEFORE any import from cwd/src below).
+    g0 = venv_custody_gate0(cwd)
+    if g0 is not None:
+        return refuse(g0)
+
     ticket = json.loads(args.ticket.read_text())
     if ticket.get("schema") != "ddm_tb1_tr1_sealed_ticket.v1":
         return refuse(f"unknown ticket schema {ticket.get('schema')!r}")
@@ -159,7 +203,8 @@ def main() -> int:
         "sealed_sha256": ticket.get("sealed_sha256"),
         "git_head": head, "git_dirty_files": dirty.splitlines(),
         "cwd": str(cwd), "argv": launch_argv,
-        "gates": {"seal_freshness": "PASS", "import_custody": str(tac_file),
+        "gates": {"venv_custody_gate0": "PASS", "seal_freshness": "PASS",
+                  "import_custody": str(tac_file),
                   "memory_free_gib": round(free_gib, 1),
                   "memory_floor_gib": round(need, 1), "scorer_slot": "FREE"},
         "score_claim": False, "launched_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ",

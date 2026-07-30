@@ -204,6 +204,32 @@ class TR1Config:
     # on basin-entry (TerminalSolve §16.1 validity: quadratic crawl + topology stable +
     # no transitions remaining) STOP training permanently and hand off to the SOLVE
     # executors (#423 GN/CG + eg1 QDBS rail + #383 terminal pose; v19 realized acceptance).
+    # ---- QA24 5-piece composed re-burn (sg1 §3; each with a pre-registered falsifier) ----
+    token_cell_mask: str | None = None    # §3.1 coarse-from-birth: path to (grid_h,grid_w)
+    # bool npy (True = KEEP). Inactive cells are MULTIPLICATIVELY zeroed in the token field
+    # (gradients vanish there => never learned => excluded from the coded token stream). None
+    # = uniform dense grid (tb1 control). Derived: gr1 cell_drop50 keep-384 (99.61% flip mass).
+    margin_weighted_loss: str = "off"     # §3.2 boundary-annulus form fix: "on" builds the
+    # canonical make_loss_fn with margin_weighted=True (100% of flips are in the bottom GT-margin
+    # decile — sg1 §1.3; the uniform loss spends its budget on the never-flipping deep interior).
+    margin_weight_temp: float = 1.0       # inverse-margin reweight temperature (make_loss_fn).
+    w_rate: float = 0.0                   # §3.4 rate-in-loss (stl1 row-8 LAW): weight on the
+    # differentiable token-entropy surrogate added to the seg loss (0.0 = distortion-only = tb1
+    # control). The explicit form of the §3.3(b) redistribution co-benefit.
+    rate_model: str = "entropy"           # "entropy" = marginal soft-histogram of the quantized
+    # token lattice; "smevr_surrogate" = temporal-DELTA soft-histogram (closer to the actual
+    # zlib-on-delta coder token_stream_bytes runs). Both real + differentiable.
+    token_quant_anneal: str = "off"       # §3.3(a) lattice annealing / staged quantizer: "off"
+    # = STE engaged from birth (tb1 control); "at_knee" = float tokens (no STE) until the CE->tau
+    # knee EVENT, then engage the STE (find the basin in float, refine on the shipped lattice).
+    composed_s_gate_subset: int = 0       # §3.5 QA77-lite: >0 = at stage exits run the bounded
+    # terminal pose+photometric solve on this many pairs and record COMPOSED S (100*d_seg +
+    # sqrt(10*d_pose) + rate) so stage/endpoint decisions see the sky/hood-freeze pose cost
+    # (co9 Knee-A externality); 0 = off. VERDICT-level only (never differentiated through).
+    composed_s_subset_ids: str | None = None  # §3.5 subset SELECTION (MAIN QA66 signal): path
+    # to an .npy of pair indices to use as the composed-S subset. Pose is content/tail-limited
+    # (QA66: top-17 pairs = 74.3% of pose mass) => run the bounded solve on the POSE-MASS TAIL
+    # for max signal/sec. None => the first composed_s_gate_subset pairs (head, uniform).
 
     @property
     def grid_h(self) -> int:
@@ -304,6 +330,26 @@ def build_module(cfg: TR1Config):
             self._dither = _FixedBank({"u": mx.array(
                 (np.random.default_rng(cfg.seed + 7).random(
                     (cfg.grid_h, cfg.grid_w, cfg.code_width)) - 0.5).astype(np.float32))})
+            # §3.1 COARSE-FROM-BIRTH cell mask (sg1 §2): a (gh,gw,1) fixed {0,1} field.
+            # Multiplied into the token field in raw_tokens => inactive cells are exactly 0
+            # (renderer sees 0 there) AND their gradient vanishes (multiply-by-0) => they never
+            # leave the zero lattice point => no counted bytes on them (byte-close excludes them).
+            # None => all-ones (uniform dense grid, the tb1 control).
+            if cfg.token_cell_mask is not None:
+                m = np.load(cfg.token_cell_mask)
+                if m.shape != (cfg.grid_h, cfg.grid_w):
+                    raise ValueError(
+                        f"token_cell_mask shape {m.shape} != grid ({cfg.grid_h},{cfg.grid_w}) "
+                        f"at D={cfg.grid_downsample}; fail-closed (never-invent geometry)")
+                cell_keep = m.astype(np.float32)[..., None]  # (gh,gw,1)
+            else:
+                cell_keep = np.ones((cfg.grid_h, cfg.grid_w, 1), dtype=np.float32)
+            self._cell_mask = _FixedBank({"keep": mx.array(cell_keep)})
+            # §3.3(a) lattice-anneal / staged quantizer: when "at_knee" the STE is DISENGAGED
+            # (float tokens) until the CE->tau knee EVENT flips this to True (see main()); "off"
+            # engages the STE from birth (tb1 control). Plain bool attribute (NOT an mx.array =>
+            # never enters MLX's trainable traversal).
+            self._quant_engaged = (cfg.token_quant_anneal != "at_knee")
             if cfg.variant == "plain":
                 for name, shp in shapes:
                     fan_in = shp[1] * shp[2] * shp[3]
@@ -337,11 +383,18 @@ def build_module(cfg: TR1Config):
         # -- description-level eval_roundtrip: token lattice with STE ------------
         def raw_tokens(self, idx: int):
             if cfg.token_temporal_mode == "shared_base":
-                return self.tokens_base + self.tokens_delta[idx]
-            return self.tokens[idx]
+                t = self.tokens_base + self.tokens_delta[idx]
+            else:
+                t = self.tokens[idx]
+            # §3.1 coarse-from-birth: zero the inactive cells (fixed {0,1} mask, stop-grad).
+            return t * mx.stop_gradient(self._cell_mask.tensors["keep"])
 
         def quantized_tokens(self, idx: int):
             t = mx.clip(self.raw_tokens(idx), -1.0, 1.0)  # (gh, gw, c)
+            # §3.3(a) lattice anneal: before the knee (at_knee mode) the STE is disengaged =>
+            # float tokens (find the basin in float, refine on the shipped lattice after).
+            if not self._quant_engaged:
+                return t
             L = float(cfg.token_quant_levels - 1)
             x01 = (t + 1.0) * 0.5
             if cfg.token_ste == "dither":
@@ -388,6 +441,26 @@ def make_render_fn():
     return render_fn
 
 
+def _soft_hist_entropy_bits(vals, levels: int, temp: float = 0.15):
+    """§3.4 differentiable marginal soft-histogram entropy (bits/token) of token VALUES.
+
+    ``vals`` (any mx shape, expected in [-1, 1]) are soft-assigned to the ``levels`` lattice
+    bins (temperature ``temp`` softmax over squared distance to bin centers) and averaged into
+    a probability vector ``p``; the return is Shannon entropy ``-sum p log2 p``. Minimizing it
+    CLUMPS the learned token distribution at fewer lattice levels => lower token entropy =>
+    fewer coded bytes (the stl1 row-8 rate-in-loss LAW; the explicit form of the §3.3(b)
+    redistribution co-benefit). Fully differentiable in ``vals`` (STE-free soft assignment)."""
+    import mlx.core as mx
+
+    L = float(levels - 1)
+    x01 = mx.clip((vals + 1.0) * 0.5, 0.0, 1.0) * L                 # -> [0, L]
+    centers = mx.arange(levels).astype(mx.float32)                  # (levels,)
+    d2 = (x01.reshape((-1, 1)) - centers.reshape((1, -1))) ** 2     # (N, levels)
+    soft = mx.softmax(-d2 / max(float(temp), 1e-6), axis=-1)        # (N, levels)
+    p = mx.mean(soft, axis=0) + 1e-12                               # (levels,)
+    return -mx.sum(p * mx.log(p)) / float(np.log(2.0))             # bits/token
+
+
 # ---------------------------------------------------------------------------
 # COUNTED-byte ledger (measured with a real compressor on the real quantized
 # payloads; labeled COUNTED-ESTIMATE until the E4/WS1 exporter grammar wires in).
@@ -397,8 +470,15 @@ def quantize_tokens_np(tokens: np.ndarray, levels: int) -> np.ndarray:
     return np.round((t + 1.0) * 0.5 * (levels - 1)).astype(np.uint8)
 
 
-def token_stream_bytes(tokens_np: np.ndarray, levels: int) -> int:
-    """Temporal-delta (mod 256) + zlib-9 on the quantized token lattice (P,gh,gw,c)."""
+def token_stream_bytes(tokens_np: np.ndarray, levels: int,
+                       keep_mask: np.ndarray | None = None) -> int:
+    """Temporal-delta (mod 256) + zlib-9 on the quantized token lattice (P,gh,gw,c).
+
+    §3.1: when ``keep_mask`` (gh,gw bool) is given, ONLY the kept cells are coded (the
+    coarse-from-birth grid excludes the inactive cells from the token stream — they are
+    zero by construction, but the byte-close must not pay their compressed residue)."""
+    if keep_mask is not None:
+        tokens_np = tokens_np[:, keep_mask, :]  # (P, n_kept, c)
     q = quantize_tokens_np(tokens_np, levels)
     delta = q.copy()
     delta[1:] = (q[1:].astype(np.int16) - q[:-1].astype(np.int16)) % 256
@@ -434,15 +514,19 @@ def selector_ledger_blob(cfg: TR1Config) -> bytes:
 def counted_bytes_ledger(model, cfg: TR1Config) -> dict[str, int]:
     """Per-stream COUNTED bytes for the current EMA/live params (rule-118 boundary):
     tokens + (plain: int8 weights | lotto: mask+modulations+biases) + selector."""
+    # §3.1: the coarse-from-birth keep-mask (gh,gw bool) excludes inactive cells from coding.
+    keep = np.asarray(model._cell_mask.tensors["keep"], dtype=np.float32)[..., 0] > 0.5
+    keep_arg = keep if not keep.all() else None  # None => uniform grid (no selection needed)
     if cfg.token_temporal_mode == "shared_base":
         base_np = np.asarray(model.tokens_base, dtype=np.float32)[None]
         delta_np = np.asarray(model.tokens_delta, dtype=np.float32)
+        base_code = (base_np[:, keep, :] if keep_arg is not None else base_np)
         # base coded once; the per-frame delta stream rides the same lattice.
-        tok_b = (len(zlib.compress(quantize_tokens_np(base_np, cfg.token_quant_levels).tobytes(), 9))
-                 + token_stream_bytes(delta_np, cfg.token_quant_levels))
+        tok_b = (len(zlib.compress(quantize_tokens_np(base_code, cfg.token_quant_levels).tobytes(), 9))
+                 + token_stream_bytes(delta_np, cfg.token_quant_levels, keep_mask=keep_arg))
     else:
         tok_b = token_stream_bytes(np.asarray(model.tokens, dtype=np.float32),
-                                   cfg.token_quant_levels)
+                                   cfg.token_quant_levels, keep_mask=keep_arg)
     ledger: dict[str, int] = {"tokens_bytes": int(tok_b)}
     shapes = _conv_shapes(cfg)
     if cfg.variant == "plain":
@@ -705,6 +789,35 @@ def build_argparser() -> argparse.ArgumentParser:
                          "transitions remaining, TerminalSolve validity conditions) STOP "
                          "and hand off to the solve executors (handoff receipt written; "
                          "full-confirm at handoff = the v19 realized acceptance baseline)")
+    # ---- QA24 5-piece composed re-burn (sg1 §3) ----
+    ap.add_argument("--token-cell-mask", type=str, default=None,
+                    help="§3.1 coarse-from-birth: path to a (grid_h,grid_w) bool .npy (True="
+                         "KEEP). Inactive cells are multiplicatively zeroed in the token field "
+                         "(no gradient, no coded bytes). None = uniform dense grid")
+    ap.add_argument("--margin-weighted-loss", default="off", choices=("off", "on"),
+                    help="§3.2 boundary-annulus form fix: 'on' builds make_loss_fn with "
+                         "margin_weighted=True (100%% of flips at small GT-margin; sg1 §1.3)")
+    ap.add_argument("--margin-weight-temp", type=float, default=1.0,
+                    help="inverse-margin reweight temperature (make_loss_fn margin_weight_temp)")
+    ap.add_argument("--w-rate", type=float, default=0.0,
+                    help="§3.4 rate-in-loss weight (stl1 row-8 LAW): differentiable token-entropy "
+                         "surrogate added to the seg loss (0.0 = distortion-only control)")
+    ap.add_argument("--rate-model", default="entropy", choices=("entropy", "smevr_surrogate"),
+                    help="§3.4 'entropy' = marginal soft-histogram of the quantized token lattice; "
+                         "'smevr_surrogate' = temporal-delta soft-histogram (the zlib-on-delta "
+                         "coder surrogate)")
+    ap.add_argument("--token-quant-anneal", default="off", choices=("off", "at_knee"),
+                    help="§3.3(a) lattice annealing: 'off' = STE from birth; 'at_knee' = float "
+                         "tokens until the CE->tau knee EVENT, then engage the STE (basin in "
+                         "float, refine on the shipped lattice)")
+    ap.add_argument("--composed-s-gate-subset", type=int, default=0,
+                    help="§3.5 QA77-lite: >0 = at stage exits run the bounded pose+photometric "
+                         "solve on this many pairs and record COMPOSED S (prices the co9 "
+                         "sky/hood-freeze pose cost); 0 = off. VERDICT-level only")
+    ap.add_argument("--composed-s-subset-ids", type=str, default=None,
+                    help="§3.5 subset SELECTION (MAIN QA66): path to an .npy of pair indices "
+                         "(the pose-mass TAIL, top-17 = 74.3%%) to use as the composed-S "
+                         "subset; None = the first --composed-s-gate-subset pairs")
     return ap
 
 
@@ -745,6 +858,13 @@ def main() -> int:
         token_temporal_mode=args.token_temporal_mode, token_ste=args.token_ste,
         class_weight_lane=args.class_weight_lane, margin_target=args.margin_target,
         token_init_mode=args.token_init_mode, basin_handoff=args.basin_handoff,
+        token_cell_mask=args.token_cell_mask,
+        margin_weighted_loss=args.margin_weighted_loss,
+        margin_weight_temp=args.margin_weight_temp,
+        w_rate=args.w_rate, rate_model=args.rate_model,
+        token_quant_anneal=args.token_quant_anneal,
+        composed_s_gate_subset=args.composed_s_gate_subset,
+        composed_s_subset_ids=args.composed_s_subset_ids,
     )
     (out_dir / "tr1_config.json").write_text(cfg.canonical_json() + "\n")
     telemetry_path = out_dir / "telemetry.jsonl"
@@ -772,8 +892,12 @@ def main() -> int:
     # MLX scorer adapter (training-gradient device; NEVER a score) + canonical loss.
     upstream_root = str(Path(sys.modules["tac"].__file__).resolve().parents[2] / "upstream")
     adapter = load_mlx_distortion_scorer_adapter_from_upstream(upstream_root, device="cpu")
+    # §3.2 boundary-annulus form fix: 100% of realized flips sit in the bottom GT-margin decile
+    # (sg1 §1.3) => reweight the per-pixel seg loss toward the small-margin boundary annulus.
     loss_fn = make_loss_fn(adapter, SEG_H, SEG_W, score_domain=True,
-                           seg_loss=cfg.seg_form_start, margin_weighted=False,
+                           seg_loss=cfg.seg_form_start,
+                           margin_weighted=(cfg.margin_weighted_loss == "on"),
+                           margin_weight_temp=cfg.margin_weight_temp,
                            render_fn=make_render_fn())
 
     model = build_module(cfg)
@@ -857,8 +981,12 @@ def main() -> int:
         ema = st["ema"]
         start_epoch = st["epoch"] + 1
         stage = st["meta"].get("stage", stage)
+        # §3.3(a) resume-past-knee: if the STE anneal already engaged (we resume in a post-CE
+        # stage), re-engage it so the token forward matches the checkpointed lattice state.
+        if cfg.token_quant_anneal == "at_knee" and stage != "seg_trunk_ce":
+            model._quant_engaged = True
         tlog({"event": "resume", "resume_from": str(args.resume_from), "epoch": start_epoch,
-              "stage": stage})
+              "stage": stage, "quant_engaged": bool(model._quant_engaged)})
         # NOTE: Adam moments are re-anchored fresh (warm-start re-anchor law #517/#518):
         # a bounded-window resume restarts moment estimation at the resume geometry.
 
@@ -882,12 +1010,43 @@ def main() -> int:
 
     state_form = {"form": cfg.seg_form_start}
 
+    # §3.4 rate-in-loss keep-cell indices (kept cells only enter the token-entropy surrogate,
+    # so the zeroed inactive cells do not bias the histogram with a constant spike at bin-0).
+    keep_bool_np = np.asarray(model._cell_mask.tensors["keep"], dtype=np.float32)[..., 0] > 0.5
+    keep_flat_np = np.flatnonzero(keep_bool_np.ravel()).astype(np.int64)
+
+    def token_rate_term(mdl, ids: list[int]):
+        """Differentiable per-token entropy surrogate over the batch's KEPT cells.
+        'entropy' = marginal token histogram; 'smevr_surrogate' = consecutive-frame temporal
+        delta histogram (the zlib-on-delta coder surrogate token_stream_bytes runs)."""
+        keep_idx = mx.array(keep_flat_np)
+        c = cfg.code_width
+        if cfg.rate_model == "smevr_surrogate":
+            sids = sorted(int(i) for i in ids)
+            if len(sids) < 2:
+                return mx.array(0.0)
+            deltas = []
+            prev = mx.take(mx.reshape(mdl.raw_tokens(sids[0]), (-1, c)), keep_idx, axis=0)
+            for i in sids[1:]:
+                cur = mx.take(mx.reshape(mdl.raw_tokens(i), (-1, c)), keep_idx, axis=0)
+                deltas.append(0.5 * (cur - prev))  # scale delta [-2,2] -> [-1,1]
+                prev = cur
+            vals = mx.concatenate(deltas, axis=0)
+        else:  # "entropy": marginal histogram of the kept-cell token values
+            vals = mx.concatenate(
+                [mx.take(mx.reshape(mdl.raw_tokens(int(i)), (-1, c)), keep_idx, axis=0)
+                 for i in ids], axis=0)
+        return _soft_hist_entropy_bits(vals, cfg.token_quant_levels)
+
     def batch_loss(mdl, ids: list[int]):
         acc = None
         for i in ids:
             li = pair_loss(mdl, int(i), state_form["form"])
             acc = li if acc is None else acc + li
-        return acc / len(ids)
+        acc = acc / len(ids)
+        if cfg.w_rate > 0.0:  # §3.4 (0.0 => byte-identical to the distortion-only control)
+            acc = acc + cfg.w_rate * token_rate_term(mdl, ids)
+        return acc
 
     vg = nn.value_and_grad(model, batch_loss)
 
@@ -974,6 +1133,12 @@ def main() -> int:
                 knee_switched = True
                 row["event_knee_switch"] = {"epoch": epoch, "rel_per_epoch": rel,
                                             "new_form": "tau_softplus"}
+                if cfg.token_quant_anneal == "at_knee" and not model._quant_engaged:
+                    # §3.3(a) lattice anneal: basin found in float -> engage the STE, refine
+                    # on the shipped lattice. The token forward snaps to the quantized lattice;
+                    # the A1 basis rebase below (prev_gate_smooth=None) absorbs the scale jump.
+                    model._quant_engaged = True
+                    row["event_quant_engage"] = {"epoch": epoch, "trigger": "ce_tau_knee"}
                 # A1 basis REBASE: the smooth-loss SCALE changes with the form —
                 # comparing tau_softplus loss against a CE baseline would fire a
                 # FALSE realization-gap alarm at the next gate. One-gate rebase.
@@ -990,6 +1155,9 @@ def main() -> int:
             knee_switched = True
             prev_gate_smooth = None
             row["event_knee_fallback"] = {"epoch": epoch, "kind": "F2_midpoint_fallback"}
+            if cfg.token_quant_anneal == "at_knee" and not model._quant_engaged:
+                model._quant_engaged = True  # §3.3(a) engage STE at the F2 fallback knee too
+                row["event_quant_engage"] = {"epoch": epoch, "trigger": "F2_midpoint_fallback"}
         tlog(row)
         telemetry_tail.append(row)
 
@@ -1164,6 +1332,53 @@ def main() -> int:
         finally:
             if live is not None:
                 ema_restore(model, live)
+
+    # §3.5 QA77-LITE composed-S ENDPOINT verdict (co9 Knee-A pricing). VERDICT-level: does NOT
+    # change any trained token/weight/byte (the burn is seg-only). Fires only when the operator
+    # enables the bounded pose solve (composed_s_gate_subset>0). Fails GRACEFULLY (advisory).
+    # The solver is the PROVEN warp-constrained FD-Jacobian LM-GN (eg1/tt1 approach; MAIN recall
+    # steer 2026-07-30) — the razor-sharp realized pose landscape needs damped GN, not Adam. The
+    # per-pair residual_mse_traj + relins_run in the verdict SELF-DOCUMENT convergence; firing is
+    # gated on a convergence smoke (bc1), so no untrustworthy verdict reaches an endpoint decision.
+    if cfg.composed_s_gate_subset > 0:
+        try:
+            from experiments.ddm_composed_s_verdict import ComposedSVerdict
+            from experiments.train_witness_realized_through_R_mlx import (
+                _torch_R_to_camera_uint8,
+                cpu_verdict_d_seg_batch,
+            )
+
+            n_sub = min(int(cfg.composed_s_gate_subset), cfg.num_pairs)
+            if cfg.composed_s_subset_ids is not None:  # MAIN QA66 pose-mass tail
+                sub_ids = [int(i) for i in np.load(cfg.composed_s_subset_ids).ravel()[:n_sub]
+                           if 0 <= int(i) < cfg.num_pairs]
+            else:
+                sub_ids = list(range(n_sub))
+            cbasis = "ema_shadow" if global_step >= ema_warmup_updates else "live_ema_warmup"
+            live = ema_snapshot_swap(model, ema) if cbasis == "ema_shadow" else None
+            try:
+                frames = []
+                with mx.stream(mx.cpu):
+                    for i in sub_ids:
+                        rgb = model.render_frame(i)
+                        mx.eval(rgb)
+                        frames.append(np.asarray(rgb, dtype=np.float32)[0])
+                cams = [_torch_R_to_camera_uint8(f) for f in frames]
+                gts = [np.asarray(lstars[i], dtype=np.int64) for i in sub_ids]
+                dseg_sub = float(np.mean(cpu_verdict_d_seg_batch(seg_cpu, cams, gts)))
+                total_bytes = counted_bytes_ledger(model, cfg)["total_counted_bytes"]
+            finally:
+                if live is not None:
+                    ema_restore(model, live)
+            verdict = ComposedSVerdict(cfg.num_pairs)
+            if verdict.available:
+                receipt["composed_s_verdict"] = verdict.composed_s(
+                    sub_ids, cams, dseg_sub, total_bytes)
+            else:
+                receipt["composed_s_verdict"] = {"skipped": verdict.reason,
+                                                 "score_claim": False}
+        except Exception as exc:  # advisory instrument NEVER crashes the burn
+            receipt["composed_s_verdict"] = {"error": repr(exc), "score_claim": False}
 
     rp = out_dir / "tr1_window_receipt.json"
     tmp = rp.with_suffix(".json.tmp")
