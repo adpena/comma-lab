@@ -72,9 +72,7 @@ def check_venv_src_custody(repo_root: Path) -> list[str]:
         return [f"import tac FAILED in this venv: {exc}"]
     tac_path = Path(tac.__file__).resolve()
     if repo_src not in tac_path.parents:
-        failures.append(
-            f"import tac -> {tac_path} (NOT under {repo_src}) — shared-venv hijack"
-        )
+        failures.append(f"import tac -> {tac_path} (NOT under {repo_src}) — shared-venv hijack")
 
     # Check 2 — belt: worktree editable fingerprints in dist metadata.
     for sp in _site_package_dirs():
@@ -84,8 +82,7 @@ def check_venv_src_custody(repo_root: Path) -> list[str]:
                 continue
             if (target / "src" / "tac").is_dir():
                 failures.append(
-                    f"{du.parent.name}: editable direct_url -> {target} "
-                    f"(a tac-bearing tree that is not {repo_root})"
+                    f"{du.parent.name}: editable direct_url -> {target} (a tac-bearing tree that is not {repo_root})"
                 )
     return failures
 
@@ -107,8 +104,7 @@ def main() -> int:
         for f in failures:
             print(f"  - {f}", file=sys.stderr)
         print(
-            f"  FIX: (cd {args.repo_root} && uv pip install -e . --no-deps) "
-            "then re-run this gate.",
+            f"  FIX: (cd {args.repo_root} && uv pip install -e . --no-deps) then re-run this gate.",
             file=sys.stderr,
         )
         return 1
