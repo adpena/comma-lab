@@ -25536,3 +25536,31 @@ dark solve pixels regardless of capacity. ax1's `ax1_capacity_split_v1` registra
 pj1 anchor; the anchor says the photometric split is invalid → register the CONFOUND, not the split.
 DEAD-END: do NOT re-run cold/margin photometric variants (range wall is init/metric-independent). Pointer
 delta UNMOVED (0.1910828242 [contest-CPU]) — means, not end.
+
+
+## FEED-ax1r (2026-07-30) — ax1 pre-registered f band FALSIFIED by pj1 (~250×); the falsified premise IS the pj1 confound — reconciliation
+
+- ax1 pre-registered f ∈ [7e-4, 2.0e-3] (7d0e41a9c2, before pj1's number). pj1 measured photometric-fit
+  realized d_seg 0.504824 (836a3c9c09) — the band is FALSIFIED ~250×, and the miss LOCALIZES the wrong
+  model exactly as the pre-registration discipline intends: ax1's premise "against solve targets ALL
+  residual is capacity by construction" is FALSE because the C1 solve frames are a DIFFERENT VEHICLE's
+  pixel manifold (v10 dark class-field, mean ~20) structurally outside TR1's bright rgb-head range
+  (output dark-floor mean 67.95, range wall). The 0.505 measures the cross-vehicle manifold gap, not
+  TR1 capacity. Register the CONFOUND, not a capacity split (pj1 verdict_scope: FORMULATION —
+  scorer-free photometric fit to cross-vehicle solve frames as a TR1 capacity probe is closed).
+- SURVIVING vs INVALIDATED in ax1: the five derived terms (delta group-sparsity · margin-coupled quant ·
+  frame_0 carried-ξ warp · QA84 rowband race · event-termination + w_rate 0.0768) derive from WITHIN-TR1
+  measured structure and are UNAFFECTED. INVALIDATED: the §10 stack's "QA75 captures ~4.4×" arithmetic
+  leg (rested on the falsified premise) — stack arithmetic re-derivation OWED at the distill-window
+  verdict. ea1's "existence proof" framing gains the caveat: 1.52e-4 is physical in the FROZEN SPACE
+  (a realizable archive achieves it) but is a CROSS-VEHICLE score — not proof of TR1-class reachability.
+- The clean capacity-vs-objective arbiter: the QA75 distill-WINDOW with the SEGNET FIELD teacher
+  (logits/margins on the solve frames — scorer-space, vehicle-agnostic; the field, not the pixels).
+  MAIN fired the b2b field pass (tools/ddm_b2b_segnet_field_pass.py --frame-source qa75_solve
+  --field-kind distill_logit_margin, out /Volumes/VertigoDataTier/pact/ddm_b2b_qa75_field_20260730)
+  in the freed scorer slot; monitor armed. Next rung after: QA75 distill-window resume from the E2
+  endpoint, slope-ratio vs plain continuation = the real capacity split; then the gc9 §4 row-2 replace.
+- TR1's own measured floor stands: E2 0.0052766 (endpoint compile re-verified byte-identical by pj1:
+  358,209 B sha e7640dee).
+
+pointer 0.1910828242 [contest-CPU] UNMOVED
