@@ -116,3 +116,36 @@ def build_rowband_flip_mass_foveation_v1() -> CanonicalEquation:
         canonical_producers=("tools.ddm_b2b_segnet_field_pass",),
         provenance=provenance,
     )
+
+
+def populate_rowband_flip_mass_foveation_v1(
+    *, path=None, lock_path=None, agent: str | None = None, subagent_id: str | None = None
+) -> CanonicalEquation:
+    """Append the measured equation through the locked registry helper (the b2b owed export)."""
+
+    from tac.canonical_equations.registry import register_canonical_equation
+
+    equation = build_rowband_flip_mass_foveation_v1()
+    register_canonical_equation(
+        equation,
+        path=path,
+        lock_path=lock_path,
+        agent=agent,
+        subagent_id=subagent_id,
+        notes=(
+            "QA84 row-band foveation constant (b2b equations leg, MAIN consolidation export); "
+            "[macOS-CPU advisory]; score_claim=false; consumer = RowBandGrammar band bounds"
+        ),
+    )
+    return equation
+
+
+__all__ = [
+    "BAND_RENDER_ROWS",
+    "EQUATION_ID",
+    "FLIP_MASS_FRACTION_IN_BAND",
+    "FOVEATION_GATE_CRITERION",
+    "build_rowband_flip_mass_foveation_v1",
+    "flip_band_render_rows",
+    "populate_rowband_flip_mass_foveation_v1",
+]

@@ -112,10 +112,6 @@ from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 im
     populate_chan_vese_area_constraint_birth_balance_equation,
     populate_isoperimetric_birth_weight_scaling_equation,
 )
-from tac.canonical_equations.hybrid_factorized_costate_adjoint_20260716 import (
-    build_hybrid_exact_factorized_costate_adjoint_v1,
-    populate_hybrid_exact_factorized_costate_adjoint_equation,
-)
 from tac.canonical_equations.chroma_boundary_match_20260709 import (
     build_chroma_boundary_annulus_match_hinge_v1,
     populate_chroma_boundary_annulus_match_equation,
@@ -145,6 +141,16 @@ from tac.canonical_equations.dash_erasure_homogenization_20260707 import (
     build_dash_erasure_homogenization_v1,
     populate_dash_erasure_homogenization_equation,
     smoothing_crossover_ok,
+)
+from tac.canonical_equations.ddm_b2b_rowband_flip_mass_20260731 import (
+    build_rowband_flip_mass_foveation_v1,
+    flip_band_render_rows,
+    populate_rowband_flip_mass_foveation_v1,
+)
+from tac.canonical_equations.ddm_v4b_composed_gate_fidelity_20260730 import (
+    build_ddm_v4b_composed_gate_instrument_fidelity_v1,
+    composed_gate_fidelity,
+    populate_ddm_v4b_composed_gate_instrument_fidelity_v1,
 )
 from tac.canonical_equations.deepmath_amortizing_argmax_laws_20260704 import (
     ALL_DEEPMATH_AMORTIZING_ARGMAX_BUILDERS,
@@ -221,6 +227,10 @@ from tac.canonical_equations.fullstack_home_assignment_20260710 import (
 from tac.canonical_equations.horizon_weighted_margin_20260709 import (
     build_horizon_weighted_margin_v1,
     populate_horizon_weighted_margin_equation,
+)
+from tac.canonical_equations.hybrid_factorized_costate_adjoint_20260716 import (
+    build_hybrid_exact_factorized_costate_adjoint_v1,
+    populate_hybrid_exact_factorized_costate_adjoint_equation,
 )
 from tac.canonical_equations.instant_projected_input_adjoint_20260712 import (
     build_instant_projected_input_adjoint_v1,
@@ -315,11 +325,6 @@ from tac.canonical_equations.powerplay_variant_ii_cost_isomorphism_20260702 impo
     build_powerplay_variant_ii_cost_isomorphism_v1,
     contest_score_as_powerplay_cost,
 )
-from tac.canonical_equations.witness_own_residual_decomposition_20260716 import (
-    build_witness_own_residual_decomposition_v1,
-    flat_band_gain_on_witness,
-    populate_witness_own_residual_decomposition_equation,
-)
 from tac.canonical_equations.procedural_predictor_residual_savings import (
     build_procedural_predictor_plus_residual_correction_savings_v1,
     predict_procedural_predictor_plus_residual_correction_savings,
@@ -334,11 +339,6 @@ from tac.canonical_equations.realization_necessity_preimage_20260715 import (
     build_realization_necessity_preimage_per_stratum_v1,
     populate_realization_necessity_preimage_equation,
     stratum_rate_floor_bytes,
-)
-from tac.canonical_equations.resize_full_kernel_structure_20260720 import (
-    build_separable_resize_full_kernel_direct_sum_v1,
-    full_resize_kernel_direct_sum,
-    populate_separable_resize_full_kernel_direct_sum_equation,
 )
 from tac.canonical_equations.registry import (
     CANONICAL_EQUATIONS_REGISTRY_LOCK,
@@ -366,6 +366,11 @@ from tac.canonical_equations.registry import (
 from tac.canonical_equations.resize_exploit_flip_fix_frontier_20260709 import (
     build_resize_exploit_flip_fix_frontier_v1,
     populate_resize_exploit_flip_fix_frontier_equation,
+)
+from tac.canonical_equations.resize_full_kernel_structure_20260720 import (
+    build_separable_resize_full_kernel_direct_sum_v1,
+    full_resize_kernel_direct_sum,
+    populate_separable_resize_full_kernel_direct_sum_equation,
 )
 from tac.canonical_equations.roadlane_grating_composition_refuted_20260710 import (
     build_roadlane_grating_composition_refuted_v1,
@@ -424,6 +429,11 @@ from tac.canonical_equations.windowed_curvelet_parabolic_capacity_20260714 impor
 )
 from tac.canonical_equations.witness_measured_findings_20260701 import (
     build_all_witness_measured_findings_20260701,
+)
+from tac.canonical_equations.witness_own_residual_decomposition_20260716 import (
+    build_witness_own_residual_decomposition_v1,
+    flat_band_gain_on_witness,
+    populate_witness_own_residual_decomposition_equation,
 )
 from tac.canonical_equations.witness_pose_grad_coeff_stability_20260709 import (
     build_witness_pose_grad_coeff_stability_v1,
