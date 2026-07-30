@@ -196,3 +196,35 @@ is an argument for measuring fast, not for believing early.
 **Routing:** QA72 (dithered realization + rounding-field steering + stage-attribution probe +
 continuous-solve-then-CVP-round race) → ledger, defer-at-source; tt1 messaged to instrument the
 threshold-crossing signature; QA65/QA69 unchanged (they are the storage-lattice half).
+
+## §7 ADDENDUM (operator 07-31, STANDING STEER) — comprehensive view: no axis priority; joint sensitivity + synergies + order of operations
+
+**Operator verbatim:** "make sure now that we're getting smaller and smaller not to necessarily
+prioritize pose or seg but take a comprehensive view and synergies and order of operations and
+all physics and photometrics and all dimensions and layers and types upstream and all
+dependencies and weights and hyperplanes and channels are sensitive to."
+
+**Why this binds NOW (measured):** at S 0.993 the axes are near-parity (seg 0.431 · pose 0.322 ·
+rate 0.240) — marginal prices have converged, so the next −0.1 lives wherever the JOINT exchange
+rate says, not where the last win was. Axis-reflex (pose-first inertia, seg-first reflex) becomes
+the dominant allocation error exactly here. The non-additive-pools LAW says per-axis pursuit
+double-counts shared budgets; the Knee-A arc measured the cross-coupling both ways (seg cell
+drops COST pose; pose re-solve PAID for seg damage).
+
+**The standing law (binding on every charter from here):** no rung fires on axis identity; every
+rung fires on its JOINT realized exchange rate read from ONE unified table. The three legs:
+1. **THE JOINT SENSITIVITY ATLAS AT THE LIVE BASE** — unify every measured scorer-internal
+   surface: SegNet rank-4 head hyperplanes + margin-Fisher Gram + BN-channel structure (sn1/#725)
+   + ker(A) resize null (shared both scorers) + PoseNet per-dim Jacobians/quadratic (pi2/ms4) +
+   photometric response (pm1) + composite-R Hessian — RE-ANCHORED at the v4c/v4d base (the
+   staleness confound: prior bundles were measured at dead bases; freshness-at-consumption).
+2. **ONE ARCHIVE-LEVEL JOINT WATERFILL** across all pools (token quanta/cell set · pose precision
+   · photometric · expert menu · selector) at REALIZED exchange rates → the ranked next-rung
+   table. This is QA69-leg-3 promoted from a v4d rung to THE standing allocator.
+3. **THE ORDER-OF-OPERATIONS DAG** — dependencies are physical (motion → per-depth projection →
+   photometric → uint8; base changes invalidate pose solves; token nudges move rounding fields)
+   and re-solve costs are real; the allocator must emit ORDER, not just amounts (oc1's
+   "ORDER is important" lifted from build-time to campaign-time).
+Consumer: the costate organ's duty queue reads THIS table; MAIN charters read it before spawning.
+→ QA73 + ddm_ja1 arm. Sister laws: non-additive-pools · meet-it-where-it-is 4-clause ·
+holistic-check-ins-are-facets · decompose-every-headline.
