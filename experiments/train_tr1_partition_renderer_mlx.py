@@ -1272,6 +1272,15 @@ def main() -> int:
     gate_param_snapshot: dict[str, np.ndarray] | None = None
     order_rng = np.random.default_rng(cfg.seed + 1)
     knee_switched = stage != "seg_trunk_ce"
+    if knee_switched and state_form["form"] == "ce":
+        # #517-twin re-anchor (2026-07-30 qa86 EMA-resume incident): the form state
+        # machine must position to the RESTORED stage, not --seg-form-start. Without
+        # this, a mid-stage resume trains the opening CE form against a tau-stage
+        # checkpoint FOREVER (both switch events are knee_switched-guarded; measured
+        # ep_loss 0.673 -> 9.611 at resumed ep202 before MAIN killed it).
+        state_form["form"] = "tau_softplus"
+        tlog({"event": "resume_form_reanchor", "stage": stage,
+              "form": state_form["form"], "seg_form_start": cfg.seg_form_start})
     stop_reason = "epochs_complete"
 
     for epoch in range(start_epoch, cfg.epochs):
