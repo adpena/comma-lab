@@ -25148,3 +25148,27 @@ receipts /Volumes/VertigoDataTier/pact/ddm_wr1_20260729/. [no-triality] [p0-ledg
 - Next: gate verdict (measured-vs-predicted per axis = composition finding) → v4c rung stack
   (QA62 A+B · kl1 lossless trio · QA47 receiver-derived-basis k-sweep · QA59/60 · effective-quantum
   re-solve ~0.03 S) → gr1 coarser re-burn fork (operator-GO class if it demands training).
+
+
+## FEED-2026-07-30-c (MAIN): v4b composed gate MEASURED — prediction verified to 3e-6 [pointer 0.1910828242 [contest-CPU] UNMOVED]
+
+- **Real n600 evaluate.py (local eval_root protocol, [macOS-CPU advisory]):** d_pose 0.06365131 ·
+  d_seg 0.00553676 · 274,479 B → recomputed S = **1.534258** (seg 0.553676 + pose 0.797818 + rate
+  0.182764). Predicted 1.534255 → **agreement 3e-6**; d_pose per-pair-realized prediction matched
+  to 5.1e-7. **ZERO composition confound: the per-pair realized instrument chain (oracle → static
+  compose → selector → byte-close → receiver) is gate-grade.** Own-vehicle advisory line: ref
+  2.2566 → **1.5343 measured** (−0.722 = 32% of the operating S removed by one composed gate:
+  Knee-A rate −0.197 + re-solved two-plane-static pose −0.690 net of seg damage +0.165).
+- Grammar shipped: Knee-A tokens (unchanged) + 600×6 f16 pose field (best-of single/two-plane) +
+  75B selector + s_r=1 static-horizon receiver (v=437 DERIVED at decode; 0 mask bytes; rule-118).
+- Ops receipt: first firing hit the SIGURG-orphan class (tracked wrapper killed at ~3min, child
+  evaluate survived, reflex refire briefly double-ran the same eval_root) — full tree-kill + clean
+  dir + single detached re-run; no contaminated numbers consumed. LAW re-receipted: heavy jobs
+  detached-ppid-1 from the start; tracked-bg only for sleep-loop watchers; parent-kill does NOT
+  kill evaluate children — tree-kill by submission-dir pattern.
+- Ledger hygiene: concurrent defer-at-source minted duplicate QA58 (kl1 exposure + v4b gate) —
+  gate row renamed QA63; ID-mint race = known deferral-scatter hazard, single-writer mint owed.
+- Next: v4c charter — re-base adjudication (gr1 cell_drop50 base seg+rate 0.6702 vs shipped Knee-A
+  0.7365, pose-blind-drop caveat + re-solve precedent 0.98×) + QA62 A+B photometric (−0.104
+  measured) + kl1 lossless trio (−0.0012) + QA47 receiver-derived-basis k-sweep + effective-quantum
+  re-solve (~0.03). Composed v4c arithmetic target ≈ 1.30-1.37 advisory, gate-verified as always.
