@@ -25373,3 +25373,15 @@ memory:all_arms_online_research_and_oss_authority_standing_20260720 (#767 verbat
 - **OWED:** archive DECISION stays harness-side (MAIN prunes using the manifest); the compaction A/B is a future
   arm (needs codex --json instrumentation first); pointer moves only through a byte-closed n600 exact row, untouched
   here. Burn pid 68621 untouched (no scorer/MLX/Metal).
+
+
+## FEED-qa86c (2026-07-30, MAIN): EMA clamp fix FIRED-VERIFIED on the live QA24 burn + #517-twin trainer fix
+Operator GO on QA86(c): burn (bc1 QA24, ep199/400 seg_trunk_tau) stopped at the durable ep199 intra ckpt and
+resumed pid 29666 with DERIVED ema_decay 0.99986667 (clamp gone; ~15,000 remaining steps = 2.0 derived EMA
+windows under corrected averaging) + SMEVR byte ledger (observability). Pre-fire argv diff vs launch_receipt
+caught 2 unintended b2b-module-default drifts (dropped --composed-s-delta-ref + gate-subset 17→16) — pinned via
+qa86_live_config_pin lever. INCIDENT: first resume (pid 23199) trained CE against the tau-stage checkpoint
+(#517-twin: state_form never re-anchored; knee_switched-guarded events ⇒ CE-forever; ep_loss 0.673→9.611);
+killed ~ep202, trainer fixed 6b546da198 (resume_form_reanchor), re-fire VERIFIED (tau_softplus, loss 0.99→0.875
+settling). Cost ~6 epochs + 15 min. Ledger QA86c-FIRED (7b45e3cd37). Equations leg: rowband_flip_mass law
+exported+REGISTERED (f2482dc3b2). Pointer 0.1910828242 [contest-CPU] UNMOVED; all rows [macOS-CPU advisory].
