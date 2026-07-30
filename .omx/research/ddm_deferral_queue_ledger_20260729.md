@@ -165,3 +165,33 @@ on the knee base). New rows (defer-at-source):
 | QA60 | non-tail static two-plane extension over the 488 pairs (currently single-plane) | ddm_v4b §8; qa43 stage-1b | PoseNet-only slot | OPEN | est ≤−0.05 S | $0 sweep | v4c pose field | DUE (cheap) |
 | QA61 | rank-1 forward-speed (dim-0) carrier for the tail two-plane field (QA50 SVD: 93.0% energy dim-0, rotation ~inert) → store single pose + 1 scalar dz/pair instead of 6-DOF | ddm_v4b §7 QA50 rider; receipt v4b_static_transfer_receipt.json | v4c rate slot | OPEN | ~5 f16/pair × 95 saved (rate lever) | $0 design + build | v4c pose member; kl1 coder | DUE (Schmidhuber loop first firing) |
 | QA62 | pm1 rungs A+B fold into v4c (per MAIN 07-30): rung B per-pair AE gain/bias a·warp(f1)+b (≤4 B/pair) + rung A rolling-shutter row-shear (~0 B). NOT folded into v4b: v4b receiver was FROZEN + byte-close-validated at MAIN's message → ship-as-chartered (no validated-build churn). A+B −0.1039 S was measured on the FULL base; the KNEE-base A+B is UNMEASURED (solve (a,b) for 488 non-tail via cheap 2-param GN) | ddm_v4b §9; pm1 memo QA44; MAIN 07-30 directive | v4c build slot (after v4b gate) | HELD (v4b freeze) | est −0.10 S on the knee base (re-measure); grammar v4c = v4b + 2 AE coeffs/pair + free row-shear | ~30 min PoseNet-only + rebuild | v4c receiver; composed candidate | DUE-AT-v4c |
+
+**Addendum (ddm_v4c, 2026-07-30) — v4c COMPOSED CANDIDATE BUILT+STAGED; QA58/QA59/QA60/QA62 FIRED, QA61 closed-negative (defer-at-source):**
+Memo `ddm_v4c_composed_candidate_20260730.md`; receipts SSD `ddm_v4c_20260730/`. Base ADJUDICATED by
+measurement (v4b ship poses transferred onto gr1 cell_drop50 through the static compose: d_pose
+0.06365→0.07382, damage +0.010 = recoverable class; Knee-A positive control exact) → **cell_drop50
+WINS**. Pose RE-SOLVED through the realizable static mask on the adjudicated base (250 hardest by
+transfer damage, best-of single/two-plane static GN, f16-monotone): solved-250 0.13730→0.02732;
+honest composed pre-photo d̄ 0.016926 (contribution 0.41141). Photometric rung-B (a,b) full-600:
+d̄ → **0.010384 (contribution 0.32225, −0.0892 S)** at 1,820 member bytes; rung-A global g*=0.0
+(honest negative — shippable global shear hurts; per-pair-best −0.0135 S needs ~2 bits/pair → v4d).
+**Byte-closed 359,750 B sha b6365270…, verify all_checks_ok (parse-back bijection + bit-exact fields
++ independent recompute + deterministic rebuild), stage smoke OK. PREDICTED composed S = 0.992834**
+(seg 0.43104 gr1-MEASURED + pose 0.322248 advisory + rate 0.239543 measured) = **−0.5414 vs the
+MEASURED v4b gate 1.534258**. [macOS-CPU advisory]; pointer 0.1910828242 [contest-CPU] UNMOVED.
+Row updates: **QA59 → FIRED** (re-solve materialized on the adjudicated base; the "further win" =
+−0.4478 S pose recovery vs transfer) · **QA60 → FIRED** (two-plane extended beyond the tail: 188/250
+solve-two, 224 shipped two-select) · **QA62 → FIRED** (rung-B shipped in v4c grammar; rung-A global
+= measured negative at the re-solved poses; pm1 per-pair finding stands, needs per-pair bits) ·
+**QA58 → FIRED** ($0 full-600 (a,b) coding race: NO-LAW — temporally white 1.42/1.37, raw byte-plane
+1,804 B beats delta 1,932 / AR(1) 1,935; third white solver-output field, kl1 family verdict extends)
+· **QA61 → CLOSED-NEGATIVE for the v4c correction field** (standardized SVD of p_best_static−p_ship
+over solved-250 = [0.221, 0.180, 0.171, 0.158, 0.139, 0.130] FLAT — the kl1-B3 scale artifact
+re-measured; no rank-1 dz law; INSTANCE, consistent with kl1 FAMILY falsification). New rows:
+
+| id | item | source receipt | parking gate | status NOW | effect (advisory) | price | consumer | status |
+|---|---|---|---|---|---|---|---|---|
+| QA64 | v4c composed gate FIRE (n600 evaluate.py on the byte-closed archive 359,750 B sha b6365270…): `bash experiments/stage_v4c_realized_gate.sh cpu static_photo_celldrop50` | ddm_v4c memo §6; build+verify receipts | MAIN n600 slot | DUE | verify predicted S 0.992834 (d_seg ~0.004310 ±2.8e-5 · pose contrib ~0.3222 · rate 0.239543) | ~17 min CPU | v4d; eg1 exporter; v10 row-12 | DUE |
+| QA65 | dim0 offset-coded lattice (kl1 §9 + pi2 f16-marginal law): shared f16 mean + 16×-finer residual; re-solve dim0 on that lattice — NOT implemented in v4c (receiver-freeze one-rule; charter novelty item deferred, stated plainly in memo §9) | kl1 §9; pi2 §1c; ddm_v4c §9 | v4d grammar slot | OPEN | ~0.03 S potential (0.040 S/ULP × ~4 bits); partially absorbed by the (a,b) member (unmeasured split) | ~1.5 h re-solve + grammar + verify | v4d pose member | DUE-AT-v4d |
+| QA66 | per-pair rung-A beta member (~2 bits/pair ≈ 150 B, +0.0001 S rate) buying the measured per-pair-best −0.0135 S over global g*=0 | ddm_v4c photo receipt (rungAB 0.009533 vs rung-B 0.010384) | v4d grammar slot | OPEN | net ≈ −0.0134 S | ~0 (data already measured; grammar+build) | v4d receiver | DUE-AT-v4d |
+| QA67 | unsolved-350 single-static polish (pre-photo residual sum 3.32/10.16; photo already ate part) | ddm_v4c solve/photo jsonls | PoseNet slot | HELD (diminishing) | small −S (unmeasured) | ~1 h | v4d pose field | HELD |
