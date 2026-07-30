@@ -307,3 +307,45 @@ quantizer levels = CODER-FRIENDLY fields = a RATE co-benefit (the #110 latent-st
 idea reborn: quantizer+coder awareness in-loop shapes token entropy down); (c) sigma-noise as
 quantization simulation (eval_roundtrip already partial). Adoption path: DERIVED as DSL events
 with provenance + per-dynamic pre-registered falsifiers — never bolted on. → QA76.
+
+## §9 (operator 07-31 "where else should be inside the loop for optimal") — the in-loop completeness sweep
+
+**THE PRINCIPLE (from the failure ledger, inverted):** every measured failure this week was a SEAM
+— a stage left outside the optimization loop charging an unpriced externality: Knee-A pose damage
+(pose outside the drop decision) · 3× white fields (coder outside the solve) · realization deaths
+(quantizer outside the proposal) · invalidation chains (downstream solves outside the burn).
+Optimal = the loop contains the ENTIRE bytes→S map: quantizer + coder + receiver prediction +
+downstream terminal solves + container. ONLY the verification gate stays outside — not for
+statistics (the scorer is frozen-exact, no generalization gap) but for NO-FAKE independence:
+never let the acceptor be its own auditor.
+
+**THE RANKED IN-LOOP LADDER (what moves inside, in value order):**
+1. **DOWNSTREAM TERMINAL SOLVES → inside the burn (the bilevel composed-S burn, QA77):** the burn
+   trains seg-only; pose/photometric are re-solved after — so token changes never pay their
+   pose-recovery cost during training (the Knee-A externality, measured both signs). Inside-form:
+   every K steps / at sched1 events, run the CHEAP terminal solves (6-dim GN/pair + 2-param
+   photometric, proven fast) on a bounded subset and let stage decisions + acceptance see COMPOSED
+   S, not raw seg. Full form (v6): implicit/argmin differentiation through the inner solve.
+   LITE form fires NOW in the QA24 burn: composed-S stage-exit verdicts.
+2. **THE CODER → inside the loss (apply the stl1 row-8 rate-in-loss LAW — already our law, never
+   applied to the renderer burn):** token code-length (real-coder surrogate / entropy model of the
+   SMEVR contexts) as a loss term; QA76(b)'s redistribution dynamic is the implicit version, this
+   is the explicit one — both race in the burn.
+3. **RECEIVER PREDICTION → inside encode (predict-then-innovate everywhere):** the receiver
+   derives structure free at decode (carried-ξ INTER expert #774 · pi2 receiver-derived basis ·
+   QA68 predicted-selector). Generalize: every stream trains/solves against the RESIDUAL after
+   the receiver's free prediction, so we ship innovations, not values. Grammar-level (v5/v6).
+4. **THE SUPPORT SET → inside training:** gr1's cell-drop is post-hoc; QA24 moves it from-birth
+   (static inside); full form = annealed existence gating (which cells exist optimized jointly
+   with values). QA24 first — gating only if the static form leaves measured mass.
+5. **ROUNDING → inside the proposal (QA72, tt1 implicit):** the rounding pattern as an
+   optimization variable via sub-threshold nudges; tt1's gradient already sees the thresholds.
+6. **PRECISION ALLOCATION → inside the solve (QA69 semi-done):** refinement waterfill DURING the
+   solve rather than between builds.
+7. **THE CODING CONTEXT → inside tie-breaking (QA70):** among realized-equal optima, the coder's
+   context model picks the predictable member (min-entropy gauge fixing).
+**Already inside (keep):** uint8-STE+R (renderer, fd2 lesson) · realized acceptance (everything)
+· eval-roundtrip (NN) · scorer-in-loop training (the original witness law).
+**Routing:** QA77 rowed (bilevel; LITE form → sg1 burn NOW, full form → v6 design) · rate-in-loss
+= stl1 law APPLICATION, messaged to sg1 for the burn config race · items 3/5/6/7 live in their
+existing rows (QA68/QA72/QA69/QA70). Sister laws: realization doctrine §1 · no-axis-priority §7.
