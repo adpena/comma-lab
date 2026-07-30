@@ -25383,5 +25383,5 @@ caught 2 unintended b2b-module-default drifts (dropped --composed-s-delta-ref + 
 qa86_live_config_pin lever. INCIDENT: first resume (pid 23199) trained CE against the tau-stage checkpoint
 (#517-twin: state_form never re-anchored; knee_switched-guarded events ⇒ CE-forever; ep_loss 0.673→9.611);
 killed ~ep202, trainer fixed 6b546da198 (resume_form_reanchor), re-fire VERIFIED (tau_softplus, loss 0.99→0.875
-settling). Cost ~6 epochs + 15 min. Ledger QA86c-FIRED (7b45e3cd37). Equations leg: rowband_flip_mass law
+settling). Cost ~6 epochs + 15 min. verdict_scope: instance — the #517-twin resume-form defect in train_tr1_partition_renderer_mlx.py (fixed 6b546da198, re-fire VERIFIED); no formulation/family/paradigm negative in this FEED. Ledger QA86c-FIRED (7b45e3cd37). Equations leg: rowband_flip_mass law
 exported+REGISTERED (f2482dc3b2). Pointer 0.1910828242 [contest-CPU] UNMOVED; all rows [macOS-CPU advisory].
