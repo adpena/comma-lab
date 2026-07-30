@@ -228,3 +228,50 @@ rung fires on its JOINT realized exchange rate read from ONE unified table. The 
 Consumer: the costate organ's duty queue reads THIS table; MAIN charters read it before spawning.
 → QA73 + ddm_ja1 arm. Sister laws: non-additive-pools · meet-it-where-it-is 4-clause ·
 holistic-check-ins-are-facets · decompose-every-headline.
+
+## §8 ADDENDUM (operator 07-31, 9th convocation + STANDING GO) — SegNet: the amortization gap is the crux; the re-burn fires
+
+**Measured SegNet state:** d_seg 0.00431179 at the v4c gate (0.431 S = largest axis) · renderer burn
+endpoint 0.0038892 FLAT (full base) · byte pool SATURATED (gr1 knee ±move = +0.05 S; corrections
+break-even ×5) · **the exact solve PROVED d_seg 0.00116 is reachable on this video** (ms2r_r3
+in-box, 291 MB value-materialized = rate-dead) · exact structure: rank-4 head hyperplanes + flip
+distance d=|m|/‖Δw‖ · stride-2 stem, ERF r50≈85 px (region-reader) · flips ~50% Road / 19% Lane
+(77% skip-limited) / 13% Undrivable · hood static IoU 0.994.
+
+**SCHMIDHUBER'S FRAME (the crux in one number):** renderer endpoint 0.00389 vs solved 0.00116 =
+**3.35× AMORTIZATION GAP**. The solve is the existence proof; the renderer is the predict stage
+that fails to reproduce what the solve proved reachable. SegNet's remaining descent is not "more
+training" and not "more bytes" (both measured saturated) — it is CLOSING THE AMORTIZATION GAP.
+Three ordered rungs:
+1. **QA74 — TYPE THE RESIDUAL ($0, FIRST — the pose-collapse playbook applied to seg):** decompose
+   the live 0.00431 residual by {margin depth at the rank-4 head · class · spatial stationarity ·
+   renderer-vs-SOLVE disagreement}. The last is the decisive column: pixels where the SOLVE also
+   fails are target/GT-floor (concede); pixels where the solve succeeds and the renderer fails
+   are the amortization gap (attack). This typed split did for pose what no capacity sweep did.
+2. **QA24 — COARSER-FROM-BIRTH RE-BURN (FIRES NOW under standing GO):** gr1 measured that post-hoc
+   dropping the low-|g| half of cells is near-free → a from-birth coarse grid re-allocates ALL
+   training capacity onto cells that matter and can only beat the −0.098 post-hoc bound. Grid
+   DERIVED from gr1's curve (not assumed); **solve-INIT tokens** (lv1's headline A/B — start the
+   burn AT the solved object's projection, not from noise); sched1 event-driven schedule; full
+   launch non-negotiables (governed launcher · DSL-hash · memory preflight · resumable + per-stage
+   checkpoints · EMA shadow). Invalidation budgeted: post-burn pose re-solve (~3.5 h proven) +
+   photometric re-fit (~35 min proven) — the capacity pool runs PARALLEL to v4d per ja1.
+3. **QA75 — SOLVE-DISTILLATION (pn1-S5 revived, the named unfired lever):** the solve provides
+   PERFECT per-pixel targets ON THIS VIDEO — train/finish the renderer to match the SOLVED frames
+   (KD #74 lineage, reopened at this vehicle by rv1) instead of fighting argmax-CE against GT.
+   Sidesteps the CE-vs-argmax wall; fires as the burn's finishing stage or post-burn, informed by
+   QA74's typed split (distill ONLY the amortization-gap regions).
+**TISHBY/CB1 (per-class carriers, the seg expert-menu):** hood is static (IoU 0.994, 25.6% of
+frame) — a ~0.5 KB static carrier relieves the renderer of a quarter of the frame; Lane (77%
+skip-limited) needs either a dedicated thin-structure carrier or the #149 pre-R sub-pixel
+placement. cb1's byte-closed carriers exist; QA74's typing decides which classes earn one.
+**WONDERS:** (Tao) is Lane's 77% skip-limit SegNet's own stride-2 resolution (→ concede or pre-R
+place) or the renderer's reach (→ QA24 cures it)? QA74 answers via the solve column. (MacKay) the
+old 0.0053 "GT-flicker floor" is construction-specific and already beaten — the true floor
+question is the solve column, not that number. (Contrarian, binding) QA24's prediction rests on a
+post-hoc bound; the from-birth claim is a RACE — falsifier: re-burn endpoint ≥ cell_drop50's
+0.00431 at matched bytes → coarse-from-birth closes at INSTANCE, solve-distillation becomes the
+lead rung.
+**Routing:** QA74 ($0, fires inside the sg1 arm first) · QA24 FIRES under the standing GO just
+granted (sg1 arm stages through the governed chain and launches) · QA75 rowed as the follow-on
+rung. Sister: ja1 table (QA24 = the only seg descent, capacity pool, parallel).
